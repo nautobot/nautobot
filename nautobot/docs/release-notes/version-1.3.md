@@ -181,13 +181,13 @@ As Python 3.6 has reached end-of-life, and many of Nautobot's dependencies have 
 !!! important
     With introducing the `has_sensitive_variables` flag on Job classes and model (see: [#2125](https://github.com/nautobot/nautobot/issues/2125)), jobs can be prevented from storing their inputs in the database. Due to the nature of queuing or scheduling jobs, the desired inputs must be stored for future use.
 
-    New safe-default behavior will only permit jobs to be executed immediately, as `has_sensitive_variables` defaults to `True`. This value can be overridden by the Job class itself or the Job model edit page. Values entered for jobs executing immediately go straight to the Redis message bus and are cleaned up on completion of execution.
+    New safe-default behavior will only permit jobs to be executed immediately, as `has_sensitive_variables` defaults to `True`. This value can be overridden by the Job class itself or the Job model edit page. Values entered for jobs executing immediately go straight to the Celery message bus and are cleaned up on completion of execution.
     
-    Scheduling jobs or requiring approval necessitates those values to be temporarily stored in the database until they have completed their run.
+    Scheduling jobs or requiring approval necessitates those values to be stored in the database until they have been sent to the Celery message bus for execution.
 
     During installation of `v1.3.10`, a migration is applied to set the `has_sensitive_variables` value to `True` to all existing Jobs. However to maintain backwards-compatibility, past scheduled jobs are permitted to keep their schedule. New schedules cannot be made until an administrator has overridden the `has_sensitive_variables` for the desired Job.
 
-    A new management command exists (`remove_stale_scheduled_jobs`) which will aid in cleaning up schedules to past jobs which may still have sensitive data stored in the database.
+    A new management command exists (`remove_stale_scheduled_jobs`) which will aid in cleaning up schedules to past jobs which may still have sensitive data stored in the database. This command is not exhaustive nor intended to clean up sensitive values stored in the database. You should review the `extras_scheduledjob` table for any further cleanup.
 
     **Note:** Leveraging the Secrets and Secret Groups features in Jobs does not need to be considered a sensitive variable. Secrets are retrieved by reference at run time, which means no secret value is stored directly in the database.
 
