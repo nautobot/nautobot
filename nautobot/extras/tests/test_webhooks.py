@@ -101,7 +101,7 @@ class WebhookTest(APITestCase):
         with patch.object(Session, "send", mock_send):
             self.client.force_login(self.user)
 
-            with web_request_context(self.user, id=request_id):
+            with web_request_context(self.user, change_id=request_id):
                 site = Site(name="Site 1", slug="site-1", status=self.active_status, region=self.region_one)
                 site.save()
 
@@ -147,7 +147,7 @@ class WebhookTest(APITestCase):
 
         # Patch the Session object with our mock_send() method, then process the webhook for sending
         with patch.object(Session, "send", mock_send):
-            with web_request_context(self.user, id=request_id):
+            with web_request_context(self.user, change_id=request_id):
                 site = Site(name="Site 1", slug="site-1")
                 site.save()
 
@@ -188,7 +188,7 @@ class WebhookTest(APITestCase):
 
         # Patch the Session object with our mock_send() method, then process the webhook for sending
         with patch.object(Session, "send", mock_send):
-            with web_request_context(self.user, id=request_id):
+            with web_request_context(self.user, change_id=request_id):
                 site = Site(name="Site 1", slug="site-1")
                 site.save()
 
@@ -244,7 +244,7 @@ class WebhookTest(APITestCase):
         with patch.object(Session, "send", mock_send):
             self.client.force_login(self.user)
 
-            with web_request_context(self.user, id=request_id):
+            with web_request_context(self.user, change_id=request_id):
                 site = Site(name="Site 1", slug="site-1", status=self.active_status, region=self.region_one)
                 site.save()
 

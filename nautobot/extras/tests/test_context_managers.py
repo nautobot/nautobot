@@ -57,7 +57,7 @@ class WebRequestContextTestCase(TestCase):
 
     def test_change_log_context(self):
 
-        with web_request_context(self.user, "test_change_log_context"):
+        with web_request_context(self.user, context_detail="test_change_log_context"):
             site = Site(name="Test Site 1")
             site.save()
 

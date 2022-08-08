@@ -92,7 +92,7 @@ class ObjectChangeMiddleware(object):
         except Resolver404:
             change_context_detail = ""
 
-        change_context = WebChangeContext(request, context_detail=change_context_detail)
+        change_context = WebChangeContext(request=request, context_detail=change_context_detail)
 
         # Process the request with change logging enabled
         with change_logging(change_context):

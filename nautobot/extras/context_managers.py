@@ -17,14 +17,19 @@ class ChangeContext:
     one will be generated to relate any changes to this transaction. Convenience
     classes are provided for each context.
 
-    :param request: WSGIRequest object
+    :param user: User object
+    :param request: WSGIRequest object to retrieve user from django rest framework after authentication is performed
     :param context: Context of the transaction, must match a choice in nautobot.extras.choices.ObjectChangeEventContextChoices
     :param context_detail: Optional extra details about the transaction (ex: the plugin name that initiated the change)
     :param id: Optional uuid object to uniquely identify the transaction. One will be generated if not supplied
     """
 
-    def __init__(self, request, context=None, context_detail="", id=None):
+    def __init__(self, user=None, request=None, context=None, context_detail="", change_id=None):
         self.request = request
+        self.user = user
+
+        if self.request is None and self.user is None:
+            raise TypeError("At least one keyword argument required: user or request")
 
         if context is not None:
             self.context = context
@@ -33,9 +38,15 @@ class ChangeContext:
 
         self.context_detail = context_detail
 
-        self.id = id
-        if self.id is None:
-            self.id = uuid.uuid4()
+        self.change_id = change_id
+        if self.change_id is None:
+            self.change_id = uuid.uuid4()
+
+    def get_user(self):
+        """Return self.user if set, otherwise return self.request.user"""
+        if self.user is not None:
+            return self.user
+        return self.request.user
 
 
 class JobChangeContext(ChangeContext):
@@ -89,7 +100,7 @@ def change_logging(change_context):
 
 
 @contextmanager
-def web_request_context(user, context_detail="", id=None):
+def web_request_context(user, context_detail="", change_id=None):
     """
     Emulate the context of an HTTP request, which provides functions like change logging and webhook processing
     in response to data changes. This context manager is for use with low level utility tooling, such as the
@@ -101,7 +112,7 @@ def web_request_context(user, context_detail="", id=None):
 
     >>> from nautobot.extras.context_managers import web_request_context
     >>> user = User.objects.get(username="admin")
-    >>> with web_request_context(user, "manual-fix"):
+    >>> with web_request_context(user, context_detail="manual-fix"):
     ...     lax = Site(name="LAX")
     ...     lax.validated_save()
 
@@ -115,6 +126,6 @@ def web_request_context(user, context_detail="", id=None):
 
     request = RequestFactory().request(SERVER_NAME="web_request_context")
     request.user = user
-    change_context = ORMChangeContext(request, context_detail=context_detail, id=id)
+    change_context = ORMChangeContext(user=request.user, context_detail=context_detail, change_id=change_id)
     with change_logging(change_context):
         yield request

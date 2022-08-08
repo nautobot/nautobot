@@ -8,7 +8,6 @@ from django.contrib.auth import get_user_model
 from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ObjectDoesNotExist
 from django.core.files.uploadedfile import SimpleUploadedFile
-from django.core.handlers.wsgi import WSGIRequest
 from django.core.management import call_command
 from django.core.management.base import CommandError
 from django.test import override_settings
@@ -686,9 +685,7 @@ class JobHookTest(TransactionTestCase):
 
     @mock.patch.object(JobResult, "enqueue_job")
     def test_enqueue_job_hook_skipped(self, mock):
-        request = mock.MagicMock(spec=WSGIRequest)
-        request.user = self.user
-        change_context = JobHookChangeContext(request)
+        change_context = JobHookChangeContext(user=self.user)
         with change_logging(change_context):
             Site.objects.create(name="Test Job Hook Site 2")
 
