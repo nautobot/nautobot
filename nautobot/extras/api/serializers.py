@@ -1031,7 +1031,7 @@ class ObjectChangeSerializer(BaseModelSerializer):
 #
 
 
-class RelationshipSerializer(ValidatedModelSerializer):
+class RelationshipSerializer(ValidatedModelSerializer, NotesSerializerMixin):
     url = serializers.HyperlinkedIdentityField(view_name="extras-api:relationship-detail")
 
     source_type = ContentTypeField(
@@ -1061,7 +1061,7 @@ class RelationshipSerializer(ValidatedModelSerializer):
         ]
 
 
-class RelationshipAssociationSerializer(ValidatedModelSerializer, NotesSerializerMixin):
+class RelationshipAssociationSerializer(ValidatedModelSerializer):
     url = serializers.HyperlinkedIdentityField(view_name="extras-api:relationshipassociation-detail")
 
     source_type = ContentTypeField(
