@@ -41,7 +41,7 @@ Installed Jobs are now represented by a data model in the Nautobot database. Thi
 
 For more details please refer to the [Jobs feature documentation](../additional-features/jobs.md) as well as the [Job data model documentation](../models/extras/job.md).
 
-#### Jobs With Sensitive Parameters ([#2125](https://github.com/nautobot/nautobot/issues/2125))
+#### Jobs With Sensitive Parameters ([#2091](https://github.com/nautobot/nautobot/issues/2091))
 
 Jobs model now includes a [`has_sensitive_variables`](../additional-features/jobs.md#has_sensitive_variables) field which by default prevents the job's input parameters from being saved to the database. Review whether each job's input parameters include sensitive data such as passwords or other user credentials before setting this to `False` for any given job.
 
@@ -79,7 +79,7 @@ Python 3.10 is officially supported by Nautobot now, and we are building and pub
 
 The expressions `re` (regex), `nre` (negated regex), `ire` (case-insensitive regex), and `nire` (negated case-insensitive regex) lookup expressions are now dynamically-generated for filter fields inherited by subclasses of `nautobot.utilities.filters.BaseFilterSet`.
 
-#### Remove Stale Scheduled Jobs ([#2125](https://github.com/nautobot/nautobot/issues/2125))
+#### Remove Stale Scheduled Jobs ([#2091](https://github.com/nautobot/nautobot/issues/2091))
 
 [remove_stale_scheduled_jobs](../administration/nautobot-server.md#remove_stale_scheduled_jobs) management command has been added to delete non-recurring scheduled jobs that were scheduled to run more than a specified days ago.
 
@@ -159,7 +159,7 @@ As Python 3.6 has reached end-of-life, and many of Nautobot's dependencies have 
 ### Added
 
 - [#1226](https://github.com/nautobot/nautobot/issues/1226) - Added custom job intervals package management.
-- [#2125](https://github.com/nautobot/nautobot/issues/2125) - Added `remove_stale_scheduled_jobs` management command which removes all stale scheduled jobs and also added `has_sensitive_variables` field to Job model which prevents the job's input parameters from being saved to the database.
+- [#2091](https://github.com/nautobot/nautobot/issues/2091) - Added `remove_stale_scheduled_jobs` management command which removes all stale scheduled jobs and also added `has_sensitive_variables` field to Job model which prevents the job's input parameters from being saved to the database.
 - [#2073](https://github.com/nautobot/nautobot/pull/2073) - Added `--local` option to `nautobot-server runjob` command.
 - [#2080](https://github.com/nautobot/nautobot/pull/2080) - Added `--data` parameter to `nautobot-server runjob` command.
 - [#2143](https://github.com/nautobot/nautobot/pull/2143) - Scheduled Job detail view now includes details of any custom interval.
@@ -180,7 +180,7 @@ As Python 3.6 has reached end-of-life, and many of Nautobot's dependencies have 
 ### Security
 
 !!! important
-    With introducing the `has_sensitive_variables` flag on Job classes and model (see: [#2125](https://github.com/nautobot/nautobot/issues/2125)), jobs can be prevented from storing their inputs in the database. Due to the nature of queuing or scheduling jobs, the desired inputs must be stored for future use.
+    With introducing the `has_sensitive_variables` flag on Job classes and model (see: [#2091](https://github.com/nautobot/nautobot/issues/2091)), jobs can be prevented from storing their inputs in the database. Due to the nature of queuing or scheduling jobs, the desired inputs must be stored for future use.
 
     New safe-default behavior will only permit jobs to be executed immediately, as `has_sensitive_variables` defaults to `True`. This value can be overridden by the Job class itself or the Job model edit page. Values entered for jobs executing immediately go straight to the Celery message bus and are cleaned up on completion of execution.
     
