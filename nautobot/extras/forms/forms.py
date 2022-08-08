@@ -9,7 +9,7 @@ from django.utils.safestring import mark_safe
 
 from nautobot.dcim.models import DeviceRole, DeviceType, Location, Platform, Region, Site
 from nautobot.tenancy.models import Tenant, TenantGroup
-from nautobot.utilities.deprecation import DeprecatedClassMixin
+from nautobot.utilities.deprecation import class_deprecated_in_favor_of
 from nautobot.utilities.forms import (
     add_blank_choice,
     APISelect,
@@ -380,7 +380,8 @@ class CustomFieldModelCSVForm(CSVModelForm, CustomFieldModelFormMixin):
 
 
 # 2.0 TODO: remove this class
-class CustomFieldBulkCreateForm(DeprecatedClassMixin, CustomFieldModelBulkEditFormMixin):
+@class_deprecated_in_favor_of(CustomFieldModelBulkEditFormMixin)
+class CustomFieldBulkCreateForm(CustomFieldModelBulkEditFormMixin):
     """No longer needed as a separate class - use CustomFieldModelBulkEditFormMixin instead."""
 
 

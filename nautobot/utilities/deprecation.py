@@ -1,32 +1,50 @@
 """Utilities for handling deprecation of code and features."""
 
+import logging
+import sys
+import traceback
 import warnings
 
+logger = logging.getLogger(__name__)
 
-class DeprecatedClassMixin:
-    """Mixin to mark a class as deprecated in favor of another, raising a DeprecationWarning when subclassed.
 
-    **Must** be the first mixin in the deprecated class, that is:
+def class_deprecated_in_favor_of(replacement_class):
+    """Decorator to mark a class as deprecated and suggest a replacement class if it is subclassed from."""
 
-    >>> class ObsoleteClass(DeprecatedClassMixin, ReplacementClass):
-
-    and not:
-
-    >>> class ObsoleteClass(ReplacementClass, DeprecatedClassMixin):
-    """
-
-    def __init_subclass__(cls):
-        # For a class mixing in this mixin correctly, as defined above,
-        # cls.__mro__ = [ObsoleteClass, DeprecatedClassMixin, ReplacementClass, object]
-        # And a subclass of that class will be:
-        # cls.__mro__ = [ChildClass, ObsoleteClass, DeprecatedClassMixin, ReplacementClass, object]
-        # We don't want to warn when declaring ObsoleteClass, but we do want to warn on ChildClass or its descendants
-        mro_names = [klass.__name__ for klass in cls.__mro__]
-        mixin_index = mro_names.index("DeprecatedClassMixin")
-        if mixin_index > 1:
+    def decorate(cls):
+        def init_subclass(new_subclass):
+            # Walk the stack up to the class declaration in question.
+            stacklevel = 0
+            for fs in reversed(traceback.extract_stack()):
+                stacklevel += 1
+                if new_subclass.__name__ in fs.line:
+                    break
+            else:
+                stacklevel = 1
             warnings.warn(
-                f"Class {mro_names[mixin_index-1]} is deprecated, and will be removed in a future Nautobot release. "
-                f"For future compatibility, please inherit from class {mro_names[mixin_index+1]} instead.",
+                f"Class {cls.__name__} is deprecated, and will be removed in a future Nautobot release. "
+                f"Instead of deriving {new_subclass.__name__} from {cls.__name__}, "
+                f"please migrate your code to inherit from class {replacement_class.__name__} instead.",
                 DeprecationWarning,
-                stacklevel=2,  # warn from `class ChildClass(ObsoleteClass):`, not from __init_subclass__
+                stacklevel=stacklevel,
             )
+            # Since DeprecationWarnings are silenced by default, also log a traditional warning.
+            # Note: logger.warning() only supports a `stacklevel` parameter in Python 3.8 and later
+            if sys.version_info >= (3, 8):
+                logger.warning(
+                    f"Class {cls.__name__} is deprecated, and will be removed in a future Nautobot release. "
+                    f"Instead of deriving {new_subclass.__name__} from {cls.__name__}, "
+                    f"please migrate your code to inherit from class {replacement_class.__name__} instead.",
+                    stacklevel=stacklevel,
+                )
+            else:
+                logger.warning(
+                    f"Class {cls.__name__} is deprecated, and will be removed in a future Nautobot release. "
+                    f"Instead of deriving {new_subclass.__name__} from {cls.__name__}, "
+                    f"please migrate your code to inherit from class {replacement_class.__name__} instead.",
+                )
+
+        cls.__init_subclass__ = classmethod(init_subclass)
+        return cls
+
+    return decorate

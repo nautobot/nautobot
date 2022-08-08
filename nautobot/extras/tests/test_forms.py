@@ -972,8 +972,8 @@ class DeprecatedAliasesTestCase(TestCase):
                     warning = warn_list[0]
                     self.assertTrue(issubclass(warning.category, DeprecationWarning))
                     self.assertIn(f"{deprecated_form_class.__name__} is deprecated", str(warning))
+                    self.assertIn(f"Instead of deriving MyForm from {deprecated_form_class.__name__}", str(warning))
                     self.assertIn(f"inherit from class {replacement_form_class.__name__} instead", str(warning))
-                    self.assertNotIn("DeprecatedClassMixin", str(warning))
 
                 # Subclassing the replacement class should not warn
                 with warnings.catch_warnings(record=True) as warn_list:
