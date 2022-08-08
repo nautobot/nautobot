@@ -72,6 +72,9 @@ class NautobotHTMLRenderer(renderers.BrowsableAPIRenderer):
         request = renderer_context["request"]
         instance = view.get_object()
         model = view.queryset.model
+        form = None
+        table = None
+        form_class = view.get_form_class()
         content_type = ContentType.objects.get_for_model(model)
         view.queryset = view.alter_queryset(request)
         # Compile a dictionary indicating which permissions are available to the current user for this model
@@ -79,9 +82,6 @@ class NautobotHTMLRenderer(renderers.BrowsableAPIRenderer):
         # Construct valid actions
         valid_actions = self.validate_action_buttons(view, request)
         obj = view.alter_obj_for_edit(instance, request, view.args, view.kwargs)
-        form = None
-        table = None
-        form_class = view.get_form_class()
         if data.get("form"):
             form = data["form"]
         else:
@@ -96,16 +96,7 @@ class NautobotHTMLRenderer(renderers.BrowsableAPIRenderer):
                             mark_safe(f"Invalid filters were specified: {filterset.errors}"),
                         )
                         view.queryset = view.queryset.none()
-                table = view.table_class(view.queryset, user=request.user)
-                if "pk" in table.base_columns and (permissions["change"] or permissions["delete"]):
-                    table.columns.show("pk")
-
-                # Apply the request context
-                paginate = {
-                    "paginator_class": EnhancedPaginator,
-                    "per_page": get_paginate_count(request),
-                }
-                RequestConfig(request, paginate).configure(table)
+                table = self.construct_table(view, request, permissions)
             elif view.action == "destroy":
                 form = form_class(initial=request.GET)
             elif view.action in ["create", "update"]:
@@ -125,7 +116,7 @@ class NautobotHTMLRenderer(renderers.BrowsableAPIRenderer):
                         "return_url": view.get_return_url(request),
                     }
                     form = form_class(initial=initial)
-                    table = view.table_class(view.queryset.filter(pk__in=pk_list), orderable=False)
+                table = view.table_class(view.queryset.filter(pk__in=pk_list), orderable=False)
             elif view.action == "bulk_create":
                 form = view.get_form()
             elif view.action == "bulk_update":
@@ -135,7 +126,6 @@ class NautobotHTMLRenderer(renderers.BrowsableAPIRenderer):
                     pk_list = request.POST.getlist("pk")
                 if "_apply" in request.POST:
                     form = form_class(model, request.POST)
-                    table = view.table_class(view.queryset.filter(pk__in=pk_list), orderable=False)
                     restrict_form_fields(form, request.user)
                 else:
                     # Include the PK list as initial data for the form
@@ -150,7 +140,7 @@ class NautobotHTMLRenderer(renderers.BrowsableAPIRenderer):
 
                     form = form_class(model, initial=initial_data)
                     restrict_form_fields(form, request.user)
-                    table = view.table_class(view.queryset.filter(pk__in=pk_list), orderable=False)
+                table = view.table_class(view.queryset.filter(pk__in=pk_list), orderable=False)
         context = {
             "obj": obj,
             "object": instance,
