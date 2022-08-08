@@ -76,7 +76,7 @@ def _handle_changed_object(change_context, sender, instance, **kwargs):
             objectchange = related_changes.first() if related_changes.exists() else None
         else:
             objectchange = instance.to_objectchange(action)
-            objectchange.user = _get_user_if_authenticated(change_context.user, objectchange)
+            objectchange.user = _get_user_if_authenticated(change_context.request.user, objectchange)
             objectchange.request_id = change_context.id
             objectchange.change_context = change_context.context
             objectchange.change_context_detail = change_context.context_detail
@@ -87,7 +87,7 @@ def _handle_changed_object(change_context, sender, instance, **kwargs):
             enqueue_job_hooks(objectchange)
 
     # Enqueue webhooks
-    enqueue_webhooks(instance, change_context.user, change_context.id, action)
+    enqueue_webhooks(instance, change_context.request.user, change_context.id, action)
 
     # Increment metric counters
     if action == ObjectChangeActionChoices.ACTION_CREATE:
@@ -111,7 +111,7 @@ def _handle_deleted_object(change_context, sender, instance, **kwargs):
     # Record an ObjectChange if applicable
     if hasattr(instance, "to_objectchange"):
         objectchange = instance.to_objectchange(ObjectChangeActionChoices.ACTION_DELETE)
-        objectchange.user = _get_user_if_authenticated(change_context.user, objectchange)
+        objectchange.user = _get_user_if_authenticated(change_context.request.user, objectchange)
         objectchange.request_id = change_context.id
         objectchange.change_context = change_context.context
         objectchange.change_context_detail = change_context.context_detail
@@ -121,7 +121,7 @@ def _handle_deleted_object(change_context, sender, instance, **kwargs):
         enqueue_job_hooks(objectchange)
 
     # Enqueue webhooks
-    enqueue_webhooks(instance, change_context.user, change_context.id, ObjectChangeActionChoices.ACTION_DELETE)
+    enqueue_webhooks(instance, change_context.request.user, change_context.id, ObjectChangeActionChoices.ACTION_DELETE)
 
     # Increment metric counters
     model_deletes.labels(instance._meta.model_name).inc()

@@ -3,6 +3,7 @@ from contextlib import contextmanager
 
 from django.contrib.auth import get_user_model
 from django.db.models.signals import m2m_changed, pre_delete, post_save
+from django.test.client import RequestFactory
 
 from nautobot.extras.choices import ObjectChangeEventContextChoices
 from nautobot.extras.signals import _handle_changed_object, _handle_deleted_object
@@ -16,14 +17,14 @@ class ChangeContext:
     one will be generated to relate any changes to this transaction. Convenience
     classes are provided for each context.
 
-    :param user: User object
+    :param request: WSGIRequest object
     :param context: Context of the transaction, must match a choice in nautobot.extras.choices.ObjectChangeEventContextChoices
     :param context_detail: Optional extra details about the transaction (ex: the plugin name that initiated the change)
-    :param id: Optional uuid object to uniquely identify the transaction
+    :param id: Optional uuid object to uniquely identify the transaction. One will be generated if not supplied
     """
 
-    def __init__(self, user, context=None, context_detail="", id=None):
-        self.user = user
+    def __init__(self, request, context=None, context_detail="", id=None):
+        self.request = request
 
         if context is not None:
             self.context = context
@@ -88,7 +89,7 @@ def change_logging(change_context):
 
 
 @contextmanager
-def web_request_context(user, context_detail=""):
+def web_request_context(user, context_detail="", id=None):
     """
     Emulate the context of an HTTP request, which provides functions like change logging and webhook processing
     in response to data changes. This context manager is for use with low level utility tooling, such as the
@@ -106,11 +107,14 @@ def web_request_context(user, context_detail=""):
 
     :param user: User object
     :param context_detail: Optional extra details about the transaction (ex: the plugin name that initiated the change)
+    :param id: Optional uuid object to uniquely identify the transaction. One will be generated if not supplied
     """
 
     if not isinstance(user, get_user_model()):
         raise TypeError("The user object must be an instance of nautobot.users.models.User")
 
-    change_context = ORMChangeContext(user, context_detail=context_detail)
+    request = RequestFactory().request(SERVER_NAME="web_request_context")
+    request.user = user
+    change_context = ORMChangeContext(request, context_detail=context_detail, id=id)
     with change_logging(change_context):
-        yield
+        yield request
