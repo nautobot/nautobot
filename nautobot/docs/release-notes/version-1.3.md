@@ -43,7 +43,7 @@ For more details please refer to the [Jobs feature documentation](../additional-
 
 #### Jobs With Sensitive Parameters ([#2125](https://github.com/nautobot/nautobot/issues/2125))
 
-Jobs model now includes [`has_sensitive_variables`](../additional-features/jobs.md#has_sensitive_variables) field which unless set to False prevents the job's input parameters from being saved to the database. This is important to set correctly if the job's input parameters include sensitive data such as passwords or other user credentials.
+Jobs model now includes a [`has_sensitive_variables`](../additional-features/jobs.md#has_sensitive_variables) field which by default prevents the job's input parameters from being saved to the database. Review whether each job's input parameters include sensitive data such as passwords or other user credentials before setting this to `False` for any given job.
 
 #### JSON Type for Custom Fields ([#897](https://github.com/nautobot/nautobot/issues/897))
 
