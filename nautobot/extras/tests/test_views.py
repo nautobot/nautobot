@@ -1428,6 +1428,8 @@ class JobTestCase(
             "soft_time_limit": 350,
             "time_limit_override": True,
             "time_limit": 650,
+            "has_sensitive_variables": False,
+            "has_sensitive_variables_override": True,
         }
 
     #
@@ -1689,6 +1691,28 @@ class JobTestCase(
 
             scheduled = ScheduledJob.objects.last()
             self.assertEqual(scheduled.kwargs["scheduled_job_pk"], str(scheduled.pk))
+
+    @mock.patch("nautobot.extras.views.get_worker_count", return_value=1)
+    def test_run_job_with_sensitive_variables_for_future(self, _):
+        self.add_permissions("extras.run_job")
+        self.add_permissions("extras.view_scheduledjob")
+
+        self.test_pass.has_sensitive_variables = True
+        self.test_pass.has_sensitive_variables_override = True
+        self.test_pass.validated_save()
+
+        start_time = timezone.now() + timedelta(minutes=1)
+        data = {
+            "_schedule_type": "future",
+            "_schedule_name": "test",
+            "_schedule_start_time": str(start_time),
+        }
+        for run_url in self.run_urls:
+            response = self.client.post(run_url, data)
+            self.assertHttpStatus(response, 200, msg=self.run_urls[1])
+
+            content = extract_page_body(response.content.decode(response.charset))
+            self.assertIn("Unable to schedule job: Job has sensitive input variables.", content)
 
 
 # TODO: Convert to StandardTestCases.Views

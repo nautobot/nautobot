@@ -219,6 +219,10 @@ class BaseJob:
         return getattr(cls.Meta, "time_limit", 0)
 
     @classproperty
+    def has_sensitive_variables(cls):
+        return getattr(cls.Meta, "has_sensitive_variables", True)
+
+    @classproperty
     def properties_dict(cls):
         """
         Return all relevant classproperties as a dict.
@@ -235,6 +239,7 @@ class BaseJob:
             "read_only": cls.read_only,
             "soft_time_limit": cls.soft_time_limit,
             "time_limit": cls.time_limit,
+            "has_sensitive_variables": cls.has_sensitive_variables,
         }
 
     @classmethod

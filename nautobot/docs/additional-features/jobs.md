@@ -130,6 +130,17 @@ Default: `[]`
 
 A list of strings (field names) representing the order your job [variables](#variables) should be rendered as form fields in the job submission UI. If not defined, the variables will be listed in order of their definition in the code.
 
+#### `has_sensitive_variables`
+
+Default: `True`
+
+Unless set to False, it prevents the job's input parameters from being saved to the database. This defaults to True so as to protect against inadvertent database exposure of input parameters that may include sensitive data such as passwords or other user credentials. Review whether each job's inputs contain any such variables before setting this to False; if a job _does_ contain sensitive inputs, if possible you should consider whether the job could be re-implemented using Nautobot's [`Secrets`](../core-functionality/secrets) feature as a way to ensure that the sensitive data is not directly provided as a job variable at all.
+
+Important notes about jobs with sensitive variables:
+
+* Such jobs cannot be scheduled to run in the future or on a recurring schedule (as scheduled jobs must by necessity store their variables in the database for future reference).
+* Jobs with sensitive variables cannot be marked as requiring approval (as jobs pending approval must store their variables in the database until approved).
+
 #### `hidden`
 
 Default: `False`

@@ -561,6 +561,7 @@ class JobFilterSet(BaseFilterSet, CustomFieldModelFilterSet):
             "grouping",
             "installed",
             "enabled",
+            "has_sensitive_variables",
             "approval_required",
             "commit_default",
             "hidden",
@@ -576,6 +577,7 @@ class JobFilterSet(BaseFilterSet, CustomFieldModelFilterSet):
             "read_only_override",
             "soft_time_limit_override",
             "time_limit_override",
+            "has_sensitive_variables_override",
         ]
 
 

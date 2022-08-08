@@ -194,6 +194,22 @@
                 </td>
             </tr>
             <tr>
+                <td>Has Sensitive Variables</td>
+                <td>{{ object.has_sensitive_variables | render_boolean }}</td>
+                <td>
+                    {% if object.has_sensitive_variables_override %}
+                        <span class="text-muted">
+                            overridden; default is
+                            {% if object.installed %}
+                                {{ object.job_class.has_sensitive_variables | render_boolean }}
+                            {% else %}
+                                unknown (not currently installed)
+                            {% endif %}
+                        </span>
+                    {% endif %}
+                </td>
+            </tr>
+            <tr>
                 <td>Execution Soft Time Limit</td>
                 <td>
                     {% if object.soft_time_limit > 0 %}
