@@ -25,12 +25,20 @@ class NautobotHTMLRenderer(renderers.BrowsableAPIRenderer):
         return filter_params
 
     def get_filter_form(self, view, request, *args, **kwargs):
-        if view.filterset_form_class:
+        """
+        Helper function to obtain the filter_form_class if there is one,
+        and then initialize and return the filter_form used in the ObjectListView UI.
+        """
+        if view.filterset_form_class is not None:
             return view.filterset_form_class(request.GET, label_suffix="", *args, **kwargs)
         else:
             return None
 
     def construct_user_permissions(self, request, model):
+        """
+        Helper function to gather the user's permissions to add, change, delete and view the model,
+        and then render the action buttons accordingly allowed in the ObjectListView UI.
+        """
         permissions = {}
         for action in ("add", "change", "delete", "view"):
             perm_name = get_permission_for_model(model, action)
@@ -38,6 +46,9 @@ class NautobotHTMLRenderer(renderers.BrowsableAPIRenderer):
         return permissions
 
     def construct_table(self, view, request, permissions):
+        """
+        Helper function to construct and paginate the table for render used in the ObjectListView UI.
+        """
         table = view.table_class(view.queryset, user=request.user)
         if "pk" in table.base_columns and (permissions["change"] or permissions["delete"]):
             table.columns.show("pk")
@@ -68,10 +79,13 @@ class NautobotHTMLRenderer(renderers.BrowsableAPIRenderer):
         return valid_actions
 
     def get_context(self, data, accepted_media_type, renderer_context):
+        """
+        Override get_context() from BrowsableAPIRenderer to obtain the context data we need to render our templates.
+        """
         view = renderer_context["view"]
         request = renderer_context["request"]
         instance = view.get_object()
-        model = view.queryset.model
+        model = view.model
         form = None
         table = None
         form_class = view.get_form_class()
@@ -87,7 +101,7 @@ class NautobotHTMLRenderer(renderers.BrowsableAPIRenderer):
         else:
             if view.action == "list":
                 filter_params = self.get_filter_params(view, request)
-                if view.filterset_class:
+                if view.filterset_form_class is not None:
                     filterset = view.filterset_class(filter_params, view.queryset)
                     view.queryset = filterset.qs
                     if not filterset.is_valid():
@@ -169,6 +183,7 @@ class NautobotHTMLRenderer(renderers.BrowsableAPIRenderer):
 
     def render(self, data, accepted_media_type=None, renderer_context=None):
         view = renderer_context["view"]
+        # Get the corresponding template based on self.action unless it is previously set. See BulkCreateView/import_success.html
         if data.get("template"):
             self.template = data["template"]
         else:

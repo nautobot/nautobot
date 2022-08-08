@@ -5,49 +5,109 @@ from nautobot.extras.views import ObjectChangeLogView, ObjectNotesView
 from . import views
 from .models import Circuit, CircuitTermination, CircuitType, Provider, ProviderNetwork
 
+from rest_framework.routers import Route, SimpleRouter
+
+
+class DRFViewSetRouter(SimpleRouter):
+    """
+    Django Rest Framework ViewSet Custom Router.
+    """
+
+    routes = [
+        Route(
+            url=r"^{prefix}$",
+            mapping={"get": "list"},
+            name="{basename}_list",
+            detail=False,
+            initkwargs={"suffix": "List"},
+        ),
+        Route(
+            url=r"^{prefix}/add/$",
+            mapping={
+                "get": "create",
+                "post": "create",
+            },
+            name="{basename}_add",
+            detail=False,
+            initkwargs={"suffix": "Add"},
+        ),
+        Route(
+            url=r"^{prefix}/import/$",
+            mapping={
+                "get": "bulk_create",
+                "post": "bulk_create",
+            },
+            name="{basename}_import",
+            detail=False,
+            initkwargs={"suffix": "Import"},
+        ),
+        Route(
+            url=r"^{prefix}/edit/$",
+            mapping={
+                "post": "bulk_update",
+            },
+            name="{basename}_bulk_edit",
+            detail=False,
+            initkwargs={"suffix": "Bulk Edit"},
+        ),
+        Route(
+            url=r"^{prefix}/delete/$",
+            mapping={
+                "post": "bulk_destroy",
+            },
+            name="{basename}_bulk_delete",
+            detail=False,
+            initkwargs={"suffix": "Bulk Delete"},
+        ),
+        Route(
+            url=r"^{prefix}/{lookup}$",
+            mapping={"get": "retrieve"},
+            name="{basename}",
+            detail=True,
+            initkwargs={"suffix": "Detail"},
+        ),
+        Route(
+            url=r"^{prefix}/{lookup}/delete/$",
+            mapping={
+                "get": "destroy",
+                "post": "destroy",
+            },
+            name="{basename}_delete",
+            detail=True,
+            initkwargs={"suffix": "Delete"},
+        ),
+        Route(
+            url=r"^{prefix}/{lookup}/edit/$",
+            mapping={
+                "get": "update",
+                "post": "update",
+            },
+            name="{basename}_edit",
+            detail=True,
+            initkwargs={"suffix": "Edit"},
+        ),
+    ]
+
+    def exclude_urls(self, excluded_urls):
+        """
+        Helper function to remove any urls that are not included in the viewset or need to be re-initialized.
+        """
+        for url in self.urls:
+            if url.name in excluded_urls:
+                self.urls.remove(url)
+
+
 app_name = "circuits"
+router = DRFViewSetRouter()
+router.register("providers", views.ProviderDRFViewSet, basename="provider")
+router.register("provider-networks", views.ProviderNetworkDRFViewSet, basename="providernetwork")
+router.register("circuit-types", views.CircuitTypeDRFViewSet, basename="circuittype")
+router.register("circuits", views.CircuitDRFViewSet, basename="circuit")
+router.register("circuit-terminations", views.CircuitTerminationDRFViewset, basename="circuittermination")
+excluded_urls = ["circuittype_bulk_edit"]
+router.exclude_urls(excluded_urls)
 
 urlpatterns = [
-    path(
-        "providers/",
-        views.ProviderDRFViewSet.as_view({"get": "list"}),
-        name="provider_list",
-    ),
-    path(
-        "providers/add/",
-        views.ProviderDRFViewSet.as_view({"get": "create", "post": "create"}),
-        name="provider_add",
-    ),
-    path(
-        "providers/import/",
-        views.ProviderDRFViewSet.as_view({"get": "bulk_create", "post": "bulk_create"}),
-        name="provider_import",
-    ),
-    path(
-        "providers/edit/",
-        views.ProviderDRFViewSet.as_view({"post": "bulk_update"}),
-        name="provider_bulk_edit",
-    ),
-    path(
-        "providers/delete/",
-        views.ProviderDRFViewSet.as_view({"post": "bulk_destroy"}),
-        name="provider_bulk_delete",
-    ),
-    path(
-        "providers/<slug:slug>/",
-        views.ProviderDRFViewSet.as_view({"get": "retrieve"}),
-        name="provider",
-    ),
-    path(
-        "providers/<slug:slug>/edit/",
-        views.ProviderDRFViewSet.as_view({"get": "update", "post": "update"}),
-        name="provider_edit",
-    ),
-    path(
-        "providers/<slug:slug>/delete/",
-        views.ProviderDRFViewSet.as_view({"get": "destroy", "post": "destroy"}),
-        name="provider_delete",
-    ),
     path(
         "providers/<slug:slug>/changelog/",
         ObjectChangeLogView.as_view(),
@@ -61,91 +121,16 @@ urlpatterns = [
         kwargs={"model": Provider},
     ),
     path(
-        "provider-networks/",
-        views.ProviderNetworkDRFViewSet.as_view({"get": "list"}),
-        name="providernetwork_list",
-    ),
-    path(
-        "provider-networks/add/",
-        views.ProviderNetworkDRFViewSet.as_view({"get": "create", "post": "create"}),
-        name="providernetwork_add",
-    ),
-    path(
-        "provider-networks/import/",
-        views.ProviderNetworkDRFViewSet.as_view({"get": "bulk_create", "post": "bulk_create"}),
-        name="providernetwork_import",
-    ),
-    path(
-        "provider-networks/edit/",
-        views.ProviderNetworkDRFViewSet.as_view({"post": "bulk_update"}),
-        name="providernetwork_bulk_edit",
-    ),
-    path(
-        "provider-networks/delete/",
-        views.ProviderNetworkDRFViewSet.as_view({"post": "bulk_destroy"}),
-        name="providernetwork_bulk_delete",
-    ),
-    path(
-        "provider-networks/<slug:slug>/",
-        views.ProviderNetworkDRFViewSet.as_view({"get": "retrieve"}),
-        name="providernetwork",
-    ),
-    path(
-        "provider-networks/<slug:slug>/edit/",
-        views.ProviderNetworkDRFViewSet.as_view({"get": "update", "post": "update"}),
-        name="providernetwork_edit",
-    ),
-    path(
         "provider-networks/<slug:slug>/notes/",
         ObjectNotesView.as_view(),
         name="providernetwork_notes",
         kwargs={"model": ProviderNetwork},
     ),
     path(
-        "provider-networks/<slug:slug>/delete/",
-        views.ProviderNetworkDRFViewSet.as_view({"get": "destroy", "post": "destroy"}),
-        name="providernetwork_delete",
-    ),
-    path(
         "provider-networks/<slug:slug>/changelog/",
         ObjectChangeLogView.as_view(),
         name="providernetwork_changelog",
         kwargs={"model": ProviderNetwork},
-    ),
-    path(
-        "circuit-types/",
-        views.CircuitTypeDRFViewSet.as_view({"get": "list"}),
-        name="circuittype_list",
-    ),
-    path(
-        "circuit-types/add/",
-        views.CircuitTypeDRFViewSet.as_view({"get": "create", "post": "create"}),
-        name="circuittype_add",
-    ),
-    path(
-        "circuit-types/import/",
-        views.CircuitTypeDRFViewSet.as_view({"get": "bulk_create", "post": "bulk_create"}),
-        name="circuittype_import",
-    ),
-    path(
-        "circuit-types/delete/",
-        views.CircuitTypeDRFViewSet.as_view({"post": "bulk_destroy"}),
-        name="circuittype_bulk_delete",
-    ),
-    path(
-        "circuit-types/<slug:slug>/",
-        views.CircuitTypeDRFViewSet.as_view({"get": "retrieve"}),
-        name="circuittype",
-    ),
-    path(
-        "circuit-types/<slug:slug>/edit/",
-        views.CircuitTypeDRFViewSet.as_view({"get": "update", "post": "update"}),
-        name="circuittype_edit",
-    ),
-    path(
-        "circuit-types/<slug:slug>/delete/",
-        views.CircuitTypeDRFViewSet.as_view({"get": "destroy", "post": "destroy"}),
-        name="circuittype_delete",
     ),
     path(
         "circuit-types/<slug:slug>/changelog/",
@@ -158,46 +143,6 @@ urlpatterns = [
         ObjectNotesView.as_view(),
         name="circuittype_notes",
         kwargs={"model": CircuitType},
-    ),
-    path(
-        "circuits/",
-        views.CircuitDRFViewSet.as_view({"get": "list"}),
-        name="circuit_list",
-    ),
-    path(
-        "circuits/add/",
-        views.CircuitDRFViewSet.as_view({"get": "create", "post": "create"}),
-        name="circuit_add",
-    ),
-    path(
-        "circuits/import/",
-        views.CircuitDRFViewSet.as_view({"get": "bulk_create", "post": "bulk_create"}),
-        name="circuit_import",
-    ),
-    path(
-        "circuits/edit/",
-        views.CircuitDRFViewSet.as_view({"post": "bulk_update"}),
-        name="circuit_bulk_edit",
-    ),
-    path(
-        "circuits/delete/",
-        views.CircuitDRFViewSet.as_view({"post": "bulk_destroy"}),
-        name="circuit_bulk_delete",
-    ),
-    path(
-        "circuits/<uuid:pk>/",
-        views.CircuitDRFViewSet.as_view({"get": "retrieve"}),
-        name="circuit",
-    ),
-    path(
-        "circuits/<uuid:pk>/edit/",
-        views.CircuitDRFViewSet.as_view({"get": "update", "post": "update"}),
-        name="circuit_edit",
-    ),
-    path(
-        "circuits/<uuid:pk>/delete/",
-        views.CircuitDRFViewSet.as_view({"get": "destroy", "post": "destroy"}),
-        name="circuit_delete",
     ),
     path(
         "circuits/<uuid:pk>/changelog/",
@@ -220,21 +165,6 @@ urlpatterns = [
         "circuits/<uuid:circuit>/terminations/add/",
         views.CircuitTerminationDRFViewset.as_view({"get": "create", "post": "create"}),
         name="circuittermination_add",
-    ),
-    path(
-        "circuit-terminations/<uuid:pk>/",
-        views.CircuitTerminationDRFViewset.as_view({"get": "retrieve"}),
-        name="circuittermination",
-    ),
-    path(
-        "circuit-terminations/<uuid:pk>/edit/",
-        views.CircuitTerminationDRFViewset.as_view({"get": "update", "post": "update"}),
-        name="circuittermination_edit",
-    ),
-    path(
-        "circuit-terminations/<uuid:pk>/delete/",
-        views.CircuitTerminationDRFViewset.as_view({"get": "destroy", "post": "destroy"}),
-        name="circuittermination_delete",
     ),
     path(
         "circuit-terminations/<uuid:termination_a_id>/connect/<str:termination_b_type>/",
@@ -261,3 +191,4 @@ urlpatterns = [
         kwargs={"model": CircuitTermination},
     ),
 ]
+urlpatterns += router.urls

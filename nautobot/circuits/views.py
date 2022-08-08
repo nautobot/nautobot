@@ -12,23 +12,24 @@ from nautobot.utilities.paginator import EnhancedPaginator, get_paginate_count
 from nautobot.utilities.utils import count_related
 
 from . import filters, forms, tables
-from .api import nested_serializers
+from .api import serializers
 from .choices import CircuitTerminationSideChoices
-from .models import Circuit, CircuitType, CircuitTermination, Provider, ProviderNetwork
+from .models import Circuit, CircuitTermination, CircuitType, Provider, ProviderNetwork
 
 
 class CircuitTypeDRFViewSet(NautobotDRFViewSet):
     model = CircuitType
-    serializer_class = nested_serializers.NestedCircuitTypeSerializer
-    queryset = CircuitType.objects.annotate(circuit_count=count_related(Circuit, "type"))
-    table_class = tables.CircuitTypeTable
-    form_class = forms.CircuitTypeForm
-    filterset_class = filters.CircuitTypeFilterSet
     bulk_create_form_class = forms.CircuitTypeCSVForm
+    filterset_class = filters.CircuitTypeFilterSet
+    form_class = forms.CircuitTypeForm
     lookup_field = "slug"
+    queryset = CircuitType.objects.annotate(circuit_count=count_related(Circuit, "type"))
+    serializer_class = serializers.CircuitTypeSerializer
+    table_class = tables.CircuitTypeTable
 
     def get_extra_context(self, request, instance):
         # Circuits
+        context = super().get_extra_context(request, instance)
         if self.action == "retrieve":
             circuits = (
                 Circuit.objects.restrict(request.user, "view")
@@ -44,19 +45,16 @@ class CircuitTypeDRFViewSet(NautobotDRFViewSet):
                 "per_page": get_paginate_count(request),
             }
             RequestConfig(request, paginate).configure(circuits_table)
-            return {
-                "circuits_table": circuits_table,
-            }
-        else:
-            return super().get_extra_context(request, instance)
+            context["circuits_table"] = circuits_table
+        return context
 
 
 class CircuitTerminationDRFViewset(NautobotDRFViewSet):
     model = CircuitTermination
-    queryset = CircuitTermination.objects.all()
-    serializer_class = nested_serializers.NestedCircuitTerminationSerializer
     form_class = forms.CircuitTerminationForm
     lookup_field = "pk"
+    queryset = CircuitTermination.objects.all()
+    serializer_class = serializers.CircuitTerminationSerializer
 
     def alter_obj_for_edit(self, obj, request, url_args, url_kwargs):
         if "circuit" in url_kwargs:
@@ -69,17 +67,18 @@ class CircuitTerminationDRFViewset(NautobotDRFViewSet):
 
 class ProviderDRFViewSet(NautobotDRFViewSet):
     model = Provider
-    serializer_class = nested_serializers.NestedProviderSerializer
-    queryset = Provider.objects.annotate(count_circuits=count_related(Circuit, "provider"))
-    table_class = tables.ProviderTable
-    form_class = forms.ProviderForm
-    filterset_form_class = forms.ProviderFilterForm
-    filterset_class = filters.ProviderFilterSet
     bulk_create_form_class = forms.ProviderCSVForm
     bulk_update_form_class = forms.ProviderBulkEditForm
+    filterset_class = filters.ProviderFilterSet
+    filterset_form_class = forms.ProviderFilterForm
+    form_class = forms.ProviderForm
     lookup_field = "slug"
+    queryset = Provider.objects.annotate(count_circuits=count_related(Circuit, "provider"))
+    serializer_class = serializers.ProviderSerializer
+    table_class = tables.ProviderTable
 
     def get_extra_context(self, request, instance):
+        context = super().get_extra_context(request, instance)
         if self.action == "retrieve":
             circuits = (
                 Circuit.objects.restrict(request.user, "view")
@@ -95,27 +94,25 @@ class ProviderDRFViewSet(NautobotDRFViewSet):
             }
             RequestConfig(request, paginate).configure(circuits_table)
 
-            return {
-                "circuits_table": circuits_table,
-            }
-        else:
-            return super().get_extra_context(request, instance)
+            context["circuits_table"] = circuits_table
+        return context
 
 
 class CircuitDRFViewSet(NautobotDRFViewSet):
     model = Circuit
-    prefetch_related = ["provider", "type", "tenant", "termination_a", "termination_z"]
-    serializer_class = nested_serializers.NestedCircuitSerializer
-    queryset = Circuit.objects.all()
-    table_class = tables.CircuitTable
-    form_class = forms.CircuitForm
-    filterset_class = filters.CircuitFilterSet
-    filterset_form_class = forms.CircuitFilterForm
     bulk_create_form_class = forms.CircuitCSVForm
     bulk_update_form_class = forms.CircuitBulkEditForm
+    filterset_class = filters.CircuitFilterSet
+    filterset_form_class = forms.CircuitFilterForm
+    form_class = forms.CircuitForm
     lookup_field = "pk"
+    prefetch_related = ["provider", "type", "tenant", "termination_a", "termination_z"]
+    queryset = Circuit.objects.all()
+    serializer_class = serializers.CircuitSerializer
+    table_class = tables.CircuitTable
 
     def get_extra_context(self, request, instance):
+        context = super().get_extra_context(request, instance)
         if self.action == "retrieve":
             # A-side termination
             termination_a = (
@@ -149,27 +146,25 @@ class CircuitDRFViewSet(NautobotDRFViewSet):
                     request.user, "view"
                 )
 
-            return {
-                "termination_a": termination_a,
-                "termination_z": termination_z,
-            }
-        else:
-            return super().get_extra_context(request, instance)
+            context["termination_a"] = termination_a
+            context["termination_z"] = termination_z
+        return context
 
 
 class ProviderNetworkDRFViewSet(NautobotDRFViewSet):
     model = ProviderNetwork
-    queryset = ProviderNetwork.objects.all()
-    serializer_class = nested_serializers.NestedProviderNetworkSerializer
-    table_class = tables.ProviderNetworkTable
-    form_class = forms.ProviderNetworkForm
-    filterset_form_class = forms.ProviderNetworkFilterForm
-    filterset_class = filters.ProviderNetworkFilterSet
     bulk_create_form_class = forms.ProviderNetworkCSVForm
     bulk_update_form_class = forms.ProviderNetworkBulkEditForm
+    filterset_class = filters.ProviderNetworkFilterSet
+    filterset_form_class = forms.ProviderNetworkFilterForm
+    form_class = forms.ProviderNetworkForm
     lookup_field = "slug"
+    queryset = ProviderNetwork.objects.all()
+    serializer_class = serializers.ProviderNetworkSerializer
+    table_class = tables.ProviderNetworkTable
 
     def get_extra_context(self, request, instance):
+        context = super().get_extra_context(request, instance)
         if self.action == "retrieve":
             circuits = (
                 Circuit.objects.restrict(request.user, "view")
@@ -184,11 +179,8 @@ class ProviderNetworkDRFViewSet(NautobotDRFViewSet):
             paginate = {"paginator_class": EnhancedPaginator, "per_page": get_paginate_count(request)}
             RequestConfig(request, paginate).configure(circuits_table)
 
-            return {
-                "circuits_table": circuits_table,
-            }
-        else:
-            return super().get_extra_context(request, instance)
+            context["circuits_table"] = circuits_table
+        return context
 
 
 class CircuitSwapTerminations(generic.ObjectEditView):
