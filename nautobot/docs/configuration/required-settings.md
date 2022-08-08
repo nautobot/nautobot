@@ -120,7 +120,7 @@ Nautobot supports database query caching using [`django-cacheops`](https://githu
 
 Caching is configured by defining the [`CACHEOPS_REDIS`](#cacheops_redis) setting which in its simplest form is just a URL.
 
-For more details Nautobot's caching see the guide on [Caching](../../additional-features/caching).
+For more details on Nautobot's caching, including TLS and HA configuration, see the guide on [Caching](../../additional-features/caching).
 
 !!! important
     Nautobot does not utilize the built-in [Django cache framework](https://docs.djangoproject.com/en/stable/topics/cache/) to perform caching, as `django-cacheops` takes its place.
@@ -137,7 +137,24 @@ If you wish to use SSL, you may set the URL scheme to `rediss://`, for example:
 CACHEOPS_REDIS = "rediss://localhost:6379/1"
 ```
 
-This setting may also be a dictionary style, but that is not covered here. Please see the official guide on [Cacheops setup](https://github.com/Suor/django-cacheops#setup).
+This setting may also be a dictionary style to provide additional options such as custom TLS/SSL settings, for example:
+
+```python
+import ssl
+
+CACHEOPS_REDIS = {
+    "host": os.getenv("NAUTOBOT_REDIS_HOST", "localhost"),
+    "port": int(os.getenv("NAUTOBOT_REDIS_PORT", 6379)),
+    "password": os.getenv("NAUTOBOT_REDIS_PASSWORD", ""),
+    "ssl": True,
+    "ssl_cert_reqs": ssl.CERT_REQUIRED,
+    "ssl_ca_certs": "/opt/nautobot/redis/ca.crt",
+    "ssl_certfile": "/opt/nautobot/redis/tls.crt",
+    "ssl_keyfile": "/opt/nautobot/redis/tls.key",
+}
+```
+
+Additional settings may be available and are not covered here. Please see the official guide on [Cacheops setup](https://github.com/Suor/django-cacheops#setup).
 
 #### CACHEOPS_SENTINEL
 
@@ -161,6 +178,9 @@ The [`django-redis`](https://github.com/jazzband/django-redis) Django plugin is 
 Default:
 
 ```python
+# Uncomment the following line to configure TLS/SSL
+# import ssl
+
 CACHES = {
     "default": {
         "BACKEND": "django_redis.cache.RedisCache",
@@ -168,6 +188,13 @@ CACHES = {
         "TIMEOUT": 300,
         "OPTIONS": {
             "CLIENT_CLASS": "django_redis.client.DefaultClient",
+            # Uncomment the following lines to configure TLS/SSL
+            # "CONNECTION_POOL_KWARGS": {
+            #     "ssl_cert_reqs": ssl.CERT_REQUIRED,
+            #     "ssl_ca_certs": "/opt/nautobot/redis/ca.crt",
+            #     "ssl_certfile": "/opt/nautobot/redis/tls.crt",
+            #     "ssl_keyfile": "/opt/nautobot/redis/tls.key",
+            # },
         },
     }
 }
@@ -285,6 +312,24 @@ This setting tells Celery and its workers how and where to communicate with the 
 #### CELERY_RESULT_BACKEND
 
 This setting tells Celery and its workers how and where to store message results. This defaults to the same value as `CELERY_BROKER_URL`. In some more advanced setups it may be required for these to be separate locations, however in our configuration guides these are always the same. Please see the [optional settings documentation for `CELERY_RESULT_BACKEND`](../optional-settings#celery_result_backend) for more information on customizing this setting.
+
+#### Configuring Celery with TLS
+
+Optionally, you can configure Celery to use custom SSL certificates to connect to redis by setting the following variables:
+
+```python
+import ssl
+
+CELERY_REDIS_BACKEND_USE_SSL = {
+    "ssl_cert_reqs": ssl.CERT_REQUIRED,
+    "ssl_ca_certs": "/opt/nautobot/redis/ca.crt",
+    "ssl_certfile": "/opt/nautobot/redis/tls.crt",
+    "ssl_keyfile": "/opt/nautobot/redis/tls.key",
+}
+CELERY_BROKER_USE_SSL = CELERY_REDIS_BACKEND_USE_SSL
+```
+
+Please see the celery [documentation](https://docs.celeryq.dev/en/stable/userguide/configuration.html#std-setting-broker_use_ssl) for additional details.
 
 #### Configuring Celery for High Availability
 
