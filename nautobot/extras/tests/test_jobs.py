@@ -623,7 +623,20 @@ class RemoveScheduledJobManagementCommandTestCase(TestCase):
                 one_off=i % 2 == 0,  # True / False
             )
 
+        ScheduledJob.objects.create(
+            name=f"test7",
+            task="nautobot.extras.jobs.scheduled_job_handler",
+            job_class="local/test_pass/TestPass",
+            interval=JobExecutionType.TYPE_DAILY,
+            user=self.user,
+            start_time=timezone.now() - datetime.timedelta(days=180),
+        )
+
         out = StringIO()
         call_command("remove_stale_scheduled_jobs", 32, stdout=out)
-        self.assertEqual(ScheduledJob.objects.count(), 1)
+        self.assertEqual(ScheduledJob.objects.count(), 2)
         self.assertIn("Stale scheduled jobs deleted successfully", out.getvalue())
+        self.assertTrue(ScheduledJob.objects.filter(name="test7").exists())
+        self.assertTrue(ScheduledJob.objects.filter(name="test1").exists())
+        for i in range(2, 7):
+            self.assertFalse(ScheduledJob.objects.filter(name=f"test{i}").exists())
