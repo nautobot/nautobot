@@ -624,7 +624,7 @@ class RemoveScheduledJobManagementCommandTestCase(TestCase):
             )
 
         ScheduledJob.objects.create(
-            name=f"test7",
+            name="test7",
             task="nautobot.extras.jobs.scheduled_job_handler",
             job_class="local/test_pass/TestPass",
             interval=JobExecutionType.TYPE_DAILY,
