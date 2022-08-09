@@ -45,20 +45,26 @@ class NautobotHTMLRenderer(renderers.BrowsableAPIRenderer):
             permissions[action] = request.user.has_perm(perm_name)
         return permissions
 
-    def construct_table(self, view, request, permissions):
+    def construct_table(self, view, **kwargs):
         """
-        Helper function to construct and paginate the table for render used in the ObjectListView UI.
+        Helper function to construct and paginate the table for render used in the ObjectListView, BulkUpdateView and BulkDestroyView.
         """
-        table = view.table_class(view.queryset, user=request.user)
-        if "pk" in table.base_columns and (permissions["change"] or permissions["delete"]):
-            table.columns.show("pk")
-
-        # Apply the request context
-        paginate = {
-            "paginator_class": EnhancedPaginator,
-            "per_page": get_paginate_count(request),
-        }
-        return RequestConfig(request, paginate).configure(table)
+        if view.action == "list":
+            permissions = kwargs.pop("permissions")
+            request = kwargs.pop("request")
+            table = view.table_class(view.queryset, user=request.user)
+            if "pk" in table.base_columns and (permissions["change"] or permissions["delete"]):
+                table.columns.show("pk")
+            # Apply the request context
+            paginate = {
+                "paginator_class": EnhancedPaginator,
+                "per_page": get_paginate_count(request),
+            }
+            return RequestConfig(request, paginate).configure(table)
+        else:
+            pk_list = kwargs.pop("pk_list")
+            table = view.table_class(view.queryset.filter(pk__in=pk_list), orderable=False)
+            return table
 
     def validate_action_buttons(self, view, request):
         """Verify actions in self.action_buttons are valid view actions."""
@@ -70,7 +76,7 @@ class NautobotHTMLRenderer(renderers.BrowsableAPIRenderer):
         if not view.action_buttons:
             view.actions_buttons = ("add", "import", "export")
         for action in view.action_buttons:
-            if action in always_valid_actions or validated_viewname(view.queryset.model, action) is not None:
+            if action in always_valid_actions or validated_viewname(view.model, action) is not None:
                 valid_actions.append(action)
             else:
                 invalid_actions.append(action)
@@ -86,8 +92,6 @@ class NautobotHTMLRenderer(renderers.BrowsableAPIRenderer):
         request = renderer_context["request"]
         instance = view.get_object()
         model = view.model
-        form = None
-        table = None
         form_class = view.get_form_class()
         content_type = ContentType.objects.get_for_model(model)
         view.queryset = view.alter_queryset(request)
@@ -95,13 +99,16 @@ class NautobotHTMLRenderer(renderers.BrowsableAPIRenderer):
         permissions = self.construct_user_permissions(request, model)
         # Construct valid actions
         valid_actions = self.validate_action_buttons(view, request)
-        obj = view.alter_obj_for_edit(instance, request, view.args, view.kwargs)
+        return_url = view.get_return_url(request, instance)
+        form = None
+        table = None
+        # Get form for context rendering according to view.action unless it is previously set
         if data.get("form"):
             form = data["form"]
         else:
             if view.action == "list":
                 filter_params = self.get_filter_params(view, request)
-                if view.filterset_form_class is not None:
+                if view.filterset_class is not None:
                     filterset = view.filterset_class(filter_params, view.queryset)
                     view.queryset = filterset.qs
                     if not filterset.is_valid():
@@ -110,17 +117,18 @@ class NautobotHTMLRenderer(renderers.BrowsableAPIRenderer):
                             mark_safe(f"Invalid filters were specified: {filterset.errors}"),
                         )
                         view.queryset = view.queryset.none()
-                table = self.construct_table(view, request, permissions)
+                table = self.construct_table(view, request=request, permissions=permissions)
             elif view.action == "destroy":
                 form = form_class(initial=request.GET)
             elif view.action in ["create", "update"]:
+                instance = view.alter_obj_for_edit(instance, request, view.args, view.kwargs)
                 initial_data = normalize_querydict(request.GET)
-                form = form_class(instance=obj, initial=initial_data)
+                form = form_class(instance=instance, initial=initial_data)
                 restrict_form_fields(form, request.user)
             elif view.action == "bulk_destroy":
                 if request.POST.get("_all"):
                     if view.filterset_class is not None:
-                        pk_list = [obj.pk for obj in self.filterset_class(request.GET, model.objects.only("pk")).qs]
+                        pk_list = [obj.pk for obj in self.filterset_class(request.POST, model.objects.only("pk")).qs]
                     else:
                         pk_list = model.objects.values_list("pk", flat=True)
                 else:
@@ -130,12 +138,15 @@ class NautobotHTMLRenderer(renderers.BrowsableAPIRenderer):
                         "return_url": view.get_return_url(request),
                     }
                     form = form_class(initial=initial)
-                table = view.table_class(view.queryset.filter(pk__in=pk_list), orderable=False)
+                table = self.construct_table(view, pk_list=pk_list)
             elif view.action == "bulk_create":
                 form = view.get_form()
+                return_url = view.get_return_url(request)
+                # if view.import_success_table is not None:
+                #     table = view.import_success_table
             elif view.action == "bulk_update":
                 if request.POST.get("_all") and view.filterset_class is not None:
-                    pk_list = [obj.pk for obj in view.filterset_class(request.GET, view.queryset.only("pk")).qs]
+                    pk_list = [obj.pk for obj in view.filterset_class(request.POST, view.queryset.only("pk")).qs]
                 else:
                     pk_list = request.POST.getlist("pk")
                 if "_apply" in request.POST:
@@ -154,26 +165,25 @@ class NautobotHTMLRenderer(renderers.BrowsableAPIRenderer):
 
                     form = form_class(model, initial=initial_data)
                     restrict_form_fields(form, request.user)
-                table = view.table_class(view.queryset.filter(pk__in=pk_list), orderable=False)
+                table = self.construct_table(view, pk_list=pk_list)
         context = {
-            "obj": obj,
-            "object": instance,
-            "obj_type": view.queryset.model._meta.verbose_name,
-            "obj_type_plural": view.queryset.model._meta.verbose_name_plural,
-            "editing": obj.present_in_database,
-            "form": form,
-            "fields": form_class(model).fields if form_class else None,
-            "table": table if table else data.get("table", None),
-            "return_url": view.get_return_url(request, instance),
-            "verbose_name": view.queryset.model._meta.verbose_name,
-            "verbose_name_plural": view.queryset.model._meta.verbose_name_plural,
+            "action_buttons": valid_actions,
+            "active_tab": "csv-data",
             "changelog_url": view.get_changelog_url(instance),
             "content_type": content_type,
-            "permissions": permissions,
-            "action_buttons": valid_actions,
-            "table_config_form": TableConfigForm(table=table) if table else None,
+            "editing": instance.present_in_database,
+            "fields": form_class(model).fields if form_class else None,
             "filter_form": self.get_filter_form(view, request),
-            "active_tab": "csv-data",
+            "form": form,
+            # I am keeping "object" and "obj" to keep the template changes needed minimally invasive.
+            "object": instance,  # "object" is used in object_detail.html template.
+            "obj": instance,  # "obj" is used in every other template (object_delete, object_edit and etc.).
+            "obj_type": view.model._meta.verbose_name,
+            "obj_type_plural": view.model._meta.verbose_name_plural,
+            "permissions": permissions,
+            "return_url": return_url,
+            "table": table if table else data.get("table", None),
+            "table_config_form": TableConfigForm(table=table) if table else None,
         }
         if view.action == "retrieve":
             context.update(view.get_extra_context(request, instance))
@@ -185,7 +195,7 @@ class NautobotHTMLRenderer(renderers.BrowsableAPIRenderer):
         view = renderer_context["view"]
         # Get the corresponding template based on self.action unless it is previously set. See BulkCreateView/import_success.html
         if data.get("template"):
-            self.template = data["template"]
+            self.template = "import_success.html"
         else:
             self.template = view.get_template_name()
         return super().render(data, accepted_media_type=accepted_media_type, renderer_context=renderer_context)

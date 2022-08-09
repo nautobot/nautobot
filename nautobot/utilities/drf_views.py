@@ -36,7 +36,7 @@ from nautobot.utilities.forms import (
     CSVFileField,
     restrict_form_fields,
 )
-from nautobot.utilities.permissions import get_permission_for_model, resolve_permission
+from nautobot.utilities.permissions import resolve_permission
 from nautobot.utilities.renderers import NautobotHTMLRenderer
 from nautobot.utilities.utils import (
     csv_format,
@@ -56,7 +56,7 @@ PERMISSIONS_ACTION_MAP = {
 }
 
 
-class NautobotViewSetMixin(ViewSetMixin, AccessMixin, GetReturnURLMixin, FormView, generics.GenericAPIView):
+class NautobotViewSetMixin(ViewSetMixin, generics.GenericAPIView, AccessMixin, GetReturnURLMixin, FormView):
     """
     serializer_class has to be specified to eliminate the need to override retrieve() in the RetrieveModelMixin for now.
     It is a step forward in our transition from NetBox legacy code to DRF framework.
@@ -66,11 +66,25 @@ class NautobotViewSetMixin(ViewSetMixin, AccessMixin, GetReturnURLMixin, FormVie
     serializer_class = None
     renderer_classes = [NautobotHTMLRenderer]
 
+    def get_permissions_for_model(self, model, actions):
+        """
+        Resolve the named permissions for a given model (or instance) and a list of actions (e.g. view or add).
+
+        :param model: A model or instance
+        :param actions: A list of actions to perform on the model
+        """
+        permissions = []
+        for action in actions:
+            if action not in ("view", "add", "change", "delete"):
+                raise ValueError(f"Unsupported action: {action}")
+        permissions.append("{}.{}_{}".format(model._meta.app_label, action, model._meta.model_name))
+        return permissions
+
     def get_required_permission(self):
         """
         Obtain the permissions needed to perform certain actions on a model.
         """
-        return get_permission_for_model(self.queryset.model, PERMISSIONS_ACTION_MAP[self.action])
+        return self.get_permissions_for_model(self.queryset.model, [PERMISSIONS_ACTION_MAP[self.action]])
 
     def has_permission(self):
         """
@@ -79,11 +93,12 @@ class NautobotViewSetMixin(ViewSetMixin, AccessMixin, GetReturnURLMixin, FormVie
         user = self.request.user
         permission_required = self.get_required_permission()
         # Check that the user has been granted the required permission(s).
-        if user.has_perms([permission_required]):
+        if user.has_perms(permission_required):
 
             # Update the view's QuerySet to filter only the permitted objects
-            action = resolve_permission(permission_required)[1]
-            self.queryset = self.queryset.restrict(user, action)
+            for permission in permission_required:
+                action = resolve_permission(permission)[1]
+                self.queryset = self.queryset.restrict(user, action)
 
             return True
 
@@ -169,7 +184,7 @@ class NautobotViewSetMixin(ViewSetMixin, AccessMixin, GetReturnURLMixin, FormVie
         elif self.action == "bulk_update":
             logger = logging.getLogger("nautobot.views.BulkUpdateView")
             try:
-                self._process_bulk_update_form(form)
+                self.import_success_table = self._process_bulk_update_form(form)
             except ValidationError as e:
                 messages.error(self.request, f"{self.obj} failed validation: {e}")
                 self.has_error = True
@@ -182,9 +197,7 @@ class NautobotViewSetMixin(ViewSetMixin, AccessMixin, GetReturnURLMixin, FormVie
                 return Response(
                     {
                         "table": obj_table,
-                        "return_url": self.get_return_url(request),
-                        "template": "import_success.html",
-                    },
+                    }
                 )
             except ValidationError:
                 self.has_error = True
@@ -305,27 +318,12 @@ class NautobotViewSetMixin(ViewSetMixin, AccessMixin, GetReturnURLMixin, FormVie
                 form_class = kwargs.get("form_class", None)
         return form_class
 
-    def form_save(self, form):
+    def form_save(self, form, **kwargs):
+        """
+        Generic method to save the object from form.
+        Should be overriden by user if customization is needed.
+        """
         return form.save()
-
-    def initial(self, request, *args, **kwargs):
-        """
-        Runs anything that needs to occur prior to calling the method handler.
-        """
-        self.format_kwarg = self.get_format_suffix(**kwargs)
-
-        # Perform content negotiation and store the accepted info on the request
-        neg = self.perform_content_negotiation(request)
-        request.accepted_renderer, request.accepted_media_type = neg
-
-        # Determine the API version, if versioning is in use.
-        version, scheme = self.determine_version(request, *args, **kwargs)
-        request.version, request.versioning_scheme = version, scheme
-
-        # Ensure that the incoming request is permitted
-        self.perform_authentication(request)
-        self.check_permissions(request)
-        self.check_throttles(request)
 
 
 class ObjectDetailViewMixin(NautobotViewSetMixin, mixins.RetrieveModelMixin):
@@ -614,7 +612,11 @@ class BulkCreateViewMixin(NautobotViewSetMixin, bulk_mixins.BulkCreateModelMixin
         request = self.request
         logger = logging.getLogger("nautobot.views.BulkCreateView")
         with transaction.atomic():
-            headers, records = form.cleaned_data["csv_data"]
+            if request.FILES:
+                field_name = "csv_file"
+            else:
+                field_name = "csv_data"
+            headers, records = form.cleaned_data[field_name]
             for row, data in enumerate(records, start=1):
                 form_class = self.get_form_class()
                 obj_form = form_class(data, headers=headers)

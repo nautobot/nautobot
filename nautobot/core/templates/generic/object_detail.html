@@ -15,7 +15,7 @@
             {% block breadcrumbs %}
                 {% if list_url %}
                 <li><a href="{% url list_url %}">
-                    {{ verbose_name_plural|bettertitle }}
+                    {{ obj_type_plural|bettertitle }}
                 </a></li>
                 {% endif %}
                 {% block extra_breadcrumbs %}{% endblock extra_breadcrumbs %}
@@ -27,7 +27,7 @@
         <div class="col-sm-4 col-md-3">
             <form action="{% url list_url %}" method="get">
                 <div class="input-group">
-                    <input type="text" name="q" class="form-control" placeholder="Search {{ verbose_name_plural }}" />
+                    <input type="text" name="q" class="form-control" placeholder="Search {{ obj_type_plural }}" />
                     <span class="input-group-btn">
                         <button type="submit" class="btn btn-primary">
                             <span class="mdi mdi-magnify" aria-hidden="true"></span>
@@ -69,7 +69,7 @@
     {% block nav_tabs %}
         <li role="presentation"{% if not active_tab and not request.GET.tab or request.GET.tab == "main" %} class="active"{% endif %}>
             <a href="{{ object.get_absolute_url }}#main" onclick="switch_tab(this.href)" aria-controls="main" role="tab" data-toggle="tab">
-                {{ verbose_name|bettertitle }}
+                {{ obj_type|bettertitle }}
             </a>
         </li>
         <li role="presentation"{% if request.GET.tab == 'advanced' %} class="active"{% endif %}>
