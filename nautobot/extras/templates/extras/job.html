@@ -66,6 +66,14 @@
                                 <div class="panel-body">
                                     {% render_form job_form %}
                                 </div>
+                                {% if job_model.has_sensitive_variables %}
+                                    <div class="panel-footer">
+                                        <span class="help-block">
+                                            <i class="mdi mdi-information-outline"></i>
+                                            This job has sensitive variables and can only be executed immediately.
+                                        </span>
+                                    </div>
+                                {% endif %}
                             </div>
                         {% else %}
                              <div class="alert alert-info">
@@ -74,7 +82,7 @@
                             </div>
                             {% render_form job_form %}
                         {% endif %}
-                        <div class="panel panel-default">
+                        <div class="panel panel-default job_execution">
                             <div class="panel-heading">
                                 <strong>Job Execution</strong>
                             </div>
@@ -153,11 +161,22 @@
             $("#id__schedule_start_date").parent().parent().show();
             $("#id__schedule_start_time").parent().parent().show();
         }
+        // Toggle custom crontab field
+        if ($("#id__schedule_type").val() != "custom") {
+            $("#id__recurrence_custom_time").parent().parent().hide();
+        } else {
+            $("#id__recurrence_custom_time").parent().parent().show();
+        }
     }
 
     $(document).ready(function() {
-        $("#id__schedule_type").change(toggleExecutionType);
-        toggleExecutionType();
+        {% if not job_model.has_sensitive_variables %}
+            $("#id__schedule_type").change(toggleExecutionType);
+            toggleExecutionType();
+        {% else %}
+            $("#id__schedule_type").val("immediately");
+            $(".job_execution").hide();
+        {% endif %}
     });
 </script>
 {% endblock %}

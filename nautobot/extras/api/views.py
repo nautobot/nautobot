@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import timedelta
 from django.contrib.contenttypes.models import ContentType
 from django.forms import ValidationError as FormsValidationError
 from django.http import Http404
@@ -10,7 +10,7 @@ from graphene_django.views import GraphQLView
 from graphql import GraphQLError
 from rest_framework import status
 from rest_framework.decorators import action
-from rest_framework.exceptions import MethodNotAllowed, PermissionDenied
+from rest_framework.exceptions import MethodNotAllowed, PermissionDenied, ValidationError
 from rest_framework.response import Response
 from rest_framework.routers import APIRootView
 from rest_framework import mixins, viewsets
@@ -327,7 +327,7 @@ class ImageAttachmentViewSet(ModelViewSet):
 def _create_schedule(serializer, data, commit, job, job_model, request):
     """
     This is an internal function to create a scheduled job from API data.
-    It has to handle boths once-offs (i.e. of type TYPE_FUTURE) and interval
+    It has to handle both once-offs (i.e. of type TYPE_FUTURE) and interval
     jobs.
     """
     job_kwargs = {
@@ -339,11 +339,19 @@ def _create_schedule(serializer, data, commit, job, job_model, request):
     }
     type_ = serializer["interval"]
     if type_ == JobExecutionType.TYPE_IMMEDIATELY:
-        time = datetime.now()
+        time = timezone.now()
         name = serializer.get("name") or f"{job.name} - {time}"
+    elif type_ == JobExecutionType.TYPE_CUSTOM:
+        time = serializer.get("start_time")  # doing .get("key", "default") returns None instead of "default"
+        if time is None:
+            # "start_time" is checked against models.ScheduledJob.earliest_possible_time()
+            # which returns timezone.now() + timedelta(seconds=15)
+            time = timezone.now() + timedelta(seconds=20)
+        name = serializer["name"]
     else:
         time = serializer["start_time"]
         name = serializer["name"]
+    crontab = serializer.get("crontab", "")
 
     # 2.0 TODO: To revisit this as part of a larger Jobs cleanup in 2.0.
     #
@@ -364,6 +372,7 @@ def _create_schedule(serializer, data, commit, job, job_model, request):
         one_off=(type_ == JobExecutionType.TYPE_FUTURE),
         user=request.user,
         approval_required=job_model.approval_required,
+        crontab=crontab,
     )
     scheduled_job.save()
     return scheduled_job
@@ -377,6 +386,11 @@ def _run_job(request, job_model, legacy_response=False):
         raise PermissionDenied("This job is not enabled to be run.")
     if not job_model.installed:
         raise MethodNotAllowed(request.method, detail="This job is not presently installed and cannot be run")
+    if job_model.has_sensitive_variables:
+        if request.data.get("schedule") and request.data["schedule"]["interval"] != JobExecutionType.TYPE_IMMEDIATELY:
+            raise ValidationError(
+                {"schedule": {"interval": ["Unable to schedule job: Job has sensitive input variables"]}}
+            )
 
     job_class = job_model.job_class
     if job_class is None:

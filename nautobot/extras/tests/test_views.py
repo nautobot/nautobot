@@ -4,6 +4,7 @@ import uuid
 
 from django.contrib.auth import get_user_model
 from django.contrib.contenttypes.models import ContentType
+from django.core.exceptions import ValidationError
 from django.test import override_settings
 from django.urls import reverse
 from django.utils import timezone
@@ -881,6 +882,57 @@ class ScheduledJobTestCase(
         self.assertHttpStatus(response, 200)
         self.assertNotIn("test4", extract_page_body(response.content.decode(response.charset)))
 
+    def test_non_valid_crontab_syntax(self):
+        self.add_permissions("extras.view_scheduledjob")
+
+        def scheduled_job_factory(name, crontab):
+            ScheduledJob.objects.create(
+                enabled=True,
+                name=name,
+                task="nautobot.extras.jobs.scheduled_job_handler",
+                job_class="local/test_pass/TestPass",
+                interval=JobExecutionType.TYPE_CUSTOM,
+                user=self.user,
+                start_time=timezone.now(),
+                crontab=crontab,
+            )
+
+        with self.assertRaises(ValidationError):
+            scheduled_job_factory("test5", None)
+
+        with self.assertRaises(ValidationError):
+            scheduled_job_factory("test6", "")
+
+        with self.assertRaises(ValidationError):
+            scheduled_job_factory("test7", "not_enough_values_to_unpack")
+
+        with self.assertRaises(ValidationError):
+            scheduled_job_factory("test8", "one too many values to unpack")
+
+        with self.assertRaises(ValidationError):
+            scheduled_job_factory("test9", "-1 * * * *")
+
+        with self.assertRaises(ValidationError):
+            scheduled_job_factory("test10", "invalid literal * * *")
+
+    def test_valid_crontab_syntax(self):
+        self.add_permissions("extras.view_scheduledjob")
+
+        ScheduledJob.objects.create(
+            enabled=True,
+            name="test11",
+            task="nautobot.extras.jobs.scheduled_job_handler",
+            job_class="local/test_pass/TestPass",
+            interval=JobExecutionType.TYPE_CUSTOM,
+            user=self.user,
+            start_time=datetime.now(),
+            crontab="*/15 9,17 3 * 1-5",
+        )
+
+        response = self.client.get(self._get_url("list"))
+        self.assertHttpStatus(response, 200)
+        self.assertIn("test11", extract_page_body(response.content.decode(response.charset)))
+
 
 class ApprovalQueueTestCase(
     # It would be nice to use ViewTestCases.GetObjectViewTestCase as well,
@@ -1376,6 +1428,8 @@ class JobTestCase(
             "soft_time_limit": 350,
             "time_limit_override": True,
             "time_limit": 650,
+            "has_sensitive_variables": False,
+            "has_sensitive_variables_override": True,
         }
 
     #
@@ -1637,6 +1691,28 @@ class JobTestCase(
 
             scheduled = ScheduledJob.objects.last()
             self.assertEqual(scheduled.kwargs["scheduled_job_pk"], str(scheduled.pk))
+
+    @mock.patch("nautobot.extras.views.get_worker_count", return_value=1)
+    def test_run_job_with_sensitive_variables_for_future(self, _):
+        self.add_permissions("extras.run_job")
+        self.add_permissions("extras.view_scheduledjob")
+
+        self.test_pass.has_sensitive_variables = True
+        self.test_pass.has_sensitive_variables_override = True
+        self.test_pass.validated_save()
+
+        start_time = timezone.now() + timedelta(minutes=1)
+        data = {
+            "_schedule_type": "future",
+            "_schedule_name": "test",
+            "_schedule_start_time": str(start_time),
+        }
+        for run_url in self.run_urls:
+            response = self.client.post(run_url, data)
+            self.assertHttpStatus(response, 200, msg=self.run_urls[1])
+
+            content = extract_page_body(response.content.decode(response.charset))
+            self.assertIn("Unable to schedule job: Job has sensitive input variables.", content)
 
 
 # TODO: Convert to StandardTestCases.Views

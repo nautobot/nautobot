@@ -41,6 +41,10 @@ Installed Jobs are now represented by a data model in the Nautobot database. Thi
 
 For more details please refer to the [Jobs feature documentation](../additional-features/jobs.md) as well as the [Job data model documentation](../models/extras/job.md).
 
+#### Jobs With Sensitive Parameters ([#2091](https://github.com/nautobot/nautobot/issues/2091))
+
+Jobs model now includes a [`has_sensitive_variables`](../additional-features/jobs.md#has_sensitive_variables) field which by default prevents the job's input parameters from being saved to the database. Review whether each job's input parameters include sensitive data such as passwords or other user credentials before setting this to `False` for any given job.
+
 #### JSON Type for Custom Fields ([#897](https://github.com/nautobot/nautobot/issues/897))
 
 Custom fields can now have a type of "json". Fields of this type can be used to store arbitrary JSON data.
@@ -74,6 +78,10 @@ Python 3.10 is officially supported by Nautobot now, and we are building and pub
 [New lookup expressions for using regular expressions](../rest-api/filtering.md#string-fields) to filter objects by string (char) fields in the API have been added to all core filters.
 
 The expressions `re` (regex), `nre` (negated regex), `ire` (case-insensitive regex), and `nire` (negated case-insensitive regex) lookup expressions are now dynamically-generated for filter fields inherited by subclasses of `nautobot.utilities.filters.BaseFilterSet`.
+
+#### Remove Stale Scheduled Jobs ([#2091](https://github.com/nautobot/nautobot/issues/2091))
+
+[remove_stale_scheduled_jobs](../administration/nautobot-server.md#remove_stale_scheduled_jobs) management command has been added to delete non-recurring scheduled jobs that were scheduled to run more than a specified days ago.
 
 #### REST API Token Provisioning ([#1374](https://github.com/nautobot/nautobot/issues/1374))
 
@@ -145,6 +153,44 @@ It is no longer possible to connect an interface to itself in the cable connect 
 #### Python 3.6 No Longer Supported ([#1268](https://github.com/nautobot/nautobot/issues/1268))
 
 As Python 3.6 has reached end-of-life, and many of Nautobot's dependencies have already dropped support for Python 3.6 as a consequence, Nautobot 1.3 and later do not support installation under Python 3.6.
+
+## v1.3.10 (2022-08-08)
+
+### Added
+
+- [#1226](https://github.com/nautobot/nautobot/issues/1226) - Added custom job intervals package management.
+- [#2091](https://github.com/nautobot/nautobot/issues/2091) - Added `remove_stale_scheduled_jobs` management command which removes all stale scheduled jobs and also added `has_sensitive_variables` field to Job model which prevents the job's input parameters from being saved to the database.
+- [#2073](https://github.com/nautobot/nautobot/pull/2073) - Added `--local` option to `nautobot-server runjob` command.
+- [#2080](https://github.com/nautobot/nautobot/pull/2080) - Added `--data` parameter to `nautobot-server runjob` command.
+- [#2143](https://github.com/nautobot/nautobot/pull/2143) - Scheduled Job detail view now includes details of any custom interval.
+
+### Changed
+
+- [#2025](https://github.com/nautobot/nautobot/pull/2025) - Tweak Renovate config for automated package management.
+- [#2114](https://github.com/nautobot/nautobot/issues/2114) - Home page now redirects to the login page when `HIDE_RESTRICTED_UI` is enabled and user is not authenticated.
+- [#2115](https://github.com/nautobot/nautobot/pull/2115) - Patch updates to `mkdocs`, `svgwrite`.
+
+### Fixed
+
+- [#1739](https://github.com/nautobot/nautobot/issues/1739) - Fixed paginator not enforcing max_page_size setting in web ui views.
+- [#2060](https://github.com/nautobot/nautobot/issues/2060) - Fixed relationship peer_id filter non-existent error on relationship association page.
+- [#2095](https://github.com/nautobot/nautobot/issues/2095) - Fixed health check failing with Redis Sentinel, TLS configuration.
+- [#2119](https://github.com/nautobot/nautobot/pull/2119) - Fixed flaky integration test for cable connection UI.
+
+### Security
+
+!!! important
+    With introducing the `has_sensitive_variables` flag on Job classes and model (see: [#2091](https://github.com/nautobot/nautobot/issues/2091)), jobs can be prevented from storing their inputs in the database. Due to the nature of queuing or scheduling jobs, the desired inputs must be stored for future use.
+
+    New safe-default behavior will only permit jobs to be executed immediately, as `has_sensitive_variables` defaults to `True`. This value can be overridden by the Job class itself or the Job model edit page. Values entered for jobs executing immediately go straight to the Celery message bus and are cleaned up on completion of execution.
+    
+    Scheduling jobs or requiring approval necessitates those values to be stored in the database until they have been sent to the Celery message bus for execution.
+
+    During installation of `v1.3.10`, a migration is applied to set the `has_sensitive_variables` value to `True` to all existing Jobs. However to maintain backwards-compatibility, past scheduled jobs are permitted to keep their schedule. New schedules cannot be made until an administrator has overridden the `has_sensitive_variables` for the desired Job.
+
+    A new management command exists (`remove_stale_scheduled_jobs`) which will aid in cleaning up schedules to past jobs which may still have sensitive data stored in the database. This command is not exhaustive nor intended to clean up sensitive values stored in the database. You should review the `extras_scheduledjob` table for any further cleanup.
+
+    **Note:** Leveraging the Secrets and Secret Groups features in Jobs does not need to be considered a sensitive variable. Secrets are retrieved by reference at run time, which means no secret value is stored directly in the database.
 
 ## v1.3.9 (2022-07-25)
 
