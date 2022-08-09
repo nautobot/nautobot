@@ -29,7 +29,10 @@ class ChangeContext:
         self.user = user
 
         if self.request is None and self.user is None:
-            raise TypeError("At least one keyword argument required: user or request")
+            raise TypeError("Either user or request must be provided")
+
+        if self.request is not None and self.user is not None:
+            raise TypeError("Request and user cannot be used together")
 
         if context is not None:
             self.context = context

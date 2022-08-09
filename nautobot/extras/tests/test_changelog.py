@@ -395,6 +395,7 @@ class ChangeLogAPITest(APITestCase):
         self.assertEqual(oc.user_id, self.user.pk)
 
     def test_m2m_change(self):
+        """Test that ManyToMany change only generates a single ObjectChange instance"""
         cluster_type = ClusterType.objects.create(name="test_cluster_type")
         cluster = Cluster.objects.create(name="test_cluster", type=cluster_type)
         vm_statuses = Status.objects.get_for_model(VirtualMachine)
