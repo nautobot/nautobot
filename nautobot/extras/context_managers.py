@@ -21,7 +21,7 @@ class ChangeContext:
     :param request: WSGIRequest object to retrieve user from django rest framework after authentication is performed
     :param context: Context of the transaction, must match a choice in nautobot.extras.choices.ObjectChangeEventContextChoices
     :param context_detail: Optional extra details about the transaction (ex: the plugin name that initiated the change)
-    :param id: Optional uuid object to uniquely identify the transaction. One will be generated if not supplied
+    :param change_id: Optional uuid object to uniquely identify the transaction. One will be generated if not supplied
     """
 
     def __init__(self, user=None, request=None, context=None, context_detail="", change_id=None):
