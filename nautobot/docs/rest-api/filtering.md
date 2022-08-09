@@ -52,7 +52,15 @@ To filter results by a custom field value, prepend `cf_` to the custom field nam
 GET /api/dcim/sites/?cf_foo=123
 ```
 
+Multi-value filtering is available for all field types and lookup expressions. When multiple values are supplied, an `or` lookup will be performed by the query. For example, the following query will return only sites where a custom field named `foo` is equal to 123 _or_ 456:
+
+```no-highlight
+GET /api/dcim/sites/?cf_foo=123&cf_foo=456
+```
+
 Custom fields can be mixed with built-in fields to further narrow results. When creating a custom string field, the type of filtering selected (loose versus exact) determines whether partial or full matching is used.
+
+Custom fields can use the lookup expressions listed in the next section by prepending `cf_` to the custom field name followed by the required lookup type (see below).
 
 ## Lookup Expressions
 
