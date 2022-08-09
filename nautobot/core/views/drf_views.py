@@ -23,10 +23,10 @@ from django.utils.safestring import mark_safe
 from django.views.generic.edit import FormView
 
 from rest_framework import generics, mixins
-from rest_framework_bulk import mixins as bulk_mixins
 from rest_framework.response import Response
 from rest_framework.viewsets import ViewSetMixin
 
+from nautobot.core.views import mixins as bulk_mixins
 from nautobot.extras.models import CustomField, ExportTemplate, ChangeLoggedModel
 from nautobot.utilities.error_handlers import handle_protectederror
 from nautobot.utilities.forms import (
