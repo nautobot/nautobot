@@ -309,11 +309,37 @@ Request:
 POST /api/extras/dynamic-group-memberships/
 
 {
-    "group": "first-child",
-    "parent_group": "parent",
+    "group": {"slug": "first-child"},
+    "parent_group": {"slug": "parent"},
     "operator": "intersection",
     "weight": 10
 }
 ```
 
 Response:
+
+```json
+{
+    "id": "4c8296de-42bc-49a6-8fed-fc1b1f6b93ca",
+    "display": "parent > intersection (10) > first-child",
+    "url": "http://localhost:6789/api/extras/dynamic-group-memberships/4c8296de-42bc-49a6-8fed-fc1b1f6b93ca/",
+    "group": {
+        "display": "first-child",
+        "id": "97188a74-eddd-46d8-be41-909c1ece1d43",
+        "url": "http://localhost:6789/api/extras/dynamic-groups/97188a74-eddd-46d8-be41-909c1ece1d43/",
+        "name": "first-child",
+        "slug": "first-child",
+        "content_type": "dcim.device"
+    },
+    "parent_group": {
+        "display": "parent",
+        "id": "6d58a68f-94d7-4150-a258-e57cec80f3b5",
+        "url": "http://localhost:6789/api/extras/dynamic-groups/6d58a68f-94d7-4150-a258-e57cec80f3b5/",
+        "name": "parent",
+        "slug": "parent",
+        "content_type": "dcim.device"
+    },
+    "operator": "intersection",
+    "weight": 10
+}
+```
