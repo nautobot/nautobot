@@ -1,11 +1,12 @@
 from django.conf import settings
 from django.contrib.auth.mixins import AccessMixin
+from django.core.exceptions import ImproperlyConfigured
 from django.urls import reverse
 from django.urls.exceptions import NoReverseMatch
 from django.utils.http import is_safe_url
-from django.core.exceptions import ImproperlyConfigured
 
-from nautobot.utilities.permissions import resolve_permission
+from .permissions import resolve_permission
+
 
 #
 # View Mixins
@@ -87,6 +88,7 @@ class ObjectPermissionRequiredMixin(AccessMixin):
     def has_permission(self):
         user = self.request.user
         permission_required = self.get_required_permission()
+
         # Check that the user has been granted the required permission(s).
         if user.has_perms((permission_required, *self.additional_permissions)):
 
@@ -106,8 +108,8 @@ class ObjectPermissionRequiredMixin(AccessMixin):
 
         if not hasattr(self, "queryset"):
             raise ImproperlyConfigured(
-                f"{self.__class__.__name__} has no queryset defined. ObjectPermissionRequiredMixin may only be used on views which define "
-                "a base queryset"
+                "{} has no queryset defined. ObjectPermissionRequiredMixin may only be used on views which define "
+                "a base queryset".format(self.__class__.__name__)
             )
 
         if not self.has_permission():
