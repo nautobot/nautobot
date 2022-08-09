@@ -6,7 +6,7 @@ from django_tables2 import RequestConfig
 
 
 from nautobot.core.views import generic
-from nautobot.utilities.drf_views import NautobotDRFViewSet
+from nautobot.core.views.drf_views import NautobotDRFViewSet
 from nautobot.utilities.forms import ConfirmationForm
 from nautobot.utilities.paginator import EnhancedPaginator, get_paginate_count
 from nautobot.utilities.utils import count_related

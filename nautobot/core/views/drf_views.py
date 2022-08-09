@@ -37,7 +37,7 @@ from nautobot.utilities.forms import (
     restrict_form_fields,
 )
 from nautobot.utilities.permissions import resolve_permission
-from nautobot.utilities.renderers import NautobotHTMLRenderer
+from nautobot.core.views.renderers import NautobotHTMLRenderer
 from nautobot.utilities.utils import (
     csv_format,
     prepare_cloned_fields,
@@ -167,6 +167,9 @@ class NautobotViewSetMixin(ViewSetMixin, generics.GenericAPIView, AccessMixin, G
         return obj
 
     def form_valid(self, form):
+        """
+        Handle valid forms and redirect to success_url.
+        """
         request = self.request
         self.has_error = False
         if self.action == "destroy":
@@ -184,7 +187,7 @@ class NautobotViewSetMixin(ViewSetMixin, generics.GenericAPIView, AccessMixin, G
         elif self.action == "bulk_update":
             logger = logging.getLogger("nautobot.views.BulkUpdateView")
             try:
-                self.import_success_table = self._process_bulk_update_form(form)
+                self._process_bulk_update_form(form)
             except ValidationError as e:
                 messages.error(self.request, f"{self.obj} failed validation: {e}")
                 self.has_error = True
@@ -193,12 +196,7 @@ class NautobotViewSetMixin(ViewSetMixin, generics.GenericAPIView, AccessMixin, G
         elif self.action == "bulk_create":
             logger = logging.getLogger("nautobot.views.BulkCreateView")
             try:
-                obj_table = self._process_bulk_create_form(form)
-                return Response(
-                    {
-                        "table": obj_table,
-                    }
-                )
+                self.obj_table = self._process_bulk_create_form(form)
             except ValidationError:
                 self.has_error = True
                 pass
@@ -207,6 +205,13 @@ class NautobotViewSetMixin(ViewSetMixin, generics.GenericAPIView, AccessMixin, G
 
         if not self.has_error:
             logger.debug("Form validation was successful")
+            if self.action == "bulk_create":
+                return Response(
+                    {
+                        "table": self.obj_table,
+                        "template": "import_success.html",
+                    }
+                )
             return super().form_valid(form)
         else:
             data = {}
@@ -220,13 +225,14 @@ class NautobotViewSetMixin(ViewSetMixin, generics.GenericAPIView, AccessMixin, G
                     )
                     return redirect(self.get_return_url(request))
 
-                data = {
-                    "table": table,
-                }
+                data.update({"table": table})
             data.update({"form": form})
             return Response(data)
 
     def form_invalid(self, form):
+        """
+        Handle invalid forms.
+        """
         data = {}
         request = self.request
         if self.action in ["bulk_update", "bulk_destroy"]:
@@ -283,9 +289,13 @@ class NautobotViewSetMixin(ViewSetMixin, generics.GenericAPIView, AccessMixin, G
             select_template([f"{app_label}/{model_opts.model_name}_{action}.html"])
             return f"{app_label}/{model_opts.model_name}_{action}.html"
         except TemplateDoesNotExist:
-            return f"utilities/object_{action}.html"
+            return f"generic/object_{action}.html"
 
     def get_form(self, *args, **kwargs):
+        """
+        Helper function to get form for different views if specified.
+        If not, return instantiated form using form_class.
+        """
         form = getattr(self, f"{self.action}_form", None)
         if not form:
             if self.action == "bulk_create":
@@ -303,6 +313,9 @@ class NautobotViewSetMixin(ViewSetMixin, generics.GenericAPIView, AccessMixin, G
         return form
 
     def get_form_class(self, **kwargs):
+        """
+        Helper function to get form_class for different views.
+        """
         if self.action in ["create", "update"]:
             form_class = getattr(self, "form_class", None)
         else:
@@ -433,6 +446,9 @@ class ObjectListViewMixin(NautobotViewSetMixin, mixins.ListModelMixin):
         return "\n".join(csv_data)
 
     def list(self, request, *args, **kwargs):
+        """
+        List the model instances.
+        """
         context = {}
         if "export" in request.GET:
             model = self.model
@@ -461,12 +477,20 @@ class ObjectDestroyViewMixin(NautobotViewSetMixin, mixins.DestroyModelMixin):
             self.success_url = obj.get_absolute_url()
 
     def destroy(self, request, *args, **kwargs):
+        """
+        request.GET: render the ObjectDeleteConfirmationForm which is passed to NautobotHTMLRenderer as Response.
+        request.POST: call perform_destroy() which validates the form and perform the action of delete.
+        Override to add more variables to Response
+        """
         context = {}
         if request.method == "POST":
             return self.perform_destroy(request, **kwargs)
         return Response(context)
 
     def perform_destroy(self, request, **kwargs):
+        """
+        Function to validate the ObjectDeleteConfirmationForm and to delete the object.
+        """
         self.obj = self.get_object()
         form_class = self.get_form_class()
         form = form_class(request.POST)
@@ -510,12 +534,20 @@ class ObjectEditViewMixin(NautobotViewSetMixin, mixins.CreateModelMixin, mixins.
                     self.success_url = self.get_return_url(request, obj)
 
     def create(self, request, *args, **kwargs):
+        """
+        request.GET: render the ObjectForm which is passed to NautobotHTMLRenderer as Response.
+        request.POST: call perform_create() which validates the form and perform the action of create.
+        Override to add more variables to Response.
+        """
         context = {}
         if request.method == "POST":
             return self.perform_create(request, *args, **kwargs)
         return Response(context)
 
     def perform_create(self, request, *args, **kwargs):
+        """
+        Function to validate the ObjectForm and to create a new object.
+        """
         self.obj = self.alter_obj_for_edit(self.get_object(), request, args, kwargs)
         form_class = self.get_form_class()
         form = form_class(data=request.POST, files=request.FILES, instance=self.obj)
@@ -526,12 +558,20 @@ class ObjectEditViewMixin(NautobotViewSetMixin, mixins.CreateModelMixin, mixins.
             return self.form_invalid(form)
 
     def update(self, request, *args, **kwargs):
+        """
+        request.GET: render the ObjectEditForm which is passed to NautobotHTMLRenderer as Response.
+        request.POST: call perform_update() which validates the form and perform the action of update/partial_update of an existing object.
+        Override to add more variables to Response.
+        """
         context = {}
         if request.method == "POST":
             return self.perform_update(request, *args, **kwargs)
         return Response(context)
 
     def perform_update(self, request, *args, **kwargs):
+        """
+        Function to validate the ObjectEditForm and to update/partial_update an existing object.
+        """
         self.obj = self.alter_obj_for_edit(self.get_object(), request, args, kwargs)
         form_class = self.get_form_class()
         form = form_class(data=request.POST, files=request.FILES, instance=self.obj)
@@ -547,9 +587,6 @@ class BulkDestroyViewMixin(NautobotViewSetMixin, bulk_mixins.BulkDestroyModelMix
     filterset_class = None
 
     def _process_bulk_destroy_form(self, form):
-        """
-        Helper method to destroy objects after the form is validated successfully.
-        """
         request = self.request
         pk_list = self.request.POST.getlist("pk")
         model = self.model
@@ -570,9 +607,18 @@ class BulkDestroyViewMixin(NautobotViewSetMixin, bulk_mixins.BulkDestroyModelMix
             self.success_url = self.get_return_url(request)
 
     def bulk_destroy(self, request, *args, **kwargs):
+        """
+        Call perform_bulk_destroy().
+        The function exist to keep the DRF's get/post pattern of {action}/perform_{action}, we will need it when we transition from using forms to serializers in the UI.
+        User should override this function to handle any actions as needed before bulk destroy.
+        """
         return self.perform_bulk_destroy(request, **kwargs)
 
     def perform_bulk_destroy(self, request, **kwargs):
+        """
+        request.POST "_delete": Function to render the user selection of objects in a table form/BulkDestroyConfirmationForm via Response that is passed to NautobotHTMLRenderer.
+        request.POST "_confirm": Function to validate the table form/BulkDestroyConfirmationForm and to perform the action of bulk destroy. Render the form with errors if exceptions are raised.
+        """
         model = self.model
         # Are we deleting *all* objects in the queryset or just a selected subset?
         if request.POST.get("_all"):
@@ -733,9 +779,19 @@ class BulkUpdateViewMixin(NautobotViewSetMixin, bulk_mixins.BulkUpdateModelMixin
         return obj
 
     def bulk_update(self, request, *args, **kwargs):
+        """
+        Call perform_bulk_update().
+        The function exist to keep the DRF's get/post pattern of {action}/perform_{action}, we will need it when we transition from using forms to serializers in the UI.
+        User should override this function to handle any actions as needed before bulk update.
+        """
+        print(request.POST)
         return self.perform_bulk_update(request, **kwargs)
 
     def perform_bulk_update(self, request, **kwargs):
+        """
+        request.POST "_edit": Function to render the user selection of objects in a table form/BulkUpdateForm via Response that is passed to NautobotHTMLRenderer.
+        request.POST "_apply": Function to validate the table form/BulkUpdateForm and to perform the action of bulk update. Render the form with errors if exceptions are raised.
+        """
         model = self.model
 
         # If we are editing *all* objects in the queryset, replace the PK list with all matched objects.
@@ -774,4 +830,6 @@ class NautobotDRFViewSet(
     BulkCreateViewMixin,
     BulkUpdateViewMixin,
 ):
-    pass
+    """
+    This is the UI BaseViewSet you should inherit.
+    """

@@ -4,6 +4,7 @@ from django.utils.safestring import mark_safe
 from django_tables2 import RequestConfig
 from rest_framework import renderers
 
+from nautobot.extras.models.change_logging import ChangeLoggedModel
 from nautobot.utilities.forms import (
     TableConfigForm,
     restrict_form_fields,
@@ -99,10 +100,14 @@ class NautobotHTMLRenderer(renderers.BrowsableAPIRenderer):
         permissions = self.construct_user_permissions(request, model)
         # Construct valid actions
         valid_actions = self.validate_action_buttons(view, request)
-        return_url = view.get_return_url(request, instance)
+        return_url = None
         form = None
         table = None
-        # Get form for context rendering according to view.action unless it is previously set
+        changelog_url = None
+        if isinstance(instance, ChangeLoggedModel):
+            changelog_url = instance.get_changelog_url()
+        # Get form for context rendering according to view.action unless it is previously set.
+        # A form will be passed in from the views if the form has errors.
         if data.get("form"):
             form = data["form"]
         else:
@@ -118,10 +123,13 @@ class NautobotHTMLRenderer(renderers.BrowsableAPIRenderer):
                         )
                         view.queryset = view.queryset.none()
                 table = self.construct_table(view, request=request, permissions=permissions)
+                return_url = view.get_return_url(request)
             elif view.action == "destroy":
                 form = form_class(initial=request.GET)
+                return_url = view.get_return_url(request, instance)
             elif view.action in ["create", "update"]:
                 instance = view.alter_obj_for_edit(instance, request, view.args, view.kwargs)
+                return_url = view.get_return_url(request, instance)
                 initial_data = normalize_querydict(request.GET)
                 form = form_class(instance=instance, initial=initial_data)
                 restrict_form_fields(form, request.user)
@@ -139,11 +147,12 @@ class NautobotHTMLRenderer(renderers.BrowsableAPIRenderer):
                     }
                     form = form_class(initial=initial)
                 table = self.construct_table(view, pk_list=pk_list)
+                return_url = view.get_return_url(request)
             elif view.action == "bulk_create":
                 form = view.get_form()
                 return_url = view.get_return_url(request)
-                # if view.import_success_table is not None:
-                #     table = view.import_success_table
+                if request.data:
+                    table = data.get("table")
             elif view.action == "bulk_update":
                 if request.POST.get("_all") and view.filterset_class is not None:
                     pk_list = [obj.pk for obj in view.filterset_class(request.POST, view.queryset.only("pk")).qs]
@@ -166,24 +175,27 @@ class NautobotHTMLRenderer(renderers.BrowsableAPIRenderer):
                     form = form_class(model, initial=initial_data)
                     restrict_form_fields(form, request.user)
                 table = self.construct_table(view, pk_list=pk_list)
+                return_url = view.get_return_url(request)
         context = {
             "action_buttons": valid_actions,
             "active_tab": "csv-data",
-            "changelog_url": view.get_changelog_url(instance),
+            "changelog_url": changelog_url,
             "content_type": content_type,
             "editing": instance.present_in_database,
             "fields": form_class(model).fields if form_class else None,
             "filter_form": self.get_filter_form(view, request),
             "form": form,
-            # I am keeping "object" and "obj" to keep the template changes needed minimally invasive.
-            "object": instance,  # "object" is used in object_detail.html template.
+            # I am keeping "object" and "obj" to keep the template changes needed minimally invasive.  # "object" is used in object_detail.html template.
+            "object": instance,  # "object" is used in object_detail templates.
             "obj": instance,  # "obj" is used in every other template (object_delete, object_edit and etc.).
             "obj_type": view.model._meta.verbose_name,
             "obj_type_plural": view.model._meta.verbose_name_plural,
             "permissions": permissions,
             "return_url": return_url,
-            "table": table if table else data.get("table", None),
+            "table": table if table is not None else data.get("table", None),
             "table_config_form": TableConfigForm(table=table) if table else None,
+            "verbose_name": view.queryset.model._meta.verbose_name,
+            "verbose_name_plural": view.queryset.model._meta.verbose_name_plural,
         }
         if view.action == "retrieve":
             context.update(view.get_extra_context(request, instance))
@@ -195,7 +207,7 @@ class NautobotHTMLRenderer(renderers.BrowsableAPIRenderer):
         view = renderer_context["view"]
         # Get the corresponding template based on self.action unless it is previously set. See BulkCreateView/import_success.html
         if data.get("template"):
-            self.template = "import_success.html"
+            self.template = data.get("template")
         else:
             self.template = view.get_template_name()
         return super().render(data, accepted_media_type=accepted_media_type, renderer_context=renderer_context)
