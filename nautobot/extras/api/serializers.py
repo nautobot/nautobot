@@ -718,6 +718,8 @@ class JobSerializer(NautobotModelSerializer, TaggedObjectSerializer):
             "installed",
             "enabled",
             "is_job_hook_receiver",
+            "has_sensitive_variables",
+            "has_sensitive_variables_override",
             "approval_required",
             "approval_required_override",
             "commit_default",
@@ -732,6 +734,25 @@ class JobSerializer(NautobotModelSerializer, TaggedObjectSerializer):
             "time_limit_override",
             "tags",
         ]
+
+    def validate(self, data):
+        # note no validation for on creation of jobs because we do not support user creation of Job records via API
+        if self.instance:
+            has_sensitive_variables = data.get("has_sensitive_variables", self.instance.has_sensitive_variables)
+            approval_required = data.get("approval_required", self.instance.approval_required)
+
+            if approval_required and has_sensitive_variables:
+                error_message = "A job with sensitive variables cannot also be marked as requiring approval"
+                errors = {}
+
+                if "approval_required" in data:
+                    errors["approval_required"] = [error_message]
+                if "has_sensitive_variables" in data:
+                    errors["has_sensitive_variables"] = [error_message]
+
+                raise serializers.ValidationError(errors)
+
+        return super().validate(data)
 
 
 class JobVariableSerializer(serializers.Serializer):

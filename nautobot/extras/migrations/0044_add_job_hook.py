@@ -13,7 +13,7 @@ class Migration(migrations.Migration):
 
     dependencies = [
         ("contenttypes", "0002_remove_content_type_name"),
-        ("extras", "0042_note"),
+        ("extras", "0043_note"),
     ]
 
     operations = [

@@ -8,6 +8,9 @@ class TestPass(Job):
 
     description = "Validate job import"
 
+    class Meta:
+        has_sensitive_variables = False
+
     def test_pass(self):
         """
         Job function.
