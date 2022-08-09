@@ -118,7 +118,7 @@ def web_request_context(user, context_detail="", change_id=None):
 
     :param user: User object
     :param context_detail: Optional extra details about the transaction (ex: the plugin name that initiated the change)
-    :param id: Optional uuid object to uniquely identify the transaction. One will be generated if not supplied
+    :param change_id: Optional uuid object to uniquely identify the transaction. One will be generated if not supplied
     """
 
     if not isinstance(user, get_user_model()):
