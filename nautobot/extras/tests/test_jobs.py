@@ -639,6 +639,7 @@ class JobHookReceiverTest(TransactionTestCase):
         test_site = Site.objects.get(name="test_jhr")
         oc = get_changes_for_model(test_site).first()
         self.assertEqual(oc.change_context, ObjectChangeEventContextChoices.CONTEXT_JOB_HOOK)
+        self.assertEqual(oc.user_id, self.user.pk)
 
     def test_run_job(self):
         module = "test_job_hook_receiver"
@@ -684,7 +685,7 @@ class JobHookTest(TransactionTestCase):
 
     @mock.patch.object(JobResult, "enqueue_job")
     def test_enqueue_job_hook_skipped(self, mock):
-        change_context = JobHookChangeContext(self.user)
+        change_context = JobHookChangeContext(user=self.user)
         with change_logging(change_context):
             Site.objects.create(name="Test Job Hook Site 2")
 
