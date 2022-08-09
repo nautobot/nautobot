@@ -1389,6 +1389,11 @@ class CustomFieldFilterTest(TestCase):
 
     def test_filter_integer(self):
         self.assertEqual(self.filterset({"cf_cf1": 100}, self.queryset).qs.count(), 1)
+        self.assertEqual(self.filterset({"cf_cf1__n": [100]}, self.queryset).qs.count(), 3)
+        self.assertEqual(self.filterset({"cf_cf1__lte": [101]}, self.queryset).qs.count(), 1)
+        self.assertEqual(self.filterset({"cf_cf1__lt": [101]}, self.queryset).qs.count(), 1)
+        self.assertEqual(self.filterset({"cf_cf1__gte": [199]}, self.queryset).qs.count(), 1)
+        self.assertEqual(self.filterset({"cf_cf1__gt": [199]}, self.queryset).qs.count(), 1)
 
     def test_filter_boolean(self):
         self.assertEqual(self.filterset({"cf_cf2": True}, self.queryset).qs.count(), 1)
@@ -1397,19 +1402,83 @@ class CustomFieldFilterTest(TestCase):
     def test_filter_text(self):
         self.assertEqual(self.filterset({"cf_cf3": "foo"}, self.queryset).qs.count(), 1)
         self.assertEqual(self.filterset({"cf_cf4": "foo"}, self.queryset).qs.count(), 2)
+        self.assertEqual(self.filterset({"cf_cf4__n": ["foo"]}, self.queryset).qs.count(), 3)
+        self.assertEqual(self.filterset({"cf_cf4__ic": ["OOB"]}, self.queryset).qs.count(), 1)
+        self.assertEqual(self.filterset({"cf_cf4__nic": ["OOB"]}, self.queryset).qs.count(), 3)
+        self.assertEqual(self.filterset({"cf_cf4__iew": ["Bar"]}, self.queryset).qs.count(), 1)
+        self.assertEqual(self.filterset({"cf_cf4__niew": ["Bar"]}, self.queryset).qs.count(), 3)
+        self.assertEqual(self.filterset({"cf_cf4__isw": ["Foob"]}, self.queryset).qs.count(), 1)
+        self.assertEqual(self.filterset({"cf_cf4__nisw": ["Foob"]}, self.queryset).qs.count(), 3)
+        self.assertEqual(self.filterset({"cf_cf4__ie": ["Foo"]}, self.queryset).qs.count(), 1)
+        self.assertEqual(self.filterset({"cf_cf4__nie": ["Foo"]}, self.queryset).qs.count(), 3)
+        self.assertEqual(self.filterset({"cf_cf4__re": ["f.*b"]}, self.queryset).qs.count(), 1)
+        self.assertEqual(self.filterset({"cf_cf4__nre": ["f.*b"]}, self.queryset).qs.count(), 3)
+        self.assertEqual(self.filterset({"cf_cf4__ire": ["F.*b"]}, self.queryset).qs.count(), 1)
+        self.assertEqual(self.filterset({"cf_cf4__nire": ["F.*b"]}, self.queryset).qs.count(), 3)
 
     def test_filter_date(self):
         self.assertEqual(self.filterset({"cf_cf5": "2016-06-26"}, self.queryset).qs.count(), 1)
+        self.assertEqual(self.filterset({"cf_cf5__n": ["2016-06-26"]}, self.queryset).qs.count(), 3)
+        self.assertEqual(self.filterset({"cf_cf5__lte": ["2016-06-28"]}, self.queryset).qs.count(), 2)
+        self.assertEqual(self.filterset({"cf_cf5__lte": ["2016-06-27"]}, self.queryset).qs.count(), 2)
+        self.assertEqual(self.filterset({"cf_cf5__lte": ["2016-06-26"]}, self.queryset).qs.count(), 1)
+        self.assertEqual(self.filterset({"cf_cf5__lte": ["2016-06-25"]}, self.queryset).qs.count(), 0)
+        self.assertEqual(self.filterset({"cf_cf5__gte": ["2016-06-25"]}, self.queryset).qs.count(), 2)
+        self.assertEqual(self.filterset({"cf_cf5__gte": ["2016-06-26"]}, self.queryset).qs.count(), 2)
+        self.assertEqual(self.filterset({"cf_cf5__gte": ["2016-06-27"]}, self.queryset).qs.count(), 1)
+        self.assertEqual(self.filterset({"cf_cf5__gte": ["2016-06-28"]}, self.queryset).qs.count(), 0)
+        params = {"cf_cf5__gte": ["2016-06-25"], "cf_cf5__lt": ["2016-06-27"]}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 1)
 
     def test_filter_url(self):
-        self.assertEqual(
-            self.filterset({"cf_cf6": "http://foo.example.com/"}, self.queryset).qs.count(),
-            1,
-        )
-        self.assertEqual(self.filterset({"cf_cf7": "example.com"}, self.queryset).qs.count(), 2)
+        params = {"cf_cf6": "http://foo.example.com/"}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 1)
+        params = {"cf_cf6__n": ["http://foo.example.com/"]}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 3)
+        params = {"cf_cf7": "example.com"}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+        params = {"cf_cf7__n": ["http://foo.example.com/"]}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 3)
+        params = {"cf_cf6__ic": ["FOO.example.COM"]}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 1)
+        params = {"cf_cf6__nic": ["FOO.example.COM"]}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 3)
+        params = {"cf_cf6__iew": ["FOO.example.COM/"]}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 1)
+        params = {"cf_cf6__niew": ["FOO.example.COM/"]}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 3)
+        params = {"cf_cf6__isw": ["HTTP://FOO"]}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 1)
+        params = {"cf_cf6__nisw": ["HTTP://FOO"]}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 3)
+        params = {"cf_cf6__ie": ["http://FOO.example.COM/"]}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 1)
+        params = {"cf_cf6__nie": ["http://FOO.example.COM/"]}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 3)
+        params = {"cf_cf6__re": ["foo.*com"]}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 1)
+        params = {"cf_cf6__nre": ["foo.*com"]}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 3)
+        params = {"cf_cf6__ire": ["FOO.*COM"]}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 1)
+        params = {"cf_cf6__nire": ["FOO.*COM"]}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 3)
 
     def test_filter_select(self):
         self.assertEqual(self.filterset({"cf_cf8": "Foo"}, self.queryset).qs.count(), 1)
+        self.assertEqual(self.filterset({"cf_cf8__n": ["Foo"]}, self.queryset).qs.count(), 3)
+        self.assertEqual(self.filterset({"cf_cf8__ic": ["FOO"]}, self.queryset).qs.count(), 1)
+        self.assertEqual(self.filterset({"cf_cf8__nic": ["FOO"]}, self.queryset).qs.count(), 3)
+        self.assertEqual(self.filterset({"cf_cf8__iew": ["AR"]}, self.queryset).qs.count(), 1)
+        self.assertEqual(self.filterset({"cf_cf8__niew": ["AR"]}, self.queryset).qs.count(), 3)
+        self.assertEqual(self.filterset({"cf_cf8__isw": ["FO"]}, self.queryset).qs.count(), 1)
+        self.assertEqual(self.filterset({"cf_cf8__nisw": ["FO"]}, self.queryset).qs.count(), 3)
+        self.assertEqual(self.filterset({"cf_cf8__ie": ["foo"]}, self.queryset).qs.count(), 1)
+        self.assertEqual(self.filterset({"cf_cf8__nie": ["foo"]}, self.queryset).qs.count(), 3)
+        self.assertEqual(self.filterset({"cf_cf8__re": ["F.o"]}, self.queryset).qs.count(), 1)
+        self.assertEqual(self.filterset({"cf_cf8__nre": ["F.o"]}, self.queryset).qs.count(), 3)
+        self.assertEqual(self.filterset({"cf_cf8__ire": ["F.O"]}, self.queryset).qs.count(), 1)
+        self.assertEqual(self.filterset({"cf_cf8__nire": ["F.O"]}, self.queryset).qs.count(), 3)
 
     def test_filter_multi_select(self):
         self.assertEqual(self.filterset({"cf_cf9": "Foo"}, self.queryset).qs.count(), 2)

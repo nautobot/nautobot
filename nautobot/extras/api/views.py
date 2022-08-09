@@ -33,6 +33,7 @@ from nautobot.extras.models import (
     ConfigContext,
     ConfigContextSchema,
     DynamicGroup,
+    DynamicGroupMembership,
     CustomLink,
     ExportTemplate,
     GitRepository,
@@ -302,6 +303,16 @@ class DynamicGroupViewSet(ModelViewSet):
         members = self.paginate_queryset(instance.members)
         member_serializer = member_serializer_class(members, many=True, context={"request": request})
         return self.get_paginated_response(member_serializer.data)
+
+
+class DynamicGroupMembershipViewSet(ModelViewSet):
+    """
+    Manage Dynamic Group Memberships through DELETE, GET, POST, PUT, and PATCH requests.
+    """
+
+    queryset = DynamicGroupMembership.objects.prefetch_related("group", "parent_group")
+    serializer_class = serializers.DynamicGroupMembershipSerializer
+    filterset_class = filters.DynamicGroupMembershipFilterSet
 
 
 #

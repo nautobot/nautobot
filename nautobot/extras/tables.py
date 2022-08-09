@@ -356,9 +356,9 @@ class DynamicGroupMembershipTable(DynamicGroupTable):
 
 DESCENDANTS_LINK = """
 {% load helpers %}
-{% for node in descendants_tree %}
-    {% if node.name == record.name %}
-        {% for i in node.depth|as_range %}
+{% for node, depth in descendants_tree.items %}
+    {% if record.pk == node %}
+        {% for i in depth|as_range %}
             {% if not forloop.first %}
             <i class="mdi mdi-circle-small"></i>
             {% endif %}
@@ -371,9 +371,9 @@ DESCENDANTS_LINK = """
 
 OPERATOR_LINK = """
 {% load helpers %}
-{% for node in descendants_tree %}
-    {% if node.name == record.name %}
-        {% for i in node.depth|as_range %}
+{% for node, depth in descendants_tree.items %}
+    {% if record.pk == node %}
+        {% for i in depth|as_range %}
             {% if not forloop.first %}
             <i class="mdi mdi-circle-small"></i>
             {% endif %}

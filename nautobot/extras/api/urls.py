@@ -26,6 +26,7 @@ router.register("custom-links", views.CustomLinkViewSet)
 
 # Dynamic Groups
 router.register("dynamic-groups", views.DynamicGroupViewSet)
+router.register("dynamic-group-memberships", views.DynamicGroupMembershipViewSet)
 
 # Export templates
 router.register("export-templates", views.ExportTemplateViewSet)
