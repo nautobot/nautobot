@@ -21,6 +21,7 @@ from nautobot.dcim.models import (
 )
 from nautobot.extras.api.nested_serializers import NestedJobResultSerializer
 from nautobot.extras.choices import (
+    DynamicGroupOperatorChoices,
     JobExecutionType,
     JobResultStatusChoices,
     RelationshipTypeChoices,
@@ -35,6 +36,7 @@ from nautobot.extras.models import (
     CustomField,
     CustomLink,
     DynamicGroup,
+    DynamicGroupMembership,
     ExportTemplate,
     GitRepository,
     GraphQLQuery,
@@ -625,29 +627,8 @@ class CustomLinkTest(APIViewTestCases.APIViewTestCase):
         )
 
 
-class DynamicGroupTest(APIViewTestCases.APIViewTestCase):
-    model = DynamicGroup
-    brief_fields = ["content_type", "display", "id", "name", "slug", "url"]
-    create_data = [
-        {
-            "name": "API DynamicGroup 4",
-            "slug": "api-dynamicgroup-4",
-            "content_type": "dcim.device",
-            "filter": {"site": ["site-1"]},
-        },
-        {
-            "name": "API DynamicGroup 5",
-            "slug": "api-dynamicgroup-5",
-            "content_type": "dcim.device",
-            "filter": {"has_interfaces": False},
-        },
-        {
-            "name": "API DynamicGroup 6",
-            "slug": "api-dynamicgroup-6",
-            "content_type": "dcim.device",
-            "filter": {"site": ["site-2"]},
-        },
-    ]
+class DynamicGroupTestMixin:
+    """Mixin for Dynamic Group test cases to re-use the same set of common fixtures."""
 
     @classmethod
     def setUpTestData(cls):
@@ -690,25 +671,52 @@ class DynamicGroupTest(APIViewTestCases.APIViewTestCase):
         )
 
         # Then the DynamicGroups.
-        content_type = ContentType.objects.get_for_model(Device)
-        DynamicGroup.objects.create(
-            name="API DynamicGroup 1",
-            slug="api-dynamicgroup-1",
-            content_type=content_type,
-            filter={"status": ["active"]},
-        )
-        DynamicGroup.objects.create(
-            name="API DynamicGroup 2",
-            slug="api-dynamicgroup-2",
-            content_type=content_type,
-            filter={"status": ["planned"]},
-        )
-        DynamicGroup.objects.create(
-            name="API DynamicGroup 3",
-            slug="api-dynamicgroup-3",
-            content_type=content_type,
-            filter={"site": ["site-3"]},
-        )
+        cls.content_type = ContentType.objects.get_for_model(Device)
+        cls.groups = [
+            DynamicGroup.objects.create(
+                name="API DynamicGroup 1",
+                slug="api-dynamicgroup-1",
+                content_type=cls.content_type,
+                filter={"status": ["active"]},
+            ),
+            DynamicGroup.objects.create(
+                name="API DynamicGroup 2",
+                slug="api-dynamicgroup-2",
+                content_type=cls.content_type,
+                filter={"status": ["planned"]},
+            ),
+            DynamicGroup.objects.create(
+                name="API DynamicGroup 3",
+                slug="api-dynamicgroup-3",
+                content_type=cls.content_type,
+                filter={"site": ["site-3"]},
+            ),
+        ]
+
+
+class DynamicGroupTest(DynamicGroupTestMixin, APIViewTestCases.APIViewTestCase):
+    model = DynamicGroup
+    brief_fields = ["content_type", "display", "id", "name", "slug", "url"]
+    create_data = [
+        {
+            "name": "API DynamicGroup 4",
+            "slug": "api-dynamicgroup-4",
+            "content_type": "dcim.device",
+            "filter": {"site": ["site-1"]},
+        },
+        {
+            "name": "API DynamicGroup 5",
+            "slug": "api-dynamicgroup-5",
+            "content_type": "dcim.device",
+            "filter": {"has_interfaces": False},
+        },
+        {
+            "name": "API DynamicGroup 6",
+            "slug": "api-dynamicgroup-6",
+            "content_type": "dcim.device",
+            "filter": {"site": ["site-2"]},
+        },
+    ]
 
     def test_get_members(self):
         """Test that the `/members/` API endpoint returns what is expected."""
@@ -719,6 +727,70 @@ class DynamicGroupTest(APIViewTestCases.APIViewTestCase):
         response = self.client.get(url, **self.header)
         self.assertHttpStatus(response, status.HTTP_200_OK)
         self.assertEqual(member_count, len(response.json()["results"]))
+
+
+class DynamicGroupMembershipTest(DynamicGroupTestMixin, APIViewTestCases.APIViewTestCase):
+    model = DynamicGroupMembership
+    brief_fields = ["display", "group", "id", "operator", "parent_group", "url", "weight"]
+    choices_fields = ["operator"]
+
+    @classmethod
+    def setUpTestData(cls):
+        super().setUpTestData()
+
+        parent = DynamicGroup.objects.create(
+            name="parent",
+            slug="parent",
+            content_type=cls.content_type,
+            filter={},
+        )
+        parent2 = DynamicGroup.objects.create(
+            name="parent2",
+            slug="parent2",
+            content_type=cls.content_type,
+            filter={},
+        )
+        group1, group2, group3 = cls.groups
+
+        DynamicGroupMembership.objects.create(
+            parent_group=parent,
+            group=group1,
+            operator=DynamicGroupOperatorChoices.OPERATOR_INTERSECTION,
+            weight=10,
+        )
+        DynamicGroupMembership.objects.create(
+            parent_group=parent,
+            group=group2,
+            operator=DynamicGroupOperatorChoices.OPERATOR_UNION,
+            weight=20,
+        )
+        DynamicGroupMembership.objects.create(
+            parent_group=parent,
+            group=group3,
+            operator=DynamicGroupOperatorChoices.OPERATOR_DIFFERENCE,
+            weight=30,
+        )
+
+        cls.create_data = [
+            {
+                "parent_group": parent2.pk,
+                "group": group1.pk,
+                "operator": DynamicGroupOperatorChoices.OPERATOR_INTERSECTION,
+                "weight": 10,
+            },
+            {
+                "parent_group": parent2.pk,
+                "group": group2.pk,
+                "operator": DynamicGroupOperatorChoices.OPERATOR_UNION,
+                "weight": 20,
+            },
+            {
+                "parent_group": parent2.pk,
+                "group": group3.pk,
+                "operator": DynamicGroupOperatorChoices.OPERATOR_DIFFERENCE,
+                "weight": 30,
+            },
+        ]
 
 
 class ExportTemplateTest(APIViewTestCases.APIViewTestCase):
@@ -1339,6 +1411,58 @@ class JobAPIRunTestMixin:
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     @mock.patch("nautobot.extras.api.views.get_worker_count")
+    def test_run_a_job_with_sensitive_variables_for_future(self, mock_get_worker_count):
+        mock_get_worker_count.return_value = 1
+        self.add_permissions("extras.run_job")
+
+        job_model = Job.objects.get(job_class_name="ExampleJob")
+        job_model.enabled = True
+        job_model.validated_save()
+
+        url = reverse("extras-api:job-run", kwargs={"pk": job_model.pk})
+        data = {
+            "data": {},
+            "commit": True,
+            "schedule": {
+                "start_time": str(datetime.now() + timedelta(minutes=1)),
+                "interval": "future",
+                "name": "test",
+            },
+        }
+
+        # url = self.get_run_url()
+        response = self.client.post(url, data, format="json", **self.header)
+        self.assertHttpStatus(response, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(
+            response.data["schedule"]["interval"][0],
+            "Unable to schedule job: Job has sensitive input variables",
+        )
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    @mock.patch("nautobot.extras.api.views.get_worker_count")
+    def test_run_a_job_with_sensitive_variables_immediately(self, mock_get_worker_count):
+        mock_get_worker_count.return_value = 1
+        self.add_permissions("extras.run_job")
+        d = DeviceRole.objects.create(name="role", slug="role")
+        data = {
+            "data": {"var1": "x", "var2": 1, "var3": False, "var4": d.pk},
+            "commit": True,
+            "schedule": {
+                "interval": "immediately",
+                "name": "test",
+            },
+        }
+        job = Job.objects.get_for_class_path("local/api_test_job/APITestJob")
+        job.has_sensitive_variables = True
+        job.has_sensitive_variables_override = True
+        job.validated_save()
+
+        url = self.get_run_url()
+        response = self.client.post(url, data, format="json", **self.header)
+        self.assertHttpStatus(response, self.run_success_response_status)
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    @mock.patch("nautobot.extras.api.views.get_worker_count")
     def test_run_job_future_past(self, mock_get_worker_count):
         mock_get_worker_count.return_value = 1
         self.add_permissions("extras.run_job")
@@ -1582,11 +1706,15 @@ class JobTestVersion13(
         "soft_time_limit": 350.1,
         "time_limit_override": True,
         "time_limit": 650,
+        "has_sensitive_variables": False,
+        "has_sensitive_variables_override": True,
     }
     bulk_update_data = {
         "enabled": True,
         "approval_required_override": True,
         "approval_required": True,
+        "has_sensitive_variables": False,
+        "has_sensitive_variables_override": True,
     }
     validation_excluded_fields = []
 
@@ -1611,6 +1739,50 @@ class JobTestVersion13(
         self.assertEqual(
             response.data[3],
             {"name": "var4", "type": "ObjectVar", "required": True, "model": "dcim.devicerole"},
+        )
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_update_job_with_sensitive_variables_set_approval_required_to_true(self):
+        job_model = Job.objects.get_for_class_path("local/api_test_job/APITestJob")
+        job_model.has_sensitive_variables = True
+        job_model.has_sensitive_variables_override = True
+        job_model.validated_save()
+
+        url = self._get_detail_url(job_model)
+        data = {
+            "approval_required_override": True,
+            "approval_required": True,
+        }
+
+        self.add_permissions("extras.change_job")
+
+        response = self.client.patch(url, data, format="json", **self.header)
+        self.assertHttpStatus(response, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(
+            response.data["approval_required"][0],
+            "A job with sensitive variables cannot also be marked as requiring approval",
+        )
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_update_approval_required_job_set_has_sensitive_variables_to_true(self):
+        job_model = Job.objects.get_for_class_path("local/api_test_job/APITestJob")
+        job_model.approval_required = True
+        job_model.approval_required_override = True
+        job_model.validated_save()
+
+        url = self._get_detail_url(job_model)
+        data = {
+            "has_sensitive_variables": True,
+            "has_sensitive_variables_override": True,
+        }
+
+        self.add_permissions("extras.change_job")
+
+        response = self.client.patch(url, data, format="json", **self.header)
+        self.assertHttpStatus(response, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(
+            response.data["has_sensitive_variables"][0],
+            "A job with sensitive variables cannot also be marked as requiring approval",
         )
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])

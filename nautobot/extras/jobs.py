@@ -222,6 +222,10 @@ class BaseJob:
         return getattr(cls.Meta, "time_limit", 0)
 
     @classproperty
+    def has_sensitive_variables(cls):
+        return getattr(cls.Meta, "has_sensitive_variables", True)
+
+    @classproperty
     def properties_dict(cls):
         """
         Return all relevant classproperties as a dict.
@@ -238,6 +242,7 @@ class BaseJob:
             "read_only": cls.read_only,
             "soft_time_limit": cls.soft_time_limit,
             "time_limit": cls.time_limit,
+            "has_sensitive_variables": cls.has_sensitive_variables,
         }
 
     @classmethod
@@ -1217,7 +1222,7 @@ def run_job(data, request, job_result_pk, commit=True, *args, **kwargs):
     # process change logs, webhooks, etc.
     if commit:
         context_class = JobHookChangeContext if job_model.is_job_hook_receiver else JobChangeContext
-        change_context = context_class(request.user, id=request.id, context_detail=job_model.slug)
+        change_context = context_class(user=request.user, context_detail=job_model.slug)
         with change_logging(change_context):
             _run_job()
     else:
@@ -1274,7 +1279,6 @@ def enqueue_job_hooks(object_change):
         job_content_type = get_job_content_type()
         job_model = job_hook.job
         request = RequestFactory().request(SERVER_NAME="job_hook")
-        request.id = object_change.request_id
         request.user = object_change.user
         JobResult.enqueue_job(
             run_job,

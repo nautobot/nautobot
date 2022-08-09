@@ -130,6 +130,17 @@ Default: `[]`
 
 A list of strings (field names) representing the order your job [variables](#variables) should be rendered as form fields in the job submission UI. If not defined, the variables will be listed in order of their definition in the code. If variables are defined on a parent class and no field order is defined, the parent class variables will appear before the subclass variables.
 
+#### `has_sensitive_variables`
+
+Default: `True`
+
+Unless set to False, it prevents the job's input parameters from being saved to the database. This defaults to True so as to protect against inadvertent database exposure of input parameters that may include sensitive data such as passwords or other user credentials. Review whether each job's inputs contain any such variables before setting this to False; if a job _does_ contain sensitive inputs, if possible you should consider whether the job could be re-implemented using Nautobot's [`Secrets`](../core-functionality/secrets) feature as a way to ensure that the sensitive data is not directly provided as a job variable at all.
+
+Important notes about jobs with sensitive variables:
+
+* Such jobs cannot be scheduled to run in the future or on a recurring schedule (as scheduled jobs must by necessity store their variables in the database for future reference).
+* Jobs with sensitive variables cannot be marked as requiring approval (as jobs pending approval must store their variables in the database until approved).
+
 #### `hidden`
 
 Default: `False`
@@ -565,14 +576,17 @@ When providing input data, it is possible to specify complex values contained in
 
 ### Via the CLI
 
-Jobs that do not require user input can be run from the CLI by invoking the management command:
+Jobs can be run from the CLI by invoking the management command:
 
 ```no-highlight
-nautobot-server runjob [--username <username>] [--commit] <class_path>
+nautobot-server runjob [--username <username>] [--commit] [--local] [--data <data>] <class_path>
 ```
 
 !!! note
     [See above](#jobs-and-class_path) for `class_path` definitions.
+
+!!! note
+    The `--data` parameter must be a JSON string, e.g. `--data='{"string_variable": "somevalue", "integer_variable": 123}'`
 
 Using the same example shown in the API:
 

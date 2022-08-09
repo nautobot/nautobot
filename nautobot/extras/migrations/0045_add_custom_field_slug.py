@@ -6,7 +6,7 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ("extras", "0043_add_job_hook"),
+        ("extras", "0044_add_job_hook"),
     ]
 
     operations = [

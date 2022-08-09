@@ -11,7 +11,7 @@ As of Nautobot 1.2.0, it is now possible to configure a number of settings via t
 * [HIDE_RESTRICTED_UI](#hide_restricted_ui)
 * [MAX_PAGE_SIZE](#max_page_size)
 * [PAGINATE_COUNT](#paginate_count)
-* PER_PAGE_DEFAULTS
+* [PER_PAGE_DEFAULTS](#per_page_defaults)
 * [PREFER_IPV4](#prefer_ipv4)
 * [RACK_ELEVATION_DEFAULT_UNIT_HEIGHT](#rack_elevation_default_unit_height)
 * [RACK_ELEVATION_DEFAULT_UNIT_WIDTH](#rack_elevation_default_unit_width)
@@ -192,6 +192,14 @@ Environment Variable: `NAUTOBOT_CACHEOPS_ENABLED`
 A boolean that turns on/off caching.
 
 If set to `False`, all caching is bypassed and Nautobot operates as if there is no cache.
+
+---
+
+## CACHEOPS_HEALTH_CHECK_ENABLED
+
+Default: `False`
+
+A boolean that turns on/off health checks for the Redis server connection utilized by Cacheops. Most deployments share a Redis server with `django-redis` as such we only need to check the health of Redis one time.  If you are using a separate Redis deployment for Cacheops, please consider enabling this to monitor that Redis deployment.  Keep in mind the more health checks enabled the longer the health checks will take and timeouts might need to be increased.
 
 ---
 
@@ -508,10 +516,13 @@ By default, all custom fields in GraphQL will be prefixed with `cf`. A custom fi
 
 Default: `False`
 
-When set to `True`, users with limited permissions will only be able to see items in the UI they have access too.
+When set to `True`, users with limited permissions will only be able to see items in the UI they have access to.
 
 !!! tip
     As of Nautobot 1.2.0, if you do not set a value for this setting in your `nautobot_config.py`, it can be configured dynamically by an admin user via the Nautobot Admin UI. If you do have a value for this setting in `nautobot_config.py`, it will override any dynamically configured value.
+
+!!! note
+    As of Nautobot 1.3.10, when this setting is set to `True`, logged out users will be redirected to the login page when navigating to the Nautobot home page.
 
 ---
 
@@ -730,6 +741,14 @@ This setting is used internally in the core settings to provide default location
 
 !!! warning
     Do not override `NAUTOBOT_ROOT` in your `nautobot_config.py`. It will not work as expected. If you need to customize this setting, please always set the `NAUTOBOT_ROOT` environment variable.
+
+---
+
+## PER_PAGE_DEFAULTS
+
+Default: `[25, 50, 100, 250, 500, 1000]`
+
+The options displayed in the web interface dropdown to limit the number of objects per page. For proper user experience, this list should include the [`PAGINATE_COUNT`](#paginate_count) and [`MAX_PAGE_SIZE`](#max_page_size) values as options.
 
 ---
 

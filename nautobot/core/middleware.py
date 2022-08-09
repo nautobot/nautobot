@@ -92,7 +92,8 @@ class ObjectChangeMiddleware(object):
         except Resolver404:
             change_context_detail = ""
 
-        change_context = WebChangeContext(request.user, context_detail=change_context_detail)
+        # Pass request rather than user here because at this point in the request handling logic, request.user may not have been set yet
+        change_context = WebChangeContext(request=request, context_detail=change_context_detail)
 
         # Process the request with change logging enabled
         with change_logging(change_context):
