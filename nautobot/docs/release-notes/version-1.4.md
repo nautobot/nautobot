@@ -114,7 +114,7 @@ A new configuration setting, [`STRICT_FILTERING`](../configuration/optional-sett
 
 The `settings_and_registry` default context processor was changed to purely `settings` - the (large) Nautobot application registry dictionary is no longer provided as part of the render context for all templates by default. Added a new `registry` template tag that can be invoked by specific templates to provide this variable where needed.
 
-## v1.4.0 (2022-MM-DD)
+## v1.4.0b2 (2022-MM-DD)
 
 ### Added
 
@@ -124,6 +124,7 @@ The `settings_and_registry` default context processor was changed to purely `set
 
 ### Fixed
 
+- [#2150](https://github.com/nautobot/nautobot/issues/2150) - Fixed unit tests performance degradation.
 - [#2132](https://github.com/nautobot/nautobot/pull/2132) - Updated job hooks to use slugs in urls instead of pk.
 - [#2133](https://github.com/nautobot/nautobot/pull/2133) - Update documentation for job hooks, make it reachable from the Nautobot UI.
 - [#2137](https://github.com/nautobot/nautobot/issues/2137) - Fixed incorrect parameter name in `NaturalKeyOrPKMultipleChoiceFilter` documentation.
