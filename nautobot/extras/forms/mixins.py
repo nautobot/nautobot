@@ -147,8 +147,8 @@ class NoteFormBase(forms.Form):
     object_note = CommentField(label="Note")
 
     def save_note(self, *, instance, user):
-        if "object_note" in self.cleaned_data and self.cleaned_data.get("object_note"):
-            value = self.cleaned_data.get("object_note")
+        value = self.cleaned_data.get("object_note", "").strip()
+        if value:
             note = Note.objects.create(
                 note=value,
                 assigned_object_type=self.obj_type,
