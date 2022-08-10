@@ -943,6 +943,25 @@ If [`STORAGE_BACKEND`](#storage_backend) is not defined, this setting will be ig
 
 ---
 
+## STRICT_FILTERING
+
+<!-- markdownlint-disable MD036 -->
+_Added in version 1.4.0_
+<!-- markdownlint-enable MD036 -->
+
+Default: `True`
+
+Environment Variable: `NAUTOBOT_STRICT_FILTERING`
+
+If set to `True` (default), UI and REST API filtering of object lists will fail if an unknown/unrecognized filter parameter is provided as a URL parameter. (For example, `/dcim/devices/?ice_cream_flavor=chocolate` or `/api/dcim/sites/?ice_cream_flavor=chocolate`). UI list (table) views will report an error message in this case and display no filtered objects; REST API list endpoints will return a 400 Bad Request response with an explanatory error message.
+
+If set to `False`, unknown/unrecognized filter parameters will be discarded and ignored, although Nautobot will log a warning message.
+
+!!! warning
+    Setting this to `False` can result in unexpected filtering results in the case of user error, for example `/dcim/devices/?has_primry_ip=false` (note the typo `primry`) will result in a list of all devices, rather than the intended list of only devices that lack a primary IP address. In the case of Jobs or external automation making use of such a filter, this could have wide-ranging consequences.
+
+---
+
 ## TIME_ZONE
 
 Default: `"UTC"`
@@ -975,3 +994,24 @@ Environment Variables:
 * `NAUTOBOT_SHORT_TIME_FORMAT`
 * `NAUTOBOT_DATETIME_FORMAT`
 * `NAUTOBOT_SHORT_DATETIME_FORMAT`
+
+---
+
+## UI_RACK_VIEW_TRUNCATE_FUNCTION
+
+<!-- markdownlint-disable MD036 -->
+_Added in version 1.4.0_
+<!-- markdownlint-enable MD036 -->
+
+Default:
+
+```py
+def UI_RACK_VIEW_TRUNCATE_FUNCTION(device_display_name):
+    return str(device_display_name).split(".")[0]
+```
+
+This setting function is used to perform the rack elevation truncation feature. This provides a way to tailor the truncation behavior to best suit the needs of the installation.
+
+The function must take only one argument: the device display name, as a string, attempting to be rendered on the rack elevation.
+
+The function must return only one argument: a string of the truncated device display name.

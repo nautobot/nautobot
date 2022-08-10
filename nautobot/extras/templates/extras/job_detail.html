@@ -29,11 +29,7 @@
             {% if object.source == "git" %}
                 <tr>
                     <td>Repository</td>
-                    {% if object.git_repository is not None %}
-                        <td><a href="{{ object.git_repository.get_absolute_url }}">{{ object.git_repository }}</a></td>
-                    {% else %}
-                        <td><span class="text-muted">&mdash;</span></td>
-                    {% endif %}
+                    <td>{{ object.git_repository|hyperlinked_object }}</td>
                 </tr>
             {% endif %}
             <tr>
@@ -58,6 +54,11 @@
             <tr>
                 <td>Installed</td>
                 <td>{{ object.installed | render_boolean }}</td>
+            </tr>
+            <tr>
+                <td>Is Job Hook Receiver</td>
+                <td>{{ object.is_job_hook_receiver | render_boolean }}</td>
+                <td></td>
             </tr>
         </table>
     </div>

@@ -5,6 +5,7 @@ from django.utils.text import slugify
 from taggit.models import TagBase, GenericUUIDTaggedItemBase
 
 from nautobot.extras.models import ChangeLoggedModel, CustomFieldModel
+from nautobot.extras.models.mixins import NotesMixin
 from nautobot.extras.models.relationships import RelationshipModel
 from nautobot.extras.utils import extras_features, TaggableClassesQuery
 from nautobot.core.models import BaseModel
@@ -34,7 +35,7 @@ class TagQuerySet(RestrictedQuerySet):
     "custom_validators",
     "relationships",
 )
-class Tag(TagBase, BaseModel, ChangeLoggedModel, CustomFieldModel, RelationshipModel):
+class Tag(TagBase, BaseModel, ChangeLoggedModel, CustomFieldModel, RelationshipModel, NotesMixin):
     content_types = models.ManyToManyField(
         to=ContentType,
         related_name="tags",

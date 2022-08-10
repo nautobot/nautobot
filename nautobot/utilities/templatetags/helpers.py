@@ -8,7 +8,7 @@ from django.conf import settings
 from django.contrib.staticfiles.finders import find
 from django.templatetags.static import static, StaticNode
 from django.urls import NoReverseMatch, reverse
-from django.utils.html import strip_tags
+from django.utils.html import format_html, strip_tags
 from django.utils.safestring import mark_safe
 from markdown import markdown
 from django_jinja import library
@@ -27,6 +27,41 @@ register = template.Library()
 #
 # Filters
 #
+
+
+@library.filter()
+@register.filter()
+def hyperlinked_object(value):
+    """Render and link to a Django model instance, if any, or render a placeholder if not.
+
+    Uses `object.display` if available, otherwise uses the string representation of the object.
+    If the object defines `get_absolute_url()` this will be used to hyperlink the displayed object;
+    additionally if there is an `object.description` this will be used as the title of the hyperlink.
+
+    Args:
+        value (django.db.models.Model, None)
+
+    Returns:
+        str: String representation of the value (hyperlinked if it defines get_absolute_url()) or a placeholder.
+
+    Examples:
+        >>> hyperlinked_object(device)
+        '<a href="/dcim/devices/3faafe8c-bdd6-4317-88dc-f791e6988caa/">Device 1</a>'
+        >>> hyperlinked_object(device_role)
+        '<a href="/dcim/device-roles/router/" title="Devices that are routers, not switches">Router</a>'
+        >>> hyperlinked_object(None)
+        '<span class="text-muted">&mdash;</span>'
+        >>> hyperlinked_object("Hello")
+        'Hello'
+    """
+    if value is None:
+        return placeholder(value)
+    display = value.display if hasattr(value, "display") else str(value)
+    if hasattr(value, "get_absolute_url"):
+        if hasattr(value, "description") and value.description:
+            return format_html('<a href="{}" title="{}">{}</a>', value.get_absolute_url(), value.description, display)
+        return format_html('<a href="{}">{}</a>', value.get_absolute_url(), display)
+    return format_html("{}", display)
 
 
 @library.filter()

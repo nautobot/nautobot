@@ -30,6 +30,8 @@ plugin_name/
     - custom_validators.py  # Custom Validators
     - datasources.py        # Loading Data from a Git Repository
     - filter_extensions.py  # Extending Filters
+    - filters.py            # Filtersets for UI, REST API, and GraphQL Model Filtering
+    - forms.py              # UI Forms and Filter Forms
     - graphql/
       - types.py            # GraphQL Type Objects
     - homepage.py           # Home Page Content
@@ -47,7 +49,7 @@ plugin_name/
       - plugin_name/
         - *.html            # UI content templates
     - urls.py               # UI URL Patterns
-    - views.py              # UI Views
+    - views.py              # UI Views and any view override definitions
   - pyproject.toml          # *** REQUIRED *** - Project package definition
   - README.md
 ```
@@ -227,6 +229,7 @@ Plugins can inject custom content into certain areas of the detail views of appl
 * `right_page()` - Inject content on the right side of the page
 * `full_width_page()` - Inject content across the entire bottom of the page
 * `buttons()` - Add buttons to the top of the page
+* `detail_tabs()` - Add extra tabs to the end of the list of tabs within the page tabs navigation
 
 Additionally, a `render()` method is available for convenience. This method accepts the name of a template to render, and any additional context data you want to pass. Its use is optional, however.
 
@@ -243,6 +246,7 @@ Declared subclasses should be gathered into a list or tuple for integration with
 
 ```python
 # template_content.py
+from django.urls import reverse
 from nautobot.extras.plugins import PluginTemplateExtension
 
 from .models import Animal
@@ -259,8 +263,89 @@ class SiteAnimalCount(PluginTemplateExtension):
         })
 
 
-template_extensions = [SiteAnimalCount]
+class DeviceExtraTabs(PluginTemplateExtension):
+    """Template extension to add extra tabs to the object detail tabs."""
+
+    model = 'dcim.device'
+
+    def detail_tabs(self):
+        """
+        You may define extra tabs to render on a model's detail page by utilizing this method.
+        Each tab is defined as a dict in a list of dicts.
+
+        For each of the tabs defined:
+        - The <title> key's value will become the tab link's title.
+        - The <url> key's value is used to render the HTML link for the tab
+
+        These tabs will be visible (in this instance) on the Device model's detail page as
+        set by the DeviceContent.model attribute "dcim.device"
+
+        This example demonstrates defining two tabs. The tabs will be ordered by their position in list.
+        """
+        return [
+            {
+                "title": "Plugin Tab 1",
+                "url": reverse("plugins:example_plugin:device_detail_tab_1", kwargs={"pk": self.context["object"].pk}),
+            },
+            {
+                "title": "Plugin Tab 2",
+                "url": reverse("plugins:example_plugin:device_detail_tab_2", kwargs={"pk": self.context["object"].pk}),
+            },
+        ]
+
+template_extensions = [DeviceExtraTabs, SiteAnimalCount]
 ```
+
+#### Adding Extra Tabs
+
+In order for any extra tabs to work properly, the `"url"` key must reference a view which inherits from the `nautobot.core.views.generic.ObjectView` class and the template must extend the object's detail template such as:
+
+```html
+<!-- example_plugin/tab_device_detail_1.html -->
+{% extends 'dcim/device.html' %}
+
+{% block content %}
+    <h2>Device Plugin Tab 1</h2>
+    <p>I am some content for the example plugin's device ({{ object.pk }}) detail tab 1.</p>
+{% endblock %}
+```
+
+Here's a basic example of a tab's view
+
+```python
+# views.py
+from nautobot.core.views import generic
+from nautobot.dcim.models import Device
+
+class DeviceDetailPluginTabOne(generic.ObjectView):
+    """
+    This view's template extends the device detail template,
+    making it suitable to show as a tab on the device detail page.
+
+    Views that are intended to be for an object detail tab's content rendering must
+    always inherit from nautobot.core.views.generic.ObjectView.
+    """
+
+    queryset = Device.objects.all()
+    template_name = "example_plugin/tab_device_detail_1.html"
+```
+
+You must also add the view to the `url_patterns` like so (make sure to read the note after this code snippet):
+
+```python
+# urls.py
+from django.urls import path
+
+from example_plugin import views
+
+urlpatterns = [
+    # ... previously defined urls
+    path("devices/<uuid:pk>/example-plugin-tab-1/", views.DeviceDetailPluginTabOne.as_view(), name="device_detail_tab_1"),
+]
+```
+
+!!! note
+    For added tab views, we recommend for consistency that you follow the URL pattern established by the base model detail view and tabs (if any). For example, `nautobot/dcim/urls.py` references Device tab views with the URL pattern `devices/<uuid:pk>/TAB-NAME/`, so above we have followed that same pattern.
 
 ### Adding a Banner
 
@@ -494,7 +579,7 @@ With this code, once your plugin is installed, the Git repository creation/editi
 
 ### Populating Extensibility Features
 
-In many cases, a plugin may wish to make use of Nautobot's various extensibility features, such as [custom fields](../../additional-features/custom-fields) or [relationships](../../models/extras/relationship/). It can be useful for a plugin to automatically create a custom field definition or relationship definition as a consequence of being installed and activated, so that everyday usage of the plugin can rely upon these definitions to be present.
+In many cases, a plugin may wish to make use of Nautobot's various extensibility features, such as [custom fields](../models/extras/customfield.md) or [relationships](../models/extras/relationship.md). It can be useful for a plugin to automatically create a custom field definition or relationship definition as a consequence of being installed and activated, so that everyday usage of the plugin can rely upon these definitions to be present.
 
 To make this possible, Nautobot provides a custom [signal](https://docs.djangoproject.com/en/stable/topics/signals/), `nautobot_database_ready`, that plugins can register to listen for. This signal is triggered when `nautobot-server migrate` or `nautobot-server post_upgrade` is run after installing a plugin, and provides an opportunity for the plugin to make any desired additions to the database at this time.
 
@@ -623,7 +708,7 @@ The requirements to extend a filter set or a filter form (or both) are:
 
 Nautobot dynamically creates many additional filters based upon the defined filter type. Specifically, there are additional lookup expressions (referred to in code as `lookup_expr`) that are created for each filter, when there is neither a `lookup_expr` nor `method` parameter already set. These dynamically-added lookup expressions are added using a shorthand notation (e.g. `icontains` is `ic`). Nautobot will also add the negation of each, for example, so `icontains` will be added along with *not* `icontains` using the `ic` and `nic` expressions respectively.
 
-The dynamically-added lookup expressions can be found in the source code at [nautobot/utilities/constants.py](https://github.com/nautobot/nautobot/blob/main/nautobot/utilities/constants.py) and the mapping logic can be found in [nautobot/utilities/filters.py](https://github.com/nautobot/nautobot/blob/main/nautobot/utilities/filters.py). Please see the documentation on [filtering](../../rest-api/filtering/#lookup-expressions) for more information.
+The dynamically-added lookup expressions can be found in the source code at [nautobot/utilities/constants.py](https://github.com/nautobot/nautobot/blob/main/nautobot/utilities/constants.py) and the mapping logic can be found in [nautobot/utilities/filters.py](https://github.com/nautobot/nautobot/blob/main/nautobot/utilities/filters.py). Please see the documentation on [filtering](../rest-api/filtering.md#lookup-expressions) for more information.
 
 !!! tip
     For developers of plugins that define their own model filters, note that the above are added dynamically, as long as the class inherits from `nautobot.utilities.filters.BaseFilterSet`.
@@ -673,8 +758,9 @@ For more advanced usage, you may want to instead inherit from one of Nautobot's 
 | [Object permissions](../administration/permissions.md) | ❌ | ✅ | ✅ | ✅ |
 | [`validated_save()`](../development/best-practices.md#model-validation) | ❌ | ✅ | ✅ | ✅ |
 | [Change logging](../additional-features/change-logging.md) | ❌ | ❌ | ✅ | ✅ |
-| [Custom fields](../additional-features/custom-fields.md) | ❌ | ❌ | ✅ | ✅ |
+| [Custom fields](../models/extras/customfield.md) | ❌ | ❌ | ✅ | ✅ |
 | [Relationships](../models/extras/relationship.md) | ❌ | ❌ | ✅ | ✅ |
+| [Note](../models/extras/note.md) | ❌ | ❌ | ✅ | ✅ |
 | [Tags](../models/extras/tag.md) | ❌ | ❌ | ❌ | ✅ |
 
 !!! note
@@ -759,7 +845,7 @@ Plugins can optionally expose their models via the GraphQL interface to allow th
 All GraphQL model types defined by your plugin, regardless of which method is chosen, will automatically support some built-in Nautobot features:
 
 * Support for object permissions based on their associated `Model` class
-* Include any [custom fields](../additional-features/custom-fields.md) defined for their `Model`
+* Include any [custom fields](../models/extras/customfield.md) defined for their `Model`
 * Include any [relationships](../models/extras/relationship.md) defined for their `Model`
 * Include [tags](../models/extras/tag.md), if the `Model` supports them
 
@@ -1008,4 +1094,55 @@ plugin_name/                   # "nautobot_animal_sounds"
         - index.html
         - models/
           - object_model.html  # "animal.html"
+```
+
+## Overriding Existing Functionality
+
+### Replacing Views
+
+You may override any of the core or plugin views by providing an `override_views` `dict` in a plugin's `views.py` file.
+
+To override a view, you must specify the view's fully qualified name as the `dict` key which consists of the app name followed by the view's name separated by a colon, for instance `dcim:device`. The `dict` value should be the overriding view function.
+
+A simple example to override the device detail view:
+
+```python
+# views.py
+from django.shortcuts import HttpResponse
+from nautobot.core.views import generic
+
+
+class DeviceViewOverride(generic.View):
+    def get(self, request, *args, **kwargs):
+        return HttpResponse(("Hello world! I'm a view which "
+                             "overrides the device object detail view."))
+
+
+override_views = {
+    "dcim:device": DeviceViewOverride.as_view(),
+}
+```
+
+## Note URL Endpoint
+
+New in Nautobot 1.4 is support for models that inherit from `PrimaryModel` and `OrganizationalModel` to have notes associated. In order to utilize this new feature you will need to add the endpoint to `urls.py`. Here is an option to be able to support 1.4 and older versions of Nautobot:
+
+```python
+
+urlpatterns = [
+    path('random/', views.RandomAnimalView.as_view(), name='random_animal'),
+]
+
+try:
+    from nautobot.extras.views import ObjectNotesView
+    urlpatterns.append(
+        path(
+            'random/<slug:slug>/notes/),
+            ObjectNotesView.as_view(),
+            name="random_notes",
+            kwargs={"model": Random},
+        )
+    )
+except ImportError:
+    pass
 ```

@@ -13,7 +13,8 @@ from django.db.models import Q
 from django.utils.deconstruct import deconstructible
 from taggit.managers import _TaggableManager
 
-from nautobot.core.fields import slugify_dots_to_dashes
+# 2.0 TODO: remove `is_taggable` import here; included for now for backwards compatibility with <1.4 code.
+from nautobot.utilities.utils import is_taggable, slugify_dots_to_dashes  # noqa: F401
 from nautobot.extras.constants import (
     EXTRAS_FEATURES,
     JOB_MAX_GROUPING_LENGTH,
@@ -34,16 +35,6 @@ def get_job_content_type():
     return ContentType.objects.get(app_label="extras", model="job")
 
 
-def is_taggable(obj):
-    """
-    Return True if the instance can have Tags assigned to it; False otherwise.
-    """
-    if hasattr(obj, "tags"):
-        if issubclass(obj.tags.__class__, _TaggableManager):
-            return True
-    return False
-
-
 def image_upload(instance, filename):
     """
     Return a path for uploading image attachments.
@@ -58,6 +49,39 @@ def image_upload(instance, filename):
         filename = instance.name
 
     return "{}{}_{}_{}".format(path, instance.content_type.name, instance.object_id, filename)
+
+
+@deconstructible
+class ChangeLoggedModelsQuery:
+    """
+    Helper class to get ContentType for models that implements the to_objectchange method for change logging.
+    """
+
+    def list_subclasses(self):
+        """
+        Return a list of classes that implement the to_objectchange method
+        """
+        return [_class for _class in apps.get_models() if hasattr(_class, "to_objectchange")]
+
+    def __call__(self):
+        return self.get_query()
+
+    def get_query(self):
+        """
+        Return a Q object for content type lookup
+        """
+        query = Q()
+        for model in self.list_subclasses():
+            app_label, model_name = model._meta.label_lower.split(".")
+            query |= Q(app_label=app_label, model=model_name)
+
+        return query
+
+    def as_queryset(self):
+        return ContentType.objects.filter(self.get_query()).order_by("app_label", "model")
+
+    def get_choices(self):
+        return [(f"{ct.app_label}.{ct.model}", ct.pk) for ct in self.as_queryset()]
 
 
 @deconstructible
@@ -214,6 +238,8 @@ def refresh_job_model_from_job_class(job_model_class, job_source, job_class, *, 
     this function may be called from various initialization processes (such as the "nautobot_database_ready" signal)
     and in that case we need to not import models ourselves.
     """
+    from nautobot.extras.jobs import JobHookReceiver  # imported here to prevent circular import problem
+
     if git_repository is not None:
         default_slug = slugify_dots_to_dashes(
             f"{job_source}-{git_repository.slug}-{job_class.__module__}-{job_class.__name__}"
@@ -269,6 +295,7 @@ def refresh_job_model_from_job_class(job_model_class, job_source, job_class, *, 
             "slug": default_slug[:JOB_MAX_SLUG_LENGTH],
             "grouping": job_class.grouping[:JOB_MAX_GROUPING_LENGTH],
             "name": job_class.name[:JOB_MAX_NAME_LENGTH],
+            "is_job_hook_receiver": issubclass(job_class, JobHookReceiver),
             "installed": True,
             "enabled": False,
         },

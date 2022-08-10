@@ -1,0 +1,7 @@
+{% for tabs in plugin_object_detail_tabs %}
+    {% for tab_id, tab in tabs.items %}
+    <li role="presentation"{% if active_tab == tab_id %} class="active"{% endif %}>
+        <a href="{{ tab.url }}?tab={{ tab_id }}">{{ tab.title }}</a>
+    </li>
+    {% endfor %}
+{% endfor %}

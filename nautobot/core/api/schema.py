@@ -1,6 +1,7 @@
 import logging
 import re
 
+from drf_spectacular.contrib.django_filters import DjangoFilterExtension
 from drf_spectacular.extensions import OpenApiSerializerFieldExtension
 from drf_spectacular.openapi import AutoSchema
 from rest_framework import serializers
@@ -143,6 +144,16 @@ class NautobotAutoSchema(AutoSchema):
         if ref_name.endswith("Serializer"):
             ref_name = ref_name[: -len("Serializer")]
         return ref_name
+
+
+class NautobotFilterExtension(DjangoFilterExtension):
+    """
+    Because drf-spectacular does extension registration by exact classpath matches, since we use a custom subclass
+    of django_filters.rest_framework.DjangoFilterBackend, we have to point drf-spectacular to our subclass since the
+    parent class isn't directly in use and therefore doesn't get extended??
+    """
+
+    target_class = "nautobot.core.api.filter_backends.NautobotFilterBackend"
 
 
 class ChoiceFieldFix(OpenApiSerializerFieldExtension):

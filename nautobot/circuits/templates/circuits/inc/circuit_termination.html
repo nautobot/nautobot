@@ -36,9 +36,15 @@
                 <td>Site</td>
                 <td>
                     {% if termination.site.region %}
-                        <a href="{{ termination.site.region.get_absolute_url }}">{{ termination.site.region }}</a> /
+                        {{ termination.site.region|hyperlinked_object }} /
                     {% endif %}
-                    <a href="{% url 'dcim:site' slug=termination.site.slug %}">{{ termination.site }}</a>
+                    {{ termination.site|hyperlinked_object }}
+                </td>
+            </tr>
+            <tr>
+                <td>Location</td>
+                <td>
+                    {% include 'dcim/inc/location_hierarchy.html' with location=termination.location %}
                 </td>
             </tr>
             <tr>
@@ -52,16 +58,16 @@
                                 </a>
                             </div>
                         {% endif %}
-                        <a href="{{ termination.cable.get_absolute_url }}">{{ termination.cable }}</a>
+                        {{ termination.cable|hyperlinked_object }}
                         <a href="{% url 'circuits:circuittermination_trace' pk=termination.pk %}" class="btn btn-primary btn-xs" title="Trace">
                             <i class="mdi mdi-transit-connection-variant" aria-hidden="true"></i>
                         </a>
                         {% with peer=termination.get_cable_peer %}
                             to
                             {% if peer.device %}
-                                <a href="{{ peer.device.get_absolute_url }}">{{ peer.device }}</a>
+                                {{ peer.device|hyperlinked_object }}
                             {% elif peer.circuit %}
-                                <a href="{{ peer.circuit.get_absolute_url }}">{{ peer.circuit }}</a>
+                                {{ peer.circuit|hyperlinked_object }}
                             {% endif %}
                             ({{ peer }})
                         {% endwith %}
@@ -88,9 +94,7 @@
             {% else %}
             <tr>
                 <td>Provider Network</td>
-                <td>
-                    <a href="{{ termination.provider_network.get_absolute_url }}">{{ termination.provider_network }}</a>
-                </td>
+                <td>{{ termination.provider_network|hyperlinked_object }}</td>
             </tr>
             {% endif %}
             <tr>
@@ -112,7 +116,7 @@
                     {% if termination.connected_endpoint %}
                         {% for ip in termination.ip_addresses %}
                             {% if not forloop.first %}<br />{% endif %}
-                            <a href="{% url 'ipam:ipaddress' pk=ip.pk %}">{{ ip }}</a> ({{ ip.vrf|default:"Global" }})
+                            {{ ip|hyperlinked_object }} ({{ ip.vrf|default:"Global" }})
                         {% empty %}
                             <span class="text-muted">None</span>
                         {% endfor %}

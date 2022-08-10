@@ -15,25 +15,27 @@ from db_file_storage.form_widgets import DBClearableFileInput
 from django import forms
 from django.conf import settings
 from django.contrib.auth import get_user_model
+from django.contrib.contenttypes.models import ContentType
 from django.core.files.uploadedfile import InMemoryUploadedFile
 from django.core.validators import RegexValidator
 from django.db import transaction
 from django.db.models import Model
 from django.db.models.query import QuerySet
 from django.forms import ValidationError
+from django.test.client import RequestFactory
 from django.utils import timezone
 from django.utils.functional import classproperty
 import netaddr
 import yaml
 
 
-from .choices import JobResultStatusChoices, LogLevelChoices
-from .context_managers import change_logging
+from .choices import JobResultStatusChoices, LogLevelChoices, ObjectChangeActionChoices, ObjectChangeEventContextChoices
+from .context_managers import change_logging, JobChangeContext, JobHookChangeContext
 from .datasources.git import ensure_git_repository
 from .forms import JobForm
-from .models import FileProxy, GitRepository, Job as JobModel, ScheduledJob
+from .models import FileProxy, GitRepository, Job as JobModel, JobHook, ObjectChange, ScheduledJob
 from .registry import registry
-from .utils import get_job_content_type, jobs_in_directory
+from .utils import ChangeLoggedModelsQuery, get_job_content_type, jobs_in_directory
 
 from nautobot.core.celery import nautobot_task
 from nautobot.ipam.formfields import IPAddressFormField, IPNetworkFormField
@@ -47,6 +49,7 @@ from nautobot.utilities.forms import (
     DynamicModelChoiceField,
     DynamicModelMultipleChoiceField,
 )
+from nautobot.utilities.utils import copy_safe_request
 
 
 User = get_user_model()
@@ -244,10 +247,18 @@ class BaseJob:
 
     @classmethod
     def _get_vars(cls):
-        vars = OrderedDict()
-        for name, attr in cls.__dict__.items():
-            if name not in vars and issubclass(attr.__class__, ScriptVariable):
-                vars[name] = attr
+        """
+        Return dictionary of ScriptVariable attributes defined on this class and any base classes to the top of the inheritance chain.
+        The variables are sorted in the order that they were defined, with variables defined on base classes appearing before subclass variables.
+        """
+        vars = dict()
+        # get list of base classes, including cls, in reverse method resolution order: [BaseJob, Job, cls]
+        base_classes = reversed(inspect.getmro(cls))
+        attr_names = [name for base in base_classes for name in base.__dict__.keys()]
+        for name in attr_names:
+            attr_class = getattr(cls, name, None).__class__
+            if name not in vars and issubclass(attr_class, ScriptVariable):
+                vars[name] = getattr(cls, name)
 
         return vars
 
@@ -315,7 +326,7 @@ class BaseJob:
             # Hide the commit field for read only jobs
             form.fields["_commit"].widget = forms.HiddenInput()
             form.fields["_commit"].initial = False
-        else:
+        elif not initial or "_commit" not in initial:
             # Set initial "commit" checkbox state based on the Meta parameter
             form.fields["_commit"].initial = commit_default
 
@@ -832,6 +843,34 @@ class IPNetworkVar(ScriptVariable):
             self.field_attrs["validators"].append(MaxPrefixLengthValidator(max_prefix_length))
 
 
+class JobHookReceiver(Job):
+    """
+    Base class for job hook receivers. Job hook receivers are jobs that are initiated
+    from object changes and are not intended to be run from the UI or API like standard jobs.
+    """
+
+    object_change = ObjectVar(model=ObjectChange)
+
+    def run(self, data, commit):
+        """JobHookReceiver subclasses generally shouldn't need to override this method."""
+        object_change = data["object_change"]
+        self.receive_job_hook(
+            change=object_change,
+            action=object_change.action,
+            changed_object=object_change.changed_object,
+        )
+
+    def receive_job_hook(self, change, action, changed_object):
+        """
+        Method to be implemented by concrete JobHookReceiver subclasses.
+
+        :param change: an instance of `nautobot.extras.models.ObjectChange`
+        :param action: a string with the action performed on the changed object ("create", "update" or "delete")
+        :param changed_object: an instance of the object that was changed, or `None` if the object has been deleted
+        """
+        raise NotImplementedError
+
+
 def is_job(obj):
     """
     Returns True if the given object is a Job subclass.
@@ -840,7 +879,7 @@ def is_job(obj):
     from .reports import Report
 
     try:
-        return issubclass(obj, Job) and obj not in [Job, Script, BaseScript, Report]
+        return issubclass(obj, Job) and obj not in [Job, Script, BaseScript, Report, JobHookReceiver]
     except TypeError:
         return False
 
@@ -923,7 +962,7 @@ def _get_job_source_paths():
                 continue
 
             try:
-                # In the case where we have multiple Nautobot instances, or multiple RQ worker instances,
+                # In the case where we have multiple Nautobot instances, or multiple worker instances,
                 # they are not required to share a common filesystem; therefore, we may need to refresh our local clone
                 # of the Git repository to ensure that it is in sync with the latest repository clone from any instance.
                 ensure_git_repository(
@@ -1110,9 +1149,6 @@ def run_job(data, request, job_result_pk, commit=True, *args, **kwargs):
     job_result.set_status(JobResultStatusChoices.STATUS_RUNNING)
     job_result.save()
 
-    # Add the current request as a property of the job
-    job.request = request
-
     def _run_job():
         """
         Core job execution task.
@@ -1185,7 +1221,9 @@ def run_job(data, request, job_result_pk, commit=True, *args, **kwargs):
     # Execute the job. If commit == True, wrap it with the change_logging context manager to ensure we
     # process change logs, webhooks, etc.
     if commit:
-        with change_logging(request):
+        context_class = JobHookChangeContext if job_model.is_job_hook_receiver else JobChangeContext
+        change_context = context_class(user=request.user, context_detail=job_model.slug)
+        with change_logging(change_context):
             _run_job()
     else:
         _run_job()
@@ -1209,3 +1247,45 @@ def scheduled_job_handler(*args, **kwargs):
 
     job_content_type = get_job_content_type()
     JobResult.enqueue_job(run_job, name, job_content_type, user, schedule=schedule, **kwargs)
+
+
+def enqueue_job_hooks(object_change):
+    """
+    Find job hook(s) assigned to this changed object type + action and enqueue them
+    to be processed
+    """
+    from nautobot.extras.models import JobResult  # avoid circular import
+
+    # Job hooks cannot trigger other job hooks
+    if object_change.change_context == ObjectChangeEventContextChoices.CONTEXT_JOB_HOOK:
+        return
+
+    # Determine whether this type of object supports job hooks
+    model_type = object_change.changed_object._meta.model
+    if model_type not in ChangeLoggedModelsQuery().list_subclasses():
+        return
+
+    # Retrieve any applicable job hooks
+    content_type = ContentType.objects.get_for_model(object_change.changed_object)
+    action_flag = {
+        ObjectChangeActionChoices.ACTION_CREATE: "type_create",
+        ObjectChangeActionChoices.ACTION_UPDATE: "type_update",
+        ObjectChangeActionChoices.ACTION_DELETE: "type_delete",
+    }[object_change.action]
+    job_hooks = JobHook.objects.filter(content_types=content_type, enabled=True, **{action_flag: True})
+
+    # Enqueue the jobs related to the job_hooks
+    for job_hook in job_hooks:
+        job_content_type = get_job_content_type()
+        job_model = job_hook.job
+        request = RequestFactory().request(SERVER_NAME="job_hook")
+        request.user = object_change.user
+        JobResult.enqueue_job(
+            run_job,
+            job_model.class_path,
+            job_content_type,
+            object_change.user,
+            data=job_model.job_class.serialize_data({"object_change": object_change}),
+            request=copy_safe_request(request),
+            commit=True,
+        )

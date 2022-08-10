@@ -1,3 +1,4 @@
+from django.db.models import Q
 from django.http import QueryDict
 from django.test import TestCase
 
@@ -10,9 +11,13 @@ from nautobot.utilities.utils import (
     get_model_from_name,
     get_route_for_model,
     get_table_for_model,
+    is_taggable,
     normalize_querydict,
+    pretty_print_query,
+    slugify_dots_to_dashes,
+    slugify_dashes_to_underscores,
 )
-from nautobot.dcim.models import Device, Site
+from nautobot.dcim.models import Device, Region, Site
 from nautobot.dcim.filters import DeviceFilterSet, SiteFilterSet
 from nautobot.dcim.forms import DeviceForm, DeviceFilterForm, SiteForm, SiteFilterForm
 from nautobot.dcim.tables import DeviceTable, SiteTable
@@ -197,6 +202,30 @@ class GetFooForModelTest(TestCase):
         self.assertEqual(get_model_from_name("dcim.site"), Site)
 
 
+class IsTaggableTest(TestCase):
+    def test_is_taggable_true(self):
+        # Classes
+        self.assertTrue(is_taggable(Site))
+        self.assertTrue(is_taggable(Device))
+
+        # Instances
+        self.assertTrue(is_taggable(Site(name="Test Site")))
+
+    def test_is_taggable_false(self):
+        class FakeOut:
+            tags = "Nope!"
+
+        # Classes
+        self.assertFalse(is_taggable(Region))
+        self.assertFalse(is_taggable(FakeOut))
+
+        # Instances
+        self.assertFalse(is_taggable(Region(name="Test Region")))
+        self.assertFalse(is_taggable(FakeOut()))
+
+        self.assertFalse(is_taggable(None))
+
+
 class IsTruthyTest(TestCase):
     def test_is_truthy(self):
         self.assertTrue(is_truthy("true"))
@@ -215,3 +244,54 @@ class IsTruthyTest(TestCase):
         self.assertFalse(is_truthy("n"))
         self.assertFalse(is_truthy(0))
         self.assertFalse(is_truthy("0"))
+
+
+class PrettyPrintQueryTest(TestCase):
+    """Tests for `pretty_print_query()."""
+
+    def test_pretty_print_query(self):
+        """Test that each Q object, from deeply nested to flat, pretty prints as expected."""
+        queries = [
+            ((Q(site__slug="ams01") | Q(site__slug="ang01")) & ~Q(status__slug="active")) | Q(status__slug="planned"),
+            (Q(site__slug="ams01") | Q(site__slug="ang01")) & ~Q(status__slug="active"),
+            Q(site__slug="ams01") | Q(site__slug="ang01"),
+            Q(site__slug="ang01") & ~Q(status__slug="active"),
+            Q(site__slug="ams01", status__slug="planned"),
+            Q(site__slug="ang01"),
+            Q(status__id=12345),
+            Q(site__slug__in=["ams01", "ang01"]),
+        ]
+        results = [
+            "(((site__slug='ams01' OR site__slug='ang01') AND (NOT status__slug='active')) OR status__slug='planned')",
+            "((site__slug='ams01' OR site__slug='ang01') AND (NOT status__slug='active'))",
+            "(site__slug='ams01' OR site__slug='ang01')",
+            "(site__slug='ang01' AND (NOT status__slug='active'))",
+            "(site__slug='ams01' AND status__slug='planned')",
+            "(site__slug='ang01')",
+            "(status__id=12345)",
+            "(site__slug__in=['ams01', 'ang01'])",
+        ]
+
+        tests = zip(queries, results)
+
+        for query, expected in tests:
+            self.assertEqual(pretty_print_query(query), expected)
+
+
+class SlugifyFunctionsTest(TestCase):
+    """Test custom slugify functions."""
+
+    def test_slugify_dots_to_dashes(self):
+        for content, expected in (
+            ("Hello.World", "hello-world"),
+            ("plugins.my_plugin.jobs", "plugins-my_plugin-jobs"),
+            ("Lots of . spaces  ... and such", "lots-of-spaces-and-such"),
+        ):
+            self.assertEqual(slugify_dots_to_dashes(content), expected)
+
+    def test_slugify_dashes_to_underscores(self):
+        for content, expected in (
+            ("Sites / Regions", "sites_regions"),
+            ("alpha-beta_gamma delta", "alpha_beta_gamma_delta"),
+        ):
+            self.assertEqual(slugify_dashes_to_underscores(content), expected)

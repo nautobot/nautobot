@@ -5,21 +5,28 @@ from django.core.exceptions import ValidationError
 from nautobot.dcim.choices import InterfaceModeChoices
 from nautobot.dcim.constants import INTERFACE_MTU_MAX, INTERFACE_MTU_MIN
 from nautobot.dcim.forms import InterfaceCommonForm, INTERFACE_MODE_HELP_TEXT
-from nautobot.dcim.models import Device, DeviceRole, Platform, Rack, Region, Site
+from nautobot.dcim.form_mixins import (
+    LocatableModelBulkEditFormMixin,
+    LocatableModelCSVFormMixin,
+    LocatableModelFilterFormMixin,
+    LocatableModelFormMixin,
+)
+from nautobot.dcim.models import Device, DeviceRole, Location, Platform, Rack, Region, Site
 from nautobot.extras.forms import (
-    AddRemoveTagsForm,
-    CustomFieldBulkCreateForm,
-    CustomFieldBulkEditForm,
-    CustomFieldFilterForm,
+    CustomFieldModelBulkEditFormMixin,
     CustomFieldModelCSVForm,
+    NautobotBulkEditForm,
     NautobotModelForm,
+    NautobotFilterForm,
     LocalContextFilterForm,
     LocalContextModelForm,
     LocalContextModelBulkEditForm,
-    StatusBulkEditFormMixin,
+    StatusModelBulkEditFormMixin,
     StatusModelCSVFormMixin,
-    StatusFilterFormMixin,
+    StatusModelFilterFormMixin,
+    TagsBulkEditFormMixin,
 )
+from nautobot.extras.models import Status
 from nautobot.ipam.models import IPAddress, VLAN
 from nautobot.tenancy.forms import TenancyFilterForm, TenancyForm
 from nautobot.tenancy.models import Tenant
@@ -96,15 +103,9 @@ class ClusterGroupCSVForm(CustomFieldModelCSVForm):
 #
 
 
-class ClusterForm(NautobotModelForm, TenancyForm):
+class ClusterForm(LocatableModelFormMixin, NautobotModelForm, TenancyForm):
     type = DynamicModelChoiceField(queryset=ClusterType.objects.all())
     group = DynamicModelChoiceField(queryset=ClusterGroup.objects.all(), required=False)
-    region = DynamicModelChoiceField(queryset=Region.objects.all(), required=False, initial_params={"sites": "$site"})
-    site = DynamicModelChoiceField(
-        queryset=Site.objects.all(),
-        required=False,
-        query_params={"region_id": "$region"},
-    )
     comments = CommentField()
 
     class Meta:
@@ -116,12 +117,13 @@ class ClusterForm(NautobotModelForm, TenancyForm):
             "tenant",
             "region",
             "site",
+            "location",
             "comments",
             "tags",
         )
 
 
-class ClusterCSVForm(CustomFieldModelCSVForm):
+class ClusterCSVForm(LocatableModelCSVFormMixin, CustomFieldModelCSVForm):
     type = CSVModelChoiceField(
         queryset=ClusterType.objects.all(),
         to_field_name="name",
@@ -132,12 +134,6 @@ class ClusterCSVForm(CustomFieldModelCSVForm):
         to_field_name="name",
         required=False,
         help_text="Assigned cluster group",
-    )
-    site = CSVModelChoiceField(
-        queryset=Site.objects.all(),
-        to_field_name="name",
-        required=False,
-        help_text="Assigned site",
     )
     tenant = CSVModelChoiceField(
         queryset=Tenant.objects.all(),
@@ -151,37 +147,33 @@ class ClusterCSVForm(CustomFieldModelCSVForm):
         fields = Cluster.csv_headers
 
 
-class ClusterBulkEditForm(BootstrapMixin, AddRemoveTagsForm, CustomFieldBulkEditForm):
+class ClusterBulkEditForm(
+    TagsBulkEditFormMixin,
+    LocatableModelBulkEditFormMixin,
+    NautobotBulkEditForm,
+):
     pk = forms.ModelMultipleChoiceField(queryset=Cluster.objects.all(), widget=forms.MultipleHiddenInput())
     type = DynamicModelChoiceField(queryset=ClusterType.objects.all(), required=False)
     group = DynamicModelChoiceField(queryset=ClusterGroup.objects.all(), required=False)
     tenant = DynamicModelChoiceField(queryset=Tenant.objects.all(), required=False)
-    region = DynamicModelChoiceField(queryset=Region.objects.all(), required=False, to_field_name="slug")
-    site = DynamicModelChoiceField(queryset=Site.objects.all(), required=False, query_params={"region": "$region"})
     comments = CommentField(widget=SmallTextarea, label="Comments")
 
     class Meta:
+        model = Cluster
         nullable_fields = [
             "group",
             "site",
+            "location",
             "comments",
             "tenant",
         ]
 
 
-class ClusterFilterForm(BootstrapMixin, TenancyFilterForm, CustomFieldFilterForm):
+class ClusterFilterForm(NautobotFilterForm, LocatableModelFilterFormMixin, TenancyFilterForm):
     model = Cluster
     field_order = ["q", "type", "region", "site", "group", "tenant_group", "tenant"]
     q = forms.CharField(required=False, label="Search")
     type = DynamicModelMultipleChoiceField(queryset=ClusterType.objects.all(), to_field_name="slug", required=False)
-    region = DynamicModelMultipleChoiceField(queryset=Region.objects.all(), to_field_name="slug", required=False)
-    site = DynamicModelMultipleChoiceField(
-        queryset=Site.objects.all(),
-        to_field_name="slug",
-        required=False,
-        null_option="None",
-        query_params={"region": "$region"},
-    )
     group = DynamicModelMultipleChoiceField(
         queryset=ClusterGroup.objects.all(),
         to_field_name="slug",
@@ -198,16 +190,25 @@ class ClusterAddDevicesForm(BootstrapMixin, forms.Form):
         required=False,
         query_params={"region_id": "$region"},
     )
+    location = DynamicModelChoiceField(
+        queryset=Location.objects.all(),
+        required=False,
+        query_params={"content_type": "virtualization.cluster"},  # TODO: base_site: $site
+    )
     rack = DynamicModelChoiceField(
         queryset=Rack.objects.all(),
         required=False,
         null_option="None",
-        query_params={"site_id": "$site"},
+        query_params={
+            "site_id": "$site",
+            "location_id": "$location",
+        },
     )
     devices = DynamicModelMultipleChoiceField(
         queryset=Device.objects.all(),
         query_params={
             "site_id": "$site",
+            "location_id": "$location",
             "rack_id": "$rack",
             "cluster_id": "null",
         },
@@ -217,6 +218,7 @@ class ClusterAddDevicesForm(BootstrapMixin, forms.Form):
         fields = [
             "region",
             "site",
+            "location",
             "rack",
             "devices",
         ]
@@ -241,6 +243,17 @@ class ClusterAddDevicesForm(BootstrapMixin, forms.Form):
                             "devices": "{} belongs to a different site ({}) than the cluster ({})".format(
                                 device, device.site, self.cluster.site
                             )
+                        }
+                    )
+
+        # If the Cluster is assigned to a Location, all Devices must exist within that Location
+        if self.cluster.location is not None:
+            for device in self.cleaned_data.get("devices", []):
+                if device.location and self.cluster.location not in device.location.ancestors(include_self=True):
+                    raise ValidationError(
+                        {
+                            "devices": f"{device} belongs to a location ({device.location}) that "
+                            f"does not fall within this cluster's location ({self.cluster.location})."
                         }
                     )
 
@@ -373,7 +386,7 @@ class VirtualMachineCSVForm(StatusModelCSVFormMixin, CustomFieldModelCSVForm):
 
 
 class VirtualMachineBulkEditForm(
-    BootstrapMixin, AddRemoveTagsForm, StatusBulkEditFormMixin, CustomFieldBulkEditForm, LocalContextModelBulkEditForm
+    TagsBulkEditFormMixin, StatusModelBulkEditFormMixin, NautobotBulkEditForm, LocalContextModelBulkEditForm
 ):
     pk = forms.ModelMultipleChoiceField(queryset=VirtualMachine.objects.all(), widget=forms.MultipleHiddenInput())
     cluster = DynamicModelChoiceField(queryset=Cluster.objects.all(), required=False)
@@ -402,7 +415,11 @@ class VirtualMachineBulkEditForm(
 
 
 class VirtualMachineFilterForm(
-    BootstrapMixin, TenancyFilterForm, StatusFilterFormMixin, CustomFieldFilterForm, LocalContextFilterForm
+    NautobotFilterForm,
+    LocatableModelFilterFormMixin,
+    TenancyFilterForm,
+    StatusModelFilterFormMixin,
+    LocalContextFilterForm,
 ):
     model = VirtualMachine
     field_order = [
@@ -414,6 +431,7 @@ class VirtualMachineFilterForm(
         "role",
         "region",
         "site",
+        "location",
         "tenant_group",
         "tenant",
         "platform",
@@ -433,14 +451,6 @@ class VirtualMachineFilterForm(
         null_option="None",
     )
     cluster_id = DynamicModelMultipleChoiceField(queryset=Cluster.objects.all(), required=False, label="Cluster")
-    region = DynamicModelMultipleChoiceField(queryset=Region.objects.all(), to_field_name="slug", required=False)
-    site = DynamicModelMultipleChoiceField(
-        queryset=Site.objects.all(),
-        to_field_name="slug",
-        required=False,
-        null_option="None",
-        query_params={"region": "$region"},
-    )
     role = DynamicModelMultipleChoiceField(
         queryset=DeviceRole.objects.filter(vm_role=True),
         to_field_name="slug",
@@ -469,6 +479,18 @@ class VirtualMachineFilterForm(
 
 
 class VMInterfaceForm(NautobotModelForm, InterfaceCommonForm):
+    parent_interface = DynamicModelChoiceField(
+        queryset=VMInterface.objects.all(),
+        required=False,
+        label="Parent interface",
+        help_text="Assigned parent VMinterface",
+    )
+    bridge = DynamicModelChoiceField(
+        queryset=VMInterface.objects.all(),
+        required=False,
+        label="Bridge interface",
+        help_text="Assigned bridge VMinterface",
+    )
     untagged_vlan = DynamicModelChoiceField(
         queryset=VLAN.objects.all(),
         required=False,
@@ -494,6 +516,8 @@ class VMInterfaceForm(NautobotModelForm, InterfaceCommonForm):
             "virtual_machine",
             "name",
             "enabled",
+            "parent_interface",
+            "bridge",
             "mac_address",
             "mtu",
             "description",
@@ -501,6 +525,7 @@ class VMInterfaceForm(NautobotModelForm, InterfaceCommonForm):
             "tags",
             "untagged_vlan",
             "tagged_vlans",
+            "status",
         ]
         widgets = {"virtual_machine": forms.HiddenInput(), "mode": StaticSelect2()}
         labels = {
@@ -512,6 +537,11 @@ class VMInterfaceForm(NautobotModelForm, InterfaceCommonForm):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+        vm_id = self.initial.get("virtual_machine") or self.data.get("virtual_machine")
+
+        # Restrict parent interface assignment by VM
+        self.fields["parent_interface"].widget.add_query_param("virtual_machine_id", vm_id)
+        self.fields["bridge"].widget.add_query_param("virtual_machine_id", vm_id)
 
         virtual_machine = VirtualMachine.objects.get(
             pk=self.initial.get("virtual_machine") or self.data.get("virtual_machine")
@@ -528,6 +558,22 @@ class VMInterfaceCreateForm(BootstrapMixin, InterfaceCommonForm):
     virtual_machine = DynamicModelChoiceField(queryset=VirtualMachine.objects.all())
     name_pattern = ExpandableNameField(label="Name")
     enabled = forms.BooleanField(required=False, initial=True)
+    parent_interface = DynamicModelChoiceField(
+        queryset=VMInterface.objects.all(),
+        required=False,
+        query_params={
+            "virtual_machine_id": "$virtual_machine",
+        },
+        help_text="Assigned parent VMinterface",
+    )
+    bridge = DynamicModelChoiceField(
+        queryset=VMInterface.objects.all(),
+        required=False,
+        query_params={
+            "virtual_machine_id": "$virtual_machine",
+        },
+        help_text="Assigned bridge VMinterface",
+    )
     mtu = forms.IntegerField(
         required=False,
         min_value=INTERFACE_MTU_MIN,
@@ -557,9 +603,20 @@ class VMInterfaceCreateForm(BootstrapMixin, InterfaceCommonForm):
             "site_id": "null",
         },
     )
+    status = DynamicModelChoiceField(
+        queryset=Status.objects.all(),
+        query_params={
+            "content_types": VMInterface._meta.label_lower,
+        },
+    )
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+        vm_id = self.initial.get("virtual_machine") or self.data.get("virtual_machine")
+
+        # Restrict parent interface assignment by VM
+        self.fields["parent_interface"].widget.add_query_param("virtual_machine_id", vm_id)
+        self.fields["bridge"].widget.add_query_param("virtual_machine_id", vm_id)
 
         virtual_machine = VirtualMachine.objects.get(
             pk=self.initial.get("virtual_machine") or self.data.get("virtual_machine")
@@ -572,8 +629,14 @@ class VMInterfaceCreateForm(BootstrapMixin, InterfaceCommonForm):
             self.fields["tagged_vlans"].widget.add_query_param("site_id", site.pk)
 
 
-class VMInterfaceCSVForm(CustomFieldModelCSVForm):
+class VMInterfaceCSVForm(CustomFieldModelCSVForm, StatusModelCSVFormMixin):
     virtual_machine = CSVModelChoiceField(queryset=VirtualMachine.objects.all(), to_field_name="name")
+    parent_interface = CSVModelChoiceField(
+        queryset=VMInterface.objects.all(), required=False, to_field_name="name", help_text="Parent interface"
+    )
+    bridge = CSVModelChoiceField(
+        queryset=VMInterface.objects.all(), required=False, to_field_name="name", help_text="Bridge interface"
+    )
     mode = CSVChoiceField(
         choices=InterfaceModeChoices,
         required=False,
@@ -592,13 +655,20 @@ class VMInterfaceCSVForm(CustomFieldModelCSVForm):
             return self.cleaned_data["enabled"]
 
 
-class VMInterfaceBulkEditForm(BootstrapMixin, AddRemoveTagsForm, CustomFieldBulkEditForm):
+class VMInterfaceBulkEditForm(TagsBulkEditFormMixin, StatusModelBulkEditFormMixin, NautobotBulkEditForm):
     pk = forms.ModelMultipleChoiceField(queryset=VMInterface.objects.all(), widget=forms.MultipleHiddenInput())
     virtual_machine = forms.ModelChoiceField(
         queryset=VirtualMachine.objects.all(),
         required=False,
         disabled=True,
         widget=forms.HiddenInput(),
+    )
+    parent_interface = DynamicModelChoiceField(
+        queryset=VMInterface.objects.all(), required=False, display_field="display_name"
+    )
+    bridge = DynamicModelChoiceField(
+        queryset=VMInterface.objects.all(),
+        required=False,
     )
     enabled = forms.NullBooleanField(required=False, widget=BulkEditNullBooleanSelect())
     mtu = forms.IntegerField(
@@ -632,12 +702,19 @@ class VMInterfaceBulkEditForm(BootstrapMixin, AddRemoveTagsForm, CustomFieldBulk
 
     class Meta:
         nullable_fields = [
+            "parent_interface",
+            "bridge",
             "mtu",
             "description",
         ]
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+        vm_id = self.initial.get("virtual_machine") or self.data.get("virtual_machine")
+
+        # Restrict parent/bridge interface assignment by VM
+        self.fields["parent_interface"].widget.add_query_param("virtual_machine_id", vm_id)
+        self.fields["bridge"].widget.add_query_param("virtual_machine_id", vm_id)
 
         # Limit available VLANs based on the parent VirtualMachine
         if "virtual_machine" in self.initial:
@@ -649,12 +726,17 @@ class VMInterfaceBulkEditForm(BootstrapMixin, AddRemoveTagsForm, CustomFieldBulk
                 self.fields["untagged_vlan"].widget.add_query_param("site_id", site.pk)
                 self.fields["tagged_vlans"].widget.add_query_param("site_id", site.pk)
 
+        self.fields["parent_interface"].choices = ()
+        self.fields["parent_interface"].widget.attrs["disabled"] = True
+        self.fields["bridge"].choices = ()
+        self.fields["bridge"].widget.attrs["disabled"] = True
+
 
 class VMInterfaceBulkRenameForm(BulkRenameForm):
     pk = forms.ModelMultipleChoiceField(queryset=VMInterface.objects.all(), widget=forms.MultipleHiddenInput())
 
 
-class VMInterfaceFilterForm(BootstrapMixin, CustomFieldFilterForm):
+class VMInterfaceFilterForm(NautobotFilterForm, StatusModelFilterFormMixin):
     model = VMInterface
     cluster_id = DynamicModelMultipleChoiceField(queryset=Cluster.objects.all(), required=False, label="Cluster")
     virtual_machine_id = DynamicModelMultipleChoiceField(
@@ -672,7 +754,7 @@ class VMInterfaceFilterForm(BootstrapMixin, CustomFieldFilterForm):
 #
 
 
-class VirtualMachineBulkAddComponentForm(CustomFieldBulkCreateForm, BootstrapMixin, forms.Form):
+class VirtualMachineBulkAddComponentForm(CustomFieldModelBulkEditFormMixin, BootstrapMixin, forms.Form):
     pk = forms.ModelMultipleChoiceField(queryset=VirtualMachine.objects.all(), widget=forms.MultipleHiddenInput())
     name_pattern = ExpandableNameField(label="Name")
 

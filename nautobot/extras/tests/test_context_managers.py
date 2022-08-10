@@ -4,9 +4,10 @@ from django.test import TestCase
 
 from nautobot.core.celery import app
 from nautobot.dcim.models import Site
-from nautobot.extras.choices import ObjectChangeActionChoices
+from nautobot.extras.choices import ObjectChangeActionChoices, ObjectChangeEventContextChoices
 from nautobot.extras.context_managers import web_request_context
-from nautobot.extras.models import ObjectChange, Webhook
+from nautobot.extras.models import Webhook
+from nautobot.utilities.utils import get_changes_for_model
 
 
 # Use the proper swappable User model
@@ -42,14 +43,6 @@ class WebRequestContextTestCase(TestCase):
             with web_request_context("a string is not a user object"):
                 pass
 
-    def test_request_object_type_error(self):
-        class NotARequest:
-            pass
-
-        with self.assertRaises(TypeError):
-            with web_request_context(self.user, NotARequest()):
-                pass
-
     def test_change_log_created(self):
 
         with web_request_context(self.user):
@@ -57,13 +50,23 @@ class WebRequestContextTestCase(TestCase):
             site.save()
 
         site = Site.objects.get(name="Test Site 1")
-        oc_list = ObjectChange.objects.filter(
-            changed_object_type=ContentType.objects.get_for_model(Site),
-            changed_object_id=site.pk,
-        ).order_by("pk")
+        oc_list = get_changes_for_model(site).order_by("pk")
         self.assertEqual(len(oc_list), 1)
         self.assertEqual(oc_list[0].changed_object, site)
         self.assertEqual(oc_list[0].action, ObjectChangeActionChoices.ACTION_CREATE)
+
+    def test_change_log_context(self):
+
+        with web_request_context(self.user, context_detail="test_change_log_context"):
+            site = Site(name="Test Site 1")
+            site.save()
+
+        site = Site.objects.get(name="Test Site 1")
+        oc_list = get_changes_for_model(site)
+        with self.subTest():
+            self.assertEqual(oc_list[0].change_context, ObjectChangeEventContextChoices.CONTEXT_ORM)
+        with self.subTest():
+            self.assertEqual(oc_list[0].change_context_detail, "test_change_log_context")
 
     def test_change_webhook_enqueued(self):
         """Test that the webhook resides on the queue"""

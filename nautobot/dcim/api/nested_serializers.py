@@ -1,4 +1,5 @@
 from rest_framework import serializers
+from drf_spectacular.utils import extend_schema_field
 
 from nautobot.core.api import BaseModelSerializer, WritableNestedSerializer
 from nautobot.dcim import models
@@ -19,6 +20,8 @@ __all__ = [
     "NestedInterfaceSerializer",
     "NestedInterfaceTemplateSerializer",
     "NestedInventoryItemSerializer",
+    "NestedLocationSerializer",
+    "NestedLocationTypeSerializer",
     "NestedManufacturerSerializer",
     "NestedPlatformSerializer",
     "NestedPowerFeedSerializer",
@@ -60,6 +63,39 @@ class NestedSiteSerializer(WritableNestedSerializer):
     class Meta:
         model = models.Site
         fields = ["id", "url", "name", "slug"]
+
+
+#
+# Locations
+#
+
+
+class NestedLocationTypeSerializer(WritableNestedSerializer):
+    url = serializers.HyperlinkedIdentityField(view_name="dcim-api:locationtype-detail")
+    tree_depth = serializers.SerializerMethodField(read_only=True)
+
+    @extend_schema_field(serializers.IntegerField(allow_null=True))
+    def get_tree_depth(self, obj):
+        """The `tree_depth` is not a database field, but an annotation automatically added by django-tree-queries."""
+        return getattr(obj, "tree_depth", None)
+
+    class Meta:
+        model = models.LocationType
+        fields = ["id", "url", "name", "slug", "tree_depth"]
+
+
+class NestedLocationSerializer(WritableNestedSerializer):
+    url = serializers.HyperlinkedIdentityField(view_name="dcim-api:location-detail")
+    tree_depth = serializers.SerializerMethodField(read_only=True)
+
+    @extend_schema_field(serializers.IntegerField(allow_null=True))
+    def get_tree_depth(self, obj):
+        """The `tree_depth` is not a database field, but an annotation automatically added by django-tree-queries."""
+        return getattr(obj, "tree_depth", None)
+
+    class Meta:
+        model = models.Location
+        fields = ["id", "url", "name", "slug", "tree_depth"]
 
 
 #

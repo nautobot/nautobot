@@ -68,6 +68,10 @@ def generate_filter_resolver(schema_type, resolver_name, field_name):
         if not filterset_class:
             return getattr(self, field_name).all()
 
+        # Inverse of substitution logic from get_filtering_args_from_filterset() - transform "_type" back to "type"
+        if "_type" in kwargs:
+            kwargs["type"] = kwargs.pop("_type")
+
         resolved_obj = filterset_class(kwargs, getattr(self, field_name).all())
 
         # Check result filter for errors.
@@ -88,6 +92,7 @@ def generate_filter_resolver(schema_type, resolver_name, field_name):
     return resolve_filter
 
 
+# 2.0 TODO: #824 rename `name` to `slug`
 def generate_custom_field_resolver(name, resolver_name):
     """Generate function to resolve each custom field within each DjangoObjectType.
 

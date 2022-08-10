@@ -30,7 +30,7 @@ from nautobot.dcim.choices import (
     RackWidthChoices,
     SubdeviceRoleChoices,
 )
-
+from nautobot.dcim.filters import ConsoleConnectionFilterSet, InterfaceConnectionFilterSet, PowerConnectionFilterSet
 from nautobot.dcim.models import (
     Cable,
     ConsolePort,
@@ -48,6 +48,8 @@ from nautobot.dcim.models import (
     InterfaceTemplate,
     Manufacturer,
     InventoryItem,
+    Location,
+    LocationType,
     Platform,
     PowerFeed,
     PowerPort,
@@ -76,8 +78,9 @@ from nautobot.extras.models import (
     Status,
 )
 from nautobot.ipam.models import VLAN, IPAddress
+from nautobot.tenancy.models import Tenant
 from nautobot.users.models import ObjectPermission
-from nautobot.utilities.testing import ViewTestCases, post_data
+from nautobot.utilities.testing import ViewTestCases, extract_page_body, post_data
 
 # Use the proper swappable User model
 User = get_user_model()
@@ -241,6 +244,95 @@ class SiteTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         }
         cls.slug_source = "name"
         cls.slug_test_object = "Site 8"
+
+
+class LocationTypeTestCase(ViewTestCases.OrganizationalObjectViewTestCase):
+    model = LocationType
+
+    @classmethod
+    def setUpTestData(cls):
+        # note that we need two root objects because the DeleteObjectViewTestCase expects to be able to delete either
+        # of the first two objects in the queryset independently; if lt2 were a child of lt1, then deleting lt1 would
+        # cascade-delete lt2, resulting in a test failure.
+        lt1 = LocationType.objects.create(name="Root 1")
+        lt2 = LocationType.objects.create(name="Root 2")
+        lt3 = LocationType.objects.create(name="Intermediate 1", parent=lt2)
+        lt4 = LocationType.objects.create(name="Leaf 1", slug="leaf-1", parent=lt3, description="A leaf type")
+        for lt in [lt1, lt2, lt3, lt4]:
+            lt.validated_save()
+            lt.content_types.add(ContentType.objects.get_for_model(RackGroup))
+
+        # Similarly, EditObjectViewTestCase expects to be able to change lt1 with the below form_data,
+        # so we need to make sure we're not trying to introduce a reference loop to the LocationType tree...
+        cls.form_data = {
+            "name": "Intermediate 2",
+            "slug": "intermediate-2",
+            "parent": lt2.pk,
+            "description": "Another intermediate type",
+            "content_types": [ContentType.objects.get_for_model(Rack).pk, ContentType.objects.get_for_model(Device).pk],
+        }
+
+        cls.csv_data = (
+            "name,slug,parent,description,content_types",
+            "Intermediate 3,intermediate-3,Root 1,Another intermediate type,ipam.prefix",
+            'Intermediate 4,intermediate-4,Root 1,Another intermediate type,"ipam.prefix,dcim.device"',
+            "Root 3,root-3,,Another root type,",
+        )
+
+        cls.slug_source = "name"
+        cls.slug_test_object = "Intermediate 1"
+
+
+class LocationTestCase(ViewTestCases.PrimaryObjectViewTestCase):
+    model = Location
+
+    @classmethod
+    def setUpTestData(cls):
+        lt1 = LocationType.objects.create(name="Root Type 1")
+        lt2 = LocationType.objects.create(name="Intermediate Type 1", parent=lt1)
+        lt3 = LocationType.objects.create(name="Leaf Type 1", slug="leaf-1", parent=lt2, description="A leaf type")
+        for lt in [lt1, lt2, lt3]:
+            lt.validated_save()
+
+        active = Status.objects.get(name="Active")
+        site = Site.objects.create(name="Site 1", slug="site-1", status=active)
+        tenant = Tenant.objects.create(name="Tenant 1")
+
+        loc1 = Location.objects.create(name="Root 1", location_type=lt1, site=site, status=active)
+        loc2 = Location.objects.create(name="Root 2", location_type=lt1, site=site, status=active, tenant=tenant)
+        loc3 = Location.objects.create(name="Intermediate 1", location_type=lt2, parent=loc2, status=active)
+        loc4 = Location.objects.create(name="Leaf 1", location_type=lt3, parent=loc3, status=active, description="Hi!")
+        for loc in [loc1, loc2, loc3, loc4]:
+            loc.validated_save()
+
+        cls.form_data = {
+            "location_type": lt1.pk,
+            "parent": None,
+            "site": site.pk,
+            "name": "Root 3",
+            "slug": "root-3",
+            "status": active.pk,
+            "tenant": tenant.pk,
+            "description": "A new root location",
+        }
+
+        cls.csv_data = (
+            "name,slug,location_type,parent,site,status,tenant,description",
+            "Root 3,root-3,Root Type 1,,Site 1,active,,",
+            "Intermediate 2,intermediate-2,Intermediate Type 1,Root 2,,active,Tenant 1,Hello world!",
+            "Leaf 2,leaf-2,Leaf Type 1,Intermediate 1,,active,Tenant 1,",
+        )
+
+        cls.bulk_edit_data = {
+            "description": "A generic description",
+            # Because we have a mix of root and non-root LocationTypes,
+            # we can't bulk-edit the parent or site fields in this generic test
+            "tenant": tenant.pk,
+            "status": Status.objects.get(name="Planned").pk,
+        }
+
+        # No slug_source/slug_test_object here because Location uses the composite [parent__name, name]
+        # and the test doesn't support that idea yet
 
 
 class RackGroupTestCase(ViewTestCases.OrganizationalObjectViewTestCase):
@@ -1730,11 +1822,15 @@ class InterfaceTestCase(ViewTestCases.DeviceComponentViewTestCase):
     def setUpTestData(cls):
         device = create_test_device("Device 1")
 
+        statuses = Status.objects.get_for_model(Interface)
+        status_active = statuses.get(slug="active")
+
         interfaces = (
             Interface.objects.create(device=device, name="Interface 1"),
             Interface.objects.create(device=device, name="Interface 2"),
             Interface.objects.create(device=device, name="Interface 3"),
             Interface.objects.create(device=device, name="LAG", type=InterfaceTypeChoices.TYPE_LAG),
+            Interface.objects.create(device=device, name="BRIDGE", type=InterfaceTypeChoices.TYPE_BRIDGE),
         )
 
         vlans = (
@@ -1748,10 +1844,10 @@ class InterfaceTestCase(ViewTestCases.DeviceComponentViewTestCase):
 
         cls.form_data = {
             "device": device.pk,
-            "virtual_machine": None,
             "name": "Interface X",
             "type": InterfaceTypeChoices.TYPE_1GE_GBIC,
             "enabled": False,
+            "status": status_active.pk,
             "lag": interfaces[3].pk,
             "mac_address": EUI("01:02:03:04:05:06"),
             "mtu": 2000,
@@ -1768,6 +1864,7 @@ class InterfaceTestCase(ViewTestCases.DeviceComponentViewTestCase):
             "name_pattern": "Interface [4-6]",
             "type": InterfaceTypeChoices.TYPE_1GE_GBIC,
             "enabled": False,
+            "bridge": interfaces[4].pk,
             "lag": interfaces[3].pk,
             "mac_address": EUI("01:02:03:04:05:06"),
             "mtu": 2000,
@@ -1777,6 +1874,7 @@ class InterfaceTestCase(ViewTestCases.DeviceComponentViewTestCase):
             "untagged_vlan": vlans[0].pk,
             "tagged_vlans": [v.pk for v in vlans[1:4]],
             "tags": [t.pk for t in tags],
+            "status": status_active.pk,
         }
 
         cls.bulk_edit_data = {
@@ -1790,13 +1888,14 @@ class InterfaceTestCase(ViewTestCases.DeviceComponentViewTestCase):
             "mode": InterfaceModeChoices.MODE_TAGGED,
             "untagged_vlan": vlans[0].pk,
             "tagged_vlans": [v.pk for v in vlans[1:4]],
+            "status": status_active.pk,
         }
 
         cls.csv_data = (
-            "device,name,type",
-            "Device 1,Interface 4,1000base-t",
-            "Device 1,Interface 5,1000base-t",
-            "Device 1,Interface 6,1000base-t",
+            "device,name,type,status",
+            "Device 1,Interface 4,1000base-t,active",
+            "Device 1,Interface 5,1000base-t,active",
+            "Device 1,Interface 6,1000base-t,active",
         )
 
 
@@ -2229,6 +2328,7 @@ class ConsoleConnectionsTestCase(ViewTestCases.ListObjectsViewTestCase):
         return "dcim:console_connections_{}"
 
     model = ConsolePort
+    filterset = ConsoleConnectionFilterSet
 
     @classmethod
     def setUpTestData(cls):
@@ -2282,6 +2382,7 @@ class PowerConnectionsTestCase(ViewTestCases.ListObjectsViewTestCase):
         return "dcim:power_connections_{}"
 
     model = PowerPort
+    filterset = PowerConnectionFilterSet
 
     @classmethod
     def setUpTestData(cls):
@@ -2340,6 +2441,7 @@ class InterfaceConnectionsTestCase(ViewTestCases.ListObjectsViewTestCase):
         return "dcim:interface_connections_{}"
 
     model = Interface
+    filterset = InterfaceConnectionFilterSet
 
     @classmethod
     def setUpTestData(cls):
@@ -2386,6 +2488,23 @@ Device 1,Interface 2,,,True
 Device 1,Interface 3,,,False""",
             response.content.decode(response.charset),
         )
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_list_objects_filtered(self):
+        """Extend base ListObjectsViewTestCase to filter based on *both ends* of a connection."""
+        # self.interfaces[0] is cabled to self.device_2_interface, and unfortunately with the way the queryset filtering
+        # works at present, we can't guarantee whether filtering on id=interfaces[0] will show it or not.
+        instance1, instance2 = self.interfaces[1], self.interfaces[2]
+        response = self.client.get(f"{self._get_url('list')}?id={instance1.pk}")
+        self.assertHttpStatus(response, 200)
+        content = extract_page_body(response.content.decode(response.charset))
+        # TODO: it'd make test failures more readable if we strip the page headers/footers from the content
+        if hasattr(self.model, "name"):
+            self.assertIn(instance1.name, content, msg=content)
+            self.assertNotIn(instance2.name, content, msg=content)
+        if hasattr(self.model, "get_absolute_url"):
+            self.assertIn(instance1.get_absolute_url(), content, msg=content)
+            self.assertNotIn(instance2.get_absolute_url(), content, msg=content)
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
     def test_list_objects_with_constrained_permission(self):

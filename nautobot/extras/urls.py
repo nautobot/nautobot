@@ -12,6 +12,9 @@ from nautobot.extras.models import (
     GitRepository,
     GraphQLQuery,
     Job,
+    Note,
+    JobHook,
+    Relationship,
     Secret,
     SecretsGroup,
     Status,
@@ -48,6 +51,12 @@ urlpatterns = [
         "computed-fields/<slug:slug>/changelog/",
         views.ObjectChangeLogView.as_view(),
         name="computedfield_changelog",
+        kwargs={"model": ComputedField},
+    ),
+    path(
+        "computed-fields/<slug:slug>/notes/",
+        views.ObjectNotesView.as_view(),
+        name="computedfield_notes",
         kwargs={"model": ComputedField},
     ),
     # Config contexts
@@ -90,6 +99,12 @@ urlpatterns = [
         "config-contexts/<uuid:pk>/changelog/",
         views.ObjectChangeLogView.as_view(),
         name="configcontext_changelog",
+        kwargs={"model": ConfigContext},
+    ),
+    path(
+        "config-contexts/<uuid:pk>/notes/",
+        views.ObjectNotesView.as_view(),
+        name="configcontext_notes",
         kwargs={"model": ConfigContext},
     ),
     # Config context schema
@@ -139,6 +154,12 @@ urlpatterns = [
         name="configcontextschema_changelog",
         kwargs={"model": ConfigContextSchema},
     ),
+    path(
+        "config-context-schemas/<slug:slug>/notes/",
+        views.ObjectNotesView.as_view(),
+        name="configcontextschema_notes",
+        kwargs={"model": ConfigContextSchema},
+    ),
     # Custom fields
     path("custom-fields/", views.CustomFieldListView.as_view(), name="customfield_list"),
     path("custom-fields/add/", views.CustomFieldEditView.as_view(), name="customfield_add"),
@@ -147,22 +168,27 @@ urlpatterns = [
         views.CustomFieldBulkDeleteView.as_view(),
         name="customfield_bulk_delete",
     ),
-    # TODO: Migrate custom field model from name to slug #464
-    path("custom-fields/<str:name>/", views.CustomFieldView.as_view(), name="customfield"),
+    path("custom-fields/<slug:slug>/", views.CustomFieldView.as_view(), name="customfield"),
     path(
-        "custom-fields/<str:name>/edit/",
+        "custom-fields/<slug:slug>/edit/",
         views.CustomFieldEditView.as_view(),
         name="customfield_edit",
     ),
     path(
-        "custom-fields/<str:name>/delete/",
+        "custom-fields/<slug:slug>/delete/",
         views.CustomFieldDeleteView.as_view(),
         name="customfield_delete",
     ),
     path(
-        "custom-fields/<str:name>/changelog/",
+        "custom-fields/<slug:slug>/changelog/",
         views.ObjectChangeLogView.as_view(),
         name="customfield_changelog",
+        kwargs={"model": CustomField},
+    ),
+    path(
+        "custom-fields/<str:name>/notes/",
+        views.ObjectNotesView.as_view(),
+        name="customfield_notes",
         kwargs={"model": CustomField},
     ),
     # Custom links
@@ -190,6 +216,12 @@ urlpatterns = [
         name="customlink_changelog",
         kwargs={"model": CustomLink},
     ),
+    path(
+        "custom-links/<uuid:pk>/notes/",
+        views.ObjectNotesView.as_view(),
+        name="customlink_notes",
+        kwargs={"model": CustomLink},
+    ),
     # Dynamic Groups
     path("dynamic-groups/", views.DynamicGroupListView.as_view(), name="dynamicgroup_list"),
     path("dynamic-groups/add/", views.DynamicGroupEditView.as_view(), name="dynamicgroup_add"),
@@ -205,6 +237,12 @@ urlpatterns = [
         "dynamic-groups/<str:slug>/changelog/",
         views.ObjectChangeLogView.as_view(),
         name="dynamicgroup_changelog",
+        kwargs={"model": DynamicGroup},
+    ),
+    path(
+        "dynamic-groups/<str:slug>/notes/",
+        views.ObjectNotesView.as_view(),
+        name="dynamicgroup_notes",
         kwargs={"model": DynamicGroup},
     ),
     # Export Templates
@@ -242,6 +280,12 @@ urlpatterns = [
         "export-templates/<uuid:pk>/changelog/",
         views.ObjectChangeLogView.as_view(),
         name="exporttemplate_changelog",
+        kwargs={"model": ExportTemplate},
+    ),
+    path(
+        "export-templates/<uuid:pk>/notes/",
+        views.ObjectNotesView.as_view(),
+        name="exporttemplate_notes",
         kwargs={"model": ExportTemplate},
     ),
     # Git repositories
@@ -292,6 +336,12 @@ urlpatterns = [
         kwargs={"model": GitRepository},
     ),
     path(
+        "git-repositories/<str:slug>/notes/",
+        views.ObjectNotesView.as_view(),
+        name="gitrepository_notes",
+        kwargs={"model": GitRepository},
+    ),
+    path(
         "git-repositories/<str:slug>/result/",
         views.GitRepositoryResultView.as_view(),
         name="gitrepository_result",
@@ -329,6 +379,12 @@ urlpatterns = [
         "graphql-queries/<uuid:pk>/changelog/",
         views.ObjectChangeLogView.as_view(),
         name="graphqlquery_changelog",
+        kwargs={"model": GraphQLQuery},
+    ),
+    path(
+        "graphql-queries/<uuid:pk>/notes/",
+        views.ObjectNotesView.as_view(),
+        name="graphqlquery_notes",
         kwargs={"model": GraphQLQuery},
     ),
     # Image attachments
@@ -381,9 +437,36 @@ urlpatterns = [
         name="job_changelog",
         kwargs={"model": Job},
     ),
+    path(
+        "jobs/<slug:slug>/notes/",
+        views.ObjectNotesView.as_view(),
+        name="job_notes",
+        kwargs={"model": Job},
+    ),
     # 2.0 TODO: JobView should actually be JobRunView, but keeping it as-is for backwards compatibility
     path("jobs/<slug:slug>/run/", views.JobView.as_view(), name="job_run"),
     path("jobs/<path:class_path>/", views.JobView.as_view(), name="job"),
+    # Job hooks
+    path("job-hooks/", views.JobHookListView.as_view(), name="jobhook_list"),
+    path("job-hooks/add/", views.JobHookEditView.as_view(), name="jobhook_add"),
+    path(
+        "job-hooks/delete/",
+        views.JobHookBulkDeleteView.as_view(),
+        name="jobhook_bulk_delete",
+    ),
+    path("job-hooks/<str:slug>/", views.JobHookView.as_view(), name="jobhook"),
+    path("job-hooks/<str:slug>/edit/", views.JobHookEditView.as_view(), name="jobhook_edit"),
+    path(
+        "job-hooks/<str:slug>/delete/",
+        views.JobHookDeleteView.as_view(),
+        name="jobhook_delete",
+    ),
+    path(
+        "job-hooks/<str:slug>/changelog/",
+        views.ObjectChangeLogView.as_view(),
+        name="jobhook_changelog",
+        kwargs={"model": JobHook},
+    ),
     # Generic job results
     path("job-results/", views.JobResultListView.as_view(), name="jobresult_list"),
     path("job-results/<uuid:pk>/", views.JobResultView.as_view(), name="jobresult"),
@@ -398,6 +481,17 @@ urlpatterns = [
         views.JobResultDeleteView.as_view(),
         name="jobresult_delete",
     ),
+    # Notes
+    path("notes/add/", views.NoteEditView.as_view(), name="note_add"),
+    path("notes/<slug:slug>/", views.NoteView.as_view(), name="note"),
+    path(
+        "notes/<slug:slug>/changelog/",
+        views.ObjectChangeLogView.as_view(),
+        name="note_changelog",
+        kwargs={"model": Note},
+    ),
+    path("notes/<slug:slug>/edit/", views.NoteEditView.as_view(), name="note_edit"),
+    path("notes/<slug:slug>/delete/", views.NoteDeleteView.as_view(), name="note_delete"),
     # Custom relationships
     path("relationships/", views.RelationshipListView.as_view(), name="relationship_list"),
     path(
@@ -411,27 +505,44 @@ urlpatterns = [
         name="relationship_bulk_delete",
     ),
     path(
-        "relationships/<uuid:pk>/edit/",
+        "relationships/<slug:slug>/",
+        views.RelationshipView.as_view(),
+        name="relationship",
+    ),
+    path(
+        "relationships/<slug:slug>/edit/",
         views.RelationshipEditView.as_view(),
         name="relationship_edit",
     ),
     path(
-        "relationships/<uuid:pk>/delete/",
+        "relationships/<slug:slug>/delete/",
         views.RelationshipDeleteView.as_view(),
         name="relationship_delete",
     ),
     path(
-        "relationships/associations/",
+        "relationships/<slug:slug>/changelog/",
+        views.ObjectChangeLogView.as_view(),
+        name="relationship_changelog",
+        kwargs={"model": Relationship},
+    ),
+    path(
+        "relationships/<slug:slug>/notes/",
+        views.ObjectNotesView.as_view(),
+        name="relationship_notes",
+        kwargs={"model": Relationship},
+    ),
+    path(
+        "relationship-associations/",
         views.RelationshipAssociationListView.as_view(),
         name="relationshipassociation_list",
     ),
     path(
-        "relationships/associations/delete/",
+        "relationship-associations/delete/",
         views.RelationshipAssociationBulkDeleteView.as_view(),
         name="relationshipassociation_bulk_delete",
     ),
     path(
-        "relationships/associations/<uuid:pk>/delete/",
+        "relationship-associations/<uuid:pk>/delete/",
         views.RelationshipAssociationDeleteView.as_view(),
         name="relationshipassociation_delete",
     ),
@@ -454,6 +565,12 @@ urlpatterns = [
         name="secret_changelog",
         kwargs={"model": Secret},
     ),
+    path(
+        "secrets/<str:slug>/notes/",
+        views.ObjectNotesView.as_view(),
+        name="secret_notes",
+        kwargs={"model": Secret},
+    ),
     path("secrets-groups/", views.SecretsGroupListView.as_view(), name="secretsgroup_list"),
     path("secrets-groups/add/", views.SecretsGroupEditView.as_view(), name="secretsgroup_add"),
     path("secrets-groups/delete/", views.SecretsGroupBulkDeleteView.as_view(), name="secretsgroup_bulk_delete"),
@@ -464,6 +581,12 @@ urlpatterns = [
         "secrets-groups/<str:slug>/changelog/",
         views.ObjectChangeLogView.as_view(),
         name="secretsgroup_changelog",
+        kwargs={"model": SecretsGroup},
+    ),
+    path(
+        "secrets-groups/<str:slug>/notes/",
+        views.ObjectNotesView.as_view(),
+        name="secretsgroup_notes",
         kwargs={"model": SecretsGroup},
     ),
     # Custom statuses
@@ -489,6 +612,12 @@ urlpatterns = [
         name="status_changelog",
         kwargs={"model": Status},
     ),
+    path(
+        "statuses/<str:slug>/notes/",
+        views.ObjectNotesView.as_view(),
+        name="status_notes",
+        kwargs={"model": Status},
+    ),
     # Tags
     path("tags/", views.TagListView.as_view(), name="tag_list"),
     path("tags/add/", views.TagEditView.as_view(), name="tag_add"),
@@ -502,6 +631,12 @@ urlpatterns = [
         "tags/<str:slug>/changelog/",
         views.ObjectChangeLogView.as_view(),
         name="tag_changelog",
+        kwargs={"model": Tag},
+    ),
+    path(
+        "tags/<str:slug>/notes/",
+        views.ObjectNotesView.as_view(),
+        name="tag_notes",
         kwargs={"model": Tag},
     ),
     # Webhook
@@ -523,6 +658,12 @@ urlpatterns = [
         "webhooks/<uuid:pk>/changelog/",
         views.ObjectChangeLogView.as_view(),
         name="webhook_changelog",
+        kwargs={"model": Webhook},
+    ),
+    path(
+        "webhooks/<uuid:pk>/notes/",
+        views.ObjectNotesView.as_view(),
+        name="webhook_notes",
         kwargs={"model": Webhook},
     ),
 ]

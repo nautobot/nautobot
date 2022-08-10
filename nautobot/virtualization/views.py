@@ -25,6 +25,7 @@ from .models import Cluster, ClusterGroup, ClusterType, VirtualMachine, VMInterf
 
 class ClusterTypeListView(generic.ObjectListView):
     queryset = ClusterType.objects.annotate(cluster_count=count_related(Cluster, "type"))
+    filterset = filters.ClusterTypeFilterSet
     table = tables.ClusterTypeTable
 
 
@@ -84,6 +85,7 @@ class ClusterTypeBulkDeleteView(generic.BulkDeleteView):
 
 class ClusterGroupListView(generic.ObjectListView):
     queryset = ClusterGroup.objects.annotate(cluster_count=count_related(Cluster, "group"))
+    filterset = filters.ClusterGroupFilterSet
     table = tables.ClusterGroupTable
 
 
@@ -394,6 +396,12 @@ class VMInterfaceView(generic.ObjectView):
             orderable=False,
         )
 
+        # Get child interfaces
+        child_interfaces = instance.child_interfaces.restrict(request.user, "view")
+        child_interfaces_tables = tables.VMInterfaceTable(
+            child_interfaces, orderable=False, exclude=("virtual_machine",)
+        )
+
         # Get assigned VLANs and annotate whether each is tagged or untagged
         vlans = []
         if instance.untagged_vlan is not None:
@@ -406,6 +414,7 @@ class VMInterfaceView(generic.ObjectView):
 
         return {
             "ipaddress_table": ipaddress_table,
+            "child_interfaces_table": child_interfaces_tables,
             "vlan_table": vlan_table,
         }
 
@@ -426,6 +435,7 @@ class VMInterfaceEditView(generic.ObjectEditView):
 
 class VMInterfaceDeleteView(generic.ObjectDeleteView):
     queryset = VMInterface.objects.all()
+    template_name = "virtualization/virtual_machine_vminterface_delete.html"
 
 
 class VMInterfaceBulkImportView(generic.BulkImportView):
@@ -448,6 +458,7 @@ class VMInterfaceBulkRenameView(generic.BulkRenameView):
 class VMInterfaceBulkDeleteView(generic.BulkDeleteView):
     queryset = VMInterface.objects.all()
     table = tables.VMInterfaceTable
+    template_name = "virtualization/virtual_machine_vminterface_delete.html"
 
 
 #
