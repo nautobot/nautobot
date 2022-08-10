@@ -7,7 +7,7 @@ from rest_framework.exceptions import APIException
 from rest_framework.response import Response
 from rest_framework.routers import APIRootView
 
-from nautobot.extras.api.views import CustomFieldModelViewSet, StatusViewSetMixin
+from nautobot.extras.api.views import NautobotModelViewSet, StatusViewSetMixin
 from nautobot.ipam import filters
 from nautobot.ipam.models import (
     Aggregate,
@@ -44,7 +44,7 @@ class IPAMRootView(APIRootView):
 #
 
 
-class VRFViewSet(CustomFieldModelViewSet):
+class VRFViewSet(NautobotModelViewSet):
     queryset = (
         VRF.objects.prefetch_related("tenant")
         .prefetch_related("import_targets", "export_targets", "tags")
@@ -62,7 +62,7 @@ class VRFViewSet(CustomFieldModelViewSet):
 #
 
 
-class RouteTargetViewSet(CustomFieldModelViewSet):
+class RouteTargetViewSet(NautobotModelViewSet):
     queryset = RouteTarget.objects.prefetch_related("tenant").prefetch_related("tags")
     serializer_class = serializers.RouteTargetSerializer
     filterset_class = filters.RouteTargetFilterSet
@@ -73,7 +73,7 @@ class RouteTargetViewSet(CustomFieldModelViewSet):
 #
 
 
-class RIRViewSet(CustomFieldModelViewSet):
+class RIRViewSet(NautobotModelViewSet):
     queryset = RIR.objects.annotate(aggregate_count=count_related(Aggregate, "rir"))
     serializer_class = serializers.RIRSerializer
     filterset_class = filters.RIRFilterSet
@@ -84,7 +84,7 @@ class RIRViewSet(CustomFieldModelViewSet):
 #
 
 
-class AggregateViewSet(CustomFieldModelViewSet):
+class AggregateViewSet(NautobotModelViewSet):
     queryset = Aggregate.objects.prefetch_related("rir").prefetch_related("tags")
     serializer_class = serializers.AggregateSerializer
     filterset_class = filters.AggregateFilterSet
@@ -95,7 +95,7 @@ class AggregateViewSet(CustomFieldModelViewSet):
 #
 
 
-class RoleViewSet(CustomFieldModelViewSet):
+class RoleViewSet(NautobotModelViewSet):
     queryset = Role.objects.annotate(
         prefix_count=count_related(Prefix, "role"),
         vlan_count=count_related(VLAN, "role"),
@@ -109,7 +109,7 @@ class RoleViewSet(CustomFieldModelViewSet):
 #
 
 
-class PrefixViewSet(StatusViewSetMixin, CustomFieldModelViewSet):
+class PrefixViewSet(StatusViewSetMixin, NautobotModelViewSet):
     queryset = Prefix.objects.prefetch_related(
         "role",
         "site",
@@ -307,7 +307,7 @@ class PrefixViewSet(StatusViewSetMixin, CustomFieldModelViewSet):
     retrieve=extend_schema(responses={"200": serializers.IPAddressSerializerLegacy}, versions=["1.2"]),
     update=extend_schema(responses={"200": serializers.IPAddressSerializerLegacy}, versions=["1.2"]),
 )
-class IPAddressViewSet(StatusViewSetMixin, CustomFieldModelViewSet):
+class IPAddressViewSet(StatusViewSetMixin, NautobotModelViewSet):
     queryset = IPAddress.objects.prefetch_related(
         "assigned_object",
         "nat_inside",
@@ -357,7 +357,7 @@ class IPAddressViewSet(StatusViewSetMixin, CustomFieldModelViewSet):
 #
 
 
-class VLANGroupViewSet(CustomFieldModelViewSet):
+class VLANGroupViewSet(NautobotModelViewSet):
     queryset = VLANGroup.objects.prefetch_related("site").annotate(vlan_count=count_related(VLAN, "group"))
     serializer_class = serializers.VLANGroupSerializer
     filterset_class = filters.VLANGroupFilterSet
@@ -368,7 +368,7 @@ class VLANGroupViewSet(CustomFieldModelViewSet):
 #
 
 
-class VLANViewSet(StatusViewSetMixin, CustomFieldModelViewSet):
+class VLANViewSet(StatusViewSetMixin, NautobotModelViewSet):
     queryset = VLAN.objects.prefetch_related(
         "group",
         "site",
@@ -386,7 +386,7 @@ class VLANViewSet(StatusViewSetMixin, CustomFieldModelViewSet):
 #
 
 
-class ServiceViewSet(CustomFieldModelViewSet):
+class ServiceViewSet(NautobotModelViewSet):
     queryset = Service.objects.prefetch_related("device", "virtual_machine", "tags", "ipaddresses")
     serializer_class = serializers.ServiceSerializer
     filterset_class = filters.ServiceFilterSet

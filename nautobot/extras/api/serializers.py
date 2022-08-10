@@ -1,8 +1,10 @@
+from django.conf import settings
 from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ObjectDoesNotExist
 from django.utils.functional import classproperty
 from drf_spectacular.utils import extend_schema_field
 from rest_framework import serializers
+from rest_framework.reverse import reverse
 
 from nautobot.core.api import (
     ChoiceField,
@@ -39,6 +41,7 @@ from nautobot.extras.models import (
     CustomFieldChoice,
     CustomLink,
     DynamicGroup,
+    DynamicGroupMembership,
     ExportTemplate,
     GitRepository,
     GraphQLQuery,
@@ -47,6 +50,7 @@ from nautobot.extras.models import (
     JobHook,
     JobLogEntry,
     JobResult,
+    Note,
     ObjectChange,
     Relationship,
     RelationshipAssociation,
@@ -86,12 +90,14 @@ from .nested_serializers import (  # noqa: F401
     NestedCustomFieldSerializer,
     NestedCustomLinkSerializer,
     NestedDynamicGroupSerializer,
+    NestedDynamicGroupMembershipSerializer,
     NestedExportTemplateSerializer,
     NestedGitRepositorySerializer,
     NestedGraphQLQuerySerializer,
     NestedImageAttachmentSerializer,
     NestedJobSerializer,
     NestedJobResultSerializer,
+    NestedNoteSerializer,
     NestedRelationshipAssociationSerializer,
     NestedRelationshipSerializer,
     NestedScheduledJobSerializer,
@@ -109,7 +115,29 @@ from .nested_serializers import (  # noqa: F401
 #
 
 
-class NautobotModelSerializer(RelationshipModelSerializerMixin, CustomFieldModelSerializer, ValidatedModelSerializer):
+class NotesSerializerMixin(BaseModelSerializer):
+    """Extend Serializer with a `notes` field."""
+
+    notes_url = serializers.SerializerMethodField()
+
+    def get_field_names(self, declared_fields, info):
+        """Ensure that fields includes "notes_url" field if applicable."""
+        fields = list(super().get_field_names(declared_fields, info))
+        if hasattr(self.Meta.model, "notes"):
+            self.extend_field_names(fields, "notes_url")
+        return fields
+
+    @extend_schema_field(serializers.URLField())
+    def get_notes_url(self, instance):
+        notes_url = f"{instance._meta.app_label}-api:{instance._meta.model_name}-notes"
+        if instance._meta.app_label in settings.PLUGINS:
+            notes_url = f"plugins-api:{notes_url}"
+        return reverse(notes_url, args=[instance.id], request=self.context["request"])
+
+
+class NautobotModelSerializer(
+    RelationshipModelSerializerMixin, CustomFieldModelSerializer, NotesSerializerMixin, ValidatedModelSerializer
+):
     """Base class to use for serializers based on OrganizationalModel or PrimaryModel.
 
     Can also be used for models derived from BaseModel, so long as they support custom fields and relationships.
@@ -193,7 +221,7 @@ class TaggedObjectSerializer(BaseModelSerializer):
 #
 
 
-class ComputedFieldSerializer(ValidatedModelSerializer):
+class ComputedFieldSerializer(ValidatedModelSerializer, NotesSerializerMixin):
     url = serializers.HyperlinkedIdentityField(view_name="extras-api:computedfield-detail")
     content_type = ContentTypeField(
         queryset=ContentType.objects.filter(FeatureQuery("custom_fields").get_query()).order_by("app_label", "model"),
@@ -218,7 +246,7 @@ class ComputedFieldSerializer(ValidatedModelSerializer):
 #
 
 
-class ConfigContextSerializer(ValidatedModelSerializer):
+class ConfigContextSerializer(ValidatedModelSerializer, NotesSerializerMixin):
     url = serializers.HyperlinkedIdentityField(view_name="extras-api:configcontext-detail")
     owner_content_type = ContentTypeField(
         queryset=ContentType.objects.filter(FeatureQuery("config_context_owners").get_query()),
@@ -385,7 +413,7 @@ class ContentTypeSerializer(BaseModelSerializer):
 #
 
 
-class CustomFieldSerializer(ValidatedModelSerializer):
+class CustomFieldSerializer(ValidatedModelSerializer, NotesSerializerMixin):
     url = serializers.HyperlinkedIdentityField(view_name="extras-api:customfield-detail")
     content_types = ContentTypeField(
         queryset=ContentType.objects.filter(FeatureQuery("custom_fields").get_query()),
@@ -463,7 +491,7 @@ class CustomFieldChoiceSerializer(ValidatedModelSerializer):
 #
 
 
-class CustomLinkSerializer(ValidatedModelSerializer):
+class CustomLinkSerializer(ValidatedModelSerializer, NotesSerializerMixin):
     url = serializers.HyperlinkedIdentityField(view_name="extras-api:customlink-detail")
     content_type = ContentTypeField(
         queryset=ContentType.objects.filter(FeatureQuery("custom_links").get_query()).order_by("app_label", "model"),
@@ -494,6 +522,9 @@ class DynamicGroupSerializer(NautobotModelSerializer):
     content_type = ContentTypeField(
         queryset=ContentType.objects.filter(FeatureQuery("dynamic_groups").get_query()).order_by("app_label", "model"),
     )
+    # Read-only because m2m is hard. Easier to just create # `DynamicGroupMemberships` explicitly
+    # using their own endpoint at /api/extras/dynamic-group-memberships/.
+    children = NestedDynamicGroupMembershipSerializer(source="dynamic_group_memberships", read_only=True, many=True)
 
     class Meta:
         model = DynamicGroup
@@ -504,8 +535,19 @@ class DynamicGroupSerializer(NautobotModelSerializer):
             "description",
             "content_type",
             "filter",
+            "children",
         ]
         extra_kwargs = {"filter": {"read_only": False}}
+
+
+class DynamicGroupMembershipSerializer(ValidatedModelSerializer):
+    url = serializers.HyperlinkedIdentityField(view_name="extras-api:dynamicgroupmembership-detail")
+    group = NestedDynamicGroupSerializer()
+    parent_group = NestedDynamicGroupSerializer()
+
+    class Meta:
+        model = DynamicGroupMembership
+        fields = ["url", "group", "parent_group", "operator", "weight"]
 
 
 #
@@ -513,7 +555,7 @@ class DynamicGroupSerializer(NautobotModelSerializer):
 #
 
 # TODO: export-templates don't support custom-fields, is this omission intentional?
-class ExportTemplateSerializer(RelationshipModelSerializerMixin, ValidatedModelSerializer):
+class ExportTemplateSerializer(RelationshipModelSerializerMixin, ValidatedModelSerializer, NotesSerializerMixin):
     url = serializers.HyperlinkedIdentityField(view_name="extras-api:exporttemplate-detail")
     content_type = ContentTypeField(
         queryset=ContentType.objects.filter(FeatureQuery("export_templates").get_query()),
@@ -597,7 +639,7 @@ class GitRepositorySerializer(NautobotModelSerializer):
 #
 
 
-class GraphQLQuerySerializer(ValidatedModelSerializer):
+class GraphQLQuerySerializer(ValidatedModelSerializer, NotesSerializerMixin):
     url = serializers.HyperlinkedIdentityField(view_name="extras-api:graphqlquery-detail")
     variables = serializers.DictField(required=False, allow_null=True, default={})
 
@@ -702,6 +744,8 @@ class JobSerializer(NautobotModelSerializer, TaggedObjectSerializer):
             "installed",
             "enabled",
             "is_job_hook_receiver",
+            "has_sensitive_variables",
+            "has_sensitive_variables_override",
             "approval_required",
             "approval_required_override",
             "commit_default",
@@ -716,6 +760,25 @@ class JobSerializer(NautobotModelSerializer, TaggedObjectSerializer):
             "time_limit_override",
             "tags",
         ]
+
+    def validate(self, data):
+        # note no validation for on creation of jobs because we do not support user creation of Job records via API
+        if self.instance:
+            has_sensitive_variables = data.get("has_sensitive_variables", self.instance.has_sensitive_variables)
+            approval_required = data.get("approval_required", self.instance.approval_required)
+
+            if approval_required and has_sensitive_variables:
+                error_message = "A job with sensitive variables cannot also be marked as requiring approval"
+                errors = {}
+
+                if "approval_required" in data:
+                    errors["approval_required"] = [error_message]
+                if "has_sensitive_variables" in data:
+                    errors["has_sensitive_variables"] = [error_message]
+
+                raise serializers.ValidationError(errors)
+
+        return super().validate(data)
 
 
 class JobVariableSerializer(serializers.Serializer):
@@ -848,7 +911,7 @@ class JobClassDetailSerializer(JobClassSerializer):
     result = JobResultSerializer(required=False)
 
 
-class JobHookSerializer(ValidatedModelSerializer):
+class JobHookSerializer(NautobotModelSerializer):
     url = serializers.HyperlinkedIdentityField(view_name="extras-api:jobhook-detail")
     content_types = ContentTypeField(
         queryset=ChangeLoggedModelsQuery().as_queryset(),
@@ -916,6 +979,46 @@ class JobLogEntrySerializer(BaseModelSerializer):
 
 
 #
+# Notes
+#
+
+
+class NoteSerializer(BaseModelSerializer):
+    url = serializers.HyperlinkedIdentityField(view_name="extras-api:note-detail")
+    user = NestedUserSerializer(read_only=True)
+    assigned_object_type = ContentTypeField(queryset=ContentType.objects.all())
+    assigned_object = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Note
+        fields = [
+            "url",
+            "user",
+            "user_name",
+            "assigned_object_type",
+            "assigned_object_id",
+            "assigned_object",
+            "note",
+            "slug",
+        ]
+
+    @extend_schema_field(serializers.DictField(allow_null=True))
+    def get_assigned_object(self, obj):
+        if obj.assigned_object is None:
+            return None
+        try:
+            serializer = get_serializer_for_model(obj.assigned_object, prefix="Nested")
+            context = {"request": self.context["request"]}
+            return serializer(obj.assigned_object, context=context).data
+        except SerializerNotFound:
+            return None
+
+
+class NoteInputSerializer(serializers.Serializer):
+    note = serializers.CharField()
+
+
+#
 # Change logging
 #
 
@@ -965,7 +1068,7 @@ class ObjectChangeSerializer(BaseModelSerializer):
 #
 
 
-class RelationshipSerializer(ValidatedModelSerializer):
+class RelationshipSerializer(ValidatedModelSerializer, NotesSerializerMixin):
     url = serializers.HyperlinkedIdentityField(view_name="extras-api:relationship-detail")
 
     source_type = ContentTypeField(
@@ -1171,7 +1274,7 @@ class TagSerializerVersion13(TagSerializer):
 #
 
 
-class WebhookSerializer(ValidatedModelSerializer):
+class WebhookSerializer(ValidatedModelSerializer, NotesSerializerMixin):
     url = serializers.HyperlinkedIdentityField(view_name="extras-api:webhook-detail")
     content_types = ContentTypeField(
         queryset=ContentType.objects.filter(FeatureQuery("webhooks").get_query()).order_by("app_label", "model"),

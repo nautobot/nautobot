@@ -6,7 +6,7 @@ from django.test import TestCase
 from nautobot.dcim.forms import DeviceForm, SiteBulkEditForm
 import nautobot.dcim.models as dcim_models
 from nautobot.extras.choices import RelationshipTypeChoices
-from nautobot.extras.forms import JobHookForm, WebhookForm
+from nautobot.extras.forms import JobEditForm, JobHookForm, WebhookForm
 from nautobot.extras.models import Job, JobHook, Relationship, RelationshipAssociation, Status, Webhook
 from nautobot.ipam.forms import IPAddressForm, IPAddressBulkEditForm, VLANGroupForm
 import nautobot.ipam.models as ipam_models
@@ -918,4 +918,40 @@ class WebhookFormTestCase(TestCase):
         self.assertEquals(
             error_msg["type_update"][0]["message"],
             "A webhook already exists for update on dcim | console port to URL http://example.com/test",
+        )
+
+
+class JobEditFormTestCase(TestCase):
+    def test_update_job_with_approval_required_and_has_has_sensitive_variables_is_true(self):
+        form_data = {
+            "grouping_override": True,
+            "grouping": "Overridden grouping",
+            "name_override": True,
+            "name": "Overridden name",
+            "slug": "overridden-slug",
+            "description_override": True,
+            "description": "This is an overridden description.",
+            "enabled": True,
+            "approval_required_override": True,
+            "approval_required": True,
+            "commit_default_override": True,
+            "commit_default": False,
+            "hidden_override": True,
+            "hidden": True,
+            "read_only_override": True,
+            "read_only": True,
+            "soft_time_limit_override": True,
+            "soft_time_limit": 350.1,
+            "time_limit_override": True,
+            "time_limit": 650,
+            "has_sensitive_variables": True,
+            "has_sensitive_variables_override": True,
+        }
+        form = JobEditForm(data=form_data)
+
+        self.assertFalse(form.is_valid())
+        error_msg = json.loads(form.errors.as_json())
+        self.assertEqual(
+            error_msg["approval_required"][0]["message"],
+            "A job with sensitive variables cannot be marked as requiring approval",
         )

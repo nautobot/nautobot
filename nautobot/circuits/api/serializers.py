@@ -14,6 +14,7 @@ from nautobot.dcim.api.serializers import (
 )
 from nautobot.extras.api.serializers import (
     NautobotModelSerializer,
+    NotesSerializerMixin,
     StatusModelSerializerMixin,
     TaggedObjectSerializer,
 )
@@ -95,7 +96,7 @@ class CircuitTypeSerializer(NautobotModelSerializer):
         ]
 
 
-class CircuitCircuitTerminationSerializer(WritableNestedSerializer):
+class CircuitCircuitTerminationSerializer(WritableNestedSerializer, NotesSerializerMixin):
     url = serializers.HyperlinkedIdentityField(view_name="circuits-api:circuittermination-detail")
     site = NestedSiteSerializer()
     location = NestedLocationSerializer(required=False, allow_null=True)
