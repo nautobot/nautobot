@@ -152,6 +152,7 @@ The `settings_and_registry` default context processor was changed to purely `set
 - [#2135](https://github.com/nautobot/nautobot/issues/2135) - Fixed ImportError on `RelationshipModelForm`, renamed other mixins and added aliases for backwards compatibility.
 - [#2137](https://github.com/nautobot/nautobot/issues/2137) - Fixed incorrect parameter name in `NaturalKeyOrPKMultipleChoiceFilter` documentation.
 - [#2142](https://github.com/nautobot/nautobot/pull/2142) - Fixed incorrect URL field in REST API nested relationship representation.
+- [#2165](https://github.com/nautobot/nautobot/pull/2165) - Fix up relationship-association API test issue.
 
 ## v1.4.0b1 (2022-07-30)
 
