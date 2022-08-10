@@ -14,6 +14,7 @@ router.register("provider-networks", views.ProviderNetworkDRFViewSet, basename="
 router.register("circuit-types", views.CircuitTypeDRFViewSet, basename="circuittype")
 router.register("circuits", views.CircuitDRFViewSet, basename="circuit")
 router.register("circuit-terminations", views.CircuitTerminationDRFViewset, basename="circuittermination")
+# BulkUpdateView is unavailable for CircuitType, there is no bulk_update_form for CircuitType
 excluded_urls = ["circuittype_bulk_edit"]
 router.exclude_urls(excluded_urls)
 

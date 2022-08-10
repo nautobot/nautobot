@@ -26,7 +26,7 @@ from rest_framework import generics, mixins
 from rest_framework.response import Response
 from rest_framework.viewsets import ViewSetMixin
 
-from nautobot.core.views import mixins as bulk_mixins
+from nautobot.core.api.views import BulkCreateModelMixin, BulkDestroyModelMixin, BulkUpdateModelMixin
 from nautobot.extras.models import CustomField, ExportTemplate, ChangeLoggedModel
 from nautobot.utilities.error_handlers import handle_protectederror
 from nautobot.utilities.forms import (
@@ -64,6 +64,7 @@ class NautobotViewSetMixin(ViewSetMixin, generics.GenericAPIView, AccessMixin, G
     # serializer_class has to be specified to eliminate the need to override retrieve() in the RetrieveModelMixin for now.
     serializer_class = None
     renderer_classes = [NautobotHTMLRenderer]
+    logger = logging.getLogger(__name__)
 
     def get_permissions_for_model(self, model, actions):
         """
@@ -105,15 +106,7 @@ class NautobotViewSetMixin(ViewSetMixin, generics.GenericAPIView, AccessMixin, G
 
     def check_permissions(self, request):
         """
-        Used to determine whether the user has permissions to a view.
-        Using AccessMixin handle_no_permission() to deal with Object-Level permissions and API-Level permissions in one pass.
-        """
-        if not self.has_permission():
-            self.handle_no_permission()
-
-    def check_object_permissions(self, request, obj):
-        """
-        Used to determine whether the user has the object-level permissions to perform certain actions to a model instance.
+        Used to determine whether the user has permissions to a view and object-level permissions.
         Using AccessMixin handle_no_permission() to deal with Object-Level permissions and API-Level permissions in one pass.
         """
         if not self.has_permission():
@@ -172,38 +165,33 @@ class NautobotViewSetMixin(ViewSetMixin, generics.GenericAPIView, AccessMixin, G
         request = self.request
         self.has_error = False
         if self.action == "destroy":
-            logger = logging.getLogger("nautobot.views.ObjectDestroyView")
             self._process_destroy_form(form)
         elif self.action == "bulk_destroy":
-            logger = logging.getLogger("nautobot.views.BulkDestroyView")
             self._process_bulk_destroy_form(form)
         elif self.action in ["create", "update"]:
-            logger = logging.getLogger("nautobot.views.ObjectEditView")
             try:
                 self._process_create_or_update_form(form)
             except ObjectDoesNotExist:
-                form = self._handle_object_does_not_exist(form, logger)
+                form = self._handle_object_does_not_exist(form, self.logger)
         elif self.action == "bulk_update":
-            logger = logging.getLogger("nautobot.views.BulkUpdateView")
             try:
                 self._process_bulk_update_form(form)
             except ValidationError as e:
                 messages.error(self.request, f"{self.obj} failed validation: {e}")
                 self.has_error = True
             except ObjectDoesNotExist:
-                form = self._handle_object_does_not_exist(form, logger)
+                form = self._handle_object_does_not_exist(form, self.logger)
         elif self.action == "bulk_create":
-            logger = logging.getLogger("nautobot.views.BulkCreateView")
             try:
                 self.obj_table = self._process_bulk_create_form(form)
             except ValidationError:
                 self.has_error = True
                 pass
             except ObjectDoesNotExist:
-                form = self._handle_object_does_not_exist(form, logger)
+                form = self._handle_object_does_not_exist(form, self.logger)
 
         if not self.has_error:
-            logger.debug("Form validation was successful")
+            self.logger.debug("Form validation was successful")
             if self.action == "bulk_create":
                 return Response(
                     {
@@ -264,8 +252,6 @@ class NautobotViewSetMixin(ViewSetMixin, generics.GenericAPIView, AccessMixin, G
             return self.queryset.model()
         filter_kwargs = {self.lookup_field: self.kwargs[lookup_url_kwarg]}
         obj = get_object_or_404(queryset, **filter_kwargs)
-        # May raise a permission denied
-        self.check_object_permissions(self.request, obj)
 
         return obj
 
@@ -282,36 +268,29 @@ class NautobotViewSetMixin(ViewSetMixin, generics.GenericAPIView, AccessMixin, G
         model_opts = self.model._meta
         app_label = model_opts.app_label
         action = self.action
-        if action in ["create", "update"]:
-            action = "create_or_update"
         try:
             if action == "retrieve":
-                select_template([f"{app_label}/{model_opts.model_name}.html"])
-                return f"{app_label}/{model_opts.model_name}.html"
-            select_template([f"{app_label}/{model_opts.model_name}_{action}.html"])
-            return f"{app_label}/{model_opts.model_name}_{action}.html"
+                template_name = f"{app_label}/{model_opts.model_name}.html"
+                select_template([template_name])
+            else:
+                template_name = f"{app_label}/{model_opts.model_name}_{action}.html"
+                select_template([template_name])
         except TemplateDoesNotExist:
-            return f"generic/object_{action}.html"
+            template_name = f"generic/object_{action}.html"
+        return template_name
 
-    def get_form(self, *args, **kwargs):
+    def get_form(self, request, *args, **kwargs):
         """
         Helper function to get form for different views if specified.
         If not, return instantiated form using form_class.
         """
         form = getattr(self, f"{self.action}_form", None)
         if not form:
-            if self.action == "bulk_create":
-
-                class BulkCreateForm(BootstrapMixin, Form):
-                    csv_data = CSVDataField(
-                        from_form=self.bulk_create_form_class, widget=Textarea(attrs=self.bulk_create_widget_attrs)
-                    )
-                    csv_file = CSVFileField(from_form=self.bulk_create_form_class)
-
-                return BulkCreateForm(*args, **kwargs)
-            else:
-                form_class = self.get_form_class()
-                form = form_class(*args, **kwargs)
+            form_class = self.get_form_class()
+            if not form_class:
+                self.logger.debug(f"{self.action}_form_class is not defined")
+                return None
+            form = form_class(*args, **kwargs)
         return form
 
     def get_form_class(self, **kwargs):
@@ -320,8 +299,18 @@ class NautobotViewSetMixin(ViewSetMixin, generics.GenericAPIView, AccessMixin, G
         """
         if self.action in ["create", "update"]:
             form_class = getattr(self, "form_class", None)
+        elif self.action == "bulk_create":
+
+            class BulkCreateForm(BootstrapMixin, Form):
+                csv_data = CSVDataField(
+                    from_form=self.bulk_create_form_class, widget=Textarea(attrs=self.bulk_create_widget_attrs)
+                )
+                csv_file = CSVFileField(from_form=self.bulk_create_form_class)
+
+            form_class = BulkCreateForm
         else:
             form_class = getattr(self, f"{self.action}_form_class", None)
+
         if not form_class:
             if self.action == "bulk_destroy":
 
@@ -330,7 +319,10 @@ class NautobotViewSetMixin(ViewSetMixin, generics.GenericAPIView, AccessMixin, G
 
                 return BulkDestroyForm
             else:
-                form_class = kwargs.get("form_class", None)
+                # Check for request first and then kwargs for form_class specified.
+                form_class = self.request.data.get("form_class", None)
+                if not form_class:
+                    form_class = kwargs.get("form_class", None)
         return form_class
 
     def form_save(self, form, **kwargs):
@@ -431,7 +423,7 @@ class ObjectListViewMixin(NautobotViewSetMixin, mixins.ListModelMixin):
         # Add custom field headers, if any
         if hasattr(self.queryset.model, "_custom_field_data"):
             for custom_field in CustomField.objects.get_for_model(self.queryset.model):
-                headers.append(custom_field.name)
+                headers.append("cf_" + custom_field.slug)
                 custom_fields.append(custom_field.name)
 
         csv_data.append(",".join(headers))
@@ -465,16 +457,15 @@ class ObjectDestroyViewMixin(NautobotViewSetMixin, mixins.DestroyModelMixin):
     def _process_destroy_form(self, form):
         request = self.request
         obj = self.obj
-        logger = logging.getLogger("nautobot.views.ObjectDestroyView")
         try:
             with transaction.atomic():
                 obj.delete()
                 msg = f"Deleted {self.model._meta.verbose_name} {obj}"
-                logger.info(msg)
+                self.logger.info(msg)
                 messages.success(request, msg)
                 self.success_url = self.get_return_url(request)
         except ProtectedError as e:
-            logger.info("Caught ProtectedError while attempting to delete object")
+            self.logger.info("Caught ProtectedError while attempting to delete object")
             handle_protectederror([obj], request, e)
             self.success_url = obj.get_absolute_url()
 
@@ -508,15 +499,18 @@ class ObjectEditViewMixin(NautobotViewSetMixin, mixins.CreateModelMixin, mixins.
         Helper method to create or update an object after the form is validated successfully.
         """
         request = self.request
-        logger = logging.getLogger("nautobot.views.ObjectEditView")
         with transaction.atomic():
             object_created = not form.instance.present_in_database
             obj = self.form_save(form)
 
             # Check that the new object conforms with any assigned object-level permissions
             self.queryset.get(pk=obj.pk)
+
+            if hasattr(form, "save_note") and callable(form.save_note):
+                form.save_note(instance=obj, user=request.user)
+
             msg = f'{"Created" if object_created else "Modified"} {self.queryset.model._meta.verbose_name}'
-            logger.info(f"{msg} {obj} (PK: {obj.pk})")
+            self.logger.info(f"{msg} {obj} (PK: {obj.pk})")
             if hasattr(obj, "get_absolute_url"):
                 msg = f'{msg} <a href="{obj.get_absolute_url()}">{escape(obj)}</a>'
             else:
@@ -584,7 +578,7 @@ class ObjectEditViewMixin(NautobotViewSetMixin, mixins.CreateModelMixin, mixins.
             return self.form_invalid(form)
 
 
-class BulkDestroyViewMixin(NautobotViewSetMixin, bulk_mixins.BulkDestroyModelMixin):
+class ObjectBulkDestroyViewMixin(NautobotViewSetMixin, BulkDestroyModelMixin):
     bulk_destroy_form_class = None
     filterset_class = None
 
@@ -594,17 +588,16 @@ class BulkDestroyViewMixin(NautobotViewSetMixin, bulk_mixins.BulkDestroyModelMix
         model = self.model
         # Delete objects
         queryset = self.queryset.filter(pk__in=pk_list)
-        logger = logging.getLogger("nautobot.views.BulkDestroyView")
 
         try:
             with transaction.atomic():
                 deleted_count = queryset.delete()[1][model._meta.label]
                 msg = f"Deleted {deleted_count} {model._meta.verbose_name_plural}"
-                logger.info(msg)
+                self.logger.info(msg)
                 self.success_url = self.get_return_url(request)
                 messages.success(request, msg)
         except ProtectedError as e:
-            logger.info("Caught ProtectedError while attempting to delete objects")
+            self.logger.info("Caught ProtectedError while attempting to delete objects")
             handle_protectederror(queryset, request, e)
             self.success_url = self.get_return_url(request)
 
@@ -650,7 +643,7 @@ class BulkDestroyViewMixin(NautobotViewSetMixin, bulk_mixins.BulkDestroyModelMix
         return Response(data)
 
 
-class BulkCreateViewMixin(NautobotViewSetMixin, bulk_mixins.BulkCreateModelMixin):
+class ObjectBulkCreateViewMixin(NautobotViewSetMixin, BulkCreateModelMixin):
     bulk_create_form_class = None
     bulk_create_widget_attrs = {}
 
@@ -658,7 +651,6 @@ class BulkCreateViewMixin(NautobotViewSetMixin, bulk_mixins.BulkCreateModelMixin
         # Iterate through CSV data and bind each row to a new model form instance.
         new_objs = []
         request = self.request
-        logger = logging.getLogger("nautobot.views.BulkCreateView")
         with transaction.atomic():
             if request.FILES:
                 field_name = "csv_file"
@@ -666,8 +658,7 @@ class BulkCreateViewMixin(NautobotViewSetMixin, bulk_mixins.BulkCreateModelMixin
                 field_name = "csv_data"
             headers, records = form.cleaned_data[field_name]
             for row, data in enumerate(records, start=1):
-                form_class = self.get_form_class()
-                obj_form = form_class(data, headers=headers)
+                obj_form = self.bulk_create_form_class(data, headers=headers)
                 restrict_form_fields(obj_form, request.user)
 
                 if obj_form.is_valid():
@@ -686,7 +677,7 @@ class BulkCreateViewMixin(NautobotViewSetMixin, bulk_mixins.BulkCreateModelMixin
         obj_table = self.table_class(new_objs)
         if new_objs:
             msg = f"Imported {len(new_objs)} {new_objs[0]._meta.verbose_name_plural}"
-            logger.info(msg)
+            self.logger.info(msg)
             messages.success(request, msg)
         return obj_table
 
@@ -697,14 +688,15 @@ class BulkCreateViewMixin(NautobotViewSetMixin, bulk_mixins.BulkCreateModelMixin
         return Response(context)
 
     def perform_bulk_create(self, request):
-        form = self.get_form(request.POST)
+        form_class = self.get_form_class()
+        form = form_class(request.POST)
         if form.is_valid():
             return self.form_valid(form)
         else:
             return self.form_invalid(form)
 
 
-class BulkUpdateViewMixin(NautobotViewSetMixin, bulk_mixins.BulkUpdateModelMixin):
+class ObjectBulkUpdateViewMixin(NautobotViewSetMixin, BulkUpdateModelMixin):
     filterset_class = None
     bulk_update_form_class = None
 
@@ -714,11 +706,12 @@ class BulkUpdateViewMixin(NautobotViewSetMixin, bulk_mixins.BulkUpdateModelMixin
         form_custom_fields = getattr(form, "custom_fields", [])
         form_relationships = getattr(form, "relationships", [])
         standard_fields = [
-            field for field in form.fields if field not in form_custom_fields + form_relationships + ["pk"]
+            field
+            for field in form.fields
+            if field not in form_custom_fields + form_relationships + ["pk"] + ["object_note"]
         ]
         nullified_fields = request.POST.getlist("_nullify")
         form_cf_to_key = {f"cf_{cf.slug}": cf.name for cf in CustomField.objects.get_for_model(model)}
-        logger = logging.getLogger("nautobot.views.BulkUpdateView")
         with transaction.atomic():
             updated_objects = []
             for obj in self.queryset.filter(pk__in=form.cleaned_data["pk"]):
@@ -754,7 +747,7 @@ class BulkUpdateViewMixin(NautobotViewSetMixin, bulk_mixins.BulkUpdateModelMixin
                 obj.full_clean()
                 obj.save()
                 updated_objects.append(obj)
-                logger.debug(f"Saved {obj} (PK: {obj.pk})")
+                self.logger.debug(f"Saved {obj} (PK: {obj.pk})")
 
                 # Add/remove tags
                 if form.cleaned_data.get("add_tags", None):
@@ -766,12 +759,15 @@ class BulkUpdateViewMixin(NautobotViewSetMixin, bulk_mixins.BulkUpdateModelMixin
                     # Add/remove relationship associations
                     form.save_relationships(instance=obj, nullified_fields=nullified_fields)
 
+                if hasattr(form, "save_note") and callable(form.save_note):
+                    form.save_note(instance=obj, user=request.user)
+
             # Enforce object-level permissions
             if self.queryset.filter(pk__in=[obj.pk for obj in updated_objects]).count() != len(updated_objects):
                 raise ObjectDoesNotExist
         if updated_objects:
             msg = f"Updated {len(updated_objects)} {model._meta.verbose_name_plural}"
-            logger.info(msg)
+            self.logger.info(msg)
             messages.success(self.request, msg)
         self.success_url = self.get_return_url(request)
 
@@ -827,9 +823,9 @@ class NautobotDRFViewSet(
     ObjectListViewMixin,
     ObjectEditViewMixin,
     ObjectDestroyViewMixin,
-    BulkDestroyViewMixin,
-    BulkCreateViewMixin,
-    BulkUpdateViewMixin,
+    ObjectBulkDestroyViewMixin,
+    ObjectBulkCreateViewMixin,
+    ObjectBulkUpdateViewMixin,
 ):
     """
     This is the UI BaseViewSet you should inherit.

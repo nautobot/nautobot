@@ -94,7 +94,7 @@ class SeleniumTestCase(StaticLiveServerTestCase, NautobotTestCaseMixin):
             cls.celery_worker.__enter__()
 
     def setUp(self):
-        super().setUpNautobot()
+        super().setUpNautobot(populate_status=True)
 
         self.password = "testpassword"
         self.user.set_password(self.password)

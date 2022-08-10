@@ -15,6 +15,7 @@ For models that support change-logging, custom fields, and relationships (which 
 | Read-only serializers    | `BaseModelSerializer`      | `BaseModelSerializer`      |
 | Nested serializers       | `WritableNestedSerializer` | `WritableNestedSerializer` |
 | All other serializers    | `NautobotModelSerializer`  | `ValidatedModelSerializer` |
+| API View Sets            | `NautobotModelViewSet`     | `ModelViewSet`             |
 
 ## Model Existence in the Database
 

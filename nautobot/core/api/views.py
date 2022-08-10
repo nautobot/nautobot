@@ -12,6 +12,7 @@ from django.db.models import ProtectedError
 from django.shortcuts import redirect
 from django_rq.queues import get_connection as get_rq_connection
 from rest_framework import status
+from rest_framework.mixins import CreateModelMixin
 from rest_framework.response import Response
 from rest_framework.reverse import reverse
 from rest_framework.views import APIView
@@ -66,6 +67,42 @@ class NautobotAPIVersionMixin:
         except AttributeError:
             pass
         return response
+
+
+# ==================================================================================================
+#  miki725 / django-rest-framework-bulk
+#  https://github.com/miki725/django-rest-framework-bulk/blob/master/rest_framework_bulk/mixins.py
+# ==================================================================================================
+#  Copyright (c) 2014-2015, Miroslav Shubernetskiy
+#  Licensed under MIT (https://github.com/miki725/django-rest-framework-bulk/blob/master/LICENSE.rst)
+# ==================================================================================================
+
+
+class BulkCreateModelMixin(CreateModelMixin):
+    """
+    Either create a single or many model instances in bulk by using the
+    Serializers ``many=True`` ability from Django REST >= 2.2.5.
+
+    .. note::
+        This mixin uses the same method to create model instances
+        as ``CreateModelMixin`` because both non-bulk and bulk
+        requests will use ``POST`` request method.
+    """
+
+    def create(self, request, *args, **kwargs):
+        bulk = isinstance(request.data, list)
+
+        if not bulk:
+            return super(BulkCreateModelMixin, self).create(request, *args, **kwargs)
+
+        else:
+            serializer = self.get_serializer(data=request.data, many=True)
+            serializer.is_valid(raise_exception=True)
+            self.perform_bulk_create(serializer)
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+
+    def perform_bulk_create(self, serializer):
+        return self.perform_create(serializer)
 
 
 class BulkUpdateModelMixin:

@@ -327,6 +327,25 @@ class DynamicGroupModelTest(DynamicGroupTestBase):
         self.assertNotIn("q", fields)
         self.assertIn("name", fields)
 
+    def test_map_filter_fields_skip_missing(self):
+        """
+        Test that missing fields are skipped in `DynamicGroup._map_filter_fields`
+        when `Model.dynamic_group_skip_missing_fields` is `True`.
+        """
+        group = self.groups[0]
+
+        try:
+            group.model.dynamic_group_skip_missing_fields = True
+            fields = group._map_filter_fields
+            # Test that it's a dict with or without certain key fields.
+            self.assertIsInstance(fields, dict)
+            self.assertNotEqual(fields, {})
+            self.assertNotIn("name", fields)
+            self.assertNotIn("asset_tag", fields)
+            self.assertNotIn("serial", fields)
+        finally:
+            del group.model.dynamic_group_skip_missing_fields
+
     def test_get_filter_fields(self):
         """Test `DynamicGroup.get_filter_fields()`."""
         # New instances should return {} `content_type` is set.

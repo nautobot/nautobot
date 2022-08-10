@@ -1,3 +1,4 @@
+import datetime
 import json
 import re
 import uuid
@@ -12,14 +13,22 @@ from django.core.management import call_command
 from django.core.management.base import CommandError
 from django.test import override_settings
 from django.test.client import RequestFactory
+from django.utils import timezone
+
 from nautobot.dcim.models import DeviceRole, Site
-from nautobot.extras.choices import JobResultStatusChoices, LogLevelChoices, ObjectChangeEventContextChoices
+from nautobot.extras.choices import (
+    JobExecutionType,
+    JobResultStatusChoices,
+    LogLevelChoices,
+    ObjectChangeEventContextChoices,
+)
 from nautobot.extras.context_managers import JobHookChangeContext, change_logging, web_request_context
 from nautobot.extras.jobs import get_job, run_job
-from nautobot.extras.models import CustomField, FileProxy, Job, JobHook, JobResult, Status
+from nautobot.extras.models import CustomField, FileProxy, Job, JobHook, JobResult, ScheduledJob, Status
 from nautobot.extras.models.models import JobLogEntry
 from nautobot.utilities.testing import (
     CeleryTestCase,
+    TestCase,
     TransactionTestCase,
     run_job_for_testing,
 )
@@ -690,3 +699,35 @@ class JobHookTest(TransactionTestCase):
             Site.objects.create(name="Test Job Hook Site 2")
 
         self.assertFalse(mock.called)
+
+
+class RemoveScheduledJobManagementCommandTestCase(TestCase):
+    def test_remove_stale_scheduled_jobs(self):
+        for i in range(1, 7):
+            ScheduledJob.objects.create(
+                name=f"test{i}",
+                task="nautobot.extras.jobs.scheduled_job_handler",
+                job_class="local/test_pass/TestPass",
+                interval=JobExecutionType.TYPE_FUTURE,
+                user=self.user,
+                start_time=timezone.now() - datetime.timedelta(days=i * 30),
+                one_off=i % 2 == 0,  # True / False
+            )
+
+        ScheduledJob.objects.create(
+            name="test7",
+            task="nautobot.extras.jobs.scheduled_job_handler",
+            job_class="local/test_pass/TestPass",
+            interval=JobExecutionType.TYPE_DAILY,
+            user=self.user,
+            start_time=timezone.now() - datetime.timedelta(days=180),
+        )
+
+        out = StringIO()
+        call_command("remove_stale_scheduled_jobs", 32, stdout=out)
+        self.assertEqual(ScheduledJob.objects.count(), 2)
+        self.assertIn("Stale scheduled jobs deleted successfully", out.getvalue())
+        self.assertTrue(ScheduledJob.objects.filter(name="test7").exists())
+        self.assertTrue(ScheduledJob.objects.filter(name="test1").exists())
+        for i in range(2, 7):
+            self.assertFalse(ScheduledJob.objects.filter(name=f"test{i}").exists())

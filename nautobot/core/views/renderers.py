@@ -156,6 +156,7 @@ class NautobotHTMLRenderer(renderers.BrowsableAPIRenderer):
                 return_url = view.get_return_url(request)
             elif view.action == "bulk_create":
                 form = view.get_form()
+                print(form)
                 return_url = view.get_return_url(request)
                 if request.data:
                     table = data.get("table")
@@ -184,11 +185,9 @@ class NautobotHTMLRenderer(renderers.BrowsableAPIRenderer):
                 return_url = view.get_return_url(request)
         context = {
             "action_buttons": valid_actions,
-            "active_tab": "csv-data",
             "changelog_url": changelog_url,
             "content_type": content_type,
             "editing": instance.present_in_database,
-            "fields": form_class(model).fields if form_class else None,
             "filter_form": self.get_filter_form(view, request),
             "form": form,
             # I am keeping "object" and "obj" to keep the template changes needed minimally invasive.  # "object" is used in object_detail.html template.
@@ -206,6 +205,13 @@ class NautobotHTMLRenderer(renderers.BrowsableAPIRenderer):
         if view.action == "retrieve":
             context.update(view.get_extra_context(request, instance))
         else:
+            if view.action == "bulk_create":
+                context.update(
+                    {
+                        "active_tab": "csv-data",
+                        "fields": view.bulk_create_form_class(model).fields if view.bulk_create_form_class else None,
+                    }
+                )
             context.update(view.get_extra_context(request, instance=None))
         return context
 

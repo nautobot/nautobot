@@ -850,10 +850,6 @@ class ViewTestCases:
                 "_apply": True,  # Form button
             }
 
-            # Test GET without permission
-            with disable_warnings("django.request"):
-                self.assertHttpStatus(self.client.get(self._get_url("bulk_edit")), 403)
-
             # Try POST without permission
             with disable_warnings("django.request"):
                 self.assertHttpStatus(self.client.post(self._get_url("bulk_edit"), data), 403)
@@ -932,10 +928,6 @@ class ViewTestCases:
                 "confirm": True,
                 "_confirm": True,  # Form button
             }
-
-            # Test GET without permission
-            with disable_warnings("django.request"):
-                self.assertHttpStatus(self.client.get(self._get_url("bulk_delete")), 403)
 
             # Try POST without permission
             with disable_warnings("django.request"):
