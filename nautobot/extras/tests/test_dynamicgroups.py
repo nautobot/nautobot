@@ -329,7 +329,7 @@ class DynamicGroupModelTest(DynamicGroupTestBase):
 
     def test_map_filter_fields_skip_missing(self):
         """
-        Test that missing fields are skipped n `DynamicGroup._map_filter_fields`
+        Test that missing fields are skipped in `DynamicGroup._map_filter_fields`
         when `Model.dynamic_group_skip_missing_fields` is `True`.
         """
         group = self.groups[0]

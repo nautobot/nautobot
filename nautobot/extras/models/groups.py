@@ -172,7 +172,7 @@ class DynamicGroup(OrganizationalModel):
         if not skip_missing_fields:
             missing_fields = set(modelform_fields).difference(filterform_fields)
         else:
-            logger.debug("Will not add missing form fields due to model meta option.")
+            logger.debug("Will not add missing form fields due to model %s meta option.", self.model)
             missing_fields = set()
 
         # Try a few ways to see if a missing field can be added to the filter fields.
