@@ -28,10 +28,11 @@ class NautobotTestCaseMixin:
 
     user_permissions = ()
 
-    def setUpNautobot(self, client=True):
+    def setUpNautobot(self, client=True, populate_status=False):
         """Setup shared testuser, statuses and client."""
         # Re-populate status choices after database truncation by TransactionTestCase
-        populate_status_choices(apps, None)
+        if populate_status:
+            populate_status_choices(apps, None)
 
         # Create the test user and assign permissions
         self.user = User.objects.create_user(username="nautobotuser")
