@@ -160,8 +160,10 @@ class StatusModelSerializerMixin(BaseModelSerializer):
         """
         Get the list of valid status values for this serializer.
 
-        May be necessary to use with settings.SPECTACULAR_SETTINGS["ENUM_NAME_OVERRIDES"] at some point if
-        we ever end up with multiple serializers whose default set of status choices are identical.
+        In the case where multiple serializers have the same set of status choices, it's necessary to set
+        settings.SPECTACULAR_SETTINGS["ENUM_NAME_OVERRIDES"] for at least one of the matching serializers,
+        or else drf-spectacular will report:
+        'enum naming encountered a non-optimally resolvable collision for fields named "status"'
         """
         return list(cls().fields["status"].get_choices().keys())
 
