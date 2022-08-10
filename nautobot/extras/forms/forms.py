@@ -1,5 +1,3 @@
-import warnings
-
 from django import forms
 from django.contrib.auth import get_user_model
 from django.contrib.contenttypes.models import ContentType
@@ -11,6 +9,7 @@ from django.utils.safestring import mark_safe
 
 from nautobot.dcim.models import DeviceRole, DeviceType, Location, Platform, Region, Site
 from nautobot.tenancy.models import Tenant, TenantGroup
+from nautobot.utilities.deprecation import class_deprecated_in_favor_of
 from nautobot.utilities.forms import (
     add_blank_choice,
     APISelect,
@@ -77,12 +76,12 @@ from nautobot.extras.registry import registry
 from nautobot.extras.utils import ChangeLoggedModelsQuery, FeatureQuery, TaggableClassesQuery
 from .base import (
     NautobotBulkEditForm,
+    NautobotFilterForm,
     NautobotModelForm,
 )
 from .mixins import (
-    CustomFieldBulkEditForm,
-    CustomFieldFilterForm,
-    CustomFieldModelForm,
+    CustomFieldModelBulkEditFormMixin,
+    CustomFieldModelFormMixin,
     RelationshipModelFormMixin,
 )
 
@@ -99,7 +98,7 @@ __all__ = (
     "ConfigContextSchemaFilterForm",
     "CustomFieldForm",
     "CustomFieldModelCSVForm",
-    "CustomFieldBulkCreateForm",
+    "CustomFieldBulkCreateForm",  # 2.0 TODO remove this deprecated class
     "CustomFieldChoiceFormSet",
     "CustomLinkForm",
     "CustomLinkFilterForm",
@@ -366,7 +365,9 @@ class CustomFieldForm(BootstrapMixin, forms.ModelForm):
         )
 
 
-class CustomFieldModelCSVForm(CSVModelForm, CustomFieldModelForm):
+class CustomFieldModelCSVForm(CSVModelForm, CustomFieldModelFormMixin):
+    """Base class for CSV export of models that support custom fields."""
+
     def _append_customfield_fields(self):
 
         # Append form fields
@@ -378,16 +379,10 @@ class CustomFieldModelCSVForm(CSVModelForm, CustomFieldModelForm):
             self.custom_fields.append(field_name)
 
 
-class CustomFieldBulkCreateForm(CustomFieldBulkEditForm):
-    """No longer needed as a separate class - use CustomFieldBulkEditForm instead."""
-
-    def __init__(self, *args, **kwargs):
-        warnings.warn(
-            "CustomFieldBulkCreateForm is deprecated and will be removed in a future major release. "
-            "Use CustomFieldBulkEditForm as a base class instead.",
-            DeprecationWarning,
-        )
-        super().__init__(*args, **kwargs)
+# 2.0 TODO: remove this class
+@class_deprecated_in_favor_of(CustomFieldModelBulkEditFormMixin)
+class CustomFieldBulkCreateForm(CustomFieldModelBulkEditFormMixin):
+    """No longer needed as a separate class - use CustomFieldModelBulkEditFormMixin instead."""
 
 
 #
@@ -1186,7 +1181,7 @@ def provider_choices_with_blank():
     return add_blank_choice(sorted([(slug, provider.name) for slug, provider in registry["secrets_providers"].items()]))
 
 
-class SecretFilterForm(BootstrapMixin, CustomFieldFilterForm):
+class SecretFilterForm(NautobotFilterForm):
     model = Secret
     q = forms.CharField(required=False, label="Search")
     provider = forms.MultipleChoiceField(
@@ -1223,7 +1218,7 @@ class SecretsGroupForm(NautobotModelForm):
         ]
 
 
-class SecretsGroupFilterForm(BootstrapMixin, CustomFieldFilterForm):
+class SecretsGroupFilterForm(NautobotFilterForm):
     model = SecretsGroup
     q = forms.CharField(required=False, label="Search")
 
@@ -1267,7 +1262,7 @@ class StatusCSVForm(CustomFieldModelCSVForm):
         }
 
 
-class StatusFilterForm(BootstrapMixin, CustomFieldFilterForm):
+class StatusFilterForm(NautobotFilterForm):
     """Filtering/search form for `Status` objects."""
 
     model = Status
@@ -1330,7 +1325,7 @@ class TagCSVForm(CustomFieldModelCSVForm):
         }
 
 
-class TagFilterForm(BootstrapMixin, CustomFieldFilterForm):
+class TagFilterForm(NautobotFilterForm):
     model = Tag
     q = forms.CharField(required=False, label="Search")
     content_types = MultipleContentTypeField(

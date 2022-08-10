@@ -106,6 +106,21 @@ Dynamic Groups may now be nested in parent/child relationships. The Dynamic Grou
 !!! warning
     The default behavior of Dynamic Groups with an empty filter (`{}`) has been inverted to include all objects matching the content type by default instead of matching no objects. This was necessary to implement the progressive layering of child filters similarly to how we use filters to reduce desired objects from basic list view filters.
 
+#### Renamed Mixin Classes ([#2135](https://github.com/nautobot/nautobot/issues/2135))
+
+A number of mixin classes have been renamed for improved self-consistency and clarity of usage. The former names of these mixins are still available for now as aliases, but inheriting from these mixins will raise a `DeprecationWarning`, and these aliases will be removed in a future major release.
+
+| Former Name                 | New Name                            |
+| --------------------------- | ----------------------------------- |
+| `AddRemoveTagsForm`         | `TagsBulkEditFormMixin`             |
+| `CustomFieldBulkCreateForm` | `CustomFieldModelBulkEditFormMixin` |
+| `CustomFieldBulkEditForm`   | `CustomFieldModelBulkEditFormMixin` |
+| `CustomFieldFilterForm`     | `CustomFieldModelFilterFormMixin`   |
+| `CustomFieldModelForm`      | `CustomFieldModelFormMixin`         |
+| `RelationshipModelForm`     | `RelationshipModelFormMixin`        |
+| `StatusBulkEditFormMixin`   | `StatusModelBulkEditFormMixin`      |
+| `StatusFilterFormMixin`     | `StatusModelFilterFormMixin`        |
+
 #### Strict Filter Validation by Default ([#1736](https://github.com/nautobot/nautobot/issues/1736))
 
 Filtering of object lists in the UI and in the REST API will now report an error if an unknown or unrecognized filter parameter is specified. _This is a behavior change from previous Nautobot releases, in which unknown filter parameters would be silently discarded and ignored._
@@ -134,6 +149,7 @@ The `settings_and_registry` default context processor was changed to purely `set
 - [#2150](https://github.com/nautobot/nautobot/issues/2150) - Fixed unit tests performance degradation.
 - [#2132](https://github.com/nautobot/nautobot/pull/2132) - Updated job hooks to use slugs in urls instead of pk.
 - [#2133](https://github.com/nautobot/nautobot/pull/2133) - Update documentation for job hooks, make it reachable from the Nautobot UI.
+- [#2135](https://github.com/nautobot/nautobot/issues/2135) - Fixed ImportError on `RelationshipModelForm`, renamed other mixins and added aliases for backwards compatibility.
 - [#2137](https://github.com/nautobot/nautobot/issues/2137) - Fixed incorrect parameter name in `NaturalKeyOrPKMultipleChoiceFilter` documentation.
 - [#2142](https://github.com/nautobot/nautobot/pull/2142) - Fixed incorrect URL field in REST API nested relationship representation.
 

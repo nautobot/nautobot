@@ -1,4 +1,6 @@
 import json
+import warnings
+
 from django.contrib.contenttypes.models import ContentType
 from django.db.models import Q
 from django.test import TestCase
@@ -6,7 +8,18 @@ from django.test import TestCase
 from nautobot.dcim.forms import DeviceForm, SiteBulkEditForm
 import nautobot.dcim.models as dcim_models
 from nautobot.extras.choices import RelationshipTypeChoices
-from nautobot.extras.forms import JobEditForm, JobHookForm, WebhookForm
+from nautobot.extras.forms import (
+    CustomFieldModelBulkEditFormMixin,
+    CustomFieldModelFilterFormMixin,
+    CustomFieldModelFormMixin,
+    JobEditForm,
+    JobHookForm,
+    RelationshipModelFormMixin,
+    StatusModelBulkEditFormMixin,
+    StatusModelFilterFormMixin,
+    TagsBulkEditFormMixin,
+    WebhookForm,
+)
 from nautobot.extras.models import Job, JobHook, Relationship, RelationshipAssociation, Status, Webhook
 from nautobot.ipam.forms import IPAddressForm, IPAddressBulkEditForm, VLANGroupForm
 import nautobot.ipam.models as ipam_models
@@ -919,6 +932,59 @@ class WebhookFormTestCase(TestCase):
             error_msg["type_update"][0]["message"],
             "A webhook already exists for update on dcim | console port to URL http://example.com/test",
         )
+
+
+class DeprecatedAliasesTestCase(TestCase):
+    """Test that deprecated class names still exist, but report a DeprecationWarning when used."""
+
+    def test_deprecated_form_mixin_classes(self):
+        # Importing these mixin classes doesn't directly warn, but subclassing them does.
+        from nautobot.extras.forms import (
+            AddRemoveTagsForm,
+            CustomFieldBulkEditForm,
+            CustomFieldBulkCreateForm,
+            CustomFieldFilterForm,
+            CustomFieldModelForm,
+            RelationshipModelForm,
+            StatusBulkEditFormMixin,
+            StatusFilterFormMixin,
+        )
+
+        for deprecated_form_class, replacement_form_class in (
+            (AddRemoveTagsForm, TagsBulkEditFormMixin),
+            (CustomFieldBulkEditForm, CustomFieldModelBulkEditFormMixin),
+            (CustomFieldBulkCreateForm, CustomFieldModelBulkEditFormMixin),
+            (CustomFieldFilterForm, CustomFieldModelFilterFormMixin),
+            (CustomFieldModelForm, CustomFieldModelFormMixin),
+            (RelationshipModelForm, RelationshipModelFormMixin),
+            (StatusBulkEditFormMixin, StatusModelBulkEditFormMixin),
+            (StatusFilterFormMixin, StatusModelFilterFormMixin),
+        ):
+            with self.subTest(msg=f"Replace {deprecated_form_class.__name__} with {replacement_form_class.__name__}"):
+                # Subclassing the deprecated class should raise a DeprecationWarning
+                with warnings.catch_warnings(record=True) as warn_list:
+                    # Ensure that warnings are always triggered
+                    warnings.simplefilter("always")
+
+                    class MyForm(deprecated_form_class):
+                        pass
+
+                    self.assertEqual(len(warn_list), 1)
+                    warning = warn_list[0]
+                    self.assertTrue(issubclass(warning.category, DeprecationWarning))
+                    self.assertIn(f"{deprecated_form_class.__name__} is deprecated", str(warning))
+                    self.assertIn(f"Instead of deriving MyForm from {deprecated_form_class.__name__}", str(warning))
+                    self.assertIn(f"inherit from class {replacement_form_class.__name__} instead", str(warning))
+
+                # Subclassing the replacement class should not warn
+                with warnings.catch_warnings(record=True) as warn_list:
+                    # Ensure that warnings are always triggered
+                    warnings.simplefilter("always")
+
+                    class MyBetterForm(replacement_form_class):
+                        pass
+
+                    self.assertEqual(len(warn_list), 0)
 
 
 class JobEditFormTestCase(TestCase):
