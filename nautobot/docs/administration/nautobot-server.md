@@ -338,6 +338,12 @@ Removing expired sessions...
 Invalidating cache...
 ```
 
+### `remove_stale_scheduled_jobs`
+
+`nautobot-server remove_stale_scheduled_jobs [max-age of days]`
+
+Delete non-recurring scheduled jobs that were scheduled to run more than `max-age` days ago.
+
 ### `renaturalize`
 
 `nautobot-server renaturalize [app_label.ModelName [app_label.ModelName ...]]`

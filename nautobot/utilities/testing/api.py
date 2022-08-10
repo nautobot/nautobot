@@ -661,12 +661,35 @@ class APIViewTestCases:
             self.assertHttpStatus(response, status.HTTP_204_NO_CONTENT)
             self.assertEqual(self._get_queryset().count(), 0)
 
+    class NotesURLViewTestCase(APITestCase):
+        """Validate Notes URL on objects that have the Note model Mixin."""
+
+        @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
+        def test_notes_url_on_object(self):
+            if hasattr(self.model, "notes"):
+                instance1, instance2 = self._get_queryset()[:2]
+                # Add object-level permission
+                obj_perm = ObjectPermission(
+                    name="Test permission",
+                    constraints={"pk": instance1.pk},
+                    actions=["view"],
+                )
+                obj_perm.save()
+                obj_perm.users.add(self.user)
+                obj_perm.object_types.add(ContentType.objects.get_for_model(self.model))
+                url = self._get_detail_url(instance1)
+                response = self.client.get(url, **self.header)
+                self.assertHttpStatus(response, status.HTTP_200_OK)
+                self.assertIn("notes_url", response.data)
+                self.assertIn(f"{url}notes/", str(response.data["notes_url"]))
+
     class APIViewTestCase(
         GetObjectViewTestCase,
         ListObjectsViewTestCase,
         CreateObjectViewTestCase,
         UpdateObjectViewTestCase,
         DeleteObjectViewTestCase,
+        NotesURLViewTestCase,
     ):
         pass
 

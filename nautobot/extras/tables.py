@@ -356,9 +356,9 @@ class DynamicGroupMembershipTable(DynamicGroupTable):
 
 DESCENDANTS_LINK = """
 {% load helpers %}
-{% for node in descendants_tree %}
-    {% if node.name == record.name %}
-        {% for i in node.depth|as_range %}
+{% for node, depth in descendants_tree.items %}
+    {% if record.pk == node %}
+        {% for i in depth|as_range %}
             {% if not forloop.first %}
             <i class="mdi mdi-circle-small"></i>
             {% endif %}
@@ -371,9 +371,9 @@ DESCENDANTS_LINK = """
 
 OPERATOR_LINK = """
 {% load helpers %}
-{% for node in descendants_tree %}
-    {% if node.name == record.name %}
-        {% for i in node.depth|as_range %}
+{% for node, depth in descendants_tree.items %}
+    {% if record.pk == node %}
+        {% for i in depth|as_range %}
             {% if not forloop.first %}
             <i class="mdi mdi-circle-small"></i>
             {% endif %}
@@ -557,6 +557,7 @@ class JobTable(BaseTable):
     name = tables.Column(linkify=True)
     installed = BooleanColumn()
     enabled = BooleanColumn()
+    has_sensitive_variables = BooleanColumn()
     description = tables.Column(accessor="description_first_line")
     commit_default = BooleanColumn()
     hidden = BooleanColumn()
@@ -593,6 +594,7 @@ class JobTable(BaseTable):
             "name",
             "installed",
             "enabled",
+            "has_sensitive_variables",
             "description",
             "commit_default",
             "hidden",

@@ -92,6 +92,11 @@ Primary and Organizational models now support notes. A notes tab has been added 
 !!! warning
     Any plugin that inherits from one of these two models and uses the `ViewTestCases.PrimaryObjectViewTestCase` or `ViewTestCases.OrganizationalObjectViewTestCase` for their test will need to add the `NotesObjectView` to the objects URLs. See [Plugin Development](../plugins/development.md#note-url-endpoint) for more details.
 
+Notes can also be used via the REST API at endpoint `/api/extras/notes` or per object at the object's `/notes` endpoint.
+
+!!! info
+    For implementers of REST API views (core and/or plugins), a new `nautobot.extras.api.views.NautobotModelViewSet` base class has been added. Use of this class ensures that all features from `PrimaryModel` or `OrganizationalModel` are accessible through the API. This includes custom fields and notes.
+
 ### Changed
 
 #### Dynamic Groups of Dynamic Groups ([#1614](https://github.com/nautobot/nautobot/issues/1614))
@@ -100,6 +105,21 @@ Dynamic Groups may now be nested in parent/child relationships. The Dynamic Grou
 
 !!! warning
     The default behavior of Dynamic Groups with an empty filter (`{}`) has been inverted to include all objects matching the content type by default instead of matching no objects. This was necessary to implement the progressive layering of child filters similarly to how we use filters to reduce desired objects from basic list view filters.
+
+#### Renamed Mixin Classes ([#2135](https://github.com/nautobot/nautobot/issues/2135))
+
+A number of mixin classes have been renamed for improved self-consistency and clarity of usage. The former names of these mixins are still available for now as aliases, but inheriting from these mixins will raise a `DeprecationWarning`, and these aliases will be removed in a future major release.
+
+| Former Name                 | New Name                            |
+| --------------------------- | ----------------------------------- |
+| `AddRemoveTagsForm`         | `TagsBulkEditFormMixin`             |
+| `CustomFieldBulkCreateForm` | `CustomFieldModelBulkEditFormMixin` |
+| `CustomFieldBulkEditForm`   | `CustomFieldModelBulkEditFormMixin` |
+| `CustomFieldFilterForm`     | `CustomFieldModelFilterFormMixin`   |
+| `CustomFieldModelForm`      | `CustomFieldModelFormMixin`         |
+| `RelationshipModelForm`     | `RelationshipModelFormMixin`        |
+| `StatusBulkEditFormMixin`   | `StatusModelBulkEditFormMixin`      |
+| `StatusFilterFormMixin`     | `StatusModelFilterFormMixin`        |
 
 #### Strict Filter Validation by Default ([#1736](https://github.com/nautobot/nautobot/issues/1736))
 
@@ -114,21 +134,28 @@ A new configuration setting, [`STRICT_FILTERING`](../configuration/optional-sett
 
 The `settings_and_registry` default context processor was changed to purely `settings` - the (large) Nautobot application registry dictionary is no longer provided as part of the render context for all templates by default. Added a new `registry` template tag that can be invoked by specific templates to provide this variable where needed.
 
-## v1.4.0 (2022-MM-DD)
+## v1.4.0b2 (2022-MM-DD)
 
 ### Added
 
 - [#1962](https://github.com/nautobot/nautobot/issues/1962) - Added `slug` field to Custom Field model, added 1.4 REST API version of the `api/extras/custom-fields/` endpoints.
 - [#2105](https://github.com/nautobot/nautobot/issues/2105) - Added support for Notes in NautobotBulkEditForm and NautobotEditForm.
+- [#2106](https://github.com/nautobot/nautobot/issues/2106) - Added support for listing/creating Notes via REST API.
 
 ### Changed
 
+- [#2168](https://github.com/nautobot/nautobot/pull/2168) - Added model toggle to skip adding missing Dynamic Group filter fields for use in easing integration of new models into Dynamic Groups.
+
 ### Fixed
 
+- [#2090](https://github.com/nautobot/nautobot/issues/2090) - Fixed an issue where a REST API PATCH of a Tag could inadvertently reset its associated content-types.
+- [#2150](https://github.com/nautobot/nautobot/issues/2150) - Fixed unit tests performance degradation.
 - [#2132](https://github.com/nautobot/nautobot/pull/2132) - Updated job hooks to use slugs in urls instead of pk.
 - [#2133](https://github.com/nautobot/nautobot/pull/2133) - Update documentation for job hooks, make it reachable from the Nautobot UI.
+- [#2135](https://github.com/nautobot/nautobot/issues/2135) - Fixed ImportError on `RelationshipModelForm`, renamed other mixins and added aliases for backwards compatibility.
 - [#2137](https://github.com/nautobot/nautobot/issues/2137) - Fixed incorrect parameter name in `NaturalKeyOrPKMultipleChoiceFilter` documentation.
 - [#2142](https://github.com/nautobot/nautobot/pull/2142) - Fixed incorrect URL field in REST API nested relationship representation.
+- [#2165](https://github.com/nautobot/nautobot/pull/2165) - Fix up relationship-association API test issue.
 
 ## v1.4.0b1 (2022-07-30)
 

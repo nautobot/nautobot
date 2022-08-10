@@ -7,14 +7,14 @@ from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from nautobot.core.api.views import ModelViewSet
+from nautobot.extras.api.views import NautobotModelViewSet
 
 from example_plugin.api.serializers import ExampleModelSerializer
 from example_plugin.filters import ExampleModelFilterSet
 from example_plugin.models import ExampleModel
 
 
-class ExampleModelViewSet(ModelViewSet):
+class ExampleModelViewSet(NautobotModelViewSet):
     queryset = ExampleModel.objects.all()
     serializer_class = ExampleModelSerializer
     filterset_class = ExampleModelFilterSet

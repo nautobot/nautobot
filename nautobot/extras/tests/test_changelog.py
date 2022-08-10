@@ -7,10 +7,12 @@ from nautobot.core.graphql import execute_query
 from nautobot.dcim.models import Site
 from nautobot.extras.choices import CustomFieldTypeChoices, ObjectChangeActionChoices, ObjectChangeEventContextChoices
 from nautobot.extras.models import CustomField, CustomFieldChoice, ObjectChange, Status, Tag
+from nautobot.ipam.models import VLAN
 from nautobot.utilities.testing import APITestCase
 from nautobot.utilities.testing.utils import post_data
 from nautobot.utilities.testing.views import ModelViewTestCase
 from nautobot.utilities.utils import get_changes_for_model
+from nautobot.virtualization.models import Cluster, ClusterType, VMInterface, VirtualMachine
 
 
 class ChangeLogViewTest(ModelViewTestCase):
@@ -59,15 +61,13 @@ class ChangeLogViewTest(ModelViewTestCase):
         # Verify the creation of a new ObjectChange record
         site = Site.objects.get(name="Test Site 1")
         # First OC is the creation; second is the tags update
-        oc = ObjectChange.objects.get(
-            changed_object_type=ContentType.objects.get_for_model(Site),
-            changed_object_id=site.pk,
-        )
+        oc = get_changes_for_model(site).first()
         self.assertEqual(oc.changed_object, site)
         self.assertEqual(oc.action, ObjectChangeActionChoices.ACTION_CREATE)
         self.assertEqual(oc.object_data["custom_fields"]["my_field"], form_data["cf_my_field"])
         self.assertEqual(oc.object_data["custom_fields"]["my_field_select"], form_data["cf_my_field_select"])
         self.assertEqual(oc.object_data["tags"], ["Tag 1", "Tag 2"])
+        self.assertEqual(oc.user_id, self.user.pk)
 
     def test_update_object(self):
         site = Site(
@@ -107,6 +107,7 @@ class ChangeLogViewTest(ModelViewTestCase):
             form_data["cf_my_field_select"],
         )
         self.assertEqual(oc.object_data["tags"], ["Tag 3"])
+        self.assertEqual(oc.user_id, self.user.pk)
 
     def test_delete_object(self):
         site = Site(
@@ -133,6 +134,7 @@ class ChangeLogViewTest(ModelViewTestCase):
         self.assertEqual(oc.object_data["custom_fields"]["my_field"], "ABC")
         self.assertEqual(oc.object_data["custom_fields"]["my_field_select"], "Bar")
         self.assertEqual(oc.object_data["tags"], ["Tag 1", "Tag 2"])
+        self.assertEqual(oc.user_id, self.user.pk)
 
     def test_change_context(self):
         form_data = {
@@ -151,12 +153,10 @@ class ChangeLogViewTest(ModelViewTestCase):
 
         # Verify the creation of a new ObjectChange record
         site = Site.objects.get(name="Test Site 1")
-        oc = ObjectChange.objects.get(
-            changed_object_type=ContentType.objects.get_for_model(Site),
-            changed_object_id=site.pk,
-        )
+        oc = get_changes_for_model(site).first()
         self.assertEqual(oc.change_context, ObjectChangeEventContextChoices.CONTEXT_WEB)
         self.assertEqual(oc.change_context_detail, "dcim:site_add")
+        self.assertEqual(oc.user_id, self.user.pk)
 
 
 class ChangeLogAPITest(APITestCase):
@@ -214,14 +214,12 @@ class ChangeLogAPITest(APITestCase):
         self.assertHttpStatus(response, status.HTTP_201_CREATED)
 
         site = Site.objects.get(pk=response.data["id"])
-        oc = ObjectChange.objects.get(
-            changed_object_type=ContentType.objects.get_for_model(Site),
-            changed_object_id=site.pk,
-        )
+        oc = get_changes_for_model(site).first()
         self.assertEqual(oc.changed_object, site)
         self.assertEqual(oc.action, ObjectChangeActionChoices.ACTION_CREATE)
         self.assertEqual(oc.object_data["custom_fields"], data["custom_fields"])
         self.assertEqual(oc.object_data["tags"], ["Tag 1", "Tag 2"])
+        self.assertEqual(oc.user_id, self.user.pk)
 
     def test_update_object(self):
         """Test PUT with changelogs."""
@@ -249,14 +247,12 @@ class ChangeLogAPITest(APITestCase):
         self.assertHttpStatus(response, status.HTTP_200_OK)
 
         site = Site.objects.get(pk=response.data["id"])
-        oc = ObjectChange.objects.get(
-            changed_object_type=ContentType.objects.get_for_model(Site),
-            changed_object_id=site.pk,
-        )
+        oc = get_changes_for_model(site).first()
         self.assertEqual(oc.changed_object, site)
         self.assertEqual(oc.action, ObjectChangeActionChoices.ACTION_UPDATE)
         self.assertEqual(oc.object_data["custom_fields"], data["custom_fields"])
         self.assertEqual(oc.object_data["tags"], ["Tag 3"])
+        self.assertEqual(oc.user_id, self.user.pk)
 
     def test_partial_update_object(self):
         """Test PATCH with changelogs."""
@@ -292,6 +288,7 @@ class ChangeLogAPITest(APITestCase):
         self.assertEqual(oc.action, ObjectChangeActionChoices.ACTION_UPDATE)
         self.assertEqual(oc.object_data["custom_fields"], site.custom_field_data)
         self.assertEqual(oc.object_data["tags"], ["Tag 3"])
+        self.assertEqual(oc.user_id, self.user.pk)
 
     def test_delete_object(self):
         site = Site(
@@ -317,6 +314,7 @@ class ChangeLogAPITest(APITestCase):
         self.assertEqual(oc.object_data["custom_fields"]["my_field"], "ABC")
         self.assertEqual(oc.object_data["custom_fields"]["my_field_select"], "Bar")
         self.assertEqual(oc.object_data["tags"], ["Tag 1", "Tag 2"])
+        self.assertEqual(oc.user_id, self.user.pk)
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     def test_get_graphql_object(self):
@@ -391,9 +389,40 @@ class ChangeLogAPITest(APITestCase):
         self.assertHttpStatus(response, status.HTTP_201_CREATED)
 
         site = Site.objects.get(pk=response.data["id"])
-        oc = ObjectChange.objects.get(
-            changed_object_type=ContentType.objects.get_for_model(Site),
-            changed_object_id=site.pk,
-        )
+        oc = get_changes_for_model(site).first()
         self.assertEqual(oc.change_context, ObjectChangeEventContextChoices.CONTEXT_WEB)
         self.assertEqual(oc.change_context_detail, "dcim-api:site-list")
+        self.assertEqual(oc.user_id, self.user.pk)
+
+    def test_m2m_change(self):
+        """Test that ManyToMany change only generates a single ObjectChange instance"""
+        cluster_type = ClusterType.objects.create(name="test_cluster_type")
+        cluster = Cluster.objects.create(name="test_cluster", type=cluster_type)
+        vm_statuses = Status.objects.get_for_model(VirtualMachine)
+        vm = VirtualMachine.objects.create(
+            name="test_vm",
+            cluster=cluster,
+            status=vm_statuses.get(slug="active"),
+        )
+        vminterface_statuses = Status.objects.get_for_model(VirtualMachine)
+        vm_interface = VMInterface.objects.create(
+            name="vm interface 1",
+            virtual_machine=vm,
+            status=vminterface_statuses.get(slug="active"),
+        )
+        vlan_statuses = Status.objects.get_for_model(VLAN)
+        tagged_vlan = VLAN.objects.create(vid=100, name="Vlan100", status=vlan_statuses.get(slug="active"))
+
+        payload = {"tagged_vlans": [str(tagged_vlan.pk)], "description": "test vm interface m2m change"}
+        self.assertEqual(ObjectChange.objects.count(), 0)
+        self.add_permissions("virtualization.change_vminterface", "ipam.change_vlan")
+        url = reverse("virtualization-api:vminterface-detail", kwargs={"pk": vm_interface.pk})
+        response = self.client.patch(url, payload, format="json", **self.header)
+        vm_interface.refresh_from_db()
+        self.assertHttpStatus(response, status.HTTP_200_OK)
+
+        oc = get_changes_for_model(vm_interface).first()
+        self.assertEqual(ObjectChange.objects.count(), 1)
+        self.assertEqual(oc.user_id, self.user.pk)
+        self.assertEqual(vm_interface.description, "test vm interface m2m change")
+        self.assertSequenceEqual(list(vm_interface.tagged_vlans.all()), [tagged_vlan])

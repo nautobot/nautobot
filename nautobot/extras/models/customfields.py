@@ -421,14 +421,16 @@ class CustomField(BaseModel, ChangeLoggedModel, NotesMixin):
         self._fixup_empty_fields()
         super().save(**kwargs)
 
-    def to_form_field(self, set_initial=True, enforce_required=True, for_csv_import=False, simple_json_filter=False):
+    def to_form_field(
+        self, set_initial=True, enforce_required=True, for_csv_import=False, simple_json_filter=False, label=None
+    ):
         """
         Return a form field suitable for setting a CustomField's value for an object.
-
         set_initial: Set initial date for the field. This should be False when generating a field for bulk editing.
         enforce_required: Honor the value of CustomField.required. Set to False for filtering/bulk editing.
         for_csv_import: Return a form field suitable for bulk import of objects in CSV format.
         simple_json_filter: Return a TextInput widget for JSON filtering instead of the default TextArea widget.
+        label: Set the input label manually (if required) otherwise it will default to field's __str__() implementation.
         """
         initial = self.default if set_initial else None
         required = self.required if enforce_required else False
@@ -507,7 +509,10 @@ class CustomField(BaseModel, ChangeLoggedModel, NotesMixin):
                 field = field_class(choices=choices, required=required, initial=initial, widget=StaticSelect2Multiple())
 
         field.model = self
-        field.label = str(self)
+        if label is not None:
+            field.label = label
+        else:
+            field.label = str(self)
 
         if self.description:
             # Avoid script injection and similar attacks! Output HTML but only accept Markdown as input

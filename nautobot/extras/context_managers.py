@@ -3,6 +3,7 @@ from contextlib import contextmanager
 
 from django.contrib.auth import get_user_model
 from django.db.models.signals import m2m_changed, pre_delete, post_save
+from django.test.client import RequestFactory
 
 from nautobot.extras.choices import ObjectChangeEventContextChoices
 from nautobot.extras.signals import _handle_changed_object, _handle_deleted_object
@@ -17,13 +18,21 @@ class ChangeContext:
     classes are provided for each context.
 
     :param user: User object
+    :param request: WSGIRequest object to retrieve user from django rest framework after authentication is performed
     :param context: Context of the transaction, must match a choice in nautobot.extras.choices.ObjectChangeEventContextChoices
     :param context_detail: Optional extra details about the transaction (ex: the plugin name that initiated the change)
-    :param id: Optional uuid object to uniquely identify the transaction
+    :param change_id: Optional uuid object to uniquely identify the transaction. One will be generated if not supplied
     """
 
-    def __init__(self, user, context=None, context_detail="", id=None):
+    def __init__(self, user=None, request=None, context=None, context_detail="", change_id=None):
+        self.request = request
         self.user = user
+
+        if self.request is None and self.user is None:
+            raise TypeError("Either user or request must be provided")
+
+        if self.request is not None and self.user is not None:
+            raise TypeError("Request and user cannot be used together")
 
         if context is not None:
             self.context = context
@@ -32,9 +41,15 @@ class ChangeContext:
 
         self.context_detail = context_detail
 
-        self.id = id
-        if self.id is None:
-            self.id = uuid.uuid4()
+        self.change_id = change_id
+        if self.change_id is None:
+            self.change_id = uuid.uuid4()
+
+    def get_user(self):
+        """Return self.user if set, otherwise return self.request.user"""
+        if self.user is not None:
+            return self.user
+        return self.request.user
 
 
 class JobChangeContext(ChangeContext):
@@ -88,7 +103,7 @@ def change_logging(change_context):
 
 
 @contextmanager
-def web_request_context(user, context_detail=""):
+def web_request_context(user, context_detail="", change_id=None):
     """
     Emulate the context of an HTTP request, which provides functions like change logging and webhook processing
     in response to data changes. This context manager is for use with low level utility tooling, such as the
@@ -100,17 +115,20 @@ def web_request_context(user, context_detail=""):
 
     >>> from nautobot.extras.context_managers import web_request_context
     >>> user = User.objects.get(username="admin")
-    >>> with web_request_context(user, "manual-fix"):
+    >>> with web_request_context(user, context_detail="manual-fix"):
     ...     lax = Site(name="LAX")
     ...     lax.validated_save()
 
     :param user: User object
     :param context_detail: Optional extra details about the transaction (ex: the plugin name that initiated the change)
+    :param change_id: Optional uuid object to uniquely identify the transaction. One will be generated if not supplied
     """
 
     if not isinstance(user, get_user_model()):
         raise TypeError("The user object must be an instance of nautobot.users.models.User")
 
-    change_context = ORMChangeContext(user, context_detail=context_detail)
+    request = RequestFactory().request(SERVER_NAME="web_request_context")
+    request.user = user
+    change_context = ORMChangeContext(user=request.user, context_detail=context_detail, change_id=change_id)
     with change_logging(change_context):
-        yield
+        yield request

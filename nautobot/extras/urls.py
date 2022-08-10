@@ -633,6 +633,12 @@ urlpatterns = [
         name="tag_changelog",
         kwargs={"model": Tag},
     ),
+    path(
+        "tags/<str:slug>/notes/",
+        views.ObjectNotesView.as_view(),
+        name="tag_notes",
+        kwargs={"model": Tag},
+    ),
     # Webhook
     path("webhooks/", views.WebhookListView.as_view(), name="webhook_list"),
     path("webhooks/add/", views.WebhookEditView.as_view(), name="webhook_add"),

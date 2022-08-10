@@ -165,8 +165,15 @@ class DynamicGroup(OrganizationalModel):
         # Get dynamic group filter field mappings (if any)
         dynamic_group_filter_fields = getattr(self.model, "dynamic_group_filter_fields", {})
 
-        # Model form fields that aren't on the filter form
-        missing_fields = set(modelform_fields).difference(filterform_fields)
+        # Whether or not to add missing form fields that aren't on the filter form.
+        skip_missing_fields = getattr(self.model, "dynamic_group_skip_missing_fields", False)
+
+        # Model form fields that aren't on the filter form.
+        if not skip_missing_fields:
+            missing_fields = set(modelform_fields).difference(filterform_fields)
+        else:
+            logger.debug("Will not add missing form fields due to model %s meta option.", self.model)
+            missing_fields = set()
 
         # Try a few ways to see if a missing field can be added to the filter fields.
         for missing_field in missing_fields:
@@ -194,8 +201,23 @@ class DynamicGroup(OrganizationalModel):
                 logger.debug("Skipping %s: doesn't have a filterset field", missing_field)
                 continue
 
+            # Skip filter fields that have methods defined. They are not reversible.
+            if filterset_field.method is not None:
+                logger.debug("Skipping %s: has a filter method", missing_field)
+                continue
+
             # Get the missing model form field so we can use it to add to the filterform_fields.
             modelform_field = modelform_fields[missing_field]
+
+            # If `required=True` was set on the model field, pop "required" from the widget
+            # attributes. Filter fields should never be required!
+            if modelform_field.required:
+                modelform_field.required = False
+                modelform_field.widget.attrs.pop("required")
+
+            # If `initial` is set, unset it.
+            if modelform_field.initial:
+                modelform_field.initial = None
 
             # Replace the modelform_field with the correct type for the UI. At this time this is
             # only being done for CharField since in the filterset form this ends up being a
@@ -205,11 +227,6 @@ class DynamicGroup(OrganizationalModel):
                 # Get ready to replace the form field w/ correct widget.
                 new_modelform_field = filterset_field.field
                 new_modelform_field.widget = modelform_field.widget
-
-                # If `required=True` was set on the model field, pop "required" from the widget
-                # attributes. Filter fields should never be required!
-                if modelform_field.required:
-                    new_modelform_field.widget.attrs.pop("required")
 
                 modelform_field = new_modelform_field
 
@@ -722,7 +739,7 @@ class DynamicGroup(OrganizationalModel):
 
     def flatten_descendants_tree(self, tree):
         """
-        Recursively flatten a tree mapping of descendants to a list, adding a `depth attribute to each
+        Recursively flatten a tree mapping of descendants to a list, adding a `depth` attribute to each
         instance in the list that can be used for visualizing tree depth.
 
         :param tree:
@@ -760,6 +777,21 @@ class DynamicGroup(OrganizationalModel):
             self._flatten_tree(branches, nodes=nodes, descending=descending, depth=depth + 1)
 
         return nodes
+
+    def membership_tree(self, depth=1):
+        """
+        Recursively return a list of group memberships, adding a `depth` attribute to each instance
+        in the list that can be used for visualizing tree depth.
+        """
+
+        tree = []
+        memberships = DynamicGroupMembership.objects.filter(parent_group=self)
+        for membership in memberships:
+            membership.depth = depth
+            tree.append(membership)
+            tree.extend(membership.group.membership_tree(depth=depth + 1))
+
+        return tree
 
     def _ordered_filter(self, queryset, field_names, values):
         """
@@ -824,7 +856,7 @@ class DynamicGroupMembership(BaseModel):
         ordering = ["parent_group", "weight", "group"]
 
     def __str__(self):
-        return f"{self.group}: {self.operator} ({self.weight})"
+        return f"{self.parent_group} > {self.operator} ({self.weight}) > {self.group}"
 
     def natural_key(self):
         return self.group.natural_key() + self.parent_group.natural_key() + (self.operator, self.weight)
@@ -877,6 +909,14 @@ class DynamicGroupMembership(BaseModel):
 
     def clean(self):
         super().clean()
+
+        # Enforce mutual exclusivity between filter & children.
+        if self.parent_group.filter:
+            raise ValidationError(
+                {
+                    "parent_group": "A parent group may have either a filter or child groups, but not both. Clear the parent filter and try again."
+                }
+            )
 
         # Enforce matching content_type
         if self.parent_group.content_type != self.group.content_type:
