@@ -140,15 +140,13 @@ class CustomFieldBulkEditForm(BulkEditForm):
             self.custom_fields.append(field_name)
 
 
-class NoteFormBase:
+class NoteFormBase(forms.Form):
     """Base fore the NoteModelFormMixin and NoteModelBulkEditFormMixin."""
 
-    def append_field(self):
-        self.fields["object_note"] = CommentField()
-        self.fields["object_note"].label = "Note"
+    object_note = CommentField(label="Note")
 
     def save_note(self, *, instance, user):
-        if "object_note" in self.cleaned_data:
+        if "object_note" in self.cleaned_data and self.cleaned_data.get("object_note"):
             value = self.cleaned_data.get("object_note")
             note = Note.objects.create(
                 note=value,
@@ -166,16 +164,12 @@ class NoteModelBulkEditFormMixin(BulkEditForm, NoteFormBase):
         super().__init__(*args, **kwargs)
         self.obj_type = ContentType.objects.get_for_model(self.model)
 
-        self.append_field()
-
 
 class NoteModelFormMixin(forms.ModelForm, NoteFormBase):
     def __init__(self, *args, **kwargs):
         self.obj_type = ContentType.objects.get_for_model(self._meta.model)
 
         super().__init__(*args, **kwargs)
-
-        self.append_field()
 
 
 class RelationshipModelBulkEditFormMixin(BulkEditForm):

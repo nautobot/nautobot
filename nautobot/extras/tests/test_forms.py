@@ -144,7 +144,7 @@ class NoteModelFormTestCase(TestCase):
     @classmethod
     def setUpTestData(cls):
         active = Status.objects.get(slug="active")
-        cls.user = User.objects.create(username="formmuser1")
+        cls.user = User.objects.create(username="formuser1")
 
         cls.site_form_base_data = {
             "name": "Site 1",
