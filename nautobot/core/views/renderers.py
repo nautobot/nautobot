@@ -18,6 +18,10 @@ from nautobot.utilities.utils import (
 
 
 class NautobotHTMLRenderer(renderers.BrowsableAPIRenderer):
+    """
+    Inherited from BrowsableAPIRenderer to do most of the heavy lifting for getting the context needed for templates and template rendering.
+    """
+
     def get_filter_params(self, view, request):
         """Helper function - take request.GET and discard any parameters that are not used for queryset filtering."""
         filter_params = request.GET.copy()
@@ -87,7 +91,9 @@ class NautobotHTMLRenderer(renderers.BrowsableAPIRenderer):
 
     def get_context(self, data, accepted_media_type, renderer_context):
         """
-        Override get_context() from BrowsableAPIRenderer to obtain the context data we need to render our templates.
+        Overrode get_context() from BrowsableAPIRenderer to obtain the context data we need to render our templates.
+        context variable contains template context needed to render Nautobot generic templates / circuits templates.
+        Override this function to add additional key/value pair to pass it to your templates.
         """
         view = renderer_context["view"]
         request = renderer_context["request"]
@@ -204,6 +210,9 @@ class NautobotHTMLRenderer(renderers.BrowsableAPIRenderer):
         return context
 
     def render(self, data, accepted_media_type=None, renderer_context=None):
+        """
+        Overrode render() from BrowsableAPIRenderer to set self.template with NautobotViewSet's get_template_name() before it is rendered.
+        """
         view = renderer_context["view"]
         # Get the corresponding template based on self.action unless it is previously set. See BulkCreateView/import_success.html
         if data.get("template"):

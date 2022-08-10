@@ -58,11 +58,10 @@ PERMISSIONS_ACTION_MAP = {
 
 class NautobotViewSetMixin(ViewSetMixin, generics.GenericAPIView, AccessMixin, GetReturnURLMixin, FormView):
     """
-    serializer_class has to be specified to eliminate the need to override retrieve() in the RetrieveModelMixin for now.
-    It is a step forward in our transition from NetBox legacy code to DRF framework.
-    NautobotHTMLRenderer is inherited from BrowsableAPIRenderer to render the original context needed for rendering the templates.
+    NautobotViewSetMixin is an aggregation of various mixins from DRF, Django and Nautobot to acheive the desired behavior pattern for NautobotDRFViewSet
     """
 
+    # serializer_class has to be specified to eliminate the need to override retrieve() in the RetrieveModelMixin for now.
     serializer_class = None
     renderer_classes = [NautobotHTMLRenderer]
 
@@ -286,6 +285,9 @@ class NautobotViewSetMixin(ViewSetMixin, generics.GenericAPIView, AccessMixin, G
         if action in ["create", "update"]:
             action = "create_or_update"
         try:
+            if action == "retrieve":
+                select_template([f"{app_label}/{model_opts.model_name}.html"])
+                return f"{app_label}/{model_opts.model_name}.html"
             select_template([f"{app_label}/{model_opts.model_name}_{action}.html"])
             return f"{app_label}/{model_opts.model_name}_{action}.html"
         except TemplateDoesNotExist:
@@ -784,7 +786,6 @@ class BulkUpdateViewMixin(NautobotViewSetMixin, bulk_mixins.BulkUpdateModelMixin
         The function exist to keep the DRF's get/post pattern of {action}/perform_{action}, we will need it when we transition from using forms to serializers in the UI.
         User should override this function to handle any actions as needed before bulk update.
         """
-        print(request.POST)
         return self.perform_bulk_update(request, **kwargs)
 
     def perform_bulk_update(self, request, **kwargs):
