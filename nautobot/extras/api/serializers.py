@@ -1234,13 +1234,13 @@ class TagSerializer(NautobotModelSerializer):
     def validate(self, data):
         data = super().validate(data)
 
-        # All relevant content_types should be assigned to tag for API Version <1.3
-        if not data.get("content_types"):
+        # All relevant content_types should be assigned to newly created tag for API Version <1.3
+        if (self.instance is None or not self.instance.present_in_database) and "content_types" not in data:
             data["content_types"] = TaggableClassesQuery().as_queryset
 
         # check if tag is assigned to any of the removed content_types
-        if self.instance is not None and self.instance.present_in_database:
-            content_types_id = [content_type.id for content_type in data.get("content_types")]
+        if self.instance is not None and self.instance.present_in_database and "content_types" in data:
+            content_types_id = [content_type.id for content_type in data["content_types"]]
             errors = self.instance.validate_content_types_removal(content_types_id)
 
             if errors:

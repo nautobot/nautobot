@@ -59,6 +59,7 @@ from nautobot.extras.models.jobs import JobHook
 from nautobot.extras.utils import TaggableClassesQuery
 from nautobot.ipam.models import VLANGroup
 from nautobot.users.models import ObjectPermission
+from nautobot.utilities.choices import ColorChoices
 from nautobot.utilities.testing import APITestCase, APIViewTestCases
 from nautobot.utilities.testing.utils import disable_warnings
 from nautobot.utilities.utils import slugify_dashes_to_underscores
@@ -3223,6 +3224,26 @@ class TagTestVersion13(
         self.assertEqual(
             str(response.data["content_types"][0]), "Unable to remove dcim.site. Dependent objects were found."
         )
+
+    def test_update_tag_content_type_unchanged(self):
+        """Test updating a tag without changing its content-types."""
+        self.add_permissions("extras.change_tag")
+
+        tag = Tag.objects.get(slug="tag-1")
+        url = self._get_detail_url(tag)
+        data = {"color": ColorChoices.COLOR_LIME}
+
+        response = self.client.patch(url, data, format="json", **self.header)
+        self.assertHttpStatus(response, status.HTTP_200_OK)
+        self.assertEqual(response.data["color"], ColorChoices.COLOR_LIME)
+        self.assertEqual(sorted(response.data["content_types"]), ["dcim.device", "dcim.site"])
+
+        tag.refresh_from_db()
+        self.assertEqual(tag.color, ColorChoices.COLOR_LIME)
+        tag_content_types = tag.content_types.all()
+        self.assertIn(ContentType.objects.get_for_model(Device), tag_content_types)
+        self.assertIn(ContentType.objects.get_for_model(Site), tag_content_types)
+        self.assertNotIn(ContentType.objects.get_for_model(Rack), tag_content_types)
 
 
 class WebhookTest(APIViewTestCases.APIViewTestCase):

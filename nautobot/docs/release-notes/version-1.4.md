@@ -130,6 +130,7 @@ The `settings_and_registry` default context processor was changed to purely `set
 
 ### Fixed
 
+- [#2090](https://github.com/nautobot/nautobot/issues/2090) - Fixed an issue where a REST API PATCH of a Tag could inadvertently reset its associated content-types.
 - [#2150](https://github.com/nautobot/nautobot/issues/2150) - Fixed unit tests performance degradation.
 - [#2132](https://github.com/nautobot/nautobot/pull/2132) - Updated job hooks to use slugs in urls instead of pk.
 - [#2133](https://github.com/nautobot/nautobot/pull/2133) - Update documentation for job hooks, make it reachable from the Nautobot UI.
