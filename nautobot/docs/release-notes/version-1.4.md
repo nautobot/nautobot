@@ -143,6 +143,8 @@ The `settings_and_registry` default context processor was changed to purely `set
 
 ### Changed
 
+- [#2168](https://github.com/nautobot/nautobot/pull/2168) - Added model toggle to skip adding missing Dynamic Group filter fields for use in easing integration of new models into Dynamic Groups.
+
 ### Fixed
 
 - [#2090](https://github.com/nautobot/nautobot/issues/2090) - Fixed an issue where a REST API PATCH of a Tag could inadvertently reset its associated content-types.
