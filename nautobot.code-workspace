@@ -4,9 +4,34 @@
 			"path": "."
 		}
 	],
+	"extensions": {
+		"recommendations": [
+			"ms-python.python"
+		]
+	},
 	"settings": {
-		"python.linting.pylintEnabled": true,
-		"python.linting.enabled": true
+		"editor.formatOnSave": true,
+		"python.formatting.provider": "black",
+		"python.formatting.blackArgs": [
+			"--line-length",
+			"120",
+			"--target-version",
+			"py37",
+			"--target-version",
+			"py38",
+			"--target-version",
+			"py39",
+			"--target-version",
+			"py310",
+			"--include",
+			"'\\.pyi?$'",
+			"--exclude",
+			"'/(\\.eggs|\\.git|\\.hg|\\.mypy_cache|\\.tox|\\.venv|_build|buck-out|build|dist)/'"
+		],
+		"python.linting.flake8Enabled": true,
+		"python.linting.flake8Args": [
+			"--ignore=E203,E501,W503,W504"
+		]
 	},
 	"launch": {
 		"version": "0.2.0",
