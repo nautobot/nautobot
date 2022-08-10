@@ -279,7 +279,7 @@ class NautobotViewSetMixin(ViewSetMixin, generics.GenericAPIView, AccessMixin, G
             template_name = f"generic/object_{action}.html"
         return template_name
 
-    def get_form(self, request, *args, **kwargs):
+    def get_form(self, *args, **kwargs):
         """
         Helper function to get form for different views if specified.
         If not, return instantiated form using form_class.
