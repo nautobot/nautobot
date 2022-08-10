@@ -21,9 +21,9 @@ from nautobot.ipam.models import (
     VLANGroup,
     VRF,
 )
-from nautobot.utilities.config import get_settings_or_config
 from nautobot.utilities.utils import count_related
 from . import serializers
+from nautobot.core.api.pagination import OptionalLimitOffsetPagination
 
 
 class IPAMRootView(APIRootView):
@@ -120,11 +120,20 @@ class PrefixViewSet(StatusViewSetMixin, CustomFieldModelViewSet):
 
     def get_serializer_class(self):
         if self.action == "available_prefixes" and self.request.method == "POST":
-            return serializers.PrefixLengthSerializer
+            return serializers.AvailablePrefixRequestSerializer
+        elif self.action == "available_ips" and self.request.method == "POST":
+            return serializers.AvailableIPAddressRequestSerializer
         return super().get_serializer_class()
 
-    @extend_schema(methods=["get"], responses={200: serializers.AvailablePrefixSerializer(many=True)})
-    @extend_schema(methods=["post"], responses={201: serializers.PrefixSerializer(many=False)})
+    @extend_schema(
+        methods=["get"],
+        responses={200: serializers.AvailablePrefixSerializer(many=True)},
+    )
+    @extend_schema(
+        methods=["post"],
+        responses={201: serializers.PrefixSerializer(many=False)},
+        request=serializers.AvailablePrefixRequestSerializer(many=False),
+    )
     @action(detail=True, url_path="available-prefixes", methods=["get", "post"], filterset_class=None)
     def available_prefixes(self, request, pk=None):
         """
@@ -140,7 +149,7 @@ class PrefixViewSet(StatusViewSetMixin, CustomFieldModelViewSet):
                 available_prefixes = prefix.get_available_prefixes()
 
                 # Validate Requested Prefixes' length
-                serializer = serializers.PrefixLengthSerializer(
+                serializer = serializers.AvailablePrefixRequestSerializer(
                     data=request.data if isinstance(request.data, list) else [request.data],
                     many=True,
                     context={
@@ -195,13 +204,17 @@ class PrefixViewSet(StatusViewSetMixin, CustomFieldModelViewSet):
                 },
             )
 
-            return Response(serializer.data)
+            paginator = OptionalLimitOffsetPagination()
+            data = paginator.paginate_queryset(serializer.data, request)
+            if request.major_version > 1 or request.minor_version >= 4:
+                return paginator.get_paginated_response(data)
+            return Response(data)
 
     @extend_schema(methods=["get"], responses={200: serializers.AvailableIPSerializer(many=True)})
     @extend_schema(
         methods=["post"],
-        responses={201: serializers.AvailableIPSerializer(many=True)},
-        request=serializers.AvailableIPSerializer(many=True),
+        responses={201: serializers.IPAddressSerializer(many=False)},
+        request=serializers.AvailableIPAddressRequestSerializer(),
     )
     @action(
         detail=True,
@@ -259,23 +272,9 @@ class PrefixViewSet(StatusViewSetMixin, CustomFieldModelViewSet):
                 serializer.save()
                 return Response(serializer.data, status=status.HTTP_201_CREATED)
 
-        # Determine the maximum number of IPs to return
         else:
-            try:
-                limit = int(request.query_params.get("limit", get_settings_or_config("PAGINATE_COUNT")))
-            except ValueError:
-                limit = get_settings_or_config("PAGINATE_COUNT")
-            if get_settings_or_config("MAX_PAGE_SIZE"):
-                limit = min(limit, get_settings_or_config("MAX_PAGE_SIZE"))
-
-            # Calculate available IPs within the prefix
-            ip_list = []
-            for index, ip in enumerate(prefix.get_available_ips(), start=1):
-                ip_list.append(ip)
-                if index == limit:
-                    break
             serializer = serializers.AvailableIPSerializer(
-                ip_list,
+                list(prefix.get_available_ips()),
                 many=True,
                 context={
                     "request": request,
@@ -284,7 +283,11 @@ class PrefixViewSet(StatusViewSetMixin, CustomFieldModelViewSet):
                 },
             )
 
-            return Response(serializer.data)
+            paginator = OptionalLimitOffsetPagination()
+            data = paginator.paginate_queryset(serializer.data, request)
+            if request.major_version > 1 or request.minor_version >= 4:
+                return paginator.get_paginated_response(data)
+            return Response(data)
 
 
 #

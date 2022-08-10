@@ -19,7 +19,13 @@ from nautobot.extras.api.serializers import (
     StatusModelSerializerMixin,
     TaggedObjectSerializer,
 )
-from nautobot.ipam.choices import IPAddressFamilyChoices, IPAddressRoleChoices, ServiceProtocolChoices
+from nautobot.ipam.choices import (
+    IPAddressFamilyChoices,
+    IPAddressRoleChoices,
+    IPAddressStatusChoices,
+    PrefixStatusChoices,
+    ServiceProtocolChoices,
+)
 from nautobot.ipam import constants
 from nautobot.ipam.models import (
     Aggregate,
@@ -336,9 +342,15 @@ class PrefixSerializer(TaggedObjectSerializer, StatusModelSerializerMixin, Custo
         opt_in_fields = ["computed_fields"]
 
 
-class PrefixLengthSerializer(serializers.Serializer):
-
+class AvailablePrefixRequestSerializer(serializers.Serializer):
     prefix_length = serializers.IntegerField()
+    status = ChoiceField(choices=PrefixStatusChoices)
+
+    class Meta:
+        model = Prefix
+        fields = [
+            "status",
+        ]
 
     def to_internal_value(self, data):
         requested_prefix = data.get("prefix_length")
@@ -442,6 +454,16 @@ class IPAddressSerializer(TaggedObjectSerializer, StatusModelSerializerMixin, Cu
 # 2.0 TODO: Remove in 2.0. Used to serialize against pre-1.3 behavior (nat_inside was one-to-one)
 class IPAddressSerializerLegacy(IPAddressSerializer):
     nat_outside = NestedIPAddressSerializer(read_only=True)
+
+
+class AvailableIPAddressRequestSerializer(StatusModelSerializerMixin):
+    status = ChoiceField(choices=IPAddressStatusChoices)
+
+    class Meta:
+        model = IPAddress
+        fields = [
+            "status",
+        ]
 
 
 class AvailableIPSerializer(serializers.Serializer):
