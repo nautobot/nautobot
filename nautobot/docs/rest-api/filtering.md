@@ -52,10 +52,16 @@ To filter results by a custom field value, prepend `cf_` to the custom field nam
 GET /api/dcim/sites/?cf_foo=123
 ```
 
-Multi-value filtering is available for all field types and lookup expressions. When multiple values are supplied, an `or` lookup will be performed by the query. For example, the following query will return only sites where a custom field named `foo` is equal to 123 _or_ 456:
+Multi-value filtering (as well as single-value filtering) is available for the `text`, `url`, `select`, `integer` and `date` field types and their associated lookup expressions. When multiple values are supplied, an `or` lookup will be performed by the query. For example, the following query will return only sites where a custom field named `foo` is equal to 123 _or_ 456:
 
 ```no-highlight
 GET /api/dcim/sites/?cf_foo=123&cf_foo=456
+```
+
+In the following example, we have a custom field (named "Warranty Expires") with a type of `date`. The following query will return results whose "Warranty Expires" is on or after `2022-07-28` or before `2022-08-08`: 
+
+```no-highlight
+GET /api/dcim/sites/?cf_warranty_expires__gte=2022-07-28&cf_warranty_expires__lt=2022-08-08
 ```
 
 Custom fields can be mixed with built-in fields to further narrow results. When creating a custom string field, the type of filtering selected (loose versus exact) determines whether partial or full matching is used.
