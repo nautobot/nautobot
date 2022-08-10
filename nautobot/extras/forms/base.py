@@ -26,8 +26,8 @@ __all__ = (
 class NautobotModelForm(BootstrapMixin, CustomFieldModelFormMixin, RelationshipModelFormMixin, NoteModelFormMixin):
     """
     This class exists to combine common functionality and is used to inherit from throughout the
-    codebase where all of BootstrapMixin, CustomFieldModelForm, RelationshipModelForm and NoteModelForm are
-    needed.
+    codebase where all of BootstrapMixin, CustomFieldModelFormMixin, RelationshipModelFormMixin, and
+    NoteModelFormMixin are needed.
     """
 
 
