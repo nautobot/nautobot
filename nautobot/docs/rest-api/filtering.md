@@ -58,7 +58,7 @@ Multi-value filtering (as well as single-value filtering) is available for the `
 GET /api/dcim/sites/?cf_foo=123&cf_foo=456
 ```
 
-In the following example, we have a custom field (named "Warranty Expires") with a type of `date`. The following query will return results whose "Warranty Expires" is on or after `2022-07-28` or before `2022-08-08`: 
+In the following example, we have a custom field (named "Warranty Expires") with a type of `date`. The following query will return results whose "Warranty Expires" is on or after `2022-07-28` or before `2022-08-08`:
 
 ```no-highlight
 GET /api/dcim/sites/?cf_warranty_expires__gte=2022-07-28&cf_warranty_expires__lt=2022-08-08
