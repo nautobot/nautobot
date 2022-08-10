@@ -55,6 +55,9 @@ router.register("job-results", views.JobResultViewSet)
 # Scheduled Jobs
 router.register("scheduled-jobs", views.ScheduledJobViewSet)
 
+# Notes
+router.register("notes", views.NoteViewSet)
+
 # Change logging
 router.register("object-changes", views.ObjectChangeViewSet)
 

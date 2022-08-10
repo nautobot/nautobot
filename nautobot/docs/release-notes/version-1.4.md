@@ -92,6 +92,12 @@ Primary and Organizational models now support notes. A notes tab has been added 
 !!! warning
     Any plugin that inherits from one of these two models and uses the `ViewTestCases.PrimaryObjectViewTestCase` or `ViewTestCases.OrganizationalObjectViewTestCase` for their test will need to add the `NotesObjectView` to the objects URLs. See [Plugin Development](../plugins/development.md#note-url-endpoint) for more details.
 
+#### Notes API and additional REST API Enhancements ([#2106](https://github.com/nautobot/nautobot/issues/2106))
+
+Notes support the REST API at endpoint `/api/extras/notes`. Additionally notes can be listed/created per object at the object's `/notes` endpoint.
+
+- For implementers of REST API views (core and/or plugins), a new `nautobot.extras.api.views.NautobotModelViewSet` base class has been added. Use of this class ensures that all features from `PrimaryModel` or `OrganizationalModel` are accessible through the API. This includes custom fields and notes.
+
 ### Changed
 
 #### Dynamic Groups of Dynamic Groups ([#1614](https://github.com/nautobot/nautobot/issues/1614))

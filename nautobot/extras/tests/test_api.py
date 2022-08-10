@@ -44,6 +44,7 @@ from nautobot.extras.models import (
     Job,
     JobLogEntry,
     JobResult,
+    Note,
     Relationship,
     RelationshipAssociation,
     ScheduledJob,
@@ -2235,6 +2236,67 @@ class JobApprovalTest(APITestCase):
         url = reverse("extras-api:scheduledjob-dry-run", kwargs={"pk": self.scheduled_job.pk})
         response = self.client.post(url, **self.header)
         self.assertHttpStatus(response, status.HTTP_200_OK)
+
+
+class NoteTest(APIViewTestCases.APIViewTestCase):
+    model = Note
+    brief_fields = [
+        "assigned_object",
+        "display",
+        "id",
+        "note",
+        "slug",
+        "url",
+        "user",
+    ]
+    choices_fields = ["assigned_object_type"]
+
+    @classmethod
+    def setUpTestData(cls):
+        site1 = Site.objects.create(name="Site 1", slug="site-1")
+        site2 = Site.objects.create(name="Site 2", slug="site-2")
+        ct = ContentType.objects.get_for_model(Site)
+        user1 = User.objects.create(username="user1", is_active=True)
+        user2 = User.objects.create(username="user2", is_active=True)
+
+        cls.create_data = [
+            {
+                "note": "This is a test.",
+                "assigned_object_id": site1.pk,
+                "assigned_object_type": f"{ct._meta.app_label}.{ct._meta.model_name}",
+            },
+            {
+                "note": "This is a test.",
+                "assigned_object_id": site2.pk,
+                "assigned_object_type": f"{ct._meta.app_label}.{ct._meta.model_name}",
+            },
+            {
+                "note": "This is a note on Site 1.",
+                "assigned_object_id": site1.pk,
+                "assigned_object_type": f"{ct._meta.app_label}.{ct._meta.model_name}",
+            },
+        ]
+        cls.bulk_update_data = {
+            "note": "Bulk change.",
+        }
+        Note.objects.create(
+            note="Site has been placed on maintenance.",
+            user=user1,
+            assigned_object_type=ct,
+            assigned_object_id=site1.pk,
+        ),
+        Note.objects.create(
+            note="Site maintenance has ended.",
+            user=user1,
+            assigned_object_type=ct,
+            assigned_object_id=site1.pk,
+        ),
+        Note.objects.create(
+            note="Site is under duress.",
+            user=user2,
+            assigned_object_type=ct,
+            assigned_object_id=site2.pk,
+        ),
 
 
 class RelationshipTest(APIViewTestCases.APIViewTestCase):

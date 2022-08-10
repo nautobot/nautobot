@@ -43,6 +43,7 @@ from nautobot.extras.models import (
     JobHook,
     JobLogEntry,
     JobResult,
+    Note,
     ObjectChange,
     Relationship,
     RelationshipAssociation,
@@ -78,12 +79,44 @@ class ExtrasRootView(APIRootView):
         return "Extras"
 
 
+class NotesViewSetMixin:
+    @extend_schema(methods=["get"], filters=False, responses={200: serializers.NoteSerializer(many=True)})
+    @extend_schema(
+        methods=["post"],
+        request=serializers.NoteInputSerializer,
+        responses={201: serializers.NoteSerializer(many=False)},
+    )
+    @action(detail=True, url_path="notes", methods=["get", "post"])
+    def notes(self, request, pk=None):
+        """
+        API methods for returning or creating notes on an object.
+        """
+        obj = get_object_or_404(self.queryset, pk=pk)
+        if request.method == "POST":
+            content_type = ContentType.objects.get_for_model(obj)
+            data = request.data
+            data["assigned_object_id"] = obj.pk
+            data["assigned_object_type"] = f"{content_type.app_label}.{content_type.model}"
+            serializer = serializers.NoteSerializer(data=data, context={"request": request})
+
+            # Create the new Note.
+            serializer.is_valid(raise_exception=True)
+            serializer.save(user=request.user)
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+
+        else:
+            notes = self.paginate_queryset(obj.notes)
+            serializer = serializers.NoteSerializer(notes, many=True, context={"request": request})
+
+        return self.get_paginated_response(serializer.data)
+
+
 #
 #  Computed Fields
 #
 
 
-class ComputedFieldViewSet(ModelViewSet):
+class ComputedFieldViewSet(ModelViewSet, NotesViewSetMixin):
     """
     Manage Computed Fields through DELETE, GET, POST, PUT, and PATCH requests.
     """
@@ -139,7 +172,7 @@ class ConfigContextQuerySetMixin:
         return queryset.annotate_config_context_data()
 
 
-class ConfigContextViewSet(ModelViewSet):
+class ConfigContextViewSet(ModelViewSet, NotesViewSetMixin):
     queryset = ConfigContext.objects.prefetch_related(
         "regions",
         "sites",
@@ -158,7 +191,7 @@ class ConfigContextViewSet(ModelViewSet):
 #
 
 
-class ConfigContextSchemaViewSet(ModelViewSet):
+class ConfigContextSchemaViewSet(ModelViewSet, NotesViewSetMixin):
     queryset = ConfigContextSchema.objects.all()
     serializer_class = serializers.ConfigContextSchemaSerializer
     filterset_class = filters.ConfigContextSchemaFilterSet
@@ -217,7 +250,7 @@ class ContentTypeViewSet(viewsets.ReadOnlyModelViewSet):
         versions=["1.2", "1.3"],
     ),
 )
-class CustomFieldViewSet(ModelViewSet):
+class CustomFieldViewSet(ModelViewSet, NotesViewSetMixin):
     metadata_class = ContentTypeMetadata
     queryset = CustomField.objects.all()
     serializer_class = serializers.CustomFieldSerializer
@@ -260,12 +293,19 @@ class CustomFieldModelViewSet(ModelViewSet):
         return context
 
 
+class NautobotModelViewSet(CustomFieldModelViewSet, NotesViewSetMixin):
+    """Base class to use for API ViewSets based on OrganizationalModel or PrimaryModel.
+
+    Can also be used for models derived from BaseModel, so long as they support Notes.
+    """
+
+
 #
 # Custom Links
 #
 
 
-class CustomLinkViewSet(ModelViewSet):
+class CustomLinkViewSet(ModelViewSet, NotesViewSetMixin):
     """
     Manage Custom Links through DELETE, GET, POST, PUT, and PATCH requests.
     """
@@ -280,7 +320,7 @@ class CustomLinkViewSet(ModelViewSet):
 #
 
 
-class DynamicGroupViewSet(ModelViewSet):
+class DynamicGroupViewSet(ModelViewSet, NotesViewSetMixin):
     """
     Manage Dynamic Groups through DELETE, GET, POST, PUT, and PATCH requests.
     """
@@ -320,7 +360,7 @@ class DynamicGroupMembershipViewSet(ModelViewSet):
 #
 
 
-class ExportTemplateViewSet(ModelViewSet):
+class ExportTemplateViewSet(ModelViewSet, NotesViewSetMixin):
     metadata_class = ContentTypeMetadata
     queryset = ExportTemplate.objects.all()
     serializer_class = serializers.ExportTemplateSerializer
@@ -332,7 +372,7 @@ class ExportTemplateViewSet(ModelViewSet):
 #
 
 
-class GitRepositoryViewSet(CustomFieldModelViewSet):
+class GitRepositoryViewSet(NautobotModelViewSet):
     """
     Manage the use of Git repositories as external data sources.
     """
@@ -363,7 +403,7 @@ class GitRepositoryViewSet(CustomFieldModelViewSet):
 #
 
 
-class GraphQLQueryViewSet(ModelViewSet):
+class GraphQLQueryViewSet(ModelViewSet, NotesViewSetMixin):
     queryset = GraphQLQuery.objects.all()
     serializer_class = serializers.GraphQLQuerySerializer
     filterset_class = filters.GraphQLQueryFilterSet
@@ -553,6 +593,7 @@ class JobViewSet(
     BulkDestroyModelMixin,
     # Base class
     ReadOnlyModelViewSet,
+    NotesViewSetMixin,
 ):
     queryset = Job.objects.all()
     serializer_class = serializers.JobSerializer
@@ -728,7 +769,7 @@ class JobViewSet(
 #
 
 
-class JobHooksViewSet(ModelViewSet):
+class JobHooksViewSet(NautobotModelViewSet):
     """
     Manage job hooks through DELETE, GET, POST, PUT, and PATCH requests.
     """
@@ -919,6 +960,22 @@ class ScheduledJobViewSet(ReadOnlyModelViewSet):
 
 
 #
+# Notes
+#
+
+
+class NoteViewSet(ModelViewSet):
+    metadata_class = ContentTypeMetadata
+    queryset = Note.objects.prefetch_related("user")
+    serializer_class = serializers.NoteSerializer
+    filterset_class = filters.NoteFilterSet
+
+    # Assign user from request
+    def perform_create(self, serializer):
+        serializer.save(user=self.request.user)
+
+
+#
 # Change logging
 #
 
@@ -939,7 +996,7 @@ class ObjectChangeViewSet(ReadOnlyModelViewSet):
 #
 
 
-class RelationshipViewSet(ModelViewSet):
+class RelationshipViewSet(ModelViewSet, NotesViewSetMixin):
     metadata_class = ContentTypeMetadata
     queryset = Relationship.objects.all()
     serializer_class = serializers.RelationshipSerializer
@@ -958,7 +1015,7 @@ class RelationshipAssociationViewSet(ModelViewSet):
 #
 
 
-class SecretsViewSet(ModelViewSet):
+class SecretsViewSet(NautobotModelViewSet):
     """
     Manage Secrets through DELETE, GET, POST, PUT, and PATCH requests.
     """
@@ -968,7 +1025,7 @@ class SecretsViewSet(ModelViewSet):
     filterset_class = filters.SecretFilterSet
 
 
-class SecretsGroupViewSet(ModelViewSet):
+class SecretsGroupViewSet(NautobotModelViewSet):
     """
     Manage Secrets Groups through DELETE, GET, POST, PUT, and PATCH requests.
     """
@@ -993,7 +1050,7 @@ class SecretsGroupAssociationViewSet(ModelViewSet):
 #
 
 
-class StatusViewSet(CustomFieldModelViewSet):
+class StatusViewSet(NautobotModelViewSet):
     """
     View and manage custom status choices for objects with a `status` field.
     """
@@ -1041,7 +1098,7 @@ class StatusViewSetMixin(ModelViewSet):
     list=extend_schema(responses={"200": serializers.TagSerializer(many=True)}, versions=["1.2"]),
     retrieve=extend_schema(responses={"200": serializers.TagSerializer}, versions=["1.2"]),
 )
-class TagViewSet(CustomFieldModelViewSet):
+class TagViewSet(NautobotModelViewSet):
     queryset = Tag.objects.annotate(tagged_items=count_related(TaggedItem, "tag"))
     serializer_class = serializers.TagSerializerVersion13
     filterset_class = filters.TagFilterSet
@@ -1060,7 +1117,7 @@ class TagViewSet(CustomFieldModelViewSet):
 #
 
 
-class WebhooksViewSet(ModelViewSet):
+class WebhooksViewSet(ModelViewSet, NotesViewSetMixin):
     """
     Manage Webhooks through DELETE, GET, POST, PUT, and PATCH requests.
     """
