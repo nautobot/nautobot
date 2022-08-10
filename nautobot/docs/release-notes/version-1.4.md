@@ -143,6 +143,7 @@ The `settings_and_registry` default context processor was changed to purely `set
 
 ### Changed
 
+- [#2156](https://github.com/nautobot/nautobot/pull/2156) - Update network automation apps listed on overview of docs.
 - [#2168](https://github.com/nautobot/nautobot/pull/2168) - Added model toggle to skip adding missing Dynamic Group filter fields for use in easing integration of new models into Dynamic Groups.
 
 ### Fixed
