@@ -66,7 +66,7 @@ Custom fields can use the lookup expressions listed in the next section by prepe
 
 ## Lookup Expressions
 
-Certain model fields also support filtering using additional lookup expressions. This allows
+Certain model fields (including custom fields of type `text`, `url`, `select`, `integer`, and `date`) also support filtering using additional lookup expressions. This allows
 for negation and other context-specific filtering.
 
 These lookup expressions can be applied by adding a suffix to the desired field's name, e.g. `mac_address__n`. In this case, the filter expression is for negation and it is separated by two underscores. Below are the lookup expressions that are supported across different field types.
