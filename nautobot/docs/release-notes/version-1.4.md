@@ -174,11 +174,11 @@ The `settings_and_registry` default context processor was changed to purely `set
 - [#2035](https://github.com/nautobot/nautobot/pull/2035) - Added change source context to object change context manager.
 - [#2051](https://github.com/nautobot/nautobot/issues/2051) - Add changelog url for Relationships.
 - [#2061](https://github.com/nautobot/nautobot/pull/2061) - Add draggable child groups to Dynamic Groups edit view in UI, recompute and hide weights.
+- [#2072](https://github.com/nautobot/nautobot/pull/2072) - Expand on `query_params` for `ObjectVar` in Jobs documentation.
 
 ### Changed
 
 - [#2049](https://github.com/nautobot/nautobot/pull/2049) - Moved `get_changelog_url` to a method on objects that support changelogs, updated template context.
-- [#2072](https://github.com/nautobot/nautobot/pull/2072) - Expand on `query_params` for `ObjectVar` in Jobs documentation.
 - [#2116](https://github.com/nautobot/nautobot/pull/2116) - Updated package dependencies: Pillow `~9.1.1` -> `~9.2.0`, black `~22.3.0` -> `~22.6.0`, coverage `6.4.1` -> `6.4.2`, django-cacheops `6.0` -> `6.1`, django-cryptography `1.0` -> `1.1`, django-debug-toolbar `~3.4.0` -> `~3.5.0`, django-extensions `~3.1.5` -> `~3.2.0`, drf-yasg `~1.20.0` -> `^1.20.0`, importlib-metadata `~4.4` -> `^4.4.0`, jsonschema `~4.4.0` -> `~4.8.0`, mkdocs `1.3.0` -> `1.3.1`, mkdocs `==1.3.0` -> `==1.3.1`, mkdocs-include-markdown-plugin `~3.2.3` -> `~3.6.0`, mkdocs-include-markdown-plugin `==3.2.3` -> `==3.6.1`, social-auth-core `~4.2.0` -> `~4.3.0`, svgwrite `1.4.2` -> `1.4.3`
 
 ### Fixed
