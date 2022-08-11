@@ -139,6 +139,7 @@ The `settings_and_registry` default context processor was changed to purely `set
 ### Added
 
 - [#1962](https://github.com/nautobot/nautobot/issues/1962) - Added `slug` field to Custom Field model, added 1.4 REST API version of the `api/extras/custom-fields/` endpoints.
+- [#2105](https://github.com/nautobot/nautobot/issues/2105) - Added support for Notes in NautobotBulkEditForm and NautobotEditForm.
 - [#2106](https://github.com/nautobot/nautobot/issues/2106) - Added support for listing/creating Notes via REST API.
 
 ### Changed
