@@ -170,6 +170,7 @@ def register_homepage_panels(path, label, homepage_layout):
                     create_or_check_entry(registry_items, item, item.name, f"{panel.name} -> {item.name}")
                     for group_item in item.items:
                         if isinstance(group_item, HomePageItem):
+                            group_item.template_path = template_path
                             create_or_check_entry(
                                 registry_items[item.name]["items"],
                                 group_item,

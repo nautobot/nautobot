@@ -1,5 +1,31 @@
+from django.contrib.contenttypes.models import ContentType
+from django.db.models import F
+
 from nautobot.core.apps import HomePageGroup, HomePageItem, HomePagePanel
 from nautobot.dcim import models
+
+
+def _connected_consoleports_count(request):
+    # Match queryset used in dcim.views.ConsoleConnectionsListView
+    return models.ConsolePort.objects.restrict(request.user, "view").filter(_path__isnull=False).count()
+
+
+def _connected_interfaces_count(request):
+    # Match queryset used in dcim.views.InterfaceConnectionsListView
+    return (
+        models.Interface.objects.restrict(request.user, "view")
+        .filter(_path__isnull=False)
+        .exclude(
+            _path__destination_type=ContentType.objects.get_for_model(models.Interface),
+            pk__lt=F("_path__destination_id"),
+        )
+        .count()
+    )
+
+
+def _connected_powerports_count(request):
+    # Match queryset used in dcim.views.PowerConnectionsListView
+    return models.PowerPort.objects.restrict(request.user, "view").filter(_path__isnull=False).count()
 
 
 layout = (
@@ -74,22 +100,22 @@ layout = (
                     ),
                     HomePageItem(
                         name="Interfaces",
-                        link="dcim:interface_connections_list",
-                        model=models.Interface,
+                        custom_template="home_page_interface_connections.html",
+                        custom_data={"connected_interfaces_count": _connected_interfaces_count},
                         permissions=["dcim.view_interface"],
                         weight=200,
                     ),
                     HomePageItem(
                         name="Console",
-                        link="dcim:console_connections_list",
-                        model=models.ConsolePort,
+                        custom_template="home_page_console_connections.html",
+                        custom_data={"connected_consoleports_count": _connected_consoleports_count},
                         permissions=["dcim.view_consoleport", "dcim.view_consoleserverport"],
                         weight=300,
                     ),
                     HomePageItem(
                         name="Power",
-                        link="dcim:power_connections_list",
-                        model=models.PowerOutlet,
+                        custom_template="home_page_power_connections.html",
+                        custom_data={"connected_powerports_count": _connected_powerports_count},
                         permissions=["dcim.view_powerport", "dcim.view_poweroutlet"],
                         weight=400,
                     ),
