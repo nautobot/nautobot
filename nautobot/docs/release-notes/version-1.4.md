@@ -9,30 +9,30 @@ If you are a user migrating from NetBox to Nautobot, please refer to the ["Migra
 
 ### Added
 
-#### Custom Field Extended Filtering [#1498](https://github.com/nautobot/nautobot/issues/1498)
+#### Custom Field Extended Filtering ([#1498](https://github.com/nautobot/nautobot/issues/1498))
 
 Custom fields now have additional filtering capabilities. These include the following:
 
-* Lookup expressions for `text`, `url` and `select` field types:
-    * `n` (exact)
-    * `ic` (case-insensitive contains)
-    * `nic` (negated case-insensitive contains)
-    * `iew` (case-insensitive endswith)
-    * `niew` (negated case-insensitive endswith)
-    * `isw` (case-insensitive  startswith)
-    * `nisw` (negated case-insensitive startswith)
-    * `ie` (case-insensitive exact)
-    * `nie` (negated case-insensitive exact)
-    * `re` (regex)
-    * `nre` (regex negated)
-    * `ire` (case-insensitive regex)
-    * `nire` (negated case-insensitive regex)
-* Lookup expressions for `integer` and `date` field types:
-    * `n` (negated exact)
-    * `lte` (less than or equal)
-    * `lt` (less than)
-    * `gte` (greater than or equal)
-    * `gt` (greater than)
+- Lookup expressions for `text`, `url` and `select` field types:
+    - `n` (exact)
+    - `ic` (case-insensitive contains)
+    - `nic` (negated case-insensitive contains)
+    - `iew` (case-insensitive endswith)
+    - `niew` (negated case-insensitive endswith)
+    - `isw` (case-insensitive  startswith)
+    - `nisw` (negated case-insensitive startswith)
+    - `ie` (case-insensitive exact)
+    - `nie` (negated case-insensitive exact)
+    - `re` (regex)
+    - `nre` (regex negated)
+    - `ire` (case-insensitive regex)
+    - `nire` (negated case-insensitive regex)
+- Lookup expressions for `integer` and `date` field types:
+    - `n` (negated exact)
+    - `lte` (less than or equal)
+    - `lt` (less than)
+    - `gte` (greater than or equal)
+    - `gt` (greater than)
 
 Multi-value lookups are supported for the `date` type, enabling date range filtering.
 
