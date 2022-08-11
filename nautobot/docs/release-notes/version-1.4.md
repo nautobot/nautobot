@@ -19,6 +19,12 @@ Additionally, REST API serialization of custom field data is itself now versione
 
 For technical reasons of backwards-compatibility, the database (ORM) and GraphQL interfaces continue to access and store object custom field data exclusively under the `name` key; this will change to use the `slug` in a future major release. Again, watch [#824](https://github.com/nautobot/nautobot/issues/824) for plans in that regard.
 
+#### Custom Tabs in Object Detail Views ([#1000](https://github.com/nautobot/nautobot/issues/1000))
+
+A plugin may now define extra tabs which will be appended to the object view's list of tabs.
+
+You can refer to the [plugin development guide](../plugins/development.md#adding-extra-tabs) on how to add tabs to existing object detail views.
+
 #### Custom Template (CSS, HTML, JavaScript) on Job Forms ([#1865](https://github.com/nautobot/nautobot/issues/1865))
 
 Jobs can now specify a `template_name` property and provide a custom template with additional JavaScript and CSS to help with user input on the Job submission form.
@@ -31,14 +37,14 @@ Nautobot's UI now supports dark mode, both explicitly and via browser preference
 
 The "Theme" link in the footer provides a modal popup to select the preferred theme. This preference is saved per browser via `localStorage`.
 
-#### Improved Filter Coverage for DCIM, Virtualization Models
+#### Improved Filter Coverage for DCIM and Virtualization Models
 
 - DCIM: [#1729](https://github.com/nautobot/nautobot/issues/1729)
 - Virtualization: [#1735](https://github.com/nautobot/nautobot/issues/1735)
 
 The DCIM, Virtualization FilterSets have been updated with over 150 new filters, including hybrid filters that support filtering on both `pk` and `slug` (or `pk` and `name` where `slug` is not available). A new filter class `NaturalKeyOrPKMultipleChoiceFilter` was added to `nautobot.utilities.filters` to support filtering on multiple fields of a related object. See the [Best Practices](../development/best-practices/#mapping-model-fields-to-filters) documentation for more information.
 
-#### Job Hooks ([#2103](https://github.com/nautobot/nautobot/pull/2103))
+#### Job Hooks ([#1878](https://github.com/nautobot/nautobot/issues/1878))
 
 Jobs can now be configured to run automatically when a change event occurs on a Nautobot object. Job hooks associate jobs to content types and actions to run jobs when a create, update or delete action occurs on the selected content type. A new job base class `JobHookReceiver` was introduced that jobs must subclass to be associated with a job hook. See the [Job Hooks](../additional-features/job-hooks/) documentation for more information.
 
@@ -52,12 +58,6 @@ To locate network information more precisely than a Site defines, you can now de
 
 !!! info
     At present, Locations fill the conceptual space between the more abstract Region and Site models and the more concrete Rack Group model. In a future Nautobot release, some or all of these other models may be collapsed into Locations. That is to say, in the future you might not deal with Regions and Sites as distinct models, but instead your Location Type hierarchy might include these higher-level categories, becoming something like Country ← City ← Site ← Building ← Floor ← Room.
-
-#### Object Detail Tabs ([#1000](https://github.com/nautobot/nautobot/issues/1000))
-
-A plugin may now define extra tabs which will be appended to the object view's list of tabs.
-
-You can refer to the [plugin development guide](../plugins/development.md##adding-extra-tabs) on how to add tabs to existing object detail views.
 
 #### Parent Interfaces and Bridge Interfaces ([#1455](https://github.com/nautobot/nautobot/issues/1455))
 
@@ -138,6 +138,7 @@ The `settings_and_registry` default context processor was changed to purely `set
 
 ### Added
 
+- [#767](https://github.com/nautobot/nautobot/issues/767) - Added notes field to Primary and Organizational models.
 - [#1962](https://github.com/nautobot/nautobot/issues/1962) - Added `slug` field to Custom Field model, added 1.4 REST API version of the `api/extras/custom-fields/` endpoints.
 - [#2105](https://github.com/nautobot/nautobot/issues/2105) - Added support for Notes in NautobotBulkEditForm and NautobotEditForm.
 - [#2106](https://github.com/nautobot/nautobot/issues/2106) - Added support for listing/creating Notes via REST API.
@@ -163,16 +164,18 @@ The `settings_and_registry` default context processor was changed to purely `set
 ### Added
 
 - [#1463](https://github.com/nautobot/nautobot/issues/1463) - Added REST API support for opt-in `relationships` data on model endpoints; added `NautobotModelSerializer` base class.
-- [#1614](https://github.com/nautobot/nautobot/issues/1614) - Added support for nesting of Dynamic Groupsallowing inclusion/exclusion rules of sub-group members
+- [#1614](https://github.com/nautobot/nautobot/issues/1614) - Added support for nesting of Dynamic Groups, allowing inclusion/exclusion rules of sub-group members.
 - [#1735](https://github.com/nautobot/nautobot/issues/1735) - Added missing filters to model FilterSets for Virtualization models.
 - [#1865](https://github.com/nautobot/nautobot/issues/1865) - Added support for a custom template on Job forms.
+- [#1875](https://github.com/nautobot/nautobot/issues/1875) - Add ability to quickly re-submit a previously run `Job` with the same parameters.
 - [#1877](https://github.com/nautobot/nautobot/issues/1877) - Add new job base class JobHookReceiver to support triggering job execution from change events.
+- [#1878](https://github.com/nautobot/nautobot/issues/1878) - Add job hooks feature.
 - [#1883](https://github.com/nautobot/nautobot/issues/1883) - Add ability to filter objects by their relationships into the existing FilterSet.
 - [#1884](https://github.com/nautobot/nautobot/issues/1884) - Add ability to set the relationship filter via the filter form.
 - [#2035](https://github.com/nautobot/nautobot/pull/2035) - Added change source context to object change context manager.
 - [#2051](https://github.com/nautobot/nautobot/issues/2051) - Add changelog url for Relationships.
-- [#2061](https://github.com/nautobot/nautobot/pulls/2061) - Add draggable child groups to Dynamic Groups edit view in UI, recompute and hide weights.
-- [#2103](https://github.com/nautobot/nautobot/pull/2103) - Add job hooks feature.
+- [#2061](https://github.com/nautobot/nautobot/pull/2061) - Add draggable child groups to Dynamic Groups edit view in UI, recompute and hide weights.
+- [#2072](https://github.com/nautobot/nautobot/pull/2072) - Expand on `query_params` for `ObjectVar` in Jobs documentation.
 
 ### Changed
 
@@ -200,13 +203,12 @@ The `settings_and_registry` default context processor was changed to purely `set
 ### Added
 
 - [#1000](https://github.com/nautobot/nautobot/issues/1000) - Object detail views can now have extra UI tabs which are defined by a plugin.
-- [#1052](https://github.com/nautobot/nautobot/issues/1052) - Initial prototype implementation of Location data model
+- [#1052](https://github.com/nautobot/nautobot/issues/1052) - Initial prototype implementation of Location data model.
 - [#1318](https://github.com/nautobot/nautobot/issues/1318) - Added `nautobot.extras.forms.NautobotBulkEditForm` base class. All bulk-edit forms for models that support both custom fields and relationships now inherit from this class.
 - [#1466](https://github.com/nautobot/nautobot/issues/1466) - Plugins can now override views.
 - [#1729](https://github.com/nautobot/nautobot/issues/1729) - Add new filter class `NaturalKeyOrPKMultipleChoiceFilter` to `nautobot.utilities.filters`.
 - [#1729](https://github.com/nautobot/nautobot/issues/1729) - Add 137 new filters to `nautobot.dcim.filters` FilterSets.
 - [#1729](https://github.com/nautobot/nautobot/issues/1729) - Add `cable_terminations` to the `model_features` registry.
-- [#1875](https://github.com/nautobot/nautobot/issues/1875) - Add ability to quickly re-submit a previously run `Job` with the same parameters.
 - [#1893](https://github.com/nautobot/nautobot/issues/1893) - Added an object detail view for Relationships.
 - [#1949](https://github.com/nautobot/nautobot/issues/1949) - Added TestCaseMixin for Helper Functions across all test case bases.
 
@@ -226,7 +228,6 @@ The `settings_and_registry` default context processor was changed to purely `set
 - [#1928](https://github.com/nautobot/nautobot/pull/1928) - Update dependency napalm to ~3.4.1
 - [#1929](https://github.com/nautobot/nautobot/pull/1929) - Update dependency selenium to ~4.2.0
 - [#1945](https://github.com/nautobot/nautobot/issues/1945) - Change the `settings_and_registry` default context processor to purely `settings`, moving registry dictionary to be accessible via `registry` template tag.
-- [#2072](https://github.com/nautobot/nautobot/pull/2072) - Expand on `query_params` for `ObjectVar` in Jobs documentation.
 
 ### Fixed
 
@@ -245,6 +246,7 @@ The `settings_and_registry` default context processor was changed to purely `set
 - [#984](https://github.com/nautobot/nautobot/issues/984) - Added status field to Interface, VMInterface models.
 - [#1119](https://github.com/nautobot/nautobot/issues/1119) - Added truncated device name functionality to Rackview UI.
 - [#1455](https://github.com/nautobot/nautobot/issues/1455) - Added `parent_interface` and `bridge` fields to Interface and VMInterface models.
+- [#1833](https://github.com/nautobot/nautobot/pull/1833) - Added `hyperlinked_object` template filter to consistently reference objects in templates.
 
 ### Changed
 
