@@ -87,15 +87,15 @@ def task(function=None, *args, **kwargs):
 
 
 def docker_compose(context, command, **kwargs):
-    """Helper function for running a specific docker compose command with all appropriate parameters and environment.
+    """Helper function for running a specific docker-compose command with all appropriate parameters and environment.
 
     Args:
         context (obj): Used to run specific commands
-        command (str): Command string to append to the "docker compose ..." command, such as "build", "up", etc.
+        command (str): Command string to append to the "docker-compose ..." command, such as "build", "up", etc.
         **kwargs: Passed through to the context.run() call.
     """
     compose_command_tokens = [
-        "docker compose",
+        "docker-compose",
         f'--project-name "{context.nautobot.project_name}"',
         f'--project-directory "{context.nautobot.compose_dir}"',
     ]
@@ -111,7 +111,7 @@ def docker_compose(context, command, **kwargs):
     if service is not None:
         compose_command_tokens.append(service)
 
-    print(f'Running docker compose command "{command}"')
+    print(f'Running docker-compose command "{command}"')
     compose_command = " \\\n    ".join(compose_command_tokens)
     if "hide" not in kwargs:
         print(f"[dim]PYTHON_VER={context.nautobot.python_ver} \\\n    {compose_command}[/dim]")
