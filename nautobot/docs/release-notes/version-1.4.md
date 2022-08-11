@@ -24,7 +24,7 @@ Custom fields now have additional filtering capabilities. These include the foll
     - `ie` (case-insensitive exact)
     - `nie` (negated case-insensitive exact)
     - `re` (regex)
-    - `nre` (regex negated)
+    - `nre` (negated regex)
     - `ire` (case-insensitive regex)
     - `nire` (negated case-insensitive regex)
 - Lookup expressions for `integer` and `date` field types:
