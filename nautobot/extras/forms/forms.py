@@ -82,6 +82,8 @@ from .base import (
 from .mixins import (
     CustomFieldModelBulkEditFormMixin,
     CustomFieldModelFormMixin,
+    NoteModelBulkEditFormMixin,
+    NoteModelFormMixin,
     RelationshipModelFormMixin,
 )
 
@@ -203,7 +205,7 @@ class ComputedFieldFilterForm(BootstrapMixin, forms.Form):
 #
 
 
-class ConfigContextForm(BootstrapMixin, forms.ModelForm):
+class ConfigContextForm(BootstrapMixin, NoteModelFormMixin, forms.ModelForm):
     regions = DynamicModelMultipleChoiceField(queryset=Region.objects.all(), required=False)
     sites = DynamicModelMultipleChoiceField(queryset=Site.objects.all(), required=False)
     locations = DynamicModelMultipleChoiceField(queryset=Location.objects.all(), required=False)
@@ -240,7 +242,7 @@ class ConfigContextForm(BootstrapMixin, forms.ModelForm):
         )
 
 
-class ConfigContextBulkEditForm(BootstrapMixin, BulkEditForm):
+class ConfigContextBulkEditForm(BootstrapMixin, NoteModelBulkEditFormMixin, BulkEditForm):
     pk = forms.ModelMultipleChoiceField(queryset=ConfigContext.objects.all(), widget=forms.MultipleHiddenInput)
     schema = DynamicModelChoiceField(queryset=ConfigContextSchema.objects.all(), required=False)
     weight = forms.IntegerField(required=False, min_value=0)
