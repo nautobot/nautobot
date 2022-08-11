@@ -12,9 +12,11 @@ from nautobot.dcim.forms import SiteCSVForm
 from nautobot.dcim.models import Site, Rack, Device
 from nautobot.dcim.tables import SiteTable
 from nautobot.extras.choices import CustomFieldTypeChoices, CustomFieldFilterLogicChoices
+from nautobot.extras.context_managers import web_request_context
 from nautobot.extras.models import ComputedField, CustomField, CustomFieldChoice, Status
 from nautobot.utilities.tables import CustomFieldColumn
 from nautobot.utilities.testing import APITestCase, CeleryTestCase, TestCase
+from nautobot.utilities.utils import get_changes_for_model
 from nautobot.virtualization.models import VirtualMachine
 
 
@@ -1542,11 +1544,8 @@ class CustomFieldBackgroundTasks(CeleryTestCase):
     def test_provision_field_task(self):
         self.clear_worker()
 
-        site = Site(
-            name="Site 1",
-            slug="site-1",
-        )
-        site.save()
+        with web_request_context(self.user):
+            site = Site.objects.create(name="Site 1", slug="site-1")
 
         obj_type = ContentType.objects.get_for_model(Site)
         cf = CustomField(name="cf1", type=CustomFieldTypeChoices.TYPE_TEXT, default="Foo")
@@ -1557,7 +1556,21 @@ class CustomFieldBackgroundTasks(CeleryTestCase):
 
         site.refresh_from_db()
 
-        self.assertEqual(site.cf["cf1"], "Foo")
+        with self.subTest("Custom field was provisioned with the default value"):
+            self.assertEqual(site.cf["cf1"], "Foo")
+
+        with self.subTest("ObjectChange created when custom field was provisioned"):
+            self.assertEqual(get_changes_for_model(site).count(), 2)  # create site, provision custom field
+            oc = get_changes_for_model(site).first()
+            self.assertEqual(oc.user_name, "_nautobot_system")
+            self.assertEqual(oc.action, "update")
+            self.assertEqual(oc.change_context, "orm")
+            self.assertEqual(oc.change_context_detail, "nautobot system task")
+            differences = {
+                "added": {"custom_fields": {"cf1": "Foo", "example_plugin_auto_custom_field": None}},
+                "removed": {"custom_fields": {"example_plugin_auto_custom_field": None}},
+            }
+            self.assertEqual(differences, oc.get_snapshots()["differences"])
 
     def test_delete_custom_field_data_task(self):
         self.clear_worker()
@@ -1570,16 +1583,45 @@ class CustomFieldBackgroundTasks(CeleryTestCase):
         cf.save()
         cf.content_types.set([obj_type])
 
-        site = Site(name="Site 1", slug="site-1", _custom_field_data={"cf1": "foo"})
-        site.save()
+        with web_request_context(self.user):
+            test_cf_site = Site.objects.create(name="Site 1", slug="site-1", _custom_field_data={"cf1": "foo"})
+            self.wait_on_active_tasks()  # nautobot.extras.tasks.provision_field runs after first object is created
+            null_cf_site = Site.objects.create(name="Null Site 1", slug="null-site-1")
+
+        with self.subTest("custom field is provisioned"):
+            self.assertIn("cf1", test_cf_site.cf)
+            self.assertNotIn("cf1", null_cf_site.cf)
 
         cf.delete()
-
         self.wait_on_active_tasks()
 
-        site.refresh_from_db()
+        test_cf_site.refresh_from_db()
+        null_cf_site.refresh_from_db()
 
-        self.assertTrue("cf1" not in site.cf)
+        with self.subTest("custom field deleted from all sites"):
+            self.assertTrue("cf1" not in test_cf_site.cf)
+            self.assertTrue("cf1" not in null_cf_site.cf)
+
+        with self.subTest("all sites have the correct number of ObjectChanges"):
+            self.assertEqual(get_changes_for_model(Site).count(), 3)
+            self.assertEqual(get_changes_for_model(test_cf_site).count(), 2)  # create site, delete custom field
+            self.assertEqual(get_changes_for_model(null_cf_site).count(), 1)  # create site
+
+        with self.subTest("ObjectChange created when custom field deleted and custom field was defined"):
+            oc = get_changes_for_model(test_cf_site).first()
+            self.assertEqual(oc.user_name, "_nautobot_system")
+            self.assertEqual(oc.action, "update")
+            self.assertEqual(oc.change_context, "orm")
+            self.assertEqual(oc.change_context_detail, "nautobot system task")
+            differences = {
+                "removed": {"custom_fields": {"cf1": "foo", "example_plugin_auto_custom_field": None}},
+                "added": {"custom_fields": {"example_plugin_auto_custom_field": None}},
+            }
+            self.assertEqual(differences, oc.get_snapshots()["differences"])
+
+        with self.subTest("ObjectChange not created when custom field deleted and custom field was null"):
+            oc = get_changes_for_model(null_cf_site).filter(user_name="_nautobot_system")
+            self.assertFalse(oc.exists())
 
     def test_update_custom_field_choice_data_task(self):
         self.clear_worker()
@@ -1597,8 +1639,8 @@ class CustomFieldBackgroundTasks(CeleryTestCase):
         choice = CustomFieldChoice(field=cf, value="Foo")
         choice.save()
 
-        site = Site(name="Site 1", slug="site-1", _custom_field_data={"cf1": "Foo"})
-        site.save()
+        with web_request_context(self.user):
+            site = Site.objects.create(name="Site 1", slug="site-1", _custom_field_data={"cf1": "Foo"})
 
         choice.value = "Bar"
         choice.save()
@@ -1607,7 +1649,21 @@ class CustomFieldBackgroundTasks(CeleryTestCase):
 
         site.refresh_from_db()
 
-        self.assertEqual(site.cf["cf1"], "Bar")
+        with self.subTest("Custom field was updated to the new choice value"):
+            self.assertEqual(site.cf["cf1"], "Bar")
+
+        with self.subTest("ObjectChange created when custom field choice was updated"):
+            self.assertEqual(get_changes_for_model(site).count(), 2)  # create site, update custom field choice
+            oc = get_changes_for_model(site).first()
+            self.assertEqual(oc.user_name, "_nautobot_system")
+            self.assertEqual(oc.action, "update")
+            self.assertEqual(oc.change_context, "orm")
+            self.assertEqual(oc.change_context_detail, "nautobot system task")
+            differences = {
+                "added": {"custom_fields": {"cf1": "Bar", "example_plugin_auto_custom_field": None}},
+                "removed": {"custom_fields": {"cf1": "Foo", "example_plugin_auto_custom_field": None}},
+            }
+            self.assertEqual(differences, oc.get_snapshots()["differences"])
 
 
 class CustomFieldTableTest(TestCase):

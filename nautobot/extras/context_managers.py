@@ -5,8 +5,10 @@ from django.contrib.auth import get_user_model
 from django.db.models.signals import m2m_changed, pre_delete, post_save
 from django.test.client import RequestFactory
 
+from nautobot.core.celery import app
 from nautobot.extras.choices import ObjectChangeEventContextChoices
 from nautobot.extras.signals import _handle_changed_object, _handle_deleted_object
+from nautobot.users.models import User
 from nautobot.utilities.utils import curry
 
 
@@ -95,6 +97,10 @@ def change_logging(change_context):
 
     yield
 
+    # Return without disconnecting signal handlers if running in an asynchronous task to prevent interfering with main django process
+    if app.current_worker_task:
+        return
+
     # Disconnect change logging signals. This is necessary to avoid recording any errant
     # changes during test cleanup.
     post_save.disconnect(handle_changed_object, dispatch_uid="handle_changed_object")
@@ -132,3 +138,15 @@ def web_request_context(user, context_detail="", change_id=None):
     change_context = ORMChangeContext(request=request, context_detail=context_detail, change_id=change_id)
     with change_logging(change_context):
         yield request
+
+
+@contextmanager
+def system_task_change_context():
+    """
+    Change logging context manager for changes made by nautobot system and background tasks. Logs changes with
+    user `_nautobot_system`, change_context "orm" and change_context_detail "nautobot system task".
+    """
+
+    system_user, _ = User.objects.get_or_create(username="_nautobot_system", password="", is_active=False)
+    with web_request_context(user=system_user, context_detail="nautobot system task"):
+        yield

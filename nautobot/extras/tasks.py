@@ -9,6 +9,7 @@ from jinja2.exceptions import TemplateError
 from nautobot.core.celery import nautobot_task
 from nautobot.extras.choices import CustomFieldTypeChoices, ObjectChangeActionChoices
 from nautobot.extras.utils import generate_signature
+from nautobot.users.models import User
 
 
 logger = getLogger("nautobot.extras.tasks")
@@ -24,6 +25,7 @@ def update_custom_field_choice_data(field_id, old_value, new_value):
         old_value (str): The existing value of the choice
         new_value (str): The value which will be used as replacement
     """
+    from nautobot.extras.context_managers import system_task_change_context  # prevent circular import
     from nautobot.extras.models import CustomField
 
     try:
@@ -32,29 +34,31 @@ def update_custom_field_choice_data(field_id, old_value, new_value):
         logger.error(f"Custom field with ID {field_id} not found, failing to act on choice data.")
         return False
 
-    if field.type == CustomFieldTypeChoices.TYPE_SELECT:
-        # Loop through all field content types and search for values to update
-        for ct in field.content_types.all():
-            model = ct.model_class()
-            # 2.0 TODO: #824 field.slug rather than field.name
-            for obj in model.objects.filter(**{f"_custom_field_data__{field.name}": old_value}):
-                obj._custom_field_data[field.name] = new_value
-                obj.save()
+    system_user, _ = User.objects.get_or_create(username="_nautobot_system", password="", is_active=False)
+    with system_task_change_context():
+        if field.type == CustomFieldTypeChoices.TYPE_SELECT:
+            # Loop through all field content types and search for values to update
+            for ct in field.content_types.all():
+                model = ct.model_class()
+                # 2.0 TODO: #824 field.slug rather than field.name
+                for obj in model.objects.filter(**{f"_custom_field_data__{field.name}": old_value}):
+                    obj._custom_field_data[field.name] = new_value
+                    obj.save()
 
-    elif field.type == CustomFieldTypeChoices.TYPE_MULTISELECT:
-        # Loop through all field content types and search for values to update
-        for ct in field.content_types.all():
-            model = ct.model_class()
-            # 2.0 TODO: #824 field.slug rather than field.name
-            for obj in model.objects.filter(**{f"_custom_field_data__{field.name}__contains": old_value}):
-                old_list = obj._custom_field_data[field.name]
-                new_list = [new_value if e == old_value else e for e in old_list]
-                obj._custom_field_data[field.name] = new_list
-                obj.save()
+        elif field.type == CustomFieldTypeChoices.TYPE_MULTISELECT:
+            # Loop through all field content types and search for values to update
+            for ct in field.content_types.all():
+                model = ct.model_class()
+                # 2.0 TODO: #824 field.slug rather than field.name
+                for obj in model.objects.filter(**{f"_custom_field_data__{field.name}__contains": old_value}):
+                    old_list = obj._custom_field_data[field.name]
+                    new_list = [new_value if e == old_value else e for e in old_list]
+                    obj._custom_field_data[field.name] = new_list
+                    obj.save()
 
-    else:
-        logger.error(f"Unknown field type, failing to act on choice data for this field {field.name}.")
-        return False
+        else:
+            logger.error(f"Unknown field type, failing to act on choice data for this field {field.name}.")
+            return False
 
 
 # 2.0 TODO: #824 rename field_name to field_slug
@@ -67,12 +71,16 @@ def delete_custom_field_data(field_name, content_type_pk_set):
         field_name (str): The name of the custom field which is being deleted
         content_type_pk_set (list): List of PKs for content types to act upon
     """
-    with transaction.atomic():
-        for ct in ContentType.objects.filter(pk__in=content_type_pk_set):
-            model = ct.model_class()
-            for obj in model.objects.filter(**{f"_custom_field_data__{field_name}__isnull": False}):
-                del obj._custom_field_data[field_name]
-                obj.save()
+    from nautobot.extras.context_managers import system_task_change_context  # prevent circular import
+
+    system_user, _ = User.objects.get_or_create(username="_nautobot_system", password="", is_active=False)
+    with system_task_change_context():
+        with transaction.atomic():
+            for ct in ContentType.objects.filter(pk__in=content_type_pk_set):
+                model = ct.model_class()
+                for obj in model.objects.filter(**{f"_custom_field_data__{field_name}__isnull": False}):
+                    del obj._custom_field_data[field_name]
+                    obj.save()
 
 
 @nautobot_task
@@ -84,6 +92,7 @@ def provision_field(field_id, content_type_pk_set):
         field_id (uuid4): The PK of the custom field being provisioned
         content_type_pk_set (list): List of PKs for content types to act upon
     """
+    from nautobot.extras.context_managers import system_task_change_context  # prevent circular import
     from nautobot.extras.models import CustomField
 
     try:
@@ -92,13 +101,18 @@ def provision_field(field_id, content_type_pk_set):
         logger.error(f"Custom field with ID {field_id} not found, failing to provision.")
         return False
 
-    with transaction.atomic():
-        for ct in ContentType.objects.filter(pk__in=content_type_pk_set):
-            model = ct.model_class()
-            for obj in model.objects.all():
-                # 2.0 TODO: #824 field.slug rather than field.name
-                obj._custom_field_data.setdefault(field.name, field.default)
-                obj.save()
+    # return if field default is null, nothing to initialize
+    if field.default is None:
+        return
+
+    with system_task_change_context():
+        with transaction.atomic():
+            for ct in ContentType.objects.filter(pk__in=content_type_pk_set):
+                model = ct.model_class()
+                for obj in model.objects.filter(**{f"_custom_field_data__{field.name}__isnull": True}):
+                    # 2.0 TODO: #824 field.slug rather than field.name
+                    obj._custom_field_data.setdefault(field.name, field.default)
+                    obj.save()
 
 
 @nautobot_task
