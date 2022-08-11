@@ -2549,6 +2549,7 @@ class RelationshipAssociationTest(APIViewTestCases.APIViewTestCase):
     def setUpTestData(cls):
         cls.site_type = ContentType.objects.get_for_model(Site)
         cls.device_type = ContentType.objects.get_for_model(Device)
+        cls.status_active = Status.objects.get(slug="active")
 
         cls.relationship = Relationship(
             name="Devices found elsewhere",
@@ -2559,18 +2560,42 @@ class RelationshipAssociationTest(APIViewTestCases.APIViewTestCase):
         )
         cls.relationship.validated_save()
         cls.sites = (
-            Site.objects.create(name="Empty Site", slug="empty"),
-            Site.objects.create(name="Occupied Site", slug="occupied"),
-            Site.objects.create(name="Another Empty Site", slug="another-empty"),
+            Site.objects.create(name="Empty Site", slug="empty", status=cls.status_active),
+            Site.objects.create(name="Occupied Site", slug="occupied", status=cls.status_active),
+            Site.objects.create(name="Another Empty Site", slug="another-empty", status=cls.status_active),
         )
         manufacturer = Manufacturer.objects.create(name="Manufacturer 1", slug="manufacturer-1")
         devicetype = DeviceType.objects.create(manufacturer=manufacturer, model="Device Type 1", slug="device-type-1")
         devicerole = DeviceRole.objects.create(name="Device Role 1", slug="device-role-1")
         cls.devices = (
-            Device.objects.create(name="Device 1", device_type=devicetype, device_role=devicerole, site=cls.sites[1]),
-            Device.objects.create(name="Device 2", device_type=devicetype, device_role=devicerole, site=cls.sites[1]),
-            Device.objects.create(name="Device 3", device_type=devicetype, device_role=devicerole, site=cls.sites[1]),
-            Device.objects.create(name="Device 4", device_type=devicetype, device_role=devicerole, site=cls.sites[1]),
+            Device.objects.create(
+                name="Device 1",
+                device_type=devicetype,
+                device_role=devicerole,
+                site=cls.sites[1],
+                status=cls.status_active,
+            ),
+            Device.objects.create(
+                name="Device 2",
+                device_type=devicetype,
+                device_role=devicerole,
+                site=cls.sites[1],
+                status=cls.status_active,
+            ),
+            Device.objects.create(
+                name="Device 3",
+                device_type=devicetype,
+                device_role=devicerole,
+                site=cls.sites[1],
+                status=cls.status_active,
+            ),
+            Device.objects.create(
+                name="Device 4",
+                device_type=devicetype,
+                device_role=devicerole,
+                site=cls.sites[1],
+                status=cls.status_active,
+            ),
         )
 
         cls.associations = (
@@ -2773,11 +2798,7 @@ class RelationshipAssociationTest(APIViewTestCases.APIViewTestCase):
         with self.subTest("Round-trip of same relationships data is a no-op"):
             response = self.client.patch(
                 url,
-                {
-                    # TODO: omitting status here results in a 400 error "This field cannot be blank". Seems like a bug?
-                    "status": "planned",
-                    "relationships": initial_response.data["relationships"],
-                },
+                {"relationships": initial_response.data["relationships"]},
                 format="json",
                 **self.header,
             )
@@ -2789,7 +2810,7 @@ class RelationshipAssociationTest(APIViewTestCases.APIViewTestCase):
         with self.subTest("Omitting relationships data entirely is valid"):
             response = self.client.patch(
                 url,
-                {"status": "planned"},  # TODO: see above
+                {},
                 format="json",
                 **self.header,
             )
@@ -2801,10 +2822,7 @@ class RelationshipAssociationTest(APIViewTestCases.APIViewTestCase):
         with self.subTest("Error handling: nonexistent relationship"):
             response = self.client.patch(
                 url,
-                {
-                    "status": "planned",  # TODO: see above
-                    "relationships": {"nonexistent-relationship": {"peer": {"objects": []}}},
-                },
+                {"relationships": {"nonexistent-relationship": {"peer": {"objects": []}}}},
                 format="json",
                 **self.header,
             )
@@ -2826,10 +2844,7 @@ class RelationshipAssociationTest(APIViewTestCases.APIViewTestCase):
             )
             response = self.client.patch(
                 url,
-                {
-                    "status": "planned",  # TODO: see above
-                    "relationships": {"device-to-device": {"peer": {"objects": []}}},
-                },
+                {"relationships": {"device-to-device": {"peer": {"objects": []}}}},
                 format="json",
                 **self.header,
             )
@@ -2844,10 +2859,7 @@ class RelationshipAssociationTest(APIViewTestCases.APIViewTestCase):
         with self.subTest("Error handling: wrong relationship side"):
             response = self.client.patch(
                 url,
-                {
-                    "status": "planned",  # TODO: see above
-                    "relationships": {self.relationship.slug: {"source": {"objects": []}}},
-                },
+                {"relationships": {self.relationship.slug: {"source": {"objects": []}}}},
                 format="json",
                 **self.header,
             )
@@ -2864,7 +2876,6 @@ class RelationshipAssociationTest(APIViewTestCases.APIViewTestCase):
             response = self.client.patch(
                 url,
                 {
-                    "status": "planned",  # TODO: see above
                     "relationships": {
                         self.relationship.slug: {
                             "destination": {

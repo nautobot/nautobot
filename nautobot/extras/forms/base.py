@@ -1,11 +1,13 @@
 from nautobot.utilities.forms import BootstrapMixin
 from .mixins import (
-    CustomFieldBulkEditForm,
-    CustomFieldModelForm,
-    CustomFieldFilterForm,
+    CustomFieldModelBulkEditFormMixin,
+    CustomFieldModelFilterFormMixin,
+    CustomFieldModelFormMixin,
+    NoteModelBulkEditFormMixin,
+    NoteModelFormMixin,
     RelationshipModelBulkEditFormMixin,
-    RelationshipModelFormMixin,
     RelationshipModelFilterFormMixin,
+    RelationshipModelFormMixin,
 )
 
 
@@ -21,21 +23,23 @@ __all__ = (
 #
 
 
-class NautobotModelForm(BootstrapMixin, CustomFieldModelForm, RelationshipModelFormMixin):
+class NautobotModelForm(BootstrapMixin, CustomFieldModelFormMixin, RelationshipModelFormMixin, NoteModelFormMixin):
     """
     This class exists to combine common functionality and is used to inherit from throughout the
-    codebase where all three of BootstrapMixin, CustomFieldModelForm and RelationshipModelForm are
+    codebase where all of BootstrapMixin, CustomFieldModelFormMixin, RelationshipModelFormMixin, and
+    NoteModelFormMixin are needed.
+    """
+
+
+class NautobotFilterForm(BootstrapMixin, CustomFieldModelFilterFormMixin, RelationshipModelFilterFormMixin):
+    """
+    This class exists to combine common functionality and is used to inherit from throughout the
+    codebase where all three of BootstrapMixin, CustomFieldModelFilterFormMixin and RelationshipModelFilterFormMixin are
     needed.
     """
 
 
-class NautobotFilterForm(BootstrapMixin, CustomFieldFilterForm, RelationshipModelFilterFormMixin):
-    """
-    This class exists to combine common functionality and is used to inherit from throughout the
-    codebase where all three of BootstrapMixin, CustomFieldFilterForm and RelationshipModelFilterForm are
-    needed.
-    """
-
-
-class NautobotBulkEditForm(BootstrapMixin, CustomFieldBulkEditForm, RelationshipModelBulkEditFormMixin):
-    """Base class for bulk-edit forms for models that support relationships and custom fields."""
+class NautobotBulkEditForm(
+    BootstrapMixin, CustomFieldModelBulkEditFormMixin, RelationshipModelBulkEditFormMixin, NoteModelBulkEditFormMixin
+):
+    """Base class for bulk-edit forms for models that support relationships, custom fields and notes."""

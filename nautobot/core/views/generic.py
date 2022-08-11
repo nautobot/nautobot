@@ -417,6 +417,9 @@ class ObjectEditView(GetReturnURLMixin, ObjectPermissionRequiredMixin, View):
                     # Check that the new object conforms with any assigned object-level permissions
                     self.queryset.get(pk=obj.pk)
 
+                if hasattr(form, "save_note") and callable(form.save_note):
+                    form.save_note(instance=obj, user=request.user)
+
                 msg = "{} {}".format(
                     "Created" if object_created else "Modified",
                     self.queryset.model._meta.verbose_name,
@@ -966,7 +969,9 @@ class BulkEditView(GetReturnURLMixin, ObjectPermissionRequiredMixin, View):
                 form_custom_fields = getattr(form, "custom_fields", [])
                 form_relationships = getattr(form, "relationships", [])
                 standard_fields = [
-                    field for field in form.fields if field not in form_custom_fields + form_relationships + ["pk"]
+                    field
+                    for field in form.fields
+                    if field not in form_custom_fields + form_relationships + ["pk"] + ["object_note"]
                 ]
                 nullified_fields = request.POST.getlist("_nullify")
 
@@ -1028,6 +1033,9 @@ class BulkEditView(GetReturnURLMixin, ObjectPermissionRequiredMixin, View):
                             if hasattr(form, "save_relationships") and callable(form.save_relationships):
                                 # Add/remove relationship associations
                                 form.save_relationships(instance=obj, nullified_fields=nullified_fields)
+
+                            if hasattr(form, "save_note") and callable(form.save_note):
+                                form.save_note(instance=obj, user=request.user)
 
                         # Enforce object-level permissions
                         if self.queryset.filter(pk__in=[obj.pk for obj in updated_objects]).count() != len(

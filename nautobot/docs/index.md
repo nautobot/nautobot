@@ -14,11 +14,15 @@ Nautobot enables three (3) key use cases.
 
 2. **Extensible Data Platform for Automation** - Nautobot has a rich feature set to seamlessly integrate with network automation solutions.  Nautobot offers GraphQL and native Git integration along with REST APIs and webhooks.  Git integration dynamically loads YAML data files as Nautobot config contexts.  Nautobot also has an evolving plugin system that enables users to create custom models, APIs, and UI elements.  The plugin system is also used to unify and aggregate disparate data sources creating a Single Source of Truth to streamline data management for network automation.
 
-3. **Platform for Network Automation Apps** - The Nautobot plugin system enables users to create Network Automation Apps.  Apps can be as lightweight or robust as needed based on user needs.  Using Nautobot for creating custom applications saves up to 70% development time by re-using features such as authentication, permissions, webhooks, GraphQL, change logging, etc. all while having access to the data already stored in Nautobot. Some applications that are already launched include:
+3. **Platform for Network Automation Apps** - The Nautobot plugin system enables users to create Network Automation Apps.  Apps can be as lightweight or robust as needed based on user needs.  Using Nautobot for creating custom applications saves up to 70% development time by re-using features such as authentication, permissions, webhooks, GraphQL, change logging, etc. all while having access to the data already stored in Nautobot. Some production ready applications include:
 
       * [Golden Configuration](https://github.com/nautobot/nautobot-plugin-golden-config)
+      * [Device Lifecycle](https://github.com/nautobot/nautobot-plugin-device-lifecycle-mgmt)
+      * [Firewall Models](https://github.com/nautobot/nautobot-plugin-firewall-models)
+      * [SSoT](https://github.com/nautobot/nautobot-plugin-ssot)
       * [ChatOps](https://github.com/nautobot/nautobot-plugin-chatops)
-      * [Capacity Metrics](https://github.com/nautobot/nautobot-plugin-capacity-metrics) and
+      * [Circuit Maintenance](https://github.com/nautobot/nautobot-plugin-circuit-maintenance)
+      * [Capacity Metrics](https://github.com/nautobot/nautobot-plugin-capacity-metrics)
       * [Device Onboarding](https://github.com/nautobot/nautobot-plugin-device-onboarding)
 
 ## Design Philosophy
