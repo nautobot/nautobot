@@ -69,15 +69,15 @@ def _handle_changed_object(change_context, sender, instance, **kwargs):
             related_changes = ObjectChange.objects.filter(
                 changed_object_type=ContentType.objects.get_for_model(instance),
                 changed_object_id=instance.pk,
-                request_id=change_context.id,
+                request_id=change_context.change_id,
             )
             m2m_changes = instance.to_objectchange(action)
             related_changes.update(object_data=m2m_changes.object_data, object_data_v2=m2m_changes.object_data_v2)
             objectchange = related_changes.first() if related_changes.exists() else None
         else:
             objectchange = instance.to_objectchange(action)
-            objectchange.user = _get_user_if_authenticated(change_context.user, objectchange)
-            objectchange.request_id = change_context.id
+            objectchange.user = _get_user_if_authenticated(change_context.get_user(), objectchange)
+            objectchange.request_id = change_context.change_id
             objectchange.change_context = change_context.context
             objectchange.change_context_detail = change_context.context_detail
             objectchange.save()
@@ -87,7 +87,7 @@ def _handle_changed_object(change_context, sender, instance, **kwargs):
             enqueue_job_hooks(objectchange)
 
     # Enqueue webhooks
-    enqueue_webhooks(instance, change_context.user, change_context.id, action)
+    enqueue_webhooks(instance, change_context.get_user(), change_context.change_id, action)
 
     # Increment metric counters
     if action == ObjectChangeActionChoices.ACTION_CREATE:
@@ -111,8 +111,8 @@ def _handle_deleted_object(change_context, sender, instance, **kwargs):
     # Record an ObjectChange if applicable
     if hasattr(instance, "to_objectchange"):
         objectchange = instance.to_objectchange(ObjectChangeActionChoices.ACTION_DELETE)
-        objectchange.user = _get_user_if_authenticated(change_context.user, objectchange)
-        objectchange.request_id = change_context.id
+        objectchange.user = _get_user_if_authenticated(change_context.get_user(), objectchange)
+        objectchange.request_id = change_context.change_id
         objectchange.change_context = change_context.context
         objectchange.change_context_detail = change_context.context_detail
         objectchange.save()
@@ -121,7 +121,9 @@ def _handle_deleted_object(change_context, sender, instance, **kwargs):
         enqueue_job_hooks(objectchange)
 
     # Enqueue webhooks
-    enqueue_webhooks(instance, change_context.user, change_context.id, ObjectChangeActionChoices.ACTION_DELETE)
+    enqueue_webhooks(
+        instance, change_context.get_user(), change_context.change_id, ObjectChangeActionChoices.ACTION_DELETE
+    )
 
     # Increment metric counters
     model_deletes.labels(instance._meta.model_name).inc()

@@ -9,14 +9,14 @@ from nautobot.dcim.form_mixins import (
 )
 from nautobot.dcim.models import Device, Interface, Rack, Region, Site
 from nautobot.extras.forms import (
-    AddRemoveTagsForm,
     CustomFieldModelCSVForm,
     NautobotBulkEditForm,
     NautobotModelForm,
     NautobotFilterForm,
-    StatusBulkEditFormMixin,
+    StatusModelBulkEditFormMixin,
     StatusModelCSVFormMixin,
-    StatusFilterFormMixin,
+    StatusModelFilterFormMixin,
+    TagsBulkEditFormMixin,
 )
 from nautobot.tenancy.forms import TenancyFilterForm, TenancyForm
 from nautobot.tenancy.models import Tenant
@@ -113,7 +113,7 @@ class VRFCSVForm(CustomFieldModelCSVForm):
         fields = VRF.csv_headers
 
 
-class VRFBulkEditForm(AddRemoveTagsForm, NautobotBulkEditForm):
+class VRFBulkEditForm(TagsBulkEditFormMixin, NautobotBulkEditForm):
     pk = forms.ModelMultipleChoiceField(queryset=VRF.objects.all(), widget=forms.MultipleHiddenInput())
     tenant = DynamicModelChoiceField(queryset=Tenant.objects.all(), required=False)
     enforce_unique = forms.NullBooleanField(
@@ -171,7 +171,7 @@ class RouteTargetCSVForm(CustomFieldModelCSVForm):
         fields = RouteTarget.csv_headers
 
 
-class RouteTargetBulkEditForm(AddRemoveTagsForm, NautobotBulkEditForm):
+class RouteTargetBulkEditForm(TagsBulkEditFormMixin, NautobotBulkEditForm):
     pk = forms.ModelMultipleChoiceField(queryset=RouteTarget.objects.all(), widget=forms.MultipleHiddenInput())
     tenant = DynamicModelChoiceField(queryset=Tenant.objects.all(), required=False)
     description = forms.CharField(max_length=200, required=False)
@@ -281,7 +281,7 @@ class AggregateCSVForm(PrefixFieldMixin, CustomFieldModelCSVForm):
         fields = Aggregate.csv_headers
 
 
-class AggregateBulkEditForm(AddRemoveTagsForm, NautobotBulkEditForm):
+class AggregateBulkEditForm(TagsBulkEditFormMixin, NautobotBulkEditForm):
     pk = forms.ModelMultipleChoiceField(queryset=Aggregate.objects.all(), widget=forms.MultipleHiddenInput())
     rir = DynamicModelChoiceField(queryset=RIR.objects.all(), required=False, label="RIR")
     tenant = DynamicModelChoiceField(queryset=Tenant.objects.all(), required=False)
@@ -444,9 +444,9 @@ class PrefixCSVForm(PrefixFieldMixin, LocatableModelCSVFormMixin, StatusModelCSV
 
 
 class PrefixBulkEditForm(
-    AddRemoveTagsForm,
+    TagsBulkEditFormMixin,
     LocatableModelBulkEditFormMixin,
-    StatusBulkEditFormMixin,
+    StatusModelBulkEditFormMixin,
     NautobotBulkEditForm,
 ):
     pk = forms.ModelMultipleChoiceField(queryset=Prefix.objects.all(), widget=forms.MultipleHiddenInput())
@@ -477,7 +477,7 @@ class PrefixFilterForm(
     NautobotFilterForm,
     LocatableModelFilterFormMixin,
     TenancyFilterForm,
-    StatusFilterFormMixin,
+    StatusModelFilterFormMixin,
 ):
     model = Prefix
     field_order = [
@@ -876,7 +876,7 @@ class IPAddressCSVForm(StatusModelCSVFormMixin, AddressFieldMixin, CustomFieldMo
         return ipaddress
 
 
-class IPAddressBulkEditForm(AddRemoveTagsForm, StatusBulkEditFormMixin, NautobotBulkEditForm):
+class IPAddressBulkEditForm(TagsBulkEditFormMixin, StatusModelBulkEditFormMixin, NautobotBulkEditForm):
     pk = forms.ModelMultipleChoiceField(queryset=IPAddress.objects.all(), widget=forms.MultipleHiddenInput())
     vrf = DynamicModelChoiceField(
         queryset=VRF.objects.all(),
@@ -915,7 +915,7 @@ class IPAddressAssignForm(BootstrapMixin, forms.Form):
     )
 
 
-class IPAddressFilterForm(NautobotFilterForm, TenancyFilterForm, StatusFilterFormMixin):
+class IPAddressFilterForm(NautobotFilterForm, TenancyFilterForm, StatusModelFilterFormMixin):
     model = IPAddress
     field_order = [
         "q",
@@ -1075,9 +1075,9 @@ class VLANCSVForm(LocatableModelCSVFormMixin, StatusModelCSVFormMixin, CustomFie
 
 
 class VLANBulkEditForm(
-    AddRemoveTagsForm,
+    TagsBulkEditFormMixin,
     LocatableModelBulkEditFormMixin,
-    StatusBulkEditFormMixin,
+    StatusModelBulkEditFormMixin,
     NautobotBulkEditForm,
 ):
     pk = forms.ModelMultipleChoiceField(queryset=VLAN.objects.all(), widget=forms.MultipleHiddenInput())
@@ -1102,7 +1102,7 @@ class VLANBulkEditForm(
         ]
 
 
-class VLANFilterForm(NautobotFilterForm, LocatableModelFilterFormMixin, TenancyFilterForm, StatusFilterFormMixin):
+class VLANFilterForm(NautobotFilterForm, LocatableModelFilterFormMixin, TenancyFilterForm, StatusModelFilterFormMixin):
     model = VLAN
     field_order = [
         "q",
@@ -1212,7 +1212,7 @@ class ServiceCSVForm(CustomFieldModelCSVForm):
         fields = Service.csv_headers
 
 
-class ServiceBulkEditForm(AddRemoveTagsForm, NautobotBulkEditForm):
+class ServiceBulkEditForm(TagsBulkEditFormMixin, NautobotBulkEditForm):
     pk = forms.ModelMultipleChoiceField(queryset=Service.objects.all(), widget=forms.MultipleHiddenInput())
     protocol = forms.ChoiceField(
         choices=add_blank_choice(ServiceProtocolChoices),

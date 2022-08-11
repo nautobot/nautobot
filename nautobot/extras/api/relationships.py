@@ -103,7 +103,6 @@ class RelationshipsDataField(JSONField):
         """
         data = {}
         relationships_data = value.get_relationships(include_hidden=True)
-
         for this_side, relationships in relationships_data.items():
             for relationship, associations in relationships.items():
                 data.setdefault(

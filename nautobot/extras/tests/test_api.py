@@ -44,6 +44,7 @@ from nautobot.extras.models import (
     Job,
     JobLogEntry,
     JobResult,
+    Note,
     Relationship,
     RelationshipAssociation,
     ScheduledJob,
@@ -58,6 +59,7 @@ from nautobot.extras.models.jobs import JobHook
 from nautobot.extras.utils import TaggableClassesQuery
 from nautobot.ipam.models import VLANGroup
 from nautobot.users.models import ObjectPermission
+from nautobot.utilities.choices import ColorChoices
 from nautobot.utilities.testing import APITestCase, APIViewTestCases
 from nautobot.utilities.testing.utils import disable_warnings
 from nautobot.utilities.utils import slugify_dashes_to_underscores
@@ -1411,6 +1413,58 @@ class JobAPIRunTestMixin:
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     @mock.patch("nautobot.extras.api.views.get_worker_count")
+    def test_run_a_job_with_sensitive_variables_for_future(self, mock_get_worker_count):
+        mock_get_worker_count.return_value = 1
+        self.add_permissions("extras.run_job")
+
+        job_model = Job.objects.get(job_class_name="ExampleJob")
+        job_model.enabled = True
+        job_model.validated_save()
+
+        url = reverse("extras-api:job-run", kwargs={"pk": job_model.pk})
+        data = {
+            "data": {},
+            "commit": True,
+            "schedule": {
+                "start_time": str(datetime.now() + timedelta(minutes=1)),
+                "interval": "future",
+                "name": "test",
+            },
+        }
+
+        # url = self.get_run_url()
+        response = self.client.post(url, data, format="json", **self.header)
+        self.assertHttpStatus(response, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(
+            response.data["schedule"]["interval"][0],
+            "Unable to schedule job: Job has sensitive input variables",
+        )
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    @mock.patch("nautobot.extras.api.views.get_worker_count")
+    def test_run_a_job_with_sensitive_variables_immediately(self, mock_get_worker_count):
+        mock_get_worker_count.return_value = 1
+        self.add_permissions("extras.run_job")
+        d = DeviceRole.objects.create(name="role", slug="role")
+        data = {
+            "data": {"var1": "x", "var2": 1, "var3": False, "var4": d.pk},
+            "commit": True,
+            "schedule": {
+                "interval": "immediately",
+                "name": "test",
+            },
+        }
+        job = Job.objects.get_for_class_path("local/api_test_job/APITestJob")
+        job.has_sensitive_variables = True
+        job.has_sensitive_variables_override = True
+        job.validated_save()
+
+        url = self.get_run_url()
+        response = self.client.post(url, data, format="json", **self.header)
+        self.assertHttpStatus(response, self.run_success_response_status)
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    @mock.patch("nautobot.extras.api.views.get_worker_count")
     def test_run_job_future_past(self, mock_get_worker_count):
         mock_get_worker_count.return_value = 1
         self.add_permissions("extras.run_job")
@@ -1654,11 +1708,15 @@ class JobTestVersion13(
         "soft_time_limit": 350.1,
         "time_limit_override": True,
         "time_limit": 650,
+        "has_sensitive_variables": False,
+        "has_sensitive_variables_override": True,
     }
     bulk_update_data = {
         "enabled": True,
         "approval_required_override": True,
         "approval_required": True,
+        "has_sensitive_variables": False,
+        "has_sensitive_variables_override": True,
     }
     validation_excluded_fields = []
 
@@ -1683,6 +1741,50 @@ class JobTestVersion13(
         self.assertEqual(
             response.data[3],
             {"name": "var4", "type": "ObjectVar", "required": True, "model": "dcim.devicerole"},
+        )
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_update_job_with_sensitive_variables_set_approval_required_to_true(self):
+        job_model = Job.objects.get_for_class_path("local/api_test_job/APITestJob")
+        job_model.has_sensitive_variables = True
+        job_model.has_sensitive_variables_override = True
+        job_model.validated_save()
+
+        url = self._get_detail_url(job_model)
+        data = {
+            "approval_required_override": True,
+            "approval_required": True,
+        }
+
+        self.add_permissions("extras.change_job")
+
+        response = self.client.patch(url, data, format="json", **self.header)
+        self.assertHttpStatus(response, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(
+            response.data["approval_required"][0],
+            "A job with sensitive variables cannot also be marked as requiring approval",
+        )
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_update_approval_required_job_set_has_sensitive_variables_to_true(self):
+        job_model = Job.objects.get_for_class_path("local/api_test_job/APITestJob")
+        job_model.approval_required = True
+        job_model.approval_required_override = True
+        job_model.validated_save()
+
+        url = self._get_detail_url(job_model)
+        data = {
+            "has_sensitive_variables": True,
+            "has_sensitive_variables_override": True,
+        }
+
+        self.add_permissions("extras.change_job")
+
+        response = self.client.patch(url, data, format="json", **self.header)
+        self.assertHttpStatus(response, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(
+            response.data["has_sensitive_variables"][0],
+            "A job with sensitive variables cannot also be marked as requiring approval",
         )
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
@@ -2137,6 +2239,67 @@ class JobApprovalTest(APITestCase):
         self.assertHttpStatus(response, status.HTTP_200_OK)
 
 
+class NoteTest(APIViewTestCases.APIViewTestCase):
+    model = Note
+    brief_fields = [
+        "assigned_object",
+        "display",
+        "id",
+        "note",
+        "slug",
+        "url",
+        "user",
+    ]
+    choices_fields = ["assigned_object_type"]
+
+    @classmethod
+    def setUpTestData(cls):
+        site1 = Site.objects.create(name="Site 1", slug="site-1")
+        site2 = Site.objects.create(name="Site 2", slug="site-2")
+        ct = ContentType.objects.get_for_model(Site)
+        user1 = User.objects.create(username="user1", is_active=True)
+        user2 = User.objects.create(username="user2", is_active=True)
+
+        cls.create_data = [
+            {
+                "note": "This is a test.",
+                "assigned_object_id": site1.pk,
+                "assigned_object_type": f"{ct._meta.app_label}.{ct._meta.model_name}",
+            },
+            {
+                "note": "This is a test.",
+                "assigned_object_id": site2.pk,
+                "assigned_object_type": f"{ct._meta.app_label}.{ct._meta.model_name}",
+            },
+            {
+                "note": "This is a note on Site 1.",
+                "assigned_object_id": site1.pk,
+                "assigned_object_type": f"{ct._meta.app_label}.{ct._meta.model_name}",
+            },
+        ]
+        cls.bulk_update_data = {
+            "note": "Bulk change.",
+        }
+        Note.objects.create(
+            note="Site has been placed on maintenance.",
+            user=user1,
+            assigned_object_type=ct,
+            assigned_object_id=site1.pk,
+        ),
+        Note.objects.create(
+            note="Site maintenance has ended.",
+            user=user1,
+            assigned_object_type=ct,
+            assigned_object_id=site1.pk,
+        ),
+        Note.objects.create(
+            note="Site is under duress.",
+            user=user2,
+            assigned_object_type=ct,
+            assigned_object_id=site2.pk,
+        ),
+
+
 class RelationshipTest(APIViewTestCases.APIViewTestCase):
     model = Relationship
     brief_fields = ["display", "id", "name", "slug", "url"]
@@ -2386,6 +2549,7 @@ class RelationshipAssociationTest(APIViewTestCases.APIViewTestCase):
     def setUpTestData(cls):
         cls.site_type = ContentType.objects.get_for_model(Site)
         cls.device_type = ContentType.objects.get_for_model(Device)
+        cls.status_active = Status.objects.get(slug="active")
 
         cls.relationship = Relationship(
             name="Devices found elsewhere",
@@ -2396,18 +2560,42 @@ class RelationshipAssociationTest(APIViewTestCases.APIViewTestCase):
         )
         cls.relationship.validated_save()
         cls.sites = (
-            Site.objects.create(name="Empty Site", slug="empty"),
-            Site.objects.create(name="Occupied Site", slug="occupied"),
-            Site.objects.create(name="Another Empty Site", slug="another-empty"),
+            Site.objects.create(name="Empty Site", slug="empty", status=cls.status_active),
+            Site.objects.create(name="Occupied Site", slug="occupied", status=cls.status_active),
+            Site.objects.create(name="Another Empty Site", slug="another-empty", status=cls.status_active),
         )
         manufacturer = Manufacturer.objects.create(name="Manufacturer 1", slug="manufacturer-1")
         devicetype = DeviceType.objects.create(manufacturer=manufacturer, model="Device Type 1", slug="device-type-1")
         devicerole = DeviceRole.objects.create(name="Device Role 1", slug="device-role-1")
         cls.devices = (
-            Device.objects.create(name="Device 1", device_type=devicetype, device_role=devicerole, site=cls.sites[1]),
-            Device.objects.create(name="Device 2", device_type=devicetype, device_role=devicerole, site=cls.sites[1]),
-            Device.objects.create(name="Device 3", device_type=devicetype, device_role=devicerole, site=cls.sites[1]),
-            Device.objects.create(name="Device 4", device_type=devicetype, device_role=devicerole, site=cls.sites[1]),
+            Device.objects.create(
+                name="Device 1",
+                device_type=devicetype,
+                device_role=devicerole,
+                site=cls.sites[1],
+                status=cls.status_active,
+            ),
+            Device.objects.create(
+                name="Device 2",
+                device_type=devicetype,
+                device_role=devicerole,
+                site=cls.sites[1],
+                status=cls.status_active,
+            ),
+            Device.objects.create(
+                name="Device 3",
+                device_type=devicetype,
+                device_role=devicerole,
+                site=cls.sites[1],
+                status=cls.status_active,
+            ),
+            Device.objects.create(
+                name="Device 4",
+                device_type=devicetype,
+                device_role=devicerole,
+                site=cls.sites[1],
+                status=cls.status_active,
+            ),
         )
 
         cls.associations = (
@@ -2610,11 +2798,7 @@ class RelationshipAssociationTest(APIViewTestCases.APIViewTestCase):
         with self.subTest("Round-trip of same relationships data is a no-op"):
             response = self.client.patch(
                 url,
-                {
-                    # TODO: omitting status here results in a 400 error "This field cannot be blank". Seems like a bug?
-                    "status": "planned",
-                    "relationships": initial_response.data["relationships"],
-                },
+                {"relationships": initial_response.data["relationships"]},
                 format="json",
                 **self.header,
             )
@@ -2626,7 +2810,7 @@ class RelationshipAssociationTest(APIViewTestCases.APIViewTestCase):
         with self.subTest("Omitting relationships data entirely is valid"):
             response = self.client.patch(
                 url,
-                {"status": "planned"},  # TODO: see above
+                {},
                 format="json",
                 **self.header,
             )
@@ -2638,10 +2822,7 @@ class RelationshipAssociationTest(APIViewTestCases.APIViewTestCase):
         with self.subTest("Error handling: nonexistent relationship"):
             response = self.client.patch(
                 url,
-                {
-                    "status": "planned",  # TODO: see above
-                    "relationships": {"nonexistent-relationship": {"peer": {"objects": []}}},
-                },
+                {"relationships": {"nonexistent-relationship": {"peer": {"objects": []}}}},
                 format="json",
                 **self.header,
             )
@@ -2663,10 +2844,7 @@ class RelationshipAssociationTest(APIViewTestCases.APIViewTestCase):
             )
             response = self.client.patch(
                 url,
-                {
-                    "status": "planned",  # TODO: see above
-                    "relationships": {"device-to-device": {"peer": {"objects": []}}},
-                },
+                {"relationships": {"device-to-device": {"peer": {"objects": []}}}},
                 format="json",
                 **self.header,
             )
@@ -2681,10 +2859,7 @@ class RelationshipAssociationTest(APIViewTestCases.APIViewTestCase):
         with self.subTest("Error handling: wrong relationship side"):
             response = self.client.patch(
                 url,
-                {
-                    "status": "planned",  # TODO: see above
-                    "relationships": {self.relationship.slug: {"source": {"objects": []}}},
-                },
+                {"relationships": {self.relationship.slug: {"source": {"objects": []}}}},
                 format="json",
                 **self.header,
             )
@@ -2701,7 +2876,6 @@ class RelationshipAssociationTest(APIViewTestCases.APIViewTestCase):
             response = self.client.patch(
                 url,
                 {
-                    "status": "planned",  # TODO: see above
                     "relationships": {
                         self.relationship.slug: {
                             "destination": {
@@ -3061,6 +3235,26 @@ class TagTestVersion13(
         self.assertEqual(
             str(response.data["content_types"][0]), "Unable to remove dcim.site. Dependent objects were found."
         )
+
+    def test_update_tag_content_type_unchanged(self):
+        """Test updating a tag without changing its content-types."""
+        self.add_permissions("extras.change_tag")
+
+        tag = Tag.objects.get(slug="tag-1")
+        url = self._get_detail_url(tag)
+        data = {"color": ColorChoices.COLOR_LIME}
+
+        response = self.client.patch(url, data, format="json", **self.header)
+        self.assertHttpStatus(response, status.HTTP_200_OK)
+        self.assertEqual(response.data["color"], ColorChoices.COLOR_LIME)
+        self.assertEqual(sorted(response.data["content_types"]), ["dcim.device", "dcim.site"])
+
+        tag.refresh_from_db()
+        self.assertEqual(tag.color, ColorChoices.COLOR_LIME)
+        tag_content_types = tag.content_types.all()
+        self.assertIn(ContentType.objects.get_for_model(Device), tag_content_types)
+        self.assertIn(ContentType.objects.get_for_model(Site), tag_content_types)
+        self.assertNotIn(ContentType.objects.get_for_model(Rack), tag_content_types)
 
 
 class WebhookTest(APIViewTestCases.APIViewTestCase):

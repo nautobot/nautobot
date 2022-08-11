@@ -12,7 +12,7 @@ class Migration(migrations.Migration):
     dependencies = [
         migrations.swappable_dependency(settings.AUTH_USER_MODEL),
         ("contenttypes", "0002_remove_content_type_name"),
-        ("extras", "0041_job__add_is_job_hook_receiver"),
+        ("extras", "0042_job__add_is_job_hook_receiver"),
     ]
 
     operations = [

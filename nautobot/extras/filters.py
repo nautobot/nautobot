@@ -47,6 +47,7 @@ from .models import (
     JobHook,
     JobLogEntry,
     JobResult,
+    Note,
     ObjectChange,
     Relationship,
     RelationshipAssociation,
@@ -88,6 +89,7 @@ __all__ = (
     "JobResultFilterSet",
     "LocalContextFilterSet",
     "NautobotFilterSet",
+    "NoteFilterSet",
     "ObjectChangeFilterSet",
     "RelationshipFilterSet",
     "RelationshipAssociationFilterSet",
@@ -834,6 +836,7 @@ class JobFilterSet(BaseFilterSet, CustomFieldModelFilterSet):
             "grouping",
             "installed",
             "enabled",
+            "has_sensitive_variables",
             "approval_required",
             "commit_default",
             "hidden",
@@ -850,6 +853,7 @@ class JobFilterSet(BaseFilterSet, CustomFieldModelFilterSet):
             "read_only_override",
             "soft_time_limit_override",
             "time_limit_override",
+            "has_sensitive_variables_override",
         ]
 
 
@@ -970,6 +974,33 @@ class LocalContextFilterSet(django_filters.FilterSet):
 
     def _local_context_data(self, queryset, name, value):
         return queryset.exclude(local_context_data__isnull=value)
+
+
+class NoteFilterSet(BaseFilterSet):
+    q = SearchFilter(
+        filter_predicates={
+            "user_name": "icontains",
+            "note": "icontains",
+            "assigned_object_id": "exact",
+        },
+    )
+    assigned_object_type = ContentTypeFilter()
+    user = NaturalKeyOrPKMultipleChoiceFilter(
+        to_field_name="username",
+        queryset=get_user_model().objects.all(),
+        label="User (username or ID)",
+    )
+
+    class Meta:
+        model = Note
+        fields = [
+            "id",
+            "user",
+            "user_name",
+            "assigned_object_type_id",
+            "assigned_object_id",
+            "note",
+        ]
 
 
 class ObjectChangeFilterSet(BaseFilterSet):

@@ -132,8 +132,13 @@ class Job(PrimaryModel):
         help_text="Whether the Python module and class providing this job are presently installed and loadable",
     )
     enabled = models.BooleanField(default=False, help_text="Whether this job can be executed by users")
+
     is_job_hook_receiver = models.BooleanField(
         default=False, editable=False, help_text="Whether this job is a job hook receiver"
+    )
+
+    has_sensitive_variables = models.BooleanField(
+        default=True, help_text="Whether this job contains sensitive variables"
     )
 
     # Additional properties, potentially inherited from the source code
@@ -201,6 +206,10 @@ class Job(PrimaryModel):
         help_text="If set, the configured value will remain even if the underlying Job source code changes",
     )
     time_limit_override = models.BooleanField(
+        default=False,
+        help_text="If set, the configured value will remain even if the underlying Job source code changes",
+    )
+    has_sensitive_variables_override = models.BooleanField(
         default=False,
         help_text="If set, the configured value will remain even if the underlying Job source code changes",
     )
@@ -335,6 +344,11 @@ class Job(PrimaryModel):
             raise ValidationError(f"Name may not exceed {JOB_MAX_NAME_LENGTH} characters in length")
         if len(self.slug) > JOB_MAX_SLUG_LENGTH:
             raise ValidationError(f"Slug may not exceed {JOB_MAX_SLUG_LENGTH} characters in length")
+
+        if self.has_sensitive_variables is True and self.approval_required is True:
+            raise ValidationError(
+                {"approval_required": "A job with sensitive variables cannot be marked as requiring approval"}
+            )
 
     def get_absolute_url(self):
         return reverse("extras:job_detail", kwargs={"slug": self.slug})

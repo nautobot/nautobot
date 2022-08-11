@@ -165,8 +165,15 @@ class DynamicGroup(OrganizationalModel):
         # Get dynamic group filter field mappings (if any)
         dynamic_group_filter_fields = getattr(self.model, "dynamic_group_filter_fields", {})
 
-        # Model form fields that aren't on the filter form
-        missing_fields = set(modelform_fields).difference(filterform_fields)
+        # Whether or not to add missing form fields that aren't on the filter form.
+        skip_missing_fields = getattr(self.model, "dynamic_group_skip_missing_fields", False)
+
+        # Model form fields that aren't on the filter form.
+        if not skip_missing_fields:
+            missing_fields = set(modelform_fields).difference(filterform_fields)
+        else:
+            logger.debug("Will not add missing form fields due to model %s meta option.", self.model)
+            missing_fields = set()
 
         # Try a few ways to see if a missing field can be added to the filter fields.
         for missing_field in missing_fields:
@@ -207,6 +214,10 @@ class DynamicGroup(OrganizationalModel):
             if modelform_field.required:
                 modelform_field.required = False
                 modelform_field.widget.attrs.pop("required")
+
+            # If `initial` is set, unset it.
+            if modelform_field.initial:
+                modelform_field.initial = None
 
             # Replace the modelform_field with the correct type for the UI. At this time this is
             # only being done for CharField since in the filterset form this ends up being a

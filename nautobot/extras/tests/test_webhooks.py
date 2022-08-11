@@ -13,7 +13,7 @@ from nautobot.dcim.api.serializers import SiteSerializer
 from nautobot.dcim.models import Site
 from nautobot.dcim.models.sites import Region
 from nautobot.extras.choices import ObjectChangeActionChoices
-from nautobot.extras.context_managers import ORMChangeContext, change_logging
+from nautobot.extras.context_managers import web_request_context
 from nautobot.extras.models import Webhook
 from nautobot.extras.models.statuses import Status
 from nautobot.extras.tasks import process_webhook
@@ -101,9 +101,7 @@ class WebhookTest(APITestCase):
         with patch.object(Session, "send", mock_send):
             self.client.force_login(self.user)
 
-            change_context = ORMChangeContext(self.user, id=request_id)
-
-            with change_logging(change_context):
+            with web_request_context(self.user, change_id=request_id):
                 site = Site(name="Site 1", slug="site-1", status=self.active_status, region=self.region_one)
                 site.save()
 
@@ -123,11 +121,12 @@ class WebhookTest(APITestCase):
                     ObjectChangeActionChoices.ACTION_CREATE,
                     timestamp,
                     self.user.username,
-                    change_context.id,
+                    request_id,
                     snapshots,
                 )
 
     def test_webhooks_snapshot_on_create(self):
+        request_id = uuid.uuid4()
         webhook = Webhook.objects.get(type_create=True)
         timestamp = str(timezone.now())
 
@@ -148,10 +147,7 @@ class WebhookTest(APITestCase):
 
         # Patch the Session object with our mock_send() method, then process the webhook for sending
         with patch.object(Session, "send", mock_send):
-
-            change_context = ORMChangeContext(self.user)
-
-            with change_logging(change_context):
+            with web_request_context(self.user, change_id=request_id):
                 site = Site(name="Site 1", slug="site-1")
                 site.save()
 
@@ -166,11 +162,12 @@ class WebhookTest(APITestCase):
                     ObjectChangeActionChoices.ACTION_CREATE,
                     timestamp,
                     self.user.username,
-                    change_context.id,
+                    request_id,
                     snapshots,
                 )
 
     def test_webhooks_snapshot_on_delete(self):
+        request_id = uuid.uuid4()
         webhook = Webhook.objects.get(type_create=True)
         timestamp = str(timezone.now())
 
@@ -191,10 +188,7 @@ class WebhookTest(APITestCase):
 
         # Patch the Session object with our mock_send() method, then process the webhook for sending
         with patch.object(Session, "send", mock_send):
-
-            change_context = ORMChangeContext(self.user)
-
-            with change_logging(change_context):
+            with web_request_context(self.user, change_id=request_id):
                 site = Site(name="Site 1", slug="site-1")
                 site.save()
 
@@ -213,7 +207,7 @@ class WebhookTest(APITestCase):
                     ObjectChangeActionChoices.ACTION_CREATE,
                     timestamp,
                     self.user.username,
-                    change_context.id,
+                    request_id,
                     snapshots,
                 )
 
@@ -224,6 +218,7 @@ class WebhookTest(APITestCase):
 
         get_serializer_for_model.side_effect = get_serializer
 
+        request_id = uuid.uuid4()
         webhook = Webhook.objects.get(type_create=True)
         timestamp = str(timezone.now())
 
@@ -249,9 +244,7 @@ class WebhookTest(APITestCase):
         with patch.object(Session, "send", mock_send):
             self.client.force_login(self.user)
 
-            change_context = ORMChangeContext(self.user)
-
-            with change_logging(change_context):
+            with web_request_context(self.user, change_id=request_id):
                 site = Site(name="Site 1", slug="site-1", status=self.active_status, region=self.region_one)
                 site.save()
 
@@ -271,7 +264,7 @@ class WebhookTest(APITestCase):
                     ObjectChangeActionChoices.ACTION_CREATE,
                     timestamp,
                     self.user.username,
-                    change_context.id,
+                    request_id,
                     snapshots,
                 )
 
