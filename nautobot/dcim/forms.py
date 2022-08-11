@@ -473,7 +473,7 @@ class LocationForm(NautobotModelForm, TenancyForm):
 
     class Meta:
         model = Location
-        fields = ["location_type", "parent", "site", "name", "slug", "status", "tenant_group", "tenant", "description"]
+        fields = ["location_type", "parent", "site", "name", "slug", "status", "tenant_group", "tenant", "description", "tags"]
 
 
 class LocationBulkEditForm(TagsBulkEditFormMixin, StatusModelBulkEditFormMixin, NautobotBulkEditForm):
