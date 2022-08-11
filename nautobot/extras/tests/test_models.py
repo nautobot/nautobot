@@ -708,6 +708,7 @@ class JobModelTest(TestCase):
     def setUpTestData(cls):
         # JobModel instances are automatically instantiated at startup, so we just need to look them up.
         cls.local_job = JobModel.objects.get(job_class_name="TestPass")
+        cls.job_containing_sensitive_variables = JobModel.objects.get(job_class_name="ExampleLoggingJob")
         cls.plugin_job = JobModel.objects.get(job_class_name="ExampleJob")
 
     def test_job_class(self):
@@ -740,36 +741,41 @@ class JobModelTest(TestCase):
 
     def test_clean_overrides(self):
         """Verify that cleaning resets non-overridden fields to their appropriate default values."""
+
         overridden_attrs = {
             "grouping": "Overridden Grouping",
             "name": "Overridden Name",
             "description": "Overridden Description",
-            "commit_default": not self.local_job.commit_default,
-            "hidden": not self.local_job.hidden,
-            "read_only": not self.local_job.read_only,
-            "approval_required": not self.local_job.approval_required,
+            "commit_default": not self.job_containing_sensitive_variables.commit_default,
+            "hidden": not self.job_containing_sensitive_variables.hidden,
+            "read_only": not self.job_containing_sensitive_variables.read_only,
+            "approval_required": not self.job_containing_sensitive_variables.approval_required,
+            "has_sensitive_variables": not self.job_containing_sensitive_variables.has_sensitive_variables,
             "soft_time_limit": 350,
             "time_limit": 650,
         }
 
         # Override values to non-defaults and ensure they are preserved
         for field_name, value in overridden_attrs.items():
-            setattr(self.local_job, field_name, value)
-            setattr(self.local_job, f"{field_name}_override", True)
-        self.local_job.validated_save()
-        self.local_job.refresh_from_db()
+            setattr(self.job_containing_sensitive_variables, field_name, value)
+            setattr(self.job_containing_sensitive_variables, f"{field_name}_override", True)
+        self.job_containing_sensitive_variables.validated_save()
+        self.job_containing_sensitive_variables.refresh_from_db()
         for field_name, value in overridden_attrs.items():
-            self.assertEqual(getattr(self.local_job, field_name), value)
-            self.assertTrue(getattr(self.local_job, f"{field_name}_override"))
+            self.assertEqual(getattr(self.job_containing_sensitive_variables, field_name), value)
+            self.assertTrue(getattr(self.job_containing_sensitive_variables, f"{field_name}_override"))
 
         # Clear the "*_override" flags and ensure that cleaning resets the corresponding fields to non-overriden values
         for field_name in overridden_attrs:
-            setattr(self.local_job, f"{field_name}_override", False)
-        self.local_job.validated_save()
-        self.local_job.refresh_from_db()
+            setattr(self.job_containing_sensitive_variables, f"{field_name}_override", False)
+        self.job_containing_sensitive_variables.validated_save()
+        self.job_containing_sensitive_variables.refresh_from_db()
         for field_name in overridden_attrs:
-            self.assertEqual(getattr(self.local_job, field_name), getattr(self.local_job.job_class, field_name))
-            self.assertFalse(getattr(self.local_job, f"{field_name}_override"))
+            self.assertEqual(
+                getattr(self.job_containing_sensitive_variables, field_name),
+                getattr(self.job_containing_sensitive_variables.job_class, field_name),
+            )
+            self.assertFalse(getattr(self.job_containing_sensitive_variables, f"{field_name}_override"))
 
     def test_clean_input_validation(self):
         """Verify that cleaning enforces validation of potentially unsanitized user input."""
@@ -812,6 +818,21 @@ class JobModelTest(TestCase):
                 name="Similarly, let us hope that no one really wants to specify a job name that is over 100 characters long, it would be a pain to type at the very least and it won't look good in the UI either",
             ).clean()
         self.assertIn("Name", str(handler.exception))
+
+        with self.assertRaises(ValidationError) as handler:
+            JobModel(
+                source="local",
+                module_name="module_name",
+                job_class_name="JobClassName",
+                grouping="grouping",
+                has_sensitive_variables=True,
+                approval_required=True,
+                name="Job Class Name",
+            ).clean()
+        self.assertEqual(
+            handler.exception.message_dict["approval_required"][0],
+            "A job with sensitive variables cannot be marked as requiring approval",
+        )
 
 
 class JobResultTest(TestCase):

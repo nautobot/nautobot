@@ -7,7 +7,7 @@ import nautobot.core.fields
 class Migration(migrations.Migration):
 
     dependencies = [
-        ("extras", "0045_populate_custom_field_slug_label"),
+        ("extras", "0046_populate_custom_field_slug_label"),
     ]
 
     operations = [

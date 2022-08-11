@@ -6,7 +6,7 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ("extras", "0040_jobresult_job_kwargs"),
+        ("extras", "0041_jobresult_job_kwargs"),
     ]
 
     operations = [

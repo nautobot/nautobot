@@ -18,7 +18,7 @@ class Migration(migrations.Migration):
     dependencies = [
         ("tenancy", "0001_initial"),
         ("contenttypes", "0002_remove_content_type_name"),
-        ("extras", "0036_configcontextschema__remove_name_unique__create_constraint_unique_name_owner"),
+        ("extras", "0037_configcontextschema__remove_name_unique__create_constraint_unique_name_owner"),
         ("dcim", "0012_interface_parent_bridge"),
     ]
 

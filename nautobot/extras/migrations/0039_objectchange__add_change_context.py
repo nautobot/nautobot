@@ -6,7 +6,7 @@ from nautobot.extras.choices import ObjectChangeEventContextChoices
 class Migration(migrations.Migration):
 
     dependencies = [
-        ("extras", "0037_configcontext_locations"),
+        ("extras", "0038_configcontext_locations"),
     ]
 
     operations = [

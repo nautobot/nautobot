@@ -1,9 +1,12 @@
 from django.contrib.contenttypes.models import ContentType
+from drf_spectacular.utils import extend_schema_field
 from rest_framework import serializers
 
 from nautobot.core.api import BaseModelSerializer, ChoiceField, ContentTypeField, WritableNestedSerializer
+from nautobot.core.api.exceptions import SerializerNotFound
 from nautobot.extras import choices, models
 from nautobot.users.api.nested_serializers import NestedUserSerializer
+from nautobot.utilities.api import get_serializer_for_model
 
 __all__ = [
     "NestedComputedFieldSerializer",
@@ -19,6 +22,7 @@ __all__ = [
     "NestedJobSerializer",
     "NestedJobLogEntrySerializer",
     "NestedJobResultSerializer",
+    "NestedNoteSerializer",
     "NestedRelationshipSerializer",
     "NestedRelationshipAssociationSerializer",
     "NestedScheduledJobSerializer",
@@ -169,6 +173,27 @@ class NestedJobResultSerializer(BaseModelSerializer):
     class Meta:
         model = models.JobResult
         fields = ["id", "url", "name", "created", "completed", "user", "status"]
+
+
+class NestedNoteSerializer(BaseModelSerializer):
+    url = serializers.HyperlinkedIdentityField(view_name="extras-api:note-detail")
+    user = NestedUserSerializer(read_only=True)
+    assigned_object = serializers.SerializerMethodField()
+
+    class Meta:
+        model = models.Note
+        fields = ["assigned_object", "id", "url", "note", "user", "slug"]
+
+    @extend_schema_field(serializers.DictField(allow_null=True))
+    def get_assigned_object(self, obj):
+        if obj.assigned_object is None:
+            return None
+        try:
+            serializer = get_serializer_for_model(obj.assigned_object, prefix="Nested")
+            context = {"request": self.context["request"]}
+            return serializer(obj.assigned_object, context=context).data
+        except SerializerNotFound:
+            return None
 
 
 class NestedRelationshipSerializer(WritableNestedSerializer):
