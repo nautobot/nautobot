@@ -265,12 +265,8 @@ class NautobotViewSetMixin(GenericViewSet, AccessMixin, GetReturnURLMixin, FormV
         app_label = model_opts.app_label
         action = self.action
         try:
-            if action == "retrieve":
-                template_name = f"{app_label}/{model_opts.model_name}.html"
-                select_template([template_name])
-            else:
-                template_name = f"{app_label}/{model_opts.model_name}_{action}.html"
-                select_template([template_name])
+            template_name = f"{app_label}/{model_opts.model_name}_{action}.html"
+            select_template([template_name])
         except TemplateDoesNotExist:
             template_name = f"generic/object_{action}.html"
         return template_name
