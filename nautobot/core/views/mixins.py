@@ -22,9 +22,9 @@ from django.utils.html import escape
 from django.utils.safestring import mark_safe
 from django.views.generic.edit import FormView
 
-from rest_framework import generics, mixins
+from rest_framework import mixins
 from rest_framework.response import Response
-from rest_framework.viewsets import ViewSetMixin
+from rest_framework.viewsets import GenericViewSet
 
 from nautobot.core.api.views import BulkCreateModelMixin, BulkDestroyModelMixin, BulkUpdateModelMixin
 from nautobot.extras.models import CustomField, ExportTemplate, ChangeLoggedModel
@@ -56,15 +56,16 @@ PERMISSIONS_ACTION_MAP = {
 }
 
 
-class NautobotViewSetMixin(ViewSetMixin, generics.GenericAPIView, AccessMixin, GetReturnURLMixin, FormView):
+class NautobotViewSetMixin(GenericViewSet, AccessMixin, GetReturnURLMixin, FormView):
     """
-    NautobotViewSetMixin is an aggregation of various mixins from DRF, Django and Nautobot to acheive the desired behavior pattern for NautobotDRFViewSet
+    NautobotViewSetMixin is an aggregation of various mixins from DRF, Django and Nautobot to acheive the desired behavior pattern for NautobotUIViewSet
     """
 
     # serializer_class has to be specified to eliminate the need to override retrieve() in the RetrieveModelMixin for now.
     serializer_class = None
     renderer_classes = [NautobotHTMLRenderer]
     logger = logging.getLogger(__name__)
+    lookup_field = "slug"
 
     def get_permissions_for_model(self, model, actions):
         """
@@ -152,11 +153,6 @@ class NautobotViewSetMixin(ViewSetMixin, generics.GenericAPIView, AccessMixin, G
     def alter_queryset(self, request):
         # .all() is necessary to avoid caching queries
         return self.queryset.all()
-
-    def alter_obj_for_edit(self, obj, request, url_args, url_kwargs):
-        # Allow views to add extra info to an object before it is processed. For example, a parent object can be defined
-        # given some parameter from the request URL.
-        return obj
 
     def form_valid(self, form):
         """
@@ -544,7 +540,7 @@ class ObjectEditViewMixin(NautobotViewSetMixin, mixins.CreateModelMixin, mixins.
         """
         Function to validate the ObjectForm and to create a new object.
         """
-        self.obj = self.alter_obj_for_edit(self.get_object(), request, args, kwargs)
+        self.obj = self.get_object()
         form_class = self.get_form_class()
         form = form_class(data=request.POST, files=request.FILES, instance=self.obj)
         restrict_form_fields(form, request.user)
@@ -568,7 +564,7 @@ class ObjectEditViewMixin(NautobotViewSetMixin, mixins.CreateModelMixin, mixins.
         """
         Function to validate the ObjectEditForm and to update/partial_update an existing object.
         """
-        self.obj = self.alter_obj_for_edit(self.get_object(), request, args, kwargs)
+        self.obj = self.get_object()
         form_class = self.get_form_class()
         form = form_class(data=request.POST, files=request.FILES, instance=self.obj)
         restrict_form_fields(form, request.user)
@@ -716,7 +712,6 @@ class ObjectBulkUpdateViewMixin(NautobotViewSetMixin, BulkUpdateModelMixin):
             updated_objects = []
             for obj in self.queryset.filter(pk__in=form.cleaned_data["pk"]):
                 self.obj = obj
-                obj = self.alter_obj_for_bulk_update(obj, request, [], self.kwargs)
                 # Update standard fields. If a field is listed in _nullify, delete its value.
                 for name in standard_fields:
                     try:
@@ -771,11 +766,6 @@ class ObjectBulkUpdateViewMixin(NautobotViewSetMixin, BulkUpdateModelMixin):
             messages.success(self.request, msg)
         self.success_url = self.get_return_url(request)
 
-    def alter_obj_for_bulk_update(self, obj, request, url_args, url_kwargs):
-        # Allow views to add extra info to an object before it is processed.
-        # For example, a parent object can be defined given some parameter from the request URL.
-        return obj
-
     def bulk_update(self, request, *args, **kwargs):
         """
         Call perform_bulk_update().
@@ -816,17 +806,3 @@ class ObjectBulkUpdateViewMixin(NautobotViewSetMixin, BulkUpdateModelMixin):
             return redirect(self.get_return_url(request))
         data.update({"table": table})
         return Response(data)
-
-
-class NautobotDRFViewSet(
-    ObjectDetailViewMixin,
-    ObjectListViewMixin,
-    ObjectEditViewMixin,
-    ObjectDestroyViewMixin,
-    ObjectBulkDestroyViewMixin,
-    ObjectBulkCreateViewMixin,
-    ObjectBulkUpdateViewMixin,
-):
-    """
-    This is the UI BaseViewSet you should inherit.
-    """

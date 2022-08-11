@@ -5,11 +5,12 @@ from django.shortcuts import get_object_or_404, redirect, render
 from django_tables2 import RequestConfig
 
 
-from nautobot.core.views import generic
-from nautobot.core.views.drf_views import NautobotDRFViewSet
+from nautobot.core.views import generic, mixins as view_mixins
+from nautobot.core.views.viewsets import NautobotUIViewSet
 from nautobot.utilities.forms import ConfirmationForm
 from nautobot.utilities.paginator import EnhancedPaginator, get_paginate_count
 from nautobot.utilities.utils import count_related
+
 
 from . import filters, forms, tables
 from .api import serializers
@@ -17,12 +18,18 @@ from .choices import CircuitTerminationSideChoices
 from .models import Circuit, CircuitTermination, CircuitType, Provider, ProviderNetwork
 
 
-class CircuitTypeDRFViewSet(NautobotDRFViewSet):
+class CircuitTypeUIViewSet(
+    view_mixins.ObjectDetailViewMixin,
+    view_mixins.ObjectListViewMixin,
+    view_mixins.ObjectEditViewMixin,
+    view_mixins.ObjectDestroyViewMixin,
+    view_mixins.ObjectBulkDestroyViewMixin,
+    view_mixins.ObjectBulkCreateViewMixin,
+):
     model = CircuitType
     bulk_create_form_class = forms.CircuitTypeCSVForm
     filterset_class = filters.CircuitTypeFilterSet
     form_class = forms.CircuitTypeForm
-    lookup_field = "slug"
     queryset = CircuitType.objects.annotate(circuit_count=count_related(Circuit, "type"))
     serializer_class = serializers.CircuitTypeSerializer
     table_class = tables.CircuitTypeTable
@@ -49,30 +56,30 @@ class CircuitTypeDRFViewSet(NautobotDRFViewSet):
         return context
 
 
-class CircuitTerminationDRFViewset(NautobotDRFViewSet):
+class CircuitTerminationUIViewSet(NautobotUIViewSet):
     model = CircuitTermination
     form_class = forms.CircuitTerminationForm
     lookup_field = "pk"
     queryset = CircuitTermination.objects.all()
     serializer_class = serializers.CircuitTerminationSerializer
 
-    def alter_obj_for_edit(self, obj, request, url_args, url_kwargs):
-        if "circuit" in url_kwargs:
-            obj.circuit = get_object_or_404(Circuit, pk=url_kwargs["circuit"])
+    def get_object(self):
+        obj = super().get_object()
+        if self.action in ["create", "update"] and "circuit" in self.kwargs:
+            obj.circuit = get_object_or_404(Circuit, pk=self.kwargs["circuit"])
         return obj
 
     def get_return_url(self, request, obj):
         return obj.circuit.get_absolute_url()
 
 
-class ProviderDRFViewSet(NautobotDRFViewSet):
+class ProviderUIViewSet(NautobotUIViewSet):
     model = Provider
     bulk_create_form_class = forms.ProviderCSVForm
     bulk_update_form_class = forms.ProviderBulkEditForm
     filterset_class = filters.ProviderFilterSet
     filterset_form_class = forms.ProviderFilterForm
     form_class = forms.ProviderForm
-    lookup_field = "slug"
     queryset = Provider.objects.annotate(count_circuits=count_related(Circuit, "provider"))
     serializer_class = serializers.ProviderSerializer
     table_class = tables.ProviderTable
@@ -98,7 +105,7 @@ class ProviderDRFViewSet(NautobotDRFViewSet):
         return context
 
 
-class CircuitDRFViewSet(NautobotDRFViewSet):
+class CircuitUIViewSet(NautobotUIViewSet):
     model = Circuit
     bulk_create_form_class = forms.CircuitCSVForm
     bulk_update_form_class = forms.CircuitBulkEditForm
@@ -151,14 +158,13 @@ class CircuitDRFViewSet(NautobotDRFViewSet):
         return context
 
 
-class ProviderNetworkDRFViewSet(NautobotDRFViewSet):
+class ProviderNetworkUIViewSet(NautobotUIViewSet):
     model = ProviderNetwork
     bulk_create_form_class = forms.ProviderNetworkCSVForm
     bulk_update_form_class = forms.ProviderNetworkBulkEditForm
     filterset_class = filters.ProviderNetworkFilterSet
     filterset_form_class = forms.ProviderNetworkFilterForm
     form_class = forms.ProviderNetworkForm
-    lookup_field = "slug"
     queryset = ProviderNetwork.objects.all()
     serializer_class = serializers.ProviderNetworkSerializer
     table_class = tables.ProviderNetworkTable

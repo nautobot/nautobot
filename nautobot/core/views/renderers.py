@@ -106,7 +106,10 @@ class NautobotHTMLRenderer(renderers.BrowsableAPIRenderer):
         permissions = self.construct_user_permissions(request, model)
         # Construct valid actions
         valid_actions = self.validate_action_buttons(view, request)
-        return_url = None
+        if view.action in ["create", "retrieve", "update", "destroy"]:
+            return_url = view.get_return_url(request, instance)
+        else:
+            return_url = view.get_return_url(request)
         form = None
         table = None
         changelog_url = None
@@ -129,13 +132,9 @@ class NautobotHTMLRenderer(renderers.BrowsableAPIRenderer):
                         )
                         view.queryset = view.queryset.none()
                 table = self.construct_table(view, request=request, permissions=permissions)
-                return_url = view.get_return_url(request)
             elif view.action == "destroy":
                 form = form_class(initial=request.GET)
-                return_url = view.get_return_url(request, instance)
             elif view.action in ["create", "update"]:
-                instance = view.alter_obj_for_edit(instance, request, view.args, view.kwargs)
-                return_url = view.get_return_url(request, instance)
                 initial_data = normalize_querydict(request.GET)
                 form = form_class(instance=instance, initial=initial_data)
                 restrict_form_fields(form, request.user)
@@ -149,15 +148,12 @@ class NautobotHTMLRenderer(renderers.BrowsableAPIRenderer):
                     pk_list = request.POST.getlist("pk")
                     initial = {
                         "pk": pk_list,
-                        "return_url": view.get_return_url(request),
+                        "return_url": return_url,
                     }
                     form = form_class(initial=initial)
                 table = self.construct_table(view, pk_list=pk_list)
-                return_url = view.get_return_url(request)
             elif view.action == "bulk_create":
                 form = view.get_form()
-                print(form)
-                return_url = view.get_return_url(request)
                 if request.data:
                     table = data.get("table")
             elif view.action == "bulk_update":
@@ -165,24 +161,17 @@ class NautobotHTMLRenderer(renderers.BrowsableAPIRenderer):
                     pk_list = [obj.pk for obj in view.filterset_class(request.POST, view.queryset.only("pk")).qs]
                 else:
                     pk_list = request.POST.getlist("pk")
+
                 if "_apply" in request.POST:
                     form = form_class(model, request.POST)
-                    restrict_form_fields(form, request.user)
                 else:
                     # Include the PK list as initial data for the form
                     initial_data = {"pk": pk_list}
-                    # Check for other contextual data needed for the form. We avoid passing all of request.GET because the
-                    # filter values will conflict with the bulk edit form fields.
-                    # TODO: Find a better way to accomplish this
-                    if "device" in request.GET:
-                        initial_data["device"] = request.GET.get("device")
-                    elif "device_type" in request.GET:
-                        initial_data["device_type"] = request.GET.get("device_type")
-
                     form = form_class(model, initial=initial_data)
-                    restrict_form_fields(form, request.user)
+
+                restrict_form_fields(form, request.user)
                 table = self.construct_table(view, pk_list=pk_list)
-                return_url = view.get_return_url(request)
+
         context = {
             "action_buttons": valid_actions,
             "changelog_url": changelog_url,
@@ -190,11 +179,10 @@ class NautobotHTMLRenderer(renderers.BrowsableAPIRenderer):
             "editing": instance.present_in_database,
             "filter_form": self.get_filter_form(view, request),
             "form": form,
-            # I am keeping "object" and "obj" to keep the template changes needed minimally invasive.  # "object" is used in object_detail.html template.
-            "object": instance,  # "object" is used in object_detail templates.
-            "obj": instance,  # "obj" is used in every other template (object_delete, object_edit and etc.).
-            "obj_type": view.queryset.model._meta.verbose_name,
-            "obj_type_plural": view.queryset.model._meta.verbose_name_plural,
+            "object": instance,
+            "obj": instance,  # NOTE: This context key is deprecated in favor of `object`.
+            "obj_type": view.queryset.model._meta.verbose_name,  # NOTE: This context key is deprecated in favor of `verbose_name`.
+            "obj_type_plural": view.queryset.model._meta.verbose_name_plural,  # NOTE: This context key is deprecated in favor of `verbose_name_plural`.
             "permissions": permissions,
             "return_url": return_url,
             "table": table if table is not None else data.get("table", None),

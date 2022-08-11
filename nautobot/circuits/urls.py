@@ -1,6 +1,6 @@
 from django.urls import path
 
-from nautobot.core.views.routers import DRFViewSetRouter
+from nautobot.core.views.routers import NautobotUIViewSetRouter
 from nautobot.dcim.views import CableCreateView, PathTraceView
 from nautobot.extras.views import ObjectChangeLogView, ObjectNotesView
 from . import views
@@ -8,15 +8,12 @@ from .models import Circuit, CircuitTermination, CircuitType, Provider, Provider
 
 
 app_name = "circuits"
-router = DRFViewSetRouter()
-router.register("providers", views.ProviderDRFViewSet, basename="provider")
-router.register("provider-networks", views.ProviderNetworkDRFViewSet, basename="providernetwork")
-router.register("circuit-types", views.CircuitTypeDRFViewSet, basename="circuittype")
-router.register("circuits", views.CircuitDRFViewSet, basename="circuit")
-router.register("circuit-terminations", views.CircuitTerminationDRFViewset, basename="circuittermination")
-# BulkUpdateView is unavailable for CircuitType, there is no bulk_update_form for CircuitType
-excluded_urls = ["circuittype_bulk_edit"]
-router.exclude_urls(excluded_urls)
+router = NautobotUIViewSetRouter()
+router.register("providers", views.ProviderUIViewSet, basename="provider")
+router.register("provider-networks", views.ProviderNetworkUIViewSet, basename="providernetwork")
+router.register("circuit-types", views.CircuitTypeUIViewSet, basename="circuittype")
+router.register("circuits", views.CircuitUIViewSet, basename="circuit")
+router.register("circuit-terminations", views.CircuitTerminationUIViewSet, basename="circuittermination")
 
 urlpatterns = [
     path(
@@ -74,7 +71,7 @@ urlpatterns = [
     ),
     path(
         "circuits/<uuid:circuit>/terminations/add/",
-        views.CircuitTerminationDRFViewset.as_view({"get": "create", "post": "create"}),
+        views.CircuitTerminationUIViewSet.as_view({"get": "create", "post": "create"}),
         name="circuittermination_add",
     ),
     path(

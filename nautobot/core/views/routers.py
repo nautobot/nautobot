@@ -1,7 +1,7 @@
 from rest_framework.routers import Route, SimpleRouter
 
 
-class DRFViewSetRouter(SimpleRouter):
+class NautobotUIViewSetRouter(SimpleRouter):
     """
     Django Rest Framework ViewSet Custom Router.
     """
@@ -80,11 +80,3 @@ class DRFViewSetRouter(SimpleRouter):
             initkwargs={"suffix": "Edit"},
         ),
     ]
-
-    def exclude_urls(self, excluded_urls):
-        """
-        Helper function to remove any urls that are not included in the viewset or need to be re-initialized.
-        """
-        for url in self.urls:
-            if url.name in excluded_urls:
-                self.urls.remove(url)
