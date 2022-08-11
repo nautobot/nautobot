@@ -193,8 +193,8 @@ class NautobotHTMLRenderer(renderers.BrowsableAPIRenderer):
             # I am keeping "object" and "obj" to keep the template changes needed minimally invasive.  # "object" is used in object_detail.html template.
             "object": instance,  # "object" is used in object_detail templates.
             "obj": instance,  # "obj" is used in every other template (object_delete, object_edit and etc.).
-            "obj_type": view.model._meta.verbose_name,
-            "obj_type_plural": view.model._meta.verbose_name_plural,
+            "obj_type": view.queryset.model._meta.verbose_name,
+            "obj_type_plural": view.queryset.model._meta.verbose_name_plural,
             "permissions": permissions,
             "return_url": return_url,
             "table": table if table is not None else data.get("table", None),
