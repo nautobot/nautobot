@@ -6,7 +6,7 @@
 {% block content %}
 <div class="pull-right noprint">
     {% block buttons %}{% endblock %}
-    {% if request.user.is_authenticated and filter_form %}
+    {% if filter_form %}
         <button type="button" class="btn btn-default" data-toggle="collapse" data-target="#SearchPanel" title="Configure table"><i class="mdi mdi-filter"></i> Filters</button>
     {% endif %}
     {% if request.user.is_authenticated and table_config_form %}
