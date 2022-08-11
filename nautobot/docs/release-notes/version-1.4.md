@@ -145,6 +145,7 @@ The `settings_and_registry` default context processor was changed to purely `set
 
 ### Added
 
+- [#1498](https://github.com/nautobot/nautobot/issues/1498) - Added extended lookup expression filters to custom fields.
 - [#1962](https://github.com/nautobot/nautobot/issues/1962) - Added `slug` field to Custom Field model, added 1.4 REST API version of the `api/extras/custom-fields/` endpoints.
 
 ### Changed
