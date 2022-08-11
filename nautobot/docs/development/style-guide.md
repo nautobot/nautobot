@@ -59,11 +59,11 @@ New dependencies can be added to the project via the `poetry add` command. This 
 
 * The combination of `nautobot.utilities.filters.BaseFilterSet`, `nautobot.extras.filters.CreatedUpdatedFilterSet`, `nautobot.extras.filters.CustomFieldModelFilterSet`, and `nautobot.extras.filters.RelationshipModelFilterSet` is such a common use case throughout the code base that they have a helper class which combines all of these at `nautobot.extras.NautobotFilterSet`. Use this helper class if you need the functionality from these classes.
 
-* The combination of `nautobot.utilities.forms.BootstrapMixin`, `nautobot.extras.forms.CustomFieldModelForm` and `nautobot.extras.forms.RelationshipModelForm` is such a common use case throughout the code base that they have a helper class which combines all three at `nautobot.extras.forms.NautobotModelForm`. Use this helper class if you need the functionality from these three classes.
+* The combination of `nautobot.utilities.forms.BootstrapMixin`, `nautobot.extras.forms.CustomFieldModelFormMixin`, `nautobot.extras.forms.RelationshipModelFormMixin` and `nautobot.extras.forms.NoteModelFormMixin` is such a common use case throughout the code base that they have a helper class which combines all three at `nautobot.extras.forms.NautobotModelForm`. Use this helper class if you need the functionality from these three classes.
 
 * Similarly, for filter forms, `nautobot.extras.forms.NautobotFilterForm` combines `nautobot.utilities.forms.BootstrapMixin`, `nautobot.extras.forms.CustomFieldModelFilterFormMixin`, and `nautobot.extras.forms.RelationshipModelFilterFormMixin`, and should be used where appropriate.
 
-* Similarly, for bulk-edit forms, `nautobot.extras.forms.NautobotBulkEditForm` combines `nautobot.utilities.forms.BulkEditForm` with `nautobot.extras.forms.CustomFieldModelBulkEditFormMixin` and `nautobot.extras.forms.RelationshipModelBulkEditFormMixin`, and should be used where appropriate.
+* Similarly, for bulk-edit forms, `nautobot.extras.forms.NautobotBulkEditForm` combines `nautobot.utilities.forms.BulkEditForm` and `nautobot.utilities.forms.BootstrapMixin` with `nautobot.extras.forms.CustomFieldModelBulkEditFormMixin`, `nautobot.extras.forms.RelationshipModelBulkEditFormMixin` and `nautobot.extras.forms.NoteModelBulkEditFormMixin`, and should be used where appropriate.
 
 * _Added in version 1.4_: API serializers for most models should inherit from `nautobot.extras.api.serializers.NautobotModelSerializer` and any appropriate mixins. Only use more abstract base classes such as ValidatedModelSerializer where absolutely required.
 
