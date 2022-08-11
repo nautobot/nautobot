@@ -12,6 +12,7 @@ from nautobot.extras.choices import (
 )
 from nautobot.extras.models import (
     CustomField,
+    Note,
     Relationship,
     RelationshipAssociation,
     Status,
@@ -20,6 +21,7 @@ from nautobot.extras.models import (
 from nautobot.utilities.deprecation import class_deprecated_in_favor_of
 from nautobot.utilities.forms import (
     BulkEditForm,
+    CommentField,
     CSVModelChoiceField,
     CSVModelForm,
     DynamicModelChoiceField,
@@ -33,6 +35,8 @@ __all__ = (
     "CustomFieldModelBulkEditFormMixin",
     "CustomFieldModelFilterFormMixin",
     "CustomFieldModelFormMixin",
+    "NoteModelBulkEditFormMixin",
+    "NoteModelFormMixin",
     "RelationshipModelBulkEditFormMixin",
     "RelationshipModelFilterFormMixin",
     "RelationshipModelFormMixin",
@@ -135,6 +139,38 @@ class CustomFieldModelBulkEditFormMixin(BulkEditForm):
             self.fields[field_name] = cf.to_form_field(set_initial=False, enforce_required=False)
             # Annotate this as a custom field
             self.custom_fields.append(field_name)
+
+
+class NoteFormBase(forms.Form):
+    """Base fore the NoteModelFormMixin and NoteModelBulkEditFormMixin."""
+
+    object_note = CommentField(label="Note")
+
+    def save_note(self, *, instance, user):
+        value = self.cleaned_data.get("object_note", "").strip()
+        if value:
+            note = Note.objects.create(
+                note=value,
+                assigned_object_type=self.obj_type,
+                assigned_object_id=instance.pk,
+                user=user,
+            )
+            logger.debug("Created %s", note)
+
+
+class NoteModelBulkEditFormMixin(BulkEditForm, NoteFormBase):
+    """Bulk-edit form mixin for models that support Notes."""
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.obj_type = ContentType.objects.get_for_model(self.model)
+
+
+class NoteModelFormMixin(forms.ModelForm, NoteFormBase):
+    def __init__(self, *args, **kwargs):
+        self.obj_type = ContentType.objects.get_for_model(self._meta.model)
+
+        super().__init__(*args, **kwargs)
 
 
 class RelationshipModelBulkEditFormMixin(BulkEditForm):
