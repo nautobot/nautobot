@@ -38,7 +38,7 @@ For example, for a Dynamic Group with Content Type of `dcim.device` and an empty
 !!! warning
     _Changed in version 1.4.0_  <!-- markdownlint-disable-line MD036 -->
 
-     v1.3.0 the default for a group with an empty filter was to fail "closed" and have zero members.
+    v1.3.0 the default for a group with an empty filter was to fail "closed" and have zero members.
 
     As of v1.4.0, this behavior has been inverted to include all objects matching the content type by default instead of matching no objects. This was necessary to implement the progressive layering of child filters similarly to how we use filters to reduce desired objects from basic list view filters. This will described in more detail below.
 
@@ -108,18 +108,18 @@ parent
   - nested-child
 ```
 
-The filter generation would walk the graph topologically, starting from the base filter of `parent`, the filter of `first-child` would be applied to that of `parent`, then `second-child`, in order, all the way down, in order by `weight`. In the case of `third-child`, all of its children (only `nested-child` in this case) would be processed in order in the same way and the resultant filter from all of the child groups for `third-child` would be used to process the filter that resulted from the filter of `second-child`.
+The filter generation would walk the graph: starting from the base (match-all) filter of `parent`, the filter of `first-child` would be applied, then `second-child`, as ordered by their `weight`. In the case of `third-child`, all of its children (only `nested-child` in this case) would be processed in order in the same way and the resultant filter from all of the child groups for `third-child` would be applied to the filter resulting from `first-child` and `second-child`, resulting in the final filter for `parent`.
 
 If this is confusing, don't worry. We'll cover it more in hands-on examples after this section.
 
 ### Weights
 
-Weights are used to enforce the order (aka topological sorting) in which filters are processed when traversing from a parent to each descending child group. Because this ordering is significant, care must be taken when constructing nested Dynamic Groups to result in filter parameters that have the desired outcome.
+Weights are used to define the order in which a parent group's child group filters are processed. Because this ordering is significant, care must be taken when constructing nested Dynamic Groups to result in filter parameters that have the desired outcome.
 
 !!! note
     Unique weights are only considered for directly-related child groups. In other words, the weights for each child group of a parent group are unique to that parent and only affect the sorting of the children for that parent.
 
-In practice, weights are automatically assigned in increments of `10`. In the web UI, child groups may be dragged and dropped to explicitly sort them. When using the API, the weights must be manually provided as a part of your request payload.
+In practice, weights are automatically assigned in increments of `10` when associating child groups in the web UI, and child groups may be dragged and dropped to re-order them and re-assign their weights accordingly. When using the REST API, the weights must be explicitly provided as a part of your request payload.
 
 Using the example group hierarchy above, the weights would be as follows:
 
@@ -149,16 +149,16 @@ The following table maps the Nautobot **operator** to the corresponding set oper
 | Include  | Union         | OR      | Any criteria from parent/child filters _may_ match           |
 | Exclude  | Difference    | NOT     | All matches from child filter are _negated_ from parent filter |
 
-Any filters provided by the child groups are used to filter the members from the parent group using one of the three operators: **Restrict (AND)**, **Include (OR)**, or **Exclude (NOT)**. This allows for logical parenthetical grouping of nested groups by the operator you choose for that child group association to the parent.
+Any filters provided by the child groups are used to filter the members from the parent group using one of the three operators: **Restrict (AND)**, **Include (OR)**, or **Exclude (NOT)**.
 
 Using the example group hierarchy from above, let's apply operators and explain how it would work:
 
 ```no-highlight
 parent {filter: None}
-- first-child {weight: 10, operator: intersection, filter: site=ams01}
-- second-child {weight: 20, operator: union, fitler: site=ang01}
-- third-child {weight: 30, operator: difference, filter: None}
-  - nested-child {weight: 10, operator: intersection, filter: status=active}
+- first-child {weight: 10, operator: intersection (AND), filter: site=ams01}
+- second-child {weight: 20, operator: union (OR), filter: site=ang01}
+- third-child {weight: 30, operator: difference (NOT), filter: None}
+  - nested-child {weight: 10, operator: intersectio (AND), filter: status=active}
 ```
 
 Logically, the filter will be expressed like so using the hierarchy above:
@@ -167,9 +167,15 @@ Logically, the filter will be expressed like so using the hierarchy above:
 ((first-child OR second-child) AND (NOT nested-child))
 ```
 
+Which in turn would map to the object filter:
+
+```no-highlight
+((site=ams01 OR site=ang01) AND (NOT status=active))
+```
+
 #### How does this work?
 
-First, the filters for direct children for a group will always be included in a parenthetical grouping, separated by the operator. Any _empty_ filters are skipped as they imply a parent group that contains other groups. Therefore the filter of `parent` and the filter of `third-child` are not directly used for generating the filter. The filter from `parent` is passed through from left to right as the "base" filter.
+First, the filters for direct children for a group will always be included in a parenthetical grouping, separated by the operator. Parent groups always start from their base filter containing "all objects" (equivalent to an empty filter or `{}`). Therefore the filter of `parent` and the filter of `third-child` are not directly used for generating the filter and are instead passed through from `parent` left to right as the "base" filter.
 
 Similarly, by the time we get to `third-child`, the filter at that node in the graph will have already had the filter from `first-child` and `second-child` applied, and will merely be passed through to the filter generated from the children of `third-child`.
 
@@ -251,6 +257,51 @@ Content-Type: application/json
 
 Dynamic Groups are fairly straightforward however it is important to note that the `filter` field is a JSON field and it must be able to be used as valid query parameters for filtering objects of the corresponding content type.
 
+It is an error to provide any value other than a JSON object (`{}` or a Python dictionary) for the `filter` field.
+
+#### Multiple Values
+
+Most fields within the `filter` accept multiple values and must be represented as a JSON array (Python list), for example:
+
+```json
+{
+    site: ["ams01", "ang01"]
+}
+```
+
+#### Single Values
+
+Certain fields take Boolean values (JSON `true`/`false`) or single numeric integers or character strings.
+
+For example, consider this boolean filter that requires a single `true`/`false` and would result in a Dynamic Group of devices that have interfaces:
+
+```json
+{
+  "has_interfaces": true
+}
+```
+
+Or this character filter that requires a single string and would result in a Dynamic Group with only one member matching this `name`:
+
+```json
+{
+  "name": "ams01-edge-01"
+}
+```
+
+#### Field Validation
+
+Any invalid field values for valid field names will also result in a `ValidationError`, for example providing an integer to the `name` filter is invalid:
+
+```json
+{
+    "name": -42
+}
+```
+
+!!! note
+    Please refer to either the source code definition of the `{model_name}FilterSet` (e.g. for `Device` it would be `nautobot.dcim.filters.DeviceFilterSet`) or the API documentation for the list endpoint (e.g. `/api/dcim/devices/`) for a given model object, to view the available filter fields and their expectations.
+
 !!! warning
     _Changed in version 1.4.0_  <!-- markdownlint-disable-line MD036 -->
 
@@ -258,46 +309,9 @@ Dynamic Groups are fairly straightforward however it is important to note that t
 
     As of v1.4.0, [strict filtering is enabled by default](../../../configuration/optional-settings/#strict_filtering), which causes any invalid field names to result in a `ValidationError`.
 
-Any invalid field values for valid field names will also result in a `ValidationError`.
+### Creation
 
-Consider, for example, the following Dynamic Group:
-
-```json
-{
-    "id": "9664758b-9de1-4b2b-87c2-8be40aa2238d",
-    "url": "http://localhost:6789/api/extras/dynamic-groups/9664758b-9de1-4b2b-87c2-8be40aa2238d/",
-    "name": "devices-a-star",
-    "slug": "devices-a-star",
-    "description": "Devices in sites starting with 'A'",
-    "content_type": "dcim.device",
-    "filter": {
-        "site": [
-            "ams01",
-            "ang01",
-            "atl01",
-            "atl02",
-            "azd01"
-        ]
-    },
-    "display": "devices-a-star"
-}
-```
-
-It is an error to provide any value other than a JSON object (`{}` or a Python dictionary) for the `filter` field. Additionally, most fields within the `filter` accept multiple values and must be represented as a JSON array (Python list). Certain fields take Boolean values (JSON `true`/`false`) or single numeric integers or character strings.
-
-For example, consider this filter:
-
-```json
-{
-  "has_interfaces": true,
-  "name": "ams01-edge-01"
-}
-```
-
-This would result in a Dynamic Group of a single Device with name "ams01-edge-01" if-and-only-if that device also has interfaces. While this likely wouldn't be all that useful of a filter for a Dynamic Group in practice, it illustrates that some fields take only one value instead of an array of values. It also underscores how important it is to think deliberately about defining your filter criteria.
-
-!!! note
-    Please refer to either the source code definition of the `{model_name}FilterSet` (e.g. for `Device` it would be `nautobot.dcim.filters.DeviceFilterSet`) or the API documentation for the list endpoint (e.g. `/api/dcim/devices/`) for a given model object, to view the available filter fields and their expectations.
+- `/api/extras/dynamic-groups/'
 
 ### Adding Child Groups
 
