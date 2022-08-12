@@ -6,69 +6,49 @@ When creating a Dynamic Group, one must select a Content Type to which it is ass
 
 Once created the Content Type for a Dynamic Group may not be modified as this relationship is tightly-coupled to the available filtering parameters. All other fields may be updated at any time.
 
-## Creating Dynamic Groups
+## Introduction
+
+### Creating Dynamic Groups
 
 Dynamic Groups can be created through the UI under _Organization > Dynamic Groups_ and clicking the "Add" button, or through the REST API.
 
 Each Dynamic Group must have a human-readable **Name** string, e.g. `devices-site-ams01` and a **Slug**, which should be a simple database-friendly string. By default, the slug will be automatically generated from the name, however you may customize it if you like. You must select a **Content Type** for the group that determines the filtering parameters available include objects as member into the group. Finally, you may also assign a an optional human-friendly **Description** (e.g. "Devices in site AMS01").
 
-Once a new Dynamic Group is created, the **Filter Fields** or **Child Groups** may be specified. This must be done after the group has been created by clicking the "Edit" button.
+Once a new Dynamic Group is created, the group can be configured by clicking the "Edit" button to specify **Filter Fields** or **Child Groups** to use to narrow down the group's member objects. More on this below.
 
 !!! warning
     The content type of a Dynamic Group cannot be modified once created, so take care in selecting this initially. This is intended to prevent the possibility of inconsistent data and enforces the importance of thinking about the data model when defining a new Dynamic Group.
 
 ### Working with Dynamic Groups
 
-Dynamic Groups can be accessed from the primary Dynamic Groups landing page in the web interface under the _Organization > Dynamic Groups_ menu. From there you may view the list of available groups, search or filter the list, view or edit an individual group, or bulk delete groups. Additionally if a group's filter has matching members, the number of members may be clicked to take you to a filtered list view of those objects.
+Once created and configured, Dynamic Groups can be accessed from the primary Dynamic Groups landing page in the web interface under the _Organization > Dynamic Groups_ menu. From there you may view the list of available groups, search or filter the list, view or edit an individual group, or bulk delete groups. Additionally if a group's filter has matching members, the number of members may be clicked to take you to a filtered list view of those objects.
 
 Dynamic Groups cannot be imported nor can they be updated in bulk, as these operations would be complex and do not make sense in most cases.
 
 From an individual object's detail page, if it is a member of any groups, a "Dynamic Groups" tab will display in the navigation tabs. Clicking that tab will display all Dynamic Groups of which this object is a member.
 
-## Filtering
+### Filtering
 
-Dynamic Group filtering is powered by **FilterSet** objects underneath the hood. Basic filtering is performed using the `filter` that is defined on a given Dynamic Group. Advanced filtering is performed by aggregating all filters from nested Dynamic Group memberships.
+Dynamic Group filtering is powered by **FilterSet** objects underneath the hood. Basic filtering is performed using the `filter` that is defined on a given Dynamic Group. Advanced filtering is performed by aggregating filters from multiple nested Dynamic Groups to form a combined parent Dynamic Group, which will be explained later in this document.
 
-### Basic Filtering
+An object is considered to be a member of a Dynamic Group if it is of the same Content Type and it is not excluded by way of any of the filter criteria specified for that group. By default, a freshly created group has an empty filter (`{}`), which will include all objects of the matching Content Type, just as a default list view of those objects would display prior to any filter fields being filled in the web UI.
 
-An object is considered to be a member of a Dynamic Group if it is of the same Content Type and it is not excluded by way of any of the filter criteria specified for that group. By default, if a group has an empty filter (`{}`) it will include all objects of the matching Content Type, just as a default list view of objects would prior to any filter fields being filled in the web UI.
-
-For example, for a Dynamic Group with Content Type of `dcim.device` and an empty filter, the list of members would be equivalent to the queryset for `Device.objects.all()` from the database ORM.
+For example, for a Dynamic Group with Content Type of `dcim.device` and an empty filter, the list of members would be equivalent to the default Device list view, which in turn is equivalent to the queryset for `Device.objects.all()` from the database ORM.
 
 !!! warning
     _Changed in version 1.4.0_  <!-- markdownlint-disable-line MD036 -->
 
     v1.3.0 the default for a group with an empty filter was to fail "closed" and have zero members.
 
-    As of v1.4.0, this behavior has been inverted to include all objects matching the content type by default instead of matching no objects. This was necessary to implement the progressive layering of child filters similarly to how we use filters to reduce desired objects from basic list view filters. This will described in more detail below.
+    As of v1.4.0, this behavior has been inverted to default to include all objects matching the content type, instead of matching no objects as was previously the case. This was necessary to implement the progressive layering of child filters similarly to how we use filters to reduce desired objects from basic list view filters. This will described in more detail below.
+
+#### Basic Filtering
 
 When editing a Dynamic Group, under the **Filter Options** section, you will find a **Filter Fields** tab that allows one to specify filter criteria. The filter fields available for a given Content Type are backed and validated by underlying filterset classes (for example `nautobot.dcim.filters.DeviceFilterSet`) and are represented in the web interface as a dynamically-generated filter form that corresponds to each eligible filter field.
 
-For example, to specify a filter condition that would filter on site "AMS01", you would edit a group, populate the desired filter fields fields, and then click "Update".
+(TODO: screenshots here)
 
-![Setting site=ams01](../../media/models/dynamicgroup05.png)
-
-This results in a filter that gets translated into a JSON object:
-
-```json
-{
-    "site": [
-        "ams01"
-    ]
-}
-```
-
-The raw query for this at the database level gets translated to:
-
-```no-highlight
-(site__slug='ams01')
-```
-
-We will cover how these are used in more detail further in the documentation.
-
-For more on how filters are stored in the database, please see [Specifying Filter Conditions](#specifying-filter-conditions) below.
-
-### Advanced Filtering
+#### Advanced Filtering
 
 _Added in version 1.4.0_  <!-- markdownlint-disable-line MD036 -->
 
@@ -80,12 +60,120 @@ When editing a Dynamic Group, under the **Filter Options** section, you will fin
 
 ![Child Groups](../../media/models/dynamicgroup02.png)
 
-!!! important
-    Filter fields and child groups are mutually exclusive. A group may have either a filter defined, or child groups, but not both.
+## Example Workflow
 
-In the event that you attempt to add child groups to a dynamic group that already has a `filter` defined, or populate a filter on a dynamic group that already has children, this will result in a `ValidationError`. For example:
+Dynamic Groups are a complex topic and are perhaps best understood through a series of worked examples.
 
-![Dynamic Group Membership validation error](../../media/models/dynamicgroup03.png)
+### Basic Filtering with a single Dynamic Group
+
+Let's say you want to create a Dynamic Group that contains all production Devices at your first two Sites. You can create a Dynamic Group called "Devices of Interest" for content-type `dcim | device`, then edit it and set the **Filter Fields** to match:
+
+1. a Site of either "AMS01" or "BKK01"
+2. a Status of "Active" or "Offline"
+
+(TODO: screenshot here)
+
+After clicking "Update", you will be returned to the detail view for this Dynamic Group, where you can verify the filter logic that results, and click the "Members" tab to see the set of Devices that it contains.
+
+(TODO: screenshot here)
+
+A key to understand here is that generally, within a single Dynamic Group, additional values specified for the _same_ filter field (here, "Site") will _broaden_ the group to _include_ additional objects that match those additional values, while specifying values for _additional filter fields_ (here, "Status") will _narrow_ the group to match only the objects that match this additional filter. This is expressed in the "Filter Query Logic" panel by the use of `OR` and `AND` operators - the logic for this Dynamic Group is:
+
+```no-highlight
+((site__slug='ams01' OR site__slug='bkk01') AND (status__slug='active' OR status__slug='offline'))
+```
+
+### Advanced Filtering - Combining Two Dynamic Groups into a Third
+
+_Added in version 1.4.0_  <!-- markdownlint-disable-line MD036 -->
+
+Now, let's say that you add a third site to your network. This site is currently being built out, and you don't care about Devices from this site that are Offline status at present. What you want for your "Devices of Interest" Dynamic Group is logic similar to:
+
+```no-highlight
+(
+  ((site__slug='ams01' OR site__slug='bkk01') AND (status__slug='active' OR status__slug='offline'))
+  OR (site__slug='can01' AND status__slug='active')
+)
+```
+
+This logic is too complex to express directly via a single Dynamic Group, but fear not! This is what combining Dynamic Groups allows you to do.
+
+First, you can edit your existing "Devices of Interest" group to a new name and slug that more accurately reflect that it no longer reflects everything you need, perhaps "Devices at Sites A and B":
+
+(TODO: screenshot here)
+
+Next, you can create a new "Devices of Interest" group. Edit this group, and instead of specifying **Filter Fields**, switch to the **Child Groups** tab of the editor, select the operator "Include (OR)" and the group "Devices at Sites A and B", and update the group.
+
+(TODO: screenshot here)
+
+In the new group's detail view, you can see that it now contains one child group, "Devices at Sites A and B", and its members are exactly the same as those of that group. But we're not done yet! Next, you'll create another group to represent the other part of your desired logic. Call this group "Site C So Far", and set its **Filter Fields** to match Site "CAN01" and Status "Active". Verify that it contains the expected set of Devices from Site C.
+
+(TODO: screenshots here)
+
+Now, we'll add this group into the "Devices of Interest" parent group. Navigate back to the **Dynamic Groups** list view, and edit this group. Under the **Child Groups** tab, add another "Include (OR)" operator and select group "Site C So Far":
+
+(TODO: screenshot here)
+
+Now things are getting interesting! The "Devices of Interest" Dynamic Group now contains the filtered Devices from both of its child groups, and the "Filter Query Logic" matches our intent as we stated it earlier:
+
+```no-highlight
+(
+  ((site__slug='ams01' OR site__slug='bkk01') AND (status__slug='active' OR status__slug='offline'))
+  OR (site__slug='can01' AND status__slug='active')
+)
+```
+
+### Advanced Filtering: Nested Groups and Negation
+
+_Added in version 1.4.0_  <!-- markdownlint-disable-line MD036 -->
+
+Next, let's say you add a fourth site to your network. This site is in bad shape, and has Devices in a wide range of statuses. You want your "Devices of Interest" group to include all Devices from this site, _except for those in Decommissioning status_. To express this logic and add these devices to our parent group, we will need to use a combination of groups and the "Exclude (NOT)" operator.
+
+First, you will create an "Site D All Devices" group. This will simply match Devices at Site "DEL01", regardless of their status.
+
+(TODO: screenshot here)
+
+Then create a "Site D Decommissioning Devices" group, which matches Site "DEL01" and Status "Decommissioning".
+
+(TODO: screenshot here)
+
+Next create a "Site D Devices of Interest" group, and set its **Child Groups** to:
+
+1. Operator "Include (OR)", group "Site D All Devices"
+2. Operator "Exclude (NOT)", group "Site D Decommissioning Devices"
+
+You can check this group and confirm that it contains the expected restricted subset of Devices.
+
+(TODO: screenshot here)
+
+Finally, you can edit the parent "Devices of Interest" group and add a third **Child Groups** entry, "Include (OR)" on "Site D Devices of Interest". The final result is a Dynamic Group that contains the desired set of Devices across all four of your Sites.
+
+(TODO: screenshot here)
+
+You can see the filter logic that this combination of groups results in:
+
+```no-highlight
+(
+  ((site__slug='ams01' OR site__slug='bkk01') AND (status__slug='active' OR status__slug='offline'))
+  OR (site__slug='can01' AND status__slug='active')
+  OR (
+    site__slug='del01'
+    AND (NOT site__slug='del01' AND status__slug='decommissioning')
+  )
+)
+```
+
+You can also see the hierarchy of nested groups that are being used to derive the "Devices of Interest" group:
+
+(TODO: screenshot here)
+
+Most importantly, you can see that you now have a Dynamic Group that contains exactly the set of Devices you need:
+
+(TODO: screenshot here)
+
+---
+
+## Technical Details
 
 ### Filter Generation
 
