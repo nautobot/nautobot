@@ -63,6 +63,11 @@ class NautobotViewSetMixin(GenericViewSet, AccessMixin, GetReturnURLMixin, FormV
     renderer_classes = [NautobotHTMLRenderer]
     logger = logging.getLogger(__name__)
     lookup_field = "slug"
+    # Attributes that need to be specified
+    queryset = None
+    table_class = None
+    filterset_class = None
+    filterset_form_class = None
 
     def get_permissions_for_model(self, model, actions):
         """
@@ -82,13 +87,19 @@ class NautobotViewSetMixin(GenericViewSet, AccessMixin, GetReturnURLMixin, FormV
         """
         Obtain the permissions needed to perform certain actions on a model.
         """
-        return self.get_permissions_for_model(self.queryset.model, [PERMISSIONS_ACTION_MAP[self.action]])
+        queryset = None
+        try:
+            queryset = self.get_queryset()
+        except AssertionError:
+            messages.error(self.request, "Please include a `queryset` attribute in '%s'" % self.__class__.__name__)
+        return self.get_permissions_for_model(queryset.model, [PERMISSIONS_ACTION_MAP[self.action]])
 
     def has_permission(self):
         """
         Check whether the user has the permissions needed to perform certain actions.
         """
         user = self.request.user
+        self.check_if_queryset_attribute_exist()
         permission_required = self.get_required_permission()
         # Check that the user has been granted the required permission(s).
         if user.has_perms(permission_required):
@@ -109,6 +120,20 @@ class NautobotViewSetMixin(GenericViewSet, AccessMixin, GetReturnURLMixin, FormV
         """
         if not self.has_permission():
             self.handle_no_permission()
+
+    def check_if_queryset_attribute_exist(self):
+        # Check if self.queryset is specified in the ModelViewSet before performing subsequent actions
+        # If not, display an error message
+        try:
+            self.get_queryset()
+        except AssertionError:
+            messages.error(self.request, "Please include a `queryset` attribute in '%s'" % self.__class__.__name__)
+
+    def check_if_table_class_attribute_exist(self):
+        # Check if self.table_class is specified in the ModelViewSet before performing subsequent actions
+        # If not, display an error message
+        if getattr(self, "table_class") is None:
+            messages.error(self.request, "Please include a `table_class` attribute in '%s'" % self.__class__.__name__)
 
     def _process_destroy_form(self, form):
         """
@@ -147,41 +172,69 @@ class NautobotViewSetMixin(GenericViewSet, AccessMixin, GetReturnURLMixin, FormV
         form.add_error(None, msg)
         return form
 
+    def _handle_not_implemented_error(self):
+        # Blanket handler for NotImplementError raised by form helper functions
+        msg = "Please provide the appropriate mixin before using this helper function"
+        messages.error(self.request, msg)
+        self.has_error = True
+
+    def _handle_validation_error(self, e):
+        messages.error(self.request, f"{self.obj} failed validation: {e}")
+        self.has_error = True
+
     def alter_queryset(self, request):
         # .all() is necessary to avoid caching queries
+        self.check_if_queryset_attribute_exist()
         return self.queryset.all()
 
     def form_valid(self, form):
         """
         Handle valid forms and redirect to success_url.
         """
+        self.check_if_queryset_attribute_exist()
         request = self.request
         self.has_error = False
         if self.action == "destroy":
-            self._process_destroy_form(form)
+            try:
+                self._process_destroy_form(form)
+            except ObjectDoesNotExist:
+                form = self._handle_object_does_not_exist(form)
+            except NotImplementedError:
+                self._handle_not_implemented_error()
         elif self.action == "bulk_destroy":
-            self._process_bulk_destroy_form(form)
+            try:
+                self._process_bulk_destroy_form(form)
+            except ObjectDoesNotExist:
+                form = self._handle_object_does_not_exist(form)
+            except NotImplementedError:
+                self._handle_not_implemented_error()
         elif self.action in ["create", "update"]:
             try:
                 self._process_create_or_update_form(form)
+            except ValidationError as e:
+                self._handle_validation_error(e)
             except ObjectDoesNotExist:
                 form = self._handle_object_does_not_exist(form)
+            except NotImplementedError:
+                self._handle_not_implemented_error()
         elif self.action == "bulk_update":
             try:
                 self._process_bulk_update_form(form)
             except ValidationError as e:
-                messages.error(self.request, f"{self.obj} failed validation: {e}")
-                self.has_error = True
+                self._handle_validation_error(e)
             except ObjectDoesNotExist:
                 form = self._handle_object_does_not_exist(form)
+            except NotImplementedError:
+                self._handle_not_implemented_error()
         elif self.action == "bulk_create":
             try:
                 self.obj_table = self._process_bulk_create_form(form)
-            except ValidationError:
-                self.has_error = True
-                pass
+            except ValidationError as e:
+                self._handle_validation_error(e)
             except ObjectDoesNotExist:
                 form = self._handle_object_does_not_exist(form)
+            except NotImplementedError:
+                self._handle_not_implemented_error()
 
         if not self.has_error:
             self.logger.debug("Form validation was successful")
@@ -197,6 +250,7 @@ class NautobotViewSetMixin(GenericViewSet, AccessMixin, GetReturnURLMixin, FormV
             data = {}
             if self.action in ["bulk_update", "bulk_destroy"]:
                 pk_list = self.request.POST.getlist("pk")
+                self.check_if_table_class_attribute_exist()
                 table = self.table_class(self.queryset.filter(pk__in=pk_list), orderable=False)
                 if not table.rows:
                     messages.warning(
@@ -213,10 +267,12 @@ class NautobotViewSetMixin(GenericViewSet, AccessMixin, GetReturnURLMixin, FormV
         """
         Handle invalid forms.
         """
+        self.check_if_queryset_attribute_exist()
         data = {}
         request = self.request
         if self.action in ["bulk_update", "bulk_destroy"]:
             pk_list = self.request.POST.getlist("pk")
+            self.check_if_table_class_attribute_exist()
             table = self.table_class(self.queryset.filter(pk__in=pk_list), orderable=False)
             if not table.rows:
                 messages.warning(
@@ -258,14 +314,41 @@ class NautobotViewSetMixin(GenericViewSet, AccessMixin, GetReturnURLMixin, FormV
 
     def get_template_name(self):
         # Use "<app>/<model>_<action> if available, else fall back to generic templates
-        model_opts = self.model._meta
+        self.check_if_queryset_attribute_exist()
+        model_opts = self.queryset.model._meta
         app_label = model_opts.app_label
         action = self.action
-        try:
-            template_name = f"{app_label}/{model_opts.model_name}_{action}.html"
-            select_template([template_name])
-        except TemplateDoesNotExist:
-            template_name = f"generic/object_{action}.html"
+
+        if action == "create":
+            # When the action is `create`, try to select {object}_create.html first, then {object}_update.html
+            # If both are not defined, fall back to generic/object_create.html
+            try:
+                template_name = f"{app_label}/{model_opts.model_name}_create.html"
+                select_template([template_name])
+            except TemplateDoesNotExist:
+                try:
+                    template_name = f"{app_label}/{model_opts.model_name}_update.html"
+                    select_template([template_name])
+                except TemplateDoesNotExist:
+                    template_name = f"generic/object_{action}.html"
+        elif action == "update":
+            # When the action is `update`, try to select {object}_update.html first, then {object}_create.html
+            # If both are not defined, fall back to generic/object_update.html
+            try:
+                template_name = f"{app_label}/{model_opts.model_name}_update.html"
+                select_template([template_name])
+            except TemplateDoesNotExist:
+                try:
+                    template_name = f"{app_label}/{model_opts.model_name}_create.html"
+                    select_template([template_name])
+                except TemplateDoesNotExist:
+                    template_name = f"generic/object_{action}.html"
+        else:
+            try:
+                template_name = f"{app_label}/{model_opts.model_name}_{action}.html"
+                select_template([template_name])
+            except TemplateDoesNotExist:
+                template_name = f"generic/object_{action}.html"
         return template_name
 
     def get_form(self, *args, **kwargs):
@@ -345,6 +428,7 @@ class ObjectListViewMixin(NautobotViewSetMixin, mixins.ListModelMixin):
 
     def check_for_export(self, request, model, content_type):
         # Check for export template rendering
+        self.check_if_queryset_attribute_exist()
         if request.GET.get("export"):
             et = get_object_or_404(
                 ExportTemplate,
@@ -377,6 +461,7 @@ class ObjectListViewMixin(NautobotViewSetMixin, mixins.ListModelMixin):
         """
         Export the queryset of objects as concatenated YAML documents.
         """
+        self.check_if_queryset_attribute_exist()
         yaml_data = [obj.to_yaml() for obj in self.queryset]
 
         return "---\n".join(yaml_data)
@@ -387,7 +472,7 @@ class ObjectListViewMixin(NautobotViewSetMixin, mixins.ListModelMixin):
         """
         csv_data = []
         custom_fields = []
-
+        self.check_if_queryset_attribute_exist()
         # Start with the column headers
         headers = self.queryset.model.csv_headers.copy()
 
@@ -415,8 +500,10 @@ class ObjectListViewMixin(NautobotViewSetMixin, mixins.ListModelMixin):
         List the model instances.
         """
         context = {}
+
         if "export" in request.GET:
-            model = self.model
+            self.check_if_queryset_attribute_exist()
+            model = self.queryset.model
             content_type = ContentType.objects.get_for_model(model)
             return self.check_for_export(request, model, content_type)
         return Response(context)
@@ -431,14 +518,15 @@ class ObjectDestroyViewMixin(NautobotViewSetMixin, mixins.DestroyModelMixin):
 
     def _process_destroy_form(self, form):
         request = self.request
+        self.check_if_queryset_attribute_exist()
         obj = self.obj
         try:
             with transaction.atomic():
                 obj.delete()
-                msg = f"Deleted {self.model._meta.verbose_name} {obj}"
+                msg = f"Deleted {self.queryset.model._meta.verbose_name} {obj}"
                 self.logger.info(msg)
                 messages.success(request, msg)
-                self.success_url = self.get_return_url(request)
+                self.success_url = self.get_return_url(request, obj)
         except ProtectedError as e:
             self.logger.info("Caught ProtectedError while attempting to delete object")
             handle_protectederror([obj], request, e)
@@ -478,6 +566,7 @@ class ObjectEditViewMixin(NautobotViewSetMixin, mixins.CreateModelMixin, mixins.
         Helper method to create or update an object after the form is validated successfully.
         """
         request = self.request
+        self.check_if_queryset_attribute_exist()
         with transaction.atomic():
             object_created = not form.instance.present_in_database
             obj = self.form_save(form)
@@ -568,7 +657,8 @@ class ObjectBulkDestroyViewMixin(NautobotViewSetMixin, BulkDestroyModelMixin):
     def _process_bulk_destroy_form(self, form):
         request = self.request
         pk_list = self.request.POST.getlist("pk")
-        model = self.model
+        self.check_if_queryset_attribute_exist()
+        model = self.queryset.model
         # Delete objects
         queryset = self.queryset.filter(pk__in=pk_list)
 
@@ -597,11 +687,11 @@ class ObjectBulkDestroyViewMixin(NautobotViewSetMixin, BulkDestroyModelMixin):
         request.POST "_delete": Function to render the user selection of objects in a table form/BulkDestroyConfirmationForm via Response that is passed to NautobotHTMLRenderer.
         request.POST "_confirm": Function to validate the table form/BulkDestroyConfirmationForm and to perform the action of bulk destroy. Render the form with errors if exceptions are raised.
         """
-        model = self.model
+        model = self.queryset.model
         # Are we deleting *all* objects in the queryset or just a selected subset?
         if request.POST.get("_all"):
             if self.filterset_class is not None:
-                self.pk_list = [obj.pk for obj in self.filterset_class(request.GET, model.objects.only("pk")).qs]
+                self.pk_list = [obj.pk for obj in self.filterset_class(request.POST, model.objects.only("pk")).qs]
             else:
                 self.pk_list = model.objects.values_list("pk", flat=True)
         else:
@@ -614,6 +704,7 @@ class ObjectBulkDestroyViewMixin(NautobotViewSetMixin, BulkDestroyModelMixin):
                 return self.form_valid(form)
             else:
                 return self.form_invalid(form)
+        self.check_if_table_class_attribute_exist()
         table = self.table_class(self.queryset.filter(pk__in=self.pk_list), orderable=False)
         if not table.rows:
             messages.warning(
@@ -638,6 +729,7 @@ class ObjectBulkCreateViewMixin(NautobotViewSetMixin, BulkCreateModelMixin):
         # Iterate through CSV data and bind each row to a new model form instance.
         new_objs = []
         request = self.request
+        self.check_if_queryset_attribute_exist()
         with transaction.atomic():
             if request.FILES:
                 field_name = "csv_file"
@@ -661,6 +753,7 @@ class ObjectBulkCreateViewMixin(NautobotViewSetMixin, BulkCreateModelMixin):
                 raise ObjectDoesNotExist
 
         # Compile a table containing the imported objects
+        self.check_if_table_class_attribute_exist()
         obj_table = self.table_class(new_objs)
         if new_objs:
             msg = f"Imported {len(new_objs)} {new_objs[0]._meta.verbose_name_plural}"
@@ -693,10 +786,13 @@ class ObjectBulkUpdateViewMixin(NautobotViewSetMixin, BulkUpdateModelMixin):
 
     def _process_bulk_update_form(self, form):
         request = self.request
-        model = self.model
+        self.check_if_queryset_attribute_exist()
+        model = self.queryset.model
         form_custom_fields = getattr(form, "custom_fields", [])
         form_relationships = getattr(form, "relationships", [])
-        # Excluding custom_field, relationship_field, pk and object_note from standard_fields.
+        # Standard fields are those that are intrinsic to self.model in the form
+        # Relationships, custom fields, object_note are extrinsic fields
+        # PK is used to identify an existing instance, not to modify the object
         standard_fields = [
             field
             for field in form.fields
@@ -774,11 +870,14 @@ class ObjectBulkUpdateViewMixin(NautobotViewSetMixin, BulkUpdateModelMixin):
         request.POST "_edit": Function to render the user selection of objects in a table form/BulkUpdateForm via Response that is passed to NautobotHTMLRenderer.
         request.POST "_apply": Function to validate the table form/BulkUpdateForm and to perform the action of bulk update. Render the form with errors if exceptions are raised.
         """
-        model = self.model
+        model = self.queryset.model
 
         # If we are editing *all* objects in the queryset, replace the PK list with all matched objects.
-        if request.POST.get("_all") and self.filterset_class is not None:
-            self.pk_list = [obj.pk for obj in self.filterset_class(request.GET, self.queryset.only("pk")).qs]
+        if request.POST.get("_all"):
+            if self.filterset_class is not None:
+                self.pk_list = [obj.pk for obj in self.filterset_class(request.POST, model.objects.only("pk")).qs]
+            else:
+                self.pk_list = model.objects.values_list("pk", flat=True)
         else:
             self.pk_list = request.POST.getlist("pk")
         data = {}
@@ -791,7 +890,7 @@ class ObjectBulkUpdateViewMixin(NautobotViewSetMixin, BulkUpdateModelMixin):
                 return self.form_valid(form)
             else:
                 return self.form_invalid(form)
-
+        self.check_if_table_class_attribute_exist()
         table = self.table_class(self.queryset.filter(pk__in=self.pk_list), orderable=False)
         if not table.rows:
             messages.warning(

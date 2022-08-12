@@ -26,7 +26,6 @@ class CircuitTypeUIViewSet(
     view_mixins.ObjectBulkDestroyViewMixin,
     view_mixins.ObjectBulkCreateViewMixin,
 ):
-    model = CircuitType
     bulk_create_form_class = forms.CircuitTypeCSVForm
     filterset_class = filters.CircuitTypeFilterSet
     form_class = forms.CircuitTypeForm
@@ -56,8 +55,11 @@ class CircuitTypeUIViewSet(
         return context
 
 
-class CircuitTerminationUIViewSet(NautobotUIViewSet):
-    model = CircuitTermination
+class CircuitTerminationUIViewSet(
+    view_mixins.ObjectDetailViewMixin,
+    view_mixins.ObjectEditViewMixin,
+    view_mixins.ObjectDestroyViewMixin,
+):
     form_class = forms.CircuitTerminationForm
     lookup_field = "pk"
     queryset = CircuitTermination.objects.all()
@@ -74,7 +76,6 @@ class CircuitTerminationUIViewSet(NautobotUIViewSet):
 
 
 class ProviderUIViewSet(NautobotUIViewSet):
-    model = Provider
     bulk_create_form_class = forms.ProviderCSVForm
     bulk_update_form_class = forms.ProviderBulkEditForm
     filterset_class = filters.ProviderFilterSet
@@ -106,7 +107,6 @@ class ProviderUIViewSet(NautobotUIViewSet):
 
 
 class CircuitUIViewSet(NautobotUIViewSet):
-    model = Circuit
     bulk_create_form_class = forms.CircuitCSVForm
     bulk_update_form_class = forms.CircuitBulkEditForm
     filterset_class = filters.CircuitFilterSet

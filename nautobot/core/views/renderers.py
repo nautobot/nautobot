@@ -54,9 +54,11 @@ class NautobotHTMLRenderer(renderers.BrowsableAPIRenderer):
         """
         Helper function to construct and paginate the table for render used in the ObjectListView, BulkUpdateView and BulkDestroyView.
         """
+        view.check_if_table_class_attribute_exist()
+        view.check_if_queryset_attribute_exist()
         if view.action == "list":
-            permissions = kwargs.pop("permissions")
-            request = kwargs.pop("request")
+            permissions = kwargs.get("permissions", {})
+            request = kwargs.get("request", view.request)
             table = view.table_class(view.queryset, user=request.user)
             if "pk" in table.base_columns and (permissions["change"] or permissions["delete"]):
                 table.columns.show("pk")
@@ -67,13 +69,13 @@ class NautobotHTMLRenderer(renderers.BrowsableAPIRenderer):
             }
             return RequestConfig(request, paginate).configure(table)
         else:
-            pk_list = kwargs.pop("pk_list")
+            pk_list = kwargs.get("pk_list", [])
             table = view.table_class(view.queryset.filter(pk__in=pk_list), orderable=False)
             return table
 
     def validate_action_buttons(self, view, request):
         """Verify actions in self.action_buttons are valid view actions."""
-
+        view.check_if_queryset_attribute_exist()
         always_valid_actions = ("export",)
         valid_actions = []
         invalid_actions = []
@@ -81,7 +83,7 @@ class NautobotHTMLRenderer(renderers.BrowsableAPIRenderer):
         if not view.action_buttons:
             view.actions_buttons = ("add", "import", "export")
         for action in view.action_buttons:
-            if action in always_valid_actions or validated_viewname(view.model, action) is not None:
+            if action in always_valid_actions or validated_viewname(view.queryset.model, action) is not None:
                 valid_actions.append(action)
             else:
                 invalid_actions.append(action)
@@ -95,26 +97,30 @@ class NautobotHTMLRenderer(renderers.BrowsableAPIRenderer):
         context variable contains template context needed to render Nautobot generic templates / circuits templates.
         Override this function to add additional key/value pair to pass it to your templates.
         """
+        if renderer_context is None:
+            messages.error("renderer_context is None, please do not use the renderer without specifying the view.")
+            return {}
         view = renderer_context["view"]
         request = renderer_context["request"]
-        instance = view.get_object()
-        model = view.model
+        # Check if queryset attribute is set before doing anything.
+        view.check_if_queryset_attribute_exist()
+        model = view.queryset.model
         form_class = view.get_form_class()
         content_type = ContentType.objects.get_for_model(model)
-        view.queryset = view.alter_queryset(request)
-        # Compile a dictionary indicating which permissions are available to the current user for this model
-        permissions = self.construct_user_permissions(request, model)
-        # Construct valid actions
-        valid_actions = self.validate_action_buttons(view, request)
-        if view.action in ["create", "retrieve", "update", "destroy"]:
-            return_url = view.get_return_url(request, instance)
-        else:
-            return_url = view.get_return_url(request)
         form = None
         table = None
         changelog_url = None
-        if isinstance(instance, ChangeLoggedModel):
-            changelog_url = instance.get_changelog_url()
+        instance = None
+        view.queryset = view.alter_queryset(request)
+        # Compile a dictionary indicating which permissions are available to the current user for this model
+        permissions = self.construct_user_permissions(request, model)
+        if view.action in ["create", "retrieve", "update", "destroy"]:
+            instance = view.get_object()
+            return_url = view.get_return_url(request, instance)
+            if isinstance(instance, ChangeLoggedModel):
+                changelog_url = instance.get_changelog_url()
+        else:
+            return_url = view.get_return_url(request)
         # Get form for context rendering according to view.action unless it is previously set.
         # A form will be passed in from the views if the form has errors.
         if data.get("form"):
@@ -141,7 +147,7 @@ class NautobotHTMLRenderer(renderers.BrowsableAPIRenderer):
             elif view.action == "bulk_destroy":
                 if request.POST.get("_all"):
                     if view.filterset_class is not None:
-                        pk_list = [obj.pk for obj in self.filterset_class(request.POST, model.objects.only("pk")).qs]
+                        pk_list = [obj.pk for obj in view.filterset_class(request.POST, model.objects.only("pk")).qs]
                     else:
                         pk_list = model.objects.values_list("pk", flat=True)
                 else:
@@ -157,8 +163,11 @@ class NautobotHTMLRenderer(renderers.BrowsableAPIRenderer):
                 if request.data:
                     table = data.get("table")
             elif view.action == "bulk_update":
-                if request.POST.get("_all") and view.filterset_class is not None:
-                    pk_list = [obj.pk for obj in view.filterset_class(request.POST, view.queryset.only("pk")).qs]
+                if request.POST.get("_all"):
+                    if view.filterset_class is not None:
+                        pk_list = [obj.pk for obj in view.filterset_class(request.POST, view.queryset.only("pk")).qs]
+                    else:
+                        pk_list = model.objects.values_list("pk", flat=True)
                 else:
                     pk_list = request.POST.getlist("pk")
 
@@ -173,12 +182,10 @@ class NautobotHTMLRenderer(renderers.BrowsableAPIRenderer):
                 table = self.construct_table(view, pk_list=pk_list)
 
         context = {
-            "action_buttons": valid_actions,
             "changelog_url": changelog_url,
             "content_type": content_type,
-            "editing": instance.present_in_database,
-            "filter_form": self.get_filter_form(view, request),
             "form": form,
+            "filter_form": self.get_filter_form(view, request),
             "object": instance,
             "obj": instance,  # NOTE: This context key is deprecated in favor of `object`.
             "obj_type": view.queryset.model._meta.verbose_name,  # NOTE: This context key is deprecated in favor of `verbose_name`.
@@ -193,7 +200,21 @@ class NautobotHTMLRenderer(renderers.BrowsableAPIRenderer):
         if view.action == "retrieve":
             context.update(view.get_extra_context(request, instance))
         else:
-            if view.action == "bulk_create":
+            if view.action == "list":
+                # Construct valid actions for list view.
+                valid_actions = self.validate_action_buttons(view, request)
+                context.update(
+                    {
+                        "action_buttons": valid_actions,
+                    }
+                )
+            elif view.action in ["create", "update"]:
+                context.update(
+                    {
+                        "editing": instance.present_in_database,
+                    }
+                )
+            elif view.action == "bulk_create":
                 context.update(
                     {
                         "active_tab": "csv-data",
@@ -210,8 +231,5 @@ class NautobotHTMLRenderer(renderers.BrowsableAPIRenderer):
         view = renderer_context["view"]
         # Get the corresponding template based on self.action in view.get_template_name() unless it is already specified in the Response() data.
         # See form_valid() for self.action == "bulk_create".
-        if data.get("template"):
-            self.template = data.get("template")
-        else:
-            self.template = view.get_template_name()
+        self.template = data.get("template", view.get_template_name())
         return super().render(data, accepted_media_type=accepted_media_type, renderer_context=renderer_context)
