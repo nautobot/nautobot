@@ -151,6 +151,7 @@ The `settings_and_registry` default context processor was changed to purely `set
 
 - [#2178](https://github.com/nautobot/nautobot/issues/2178) - Fixed "invalid filter" error when filtering JobResults in the UI.
 - [#2191](https://github.com/nautobot/nautobot/pull/2191) - Fix widget for boolean filters fields when generating filter form for a Dynamic Group
+- [#2197](https://github.com/nautobot/nautobot/pull/2197) - Fixed some display issues in the Dynamic Groups detail view.
 
 ## v1.4.0rc1 (2022-08-10)
 
