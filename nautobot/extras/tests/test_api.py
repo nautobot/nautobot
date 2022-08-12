@@ -1437,7 +1437,7 @@ class JobAPIRunTestMixin:
         self.assertHttpStatus(response, status.HTTP_400_BAD_REQUEST)
         self.assertEqual(
             response.data["schedule"]["interval"][0],
-            "Unable to schedule job: Job may have sensitive input variables.",
+            "Unable to schedule job: Job may have sensitive input variables",
         )
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
