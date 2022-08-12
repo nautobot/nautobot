@@ -369,7 +369,7 @@ class DynamicGroupModelTest(DynamicGroupTestBase):
 
     # 2.0 TODO(jathan): This is done using Prefix at this time and this should be revised as filter
     # fields are vetted.
-    def tets_map_filter_fields_skip_method_filters_no_generate_query(self):
+    def test_map_filter_fields_skip_method_filters_no_generate_query(self):
         """
         Test that method filters are skipped in `DynamicGroup._map_filter_fields` when the filterset
         for the group's content type DOES NOT have a method named `generate_query_{filter_method}`.
