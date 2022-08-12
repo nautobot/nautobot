@@ -694,9 +694,7 @@ class JobHookTest(CeleryTestCase):
 
     @mock.patch.object(JobResult, "enqueue_job")
     def test_enqueue_job_hook_skipped(self, mock):
-        request = RequestFactory().request(SERVER_NAME="job_hook_context")
-        request.user = self.user
-        change_context = JobHookChangeContext(request=request)
+        change_context = JobHookChangeContext(user=self.user)
         with change_logging(change_context):
             Site.objects.create(name="Test Job Hook Site 2")
 
