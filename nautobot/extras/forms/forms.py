@@ -949,10 +949,10 @@ class JobResultFilterForm(BootstrapMixin, forms.Form):
             api_url="/api/users/users/",
         ),
     )
-    status = forms.ChoiceField(
-        choices=add_blank_choice(JobResultStatusChoices),
+    status = forms.MultipleChoiceField(
+        choices=JobResultStatusChoices,
         required=False,
-        widget=StaticSelect2(),
+        widget=StaticSelect2Multiple(),
     )
 
 

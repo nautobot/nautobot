@@ -145,6 +145,8 @@ The `settings_and_registry` default context processor was changed to purely `set
 
 ### Fixed
 
+- [#2178](https://github.com/nautobot/nautobot/issues/2178) - Fixed "invalid filter" error when filtering JobResults in the UI.
+
 ## v1.4.0rc1 (2022-08-10)
 
 ### Added
