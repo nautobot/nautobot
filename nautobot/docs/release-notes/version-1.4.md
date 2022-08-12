@@ -9,6 +9,10 @@ If you are a user migrating from NetBox to Nautobot, please refer to the ["Migra
 
 ### Added
 
+#### Custom Field Extended Filtering ([#1498](https://github.com/nautobot/nautobot/issues/1498))
+
+Objects with custom fields now support [filter lookup expressions](../rest-api/filtering/#lookup-expressions) for filtering by custom field values, such as `cf_date_field__gte=2022-08-11` to select objects whose `date_field` custom field has a date of 2022-08-11 or later.
+
 #### Custom Field Slugs ([#1962](https://github.com/nautobot/nautobot/issues/1962))
 
 Custom fields now have a distinct `slug` field. The custom field `name` attribute should be considered deprecated, and will be removed in a future major release (see also [#824](https://github.com/nautobot/nautobot/issues/824).) Additionally, the `label` attribute, while currently optional in the database, will become mandatory in that same future release as a consequence. When migrating from an earlier Nautobot release to version 1.4 or later, the `slug` and `label` for all existing custom fields will be automatically populated if not previously defined.
@@ -146,13 +150,16 @@ The `settings_and_registry` default context processor was changed to purely `set
 ### Fixed
 
 - [#2178](https://github.com/nautobot/nautobot/issues/2178) - Fixed "invalid filter" error when filtering JobResults in the UI.
+- [#2191](https://github.com/nautobot/nautobot/pull/2191) - Fix widget for boolean filters fields when generating filter form for a Dynamic Group
 - [#2192](https://github.com/nautobot/nautobot/issues/2178) - Fixed job.request removed from job instance in `v1.4.0b1`.
+- [#2197](https://github.com/nautobot/nautobot/pull/2197) - Fixed some display issues in the Dynamic Groups detail view.
 
 ## v1.4.0rc1 (2022-08-10)
 
 ### Added
 
 - [#767](https://github.com/nautobot/nautobot/issues/767) - Added notes field to Primary and Organizational models.
+- [#1498](https://github.com/nautobot/nautobot/issues/1498) - Added extended lookup expression filters to custom fields.
 - [#1962](https://github.com/nautobot/nautobot/issues/1962) - Added `slug` field to Custom Field model, added 1.4 REST API version of the `api/extras/custom-fields/` endpoints.
 - [#2106](https://github.com/nautobot/nautobot/issues/2106) - Added support for listing/creating Notes via REST API.
 
