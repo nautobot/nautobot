@@ -262,20 +262,57 @@ class PrettyPrintQueryTest(TestCase):
             Q(site__slug__in=["ams01", "ang01"]),
         ]
         results = [
-            "(((site__slug='ams01' OR site__slug='ang01') AND (NOT status__slug='active')) OR status__slug='planned')",
-            "((site__slug='ams01' OR site__slug='ang01') AND (NOT status__slug='active'))",
-            "(site__slug='ams01' OR site__slug='ang01')",
-            "(site__slug='ang01' AND (NOT status__slug='active'))",
-            "(site__slug='ams01' AND status__slug='planned')",
-            "(site__slug='ang01')",
-            "(status__id=12345)",
-            "(site__slug__in=['ams01', 'ang01'])",
+            """\
+(
+  (
+    (
+      site__slug='ams01' OR site__slug='ang01'
+    ) AND (
+      NOT (status__slug='active')
+    )
+  ) OR status__slug='planned'
+)""",
+            """\
+(
+  (
+    site__slug='ams01' OR site__slug='ang01'
+  ) AND (
+    NOT (status__slug='active')
+  )
+)""",
+            """\
+(
+  site__slug='ams01' OR site__slug='ang01'
+)""",
+            """\
+(
+  site__slug='ang01' AND (
+    NOT (status__slug='active')
+  )
+)""",
+            """\
+(
+  site__slug='ams01' AND status__slug='planned'
+)""",
+            """\
+(
+  site__slug='ang01'
+)""",
+            """\
+(
+  status__id=12345
+)""",
+            """\
+(
+  site__slug__in=['ams01', 'ang01']
+)""",
         ]
 
         tests = zip(queries, results)
 
         for query, expected in tests:
-            self.assertEqual(pretty_print_query(query), expected)
+            with self.subTest(query=query):
+                self.assertEqual(pretty_print_query(query), expected)
 
 
 class SlugifyFunctionsTest(TestCase):
