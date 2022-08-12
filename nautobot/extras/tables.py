@@ -365,7 +365,7 @@ DESCENDANTS_LINK = """
         {% endfor %}
     {% endif %}
 {% endfor %}
-<a href="{{ record.get_absolute_url }}">{{ record.slug }}</a>
+<a href="{{ record.get_absolute_url }}">{{ record.name }}</a>
 """
 
 
@@ -407,7 +407,7 @@ ANCESTORS_LINK = """
         {% endfor %}
     {% endif %}
 {% endfor %}
-<a href="{{ record.get_absolute_url }}">{{ record.slug }}</a>
+<a href="{{ record.get_absolute_url }}">{{ record.name }}</a>
 """
 
 
