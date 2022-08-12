@@ -1149,6 +1149,9 @@ def run_job(data, request, job_result_pk, commit=True, *args, **kwargs):
     job_result.set_status(JobResultStatusChoices.STATUS_RUNNING)
     job_result.save()
 
+    # Add the current request as a property of the job
+    job.request = request
+
     def _run_job():
         """
         Core job execution task.
