@@ -66,21 +66,29 @@ Dynamic Groups are a complex topic and are perhaps best understood through a ser
 
 ### Basic Filtering with a single Dynamic Group
 
-Let's say you want to create a Dynamic Group that contains all production Devices at your first two Sites. You can create a Dynamic Group called "Devices of Interest" for content-type `dcim | device`, then edit it and set the **Filter Fields** to match:
+Let's say you want to create a Dynamic Group that contains all production Devices at your first two Sites. You can create a Dynamic Group called "Devices at Sites A and B" for content-type `dcim | device`, then edit it and set the **Filter Fields** to match:
 
 1. a Site of either "AMS01" or "BKK01"
 2. a Status of "Active" or "Offline"
 
-(TODO: screenshot here)
+![Setting Filter Fields for a Basic Dynamic Group](../../media/models/dynamicgroup_workflow_basic_01.png)
 
 After clicking "Update", you will be returned to the detail view for this Dynamic Group, where you can verify the filter logic that results, and click the "Members" tab to see the set of Devices that it contains.
 
-(TODO: screenshot here)
+![Resulting Basic Dynamic Group](../../media/models/dynamicgroup_workflow_basic_02.png)
+
+![Basic Group Members](../../media/models/dynamicgroup_workflow_basic_03.png)
 
 A key to understand here is that generally, within a single Dynamic Group, additional values specified for the _same_ filter field (here, "Site") will _broaden_ the group to _include_ additional objects that match those additional values, while specifying values for _additional filter fields_ (here, "Status") will _narrow_ the group to match only the objects that match this additional filter. This is expressed in the "Filter Query Logic" panel by the use of `OR` and `AND` operators - the logic for this Dynamic Group is:
 
 ```no-highlight
-((site__slug='ams01' OR site__slug='bkk01') AND (status__slug='active' OR status__slug='offline'))
+(
+  (
+    site__slug='ams01' OR site__slug='bkk01'
+  ) AND (
+    status__slug='active' OR status__slug='offline'
+  )
+)
 ```
 
 ### Advanced Filtering - Combining Two Dynamic Groups into a Third
@@ -91,35 +99,53 @@ Now, let's say that you add a third site to your network. This site is currently
 
 ```no-highlight
 (
-  ((site__slug='ams01' OR site__slug='bkk01') AND (status__slug='active' OR status__slug='offline'))
-  OR (site__slug='can01' AND status__slug='active')
+  (
+    (
+      site__slug='ams01' OR site__slug='bkk01'
+    ) AND (
+      status__slug='active' OR status__slug='offline'
+    )
+  ) OR (
+    site__slug='can01' AND status__slug='active'
+  )
 )
 ```
 
 This logic is too complex to express directly via a single Dynamic Group, but fear not! This is what combining Dynamic Groups allows you to do.
 
-First, you can edit your existing "Devices of Interest" group to a new name and slug that more accurately reflect that it no longer reflects everything you need, perhaps "Devices at Sites A and B":
+First, you can create a new "Devices of Interest" group. Edit this group, and instead of specifying **Filter Fields**, switch to the **Child Groups** tab of the editor, select the operator "Include (OR)" and the group "Devices at Sites A and B", and update the group.
 
-(TODO: screenshot here)
+![Creating a Parent Group](../../media/models/dynamicgroup_workflow_advanced_1_01.png)
 
-Next, you can create a new "Devices of Interest" group. Edit this group, and instead of specifying **Filter Fields**, switch to the **Child Groups** tab of the editor, select the operator "Include (OR)" and the group "Devices at Sites A and B", and update the group.
+In the new group's detail view, you can see that it now contains one child group, "Devices at Sites A and B", and its members are exactly the same as those of that group. But we're not done yet!
 
-(TODO: screenshot here)
+![Resulting Parent Group](../../media/models/dynamicgroup_workflow_advanced_1_02.png)
 
-In the new group's detail view, you can see that it now contains one child group, "Devices at Sites A and B", and its members are exactly the same as those of that group. But we're not done yet! Next, you'll create another group to represent the other part of your desired logic. Call this group "Site C So Far", and set its **Filter Fields** to match Site "CAN01" and Status "Active". Verify that it contains the expected set of Devices from Site C.
+Next, you'll create another group to represent the other part of your desired logic. Call this group "Site C So Far", and set its **Filter Fields** to match Site "CAN01" and Status "Active". Verify that it contains the expected set of Devices from Site C.
 
-(TODO: screenshots here)
+![Another Child Group](../../media/models/dynamicgroup_workflow_advanced_1_03.png)
 
 Now, we'll add this group into the "Devices of Interest" parent group. Navigate back to the **Dynamic Groups** list view, and edit this group. Under the **Child Groups** tab, add another "Include (OR)" operator and select group "Site C So Far":
 
-(TODO: screenshot here)
+![Adding Another Child Group to Parent Group](../../media/models/dynamicgroup_workflow_advanced_1_04.png)
 
-Now things are getting interesting! The "Devices of Interest" Dynamic Group now contains the filtered Devices from both of its child groups, and the "Filter Query Logic" matches our intent as we stated it earlier:
+Now things are getting interesting!
+
+![Updated Parent Group](../../media/models/dynamicgroup_workflow_advanced_1_05.png)
+
+The "Devices of Interest" Dynamic Group now contains the filtered Devices from both of its child groups, and the "Filter Query Logic" matches our intent as we stated it earlier:
 
 ```no-highlight
 (
-  ((site__slug='ams01' OR site__slug='bkk01') AND (status__slug='active' OR status__slug='offline'))
-  OR (site__slug='can01' AND status__slug='active')
+  (
+    (
+      site__slug='ams01' OR site__slug='bkk01'
+    ) AND (
+      status__slug='active' OR status__slug='offline'
+    )
+  ) OR (
+    site__slug='can01' AND status__slug='active'
+  )
 )
 ```
 
@@ -131,47 +157,57 @@ Next, let's say you add a fourth site to your network. This site is in bad shape
 
 First, you will create an "Site D All Devices" group. This will simply match Devices at Site "DEL01", regardless of their status.
 
-(TODO: screenshot here)
+![Another Child Group](../../media/models/dynamicgroup_workflow_advanced_2_01.png)
 
 Then create a "Site D Decommissioning Devices" group, which matches Site "DEL01" and Status "Decommissioning".
 
-(TODO: screenshot here)
+![A Child Group To Negate](../../media/models/dynamicgroup_workflow_advanced_2_02.png)
 
 Next create a "Site D Devices of Interest" group, and set its **Child Groups** to:
 
 1. Operator "Include (OR)", group "Site D All Devices"
 2. Operator "Exclude (NOT)", group "Site D Decommissioning Devices"
 
+![Defining a Group With Negation](../../media/models/dynamicgroup_workflow_advanced_2_03.png)
+
+!!! warning
+    In general, but especially when using the AND and NOT operators, you must pay close attention to the order of the child groups. In this example, if you were to reverse the order of these two child groups, you would **not** get the desired final result!
+
 You can check this group and confirm that it contains the expected restricted subset of Devices.
 
-(TODO: screenshot here)
+![The Resulting Group](../../media/models/dynamicgroup_workflow_advanced_2_04.png)
 
 Finally, you can edit the parent "Devices of Interest" group and add a third **Child Groups** entry, "Include (OR)" on "Site D Devices of Interest". The final result is a Dynamic Group that contains the desired set of Devices across all four of your Sites.
 
-(TODO: screenshot here)
+![The Final Combined Group](../../media/models/dynamicgroup_workflow_advanced_2_05.png)
 
 You can see the filter logic that this combination of groups results in:
 
 ```no-highlight
 (
-  ((site__slug='ams01' OR site__slug='bkk01') AND (status__slug='active' OR status__slug='offline'))
-  OR (site__slug='can01' AND status__slug='active')
-  OR (
-    site__slug='del01'
-    AND (NOT site__slug='del01' AND status__slug='decommissioning')
+  (
+    (
+      site__slug='ams01' OR site__slug='bkk01'
+    ) AND (
+      status__slug='active' OR status__slug='offline'
+    )
+  ) OR (
+    site__slug='can01' AND status__slug='active'
+  ) OR (
+    site__slug='del01' AND (
+      NOT (site__slug='del01' AND status__slug='decommissioning')
+    )
   )
 )
 ```
 
 You can also see the hierarchy of nested groups that are being used to derive the "Devices of Interest" group:
 
-(TODO: screenshot here)
+![Nested Group Hierarchy](../../media/models/dynamicgroup_workflow_advanced_2_06.png)
 
-Most importantly, you can see that you now have a Dynamic Group that contains exactly the set of Devices you need:
+Most importantly, you now have a Dynamic Group that contains exactly the set of Devices you need!
 
-(TODO: screenshot here)
-
----
+![Final Group Members](../../media/models/dynamicgroup_workflow_advanced_2_07.png)
 
 ## Technical Details
 
