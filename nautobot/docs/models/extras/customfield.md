@@ -62,6 +62,12 @@ If a default value is specified for a selection field, it must exactly match one
 
 The value of a multiple selection field will always return a list, even if only one value is selected.
 
+### Filtering on Custom Fields
+
+There are a number of available built-in filters for custom fields.
+
+Filtering on an object's list view follows the same pattern as [custom field filtering on the API](/rest-api/filtering/#filtering-by-custom-field).
+
 ## Custom Fields and the REST API
 
 When retrieving an object via the REST API, all of its custom field data will be included within the `custom_fields` attribute. For example, below is the partial output of a site with two custom fields defined:
