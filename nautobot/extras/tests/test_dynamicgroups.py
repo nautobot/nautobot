@@ -5,9 +5,10 @@ from django.core.exceptions import ValidationError
 from django.db.models import ProtectedError
 from django.urls import reverse
 
+from nautobot.dcim.choices import PortTypeChoices
 from nautobot.dcim.filters import DeviceFilterSet
 from nautobot.dcim.forms import DeviceForm, DeviceFilterForm
-from nautobot.dcim.models import Device, DeviceRole, DeviceType, Manufacturer, Site
+from nautobot.dcim.models import Device, DeviceRole, DeviceType, FrontPort, Manufacturer, RearPort, Site
 from nautobot.extras.choices import DynamicGroupOperatorChoices
 from nautobot.extras.models import DynamicGroup, DynamicGroupMembership, Status
 from nautobot.extras.filters import DynamicGroupFilterSet, DynamicGroupMembershipFilterSet
@@ -366,6 +367,27 @@ class DynamicGroupModelTest(DynamicGroupTestBase):
         # The filterset should have the method name and `generate_query_` method
         self.assertTrue(hasattr(filterset, filter_field.method))
         self.assertTrue(hasattr(filterset, "generate_query_" + filter_field.method))
+
+    # 2.0 TODO(jathan): This is done using `DeviceFilterSet.pass_through_ports` at this time and
+    # should be revised as filter fields are vetted.
+    def test_filter_method_generate_query(self):
+        """
+        Test that a filter with a filter method's corresponding `generate_query_{filter_method}` works as intended.
+        """
+        group = self.groups[0]
+
+        # We're going to test `pass_through_ports`
+        device = self.devices[0]
+        rear_port = RearPort.objects.create(device=device, name="rp1", positions=1, type=PortTypeChoices.TYPE_8P8C)
+        FrontPort.objects.create(
+            device=device, name="fp1", type=PortTypeChoices.TYPE_FC, rear_port=rear_port, rear_port_position=1
+        )
+
+        # Test that the filter returns the one device to which we added front/rear ports.
+        expected = ["device-site-1"]
+        filterset = group.filterset_class({"pass_through_ports": True}, Device.objects.all())
+        devices = list(filterset.qs.values_list("name", flat=True))
+        self.assertEqual(expected, devices)
 
     # 2.0 TODO(jathan): This is done using Prefix at this time and this should be revised as filter
     # fields are vetted.
