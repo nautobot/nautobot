@@ -9,11 +9,11 @@ from .models import Circuit, CircuitTermination, CircuitType, Provider, Provider
 
 app_name = "circuits"
 router = NautobotUIViewSetRouter()
-router.register("providers", views.ProviderUIViewSet, basename="provider")
-router.register("provider-networks", views.ProviderNetworkUIViewSet, basename="providernetwork")
-router.register("circuit-types", views.CircuitTypeUIViewSet, basename="circuittype")
-router.register("circuits", views.CircuitUIViewSet, basename="circuit")
-router.register("circuit-terminations", views.CircuitTerminationUIViewSet, basename="circuittermination")
+router.register("providers", views.ProviderUIViewSet)
+router.register("provider-networks", views.ProviderNetworkUIViewSet)
+router.register("circuit-types", views.CircuitTypeUIViewSet)
+router.register("circuits", views.CircuitUIViewSet)
+router.register("circuit-terminations", views.CircuitTerminationUIViewSet)
 
 urlpatterns = [
     path(

@@ -11,5 +11,6 @@ class NautobotUIViewSet(
     mixins.ObjectBulkUpdateViewMixin,
 ):
     """
-    This is the UI BaseViewSet you should inherit.
+    Nautobot BaseViewSet that is intended for UI use only. It provides default Nautobot functionalities such as
+    `create()`, `bulk_create()`, `update()`, `partial_update()`, `bulk_update()`, `destroy()`, `bulk_destroy()`, `retrieve()` and `list()` actions.
     """

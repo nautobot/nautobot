@@ -208,7 +208,8 @@ class NautobotHTMLRenderer(renderers.BrowsableAPIRenderer):
         Overrode render() from BrowsableAPIRenderer to set self.template with NautobotViewSet's get_template_name() before it is rendered.
         """
         view = renderer_context["view"]
-        # Get the corresponding template based on self.action unless it is previously set. See BulkCreateView/import_success.html
+        # Get the corresponding template based on self.action in view.get_template_name() unless it is already specified in the Response() data.
+        # See form_valid() for self.action == "bulk_create".
         if data.get("template"):
             self.template = data.get("template")
         else:

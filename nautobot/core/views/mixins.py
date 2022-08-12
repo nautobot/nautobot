@@ -1,6 +1,5 @@
 import logging
 
-from django.conf import settings
 from django.contrib import messages
 from django.contrib.contenttypes.models import ContentType
 from django.contrib.auth.mixins import AccessMixin
@@ -15,8 +14,6 @@ from django.forms import Form, ModelMultipleChoiceField, MultipleHiddenInput, Te
 from django.http import HttpResponse
 from django.shortcuts import get_object_or_404, redirect
 from django.template.loader import select_template, TemplateDoesNotExist
-from django.urls import reverse
-from django.urls.exceptions import NoReverseMatch
 from django.utils.http import is_safe_url
 from django.utils.html import escape
 from django.utils.safestring import mark_safe
@@ -27,7 +24,7 @@ from rest_framework.response import Response
 from rest_framework.viewsets import GenericViewSet
 
 from nautobot.core.api.views import BulkCreateModelMixin, BulkDestroyModelMixin, BulkUpdateModelMixin
-from nautobot.extras.models import CustomField, ExportTemplate, ChangeLoggedModel
+from nautobot.extras.models import CustomField, ExportTemplate
 from nautobot.utilities.error_handlers import handle_protectederror
 from nautobot.utilities.forms import (
     BootstrapMixin,
@@ -143,9 +140,9 @@ class NautobotViewSetMixin(GenericViewSet, AccessMixin, GetReturnURLMixin, FormV
         """
         raise NotImplementedError("_process_bulk_create_form() is not implemented")
 
-    def _handle_object_does_not_exist(self, form, logger):
+    def _handle_object_does_not_exist(self, form):
         msg = "Object import failed due to object-level permissions violation"
-        logger.debug(msg)
+        self.logger.debug(msg)
         self.has_error = True
         form.add_error(None, msg)
         return form
@@ -168,7 +165,7 @@ class NautobotViewSetMixin(GenericViewSet, AccessMixin, GetReturnURLMixin, FormV
             try:
                 self._process_create_or_update_form(form)
             except ObjectDoesNotExist:
-                form = self._handle_object_does_not_exist(form, self.logger)
+                form = self._handle_object_does_not_exist(form)
         elif self.action == "bulk_update":
             try:
                 self._process_bulk_update_form(form)
@@ -176,7 +173,7 @@ class NautobotViewSetMixin(GenericViewSet, AccessMixin, GetReturnURLMixin, FormV
                 messages.error(self.request, f"{self.obj} failed validation: {e}")
                 self.has_error = True
             except ObjectDoesNotExist:
-                form = self._handle_object_does_not_exist(form, self.logger)
+                form = self._handle_object_does_not_exist(form)
         elif self.action == "bulk_create":
             try:
                 self.obj_table = self._process_bulk_create_form(form)
@@ -184,7 +181,7 @@ class NautobotViewSetMixin(GenericViewSet, AccessMixin, GetReturnURLMixin, FormV
                 self.has_error = True
                 pass
             except ObjectDoesNotExist:
-                form = self._handle_object_does_not_exist(form, self.logger)
+                form = self._handle_object_does_not_exist(form)
 
         if not self.has_error:
             self.logger.debug("Form validation was successful")
@@ -326,34 +323,16 @@ class NautobotViewSetMixin(GenericViewSet, AccessMixin, GetReturnURLMixin, FormV
 
 
 class ObjectDetailViewMixin(NautobotViewSetMixin, mixins.RetrieveModelMixin):
-    def get_changelog_url(self, instance):
-        """Return the changelog URL for a given instance."""
-        meta = self.queryset.model._meta
-
-        # Don't try to generate a changelog_url for an ObjectChange.
-        if not issubclass(self.queryset.model, ChangeLoggedModel):
-            return None
-
-        route = f"{meta.app_label}:{meta.model_name}_changelog"
-        if meta.app_label in settings.PLUGINS:
-            route = f"plugins:{route}"
-
-        # Iterate the pk-like fields and try to get a URL, or return None.
-        fields = ["pk", "slug"]
-        for field in fields:
-            if not hasattr(instance, field):
-                continue
-
-            try:
-                return reverse(route, kwargs={field: getattr(instance, field)})
-            except NoReverseMatch:
-                continue
-
-        # This object likely doesn't have a changelog route defined.
-        return None
+    """
+    UI mixin to retrieve a model instance.
+    """
 
 
 class ObjectListViewMixin(NautobotViewSetMixin, mixins.ListModelMixin):
+    """
+    UI mixin to list a model queryset
+    """
+
     action_buttons = ("add", "import", "export")
     filterset_class = None
     filterset_form_class = None
@@ -444,6 +423,10 @@ class ObjectListViewMixin(NautobotViewSetMixin, mixins.ListModelMixin):
 
 
 class ObjectDestroyViewMixin(NautobotViewSetMixin, mixins.DestroyModelMixin):
+    """
+    UI mixin to destroy a model instance.
+    """
+
     destroy_form_class = ConfirmationForm
 
     def _process_destroy_form(self, form):
@@ -486,6 +469,10 @@ class ObjectDestroyViewMixin(NautobotViewSetMixin, mixins.DestroyModelMixin):
 
 
 class ObjectEditViewMixin(NautobotViewSetMixin, mixins.CreateModelMixin, mixins.UpdateModelMixin):
+    """
+    UI mixin to create or update a model instance.
+    """
+
     def _process_create_or_update_form(self, form):
         """
         Helper method to create or update an object after the form is validated successfully.
@@ -571,6 +558,10 @@ class ObjectEditViewMixin(NautobotViewSetMixin, mixins.CreateModelMixin, mixins.
 
 
 class ObjectBulkDestroyViewMixin(NautobotViewSetMixin, BulkDestroyModelMixin):
+    """
+    UI mixin to bulk destroy model instances.
+    """
+
     bulk_destroy_form_class = None
     filterset_class = None
 
@@ -636,6 +627,10 @@ class ObjectBulkDestroyViewMixin(NautobotViewSetMixin, BulkDestroyModelMixin):
 
 
 class ObjectBulkCreateViewMixin(NautobotViewSetMixin, BulkCreateModelMixin):
+    """
+    UI mixin to bulk create model instances.
+    """
+
     bulk_create_form_class = None
     bulk_create_widget_attrs = {}
 
@@ -689,6 +684,10 @@ class ObjectBulkCreateViewMixin(NautobotViewSetMixin, BulkCreateModelMixin):
 
 
 class ObjectBulkUpdateViewMixin(NautobotViewSetMixin, BulkUpdateModelMixin):
+    """
+    UI mixin to bulk update model instances.
+    """
+
     filterset_class = None
     bulk_update_form_class = None
 
@@ -697,6 +696,7 @@ class ObjectBulkUpdateViewMixin(NautobotViewSetMixin, BulkUpdateModelMixin):
         model = self.model
         form_custom_fields = getattr(form, "custom_fields", [])
         form_relationships = getattr(form, "relationships", [])
+        # Excluding custom_field, relationship_field, pk and object_note from standard_fields.
         standard_fields = [
             field
             for field in form.fields
@@ -735,8 +735,7 @@ class ObjectBulkUpdateViewMixin(NautobotViewSetMixin, BulkUpdateModelMixin):
                     elif form.cleaned_data.get(field_name) not in (None, ""):
                         obj.cf[form_cf_to_key[field_name]] = form.cleaned_data[field_name]
 
-                obj.full_clean()
-                obj.save()
+                obj.validated_save()
                 updated_objects.append(obj)
                 self.logger.debug(f"Saved {obj} (PK: {obj.pk})")
 

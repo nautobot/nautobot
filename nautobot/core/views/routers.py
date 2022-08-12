@@ -3,7 +3,7 @@ from rest_framework.routers import Route, SimpleRouter
 
 class NautobotUIViewSetRouter(SimpleRouter):
     """
-    Django Rest Framework ViewSet Custom Router.
+    Nautobot Custom Router that is intended for UI use only.
     """
 
     routes = [
