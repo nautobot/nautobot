@@ -1765,7 +1765,7 @@ class JobTestVersion13(
         self.assertHttpStatus(response, status.HTTP_400_BAD_REQUEST)
         self.assertEqual(
             response.data["approval_required"][0],
-            "A job that may have sensitive variables cannot also be marked as requiring approval",
+            "A job with sensitive variables cannot also be marked as requiring approval",
         )
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
