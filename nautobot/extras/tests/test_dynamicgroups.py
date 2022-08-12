@@ -11,6 +11,7 @@ from nautobot.dcim.models import Device, DeviceRole, DeviceType, Manufacturer, S
 from nautobot.extras.choices import DynamicGroupOperatorChoices
 from nautobot.extras.models import DynamicGroup, DynamicGroupMembership, Status
 from nautobot.extras.filters import DynamicGroupFilterSet, DynamicGroupMembershipFilterSet
+from nautobot.ipam.models import Prefix
 from nautobot.utilities.testing import TestCase
 
 
@@ -345,6 +346,50 @@ class DynamicGroupModelTest(DynamicGroupTestBase):
             self.assertNotIn("serial", fields)
         finally:
             del group.model.dynamic_group_skip_missing_fields
+
+    def test_map_filter_fields_skip_method_filters_generate_query(self):
+        """
+        Test that method filters are skipped in `DynamicGroup._map_filter_fields` when the filterset
+        for the group's content type has a method named `generate_query_{filter_method}`.
+        """
+        group = self.groups[0]
+        filterset = group.filterset_class()
+        fields = group._map_filter_fields
+
+        # We know that `has_primary_ip` fits this bill, so let's test that.
+        field_name = "has_primary_ip"
+        filter_field = filterset.filters[field_name]
+
+        # Make some field presence assertions
+        self.assertIn(field_name, fields)
+
+        # The filterset should have the method name and `generate_query_` method
+        self.assertTrue(hasattr(filterset, filter_field.method))
+        self.assertTrue(hasattr(filterset, "generate_query_" + filter_field.method))
+
+    # 2.0 TODO(jathan): This is done using Prefix at this time and this should be revised as filter
+    # fields are vetted.
+    def tets_map_filter_fields_skip_method_filters_no_generate_query(self):
+        """
+        Test that method filters are skipped in `DynamicGroup._map_filter_fields` when the filterset
+        for the group's content type DOES NOT have a method named `generate_query_{filter_method}`.
+
+        """
+        pfx_content_type = ContentType.objects.get_for_model(Prefix)
+        group = DynamicGroup(name="pfx", slug="pfx", content_type=pfx_content_type)
+        filterset = group.filterset_class()
+        fields = group._map_filter_fields
+
+        # We know that `within_include` does not have a `generate_query_{filter_method}` method.
+        field_name = "within_include"
+        filter_field = filterset.filters[field_name]
+
+        # Make some field presence assertions
+        self.assertNotIn(field_name, fields)
+
+        # The filterset should have the method name BUT NOT `generate_query_` method
+        self.assertTrue(hasattr(filterset, filter_field.method))
+        self.assertFalse(hasattr(filterset, "generate_query_" + filter_field.method))
 
     def test_get_filter_fields(self):
         """Test `DynamicGroup.get_filter_fields()`."""

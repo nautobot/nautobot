@@ -1037,15 +1037,26 @@ class DeviceFilterSet(
             "vc_priority",
         ]
 
+    def generate_query__has_primary_ip(self, value):
+        query = Q(primary_ip4__isnull=False) | Q(primary_ip6__isnull=False)
+        if not value:
+            return ~query
+        return query
+
     def _has_primary_ip(self, queryset, name, value):
-        params = Q(primary_ip4__isnull=False) | Q(primary_ip6__isnull=False)
-        if value:
-            return queryset.filter(params)
-        return queryset.exclude(params)
+        params = self.generate_query__has_primary_ip(value)
+        return queryset.filter(params)
 
     # 2.0 TODO: Remove me and `pass_through_ports` in exchange for `has_(front|rear)_ports`.
+    def generate_query__pass_through_ports(self, value):
+        query = Q(frontports__isnull=False, rearports__isnull=False)
+        if not value:
+            return ~query
+        return query
+
     def _pass_through_ports(self, queryset, name, value):
-        return queryset.exclude(frontports__isnull=value, rearports__isnull=value)
+        params = self.generate_query__pass_through_ports(value)
+        return queryset.filter(params)
 
 
 # TODO: should be DeviceComponentFilterSetMixin

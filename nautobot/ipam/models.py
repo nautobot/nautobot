@@ -424,6 +424,7 @@ class Role(OrganizationalModel):
     "custom_fields",
     "custom_links",
     "custom_validators",
+    "dynamic_groups",
     "export_templates",
     "graphql",
     "locations",
@@ -524,6 +525,9 @@ class Prefix(PrimaryModel, StatusModel):
         "is_pool",
         "description",
     ]
+    dynamic_group_filter_fields = {
+        "vrf": "vrf_id",
+    }
 
     class Meta:
         ordering = (
@@ -744,6 +748,7 @@ class Prefix(PrimaryModel, StatusModel):
     "custom_fields",
     "custom_links",
     "custom_validators",
+    "dynamic_groups",
     "export_templates",
     "graphql",
     "relationships",
@@ -839,6 +844,7 @@ class IPAddress(PrimaryModel, StatusModel):
         "role",
         "description",
     ]
+    dynamic_group_skip_missing_fields = True
 
     objects = IPAddressQuerySet.as_manager()
 

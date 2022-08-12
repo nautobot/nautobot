@@ -185,6 +185,7 @@ class RackRole(OrganizationalModel):
     "custom_fields",
     "custom_links",
     "custom_validators",
+    "dynamic_groups",
     "export_templates",
     "graphql",
     "locations",
@@ -310,6 +311,10 @@ class Rack(PrimaryModel, StatusModel):
         "outer_depth",
         "outer_unit",
     ]
+    dynamic_group_filter_fields = {
+        "group": "group_id",
+    }
+    dynamic_group_skip_missing_fields = True
 
     class Meta:
         ordering = ("site", "group", "_name")  # (site, group, name) may be non-unique
