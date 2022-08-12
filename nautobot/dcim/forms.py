@@ -483,7 +483,7 @@ class LocationForm(NautobotModelForm, TenancyForm):
             "tenant_group",
             "tenant",
             "description",
-            "tag",
+            "tags",
         ]
 
 
