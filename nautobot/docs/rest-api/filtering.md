@@ -52,11 +52,16 @@ To filter results by a custom field value, prepend `cf_` to the custom field nam
 GET /api/dcim/sites/?cf_foo=123
 ```
 
+!!! note
+    For custom field filters, due to historical details of implementation, only a single filter value can be specified when matching a given field. In other words, in the above example, you could _not_ add `&cf_foo=456` to the query in order to get all sites where custom field `foo` is 123 _or_ 456; instead you would need to run two separate queries. This restriction does not apply to custom field filters using lookup expressions (next section) and will likely be changed in a future major version of Nautobot.
+
 Custom fields can be mixed with built-in fields to further narrow results. When creating a custom string field, the type of filtering selected (loose versus exact) determines whether partial or full matching is used.
+
+Custom fields can use the lookup expressions listed in the next section by prepending `cf_` to the custom field `name` (and not the `slug`) followed by the required lookup type (see below).
 
 ## Lookup Expressions
 
-Certain model fields also support filtering using additional lookup expressions. This allows
+Certain model fields (including custom fields of type `text`, `url`, `select`, `integer`, and `date`) also support filtering using additional lookup expressions. This allows
 for negation and other context-specific filtering.
 
 These lookup expressions can be applied by adding a suffix to the desired field's name, e.g. `mac_address__n`. In this case, the filter expression is for negation and it is separated by two underscores. Below are the lookup expressions that are supported across different field types.
