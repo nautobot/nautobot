@@ -1146,3 +1146,147 @@ try:
 except ImportError:
     pass
 ```
+
+## NautobotUIViewSet
+
+New in Nautobot 1.4 is the debut of `NautobotUIViewSet`: A powerful plugin development tool that can save plugin developer hundreds of lines of code compared to using legacy `generic.views`. Using it to gain access to default functionalities previous provided by `generic.views` such as `create()`, `bulk_create()`, `update()`, `partial_update()`, `bulk_update()`, `destroy()`, `bulk_destroy()`, `retrieve()` and `list()` actions.
+
+Note that this ViewSet is catered specifically to the UI, not the API.
+
+Concrete examples on how to use `NautobotUIViewSet` resides in `nautobot.circuits.views`.
+
+Below we provide an example on how to use `NautobotUIViewSet` on a theoretical plugin model.
+
+```python
+from nautobot.core.views.viewsets import NautobotUIViewset
+
+class YourPluginModelUIViewSet(NautobotUIViewSet):
+    bulk_create_form_class = YourPluginModelCSVForm
+    bulk_update_form_class = YourPluginModelBulkEditForm
+    filterset_class = YourPluginModelFilterSet
+    filterset_form_class = YourPluginModelFilterForm
+    form_class = YourPluginModelForm
+    queryset = YourPluginModel.objects.all()
+    serializer_class = serializers.YourPluginModelSerializer
+    table_class = YourPluginModelTable
+```
+
+### Setting ViewSet Attributes
+
+**One caveat of using the NautobotUIViewSet is that the `queryset`, `serializer_class` and `table_class` attribute of the `YourPluginModelUIViewSet` has to be set before most of the `NautobotUIViewSet` functionalities will become available.**
+
+`NautobotUIViewSet`'s `lookup_field` is default to `slug` as we transition from `pk` to `slug` across Nautobot Apps. If you want to use a different field to look up an object, just override the default `lookup_field` in your ViewSet attributes:
+
+```python
+from nautobot.core.views.viewsets import NautobotUIViewset
+
+class YourPluginModelUIViewSet(NautobotUIViewSet):
+    ...
+    lookup_field = "pk"
+    ...
+```
+
+### Excluding ViewMixins from NautobotUIViewSet
+
+For plugin models that do not require certain views, simply inherit directly from the `ViewMixins` available in `nautobot.core.views.mixins` instead of `NautobotUIViewSet`.
+
+Concrete examples for excluding `ViewMixins`, checkout `CircuitTerminationUIViewSet` and `CircuitTypeUIViewSet` in `nautobot.circuits.views`.
+
+```python
+## A plugin model viewset that does not support bulk views and operations
+from nautobot.core.views import mixins as view_mixins
+
+class YourPluginModelUIViewSet(
+    view_mixins.ObjectListViewMixin,
+    view_mixins.ObjectDetailViewMixin,
+    view_mixins.ObjectEditViewMixin,
+    view_mixins.ObjectDestroyViewMixin,
+):
+
+    filterset_class = YourPluginModelFilterSet
+    filterset_form_class = YourPluginModelFilterForm
+    form_class = YourPluginModelForm
+    queryset = YourPluginModel.objects.all()
+    serializer_class = serializers.YourPluginModelSerializer
+    table_class = YourPluginModelTable
+    # You do not need to specify attributes that are not needed.
+```
+
+### Template Naming for NautobotUIViewSet
+
+Template naming is very intuitive in NautobotUIViewSet. In `templates/yourpluginmodel` folder, name your templates following this convention `{app_label}/{model_name}_{self.action}.html`.
+
+| ViewMixins    | self.action   |
+| ------------- |:-------------:|
+| ObjectlistViewMixin        | list         |
+| ObjectDetailViewMixin      | retrieve     |
+| ObjectEditViewMixin        | create/update|
+| ObjectDestroyViewMixin     | destroy      |
+| ObjectBulkDestroyViewMixin | bulk_destroy |
+| ObjectBulkCreateViewMixin  | bulk_create  |
+| ObjectBulkUpdateViewMixin  | bulk_update  |
+
+For example, for a DetailView template for `yourpluginmodel`, the template name will be `yourplugin/yourpluginmodel_retrieve.html`, for a BulkCreateView template for `yourpluginmodel`, the template name will be `yourplugin/yourpluginmodel_bulk_create.html` and etc.
+
+If you do not specify your own templates in `templates/yourpluginmodel` folder, `NautobotUIViewSet` will fall back to `generic/object_{self.action}.html`.
+
+If you do specify a `{app_label}/{model_opts.model_name}_create.html` file but not a `{app_label}/{model_opts.model_name}_update.html` file. When you update an object, it will fall back to `{app_label}/{model_opts.model_name}_create.html` and vice versa.
+
+## NautobotUIViewSetRouter
+
+With `NautobotUIViewSet` as the base UI ViewSet for `YourPluginModel`, it is required to register your urls with the help of `NautobotUIViewSetRouter`.
+
+For a concrete example on how to use `NautobotUIViewSetRouter`, see `nautobot.circuits.urls`.
+
+Below is a theoretical `urls.py` file for `YourPluginModel`:
+
+```python
+from django.urls import path
+
+from nautobot.core.views.routers import NautobotUIViewSetRouter
+from nautobot.plugins import views
+
+
+router = NautobotUIViewSetRouter()
+router.register("yourpluginmodel", views.YourPluginModelUIViewSet)
+
+urlpatterns = [
+    # Extra urls that do not follow the patterns of `NautobotUIViewSetRouter` go here.
+    # changelog, notes and etc.
+    ...
+    path(
+        "yourpluginmodels/<slug:slug>/changelog/",
+        ObjectChangeLogView.as_view(),
+        name="yourpluginmodel_changelog",
+        kwargs={"model": yourpluginmodel},
+    ),
+    path(
+        "yourpluginmodels/<slug:slug>/notes/",
+        ObjectNotesView.as_view(),
+        name="yourpluginmodel_notes",
+        kwargs={"model": yourpluginmodel},
+    ),
+    ...
+]
+urlpatterns += router.urls
+```
+
+### Excluding Urls from NautobotUIViewSetRouter
+
+Excluding unwanted urls from `NautobotUIViewSetRouter` is done for you at the ViewSet level. If you do not inherit the unwanted ViewMixin, the corresponding route from the router will not be published.
+
+```python
+# views.py
+# A viewset with no BulkViewMixins inherited
+class YourPluginModelUIViewSet(
+    view_mixins.ObjectListViewMixin,
+    view_mixins.ObjectDetailViewMixin,
+    view_mixins.ObjectEditViewMixin,
+    view_mixins.ObjectDestroyViewMixin,
+):
+...
+
+# urls.py
+# All the urls correspond to BulkViewMixins will not be published.
+router.register("yourpluginmodel", views.YourPluginModelUIViewSet)
+```

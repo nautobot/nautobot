@@ -37,6 +37,7 @@ class NautobotUIViewSetRouter(SimpleRouter):
         Route(
             url=r"^{prefix}/edit/$",
             mapping={
+                "get": "list",  # NOTE: To avoid a key error when the user manually type in "^{prefix}/edit/" in the browser, just render the ListView.
                 "post": "bulk_update",
             },
             name="{basename}_bulk_edit",
@@ -46,6 +47,7 @@ class NautobotUIViewSetRouter(SimpleRouter):
         Route(
             url=r"^{prefix}/delete/$",
             mapping={
+                "get": "list",  # NOTE: To avoid a key error when the user manually type in "^{prefix}/delete/" in the browser, just render the ListView.
                 "post": "bulk_destroy",
             },
             name="{basename}_bulk_delete",

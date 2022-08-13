@@ -58,16 +58,15 @@ class NautobotViewSetMixin(GenericViewSet, AccessMixin, GetReturnURLMixin, FormV
     NautobotViewSetMixin is an aggregation of various mixins from DRF, Django and Nautobot to acheive the desired behavior pattern for NautobotUIViewSet
     """
 
-    # serializer_class has to be specified to eliminate the need to override retrieve() in the RetrieveModelMixin for now.
-    serializer_class = None
     renderer_classes = [NautobotHTMLRenderer]
     logger = logging.getLogger(__name__)
     lookup_field = "slug"
-    # Attributes that need to be specified
+    # Attributes that need to be specified: form_class, queryset, serializer_class, table_class for most mixins.
+    form_class = None
     queryset = None
+    # serializer_class has to be specified to eliminate the need to override retrieve() in the RetrieveModelMixin for now.
+    serializer_class = None
     table_class = None
-    filterset_class = None
-    filterset_form_class = None
 
     def get_permissions_for_model(self, model, actions):
         """
@@ -87,12 +86,8 @@ class NautobotViewSetMixin(GenericViewSet, AccessMixin, GetReturnURLMixin, FormV
         """
         Obtain the permissions needed to perform certain actions on a model.
         """
-        queryset = None
-        try:
-            queryset = self.get_queryset()
-        except AssertionError:
-            messages.error(self.request, "Please include a `queryset` attribute in '%s'" % self.__class__.__name__)
-        return self.get_permissions_for_model(queryset.model, [PERMISSIONS_ACTION_MAP[self.action]])
+        self.check_if_queryset_attribute_exist()
+        return self.get_permissions_for_model(self.queryset.model, [PERMISSIONS_ACTION_MAP[self.action]])
 
     def has_permission(self):
         """
@@ -182,11 +177,6 @@ class NautobotViewSetMixin(GenericViewSet, AccessMixin, GetReturnURLMixin, FormV
         messages.error(self.request, f"{self.obj} failed validation: {e}")
         self.has_error = True
 
-    def alter_queryset(self, request):
-        # .all() is necessary to avoid caching queries
-        self.check_if_queryset_attribute_exist()
-        return self.queryset.all()
-
     def form_valid(self, form):
         """
         Handle valid forms and redirect to success_url.
@@ -194,47 +184,23 @@ class NautobotViewSetMixin(GenericViewSet, AccessMixin, GetReturnURLMixin, FormV
         self.check_if_queryset_attribute_exist()
         request = self.request
         self.has_error = False
-        if self.action == "destroy":
-            try:
+        try:
+            if self.action == "destroy":
                 self._process_destroy_form(form)
-            except ObjectDoesNotExist:
-                form = self._handle_object_does_not_exist(form)
-            except NotImplementedError:
-                self._handle_not_implemented_error()
-        elif self.action == "bulk_destroy":
-            try:
+            elif self.action == "bulk_destroy":
                 self._process_bulk_destroy_form(form)
-            except ObjectDoesNotExist:
-                form = self._handle_object_does_not_exist(form)
-            except NotImplementedError:
-                self._handle_not_implemented_error()
-        elif self.action in ["create", "update"]:
-            try:
+            elif self.action in ["create", "update"]:
                 self._process_create_or_update_form(form)
-            except ValidationError as e:
-                self._handle_validation_error(e)
-            except ObjectDoesNotExist:
-                form = self._handle_object_does_not_exist(form)
-            except NotImplementedError:
-                self._handle_not_implemented_error()
-        elif self.action == "bulk_update":
-            try:
+            elif self.action == "bulk_update":
                 self._process_bulk_update_form(form)
-            except ValidationError as e:
-                self._handle_validation_error(e)
-            except ObjectDoesNotExist:
-                form = self._handle_object_does_not_exist(form)
-            except NotImplementedError:
-                self._handle_not_implemented_error()
-        elif self.action == "bulk_create":
-            try:
+            elif self.action == "bulk_create":
                 self.obj_table = self._process_bulk_create_form(form)
-            except ValidationError as e:
-                self._handle_validation_error(e)
-            except ObjectDoesNotExist:
-                form = self._handle_object_does_not_exist(form)
-            except NotImplementedError:
-                self._handle_not_implemented_error()
+        except ValidationError as e:
+            self._handle_validation_error(e)
+        except ObjectDoesNotExist:
+            form = self._handle_object_does_not_exist(form)
+        except NotImplementedError:
+            self._handle_not_implemented_error()
 
         if not self.has_error:
             self.logger.debug("Form validation was successful")
@@ -247,6 +213,7 @@ class NautobotViewSetMixin(GenericViewSet, AccessMixin, GetReturnURLMixin, FormV
                 )
             return super().form_valid(form)
         else:
+            # render the form with the error message.
             data = {}
             if self.action in ["bulk_update", "bulk_destroy"]:
                 pk_list = self.request.POST.getlist("pk")
@@ -403,6 +370,11 @@ class NautobotViewSetMixin(GenericViewSet, AccessMixin, GetReturnURLMixin, FormV
         Should be overriden by user if customization is needed.
         """
         return form.save()
+
+    def alter_queryset(self, request):
+        # .all() is necessary to avoid caching queries
+        self.check_if_queryset_attribute_exist()
+        return self.queryset.all()
 
 
 class ObjectDetailViewMixin(NautobotViewSetMixin, mixins.RetrieveModelMixin):

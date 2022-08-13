@@ -1,3 +1,5 @@
+import logging
+
 from django.contrib import messages
 from django.contrib.contenttypes.models import ContentType
 from django.utils.safestring import mark_safe
@@ -21,6 +23,9 @@ class NautobotHTMLRenderer(renderers.BrowsableAPIRenderer):
     """
     Inherited from BrowsableAPIRenderer to do most of the heavy lifting for getting the context needed for templates and template rendering.
     """
+
+    # Log error messages within NautobotHTMLRenderer
+    logger = logging.getLogger(__name__)
 
     def get_filter_params(self, view, request):
         """Helper function - take request.GET and discard any parameters that are not used for queryset filtering."""
@@ -52,7 +57,7 @@ class NautobotHTMLRenderer(renderers.BrowsableAPIRenderer):
 
     def construct_table(self, view, **kwargs):
         """
-        Helper function to construct and paginate the table for render used in the ObjectListView, BulkUpdateView and BulkDestroyView.
+        Helper function to construct and paginate the table for rendering used in the ObjectListView, ObjectBulkUpdateView and ObjectBulkDestroyView.
         """
         view.check_if_table_class_attribute_exist()
         view.check_if_queryset_attribute_exist()
@@ -93,12 +98,16 @@ class NautobotHTMLRenderer(renderers.BrowsableAPIRenderer):
 
     def get_context(self, data, accepted_media_type, renderer_context):
         """
-        Overrode get_context() from BrowsableAPIRenderer to obtain the context data we need to render our templates.
+        Override get_context() from BrowsableAPIRenderer to obtain the context data we need to render our templates.
         context variable contains template context needed to render Nautobot generic templates / circuits templates.
         Override this function to add additional key/value pair to pass it to your templates.
         """
         if renderer_context is None:
-            messages.error("renderer_context is None, please do not use the renderer without specifying the view.")
+            # renderer_context content is automatically provided with the view returning the Response({}) object.
+            # The only way renderer_context is None if the user directly calls it from the renderer without a view.
+            self.logger.error(
+                "renderer_context is None, please do not directly call get_context() from NautobotHTMLRenderer without specifying the view."
+            )
             return {}
         view = renderer_context["view"]
         request = renderer_context["request"]
