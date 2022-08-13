@@ -23,6 +23,7 @@ from django.views.generic import View
 from django_tables2 import RequestConfig
 
 from nautobot.extras.models import CustomField, ExportTemplate
+from nautobot.extras.models.change_logging import ChangeLoggedModel
 from nautobot.utilities.error_handlers import handle_protectederror
 from nautobot.utilities.exceptions import AbortTransaction
 from nautobot.utilities.forms import (
@@ -80,8 +81,13 @@ class ObjectView(ObjectPermissionRequiredMixin, View):
         Returns:
             dict
         """
-        return {}
+        return {
+            "active_tab": request.GET.get("tab", "main"),
+        }
 
+    # TODO: Remove this method in 2.0. Can be retrieved from instance itself now
+    # instance.get_changelog_url()
+    # Only available on models that support changelogs
     def get_changelog_url(self, instance):
         """Return the changelog URL for a given instance."""
         meta = self.queryset.model._meta
@@ -114,6 +120,11 @@ class ObjectView(ObjectPermissionRequiredMixin, View):
         """
         instance = get_object_or_404(self.queryset, **kwargs)
 
+        changelog_url = None
+
+        if isinstance(instance, ChangeLoggedModel):
+            changelog_url = instance.get_changelog_url()
+
         return render(
             request,
             self.get_template_name(),
@@ -121,7 +132,7 @@ class ObjectView(ObjectPermissionRequiredMixin, View):
                 "object": instance,
                 "verbose_name": self.queryset.model._meta.verbose_name,
                 "verbose_name_plural": self.queryset.model._meta.verbose_name_plural,
-                "changelog_url": self.get_changelog_url(instance),
+                "changelog_url": changelog_url,  # TODO: Remove in 2.0. This information can be retrieved from the object itself now.
                 **self.get_extra_context(request, instance),
             },
         )
@@ -137,6 +148,7 @@ class ObjectListView(ObjectPermissionRequiredMixin, View):
     filter_form: The form used to render filter options
     table: The django-tables2 Table used to render the objects list
     template_name: The name of the template
+    non_filter_params: List of query parameters that are **not** used for queryset filtering
     """
 
     queryset = None
@@ -145,6 +157,19 @@ class ObjectListView(ObjectPermissionRequiredMixin, View):
     table = None
     template_name = "generic/object_list.html"
     action_buttons = ("add", "import", "export")
+    non_filter_params = (
+        "export",  # trigger for CSV/export-template/YAML export
+        "page",  # used by django-tables2.RequestConfig
+        "per_page",  # used by get_paginate_count
+        "sort",  # table sorting
+    )
+
+    def get_filter_params(self, request):
+        """Helper function - take request.GET and discard any parameters that are not used for queryset filtering."""
+        filter_params = request.GET.copy()
+        for non_filter_param in self.non_filter_params:
+            filter_params.pop(non_filter_param, None)
+        return filter_params
 
     def get_required_permission(self):
         return get_permission_for_model(self.queryset.model, "view")
@@ -162,7 +187,7 @@ class ObjectListView(ObjectPermissionRequiredMixin, View):
         Export the queryset of objects as comma-separated value (CSV), using the model's to_csv() method.
         """
         csv_data = []
-        custom_fields = []
+        custom_field_names = []
 
         # Start with the column headers
         headers = self.queryset.model.csv_headers.copy()
@@ -170,8 +195,9 @@ class ObjectListView(ObjectPermissionRequiredMixin, View):
         # Add custom field headers, if any
         if hasattr(self.queryset.model, "_custom_field_data"):
             for custom_field in CustomField.objects.get_for_model(self.queryset.model):
-                headers.append("cf_" + custom_field.name)
-                custom_fields.append(custom_field.name)
+                headers.append("cf_" + custom_field.slug)
+                # 2.0 TODO: #824 custom_field.slug
+                custom_field_names.append(custom_field.name)
 
         csv_data.append(",".join(headers))
 
@@ -179,8 +205,9 @@ class ObjectListView(ObjectPermissionRequiredMixin, View):
         for obj in self.queryset:
             data = obj.to_csv()
 
-            for custom_field in custom_fields:
-                data += (obj.cf.get(custom_field, ""),)
+            # 2.0 TODO: #824 use custom_field_slug
+            for custom_field_name in custom_field_names:
+                data += (obj.cf.get(custom_field_name, ""),)
 
             csv_data.append(csv_format(data))
 
@@ -207,8 +234,16 @@ class ObjectListView(ObjectPermissionRequiredMixin, View):
         model = self.queryset.model
         content_type = ContentType.objects.get_for_model(model)
 
+        filter_params = self.get_filter_params(request)
         if self.filterset:
-            self.queryset = self.filterset(request.GET, self.queryset).qs
+            filterset = self.filterset(filter_params, self.queryset)
+            self.queryset = filterset.qs
+            if not filterset.is_valid():
+                messages.error(
+                    request,
+                    mark_safe(f"Invalid filters were specified: {filterset.errors}"),
+                )
+                self.queryset = self.queryset.none()
 
         # Check for export template rendering
         if request.GET.get("export"):
@@ -268,7 +303,7 @@ class ObjectListView(ObjectPermissionRequiredMixin, View):
         if self.filterset_form:
             if request.GET:
                 # Bind form to the values specified in request.GET
-                filter_form = self.filterset_form(request.GET, label_suffix="")
+                filter_form = self.filterset_form(filter_params, label_suffix="")
             else:
                 # Use unbound form with default (initial) values
                 filter_form = self.filterset_form(label_suffix="")
@@ -381,6 +416,9 @@ class ObjectEditView(GetReturnURLMixin, ObjectPermissionRequiredMixin, View):
 
                     # Check that the new object conforms with any assigned object-level permissions
                     self.queryset.get(pk=obj.pk)
+
+                if hasattr(form, "save_note") and callable(form.save_note):
+                    form.save_note(instance=obj, user=request.user)
 
                 msg = "{} {}".format(
                     "Created" if object_created else "Modified",
@@ -928,9 +966,17 @@ class BulkEditView(GetReturnURLMixin, ObjectPermissionRequiredMixin, View):
 
             if form.is_valid():
                 logger.debug("Form validation was successful")
-                custom_fields = form.custom_fields if hasattr(form, "custom_fields") else []
-                standard_fields = [field for field in form.fields if field not in custom_fields + ["pk"]]
+                form_custom_fields = getattr(form, "custom_fields", [])
+                form_relationships = getattr(form, "relationships", [])
+                standard_fields = [
+                    field
+                    for field in form.fields
+                    if field not in form_custom_fields + form_relationships + ["pk"] + ["object_note"]
+                ]
                 nullified_fields = request.POST.getlist("_nullify")
+
+                # 2.0 TODO: #824 this won't really be needed once obj.cf is indexed by slug rather than by name
+                form_cf_to_key = {f"cf_{cf.slug}": cf.name for cf in CustomField.objects.get_for_model(model)}
 
                 try:
 
@@ -955,7 +1001,7 @@ class BulkEditView(GetReturnURLMixin, ObjectPermissionRequiredMixin, View):
                                     if isinstance(model_field, ManyToManyField):
                                         getattr(obj, name).set([])
                                     else:
-                                        setattr(obj, name, None if model_field.null else "")
+                                        setattr(obj, name, None if model_field is not None and model_field.null else "")
 
                                 # ManyToManyFields
                                 elif isinstance(model_field, ManyToManyField):
@@ -966,11 +1012,12 @@ class BulkEditView(GetReturnURLMixin, ObjectPermissionRequiredMixin, View):
                                     setattr(obj, name, form.cleaned_data[name])
 
                             # Update custom fields
-                            for name in custom_fields:
-                                if name in form.nullable_fields and name in nullified_fields:
-                                    obj.cf[name] = None
-                                elif form.cleaned_data.get(name) not in (None, ""):
-                                    obj.cf[name] = form.cleaned_data[name]
+                            for field_name in form_custom_fields:
+                                # 2.0 TODO: #824 when we use slug in obj.cf we can just do obj.cf[field_name[3:]]
+                                if field_name in form.nullable_fields and field_name in nullified_fields:
+                                    obj.cf[form_cf_to_key[field_name]] = None
+                                elif form.cleaned_data.get(field_name) not in (None, ""):
+                                    obj.cf[form_cf_to_key[field_name]] = form.cleaned_data[field_name]
 
                             obj.full_clean()
                             obj.save()
@@ -982,6 +1029,13 @@ class BulkEditView(GetReturnURLMixin, ObjectPermissionRequiredMixin, View):
                                 obj.tags.add(*form.cleaned_data["add_tags"])
                             if form.cleaned_data.get("remove_tags", None):
                                 obj.tags.remove(*form.cleaned_data["remove_tags"])
+
+                            if hasattr(form, "save_relationships") and callable(form.save_relationships):
+                                # Add/remove relationship associations
+                                form.save_relationships(instance=obj, nullified_fields=nullified_fields)
+
+                            if hasattr(form, "save_note") and callable(form.save_note):
+                                form.save_note(instance=obj, user=request.user)
 
                         # Enforce object-level permissions
                         if self.queryset.filter(pk__in=[obj.pk for obj in updated_objects]).count() != len(

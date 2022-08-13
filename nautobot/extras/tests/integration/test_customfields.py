@@ -25,13 +25,13 @@ class CustomFieldTestCase(SeleniumTestCase):
         self.logout()
         super().tearDown()
 
-    def _create_custom_field(self, field_name, field_type, choices=None, call_before_create=None):
+    def _create_custom_field(self, field_label, field_type, choices=None, call_before_create=None):
         """
         Repeatable method for creating custom fields.
 
         Args:
-            field_name (str):
-                Name of the field to create
+            field_label (str):
+                Label of the field to create
             field_type (str):
                 Type of the field to create (must match valid options)
             choices (list):
@@ -53,7 +53,8 @@ class CustomFieldTestCase(SeleniumTestCase):
 
         # Fill out form
         self.browser.select("type", field_type)
-        self.browser.fill("name", field_name)
+        self.browser.fill("label", field_label)
+        # Slug field should be auto-populated based on the provided label
 
         # Find the "content_types" dynamic multi-select and type into it.
         # See: https://splinter.readthedocs.io/en/latest/elements-in-the-page.html#interacting-with-forms
@@ -73,7 +74,7 @@ class CustomFieldTestCase(SeleniumTestCase):
         self.browser.find_by_text("Create").click()
 
         # Verify form redirect and presence of choices
-        self.assertTrue(self.browser.is_text_present(f"Created custom field {field_name.capitalize()}"))
+        self.assertTrue(self.browser.is_text_present(f"Created custom field {field_label}"))
         self.assertTrue(self.browser.is_text_present("Edit"))
         for choice in choices:
             self.assertTrue(self.browser.is_text_present(choice))
@@ -82,21 +83,21 @@ class CustomFieldTestCase(SeleniumTestCase):
         """Test pass create type=select/multi-select with choices."""
         choices = ["choice1", "choice2"]
         # pass create type=select w/ choices
-        self._create_custom_field(field_name="test-select", field_type="select", choices=choices)
+        self._create_custom_field(field_label="Test Select", field_type="select", choices=choices)
         # pass create type=multi-select w/ choices
-        self._create_custom_field(field_name="test-multi-select", field_type="multi-select", choices=choices)
+        self._create_custom_field(field_label="Test Multi-select", field_type="multi-select", choices=choices)
 
     def test_create_type_select_without_choices(self):
         """Test pass create type=select/multi-select without choices."""
         # pass create type=select w/out choices
-        self._create_custom_field(field_name="test-select", field_type="select")
+        self._create_custom_field(field_label="Test Select", field_type="select")
         # pass create type=multi-select w/out choices
-        self._create_custom_field(field_name="test-multi-select", field_type="multi-select")
+        self._create_custom_field(field_label="Test Multi-select", field_type="multi-select")
 
     def test_fail_create_invalid_type_with_choices(self):
         """Test fail type!=select with choices."""
         with self.assertRaises(AssertionError):
-            self._create_custom_field(field_name="test-text", field_type="text", choices=["bad1"])
+            self._create_custom_field(field_label="Test Text", field_type="text", choices=["bad1"])
 
         # Assert error state
         self.assertTrue(self.browser.is_text_present("Editing custom field"))
@@ -124,7 +125,7 @@ class CustomFieldTestCase(SeleniumTestCase):
             self.assertEqual(rows.last.find_by_name("choices-5-weight").value, "100")
 
         self._create_custom_field(
-            field_name="test-select", field_type="select", choices=choices, call_before_create=call_before_create
+            field_label="Test Select", field_type="select", choices=choices, call_before_create=call_before_create
         )
 
     def test_update_type_select_with_choices_editing_existing_choice(self):
@@ -132,7 +133,7 @@ class CustomFieldTestCase(SeleniumTestCase):
         choices = ["replace_me"]
 
         # Create the field
-        self._create_custom_field(field_name="test-select", field_type="select", choices=choices)
+        self._create_custom_field(field_label="Test Select", field_type="select", choices=choices)
         detail_url = self.browser.url
 
         #
@@ -162,14 +163,13 @@ class CustomFieldTestCase(SeleniumTestCase):
 
     def test_update_type_select_create_delete_choices(self):
         """
-        Test edit existing field, deleting first choice, adding a new row and
-        saving that as a new choice.
+        Test edit existing field, deleting first choice, adding a new row and saving that as a new choice.
         """
         # pass edit type=select create/delete row @ same time
         choices = ["delete_me"]
 
         # Create the field and then click the "Edit" button
-        self._create_custom_field(field_name="test-select", field_type="select", choices=choices)
+        self._create_custom_field(field_label="Test Select", field_type="select", choices=choices)
         detail_url = self.browser.url
         self.browser.find_by_id("edit-button").click()
 
@@ -188,21 +188,25 @@ class CustomFieldTestCase(SeleniumTestCase):
 
     def test_custom_field_advanced_ui(self):
         """
-        This test creates a custom field with a type of "text"
+        This test creates a custom field with a type of "text".
+
         It first leaves the custom field advanced_ui default of False to be show on the primary information
         tab in the UI and checks it is there.
-        It secondly sets the custom field to be shown only in the "Advanced" tab in the UI and checks it appears ONLY there!.
+        It secondly sets the custom field to be shown only in the "Advanced" tab in the UI
+        and checks it appears ONLY there!.
         """
         device = self.device
         custom_field = CustomField(
             type="text",
             label="Device Custom Field",
             name="test_custom_field",
+            slug="test_custom_field",
             required=False,
         )
         custom_field.save()
         device_content_type = ContentType.objects.get_for_model(Device)
         custom_field.content_types.set([device_content_type])
+        # 2.0 TODO: #824 replace custom_field.name with custom_field.slug
         device.cf[custom_field.name] = "This is some testing text"
         device.validated_save()
         # Visit the device detail page
@@ -229,13 +233,15 @@ class CustomFieldTestCase(SeleniumTestCase):
 
     def test_json_type_with_valid_json(self):
         """
-        This test creates a custom field with a type of "json"
-        It then edits the value of the custom field by adding valid json
+        This test creates a custom field with a type of "json".
+
+        It then edits the value of the custom field by adding valid JSON.
         """
         custom_field = CustomField(
             type="json",
             label="Device Valid JSON Field",
             name="test_valid_json_field",
+            slug="test_valid_json_field",
             required=False,
         )
         custom_field.save()
@@ -254,13 +260,15 @@ class CustomFieldTestCase(SeleniumTestCase):
 
     def test_json_type_with_invalid_json(self):
         """
-        This test creates a custom field with a type of "json"
-        It then edits the value of the custom field by adding invalid json
+        This test creates a custom field with a type of "json".
+
+        It then edits the value of the custom field by adding invalid JSON.
         """
         custom_field = CustomField(
             type="json",
             label="Device Invalid JSON Field",
             name="test_invalid_json_field",
+            slug="test_invalid_json_field",
             required=False,
         )
         custom_field.save()
@@ -278,7 +286,8 @@ class CustomFieldTestCase(SeleniumTestCase):
     def test_saving_object_after_its_custom_field_deleted(self):
         """
         This test creates a custom field with type Selection for the Device content type.
-        It then adds a value for the new custom field to self.device
+
+        It then adds a value for the new custom field to self.device.
         It then deletes the custom field.
         It then visits self.object's edit page and clicks the Update button.
         It then checks that page is now on the self.device object's page (without any validation error after updating).
@@ -288,6 +297,7 @@ class CustomFieldTestCase(SeleniumTestCase):
             type="select",
             label="Device Selection Field",
             name="test_selection_field",
+            slug="test_selection_field",
             required=False,
         )
         custom_field.save()
@@ -313,7 +323,7 @@ class CustomFieldTestCase(SeleniumTestCase):
         # Delete the custom field
         self.browser.links.find_by_partial_text("Extensibility").click()
         self.browser.links.find_by_partial_text("Custom Fields").click()
-        self.browser.links.find_by_partial_text("test_selection_field").click()
+        self.browser.links.find_by_partial_text("Device Selection Field").click()
         self.browser.links.find_by_partial_text("Delete").click()
         self.browser.find_by_xpath(".//button[contains(text(), 'Confirm')]").click()
 

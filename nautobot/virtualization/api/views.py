@@ -1,13 +1,15 @@
+from drf_spectacular.utils import extend_schema, extend_schema_view
 from rest_framework.routers import APIRootView
 
 from nautobot.dcim.models import Device
 from nautobot.extras.api.views import (
     ConfigContextQuerySetMixin,
-    CustomFieldModelViewSet,
+    NautobotModelViewSet,
     ModelViewSet,
+    NotesViewSetMixin,
     StatusViewSetMixin,
 )
-from nautobot.utilities.utils import count_related
+from nautobot.utilities.utils import count_related, SerializerForAPIVersions, versioned_serializer_selector
 from nautobot.virtualization import filters
 from nautobot.virtualization.models import (
     Cluster,
@@ -33,19 +35,19 @@ class VirtualizationRootView(APIRootView):
 #
 
 
-class ClusterTypeViewSet(CustomFieldModelViewSet):
+class ClusterTypeViewSet(NautobotModelViewSet):
     queryset = ClusterType.objects.annotate(cluster_count=count_related(Cluster, "type"))
     serializer_class = serializers.ClusterTypeSerializer
     filterset_class = filters.ClusterTypeFilterSet
 
 
-class ClusterGroupViewSet(CustomFieldModelViewSet):
+class ClusterGroupViewSet(NautobotModelViewSet):
     queryset = ClusterGroup.objects.annotate(cluster_count=count_related(Cluster, "group"))
     serializer_class = serializers.ClusterGroupSerializer
     filterset_class = filters.ClusterGroupFilterSet
 
 
-class ClusterViewSet(CustomFieldModelViewSet):
+class ClusterViewSet(NautobotModelViewSet):
     queryset = Cluster.objects.prefetch_related("type", "group", "tenant", "site", "tags").annotate(
         device_count=count_related(Device, "cluster"),
         virtualmachine_count=count_related(VirtualMachine, "cluster"),
@@ -59,7 +61,7 @@ class ClusterViewSet(CustomFieldModelViewSet):
 #
 
 
-class VirtualMachineViewSet(ConfigContextQuerySetMixin, StatusViewSetMixin, CustomFieldModelViewSet):
+class VirtualMachineViewSet(ConfigContextQuerySetMixin, StatusViewSetMixin, NautobotModelViewSet):
     queryset = VirtualMachine.objects.prefetch_related(
         "cluster__site",
         "platform",
@@ -93,8 +95,37 @@ class VirtualMachineViewSet(ConfigContextQuerySetMixin, StatusViewSetMixin, Cust
         return serializers.VirtualMachineWithConfigContextSerializer
 
 
-class VMInterfaceViewSet(ModelViewSet):
-    queryset = VMInterface.objects.prefetch_related("virtual_machine", "tags", "tagged_vlans")
+@extend_schema_view(
+    bulk_update=extend_schema(
+        responses={"200": serializers.VMInterfaceSerializerVersion12(many=True)}, versions=["1.2", "1.3"]
+    ),
+    bulk_partial_update=extend_schema(
+        responses={"200": serializers.VMInterfaceSerializerVersion12(many=True)}, versions=["1.2", "1.3"]
+    ),
+    create=extend_schema(responses={"201": serializers.VMInterfaceSerializerVersion12}, versions=["1.2", "1.3"]),
+    list=extend_schema(
+        responses={"200": serializers.VMInterfaceSerializerVersion12(many=True)}, versions=["1.2", "1.3"]
+    ),
+    partial_update=extend_schema(
+        responses={"200": serializers.VMInterfaceSerializerVersion12}, versions=["1.2", "1.3"]
+    ),
+    retrieve=extend_schema(responses={"200": serializers.VMInterfaceSerializerVersion12}, versions=["1.2", "1.3"]),
+    update=extend_schema(responses={"200": serializers.VMInterfaceSerializerVersion12}, versions=["1.2", "1.3"]),
+)
+class VMInterfaceViewSet(StatusViewSetMixin, ModelViewSet, NotesViewSetMixin):
+    queryset = VMInterface.objects.prefetch_related(
+        "virtual_machine", "parent_interface", "bridge", "status", "tags", "tagged_vlans"
+    )
     serializer_class = serializers.VMInterfaceSerializer
     filterset_class = filters.VMInterfaceFilterSet
     brief_prefetch_fields = ["virtual_machine"]
+
+    def get_serializer_class(self):
+        serializer_choices = (
+            SerializerForAPIVersions(versions=["1.2", "1.3"], serializer=serializers.VMInterfaceSerializerVersion12),
+        )
+        return versioned_serializer_selector(
+            obj=self,
+            serializer_choices=serializer_choices,
+            default_serializer=super().get_serializer_class(),
+        )

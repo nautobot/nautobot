@@ -14,6 +14,8 @@ from nautobot.dcim.models import (
     Device,
     DeviceRole,
     DeviceType,
+    Location,
+    LocationType,
     Manufacturer,
     Platform,
     Site,
@@ -114,6 +116,8 @@ class ConfigContextTest(TestCase):
         self.devicerole = DeviceRole.objects.create(name="Device Role 1", slug="device-role-1")
         self.region = Region.objects.create(name="Region")
         self.site = Site.objects.create(name="Site-1", slug="site-1", region=self.region)
+        location_type = LocationType.objects.create(name="Location Type 1")
+        self.location = Location.objects.create(name="Location 1", location_type=location_type, site=self.site)
         self.platform = Platform.objects.create(name="Platform")
         self.tenantgroup = TenantGroup.objects.create(name="Tenant Group")
         self.tenant = Tenant.objects.create(name="Tenant", group=self.tenantgroup)
@@ -125,6 +129,7 @@ class ConfigContextTest(TestCase):
             device_type=self.devicetype,
             device_role=self.devicerole,
             site=self.site,
+            location=self.location,
         )
 
     def test_higher_weight_wins(self):
@@ -166,7 +171,7 @@ class ConfigContextTest(TestCase):
 
     def test_annotation_same_as_get_for_object(self):
         """
-        This test incorperates features from all of the above tests cases to ensure
+        This test incorporates features from all of the above tests cases to ensure
         the annotate_config_context_data() and get_for_object() queryset methods are the same.
         """
         ConfigContext.objects.create(name="context 1", weight=101, data={"a": 123, "b": 456, "c": 777})
@@ -179,6 +184,8 @@ class ConfigContextTest(TestCase):
 
     def test_annotation_same_as_get_for_object_device_relations(self):
 
+        location_context = ConfigContext.objects.create(name="location", weight=100, data={"location": 1})
+        location_context.locations.add(self.location)
         site_context = ConfigContext.objects.create(name="site", weight=100, data={"site": 1})
         site_context.sites.add(self.site)
         region_context = ConfigContext.objects.create(name="region", weight=100, data={"region": 1})
@@ -195,6 +202,7 @@ class ConfigContextTest(TestCase):
         device = Device.objects.create(
             name="Device 2",
             site=self.site,
+            location=self.location,
             tenant=self.tenant,
             platform=self.platform,
             device_role=self.devicerole,
@@ -203,10 +211,15 @@ class ConfigContextTest(TestCase):
         device.tags.add(self.tag)
 
         annotated_queryset = Device.objects.filter(name=device.name).annotate_config_context_data()
-        self.assertEqual(device.get_config_context(), annotated_queryset[0].get_config_context())
+        device_context = device.get_config_context()
+        self.assertEqual(device_context, annotated_queryset[0].get_config_context())
+        for key in ["location", "site", "region", "platform", "tenant_group", "tenant", "tag"]:
+            self.assertIn(key, device_context)
 
     def test_annotation_same_as_get_for_object_virtualmachine_relations(self):
 
+        location_context = ConfigContext.objects.create(name="location", weight=100, data={"location": 1})
+        location_context.locations.add(self.location)
         site_context = ConfigContext.objects.create(name="site", weight=100, data={"site": 1})
         site_context.sites.add(self.site)
         region_context = ConfigContext.objects.create(name="region", weight=100, data={"region": 1})
@@ -225,7 +238,13 @@ class ConfigContextTest(TestCase):
         )
         cluster_group_context.cluster_groups.add(cluster_group)
         cluster_type = ClusterType.objects.create(name="Cluster Type 1")
-        cluster = Cluster.objects.create(name="Cluster", group=cluster_group, type=cluster_type)
+        cluster = Cluster.objects.create(
+            name="Cluster",
+            group=cluster_group,
+            type=cluster_type,
+            site=self.site,
+            location=self.location,
+        )
         cluster_context = ConfigContext.objects.create(name="cluster", weight=100, data={"cluster": 1})
         cluster_context.clusters.add(cluster)
 
@@ -239,10 +258,20 @@ class ConfigContextTest(TestCase):
         virtual_machine.tags.add(self.tag)
 
         annotated_queryset = VirtualMachine.objects.filter(name=virtual_machine.name).annotate_config_context_data()
-        self.assertEqual(
-            virtual_machine.get_config_context(),
-            annotated_queryset[0].get_config_context(),
-        )
+        vm_context = virtual_machine.get_config_context()
+        self.assertEqual(vm_context, annotated_queryset[0].get_config_context())
+        for key in [
+            "location",
+            "site",
+            "region",
+            "platform",
+            "tenant_group",
+            "tenant",
+            "tag",
+            "cluster_group",
+            "cluster",
+        ]:
+            self.assertIn(key, vm_context)
 
     def test_multiple_tags_return_distinct_objects(self):
         """
@@ -679,6 +708,7 @@ class JobModelTest(TestCase):
     def setUpTestData(cls):
         # JobModel instances are automatically instantiated at startup, so we just need to look them up.
         cls.local_job = JobModel.objects.get(job_class_name="TestPass")
+        cls.job_containing_sensitive_variables = JobModel.objects.get(job_class_name="ExampleLoggingJob")
         cls.plugin_job = JobModel.objects.get(job_class_name="ExampleJob")
 
     def test_job_class(self):
@@ -711,36 +741,41 @@ class JobModelTest(TestCase):
 
     def test_clean_overrides(self):
         """Verify that cleaning resets non-overridden fields to their appropriate default values."""
+
         overridden_attrs = {
             "grouping": "Overridden Grouping",
             "name": "Overridden Name",
             "description": "Overridden Description",
-            "commit_default": not self.local_job.commit_default,
-            "hidden": not self.local_job.hidden,
-            "read_only": not self.local_job.read_only,
-            "approval_required": not self.local_job.approval_required,
+            "commit_default": not self.job_containing_sensitive_variables.commit_default,
+            "hidden": not self.job_containing_sensitive_variables.hidden,
+            "read_only": not self.job_containing_sensitive_variables.read_only,
+            "approval_required": not self.job_containing_sensitive_variables.approval_required,
+            "has_sensitive_variables": not self.job_containing_sensitive_variables.has_sensitive_variables,
             "soft_time_limit": 350,
             "time_limit": 650,
         }
 
         # Override values to non-defaults and ensure they are preserved
         for field_name, value in overridden_attrs.items():
-            setattr(self.local_job, field_name, value)
-            setattr(self.local_job, f"{field_name}_override", True)
-        self.local_job.validated_save()
-        self.local_job.refresh_from_db()
+            setattr(self.job_containing_sensitive_variables, field_name, value)
+            setattr(self.job_containing_sensitive_variables, f"{field_name}_override", True)
+        self.job_containing_sensitive_variables.validated_save()
+        self.job_containing_sensitive_variables.refresh_from_db()
         for field_name, value in overridden_attrs.items():
-            self.assertEqual(getattr(self.local_job, field_name), value)
-            self.assertTrue(getattr(self.local_job, f"{field_name}_override"))
+            self.assertEqual(getattr(self.job_containing_sensitive_variables, field_name), value)
+            self.assertTrue(getattr(self.job_containing_sensitive_variables, f"{field_name}_override"))
 
         # Clear the "*_override" flags and ensure that cleaning resets the corresponding fields to non-overriden values
         for field_name in overridden_attrs:
-            setattr(self.local_job, f"{field_name}_override", False)
-        self.local_job.validated_save()
-        self.local_job.refresh_from_db()
+            setattr(self.job_containing_sensitive_variables, f"{field_name}_override", False)
+        self.job_containing_sensitive_variables.validated_save()
+        self.job_containing_sensitive_variables.refresh_from_db()
         for field_name in overridden_attrs:
-            self.assertEqual(getattr(self.local_job, field_name), getattr(self.local_job.job_class, field_name))
-            self.assertFalse(getattr(self.local_job, f"{field_name}_override"))
+            self.assertEqual(
+                getattr(self.job_containing_sensitive_variables, field_name),
+                getattr(self.job_containing_sensitive_variables.job_class, field_name),
+            )
+            self.assertFalse(getattr(self.job_containing_sensitive_variables, f"{field_name}_override"))
 
     def test_clean_input_validation(self):
         """Verify that cleaning enforces validation of potentially unsanitized user input."""
@@ -783,6 +818,21 @@ class JobModelTest(TestCase):
                 name="Similarly, let us hope that no one really wants to specify a job name that is over 100 characters long, it would be a pain to type at the very least and it won't look good in the UI either",
             ).clean()
         self.assertIn("Name", str(handler.exception))
+
+        with self.assertRaises(ValidationError) as handler:
+            JobModel(
+                source="local",
+                module_name="module_name",
+                job_class_name="JobClassName",
+                grouping="grouping",
+                has_sensitive_variables=True,
+                approval_required=True,
+                name="Job Class Name",
+            ).clean()
+        self.assertEqual(
+            handler.exception.message_dict["approval_required"][0],
+            "A job with sensitive variables cannot be marked as requiring approval",
+        )
 
 
 class JobResultTest(TestCase):

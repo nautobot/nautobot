@@ -1,13 +1,13 @@
-import uuid
-
 from django.conf import settings
 from django.contrib.auth.middleware import RemoteUserMiddleware as RemoteUserMiddleware_
 from django.db import ProgrammingError
 from django.http import Http404
+from django.urls import resolve
+from django.urls.exceptions import Resolver404
 from django.utils.deprecation import MiddlewareMixin
 
 from nautobot.core.views import server_error
-from nautobot.extras.context_managers import change_logging
+from nautobot.extras.context_managers import change_logging, WebChangeContext
 from nautobot.utilities.api import is_api_request, rest_api_server_error
 from nautobot.core.settings_funcs import (
     sso_auth_enabled,
@@ -86,12 +86,17 @@ class ObjectChangeMiddleware(object):
         self.get_response = get_response
 
     def __call__(self, request):
-        # Assign a random unique ID to the request. This will be used to associate multiple object changes made during
-        # the same request.
-        request.id = uuid.uuid4()
+        # Determine the resolved path of the request that initiated the change
+        try:
+            change_context_detail = resolve(request.path).view_name
+        except Resolver404:
+            change_context_detail = ""
+
+        # Pass request rather than user here because at this point in the request handling logic, request.user may not have been set yet
+        change_context = WebChangeContext(request=request, context_detail=change_context_detail)
 
         # Process the request with change logging enabled
-        with change_logging(request):
+        with change_logging(change_context):
             response = self.get_response(request)
 
         return response

@@ -1,3 +1,4 @@
+from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ValidationError
 from django.db import models
 from django.urls import reverse
@@ -96,6 +97,7 @@ class Provider(PrimaryModel):
         verbose_name="ASN",
         help_text="32-bit autonomous system number",
     )
+    # todoindex:
     account = models.CharField(max_length=100, blank=True, verbose_name="Account number")
     portal_url = models.URLField(blank=True, verbose_name="Portal URL")
     noc_contact = models.TextField(blank=True, verbose_name="NOC contact")
@@ -187,9 +189,10 @@ class CircuitType(OrganizationalModel):
 )
 class Circuit(PrimaryModel, StatusModel):
     """
-    A communications circuit connects two points. Each Circuit belongs to a Provider; Providers may have multiple
-    circuits. Each circuit is also assigned a CircuitType and a Site.  Circuit port speed and commit rate are measured
-    in Kbps.
+    A communications circuit connects two points.
+    Each Circuit belongs to a Provider; Providers may have multiple circuits.
+    Each circuit is also assigned a CircuitType.
+    Circuit port speed and commit rate are measured in Kbps.
     """
 
     cid = models.CharField(max_length=100, verbose_name="Circuit ID")
@@ -271,11 +274,13 @@ class Circuit(PrimaryModel, StatusModel):
 
 
 @extras_features(
+    "cable_terminations",
     "custom_fields",
     "custom_links",
     "custom_validators",
     "export_templates",
     "graphql",
+    "locations",
     "relationships",
     "statuses",
     "webhooks",
@@ -285,6 +290,13 @@ class CircuitTermination(PrimaryModel, PathEndpoint, CableTermination):
     term_side = models.CharField(max_length=1, choices=CircuitTerminationSideChoices, verbose_name="Termination")
     site = models.ForeignKey(
         to="dcim.Site",
+        on_delete=models.PROTECT,
+        related_name="circuit_terminations",
+        blank=True,
+        null=True,
+    )
+    location = models.ForeignKey(
+        to="dcim.Location",
         on_delete=models.PROTECT,
         related_name="circuit_terminations",
         blank=True,
@@ -326,6 +338,21 @@ class CircuitTermination(PrimaryModel, PathEndpoint, CableTermination):
             raise ValidationError("A circuit termination must attach to either a site or a provider network.")
         if self.site and self.provider_network:
             raise ValidationError("A circuit termination cannot attach to both a site and a provider network.")
+        # If and only if a site is defined, a location *may* also be defined.
+        if self.location is not None:
+            if self.provider_network is not None:
+                raise ValidationError("A circuit termination cannot attach to both a location and a provider network.")
+            if self.site is not None and self.location.base_site != self.site:
+                raise ValidationError(
+                    {"location": f'Location "{self.location}" does not belong to site "{self.site}".'}
+                )
+            if ContentType.objects.get_for_model(self) not in self.location.location_type.content_types.all():
+                raise ValidationError(
+                    {
+                        "location": "Circuit terminations may not associate to locations of type "
+                        f'"{self.location.location_type}"'
+                    }
+                )
 
     def to_objectchange(self, action):
 

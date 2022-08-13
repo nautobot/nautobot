@@ -47,6 +47,8 @@ from .models import (
     Interface,
     InterfaceTemplate,
     InventoryItem,
+    Location,
+    LocationType,
     Manufacturer,
     PathEndpoint,
     Platform,
@@ -254,6 +256,133 @@ class SiteBulkDeleteView(generic.BulkDeleteView):
 
 
 #
+# LocationTypes
+#
+
+
+class LocationTypeListView(generic.ObjectListView):
+    queryset = LocationType.objects.with_tree_fields()
+    filterset = filters.LocationTypeFilterSet
+    filterset_form = forms.LocationTypeFilterForm
+    table = tables.LocationTypeTable
+
+
+class LocationTypeView(generic.ObjectView):
+    queryset = LocationType.objects.all()
+
+    def get_extra_context(self, request, instance):
+        children = (
+            LocationType.objects.restrict(request.user, "view").filter(parent=instance).prefetch_related("parent")
+        )
+        locations = (
+            Location.objects.restrict(request.user, "view")
+            .filter(location_type=instance)
+            .prefetch_related("parent", "location_type")
+        )
+
+        children_table = tables.LocationTypeTable(children)
+        locations_table = tables.LocationTable(locations)
+        locations_table.columns.hide("location_type")
+
+        paginate = {
+            "paginator_class": EnhancedPaginator,
+            "per_page": get_paginate_count(request),
+        }
+        RequestConfig(request, paginate).configure(children_table)
+        RequestConfig(request, paginate).configure(locations_table)
+
+        return {
+            "children_table": children_table,
+            "locations_table": locations_table,
+        }
+
+
+class LocationTypeEditView(generic.ObjectEditView):
+    queryset = LocationType.objects.all()
+    model_form = forms.LocationTypeForm
+
+
+class LocationTypeDeleteView(generic.ObjectDeleteView):
+    queryset = LocationType.objects.all()
+
+
+class LocationTypeBulkImportView(generic.BulkImportView):
+    queryset = LocationType.objects.all()
+    model_form = forms.LocationTypeCSVForm
+    table = tables.LocationTypeTable
+
+
+class LocationTypeBulkDeleteView(generic.BulkDeleteView):
+    queryset = LocationType.objects.all()
+    filterset = filters.LocationTypeFilterSet
+    table = tables.LocationTypeTable
+
+
+#
+# Locations
+#
+
+
+class LocationListView(generic.ObjectListView):
+    queryset = Location.objects.prefetch_related("location_type", "parent", "site", "tenant")
+    filterset = filters.LocationFilterSet
+    filterset_form = forms.LocationFilterForm
+    table = tables.LocationTable
+
+
+class LocationView(generic.ObjectView):
+    queryset = Location.objects.all()
+
+    def get_extra_context(self, request, instance):
+        children = (
+            Location.objects.restrict(request.user, "view")
+            .filter(parent=instance)
+            .prefetch_related("parent", "location_type")
+        )
+
+        children_table = tables.LocationTable(children)
+
+        paginate = {
+            "paginator_class": EnhancedPaginator,
+            "per_page": get_paginate_count(request),
+        }
+        RequestConfig(request, paginate).configure(children_table)
+
+        return {
+            "children_table": children_table,
+        }
+
+
+class LocationEditView(generic.ObjectEditView):
+    queryset = Location.objects.all()
+    model_form = forms.LocationForm
+    template_name = "dcim/location_edit.html"
+
+
+class LocationDeleteView(generic.ObjectDeleteView):
+    queryset = Location.objects.all()
+
+
+class LocationBulkEditView(generic.BulkEditView):
+    queryset = Location.objects.prefetch_related("location_type", "parent", "site", "tenant")
+    filterset = filters.LocationFilterSet
+    table = tables.LocationTable
+    form = forms.LocationBulkEditForm
+
+
+class LocationBulkImportView(generic.BulkImportView):
+    queryset = Location.objects.all()
+    model_form = forms.LocationCSVForm
+    table = tables.LocationTable
+
+
+class LocationBulkDeleteView(generic.BulkDeleteView):
+    queryset = Location.objects.prefetch_related("location_type", "parent", "site", "tenant")
+    filterset = filters.LocationFilterSet
+    table = tables.LocationTable
+
+
+#
 # Rack groups
 #
 
@@ -323,6 +452,7 @@ class RackGroupBulkDeleteView(generic.BulkDeleteView):
 
 class RackRoleListView(generic.ObjectListView):
     queryset = RackRole.objects.annotate(rack_count=count_related(Rack, "role"))
+    filterset = filters.RackRoleFilterSet
     table = tables.RackRoleTable
 
 
@@ -392,10 +522,24 @@ class RackElevationListView(generic.ObjectListView):
     """
 
     queryset = Rack.objects.prefetch_related("role")
+    non_filter_params = (
+        *generic.ObjectListView.non_filter_params,
+        "face",  # render front or rear of racks?
+        "reverse",  # control of ordering
+    )
 
     def get(self, request):
+        filter_params = self.get_filter_params(request)
+        filterset = filters.RackFilterSet(filter_params, self.queryset)
+        if filterset.is_valid():
+            racks = filterset.qs
+        else:
+            messages.error(
+                request,
+                mark_safe(f"Invalid filters were specified: {filterset.errors}"),
+            )
+            racks = filterset.qs.none()
 
-        racks = filters.RackFilterSet(request.GET, self.queryset).qs
         total_count = racks.count()
 
         # Determine ordering
@@ -428,7 +572,7 @@ class RackElevationListView(generic.ObjectListView):
                 "total_count": total_count,
                 "reverse": reverse,
                 "rack_face": rack_face,
-                "filter_form": forms.RackElevationFilterForm(request.GET),
+                "filter_form": forms.RackElevationFilterForm(filter_params),
             },
         )
 
@@ -570,6 +714,7 @@ class ManufacturerListView(generic.ObjectListView):
         inventoryitem_count=count_related(InventoryItem, "manufacturer"),
         platform_count=count_related(Platform, "manufacturer"),
     )
+    filterset = filters.ManufacturerFilterSet
     table = tables.ManufacturerTable
 
 
@@ -1047,6 +1192,7 @@ class DeviceRoleListView(generic.ObjectListView):
         device_count=count_related(Device, "device_role"),
         vm_count=count_related(VirtualMachine, "role"),
     )
+    filterset = filters.DeviceRoleFilterSet
     table = tables.DeviceRoleTable
 
 
@@ -1106,6 +1252,7 @@ class PlatformListView(generic.ObjectListView):
         device_count=count_related(Device, "platform"),
         vm_count=count_related(VirtualMachine, "platform"),
     )
+    filterset = filters.PlatformFilterSet
     table = tables.PlatformTable
 
 
@@ -1781,6 +1928,10 @@ class InterfaceView(generic.ObjectView):
             orderable=False,
         )
 
+        # Get child interfaces
+        child_interfaces = instance.child_interfaces.restrict(request.user, "view")
+        child_interfaces_tables = tables.InterfaceTable(child_interfaces, orderable=False, exclude=("device",))
+
         # Get assigned VLANs and annotate whether each is tagged or untagged
         vlans = []
         if instance.untagged_vlan is not None:
@@ -1795,6 +1946,7 @@ class InterfaceView(generic.ObjectView):
             "ipaddress_table": ipaddress_table,
             "vlan_table": vlan_table,
             "breadcrumb_url": "dcim:device_interfaces",
+            "child_interfaces_table": child_interfaces_tables,
         }
 
 
@@ -1813,6 +1965,7 @@ class InterfaceEditView(generic.ObjectEditView):
 
 class InterfaceDeleteView(generic.ObjectDeleteView):
     queryset = Interface.objects.all()
+    template_name = "dcim/device_interface_delete.html"
 
 
 class InterfaceBulkImportView(generic.BulkImportView):
@@ -1840,6 +1993,7 @@ class InterfaceBulkDeleteView(generic.BulkDeleteView):
     queryset = Interface.objects.all()
     filterset = filters.InterfaceFilterSet
     table = tables.InterfaceTable
+    template_name = "dcim/interface_bulk_delete.html"
 
 
 #
@@ -2568,6 +2722,8 @@ class InterfaceConnectionsListView(ConnectionsListView):
             # used for reverse querying.
             # The below at least ensures uniqueness, but doesn't guarantee whether we get (A, B) or (B, A);
             # we fix it up to be consistently (A, B) in queryset_to_csv_body_data().
+            # TODO: this is very problematic when filtering the view via FilterSet - if the filterset matches (A), then
+            #       the connection will appear in the table, but if it only matches (B) then the connection will not!
             _path__destination_type=ContentType.objects.get_for_model(Interface),
             pk__lt=F("_path__destination_id"),
         )

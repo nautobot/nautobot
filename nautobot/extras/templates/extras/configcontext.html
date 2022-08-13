@@ -16,9 +16,7 @@
                     {% if object.owner %}
                         <tr>
                             <td>Owner</td>
-                            <td>
-                                <a href="{{ object.owner.get_absolute_url }}">{{ object.owner }}</a>
-                            </td>
+                            <td>{{ object.owner|hyperlinked_object }}</td>
                         </tr>
                     {% endif %}
                     <tr>
@@ -33,13 +31,7 @@
                     </tr>
                     <tr>
                         <td>Schema</td>
-                        <td>
-                            {% if object.schema %}
-                                <a href="{{ object.schema.get_absolute_url }}">{{ object.schema }}</a>
-                            {% else %}
-                                <span class="text-muted">None</span>
-                            {% endif %}
-                        </td>
+                        <td>{{ object.schema|hyperlinked_object }}</td>
                     </tr>
                     <tr>
                         <td>Active</td>
@@ -61,7 +53,7 @@
                             {% if object.regions.all %}
                                 <ul>
                                     {% for region in object.regions.all %}
-                                        <li><a href="{{ region.get_absolute_url }}">{{ region }}</a></li>
+                                        <li>{{ region|hyperlinked_object }}</li>
                                     {% endfor %}
                                 </ul>
                             {% else %}
@@ -75,7 +67,21 @@
                             {% if object.sites.all %}
                                 <ul>
                                     {% for site in object.sites.all %}
-                                        <li><a href="{{ site.get_absolute_url }}">{{ site }}</a></li>
+                                        <li>{{ site|hyperlinked_object }}</li>
+                                    {% endfor %}
+                                </ul>
+                            {% else %}
+                                <span class="text-muted">None</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    <tr>
+                        <td>Locations</td>
+                        <td>
+                            {% if object.locations.all %}
+                                <ul>
+                                    {% for location in object.locations.all %}
+                                        <li>{{ location|hyperlinked_object }}</li>
                                     {% endfor %}
                                 </ul>
                             {% else %}
@@ -103,7 +109,7 @@
                             {% if object.device_types.all %}
                                 <ul>
                                     {% for device_type in object.device_types.all %}
-                                        <li><a href="{{ device_type.get_absolute_url }}">{{ device_type }}</a></li>
+                                        <li>{{ device_type|hyperlinked_object }}</li>
                                     {% endfor %}
                                 </ul>
                             {% else %}
@@ -117,7 +123,7 @@
                             {% if object.platforms.all %}
                                 <ul>
                                     {% for platform in object.platforms.all %}
-                                        <li><a href="{{ platform.get_absolute_url }}">{{ platform }}</a></li>
+                                        <li>{{ platform|hyperlinked_object }}</li>
                                     {% endfor %}
                                 </ul>
                             {% else %}
@@ -131,7 +137,7 @@
                             {% if object.cluster_groups.all %}
                                 <ul>
                                     {% for cluster_group in object.cluster_groups.all %}
-                                        <li><a href="{{ cluster_group.get_absolute_url }}">{{ cluster_group }}</a></li>
+                                        <li>{{ cluster_group|hyperlinked_object }}</li>
                                     {% endfor %}
                                 </ul>
                             {% else %}
@@ -145,7 +151,7 @@
                             {% if object.clusters.all %}
                                 <ul>
                                     {% for cluster in object.clusters.all %}
-                                        <li><a href="{{ cluster.get_absolute_url }}">{{ cluster }}</a></li>
+                                        <li>{{ cluster|hyperlinked_object }}</li>
                                     {% endfor %}
                                 </ul>
                             {% else %}
@@ -159,7 +165,7 @@
                             {% if object.tenant_groups.all %}
                                 <ul>
                                     {% for tenant_group in object.tenant_groups.all %}
-                                        <li><a href="{{ tenant_group.get_absolute_url }}">{{ tenant_group }}</a></li>
+                                        <li>{{ tenant_group|hyperlinked_object }}</li>
                                     {% endfor %}
                                 </ul>
                             {% else %}
@@ -173,7 +179,7 @@
                             {% if object.tenants.all %}
                                 <ul>
                                     {% for tenant in object.tenants.all %}
-                                        <li><a href="{{ tenant.get_absolute_url }}">{{ tenant }}</a></li>
+                                        <li>{{ tenant|hyperlinked_object }}</li>
                                     {% endfor %}
                                 </ul>
                             {% else %}
@@ -187,7 +193,7 @@
                             {% if object.tags.all %}
                                 <ul>
                                     {% for tag in object.tags.all %}
-                                        <li><a href="{{ tag.get_absolute_url }}">{{ tag }}</a></li>
+                                        <li>{{ tag|hyperlinked_object }}</li>
                                     {% endfor %}
                                 </ul>
                             {% else %}

@@ -291,72 +291,6 @@ http://nautobot/api/ipam/ip-addresses/ \
 
 If we wanted to assign this IP address to a virtual machine interface instead, we would have set `assigned_object_type` to `virtualization.vminterface` and updated the object ID appropriately.
 
-### Brief Format
-
-Most API endpoints support an optional "brief" format, which returns only a minimal representation of each object in the response. This is useful when you need only a list of available objects without any related data, such as when populating a drop-down list in a form. As an example, the default (complete) format of an IP address looks like this:
-
-```no-highlight
-GET /api/ipam/prefixes/7d2d24ac-4737-4fc1-a850-b30366618f3d/
-```
-
-```json
-{
-    "id": "7d2d24ac-4737-4fc1-a850-b30366618f3d",
-    "url": "http://nautobot/api/ipam/prefixes/7d2d24ac-4737-4fc1-a850-b30366618f3d/",
-    "family": {
-        "value": 4,
-        "label": "IPv4"
-    },
-    "prefix": "192.0.2.0/24",
-    "site": {
-        "id": "b9edf2ee-cad9-48be-9921-006294bff730",
-        "url": "http://nautobot/api/dcim/sites/b9edf2ee-cad9-48be-9921-006294bff730/",
-        "name": "Site 23A",
-        "slug": "site-23a"
-    },
-    "vrf": null,
-    "tenant": null,
-    "vlan": null,
-    "status": {
-        "value": "container",
-        "label": "Container"
-    },
-    "role": {
-        "id": "ae1470bc-a858-4ce7-b9ce-dd1cd46333fe",
-        "url": "http://nautobot/api/ipam/roles/ae1470bc-a858-4ce7-b9ce-dd1cd46333fe/",
-        "name": "Staging",
-        "slug": "staging"
-    },
-    "is_pool": false,
-    "description": "Example prefix",
-    "tags": [],
-    "custom_fields": {},
-    "created": "2018-12-10",
-    "last_updated": "2019-03-01T20:02:46.173540Z"
-}
-```
-
-The brief format is much more terse:
-
-```no-highlight
-GET /api/ipam/prefixes/7d2d24ac-4737-4fc1-a850-b30366618f3d/?brief=1
-```
-
-```json
-{
-    "id": "7d2d24ac-4737-4fc1-a850-b30366618f3d",
-    "url": "http://nautobot/api/ipam/prefixes/7d2d24ac-4737-4fc1-a850-b30366618f3d/",
-    "family": 4,
-    "prefix": "10.40.3.0/24"
-}
-```
-
-The brief format is supported for both lists and individual objects.
-
-### Excluding Config Contexts
-
-When retrieving devices and virtual machines via the REST API, each will included its rendered [configuration context data](../models/extras/configcontext/) by default. Users with large amounts of context data will likely observe suboptimal performance when returning multiple objects, particularly with very high page sizes. To combat this, context data may be excluded from the response data by attaching the query parameter `?exclude=config_context` to the request. This parameter works for both list and detail views.
-
 ## Pagination
 
 API responses which contain a list of many objects will be paginated for efficiency. The root JSON object returned by a list endpoint contains the following attributes:
@@ -475,6 +409,132 @@ http://nautobot/api/ipam/ip-addresses/bd307eca-de34-4bda-9195-d69ca52206d6/ | jq
   ...
 }
 ```
+
+### Brief Format
+
+The `GET` API endpoints support an optional "brief" format, which returns only a minimal representation of each object in the response. This is useful when you need only a list of available objects without any related data, such as when populating a drop-down list in a form. As an example, the default (complete) format of an IP address looks like this:
+
+```no-highlight
+GET /api/ipam/prefixes/7d2d24ac-4737-4fc1-a850-b30366618f3d/
+```
+
+```json
+{
+    "id": "7d2d24ac-4737-4fc1-a850-b30366618f3d",
+    "url": "http://nautobot/api/ipam/prefixes/7d2d24ac-4737-4fc1-a850-b30366618f3d/",
+    "family": {
+        "value": 4,
+        "label": "IPv4"
+    },
+    "prefix": "192.0.2.0/24",
+    "site": {
+        "id": "b9edf2ee-cad9-48be-9921-006294bff730",
+        "url": "http://nautobot/api/dcim/sites/b9edf2ee-cad9-48be-9921-006294bff730/",
+        "name": "Site 23A",
+        "slug": "site-23a"
+    },
+    "vrf": null,
+    "tenant": null,
+    "vlan": null,
+    "status": {
+        "value": "container",
+        "label": "Container"
+    },
+    "role": {
+        "id": "ae1470bc-a858-4ce7-b9ce-dd1cd46333fe",
+        "url": "http://nautobot/api/ipam/roles/ae1470bc-a858-4ce7-b9ce-dd1cd46333fe/",
+        "name": "Staging",
+        "slug": "staging"
+    },
+    "is_pool": false,
+    "description": "Example prefix",
+    "tags": [],
+    "custom_fields": {},
+    "created": "2018-12-10",
+    "last_updated": "2019-03-01T20:02:46.173540Z"
+}
+```
+
+The brief format is much more terse:
+
+```no-highlight
+GET /api/ipam/prefixes/7d2d24ac-4737-4fc1-a850-b30366618f3d/?brief=1
+```
+
+```json
+{
+    "id": "7d2d24ac-4737-4fc1-a850-b30366618f3d",
+    "url": "http://nautobot/api/ipam/prefixes/7d2d24ac-4737-4fc1-a850-b30366618f3d/",
+    "family": 4,
+    "prefix": "10.40.3.0/24"
+}
+```
+
+The brief format is supported for both lists and individual objects.
+
+### Retrieving Object Relationships and Relationship Associations
+
+_Added in version 1.4.0_ <!-- markdownlint-disable-line MD036 -->
+
+Objects that are associated with another object by a custom [Relationship](../models/extras/relationship.md) are also retrievable and modifiable via the REST API. Due to the additional processing overhead involved in retrieving and representing these relationships, they are _not_ included in default REST API `GET` responses. To include relationships data, pass `include=relationships` as a query parameter; in this case an additional key, `"relationships"`, will be included in the API response, as seen below:
+
+```no-highlight
+GET /api/dcim/sites/f472bb77-7f56-4e79-ac25-2dc73eb63924/?include=relationships
+```
+
+```json
+{
+    "id": "f472bb77-7f56-4e79-ac25-2dc73eb63924",
+    "display": "alpha",
+    "url": "http://nautobot/api/dcim/sites/f472bb77-7f56-4e79-ac25-2dc73eb63924/",
+...
+    "relationships": {
+        "site-to-vrf": {
+            "id": "e74cb7f7-15b0-499d-9401-a0f01cb96a9a",
+            "url": "/api/extras/relationships/e74cb7f7-15b0-499d-9401-a0f01cb96a9a/",
+            "name": "Single Site to Single VRF",
+            "type": "one-to-one",
+            "destination": {
+                "label": "VRF",
+                "object_type": "ipam.vrf",
+                "objects": [
+                    {
+                        "id": "36641ba0-50d6-43be-b9b5-86aa992402e0",
+                        "url": "http://nautobot/api/ipam/vrfs/36641ba0-50d6-43be-b9b5-86aa992402e0/",
+                        "name": "red",
+                        "rd": null,
+                        "display": "red"
+                    }
+                ]
+            }
+        },
+        "vrfs-to-sites": {
+            "id": "e39c53e4-78cf-4572-b116-1d8830b81b2e",
+            "url": "/api/extras/relationships/e39c53e4-78cf-4572-b116-1d8830b81b2e/",
+            "name": "VRFs to Sites",
+            "type": "many-to-many",
+            "source": {
+                "label": "VRFs",
+                "object_type": "ipam.vrf",
+                "objects": []
+            }
+        },
+    }
+}
+```
+
+* Under the `"relationships"` key, there will be one key per Relationship that applies to this model, corresponding to the `slug` of that Relationship.
+    * Under each slug key, there will be information about the Relationship itself, plus any of `"source"`, `"destination"`, or `"peer"` keys (depending on the type and directionality of the Relationship).
+        * Under the `"source"`, `"destination"`, or `"peer"` keys, there are the following keys:
+            * `"label"` - a human-readable description of the related objects
+            * `"object_type"` - the content-type of the related objects
+            * `"objects"` - a list of all related objects, each represented in nested-serializer form as described under [Related Objects](#related-objects) above.
+
+In the example above we can see that a single VRF, `green`, is a destination for the `site-to-vrf` Relationship from this Site, while there are currently no VRFs associated as sources for the `vrfs-to-sites` Relationship to this Site.
+
+### Excluding Config Contexts
+
+When retrieving devices and virtual machines via the REST API, each will include its rendered [configuration context data](../models/extras/configcontext/) by default. Users with large amounts of context data will likely observe suboptimal performance when returning multiple objects, particularly with very high page sizes. To combat this, context data may be excluded from the response data by attaching the query parameter `?exclude=config_context` to the request. This parameter works for both list and detail views.
 
 ### Creating a New Object
 
@@ -607,6 +667,49 @@ http://nautobot/api/ipam/prefixes/b484b0ac-12e3-484a-84c0-aa17955eaedc/ \
 
 !!! note "PUT versus PATCH"
     The Nautobot REST API support the use of either `PUT` or `PATCH` to modify an existing object. The difference is that a `PUT` request requires the user to specify a _complete_ representation of the object being modified, whereas a `PATCH` request need include only the attributes that are being updated. For most purposes, using `PATCH` is recommended.
+
+### Updating Relationship Associations
+
+_Added in version 1.4.0_ <!-- markdownlint-disable-line MD036 -->
+
+It is possible to modify the objects associated via Relationship with an object as part of a REST API `PATCH` request by specifying the `"relationships"` key, any or all of the relevant Relationships, and the list of desired related objects for each such Relationship. Since nested serializers are used for the related objects, they can be identified by ID (primary key) or by one or more attributes in a dictionary. For example, either of the following requests would be valid:
+
+```json
+{
+    "relationships": {
+        "site-to-vrf": {
+            "destination": {
+                "objects": [
+                    {"name": "blue"}
+                ]
+            }
+        },
+        "vrfs-to-sites": {
+            "source": {
+                "objects": [
+                    {"name": "green"},
+                    {"name": "red"},
+                ]
+            }
+        }
+    }
+}
+```
+
+```json
+{
+    "relationships": {
+        "site-to-vrf": {
+            "destination": {
+                "objects": ["3e3c58f9-4f63-44ba-acee-f0c42430eba7"]
+            }
+        }
+    }
+}
+```
+
+!!! Note
+    Relationship slugs can be omitted from the `"relationships"` dictionary, in which case the associations for that Relationship will be left unmodified. In the second example above, the existing association for the `"site-to-vrf"` Relationship would be replaced, but the `"vrfs-to-sites"` Relationship's associations would remain as-is.
 
 ### Updating Multiple Objects
 

@@ -7,6 +7,7 @@ html {
 }
 html, body {
     height: 100%;
+    overflow: auto;
 }
 body {
     padding-top: 70px;
@@ -122,7 +123,11 @@ footer p {
 
 /* Navigation menu */
 ul.dropdown-menu {
-    width: 250px;
+    min-width: 250px;
+}
+ul.dropdown-menu.edge {
+    right: 0;
+    left: auto;
 }
 ul.dropdown-menu div.buttons {
     padding-right: 10px;
@@ -130,6 +135,7 @@ ul.dropdown-menu div.buttons {
 }
 ul.dropdown-menu > li > a {
     clear: left;
+    margin-right: 80px
 }
 .nav > li > a.dropdown-toggle {
     padding: 15px 12px;
@@ -514,4 +520,12 @@ span.hover_copy:hover .hover_copy_button {
 }
 #accordion-toggle-all {
     display: inline;
+}
+
+/* Theme modal */
+.theme-table .img-responsive {
+    margin: 0 auto;
+}
+.theme-table .active-theme {
+    border: 5px solid #FF0000;
 }

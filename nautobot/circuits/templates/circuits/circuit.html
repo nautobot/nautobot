@@ -19,9 +19,7 @@
                 </tr>
                 <tr>
                     <td>Provider</td>
-                    <td>
-                        <a href="{% url 'circuits:provider' slug=object.provider.slug %}">{{ object.provider }}</a>
-                    </td>
+                    <td>{{ object.provider|hyperlinked_object }}</td>
                 </tr>
                 <tr>
                     <td>Circuit ID</td>
@@ -29,19 +27,15 @@
                 </tr>
                 <tr>
                     <td>Type</td>
-                    <td><a href="{{ object.type.get_absolute_url }}">{{ object.type }}</a></td>
+                    <td>{{ object.type|hyperlinked_object }}</td>
                 </tr>
                 <tr>
                     <td>Tenant</td>
                     <td>
-                        {% if object.tenant %}
-                            {% if object.tenant.group %}
-                                <a href="{{ object.tenant.group.get_absolute_url }}">{{ object.tenant.group }}</a> /
-                            {% endif %}
-                            <a href="{{ object.tenant.get_absolute_url }}">{{ object.tenant }}</a>
-                        {% else %}
-                            <span class="text-muted">None</span>
+                        {% if object.tenant and object.tenant.group %}
+                            {{ object.tenant.group|hyperlinked_object }} /
                         {% endif %}
+                        {{ object.tenant|hyperlinked_object }}
                     </td>
                 </tr>
                 <tr>

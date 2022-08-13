@@ -10,7 +10,7 @@
             <ol class="breadcrumb">
                 <li><a href="{% url 'extras:job_list' %}">Jobs</a></li>
                 <li>{{ job_model.grouping | bettertitle }}</li>
-                <li><a href="{{ job_model.get_absolute_url }}">{{ job_model }}</a></li>
+                <li>{{ job_model|hyperlinked_object }}</li>
                 <li>Submission and Scheduling</li>
             </ol>
         </div>
@@ -23,9 +23,6 @@
     <ul class="nav nav-tabs" role="tablist">
         <li role="presentation" class="active">
             <a href="#run" role="tab" data-toggle="tab" class="active">Run</a>
-        </li>
-        <li role="presentation">
-            <a href="#source" role="tab" data-toggle="tab">Source</a>
         </li>
     </ul>
     <div class="tab-content">
@@ -66,6 +63,14 @@
                                 <div class="panel-body">
                                     {% render_form job_form %}
                                 </div>
+                                {% if job_model.has_sensitive_variables %}
+                                    <div class="panel-footer">
+                                        <span class="help-block">
+                                            <i class="mdi mdi-information-outline"></i>
+                                            This job has sensitive variables and can only be executed immediately.
+                                        </span>
+                                    </div>
+                                {% endif %}
                             </div>
                         {% else %}
                              <div class="alert alert-info">
@@ -74,7 +79,7 @@
                             </div>
                             {% render_form job_form %}
                         {% endif %}
-                        <div class="panel panel-default">
+                        <div class="panel panel-default job_execution">
                             <div class="panel-heading">
                                 <strong>Job Execution</strong>
                             </div>
@@ -103,12 +108,6 @@
                     </form>
                 </div>
             </div>
-        </div>
-        <div role="tabpanel" class="tab-pane" id="source">
-            {% if job_model.installed and job_model.job_class is not None %}
-                <p><code>{{ job_model.job_class.filename }}</code></p>
-                <pre>{{ job_model.job_class.source }}</pre>
-            {% endif %}
         </div>
     </div>
 {% endblock %}
@@ -162,8 +161,13 @@
     }
 
     $(document).ready(function() {
-        $("#id__schedule_type").change(toggleExecutionType);
-        toggleExecutionType();
+        {% if not job_model.has_sensitive_variables %}
+            $("#id__schedule_type").change(toggleExecutionType);
+            toggleExecutionType();
+        {% else %}
+            $("#id__schedule_type").val("immediately");
+            $(".job_execution").hide();
+        {% endif %}
     });
 </script>
 {% endblock %}

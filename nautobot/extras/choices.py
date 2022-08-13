@@ -90,6 +90,23 @@ class CustomLinkButtonClassChoices(ChoiceSet):
 
 
 #
+# Dynamic Groups
+#
+
+
+class DynamicGroupOperatorChoices(ChoiceSet):
+    OPERATOR_UNION = "union"
+    OPERATOR_INTERSECTION = "intersection"
+    OPERATOR_DIFFERENCE = "difference"
+
+    CHOICES = (
+        (OPERATOR_UNION, "Include (OR)"),
+        (OPERATOR_INTERSECTION, "Restrict (AND)"),
+        (OPERATOR_DIFFERENCE, "Exclude (NOT)"),
+    )
+
+
+#
 # Jobs
 #
 
@@ -227,6 +244,23 @@ class ObjectChangeActionChoices(ChoiceSet):
         ACTION_UPDATE: "primary",
         ACTION_DELETE: "danger",
     }
+
+
+class ObjectChangeEventContextChoices(ChoiceSet):
+
+    CONTEXT_WEB = "web"
+    CONTEXT_JOB = "job"
+    CONTEXT_JOB_HOOK = "job-hook"
+    CONTEXT_ORM = "orm"
+    CONTEXT_UNKNOWN = "unknown"
+
+    CHOICES = (
+        (CONTEXT_WEB, "Web"),
+        (CONTEXT_JOB, "Job"),
+        (CONTEXT_JOB_HOOK, "Job hook"),
+        (CONTEXT_ORM, "ORM"),
+        (CONTEXT_UNKNOWN, "Unknown"),
+    )
 
 
 #

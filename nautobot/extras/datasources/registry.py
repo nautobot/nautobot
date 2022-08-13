@@ -1,7 +1,7 @@
 """Registry-related APIs for datasources."""
 
 from nautobot.extras.choices import JobResultStatusChoices, LogLevelChoices
-from nautobot.extras.context_managers import change_logging
+from nautobot.extras.context_managers import change_logging, JobChangeContext
 from nautobot.extras.registry import registry
 
 
@@ -36,7 +36,8 @@ def refresh_datasource_content(model_name, record, request, job_result, delete=F
     job_result.log(f"Refreshing data provided by {record}...", level_choice=LogLevelChoices.LOG_INFO)
     job_result.save()
     if request:
-        with change_logging(request):
+        change_context = JobChangeContext(user=request.user)
+        with change_logging(change_context):
             for entry in get_datasource_contents(model_name):
                 job_result.log(f"Refreshing {entry.name}...", level_choice=LogLevelChoices.LOG_INFO)
                 try:

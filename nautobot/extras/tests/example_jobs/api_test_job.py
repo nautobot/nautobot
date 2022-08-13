@@ -5,6 +5,7 @@ from nautobot.extras.jobs import Job, BooleanVar, IntegerVar, StringVar, ObjectV
 class APITestJob(Job):
     class Meta:
         name = "Job for API Tests"
+        has_sensitive_variables = False
 
     var1 = StringVar()
     var2 = IntegerVar(required=True)  # explicitly stated, though required=True is the default in any case
