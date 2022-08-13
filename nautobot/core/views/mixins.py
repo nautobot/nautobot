@@ -62,6 +62,8 @@ class NautobotViewSetMixin(GenericViewSet, AccessMixin, GetReturnURLMixin, FormV
     logger = logging.getLogger(__name__)
     lookup_field = "slug"
     # Attributes that need to be specified: form_class, queryset, serializer_class, table_class for most mixins.
+    filterset_class = None
+    filterset_form_class = None
     form_class = None
     queryset = None
     # serializer_class has to be specified to eliminate the need to override retrieve() in the RetrieveModelMixin for now.
