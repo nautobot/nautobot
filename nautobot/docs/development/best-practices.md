@@ -312,5 +312,6 @@ filterset.qs.filter(query).count()  # 339
 - The good news is that in the core there are not that many of these filter methods defined, but we also don’t want to see them continue to proliferate.
 
 ## Using NautobotUIViewSet for Plugin Development
-Starting from Nautobot v1.4, using `NautobotUIViewSet` for plugin development is strongly recommended.
-- See how to use `NautobotUIViewSet`, check out [plugins/development.md](/docs/plugins/development.md)
+
+- Starting from Nautobot v1.4, using `NautobotUIViewSet` for plugin development is strongly recommended.
+- See how to use `NautobotUIViewSet`, check out [plugins/development.md](/docs/plugins/development.md).
