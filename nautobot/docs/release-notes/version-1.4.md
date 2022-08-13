@@ -147,8 +147,12 @@ The `settings_and_registry` default context processor was changed to purely `set
 
 ### Changed
 
+- [#2183](https://github.com/nautobot/nautobot/pull/2183) - Update dependency django to ~3.2.15
+- [#2193](https://github.com/nautobot/nautobot/issues/2193) - Updated Postgres/MySQL `dumpdata` docs to exclude `django_rq` exports.
+
 ### Fixed
 
+- [#1996](https://github.com/nautobot/nautobot/issues/1996) - Fixed Menu Item `link_text` render on top of buttons.
 - [#2178](https://github.com/nautobot/nautobot/issues/2178) - Fixed "invalid filter" error when filtering JobResults in the UI.
 - [#2191](https://github.com/nautobot/nautobot/pull/2191) - Fix widget for boolean filters fields when generating filter form for a Dynamic Group
 - [#2192](https://github.com/nautobot/nautobot/issues/2178) - Fixed job.request removed from job instance in `v1.4.0b1`.
