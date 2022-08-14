@@ -35,9 +35,13 @@
     {{ block.super }}
      {% if perms.extras.run_job %}
         {% if result.job_model and result.job_kwargs %}
-        <a href="{% url 'extras:job_run' slug=result.job_model.slug %}?kwargs_from_job_result={{ result.pk }}"
+        <a href="{% url 'extras:job_run' slug=result.job_model.slug %}{% if not result.job_model.job_class.has_sensitive_variables %}?kwargs_from_job_result={{ result.pk }}{% endif %}"
            class="btn btn-info">
-            <span class="mdi mdi-repeat" aria-hidden="true"></span> Re-Run
+            {% if not result.job_model.job_class.has_sensitive_variables %}
+                <span class="mdi mdi-repeat" aria-hidden="true"></span> Re-Run
+            {% else %}
+                <span class="mdi mdi-play" aria-hidden="true"></span> Run
+            {% endif %}
         </a>
         {% endif %}
     {% endif %}
@@ -73,28 +77,35 @@
 
 {% block extra_tab_content %}
     <div role="tabpanel" class="tab-pane" id="json">
-        <div class="row">
-            <div class="col-md-6">
-                <div class="panel panel-default">
-                    <div class="panel-heading">
-                        <strong>Job Inputs</strong>
+        {% if not result.job_model.job_class.has_sensitive_variables %}
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="panel panel-default">
+                        <div class="panel-heading">
+                            <strong>Job Inputs</strong>
+                        </div>
+                        <div class="panel-body">
+                            {% include 'extras/inc/json_data.html' with data=result.job_kwargs format="json" %}
+                        </div>
                     </div>
-                    <div class="panel-body">
-                        {% include 'extras/inc/json_data.html' with data=result.job_kwargs format="json" %}
+                </div>
+                <div class="col-md-6">
+                    <div class="panel panel-default">
+                        <div class="panel-heading">
+                            <strong>Output Data</strong>
+                        </div>
+                        <div class="panel-body">
+                            {% include 'extras/inc/json_data.html' with data=result.data format="json" %}
+                        </div>
                     </div>
                 </div>
             </div>
-            <div class="col-md-6">
-                <div class="panel panel-default">
-                    <div class="panel-heading">
-                        <strong>Output Data</strong>
-                    </div>
-                    <div class="panel-body">
-                        {% include 'extras/inc/json_data.html' with data=result.data format="json" %}
-                    </div>
-                </div>
+        {% else %}
+            <div class="alert alert-warning text-center" role="alert">
+                <h4><i class="mdi mdi-alert"></i> Job Data Not saved</h4>
+                <p>This job is marked as having sensitive variables, so its data has not been saved to the database.</p>
             </div>
-        </div>
+        {% endif %}
     </div>
     {% if result.data.output %}
         <div role="tabpanel" class="tab-pane" id="output">
