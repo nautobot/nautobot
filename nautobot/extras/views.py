@@ -1163,6 +1163,7 @@ class JobView(ObjectPermissionRequiredMixin, View):
                     data=job_model.job_class.serialize_data(job_form.cleaned_data),
                     request=copy_safe_request(request),
                     commit=commit,
+                    has_sensitive_variables=getattr(job_model.job_class, "has_sensitive_variables", False),
                 )
 
                 return redirect("extras:job_jobresult", pk=job_result.pk)

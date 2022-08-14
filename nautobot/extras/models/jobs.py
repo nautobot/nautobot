@@ -650,7 +650,18 @@ class JobResult(BaseModel, CustomFieldModel):
             self.completed = timezone.now()
 
     @classmethod
-    def enqueue_job(cls, func, name, obj_type, user, *args, celery_kwargs=None, schedule=None, **kwargs):
+    def enqueue_job(
+        cls,
+        func,
+        name,
+        obj_type,
+        user,
+        *args,
+        celery_kwargs=None,
+        schedule=None,
+        has_sensitive_variables=False,
+        **kwargs,
+    ):
         """
         Create a JobResult instance and enqueue a job using the given callable
 
@@ -662,11 +673,17 @@ class JobResult(BaseModel, CustomFieldModel):
         celery_kwargs: Dictionary of kwargs to pass as **kwargs to Celery when job is queued
         args: additional args passed to the callable
         schedule: Optional ScheduledJob instance to link to the JobResult
+        has_sensitive_variables: If this is true, result kwargs will not be saved to the db
         kwargs: additional kwargs passed to the callable
         """
-        # Discard "request" parameter from the kwargs that we save in the job_result, as it's not relevant to re-runs,
-        # and will likely go away in the future.
-        job_result_kwargs = {key: value for key, value in kwargs.items() if key != "request"}
+
+        if not has_sensitive_variables:
+            # Discard "request" parameter from the kwargs that we save in the job_result,
+            # as it's not relevant to re-runs, and will likely go away in the future.
+            job_result_kwargs = {key: value for key, value in kwargs.items() if key != "request"}
+        else:
+            # Set job data to None as has_sensitive_variables is True
+            job_result_kwargs = None
         job_result = cls.objects.create(
             name=name,
             job_kwargs=job_result_kwargs,
