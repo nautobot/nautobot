@@ -57,11 +57,11 @@ GET /api/dcim/sites/?cf_foo=123
 
 Custom fields can be mixed with built-in fields to further narrow results. When creating a custom string field, the type of filtering selected (loose versus exact) determines whether partial or full matching is used.
 
-Custom fields can use the lookup expressions listed in the next section by prepending `cf_` to the custom field `name` (and not the `slug`) followed by the required lookup type (see below).
+_Added in version 1.4.0_: Custom fields can use the lookup expressions listed in the next section by prepending `cf_` to the custom field `name` (and not the `slug`) followed by the required lookup type (see below).
 
 ## Lookup Expressions
 
-Certain model fields (including custom fields of type `text`, `url`, `select`, `integer`, and `date`) also support filtering using additional lookup expressions. This allows
+Certain model fields (including, in Nautobot 1.4 and later, custom fields of type `text`, `url`, `select`, `integer`, and `date`) also support filtering using additional lookup expressions. This allows
 for negation and other context-specific filtering.
 
 These lookup expressions can be applied by adding a suffix to the desired field's name, e.g. `mac_address__n`. In this case, the filter expression is for negation and it is separated by two underscores. Below are the lookup expressions that are supported across different field types.

@@ -298,6 +298,8 @@ template_extensions = [DeviceExtraTabs, SiteAnimalCount]
 
 #### Adding Extra Tabs
 
+_Added in version 1.4.0_ <!-- markdownlint-disable-line MD036 -->
+
 In order for any extra tabs to work properly, the `"url"` key must reference a view which inherits from the `nautobot.core.views.generic.ObjectView` class and the template must extend the object's detail template such as:
 
 ```html
@@ -1100,6 +1102,8 @@ plugin_name/                   # "nautobot_animal_sounds"
 
 ### Replacing Views
 
+_Added in version 1.4.0_ <!-- markdownlint-disable-line MD036 -->
+
 You may override any of the core or plugin views by providing an `override_views` `dict` in a plugin's `views.py` file.
 
 To override a view, you must specify the view's fully qualified name as the `dict` key which consists of the app name followed by the view's name separated by a colon, for instance `dcim:device`. The `dict` value should be the overriding view function.
@@ -1125,7 +1129,9 @@ override_views = {
 
 ## Note URL Endpoint
 
-New in Nautobot 1.4 is support for models that inherit from `PrimaryModel` and `OrganizationalModel` to have notes associated. In order to utilize this new feature you will need to add the endpoint to `urls.py`. Here is an option to be able to support 1.4 and older versions of Nautobot:
+_Added in version 1.4.0_ <!-- markdownlint-disable-line MD036 -->
+
+Models that inherit from `PrimaryModel` and `OrganizationalModel` can have notes associated. In order to utilize this new feature you will need to add the endpoint to `urls.py`. Here is an option to be able to support both 1.4+ and older versions of Nautobot:
 
 ```python
 
