@@ -19,6 +19,9 @@ import re
 from invoke import Collection, task as invoke_task
 from invoke.exceptions import Exit
 
+# Override built-in print function with rich's pretty-printer function
+from rich import print
+
 
 def is_truthy(arg):
     """Convert "truthy" strings into Booleans.
@@ -91,20 +94,27 @@ def docker_compose(context, command, **kwargs):
         command (str): Command string to append to the "docker-compose ..." command, such as "build", "up", etc.
         **kwargs: Passed through to the context.run() call.
     """
-    compose_command = f'docker-compose --project-name {context.nautobot.project_name} --project-directory "{context.nautobot.compose_dir}"'
+    compose_command_tokens = [
+        "docker-compose",
+        f'--project-name "{context.nautobot.project_name}"',
+        f'--project-directory "{context.nautobot.compose_dir}"',
+    ]
 
     for compose_file in context.nautobot.compose_files:
         compose_file_path = os.path.join(context.nautobot.compose_dir, compose_file)
-        compose_command += f' -f "{compose_file_path}"'
+        compose_command_tokens.append(f'-f "{compose_file_path}"')
 
-    compose_command += f" {command}"
+    compose_command_tokens.append(command)
 
     # If `service` was passed as a kwarg, add it to the end.
     service = kwargs.pop("service", None)
     if service is not None:
-        compose_command += f" {service}"
+        compose_command_tokens.append(service)
 
     print(f'Running docker-compose command "{command}"')
+    compose_command = " \\\n    ".join(compose_command_tokens)
+    if "hide" not in kwargs:
+        print(f"[dim]PYTHON_VER={context.nautobot.python_ver} \\\n    {compose_command}[/dim]")
     return context.run(compose_command, env={"PYTHON_VER": context.nautobot.python_ver}, **kwargs)
 
 
