@@ -508,7 +508,7 @@ def _run_job(request, job_model, legacy_response=False):
     if job_model.has_sensitive_variables:
         if request.data.get("schedule") and request.data["schedule"]["interval"] != JobExecutionType.TYPE_IMMEDIATELY:
             raise ValidationError(
-                {"schedule": {"interval": ["Unable to schedule job: Job has sensitive input variables"]}}
+                {"schedule": {"interval": ["Unable to schedule job: Job may have sensitive input variables"]}}
             )
 
     job_class = job_model.job_class
@@ -545,6 +545,14 @@ def _run_job(request, job_model, legacy_response=False):
     # executes immediately.
     if schedule_data is None and job_model.approval_required:
         schedule_data = {"interval": JobExecutionType.TYPE_IMMEDIATELY}
+
+    # Skip creating a ScheduledJob when job can be executed immediately
+    elif (
+        schedule_data
+        and schedule_data["interval"] == JobExecutionType.TYPE_IMMEDIATELY
+        and not job_model.approval_required
+    ):
+        schedule_data = None
 
     # Try to create a ScheduledJob, or...
     if schedule_data:

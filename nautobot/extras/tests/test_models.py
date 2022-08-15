@@ -831,7 +831,7 @@ class JobModelTest(TestCase):
             ).clean()
         self.assertEqual(
             handler.exception.message_dict["approval_required"][0],
-            "A job with sensitive variables cannot be marked as requiring approval",
+            "A job that may have sensitive variables cannot be marked as requiring approval",
         )
 
 
