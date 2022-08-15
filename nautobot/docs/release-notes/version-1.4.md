@@ -36,6 +36,10 @@ Jobs can now specify a `template_name` property and provide a custom template wi
 
 You can refer to the [Job class metadata attribute documentation](../additional-features/jobs.md#template_name) on how to build and define this template.
 
+#### Dynamic Groups Support Additional Models ([#2200](https://github.com/nautobot/nautobot/pull/2200))
+
+Cluster, IP Address, Prefix, and Rack models can now be filtered on in Dynamic Groups and can also support nested or groups of Dynamic Groups. Some fields have been excluded from filtering until a sensible widget can be provided.
+
 #### Dark Mode UI ([#729](https://github.com/nautobot/nautobot/issues/729))
 
 Nautobot's UI now supports dark mode, both explicitly and via browser preference selection.
@@ -145,17 +149,24 @@ The `settings_and_registry` default context processor was changed to purely `set
 
 - [#2173](https://github.com/nautobot/nautobot/pull/2173) - Added flake8 linting and black formatting settings to vscode workspace settings.
 - [#2105](https://github.com/nautobot/nautobot/issues/2105) - Added support for Notes in NautobotBulkEditForm and NautobotEditForm.
+- [#2200](https://github.com/nautobot/nautobot/pull/2200) - Added Dynamic Groups support for Cluster, IP Address, Prefix, and Rack.
 
 ### Changed
 
-- [#2183](https://github.com/nautobot/nautobot/pull/2183) - Update dependency django to ~3.2.15
+- [#2029](https://github.com/nautobot/nautobot/pull/2029) - Updated optional settings docs to call out environment variable only settings.
+- [#2176](https://github.com/nautobot/nautobot/pull/2176) - Update invoke task output to use rich formatting, print full Docker Compose commands.
+- [#2183](https://github.com/nautobot/nautobot/pull/2183) - Update dependency django to ~3.2.15.
 - [#2193](https://github.com/nautobot/nautobot/issues/2193) - Updated Postgres/MySQL `dumpdata` docs to exclude `django_rq` exports.
+- [#2200](https://github.com/nautobot/nautobot/pull/2200) - Group of dynamic group membership links now link to the group's membership table view.
 
 ### Fixed
 
 - [#1304](https://github.com/nautobot/nautobot/issues/1304) - Fixed incorrect display of connection counts on home page.
+- [#1845](https://github.com/nautobot/nautobot/issues/1845) - Fixed not being able to schedule job with 'immediate' schedule via API.
 - [#1996](https://github.com/nautobot/nautobot/issues/1996) - Fixed Menu Item `link_text` render on top of buttons.
 - [#2178](https://github.com/nautobot/nautobot/issues/2178) - Fixed "invalid filter" error when filtering JobResults in the UI.
+- [#2184](https://github.com/nautobot/nautobot/issues/2184) - Fixed job re-run not honoring `has_sensitive_variables`.
+- [#2190](https://github.com/nautobot/nautobot/pull/2190) - Fixed tags missing from Location forms.
 - [#2191](https://github.com/nautobot/nautobot/pull/2191) - Fix widget for boolean filters fields when generating filter form for a Dynamic Group
 - [#2192](https://github.com/nautobot/nautobot/issues/2178) - Fixed job.request removed from job instance in `v1.4.0b1`.
 - [#2197](https://github.com/nautobot/nautobot/pull/2197) - Fixed some display issues in the Dynamic Groups detail view.
