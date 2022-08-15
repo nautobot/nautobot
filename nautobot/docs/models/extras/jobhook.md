@@ -1,5 +1,7 @@
 # Job Hooks
 
+_Added in version 1.4.0_ <!-- markdownlint-disable-line MD036 -->
+
 A Job Hook is a mechanism for automatically starting a [job](../../../additional-features/jobs/) when an object is changed. Job Hooks are similar to [webhooks](../webhook/) except that an object change event initiates a `JobHookReceiver` job instead of a web request. Job hooks are configured in the web UI under **Jobs > Job Hooks**.
 
 ## Configuration

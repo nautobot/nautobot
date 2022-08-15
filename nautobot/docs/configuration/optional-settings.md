@@ -922,9 +922,7 @@ If [`STORAGE_BACKEND`](#storage_backend) is not defined, this setting will be ig
 
 ## STRICT_FILTERING
 
-<!-- markdownlint-disable MD036 -->
-_Added in version 1.4.0_
-<!-- markdownlint-enable MD036 -->
+_Added in version 1.4.0_ <!-- markdownlint-disable-line MD036 -->
 
 Default: `True`
 
@@ -976,9 +974,7 @@ Environment Variables:
 
 ## UI_RACK_VIEW_TRUNCATE_FUNCTION
 
-<!-- markdownlint-disable MD036 -->
-_Added in version 1.4.0_
-<!-- markdownlint-enable MD036 -->
+_Added in version 1.4.0_ <!-- markdownlint-disable-line MD036 -->
 
 Default:
 

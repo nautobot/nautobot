@@ -1,8 +1,6 @@
 # Location Types
 
-<!-- markdownlint-disable MD036 -->
-_Added in version 1.4.0_
-<!-- markdownlint-enable MD036 -->
+_Added in version 1.4.0_ <!-- markdownlint-disable-line MD036 -->
 
 Before defining individual Locations, you must first define the hierarchy of Location Types that you wish to use for the organization of your network. An example hierarchy might be `Building ← Floor ← Room`, but you might have more or fewer distinct types depending on your specific organizational requirements.
 
