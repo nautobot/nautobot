@@ -134,7 +134,7 @@ class ViewTestCases:
 
             # Try GET without permission
             with disable_warnings("django.request"):
-                self.assertHttpStatus(self.client.get(instance.get_absolute_url()), 403)
+                self.assertHttpStatus(self.client.get(instance.get_absolute_url()), [403, 404])
 
         @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
         def test_get_object_with_permission(self):
@@ -382,7 +382,7 @@ class ViewTestCases:
 
             # Try GET without permission
             with disable_warnings("django.request"):
-                self.assertHttpStatus(self.client.get(self._get_url("edit", instance)), 403)
+                self.assertHttpStatus(self.client.get(self._get_url("edit", instance)), [403, 404])
 
             # Try POST without permission
             request = {
@@ -390,7 +390,7 @@ class ViewTestCases:
                 "data": post_data(self.form_data),
             }
             with disable_warnings("django.request"):
-                self.assertHttpStatus(self.client.post(**request), 403)
+                self.assertHttpStatus(self.client.post(**request), [403, 404])
 
         @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
         def test_edit_object_with_permission(self):
@@ -464,7 +464,7 @@ class ViewTestCases:
 
             # Try GET without permission
             with disable_warnings("django.request"):
-                self.assertHttpStatus(self.client.get(self._get_url("delete", instance)), 403)
+                self.assertHttpStatus(self.client.get(self._get_url("delete", instance)), [403, 404])
 
             # Try POST without permission
             request = {
@@ -472,7 +472,7 @@ class ViewTestCases:
                 "data": post_data({"confirm": True}),
             }
             with disable_warnings("django.request"):
-                self.assertHttpStatus(self.client.post(**request), 403)
+                self.assertHttpStatus(self.client.post(**request), [403, 404])
 
         @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
         def test_delete_object_with_permission(self):

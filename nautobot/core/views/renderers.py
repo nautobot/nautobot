@@ -59,12 +59,12 @@ class NautobotHTMLRenderer(renderers.BrowsableAPIRenderer):
         """
         Helper function to construct and paginate the table for rendering used in the ObjectListView, ObjectBulkUpdateView and ObjectBulkDestroyView.
         """
-        view.check_if_table_class_attribute_exist()
-        view.check_if_queryset_attribute_exist()
+        table_class = view.get_table_class()
+        queryset = view.get_queryset()
         if view.action == "list":
             permissions = kwargs.get("permissions", {})
             request = kwargs.get("request", view.request)
-            table = view.table_class(view.queryset, user=request.user)
+            table = table_class(queryset, user=request.user)
             if "pk" in table.base_columns and (permissions["change"] or permissions["delete"]):
                 table.columns.show("pk")
             # Apply the request context
@@ -75,12 +75,12 @@ class NautobotHTMLRenderer(renderers.BrowsableAPIRenderer):
             return RequestConfig(request, paginate).configure(table)
         else:
             pk_list = kwargs.get("pk_list", [])
-            table = view.table_class(view.queryset.filter(pk__in=pk_list), orderable=False)
+            table = table_class(queryset.filter(pk__in=pk_list), orderable=False)
             return table
 
     def validate_action_buttons(self, view, request):
         """Verify actions in self.action_buttons are valid view actions."""
-        view.check_if_queryset_attribute_exist()
+        queryset = view.get_queryset()
         always_valid_actions = ("export",)
         valid_actions = []
         invalid_actions = []
@@ -88,7 +88,7 @@ class NautobotHTMLRenderer(renderers.BrowsableAPIRenderer):
         if not view.action_buttons:
             view.actions_buttons = ("add", "import", "export")
         for action in view.action_buttons:
-            if action in always_valid_actions or validated_viewname(view.queryset.model, action) is not None:
+            if action in always_valid_actions or validated_viewname(queryset.model, action) is not None:
                 valid_actions.append(action)
             else:
                 invalid_actions.append(action)
@@ -105,22 +105,22 @@ class NautobotHTMLRenderer(renderers.BrowsableAPIRenderer):
         if renderer_context is None:
             # renderer_context content is automatically provided with the view returning the Response({}) object.
             # The only way renderer_context is None if the user directly calls it from the renderer without a view.
-            self.logger.error(
+            self.logger.debug(
                 "renderer_context is None, please do not directly call get_context() from NautobotHTMLRenderer without specifying the view."
             )
             return {}
         view = renderer_context["view"]
         request = renderer_context["request"]
         # Check if queryset attribute is set before doing anything.
-        view.check_if_queryset_attribute_exist()
-        model = view.queryset.model
+        queryset = view.get_queryset()
+        model = queryset.model
         form_class = view.get_form_class()
         content_type = ContentType.objects.get_for_model(model)
         form = None
         table = None
         changelog_url = None
         instance = None
-        view.queryset = view.alter_queryset(request)
+        queryset = view.alter_queryset(request)
         # Compile a dictionary indicating which permissions are available to the current user for this model
         permissions = self.construct_user_permissions(request, model)
         if view.action in ["create", "retrieve", "update", "destroy"]:
@@ -174,7 +174,7 @@ class NautobotHTMLRenderer(renderers.BrowsableAPIRenderer):
             elif view.action == "bulk_update":
                 if request.POST.get("_all"):
                     if view.filterset_class is not None:
-                        pk_list = [obj.pk for obj in view.filterset_class(request.POST, view.queryset.only("pk")).qs]
+                        pk_list = [obj.pk for obj in view.filterset_class(request.POST, queryset.only("pk")).qs]
                     else:
                         pk_list = model.objects.values_list("pk", flat=True)
                 else:
@@ -197,14 +197,14 @@ class NautobotHTMLRenderer(renderers.BrowsableAPIRenderer):
             "filter_form": self.get_filter_form(view, request),
             "object": instance,
             "obj": instance,  # NOTE: This context key is deprecated in favor of `object`.
-            "obj_type": view.queryset.model._meta.verbose_name,  # NOTE: This context key is deprecated in favor of `verbose_name`.
-            "obj_type_plural": view.queryset.model._meta.verbose_name_plural,  # NOTE: This context key is deprecated in favor of `verbose_name_plural`.
+            "obj_type": queryset.model._meta.verbose_name,  # NOTE: This context key is deprecated in favor of `verbose_name`.
+            "obj_type_plural": queryset.model._meta.verbose_name_plural,  # NOTE: This context key is deprecated in favor of `verbose_name_plural`.
             "permissions": permissions,
             "return_url": return_url,
             "table": table if table is not None else data.get("table", None),
             "table_config_form": TableConfigForm(table=table) if table else None,
-            "verbose_name": view.queryset.model._meta.verbose_name,
-            "verbose_name_plural": view.queryset.model._meta.verbose_name_plural,
+            "verbose_name": queryset.model._meta.verbose_name,
+            "verbose_name_plural": queryset.model._meta.verbose_name_plural,
         }
         if view.action == "retrieve":
             context.update(view.get_extra_context(request, instance))
