@@ -526,7 +526,7 @@ class Prefix(PrimaryModel, StatusModel):
         "description",
     ]
     dynamic_group_filter_fields = {
-        "vrf": "vrf_id", # Duplicate filter fields that will be collapsed in 2.0
+        "vrf": "vrf_id",  # Duplicate filter fields that will be collapsed in 2.0
     }
 
     class Meta:
@@ -844,7 +844,7 @@ class IPAddress(PrimaryModel, StatusModel):
         "role",
         "description",
     ]
-    dynamic_group_skip_missing_fields = True # Problematic form labels for `vminterface` and `interface`
+    dynamic_group_skip_missing_fields = True  # Problematic form labels for `vminterface` and `interface`
 
     objects = IPAddressQuerySet.as_manager()
 
