@@ -125,9 +125,7 @@ class NautobotViewSetMixin(GenericViewSet, AccessMixin, GetReturnURLMixin, FormV
             "'%s' should include a `table_class` attribute for bulk operations" % self.__class__.__name__
         )
 
-        table_class = self.table_class
-
-        return table_class
+        return self.table_class
 
     def _process_destroy_form(self, form):
         """

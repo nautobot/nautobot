@@ -1074,17 +1074,17 @@ Templates can benefit from a very rich context passed down from the views and re
 * `return_url`: The relevant return URL
 * `table`: A Table object for the associated model if relevant (`None` for detail/retrieve and update views)
 * `table_config_form`: A TableConfigForm object for the associated `table`, providing the ability to customize the table
-* `verbose_name`: The singular form of the models name
-* `verbose_name_plural`: The plural form of the models name
+* `verbose_name`: The singular form of the model's name
+* `verbose_name_plural`: The plural form of the model's name
 
 An example from editing a Provider object:
 
 ```python
 {
     'content_type': <ContentType: circuits | provider>,
-    'filter_form': <ProviderFilterForm bound=True, valid=Unknown, fields=(region;site;location;q;asn;tag;cf_emails_circuit_maintenances;cf_provider_parser_circuit_maintenances)>,
-    'form': <ProviderForm bound=False, valid=Unknown, fields=(name;slug;asn;account;portal_url;noc_contact;admin_contact;comments;tags;object_note;cf_emails_circuit_maintenances;cf_provider_parser_circuit_maintenances)>,
-    'object': <Provider: NautobotProivder>,
+    'filter_form': <ProviderFilterForm bound=True, valid=Unknown, fields=(region;site;location;q;asn;tag)>,
+    'form': <ProviderForm bound=False, valid=Unknown, fields=(name;slug;asn;account;portal_url;noc_contact;admin_contact;comments;tags;object_note)>,
+    'object': <Provider: NautobotProvider>,
     'permissions': {'add': True, 'change': True, 'delete': True, 'view': True},
     'return_url': '/circuits/providers/nautobotprovider',
     'table': None,
@@ -1099,7 +1099,7 @@ Other context keys may be available for certain views:
 * `editing`: Provided for create and update views to help the template determine if this is a new or existing object
 * `action_buttons`: Provided for the list view for the top of table buttons (such as "Add" and "Export")
 
-You may see other context keys provided by default but these are strictly intended to be transitionary for the time being. Some examples of those are:
+You may see other context keys as well, but any not documented above should not be relied upon as they may be removed in a future release. Some examples of those are:
 
 * `changelog_url`: This can now be retrieved from the object itself, via `object.get_changelog_url`, if the object supports change-logging
 * `obj`: Please use `object` instead
@@ -1144,9 +1144,9 @@ router.register("yourpluginmodel", views.YourPluginModelUIViewSet)
 
 Template naming is very intuitive in NautobotUIViewSet. In `templates/yourpluginmodel` folder, name your templates following this convention `{app_label}/{model_name}_{self.action}.html`.
 
-| ViewMixins    | self.action   |
-| ------------- |:-------------:|
-| ObjectlistViewMixin        | list         |
+| ViewMixins                 | self.action  |
+| -------------------------- |:------------:|
+| ObjectListViewMixin        | list         |
 | ObjectDetailViewMixin      | retrieve     |
 | ObjectEditViewMixin        | create/update|
 | ObjectDestroyViewMixin     | destroy      |
@@ -1154,9 +1154,9 @@ Template naming is very intuitive in NautobotUIViewSet. In `templates/yourplugin
 | ObjectBulkCreateViewMixin  | bulk_create  |
 | ObjectBulkUpdateViewMixin  | bulk_update  |
 
-For example, for a DetailView template for `yourpluginmodel`, the template name will be `yourplugin/yourpluginmodel_retrieve.html`, for a BulkCreateView template for `yourpluginmodel`, the template name will be `yourplugin/yourpluginmodel_bulk_create.html` and etc.
+For example, for a DetailView template for `YourPluginModel`, the template name will be `yourplugin/yourpluginmodel_retrieve.html`, for a BulkCreateView template for `yourpluginmodel`, the template name will be `yourplugin/yourpluginmodel_bulk_create.html` and etc.
 
-If you do not specify your own templates in `templates/yourpluginmodel` folder, `NautobotUIViewSet` will fall back to `generic/object_{self.action}.html`.
+If you do not provide your own templates in the `yourplugin/templates/yourplugin` folder, `NautobotUIViewSet` will fall back to `generic/object_{self.action}.html`.
 
 Since in many cases the `create` and `update` templates for a model will be identical, you are not required to create both. If you provide a `{app_label}/{model_opts.model_name}_create.html` file but not a `{app_label}/{model_opts.model_name}_update.html` file, then when you update an object, it will fall back to `{app_label}/{model_opts.model_name}_create.html` and vice versa.
 
