@@ -94,6 +94,16 @@ A new version of the `/dcim/interfaces/*` REST API endpoints have been implement
 
 Visit the documentation on [REST API versioning](../rest-api/overview/#versioning) for more information on using the versioned APIs.
 
+#### NautobotUIViewSet ([#1812](https://github.com/nautobot/nautobot/issues/1812))
+
+New in Nautobot 1.4 is the debut of `NautobotUIViewSet`: A powerful plugin development tool that can save plugin developer hundreds of lines of code compared to using legacy `generic.views`. Using it to gain access to default functionalities previous provided by `generic.views` such as `create()`, `bulk_create()`, `update()`, `partial_update()`, `bulk_update()`, `destroy()`, `bulk_destroy()`, `retrieve()` and `list()` actions.
+
+Note that this ViewSet is catered specifically to the UI, not the API.
+
+Concrete examples on how to use `NautobotUIViewSet` resides in `nautobot.circuits.views`.
+
+Visit the documentation on [plugins/development.md](/docs/plugins/development.md) for more information on how to use `NautobotUIViewSet`.
+
 #### Notes ([#767](https://github.com/nautobot/nautobot/issues/767))
 
 Primary and Organizational models now support notes. A notes tab has been added to the Object Detail view for all models that inherit the Primary or Organizational base abstract models.
