@@ -92,6 +92,7 @@ class ProviderBulkEditForm(TagsBulkEditFormMixin, NautobotBulkEditForm):
 
 class ProviderFilterForm(NautobotFilterForm, LocatableModelFilterFormMixin):
     model = Provider
+    field_order = ["q"]
     q = forms.CharField(required=False, label="Search")
     asn = forms.IntegerField(required=False, label="ASN")
     tag = TagFilterField(model)

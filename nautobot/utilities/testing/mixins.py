@@ -130,7 +130,9 @@ class NautobotTestCaseMixin:
         """
         err_message = None
         # Construct an error message only if we know the test is going to fail
-        if response.status_code != expected_status:
+        if isinstance(expected_status, int):
+            expected_status = [expected_status]
+        if response.status_code not in expected_status:
             if hasattr(response, "data"):
                 # REST API response; pass the response data through directly
                 err = response.data
@@ -138,10 +140,10 @@ class NautobotTestCaseMixin:
                 # Attempt to extract form validation errors from the response HTML
                 form_errors = extract_form_failures(response.content.decode(response.charset))
                 err = form_errors or response.content.decode(response.charset) or "No data"
-            err_message = f"Expected HTTP status {expected_status}; received {response.status_code}: {err}"
+            err_message = f"Expected HTTP status(es) {expected_status}; received {response.status_code}: {err}"
             if msg:
                 err_message = f"{msg}\n{err_message}"
-        self.assertEqual(response.status_code, expected_status, err_message)
+        self.assertIn(response.status_code, expected_status, err_message)
 
     def assertInstanceEqual(self, instance, data, exclude=None, api=False):
         """
