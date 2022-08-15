@@ -191,7 +191,7 @@ class NautobotHTMLRenderer(renderers.BrowsableAPIRenderer):
                 table = self.construct_table(view, pk_list=pk_list)
 
         context = {
-            "changelog_url": changelog_url,
+            "changelog_url": changelog_url,  # NOTE: This context key is deprecated in favor of `object.get_changelog_url`.
             "content_type": content_type,
             "form": form,
             "filter_form": self.get_filter_form(view, request),
