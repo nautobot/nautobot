@@ -5,12 +5,14 @@ from django.core.exceptions import ValidationError
 from django.db.models import ProtectedError
 from django.urls import reverse
 
+from nautobot.dcim.choices import PortTypeChoices
 from nautobot.dcim.filters import DeviceFilterSet
 from nautobot.dcim.forms import DeviceForm, DeviceFilterForm
-from nautobot.dcim.models import Device, DeviceRole, DeviceType, Manufacturer, Site
+from nautobot.dcim.models import Device, DeviceRole, DeviceType, FrontPort, Manufacturer, RearPort, Site
 from nautobot.extras.choices import DynamicGroupOperatorChoices
 from nautobot.extras.models import DynamicGroup, DynamicGroupMembership, Status
 from nautobot.extras.filters import DynamicGroupFilterSet, DynamicGroupMembershipFilterSet
+from nautobot.ipam.models import Prefix
 from nautobot.utilities.testing import TestCase
 
 
@@ -294,23 +296,16 @@ class DynamicGroupModelTest(DynamicGroupTestBase):
         self.assertEqual(group.filterform_class, DeviceFilterForm)
         self.assertEqual(group.form_class, DeviceForm)
 
-    def test_members_base_url(self):
-        """Test `DynamicGroup.members_base_url`."""
-        # New instances should not have `members_base_url` unless `content_type` is set.
-        new_group = DynamicGroup(name="Unsaved Group", slug="unsaved-group")
-        self.assertEqual(new_group.members_base_url, "")
-
-        # Setting the content_type will now allow `.members_base_url` to be accessed.
-        new_group.content_type = self.device_ct
-        self.assertEqual(new_group.members_base_url, reverse("dcim:device_list"))
-
     def test_get_group_members_url(self):
         """Test `DynamicGroup.get_group_members_url()."""
-        group = self.first_child
-        base_url = reverse("dcim:device_list")
-        params = "site=site-1"
-        url = f"{base_url}?{params}"
-        self.assertEqual(group.get_group_members_url(), url)
+
+        # First assert that a basic group with no children, then a group with children, will always
+        # link to the members tab on the detail view.
+        for group in [self.first_child, self.parent]:
+            detail_url = reverse("extras:dynamicgroup", kwargs={"slug": group.slug})
+            params = "tab=members"
+            url = f"{detail_url}?{params}"
+            self.assertEqual(group.get_group_members_url(), url)
 
         # If the new group has no attributes or map yet, expect an empty string.
         new_group = DynamicGroup()
@@ -345,6 +340,71 @@ class DynamicGroupModelTest(DynamicGroupTestBase):
             self.assertNotIn("serial", fields)
         finally:
             del group.model.dynamic_group_skip_missing_fields
+
+    def test_map_filter_fields_skip_method_filters_generate_query(self):
+        """
+        Test that method filters are skipped in `DynamicGroup._map_filter_fields` when the filterset
+        for the group's content type has a method named `generate_query_{filter_method}`.
+        """
+        group = self.groups[0]
+        filterset = group.filterset_class()
+        fields = group._map_filter_fields
+
+        # We know that `has_primary_ip` fits this bill, so let's test that.
+        field_name = "has_primary_ip"
+        filter_field = filterset.filters[field_name]
+
+        # Make some field presence assertions
+        self.assertIn(field_name, fields)
+
+        # The filterset should have the method name and `generate_query_` method
+        self.assertTrue(hasattr(filterset, filter_field.method))
+        self.assertTrue(hasattr(filterset, "generate_query_" + filter_field.method))
+
+    # 2.0 TODO(jathan): This is done using `DeviceFilterSet.pass_through_ports` at this time and
+    # should be revised as filter fields are vetted.
+    def test_filter_method_generate_query(self):
+        """
+        Test that a filter with a filter method's corresponding `generate_query_{filter_method}` works as intended.
+        """
+        group = self.groups[0]
+
+        # We're going to test `pass_through_ports`
+        device = self.devices[0]
+        rear_port = RearPort.objects.create(device=device, name="rp1", positions=1, type=PortTypeChoices.TYPE_8P8C)
+        FrontPort.objects.create(
+            device=device, name="fp1", type=PortTypeChoices.TYPE_FC, rear_port=rear_port, rear_port_position=1
+        )
+
+        # Test that the filter returns the one device to which we added front/rear ports.
+        expected = ["device-site-1"]
+        filterset = group.filterset_class({"pass_through_ports": True}, Device.objects.all())
+        devices = list(filterset.qs.values_list("name", flat=True))
+        self.assertEqual(expected, devices)
+
+    # 2.0 TODO(jathan): This is done using Prefix at this time and this should be revised as filter
+    # fields are vetted.
+    def test_map_filter_fields_skip_method_filters_no_generate_query(self):
+        """
+        Test that method filters are skipped in `DynamicGroup._map_filter_fields` when the filterset
+        for the group's content type DOES NOT have a method named `generate_query_{filter_method}`.
+
+        """
+        pfx_content_type = ContentType.objects.get_for_model(Prefix)
+        group = DynamicGroup(name="pfx", slug="pfx", content_type=pfx_content_type)
+        filterset = group.filterset_class()
+        fields = group._map_filter_fields
+
+        # We know that `within_include` does not have a `generate_query_{filter_method}` method.
+        field_name = "within_include"
+        filter_field = filterset.filters[field_name]
+
+        # Make some field presence assertions
+        self.assertNotIn(field_name, fields)
+
+        # The filterset should have the method name BUT NOT `generate_query_` method
+        self.assertTrue(hasattr(filterset, filter_field.method))
+        self.assertFalse(hasattr(filterset, "generate_query_" + filter_field.method))
 
     def test_get_filter_fields(self):
         """Test `DynamicGroup.get_filter_fields()`."""

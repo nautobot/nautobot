@@ -316,10 +316,19 @@ class PrefixFilterSet(
         except (AddrFormatError, ValueError):
             return queryset.none()
 
+    def generate_query_filter_present_in_vrf(self, value):
+        if isinstance(value, str):
+            value = VRF.objects.get(pk=value)
+
+        # This stringification is done to make the `pretty_print_query()` output look human-readable,
+        # and nothing more. It would work as complex objects but looks bad in the web UI.
+        targets = [str(t) for t in value.import_targets.values_list("pk", flat=True)]
+        query = Q(vrf=str(value.pk)) | Q(vrf__export_targets__in=targets)
+        return query
+
     def filter_present_in_vrf(self, queryset, name, value):
-        if value is None:
-            return queryset.none
-        return queryset.filter(Q(vrf=value) | Q(vrf__export_targets__in=value.import_targets.all()))
+        params = self.generate_query_filter_present_in_vrf(value)
+        return queryset.filter(params)
 
 
 class IPAddressFilterSet(NautobotFilterSet, IPAMFilterSetMixin, TenancyFilterSet, StatusModelFilterSetMixin):

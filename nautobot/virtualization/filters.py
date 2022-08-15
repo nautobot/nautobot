@@ -234,12 +234,17 @@ class VirtualMachineFilterSet(NautobotFilterSet, LocalContextFilterSet, TenancyF
         model = VirtualMachine
         fields = ["id", "name", "cluster", "vcpus", "memory", "disk", "comments"]
 
-    def _has_primary_ip(self, queryset, name, value):
-        params = Q(primary_ip4__isnull=False) | Q(primary_ip6__isnull=False)
-        if value:
-            return queryset.filter(params)
-        return queryset.exclude(params)
+    def generate_query__has_primary_ip(self, value):
+        query = Q(primary_ip4__isnull=False) | Q(primary_ip6__isnull=False)
+        if not value:
+            return ~query
+        return query
 
+    def _has_primary_ip(self, queryset, name, value):
+        params = self.generate_query__has_primary_ip(value)
+        return queryset.filter(params)
+
+    # 2.0 TODO(jathan): Eliminate these methods.
     def filter_primary_ip4(self, queryset, name, value):
         pk_values = set(item for item in value if is_uuid(item))
         addresses = set(item for item in value if item not in pk_values)
