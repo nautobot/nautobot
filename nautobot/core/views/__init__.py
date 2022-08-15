@@ -89,9 +89,14 @@ class HomeView(AccessMixin, TemplateView):
                     elif item_details.get("items"):
                         # Collect count for grouped objects.
                         for group_item_details in item_details["items"].values():
-                            group_item_details["count"] = (
-                                group_item_details["model"].objects.restrict(request.user, "view").count()
-                            )
+                            if group_item_details.get("custom_template"):
+                                group_item_details["rendered_html"] = self.render_additional_content(
+                                    request, context, group_item_details
+                                )
+                            elif group_item_details.get("model"):
+                                group_item_details["count"] = (
+                                    group_item_details["model"].objects.restrict(request.user, "view").count()
+                                )
 
         return self.render_to_response(context)
 
