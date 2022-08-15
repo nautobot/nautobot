@@ -18,6 +18,8 @@ from nautobot.core.models.generics import OrganizationalModel
 from nautobot.extras.choices import DynamicGroupOperatorChoices
 from nautobot.extras.querysets import DynamicGroupQuerySet, DynamicGroupMembershipQuerySet
 from nautobot.extras.utils import extras_features
+from nautobot.utilities.forms.constants import BOOLEAN_WITH_BLANK_CHOICES
+from nautobot.utilities.forms.widgets import StaticSelect2
 from nautobot.utilities.utils import get_filterset_for_model, get_form_for_model, get_route_for_model
 
 
@@ -209,26 +211,28 @@ class DynamicGroup(OrganizationalModel):
             # Get the missing model form field so we can use it to add to the filterform_fields.
             modelform_field = modelform_fields[missing_field]
 
-            # If `required=True` was set on the model field, pop "required" from the widget
-            # attributes. Filter fields should never be required!
-            if modelform_field.required:
-                modelform_field.required = False
-                modelform_field.widget.attrs.pop("required")
-
-            # If `initial` is set, unset it.
-            if modelform_field.initial:
-                modelform_field.initial = None
-
             # Replace the modelform_field with the correct type for the UI. At this time this is
             # only being done for CharField since in the filterset form this ends up being a
             # `MultiValueCharField` (dynamically generated from from `MultiValueCharFilter`) which is
-            # not correct for char fields.
-            if isinstance(modelform_field, forms.CharField):
+            # not correct for char fields. For boolean fields, we want them to be nullable.
+            if isinstance(modelform_field, (forms.CharField, forms.BooleanField)):
                 # Get ready to replace the form field w/ correct widget.
                 new_modelform_field = filterset_field.field
                 new_modelform_field.widget = modelform_field.widget
-
                 modelform_field = new_modelform_field
+
+            # FIXME(jathan); Figure out how we can do this autoamtically from the FilterSet so we
+            # don't have to munge it here.
+            # Null boolean fields need a special widget that doesn't save `False` when unchecked.
+            if isinstance(modelform_field, forms.NullBooleanField):
+                modelform_field.widget = StaticSelect2(choices=BOOLEAN_WITH_BLANK_CHOICES)
+
+            # Filter fields should never be required!
+            modelform_field.required = False
+            modelform_field.widget.attrs.pop("required", None)
+
+            # And initial values should also be ignored.
+            modelform_field.initial = None
 
             # Carry over the `to_field_name` to the modelform_field.
             to_field_name = filterset_field.extra.get("to_field_name")

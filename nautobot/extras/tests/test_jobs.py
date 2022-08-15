@@ -650,16 +650,6 @@ class JobHookReceiverTest(TransactionTestCase):
         self.assertEqual(oc.change_context, ObjectChangeEventContextChoices.CONTEXT_JOB_HOOK)
         self.assertEqual(oc.user_id, self.user.pk)
 
-    def test_run_job(self):
-        module = "test_job_hook_receiver"
-        name = "TestJobHookReceiverLog"
-        job_result = create_job_result_and_run_job(module, name, data=self.data, commit=False)
-        log_info = JobLogEntry.objects.filter(job_result=job_result, log_level=LogLevelChoices.LOG_INFO)[:2]
-        self.assertEqual(log_info[0].message, "change: dcim | site Test Site 1 created by testuser")
-        self.assertEqual(log_info[1].message, "action: create")
-        log_success = JobLogEntry.objects.filter(job_result=job_result, log_level=LogLevelChoices.LOG_SUCCESS).first()
-        self.assertEqual(log_success.message, "Test Site 1")
-
     def test_missing_receive_job_hook_method(self):
         module = "test_job_hook_receiver"
         name = "TestJobHookReceiverFail"
@@ -667,7 +657,7 @@ class JobHookReceiverTest(TransactionTestCase):
         self.assertEqual(job_result.status, JobResultStatusChoices.STATUS_ERRORED)
 
 
-class JobHookTest(TransactionTestCase):
+class JobHookTest(CeleryTestCase):
     """
     Test job hooks.
     """
@@ -675,22 +665,32 @@ class JobHookTest(TransactionTestCase):
     def setUp(self):
         super().setUp()
 
-        job = Job.objects.get(job_class_name="TestJobHookReceiverLog")
+        module = "test_job_hook_receiver"
+        name = "TestJobHookReceiverLog"
+        self.job_class, self.job_model = get_job_class_and_model(module, name)
         job_hook = JobHook(
             name="JobHookTest",
             type_create=True,
-            job=job,
+            job=self.job_model,
         )
         obj_type = ContentType.objects.get_for_model(Site)
         job_hook.save()
         job_hook.content_types.set([obj_type])
 
-    @mock.patch.object(JobResult, "enqueue_job")
-    def test_enqueue_job_hook(self, mock):
-        with web_request_context(self.user):
+    def test_enqueue_job_hook(self):
+        self.clear_worker()
+        with web_request_context(user=self.user):
             Site.objects.create(name="Test Job Hook Site 1")
-
-        mock.assert_called_once()
+            self.wait_on_active_tasks()
+            job_result = JobResult.objects.get(job_model=self.job_model)
+            expected_log_messages = [
+                ("info", f"change: dcim | site Test Job Hook Site 1 created by {self.user.username}"),
+                ("info", "action: create"),
+                ("info", f"request.user: {self.user.username}"),
+                ("success", "Test Job Hook Site 1"),
+            ]
+            log_messages = JobLogEntry.objects.filter(job_result=job_result).values_list("log_level", "message")
+            self.assertSequenceEqual(log_messages, expected_log_messages)
 
     @mock.patch.object(JobResult, "enqueue_job")
     def test_enqueue_job_hook_skipped(self, mock):
