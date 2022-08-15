@@ -1,8 +1,8 @@
 # Dynamic Groups
 
-Dynamic Groups provide a way to organize objects of the same Content Type by matching filters. A Dynamic Group can be used to create unique groups of objects matching a given filter, such as Devices for a specific site location or set of locations. As indicated by the name, Dynamic Groups update in real time as member objects are created, updated, or deleted.
+Dynamic Groups provide a way to organize objects of the same Content Type by matching filters. A Dynamic Group can be used to create unique groups of objects matching a given filter, such as Devices for a specific site location or set of locations. As indicated by the name, Dynamic Groups update in real time as potential member objects are created, updated, or deleted.
 
-When creating a Dynamic Group, one must select a Content Type to which it is associated, for example `dcim.device`. The filtering parameters saved to the group behave as a bi-directional search query that used to identify members of that group, and can also be used to determine from an individual object the list of Dynamic Groups to which it belongs.
+When creating a Dynamic Group, one must select a Content Type to which it is associated, for example `dcim.device`. The filtering parameters saved to the group behave as a bi-directional search query that used to identify members of that group, and can also be used to determine from an individual object the list of Dynamic Groups to which an individual object belongs.
 
 Once created the Content Type for a Dynamic Group may not be modified as this relationship is tightly-coupled to the available filtering parameters. All other fields may be updated at any time.
 
@@ -12,7 +12,7 @@ Once created the Content Type for a Dynamic Group may not be modified as this re
 
 Dynamic Groups can be created through the UI under _Organization > Dynamic Groups_ and clicking the "Add" button, or through the REST API.
 
-Each Dynamic Group must have a human-readable **Name** string, e.g. `devices-site-ams01` and a **Slug**, which should be a simple database-friendly string. By default, the slug will be automatically generated from the name, however you may customize it if you like. You must select a **Content Type** for the group that determines the filtering parameters available include objects as member into the group. Finally, you may also assign a an optional human-friendly **Description** (e.g. "Devices in site AMS01").
+Each Dynamic Group must have a human-readable **Name** string, e.g. `devices-site-ams01` and a **Slug**, which should be a simple database-friendly string. By default, the slug will be automatically generated from the name, however you may customize it if you like. You must select a **Content Type** for the group that determines the kind of objects that can be members of the group and the corresponding filtering parameters available. Finally, you may also assign an optional human-friendly **Description** (e.g. "Devices in site AMS01").
 
 Once a new Dynamic Group is created, the group can be configured by clicking the "Edit" button to specify **Filter Fields** or **Child Groups** to use to narrow down the group's member objects. More on this below.
 
@@ -21,7 +21,7 @@ Once a new Dynamic Group is created, the group can be configured by clicking the
 
 ### Working with Dynamic Groups
 
-Once created and configured, Dynamic Groups can be accessed from the primary Dynamic Groups landing page in the web interface under the _Organization > Dynamic Groups_ menu. From there you may view the list of available groups, search or filter the list, view or edit an individual group, or bulk delete groups. Additionally if a group's filter has matching members, the number of members may be clicked to take you to a filtered list view of those objects.
+Once created and configured, Dynamic Groups can be accessed from the primary Dynamic Groups landing page in the web interface under the _Organization > Dynamic Groups_ menu. From there you may view the list of available groups, search or filter the list, view or edit an individual group, or bulk delete groups. Additionally if a group's filter has matching members, the number of members may be clicked to take you to the list of members for that dynamic group containing those objects.
 
 Dynamic Groups cannot be imported nor can they be updated in bulk, as these operations would be complex and do not make sense in most cases.
 
@@ -40,7 +40,7 @@ For example, for a Dynamic Group with Content Type of `dcim.device` and an empty
 
     v1.3.0 the default for a group with an empty filter was to fail "closed" and have zero members.
 
-    As of v1.4.0, this behavior has been inverted to default to include all objects matching the content type, instead of matching no objects as was previously the case. This was necessary to implement the progressive layering of child filters similarly to how we use filters to reduce desired objects from basic list view filters. This will described in more detail below.
+    As of v1.4.0, this behavior has been inverted to default to include all objects matching the Content Type, instead of matching no objects as was previously the case. This was necessary to implement the progressive layering of child filters similarly to how we use filters to reduce desired objects from basic list view filters. This will described in more detail below.
 
 #### Basic Filtering
 
@@ -56,7 +56,7 @@ Advanced filtering is performed using nested Dynamic Group memberships.
 
 An object is considered a member of an advanced Dynamic Group if it matches the aggregated filter criteria across all descendant groups.
 
-When editing a Dynamic Group, under the **Filter Options** section, you will find a **Child Groups** tab that allows one to make other Dynamic Groups of the same content type children of the parent group.
+When editing a Dynamic Group, under the **Filter Options** section, you will find a **Child Groups** tab that allows one to make other Dynamic Groups of the same Content Type children of the parent group.
 
 ![Child Groups](../../media/models/dynamicgroup02.png)
 
@@ -66,7 +66,7 @@ Dynamic Groups are a complex topic and are perhaps best understood through a ser
 
 ### Basic Filtering with a single Dynamic Group
 
-Let's say you want to create a Dynamic Group that contains all production Devices at your first two Sites. You can create a Dynamic Group called "Devices at Sites A and B" for content-type `dcim | device`, then edit it and set the **Filter Fields** to match:
+Let's say you want to create a Dynamic Group that contains all production Devices at your first two Sites. You can create a Dynamic Group called "Devices at Sites A and B" for Content Type `dcim | device`, then edit it and set the **Filter Fields** to match:
 
 1. a Site of either "AMS01" or "BKK01"
 2. a Status of "Active" or "Offline"
@@ -261,17 +261,17 @@ Set theory is applied when a new group is added as a child group. Three key conc
 
 We have attempted to simplify working with these operators by giving them both human-readable and Boolean name mappings. They are as follows:
 
-- **Restrict (`AND`)** - The **Restrict** operator performs a set _intersection_ on the queryset, and is equivalent to a Boolean `AND`. Any objects matching the child filter are _restricted_ (aka _intersected_) with the preceding filter. All filter criteria must match between the filters for a member object to be included in the resultant filter.
-- **Include (`OR`)** - The **Include** operator performs a set _union_ on the queryset, and is equivalent to a Boolean `OR`. Any objects matching the child filter are _included_ (aka _unioned_) with the preceding filter. Any filter criteria may match between the filters for member objects to be included in the resultant filter.
-- **Exclude (`NOT`)** - The **Exclude** operator performs a set _difference_ on the queryset, and is equivalent to a Boolean `NOT`. Any objects matching the child filter are _excluded_ (aka _differenced_) from the preceding filter. Any matching objects from the child filter will be negated from the members of the resultant filter.
+- **Restrict (Boolean `AND`)** - The **Restrict** operator performs a set _intersection_ on the queryset, and is equivalent to a Boolean `AND`. The preceding filter is _restricted_ (aka _intersected_) by the objects matching the child filter. All filter criteria must match between the filters for a member object to be included in the resultant filter.
+- **Include (Boolean `OR`)** - The **Include** operator performs a set _union_ on the queryset, and is equivalent to a Boolean `OR`. The preceding filter is _extended to include_ (aka _unioned with_) any objects matching the child filter. Any filter criteria may match between the filters for member objects to be included in the resultant filter.
+- **Exclude (Boolean `NOT`)** - The **Exclude** operator performs a set _difference_ on the queryset, and is equivalent to a Boolean `NOT`. The preceding filter _excludes_ (aka _differences_) any objects matching the child filter. Any matching objects from the child filter will be negated from the members of the resultant filter.
 
 The following table maps the Nautobot **operator** to the corresponding set operations:
 
 | Operator | Set Operation | Boolean | Description                                                  |
 | -------- | ------------- | ------- | ------------------------------------------------------------ |
-| Restrict | Intersection  | AND     | All criteria from parent/child filters _must_ match          |
-| Include  | Union         | OR      | Any criteria from parent/child filters _may_ match           |
-| Exclude  | Difference    | NOT     | All matches from child filter are _negated_ from parent filter |
+| Restrict | Intersection  | AND     | Objects _must_ match this child filter to be included in the parent group |
+| Include  | Union         | OR      | Objects _may_ match the child filter to be included in the parent group |
+| Exclude  | Difference    | NOT     | Objects _must not_ match this child filter to be included in the parent group |
 
 Any filters provided by the child groups are used to filter the members from the parent group using one of the three operators: **Restrict (AND)**, **Include (OR)**, or **Exclude (NOT)**.
 
@@ -379,7 +379,7 @@ Content-Type: application/json
 
 ### Specifying Filter Conditions
 
-Dynamic Groups are fairly straightforward however it is important to note that the `filter` field is a JSON field and it must be able to be used as valid query parameters for filtering objects of the corresponding content type.
+Dynamic Groups are fairly straightforward however it is important to note that the `filter` field is a JSON field and it must be able to be used as valid query parameters for filtering objects of the corresponding Content Type.
 
 It is an error to provide any value other than a JSON object (`{}` or a Python dictionary) for the `filter` field.
 
