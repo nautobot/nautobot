@@ -1,7 +1,6 @@
 """Dynamic Groups Models."""
 
 import logging
-import urllib
 
 import django_filters
 from django import forms
@@ -20,7 +19,7 @@ from nautobot.extras.querysets import DynamicGroupQuerySet, DynamicGroupMembersh
 from nautobot.extras.utils import extras_features
 from nautobot.utilities.forms.constants import BOOLEAN_WITH_BLANK_CHOICES
 from nautobot.utilities.forms.widgets import StaticSelect2
-from nautobot.utilities.utils import get_filterset_for_model, get_form_for_model, get_route_for_model
+from nautobot.utilities.utils import get_filterset_for_model, get_form_for_model
 
 
 logger = logging.getLogger(__name__)
@@ -321,27 +320,12 @@ class DynamicGroup(OrganizationalModel):
     def get_absolute_url(self):
         return reverse("extras:dynamicgroup", kwargs={"slug": self.slug})
 
-    @property
-    def members_base_url(self):
-        """Return the list route name for this group's `content_type'."""
-        if self.model is None:
-            return ""
-
-        route_name = get_route_for_model(self.model, "list")
-        return reverse(route_name)
-
     def get_group_members_url(self):
         """Get URL to group members."""
         if self.model is None:
             return ""
 
-        url = self.members_base_url
-        filter_str = urllib.parse.urlencode(self.filter, doseq=True)
-
-        if filter_str is not None:
-            url += f"?{filter_str}"
-
-        return url
+        return self.get_absolute_url() + "?tab=members"
 
     def set_filter(self, form_data):
         """

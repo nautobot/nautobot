@@ -296,23 +296,16 @@ class DynamicGroupModelTest(DynamicGroupTestBase):
         self.assertEqual(group.filterform_class, DeviceFilterForm)
         self.assertEqual(group.form_class, DeviceForm)
 
-    def test_members_base_url(self):
-        """Test `DynamicGroup.members_base_url`."""
-        # New instances should not have `members_base_url` unless `content_type` is set.
-        new_group = DynamicGroup(name="Unsaved Group", slug="unsaved-group")
-        self.assertEqual(new_group.members_base_url, "")
-
-        # Setting the content_type will now allow `.members_base_url` to be accessed.
-        new_group.content_type = self.device_ct
-        self.assertEqual(new_group.members_base_url, reverse("dcim:device_list"))
-
     def test_get_group_members_url(self):
         """Test `DynamicGroup.get_group_members_url()."""
-        group = self.first_child
-        base_url = reverse("dcim:device_list")
-        params = "site=site-1"
-        url = f"{base_url}?{params}"
-        self.assertEqual(group.get_group_members_url(), url)
+
+        # First assert that a basic group with no children, then a group with children, will always
+        # link to the members tab on the detail view.
+        for group in [self.first_child, self.parent]:
+            detail_url = reverse("extras:dynamicgroup", kwargs={"slug": group.slug})
+            params = "tab=members"
+            url = f"{detail_url}?{params}"
+            self.assertEqual(group.get_group_members_url(), url)
 
         # If the new group has no attributes or map yet, expect an empty string.
         new_group = DynamicGroup()
