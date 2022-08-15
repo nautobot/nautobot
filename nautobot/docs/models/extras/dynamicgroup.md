@@ -56,7 +56,7 @@ An object is considered a member of an advanced Dynamic Group if it matches the 
 
 When editing a Dynamic Group, under the **Filter Options** section, you will find a **Child Groups** tab that allows one to make other Dynamic Groups of the same Content Type children of the parent group.
 
-![Child Groups](../../media/models/dynamicgroup02.png)
+![Child Groups](../../media/models/dynamicgroup_filtering_01.png)
 
 ## Example Workflow
 
@@ -345,7 +345,7 @@ Most fields within the `filter` accept multiple values and must be represented a
 
 ```json
 {
-    site: ["ams01", "ang01"]
+    "site": ["ams01", "ang01"]
 }
 ```
 
@@ -441,7 +441,7 @@ Response:
 !!! important
   It is not possible to perform a nested update of `children` when updating a new Dynamic Group. You must use the endpoint for creating Dynamic Group Memberships as explained below under [Updating or Deleting Child Groups](#updating-or-deleting-child-groups).
 
-Updating or deleting Dynamic Group is done by sending a request to the detail endpoint for that object.
+Updating or deleting a Dynamic Group is done by sending a request to the detail endpoint for that object.
 
 A Dynamic Group may be updated using `PUT` or `PATCH` (for a partial update) requests. A `PUT` request requires the entire object to be updated in place. For example if you wanted to update the `name` and the `slug` together, leaving every other field with their current values as provided:
 
@@ -483,7 +483,7 @@ This can be done at the list endpoint found at `/api/extras/dynamic-group-member
 Dynamic Group Membership objects may be created, updated, or deleted just like any other object and are represented as `children` on the parent group.
 
 !!! note
-  When interacting the the REST API, the `operator` must be provided using the string represetnation that is stored in the database. The human-readable operator names (such as "Exclude (AND)" for "intersection") are not accepted.
+  When interacting with the REST API, the `operator` must be provided using the string representation that is stored in the database. The human-readable operator names (such as "Exclude (AND)" for "intersection") are not accepted.
 
 Request:
 
@@ -589,7 +589,7 @@ PUT /api/extras/dynamic-group-memberships/{uuid}/
 }
 ```
 
-Performing A partial update using a `PATCH` request can allow any single field to be updated without affecting the other fields. For example, if we only wanted to update the `weight` for a membership:
+Performing a partial update using a `PATCH` request can allow any single field to be updated without affecting the other fields. For example, if we only wanted to update the `weight` for a membership:
 
 ```json
 PATCH /api/extras/dynamic-group-memberships/{uuid}/
