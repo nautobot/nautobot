@@ -170,7 +170,7 @@ class DynamicGroup(OrganizationalModel):
         skip_missing_fields = getattr(self.model, "dynamic_group_skip_missing_fields", False)
 
         # 2.0 TODO(jathan): v1.4.0 hard-codes skipping method fields by default for now. Revisit as we
-        # head to v2 and groom indiividual method filters on existing filtersets. Lower down inside
+        # head to v2 and groom individual method filters on existing filtersets. Lower down inside
         # of `generate_query()` there is a test as to whether a method filter also has a
         # `generate_query_{filter_method}()` method on the filterset and processes it accordingly.
         skip_method_filters = True
