@@ -546,6 +546,7 @@ def _run_job(request, job_model, legacy_response=False):
     if schedule_data is None and job_model.approval_required:
         schedule_data = {"interval": JobExecutionType.TYPE_IMMEDIATELY}
 
+    # Skip creating a ScheduledJob when job can be executed immediately
     elif (
         schedule_data
         and schedule_data["interval"] == JobExecutionType.TYPE_IMMEDIATELY
