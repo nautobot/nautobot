@@ -1437,7 +1437,7 @@ class JobAPIRunTestMixin:
         self.assertHttpStatus(response, status.HTTP_400_BAD_REQUEST)
         self.assertEqual(
             response.data["schedule"]["interval"][0],
-            "Unable to schedule job: Job has sensitive input variables",
+            "Unable to schedule job: Job may have sensitive input variables",
         )
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
@@ -1462,6 +1462,9 @@ class JobAPIRunTestMixin:
         url = self.get_run_url()
         response = self.client.post(url, data, format="json", **self.header)
         self.assertHttpStatus(response, self.run_success_response_status)
+
+        job_result = JobResult.objects.last()
+        self.assertEqual(job_result.job_kwargs, None)
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     @mock.patch("nautobot.extras.api.views.get_worker_count")

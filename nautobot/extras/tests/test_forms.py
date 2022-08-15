@@ -1089,5 +1089,5 @@ class JobEditFormTestCase(TestCase):
         error_msg = json.loads(form.errors.as_json())
         self.assertEqual(
             error_msg["approval_required"][0]["message"],
-            "A job with sensitive variables cannot be marked as requiring approval",
+            "A job that may have sensitive variables cannot be marked as requiring approval",
         )

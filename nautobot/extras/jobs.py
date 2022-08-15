@@ -100,6 +100,7 @@ class BaseJob:
         - approval_required (bool)
         - soft_time_limit (int)
         - time_limit (int)
+        - has_sensitive_variables (bool)
         """
 
         pass
