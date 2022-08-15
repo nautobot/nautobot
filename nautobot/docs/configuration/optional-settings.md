@@ -486,21 +486,11 @@ Please see the [official Django documentation on `FORCE_SCRIPT_NAME`](https://do
 
 Default: `os.path.join(NAUTOBOT_ROOT, "git")`
 
+Environment Variable: `NAUTOBOT_GIT_ROOT`
+
 The file path to a directory where cloned [Git repositories](../models/extras/gitrepository.md) will be located.
 
 The value of this variable can also be customized by setting the environment variable `NAUTOBOT_GIT_ROOT` to a directory path of your choosing.
-
----
-
-## GIT_SSL_NO_VERIFY
-
-Default: Unset
-
-If you are using a self-signed git repository, you will need to set the environment variable `GIT_SSL_NO_VERIFY="1"`
-in order for the repository to sync.
-
-!!! warning
-    This _must_ be specified as an environment variable. Setting it in `nautobot_config.py` will not have the desired effect.
 
 ---
 
@@ -564,9 +554,9 @@ addresses (and [`DEBUG`](#debug) is true).
 
 Default: `os.path.join(NAUTOBOT_ROOT, "jobs")`
 
-The file path to a directory where [Jobs](../additional-features/jobs.md) can be discovered.
+Environment Variable: `NAUTOBOT_JOBS_ROOT`
 
-The value of this variable can also be customized by setting the environment variable `NAUTOBOT_JOBS_ROOT` to a directory path of your choosing.
+The file path to a directory where [Jobs](../additional-features/jobs.md) can be discovered.
 
 !!! note
     This directory **must** contain an `__init__.py` file.
@@ -728,19 +718,6 @@ Default: `30`
 Environment Variable: `NAUTOBOT_NAPALM_TIMEOUT`
 
 The amount of time (in seconds) to wait for NAPALM to connect to a device.
-
----
-
-## NAUTOBOT_ROOT
-
-Default: `~/.nautobot/`
-
-The filesystem path to use to store Nautobot files (Jobs, uploaded images, Git repositories, etc.).
-
-This setting is used internally in the core settings to provide default locations for [features that require file storage](../../configuration/#file-storage), and the [default location of the `nautobot_config.py`](../../configuration/#specifying-your-configuration).
-
-!!! warning
-    Do not override `NAUTOBOT_ROOT` in your `nautobot_config.py`. It will not work as expected. If you need to customize this setting, please always set the `NAUTOBOT_ROOT` environment variable.
 
 ---
 
@@ -1015,3 +992,33 @@ This setting function is used to perform the rack elevation truncation feature. 
 The function must take only one argument: the device display name, as a string, attempting to be rendered on the rack elevation.
 
 The function must return only one argument: a string of the truncated device display name.
+
+## Environment-Variable-Only Settings
+
+!!! warning
+    The following settings are **only** configurable as environment variables, and not via `nautobot_config.py` or similar.
+
+---
+
+### GIT_SSL_NO_VERIFY
+
+Default: Unset
+
+If you are using a self-signed git repository, you will need to set the environment variable `GIT_SSL_NO_VERIFY="1"`
+in order for the repository to sync.
+
+!!! warning
+    This _must_ be specified as an environment variable. Setting it in `nautobot_config.py` will not have the desired effect.
+
+---
+
+### NAUTOBOT_ROOT
+
+Default: `~/.nautobot/`
+
+The filesystem path to use to store Nautobot files (Jobs, uploaded images, Git repositories, etc.).
+
+This setting is used internally in the core settings to provide default locations for [features that require file storage](../../configuration/#file-storage), and the [default location of the `nautobot_config.py`](../../configuration/#specifying-your-configuration).
+
+!!! warning
+    Do not override `NAUTOBOT_ROOT` in your `nautobot_config.py`. It will not work as expected. If you need to customize this setting, please always set the `NAUTOBOT_ROOT` environment variable.

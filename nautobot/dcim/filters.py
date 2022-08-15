@@ -321,7 +321,7 @@ class LocationFilterSet(NautobotFilterSet, StatusModelFilterSetMixin, TenancyFil
         field_name="location_type__content_types",
         choices=FeatureQuery("locations").get_choices,
     )
-    tags = TagFilter()
+    tag = TagFilter()
 
     class Meta:
         model = Location

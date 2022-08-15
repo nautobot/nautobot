@@ -625,13 +625,33 @@ def pretty_print_query(query):
     """
     Given a `Q` object, display it in a more human-readable format.
 
-    :param query:
-        Q instance
+    Args:
+        query (Q): Query to display.
+
+    Returns:
+        str: Pretty-printed query logic
+
+    Example:
+        >>> print(pretty_print_query(Q))
+        (
+          site__slug='ams01' OR site__slug='bkk01' OR (
+            site__slug='can01' AND status__slug='active'
+          ) OR (
+            site__slug='del01' AND (
+              NOT (site__slug='del01' AND status__slug='decommissioning')
+            )
+          )
+        )
     """
 
-    def pretty_str(self, node=None):
+    def pretty_str(self, node=None, depth=0):
         """Improvement to default `Node.__str__` with a more human-readable style."""
-        template = "(NOT %s)" if self.negated else "(%s)"
+        template = f"(\n{'  ' * (depth + 1)}"
+        if self.negated:
+            template += "NOT (%s)"
+        else:
+            template += "%s"
+        template += f"\n{'  ' * depth})"
         children = []
 
         # If we don't have a node, we are the node!
@@ -642,7 +662,7 @@ def pretty_print_query(query):
         for child in node.children:
             # Trust that we can stringify the child if it is a Node instance.
             if isinstance(child, Node):
-                children.append(pretty_str(child))
+                children.append(pretty_str(child, depth=depth + 1))
             # If a 2-tuple, stringify to key=value
             else:
                 key, value = child
