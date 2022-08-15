@@ -46,8 +46,6 @@ For example, for a Dynamic Group with Content Type of `dcim.device` and an empty
 
 When editing a Dynamic Group, under the **Filter Options** section, you will find a **Filter Fields** tab that allows one to specify filter criteria. The filter fields available for a given Content Type are backed and validated by underlying filterset classes (for example `nautobot.dcim.filters.DeviceFilterSet`) and are represented in the web interface as a dynamically-generated filter form that corresponds to each eligible filter field.
 
-(TODO: screenshots here)
-
 #### Advanced Filtering
 
 _Added in version 1.4.0_  <!-- markdownlint-disable-line MD036 -->
@@ -234,8 +232,6 @@ parent
 
 The filter generation would walk the graph: starting from the base (match-all) filter of `parent`, the filter of `first-child` would be applied, then `second-child`, as ordered by their `weight`. In the case of `third-child`, all of its children (only `nested-child` in this case) would be processed in order in the same way and the resultant filter from all of the child groups for `third-child` would be applied to the filter resulting from `first-child` and `second-child`, resulting in the final filter for `parent`.
 
-If this is confusing, don't worry. We'll cover it more in hands-on examples after this section.
-
 ### Weights
 
 Weights are used to define the order in which a parent group's child group filters are processed. Because this ordering is significant, care must be taken when constructing nested Dynamic Groups to result in filter parameters that have the desired outcome.
@@ -318,68 +314,28 @@ Continuing on to the children of `third-child`, the same iteration rules apply. 
 Piecing the rules together, we ended up with two filters and by wrapping them in their own set of parentheses we get our final generated filter:
 
 ```no-highlight
-((first-child OR second-child) AND (NOT nested-child))
+(
+  (
+    [ALL OBJECTS]
+    AND first-child
+  )
+  OR second-child
+)
+AND NOT (
+  [ALL OBJECTS]
+  AND nested-child
+)
 ```
-
-How does this work?
-
-| Start with   | Filter        | Operator | Weight | Group Count | Final Count |
-| ------------ | ------------- | -------- | ------ | ----------- | ----------- |
-| parent       | none          | none     | none   | 389         | 389         |
-| first-child  | site=ams01    | restrict | 10     | 11          | 11          |
-| second-child | site=ang01    | include  | 20     | 7           | 18          |
-| third-child  | none          | none     | 30     | 389         | n/a         |
-| nested-child | status=active | exclude  | 10     | 389         | 0           |
-
-### Assigning Child Groups
-
-TBD. Higher-weight fields will be ordered lower within a form. (The default weight is 100.)
 
 ## Dynamic Groups and the REST API
 
-Dynamic Groups are fully supported by the API.
-
-### Creating a Dynamic Group
-
-Request:
-
-```json
-POST /api/extras/dynamic-groups/
-{
-    "name": "parent2",
-    "slug": "parent2",
-    "description": "I am the parent group with nested children.",
-    "content-type": "dcim.device"
-}
-```
-
-Response:
-
-```json
-200 OK
-Content-Type: application/json
-
-{
-    "id": "03df0328-337c-4eeb-9095-fa2764cb31e2",
-    "display": "parent",
-    "url": "http://localhost:6789/api/extras/dynamic-groups/03df0328-337c-4eeb-9095-fa2764cb31e2/",
-    "name": "parent",
-    "slug": "parent",
-    "description": "I am the parent group with nested children.",
-    "content_type": "dcim.device",
-    "filter": {},
-    "children": [],
-    "created": "2022-07-06",
-    "last_updated": "2022-07-06T20:17:04.305663Z",
-    "custom_fields": {},
-    "computed_fields": {},
-    "relationships": {}
-}
-```
+Dynamic Groups are fully supported by the API. Two distinct endpoints are required, one each for managing Dynamic Groups and for assigning child groups using Dynamic Group Memberships.
 
 ### Specifying Filter Conditions
 
-Dynamic Groups are fairly straightforward however it is important to note that the `filter` field is a JSON field and it must be able to be used as valid query parameters for filtering objects of the corresponding Content Type.
+Dynamic Groups are fairly straightforward however it is important to understand how the `filter` field works before digging in.
+
+The `filter` is a JSON field and it must be able to be used as valid query parameters for filtering objects of the corresponding Content Type.
 
 It is an error to provide any value other than a JSON object (`{}` or a Python dictionary) for the `filter` field.
 
@@ -433,13 +389,101 @@ Any invalid field values for valid field names will also result in a `Validation
 
     As of v1.4.0, [strict filtering is enabled by default](../../../configuration/optional-settings/#strict_filtering), which causes any invalid field names to result in a `ValidationError`.
 
-### Creation
+### Managing Dynamic Groups
 
-- `/api/extras/dynamic-groups/'
+#### Creating a Dynamic Group
 
-### Adding Child Groups
+A Dynamic Group may be created by performing a `POST` to the Dynamic Groups list endpoint at `/api/extras/dynamic-groups/`.
 
-- `/api/extras/dynamic-group-memberships/`
+!!! note
+  The `filter` field will default to an empty filter (`{}`) if not provided.
+
+!!! important
+  It is not possible to perform a nested assignment of `children` when creating a new Dynamic Group. You must first create the new group and then use the endpoint for creating Dynamic Group Memberships as explained below under [Assigning Child Groups](#assigning-child-groups).
+
+Request:
+
+```json
+POST /api/extras/dynamic-groups/
+
+{
+    "name": "parent",
+    "slug": "parent",
+    "description": "I am a parent group with nested children.",
+    "content-type": "dcim.device",
+    "filter": {},
+}
+```
+
+Response:
+
+```json
+{
+    "id": "1f825078-b6dc-4b12-9463-be5a9189b03f",
+    "display": "parent",
+    "url": "http://localhost:6789/api/extras/dynamic-groups/1f825078-b6dc-4b12-9463-be5a9189b03f/",
+    "name": "parent",
+    "slug": "parent",
+    "description": "I am the parent group with nested children.",
+    "content_type": "dcim.device",
+    "filter": {},
+    "children": [],
+    "created": "2022-07-06",
+    "last_updated": "2022-07-06T20:17:04.305663Z",
+    "custom_fields": {},
+    "computed_fields": {},
+    "relationships": {}
+}
+```
+
+#### Updating or Deleting a Dynamic Group
+
+!!! important
+  It is not possible to perform a nested update of `children` when updating a new Dynamic Group. You must use the endpoint for creating Dynamic Group Memberships as explained below under [Updating or Deleting Child Groups](#updating-or-deleting-child-groups).
+
+Updating or deleting Dynamic Group is done by sending a request to the detail endpoint for that object.
+
+A Dynamic Group may be updated using `PUT` or `PATCH` (for a partial update) requests. A `PUT` request requires the entire object to be updated in place. For example if you wanted to update the `name` and the `slug` together, leaving every other field with their current values as provided:
+
+```json
+PUT /api/extras/dynamic-groups/{uuid}/
+
+{
+    "name": "I am the best parent group",
+    "slug": "best-parent",
+    "description": "I am the parent group with nested children.",
+    "filter": {}
+}
+```
+
+Performing a partial update using a `PATCH` request can allow any single field to be updated without affecting the other fields. For example, if we wanted to update only the `slug` for a group:
+
+```json
+PATCH /api/extras/dynamic-group-memberships/{uuid}/
+
+{
+    "slug": "best-parent"
+}
+```
+
+To delete a Dynamic Group you would send a `DELETE` request to the detail endpoint:
+
+```json
+DELETE /api/extras/dynamic-group-memberships/{uuid}/
+```
+
+### Managing Child Groups
+
+Dynamic Groups may be nested to a parent group by creating a new Dynamic Group Membership. The act of assigning a Dynamic Group as a child to a parent group creates a Dynamic Group Membership.
+
+This can be done at the list endpoint found at `/api/extras/dynamic-group-memberships/`.
+
+#### Assigning Child Groups
+
+Dynamic Group Membership objects may be created, updated, or deleted just like any other object and are represented as `children` on the parent group.
+
+!!! note
+  When interacting the the REST API, the `operator` must be provided using the string represetnation that is stored in the database. The human-readable operator names (such as "Exclude (AND)" for "intersection") are not accepted.
 
 Request:
 
@@ -471,8 +515,8 @@ Response:
     },
     "parent_group": {
         "display": "parent",
-        "id": "6d58a68f-94d7-4150-a258-e57cec80f3b5",
-        "url": "http://localhost:6789/api/extras/dynamic-groups/6d58a68f-94d7-4150-a258-e57cec80f3b5/",
+        "id": "1f825078-b6dc-4b12-9463-be5a9189b03f",
+        "url": "http://localhost:6789/api/extras/dynamic-groups/1f825078-b6dc-4b12-9463-be5a9189b03f/",
         "name": "parent",
         "slug": "parent",
         "content_type": "dcim.device"
@@ -480,4 +524,83 @@ Response:
     "operator": "intersection",
     "weight": 10
 }
+```
+
+Observe that after adding this new membership object, the parent group now reflects this in its `children`:
+
+```json
+GET /api/extras/dynamic-groups/1f825078-b6dc-4b12-9463-be5a9189b03f/
+
+{
+    "id": "1f825078-b6dc-4b12-9463-be5a9189b03f",
+    "display": "parent",
+    "url": "http://localhost:6789/api/extras/dynamic-groups/1f825078-b6dc-4b12-9463-be5a9189b03f/",
+    "name": "parent",
+    "slug": "parent",
+    "description": "",
+    "content_type": "dcim.device",
+    "filter": {},
+    "children": [
+        {
+            "id": "4c8296de-42bc-49a6-8fed-fc1b1f6b93ca",
+            "display": "parent > intersection (10) > first-child",
+            "url": "http://localhost:6789/api/extras/dynamic-group-memberships/4c8296de-42bc-49a6-8fed-fc1b1f6b93ca/",
+            "group": {
+                "display": "first-child",
+                "id": "97188a74-eddd-46d8-be41-909c1ece1d43",
+                "url": "http://localhost:6789/api/extras/dynamic-groups/97188a74-eddd-46d8-be41-909c1ece1d43/",
+                "name": "first-child",
+                "slug": "first-child",
+                "content_type": "dcim.device"
+            },
+            "parent_group": {
+                "display": "parent",
+                "id": "1f825078-b6dc-4b12-9463-be5a9189b03f",
+                "url": "http://localhost:6789/api/extras/dynamic-groups/1f825078-b6dc-4b12-9463-be5a9189b03f/",
+                "name": "parent",
+                "slug": "parent",
+                "content_type": "dcim.device"
+            },
+            "operator": "intersection",
+            "weight": 10
+        }
+    ],
+    "created": "2022-07-15",
+    "last_updated": "2022-07-15T16:50:45.453965Z",
+    "notes_url": "http://localhost:6789/api/extras/dynamic-groups/1f825078-b6dc-4b12-9463-be5a9189b03f/notes/",
+    "custom_fields": {}
+}
+```
+
+#### Updating or Deleting Child Groups
+
+Updating or deleting Dynamic Group Membership is done by sending a request to the detail endpoint for that membership object.
+
+A Dynamic Group Membership may be updated using `PUT` or `PATCH` (for a partial update) requests. A `PUT` request requires the entire object to be updated in place. For example if you wanted to update the `operator` and the `weight` together,leaving every other field with their current values as provided:
+
+```json
+PUT /api/extras/dynamic-group-memberships/{uuid}/
+
+{
+    "group": {"slug": "first-child"},
+    "parent_group": {"slug": "parent"},
+    "operator": "difference",
+    "weight": 10
+}
+```
+
+Performing A partial update using a `PATCH` request can allow any single field to be updated without affecting the other fields. For example, if we only wanted to update the `weight` for a membership:
+
+```json
+PATCH /api/extras/dynamic-group-memberships/{uuid}/
+
+{
+    "weight": 15
+}
+```
+
+To delete a Dynamic Group Membership you would send a `DELETE` request to the detail endpoint:
+
+```json
+DELETE /api/extras/dynamic-group-memberships/{uuid}/
 ```
