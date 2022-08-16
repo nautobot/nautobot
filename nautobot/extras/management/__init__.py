@@ -3,8 +3,8 @@ import sys
 from django.apps import apps as global_apps
 from django.db import DEFAULT_DB_ALIAS, IntegrityError
 
-from nautobot.dcim import choices as dcim_choices
 from nautobot.circuits import choices as circuit_choices
+from nautobot.dcim import choices as dcim_choices
 from nautobot.ipam import choices as ipam_choices
 from nautobot.virtualization import choices as vm_choices
 from nautobot.utilities.choices import ColorChoices
@@ -73,10 +73,10 @@ DESCRIPTION_MAP = {
     "planned": "Unit has been planned",
     "provisioning": "Circuit is being provisioned",
     "reserved": "Unit is reserved",
-    "retired": "Site or location has been retired",
+    "retired": "Site or Location has been retired",
     "slaac": "Dynamically assigned IPv6 address",
     "staged": "Unit has been staged",
-    "staging": "Site or location is in the process of being staged",
+    "staging": "Site or Location is in the process of being staged",
 }
 
 
@@ -238,7 +238,7 @@ def clear_status_choices(
             slugs = [choice_kwargs["slug"] for choice_kwargs in choices]
         else:
             # Clear all statuses for this model
-            slugs = [obj.slug for obj in Status.objects.filter(content_types=content_type)]
+            slugs = Status.objects.filter(content_types=content_type).values_list("slug", flat=True)
 
         for slug in slugs:
             try:

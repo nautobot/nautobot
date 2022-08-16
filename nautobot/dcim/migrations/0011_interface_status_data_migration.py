@@ -2,7 +2,7 @@
 
 from django.db import migrations
 from nautobot.dcim.choices import InterfaceStatusChoices
-from nautobot.extras.management import populate_status_choices, clear_status_choices
+from nautobot.extras.management import clear_status_choices, populate_status_choices
 
 
 def populate_interface_status(apps, schema_editor):
