@@ -704,10 +704,14 @@ class JobResultTable(BaseTable):
                    class="btn btn-xs btn-success" title="Re-run job with same arguments.">
                     <i class="mdi mdi-repeat"></i>
                 </a>
-            {% else %}
+            {% elif record.job_model is not None %}
                 <a href="{% url 'extras:job_run' slug=record.job_model.slug %}" class="btn btn-primary btn-xs"
                    title="Run job">
                     <i class="mdi mdi-play"></i>
+                </a>
+            {% else %}
+                <a href="#" class="btn btn-xs btn-default disabled" title="No saved job arguments, cannot be re-run">
+                    <i class="mdi mdi-repeat-off"></i>
                 </a>
             {% endif %}
             <a href="{% url 'extras:jobresult_delete' pk=record.pk %}" class="btn btn-xs btn-danger"
