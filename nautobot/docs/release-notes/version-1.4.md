@@ -169,6 +169,8 @@ The `settings_and_registry` default context processor was changed to purely `set
 
 ### Fixed
 
+- [#2218](https://github.com/nautobot/nautobot/pull/2218) - Fixed typos/links in release notes and Dynamic Groups docs.
+
 ## v1.4.0 (2022-08-15)
 
 ### Added
