@@ -153,16 +153,18 @@ Setting `STRICT_FILTERING` to `False` can result in unexpected filtering results
 
 The `settings_and_registry` default context processor was changed to purely `settings` - the (large) Nautobot application registry dictionary is no longer provided as part of the render context for all templates by default. Added a new `registry` template tag that can be invoked by specific templates to provide this variable where needed.
 
-## v1.4.0 (2022-MM-DD)
+## v1.4.0 (2022-08-15)
 
 ### Added
 
+- [#1812](https://github.com/nautobot/nautobot/issues/1812) - Added `NautobotViewSet` and accompanying helper methods, documentation.
 - [#2173](https://github.com/nautobot/nautobot/pull/2173) - Added flake8 linting and black formatting settings to vscode workspace settings.
 - [#2105](https://github.com/nautobot/nautobot/issues/2105) - Added support for Notes in NautobotBulkEditForm and NautobotEditForm.
 - [#2200](https://github.com/nautobot/nautobot/pull/2200) - Added Dynamic Groups support for Cluster, IP Address, Prefix, and Rack.
 
 ### Changed
 
+- [#1812](https://github.com/nautobot/nautobot/issues/1812) - Changed Circuit app models to use `NautobotViewSet`s.
 - [#2029](https://github.com/nautobot/nautobot/pull/2029) - Updated optional settings docs to call out environment variable only settings.
 - [#2176](https://github.com/nautobot/nautobot/pull/2176) - Update invoke task output to use rich formatting, print full Docker Compose commands.
 - [#2183](https://github.com/nautobot/nautobot/pull/2183) - Update dependency django to ~3.2.15.

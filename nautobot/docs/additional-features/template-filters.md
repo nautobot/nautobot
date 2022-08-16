@@ -119,7 +119,7 @@ Humanize speeds given in Kbps.
 
 ### hyperlinked_object
 
-_Added in version 1.4.0_ <!-- markdownlint-disable-line MD036 -->
+*Added in version 1.4.0* <!-- markdownlint-disable-line MD036 MD049 -->
 
 Render and link to a Django model instance, if any, or render a placeholder if not.
 
