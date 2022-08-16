@@ -153,6 +153,12 @@ Setting `STRICT_FILTERING` to `False` can result in unexpected filtering results
 
 The `settings_and_registry` default context processor was changed to purely `settings` - the (large) Nautobot application registry dictionary is no longer provided as part of the render context for all templates by default. Added a new `registry` template tag that can be invoked by specific templates to provide this variable where needed.
 
+## v1.4.1 (2022-08-22)
+
+### Fixed
+
+- [#2215](https://github.com/nautobot/nautobot/issues/2215) - Fixed error seen in migration from 1.3.x if certain default Statuses had been modified.
+
 ## v1.4.0 (2022-08-15)
 
 ### Added
