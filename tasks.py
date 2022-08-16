@@ -143,9 +143,10 @@ def run_command(context, command, **kwargs):
         "force_rm": "Always remove intermediate containers.",
         "cache": "Whether to use Docker's cache when building the image. (Default: enabled)",
         "poetry_parallel": "Enable/disable poetry to install packages in parallel. (Default: True)",
+        "pull": "Whether to pull Docker images when building the image. (Default: disabled)",
     }
 )
-def build(context, force_rm=False, cache=True, poetry_parallel=True):
+def build(context, force_rm=False, cache=True, poetry_parallel=True, pull=False):
     """Build Nautobot docker image."""
     command = (
         "build"
@@ -159,6 +160,8 @@ def build(context, force_rm=False, cache=True, poetry_parallel=True):
         command += " --force-rm"
     if poetry_parallel:
         command += " --build-arg POETRY_PARALLEL=true"
+    if pull:
+        command += " --pull"
 
     print(f"Building Nautobot with Python {context.nautobot.python_ver}...")
     docker_compose(context, command)
