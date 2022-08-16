@@ -53,7 +53,7 @@ The "Theme" link in the footer provides a modal popup to select the preferred th
 
 The DCIM, Virtualization FilterSets have been updated with over 150 new filters, including hybrid filters that support filtering on both `pk` and `slug` (or `pk` and `name` where `slug` is not available). A new filter class `NaturalKeyOrPKMultipleChoiceFilter` was added to `nautobot.utilities.filters` to support filtering on multiple fields of a related object.
 
-Please see the documentation on [best practices for mapping models fields to filters](../../development/best-practices/#mapping-model-fields-to-filters) for more information.
+Please see the documentation on [best practices for mapping model fields to filters](../../development/best-practices/#mapping-model-fields-to-filters) for more information.
 
 #### Job Hooks ([#1878](https://github.com/nautobot/nautobot/issues/1878))
 
@@ -162,6 +162,8 @@ A new configuration setting, [`STRICT_FILTERING`](../configuration/optional-sett
 The `settings_and_registry` default context processor was changed to purely `settings` - the (large) Nautobot application registry dictionary is no longer provided as part of the render context for all templates by default. Added a new `registry` template tag that can be invoked by specific templates to provide this variable where needed.
 
 ## v1.4.0 (2022-08-15)
+
+### Added
 
 - [#1812](https://github.com/nautobot/nautobot/issues/1812) - Added `NautobotViewSet` and accompanying helper methods, documentation.
 - [#2173](https://github.com/nautobot/nautobot/pull/2173) - Added flake8 linting and black formatting settings to vscode workspace settings.
