@@ -63,7 +63,8 @@ __all__ = (
     "RearPort",
 )
 
-from functools import cached_property
+from django.utils.functional import cached_property
+
 
 class ComponentModel(BaseModel, CustomFieldModel, RelationshipModel, NotesMixin):
     """
@@ -122,23 +123,19 @@ class CableTermination(models.Model):
         blank=True,
         null=True,
     )
-    cable_side = models.CharField(
-        max_length=1,
-        blank=True,
-        choices=CableEndpointSideChoices
-    )
+    cable_side = models.CharField(max_length=1, blank=True, choices=CableEndpointSideChoices)
 
     cable_endpoints = GenericRelation(
-        to='dcim.CableEndpoint',
-        content_type_field='termination_type',
-        object_id_field='termination_id',
-        related_query_name='%(class)s',
+        to="dcim.CableEndpoint",
+        content_type_field="termination_type",
+        object_id_field="termination_id",
+        related_query_name="%(class)s",
     )
 
     @property  # TODO(mzb) cached ?
     def cable_peers(self):
         if self.cable:
-            peers = self.cable.endpoints.exclude(cable_side=self.cable_side).prefetch_related('termination')
+            peers = self.cable.endpoints.exclude(cable_side=self.cable_side).prefetch_related("termination")
             return [peer.termination for peer in peers]
         return []
 
@@ -149,13 +146,9 @@ class CableTermination(models.Model):
         super().clean()
 
         if self.cable and not self.cable_side:
-            raise ValidationError({
-                "cable_side": "Must specify cable side (A or B) when attaching a cable."
-            })
+            raise ValidationError({"cable_side": "Must specify cable side (A or B) when attaching a cable."})
         if self.cable_side and not self.cable:
-            raise ValidationError({
-                "cable_side": "Cable side must not be set without a cable."
-            })
+            raise ValidationError({"cable_side": "Cable side must not be set without a cable."})
 
     # def get_cable_peer(self):  # TODO(mzb)
     #     return self._cable_peer

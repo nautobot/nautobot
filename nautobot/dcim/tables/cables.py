@@ -24,28 +24,27 @@ class CableTerminationsColumn(tables.Column):
         cable_side: Which side of the cable to report on (A or B)
         attr: The CableTermination attribute to return for each instance (returns the termination object by default)
     """
+
     def __init__(self, attr, cable_side, *args, **kwargs):
         self.cable_side = cable_side
         self.attr = attr
-        super().__init__(accessor=Accessor('endpoints'), *args, **kwargs)
+        super().__init__(accessor=Accessor("endpoints"), *args, **kwargs)
 
     def _get_terminations(self, manager):
         terminations = set()
         for cable_endpoint in manager.all():
             if cable_endpoint.cable_side == self.cable_side:
-                if termination := getattr(cable_endpoint, self.attr, None):
+                if termination == getattr(cable_endpoint, self.attr, None):
                     terminations.add(termination)
 
         return terminations
 
     def render(self, value):
-        links = [
-            f'<a href="{term.get_absolute_url()}">{term}</a>' for term in self._get_terminations(value)
-        ]
-        return mark_safe('<br />'.join(links) or '&mdash;')
+        links = [f'<a href="{term.get_absolute_url()}">{term}</a>' for term in self._get_terminations(value)]
+        return mark_safe("<br />".join(links) or "&mdash;")
 
     def value(self, value):
-        return ','.join([str(t) for t in self._get_terminations(value)])
+        return ",".join([str(t) for t in self._get_terminations(value)])
 
 
 class CableTable(StatusTableMixin, BaseTable):
@@ -53,29 +52,19 @@ class CableTable(StatusTableMixin, BaseTable):
     id = tables.Column(linkify=True, verbose_name="ID")
 
     a_terminations = CableTerminationsColumn(
-        cable_side='A',
+        cable_side="A",
         attr="termination",
         orderable=False,
-        verbose_name='Termination A',
+        verbose_name="Termination A",
     )
     b_terminations = CableTerminationsColumn(
-        cable_side='B',
+        cable_side="B",
         attr="termination",
         orderable=False,
-        verbose_name='Termination B',
+        verbose_name="Termination B",
     )
-    device_a = CableTerminationsColumn(
-        cable_side='A',
-        attr='_device',
-        orderable=False,
-        verbose_name='Device A'
-    )
-    device_b = CableTerminationsColumn(
-        cable_side='B',
-        attr='_device',
-        orderable=False,
-        verbose_name='Device B'
-    )
+    device_a = CableTerminationsColumn(cable_side="A", attr="_device", orderable=False, verbose_name="Device A")
+    device_b = CableTerminationsColumn(cable_side="B", attr="_device", orderable=False, verbose_name="Device B")
     length = tables.TemplateColumn(template_code=CABLE_LENGTH, order_by="_abs_length")
     color = ColorColumn()
     tags = TagColumn(url_name="dcim:cable_list")
