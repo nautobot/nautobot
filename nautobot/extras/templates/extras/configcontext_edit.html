@@ -17,6 +17,7 @@
         <div class="panel-body">
             {% render_field form.regions %}
             {% render_field form.sites %}
+            {% render_field form.locations %}
             {% render_field form.roles %}
             {% render_field form.device_types %}
             {% render_field form.platforms %}
@@ -31,6 +32,17 @@
         <div class="panel-heading"><strong>Data</strong></div>
         <div class="panel-body">
             {% render_field form.data %}
+        </div>
+    </div>
+    {% comment %}
+    We don't use 'inc/extras_features_edit_form_fields.html' because it would add a second,
+    and incorrect, "Tags" field to the form. Currently config-contexts don't support custom-fields or relationships,
+    but they do support notes.
+    {% endcomment %}
+    <div class="panel panel-default">
+        <div class="panel-heading"><strong>Notes</strong></div>
+        <div class="panel-body">
+            {% render_field form.object_note %}
         </div>
     </div>
 {% endblock %}

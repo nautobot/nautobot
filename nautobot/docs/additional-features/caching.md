@@ -128,7 +128,7 @@ of the Redis server and port for each sentinel instance to connect to
     `locations` for `django-cacheops` has a different meaning than the `LOCATION` value for `django-redis`
 
 !!! warning
-    [`CACHEOPS_REDIS`](#cacheops_redis) and [`CACHEOPS_SENTINEL`](#cacheops_sentinel) are mutually exclusive and will result in an error if both are set.
+    [`CACHEOPS_REDIS`](../../configuration/required-settings/#cacheops_redis) and [`CACHEOPS_SENTINEL`](../../configuration/required-settings/#cacheops_sentinel) are mutually exclusive and will result in an error if both are set.
 
 Example:
 

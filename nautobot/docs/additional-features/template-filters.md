@@ -117,6 +117,20 @@ Humanize speeds given in Kbps.
 {{ speed_value | humanize_speed }}
 ```
 
+### hyperlinked_object
+
+*Added in version 1.4.0* <!-- markdownlint-disable-line MD036 MD049 -->
+
+Render and link to a Django model instance, if any, or render a placeholder if not.
+
+Uses `object.display` if available, otherwise uses the string representation of the object.
+If the object defines `get_absolute_url()` this will be used to hyperlink the displayed object;
+additionally if there is an `object.description` this will be used as the title of the hyperlink.
+
+```django
+{{ device|hyperlinked_object }}
+```
+
 ### meta
 
 Return the specified Meta attribute of a model.

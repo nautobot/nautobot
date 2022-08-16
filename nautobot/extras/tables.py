@@ -25,12 +25,15 @@ from .models import (
     CustomField,
     CustomLink,
     DynamicGroup,
+    DynamicGroupMembership,
     ExportTemplate,
     GitRepository,
     GraphQLQuery,
     Job as JobModel,
+    JobHook,
     JobResult,
     JobLogEntry,
+    Note,
     ObjectChange,
     Relationship,
     RelationshipAssociation,
@@ -202,8 +205,24 @@ class ConfigContextSchemaValidationStateColumn(tables.Column):
 
 class CustomFieldTable(BaseTable):
     pk = ToggleColumn()
-    # TODO: Replace name column with slug #464
-    slug = tables.Column(linkify=True, accessor="name")
+    label = tables.Column(linkify=True)
+    # 2.0 TODO: #824 Remove name column
+    name = tables.TemplateColumn(
+        template_code="""
+{{ value }}
+{% if value != record.slug %}
+<span class="text-warning mdi mdi-alert" title="Name does not match slug '{{ record.slug }}'"></span>
+{% endif %}
+"""
+    )
+    slug = tables.TemplateColumn(
+        template_code="""
+{{ value }}
+{% if value != record.name %}
+<span class="text-warning mdi mdi-alert" title="Name '{{ record.name }}' does not match slug"></span>
+{% endif %}
+"""
+    )
     content_types = ContentTypesColumn(truncate_words=15)
     required = BooleanColumn()
 
@@ -211,10 +230,12 @@ class CustomFieldTable(BaseTable):
         model = CustomField
         fields = (
             "pk",
+            "label",
+            # 2.0 TODO: #824 Remove name column
+            "name",
             "slug",
             "content_types",
             "type",
-            "label",
             "description",
             "required",
             "default",
@@ -222,10 +243,10 @@ class CustomFieldTable(BaseTable):
         )
         default_columns = (
             "pk",
+            "label",
             "slug",
             "content_types",
             "type",
-            "label",
             "required",
             "weight",
         )
@@ -264,6 +285,7 @@ class CustomLinkTable(BaseTable):
 
 
 class DynamicGroupTable(BaseTable):
+    """Base table for displaying dynamic groups in list view."""
 
     pk = ToggleColumn()
     name = tables.Column(linkify=True)
@@ -271,8 +293,6 @@ class DynamicGroupTable(BaseTable):
     actions = ButtonsColumn(DynamicGroup, pk_field="slug")
 
     class Meta(BaseTable.Meta):  # pylint: disable=too-few-public-methods
-        """Resource Manager Meta."""
-
         model = DynamicGroup
         fields = (
             "pk",
@@ -289,6 +309,119 @@ class DynamicGroupTable(BaseTable):
         if not value:
             return value
         return format_html('<a href="{}">{}</a>', record.get_group_members_url(), value)
+
+
+class DynamicGroupMembershipTable(DynamicGroupTable):
+    """Hybrid table for displaying info for both group and membership."""
+
+    description = tables.Column(accessor="group.description")
+    actions = ButtonsColumn(DynamicGroup, pk_field="slug", buttons=("edit",))
+
+    class Meta(BaseTable.Meta):
+        model = DynamicGroupMembership
+        fields = (
+            "pk",
+            "operator",
+            "name",
+            "weight",
+            "filter",
+            "members",
+            "description",
+            "actions",
+        )
+        exclude = ("content_type",)
+
+    def render_filter(self, value, record):
+        """Turns the filter dict into a prettified list of HTML links."""
+        # Display an empty filter as None
+        if not value:
+            return None
+
+        # Use the filterset for the record to construct links to the objects used in the filter.
+        fs = record.group.filterset_class(record.filter, record.group.get_queryset())
+        fs.is_valid()  # Required or we don't get the inner form's `cleaned_data`
+
+        # Iterate over each key in the filter and extract the value from the inner form's
+        # cleaned_data`, calling `get_absolute_url()` on each to create links.
+        # TODO(jathan): If an instance doesn't have `get_absolute_url()` we're gonna have a bad time.
+        items = []
+        for field_name in record.filter:
+            value = fs.form.cleaned_data[field_name]
+            links = [format_html('<a href="{}">{}</a>', item.get_absolute_url(), item) for item in value]
+            links_str = "[" + ", ".join(links) + "]"
+            items.append(f"{field_name.title()}: {links_str}")
+
+        return format_html("<br/>".join(items))
+
+
+DESCENDANTS_LINK = """
+{% load helpers %}
+{% for node, depth in descendants_tree.items %}
+    {% if record.pk == node %}
+        {% for i in depth|as_range %}
+            {% if not forloop.first %}
+            <i class="mdi mdi-circle-small"></i>
+            {% endif %}
+        {% endfor %}
+    {% endif %}
+{% endfor %}
+<a href="{{ record.get_absolute_url }}">{{ record.name }}</a>
+"""
+
+
+OPERATOR_LINK = """
+{% load helpers %}
+{% for node, depth in descendants_tree.items %}
+    {% if record.pk == node %}
+        {% for i in depth|as_range %}
+            {% if not forloop.first %}
+            <i class="mdi mdi-circle-small"></i>
+            {% endif %}
+        {% endfor %}
+    {% endif %}
+{% endfor %}
+{{ record.get_operator_display }}
+"""
+
+
+class NestedDynamicGroupDescendantsTable(DynamicGroupMembershipTable):
+    """
+    Subclass of DynamicGroupMembershipTable used in detail views to show parenting hierarchy with dots.
+    """
+
+    operator = tables.TemplateColumn(template_code=OPERATOR_LINK)
+    name = tables.TemplateColumn(template_code=DESCENDANTS_LINK)
+
+    class Meta(DynamicGroupMembershipTable.Meta):
+        pass
+
+
+ANCESTORS_LINK = """
+{% load helpers %}
+{% for node in ancestors_tree %}
+    {% if node.name == record.name %}
+        {% for i in node.depth|as_range %}
+            {% if not forloop.first %}
+            <i class="mdi mdi-circle-small"></i>
+            {% endif %}
+        {% endfor %}
+    {% endif %}
+{% endfor %}
+<a href="{{ record.get_absolute_url }}">{{ record.name }}</a>
+"""
+
+
+class NestedDynamicGroupAncestorsTable(DynamicGroupTable):
+    """
+    Subclass of DynamicGroupTable used in detail views to show parenting hierarchy with dots.
+    """
+
+    name = tables.TemplateColumn(template_code=ANCESTORS_LINK)
+    actions = ButtonsColumn(DynamicGroup, pk_field="slug", buttons=("edit",))
+
+    class Meta(DynamicGroupTable.Meta):
+        fields = ["name", "members", "description", "actions"]
+        exclude = ["content_type"]
 
 
 class ExportTemplateTable(BaseTable):
@@ -430,6 +563,7 @@ class JobTable(BaseTable):
     hidden = BooleanColumn()
     read_only = BooleanColumn()
     approval_required = BooleanColumn()
+    is_job_hook_receiver = BooleanColumn()
     soft_time_limit = tables.Column()
     time_limit = tables.Column()
     actions = ButtonsColumn(JobModel, pk_field="slug", prepend_template=JOB_BUTTONS)
@@ -465,6 +599,7 @@ class JobTable(BaseTable):
             "commit_default",
             "hidden",
             "read_only",
+            "is_job_hook_receiver",
             "approval_required",
             "soft_time_limit",
             "time_limit",
@@ -480,6 +615,33 @@ class JobTable(BaseTable):
             "last_run",
             "last_status",
             "actions",
+        )
+
+
+class JobHookTable(BaseTable):
+    pk = ToggleColumn()
+    name = tables.Column(linkify=True)
+    content_types = tables.TemplateColumn(WEBHOOK_CONTENT_TYPES)
+    job = tables.Column(linkify=True)
+
+    class Meta(BaseTable.Meta):
+        model = JobHook
+        fields = (
+            "pk",
+            "name",
+            "content_types",
+            "job",
+            "enabled",
+            "type_create",
+            "type_update",
+            "type_delete",
+        )
+        default_columns = (
+            "pk",
+            "name",
+            "content_types",
+            "job",
+            "enabled",
         )
 
 
@@ -534,6 +696,25 @@ class JobResultTable(BaseTable):
         orderable=False,
         attrs={"td": {"class": "text-nowrap report-stats"}},
     )
+    actions = tables.TemplateColumn(
+        template_code="""
+            {% load helpers %}
+            {% if record.job_model and record.job_kwargs %}
+                <a href="{% url 'extras:job_run' slug=record.job_model.slug %}?kwargs_from_job_result={{ record.pk }}"
+                   class="btn btn-xs btn-success" title="Re-run job with same arguments.">
+                    <i class="mdi mdi-repeat"></i>
+                </a>
+            {% else %}
+                <a href="#" class="btn btn-xs btn-default disabled" title="No saved job arguments, cannot be re-run">
+                    <i class="mdi mdi-repeat-off"></i>
+                </a>
+            {% endif %}
+            <a href="{% url 'extras:jobresult_delete' pk=record.pk %}" class="btn btn-xs btn-danger"
+               title="Delete this job result.">
+                <i class="mdi mdi-trash-can-outline"></i>
+            </a>
+        """
+    )
 
     def order_linked_record(self, queryset, is_descending):
         return (
@@ -576,8 +757,25 @@ class JobResultTable(BaseTable):
             "user",
             "status",
             "summary",
+            "actions",
         )
-        default_columns = ("pk", "created", "name", "linked_record", "user", "status", "summary")
+        default_columns = ("pk", "created", "name", "linked_record", "user", "status", "summary", "actions")
+
+
+#
+# Notes
+#
+
+
+class NoteTable(BaseTable):
+    actions = ButtonsColumn(Note, pk_field="slug")
+
+    class Meta(BaseTable.Meta):
+        model = Note
+        fields = ("created", "note", "user_name")
+
+    def render_note(self, value):
+        return render_markdown(value)
 
 
 #
@@ -638,7 +836,8 @@ class ObjectChangeTable(BaseTable):
 
 class RelationshipTable(BaseTable):
     pk = ToggleColumn()
-    actions = ButtonsColumn(Relationship, buttons=("edit", "delete"))
+    name = tables.Column(linkify=True)
+    actions = ButtonsColumn(Relationship, pk_field="slug", buttons=("edit", "delete"))
 
     class Meta(BaseTable.Meta):
         model = Relationship
@@ -656,6 +855,7 @@ class RelationshipTable(BaseTable):
 class RelationshipAssociationTable(BaseTable):
     pk = ToggleColumn()
     actions = ButtonsColumn(RelationshipAssociation, buttons=("delete",))
+    relationship = tables.Column(linkify=True)
 
     source_type = tables.Column()
     source = tables.Column(linkify=True, orderable=False, accessor="get_source", default="unknown")

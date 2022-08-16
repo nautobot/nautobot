@@ -97,7 +97,7 @@ class ExampleJob(Job):
     class Meta:
         description = """
             This job does a number of interesting things.
-            
+
              1. It hacks the Gibson
              2. It immanentizes the eschaton
              3. It's a floor wax *and* a dessert topping
@@ -128,13 +128,13 @@ class MyJob(Job):
 
 Default: `[]`
 
-A list of strings (field names) representing the order your job [variables](#variables) should be rendered as form fields in the job submission UI. If not defined, the variables will be listed in order of their definition in the code.
+A list of strings (field names) representing the order your job [variables](#variables) should be rendered as form fields in the job submission UI. If not defined, the variables will be listed in order of their definition in the code. If variables are defined on a parent class and no field order is defined, the parent class variables will appear before the subclass variables.
 
 #### `has_sensitive_variables`
 
 Default: `True`
 
-Unless set to False, it prevents the job's input parameters from being saved to the database. This defaults to True so as to protect against inadvertent database exposure of input parameters that may include sensitive data such as passwords or other user credentials. Review whether each job's inputs contain any such variables before setting this to False; if a job _does_ contain sensitive inputs, if possible you should consider whether the job could be re-implemented using Nautobot's [`Secrets`](../core-functionality/secrets) feature as a way to ensure that the sensitive data is not directly provided as a job variable at all.
+Unless set to False, it prevents the job's input parameters from being saved to the database. This defaults to True so as to protect against inadvertent database exposure of input parameters that may include sensitive data such as passwords or other user credentials. Review whether each job's inputs contain any such variables before setting this to False; if a job *does* contain sensitive inputs, if possible you should consider whether the job could be re-implemented using Nautobot's [`Secrets`](../core-functionality/secrets) feature as a way to ensure that the sensitive data is not directly provided as a job variable at all.
 
 Important notes about jobs with sensitive variables:
 
@@ -187,6 +187,34 @@ class ExampleJobWithSoftTimeLimit(Job):
             # any clean up code
             cleanup_in_a_hurry()
 ```
+
+#### `template_name`
+
+<!-- markdownlint-disable-next-line MD036 MD049 -->
+_Added in version 1.4.0_
+
+A path relative to the job source code containing a Django template which provides additional code to customize the Job's submission form. This template should extend the existing job template, `extras/job.html`, otherwise the base form and functionality may not be available.
+
+A template can provide additional JavaScript, CSS, or even display HTML. A good starting template would be:
+
+```html
+{% extends 'extras/job.html' %}
+
+{% block extra_styles %}
+    {{ block.super }}
+    <!-- Add additional CSS here. -->
+{% endblock %}
+{% block content %}
+    {{ block.super }}
+    <!-- Add additional HTML here. -->
+{% endblock content %}
+{% block javascript %}
+    {{ block.super }}
+    <!-- Add additional JavaScript here. -->
+{% endblock javascript %}
+```
+
+For another example checkout [the template used in example plugin](https://github.com/nautobot/nautobot/blob/next/examples/example_plugin/example_plugin/templates/example_plugin/example_with_custom_template.html) in the GitHub repo.
 
 #### `time_limit`
 

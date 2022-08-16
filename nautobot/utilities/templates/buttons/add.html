@@ -1,3 +1,5 @@
-<a href="{{ add_url }}" class="btn btn-primary" id="add-button">
-    <span class="mdi mdi-plus-thick" aria-hidden="true"></span> Add
-</a>
+{% if add_url %}
+    <a href="{{ add_url }}" class="btn btn-primary" id="add-button">
+        <span class="mdi mdi-plus-thick" aria-hidden="true"></span> Add
+    </a>
+{% endif %}

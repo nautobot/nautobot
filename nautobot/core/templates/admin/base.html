@@ -26,6 +26,9 @@
     <link rel="stylesheet"
           href="{% static 'flatpickr-4.6.9/themes/light.min.css' %}"
           onerror="window.location='{% url 'media_failure' %}?filename=flatpickr-4.6.9/themes/light.min.css'">
+    <link rel="stylesheet" id="dark-theme"
+          href="{% static 'css/dark.css' %}?v{{ settings.VERSION }}"
+          onerror="window.location='{% url 'media_failure' %}?filename=css/dark.css'" disabled="disabled" />
     <link rel="stylesheet"
           href="{% static 'css/base.css' %}?v{{ settings.VERSION }}"
           onerror="window.location='{% url 'media_failure' %}?filename=css/base.css'">
@@ -166,17 +169,26 @@
                 </div>
                 <div class="col-xs-4 text-right noprint">
                     <p class="text-muted">
-                        <i class="mdi mdi-book-open-page-variant text-primary"></i> <a href="https://nautobot.readthedocs.io/">Docs</a> &middot;
+                        <a href="#theme_modal" data-toggle="modal" data-target="#theme_modal" id="btn-theme-modal"><i class="mdi mdi-theme-light-dark text-primary"></i>Theme</a> &middot;
+                        <i class="mdi mdi-book-open-page-variant text-primary"></i>
+                        {% if settings.BRANDING_URLS.docs %}
+                            <a href="{{ settings.BRANDING_URLS.docs }}">Docs</a>
+                        {% else %}
+                            <a href="{% static 'docs/index.html' %}">Docs</a>
+                        {% endif %}
+                        &middot;
                         <i class="mdi mdi-cloud-braces text-primary"></i> <a href="{% url 'api_docs' %}">API</a> &middot;
                         <i class="mdi mdi-graphql text-primary"></i> <a href="{% url 'graphql' %}">GraphQL</a> &middot;
-                        <i class="mdi mdi-xml text-primary"></i> <a href="https://github.com/nautobot/nautobot">Code</a> &middot;
-                        <i class="mdi mdi-lifebuoy text-primary"></i> <a href="https://github.com/nautobot/nautobot/wiki">Help</a>
+                        <i class="mdi mdi-xml text-primary"></i> <a href="{{ settings.BRANDING_URLS.code }}">Code</a> &middot;
+                        <i class="mdi mdi-lifebuoy text-primary"></i> <a href="{{ settings.BRANDING_URLS.help }}">Help</a>
                     </p>
                 </div>
             </div>
         </div>
     </footer>
 {% endif %}
+{% include 'modals/modal_theme.html' with name='theme'%}
+<script src="{% static 'js/theme.js' %}"></script>
 {% block javascript %}{% endblock %}
 </body>
 </html>

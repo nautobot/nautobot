@@ -2,10 +2,25 @@
 
 While there are many different development interfaces in Nautobot that each expose unique functionality, there are a common set of a best practices that have broad applicability to users and developers alike. This includes elements of writing Jobs, Plugins, and scripts for execution through the `nbshell`.
 
+## Base Classes
+
+For models that support change-logging, custom fields, and relationships (which includes all subclasses of `OrganizationalModel` and `PrimaryModel`), the "Full-featured models" base classes below should always be used. For less full-featured models, refer to the "Minimal models" column instead.
+
+| Feature                  | Full-featured models       | Minimal models             |
+| ------------------------ | -------------------------- | -------------------------- |
+| FilterSets               | `NautobotFilterSet`        | `BaseFilterSet`            |
+| Object create/edit forms | `NautobotModelForm`        | `BootstrapMixin`           |
+| Object bulk-edit forms   | `NautobotBulkEditForm`     | `BootstrapMixin`           |
+| Table filter forms       | `NautobotFilterForm`       | `BootstrapMixin`           |
+| Read-only serializers    | `BaseModelSerializer`      | `BaseModelSerializer`      |
+| Nested serializers       | `WritableNestedSerializer` | `WritableNestedSerializer` |
+| All other serializers    | `NautobotModelSerializer`  | `ValidatedModelSerializer` |
+| API View Sets            | `NautobotModelViewSet`     | `ModelViewSet`             |
+
 ## Model Existence in the Database
 
 A common Django pattern is to check whether a model instance's primary key (`pk`) field is set as a proxy for whether the instance has been written to the database or whether it exists only in memory.
-Because of the way Nautobot's UUID primary keys are implemented, **this check will not work as expected** because model instances are assigned a UUID in memory *at instance creation time*, not at the time they are written to the database (when the model's `save()` method is called).
+Because of the way Nautobot's UUID primary keys are implemented, **this check will not work as expected** because model instances are assigned a UUID in memory _at instance creation time_, not at the time they are written to the database (when the model's `save()` method is called).
 Instead, for any model which inherits from `nautobot.core.models.BaseModel`, you should check an instance's `present_in_database` property which will be either `True` or `False`.
 
 Wrong:
@@ -32,7 +47,7 @@ else:
 ```
 
 !!! note
-    There is one case where a model instance *will* have a null primary key, and that is the case where it has been removed from the database and is in the process of being deleted.
+    There is one case where a model instance _will_ have a null primary key, and that is the case where it has been removed from the database and is in the process of being deleted.
     For most purposes, this is not the case you are intending to check!
 
 ## Model Validation
@@ -110,16 +125,23 @@ class UserFilter(NautobotFilterSet):
 ```
 
 - For foreign-key related fields on **new core models for v1.4 or later:**
-    - The field **must** be shadowed utilizing a hybrid `NaturalKeyMultipleChoiceFilter`(yet to be implemented) which will automatically try to lookup by UUID or `slug` depending on the value of the incoming argument (e.g. UUID string vs. slug string).
-    - In default settings for filtersets, when not using `NaturalKeyMultipleChoiceFilter`, `provider` would be a `pk` (UUID) field, whereas using `NaturalKeyMultipleChoiceFilter` will automatically support both input values for `slug` or `pk`.
-    - New filtersets should follow this direction vs. propagating the need to continue to overload the default foreign-key filter and define an additional `_id` filter on each new filterset. *We know that most existing FilterSets aren't following this pattern, and we plan to change that in a major release.*
+    - The field **must** be shadowed utilizing a hybrid `NaturalKeyOrPKMultipleChoiceFilter` which will automatically try to lookup by UUID or `slug` depending on the value of the incoming argument (e.g. UUID string vs. slug string).
+    - Fields that use `name` instead of `slug` can set the `natural_key` argument on `NaturalKeyOrPKMultipleChoiceFilter`.
+    - In default settings for filtersets, when not using `NaturalKeyOrPKMultipleChoiceFilter`, `provider` would be a `pk` (UUID) field, whereas using `NaturalKeyOrPKMultipleChoiceFilter` will automatically support both input values for `slug` or `pk`.
+    - New filtersets should follow this direction vs. propagating the need to continue to overload the default foreign-key filter and define an additional `_id` filter on each new filterset. _We know that most existing FilterSets aren't following this pattern, and we plan to change that in a major release._
     - Using the previous field (`provider`) as an example, it would look something like this:
 
 ```python
-    provider = NaturalKeyModelMultipleChoiceFilter(
+    from nautobot.utilities.filters import NaturalKeyOrPKMultipleChoiceFilter
+    provider = NaturalKeyOrPKMultipleChoiceFilter(
         queryset=Provider.objects.all(),
-        to_field_name="slug",
         label="Provider (slug or ID)",
+    )
+    # optionally use the to_field_name argument to set the field to name instead of slug
+    provider = NaturalKeyOrPKMultipleChoiceFilter(
+        to_field_name="name",
+        queryset=Provider.objects.all(),
+        label="Provider (name or ID)",
     )
 ```
 
@@ -288,3 +310,8 @@ filterset.qs.filter(query).count()  # 339
 - Reversibility may not always necessarily be required, but by properly defining `field_name`, `lookup_expr`, and `exclude` on filter fields, **introspection becomes deterministic and reversible queries can be reliably generated as needed.**
 - For exceptions such as `DeviceFilterSet.has_primary_ip` where it checks for both `Device.primary_ip4` OR `Device.primary_ip6`, method filters may still be necessary, however, they would be **the exception and not the norm.**
 - The good news is that in the core there are not that many of these filter methods defined, but we also don’t want to see them continue to proliferate.
+
+## Using NautobotUIViewSet for Plugin Development
+
+- Starting from Nautobot v1.4, using `NautobotUIViewSet` for plugin development is strongly recommended.
+- See how to use `NautobotUIViewSet`, check out [plugins/development.md](/docs/plugins/development.md).

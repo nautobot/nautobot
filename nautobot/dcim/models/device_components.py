@@ -11,6 +11,7 @@ from taggit.managers import TaggableManager
 from nautobot.dcim.choices import (
     ConsolePortTypeChoices,
     InterfaceModeChoices,
+    InterfaceStatusChoices,
     InterfaceTypeChoices,
     PortTypeChoices,
     PowerFeedPhaseChoices,
@@ -31,8 +32,11 @@ from nautobot.extras.models import (
     CustomFieldModel,
     ObjectChange,
     RelationshipModel,
+    Status,
+    StatusModel,
     TaggedItem,
 )
+from nautobot.extras.models.mixins import NotesMixin
 from nautobot.extras.utils import extras_features
 from nautobot.core.models import BaseModel
 from nautobot.utilities.fields import NaturalOrderingField
@@ -57,7 +61,7 @@ __all__ = (
 )
 
 
-class ComponentModel(BaseModel, CustomFieldModel, RelationshipModel):
+class ComponentModel(BaseModel, CustomFieldModel, RelationshipModel, NotesMixin):
     """
     An abstract model inherited by any model which has a parent Device.
     """
@@ -196,6 +200,7 @@ class PathEndpoint(models.Model):
 
 
 @extras_features(
+    "cable_terminations",
     "custom_fields",
     "custom_validators",
     "export_templates",
@@ -239,7 +244,7 @@ class ConsolePort(CableTermination, PathEndpoint, ComponentModel):
 #
 
 
-@extras_features("custom_fields", "custom_validators", "graphql", "relationships", "webhooks")
+@extras_features("cable_terminations", "custom_fields", "custom_validators", "graphql", "relationships", "webhooks")
 class ConsoleServerPort(CableTermination, PathEndpoint, ComponentModel):
     """
     A physical port within a Device (typically a designated console server) which provides access to ConsolePorts.
@@ -277,6 +282,7 @@ class ConsoleServerPort(CableTermination, PathEndpoint, ComponentModel):
 
 
 @extras_features(
+    "cable_terminations",
     "custom_fields",
     "custom_validators",
     "export_templates",
@@ -414,7 +420,7 @@ class PowerPort(CableTermination, PathEndpoint, ComponentModel):
 #
 
 
-@extras_features("custom_fields", "custom_validators", "graphql", "relationships", "webhooks")
+@extras_features("cable_terminations", "custom_fields", "custom_validators", "graphql", "relationships", "webhooks")
 class PowerOutlet(CableTermination, PathEndpoint, ComponentModel):
     """
     A physical power outlet (output) within a Device which provides power to a PowerPort.
@@ -433,6 +439,7 @@ class PowerOutlet(CableTermination, PathEndpoint, ComponentModel):
         null=True,
         related_name="poweroutlets",
     )
+    # todoindex:
     feed_leg = models.CharField(
         max_length=50,
         choices=PowerOutletFeedLegChoices,
@@ -481,7 +488,7 @@ class PowerOutlet(CableTermination, PathEndpoint, ComponentModel):
 #
 
 
-class BaseInterface(RelationshipModel):
+class BaseInterface(RelationshipModel, StatusModel):
     """
     Abstract base class for fields shared by dcim.Interface and virtualization.VMInterface.
     """
@@ -495,6 +502,24 @@ class BaseInterface(RelationshipModel):
         verbose_name="MTU",
     )
     mode = models.CharField(max_length=50, choices=InterfaceModeChoices, blank=True)
+    parent_interface = models.ForeignKey(
+        to="self",
+        on_delete=models.CASCADE,
+        related_name="child_interfaces",
+        null=True,
+        blank=True,
+        verbose_name="Parent interface",
+        help_text="Assigned parent interface",
+    )
+    bridge = models.ForeignKey(
+        to="self",
+        on_delete=models.SET_NULL,
+        related_name="bridged_interfaces",
+        null=True,
+        blank=True,
+        verbose_name="Bridge interface",
+        help_text="Assigned bridge interface",
+    )
 
     class Meta:
         abstract = True
@@ -506,6 +531,14 @@ class BaseInterface(RelationshipModel):
 
     def save(self, *args, **kwargs):
 
+        if not self.status:
+            query = Status.objects.get_for_model(self)
+            try:
+                status = query.get(slug=InterfaceStatusChoices.STATUS_ACTIVE)
+            except Status.DoesNotExist:
+                raise ValidationError({"status": "Default status 'active' does not exist"})
+            self.status = status
+
         # Only "tagged" interfaces may have tagged VLANs assigned. ("tagged all" implies all VLANs are assigned.)
         if self.present_in_database and self.mode != InterfaceModeChoices.MODE_TAGGED:
             self.tagged_vlans.clear()
@@ -514,11 +547,13 @@ class BaseInterface(RelationshipModel):
 
 
 @extras_features(
+    "cable_terminations",
     "custom_fields",
     "custom_validators",
     "export_templates",
     "graphql",
     "relationships",
+    "statuses",
     "webhooks",
 )
 class Interface(CableTermination, PathEndpoint, ComponentModel, BaseInterface):
@@ -537,8 +572,11 @@ class Interface(CableTermination, PathEndpoint, ComponentModel, BaseInterface):
         null=True,
         blank=True,
         verbose_name="Parent LAG",
+        help_text="Assigned LAG interface",
     )
+    # todoindex:
     type = models.CharField(max_length=50, choices=InterfaceTypeChoices)
+    # todoindex:
     mgmt_only = models.BooleanField(
         default=False,
         verbose_name="Management only",
@@ -577,6 +615,9 @@ class Interface(CableTermination, PathEndpoint, ComponentModel, BaseInterface):
         "mgmt_only",
         "description",
         "mode",
+        "status",
+        "parent_interface",
+        "bridge",
     ]
 
     class Meta:
@@ -599,13 +640,47 @@ class Interface(CableTermination, PathEndpoint, ComponentModel, BaseInterface):
             self.mgmt_only,
             self.description,
             self.get_mode_display(),
+            self.get_status_display(),
+            self.parent_interface.name if self.parent_interface else None,
+            self.bridge.name if self.bridge else None,
         )
 
     def clean(self):
         super().clean()
 
+        # LAG validation
+        if self.lag is not None:
+
+            # A LAG interface cannot be its own parent
+            if self.lag_id == self.pk:
+                raise ValidationError({"lag": "A LAG interface cannot be its own parent."})
+
+            # An interface's LAG must belong to the same device or virtual chassis
+            if self.lag.device_id != self.device_id:
+                if self.device.virtual_chassis is None:
+                    raise ValidationError(
+                        {
+                            "lag": f"The selected LAG interface ({self.lag}) belongs to a different device ({self.lag.device})."
+                        }
+                    )
+                elif self.lag.device.virtual_chassis_id != self.device.virtual_chassis_id:
+                    raise ValidationError(
+                        {
+                            "lag": (
+                                f"The selected LAG interface ({self.lag}) belongs to {self.lag.device}, which is not part "
+                                f"of virtual chassis {self.device.virtual_chassis}."
+                            )
+                        }
+                    )
+
+            # A virtual interface cannot have a parent LAG
+            if self.type == InterfaceTypeChoices.TYPE_VIRTUAL:
+                raise ValidationError({"lag": "Virtual interfaces cannot have a parent LAG interface."})
+
         # Virtual interfaces cannot be connected
-        if self.type in NONCONNECTABLE_IFACE_TYPES and (self.cable or getattr(self, "circuit_termination", False)):
+        if getattr(self, "type", None) in NONCONNECTABLE_IFACE_TYPES and (
+            self.cable or getattr(self, "circuit_termination", False)
+        ):
             raise ValidationError(
                 {
                     "type": "Virtual and wireless interfaces cannot be connected to another interface or circuit. "
@@ -613,45 +688,79 @@ class Interface(CableTermination, PathEndpoint, ComponentModel, BaseInterface):
                 }
             )
 
-        # An interface's LAG must belong to the same device or virtual chassis
-        if self.lag and self.lag.device != self.device:
-            if self.device.virtual_chassis is None:
+        # Parent validation
+        if self.parent_interface is not None:
+
+            # An interface cannot be its own parent
+            if self.parent_interface_id == self.pk:
+                raise ValidationError({"parent_interface": "An interface cannot be its own parent."})
+            # A physical interface cannot have a parent interface
+            if hasattr(self, "type") and self.type != InterfaceTypeChoices.TYPE_VIRTUAL:
                 raise ValidationError(
-                    {
-                        "lag": f"The selected LAG interface ({self.lag}) belongs to a different device ({self.lag.device})."
-                    }
-                )
-            elif self.lag.device.virtual_chassis != self.device.virtual_chassis:
-                raise ValidationError(
-                    {
-                        "lag": f"The selected LAG interface ({self.lag}) belongs to {self.lag.device}, which is not part "
-                        f"of virtual chassis {self.device.virtual_chassis}."
-                    }
+                    {"parent_interface": "Only virtual interfaces may be assigned to a parent interface."}
                 )
 
-        # A virtual interface cannot have a parent LAG
-        if self.type == InterfaceTypeChoices.TYPE_VIRTUAL and self.lag is not None:
-            raise ValidationError({"lag": "Virtual interfaces cannot have a parent LAG interface."})
+            # A virtual interface cannot be a parent interface
+            if getattr(self.parent_interface, "type", None) == InterfaceTypeChoices.TYPE_VIRTUAL:
+                raise ValidationError(
+                    {"parent_interface": "Virtual interfaces may not be parents of other interfaces."}
+                )
 
-        # A LAG interface cannot be its own parent
-        if self.present_in_database and self.lag_id == self.pk:
-            raise ValidationError({"lag": "A LAG interface cannot be its own parent."})
+            # An interface's parent must belong to the same device or virtual chassis
+            if self.parent_interface.parent != self.parent:
+                if getattr(self.parent, "virtual_chassis", None) is None:
+                    raise ValidationError(
+                        {
+                            "parent_interface": f"The selected parent interface ({self.parent_interface}) belongs to a different device "
+                            f"({self.parent_interface.parent})."
+                        }
+                    )
+                elif self.parent_interface.parent.virtual_chassis != self.parent.virtual_chassis:
+                    raise ValidationError(
+                        {
+                            "parent_interface": f"The selected parent interface ({self.parent_interface}) belongs to {self.parent_interface.parent}, which "
+                            f"is not part of virtual chassis {self.parent.virtual_chassis}."
+                        }
+                    )
 
         # Validate untagged VLAN
-        if self.untagged_vlan and self.untagged_vlan.site not in [
-            self.parent.site,
-            None,
-        ]:
+        if self.untagged_vlan and self.untagged_vlan.site_id not in [self.parent.site_id, None]:
             raise ValidationError(
                 {
-                    "untagged_vlan": "The untagged VLAN ({}) must belong to the same site as the interface's parent "
-                    "device, or it must be global".format(self.untagged_vlan)
+                    "untagged_vlan": (
+                        f"The untagged VLAN ({self.untagged_vlan}) must belong to the same site as the interface's parent "
+                        f"device, or it must be global."
+                    )
                 }
             )
 
-    @property
-    def parent(self):
-        return self.device
+        # Bridge validation
+        if self.bridge is not None:
+
+            # An interface cannot be bridged to itself
+            if self.bridge_id == self.pk:
+                raise ValidationError({"bridge": "An interface cannot be bridged to itself."})
+
+            # A bridged interface belong to the same device or virtual chassis
+            if self.bridge.parent.id != self.parent.id:
+                if getattr(self.parent, "virtual_chassis", None) is None:
+                    raise ValidationError(
+                        {
+                            "bridge": (
+                                f"The selected bridge interface ({self.bridge}) belongs to a different device "
+                                f"({self.bridge.parent})."
+                            )
+                        }
+                    )
+                elif self.bridge.parent.virtual_chassis_id != self.parent.virtual_chassis_id:
+                    raise ValidationError(
+                        {
+                            "bridge": (
+                                f"The selected bridge interface ({self.bridge}) belongs to {self.bridge.parent}, which "
+                                f"is not part of virtual chassis {self.parent.virtual_chassis}."
+                            )
+                        }
+                    )
 
     @property
     def is_connectable(self):
@@ -673,13 +782,17 @@ class Interface(CableTermination, PathEndpoint, ComponentModel, BaseInterface):
     def count_ipaddresses(self):
         return self.ip_addresses.count()
 
+    @property
+    def parent(self):
+        return self.device
+
 
 #
 # Pass-through ports
 #
 
 
-@extras_features("custom_fields", "custom_validators", "graphql", "relationships", "webhooks")
+@extras_features("cable_terminations", "custom_fields", "custom_validators", "graphql", "relationships", "webhooks")
 class FrontPort(CableTermination, ComponentModel):
     """
     A pass-through port on the front of a Device.
@@ -743,7 +856,7 @@ class FrontPort(CableTermination, ComponentModel):
             )
 
 
-@extras_features("custom_fields", "custom_validators", "graphql", "relationships", "webhooks")
+@extras_features("cable_terminations", "custom_fields", "custom_validators", "graphql", "relationships", "webhooks")
 class RearPort(CableTermination, ComponentModel):
     """
     A pass-through port on the rear of a Device.

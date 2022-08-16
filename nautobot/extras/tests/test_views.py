@@ -31,6 +31,7 @@ from nautobot.extras.models import (
     GraphQLQuery,
     Job,
     JobResult,
+    Note,
     ObjectChange,
     Relationship,
     RelationshipAssociation,
@@ -48,6 +49,7 @@ from nautobot.ipam.models import VLAN, VLANGroup
 from nautobot.users.models import ObjectPermission
 from nautobot.utilities.testing import ViewTestCases, TestCase, extract_page_body, extract_form_failures
 from nautobot.utilities.testing.utils import disable_warnings, post_data
+from nautobot.utilities.utils import slugify_dashes_to_underscores
 
 
 # Use the proper swappable User model
@@ -64,6 +66,8 @@ class ComputedFieldTestCase(
     ViewTestCases.ListObjectsViewTestCase,
 ):
     model = ComputedField
+    slug_source = "label"
+    slugify_function = staticmethod(slugify_dashes_to_underscores)
 
     @classmethod
     def setUpTestData(cls):
@@ -117,7 +121,6 @@ class ComputedFieldTestCase(
             "weight": 100,
         }
 
-        cls.slug_source = "label"
         cls.slug_test_object = "Computed Field Five"
 
 
@@ -347,15 +350,18 @@ class CustomLinkTestCase(
 
 
 class CustomFieldTestCase(
+    # No NotesViewTestCase or BulkImportObjectsViewTestCase, at least for now
     ViewTestCases.BulkDeleteObjectsViewTestCase,
     ViewTestCases.CreateObjectViewTestCase,
     ViewTestCases.DeleteObjectViewTestCase,
     ViewTestCases.EditObjectViewTestCase,
     ViewTestCases.GetObjectViewTestCase,
+    ViewTestCases.GetObjectChangelogViewTestCase,
     ViewTestCases.ListObjectsViewTestCase,
 ):
     model = CustomField
-    reverse_url_attribute = "name"
+    slug_source = "label"
+    slugify_function = staticmethod(slugify_dashes_to_underscores)
 
     @classmethod
     def setUpTestData(cls):
@@ -380,7 +386,15 @@ class CustomFieldTestCase(
                 label="Custom Field Integer",
                 default="",
             ),
+            CustomField(
+                type=CustomFieldTypeChoices.TYPE_TEXT,
+                # https://github.com/nautobot/nautobot/issues/1962
+                name="Custom field? With special / unusual characters!",
+                default="",
+            ),
         ]
+
+        cls.slug_test_object = "Custom Field Integer"
 
         for custom_field in custom_fields:
             custom_field.validated_save()
@@ -388,8 +402,8 @@ class CustomFieldTestCase(
 
         cls.form_data = {
             "content_types": [obj_type.pk],
-            "type": CustomFieldTypeChoices.TYPE_BOOLEAN,
-            "name": "Custom Field Boolean",
+            "type": CustomFieldTypeChoices.TYPE_BOOLEAN,  # type is mandatory but cannot be changed once set.
+            "slug": "custom_field_boolean",  # slug is mandatory but cannot be changed once set.
             "label": "Custom Field Boolean",
             "default": None,
             "filter_logic": "loose",
@@ -402,21 +416,25 @@ class CustomFieldTestCase(
         }
 
     def test_create_object_without_permission(self):
-        # Can't have two CustomFields with the same "name"
-        for cf in CustomField.objects.all():
-            cf.delete()
+        # Can't have two CustomFields with the same "slug"
+        self.form_data = self.form_data.copy()
+        self.form_data["slug"] = "custom_field_boolean_2"
         super().test_create_object_without_permission()
 
     def test_create_object_with_permission(self):
-        # Can't have two CustomFields with the same "name"
-        for cf in CustomField.objects.all():
-            cf.delete()
+        # Can't have two CustomFields with the same "slug"
+        self.form_data = self.form_data.copy()
+        self.form_data["slug"] = "custom_field_boolean_2"
         super().test_create_object_with_permission()
+        instance = self._get_queryset().get(slug="custom_field_boolean_2")
+        # 2.0 TODO: #824 removal of `name` field altogether
+        # Assure that `name` was auto-populated from the given slug
+        self.assertEqual(instance.name, instance.slug)
 
     def test_create_object_with_constrained_permission(self):
-        # Can't have two CustomFields with the same "name"
-        for cf in CustomField.objects.all():
-            cf.delete()
+        # Can't have two CustomFields with the same "slug"
+        self.form_data = self.form_data.copy()
+        self.form_data["slug"] = "custom_field_boolean_2"
         super().test_create_object_with_constrained_permission()
 
 
@@ -471,6 +489,11 @@ class DynamicGroupTestCase(
             "slug": "new-dynamic-group",
             "description": "I am a new dynamic group object.",
             "content_type": content_type.pk,
+            # Management form fields required for the dynamic formset
+            "dynamic_group_memberships-TOTAL_FORMS": "0",
+            "dynamic_group_memberships-INITIAL_FORMS": "1",
+            "dynamic_group_memberships-MIN_NUM_FORMS": "0",
+            "dynamic_group_memberships-MAX_NUM_FORMS": "1000",
         }
 
 
@@ -568,6 +591,48 @@ class GitRepositoryTestCase(
 
         cls.slug_source = "name"
         cls.slug_test_object = "Repo 4"
+
+
+class NoteTestCase(
+    ViewTestCases.CreateObjectViewTestCase,
+    ViewTestCases.DeleteObjectViewTestCase,
+    ViewTestCases.EditObjectViewTestCase,
+    ViewTestCases.GetObjectChangelogViewTestCase,
+):
+    model = Note
+
+    @classmethod
+    def setUpTestData(cls):
+
+        content_type = ContentType.objects.get_for_model(Site)
+        site = Site.objects.create(name="Site 1", slug="site-1")
+        user = User.objects.first()
+
+        # Notes Objects to test
+        Note.objects.create(
+            note="Site has been placed on maintenance.",
+            user=user,
+            assigned_object_type=content_type,
+            assigned_object_id=site.pk,
+        ),
+        Note.objects.create(
+            note="Site maintenance has ended.",
+            user=user,
+            assigned_object_type=content_type,
+            assigned_object_id=site.pk,
+        ),
+        Note.objects.create(
+            note="Site is under duress.",
+            user=user,
+            assigned_object_type=content_type,
+            assigned_object_id=site.pk,
+        ),
+
+        cls.form_data = {
+            "note": "This is Site note.",
+            "assigned_object_type": content_type.pk,
+            "assigned_object_id": site.pk,
+        }
 
 
 # Not a full-fledged PrimaryObjectViewTestCase as there's no BulkEditView for Secrets
@@ -1361,8 +1426,8 @@ class JobTestCase(
     model = Job
 
     def _get_queryset(self):
-        """Don't include hidden or non-installed Jobs as they won't appear in the UI by default."""
-        return self.model.objects.filter(installed=True, hidden=False)
+        """Don't include hidden Jobs, non-installed Jobs or JobHookReceivers as they won't appear in the UI by default."""
+        return self.model.objects.filter(installed=True, hidden=False, is_job_hook_receiver=False)
 
     @classmethod
     def setUpTestData(cls):
@@ -1712,7 +1777,7 @@ class JobTestCase(
             self.assertHttpStatus(response, 200, msg=self.run_urls[1])
 
             content = extract_page_body(response.content.decode(response.charset))
-            self.assertIn("Unable to schedule job: Job has sensitive input variables.", content)
+            self.assertIn("Unable to schedule job: Job may have sensitive input variables.", content)
 
 
 # TODO: Convert to StandardTestCases.Views
@@ -1755,11 +1820,13 @@ class RelationshipTestCase(
     ViewTestCases.DeleteObjectViewTestCase,
     ViewTestCases.EditObjectViewTestCase,
     ViewTestCases.BulkDeleteObjectsViewTestCase,
-    # TODO? ViewTestCases.GetObjectViewTestCase,
-    # TODO? ViewTestCases.GetObjectChangelogViewTestCase,
+    ViewTestCases.GetObjectViewTestCase,
+    ViewTestCases.GetObjectChangelogViewTestCase,
     ViewTestCases.ListObjectsViewTestCase,
 ):
     model = Relationship
+    slug_source = "name"
+    slugify_function = staticmethod(slugify_dashes_to_underscores)
 
     @classmethod
     def setUpTestData(cls):
@@ -1802,7 +1869,6 @@ class RelationshipTestCase(
             "destination_filter": None,
         }
 
-        cls.slug_source = "name"
         cls.slug_test_object = "Primary Interface"
 
 

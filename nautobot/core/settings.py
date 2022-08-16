@@ -142,6 +142,7 @@ PROMETHEUS_EXPORT_MIGRATIONS = False
 FILTERS_NULL_CHOICE_LABEL = "None"
 FILTERS_NULL_CHOICE_VALUE = "null"
 
+STRICT_FILTERING = True
 
 #
 # Django REST framework (API)
@@ -161,7 +162,7 @@ REST_FRAMEWORK = {
         "rest_framework.authentication.SessionAuthentication",
         "nautobot.core.api.authentication.TokenAuthentication",
     ),
-    "DEFAULT_FILTER_BACKENDS": ("django_filters.rest_framework.DjangoFilterBackend",),
+    "DEFAULT_FILTER_BACKENDS": ("nautobot.core.api.filter_backends.NautobotFilterBackend",),
     "DEFAULT_METADATA_CLASS": "nautobot.core.api.metadata.BulkOperationMetadata",
     "DEFAULT_PAGINATION_CLASS": "nautobot.core.api.pagination.OptionalLimitOffsetPagination",
     "DEFAULT_PERMISSION_CLASSES": ("nautobot.core.api.authentication.TokenPermissions",),
@@ -220,6 +221,10 @@ SPECTACULAR_SETTINGS = {
         "PowerPortTypeChoices": "nautobot.dcim.choices.PowerPortTypeChoices",
         "RackTypeChoices": "nautobot.dcim.choices.RackTypeChoices",
         "RelationshipTypeChoices": "nautobot.extras.choices.RelationshipTypeChoices",
+        # Because Interface and VMInterface, and Site and Location, have the same default statuses, we get the error:
+        #   enum naming encountered a non-optimally resolvable collision for fields named "status"
+        "LocationStatusChoices": "nautobot.dcim.api.serializers.LocationSerializer.status_choices",
+        "InterfaceStatusChoices": "nautobot.dcim.api.serializers.InterfaceSerializer.status_choices",
     },
 }
 
@@ -279,14 +284,14 @@ INSTALLED_APPS = [
     "django_tables2",
     "django_prometheus",
     "mptt",
-    "rest_framework",
     "social_django",
     "taggit",
     "timezone_field",
     "nautobot.core.apps.NautobotConstanceConfig",  # overridden form of "constance" AppConfig
     "nautobot.core",
-    "django.contrib.admin",  # Needs to after `nautobot.core` to so templates can be overridden
-    "django_celery_beat",  # Needs to after `nautobot.core` to so templates can be overridden
+    "django.contrib.admin",  # Must be after `nautobot.core` for template overrides
+    "django_celery_beat",  # Must be after `nautobot.core` for template overrides
+    "rest_framework",  # Must be after `nautobot.core` for template overrides
     "db_file_storage",
     "nautobot.circuits",
     "nautobot.dcim",
@@ -342,7 +347,7 @@ TEMPLATES = [
                 "django.contrib.messages.context_processors.messages",
                 "social_django.context_processors.backends",
                 "social_django.context_processors.login_redirect",
-                "nautobot.core.context_processors.settings_and_registry",
+                "nautobot.core.context_processors.settings",
                 "nautobot.core.context_processors.sso_auth",
             ],
         },
@@ -361,7 +366,7 @@ TEMPLATES = [
                 "django.contrib.messages.context_processors.messages",
                 "social_django.context_processors.backends",
                 "social_django.context_processors.login_redirect",
-                "nautobot.core.context_processors.settings_and_registry",
+                "nautobot.core.context_processors.settings",
                 "nautobot.core.context_processors.sso_auth",
             ],
         },
@@ -681,3 +686,20 @@ BRANDING_POWERED_BY_URL = "https://nautobot.readthedocs.io/"
 
 # Dont load the 'taggit' app, since we have our own custom `Tag` and `TaggedItem` models
 SHELL_PLUS_DONT_LOAD = ["taggit"]
+
+#
+# UI settings
+#
+
+
+# UI_RACK_VIEW_TRUNCATE_FUNCTION
+def UI_RACK_VIEW_TRUNCATE_FUNCTION(device_display_name):
+    """Given device display name, truncate to fit the rack elevation view.
+
+    :param device_display_name: Full display name of the device attempting to be rendered in the rack elevation.
+    :type device_display_name: str
+
+    :return: Truncated device name
+    :type: str
+    """
+    return str(device_display_name).split(".")[0]

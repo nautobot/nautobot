@@ -8,7 +8,7 @@ The value of a `status` field on a model (such as `Device.status`) will be repre
 
 When created, a `Status` can be associated to one or more model content-types using a many-to-many relationship. The relationship to each model is referenced across all user interfaces using the `{app_label}.{model}` naming convention (e.g. `dcim.device`).
 
-Statuses may be managed by navigating to *Organization* > *Statuses* in the navigation menu.
+Statuses may be managed by navigating to **Organization > Statuses** in the navigation menu.
 
 ### Importing Objects with a `status` Field
 
@@ -51,8 +51,10 @@ Any filter that is intended to have a `status` field must inherit from `nautobot
 
 Any model form that is intended to have a `status` field must inherit from one of three mixins, depending on the use-case:
 
-- `nautobot.extras.forms.StatusFilterFormMixin` should be used to add a non-required, multiple-choice `status` filter field to UI filter forms. This multiple-choice field allows for multiple status values to be selected for filtering objects in list views in the web UI.
-- `nautobot.extras.forms.StatusBulkEditFormMixin` should be used to add a non-required `status` form field to a an object's model form. This field constrains status choices eligible to the object type being edited.
+- `nautobot.extras.forms.StatusModelFilterFormMixin` should be used to add a non-required, multiple-choice `status` filter field to UI filter forms. This multiple-choice field allows for multiple status values to be selected for filtering objects in list views in the web UI.
+    - _Changed in version 1.4.0_: In prior Nautobot versions this mixin was named `StatusFilterFormMixin`; the old name is still available as an alias but will be removed in a future major release.
+- `nautobot.extras.forms.StatusModelBulkEditFormMixin` should be used to add a non-required `status` form field to a an object's model form. This field constrains status choices eligible to the object type being edited.
+    - _Changed in version 1.4.0_: In prior Nautobot versions this mixin was named `StatusBulkEditFormMixin`; the old name is still available as an alias but will be removed in a future major release.
 - FIXME: CSV import forms
 
 ### `StatusSerializerField` serializer field
@@ -77,9 +79,11 @@ To fully integrate a model to include a `status` field, assert the following:
 ### Forms
 
 - Generic model forms will automatically include a `StatusField`
-- Bulk edit model forms must inherit from `nautobot.extras.forms.StatusBulkEditFormMixin`
+- Bulk edit model forms must inherit from `nautobot.extras.forms.StatusModelBulkEditFormMixin`
+    - _Changed in version 1.4.0_ - in prior Nautobot releases this was called `StatusBulkEditFormMixin`; the old name is still available as an alias but will be removed in a future major release.
 - CSV model import forms must inherit from `nautobot.extras.forms.StatusModelCSVFormMixin`
-- Filter forms must inherit from `nautobot.extras.forms.StatusFilterFormMixin`
+- Filter forms must inherit from `nautobot.extras.forms.StatusModelFilterFormMixin`
+    - _Changed in version 1.4.0_ - in prior Nautobot releases this was called `StatusFilterFormMixin`; the old name is still available as an alias but will be removed in a future major release.
 
 ### Filters
 

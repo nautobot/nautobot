@@ -1,0 +1,72 @@
+{% extends 'generic/object_retrieve.html' %}
+{% load helpers %}
+
+{% block extra_breadcrumbs %}
+                <li><a href="{% url 'circuits:circuit_list' %}?provider={{ object.provider.slug }}">{{ object.provider }}</a></li>
+{% endblock extra_breadcrumbs %}
+
+{% block content_left_page %}
+        <div class="panel panel-default">
+            <div class="panel-heading">
+                <strong>Circuit</strong>
+            </div>
+            <table class="table table-hover panel-body attr-table">
+                <tr>
+                    <td>Status</td>
+                    <td>
+                        <span class="label" style="color: {{ object.status.color|fgcolor }}; background-color: #{{ object.status.color }}">{{ object.get_status_display }}</span>
+                    </td>
+                </tr>
+                <tr>
+                    <td>Provider</td>
+                    <td>{{ object.provider|hyperlinked_object }}</td>
+                </tr>
+                <tr>
+                    <td>Circuit ID</td>
+                    <td>{{ object.cid }}</td>
+                </tr>
+                <tr>
+                    <td>Type</td>
+                    <td>{{ object.type|hyperlinked_object }}</td>
+                </tr>
+                <tr>
+                    <td>Tenant</td>
+                    <td>
+                        {% if object.tenant and object.tenant.group %}
+                            {{ object.tenant.group|hyperlinked_object }} /
+                        {% endif %}
+                        {{ object.tenant|hyperlinked_object }}
+                    </td>
+                </tr>
+                <tr>
+                    <td>Install Date</td>
+                    <td>{{ object.install_date|placeholder }}</td>
+                </tr>
+                <tr>
+                    <td>Commit Rate</td>
+                    <td>{{ object.commit_rate|humanize_speed|placeholder }}</td>
+                </tr>
+                <tr>
+                    <td>Description</td>
+                    <td>{{ object.description|placeholder }}</td>
+                </tr>
+            </table>
+        </div>
+        <div class="panel panel-default">
+            <div class="panel-heading">
+                <strong>Comments</strong>
+            </div>
+            <div class="panel-body rendered-markdown">
+                {% if object.comments %}
+                    {{ object.comments|render_markdown }}
+                {% else %}
+                    <span class="text-muted">None</span>
+                {% endif %}
+            </div>
+        </div>
+{% endblock content_left_page %}
+
+{% block content_right_page %}
+    {% include 'circuits/inc/circuit_termination.html' with termination=termination_a side='A' %}
+    {% include 'circuits/inc/circuit_termination.html' with termination=termination_z side='Z' %}
+{% endblock content_right_page %}

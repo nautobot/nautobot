@@ -68,6 +68,27 @@ class NautobotAPIVersionMixin:
         return response
 
 
+class BulkCreateModelMixin:
+    """
+    Bulk create multiple model instances by using the
+    Serializers ``many=True`` ability from Django REST >= 2.2.5.
+
+    .. note::
+        This mixin uses the same method to create model instances
+        as ``CreateModelMixin`` because both non-bulk and bulk
+        requests will use ``POST`` request method.
+    """
+
+    def bulk_create(self, request, *args, **kwargs):
+        return self.perform_bulk_create(request)
+
+    def perform_bulk_create(self, request):
+        with transaction.atomic():
+            serializer = self.get_serializer(data=request.data, many=True)
+            serializer.is_valid(raise_exception=True)
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+
+
 class BulkUpdateModelMixin:
     """
     Support bulk modification of objects using the list endpoint for a model. Accepts a PATCH action with a list of one
@@ -380,6 +401,7 @@ class StatusView(NautobotAPIVersionMixin, APIView):
                     "nautobot-version": {"type": "string"},
                     "plugins": {"type": "object"},
                     "python-version": {"type": "string"},
+                    # 2.0 TODO: remove rq-workers-running property
                     "rq-workers-running": {"type": "integer"},
                     "celery-workers-running": {"type": "integer"},
                 },
@@ -417,6 +439,7 @@ class StatusView(NautobotAPIVersionMixin, APIView):
                 "nautobot-version": settings.VERSION,
                 "plugins": plugins,
                 "python-version": platform.python_version(),
+                # 2.0 TODO: remove rq-workers-running
                 "rq-workers-running": RQWorker.count(get_rq_connection("default")),
                 "celery-workers-running": worker_count,
             }

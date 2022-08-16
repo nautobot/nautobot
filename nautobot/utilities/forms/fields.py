@@ -10,12 +10,13 @@ from django.conf import settings
 from django.contrib.contenttypes.models import ContentType
 from django.contrib.postgres.forms import SimpleArrayField
 from django.core.exceptions import MultipleObjectsReturned, ObjectDoesNotExist, ValidationError
-from django.db.models import Count
+from django.db.models import Count, Q
 from django.forms.fields import BoundField, JSONField as _JSONField, InvalidJSONInput
 from django.urls import reverse
 
 from nautobot.extras.utils import FeatureQuery
 from nautobot.utilities.choices import unpack_grouped_choices
+from nautobot.utilities.utils import is_uuid
 from nautobot.utilities.validators import EnhancedURLValidator
 from . import widgets
 from .constants import ALPHANUMERIC_EXPANSION_PATTERN, IP4_EXPANSION_PATTERN, IP6_EXPANSION_PATTERN
@@ -38,6 +39,7 @@ __all__ = (
     "JSONArrayFormField",
     "LaxURLField",
     "MultipleContentTypeField",
+    "MultiMatchModelMultipleChoiceField",
     "NumericArrayField",
     "SlugField",
     "TagFilterField",
@@ -200,14 +202,22 @@ class CSVContentTypeField(CSVModelChoiceField):
         """
         if value is None:
             return ""
+
+        # Only pass through strings if they aren't numeric. Otherwise cast to `int`.
         if isinstance(value, str):
-            return value
+            if not value.isdigit():
+                return value
+            else:
+                value = int(value)
+
+        # Integers are PKs
         if isinstance(value, int):
             value = self.queryset.get(pk=value)
 
         return f"{value.app_label}.{value.model}"
 
     def to_python(self, value):
+        value = self.prepare_value(value)
         try:
             app_label, model = value.split(".")
         except ValueError:
@@ -263,7 +273,8 @@ class CSVMultipleContentTypeField(MultipleContentTypeField):
 
     def prepare_value(self, value):
         """Parse a comma-separated string of model names into a list of PKs."""
-        if isinstance(value, str):
+        # "".split(",") yields [""] rather than [], which we don't want!
+        if isinstance(value, str) and value:
             value = value.split(",")
 
         # For each model name, retrieve the model object and extract its
@@ -360,10 +371,18 @@ class SlugField(forms.SlugField):
     """
 
     def __init__(self, slug_source="name", *args, **kwargs):
-        label = kwargs.pop("label", "Slug")
-        help_text = kwargs.pop("help_text", "URL-friendly unique shorthand")
-        widget = kwargs.pop("widget", widgets.SlugWidget)
-        super().__init__(label=label, help_text=help_text, widget=widget, *args, **kwargs)
+        """
+        Instantiate a SlugField.
+
+        Args:
+            slug_source (str, tuple): Name of the field (or a list of field names) that will be used to suggest a slug.
+        """
+        kwargs.setdefault("label", "Slug")
+        kwargs.setdefault("help_text", "URL-friendly unique shorthand")
+        kwargs.setdefault("widget", widgets.SlugWidget)
+        super().__init__(*args, **kwargs)
+        if isinstance(slug_source, (tuple, list)):
+            slug_source = " ".join(slug_source)
         self.widget.attrs["slug-source"] = slug_source
 
 
@@ -666,3 +685,58 @@ class NumericArrayField(SimpleArrayField):
         except ValueError as error:
             raise ValidationError(error)
         return super().to_python(value)
+
+
+class MultiMatchModelMultipleChoiceField(django_filters.fields.ModelMultipleChoiceField):
+    """
+    Filter field to support matching on the PK *or* `to_field_name` fields (defaulting to `slug` if not specified).
+
+    Raises ValidationError if none of the fields match the requested value.
+    """
+
+    def __init__(self, *args, **kwargs):
+        self.natural_key = kwargs.setdefault("to_field_name", "slug")
+        super().__init__(*args, **kwargs)
+
+    def _check_values(self, values):
+        """
+        This method overloads the grandparent method in `django.forms.models.ModelMultipleChoiceField`,
+        re-using some of that method's existing logic and adding support for coupling this field with
+        multiple model fields.
+        """
+        null = self.null_label is not None and values and self.null_value in values
+        if null:
+            values = [v for v in values if v != self.null_value]
+        # deduplicate given values to avoid creating many querysets or
+        # requiring the database backend deduplicate efficiently.
+        try:
+            values = frozenset(values)
+        except TypeError:
+            # list of lists isn't hashable, for example
+            raise ValidationError(
+                self.error_messages["invalid_list"],
+                code="invalid_list",
+            )
+        pk_values = set()
+        natural_key_values = set()
+        for item in values:
+            query = Q()
+            if is_uuid(item):
+                pk_values.add(item)
+                query |= Q(pk=item)
+            else:
+                natural_key_values.add(item)
+                query |= Q(**{self.natural_key: item})
+            qs = self.queryset.filter(query)
+            if not qs.exists():
+                raise ValidationError(
+                    self.error_messages["invalid_choice"],
+                    code="invalid_choice",
+                    params={"value": item},
+                )
+        query = Q(pk__in=pk_values) | Q(**{f"{self.natural_key}__in": natural_key_values})
+        qs = self.queryset.filter(query)
+        result = list(qs)
+        if null:
+            result += [self.null_value]
+        return result
