@@ -2,7 +2,7 @@
 
 Dynamic Groups provide a way to organize objects of the same Content Type by matching filters. A Dynamic Group can be used to create unique groups of objects matching a given filter, such as Devices for a specific site location or set of locations. As indicated by the name, Dynamic Groups update in real time as potential member objects are created, updated, or deleted.
 
-When creating a Dynamic Group, one must select a Content Type to which it is associated, for example `dcim.device`. The filtering parameters saved to the group behave as a bi-directional search query that used to identify members of that group, and can also be used to determine from an individual object the list of Dynamic Groups to which an individual object belongs.
+When creating a Dynamic Group, one must select a Content Type to which it is associated, for example `dcim.device`. The filtering parameters saved to the group behave as a bi-directional search query that is used to identify members of that group, and can also be used to determine from an individual object the list of Dynamic Groups to which an individual object belongs.
 
 Once created the Content Type for a Dynamic Group may not be modified as this relationship is tightly-coupled to the available filtering parameters. All other fields may be updated at any time.
 
@@ -38,9 +38,9 @@ For example, for a Dynamic Group with Content Type of `dcim.device` and an empty
 !!! warning
     _Changed in version 1.4.0_  <!-- markdownlint-disable-line MD036 -->
 
-    v1.3.0 the default for a group with an empty filter was to fail "closed" and have zero members.
+    In Nautobot v1.3.0 the default for a Dynamic Group with an empty filter was to "fail closed" and have zero members.
 
-    As of v1.4.0, this behavior has been inverted to default to include all objects matching the Content Type, instead of matching no objects as was previously the case. This was necessary to implement the progressive layering of child filters similarly to how we use filters to reduce desired objects from basic list view filters. This will described in more detail below.
+    As of v1.4.0, this behavior has been inverted to default to include all objects matching the Content Type, instead of matching no objects as was previously the case. This was necessary to implement the progressive layering of child filters similarly to how we use filters to reduce desired objects from basic list view filters. This will be described in more detail below.
 
 #### Basic Filtering
 
@@ -396,10 +396,10 @@ Any invalid field values for valid field names will also result in a `Validation
 A Dynamic Group may be created by performing a `POST` to the Dynamic Groups list endpoint at `/api/extras/dynamic-groups/`.
 
 !!! note
-  The `filter` field will default to an empty filter (`{}`) if not provided.
+    The `filter` field will default to an empty filter (`{}`) if not provided.
 
 !!! important
-  It is not possible to perform a nested assignment of `children` when creating a new Dynamic Group. You must first create the new group and then use the endpoint for creating Dynamic Group Memberships as explained below under [Assigning Child Groups](#assigning-child-groups).
+    It is not possible to perform a nested assignment of `children` when creating a new Dynamic Group. You must first create the new group and then use the endpoint for creating Dynamic Group Memberships as explained below under [Assigning Child Groups](#assigning-child-groups).
 
 Request:
 
@@ -439,7 +439,7 @@ Response:
 #### Updating or Deleting a Dynamic Group
 
 !!! important
-  It is not possible to perform a nested update of `children` when updating a new Dynamic Group. You must use the endpoint for creating Dynamic Group Memberships as explained below under [Updating or Deleting Child Groups](#updating-or-deleting-child-groups).
+    It is not possible to perform a nested update of `children` when updating a new Dynamic Group. You must use the endpoint for creating Dynamic Group Memberships as explained below under [Updating or Deleting Child Groups](#updating-or-deleting-child-groups).
 
 Updating or deleting a Dynamic Group is done by sending a request to the detail endpoint for that object.
 
@@ -483,7 +483,7 @@ This can be done at the list endpoint found at `/api/extras/dynamic-group-member
 Dynamic Group Membership objects may be created, updated, or deleted just like any other object and are represented as `children` on the parent group.
 
 !!! note
-  When interacting with the REST API, the `operator` must be provided using the string representation that is stored in the database. The human-readable operator names (such as "Exclude (AND)" for "intersection") are not accepted.
+    When interacting with the REST API, the `operator` must be provided using the string representation that is stored in the database. The human-readable operator names (such as "Exclude (AND)" for "intersection") are not accepted.
 
 Request:
 
