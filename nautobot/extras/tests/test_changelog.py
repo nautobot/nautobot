@@ -77,7 +77,7 @@ class ChangeLogViewTest(ModelViewTestCase):
         )
         site.save()
         tags = self.create_tags("Tag 1", "Tag 2", "Tag 3")
-        site.tags.set("Tag 1", "Tag 2")
+        site.tags.set(["Tag 1", "Tag 2"])
 
         form_data = {
             "name": "Test Site X",
@@ -117,7 +117,7 @@ class ChangeLogViewTest(ModelViewTestCase):
         )
         site.save()
         self.create_tags("Tag 1", "Tag 2")
-        site.tags.set("Tag 1", "Tag 2")
+        site.tags.set(["Tag 1", "Tag 2"])
 
         request = {
             "path": self._get_url("delete", instance=site),
@@ -298,7 +298,7 @@ class ChangeLogAPITest(APITestCase):
             _custom_field_data={"my_field": "ABC", "my_field_select": "Bar"},
         )
         site.save()
-        site.tags.set(*Tag.objects.all()[:2])
+        site.tags.set(Tag.objects.all()[:2])
         self.assertEqual(ObjectChange.objects.count(), 0)
         self.add_permissions("dcim.delete_site", "extras.view_status")
         url = reverse("dcim-api:site-detail", kwargs={"pk": site.pk})

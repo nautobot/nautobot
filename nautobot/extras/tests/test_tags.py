@@ -4,7 +4,35 @@ from rest_framework import status
 
 from nautobot.dcim.models import Site, Device
 from nautobot.extras.models import Status, Tag
-from nautobot.utilities.testing import APITestCase
+from nautobot.utilities.testing import APITestCase, TestCase
+
+
+class TaggedItemORMTest(TestCase):
+    """
+    Test the application of tags via the Python API (ORM).
+    """
+
+    @classmethod
+    def setUpTestData(cls):
+        super().setUpTestData()
+
+        cls.site = Site.objects.create(name="Test Site", slug="test-site", status=Status.objects.get(slug="active"))
+
+    def test_tags_set_taggit_1(self):
+        """Test that obj.tags.set() works when invoked like django-taggit 1.x."""
+        self.site.tags.set("Tag 1", "Tag 2")
+        self.assertListEqual(sorted([t.name for t in self.site.tags.all()]), ["Tag 1", "Tag 2"])
+
+        self.site.tags.set(Tag.objects.get(name="Tag 1"))
+        self.assertListEqual(sorted([t.name for t in self.site.tags.all()]), ["Tag 1"])
+
+    def test_tags_set_taggit_2(self):
+        """Test that obj.tags.set() works when invoked like django-taggit 2.x and later."""
+        self.site.tags.set(["Tag 1", "Tag 2"])
+        self.assertListEqual(sorted([t.name for t in self.site.tags.all()]), ["Tag 1", "Tag 2"])
+
+        self.site.tags.set([Tag.objects.get(name="Tag 1")])
+        self.assertListEqual(sorted([t.name for t in self.site.tags.all()]), ["Tag 1"])
 
 
 class TaggedItemTest(APITestCase):
