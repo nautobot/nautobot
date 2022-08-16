@@ -710,7 +710,7 @@ class JobResultTable(BaseTable):
                     <i class="mdi mdi-play"></i>
                 </a>
             {% else %}
-                <a href="#" class="btn btn-xs btn-default disabled" title="No saved job arguments, cannot be re-run">
+                <a href="#" class="btn btn-xs btn-default disabled" title="Job is not available, cannot be re-run">
                     <i class="mdi mdi-repeat-off"></i>
                 </a>
             {% endif %}
