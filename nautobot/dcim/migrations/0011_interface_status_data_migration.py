@@ -6,6 +6,9 @@ from nautobot.extras.management import clear_status_choices, populate_status_cho
 
 
 def populate_interface_status(apps, schema_editor):
+    """
+    Create/link default Status records for the Interface content-type, and default all Interfaces to "active" status.
+    """
     # Create Interface Statuses and add dcim.Interface to its content_types
     populate_status_choices(apps, schema_editor, models=["dcim.Interface"])
 
@@ -20,6 +23,9 @@ def populate_interface_status(apps, schema_editor):
 
 
 def clear_interface_status(apps, schema_editor):
+    """
+    Clear the status field on all Interfaces, and de-link/delete all Status records from the Interface content-type.
+    """
     Interface = apps.get_model("dcim.Interface")
 
     for interface in Interface.objects.filter(status__isnull=False):

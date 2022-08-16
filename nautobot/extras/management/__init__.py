@@ -131,7 +131,7 @@ def create_custom_statuses(
     interactive=True,
     using=DEFAULT_DB_ALIAS,
     apps=global_apps,
-    models=list(CHOICESET_MAP.keys()),
+    models=None,
     **kwargs,
 ):
     """
@@ -146,6 +146,9 @@ def create_custom_statuses(
 
     if verbosity >= 0:
         print("\n", end="")
+
+    if not models:
+        models = CHOICESET_MAP.keys()
 
     # Prep the app and get the Status model dynamically
     try:
@@ -205,7 +208,7 @@ def clear_status_choices(
     apps=global_apps,
     schema_editor=None,
     verbosity=2,
-    models=list(CHOICESET_MAP.keys()),
+    models=None,
     clear_all_model_statuses=True,
     **kwargs,
 ):
@@ -218,6 +221,9 @@ def clear_status_choices(
 
     if verbosity >= 0:
         print("\n", end="")
+
+    if not models:
+        models = CHOICESET_MAP.keys()
 
     Status = apps.get_model("extras.Status")
     ContentType = apps.get_model("contenttypes.ContentType")
