@@ -24,6 +24,7 @@ class CircuitStatusChoices(ChoiceSet):
         (STATUS_DECOMMISSIONED, "Decommissioned"),
     )
 
+    # 2.0 TODO: No longer used (see extras.management.COLOR_MAP instead), remove in 2.0
     CSS_CLASSES = {
         STATUS_DEPROVISIONING: "warning",
         STATUS_ACTIVE: "success",
