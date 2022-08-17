@@ -32,7 +32,7 @@ add "&raw" to the end of the URL within a browser.
         onerror="window.location='{% url 'media_failure' %}?filename=flatpickr-4.6.9/themes/light.min.css'">
   <link rel="stylesheet" id="dark-theme"
         href="{% static 'css/dark.css' %}?v{{ settings.VERSION }}"
-        onerror="window.location='{% url 'media_failure' %}?filename=css/dark.css'" disabled="disabled" />
+        onerror="window.location='{% url 'media_failure' %}?filename=css/dark.css'" />
   <link rel="stylesheet"
         href="{% static 'css/base.css' %}?v{{ settings.VERSION }}"
         onerror="window.location='{% url 'media_failure' %}?filename=css/base.css'">
