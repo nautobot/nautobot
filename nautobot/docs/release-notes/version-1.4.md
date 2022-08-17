@@ -170,6 +170,7 @@ The `settings_and_registry` default context processor was changed to purely `set
 ### Fixed
 
 - [#2218](https://github.com/nautobot/nautobot/pull/2218) - Fixed typos/links in release notes and Dynamic Groups docs.
+- [#2220](https://github.com/nautobot/nautobot/pull/2220) - Narrowed scope of auto-formatting in VSCode to only apply to Python files.
 
 ## v1.4.0 (2022-08-15)
 
