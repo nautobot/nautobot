@@ -51,7 +51,7 @@ add "&raw" to the end of the URL within a browser.
     html, body, #editor {
       height: 100%;
       margin: 0;
-      overflow: hidden;
+      overflow: auto;
       width: 100%;
     }
   </style>
@@ -86,6 +86,7 @@ add "&raw" to the end of the URL within a browser.
   {% include 'inc/javascript.html' %}
   <!-- GraphiQL page contents -->
   <div id="editor"></div>
+  {% include 'inc/footer.html' %}
   {% csrf_token %}
   <script type="application/javascript">
     window.GRAPHENE_SETTINGS = {
