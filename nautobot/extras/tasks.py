@@ -9,7 +9,6 @@ from jinja2.exceptions import TemplateError
 from nautobot.core.celery import nautobot_task
 from nautobot.extras.choices import CustomFieldTypeChoices, ObjectChangeActionChoices
 from nautobot.extras.utils import generate_signature
-from nautobot.users.models import User
 
 
 logger = getLogger("nautobot.extras.tasks")
@@ -34,7 +33,6 @@ def update_custom_field_choice_data(field_id, old_value, new_value):
         logger.error(f"Custom field with ID {field_id} not found, failing to act on choice data.")
         return False
 
-    system_user, _ = User.objects.get_or_create(username="_nautobot_system", password="", is_active=False)
     with system_task_change_context():
         if field.type == CustomFieldTypeChoices.TYPE_SELECT:
             # Loop through all field content types and search for values to update
@@ -73,7 +71,6 @@ def delete_custom_field_data(field_name, content_type_pk_set):
     """
     from nautobot.extras.context_managers import system_task_change_context  # prevent circular import
 
-    system_user, _ = User.objects.get_or_create(username="_nautobot_system", password="", is_active=False)
     with system_task_change_context():
         with transaction.atomic():
             for ct in ContentType.objects.filter(pk__in=content_type_pk_set):
