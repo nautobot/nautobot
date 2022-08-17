@@ -74,7 +74,7 @@ urlpatterns = [
         views.CircuitTerminationUIViewSet.as_view({"get": "create", "post": "create"}),
         name="circuittermination_add",
     ),
-    # path("circuit-terminations/<uuid:pk>/", views.CircuitTerminationDetailView.as_view(), name="circuittermination"),
+    # path("circuit-terminations/<uuid:pk>/", views.CircuitTerminationView.as_view(), name="circuittermination"),
     # path(
     #     "circuit-terminations/<uuid:pk>/edit/",
     #     views.CircuitTerminationEditView.as_view(),

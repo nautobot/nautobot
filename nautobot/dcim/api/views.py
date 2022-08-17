@@ -712,7 +712,7 @@ class InterfaceConnectionViewSet(ListModelMixin, GenericViewSet):
     queryset = Interface.objects.prefetch_related("device", "_path").filter(
         # Avoid duplicate connections by only selecting the lower PK in a connected pair
         _path__isnull=False,
-        #pk__lt=F("_path__destination_id"),  # TODO(mzb)
+        # pk__lt=F("_path__destination_id"),  # TODO(mzb)
     )
     serializer_class = serializers.InterfaceConnectionSerializer
     filterset_class = filters.InterfaceConnectionFilterSet
@@ -730,9 +730,10 @@ class CableViewSet(StatusViewSetMixin, NautobotModelViewSet):
 
 
 class CableEndpointViewSet(StatusViewSetMixin, NautobotModelViewSet):
-    queryset = CableEndpoint.objects.prefetch_related('cable', 'termination')
+    queryset = CableEndpoint.objects.prefetch_related("cable", "termination")
     serializer_class = serializers.CableEndpointSerializer
     filterset_class = filters.CableEndpointFilterSet
+
 
 #
 # Virtual chassis
