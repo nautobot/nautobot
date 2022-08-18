@@ -31,7 +31,6 @@ export default function NautobotFilterForm(props){
                                 }
                             </Form.Select>
                         }
-                        
                     </Form.Group>
                 ))
             }

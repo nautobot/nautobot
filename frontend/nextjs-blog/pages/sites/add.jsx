@@ -1,9 +1,7 @@
-
+import CreateViewTemplate from "../../common/template/create-view"
 
 export default function SiteAdd(){
     return (
-        <>
-            <h1>This is the site create view</h1>
-        </>
+        <CreateViewTemplate />
     )
 }

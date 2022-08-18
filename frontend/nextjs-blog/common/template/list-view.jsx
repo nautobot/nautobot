@@ -1,5 +1,4 @@
 
-import Alert from 'react-bootstrap/Alert';
 import Row from 'react-bootstrap/Row';
 import Col from 'react-bootstrap/Col';
 import Button from 'react-bootstrap/Button';
@@ -8,40 +7,107 @@ import NautobotTable from "../../common/components/table"
 import NautobotFilterForm from "../../common/components/filter-form";
 import { useState, useEffect } from "react";
 import Home from '../../pages';
+import { NavLink } from 'react-bootstrap';
+import { useRouter } from 'next/router';
 
 export default function ListView(props){
-    const [tableData, setTableData] = useState({header: [], data: [], filter_form: []})
+    const router = useRouter()
+    const [pageConfig, setPageConfig] = useState(
+        {
+            "buttons": {
+                "configure": {
+                    "label": "Configure",
+                    "icon": <Icon.Settings size={15} />,
+                    "color": "outline-dark"
+                },
+                "add": {
+                    "label": "Add",
+                    "icon": <Icon.Plus size={15} />,
+                    "color": "primary",
+                    "link": "add",
+                },
+                "import": {
+                    "label": "Import",
+                    "icon": <Icon.Cloud size={15} />,
+                    "color": "info",
+                    "link": "import",
+                },
+                "export": {
+                    "label": "Export",
+                    "icon": <Icon.Database size={15} />,
+                    "color": "success",
+                },
+            },
+            "data": require("../../common/utils/table_api.json"),
+            "filter_form": require("../../common/utils/table_api.json")["filter_form"],
+        }
+    )
 
     useEffect(() => {
-        const tableDataAPI = require("../../common/utils/table_api.json")
-        setTableData(props.list_url ? props.list_url : tableDataAPI)
+        // setTableData(props.list_url ? props.list_url : tableDataAPI)
+        if (props.config) {
+            if (props.config.buttons) {
+                
+            }
+        }
 
-    }, [tableData])
+    }, [pageConfig])
 
     return (
         <Home>
-            <Alert variant="success" style={{textAlign: "center"}}>
-                Example Plugin says “Hello, admin!” 👋 <br />
-                You are viewing a table of sites
-            </Alert>
-            
             <Row>
                 <Col xs={8}>
-                    <h3>{tableData.title}</h3>
+                    <h3>{pageConfig.data.title}</h3>
                 </Col>
-                <Col style={{textAlign: "right"}}>
-                    <Button size="sm" variant="outline-dark"><Icon.Settings size={15} /> Configure</Button>{' '}
-                    <Button size="sm" variant="primary"><Icon.Plus size={15} /> Add</Button>{' '}
-                    <Button size="sm" variant="info"><Icon.Inbox size={15} /> Import</Button>{' '}
-                    <Button size="sm" variant="success"><Icon.Database size={15} /> Export</Button>
+                <Col style={{textAlign: "right"}} className="action-items-container">
+                    {
+                        Object.entries(pageConfig.buttons).map((item, idx) => (
+                            <NavLink key={idx} href={item[1].link ?  router.pathname + "/" + item[1].link : "#"}>
+                                <Button 
+                                    key={idx} 
+                                    size="sm" 
+                                    variant={item[1].color}
+                                    className='mr-2 action-btn'
+                                >
+                                    {item[1].icon} {item[1].label} 
+                                </Button>
+                            </NavLink>
+                        ))
+                    }
                 </Col>
             </Row>
             <Row>
                 <Col xs={9}>
-                    <NautobotTable data={tableData.data} header={tableData.header} />
+                    <NautobotTable 
+                        data={
+                            pageConfig.data ? 
+                                pageConfig.data.data ?
+                                    pageConfig.data.data
+                                    :
+                                    {}
+                                :
+                                {}
+                        } 
+                        header={
+                            pageConfig.data ? 
+                                pageConfig.data.header ?
+                                    pageConfig.data.header
+                                    :
+                                    []
+                                :
+                                []
+                        } 
+                    />
                 </Col>
                 <Col>
-                    <NautobotFilterForm fields={tableData.filter_form} />
+                    <NautobotFilterForm 
+                        fields={
+                            pageConfig.filter_form ? 
+                                pageConfig.filter_form
+                                :
+                                []
+                        }
+                    />
                 </Col>
             </Row>
         </Home>

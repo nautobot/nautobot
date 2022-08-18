@@ -1,6 +1,7 @@
 import Head from 'next/head'
 import Menu from "../common/components/menu"
 import { Container } from "react-bootstrap";
+import Alert from 'react-bootstrap/Alert';
 
 
 export default function Home({children}) {
@@ -12,6 +13,10 @@ export default function Home({children}) {
       </Head>
       <Menu />
       <Container fluid="sm" className='page-container'>
+
+        <Alert variant="success" style={{textAlign: "center"}}>
+            Example Plugin says “Hello, admin!” 👋 <br />
+        </Alert>
         {children}
       </Container>
 
