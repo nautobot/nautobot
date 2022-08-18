@@ -165,7 +165,11 @@ The `settings_and_registry` default context processor was changed to purely `set
 
 ### Added
 
+- [#2213](https://github.com/nautobot/nautobot/issues/2213) - Added a new `--pull` parameter for `invoke build` to tell Docker to pull images when building containers.
+
 ### Changed
+
+- [#2252](https://github.com/nautobot/nautobot/pull/2252) - Updated Poetry install command for Development Getting Started guide.
 
 ### Fixed
 
@@ -174,6 +178,7 @@ The `settings_and_registry` default context processor was changed to purely `set
 - [#2218](https://github.com/nautobot/nautobot/pull/2218) - Fixed typos/links in release notes and Dynamic Groups docs.
 - [#2219](https://github.com/nautobot/nautobot/pull/2219) - Fixed broken pagination in Dynamic Group detail "Members" tab.
 - [#2220](https://github.com/nautobot/nautobot/pull/2220) - Narrowed scope of auto-formatting in VSCode to only apply to Python files.
+- [#2229](https://github.com/nautobot/nautobot/issues/2229) - Fixed `render_form.html` include template to not render `object_note` field.
 
 ## v1.4.0 (2022-08-15)
 
