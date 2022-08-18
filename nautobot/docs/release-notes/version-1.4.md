@@ -169,7 +169,7 @@ The `settings_and_registry` default context processor was changed to purely `set
 
 ### Fixed
 
-- [#2209](https://github.com/nautobot/nautobot/issues/2209) - Fixed GraphiQL page doesn't support dark-mode at present. 
+- [#2209](https://github.com/nautobot/nautobot/issues/2209) - Fixed GraphiQL page doesn't support dark-mode at present.
 - [#2215](https://github.com/nautobot/nautobot/issues/2215) - Fixed error seen in migration from 1.3.x if certain default Statuses had been modified.
 - [#2218](https://github.com/nautobot/nautobot/pull/2218) - Fixed typos/links in release notes and Dynamic Groups docs.
 - [#2220](https://github.com/nautobot/nautobot/pull/2220) - Narrowed scope of auto-formatting in VSCode to only apply to Python files.
