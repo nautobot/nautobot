@@ -54,9 +54,9 @@ class Command(BaseCommand):
             self.stdout.write("Validating {} models.".format(len(models)))
 
         for model in models:
-            model_name = f"{model.__name__}.{model._meta.app_label}"
+            model_name = f"{model._meta.app_label}.{model.__name__}"
             # Most swap out for user_model
-            if model_name == "User.auth":
+            if model_name == "auth.User":
                 model = get_user_model()
             # Skip models that aren't actually in the database
             if not model._meta.managed:
