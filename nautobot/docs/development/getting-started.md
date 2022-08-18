@@ -224,7 +224,7 @@ There are a few things you'll need:
 You may install Poetry in your user environment by running:
 
 ```no-highlight
-$ curl -sSL https://raw.githubusercontent.com/python-poetry/poetry/master/get-poetry.py | python -
+$ curl -sSL https://install.python-poetry.org | python3 -
 ```
 
 For detailed installation instructions, please see the [official Poetry installation guide](https://python-poetry.org/docs/#installation).
