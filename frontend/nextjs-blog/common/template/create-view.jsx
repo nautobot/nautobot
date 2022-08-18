@@ -6,6 +6,7 @@ import Button from 'react-bootstrap/Button';
 import Card from 'react-bootstrap/Card';
 import Form from 'react-bootstrap/Form';
 import { useState, useEffect } from "react";
+import NautobotInput from "../../common/components/nautobot-default-input"
 
 
 export default function CreateViewTemplate({children}, props){
@@ -41,33 +42,13 @@ export default function CreateViewTemplate({children}, props){
                                         <Card.Body>
                                             {
                                                 item.fields.map((field, idx) => (
-                                                    <Row key={idx}>
-                                                        <Col sm={3}><Form.Label>{field.label}</Form.Label></Col>
-                                                        <Col>
-                                                            <Form.Group className="mb-3" controlId="formBasicEmail" key={idx}>
-                                                                {
-                                                                    field.type == "text" ? 
-                                                                    <Form.Control type="text" placeholder={field.placeholder}/> 
-                                                                    : 
-                                                                    field.type == "select" ?
-                                                                    <Form.Select aria-label="Default select example">
-                                                                        <option>------</option>
-                                                                        {
-                                                                            field.options.map(item => (
-                                                                                <option key={item.value} value={item.value}>{item.label}</option>
-                                                                            ))
-                                                                        }
-                                                                    </Form.Select>
-                                                                    :
-                                                                    <Form.Control 
-                                                                        as="textarea" 
-                                                                        placeholder="Leave a comment here"
-                                                                        style={{ height: '100px' }}  
-                                                                    />  
-                                                                }
-                                                            </Form.Group>
-                                                        </Col>
-                                                    </Row>
+                                                    field.type == "text" ? 
+                                                    <NautobotInput _type="text" label={field.label} />
+                                                    :
+                                                    field.type == "select" ? 
+                                                    <NautobotInput _type="select" label={field.label} options={field.options} />
+                                                    :
+                                                    <NautobotInput _type="checkbox" label={field.label} />
                                                 ))
                                             }
                                         </Card.Body>

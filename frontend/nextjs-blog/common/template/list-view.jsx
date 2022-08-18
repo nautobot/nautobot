@@ -44,14 +44,23 @@ export default function ListView(props){
     )
 
     useEffect(() => {
-        // setTableData(props.list_url ? props.list_url : tableDataAPI)
+        let newPageConfig = pageConfig
         if (props.config) {
             if (props.config.buttons) {
-                
+                let pageButtons = props.config.buttons
+                newPageConfig = {...newPageConfig, "buttons": {...newPageConfig.buttons, ...pageButtons}}
+            }
+            if (props.config.data) {
+                let pageData = props.config.data
+                newPageConfig = {...newPageConfig, "data": {...pageData}}
+            }
+            if (props.config.filter_form) {
+                let pageFilterForm = props.config.filter_form
+                newPageConfig = {...newPageConfig, "filter_form": [...pageFilterForm]}
             }
         }
-
-    }, [pageConfig])
+        setPageConfig(newPageConfig)
+    }, [])
 
     return (
         <Home>
@@ -62,6 +71,7 @@ export default function ListView(props){
                 <Col style={{textAlign: "right"}} className="action-items-container">
                     {
                         Object.entries(pageConfig.buttons).map((item, idx) => (
+                            item[1] ? 
                             <NavLink key={idx} href={item[1].link ?  router.pathname + "/" + item[1].link : "#"}>
                                 <Button 
                                     key={idx} 
@@ -72,6 +82,7 @@ export default function ListView(props){
                                     {item[1].icon} {item[1].label} 
                                 </Button>
                             </NavLink>
+                            : null
                         ))
                     }
                 </Col>

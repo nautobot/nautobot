@@ -1,8 +1,6 @@
 import CreateViewTemplate from "../../../common/template/create-view"
 import Card from 'react-bootstrap/Card';
-import Form from 'react-bootstrap/Form';
-import Row from 'react-bootstrap/Row';
-import Col from 'react-bootstrap/Col';
+import NautobotInput from "../../../common/components/nautobot-default-input"
 
 export default function ExamplePluginAdd(){
     return (
@@ -11,22 +9,9 @@ export default function ExamplePluginAdd(){
             <Card className="mb-4">
                 <Card.Header><b>Example Custom Form</b></Card.Header>
                 <Card.Body>
-                    <Row>
-                        <Col sm={3}><Form.Label>Item 1</Form.Label></Col>
-                        <Col>
-                            <Form.Group className="mb-3" controlId="formBasicEmail">
-                                <Form.Control type="text" placeholder="Item 1" />
-                            </Form.Group>
-                        </Col>
-                    </Row>
-                    <Row>
-                        <Col sm={3}><Form.Label>Item 2</Form.Label></Col>
-                        <Col>
-                            <Form.Group className="mb-3" controlId="formBasicEmail">
-                                <Form.Control type="text" placeholder="Item 2" />
-                            </Form.Group>
-                        </Col>
-                    </Row>
+                    <NautobotInput _type="text" label="Item 1" />
+                    <NautobotInput _type="text" label="Item 2" />
+                    <NautobotInput _type="select" label="Item 3" options={[{"label": "Sammy", "value": "sammy"}]} />
                 </Card.Body>
             </Card>
 
