@@ -58,8 +58,8 @@ class Command(BaseCommand):
             # Most swap out for user_model
             if model_name == "User.auth":
                 model = get_user_model()
-            # Results in `psycopg2.errors.UndefinedTable` error, so skip
-            if model_name == "Queue.django_rq":
+            # Skip models that aren't actually in the database
+            if not model._meta.managed:
                 continue
 
             self.stdout.write(model_name)
