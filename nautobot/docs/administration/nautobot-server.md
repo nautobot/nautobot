@@ -148,7 +148,7 @@ $ nautobot-server dumpdata \
 
 Use this command to generate a JSON dump of the database contents.
 
-One example of using this command would be to [`export data from PostgreSQL`](../../latest/installation/migrating-from-postgresql/#export-data-from-postgresql).
+One example of using this command would be to [`export data from PostgreSQL`](../../installation/migrating-from-postgresql/#export-data-from-postgresql).
 
 ### `fix_custom_fields`
 
@@ -230,8 +230,8 @@ There are a number of other options not covered here.
 
 To import the data that was exported with `nautobot-server dumpdata ...` see the following documentation:
 
-- [`Remove the auto-populated Status records from the database`](../../latest/installation/migrating-from-postgresql/#remove-the-auto-populated-status-records-from-the-mysql-database)
-- [`Import the database dump`](../../latest/installation/migrating-from-postgresql/#import-the-database-dump-into-mysql)
+- [`Remove the auto-populated Status records from the database`](../../installation/migrating-from-postgresql/#remove-the-auto-populated-status-records-from-the-mysql-database)
+- [`Import the database dump`](../../installation/migrating-from-postgresql/#import-the-database-dump-into-mysql)
 
 ### `migrate`
 
@@ -291,22 +291,22 @@ This will run the following management commands with default settings, in order:
 !!! note
     Commands listed here that are not covered in this document here are Django built-in commands.
 
-`--no-clearsessions`  
+`--no-clearsessions`
 Do not automatically clean out expired sessions.
 
-`--no-collectstatic`  
+`--no-collectstatic`
 Do not automatically collect static files into a single location.
 
-`--no-invalidate-all`  
+`--no-invalidate-all`
 Do not automatically invalidate cache for entire application.
 
-`--no-migrate`  
+`--no-migrate`
 Do not automatically perform any database migrations.
 
-`--no-remove-stale-contenttypes`  
+`--no-remove-stale-contenttypes`
 Do not automatically remove stale content types.
 
-`--no-trace-paths`  
+`--no-trace-paths`
 Do not automatically generate missing cable paths.
 
 ```no-highlight
@@ -394,10 +394,10 @@ Done.
 
 Run a job (script, report) to validate or update data in Nautobot.
 
-`--commit`  
+`--commit`
 Commit changes to DB (defaults to dry-run if unset). `--username` is mandatory if using this argument.
 
-`--username <username>`  
+`--username <username>`
 User account to impersonate as the requester of this job.
 
 ```no-highlight
@@ -482,10 +482,10 @@ Generate any missing cable paths among all cable termination objects in Nautobot
 
 After upgrading the database or working with Cables, Circuits, or other related objects, there may be a need to rebuild cached cable paths.
 
-`--force`  
+`--force`
 Force recalculation of all existing cable paths.
 
-`--no-input`  
+`--no-input`
 Do not prompt user for any input/confirmation.
 
 ```no-highlight
@@ -509,10 +509,10 @@ Finished.
 
 Start a simple listener to display received HTTP requests.
 
-`--port PORT`  
+`--port PORT`
 Optional port number (default: `9000`)
 
-`--no-headers`  
+`--no-headers`
 Hide HTTP request headers.
 
 ```no-highlight
