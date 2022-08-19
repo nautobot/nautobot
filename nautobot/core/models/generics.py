@@ -47,19 +47,13 @@ class _NautobotTaggableManager(_TaggableManager):
         else:
             # taggit 1.x style, i.e. `set(tag, tag, tag)`
             # Note: logger.warning() only supports a `stacklevel` parameter in Python 3.8 and later
+            tags_unpacked = ", ".join([repr(tag) for tag in tags])
+            tags_list = list(tags)
+            message = "Deprecated `tags.set(%s)` was called, please change to `tags.set(%s)` instead"
             if sys.version_info >= (3, 8):
-                logger.warning(
-                    "Deprecated `tags.set(%s)` was called, please change to `tags.set(%s)` instead",
-                    ", ".join([repr(tag) for tag in tags]),
-                    list(tags),
-                    stacklevel=2,
-                )
+                logger.warning(message, tags_unpacked, tags_list, stacklevel=2)
             else:  # Python 3.7
-                logger.warning(
-                    "Deprecated `tags.set(%s)` was called, please change to `tags.set(%s)` instead",
-                    ", ".join([repr(tag) for tag in tags]),
-                    list(tags),
-                )
+                logger.warning(message, tags_unpacked, tags_list)
         return super().set(tags, through_defaults=through_defaults, **kwargs)
 
 
