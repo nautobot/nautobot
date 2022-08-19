@@ -2688,7 +2688,7 @@ class InterfaceConnectionsListView(ConnectionsListView):
             # TODO: this is very problematic when filtering the view via FilterSet - if the filterset matches (A), then
             #       the connection will appear in the table, but if it only matches (B) then the connection will not!
             _path__destination_type=ContentType.objects.get_for_model(Interface),
-            pk__lt=F("_path__destination_id"),
+            #pk__lt=F("_path__destination_id"), # TODO(mzb)
         )
         if self.queryset is None:
             self.queryset = qs

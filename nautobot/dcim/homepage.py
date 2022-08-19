@@ -17,7 +17,7 @@ def _connected_interfaces_count(request):
         .filter(_path__isnull=False)
         .exclude(
             _path__destination_type=ContentType.objects.get_for_model(models.Interface),
-            pk__lt=F("_path__destination_id"),
+            #pk__lt=F("_path__destination_id"), # TODO(mzb)
         )
         .count()
     )
