@@ -94,6 +94,7 @@ def register_menu_items(tab_list):
                         item.link,
                         f"{nav_tab.name} -> {group.name} -> {item.link}",
                     )
+
                     registry_buttons = registry_groups[group.name]["items"][item.link]["buttons"]
                     for button in item.buttons:
                         create_or_check_entry(
@@ -107,7 +108,9 @@ def register_menu_items(tab_list):
                     registry_groups[group.name]["items"][item.link]["buttons"] = OrderedDict(
                         sorted(registry_buttons.items(), key=lambda kv_pair: kv_pair[1]["weight"])
                     )
+
                     group_perms |= set(perms for perms in item.permissions)
+
                 # Add sorted items to group registry dict
                 registry_groups[group.name]["items"] = OrderedDict(
                     sorted(registry_groups[group.name]["items"].items(), key=lambda kv_pair: kv_pair[1]["weight"])
