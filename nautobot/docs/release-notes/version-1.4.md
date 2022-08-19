@@ -173,12 +173,14 @@ The `settings_and_registry` default context processor was changed to purely `set
 
 ### Fixed
 
-- [#2209](https://github.com/nautobot/nautobot/issues/2209) - Fixed GraphiQL page doesn't support dark-mode at present.
+- [#2209](https://github.com/nautobot/nautobot/issues/2209) - Fixed lack of dark-mode support in GraphiQL page.
 - [#2215](https://github.com/nautobot/nautobot/issues/2215) - Fixed error seen in migration from 1.3.x if certain default Statuses had been modified.
 - [#2218](https://github.com/nautobot/nautobot/pull/2218) - Fixed typos/links in release notes and Dynamic Groups docs.
 - [#2219](https://github.com/nautobot/nautobot/pull/2219) - Fixed broken pagination in Dynamic Group detail "Members" tab.
 - [#2220](https://github.com/nautobot/nautobot/pull/2220) - Narrowed scope of auto-formatting in VSCode to only apply to Python files.
-- [#2229](https://github.com/nautobot/nautobot/issues/2229) - Fixed `render_form.html` include template to not render `object_note` field.
+- [#2222](https://github.com/nautobot/nautobot/issues/2222) - Fixed missing app headings in Swagger UI.
+- [#2229](https://github.com/nautobot/nautobot/issues/2229) - Fixed `render_form.html` include template to not render a duplicate `object_note` field.
+- [#2232](https://github.com/nautobot/nautobot/issues/2232) - Fixed incorrect API URLs and incorrect inclusion of Circuits UI URLs in Swagger UI.
 
 ## v1.4.0 (2022-08-15)
 
