@@ -83,10 +83,9 @@ def register_menu_items(tab_list):
                     try:
                         item.link = reverse(item.link, args=item.args, kwargs=item.kwargs)
                     except NoReverseMatch as e:
-                        logger = logging.getLogger("nautobot.core.apps")
-                        logger.debug(
-                            f"{e}, Please specify `args` or `kwargs` attribute in NavMenuItem in your `navigation.py` file"
-                        )
+                        # Catch the invalid link here and render the link name as an error message in the template
+                        logger.debug("%s", e)
+                        item.name = "ERROR: Invalid link!"
 
                     create_or_check_entry(
                         registry_groups[group.name]["items"],
@@ -513,13 +512,15 @@ class NavMenuItem(NavMenuBase, PermissionsMixin):
     args = []
     kwargs = {}
 
-    def __init__(self, link, name, args=[], kwargs={}, permissions=None, buttons=(), weight=1000):
+    def __init__(self, link, name, args=None, kwargs=None, permissions=None, buttons=(), weight=1000):
         """
         Ensure item properties.
 
         Args:
             link (str): The link to be used for this item.
             name (str): The name of the item.
+            args (list): Arguments that are being passed to the url with reverse() method
+            kwargs (dict): Keyword arguments are are being passed to the url with reverse() method
             permissions (list): The permissions required to view this item.
             buttons (list): List of buttons to be rendered in this item.
             weight (int): The weight of this item.

@@ -56,17 +56,11 @@
                                                                 {% endif %}
                                                             {% endfor %}
                                                         </div>
-                                                        {% comment %}
-                                                            Use 'url xxx as variable' so that an invalid
-                                                            link doesn't throw a NoReverseMatch exception.
-                                                        {% endcomment %}
                                                         {% if item_link %}
                                                             <a href="{{ item_link }}"
                                                                data-item-weight="{{ item_details.weight }}">
                                                                 {{ item_details.name }}
                                                             </a>
-                                                        {% else %}
-                                                            <a>ERROR: Invalid link!</a>
                                                         {% endif %}
                                                     </li>
                                                 {% endif %}
