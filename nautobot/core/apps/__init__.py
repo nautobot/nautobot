@@ -7,6 +7,8 @@ from collections import OrderedDict
 from django.apps import AppConfig, apps as global_apps
 from django.db.models import JSONField, BigIntegerField, BinaryField
 from django.db.models.signals import post_migrate
+from django.urls import reverse
+from django.urls.exceptions import NoReverseMatch
 
 from constance.apps import ConstanceConfig
 from graphene.types import generic, String
@@ -76,13 +78,22 @@ def register_menu_items(tab_list):
 
                 group_perms = set()
                 for item in group.items:
+
+                    # Instead of passing the reverse url strings, we pass in the url itself initialized with args and kwargs.
+                    try:
+                        item.link = reverse(item.link, args=item.args, kwargs=item.kwargs)
+                    except NoReverseMatch as e:
+                        logger = logging.getLogger("nautobot.core.apps")
+                        logger.debug(
+                            f"{e}, Please specify `args` or `kwargs` attribute in NavMenuItem in your `navigation.py` file"
+                        )
+
                     create_or_check_entry(
                         registry_groups[group.name]["items"],
                         item,
                         item.link,
                         f"{nav_tab.name} -> {group.name} -> {item.link}",
                     )
-
                     registry_buttons = registry_groups[group.name]["items"][item.link]["buttons"]
                     for button in item.buttons:
                         create_or_check_entry(
@@ -96,9 +107,7 @@ def register_menu_items(tab_list):
                     registry_groups[group.name]["items"][item.link]["buttons"] = OrderedDict(
                         sorted(registry_buttons.items(), key=lambda kv_pair: kv_pair[1]["weight"])
                     )
-
                     group_perms |= set(perms for perms in item.permissions)
-
                 # Add sorted items to group registry dict
                 registry_groups[group.name]["items"] = OrderedDict(
                     sorted(registry_groups[group.name]["items"].items(), key=lambda kv_pair: kv_pair[1]["weight"])
@@ -485,6 +494,8 @@ class NavMenuItem(NavMenuBase, PermissionsMixin):
             "weight": self.weight,
             "buttons": {},
             "permissions": self.permissions,
+            "args": [],
+            "kwargs": {},
         }
 
     @property
@@ -496,8 +507,10 @@ class NavMenuItem(NavMenuBase, PermissionsMixin):
 
     permissions = []
     buttons = []
+    args = []
+    kwargs = {}
 
-    def __init__(self, link, name, permissions=None, buttons=(), weight=1000):
+    def __init__(self, link, name, args=[], kwargs={}, permissions=None, buttons=(), weight=1000):
         """
         Ensure item properties.
 
@@ -512,6 +525,8 @@ class NavMenuItem(NavMenuBase, PermissionsMixin):
         self.link = link
         self.name = name
         self.weight = weight
+        self.args = args
+        self.kwargs = kwargs
 
         if not isinstance(buttons, (list, tuple)):
             raise TypeError("Buttons must be passed as a tuple or list.")
