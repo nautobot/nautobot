@@ -31,7 +31,22 @@ class OrganizationalModel(
         abstract = True
 
 
+# 2.0 TODO: remove this, force migration to the newer django-taggit API.
 class _NautobotTaggableManager(_TaggableManager):
+    """Extend _TaggableManager to work around a breaking API change between django-taggit 1.x and 2.x.
+
+    This is a bit confusing, as there's also a related `TaggableManager` class as well.
+    `TaggableManager` is the *model field* (subclass of `models.fields.related.RelatedField`),
+    while `_TaggableManager` is the *associated manager* (subclass of `models.Manager`).
+
+    For `TaggableManager`, we chose to monkey-patch rather than subclass to override its `formfield` method;
+    replacing it with a subclass would create database migrations for every PrimaryModel with a `tags` field.
+    In 2.0 we'll want to bite the bullet and make the cutover (#1633).
+
+    For `_TaggableManager`, we can subclass rather than monkey-patching because replacing it *doesn't* require
+    a database migration, and this is cleaner than a monkey-patch.
+    """
+
     def set(self, *tags, through_defaults=None, **kwargs):
         """
         Patch model.tags.set() to be backwards-compatible with django-taggit 1.x and forward-compatible with later.
