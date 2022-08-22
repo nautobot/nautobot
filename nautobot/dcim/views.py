@@ -348,22 +348,29 @@ class LocationView(generic.ObjectView):
     queryset = Location.objects.all()
 
     def get_extra_context(self, request, instance):
+        related_locations = (
+            instance.descendants(include_self=True).restrict(request.user, "view").values_list("pk", flat=True)
+        )
         stats = {
-            "rack_count": Rack.objects.restrict(request.user, "view").filter(location=instance).count(),
-            "device_count": Device.objects.restrict(request.user, "view").filter(location=instance).count(),
-            "prefix_count": Prefix.objects.restrict(request.user, "view").filter(location=instance).count(),
-            "vlan_count": VLAN.objects.restrict(request.user, "view").filter(location=instance).count(),
+            "rack_count": Rack.objects.restrict(request.user, "view").filter(location__in=related_locations).count(),
+            "device_count": Device.objects.restrict(request.user, "view")
+            .filter(location__in=related_locations)
+            .count(),
+            "prefix_count": Prefix.objects.restrict(request.user, "view")
+            .filter(location__in=related_locations)
+            .count(),
+            "vlan_count": VLAN.objects.restrict(request.user, "view").filter(location__in=related_locations).count(),
             "circuit_count": Circuit.objects.restrict(request.user, "view")
-            .filter(terminations__location=instance)
+            .filter(terminations__location__in=related_locations)
             .count(),
             "vm_count": VirtualMachine.objects.restrict(request.user, "view")
-            .filter(cluster__location=instance)
+            .filter(cluster__location__in=related_locations)
             .count(),
         }
         rack_groups = (
             RackGroup.objects.add_related_count(RackGroup.objects.all(), Rack, "group", "rack_count", cumulative=True)
             .restrict(request.user, "view")
-            .filter(location=instance)
+            .filter(location__in=related_locations)
         )
         children = (
             Location.objects.restrict(request.user, "view")
