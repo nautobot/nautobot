@@ -7,6 +7,8 @@ from collections import OrderedDict
 from django.apps import AppConfig, apps as global_apps
 from django.db.models import JSONField, BigIntegerField, BinaryField
 from django.db.models.signals import post_migrate
+from django.urls import reverse
+from django.urls.exceptions import NoReverseMatch
 
 from constance.apps import ConstanceConfig
 from graphene.types import generic, String
@@ -76,6 +78,15 @@ def register_menu_items(tab_list):
 
                 group_perms = set()
                 for item in group.items:
+
+                    # Instead of passing the reverse url strings, we pass in the url itself initialized with args and kwargs.
+                    try:
+                        item.link = reverse(item.link, args=item.args, kwargs=item.kwargs)
+                    except NoReverseMatch as e:
+                        # Catch the invalid link here and render the link name as an error message in the template
+                        logger.debug("%s", e)
+                        item.name = "ERROR: Invalid link!"
+
                     create_or_check_entry(
                         registry_groups[group.name]["items"],
                         item,
@@ -485,6 +496,8 @@ class NavMenuItem(NavMenuBase, PermissionsMixin):
             "weight": self.weight,
             "buttons": {},
             "permissions": self.permissions,
+            "args": [],
+            "kwargs": {},
         }
 
     @property
@@ -496,14 +509,18 @@ class NavMenuItem(NavMenuBase, PermissionsMixin):
 
     permissions = []
     buttons = []
+    args = []
+    kwargs = {}
 
-    def __init__(self, link, name, permissions=None, buttons=(), weight=1000):
+    def __init__(self, link, name, args=None, kwargs=None, permissions=None, buttons=(), weight=1000):
         """
         Ensure item properties.
 
         Args:
             link (str): The link to be used for this item.
             name (str): The name of the item.
+            args (list): Arguments that are being passed to the url with reverse() method
+            kwargs (dict): Keyword arguments are are being passed to the url with reverse() method
             permissions (list): The permissions required to view this item.
             buttons (list): List of buttons to be rendered in this item.
             weight (int): The weight of this item.
@@ -512,6 +529,8 @@ class NavMenuItem(NavMenuBase, PermissionsMixin):
         self.link = link
         self.name = name
         self.weight = weight
+        self.args = args
+        self.kwargs = kwargs
 
         if not isinstance(buttons, (list, tuple)):
             raise TypeError("Buttons must be passed as a tuple or list.")
