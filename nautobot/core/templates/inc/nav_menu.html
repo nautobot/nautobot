@@ -56,12 +56,10 @@
                                                                 {% endif %}
                                                             {% endfor %}
                                                         </div>
-                                                        {% if item_link %}
-                                                            <a href="{{ item_link }}"
-                                                               data-item-weight="{{ item_details.weight }}">
-                                                                {{ item_details.name }}
-                                                            </a>
-                                                        {% endif %}
+                                                        <a href="{{ item_link }}"
+                                                            data-item-weight="{{ item_details.weight }}">
+                                                            {{ item_details.name }}
+                                                        </a>
                                                     </li>
                                                 {% endif %}
                                             {% endfor %}
