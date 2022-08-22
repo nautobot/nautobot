@@ -13,7 +13,7 @@ These instructions will guide you through the following actions:
 * Verify the installation using the development/test server
 
 !!! important
-    Your database server and Redis must have been successfully installed before continuing with deployment steps. If you haven't done that yet, please visit the guide on [Installing Nautobot Dependencies](../../installation/#installing-nautobot-dependencies)
+    Your database server and Redis must have been successfully installed before continuing with deployment steps. If you haven't done that yet, please visit the guide on [Installing Nautobot Dependencies](index.md#installing-nautobot-dependencies)
 
 ## Choose your `NAUTOBOT_ROOT`
 
@@ -178,13 +178,13 @@ Configuration file created at '/opt/nautobot/nautobot_config.py'
 
 ### Required Settings
 
-Your `nautobot_config.py` provides sane defaults for all of the configuration settings. You will inevitably need to update the settings for your environment, most notably the [`DATABASES`](../../configuration/required-settings/#databases) setting.  If you do not wish to modify the config, by default, many of these configuration settings can also be specified by environment variables. Please see [Required Settings](../../configuration/required-settings) for further details.
+Your `nautobot_config.py` provides sane defaults for all of the configuration settings. You will inevitably need to update the settings for your environment, most notably the [`DATABASES`](../configuration/required-settings.md#databases) setting.  If you do not wish to modify the config, by default, many of these configuration settings can also be specified by environment variables. Please see [Required Settings](../../configuration/required-settings) for further details.
 
 Edit `$NAUTOBOT_ROOT/nautobot_config.py`, and head over to the documentation on [Required Settings](../../configuration/required-settings) to tweak your required settings. At a minimum, you'll need to update the following settings:
 
-* [`ALLOWED_HOSTS`](../../configuration/required-settings/#allowed_hosts): You must set this value. This can be set to `["*"]` for a quick start, but this value is not suitable for production deployment.
-* [`DATABASES`](../../configuration/required-settings/#databases): Database connection parameters. If you installed your database server on the same system as Nautobot, you'll need to update the `USER` and `PASSWORD` fields here. If you are using MySQL, you'll also need to update the `ENGINE` field, changing the default database driver suffix from `django.db.backends.postgresql` to `django.db.backends.mysql`.
-* **Redis settings**: Redis configuration requires multiple settings including [`CACHEOPS_REDIS`](../../configuration/required-settings/#cacheops_redis) and [`RQ_QUEUES`](../../configuration/required-settings/#rq_queues), if different from the defaults. If you installed Redis on the same system as Nautobot, you do not need to change these settings.
+* [`ALLOWED_HOSTS`](../configuration/required-settings.md#allowed_hosts): You must set this value. This can be set to `["*"]` for a quick start, but this value is not suitable for production deployment.
+* [`DATABASES`](../configuration/required-settings.md#databases): Database connection parameters. If you installed your database server on the same system as Nautobot, you'll need to update the `USER` and `PASSWORD` fields here. If you are using MySQL, you'll also need to update the `ENGINE` field, changing the default database driver suffix from `django.db.backends.postgresql` to `django.db.backends.mysql`.
+* **Redis settings**: Redis configuration requires multiple settings including [`CACHEOPS_REDIS`](../configuration/required-settings.md#cacheops_redis) and [`RQ_QUEUES`](../configuration/required-settings.md#rq_queues), if different from the defaults. If you installed Redis on the same system as Nautobot, you do not need to change these settings.
 
 !!! important
     You absolutely must update your required settings in your `nautobot_config.py` or Nautobot will not work.
@@ -196,7 +196,7 @@ Save your changes to your `nautobot_config.py` and then proceed to the next step
 
 #### MySQL Unicode Settings
 
-If you are using MySQL as your database backend, and you want to enable support for Unicode emojis, please make sure to add `"OPTIONS": {"charset": "utf8mb4"}` to your `DATABASES` setting. Please see the [configuration guide on MySQL Unicode settings](../../configuration/required-settings/#mysql-unicode-settings) for more information.
+If you are using MySQL as your database backend, and you want to enable support for Unicode emojis, please make sure to add `"OPTIONS": {"charset": "utf8mb4"}` to your `DATABASES` setting. Please see the [configuration guide on MySQL Unicode settings](../configuration/required-settings.md#mysql-unicode-settings) for more information.
 
 ## Optional Settings
 
@@ -220,7 +220,7 @@ $ echo "nautobot[napalm]" >> $NAUTOBOT_ROOT/local_requirements.txt
 
 ### Remote File Storage
 
-By default, Nautobot will use the local filesystem to store uploaded files. To use a remote filesystem, install the [`django-storages`](https://django-storages.readthedocs.io/en/stable/) library and configure your [desired storage backend](../../configuration/optional-settings/#storage_backend) in `nautobot_config.py`.
+By default, Nautobot will use the local filesystem to store uploaded files. To use a remote filesystem, install the [`django-storages`](https://django-storages.readthedocs.io/en/stable/) library and configure your [desired storage backend](../configuration/optional-settings.md#storage_backend) in `nautobot_config.py`.
 
 To use remote file storage, add `nautobot[remote_storage]` to your `local_requirements.txt` so that it can be installed and kept up to date:
 
@@ -250,8 +250,8 @@ Nautobot relies upon many static files including:
 
 * `git` - For storing [Git repositories](../../models/extras/gitrepository)
 * `jobs` - For storing [custom Jobs](../../additional-features/jobs)
-* `media` - For storing [uploaded images and attachments](../../configuration/optional-settings/#media_root) (such as device type images)
-* `static` - The home for [CSS, JavaScript, and images](../../configuration/optional-settings/#static_root) used to serve the web interface
+* `media` - For storing [uploaded images and attachments](../configuration/optional-settings.md#media_root) (such as device type images)
+* `static` - The home for [CSS, JavaScript, and images](../configuration/optional-settings.md#static_root) used to serve the web interface
 
 Each of these have their own corresponding setting that defined in `nautobot_config.py`, but by default they will all be placed in `NAUTOBOT_ROOT` unless you tell Nautobot otherwise by customizing their unique variable.
 

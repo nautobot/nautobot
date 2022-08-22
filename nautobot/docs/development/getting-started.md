@@ -116,7 +116,7 @@ Getting started with Nautobot development is pretty straightforward, and should 
 ### Windows Development
 
 Local development on Windows Subsystem for Linux (WSL) is not currently supported. When developing locally on Windows, we recommend
-using a virtual machine running an [officially supported operating system](../../installation/#installing-nautobot-dependencies).
+using a virtual machine running an [officially supported operating system](../installation/index.md#installing-nautobot-dependencies).
 
 ### Docker Compose Workflow
 
@@ -212,8 +212,8 @@ This workflow uses Python and Poetry to work with your development environment l
 There are a few things you'll need:
 
 * A Linux system or environment
-* A MySQL or PostgreSQL server, which can be installed locally [per the documentation](../../installation/#installing-nautobot-dependencies)
-* A Redis server, which can also be [installed locally](../../installation/#installing-nautobot-dependencies)
+* A MySQL or PostgreSQL server, which can be installed locally [per the documentation](../installation/index.md#installing-nautobot-dependencies)
+* A Redis server, which can also be [installed locally](../installation/index.md#installing-nautobot-dependencies)
 * A supported version of Python
 * A recent version of [Poetry](https://python-poetry.org/docs/#installation)
 
@@ -342,11 +342,11 @@ $ cp development/nautobot_config.py ~/.nautobot/nautobot_config.py
 
 A newly created configuration includes sane defaults. If you need to customize them, edit your `nautobot_config.py` and update the following settings as required:
 
-* [`ALLOWED_HOSTS`](../../configuration/required-settings/#allowed_hosts): This can be set to `["*"]` for development purposes and must be set if `DEBUG=False`
-* [`DATABASES`](../../configuration/required-settings/#databases): Database connection parameters, if different from the defaults
-* **Redis settings**: Redis configuration requires multiple settings including [`CACHEOPS_REDIS`](../../configuration/required-settings/#cacheops_redis) and [`RQ_QUEUES`](../../configuration/required-settings/#rq_queues). The defaults should be fine for development.
-* [`DEBUG`](../../configuration/optional-settings/#debug): Set to `True` to enable verbose exception logging and, if installed, the [Django debug toolbar](https://django-debug-toolbar.readthedocs.io/en/latest/)
-* [`EXTRA_INSTALLED_APPS`](../../configuration/optional-settings/#extra-applications): Optionally provide a list of extra Django apps/plugins you may desire to use for development
+* [`ALLOWED_HOSTS`](../configuration/required-settings.md#allowed_hosts): This can be set to `["*"]` for development purposes and must be set if `DEBUG=False`
+* [`DATABASES`](../configuration/required-settings.md#databases): Database connection parameters, if different from the defaults
+* **Redis settings**: Redis configuration requires multiple settings including [`CACHEOPS_REDIS`](../configuration/required-settings.md#cacheops_redis) and [`RQ_QUEUES`](../configuration/required-settings.md#rq_queues). The defaults should be fine for development.
+* [`DEBUG`](../configuration/optional-settings.md#debug): Set to `True` to enable verbose exception logging and, if installed, the [Django debug toolbar](https://django-debug-toolbar.readthedocs.io/en/latest/)
+* [`EXTRA_INSTALLED_APPS`](../configuration/optional-settings.md#extra-applications): Optionally provide a list of extra Django apps/plugins you may desire to use for development
 
 ## Working in your Development Environment
 

@@ -12,7 +12,7 @@ If you are a user migrating from NetBox to Nautobot, please refer to the ["Migra
 
 #### Custom Field Extended Filtering ([#1498](https://github.com/nautobot/nautobot/issues/1498))
 
-Objects with custom fields now support [filter lookup expressions](../../rest-api/filtering/#lookup-expressions) for filtering by custom field values, such as `cf_date_field__gte=2022-08-11` to select objects whose `date_field` custom field has a date of 2022-08-11 or later.
+Objects with custom fields now support [filter lookup expressions](../rest-api/filtering.md#lookup-expressions) for filtering by custom field values, such as `cf_date_field__gte=2022-08-11` to select objects whose `date_field` custom field has a date of 2022-08-11 or later.
 
 #### Custom Field Slugs ([#1962](https://github.com/nautobot/nautobot/issues/1962))
 
@@ -53,7 +53,7 @@ The "Theme" link in the footer provides a modal popup to select the preferred th
 
 The DCIM, Virtualization FilterSets have been updated with over 150 new filters, including hybrid filters that support filtering on both `pk` and `slug` (or `pk` and `name` where `slug` is not available). A new filter class `NaturalKeyOrPKMultipleChoiceFilter` was added to `nautobot.utilities.filters` to support filtering on multiple fields of a related object.
 
-Please see the documentation on [best practices for mapping model fields to filters](../../development/best-practices/#mapping-model-fields-to-filters) for more information.
+Please see the documentation on [best practices for mapping model fields to filters](../development/best-practices.md#mapping-model-fields-to-filters) for more information.
 
 #### Job Hooks ([#1878](https://github.com/nautobot/nautobot/issues/1878))
 
@@ -96,7 +96,7 @@ Interface and VMInterface models now support a status. Default statuses that are
 
 A new version of the `/dcim/interfaces/*` REST API endpoints have been implemented. By default this endpoint continues to demonstrate the pre-1.4 behavior unless the REST API client explicitly requests API version=1.4. If you continue to use the pre-1.4 API endpoints, status is defaulted to "Active".
 
-Visit the documentation on [REST API versioning](../../rest-api/overview/#versioning) for more information on using the versioned APIs.
+Visit the documentation on [REST API versioning](../rest-api/overview.md#versioning) for more information on using the versioned APIs.
 
 #### NautobotUIViewSet ([#1812](https://github.com/nautobot/nautobot/issues/1812))
 
@@ -106,7 +106,7 @@ Note that this ViewSet is catered specifically to the UI, not the API.
 
 Concrete examples on how to use `NautobotUIViewSet` resides in `nautobot.circuits.views`.
 
-Please visit the [plugin development guide on `NautobotViewSet`](../../plugins/development/#nautobotuiviewset) for more information.
+Please visit the [plugin development guide on `NautobotViewSet`](../plugins/development.md#nautobotuiviewset) for more information.
 
 #### Notes ([#767](https://github.com/nautobot/nautobot/issues/767))
 
@@ -120,7 +120,7 @@ Notes can also be used via the REST API at endpoint `/api/extras/notes/` or per 
 !!! info
     For implementers of REST API views (core and/or plugins), a new `nautobot.extras.api.views.NautobotModelViewSet` base class has been added. Use of this class ensures that all features from `PrimaryModel` or `OrganizationalModel` are accessible through the API. This includes custom fields and notes.
 
-Please see the on [plugin development guide on Notes](../../plugins/development/#note-url-endpoint) for more details.
+Please see the on [plugin development guide on Notes](../plugins/development.md#note-url-endpoint) for more details.
 
 ### Changed
 
