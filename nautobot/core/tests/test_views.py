@@ -105,46 +105,73 @@ class ForceScriptNameTestcase(TestCase):
 
 
 class NavRestrictedUI(TestCase):
+    def setUp(self):
+        super().setUp()
+
+        self.url = reverse("plugins:plugins_list")
+        self.item_weight = 100  # TODO: not easy to introspect from the nav menu struct, so hard-code it here for now
+
     def make_request(self):
         response = self.client.get(reverse("home"))
-        response_body = response.content.decode(response.charset).replace("\n", "")
-        return re.compile(r'<nav.*<li class="dropdown-header".*General</li>.*Installed Plugins.*</nav>').search(
-            response_body
+        return response.content.decode(response.charset)
+
+    @override_settings(HIDE_RESTRICTED_UI=True)
+    def test_installed_plugins_visible_to_staff_with_hide_restricted_ui_true(self):
+        """The "Installed Plugins" menu item should be available to is_staff user regardless of HIDE_RESTRICTED_UI."""
+        # Make user admin
+        self.user.is_staff = True
+        self.user.save()
+
+        response_content = self.make_request()
+        self.assertInHTML(
+            f"""
+            <li>
+              <div class="buttons pull-right"></div>
+              <a href="{self.url}" data-item-weight="{self.item_weight}">Installed Plugins</a>
+            </li>
+            """,
+            response_content,
+        )
+
+    @override_settings(HIDE_RESTRICTED_UI=False)
+    def test_installed_plugins_visible_to_staff_with_hide_restricted_ui_false(self):
+        """The "Installed Plugins" menu item should be available to is_staff user regardless of HIDE_RESTRICTED_UI."""
+        # Make user admin
+        self.user.is_staff = True
+        self.user.save()
+
+        response_content = self.make_request()
+        self.assertInHTML(
+            f"""
+            <li>
+              <div class="buttons pull-right"></div>
+              <a href="{self.url}" data-item-weight="{self.item_weight}">Installed Plugins</a>
+            </li>
+            """,
+            response_content,
         )
 
     @override_settings(HIDE_RESTRICTED_UI=True)
-    def test_installed_plugins_visible_to_admin_with_hide_restricted_ui_True(self):
-        # Make user admin
-        self.user.is_staff = True
-        self.user.is_superuser = True
-        self.user.save()
+    def test_installed_plugins_not_visible_to_non_staff_user_with_hide_restricted_ui_true(self):
+        """The "Installed Plugins" menu item should be hidden from a non-staff user when HIDE_RESTRICTED_UI=True."""
+        response_content = self.make_request()
 
-        search_result = self.make_request()
-
-        self.assertIsNotNone(search_result)
+        self.assertNotRegex(response_content, r"Installed\s+Plugins")
 
     @override_settings(HIDE_RESTRICTED_UI=False)
-    def test_installed_plugins_visible_to_admin_with_hide_restricted_ui_False(self):
-        # Make user admin
-        self.user.is_staff = True
-        self.user.is_superuser = True
-        self.user.save()
+    def test_installed_plugins_disabled_to_non_staff_user_with_hide_restricted_ui_false(self):
+        """The "Installed Plugins" menu item should be disabled for a non-staff user when HIDE_RESTRICTED_UI=False."""
+        response_content = self.make_request()
 
-        search_result = self.make_request()
-
-        self.assertIsNotNone(search_result)
-
-    @override_settings(HIDE_RESTRICTED_UI=True)
-    def test_installed_plugins_not_visible_to_user_with_hide_restricted_ui_True(self):
-        search_result = self.make_request()
-
-        self.assertIsNone(search_result)
-
-    @override_settings(HIDE_RESTRICTED_UI=False)
-    def test_installed_plugins_not_visible_to_user_with_hide_restricted_ui_False(self):
-        search_result = self.make_request()
-
-        self.assertIsNone(search_result)
+        self.assertInHTML(
+            f"""
+            <li class="disabled">
+              <div class="buttons pull-right"></div>
+              <a href="{self.url}" data-item-weight="{self.item_weight}">Installed Plugins</a>
+            </li>
+            """,
+            response_content,
+        )
 
 
 class LoginUI(TestCase):
