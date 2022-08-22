@@ -32,15 +32,20 @@
 {% endblock breadcrumbs %}
 
 {% block buttons %}
-    {{ block.super }}
-     {% if perms.extras.run_job %}
+    {% if perms.extras.run_job %}
         {% if result.job_model and result.job_kwargs %}
-        <a href="{% url 'extras:job_run' slug=result.job_model.slug %}?kwargs_from_job_result={{ result.pk }}"
-           class="btn btn-info">
-            <span class="mdi mdi-repeat" aria-hidden="true"></span> Re-Run
-        </a>
+            <a href="{% url 'extras:job_run' slug=result.job_model.slug %}?kwargs_from_job_result={{ result.pk }}"
+               class="btn btn-success">
+                <span class="mdi mdi-repeat" aria-hidden="true"></span> Re-Run
+            </a>
+        {% elif result.job_model is not None %}
+            <a href="{% url 'extras:job_run' slug=result.job_model.slug %}"
+               class="btn btn-primary">
+                <span class="mdi mdi-play" aria-hidden="true"></span> Run
+            </a>
         {% endif %}
     {% endif %}
+    {{ block.super }}
 {% endblock buttons %}
 
 {% block title %}

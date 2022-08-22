@@ -217,11 +217,17 @@ class DynamicGroupModelTest(DynamicGroupTestBase):
     def test_get_for_object(self):
         """Test `DynamicGroup.objects.get_for_object()`."""
         device1 = self.devices[0]  # site-1
+        device4 = self.devices[-1]  # site-4
 
         # Assert that the groups we got from `get_for_object()` match the lookup
         # from the group instance itself.
         device1_groups = DynamicGroup.objects.get_for_object(device1)
         self.assertQuerySetEqual(device1_groups, device1.dynamic_groups)
+
+        # Device4 should not be in ANY Dynamic Groups.
+        device4_groups = DynamicGroup.objects.get_for_object(device4)
+        self.assertEqual(list(device4_groups), [])
+        self.assertQuerySetEqual(device4_groups, device4.dynamic_groups)
 
     def test_members(self):
         """Test `DynamicGroup.members`."""

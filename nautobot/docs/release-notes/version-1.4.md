@@ -12,7 +12,7 @@ If you are a user migrating from NetBox to Nautobot, please refer to the ["Migra
 
 #### Custom Field Extended Filtering ([#1498](https://github.com/nautobot/nautobot/issues/1498))
 
-Objects with custom fields now support [filter lookup expressions](../rest-api/filtering/#lookup-expressions) for filtering by custom field values, such as `cf_date_field__gte=2022-08-11` to select objects whose `date_field` custom field has a date of 2022-08-11 or later.
+Objects with custom fields now support [filter lookup expressions](../../rest-api/filtering/#lookup-expressions) for filtering by custom field values, such as `cf_date_field__gte=2022-08-11` to select objects whose `date_field` custom field has a date of 2022-08-11 or later.
 
 #### Custom Field Slugs ([#1962](https://github.com/nautobot/nautobot/issues/1962))
 
@@ -51,11 +51,15 @@ The "Theme" link in the footer provides a modal popup to select the preferred th
 - DCIM: [#1729](https://github.com/nautobot/nautobot/issues/1729)
 - Virtualization: [#1735](https://github.com/nautobot/nautobot/issues/1735)
 
-The DCIM, Virtualization FilterSets have been updated with over 150 new filters, including hybrid filters that support filtering on both `pk` and `slug` (or `pk` and `name` where `slug` is not available). A new filter class `NaturalKeyOrPKMultipleChoiceFilter` was added to `nautobot.utilities.filters` to support filtering on multiple fields of a related object. See the [Best Practices](../development/best-practices/#mapping-model-fields-to-filters) documentation for more information.
+The DCIM, Virtualization FilterSets have been updated with over 150 new filters, including hybrid filters that support filtering on both `pk` and `slug` (or `pk` and `name` where `slug` is not available). A new filter class `NaturalKeyOrPKMultipleChoiceFilter` was added to `nautobot.utilities.filters` to support filtering on multiple fields of a related object.
+
+Please see the documentation on [best practices for mapping model fields to filters](../../development/best-practices/#mapping-model-fields-to-filters) for more information.
 
 #### Job Hooks ([#1878](https://github.com/nautobot/nautobot/issues/1878))
 
-Jobs can now be configured to run automatically when a change event occurs on a Nautobot object. Job hooks associate jobs to content types and actions to run jobs when a create, update or delete action occurs on the selected content type. A new job base class `JobHookReceiver` was introduced that jobs must subclass to be associated with a job hook. See the [Job Hooks](../additional-features/job-hooks/) documentation for more information.
+Jobs can now be configured to run automatically when a change event occurs on a Nautobot object. Job hooks associate jobs to content types and actions to run jobs when a create, update or delete action occurs on the selected content type. A new job base class `JobHookReceiver` was introduced that jobs must subclass to be associated with a job hook.
+
+Please see the documentation on [Job Hooks](../models/extras/jobhook.md) for more information.
 
 #### Job Re-Runs ([#1875](https://github.com/nautobot/nautobot/issues/1875))
 
@@ -66,7 +70,7 @@ JobResult records now save the arguments with which the Job was called, allowing
 To locate network information more precisely than a Site defines, you can now define a hierarchy of Location Types (for example, `Building` ← `Floor` ← `Room`) and then create Locations corresponding to these types within each Site. Data objects such as devices, prefixes, VLAN groups, etc. can thus be mapped or assigned to Location representing a specific building, wing, floor, room, etc. as appropriate to your needs.
 
 !!! info
-At present, Locations fill the conceptual space between the more abstract Region and Site models and the more concrete Rack Group model. In a future Nautobot release, some or all of these other models may be collapsed into Locations. That is to say, in the future you might not deal with Regions and Sites as distinct models, but instead your Location Type hierarchy might include these higher-level categories, becoming something like Country ← City ← Site ← Building ← Floor ← Room.
+    At present, Locations fill the conceptual space between the more abstract Region and Site models and the more concrete Rack Group model. In a future Nautobot release, some or all of these other models may be collapsed into Locations. That is to say, in the future you might not deal with Regions and Sites as distinct models, but instead your Location Type hierarchy might include these higher-level categories, becoming something like Country ← City ← Site ← Building ← Floor ← Room.
 
 #### Parent Interfaces and Bridge Interfaces ([#1455](https://github.com/nautobot/nautobot/issues/1455))
 
@@ -92,7 +96,7 @@ Interface and VMInterface models now support a status. Default statuses that are
 
 A new version of the `/dcim/interfaces/*` REST API endpoints have been implemented. By default this endpoint continues to demonstrate the pre-1.4 behavior unless the REST API client explicitly requests API version=1.4. If you continue to use the pre-1.4 API endpoints, status is defaulted to "Active".
 
-Visit the documentation on [REST API versioning](../rest-api/overview/#versioning) for more information on using the versioned APIs.
+Visit the documentation on [REST API versioning](../../rest-api/overview/#versioning) for more information on using the versioned APIs.
 
 #### NautobotUIViewSet ([#1812](https://github.com/nautobot/nautobot/issues/1812))
 
@@ -102,19 +106,21 @@ Note that this ViewSet is catered specifically to the UI, not the API.
 
 Concrete examples on how to use `NautobotUIViewSet` resides in `nautobot.circuits.views`.
 
-Visit the documentation on [plugins/development.md](/docs/plugins/development.md) for more information on how to use `NautobotUIViewSet`.
+Please visit the [plugin development guide on `NautobotViewSet`](../../plugins/development/#nautobotuiviewset) for more information.
 
 #### Notes ([#767](https://github.com/nautobot/nautobot/issues/767))
 
 Primary and Organizational models now support notes. A notes tab has been added to the Object Detail view for all models that inherit the Primary or Organizational base abstract models.
 
 !!! warning
-Any plugin that inherits from one of these two models and uses the `ViewTestCases.PrimaryObjectViewTestCase` or `ViewTestCases.OrganizationalObjectViewTestCase` for their test will need to add the `NotesObjectView` to the objects URLs. See [Plugin Development](../plugins/development.md#note-url-endpoint) for more details.
+    Any plugin that inherits from one of these two models and uses the `ViewTestCases.PrimaryObjectViewTestCase` or `ViewTestCases.OrganizationalObjectViewTestCase` for their test will need to add the `NotesObjectView` to the objects URLs.
 
-Notes can also be used via the REST API at endpoint `/api/extras/notes` or per object at the object's `/notes` endpoint.
+Notes can also be used via the REST API at endpoint `/api/extras/notes/` or per object detail endpoint at the object's nested `/notes/` endpoint.
 
 !!! info
-For implementers of REST API views (core and/or plugins), a new `nautobot.extras.api.views.NautobotModelViewSet` base class has been added. Use of this class ensures that all features from `PrimaryModel` or `OrganizationalModel` are accessible through the API. This includes custom fields and notes.
+    For implementers of REST API views (core and/or plugins), a new `nautobot.extras.api.views.NautobotModelViewSet` base class has been added. Use of this class ensures that all features from `PrimaryModel` or `OrganizationalModel` are accessible through the API. This includes custom fields and notes.
+
+Please see the on [plugin development guide on Notes](../../plugins/development/#note-url-endpoint) for more details.
 
 ### Changed
 
@@ -123,7 +129,9 @@ For implementers of REST API views (core and/or plugins), a new `nautobot.extras
 Dynamic Groups may now be nested in parent/child relationships. The Dynamic Group edit view now has a "Child Groups" tab that allows one to make other Dynamic Groups of the same content type children of the parent group. Any filters provided by the child groups are used to filter the members from the parent group using one of three operators: "Restrict (AND)", "Include (OR)", or "Exclude (NOT)". This allows for logical parenthetical grouping of nested groups by the operator you choose for that child group association to the parent.
 
 !!! warning
-The default behavior of Dynamic Groups with an empty filter (`{}`) has been inverted to include all objects matching the content type by default instead of matching no objects. This was necessary to implement the progressive layering of child filters similarly to how we use filters to reduce desired objects from basic list view filters.
+    The default behavior of Dynamic Groups with an empty filter (`{}`) has been inverted to include all objects matching the content type by default instead of matching no objects. This was necessary to implement the progressive layering of child filters similarly to how we use filters to reduce desired objects from basic list view filters.
+
+Please see the greatly-expanded documentation on [Dynamic Groups](../models/extras/dynamicgroup.md) for more information.
 
 #### Renamed Mixin Classes ([#2135](https://github.com/nautobot/nautobot/issues/2135))
 
@@ -147,11 +155,37 @@ Filtering of object lists in the UI and in the REST API will now report an error
 A new configuration setting, [`STRICT_FILTERING`](../configuration/optional-settings.md#strict_filtering) has been added. It defaults to `True`, enabling strict validation of filter parameters, but can be set to `False` to disable this validation.
 
 !!! warning
-Setting `STRICT_FILTERING` to `False` can result in unexpected filtering results in the case of user error, for example a request to `/api/dcim/devices/?has_primry_ip=false` (note the typo `primry`) will result in a list of all devices, rather than the intended list of only devices that lack a primary IP address. In the case of Jobs or external automation making use of such a filter, this could have wide-ranging consequences.
+    Setting [`STRICT_FILTERING`](../configuration/optional-settings.md#strict_filtering) to `False` can result in unexpected filtering results in the case of user error, for example a request to `/api/dcim/devices/?has_primry_ip=false` (note the typo `primry`) will result in a list of all devices, rather than the intended list of only devices that lack a primary IP address. In the case of Jobs or external automation making use of such a filter, this could have wide-ranging consequences.
 
 #### Moved Registry Template Context ([#1945](https://github.com/nautobot/nautobot/issues/1945))
 
 The `settings_and_registry` default context processor was changed to purely `settings` - the (large) Nautobot application registry dictionary is no longer provided as part of the render context for all templates by default. Added a new `registry` template tag that can be invoked by specific templates to provide this variable where needed.
+
+## v1.4.1 (2022-08-22)
+
+### Added
+
+- [#1809](https://github.com/nautobot/nautobot/issues/1809) - Added Django natural key to `extras.Status` to simplify exporting and importing of database dumps for `Status` objects.
+- [#2202](https://github.com/nautobot/nautobot/pull/2202) - Added `validate_models` management command to validate each instance in the database.
+- [#2213](https://github.com/nautobot/nautobot/issues/2213) - Added a new `--pull` parameter for `invoke build` to tell Docker to pull images when building containers.
+
+### Changed
+
+- [#2206](https://github.com/nautobot/nautobot/issues/2206) - Changed Run button on Job Result to always be displayed, "Re-Run" if available.
+- [#2252](https://github.com/nautobot/nautobot/pull/2252) - Updated Poetry install command for Development Getting Started guide.
+
+### Fixed
+
+- [#2209](https://github.com/nautobot/nautobot/issues/2209) - Fixed lack of dark-mode support in GraphiQL page.
+- [#2215](https://github.com/nautobot/nautobot/issues/2215) - Fixed error seen in migration from 1.3.x if certain default Statuses had been modified.
+- [#2218](https://github.com/nautobot/nautobot/pull/2218) - Fixed typos/links in release notes and Dynamic Groups docs.
+- [#2219](https://github.com/nautobot/nautobot/pull/2219) - Fixed broken pagination in Dynamic Group detail "Members" tab.
+- [#2220](https://github.com/nautobot/nautobot/pull/2220) - Narrowed scope of auto-formatting in VSCode to only apply to Python files.
+- [#2222](https://github.com/nautobot/nautobot/issues/2222) - Fixed missing app headings in Swagger UI.
+- [#2229](https://github.com/nautobot/nautobot/issues/2229) - Fixed `render_form.html` include template to not render a duplicate `object_note` field.
+- [#2232](https://github.com/nautobot/nautobot/issues/2232) - Fixed incorrect API URLs and incorrect inclusion of Circuits UI URLs in Swagger UI.
+- [#2241](https://github.com/nautobot/nautobot/issues/2241) - Fixed `DynamicGroup.objects.get_for_model()` to support nested Dynamic Groups.
+- [#2259](https://github.com/nautobot/nautobot/issues/2259) - Fixed footer not bound to bottom of Device View.
 
 ## v1.4.0 (2022-08-15)
 
@@ -241,7 +275,7 @@ The `settings_and_registry` default context processor was changed to purely `set
 ## v1.4.0a2 (2022-07-11)
 
 !!! attention
-`next` and `develop` introduced conflicting migration numbers during the release cycle. This necessitates reordering the migration in `next`. If you installed `v1.4.0a1`, you will need to roll back a migration before upgrading/installing `v1.4.0a2` and newer. If you have not installed `v1.4.0a` this will not be an issue.
+    The  `next` and `develop` branches introduced conflicting migration numbers during the release cycle. This necessitates reordering the migration in `next`. If you installed `v1.4.0a1`, you will need to roll back a migration before upgrading/installing `v1.4.0a2` and newer. If you have not installed `v1.4.0a` this will not be an issue.
 
     Before upgrading, run: `nautobot-server migrate extras 0033_add__optimized_indexing`. This will revert the reordered migration `0034_configcontextschema__remove_name_unique__create_constraint_unique_name_owner`, which is now number `0035`.
 
