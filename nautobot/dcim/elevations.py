@@ -76,7 +76,7 @@ class RackElevationSVG:
         return drawing
 
     def _draw_device_front(self, drawing, device, start, end, text):
-        name = str(device).split(".")[0] if settings.UI_RACK_VIEW_TRUNCATE_FQDN else str(device)
+        name = str(device)
         if device.devicebay_count:
             name += " ({}/{})".format(device.get_children().count(), device.devicebay_count)
 
