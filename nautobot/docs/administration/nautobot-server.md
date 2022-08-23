@@ -148,7 +148,7 @@ $ nautobot-server dumpdata \
 
 Use this command to generate a JSON dump of the database contents.
 
-One example of using this command would be to [`export data from PostgreSQL`](../../latest/installation/migrating-from-postgresql/#export-data-from-postgresql).
+One example of using this command would be to [`export data from PostgreSQL`](../installation/migrating-from-postgresql.md#export-data-from-postgresql).
 
 ### `fix_custom_fields`
 
@@ -230,8 +230,8 @@ There are a number of other options not covered here.
 
 To import the data that was exported with `nautobot-server dumpdata ...` see the following documentation:
 
-- [`Remove the auto-populated Status records from the database`](../../latest/installation/migrating-from-postgresql/#remove-the-auto-populated-status-records-from-the-mysql-database)
-- [`Import the database dump`](../../latest/installation/migrating-from-postgresql/#import-the-database-dump-into-mysql)
+- [`Remove the auto-populated Status records from the database`](../installation/migrating-from-postgresql.md#remove-the-auto-populated-status-records-from-the-mysql-database)
+- [`Import the database dump`](../installation/migrating-from-postgresql.md#import-the-database-dump-into-mysql)
 
 ### `migrate`
 
