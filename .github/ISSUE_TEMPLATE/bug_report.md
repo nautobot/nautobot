@@ -17,7 +17,9 @@ about: Report a reproducible bug in the current release of Nautobot
 -->
 ### Environment
 * Python version:
-* Nautobot version:
+* Nautobot version (Docker tag too if applicable):
+* Database platform, version:
+* Middleware(s):
 
 <!--
     Describe in detail the exact steps that someone else can take to reproduce
