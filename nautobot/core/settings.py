@@ -681,10 +681,3 @@ BRANDING_POWERED_BY_URL = "https://nautobot.readthedocs.io/"
 
 # Dont load the 'taggit' app, since we have our own custom `Tag` and `TaggedItem` models
 SHELL_PLUS_DONT_LOAD = ["taggit"]
-
-#
-# UI settings
-#
-
-# UI_RACK_VIEW_TRUNCATE_FQDN
-UI_RACK_VIEW_TRUNCATE_FQDN = is_truthy(os.getenv("UI_RACK_VIEW_TRUNCATE_FQDN", False))
