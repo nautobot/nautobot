@@ -22,4 +22,6 @@ If you are a user migrating from NetBox to Nautobot, please refer to the ["Migra
 
 ### Changed
 
+- [#1983](https://github.com/nautobot/nautobot/issues/1983) - Updated `django-taggit` dependency to 3.0.0
+
 ### Fixed
