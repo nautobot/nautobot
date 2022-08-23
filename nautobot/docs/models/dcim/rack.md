@@ -14,7 +14,7 @@ A rack must be designated as one of the following types:
 * Wall-mounted frame
 * Wall-mounted cabinet
 
-Similarly, each rack must be assigned an operational [`status`](../../../models/extras/status/). The following statuses are available by default:
+Similarly, each rack must be assigned an operational [`status`](../../models/extras/status.md). The following statuses are available by default:
 
 * Reserved
 * Available

@@ -8,7 +8,7 @@ This next section will demonstrate how to:
 * Assign an IP address to an Interface on a Device
 
 These type of operations fall under an umbrella called IP Address Management (IPAM).
-The Nautobot documentation [IPAM section](../../../core-functionality/ipam/) has more detail on IPAM and each operation.
+The Nautobot documentation [IPAM section](../../core-functionality/ipam/index.md) has more detail on IPAM and each operation.
 
 ## Creating a Regional Internet Registry (RIR)
 
