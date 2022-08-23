@@ -108,11 +108,7 @@ class RackElevationSVG:
         rect = drawing.rect(start, end, class_="slot blocked")
         rect.set_desc(self._get_device_description(device))
         drawing.add(rect)
-        drawing.add(
-            drawing.text(
-                str(device).split(".")[0] if settings.UI_RACK_VIEW_TRUNCATE_FQDN else device.name, insert=text
-            ),
-        )
+        drawing.add(drawing.text(str(device), insert=text))
 
         # Embed rear device type image if one exists
         if self.include_images and device.device_type.rear_image:
