@@ -16,8 +16,8 @@ about: Report a reproducible bug in the current release of Nautobot
     before submitting a bug report, and that any plugins have been disabled.
 -->
 ### Environment
-* Python version:
 * Nautobot version (Docker tag too if applicable):
+* Python version:
 * Database platform, version:
 * Middleware(s):
 
