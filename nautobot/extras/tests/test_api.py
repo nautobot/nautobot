@@ -632,6 +632,8 @@ class CustomLinkTest(APIViewTestCases.APIViewTestCase):
 class DynamicGroupTestMixin:
     """Mixin for Dynamic Group test cases to re-use the same set of common fixtures."""
 
+    fixtures = ("status",)
+
     @classmethod
     def setUpTestData(cls):
         # Create the objects required for devices.
@@ -963,6 +965,7 @@ class GitRepositoryTest(APIViewTestCases.APIViewTestCase):
 class GraphQLQueryTest(APIViewTestCases.APIViewTestCase):
     model = GraphQLQuery
     brief_fields = ["display", "id", "name", "url"]
+    fixtures = ("status",)
 
     create_data = [
         {
@@ -2345,6 +2348,7 @@ class RelationshipTest(APIViewTestCases.APIViewTestCase):
         "source_filter": {"slug": ["some-slug"]},
     }
     choices_fields = ["destination_type", "source_type", "type"]
+    fixtures = ("status",)
     slug_source = "name"
     slugify_function = staticmethod(slugify_dashes_to_underscores)
 
@@ -2547,6 +2551,7 @@ class RelationshipAssociationTest(APIViewTestCases.APIViewTestCase):
     model = RelationshipAssociation
     brief_fields = ["destination_id", "display", "id", "relationship", "source_id", "url"]
     choices_fields = ["destination_type", "source_type"]
+    fixtures = ("status",)
 
     @classmethod
     def setUpTestData(cls):
@@ -3088,6 +3093,7 @@ class StatusTest(APIViewTestCases.APIViewTestCase):
     bulk_update_data = {
         "color": "000000",
     }
+    fixtures = ("status",)
 
     create_data = [
         {
@@ -3118,16 +3124,7 @@ class StatusTest(APIViewTestCases.APIViewTestCase):
 
     @classmethod
     def setUpTestData(cls):
-        """
-        Since many `Status` objects are created as part of data migrations, we're
-        testing against those. If this seems magical, it's because they are
-        imported from `ChoiceSet` enum objects.
-
-        This method is defined just so it's clear that there is no need to
-        create test data for this test case.
-
-        See `extras.management.create_custom_statuses` for context.
-        """
+        """Handled by "status" fixture."""
 
 
 class TagTestVersion12(APIViewTestCases.APIViewTestCase):

@@ -395,18 +395,65 @@ def post_upgrade(context):
     run_command(context, command)
 
 
-@task(help={"format": "Output serialization format for dumped data. (Choices: json, xml, yaml)"})
-def dumpdata(context, format="json"):
+@task(
+    help={
+        "filepath": "Path to the file to create or overwrite",
+        "format": "Output serialization format for dumped data. (Choices: json, xml, yaml)",
+        "model": "Model to include, such as 'dcim.device', repeat as needed",
+    },
+    iterable=["model"],
+)
+def dumpdata(context, format="json", model=None, filepath=None):
     """Dump data from database to db_output file."""
-    command = f"nautobot-server dumpdata --exclude django_rq --indent 4 --output db_output.{format} --format {format}"
-    run_command(context, command)
+    if not filepath:
+        filepath = f"db_output.{format}"
+    command_tokens = [
+        "nautobot-server dumpdata",
+        f"--indent 2 --format {format} --natural-foreign --natural-primary",
+        f"--output {filepath}",
+    ]
+    if model is not None:
+        command_tokens += [" ".join(model)]
+    run_command(context, " \\\n    ".join(command_tokens))
 
 
-@task(help={"file_name": "Name and path of file to load."})
-def loaddata(context, file_name):
+@task(help={"filepath": "Name and path of file to load."})
+def loaddata(context, filepath="db_output.json"):
     """Load data from file."""
-    command = f"nautobot-server loaddata {file_name}"
+    command = f"nautobot-server loaddata {filepath}"
     run_command(context, command)
+
+
+@task(
+    help={
+        "app": "Nautobot app such as 'dcim', defaults to 'core'",
+        "filename": "Name of the fixture to create or overwrite, without .extension",
+        "model": "Model to include, such as 'dcim.device', repeat as needed",
+    },
+    iterable=["model"],
+)
+def write_fixture(context, app="core", filename=None, model=None):
+    """Create or overwrite a data fixture."""
+    if filename:
+        filepath = f"nautobot/{app}/fixtures/{filename}.json"
+    else:
+        filepath = None
+    dumpdata(context, format="json", model=model, filepath=filepath)
+
+
+@task(
+    help={
+        "app": "Nautobot app such as 'dcim', defaults to 'core'",
+        "filename": "Name of the fixture to load, without .extension",
+    },
+)
+def load_fixture(context, app="core", filename=None):
+    """Load a data fixture into Nautobot."""
+    if filename:
+        filepath = f"nautobot/{app}/fixtures/{filename}.json"
+    else:
+        filepath = None
+    loaddata(context, filepath=filepath)
 
 
 @task()

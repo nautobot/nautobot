@@ -819,6 +819,7 @@ class JobLogEntryTestCase(FilterTestCases.FilterTestCase):
 class ObjectChangeTestCase(FilterTestCases.FilterTestCase):
     queryset = ObjectChange.objects.all()
     filterset = ObjectChangeFilterSet
+    fixtures = ("status",)
 
     @classmethod
     def setUpTestData(cls):
@@ -1390,19 +1391,11 @@ class SecretsGroupAssociationTestCase(FilterTestCases.FilterTestCase):
 class StatusTestCase(FilterTestCases.NameSlugFilterTestCase):
     queryset = Status.objects.all()
     filterset = StatusFilterSet
+    fixtures = ("status",)
 
     @classmethod
     def setUpTestData(cls):
-        """
-        Since many `Status` objects are created as part of data migrations, we're
-        testing against those. If this seems magical, it's because they are
-        imported from `ChoiceSet` enum objects.
-
-        This method is defined just so it's clear that there is no need to
-        create test data for this test case.
-
-        See `extras.management.create_custom_statuses` for context.
-        """
+        """Handled by "status" fixture."""
 
     def test_content_types(self):
         ct = ContentType.objects.get_for_model(Device)

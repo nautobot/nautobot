@@ -12,6 +12,8 @@ class DynamicGroupTestCase(SeleniumTestCase):
     Integration test to check nautobot.extras.models.DynamicGroup add/edit functionality.
     """
 
+    fixtures = ("status",)
+
     def setUp(self):
         super().setUp()
         self.user.is_superuser = True

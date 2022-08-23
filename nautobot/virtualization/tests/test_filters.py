@@ -271,6 +271,7 @@ class ClusterTestCase(FilterTestCases.FilterTestCase):
 class VirtualMachineTestCase(FilterTestCases.FilterTestCase):
     queryset = VirtualMachine.objects.all()
     filterset = VirtualMachineFilterSet
+    fixtures = ("status",)
 
     @classmethod
     def setUpTestData(cls):
@@ -584,6 +585,7 @@ class VirtualMachineTestCase(FilterTestCases.FilterTestCase):
 class VMInterfaceTestCase(FilterTestCases.FilterTestCase):
     queryset = VMInterface.objects.all()
     filterset = VMInterfaceFilterSet
+    fixtures = ("status",)
 
     @classmethod
     def setUpTestData(cls):

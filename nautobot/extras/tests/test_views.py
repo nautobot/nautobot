@@ -1825,6 +1825,7 @@ class RelationshipTestCase(
     ViewTestCases.ListObjectsViewTestCase,
 ):
     model = Relationship
+    fixtures = ("status",)
     slug_source = "name"
     slugify_function = staticmethod(slugify_dashes_to_underscores)
 
@@ -1942,16 +1943,12 @@ class StatusTestCase(
     ViewTestCases.ListObjectsViewTestCase,
 ):
     model = Status
+    fixtures = ("status",)
 
     @classmethod
     def setUpTestData(cls):
 
         # Status objects to test.
-        Status.objects.create(name="Status 1", slug="status-1")
-        Status.objects.create(name="Status 2", slug="status-2")
-        Status.objects.create(name="Status 3", slug="status-3")
-        Status.objects.create(name="Status 4")
-
         content_type = ContentType.objects.get_for_model(Device)
 
         cls.form_data = {
@@ -1975,7 +1972,7 @@ class StatusTestCase(
         }
 
         cls.slug_source = "name"
-        cls.slug_test_object = "Status 4"
+        cls.slug_test_object = "Irradiated"
 
 
 class TagTestCase(ViewTestCases.OrganizationalObjectViewTestCase):
