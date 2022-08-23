@@ -29,6 +29,9 @@ class StatusQuerySet(RestrictedQuerySet):
         content_type = ContentType.objects.get_for_model(model._meta.concrete_model)
         return self.filter(content_types=content_type)
 
+    def get_by_natural_key(self, slug):
+        return self.get(slug=slug)
+
 
 @extras_features(
     "custom_fields",
@@ -68,6 +71,9 @@ class Status(BaseModel, ChangeLoggedModel, CustomFieldModel, RelationshipModel, 
 
     def __str__(self):
         return self.name
+
+    def natural_key(self):
+        return (self.slug,)
 
     def get_absolute_url(self):
         return reverse("extras:status", args=[self.slug])

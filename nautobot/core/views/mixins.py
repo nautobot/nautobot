@@ -23,6 +23,8 @@ from rest_framework import mixins
 from rest_framework.response import Response
 from rest_framework.viewsets import GenericViewSet
 
+from drf_spectacular.utils import extend_schema
+
 from nautobot.core.api.views import BulkCreateModelMixin, BulkDestroyModelMixin, BulkUpdateModelMixin
 from nautobot.extras.models import CustomField, ExportTemplate
 from nautobot.utilities.error_handlers import handle_protectederror
@@ -53,6 +55,7 @@ PERMISSIONS_ACTION_MAP = {
 }
 
 
+@extend_schema(exclude=True)
 class NautobotViewSetMixin(GenericViewSet, AccessMixin, GetReturnURLMixin, FormView):
     """
     NautobotViewSetMixin is an aggregation of various mixins from DRF, Django and Nautobot to acheive the desired behavior pattern for NautobotUIViewSet
