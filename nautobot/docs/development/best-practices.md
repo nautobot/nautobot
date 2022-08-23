@@ -2,6 +2,8 @@
 
 While there are many different development interfaces in Nautobot that each expose unique functionality, there are a common set of a best practices that have broad applicability to users and developers alike. This includes elements of writing Jobs, Plugins, and scripts for execution through the `nbshell`.
 
+The below best practices apply to test code as well as feature code, and there are additional [test-specific best practices](testing.md) to be aware of as well.
+
 ## Base Classes
 
 For models that support change-logging, custom fields, and relationships (which includes all subclasses of `OrganizationalModel` and `PrimaryModel`), the "Full-featured models" base classes below should always be used. For less full-featured models, refer to the "Minimal models" column instead.
