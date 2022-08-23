@@ -73,8 +73,7 @@ django-storages = {version = "~1.12.3", optional = true}
 # Advanced HTML tables
 django-tables2 = "~2.4.1"
 # Tags
-# NOTE: django-taggit 2.x is available but has breaking API changes
-django-taggit = "~1.5.1"
+django-taggit = "~3.0.0"
 # Represent time zones in Django
 # NOTE: django-timezone-field 4.2.x is available but appears to break our initial migrations?
 django-timezone-field = "~4.1.2"
