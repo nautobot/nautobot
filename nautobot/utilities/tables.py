@@ -4,6 +4,7 @@ from django.contrib.auth.models import AnonymousUser
 from django.contrib.contenttypes.fields import GenericForeignKey
 from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import FieldDoesNotExist
+from django.db.models import Q
 from django.db.models.fields.related import RelatedField
 from django.urls import reverse
 from django.utils.html import escape, format_html
@@ -12,9 +13,8 @@ from django.utils.text import Truncator
 from django_tables2.data import TableQuerysetData
 from django_tables2.utils import Accessor
 
-from nautobot.extras.models import ComputedField, CustomField
-from nautobot.extras.choices import CustomFieldTypeChoices
-
+from nautobot.extras.models import ComputedField, CustomField, Relationship
+from nautobot.extras.choices import CustomFieldTypeChoices, RelationshipSideChoices
 from .templatetags.helpers import render_boolean
 
 
@@ -40,6 +40,16 @@ class BaseTable(tables.Table):
 
         for cpf in ComputedField.objects.filter(content_type=obj_type):
             self.base_columns[f"cpf_{cpf.slug}"] = ComputedFieldColumn(cpf)
+
+        for relationship in Relationship.objects.filter(Q(source_type=obj_type)):
+            self.base_columns[f"cr_{relationship.slug}"] = RelationshipColumn(
+                relationship, side=RelationshipSideChoices.SIDE_SOURCE
+            )
+
+        for relationship in Relationship.objects.filter(Q(destination_type=obj_type)):
+            self.base_columns[f"cr_{relationship.slug}"] = RelationshipColumn(
+                relationship, side=RelationshipSideChoices.SIDE_DESTINATION
+            )
 
         # Init table
         super().__init__(*args, **kwargs)
@@ -380,5 +390,43 @@ class CustomFieldColumn(tables.Column):
             template = format_html('<a href="{}">{}</a>', value, value)
         else:
             template = escape(value)
+
+        return mark_safe(template)
+
+
+class RelationshipColumn(tables.Column):
+    """
+    Display relationship association instances in the appropriate format.
+    """
+
+    def __init__(self, relationship, side, *args, **kwargs):
+        self.relationship = relationship
+        self.side = side
+        kwargs["verbose_name"] = relationship.name
+        kwargs["accessor"] = Accessor("associations")
+        super().__init__(*args, **kwargs)
+
+    def render(self, record, value):
+        # Filter the relationship associations by the relationship instance.
+        # Since associations accessor returns all the relationship associations regardless of the relationship.
+        value = [v for v in value if v.relationship == self.relationship]
+        if value is None:
+            # This returns None if value is None
+            return self.default
+
+        template = ""
+        if self.relationship.symmetric:
+            for v in value:
+                # Always get the opposite end of the relationship association with respect to record.
+                if v.source == record:
+                    template += format_html('<a href="{}">{}</a><br>', v.destination.get_absolute_url(), v.destination)
+                else:
+                    template += format_html('<a href="{}">{}</a><br>', v.source.get_absolute_url(), v.source)
+        else:
+            for v in value:
+                if self.side == RelationshipSideChoices.SIDE_SOURCE:
+                    template += format_html('<a href="{}">{}</a><br>', v.destination.get_absolute_url(), v.destination)
+                else:
+                    template += format_html('<a href="{}">{}</a><br>', v.source.get_absolute_url(), v.source)
 
         return mark_safe(template)
