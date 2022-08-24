@@ -46,7 +46,7 @@ class StatusManagementTestCase(TestCase):
         initial_statuses_count = Status.objects.count()
         # Should successfully delete then regenerate all built-in statuses, leaving custom statuses alone
         clear_status_choices(apps=apps, clear_all_model_statuses=False)
-        self.assertEqual(Status.objects.count(), 1)  # custom "Irradiated" status
+        self.assertEqual(Status.objects.count(), 2)  # non-default custom statuses remain
         populate_status_choices(apps=apps, schema_editor=None)
         self.assertEqual(Status.objects.count(), initial_statuses_count)
 
@@ -62,10 +62,10 @@ class StatusManagementTestCase(TestCase):
         Verify that clear_status_choices() and populate_status_choices() can be run for a single model if desired.
         """
         initial_statuses_count = Status.objects.count()
-        self.assertEqual(6, len(Status.objects.get_for_model(Location)))  # 5 default + custom "Irradiated" status
+        self.assertEqual(7, len(Status.objects.get_for_model(Location)))  # 5 default + 2 custom statuses
 
         clear_status_choices(models=["dcim.Location"], clear_all_model_statuses=False)
-        self.assertEqual(1, len(Status.objects.get_for_model(Location)))  # custom status remains
+        self.assertEqual(2, len(Status.objects.get_for_model(Location)))  # non-default custom statuses remain
 
         clear_status_choices(models=["dcim.Location"], clear_all_model_statuses=True)
         self.assertEqual(0, len(Status.objects.get_for_model(Location)))

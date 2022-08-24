@@ -76,6 +76,7 @@ from nautobot.extras.models import (
     RelationshipAssociation,
     SecretsGroup,
     Status,
+    Tag,
 )
 from nautobot.ipam.models import VLAN, IPAddress
 from nautobot.tenancy.models import Tenant
@@ -133,7 +134,10 @@ class RegionTestCase(ViewTestCases.OrganizationalObjectViewTestCase):
 
 class SiteTestCase(ViewTestCases.PrimaryObjectViewTestCase):
     model = Site
-    fixtures = ("status",)
+    fixtures = (
+        "status",
+        "tag",
+    )
 
     @classmethod
     def setUpTestData(cls):
@@ -202,8 +206,6 @@ class SiteTestCase(ViewTestCases.PrimaryObjectViewTestCase):
                 relationship=cls.relationships[0], source=regions[1], destination=site
             ).validated_save()
 
-        tags = cls.create_tags("Alpha", "Bravo", "Charlie")
-
         cls.form_data = {
             "name": "Site X",
             "slug": "site-x",
@@ -222,7 +224,7 @@ class SiteTestCase(ViewTestCases.PrimaryObjectViewTestCase):
             "contact_phone": "123-555-9999",
             "contact_email": "hank@stricklandpropane.com",
             "comments": "Test site",
-            "tags": [t.pk for t in tags],
+            "tags": [t.pk for t in Tag.objects.get_for_model(Site)],
             "cf_contact_slack": "@site-x-manager",
             "cr_region-related-sites__destination": regions[0].pk,
         }
@@ -400,7 +402,10 @@ class RackRoleTestCase(ViewTestCases.OrganizationalObjectViewTestCase):
 
 class RackReservationTestCase(ViewTestCases.PrimaryObjectViewTestCase):
     model = RackReservation
-    fixtures = ("status",)
+    fixtures = (
+        "status",
+        "tag",
+    )
 
     @classmethod
     def setUpTestData(cls):
@@ -418,15 +423,13 @@ class RackReservationTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         RackReservation.objects.create(rack=rack, user=user2, units=[4, 5, 6], description="Reservation 2")
         RackReservation.objects.create(rack=rack, user=user2, units=[7, 8, 9], description="Reservation 3")
 
-        tags = cls.create_tags("Alpha", "Bravo", "Charlie")
-
         cls.form_data = {
             "rack": rack.pk,
             "units": "10,11,12",
             "user": user3.pk,
             "tenant": None,
             "description": "Rack reservation",
-            "tags": [t.pk for t in tags],
+            "tags": [t.pk for t in Tag.objects.get_for_model(RackReservation)],
         }
 
         cls.csv_data = (
@@ -445,7 +448,10 @@ class RackReservationTestCase(ViewTestCases.PrimaryObjectViewTestCase):
 
 class RackTestCase(ViewTestCases.PrimaryObjectViewTestCase):
     model = Rack
-    fixtures = ("status",)
+    fixtures = (
+        "status",
+        "tag",
+    )
 
     @classmethod
     def setUpTestData(cls):
@@ -525,8 +531,6 @@ class RackTestCase(ViewTestCases.PrimaryObjectViewTestCase):
                 relationship=cls.relationships[0], source=rack, destination=cls.sites[1]
             ).validated_save()
 
-        tags = cls.create_tags("Alpha", "Bravo", "Charlie")
-
         cls.form_data = {
             "name": "Rack X",
             "facility_id": "Facility X",
@@ -545,7 +549,7 @@ class RackTestCase(ViewTestCases.PrimaryObjectViewTestCase):
             "outer_depth": 500,
             "outer_unit": RackDimensionUnitChoices.UNIT_MILLIMETER,
             "comments": "Some comments",
-            "tags": [t.pk for t in tags],
+            "tags": [t.pk for t in Tag.objects.get_for_model(Rack)],
             "cf_rack-colors": ["red", "green", "blue"],
             "cr_backup-sites__destination": [cls.sites[0].pk],
         }
@@ -681,6 +685,7 @@ class DeviceTypeTestCase(
     ViewTestCases.BulkDeleteObjectsViewTestCase,
 ):
     model = DeviceType
+    fixtures = ("tag",)
 
     @classmethod
     def setUpTestData(cls):
@@ -695,8 +700,6 @@ class DeviceTypeTestCase(
         DeviceType.objects.create(model="Device Type 3", slug="device-type-3", manufacturer=manufacturers[0])
         DeviceType.objects.create(model="Device Type 4", manufacturer=manufacturers[1])
 
-        tags = cls.create_tags("Alpha", "Bravo", "Charlie")
-
         cls.form_data = {
             "manufacturer": manufacturers[1].pk,
             "model": "Device Type X",
@@ -706,7 +709,7 @@ class DeviceTypeTestCase(
             "is_full_depth": True,
             "subdevice_role": "",  # CharField
             "comments": "Some comments",
-            "tags": [t.pk for t in tags],
+            "tags": [t.pk for t in Tag.objects.get_for_model(DeviceType)],
         }
 
         cls.bulk_edit_data = {
@@ -1287,7 +1290,10 @@ class PlatformTestCase(ViewTestCases.OrganizationalObjectViewTestCase):
 
 class DeviceTestCase(ViewTestCases.PrimaryObjectViewTestCase):
     model = Device
-    fixtures = ("status",)
+    fixtures = (
+        "status",
+        "tag",
+    )
 
     @classmethod
     def setUpTestData(cls):
@@ -1393,8 +1399,6 @@ class DeviceTestCase(ViewTestCases.PrimaryObjectViewTestCase):
                 relationship=cls.relationships[0], source=device, destination=ipaddress
             ).validated_save()
 
-        tags = cls.create_tags("Alpha", "Bravo", "Charlie")
-
         cls.form_data = {
             "device_type": devicetypes[1].pk,
             "device_role": deviceroles[1].pk,
@@ -1416,7 +1420,7 @@ class DeviceTestCase(ViewTestCases.PrimaryObjectViewTestCase):
             "vc_position": None,
             "vc_priority": None,
             "comments": "A new device",
-            "tags": [t.pk for t in tags],
+            "tags": [t.pk for t in Tag.objects.get_for_model(Device)],
             "local_context_data": None,
             "cf_crash-counter": -1,
             "cr_router-id": None,
@@ -1636,6 +1640,7 @@ class DeviceTestCase(ViewTestCases.PrimaryObjectViewTestCase):
 
 class ConsolePortTestCase(ViewTestCases.DeviceComponentViewTestCase):
     model = ConsolePort
+    fixtures = ("tag",)
 
     @classmethod
     def setUpTestData(cls):
@@ -1645,14 +1650,12 @@ class ConsolePortTestCase(ViewTestCases.DeviceComponentViewTestCase):
         ConsolePort.objects.create(device=device, name="Console Port 2")
         ConsolePort.objects.create(device=device, name="Console Port 3")
 
-        tags = cls.create_tags("Alpha", "Bravo", "Charlie")
-
         cls.form_data = {
             "device": device.pk,
             "name": "Console Port X",
             "type": ConsolePortTypeChoices.TYPE_RJ45,
             "description": "A console port",
-            "tags": sorted([t.pk for t in tags]),
+            "tags": sorted([t.pk for t in Tag.objects.get_for_model(ConsolePort)]),
         }
 
         cls.bulk_create_data = {
@@ -1662,7 +1665,7 @@ class ConsolePortTestCase(ViewTestCases.DeviceComponentViewTestCase):
             "label_pattern": "Serial[3-5]",
             "type": ConsolePortTypeChoices.TYPE_RJ45,
             "description": "A console port",
-            "tags": sorted([t.pk for t in tags]),
+            "tags": sorted([t.pk for t in Tag.objects.get_for_model(ConsolePort)]),
         }
 
         cls.bulk_edit_data = {
@@ -1680,6 +1683,7 @@ class ConsolePortTestCase(ViewTestCases.DeviceComponentViewTestCase):
 
 class ConsoleServerPortTestCase(ViewTestCases.DeviceComponentViewTestCase):
     model = ConsoleServerPort
+    fixtures = ("tag",)
 
     @classmethod
     def setUpTestData(cls):
@@ -1689,14 +1693,12 @@ class ConsoleServerPortTestCase(ViewTestCases.DeviceComponentViewTestCase):
         ConsoleServerPort.objects.create(device=device, name="Console Server Port 2")
         ConsoleServerPort.objects.create(device=device, name="Console Server Port 3")
 
-        tags = cls.create_tags("Alpha", "Bravo", "Charlie")
-
         cls.form_data = {
             "device": device.pk,
             "name": "Console Server Port X",
             "type": ConsolePortTypeChoices.TYPE_RJ45,
             "description": "A console server port",
-            "tags": [t.pk for t in tags],
+            "tags": [t.pk for t in Tag.objects.get_for_model(ConsoleServerPort)],
         }
 
         cls.bulk_create_data = {
@@ -1704,7 +1706,7 @@ class ConsoleServerPortTestCase(ViewTestCases.DeviceComponentViewTestCase):
             "name_pattern": "Console Server Port [4-6]",
             "type": ConsolePortTypeChoices.TYPE_RJ45,
             "description": "A console server port",
-            "tags": [t.pk for t in tags],
+            "tags": [t.pk for t in Tag.objects.get_for_model(ConsoleServerPort)],
         }
 
         cls.bulk_edit_data = {
@@ -1722,6 +1724,7 @@ class ConsoleServerPortTestCase(ViewTestCases.DeviceComponentViewTestCase):
 
 class PowerPortTestCase(ViewTestCases.DeviceComponentViewTestCase):
     model = PowerPort
+    fixtures = ("tag",)
 
     @classmethod
     def setUpTestData(cls):
@@ -1731,8 +1734,6 @@ class PowerPortTestCase(ViewTestCases.DeviceComponentViewTestCase):
         PowerPort.objects.create(device=device, name="Power Port 2")
         PowerPort.objects.create(device=device, name="Power Port 3")
 
-        tags = cls.create_tags("Alpha", "Bravo", "Charlie")
-
         cls.form_data = {
             "device": device.pk,
             "name": "Power Port X",
@@ -1740,7 +1741,7 @@ class PowerPortTestCase(ViewTestCases.DeviceComponentViewTestCase):
             "maximum_draw": 100,
             "allocated_draw": 50,
             "description": "A power port",
-            "tags": [t.pk for t in tags],
+            "tags": [t.pk for t in Tag.objects.get_for_model(PowerPort)],
         }
 
         cls.bulk_create_data = {
@@ -1750,7 +1751,7 @@ class PowerPortTestCase(ViewTestCases.DeviceComponentViewTestCase):
             "maximum_draw": 100,
             "allocated_draw": 50,
             "description": "A power port",
-            "tags": [t.pk for t in tags],
+            "tags": [t.pk for t in Tag.objects.get_for_model(PowerPort)],
         }
 
         cls.bulk_edit_data = {
@@ -1770,6 +1771,7 @@ class PowerPortTestCase(ViewTestCases.DeviceComponentViewTestCase):
 
 class PowerOutletTestCase(ViewTestCases.DeviceComponentViewTestCase):
     model = PowerOutlet
+    fixtures = ("tag",)
 
     @classmethod
     def setUpTestData(cls):
@@ -1784,8 +1786,6 @@ class PowerOutletTestCase(ViewTestCases.DeviceComponentViewTestCase):
         PowerOutlet.objects.create(device=device, name="Power Outlet 2", power_port=powerports[0])
         PowerOutlet.objects.create(device=device, name="Power Outlet 3", power_port=powerports[0])
 
-        tags = cls.create_tags("Alpha", "Bravo", "Charlie")
-
         cls.form_data = {
             "device": device.pk,
             "name": "Power Outlet X",
@@ -1793,7 +1793,7 @@ class PowerOutletTestCase(ViewTestCases.DeviceComponentViewTestCase):
             "power_port": powerports[1].pk,
             "feed_leg": PowerOutletFeedLegChoices.FEED_LEG_B,
             "description": "A power outlet",
-            "tags": [t.pk for t in tags],
+            "tags": [t.pk for t in Tag.objects.get_for_model(PowerOutlet)],
         }
 
         cls.bulk_create_data = {
@@ -1803,7 +1803,7 @@ class PowerOutletTestCase(ViewTestCases.DeviceComponentViewTestCase):
             "power_port": powerports[1].pk,
             "feed_leg": PowerOutletFeedLegChoices.FEED_LEG_B,
             "description": "A power outlet",
-            "tags": [t.pk for t in tags],
+            "tags": [t.pk for t in Tag.objects.get_for_model(PowerOutlet)],
         }
 
         cls.bulk_edit_data = {
@@ -1823,7 +1823,10 @@ class PowerOutletTestCase(ViewTestCases.DeviceComponentViewTestCase):
 
 class InterfaceTestCase(ViewTestCases.DeviceComponentViewTestCase):
     model = Interface
-    fixtures = ("status",)
+    fixtures = (
+        "status",
+        "tag",
+    )
 
     @classmethod
     def setUpTestData(cls):
@@ -1847,8 +1850,6 @@ class InterfaceTestCase(ViewTestCases.DeviceComponentViewTestCase):
             VLAN.objects.create(vid=103, name="VLAN103", site=device.site),
         )
 
-        tags = cls.create_tags("Alpha", "Bravo", "Charlie")
-
         cls.form_data = {
             "device": device.pk,
             "name": "Interface X",
@@ -1863,7 +1864,7 @@ class InterfaceTestCase(ViewTestCases.DeviceComponentViewTestCase):
             "mode": InterfaceModeChoices.MODE_TAGGED,
             "untagged_vlan": vlans[0].pk,
             "tagged_vlans": [v.pk for v in vlans[1:4]],
-            "tags": [t.pk for t in tags],
+            "tags": [t.pk for t in Tag.objects.get_for_model(Interface)],
         }
 
         cls.bulk_create_data = {
@@ -1880,7 +1881,7 @@ class InterfaceTestCase(ViewTestCases.DeviceComponentViewTestCase):
             "mode": InterfaceModeChoices.MODE_TAGGED,
             "untagged_vlan": vlans[0].pk,
             "tagged_vlans": [v.pk for v in vlans[1:4]],
-            "tags": [t.pk for t in tags],
+            "tags": [t.pk for t in Tag.objects.get_for_model(Interface)],
             "status": status_active.pk,
         }
 
@@ -1908,6 +1909,7 @@ class InterfaceTestCase(ViewTestCases.DeviceComponentViewTestCase):
 
 class FrontPortTestCase(ViewTestCases.DeviceComponentViewTestCase):
     model = FrontPort
+    fixtures = ("tag",)
 
     @classmethod
     def setUpTestData(cls):
@@ -1926,8 +1928,6 @@ class FrontPortTestCase(ViewTestCases.DeviceComponentViewTestCase):
         FrontPort.objects.create(device=device, name="Front Port 2", rear_port=rearports[1])
         FrontPort.objects.create(device=device, name="Front Port 3", rear_port=rearports[2])
 
-        tags = cls.create_tags("Alpha", "Bravo", "Charlie")
-
         cls.form_data = {
             "device": device.pk,
             "name": "Front Port X",
@@ -1935,7 +1935,7 @@ class FrontPortTestCase(ViewTestCases.DeviceComponentViewTestCase):
             "rear_port": rearports[3].pk,
             "rear_port_position": 1,
             "description": "New description",
-            "tags": [t.pk for t in tags],
+            "tags": [t.pk for t in Tag.objects.get_for_model(FrontPort)],
         }
 
         cls.bulk_create_data = {
@@ -1944,7 +1944,7 @@ class FrontPortTestCase(ViewTestCases.DeviceComponentViewTestCase):
             "type": PortTypeChoices.TYPE_8P8C,
             "rear_port_set": ["{}:1".format(rp.pk) for rp in rearports[3:6]],
             "description": "New description",
-            "tags": [t.pk for t in tags],
+            "tags": [t.pk for t in Tag.objects.get_for_model(FrontPort)],
         }
 
         cls.bulk_edit_data = {
@@ -1962,6 +1962,7 @@ class FrontPortTestCase(ViewTestCases.DeviceComponentViewTestCase):
 
 class RearPortTestCase(ViewTestCases.DeviceComponentViewTestCase):
     model = RearPort
+    fixtures = ("tag",)
 
     @classmethod
     def setUpTestData(cls):
@@ -1971,15 +1972,13 @@ class RearPortTestCase(ViewTestCases.DeviceComponentViewTestCase):
         RearPort.objects.create(device=device, name="Rear Port 2")
         RearPort.objects.create(device=device, name="Rear Port 3")
 
-        tags = cls.create_tags("Alpha", "Bravo", "Charlie")
-
         cls.form_data = {
             "device": device.pk,
             "name": "Rear Port X",
             "type": PortTypeChoices.TYPE_8P8C,
             "positions": 3,
             "description": "A rear port",
-            "tags": [t.pk for t in tags],
+            "tags": [t.pk for t in Tag.objects.get_for_model(RearPort)],
         }
 
         cls.bulk_create_data = {
@@ -1988,7 +1987,7 @@ class RearPortTestCase(ViewTestCases.DeviceComponentViewTestCase):
             "type": PortTypeChoices.TYPE_8P8C,
             "positions": 3,
             "description": "A rear port",
-            "tags": [t.pk for t in tags],
+            "tags": [t.pk for t in Tag.objects.get_for_model(RearPort)],
         }
 
         cls.bulk_edit_data = {
@@ -2006,6 +2005,7 @@ class RearPortTestCase(ViewTestCases.DeviceComponentViewTestCase):
 
 class DeviceBayTestCase(ViewTestCases.DeviceComponentViewTestCase):
     model = DeviceBay
+    fixtures = ("tag",)
 
     @classmethod
     def setUpTestData(cls):
@@ -2018,20 +2018,18 @@ class DeviceBayTestCase(ViewTestCases.DeviceComponentViewTestCase):
         DeviceBay.objects.create(device=device, name="Device Bay 2")
         DeviceBay.objects.create(device=device, name="Device Bay 3")
 
-        tags = cls.create_tags("Alpha", "Bravo", "Charlie")
-
         cls.form_data = {
             "device": device.pk,
             "name": "Device Bay X",
             "description": "A device bay",
-            "tags": [t.pk for t in tags],
+            "tags": [t.pk for t in Tag.objects.get_for_model(DeviceBay)],
         }
 
         cls.bulk_create_data = {
             "device": device.pk,
             "name_pattern": "Device Bay [4-6]",
             "description": "A device bay",
-            "tags": [t.pk for t in tags],
+            "tags": [t.pk for t in Tag.objects.get_for_model(DeviceBay)],
         }
 
         cls.bulk_edit_data = {
@@ -2048,6 +2046,7 @@ class DeviceBayTestCase(ViewTestCases.DeviceComponentViewTestCase):
 
 class InventoryItemTestCase(ViewTestCases.DeviceComponentViewTestCase):
     model = InventoryItem
+    fixtures = ("tag",)
 
     @classmethod
     def setUpTestData(cls):
@@ -2057,8 +2056,6 @@ class InventoryItemTestCase(ViewTestCases.DeviceComponentViewTestCase):
         InventoryItem.objects.create(device=device, name="Inventory Item 1")
         InventoryItem.objects.create(device=device, name="Inventory Item 2")
         InventoryItem.objects.create(device=device, name="Inventory Item 3")
-
-        tags = cls.create_tags("Alpha", "Bravo", "Charlie")
 
         cls.form_data = {
             "device": device.pk,
@@ -2070,7 +2067,7 @@ class InventoryItemTestCase(ViewTestCases.DeviceComponentViewTestCase):
             "serial": "VMWARE-XX XX XX XX XX XX XX XX-XX XX XX XX XX XX XX XX ABC",
             "asset_tag": "ABC123",
             "description": "An inventory item",
-            "tags": [t.pk for t in tags],
+            "tags": [t.pk for t in Tag.objects.get_for_model(InventoryItem)],
         }
 
         cls.bulk_create_data = {
@@ -2082,7 +2079,7 @@ class InventoryItemTestCase(ViewTestCases.DeviceComponentViewTestCase):
             "part_id": "123456",
             "serial": "VMWARE-XX XX XX XX XX XX XX XX-XX XX XX XX XX XX XX XX ABC",
             "description": "An inventory item",
-            "tags": [t.pk for t in tags],
+            "tags": [t.pk for t in Tag.objects.get_for_model(InventoryItem)],
         }
 
         cls.bulk_edit_data = {
@@ -2111,7 +2108,10 @@ class CableTestCase(
     ViewTestCases.BulkDeleteObjectsViewTestCase,
 ):
     model = Cable
-    fixtures = ("status",)
+    fixtures = (
+        "status",
+        "tag",
+    )
 
     @classmethod
     def setUpTestData(cls):
@@ -2227,8 +2227,6 @@ class CableTestCase(
             type=CableTypeChoices.TYPE_CAT6,
         )
 
-        tags = cls.create_tags("Alpha", "Bravo", "Charlie")
-
         statuses = Status.objects.get_for_model(Cable)
 
         # interface_ct = ContentType.objects.get_for_model(Interface)
@@ -2245,7 +2243,7 @@ class CableTestCase(
             "color": "c0c0c0",
             "length": 100,
             "length_unit": CableLengthUnitChoices.UNIT_FOOT,
-            "tags": [t.pk for t in tags],
+            "tags": [t.pk for t in Tag.objects.get_for_model(Cable)],
         }
 
         cls.csv_data = (
@@ -2690,7 +2688,7 @@ class VirtualChassisTestCase(ViewTestCases.PrimaryObjectViewTestCase):
 
 class PowerPanelTestCase(ViewTestCases.PrimaryObjectViewTestCase):
     model = PowerPanel
-    fixtures = ("status",)
+    fixtures = ("status", "tag")
 
     @classmethod
     def setUpTestData(cls):
@@ -2709,13 +2707,11 @@ class PowerPanelTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         PowerPanel.objects.create(site=sites[0], rack_group=rackgroups[0], name="Power Panel 2")
         PowerPanel.objects.create(site=sites[0], rack_group=rackgroups[0], name="Power Panel 3")
 
-        tags = cls.create_tags("Alpha", "Bravo", "Charlie")
-
         cls.form_data = {
             "site": sites[1].pk,
             "rack_group": rackgroups[1].pk,
             "name": "Power Panel X",
-            "tags": [t.pk for t in tags],
+            "tags": [t.pk for t in Tag.objects.get_for_model(PowerPanel)],
         }
 
         cls.csv_data = (
@@ -2733,7 +2729,7 @@ class PowerPanelTestCase(ViewTestCases.PrimaryObjectViewTestCase):
 
 class PowerFeedTestCase(ViewTestCases.PrimaryObjectViewTestCase):
     model = PowerFeed
-    fixtures = ("status",)
+    fixtures = ("status", "tag")
 
     @classmethod
     def setUpTestData(cls):
@@ -2763,8 +2759,6 @@ class PowerFeedTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         # Assign power feeds for the tests later
         cls.powerfeeds = (powerfeed_1, powerfeed_2)
 
-        tags = cls.create_tags("Alpha", "Bravo", "Charlie")
-
         statuses = Status.objects.get_for_model(PowerFeed)
         cls.statuses = statuses
         status_planned = statuses.get(slug="planned")
@@ -2781,7 +2775,7 @@ class PowerFeedTestCase(ViewTestCases.PrimaryObjectViewTestCase):
             "amperage": 100,
             "max_utilization": 50,
             "comments": "New comments",
-            "tags": [t.pk for t in tags],
+            "tags": [t.pk for t in Tag.objects.get_for_model(PowerFeed)],
         }
 
         cls.csv_data = (

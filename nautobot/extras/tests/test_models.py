@@ -107,6 +107,8 @@ class ConfigContextTest(TestCase):
     It also ensures the various config context querysets are consistent.
     """
 
+    fixtures = ("tag",)
+
     def setUp(self):
 
         manufacturer = Manufacturer.objects.create(name="Manufacturer 1", slug="manufacturer-1")
@@ -121,8 +123,8 @@ class ConfigContextTest(TestCase):
         self.platform = Platform.objects.create(name="Platform")
         self.tenantgroup = TenantGroup.objects.create(name="Tenant Group")
         self.tenant = Tenant.objects.create(name="Tenant", group=self.tenantgroup)
-        self.tag = Tag.objects.create(name="Tag", slug="tag")
-        self.tag2 = Tag.objects.create(name="Tag2", slug="tag2")
+        self.tag = Tag.objects.get_for_model(Device)[0]
+        self.tag2 = Tag.objects.get_for_model(Device)[1]
 
         self.device = Device.objects.create(
             name="Device 1",

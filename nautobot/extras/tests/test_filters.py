@@ -1424,32 +1424,24 @@ class StatusTestCase(FilterTestCases.NameSlugFilterTestCase):
 class TagTestCase(FilterTestCases.NameSlugFilterTestCase):
     queryset = Tag.objects.all()
     filterset = TagFilterSet
+    fixtures = ("tag",)
 
     @classmethod
     def setUpTestData(cls):
-        cls.tags = (
-            Tag.objects.create(name="Tag 1", slug="tag-1", color="ff0000"),
-            Tag.objects.create(name="Tag 2", slug="tag-2", color="00ff00"),
-            Tag.objects.create(name="Tag 3", slug="tag-3", color="0000ff"),
-        )
-        cls.site_content_type = ContentType.objects.get_for_model(Site)
-        cls.tags[0].content_types.add(cls.site_content_type)
-
-        for tag in cls.tags[1:]:
-            tag.content_types.add(ContentType.objects.get_for_model(Device))
+        cls.tags = Tag.objects.all()
 
     def test_color(self):
-        params = {"color": ["ff0000", "00ff00"]}
+        params = {"color": [self.tags[0].color, self.tags[1].color]}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
 
     def test_content_types(self):
-        params = {"content_types": [f"{self.site_content_type.app_label}.{self.site_content_type.model}"]}
+        params = {"content_types": ["dcim.site"]}
         filtered_data = self.filterset(params, self.queryset).qs
-        self.assertEqual(filtered_data.count(), 1)
-        self.assertEqual(filtered_data[0], self.tags[0])
+        self.assertEqual(filtered_data.count(), Tag.objects.get_for_model(Site).count())
+        self.assertEqual(filtered_data[0], Tag.objects.get_for_model(Site)[0])
 
     def test_search(self):
-        params = {"q": "tag-1"}
+        params = {"q": self.tags[0].slug}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 1)
         value = self.queryset.values_list("pk", flat=True)[0]
         params = {"q": value}

@@ -647,17 +647,16 @@ class SecretTestCase(
     ViewTestCases.BulkDeleteObjectsViewTestCase,
 ):
     model = Secret
+    fixtures = ("tag",)
 
     @classmethod
     def setUpTestData(cls):
-        tags = cls.create_tags("alpha", "beta", "gamma")
-
         secrets = (
             Secret(
                 name="View Test 1",
                 provider="environment-variable",
                 parameters={"variable": "VIEW_TEST_1"},
-                tags=[t.pk for t in tags],
+                tags=[t.pk for t in Tag.objects.get_for_model(Secret)],
             ),
             Secret(
                 name="View Test 2",
@@ -1977,18 +1976,10 @@ class StatusTestCase(
 
 class TagTestCase(ViewTestCases.OrganizationalObjectViewTestCase):
     model = Tag
+    fixtures = ("tag",)
 
     @classmethod
     def setUpTestData(cls):
-        tags = (
-            Tag.objects.create(name="Tag 1", slug="tag-1"),
-            Tag.objects.create(name="Tag 2", slug="tag-2"),
-            Tag.objects.create(name="Tag 3", slug="tag-3"),
-        )
-        for tag in tags:
-            tag.content_types.add(ContentType.objects.get_for_model(Site))
-            tag.content_types.add(ContentType.objects.get_for_model(Device))
-
         cls.form_data = {
             "name": "Tag X",
             "slug": "tag-x",
@@ -2050,7 +2041,7 @@ class TagTestCase(ViewTestCases.OrganizationalObjectViewTestCase):
         """Test removing a tag content_type that is been tagged to a model"""
         self.add_permissions("extras.change_tag")
 
-        tag_1 = Tag.objects.get(slug="tag-1")
+        tag_1 = Tag.objects.get_for_model(Site).first()
         site = Site.objects.create(name="site 1", slug="site-1")
         site.tags.add(tag_1)
 
