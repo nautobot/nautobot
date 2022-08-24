@@ -3,14 +3,13 @@ from django.conf.urls import include
 from django.urls import path
 from django.views.static import serve
 
-from nautobot.core.views import CustomGraphQLView, HomeView, StaticMediaFailureView, SearchView
+from nautobot.core.views import CustomGraphQLView, HomeView, StaticMediaFailureView, SearchView, LookupFormFieldsView
 from nautobot.extras.plugins.urls import (
     plugin_admin_patterns,
     plugin_patterns,
 )
 from nautobot.users.views import LoginView, LogoutView
 from .admin import admin_site
-
 
 urlpatterns = [
     # Base views
@@ -47,6 +46,8 @@ urlpatterns = [
     path(r"health/", include("health_check.urls")),
     # FileProxy attachments download/get URLs used in admin views only
     path("files/", include("db_file_storage.urls")),
+    #
+    path("lookups/<model>/<field>/", LookupFormFieldsView.as_view()),
 ]
 
 

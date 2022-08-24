@@ -36,6 +36,7 @@ from nautobot.utilities.forms import (
     TableConfigForm,
     restrict_form_fields,
 )
+from nautobot.utilities.forms.forms import DynamicFilterFormSet
 from nautobot.utilities.paginator import EnhancedPaginator, get_paginate_count
 from nautobot.utilities.permissions import get_permission_for_model
 from nautobot.utilities.templatetags.helpers import validated_viewname
@@ -300,6 +301,7 @@ class ObjectListView(ObjectPermissionRequiredMixin, View):
         RequestConfig(request, paginate).configure(table)
 
         filter_form = None
+        dynamic_filter_form = DynamicFilterFormSet(model=self.queryset.model)
         if self.filterset_form:
             if request.GET:
                 # Bind form to the values specified in request.GET
@@ -317,6 +319,7 @@ class ObjectListView(ObjectPermissionRequiredMixin, View):
             "action_buttons": valid_actions,
             "table_config_form": TableConfigForm(table=table),
             "filter_form": filter_form,
+            "dynamic_filter_form": dynamic_filter_form,
         }
         context.update(self.extra_context())
 

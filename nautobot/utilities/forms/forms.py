@@ -3,8 +3,10 @@ import re
 
 import yaml
 from django import forms
+from django.forms import formset_factory
 
 from nautobot.ipam.formfields import IPNetworkFormField
+from nautobot.utilities.utils import get_filterset_for_model
 
 __all__ = (
     "AddressFieldMixin",
@@ -13,6 +15,7 @@ __all__ = (
     "BulkRenameForm",
     "ConfirmationForm",
     "CSVModelForm",
+    "DynamicFilterForm",
     "ImportForm",
     "PrefixFieldMixin",
     "ReturnURLForm",
@@ -233,3 +236,69 @@ class TableConfigForm(BootstrapMixin, forms.Form):
     @property
     def table_name(self):
         return self.table.__class__.__name__
+
+
+class DynamicFilterForm(BootstrapMixin, forms.Form):
+    """
+    Form for configuring user's filter form preferences.
+    """
+
+    lookup_field = forms.ChoiceField(
+        choices=[],
+        required=False,
+        label="Field",
+    )
+    lookup_type = forms.ChoiceField(
+        choices=[],
+        required=False,
+    )
+    value = forms.CharField(required=False)
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+        # Configure fields: Add css class and set choices for lookup_field
+        lookup_field_css = self.fields["lookup_field"].widget.attrs.get("class")
+        self.fields["lookup_field"].widget.attrs["class"] = " ".join(
+            [lookup_field_css, "nautobot-select2-static lookup_field-select"]
+        )
+        self.fields["lookup_field"].choices = [(None, None)] + self.get_lookup_expr_choices()
+
+        self.fields["lookup_type"].widget.attrs["class"] = "nautobot-select2-static lookup_type-select"
+
+        self.fields["value"].widget.attrs["class"] = "value-input form-control"
+
+    @staticmethod
+    def capitalize(field):
+        data = field.split("_")
+        first_word = data[0][0].upper() + data[0][1:]
+        return " ".join([first_word, *data[1:]])
+
+    def get_lookup_expr_choices(self):
+        filterset = get_filterset_for_model(self.model).get_filters()
+        filterset_without_lookup = []
+
+        for name, field in filterset.items():
+            if "__" not in name:
+                filterset_without_lookup.append((name, field.label or self.capitalize(field.field_name)))
+
+        return filterset_without_lookup
+
+
+def dynamic_formset_factory(model, **kwargs):
+    modelform = DynamicFilterForm
+    modelform.model = model
+
+    params = {
+        "can_delete_extra": False,
+        "can_delete": False,
+        "extra": 3,
+    }
+
+    kwargs.update(params)
+    form = formset_factory(form=DynamicFilterForm, **kwargs)
+
+    return form
+
+
+DynamicFilterFormSet = dynamic_formset_factory

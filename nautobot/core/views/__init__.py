@@ -4,6 +4,7 @@ import sys
 
 from django.conf import settings
 from django.contrib.auth.mixins import AccessMixin
+from django.contrib.contenttypes.models import ContentType
 from django.http import HttpResponseServerError, JsonResponse
 from django.shortcuts import render
 from django.template import loader, RequestContext, Template
@@ -22,6 +23,7 @@ from nautobot.extras.models import GraphQLQuery
 from nautobot.extras.registry import registry
 from nautobot.extras.forms import GraphQLQueryForm
 from nautobot.utilities.config import get_settings_or_config
+from nautobot.utilities.utils import get_filterset_for_model
 
 
 class HomeView(AccessMixin, TemplateView):
@@ -205,3 +207,27 @@ class CustomGraphQLView(GraphQLView):
         data["saved_graphiql_queries"] = GraphQLQuery.objects.all()
         data["form"] = GraphQLQueryForm
         return render(request, self.graphiql_template, data)
+
+
+class LookupFormFieldsView(View):
+    queryset = None
+
+    @staticmethod
+    def get_field_lookup_exper(filterset, field_name):
+        lookup_expr_2 = [
+            {"name": name, "label": field.lookup_expr + " (" + name.replace(f"{field_name}__", "") + ")"}
+            for name, field in filterset.items()
+            if field.field_name == field_name
+        ]
+        return lookup_expr_2
+
+    def get(self, request, model, field):
+        app_label, model_name = model.split("_")
+        try:
+            contenttype = ContentType.objects.get(app_label=app_label, model=model_name)
+            filterset = get_filterset_for_model(contenttype.model_class())
+            if filterset is not None:
+                lookup_exper = self.get_field_lookup_exper(filterset.get_filters(), field)
+        except ContentType.DoesNotExist:
+            lookup_exper = []
+        return JsonResponse(lookup_exper, safe=False)

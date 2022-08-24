@@ -594,6 +594,14 @@ def table_config_form(table, table_name=None):
     }
 
 
+@register.inclusion_tag("utilities/templatetags/filter_form.html")
+def dynamic_filter_form_modal(form, form_name="DynamicFilterForm"):
+    return {
+        "form": form,
+        "form_name": form_name,
+    }
+
+
 @register.inclusion_tag("utilities/templatetags/modal_form_as_dialog.html")
 def modal_form_as_dialog(form, editing=False, form_name=None, obj=None, obj_type=None):
     """Generate a form in a modal view.

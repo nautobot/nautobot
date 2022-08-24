@@ -9,6 +9,7 @@
     {% if request.user.is_authenticated and table_config_form %}
         <button type="button" class="btn btn-default" data-toggle="modal" data-target="#ObjectTable_config" title="Configure table"><i class="mdi mdi-cog"></i> Configure</button>
     {% endif %}
+    <button type="button" class="btn btn-default" data-toggle="modal" data-target="#DynamicFilterForm_modal" title="Configure filter form"><i class="mdi mdi-form-dropdown"></i> Filter Form</button>
     {% if permissions.add and 'add' in action_buttons %}
         {% add_button content_type.model_class|validated_viewname:"add" %}
     {% endif %}
@@ -20,6 +21,15 @@
     {% endif %}
 </div>
 <h1>{% block title %}{{ content_type.model_class|meta:"verbose_name_plural"|bettertitle }}{% endblock %}</h1>
+<div class="filters-applied">
+    Filters:
+    <button class="btn btn-sm"><b>Status:</b> Active, Planned <b class="text-danger"><i class="mdi mdi-close"></i></b></button>
+    <button class="btn btn-sm"><b>Region:</b> Region 1 <b class="text-danger"><i class="mdi mdi-close"></i></b></button>
+    <button class="btn btn-sm"><b>Tags:</b> Tag 1, Tag 2, Tag 3 <b class="text-danger"><i class="mdi mdi-close"></i></b></button>
+    <button class="btn btn-sm"><b>Contact Email:</b> test@gmail.com <b class="text-danger"><i class="mdi mdi-close"></i></b></button>
+
+</div>
+<hr>
 <div class="row">
     <div class="col-md-12">
         {% if filter_form %}
@@ -83,8 +93,10 @@
     </div>
 </div>
 {% table_config_form table table_name="ObjectTable" %}
+{% dynamic_filter_form_modal dynamic_filter_form %}
 {% endblock %}
 
 {% block javascript %}
 <script src="{% static 'js/tableconfig.js' %}"></script>
+<script src="{% static 'jquery/jquery.formset.js' %}"></script>
 {% endblock %}
