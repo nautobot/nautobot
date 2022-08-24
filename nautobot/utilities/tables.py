@@ -399,12 +399,12 @@ class RelationshipColumn(tables.Column):
     Display relationship association instances in the appropriate format.
     """
 
-    def __init__(self, relationship, side, *args, **kwargs):
+    def __init__(self, relationship, side, orderable=False, *args, **kwargs):
         self.relationship = relationship
         self.side = side
         kwargs["verbose_name"] = relationship.name
         kwargs["accessor"] = Accessor("associations")
-        super().__init__(*args, **kwargs)
+        super().__init__(orderable, *args, **kwargs)
 
     def render(self, record, value):
         # Filter the relationship associations by the relationship instance.
