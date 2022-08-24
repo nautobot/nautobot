@@ -865,10 +865,16 @@ class RelationshipTableTest(RelationshipBaseTest):
         site_table = SiteTable(queryset)
 
         relationship_column_expected = {
-            "site-vlan": f'<a href="{self.vlans[0].get_absolute_url()}">{self.vlans[0].__str__()}</a><br><a href="{self.vlans[1].get_absolute_url()}">{self.vlans[1].__str__()}</a><br>',
-            "primary-rack-site": f'<a href="{self.racks[0].get_absolute_url()}">{self.racks[0].__str__()}</a><br>',
-            "alphabetical-sites": f'<a href="{self.sites[0].get_absolute_url()}">{self.sites[0].__str__()}</a><br>',
-            "related-sites": f'<a href="{self.sites[1].get_absolute_url()}">{self.sites[1].__str__()}</a><br><a href="{self.sites[3].get_absolute_url()}">{self.sites[3].__str__()}</a><br>',
+            "site-vlan": [
+                f'<a href="{self.vlans[0].get_absolute_url()}">{self.vlans[0].__str__()}</a><br>',
+                f'<a href="{self.vlans[1].get_absolute_url()}">{self.vlans[1].__str__()}</a><br>',
+            ],
+            "primary-rack-site": [f'<a href="{self.racks[0].get_absolute_url()}">{self.racks[0].__str__()}</a><br>'],
+            "alphabetical-sites": [f'<a href="{self.sites[0].get_absolute_url()}">{self.sites[0].__str__()}</a><br>'],
+            "related-sites": [
+                f'<a href="{self.sites[1].get_absolute_url()}">{self.sites[1].__str__()}</a><br>',
+                f'<a href="{self.sites[3].get_absolute_url()}">{self.sites[3].__str__()}</a><br>',
+            ],
         }
         bound_row = site_table.rows[0]
 
@@ -879,4 +885,7 @@ class RelationshipTableTest(RelationshipBaseTest):
             self.assertIsInstance(relationship_column, RelationshipColumn)
 
             rendered_value = bound_row.get_cell(internal_col_name)
-            self.assertEqual(rendered_value, col_expected_value)
+            # Test if the expected value is in the rendered value.
+            # Exact match is difficult because the order of rendering is unpredictable.
+            for value in col_expected_value:
+                self.assertIn(value, rendered_value)
