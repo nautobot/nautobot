@@ -42,25 +42,23 @@ class BaseTable(tables.Table):
             self.base_columns[f"cpf_{cpf.slug}"] = ComputedFieldColumn(cpf)
 
         for relationship in Relationship.objects.filter(Q(source_type=obj_type)):
-            # Specify source and destination columns if non-symmetric m2m relationship has the same source_type and destination_type
-            if relationship.source_type == relationship.destination_type and not relationship.symmetric:
+            if not relationship.symmetric:
                 self.base_columns[f"cr_{relationship.slug}_src"] = RelationshipColumn(
                     relationship, side=RelationshipSideChoices.SIDE_SOURCE
                 )
             else:
-                self.base_columns[f"cr_{relationship.slug}"] = RelationshipColumn(
-                    relationship, side=RelationshipSideChoices.SIDE_SOURCE
+                self.base_columns[f"cr_{relationship.slug}_peer"] = RelationshipColumn(
+                    relationship, side=RelationshipSideChoices.SIDE_PEER
                 )
 
         for relationship in Relationship.objects.filter(Q(destination_type=obj_type)):
-            # Specify source and destination columns if non-symmetric m2m relationship has the same source_type and destination_type
-            if relationship.source_type == relationship.destination_type and not relationship.symmetric:
+            if not relationship.symmetric:
                 self.base_columns[f"cr_{relationship.slug}_dst"] = RelationshipColumn(
                     relationship, side=RelationshipSideChoices.SIDE_DESTINATION
                 )
             else:
-                self.base_columns[f"cr_{relationship.slug}"] = RelationshipColumn(
-                    relationship, side=RelationshipSideChoices.SIDE_DESTINATION
+                self.base_columns[f"cr_{relationship.slug}_peer"] = RelationshipColumn(
+                    relationship, side=RelationshipSideChoices.SIDE_PEER
                 )
 
         # Init table
@@ -413,11 +411,8 @@ class RelationshipColumn(tables.Column):
 
     def __init__(self, relationship, side, *args, **kwargs):
         self.relationship = relationship
-        if relationship.symmetric:
-            self.side = RelationshipSideChoices.SIDE_PEER
-        else:
-            self.side = RelationshipSideChoices.OPPOSITE[side]
-        kwargs["verbose_name"] = relationship.name + " " + self.side
+        self.side = RelationshipSideChoices.OPPOSITE[side]
+        kwargs["verbose_name"] = relationship.get_label(side)
         kwargs["accessor"] = Accessor("associations")
         super().__init__(orderable=False, *args, **kwargs)
 
@@ -448,15 +443,8 @@ class RelationshipColumn(tables.Column):
         else:
             # Handle Relationships on the many side.
             if self.relationship.has_many(self.side):
-                # symmetric many to many
-                if self.relationship.symmetric:
-                    meta = self.relationship.source_type.model_class()._meta
-                # non-symmetric many to many or one to many
-                else:
-                    if self.side == RelationshipSideChoices.SIDE_SOURCE:
-                        meta = self.relationship.source_type.model_class()._meta
-                    else:
-                        meta = self.relationship.destination_type.model_class()._meta
+                v = value[0]
+                meta = type(v.get_peer(record))._meta
                 name = meta.verbose_name_plural if len(value) > 1 else meta.verbose_name
                 template += format_html(
                     '<a href="{}?relationship={}&{}_id={}">{} {}</a>',
@@ -469,19 +457,8 @@ class RelationshipColumn(tables.Column):
                 )
             # Handle Relationships on the one side.
             else:
-                for v in value:
-                    # symmetric one to one
-                    if self.relationship.symmetric:
-                        # Always get the opposite end of the relationship association with respect to record.
-                        peer = v.get_peer(record)
-                        template += format_html('<a href="{}">{}</a>', peer.get_absolute_url(), peer)
-                    else:
-                        # non-symmetric one to one, or one to many
-                        if self.side == RelationshipSideChoices.SIDE_SOURCE:
-                            template += format_html('<a href="{}">{}</a>', v.source.get_absolute_url(), v.source)
-                        else:
-                            template += format_html(
-                                '<a href="{}">{}</a>', v.destination.get_absolute_url(), v.destination
-                            )
+                v = value[0]
+                peer = v.get_peer(record)
+                template += format_html('<a href="{}">{}</a>', peer.get_absolute_url(), peer)
 
         return mark_safe(template)

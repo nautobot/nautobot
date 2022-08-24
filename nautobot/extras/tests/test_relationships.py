@@ -894,7 +894,7 @@ class RelationshipTableTest(RelationshipBaseTest):
         site_table = SiteTable(queryset)
 
         relationship_column_expected = {
-            "site-vlan": [
+            "site-vlan_src": [
                 format_html(
                     '<a href="{}?relationship={}&{}_id={}">{} {}</a>',
                     reverse("extras:relationshipassociation_list"),
@@ -905,9 +905,9 @@ class RelationshipTableTest(RelationshipBaseTest):
                     "VLANs",
                 )
             ],
-            "primary-rack-site": [f'<a href="{self.racks[0].get_absolute_url()}">{self.racks[0].__str__()}</a>'],
+            "primary-rack-site_dst": [f'<a href="{self.racks[0].get_absolute_url()}">{self.racks[0].__str__()}</a>'],
             "alphabetical-sites_src": [f'<a href="{self.sites[1].get_absolute_url()}">{self.sites[1].__str__()}</a>'],
-            "related-sites": [
+            "related-sites_peer": [
                 format_html(
                     '<a href="{}?relationship={}&{}_id={}">{} {}</a>',
                     reverse("extras:relationshipassociation_list"),
