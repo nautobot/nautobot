@@ -34,7 +34,7 @@ class CableTerminationsColumn(tables.Column):
         terminations = set()
         for cable_endpoint in manager.all():
             if cable_endpoint.cable_side == self.cable_side:
-                if termination == getattr(cable_endpoint, self.attr, None):
+                if termination := getattr(cable_endpoint, self.attr, None):
                     terminations.add(termination)
 
         return terminations
