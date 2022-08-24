@@ -4,6 +4,7 @@ import uuid
 from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ValidationError
 from django.urls import reverse
+from django.utils.html import format_html
 
 from nautobot.dcim.models import Site, Rack
 from nautobot.dcim.tables import SiteTable
@@ -862,18 +863,82 @@ class RelationshipTableTest(RelationshipBaseTest):
             destination_type=self.site_ct,
         )
         cr_6.validated_save()
+
+        # Test non-symmetric many to many with same source_type and same destination_type
+        self.m2m_same_type = Relationship(
+            name="Site to Site",
+            slug="site-to-site",
+            source_type=self.site_ct,
+            destination_type=self.site_ct,
+            type=RelationshipTypeChoices.TYPE_MANY_TO_MANY,
+        )
+        self.m2m_same_type.validated_save()
+        cr_7 = RelationshipAssociation(
+            relationship=self.m2m_same_type,
+            source_id=self.sites[0].id,
+            source_type=self.site_ct,
+            destination_id=self.sites[2].id,
+            destination_type=self.site_ct,
+        )
+        cr_7.validated_save()
+
+        cr_8 = RelationshipAssociation(
+            relationship=self.m2m_same_type,
+            source_id=self.sites[3].id,
+            source_type=self.site_ct,
+            destination_id=self.sites[0].id,
+            destination_type=self.site_ct,
+        )
+        cr_8.validated_save()
+
         site_table = SiteTable(queryset)
 
         relationship_column_expected = {
             "site-vlan": [
-                f'<a href="{self.vlans[0].get_absolute_url()}">{self.vlans[0].__str__()}</a><br>',
-                f'<a href="{self.vlans[1].get_absolute_url()}">{self.vlans[1].__str__()}</a><br>',
+                format_html(
+                    '<a href="{}?relationship={}&{}_id={}">{} {}</a>',
+                    reverse("extras:relationshipassociation_list"),
+                    cr_1.relationship.slug,
+                    "source",
+                    self.sites[0].id,
+                    2,
+                    "VLANs",
+                )
             ],
-            "primary-rack-site": [f'<a href="{self.racks[0].get_absolute_url()}">{self.racks[0].__str__()}</a><br>'],
-            "alphabetical-sites": [f'<a href="{self.sites[0].get_absolute_url()}">{self.sites[0].__str__()}</a><br>'],
+            "primary-rack-site": [f'<a href="{self.racks[0].get_absolute_url()}">{self.racks[0].__str__()}</a>'],
+            "alphabetical-sites_src": [f'<a href="{self.sites[1].get_absolute_url()}">{self.sites[1].__str__()}</a>'],
             "related-sites": [
-                f'<a href="{self.sites[1].get_absolute_url()}">{self.sites[1].__str__()}</a><br>',
-                f'<a href="{self.sites[3].get_absolute_url()}">{self.sites[3].__str__()}</a><br>',
+                format_html(
+                    '<a href="{}?relationship={}&{}_id={}">{} {}</a>',
+                    reverse("extras:relationshipassociation_list"),
+                    cr_5.relationship.slug,
+                    "peer",
+                    self.sites[0].id,
+                    2,
+                    "sites",
+                )
+            ],
+            "site-to-site_src": [
+                format_html(
+                    '<a href="{}?relationship={}&{}_id={}">{} {}</a>',
+                    reverse("extras:relationshipassociation_list"),
+                    cr_7.relationship.slug,
+                    "source",
+                    self.sites[0].id,
+                    1,
+                    "site",
+                )
+            ],
+            "site-to-site_dst": [
+                format_html(
+                    '<a href="{}?relationship={}&{}_id={}">{} {}</a>',
+                    reverse("extras:relationshipassociation_list"),
+                    cr_8.relationship.slug,
+                    "destination",
+                    self.sites[0].id,
+                    1,
+                    "site",
+                )
             ],
         }
         bound_row = site_table.rows[0]
