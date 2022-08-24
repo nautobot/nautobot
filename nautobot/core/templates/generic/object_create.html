@@ -1,0 +1,63 @@
+{% extends 'base.html' %}
+{% load form_helpers %}
+{% load helpers %}
+
+{% block content %}
+    <form action="" method="post" enctype="multipart/form-data" class="form form-horizontal">
+        {% csrf_token %}
+        {% for field in form.hidden_fields %}
+            {{ field }}
+        {% endfor %}
+        <div class="row">
+            <div class="col-md-6 col-md-offset-3">
+                <h3>
+                    {% if obj %}
+                        {% with obj|get_docs_url as docs_url %}
+                            {% if docs_url %}
+                                <div class="pull-right">
+                                    <a href="{{ docs_url }}" target="_blank" class="btn btn-link btn-xs" title="Help">
+                                        <i class="mdi mdi-help-circle"></i>
+                                    </a>
+                                </div>
+                            {% endif %}
+                        {% endwith %}
+                    {% endif %}
+                    {% block title %}{% if editing %}Editing {{ obj_type }} {{ obj }}{% else %}Add a new {{ obj_type }}{% endif %}{% endblock %}
+                </h3>
+                {% block tabs %}{% endblock %}
+                {% if form.non_field_errors %}
+                    <div class="panel panel-danger">
+                        <div class="panel-heading"><strong>Errors</strong></div>
+                        <div class="panel-body">
+                            {{ form.non_field_errors }}
+                        </div>
+                    </div>
+                {% endif %}
+                {% block form %}
+                    <div class="panel panel-default">
+                        <div class="panel-heading"><strong>{{ obj_type|capfirst }}</strong></div>
+                        <div class="panel-body">
+                            {% block form_fields %}
+                                {% render_form form %}
+                            {% endblock %}
+                        </div>
+                    </div>
+                    {% include 'inc/extras_features_edit_form_fields.html' %}
+                {% endblock %}
+            </div>
+        </div>
+        <div class="row">
+            <div class="col-md-6 col-md-offset-3 text-right">
+                {% block buttons %}
+                    {% if editing %}
+                        <button type="submit" name="_update" class="btn btn-primary">Update</button>
+                    {% else %}
+                        <button type="submit" name="_create" class="btn btn-primary">Create</button>
+                        <button type="submit" name="_addanother" class="btn btn-primary">Create and Add Another</button>
+                    {% endif %}
+                    <a href="{{ return_url }}" class="btn btn-default">Cancel</a>
+                {% endblock %}
+            </div>
+        </div>
+    </form>
+{% endblock %}

@@ -160,7 +160,7 @@ Additional settings may be available and are not covered here. Please see the of
 
 Default: `undefined`
 
-If you are using [Redis Sentinel](https://redis.io/topics/sentinel) for high-availability purposes, you must replace the [`CACHEOPS_REDIS`](#cacheops_redis) setting with [`CACHEOPS_SENTINEL`](#cacheops_sentinel).  For more details on configuring Nautobot to use Redis Sentinel see [Using Redis Sentinel](../../additional-features/caching/#using-redis-sentinel). For more details on how to configure Cacheops specifically to use Redis Sentinel see the official guide on [Cacheops
+If you are using [Redis Sentinel](https://redis.io/topics/sentinel) for high-availability purposes, you must replace the [`CACHEOPS_REDIS`](#cacheops_redis) setting with [`CACHEOPS_SENTINEL`](#cacheops_sentinel).  For more details on configuring Nautobot to use Redis Sentinel see [Using Redis Sentinel](../additional-features/caching.md#using-redis-sentinel). For more details on how to configure Cacheops specifically to use Redis Sentinel see the official guide on [Cacheops
 setup](https://github.com/Suor/django-cacheops#setup).
 
 !!! warning

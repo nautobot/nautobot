@@ -100,6 +100,7 @@ class BaseJob:
         - approval_required (bool)
         - soft_time_limit (int)
         - time_limit (int)
+        - has_sensitive_variables (bool)
         """
 
         pass
@@ -1148,6 +1149,9 @@ def run_job(data, request, job_result_pk, commit=True, *args, **kwargs):
 
     job_result.set_status(JobResultStatusChoices.STATUS_RUNNING)
     job_result.save()
+
+    # Add the current request as a property of the job
+    job.request = request
 
     def _run_job():
         """

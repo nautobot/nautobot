@@ -129,6 +129,6 @@ def web_request_context(user, context_detail="", change_id=None):
 
     request = RequestFactory().request(SERVER_NAME="web_request_context")
     request.user = user
-    change_context = ORMChangeContext(user=request.user, context_detail=context_detail, change_id=change_id)
+    change_context = ORMChangeContext(request=request, context_detail=context_detail, change_id=change_id)
     with change_logging(change_context):
         yield request

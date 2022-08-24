@@ -1,0 +1,77 @@
+{% extends 'generic/object_retrieve.html' %}
+{% load helpers %}
+
+{% block content_left_page %}
+        <div class="panel panel-default">
+            <div class="panel-heading">
+                <strong>Provider</strong>
+            </div>
+            <table class="table table-hover panel-body attr-table">
+                <tr>
+                    <td>ASN</td>
+                    <td>{{ object.asn|placeholder }}</td>
+                </tr>
+                <tr>
+                    <td>Account</td>
+                    <td>{{ object.account|placeholder }}</td>
+                </tr>
+                <tr>
+                    <td>Customer Portal</td>
+                    <td>
+                        {% if object.portal_url %}
+                            <a href="{{ object.portal_url }}">{{ object.portal_url }}</a>
+                        {% else %}
+                            <span class="text-muted">&mdash;</span>
+                        {% endif %}
+                    </td>
+                </tr>
+                <tr>
+                    <td>NOC Contact</td>
+                    <td class="rendered-markdown">{{ object.noc_contact|render_markdown|placeholder }}</td>
+                </tr>
+                <tr>
+                    <td>Admin Contact</td>
+                    <td class="rendered-markdown">{{ object.admin_contact|render_markdown|placeholder }}</td>
+                </tr>
+                <tr>
+                    <td>Circuits</td>
+                    <td>
+                        <a href="{% url 'circuits:circuit_list' %}?provider={{ object.slug }}">{{ circuits_table.rows|length }}</a>
+                    </td>
+                </tr>
+            </table>
+        </div>
+{% endblock content_left_page %}
+
+{% block content_right_page %}
+        <div class="panel panel-default">
+            <div class="panel-heading">
+                <strong>Comments</strong>
+            </div>
+            <div class="panel-body rendered-markdown">
+                {% if object.comments %}
+                    {{ object.comments|render_markdown }}
+                {% else %}
+                    <span class="text-muted">None</span>
+                {% endif %}
+            </div>
+        </div>
+{% endblock content_right_page %}
+
+{% block content_full_width_page %}
+        <div class="panel panel-default">
+            <div class="panel-heading">
+                <strong>Circuits</strong>
+            </div>
+            {% include 'inc/table.html' with table=circuits_table %}
+            {% if perms.circuits.add_circuit %}
+                <div class="panel-footer text-right noprint">
+                    <a href="{% url 'circuits:circuit_add' %}?provider={{ object.pk }}" class="btn btn-xs btn-primary">
+                        <span class="mdi mdi-plus-thick" aria-hidden="true"></span> Add circuit
+                    </a>
+                </div>
+            {% endif %}
+        </div>
+        {% include 'inc/paginator.html' with paginator=circuits_table.paginator page=circuits_table.page %}
+        <div class="row"></div>
+{% endblock content_full_width_page %}

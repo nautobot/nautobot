@@ -347,7 +347,7 @@ class Job(PrimaryModel):
 
         if self.has_sensitive_variables is True and self.approval_required is True:
             raise ValidationError(
-                {"approval_required": "A job with sensitive variables cannot be marked as requiring approval"}
+                {"approval_required": "A job that may have sensitive variables cannot be marked as requiring approval"}
             )
 
     def get_absolute_url(self):
@@ -669,7 +669,6 @@ class JobResult(BaseModel, CustomFieldModel):
         job_result_kwargs = {key: value for key, value in kwargs.items() if key != "request"}
         job_result = cls.objects.create(
             name=name,
-            job_kwargs=job_result_kwargs,
             obj_type=obj_type,
             user=user,
             job_id=uuid.uuid4(),
@@ -689,6 +688,8 @@ class JobResult(BaseModel, CustomFieldModel):
                     celery_kwargs["soft_time_limit"] = job_model.soft_time_limit
                 if job_model.time_limit > 0:
                     celery_kwargs["time_limit"] = job_model.time_limit
+                if not job_model.has_sensitive_variables:
+                    job_result.job_kwargs = job_result_kwargs
                 job_result.job_model = job_model
                 job_result.save()
             except Job.DoesNotExist:
@@ -702,6 +703,9 @@ class JobResult(BaseModel, CustomFieldModel):
                         celery_kwargs["soft_time_limit"] = job_class.Meta.soft_time_limit
                     if hasattr(job_class.Meta, "time_limit"):
                         celery_kwargs["time_limit"] = job_class.Meta.time_limit
+                    if not job_class.has_sensitive_variables:
+                        job_result.job_kwargs = job_result_kwargs
+                        job_result.save()
                 else:
                     logger.error("Neither a Job database record nor a Job source class were found for %s", name)
 

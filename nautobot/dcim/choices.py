@@ -22,6 +22,7 @@ class SiteStatusChoices(ChoiceSet):
         (STATUS_RETIRED, "Retired"),
     )
 
+    # 2.0 TODO: No longer used (see extras.management.COLOR_MAP instead), remove in 2.0
     CSS_CLASSES = {
         STATUS_PLANNED: "info",
         STATUS_STAGING: "primary",
@@ -51,14 +52,6 @@ class LocationStatusChoices(ChoiceSet):
         (STATUS_DECOMMISSIONING, "Decommissioning"),
         (STATUS_RETIRED, "Retired"),
     )
-
-    CSS_CLASSES = {
-        STATUS_PLANNED: "info",
-        STATUS_STAGING: "primary",
-        STATUS_ACTIVE: "success",
-        STATUS_DECOMMISSIONING: "warning",
-        STATUS_RETIRED: "danger",
-    }
 
 
 #
@@ -114,6 +107,7 @@ class RackStatusChoices(ChoiceSet):
         (STATUS_DEPRECATED, "Deprecated"),
     )
 
+    # 2.0 TODO: No longer used (see extras.management.COLOR_MAP instead), remove in 2.0
     CSS_CLASSES = {
         STATUS_RESERVED: "warning",
         STATUS_AVAILABLE: "success",
@@ -194,6 +188,7 @@ class DeviceStatusChoices(ChoiceSet):
         (STATUS_DECOMMISSIONING, "Decommissioning"),
     )
 
+    # 2.0 TODO: No longer used (see extras.management.COLOR_MAP instead), remove in 2.0
     CSS_CLASSES = {
         STATUS_OFFLINE: "warning",
         STATUS_ACTIVE: "success",
@@ -957,14 +952,6 @@ class InterfaceStatusChoices(ChoiceSet):
         (STATUS_MAINTENANCE, "Maintenance"),
     )
 
-    CSS_CLASSES = {
-        STATUS_PLANNED: "info",
-        STATUS_FAILED: "danger",
-        STATUS_ACTIVE: "success",
-        STATUS_DECOMMISSIONING: "warning",
-        STATUS_MAINTENANCE: "default",
-    }
-
 
 #
 # FrontPorts/RearPorts
@@ -1120,6 +1107,7 @@ class CableStatusChoices(ChoiceSet):
         (STATUS_DECOMMISSIONING, "Decommissioning"),
     )
 
+    # 2.0 TODO: No longer used (see extras.management.COLOR_MAP instead), remove in 2.0
     CSS_CLASSES = {
         STATUS_CONNECTED: "success",
         STATUS_PLANNED: "info",
@@ -1161,6 +1149,7 @@ class PowerFeedStatusChoices(ChoiceSet):
         (STATUS_FAILED, "Failed"),
     )
 
+    # 2.0 TODO: No longer used (see extras.management.COLOR_MAP instead), remove in 2.0
     CSS_CLASSES = {
         STATUS_OFFLINE: "warning",
         STATUS_ACTIVE: "success",
