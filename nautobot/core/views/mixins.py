@@ -93,12 +93,12 @@ class NautobotViewSetMixin(GenericViewSet, AccessMixin, GetReturnURLMixin, FormV
         """
         queryset = self.get_queryset()
         try:
-            actions = [PERMISSIONS_ACTION_MAP[self.action]]
+            permissions = [PERMISSIONS_ACTION_MAP[self.action]]
         except KeyError:
-            self.logger.error(
+            messages.error(
                 "This action is not permitted. Please use the buttons at the bottom of the table for Bulk Delete and Bulk Update"
             )
-        return self.get_permissions_for_model(queryset.model, actions)
+        return self.get_permissions_for_model(queryset.model, permissions)
 
     def has_permission(self):
         """
