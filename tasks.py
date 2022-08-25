@@ -487,13 +487,6 @@ def markdownlint(context):
 
 
 @task
-def pylint(context):
-    """Lint Python code."""
-    command = "nautobot-server pylint"
-    run_command(context, command)
-
-
-@task
 def check_migrations(context):
     """Check for missing migrations."""
     command = "nautobot-server --config=nautobot/core/tests/nautobot_config.py makemigrations --dry-run --check"

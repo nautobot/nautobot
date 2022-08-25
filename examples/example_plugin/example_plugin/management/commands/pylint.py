@@ -13,7 +13,7 @@ class Command(BaseCommand):
         parser.add_argument(
             "--recursive",
             action="store_true",
-            help="Discover Python modules and packages in the file system subtree."
+            help="Discover Python modules and packages in the file system subtree.",
         )
 
     def handle(self, *args, **options):
