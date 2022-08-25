@@ -78,6 +78,8 @@ Here is what you need to know about Nautobot releases:
     * The final notification will be provided 3-5 days before the release drops.
 * The dates and notifications will occur by updating the GitHub Release Milestone and on Slack.
 
+![Visual diagram of Nautobot release cadence.](../media/development/index_release_cadence.jpg)
+
 #### Patch Releases
 
 Specifics around patch releases:
@@ -104,7 +106,7 @@ For the abundance of clarity sake, we are officially naming what is sometimes ca
 
 #### SemVer Summary
 
-TODO: _Link to existing SemVer section with more detail copied_
+**TODO: _Link to existing SemVer section with more detail copied_**
 
 Nautobot adheres to the SemVer versioning strategy, which gives us versions of the format `x.y.z`.
 
@@ -114,7 +116,7 @@ Nautobot adheres to the SemVer versioning strategy, which gives us versions of t
 
 #### Summary Release Schedule
 
-TODO: _Link to release schedule with updated examples from below_
+**TODO: _Link to release schedule with updated examples from below_**
 
 Nautobot aims to publish against following release schedule:
 
@@ -137,7 +139,7 @@ To facilitate smooth upgrades to breaking changes on newer major releases, we pu
 
 At the time of this writing `1.5.z` will be our maintenance release of Nautobot for the `1.y` release cycle. Version 1 of Nautobot had an extended release cycle as it was our first major release of the platform. Going forward it can be expected that the `x.3.z` version of the platform will be the maintenance release of any major version.
 
-TODO: _Link to deprecation policy which should be more detailed with examples from below_
+**TODO: _Link to deprecation policy which should be more detailed with examples from below_**
 
 With this schedule you can expect a few things per major/minor release:
 
