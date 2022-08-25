@@ -22,6 +22,7 @@ from django.template.loader import get_template, TemplateDoesNotExist
 from django_tables2 import RequestConfig
 from jsonschema.validators import Draft7Validator
 
+from nautobot.core.celery import app
 from nautobot.core.views import generic
 from nautobot.dcim.models import Device
 from nautobot.dcim.tables import DeviceTable
@@ -1094,6 +1095,8 @@ class JobView(ObjectPermissionRequiredMixin, View):
             # Run the job. A new JobResult is created.
             commit = job_form.cleaned_data.pop("_commit")
             schedule_type = schedule_form.cleaned_data["_schedule_type"]
+            # TODO: add form field for celery queue name, move default value to form field
+            celery_queue = app.conf.task_default_queue
 
             if job_model.approval_required or schedule_type in JobExecutionType.SCHEDULE_CHOICES:
                 crontab = ""
@@ -1127,6 +1130,7 @@ class JobView(ObjectPermissionRequiredMixin, View):
                     "user": request.user.pk,
                     "commit": commit,
                     "name": job_model.class_path,
+                    "celery_kwargs": {"queue": celery_queue},
                 }
 
                 scheduled_job = ScheduledJob(
@@ -1139,6 +1143,7 @@ class JobView(ObjectPermissionRequiredMixin, View):
                     kwargs=job_kwargs,
                     interval=schedule_type,
                     one_off=schedule_type == JobExecutionType.TYPE_FUTURE,
+                    queue=celery_queue,
                     user=request.user,
                     approval_required=job_model.approval_required,
                     crontab=crontab,
@@ -1160,6 +1165,7 @@ class JobView(ObjectPermissionRequiredMixin, View):
                     job_model.class_path,
                     job_content_type,
                     request.user,
+                    celery_kwargs={"queue": celery_queue},
                     data=job_model.job_class.serialize_data(job_form.cleaned_data),
                     request=copy_safe_request(request),
                     commit=commit,
@@ -1271,11 +1277,14 @@ class JobApprovalRequestView(generic.ObjectView):
                 job_content_type = get_job_content_type()
                 initial = scheduled_job.kwargs.get("data", {})
                 initial["_commit"] = False
+                # TODO: add form field for celery queue name, move default value to form field
+                celery_queue = app.conf.task_default_queue
                 job_result = JobResult.enqueue_job(
                     run_job,
                     job_model.job_class.class_path,
                     job_content_type,
                     request.user,
+                    celery_kwargs={"queue": celery_queue},
                     data=job_model.job_class.serialize_data(initial),
                     request=copy_safe_request(request),
                     commit=False,  # force a dry-run
