@@ -166,12 +166,18 @@ The `settings_and_registry` default context processor was changed to purely `set
 ### Added
 
 - [#983](https://github.com/nautobot/nautobot/issues/983) - Added functionalities to specify `args` and `kwargs` to `NavMenuItem`.
+- [#2250](https://github.com/nautobot/nautobot/issues/2250) - Added "Stats" and "Rack Groups" to Location detail view, added "Locations" to Site detail view.
 
 ### Changed
+
+- [#2293](https://github.com/nautobot/nautobot/pull/2293) - Updated GitHub bug report template.
+- [#2296](https://github.com/nautobot/nautobot/pull/2296) - Updated `netutils` dependency from 1.1.x to 1.2.x.
 
 ### Fixed
 
 - [#2268](https://github.com/nautobot/nautobot/pull/2268) - Fixed broken links in documentation.
+- [#2269](https://github.com/nautobot/nautobot/issues/2269) - Fixed missing JS code causing rendering errors on GraphQL Query and Rack Reservation detail views.
+- [#2278](https://github.com/nautobot/nautobot/issues/2278) - Fixed incorrect permissions check on "Installed Plugins" menu item
 
 ## v1.4.1 (2022-08-22)
 
