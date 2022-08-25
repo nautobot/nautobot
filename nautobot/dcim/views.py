@@ -219,8 +219,22 @@ class SiteView(generic.ObjectView):
             .restrict(request.user, "view")
             .filter(site=instance)
         )
+        locations = (
+            Location.objects.restrict(request.user, "view")
+            .filter(site=instance)
+            .prefetch_related("parent", "location_type")
+        )
+
+        locations_table = tables.LocationTable(locations)
+
+        paginate = {
+            "paginator_class": EnhancedPaginator,
+            "per_page": get_paginate_count(request),
+        }
+        RequestConfig(request, paginate).configure(locations_table)
 
         return {
+            "locations_table": locations_table,
             "stats": stats,
             "rack_groups": rack_groups,
         }
@@ -334,6 +348,30 @@ class LocationView(generic.ObjectView):
     queryset = Location.objects.all()
 
     def get_extra_context(self, request, instance):
+        related_locations = (
+            instance.descendants(include_self=True).restrict(request.user, "view").values_list("pk", flat=True)
+        )
+        stats = {
+            "rack_count": Rack.objects.restrict(request.user, "view").filter(location__in=related_locations).count(),
+            "device_count": Device.objects.restrict(request.user, "view")
+            .filter(location__in=related_locations)
+            .count(),
+            "prefix_count": Prefix.objects.restrict(request.user, "view")
+            .filter(location__in=related_locations)
+            .count(),
+            "vlan_count": VLAN.objects.restrict(request.user, "view").filter(location__in=related_locations).count(),
+            "circuit_count": Circuit.objects.restrict(request.user, "view")
+            .filter(terminations__location__in=related_locations)
+            .count(),
+            "vm_count": VirtualMachine.objects.restrict(request.user, "view")
+            .filter(cluster__location__in=related_locations)
+            .count(),
+        }
+        rack_groups = (
+            RackGroup.objects.add_related_count(RackGroup.objects.all(), Rack, "group", "rack_count", cumulative=True)
+            .restrict(request.user, "view")
+            .filter(location__in=related_locations)
+        )
         children = (
             Location.objects.restrict(request.user, "view")
             .filter(parent=instance)
@@ -350,6 +388,8 @@ class LocationView(generic.ObjectView):
 
         return {
             "children_table": children_table,
+            "rack_groups": rack_groups,
+            "stats": stats,
         }
 
 
