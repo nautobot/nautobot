@@ -4,7 +4,6 @@ from django.contrib.auth.models import AnonymousUser
 from django.contrib.contenttypes.fields import GenericForeignKey
 from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import FieldDoesNotExist
-from django.db.models import Q
 from django.db.models.fields.related import RelatedField
 from django.urls import reverse
 from django.utils.html import escape, format_html
@@ -15,6 +14,7 @@ from django_tables2.utils import Accessor
 
 from nautobot.extras.models import ComputedField, CustomField, Relationship
 from nautobot.extras.choices import CustomFieldTypeChoices, RelationshipSideChoices
+
 from .templatetags.helpers import render_boolean
 
 
@@ -41,7 +41,7 @@ class BaseTable(tables.Table):
         for cpf in ComputedField.objects.filter(content_type=obj_type):
             self.base_columns[f"cpf_{cpf.slug}"] = ComputedFieldColumn(cpf)
 
-        for relationship in Relationship.objects.filter(Q(source_type=obj_type)):
+        for relationship in Relationship.objects.filter(source_type=obj_type):
             if not relationship.symmetric:
                 self.base_columns[f"cr_{relationship.slug}_src"] = RelationshipColumn(
                     relationship, side=RelationshipSideChoices.SIDE_SOURCE
@@ -51,7 +51,7 @@ class BaseTable(tables.Table):
                     relationship, side=RelationshipSideChoices.SIDE_PEER
                 )
 
-        for relationship in Relationship.objects.filter(Q(destination_type=obj_type)):
+        for relationship in Relationship.objects.filter(destination_type=obj_type):
             if not relationship.symmetric:
                 self.base_columns[f"cr_{relationship.slug}_dst"] = RelationshipColumn(
                     relationship, side=RelationshipSideChoices.SIDE_DESTINATION
