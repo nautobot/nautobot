@@ -41,9 +41,6 @@ The following provides more detail on these.
 * Uses `current` label on GitHub.
 * The GitHub **Release Milestone** will track items for the _current_ release.
 
-!!! note
-    Release windows and dates will be updated per [Release Management](#release-management).
-
 #### Near Term
 
 * Current tickets (GitHub issues) that are estimated to complete in one of the next two releases, e.g. 3-6 months to get into core, if accepted.
