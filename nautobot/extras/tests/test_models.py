@@ -123,8 +123,7 @@ class ConfigContextTest(TestCase):
         self.platform = Platform.objects.create(name="Platform")
         self.tenantgroup = TenantGroup.objects.create(name="Tenant Group")
         self.tenant = Tenant.objects.create(name="Tenant", group=self.tenantgroup)
-        self.tag = Tag.objects.get_for_model(Device)[0]
-        self.tag2 = Tag.objects.get_for_model(Device)[1]
+        self.tag, self.tag2 = Tag.objects.get_for_model(Device)[:2]
 
         self.device = Device.objects.create(
             name="Device 1",
