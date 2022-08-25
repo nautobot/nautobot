@@ -113,6 +113,7 @@ jobs:
       - "flake8"
       - "markdownlint"
       - "hadolint"
+
   pylint:
     runs-on: "ubuntu-20.04"
     env:
@@ -138,10 +139,8 @@ jobs:
       - name: "Run pylint"
         run: "poetry run invoke pylint"
     needs:
-      - "black"
-      - "flake8"
-      - "markdownlint"
-      - "hadolint"
+      - "check-migrations"
+      - "check-schema"
 
   tests-postgres:
     runs-on: "ubuntu-20.04"
@@ -185,7 +184,6 @@ jobs:
     needs:
       - "check-migrations"
       - "check-schema"
-      - "pylint"
 
   tests-mysql:
     runs-on: "ubuntu-20.04"
@@ -235,7 +233,6 @@ jobs:
     needs:
       - "check-migrations"
       - "check-schema"
-      - "pylint"
 
   integration-test:
     runs-on: "ubuntu-20.04"
@@ -277,5 +274,6 @@ jobs:
       - name: "Run coverage"
         run: "poetry run invoke unittest-coverage"
     needs:
+      - "pylint"
       - "tests-postgres"
       - "tests-mysql"
