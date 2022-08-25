@@ -330,7 +330,7 @@ You can use the command `systemctl status nautobot.service` to verify that the W
     If the Nautobot service fails to start, issue the command `journalctl -eu nautobot.service` to check for log messages that
     may indicate the problem.
 
-Once you've verified that the WSGI service and worker are up and running, move on to [HTTP server setup](../http-server).
+Once you've verified that the WSGI service and worker are up and running, move on to [HTTP server setup](http-server.md).
 
 ## Troubleshooting
 
@@ -370,4 +370,4 @@ When serving Nautobot directly from uWSGI on RedHat or CentOS there may be a pro
 mime-file = /opt/nautobot/mime.types
 ```
 
-Alternatively, host Nautobot behind Nginx as instructed in [HTTP server setup](../http-server).
+Alternatively, host Nautobot behind Nginx as instructed in [HTTP server setup](http-server.md).

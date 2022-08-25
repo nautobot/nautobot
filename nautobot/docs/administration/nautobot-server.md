@@ -207,7 +207,7 @@ $ nautobot-server init
 Configuration file created at '/home/example/.nautobot/nautobot_config.py
 ```
 
-For more information on configuring Nautobot for the first time or on more advanced configuration patterns, please see the guide on [Nautobot Configuration](../../configuration).
+For more information on configuring Nautobot for the first time or on more advanced configuration patterns, please see the guide on [Nautobot Configuration](../configuration/index.md).
 
 ### `invalidate`
 

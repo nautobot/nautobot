@@ -2,7 +2,7 @@
 
 ## Review the Release Notes
 
-Be sure to carefully review all [release notes](../release-notes/index.md) that have been published. In particular, the [Nautobot 1.0 release notes](../../release-notes/version-1.0/) include an overview of key changes between NetBox 2.10 and Nautobot 1.0, while later release notes highlight incremental changes between Nautobot versions.
+Be sure to carefully review all [release notes](../release-notes/index.md) that have been published. In particular, the [Nautobot 1.0 release notes](../release-notes/version-1.0.md) include an overview of key changes between NetBox 2.10 and Nautobot 1.0, while later release notes highlight incremental changes between Nautobot versions.
 
 ## Install Nautobot
 

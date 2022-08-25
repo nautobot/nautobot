@@ -160,10 +160,10 @@ For more details on how to configure Cacheops to use Redis Sentinel see the docu
 
 Celery Sentinel configuration is controlled by four settings within your `nautobot_config.py`:
 
-* [`CELERY_BROKER_URL`](../../configuration/optional-settings#celery_broker_url)
-* [`CELERY_BROKER_TRANSPORT_OPTIONS`](../../configuration/optional-settings#celery_broker_transport_options)
-* [`CELERY_RESULT_BACKEND`](../../configuration/optional-settings#celery_result_backend)
-* [`CELERY_RESULT_BACKEND_TRANSPORT_OPTIONS`](../../configuration/optional-settings#celery_result_backend_transport_options)
+* [`CELERY_BROKER_URL`](../configuration/optional-settings.md#celery_broker_url)
+* [`CELERY_BROKER_TRANSPORT_OPTIONS`](../configuration/optional-settings.md#celery_broker_transport_options)
+* [`CELERY_RESULT_BACKEND`](../configuration/optional-settings.md#celery_result_backend)
+* [`CELERY_RESULT_BACKEND_TRANSPORT_OPTIONS`](../configuration/optional-settings.md#celery_result_backend_transport_options)
 
 By default Nautobot configures the celery broker and results backend with the same settings, so this pattern is mirrored here.
 
@@ -188,4 +188,4 @@ CELERY_RESULT_BACKEND_TRANSPORT_OPTIONS = CELERY_BROKER_TRANSPORT_OPTIONS
 
 Please see the official Celery documentation for more information on how to [configure Celery to use Redis Sentinel](https://docs.celeryq.dev/en/stable/getting-started/backends-and-brokers/redis.html?highlight=sentinel#configuration).
 
-Please also see the [Nautobot documentation on required settings for Celery](../../configuration/required-settings#task-queuing-with-celery) for additional information.
+Please also see the [Nautobot documentation on required settings for Celery](../configuration/required-settings.md#task-queuing-with-celery) for additional information.

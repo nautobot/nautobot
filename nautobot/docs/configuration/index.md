@@ -126,7 +126,7 @@ $ echo $NAUTOBOT_CONFIG
 ### Adding your own dependencies
 
 !!! warning
-    Be cautious not to confuse extra applications with Nautobot plugins which are installed using the [`PLUGINS`](optional-settings#plugins) setting. They are similar, but distinctly different!
+    Be cautious not to confuse extra applications with Nautobot plugins which are installed using the [`PLUGINS`](optional-settings.md#plugins) setting. They are similar, but distinctly different!
 
 Nautobot, being a Django application, allows for installation of additional dependencies utilizing the [`INSTALLED_APPS`](https://docs.djangoproject.com/en/stable/ref/settings/#std:setting-INSTALLED_APPS) settings. Due to the highly specialized nature of Nautobot, *you cannot safely do this*.
 
@@ -162,6 +162,6 @@ EXTRA_INSTALLED_APPS = [
 ]
 ```
 
-For more information on installing extra applications, please see the documentation on [Extra Applications](optional-settings#extra-applications).
+For more information on installing extra applications, please see the documentation on [Extra Applications](optional-settings.md#extra-applications).
 
-For more information on installing or developing Nautobot plugins, please see the [documentation on Plugins](../plugins).
+For more information on installing or developing Nautobot plugins, please see the [documentation on Plugins](../plugins/index.md).

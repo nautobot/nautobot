@@ -121,7 +121,7 @@ This makes sure that the version of Python you're using, as well any dependencie
 
 Before we install anything into the virtualenv, we want to make sure that Pip is running the latest version.
 
-[Pip]((https://pip.pypa.io/)) is Python's package installer and is referred interchangeably as `pip` or `pip3`. For the purpose of this document, we'll deliberately be referring to it as `pip3`. Many common issues can be solved by running the latest version of Pip. Before continuing with installing Nautobot, upgrade Pip to its latest release.
+[Pip](https://pip.pypa.io/) is Python's package installer and is referred interchangeably as `pip` or `pip3`. For the purpose of this document, we'll deliberately be referring to it as `pip3`. Many common issues can be solved by running the latest version of Pip. Before continuing with installing Nautobot, upgrade Pip to its latest release.
 
 We also want to deliberately install the `wheel` library which will tell Pip to always try to install wheel packages if they are available. A [wheel is a pre-compiled Python package](https://realpython.com/python-wheels/), which is quicker and safer to install because it does not require development libraries or `gcc` to be installed on your system just so that some more advanced Python libraries can be compiled.
 
@@ -167,7 +167,7 @@ Before you can use Nautobot, you'll need to configure it by telling it where you
 
 ### Initialize your configuration
 
-Initialize a new configuration by running `nautobot-server init`. You may specify an alternate location and detailed instructions for this are covered in the documentation on [Nautobot Configuration](../../configuration).
+Initialize a new configuration by running `nautobot-server init`. You may specify an alternate location and detailed instructions for this are covered in the documentation on [Nautobot Configuration](../configuration/index.md).
 
 However, because we've set the `NAUTOBOT_ROOT`, this command will automatically create a new `nautobot_config.py` at the default location based on this at `$NAUTOBOT_ROOT/nautobot_config.py`:
 
@@ -178,9 +178,9 @@ Configuration file created at '/opt/nautobot/nautobot_config.py'
 
 ### Required Settings
 
-Your `nautobot_config.py` provides sane defaults for all of the configuration settings. You will inevitably need to update the settings for your environment, most notably the [`DATABASES`](../configuration/required-settings.md#databases) setting.  If you do not wish to modify the config, by default, many of these configuration settings can also be specified by environment variables. Please see [Required Settings](../../configuration/required-settings) for further details.
+Your `nautobot_config.py` provides sane defaults for all of the configuration settings. You will inevitably need to update the settings for your environment, most notably the [`DATABASES`](../configuration/required-settings.md#databases) setting.  If you do not wish to modify the config, by default, many of these configuration settings can also be specified by environment variables. Please see [Required Settings](../configuration/required-settings.md) for further details.
 
-Edit `$NAUTOBOT_ROOT/nautobot_config.py`, and head over to the documentation on [Required Settings](../../configuration/required-settings) to tweak your required settings. At a minimum, you'll need to update the following settings:
+Edit `$NAUTOBOT_ROOT/nautobot_config.py`, and head over to the documentation on [Required Settings](../configuration/required-settings.md) to tweak your required settings. At a minimum, you'll need to update the following settings:
 
 * [`ALLOWED_HOSTS`](../configuration/required-settings.md#allowed_hosts): You must set this value. This can be set to `["*"]` for a quick start, but this value is not suitable for production deployment.
 * [`DATABASES`](../configuration/required-settings.md#databases): Database connection parameters. If you installed your database server on the same system as Nautobot, you'll need to update the `USER` and `PASSWORD` fields here. If you are using MySQL, you'll also need to update the `ENGINE` field, changing the default database driver suffix from `django.db.backends.postgresql` to `django.db.backends.mysql`.
@@ -204,13 +204,13 @@ All Python packages required by Nautobot will be installed automatically when ru
 
 Nautobot also supports the ability to install optional Python packages. If desired, these packages should be listed in `local_requirements.txt` within the `NAUTOBOT_ROOT` directory, such as `/opt/nautobot/local_requirements.txt`.
 
-If you decide to use any [Nautobot plugins](../../plugins), they should be listed in this file.
+If you decide to use any [Nautobot plugins](../plugins/index.md), they should be listed in this file.
 
 We will cover two examples of common optional settings below.
 
 ### Configuring NAPALM
 
-Nautobot provides built-in support for the [NAPALM automation](https://github.com/napalm-automation/napalm/) library, which allows Nautobot to fetch live data from devices and return it to a requester via its REST API. The [`NAPALM_USERNAME`](../../configuration/optional-settings#napalm_username) and [`NAPALM_PASSWORD`](../../configuration/optional-settings#napalm_password) configuration parameters define the credentials to be used when connecting to a device.
+Nautobot provides built-in support for the [NAPALM automation](https://github.com/napalm-automation/napalm/) library, which allows Nautobot to fetch live data from devices and return it to a requester via its REST API. The [`NAPALM_USERNAME`](../configuration/optional-settings.md#napalm_username) and [`NAPALM_PASSWORD`](../configuration/optional-settings.md#napalm_password) configuration parameters define the credentials to be used when connecting to a device.
 
 To use NAPALM, add `nautobot[napalm]` to your `local_requirements.txt` so that it can be installed and kept up to date:
 
@@ -248,8 +248,8 @@ $ nautobot-server createsuperuser
 
 Nautobot relies upon many static files including:
 
-* `git` - For storing [Git repositories](../../models/extras/gitrepository)
-* `jobs` - For storing [custom Jobs](../../additional-features/jobs)
+* `git` - For storing [Git repositories](../models/extras/gitrepository.md)
+* `jobs` - For storing [custom Jobs](../additional-features/jobs.md)
 * `media` - For storing [uploaded images and attachments](../configuration/optional-settings.md#media_root) (such as device type images)
 * `static` - The home for [CSS, JavaScript, and images](../configuration/optional-settings.md#static_root) used to serve the web interface
 

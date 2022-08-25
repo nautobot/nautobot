@@ -217,7 +217,7 @@ The Redis connection string to use for caching.
 
 Default: `{}`
 
-A dict of additional options passed to the Celery broker transport. This is only required when [configuring Celery to utilize Redis Sentinel](../../additional-features/caching#celery-sentinel-configuration).
+A dict of additional options passed to the Celery broker transport. This is only required when [configuring Celery to utilize Redis Sentinel](../additional-features/caching.md#celery-sentinel-configuration).
 
 ---
 
@@ -245,7 +245,7 @@ Celery result backend used to tell workers where to store task results (tombston
 
 Default: `{}`
 
-A dict of additional options passed to the Celery result backend transport. This is only required when [configuring Celery to utilize Redis Sentinel](../../additional-features/caching#celery-sentinel-configuration).
+A dict of additional options passed to the Celery result backend transport. This is only required when [configuring Celery to utilize Redis Sentinel](../additional-features/caching.md#celery-sentinel-configuration).
 
 ---
 
@@ -744,7 +744,7 @@ The default maximum number of objects to display per page within each list of ob
 
 Default: `[]` (Empty list)
 
-A list of installed [Nautobot plugins](../../plugins) to enable. Plugins will not take effect unless they are listed here.
+A list of installed [Nautobot plugins](../plugins/index.md) to enable. Plugins will not take effect unless they are listed here.
 
 !!! warning
     Plugins extend Nautobot by allowing external code to run with the same access and privileges as Nautobot itself. Only install plugins from trusted sources. The Nautobot maintainers make absolutely no guarantees about the integrity or security of your installation with plugins enabled.

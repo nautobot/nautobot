@@ -201,7 +201,7 @@ Additional useful commands for the development environment:
     `invoke start` or `invoke debug` commands.
 
 !!! tip
-    To learn about advanced use cases within the Docker Compose workflow, see the [Docker Compose Advanced Use Cases](../docker-compose-advanced-use-cases) page.
+    To learn about advanced use cases within the Docker Compose workflow, see the [Docker Compose Advanced Use Cases](docker-compose-advanced-use-cases.md) page.
 
 Proceed to the [Working in your Development Environment](#working-in-your-development-environment) section
 
@@ -326,7 +326,7 @@ $ nautobot-server init
 Configuration file created at '/home/example/.nautobot/nautobot_config.py'
 ```
 
-You may also specify alternate file locations. Please refer to [Configuring Nautobot](../../configuration) for how to do that.
+You may also specify alternate file locations. Please refer to [Configuring Nautobot](../configuration/index.md) for how to do that.
 
 ##### Using the Development Config
 
@@ -395,7 +395,7 @@ You can then log into the development server at `localhost:8080` with the [super
 
 ### Starting the Interactive Shell
 
-Nautobot provides an [interactive Python shell](../../administration/nautobot-shell) that sets up the server environment and gives you direct access to the database models for debugging. Nautobot extends this slightly to automatically import models and other utilities.
+Nautobot provides an [interactive Python shell](../administration/nautobot-shell.md) that sets up the server environment and gives you direct access to the database models for debugging. Nautobot extends this slightly to automatically import models and other utilities.
 
 Run the Nautobot interactive shell with `invoke nbshell` (Docker) or the `nautobot-server nbshell` management command:
 
