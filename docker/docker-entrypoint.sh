@@ -9,12 +9,11 @@ DB_WAIT_TIMEOUT=${DB_WAIT_TIMEOUT-3}
 MAX_DB_WAIT_TIME=${MAX_DB_WAIT_TIME-30}
 CUR_DB_WAIT_TIME=0
 
-# lowercase NAUTOBOT_SKIP_INIT and assign to SKIP_INIT:
-SKIP_INIT=$(echo $NAUTOBOT_DOCKER_SKIP_INIT | tr '[:upper:]' '[:lower:]')
-# reassign SKIP_INIT to first character of SKIP_INIT:
-SKIP_INIT=${SKIP_INIT:0:1}
-# tests for falsey value ($NAUTOBOT_DOCKER_SKIP_INIT can be any string starting with case-insensitive "f" or "0"):
-if [[ "$SKIP_INIT" == "f" ]] || [[ "$SKIP_INIT" == "0" ]]; then
+# set SKIP_INIT to NAUTOBOT_DOCKER_SKIP_INIT, defaulting to false:
+SKIP_INIT=${NAUTOBOT_DOCKER_SKIP_INIT-false}
+# lowercase SKIP_INIT:
+SKIP_INIT=$(echo $SKIP_INIT | tr '[:upper:]' '[:lower:]')
+if [[ "$SKIP_INIT" == "false" ]]; then
   while ! nautobot-server post_upgrade --no-invalidate-all 2>&1 && [ "${CUR_DB_WAIT_TIME}" -lt "${MAX_DB_WAIT_TIME}" ]; do
     echo "⏳ Waiting on DB... (${CUR_DB_WAIT_TIME}s / ${MAX_DB_WAIT_TIME}s)"
     sleep "${DB_WAIT_TIMEOUT}"
