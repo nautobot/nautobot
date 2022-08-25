@@ -1,5 +1,9 @@
 // Log Level Interface filtering
-$('input.log-filter').on('input', function() {
+$('input.log-filter').on('input keydown', function(ev) {
+    // ignore return key
+    if(ev.keyCode === 13) {
+        return false;
+    }
     let filter = new RegExp(this.value);
     let log;
 
