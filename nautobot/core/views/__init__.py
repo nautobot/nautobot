@@ -213,21 +213,52 @@ class LookupFormFieldsView(View):
     queryset = None
 
     @staticmethod
-    def get_field_lookup_exper(filterset, field_name):
-        lookup_expr_2 = [
-            {"name": name, "label": field.lookup_expr + " (" + name.replace(f"{field_name}__", "") + ")"}
-            for name, field in filterset.items()
-            if field.field_name == field_name
-        ]
-        return lookup_expr_2
+    def __build_lookup_label(field_name, verbose_name, to_remove):
+        """
+        Return lookup expr with its verbose name
 
-    def get(self, request, model, field):
-        app_label, model_name = model.split("_")
+        Args:
+            field_name (str): Field name e.g slug__iew
+            verbose_name (str): The verbose name for the lookup exper which is suffixed to the field name e.g iew -> iendswith
+            to_remove (str): Value to remove from the field_name e.g Remove slug from slug__iew
+
+        Examples:
+            >>> __build_lookup_label("slug__iew", "iendswith", "slug")
+            >>> "iendswith(iew)"
+        """
+        lookup = field_name.replace(to_remove, "").replace("__", "")
+        return verbose_name + (f"({lookup})" if lookup else "")
+
+    def __get_field_lookup_exper(self, filterset, field_name):
+        """
+        Return all lookup expressions for `field_name` in the `filterset`
+        """
+        lookup_expr = [
+            {
+                "id": name,
+                "display": self.__build_lookup_label(name, field.lookup_expr, field_name),
+                "name": self.__build_lookup_label(name, field.lookup_expr, field_name),
+            }
+            for name, field in filterset.items()
+            if field.field_name == field_name and not name.startswith("has_")
+        ]
+        return lookup_expr or [{"id": "exact", "display": "exact", "name": "exact"}]
+
+    def get(self, request):
+        contenttype = request.GET.get("contenttype")
+        field_name = request.GET.get("field_name")
         try:
+            app_label, model_name = contenttype.split("_")
             contenttype = ContentType.objects.get(app_label=app_label, model=model_name)
             filterset = get_filterset_for_model(contenttype.model_class())
             if filterset is not None:
-                lookup_exper = self.get_field_lookup_exper(filterset.get_filters(), field)
+                lookup_exper = self.__get_field_lookup_exper(filterset.get_filters(), field_name)
         except ContentType.DoesNotExist:
             lookup_exper = []
-        return JsonResponse(lookup_exper, safe=False)
+
+        return JsonResponse({
+            "count": len(lookup_exper),
+            "next": None,
+            "previous": None,
+            "results": lookup_exper
+        })

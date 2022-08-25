@@ -256,15 +256,17 @@ class DynamicFilterForm(BootstrapMixin, forms.Form):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+        contenttype =  self.model._meta.app_label + "_" + self.model._meta.model_name
 
         # Configure fields: Add css class and set choices for lookup_field
-        lookup_field_css = self.fields["lookup_field"].widget.attrs.get("class")
-        self.fields["lookup_field"].widget.attrs["class"] = " ".join(
-            [lookup_field_css, "nautobot-select2-static lookup_field-select"]
-        )
         self.fields["lookup_field"].choices = [(None, None)] + self.get_lookup_expr_choices()
+        self.fields["lookup_field"].widget.attrs["class"] = "nautobot-select2-static lookup_field-select"
 
-        self.fields["lookup_type"].widget.attrs["class"] = "nautobot-select2-static lookup_type-select"
+        # data-query-param-group_id="["$tenant_group"]"
+        self.fields["lookup_type"].widget.attrs["data-query-param-field_name"] = json.dumps(["$lookup_field"])
+        self.fields["lookup_type"].widget.attrs["data-contenttype"] = contenttype
+        self.fields["lookup_type"].widget.attrs["data-url"] = "/lookup-choices/"
+        self.fields["lookup_type"].widget.attrs["class"] = "nautobot-select2-api lookup_type-select"
 
         self.fields["value"].widget.attrs["class"] = "value-input form-control"
 

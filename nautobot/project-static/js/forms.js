@@ -189,7 +189,16 @@ function jsify_form(context) {
                         $.each($.parseJSON(attr.value), function(index, value) {
                             // Referencing the value of another form field
                             if (value.startsWith('$')) {
-                                let ref_field = $('#id_' + value.slice(1));
+                                let element_id = $(element).attr("id")
+                                let ref_field;
+
+                                if(element_id.includes("id_form-")){
+                                    let id_prefix = element_id.match(/id_form-[0-9]+-/i, "")[0]
+                                    ref_field = $("#" + id_prefix + value.slice(1));
+                                }
+                                else
+                                    ref_field = $('#id_' + value.slice(1));
+
                                 if (ref_field.val() && ref_field.is(":visible")) {
                                     value = ref_field.val();
                                 } else if (ref_field.attr("required") && ref_field.attr("data-null-option")) {
@@ -210,6 +219,11 @@ function jsify_form(context) {
                         });
                     }
                 });
+
+                // Attach contenttype to parameters
+                contenttype = $(element).attr("data-contenttype")
+                if(contenttype)
+                    parameters["contenttype"] = contenttype
 
                 // This will handle params with multiple values (i.e. for list filter forms)
                 return $.param(parameters, true);

@@ -47,7 +47,7 @@ urlpatterns = [
     # FileProxy attachments download/get URLs used in admin views only
     path("files/", include("db_file_storage.urls")),
     #
-    path("lookups/<model>/<field>/", LookupFormFieldsView.as_view()),
+    path("lookup-choices/", LookupFormFieldsView.as_view()),
 ]
 
 
