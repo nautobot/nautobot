@@ -142,158 +142,161 @@ function jsify_form(context) {
     // Includes live search and chained fields
     // The `multiple` setting may be controlled via a data-* attribute
 
-    this_context.find('.nautobot-select2-api').select2({
-        allowClear: true,
-        placeholder: "---------",
-        theme: "bootstrap",
-        width: "off",
-        ajax: {
-            delay: 500,
+    function initialize_dynamic_choice_selection(){
+        this_context.find('.nautobot-select2-api').select2({
+            allowClear: true,
+            placeholder: "---------",
+            theme: "bootstrap",
+            width: "off",
+            ajax: {
+                delay: 500,
 
-            url: function(params) {
-                var element = this[0];
-                var url = parseURL(element.getAttribute("data-url"));
+                url: function(params) {
+                    var element = this[0];
+                    var url = parseURL(element.getAttribute("data-url"));
 
-                if (url.includes("{{")) {
-                    // URL is not fully rendered yet, abort the request
-                    return false;
-                }
-                return url;
-            },
+                    if (url.includes("{{")) {
+                        // URL is not fully rendered yet, abort the request
+                        return false;
+                    }
+                    return url;
+                },
 
-            data: function(params) {
-                var element = this[0];
-                // Paging. Note that `params.page` indexes at 1
-                var offset = (params.page - 1) * 50 || 0;
-                // Base query params
-                var parameters = {
-                    q: params.term,
-                    limit: 50,
-                    offset: offset,
-                };
-                
-                // Set api_version
-                api_version = $(element).attr("data-api-version")
-                if(api_version)
-                    parameters["api_version"] = api_version
+                data: function(params) {
+                    var element = this[0];
+                    // Paging. Note that `params.page` indexes at 1
+                    var offset = (params.page - 1) * 50 || 0;
+                    // Base query params
+                    var parameters = {
+                        q: params.term,
+                        limit: 50,
+                        offset: offset,
+                    };
+
+                    // Set api_version
+                    api_version = $(element).attr("data-api-version")
+                    if(api_version)
+                        parameters["api_version"] = api_version
 
 
-                // Allow for controlling the brief setting from within APISelect
-                parameters.brief = ( $(element).is('[data-full]') ? undefined : true );
+                    // Allow for controlling the brief setting from within APISelect
+                    parameters.brief = ( $(element).is('[data-full]') ? undefined : true );
 
-                // Attach any extra query parameters
-                $.each(element.attributes, function(index, attr){
-                    if (attr.name.includes("data-query-param-")){
-                        var param_name = attr.name.split("data-query-param-")[1];
+                    // Attach any extra query parameters
+                    $.each(element.attributes, function(index, attr){
+                        if (attr.name.includes("data-query-param-")){
+                            var param_name = attr.name.split("data-query-param-")[1];
 
-                        $.each($.parseJSON(attr.value), function(index, value) {
-                            // Referencing the value of another form field
-                            if (value.startsWith('$')) {
-                                let element_id = $(element).attr("id")
-                                let ref_field;
+                            $.each($.parseJSON(attr.value), function(index, value) {
+                                // Referencing the value of another form field
+                                if (value.startsWith('$')) {
+                                    let element_id = $(element).attr("id")
+                                    let ref_field;
 
-                                if(element_id.includes("id_form-")){
-                                    let id_prefix = element_id.match(/id_form-[0-9]+-/i, "")[0]
-                                    ref_field = $("#" + id_prefix + value.slice(1));
+                                    if(element_id.includes("id_form-")){
+                                        let id_prefix = element_id.match(/id_form-[0-9]+-/i, "")[0]
+                                        ref_field = $("#" + id_prefix + value.slice(1));
+                                    }
+                                    else
+                                        ref_field = $('#id_' + value.slice(1));
+
+                                    if (ref_field.val() && ref_field.is(":visible")) {
+                                        value = ref_field.val();
+                                    } else if (ref_field.attr("required") && ref_field.attr("data-null-option")) {
+                                        value = "null";
+                                    } else {
+                                        return true;  // Skip if ref_field has no value
+                                    }
                                 }
-                                else
-                                    ref_field = $('#id_' + value.slice(1));
-
-                                if (ref_field.val() && ref_field.is(":visible")) {
-                                    value = ref_field.val();
-                                } else if (ref_field.attr("required") && ref_field.attr("data-null-option")) {
-                                    value = "null";
+                                if (param_name in parameters) {
+                                    if (Array.isArray(parameters[param_name])) {
+                                        parameters[param_name].push(value);
+                                    } else {
+                                        parameters[param_name] = [parameters[param_name], value];
+                                    }
                                 } else {
-                                    return true;  // Skip if ref_field has no value
+                                    parameters[param_name] = value;
                                 }
-                            }
-                            if (param_name in parameters) {
-                                if (Array.isArray(parameters[param_name])) {
-                                    parameters[param_name].push(value);
-                                } else {
-                                    parameters[param_name] = [parameters[param_name], value];
-                                }
-                            } else {
-                                parameters[param_name] = value;
-                            }
+                            });
+                        }
+                    });
+
+                    // Attach contenttype to parameters
+                    contenttype = $(element).attr("data-contenttype")
+                    if(contenttype)
+                        parameters["contenttype"] = contenttype
+
+                    // This will handle params with multiple values (i.e. for list filter forms)
+                    return $.param(parameters, true);
+                },
+
+                processResults: function (data) {
+                    var element = this.$element[0];
+                    $(element).children('option').attr('disabled', false);
+                    var results = data.results;
+
+                    results = results.reduce((results,record,idx) => {
+                        record.text = record[element.getAttribute('display-field')] || record.name;
+                        if (record._depth) {
+                            // Annotate hierarchical depth for MPTT objects
+                            record.text = '--'.repeat(record._depth) + ' ' + record.text;
+                        }
+                        if (record.tree_depth) {
+                            // Annotate hierarchical depth for django-tree-queries objects
+                            record.text = '--'.repeat(record.tree_depth) + ' ' + record.text;
+                        }
+                        record.id = record[element.getAttribute('value-field')] || record.id;
+                        if(element.getAttribute('disabled-indicator') && record[element.getAttribute('disabled-indicator')]) {
+                            // The disabled-indicator equated to true, so we disable this option
+                            record.disabled = true;
+                        }
+
+                        if( record.group !== undefined && record.group !== null && record.site !== undefined && record.site !== null ) {
+                            results[record.site.name + ":" + record.group.name] = results[record.site.name + ":" + record.group.name] || { text: record.site.name + " / " + record.group.name, children: [] };
+                            results[record.site.name + ":" + record.group.name].children.push(record);
+                        }
+                        else if( record.group !== undefined && record.group !== null ) {
+                            results[record.group.name] = results[record.group.name] || { text: record.group.name, children: [] };
+                            results[record.group.name].children.push(record);
+                        }
+                        else if( record.site !== undefined && record.site !== null ) {
+                            results[record.site.name] = results[record.site.name] || { text: record.site.name, children: [] };
+                            results[record.site.name].children.push(record);
+                        }
+                        else if ( (record.group !== undefined || record.group == null) && (record.site !== undefined || record.site === null) ) {
+                            results['global'] = results['global'] || { text: 'Global', children: [] };
+                            results['global'].children.push(record);
+                        }
+                        else {
+                            results[idx] = record
+                        }
+
+                        return results;
+                    },Object.create(null));
+
+                    results = Object.values(results);
+
+                    // Handle the null option, but only add it once
+                    if (element.getAttribute('data-null-option') && data.previous === null) {
+                        results.unshift({
+                            id: 'null',
+                            text: element.getAttribute('data-null-option')
                         });
                     }
-                });
 
-                // Attach contenttype to parameters
-                contenttype = $(element).attr("data-contenttype")
-                if(contenttype)
-                    parameters["contenttype"] = contenttype
-
-                // This will handle params with multiple values (i.e. for list filter forms)
-                return $.param(parameters, true);
-            },
-
-            processResults: function (data) {
-                var element = this.$element[0];
-                $(element).children('option').attr('disabled', false);
-                var results = data.results;
-
-                results = results.reduce((results,record,idx) => {
-                    record.text = record[element.getAttribute('display-field')] || record.name;
-                    if (record._depth) {
-                        // Annotate hierarchical depth for MPTT objects
-                        record.text = '--'.repeat(record._depth) + ' ' + record.text;
-                    }
-                    if (record.tree_depth) {
-                        // Annotate hierarchical depth for django-tree-queries objects
-                        record.text = '--'.repeat(record.tree_depth) + ' ' + record.text;
-                    }
-                    record.id = record[element.getAttribute('value-field')] || record.id;
-                    if(element.getAttribute('disabled-indicator') && record[element.getAttribute('disabled-indicator')]) {
-                        // The disabled-indicator equated to true, so we disable this option
-                        record.disabled = true;
-                    }
-
-                    if( record.group !== undefined && record.group !== null && record.site !== undefined && record.site !== null ) {
-                        results[record.site.name + ":" + record.group.name] = results[record.site.name + ":" + record.group.name] || { text: record.site.name + " / " + record.group.name, children: [] };
-                        results[record.site.name + ":" + record.group.name].children.push(record);
-                    }
-                    else if( record.group !== undefined && record.group !== null ) {
-                        results[record.group.name] = results[record.group.name] || { text: record.group.name, children: [] };
-                        results[record.group.name].children.push(record);
-                    }
-                    else if( record.site !== undefined && record.site !== null ) {
-                        results[record.site.name] = results[record.site.name] || { text: record.site.name, children: [] };
-                        results[record.site.name].children.push(record);
-                    }
-                    else if ( (record.group !== undefined || record.group == null) && (record.site !== undefined || record.site === null) ) {
-                        results['global'] = results['global'] || { text: 'Global', children: [] };
-                        results['global'].children.push(record);
-                    }
-                    else {
-                        results[idx] = record
-                    }
-
-                    return results;
-                },Object.create(null));
-
-                results = Object.values(results);
-
-                // Handle the null option, but only add it once
-                if (element.getAttribute('data-null-option') && data.previous === null) {
-                    results.unshift({
-                        id: 'null',
-                        text: element.getAttribute('data-null-option')
-                    });
+                    // Check if there are more results to page
+                    var page = data.next !== null;
+                    return {
+                        results: results,
+                        pagination: {
+                            more: page
+                        }
+                    };
                 }
-
-                // Check if there are more results to page
-                var page = data.next !== null;
-                return {
-                    results: results,
-                    pagination: {
-                        more: page
-                    }
-                };
             }
-        }
-    });
+        });
+    }
+    initialize_dynamic_choice_selection()
 
     // Flatpickr selectors
     this_context.find('.date-picker').flatpickr({
@@ -498,6 +501,72 @@ function jsify_form(context) {
         var select_id = '#' + $(this).attr('data-target');
         $(select_id + ' option').prop('selected',true);
     });
+
+
+    // Dynamic filter form
+    // TODO clear lookup type select if lookup field changes
+    this_context.on("change", ".lookup_type-select", function(){
+        let parent_element = $(this).parents("tr")
+
+        let lookup_field_val = parent_element.find(".lookup_field-select").val()
+
+        let lookup_type = parent_element.find(".lookup_type-select")
+        let lookup_type_val = lookup_type.val()
+        let contenttype = lookup_type.attr("data-contenttype")
+
+        let value_element = parent_element.find(".value-input")
+        let value_name = value_element.attr("name")
+        let value_id = value_element.attr("id")
+
+        // if `lookup_field_val` == `lookup_type_val` lookup expr is exact
+        if(lookup_field_val == lookup_type_val){
+            $.ajax({
+                url: `/lookup-field-type/?field_name=${lookup_field_val}&contenttype=${contenttype}`,
+                async: true,
+                contentType: 'application/json',
+                dataType: 'json',
+                type: 'GET',
+            }).done(function (response) {
+                if(response.data_url)
+                    use_dynamic_select(value_element, value_name, value_id, response.data_url)
+                else if (response.choices)
+                    use_static_select(value_element, value_name)
+                else
+                    use_input(value_element, value_name, value_id)
+            }).fail(function (xhr, status, error) {
+                use_input(value_element, value_name, value_id)
+            });
+        }
+        else {
+            use_input(value_element, value_name, value_id)
+        }
+    })
+
+    function use_input(element, name, _id){
+        input_field = `<input type="text" name="${name}" class="value-input form-control" id="${_id}">`
+        element.parent().html(input_field)
+    }
+
+    function use_static_select(element, name, _id){
+
+    }
+
+    function use_dynamic_select(element, name, _id, data_url){
+        select_field = `
+            <select
+                name="${name}"
+                class="value-input nautobot-select2-api select2-hidden-accessible"
+                data-url="${data_url}"
+                id="id_${_id}"
+                data-select2-id="${_id}"
+                tabindex="-1"
+                aria-hidden="true"
+                multiple
+            ></select>
+        `
+        element.parent().html(select_field)
+        initialize_dynamic_choice_selection()
+    }
 
 }
 

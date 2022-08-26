@@ -5,6 +5,8 @@ import sys
 from django.conf import settings
 from django.contrib.auth.mixins import AccessMixin
 from django.contrib.contenttypes.models import ContentType
+from django.core.exceptions import FieldDoesNotExist
+from django.db.models import fields, ManyToOneRel, ManyToManyRel
 from django.http import HttpResponseServerError, JsonResponse
 from django.shortcuts import render
 from django.template import loader, RequestContext, Template
@@ -15,6 +17,7 @@ from django.views.defaults import ERROR_500_TEMPLATE_NAME, page_not_found
 from django.views.generic import TemplateView, View
 from packaging import version
 from graphene_django.views import GraphQLView
+from taggit.managers import TaggableManager
 
 from nautobot.core.constants import SEARCH_MAX_RESULTS, SEARCH_TYPES
 from nautobot.core.forms import SearchForm
@@ -209,7 +212,7 @@ class CustomGraphQLView(GraphQLView):
         return render(request, self.graphiql_template, data)
 
 
-class LookupFormFieldsView(View):
+class LookupFieldsChoicesView(View):
     queryset = None
 
     @staticmethod
@@ -236,13 +239,12 @@ class LookupFormFieldsView(View):
         lookup_expr = [
             {
                 "id": name,
-                "display": self.__build_lookup_label(name, field.lookup_expr, field_name),
                 "name": self.__build_lookup_label(name, field.lookup_expr, field_name),
             }
             for name, field in filterset.items()
             if field.field_name == field_name and not name.startswith("has_")
         ]
-        return lookup_expr or [{"id": "exact", "display": "exact", "name": "exact"}]
+        return lookup_expr or [{"id": "exact", "name": "exact"}]
 
     def get(self, request):
         contenttype = request.GET.get("contenttype")
@@ -262,3 +264,46 @@ class LookupFormFieldsView(View):
             "previous": None,
             "results": lookup_exper
         })
+
+
+class LookupFieldTypeView(View):
+    """
+    Endpoint which returns either field's api url or choices
+
+    If the model field is a relational field it resolves and returns the endpoint for that fields related_model
+    while if it's a choice field, the choices are returned else returns an empty dict
+    """
+    queryset = None
+
+    @staticmethod
+    def __get_model_api_endpoint_and_type(model):
+        if isinstance(model, (ManyToOneRel, fields.related.ForeignKey, ManyToManyRel, TaggableManager)):
+            app_label = model.related_model._meta.app_label
+            model_name = model.related_model._meta.model_name
+
+            if app_label in settings.PLUGINS:
+                data_url = reverse(f"plugins-api:{app_label}-api:{model_name}-list")
+            else:
+                data_url = reverse(f"{app_label}-api:{model_name}-list")
+
+            return {
+                "data_url": data_url,
+            }
+
+        # TODO: Timizuo Check if its hardcoded choices then return the choices or do nothing
+        #  Might be a static choice field or text field
+        return {}
+
+    def get(self, request):
+        field_name = request.GET.get("field_name")
+
+        contenttype = request.GET.get("contenttype")
+        app_label, model_name = contenttype.split("_")
+        model = ContentType.objects.get(app_label=app_label, model=model_name).model_class()
+        try:
+            field_model = model._meta.get_field(field_name)
+            data = self.__get_model_api_endpoint_and_type(field_model)
+        except FieldDoesNotExist:
+            return JsonResponse("Field does not exist", status=400)
+
+        return JsonResponse(data)
