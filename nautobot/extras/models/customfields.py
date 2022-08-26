@@ -161,6 +161,64 @@ class CustomFieldModel(models.Model):
         # 2.0 TODO: #824 field.slug rather than field.name
         return OrderedDict([(field, self.cf.get(field.name)) for field in fields])
 
+    def get_custom_field_groupings_basic(self):
+        """
+        Return a dictonary of custom fields grouped by the same grouping in the form
+        {
+            <grouping_1>: [cf1, cf2...],
+            ...
+            <grouping_5>: [cf8, cf9...],
+            ...
+        }
+        which have advanced_ui set to False
+        """
+        return self.get_custom_field_groupings(advanced_ui=False)
+
+    def get_custom_field_groupings_advanced(self):
+        """
+        Return a dictonary of custom fields grouped by the same grouping in the form
+        {
+            <grouping_1>: [cf1, cf2...],
+            ...
+            <grouping_5>: [cf8, cf9...],
+            ...
+        }
+        which have advanced_ui set to True
+        """
+        return self.get_custom_field_groupings(advanced_ui=True)
+
+    def get_custom_field_groupings(self, advanced_ui=None):
+        """
+        Return a dictonary of custom fields grouped by the same grouping in the form
+        {
+            <grouping_1>: [cf1, cf2...],
+            ...
+            <grouping_5>: [cf8, cf9...],
+            ...
+        }
+        """
+        record = {}
+        fields = CustomField.objects.get_for_model(self)
+        if advanced_ui is not None:
+            fields = fields.filter(advanced_ui=advanced_ui)
+
+        for field in fields:
+            data = (field, self.cf.get(field.name))
+            # Data made before migration will have a grouping of None if not specified
+            # Data made after migration will have a grouping of "" if not specified.
+            # We put them in the same grouping
+            if field.grouping in ["", None]:
+                field.grouping = ""
+            if field.grouping not in record:
+                record[field.grouping] = []
+            record[field.grouping].append(data)
+        record = OrderedDict(sorted(record.items()))
+        # Check if custom fields with no grouping specified exist.
+        if record.get(""):
+            # Move it to the front of the OrderedDict (render it first)
+            record.move_to_end("", last=False)
+        return record
+
     def clean(self):
         super().clean()
 
@@ -250,6 +308,12 @@ class CustomField(BaseModel, ChangeLoggedModel, NotesMixin):
         verbose_name="Object(s)",
         limit_choices_to=FeatureQuery("custom_fields"),
         help_text="The object(s) to which this field applies.",
+    )
+    grouping = models.CharField(
+        max_length=50,
+        null=True,
+        blank=True,
+        help_text="Human-readable grouping that this custom field belongs to.",
     )
     type = models.CharField(
         max_length=50,

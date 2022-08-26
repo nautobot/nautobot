@@ -347,6 +347,10 @@ class CustomFieldForm(BootstrapMixin, forms.ModelForm):
     content_types = MultipleContentTypeField(
         feature="custom_fields", help_text="The object(s) to which this field applies."
     )
+    grouping = forms.CharField(
+        required=False,
+        help_text="Human-readable grouping that this custom field belongs to",
+    )
 
     class Meta:
         model = CustomField
@@ -361,6 +365,7 @@ class CustomFieldForm(BootstrapMixin, forms.ModelForm):
             "filter_logic",
             "advanced_ui",
             "content_types",
+            "grouping",
             "validation_minimum",
             "validation_maximum",
             "validation_regex",
