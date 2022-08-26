@@ -1081,9 +1081,11 @@ class JobView(ObjectPermissionRequiredMixin, View):
             job_model.job_class().as_form(request.POST, request.FILES) if job_model.job_class is not None else None
         )
         schedule_form = forms.JobScheduleForm(request.POST)
+        # TODO: add form field for celery queue name, move default value to form field
+        celery_queue = app.conf.task_default_queue
 
         # Allow execution only if a worker process is running and the job is runnable.
-        if not get_worker_count(request):
+        if not get_worker_count(request, queue=celery_queue):
             messages.error(request, "Unable to run or schedule job: Celery worker process not running.")
         elif not job_model.installed or job_model.job_class is None:
             messages.error(request, "Unable to run or schedule job: Job is not presently installed.")
@@ -1095,8 +1097,6 @@ class JobView(ObjectPermissionRequiredMixin, View):
             # Run the job. A new JobResult is created.
             commit = job_form.cleaned_data.pop("_commit")
             schedule_type = schedule_form.cleaned_data["_schedule_type"]
-            # TODO: add form field for celery queue name, move default value to form field
-            celery_queue = app.conf.task_default_queue
 
             if job_model.approval_required or schedule_type in JobExecutionType.SCHEDULE_CHOICES:
                 crontab = ""

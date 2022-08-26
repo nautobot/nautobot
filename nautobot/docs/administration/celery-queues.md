@@ -14,7 +14,7 @@ Each environment is unique but it's generally a good idea to add at least one ex
 ExecStart=/opt/nautobot/bin/nautobot-server celery worker --loglevel INFO --pidfile /var/tmp/nautobot-worker-jobqueue.pid --queues job_queue
 ```
 
-This will create a worker that will only process tasks sent to the `job_queue` celery queue. You can use this worker to run jobs while the rest of Nautobot's background tasks will be processed by the default celery worker listening to the `celery` queue. 
+This will create a worker that will only process tasks sent to the `job_queue` celery queue. You can use this worker to run jobs while the rest of Nautobot's background tasks will be processed by the default celery worker listening to the `celery` queue.
 
 !!! info
     Workers can be configured to listen to multiple queues by supplying a comma separated list of queues to the `--queues` argument. See the [celery workers guide](https://docs.celeryq.dev/en/stable/userguide/workers.html#queues) for more information.

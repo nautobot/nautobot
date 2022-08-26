@@ -537,8 +537,8 @@ def _run_job(request, job_model, legacy_response=False):
         # of errors under messages
         return Response({"errors": e.message_dict if hasattr(e, "error_dict") else e.messages}, status=400)
 
-    if not get_worker_count():
-        raise CeleryWorkerNotRunningException()
+    if not get_worker_count(queue=celery_queue):
+        raise CeleryWorkerNotRunningException(queue=celery_queue)
 
     job_content_type = get_job_content_type()
     schedule_data = input_serializer.validated_data.get("schedule")
