@@ -11,29 +11,7 @@ If you don't change any of the defaults when [deploying a celery worker](../inst
 Each environment is unique but it's generally a good idea to add at least one extra worker on a separate queue for running jobs. Nautobot uses the default `celery` queue to perform some background tasks and if the queue is full of long running jobs these system tasks could take a long time to execute. This could cause performance problems or unexpected behavior in Nautobot. A new worker can be deployed on a separate queue by using the [`nautobot-worker.service` systemd service](../installation/services.md#celery-worker) and modifying the `ExecStart` line to include a [`--queues` option](https://docs.celeryq.dev/en/stable/reference/cli.html#cmdoption-celery-worker-Q). Example:
 
 ```ini
-[Unit]
-Description=Nautobot Celery Job Queue Worker
-Documentation=https://nautobot.readthedocs.io/en/stable/
-After=network-online.target
-Wants=network-online.target
-
-[Service]
-Type=exec
-Environment="NAUTOBOT_ROOT=/opt/nautobot"
-
-User=nautobot
-Group=nautobot
-PIDFile=/var/tmp/nautobot-worker-jobqueue.pid
-WorkingDirectory=/opt/nautobot
-
 ExecStart=/opt/nautobot/bin/nautobot-server celery worker --loglevel INFO --pidfile /var/tmp/nautobot-worker-jobqueue.pid --queues job_queue
-
-Restart=always
-RestartSec=30
-PrivateTmp=true
-
-[Install]
-WantedBy=multi-user.target
 ```
 
 !!! warning
