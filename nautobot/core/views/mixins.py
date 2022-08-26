@@ -97,7 +97,7 @@ class NautobotViewSetMixin(GenericViewSet, AccessMixin, GetReturnURLMixin, FormV
         except KeyError:
             messages.error(
                 self.request,
-                "This action is not permitted. Please use the buttons at the bottom of the table for Bulk Delete and Bulk Update"
+                "This action is not permitted. Please use the buttons at the bottom of the table for Bulk Delete and Bulk Update",
             )
         return self.get_permissions_for_model(queryset.model, permissions)
 
