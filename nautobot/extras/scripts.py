@@ -1,4 +1,5 @@
 """Legacy implementation of "scripts" API. New development should use extras.jobs instead."""
+# 2.0 TODO: remove this entire file.
 from .jobs import (
     BaseJob,
     Job,
@@ -48,17 +49,20 @@ class BaseScript(BaseJob):
         raise NotImplementedError("The script must define a run() method.")
 
     # Logging
+    # These APIs are intentionally different in their signature from BaseJob.log_*, because
+    # in NetBox, the Script logging APIs were different from the Report logging APIs.
+    # pylint: disable=arguments-differ
 
-    def log_success(self, message):  # pylint: disable=arguments-differ
+    def log_success(self, message):
         super().log_success(obj=None, message=message)
 
-    def log_info(self, message):  # pylint: disable=arguments-differ
+    def log_info(self, message):
         super().log_info(obj=None, message=message)
 
-    def log_warning(self, message):  # pylint: disable=arguments-differ
+    def log_warning(self, message):
         super().log_warning(obj=None, message=message)
 
-    def log_failure(self, message):  # pylint: disable=arguments-differ
+    def log_failure(self, message):
         super().log_failure(obj=None, message=message)
 
 

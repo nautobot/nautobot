@@ -331,6 +331,7 @@ class BaseJob:
             # Set initial "commit" checkbox state based on the Meta parameter
             form.fields["_commit"].initial = commit_default
 
+        # https://github.com/PyCQA/pylint/issues/3484
         if self.field_order:  # pylint: disable=using-constant-test
             form.order_fields(self.field_order)
 
