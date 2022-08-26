@@ -56,10 +56,6 @@ class BaseTable(tables.Table):
                 self.base_columns[f"cr_{relationship.slug}_dst"] = RelationshipColumn(
                     relationship, side=RelationshipSideChoices.SIDE_DESTINATION
                 )
-            else:
-                self.base_columns[f"cr_{relationship.slug}_peer"] = RelationshipColumn(
-                    relationship, side=RelationshipSideChoices.SIDE_PEER
-                )
 
         # Init table
         super().__init__(*args, **kwargs)
@@ -411,7 +407,8 @@ class RelationshipColumn(tables.Column):
 
     def __init__(self, relationship, side, *args, **kwargs):
         self.relationship = relationship
-        self.side = RelationshipSideChoices.OPPOSITE[side]
+        self.side = side
+        self.peer_side = RelationshipSideChoices.OPPOSITE[side]
         kwargs["verbose_name"] = relationship.get_label(side)
         kwargs["accessor"] = Accessor("associations")
         super().__init__(orderable=False, *args, **kwargs)
@@ -423,26 +420,21 @@ class RelationshipColumn(tables.Column):
 
         # Filter the relationship associations by the relationship instance.
         # Since associations accessor returns all the relationship associations regardless of the relationship.
+        value = [v for v in value if v.relationship == self.relationship]
         if not self.relationship.symmetric:
             if self.side == RelationshipSideChoices.SIDE_SOURCE:
-                value = [v for v in value if v.relationship == self.relationship and v.destination_id == record.id]
+                value = [v for v in value if v.source_id == record.id]
             else:
-                value = [v for v in value if v.relationship == self.relationship and v.source_id == record.id]
-        else:
-            value = [
-                v
-                for v in value
-                if v.relationship == self.relationship and (v.destination_id == record.id or v.source_id == record.id)
-            ]
+                value = [v for v in value if v.destination_id == record.id]
 
         template = ""
         # Handle Symmetric Relationships
         if len(value) < 1:
-            # If no relationship association, render nothing
-            pass
+            # If no relationship association, render None
+            return self.default
         else:
             # Handle Relationships on the many side.
-            if self.relationship.has_many(self.side):
+            if self.relationship.has_many(self.peer_side):
                 v = value[0]
                 meta = type(v.get_peer(record))._meta
                 name = meta.verbose_name_plural if len(value) > 1 else meta.verbose_name
@@ -450,7 +442,7 @@ class RelationshipColumn(tables.Column):
                     '<a href="{}?relationship={}&{}_id={}">{} {}</a>',
                     reverse("extras:relationshipassociation_list"),
                     self.relationship.slug,
-                    RelationshipSideChoices.OPPOSITE[self.side],
+                    self.side,
                     record.id,
                     len(value),
                     name,
