@@ -56,6 +56,7 @@ class BaseTable(tables.Table):
                 self.base_columns[f"cr_{relationship.slug}_dst"] = RelationshipColumn(
                     relationship, side=RelationshipSideChoices.SIDE_DESTINATION
                 )
+            # symmetric relationships are already handled above in the source_type case
 
         # Init table
         super().__init__(*args, **kwargs)
@@ -409,8 +410,8 @@ class RelationshipColumn(tables.Column):
         self.relationship = relationship
         self.side = side
         self.peer_side = RelationshipSideChoices.OPPOSITE[side]
-        kwargs["verbose_name"] = relationship.get_label(side)
-        kwargs["accessor"] = Accessor("associations")
+        kwargs.setdefault("verbose_name", relationship.get_label(side))
+        kwargs.setdefault("accessor", Accessor("associations"))
         super().__init__(orderable=False, *args, **kwargs)
 
     def render(self, record, value):
