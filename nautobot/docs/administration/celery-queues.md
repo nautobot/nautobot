@@ -41,7 +41,7 @@ WantedBy=multi-user.target
 
 ## Concurrency Setting
 
-If you have long running jobs that use little cpu resources you may want to increase your [`--concurrency`](https://docs.celeryq.dev/en/stable/reference/cli.html#cmdoption-celery-worker-c) setting on your worker to increase the number of jobs that run in parallel. For example, you may have a job that logs into a device over ssh and collects some information from the command line. This task could take a long time to run but consume minimal cpu so your system may be able to run many more of these tasks in parallel than the default concurrency setting allows. The `--concurrency` setting can be modified by adding the command line option in the `ExecStart` line in your systemd service:
+If you have long running jobs that use little CPU resources you may want to increase your [`--concurrency`](https://docs.celeryq.dev/en/stable/reference/cli.html#cmdoption-celery-worker-c) setting on your worker to increase the number of jobs that run in parallel. For example, you may have a job that logs into a device over ssh and collects some information from the command line. This task could take a long time to run but consume minimal CPU so your system may be able to run many more of these tasks in parallel than the default concurrency setting allows. The `--concurrency` setting can be modified by adding the command line option in the `ExecStart` line in your systemd service:
 
 ```ini
 ExecStart=/opt/nautobot/bin/nautobot-server celery worker --loglevel INFO --pidfile /var/tmp/nautobot-worker-jobqueue.pid --queues job_queue --concurrency 64
@@ -50,5 +50,4 @@ ExecStart=/opt/nautobot/bin/nautobot-server celery worker --loglevel INFO --pidf
 You may have to change this setting multiple times to find what works best in your environment.
 
 !!! warning
-
-    Modifying your concurrency setting may increase the cpu and memory load on your celery worker. Only change this setting if you have monitoring systems in place to monitor the system resources on your worker.
+    Modifying your concurrency setting may increase the CPU and memory load on your celery worker. Only change this setting if you have monitoring systems in place to monitor the system resources on your worker.
