@@ -180,19 +180,35 @@ def generate_signature(request_body, secret):
     return hmac_prep.hexdigest()
 
 
-def get_worker_count(request=None):
+def get_celery_queues():
     """
-    Return a count of the active Celery workers.
+    Return a dictionary of celery queues and the number of workers active on the queue in
+    the form {queue_name: num_workers}
     """
-    # Inner imports so we don't risk circular imports
-    from nautobot.core.celery import app  # noqa
+    from nautobot.core.celery import app  # prevent circular import
 
-    # Count the number of active celery workers
+    celery_queues = {}
+
     inspect = app.control.inspect()
-    active = inspect.active()  # None if no active workers
-    celery_count = len(active) if active is not None else 0
+    active_queues = inspect.active_queues().values()
+    if active_queues is None:
+        return celery_queues
+    for worker_queue_list in active_queues:
+        distinct_queues = set([q["name"] for q in worker_queue_list])
+        for queue in distinct_queues:
+            celery_queues.setdefault(queue, 0)
+            celery_queues[queue] += 1
 
-    return celery_count
+    return celery_queues
+
+
+def get_worker_count(request=None, queue="celery"):
+    """
+    Return a count of the active Celery workers in a specified queue. Defaults to the default queue "celery"
+    """
+
+    celery_queues = get_celery_queues()
+    return celery_queues.get(queue, 0)
 
 
 # namedtuple class yielded by the jobs_in_directory generator function, below
