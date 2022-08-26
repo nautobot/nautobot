@@ -1,20 +1,16 @@
 # Style Guide
 
-Nautobot generally follows the [Django style guide](https://docs.djangoproject.com/en/stable/internals/contributing/writing-code/coding-style/), which is itself based on [PEP 8](https://www.python.org/dev/peps/pep-0008/). [Flake8](https://flake8.pycqa.org/) is used to validate code style, ignoring certain violations, and [Black](https://black.readthedocs.io/) is used to enforce code formatting conventions. [Hadolint](https://github.com/hadolint/hadolint) is used to lint and validate Docker best practices in the Dockerfile. [MarkdownLint-cli](https://github.com/igorshubovych/markdownlint-cli) is used to lint and validate Markdown files. See `tasks.py`.
+Nautobot generally follows the [Django style guide](https://docs.djangoproject.com/en/stable/internals/contributing/writing-code/coding-style/), which is itself based on [PEP 8](https://www.python.org/dev/peps/pep-0008/). The following tools are used to enforce coding style and best practices:
 
-## Flake8 Exceptions
+* [Flake8](https://flake8.pycqa.org/) is used to validate code style.
+* [Black](https://black.readthedocs.io/) is used to enforce code formatting conventions.
+* [Pylint](https://pylint.pycqa.org/en/latest/) is used for Python static code analysis.
+* [Hadolint](https://github.com/hadolint/hadolint) is used to lint and validate Docker best practices in the Dockerfile.
+* [MarkdownLint-cli](https://github.com/igorshubovych/markdownlint-cli) is used to lint and validate Markdown (documentation) files.
 
-* Whitespace before ':' is permitted (E203) as Black maintains that there are cases where this is the preferred style.
-* Imported-but-unused modules (F401) are currently not flagged, but we want to fix this in the future.
-* Wildcard imports (for example `from .constants import *`, F403) are currently not flagged, as this is a pattern inherited from NetBox's coding style, but we want to change this in the future, and recommend against introducing this pattern in any new code.
-* "Name may be undefined or defined from star imports" (F405) is currently not flagged due to the previous item; we plan to
-enable this check after changing the above import pattern.
-* Maximum line length is 120 characters (E501)
-* Line breaks are permitted both before (W503) and after (W504) binary operators.
+Nautobot-specific configuration of these tools is maintained in the files `.flake8`, `.markdownlint.yml`, or `pyproject.toml` as appropriate to the individual tool.
 
-## Enforcing Code Style
-
-The `flake8`, `black` and `hadolint` utilities are used by the CI process to enforce code style. It is strongly recommended to include these as part of your commit process. A git commit hook is provided in the source at `scripts/git-hooks/pre-commit`. Linking to this script from `.git/hooks/` will invoke `flake8` and `black --check` prior to every commit attempt and abort if the validation fails.
+It is strongly recommended to include all of the above tools as part of your commit process before opening any pull request. A Git commit hook is provided in the source at `scripts/git-hooks/pre-commit`. Linking to this script from `.git/hooks/` will invoke these tools prior to every commit attempt and abort if the validation fails.
 
 ```bash
 $ cd .git/hooks/
@@ -26,8 +22,10 @@ You can also invoke these utilities manually against the development Docker cont
 ```no-highlight
 invoke flake8
 invoke black
+invoke check-migrations
 invoke hadolint
 invoke markdownlint
+invoke pylint
 ```
 
 ## Introducing New Dependencies
