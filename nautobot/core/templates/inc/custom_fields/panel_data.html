@@ -1,5 +1,10 @@
 {% load helpers %}
 {% if custom_fields %}
+<style>
+    .accordion-toggle {
+        font-size: 15px;
+    }
+</style>
     <div class="panel panel-default">
         <div class="panel-heading">
             <strong>Custom Fields</strong>
@@ -10,18 +15,13 @@
             {% with forloop.counter0 as count %}
                 {% if grouping != "" %}
                     <tr>
-                        <!-- #TODO
-                        Here we are using forloop.counter0 to guarantee the unqiueness of `data-target` attribute.
-                        This feature on the joblist page is using {{ grouping | slugify }} it should be changed as it breaks `accordion-toggle`
-                        when two distinct groups have the same slugified name. e.g. Group 2, group-2 -->
-                        <th>
-                            <button type="button" class="btn-link accordion-toggle mdi mdi-chevron-down"
-                            name="grouping.{{ grouping }}" data-toggle="collapse"
-                            data-target=".collapseme-{{ count }}">
+                        <td colspan="2"><strong>
+                            <button type="button" class="accordion-toggle mdi mdi-chevron-down"
+                                    name="grouping.{{ grouping }}" data-toggle="collapse"
+                                    data-target=".collapseme-{{ count }}">
                                 {{ grouping }}
-                            </button>
-                        </th>
-                        <td></td>
+                            </button></strong>
+                        </td>
                     </tr>
                 {% endif %}
                     {% for field, value in fields %}
@@ -37,12 +37,12 @@
                                 {% elif field.type == 'json' and value is not None %}
                                     <p>
                                         <button class="btn btn-xs btn-primary" type="button" data-toggle="collapse"
-                                                data-target="#cf_{{ field.name | slugify }}" aria-expanded="false"
-                                                aria-controls="cf_{{ field.name | slugify }}">
+                                                data-target="#cf_{{ field.slug }}" aria-expanded="false"
+                                                aria-controls="cf_{{ field.slug }}">
                                             Show/Hide
                                         </button>
                                     </p>
-                                    <pre class="collapse" id="cf_{{ field.name | slugify }}"><code>{{ value|render_json }}</code></pre>
+                                    <pre class="collapse" id="cf_{{ field.slug }}"><code>{{ value|render_json }}</code></pre>
                                 {% elif value or value == 0 %}
                                     {{ value }}
                                 {% elif field.required %}

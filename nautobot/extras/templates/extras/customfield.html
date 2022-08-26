@@ -39,6 +39,10 @@
                         <td><span>{{ object.label | placeholder }}</span></td>
                     </tr>
                     <tr>
+                        <td>Grouping</td>
+                        <td><span>{{ object.grouping | placeholder }}</span></td>
+                    </tr>
+                    <tr>
                         <td>Description</td>
                         <td><span>{{ object.description | render_markdown | placeholder }}</span></td>
                     </tr>
@@ -98,14 +102,6 @@
                                 {% for ct in object.content_types.all %}
                                     <li>{{ ct }}</li>
                                 {% endfor %}
-                            </ul>
-                        </td>
-                    </tr>
-                    <tr>
-                        <td>Grouping</td>
-                        <td>
-                            <ul>
-                                {{ object.grouping }}
                             </ul>
                         </td>
                     </tr>

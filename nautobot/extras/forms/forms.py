@@ -333,6 +333,11 @@ CustomFieldChoiceFormSet = inlineformset_factory(
 
 class CustomFieldForm(BootstrapMixin, forms.ModelForm):
     label = forms.CharField(required=True, max_length=50, help_text="Name of the field as displayed to users.")
+    grouping = forms.CharField(
+        max_length=255,
+        required=False,
+        help_text="Human-readable grouping that this custom field belongs to",
+    )
     slug = SlugField(
         max_length=50,
         slug_source="label",
@@ -347,15 +352,12 @@ class CustomFieldForm(BootstrapMixin, forms.ModelForm):
     content_types = MultipleContentTypeField(
         feature="custom_fields", help_text="The object(s) to which this field applies."
     )
-    grouping = forms.CharField(
-        required=False,
-        help_text="Human-readable grouping that this custom field belongs to",
-    )
 
     class Meta:
         model = CustomField
         fields = (
             "label",
+            "grouping",
             "slug",
             "type",
             "weight",
@@ -365,7 +367,6 @@ class CustomFieldForm(BootstrapMixin, forms.ModelForm):
             "filter_logic",
             "advanced_ui",
             "content_types",
-            "grouping",
             "validation_minimum",
             "validation_maximum",
             "validation_regex",

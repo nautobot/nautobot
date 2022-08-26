@@ -204,19 +204,8 @@ class CustomFieldModel(models.Model):
 
         for field in fields:
             data = (field, self.cf.get(field.name))
-            # Data made before migration will have a grouping of None if not specified
-            # Data made after migration will have a grouping of "" if not specified.
-            # We put them in the same grouping
-            if field.grouping in ["", None]:
-                field.grouping = ""
-            if field.grouping not in record:
-                record[field.grouping] = []
-            record[field.grouping].append(data)
+            record.setdefault(field.grouping, []).append(data)
         record = OrderedDict(sorted(record.items()))
-        # Check if custom fields with no grouping specified exist.
-        if record.get(""):
-            # Move it to the front of the OrderedDict (render it first)
-            record.move_to_end("", last=False)
         return record
 
     def clean(self):
@@ -310,8 +299,7 @@ class CustomField(BaseModel, ChangeLoggedModel, NotesMixin):
         help_text="The object(s) to which this field applies.",
     )
     grouping = models.CharField(
-        max_length=50,
-        null=True,
+        max_length=255,
         blank=True,
         help_text="Human-readable grouping that this custom field belongs to.",
     )
