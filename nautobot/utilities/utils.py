@@ -13,6 +13,7 @@ from django.contrib.contenttypes.models import ContentType
 from django.core.serializers import serialize
 from django.db.models import Count, Model, OuterRef, Subquery
 from django.db.models.functions import Coalesce
+from django.urls import reverse, NoReverseMatch
 from django.utils.tree import Node
 
 from django.template import engines
@@ -537,6 +538,25 @@ def get_filterset_for_model(model):
         Either the `FilterSet` class or `None`
     """
     return get_related_class_for_model(model, module_name="filters", object_suffix="FilterSet")
+
+
+def get_model_api_endpoint(model):
+    """Return the API endpoint associated with a given `model`.
+
+    Returns:
+        Either the endpoint or `None`
+    """
+    app_label = model._meta.app_label
+    model_name = model._meta.model_name
+
+    try:
+        if app_label in settings.PLUGINS:
+            data_url = reverse(f"plugins-api:{app_label}-api:{model_name}-list")
+        else:
+            data_url = reverse(f"{app_label}-api:{model_name}-list")
+        return data_url
+    except NoReverseMatch:
+        return None
 
 
 def get_form_for_model(model, form_prefix=""):

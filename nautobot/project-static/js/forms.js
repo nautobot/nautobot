@@ -131,18 +131,21 @@ function jsify_form(context) {
     });
 
     // Static choice selection
-    this_context.find('.nautobot-select2-static').select2({
-        allowClear: true,
-        placeholder: "---------",
-        theme: "bootstrap",
-        width: "off"
-    });
+    function initializeStaticChoiceSelection(){
+        this_context.find('.nautobot-select2-static').select2({
+            allowClear: true,
+            placeholder: "---------",
+            theme: "bootstrap",
+            width: "off"
+        });
+    }
+    initializeStaticChoiceSelection()
 
     // API backed selection
     // Includes live search and chained fields
     // The `multiple` setting may be controlled via a data-* attribute
 
-    function initialize_dynamic_choice_selection(){
+    function initializeDynamicChoiceSelection(){
         this_context.find('.nautobot-select2-api').select2({
             allowClear: true,
             placeholder: "---------",
@@ -296,7 +299,7 @@ function jsify_form(context) {
             }
         });
     }
-    initialize_dynamic_choice_selection()
+    initializeDynamicChoiceSelection()
 
     // Flatpickr selectors
     this_context.find('.date-picker').flatpickr({
@@ -528,36 +531,50 @@ function jsify_form(context) {
                 type: 'GET',
             }).done(function (response) {
                 if(response.data_url)
-                    use_dynamic_select(value_element, value_name, value_id, response.data_url)
+                    useStaticSelect(value_element, value_name, value_id, response.data_url)
                 else if (response.choices)
-                    use_static_select(value_element, value_name)
+                    useStaticSelect(value_element, value_name, value_id, response.choices, response.allow_multiple)
                 else
-                    use_input(value_element, value_name, value_id)
+                    useInput(value_element, value_name, value_id)
             }).fail(function (xhr, status, error) {
-                use_input(value_element, value_name, value_id)
+                useInput(value_element, value_name, value_id)
             });
         }
         else {
-            use_input(value_element, value_name, value_id)
+            useInput(value_element, value_name, value_id)
         }
     })
 
-    function use_input(element, name, _id){
+    function useInput(element, name, _id){
         input_field = `<input type="text" name="${name}" class="value-input form-control" id="${_id}">`
         element.parent().html(input_field)
     }
 
-    function use_static_select(element, name, _id){
-
+    function useStaticSelect(element, name, _id, choices, allow_multiple){
+        select_field = `
+            <select
+                name="${name}"
+                class="value-input nautobot-select2-static select2-hidden-accessible"
+                id="${_id}"
+                data-select2-id="${_id}"
+                tabindex="-1"
+                aria-hidden="true"
+                ${allow_multiple ? "multiple" : ""}
+            >
+        `
+        choices.forEach(([value, label]) => select_field += `<option value="${value}">${label}</option>`)
+        select_field += `</select>`
+        element.parent().html(select_field)
+        initializeStaticChoiceSelection()
     }
 
-    function use_dynamic_select(element, name, _id, data_url){
+    function useStaticSelect(element, name, _id, data_url){
         select_field = `
             <select
                 name="${name}"
                 class="value-input nautobot-select2-api select2-hidden-accessible"
                 data-url="${data_url}"
-                id="id_${_id}"
+                id="${_id}"
                 data-select2-id="${_id}"
                 tabindex="-1"
                 aria-hidden="true"
@@ -565,7 +582,7 @@ function jsify_form(context) {
             ></select>
         `
         element.parent().html(select_field)
-        initialize_dynamic_choice_selection()
+        initializeDynamicChoiceSelection()
     }
 
 }

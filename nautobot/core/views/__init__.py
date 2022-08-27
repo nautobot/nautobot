@@ -15,6 +15,7 @@ from django.urls import reverse
 from django.views.decorators.csrf import requires_csrf_token
 from django.views.defaults import ERROR_500_TEMPLATE_NAME, page_not_found
 from django.views.generic import TemplateView, View
+from django_filters import filters
 from packaging import version
 from graphene_django.views import GraphQLView
 from taggit.managers import TaggableManager
@@ -26,7 +27,9 @@ from nautobot.extras.models import GraphQLQuery
 from nautobot.extras.registry import registry
 from nautobot.extras.forms import GraphQLQueryForm
 from nautobot.utilities.config import get_settings_or_config
-from nautobot.utilities.utils import get_filterset_for_model
+from nautobot.utilities.filters import RelatedMembershipBooleanFilter
+from nautobot.utilities.forms import BOOLEAN_WITH_BLANK_CHOICES
+from nautobot.utilities.utils import get_filterset_for_model, get_model_api_endpoint
 
 
 class HomeView(AccessMixin, TemplateView):
@@ -236,6 +239,10 @@ class LookupFieldsChoicesView(View):
         """
         Return all lookup expressions for `field_name` in the `filterset`
         """
+        if field_name.startswith("has_"):
+            field = filterset[field_name]
+            return [{"id": field_name, "name": field.label}]
+
         lookup_expr = [
             {
                 "id": name,
@@ -244,7 +251,7 @@ class LookupFieldsChoicesView(View):
             for name, field in filterset.items()
             if field.field_name == field_name and not name.startswith("has_")
         ]
-        return lookup_expr or [{"id": "exact", "name": "exact"}]
+        return lookup_expr or [{"id": "exact", "name": "exact - Not Found"}]
 
     def get(self, request):
         contenttype = request.GET.get("contenttype")
@@ -254,7 +261,7 @@ class LookupFieldsChoicesView(View):
             contenttype = ContentType.objects.get(app_label=app_label, model=model_name)
             filterset = get_filterset_for_model(contenttype.model_class())
             if filterset is not None:
-                lookup_exper = self.__get_field_lookup_exper(filterset.get_filters(), field_name)
+                lookup_exper = self.__get_field_lookup_exper(filterset.base_filters, field_name)
         except ContentType.DoesNotExist:
             lookup_exper = []
 
@@ -276,10 +283,10 @@ class LookupFieldTypeView(View):
     queryset = None
 
     @staticmethod
-    def __get_model_api_endpoint_and_type(model):
-        if isinstance(model, (ManyToOneRel, fields.related.ForeignKey, ManyToManyRel, TaggableManager)):
-            app_label = model.related_model._meta.app_label
-            model_name = model.related_model._meta.model_name
+    def __get_model_api_endpoint_and_type(field):
+        if isinstance(field, (ManyToOneRel, fields.related.ForeignKey, ManyToManyRel, TaggableManager)):
+            app_label = field.related_model._meta.app_label
+            model_name = field.related_model._meta.model_name
 
             if app_label in settings.PLUGINS:
                 data_url = reverse(f"plugins-api:{app_label}-api:{model_name}-list")
@@ -294,16 +301,57 @@ class LookupFieldTypeView(View):
         #  Might be a static choice field or text field
         return {}
 
+    @staticmethod
+    def __get_filterset_field_data(field):
+        data = {"type": "others"}
+
+        if isinstance(field, (filters.MultipleChoiceFilter, )):
+            if "choices" in field.extra:  # Field choices
+                # Problem might arise here if plugin developer do not declare field choices using nautobot.utilities.choices.ChoiceSet
+                data = {
+                    "type": "static-choices",
+                    "choices": field.extra["choices"].CHOICES,
+                    "allow_multiple": True,
+                }
+            elif "queryset" in field.extra:  # Dynamically populated choices
+                related_model = field.extra["queryset"].model
+                api_endpoint = get_model_api_endpoint(related_model)
+                if api_endpoint:
+                    data = {
+                        "type": "dynamic-choices",
+                        "data_url": api_endpoint,
+                    }
+        elif isinstance(field, (RelatedMembershipBooleanFilter, )):  # Yes / No choice
+            data = {
+                "type": "static-choices",
+                "choices": BOOLEAN_WITH_BLANK_CHOICES,
+                "allow_multiple": False,
+            }
+        return data
+
     def get(self, request):
         field_name = request.GET.get("field_name")
 
         contenttype = request.GET.get("contenttype")
         app_label, model_name = contenttype.split("_")
         model = ContentType.objects.get(app_label=app_label, model=model_name).model_class()
-        try:
-            field_model = model._meta.get_field(field_name)
-            data = self.__get_model_api_endpoint_and_type(field_model)
-        except FieldDoesNotExist:
-            return JsonResponse("Field does not exist", status=400)
+        filterset = get_filterset_for_model(model)
+
+        if filterset is None:
+            # error / try using model instead of filterset
+            # try:
+            #     field = model._meta.get_field(field_name)
+            #     data = self.__get_model_api_endpoint_and_type(field)
+            # except FieldDoesNotExist:
+            #     return JsonResponse({"error": "Field does not exist"}, status=400)
+            pass
+
+        #  filterset.declared_filters -  fields without lookup
+        #  filterset.base_filters -  fields with lookup
+        field = filterset.base_filters.get(field_name)
+        if field is None:
+            pass  # Field not found in filterset
+
+        data = self.__get_filterset_field_data(field)
 
         return JsonResponse(data)
