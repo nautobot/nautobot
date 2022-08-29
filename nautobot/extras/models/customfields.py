@@ -168,9 +168,9 @@ class CustomFieldModel(models.Model):
         This method exists to help call get_custom_field_groupings() in templates where a function argument (advanced_ui) cannot be specified.
         Return a dictonary of custom fields grouped by the same grouping in the form
         {
-            <grouping_1>: [cf1, cf2...],
+            <grouping_1>: [(cf1, <value for cf1>), (cf2, <value for cf2>), ...],
             ...
-            <grouping_5>: [cf8, cf9...],
+            <grouping_5>: [(cf8, <value for cf8>), (cf9, <value for cf9>), ...],
             ...
         }
         which have advanced_ui set to False
@@ -182,9 +182,9 @@ class CustomFieldModel(models.Model):
         This method exists to help call get_custom_field_groupings() in templates where a function argument (advanced_ui) cannot be specified.
         Return a dictonary of custom fields grouped by the same grouping in the form
         {
-            <grouping_1>: [cf1, cf2...],
+            <grouping_1>: [(cf1, <value for cf1>), (cf2, <value for cf2>), ...],
             ...
-            <grouping_5>: [cf8, cf9...],
+            <grouping_5>: [(cf8, <value for cf8>), (cf9, <value for cf9>), ...],
             ...
         }
         which have advanced_ui set to True
@@ -195,9 +195,9 @@ class CustomFieldModel(models.Model):
         """
         Return a dictonary of custom fields grouped by the same grouping in the form
         {
-            <grouping_1>: [cf1, cf2...],
+            <grouping_1>: [(cf1, <value for cf1>), (cf2, <value for cf2>), ...],
             ...
-            <grouping_5>: [cf8, cf9...],
+            <grouping_5>: [(cf8, <value for cf8>), (cf9, <value for cf9>), ...],
             ...
         }
         """
@@ -209,7 +209,7 @@ class CustomFieldModel(models.Model):
         for field in fields:
             data = (field, self.cf.get(field.name))
             record.setdefault(field.grouping, []).append(data)
-        record = OrderedDict(sorted(record.items()))
+        record = dict(sorted(record.items()))
         return record
 
     def clean(self):
