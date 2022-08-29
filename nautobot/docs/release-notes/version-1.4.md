@@ -168,6 +168,7 @@ The `settings_and_registry` default context processor was changed to purely `set
 - [#983](https://github.com/nautobot/nautobot/issues/983) - Added functionalities to specify `args` and `kwargs` to `NavMenuItem`.
 - [#2250](https://github.com/nautobot/nautobot/issues/2250) - Added "Stats" and "Rack Groups" to Location detail view, added "Locations" to Site detail view.
 - [#2273](https://github.com/nautobot/nautobot/issues/2273) - Added custom markdownlint rule to check for invalid relative links in the documentation.
+- [#2314](https://github.com/nautobot/nautobot/pull/2314) - Added `pylint` to linting suite and CI.
 
 ### Changed
 
