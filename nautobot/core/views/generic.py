@@ -219,7 +219,9 @@ class ObjectListView(ObjectPermissionRequiredMixin, View):
         always_valid_actions = ("export",)
         valid_actions = []
         invalid_actions = []
-
+        # added check for whether the action_buttons exist because of issue #2107
+        if self.action_buttons is None:
+            self.action_buttons = []
         for action in self.action_buttons:
             if action in always_valid_actions or validated_viewname(self.queryset.model, action) is not None:
                 valid_actions.append(action)
