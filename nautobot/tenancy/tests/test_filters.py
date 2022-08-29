@@ -23,19 +23,19 @@ class TenantGroupTestCase(FilterTestCases.NameSlugFilterTestCase):
             slug="tenant-group-1",
             parent=parent_tenant_groups[0],
             description="A",
-        ),
+        )
         TenantGroup.objects.create(
             name="Tenant Group 2",
             slug="tenant-group-2",
             parent=parent_tenant_groups[1],
             description="B",
-        ),
+        )
         TenantGroup.objects.create(
             name="Tenant Group 3",
             slug="tenant-group-3",
             parent=parent_tenant_groups[2],
             description="C",
-        ),
+        )
 
     def test_description(self):
         params = {"description": ["A", "B"]}
@@ -52,6 +52,7 @@ class TenantGroupTestCase(FilterTestCases.NameSlugFilterTestCase):
 class TenantTestCase(FilterTestCases.NameSlugFilterTestCase):
     queryset = Tenant.objects.all()
     filterset = TenantFilterSet
+    fixtures = ("status",)
 
     @classmethod
     def setUpTestData(cls):

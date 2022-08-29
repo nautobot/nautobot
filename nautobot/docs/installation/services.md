@@ -330,7 +330,7 @@ You can use the command `systemctl status nautobot.service` to verify that the W
     If the Nautobot service fails to start, issue the command `journalctl -eu nautobot.service` to check for log messages that
     may indicate the problem.
 
-Once you've verified that the WSGI service and worker are up and running, move on to [HTTP server setup](../http-server).
+Once you've verified that the WSGI service and worker are up and running, move on to [HTTP server setup](http-server.md).
 
 ## Troubleshooting
 
@@ -358,7 +358,7 @@ Please see [SSL error: decryption failed or bad record mac & SSL SYSCALL error: 
 
 When using MySQL as a database backend, if you encounter a server error along the lines of `Incorrect string value: '\\xF0\\x9F\\x92\\x80' for column`, it is because you are running afoul of the legacy implementation of Unicode (aka `utf8`) encoding in MySQL. This often occurs when using modern Unicode glyphs like the famous poop emoji.
 
-Please see the [configuration guide on MySQL Unicode settings](../../configuration/required-settings/#mysql-unicode-settings) for instructions on how to address this.
+Please see the [configuration guide on MySQL Unicode settings](../configuration/required-settings.md#mysql-unicode-settings) for instructions on how to address this.
 
 Please see [Computed fields with fallback value that is unicode results in OperationalError (#645)](https://github.com/nautobot/nautobot/issues/645) for more details.
 
@@ -370,4 +370,4 @@ When serving Nautobot directly from uWSGI on RedHat or CentOS there may be a pro
 mime-file = /opt/nautobot/mime.types
 ```
 
-Alternatively, host Nautobot behind Nginx as instructed in [HTTP server setup](../http-server).
+Alternatively, host Nautobot behind Nginx as instructed in [HTTP server setup](http-server.md).

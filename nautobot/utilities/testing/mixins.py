@@ -1,4 +1,5 @@
 import json
+import warnings
 
 from django.apps import apps
 from django.contrib.auth import get_user_model
@@ -189,6 +190,13 @@ class NautobotTestCaseMixin:
     def create_tags(cls, *names):
         """
         Create and return a Tag instance for each name given.
-        """
 
+        DEPRECATED: use fixtures instead if at all possible.
+        """
+        warnings.warn(
+            "create_tags() is deprecated and will be removed in a future Nautobot release. "
+            "Use fixtures such as nautobot/extras/fixtures.tags.json (provided in Nautobot 1.5 and later) instead.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
         return [Tag.objects.create(name=name, slug=slugify(name)) for name in names]

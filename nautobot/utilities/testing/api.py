@@ -667,7 +667,7 @@ class APIViewTestCases:
         @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
         def test_notes_url_on_object(self):
             if hasattr(self.model, "notes"):
-                instance1, instance2 = self._get_queryset()[:2]
+                instance1 = self._get_queryset().first()
                 # Add object-level permission
                 obj_perm = ObjectPermission(
                     name="Test permission",
@@ -705,14 +705,3 @@ class APITransactionTestCase(_APITransactionTestCase, NautobotTestCaseMixin):
         self.user.save()
         self.token = Token.objects.create(user=self.user)
         self.header = {"HTTP_AUTHORIZATION": "Token {}".format(self.token.key)}
-
-    def assertHttpStatus(self, response, expected_status):
-        """
-        Provide more detail in the event of an unexpected HTTP response.
-        """
-        err_message = "Expected HTTP status {}; received {}: {}"
-        self.assertEqual(
-            response.status_code,
-            expected_status,
-            err_message.format(expected_status, response.status_code, response.data),
-        )

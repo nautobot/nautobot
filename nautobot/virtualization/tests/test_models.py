@@ -9,6 +9,8 @@ from nautobot.virtualization.models import VirtualMachine, ClusterType, Cluster
 
 
 class ClusterTestCase(TestCase):
+    fixtures = ("status",)
+
     def test_cluster_validation(self):
         active = Status.objects.get(name="Active")
         cluster_type = ClusterType.objects.create(name="Test Cluster Type 1")
@@ -29,6 +31,8 @@ class ClusterTestCase(TestCase):
 
 
 class VirtualMachineTestCase(TestCase):
+    fixtures = ("status",)
+
     def setUp(self):
         statuses = Status.objects.get_for_model(VirtualMachine)
 

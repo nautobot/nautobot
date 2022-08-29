@@ -344,11 +344,13 @@ class Aggregate(PrimaryModel):
     def cidr_str(self):
         if self.network is not None and self.prefix_length is not None:
             return "%s/%s" % (self.network, self.prefix_length)
+        return None
 
     @property
     def prefix(self):
         if self.cidr_str:
             return netaddr.IPNetwork(self.cidr_str)
+        return None
 
     @prefix.setter
     def prefix(self, prefix):
@@ -565,8 +567,8 @@ class Prefix(PrimaryModel, StatusModel):
     def get_absolute_url(self):
         return reverse("ipam:prefix", args=[self.pk])
 
-    @classproperty
-    def STATUS_CONTAINER(cls):
+    @classproperty  # https://github.com/PyCQA/pylint-django/issues/240
+    def STATUS_CONTAINER(cls):  # pylint: disable=no-self-argument
         """Return a cached "container" `Status` object for later reference."""
         if getattr(cls, "__status_container", None) is None:
             cls.__status_container = Status.objects.get_for_model(Prefix).get(slug="container")
@@ -634,11 +636,13 @@ class Prefix(PrimaryModel, StatusModel):
     def cidr_str(self):
         if self.network is not None and self.prefix_length is not None:
             return "%s/%s" % (self.network, self.prefix_length)
+        return None
 
     @property
     def prefix(self):
         if self.cidr_str:
             return netaddr.IPNetwork(self.cidr_str)
+        return None
 
     @prefix.setter
     def prefix(self, prefix):
@@ -884,8 +888,8 @@ class IPAddress(PrimaryModel, StatusModel):
     def get_duplicates(self):
         return IPAddress.objects.filter(vrf=self.vrf, host=self.host).exclude(pk=self.pk)
 
-    @classproperty
-    def STATUS_SLAAC(cls):
+    @classproperty  # https://github.com/PyCQA/pylint-django/issues/240
+    def STATUS_SLAAC(cls):  # pylint: disable=no-self-argument
         """Return a cached "slaac" `Status` object for later reference."""
         cls.__status_slaac = getattr(cls, "__status_slaac", None)
         if cls.__status_slaac is None:
@@ -953,9 +957,9 @@ class IPAddress(PrimaryModel, StatusModel):
         # Force dns_name to lowercase
         self.dns_name = self.dns_name.lower()
 
-    def to_objectchange(self, action):
+    def to_objectchange(self, action, related_object=None, **kwargs):
         # Annotate the assigned object, if any
-        return super().to_objectchange(action, related_object=self.assigned_object)
+        return super().to_objectchange(action, related_object=self.assigned_object, **kwargs)
 
     def to_csv(self):
 
@@ -988,6 +992,7 @@ class IPAddress(PrimaryModel, StatusModel):
         if self.host is not None and self.prefix_length is not None:
             cidr = "%s/%s" % (self.host, self.prefix_length)
             return netaddr.IPNetwork(cidr)
+        return None
 
     @address.setter
     def address(self, address):

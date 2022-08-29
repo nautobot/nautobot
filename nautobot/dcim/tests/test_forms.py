@@ -23,6 +23,8 @@ def get_id(model, slug):
 
 
 class DeviceTestCase(TestCase):
+    fixtures = ("status",)
+
     def setUp(self):
         self.device_status = Status.objects.get_for_model(Device).get(slug="active")
 
@@ -149,6 +151,8 @@ class DeviceTestCase(TestCase):
 
 
 class LabelTestCase(TestCase):
+    fixtures = ("status",)
+
     @classmethod
     def setUpTestData(cls):
         site = Site.objects.create(name="Site 2", slug="site-2")
@@ -196,6 +200,8 @@ class LabelTestCase(TestCase):
 
 
 class TestCableCSVForm(TestCase):
+    fixtures = ("status",)
+
     @classmethod
     def setUpTestData(cls):
         site = Site.objects.create(name="Site 2", slug="site-2")
@@ -257,6 +263,8 @@ class TestCableCSVForm(TestCase):
 
 
 class TestInterfaceCSVForm(TestCase):
+    fixtures = ("status",)
+
     @classmethod
     def setUpTestData(cls):
         site = Site.objects.create(name="Site 1", slug="site-1")

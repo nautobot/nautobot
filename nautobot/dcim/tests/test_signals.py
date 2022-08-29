@@ -13,6 +13,8 @@ from nautobot.dcim.models import (
 
 
 class VirtualChassisTest(TestCase):
+    fixtures = ("status",)
+
     """Class to test signals for VirtualChassis."""
 
     def setUp(self):

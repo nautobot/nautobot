@@ -182,9 +182,6 @@ class Location(TreeNode, StatusModel, PrimaryModel):
     def get_absolute_url(self):
         return reverse("dcim:location", args=[self.slug])
 
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-
     def to_csv(self):
         return (
             self.name,

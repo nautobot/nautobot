@@ -139,6 +139,8 @@ class TestAggregate(TestCase):
 
 
 class TestPrefix(TestCase):
+    fixtures = ("status",)
+
     def setUp(self):
         super().setUp()
         self.statuses = Status.objects.get_for_model(Prefix)
@@ -389,6 +391,8 @@ class TestPrefix(TestCase):
 
 
 class TestIPAddress(TestCase):
+    fixtures = ("status",)
+
     def test_get_duplicates(self):
         ips = (
             IPAddress.objects.create(address=netaddr.IPNetwork("192.0.2.1/24")),
@@ -558,6 +562,8 @@ class TestVLANGroup(TestCase):
 
 
 class VLANTestCase(TestCase):
+    fixtures = ("status",)
+
     def test_vlan_validation(self):
         site = Site.objects.create(name="Site 1")
         location_type = LocationType.objects.create(name="Location Type 1")
