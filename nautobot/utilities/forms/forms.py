@@ -256,7 +256,7 @@ class DynamicFilterForm(BootstrapMixin, forms.Form):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        contenttype =  self.model._meta.app_label + "_" + self.model._meta.model_name
+        contenttype = self.model._meta.app_label + "." + self.model._meta.model_name
 
         # Configure fields: Add css class and set choices for lookup_field
         self.fields["lookup_field"].choices = [(None, None)] + self.get_lookup_expr_choices()

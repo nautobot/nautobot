@@ -1,3 +1,4 @@
+import json
 import os
 import platform
 import re
@@ -6,8 +7,6 @@ import sys
 from django.conf import settings
 from django.contrib.auth.mixins import AccessMixin
 from django.contrib.contenttypes.models import ContentType
-from django.core.exceptions import FieldDoesNotExist
-from django.db.models import fields, ManyToOneRel, ManyToManyRel
 from django.http import HttpResponseServerError, JsonResponse
 from django.shortcuts import render
 from django.template import loader, RequestContext, Template
@@ -16,15 +15,15 @@ from django.urls import reverse
 from django.views.decorators.csrf import requires_csrf_token
 from django.views.defaults import ERROR_500_TEMPLATE_NAME, page_not_found
 from django.views.generic import TemplateView, View
-from django_filters import filters
+from django_filters import filters, ModelMultipleChoiceFilter
 from packaging import version
 from graphene_django.views import GraphQLView
-from taggit.managers import TaggableManager
 
 from nautobot.core.constants import SEARCH_MAX_RESULTS, SEARCH_TYPES
 from nautobot.core.forms import SearchForm
 from nautobot.core.releases import get_latest_release
-from nautobot.extras.models import GraphQLQuery
+from nautobot.extras.filters import StatusFilter
+from nautobot.extras.models import GraphQLQuery, Status, Tag
 from nautobot.extras.registry import registry
 from nautobot.extras.forms import GraphQLQueryForm
 from nautobot.utilities.config import get_settings_or_config
@@ -261,7 +260,7 @@ class LookupFieldsChoicesView(View):
         contenttype = request.GET.get("contenttype")
         field_name = request.GET.get("field_name")
         try:
-            app_label, model_name = contenttype.split("_")
+            app_label, model_name = contenttype.split(".")
             contenttype = ContentType.objects.get(app_label=app_label, model=model_name)
             filterset = get_filterset_for_model(contenttype.model_class())
             if filterset is not None:
@@ -288,10 +287,10 @@ class LookupFieldTypeView(View):
     queryset = None
 
     @staticmethod
-    def __get_filterset_field_data(field):
+    def __get_filterset_field_data(field, contenttype):
         data = {"type": "others"}
 
-        if isinstance(field, (filters.MultipleChoiceFilter, )):
+        if isinstance(field, (filters.MultipleChoiceFilter, ModelMultipleChoiceFilter)):
             if "choices" in field.extra:  # Field choices
                 # Problem might arise here if plugin developer do not declare field choices using nautobot.utilities.choices.ChoiceSet
                 data = {
@@ -299,14 +298,22 @@ class LookupFieldTypeView(View):
                     "choices": field.extra["choices"].CHOICES,
                     "allow_multiple": True,
                 }
-            elif "queryset" in field.extra:  # Dynamically populated choices
-                related_model = field.extra["queryset"].model
+            elif hasattr(field, "queryset"):  # Dynamically populated choices
+                if isinstance(field, StatusFilter):
+                    related_model = Status
+                else:
+                    related_model = field.extra["queryset"].model
                 api_endpoint = get_model_api_endpoint(related_model)
+
                 if api_endpoint:
                     data = {
                         "type": "dynamic-choices",
                         "data_url": api_endpoint,
                     }
+                # Status and Tag api requires content_type, to limit result to only related content_types
+                if related_model in [Status, Tag]:
+                    data["content_type"] = json.dumps([contenttype])
+
         elif isinstance(field, (RelatedMembershipBooleanFilter, )):  # Yes / No choice
             data = {
                 "type": "static-choices",
@@ -319,7 +326,7 @@ class LookupFieldTypeView(View):
         field_name = request.GET.get("field_name")
 
         contenttype = request.GET.get("contenttype")
-        app_label, model_name = contenttype.split("_")
+        app_label, model_name = contenttype.split(".")
         model = ContentType.objects.get(app_label=app_label, model=model_name).model_class()
         filterset = get_filterset_for_model(model)
 
@@ -331,6 +338,6 @@ class LookupFieldTypeView(View):
         if field is None:
             return JsonResponse({field_name: "Field not found in filterset"}, status=400)
 
-        data = self.__get_filterset_field_data(field)
+        data = self.__get_filterset_field_data(field, contenttype)
 
         return JsonResponse(data)

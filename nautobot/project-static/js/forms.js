@@ -518,8 +518,6 @@ function jsify_form(context) {
         let contenttype = lookup_type.attr("data-contenttype")
 
         let value_element = parent_element.find(".value-input")
-        let value_name = value_element.attr("name")
-        let value_id = value_element.attr("id")
 
         // if `lookup_field_val` == `lookup_type_val` lookup expr is exact
         if(lookup_field_val == lookup_type_val){
@@ -531,32 +529,38 @@ function jsify_form(context) {
                 type: 'GET',
             }).done(function (response) {
                 if(response.data_url)
-                    useDynamicSelect(value_element, value_name, value_id, response.data_url)
+                    useDynamicSelect(value_element, response)
                 else if (response.choices)
-                    useStaticSelect(value_element, value_name, value_id, response.choices, response.allow_multiple)
+                    useStaticSelect(value_element, response.choices, response.allow_multiple)
                 else
-                    useInput(value_element, value_name, value_id)
+                    useInput(value_element)
             }).fail(function (xhr, status, error) {
-                useInput(value_element, value_name, value_id)
+                useInput(value_element)
             });
         }
         else {
-            useInput(value_element, value_name, value_id)
+            useInput(value_element)
         }
     })
 
     function useInput(element, name, _id){
-        input_field = `<input type="text" name="${name}" class="value-input form-control" id="${_id}">`
+        input_field = `
+            <input
+                type="text"
+                name="${element.attr('name')}"
+                class="value-input form-control"
+                id="${element.attr('id')}"
+            />`
         element.parent().html(input_field)
     }
 
-    function useStaticSelect(element, name, _id, choices, allow_multiple){
+    function useStaticSelect(element, choices, allow_multiple){
         select_field = `
             <select
-                name="${name}"
+                name="${element.attr("name")}"
                 class="value-input nautobot-select2-static select2-hidden-accessible"
-                id="${_id}"
-                data-select2-id="${_id}"
+                id="${element.attr("id")}"
+                data-select2-id="${element.attr("id")}"
                 tabindex="-1"
                 aria-hidden="true"
                 ${allow_multiple ? "multiple" : ""}
@@ -568,17 +572,23 @@ function jsify_form(context) {
         initializeStaticChoiceSelection()
     }
 
-    function useDynamicSelect(element, name, _id, data_url){
+    function useDynamicSelect(element, response){
+        let value_name = element.attr("name")
+        let value_id = element.attr("id")
+        let data_url = response.data_url
+        let content_type = response.content_type
+
         select_field = `
             <select
-                name="${name}"
+                name="${value_name}"
                 class="value-input nautobot-select2-api select2-hidden-accessible"
                 data-url="${data_url}"
-                id="${_id}"
-                data-select2-id="${_id}"
+                id="${value_id}"
+                data-select2-id="${value_id}"
                 tabindex="-1"
                 aria-hidden="true"
                 multiple
+                ${content_type ? "data-query-param-content_types=" + content_type + "" : null}
             ></select>
         `
         element.parent().html(select_field)
