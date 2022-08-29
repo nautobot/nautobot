@@ -248,7 +248,7 @@ DATABASES = {
         "PASSWORD": os.getenv("NAUTOBOT_PASSWORD", ""),
         "HOST": os.getenv("NAUTOBOT_DB_HOST", "localhost"),
         "PORT": os.getenv("NAUTOBOT_DB_PORT", ""),
-        "CONN_MAX_AGE": int(os.getenv("NAUTOBOT_DB_TIMEOUT", 300)),
+        "CONN_MAX_AGE": int(os.getenv("NAUTOBOT_DB_TIMEOUT", "300")),
         "ENGINE": os.getenv("NAUTOBOT_DB_ENGINE", "django.db.backends.postgresql"),
     }
 }
@@ -633,8 +633,8 @@ CELERY_TASK_TRACK_STARTED = True
 # Global task time limits (seconds)
 # Exceeding the soft limit will result in a SoftTimeLimitExceeded exception,
 # while exceeding the hard limit will result in a SIGKILL.
-CELERY_TASK_SOFT_TIME_LIMIT = int(os.getenv("NAUTOBOT_CELERY_TASK_SOFT_TIME_LIMIT", 5 * 60))
-CELERY_TASK_TIME_LIMIT = int(os.getenv("NAUTOBOT_CELERY_TASK_TIME_LIMIT", 10 * 60))
+CELERY_TASK_SOFT_TIME_LIMIT = int(os.getenv("NAUTOBOT_CELERY_TASK_SOFT_TIME_LIMIT", str(5 * 60)))
+CELERY_TASK_TIME_LIMIT = int(os.getenv("NAUTOBOT_CELERY_TASK_TIME_LIMIT", str(10 * 60)))
 
 # These settings define the custom nautobot serialization encoding as an accepted data encoding format
 # and register that format for task input and result serialization

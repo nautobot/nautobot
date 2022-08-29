@@ -67,7 +67,7 @@
 
     <ul id="tabs" class="nav nav-tabs">
     {% block nav_tabs %}
-        <li role="presentation"{% if not active_tab and not request.GET.tab or request.GET.tab == "main" %} class="active"{% endif %}>
+        <li role="presentation"{% if active_tab == "main" or request.GET.tab == "main" %} class="active"{% endif %}>
             <a href="{{ object.get_absolute_url }}#main" onclick="switch_tab(this.href)" aria-controls="main" role="tab" data-toggle="tab">
                 {{ verbose_name|bettertitle }}
             </a>
@@ -78,7 +78,7 @@
             </a>
         </li>
         {% block extra_nav_tabs %}{% endblock extra_nav_tabs %}
-        {% if perms.extras.view_notes %}
+        {% if perms.extras.view_note %}
             {% if active_tab != 'notes' and object.get_notes_url or active_tab == 'notes' %}
                 <li role="presentation"{% if active_tab == 'notes' %} class="active"{% endif %}>
                     <a href="{{ object.get_notes_url }}">Notes</a>
@@ -106,7 +106,7 @@
 
 {% block content %}
     <div class="tab-content">
-        <div id="main" role="tabpanel" class="tab-pane {% if not active_tab and not request.GET.tab or request.GET.tab == "main" %}active{% else %}fade{% endif %}">
+        <div id="main" role="tabpanel" class="tab-pane {% if active_tab == "main" or request.GET.tab == "main" %}active{% else %}fade{% endif %}">
             <div class="row">
                 <div class="col-md-6">
                     {% block content_left_page %}{% endblock content_left_page %}

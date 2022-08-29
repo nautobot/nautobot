@@ -2,7 +2,7 @@
 
 _Added in version 1.4.0_ <!-- markdownlint-disable-line MD036 -->
 
-A Job Hook is a mechanism for automatically starting a [job](../../../additional-features/jobs/) when an object is changed. Job Hooks are similar to [webhooks](../webhook/) except that an object change event initiates a `JobHookReceiver` job instead of a web request. Job hooks are configured in the web UI under **Jobs > Job Hooks**.
+A Job Hook is a mechanism for automatically starting a [job](../../additional-features/jobs.md) when an object is changed. Job Hooks are similar to [webhooks](webhook.md) except that an object change event initiates a `JobHookReceiver` job instead of a web request. Job hooks are configured in the web UI under **Jobs > Job Hooks**.
 
 ## Configuration
 
@@ -14,7 +14,7 @@ A Job Hook is a mechanism for automatically starting a [job](../../../additional
 
 ## Job Hook Receivers
 
-Job Hooks are only able to initiate a specific type of job called a **Job Hook Receiver**. These are jobs that subclass the `nautobot.extras.jobs.JobHookReceiver` class. Job hook receivers are similar to normal jobs except they are hard coded to accept only an `object_change` [variable](../../../additional-features/jobs/#variables). Job Hook Receivers are hidden from the jobs listing UI by default but otherwise function similarly to other jobs. The `JobHookReceiver` class only implements one method called `receive_job_hook`.
+Job Hooks are only able to initiate a specific type of job called a **Job Hook Receiver**. These are jobs that subclass the `nautobot.extras.jobs.JobHookReceiver` class. Job hook receivers are similar to normal jobs except they are hard coded to accept only an `object_change` [variable](../../additional-features/jobs.md#variables). Job Hook Receivers are hidden from the jobs listing UI by default but otherwise function similarly to other jobs. The `JobHookReceiver` class only implements one method called `receive_job_hook`.
 
 !!! important
     To prevent negatively impacting system performance through an infinite loop, a change that was made by a `JobHookReceiver` job will not trigger another `JobHookReceiver` job to run.

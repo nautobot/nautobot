@@ -266,16 +266,16 @@ class ConfigContextSchemaTestCase(
         # Create three ConfigContextSchema records
         ConfigContextSchema.objects.create(
             name="Schema 1", slug="schema-1", data_schema={"type": "object", "properties": {"foo": {"type": "string"}}}
-        ),
+        )
         ConfigContextSchema.objects.create(
             name="Schema 2", slug="schema-2", data_schema={"type": "object", "properties": {"bar": {"type": "string"}}}
-        ),
+        )
         ConfigContextSchema.objects.create(
             name="Schema 3", slug="schema-3", data_schema={"type": "object", "properties": {"baz": {"type": "string"}}}
-        ),
+        )
         ConfigContextSchema.objects.create(
             name="Schema 4", data_schema={"type": "object", "properties": {"baz": {"type": "string"}}}
-        ),
+        )
 
         cls.form_data = {
             "name": "Schema X",
@@ -605,7 +605,7 @@ class NoteTestCase(
     def setUpTestData(cls):
 
         content_type = ContentType.objects.get_for_model(Site)
-        site = Site.objects.create(name="Site 1", slug="site-1")
+        cls.site = Site.objects.create(name="Site 1", slug="site-1")
         user = User.objects.first()
 
         # Notes Objects to test
@@ -613,26 +613,47 @@ class NoteTestCase(
             note="Site has been placed on maintenance.",
             user=user,
             assigned_object_type=content_type,
-            assigned_object_id=site.pk,
-        ),
+            assigned_object_id=cls.site.pk,
+        )
         Note.objects.create(
             note="Site maintenance has ended.",
             user=user,
             assigned_object_type=content_type,
-            assigned_object_id=site.pk,
-        ),
+            assigned_object_id=cls.site.pk,
+        )
         Note.objects.create(
             note="Site is under duress.",
             user=user,
             assigned_object_type=content_type,
-            assigned_object_id=site.pk,
-        ),
+            assigned_object_id=cls.site.pk,
+        )
 
         cls.form_data = {
             "note": "This is Site note.",
             "assigned_object_type": content_type.pk,
-            "assigned_object_id": site.pk,
+            "assigned_object_id": cls.site.pk,
         }
+        cls.expected_object_note = '<textarea name="object_note" cols="40" rows="10" class="form-control" placeholder="Note" id="id_object_note"></textarea>'
+
+    def test_note_on_bulk_update_perms(self):
+        self.add_permissions("dcim.add_site", "extras.add_note")
+        response = self.client.get(reverse("dcim:site_add"))
+        self.assertContains(response, self.expected_object_note, html=True)
+
+    def test_note_on_bulk_update_no_perms(self):
+        self.add_permissions("dcim.add_site")
+        response = self.client.get(reverse("dcim:site_add"))
+        self.assertNotContains(response, self.expected_object_note, html=True)
+
+    def test_note_on_create_edit_perms(self):
+        self.add_permissions("dcim.change_site", "extras.add_note")
+        response = self.client.post(reverse("dcim:site_bulk_edit"), data={"pk": self.site.pk})
+        self.assertContains(response, self.expected_object_note, html=True)
+
+    def test_note_on_create_edit_no_perms(self):
+        self.add_permissions("dcim.change_site")
+        response = self.client.post(reverse("dcim:site_bulk_edit"), data={"pk": self.site.pk})
+        self.assertNotContains(response, self.expected_object_note, html=True)
 
 
 # Not a full-fledged PrimaryObjectViewTestCase as there's no BulkEditView for Secrets
@@ -647,17 +668,16 @@ class SecretTestCase(
     ViewTestCases.BulkDeleteObjectsViewTestCase,
 ):
     model = Secret
+    fixtures = ("tag",)
 
     @classmethod
     def setUpTestData(cls):
-        tags = cls.create_tags("alpha", "beta", "gamma")
-
         secrets = (
             Secret(
                 name="View Test 1",
                 provider="environment-variable",
                 parameters={"variable": "VIEW_TEST_1"},
-                tags=[t.pk for t in tags],
+                tags=[t.pk for t in Tag.objects.get_for_model(Secret)],
             ),
             Secret(
                 name="View Test 2",
@@ -1792,7 +1812,7 @@ class ObjectChangeTestCase(TestCase):
 
         # Create three ObjectChanges
         user = User.objects.create_user(username="testuser2")
-        for i in range(1, 4):
+        for _ in range(1, 4):
             oc = site.to_objectchange(action=ObjectChangeActionChoices.ACTION_UPDATE)
             oc.user = user
             oc.request_id = uuid.uuid4()
@@ -1825,6 +1845,7 @@ class RelationshipTestCase(
     ViewTestCases.ListObjectsViewTestCase,
 ):
     model = Relationship
+    fixtures = ("status",)
     slug_source = "name"
     slugify_function = staticmethod(slugify_dashes_to_underscores)
 
@@ -1942,16 +1963,12 @@ class StatusTestCase(
     ViewTestCases.ListObjectsViewTestCase,
 ):
     model = Status
+    fixtures = ("status",)
 
     @classmethod
     def setUpTestData(cls):
 
         # Status objects to test.
-        Status.objects.create(name="Status 1", slug="status-1")
-        Status.objects.create(name="Status 2", slug="status-2")
-        Status.objects.create(name="Status 3", slug="status-3")
-        Status.objects.create(name="Status 4")
-
         content_type = ContentType.objects.get_for_model(Device)
 
         cls.form_data = {
@@ -1975,23 +1992,15 @@ class StatusTestCase(
         }
 
         cls.slug_source = "name"
-        cls.slug_test_object = "Status 4"
+        cls.slug_test_object = "Irradiated"
 
 
 class TagTestCase(ViewTestCases.OrganizationalObjectViewTestCase):
     model = Tag
+    fixtures = ("tag",)
 
     @classmethod
     def setUpTestData(cls):
-        tags = (
-            Tag.objects.create(name="Tag 1", slug="tag-1"),
-            Tag.objects.create(name="Tag 2", slug="tag-2"),
-            Tag.objects.create(name="Tag 3", slug="tag-3"),
-        )
-        for tag in tags:
-            tag.content_types.add(ContentType.objects.get_for_model(Site))
-            tag.content_types.add(ContentType.objects.get_for_model(Device))
-
         cls.form_data = {
             "name": "Tag X",
             "slug": "tag-x",
@@ -2053,7 +2062,7 @@ class TagTestCase(ViewTestCases.OrganizationalObjectViewTestCase):
         """Test removing a tag content_type that is been tagged to a model"""
         self.add_permissions("extras.change_tag")
 
-        tag_1 = Tag.objects.get(slug="tag-1")
+        tag_1 = Tag.objects.get_for_model(Site).first()
         site = Site.objects.create(name="site 1", slug="site-1")
         site.tags.add(tag_1)
 

@@ -15,6 +15,8 @@ class WritableNestedSerializerTest(APITestCase):
     Test the operation of WritableNestedSerializer using VLANSerializer as our test subject.
     """
 
+    fixtures = ("status",)
+
     def setUp(self):
         super().setUp()
 

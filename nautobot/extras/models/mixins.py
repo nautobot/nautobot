@@ -64,6 +64,8 @@ class NotesMixin:
             except NoReverseMatch:
                 continue
 
+        return None
+
 
 # 2.0 TODO: Remove after v2 since we will no longer care about backwards-incompatibility.
 # - Remove the `monkey_mix` from `nautobot.core.apps.CoreConfig.ready()`

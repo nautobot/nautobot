@@ -105,9 +105,12 @@ class RackGroup(MPTTModel, OrganizationalModel):
             self.description,
         )
 
-    def to_objectchange(self, action):
+    def to_objectchange(self, action, object_data_exclude=None, **kwargs):
+        if object_data_exclude is None:
+            object_data_exclude = []
         # Remove MPTT-internal fields
-        return super().to_objectchange(action, object_data_exclude=["level", "lft", "rght", "tree_id"])
+        object_data_exclude += ["level", "lft", "rght", "tree_id"]
+        return super().to_objectchange(action, object_data_exclude=object_data_exclude, **kwargs)
 
     def clean(self):
         super().clean()
@@ -485,7 +488,7 @@ class Rack(PrimaryModel, StatusModel):
                     ):
                         elevation.pop(u, None)
 
-        return [u for u in elevation.values()]
+        return list(elevation.values())
 
     def get_available_units(self, u_height=1, rack_face=None, exclude=None):
         """

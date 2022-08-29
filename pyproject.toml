@@ -114,7 +114,7 @@ napalm = {version = "~3.4.1", optional = true}
 # IP prefix and address handling
 netaddr = "~0.8.0"
 # Library of network related Jinja Filters
-netutils = "~1.1.0"
+netutils = "~1.2.0"
 # Image processing library
 Pillow = "~9.2.0"
 # PostgreSQL database adapter
@@ -166,6 +166,10 @@ invoke = "~1.7.1"
 mkdocs-include-markdown-plugin = "~3.6.0"
 # Rendering docs to HTML
 mkdocs = "~1.3.0"
+# Code static analysis
+pylint = {version = "~2.14.5", python = "^3.7.2"}
+# Pylint extensions for Django
+pylint-django = {version = "~2.5.3", python = "^3.7.2"}
 # Integration Tests
 requests = "~2.27.1"
 # Colorization and autoformatting of CLI output, used for Invoke tasks
@@ -202,3 +206,95 @@ exclude = '''
   )/
 )
 '''
+
+[tool.pylint.master]
+load-plugins = "pylint_django"
+py-version = "3.7"
+ignore-paths = [
+    ".*third_party.*"
+]
+
+[tool.pylint.basic]
+# No docstrings required yet for private functions, or for test_* functions, or for inner Meta classes.
+no-docstring-rgx="^(_|test_|Meta$)"
+# Don't complain about "pk" as a variable name
+good-names = """_,i,j,k,pk"""
+
+[tool.pylint.message_control]
+# TODO: re-enable and fix these as time permits
+# unused-import is already covered by flake8
+disable=""",
+    abstract-method,
+    access-member-before-definition,
+    arguments-renamed,
+    attribute-defined-outside-init,
+    broad-except,
+    consider-iterating-dictionary,
+    consider-using-f-string,
+    consider-using-from-import,
+    consider-using-in,
+    consider-using-generator,
+    cyclic-import,
+    duplicate-code,
+    empty-docstring,
+    exec-used,
+    fixme,
+    global-statement,
+    global-variable-not-assigned,
+    hard-coded-auth-user,
+    import-outside-toplevel,
+    invalid-name,
+    keyword-arg-before-vararg,
+    line-too-long,
+    logging-format-interpolation,
+    logging-fstring-interpolation,
+    missing-class-docstring,
+    missing-function-docstring,
+    missing-module-docstring,
+    modelform-uses-exclude,
+    no-else-raise,
+    no-else-return,
+    no-member,
+    no-value-for-parameter,
+    not-an-iterable,
+    not-callable,
+    pointless-statement,
+    pointless-string-statement,
+    protected-access,
+    raise-missing-from,
+    self-assigning-variable,
+    signature-differs,
+    super-init-not-called,
+    super-with-arguments,
+    superfluous-parens,
+    too-few-public-methods,
+    too-many-ancestors,
+    too-many-arguments,
+    too-many-boolean-expressions,
+    too-many-branches,
+    too-many-instance-attributes,
+    too-many-lines,
+    too-many-locals,
+    too-many-nested-blocks,
+    too-many-public-methods,
+    too-many-return-statements,
+    too-many-statements,
+    ungrouped-imports,
+    unnecessary-dunder-call,
+    unspecified-encoding,
+    unsubscriptable-object,
+    unused-argument,
+    unused-import,
+    unused-wildcard-import,
+    use-maxsplit-arg,
+    wildcard-import,
+    wrong-import-order,
+    wrong-import-position,
+    """
+
+[tool.pylint.miscellaneous]
+# We don't want to fail on "TODO" comments as there are plenty of those in our code for good reason
+notes = """,
+    FIXME,
+    XXX,
+    """

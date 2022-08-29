@@ -107,6 +107,8 @@ class ConfigContextTest(TestCase):
     It also ensures the various config context querysets are consistent.
     """
 
+    fixtures = ("tag",)
+
     def setUp(self):
 
         manufacturer = Manufacturer.objects.create(name="Manufacturer 1", slug="manufacturer-1")
@@ -121,8 +123,7 @@ class ConfigContextTest(TestCase):
         self.platform = Platform.objects.create(name="Platform")
         self.tenantgroup = TenantGroup.objects.create(name="Tenant Group")
         self.tenant = Tenant.objects.create(name="Tenant", group=self.tenantgroup)
-        self.tag = Tag.objects.create(name="Tag", slug="tag")
-        self.tag2 = Tag.objects.create(name="Tag2", slug="tag2")
+        self.tag, self.tag2 = Tag.objects.get_for_model(Device)[:2]
 
         self.device = Device.objects.create(
             name="Device 1",
@@ -337,6 +338,8 @@ class ConfigContextSchemaTestCase(TestCase):
     """
     Tests for the ConfigContextSchema model
     """
+
+    fixtures = ("status",)
 
     def setUp(self):
         context_data = {"a": 123, "b": "456", "c": "10.7.7.7"}
@@ -1147,8 +1150,10 @@ class StatusTest(TestCase):
     Tests for the `Status` model class.
     """
 
+    fixtures = ("status",)
+
     def setUp(self):
-        self.status = Status.objects.create(name="delete_me", slug="delete-me", color=ColorChoices.COLOR_RED)
+        self.status = Status.objects.get(name="Irradiated")
 
         manufacturer = Manufacturer.objects.create(name="Manufacturer 1")
         devicetype = DeviceType.objects.create(manufacturer=manufacturer, model="Device Type 1")
@@ -1164,9 +1169,9 @@ class StatusTest(TestCase):
         )
 
     def test_uniqueness(self):
-        # A `delete_me` Status already exists.
+        # An `Irradiated` Status already exists.
         with self.assertRaises(IntegrityError):
-            Status.objects.create(name="delete_me")
+            Status.objects.create(name=self.status.name)
 
     def test_delete_protection(self):
         # Protected delete will fail
@@ -1181,7 +1186,7 @@ class StatusTest(TestCase):
         self.assertEqual(self.status.pk, None)
 
     def test_color(self):
-        self.assertEqual(self.status.color, ColorChoices.COLOR_RED)
+        self.assertEqual(self.status.color, ColorChoices.COLOR_LIME)
 
         # Valid color
         self.status.color = ColorChoices.COLOR_PURPLE

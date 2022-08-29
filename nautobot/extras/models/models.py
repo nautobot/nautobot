@@ -682,7 +682,7 @@ class Note(BaseModel, ChangeLoggedModel):
         return slugify(f"{str(content)[:50]}-{datetime.now().isoformat()}")
 
     def __str__(self):
-        return self.slug
+        return str(self.slug)
 
     def save(self, *args, **kwargs):
         # Record the user's name as static strings
