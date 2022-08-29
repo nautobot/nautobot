@@ -1,5 +1,7 @@
 # Nautobot Apps Overview
 
+To view and search the full list of Apps, head over to the [Nautobot App Ecosystem Page on networktocode.com](https://www.networktocode.com/nautobot/apps/). Below you will only find links to the **documentation** for the apps listed in the table.
+
 ## The Nautobot Community Apps
 
 Find out more about what documentation is available for the various community developed Nautobot Apps by visiting the [Community Apps](nautobot-apps.md) page.
@@ -11,5 +13,9 @@ These Nautobot Apps have their documentation hosted as a subproject of this docs
 
 | | App Name | Description |
 |-| --- | --- |
-| ![](../assets/icon-GoldenConfiguration.png) | [Nautobot Golden Configuration](https://nbatest-ml.readthedocs.io/projects/golden-config/en/latest/) | Automate configuration backups, perform configuration compliance, and generate intended configurations. |
-| ![](../assets/icon-DeviceOnboarding.png) | [Nautobot Device Onboarding](https://nbatest-ml.readthedocs.io/projects/device-onboarding/en/latest/) | Simplify the onboarding process of a new device by allowing the user to specify a small amount of info and having the plugin populate a much larger amount of device data in Nautobot. |
+| ![](../assets/app-icons/icon-GoldenConfiguration.png) | [Nautobot Golden Configuration](https://docs.nautobot.com/projects/golden-config/en/latest/) | Automate configuration backups, perform configuration compliance, and generate intended configurations. |
+| ![](../assets/app-icons/icon-DeviceOnboarding.png) | Nautobot Device Onboarding | `Coming soon`<br>Simplify the onboarding process of a new device by allowing the user to specify a small amount of info and having the plugin populate a much larger amount of device data in Nautobot. |
+| ![](../assets/app-icons/icon-SSoT.png) | [Nautobot Single Source of Truth (SSoT)](https://nautobot-plugin-ssot.readthedocs.io/en/latest/)  | This app facilitates integration and data synchronization between various "source of truth" (SoT) systems, with Nautobot acting as a central clearinghouse for data - a Single Source of Truth|
+| ![](../assets/app-icons/icon-DeviceLifecycle.png)    | Nautobot Device Lifecycle Management | `Coming soon`<br>This App works by making related associations to Devices, Device Types, and Inventory Items to help provide data about the hardware end of life notices, appropriate software versions to be running on the devices, and the maintenance contracts associated with devices. |
+| ![](../assets/app-icons/icon-FirewallModels.png)    | [Nautobot Firewall Models](https://nautobot-plugin-firewall-models.readthedocs.io/en/latest/) | Collection of models for constructing firewall policies in Nautobot. |
+| ![](../assets/app-icons/icon-ChatOps.png)    | Nautobot ChatOps | `Coming soon`<br>Adds a chatbot to Nautobot so you can easily get data from Nautobot directly from chat. The ChatOps app is a multi-platform chatbot for network operations and engineering teams. It is built to seamlessly work across Slack, MS Teams, WebEx Teams, and Mattermost, but also as a framework to help developers add more chat platforms in the future. |

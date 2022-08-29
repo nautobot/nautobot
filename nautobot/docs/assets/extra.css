@@ -38,8 +38,9 @@
     font-size: 1.2rem;
 }
 
-img.logo {
-    height: 100px;
+/* Keep images in tables at 50px */
+.md-typeset table:not([class]) :is(img) {
+    height: 50px;
 }
 
 img.copyright-logo {
