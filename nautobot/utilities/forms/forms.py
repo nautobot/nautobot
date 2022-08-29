@@ -277,7 +277,7 @@ class DynamicFilterForm(BootstrapMixin, forms.Form):
         return " ".join([first_word, *data[1:]])
 
     def get_lookup_expr_choices(self):
-        filterset = get_filterset_for_model(self.model).get_filters()
+        filterset = get_filterset_for_model(self.model).base_filters
         filterset_without_lookup = []
 
         for name, field in filterset.items():

@@ -531,7 +531,7 @@ function jsify_form(context) {
                 type: 'GET',
             }).done(function (response) {
                 if(response.data_url)
-                    useStaticSelect(value_element, value_name, value_id, response.data_url)
+                    useDynamicSelect(value_element, value_name, value_id, response.data_url)
                 else if (response.choices)
                     useStaticSelect(value_element, value_name, value_id, response.choices, response.allow_multiple)
                 else
@@ -568,7 +568,7 @@ function jsify_form(context) {
         initializeStaticChoiceSelection()
     }
 
-    function useStaticSelect(element, name, _id, data_url){
+    function useDynamicSelect(element, name, _id, data_url){
         select_field = `
             <select
                 name="${name}"

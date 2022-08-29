@@ -1,5 +1,6 @@
 import os
 import platform
+import re
 import sys
 
 from django.conf import settings
@@ -219,37 +220,40 @@ class LookupFieldsChoicesView(View):
     queryset = None
 
     @staticmethod
-    def __build_lookup_label(field_name, verbose_name, to_remove):
+    def __build_lookup_label(field_name, verbose_name):
         """
         Return lookup expr with its verbose name
 
         Args:
             field_name (str): Field name e.g slug__iew
             verbose_name (str): The verbose name for the lookup exper which is suffixed to the field name e.g iew -> iendswith
-            to_remove (str): Value to remove from the field_name e.g Remove slug from slug__iew
 
         Examples:
-            >>> __build_lookup_label("slug__iew", "iendswith", "slug")
+            >>> __build_lookup_label("slug__iew", "iendswith")
             >>> "iendswith(iew)"
         """
-        lookup = field_name.replace(to_remove, "").replace("__", "")
-        return verbose_name + (f"({lookup})" if lookup else "")
+        label = ""
+        search = re.search("__.+$", field_name)
+        if search is not None:
+            text = search.group().replace("__", "")
+            label = f"({text})"
+
+        return verbose_name + label
 
     def __get_field_lookup_exper(self, filterset, field_name):
         """
         Return all lookup expressions for `field_name` in the `filterset`
         """
         if field_name.startswith("has_"):
-            field = filterset[field_name]
-            return [{"id": field_name, "name": field.label}]
+            return [{"id": field_name, "name": "exact"}]
 
         lookup_expr = [
             {
                 "id": name,
-                "name": self.__build_lookup_label(name, field.lookup_expr, field_name),
+                "name": self.__build_lookup_label(name, field.lookup_expr),
             }
             for name, field in filterset.items()
-            if field.field_name == field_name and not name.startswith("has_")
+            if name.startswith(field_name) and not name.startswith("has_")
         ]
         return lookup_expr or [{"id": "exact", "name": "exact - Not Found"}]
 
@@ -262,6 +266,7 @@ class LookupFieldsChoicesView(View):
             filterset = get_filterset_for_model(contenttype.model_class())
             if filterset is not None:
                 lookup_exper = self.__get_field_lookup_exper(filterset.base_filters, field_name)
+            # TODO Timizuo Raise Error if filterset not found
         except ContentType.DoesNotExist:
             lookup_exper = []
 
@@ -281,25 +286,6 @@ class LookupFieldTypeView(View):
     while if it's a choice field, the choices are returned else returns an empty dict
     """
     queryset = None
-
-    @staticmethod
-    def __get_model_api_endpoint_and_type(field):
-        if isinstance(field, (ManyToOneRel, fields.related.ForeignKey, ManyToManyRel, TaggableManager)):
-            app_label = field.related_model._meta.app_label
-            model_name = field.related_model._meta.model_name
-
-            if app_label in settings.PLUGINS:
-                data_url = reverse(f"plugins-api:{app_label}-api:{model_name}-list")
-            else:
-                data_url = reverse(f"{app_label}-api:{model_name}-list")
-
-            return {
-                "data_url": data_url,
-            }
-
-        # TODO: Timizuo Check if its hardcoded choices then return the choices or do nothing
-        #  Might be a static choice field or text field
-        return {}
 
     @staticmethod
     def __get_filterset_field_data(field):
@@ -338,19 +324,12 @@ class LookupFieldTypeView(View):
         filterset = get_filterset_for_model(model)
 
         if filterset is None:
-            # error / try using model instead of filterset
-            # try:
-            #     field = model._meta.get_field(field_name)
-            #     data = self.__get_model_api_endpoint_and_type(field)
-            # except FieldDoesNotExist:
-            #     return JsonResponse({"error": "Field does not exist"}, status=400)
+            # TODO Timizuo Raise Error if filterset not found
             pass
 
-        #  filterset.declared_filters -  fields without lookup
-        #  filterset.base_filters -  fields with lookup
         field = filterset.base_filters.get(field_name)
         if field is None:
-            pass  # Field not found in filterset
+            return JsonResponse({field_name: "Field not found in filterset"}, status=400)
 
         data = self.__get_filterset_field_data(field)
 
