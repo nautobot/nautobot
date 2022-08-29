@@ -37,6 +37,7 @@ class JobResultTest(SeleniumTestCase):
             status=JobResultStatusChoices.STATUS_RUNNING,
             job_id=job.pk,
         )
+        job_result.save()
 
         # Create fake log entries
         for i, log_level in enumerate(["default", "info", "success", "warning"]):
@@ -53,7 +54,11 @@ class JobResultTest(SeleniumTestCase):
         job_result.save()
 
         # Visit the job result page
-        self.browser.visit(f'{self.live_server_url}{reverse("extras:job_jobresult", kwargs={"pk": job_result.pk})}')
+        self.browser.visit(self.live_server_url)
+        self.browser.links.find_by_partial_text("Jobs").first.click()
+        self.browser.links.find_by_partial_text("Job Results").first.click()
+        self.browser.find_by_xpath(
+            "//table[@class='table table-hover table-headings']/tbody/tr[1]/td[2]/a").click()
 
         filter_element = self.browser.find_by_xpath("//input[@class='form-control log-filter']")
         visible_rows_xpath = "//table[@id='logs']/tbody/tr[not(contains(@style, 'display: none'))]"
