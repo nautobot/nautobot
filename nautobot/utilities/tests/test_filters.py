@@ -6,7 +6,7 @@ from mptt.fields import TreeForeignKey
 from taggit.managers import TaggableManager
 
 from nautobot.dcim.choices import DeviceFaceChoices
-from nautobot.dcim.fields import MACAddressField
+from nautobot.dcim.fields import MACAddressCharField
 from nautobot.dcim.filters import DeviceFilterSet, SiteFilterSet
 from nautobot.dcim.models import (
     Device,
@@ -320,7 +320,7 @@ class TestModel(models.Model):
     datefield = models.DateField()
     datetimefield = models.DateTimeField()
     integerfield = models.IntegerField()
-    macaddressfield = MACAddressField()
+    macaddressfield = MACAddressCharField()
     textfield = models.TextField()
     timefield = models.TimeField()
     treeforeignkeyfield = TreeForeignKey(to="self", on_delete=models.CASCADE)
