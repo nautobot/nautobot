@@ -425,7 +425,7 @@ def as_range(n):
     try:
         int(n)
     except (TypeError, ValueError):
-        return list()
+        return []
     return range(int(n))
 
 
@@ -499,9 +499,9 @@ def querystring(request, **kwargs):
             querydict[k] = str(v)
         elif k in querydict:
             querydict.pop(k)
-    querystring = querydict.urlencode(safe="/")
-    if querystring:
-        return "?" + querystring
+    query_string = querydict.urlencode(safe="/")
+    if query_string:
+        return "?" + query_string
     else:
         return ""
 
@@ -565,7 +565,7 @@ def utilization_graph_raw_data(numerator, denominator, warning_threshold=75, dan
 
 
 @register.inclusion_tag("utilities/templatetags/tag.html")
-def tag(tag, url_name=None):
+def tag(tag, url_name=None):  # pylint: disable=redefined-outer-name
     """
     Display a tag, optionally linked to a filtered list of objects.
     """

@@ -155,8 +155,8 @@ class StatusModelSerializerMixin(BaseModelSerializer):
         self.extend_field_names(fields, "status")
         return fields
 
-    @classproperty
-    def status_choices(cls):
+    @classproperty  # https://github.com/PyCQA/pylint-django/issues/240
+    def status_choices(cls):  # pylint: disable=no-self-argument
         """
         Get the list of valid status values for this serializer.
 

@@ -2204,8 +2204,8 @@ class DeviceBayDeleteView(generic.ObjectDeleteView):
 class DeviceBayPopulateView(generic.ObjectEditView):
     queryset = DeviceBay.objects.all()
 
-    def get(self, request, pk):
-        device_bay = get_object_or_404(self.queryset, pk=pk)
+    def get(self, request, *args, **kwargs):
+        device_bay = get_object_or_404(self.queryset, pk=kwargs["pk"])
         form = forms.PopulateDeviceBayForm(device_bay)
 
         return render(
@@ -2218,8 +2218,8 @@ class DeviceBayPopulateView(generic.ObjectEditView):
             },
         )
 
-    def post(self, request, pk):
-        device_bay = get_object_or_404(self.queryset, pk=pk)
+    def post(self, request, *args, **kwargs):
+        device_bay = get_object_or_404(self.queryset, pk=kwargs["pk"])
         form = forms.PopulateDeviceBayForm(device_bay, request.POST)
 
         if form.is_valid():
@@ -2247,8 +2247,8 @@ class DeviceBayPopulateView(generic.ObjectEditView):
 class DeviceBayDepopulateView(generic.ObjectEditView):
     queryset = DeviceBay.objects.all()
 
-    def get(self, request, pk):
-        device_bay = get_object_or_404(self.queryset, pk=pk)
+    def get(self, request, *args, **kwargs):
+        device_bay = get_object_or_404(self.queryset, pk=kwargs["pk"])
         form = ConfirmationForm()
 
         return render(
@@ -2261,8 +2261,8 @@ class DeviceBayDepopulateView(generic.ObjectEditView):
             },
         )
 
-    def post(self, request, pk):
-        device_bay = get_object_or_404(self.queryset, pk=pk)
+    def post(self, request, *args, **kwargs):
+        device_bay = get_object_or_404(self.queryset, pk=kwargs["pk"])
         form = ConfirmationForm(request.POST)
 
         if form.is_valid():

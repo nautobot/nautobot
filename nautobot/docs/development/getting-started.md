@@ -151,34 +151,36 @@ Now that you have an `invoke` command, list the tasks defined in `tasks.py`:
 $ invoke --list
 Available tasks:
 
-  black               Check Python code style with Black.
-  build               Build Nautobot docker image.
-  buildx              Build Nautobot docker image using the experimental buildx docker functionality (multi-arch
-                      capablility).
-  check-migrations    Check for missing migrations.
-  check-schema        Render the REST API schema and check for problems.
-  cli                 Launch a bash shell inside the running Nautobot (or other) Docker container.
-  createsuperuser     Create a new Nautobot superuser account (default: "admin"), will prompt for password.
-  debug               Start Nautobot and its dependencies in debug mode.
-  destroy             Destroy all containers and volumes.
-  docker-push         Tags and pushes docker images to the appropriate repos, intended for release use only.
-  dumpdata            Dump data from database to db_output file.
-  flake8              Check for PEP8 compliance and other style issues.
-  hadolint            Check Dockerfile for hadolint compliance and other style issues.
-  integration-test    Run Nautobot integration tests.
-  loaddata            Load data from file.
-  makemigrations      Perform makemigrations operation in Django.
-  markdownlint        Lint Markdown files.
-  migrate             Perform migrate operation in Django.
-  nbshell             Launch an interactive nbshell session.
-  post-upgrade        Performs Nautobot common post-upgrade operations using a single entrypoint.
-  restart             Gracefully restart containers.
-  start               Start Nautobot and its dependencies in detached mode.
-  stop                Stop Nautobot and its dependencies.
-  tests               Run all tests and linters.
-  unittest            Run Nautobot unit tests.
-  unittest-coverage   Report on code test coverage as measured by 'invoke unittest'.
-  vscode              Launch Visual Studio Code with the appropriate Environment variables to run in a container.
+  black                  Check Python code style with Black.
+  build                  Build Nautobot docker image.
+  build-and-check-docs   Build docs for use within Nautobot.
+  buildx                 Build Nautobot docker image using the experimental buildx docker functionality (multi-arch
+                         capablility).
+  check-migrations       Check for missing migrations.
+  check-schema           Render the REST API schema and check for problems.
+  cli                    Launch a bash shell inside the running Nautobot (or other) Docker container.
+  createsuperuser        Create a new Nautobot superuser account (default: "admin"), will prompt for password.
+  debug                  Start Nautobot and its dependencies in debug mode.
+  destroy                Destroy all containers and volumes.
+  docker-push            Tags and pushes docker images to the appropriate repos, intended for release use only.
+  dumpdata               Dump data from database to db_output file.
+  flake8                 Check for PEP8 compliance and other style issues.
+  hadolint               Check Dockerfile for hadolint compliance and other style issues.
+  integration-test       Run Nautobot integration tests.
+  loaddata               Load data from file.
+  makemigrations         Perform makemigrations operation in Django.
+  markdownlint           Lint Markdown files.
+  migrate                Perform migrate operation in Django.
+  nbshell                Launch an interactive nbshell session.
+  post-upgrade           Performs Nautobot common post-upgrade operations using a single entrypoint.
+  pylint                 Perform static analysis of Nautobot code.
+  restart                Gracefully restart containers.
+  start                  Start Nautobot and its dependencies in detached mode.
+  stop                   Stop Nautobot and its dependencies.
+  tests                  Run all linters and unit tests.
+  unittest               Run Nautobot unit tests.
+  unittest-coverage      Report on code test coverage as measured by 'invoke unittest'.
+  vscode                 Launch Visual Studio Code with the appropriate Environment variables to run in a container.
 ```
 
 #### Using Docker with Invoke
@@ -576,14 +578,15 @@ If you make changes to the REST API, you should verify that the REST API OpenAPI
 |-------------------------|--------------------------------------------------------------------------------------------|
 | `invoke check-schema`   | `nautobot-server spectacular --api-version 1.2 --validate --fail-on-warn --file /dev/null` |
 
-### Verifying Code Style
+### Verifying Code Style and Static Analysis
 
-To enforce best practices around consistent [coding style](style-guide.md), Nautobot uses [Flake8](https://flake8.pycqa.org/) and [Black](https://black.readthedocs.io/). You should run both of these commands and ensure that they pass fully with regard to your code changes before opening a pull request upstream.
+To enforce best practices around consistent [coding style](style-guide.md), Nautobot uses [Flake8](https://flake8.pycqa.org/) and [Black](https://black.readthedocs.io/). Additionally, [static analysis](https://en.wikipedia.org/wiki/Static_program_analysis) of Nautobot code is performed by [Pylint](https://pylint.pycqa.org/en/latest/). You should run all of these commands and ensure that they pass fully with regard to your code changes before opening a pull request upstream.
 
-| Docker Compose Workflow | Virtual Environment Workflow |
-|-------------------------|------------------------------|
-| `invoke flake8`         | `flake8`                     |
-| `invoke black`          | `black`                      |
+| Docker Compose Workflow | Virtual Environment Workflow                                                                            |
+|-------------------------|---------------------------------------------------------------------------------------------------------|
+| `invoke flake8`         | `flake8`                                                                                                |
+| `invoke black`          | `black`                                                                                                 |
+| `invoke pylint`         | `nautobot-server pylint nautobot tasks.py && nautobot-server pylint --recursive development/ examples/` |
 
 ### Handling Migrations
 

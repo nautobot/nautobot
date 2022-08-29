@@ -14,7 +14,7 @@ class ChoiceSetMeta(type):
 
 class ChoiceSet(metaclass=ChoiceSetMeta):
 
-    CHOICES = list()
+    CHOICES = []
 
     @classmethod
     def values(cls):

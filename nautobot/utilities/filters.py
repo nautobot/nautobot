@@ -16,6 +16,7 @@ from django_filters.utils import get_model_field, resolve_field
 from mptt.models import MPTTModel
 from tree_queries.models import TreeNode
 
+from nautobot.dcim.fields import MACAddressCharField
 from nautobot.dcim.forms import MACAddressField
 from nautobot.extras.models import Tag
 from nautobot.utilities.constants import (
@@ -51,12 +52,12 @@ def multivalue_field_factory(field_class):
 
             return [
                 # Only append non-empty values (this avoids e.g. trying to cast '' as an integer)
-                super(field_class, self).to_python(v)
+                super(field_class, self).to_python(v)  # pylint: disable=bad-super-call
                 for v in value
                 if v
             ]
 
-    return type("MultiValue{}".format(field_class.__name__), (NewField,), dict())
+    return type("MultiValue{}".format(field_class.__name__), (NewField,), {})
 
 
 #
@@ -540,7 +541,7 @@ class BaseFilterSet(django_filters.FilterSet):
             models.TimeField: {"filter_class": MultiValueTimeFilter},
             models.URLField: {"filter_class": MultiValueCharFilter},
             models.UUIDField: {"filter_class": MultiValueUUIDFilter},
-            MACAddressField: {"filter_class": MultiValueMACAddressFilter},
+            MACAddressCharField: {"filter_class": MultiValueMACAddressFilter},
             TaggableManager: {"filter_class": TagFilter},
         }
     )
