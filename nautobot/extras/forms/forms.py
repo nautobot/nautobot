@@ -333,11 +333,6 @@ CustomFieldChoiceFormSet = inlineformset_factory(
 
 class CustomFieldForm(BootstrapMixin, forms.ModelForm):
     label = forms.CharField(required=True, max_length=50, help_text="Name of the field as displayed to users.")
-    grouping = forms.CharField(
-        max_length=255,
-        required=False,
-        help_text="Human-readable grouping that this custom field belongs to",
-    )
     slug = SlugField(
         max_length=50,
         slug_source="label",

@@ -139,6 +139,7 @@ class CustomFieldModel(models.Model):
 
     def get_custom_fields_basic(self):
         """
+        This method exists to help call get_custom_fields() in templates where a function argument (advanced_ui) cannot be specified.
         Return a dictionary of custom fields for a single object in the form {<field>: value}
         which have advanced_ui set to False
         """
@@ -146,6 +147,7 @@ class CustomFieldModel(models.Model):
 
     def get_custom_fields_advanced(self):
         """
+        This method exists to help call get_custom_fields() in templates where a function argument (advanced_ui) cannot be specified.
         Return a dictionary of custom fields for a single object in the form {<field>: value}
         which have advanced_ui set to True
         """
@@ -163,6 +165,7 @@ class CustomFieldModel(models.Model):
 
     def get_custom_field_groupings_basic(self):
         """
+        This method exists to help call get_custom_field_groupings() in templates where a function argument (advanced_ui) cannot be specified.
         Return a dictonary of custom fields grouped by the same grouping in the form
         {
             <grouping_1>: [cf1, cf2...],
@@ -176,6 +179,7 @@ class CustomFieldModel(models.Model):
 
     def get_custom_field_groupings_advanced(self):
         """
+        This method exists to help call get_custom_field_groupings() in templates where a function argument (advanced_ui) cannot be specified.
         Return a dictonary of custom fields grouped by the same grouping in the form
         {
             <grouping_1>: [cf1, cf2...],
