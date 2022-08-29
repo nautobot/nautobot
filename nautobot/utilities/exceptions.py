@@ -7,8 +7,6 @@ class AbortTransaction(Exception):
     An exception used to trigger a database transaction rollback.
     """
 
-    pass
-
 
 # TODO remove this in 2.0
 class RQWorkerNotRunningException(APIException):

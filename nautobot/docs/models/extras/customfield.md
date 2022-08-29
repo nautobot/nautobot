@@ -66,7 +66,7 @@ The value of a multiple selection field will always return a list, even if only 
 
 There are a number of available built-in filters for custom fields.
 
-Filtering on an object's list view follows the same pattern as [custom field filtering on the API](/rest-api/filtering/#filtering-by-custom-field).
+Filtering on an object's list view follows the same pattern as [custom field filtering on the API](../../rest-api/filtering.md#filtering-by-custom-field).
 
 ## Custom Fields and the REST API
 

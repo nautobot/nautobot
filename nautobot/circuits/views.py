@@ -196,8 +196,8 @@ class CircuitSwapTerminations(generic.ObjectEditView):
 
     queryset = Circuit.objects.all()
 
-    def get(self, request, pk):
-        circuit = get_object_or_404(self.queryset, pk=pk)
+    def get(self, request, *args, **kwargs):
+        circuit = get_object_or_404(self.queryset, pk=kwargs["pk"])
         form = ConfirmationForm()
 
         # Circuit must have at least one termination to swap
@@ -222,8 +222,8 @@ class CircuitSwapTerminations(generic.ObjectEditView):
             },
         )
 
-    def post(self, request, pk):
-        circuit = get_object_or_404(self.queryset, pk=pk)
+    def post(self, request, *args, **kwargs):
+        circuit = get_object_or_404(self.queryset, pk=kwargs["pk"])
         form = ConfirmationForm(request.POST)
 
         if form.is_valid():

@@ -74,7 +74,7 @@ celery@worker1 v5.1.1 (sun-harmonics)
 
 `nautobot-server collectstatic`
 
-Collect static files into [`STATIC_ROOT`](../../configuration/optional-settings/#static_root).
+Collect static files into [`STATIC_ROOT`](../configuration/optional-settings.md#static_root).
 
 ```no-highlight
 $ nautobot-server collectstatic
@@ -172,7 +172,7 @@ Processing ContentType ipam | prefix
 
 `nautobot-server generate_secret_key`
 
-Generates a new [`SECRET_KEY`](../../configuration/required-settings/#secret_key) that can be used in your `nautobot_config.py`:
+Generates a new [`SECRET_KEY`](../configuration/required-settings.md#secret_key) that can be used in your `nautobot_config.py`:
 
 ```no-highlight
 $ nautobot-server generate_secret_key
@@ -198,7 +198,7 @@ Please see the [healthcheck documentation](../additional-features/healthcheck.md
 
 `nautobot-server init [config_path]`
 
-Generates a new configuration with all of the default settings provided for you, and will also generate a unique[`SECRET_KEY`](../../configuration/required-settings/#secret_key).
+Generates a new configuration with all of the default settings provided for you, and will also generate a unique[`SECRET_KEY`](../configuration/required-settings.md#secret_key).
 
 By default the file will be created at `$HOME/.nautobot/nautobot_config.py`:
 
@@ -207,7 +207,7 @@ $ nautobot-server init
 Configuration file created at '/home/example/.nautobot/nautobot_config.py
 ```
 
-For more information on configuring Nautobot for the first time or on more advanced configuration patterns, please see the guide on [Nautobot Configuration](../../configuration).
+For more information on configuring Nautobot for the first time or on more advanced configuration patterns, please see the guide on [Nautobot Configuration](../configuration/index.md).
 
 ### `invalidate`
 

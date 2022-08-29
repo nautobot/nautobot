@@ -414,12 +414,12 @@ class CustomField(BaseModel, ChangeLoggedModel, NotesMixin):
                 {"default": f"The specified default value ({self.default}) is not listed as an available choice."}
             )
 
-    def save(self, **kwargs):
+    def save(self, *args, **kwargs):
         # Prior to Nautobot 1.4, `slug` was a non-existent field, but now it's mandatory.
         # Protect against get_or_create() or other ORM usage where callers aren't calling clean() before saving.
         # Normally we'd just say "Don't do that!" but we know there are some cases of this in the wild.
         self._fixup_empty_fields()
-        super().save(**kwargs)
+        super().save(*args, **kwargs)
 
     def to_form_field(
         self, set_initial=True, enforce_required=True, for_csv_import=False, simple_json_filter=False, label=None
@@ -652,11 +652,13 @@ class CustomFieldChoice(BaseModel, ChangeLoggedModel):
             # Cannot delete the choice if it is the default value.
             if self.field.type == CustomFieldTypeChoices.TYPE_SELECT and self.field.default == self.value:
                 raise models.ProtectedError(
-                    self, "Cannot delete this choice because it is the default value for the field."
+                    msg="Cannot delete this choice because it is the default value for the field.",
+                    protected_objects=[self],  # TODO: should this be self.field instead?
                 )
             elif self.value in self.field.default:
                 raise models.ProtectedError(
-                    self, "Cannot delete this choice because it is one of the default values for the field."
+                    msg="Cannot delete this choice because it is one of the default values for the field.",
+                    protected_objects=[self],  # TODO: should this be self.field instead?
                 )
 
         if self.field.type == CustomFieldTypeChoices.TYPE_SELECT:
@@ -665,7 +667,10 @@ class CustomFieldChoice(BaseModel, ChangeLoggedModel):
                 model = ct.model_class()
                 # 2.0 TODO: #824 self.field.slug instead of self.field.name
                 if model.objects.filter(**{f"_custom_field_data__{self.field.name}": self.value}).exists():
-                    raise models.ProtectedError(self, "Cannot delete this choice because it is in active use.")
+                    raise models.ProtectedError(
+                        msg="Cannot delete this choice because it is in active use.",
+                        protected_objects=[self],  # TODO should this be model.objects.filter(...) instead?
+                    )
 
         else:
             # Check if this value is in active use in a multi-select field
@@ -673,11 +678,14 @@ class CustomFieldChoice(BaseModel, ChangeLoggedModel):
                 model = ct.model_class()
                 # 2.0 TODO: #824 self.field.slug instead of self.field.name
                 if model.objects.filter(**{f"_custom_field_data__{self.field.name}__contains": self.value}).exists():
-                    raise models.ProtectedError(self, "Cannot delete this choice because it is in active use.")
+                    raise models.ProtectedError(
+                        msg="Cannot delete this choice because it is in active use.",
+                        protected_objects=[self],  # TODO should this be model.objects.filter(...) instead?
+                    )
 
         super().delete(*args, **kwargs)
 
-    def to_objectchange(self, action):
+    def to_objectchange(self, action, related_object=None, **kwargs):
         # Annotate the parent field
         try:
             field = self.field
@@ -685,4 +693,4 @@ class CustomFieldChoice(BaseModel, ChangeLoggedModel):
             # The parent field has already been deleted
             field = None
 
-        return super().to_objectchange(action, related_object=field)
+        return super().to_objectchange(action, related_object=field, **kwargs)

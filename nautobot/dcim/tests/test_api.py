@@ -1069,19 +1069,19 @@ class FrontPortTemplateTest(APIViewTestCases.APIViewTestCase):
             name="Front Port Template 1",
             type=PortTypeChoices.TYPE_8P8C,
             rear_port=rear_port_templates[0],
-        ),
+        )
         FrontPortTemplate.objects.create(
             device_type=devicetype,
             name="Front Port Template 2",
             type=PortTypeChoices.TYPE_8P8C,
             rear_port=rear_port_templates[1],
-        ),
+        )
         FrontPortTemplate.objects.create(
             device_type=devicetype,
             name="Front Port Template 3",
             type=PortTypeChoices.TYPE_8P8C,
             rear_port=rear_port_templates[2],
-        ),
+        )
 
         cls.create_data = [
             {
@@ -1320,7 +1320,7 @@ class DeviceTest(APIViewTestCases.APIViewTestCase):
             cluster=clusters[0],
             secrets_group=secrets_groups[0],
             local_context_data={"A": 1},
-        ),
+        )
         Device.objects.create(
             device_type=device_types[0],
             device_role=device_roles[0],
@@ -1331,7 +1331,7 @@ class DeviceTest(APIViewTestCases.APIViewTestCase):
             cluster=clusters[0],
             secrets_group=secrets_groups[0],
             local_context_data={"B": 2},
-        ),
+        )
         Device.objects.create(
             device_type=device_types[0],
             device_role=device_roles[0],
@@ -1342,7 +1342,7 @@ class DeviceTest(APIViewTestCases.APIViewTestCase):
             cluster=clusters[0],
             secrets_group=secrets_groups[0],
             local_context_data={"C": 3},
-        ),
+        )
 
         # FIXME(jathan): The writable serializer for `Device.status` takes the
         # status `name` (str) and not the `pk` (int). Do not validate this
@@ -1762,9 +1762,9 @@ class InterfaceTestVersion12(Mixins.ComponentTraceMixin, APIViewTestCases.APIVie
     def test_active_status_not_found(self):
         self.add_permissions("dcim.add_interface")
 
-        status = Status.objects.get_for_model(Interface).get(slug=InterfaceStatusChoices.STATUS_ACTIVE)
+        status_active = Status.objects.get_for_model(Interface).get(slug=InterfaceStatusChoices.STATUS_ACTIVE)
         interface_ct = ContentType.objects.get_for_model(Interface)
-        status.content_types.remove(interface_ct)
+        status_active.content_types.remove(interface_ct)
         device = Device.objects.first()
 
         data = {
@@ -2458,9 +2458,9 @@ class PowerPanelTest(APIViewTestCases.APIViewTestCase):
             RackGroup.objects.create(name="Rack Group 4", slug="rack-group-3", site=sites[1]),
         )
 
-        PowerPanel.objects.create(site=sites[0], rack_group=rack_groups[0], name="Power Panel 1"),
-        PowerPanel.objects.create(site=sites[0], rack_group=rack_groups[1], name="Power Panel 2"),
-        PowerPanel.objects.create(site=sites[0], rack_group=rack_groups[2], name="Power Panel 3"),
+        PowerPanel.objects.create(site=sites[0], rack_group=rack_groups[0], name="Power Panel 1")
+        PowerPanel.objects.create(site=sites[0], rack_group=rack_groups[1], name="Power Panel 2")
+        PowerPanel.objects.create(site=sites[0], rack_group=rack_groups[2], name="Power Panel 3")
 
         cls.create_data = [
             {

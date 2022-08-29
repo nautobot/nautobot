@@ -36,7 +36,7 @@ class Command(TemplateCommand):
             "with commas, or use -n multiple times.",
         )
 
-    def handle(self, **options):
+    def handle(self, *args, **options):
         app_name = options.pop("name")
         target = options.pop("directory")
         super().handle("app", app_name, target, **options)
