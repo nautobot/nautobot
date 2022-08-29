@@ -18,7 +18,7 @@ class WebhookHandler(BaseHTTPRequestHandler):
 
         raise AttributeError
 
-    def log_message(self, format_str, *args):
+    def log_message(self, format_str, *args):  # pylint: disable=arguments-differ
         global request_counter
 
         print(

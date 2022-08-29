@@ -79,7 +79,7 @@ def enqueue_pull_git_repository_and_refresh_data(repository, request):
     enqueue_git_repository_helper(repository, request, pull_git_repository_and_refresh_data)
 
 
-def get_job_result_and_repository_record(repository_pk, job_result_pk, logger):
+def get_job_result_and_repository_record(repository_pk, job_result_pk, logger):  # pylint: disable=redefined-outer-name
     """
     Get JobResult instance and GitRepository instance
 
@@ -259,7 +259,9 @@ def get_repo_from_url_to_path_and_from_branch(repository_record):
     return GitRepoInfo(from_url=from_url, to_path=to_path, from_branch=from_branch)
 
 
-def ensure_git_repository(repository_record, job_result=None, logger=None, head=None):
+def ensure_git_repository(
+    repository_record, job_result=None, logger=None, head=None  # pylint: disable=redefined-outer-name
+):
     """Ensure that the given Git repo is present, up-to-date, and has the correct branch selected.
     Note that this function may be called independently of the `pull_git_repository_and_refresh_data` job,
     such as to ensure that different Nautobot instances and/or worker instances all have a local copy of the same HEAD.
@@ -300,7 +302,7 @@ def ensure_git_repository(repository_record, job_result=None, logger=None, head=
         logger.info("Repository successfully refreshed")
 
 
-def git_repository_dry_run(repository_record, job_result=None, logger=None):
+def git_repository_dry_run(repository_record, job_result=None, logger=None):  # pylint: disable=redefined-outer-name
     """Log the difference between local branch and remote branch files.
     Args:
         repository_record (GitRepository)
@@ -500,7 +502,7 @@ def update_git_config_contexts(repository_record, job_result):
     )
 
 
-def import_config_context(context_data, repository_record, job_result, logger):
+def import_config_context(context_data, repository_record, job_result, logger):  # pylint: disable=redefined-outer-name
     """
     Parse a given dictionary of data to create/update a ConfigContext record.
 
@@ -658,7 +660,9 @@ def import_config_context(context_data, repository_record, job_result, logger):
     return context_record.name if context_record else None
 
 
-def import_local_config_context(local_type, device_name, context_data, repository_record, job_result, logger):
+def import_local_config_context(
+    local_type, device_name, context_data, repository_record, job_result, logger  # pylint: disable=redefined-outer-name
+):
     """
     Create/update the local config context data associated with a Device or VirtualMachine.
     """
@@ -814,7 +818,9 @@ def update_git_config_context_schemas(repository_record, job_result):
     )
 
 
-def import_config_context_schema(context_schema_data, repository_record, job_result, logger):
+def import_config_context_schema(
+    context_schema_data, repository_record, job_result, logger  # pylint: disable=redefined-outer-name
+):
     """Using data from schema file, create schema record in Nautobot."""
     git_repository_content_type = ContentType.objects.get_for_model(GitRepository)
 

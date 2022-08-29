@@ -350,23 +350,23 @@ class ViewTestCases:
             """Test that slug is autocreated through ORM."""
             # This really should go on a models test page, but we don't have test structures for models.
             if self.slug_source is not None:
-                object = self.model.objects.get(**{self.slug_source: self.slug_test_object})
-                expected_slug = self.slugify_function(getattr(object, self.slug_source))
-                self.assertEqual(object.slug, expected_slug)
+                obj = self.model.objects.get(**{self.slug_source: self.slug_test_object})
+                expected_slug = self.slugify_function(getattr(obj, self.slug_source))
+                self.assertEqual(obj.slug, expected_slug)
 
         def test_slug_not_modified(self):
             """Ensure save method does not modify slug that is passed in."""
             # This really should go on a models test page, but we don't have test structures for models.
             if self.slug_source is not None:
-                object = self.model.objects.get(**{self.slug_source: self.slug_test_object})
-                expected_slug = self.slugify_function(getattr(object, self.slug_source))
+                obj = self.model.objects.get(**{self.slug_source: self.slug_test_object})
+                expected_slug = self.slugify_function(getattr(obj, self.slug_source))
                 # Update slug source field str
-                filter = self.slug_source + "__contains"
-                self.model.objects.filter(**{filter: self.slug_test_object}).update(**{self.slug_source: "Test"})
+                filter_ = self.slug_source + "__contains"
+                self.model.objects.filter(**{filter_: self.slug_test_object}).update(**{self.slug_source: "Test"})
 
-                object.refresh_from_db()
-                self.assertEqual(getattr(object, self.slug_source), "Test")
-                self.assertEqual(object.slug, expected_slug)
+                obj.refresh_from_db()
+                self.assertEqual(getattr(obj, self.slug_source), "Test")
+                self.assertEqual(obj.slug, expected_slug)
 
     class EditObjectViewTestCase(ModelViewTestCase):
         """
@@ -873,7 +873,7 @@ class ViewTestCases:
 
             # Try POST with model-level permission
             self.assertHttpStatus(self.client.post(self._get_url("bulk_edit"), data), 302)
-            for i, instance in enumerate(self._get_queryset().filter(pk__in=pk_list)):
+            for instance in self._get_queryset().filter(pk__in=pk_list):
                 self.assertInstanceEqual(instance, self.bulk_edit_data)
 
         @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
@@ -912,7 +912,7 @@ class ViewTestCases:
 
             # Bulk edit permitted objects
             self.assertHttpStatus(self.client.post(self._get_url("bulk_edit"), data), 302)
-            for i, instance in enumerate(self._get_queryset().filter(pk__in=pk_list)):
+            for instance in self._get_queryset().filter(pk__in=pk_list):
                 self.assertInstanceEqual(instance, self.bulk_edit_data)
 
     class BulkDeleteObjectsViewTestCase(ModelViewTestCase):

@@ -56,6 +56,8 @@ def update_custom_field_choice_data(field_id, old_value, new_value):
         logger.error(f"Unknown field type, failing to act on choice data for this field {field.name}.")
         return False
 
+    return True
+
 
 # 2.0 TODO: #824 rename field_name to field_slug
 @nautobot_task
@@ -99,6 +101,8 @@ def provision_field(field_id, content_type_pk_set):
                 # 2.0 TODO: #824 field.slug rather than field.name
                 obj._custom_field_data.setdefault(field.name, field.default)
                 obj.save()
+
+    return True
 
 
 @nautobot_task

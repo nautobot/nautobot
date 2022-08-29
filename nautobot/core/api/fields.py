@@ -19,7 +19,7 @@ class ChoiceField(serializers.Field):
     def __init__(self, choices, allow_blank=False, **kwargs):
         self.choiceset = choices
         self.allow_blank = allow_blank
-        self._choices = dict()
+        self._choices = {}
 
         # Unpack grouped choices
         for k, v in choices:
@@ -99,6 +99,7 @@ class ContentTypeField(RelatedField):
             self.fail("does_not_exist", content_type=data)
         except (AttributeError, TypeError, ValueError):
             self.fail("invalid")
+        return None
 
     def to_representation(self, obj):
         return f"{obj.app_label}.{obj.model}"

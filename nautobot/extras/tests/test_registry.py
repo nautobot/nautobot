@@ -38,7 +38,9 @@ class RegistryTest(TestCase):
             register_secrets_provider("a string is not a SecretsProvider")
         with self.assertRaises(TypeError):
             # Need to register a class, not a class instance
-            register_secrets_provider(EnvironmentVariableSecretsProvider())
+            # For some reason pylint thinks EnvironmentVariableSecretsProvider is a partially abstract class; it isn't
+            instance = EnvironmentVariableSecretsProvider()  # pylint: disable=abstract-class-instantiated
+            register_secrets_provider(instance)
 
         # Duplicate slug
         class DuplicateSecretsProvider(EnvironmentVariableSecretsProvider):

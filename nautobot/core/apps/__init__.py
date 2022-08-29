@@ -1,7 +1,7 @@
 import logging
 import os
 
-from abc import ABC, abstractproperty
+from abc import ABC, abstractmethod
 from collections import OrderedDict
 
 from django.apps import AppConfig, apps as global_apps
@@ -190,7 +190,7 @@ def register_homepage_panels(path, label, homepage_layout):
                             )
                         else:
                             raise TypeError(f"Third level objects need to be an instance of HomePageItem: {group_item}")
-                    panel_perms |= set(group_item.permissions)
+                        panel_perms |= set(group_item.permissions)
                     registry_items[item.name]["items"] = OrderedDict(
                         sorted(registry_items[item.name]["items"].items(), key=lambda kv_pair: kv_pair[1]["weight"])
                     )
@@ -214,11 +214,13 @@ def register_homepage_panels(path, label, homepage_layout):
 class HomePageBase(ABC):
     """Base class for homepage layout classes."""
 
-    @abstractproperty
+    @property
+    @abstractmethod
     def initial_dict(self):  # to be implemented by each subclass
         return {}
 
-    @abstractproperty
+    @property
+    @abstractmethod
     def fixed_fields(self):  # to be implemented by subclass
         return ()
 
@@ -226,11 +228,13 @@ class HomePageBase(ABC):
 class NavMenuBase(ABC):  # replaces PermissionsMixin
     """Base class for navigation classes."""
 
-    @abstractproperty
+    @property
+    @abstractmethod
     def initial_dict(self):  # to be implemented by each subclass
         return {}
 
-    @abstractproperty
+    @property
+    @abstractmethod
     def fixed_fields(self):  # to be implemented by subclass
         return ()
 
@@ -267,7 +271,7 @@ class HomePagePanel(HomePageBase, PermissionsMixin):
     def fixed_fields(self):
         return ()
 
-    def __init__(self, name, permissions=[], custom_data=None, custom_template=None, items=None, weight=1000):
+    def __init__(self, name, permissions=None, custom_data=None, custom_template=None, items=None, weight=1000):
         """
         Ensure panel properties.
 
@@ -279,6 +283,8 @@ class HomePagePanel(HomePageBase, PermissionsMixin):
             items (list): List of items to be rendered in this panel.
             weight (int): The weight of this panel.
         """
+        if permissions is None:
+            permissions = []
         super().__init__(permissions)
         self.custom_data = custom_data
         self.custom_template = custom_template
@@ -314,7 +320,7 @@ class HomePageGroup(HomePageBase, PermissionsMixin):
     def fixed_fields(self):
         return ()
 
-    def __init__(self, name, permissions=[], items=None, weight=1000):
+    def __init__(self, name, permissions=None, items=None, weight=1000):
         """
         Ensure group properties.
 
@@ -324,6 +330,8 @@ class HomePageGroup(HomePageBase, PermissionsMixin):
             items (list): List of items to be rendered in this group.
             weight (int): The weight of this group.
         """
+        if permissions is None:
+            permissions = []
         super().__init__(permissions)
         self.name = name
         self.weight = weight
@@ -649,17 +657,17 @@ class CoreConfig(NautobotConfig):
         from nautobot.core.graphql import BigInteger
 
         @convert_django_field.register(JSONField)
-        def convert_json(field, registry=None):
+        def convert_json(field, registry=None):  # pylint: disable=redefined-outer-name
             """Convert JSONField to GenericScalar."""
             return generic.GenericScalar()
 
         @convert_django_field.register(BinaryField)
-        def convert_binary(field, registry=None):
+        def convert_binary(field, registry=None):  # pylint: disable=redefined-outer-name
             """Convert BinaryField to String."""
             return String()
 
         @convert_django_field.register(BigIntegerField)
-        def convert_biginteger(field, registry=None):
+        def convert_biginteger(field, registry=None):  # pylint: disable=redefined-outer-name
             """Convert BigIntegerField to BigInteger scalar."""
             return BigInteger()
 

@@ -124,7 +124,6 @@ def configure_app(
             )
         except Exception:
             # XXX: Django doesn't like various errors in this path
-            import sys
             import traceback
 
             traceback.print_exc()

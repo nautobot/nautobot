@@ -705,7 +705,7 @@ class IPAddressAssignView(generic.ObjectView):
 
         return super().dispatch(request, *args, **kwargs)
 
-    def get(self, request):
+    def get(self, request, *args, **kwargs):
         form = forms.IPAddressAssignForm()
 
         return render(
