@@ -14,7 +14,9 @@ class GraphQLTestCase(TestCase):
         self.device_role = DeviceRole.objects.create(name="Switch")
         self.manufacturer = Manufacturer.objects.create(name="Brand")
         self.device_type = DeviceType.objects.create(model="Model", manufacturer=self.manufacturer)
-        self.device = Device.objects.create(site=self.site, device_role=self.device_role, device_type=self.device_type, name="Device")
+        self.device = Device.objects.create(
+            site=self.site, device_role=self.device_role, device_type=self.device_type, name="Device"
+        )
         self.dynamic_group = DynamicGroup.objects.create(
             name="Dynamic_Group", content_type=ContentType.objects.get_for_model(Device)
         )
