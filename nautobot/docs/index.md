@@ -1,8 +1,17 @@
-<!-- markdownlint-disable MD041 -->
-![Nautobot](nautobot_logo.svg "Nautobot logo")
-<!-- markdownlint-enable MD041 -->
+---
+hide:
+  - navigation
+---
 
-# What is Nautobot?
+# Overview
+
+Intro to docs TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO
+
+
+
+## What is Nautobot?
+
+<img src="assets/nautobot_logo.svg" class="logo">
 
 Nautobot is an open source Network Source of Truth and Network Automation Platform. Nautobot was initially developed as a fork of NetBox (v2.10.4), which was originally created by Jeremy Stretch at DigitalOcean and by the NetBox open source community.
 

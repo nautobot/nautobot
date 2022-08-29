@@ -43,6 +43,10 @@
     height: 50px;
 }
 
+img.logo {
+    height: 100px;
+}
+
 img.copyright-logo {
     height: 24px;
     vertical-align: middle;
