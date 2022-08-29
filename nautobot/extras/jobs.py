@@ -1211,6 +1211,7 @@ def run_job(data, request, job_result_pk, commit=True, *args, **kwargs):
             job_result.schedule.save()
 
         # Perform any post-run tasks
+        # TODO Remove post_run() method entirely in Nautobot V2.0.
         job.active_test = "post_run"
         try:
             output = job.post_run()
