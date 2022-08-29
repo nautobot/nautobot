@@ -64,7 +64,7 @@ class BootstrapMixin(forms.BaseForm):
             forms.RadioSelect,
         ]
 
-        for field_name, field in self.fields.items():
+        for field in self.fields.values():
             if field.widget.__class__ not in exempt_widgets:
                 css = field.widget.attrs.get("class", "")
                 field.widget.attrs["class"] = " ".join([css, "form-control"]).strip()
@@ -188,10 +188,10 @@ class ImportForm(BootstrapMixin, forms.Form):
         super().clean()
 
         data = self.cleaned_data["data"]
-        format = self.cleaned_data["format"]
+        format_ = self.cleaned_data["format"]
 
         # Process JSON/YAML data
-        if format == "json":
+        if format_ == "json":
             try:
                 self.cleaned_data["data"] = json.loads(data)
                 # Check for multiple JSON objects

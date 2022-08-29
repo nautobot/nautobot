@@ -17,6 +17,7 @@ from nautobot.extras.choices import (
     SecretsGroupAccessTypeChoices,
     SecretsGroupSecretTypeChoices,
 )
+from nautobot.extras.choices import LogLevelChoices
 from nautobot.extras.datasources.git import pull_git_repository_and_refresh_data, git_repository_diff_origin_and_local
 from nautobot.extras.datasources.registry import get_datasource_contents
 from nautobot.extras.management import create_custom_statuses
@@ -25,6 +26,7 @@ from nautobot.extras.models import (
     ConfigContextSchema,
     ExportTemplate,
     GitRepository,
+    JobLogEntry,
     JobResult,
     Secret,
     SecretsGroup,
@@ -510,45 +512,30 @@ class GitTest(TransactionTestCase):
                     os.makedirs(os.path.join(path, "config_context_schemas"))
                     os.makedirs(os.path.join(path, "export_templates", "nosuchapp", "device"))
                     os.makedirs(os.path.join(path, "export_templates", "dcim", "nosuchmodel"))
+                    # Incorrect directories
+                    os.makedirs(os.path.join(path, "devices"))
+                    os.makedirs(os.path.join(path, "dcim"))
                     # Malformed JSON
                     with open(os.path.join(path, "config_contexts", "context.json"), "w") as fd:
                         fd.write('{"data": ')
                     # Valid JSON but missing required keys
                     with open(os.path.join(path, "config_contexts", "context2.json"), "w") as fd:
                         fd.write("{}")
+                    with open(os.path.join(path, "config_contexts", "context3.json"), "w") as fd:
+                        fd.write('{"_metadata": {}}')
+                    # Malformed JSON
                     with open(os.path.join(path, "config_context_schemas", "schema-1.yaml"), "w") as fd:
                         fd.write('{"data": ')
                     # Valid JSON but missing required keys
                     with open(os.path.join(path, "config_context_schemas", "schema-2.yaml"), "w") as fd:
                         fd.write("{}")
                     # No such device
-                    with open(
-                        os.path.join(path, "config_contexts", "devices", "nosuchdevice.json"),
-                        "w",
-                    ) as fd:
+                    with open(os.path.join(path, "config_contexts", "devices", "nosuchdevice.json"), "w") as fd:
                         fd.write("{}")
                     # Invalid paths
-                    with open(
-                        os.path.join(
-                            path,
-                            "export_templates",
-                            "nosuchapp",
-                            "device",
-                            "template.j2",
-                        ),
-                        "w",
-                    ) as fd:
+                    with open(os.path.join(path, "export_templates", "nosuchapp", "device", "template.j2"), "w") as fd:
                         fd.write("{% for device in queryset %}\n{{ device.name }}\n{% endfor %}")
-                    with open(
-                        os.path.join(
-                            path,
-                            "export_templates",
-                            "dcim",
-                            "nosuchmodel",
-                            "template.j2",
-                        ),
-                        "w",
-                    ) as fd:
+                    with open(os.path.join(path, "export_templates", "dcim", "nosuchmodel", "template.j2"), "w") as fd:
                         fd.write("{% for device in queryset %}\n{{ device.name }}\n{% endfor %}")
                     return mock.DEFAULT
 
@@ -563,6 +550,56 @@ class GitTest(TransactionTestCase):
                     self.job_result.status,
                     JobResultStatusChoices.STATUS_FAILED,
                     self.job_result.data,
+                )
+
+                # Check for specific log messages
+                log_entries = JobLogEntry.objects.filter(job_result=self.job_result)
+                warning_logs = log_entries.filter(log_level=LogLevelChoices.LOG_WARNING)
+                failure_logs = log_entries.filter(log_level=LogLevelChoices.LOG_FAILURE)
+
+                warning_logs.get(
+                    grouping="config contexts", message__contains='Found "devices" directory in the repository root'
+                )
+                warning_logs.get(grouping="jobs", message__contains="No `jobs` subdirectory found")
+                warning_logs.get(
+                    grouping="export templates", message__contains='Found "dcim" directory in the repository root'
+                )
+                warning_logs.get(
+                    grouping="export templates",
+                    message__contains="Skipping `dcim.nosuchmodel` as it isn't a known content type",
+                )
+                warning_logs.get(
+                    grouping="export templates",
+                    message__contains="Skipping `nosuchapp.device` as it isn't a known content type",
+                )
+
+                failure_logs.get(
+                    grouping="config context schemas",
+                    message__contains="Error in loading config context schema data from `schema-1.yaml`",
+                )
+                failure_logs.get(
+                    grouping="config context schemas",
+                    message__contains="Error in loading config context schema data from `schema-2.yaml`: "
+                    "data is missing the required `_metadata` key",
+                )
+                failure_logs.get(
+                    grouping="config contexts",
+                    message__contains="Error in loading config context data from `context.json`",
+                )
+                failure_logs.get(
+                    grouping="config contexts",
+                    message__contains="Error in loading config context data from `context2.json`: "
+                    "data is missing the required `_metadata` key",
+                )
+                failure_logs.get(
+                    grouping="config contexts",
+                    message__contains="Error in loading config context data from `context3.json`: "
+                    "data `_metadata` is missing the required `name` key",
+                )
+                failure_logs.get(
+                    grouping="local config contexts",
+                    message__contains="Error in loading local config context from `devices/nosuchdevice.json`: "
+                    "record not found",
                 )
 
     def test_delete_git_repository_cleanup(self, MockGitRepo):

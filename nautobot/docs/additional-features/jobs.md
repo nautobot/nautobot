@@ -12,13 +12,13 @@ Jobs are a way for users to execute custom logic on demand from within the Nauto
 ...and so on. Jobs are Python code and exist outside of the official Nautobot code base, so they can be updated and changed without interfering with the core Nautobot installation. And because they're completely customizable, there's practically no limit to what a job can accomplish.
 
 !!! note
-    Jobs unify and supersede the functionality previously provided in NetBox by "custom scripts" and "reports". Jobs are backwards-compatible for now with the `Script` and `Report` class APIs, but you are urged to move to the new `Job` class API described below. Jobs may be optionally marked as [read-only](./#read_only) which equates to the `Report` functionally, but in all cases, user input is supported via [job variables](./#variables).
+    Jobs unify and supersede the functionality previously provided in NetBox by "custom scripts" and "reports". Jobs are backwards-compatible for now with the `Script` and `Report` class APIs, but you are urged to move to the new `Job` class API described below. Jobs may be optionally marked as [read-only](#read_only) which equates to the `Report` functionally, but in all cases, user input is supported via [job variables](#variables).
 
 ## Writing Jobs
 
 Jobs may be installed in one of three ways:
 
-* Manually installed as files in the [`JOBS_ROOT`](../../configuration/optional-settings/#jobs_root) path (which defaults to `$NAUTOBOT_ROOT/jobs/`).
+* Manually installed as files in the [`JOBS_ROOT`](../configuration/optional-settings.md#jobs_root) path (which defaults to `$NAUTOBOT_ROOT/jobs/`).
     * The `JOBS_ROOT` directory *must* contain a file named `__init__.py`. Do not delete this file.
     * Each file created within this path is considered a separate module; there is no support for cross-file dependencies (such as a file acting as a common "library" module of functions shared between jobs) for files installed in this way.
 * Imported from an external [Git repository](../models/extras/gitrepository.md#jobs).
@@ -134,7 +134,7 @@ A list of strings (field names) representing the order your job [variables](#var
 
 Default: `True`
 
-Unless set to False, it prevents the job's input parameters from being saved to the database. This defaults to True so as to protect against inadvertent database exposure of input parameters that may include sensitive data such as passwords or other user credentials. Review whether each job's inputs contain any such variables before setting this to False; if a job *does* contain sensitive inputs, if possible you should consider whether the job could be re-implemented using Nautobot's [`Secrets`](../core-functionality/secrets) feature as a way to ensure that the sensitive data is not directly provided as a job variable at all.
+Unless set to False, it prevents the job's input parameters from being saved to the database. This defaults to True so as to protect against inadvertent database exposure of input parameters that may include sensitive data such as passwords or other user credentials. Review whether each job's inputs contain any such variables before setting this to False; if a job *does* contain sensitive inputs, if possible you should consider whether the job could be re-implemented using Nautobot's [`Secrets`](../core-functionality/secrets.md) feature as a way to ensure that the sensitive data is not directly provided as a job variable at all.
 
 Important notes about jobs with sensitive variables:
 

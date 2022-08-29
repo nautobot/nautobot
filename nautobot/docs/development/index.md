@@ -41,9 +41,6 @@ The following provides more detail on these.
 * Uses `current` label on GitHub.
 * The GitHub **Release Milestone** will track items for the _current_ release.
 
-!!! note
-    Release windows and dates will be updated per [Release Management](release-management).
-
 #### Near Term
 
 * Current tickets (GitHub issues) that are estimated to complete in one of the next two releases, e.g. 3-6 months to get into core, if accepted.
@@ -209,7 +206,7 @@ Feature requests will follow our published workflow from inbound triage to ultim
 ### Submitting Pull Requests
 
 * If you're interested in contributing to Nautobot, be sure to check out our
-  [getting started](getting-started)
+  [getting started](getting-started.md)
   documentation for tips on setting up your development environment.
 
 * It is recommended to open an issue **before** starting work on a pull request, and discuss your idea with the Nautobot maintainers before beginning work. This will help prevent wasting time on something that might we might not be able to implement. When suggesting a new feature, also make sure it won't conflict with any work that's already in progress.

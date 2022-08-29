@@ -1,6 +1,6 @@
 # Installation
 
-This set of documents will help you get Nautobot up and running.  As an alternative, you can also [run Nautobot in Docker](../docker).
+This set of documents will help you get Nautobot up and running.  As an alternative, you can also [run Nautobot in Docker](../docker/index.md).
 
 ## About Dependencies
 
@@ -55,12 +55,12 @@ For production deployment we recommend the following:
 
 - [uWSGI](https://uwsgi-docs.readthedocs.io/en/latest/) WSGI server
 - [NGINX](https://www.nginx.com/resources/wiki/) HTTP server
-- [External authentication](external-authentication) service for SSO such as SAML, OAuth2, or LDAP, or an authenticating proxy
+- [External authentication](external-authentication.md) service for SSO such as SAML, OAuth2, or LDAP, or an authenticating proxy
 
 For additional features:
 
-- [NAPALM support](../additional-features/napalm) for retrieving operational data from network devices
-- [Prometheus metrics](../additional-features/prometheus-metrics) for exporting application performance and telemetry data
+- [NAPALM support](../additional-features/napalm.md) for retrieving operational data from network devices
+- [Prometheus metrics](../additional-features/prometheus-metrics.md) for exporting application performance and telemetry data
 
 ## Installing Nautobot Dependencies
 
@@ -74,13 +74,13 @@ can be found by following the link to each.
 
 Red Hat flavors of Linux including CentOS 8.2+ or Red Hat Enterprise Linux (RHEL) 8.2+ are supported. The same installation instructions can be used on either.
 
-- [Installing Nautobot Dependencies on CentOS/RHEL](centos)
+- [Installing Nautobot Dependencies on CentOS/RHEL](centos.md)
 
 ### Installing Nautobot Dependencies on Ubuntu
 
 Ubuntu 20.04 or later is supported.
 
-- [Installing Nautobot Dependencies on Ubuntu](ubuntu)
+- [Installing Nautobot Dependencies on Ubuntu](ubuntu.md)
 
 ### Installing on Other Systems
 
@@ -88,7 +88,7 @@ Nautobot should work on any POSIX-compliant system including practically any fla
 
 ### Running Nautobot in Docker
 
-Nautobot docker images are available for use in a containerized deployment for an easier installation, see the [Docker overview](../docker) for more information.
+Nautobot docker images are available for use in a containerized deployment for an easier installation, see the [Docker overview](../docker/index.md) for more information.
 
 ## Upgrading
 

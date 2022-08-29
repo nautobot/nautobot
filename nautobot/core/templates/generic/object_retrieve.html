@@ -67,7 +67,7 @@
 
     <ul id="tabs" class="nav nav-tabs">
     {% block nav_tabs %}
-        <li role="presentation"{% if not active_tab and not request.GET.tab or request.GET.tab == "main" %} class="active"{% endif %}>
+        <li role="presentation"{% if active_tab == "main" or request.GET.tab == "main" %} class="active"{% endif %}>
             <a href="{{ object.get_absolute_url }}#main" onclick="switch_tab(this.href)" aria-controls="main" role="tab" data-toggle="tab">
                 {{ verbose_name|bettertitle }}
             </a>
@@ -106,7 +106,7 @@
 
 {% block content %}
     <div class="tab-content">
-        <div id="main" role="tabpanel" class="tab-pane {% if not active_tab and not request.GET.tab or request.GET.tab == "main" %}active{% else %}fade{% endif %}">
+        <div id="main" role="tabpanel" class="tab-pane {% if active_tab == "main" or request.GET.tab == "main" %}active{% else %}fade{% endif %}">
             <div class="row">
                 <div class="col-md-6">
                     {% block content_left_page %}{% endblock content_left_page %}

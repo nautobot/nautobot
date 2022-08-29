@@ -32,7 +32,7 @@ class DictToFilterParamsTest(TestCase):
 
     def test_dict_to_filter_params(self):
 
-        input = {
+        input_ = {
             "a": True,
             "foo": {
                 "bar": 123,
@@ -48,11 +48,11 @@ class DictToFilterParamsTest(TestCase):
             "x__y__z": False,
         }
 
-        self.assertEqual(dict_to_filter_params(input), output)
+        self.assertEqual(dict_to_filter_params(input_), output)
 
-        input["x"]["y"]["z"] = True
+        input_["x"]["y"]["z"] = True
 
-        self.assertNotEqual(dict_to_filter_params(input), output)
+        self.assertNotEqual(dict_to_filter_params(input_), output)
 
 
 class NormalizeQueryDictTest(TestCase):

@@ -28,8 +28,8 @@ def custom_links(context, obj):
     Render all applicable links for the given object.
     """
     content_type = ContentType.objects.get_for_model(obj)
-    custom_links = CustomLink.objects.filter(content_type=content_type)
-    if not custom_links:
+    links = CustomLink.objects.filter(content_type=content_type)
+    if not links:
         return ""
 
     # Pass select context data when rendering the CustomLink
@@ -43,7 +43,7 @@ def custom_links(context, obj):
     template_code = ""
     group_names = OrderedDict()
 
-    for cl in custom_links:
+    for cl in links:
 
         # Organize custom links by group
         if cl.group_name and cl.group_name in group_names:
