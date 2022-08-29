@@ -72,9 +72,9 @@ def parse_redis_connection(redis_database):
     """
     # The following `_redis_*` variables are used to generate settings based on
     # environment variables.
-    redis_scheme = "rediss" if is_truthy(os.getenv("NAUTOBOT_REDIS_SSL", False)) else "redis"
+    redis_scheme = "rediss" if is_truthy(os.getenv("NAUTOBOT_REDIS_SSL", "false")) else "redis"
     redis_host = os.getenv("NAUTOBOT_REDIS_HOST", "localhost")
-    redis_port = int(os.getenv("NAUTOBOT_REDIS_PORT", 6379))
+    redis_port = int(os.getenv("NAUTOBOT_REDIS_PORT", "6379"))
     redis_username = os.getenv("NAUTOBOT_REDIS_USERNAME", "")
     redis_password = os.getenv("NAUTOBOT_REDIS_PASSWORD", "")
 

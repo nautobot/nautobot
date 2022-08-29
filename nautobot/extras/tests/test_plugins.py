@@ -42,8 +42,6 @@ class PluginTest(TestCase):
         )
 
     def test_models(self):
-        from example_plugin.models import ExampleModel
-
         # Test saving an instance
         instance = ExampleModel(name="Instance 1", number=100)
         instance.save()

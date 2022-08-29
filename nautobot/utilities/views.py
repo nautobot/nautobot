@@ -23,7 +23,7 @@ class ContentTypePermissionRequiredMixin(AccessMixin):
                             derived from the object type
     """
 
-    additional_permissions = list()
+    additional_permissions = []
 
     def get_required_permission(self):
         """
@@ -77,7 +77,7 @@ class ObjectPermissionRequiredMixin(AccessMixin):
                             derived from the object type
     """
 
-    additional_permissions = list()
+    additional_permissions = []
 
     def get_required_permission(self):
         """

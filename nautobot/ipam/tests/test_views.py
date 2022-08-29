@@ -37,9 +37,9 @@ class VRFTestCase(ViewTestCases.PrimaryObjectViewTestCase):
             Tenant.objects.create(name="Tenant B", slug="tenant-b"),
         )
 
-        VRF.objects.create(name="VRF 1", rd="65000:1"),
-        VRF.objects.create(name="VRF 2", rd="65000:2"),
-        VRF.objects.create(name="VRF 3", rd="65000:3"),
+        VRF.objects.create(name="VRF 1", rd="65000:1")
+        VRF.objects.create(name="VRF 2", rd="65000:2")
+        VRF.objects.create(name="VRF 3", rd="65000:3")
 
         cls.form_data = {
             "name": "VRF X",
@@ -76,9 +76,9 @@ class RouteTargetTestCase(ViewTestCases.PrimaryObjectViewTestCase):
             Tenant.objects.create(name="Tenant B", slug="tenant-b"),
         )
 
-        RouteTarget.objects.create(name="65000:1001", tenant=tenants[0]),
-        RouteTarget.objects.create(name="65000:1002", tenant=tenants[1]),
-        RouteTarget.objects.create(name="65000:1003"),
+        RouteTarget.objects.create(name="65000:1001", tenant=tenants[0])
+        RouteTarget.objects.create(name="65000:1002", tenant=tenants[1])
+        RouteTarget.objects.create(name="65000:1003")
 
         cls.form_data = {
             "name": "65000:100",
@@ -144,9 +144,9 @@ class AggregateTestCase(ViewTestCases.PrimaryObjectViewTestCase):
             RIR.objects.create(name="RIR 2", slug="rir-2"),
         )
 
-        Aggregate.objects.create(prefix=IPNetwork("10.1.0.0/16"), rir=rirs[0]),
-        Aggregate.objects.create(prefix=IPNetwork("10.2.0.0/16"), rir=rirs[0]),
-        Aggregate.objects.create(prefix=IPNetwork("10.3.0.0/16"), rir=rirs[0]),
+        Aggregate.objects.create(prefix=IPNetwork("10.1.0.0/16"), rir=rirs[0])
+        Aggregate.objects.create(prefix=IPNetwork("10.2.0.0/16"), rir=rirs[0])
+        Aggregate.objects.create(prefix=IPNetwork("10.3.0.0/16"), rir=rirs[0])
 
         cls.form_data = {
             "prefix": IPNetwork("10.99.0.0/16"),

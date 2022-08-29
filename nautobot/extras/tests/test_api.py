@@ -139,14 +139,14 @@ class ComputedFieldTest(APIViewTestCases.APIViewTestCase):
             template="{{ obj.name }}",
             fallback_value="error",
             content_type=site_ct,
-        ),
+        )
         ComputedField.objects.create(
             slug="cf2",
             label="Computed Field Two",
             template="{{ obj.name }}",
             fallback_value="error",
             content_type=site_ct,
-        ),
+        )
         ComputedField.objects.create(
             slug="cf3",
             label="Computed Field Three",
@@ -328,13 +328,13 @@ class ConfigContextSchemaTest(APIViewTestCases.APIViewTestCase):
     def setUpTestData(cls):
         ConfigContextSchema.objects.create(
             name="Schema 1", slug="schema-1", data_schema={"type": "object", "properties": {"foo": {"type": "string"}}}
-        ),
+        )
         ConfigContextSchema.objects.create(
             name="Schema 2", slug="schema-2", data_schema={"type": "object", "properties": {"bar": {"type": "string"}}}
-        ),
+        )
         ConfigContextSchema.objects.create(
             name="Schema 3", slug="schema-3", data_schema={"type": "object", "properties": {"baz": {"type": "string"}}}
-        ),
+        )
 
 
 class ContentTypeTest(APITestCase):
@@ -1794,7 +1794,7 @@ class JobTestVersion13(
         )
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
-    def test_run_job_object_var(self):
+    def test_run_job_object_var(self):  # pylint: disable=arguments-differ
         """In addition to the base test case provided by JobAPIRunTestMixin, also verify the JSON response data."""
         response, schedule = super().test_run_job_object_var()
 
@@ -1811,7 +1811,7 @@ class JobTestVersion13(
         self.assertIsNone(response.data["job_result"])
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
-    def test_run_job_object_var_lookup(self):
+    def test_run_job_object_var_lookup(self):  # pylint: disable=arguments-differ
         """In addition to the base test case provided by JobAPIRunTestMixin, also verify the JSON response data."""
         response, job_result = super().test_run_job_object_var_lookup()
 
@@ -1828,7 +1828,7 @@ class JobTestVersion13(
         self.assertEqual(data_job_result, expected_data_job_result)
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
-    def test_run_job_future(self):
+    def test_run_job_future(self):  # pylint: disable=arguments-differ
         """In addition to the base test case provided by JobAPIRunTestMixin, also verify the JSON response data."""
         response, schedule = super().test_run_job_future()
 
@@ -1852,7 +1852,7 @@ class JobTestVersion13(
         self.assertEqual(schedule.kwargs["scheduled_job_pk"], str(schedule.pk))
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
-    def test_run_job_interval(self):
+    def test_run_job_interval(self):  # pylint: disable=arguments-differ
         """In addition to the base test case provided by JobAPIRunTestMixin, also verify the JSON response data."""
         response, schedule = super().test_run_job_interval()
 
@@ -2291,19 +2291,19 @@ class NoteTest(APIViewTestCases.APIViewTestCase):
             user=user1,
             assigned_object_type=ct,
             assigned_object_id=site1.pk,
-        ),
+        )
         Note.objects.create(
             note="Site maintenance has ended.",
             user=user1,
             assigned_object_type=ct,
             assigned_object_id=site1.pk,
-        ),
+        )
         Note.objects.create(
             note="Site is under duress.",
             user=user2,
             assigned_object_type=ct,
             assigned_object_id=site2.pk,
-        ),
+        )
 
 
 class RelationshipTest(APIViewTestCases.APIViewTestCase):
@@ -3377,7 +3377,7 @@ class WebhookTest(APIViewTestCases.APIViewTestCase):
 
         response = self.client.post(self._get_list_url(), data, format="json", **self.header)
         self.assertHttpStatus(response, status.HTTP_400_BAD_REQUEST)
-        self.assertEquals(
+        self.assertEqual(
             response.data[0]["type_create"][0],
             "A webhook already exists for create on dcim | device type to URL http://example.com/test1",
         )
@@ -3392,7 +3392,7 @@ class WebhookTest(APIViewTestCases.APIViewTestCase):
 
         response = self.client.patch(self._get_detail_url(self.webhooks[2]), data, format="json", **self.header)
         self.assertHttpStatus(response, status.HTTP_400_BAD_REQUEST)
-        self.assertEquals(
+        self.assertEqual(
             response.data["type_update"][0],
             f"A webhook already exists for update on dcim | device type to URL {self.webhooks[1].payload_url}",
         )
@@ -3438,7 +3438,7 @@ class WebhookTest(APIViewTestCases.APIViewTestCase):
 
         data = {"payload_url": "http://example.com/test2"}
         response = self.client.patch(self._get_detail_url(instance_1), data, format="json", **self.header)
-        self.assertEquals(
+        self.assertEqual(
             response.data["type_update"][0],
             "A webhook already exists for update on dcim | device type to URL http://example.com/test2",
         )
@@ -3456,7 +3456,7 @@ class WebhookTest(APIViewTestCases.APIViewTestCase):
 
         data = {"content_types": ["dcim.devicetype"]}
         response = self.client.patch(self._get_detail_url(instance_2), data, format="json", **self.header)
-        self.assertEquals(
+        self.assertEqual(
             response.data["type_create"][0],
             "A webhook already exists for create on dcim | device type to URL http://example.com/test1",
         )

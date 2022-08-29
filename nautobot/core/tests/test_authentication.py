@@ -49,7 +49,7 @@ class ExternalAuthenticationTestCase(TestCase):
         self.assertEqual(settings.REMOTE_AUTH_HEADER, "HTTP_REMOTE_USER")
 
         # Client should not be authenticated
-        response = self.client.get(reverse("home"), follow=True, **headers)  # noqa
+        self.client.get(reverse("home"), follow=True, **headers)  # noqa
         self.assertNotIn("_auth_user_id", self.client.session)
 
     @override_settings(AUTHENTICATION_BACKENDS=TEST_AUTHENTICATION_BACKENDS)

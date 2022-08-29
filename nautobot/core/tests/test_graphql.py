@@ -1258,9 +1258,9 @@ query {
             (f'status: ["{self.statuses[0].slug}", "{self.statuses[1].slug}"]', 2),
         )
 
-        for filter, nbr_expected_results in filters:
-            with self.subTest(msg=f"Checking {filter}", filter=filter, nbr_expected_results=nbr_expected_results):
-                query = "query { sites(" + filter + "){ name }}"
+        for filterv, nbr_expected_results in filters:
+            with self.subTest(msg=f"Checking {filterv}", filterv=filterv, nbr_expected_results=nbr_expected_results):
+                query = "query { sites(" + filterv + "){ name }}"
                 result = self.execute_query(query)
                 self.assertIsNone(result.errors)
                 self.assertEqual(len(result.data["sites"]), nbr_expected_results)
@@ -1305,9 +1305,9 @@ query {
             ('q: "notthere"', 0),
         )
 
-        for filter, nbr_expected_results in filters:
-            with self.subTest(msg=f"Checking {filter}", filter=filter, nbr_expected_results=nbr_expected_results):
-                query = "query {devices(" + filter + "){ name }}"
+        for filterv, nbr_expected_results in filters:
+            with self.subTest(msg=f"Checking {filterv}", filterv=filterv, nbr_expected_results=nbr_expected_results):
+                query = "query {devices(" + filterv + "){ name }}"
                 result = self.execute_query(query)
                 self.assertIsNone(result.errors)
                 self.assertEqual(len(result.data["devices"]), nbr_expected_results)
@@ -1329,9 +1329,9 @@ query {
             ('parent: "10.0.2.0/24"', 1),
         )
 
-        for filter, nbr_expected_results in filters:
-            with self.subTest(msg=f"Checking {filter}", filter=filter, nbr_expected_results=nbr_expected_results):
-                query = "query { ip_addresses(" + filter + "){ address }}"
+        for filterv, nbr_expected_results in filters:
+            with self.subTest(msg=f"Checking {filterv}", filterv=filterv, nbr_expected_results=nbr_expected_results):
+                query = "query { ip_addresses(" + filterv + "){ address }}"
                 result = self.execute_query(query)
                 self.assertIsNone(result.errors)
                 self.assertEqual(len(result.data["ip_addresses"]), nbr_expected_results)
@@ -1401,9 +1401,9 @@ query {
             ('tenant: ["tenant-1", "tenant-2"]', 4),
         )
 
-        for filter, nbr_expected_results in filters:
-            with self.subTest(msg=f"Checking {filter}", filter=filter, nbr_expected_results=nbr_expected_results):
-                query = "query { cables(" + filter + "){ id }}"
+        for filterv, nbr_expected_results in filters:
+            with self.subTest(msg=f"Checking {filterv}", filterv=filterv, nbr_expected_results=nbr_expected_results):
+                query = "query { cables(" + filterv + "){ id }}"
                 result = self.execute_query(query)
                 self.assertIsNone(result.errors)
                 self.assertEqual(len(result.data["cables"]), nbr_expected_results)
@@ -1418,9 +1418,9 @@ query {
             (f'_type: "{PortTypeChoices.TYPE_8P8C}"', 3),
         )
 
-        for filter, nbr_expected_results in filters:
-            with self.subTest(msg=f"Checking {filter}", filter=filter, nbr_expected_results=nbr_expected_results):
-                query = "query { devices{ frontports(" + filter + "){ id }}}"
+        for filterv, nbr_expected_results in filters:
+            with self.subTest(msg=f"Checking {filterv}", filterv=filterv, nbr_expected_results=nbr_expected_results):
+                query = "query { devices{ frontports(" + filterv + "){ id }}}"
                 result = self.execute_query(query)
                 self.assertIsNone(result.errors)
                 self.assertEqual(len(result.data["devices"][0]["frontports"]), nbr_expected_results)
@@ -1435,9 +1435,9 @@ query {
             (f'_type: "{PortTypeChoices.TYPE_8P8C}"', 3),
         )
 
-        for filter, nbr_expected_results in filters:
-            with self.subTest(msg=f"Checking {filter}", filter=filter, nbr_expected_results=nbr_expected_results):
-                query = "query { sites{ devices{ frontports(" + filter + "){ id }}}}"
+        for filterv, nbr_expected_results in filters:
+            with self.subTest(msg=f"Checking {filterv}", filterv=filterv, nbr_expected_results=nbr_expected_results):
+                query = "query { sites{ devices{ frontports(" + filterv + "){ id }}}}"
                 result = self.execute_query(query)
                 self.assertIsNone(result.errors)
                 self.assertEqual(len(result.data["sites"][0]["devices"][0]["frontports"]), nbr_expected_results)
@@ -1546,9 +1546,9 @@ query {
             ("enabled: false", 1),
         )
 
-        for filter, nbr_expected_results in filters:
-            with self.subTest(msg=f"Checking {filter}", filter=filter, nbr_expected_results=nbr_expected_results):
-                query = "query { interfaces(" + filter + "){ id }}"
+        for filterv, nbr_expected_results in filters:
+            with self.subTest(msg=f"Checking {filterv}", filterv=filterv, nbr_expected_results=nbr_expected_results):
+                query = "query { interfaces(" + filterv + "){ id }}"
                 result = self.execute_query(query)
                 self.assertIsNone(result.errors)
                 self.assertEqual(len(result.data["interfaces"]), nbr_expected_results)
@@ -1565,9 +1565,9 @@ query {
             (f'vlan_id: "{self.vlan1.id}"', 1),
         )
 
-        for filter, nbr_expected_results in filters:
-            with self.subTest(msg=f"Checking {filter}", filter=filter, nbr_expected_results=nbr_expected_results):
-                query = "query { devices{ interfaces(" + filter + "){ id }}}"
+        for filterv, nbr_expected_results in filters:
+            with self.subTest(msg=f"Checking {filterv}", filterv=filterv, nbr_expected_results=nbr_expected_results):
+                query = "query { devices{ interfaces(" + filterv + "){ id }}}"
                 result = self.execute_query(query)
                 self.assertIsNone(result.errors)
                 self.assertEqual(len(result.data["devices"][0]["interfaces"]), nbr_expected_results)
@@ -1584,9 +1584,9 @@ query {
             (f'vlan_id: "{self.vlan1.id}"', 1),
         )
 
-        for filter, nbr_expected_results in filters:
-            with self.subTest(msg=f"Checking {filter}", filter=filter, nbr_expected_results=nbr_expected_results):
-                query = "query { sites{ devices{ interfaces(" + filter + "){ id }}}}"
+        for filterv, nbr_expected_results in filters:
+            with self.subTest(msg=f"Checking {filterv}", filterv=filterv, nbr_expected_results=nbr_expected_results):
+                query = "query { sites{ devices{ interfaces(" + filterv + "){ id }}}}"
                 result = self.execute_query(query)
                 self.assertIsNone(result.errors)
                 self.assertEqual(len(result.data["sites"][0]["devices"][0]["interfaces"]), nbr_expected_results)

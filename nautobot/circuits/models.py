@@ -5,11 +5,10 @@ from django.urls import reverse
 
 from nautobot.dcim.fields import ASNField
 from nautobot.dcim.models import CableTermination, PathEndpoint
-from nautobot.extras.models import ObjectChange, StatusModel
+from nautobot.extras.models import StatusModel
 from nautobot.extras.utils import extras_features
 from nautobot.core.fields import AutoSlugField
 from nautobot.core.models.generics import OrganizationalModel, PrimaryModel
-from nautobot.utilities.utils import serialize_object, serialize_object_v2
 
 from .choices import CircuitTerminationSideChoices
 
@@ -353,7 +352,7 @@ class CircuitTermination(PrimaryModel, PathEndpoint, CableTermination):
                     }
                 )
 
-    def to_objectchange(self, action):
+    def to_objectchange(self, action, related_object=None, **kwargs):
 
         # Annotate the parent Circuit
         try:
@@ -362,14 +361,7 @@ class CircuitTermination(PrimaryModel, PathEndpoint, CableTermination):
             # Parent circuit has been deleted
             related_object = None
 
-        return ObjectChange(
-            changed_object=self,
-            object_repr=str(self),
-            action=action,
-            object_data=serialize_object(self),
-            object_data_v2=serialize_object_v2(self),
-            related_object=related_object,
-        )
+        return super().to_objectchange(action, related_object=related_object, **kwargs)
 
     @property
     def parent(self):

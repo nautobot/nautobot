@@ -1559,9 +1559,9 @@ class DeviceTestCase(ViewTestCases.PrimaryObjectViewTestCase):
     def test_device_inventory(self):
         device = Device.objects.first()
 
-        InventoryItem.objects.create(device=device, name="Inventory Item 1"),
-        InventoryItem.objects.create(device=device, name="Inventory Item 2"),
-        InventoryItem.objects.create(device=device, name="Inventory Item 3"),
+        InventoryItem.objects.create(device=device, name="Inventory Item 1")
+        InventoryItem.objects.create(device=device, name="Inventory Item 2")
+        InventoryItem.objects.create(device=device, name="Inventory Item 3")
 
         url = reverse("dcim:device_inventory", kwargs={"pk": device.pk})
         self.assertHttpStatus(self.client.get(url), 200)

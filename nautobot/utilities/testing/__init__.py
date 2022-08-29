@@ -96,8 +96,8 @@ def run_job_for_testing(job, data=None, commit=True, username="test-user", reque
         else:
             yield web_request_context(user=user)
 
-    with _web_request_context(user=user_instance) as request:
-        run_job(data=data, request=request, commit=commit, job_result_pk=job_result.pk)
+    with _web_request_context(user=user_instance) as wrapped_request:
+        run_job(data=data, request=wrapped_request, commit=commit, job_result_pk=job_result.pk)
     return job_result
 
 

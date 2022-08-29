@@ -66,8 +66,8 @@ class BaseTable(tables.Table):
             self.empty_text = f"No {self._meta.model._meta.verbose_name_plural} found"
 
         # Hide non-default columns
-        default_columns = list(getattr(self.Meta, "default_columns", list()))
-        extra_columns = [c[0] for c in kwargs.get("extra_columns", list())]  # extra_columns is a list of tuples
+        default_columns = list(getattr(self.Meta, "default_columns", []))
+        extra_columns = [c[0] for c in kwargs.get("extra_columns", [])]  # extra_columns is a list of tuples
         if default_columns:
             for column in self.columns:
                 if column.name not in default_columns and column.name not in extra_columns:
@@ -235,7 +235,7 @@ class ButtonsColumn(tables.TemplateColumn):
             }
         )
 
-    def header(self):
+    def header(self):  # pylint: disable=invalid-overridden-method
         return ""
 
 
@@ -245,7 +245,7 @@ class ChoiceFieldColumn(tables.Column):
     choices. The CSS class is derived by calling .get_FOO_class() on the row record.
     """
 
-    def render(self, record, bound_column, value):
+    def render(self, record, bound_column, value):  # pylint: disable=arguments-differ
         if value:
             name = bound_column.name
             css_class = getattr(record, f"get_{name}_class")()
@@ -292,7 +292,7 @@ class LinkedCountColumn(tables.Column):
         self.url_params = url_params
         super().__init__(*args, default=default, **kwargs)
 
-    def render(self, record, value):
+    def render(self, record, value):  # pylint: disable=arguments-differ
         if value:
             url = reverse(self.viewname, kwargs=self.view_kwargs)
             if self.url_params:
@@ -379,7 +379,7 @@ class CustomFieldColumn(tables.Column):
 
         super().__init__(*args, **kwargs)
 
-    def render(self, record, bound_column, value):
+    def render(self, record, bound_column, value):  # pylint: disable=arguments-differ
         if value is None:
             return self.default
 
@@ -414,7 +414,7 @@ class RelationshipColumn(tables.Column):
         kwargs.setdefault("accessor", Accessor("associations"))
         super().__init__(orderable=False, *args, **kwargs)
 
-    def render(self, record, value):
+    def render(self, record, value):  # pylint: disable=arguments-differ
         if value is None:
             # This returns None if value is None
             return self.default

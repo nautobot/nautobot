@@ -694,19 +694,19 @@ class ServiceTest(APIViewTestCases.APIViewTestCase):
             name="Service 1",
             protocol=ServiceProtocolChoices.PROTOCOL_TCP,
             ports=[1],
-        ),
+        )
         Service.objects.create(
             device=devices[0],
             name="Service 2",
             protocol=ServiceProtocolChoices.PROTOCOL_TCP,
             ports=[2],
-        ),
+        )
         Service.objects.create(
             device=devices[0],
             name="Service 3",
             protocol=ServiceProtocolChoices.PROTOCOL_TCP,
             ports=[3],
-        ),
+        )
 
         cls.create_data = [
             {

@@ -616,7 +616,7 @@ class ImageAttachmentTestCase(FilterTestCases.FilterTestCase):
             image="http://example.com/image1.png",
             image_height=100,
             image_width=100,
-        ),
+        )
         ImageAttachment.objects.create(
             content_type=site_ct,
             object_id=sites[1].pk,
@@ -624,7 +624,7 @@ class ImageAttachmentTestCase(FilterTestCases.FilterTestCase):
             image="http://example.com/image2.png",
             image_height=100,
             image_width=100,
-        ),
+        )
         ImageAttachment.objects.create(
             content_type=rack_ct,
             object_id=racks[0].pk,
@@ -632,7 +632,7 @@ class ImageAttachmentTestCase(FilterTestCases.FilterTestCase):
             image="http://example.com/image3.png",
             image_height=100,
             image_width=100,
-        ),
+        )
         ImageAttachment.objects.create(
             content_type=rack_ct,
             object_id=racks[1].pk,

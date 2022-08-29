@@ -206,8 +206,8 @@ class ClusterAddDevicesView(generic.ObjectEditView):
     form = forms.ClusterAddDevicesForm
     template_name = "virtualization/cluster_add_devices.html"
 
-    def get(self, request, pk):
-        cluster = get_object_or_404(self.queryset, pk=pk)
+    def get(self, request, *args, **kwargs):
+        cluster = get_object_or_404(self.queryset, pk=kwargs["pk"])
         form = self.form(cluster, initial=normalize_querydict(request.GET))
 
         return render(
@@ -216,12 +216,12 @@ class ClusterAddDevicesView(generic.ObjectEditView):
             {
                 "cluster": cluster,
                 "form": form,
-                "return_url": reverse("virtualization:cluster", kwargs={"pk": pk}),
+                "return_url": reverse("virtualization:cluster", kwargs={"pk": kwargs["pk"]}),
             },
         )
 
-    def post(self, request, pk):
-        cluster = get_object_or_404(self.queryset, pk=pk)
+    def post(self, request, *args, **kwargs):
+        cluster = get_object_or_404(self.queryset, pk=kwargs["pk"])
         form = self.form(cluster, request.POST)
 
         if form.is_valid():
@@ -256,9 +256,9 @@ class ClusterRemoveDevicesView(generic.ObjectEditView):
     form = forms.ClusterRemoveDevicesForm
     template_name = "generic/object_bulk_remove.html"
 
-    def post(self, request, pk):
+    def post(self, request, *args, **kwargs):
 
-        cluster = get_object_or_404(self.queryset, pk=pk)
+        cluster = get_object_or_404(self.queryset, pk=kwargs["pk"])
 
         if "_confirm" in request.POST:
             form = self.form(request.POST)

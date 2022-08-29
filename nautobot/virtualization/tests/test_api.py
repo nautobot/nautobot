@@ -162,19 +162,19 @@ class VirtualMachineTest(APIViewTestCases.APIViewTestCase):
             cluster=clusters[0],
             local_context_data={"A": 1},
             status=statuses[0],
-        ),
+        )
         VirtualMachine.objects.create(
             name="Virtual Machine 2",
             cluster=clusters[0],
             local_context_data={"B": 2},
             status=statuses[0],
-        ),
+        )
         VirtualMachine.objects.create(
             name="Virtual Machine 3",
             cluster=clusters[0],
             local_context_data={"C": 3},
             status=statuses[0],
-        ),
+        )
 
         # FIXME(jathan): The writable serializer for `status` takes the
         # status `name` (str) and not the `pk` (int). Do not validate this
@@ -347,8 +347,8 @@ class VMInterfaceTestVersion12(APIViewTestCases.APIViewTestCase):
         self.add_permissions("virtualization.add_vminterface")
 
         vminterface_ct = ContentType.objects.get_for_model(VMInterface)
-        status = Status.objects.get_for_model(VMInterface).get(slug=VMInterfaceStatusChoices.STATUS_ACTIVE)
-        status.content_types.remove(vminterface_ct)
+        status_active = Status.objects.get_for_model(VMInterface).get(slug=VMInterfaceStatusChoices.STATUS_ACTIVE)
+        status_active.content_types.remove(vminterface_ct)
 
         data = {
             "virtual_machine": VirtualMachine.objects.first().id,

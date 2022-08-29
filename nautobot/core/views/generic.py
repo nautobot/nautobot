@@ -219,7 +219,9 @@ class ObjectListView(ObjectPermissionRequiredMixin, View):
         always_valid_actions = ("export",)
         valid_actions = []
         invalid_actions = []
-
+        # added check for whether the action_buttons exist because of issue #2107
+        if self.action_buttons is None:
+            self.action_buttons = []
         for action in self.action_buttons:
             if action in always_valid_actions or validated_viewname(self.queryset.model, action) is not None:
                 valid_actions.append(action)
@@ -669,7 +671,7 @@ class ObjectImportView(GetReturnURLMixin, ObjectPermissionRequiredMixin, View):
 
     queryset = None
     model_form = None
-    related_object_forms = dict()
+    related_object_forms = {}
     template_name = "generic/object_import.html"
 
     def get_required_permission(self):
@@ -729,7 +731,7 @@ class ObjectImportView(GetReturnURLMixin, ObjectPermissionRequiredMixin, View):
                             logger.debug("Processing form for related objects: {related_object_form}")
 
                             related_obj_pks = []
-                            for i, rel_obj_data in enumerate(data.get(field_name, list())):
+                            for i, rel_obj_data in enumerate(data.get(field_name, [])):
 
                                 f = related_object_form(obj, rel_obj_data)
 
@@ -820,11 +822,11 @@ class BulkImportView(GetReturnURLMixin, ObjectPermissionRequiredMixin, View):
     widget_attrs = {}
 
     def _import_form(self, *args, **kwargs):
-        class ImportForm(BootstrapMixin, Form):
+        class CSVImportForm(BootstrapMixin, Form):
             csv_data = CSVDataField(from_form=self.model_form, widget=Textarea(attrs=self.widget_attrs))
             csv_file = CSVFileField(from_form=self.model_form)
 
-        return ImportForm(*args, **kwargs)
+        return CSVImportForm(*args, **kwargs)
 
     def _save_obj(self, obj_form, request):
         """
