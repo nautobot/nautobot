@@ -447,6 +447,8 @@ class PluginAPITest(APIViewTestCases.APIViewTestCase):
     "example_plugin not in settings.PLUGINS",
 )
 class PluginCustomValidationTest(TestCase):
+    fixtures = ("status",)
+
     def setUp(self):
         # When creating a fresh test DB, wrapping model clean methods fails, which is normal.
         # This always occurs during the first run of migrations, however, During testing we
@@ -461,9 +463,9 @@ class PluginCustomValidationTest(TestCase):
             site.clean()
 
     def test_relationship_association_validator_raises_exception(self):
-        status_active = Status.objects.create(name="status1", slug="status1")
+        status = Status.objects.get(name="Irradiated")
         prefix = Prefix.objects.create(prefix=netaddr.IPNetwork("192.168.10.0/24"))
-        ipaddress = IPAddress.objects.create(address="192.168.22.1/24", status=status_active)
+        ipaddress = IPAddress.objects.create(address="192.168.22.1/24", status=status)
         relationship = Relationship.objects.create(
             name="Test Relationship",
             slug="test-relationship",
@@ -638,6 +640,8 @@ class TestPluginCoreViewOverrides(TestCase):
 
     The functionality is loaded and unloaded by this test case to isolate it from the rest of the test suite.
     """
+
+    fixtures = ("status",)
 
     def setUp(self):
         super().setUp()

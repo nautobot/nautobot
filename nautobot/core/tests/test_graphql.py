@@ -631,6 +631,8 @@ class GraphQLAPIPermissionTest(TestCase):
 class GraphQLQueryTest(TestCase):
     """Execute various GraphQL queries and verify their correct responses."""
 
+    fixtures = ("status",)
+
     @classmethod
     def setUpTestData(cls):
         """Initialize the Database with some datas."""
@@ -653,12 +655,16 @@ class GraphQLQueryTest(TestCase):
         cls.devicerole1 = DeviceRole.objects.create(name="Device Role 1", slug="device-role-1")
         cls.devicerole2 = DeviceRole.objects.create(name="Device Role 2", slug="device-role-2")
         cls.upsdevicerole = DeviceRole.objects.create(name="UPS Device Role 1", slug="ups-device-role-1")
-        cls.status1 = Status.objects.create(name="status1", slug="status1")
-        cls.status2 = Status.objects.create(name="status2", slug="status2")
+        # Be sure cls.statuses are valid for all appropriate content-types they will be used with!
+        cls.statuses = [Status.objects.get(slug="irradiated"), Status.objects.get(slug="unknown")]
         cls.region1 = Region.objects.create(name="Region1", slug="region1")
         cls.region2 = Region.objects.create(name="Region2", slug="region2")
-        cls.site1 = Site.objects.create(name="Site-1", slug="site-1", asn=65000, status=cls.status1, region=cls.region1)
-        cls.site2 = Site.objects.create(name="Site-2", slug="site-2", asn=65099, status=cls.status2, region=cls.region2)
+        cls.site1 = Site.objects.create(
+            name="Site-1", slug="site-1", asn=65000, status=cls.statuses[0], region=cls.region1
+        )
+        cls.site2 = Site.objects.create(
+            name="Site-2", slug="site-2", asn=65099, status=cls.statuses[1], region=cls.region2
+        )
         cls.rack1 = Rack.objects.create(name="Rack 1", site=cls.site1)
         cls.rack2 = Rack.objects.create(name="Rack 2", site=cls.site2)
         cls.tenant1 = Tenant.objects.create(name="Tenant 1", slug="tenant-1")
@@ -686,7 +692,7 @@ class GraphQLQueryTest(TestCase):
             device_type=cls.upsdevicetype,
             device_role=cls.upsdevicerole,
             site=cls.site1,
-            status=cls.status1,
+            status=cls.statuses[0],
             rack=cls.rack1,
             tenant=cls.tenant1,
             face="front",
@@ -706,7 +712,7 @@ class GraphQLQueryTest(TestCase):
             device_type=cls.devicetype,
             device_role=cls.devicerole1,
             site=cls.site1,
-            status=cls.status1,
+            status=cls.statuses[0],
             rack=cls.rack1,
             tenant=cls.tenant1,
             face="front",
@@ -784,7 +790,7 @@ class GraphQLQueryTest(TestCase):
             device=cls.device1,
         )
         cls.ipaddr1 = IPAddress.objects.create(
-            address="10.0.1.1/24", status=cls.status1, assigned_object=cls.interface11
+            address="10.0.1.1/24", status=cls.statuses[0], assigned_object=cls.interface11
         )
 
         cls.device2 = Device.objects.create(
@@ -792,7 +798,7 @@ class GraphQLQueryTest(TestCase):
             device_type=cls.devicetype,
             device_role=cls.devicerole2,
             site=cls.site1,
-            status=cls.status2,
+            status=cls.statuses[1],
             rack=cls.rack2,
             tenant=cls.tenant2,
             face="rear",
@@ -809,7 +815,7 @@ class GraphQLQueryTest(TestCase):
             name="Int2", type=InterfaceTypeChoices.TYPE_1GE_FIXED, device=cls.device2, mac_address="00:12:12:12:12:12"
         )
         cls.ipaddr2 = IPAddress.objects.create(
-            address="10.0.2.1/30", status=cls.status2, assigned_object=cls.interface12
+            address="10.0.2.1/30", status=cls.statuses[1], assigned_object=cls.interface12
         )
 
         cls.device3 = Device.objects.create(
@@ -817,7 +823,7 @@ class GraphQLQueryTest(TestCase):
             device_type=cls.devicetype,
             device_role=cls.devicerole1,
             site=cls.site2,
-            status=cls.status1,
+            status=cls.statuses[0],
         )
 
         cls.interface31 = Interface.objects.create(
@@ -834,12 +840,12 @@ class GraphQLQueryTest(TestCase):
         cls.cable1 = Cable.objects.create(
             termination_a=cls.interface11,
             termination_b=cls.interface12,
-            status=cls.status1,
+            status=cls.statuses[0],
         )
         cls.cable2 = Cable.objects.create(
             termination_a=cls.interface31,
             termination_b=cls.interface21,
-            status=cls.status2,
+            status=cls.statuses[1],
         )
 
         # Power Cables
@@ -870,14 +876,14 @@ class GraphQLQueryTest(TestCase):
         cls.virtualmachine = VirtualMachine.objects.create(
             name="Virtual Machine 1",
             cluster=cluster,
-            status=cls.status1,
+            status=cls.statuses[0],
         )
         cls.vminterface = VMInterface.objects.create(
             virtual_machine=cls.virtualmachine,
             name="eth0",
         )
         cls.vmipaddr = IPAddress.objects.create(
-            address="1.1.1.1/32", status=cls.status1, assigned_object=cls.vminterface
+            address="1.1.1.1/32", status=cls.statuses[0], assigned_object=cls.vminterface
         )
 
         cls.relationship_o2o_1 = Relationship(
@@ -1247,9 +1253,9 @@ query {
             (f'id: "{self.site1.pk}"', 1),
             (f'id: ["{self.site1.pk}"]', 1),
             (f'id: ["{self.site1.pk}", "{self.site2.pk}"]', 2),
-            ('status: "status1"', 1),
-            ('status: ["status2"]', 1),
-            ('status: ["status1", "status2"]', 2),
+            (f'status: "{self.statuses[0].slug}"', 1),
+            (f'status: ["{self.statuses[1].slug}"]', 1),
+            (f'status: ["{self.statuses[0].slug}", "{self.statuses[1].slug}"]', 2),
         )
 
         for filter, nbr_expected_results in filters:
@@ -1284,9 +1290,9 @@ query {
             ('region: ["region1", "region2"]', 4),
             ('face: "front"', 2),
             ('face: "rear"', 1),
-            ('status: "status1"', 3),
-            ('status: ["status2"]', 1),
-            ('status: ["status1", "status2"]', 4),
+            (f'status: "{self.statuses[0].slug}"', 3),
+            (f'status: ["{self.statuses[1].slug}"]', 1),
+            (f'status: ["{self.statuses[0].slug}", "{self.statuses[1].slug}"]', 4),
             ("is_full_depth: true", 4),
             ("is_full_depth: false", 0),
             ("has_primary_ip: true", 0),
@@ -1312,9 +1318,9 @@ query {
         filters = (
             ('address: "10.0.1.1"', 1),
             ("family: 4", 3),
-            ('status: "status1"', 2),
-            ('status: ["status2"]', 1),
-            ('status: ["status1", "status2"]', 3),
+            (f'status: "{self.statuses[0].slug}"', 2),
+            (f'status: ["{self.statuses[1].slug}"]', 1),
+            (f'status: ["{self.statuses[0].slug}", "{self.statuses[1].slug}"]', 3),
             ("mask_length: 24", 1),
             ("mask_length: 30", 1),
             ("mask_length: 32", 1),

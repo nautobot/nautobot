@@ -632,6 +632,8 @@ class CustomLinkTest(APIViewTestCases.APIViewTestCase):
 class DynamicGroupTestMixin:
     """Mixin for Dynamic Group test cases to re-use the same set of common fixtures."""
 
+    fixtures = ("status",)
+
     @classmethod
     def setUpTestData(cls):
         # Create the objects required for devices.
@@ -963,6 +965,7 @@ class GitRepositoryTest(APIViewTestCases.APIViewTestCase):
 class GraphQLQueryTest(APIViewTestCases.APIViewTestCase):
     model = GraphQLQuery
     brief_fields = ["display", "id", "name", "url"]
+    fixtures = ("status",)
 
     create_data = [
         {
@@ -2345,6 +2348,7 @@ class RelationshipTest(APIViewTestCases.APIViewTestCase):
         "source_filter": {"slug": ["some-slug"]},
     }
     choices_fields = ["destination_type", "source_type", "type"]
+    fixtures = ("status",)
     slug_source = "name"
     slugify_function = staticmethod(slugify_dashes_to_underscores)
 
@@ -2547,6 +2551,7 @@ class RelationshipAssociationTest(APIViewTestCases.APIViewTestCase):
     model = RelationshipAssociation
     brief_fields = ["destination_id", "display", "id", "relationship", "source_id", "url"]
     choices_fields = ["destination_type", "source_type"]
+    fixtures = ("status",)
 
     @classmethod
     def setUpTestData(cls):
@@ -3088,6 +3093,7 @@ class StatusTest(APIViewTestCases.APIViewTestCase):
     bulk_update_data = {
         "color": "000000",
     }
+    fixtures = ("status",)
 
     create_data = [
         {
@@ -3116,19 +3122,6 @@ class StatusTest(APIViewTestCases.APIViewTestCase):
     ]
     slug_source = "name"
 
-    @classmethod
-    def setUpTestData(cls):
-        """
-        Since many `Status` objects are created as part of data migrations, we're
-        testing against those. If this seems magical, it's because they are
-        imported from `ChoiceSet` enum objects.
-
-        This method is defined just so it's clear that there is no need to
-        create test data for this test case.
-
-        See `extras.management.create_custom_statuses` for context.
-        """
-
 
 class TagTestVersion12(APIViewTestCases.APIViewTestCase):
     model = Tag
@@ -3150,17 +3143,7 @@ class TagTestVersion12(APIViewTestCases.APIViewTestCase):
     bulk_update_data = {
         "description": "New description",
     }
-
-    @classmethod
-    def setUpTestData(cls):
-        tags = (
-            Tag.objects.create(name="Tag 1", slug="tag-1"),
-            Tag.objects.create(name="Tag 2", slug="tag-2"),
-            Tag.objects.create(name="Tag 3", slug="tag-3"),
-        )
-
-        for tag in tags:
-            tag.content_types.add(ContentType.objects.get_for_model(Site))
+    fixtures = ("tag",)
 
     def test_all_relevant_content_types_assigned_to_tags_with_empty_content_types(self):
         self.add_permissions("extras.add_tag")
@@ -3188,17 +3171,7 @@ class TagTestVersion13(
     ]
     bulk_update_data = {"content_types": [Site._meta.label_lower]}
     choices_fields = []
-
-    @classmethod
-    def setUpTestData(cls):
-        tags = (
-            Tag.objects.create(name="Tag 1", slug="tag-1"),
-            Tag.objects.create(name="Tag 2", slug="tag-2"),
-            Tag.objects.create(name="Tag 3", slug="tag-3"),
-        )
-        for tag in tags:
-            tag.content_types.add(ContentType.objects.get_for_model(Site))
-            tag.content_types.add(ContentType.objects.get_for_model(Device))
+    fixtures = ("tag",)
 
     def test_create_tags_with_invalid_content_types(self):
         self.add_permissions("extras.add_tag")
@@ -3226,7 +3199,7 @@ class TagTestVersion13(
         """Test removing a tag content_type that is been tagged to a model"""
         self.add_permissions("extras.change_tag")
 
-        tag_1 = Tag.objects.get(slug="tag-1")
+        tag_1 = Tag.objects.get(slug="devices-and-sites-only")
         site = Site.objects.create(name="site 1", slug="site-1")
         site.tags.add(tag_1)
 
@@ -3243,7 +3216,7 @@ class TagTestVersion13(
         """Test updating a tag without changing its content-types."""
         self.add_permissions("extras.change_tag")
 
-        tag = Tag.objects.get(slug="tag-1")
+        tag = Tag.objects.get(slug="devices-and-sites-only")
         url = self._get_detail_url(tag)
         data = {"color": ColorChoices.COLOR_LIME}
 

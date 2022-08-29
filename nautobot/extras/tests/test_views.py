@@ -647,17 +647,16 @@ class SecretTestCase(
     ViewTestCases.BulkDeleteObjectsViewTestCase,
 ):
     model = Secret
+    fixtures = ("tag",)
 
     @classmethod
     def setUpTestData(cls):
-        tags = cls.create_tags("alpha", "beta", "gamma")
-
         secrets = (
             Secret(
                 name="View Test 1",
                 provider="environment-variable",
                 parameters={"variable": "VIEW_TEST_1"},
-                tags=[t.pk for t in tags],
+                tags=[t.pk for t in Tag.objects.get_for_model(Secret)],
             ),
             Secret(
                 name="View Test 2",
@@ -1825,6 +1824,7 @@ class RelationshipTestCase(
     ViewTestCases.ListObjectsViewTestCase,
 ):
     model = Relationship
+    fixtures = ("status",)
     slug_source = "name"
     slugify_function = staticmethod(slugify_dashes_to_underscores)
 
@@ -1942,16 +1942,12 @@ class StatusTestCase(
     ViewTestCases.ListObjectsViewTestCase,
 ):
     model = Status
+    fixtures = ("status",)
 
     @classmethod
     def setUpTestData(cls):
 
         # Status objects to test.
-        Status.objects.create(name="Status 1", slug="status-1")
-        Status.objects.create(name="Status 2", slug="status-2")
-        Status.objects.create(name="Status 3", slug="status-3")
-        Status.objects.create(name="Status 4")
-
         content_type = ContentType.objects.get_for_model(Device)
 
         cls.form_data = {
@@ -1975,23 +1971,15 @@ class StatusTestCase(
         }
 
         cls.slug_source = "name"
-        cls.slug_test_object = "Status 4"
+        cls.slug_test_object = "Irradiated"
 
 
 class TagTestCase(ViewTestCases.OrganizationalObjectViewTestCase):
     model = Tag
+    fixtures = ("tag",)
 
     @classmethod
     def setUpTestData(cls):
-        tags = (
-            Tag.objects.create(name="Tag 1", slug="tag-1"),
-            Tag.objects.create(name="Tag 2", slug="tag-2"),
-            Tag.objects.create(name="Tag 3", slug="tag-3"),
-        )
-        for tag in tags:
-            tag.content_types.add(ContentType.objects.get_for_model(Site))
-            tag.content_types.add(ContentType.objects.get_for_model(Device))
-
         cls.form_data = {
             "name": "Tag X",
             "slug": "tag-x",
@@ -2053,7 +2041,7 @@ class TagTestCase(ViewTestCases.OrganizationalObjectViewTestCase):
         """Test removing a tag content_type that is been tagged to a model"""
         self.add_permissions("extras.change_tag")
 
-        tag_1 = Tag.objects.get(slug="tag-1")
+        tag_1 = Tag.objects.get_for_model(Site).first()
         site = Site.objects.create(name="site 1", slug="site-1")
         site.tags.add(tag_1)
 

@@ -187,6 +187,8 @@ class PluginTabsTestCase(SeleniumTestCase):
     Integration tests for extra object detail UI tabs.
     """
 
+    fixtures = ("status",)
+
     def setUp(self):
         super().setUp()
         self.user.is_superuser = True

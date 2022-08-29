@@ -282,7 +282,6 @@ class Circuit(PrimaryModel, StatusModel):
     "graphql",
     "locations",
     "relationships",
-    "statuses",
     "webhooks",
 )
 class CircuitTermination(PrimaryModel, PathEndpoint, CableTermination):

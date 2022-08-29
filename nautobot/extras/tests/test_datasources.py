@@ -19,7 +19,6 @@ from nautobot.extras.choices import (
 )
 from nautobot.extras.datasources.git import pull_git_repository_and_refresh_data, git_repository_diff_origin_and_local
 from nautobot.extras.datasources.registry import get_datasource_contents
-from nautobot.extras.management import create_custom_statuses
 from nautobot.extras.models import (
     ConfigContext,
     ConfigContextSchema,
@@ -43,13 +42,12 @@ class GitTest(TransactionTestCase):
     """
 
     databases = ("default", "job_logs")
+    fixtures = ("status",)
 
     COMMIT_HEXSHA = "88dd9cd78df89e887ee90a1d209a3e9a04e8c841"
 
     def setUp(self):
         super().setUp()
-        # Repopulate custom statuses between test cases, as TransactionTestCase deletes them during cleanup
-        create_custom_statuses(None, verbosity=0)
 
         self.factory = RequestFactory()
         self.mock_request = self.factory.get("/no-op/")

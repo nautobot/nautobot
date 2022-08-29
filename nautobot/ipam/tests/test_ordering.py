@@ -6,6 +6,8 @@ from nautobot.ipam.models import IPAddress, Prefix, VRF
 
 
 class OrderingTestBase(TestCase):
+    fixtures = ("status",)
+
     vrfs = None
 
     def setUp(self):
@@ -37,6 +39,8 @@ class OrderingTestBase(TestCase):
 
 
 class PrefixOrderingTestCase(OrderingTestBase):
+    fixtures = ("status",)
+
     def test_prefix_vrf_ordering(self):
         """
         This is a very basic test, which tests both prefixes without VRFs and prefixes with VRFs
@@ -309,6 +313,8 @@ class PrefixOrderingTestCase(OrderingTestBase):
 
 
 class IPAddressOrderingTestCase(OrderingTestBase):
+    fixtures = ("status",)
+
     def test_address_vrf_ordering(self):
         """
         This function tests ordering with the inclusion of vrfs

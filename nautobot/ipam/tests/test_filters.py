@@ -369,6 +369,7 @@ class RoleTestCase(FilterTestCases.NameSlugFilterTestCase):
 class PrefixTestCase(FilterTestCases.FilterTestCase):
     queryset = Prefix.objects.all()
     filterset = PrefixFilterSet
+    fixtures = ("status",)
 
     @classmethod
     def setUpTestData(cls):
@@ -610,6 +611,7 @@ class PrefixTestCase(FilterTestCases.FilterTestCase):
 class IPAddressTestCase(FilterTestCases.FilterTestCase):
     queryset = IPAddress.objects.all()
     filterset = IPAddressFilterSet
+    fixtures = ("status",)
 
     @classmethod
     def setUpTestData(cls):
@@ -941,6 +943,7 @@ class VLANGroupTestCase(FilterTestCases.NameSlugFilterTestCase):
 class VLANTestCase(FilterTestCases.FilterTestCase):
     queryset = VLAN.objects.all()
     filterset = VLANFilterSet
+    fixtures = ("status",)
 
     @classmethod
     def setUpTestData(cls):
