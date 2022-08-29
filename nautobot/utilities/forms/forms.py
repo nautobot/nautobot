@@ -292,8 +292,8 @@ def dynamic_formset_factory(model, **kwargs):
     modelform.model = model
 
     params = {
-        "can_delete_extra": False,
-        "can_delete": False,
+        "can_delete_extra": True,
+        "can_delete": True,
         "extra": 3,
     }
 

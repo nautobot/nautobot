@@ -23,10 +23,14 @@
 <h1>{% block title %}{{ content_type.model_class|meta:"verbose_name_plural"|bettertitle }}{% endblock %}</h1>
 <div class="filters-applied">
     Filters:
-    <button class="btn btn-sm"><b>Status:</b> Active, Planned <b class="text-danger"><i class="mdi mdi-close"></i></b></button>
-    <button class="btn btn-sm"><b>Region:</b> Region 1 <b class="text-danger"><i class="mdi mdi-close"></i></b></button>
-    <button class="btn btn-sm"><b>Tags:</b> Tag 1, Tag 2, Tag 3 <b class="text-danger"><i class="mdi mdi-close"></i></b></button>
-    <button class="btn btn-sm"><b>Contact Email:</b> test@gmail.com <b class="text-danger"><i class="mdi mdi-close"></i></b></button>
+    {% for field, values in filter_params %}
+        <button class="btn btn-sm">
+            <b>{{ field }}:</b>
+            {% for value in values %}
+            {{ value }},
+            {% endfor %}
+            <b class="text-danger"><i class="mdi mdi-close"></i></b></button>
+    {% endfor %}
 
 </div>
 <hr>

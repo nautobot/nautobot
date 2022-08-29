@@ -9,7 +9,7 @@
                 <h4 class="modal-title">Filter Form</h4>
             </div>
             <div class="modal-body">
-                <form class="form-horizontal userconfigform" data-config-root="">
+                <form class="form-horizontal" method="get" action=".">
                     <div class="">
                         <table class="table" id="secrets" style="table-layout: fixed;">
                             {{ form.management_form }}
@@ -35,7 +35,7 @@
                     </div>
 
                     <div class="text-right noprint">
-                        <button type="button" class="btn btn-info" data-dismiss="modal">
+                        <button type="submit" class="btn btn-info">
                             <span class="mdi mdi-magnify" aria-hidden="true"></span> Apply
                         </button>
                         <a href="." class="btn btn-default">

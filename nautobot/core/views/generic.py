@@ -170,7 +170,22 @@ class ObjectListView(ObjectPermissionRequiredMixin, View):
         filter_params = request.GET.copy()
         for non_filter_param in self.non_filter_params:
             filter_params.pop(non_filter_param, None)
-        return filter_params
+
+        forms_total = filter_params.get("form-TOTAL_FORMS")
+        filter_by = {}
+        if forms_total:
+            for x in range(int(forms_total)):
+                lookup_type = filter_params.get(f"form-{x}-lookup_type")
+                values = []
+                if lookup_type:
+                    for value in filter_params.getlist(f"form-{x}-value"):
+                        if ", " in value:
+                            values += value.split(", ")
+                        else:
+                            values.append(value)
+                    for value in values:
+                        filter_by.setdefault(lookup_type, []).append(value)
+        return filter_by
 
     def get_required_permission(self):
         return get_permission_for_model(self.queryset.model, "view")
@@ -319,6 +334,7 @@ class ObjectListView(ObjectPermissionRequiredMixin, View):
             "action_buttons": valid_actions,
             "table_config_form": TableConfigForm(table=table),
             "filter_form": filter_form,
+            "filter_params": filter_params.items(),
             "dynamic_filter_form": dynamic_filter_form,
         }
         context.update(self.extra_context())
