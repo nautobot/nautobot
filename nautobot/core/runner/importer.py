@@ -6,14 +6,10 @@ logan.importer
 :license: Apache License 2.0, see LICENSE for more details.
 """
 
-from __future__ import absolute_import, unicode_literals
-
 import sys
 
 from importlib import import_module
 from .settings import load_settings, create_module
-
-basestring = unicode = str
 
 
 def execfile(afile, globalz=None, localz=None):
@@ -77,7 +73,7 @@ class LoganImporter:
             execfile(self.config_path, {"__file__": self.config_path})
         except Exception as e:
             exc_info = sys.exc_info()
-            raise ConfigurationError(unicode(e), exc_info[2])
+            raise ConfigurationError(str(e), exc_info[2])
 
     def find_module(self, fullname, path=None):
         """Meta path finder API function implementation.
@@ -118,7 +114,7 @@ class LoganLoader:
             return self._load_module(fullname)
         except Exception as e:
             exc_info = sys.exc_info()
-            raise ConfigurationError(unicode(e), exc_info[2])
+            raise ConfigurationError(str(e), exc_info[2])
 
     def _load_module(self, fullname):
         # TODO: is this needed?
