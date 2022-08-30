@@ -57,7 +57,7 @@ class DeviceType(gql_optimizer.OptimizedDjangoObjectType):
     dynamic_groups = graphene.List("nautobot.extras.graphql.types.DynamicGroupType")
 
     def resolve_dynamic_groups(self, args):
-        return DynamicGroup.objects.get_for_object(Device.objects.get(pk=self.pk))
+        return DynamicGroup.objects.get_for_object(self)
 
 
 class RackType(gql_optimizer.OptimizedDjangoObjectType):
@@ -71,7 +71,7 @@ class RackType(gql_optimizer.OptimizedDjangoObjectType):
     dynamic_groups = graphene.List("nautobot.extras.graphql.types.DynamicGroupType")
 
     def resolve_dynamic_groups(self, args):
-        return DynamicGroup.objects.get_for_object(Rack.objects.get(pk=self.pk))
+        return DynamicGroup.objects.get_for_object(self)
 
 
 class CableType(gql_optimizer.OptimizedDjangoObjectType):
