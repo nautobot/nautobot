@@ -269,7 +269,9 @@ class DynamicFilterForm(BootstrapMixin, forms.Form):
             lookup_type = data.getlist(prefix + "-lookup_type")
             lookup_value = data.getlist(prefix + "-value")
             if lookup_type:
-                label = build_lookup_label(lookup_type[0])
+                # TODO: timizuo catch keyerror if lookup_type not in filterset
+                verbose_name = self.filterset[lookup_type[0]].lookup_expr
+                label = build_lookup_label(lookup_type[0], verbose_name)
                 self.fields["lookup_type"].choices = [(lookup_type[0], label)]
 
             if lookup_type and lookup_value:
@@ -325,7 +327,7 @@ class DynamicFilterForm(BootstrapMixin, forms.Form):
         return " ".join([first_word, *data[1:]])
 
     def get_lookup_expr_choices(self):
-        filterset = get_filterset_for_model(self.model).base_filters
+        filterset = self.filterset
         filterset_without_lookup = []
 
         for name, field in filterset.items():
@@ -335,47 +337,12 @@ class DynamicFilterForm(BootstrapMixin, forms.Form):
         return filterset_without_lookup
 
 
-class DynamicFilterFormBaseFormSet(BaseFormSet):
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-
-    def __iter__(self):
-        """Yield the forms in the order they should be rendered."""
-        return iter(self.forms)
-
-    def _construct_form(self, i, **kwargs):
-        # form = super()._construct_form(i, **kwargs)
-        """Instantiate and return the i-th form instance in a formset."""
-        defaults = {
-            'auto_id': self.auto_id,
-            'prefix': self.add_prefix(i),
-            'error_class': self.error_class,
-            # Don't render the HTML 'required' attribute as it may cause
-            # incorrect validation for extra, optional, and deleted
-            # forms in the formset.
-            'use_required_attribute': False,
-        }
-        if self.is_bound:
-            defaults['data'] = self.data
-            defaults['files'] = self.files
-        if self.initial and 'initial' not in kwargs:
-            try:
-                defaults['initial'] = self.initial[i]
-            except IndexError:
-                pass
-        # Allow extra forms to be empty, unless they're part of
-        # the minimum forms.
-        if i >= self.initial_form_count() and i >= self.min_num:
-            defaults['empty_permitted'] = True
-        defaults.update(kwargs)
-        form = self.form(**defaults)
-        self.add_fields(form, i)
-        return form
-
-
 def dynamic_formset_factory(model, data=None, **kwargs):
     modelform = DynamicFilterForm
     modelform.model = model
+    filterset = get_filterset_for_model(model)
+    if filterset is not None:
+        modelform.filterset = filterset.base_filters
 
     params = {
         "can_delete_extra": True,
@@ -384,7 +351,7 @@ def dynamic_formset_factory(model, data=None, **kwargs):
     }
 
     kwargs.update(params)
-    form = formset_factory(form=DynamicFilterForm, formset=DynamicFilterFormBaseFormSet, **kwargs)
+    form = formset_factory(form=DynamicFilterForm, **kwargs)
     if data:
         form = form(data=data)
 
