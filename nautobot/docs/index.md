@@ -5,8 +5,11 @@ hide:
 
 # Overview
 
-Intro to docs TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO
+Welcome to the Nautobot Core Documentation! Use the top navigation bar to read about:
 
+- [Installing Nautobot](installation/index.md), [Configuring Nautobot](configuration/index.md), [Getting Started with the Web Interface](user-guides/getting-started/index.md), [REST](rest-api/overview.md) and [GraphQL](additional-features/graphql.md) APIs, [Plugins](plugins/index.md), additional features and much more can be found under the **Documentation** section.
+- Learn about how to [Develop and Contribute to Nautobot](development/index.md), [Set up your Development Environment](development/getting-started.md), and more under the **Development Guide** section.
+- Nautobot has a thriving ecosystem of **Apps** (also known as Plugins), developed as separate projects, for which you can find links to documentation under the [Nautobot Apps](apps/index.md) section.
 
 
 ## What is Nautobot?
