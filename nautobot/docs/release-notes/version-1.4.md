@@ -178,6 +178,7 @@ The `settings_and_registry` default context processor was changed to purely `set
 ### Fixed
 
 - [#449](https://github.com/nautobot/nautobot/issues/449) - Improved error checking and reporting when syncing Git repositories.
+- [#1807](https://github.com/nautobot/nautobot/issues/1807) - Fixed post_run method fails to add exceptions to job log.
 - [#2107](https://github.com/nautobot/nautobot/issues/2107) - Fixed a TypeError when a view defines `action_buttons = None`.
 - [#2237](https://github.com/nautobot/nautobot/issues/2237) - Fixed several issues with permissions enforcement for Note creation and viewing.
 - [#2268](https://github.com/nautobot/nautobot/pull/2268) - Fixed broken links in documentation.
