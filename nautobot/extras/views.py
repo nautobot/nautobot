@@ -22,6 +22,7 @@ from django.template.loader import get_template, TemplateDoesNotExist
 from django_tables2 import RequestConfig
 from jsonschema.validators import Draft7Validator
 
+from nautobot.core.celery import app
 from nautobot.core.views import generic
 from nautobot.dcim.models import Device
 from nautobot.dcim.tables import DeviceTable
@@ -1082,9 +1083,11 @@ class JobView(ObjectPermissionRequiredMixin, View):
             job_model.job_class().as_form(request.POST, request.FILES) if job_model.job_class is not None else None
         )
         schedule_form = forms.JobScheduleForm(request.POST)
+        # TODO: add form field for celery queue name, move default value to form field
+        celery_queue = app.conf.task_default_queue
 
         # Allow execution only if a worker process is running and the job is runnable.
-        if not get_worker_count(request):
+        if not get_worker_count(request, queue=celery_queue):
             messages.error(request, "Unable to run or schedule job: Celery worker process not running.")
         elif not job_model.installed or job_model.job_class is None:
             messages.error(request, "Unable to run or schedule job: Job is not presently installed.")
@@ -1129,6 +1132,7 @@ class JobView(ObjectPermissionRequiredMixin, View):
                     "user": request.user.pk,
                     "commit": commit,
                     "name": job_model.class_path,
+                    "celery_kwargs": {"queue": celery_queue},
                 }
 
                 scheduled_job = ScheduledJob(
@@ -1141,6 +1145,7 @@ class JobView(ObjectPermissionRequiredMixin, View):
                     kwargs=job_kwargs,
                     interval=schedule_type,
                     one_off=schedule_type == JobExecutionType.TYPE_FUTURE,
+                    queue=celery_queue,
                     user=request.user,
                     approval_required=job_model.approval_required,
                     crontab=crontab,
@@ -1162,6 +1167,7 @@ class JobView(ObjectPermissionRequiredMixin, View):
                     job_model.class_path,
                     job_content_type,
                     request.user,
+                    celery_kwargs={"queue": celery_queue},
                     data=job_model.job_class.serialize_data(job_form.cleaned_data),
                     request=copy_safe_request(request),
                     commit=commit,
@@ -1273,11 +1279,14 @@ class JobApprovalRequestView(generic.ObjectView):
                 job_content_type = get_job_content_type()
                 initial = scheduled_job.kwargs.get("data", {})
                 initial["_commit"] = False
+                # TODO: add form field for celery queue name, move default value to form field
+                celery_queue = app.conf.task_default_queue
                 job_result = JobResult.enqueue_job(
                     run_job,
                     job_model.job_class.class_path,
                     job_content_type,
                     request.user,
+                    celery_kwargs={"queue": celery_queue},
                     data=job_model.job_class.serialize_data(initial),
                     request=copy_safe_request(request),
                     commit=False,  # force a dry-run

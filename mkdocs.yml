@@ -97,6 +97,7 @@ nav:
         - Nautobot Shell: 'administration/nautobot-shell.md'
         - Permissions: 'administration/permissions.md'
         - Replicating Nautobot: 'administration/replicating-nautobot.md'
+        - Worker Queues: 'administration/celery-queues.md'
     - REST API:
         - Overview: 'rest-api/overview.md'
         - Filtering: 'rest-api/filtering.md'

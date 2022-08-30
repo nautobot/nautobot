@@ -913,7 +913,9 @@ class GitRepositoryTest(APIViewTestCases.APIViewTestCase):
         url = reverse("extras-api:gitrepository-sync", kwargs={"pk": self.repos[0].id})
         response = self.client.post(url, format="json", **self.header)
         self.assertHttpStatus(response, status.HTTP_503_SERVICE_UNAVAILABLE)
-        self.assertEqual(response.data["detail"], "Unable to process request: Celery worker process not running.")
+        self.assertEqual(
+            response.data["detail"], "Unable to process request: No celery workers running on queue celery."
+        )
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
     @mock.patch("nautobot.extras.api.views.get_worker_count")
@@ -1281,7 +1283,9 @@ class JobAPIRunTestMixin:
         url = self.get_run_url()
         response = self.client.post(url, data, format="json", **self.header)
         self.assertHttpStatus(response, status.HTTP_503_SERVICE_UNAVAILABLE)
-        self.assertEqual(response.data["detail"], "Unable to process request: Celery worker process not running.")
+        self.assertEqual(
+            response.data["detail"], "Unable to process request: No celery workers running on queue celery."
+        )
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     @mock.patch("nautobot.extras.api.views.get_worker_count")
