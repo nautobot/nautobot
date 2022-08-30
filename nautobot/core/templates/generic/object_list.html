@@ -21,6 +21,7 @@
     {% endif %}
 </div>
 <h1>{% block title %}{{ content_type.model_class|meta:"verbose_name_plural"|bettertitle }}{% endblock %}</h1>
+{% if filter_params %}
 <div class="filters-applied">
     Filters:
     {% for field, values in filter_params %}
@@ -31,9 +32,10 @@
             {% endfor %}
             <b class="text-danger"><i class="mdi mdi-close"></i></b></button>
     {% endfor %}
-
 </div>
 <hr>
+{% endif %}
+
 <div class="row">
     <div class="col-md-12">
         {% if filter_form %}

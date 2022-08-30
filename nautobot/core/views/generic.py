@@ -184,7 +184,10 @@ class ObjectListView(ObjectPermissionRequiredMixin, View):
                         else:
                             values.append(value)
                     for value in values:
-                        filter_by.setdefault(lookup_type, []).append(value)
+                        if value in ["True", "False"]:
+                            filter_by[lookup_type] = value
+                        else:
+                            filter_by.setdefault(lookup_type, []).append(value)
         return filter_by
 
     def get_required_permission(self):
@@ -315,17 +318,21 @@ class ObjectListView(ObjectPermissionRequiredMixin, View):
         }
         RequestConfig(request, paginate).configure(table)
 
-        filter_form = None
-        dynamic_filter_form = DynamicFilterFormSet(model=self.queryset.model)
         if self.filterset_form:
             if request.GET:
                 # Bind form to the values specified in request.GET
+                dynamic_filter_form = DynamicFilterFormSet(model=self.queryset.model, data=request.GET)
                 filter_form = self.filterset_form(filter_params, label_suffix="")
             else:
                 # Use unbound form with default (initial) values
+                dynamic_filter_form = DynamicFilterFormSet(model=self.queryset.model)
                 filter_form = self.filterset_form(label_suffix="")
 
         valid_actions = self.validate_action_buttons(request)
+        display_filter_params = [
+            [field_name, values if isinstance(values, (list, tuple)) else [values]]
+            for field_name, values in filter_params.items()
+        ]
 
         context = {
             "content_type": content_type,
@@ -334,7 +341,7 @@ class ObjectListView(ObjectPermissionRequiredMixin, View):
             "action_buttons": valid_actions,
             "table_config_form": TableConfigForm(table=table),
             "filter_form": filter_form,
-            "filter_params": filter_params.items(),
+            "filter_params": display_filter_params,
             "dynamic_filter_form": dynamic_filter_form,
         }
         context.update(self.extra_context())

@@ -2,6 +2,7 @@ import copy
 import datetime
 import inspect
 import json
+import re
 import uuid
 from collections import OrderedDict, namedtuple
 from itertools import count, groupby
@@ -19,10 +20,12 @@ from django.utils.tree import Node
 from django.template import engines
 from django.utils.module_loading import import_string
 from django.utils.text import slugify
+from django_filters import ModelMultipleChoiceFilter, filters
 from taggit.managers import _TaggableManager
 
 from nautobot.dcim.choices import CableLengthUnitChoices
-from nautobot.utilities.constants import HTTP_REQUEST_META_SAFE_COPY
+from nautobot.utilities.constants import HTTP_REQUEST_META_SAFE_COPY, FILTER_LOOKUP_MAP
+from nautobot.utilities.forms import BOOLEAN_WITH_BLANK_CHOICES
 
 
 def csv_format(data):
@@ -692,3 +695,141 @@ def pretty_print_query(query):
 
     # Use pretty_str() as the string generator vs. just stringify the `Q` object.
     return pretty_str(query)
+
+
+def build_lookup_label(field_name, verbose_name=None):
+    """
+    Return lookup expr with its verbose name
+
+    Args:
+        field_name (str): Field name e.g slug__iew
+        verbose_name (str): The verbose name for the lookup exper which is suffixed to the field name e.g iew -> iendswith
+
+    Examples:
+        >>> build_lookup_label("slug__iew", "iendswith")
+        >>> "iendswith(iew)"
+    """
+
+    text = None
+    label = ""
+    search = re.search("__.+$", field_name)
+    if search is not None:
+        text = search.group().replace("__", "")
+        label = f"({text})"
+
+    if verbose_name is None:
+        if text is not None:
+            verbose_name = FILTER_LOOKUP_MAP.get(text)
+        else:
+            verbose_name = "exact"
+
+    return verbose_name + label
+
+
+def get_all_field_lookup_exper(model, field_name):
+    """
+    Return all lookup expressions for `field_name` in `model` filterset
+    """
+    filterset = get_filterset_for_model(model).base_filters
+    if field_name.startswith("has_"):
+        return [{"id": field_name, "name": "exact"}]
+
+    lookup_expr = [
+        {
+            "id": name,
+            "name": build_lookup_label(name, field.lookup_expr),
+        }
+        for name, field in filterset.items()
+        if name.startswith(field_name) and not name.startswith("has_")
+    ]
+    return lookup_expr or [{"id": "exact", "name": "exact - Not Found"}]
+
+
+def get_filterset_field_data(model, field_name, initial_choice=None):
+    # Avoid circular import
+    from nautobot.extras.filters import StatusFilter
+    from nautobot.extras.models import Status, Tag
+    from nautobot.utilities.filters import RelatedMembershipBooleanFilter
+
+    contenttype = model._meta.app_label + "." + model._meta.model_name
+
+    filterset = get_filterset_for_model(model)
+    if filterset is None:
+        # TODO Timizuo Raise Error if filterset not found
+        pass
+
+    field = filterset.base_filters.get(field_name)
+    if field is None:
+        # TODO Timizuo Raise Error if field not found
+        pass
+
+    data = {"type": "others"}
+
+    if isinstance(field, (filters.MultipleChoiceFilter, ModelMultipleChoiceFilter)):
+        if "choices" in field.extra:  # Field choices
+            # Problem might arise here if plugin developer do not declare field choices using nautobot.utilities.choices.ChoiceSet
+            data = {
+                "type": "static-choices",
+                "choices": field.extra["choices"].CHOICES,
+                "allow_multiple": True,
+            }
+        elif hasattr(field, "queryset"):  # Dynamically populated choices
+            if isinstance(field, StatusFilter):
+                related_model = Status
+            else:
+                related_model = field.extra["queryset"].model
+            api_endpoint = get_model_api_endpoint(related_model)
+
+            if api_endpoint:
+                data = {
+                    "type": "dynamic-choices",
+                    "data_url": api_endpoint,
+                    "choices": [],
+                }
+            # Status and Tag api requires content_type, to limit result to only related content_types
+            if related_model in [Status, Tag]:
+                data["content_type"] = json.dumps([contenttype])
+
+            # Set value-field
+            value_field = field.extra.get("to_field_name")
+            if value_field is not None:
+                data["value_field"] = value_field
+
+            # Add initial choices if initial_choice is not none
+            # This would be used in select field to populate the default options/choices
+            if initial_choice is not None:
+                search_by = field.extra.get("to_field_name") or "id"
+                values = initial_choice if isinstance(initial_choice, (list, tuple)) else [initial_choice]
+                data["choices"] = compile_model_choices(related_model, search_by, values)
+
+    elif isinstance(field, (RelatedMembershipBooleanFilter, )):  # Yes / No choice
+        data = {
+            "type": "static-choices",
+            "choices": BOOLEAN_WITH_BLANK_CHOICES,
+            "allow_multiple": False,
+        }
+    return data
+
+
+def compile_model_choices(model, search_by, values):
+    """
+    Return a list of tuples of a Model's instance values and its labels
+
+    Examples:
+        >>> compile_model_choices(<class: nautobot.dcim.models.Site>, "slug", ["site-1", "site-2"] )
+        >>> [("site-1", "Site 1", ("site-2", "Site 2"))]
+    Args:
+        model:
+        search_by:
+        values:
+    """
+    choices = []
+    for value in values:
+        try:
+            instance = model.objects.get(**{search_by: value})
+            # TODO timizio: create method to get display e.g instance.get_display()
+            #  this would help in getting the right label name for a field
+            choices.append((value, "Value-Label"))
+        except model.DoesNotExist:
+            pass
+    return choices

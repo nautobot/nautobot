@@ -577,6 +577,7 @@ function jsify_form(context) {
         let value_id = element.attr("id")
         let data_url = response.data_url
         let content_type = response.content_type
+        let value_field = response.value_field
 
         select_field = `
             <select
@@ -589,6 +590,7 @@ function jsify_form(context) {
                 aria-hidden="true"
                 multiple
                 ${content_type ? "data-query-param-content_types=" + content_type + "" : null}
+                ${value_field ? "value-field=" + value_field + "" : null}
             ></select>
         `
         element.parent().html(select_field)

@@ -314,6 +314,11 @@ class LookupFieldTypeView(View):
                 if related_model in [Status, Tag]:
                     data["content_type"] = json.dumps([contenttype])
 
+                # Set value-field
+                value_field = field.extra.get("to_field_name")
+                if value_field is not None:
+                    data["value_field"] = value_field
+
         elif isinstance(field, (RelatedMembershipBooleanFilter, )):  # Yes / No choice
             data = {
                 "type": "static-choices",

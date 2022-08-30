@@ -3,10 +3,10 @@ import re
 
 import yaml
 from django import forms
-from django.forms import formset_factory
+from django.forms import formset_factory, BaseFormSet
 
 from nautobot.ipam.formfields import IPNetworkFormField
-from nautobot.utilities.utils import get_filterset_for_model
+from nautobot.utilities.utils import get_filterset_for_model, build_lookup_label, get_filterset_field_data
 
 __all__ = (
     "AddressFieldMixin",
@@ -262,13 +262,61 @@ class DynamicFilterForm(BootstrapMixin, forms.Form):
         self.fields["lookup_field"].choices = [(None, None)] + self.get_lookup_expr_choices()
         self.fields["lookup_field"].widget.attrs["class"] = "nautobot-select2-static lookup_field-select"
 
+        # Populate lookup type if item present in data
+        data = kwargs.get("data")
+        prefix = kwargs.get("prefix")
+        if data and prefix:
+            lookup_type = data.getlist(prefix + "-lookup_type")
+            lookup_value = data.getlist(prefix + "-value")
+            if lookup_type:
+                label = build_lookup_label(lookup_type[0])
+                self.fields["lookup_type"].choices = [(lookup_type[0], label)]
+
+            if lookup_type and lookup_value:
+                self.select_or_input_data(lookup_type[0], lookup_value)
+
         # data-query-param-group_id="["$tenant_group"]"
         self.fields["lookup_type"].widget.attrs["data-query-param-field_name"] = json.dumps(["$lookup_field"])
         self.fields["lookup_type"].widget.attrs["data-contenttype"] = contenttype
         self.fields["lookup_type"].widget.attrs["data-url"] = "/lookup-choices/"
         self.fields["lookup_type"].widget.attrs["class"] = "nautobot-select2-api lookup_type-select"
 
-        self.fields["value"].widget.attrs["class"] = "value-input form-control"
+        lookup_value_css = self.fields["value"].widget.attrs.get("class")
+        self.fields["value"].widget.attrs["class"] = " ".join([lookup_value_css, "value-input form-control"])
+
+    def select_or_input_data(self, field_name, choice):
+        from nautobot.utilities.forms import StaticSelect2
+        from nautobot.utilities.forms import APISelect, APISelectMultiple
+
+        # Static choice and Dynamic Choice and Yes/No Choice
+        data = get_filterset_field_data(self.model, field_name, choice)
+        if data["type"] == "static-choices":
+            allow_multiple = data["allow_multiple"]
+            attr = {}
+            if allow_multiple:
+                attr["multiple"] = "true"
+
+            self.fields["value"] = forms.ChoiceField(
+                choices=data["choices"],
+                required=False,
+                widget=StaticSelect2(attrs={**attr}),
+                initial=choice
+            )
+        elif data["type"] == "dynamic-choices":
+            # Add contenttype if needed like status and tags
+
+            api_attr = {}
+            if data.get("content_type") is not None:
+                api_attr["data-query-param-content_types"] = data["content_type"]
+            if data.get("value_field") is not None:
+                api_attr["value-field"] = data["value_field"]
+
+            self.fields["value"] = forms.ChoiceField(
+                choices=data["choices"],
+                required=False,
+                widget=APISelectMultiple(api_url=data["data_url"], attrs={**api_attr}),
+                initial=choice
+            )
 
     @staticmethod
     def capitalize(field):
@@ -287,7 +335,45 @@ class DynamicFilterForm(BootstrapMixin, forms.Form):
         return filterset_without_lookup
 
 
-def dynamic_formset_factory(model, **kwargs):
+class DynamicFilterFormBaseFormSet(BaseFormSet):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+    def __iter__(self):
+        """Yield the forms in the order they should be rendered."""
+        return iter(self.forms)
+
+    def _construct_form(self, i, **kwargs):
+        # form = super()._construct_form(i, **kwargs)
+        """Instantiate and return the i-th form instance in a formset."""
+        defaults = {
+            'auto_id': self.auto_id,
+            'prefix': self.add_prefix(i),
+            'error_class': self.error_class,
+            # Don't render the HTML 'required' attribute as it may cause
+            # incorrect validation for extra, optional, and deleted
+            # forms in the formset.
+            'use_required_attribute': False,
+        }
+        if self.is_bound:
+            defaults['data'] = self.data
+            defaults['files'] = self.files
+        if self.initial and 'initial' not in kwargs:
+            try:
+                defaults['initial'] = self.initial[i]
+            except IndexError:
+                pass
+        # Allow extra forms to be empty, unless they're part of
+        # the minimum forms.
+        if i >= self.initial_form_count() and i >= self.min_num:
+            defaults['empty_permitted'] = True
+        defaults.update(kwargs)
+        form = self.form(**defaults)
+        self.add_fields(form, i)
+        return form
+
+
+def dynamic_formset_factory(model, data=None, **kwargs):
     modelform = DynamicFilterForm
     modelform.model = model
 
@@ -298,9 +384,13 @@ def dynamic_formset_factory(model, **kwargs):
     }
 
     kwargs.update(params)
-    form = formset_factory(form=DynamicFilterForm, **kwargs)
+    form = formset_factory(form=DynamicFilterForm, formset=DynamicFilterFormBaseFormSet, **kwargs)
+    if data:
+        form = form(data=data)
 
     return form
 
 
 DynamicFilterFormSet = dynamic_formset_factory
+
+
