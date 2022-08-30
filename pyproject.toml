@@ -226,7 +226,6 @@ good-names = """_,i,j,k,pk"""
 # unused-import is already covered by flake8
 disable=""",
     abstract-method,
-    access-member-before-definition,
     arguments-renamed,
     attribute-defined-outside-init,
     broad-except,

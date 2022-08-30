@@ -478,6 +478,7 @@ class APIViewTestCases:
         update_data = {}
         bulk_update_data = None
         validation_excluded_fields = []
+        choices_fields = None
 
         def test_update_object_without_permission(self):
             """
