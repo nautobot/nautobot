@@ -21,7 +21,8 @@ If you are a user migrating from NetBox to Nautobot, please refer to the ["Migra
 ### Added
 
 - [#1468](https://github.com/nautobot/nautobot/issues/1468) - Added relationship columns to ObjectListTableView and disabled sorting.
-- [#2281](https://github.com/nautobot/nautobot/issues/2281) - Added test database fixtures for Tag and Status models
+- [#2063](https://github.com/nautobot/nautobot/issues/2063) - Added documentation and initial support for custom celery queues.
+- [#2281](https://github.com/nautobot/nautobot/issues/2281) - Added test database fixtures for Tag and Status models.
 
 ### Changed
 
