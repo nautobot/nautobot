@@ -3,6 +3,16 @@
 {% load helpers %}
 {% load static %}
 
+
+{% block extra_styles %}
+<style>
+    .btn-filter-value {
+        background: #cfcfcf;
+        margin-right: 5px;
+    }
+</style>
+{% endblock extra_styles %}
+
 {% block content %}
 <div class="pull-right noprint">
     {% block buttons %}{% endblock %}
@@ -28,9 +38,23 @@
         <button class="btn btn-sm">
             <b>{{ field }}:</b>
             {% for value in values %}
-            {{ value }},
+                <span class="btn btn-sm btn-filter-value">
+                    <i
+                        class="mdi mdi-close text-danger remove-filter-param"
+                        data-field-type="child"
+                        data-field-parent={{ field }}
+                        data-field-value={{ value }}
+                    ></i> {{ value }}
+                </span>
             {% endfor %}
-            <b class="text-danger"><i class="mdi mdi-close"></i></b></button>
+            <b class="text-danger">
+                <i
+                    class="mdi mdi-close remove-filter-param"
+                    data-field-type="parent"
+                    data-field-value={{ field }}
+                ></i>
+            </b>
+        </button>
     {% endfor %}
 </div>
 <hr>
@@ -105,4 +129,38 @@
 {% block javascript %}
 <script src="{% static 'js/tableconfig.js' %}"></script>
 <script src="{% static 'jquery/jquery.formset.js' %}"></script>
+<script>
+    $(".remove-filter-param").on("click", function(){
+        let query_params = location.search
+        let type = $(this).attr("data-field-type")
+        let field_value = $(this).attr("data-field-value")
+
+        let query_string = location.search.split("&")
+        let temp_query_string = location.search.split("&")
+
+        if (type === "parent"){
+            temp_query_string.forEach(item => {
+                re = item.search(/form-.{1}-lookup_type/)
+                let [field, value] = item.split("=")
+                if (re != -1 && value == field_value){
+                    prefix = /form-.{1}-/.exec(field)[0]
+                    query_string = temp_query_string.filter(data => data.search(prefix) == -1)
+                }
+            })
+        }
+        else {
+            let parent = $(this).attr("data-field-parent")
+            temp_query_string.forEach(item => {
+                re = item.search(/form-.{1}-lookup_type=/)
+                let [field, value] = item.split("=")
+                if (re != -1 && value == parent){
+                    prefix = /form-.{1}-/.exec(field)[0]
+                    query_string = temp_query_string.filter(data => data.search(prefix + `value=${field_value}`) == -1)
+                }
+            })
+        }
+        location.replace(query_string.join("&"))
+    })
+
+</script>
 {% endblock %}
