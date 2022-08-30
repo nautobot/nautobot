@@ -1135,7 +1135,8 @@ def run_job(data, request, job_result_pk, commit=True, *args, **kwargs):
         job_result.completed = timezone.now()
         job_result.save()
         if file_ids:
-            job.delete_files(*file_ids)  # Cleanup FileProxy objects
+            # Cleanup FileProxy objects
+            job.delete_files(*file_ids)  # pylint: disable=not-an-iterable
         return False
 
     if job_model.read_only:
@@ -1202,7 +1203,8 @@ def run_job(data, request, job_result_pk, commit=True, *args, **kwargs):
 
         finally:
             job_result.save()
-            job.delete_files(*file_ids)  # Cleanup FileProxy objects
+            if file_ids:
+                job.delete_files(*file_ids)  # Cleanup FileProxy objects
 
         # record data about this jobrun in the schedule
         if job_result.schedule:

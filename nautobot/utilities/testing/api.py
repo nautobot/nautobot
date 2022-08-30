@@ -1,3 +1,5 @@
+from typing import Optional, Sequence, Union
+
 from django.conf import settings
 from django.contrib.contenttypes.models import ContentType
 from django.urls import reverse
@@ -374,7 +376,7 @@ class APIViewTestCases:
     class CreateObjectViewTestCase(APITestCase):
         create_data = []
         validation_excluded_fields = []
-        slug_source = None
+        slug_source: Optional[Union[str, Sequence[str]]] = None
         slugify_function = staticmethod(slugify)
 
         def test_create_object_without_permission(self):
@@ -391,7 +393,7 @@ class APIViewTestCases:
         def check_expected_slug(self, obj):
             slug_source = [self.slug_source] if isinstance(self.slug_source, str) else self.slug_source
             expected_slug = ""
-            for source_item in slug_source:
+            for source_item in slug_source:  # false positive pylint: disable=not-an-iterable
                 # e.g. self.slug_source = ["parent__name", "name"]
                 source_keys = source_item.split("__")
                 try:
@@ -476,7 +478,7 @@ class APIViewTestCases:
 
     class UpdateObjectViewTestCase(APITestCase):
         update_data = {}
-        bulk_update_data = None
+        bulk_update_data: Optional[dict] = None
         validation_excluded_fields = []
         choices_fields = None
 
@@ -537,7 +539,7 @@ class APIViewTestCases:
             response = self.client.patch(self._get_list_url(), data, format="json", **self.header)
             self.assertHttpStatus(response, status.HTTP_200_OK)
             for i, obj in enumerate(response.data):
-                for field in self.bulk_update_data:
+                for field in self.bulk_update_data:  # false positive pylint: disable=not-an-iterable
                     self.assertIn(
                         field,
                         obj,
