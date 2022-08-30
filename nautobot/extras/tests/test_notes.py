@@ -28,19 +28,19 @@ class NoteModelTest(TestCase):
             user=user,
             assigned_object_type=site_ct,
             assigned_object_id=cls.sites[0].pk,
-        ),
+        )
         Note.objects.create(
             note="Site maintenance has ended.",
             user=user,
             assigned_object_type=site_ct,
             assigned_object_id=cls.sites[0].pk,
-        ),
+        )
         Note.objects.create(
             note="Site is under duress.",
             user=user,
             assigned_object_type=site_ct,
             assigned_object_id=cls.sites[1].pk,
-        ),
+        )
 
     def test_notes_queryset(self):
         self.assertIsInstance(self.sites[0].notes, QuerySet)

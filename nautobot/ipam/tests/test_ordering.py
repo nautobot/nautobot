@@ -42,7 +42,7 @@ class PrefixOrderingTestCase(OrderingTestBase):
         This is a very basic test, which tests both prefixes without VRFs and prefixes with VRFs
         """
         # Setup VRFs
-        vrfa, vrfb, vrfc = self.vrfs
+        vrfa, vrfb = self.vrfs[:2]
 
         # Setup Prefixes
         prefixes = (
@@ -253,7 +253,7 @@ class PrefixOrderingTestCase(OrderingTestBase):
             None: 192.168.0.0/16
         """
         # Setup VRFs
-        vrfa, vrfb, vrfc = self.vrfs
+        vrfa = self.vrfs[0]
 
         # Setup Prefixes
         prefixes = [
@@ -314,7 +314,7 @@ class IPAddressOrderingTestCase(OrderingTestBase):
         This function tests ordering with the inclusion of vrfs
         """
         # Setup VRFs
-        vrfa, vrfb, vrfc = self.vrfs
+        vrfa, vrfb = self.vrfs[:2]
 
         status_active = Status.objects.get_for_model(IPAddress).get(slug="active")
 

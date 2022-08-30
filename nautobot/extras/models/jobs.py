@@ -722,7 +722,7 @@ class JobResult(BaseModel, CustomFieldModel):
         obj=None,
         level_choice=LogLevelChoices.LOG_DEFAULT,
         grouping="main",
-        logger=None,
+        logger=None,  # pylint: disable=redefined-outer-name
     ):
         """
         General-purpose API for storing log messages in a JobResult's 'data' field.

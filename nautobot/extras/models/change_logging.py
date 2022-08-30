@@ -29,7 +29,7 @@ class ChangeLoggedModel(models.Model):
     class Meta:
         abstract = True
 
-    def to_objectchange(self, action, related_object=None, object_data_extra=None, object_data_exclude=None):
+    def to_objectchange(self, action, *, related_object=None, object_data_extra=None, object_data_exclude=None):
         """
         Return a new ObjectChange representing a change made to this object. This will typically be called automatically
         by ChangeLoggingMiddleware.
@@ -62,6 +62,8 @@ class ChangeLoggedModel(models.Model):
                 return reverse(route, kwargs={field: getattr(self, field)})
             except NoReverseMatch:
                 continue
+
+        return None
 
 
 @extras_features("graphql")
