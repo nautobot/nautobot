@@ -189,12 +189,12 @@ def get_celery_queues():
 
     celery_queues = {}
 
-    inspect = app.control.inspect()
-    active_queues = inspect.active_queues()
+    celery_inspect = app.control.inspect()
+    active_queues = celery_inspect.active_queues()
     if active_queues is None:
         return celery_queues
     for worker_queue_list in active_queues.values():
-        distinct_queues = set([q["name"] for q in worker_queue_list])
+        distinct_queues = {q["name"] for q in worker_queue_list}
         for queue in distinct_queues:
             celery_queues.setdefault(queue, 0)
             celery_queues[queue] += 1
