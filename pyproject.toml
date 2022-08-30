@@ -255,7 +255,6 @@ disable=""",
     no-else-raise,
     no-else-return,
     no-member,
-    no-value-for-parameter,
     not-an-iterable,
     not-callable,
     pointless-statement,
@@ -297,3 +296,7 @@ notes = """,
     FIXME,
     XXX,
     """
+
+[tool.pylint.typecheck]
+# @patch changes the signature of a function it's applied to; don't raise "no-value-for-parameter" here
+signature-mutators=["unittest.mock.patch"]
