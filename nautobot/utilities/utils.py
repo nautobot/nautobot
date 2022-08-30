@@ -827,9 +827,7 @@ def compile_model_choices(model, search_by, values):
     for value in values:
         try:
             instance = model.objects.get(**{search_by: value})
-            # TODO timizio: create method to get display e.g instance.get_display()
-            #  this would help in getting the right label name for a field
-            choices.append((value, "Value-Label"))
+            choices.append((value, getattr(instance, "display", str(instance))))
         except model.DoesNotExist:
             pass
     return choices
