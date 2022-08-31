@@ -638,7 +638,7 @@ class CustomFieldDataAPITest(APITestCase):
         self.assertHttpStatus(response, status.HTTP_201_CREATED)
         self.assertEqual(len(response.data), len(data))
 
-        for i, obj in enumerate(data):
+        for i, _obj in enumerate(data):
 
             # Validate response data
             response_cf = response.data[i]["custom_fields"]
@@ -706,7 +706,7 @@ class CustomFieldDataAPITest(APITestCase):
         self.assertHttpStatus(response, status.HTTP_201_CREATED)
         self.assertEqual(len(response.data), len(data))
 
-        for i, obj in enumerate(data):
+        for i, _obj in enumerate(data):
 
             # Validate response data
             response_cf = response.data[i]["custom_fields"]

@@ -112,6 +112,7 @@
     </div>
 {% endblock %}
 {% block javascript %}
+{{ block.super }}
 <script type="text/javascript">
     var requires_approval = {{ job_model.approval_required|yesno:"true,false" }};
     var run_now_text;

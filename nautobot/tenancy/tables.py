@@ -40,8 +40,8 @@ class TenantColumn(tables.TemplateColumn):
     def __init__(self, *args, **kwargs):
         super().__init__(template_code=self.template_code, *args, **kwargs)
 
-    def value(self, value):
-        return str(value) if value else None
+    def value(self, **kwargs):
+        return str(kwargs["value"]) if kwargs["value"] else None
 
 
 #

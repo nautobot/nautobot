@@ -83,7 +83,7 @@ class DCIMRootView(APIRootView):
 # Mixins
 
 
-class PathEndpointMixin(object):
+class PathEndpointMixin:
     @action(detail=True, url_path="trace")
     def trace(self, request, pk):
         """
@@ -117,7 +117,7 @@ class PathEndpointMixin(object):
         return Response(path)
 
 
-class PassThroughPortMixin(object):
+class PassThroughPortMixin:
     @action(detail=True, url_path="paths")
     def paths(self, request, pk):
         """
@@ -265,6 +265,8 @@ class RackViewSet(StatusViewSetMixin, NautobotModelViewSet):
             if page is not None:
                 rack_units = serializers.RackUnitSerializer(page, many=True, context={"request": request})
                 return self.get_paginated_response(rack_units.data)
+
+        return None
 
 
 #

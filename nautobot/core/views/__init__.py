@@ -48,7 +48,7 @@ class HomeView(AccessMixin, TemplateView):
         additional_context = RequestContext(request, context)
         return template.render(additional_context)
 
-    def get(self, request):
+    def get(self, request, *args, **kwargs):
         # Redirect user to login page if not authenticated and HIDE_RESTRICTED_UI is set to True
         if not request.user.is_authenticated and get_settings_or_config("HIDE_RESTRICTED_UI"):
             return self.handle_no_permission()
@@ -182,7 +182,7 @@ def server_error(request, template_name=ERROR_500_TEMPLATE_NAME):
         template = loader.get_template(template_name)
     except TemplateDoesNotExist:
         return HttpResponseServerError("<h1>Server Error (500)</h1>", content_type="text/html")
-    type_, error, traceback = sys.exc_info()
+    type_, error, _traceback = sys.exc_info()
 
     return HttpResponseServerError(
         template.render(

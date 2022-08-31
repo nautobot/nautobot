@@ -48,6 +48,7 @@
 {% endblock content_right_page %}
 
 {% block javascript %}
+{{ block.super }}
 <script>
     function test_query() {
         var output = $("#query_output");

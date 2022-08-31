@@ -42,8 +42,6 @@ class PluginTest(TestCase):
         )
 
     def test_models(self):
-        from example_plugin.models import ExampleModel
-
         # Test saving an instance
         instance = ExampleModel(name="Instance 1", number=100)
         instance.save()
@@ -286,9 +284,10 @@ class PluginTest(TestCase):
         """
         self.assertTrue(registry["nav_menu"]["tabs"].get("Example Menu"))
         self.assertTrue(registry["nav_menu"]["tabs"]["Example Menu"]["groups"].get("Example Group 1"))
+        # Modified this statement since we are passing the url into registry directly instead of the reverse url string
         self.assertTrue(
             registry["nav_menu"]["tabs"]["Example Menu"]["groups"]["Example Group 1"]["items"].get(
-                "plugins:example_plugin:examplemodel_list"
+                "/plugins/example-plugin/models/"
             )
         )
 

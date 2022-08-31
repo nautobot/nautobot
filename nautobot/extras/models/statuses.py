@@ -29,6 +29,9 @@ class StatusQuerySet(RestrictedQuerySet):
         content_type = ContentType.objects.get_for_model(model._meta.concrete_model)
         return self.filter(content_types=content_type)
 
+    def get_by_natural_key(self, slug):
+        return self.get(slug=slug)
+
 
 @extras_features(
     "custom_fields",
@@ -69,6 +72,9 @@ class Status(BaseModel, ChangeLoggedModel, CustomFieldModel, RelationshipModel, 
     def __str__(self):
         return self.name
 
+    def natural_key(self):
+        return (self.slug,)
+
     def get_absolute_url(self):
         return reverse("extras:status", args=[self.slug])
 
@@ -100,7 +106,7 @@ class StatusField(models.ForeignKey):
     def get_limit_choices_to(self):
         return {"content_types": ContentType.objects.get_for_model(self.model)}
 
-    def contribute_to_class(self, cls, name, private_only=False):
+    def contribute_to_class(self, cls, name, *args, private_only=False, **kwargs):
         """
         Overload default so that we can assert that `.get_FOO_display` is
         attached to any model that is using a `StatusField`.
@@ -112,7 +118,7 @@ class StatusField(models.ForeignKey):
         `.get_status_display()` and a `.get_status_color()` method without
         having to define it on the model yourself.
         """
-        super().contribute_to_class(cls, name, private_only=private_only)
+        super().contribute_to_class(cls, name, *args, private_only=private_only, **kwargs)
 
         def _get_FIELD_display(self, field):
             """

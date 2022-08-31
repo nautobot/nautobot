@@ -15,7 +15,7 @@ Records of this type store the following data as read-only (not modifiable via t
 * The name of the module containing the Job
 * The name of the Job class
 * Whether the job is installed presently
-* Whether the job is a [Job Hook Receiver](../jobhook/#job-hook-receivers)
+* Whether the job is a [Job Hook Receiver](jobhook.md#job-hook-receivers)
 
 !!! note
     As presently implemented, after a job is uninstalled, when the database is next refreshed, the corresponding Job database record will *not* be deleted - only its `installed` flag will be set to False. This allows existing `JobResult` and `ScheduledJob` records to continue to reference the Job that they originated from.

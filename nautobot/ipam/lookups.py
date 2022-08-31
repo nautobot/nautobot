@@ -65,7 +65,7 @@ def get_ip_info(field_name, ip_str):
     return ip_details
 
 
-class IPDetails(object):
+class IPDetails:
     """Class for setting up all details about an IP they may be needed"""
 
     net = None
@@ -83,7 +83,7 @@ class IPDetails(object):
     to_len = {4: 32, 6: 128}
 
 
-class StringMatchMixin(object):
+class StringMatchMixin:
     def process_lhs(self, qn, connection, lhs=None):
         lhs = lhs or self.lhs
         lhs_string, lhs_params = qn.compile(lhs)
@@ -124,7 +124,7 @@ class IRegex(StringMatchMixin, lookups.IRegex):
     pass
 
 
-class NetworkFieldMixin(object):
+class NetworkFieldMixin:
     def get_prep_lookup(self):
         field_name = self.lhs.field.name
         if field_name not in ["host", "network"]:

@@ -23,6 +23,8 @@ from rest_framework import mixins
 from rest_framework.response import Response
 from rest_framework.viewsets import GenericViewSet
 
+from drf_spectacular.utils import extend_schema
+
 from nautobot.core.api.views import BulkCreateModelMixin, BulkDestroyModelMixin, BulkUpdateModelMixin
 from nautobot.extras.models import CustomField, ExportTemplate
 from nautobot.utilities.error_handlers import handle_protectederror
@@ -53,6 +55,7 @@ PERMISSIONS_ACTION_MAP = {
 }
 
 
+@extend_schema(exclude=True)
 class NautobotViewSetMixin(GenericViewSet, AccessMixin, GetReturnURLMixin, FormView):
     """
     NautobotViewSetMixin is an aggregation of various mixins from DRF, Django and Nautobot to acheive the desired behavior pattern for NautobotUIViewSet
@@ -81,7 +84,7 @@ class NautobotViewSetMixin(GenericViewSet, AccessMixin, GetReturnURLMixin, FormV
         for action in actions:
             if action not in ("view", "add", "change", "delete"):
                 raise ValueError(f"Unsupported action: {action}")
-        permissions.append("{}.{}_{}".format(model._meta.app_label, action, model._meta.model_name))
+            permissions.append("{}.{}_{}".format(model._meta.app_label, action, model._meta.model_name))
         return permissions
 
     def get_required_permission(self):
@@ -89,7 +92,14 @@ class NautobotViewSetMixin(GenericViewSet, AccessMixin, GetReturnURLMixin, FormV
         Obtain the permissions needed to perform certain actions on a model.
         """
         queryset = self.get_queryset()
-        return self.get_permissions_for_model(queryset.model, [PERMISSIONS_ACTION_MAP[self.action]])
+        try:
+            permissions = [PERMISSIONS_ACTION_MAP[self.action]]
+        except KeyError:
+            messages.error(
+                self.request,
+                "This action is not permitted. Please use the buttons at the bottom of the table for Bulk Delete and Bulk Update",
+            )
+        return self.get_permissions_for_model(queryset.model, permissions)
 
     def has_permission(self):
         """
@@ -431,6 +441,8 @@ class ObjectListViewMixin(NautobotViewSetMixin, mixins.ListModelMixin):
             response["Content-Disposition"] = f'attachment; filename="{filename}"'
             return response
 
+        return None
+
     def queryset_to_yaml(self):
         """
         Export the queryset of objects as concatenated YAML documents.
@@ -478,7 +490,9 @@ class ObjectListViewMixin(NautobotViewSetMixin, mixins.ListModelMixin):
             queryset = self.get_queryset()
             model = queryset.model
             content_type = ContentType.objects.get_for_model(model)
-            return self.check_for_export(request, model, content_type)
+            response = self.check_for_export(request, model, content_type)
+            if response is not None:
+                return response
         return Response(context)
 
 
@@ -581,7 +595,8 @@ class ObjectEditViewMixin(NautobotViewSetMixin, mixins.CreateModelMixin, mixins.
             return self.perform_create(request, *args, **kwargs)
         return Response(context)
 
-    def perform_create(self, request, *args, **kwargs):
+    # TODO: this conflicts with DRF's CreateModelMixin.perform_create(self, serializer) API
+    def perform_create(self, request, *args, **kwargs):  # pylint: disable=arguments-differ
         """
         Function to validate the ObjectForm and to create a new object.
         """
@@ -605,7 +620,8 @@ class ObjectEditViewMixin(NautobotViewSetMixin, mixins.CreateModelMixin, mixins.
             return self.perform_update(request, *args, **kwargs)
         return Response(context)
 
-    def perform_update(self, request, *args, **kwargs):
+    # TODO: this conflicts with DRF's UpdateModelMixin.perform_update(self, serializer) API
+    def perform_update(self, request, *args, **kwargs):  # pylint: disable=arguments-differ
         """
         Function to validate the ObjectEditForm and to update/partial_update an existing object.
         """
@@ -735,7 +751,7 @@ class ObjectBulkCreateViewMixin(NautobotViewSetMixin, BulkCreateModelMixin):
             messages.success(request, msg)
         return obj_table
 
-    def bulk_create(self, request):
+    def bulk_create(self, request, *args, **kwargs):
         context = {}
         if request.method == "POST":
             return self.perform_bulk_create(request)
@@ -839,7 +855,8 @@ class ObjectBulkUpdateViewMixin(NautobotViewSetMixin, BulkUpdateModelMixin):
         """
         return self.perform_bulk_update(request, **kwargs)
 
-    def perform_bulk_update(self, request, **kwargs):
+    # TODO: this conflicts with BulkUpdateModelMixin.perform_bulk_update(self, objects, update_data, partial)
+    def perform_bulk_update(self, request, **kwargs):  # pylint: disable=arguments-differ
         """
         request.POST "_edit": Function to render the user selection of objects in a table form/BulkUpdateForm via Response that is passed to NautobotHTMLRenderer.
         request.POST "_apply": Function to validate the table form/BulkUpdateForm and to perform the action of bulk update. Render the form with errors if exceptions are raised.

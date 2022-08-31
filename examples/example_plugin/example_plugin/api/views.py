@@ -33,7 +33,7 @@ class ExampleModelWebhook(APIView):
 
     permission_classes = [AllowAny]
 
-    def get(self, request, format=None):
+    def get(self, request, format=None):  # pylint: disable=redefined-builtin
         with open(
             os.path.join(tempfile.gettempdir(), self.request.META.get("HTTP_TEST_NAME", "NO-TEST-NAME")), "w+"
         ) as f:

@@ -13,7 +13,7 @@ CUSTOM_FIELD_RENDERER = getattr(settings, "DAB_FIELD_RENDERER", False)
 
 
 @register.simple_tag(takes_context=True)
-def render_with_template_if_exist(context, template, fallback):
+def render_with_template_if_exist(context, template, fallback):  # pylint: disable=redefined-outer-name
     text = fallback
     try:
         text = render_to_string(template, context)
@@ -33,10 +33,10 @@ def language_selector(context):
     output = ""
     i18 = getattr(settings, "USE_I18N", False)
     if i18:
-        template = "admin/language_selector.html"
+        template_ = "admin/language_selector.html"
         context["i18n_is_set"] = True
         try:
-            output = render_to_string(template, context)
+            output = render_to_string(template_, context)
         except Exception:
             pass
     return output
@@ -71,7 +71,7 @@ def fieldset_column_width(fieldset):
 
 
 @register.simple_tag(takes_context=True)
-def render_app_name(context, app, template="/admin_app_name.html"):
+def render_app_name(context, app, template="/admin_app_name.html"):  # pylint: disable=redefined-outer-name
     """Render the application name using the default template name. If it cannot find a
     template matching the given path, fallback to the application name.
     """
@@ -96,7 +96,9 @@ def render_app_label(context, app, fallback=""):
 
 
 @register.simple_tag(takes_context=True)
-def render_app_description(context, app, fallback="", template="/admin_app_description.html"):
+def render_app_description(
+    context, app, fallback="", template="/admin_app_description.html"  # pylint: disable=redefined-outer-name
+):
     """Render the application description using the default template name. If it cannot find a
     template matching the given path, fallback to the fallback argument.
     """

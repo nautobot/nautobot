@@ -2,7 +2,7 @@
 
 A Platform object can hold various information about a device, such as the OS, OS version, and NAPALM driver.
 
-Further information is available in the [Platforms](https://nautobot.readthedocs.io/en/latest/models/dcim/platform/) section of the Nautobot docs.
+Further information is available in the [Platforms](../../models/dcim/platform.md) section of the Nautobot docs.
 
 While use of Platforms is optional, they provide great value in many use cases.
 
@@ -28,7 +28,7 @@ To create a Platform:
     - ios (Cisco)
     - nxos (used with `nxapi` feature)
     - nxos_ssh (used for ssh login)
-    - junos 
+    - junos
 
 ![Add platform](../images/getting-started-nautobot-ui/10-add-platform.png)
 
