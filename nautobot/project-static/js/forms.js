@@ -597,6 +597,19 @@ function jsify_form(context) {
         initializeDynamicChoiceSelection()
     }
 
+    // On change of lookup_field or lookup_type field in filter form reset field value
+    this_context.on("change", ".lookup_field-select, .lookup_type-select", function(){
+        let parent_element = $(this).parents("tr")
+        let lookup_field_element = parent_element.find(".lookup_field-select")
+        let lookup_type_element = parent_element.find(".lookup_type-select")
+        let value_element = parent_element.find(".value-input")
+
+        if ($(this)[0] == lookup_field_element[0])
+            lookup_type_element.val(null).trigger('change')
+        value_element.val(null).trigger('change')
+
+    })
+
 }
 
 $(document).ready((e) => {
