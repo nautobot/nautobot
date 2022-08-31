@@ -320,8 +320,10 @@ class ObjectListView(ObjectPermissionRequiredMixin, View):
 
         if self.filterset_form:
             if request.GET:
-                # Bind form to the values specified in request.GET
+                # TODO timizuo replace filter_form with dynamic_filter_form
+                # TODO Raise Error if filterset not found
                 dynamic_filter_form = DynamicFilterFormSet(model=self.queryset.model, data=request.GET)
+                # Bind form to the values specified in request.GET
                 filter_form = self.filterset_form(filter_params, label_suffix="")
             else:
                 # Use unbound form with default (initial) values

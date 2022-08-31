@@ -3,7 +3,14 @@ from django.conf.urls import include
 from django.urls import path
 from django.views.static import serve
 
-from nautobot.core.views import CustomGraphQLView, HomeView, StaticMediaFailureView, SearchView, LookupFieldsChoicesView, LookupFieldTypeView
+from nautobot.core.views import (
+    CustomGraphQLView,
+    HomeView,
+    StaticMediaFailureView,
+    SearchView,
+    LookupTypeChoicesView,
+    LookupValueChoicesView,
+)
 from nautobot.extras.plugins.urls import (
     plugin_admin_patterns,
     plugin_patterns,
@@ -47,8 +54,8 @@ urlpatterns = [
     # FileProxy attachments download/get URLs used in admin views only
     path("files/", include("db_file_storage.urls")),
     #
-    path("lookup-choices/", LookupFieldsChoicesView.as_view()),
-    path("lookup-field-type/", LookupFieldTypeView.as_view()),
+    path("lookup-choices/", LookupTypeChoicesView.as_view()),
+    path("lookup-field-type/", LookupValueChoicesView.as_view()),
 ]
 
 

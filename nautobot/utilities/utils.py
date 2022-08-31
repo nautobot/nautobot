@@ -726,7 +726,7 @@ def build_lookup_label(field_name, verbose_name=None):
     return verbose_name + label
 
 
-def get_all_field_lookup_exper(model, field_name):
+def get_all_lookup_exper_for_field(model, field_name):
     """
     Return all lookup expressions for `field_name` in `model` filterset
     """
@@ -745,7 +745,32 @@ def get_all_field_lookup_exper(model, field_name):
     return lookup_expr or [{"id": "exact", "name": "exact - Not Found"}]
 
 
-def get_filterset_field_data(model, field_name, initial_choice=None):
+def get_data_for_filterset_parameter(model, parameter, initial_choice=None):
+    """
+    Return relevant data for a filterset parameter which can include `model` api_url, the parameter-type,
+    parameter choices etc.
+
+    Args:
+        model: Filterset model
+        parameter: The filterset parameter e.g has_vlans, last_updated__lte, slug e.t.c
+        initial_choice: [Optional] The filterset parameter value
+
+    Examples:
+        >>> get_data_for_filterset_parameter(<class: nautobot.dcim.models.Site>, "has_vlans")
+        >>> {"type": "static-choice", "choices": [["True", "Yes", ["False", "No"]]], "allow_multiple": False}
+
+        >>> get_data_for_filterset_parameter(<class: nautobot.dcim.models.Site>, "status")
+        >>> {"type": "dynamic-choice", "choices": [], "data_url": "/api/dcim/sites/"}
+
+    Returns:
+        Returns a dict which keys may vary depending on the parameter type
+        e.g relational filed(ForeignKey, ManyToMany e.t.c.), choice field including boolean or char/int field:
+            type: param type either staic-choice/dynamic-choice/others,
+            data_url[for relational field]: param models api endpoint,
+            content_type[for relational field]: (model contenttype),
+            choices[for choice field or if initial_choice is not None]:  param available choices,
+            allow_multiple[for choice field]:  allow multiple choices or not
+    """
     # Avoid circular import
     from nautobot.extras.filters import StatusFilter
     from nautobot.extras.models import Status, Tag
@@ -758,7 +783,7 @@ def get_filterset_field_data(model, field_name, initial_choice=None):
         # TODO Timizuo Raise Error if filterset not found
         pass
 
-    field = filterset.base_filters.get(field_name)
+    field = filterset.base_filters.get(parameter)
     if field is None:
         # TODO Timizuo Raise Error if field not found
         pass
@@ -767,7 +792,7 @@ def get_filterset_field_data(model, field_name, initial_choice=None):
 
     if isinstance(field, (filters.MultipleChoiceFilter, ModelMultipleChoiceFilter)):
         if "choices" in field.extra:  # Field choices
-            # Problem might arise here if plugin developer do not declare field choices using nautobot.utilities.choices.ChoiceSet
+            # Problem might arise here if plugin developer do not declare field inheriting from nautobot.utilities.choices.ChoiceSet
             data = {
                 "type": "static-choices",
                 "choices": field.extra["choices"].CHOICES,
@@ -790,19 +815,19 @@ def get_filterset_field_data(model, field_name, initial_choice=None):
             if related_model in [Status, Tag]:
                 data["content_type"] = json.dumps([contenttype])
 
-            # Set value-field
+            # Set value-field - This is used by DynamicModelChoiceField to set option value
             value_field = field.extra.get("to_field_name")
             if value_field is not None:
                 data["value_field"] = value_field
 
             # Add initial choices if initial_choice is not none
-            # This would be used in select field to populate the default options/choices
+            # This can be used to populate the selected options for the select field
             if initial_choice is not None:
                 search_by = field.extra.get("to_field_name") or "id"
                 values = initial_choice if isinstance(initial_choice, (list, tuple)) else [initial_choice]
                 data["choices"] = compile_model_choices(related_model, search_by, values)
 
-    elif isinstance(field, (RelatedMembershipBooleanFilter, )):  # Yes / No choice
+    elif isinstance(field, (RelatedMembershipBooleanFilter,)):  # Yes / No choice
         data = {
             "type": "static-choices",
             "choices": BOOLEAN_WITH_BLANK_CHOICES,
@@ -813,7 +838,7 @@ def get_filterset_field_data(model, field_name, initial_choice=None):
 
 def compile_model_choices(model, search_by, values):
     """
-    Return a list of tuples of a Model's instance values and its labels
+    Return a list of tuples of `model` instance values and its labels
 
     Examples:
         >>> compile_model_choices(<class: nautobot.dcim.models.Site>, "slug", ["site-1", "site-2"] )

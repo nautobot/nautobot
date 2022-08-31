@@ -1,7 +1,5 @@
-import json
 import os
 import platform
-import re
 import sys
 
 from django.conf import settings
@@ -15,21 +13,20 @@ from django.urls import reverse
 from django.views.decorators.csrf import requires_csrf_token
 from django.views.defaults import ERROR_500_TEMPLATE_NAME, page_not_found
 from django.views.generic import TemplateView, View
-from django_filters import filters, ModelMultipleChoiceFilter
 from packaging import version
 from graphene_django.views import GraphQLView
 
 from nautobot.core.constants import SEARCH_MAX_RESULTS, SEARCH_TYPES
 from nautobot.core.forms import SearchForm
 from nautobot.core.releases import get_latest_release
-from nautobot.extras.filters import StatusFilter
-from nautobot.extras.models import GraphQLQuery, Status, Tag
+from nautobot.extras.models import GraphQLQuery
 from nautobot.extras.registry import registry
 from nautobot.extras.forms import GraphQLQueryForm
 from nautobot.utilities.config import get_settings_or_config
-from nautobot.utilities.filters import RelatedMembershipBooleanFilter
-from nautobot.utilities.forms import BOOLEAN_WITH_BLANK_CHOICES
-from nautobot.utilities.utils import get_filterset_for_model, get_model_api_endpoint
+from nautobot.utilities.utils import (
+    get_data_for_filterset_parameter,
+    get_all_lookup_exper_for_field,
+)
 
 
 class HomeView(AccessMixin, TemplateView):
@@ -215,134 +212,26 @@ class CustomGraphQLView(GraphQLView):
         return render(request, self.graphiql_template, data)
 
 
-class LookupFieldsChoicesView(View):
-    queryset = None
-
-    @staticmethod
-    def __build_lookup_label(field_name, verbose_name):
-        """
-        Return lookup expr with its verbose name
-
-        Args:
-            field_name (str): Field name e.g slug__iew
-            verbose_name (str): The verbose name for the lookup exper which is suffixed to the field name e.g iew -> iendswith
-
-        Examples:
-            >>> __build_lookup_label("slug__iew", "iendswith")
-            >>> "iendswith(iew)"
-        """
-        label = ""
-        search = re.search("__.+$", field_name)
-        if search is not None:
-            text = search.group().replace("__", "")
-            label = f"({text})"
-
-        return verbose_name + label
-
-    def __get_field_lookup_exper(self, filterset, field_name):
-        """
-        Return all lookup expressions for `field_name` in the `filterset`
-        """
-        if field_name.startswith("has_"):
-            return [{"id": field_name, "name": "exact"}]
-
-        lookup_expr = [
-            {
-                "id": name,
-                "name": self.__build_lookup_label(name, field.lookup_expr),
-            }
-            for name, field in filterset.items()
-            if name.startswith(field_name) and not name.startswith("has_")
-        ]
-        return lookup_expr or [{"id": "exact", "name": "exact - Not Found"}]
-
+class LookupTypeChoicesView(View):
     def get(self, request):
         contenttype = request.GET.get("contenttype")
         field_name = request.GET.get("field_name")
-        try:
-            app_label, model_name = contenttype.split(".")
-            contenttype = ContentType.objects.get(app_label=app_label, model=model_name)
-            filterset = get_filterset_for_model(contenttype.model_class())
-            if filterset is not None:
-                lookup_exper = self.__get_field_lookup_exper(filterset.base_filters, field_name)
-            # TODO Timizuo Raise Error if filterset not found
-        except ContentType.DoesNotExist:
-            lookup_exper = []
+        app_label, model_name = contenttype.split(".")
+        model = ContentType.objects.get(app_label=app_label, model=model_name).model_class()
+        data = get_all_lookup_exper_for_field(model, field_name)
 
-        return JsonResponse({
-            "count": len(lookup_exper),
-            "next": None,
-            "previous": None,
-            "results": lookup_exper
-        })
+        # Needs to be returned in this format because this endpoint is used by
+        # DynamicModelChoiceField which requires the response of an api in this exact format
+        return JsonResponse({"count": len(data), "next": None, "previous": None, "results": data})
 
 
-class LookupFieldTypeView(View):
-    """
-    Endpoint which returns either field's api url or choices
-
-    If the model field is a relational field it resolves and returns the endpoint for that fields related_model
-    while if it's a choice field, the choices are returned else returns an empty dict
-    """
-    queryset = None
-
-    @staticmethod
-    def __get_filterset_field_data(field, contenttype):
-        data = {"type": "others"}
-
-        if isinstance(field, (filters.MultipleChoiceFilter, ModelMultipleChoiceFilter)):
-            if "choices" in field.extra:  # Field choices
-                # Problem might arise here if plugin developer do not declare field choices using nautobot.utilities.choices.ChoiceSet
-                data = {
-                    "type": "static-choices",
-                    "choices": field.extra["choices"].CHOICES,
-                    "allow_multiple": True,
-                }
-            elif hasattr(field, "queryset"):  # Dynamically populated choices
-                if isinstance(field, StatusFilter):
-                    related_model = Status
-                else:
-                    related_model = field.extra["queryset"].model
-                api_endpoint = get_model_api_endpoint(related_model)
-
-                if api_endpoint:
-                    data = {
-                        "type": "dynamic-choices",
-                        "data_url": api_endpoint,
-                    }
-                # Status and Tag api requires content_type, to limit result to only related content_types
-                if related_model in [Status, Tag]:
-                    data["content_type"] = json.dumps([contenttype])
-
-                # Set value-field
-                value_field = field.extra.get("to_field_name")
-                if value_field is not None:
-                    data["value_field"] = value_field
-
-        elif isinstance(field, (RelatedMembershipBooleanFilter, )):  # Yes / No choice
-            data = {
-                "type": "static-choices",
-                "choices": BOOLEAN_WITH_BLANK_CHOICES,
-                "allow_multiple": False,
-            }
-        return data
-
+class LookupValueChoicesView(View):
     def get(self, request):
         field_name = request.GET.get("field_name")
 
         contenttype = request.GET.get("contenttype")
         app_label, model_name = contenttype.split(".")
         model = ContentType.objects.get(app_label=app_label, model=model_name).model_class()
-        filterset = get_filterset_for_model(model)
-
-        if filterset is None:
-            # TODO Timizuo Raise Error if filterset not found
-            pass
-
-        field = filterset.base_filters.get(field_name)
-        if field is None:
-            return JsonResponse({field_name: "Field not found in filterset"}, status=400)
-
-        data = self.__get_filterset_field_data(field, contenttype)
+        data = get_data_for_filterset_parameter(model, field_name)
 
         return JsonResponse(data)
