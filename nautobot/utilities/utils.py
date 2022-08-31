@@ -740,7 +740,8 @@ def get_all_lookup_exper_for_field(model, field_name):
             "name": build_lookup_label(name, field.lookup_expr),
         }
         for name, field in filterset.items()
-        if name.startswith(field_name) and not name.startswith("has_")
+        # name without the lookup_expr e.g name__iew -> name
+        if re.sub(r"__\w+", "", name) == field_name and not name.startswith("has_")
     ]
     return lookup_expr or [{"id": "exact", "name": "exact - Not Found"}]
 
