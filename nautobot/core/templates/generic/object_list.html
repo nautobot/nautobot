@@ -62,12 +62,14 @@
 
 <div class="row">
     <div class="col-md-12">
-        {% if filter_form %}
-            <div class="col-md-3 pull-right right-side-panel noprint">
-                {% include 'inc/search_panel.html' %}
-                {% block sidebar %}{% endblock %}
-            </div>
-        {% endif %}
+
+<!--        {% if filter_form %}-->
+<!--            <div class="col-md-3 pull-right right-side-panel noprint">-->
+<!--                {% include 'inc/search_panel.html' %}-->
+<!--                {% block sidebar %}{% endblock %}-->
+<!--            </div>-->
+<!--        {% endif %}-->
+
         {% with bulk_edit_url=content_type.model_class|validated_viewname:"bulk_edit" bulk_delete_url=content_type.model_class|validated_viewname:"bulk_delete" %}
         {% if permissions.change or permissions.delete %}
             <form method="post" class="form form-horizontal">
@@ -130,6 +132,17 @@
 <script src="{% static 'js/tableconfig.js' %}"></script>
 <script src="{% static 'jquery/jquery.formset.js' %}"></script>
 <script>
+    $('.formset_row-dynamic-filterform').formset({
+        addText: '<span class="mdi mdi-plus-thick" aria-hidden="true"></span> Add another Filter',
+        addCssClass: 'btn btn-primary add-row',
+        deleteText: '<span class="mdi mdi-trash-can-outline" aria-hidden="true"></span>',
+        deleteCssClass: 'btn btn-danger delete-row',
+        prefix: 'form',
+        formCssClass: 'dynamic-filterform',
+        added: jsify_form
+    });
+
+    // Remove an applied filter
     $(".remove-filter-param").on("click", function(){
         let query_params = location.search
         let type = $(this).attr("data-field-type")
