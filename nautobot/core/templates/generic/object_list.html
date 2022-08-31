@@ -19,7 +19,7 @@
     {% if request.user.is_authenticated and table_config_form %}
         <button type="button" class="btn btn-default" data-toggle="modal" data-target="#ObjectTable_config" title="Configure table"><i class="mdi mdi-cog"></i> Configure</button>
     {% endif %}
-    <button type="button" class="btn btn-default" data-toggle="modal" data-target="#DynamicFilterForm_modal" title="Configure filter form"><i class="mdi mdi-form-dropdown"></i> Filter Form</button>
+    <button type="button" class="btn btn-default" data-toggle="modal" data-target="#DynamicFilterForm_modal" title="Add filters"><i class="mdi mdi-filter-cog"></i> Filter</button>
     {% if permissions.add and 'add' in action_buttons %}
         {% add_button content_type.model_class|validated_viewname:"add" %}
     {% endif %}
