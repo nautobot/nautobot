@@ -28,6 +28,8 @@ include = [
     "CONTRIBUTING.md",
     "LICENSE.txt",
     "NOTICE",
+    # Poetry by default will exclude these files as they are in .gitignore
+    "nautobot/project-static/docs/**/*",
 ]
 
 [tool.poetry.dependencies]
