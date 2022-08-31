@@ -1344,8 +1344,8 @@ class ComponentCreateView(GetReturnURLMixin, ObjectPermissionRequiredMixin, View
                         elif field == "label":
                             field = "label_pattern"
                         for e in errors:
-                            e = ", ".join(e)
-                            form.add_error(field, f"{name}: {e}")
+                            err_str = ", ".join(e)
+                            form.add_error(field, f"{name}: {err_str}")
 
             if not form.errors:
 
@@ -1463,10 +1463,10 @@ class BulkComponentCreateView(GetReturnURLMixin, ObjectPermissionRequiredMixin, 
                                         errors,
                                     ) in component_form.errors.as_data().items():
                                         for e in errors:
-                                            e = ", ".join(e)
+                                            err_str = ", ".join(e)
                                             form.add_error(
                                                 field,
-                                                f"{obj} {name}: {e}",
+                                                f"{obj} {name}: {err_str}",
                                             )
 
                         # Enforce object-level permissions

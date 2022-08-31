@@ -313,7 +313,10 @@ class FrontPortTemplate(ComponentTemplateModel):
         # Validate rear port position assignment
         if self.rear_port_position > self.rear_port.positions:
             raise ValidationError(
-                f"Invalid rear port position ({self.rear_port_position}); rear port {self.rear_port.name} has only {self.rear_port.positions} positions"
+                (
+                    f"Invalid rear port position ({self.rear_port_position}); "
+                    f"rear port {self.rear_port.name} has only {self.rear_port.positions} positions"
+                )
             )
 
     def instantiate(self, device):

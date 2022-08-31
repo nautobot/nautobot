@@ -312,7 +312,10 @@ class Aggregate(PrimaryModel):
             if covering_aggregates:
                 raise ValidationError(
                     {
-                        "prefix": f"Aggregates cannot overlap. {self.prefix} is already covered by an existing aggregate ({covering_aggregates[0]})."
+                        "prefix": (
+                            "Aggregates cannot overlap. "
+                            f"{self.prefix} is already covered by an existing aggregate ({covering_aggregates[0]})."
+                        )
                     }
                 )
 

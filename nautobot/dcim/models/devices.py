@@ -746,8 +746,10 @@ class Device(PrimaryModel, ConfigContextModel, StatusModel):
             if self.platform.manufacturer and self.platform.manufacturer != self.device_type.manufacturer:
                 raise ValidationError(
                     {
-                        "platform": f"The assigned platform is limited to {self.platform.manufacturer} device types, but this device's type belongs "
-                        f"to {self.device_type.manufacturer}."
+                        "platform": (
+                            f"The assigned platform is limited to {self.platform.manufacturer} device types, "
+                            f"but this device's type belongs to {self.device_type.manufacturer}."
+                        )
                     }
                 )
 

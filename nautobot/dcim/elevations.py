@@ -36,9 +36,14 @@ class RackElevationSVG:
 
     @staticmethod
     def _get_device_description(device):
-        asset_tag = device.asset_tag or ""
-        serial = device.serial or ""
-        return f"{device.name} ({device.device_role}) — {device.device_type.display} ({device.device_type.u_height}U) {asset_tag} {serial}"
+        return "{} ({}) — {} ({}U) {} {}".format(  # pylint: disable=C0209
+            device.name,
+            device.device_role,
+            device.device_type.display,
+            device.device_type.u_height,
+            device.asset_tag or "",
+            device.serial or "",
+        )
 
     @staticmethod
     def _add_gradient(drawing, id_, color):
@@ -154,7 +159,7 @@ class RackElevationSVG:
     @staticmethod
     def _draw_empty(drawing, rack, start, end, text, id_, face_id, class_, reservation):
         reverse_url = reverse("dcim:device_add")
-        url_encode = urlencode(
+        query_params = urlencode(
             {
                 "rack": rack.pk,
                 "site": rack.site.pk,
@@ -164,7 +169,7 @@ class RackElevationSVG:
         )
         link = drawing.add(
             drawing.a(
-                href=f"{reverse_url}?{url_encode}",
+                href=f"{reverse_url}?{query_params}",
                 target="_top",
             )
         )

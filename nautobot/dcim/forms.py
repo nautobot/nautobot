@@ -1468,8 +1468,10 @@ class FrontPortTemplateCreateForm(ComponentTemplateCreateForm):
         if front_port_count != rear_port_count:
             raise forms.ValidationError(
                 {
-                    "rear_port_set": f"The provided name pattern will create {front_port_count} ports, however {rear_port_count} rear port assignments "
-                    "were selected. These counts must match."
+                    "rear_port_set": (
+                        f"The provided name pattern will create {front_port_count} ports, "
+                        f"however {rear_port_count} rear port assignments were selected. These counts must match."
+                    )
                 }
             )
 
@@ -3131,8 +3133,10 @@ class FrontPortCreateForm(ComponentCreateForm):
         if front_port_count != rear_port_count:
             raise forms.ValidationError(
                 {
-                    "rear_port_set": f"The provided name pattern will create {front_port_count} ports, however {rear_port_count} rear port assignments "
-                    "were selected. These counts must match."
+                    "rear_port_set": (
+                        f"The provided name pattern will create {front_port_count} ports, "
+                        f"however {rear_port_count} rear port assignments were selected. These counts must match."
+                    )
                 }
             )
 

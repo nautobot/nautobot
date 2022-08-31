@@ -1006,20 +1006,24 @@ query {
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     def test_query_config_context_and_custom_field_data(self):
 
-        query = f"""
-        query {{
-            devices {{
-                name
-                config_context
-                _custom_field_data
-            }}
-            device (id: "{self.device1.id}") {{
-                name
-                config_context
-                _custom_field_data
-            }}
-        }}
-        """
+        query = (
+            ""  # pylint: disable=C0209
+            """
+                query {
+                    devices {
+                        name
+                        config_context
+                        _custom_field_data
+                    }
+                    device (id: "%s") {
+                        name
+                        config_context
+                        _custom_field_data
+                    }
+                }
+            """
+            % (self.device1.id)
+        )
 
         expected_data = {"a": 123, "b": 456, "c": 777}
 
@@ -1166,19 +1170,24 @@ query {
         """Test queries involving relationship associations."""
 
         # Query testing for https://github.com/nautobot/nautobot/issues/1228
-        query = f"""
-        query {{
-            device (id: "{self.device1.id}") {{
-                name
-                rel_device_to_vm {{
-                    id
-                }}
-                rel_device_group {{
-                    id
-                }}
-            }}
-        }}
-        """
+
+        query = (
+            ""  # pylint: disable=C0209
+            """
+                query {
+                    device (id: "%s") {
+                        name
+                        rel_device_to_vm {
+                            id
+                        }
+                        rel_device_group {
+                            id
+                        }
+                    }
+                }
+            """
+            % (self.device1.id)
+        )
         result = self.execute_query(query)
 
         self.assertIsInstance(result.data, dict, result)

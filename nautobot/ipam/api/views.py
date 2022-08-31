@@ -236,8 +236,10 @@ class PrefixViewSet(StatusViewSetMixin, NautobotModelViewSet):
                 if available_ips.size < len(requested_ips):
                     return Response(
                         {
-                            "detail": f"An insufficient number of IP addresses are available within the prefix {prefix} ({len(requested_ips)} "
-                            f"requested, {len(available_ips)} available)"
+                            "detail": (
+                                f"An insufficient number of IP addresses are available within the prefix {prefix} "
+                                f"({len(requested_ips)} requested, {len(available_ips)} available)"
+                            )
                         },
                         status=status.HTTP_204_NO_CONTENT,
                     )
