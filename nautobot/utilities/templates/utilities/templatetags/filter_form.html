@@ -9,40 +9,49 @@
                 <h4 class="modal-title">Filter Form</h4>
             </div>
             <div class="modal-body">
-                <form class="form-horizontal" method="get" action=".">
-                    <div class="">
-                        <table class="table" id="secrets" style="table-layout: fixed;">
-                            {{ form.management_form }}
-                            {% for form in form %}
-                                {% if forloop.first %}
-                                    <thead>
-                                        <tr>
-                                            {% for field in form.visible_fields %}
-                                                <th>{{ field.label|capfirst }}</th>
-                                            {% endfor %}
-                                        </tr>
-                                    </thead>
-                                {% endif %}
-                                <tr class="formset_row-dynamic-filterform">
-                                    {% for field in form.visible_fields %}
-                                        <td>
-                                            {{ field }}
-                                        </td>
-                                    {% endfor %}
-                                </tr>
-                            {% endfor %}
-                        </table>
-                    </div>
+                {% if form %}
+                    <form class="form-horizontal" method="get" action=".">
+                        <div class="">
+                            <table class="table" id="secrets" style="table-layout: fixed;">
+                                {{ form.management_form }}
+                                {% for form in form %}
+                                    {% if forloop.first %}
+                                        <thead>
+                                            <tr>
+                                                {% for field in form.visible_fields %}
+                                                    <th>{{ field.label|capfirst }}</th>
+                                                {% endfor %}
+                                            </tr>
+                                        </thead>
+                                    {% endif %}
+                                    <tr class="formset_row-dynamic-filterform">
+                                        {% for field in form.visible_fields %}
+                                            <td>
+                                                {{ field }}
+                                            </td>
+                                        {% endfor %}
+                                    </tr>
+                                {% endfor %}
+                            </table>
+                        </div>
 
-                    <div class="text-right noprint">
-                        <button type="submit" class="btn btn-info">
-                            <span class="mdi mdi-magnify" aria-hidden="true"></span> Apply
-                        </button>
-                        <a href="." class="btn btn-default">
-                            <span class="mdi mdi-close-thick" aria-hidden="true"></span> Clear
-                        </a>
+                        <div class="text-right noprint">
+                            <button type="submit" class="btn btn-info">
+                                <span class="mdi mdi-magnify" aria-hidden="true"></span> Apply
+                            </button>
+                            <a href="." class="btn btn-default">
+                                <span class="mdi mdi-close-thick" aria-hidden="true"></span> Clear
+                            </a>
+                        </div>
+                    </form>
+                {% else %}
+                    <div class="alert alert-warning">
+                        <b>
+                            <i class="mdi mdi-alert"></i>
+                            Please create a FilterSet for this model to use this feature.
+                        </b>
                     </div>
-                </form>
+                {% endif %}
 
             </div>
         </div>

@@ -743,7 +743,7 @@ def get_all_lookup_exper_for_field(model, field_name):
         # name without the lookup_expr e.g name__iew -> name
         if re.sub(r"__\w+", "", name) == field_name and not name.startswith("has_")
     ]
-    return lookup_expr or [{"id": "exact", "name": "exact - Not Found"}]
+    return lookup_expr
 
 
 def get_data_for_filterset_parameter(model, parameter, initial_choice=None):
