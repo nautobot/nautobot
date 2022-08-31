@@ -215,7 +215,7 @@ class NetHost(Lookup):
     def as_sql(self, qn, connection):
         lhs, lhs_params = self.process_lhs(qn, connection)
         rhs, rhs_params = self.process_rhs(qn, connection)
-        return "%s = %s" % (lhs, rhs), lhs_params + rhs_params
+        return f"{lhs} = {rhs}", lhs_params + rhs_params
 
 
 class NetIn(Lookup):
@@ -269,9 +269,9 @@ class NetFamily(Lookup):
     def process_lhs(self, qn, connection, lhs=None):
         lhs = lhs or self.lhs
         lhs_string, lhs_params = qn.compile(lhs)
-        return "LENGTH(%s)" % lhs_string, lhs_params
+        return f"LENGTH({lhs_string})", lhs_params
 
     def as_sql(self, qn, connection):
         lhs, lhs_params = self.process_lhs(qn, connection)
         rhs, rhs_params = self.process_rhs(qn, connection)
-        return "%s = %s" % (lhs, rhs), lhs_params + rhs_params
+        return f"{lhs} = {rhs}", lhs_params + rhs_params

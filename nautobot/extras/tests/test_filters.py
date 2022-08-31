@@ -221,7 +221,7 @@ class ConfigContextTestCase(FilterTestCases.FilterTestCase):
         for i in range(0, 3):
             is_active = bool(i % 2)
             c = ConfigContext.objects.create(
-                name="Config Context {}".format(i + 1),
+                name=f"Config Context {i + 1}",
                 is_active=is_active,
                 data='{"foo": 123}',
             )

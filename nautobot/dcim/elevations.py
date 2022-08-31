@@ -36,14 +36,9 @@ class RackElevationSVG:
 
     @staticmethod
     def _get_device_description(device):
-        return "{} ({}) — {} ({}U) {} {}".format(
-            device.name,
-            device.device_role,
-            device.device_type.display,
-            device.device_type.u_height,
-            device.asset_tag or "",
-            device.serial or "",
-        )
+        asset_tag = device.asset_tag or ""
+        serial = device.serial or ""
+        return f"{device.name} ({device.device_role}) — {device.device_type.display} ({device.device_type.u_height}U) {asset_tag} {serial}"
 
     @staticmethod
     def _add_gradient(drawing, id_, color):
@@ -66,7 +61,7 @@ class RackElevationSVG:
         drawing = svgwrite.Drawing(size=(width, height))
 
         # add the stylesheet
-        with open("{}/css/rack_elevation.css".format(settings.STATICFILES_DIRS[0])) as css_file:
+        with open(f"{settings.STATICFILES_DIRS[0]}/css/rack_elevation.css") as css_file:
             drawing.defs.add(drawing.style(css_file.read()))
 
         # add gradients
@@ -85,16 +80,17 @@ class RackElevationSVG:
         device_shortname = settings.UI_RACK_VIEW_TRUNCATE_FUNCTION(str(device)) + devicebay_details
 
         color = device.device_role.color
+        reverse_url = reverse("dcim:device", kwargs={"pk": device.pk})
         link = drawing.add(
             drawing.a(
-                href="{}{}".format(self.base_url, reverse("dcim:device", kwargs={"pk": device.pk})),
+                href=f"{self.base_url}{reverse_url}",
                 target="_top",
                 fill="black",
             )
         )
         link.set_desc(self._get_device_description(device))
-        link.add(drawing.rect(start, end, style="fill: #{}".format(color), class_="slot"))
-        hex_color = "#{}".format(foreground_color(color))
+        link.add(drawing.rect(start, end, style=f"fill: #{color}", class_="slot"))
+        hex_color = f"#{foreground_color(color)}"
         link.add(
             drawing.text(
                 device_fullname,
@@ -157,24 +153,23 @@ class RackElevationSVG:
 
     @staticmethod
     def _draw_empty(drawing, rack, start, end, text, id_, face_id, class_, reservation):
+        reverse_url = reverse("dcim:device_add")
+        url_encode = urlencode(
+            {
+                "rack": rack.pk,
+                "site": rack.site.pk,
+                "face": face_id,
+                "position": id_,
+            }
+        )
         link = drawing.add(
             drawing.a(
-                href="{}?{}".format(
-                    reverse("dcim:device_add"),
-                    urlencode(
-                        {
-                            "rack": rack.pk,
-                            "site": rack.site.pk,
-                            "face": face_id,
-                            "position": id_,
-                        }
-                    ),
-                ),
+                href=f"{reverse_url}?{url_encode}",
                 target="_top",
             )
         )
         if reservation:
-            link.set_desc("{} — {} · {}".format(reservation.description, reservation.user, reservation.created))
+            link.set_desc(f"{reservation.description} — {reservation.user} · {reservation.created}")
         link.add(drawing.rect(start, end, class_=class_))
         link.add(drawing.text("add device", insert=text, class_="add-device"))
 

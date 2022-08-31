@@ -75,8 +75,8 @@ class ModelViewTestCase(ModelTestCase):
         to a different app (e.g. testing Interfaces within the virtualization app).
         """
         if self.model._meta.app_label in settings.PLUGINS:
-            return "plugins:{}:{}_{{}}".format(self.model._meta.app_label, self.model._meta.model_name)
-        return "{}:{}_{{}}".format(self.model._meta.app_label, self.model._meta.model_name)
+            return f"plugins:{self.model._meta.app_label}:{self.model._meta.model_name}_{{}}"
+        return f"{self.model._meta.app_label}:{self.model._meta.model_name}_{{}}"
 
     def _get_url(self, action, instance=None):
         """
@@ -637,7 +637,7 @@ class ViewTestCases:
 
             # Built-in CSV export
             if hasattr(self.model, "csv_headers"):
-                response = self.client.get("{}?export".format(self._get_url("list")))
+                response = self.client.get(f"{self._get_url('list')}?export")
                 self.assertHttpStatus(response, 200)
                 self.assertEqual(response.get("Content-Type"), "text/csv")
 

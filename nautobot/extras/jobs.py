@@ -663,7 +663,7 @@ class StringVar(ScriptVariable):
             self.field_attrs["validators"] = [
                 RegexValidator(
                     regex=regex,
-                    message="Invalid value. Must match regex: {}".format(regex),
+                    message=f"Invalid value. Must match regex: {regex}",
                     code="invalid",
                 )
             ]

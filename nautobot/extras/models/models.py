@@ -400,7 +400,7 @@ class ExportTemplate(BaseModel, ChangeLoggedModel, RelationshipModel, NotesMixin
     def __str__(self):
         if self.owner:
             return f"[{self.owner}] {self.content_type}: {self.name}"
-        return "{}: {}".format(self.content_type, self.name)
+        return f"{self.content_type}: {self.name}"
 
     def render(self, queryset):
         """
@@ -423,12 +423,9 @@ class ExportTemplate(BaseModel, ChangeLoggedModel, RelationshipModel, NotesMixin
 
         # Build the response
         response = HttpResponse(output, content_type=mime_type)
-        filename = "{}{}{}".format(
-            settings.BRANDING_PREPENDED_FILENAME,
-            queryset.model._meta.verbose_name_plural,
-            ".{}".format(self.file_extension) if self.file_extension else "",
-        )
-        response["Content-Disposition"] = 'attachment; filename="{}"'.format(filename)
+        extension = f".{self.file_extension}" if self.file_extension else ""
+        filename = f"{settings.BRANDING_PREPENDED_FILENAME}{queryset.model._meta.verbose_name_plural}{extension}"
+        response["Content-Disposition"] = f'attachment; filename="{filename}"'
 
         return response
 

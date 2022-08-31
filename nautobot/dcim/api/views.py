@@ -484,7 +484,7 @@ class DeviceViewSet(ConfigContextQuerySetMixin, StatusViewSetMixin, NautobotMode
             driver = napalm.get_network_driver(device.platform.napalm_driver)
         except ModuleImportError:
             raise ServiceUnavailable(
-                "NAPALM driver for platform {} not found: {}.".format(device.platform, device.platform.napalm_driver)
+                f"NAPALM driver for platform {device.platform} not found: {device.platform.napalm_driver}."
             )
 
         # Verify user permission
@@ -567,7 +567,7 @@ class DeviceViewSet(ConfigContextQuerySetMixin, StatusViewSetMixin, NautobotMode
         try:
             d.open()
         except Exception as e:
-            raise ServiceUnavailable("Error connecting to the device at {}: {}".format(host, e))
+            raise ServiceUnavailable(f"Error connecting to the device at {host}: {e}")
 
         # Validate and execute each specified NAPALM method
         for method in napalm_methods:
@@ -580,9 +580,9 @@ class DeviceViewSet(ConfigContextQuerySetMixin, StatusViewSetMixin, NautobotMode
             try:
                 response[method] = getattr(d, method)()
             except NotImplementedError:
-                response[method] = {"error": "Method {} not implemented for NAPALM driver {}".format(method, driver)}
+                response[method] = {"error": f"Method {method} not implemented for NAPALM driver {driver}"}
             except Exception as e:
-                response[method] = {"error": "Method {} failed: {}".format(method, e)}
+                response[method] = {"error": f"Method {method} failed: {e}"}
         d.close()
 
         return Response(response)

@@ -48,7 +48,7 @@ class APITestCase(ModelTestCase):
         # Do not initialize the client, it conflicts with the APIClient.
         super().setUpNautobot(client=False)
         self.token = Token.objects.create(user=self.user)
-        self.header = {"HTTP_AUTHORIZATION": "Token {}".format(self.token.key)}
+        self.header = {"HTTP_AUTHORIZATION": f"Token {self.token.key}"}
         if self.api_version:
             self.set_api_version(self.api_version)
 
@@ -704,4 +704,4 @@ class APITransactionTestCase(_APITransactionTestCase, NautobotTestCaseMixin):
         self.user.is_superuser = True
         self.user.save()
         self.token = Token.objects.create(user=self.user)
-        self.header = {"HTTP_AUTHORIZATION": "Token {}".format(self.token.key)}
+        self.header = {"HTTP_AUTHORIZATION": f"Token {self.token.key}"}
