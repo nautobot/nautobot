@@ -162,7 +162,7 @@ WORKDIR /source
 # pyuwsgi wheel doesn't support ssl so we build it from source
 # https://github.com/nautobot/nautobot/issues/193
 RUN pip install --no-cache-dir --no-binary=pyuwsgi pyuwsgi==${PYUWSGI_VER} && \
-    poetry install --no-root --no-dev --no-ansi --extras all
+    poetry install --no-root --only main --no-ansi --extras all
 
 ################################ Stage: dependencies-dev-python (intermediate build target)
 # We need dev dependencies for building the docs but don't want them in the final build image
@@ -171,7 +171,7 @@ RUN pip install --no-cache-dir --no-binary=pyuwsgi pyuwsgi==${PYUWSGI_VER} && \
 
 FROM dependencies as dependencies-dev-python
 
-# Development-specific dependencies of Nautobot
+# Add development-specific dependencies of Nautobot to the installation
 RUN poetry install --no-root --no-ansi --extras all
 
 ################################ Stage: build-docs (intermediate build target)
@@ -253,7 +253,7 @@ CMD ["nautobot-server", "runserver", "0.0.0.0:8080", "--insecure"]
 
 FROM dependencies-dev as dev
 
-RUN poetry install --no-ansi && \
+RUN poetry install --no-ansi --extras all && \
     rm -rf /source
 
 ################################ Stage: final-dev (development environment for Nautobot plugins)
@@ -262,6 +262,11 @@ FROM dependencies-dev as final-dev
 
 RUN pip install --no-deps --no-cache-dir /source/dist/*.whl && \
     rm -rf /source
+
+# Remove Poetry's cache of PyPI files to keep image size down
+# poetry cache clear --no-interactive actually doesn't clear anything - see
+# https://github.com/python-poetry/poetry/issues/4998
+RUN yes | poetry cache clear --all PyPI
 
 ################################ Stage: final (production-ready image)
 
