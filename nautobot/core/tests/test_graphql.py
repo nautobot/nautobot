@@ -1007,7 +1007,7 @@ query {
     def test_query_config_context_and_custom_field_data(self):
 
         query = (
-            ""  # pylint: disable=C0209
+            # pylint: disable=consider-using-f-string
             """
                 query {
                     devices {
@@ -1172,7 +1172,7 @@ query {
         # Query testing for https://github.com/nautobot/nautobot/issues/1228
 
         query = (
-            ""  # pylint: disable=C0209
+            # pylint: disable=consider-using-f-string
             """
                 query {
                     device (id: "%s") {

@@ -36,7 +36,7 @@ class RackElevationSVG:
 
     @staticmethod
     def _get_device_description(device):
-        return "{} ({}) — {} ({}U) {} {}".format(  # pylint: disable=C0209
+        return "{} ({}) — {} ({}U) {} {}".format(  # pylint: disable=consider-using-f-string
             device.name,
             device.device_role,
             device.device_type.display,

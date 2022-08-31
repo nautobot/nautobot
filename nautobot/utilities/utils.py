@@ -90,7 +90,7 @@ def rgb_to_hex(r, g, b):
     """
     Map r, g, b values to a hex string.
     """
-    return "%02x%02x%02x" % (r, g, b)  # pylint: disable=C0209
+    return "%02x%02x%02x" % (r, g, b)  # pylint: disable=consider-using-f-string
 
 
 def foreground_color(bg_color):
