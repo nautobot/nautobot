@@ -266,6 +266,7 @@ RUN pip install --no-deps --no-cache-dir /source/dist/*.whl && \
 # Remove Poetry's cache of PyPI files to keep image size down
 # poetry cache clear --no-interactive actually doesn't clear anything - see
 # https://github.com/python-poetry/poetry/issues/4998
+# hadolint ignore=DL4006
 RUN yes | poetry cache clear --all PyPI
 
 ################################ Stage: final (production-ready image)
