@@ -352,6 +352,7 @@ class CustomFieldForm(BootstrapMixin, forms.ModelForm):
         model = CustomField
         fields = (
             "label",
+            "grouping",
             "slug",
             "type",
             "weight",
