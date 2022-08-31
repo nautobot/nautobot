@@ -1211,15 +1211,26 @@ def run_job(data, request, job_result_pk, commit=True, *args, **kwargs):
             job_result.schedule.save()
 
         # Perform any post-run tasks
+        # 2.0 TODO Remove post_run() method entirely
         job.active_test = "post_run"
-        output = job.post_run()
-        if output:
-            job.results["output"] += "\n" + str(output)
+        try:
+            output = job.post_run()
+        except Exception as exc:
+            stacktrace = traceback.format_exc()
+            message = (
+                f"An exception occurred during job post_run(): `{type(exc).__name__}: {exc}`\n```\n{stacktrace}\n```"
+            )
+            output = message
+            job.log_failure(message=message)
+            job_result.set_status(JobResultStatusChoices.STATUS_ERRORED)
+        finally:
+            if output:
+                job.results["output"] += "\n" + str(output)
 
-        job_result.completed = timezone.now()
-        job_result.save()
+            job_result.completed = timezone.now()
+            job_result.save()
 
-        job.logger.info(f"Job completed in {job_result.duration}")
+            job.logger.info(f"Job completed in {job_result.duration}")
 
     # Execute the job. If commit == True, wrap it with the change_logging context manager to ensure we
     # process change logs, webhooks, etc.

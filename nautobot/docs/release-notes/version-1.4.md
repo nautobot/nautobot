@@ -178,6 +178,7 @@ The `settings_and_registry` default context processor was changed to purely `set
 ### Fixed
 
 - [#449](https://github.com/nautobot/nautobot/issues/449) - Improved error checking and reporting when syncing Git repositories.
+- [#1807](https://github.com/nautobot/nautobot/issues/1807) - Fixed post_run method fails to add exceptions to job log.
 - [#2085](https://github.com/nautobot/nautobot/issues/2085) - The log entries table on a job result page can now be filtered by log level or message and hitting the return key has no effect.
 - [#2107](https://github.com/nautobot/nautobot/issues/2107) - Fixed a TypeError when a view defines `action_buttons = None`.
 - [#2237](https://github.com/nautobot/nautobot/issues/2237) - Fixed several issues with permissions enforcement for Note creation and viewing.
@@ -186,6 +187,7 @@ The `settings_and_registry` default context processor was changed to purely `set
 - [#2278](https://github.com/nautobot/nautobot/issues/2278) - Fixed incorrect permissions check on "Installed Plugins" menu item.
 - [#2290](https://github.com/nautobot/nautobot/issues/2290) - Fixed inheritance of ObjectListViewMixin for CircuitTypeUIViewSet.
 - [#2311](https://github.com/nautobot/nautobot/issues/2311) - Fixed autopopulation of "Parent" selection when editing an existing Location.
+- [#2341](https://github.com/nautobot/nautobot/issues/2341) - Fixed omission of docs from published Python packages.
 
 ## v1.4.1 (2022-08-22)
 
