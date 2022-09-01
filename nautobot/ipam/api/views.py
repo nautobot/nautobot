@@ -140,7 +140,9 @@ class PrefixViewSet(StatusViewSetMixin, NautobotModelViewSet):
         prefix = get_object_or_404(self.queryset, pk=pk)
         if request.method == "POST":
 
-            with cache.lock("available-prefixes", blocking_timeout=5):
+            with cache.lock(
+                "available-prefixes", blocking_timeout=5, timeout=get_settings_or_config("AVAILABLE_PREFIX_TIMEOUT")
+            ):
                 available_prefixes = prefix.get_available_prefixes()
 
                 # Validate Requested Prefixes' length

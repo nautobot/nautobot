@@ -53,6 +53,16 @@ Please see the [official Django documentation on `ADMINS`](https://docs.djangopr
 
 ---
 
+## AVAILABLE_PREFIX_TIMEOUT
+
+Defaul: `600`
+
+Environment Variable: `NAUTOBOT_AVAILABLE_PREFIX_TIMEOUT`
+
+Prevents a deadlock scenario where a Redis lock is achieved upon performing API to `/api/ipam/prefixes/{id}/available-prefixes/`. Default is set to 600 seconds (10 minutes) to be longer than any theorhetical API call time. This is to prevent a deadlock scenario where the server did not gracefully exit the with block when acquiring the Redis lock.
+
+---
+
 ## ALLOWED_URL_SCHEMES
 
 Default: `('file', 'ftp', 'ftps', 'http', 'https', 'irc', 'mailto', 'sftp', 'ssh', 'tel', 'telnet', 'tftp', 'vnc', 'xmpp')`

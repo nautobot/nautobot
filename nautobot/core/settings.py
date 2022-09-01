@@ -76,7 +76,7 @@ GIT_ROOT = os.getenv("NAUTOBOT_GIT_ROOT", os.path.join(NAUTOBOT_ROOT, "git").rst
 HTTP_PROXIES = None
 JOBS_ROOT = os.getenv("NAUTOBOT_JOBS_ROOT", os.path.join(NAUTOBOT_ROOT, "jobs").rstrip("/"))
 MAINTENANCE_MODE = False
-
+AVAILABLE_PREFIX_TIMEOUT = int(os.getenv("NAUTOBOT_AVAILABLE_PREFIX_TIMEOUT", 600))
 # Metrics
 METRICS_ENABLED = False
 
