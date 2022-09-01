@@ -20,7 +20,7 @@ from django.utils.tree import Node
 from django.template import engines
 from django.utils.module_loading import import_string
 from django.utils.text import slugify
-from django_filters import ModelMultipleChoiceFilter, filters
+from django_filters import ModelMultipleChoiceFilter, filters, BooleanFilter
 from taggit.managers import _TaggableManager
 
 from nautobot.dcim.choices import CableLengthUnitChoices
@@ -804,6 +804,7 @@ def get_data_for_filterset_parameter(model, parameter, initial_choice=None):
                 related_model = Status
             else:
                 related_model = field.extra["queryset"].model
+            # TODO: timizuo use get_route_for_model() inplace of get_model_api_endpoint when PR-#2223 gets merged
             api_endpoint = get_model_api_endpoint(related_model)
 
             if api_endpoint:
@@ -828,7 +829,7 @@ def get_data_for_filterset_parameter(model, parameter, initial_choice=None):
                 values = initial_choice if isinstance(initial_choice, (list, tuple)) else [initial_choice]
                 data["choices"] = compile_model_choices(related_model, search_by, values)
 
-    elif isinstance(field, (RelatedMembershipBooleanFilter,)):  # Yes / No choice
+    elif isinstance(field, (BooleanFilter,)):  # Yes / No choice
         data = {
             "type": "static-choices",
             "choices": BOOLEAN_WITH_BLANK_CHOICES,
