@@ -55,7 +55,7 @@ Please see the [official Django documentation on `ADMINS`](https://docs.djangopr
 
 ## AVAILABLE_PREFIX_TIMEOUT
 
-Defaul: `600`
+Default: `600`
 
 Environment Variable: `NAUTOBOT_AVAILABLE_PREFIX_TIMEOUT`
 
