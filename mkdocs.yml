@@ -101,8 +101,7 @@ nav:
           - Deploying Nautobot Services: "installation/services.md"
           - Configuring an HTTP Server: "installation/http-server.md"
           - External Authentication (Optional): "installation/external-authentication.md"
-      - Docker:
-          - Overview: "docker/index.md"
+          - Nautobot Docker Images: "docker/index.md"
       - Migration:
           - Migrating from NetBox: "installation/migrating-from-netbox.md"
           - Upgrading Nautobot: "installation/upgrading.md"
@@ -115,11 +114,13 @@ nav:
           - LDAP: "configuration/authentication/ldap.md"
           - SSO: "configuration/authentication/sso.md"
           - Remote Header: "configuration/authentication/remote.md"
+      - Administration:
+          - Nautobot Server: "administration/nautobot-server.md"
+          - Nautobot Shell: "administration/nautobot-shell.md"
+          - Permissions: "administration/permissions.md"
+          - Replicating Nautobot: "administration/replicating-nautobot.md"
       - User Guides:
-          - Git as a Data Source: "user-guides/git-data-source.md"
-          - GraphQL: "user-guides/graphql.md"
-      - Getting Started In the Web UI:
-          - "user-guides/getting-started/index.md"
+          - Getting Started In the Web UI: "user-guides/getting-started/index.md"
           - Creating Devices: "user-guides/getting-started/creating-devices.md"
           - Regions: "user-guides/getting-started/regions.md"
           - Platforms: "user-guides/getting-started/platforms.md"
@@ -128,6 +129,8 @@ nav:
           - VLANS and VLAN Groups: "user-guides/getting-started/vlans-and-vlan-groups.md"
           - IP Address Management: "user-guides/getting-started/ipam.md"
           - The Search Bar: "user-guides/getting-started/search-bar.md"
+          - Git as a Data Source: "user-guides/git-data-source.md"
+          - GraphQL: "user-guides/graphql.md"
       - Core Functionality:
           - Circuits: "core-functionality/circuits.md"
           - Devices and Cabling: "core-functionality/devices.md"
@@ -162,25 +165,20 @@ nav:
           - Tags: "models/extras/tag.md"
           - Template Filters: "additional-features/template-filters.md"
           - Webhooks: "models/extras/webhook.md"
-      - Plugins:
-          - Using Plugins: "plugins/index.md"
-          - Developing Plugins: "plugins/development.md"
-          - Porting NetBox Plugins to Nautobot: "plugins/porting-from-netbox.md"
-      - Administration:
-          - Nautobot Server: "administration/nautobot-server.md"
-          - Nautobot Shell: "administration/nautobot-shell.md"
-          - Permissions: "administration/permissions.md"
-          - Replicating Nautobot: "administration/replicating-nautobot.md"
       - REST API:
           - Overview: "rest-api/overview.md"
           - Filtering: "rest-api/filtering.md"
           - Authentication: "rest-api/authentication.md"
       - GraphQL API:
           - Overview: "additional-features/graphql.md"
-  - Development Guide:
+      - Installing and Using Plugins: "plugins/index.md"
+  - Developer Guide:
       - Introduction: "development/index.md"
       - Getting Started: "development/getting-started.md"
       - Advanced Docker Compose Usage: "development/docker-compose-advanced-use-cases.md"
+      - Plugins:
+          - Developing Plugins: "plugins/development.md"
+          - Porting NetBox Plugins to Nautobot: "plugins/porting-from-netbox.md"
       - Best Practices: "development/best-practices.md"
       - Style Guide: "development/style-guide.md"
       - Extending Models: "development/extending-models.md"
