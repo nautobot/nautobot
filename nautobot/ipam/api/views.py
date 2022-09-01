@@ -141,7 +141,7 @@ class PrefixViewSet(StatusViewSetMixin, NautobotModelViewSet):
         if request.method == "POST":
 
             with cache.lock(
-                "available-prefixes", blocking_timeout=5, timeout=get_settings_or_config("AVAILABLE_PREFIX_TIMEOUT")
+                "available-prefixes", blocking_timeout=5, timeout=get_settings_or_config("AVAILABLE_IP_PREFIX_TIMEOUT")
             ):
                 available_prefixes = prefix.get_available_prefixes()
 
@@ -228,7 +228,9 @@ class PrefixViewSet(StatusViewSetMixin, NautobotModelViewSet):
         # Create the next available IP within the prefix
         if request.method == "POST":
 
-            with cache.lock("available-ips", blocking_timeout=5):
+            with cache.lock(
+                "available-ips", blocking_timeout=5, timeout=get_settings_or_config("AVAILABLE_IP_PREFIX_TIMEOUT")
+            ):
 
                 # Normalize to a list of objects
                 requested_ips = request.data if isinstance(request.data, list) else [request.data]
