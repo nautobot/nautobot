@@ -461,15 +461,29 @@ def flake8(context):
     run_command(context, command)
 
 
-@task
-def pylint(context):
+@task(
+    help={
+        "target": "Module or file or directory to inspect, repeatable",
+        "recursive": "Must be set if target is a directory rather than a module or file name",
+    },
+    iterable=["target"],
+)
+def pylint(context, target=None, recursive=False):
     """Perform static analysis of Nautobot code."""
-    # Lint the installed nautobot package and the file tasks.py in the current directory
-    command = "nautobot-server pylint nautobot tasks.py"
-    run_command(context, command)
-    # Lint Python files discovered recursively in the development/ and examples/ directories
-    command = "nautobot-server pylint --recursive development/ examples/"
-    run_command(context, command)
+    if not target:
+        # Lint everything
+        # Lint the installed nautobot package and the file tasks.py in the current directory
+        command = "nautobot-server pylint nautobot tasks.py"
+        run_command(context, command)
+        # Lint Python files discovered recursively in the development/ and examples/ directories
+        command = "nautobot-server pylint --recursive development/ examples/"
+        run_command(context, command)
+    else:
+        command = "nautobot-server pylint "
+        if recursive:
+            command += "--recursive "
+        command += " ".join(target)
+        run_command(context, command)
 
 
 @task

@@ -228,7 +228,6 @@ good-names = """_,i,j,k,pk"""
 # unused-import is already covered by flake8
 disable=""",
     abstract-method,
-    access-member-before-definition,
     arguments-renamed,
     attribute-defined-outside-init,
     broad-except,
@@ -257,8 +256,6 @@ disable=""",
     no-else-raise,
     no-else-return,
     no-member,
-    no-value-for-parameter,
-    not-an-iterable,
     not-callable,
     pointless-statement,
     pointless-string-statement,
@@ -284,7 +281,6 @@ disable=""",
     ungrouped-imports,
     unnecessary-dunder-call,
     unspecified-encoding,
-    unsubscriptable-object,
     unused-argument,
     unused-import,
     unused-wildcard-import,
@@ -300,3 +296,7 @@ notes = """,
     FIXME,
     XXX,
     """
+
+[tool.pylint.typecheck]
+# @patch changes the signature of a function it's applied to; don't raise "no-value-for-parameter" here
+signature-mutators=["unittest.mock.patch"]
