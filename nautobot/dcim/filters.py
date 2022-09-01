@@ -1300,7 +1300,7 @@ class InterfaceFilterSet(
 
     def filter_device(self, queryset, name, value):
         try:
-            devices = Device.objects.filter(**{"{}__in".format(name): value})
+            devices = Device.objects.filter(**{f"{name}__in": value})
             vc_interface_ids = []
             for device in devices:
                 vc_interface_ids.extend(device.vc_interfaces.values_list("id", flat=True))
@@ -1573,7 +1573,7 @@ class CableFilterSet(NautobotFilterSet, StatusModelFilterSetMixin):
 
     def filter_device(self, queryset, name, value):
         queryset = queryset.filter(
-            Q(**{"_termination_a_{}__in".format(name): value}) | Q(**{"_termination_b_{}__in".format(name): value})
+            Q(**{f"_termination_a_{name}__in": value}) | Q(**{f"_termination_b_{name}__in": value})
         )
         return queryset
 

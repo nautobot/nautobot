@@ -133,10 +133,10 @@ class StatusField(models.ForeignKey):
             return force_str(choices_dict.get(make_hashable(value), value), strings_only=True)
 
         # Install `.get_FOO_display()` onto the model using our own version.
-        if "get_%s_display" % self.name not in cls.__dict__:
+        if f"get_{self.name}_display" not in cls.__dict__:
             setattr(
                 cls,
-                "get_%s_display" % self.name,
+                f"get_{self.name}_display",
                 partialmethod(_get_FIELD_display, field=self),
             )
 
@@ -150,10 +150,10 @@ class StatusField(models.ForeignKey):
             return getattr(field_method, "color")
 
         # Install `.get_FOO_color()` onto the model using our own version.
-        if "get_%s_color" % self.name not in cls.__dict__:
+        if f"get_{self.name}_color" not in cls.__dict__:
             setattr(
                 cls,
-                "get_%s_color" % self.name,
+                f"get_{self.name}_color",
                 partialmethod(_get_FIELD_color, field=self),
             )
 

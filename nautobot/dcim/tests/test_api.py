@@ -69,7 +69,7 @@ class AppTest(APITestCase):
     def test_root(self):
 
         url = reverse("dcim-api:api-root")
-        response = self.client.get("{}?format=api".format(url), **self.header)
+        response = self.client.get(f"{url}?format=api", **self.header)
 
         self.assertEqual(response.status_code, 200)
 
@@ -681,7 +681,8 @@ class RackTest(APIViewTestCases.APIViewTestCase):
         """
         rack = Rack.objects.first()
         self.add_permissions("dcim.view_rack")
-        url = "{}?render=svg".format(reverse("dcim-api:rack-elevation", kwargs={"pk": rack.pk}))
+        reverse_url = reverse("dcim-api:rack-elevation", kwargs={"pk": rack.pk})
+        url = f"{reverse_url}?render=svg"
 
         response = self.client.get(url, **self.header)
         self.assertHttpStatus(response, status.HTTP_200_OK)
@@ -696,7 +697,8 @@ class RackTest(APIViewTestCases.APIViewTestCase):
         """
         rack = Rack.objects.first()
         self.add_permissions("dcim.view_rack")
-        url = "{}?render=svg".format(reverse("dcim-api:rack-elevation", kwargs={"pk": rack.pk}))
+        reverse_url = reverse("dcim-api:rack-elevation", kwargs={"pk": rack.pk})
+        url = f"{reverse_url}?render=svg"
 
         response = self.client.get(url, **self.header)
         self.assertHttpStatus(response, status.HTTP_200_OK)
@@ -710,7 +712,8 @@ class RackTest(APIViewTestCases.APIViewTestCase):
         """
         rack = Rack.objects.first()
         self.add_permissions("dcim.view_rack")
-        url = "{}?render=svg".format(reverse("dcim-api:rack-elevation", kwargs={"pk": rack.pk}))
+        reverse_url = reverse("dcim-api:rack-elevation", kwargs={"pk": rack.pk})
+        url = f"{reverse_url}?render=svg"
 
         response = self.client.get(url, **self.header)
         self.assertHttpStatus(response, status.HTTP_200_OK)

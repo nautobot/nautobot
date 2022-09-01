@@ -25,9 +25,7 @@ def get_serializer_for_model(model, prefix=""):
     try:
         return dynamic_import(serializer_name)
     except AttributeError:
-        raise SerializerNotFound(
-            "Could not determine serializer for {}.{} with prefix '{}'".format(app_name, model_name, prefix)
-        )
+        raise SerializerNotFound(f"Could not determine serializer for {app_name}.{model_name} with prefix '{prefix}'")
 
 
 def is_api_request(request):

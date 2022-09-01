@@ -1006,21 +1006,23 @@ query {
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     def test_query_config_context_and_custom_field_data(self):
 
-        query = """
-        query {
-            devices {
-                name
-                config_context
-                _custom_field_data
-            }
-            device (id: "%s") {
-                name
-                config_context
-                _custom_field_data
-            }
-        }
-        """ % (
-            self.device1.id,
+        query = (
+            # pylint: disable=consider-using-f-string
+            """
+                query {
+                    devices {
+                        name
+                        config_context
+                        _custom_field_data
+                    }
+                    device (id: "%s") {
+                        name
+                        config_context
+                        _custom_field_data
+                    }
+                }
+            """
+            % (self.device1.id)
         )
 
         expected_data = {"a": 123, "b": 456, "c": 777}
@@ -1168,20 +1170,23 @@ query {
         """Test queries involving relationship associations."""
 
         # Query testing for https://github.com/nautobot/nautobot/issues/1228
-        query = """
-        query {
-            device (id: "%s") {
-                name
-                rel_device_to_vm {
-                    id
+
+        query = (
+            # pylint: disable=consider-using-f-string
+            """
+                query {
+                    device (id: "%s") {
+                        name
+                        rel_device_to_vm {
+                            id
+                        }
+                        rel_device_group {
+                            id
+                        }
+                    }
                 }
-                rel_device_group {
-                    id
-                }
-            }
-        }
-        """ % (
-            self.device1.id,
+            """
+            % (self.device1.id)
         )
         result = self.execute_query(query)
 

@@ -169,11 +169,9 @@ def process_webhook(webhook_pk, data, model_name, event, timestamp, username, re
 
     if response.ok:
         logger.info("Request succeeded; response status %s", response.status_code)
-        return "Status {} returned, webhook successfully processed.".format(response.status_code)
+        return f"Status {response.status_code} returned, webhook successfully processed."
     else:
         logger.warning("Request failed; response status %s: %s", response.status_code, response.content)
         raise requests.exceptions.RequestException(
-            "Status {} returned with content '{}', webhook FAILED to process.".format(
-                response.status_code, response.content
-            )
+            f"Status {response.status_code} returned with content '{response.content}', webhook FAILED to process."
         )

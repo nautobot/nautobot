@@ -240,9 +240,7 @@ class ClusterAddDevicesForm(BootstrapMixin, forms.Form):
                 if device.site != self.cluster.site:
                     raise ValidationError(
                         {
-                            "devices": "{} belongs to a different site ({}) than the cluster ({})".format(
-                                device, device.site, self.cluster.site
-                            )
+                            "devices": f"{device} belongs to a different site ({device.site}) than the cluster ({self.cluster.site})"
                         }
                     )
 
@@ -344,7 +342,7 @@ class VirtualMachineForm(NautobotModelForm, TenancyForm, LocalContextModelForm):
                 if nat_ips:
                     ip_list = [(ip.id, f"{ip.address} (NAT)") for ip in nat_ips]
                     ip_choices.append(("NAT IPs", ip_list))
-                self.fields["primary_ip{}".format(family)].choices = ip_choices
+                self.fields[f"primary_ip{family}"].choices = ip_choices
 
         else:
 

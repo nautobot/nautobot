@@ -475,7 +475,7 @@ class VLANTestCase(ViewTestCases.PrimaryObjectViewTestCase):
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     def test_queryset_to_csv(self):
         """This view has a custom queryset_to_csv() implementation."""
-        response = self.client.get("{}?export".format(self._get_url("list")))
+        response = self.client.get(f"{self._get_url('list')}?export")
         self.assertHttpStatus(response, 200)
         self.assertEqual(response.get("Content-Type"), "text/csv")
         self.assertEqual(

@@ -35,7 +35,7 @@ class BaseTable(tables.Table):
         obj_type = ContentType.objects.get_for_model(self._meta.model)
 
         for cf in CustomField.objects.filter(content_types=obj_type):
-            name = "cf_{}".format(cf.slug)
+            name = f"cf_{cf.slug}"
             self.base_columns[name] = CustomFieldColumn(cf)
 
         for cpf in ComputedField.objects.filter(content_type=obj_type):
