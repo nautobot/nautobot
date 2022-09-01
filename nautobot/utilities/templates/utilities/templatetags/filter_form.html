@@ -10,7 +10,7 @@
             </div>
             <div class="modal-body">
                 {% if form %}
-                    <form class="form-horizontal" method="get" action=".">
+                    <form id="dynamic-filter-form" class="form-horizontal" method="get" action=".">
                         <div class="">
                             <table class="table" id="secrets" style="table-layout: fixed;">
                                 {{ form.management_form }}

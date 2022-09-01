@@ -1,3 +1,4 @@
+from collections import namedtuple
 from copy import deepcopy
 import logging
 import re
@@ -44,8 +45,13 @@ from nautobot.utilities.utils import (
     csv_format,
     normalize_querydict,
     prepare_cloned_fields,
+    convert_querydict_to_factory_formset_dict,
 )
 from nautobot.utilities.views import GetReturnURLMixin, ObjectPermissionRequiredMixin
+
+
+# namedtuple takes a filterset params and factory_formset params
+FilterParams = namedtuple("FilterParams", ["filterset", "factory_formset"])
 
 
 class ObjectView(ObjectPermissionRequiredMixin, View):
@@ -167,28 +173,19 @@ class ObjectListView(ObjectPermissionRequiredMixin, View):
 
     def get_filter_params(self, request):
         """Helper function - take request.GET and discard any parameters that are not used for queryset filtering."""
+        boolean_choices = {"True", "False"}
         filter_params = request.GET.copy()
         for non_filter_param in self.non_filter_params:
             filter_params.pop(non_filter_param, None)
 
-        forms_total = filter_params.get("form-TOTAL_FORMS")
-        filter_by = {}
-        if forms_total:
-            for x in range(int(forms_total)):
-                lookup_type = filter_params.get(f"form-{x}-lookup_type")
-                values = []
-                if lookup_type:
-                    for value in filter_params.getlist(f"form-{x}-value"):
-                        if ", " in value:
-                            values += value.split(", ")
-                        else:
-                            values.append(value)
-                    for value in values:
-                        if value in ["True", "False"]:
-                            filter_by[lookup_type] = value
-                        else:
-                            filter_by.setdefault(lookup_type, []).append(value)
-        return filter_by
+        # If True or False in value get the first item in the list
+        filterset_data = {
+            key: value if boolean_choices.intersection(set(filter_params.getlist(key))) else filter_params.getlist(key)
+            for key, value in filter_params.items()
+        }
+        factory_formset_data = convert_querydict_to_factory_formset_dict(filter_params)
+
+        return FilterParams(filterset_data, factory_formset_data)
 
     def get_required_permission(self):
         return get_permission_for_model(self.queryset.model, "view")
@@ -255,7 +252,7 @@ class ObjectListView(ObjectPermissionRequiredMixin, View):
 
         filter_params = self.get_filter_params(request)
         if self.filterset:
-            filterset = self.filterset(filter_params, self.queryset)
+            filterset = self.filterset(filter_params.filterset, self.queryset)
             self.queryset = filterset.qs
             if not filterset.is_valid():
                 messages.error(
@@ -322,9 +319,11 @@ class ObjectListView(ObjectPermissionRequiredMixin, View):
             if request.GET:
                 # TODO timizuo replace filter_form with dynamic_filter_form
                 # TODO Raise Error if filterset not found
-                dynamic_filter_form = DynamicFilterFormSet(model=self.queryset.model, data=request.GET)
+                dynamic_filter_form = DynamicFilterFormSet(
+                    model=self.queryset.model, data=filter_params.factory_formset
+                )
                 # Bind form to the values specified in request.GET
-                filter_form = self.filterset_form(filter_params, label_suffix="")
+                filter_form = self.filterset_form({}, label_suffix="")
             else:
                 # Use unbound form with default (initial) values
                 dynamic_filter_form = DynamicFilterFormSet(model=self.queryset.model)
@@ -333,7 +332,7 @@ class ObjectListView(ObjectPermissionRequiredMixin, View):
         valid_actions = self.validate_action_buttons(request)
         display_filter_params = [
             [field_name, values if isinstance(values, (list, tuple)) else [values]]
-            for field_name, values in filter_params.items()
+            for field_name, values in filter_params.filterset.items()
         ]
 
         context = {

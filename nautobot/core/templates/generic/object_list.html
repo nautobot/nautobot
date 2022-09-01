@@ -142,7 +142,7 @@
         added: jsify_form
     });
 
-    // Remove an applied filter
+    // Remove applied filters
     $(".remove-filter-param").on("click", function(){
         let query_params = location.search
         let type = $(this).attr("data-field-type")
@@ -173,6 +173,33 @@
             })
         }
         location.replace(query_string.join("&"))
+    })
+
+    // On submit of filter form convert filterform data to a better URL query sting
+    // e.g from -->
+    //      form-TOTAL_FORMS=4&form-INITIAL_FORMS=0&form-MIN_NUM_FORMS=&form-MAX_NUM_FORMS=&form-0-lookup_field=status&
+    //      form-0-lookup_type=status&form-0-value=active&form-0-value=decommissioning&
+    // to -->
+    //      status=active&status=decommissioning
+
+    $("#dynamic-filter-form").on("submit", function(e){
+        // "form-3-lookup_type=tenant_id"
+        e.preventDefault()
+        formdata = $(this).serialize().split("&")
+        query_string = ""
+
+        formdata.forEach(item => {
+            if (item.search(/form-\d+-lookup_type/) > -1){
+                let lookup_type = item.split("=")[1]
+                let form_no = item.split("-")[1]
+                values = formdata.filter(data => data.search(`form-${form_no}-value`) == 0)
+                values.forEach(data => {
+                    value = data.split("=")[1]
+                    query_string += `&${lookup_type}=${value}`
+                })
+            }
+        })
+        location.replace("?" + query_string.substr(1))
     })
 
 </script>

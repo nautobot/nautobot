@@ -14,6 +14,7 @@ from django.contrib.contenttypes.models import ContentType
 from django.core.serializers import serialize
 from django.db.models import Count, Model, OuterRef, Subquery
 from django.db.models.functions import Coalesce
+from django.http import QueryDict
 from django.urls import reverse, NoReverseMatch
 from django.utils.tree import Node
 
@@ -775,7 +776,6 @@ def get_data_for_filterset_parameter(model, parameter, initial_choice=None):
     # Avoid circular import
     from nautobot.extras.filters import StatusFilter
     from nautobot.extras.models import Status, Tag
-    from nautobot.utilities.filters import RelatedMembershipBooleanFilter
 
     contenttype = model._meta.app_label + "." + model._meta.model_name
 
@@ -858,3 +858,48 @@ def compile_model_choices(model, search_by, values):
         except model.DoesNotExist:
             pass
     return choices
+
+
+def convert_querydict_to_factory_formset_dict(querydict):
+    """
+    Convert basic QueryDict/dict into an acceptable factory formset QueryDict
+
+    Args:
+        querydict (QueryDict): QueryDict to convert
+
+    Examples:
+        >>> convert_querydict_to_factory_formset_dict({"status": ["active", "decommissioning"], "name__ic": ["site"]})
+        >>> {
+        ...     'form-TOTAL_FORMS': [3],
+        ...     'form-INITIAL_FORMS': ['0'],
+        ...     'form-MIN_NUM_FORMS': [''],
+        ...     'form-MAX_NUM_FORMS': [''],
+        ...     'form-0-lookup_field': ['status'],
+        ...     'form-0-lookup_type': ['status'],
+        ...     'form-0-value': ['active', 'decommissioning'],
+        ...     'form-1-lookup_field': ['name'],
+        ...     'form-1-lookup_type': ['name__ic'],
+        ...     'form-1-value': ['site']
+        ... }
+    """
+    query_dict = QueryDict(mutable=True)
+
+    total_forms = len(querydict)
+    query_dict.setdefault("form-TOTAL_FORMS", total_forms if total_forms > 2 else 3)
+    query_dict.setdefault("form-INITIAL_FORMS", 0)
+    query_dict.setdefault("form-MIN_NUM_FORMS", 0)
+    query_dict.setdefault("form-MAX_NUM_FORMS", 100)
+
+    lookup_field_placeholder = "form-%d-lookup_field"
+    lookup_type_placeholder = "form-%d-lookup_type"
+    lookup_value_placeholder = "form-%d-value"
+
+    for idx, item in enumerate(querydict.items()):
+        lookup_type = item[0]
+        lookup_field = re.sub(r"__\w+", "", lookup_type)
+        lookup_value = querydict.getlist(lookup_type)
+
+        query_dict.setlistdefault(lookup_field_placeholder % idx, [lookup_field])
+        query_dict.setlistdefault(lookup_type_placeholder % idx, [lookup_type])
+        query_dict.setlistdefault(lookup_value_placeholder % idx, lookup_value)
+    return query_dict
