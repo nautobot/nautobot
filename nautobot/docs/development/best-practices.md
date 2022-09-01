@@ -314,4 +314,4 @@ filterset.qs.filter(query).count()  # 339
 ## Using NautobotUIViewSet for Plugin Development
 
 - Starting from Nautobot v1.4, using `NautobotUIViewSet` for plugin development is strongly recommended.
-- See how to use `NautobotUIViewSet`, check out [plugins/development.md](/docs/plugins/development.md).
+- To see how to use `NautobotUIViewSet`, check out [plugins/development.md](../plugins/development.md#nautobotuiviewset).
