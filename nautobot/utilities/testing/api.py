@@ -391,9 +391,9 @@ class APIViewTestCases:
                 self.assertHttpStatus(response, status.HTTP_403_FORBIDDEN)
 
         def check_expected_slug(self, obj):
-            slug_source = [self.slug_source] if isinstance(self.slug_source, str) else self.slug_source
+            slug_source = self.slug_source if isinstance(self.slug_source, (list, tuple)) else [self.slug_source]
             expected_slug = ""
-            for source_item in slug_source:  # false positive pylint: disable=not-an-iterable
+            for source_item in slug_source:
                 # e.g. self.slug_source = ["parent__name", "name"]
                 source_keys = source_item.split("__")
                 try:
@@ -539,12 +539,13 @@ class APIViewTestCases:
             response = self.client.patch(self._get_list_url(), data, format="json", **self.header)
             self.assertHttpStatus(response, status.HTTP_200_OK)
             for i, obj in enumerate(response.data):
-                for field in self.bulk_update_data:  # false positive pylint: disable=not-an-iterable
+                for field, _value in self.bulk_update_data.items():
                     self.assertIn(
                         field,
                         obj,
                         f"Bulk update field '{field}' missing from object {i} in response",
                     )
+                    # TODO: shouldn't we also check that obj[field] == value?
             for instance in self._get_queryset().filter(pk__in=id_list):
                 self.assertInstanceEqual(
                     instance,
