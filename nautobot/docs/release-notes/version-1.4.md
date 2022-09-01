@@ -172,6 +172,7 @@ The `settings_and_registry` default context processor was changed to purely `set
 
 ### Changed
 
+- [#2011](https://github.com/nautobot/nautobot/issues/2011) - replaced all .format() strings and C format strings with fstrings.
 - [#2293](https://github.com/nautobot/nautobot/pull/2293) - Updated GitHub bug report template.
 - [#2296](https://github.com/nautobot/nautobot/pull/2296) - Updated `netutils` dependency from 1.1.x to 1.2.x.
 
