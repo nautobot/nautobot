@@ -80,7 +80,8 @@ class ExampleModelEditView(generic.ObjectEditView):
     """Edit a single `ExampleModel` object."""
 
     queryset = ExampleModel.objects.all()
-    model_form = forms.ExampleModelForm
+    # model_form = forms.ExampleModelForm
+    model_form = forms.ExampleFormSet.object_edit_form()
 
 
 class ExampleModelBulkEditView(generic.BulkEditView):

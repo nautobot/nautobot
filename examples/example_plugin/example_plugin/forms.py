@@ -5,6 +5,8 @@ from nautobot.utilities.forms import (
     BootstrapMixin,
     BulkEditForm,
     CSVModelForm,
+    NautobotFormSet,
+    NautobotFormSetEditFormMixin,
 )
 
 from example_plugin.models import AnotherExampleModel, ExampleModel
@@ -79,3 +81,11 @@ class AnotherExampleModelBulkEditForm(BootstrapMixin, BulkEditForm):
 
     class Meta:
         nullable_fields = []
+
+
+class ExampleFormSet(NautobotFormSetEditFormMixin, NautobotFormSet):
+    edit_form_testfield = forms.CharField(initial="test field added by formset")
+
+    class Meta:
+        model = ExampleModel
+        fields = ["name", "number", "testfield"]

@@ -233,3 +233,153 @@ class TableConfigForm(BootstrapMixin, forms.Form):
     @property
     def table_name(self):
         return self.table.__class__.__name__
+
+
+# Form set factories
+
+
+def meta_class_factory(**kwargs):
+    return type("Meta", (), kwargs)
+
+
+def form_class_factory(class_name, bases, class_attrs, meta_class_attrs):
+    try:
+        bases = tuple(bases)
+    except TypeError:
+        bases = tuple([bases])
+    meta_class = meta_class_factory(**meta_class_attrs)
+    class_attrs["Meta"] = meta_class
+    return type(class_name, bases, class_attrs)
+
+
+# Form sets
+
+
+class NautobotFormSet:
+    """Form set for creating sets of forms dynamically"""
+
+    class Meta:
+        fields = None
+        model = None
+
+    @classmethod
+    def get_form_specific_attrs(cls, prefix):
+        form_specific_attrs = {}
+        for key, value in cls.__dict__.items():
+            if key.startswith(f"{prefix}_"):
+                key_without_prefix = key.removeprefix(f"{prefix}_")
+                form_specific_attrs[key_without_prefix] = value
+        return form_specific_attrs
+
+    @classmethod
+    def get_form_specific_fields(cls, prefix):
+        attrs = cls.get_form_specific_attrs(prefix)
+        form_specific_fields = {k: v for k, v in attrs.items() if isinstance(v, forms.Field)}
+        return form_specific_fields
+
+
+class NautobotFormSetEditFormMixin:
+    """
+    Mixin for NautobotFormSet to create a new object edit form class.
+    The class will be named class {formset name}EditForm
+    The FormSet Meta class must have these attributes set:
+    model: The class of the database model
+
+    Optional Meta attributes:
+    edit_form_fields: set as the new form's Meta.fields attribute
+    edit_form_widgets: set as the new form's Meta.widgets attribute
+    fields: set as the new form's Meta.fields attribute, only used if edit_form_fields is not set
+
+    Custom field definitions may be created similar to django's built-in ModelForm by declaring
+    them on the FormSet class, but each field name must be prefixed with `edit_form_`
+    Example for a field named description:
+    edit_form_description = forms.CharField(max_length=200, blank=True)
+    """
+
+    @classmethod
+    def object_edit_form(cls, *args, **kwargs):
+        """Return a dynamically generated object edit form class"""
+        if not hasattr(cls, "_edit_form"):
+            meta_class_attrs = cls._get_edit_form_meta_class_attrs()
+            bases = cls._get_edit_form_bases()
+            form_class_name = f"{cls.__name__}EditForm"
+            class_attrs = cls.get_form_specific_fields("edit_form")
+            cls._edit_form = form_class_factory(form_class_name, bases, class_attrs, meta_class_attrs)
+
+        return cls._edit_form
+
+    @classmethod
+    def _get_edit_form_meta_class_attrs(cls):
+        """Return mapping of attributes for the form's Meta class"""
+        meta_class_attrs = {
+            "model": cls.Meta.model,
+        }
+        fields = cls._get_edit_form_meta_fields()
+        if fields is not None:
+            meta_class_attrs["fields"] = fields
+        widgets = getattr(cls.Meta, "edit_form_widgets", None)
+        if widgets is not None:
+            meta_class_attrs["widgets"] = widgets
+        return meta_class_attrs
+
+    @classmethod
+    def _get_edit_form_bases(cls):
+        """Return list of base classes for the edit form by inspecting the base classes of the model"""
+        #  prevent circular imports
+        from nautobot.extras.forms import CustomFieldModelFormMixin, RelationshipModelFormMixin
+        from nautobot.extras.forms.mixins import NoteModelFormMixin
+        from nautobot.extras.models import CustomFieldModel, RelationshipModel
+        from nautobot.extras.models.mixins import NotesMixin
+
+        model_form_mapping = {
+            CustomFieldModel: CustomFieldModelFormMixin,
+            RelationshipModel: RelationshipModelFormMixin,
+            NotesMixin: NoteModelFormMixin,
+        }
+        bases = [BootstrapMixin]
+        for base_model, form in model_form_mapping.items():
+            if issubclass(cls.Meta.model, base_model):
+                bases.append(form)
+        bases.append(forms.ModelForm)
+        return bases
+
+    @classmethod
+    def _get_edit_form_meta_fields(cls):
+        """Retrieve Meta.fields for the edit form from FormSet.Meta class"""
+        if hasattr(cls.Meta, "edit_form_fields"):
+            return cls.Meta.edit_form_fields
+        else:
+            return getattr(cls.Meta, "fields", None)
+
+
+# class NautobotFormSetCSVFormMixin:
+#     csv_model_form_mapping = {
+#         CustomFieldModel: CustomFieldModelCSVForm,
+#         StatusModel: StatusModelCSVFormMixin,
+#     }
+
+#     @classmethod
+#     def csv_form(cls, *args, **kwargs):
+#         if not hasattr(cls, "_csv_form"):
+#             meta_class_attrs = cls.csv_form_meta_class_attrs()
+#             bases = cls.get_csv_form_bases()
+#             form_class_name = f"{cls.__name__}CSVForm"
+#             cls._csv_form = form_class_factory(form_class_name, bases, meta_class_attrs)
+
+#         return cls._csv_form
+
+#     @classmethod
+#     def csv_form_meta_class_attrs(cls):
+#         return {
+#             "model": cls.Meta.model,
+#             "fields": cls.Meta.model.csv_headers,
+#         }
+
+#     @classmethod
+#     def get_csv_form_bases(cls):
+#         bases = []
+#         for base_model, form in cls.csv_model_form_mapping.items():
+#             if issubclass(cls.Meta.model, base_model):
+#                 bases.append(form)
+#         bases.append(CSVModelForm)
+#         return bases
