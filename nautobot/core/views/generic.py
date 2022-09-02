@@ -176,10 +176,8 @@ class ObjectListView(ObjectPermissionRequiredMixin, View):
         if self.filterset:
             boolean_choices = {"True", "False"}
             filter_params = request.GET.copy()
-
-            for field in request.GET:
-                if field not in self.filterset.base_filters.keys():
-                    filter_params.pop(field, None)
+            for non_filter_param in self.non_filter_params:
+                filter_params.pop(non_filter_param, None)
 
             # If True or False in value get the first item in the list
             filterset_data = {
@@ -188,6 +186,12 @@ class ObjectListView(ObjectPermissionRequiredMixin, View):
                 else filter_params.getlist(key)
                 for key, value in filter_params.items()
             }
+
+            # Factory formset can't include fields not part of the filterset params
+            for field in request.GET:
+                if field not in self.filterset.base_filters.keys():
+                    filter_params.pop(field, None)
+
             factory_formset_data = convert_querydict_to_factory_formset_dict(filter_params)
 
             return FilterParams(filterset_data, factory_formset_data)

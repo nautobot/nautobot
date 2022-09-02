@@ -580,8 +580,7 @@ class ViewTestCases:
             self.assertHttpStatus(response, 200)
             content = extract_page_body(response.content.decode(response.charset))
             # TODO: it'd make test failures more readable if we strip the page headers/footers from the content
-            # Fields not part of filterset parameters are ignored
-            # self.assertIn("Unknown filter field", content, msg=content)
+            self.assertIn("Unknown filter field", content, msg=content)
             if hasattr(self.model, "name"):
                 self.assertNotIn(instance1.name, content, msg=content)
                 self.assertNotIn(instance2.name, content, msg=content)
