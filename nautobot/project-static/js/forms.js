@@ -518,8 +518,6 @@ function jsify_form(context) {
 
         let lookup_value_element = parent_element.find(".lookup_value-input")
 
-        console.log(lookup_value_element)
-
         // if `lookup_field_val` == `lookup_type_val` lookup expr is exact
         if(lookup_field_val == lookup_type_val){
             $.ajax({

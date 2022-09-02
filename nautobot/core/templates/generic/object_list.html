@@ -177,5 +177,15 @@
         location.replace("?" + query_string.substr(1))
     })
 
+    // Clear new filter values upon creation
+    $(".dynamic-filterform-add .add-row").click(function(){
+        let parent_element = $(".dynamic-filterform").last()
+        let lookup_field_classes = [".lookup_field-select", ".lookup_type-select", ".lookup_value-input"]
+        lookup_field_classes.forEach(field_class => {
+            let element = parent_element.find(field_class)
+            element.val(null).trigger('change')
+        })
+    })
+
 </script>
 {% endblock %}
