@@ -168,14 +168,19 @@ The `settings_and_registry` default context processor was changed to purely `set
 - [#983](https://github.com/nautobot/nautobot/issues/983) - Added functionalities to specify `args` and `kwargs` to `NavMenuItem`.
 - [#2250](https://github.com/nautobot/nautobot/issues/2250) - Added "Stats" and "Rack Groups" to Location detail view, added "Locations" to Site detail view.
 - [#2273](https://github.com/nautobot/nautobot/issues/2273) - Added custom markdownlint rule to check for invalid relative links in the documentation.
+- [#2307](https://github.com/nautobot/nautobot/issues/2307) - Added `dynamic_groups` field in GraphQL on objects that can belong to dynamic groups.
 - [#2314](https://github.com/nautobot/nautobot/pull/2314) - Added `pylint` to linting suite and CI.
 - [#2339](https://github.com/nautobot/nautobot/pull/2339) - Enabled and addressed additional `pylint` checkers.
+- [#2360](https://github.com/nautobot/nautobot/pull/2360) - Added Django natural key to `extras.Tag`.
 
 ### Changed
 
 - [#2011](https://github.com/nautobot/nautobot/issues/2011) - replaced all .format() strings and C format strings with fstrings.
 - [#2293](https://github.com/nautobot/nautobot/pull/2293) - Updated GitHub bug report template.
 - [#2296](https://github.com/nautobot/nautobot/pull/2296) - Updated `netutils` dependency from 1.1.x to 1.2.x.
+- [#2347](https://github.com/nautobot/nautobot/pull/2347) - Revamped documentation look and feel.
+- [#2349](https://github.com/nautobot/nautobot/pull/2349) - Docker images are now built with Poetry 1.2.0.
+- [#2360](https://github.com/nautobot/nautobot/pull/2360) - Django natural key for Status is now `name` rather than `slug`.
 
 ### Fixed
 
@@ -191,6 +196,8 @@ The `settings_and_registry` default context processor was changed to purely `set
 - [#2290](https://github.com/nautobot/nautobot/issues/2290) - Fixed inheritance of ObjectListViewMixin for CircuitTypeUIViewSet.
 - [#2311](https://github.com/nautobot/nautobot/issues/2311) - Fixed autopopulation of "Parent" selection when editing an existing Location.
 - [#2341](https://github.com/nautobot/nautobot/issues/2341) - Fixed omission of docs from published Python packages.
+- [#2342](https://github.com/nautobot/nautobot/issues/2342) - Reduced file size of `nautobot-dev` Docker images by clearing Poetry cache
+- [#2350](https://github.com/nautobot/nautobot/issues/2350) - Fixed potential Redis deadlock if Nautobot server restarts at an unfortunate time.
 
 ## v1.4.1 (2022-08-22)
 
