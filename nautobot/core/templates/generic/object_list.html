@@ -62,14 +62,6 @@
 
 <div class="row">
     <div class="col-md-12">
-
-<!--        {% if filter_form %}-->
-<!--            <div class="col-md-3 pull-right right-side-panel noprint">-->
-<!--                {% include 'inc/search_panel.html' %}-->
-<!--                {% block sidebar %}{% endblock %}-->
-<!--            </div>-->
-<!--        {% endif %}-->
-
         {% with bulk_edit_url=content_type.model_class|validated_viewname:"bulk_edit" bulk_delete_url=content_type.model_class|validated_viewname:"bulk_delete" %}
         {% if permissions.change or permissions.delete %}
             <form method="post" class="form form-horizontal">
@@ -125,7 +117,7 @@
     </div>
 </div>
 {% table_config_form table table_name="ObjectTable" %}
-{% dynamic_filter_form_modal dynamic_filter_form %}
+{% dynamic_filter_form_modal filter_form %}
 {% endblock %}
 
 {% block javascript %}

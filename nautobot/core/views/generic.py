@@ -315,19 +315,11 @@ class ObjectListView(ObjectPermissionRequiredMixin, View):
         }
         RequestConfig(request, paginate).configure(table)
 
-        if self.filterset_form:
-            if request.GET:
-                # TODO timizuo replace filter_form with dynamic_filter_form
-                # TODO Raise Error if filterset not found
-                dynamic_filter_form = DynamicFilterFormSet(
-                    model=self.queryset.model, data=filter_params.factory_formset
-                )
-                # Bind form to the values specified in request.GET
-                filter_form = self.filterset_form({}, label_suffix="")
-            else:
-                # Use unbound form with default (initial) values
-                dynamic_filter_form = DynamicFilterFormSet(model=self.queryset.model)
-                filter_form = self.filterset_form(label_suffix="")
+        if request.GET:
+            # TODO Raise Error if queryset model filterset not found
+            dynamic_filter_form = DynamicFilterFormSet(model=self.queryset.model, data=filter_params.factory_formset)
+        else:
+            dynamic_filter_form = DynamicFilterFormSet(model=self.queryset.model)
 
         valid_actions = self.validate_action_buttons(request)
         display_filter_params = [
@@ -341,9 +333,8 @@ class ObjectListView(ObjectPermissionRequiredMixin, View):
             "permissions": permissions,
             "action_buttons": valid_actions,
             "table_config_form": TableConfigForm(table=table),
-            "filter_form": filter_form,
             "filter_params": display_filter_params,
-            "dynamic_filter_form": dynamic_filter_form,
+            "filter_form": dynamic_filter_form,
         }
         context.update(self.extra_context())
 
