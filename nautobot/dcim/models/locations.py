@@ -199,6 +199,20 @@ class Location(TreeNode, StatusModel, PrimaryModel):
         """The site that this Location belongs to, if any, or that its root ancestor belongs to, if any."""
         return self.site or self.ancestors().first().site
 
+    @property
+    def display(self):
+        # prefix with parent name allows location name identity if there are the same name exists under different parents.
+        if self.name:
+            if self.parent:
+                if self.parent.parent:
+                    return f"[{self.parent.parent}->{self.parent}] {self.name}"
+                else:
+                    return f"[{self.parent}] {self.name}"
+            else:
+                return self.name
+        else:
+            return ""
+
     def validate_unique(self, exclude=None):
         # Check for a duplicate name on a Location with no parent.
         # This is necessary because Django does not consider two NULL fields to be equal.
