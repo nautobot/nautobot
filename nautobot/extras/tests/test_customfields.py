@@ -1546,7 +1546,10 @@ class CustomFieldChoiceTest(TestCase):
             self.assertEqual(CustomField.objects.count(), 0)
         self.assertEqual(CustomFieldChoice.objects.count(), 0)
 
+
 logging.disable(logging.ERROR)
+
+
 class CustomFieldBackgroundTasks(CeleryTestCase):
     def test_provision_field_task(self):
         self.clear_worker()
@@ -1617,6 +1620,8 @@ class CustomFieldBackgroundTasks(CeleryTestCase):
         site.refresh_from_db()
 
         self.assertEqual(site.cf["cf1"], "Bar")
+
+
 logging.disable(logging.NOTSET)
 
 
