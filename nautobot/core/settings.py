@@ -76,7 +76,6 @@ GIT_ROOT = os.getenv("NAUTOBOT_GIT_ROOT", os.path.join(NAUTOBOT_ROOT, "git").rst
 HTTP_PROXIES = None
 JOBS_ROOT = os.getenv("NAUTOBOT_JOBS_ROOT", os.path.join(NAUTOBOT_ROOT, "jobs").rstrip("/"))
 MAINTENANCE_MODE = False
-
 # Metrics
 METRICS_ENABLED = False
 
@@ -644,6 +643,10 @@ CELERY_TASK_SERIALIZER = "nautobot_json"
 CELERY_RESULT_SERIALIZER = "nautobot_json"
 
 CELERY_BEAT_SCHEDULER = "nautobot.core.celery.schedulers:NautobotDatabaseScheduler"
+
+# Sets an age out timer of redis lock. This is NOT implicitially applied to locks, must be added
+# to a lock creation as `timeout=settings.REDIS_LOCK_TIMEOUT`
+REDIS_LOCK_TIMEOUT = int(os.getenv("NAUTOBOT_REDIS_LOCK_TIMEOUT", "600"))
 
 #
 # Custom branding (logo and title)
