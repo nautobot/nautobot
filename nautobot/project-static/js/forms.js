@@ -507,7 +507,6 @@ function jsify_form(context) {
 
 
     // Dynamic filter form
-    // TODO clear lookup type select if lookup field changes
     this_context.on("change", ".lookup_type-select", function(){
         let parent_element = $(this).parents("tr")
 
@@ -517,7 +516,9 @@ function jsify_form(context) {
         let lookup_type_val = lookup_type.val()
         let contenttype = lookup_type.attr("data-contenttype")
 
-        let value_element = parent_element.find(".value-input")
+        let lookup_value_element = parent_element.find(".lookup_value-input")
+
+        console.log(lookup_value_element)
 
         // if `lookup_field_val` == `lookup_type_val` lookup expr is exact
         if(lookup_field_val == lookup_type_val){
@@ -529,17 +530,17 @@ function jsify_form(context) {
                 type: 'GET',
             }).done(function (response) {
                 if(response.data_url)
-                    useDynamicSelect(value_element, response)
+                    useDynamicSelect(lookup_value_element, response)
                 else if (response.choices)
-                    useStaticSelect(value_element, response.choices, response.allow_multiple)
+                    useStaticSelect(lookup_value_element, response.choices, response.allow_multiple)
                 else
-                    useInput(value_element)
+                    useInput(lookup_value_element)
             }).fail(function (xhr, status, error) {
-                useInput(value_element)
+                useInput(lookup_value_element)
             });
         }
         else {
-            useInput(value_element)
+            useInput(lookup_value_element)
         }
     })
 
@@ -548,7 +549,7 @@ function jsify_form(context) {
             <input
                 type="text"
                 name="${element.attr('name')}"
-                class="value-input form-control"
+                class="lookup_value-input form-control"
                 id="${element.attr('id')}"
             />`
         element.parent().html(input_field)
@@ -558,7 +559,7 @@ function jsify_form(context) {
         select_field = `
             <select
                 name="${element.attr("name")}"
-                class="value-input nautobot-select2-static select2-hidden-accessible"
+                class="lookup_value-input nautobot-select2-static select2-hidden-accessible"
                 id="${element.attr("id")}"
                 data-select2-id="${element.attr("id")}"
                 tabindex="-1"
@@ -582,7 +583,7 @@ function jsify_form(context) {
         select_field = `
             <select
                 name="${value_name}"
-                class="value-input nautobot-select2-api select2-hidden-accessible"
+                class="lookup_value-input nautobot-select2-api select2-hidden-accessible"
                 data-url="${data_url}"
                 id="${value_id}"
                 data-select2-id="${value_id}"
@@ -602,11 +603,11 @@ function jsify_form(context) {
         let parent_element = $(this).parents("tr")
         let lookup_field_element = parent_element.find(".lookup_field-select")
         let lookup_type_element = parent_element.find(".lookup_type-select")
-        let value_element = parent_element.find(".value-input")
+        let lookup_value_element = parent_element.find(".lookup_value-input")
 
         if ($(this)[0] == lookup_field_element[0])
             lookup_type_element.val(null).trigger('change')
-        value_element.val(null).trigger('change')
+        lookup_value_element.val(null).trigger('change')
 
     })
 

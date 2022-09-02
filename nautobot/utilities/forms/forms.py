@@ -253,7 +253,10 @@ class DynamicFilterForm(BootstrapMixin, forms.Form):
         required=False,
     )
     # TODO: timizuo change value to lookup_value
-    value = forms.CharField(required=False)
+    lookup_value = forms.CharField(
+        required=False,
+        label="Value",
+    )
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -270,7 +273,7 @@ class DynamicFilterForm(BootstrapMixin, forms.Form):
         prefix = kwargs.get("prefix")
         if data and prefix:
             lookup_type = data.getlist(prefix + "-lookup_type")
-            lookup_value = data.getlist(prefix + "-value")
+            lookup_value = data.getlist(prefix + "-lookup_value")
             if lookup_type:
                 # TODO: timizuo catch keyerror if lookup_type not in filterset
                 verbose_name = self.filterset[lookup_type[0]].lookup_expr
@@ -285,8 +288,10 @@ class DynamicFilterForm(BootstrapMixin, forms.Form):
         self.fields["lookup_type"].widget.attrs["data-url"] = "/lookup-choices/"
         self.fields["lookup_type"].widget.attrs["class"] = "nautobot-select2-api lookup_type-select"
 
-        lookup_value_css = self.fields["value"].widget.attrs.get("class")
-        self.fields["value"].widget.attrs["class"] = " ".join([lookup_value_css, "value-input form-control"])
+        lookup_value_css = self.fields["lookup_value"].widget.attrs.get("class")
+        self.fields["lookup_value"].widget.attrs["class"] = " ".join(
+            [lookup_value_css, "lookup_value-input form-control"]
+        )
 
     def set_value_lookup_value_field(self, field_name, choice):
         from nautobot.utilities.forms import StaticSelect2
@@ -299,7 +304,7 @@ class DynamicFilterForm(BootstrapMixin, forms.Form):
             if data["allow_multiple"]:
                 attr["multiple"] = "true"
 
-            self.fields["value"] = forms.ChoiceField(
+            self.fields["lookup_value"] = forms.ChoiceField(
                 choices=data["choices"], required=False, widget=StaticSelect2(attrs={**attr}), initial=choice
             )
         elif data["type"] == "dynamic-choices":
@@ -309,7 +314,7 @@ class DynamicFilterForm(BootstrapMixin, forms.Form):
             if data.get("value_field") is not None:
                 attr["value-field"] = data["value_field"]
 
-            self.fields["value"] = forms.ChoiceField(
+            self.fields["lookup_value"] = forms.ChoiceField(
                 choices=data["choices"],
                 required=False,
                 widget=APISelectMultiple(api_url=data["data_url"], attrs={**attr}),

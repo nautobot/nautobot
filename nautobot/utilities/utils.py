@@ -892,7 +892,7 @@ def convert_querydict_to_factory_formset_dict(querydict):
 
     lookup_field_placeholder = "form-%d-lookup_field"
     lookup_type_placeholder = "form-%d-lookup_type"
-    lookup_value_placeholder = "form-%d-value"
+    lookup_value_placeholder = "form-%d-lookup_value"
 
     for idx, item in enumerate(querydict.items()):
         lookup_type = item[0]
