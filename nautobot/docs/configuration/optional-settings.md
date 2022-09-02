@@ -53,16 +53,6 @@ Please see the [official Django documentation on `ADMINS`](https://docs.djangopr
 
 ---
 
-## AVAILABLE_IP_PREFIX_TIMEOUT
-
-Default: `600`
-
-Environment Variable: `NAUTOBOT_AVAILABLE_IP_PREFIX_TIMEOUT`
-
-Prevents a deadlock scenario where a Redis lock is achieved upon performing API to `/api/ipam/prefixes/{id}/available-prefixes/`. Default is set to 600 seconds (10 minutes) to be longer than any theoretical API call time. This is to prevent a deadlock scenario where the server did not gracefully exit the with block when acquiring the Redis lock.
-
----
-
 ## ALLOWED_URL_SCHEMES
 
 Default: `('file', 'ftp', 'ftps', 'http', 'https', 'irc', 'mailto', 'sftp', 'ssh', 'tel', 'telnet', 'tftp', 'vnc', 'xmpp')`
@@ -813,6 +803,16 @@ Default width (in pixels) of a unit within a rack elevation.
 
 !!! tip
     As of Nautobot 1.2.0, if you do not set a value for this setting in your `nautobot_config.py`, it can be configured dynamically by an admin user via the Nautobot Admin UI. If you do have a value for this setting in `nautobot_config.py`, it will override any dynamically configured value.
+
+---
+
+## REDIS_LOCK_TIMEOUT
+
+Default: `600`
+
+Environment Variable: `NAUTOBOT_REDIS_LOCK_TIMEOUT`
+
+Maximum duration of a Redis lock created when calling `/api/ipam/prefixes/{id}/available-prefixes/` or `/api/ipam/prefixes/{id}/available-ips/` to avoid inadvertently allocating the same prefix or IP to multiple simultaneous callers. Default is set to 600 seconds (10 minutes) to be longer than any theoretical API call time. This is to prevent a deadlock scenario where the server did not gracefully exit the `with` block when acquiring the Redis lock.
 
 ---
 

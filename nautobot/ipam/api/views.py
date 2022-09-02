@@ -1,3 +1,4 @@
+from django.conf import settings
 from django.core.cache import cache
 from django.shortcuts import get_object_or_404
 from drf_spectacular.utils import extend_schema, extend_schema_view
@@ -141,7 +142,7 @@ class PrefixViewSet(StatusViewSetMixin, NautobotModelViewSet):
         if request.method == "POST":
 
             with cache.lock(
-                "available-prefixes", blocking_timeout=5, timeout=get_settings_or_config("AVAILABLE_IP_PREFIX_TIMEOUT")
+                "available-prefixes", blocking_timeout=5, timeout=settings.REDIS_LOCK_TIMEOUT
             ):
                 available_prefixes = prefix.get_available_prefixes()
 
@@ -229,7 +230,7 @@ class PrefixViewSet(StatusViewSetMixin, NautobotModelViewSet):
         if request.method == "POST":
 
             with cache.lock(
-                "available-ips", blocking_timeout=5, timeout=get_settings_or_config("AVAILABLE_IP_PREFIX_TIMEOUT")
+                "available-ips", blocking_timeout=5, timeout=settings.REDIS_LOCK_TIMEOUT
             ):
 
                 # Normalize to a list of objects
