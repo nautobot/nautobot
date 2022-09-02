@@ -1,4 +1,5 @@
 import json
+import logging
 import os
 import tempfile
 from unittest import mock
@@ -541,7 +542,11 @@ class GitTest(TransactionTestCase):
                 MockGitRepo.return_value.checkout.return_value = self.COMMIT_HEXSHA
 
                 # Run the Git operation and refresh the object from the DB
+                # Silence the error messages when intended exceptions are raised and job_result is logging it during unittests
+                # Re-enable it after
+                logging.disable(logging.ERROR)
                 pull_git_repository_and_refresh_data(self.repo.pk, self.mock_request, self.job_result.pk)
+                logging.disable(logging.NOTSET)
                 self.job_result.refresh_from_db()
 
                 self.assertEqual(
