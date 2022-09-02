@@ -255,7 +255,7 @@ def form_class_factory(class_name, bases, class_attrs, meta_class_attrs):
 # Form sets
 
 
-class NautobotFormSet:
+class NautobotBaseFormSet:
     """Form set for creating sets of forms dynamically"""
 
     class Meta:
@@ -422,3 +422,7 @@ class NautobotFormSetCSVFormMixin:
             return cls.Meta.edit_form_fields
         else:
             return cls.Meta.model.csv_headers
+
+
+class NautobotFormSet(NautobotFormSetCSVFormMixin, NautobotFormSetEditFormMixin, NautobotBaseFormSet):
+    """Formset that dynamically creates CSV import and object edit forms"""
