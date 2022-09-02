@@ -330,7 +330,7 @@ class DynamicFilterForm(BootstrapMixin, forms.Form):
             if "__" not in name:
                 filterset_without_lookup.append((name, field.label or self.capitalize(field.field_name)))
 
-        return filterset_without_lookup
+        return sorted(filterset_without_lookup)
 
 
 def dynamic_formset_factory(model, data=None, **kwargs):
