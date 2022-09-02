@@ -271,7 +271,7 @@ class NautobotFormSet:
         form_specific_attrs = {}
         for key, value in cls.__dict__.items():
             if key.startswith(f"{prefix}_"):
-                key_without_prefix = key.removeprefix(f"{prefix}_")
+                key_without_prefix = key.replace(f"{prefix}_", "", 1)
                 form_specific_attrs[key_without_prefix] = value
         return form_specific_attrs
 
