@@ -80,7 +80,6 @@ class ExampleModelEditView(generic.ObjectEditView):
     """Edit a single `ExampleModel` object."""
 
     queryset = ExampleModel.objects.all()
-    # model_form = forms.ExampleModelForm
     model_form = forms.ExampleFormSet.object_edit_form()
 
 
@@ -109,7 +108,7 @@ class ExampleModelBulkImportView(generic.BulkImportView):
     """Bulk CSV import of multiple `ExampleModel` objects."""
 
     queryset = ExampleModel.objects.all()
-    model_form = forms.ExampleModelCSVForm
+    model_form = forms.ExampleFormSet.csv_form()
     table = tables.ExampleModelTable
 
 

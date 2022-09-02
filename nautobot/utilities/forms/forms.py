@@ -264,6 +264,10 @@ class NautobotFormSet:
 
     @classmethod
     def get_form_specific_attrs(cls, prefix):
+        """
+        Return attributes defined on the FormSet class with names starting with the supplied prefix
+        Remove the prefix before returning a mapping of the attributes
+        """
         form_specific_attrs = {}
         for key, value in cls.__dict__.items():
             if key.startswith(f"{prefix}_"):
@@ -273,6 +277,10 @@ class NautobotFormSet:
 
     @classmethod
     def get_form_specific_fields(cls, prefix):
+        """
+        Return form fields defined on the FormSet class with names starting with the supplied prefix
+        Fields must be an instance of django.forms.Field. Remove the prefix before returning a mapping of the fields
+        """
         attrs = cls.get_form_specific_attrs(prefix)
         form_specific_fields = {k: v for k, v in attrs.items() if isinstance(v, forms.Field)}
         return form_specific_fields
@@ -281,7 +289,7 @@ class NautobotFormSet:
 class NautobotFormSetEditFormMixin:
     """
     Mixin for NautobotFormSet to create a new object edit form class.
-    The class will be named class {formset name}EditForm
+    The class will be named {formset name}EditForm
     The FormSet Meta class must have these attributes set:
     model: The class of the database model
 
@@ -290,7 +298,7 @@ class NautobotFormSetEditFormMixin:
     edit_form_widgets: set as the new form's Meta.widgets attribute
     fields: set as the new form's Meta.fields attribute, only used if edit_form_fields is not set
 
-    Custom field definitions may be created similar to django's built-in ModelForm by declaring
+    Static field definitions may be created similar to django's built-in ModelForm by declaring
     them on the FormSet class, but each field name must be prefixed with `edit_form_`
     Example for a field named description:
     edit_form_description = forms.CharField(max_length=200, blank=True)
@@ -324,7 +332,7 @@ class NautobotFormSetEditFormMixin:
 
     @classmethod
     def _get_edit_form_bases(cls):
-        """Return list of base classes for the edit form by inspecting the base classes of the model"""
+        """Return list of base classes for the form by inspecting the base classes of the model"""
         #  prevent circular imports
         from nautobot.extras.forms import CustomFieldModelFormMixin, RelationshipModelFormMixin
         from nautobot.extras.forms.mixins import NoteModelFormMixin
@@ -345,41 +353,72 @@ class NautobotFormSetEditFormMixin:
 
     @classmethod
     def _get_edit_form_meta_fields(cls):
-        """Retrieve Meta.fields for the edit form from FormSet.Meta class"""
+        """Retrieve Meta.fields for the form from the FormSet.Meta class"""
         if hasattr(cls.Meta, "edit_form_fields"):
             return cls.Meta.edit_form_fields
         else:
             return getattr(cls.Meta, "fields", None)
 
 
-# class NautobotFormSetCSVFormMixin:
-#     csv_model_form_mapping = {
-#         CustomFieldModel: CustomFieldModelCSVForm,
-#         StatusModel: StatusModelCSVFormMixin,
-#     }
+class NautobotFormSetCSVFormMixin:
+    """
+    Mixin for NautobotFormSet to create a new csv import form class.
+    The class will be named {formset name}CSVForm
+    The FormSet Meta class must have these attributes set:
+    model: The class of the database model
 
-#     @classmethod
-#     def csv_form(cls, *args, **kwargs):
-#         if not hasattr(cls, "_csv_form"):
-#             meta_class_attrs = cls.csv_form_meta_class_attrs()
-#             bases = cls.get_csv_form_bases()
-#             form_class_name = f"{cls.__name__}CSVForm"
-#             cls._csv_form = form_class_factory(form_class_name, bases, meta_class_attrs)
+    Optional Meta attributes:
+    csv_form_fields: set as the new form's Meta.fields attribute, overriding the default model.csv_headers
 
-#         return cls._csv_form
+    Static field definitions may be created similar to django's built-in ModelForm by declaring
+    them on the FormSet class, but each field name must be prefixed with `csv_form_`
+    Example for a field named description:
+    csv_form_description = forms.CharField(max_length=200, blank=True)
+    """
 
-#     @classmethod
-#     def csv_form_meta_class_attrs(cls):
-#         return {
-#             "model": cls.Meta.model,
-#             "fields": cls.Meta.model.csv_headers,
-#         }
+    @classmethod
+    def csv_form(cls, *args, **kwargs):
+        """Return a dynamically generated csv import form class"""
+        if not hasattr(cls, "_csv_form"):
+            meta_class_attrs = cls._get_csv_form_meta_class_attrs()
+            bases = cls._get_csv_form_bases()
+            form_class_name = f"{cls.__name__}CSVForm"
+            class_attrs = cls.get_form_specific_fields("csv_form")
+            cls._csv_form = form_class_factory(form_class_name, bases, class_attrs, meta_class_attrs)
 
-#     @classmethod
-#     def get_csv_form_bases(cls):
-#         bases = []
-#         for base_model, form in cls.csv_model_form_mapping.items():
-#             if issubclass(cls.Meta.model, base_model):
-#                 bases.append(form)
-#         bases.append(CSVModelForm)
-#         return bases
+        return cls._csv_form
+
+    @classmethod
+    def _get_csv_form_meta_class_attrs(cls):
+        """Return mapping of attributes for the form's Meta class"""
+        meta_class_attrs = {
+            "model": cls.Meta.model,
+            "fields": cls._get_csv_form_meta_fields(),
+        }
+        return meta_class_attrs
+
+    @classmethod
+    def _get_csv_form_bases(cls):
+        """Return list of base classes for the form by inspecting the base classes of the model"""
+        #  prevent circular imports
+        from nautobot.extras.forms import CustomFieldModelCSVForm, StatusModelCSVFormMixin
+        from nautobot.extras.models import CustomFieldModel, StatusModel
+
+        csv_model_form_mapping = {
+            CustomFieldModel: CustomFieldModelCSVForm,
+            StatusModel: StatusModelCSVFormMixin,
+        }
+        bases = []
+        for base_model, form in csv_model_form_mapping.items():
+            if issubclass(cls.Meta.model, base_model):
+                bases.append(form)
+        bases.append(CSVModelForm)
+        return bases
+
+    @classmethod
+    def _get_csv_form_meta_fields(cls):
+        """Retrieve Meta.fields for the form from the FormSet.Meta class if set, otherwise use the model's csv_headers"""
+        if hasattr(cls.Meta, "csv_form_fields"):
+            return cls.Meta.edit_form_fields
+        else:
+            return cls.Meta.model.csv_headers
