@@ -226,6 +226,10 @@ SPECTACULAR_SETTINGS = {
         "LocationStatusChoices": "nautobot.dcim.api.serializers.LocationSerializer.status_choices",
         "InterfaceStatusChoices": "nautobot.dcim.api.serializers.InterfaceSerializer.status_choices",
     },
+    # Create separate schema components for PATCH requests (fields generally are not `required` on PATCH)
+    "COMPONENT_SPLIT_PATCH": True,
+    # Create separate schema components for request vs response where appropriate
+    "COMPONENT_SPLIT_REQUEST": True,
 }
 
 

@@ -238,7 +238,7 @@ class WritableNestedSerializer(BaseModelSerializer):
 
 
 class BulkOperationSerializer(serializers.Serializer):
-    id = serializers.CharField()  # This supports both UUIDs and numeric ID for the User model
+    id = serializers.UUIDField()
 
 
 #
