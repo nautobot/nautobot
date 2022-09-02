@@ -173,19 +173,25 @@ class ObjectListView(ObjectPermissionRequiredMixin, View):
 
     def get_filter_params(self, request):
         """Helper function - take request.GET and discard any parameters that are not used for queryset filtering."""
-        boolean_choices = {"True", "False"}
-        filter_params = request.GET.copy()
-        for non_filter_param in self.non_filter_params:
-            filter_params.pop(non_filter_param, None)
+        if self.filterset:
+            boolean_choices = {"True", "False"}
+            filter_params = request.GET.copy()
 
-        # If True or False in value get the first item in the list
-        filterset_data = {
-            key: value if boolean_choices.intersection(set(filter_params.getlist(key))) else filter_params.getlist(key)
-            for key, value in filter_params.items()
-        }
-        factory_formset_data = convert_querydict_to_factory_formset_dict(filter_params)
+            for field in request.GET:
+                if field not in self.filterset.base_filters.keys():
+                    filter_params.pop(field, None)
 
-        return FilterParams(filterset_data, factory_formset_data)
+            # If True or False in value get the first item in the list
+            filterset_data = {
+                key: value
+                if boolean_choices.intersection(set(filter_params.getlist(key)))
+                else filter_params.getlist(key)
+                for key, value in filter_params.items()
+            }
+            factory_formset_data = convert_querydict_to_factory_formset_dict(filter_params)
+
+            return FilterParams(filterset_data, factory_formset_data)
+        return None
 
     def get_required_permission(self):
         return get_permission_for_model(self.queryset.model, "view")

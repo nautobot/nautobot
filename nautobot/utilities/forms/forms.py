@@ -252,7 +252,6 @@ class DynamicFilterForm(BootstrapMixin, forms.Form):
         choices=[],
         required=False,
     )
-    # TODO: timizuo change value to lookup_value
     lookup_value = forms.CharField(
         required=False,
         label="Value",
@@ -274,14 +273,16 @@ class DynamicFilterForm(BootstrapMixin, forms.Form):
         if data and prefix:
             lookup_type = data.getlist(prefix + "-lookup_type")
             lookup_value = data.getlist(prefix + "-lookup_value")
-            if lookup_type:
-                # TODO: timizuo catch keyerror if lookup_type not in filterset
-                verbose_name = self.filterset[lookup_type[0]].lookup_expr
-                label = build_lookup_label(lookup_type[0], verbose_name)
-                self.fields["lookup_type"].choices = [(lookup_type[0], label)]
 
-            if lookup_type and lookup_value:
-                self.set_value_lookup_value_field(lookup_type[0], lookup_value)
+            # Skip query param not part of filterset fields
+            if lookup_type:
+                if lookup_type:
+                    verbose_name = self.filterset[lookup_type[0]].lookup_expr
+                    label = build_lookup_label(lookup_type[0], verbose_name)
+                    self.fields["lookup_type"].choices = [(lookup_type[0], label)]
+
+                if lookup_type and lookup_value:
+                    self.set_value_lookup_value_field(lookup_type[0], lookup_value)
 
         self.fields["lookup_type"].widget.attrs["data-query-param-field_name"] = json.dumps(["$lookup_field"])
         self.fields["lookup_type"].widget.attrs["data-contenttype"] = contenttype
