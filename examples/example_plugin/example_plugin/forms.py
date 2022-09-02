@@ -68,7 +68,7 @@ class AnotherExampleModelBulkEditForm(BootstrapMixin, BulkEditForm):
 
 
 class ExampleFormSet(NautobotFormSetCSVFormMixin, NautobotFormSetEditFormMixin, NautobotFormSet):
-    edit_form_testfield = forms.CharField(initial="test field added by formset")
+    edit_form_testfield = forms.CharField(initial="test field added by formset", required=False)
 
     class Meta:
         model = ExampleModel
