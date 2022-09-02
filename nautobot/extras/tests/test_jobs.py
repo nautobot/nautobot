@@ -5,10 +5,9 @@ import uuid
 from io import StringIO
 from unittest import mock
 
-from celery.contrib.testing.worker import start_worker
 from django.contrib.auth import get_user_model
 from django.contrib.contenttypes.models import ContentType
-from django.core.exceptions import ObjectDoesNotExist, ValidationError
+from django.core.exceptions import ObjectDoesNotExist
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.core.management import call_command
 from django.core.management.base import CommandError
@@ -16,7 +15,6 @@ from django.test import override_settings
 from django.test.client import RequestFactory
 from django.utils import timezone
 
-from nautobot.core.celery import app
 from nautobot.dcim.models import DeviceRole, Site
 from nautobot.extras.choices import (
     JobExecutionType,
@@ -129,10 +127,7 @@ class JobTest(TransactionTestCase):
         """
         module = "test_fail"
         name = "TestFail"
-        try:
-            job_result = create_job_result_and_run_job(module, name, commit=False)
-        except Exception as e:
-            self.assert_equal(str(e), "Test failure")
+        job_result = create_job_result_and_run_job(module, name, commit=False)
         self.assertEqual(job_result.status, JobResultStatusChoices.STATUS_ERRORED)
 
     def test_field_default(self):
@@ -204,10 +199,7 @@ class JobTest(TransactionTestCase):
         """
         module = "test_read_only_fail"
         name = "TestReadOnlyFail"
-        try:
-            job_result = create_job_result_and_run_job(module, name, commit=False)
-        except Exception as e:
-            self.assertEqual(str(e), "Test failure")
+        job_result = create_job_result_and_run_job(module, name, commit=False)
         self.assertEqual(job_result.status, JobResultStatusChoices.STATUS_ERRORED)
         self.assertEqual(Site.objects.count(), 0)  # Ensure DB transaction was aborted
         # Also ensure the standard log message about aborting the transaction is *not* present
@@ -344,8 +336,8 @@ class JobTest(TransactionTestCase):
         module = "test_object_var_required"
         name = "TestRequiredObjectVar"
         data = {"region": None}
+
         job_result = create_job_result_and_run_job(module, name, data=data, commit=False)
-        self.assertRaises(ValidationError, create_job_result_and_run_job(module, name, data=data, commit=False))
 
         # Assert stuff
         self.assertEqual(job_result.status, JobResultStatusChoices.STATUS_ERRORED)
@@ -361,17 +353,15 @@ class JobTest(TransactionTestCase):
         module = "test_object_vars"
         name = "TestObjectVars"
         data = "BAD DATA STRING"
-        try:
-            job_result = create_job_result_and_run_job(module, name, data=data, commit=False)
-        except Exception as e:
-            self.assertEqual(e, TypeError)
 
-            # Assert stuff
-            self.assertEqual(job_result.status, JobResultStatusChoices.STATUS_ERRORED)
-            log_failure = JobLogEntry.objects.filter(
-                grouping="initialization", log_level=LogLevelChoices.LOG_FAILURE
-            ).first()
-            self.assertIn("Data should be a dictionary", log_failure.message)
+        job_result = create_job_result_and_run_job(module, name, data=data, commit=False)
+
+        # Assert stuff
+        self.assertEqual(job_result.status, JobResultStatusChoices.STATUS_ERRORED)
+        log_failure = JobLogEntry.objects.filter(
+            grouping="initialization", log_level=LogLevelChoices.LOG_FAILURE
+        ).first()
+        self.assertIn("Data should be a dictionary", log_failure.message)
 
     def test_job_latest_result_property(self):
         """
@@ -455,37 +445,29 @@ class JobFileUploadTest(TransactionTestCase):
         self.assertEqual(FileProxy.objects.count(), 1)
 
         # Run the job
-        try:
-            job_result = create_job_result_and_run_job(module, name, data=serialized_data, commit=False)
-        except Exception as e:
-            self.assertEqual(str(e), "Test failure")
+        job_result = create_job_result_and_run_job(module, name, data=serialized_data, commit=False)
 
-            # Assert that file contents were correctly read
-            self.assertEqual(
-                JobLogEntry.objects.filter(job_result=job_result, log_level=LogLevelChoices.LOG_WARNING, grouping="run")
-                .first()
-                .message,
-                f"File contents: {self.file_contents}",
-            )
-            # Also ensure the standard log message about aborting the transaction is present
-            self.assertEqual(
-                JobLogEntry.objects.filter(job_result=job_result, log_level=LogLevelChoices.LOG_INFO, grouping="run")
-                .first()
-                .message,
-                "Database changes have been reverted due to error.",
-            )
+        # Assert that file contents were correctly read
+        self.assertEqual(
+            JobLogEntry.objects.filter(job_result=job_result, log_level=LogLevelChoices.LOG_WARNING, grouping="run")
+            .first()
+            .message,
+            f"File contents: {self.file_contents}",
+        )
+        # Also ensure the standard log message about aborting the transaction is present
+        self.assertEqual(
+            JobLogEntry.objects.filter(job_result=job_result, log_level=LogLevelChoices.LOG_INFO, grouping="run")
+            .first()
+            .message,
+            "Database changes have been reverted due to error.",
+        )
 
-            # Assert that FileProxy was cleaned up
-            self.assertEqual(FileProxy.objects.count(), 0)
+        # Assert that FileProxy was cleaned up
+        self.assertEqual(FileProxy.objects.count(), 0)
 
 
 class RunJobManagementCommandTest(CeleryTestCase):
     """Test cases for the `nautobot-server runjob` management command."""
-
-    @classmethod
-    def setUpClass(cls):
-        """Start a celery worker"""
-        super().setUpClass()
 
     def run_command(self, *args):
         out = StringIO()
@@ -671,11 +653,8 @@ class JobHookReceiverTest(TransactionTestCase):
     def test_missing_receive_job_hook_method(self):
         module = "test_job_hook_receiver"
         name = "TestJobHookReceiverFail"
-        try:
-            job_result = create_job_result_and_run_job(module, name, data=self.data, commit=False)
-        except Exception as e:
-            self.assertEqual(e, NotImplementedError)
-            self.assertEqual(job_result.status, JobResultStatusChoices.STATUS_ERRORED)
+        job_result = create_job_result_and_run_job(module, name, data=self.data, commit=False)
+        self.assertEqual(job_result.status, JobResultStatusChoices.STATUS_ERRORED)
 
 
 class JobHookTest(CeleryTestCase):
