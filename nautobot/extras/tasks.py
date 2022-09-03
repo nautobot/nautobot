@@ -1,5 +1,5 @@
 from logging import getLogger
-import traceback
+import inspect
 
 import requests
 from django.conf import settings
@@ -89,10 +89,11 @@ def provision_field(field_id, content_type_pk_set):
     """
     from nautobot.extras.models import CustomField
 
+    logger.error(inspect.stack())
     try:
         field = CustomField.objects.get(pk=field_id)
     except CustomField.DoesNotExist:
-        logger.error(traceback.format_exc())
+        logger.error(inspect.stack())
         logger.error(f"Custom field with ID {field_id} not found, failing to provision.")
         return False
 
