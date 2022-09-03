@@ -30,7 +30,6 @@ def update_custom_field_choice_data(field_id, old_value, new_value):
     try:
         field = CustomField.objects.get(pk=field_id)
     except CustomField.DoesNotExist:
-        logger.error(traceback.format_exc())
         logger.error(f"Custom field with ID {field_id} not found, failing to act on choice data.")
         return False
 
@@ -93,6 +92,7 @@ def provision_field(field_id, content_type_pk_set):
     try:
         field = CustomField.objects.get(pk=field_id)
     except CustomField.DoesNotExist:
+        logger.error(traceback.format_exc())
         logger.error(f"Custom field with ID {field_id} not found, failing to provision.")
         return False
 
