@@ -91,7 +91,9 @@ def provision_field(field_id, content_type_pk_set):
     try:
         field = CustomField.objects.get(pk=field_id)
     except CustomField.DoesNotExist:
-        logger.error(f"Custom field with ID {field_id} not found, failing to provision.")
+        for ct in ContentType.objects.filter(pk__in=content_type_pk_set):
+            logger.error(f"{ct.model_class()}")
+            logger.error(f"Custom field with ID {field_id} not found, failing to provision.")
         return False
 
     with transaction.atomic():

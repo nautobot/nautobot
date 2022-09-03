@@ -18,9 +18,6 @@ from nautobot.utilities.testing import APITestCase, CeleryTestCase, TestCase
 from nautobot.virtualization.models import VirtualMachine
 
 
-logging.disable(logging.ERROR)
-
-
 class CustomFieldTest(TestCase):
     fixtures = ("status",)
 
@@ -1739,6 +1736,3 @@ class CustomFieldTableTest(TestCase):
 
             rendered_value = bound_row.get_cell(internal_col_name)
             self.assertEqual(rendered_value, col_expected_value)
-
-
-logging.disable(logging.NOTSET)
