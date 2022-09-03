@@ -18,6 +18,9 @@ from nautobot.utilities.testing import APITestCase, CeleryTestCase, TestCase
 from nautobot.virtualization.models import VirtualMachine
 
 
+logging.disable(logging.ERROR)
+
+
 class CustomFieldTest(TestCase):
     fixtures = ("status",)
 
@@ -1547,9 +1550,6 @@ class CustomFieldChoiceTest(TestCase):
         self.assertEqual(CustomFieldChoice.objects.count(), 0)
 
 
-logging.disable(logging.ERROR)
-
-
 class CustomFieldBackgroundTasks(CeleryTestCase):
     def test_provision_field_task(self):
         self.clear_worker()
@@ -1620,9 +1620,6 @@ class CustomFieldBackgroundTasks(CeleryTestCase):
         site.refresh_from_db()
 
         self.assertEqual(site.cf["cf1"], "Bar")
-
-
-logging.disable(logging.NOTSET)
 
 
 class CustomFieldTableTest(TestCase):
@@ -1742,3 +1739,6 @@ class CustomFieldTableTest(TestCase):
 
             rendered_value = bound_row.get_cell(internal_col_name)
             self.assertEqual(rendered_value, col_expected_value)
+
+
+logging.disable(logging.NOTSET)
