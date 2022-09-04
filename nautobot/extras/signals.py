@@ -146,7 +146,6 @@ def handle_cf_removed_obj_types(instance, action, pk_set, **kwargs):
 
     elif action == "post_add":
         # New content types have been added to the custom field, provision them
-        logger.error(f"{instance.name}, {instance.slug}, {instance.type}, {instance.default}")
         transaction.on_commit(lambda: provision_field.delay(instance.pk, pk_set))
 
 
