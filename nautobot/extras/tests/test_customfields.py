@@ -1577,7 +1577,7 @@ class CustomFieldBackgroundTasks(CeleryTestCase):
             type=CustomFieldTypeChoices.TYPE_TEXT,
         )
         cf.save()
-        logging.disable(logging.error)
+        logging.disable(logging.ERROR)
         cf.content_types.set([obj_type])
 
         site = Site(name="Site 1", slug="site-1", _custom_field_data={"cf1": "foo"})
