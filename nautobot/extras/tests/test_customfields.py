@@ -17,6 +17,8 @@ from nautobot.utilities.tables import CustomFieldColumn
 from nautobot.utilities.testing import APITestCase, CeleryTestCase, TestCase
 from nautobot.virtualization.models import VirtualMachine
 
+logging.disable(logging.CRITICAL)
+
 
 class CustomFieldTest(TestCase):
     fixtures = ("status",)
