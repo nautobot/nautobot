@@ -1546,6 +1546,7 @@ class CustomFieldChoiceTest(TestCase):
             self.assertEqual(CustomField.objects.count(), 0)
         self.assertEqual(CustomFieldChoice.objects.count(), 0)
 
+
 class CustomFieldBackgroundTasks(CeleryTestCase):
     def test_provision_field_task(self):
         self.clear_worker()
