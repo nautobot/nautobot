@@ -55,19 +55,19 @@ extra:
   social:
     - icon: "fontawesome/solid/rss"
       link: "https://blog.networktocode.com/blog/tags/nautobot"
-      name: "NetworkToCode Blog"
+      name: "Network to Code Blog"
     - icon: "fontawesome/brands/youtube"
       link: "https://www.youtube.com/playlist?list=PLjA0bhxgryJ2Ts4GJMDA-tPzVWEncv4pb"
       name: "Nautobot Videos"
     - icon: "fontawesome/brands/slack"
       link: "https://www.networktocode.com/community/"
-      name: "NetworkToCode Community"
+      name: "Network to Code Community"
     - icon: "fontawesome/brands/github"
       link: "https://github.com/nautobot/nautobot"
       name: "GitHub Repo"
     - icon: "fontawesome/brands/twitter"
       link: "https://twitter.com/networktocode"
-      name: "NetworkToCode Twitter"
+      name: "Network to Code Twitter"
 markdown_extensions:
   - "admonition"
   - "toc":
