@@ -161,7 +161,7 @@ A new configuration setting, [`STRICT_FILTERING`](../configuration/optional-sett
 
 The `settings_and_registry` default context processor was changed to purely `settings` - the (large) Nautobot application registry dictionary is no longer provided as part of the render context for all templates by default. Added a new `registry` template tag that can be invoked by specific templates to provide this variable where needed.
 
-## v1.4.2 (2022-MM-DD)
+## v1.4.2 (2022-09-05)
 
 ### Added
 
@@ -181,6 +181,9 @@ The `settings_and_registry` default context processor was changed to purely `set
 - [#2347](https://github.com/nautobot/nautobot/pull/2347) - Revamped documentation look and feel.
 - [#2349](https://github.com/nautobot/nautobot/pull/2349) - Docker images are now built with Poetry 1.2.0.
 - [#2360](https://github.com/nautobot/nautobot/pull/2360) - Django natural key for Status is now `name` rather than `slug`.
+- [#2363](https://github.com/nautobot/nautobot/pull/2363) - Update app icons for consistency
+- [#2365](https://github.com/nautobot/nautobot/pull/2365) - Update Network to Code branding name
+- [#2367](https://github.com/nautobot/nautobot/pull/2367) - Remove coming soon from projects that exists
 
 ### Fixed
 
