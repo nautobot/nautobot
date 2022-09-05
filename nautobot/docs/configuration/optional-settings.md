@@ -217,7 +217,7 @@ The Redis connection string to use for caching.
 
 Default: `{}`
 
-A dict of additional options passed to the Celery broker transport. This is only required when [configuring Celery to utilize Redis Sentinel](../../additional-features/caching#celery-sentinel-configuration).
+A dict of additional options passed to the Celery broker transport. This is only required when [configuring Celery to utilize Redis Sentinel](../additional-features/caching.md#celery-sentinel-configuration).
 
 ---
 
@@ -245,7 +245,7 @@ Celery result backend used to tell workers where to store task results (tombston
 
 Default: `{}`
 
-A dict of additional options passed to the Celery result backend transport. This is only required when [configuring Celery to utilize Redis Sentinel](../../additional-features/caching#celery-sentinel-configuration).
+A dict of additional options passed to the Celery result backend transport. This is only required when [configuring Celery to utilize Redis Sentinel](../additional-features/caching.md#celery-sentinel-configuration).
 
 ---
 
@@ -625,7 +625,7 @@ Setting this to `True` will display a "maintenance mode" banner at the top of ev
     The default [`SESSION_ENGINE`](#session_engine) configuration will store sessions in the database, this obviously will not work when `MAINTENANCE_MODE` is `True` and the database is in a read-only state for maintenance.  Consider setting `SESSION_ENGINE` to `django.contrib.sessions.backends.cache` when enabling `MAINTENANCE_MODE`.
 
 !!! note
-    The Docker container normally attempts to run migrations on startup; however, if the database is in a read-only state the Docker container will fail to start.  Setting the environment variable [`NAUTOBOT_DOCKER_SKIP_INIT`](../docker/#nautobot_docker_skip_init) to `true` will prevent the migrations from occurring.
+    The Docker container normally attempts to run migrations on startup; however, if the database is in a read-only state the Docker container will fail to start.  Setting the environment variable [`NAUTOBOT_DOCKER_SKIP_INIT`](../docker/index.md#nautobot_docker_skip_init) to `true` will prevent the migrations from occurring.
 
 !!! note
     If you are using `django-auth-ldap` for LDAP authentication, `django-auth-ldap` by default will try to update a user object on every log in.  If the database is in a read-only state `django-auth-ldap` will fail.  You will also need to set `AUTH_LDAP_ALWAYS_UPDATE_USER=False` and `AUTH_LDAP_NO_NEW_USERS=True` to avoid this, please see the [`django-auth-ldap` documentation](https://django-auth-ldap.readthedocs.io/en/stable/reference.html) for more information.
@@ -677,7 +677,7 @@ Nautobot will use these credentials when authenticating to remote devices via th
     If SSH public key authentication has been set up on the remote device(s) for the system account under which Nautobot runs, these parameters are not needed.
 
 !!! note
-    If a given device has an appropriately populated [secrets group](../../models/extras/secretsgroup/) assigned to it, the [secrets](../../models/extras/secret/) defined in that group will take precedence over these default values.
+    If a given device has an appropriately populated [secrets group](../models/extras/secretsgroup.md) assigned to it, the [secrets](../models/extras/secret.md) defined in that group will take precedence over these default values.
 
 ---
 
@@ -707,7 +707,7 @@ NAPALM_ARGS = {
 ```
 
 !!! note
-    If a given device has an appropriately populated [secrets group](../../models/extras/secretsgroup/) assigned to it, a [secret](../../models/extras/secret/) defined in that group can override the `NAPALM_ARGS["secret"]` or `NAPALM_ARGS["enable_password"]` default value defined here.
+    If a given device has an appropriately populated [secrets group](../models/extras/secretsgroup.md) assigned to it, a [secret](../models/extras/secret.md) defined in that group can override the `NAPALM_ARGS["secret"]` or `NAPALM_ARGS["enable_password"]` default value defined here.
 
 ---
 
@@ -744,7 +744,7 @@ The default maximum number of objects to display per page within each list of ob
 
 Default: `[]` (Empty list)
 
-A list of installed [Nautobot plugins](../../plugins) to enable. Plugins will not take effect unless they are listed here.
+A list of installed [Nautobot plugins](../plugins/index.md) to enable. Plugins will not take effect unless they are listed here.
 
 !!! warning
     Plugins extend Nautobot by allowing external code to run with the same access and privileges as Nautobot itself. Only install plugins from trusted sources. The Nautobot maintainers make absolutely no guarantees about the integrity or security of your installation with plugins enabled.
@@ -803,6 +803,16 @@ Default width (in pixels) of a unit within a rack elevation.
 
 !!! tip
     As of Nautobot 1.2.0, if you do not set a value for this setting in your `nautobot_config.py`, it can be configured dynamically by an admin user via the Nautobot Admin UI. If you do have a value for this setting in `nautobot_config.py`, it will override any dynamically configured value.
+
+---
+
+## REDIS_LOCK_TIMEOUT
+
+Default: `600`
+
+Environment Variable: `NAUTOBOT_REDIS_LOCK_TIMEOUT`
+
+Maximum duration of a Redis lock created when calling `/api/ipam/prefixes/{id}/available-prefixes/` or `/api/ipam/prefixes/{id}/available-ips/` to avoid inadvertently allocating the same prefix or IP to multiple simultaneous callers. Default is set to 600 seconds (10 minutes) to be longer than any theoretical API call time. This is to prevent a deadlock scenario where the server did not gracefully exit the `with` block when acquiring the Redis lock.
 
 ---
 
@@ -1014,7 +1024,7 @@ Default: `~/.nautobot/`
 
 The filesystem path to use to store Nautobot files (Jobs, uploaded images, Git repositories, etc.).
 
-This setting is used internally in the core settings to provide default locations for [features that require file storage](../../configuration/#file-storage), and the [default location of the `nautobot_config.py`](../../configuration/#specifying-your-configuration).
+This setting is used internally in the core settings to provide default locations for [features that require file storage](index.md#file-storage), and the [default location of the `nautobot_config.py`](index.md#specifying-your-configuration).
 
 !!! warning
     Do not override `NAUTOBOT_ROOT` in your `nautobot_config.py`. It will not work as expected. If you need to customize this setting, please always set the `NAUTOBOT_ROOT` environment variable.

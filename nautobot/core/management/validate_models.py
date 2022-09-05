@@ -51,7 +51,7 @@ class Command(BaseCommand):
         models = self._get_models(args)
 
         if options["verbosity"]:
-            self.stdout.write("Validating {} models.".format(len(models)))
+            self.stdout.write(f"Validating {len(models)} models.")
 
         for model in models:
             model_name = f"{model._meta.app_label}.{model.__name__}"

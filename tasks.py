@@ -20,7 +20,7 @@ from invoke import Collection, task as invoke_task
 from invoke.exceptions import Exit
 
 # Override built-in print function with rich's pretty-printer function
-from rich import print
+from rich import print  # pylint: disable=redefined-builtin
 
 
 def is_truthy(arg):
@@ -396,7 +396,7 @@ def post_upgrade(context):
 
 
 @task(help={"format": "Output serialization format for dumped data. (Choices: json, xml, yaml)"})
-def dumpdata(context, format="json"):
+def dumpdata(context, format="json"):  # pylint: disable=redefined-builtin
     """Dump data from database to db_output file."""
     command = f"nautobot-server dumpdata --exclude django_rq --indent 4 --output db_output.{format} --format {format}"
     run_command(context, command)
@@ -461,6 +461,31 @@ def flake8(context):
     run_command(context, command)
 
 
+@task(
+    help={
+        "target": "Module or file or directory to inspect, repeatable",
+        "recursive": "Must be set if target is a directory rather than a module or file name",
+    },
+    iterable=["target"],
+)
+def pylint(context, target=None, recursive=False):
+    """Perform static analysis of Nautobot code."""
+    if not target:
+        # Lint everything
+        # Lint the installed nautobot package and the file tasks.py in the current directory
+        command = "nautobot-server pylint nautobot tasks.py"
+        run_command(context, command)
+        # Lint Python files discovered recursively in the development/ and examples/ directories
+        command = "nautobot-server pylint --recursive development/ examples/"
+        run_command(context, command)
+    else:
+        command = "nautobot-server pylint "
+        if recursive:
+            command += "--recursive "
+        command += " ".join(target)
+        run_command(context, command)
+
+
 @task
 def hadolint(context):
     """Check Dockerfile for hadolint compliance and other style issues."""
@@ -471,7 +496,7 @@ def hadolint(context):
 @task
 def markdownlint(context):
     """Lint Markdown files."""
-    command = "markdownlint --ignore nautobot/project-static --config .markdownlint.yml nautobot examples *.md"
+    command = "markdownlint --ignore nautobot/project-static --config .markdownlint.yml --rules scripts/use-relative-md-links.js nautobot examples *.md"
     run_command(context, command)
 
 
@@ -499,8 +524,8 @@ def check_schema(context, api_version=None):
         assert current_major == "1", f"check_schemas version calc must be updated to handle version {current_major}"
         api_versions = [f"{current_major}.{minor}" for minor in range(2, int(current_minor) + 1)]
 
-    for api_version in api_versions:
-        command = f"nautobot-server spectacular --api-version {api_version} --validate --fail-on-warn --file /dev/null"
+    for api_vers in api_versions:
+        command = f"nautobot-server spectacular --api-version {api_vers} --validate --fail-on-warn --file /dev/null"
         run_command(context, command)
 
 
@@ -618,11 +643,12 @@ def integration_test(
     }
 )
 def tests(context, lint_only=False, keepdb=False):
-    """Run all tests and linters."""
+    """Run all linters and unit tests."""
     black(context)
     flake8(context)
     hadolint(context)
     markdownlint(context)
+    pylint(context)
     check_migrations(context)
     check_schema(context)
     build_and_check_docs(context)

@@ -136,16 +136,16 @@ class ConfigContextView(generic.ObjectView):
     def get_extra_context(self, request, instance):
         # Determine user's preferred output format
         if request.GET.get("format") in ["json", "yaml"]:
-            format = request.GET.get("format")
+            format_ = request.GET.get("format")
             if request.user.is_authenticated:
-                request.user.set_config("extras.configcontext.format", format, commit=True)
+                request.user.set_config("extras.configcontext.format", format_, commit=True)
         elif request.user.is_authenticated:
-            format = request.user.get_config("extras.configcontext.format", "json")
+            format_ = request.user.get_config("extras.configcontext.format", "json")
         else:
-            format = "json"
+            format_ = "json"
 
         return {
-            "format": format,
+            "format": format_,
         }
 
 
@@ -180,18 +180,18 @@ class ObjectConfigContextView(generic.ObjectView):
 
         # Determine user's preferred output format
         if request.GET.get("format") in ["json", "yaml"]:
-            format = request.GET.get("format")
+            format_ = request.GET.get("format")
             if request.user.is_authenticated:
-                request.user.set_config("extras.configcontext.format", format, commit=True)
+                request.user.set_config("extras.configcontext.format", format_, commit=True)
         elif request.user.is_authenticated:
-            format = request.user.get_config("extras.configcontext.format", "json")
+            format_ = request.user.get_config("extras.configcontext.format", "json")
         else:
-            format = "json"
+            format_ = "json"
 
         return {
             "rendered_context": instance.get_config_context(),
             "source_contexts": source_contexts,
-            "format": format,
+            "format": format_,
             "base_template": self.base_template,
             "active_tab": "config-context",
         }
@@ -219,16 +219,16 @@ class ConfigContextSchemaView(generic.ObjectView):
     def get_extra_context(self, request, instance):
         # Determine user's preferred output format
         if request.GET.get("format") in ["json", "yaml"]:
-            format = request.GET.get("format")
+            format_ = request.GET.get("format")
             if request.user.is_authenticated:
-                request.user.set_config("extras.configcontextschema.format", format, commit=True)
+                request.user.set_config("extras.configcontextschema.format", format_, commit=True)
         elif request.user.is_authenticated:
-            format = request.user.get_config("extras.configcontextschema.format", "json")
+            format_ = request.user.get_config("extras.configcontextschema.format", "json")
         else:
-            format = "json"
+            format_ = "json"
 
         return {
-            "format": format,
+            "format": format_,
         }
 
 
@@ -391,23 +391,20 @@ class CustomFieldEditView(generic.ObjectEditView):
                     else:
                         raise RuntimeError(choices.errors)
                     # <--- END difference from ObjectEditView.post()
-
-                msg = "{} {}".format(
-                    "Created" if object_created else "Modified",
-                    self.queryset.model._meta.verbose_name,
-                )
+                verb = "Created" if object_created else "Modified"
+                msg = f"{verb} {self.queryset.model._meta.verbose_name}"
                 logger.info(f"{msg} {obj} (PK: {obj.pk})")
                 if hasattr(obj, "get_absolute_url"):
-                    msg = '{} <a href="{}">{}</a>'.format(msg, obj.get_absolute_url(), escape(obj))
+                    msg = f'{msg} <a href="{obj.get_absolute_url()}">{escape(obj)}</a>'
                 else:
-                    msg = "{} {}".format(msg, escape(obj))
+                    msg = f"{msg} {escape(obj)}"
                 messages.success(request, mark_safe(msg))
 
                 if "_addanother" in request.POST:
 
                     # If the object has clone_fields, pre-populate a new instance of the form
                     if hasattr(obj, "clone_fields"):
-                        url = "{}?{}".format(request.path, prepare_cloned_fields(obj))
+                        url = f"{request.path}?{prepare_cloned_fields(obj)}"
                         return redirect(url)
 
                     return redirect(request.get_full_path())
@@ -429,7 +426,8 @@ class CustomFieldEditView(generic.ObjectEditView):
                 form.add_error(None, msg)
             except ProtectedError as err:
                 # e.g. Trying to delete a choice that is in use.
-                protected_obj, err_msg = err.args
+                err_msg = err.args[0]
+                protected_obj = err.protected_objects[0]
                 msg = f"{protected_obj.value}: {err_msg} Please cancel this edit and start again."
                 logger.debug(msg)
                 form.add_error(None, msg)
@@ -637,23 +635,20 @@ class DynamicGroupEditView(generic.ObjectEditView):
                         children.save()
                     else:
                         raise RuntimeError(children.errors)
-
-                msg = "{} {}".format(
-                    "Created" if object_created else "Modified",
-                    self.queryset.model._meta.verbose_name,
-                )
+                verb = "Created" if object_created else "Modified"
+                msg = f"{verb} {self.queryset.model._meta.verbose_name}"
                 logger.info(f"{msg} {obj} (PK: {obj.pk})")
                 if hasattr(obj, "get_absolute_url"):
-                    msg = '{} <a href="{}">{}</a>'.format(msg, obj.get_absolute_url(), escape(obj))
+                    msg = f'{msg} <a href="{obj.get_absolute_url()}">{escape(obj)}</a>'
                 else:
-                    msg = "{} {}".format(msg, escape(obj))
+                    msg = f"{msg} {escape(obj)}"
                 messages.success(request, mark_safe(msg))
 
                 if "_addanother" in request.POST:
 
                     # If the object has clone_fields, pre-populate a new instance of the form
                     if hasattr(obj, "clone_fields"):
-                        url = "{}?{}".format(request.path, prepare_cloned_fields(obj))
+                        url = f"{request.path}?{prepare_cloned_fields(obj)}"
                         return redirect(url)
 
                     return redirect(request.get_full_path())
@@ -674,7 +669,8 @@ class DynamicGroupEditView(generic.ObjectEditView):
                 form.add_error(None, msg)
             except ProtectedError as err:
                 # e.g. Trying to delete a something that is in use.
-                protected_obj, err_msg = err.args
+                err_msg = err.args[0]
+                protected_obj = err.protected_objects[0]
                 msg = f"{protected_obj.value}: {err_msg} Please cancel this edit and start again."
                 logger.debug(msg)
                 form.add_error(None, msg)
@@ -1738,13 +1734,13 @@ class SecretView(generic.ObjectView):
     def get_extra_context(self, request, instance):
         # Determine user's preferred output format
         if request.GET.get("format") in ["json", "yaml"]:
-            format = request.GET.get("format")
+            format_ = request.GET.get("format")
             if request.user.is_authenticated:
-                request.user.set_config("extras.configcontext.format", format, commit=True)
+                request.user.set_config("extras.configcontext.format", format_, commit=True)
         elif request.user.is_authenticated:
-            format = request.user.get_config("extras.configcontext.format", "json")
+            format_ = request.user.get_config("extras.configcontext.format", "json")
         else:
-            format = "json"
+            format_ = "json"
 
         provider = registry["secrets_providers"].get(instance.provider)
 
@@ -1752,7 +1748,7 @@ class SecretView(generic.ObjectView):
         groups_table = tables.SecretsGroupTable(groups, orderable=False)
 
         return {
-            "format": format,
+            "format": format_,
             "provider_name": provider.name if provider else instance.provider,
             "groups_table": groups_table,
         }
@@ -1849,23 +1845,20 @@ class SecretsGroupEditView(generic.ObjectEditView):
                         secrets.save()
                     else:
                         raise RuntimeError(secrets.errors)
-
-                msg = "{} {}".format(
-                    "Created" if object_created else "Modified",
-                    self.queryset.model._meta.verbose_name,
-                )
+                verb = "Created" if object_created else "Modified"
+                msg = f"{verb} {self.queryset.model._meta.verbose_name}"
                 logger.info(f"{msg} {obj} (PK: {obj.pk})")
                 if hasattr(obj, "get_absolute_url"):
-                    msg = '{} <a href="{}">{}</a>'.format(msg, obj.get_absolute_url(), escape(obj))
+                    msg = f'{msg} <a href="{obj.get_absolute_url()}">{escape(obj)}</a>'
                 else:
-                    msg = "{} {}".format(msg, escape(obj))
+                    msg = f"{msg} {escape(obj)}"
                 messages.success(request, mark_safe(msg))
 
                 if "_addanother" in request.POST:
 
                     # If the object has clone_fields, pre-populate a new instance of the form
                     if hasattr(obj, "clone_fields"):
-                        url = "{}?{}".format(request.path, prepare_cloned_fields(obj))
+                        url = f"{request.path}?{prepare_cloned_fields(obj)}"
                         return redirect(url)
 
                     return redirect(request.get_full_path())
@@ -1886,7 +1879,8 @@ class SecretsGroupEditView(generic.ObjectEditView):
                 form.add_error(None, msg)
             except ProtectedError as err:
                 # e.g. Trying to delete a choice that is in use.
-                protected_obj, err_msg = err.args
+                err_msg = err.args[0]
+                protected_obj = err.protected_objects[0]
                 msg = f"{protected_obj.value}: {err_msg} Please cancel this edit and start again."
                 logger.debug(msg)
                 form.add_error(None, msg)

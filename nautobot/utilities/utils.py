@@ -42,14 +42,14 @@ def csv_format(data):
 
         # Force conversion to string first so we can check for any commas
         if not isinstance(value, str):
-            value = "{}".format(value)
+            value = f"{value}"
 
         # Double-quote the value if it contains a comma or line break
         if "," in value or "\n" in value:
             value = value.replace('"', '""')  # Escape double-quotes
-            csv.append('"{}"'.format(value))
+            csv.append(f'"{value}"')
         else:
-            csv.append("{}".format(value))
+            csv.append(f"{value}")
 
     return ",".join(csv)
 
@@ -79,18 +79,18 @@ def get_route_for_model(model, action):
     return viewname
 
 
-def hex_to_rgb(hex):
+def hex_to_rgb(hex_str):
     """
     Map a hex string like "00ff00" to individual r, g, b integer values.
     """
-    return [int(hex[c : c + 2], 16) for c in (0, 2, 4)]  # noqa: E203
+    return [int(hex_str[c : c + 2], 16) for c in (0, 2, 4)]  # noqa: E203
 
 
 def rgb_to_hex(r, g, b):
     """
     Map r, g, b values to a hex string.
     """
-    return "%02x%02x%02x" % (r, g, b)
+    return "%02x%02x%02x" % (r, g, b)  # pylint: disable=consider-using-f-string
 
 
 def foreground_color(bg_color):
@@ -285,7 +285,7 @@ def to_meters(length, unit):
 
     valid_units = CableLengthUnitChoices.values()
     if unit not in valid_units:
-        raise ValueError("Unknown unit {}. Must be one of the following: {}".format(unit, ", ".join(valid_units)))
+        raise ValueError(f"Unknown unit {unit}. Must be one of the following: {', '.join(valid_units)}")
 
     if unit == CableLengthUnitChoices.UNIT_METER:
         return length
@@ -295,7 +295,7 @@ def to_meters(length, unit):
         return length * Decimal("0.3048")
     if unit == CableLengthUnitChoices.UNIT_INCH:
         return length * Decimal("0.3048") * 12
-    raise ValueError("Unknown unit {}. Must be 'm', 'cm', 'ft', or 'in'.".format(unit))
+    raise ValueError(f"Unknown unit {unit}. Must be 'm', 'cm', 'ft', or 'in'.")
 
 
 def render_jinja2(template_code, context):

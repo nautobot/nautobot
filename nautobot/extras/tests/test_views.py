@@ -145,7 +145,7 @@ class ConfigContextTestCase(
 
         # Create three ConfigContexts
         for i in range(1, 4):
-            configcontext = ConfigContext(name="Config Context {}".format(i), data={"foo": i})
+            configcontext = ConfigContext(name=f"Config Context {i}", data={"foo": i})
             configcontext.save()
             configcontext.sites.add(site)
 
@@ -266,16 +266,16 @@ class ConfigContextSchemaTestCase(
         # Create three ConfigContextSchema records
         ConfigContextSchema.objects.create(
             name="Schema 1", slug="schema-1", data_schema={"type": "object", "properties": {"foo": {"type": "string"}}}
-        ),
+        )
         ConfigContextSchema.objects.create(
             name="Schema 2", slug="schema-2", data_schema={"type": "object", "properties": {"bar": {"type": "string"}}}
-        ),
+        )
         ConfigContextSchema.objects.create(
             name="Schema 3", slug="schema-3", data_schema={"type": "object", "properties": {"baz": {"type": "string"}}}
-        ),
+        )
         ConfigContextSchema.objects.create(
             name="Schema 4", data_schema={"type": "object", "properties": {"baz": {"type": "string"}}}
-        ),
+        )
 
         cls.form_data = {
             "name": "Schema X",
@@ -605,7 +605,7 @@ class NoteTestCase(
     def setUpTestData(cls):
 
         content_type = ContentType.objects.get_for_model(Site)
-        site = Site.objects.create(name="Site 1", slug="site-1")
+        cls.site = Site.objects.create(name="Site 1", slug="site-1")
         user = User.objects.first()
 
         # Notes Objects to test
@@ -613,26 +613,47 @@ class NoteTestCase(
             note="Site has been placed on maintenance.",
             user=user,
             assigned_object_type=content_type,
-            assigned_object_id=site.pk,
-        ),
+            assigned_object_id=cls.site.pk,
+        )
         Note.objects.create(
             note="Site maintenance has ended.",
             user=user,
             assigned_object_type=content_type,
-            assigned_object_id=site.pk,
-        ),
+            assigned_object_id=cls.site.pk,
+        )
         Note.objects.create(
             note="Site is under duress.",
             user=user,
             assigned_object_type=content_type,
-            assigned_object_id=site.pk,
-        ),
+            assigned_object_id=cls.site.pk,
+        )
 
         cls.form_data = {
             "note": "This is Site note.",
             "assigned_object_type": content_type.pk,
-            "assigned_object_id": site.pk,
+            "assigned_object_id": cls.site.pk,
         }
+        cls.expected_object_note = '<textarea name="object_note" cols="40" rows="10" class="form-control" placeholder="Note" id="id_object_note"></textarea>'
+
+    def test_note_on_bulk_update_perms(self):
+        self.add_permissions("dcim.add_site", "extras.add_note")
+        response = self.client.get(reverse("dcim:site_add"))
+        self.assertContains(response, self.expected_object_note, html=True)
+
+    def test_note_on_bulk_update_no_perms(self):
+        self.add_permissions("dcim.add_site")
+        response = self.client.get(reverse("dcim:site_add"))
+        self.assertNotContains(response, self.expected_object_note, html=True)
+
+    def test_note_on_create_edit_perms(self):
+        self.add_permissions("dcim.change_site", "extras.add_note")
+        response = self.client.post(reverse("dcim:site_bulk_edit"), data={"pk": self.site.pk})
+        self.assertContains(response, self.expected_object_note, html=True)
+
+    def test_note_on_create_edit_no_perms(self):
+        self.add_permissions("dcim.change_site")
+        response = self.client.post(reverse("dcim:site_bulk_edit"), data={"pk": self.site.pk})
+        self.assertNotContains(response, self.expected_object_note, html=True)
 
 
 # Not a full-fledged PrimaryObjectViewTestCase as there's no BulkEditView for Secrets
@@ -1792,7 +1813,7 @@ class ObjectChangeTestCase(TestCase):
 
         # Create three ObjectChanges
         user = User.objects.create_user(username="testuser2")
-        for i in range(1, 4):
+        for _ in range(1, 4):
             oc = site.to_objectchange(action=ObjectChangeActionChoices.ACTION_UPDATE)
             oc.user = user
             oc.request_id = uuid.uuid4()
@@ -1805,7 +1826,7 @@ class ObjectChangeTestCase(TestCase):
             "user": User.objects.first().pk,
         }
 
-        response = self.client.get("{}?{}".format(url, urllib.parse.urlencode(params)))
+        response = self.client.get(f"{url}?{urllib.parse.urlencode(params)}")
         self.assertHttpStatus(response, 200)
 
     def test_objectchange(self):

@@ -221,7 +221,7 @@ class ConfigContextTestCase(FilterTestCases.FilterTestCase):
         for i in range(0, 3):
             is_active = bool(i % 2)
             c = ConfigContext.objects.create(
-                name="Config Context {}".format(i + 1),
+                name=f"Config Context {i + 1}",
                 is_active=is_active,
                 data='{"foo": 123}',
             )
@@ -616,7 +616,7 @@ class ImageAttachmentTestCase(FilterTestCases.FilterTestCase):
             image="http://example.com/image1.png",
             image_height=100,
             image_width=100,
-        ),
+        )
         ImageAttachment.objects.create(
             content_type=site_ct,
             object_id=sites[1].pk,
@@ -624,7 +624,7 @@ class ImageAttachmentTestCase(FilterTestCases.FilterTestCase):
             image="http://example.com/image2.png",
             image_height=100,
             image_width=100,
-        ),
+        )
         ImageAttachment.objects.create(
             content_type=rack_ct,
             object_id=racks[0].pk,
@@ -632,7 +632,7 @@ class ImageAttachmentTestCase(FilterTestCases.FilterTestCase):
             image="http://example.com/image3.png",
             image_height=100,
             image_width=100,
-        ),
+        )
         ImageAttachment.objects.create(
             content_type=rack_ct,
             object_id=racks[1].pk,

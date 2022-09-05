@@ -48,7 +48,7 @@ def image_upload(instance, filename):
     elif instance.name:
         filename = instance.name
 
-    return "{}{}_{}_{}".format(path, instance.content_type.name, instance.object_id, filename)
+    return f"{path}{instance.content_type.name}_{instance.object_id}_{filename}"
 
 
 @deconstructible
@@ -166,7 +166,7 @@ def extras_features(*features):
                 app_label, model_name = model_class._meta.label_lower.split(".")
                 registry["model_features"][feature][app_label].append(model_name)
             else:
-                raise ValueError("{} is not a valid extras feature!".format(feature))
+                raise ValueError(f"{feature} is not a valid extras feature!")
         return model_class
 
     return wrapper
@@ -188,8 +188,8 @@ def get_worker_count(request=None):
     from nautobot.core.celery import app  # noqa
 
     # Count the number of active celery workers
-    inspect = app.control.inspect()
-    active = inspect.active()  # None if no active workers
+    inspect_ = app.control.inspect()
+    active = inspect_.active()  # None if no active workers
     celery_count = len(active) if active is not None else 0
 
     return celery_count

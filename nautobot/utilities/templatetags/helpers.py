@@ -253,15 +253,15 @@ def humanize_speed(speed):
     if not speed:
         return ""
     if speed >= 1000000000 and speed % 1000000000 == 0:
-        return "{} Tbps".format(int(speed / 1000000000))
+        return f"{int(speed / 1000000000)} Tbps"
     elif speed >= 1000000 and speed % 1000000 == 0:
-        return "{} Gbps".format(int(speed / 1000000))
+        return f"{int(speed / 1000000)} Gbps"
     elif speed >= 1000 and speed % 1000 == 0:
-        return "{} Mbps".format(int(speed / 1000))
+        return f"{int(speed / 1000)} Mbps"
     elif speed >= 1000:
-        return "{} Mbps".format(float(speed) / 1000)
+        return f"{float(speed) / 1000} Mbps"
     else:
-        return "{} Kbps".format(speed)
+        return f"{speed} Kbps"
 
 
 @library.filter()
@@ -292,7 +292,7 @@ def fgcolor(value):
     value = value.lower().strip("#")
     if not re.match("^[0-9a-f]{6}$", value):
         return ""
-    return "#{}".format(foreground_color(value))
+    return f"#{foreground_color(value)}"
 
 
 @library.filter()
@@ -425,7 +425,7 @@ def as_range(n):
     try:
         int(n)
     except (TypeError, ValueError):
-        return list()
+        return []
     return range(int(n))
 
 
@@ -499,9 +499,9 @@ def querystring(request, **kwargs):
             querydict[k] = str(v)
         elif k in querydict:
             querydict.pop(k)
-    querystring = querydict.urlencode(safe="/")
-    if querystring:
-        return "?" + querystring
+    query_string = querydict.urlencode(safe="/")
+    if query_string:
+        return "?" + query_string
     else:
         return ""
 
@@ -565,7 +565,7 @@ def utilization_graph_raw_data(numerator, denominator, warning_threshold=75, dan
 
 
 @register.inclusion_tag("utilities/templatetags/tag.html")
-def tag(tag, url_name=None):
+def tag(tag, url_name=None):  # pylint: disable=redefined-outer-name
     """
     Display a tag, optionally linked to a filtered list of objects.
     """

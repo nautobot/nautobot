@@ -1,5 +1,5 @@
 from django.conf import settings
-from django.core.checks import register, Error, Tags, Warning
+from django.core.checks import register, Error, Tags, Warning  # pylint: disable=redefined-builtin
 from django.core.exceptions import ValidationError
 from django.core.validators import URLValidator
 

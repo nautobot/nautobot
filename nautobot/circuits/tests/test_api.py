@@ -10,7 +10,7 @@ from nautobot.utilities.testing import APITestCase, APIViewTestCases
 class AppTest(APITestCase):
     def test_root(self):
         url = reverse("circuits-api:api-root")
-        response = self.client.get("{}?format=api".format(url), **self.header)
+        response = self.client.get(f"{url}?format=api", **self.header)
 
         self.assertEqual(response.status_code, 200)
 

@@ -96,20 +96,22 @@ def construct_resolver(model_name, resolver_type):
     """
     if resolver_type == "cable_peer":
 
-        def resolve(self, args):
+        def resolve_cable_peer(self, args):
             peer = self.get_cable_peer()
             if type(peer).__name__ == model_name:
                 return peer
             return None
 
-        return resolve
+        return resolve_cable_peer
 
     if resolver_type == "connected_endpoint":
 
-        def resolve(self, args):
+        def resolve_connected_endpoint(self, args):
             peer = self.connected_endpoint
             if type(peer).__name__ == model_name:
                 return peer
             return None
 
-        return resolve
+        return resolve_connected_endpoint
+
+    raise ValueError(f"resolver_type must be 'cable_peer' or 'connected_endpoint', not '{resolver_type}'")

@@ -71,7 +71,7 @@ class Command(BaseCommand):
             help="Do not automatically generate missing cable paths.",
         )
 
-    def handle(self, **options):
+    def handle(self, *args, **options):
         # Run migrate
         if options.get("migrate"):
             print("Performing database migrations...")

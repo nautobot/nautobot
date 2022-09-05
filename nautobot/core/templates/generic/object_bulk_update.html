@@ -42,7 +42,11 @@
                     {% for field in form.visible_fields %}
                         {% if field.name in form.nullable_fields %}
                             {% render_field field bulk_nullable=True %}
-                        {% else %}
+                        {% elif field.name == "object_note" %}
+                            {% if perms.extras.add_note %}
+                                {% render_field field %}
+                            {% endif %}
+                        {% else%}
                             {% render_field field %}
                         {% endif %}
                     {% endfor %}

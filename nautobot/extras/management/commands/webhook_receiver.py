@@ -18,17 +18,10 @@ class WebhookHandler(BaseHTTPRequestHandler):
 
         raise AttributeError
 
-    def log_message(self, format_str, *args):
+    def log_message(self, format_str, *args):  # pylint: disable=arguments-differ
         global request_counter
 
-        print(
-            "[{}] {} {} {}".format(
-                request_counter,
-                self.date_time_string(),
-                self.address_string(),
-                format_str % args,
-            )
-        )
+        print(f"[{request_counter}] {self.date_time_string()} {self.address_string()} {format_str % args}")
 
     def do_ANY(self):
         global request_counter
@@ -43,7 +36,7 @@ class WebhookHandler(BaseHTTPRequestHandler):
         # Print the request headers to stdout
         if self.show_headers:
             for k, v in self.headers.items():
-                print("{}: {}".format(k, v))
+                print(f"{k}: {v}")
             print()
 
         # Print the request body (if any)
@@ -67,7 +60,7 @@ class Command(BaseCommand):
             "--port",
             type=int,
             default=self.default_port,
-            help="Optional port number (default: {})".format(self.default_port),
+            help=f"Optional port number (default: {self.default_port})",
         )
         parser.add_argument(
             "--no-headers",
@@ -82,7 +75,7 @@ class Command(BaseCommand):
 
         WebhookHandler.show_headers = not options["no_headers"]
 
-        self.stdout.write("Listening on port http://localhost:{}. Stop with {}.".format(port, quit_command))
+        self.stdout.write(f"Listening on port http://localhost:{port}. Stop with {quit_command}.")
         httpd = HTTPServer(("localhost", port), WebhookHandler)
 
         try:
