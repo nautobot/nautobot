@@ -276,7 +276,7 @@ class DynamicFilterForm(BootstrapMixin, forms.Form):
         data = kwargs.get("data")
         prefix = kwargs.get("prefix")
         if data and prefix:
-            lookup_type = data[prefix + "-lookup_type"]
+            lookup_type = data.get(prefix + "-lookup_type")
             lookup_value = data.getlist(prefix + "-lookup_value")
 
             if lookup_type and lookup_value:
