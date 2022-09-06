@@ -216,3 +216,52 @@ class APIVersioningTestCase(APITestCase):
         response = self.client.get(f"{url}?api_version={min_version}", **self.header)
         self.assertHttpStatus(response, 400)
         self.assertIn("Version mismatch", response.data["detail"])
+
+
+class LookupTypeChoicesTestCase(APITestCase):
+    def test_get_lookup_choices_without_query_params(self):
+        url = reverse("lookup_choices")
+        response = self.client.get(url, **self.header)
+
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(response.data, "contentype and field_name are required parameters")
+
+    def test_get_lookup_choices(self):
+        url = reverse("lookup_choices")
+        response = self.client.get(url + "?contenttype=dcim.site&field_name=status", **self.header)
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(
+            response.data,
+            {
+                "count": 2,
+                "next": None,
+                "previous": None,
+                "results": [{"id": "status", "name": "exact"}, {"id": "status__n", "name": "not-exact(n)"}],
+            },
+        )
+
+
+class GenerateLookupFieldDataViewTestCase(APITestCase):
+    def test_get_lookup_field_data_without_query_params(self):
+        url = reverse("lookup_field_type")
+        response = self.client.get(url, **self.header)
+
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(response.data, "contentype and field_name are required parameters")
+
+    def test_get_lookup_field_data(self):
+        url = reverse("lookup_field_type")
+        response = self.client.get(url + "?contenttype=dcim.site&field_name=status__n", **self.header)
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(
+            response.data,
+            {
+                "type": "dynamic-choices",
+                "data_url": "/api/extras/statuses/",
+                "choices": [],
+                "content_type": '["dcim.site"]',
+                "value_field": "slug",
+            },
+        )

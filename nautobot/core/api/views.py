@@ -700,6 +700,7 @@ class GraphQLDRFAPIView(NautobotAPIVersionMixin, APIView):
 class LookupTypeChoicesView(NautobotAPIVersionMixin, APIView):
     permission_classes = [IsAuthenticated]
 
+    # TODO timizuo: add contenttype, field_name parameters to schema
     @extend_schema(
         responses={
             200: {
@@ -723,6 +724,11 @@ class LookupTypeChoicesView(NautobotAPIVersionMixin, APIView):
         }
     )
     def get(self, request):
+        if "contenttype" not in request.GET or "field_name" not in request.GET:
+            return Response(
+                "contentype and field_name are required parameters",
+                status=400,
+            )
         contenttype = request.GET.get("contenttype")
         field_name = request.GET.get("field_name")
         app_label, model_name = contenttype.split(".")
@@ -741,9 +747,10 @@ class LookupTypeChoicesView(NautobotAPIVersionMixin, APIView):
         )
 
 
-class LookupValueChoicesView(NautobotAPIVersionMixin, APIView):
+class GenerateLookupFieldDataView(NautobotAPIVersionMixin, APIView):
     permission_classes = [IsAuthenticated]
 
+    # TODO timizuo: add contenttype, field_name parameters to schema
     @extend_schema(
         responses={
             200: {
@@ -761,8 +768,12 @@ class LookupValueChoicesView(NautobotAPIVersionMixin, APIView):
         }
     )
     def get(self, request):
+        if "contenttype" not in request.GET or "field_name" not in request.GET:
+            return Response(
+                "contentype and field_name are required parameters",
+                status=400,
+            )
         field_name = request.GET.get("field_name")
-
         contenttype = request.GET.get("contenttype")
         app_label, model_name = contenttype.split(".")
         model = ContentType.objects.get(app_label=app_label, model=model_name).model_class()

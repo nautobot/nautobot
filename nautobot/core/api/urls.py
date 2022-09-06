@@ -9,9 +9,9 @@ from drf_spectacular.views import (
 from nautobot.core.api.views import (
     APIRootView,
     StatusView,
+    GenerateLookupFieldDataView,
     GraphQLDRFAPIView,
     LookupTypeChoicesView,
-    LookupValueChoicesView,
     NautobotSpectacularSwaggerView,
     NautobotSpectacularRedocView,
 )
@@ -40,5 +40,5 @@ urlpatterns = [
     path("plugins/", include((plugin_api_patterns, "plugins-api"))),
     # Lookup Expr
     path("lookup-choices/", LookupTypeChoicesView.as_view(), name="lookup_choices"),
-    path("lookup-field-type/", LookupValueChoicesView.as_view(), name="lookup_field_type"),
+    path("lookup-field/", GenerateLookupFieldDataView.as_view(), name="lookup_field_type"),
 ]
