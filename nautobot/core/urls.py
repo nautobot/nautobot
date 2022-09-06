@@ -3,18 +3,14 @@ from django.conf.urls import include
 from django.urls import path
 from django.views.static import serve
 
-from nautobot.core.views import (
-    CustomGraphQLView,
-    HomeView,
-    SearchView,
-    StaticMediaFailureView,
-)
+from nautobot.core.views import CustomGraphQLView, HomeView, StaticMediaFailureView, SearchView
 from nautobot.extras.plugins.urls import (
     plugin_admin_patterns,
     plugin_patterns,
 )
 from nautobot.users.views import LoginView, LogoutView
 from .admin import admin_site
+
 
 urlpatterns = [
     # Base views
