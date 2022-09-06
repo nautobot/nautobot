@@ -304,6 +304,19 @@ class RelationshipTypeChoices(ChoiceSet):
     )
 
 
+class RelationshipSidesRequiredChoices(ChoiceSet):
+
+    NEITHER_SIDE_REQUIRED = ""
+    SOURCE_SIDE_REQUIRED = "source"
+    DESTINATION_SIDE_REQUIRED = "destination"
+
+    CHOICES = (
+        (NEITHER_SIDE_REQUIRED, "No"),
+        (SOURCE_SIDE_REQUIRED, "Source side required"),
+        (DESTINATION_SIDE_REQUIRED, "Destination side required"),
+    )
+
+
 #
 # Secrets
 #

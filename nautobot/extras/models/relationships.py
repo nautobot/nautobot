@@ -11,7 +11,7 @@ from django.urls import reverse
 
 from nautobot.core.fields import AutoSlugField
 from nautobot.core.models import BaseModel
-from nautobot.extras.choices import RelationshipTypeChoices, RelationshipSideChoices
+from nautobot.extras.choices import RelationshipTypeChoices, RelationshipSideChoices, RelationshipSidesRequiredChoices
 from nautobot.extras.utils import FeatureQuery, extras_features
 from nautobot.extras.models import ChangeLoggedModel
 from nautobot.extras.models.mixins import NotesMixin
@@ -233,6 +233,17 @@ class RelationshipManager(models.Manager.from_queryset(RestrictedQuerySet)):
             self.get_queryset().filter(destination_type=content_type),
         )
 
+    def get_required_for_model(self, model):
+        """
+        Return all required Relationships assigned to the given model.
+        """
+        required_types = [req_type for req_type in RelationshipSidesRequiredChoices.values() if req_type]
+        source, destination = self.get_for_model(model)
+        return {
+            "source": destination.filter(required__in=required_types),
+            "destination": source.filter(required__in=required_types),
+        }
+
 
 class Relationship(BaseModel, ChangeLoggedModel, NotesMixin):
 
@@ -249,7 +260,13 @@ class Relationship(BaseModel, ChangeLoggedModel, NotesMixin):
         default=RelationshipTypeChoices.TYPE_MANY_TO_MANY,
         help_text="Cardinality of this relationship",
     )
-
+    required = models.CharField(
+        max_length=12,
+        choices=RelationshipSidesRequiredChoices,
+        default=RelationshipSidesRequiredChoices.NEITHER_SIDE_REQUIRED,
+        help_text="Force this relationship to be required.",
+        blank=True,
+    )
     #
     # Source
     #

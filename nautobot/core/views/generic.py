@@ -22,7 +22,7 @@ from django.utils.safestring import mark_safe
 from django.views.generic import View
 from django_tables2 import RequestConfig
 
-from nautobot.extras.models import CustomField, ExportTemplate
+from nautobot.extras.models import CustomField, ExportTemplate, Relationship
 from nautobot.extras.models.change_logging import ChangeLoggedModel
 from nautobot.utilities.error_handlers import handle_protectederror
 from nautobot.utilities.exceptions import AbortTransaction
@@ -382,12 +382,43 @@ class ObjectEditView(GetReturnURLMixin, ObjectPermissionRequiredMixin, View):
 
         return super().dispatch(request, *args, **kwargs)
 
+    def check_required_relationships(self, request, obj):
+        required_relationships = Relationship.objects.get_required_for_model(obj)
+        for side, relations in required_relationships.items():
+            for relation in relations:
+
+                # Skip referencing itself
+                if ContentType.objects.get_for_model(obj) == getattr(relation, f"{relation.required}_type"):
+                    continue
+
+                model_class = getattr(relation, f"{side}_type").model_class()
+
+                if not model_class.objects.count():
+                    model_meta = model_class._meta
+                    required = model_meta.verbose_name
+                    try:
+                        add_url = reverse(f"{model_meta.app_label}:{model_meta.model_name}_add")
+                        add_message = f"<a href='{add_url}'>Click here</a> to add one."
+                    except NoReverseMatch:
+                        add_message = "Please add one first."
+
+                    messages.add_message(
+                        request,
+                        messages.ERROR,
+                        mark_safe(
+                            f"{obj._meta.verbose_name_plural.capitalize()} require a {required}, "
+                            f"but none exists yet. {add_message}"
+                        ),
+                    )
+
     def get(self, request, *args, **kwargs):
         obj = self.alter_obj(self.get_object(kwargs), request, args, kwargs)
 
         initial_data = normalize_querydict(request.GET)
         form = self.model_form(instance=obj, initial=initial_data)
         restrict_form_fields(form, request.user)
+
+        self.check_required_relationships(request, obj)
 
         return render(
             request,
@@ -407,6 +438,8 @@ class ObjectEditView(GetReturnURLMixin, ObjectPermissionRequiredMixin, View):
         obj = self.alter_obj(self.get_object(kwargs), request, args, kwargs)
         form = self.model_form(data=request.POST, files=request.FILES, instance=obj)
         restrict_form_fields(form, request.user)
+
+        self.check_required_relationships(request, obj)
 
         if form.is_valid():
             logger.debug("Form validation was successful")

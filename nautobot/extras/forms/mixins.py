@@ -370,6 +370,12 @@ class RelationshipModelFormMixin(forms.ModelForm):
                 field_name = f"cr_{relationship.slug}__{peer_side}"
                 self.fields[field_name] = relationship.to_form_field(side=side)
 
+                # if relationship.required in [
+                #     RelationshipSidesRequiredChoices.BOTH_SIDES_REQUIRED,
+                #     RelationshipSidesRequiredChoices.DESTINATION_SIDE_REQUIRED,
+                # ]:
+                #     self.fields[field_name].required = True
+
                 # if the object already exists, populate the field with existing values
                 if self.instance.present_in_database:
                     if relationship.has_many(peer_side):
@@ -394,6 +400,33 @@ class RelationshipModelFormMixin(forms.ModelForm):
           verify that the requested "source" object does not have an existing RelationshipAssociation to
           a different destination object.
         """
+
+        required_relationships = Relationship.objects.get_required_for_model(self.instance)
+        for side, relations in required_relationships.items():
+            for relation in relations:
+
+                if relation.symmetric:
+                    if not self.cleaned_data.get(f"cr_{relation.slug}__peer", []):
+                        model_name = relation.source_type.model_class()._meta.verbose_name
+                        # Only add the error once for this field
+                        if not len(self.errors.get(f"cr_{relation.slug}__peer", [])):
+                            self.add_error(
+                                f"cr_{relation.slug}__peer", forms.ValidationError(f"You must select a {model_name}")
+                            )
+                    continue
+
+                # Skip self-referencing
+                if ContentType.objects.get_for_model(self.instance) == getattr(relation, f"{relation.required}_type"):
+                    continue
+
+                model_name = getattr(relation, f"{side}_type").model_class()._meta.verbose_name
+                cr_field_name = f"cr_{relation.slug}__{relation.required}"
+
+                if not self.cleaned_data[cr_field_name]:
+                    self.add_error(
+                        f"cr_{relation.slug}__{side}", forms.ValidationError(f"You must select a {model_name}")
+                    )
+
         for side, relationships in self.instance.get_relationships().items():
             for relationship in relationships:
                 # The form field name reflects what it provides, i.e. the peer object(s) to link via this relationship.
