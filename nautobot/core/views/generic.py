@@ -59,6 +59,8 @@ def get_relationships_errors(request, obj):
                 continue
 
             model_class = getattr(relation, f"{side}_type").model_class()
+            # Handle the case where model_class is None (e.g., relationship to a plugin
+            # model for a plugin that's not installed at present):
             if model_class is None:
                 continue
 
