@@ -1,0 +1,22 @@
+---
+name: "Check for change log fragments"
+on:
+  pull_request:
+    branches:
+      - "develop"
+      - "next"
+
+jobs:
+  changelog:
+    runs-on: "ubuntu-20.04"
+    steps:
+      - name: "Check for changelog entry"
+        uses: brettcannon/check-for-changed-files@v1
+        with:
+          file-pattern: |
+            changes/*.added
+            changes/*.changed
+            changes/*.fixed
+            changes/*.removed
+            nautobot/docs/release-notes/version-*.*.md
+          failure-message: "Change log file missing in ${file-pattern}. Please add one to the branch ${{github.ref}}"
