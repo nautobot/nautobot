@@ -4,7 +4,13 @@ If you're planning to run multiple jobs, leverage job hooks or are finding that 
 
 ## How Celery Task Queues Work
 
-If you don't change any of the defaults when [deploying a celery worker](../installation/services.md#celery-worker) it will listen to the default queue named `celery`, use a [`--concurrency` value](https://docs.celeryq.dev/en/stable/reference/cli.html#cmdoption-celery-worker-c) set to the number of CPUs detected on the system and the [`worker_prefetch_multiplier` setting](https://docs.celeryq.dev/en/stable/userguide/configuration.html#std-setting-worker_prefetch_multiplier) defaults to 4. This means that a worker running on a 4 core system will run 4 tasks concurrently and reserve a maximum of 16 more tasks from the queue. If you have a mixture of long running and short running tasks with a single queue, you could find your long running tasks blocking the shorter tasks.
+The default celery behavior is:
+
+- [`--queue celery`](https://docs.celeryq.dev/en/stable/reference/cli.html#cmdoption-celery-worker-Q)
+- [`--concurrency`](https://docs.celeryq.dev/en/stable/reference/cli.html#cmdoption-celery-worker-c) set to the number of CPUs detected on the system
+- [`worker_prefetch_multiplier=4`](https://docs.celeryq.dev/en/stable/userguide/configuration.html#std-setting-worker_prefetch_multiplier)
+
+This means that a worker running on a 4 core system will run 4 tasks concurrently and reserve a maximum of 16 more tasks from the queue named `celery`. If you have a mixture of long running and short running tasks with a single queue, you could find your long running tasks blocking the shorter tasks.
 
 ## Recommended Worker Deployment
 
