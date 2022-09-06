@@ -41,6 +41,7 @@ from nautobot.utilities.permissions import get_permission_for_model
 from nautobot.utilities.templatetags.helpers import validated_viewname
 from nautobot.utilities.utils import (
     csv_format,
+    get_route_for_model,
     normalize_querydict,
     prepare_cloned_fields,
 )
@@ -58,12 +59,14 @@ def get_relationships_errors(request, obj):
                 continue
 
             model_class = getattr(relation, f"{side}_type").model_class()
+            if model_class is None:
+                continue
 
-            if not model_class.objects.count():
+            if model_class.objects.count() == 0:
                 model_meta = model_class._meta
                 required = model_meta.verbose_name
                 try:
-                    add_url = reverse(f"{model_meta.app_label}:{model_meta.model_name}_add")
+                    add_url = reverse(get_route_for_model(model_class, "add"))
                     add_message = f"<a href='{add_url}'>Click here</a> to create a {model_meta.verbose_name}."
                 except NoReverseMatch:
                     add_message = "Please add one first."
@@ -72,6 +75,15 @@ def get_relationships_errors(request, obj):
                     f"{obj._meta.verbose_name_plural.capitalize()} require a {required}, "
                     f"but no {model_meta.verbose_name_plural} exist yet. {add_message}"
                 )
+
+    if len(relationships_errors) > 0:
+        for msg in relationships_errors:
+            messages.add_message(
+                request,
+                messages.ERROR,
+                mark_safe(msg),
+            )
+
     return relationships_errors
 
 
@@ -418,14 +430,8 @@ class ObjectEditView(GetReturnURLMixin, ObjectPermissionRequiredMixin, View):
         restrict_form_fields(form, request.user)
 
         relationships_errors = get_relationships_errors(request, obj)
-        if relationships_errors:
-            for msg in relationships_errors:
-                messages.add_message(
-                    request,
-                    messages.ERROR,
-                    mark_safe(msg),
-                )
-            return redirect(reverse(f"{obj._meta.app_label}:{obj._meta.model_name}_list"))
+        if len(relationships_errors) > 0:
+            return redirect(get_route_for_model(obj, "list"))
 
         return render(
             request,
@@ -447,14 +453,8 @@ class ObjectEditView(GetReturnURLMixin, ObjectPermissionRequiredMixin, View):
         restrict_form_fields(form, request.user)
 
         relationships_errors = get_relationships_errors(request, obj)
-        if relationships_errors:
-            for msg in relationships_errors:
-                messages.add_message(
-                    request,
-                    messages.ERROR,
-                    mark_safe(msg),
-                )
-            return redirect(reverse(f"{obj._meta.app_label}:{obj._meta.model_name}_list"))
+        if len(relationships_errors) > 0:
+            return redirect(get_route_for_model(obj, "list"))
 
         if form.is_valid():
             logger.debug("Form validation was successful")
@@ -1003,15 +1003,10 @@ class BulkEditView(GetReturnURLMixin, ObjectPermissionRequiredMixin, View):
     def post(self, request, **kwargs):
         logger = logging.getLogger("nautobot.views.BulkEditView")
         model = self.queryset.model
+
         relationships_errors = get_relationships_errors(request, model)
-        if relationships_errors:
-            for msg in relationships_errors:
-                messages.add_message(
-                    request,
-                    messages.ERROR,
-                    mark_safe(msg),
-                )
-            return redirect(reverse(f"{model._meta.app_label}:{model._meta.model_name}_list"))
+        if len(relationships_errors) > 0:
+            return redirect(get_route_for_model(model, "list"))
 
         # If we are editing *all* objects in the queryset, replace the PK list with all matched objects.
         if request.POST.get("_all") and self.filterset is not None:

@@ -30,7 +30,6 @@ from nautobot.utilities.forms import (
 
 logger = logging.getLogger(__name__)
 
-
 __all__ = (
     "CustomFieldModelBulkEditFormMixin",
     "CustomFieldModelFilterFormMixin",
@@ -405,14 +404,8 @@ class RelationshipModelFormMixin(forms.ModelForm):
         for side, relations in required_relationships.items():
             for relation in relations:
 
+                # Not enforcing required symmetric relationships
                 if relation.symmetric:
-                    if not self.cleaned_data.get(f"cr_{relation.slug}__peer", []):
-                        model_name = relation.source_type.model_class()._meta.verbose_name
-                        # Only add the error once for this field
-                        if len(self.errors.get(f"cr_{relation.slug}__peer", [])) == 0:
-                            self.add_error(
-                                f"cr_{relation.slug}__peer", forms.ValidationError(f"You must select a {model_name}")
-                            )
                     continue
 
                 # Skip self-referencing
@@ -423,8 +416,16 @@ class RelationshipModelFormMixin(forms.ModelForm):
                 cr_field_name = f"cr_{relation.slug}__{relation.required}"
 
                 if not self.cleaned_data[cr_field_name]:
+                    if relation.type in [
+                        RelationshipTypeChoices.TYPE_ONE_TO_MANY,
+                        RelationshipTypeChoices.TYPE_MANY_TO_MANY,
+                    ]:
+                        num_required = "at least one"
+                    else:
+                        num_required = "a"
                     self.add_error(
-                        f"cr_{relation.slug}__{side}", forms.ValidationError(f"You must select a {model_name}")
+                        f"cr_{relation.slug}__{side}",
+                        forms.ValidationError(f"You must select {num_required} {model_name}"),
                     )
 
         for side, relationships in self.instance.get_relationships().items():
