@@ -50,10 +50,6 @@ from nautobot.utilities.utils import (
 from nautobot.utilities.views import GetReturnURLMixin, ObjectPermissionRequiredMixin
 
 
-# namedtuple takes a filterset params and factory_formset params
-FilterParams = namedtuple("FilterParams", ["filterset", "factory_formset"])
-
-
 class ObjectView(ObjectPermissionRequiredMixin, View):
     """
     Retrieve a single object for display.
@@ -187,15 +183,7 @@ class ObjectListView(ObjectPermissionRequiredMixin, View):
                 for key, value in filter_params.items()
             }
 
-            # Factory formset can't include fields not part of the filterset params
-            for field in request.GET:
-                if field not in self.filterset.base_filters.keys():
-                    filter_params.pop(field, None)
-
-            factory_formset_data = convert_querydict_to_factory_formset_dict(filter_params)
-
-            return FilterParams(filterset_data, factory_formset_data)
-        return None
+            return filterset_data
 
     def get_required_permission(self):
         return get_permission_for_model(self.queryset.model, "view")
@@ -260,9 +248,10 @@ class ObjectListView(ObjectPermissionRequiredMixin, View):
         model = self.queryset.model
         content_type = ContentType.objects.get_for_model(model)
 
-        filter_params = self.get_filter_params(request)
+        display_filter_params = []
         if self.filterset:
-            filterset = self.filterset(filter_params.filterset, self.queryset)
+            filter_params = self.get_filter_params(request)
+            filterset = self.filterset(filter_params, self.queryset)
             self.queryset = filterset.qs
             if not filterset.is_valid():
                 messages.error(
@@ -270,6 +259,11 @@ class ObjectListView(ObjectPermissionRequiredMixin, View):
                     mark_safe(f"Invalid filters were specified: {filterset.errors}"),
                 )
                 self.queryset = self.queryset.none()
+
+            display_filter_params = [
+                [field_name, values if isinstance(values, (list, tuple)) else [values]]
+                for field_name, values in filter_params.items()
+            ]
 
         # Check for export template rendering
         if request.GET.get("export"):
@@ -327,15 +321,12 @@ class ObjectListView(ObjectPermissionRequiredMixin, View):
 
         if request.GET:
             # TODO Raise Error if queryset model filterset not found
-            dynamic_filter_form = DynamicFilterFormSet(model=self.queryset.model, data=filter_params.factory_formset)
+            factory_formset_params = convert_querydict_to_factory_formset_dict(request.GET, self.filterset)
+            dynamic_filter_form = DynamicFilterFormSet(model=self.queryset.model, data=factory_formset_params)
         else:
             dynamic_filter_form = DynamicFilterFormSet(model=self.queryset.model)
 
         valid_actions = self.validate_action_buttons(request)
-        display_filter_params = [
-            [field_name, values if isinstance(values, (list, tuple)) else [values]]
-            for field_name, values in filter_params.filterset.items()
-        ]
 
         context = {
             "content_type": content_type,

@@ -860,12 +860,14 @@ def compile_model_choices(model, search_by, values):
     return choices
 
 
-def convert_querydict_to_factory_formset_dict(querydict):
+def convert_querydict_to_factory_formset_dict(request_querydict, filterset_class):
     """
-    Convert basic QueryDict/dict into an acceptable factory formset QueryDict
+    Convert request QueryDict/GET into an acceptable factory formset QueryDict
+    while discarding `querdict` params which are not part of `filterset_class` params
 
     Args:
-        querydict (QueryDict): QueryDict to convert
+        request_querydict (QueryDict): QueryDict to convert
+        filterset_class: Filterset class
 
     Examples:
         >>> convert_querydict_to_factory_formset_dict({"status": ["active", "decommissioning"], "name__ic": ["site"]})
@@ -883,8 +885,9 @@ def convert_querydict_to_factory_formset_dict(querydict):
         ... }
     """
     query_dict = QueryDict(mutable=True)
+    filterset_class_fields = filterset_class.base_filters.keys()
 
-    total_forms = len(querydict)
+    total_forms = len(request_querydict)
     query_dict.setdefault("form-TOTAL_FORMS", total_forms if total_forms > 2 else 3)
     query_dict.setdefault("form-INITIAL_FORMS", 0)
     query_dict.setdefault("form-MIN_NUM_FORMS", 0)
@@ -894,12 +897,14 @@ def convert_querydict_to_factory_formset_dict(querydict):
     lookup_type_placeholder = "form-%d-lookup_type"
     lookup_value_placeholder = "form-%d-lookup_value"
 
-    for idx, item in enumerate(querydict.items()):
-        lookup_type = item[0]
-        lookup_field = re.sub(r"__\w+", "", lookup_type)
-        lookup_value = querydict.getlist(lookup_type)
+    num = 0
+    for lookup_type in request_querydict.keys():
+        if lookup_type in filterset_class_fields:
+            lookup_field = re.sub(r"__\w+", "", lookup_type)
+            lookup_value = request_querydict.getlist(lookup_type)
 
-        query_dict.setlistdefault(lookup_field_placeholder % idx, [lookup_field])
-        query_dict.setlistdefault(lookup_type_placeholder % idx, [lookup_type])
-        query_dict.setlistdefault(lookup_value_placeholder % idx, lookup_value)
+            query_dict.setlistdefault(lookup_field_placeholder % num, [lookup_field])
+            query_dict.setlistdefault(lookup_type_placeholder % num, [lookup_type])
+            query_dict.setlistdefault(lookup_value_placeholder % num, lookup_value)
+            num += 1
     return query_dict
