@@ -698,7 +698,7 @@ def pretty_print_query(query):
     return pretty_str(query)
 
 
-def build_lookup_label(field_name, verbose_name=None):
+def build_lookup_label(field_name, verbose_name):
     """
     Return lookup expr with its verbose name
 
@@ -824,7 +824,7 @@ def get_data_for_filterset_parameter(model, parameter, initial_choice=None):
             if initial_choice is not None:
                 search_by = field.extra.get("to_field_name") or "id"
                 values = initial_choice if isinstance(initial_choice, (list, tuple)) else [initial_choice]
-                data["choices"] = compile_model_choices(related_model, search_by, values)
+                data["choices"] = compile_model_instance_choices(related_model, search_by, values)
 
     elif isinstance(field, (BooleanFilter,)):  # Yes / No choice
         data = {
@@ -835,17 +835,17 @@ def get_data_for_filterset_parameter(model, parameter, initial_choice=None):
     return data
 
 
-def compile_model_choices(model, search_by, values):
+def compile_model_instance_choices(model, search_by, values):
     """
-    Return a list of tuples of `model` instance values and its labels
+    Get all display names for values in `model` instance.
 
     Examples:
-        >>> compile_model_choices(<class: nautobot.dcim.models.Site>, "slug", ["site-1", "site-2"] )
-        >>> [("site-1", "Site 1", ("site-2", "Site 2"))]
+        >>> compile_model_instance_choices(,<class: nautobot.dcim.models.Site>, "slug", ["site-1", "site-2"] )
+        >>> [("site-1", "Site 1"), ("site-2", "Site 2")]
     Args:
-        model:
-        search_by:
-        values:
+        model: Model to query
+        search_by: Filter query by
+        values: List of values to get their display names
     """
     choices = []
     for value in values:
@@ -857,7 +857,7 @@ def compile_model_choices(model, search_by, values):
     return choices
 
 
-def convert_querydict_to_factory_formset_dict(request_querydict, filterset_class):
+def convert_querydict_to_factory_formset_acceptable_querydict(request_querydict, filterset_class):
     """
     Convert request QueryDict/GET into an acceptable factory formset QueryDict
     while discarding `querdict` params which are not part of `filterset_class` params
@@ -867,7 +867,7 @@ def convert_querydict_to_factory_formset_dict(request_querydict, filterset_class
         filterset_class: Filterset class
 
     Examples:
-        >>> convert_querydict_to_factory_formset_dict({"status": ["active", "decommissioning"], "name__ic": ["site"]})
+        >>> convert_querydict_to_factory_formset_acceptable_querydict({"status": ["active", "decommissioning"], "name__ic": ["site"]},)
         >>> {
         ...     'form-TOTAL_FORMS': [3],
         ...     'form-INITIAL_FORMS': ['0'],
@@ -884,8 +884,6 @@ def convert_querydict_to_factory_formset_dict(request_querydict, filterset_class
     query_dict = QueryDict(mutable=True)
     filterset_class_fields = filterset_class.base_filters.keys()
 
-    total_forms = len(request_querydict)
-    query_dict.setdefault("form-TOTAL_FORMS", total_forms if total_forms > 2 else 3)
     query_dict.setdefault("form-INITIAL_FORMS", 0)
     query_dict.setdefault("form-MIN_NUM_FORMS", 0)
     query_dict.setdefault("form-MAX_NUM_FORMS", 100)
@@ -904,4 +902,6 @@ def convert_querydict_to_factory_formset_dict(request_querydict, filterset_class
             query_dict.setlistdefault(lookup_type_placeholder % num, [lookup_type])
             query_dict.setlistdefault(lookup_value_placeholder % num, lookup_value)
             num += 1
+
+    query_dict.setdefault("form-TOTAL_FORMS", num if num > 2 else 3)
     return query_dict

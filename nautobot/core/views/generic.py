@@ -41,7 +41,7 @@ from nautobot.utilities.paginator import EnhancedPaginator, get_paginate_count
 from nautobot.utilities.permissions import get_permission_for_model
 from nautobot.utilities.templatetags.helpers import validated_viewname
 from nautobot.utilities.utils import (
-    convert_querydict_to_factory_formset_dict,
+    convert_querydict_to_factory_formset_acceptable_querydict,
     csv_format,
     normalize_querydict,
     prepare_cloned_fields,
@@ -321,7 +321,9 @@ class ObjectListView(ObjectPermissionRequiredMixin, View):
 
         if request.GET:
             # TODO Raise Error if queryset model filterset not found
-            factory_formset_params = convert_querydict_to_factory_formset_dict(request.GET, self.filterset)
+            factory_formset_params = convert_querydict_to_factory_formset_acceptable_querydict(
+                request.GET, self.filterset
+            )
             dynamic_filter_form = DynamicFilterFormSet(model=self.queryset.model, data=factory_formset_params)
         else:
             dynamic_filter_form = DynamicFilterFormSet(model=self.queryset.model)

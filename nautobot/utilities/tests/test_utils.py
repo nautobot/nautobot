@@ -4,8 +4,13 @@ from django.test import TestCase
 
 from nautobot.core.settings_funcs import is_truthy
 from nautobot.utilities.utils import (
+    build_lookup_label,
+    compile_model_instance_choices,
+    convert_querydict_to_factory_formset_acceptable_querydict,
     deepmerge,
     dict_to_filter_params,
+    get_all_lookup_exper_for_field,
+    get_data_for_filterset_parameter,
     get_form_for_model,
     get_filterset_for_model,
     get_model_from_name,
@@ -17,7 +22,7 @@ from nautobot.utilities.utils import (
     slugify_dots_to_dashes,
     slugify_dashes_to_underscores,
 )
-from nautobot.dcim.models import Device, Region, Site
+from nautobot.dcim.models import Device, Rack, Region, Site
 from nautobot.dcim.filters import DeviceFilterSet, SiteFilterSet
 from nautobot.dcim.forms import DeviceForm, DeviceFilterForm, SiteForm, SiteFilterForm
 from nautobot.dcim.tables import DeviceTable, SiteTable
@@ -332,3 +337,157 @@ class SlugifyFunctionsTest(TestCase):
             ("alpha-beta_gamma delta", "alpha_beta_gamma_delta"),
         ):
             self.assertEqual(slugify_dashes_to_underscores(content), expected)
+
+
+class LookupRelatedFunctionTest(TestCase):
+    def test_build_lookup_label(self):
+        with self.subTest():
+            label = build_lookup_label("slug__iew", "iendswith")
+            self.assertEqual(label, "ends-with(iew)")
+
+        with self.subTest("Test negation"):
+            label = build_lookup_label("slug__niew", "iendswith")
+            self.assertEqual(label, "not-ends-with(niew)")
+
+        with self.subTest("Test for exact: without a lookup expr"):
+            label = build_lookup_label("slug", "exact")
+            self.assertEqual(label, "exact")
+
+    def test_get_all_lookup_exper_for_field(self):
+        with self.subTest():
+            lookup_expr = get_all_lookup_exper_for_field(Site, "status")
+            self.assertEqual(
+                lookup_expr,
+                [{"id": "status", "name": "exact"}, {"id": "status__n", "name": "not-exact(n)"}],
+            )
+
+        with self.subTest("Test field with has_ prefix"):
+            lookup_expr = get_all_lookup_exper_for_field(Site, "has_vlans")
+            self.assertEqual(
+                lookup_expr,
+                [{"id": "has_vlans", "name": "exact"}],
+            )
+
+        with self.subTest("Test unknown field"):
+            lookup_expr = get_all_lookup_exper_for_field(Site, "unknown_field")
+            self.assertEqual(lookup_expr, [])
+
+    def test_get_data_for_filterset_parameter(self):
+        with self.subTest("Get data for field with dynamic choices i.e relational fields"):
+            data = get_data_for_filterset_parameter(Site, "status")
+            self.assertEqual(
+                data,
+                {
+                    "type": "dynamic-choices",
+                    "data_url": "/api/extras/statuses/",
+                    "choices": [],
+                    "content_type": '["dcim.site"]',
+                    "value_field": "slug",
+                },
+            )
+
+            data = get_data_for_filterset_parameter(Site, "tenant")
+            self.assertEqual(
+                data,
+                {"type": "dynamic-choices", "data_url": "/api/tenancy/tenants/", "choices": [], "value_field": "slug"},
+            )
+
+        with self.subTest("Get data for field with dynamic choices with an initial choices"):
+            data = get_data_for_filterset_parameter(Site, "status", ["active", "planned"])
+            self.assertEqual(
+                data,
+                {
+                    "type": "dynamic-choices",
+                    "data_url": "/api/extras/statuses/",
+                    "choices": [("active", "Active"), ("planned", "Planned")],
+                    "content_type": '["dcim.site"]',
+                    "value_field": "slug",
+                },
+            )
+
+        with self.subTest("Get data for fields with static choices i.e choice or bool fields"):
+            data = get_data_for_filterset_parameter(Rack, "type")
+            self.assertEqual(
+                data,
+                {
+                    "type": "static-choices",
+                    "choices": (
+                        ("2-post-frame", "2-post frame"),
+                        ("4-post-frame", "4-post frame"),
+                        ("4-post-cabinet", "4-post cabinet"),
+                        ("wall-frame", "Wall-mounted frame"),
+                        ("wall-cabinet", "Wall-mounted cabinet"),
+                    ),
+                    "allow_multiple": True,
+                },
+            )
+            data = get_data_for_filterset_parameter(Site, "has_vlans")
+            self.assertEqual(
+                data,
+                {
+                    "type": "static-choices",
+                    "choices": (("", "---------"), ("True", "Yes"), ("False", "No")),
+                    "allow_multiple": False,
+                },
+            )
+
+        with self.subTest("Get data for other fields i.e Integer and Char fields"):
+            data = get_data_for_filterset_parameter(Site, "comment__iew")
+            self.assertEqual(
+                data,
+                {"type": "others"},
+            )
+
+    def test_compile_model_instance_choices(self):
+        sites = (
+            Site.objects.create(name="Site 1", slug="site-1"),
+            Site.objects.create(name="Site 2", slug="site-2"),
+        )
+
+        with self.subTest("Get choices of valid fields"):
+            choices = compile_model_instance_choices(Site, "slug", ["site-1", "site-2"])
+            self.assertEqual(
+                choices,
+                [
+                    (sites[0].slug, sites[0].name),
+                    (sites[1].slug, sites[1].name),
+                ],
+            )
+
+        with self.subTest("Get choices for invalid fields"):
+            choices = compile_model_instance_choices(Site, "slug", ["site-3", "site-4"])
+            self.assertEqual(choices, [])
+
+    def test_convert_querydict_to_factory_formset_dict(self):
+        with self.subTest("Convert QueryDict to an acceptable factory formset QueryDict and discards invalid params"):
+            request_querydict = QueryDict(mutable=True)
+            request_querydict.setlistdefault("status", ["active", "decommissioning"])
+            request_querydict.setlistdefault("name__ic", ["site"])
+            request_querydict.setlistdefault("invalid_field", ["invalid"])
+
+            data = convert_querydict_to_factory_formset_acceptable_querydict(request_querydict, SiteFilterSet)
+            expected_querydict = QueryDict(mutable=True)
+            expected_querydict.setlistdefault("form-TOTAL_FORMS", [3])
+            expected_querydict.setlistdefault("form-INITIAL_FORMS", [0])
+            expected_querydict.setlistdefault("form-MIN_NUM_FORMS", [0])
+            expected_querydict.setlistdefault("form-MAX_NUM_FORMS", [100])
+            expected_querydict.setlistdefault("form-0-lookup_field", ["status"])
+            expected_querydict.setlistdefault("form-0-lookup_type", ["status"])
+            expected_querydict.setlistdefault("form-0-lookup_value", ["active", "decommissioning"])
+            expected_querydict.setlistdefault("form-1-lookup_field", ["name"])
+            expected_querydict.setlistdefault("form-1-lookup_type", ["name__ic"])
+            expected_querydict.setlistdefault("form-1-lookup_value", ["site"])
+
+            self.assertEqual(data, expected_querydict)
+
+        with self.subTest("Convert an empty QueryDict to an acceptable factory formset QueryDict"):
+            request_querydict = QueryDict(mutable=True)
+
+            data = convert_querydict_to_factory_formset_acceptable_querydict(request_querydict, SiteFilterSet)
+            expected_querydict = QueryDict(mutable=True)
+            expected_querydict.setlistdefault("form-TOTAL_FORMS", [3])
+            expected_querydict.setlistdefault("form-INITIAL_FORMS", [0])
+            expected_querydict.setlistdefault("form-MIN_NUM_FORMS", [0])
+            expected_querydict.setlistdefault("form-MAX_NUM_FORMS", [100])
+
+            self.assertEqual(data, expected_querydict)

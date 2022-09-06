@@ -16,7 +16,7 @@ from nautobot.utilities.paginator import EnhancedPaginator, get_paginate_count
 from nautobot.utilities.permissions import get_permission_for_model
 from nautobot.utilities.templatetags.helpers import validated_viewname
 from nautobot.utilities.utils import (
-    convert_querydict_to_factory_formset_dict,
+    convert_querydict_to_factory_formset_acceptable_querydict,
     normalize_querydict,
 )
 
@@ -49,7 +49,9 @@ class NautobotHTMLRenderer(renderers.BrowsableAPIRenderer):
         """
         factory_formset_params = {}
         if filterset_class:
-            factory_formset_params = convert_querydict_to_factory_formset_dict(request.GET, filterset_class)
+            factory_formset_params = convert_querydict_to_factory_formset_acceptable_querydict(
+                request.GET, filterset_class
+            )
         return DynamicFilterFormSet(model=view.queryset.model, data=factory_formset_params)
 
     def construct_user_permissions(self, request, model):
