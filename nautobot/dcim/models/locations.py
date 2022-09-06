@@ -202,16 +202,14 @@ class Location(TreeNode, StatusModel, PrimaryModel):
     @property
     def display(self):
         # prefix with parent name allows location name identity if there are the same name exists under different parents.
-        if self.name:
-            if self.parent:
-                if self.parent.parent:
-                    return f"[{self.parent.parent}->{self.parent}] {self.name}"
-                else:
-                    return f"[{self.parent}] {self.name}"
-            else:
-                return self.name
-        else:
-            return ""
+        display_str = self.name
+        parent = self.parent
+        for i in range(10):  # "10 levels iteration"
+            if parent is None:
+                break
+            display_str = f"{parent.name} → {display_str}"
+            parent = parent.parent
+        return display_str
 
     def validate_unique(self, exclude=None):
         # Check for a duplicate name on a Location with no parent.
