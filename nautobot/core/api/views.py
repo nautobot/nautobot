@@ -5,6 +5,7 @@ from collections import OrderedDict
 from django import __version__ as DJANGO_VERSION
 from django.apps import apps
 from django.conf import settings
+from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ObjectDoesNotExist
 from django.http.response import HttpResponseBadRequest
 from django.db import transaction
@@ -36,6 +37,7 @@ from nautobot.core.celery import app as celery_app
 from nautobot.core.api import BulkOperationSerializer
 from nautobot.core.api.exceptions import SerializerNotFound
 from nautobot.utilities.api import get_serializer_for_model
+from nautobot.utilities.utils import get_all_lookup_exper_for_field, get_data_for_filterset_parameter
 from . import serializers
 
 HTTP_ACTIONS = {
@@ -688,3 +690,83 @@ class GraphQLDRFAPIView(NautobotAPIVersionMixin, APIView):
             return document.execute(**options)
         except Exception as e:
             return ExecutionResult(errors=[e], invalid=True)
+
+
+#
+# Lookup Expr
+#
+
+
+class LookupTypeChoicesView(NautobotAPIVersionMixin, APIView):
+    permission_classes = [IsAuthenticated]
+
+    @extend_schema(
+        responses={
+            200: {
+                "type": "object",
+                "properties": {
+                    "count": {"type": "integer"},
+                    "next": {"type": "string"},
+                    "previous": {"type": "string"},
+                    "data": {
+                        "type": "array",
+                        "items": {
+                            "type": "object",
+                            "properties": {
+                                "id": {"type": "string", "format": "uuid"},
+                                "name": {"type": "string"},
+                            },
+                        },
+                    },
+                },
+            }
+        }
+    )
+    def get(self, request):
+        contenttype = request.GET.get("contenttype")
+        field_name = request.GET.get("field_name")
+        app_label, model_name = contenttype.split(".")
+        model = ContentType.objects.get(app_label=app_label, model=model_name).model_class()
+        data = get_all_lookup_exper_for_field(model, field_name)
+
+        # Needs to be returned in this format because this endpoint is used by
+        # DynamicModelChoiceField which requires the response of an api in this exact format
+        return Response(
+            {
+                "count": len(data),
+                "next": None,
+                "previous": None,
+                "results": data,
+            }
+        )
+
+
+class LookupValueChoicesView(NautobotAPIVersionMixin, APIView):
+    permission_classes = [IsAuthenticated]
+
+    @extend_schema(
+        responses={
+            200: {
+                "type": "object",
+                "properties": {
+                    "choices": {
+                        "type": "array",
+                        "items": {"type": "array", "minItems": 2, "maxItems": 2, "items": {"type": "string"}},
+                    },
+                    "data_url": {"type": "string"},
+                    "type": {"type": "string"},
+                    "allow_multiple": {"type": "boolean"},
+                },
+            }
+        }
+    )
+    def get(self, request):
+        field_name = request.GET.get("field_name")
+
+        contenttype = request.GET.get("contenttype")
+        app_label, model_name = contenttype.split(".")
+        model = ContentType.objects.get(app_label=app_label, model=model_name).model_class()
+        data = get_data_for_filterset_parameter(model, field_name)
+        # TODO: timizuo for choices instead of returning an array of array([["True", "Yes"]])
+        #  return a list of object e.g [{"value": "True", "label": "Yes"}]
+        return Response(data)

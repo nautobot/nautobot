@@ -10,6 +10,8 @@ from nautobot.core.api.views import (
     APIRootView,
     StatusView,
     GraphQLDRFAPIView,
+    LookupTypeChoicesView,
+    LookupValueChoicesView,
     NautobotSpectacularSwaggerView,
     NautobotSpectacularRedocView,
 )
@@ -36,4 +38,7 @@ urlpatterns = [
     path("graphql/", GraphQLDRFAPIView.as_view(), name="graphql-api"),
     # Plugins
     path("plugins/", include((plugin_api_patterns, "plugins-api"))),
+    # Lookup Expr
+    path("lookup-choices/", LookupTypeChoicesView.as_view(), name="lookup_choices"),
+    path("lookup-field-type/", LookupValueChoicesView.as_view(), name="lookup_field_type"),
 ]

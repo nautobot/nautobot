@@ -4,7 +4,6 @@ import sys
 
 from django.conf import settings
 from django.contrib.auth.mixins import AccessMixin
-from django.contrib.contenttypes.models import ContentType
 from django.http import HttpResponseServerError, JsonResponse
 from django.shortcuts import render
 from django.template import loader, RequestContext, Template
@@ -23,10 +22,6 @@ from nautobot.extras.models import GraphQLQuery
 from nautobot.extras.registry import registry
 from nautobot.extras.forms import GraphQLQueryForm
 from nautobot.utilities.config import get_settings_or_config
-from nautobot.utilities.utils import (
-    get_all_lookup_exper_for_field,
-    get_data_for_filterset_parameter,
-)
 
 
 class HomeView(AccessMixin, TemplateView):
@@ -210,28 +205,3 @@ class CustomGraphQLView(GraphQLView):
         data["saved_graphiql_queries"] = GraphQLQuery.objects.all()
         data["form"] = GraphQLQueryForm
         return render(request, self.graphiql_template, data)
-
-
-class LookupTypeChoicesView(View):
-    def get(self, request):
-        contenttype = request.GET.get("contenttype")
-        field_name = request.GET.get("field_name")
-        app_label, model_name = contenttype.split(".")
-        model = ContentType.objects.get(app_label=app_label, model=model_name).model_class()
-        data = get_all_lookup_exper_for_field(model, field_name)
-
-        # Needs to be returned in this format because this endpoint is used by
-        # DynamicModelChoiceField which requires the response of an api in this exact format
-        return JsonResponse({"count": len(data), "next": None, "previous": None, "results": data})
-
-
-class LookupValueChoicesView(View):
-    def get(self, request):
-        field_name = request.GET.get("field_name")
-
-        contenttype = request.GET.get("contenttype")
-        app_label, model_name = contenttype.split(".")
-        model = ContentType.objects.get(app_label=app_label, model=model_name).model_class()
-        data = get_data_for_filterset_parameter(model, field_name)
-
-        return JsonResponse(data)

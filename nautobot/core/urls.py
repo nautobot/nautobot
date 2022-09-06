@@ -6,8 +6,6 @@ from django.views.static import serve
 from nautobot.core.views import (
     CustomGraphQLView,
     HomeView,
-    LookupTypeChoicesView,
-    LookupValueChoicesView,
     SearchView,
     StaticMediaFailureView,
 )
@@ -53,9 +51,6 @@ urlpatterns = [
     path(r"health/", include("health_check.urls")),
     # FileProxy attachments download/get URLs used in admin views only
     path("files/", include("db_file_storage.urls")),
-    #
-    path("lookup-choices/", LookupTypeChoicesView.as_view()),
-    path("lookup-field-type/", LookupValueChoicesView.as_view()),
 ]
 
 

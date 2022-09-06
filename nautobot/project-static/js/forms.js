@@ -521,7 +521,7 @@ function jsify_form(context) {
         // if `lookup_field_val` == `lookup_type_val` lookup expr is exact
         if(lookup_field_val == lookup_type_val){
             $.ajax({
-                url: `/lookup-field-type/?field_name=${lookup_field_val}&contenttype=${contenttype}`,
+                url: `/api/lookup-field-type/?field_name=${lookup_field_val}&contenttype=${contenttype}`,
                 async: true,
                 contentType: 'application/json',
                 dataType: 'json',

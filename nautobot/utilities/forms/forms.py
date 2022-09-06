@@ -4,6 +4,7 @@ import re
 import yaml
 from django import forms
 from django.forms import formset_factory
+from django.urls import reverse
 
 from nautobot.ipam.formfields import IPNetworkFormField
 from nautobot.utilities.utils import (
@@ -290,7 +291,7 @@ class DynamicFilterForm(BootstrapMixin, forms.Form):
 
         self.fields["lookup_type"].widget.attrs["data-query-param-field_name"] = json.dumps(["$lookup_field"])
         self.fields["lookup_type"].widget.attrs["data-contenttype"] = contenttype
-        self.fields["lookup_type"].widget.attrs["data-url"] = "/lookup-choices/"
+        self.fields["lookup_type"].widget.attrs["data-url"] = reverse("lookup_choices")
         self.fields["lookup_type"].widget.attrs["class"] = "nautobot-select2-api lookup_type-select"
 
         lookup_value_css = self.fields["lookup_value"].widget.attrs.get("class")
