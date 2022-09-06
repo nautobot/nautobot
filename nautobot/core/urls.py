@@ -6,10 +6,10 @@ from django.views.static import serve
 from nautobot.core.views import (
     CustomGraphQLView,
     HomeView,
-    StaticMediaFailureView,
-    SearchView,
     LookupTypeChoicesView,
     LookupValueChoicesView,
+    SearchView,
+    StaticMediaFailureView,
 )
 from nautobot.extras.plugins.urls import (
     plugin_admin_patterns,

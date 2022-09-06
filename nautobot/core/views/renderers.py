@@ -128,6 +128,7 @@ class NautobotHTMLRenderer(renderers.BrowsableAPIRenderer):
         changelog_url = None
         instance = None
         queryset = view.alter_queryset(request)
+        display_filter_params = []
         # Compile a dictionary indicating which permissions are available to the current user for this model
         permissions = self.construct_user_permissions(request, model)
         if view.action in ["create", "retrieve", "update", "destroy"]:
@@ -153,6 +154,11 @@ class NautobotHTMLRenderer(renderers.BrowsableAPIRenderer):
                             mark_safe(f"Invalid filters were specified: {filterset.errors}"),
                         )
                         view.queryset = view.queryset.none()
+
+                    display_filter_params = [
+                        [field_name, values if isinstance(values, (list, tuple)) else [values]]
+                        for field_name, values in filter_params.items()
+                    ]
                 table = self.construct_table(view, request=request, permissions=permissions)
             elif view.action == "destroy":
                 form = form_class(initial=request.GET)
@@ -202,6 +208,7 @@ class NautobotHTMLRenderer(renderers.BrowsableAPIRenderer):
             "content_type": content_type,
             "form": form,
             "filter_form": self.get_filter_form(view, request, filterset_class=view.filterset_class),
+            "filter_params": display_filter_params,
             "object": instance,
             "obj": instance,  # NOTE: This context key is deprecated in favor of `object`.
             "obj_type": queryset.model._meta.verbose_name,  # NOTE: This context key is deprecated in favor of `verbose_name`.
