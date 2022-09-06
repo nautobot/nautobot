@@ -312,8 +312,8 @@ class RelationshipSidesRequiredChoices(ChoiceSet):
 
     CHOICES = (
         (NEITHER_SIDE_REQUIRED, "No"),
-        (SOURCE_SIDE_REQUIRED, "Source side required"),
-        (DESTINATION_SIDE_REQUIRED, "Destination side required"),
+        (SOURCE_SIDE_REQUIRED, "Source objects MUST implement this relationship"),
+        (DESTINATION_SIDE_REQUIRED, "Destination objects MUST implement this relationship"),
     )
 
 
