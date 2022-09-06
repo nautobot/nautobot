@@ -409,7 +409,7 @@ class RelationshipModelFormMixin(forms.ModelForm):
                     if not self.cleaned_data.get(f"cr_{relation.slug}__peer", []):
                         model_name = relation.source_type.model_class()._meta.verbose_name
                         # Only add the error once for this field
-                        if not len(self.errors.get(f"cr_{relation.slug}__peer", [])):
+                        if len(self.errors.get(f"cr_{relation.slug}__peer", [])) == 0:
                             self.add_error(
                                 f"cr_{relation.slug}__peer", forms.ValidationError(f"You must select a {model_name}")
                             )
