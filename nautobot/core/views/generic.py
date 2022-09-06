@@ -1,4 +1,3 @@
-from collections import namedtuple
 from copy import deepcopy
 import logging
 import re

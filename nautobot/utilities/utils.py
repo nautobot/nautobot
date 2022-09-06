@@ -25,7 +25,7 @@ from django_filters import ModelMultipleChoiceFilter, filters, BooleanFilter
 from taggit.managers import _TaggableManager
 
 from nautobot.dcim.choices import CableLengthUnitChoices
-from nautobot.utilities.constants import HTTP_REQUEST_META_SAFE_COPY, FILTER_LOOKUP_MAP
+from nautobot.utilities.constants import FILTER_LOOKUP_MAP, HTTP_REQUEST_META_SAFE_COPY
 from nautobot.utilities.forms import BOOLEAN_WITH_BLANK_CHOICES
 
 
@@ -708,21 +708,18 @@ def build_lookup_label(field_name, verbose_name=None):
 
     Examples:
         >>> build_lookup_label("slug__iew", "iendswith")
-        >>> "iendswith(iew)"
+        >>> "ends-with(iew)"
     """
 
-    text = None
     label = ""
     search = re.search("__.+$", field_name)
     if search is not None:
         text = search.group().replace("__", "")
         label = f"({text})"
 
-    if verbose_name is None:
-        if text is not None:
-            verbose_name = FILTER_LOOKUP_MAP.get(text)
-        else:
-            verbose_name = "exact"
+    if FILTER_LOOKUP_MAP.get(verbose_name):
+        lookup_label = FILTER_LOOKUP_MAP[verbose_name]
+        verbose_name = "not-" + lookup_label if label.startswith("(n") else lookup_label
 
     return verbose_name + label
 
