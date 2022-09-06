@@ -674,7 +674,6 @@ class JobLogEntryTable(BaseTable):
         default_columns = ("created", "grouping", "log_level", "log_object", "message")
         row_attrs = {
             "class": log_entry_color_css,
-            "data-name": lambda record: record.log_level,
         }
         attrs = {
             "class": "table table-hover table-headings",

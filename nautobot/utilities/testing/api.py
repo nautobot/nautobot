@@ -1,3 +1,5 @@
+from typing import Optional, Sequence, Union
+
 from django.conf import settings
 from django.contrib.contenttypes.models import ContentType
 from django.urls import reverse
@@ -48,7 +50,7 @@ class APITestCase(ModelTestCase):
         # Do not initialize the client, it conflicts with the APIClient.
         super().setUpNautobot(client=False)
         self.token = Token.objects.create(user=self.user)
-        self.header = {"HTTP_AUTHORIZATION": "Token {}".format(self.token.key)}
+        self.header = {"HTTP_AUTHORIZATION": f"Token {self.token.key}"}
         if self.api_version:
             self.set_api_version(self.api_version)
 
@@ -374,7 +376,7 @@ class APIViewTestCases:
     class CreateObjectViewTestCase(APITestCase):
         create_data = []
         validation_excluded_fields = []
-        slug_source = None
+        slug_source: Optional[Union[str, Sequence[str]]] = None
         slugify_function = staticmethod(slugify)
 
         def test_create_object_without_permission(self):
@@ -389,7 +391,7 @@ class APIViewTestCases:
                 self.assertHttpStatus(response, status.HTTP_403_FORBIDDEN)
 
         def check_expected_slug(self, obj):
-            slug_source = [self.slug_source] if isinstance(self.slug_source, str) else self.slug_source
+            slug_source = self.slug_source if isinstance(self.slug_source, (list, tuple)) else [self.slug_source]
             expected_slug = ""
             for source_item in slug_source:
                 # e.g. self.slug_source = ["parent__name", "name"]
@@ -476,8 +478,9 @@ class APIViewTestCases:
 
     class UpdateObjectViewTestCase(APITestCase):
         update_data = {}
-        bulk_update_data = None
+        bulk_update_data: Optional[dict] = None
         validation_excluded_fields = []
+        choices_fields = None
 
         def test_update_object_without_permission(self):
             """
@@ -536,12 +539,13 @@ class APIViewTestCases:
             response = self.client.patch(self._get_list_url(), data, format="json", **self.header)
             self.assertHttpStatus(response, status.HTTP_200_OK)
             for i, obj in enumerate(response.data):
-                for field in self.bulk_update_data:
+                for field, _value in self.bulk_update_data.items():
                     self.assertIn(
                         field,
                         obj,
                         f"Bulk update field '{field}' missing from object {i} in response",
                     )
+                    # TODO: shouldn't we also check that obj[field] == value?
             for instance in self._get_queryset().filter(pk__in=id_list):
                 self.assertInstanceEqual(
                     instance,
@@ -704,4 +708,4 @@ class APITransactionTestCase(_APITransactionTestCase, NautobotTestCaseMixin):
         self.user.is_superuser = True
         self.user.save()
         self.token = Token.objects.create(user=self.user)
-        self.header = {"HTTP_AUTHORIZATION": "Token {}".format(self.token.key)}
+        self.header = {"HTTP_AUTHORIZATION": f"Token {self.token.key}"}

@@ -378,16 +378,12 @@ class Rack(PrimaryModel, StatusModel):
                 min_height = top_device.position + top_device.device_type.u_height - 1
                 if self.u_height < min_height:
                     raise ValidationError(
-                        {
-                            "u_height": "Rack must be at least {}U tall to house currently installed devices.".format(
-                                min_height
-                            )
-                        }
+                        {"u_height": f"Rack must be at least {min_height}U tall to house currently installed devices."}
                     )
             # Validate that Rack was assigned a group of its same site, if applicable
             if self.group:
                 if self.group.site != self.site:
-                    raise ValidationError({"group": "Rack group must be from the same site, {}.".format(self.site)})
+                    raise ValidationError({"group": f"Rack group must be from the same site, {self.site}."})
 
     def to_csv(self):
         return (
@@ -660,7 +656,7 @@ class RackReservation(PrimaryModel):
         ordering = ["created"]
 
     def __str__(self):
-        return "Reservation for rack {}".format(self.rack)
+        return f"Reservation for rack {self.rack}"
 
     def get_absolute_url(self):
         return reverse("dcim:rackreservation", args=[self.pk])
@@ -673,12 +669,10 @@ class RackReservation(PrimaryModel):
             # Validate that all specified units exist in the Rack.
             invalid_units = [u for u in self.units if u not in self.rack.units]
             if invalid_units:
+                error = ", ".join([str(u) for u in invalid_units])
                 raise ValidationError(
                     {
-                        "units": "Invalid unit(s) for {}U rack: {}".format(
-                            self.rack.u_height,
-                            ", ".join([str(u) for u in invalid_units]),
-                        ),
+                        "units": f"Invalid unit(s) for {self.rack.u_height}U rack: {error}",
                     }
                 )
 
@@ -688,13 +682,8 @@ class RackReservation(PrimaryModel):
                 reserved_units += resv.units
             conflicting_units = [u for u in self.units if u in reserved_units]
             if conflicting_units:
-                raise ValidationError(
-                    {
-                        "units": "The following units have already been reserved: {}".format(
-                            ", ".join([str(u) for u in conflicting_units]),
-                        )
-                    }
-                )
+                error = ", ".join([str(u) for u in conflicting_units])
+                raise ValidationError({"units": f"The following units have already been reserved: {error}"})
 
     def to_csv(self):
         return (

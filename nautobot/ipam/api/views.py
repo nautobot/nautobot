@@ -1,3 +1,4 @@
+from django.conf import settings
 from django.core.cache import cache
 from django.shortcuts import get_object_or_404
 from drf_spectacular.utils import extend_schema, extend_schema_view
@@ -140,7 +141,7 @@ class PrefixViewSet(StatusViewSetMixin, NautobotModelViewSet):
         prefix = get_object_or_404(self.queryset, pk=pk)
         if request.method == "POST":
 
-            with cache.lock("available-prefixes", blocking_timeout=5):
+            with cache.lock("available-prefixes", blocking_timeout=5, timeout=settings.REDIS_LOCK_TIMEOUT):
                 available_prefixes = prefix.get_available_prefixes()
 
                 # Validate Requested Prefixes' length
@@ -161,9 +162,7 @@ class PrefixViewSet(StatusViewSetMixin, NautobotModelViewSet):
                     # Find the first available prefix equal to or larger than the requested size
                     for available_prefix in available_prefixes.iter_cidrs():
                         if requested_prefix["prefix_length"] >= available_prefix.prefixlen:
-                            allocated_prefix = "{}/{}".format(
-                                available_prefix.network, requested_prefix["prefix_length"]
-                            )
+                            allocated_prefix = f"{available_prefix.network}/{requested_prefix['prefix_length']}"
                             requested_prefix["prefix"] = allocated_prefix
                             requested_prefix["vrf"] = prefix.vrf.pk if prefix.vrf else None
                             break
@@ -228,7 +227,7 @@ class PrefixViewSet(StatusViewSetMixin, NautobotModelViewSet):
         # Create the next available IP within the prefix
         if request.method == "POST":
 
-            with cache.lock("available-ips", blocking_timeout=5):
+            with cache.lock("available-ips", blocking_timeout=5, timeout=settings.REDIS_LOCK_TIMEOUT):
 
                 # Normalize to a list of objects
                 requested_ips = request.data if isinstance(request.data, list) else [request.data]
@@ -238,8 +237,10 @@ class PrefixViewSet(StatusViewSetMixin, NautobotModelViewSet):
                 if available_ips.size < len(requested_ips):
                     return Response(
                         {
-                            "detail": "An insufficient number of IP addresses are available within the prefix {} ({} "
-                            "requested, {} available)".format(prefix, len(requested_ips), len(available_ips))
+                            "detail": (
+                                f"An insufficient number of IP addresses are available within the prefix {prefix} "
+                                f"({len(requested_ips)} requested, {len(available_ips)} available)"
+                            )
                         },
                         status=status.HTTP_204_NO_CONTENT,
                     )
@@ -248,7 +249,7 @@ class PrefixViewSet(StatusViewSetMixin, NautobotModelViewSet):
                 available_ips = iter(available_ips)
                 prefix_length = prefix.prefix.prefixlen
                 for requested_ip in requested_ips:
-                    requested_ip["address"] = "{}/{}".format(next(available_ips), prefix_length)
+                    requested_ip["address"] = f"{next(available_ips)}/{prefix_length}"
                     requested_ip["vrf"] = prefix.vrf.pk if prefix.vrf else None
 
                 # Initialize the serializer with a list or a single object depending on what was requested

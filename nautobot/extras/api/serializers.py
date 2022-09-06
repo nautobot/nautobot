@@ -694,9 +694,7 @@ class ImageAttachmentSerializer(ValidatedModelSerializer):
         try:
             data["content_type"].get_object_for_this_type(id=data["object_id"])
         except ObjectDoesNotExist:
-            raise serializers.ValidationError(
-                "Invalid parent object: {} ID {}".format(data["content_type"], data["object_id"])
-            )
+            raise serializers.ValidationError(f"Invalid parent object: {data['content_type']} ID {data['object_id']}")
 
         # Enforce model validation
         super().validate(data)

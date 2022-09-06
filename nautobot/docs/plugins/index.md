@@ -1,4 +1,4 @@
-# Plugins
+# Installing and Using Plugins
 
 Plugins are packaged [Django](https://docs.djangoproject.com/) apps that can be installed alongside Nautobot to provide custom functionality not present in the core application. Plugins can introduce their own models and views, but cannot interfere with existing components. A Nautobot user may opt to install plugins provided by the community or build his or her own.
 

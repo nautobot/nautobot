@@ -253,15 +253,15 @@ def humanize_speed(speed):
     if not speed:
         return ""
     if speed >= 1000000000 and speed % 1000000000 == 0:
-        return "{} Tbps".format(int(speed / 1000000000))
+        return f"{int(speed / 1000000000)} Tbps"
     elif speed >= 1000000 and speed % 1000000 == 0:
-        return "{} Gbps".format(int(speed / 1000000))
+        return f"{int(speed / 1000000)} Gbps"
     elif speed >= 1000 and speed % 1000 == 0:
-        return "{} Mbps".format(int(speed / 1000))
+        return f"{int(speed / 1000)} Mbps"
     elif speed >= 1000:
-        return "{} Mbps".format(float(speed) / 1000)
+        return f"{float(speed) / 1000} Mbps"
     else:
-        return "{} Kbps".format(speed)
+        return f"{speed} Kbps"
 
 
 @library.filter()
@@ -292,7 +292,7 @@ def fgcolor(value):
     value = value.lower().strip("#")
     if not re.match("^[0-9a-f]{6}$", value):
         return ""
-    return "#{}".format(foreground_color(value))
+    return f"#{foreground_color(value)}"
 
 
 @library.filter()

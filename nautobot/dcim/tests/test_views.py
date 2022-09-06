@@ -870,7 +870,7 @@ device-bays:
         url = reverse("dcim:devicetype_list")
         self.add_permissions("dcim.view_devicetype")
 
-        response = self.client.get("{}?export".format(url))
+        response = self.client.get(f"{url}?export")
         self.assertEqual(response.status_code, 200)
         data = list(yaml.load_all(response.content, Loader=yaml.SafeLoader))
         self.assertEqual(len(data), 4)
@@ -1141,7 +1141,7 @@ class FrontPortTemplateTestCase(ViewTestCases.DeviceComponentTemplateViewTestCas
             "device_type": devicetype.pk,
             "name_pattern": "Front Port [4-6]",
             "type": PortTypeChoices.TYPE_8P8C,
-            "rear_port_set": ["{}:1".format(rp.pk) for rp in rearports[3:6]],
+            "rear_port_set": [f"{rp.pk}:1" for rp in rearports[3:6]],
         }
 
         cls.bulk_edit_data = {
@@ -1942,7 +1942,7 @@ class FrontPortTestCase(ViewTestCases.DeviceComponentViewTestCase):
             "device": device.pk,
             "name_pattern": "Front Port [4-6]",
             "type": PortTypeChoices.TYPE_8P8C,
-            "rear_port_set": ["{}:1".format(rp.pk) for rp in rearports[3:6]],
+            "rear_port_set": [f"{rp.pk}:1" for rp in rearports[3:6]],
             "description": "New description",
             "tags": [t.pk for t in Tag.objects.get_for_model(FrontPort)],
         }
@@ -2367,7 +2367,7 @@ class ConsoleConnectionsTestCase(ViewTestCases.ListObjectsViewTestCase):
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     def test_queryset_to_csv(self):
         """This view has a custom queryset_to_csv() implementation."""
-        response = self.client.get("{}?export".format(self._get_url("list")))
+        response = self.client.get(f"{self._get_url('list')}?export")
         self.assertHttpStatus(response, 200)
         self.assertEqual(response.get("Content-Type"), "text/csv")
         self.assertEqual(
@@ -2427,7 +2427,7 @@ class PowerConnectionsTestCase(ViewTestCases.ListObjectsViewTestCase):
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     def test_queryset_to_csv(self):
         """This view has a custom queryset_to_csv() implementation."""
-        response = self.client.get("{}?export".format(self._get_url("list")))
+        response = self.client.get(f"{self._get_url('list')}?export")
         self.assertHttpStatus(response, 200)
         self.assertEqual(response.get("Content-Type"), "text/csv")
         self.assertEqual(
@@ -2486,7 +2486,7 @@ class InterfaceConnectionsTestCase(ViewTestCases.ListObjectsViewTestCase):
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     def test_queryset_to_csv(self):
         """This view has a custom queryset_to_csv() implementation."""
-        response = self.client.get("{}?export".format(self._get_url("list")))
+        response = self.client.get(f"{self._get_url('list')}?export")
         self.assertHttpStatus(response, 200)
         self.assertEqual(response.get("Content-Type"), "text/csv")
         self.assertEqual(

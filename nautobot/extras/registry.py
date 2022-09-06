@@ -11,11 +11,11 @@ class Registry(dict):
         try:
             return super().__getitem__(key)
         except KeyError:
-            raise KeyError("Invalid store: {}".format(key))
+            raise KeyError(f"Invalid store: {key}")
 
     def __setitem__(self, key, value):
         if key in self:
-            raise KeyError("Store already set: {}".format(key))
+            raise KeyError(f"Store already set: {key}")
         super().__setitem__(key, value)
 
     def __delitem__(self, key):

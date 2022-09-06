@@ -29,8 +29,8 @@ class StatusQuerySet(RestrictedQuerySet):
         content_type = ContentType.objects.get_for_model(model._meta.concrete_model)
         return self.filter(content_types=content_type)
 
-    def get_by_natural_key(self, slug):
-        return self.get(slug=slug)
+    def get_by_natural_key(self, name):
+        return self.get(name=name)
 
 
 @extras_features(
@@ -73,7 +73,7 @@ class Status(BaseModel, ChangeLoggedModel, CustomFieldModel, RelationshipModel, 
         return self.name
 
     def natural_key(self):
-        return (self.slug,)
+        return (self.name,)
 
     def get_absolute_url(self):
         return reverse("extras:status", args=[self.slug])
@@ -133,10 +133,10 @@ class StatusField(models.ForeignKey):
             return force_str(choices_dict.get(make_hashable(value), value), strings_only=True)
 
         # Install `.get_FOO_display()` onto the model using our own version.
-        if "get_%s_display" % self.name not in cls.__dict__:
+        if f"get_{self.name}_display" not in cls.__dict__:
             setattr(
                 cls,
-                "get_%s_display" % self.name,
+                f"get_{self.name}_display",
                 partialmethod(_get_FIELD_display, field=self),
             )
 
@@ -150,10 +150,10 @@ class StatusField(models.ForeignKey):
             return getattr(field_method, "color")
 
         # Install `.get_FOO_color()` onto the model using our own version.
-        if "get_%s_color" % self.name not in cls.__dict__:
+        if f"get_{self.name}_color" not in cls.__dict__:
             setattr(
                 cls,
-                "get_%s_color" % self.name,
+                f"get_{self.name}_color",
                 partialmethod(_get_FIELD_color, field=self),
             )
 

@@ -312,8 +312,9 @@ class Aggregate(PrimaryModel):
             if covering_aggregates:
                 raise ValidationError(
                     {
-                        "prefix": "Aggregates cannot overlap. {} is already covered by an existing aggregate ({}).".format(
-                            self.prefix, covering_aggregates[0]
+                        "prefix": (
+                            "Aggregates cannot overlap. "
+                            f"{self.prefix} is already covered by an existing aggregate ({covering_aggregates[0]})."
                         )
                     }
                 )
@@ -325,9 +326,7 @@ class Aggregate(PrimaryModel):
             if covered_aggregates:
                 raise ValidationError(
                     {
-                        "prefix": "Aggregates cannot overlap. {} covers an existing aggregate ({}).".format(
-                            self.prefix, covered_aggregates[0]
-                        )
+                        "prefix": f"Aggregates cannot overlap. {self.prefix} covers an existing aggregate ({covered_aggregates[0]})."
                     }
                 )
 
@@ -343,7 +342,7 @@ class Aggregate(PrimaryModel):
     @property
     def cidr_str(self):
         if self.network is not None and self.prefix_length is not None:
-            return "%s/%s" % (self.network, self.prefix_length)
+            return f"{self.network}/{self.prefix_length}"
         return None
 
     @property
@@ -587,14 +586,8 @@ class Prefix(PrimaryModel, StatusModel):
             if (self.vrf is None and settings.ENFORCE_GLOBAL_UNIQUE) or (self.vrf and self.vrf.enforce_unique):
                 duplicate_prefixes = self.get_duplicates()
                 if duplicate_prefixes:
-                    raise ValidationError(
-                        {
-                            "prefix": "Duplicate prefix found in {}: {}".format(
-                                "VRF {}".format(self.vrf) if self.vrf else "global table",
-                                duplicate_prefixes.first(),
-                            )
-                        }
-                    )
+                    vrf = f"VRF {self.vrf}" if self.vrf else "global table"
+                    raise ValidationError({"prefix": f"Duplicate prefix found in {vrf}: {duplicate_prefixes.first()}"})
 
         # Validate location
         if self.location is not None:
@@ -635,7 +628,7 @@ class Prefix(PrimaryModel, StatusModel):
     @property
     def cidr_str(self):
         if self.network is not None and self.prefix_length is not None:
-            return "%s/%s" % (self.network, self.prefix_length)
+            return f"{self.network}/{self.prefix_length}"
         return None
 
     @property
@@ -725,7 +718,7 @@ class Prefix(PrimaryModel, StatusModel):
         available_ips = self.get_available_ips()
         if not available_ips:
             return None
-        return "{}/{}".format(next(available_ips.__iter__()), self.prefix.prefixlen)
+        return f"{next(available_ips.__iter__())}/{self.prefix.prefixlen}"
 
     def get_utilization(self):
         """Get the child prefix size and parent size.
@@ -921,14 +914,8 @@ class IPAddress(PrimaryModel, StatusModel):
             ):
                 duplicate_ips = self.get_duplicates()
                 if duplicate_ips:
-                    raise ValidationError(
-                        {
-                            "address": "Duplicate IP address found in {}: {}".format(
-                                "VRF {}".format(self.vrf) if self.vrf else "global table",
-                                duplicate_ips.first(),
-                            )
-                        }
-                    )
+                    vrf = f"VRF {self.vrf}" if self.vrf else "global table"
+                    raise ValidationError({"address": f"Duplicate IP address found in {vrf}: {duplicate_ips.first()}"})
 
         # This attribute will have been set by `IPAddressForm.clean()` to indicate that the
         # `primary_ip{version}` field on `self.assigned_object.parent` has been nullified but not yet saved.
@@ -990,7 +977,7 @@ class IPAddress(PrimaryModel, StatusModel):
     @property
     def address(self):
         if self.host is not None and self.prefix_length is not None:
-            cidr = "%s/%s" % (self.host, self.prefix_length)
+            cidr = f"{self.host}/{self.prefix_length}"
             return netaddr.IPNetwork(cidr)
         return None
 
@@ -1252,7 +1239,7 @@ class VLAN(PrimaryModel, StatusModel):
 
         # Validate VLAN group
         if self.group and self.group.site != self.site:
-            raise ValidationError({"group": "VLAN group must belong to the assigned site ({}).".format(self.site)})
+            raise ValidationError({"group": f"VLAN group must belong to the assigned site ({self.site})."})
 
         if (
             self.group is not None
