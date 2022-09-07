@@ -1817,11 +1817,16 @@ class JobTestCase(
             # Assert warning message shows in get
             response = self.client.get(run_url)
             content = extract_page_body(response.content.decode(response.charset))
-            self.assertIn("This job may have sensitive variables and cannot be marked as requiring approval.", content)
+            self.assertIn(
+                "This job is flagged as possibly having sensitive variables but is also flagged as requiring approval.",
+                content,
+            )
 
             # Assert run button is disabled
-            search = re.search(r'<button.+ id="id__run" class="btn btn-primary"\s+disabled="disabled"', content)
-            self.assertTrue(search is not None)
+            search = re.search(
+                r'<button type="submit" name="_run" id="id__run" class="btn btn-primary"\s+disabled="disabled"', content
+            )
+            self.assertTrue(search)
 
             # Assert error message shows after post
             response = self.client.post(run_url, data)
@@ -1829,7 +1834,9 @@ class JobTestCase(
 
             content = extract_page_body(response.content.decode(response.charset))
             self.assertIn(
-                "Unable to run or schedule job: A job that may have sensitive variables cannot be marked as requiring approval.",
+                "Unable to run or schedule job: "
+                "This job is flagged as possibly having sensitive variables but is also flagged as requiring approval."
+                "One of these two flags must be removed before this job can be scheduled or run.",
                 content,
             )
 

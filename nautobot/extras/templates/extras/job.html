@@ -38,7 +38,8 @@
                     {% if job_model.has_sensitive_variables or job_model.approval_required %}
                         <div class="alert alert-danger">
                             <i class="mdi mdi-alert"></i>
-                            This job may have sensitive variables and cannot be marked as requiring approval.
+                            This job is flagged as possibly having sensitive variables but is also flagged as requiring approval.
+                            One of these two flags must be removed before this job can be run.
                         </div>
                     {% endif %}
                     {% if not job_model.installed or job_model.job_class is None %}
@@ -103,7 +104,7 @@
                         </div>
                         <div class="pull-right">
                             <button type="submit" name="_run" id="id__run" class="btn btn-primary"
-                                {% if not perms.extras.run_job or not job_model.runnable or job_model.has_sensitive_variables or job_model.approval_required %}
+                                {% if not perms.extras.run_job or not job_model.runnable %}
                                     disabled="disabled"
                                 {% endif %}
                             >

@@ -1089,7 +1089,9 @@ class JobView(ObjectPermissionRequiredMixin, View):
         elif job_model.has_sensitive_variables and job_model.approval_required:
             messages.error(
                 request,
-                "Unable to run or schedule job: A job that may have sensitive variables cannot be marked as requiring approval.",
+                "Unable to run or schedule job: "
+                "This job is flagged as possibly having sensitive variables but is also flagged as requiring approval."
+                "One of these two flags must be removed before this job can be scheduled or run.",
             )
         elif job_form is not None and job_form.is_valid() and schedule_form.is_valid():
             # Run the job. A new JobResult is created.
