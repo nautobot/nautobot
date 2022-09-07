@@ -8,7 +8,7 @@ from unittest import mock
 from netaddr import IPNetwork
 
 from nautobot.dcim.filters import SiteFilterSet
-from nautobot.dcim.models import Device
+from nautobot.dcim.models import Device, Site
 from nautobot.dcim.tests.test_views import create_test_device
 from nautobot.extras.filters import StatusFilterSet
 from nautobot.extras.models import CustomField, Status
@@ -25,7 +25,7 @@ from nautobot.utilities.forms.utils import (
     expand_ipaddress_pattern,
     add_field_to_filter_form_class,
 )
-from nautobot.utilities.forms.widgets import APISelect
+from nautobot.utilities.forms.widgets import APISelect, APISelectMultiple, StaticSelect2
 from nautobot.utilities.forms.forms import AddressFieldMixin, DynamicFilterForm, PrefixFieldMixin
 from nautobot.utilities.testing import TestCase as NautobotTestCase
 from nautobot.utilities.utils import convert_querydict_to_factory_formset_acceptable_querydict
@@ -627,57 +627,188 @@ class DynamicFilterFormTest(TestCase):
             DynamicFilterForm()
         self.assertIn("'DynamicFilterForm' object requires `model` attribute", str(err.exception))
 
-    def test_dynamic_filter_form_without_data_and_prefix(self):
+    def test_dynamic_filter_form(self):
         form = DynamicFilterForm(model=Status)
 
-        # Assert form generates the correct base_filters
-        self.assertEqual(form.filterset_base_filters, StatusFilterSet.base_filters)
-        self.assertEqual(
-            form.fields["lookup_field"]._choices,
-            [
-                (None, "---------"),
-                ("color", "Color"),
-                ("content_types", "Content types"),
-                ("created", "Created"),
-                ("id", "Id"),
-                ("last_updated", "Last updated"),
-                ("name", "Name"),
-                ("q", "Search"),
-                ("slug", "Slug"),
-            ],
-        )
-        self.assertEqual(
-            form.fields["lookup_field"].widget.attrs,
-            {"class": "nautobot-select2-static lookup_field-select", "placeholder": "Field"},
-        )
+        with self.subTest("Assert capitalize"):
+            self.assertEqual(form.capitalize("test"), "Test")
+            self.assertEqual(form.capitalize("test_one"), "Test one")
 
-        self.assertEqual(
-            form.fields["lookup_type"].widget.attrs,
-            {
-                "class": "nautobot-select2-api lookup_type-select",
-                "placeholder": None,
-                "data-query-param-field_name": '["$lookup_field"]',
-                "data-contenttype": "extras.status",
-                "data-url": "/api/lookup-choices/",
-            },
-        )
+        with self.subTest("Assert get_lookup_field_choices"):
+            site_form = DynamicFilterForm(model=Site)
+            self.assertEqual(
+                form.get_lookup_field_choices(),
+                [
+                    ("color", "Color"),
+                    ("content_types", "Content types"),
+                    ("created", "Created"),
+                    ("id", "Id"),
+                    ("last_updated", "Last updated"),
+                    ("name", "Name"),
+                    ("q", "Search"),
+                    ("slug", "Slug"),
+                ],
+            )
+            self.assertEqual(
+                site_form.get_lookup_field_choices(),
+                [
+                    ("asn", "Asn"),
+                    ("circuit_terminations", "Circuit terminations"),
+                    ("clusters", "Clusters"),
+                    ("comments", "Comments"),
+                    ("contact_email", "Contact email"),
+                    ("contact_name", "Contact name"),
+                    ("contact_phone", "Contact phone"),
+                    ("created", "Created"),
+                    ("description", "Description"),
+                    ("devices", "Devices (name or ID)"),
+                    ("facility", "Facility"),
+                    ("has_circuit_terminations", "Has circuit terminations"),
+                    ("has_clusters", "Has clusters"),
+                    ("has_devices", "Has devices"),
+                    ("has_locations", "Has locations"),
+                    ("has_power_panels", "Has power panels"),
+                    ("has_prefixes", "Has prefixes"),
+                    ("has_rack_groups", "Has rack groups"),
+                    ("has_racks", "Has racks"),
+                    ("has_vlan_groups", "Has vlan groups"),
+                    ("has_vlans", "Has vlans"),
+                    ("id", "Id"),
+                    ("last_updated", "Last updated"),
+                    ("latitude", "Latitude"),
+                    ("locations", "Locations within this Site (slugs or IDs)"),
+                    ("longitude", "Longitude"),
+                    ("name", "Name"),
+                    ("physical_address", "Physical address"),
+                    ("power_panels", "Power panels (name or ID)"),
+                    ("prefixes", "Prefixes"),
+                    ("q", "Search"),
+                    ("rack_groups", "Rack groups (slug or ID)"),
+                    ("racks", "Racks"),
+                    ("region", "Region (slug)"),
+                    ("region_id", "Region (ID)"),
+                    ("shipping_address", "Shipping address"),
+                    ("slug", "Slug"),
+                    ("status", "Status"),
+                    ("tag", "Tags  slug"),
+                    ("tenant", "Tenant (slug or ID)"),
+                    ("tenant_group", "Tenant Group (slug)"),
+                    ("tenant_group_id", "Tenant Group (ID)"),
+                    ("tenant_id", 'Tenant (ID) (deprecated, use "tenant" filter instead)'),
+                    ("time_zone", "Time zone"),
+                    ("vlan_groups", "Vlan groups (slug or ID)"),
+                    ("vlans", "Vlans"),
+                ],
+            )
 
-        self.assertEqual(
-            form.fields["lookup_value"].widget.attrs,
-            {"class": "form-control lookup_value-input form-control", "placeholder": "Value"},
-        )
+        with self.subTest("Assert form generates the correct base_filters"):
+            self.assertEqual(form.filterset_base_filters, StatusFilterSet.base_filters)
+
+        with self.subTest("Assert lookup_field, lookup_value & lookup_type fields has accurate attributes"):
+            self.assertEqual(
+                form.fields["lookup_field"]._choices,
+                [
+                    (None, "---------"),
+                    ("color", "Color"),
+                    ("content_types", "Content types"),
+                    ("created", "Created"),
+                    ("id", "Id"),
+                    ("last_updated", "Last updated"),
+                    ("name", "Name"),
+                    ("q", "Search"),
+                    ("slug", "Slug"),
+                ],
+            )
+            self.assertEqual(
+                form.fields["lookup_field"].widget.attrs,
+                {"class": "nautobot-select2-static lookup_field-select", "placeholder": "Field"},
+            )
+
+            self.assertEqual(
+                form.fields["lookup_type"].widget.attrs,
+                {
+                    "class": "nautobot-select2-api lookup_type-select",
+                    "placeholder": None,
+                    "data-query-param-field_name": '["$lookup_field"]',
+                    "data-contenttype": "extras.status",
+                    "data-url": "/api/lookup-choices/",
+                },
+            )
+
+            self.assertEqual(
+                form.fields["lookup_value"].widget.attrs,
+                {"class": "form-control lookup_value-input form-control", "placeholder": "Value"},
+            )
 
     def test_dynamic_filter_form_with_data_and_prefix(self):
-        # Test for if value show diffrent widget depending on d value type either select or input
+        """Assert that lookup value implements the right field(CharField, ChoicField etc) and widget"""
+        # Test for if value show different widget depending on the value type either dynamic, select or others
         request_querydict = QueryDict(mutable=True)
-        request_querydict.setlistdefault("name", ["Active"])
-        request_querydict.setlistdefault("slug", ["active"])
+        request_querydict.setlistdefault("name__ic", ["Site"])
+        request_querydict.setlistdefault("slug", ["site-1"])
+        request_querydict.setlistdefault("status", ["active"])
+        request_querydict.setlistdefault("has_vlans", ["True"])
 
-        data = convert_querydict_to_factory_formset_acceptable_querydict(request_querydict, SiteFilterSet)
-        form = DynamicFilterForm(model=Status, data=data, prefix="form-0")
-        self.assertEqual(form.fields["lookup_type"]._choices, [("name", "exact")])
+        with self.subTest("Test for lookup_value with a CharField"):
+            # If `lookup_field` value is a CharField and or `lookup_type` lookup expr is not `exact` or `in` then,
+            # `lookup_value` field should be a CharField
+            data = convert_querydict_to_factory_formset_acceptable_querydict(request_querydict, SiteFilterSet)
+            form = DynamicFilterForm(model=Site, data=data, prefix="form-0")
+            self.assertEqual(form.fields["lookup_type"]._choices, [("name__ic", "contains(ic)")])
+            # Assert lookup_value is a CharField
+            self.assertTrue(isinstance(form.fields["lookup_value"], forms.CharField))
 
-        form = DynamicFilterForm(model=Status, data=data, prefix="form-1")
-        self.assertEqual(form.fields["lookup_type"]._choices, [("slug", "exact")])
-        # print(form.fields["lookup_value"]._choices)
-        self.assertEqual(1, 2)
+            form = DynamicFilterForm(model=Site, data=data, prefix="form-1")
+            self.assertEqual(form.fields["lookup_type"]._choices, [("slug", "exact")])
+            self.assertTrue(isinstance(form.fields["lookup_value"], forms.CharField))
+
+        with self.subTest("Test for lookup_value with a ChoiceField and APISelectMultiple widget"):
+            # If `lookup_field` value is a relational field(ManyToMany, ForeignKey etc.) and `lookup_type` lookup expr is `exact` or `in` then,
+            # `lookup_value` field should be a ChoiceField with APISelectMultiple widget
+            form = DynamicFilterForm(model=Site, data=data, prefix="form-2")
+            self.assertEqual(
+                form.fields["lookup_type"].widget.attrs,
+                {
+                    "class": "nautobot-select2-api lookup_type-select",
+                    "data-contenttype": "dcim.site",
+                    "data-query-param-field_name": '["$lookup_field"]',
+                    "data-url": "/api/lookup-choices/",
+                    "placeholder": None,
+                },
+            )
+            self.assertTrue(isinstance(form.fields["lookup_value"], forms.ChoiceField))
+            self.assertTrue(isinstance(form.fields["lookup_value"].widget, APISelectMultiple))
+            self.assertEqual(
+                form.fields["lookup_value"].widget.attrs,
+                {
+                    "data-query-param-content_types": '["dcim.site"]',
+                    "value-field": "slug",
+                    "class": "nautobot-select2-api lookup_value-input form-control",
+                    "data-url": "/api/extras/statuses/",
+                    "data-multiple": 1,
+                },
+            )
+
+        with self.subTest("Test for lookup_value with a ChoiceField and StaticSelect2 widget"):
+            # If `lookup_field` value is a ChoiceField and `lookup_type` lookup expr is `exact` or `in` then,
+            # `lookup_value` field should be a ChoiceField with StaticSelect2 widget
+            form = DynamicFilterForm(model=Site, data=data, prefix="form-3")
+            self.assertEqual(
+                form.fields["lookup_type"].widget.attrs,
+                {
+                    "class": "nautobot-select2-api lookup_type-select",
+                    "data-contenttype": "dcim.site",
+                    "data-query-param-field_name": '["$lookup_field"]',
+                    "data-url": "/api/lookup-choices/",
+                    "placeholder": None,
+                },
+            )
+            self.assertTrue(isinstance(form.fields["lookup_value"], forms.ChoiceField))
+            self.assertEqual(
+                form.fields["lookup_value"].widget.attrs,
+                {"class": "nautobot-select2-static lookup_value-input form-control"},
+            )
+            self.assertTrue(isinstance(form.fields["lookup_value"].widget, StaticSelect2))
+            self.assertEqual(
+                form.fields["lookup_value"]._choices, [("", "---------"), ("True", "Yes"), ("False", "No")]
+            )

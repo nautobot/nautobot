@@ -287,6 +287,7 @@ class DynamicFilterForm(BootstrapMixin, forms.Form):
         self.fields["lookup_field"].widget.attrs["class"] = "nautobot-select2-static lookup_field-select"
 
         # Set lookup_type and lookup_value value if data present in kwargs
+        # Pre-populate lookup_type and lookup_value choices with values from data(form value)
         data = kwargs.get("data")
         prefix = kwargs.get("prefix")
         if data and prefix:
