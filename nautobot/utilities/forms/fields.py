@@ -676,6 +676,25 @@ class JSONArrayFormField(forms.JSONField):
         return super().has_changed(initial, data)
 
 
+class MultiValueCharField(forms.CharField):
+    """
+    CharField that takes multiple user character inputs and render them as tags in the form field.
+    Press enter to complete an input.
+    """
+
+    widget = widgets.MultiValueCharInput()
+
+    def get_bound_field(self, form, field_name):
+        bound_field = BoundField(form, self, field_name)
+        value = bound_field.value()
+        widget = bound_field.field.widget
+        # Save the selected choices in the widget even after the filterform is submitted
+        if value is not None:
+            widget.choices = [(v, v) for v in value]
+
+        return bound_field
+
+
 class NumericArrayField(SimpleArrayField):
     """Basic array field that takes comma-separated or hyphenated ranges."""
 

@@ -54,6 +54,7 @@ from nautobot.utilities.forms import (
     ExpandableNameField,
     form_from_model,
     MultipleContentTypeField,
+    MultiValueCharField,
     NumericArrayField,
     SelectWithPK,
     SmallTextarea,
@@ -2165,6 +2166,8 @@ class DeviceFilterForm(
     model = Device
     field_order = [
         "q",
+        "name",
+        "asset_tag",
         "region",
         "site",
         "location",
@@ -2180,6 +2183,8 @@ class DeviceFilterForm(
         "has_primary_ip",
     ]
     q = forms.CharField(required=False, label="Search")
+    name = MultiValueCharField(required=False, label="Name")
+    asset_tag = MultiValueCharField(required=False, label="Asset Tag")
     rack_group_id = DynamicModelMultipleChoiceField(
         queryset=RackGroup.objects.all(),
         required=False,

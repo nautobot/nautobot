@@ -231,3 +231,13 @@ class TimePicker(forms.TextInput):
         super().__init__(*args, **kwargs)
         self.attrs["class"] = "time-picker"
         self.attrs["placeholder"] = "hh:mm:ss"
+
+
+class MultiValueCharInput(StaticSelect2Multiple):
+    """
+    Manual text input tag with multi-value select boxes.
+    """
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.attrs["class"] = "nautobot-select2-multi-value-char"
