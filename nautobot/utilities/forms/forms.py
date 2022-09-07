@@ -321,32 +321,27 @@ class DynamicFilterForm(BootstrapMixin, forms.Form):
         from nautobot.utilities.forms import APISelectMultiple, DatePicker, DateTimePicker, StaticSelect2, TimePicker
 
         data = get_data_for_filterset_parameter(self.model, field_name, choice)
-        if data["type"] == "static-choices":
+        if data["type"] == "select-field":
             attr = {}
-            if data["allow_multiple"]:
+            widget = StaticSelect2 if data["widget"] == "static-select" else APISelectMultiple
+
+            if data["allow_multiple"] is True:
                 attr["multiple"] = "true"
-
-            self.fields["lookup_value"] = forms.ChoiceField(
-                choices=data["choices"],
-                required=False,
-                widget=StaticSelect2(attrs={**attr}),
-                initial=choice,
-            )
-        elif data["type"] == "dynamic-choices":
-            attr = {}
-            if data.get("content_type") is not None:
+            if data["content_type"] is not None:
                 attr["data-query-param-content_types"] = data["content_type"]
-            if data.get("value_field") is not None:
+            if data["value_field"] is not None:
                 attr["value-field"] = data["value_field"]
+            if data["api_url"] is not None:
+                attr["data-url"] = data["api_url"]
 
             self.fields["lookup_value"] = forms.ChoiceField(
                 choices=data["choices"],
                 required=False,
-                widget=APISelectMultiple(api_url=data["data_url"], attrs={**attr}),
+                widget=widget(attrs={**attr}),
                 initial=choice,
             )
         elif data["type"] == "datetime-field":
-            _format = data["format"]
+            _format = data["widget"]
             widget = DatePicker if _format == "date" else DateTimePicker if _format == "datetime" else TimePicker
             self.fields["lookup_value"] = forms.CharField(
                 required=False,

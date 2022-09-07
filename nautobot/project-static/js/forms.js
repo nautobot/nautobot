@@ -531,10 +531,10 @@ function jsify_form(context) {
                 dataType: 'json',
                 type: 'GET',
             }).done(function (response) {
-                if(response.type == "dynamic-choices")
+                if(response.type == "select-field" && response.widget == "api-select-multiple")
                     useDynamicSelect(lookup_value_element, response)
-                else if (response.type == "static-choices")
-                    useStaticSelect(lookup_value_element, response.choices, response.allow_multiple)
+                else if (response.type == "select-field" && response.widget == "static-select")
+                    useStaticSelect(lookup_value_element, response)
                 else if (response.type == "datetime-field")
                     useDateTimeField(lookup_value_element, response.css_classes, response.placeholder)
                 else
@@ -572,19 +572,19 @@ function jsify_form(context) {
         initializeDateTimePicker()
     }
 
-    function useStaticSelect(element, choices, allow_multiple){
+    function useStaticSelect(element, response){
         select_field = `
             <select
                 name="${element.attr("name")}"
-                class="lookup_value-input nautobot-select2-static select2-hidden-accessible"
+                class="${response.css_classes}"
                 id="${element.attr("id")}"
                 data-select2-id="${element.attr("id")}"
                 tabindex="-1"
                 aria-hidden="true"
-                ${allow_multiple ? "multiple" : ""}
+                ${response.allow_multiple ? "multiple" : ""}
             >
         `
-        choices.forEach(([value, label]) => select_field += `<option value="${value}">${label}</option>`)
+        response.choices.forEach(([value, label]) => select_field += `<option value="${value}">${label}</option>`)
         select_field += `</select>`
         element.parent().html(select_field)
         initializeStaticChoiceSelection()
@@ -593,22 +593,19 @@ function jsify_form(context) {
     function useDynamicSelect(element, response){
         let value_name = element.attr("name")
         let value_id = element.attr("id")
-        let data_url = response.data_url
-        let content_type = response.content_type
-        let value_field = response.value_field
 
         select_field = `
             <select
                 name="${value_name}"
-                class="lookup_value-input nautobot-select2-api select2-hidden-accessible"
-                data-url="${data_url}"
+                class="${response.css_classes}"
+                data-url="${response.api_url}"
                 id="${value_id}"
                 data-select2-id="${value_id}"
                 tabindex="-1"
                 aria-hidden="true"
                 multiple
-                ${content_type ? "data-query-param-content_types=" + content_type + "" : null}
-                ${value_field ? "value-field=" + value_field + "" : null}
+                ${response.content_type ? "data-query-param-content_types=" + response.content_type + "" : null}
+                ${response.value_field ? "value-field=" + response.value_field + "" : null}
             ></select>
         `
         element.parent().html(select_field)

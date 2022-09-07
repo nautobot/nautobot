@@ -793,16 +793,29 @@ def get_data_for_filterset_parameter(model, parameter, initial_choice=None):
         # TODO Timizuo Raise Error if field not found
         pass
 
-    data = {"type": "others"}
+    default_css_classes = "lookup_value-input form-control"
+    data = {
+        "type": "others",  # Param type e.g select field, char field, datetime field etc.
+        "widget": None,  # Param relevant widget e.g APISelectMultiple, DateTimePicker etc.
+        "choices": [],  # Param choices for select fields
+        "allow_multiple": True,  # Allow multiple selection of choices
+        "api_url": None,  # Param's related model api endpoint
+        "content_type": None,  # `model` contenttype
+        "value_field": None,  #
+        "css_classes": default_css_classes,  # css classes used in UI for form fields
+        "placeholder": None,  # Form field placeholder
+    }
+    kwargs = {}
 
     if isinstance(field, (filters.MultipleChoiceFilter, ModelMultipleChoiceFilter)):
         if "choices" in field.extra:  # Field choices
-            # Problem might arise here if plugin developer do not declare field inheriting from nautobot.utilities.choices.ChoiceSet
-            data = {
-                "type": "static-choices",
+            kwargs = {
+                "type": "select-field",
                 "choices": field.extra["choices"].CHOICES,
-                "allow_multiple": True,
+                "widget": "static-select",
+                "css_classes": default_css_classes + " nautobot-select2-static select2-hidden-accessible",
             }
+
         elif hasattr(field, "queryset"):  # Dynamically populated choices
             if isinstance(field, StatusFilter):
                 related_model = Status
@@ -812,50 +825,56 @@ def get_data_for_filterset_parameter(model, parameter, initial_choice=None):
             api_endpoint = get_model_api_endpoint(related_model)
 
             if api_endpoint:
-                data = {
-                    "type": "dynamic-choices",
-                    "data_url": api_endpoint,
-                    "choices": [],
+                kwargs = {
+                    "type": "select-field",
+                    "api_url": api_endpoint,
+                    "widget": "api-select-multiple",
+                    "css_classes": default_css_classes + " nautobot-select2-api select2-hidden-accessible",
                 }
+
             # Status and Tag api requires content_type, to limit result to only related content_types
             if related_model in [Status, Tag]:
-                data["content_type"] = json.dumps([contenttype])
+                kwargs["content_type"] = json.dumps([contenttype])
 
             # Set value-field - This is used by DynamicModelChoiceField to set option value
             value_field = field.extra.get("to_field_name")
             if value_field is not None:
-                data["value_field"] = value_field
+                kwargs["value_field"] = value_field
 
             # Add initial choices if initial_choice is not none
             # This can be used to populate the selected options for the select field
             if initial_choice is not None:
                 search_by = field.extra.get("to_field_name") or "id"
                 values = initial_choice if isinstance(initial_choice, (list, tuple)) else [initial_choice]
-                data["choices"] = compile_model_instance_choices(related_model, search_by, values)
+                kwargs["choices"] = compile_model_instance_choices(related_model, search_by, values)
 
     elif isinstance(field, (BooleanFilter,)):  # Yes / No choice
-        data = {
-            "type": "static-choices",
+        kwargs = {
+            "type": "select-field",
             "choices": BOOLEAN_WITH_BLANK_CHOICES,
             "allow_multiple": False,
+            "widget": "static-select",
+            "css_classes": default_css_classes + " nautobot-select2-static select2-hidden-accessible",
         }
+
     elif isinstance(field, (DateFilter, DateTimeFilter, TimeFilter)):
         css_classes = "form-control flatpickr-input active lookup_value-input"
-        data = {
+        kwargs = {
             "type": "datetime-field",
             "css_classes": css_classes + " time-picker",
             "placeholder": "hh:mm:ss",
-            "format": "time",
+            "widget": "time",
         }
         if isinstance(field, DateTimeFilter):
-            data["css_class"] = css_classes + " datetime-picker"
-            data["placeholder"] = "YYYY-MM-DD hh:mm:ss"
-            data["format"] = "datetime"
+            kwargs["css_class"] = css_classes + " datetime-picker"
+            kwargs["placeholder"] = "YYYY-MM-DD hh:mm:ss"
+            kwargs["widget"] = "datetime"
         elif isinstance(field, DateFilter):
-            data["css_classes"] = css_classes + " date-picker"
-            data["placeholder"] = "YYYY-MM-DD"
-            data["format"] = "date"
+            kwargs["css_classes"] = css_classes + " date-picker"
+            kwargs["placeholder"] = "YYYY-MM-DD"
+            kwargs["widget"] = "date"
 
+    data.update(kwargs)
     return data
 
 
