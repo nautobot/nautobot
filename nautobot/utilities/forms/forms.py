@@ -262,9 +262,23 @@ class DynamicFilterForm(BootstrapMixin, forms.Form):
         label="Value",
     )
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args, model=None, filterset_base_filters=None, **kwargs):
         super().__init__(*args, **kwargs)
         from nautobot.utilities.forms import add_blank_choice  # Avoid circular import
+
+        if model:
+            self.model = model
+        if filterset_base_filters:
+            self.filterset_base_filters = filterset_base_filters
+
+        # If filterset_base_filters is not provided get base filters from its model
+        if hasattr(self, "model") and not hasattr(self, "filterset_base_filters"):
+            filterset = get_filterset_for_model(model)
+            if filterset is not None:
+                self.filterset_base_filters = filterset.base_filters
+
+        if not hasattr(self, "model"):
+            raise AttributeError("'DynamicFilterForm' object requires `model` attribute")
 
         contenttype = self.model._meta.app_label + "." + self.model._meta.model_name
 
@@ -279,8 +293,8 @@ class DynamicFilterForm(BootstrapMixin, forms.Form):
             lookup_type = data.get(prefix + "-lookup_type")
             lookup_value = data.getlist(prefix + "-lookup_value")
 
-            if lookup_type and lookup_value:
-                verbose_name = self.filterset[lookup_type].lookup_expr
+            if lookup_type and lookup_value and lookup_type in self.filterset_base_filters:
+                verbose_name = self.filterset_base_filters[lookup_type].lookup_expr
                 label = build_lookup_label(lookup_type, verbose_name)
                 self.fields["lookup_type"].choices = [(lookup_type, label)]
                 self.set_value_lookup_value_field(lookup_type, lookup_value)
@@ -330,7 +344,7 @@ class DynamicFilterForm(BootstrapMixin, forms.Form):
         return " ".join([first_word, *data[1:]])
 
     def get_lookup_field_choices(self):
-        filterset = self.filterset
+        filterset = self.filterset_base_filters
         filterset_without_lookup = []
 
         for name, field in filterset.items():
@@ -345,7 +359,7 @@ def dynamic_formset_factory(model, data=None, **kwargs):
     modelform.model = model
     filterset = get_filterset_for_model(model)
     if filterset is not None:
-        modelform.filterset = filterset.base_filters
+        modelform.filterset_base_filters = filterset.base_filters
 
     params = {
         "can_delete_extra": True,
