@@ -24,6 +24,7 @@ from nautobot.core.api.views import (
     ModelViewSet,
     ReadOnlyModelViewSet,
 )
+from nautobot.core.celery import app
 from nautobot.core.graphql import execute_saved_query
 from nautobot.extras import filters
 from nautobot.extras.choices import JobExecutionType, JobResultStatusChoices
@@ -443,7 +444,7 @@ class ImageAttachmentViewSet(ModelViewSet):
 #
 
 
-def _create_schedule(serializer, data, commit, job, job_model, request):
+def _create_schedule(serializer, data, commit, job, job_model, request, celery_queue):
     """
     This is an internal function to create a scheduled job from API data.
     It has to handle both once-offs (i.e. of type TYPE_FUTURE) and interval
@@ -455,6 +456,7 @@ def _create_schedule(serializer, data, commit, job, job_model, request):
         "user": request.user.pk,
         "commit": commit,
         "name": job.class_path,
+        "celery_kwargs": {"queue": celery_queue},
     }
     type_ = serializer["interval"]
     if type_ == JobExecutionType.TYPE_IMMEDIATELY:
@@ -492,6 +494,7 @@ def _create_schedule(serializer, data, commit, job, job_model, request):
         user=request.user,
         approval_required=job_model.approval_required,
         crontab=crontab,
+        queue=celery_queue,
     )
     scheduled_job.save()
     return scheduled_job
@@ -520,6 +523,8 @@ def _run_job(request, job_model, legacy_response=False):
     input_serializer.is_valid(raise_exception=True)
 
     data = input_serializer.validated_data.get("data", {})
+    # TODO: retrieve celery queue name from api serializer, move default value to serializer
+    celery_queue = app.conf.task_default_queue
     commit = input_serializer.validated_data.get("commit", None)
     if commit is None:
         commit = job_model.commit_default
@@ -532,8 +537,8 @@ def _run_job(request, job_model, legacy_response=False):
         # of errors under messages
         return Response({"errors": e.message_dict if hasattr(e, "error_dict") else e.messages}, status=400)
 
-    if not get_worker_count():
-        raise CeleryWorkerNotRunningException()
+    if not get_worker_count(queue=celery_queue):
+        raise CeleryWorkerNotRunningException(queue=celery_queue)
 
     job_content_type = get_job_content_type()
     schedule_data = input_serializer.validated_data.get("schedule")
@@ -556,7 +561,7 @@ def _run_job(request, job_model, legacy_response=False):
 
     # Try to create a ScheduledJob, or...
     if schedule_data:
-        schedule = _create_schedule(schedule_data, data, commit, job, job_model, request)
+        schedule = _create_schedule(schedule_data, data, commit, job, job_model, request, celery_queue)
     else:
         schedule = None
 
@@ -567,6 +572,7 @@ def _run_job(request, job_model, legacy_response=False):
             job.class_path,
             job_content_type,
             request.user,
+            celery_kwargs={"queue": celery_queue},
             data=data,
             request=copy_safe_request(request),
             commit=commit,
@@ -953,11 +959,14 @@ class ScheduledJobViewSet(ReadOnlyModelViewSet):
 
         # Immediately enqueue the job with commit=False
         job_content_type = get_job_content_type()
+        # TODO: retrieve celery queue name from api serializer, move default value to serializer
+        celery_queue = app.conf.task_default_queue
         job_result = JobResult.enqueue_job(
             run_job,
             job_model.class_path,
             job_content_type,
             request.user,
+            celery_kwargs={"queue": celery_queue},
             data=scheduled_job.kwargs.get("data", {}),
             request=copy_safe_request(request),
             commit=False,  # force a dry-run

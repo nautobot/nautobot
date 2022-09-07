@@ -44,7 +44,7 @@ class Command(BaseCommand):
             )
         job_class = get_job(options["job"])
         if not job_class:
-            raise CommandError('Job "%s" not found' % options["job"])
+            raise CommandError(f'Job "{options["job"]}" not found')
 
         user = None
         request = None
@@ -73,7 +73,7 @@ class Command(BaseCommand):
         job_content_type = get_job_content_type()
 
         # Run the job and create a new JobResult
-        self.stdout.write("[{:%H:%M:%S}] Running {}...".format(timezone.now(), job_class.class_path))
+        self.stdout.write(f"[{timezone.now():%H:%M:%S}] Running {job_class.class_path}...")
 
         if options["local"]:
             job = Job.objects.get_for_class_path(job_class.class_path)
@@ -118,13 +118,7 @@ class Command(BaseCommand):
             failure_count = logs.filter(log_level=LogLevelChoices.LOG_FAILURE).count()
 
             self.stdout.write(
-                "\t{}: {} success, {} info, {} warning, {} failure".format(
-                    group,
-                    success_count,
-                    info_count,
-                    warning_count,
-                    failure_count,
-                )
+                f"\t{group}: {success_count} success, {info_count} info, {warning_count} warning, {failure_count} failure"
             )
 
             for log_entry in logs:
@@ -152,10 +146,8 @@ class Command(BaseCommand):
             status = self.style.ERROR("ERRORED")
         else:
             status = self.style.SUCCESS("SUCCESS")
-        self.stdout.write("[{:%H:%M:%S}] {}: {}".format(timezone.now(), job_class.class_path, status))
+        self.stdout.write(f"[{timezone.now():%H:%M:%S}] {job_class.class_path}: {status}")
 
         # Wrap things up
-        self.stdout.write(
-            "[{:%H:%M:%S}] {}: Duration {}".format(timezone.now(), job_class.class_path, job_result.duration)
-        )
-        self.stdout.write("[{:%H:%M:%S}] Finished".format(timezone.now()))
+        self.stdout.write(f"[{timezone.now():%H:%M:%S}] {job_class.class_path}: Duration {job_result.duration}")
+        self.stdout.write(f"[{timezone.now():%H:%M:%S}] Finished")

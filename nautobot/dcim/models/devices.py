@@ -266,8 +266,7 @@ class DeviceType(PrimaryModel):
                 if d.position not in u_available:
                     raise ValidationError(
                         {
-                            "u_height": "Device {} in rack {} does not have sufficient space to accommodate a height of "
-                            "{}U".format(d, d.rack, self.u_height)
+                            "u_height": f"Device {d} in rack {d.rack} does not have sufficient space to accommodate a height of {self.u_height}U"
                         }
                     )
 
@@ -747,15 +746,17 @@ class Device(PrimaryModel, ConfigContextModel, StatusModel):
             if self.platform.manufacturer and self.platform.manufacturer != self.device_type.manufacturer:
                 raise ValidationError(
                     {
-                        "platform": "The assigned platform is limited to {} device types, but this device's type belongs "
-                        "to {}.".format(self.platform.manufacturer, self.device_type.manufacturer)
+                        "platform": (
+                            f"The assigned platform is limited to {self.platform.manufacturer} device types, "
+                            f"but this device's type belongs to {self.device_type.manufacturer}."
+                        )
                     }
                 )
 
         # A Device can only be assigned to a Cluster in the same Site (or no Site)
         if self.cluster and self.cluster.site is not None and self.cluster.site != self.site:
             raise ValidationError(
-                {"cluster": "The assigned cluster belongs to a different site ({})".format(self.cluster.site)}
+                {"cluster": f"The assigned cluster belongs to a different site ({self.cluster.site})"}
             )
 
         # A Device can only be assigned to a Cluster in the same location or parent location, if any
@@ -781,9 +782,7 @@ class Device(PrimaryModel, ConfigContextModel, StatusModel):
             if existing_virtual_chassis and existing_virtual_chassis.master == self:
                 raise ValidationError(
                     {
-                        "virtual_chassis": "The master device for the virtual chassis ({}) may not be removed".format(
-                            existing_virtual_chassis
-                        )
+                        "virtual_chassis": f"The master device for the virtual chassis ({ existing_virtual_chassis}) may not be removed"
                     }
                 )
 
@@ -853,7 +852,7 @@ class Device(PrimaryModel, ConfigContextModel, StatusModel):
         """
         if self.name is not None:
             return self.name
-        return "{{{}}}".format(self.pk)
+        return f"{{{self.pk}}}"
 
     @property
     def primary_ip(self):

@@ -22,7 +22,7 @@ class AppTest(APITestCase):
     def test_root(self):
 
         url = reverse("virtualization-api:api-root")
-        response = self.client.get("{}?format=api".format(url), **self.header)
+        response = self.client.get(f"{url}?format=api", **self.header)
 
         self.assertEqual(response.status_code, 200)
 
@@ -207,7 +207,8 @@ class VirtualMachineTest(APIViewTestCases.APIViewTestCase):
         Check that config context data is included by default in the virtual machines list.
         """
         virtualmachine = VirtualMachine.objects.first()
-        url = "{}?id={}".format(reverse("virtualization-api:virtualmachine-list"), virtualmachine.pk)
+        reverse_url = reverse("virtualization-api:virtualmachine-list")
+        url = f"{reverse_url}?id={virtualmachine.pk}"
         self.add_permissions("virtualization.view_virtualmachine")
 
         response = self.client.get(url, **self.header)

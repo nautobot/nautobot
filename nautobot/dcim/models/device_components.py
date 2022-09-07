@@ -480,7 +480,7 @@ class PowerOutlet(CableTermination, PathEndpoint, ComponentModel):
 
         # Validate power port assignment
         if self.power_port and self.power_port.device != self.device:
-            raise ValidationError("Parent power port ({}) must belong to the same device".format(self.power_port))
+            raise ValidationError(f"Parent power port ({self.power_port}) must belong to the same device")
 
 
 #
@@ -946,9 +946,7 @@ class DeviceBay(ComponentModel):
 
         # Validate that the parent Device can have DeviceBays
         if not self.device.device_type.is_parent_device:
-            raise ValidationError(
-                "This type of device ({}) does not support device bays.".format(self.device.device_type)
-            )
+            raise ValidationError(f"This type of device ({self.device.device_type}) does not support device bays.")
 
         # Cannot install a device into itself, obviously
         if self.device == self.installed_device:
@@ -960,9 +958,7 @@ class DeviceBay(ComponentModel):
             if current_bay and current_bay != self:
                 raise ValidationError(
                     {
-                        "installed_device": "Cannot install the specified device; device is already installed in {}".format(
-                            current_bay
-                        )
+                        "installed_device": f"Cannot install the specified device; device is already installed in {current_bay}"
                     }
                 )
 
@@ -1041,7 +1037,7 @@ class InventoryItem(MPTTModel, ComponentModel):
 
     def to_csv(self):
         return (
-            self.device.name or "{{{}}}".format(self.device.pk),
+            self.device.name or f"{{{self.device.pk}}}",
             self.name,
             self.label,
             self.manufacturer.name if self.manufacturer else None,

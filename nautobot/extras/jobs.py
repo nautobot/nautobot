@@ -663,7 +663,7 @@ class StringVar(ScriptVariable):
             self.field_attrs["validators"] = [
                 RegexValidator(
                     regex=regex,
-                    message="Invalid value. Must match regex: {}".format(regex),
+                    message=f"Invalid value. Must match regex: {regex}",
                     code="invalid",
                 )
             ]
@@ -1135,7 +1135,8 @@ def run_job(data, request, job_result_pk, commit=True, *args, **kwargs):
         job_result.completed = timezone.now()
         job_result.save()
         if file_ids:
-            job.delete_files(*file_ids)  # Cleanup FileProxy objects
+            # Cleanup FileProxy objects
+            job.delete_files(*file_ids)  # pylint: disable=not-an-iterable
         return False
 
     if job_model.read_only:
@@ -1202,7 +1203,8 @@ def run_job(data, request, job_result_pk, commit=True, *args, **kwargs):
 
         finally:
             job_result.save()
-            job.delete_files(*file_ids)  # Cleanup FileProxy objects
+            if file_ids:
+                job.delete_files(*file_ids)  # Cleanup FileProxy objects
 
         # record data about this jobrun in the schedule
         if job_result.schedule:
@@ -1211,15 +1213,26 @@ def run_job(data, request, job_result_pk, commit=True, *args, **kwargs):
             job_result.schedule.save()
 
         # Perform any post-run tasks
+        # 2.0 TODO Remove post_run() method entirely
         job.active_test = "post_run"
-        output = job.post_run()
-        if output:
-            job.results["output"] += "\n" + str(output)
+        try:
+            output = job.post_run()
+        except Exception as exc:
+            stacktrace = traceback.format_exc()
+            message = (
+                f"An exception occurred during job post_run(): `{type(exc).__name__}: {exc}`\n```\n{stacktrace}\n```"
+            )
+            output = message
+            job.log_failure(message=message)
+            job_result.set_status(JobResultStatusChoices.STATUS_ERRORED)
+        finally:
+            if output:
+                job.results["output"] += "\n" + str(output)
 
-        job_result.completed = timezone.now()
-        job_result.save()
+            job_result.completed = timezone.now()
+            job_result.save()
 
-        job.logger.info(f"Job completed in {job_result.duration}")
+            job.logger.info(f"Job completed in {job_result.duration}")
 
     # Execute the job. If commit == True, wrap it with the change_logging context manager to ensure we
     # process change logs, webhooks, etc.
@@ -1248,10 +1261,13 @@ def scheduled_job_handler(*args, **kwargs):
     user = User.objects.get(pk=user_pk)
     name = kwargs.pop("name")
     scheduled_job_pk = kwargs.pop("scheduled_job_pk")
+    celery_kwargs = kwargs.pop("celery_kwargs")
     schedule = ScheduledJob.objects.get(pk=scheduled_job_pk)
 
     job_content_type = get_job_content_type()
-    JobResult.enqueue_job(run_job, name, job_content_type, user, schedule=schedule, **kwargs)
+    JobResult.enqueue_job(
+        run_job, name, job_content_type, user, celery_kwargs=celery_kwargs, schedule=schedule, **kwargs
+    )
 
 
 def enqueue_job_hooks(object_change):
