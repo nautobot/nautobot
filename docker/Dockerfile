@@ -1,3 +1,4 @@
+# syntax=docker/dockerfile:1
 ARG PYTHON_VER
 
 ################################ Overview
@@ -100,14 +101,13 @@ ENV PYTHONUNBUFFERED=1 \
 
 # Install all OS package upgrades and dependencies needed to run Nautobot in production
 # hadolint ignore=DL3005,DL3008,DL3013
-RUN --mount=type=cache,target="/root/.cache/pip" \
-    apt-get update && \
+RUN apt-get update && \
     apt-get upgrade -y && \
     apt-get install --no-install-recommends -y git mime-support curl libxml2 libmariadb3 openssl && \
     apt-get autoremove -y && \
     apt-get clean all && \
     rm -rf /var/lib/apt/lists/* && \
-    pip install --upgrade pip wheel
+    pip --no-cache-dir install --upgrade pip wheel
 
 HEALTHCHECK --interval=5s --timeout=5s --start-period=5s --retries=1 CMD curl --fail http://localhost:8080/health/ || exit 1
 
