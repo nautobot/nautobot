@@ -151,7 +151,6 @@ def build(context, force_rm=False, cache=True, poetry_parallel=True, pull=False)
     command = (
         "build"
         f" --build-arg PYTHON_VER={context.nautobot.python_ver}"
-        f" --build-arg PYUWSGI_VER={get_dependency_version('pyuwsgi')}"
     )
 
     if not cache:
@@ -194,7 +193,6 @@ def buildx(
     command = (
         f"docker buildx build --platform {platforms} -t {tag} --target {target} --load -f ./docker/Dockerfile"
         f" --build-arg PYTHON_VER={context.nautobot.python_ver}"
-        f" --build-arg PYUWSGI_VER={get_dependency_version('pyuwsgi')}"
         " ."
     )
     if not cache:
