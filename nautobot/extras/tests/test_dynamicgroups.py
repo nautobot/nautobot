@@ -343,8 +343,6 @@ class DynamicGroupModelTest(DynamicGroupTestBase):
             # Test that it's a dict with or without certain key fields.
             self.assertIsInstance(fields, dict)
             self.assertNotEqual(fields, {})
-            self.assertNotIn("name", fields)
-            self.assertNotIn("asset_tag", fields)
             self.assertNotIn("serial", fields)
         finally:
             del group.model.dynamic_group_skip_missing_fields
