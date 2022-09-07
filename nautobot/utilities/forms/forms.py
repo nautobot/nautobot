@@ -271,9 +271,9 @@ class DynamicFilterForm(BootstrapMixin, forms.Form):
         if filterset_base_filters:
             self.filterset_base_filters = filterset_base_filters
 
-        # If filterset_base_filters is not provided get base filters from its model
+        # If filterset_base_filters is not provided, get base filters from its model
         if hasattr(self, "model") and not hasattr(self, "filterset_base_filters"):
-            filterset = get_filterset_for_model(model)
+            filterset = get_filterset_for_model(self.model)
             if filterset is not None:
                 self.filterset_base_filters = filterset.base_filters
 
@@ -286,7 +286,6 @@ class DynamicFilterForm(BootstrapMixin, forms.Form):
         self.fields["lookup_field"].choices = add_blank_choice(self.get_lookup_field_choices())
         self.fields["lookup_field"].widget.attrs["class"] = "nautobot-select2-static lookup_field-select"
 
-        # Set lookup_type and lookup_value value if data present in kwargs
         # Pre-populate lookup_type and lookup_value choices with values from data(form value)
         data = kwargs.get("data")
         prefix = kwargs.get("prefix")
@@ -311,10 +310,16 @@ class DynamicFilterForm(BootstrapMixin, forms.Form):
         )
 
     def set_value_lookup_value_field(self, field_name, choice):
+        """
+        Update `lookup_value` field to an appropriate field for the `field_name`
+
+        If `field_name` is a relational field(ForeignKey, ManyToMany e.t.c) `lookup_value`
+        should be `forms.ChoiceField(...widget=APISelectMultiple(...))` while if `field_name` is a
+        choice field then `lookup_value` should be `forms.ChoiceField(...widget=StaticSelect2(...))`
+        """
         from nautobot.utilities.forms import StaticSelect2
         from nautobot.utilities.forms import APISelectMultiple
 
-        # Static choice and Dynamic Choice and Yes/No Choice
         data = get_data_for_filterset_parameter(self.model, field_name, choice)
         if data["type"] == "static-choices":
             attr = {}
@@ -322,7 +327,10 @@ class DynamicFilterForm(BootstrapMixin, forms.Form):
                 attr["multiple"] = "true"
 
             self.fields["lookup_value"] = forms.ChoiceField(
-                choices=data["choices"], required=False, widget=StaticSelect2(attrs={**attr}), initial=choice
+                choices=data["choices"],
+                required=False,
+                widget=StaticSelect2(attrs={**attr}),
+                initial=choice,
             )
         elif data["type"] == "dynamic-choices":
             attr = {}
@@ -345,22 +353,17 @@ class DynamicFilterForm(BootstrapMixin, forms.Form):
         return " ".join([first_word, *data[1:]])
 
     def get_lookup_field_choices(self):
-        filterset = self.filterset_base_filters
-        filterset_without_lookup = []
-
-        for name, field in filterset.items():
-            if "__" not in name:
-                filterset_without_lookup.append((name, field.label or self.capitalize(field.field_name)))
-
+        filterset_without_lookup = (
+            (name, field.label or self.capitalize(field.field_name))
+            for name, field in self.filterset_base_filters.items()
+            if "__" not in name
+        )
         return sorted(filterset_without_lookup)
 
 
 def dynamic_formset_factory(model, data=None, **kwargs):
     modelform = DynamicFilterForm
     modelform.model = model
-    filterset = get_filterset_for_model(model)
-    if filterset is not None:
-        modelform.filterset_base_filters = filterset.base_filters
 
     params = {
         "can_delete_extra": True,

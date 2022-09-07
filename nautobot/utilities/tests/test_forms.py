@@ -628,14 +628,15 @@ class DynamicFilterFormTest(TestCase):
         self.assertIn("'DynamicFilterForm' object requires `model` attribute", str(err.exception))
 
     def test_dynamic_filter_form(self):
+        # TODO: timizuo Find a way to test for all models
         form = DynamicFilterForm(model=Status)
+        site_form = DynamicFilterForm(model=Site)
 
         with self.subTest("Assert capitalize"):
             self.assertEqual(form.capitalize("test"), "Test")
             self.assertEqual(form.capitalize("test_one"), "Test one")
 
         with self.subTest("Assert get_lookup_field_choices"):
-            site_form = DynamicFilterForm(model=Site)
             self.assertEqual(
                 form.get_lookup_field_choices(),
                 [
@@ -703,6 +704,7 @@ class DynamicFilterFormTest(TestCase):
 
         with self.subTest("Assert form generates the correct base_filters"):
             self.assertEqual(form.filterset_base_filters, StatusFilterSet.base_filters)
+            self.assertEqual(site_form.filterset_base_filters, SiteFilterSet.base_filters)
 
         with self.subTest("Assert lookup_field, lookup_value & lookup_type fields has accurate attributes"):
             self.assertEqual(
@@ -742,7 +744,7 @@ class DynamicFilterFormTest(TestCase):
 
     def test_dynamic_filter_form_with_data_and_prefix(self):
         """Assert that lookup value implements the right field(CharField, ChoicField etc) and widget"""
-        # Test for if value show different widget depending on the value type either dynamic, select or others
+        # Assert lookup_value shows the right field and widget
         request_querydict = QueryDict(mutable=True)
         request_querydict.setlistdefault("name__ic", ["Site"])
         request_querydict.setlistdefault("slug", ["site-1"])
