@@ -1,4 +1,4 @@
-<!-- markdownlint-disable MD024 -->
+<!-- markdownlint-disable MD012 MD024 -->
 
 # Nautobot v1.4
 
