@@ -18,6 +18,7 @@ from nautobot.utilities.templatetags.helpers import validated_viewname
 from nautobot.utilities.utils import (
     convert_querydict_to_factory_formset_acceptable_querydict,
     normalize_querydict,
+    get_filterable_params_from_filter_params,
 )
 
 
@@ -32,15 +33,7 @@ class NautobotHTMLRenderer(renderers.BrowsableAPIRenderer):
     def get_filter_params(self, view, request):
         """Helper function - take request.GET and discard any parameters that are not used for queryset filtering."""
         filter_params = request.GET.copy()
-        boolean_choices = {"True", "False"}
-        for non_filter_param in view.non_filter_params:
-            filter_params.pop(non_filter_param, None)
-
-        filterset_data = {
-            key: value if boolean_choices.intersection(set(filter_params.getlist(key))) else filter_params.getlist(key)
-            for key, value in filter_params.items()
-        }
-        return filterset_data
+        return get_filterable_params_from_filter_params(filter_params, view.non_filter_params)
 
     def get_filter_form(self, view, request, *args, filterset_class=None, **kwargs):
         """

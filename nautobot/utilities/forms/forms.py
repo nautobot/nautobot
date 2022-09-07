@@ -317,8 +317,8 @@ class DynamicFilterForm(BootstrapMixin, forms.Form):
         should be `forms.ChoiceField(...widget=APISelectMultiple(...))` while if `field_name` is a
         choice field then `lookup_value` should be `forms.ChoiceField(...widget=StaticSelect2(...))`
         """
-        from nautobot.utilities.forms import StaticSelect2
-        from nautobot.utilities.forms import APISelectMultiple
+        # Avoid circular import
+        from nautobot.utilities.forms import APISelectMultiple, DatePicker, DateTimePicker, StaticSelect2, TimePicker
 
         data = get_data_for_filterset_parameter(self.model, field_name, choice)
         if data["type"] == "static-choices":
@@ -344,6 +344,13 @@ class DynamicFilterForm(BootstrapMixin, forms.Form):
                 required=False,
                 widget=APISelectMultiple(api_url=data["data_url"], attrs={**attr}),
                 initial=choice,
+            )
+        elif data["type"] == "datetime-field":
+            _format = data["format"]
+            widget = DatePicker if _format == "date" else DateTimePicker if _format == "datetime" else TimePicker
+            self.fields["lookup_value"] = forms.CharField(
+                required=False,
+                widget=widget(),
             )
 
     @staticmethod

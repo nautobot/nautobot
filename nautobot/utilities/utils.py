@@ -21,7 +21,14 @@ from django.utils.tree import Node
 from django.template import engines
 from django.utils.module_loading import import_string
 from django.utils.text import slugify
-from django_filters import BooleanFilter, filters, ModelMultipleChoiceFilter
+from django_filters import (
+    BooleanFilter,
+    DateFilter,
+    DateTimeFilter,
+    filters,
+    ModelMultipleChoiceFilter,
+    TimeFilter,
+)
 from taggit.managers import _TaggableManager
 
 from nautobot.dcim.choices import CableLengthUnitChoices
@@ -832,6 +839,23 @@ def get_data_for_filterset_parameter(model, parameter, initial_choice=None):
             "choices": BOOLEAN_WITH_BLANK_CHOICES,
             "allow_multiple": False,
         }
+    elif isinstance(field, (DateFilter, DateTimeFilter, TimeFilter)):
+        css_classes = "form-control flatpickr-input active lookup_value-input"
+        data = {
+            "type": "datetime-field",
+            "css_classes": css_classes + " time-picker",
+            "placeholder": "hh:mm:ss",
+            "format": "time",
+        }
+        if isinstance(field, DateTimeFilter):
+            data["css_class"] = css_classes + " datetime-picker"
+            data["placeholder"] = "YYYY-MM-DD hh:mm:ss"
+            data["format"] = "datetime"
+        elif isinstance(field, DateFilter):
+            data["css_classes"] = css_classes + " date-picker"
+            data["placeholder"] = "YYYY-MM-DD"
+            data["format"] = "date"
+
     return data
 
 
@@ -905,3 +929,27 @@ def convert_querydict_to_factory_formset_acceptable_querydict(request_querydict,
 
     query_dict.setdefault("form-TOTAL_FORMS", num if num > 2 else 3)
     return query_dict
+
+
+def get_filterable_params_from_filter_params(filter_params, non_filter_params):
+    """
+    Return only queryset filterable params in filter_params.
+
+    Args:
+        filter_params(QueryDict): Filter param querydict
+        non_filter_params(list): Non queryset filterable params
+    """
+    single_choice_fields = (r"^created", r"^has_")
+
+    for non_filter_param in non_filter_params:
+        filter_params.pop(non_filter_param, None)
+
+    # Some FilterSet field only accept single choice not multiple choices
+    # e.g datetime field, bool fields etc.
+    filter_params = {
+        field: value
+        if any((re.search(pattern, field) for pattern in single_choice_fields))
+        else filter_params.getlist(field)
+        for field, value in filter_params.items()
+    }
+    return filter_params

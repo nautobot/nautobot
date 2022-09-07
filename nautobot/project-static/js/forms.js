@@ -302,22 +302,26 @@ function jsify_form(context) {
     initializeDynamicChoiceSelection()
 
     // Flatpickr selectors
-    this_context.find('.date-picker').flatpickr({
-        allowInput: true
-    });
-    this_context.find('.datetime-picker').flatpickr({
-        allowInput: true,
-        enableSeconds: true,
-        enableTime: true,
-        time_24hr: true
-    });
-    this_context.find('.time-picker').flatpickr({
-        allowInput: true,
-        enableSeconds: true,
-        enableTime: true,
-        noCalendar: true,
-        time_24hr: true
-    });
+    function initializeDateTimePicker(){
+        this_context.find('.date-picker').flatpickr({
+            allowInput: true
+        });
+        this_context.find('.datetime-picker').flatpickr({
+            allowInput: true,
+            enableSeconds: true,
+            enableTime: true,
+            time_24hr: true
+        });
+        this_context.find('.time-picker').flatpickr({
+            allowInput: true,
+            enableSeconds: true,
+            enableTime: true,
+            noCalendar: true,
+            time_24hr: true
+        });
+    }
+    initializeDateTimePicker()
+
 
     // API backed tags
     var tags = $('#id_tags.tagfield');
@@ -527,10 +531,12 @@ function jsify_form(context) {
                 dataType: 'json',
                 type: 'GET',
             }).done(function (response) {
-                if(response.data_url)
+                if(response.type == "dynamic-choices")
                     useDynamicSelect(lookup_value_element, response)
-                else if (response.choices)
+                else if (response.type == "static-choices")
                     useStaticSelect(lookup_value_element, response.choices, response.allow_multiple)
+                else if (response.type == "datetime-field")
+                    useDateTimeField(lookup_value_element, response.css_classes, response.placeholder)
                 else
                     useInput(lookup_value_element)
             }).fail(function (xhr, status, error) {
@@ -542,7 +548,7 @@ function jsify_form(context) {
         }
     })
 
-    function useInput(element, name, _id){
+    function useInput(element){
         input_field = `
             <input
                 type="text"
@@ -551,6 +557,19 @@ function jsify_form(context) {
                 id="${element.attr('id')}"
             />`
         element.parent().html(input_field)
+    }
+
+    function useDateTimeField(element, css_classes, placeholder){
+        input_field = `
+            <input
+                type="text"
+                name="${element.attr('name')}"
+                class="${css_classes}"
+                placeholder="${placeholder}"
+                id="${element.attr('id')}"
+            >`
+        element.parent().html(input_field)
+        initializeDateTimePicker()
     }
 
     function useStaticSelect(element, choices, allow_multiple){
