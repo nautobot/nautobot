@@ -895,7 +895,7 @@ class JobScheduleForm(BootstrapMixin, forms.Form):
         required=False,
         label="Starting date and time",
         widget=DateTimePicker(),
-        help_text=f"The scheduled time is relative to the Nautobot configured timezone: {settings.TIME_ZONE}."
+        help_text=f"The scheduled time is relative to the Nautobot configured timezone: {settings.TIME_ZONE}.",
     )
     _recurrence_custom_time = forms.CharField(
         required=False,
