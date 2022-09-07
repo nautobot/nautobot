@@ -280,7 +280,7 @@ jobs:
       - "tests-mysql"
 
   changelog:
-    if: github.base_ref == 'develop' || github.base_ref == 'main'
+    if: github.base_ref == 'develop' || github.base_ref == 'next'
     runs-on: "ubuntu-20.04"
     steps:
       - name: "Check for changelog entry"
