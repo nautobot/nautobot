@@ -278,3 +278,22 @@ jobs:
       - "pylint"
       - "tests-postgres"
       - "tests-mysql"
+
+  changelog:
+    if: github.base_ref == 'develop' || github.base_ref == 'main'
+    runs-on: "ubuntu-20.04"
+    steps:
+      - name: "Check for changelog entry"
+        uses: brettcannon/check-for-changed-files@v1
+        with:
+          file-pattern: |
+            changes/*.added
+            changes/*.changed
+            changes/*.fixed
+            changes/*.removed
+            nautobot/docs/release-notes/version-*.*.md
+          failure-message: >
+            Change log fragment missing. Please add a changelog fragment to ./changes in the
+            branch ${{github.head_ref}}. See
+            https://nautobot.readthedocs.io/en/stable/development/#creating-changelog-fragments
+            for more information on creating changelog fragments.
