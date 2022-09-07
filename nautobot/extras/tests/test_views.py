@@ -1,3 +1,4 @@
+import re
 from datetime import datetime, timedelta
 import urllib.parse
 import uuid
@@ -1799,6 +1800,38 @@ class JobTestCase(
 
             content = extract_page_body(response.content.decode(response.charset))
             self.assertIn("Unable to schedule job: Job may have sensitive input variables.", content)
+
+    @mock.patch("nautobot.extras.views.get_worker_count", return_value=1)
+    def test_run_job_with_sensitive_variables_and_requires_approval(self, _):
+        self.add_permissions("extras.run_job")
+        self.add_permissions("extras.view_scheduledjob")
+
+        self.test_pass.has_sensitive_variables = True
+        self.test_pass.approval_required = True
+        self.test_pass.save()
+
+        data = {
+            "_schedule_type": "immediately",
+        }
+        for run_url in self.run_urls:
+            # Assert warning message shows in get
+            response = self.client.get(run_url)
+            content = extract_page_body(response.content.decode(response.charset))
+            self.assertIn("This job may have sensitive variables and cannot be marked as requiring approval.", content)
+
+            # Assert run button is disabled
+            search = re.search(r'<button.+ id="id__run" class="btn btn-primary"\s+disabled="disabled"', content)
+            self.assertTrue(search is not None)
+
+            # Assert error message shows after post
+            response = self.client.post(run_url, data)
+            self.assertHttpStatus(response, 200, msg=self.run_urls[1])
+
+            content = extract_page_body(response.content.decode(response.charset))
+            self.assertIn(
+                "Unable to run or schedule job: A job that may have sensitive variables cannot be marked as requiring approval.",
+                content,
+            )
 
 
 # TODO: Convert to StandardTestCases.Views

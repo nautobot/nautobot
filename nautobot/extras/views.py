@@ -1086,6 +1086,11 @@ class JobView(ObjectPermissionRequiredMixin, View):
             messages.error(request, "Unable to run or schedule job: Job is not enabled to be run.")
         elif job_model.has_sensitive_variables and request.POST["_schedule_type"] != JobExecutionType.TYPE_IMMEDIATELY:
             messages.error(request, "Unable to schedule job: Job may have sensitive input variables.")
+        elif job_model.has_sensitive_variables and job_model.approval_required:
+            messages.error(
+                request,
+                "Unable to run or schedule job: A job that may have sensitive variables cannot be marked as requiring approval.",
+            )
         elif job_form is not None and job_form.is_valid() and schedule_form.is_valid():
             # Run the job. A new JobResult is created.
             commit = job_form.cleaned_data.pop("_commit")
