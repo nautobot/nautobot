@@ -2655,6 +2655,7 @@ class PowerOutletCSVForm(CustomFieldModelCSVForm):
 
 class InterfaceFilterForm(DeviceComponentFilterForm, StatusModelFilterFormMixin):
     model = Interface
+    device = MultiValueCharField(required=False, label="Device Name")
     type = forms.MultipleChoiceField(choices=InterfaceTypeChoices, required=False, widget=StaticSelect2Multiple())
     enabled = forms.NullBooleanField(required=False, widget=StaticSelect2(choices=BOOLEAN_WITH_BLANK_CHOICES))
     mgmt_only = forms.NullBooleanField(required=False, widget=StaticSelect2(choices=BOOLEAN_WITH_BLANK_CHOICES))
@@ -3905,6 +3906,7 @@ class CableFilterForm(BootstrapMixin, StatusModelFilterFormMixin, forms.Form):
         query_params={"region": "$region"},
     )
     tenant = DynamicModelMultipleChoiceField(queryset=Tenant.objects.all(), to_field_name="slug", required=False)
+    rack = MultiValueCharField(required=False, label="Rack Name")
     rack_id = DynamicModelMultipleChoiceField(
         queryset=Rack.objects.all(),
         required=False,
@@ -3918,6 +3920,7 @@ class CableFilterForm(BootstrapMixin, StatusModelFilterFormMixin, forms.Form):
         widget=StaticSelect2(),
     )
     color = forms.CharField(max_length=6, required=False, widget=ColorSelect())  # RGB color code
+    device = MultiValueCharField(required=False, label="Device Name")
     device_id = DynamicModelMultipleChoiceField(
         queryset=Device.objects.all(),
         required=False,
@@ -3950,6 +3953,10 @@ class ConsoleConnectionFilterForm(BootstrapMixin, forms.Form):
         label="Device",
         query_params={"site": "$site"},
     )
+    device = MultiValueCharField(
+        required=False,
+        label="Device Name",
+    )
 
 
 class PowerConnectionFilterForm(BootstrapMixin, forms.Form):
@@ -3966,6 +3973,10 @@ class PowerConnectionFilterForm(BootstrapMixin, forms.Form):
         label="Device",
         query_params={"site": "$site"},
     )
+    device = MultiValueCharField(
+        required=False,
+        label="Device Name",
+    )
 
 
 class InterfaceConnectionFilterForm(BootstrapMixin, forms.Form):
@@ -3981,6 +3992,10 @@ class InterfaceConnectionFilterForm(BootstrapMixin, forms.Form):
         required=False,
         label="Device",
         query_params={"site": "$site"},
+    )
+    device = MultiValueCharField(
+        required=False,
+        label="Device Name",
     )
 
 
