@@ -254,6 +254,17 @@ Running migrations:
 !!! note
     This is a built-in Django command. Please see the [official documentation on `migrate`](https://docs.djangoproject.com/en/stable/ref/django-admin/#migrate) for more information.
 
+### `nautobot_version`
+
+`nautobot-server nautobot_version`
+
+Provides the Nautobot version to standard out, this command is namespaced with `nautobot_` as DJango provides a `version` command to provide the DJango version.
+
+```no-highlight
+$ nautobot-server nautobot_version
+1.4.2
+```
+
 ### `nbshell`
 
 `nautobot-server nbshell`
