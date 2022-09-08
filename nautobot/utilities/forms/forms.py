@@ -364,17 +364,16 @@ class DynamicFilterForm(BootstrapMixin, forms.Form):
 
 
 def dynamic_formset_factory(model, data=None, **kwargs):
-    modelform = DynamicFilterForm
-    modelform.model = model
+    filter_form = DynamicFilterForm
+    filter_form.model = model
 
     params = {
         "can_delete_extra": True,
         "can_delete": True,
         "extra": 3,
     }
-
     kwargs.update(params)
-    form = formset_factory(form=DynamicFilterForm, **kwargs)
+    form = formset_factory(form=filter_form, **kwargs)
     if data:
         form = form(data=data)
 
