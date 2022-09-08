@@ -728,11 +728,18 @@ class JobForm(BootstrapMixin, forms.Form):
         label="Commit changes",
         help_text="Commit changes to the database (uncheck for a dry-run)",
     )
+    _worker_queue = forms.ChoiceField(
+        required=False,
+        help_text="The worker queue to send this job to.",
+        label="Worker queue",
+    )
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-        # Move _commit to the end of the form
+        # Move _worker_queue and _commit to the end of the form
+        worker_queue = self.fields.pop("_worker_queue")
+        self.fields["_worker_queue"] = worker_queue
         commit = self.fields.pop("_commit")
         self.fields["_commit"] = commit
 
