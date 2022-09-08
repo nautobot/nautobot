@@ -476,7 +476,24 @@ class LookupRelatedFunctionTest(TestCase):
                 },
             )
 
-        with self.subTest("Get data for other fields i.e Integer and Char fields"):
+        with self.subTest("Get data for Integer fields"):
+            data = get_data_for_filterset_parameter(Site, "asn")
+            self.assertEqual(
+                data,
+                {
+                    "type": "number-field",
+                    "widget": None,
+                    "choices": [],
+                    "allow_multiple": True,
+                    "api_url": None,
+                    "content_type": None,
+                    "value_field": None,
+                    "css_classes": "lookup_value-input form-control",
+                    "placeholder": None,
+                },
+            )
+
+        with self.subTest("Get data for other fields i.e Char fields"):
             data = get_data_for_filterset_parameter(Site, "comment__iew")
             self.assertEqual(
                 data,

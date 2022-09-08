@@ -28,6 +28,7 @@ from django_filters import (
     filters,
     ModelMultipleChoiceFilter,
     TimeFilter,
+    NumberFilter,
 )
 from taggit.managers import _TaggableManager
 
@@ -807,7 +808,10 @@ def get_data_for_filterset_parameter(model, parameter, initial_choice=None):
     }
     kwargs = {}
 
-    if isinstance(field, (filters.MultipleChoiceFilter, ModelMultipleChoiceFilter)):
+    if isinstance(field, (NumberFilter,)):
+        kwargs = {"type": "number-field"}
+
+    elif isinstance(field, (filters.MultipleChoiceFilter, ModelMultipleChoiceFilter)):
         if "choices" in field.extra:  # Field choices
             kwargs = {
                 "type": "select-field",
@@ -856,7 +860,6 @@ def get_data_for_filterset_parameter(model, parameter, initial_choice=None):
             "widget": "static-select",
             "css_classes": default_css_classes + " nautobot-select2-static select2-hidden-accessible",
         }
-
     elif isinstance(field, (DateFilter, DateTimeFilter, TimeFilter)):
         css_classes = "form-control flatpickr-input active lookup_value-input"
         kwargs = {

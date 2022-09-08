@@ -538,7 +538,7 @@ function jsify_form(context) {
                 else if (response.type == "datetime-field")
                     useDateTimeField(lookup_value_element, response.css_classes, response.placeholder)
                 else
-                    useInput(lookup_value_element)
+                    useInput(lookup_value_element, response)
             }).fail(function (xhr, status, error) {
                 useInput(lookup_value_element)
             });
@@ -548,10 +548,10 @@ function jsify_form(context) {
         }
     })
 
-    function useInput(element){
+    function useInput(element, response){
         input_field = `
             <input
-                type="text"
+                type="${response && response.type == "number-field" ? "number" : "text"}"
                 name="${element.attr('name')}"
                 class="lookup_value-input form-control"
                 id="${element.attr('id')}"

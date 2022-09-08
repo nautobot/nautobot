@@ -304,7 +304,7 @@ class DynamicFilterForm(BootstrapMixin, forms.Form):
         self.fields["lookup_type"].widget.attrs["data-url"] = reverse("lookup_choices")
         self.fields["lookup_type"].widget.attrs["class"] = "nautobot-select2-api lookup_type-select"
 
-        lookup_value_css = self.fields["lookup_value"].widget.attrs.get("class")
+        lookup_value_css = self.fields["lookup_value"].widget.attrs.get("class") or ""
         self.fields["lookup_value"].widget.attrs["class"] = " ".join(
             [lookup_value_css, "lookup_value-input form-control"]
         )
@@ -347,6 +347,8 @@ class DynamicFilterForm(BootstrapMixin, forms.Form):
                 required=False,
                 widget=widget(),
             )
+        elif data["type"] == "number-field":
+            self.fields["lookup_value"] = forms.IntegerField(required=False)
 
     @staticmethod
     def capitalize(field):

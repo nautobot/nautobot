@@ -25,7 +25,7 @@ from nautobot.utilities.forms.utils import (
     expand_ipaddress_pattern,
     add_field_to_filter_form_class,
 )
-from nautobot.utilities.forms.widgets import APISelect, APISelectMultiple, StaticSelect2
+from nautobot.utilities.forms.widgets import APISelect, APISelectMultiple, DatePicker, StaticSelect2
 from nautobot.utilities.forms.forms import AddressFieldMixin, DynamicFilterForm, PrefixFieldMixin
 from nautobot.utilities.testing import TestCase as NautobotTestCase
 from nautobot.utilities.utils import convert_querydict_to_factory_formset_acceptable_querydict
@@ -744,12 +744,14 @@ class DynamicFilterFormTest(TestCase):
 
     def test_dynamic_filter_form_with_data_and_prefix(self):
         """Assert that lookup value implements the right field(CharField, ChoicField etc) and widget"""
-        # Assert lookup_value shows the right field and widget
+
         request_querydict = QueryDict(mutable=True)
         request_querydict.setlistdefault("name__ic", ["Site"])
         request_querydict.setlistdefault("slug", ["site-1"])
         request_querydict.setlistdefault("status", ["active"])
         request_querydict.setlistdefault("has_vlans", ["True"])
+        request_querydict.setdefault("created", "2022-09-05")
+        request_querydict.setlistdefault("asn", ["4"])
 
         with self.subTest("Test for lookup_value with a CharField"):
             # If `lookup_field` value is a CharField and or `lookup_type` lookup expr is not `exact` or `in` then,
@@ -815,3 +817,31 @@ class DynamicFilterFormTest(TestCase):
             self.assertEqual(
                 form.fields["lookup_value"]._choices, [("", "---------"), ("True", "Yes"), ("False", "No")]
             )
+
+        with self.subTest("Test for lookup_value with a DateField"):
+            form = DynamicFilterForm(model=Site, data=data, prefix="form-4")
+            self.assertEqual(
+                form.fields["lookup_type"].widget.attrs,
+                {
+                    "class": "nautobot-select2-api lookup_type-select",
+                    "data-contenttype": "dcim.site",
+                    "data-query-param-field_name": '["$lookup_field"]',
+                    "data-url": "/api/lookup-choices/",
+                    "placeholder": None,
+                },
+            )
+            self.assertTrue(isinstance(form.fields["lookup_value"].widget, DatePicker))
+
+        with self.subTest("Test for lookup_value with an IntegerField"):
+            form = DynamicFilterForm(model=Site, data=data, prefix="form-5")
+            self.assertEqual(
+                form.fields["lookup_type"].widget.attrs,
+                {
+                    "class": "nautobot-select2-api lookup_type-select",
+                    "data-contenttype": "dcim.site",
+                    "data-query-param-field_name": '["$lookup_field"]',
+                    "data-url": "/api/lookup-choices/",
+                    "placeholder": None,
+                },
+            )
+            self.assertTrue(isinstance(form.fields["lookup_value"], forms.IntegerField))
