@@ -185,6 +185,8 @@
             let element = parent_element.find(field_class)
             element.val(null).trigger('change')
         })
+        # reinitialize jsify_form
+        jsify_form($(document))
     })
 
 </script>

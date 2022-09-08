@@ -511,7 +511,7 @@ function jsify_form(context) {
 
 
     // Dynamic filter form
-    this_context.on("change", ".lookup_type-select", function(){
+    this_context.find(".lookup_type-select").bind("change", function(){
         let parent_element = $(this).parents("tr")
 
         let lookup_field_val = parent_element.find(".lookup_field-select").val()
