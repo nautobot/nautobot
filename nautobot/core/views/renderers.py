@@ -33,7 +33,7 @@ class NautobotHTMLRenderer(renderers.BrowsableAPIRenderer):
     def get_filter_params(self, view, request):
         """Helper function - take request.GET and discard any parameters that are not used for queryset filtering."""
         filter_params = request.GET.copy()
-        return get_filterable_params_from_filter_params(filter_params, view.non_filter_params)
+        return get_filterable_params_from_filter_params(filter_params, view.non_filter_params, view.filterset_class)
 
     def get_filter_form(self, view, request, *args, filterset_class=None, **kwargs):
         """

@@ -12,11 +12,13 @@ from nautobot.utilities.utils import (
     get_all_lookup_exper_for_field,
     get_data_for_filterset_parameter,
     get_form_for_model,
+    get_filterable_params_from_filter_params,
     get_filterset_for_model,
     get_model_from_name,
     get_route_for_model,
     get_table_for_model,
     is_taggable,
+    is_single_choice_field,
     normalize_querydict,
     pretty_print_query,
     slugify_dots_to_dashes,
@@ -340,6 +342,19 @@ class SlugifyFunctionsTest(TestCase):
 
 
 class LookupRelatedFunctionTest(TestCase):
+    def test_is_single_choice_field(self):
+        # Assert function returns True for any field starting with create or has_
+        # Cause these fields are either boolean fields or date time fields which one accepts single values
+        filterset_class = SiteFilterSet
+
+        single_choice_fields = ("created", "created__gte", "has_vlans", "has_clusters")
+        for field in single_choice_fields:
+            self.assertTrue(is_single_choice_field(filterset_class, field))
+
+        multi_choice_fields = ("status", "tenant", "tag")
+        for field in multi_choice_fields:
+            self.assertFalse(is_single_choice_field(filterset_class, field))
+
     def test_build_lookup_label(self):
         with self.subTest():
             label = build_lookup_label("slug__iew", "iendswith")
@@ -378,18 +393,32 @@ class LookupRelatedFunctionTest(TestCase):
             self.assertEqual(
                 data,
                 {
-                    "type": "dynamic-choices",
-                    "data_url": "/api/extras/statuses/",
+                    "type": "select-field",
+                    "widget": "api-select-multiple",
                     "choices": [],
+                    "allow_multiple": True,
+                    "api_url": "/api/extras/statuses/",
                     "content_type": '["dcim.site"]',
                     "value_field": "slug",
+                    "css_classes": "lookup_value-input form-control nautobot-select2-api select2-hidden-accessible",
+                    "placeholder": None,
                 },
             )
 
             data = get_data_for_filterset_parameter(Site, "tenant")
             self.assertEqual(
                 data,
-                {"type": "dynamic-choices", "data_url": "/api/tenancy/tenants/", "choices": [], "value_field": "slug"},
+                {
+                    "type": "select-field",
+                    "widget": "api-select-multiple",
+                    "choices": [],
+                    "allow_multiple": True,
+                    "api_url": "/api/tenancy/tenants/",
+                    "content_type": None,
+                    "value_field": "slug",
+                    "css_classes": "lookup_value-input form-control nautobot-select2-api select2-hidden-accessible",
+                    "placeholder": None,
+                },
             )
 
         with self.subTest("Get data for field with dynamic choices with an initial choices"):
@@ -397,11 +426,15 @@ class LookupRelatedFunctionTest(TestCase):
             self.assertEqual(
                 data,
                 {
-                    "type": "dynamic-choices",
-                    "data_url": "/api/extras/statuses/",
+                    "type": "select-field",
+                    "widget": "api-select-multiple",
                     "choices": [("active", "Active"), ("planned", "Planned")],
+                    "allow_multiple": True,
+                    "api_url": "/api/extras/statuses/",
                     "content_type": '["dcim.site"]',
                     "value_field": "slug",
+                    "css_classes": "lookup_value-input form-control nautobot-select2-api select2-hidden-accessible",
+                    "placeholder": None,
                 },
             )
 
@@ -410,7 +443,8 @@ class LookupRelatedFunctionTest(TestCase):
             self.assertEqual(
                 data,
                 {
-                    "type": "static-choices",
+                    "type": "select-field",
+                    "widget": "static-select",
                     "choices": (
                         ("2-post-frame", "2-post frame"),
                         ("4-post-frame", "4-post frame"),
@@ -419,15 +453,26 @@ class LookupRelatedFunctionTest(TestCase):
                         ("wall-cabinet", "Wall-mounted cabinet"),
                     ),
                     "allow_multiple": True,
+                    "api_url": None,
+                    "content_type": None,
+                    "value_field": None,
+                    "css_classes": "lookup_value-input form-control nautobot-select2-static select2-hidden-accessible",
+                    "placeholder": None,
                 },
             )
             data = get_data_for_filterset_parameter(Site, "has_vlans")
             self.assertEqual(
                 data,
                 {
-                    "type": "static-choices",
+                    "type": "select-field",
+                    "widget": "static-select",
                     "choices": (("", "---------"), ("True", "Yes"), ("False", "No")),
                     "allow_multiple": False,
+                    "api_url": None,
+                    "content_type": None,
+                    "value_field": None,
+                    "css_classes": "lookup_value-input form-control nautobot-select2-static select2-hidden-accessible",
+                    "placeholder": None,
                 },
             )
 
@@ -435,7 +480,17 @@ class LookupRelatedFunctionTest(TestCase):
             data = get_data_for_filterset_parameter(Site, "comment__iew")
             self.assertEqual(
                 data,
-                {"type": "others"},
+                {
+                    "type": "others",
+                    "widget": None,
+                    "choices": [],
+                    "allow_multiple": True,
+                    "api_url": None,
+                    "content_type": None,
+                    "value_field": None,
+                    "css_classes": "lookup_value-input form-control",
+                    "placeholder": None,
+                },
             )
 
     def test_compile_model_instance_choices(self):
@@ -463,7 +518,8 @@ class LookupRelatedFunctionTest(TestCase):
             request_querydict = QueryDict(mutable=True)
             request_querydict.setlistdefault("status", ["active", "decommissioning"])
             request_querydict.setlistdefault("name__ic", ["site"])
-            request_querydict.setlistdefault("invalid_field", ["invalid"])
+            request_querydict.setlistdefault("invalid_field", ["invalid"])  # Should be ignored
+            request_querydict.setlistdefault("name__iew", [""])  # Should be ignored since it has no value
 
             data = convert_querydict_to_factory_formset_acceptable_querydict(request_querydict, SiteFilterSet)
             expected_querydict = QueryDict(mutable=True)
@@ -491,3 +547,14 @@ class LookupRelatedFunctionTest(TestCase):
             expected_querydict.setlistdefault("form-MAX_NUM_FORMS", [100])
 
             self.assertEqual(data, expected_querydict)
+
+    def test_get_filterable_params_from_filter_params(self):
+        filter_params = QueryDict(mutable=True)
+        filter_params.update({"page": "1", "per_page": "20", "name": "Site 1"})
+        filter_params.setlistdefault("status", ["active", "planned"])
+
+        non_filter_params = ["page", "per_page"]
+        filterset_class = SiteFilterSet
+        data = get_filterable_params_from_filter_params(filter_params, non_filter_params, filterset_class)
+
+        self.assertEqual(data, {"name": ["Site 1"], "status": ["active", "planned"]})

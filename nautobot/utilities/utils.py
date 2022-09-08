@@ -952,18 +952,25 @@ def convert_querydict_to_factory_formset_acceptable_querydict(request_querydict,
     return query_dict
 
 
-def is_single_choice_field(field):
-    single_choice_fields_patterns = (r"^created", r"^has_")
-    return any((re.search(pattern, field) for pattern in single_choice_fields_patterns))
+def is_single_choice_field(filterset_class, field_name):
+    # Some filter parameters do not accept multiple values, e.g DateTime fields, boolean fields etc.
+    field = filterset_class.base_filters.get(field_name)
+    if field is None:
+        pass
+        # TODO (timizuo): handle filed not exist
+    if isinstance(field, (DateFilter, DateTimeFilter, TimeFilter, BooleanFilter)):
+        return True
+    return False
 
 
-def get_filterable_params_from_filter_params(filter_params, non_filter_params):
+def get_filterable_params_from_filter_params(filter_params, non_filter_params, filterset_class):
     """
     Return only queryset filterable params in filter_params.
 
     Args:
         filter_params(QueryDict): Filter param querydict
         non_filter_params(list): Non queryset filterable params
+        filterset_class: The FilterSet class
     """
     for non_filter_param in non_filter_params:
         filter_params.pop(non_filter_param, None)
@@ -971,8 +978,10 @@ def get_filterable_params_from_filter_params(filter_params, non_filter_params):
     # Some FilterSet field only accept single choice not multiple choices
     # e.g datetime field, bool fields etc.
     filter_params = {
-        field: filter_params.get(field) if is_single_choice_field(field) else filter_params.getlist(field)
-        for field, value in filter_params.items()
-        if value  # Discard fields without values
+        field: filter_params.get(field)
+        if is_single_choice_field(filterset_class, field)
+        else filter_params.getlist(field)
+        for field in filter_params.keys()
+        if filter_params.get(field)  # Discard fields without values
     }
     return filter_params
