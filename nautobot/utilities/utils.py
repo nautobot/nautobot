@@ -936,18 +936,25 @@ def convert_querydict_to_factory_formset_acceptable_querydict(request_querydict,
     lookup_value_placeholder = "form-%d-lookup_value"
 
     num = 0
-    for lookup_type in request_querydict.keys():
-        if lookup_type in filterset_class_fields:
-            lookup_field = re.sub(r"__\w+", "", lookup_type)
-            lookup_value = request_querydict.getlist(lookup_type)
+    for lookup_type, value in request_querydict.items():
+        # Discard fields without values
+        if value:
+            if lookup_type in filterset_class_fields:
+                lookup_field = re.sub(r"__\w+", "", lookup_type)
+                lookup_value = request_querydict.getlist(lookup_type)
 
-            query_dict.setlistdefault(lookup_field_placeholder % num, [lookup_field])
-            query_dict.setlistdefault(lookup_type_placeholder % num, [lookup_type])
-            query_dict.setlistdefault(lookup_value_placeholder % num, lookup_value)
-            num += 1
+                query_dict.setlistdefault(lookup_field_placeholder % num, [lookup_field])
+                query_dict.setlistdefault(lookup_type_placeholder % num, [lookup_type])
+                query_dict.setlistdefault(lookup_value_placeholder % num, lookup_value)
+                num += 1
 
     query_dict.setdefault("form-TOTAL_FORMS", num if num > 2 else 3)
     return query_dict
+
+
+def is_single_choice_field(field):
+    single_choice_fields_patterns = (r"^created", r"^has_")
+    return any((re.search(pattern, field) for pattern in single_choice_fields_patterns))
 
 
 def get_filterable_params_from_filter_params(filter_params, non_filter_params):
@@ -958,17 +965,14 @@ def get_filterable_params_from_filter_params(filter_params, non_filter_params):
         filter_params(QueryDict): Filter param querydict
         non_filter_params(list): Non queryset filterable params
     """
-    single_choice_fields = (r"^created", r"^has_")
-
     for non_filter_param in non_filter_params:
         filter_params.pop(non_filter_param, None)
 
     # Some FilterSet field only accept single choice not multiple choices
     # e.g datetime field, bool fields etc.
     filter_params = {
-        field: value
-        if any((re.search(pattern, field) for pattern in single_choice_fields))
-        else filter_params.getlist(field)
+        field: filter_params.get(field) if is_single_choice_field(field) else filter_params.getlist(field)
         for field, value in filter_params.items()
+        if value  # Discard fields without values
     }
     return filter_params
