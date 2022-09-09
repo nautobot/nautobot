@@ -165,9 +165,14 @@ The `settings_and_registry` default context processor was changed to purely `set
 
 ### Added
 
+- [#2327](https://github.com/nautobot/nautobot/issues/2327) - Added help text to the Job scheduling datetime picker to indicate the applicable time zone.
+
 ### Changed
 
 ### Fixed
+
+- [#2382](https://github.com/nautobot/nautobot/pull/2382) - Removed extraneous cache and temporary files from the `dev` and `final-dev` Docker images to reduce image size.
+- [#2389](https://github.com/nautobot/nautobot/pull/2389) - Removed extraneous `inspect.getsource()` call from Job class.
 
 ## v1.4.2 (2022-09-05)
 
