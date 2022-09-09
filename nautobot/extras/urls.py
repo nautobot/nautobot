@@ -403,9 +403,9 @@ urlpatterns = [
     path("jobs/", views.JobListView.as_view(), name="job_list"),
     path(
         "jobs/results/<uuid:pk>/",
-        RedirectView.as_view(pattern_name='extras:jobresult'),
+        RedirectView.as_view(pattern_name="extras:jobresult"),
         name="job_jobresult",
-    ),
+    ),  # TODO 2.0: REMOVE ME!!!!!!
     path("jobs/scheduled-jobs/", views.ScheduledJobListView.as_view(), name="scheduledjob_list"),
     path("jobs/scheduled-jobs/<uuid:pk>/", views.ScheduledJobView.as_view(), name="scheduledjob"),
     path("jobs/scheduled-jobs/<uuid:pk>/delete/", views.ScheduledJobDeleteView.as_view(), name="scheduledjob_delete"),
