@@ -23,9 +23,9 @@ try:
     # Override built-in print function with rich's pretty-printer function, if available
     from rich import print  # pylint: disable=redefined-builtin
 
-    RICH_PRINT = True
+    HAS_RICH = True
 except ModuleNotFoundError:
-    RICH_PRINT = False
+    HAS_RICH = False
 
 
 def is_truthy(arg):
@@ -122,7 +122,7 @@ def docker_compose(context, command, **kwargs):
     env.update({"PYTHON_VER": context.nautobot.python_ver})
     if "hide" not in kwargs:
         env_str = " \\\n    ".join(f"{var}={value}" for var, value in env.items())
-        if RICH_PRINT:
+        if HAS_RICH:
             print(f"[dim]{env_str} \\\n    {compose_command}[/dim]")
         else:
             print(f"{env_str} \\\n    {compose_command}")
