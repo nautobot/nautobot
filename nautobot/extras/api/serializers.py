@@ -1089,6 +1089,7 @@ class RelationshipSerializer(ValidatedModelSerializer, NotesSerializerMixin):
             "slug",
             "description",
             "type",
+            "required",
             "source_type",
             "source_label",
             "source_hidden",

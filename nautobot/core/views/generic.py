@@ -22,8 +22,9 @@ from django.utils.safestring import mark_safe
 from django.views.generic import View
 from django_tables2 import RequestConfig
 
-from nautobot.extras.models import CustomField, ExportTemplate, Relationship
+from nautobot.extras.models import CustomField, ExportTemplate
 from nautobot.extras.models.change_logging import ChangeLoggedModel
+from nautobot.extras.models import get_relationships_errors
 from nautobot.utilities.error_handlers import handle_protectederror
 from nautobot.utilities.exceptions import AbortTransaction
 from nautobot.utilities.forms import (
@@ -46,47 +47,6 @@ from nautobot.utilities.utils import (
     prepare_cloned_fields,
 )
 from nautobot.utilities.views import GetReturnURLMixin, ObjectPermissionRequiredMixin
-
-
-def get_relationships_errors(request, obj):
-    required_relationships = Relationship.objects.get_required_for_model(obj)
-    relationships_errors = []
-    for side, relations in required_relationships.items():
-        for relation in relations:
-
-            # Skip referencing itself
-            if ContentType.objects.get_for_model(obj) == getattr(relation, f"{relation.required}_type"):
-                continue
-
-            model_class = getattr(relation, f"{side}_type").model_class()
-            # Handle the case where model_class is None (e.g., relationship to a plugin
-            # model for a plugin that's not installed at present):
-            if model_class is None:
-                continue
-
-            if model_class.objects.count() == 0:
-                model_meta = model_class._meta
-                required = model_meta.verbose_name
-                try:
-                    add_url = reverse(get_route_for_model(model_class, "add"))
-                    add_message = f"<a href='{add_url}'>Click here</a> to create a {model_meta.verbose_name}."
-                except NoReverseMatch:
-                    add_message = "Please add one first."
-
-                relationships_errors.append(
-                    f"{obj._meta.verbose_name_plural.capitalize()} require a {required}, "
-                    f"but no {model_meta.verbose_name_plural} exist yet. {add_message}"
-                )
-
-    if len(relationships_errors) > 0:
-        for msg in relationships_errors:
-            messages.add_message(
-                request,
-                messages.ERROR,
-                mark_safe(msg),
-            )
-
-    return relationships_errors
 
 
 class ObjectView(ObjectPermissionRequiredMixin, View):

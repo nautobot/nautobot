@@ -10,8 +10,8 @@ from rest_framework.serializers import ValidationError
 
 from nautobot.core.api import ValidatedModelSerializer
 from nautobot.core.api.exceptions import SerializerNotFound
-from nautobot.extras.choices import RelationshipSideChoices
-from nautobot.extras.models import Relationship, RelationshipAssociation
+from nautobot.extras.choices import RelationshipSideChoices, RelationshipTypeChoices
+from nautobot.extras.models import get_relationships_errors, Relationship, RelationshipAssociation
 from nautobot.utilities.api import get_serializer_for_model
 
 
@@ -259,6 +259,40 @@ class RelationshipsDataField(JSONField):
         return {self.field_name: output_data}
 
 
+def api_relationships_errors(instance, validated_data):
+    required_relationships = Relationship.objects.get_required_for_model(instance)
+    relationships_errors = []
+    for side, relations in required_relationships.items():
+        for relation in relations:
+
+            # Not enforcing required symmetric relationships
+            if relation.symmetric:
+                continue
+
+            # Skip self-referencing
+            if ContentType.objects.get_for_model(instance) == getattr(relation, f"{relation.required}_type"):
+                continue
+
+            model_name = getattr(relation, f"{side}_type").model_class()._meta.verbose_name
+            cr_field_name = f"cr_{relation.slug}__{relation.required}"
+
+            if not validated_data.get(cr_field_name, ""):
+                if relation.type in [
+                    RelationshipTypeChoices.TYPE_ONE_TO_MANY,
+                    RelationshipTypeChoices.TYPE_MANY_TO_MANY,
+                ]:
+                    num_required_verbose = "at least one"
+                else:
+                    num_required_verbose = "a"
+                relationships_errors.append(
+                    {
+                        f"cr_{relation.slug}__{side}": f"You must define {num_required_verbose} {model_name} for "
+                                                       f"the {relation} relationship in the request"
+                    }
+                )
+    return relationships_errors
+
+
 class RelationshipModelSerializerMixin(ValidatedModelSerializer):
     """Extend ValidatedModelSerializer with a `relationships` field."""
 
@@ -267,11 +301,29 @@ class RelationshipModelSerializerMixin(ValidatedModelSerializer):
     def create(self, validated_data):
         relationships = validated_data.pop("relationships", {})
         instance = super().create(validated_data)
+
+        relationships_errors = get_relationships_errors(self.context["request"], instance, output_for="api")
+        if len(relationships_errors) > 0:
+            raise ValidationError(relationships_errors)
+
+        relationships_data_errors = api_relationships_errors(instance, validated_data)
+        if len(relationships_data_errors) > 0:
+            raise ValidationError(relationships_data_errors)
+
         if relationships:
             self._save_relationships(instance, relationships)
         return instance
 
     def update(self, instance, validated_data):
+
+        relationships_errors = get_relationships_errors(self.context["request"], instance, output_for="api")
+        if len(relationships_errors) > 0:
+            raise ValidationError(relationships_errors)
+
+        relationships_data_errors = api_relationships_errors(instance, validated_data)
+        if len(relationships_data_errors) > 0:
+            raise ValidationError(relationships_data_errors)
+
         relationships = validated_data.pop("relationships", {})
         instance = super().update(instance, validated_data)
         if relationships:

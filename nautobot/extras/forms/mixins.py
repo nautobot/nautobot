@@ -390,7 +390,9 @@ class RelationshipModelFormMixin(forms.ModelForm):
 
     def clean(self):
         """
-        Verify that any requested RelationshipAssociations do not violate relationship cardinality restrictions.
+        Verify that any required relationships are present in the submitted form data and raise
+        forms.ValidationError exceptions for any missing fields. Then verify that any requested
+        RelationshipAssociations do not violate relationship cardinality restrictions.
 
         - For TYPE_ONE_TO_MANY and TYPE_ONE_TO_ONE relations, if the form's object is on the "source" side of
           the relationship, verify that the requested "destination" object(s) do not already have any existing
@@ -420,12 +422,12 @@ class RelationshipModelFormMixin(forms.ModelForm):
                         RelationshipTypeChoices.TYPE_ONE_TO_MANY,
                         RelationshipTypeChoices.TYPE_MANY_TO_MANY,
                     ]:
-                        num_required = "at least one"
+                        num_required_verbose = "at least one"
                     else:
-                        num_required = "a"
+                        num_required_verbose = "a"
                     self.add_error(
                         f"cr_{relation.slug}__{side}",
-                        forms.ValidationError(f"You must select {num_required} {model_name}"),
+                        forms.ValidationError(f"You must select {num_required_verbose} {model_name}"),
                     )
 
         for side, relationships in self.instance.get_relationships().items():

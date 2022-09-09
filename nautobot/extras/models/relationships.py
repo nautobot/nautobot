@@ -3,11 +3,13 @@ import logging
 from django import forms
 from django.contrib.contenttypes.models import ContentType
 from django.contrib.contenttypes.fields import GenericForeignKey, GenericRelation
+from django.contrib import messages
 from django.core.exceptions import ValidationError
 from django.core.serializers.json import DjangoJSONEncoder
-from django.db import models
+from django.db import models, transaction
 from django.db.models import Q
-from django.urls import reverse
+from django.urls import NoReverseMatch, reverse
+from django.utils.safestring import mark_safe
 
 from nautobot.core.fields import AutoSlugField
 from nautobot.core.models import BaseModel
@@ -15,7 +17,7 @@ from nautobot.extras.choices import RelationshipTypeChoices, RelationshipSideCho
 from nautobot.extras.utils import FeatureQuery, extras_features
 from nautobot.extras.models import ChangeLoggedModel
 from nautobot.extras.models.mixins import NotesMixin
-from nautobot.utilities.utils import get_filterset_for_model, slugify_dashes_to_underscores
+from nautobot.utilities.utils import get_filterset_for_model, get_route_for_model, slugify_dashes_to_underscores
 from nautobot.utilities.forms import (
     DynamicModelChoiceField,
     DynamicModelMultipleChoiceField,
@@ -264,7 +266,7 @@ class Relationship(BaseModel, ChangeLoggedModel, NotesMixin):
         max_length=12,
         choices=RelationshipSidesRequiredChoices,
         default=RelationshipSidesRequiredChoices.NEITHER_SIDE_REQUIRED,
-        help_text="Force this relationship to be required.",
+        help_text="Force this relationship to be required. This does not effect symmetrical relationships.",
         blank=True,
     )
     #
@@ -753,3 +755,58 @@ class RelationshipAssociation(BaseModel):
                 raise ValidationError(
                     {side_name: (f"{side} violates {self.relationship} {side_name}_filter restriction")}
                 )
+
+
+def get_relationships_errors(request, obj, output_for="ui"):
+    required_relationships = Relationship.objects.get_required_for_model(obj)
+    relationships_errors = []
+    for side, relations in required_relationships.items():
+        for relation in relations:
+
+            # Skip referencing itself
+            if ContentType.objects.get_for_model(obj) == getattr(relation, f"{relation.required}_type"):
+                continue
+
+            required_model_class = getattr(relation, f"{side}_type").model_class()
+            # Handle the case where required_model_class is None (e.g., relationship to a plugin
+            # model for a plugin that's not installed at present):
+            if required_model_class is None:
+                continue
+
+            if required_model_class.objects.count() == 0:
+                model_meta = required_model_class._meta
+                required = model_meta.verbose_name
+                if output_for == "ui":
+                    try:
+                        add_url = reverse(get_route_for_model(required_model_class, "add"))
+                        add_message = f"<a href='{add_url}'>Click here</a> to create a {model_meta.verbose_name}."
+                    except NoReverseMatch:
+                        add_message = "Please add one first."
+
+                    relationships_errors.append(
+                        f"{obj._meta.verbose_name_plural.capitalize()} require a {required}, "
+                        f"but no {model_meta.verbose_name_plural} exist yet. {add_message}"
+                    )
+                elif output_for == "api":
+                    if relation.type in [
+                        RelationshipTypeChoices.TYPE_ONE_TO_MANY,
+                        RelationshipTypeChoices.TYPE_MANY_TO_MANY,
+                    ]:
+                        num_required_verbose = "at least one"
+                    else:
+                        num_required_verbose = "a"
+                    api_post_url = reverse(f"{model_meta.app_label}-api:{model_meta.model_name}-list")
+                    relationships_errors.append(
+                        f"{obj._meta.verbose_name_plural.capitalize()} require {num_required_verbose} {required} "
+                        f"but no {model_meta.verbose_name_plural} exist yet. Create one by posting to {api_post_url}"
+                    )
+
+    if len(relationships_errors) > 0 and output_for == "ui":
+        for msg in relationships_errors:
+            messages.add_message(
+                request,
+                messages.ERROR,
+                mark_safe(msg),
+            )
+
+    return relationships_errors
