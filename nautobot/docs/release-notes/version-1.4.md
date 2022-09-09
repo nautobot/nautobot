@@ -169,6 +169,8 @@ The `settings_and_registry` default context processor was changed to purely `set
 
 ### Changed
 
+- [#2383](https://github.com/nautobot/nautobot/pull/2383) - Updated documentation link for Nautobot ChatOps plugin.
+
 ### Fixed
 
 - [#2382](https://github.com/nautobot/nautobot/pull/2382) - Removed extraneous cache and temporary files from the `dev` and `final-dev` Docker images to reduce image size.
