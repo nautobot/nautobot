@@ -346,9 +346,22 @@ class DynamicGroupMembershipTable(DynamicGroupTable):
         # TODO(jathan): If an instance doesn't have `get_absolute_url()` we're gonna have a bad time.
         items = []
         for field_name in record.filter:
-            value = fs.form.cleaned_data[field_name]
-            links = [format_html('<a href="{}">{}</a>', item.get_absolute_url(), item) for item in value]
-            links_str = "[" + ", ".join(links) + "]"
+            filters = fs.form.cleaned_data[field_name]
+            links = []
+
+            for item in filters:
+                if isinstance(item, (str, int)):  # single-value char/int filter
+                    multi = False
+                    links.append(repr(item))
+                else:
+                    multi = True
+                    links.append(format_html('<a href="{}">{}</a>', item.get_absolute_url(), item))
+
+            # Only wrap the values in [] if it's a multi-value filter.
+            links_str = ", ".join(links)
+            if multi:
+                links_str = f"[{links_str}]"
+
             items.append(f"{field_name.title()}: {links_str}")
 
         return format_html("<br/>".join(items))
