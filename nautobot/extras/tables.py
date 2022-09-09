@@ -324,7 +324,7 @@ class DynamicGroupMembershipTable(DynamicGroupTable):
             "operator",
             "name",
             "weight",
-            "filter",
+            # "filter",  # FIXME(jathan): Revisit rendering this in a future release.
             "members",
             "description",
             "actions",
