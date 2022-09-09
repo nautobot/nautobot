@@ -1,3 +1,4 @@
+from typing import Optional, Sequence
 import uuid
 
 from django.conf import settings
@@ -8,7 +9,7 @@ from django.urls import reverse, NoReverseMatch
 from django.utils.text import slugify
 
 from nautobot.extras.choices import CustomFieldTypeChoices, RelationshipSideChoices, ObjectChangeActionChoices
-from nautobot.extras.models import ChangeLoggedModel
+from nautobot.extras.models import ChangeLoggedModel, CustomField, Relationship
 from nautobot.users.models import ObjectPermission
 from nautobot.utilities.testing.mixins import NautobotTestCaseMixin
 from nautobot.utilities.utils import get_changes_for_model, get_filterset_for_model
@@ -40,10 +41,10 @@ class ModelTestCase(TestCase):
     model = None
     # Optional, list of Relationships populated in setUpTestData for testing with this model
     # Be sure to also create RelationshipAssociations using these Relationships!
-    relationships = None
+    relationships: Optional[Sequence[Relationship]] = None
     # Optional, list of CustomFields populated in setUpTestData for testing with this model
     # Be sure to also populate these fields on your test data!
-    custom_fields = None
+    custom_fields: Optional[Sequence[CustomField]] = None
 
     def _get_queryset(self):
         """
@@ -75,8 +76,8 @@ class ModelViewTestCase(ModelTestCase):
         to a different app (e.g. testing Interfaces within the virtualization app).
         """
         if self.model._meta.app_label in settings.PLUGINS:
-            return "plugins:{}:{}_{{}}".format(self.model._meta.app_label, self.model._meta.model_name)
-        return "{}:{}_{{}}".format(self.model._meta.app_label, self.model._meta.model_name)
+            return f"plugins:{self.model._meta.app_label}:{self.model._meta.model_name}_{{}}"
+        return f"{self.model._meta.app_label}:{self.model._meta.model_name}_{{}}"
 
     def _get_url(self, action, instance=None):
         """
@@ -156,8 +157,8 @@ class ViewTestCases:
             self.assertIn(getattr(instance, "display", str(instance)), response_body, msg=response_body)
 
             # If any Relationships are defined, they should appear in the response
-            if self.relationships:
-                for relationship in self.relationships:
+            if self.relationships is not None:
+                for relationship in self.relationships:  # false positive pylint: disable=not-an-iterable
                     content_type = ContentType.objects.get_for_model(instance)
                     if content_type == relationship.source_type:
                         self.assertIn(
@@ -173,8 +174,8 @@ class ViewTestCases:
                         )
 
             # If any Custom Fields are defined, they should appear in the response
-            if self.custom_fields:
-                for custom_field in self.custom_fields:
+            if self.custom_fields is not None:
+                for custom_field in self.custom_fields:  # false positive pylint: disable=not-an-iterable
                     self.assertIn(str(custom_field), response_body, msg=response_body)
                     # 2.0 TODO: #824 custom_field.slug rather than custom_field.name
                     if custom_field.type == CustomFieldTypeChoices.TYPE_MULTISELECT:
@@ -637,7 +638,7 @@ class ViewTestCases:
 
             # Built-in CSV export
             if hasattr(self.model, "csv_headers"):
-                response = self.client.get("{}?export".format(self._get_url("list")))
+                response = self.client.get(f"{self._get_url('list')}?export")
                 self.assertHttpStatus(response, 200)
                 self.assertEqual(response.get("Content-Type"), "text/csv")
 

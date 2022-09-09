@@ -334,7 +334,7 @@ class TestPrefix(TestCase):
         prefix.save()
         IPAddress.objects.bulk_create(
             # Create 32 IPAddresses within the Prefix
-            [IPAddress(address=netaddr.IPNetwork("10.0.0.{}/24".format(i))) for i in range(1, 33)]
+            [IPAddress(address=netaddr.IPNetwork(f"10.0.0.{i}/24")) for i in range(1, 33)]
         )
         # Create IPAddress objects for network and broadcast addresses
         IPAddress.objects.bulk_create(

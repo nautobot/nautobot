@@ -266,7 +266,7 @@ class ObjectPermissionAPIViewTestCase(TestCase):
         """
         self.user = User.objects.create(username="testuser")
         self.token = Token.objects.create(user=self.user)
-        self.header = {"HTTP_AUTHORIZATION": "Token {}".format(self.token.key)}
+        self.header = {"HTTP_AUTHORIZATION": f"Token {self.token.key}"}
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
     def test_get_object(self):

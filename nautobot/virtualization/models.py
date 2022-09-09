@@ -204,9 +204,7 @@ class Cluster(PrimaryModel):
             if nonsite_devices:
                 raise ValidationError(
                     {
-                        "site": "{} devices are assigned as hosts for this cluster but are not in site {}".format(
-                            nonsite_devices, self.site
-                        )
+                        "site": f"{nonsite_devices} devices are assigned as hosts for this cluster but are not in site {self.site}"
                     }
                 )
 

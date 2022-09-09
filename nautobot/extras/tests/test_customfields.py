@@ -1577,6 +1577,7 @@ class CustomFieldBackgroundTasks(CeleryTestCase):
             type=CustomFieldTypeChoices.TYPE_TEXT,
         )
         cf.save()
+        logging.disable(logging.ERROR)
         cf.content_types.set([obj_type])
 
         site = Site(name="Site 1", slug="site-1", _custom_field_data={"cf1": "foo"})
@@ -1589,6 +1590,7 @@ class CustomFieldBackgroundTasks(CeleryTestCase):
         site.refresh_from_db()
 
         self.assertTrue("cf1" not in site.cf)
+        logging.disable(logging.NOTSET)
 
     def test_update_custom_field_choice_data_task(self):
         self.clear_worker()

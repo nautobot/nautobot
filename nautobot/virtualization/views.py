@@ -236,7 +236,7 @@ class ClusterAddDevicesView(generic.ObjectEditView):
 
             messages.success(
                 request,
-                "Added {} devices to cluster {}".format(len(device_pks), cluster),
+                f"Added {len(device_pks)} devices to cluster {cluster}",
             )
             return redirect(cluster.get_absolute_url())
 
@@ -274,7 +274,7 @@ class ClusterRemoveDevicesView(generic.ObjectEditView):
 
                 messages.success(
                     request,
-                    "Removed {} devices from cluster {}".format(len(device_pks), cluster),
+                    f"Removed {len(device_pks)} devices from cluster {cluster}",
                 )
                 return redirect(cluster.get_absolute_url())
 
