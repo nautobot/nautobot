@@ -1823,9 +1823,7 @@ class JobTestCase(
             )
 
             # Assert run button is disabled
-            search = re.search(
-                r'<button[^>]+id="id__run"[^>]+disabled="disabled"', content
-            )
+            search = re.search(r'<button[^>]+id="id__run"[^>]+disabled="disabled"', content)
             self.assertTrue(search)
 
             # Assert error message shows after post
