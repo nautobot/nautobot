@@ -6,7 +6,7 @@ from django.contrib.contenttypes.fields import GenericForeignKey, GenericRelatio
 from django.contrib import messages
 from django.core.exceptions import ValidationError
 from django.core.serializers.json import DjangoJSONEncoder
-from django.db import models, transaction
+from django.db import models
 from django.db.models import Q
 from django.urls import NoReverseMatch, reverse
 from django.utils.safestring import mark_safe
