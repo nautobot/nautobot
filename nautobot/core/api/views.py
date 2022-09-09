@@ -110,9 +110,11 @@ class BulkUpdateModelMixin:
     ]
     """
 
+    bulk_operation_serializer_class = BulkOperationSerializer
+
     def bulk_update(self, request, *args, **kwargs):
         partial = kwargs.pop("partial", False)
-        serializer = BulkOperationSerializer(data=request.data, many=True)
+        serializer = self.bulk_operation_serializer_class(data=request.data, many=True)
         serializer.is_valid(raise_exception=True)
         qs = self.get_queryset().filter(pk__in=[o["id"] for o in serializer.data])
 
@@ -154,11 +156,13 @@ class BulkDestroyModelMixin:
     ]
     """
 
+    bulk_operation_serializer_class = BulkOperationSerializer
+
     @extend_schema(
         request=BulkOperationSerializer(many=True),
     )
     def bulk_destroy(self, request, *args, **kwargs):
-        serializer = BulkOperationSerializer(data=request.data, many=True)
+        serializer = self.bulk_operation_serializer_class(data=request.data, many=True)
         serializer.is_valid(raise_exception=True)
         qs = self.get_queryset().filter(pk__in=[o["id"] for o in serializer.data])
 
