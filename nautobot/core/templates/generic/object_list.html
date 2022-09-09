@@ -10,6 +10,10 @@
         background: #cfcfcf;
         margin-right: 5px;
     }
+    .filters-applied>.btn {
+        margin-right: 5px;
+        margin-bottom: 5px;
+    }
 </style>
 {% endblock extra_styles %}
 
@@ -33,7 +37,7 @@
 <h1>{% block title %}{{ content_type.model_class|meta:"verbose_name_plural"|bettertitle }}{% endblock %}</h1>
 {% if filter_params %}
 <div class="filters-applied">
-    Filters:
+    <b>Filters:</b>
     {% for field, values in filter_params %}
         <button class="btn btn-sm">
             <b>{{ field }}:</b>
@@ -156,11 +160,10 @@
     //      form-0-lookup_type=status&form-0-lookup_value=active&form-0-lookup_value=decommissioning&
     // to -->
     //      status=active&status=decommissioning
-
     $("#dynamic-filter-form").on("submit", function(e){
         e.preventDefault()
 
-        fields_data = $(this).serialize().split(/form-\d-lookup_field=\w+&/).slice(1)
+        fields_data = $(this).serialize().split(/form-\d-lookup_field=\w*&/).slice(1)
         query_fields = []
 
         fields_data.forEach(field => {

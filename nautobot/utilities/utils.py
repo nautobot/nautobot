@@ -720,10 +720,9 @@ def build_lookup_label(field_name, verbose_name):
     """
 
     label = ""
-    search = re.search("__.+$", field_name)
-    if search is not None:
-        text = search.group().replace("__", "")
-        label = f"({text})"
+    search = re.search(r"(?<=__)\w+", field_name)
+    if search:
+        label = f"({search.group()})"
 
     if FILTER_LOOKUP_MAP.get(verbose_name):
         lookup_label = FILTER_LOOKUP_MAP[verbose_name]
@@ -850,7 +849,7 @@ def get_data_for_filterset_parameter(model, parameter, initial_choice=None):
             if initial_choice is not None:
                 search_by = field.extra.get("to_field_name") or "id"
                 values = initial_choice if isinstance(initial_choice, (list, tuple)) else [initial_choice]
-                kwargs["choices"] = compile_model_instance_choices(related_model, search_by, values)
+                kwargs["choices"] = get_values_display_names(related_model, search_by, values)
 
     elif isinstance(field, (BooleanFilter,)):  # Yes / No choice
         kwargs = {
@@ -881,12 +880,12 @@ def get_data_for_filterset_parameter(model, parameter, initial_choice=None):
     return data
 
 
-def compile_model_instance_choices(model, search_by, values):
+def get_values_display_names(model, search_by, values):
     """
     Get all display names for values in `model` instance.
 
     Examples:
-        >>> compile_model_instance_choices(,<class: nautobot.dcim.models.Site>, "slug", ["site-1", "site-2"] )
+        >>> get_values_display_names(,,<class: nautobot.dcim.models.Site>, "slug", ["site-1", "site-2"] )
         >>> [("site-1", "Site 1"), ("site-2", "Site 2")]
     Args:
         model: Model to query

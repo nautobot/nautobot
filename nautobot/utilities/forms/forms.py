@@ -286,10 +286,12 @@ class DynamicFilterForm(BootstrapMixin, forms.Form):
         self.fields["lookup_field"].choices = add_blank_choice(self.get_lookup_field_choices())
         self.fields["lookup_field"].widget.attrs["class"] = "nautobot-select2-static lookup_field-select"
 
-        # Pre-populate lookup_type and lookup_value choices with values from data(form value)
-        data = kwargs.get("data")
-        prefix = kwargs.get("prefix")
-        if data and prefix:
+        # Update lookup_type and lookup_value fields to match expected field types derived from data
+        # e.g status expects a ChoiceField with APISelectMultiple widget, while name expects a CharField etc.
+        if kwargs.get("data") and kwargs.get("prefix"):
+            data = kwargs["data"]
+            prefix = kwargs["prefix"]
+
             lookup_type = data.get(prefix + "-lookup_type")
             lookup_value = data.getlist(prefix + "-lookup_value")
 
@@ -297,7 +299,7 @@ class DynamicFilterForm(BootstrapMixin, forms.Form):
                 verbose_name = self.filterset_base_filters[lookup_type].lookup_expr
                 label = build_lookup_label(lookup_type, verbose_name)
                 self.fields["lookup_type"].choices = [(lookup_type, label)]
-                self.set_value_lookup_value_field(lookup_type, lookup_value)
+                self.update_lookup_value_field(lookup_type, lookup_value)
 
         self.fields["lookup_type"].widget.attrs["data-query-param-field_name"] = json.dumps(["$lookup_field"])
         self.fields["lookup_type"].widget.attrs["data-contenttype"] = contenttype
@@ -309,7 +311,7 @@ class DynamicFilterForm(BootstrapMixin, forms.Form):
             [lookup_value_css, "lookup_value-input form-control"]
         )
 
-    def set_value_lookup_value_field(self, field_name, choice):
+    def update_lookup_value_field(self, field_name, choice):
         """
         Update `lookup_value` field to an appropriate field for the `field_name`
 
@@ -357,6 +359,7 @@ class DynamicFilterForm(BootstrapMixin, forms.Form):
         return " ".join([first_word, *data[1:]])
 
     def get_lookup_field_choices(self):
+        """Get choices for lookup_fields i.e filterset parameters without a lookup expr"""
         filterset_without_lookup = (
             (name, field.label or self.capitalize(field.field_name))
             for name, field in self.filterset_base_filters.items()

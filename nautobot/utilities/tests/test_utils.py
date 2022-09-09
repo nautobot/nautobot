@@ -5,7 +5,7 @@ from django.test import TestCase
 from nautobot.core.settings_funcs import is_truthy
 from nautobot.utilities.utils import (
     build_lookup_label,
-    compile_model_instance_choices,
+    get_values_display_names,
     convert_querydict_to_factory_formset_acceptable_querydict,
     deepmerge,
     dict_to_filter_params,
@@ -517,7 +517,7 @@ class LookupRelatedFunctionTest(TestCase):
         )
 
         with self.subTest("Get choices of valid fields"):
-            choices = compile_model_instance_choices(Site, "slug", ["site-1", "site-2"])
+            choices = get_values_display_names(Site, "slug", ["site-1", "site-2"])
             self.assertEqual(
                 choices,
                 [
@@ -527,7 +527,7 @@ class LookupRelatedFunctionTest(TestCase):
             )
 
         with self.subTest("Get choices for invalid fields"):
-            choices = compile_model_instance_choices(Site, "slug", ["site-3", "site-4"])
+            choices = get_values_display_names(Site, "slug", ["site-3", "site-4"])
             self.assertEqual(choices, [])
 
     def test_convert_querydict_to_factory_formset_dict(self):
