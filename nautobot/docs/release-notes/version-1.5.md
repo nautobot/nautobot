@@ -28,6 +28,7 @@ If you are a user migrating from NetBox to Nautobot, please refer to the ["Migra
 ### Changed
 
 - [#1983](https://github.com/nautobot/nautobot/issues/1983) - Updated `django-taggit` dependency to 3.0.0.
+- [#2170](https://github.com/nautobot/nautobot/pull/2170) - Updated `django-constance` dependency to 2.9.1; updated `Jinja2` dependency to 3.1.2; updated `black` development dependency to 22.8.0.
 - [#2320](https://github.com/nautobot/nautobot/pull/2320) - Removed PKs from Tag test database fixture.
 
 ### Fixed
