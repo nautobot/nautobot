@@ -173,6 +173,7 @@ The `settings_and_registry` default context processor was changed to purely `set
 
 ### Fixed
 
+- [#2338](https://github.com/nautobot/nautobot/issues/2338) - Fixed whitespace issue with Text File secrets and they are now stripped of leading/trailing whitespace and newlines.
 - [#2382](https://github.com/nautobot/nautobot/pull/2382) - Removed extraneous cache and temporary files from the `dev` and `final-dev` Docker images to reduce image size.
 - [#2389](https://github.com/nautobot/nautobot/pull/2389) - Removed extraneous `inspect.getsource()` call from Job class.
 
