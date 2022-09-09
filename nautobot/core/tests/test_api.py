@@ -258,10 +258,14 @@ class GenerateLookupFieldDataViewTestCase(APITestCase):
         self.assertEqual(
             response.data,
             {
-                "type": "dynamic-choices",
-                "data_url": "/api/extras/statuses/",
+                "type": "select-field",
+                "widget": "api-select-multiple",
                 "choices": [],
+                "allow_multiple": True,
+                "api_url": "/api/extras/statuses/",
                 "content_type": '["dcim.site"]',
                 "value_field": "slug",
+                "css_classes": "lookup_value-input form-control nautobot-select2-api select2-hidden-accessible",
+                "placeholder": None,
             },
         )
