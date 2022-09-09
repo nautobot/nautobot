@@ -111,9 +111,6 @@ class BaseJob:
         self.failed = False
         self._job_result = None
 
-        # Grab some info about the job
-        self.source = inspect.getsource(self.__class__)
-
         # Compile test methods and initialize results skeleton
         self.test_methods = []
 
