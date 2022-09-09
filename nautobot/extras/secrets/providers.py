@@ -60,7 +60,7 @@ class TextFileSecretsProvider(SecretsProvider):
     def get_value_for_secret(cls, secret, obj=None, **kwargs):
         """
         Retrieve the appropriate text file's contents.
-        
+
         The value will be stripped of leading and trailing whitespace and newlines.
         """
         rendered_parameters = secret.rendered_parameters(obj=obj)
