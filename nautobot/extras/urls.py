@@ -1,4 +1,5 @@
 from django.urls import path
+from django.views.generic import RedirectView
 
 from nautobot.extras import views
 from nautobot.extras.models import (
@@ -402,7 +403,7 @@ urlpatterns = [
     path("jobs/", views.JobListView.as_view(), name="job_list"),
     path(
         "jobs/results/<uuid:pk>/",
-        views.JobResultView.as_view(),
+        RedirectView.as_view(pattern_name='extras:jobresult'),
         name="job_jobresult",
     ),
     path("jobs/scheduled-jobs/", views.ScheduledJobListView.as_view(), name="scheduledjob_list"),

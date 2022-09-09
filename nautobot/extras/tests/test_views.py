@@ -1241,7 +1241,7 @@ class ApprovalQueueTestCase(
         job_result = JobResult.objects.first()
         self.assertEqual(job_result.job_model, instance.job_model)
         self.assertEqual(job_result.user, self.user)
-        self.assertRedirects(response, reverse("extras:job_jobresult", kwargs={"pk": job_result.pk}))
+        self.assertRedirects(response, reverse("extras:jobresult", kwargs={"pk": job_result.pk}))
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     def test_post_deny_different_user_lacking_permissions(self):
@@ -1598,7 +1598,7 @@ class JobTestCase(
             response = self.client.post(run_url, self.data_run_immediately)
 
             result = JobResult.objects.latest()
-            self.assertRedirects(response, reverse("extras:job_jobresult", kwargs={"pk": result.pk}))
+            self.assertRedirects(response, reverse("extras:jobresult", kwargs={"pk": result.pk}))
 
     @mock.patch("nautobot.extras.views.get_worker_count", return_value=1)
     def test_run_now_constrained_permissions(self, _):
@@ -1619,7 +1619,7 @@ class JobTestCase(
 
             result = JobResult.objects.latest()
             self.assertIsNotNone(result, msg=run_url)
-            self.assertRedirects(response, reverse("extras:job_jobresult", kwargs={"pk": result.pk}))
+            self.assertRedirects(response, reverse("extras:jobresult", kwargs={"pk": result.pk}))
 
         # Try POST with a non-permitted object
         for run_url in self.extra_run_urls:
@@ -1679,7 +1679,7 @@ class JobTestCase(
             response = self.client.post(run_url, data)
 
             result = JobResult.objects.latest()
-            self.assertRedirects(response, reverse("extras:job_jobresult", kwargs={"pk": result.pk}))
+            self.assertRedirects(response, reverse("extras:jobresult", kwargs={"pk": result.pk}))
 
     @mock.patch("nautobot.extras.views.get_worker_count", return_value=1)
     def test_run_later_missing_name(self, _):
