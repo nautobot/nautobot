@@ -730,7 +730,7 @@ class JobForm(BootstrapMixin, forms.Form):
     )
     _worker_queue = forms.ChoiceField(
         required=False,
-        help_text="The worker queue to send this job to.",
+        help_text="The worker queue to send this job to",
         label="Worker queue",
     )
 

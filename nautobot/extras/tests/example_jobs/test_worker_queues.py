@@ -10,10 +10,10 @@ class TestWorkerQueues(Job):
 
     class Meta:
         has_sensitive_variables = False
-        worker_queues = {
-            None: "This is the default celery queue",
-            "nonexistent": "This queue doesn't exist and should have zero workers",
-        }
+        worker_queues = [
+            None,  # None defaults to the default celery queue
+            "nonexistent",  # This queue doesn't exist and should have zero workers
+        ]
 
     def run(self, data, commit):
         pass

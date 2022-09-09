@@ -954,6 +954,7 @@ class JobInputSerializer(serializers.Serializer):
     data = serializers.JSONField(required=False, default=dict)
     commit = serializers.BooleanField(required=False, default=None)
     schedule = NestedScheduledJobSerializer(required=False)
+    worker_queue = serializers.CharField(required=False, allow_blank=True)
 
 
 class JobLogEntrySerializer(BaseModelSerializer):

@@ -1,6 +1,8 @@
 from rest_framework import status
 from rest_framework.exceptions import APIException
 
+from nautobot.core.celery import app
+
 
 class AbortTransaction(Exception):
     """
@@ -26,8 +28,12 @@ class CeleryWorkerNotRunningException(APIException):
     """
 
     status_code = status.HTTP_503_SERVICE_UNAVAILABLE
+    default_detail = f"Unable to process request: No celery workers running on queue {app.conf.task_default_queue}."
     default_code = "celery_worker_not_running"
 
-    def __init__(self, queue="celery"):
-        detail = f"Unable to process request: No celery workers running on queue {queue}."
+    def __init__(self, queue=""):
+        if queue:
+            detail = f"Unable to process request: No celery workers running on queue {queue}."
+        else:
+            detail = self.default_detail
         super().__init__(detail=detail)

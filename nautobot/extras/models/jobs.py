@@ -172,8 +172,9 @@ class Job(PrimaryModel):
         "<br>Set to 0 to use Nautobot system default",
     )
     worker_queues = JSONArrayField(
-        base_field=models.CharField(),
+        base_field=models.CharField(blank=True, null=True, max_length=100),
         default=list,
+        blank=True,
     )
 
     # Flags to indicate whether the above properties are inherited from the source code or overridden by the database
