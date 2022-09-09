@@ -287,7 +287,7 @@ def api_relationships_errors(instance, validated_data):
                 relationships_errors.append(
                     {
                         f"cr_{relation.slug}__{side}": f"You must define {num_required_verbose} {model_name} for "
-                                                       f"the {relation} relationship in the request"
+                        f"the {relation} relationship in the request"
                     }
                 )
     return relationships_errors
