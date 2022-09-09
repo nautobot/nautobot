@@ -41,6 +41,9 @@ The following data is available as context for Jinja2 templates:
 * `data` - A serialized representation of the object _after_ the change was made. This is typically equivalent to the model's representation in Nautobot's REST API.
 * `snapshots` - snapshots of the serialized object state both before and after the change was made; provided as a dictionary with keys named `prechange`, `postchange` and `differences`.
 
+!!! check "Enhanced in version 1.3.0"
+    The `snapshots` data was added in Nautobot 1.3.0.
+
 ### Default Request Body
 
 If no body template is specified, the request body will be populated with a JSON object containing the context data. For example, a newly created site might appear as follows:

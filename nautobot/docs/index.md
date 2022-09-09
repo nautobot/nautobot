@@ -76,6 +76,9 @@ Nautobot is built on the [Django](https://djangoproject.com/) Python Web framewo
 | Task queuing       | Redis/Celery/django-rq          |
 | Live device access | NAPALM                          |
 
+!!! check "Added in version 1.1.0"
+    MySQL support was added in Nautobot 1.1.0.
+
 The following diagram displays how data travels through Nautobot's application stack.
 
 ![Application stack diagram](./media/nautobot_application_stack_low_level.png "Application stack diagram")
@@ -83,6 +86,12 @@ The following diagram displays how data travels through Nautobot's application s
 ## Supported Python Versions
 
 Nautobot supports Python 3.7, 3.8, 3.9, and 3.10.
+
+!!! check "Added in version 1.3.0"
+    Python 3.10 support was added in Nautobot 1.3.0.
+
+!!! danger "Removed in version 1.3.0"
+    Python 3.6 support was removed in Nautobot 1.3.0.
 
 ## Getting Started
 

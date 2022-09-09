@@ -22,6 +22,15 @@ The following minimum versions are required for Nautobot to operate:
 !!! note
     Either PostgreSQL or MySQL must be selected, but not both.
 
+!!! check "Added in version 1.1.0"
+    MySQL support was added in Nautobot 1.1.0.
+
+!!! check "Added in version 1.3.0"
+    Python 3.10 support was added in Nautobot 1.3.0.
+
+!!! danger "Removed in version 1.3.0"
+    Python 3.6 support was removed in Nautobot 1.3.0.
+
 Nautobot will not work without these dependencies.
 
 #### Python

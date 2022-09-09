@@ -132,6 +132,8 @@ A list of strings (field names) representing the order your job [variables](#var
 
 #### `has_sensitive_variables`
 
+!!! check "Added in version 1.3.10"
+
 Default: `True`
 
 Unless set to False, it prevents the job's input parameters from being saved to the database. This defaults to True so as to protect against inadvertent database exposure of input parameters that may include sensitive data such as passwords or other user credentials. Review whether each job's inputs contain any such variables before setting this to False; if a job *does* contain sensitive inputs, if possible you should consider whether the job could be re-implemented using Nautobot's [`Secrets`](../core-functionality/secrets.md) feature as a way to ensure that the sensitive data is not directly provided as a job variable at all.
@@ -158,6 +160,8 @@ Important notes about hidden jobs:
 * Results for hidden jobs will still appear in the Job Results list after they are run.
 
 #### `read_only`
+
+!!! check "Added in version 1.1.0"
 
 Default: `False`
 
@@ -190,8 +194,7 @@ class ExampleJobWithSoftTimeLimit(Job):
 
 #### `template_name`
 
-<!-- markdownlint-disable-next-line MD036 MD049 -->
-_Added in version 1.4.0_
+!!! check "Added in version 1.4.0"
 
 A path relative to the job source code containing a Django template which provides additional code to customize the Job's submission form. This template should extend the existing job template, `extras/job.html`, otherwise the base form and functionality may not be available.
 
@@ -585,7 +588,9 @@ nautobot-server runjob [--username <username>] [--commit] [--local] [--data <dat
 !!! note
     [See above](#jobs-and-class_path) for `class_path` definitions.
 
-!!! note
+!!! check "Enhanced in version 1.3.10"
+    The `--data` and `--local` parameters were added in Nautobot 1.3.10.
+
     The `--data` parameter must be a JSON string, e.g. `--data='{"string_variable": "somevalue", "integer_variable": 123}'`
 
 Using the same example shown in the API:
@@ -593,8 +598,6 @@ Using the same example shown in the API:
 ```no-highlight
 nautobot-server runjob --username myusername local/example/MyJobWithNoVars
 ```
-
-Provision of user input (`data` values) via the CLI is not supported at this time.
 
 !!! warning
     The `--username <username>` parameter can be used to specify the user that will be identified as the requester of the job. It is optional if the job will not be modifying the database, but is mandatory if you are running with `--commit`, as the specified user will own any resulting database changes.

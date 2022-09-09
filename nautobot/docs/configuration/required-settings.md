@@ -53,6 +53,9 @@ The following environment variables may also be set for each of the above values
 * `NAUTOBOT_DB_TIMEOUT`
 * `NAUTOBOT_DB_ENGINE`
 
+!!! check "Enhanced in version 1.1.0"
+    The `NAUTOBOT_DB_ENGINE` setting was added in Nautobot 1.1.0.
+
 !!! warning
     Nautobot supports either MySQL or PostgreSQL as a database backend. You must make sure that the `ENGINE` setting matches your selected database backend or **you will be unable to connect to the database**.
 
