@@ -4,7 +4,7 @@ import re
 from drf_spectacular.contrib.django_filters import DjangoFilterExtension
 from drf_spectacular.extensions import OpenApiSerializerFieldExtension
 from drf_spectacular.openapi import AutoSchema
-from drf_spectacular.plumbing import build_media_type_object, is_serializer
+from drf_spectacular.plumbing import build_array_type, build_media_type_object, is_serializer
 from rest_framework import serializers
 from rest_framework.relations import ManyRelatedField
 
@@ -53,52 +53,32 @@ class NautobotAutoSchema(AutoSchema):
             return None
         return super()._get_paginator()
 
-    def _get_request_body(self, direction="request"):
-        """Get the dict of information that defines the request portion of the schema for a given operation.
-
-        We have to override this method because drf-spectacular itself asserts that DELETE operations
-        never have a request body, which is not the case for our bulk_delete action.
-        """
-        request_body = super()._get_request_body(direction=direction)
-        if not request_body and self.is_bulk_action and self.method == "DELETE":
-            # The below is copied from drf-spectacular's `_get_request_body()` method,
-            # minus the "only unsafe methods can have a body" assertion
-            request_serializer = self.get_request_serializer()
-
-            if isinstance(request_serializer, dict):
-                content = []
-                request_body_required = True
-                for media_type, serializer in request_serializer.items():
-                    schema, partial_request_body_required = self._get_request_for_media_type(serializer, direction)
-                    examples = self._get_examples(serializer, direction, media_type)
-                    if schema is None:
-                        continue
-                    content.append((media_type, schema, examples))
-                    request_body_required &= partial_request_body_required
-            else:
-                schema, request_body_required = self._get_request_for_media_type(request_serializer, direction)
-                if schema is None:
-                    return None
-                content = [
-                    (media_type, schema, self._get_examples(request_serializer, direction, media_type))
-                    for media_type in self.map_parsers()
-                ]
-
-            request_body = {
-                "content": {
-                    media_type: build_media_type_object(schema, examples) for media_type, schema, examples in content
-                }
-            }
-            if request_body_required:
-                request_body["required"] = request_body_required
-
-        return request_body
-
     def get_filter_backends(self):
         """Nautobot's custom bulk operations, even though they return a list of records, are NOT filterable."""
         if self.is_bulk_action:
             return []
         return super().get_filter_backends()
+
+    def get_operation(self, *args, **kwargs):
+        operation = super().get_operation(*args, **kwargs)
+        # drf-spectacular never generates a requestBody for DELETE operations, but our bulk-delete operations need one
+        if "requestBody" not in operation and self.is_bulk_action and self.method == "DELETE":
+            # based on drf-spectacular's `_get_request_body()`, `_get_request_for_media_type()`,
+            # `_unwrap_list_serializer()`, and `_get_request_for_media_type()` methods
+            request_serializer = self.get_request_serializer()
+
+            # We skip past a number of checks from the aforementioned private methods, as this is a very specific case
+            component = self.resolve_serializer(request_serializer.child, "request")
+
+            operation["requestBody"] = {
+                "content": {
+                    media_type: build_media_type_object(build_array_type(component.ref))
+                    for media_type in self.map_parsers()
+                },
+                "required": True,
+            }
+
+        return operation
 
     def get_operation_id(self):
         """Extend the base method to handle Nautobot's REST API bulk operations.
