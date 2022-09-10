@@ -782,7 +782,7 @@ def get_relationships_errors(request, obj, output_for="ui"):
                         add_url = reverse(get_route_for_model(required_model_class, "add"))
                         add_message = f"<a href='{add_url}'>Click here</a> to create a {model_meta.verbose_name}."
                     except NoReverseMatch:
-                        add_message = "Please add one first."
+                        add_message = f"You need to create a {required} first"
 
                     relationships_errors.append(
                         f"{obj._meta.verbose_name_plural.capitalize()} require a {required}, "
@@ -796,10 +796,16 @@ def get_relationships_errors(request, obj, output_for="ui"):
                         num_required_verbose = "at least one"
                     else:
                         num_required_verbose = "a"
-                    api_post_url = reverse(f"{model_meta.app_label}-api:{model_meta.model_name}-list")
+
+                    try:
+                        api_post_url = reverse(f"{model_meta.app_label}-api:{model_meta.model_name}-list")
+                        api_hint = f"Create a {required} by posting to {api_post_url}"
+                    except NoReverseMatch:
+                        api_hint = f"You need to create a {required} first"
+
                     relationships_errors.append(
-                        f"{obj._meta.verbose_name_plural.capitalize()} require {num_required_verbose} {required} "
-                        f"but no {model_meta.verbose_name_plural} exist yet. Create one by posting to {api_post_url}"
+                        f"{obj._meta.verbose_name_plural.capitalize()} require {num_required_verbose} {required}, "
+                        f"but no {model_meta.verbose_name_plural} exist yet. {api_hint}"
                     )
 
     if len(relationships_errors) > 0 and output_for == "ui":

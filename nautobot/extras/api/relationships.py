@@ -293,6 +293,16 @@ def api_relationships_errors(instance, validated_data):
     return relationships_errors
 
 
+def validate_relationships(request, instance, validated_data):
+    relationships_errors = get_relationships_errors(request, instance, output_for="api")
+    if len(relationships_errors) > 0:
+        raise ValidationError(relationships_errors)
+
+    relationships_data_errors = api_relationships_errors(instance, validated_data)
+    if len(relationships_data_errors) > 0:
+        raise ValidationError(relationships_data_errors)
+
+
 class RelationshipModelSerializerMixin(ValidatedModelSerializer):
     """Extend ValidatedModelSerializer with a `relationships` field."""
 
@@ -302,13 +312,7 @@ class RelationshipModelSerializerMixin(ValidatedModelSerializer):
         relationships = validated_data.pop("relationships", {})
         instance = super().create(validated_data)
 
-        relationships_errors = get_relationships_errors(self.context["request"], instance, output_for="api")
-        if len(relationships_errors) > 0:
-            raise ValidationError(relationships_errors)
-
-        relationships_data_errors = api_relationships_errors(instance, validated_data)
-        if len(relationships_data_errors) > 0:
-            raise ValidationError(relationships_data_errors)
+        validate_relationships(self.context["request"], instance, validated_data)
 
         if relationships:
             self._save_relationships(instance, relationships)
@@ -316,13 +320,7 @@ class RelationshipModelSerializerMixin(ValidatedModelSerializer):
 
     def update(self, instance, validated_data):
 
-        relationships_errors = get_relationships_errors(self.context["request"], instance, output_for="api")
-        if len(relationships_errors) > 0:
-            raise ValidationError(relationships_errors)
-
-        relationships_data_errors = api_relationships_errors(instance, validated_data)
-        if len(relationships_data_errors) > 0:
-            raise ValidationError(relationships_data_errors)
+        validate_relationships(self.context["request"], instance, validated_data)
 
         relationships = validated_data.pop("relationships", {})
         instance = super().update(instance, validated_data)
