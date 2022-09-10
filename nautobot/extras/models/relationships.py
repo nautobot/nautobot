@@ -797,6 +797,8 @@ def get_relationships_errors(request, obj, output_for="ui"):
                     else:
                         num_required_verbose = "a"
 
+                    cr_field_name = f"cr_{relation.slug}__{relation.required_side}"
+
                     try:
                         api_post_url = reverse(f"{model_meta.app_label}-api:{model_meta.model_name}-list")
                         api_hint = f"Create a {required} by posting to {api_post_url}"
@@ -804,8 +806,11 @@ def get_relationships_errors(request, obj, output_for="ui"):
                         api_hint = f"You need to create a {required} first"
 
                     relationships_errors.append(
-                        f"{obj._meta.verbose_name_plural.capitalize()} require {num_required_verbose} {required}, "
-                        f"but no {model_meta.verbose_name_plural} exist yet. {api_hint}"
+                        {
+                            cr_field_name: f"{obj._meta.verbose_name_plural.capitalize()} "
+                                           f"require {num_required_verbose} {required}, "
+                                           f"but no {model_meta.verbose_name_plural} exist yet. {api_hint}"
+                        }
                     )
 
     if len(relationships_errors) > 0 and output_for == "ui":

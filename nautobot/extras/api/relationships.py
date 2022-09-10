@@ -1,5 +1,6 @@
 import logging
 
+from django.conf import settings
 from django.contrib.contenttypes.models import ContentType
 from django.db.models import Q
 from drf_spectacular.utils import extend_schema_field
@@ -259,7 +260,7 @@ class RelationshipsDataField(JSONField):
         return {self.field_name: output_data}
 
 
-def api_relationships_errors(instance, validated_data):
+def api_relationships_errors(instance, relationships_data):
     required_relationships = Relationship.objects.get_required_for_model(instance)
     relationships_errors = []
     for side, relations in required_relationships.items():
@@ -274,9 +275,13 @@ def api_relationships_errors(instance, validated_data):
                 continue
 
             model_name = getattr(relation, f"{side}_type").model_class()._meta.verbose_name
-            cr_field_name = f"cr_{relation.slug}__{relation.required_side}"
 
-            if not validated_data.get(cr_field_name, ""):
+            try:
+                submitted_data = relationships_data.get(relation, "").get(side, "")
+            except AttributeError:
+                submitted_data = []
+
+            if len(submitted_data) == 0:
                 if relation.type in [
                     RelationshipTypeChoices.TYPE_ONE_TO_MANY,
                     RelationshipTypeChoices.TYPE_MANY_TO_MANY,
@@ -286,19 +291,22 @@ def api_relationships_errors(instance, validated_data):
                     num_required_verbose = "a"
                 relationships_errors.append(
                     {
-                        f"cr_{relation.slug}__{side}": f"You must define {num_required_verbose} {model_name} for "
-                        f"the {relation} relationship in the request"
+                        relation.slug: f"You must specify {num_required_verbose} {model_name} id or slug "
+                        f"in the request body's relationships[{relation.slug}][{side}][objects] list data"
                     }
                 )
     return relationships_errors
 
 
-def validate_relationships(request, instance, validated_data):
+def validate_relationships(request, instance, relationships_data):
+
     relationships_errors = get_relationships_errors(request, instance, output_for="api")
     if len(relationships_errors) > 0:
-        raise ValidationError(relationships_errors)
+        raise ValidationError(
+            relationships_errors
+        )
 
-    relationships_data_errors = api_relationships_errors(instance, validated_data)
+    relationships_data_errors = api_relationships_errors(instance, relationships_data)
     if len(relationships_data_errors) > 0:
         raise ValidationError(relationships_data_errors)
 
@@ -312,17 +320,17 @@ class RelationshipModelSerializerMixin(ValidatedModelSerializer):
         relationships = validated_data.pop("relationships", {})
         instance = super().create(validated_data)
 
-        validate_relationships(self.context["request"], instance, validated_data)
+        validate_relationships(self.context["request"], instance, relationships)
 
         if relationships:
             self._save_relationships(instance, relationships)
         return instance
 
     def update(self, instance, validated_data):
-
-        validate_relationships(self.context["request"], instance, validated_data)
-
         relationships = validated_data.pop("relationships", {})
+
+        validate_relationships(self.context["request"], instance, relationships)
+
         instance = super().update(instance, validated_data)
         if relationships:
             self._save_relationships(instance, relationships)
