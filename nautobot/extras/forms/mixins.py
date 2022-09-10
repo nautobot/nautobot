@@ -411,11 +411,13 @@ class RelationshipModelFormMixin(forms.ModelForm):
                     continue
 
                 # Skip self-referencing
-                if ContentType.objects.get_for_model(self.instance) == getattr(relation, f"{relation.required}_type"):
+                if ContentType.objects.get_for_model(self.instance) == getattr(
+                    relation, f"{relation.required_side}_type"
+                ):
                     continue
 
                 model_name = getattr(relation, f"{side}_type").model_class()._meta.verbose_name
-                cr_field_name = f"cr_{relation.slug}__{relation.required}"
+                cr_field_name = f"cr_{relation.slug}__{relation.required_side}"
 
                 if not self.cleaned_data[cr_field_name]:
                     if relation.type in [

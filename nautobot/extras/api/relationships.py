@@ -270,11 +270,11 @@ def api_relationships_errors(instance, validated_data):
                 continue
 
             # Skip self-referencing
-            if ContentType.objects.get_for_model(instance) == getattr(relation, f"{relation.required}_type"):
+            if ContentType.objects.get_for_model(instance) == getattr(relation, f"{relation.required_side}_type"):
                 continue
 
             model_name = getattr(relation, f"{side}_type").model_class()._meta.verbose_name
-            cr_field_name = f"cr_{relation.slug}__{relation.required}"
+            cr_field_name = f"cr_{relation.slug}__{relation.required_side}"
 
             if not validated_data.get(cr_field_name, ""):
                 if relation.type in [

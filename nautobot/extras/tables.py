@@ -856,7 +856,7 @@ class RelationshipTable(BaseTable):
             "source_type",
             "destination_type",
             "actions",
-            "required",
+            "required_side",
         )
 
 

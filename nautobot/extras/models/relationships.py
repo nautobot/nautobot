@@ -242,8 +242,8 @@ class RelationshipManager(models.Manager.from_queryset(RestrictedQuerySet)):
         required_types = [req_type for req_type in RelationshipSidesRequiredChoices.values() if req_type]
         source, destination = self.get_for_model(model)
         return {
-            "source": destination.filter(required__in=required_types),
-            "destination": source.filter(required__in=required_types),
+            "source": destination.filter(required_side__in=required_types),
+            "destination": source.filter(required_side__in=required_types),
         }
 
 
@@ -262,11 +262,12 @@ class Relationship(BaseModel, ChangeLoggedModel, NotesMixin):
         default=RelationshipTypeChoices.TYPE_MANY_TO_MANY,
         help_text="Cardinality of this relationship",
     )
-    required = models.CharField(
+    required_side = models.CharField(
         max_length=12,
         choices=RelationshipSidesRequiredChoices,
         default=RelationshipSidesRequiredChoices.NEITHER_SIDE_REQUIRED,
         help_text="Force this relationship to be required. This does not effect symmetrical relationships.",
+        verbose_name="Required Side",
         blank=True,
     )
     #
@@ -764,7 +765,7 @@ def get_relationships_errors(request, obj, output_for="ui"):
         for relation in relations:
 
             # Skip referencing itself
-            if ContentType.objects.get_for_model(obj) == getattr(relation, f"{relation.required}_type"):
+            if ContentType.objects.get_for_model(obj) == getattr(relation, f"{relation.required_side}_type"):
                 continue
 
             required_model_class = getattr(relation, f"{side}_type").model_class()

@@ -2351,7 +2351,7 @@ class RelationshipTest(APIViewTestCases.APIViewTestCase):
     bulk_update_data = {
         "source_filter": {"slug": ["some-slug"]},
     }
-    choices_fields = ["destination_type", "source_type", "type"]
+    choices_fields = ["destination_type", "source_type", "type", "required_side"]
     fixtures = ("status",)
     slug_source = "name"
     slugify_function = staticmethod(slugify_dashes_to_underscores)
@@ -2368,6 +2368,7 @@ class RelationshipTest(APIViewTestCases.APIViewTestCase):
                 type="symmetric-many-to-many",
                 source_type=site_type,
                 destination_type=site_type,
+                required_side="",
             ),
             Relationship(
                 name="Unrelated Sites",
@@ -2377,6 +2378,7 @@ class RelationshipTest(APIViewTestCases.APIViewTestCase):
                 source_label="Other sites (from source side)",
                 destination_type=site_type,
                 destination_label="Other sites (from destination side)",
+                required_side="",
             ),
             Relationship(
                 name="Devices found elsewhere",
@@ -2384,6 +2386,7 @@ class RelationshipTest(APIViewTestCases.APIViewTestCase):
                 type="many-to-many",
                 source_type=site_type,
                 destination_type=device_type,
+                required_side="",
             ),
         )
         for relationship in cls.relationships:
