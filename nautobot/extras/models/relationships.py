@@ -808,8 +808,8 @@ def get_relationships_errors(request, obj, output_for="ui"):
                     relationships_errors.append(
                         {
                             cr_field_name: f"{obj._meta.verbose_name_plural.capitalize()} "
-                                           f"require {num_required_verbose} {required}, "
-                                           f"but no {model_meta.verbose_name_plural} exist yet. {api_hint}"
+                            f"require {num_required_verbose} {required}, "
+                            f"but no {model_meta.verbose_name_plural} exist yet. {api_hint}"
                         }
                     )
 

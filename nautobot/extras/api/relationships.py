@@ -15,9 +15,7 @@ from nautobot.extras.choices import RelationshipSideChoices, RelationshipTypeCho
 from nautobot.extras.models import get_relationships_errors, Relationship, RelationshipAssociation
 from nautobot.utilities.api import get_serializer_for_model
 
-
 logger = logging.getLogger(__name__)
-
 
 nested_abstract_serializer = {
     "type": "object",
@@ -28,7 +26,6 @@ nested_abstract_serializer = {
     },
     "additionalProperties": True,
 }
-
 
 side_data_schema = {
     "label": {"type": "string", "readOnly": True},
@@ -299,12 +296,9 @@ def api_relationships_errors(instance, relationships_data):
 
 
 def validate_relationships(request, instance, relationships_data):
-
     relationships_errors = get_relationships_errors(request, instance, output_for="api")
     if len(relationships_errors) > 0:
-        raise ValidationError(
-            relationships_errors
-        )
+        raise ValidationError(relationships_errors)
 
     relationships_data_errors = api_relationships_errors(instance, relationships_data)
     if len(relationships_data_errors) > 0:
