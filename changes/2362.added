@@ -1,1 +1,1 @@
-add change log fragments and automated release notes for nautobot github project
+Added documentation and automation for nautobot github project to use towncrier for changelog fragments.
