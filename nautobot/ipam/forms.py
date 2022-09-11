@@ -40,7 +40,6 @@ from nautobot.utilities.forms import (
     TagFilterField,
 )
 from nautobot.utilities.forms.constants import BOOLEAN_WITH_BLANK_CHOICES
-from nautobot.utilities.forms.fields import MultiValueCharField
 from nautobot.virtualization.models import Cluster, VirtualMachine, VMInterface
 from .choices import IPAddressFamilyChoices, IPAddressRoleChoices, ServiceProtocolChoices
 from .constants import (
@@ -932,7 +931,6 @@ class IPAddressFilterForm(NautobotFilterForm, TenancyFilterForm, StatusModelFilt
         "tenant",
     ]
     q = forms.CharField(required=False, label="Search")
-    address = MultiValueCharField(required=False, label="Address")
     parent = forms.CharField(
         required=False,
         widget=forms.TextInput(
@@ -942,7 +940,6 @@ class IPAddressFilterForm(NautobotFilterForm, TenancyFilterForm, StatusModelFilt
         ),
         label="Parent Prefix",
     )
-    device = MultiValueCharField(required=False, label="Device Name")
     family = forms.ChoiceField(
         required=False,
         choices=add_blank_choice(IPAddressFamilyChoices),
@@ -955,7 +952,6 @@ class IPAddressFilterForm(NautobotFilterForm, TenancyFilterForm, StatusModelFilt
         label="Mask length",
         widget=StaticSelect2(),
     )
-    virtual_machine = MultiValueCharField(required=False, label="Virtual Machine Name")
     vrf_id = DynamicModelMultipleChoiceField(
         queryset=VRF.objects.all(),
         required=False,

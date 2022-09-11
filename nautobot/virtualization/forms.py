@@ -49,7 +49,6 @@ from nautobot.utilities.forms import (
     TagFilterField,
 )
 from nautobot.utilities.forms.constants import BOOLEAN_WITH_BLANK_CHOICES
-from nautobot.utilities.forms.fields import MultiValueCharField
 from .models import Cluster, ClusterGroup, ClusterType, VirtualMachine, VMInterface
 
 
@@ -465,8 +464,6 @@ class VirtualMachineFilterForm(
         required=False,
         null_option="None",
     )
-    primary_ip4 = MultiValueCharField(required=False, label="Primary IPv4 Address (address or ID)")
-    primary_ip6 = MultiValueCharField(required=False, label="Primary IPv6 Address (address or ID)")
     mac_address = forms.CharField(required=False, label="MAC address")
     has_primary_ip = forms.NullBooleanField(
         required=False,
@@ -748,7 +745,6 @@ class VMInterfaceFilterForm(NautobotFilterForm, StatusModelFilterFormMixin):
         label="Virtual machine",
         query_params={"cluster_id": "$cluster_id"},
     )
-    addresses = MultiValueCharField(required=False, label="IP addresses (address or ID)")
     enabled = forms.NullBooleanField(required=False, widget=StaticSelect2(choices=BOOLEAN_WITH_BLANK_CHOICES))
     tag = TagFilterField(model)
 

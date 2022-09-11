@@ -694,6 +694,22 @@ class MultiValueCharField(forms.CharField):
 
         return bound_field
 
+    def to_python(self, value):
+        self.field_class = forms.CharField
+        if not value:
+            return []
+
+        # Make it a list if it's a string.
+        if isinstance(value, str):
+            value = [value]
+
+        return [
+            # Only append non-empty values (this avoids e.g. trying to cast '' as an integer)
+            super(self.field_class, self).to_python(v)  # pylint: disable=bad-super-call
+            for v in value
+            if v
+        ]
+
 
 class NumericArrayField(SimpleArrayField):
     """Basic array field that takes comma-separated or hyphenated ranges."""
