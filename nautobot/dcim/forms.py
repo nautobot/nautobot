@@ -2165,8 +2165,6 @@ class DeviceFilterForm(
     model = Device
     field_order = [
         "q",
-        "name",
-        "asset_tag",
         "region",
         "site",
         "location",
