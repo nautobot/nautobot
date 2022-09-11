@@ -288,12 +288,115 @@ function jsify_form(context) {
         placeholder: "---------",
         multiple: true,
         width: "off",
-        "language": {
-            "noResults": function(){
-                return "Type something to add it as an option";
+        ajax: {
+            delay: 500,
+            url: function(params) {
+                var element = this[0];
+                var url = parseURL(element.getAttribute("data-url"));
+
+                if (url.includes("{{")) {
+                    // URL is not fully rendered yet, abort the request
+                    return false;
+                }
+                return url;
+            },
+
+            data: function(params) {
+                var element = this[0];
+                // Paging. Note that `params.page` indexes at 1
+                var offset = (params.page - 1) * 50 || 0;
+                // Base query params
+                var parameters = {
+                    q: params.term,
+                    limit: 50,
+                    offset: offset,
+                };
+                
+                // Set api_version
+                api_version = $(element).attr("data-api-version")
+                if(api_version)
+                    parameters["api_version"] = api_version
+
+
+                // Allow for controlling the brief setting from within APISelect
+                parameters.brief = ( $(element).is('[data-full]') ? undefined : "" );
+
+                // Attach any extra query parameters
+                $.each(element.attributes, function(index, attr){
+                    if (attr.name.includes("data-query-param-")){
+                        var param_name = attr.name.split("data-query-param-")[1];
+
+                        $.each($.parseJSON(attr.value), function(index, value) {
+                            // Referencing the value of another form field
+                            if (value.startsWith('$')) {
+                                let ref_field = $('#id_' + value.slice(1));
+                                if (ref_field.val() && ref_field.is(":visible")) {
+                                    value = ref_field.val();
+                                } else if (ref_field.attr("required") && ref_field.attr("data-null-option")) {
+                                    value = "null";
+                                } else {
+                                    return true;  // Skip if ref_field has no value
+                                }
+                            }
+                            if (param_name in parameters) {
+                                if (Array.isArray(parameters[param_name])) {
+                                    parameters[param_name].push(value);
+                                } else {
+                                    parameters[param_name] = [parameters[param_name], value];
+                                }
+                            } else {
+                                parameters[param_name] = value;
+                            }
+                        });
+                    }
+                });
+                
+                // This will handle params with multiple values (i.e. for list filter forms)
+                return $.param(parameters, true);
+            },
+
+            processResults: function (data) {
+                var element = this.$element[0];
+                $(element).children('option').attr('disabled', false);
+                var results = data.results;
+                results = results.reduce((results,record,idx) => {
+                    var lookup_str = element.getAttribute('value-field').split("__");
+                    for (let i = 0; i < lookup_str.length - 1; i++) {
+                        record = record[lookup_str[i]]
+                    }
+                    record.id = record[lookup_str[lookup_str.length - 1]] || "-----";
+                    record.text = record[lookup_str[lookup_str.length - 1]] || "-----";
+                    results[idx] = record
+                    return results;
+                },Object.create(null));
+
+                // results = new Set(results);
+                // results = [results]
+                // console.log(results)
+                results = Object.values(results);
+                results = $.grep(results, function( n, i ) {
+                                return n.id!="-----";
+                            });
+
+                // Handle the null option, but only add it once
+                if (element.getAttribute('data-null-option') && data.previous === null) {
+                    results.unshift({
+                        id: 'null',
+                        text: element.getAttribute('data-null-option')
+                    });
+                }
+
+                // Check if there are more results to page
+                var page = data.next !== null;
+                return {
+                    results: results,
+                    pagination: {
+                        more: page
+                    }
+                };
             }
-        },
-    });    
+        }
+    });
 
     // Flatpickr selectors
     this_context.find('.date-picker').flatpickr({

@@ -676,7 +676,7 @@ class JSONArrayFormField(forms.JSONField):
         return super().has_changed(initial, data)
 
 
-class MultiValueCharField(forms.CharField):
+class MultiValueCharField(DynamicModelChoiceMixin, forms.CharField):
     """
     CharField that takes multiple user character inputs and render them as tags in the form field.
     Press enter to complete an input.
@@ -684,13 +684,47 @@ class MultiValueCharField(forms.CharField):
 
     widget = widgets.MultiValueCharInput()
 
+    def __init__(self, queryset, lookup_field, *args, **kwargs):
+        self.queryset = queryset
+        self.lookup_field = lookup_field
+        # Disable brief_mode because some of the fields we need are not available in brief mode.
+        self.brief_mode = False
+        super().__init__(*args, **kwargs)
+
+    def widget_attrs(self, widget):
+        attrs = {
+            "display-field": self.display_field,
+        }
+
+        # Set value-field attribute if the field specifies to_field_name
+        if self.lookup_field:
+            attrs["value-field"] = self.lookup_field
+        
+        if not self.brief_mode:
+            attrs["data-full"] = "true"
+
+        for key, value in self.query_params.items():
+            widget.add_query_param(key, value)
+        
+        return attrs
+    
     def get_bound_field(self, form, field_name):
         bound_field = BoundField(form, self, field_name)
-        value = bound_field.value()
         widget = bound_field.field.widget
-        # Save the selected choices in the widget even after the filterform is submitted
-        if value is not None:
-            widget.choices = [(v, v) for v in value]
+
+        # Set the data URL on the APISelect widget (if not already set)
+        if not widget.attrs.get("data-url"):
+            app_label = self.queryset.model._meta.app_label
+            model_name = self.queryset.model._meta.model_name
+            if app_label in settings.PLUGINS:
+                data_url = reverse(f"plugins-api:{app_label}-api:{model_name}-list")
+            else:
+                data_url = reverse(f"{app_label}-api:{model_name}-list")
+            widget.attrs["data-url"] = data_url
+        # Repopulate the widget choices after the filter is applied.
+        data = bound_field.value()
+        if data:
+            widget.choices = [(v, v) for v in data]
 
         return bound_field
 

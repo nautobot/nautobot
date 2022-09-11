@@ -2183,8 +2183,8 @@ class DeviceFilterForm(
         "has_primary_ip",
     ]
     q = forms.CharField(required=False, label="Search")
-    name = MultiValueCharField(required=False, label="Name")
-    asset_tag = MultiValueCharField(required=False, label="Asset Tag")
+    name = MultiValueCharField(queryset=Device.objects.all(), lookup_field="name", brief_mode=False, required=False, label="Name")
+    asset_tag = MultiValueCharField(queryset=Device.objects.all(), lookup_field="asset_tag", brief_mode=False, required=False, label="Asset Tag")
     rack_group_id = DynamicModelMultipleChoiceField(
         queryset=RackGroup.objects.all(),
         required=False,
@@ -2655,7 +2655,7 @@ class PowerOutletCSVForm(CustomFieldModelCSVForm):
 
 class InterfaceFilterForm(DeviceComponentFilterForm, StatusModelFilterFormMixin):
     model = Interface
-    device = MultiValueCharField(required=False, label="Device Name")
+    device = MultiValueCharField(queryset=Device.objects.all(), lookup_field="name", required=False, label="Device Name")
     type = forms.MultipleChoiceField(choices=InterfaceTypeChoices, required=False, widget=StaticSelect2Multiple())
     enabled = forms.NullBooleanField(required=False, widget=StaticSelect2(choices=BOOLEAN_WITH_BLANK_CHOICES))
     mgmt_only = forms.NullBooleanField(required=False, widget=StaticSelect2(choices=BOOLEAN_WITH_BLANK_CHOICES))
@@ -3906,7 +3906,7 @@ class CableFilterForm(BootstrapMixin, StatusModelFilterFormMixin, forms.Form):
         query_params={"region": "$region"},
     )
     tenant = DynamicModelMultipleChoiceField(queryset=Tenant.objects.all(), to_field_name="slug", required=False)
-    rack = MultiValueCharField(required=False, label="Rack Name")
+    rack = MultiValueCharField(queryset=Rack.objects.all(), lookup_field="name", required=False, label="Rack Name")
     rack_id = DynamicModelMultipleChoiceField(
         queryset=Rack.objects.all(),
         required=False,
@@ -3920,7 +3920,7 @@ class CableFilterForm(BootstrapMixin, StatusModelFilterFormMixin, forms.Form):
         widget=StaticSelect2(),
     )
     color = forms.CharField(max_length=6, required=False, widget=ColorSelect())  # RGB color code
-    device = MultiValueCharField(required=False, label="Device Name")
+    device = MultiValueCharField(Device.objects.all(), lookup_field="name", required=False, label="Device Name")
     device_id = DynamicModelMultipleChoiceField(
         queryset=Device.objects.all(),
         required=False,
@@ -3954,6 +3954,8 @@ class ConsoleConnectionFilterForm(BootstrapMixin, forms.Form):
         query_params={"site": "$site"},
     )
     device = MultiValueCharField(
+        queryset=Device.objects.all(),
+        lookup_field="name",
         required=False,
         label="Device Name",
     )
@@ -3974,6 +3976,8 @@ class PowerConnectionFilterForm(BootstrapMixin, forms.Form):
         query_params={"site": "$site"},
     )
     device = MultiValueCharField(
+        queryset=Device.objects.all(),
+        lookup_field="name",
         required=False,
         label="Device Name",
     )
@@ -3994,6 +3998,8 @@ class InterfaceConnectionFilterForm(BootstrapMixin, forms.Form):
         query_params={"site": "$site"},
     )
     device = MultiValueCharField(
+        queryset=Device.objects.all(),
+        lookup_field="name",
         required=False,
         label="Device Name",
     )

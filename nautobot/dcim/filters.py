@@ -1,4 +1,6 @@
 import django_filters
+from collections import OrderedDict
+
 from django.contrib.auth import get_user_model
 from django.db.models import Q
 from timezone_field import TimeZoneField
@@ -76,7 +78,8 @@ from .models import (
     Site,
     VirtualChassis,
 )
-
+from nautobot.utilities.forms.fields import DynamicModelChoiceMixin
+from nautobot.dcim.forms import DeviceFilterForm
 
 __all__ = (
     "CableFilterSet",
@@ -955,7 +958,7 @@ class DeviceFilterSet(
         field_name="interfaces__mac_address",
         label="MAC address",
     )
-    serial = django_filters.CharFilter(lookup_expr="iexact")
+    serial = MultiValueCharFilter(lookup_expr="iexact")
     has_primary_ip = django_filters.BooleanFilter(
         method="_has_primary_ip",
         label="Has a primary IP",

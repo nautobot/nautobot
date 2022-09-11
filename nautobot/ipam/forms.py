@@ -932,7 +932,7 @@ class IPAddressFilterForm(NautobotFilterForm, TenancyFilterForm, StatusModelFilt
         "tenant",
     ]
     q = forms.CharField(required=False, label="Search")
-    address = MultiValueCharField(required=False, label="Address")
+    address = MultiValueCharField(queryset=IPAddress.objects.all(), lookup_field="address", required=False, label="Address")
     parent = forms.CharField(
         required=False,
         widget=forms.TextInput(
@@ -942,7 +942,7 @@ class IPAddressFilterForm(NautobotFilterForm, TenancyFilterForm, StatusModelFilt
         ),
         label="Parent Prefix",
     )
-    device = MultiValueCharField(required=False, label="Device Name")
+    device = MultiValueCharField(queryset=IPAddress.objects.all(), lookup_field="assigned_object__device__name", required=False, label="Device Name")
     family = forms.ChoiceField(
         required=False,
         choices=add_blank_choice(IPAddressFamilyChoices),
@@ -955,7 +955,7 @@ class IPAddressFilterForm(NautobotFilterForm, TenancyFilterForm, StatusModelFilt
         label="Mask length",
         widget=StaticSelect2(),
     )
-    virtual_machine = MultiValueCharField(required=False, label="Virtual Machine Name")
+    # virtual_machine = MultiValueCharField(required=False, label="Virtual Machine Name")
     vrf_id = DynamicModelMultipleChoiceField(
         queryset=VRF.objects.all(),
         required=False,

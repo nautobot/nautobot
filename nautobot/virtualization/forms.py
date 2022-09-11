@@ -465,8 +465,20 @@ class VirtualMachineFilterForm(
         required=False,
         null_option="None",
     )
-    primary_ip4 = MultiValueCharField(required=False, label="Primary IPv4 Address (address or ID)")
-    primary_ip6 = MultiValueCharField(required=False, label="Primary IPv6 Address (address or ID)")
+    primary_ip4 = MultiValueCharField(
+        queryset=IPAddress.objects.all(),
+        lookup_field="address",
+        required=False,
+        label="Primary IPv4 Address (address or ID)",
+        query_params={"family": "4"},
+    )
+    primary_ip6 = MultiValueCharField(
+        queryset=IPAddress.objects.all(),
+        lookup_field="address",
+        required=False,
+        label="Primary IPv6 Address (address or ID)",
+        query_params={"family": "6"},
+    )
     mac_address = forms.CharField(required=False, label="MAC address")
     has_primary_ip = forms.NullBooleanField(
         required=False,
@@ -748,7 +760,7 @@ class VMInterfaceFilterForm(NautobotFilterForm, StatusModelFilterFormMixin):
         label="Virtual machine",
         query_params={"cluster_id": "$cluster_id"},
     )
-    addresses = MultiValueCharField(required=False, label="IP addresses (address or ID)")
+    # addresses = MultiValueCharField(required=False, label="IP addresses (address or ID)")
     enabled = forms.NullBooleanField(required=False, widget=StaticSelect2(choices=BOOLEAN_WITH_BLANK_CHOICES))
     tag = TagFilterField(model)
 

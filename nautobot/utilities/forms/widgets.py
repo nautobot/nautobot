@@ -233,7 +233,7 @@ class TimePicker(forms.TextInput):
         self.attrs["placeholder"] = "hh:mm:ss"
 
 
-class MultiValueCharInput(StaticSelect2Multiple):
+class MultiValueCharInput(APISelectMultiple):
     """
     Manual text input tag with multi-value select boxes.
     """
