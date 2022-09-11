@@ -445,14 +445,6 @@ class DynamicGroupModelTest(DynamicGroupTestBase):
     def test_get_initial(self):
         """Test `DynamicGroup.get_initial()`."""
         group1 = self.first_child  # Filter has `site`
-        group2 = self.invalid_filter  # Filter has `name`
-
-        # Test that a CharField (e.g. `name`) gets flattened. We use group2 for this.
-        initial = group2.get_initial()
-        expected = {"name": "bogus"}
-        self.assertEqual(initial, expected)
-
-        # Otherwise, it just passes through the filter.
         self.assertEqual(group1.get_initial(), group1.filter)
 
     def test_set_filter(self):
