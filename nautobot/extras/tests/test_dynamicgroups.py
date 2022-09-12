@@ -125,6 +125,13 @@ class DynamicGroupTestBase(TestCase):
                 filter={"name": ["bogus"]},
                 content_type=cls.device_ct,
             ),
+            DynamicGroup.objects.create(
+                name="MultiValueCharFilter",
+                slug="multivaluecharfilter",
+                description="A group with a multivaluechar filter",
+                filter={"name": ["device-1", "device-2", "device-3"]},
+                content_type=cls.device_ct,
+            ),
         ]
 
         cls.parent = cls.groups[0]
@@ -451,6 +458,11 @@ class DynamicGroupModelTest(DynamicGroupTestBase):
         """Test `DynamicGroup.get_initial()`."""
         group1 = self.first_child  # Filter has `site`
         self.assertEqual(group1.get_initial(), group1.filter)
+        # Test if MultiValueCharField is properly pre-populated
+        group2 = self.groups[6] # Filter has `name`
+        initial = group2.get_initial()
+        expected = {"name": ["device-1", "device-2", "device-3"]}
+        self.assertEqual(initial, expected)
 
     def test_set_filter(self):
         """Test `DynamicGroup.set_filter()`."""
