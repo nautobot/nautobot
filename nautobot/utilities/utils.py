@@ -832,17 +832,13 @@ def get_data_for_filterset_parameter(model, parameter, initial_choice=None):
                     "type": "select-field",
                     "api_url": api_endpoint,
                     "widget": "api-select-multiple",
+                    "value_field": field.extra.get("to_field_name"),
                     "css_classes": default_css_classes + " nautobot-select2-api select2-hidden-accessible",
                 }
 
             # Status and Tag api requires content_type, to limit result to only related content_types
             if related_model in [Status, Tag]:
                 kwargs["content_type"] = json.dumps([contenttype])
-
-            # Set value-field - This is used by DynamicModelChoiceField to set option value
-            value_field = field.extra.get("to_field_name")
-            if value_field is not None:
-                kwargs["value_field"] = value_field
 
             # Add initial choices if initial_choice is not none
             # This can be used to populate the selected options for the select field

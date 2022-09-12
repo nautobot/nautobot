@@ -43,9 +43,9 @@ from nautobot.utilities.templatetags.helpers import validated_viewname
 from nautobot.utilities.utils import (
     convert_querydict_to_factory_formset_acceptable_querydict,
     csv_format,
+    get_filterable_params_from_filter_params,
     normalize_querydict,
     prepare_cloned_fields,
-    get_filterable_params_from_filter_params,
 )
 from nautobot.utilities.views import GetReturnURLMixin, ObjectPermissionRequiredMixin
 
