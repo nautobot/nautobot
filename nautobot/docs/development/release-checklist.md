@@ -127,7 +127,7 @@ Please see the [official Poetry documentation on `version`](https://python-poetr
 
 Create a release branch off of `develop` (`git checkout -b release-1.4.3 develop`)
 
-Generate release notes with `towncrier build --version 1.4.3`. This will update the release notes in `nautobot/docs/release-notes/version-1.4.md`, stage that file in git and `git rm` all of the fragments if you answer yes to the towncrier prompt `Is it okay if I remove those files? [Y/n]:`.
+Generate release notes with `towncrier build --version 1.4.3` and answer `yes` to the prompt `Is it okay if I remove those files? [Y/n]:`. This will update the release notes in `nautobot/docs/release-notes/version-1.4.md`, stage that file in git, and `git rm` all of the fragments that have now been incorporated into the release notes.
 
 Run `invoke markdownlint` to make sure the generated release notes pass the linter checks.
 
