@@ -154,29 +154,24 @@
         location.replace("?" + query_string.join("&"))
     })
 
-    // On submit of filter form convert filterform data to a better URL query sting
-    // e.g from -->
-    //      form-TOTAL_FORMS=4&form-INITIAL_FORMS=0&form-MIN_NUM_FORMS=&form-MAX_NUM_FORMS=&form-0-lookup_field=status&
-    //      form-0-lookup_type=status&form-0-lookup_value=active&form-0-lookup_value=decommissioning&
-    // to -->
-    //      status=active&status=decommissioning
+    // On submit of filter form
     $("#dynamic-filter-form").on("submit", function(e){
         e.preventDefault()
-
-        fields_data = $(this).serialize().split(/form-\d-lookup_field=\w*&/).slice(1)
-        query_fields = []
-
-        fields_data.forEach(field => {
-            let lookup_type = field.match(/\w+(?=&)/)
-            let lookup_values = `${field}&`.match(/(?<=form-\d+-lookup_value=).+?(?=&)/g)
-            let is_field_deleted = /DELETE=on/.test(field)
-            if (lookup_values && !is_field_deleted)
-                lookup_values.forEach(value => query_fields.push(`${lookup_type}=${value}`))
+        $(this).find(".dynamic-filterform").each((idx, element) => {
+            // Exclude rows with display == none because those are deleted rows
+            if ($(element).css("display") != "none") {
+                let lookup_type = $(element).find(".lookup_type-select")
+                let lookup_value = $(element).find(".lookup_value-input")
+                lookup_value.attr("name", lookup_type.val())
+            }
         })
-        location.replace("?" + query_fields.join("&"))
+        // By removing all name attr with 'form-' prefix form input/select elements
+        // only filterable fields would be picked up by `$(this).serialize()`
+        $(this).find(`input[name*="form-"], select[name*="form-"]`).removeAttr("name")
+        location.replace("?" + $(this).serialize())
     })
 
-    // Clear new filter values upon creation
+    // Clear new row values upon creation
     $(".dynamic-filterform-add .add-row").click(function(){
         let new_fields_parent_element = $(".dynamic-filterform").last()
         let lookup_field_classes = [".lookup_field-select", ".lookup_type-select", ".lookup_value-input"]
