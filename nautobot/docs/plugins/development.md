@@ -298,6 +298,8 @@ template_extensions = [DeviceExtraTabs, SiteAnimalCount]
 
 #### Adding Extra Tabs
 
+_Added in version 1.4.0_ <!-- markdownlint-disable-line MD036 -->
+
 In order for any extra tabs to work properly, the `"url"` key must reference a view which inherits from the `nautobot.core.views.generic.ObjectView` class and the template must extend the object's detail template such as:
 
 ```html
@@ -706,7 +708,7 @@ The requirements to extend a filter set or a filter form (or both) are:
 * The variable `filter_extensions` must be declared in that file, and contain a list of `PluginFilterExtension` subclasses
 * The `model` attribute of each `PluginFilterExtension` subclass must be set to a valid model name in the dotted pair format (`{app_label}.{model}`, e.g. `tenant.tenant` or `dcim.device`)
 
-Nautobot dynamically creates many additional filters based upon the defined filter type. Specifically, there are additional lookup expressions (referred to in code as `lookup_expr`) that are created for each filter, when there is neither a `lookup_expr` nor `method` parameter already set. These dynamically-added lookup expressions are added using a shorthand notation (e.g. `icontains` is `ic`). Nautobot will also add the negation of each, for example, so `icontains` will be added along with *not* `icontains` using the `ic` and `nic` expressions respectively.
+Nautobot dynamically creates many additional filters based upon the defined filter type. Specifically, there are additional lookup expressions (referred to in code as `lookup_expr`) that are created for each filter, when there is neither a `lookup_expr` nor `method` parameter already set. These dynamically-added lookup expressions are added using a shorthand notation (e.g. `icontains` is `ic`). Nautobot will also add the negation of each, for example, so `icontains` will be added along with _not_ `icontains` using the `ic` and `nic` expressions respectively.
 
 The dynamically-added lookup expressions can be found in the source code at [nautobot/utilities/constants.py](https://github.com/nautobot/nautobot/blob/main/nautobot/utilities/constants.py) and the mapping logic can be found in [nautobot/utilities/filters.py](https://github.com/nautobot/nautobot/blob/main/nautobot/utilities/filters.py). Please see the documentation on [filtering](../rest-api/filtering.md#lookup-expressions) for more information.
 
@@ -742,7 +744,7 @@ There are several conditions that must be met in order to extend a filter:
 You can view an example of `filter_extensions.py` by viewing [the one provided](https://github.com/nautobot/nautobot/blob/main/examples/example_plugin/example_plugin/filter_extensions.py) with the Example Plugin.
 
 !!! tip
-    The `method` parameter, if used, must be a callable (method/function). Note that because filters with a `method` do their filtering in Python code rather than at the database level, performance of `method` filters is generally much poorer than pure-database filters. The `method` parameter is not supported when using [Dynamic Groups](../additional-features/dynamic-groups.md).
+    The `method` parameter, if used, must be a callable (method/function). Note that because filters with a `method` do their filtering in Python code rather than at the database level, performance of `method` filters is generally much poorer than pure-database filters. The `method` parameter is not supported when using [Dynamic Groups](../models/extras/dynamicgroup.md).
 
 ## Adding Database Models
 
@@ -840,7 +842,7 @@ This will display the plugin and its model in the admin UI. Staff users can crea
 Plugins can optionally expose their models via the GraphQL interface to allow the models to be part of the Graph and to be queried easily. There are two mutually exclusive ways to expose a model to the GraphQL interface.
 
 * By using the `@extras_features` decorator
-* By creating your own GraphQL type definition and registering it within `graphql/types.py` of your plugin (the decorator *should not* be used in this case)
+* By creating your own GraphQL type definition and registering it within `graphql/types.py` of your plugin (the decorator _should not_ be used in this case)
 
 All GraphQL model types defined by your plugin, regardless of which method is chosen, will automatically support some built-in Nautobot features:
 
@@ -1023,6 +1025,182 @@ This makes our view accessible at the URL `/plugins/animal-sounds/random/`. (Rem
 !!! tip
     As a next step, you would typically want to add links from the Nautobot UI to this view, either from the [navigation menu](#adding-navigation-menu-items), the [Nautobot home page](#adding-home-page-content), and/or the [Installed Plugins view](#adding-links-to-the-installed-plugins-view).
 
+### NautobotUIViewSet
+
+New in Nautobot 1.4 is the debut of `NautobotUIViewSet`: A powerful plugin development tool that can save plugin developer hundreds of lines of code compared to using legacy `generic.views`. Using it to gain access to default functionalities previous provided by `generic.views` such as `create()`, `bulk_create()`, `update()`, `partial_update()`, `bulk_update()`, `destroy()`, `bulk_destroy()`, `retrieve()` and `list()` actions.
+
+Note that this ViewSet is catered specifically to the UI, not the API.
+
+Concrete examples on how to use `NautobotUIViewSet` resides in `nautobot.circuits.views`.
+
+Below we provide an example on how to use `NautobotUIViewSet` on a theoretical plugin model.
+
+```python
+from nautobot.core.views.viewsets import NautobotUIViewset
+
+class YourPluginModelUIViewSet(NautobotUIViewSet):
+    bulk_create_form_class = YourPluginModelCSVForm
+    bulk_update_form_class = YourPluginModelBulkEditForm
+    filterset_class = YourPluginModelFilterSet
+    filterset_form_class = YourPluginModelFilterForm
+    form_class = YourPluginModelForm
+    queryset = YourPluginModel.objects.all()
+    serializer_class = serializers.YourPluginModelSerializer
+    table_class = YourPluginModelTable
+```
+
+#### Setting ViewSet Attributes
+
+**One caveat of using the NautobotUIViewSet is that the `queryset`, `serializer_class` and `table_class` attribute of the `YourPluginModelUIViewSet` has to be set before most of the `NautobotUIViewSet` functionalities will become available.**
+
+By default the URL patterns generated by a `NautobotUIViewSet` are based on the model's `slug` (`/model-name/<slug>/` for the detail view, `/model-name/<slug>/edit/` for the edit view, etc.). If your model lacks a `slug` field, or if you otherwise need to use a different field to look up an object, just override the default `lookup_field` in your ViewSet attributes:
+
+```python
+from nautobot.core.views.viewsets import NautobotUIViewset
+
+class YourPluginModelUIViewSet(NautobotUIViewSet):
+    ...
+    lookup_field = "pk"
+    ...
+```
+
+#### View Template Context
+
+Templates can benefit from a very rich context passed down from the views and renderer, including forms, tables, as well as any other information that may be helpful for rendering templates. The keys it provides are as follows:
+
+* `content_type`: The ContentType object for the associated model
+* `filter_form`: The FilterForm object for the associated model
+* `form`: A Form object for the associated model if relevant (`None` for list and detail/retrieve views)
+* `object`: An instance of the associated mode if available (`None` for list and bulk operation views)
+* `permissions`: Summary of user permissions for the given model
+* `return_url`: The relevant return URL
+* `table`: A Table object for the associated model if relevant (`None` for detail/retrieve and update views)
+* `table_config_form`: A TableConfigForm object for the associated `table`, providing the ability to customize the table
+* `verbose_name`: The singular form of the model's name
+* `verbose_name_plural`: The plural form of the model's name
+
+An example from editing a Provider object:
+
+```python
+{
+    'content_type': <ContentType: circuits | provider>,
+    'filter_form': <ProviderFilterForm bound=True, valid=Unknown, fields=(region;site;location;q;asn;tag)>,
+    'form': <ProviderForm bound=False, valid=Unknown, fields=(name;slug;asn;account;portal_url;noc_contact;admin_contact;comments;tags;object_note)>,
+    'object': <Provider: NautobotProvider>,
+    'permissions': {'add': True, 'change': True, 'delete': True, 'view': True},
+    'return_url': '/circuits/providers/nautobotprovider',
+    'table': None,
+    'table_config_form': None,
+    'verbose_name': 'provider',
+    'verbose_name_plural': 'providers'
+}
+```
+
+Other context keys may be available for certain views:
+
+* `editing`: Provided for create and update views to help the template determine if this is a new or existing object
+* `action_buttons`: Provided for the list view for the top of table buttons (such as "Add" and "Export")
+
+You may see other context keys as well, but any not documented above should not be relied upon as they may be removed in a future release. Some examples of those are:
+
+* `changelog_url`: This can now be retrieved from the object itself, via `object.get_changelog_url`, if the object supports change-logging
+* `obj`: Please use `object` instead
+* `obj_type`: Please use `verbose_name` instead
+* `obj_type_plural`: Please use `verbose_name_plural` instead
+
+#### Excluding ViewMixins from NautobotUIViewSet
+
+For plugin models that do not require certain views, simply inherit directly from the `ViewMixins` available in `nautobot.core.views.mixins` instead of `NautobotUIViewSet`.
+
+Concrete examples for excluding `ViewMixins`, checkout `CircuitTerminationUIViewSet` and `CircuitTypeUIViewSet` in `nautobot.circuits.views`.
+
+```python
+## A plugin model viewset that does not support bulk views and operations
+from nautobot.core.views import mixins as view_mixins
+
+class YourPluginModelUIViewSet(
+    view_mixins.ObjectListViewMixin,
+    view_mixins.ObjectDetailViewMixin,
+    view_mixins.ObjectEditViewMixin,
+    view_mixins.ObjectDestroyViewMixin,
+):
+
+    filterset_class = YourPluginModelFilterSet
+    filterset_form_class = YourPluginModelFilterForm
+    form_class = YourPluginModelForm
+    queryset = YourPluginModel.objects.all()
+    serializer_class = serializers.YourPluginModelSerializer
+    table_class = YourPluginModelTable
+    # You do not need to specify attributes that are not needed.
+```
+
+Excluding unwanted urls from `NautobotUIViewSetRouter` is done for you at the ViewSet level. If you do not inherit the unwanted ViewMixins, the corresponding route from the router will not be published.
+
+```python
+# urls.py
+# All the urls correspond to BulkViewMixins will not be published when you register your ViewSet with the router.
+router.register("yourpluginmodel", views.YourPluginModelUIViewSet)
+```
+
+#### Template Naming for NautobotUIViewSet
+
+Template naming is very intuitive in NautobotUIViewSet. In `templates/yourpluginmodel` folder, name your templates following this convention `{app_label}/{model_name}_{self.action}.html`.
+
+| ViewMixins                 | self.action  |
+| -------------------------- |:------------:|
+| ObjectListViewMixin        | list         |
+| ObjectDetailViewMixin      | retrieve     |
+| ObjectEditViewMixin        | create/update|
+| ObjectDestroyViewMixin     | destroy      |
+| ObjectBulkDestroyViewMixin | bulk_destroy |
+| ObjectBulkCreateViewMixin  | bulk_create  |
+| ObjectBulkUpdateViewMixin  | bulk_update  |
+
+For example, for a DetailView template for `YourPluginModel`, the template name will be `yourplugin/yourpluginmodel_retrieve.html`, for a BulkCreateView template for `yourpluginmodel`, the template name will be `yourplugin/yourpluginmodel_bulk_create.html` and etc.
+
+If you do not provide your own templates in the `yourplugin/templates/yourplugin` folder, `NautobotUIViewSet` will fall back to `generic/object_{self.action}.html`.
+
+Since in many cases the `create` and `update` templates for a model will be identical, you are not required to create both. If you provide a `{app_label}/{model_opts.model_name}_create.html` file but not a `{app_label}/{model_opts.model_name}_update.html` file, then when you update an object, it will fall back to `{app_label}/{model_opts.model_name}_create.html` and vice versa.
+
+### NautobotUIViewSetRouter
+
+With `NautobotUIViewSet` as the base UI ViewSet for `YourPluginModel`, it is required to register your urls with the help of `NautobotUIViewSetRouter`.
+
+For a concrete example on how to use `NautobotUIViewSetRouter`, see `nautobot.circuits.urls`.
+
+Below is a theoretical `urls.py` file for `YourPluginModel`:
+
+```python
+from django.urls import path
+
+from nautobot.core.views.routers import NautobotUIViewSetRouter
+from nautobot.plugins import views
+
+
+router = NautobotUIViewSetRouter()
+router.register("yourpluginmodel", views.YourPluginModelUIViewSet)
+
+urlpatterns = [
+    # Extra urls that do not follow the patterns of `NautobotUIViewSetRouter` go here.
+    # changelog, notes and etc.
+    ...
+    path(
+        "yourpluginmodels/<slug:slug>/changelog/",
+        ObjectChangeLogView.as_view(),
+        name="yourpluginmodel_changelog",
+        kwargs={"model": yourpluginmodel},
+    ),
+    path(
+        "yourpluginmodels/<slug:slug>/notes/",
+        ObjectNotesView.as_view(),
+        name="yourpluginmodel_notes",
+        kwargs={"model": yourpluginmodel},
+    ),
+    ...
+]
+urlpatterns += router.urls
+```
+
 ## Adding REST API Endpoints
 
 Plugins can declare custom endpoints on Nautobot's REST API to retrieve or manipulate models or other data. These behave very similarly to views, except that instead of rendering arbitrary content using a template, data is returned in JSON format using a serializer. Nautobot uses the [Django REST Framework](https://www.django-rest-framework.org/), which makes writing API serializers and views very simple.
@@ -1100,6 +1278,8 @@ plugin_name/                   # "nautobot_animal_sounds"
 
 ### Replacing Views
 
+_Added in version 1.4.0_ <!-- markdownlint-disable-line MD036 -->
+
 You may override any of the core or plugin views by providing an `override_views` `dict` in a plugin's `views.py` file.
 
 To override a view, you must specify the view's fully qualified name as the `dict` key which consists of the app name followed by the view's name separated by a colon, for instance `dcim:device`. The `dict` value should be the overriding view function.
@@ -1125,7 +1305,9 @@ override_views = {
 
 ## Note URL Endpoint
 
-New in Nautobot 1.4 is support for models that inherit from `PrimaryModel` and `OrganizationalModel` to have notes associated. In order to utilize this new feature you will need to add the endpoint to `urls.py`. Here is an option to be able to support 1.4 and older versions of Nautobot:
+_Added in version 1.4.0_ <!-- markdownlint-disable-line MD036 -->
+
+Models that inherit from `PrimaryModel` and `OrganizationalModel` can have notes associated. In order to utilize this new feature you will need to add the endpoint to `urls.py`. Here is an option to be able to support both 1.4+ and older versions of Nautobot:
 
 ```python
 

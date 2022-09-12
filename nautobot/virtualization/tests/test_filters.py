@@ -1,5 +1,3 @@
-from django.contrib.contenttypes.models import ContentType
-
 from nautobot.dcim.choices import InterfaceModeChoices
 from nautobot.dcim.models import Device, DeviceRole, DeviceType, Manufacturer, Platform, Region, Site
 from nautobot.extras.models import Status, Tag
@@ -101,6 +99,7 @@ class ClusterGroupTestCase(FilterTestCases.NameSlugFilterTestCase):
 class ClusterTestCase(FilterTestCases.FilterTestCase):
     queryset = Cluster.objects.all()
     filterset = ClusterFilterSet
+    fixtures = ("tag",)
 
     @classmethod
     def setUpTestData(cls):
@@ -178,11 +177,9 @@ class ClusterTestCase(FilterTestCases.FilterTestCase):
 
         cls.virtualmachine = VirtualMachine.objects.create(name="Virtual Machine 1", cluster=clusters[1])
 
-        tag = Tag.objects.create(name="Tag 1", slug="tag-1")
-        tag.content_types.add(ContentType.objects.get_for_model(Cluster))
-
-        clusters[0].tags.add(tag)
-        clusters[1].tags.add(tag)
+        cls.tag = Tag.objects.get_for_model(Cluster).first()
+        clusters[0].tags.add(cls.tag)
+        clusters[1].tags.add(cls.tag)
 
     def test_name(self):
         params = {"name": ["Cluster 1", "Cluster 2"]}
@@ -193,7 +190,7 @@ class ClusterTestCase(FilterTestCases.FilterTestCase):
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
 
     def test_tags(self):
-        params = {"tag": ["tag-1"]}
+        params = {"tag": [self.tag.slug]}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
 
     def test_device(self):
@@ -271,6 +268,10 @@ class ClusterTestCase(FilterTestCases.FilterTestCase):
 class VirtualMachineTestCase(FilterTestCases.FilterTestCase):
     queryset = VirtualMachine.objects.all()
     filterset = VirtualMachineFilterSet
+    fixtures = (
+        "status",
+        "tag",
+    )
 
     @classmethod
     def setUpTestData(cls):
@@ -429,11 +430,9 @@ class VirtualMachineTestCase(FilterTestCases.FilterTestCase):
         VirtualMachine.objects.filter(pk=vms[0].pk).update(primary_ip4=cls.ipaddresses[0])
         VirtualMachine.objects.filter(pk=vms[1].pk).update(primary_ip6=cls.ipaddresses[1])
 
-        tag = Tag.objects.create(name="Tag 1", slug="tag-1")
-        tag.content_types.add(ContentType.objects.get_for_model(VirtualMachine))
-
-        vms[0].tags.add(tag)
-        vms[1].tags.add(tag)
+        cls.tag = Tag.objects.get_for_model(VirtualMachine).first()
+        vms[0].tags.add(cls.tag)
+        vms[1].tags.add(cls.tag)
 
     def test_name(self):
         params = {"name": ["Virtual Machine 1", "Virtual Machine 2"]}
@@ -476,7 +475,7 @@ class VirtualMachineTestCase(FilterTestCases.FilterTestCase):
             self.assertEqual(self.filterset(params, self.queryset).qs.count(), 0)
 
     def test_tags(self):
-        params = {"tag": ["tag-1"]}
+        params = {"tag": [self.tag.slug]}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
 
     def test_vcpus(self):
@@ -584,6 +583,10 @@ class VirtualMachineTestCase(FilterTestCases.FilterTestCase):
 class VMInterfaceTestCase(FilterTestCases.FilterTestCase):
     queryset = VMInterface.objects.all()
     filterset = VMInterfaceFilterSet
+    fixtures = (
+        "status",
+        "tag",
+    )
 
     @classmethod
     def setUpTestData(cls):
@@ -652,11 +655,9 @@ class VMInterfaceTestCase(FilterTestCases.FilterTestCase):
         IPAddress.objects.create(address="192.0.2.1/24", assigned_object=vminterfaces[0])
         IPAddress.objects.create(address="fe80::8ef:3eff:fe4c:3895/24", assigned_object=vminterfaces[1])
 
-        tag = Tag.objects.create(name="Tag 1", slug="tag-1")
-        tag.content_types.add(ContentType.objects.get_for_model(VMInterface))
-
-        vminterfaces[0].tags.add(tag)
-        vminterfaces[1].tags.add(tag)
+        cls.tag = Tag.objects.get_for_model(VMInterface).first()
+        vminterfaces[0].tags.add(cls.tag)
+        vminterfaces[1].tags.add(cls.tag)
 
     def test_name(self):
         params = {"name": ["Interface 1", "Interface 2"]}
@@ -667,7 +668,7 @@ class VMInterfaceTestCase(FilterTestCases.FilterTestCase):
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
 
     def test_tags(self):
-        params = {"tag": ["tag-1"]}
+        params = {"tag": [self.tag.slug]}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
 
     def test_tagged_vlans(self):

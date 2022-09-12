@@ -1,12 +1,14 @@
 import logging
 import os
 
-from abc import ABC, abstractproperty
+from abc import ABC, abstractmethod
 from collections import OrderedDict
 
 from django.apps import AppConfig, apps as global_apps
 from django.db.models import JSONField, BigIntegerField, BinaryField
 from django.db.models.signals import post_migrate
+from django.urls import reverse
+from django.urls.exceptions import NoReverseMatch
 
 from constance.apps import ConstanceConfig
 from graphene.types import generic, String
@@ -76,6 +78,15 @@ def register_menu_items(tab_list):
 
                 group_perms = set()
                 for item in group.items:
+
+                    # Instead of passing the reverse url strings, we pass in the url itself initialized with args and kwargs.
+                    try:
+                        item.link = reverse(item.link, args=item.args, kwargs=item.kwargs)
+                    except NoReverseMatch as e:
+                        # Catch the invalid link here and render the link name as an error message in the template
+                        logger.debug("%s", e)
+                        item.name = "ERROR: Invalid link!"
+
                     create_or_check_entry(
                         registry_groups[group.name]["items"],
                         item,
@@ -170,6 +181,7 @@ def register_homepage_panels(path, label, homepage_layout):
                     create_or_check_entry(registry_items, item, item.name, f"{panel.name} -> {item.name}")
                     for group_item in item.items:
                         if isinstance(group_item, HomePageItem):
+                            group_item.template_path = template_path
                             create_or_check_entry(
                                 registry_items[item.name]["items"],
                                 group_item,
@@ -178,7 +190,7 @@ def register_homepage_panels(path, label, homepage_layout):
                             )
                         else:
                             raise TypeError(f"Third level objects need to be an instance of HomePageItem: {group_item}")
-                    panel_perms |= set(group_item.permissions)
+                        panel_perms |= set(group_item.permissions)
                     registry_items[item.name]["items"] = OrderedDict(
                         sorted(registry_items[item.name]["items"].items(), key=lambda kv_pair: kv_pair[1]["weight"])
                     )
@@ -202,11 +214,13 @@ def register_homepage_panels(path, label, homepage_layout):
 class HomePageBase(ABC):
     """Base class for homepage layout classes."""
 
-    @abstractproperty
+    @property
+    @abstractmethod
     def initial_dict(self):  # to be implemented by each subclass
         return {}
 
-    @abstractproperty
+    @property
+    @abstractmethod
     def fixed_fields(self):  # to be implemented by subclass
         return ()
 
@@ -214,11 +228,13 @@ class HomePageBase(ABC):
 class NavMenuBase(ABC):  # replaces PermissionsMixin
     """Base class for navigation classes."""
 
-    @abstractproperty
+    @property
+    @abstractmethod
     def initial_dict(self):  # to be implemented by each subclass
         return {}
 
-    @abstractproperty
+    @property
+    @abstractmethod
     def fixed_fields(self):  # to be implemented by subclass
         return ()
 
@@ -255,7 +271,7 @@ class HomePagePanel(HomePageBase, PermissionsMixin):
     def fixed_fields(self):
         return ()
 
-    def __init__(self, name, permissions=[], custom_data=None, custom_template=None, items=None, weight=1000):
+    def __init__(self, name, permissions=None, custom_data=None, custom_template=None, items=None, weight=1000):
         """
         Ensure panel properties.
 
@@ -267,6 +283,8 @@ class HomePagePanel(HomePageBase, PermissionsMixin):
             items (list): List of items to be rendered in this panel.
             weight (int): The weight of this panel.
         """
+        if permissions is None:
+            permissions = []
         super().__init__(permissions)
         self.custom_data = custom_data
         self.custom_template = custom_template
@@ -302,7 +320,7 @@ class HomePageGroup(HomePageBase, PermissionsMixin):
     def fixed_fields(self):
         return ()
 
-    def __init__(self, name, permissions=[], items=None, weight=1000):
+    def __init__(self, name, permissions=None, items=None, weight=1000):
         """
         Ensure group properties.
 
@@ -312,6 +330,8 @@ class HomePageGroup(HomePageBase, PermissionsMixin):
             items (list): List of items to be rendered in this group.
             weight (int): The weight of this group.
         """
+        if permissions is None:
+            permissions = []
         super().__init__(permissions)
         self.name = name
         self.weight = weight
@@ -484,6 +504,8 @@ class NavMenuItem(NavMenuBase, PermissionsMixin):
             "weight": self.weight,
             "buttons": {},
             "permissions": self.permissions,
+            "args": [],
+            "kwargs": {},
         }
 
     @property
@@ -495,14 +517,18 @@ class NavMenuItem(NavMenuBase, PermissionsMixin):
 
     permissions = []
     buttons = []
+    args = []
+    kwargs = {}
 
-    def __init__(self, link, name, permissions=None, buttons=(), weight=1000):
+    def __init__(self, link, name, args=None, kwargs=None, permissions=None, buttons=(), weight=1000):
         """
         Ensure item properties.
 
         Args:
             link (str): The link to be used for this item.
             name (str): The name of the item.
+            args (list): Arguments that are being passed to the url with reverse() method
+            kwargs (dict): Keyword arguments are are being passed to the url with reverse() method
             permissions (list): The permissions required to view this item.
             buttons (list): List of buttons to be rendered in this item.
             weight (int): The weight of this item.
@@ -511,6 +537,8 @@ class NavMenuItem(NavMenuBase, PermissionsMixin):
         self.link = link
         self.name = name
         self.weight = weight
+        self.args = args
+        self.kwargs = kwargs
 
         if not isinstance(buttons, (list, tuple)):
             raise TypeError("Buttons must be passed as a tuple or list.")
@@ -629,17 +657,17 @@ class CoreConfig(NautobotConfig):
         from nautobot.core.graphql import BigInteger
 
         @convert_django_field.register(JSONField)
-        def convert_json(field, registry=None):
+        def convert_json(field, registry=None):  # pylint: disable=redefined-outer-name
             """Convert JSONField to GenericScalar."""
             return generic.GenericScalar()
 
         @convert_django_field.register(BinaryField)
-        def convert_binary(field, registry=None):
+        def convert_binary(field, registry=None):  # pylint: disable=redefined-outer-name
             """Convert BinaryField to String."""
             return String()
 
         @convert_django_field.register(BigIntegerField)
-        def convert_biginteger(field, registry=None):
+        def convert_biginteger(field, registry=None):  # pylint: disable=redefined-outer-name
             """Convert BigIntegerField to BigInteger scalar."""
             return BigInteger()
 
@@ -659,13 +687,3 @@ class NautobotConstanceConfig(ConstanceConfig):
     """Override "Constance" app name to "Configuration"."""
 
     verbose_name = "Configuration"
-
-
-class ConstanceDatabaseAppConfig(AppConfig):
-    """
-    Add an AppConfig for constance.backends.database
-    to work around https://github.com/jazzband/django-constance/issues/454
-    """
-
-    name = "constance.backends.database"
-    default_auto_field = "django.db.models.AutoField"

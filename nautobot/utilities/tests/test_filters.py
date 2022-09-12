@@ -6,7 +6,7 @@ from mptt.fields import TreeForeignKey
 from taggit.managers import TaggableManager
 
 from nautobot.dcim.choices import DeviceFaceChoices
-from nautobot.dcim.fields import MACAddressField
+from nautobot.dcim.fields import MACAddressCharField
 from nautobot.dcim.filters import DeviceFilterSet, SiteFilterSet
 from nautobot.dcim.models import (
     Device,
@@ -320,7 +320,7 @@ class TestModel(models.Model):
     datefield = models.DateField()
     datetimefield = models.DateTimeField()
     integerfield = models.IntegerField()
-    macaddressfield = MACAddressField()
+    macaddressfield = MACAddressCharField()
     textfield = models.TextField()
     timefield = models.TimeField()
     treeforeignkeyfield = TreeForeignKey(to="self", on_delete=models.CASCADE)
@@ -681,6 +681,8 @@ class DynamicFilterLookupExpressionTest(TestCase):
     """
     Validate function of automatically generated filters using the Device model as an example.
     """
+
+    fixtures = ("status",)
 
     device_queryset = Device.objects.all()
     device_filterset = DeviceFilterSet
@@ -1083,7 +1085,7 @@ class SearchFilterTest(TestCase):
         with self.assertRaises(TypeError):
             barf = None
 
-            class BarfSiteFilterSet(SiteFilterSet):
+            class BarfSiteFilterSet(SiteFilterSet):  # pylint: disable=unused-variable
                 q = SearchFilter(
                     filter_predicates={
                         "asn": {"preprocessor": barf, "lookup_expr": "exact"},
@@ -1093,11 +1095,11 @@ class SearchFilterTest(TestCase):
         # Missing preprocessor callable in expanded form should also fail
         with self.assertRaises(TypeError):
 
-            class MissingSiteFilterSet(SiteFilterSet):
+            class MissingSiteFilterSet(SiteFilterSet):  # pylint: disable=unused-variable
                 q = SearchFilter(filter_predicates={"asn": {"lookup_expr": "exact"}})
 
         # Incorrect lookup_info type (must be str or dict)
         with self.assertRaises(TypeError):
 
-            class InvalidSiteFilterSet(SiteFilterSet):
+            class InvalidSiteFilterSet(SiteFilterSet):  # pylint: disable=unused-variable
                 q = SearchFilter(filter_predicates={"asn": ["icontains"]})

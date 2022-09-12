@@ -105,9 +105,12 @@ class RackGroup(MPTTModel, OrganizationalModel):
             self.description,
         )
 
-    def to_objectchange(self, action):
+    def to_objectchange(self, action, object_data_exclude=None, **kwargs):
+        if object_data_exclude is None:
+            object_data_exclude = []
         # Remove MPTT-internal fields
-        return super().to_objectchange(action, object_data_exclude=["level", "lft", "rght", "tree_id"])
+        object_data_exclude += ["level", "lft", "rght", "tree_id"]
+        return super().to_objectchange(action, object_data_exclude=object_data_exclude, **kwargs)
 
     def clean(self):
         super().clean()
@@ -185,6 +188,7 @@ class RackRole(OrganizationalModel):
     "custom_fields",
     "custom_links",
     "custom_validators",
+    "dynamic_groups",
     "export_templates",
     "graphql",
     "locations",
@@ -310,6 +314,10 @@ class Rack(PrimaryModel, StatusModel):
         "outer_depth",
         "outer_unit",
     ]
+    dynamic_group_filter_fields = {
+        "group": "group_id",  # Duplicate filter fields that will be collapsed in 2.0
+    }
+    dynamic_group_skip_missing_fields = True  # Poor widget selection for `outer_depth` (no validators, limit supplied)
 
     class Meta:
         ordering = ("site", "group", "_name")  # (site, group, name) may be non-unique
@@ -370,16 +378,12 @@ class Rack(PrimaryModel, StatusModel):
                 min_height = top_device.position + top_device.device_type.u_height - 1
                 if self.u_height < min_height:
                     raise ValidationError(
-                        {
-                            "u_height": "Rack must be at least {}U tall to house currently installed devices.".format(
-                                min_height
-                            )
-                        }
+                        {"u_height": f"Rack must be at least {min_height}U tall to house currently installed devices."}
                     )
             # Validate that Rack was assigned a group of its same site, if applicable
             if self.group:
                 if self.group.site != self.site:
-                    raise ValidationError({"group": "Rack group must be from the same site, {}.".format(self.site)})
+                    raise ValidationError({"group": f"Rack group must be from the same site, {self.site}."})
 
     def to_csv(self):
         return (
@@ -480,7 +484,7 @@ class Rack(PrimaryModel, StatusModel):
                     ):
                         elevation.pop(u, None)
 
-        return [u for u in elevation.values()]
+        return list(elevation.values())
 
     def get_available_units(self, u_height=1, rack_face=None, exclude=None):
         """
@@ -652,7 +656,7 @@ class RackReservation(PrimaryModel):
         ordering = ["created"]
 
     def __str__(self):
-        return "Reservation for rack {}".format(self.rack)
+        return f"Reservation for rack {self.rack}"
 
     def get_absolute_url(self):
         return reverse("dcim:rackreservation", args=[self.pk])
@@ -665,12 +669,10 @@ class RackReservation(PrimaryModel):
             # Validate that all specified units exist in the Rack.
             invalid_units = [u for u in self.units if u not in self.rack.units]
             if invalid_units:
+                error = ", ".join([str(u) for u in invalid_units])
                 raise ValidationError(
                     {
-                        "units": "Invalid unit(s) for {}U rack: {}".format(
-                            self.rack.u_height,
-                            ", ".join([str(u) for u in invalid_units]),
-                        ),
+                        "units": f"Invalid unit(s) for {self.rack.u_height}U rack: {error}",
                     }
                 )
 
@@ -680,13 +682,8 @@ class RackReservation(PrimaryModel):
                 reserved_units += resv.units
             conflicting_units = [u for u in self.units if u in reserved_units]
             if conflicting_units:
-                raise ValidationError(
-                    {
-                        "units": "The following units have already been reserved: {}".format(
-                            ", ".join([str(u) for u in conflicting_units]),
-                        )
-                    }
-                )
+                error = ", ".join([str(u) for u in conflicting_units])
+                raise ValidationError({"units": f"The following units have already been reserved: {error}"})
 
     def to_csv(self):
         return (

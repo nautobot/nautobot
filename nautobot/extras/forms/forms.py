@@ -82,6 +82,8 @@ from .base import (
 from .mixins import (
     CustomFieldModelBulkEditFormMixin,
     CustomFieldModelFormMixin,
+    NoteModelBulkEditFormMixin,
+    NoteModelFormMixin,
     RelationshipModelFormMixin,
 )
 
@@ -203,7 +205,7 @@ class ComputedFieldFilterForm(BootstrapMixin, forms.Form):
 #
 
 
-class ConfigContextForm(BootstrapMixin, forms.ModelForm):
+class ConfigContextForm(BootstrapMixin, NoteModelFormMixin, forms.ModelForm):
     regions = DynamicModelMultipleChoiceField(queryset=Region.objects.all(), required=False)
     sites = DynamicModelMultipleChoiceField(queryset=Site.objects.all(), required=False)
     locations = DynamicModelMultipleChoiceField(queryset=Location.objects.all(), required=False)
@@ -240,7 +242,7 @@ class ConfigContextForm(BootstrapMixin, forms.ModelForm):
         )
 
 
-class ConfigContextBulkEditForm(BootstrapMixin, BulkEditForm):
+class ConfigContextBulkEditForm(BootstrapMixin, NoteModelBulkEditFormMixin, BulkEditForm):
     pk = forms.ModelMultipleChoiceField(queryset=ConfigContext.objects.all(), widget=forms.MultipleHiddenInput)
     schema = DynamicModelChoiceField(queryset=ConfigContextSchema.objects.all(), required=False)
     weight = forms.IntegerField(required=False, min_value=0)
@@ -350,6 +352,7 @@ class CustomFieldForm(BootstrapMixin, forms.ModelForm):
         model = CustomField
         fields = (
             "label",
+            "grouping",
             "slug",
             "type",
             "weight",
@@ -372,7 +375,7 @@ class CustomFieldModelCSVForm(CSVModelForm, CustomFieldModelFormMixin):
 
         # Append form fields
         for cf in CustomField.objects.filter(content_types=self.obj_type):
-            field_name = "cf_{}".format(cf.slug)
+            field_name = f"cf_{cf.slug}"
             self.fields[field_name] = cf.to_form_field(for_csv_import=True)
 
             # Annotate the field in the list of CustomField form fields
@@ -949,10 +952,10 @@ class JobResultFilterForm(BootstrapMixin, forms.Form):
             api_url="/api/users/users/",
         ),
     )
-    status = forms.ChoiceField(
-        choices=add_blank_choice(JobResultStatusChoices),
+    status = forms.MultipleChoiceField(
+        choices=JobResultStatusChoices,
         required=False,
-        widget=StaticSelect2(),
+        widget=StaticSelect2Multiple(),
     )
 
 

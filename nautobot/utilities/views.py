@@ -23,7 +23,7 @@ class ContentTypePermissionRequiredMixin(AccessMixin):
                             derived from the object type
     """
 
-    additional_permissions = list()
+    additional_permissions = []
 
     def get_required_permission(self):
         """
@@ -77,7 +77,7 @@ class ObjectPermissionRequiredMixin(AccessMixin):
                             derived from the object type
     """
 
-    additional_permissions = list()
+    additional_permissions = []
 
     def get_required_permission(self):
         """
@@ -104,8 +104,10 @@ class ObjectPermissionRequiredMixin(AccessMixin):
 
         if not hasattr(self, "queryset"):
             raise ImproperlyConfigured(
-                "{} has no queryset defined. ObjectPermissionRequiredMixin may only be used on views which define "
-                "a base queryset".format(self.__class__.__name__)
+                (
+                    f"{self.__class__.__name__} has no queryset defined. "
+                    "ObjectPermissionRequiredMixin may only be used on views which define a base queryset"
+                )
             )
 
         if not self.has_permission():

@@ -1,7 +1,6 @@
 """Dynamic Groups Models."""
 
 import logging
-import urllib
 
 import django_filters
 from django import forms
@@ -18,7 +17,9 @@ from nautobot.core.models.generics import OrganizationalModel
 from nautobot.extras.choices import DynamicGroupOperatorChoices
 from nautobot.extras.querysets import DynamicGroupQuerySet, DynamicGroupMembershipQuerySet
 from nautobot.extras.utils import extras_features
-from nautobot.utilities.utils import get_filterset_for_model, get_form_for_model, get_route_for_model
+from nautobot.utilities.forms.constants import BOOLEAN_WITH_BLANK_CHOICES
+from nautobot.utilities.forms.widgets import StaticSelect2
+from nautobot.utilities.utils import get_filterset_for_model, get_form_for_model
 
 
 logger = logging.getLogger(__name__)
@@ -168,6 +169,12 @@ class DynamicGroup(OrganizationalModel):
         # Whether or not to add missing form fields that aren't on the filter form.
         skip_missing_fields = getattr(self.model, "dynamic_group_skip_missing_fields", False)
 
+        # 2.0 TODO(jathan): v1.4.0 hard-codes skipping method fields by default for now. Revisit as we
+        # head to v2 and groom individual method filters on existing filtersets. Lower down inside
+        # of `generate_query()` there is a test as to whether a method filter also has a
+        # `generate_query_{filter_method}()` method on the filterset and processes it accordingly.
+        skip_method_filters = True
+
         # Model form fields that aren't on the filter form.
         if not skip_missing_fields:
             missing_fields = set(modelform_fields).difference(filterform_fields)
@@ -201,34 +208,31 @@ class DynamicGroup(OrganizationalModel):
                 logger.debug("Skipping %s: doesn't have a filterset field", missing_field)
                 continue
 
-            # Skip filter fields that have methods defined. They are not reversible.
-            if filterset_field.method is not None:
-                logger.debug("Skipping %s: has a filter method", missing_field)
-                continue
-
             # Get the missing model form field so we can use it to add to the filterform_fields.
             modelform_field = modelform_fields[missing_field]
-
-            # If `required=True` was set on the model field, pop "required" from the widget
-            # attributes. Filter fields should never be required!
-            if modelform_field.required:
-                modelform_field.required = False
-                modelform_field.widget.attrs.pop("required")
-
-            # If `initial` is set, unset it.
-            if modelform_field.initial:
-                modelform_field.initial = None
 
             # Replace the modelform_field with the correct type for the UI. At this time this is
             # only being done for CharField since in the filterset form this ends up being a
             # `MultiValueCharField` (dynamically generated from from `MultiValueCharFilter`) which is
-            # not correct for char fields.
-            if isinstance(modelform_field, forms.CharField):
+            # not correct for char fields. For boolean fields, we want them to be nullable.
+            if isinstance(modelform_field, (forms.CharField, forms.BooleanField)):
                 # Get ready to replace the form field w/ correct widget.
                 new_modelform_field = filterset_field.field
                 new_modelform_field.widget = modelform_field.widget
-
                 modelform_field = new_modelform_field
+
+            # FIXME(jathan); Figure out how we can do this autoamtically from the FilterSet so we
+            # don't have to munge it here.
+            # Null boolean fields need a special widget that doesn't save `False` when unchecked.
+            if isinstance(modelform_field, forms.NullBooleanField):
+                modelform_field.widget = StaticSelect2(choices=BOOLEAN_WITH_BLANK_CHOICES)
+
+            # Filter fields should never be required!
+            modelform_field.required = False
+            modelform_field.widget.attrs.pop("required", None)
+
+            # And initial values should also be ignored.
+            modelform_field.initial = None
 
             # Carry over the `to_field_name` to the modelform_field.
             to_field_name = filterset_field.extra.get("to_field_name")
@@ -238,12 +242,33 @@ class DynamicGroup(OrganizationalModel):
             logger.debug("Added %s (%s) to filter fields", missing_field, modelform_field.__class__.__name__)
             filterform_fields[missing_field] = modelform_field
 
+        # Filter out unwanted fields from the filterform
+        for filterset_field_name, filterset_field in filterset_fields.items():
+
+            # Skip filter fields that have methods defined. They are not reversible.
+            if skip_method_filters and filterset_field.method is not None:
+                # Don't skip method fields that also have a "generate_query_" method
+                if hasattr(filterset, "generate_query_" + filterset_field.method):
+                    logger.debug(
+                        "Keeping %s for filterform: has a `generate_query_` filter method", filterset_field_name
+                    )
+                    continue
+
+                # Otherwise pop the method filter from the filter form.
+                filterform_fields.pop(filterset_field_name, None)
+                logger.debug("Deleting %s from filterform: has a filter method", filterset_field_name)
+
         # Reduce down to a final dict of desired fields.
         return_fields = {}
         for field_name, filter_field in filterform_fields.items():
             # Skip excluded fields
             if field_name.startswith(self.exclude_filter_fields):
                 logger.debug("Skipping excluded filter field: %s", field_name)
+                continue
+
+            # Skip fields that were removed from the filterset fields
+            if field_name not in filterset_fields:
+                logger.debug("Skipping removed filterset field: %s", field_name)
                 continue
 
             return_fields[field_name] = filter_field
@@ -295,27 +320,12 @@ class DynamicGroup(OrganizationalModel):
     def get_absolute_url(self):
         return reverse("extras:dynamicgroup", kwargs={"slug": self.slug})
 
-    @property
-    def members_base_url(self):
-        """Return the list route name for this group's `content_type'."""
-        if self.model is None:
-            return ""
-
-        route_name = get_route_for_model(self.model, "list")
-        return reverse(route_name)
-
     def get_group_members_url(self):
         """Get URL to group members."""
         if self.model is None:
             return ""
 
-        url = self.members_base_url
-        filter_str = urllib.parse.urlencode(self.filter, doseq=True)
-
-        if filter_str is not None:
-            url += f"?{filter_str}"
-
-        return url
+        return self.get_absolute_url() + "?tab=members"
 
     def set_filter(self, form_data):
         """
@@ -448,14 +458,14 @@ class DynamicGroup(OrganizationalModel):
         if not filterset.is_valid():
             raise ValidationError(filterset.errors)
 
-    def delete(self):
+    def delete(self, *args, **kwargs):
         """Check if we're a child and attempt to block delete if we are."""
         if self.parents.exists():
             raise models.ProtectedError(
                 msg="Cannot delete DynamicGroup while child of other DynamicGroups.",
                 protected_objects=set(self.parents.all()),
             )
-        return super().delete()
+        return super().delete(*args, **kwargs)
 
     def clean(self):
         super().clean()
@@ -481,9 +491,14 @@ class DynamicGroup(OrganizationalModel):
         """
         query = models.Q()
 
+        # Explicitly call generate_query_{filter_method} for a method filter.
+        if filter_field.method is not None and hasattr(filter_field.parent, "generate_query_" + filter_field.method):
+            filter_method = getattr(filter_field.parent, "generate_query_" + filter_field.method)
+            query |= models.Q(filter_method(value))
+
         # In this case we want all values in a set union (boolean OR) because we want ANY of the
         # filter values to match.
-        if isinstance(filter_field, django_filters.MultipleChoiceFilter):
+        elif isinstance(filter_field, django_filters.MultipleChoiceFilter):
             for v in value:
                 query |= models.Q(**filter_field.get_filter_predicate(v))
 

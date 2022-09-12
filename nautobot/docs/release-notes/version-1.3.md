@@ -159,9 +159,9 @@ As Python 3.6 has reached end-of-life, and many of Nautobot's dependencies have 
 ### Added
 
 - [#1226](https://github.com/nautobot/nautobot/issues/1226) - Added custom job intervals package management.
-- [#2091](https://github.com/nautobot/nautobot/issues/2091) - Added `remove_stale_scheduled_jobs` management command which removes all stale scheduled jobs and also added `has_sensitive_variables` field to Job model which prevents the job's input parameters from being saved to the database.
 - [#2073](https://github.com/nautobot/nautobot/pull/2073) - Added `--local` option to `nautobot-server runjob` command.
 - [#2080](https://github.com/nautobot/nautobot/pull/2080) - Added `--data` parameter to `nautobot-server runjob` command.
+- [#2091](https://github.com/nautobot/nautobot/issues/2091) - Added `remove_stale_scheduled_jobs` management command which removes all stale scheduled jobs and also added `has_sensitive_variables` field to Job model which prevents the job's input parameters from being saved to the database.
 - [#2143](https://github.com/nautobot/nautobot/pull/2143) - Scheduled Job detail view now includes details of any custom interval.
 
 ### Changed

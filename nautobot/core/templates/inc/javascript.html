@@ -2,7 +2,6 @@
 {% load plugins %}
 {% load static %}
 
-<script src="{% static 'js/theme.js' %}"></script>
 <script src="{% static 'jquery/jquery-3.6.0.min.js' %}"
         onerror="window.location='{% url 'media_failure' %}?filename=jquery/jquery-3.6.0.min.js'"></script>
 <script src="{% static 'jquery-ui-1.13.1/jquery-ui.min.js' %}"
@@ -17,6 +16,8 @@
         onerror="window.location='{% url 'media_failure' %}?filename=flatpickr-4.6.9/flatpickr.min.js'"></script>
 <script src="{% static 'js/forms.js' %}?v{{ settings.VERSION }}"
         onerror="window.location='{% url 'media_failure' %}?filename=js/forms.js'"></script>
+<script src="{% static 'js/theme.js' %}"
+        onerror="window.location='{% url 'media_failure' %}?filename=js/theme.js'"></script>
 <script type="text/javascript">
     var nautobot_api_path = "{% url 'api-root' %}";
     var nautobot_csrf_token = "{{ csrf_token }}";
@@ -35,4 +36,19 @@
     }
     window.addEventListener("resize", setBodyPaddingTop);
     window.addEventListener("load", setBodyPaddingTop);
+
+    /*
+    Dropdown menu overflow screen view control
+    */
+    $(".dropdown .dropdown-toggle").on("click", function(){
+        var dropdown = $(this).next("ul");
+        var distanceOfDropDownFromNavStart = $(this).offset().left + dropdown.width();
+        var navBarWidth = $(".nav.navbar-nav").width();
+        var isEntirelyVisible = (distanceOfDropDownFromNavStart <= navBarWidth);
+
+        if (!isEntirelyVisible)
+            dropdown.addClass('edge');
+        else
+            dropdown.removeClass('edge');
+    })
 </script>

@@ -111,7 +111,7 @@ class BulkDisconnectView(GetReturnURLMixin, ObjectPermissionRequiredMixin, View)
 
                 messages.success(
                     request,
-                    "Disconnected {} {}".format(count, self.queryset.model._meta.verbose_name_plural),
+                    f"Disconnected {count} {self.queryset.model._meta.verbose_name_plural}",
                 )
 
                 return redirect(return_url)
@@ -219,8 +219,22 @@ class SiteView(generic.ObjectView):
             .restrict(request.user, "view")
             .filter(site=instance)
         )
+        locations = (
+            Location.objects.restrict(request.user, "view")
+            .filter(site=instance)
+            .prefetch_related("parent", "location_type")
+        )
+
+        locations_table = tables.LocationTable(locations)
+
+        paginate = {
+            "paginator_class": EnhancedPaginator,
+            "per_page": get_paginate_count(request),
+        }
+        RequestConfig(request, paginate).configure(locations_table)
 
         return {
+            "locations_table": locations_table,
             "stats": stats,
             "rack_groups": rack_groups,
         }
@@ -334,6 +348,30 @@ class LocationView(generic.ObjectView):
     queryset = Location.objects.all()
 
     def get_extra_context(self, request, instance):
+        related_locations = (
+            instance.descendants(include_self=True).restrict(request.user, "view").values_list("pk", flat=True)
+        )
+        stats = {
+            "rack_count": Rack.objects.restrict(request.user, "view").filter(location__in=related_locations).count(),
+            "device_count": Device.objects.restrict(request.user, "view")
+            .filter(location__in=related_locations)
+            .count(),
+            "prefix_count": Prefix.objects.restrict(request.user, "view")
+            .filter(location__in=related_locations)
+            .count(),
+            "vlan_count": VLAN.objects.restrict(request.user, "view").filter(location__in=related_locations).count(),
+            "circuit_count": Circuit.objects.restrict(request.user, "view")
+            .filter(terminations__location__in=related_locations)
+            .count(),
+            "vm_count": VirtualMachine.objects.restrict(request.user, "view")
+            .filter(cluster__location__in=related_locations)
+            .count(),
+        }
+        rack_groups = (
+            RackGroup.objects.add_related_count(RackGroup.objects.all(), Rack, "group", "rack_count", cumulative=True)
+            .restrict(request.user, "view")
+            .filter(location__in=related_locations)
+        )
         children = (
             Location.objects.restrict(request.user, "view")
             .filter(parent=instance)
@@ -350,6 +388,8 @@ class LocationView(generic.ObjectView):
 
         return {
             "children_table": children_table,
+            "rack_groups": rack_groups,
+            "stats": stats,
         }
 
 
@@ -2164,8 +2204,8 @@ class DeviceBayDeleteView(generic.ObjectDeleteView):
 class DeviceBayPopulateView(generic.ObjectEditView):
     queryset = DeviceBay.objects.all()
 
-    def get(self, request, pk):
-        device_bay = get_object_or_404(self.queryset, pk=pk)
+    def get(self, request, *args, **kwargs):
+        device_bay = get_object_or_404(self.queryset, pk=kwargs["pk"])
         form = forms.PopulateDeviceBayForm(device_bay)
 
         return render(
@@ -2178,8 +2218,8 @@ class DeviceBayPopulateView(generic.ObjectEditView):
             },
         )
 
-    def post(self, request, pk):
-        device_bay = get_object_or_404(self.queryset, pk=pk)
+    def post(self, request, *args, **kwargs):
+        device_bay = get_object_or_404(self.queryset, pk=kwargs["pk"])
         form = forms.PopulateDeviceBayForm(device_bay, request.POST)
 
         if form.is_valid():
@@ -2188,7 +2228,7 @@ class DeviceBayPopulateView(generic.ObjectEditView):
             device_bay.save()
             messages.success(
                 request,
-                "Added {} to {}.".format(device_bay.installed_device, device_bay),
+                f"Added {device_bay.installed_device} to {device_bay}.",
             )
 
             return redirect("dcim:device", pk=device_bay.device.pk)
@@ -2207,8 +2247,8 @@ class DeviceBayPopulateView(generic.ObjectEditView):
 class DeviceBayDepopulateView(generic.ObjectEditView):
     queryset = DeviceBay.objects.all()
 
-    def get(self, request, pk):
-        device_bay = get_object_or_404(self.queryset, pk=pk)
+    def get(self, request, *args, **kwargs):
+        device_bay = get_object_or_404(self.queryset, pk=kwargs["pk"])
         form = ConfirmationForm()
 
         return render(
@@ -2221,8 +2261,8 @@ class DeviceBayDepopulateView(generic.ObjectEditView):
             },
         )
 
-    def post(self, request, pk):
-        device_bay = get_object_or_404(self.queryset, pk=pk)
+    def post(self, request, *args, **kwargs):
+        device_bay = get_object_or_404(self.queryset, pk=kwargs["pk"])
         form = ConfirmationForm(request.POST)
 
         if form.is_valid():
@@ -2232,7 +2272,7 @@ class DeviceBayDepopulateView(generic.ObjectEditView):
             device_bay.save()
             messages.success(
                 request,
-                "{} has been removed from {}.".format(removed_device, device_bay),
+                f"{removed_device,} has been removed from {device_bay}.",
             )
 
             return redirect("dcim:device", pk=device_bay.device.pk)
@@ -2897,7 +2937,7 @@ class VirtualChassisAddMemberView(ObjectPermissionRequiredMixin, GetReturnURLMix
             if membership_form.is_valid():
 
                 membership_form.save()
-                msg = 'Added member <a href="{}">{}</a>'.format(device.get_absolute_url(), escape(device))
+                msg = f'Added member <a href="{device.get_absolute_url()}">{escape(device)}</a>'
                 messages.success(request, mark_safe(msg))
 
                 if "_addanother" in request.POST:
@@ -2950,7 +2990,7 @@ class VirtualChassisRemoveMemberView(ObjectPermissionRequiredMixin, GetReturnURL
         # Protect master device from being removed
         virtual_chassis = VirtualChassis.objects.filter(master=device).first()
         if virtual_chassis is not None:
-            msg = "Unable to remove master device {} from the virtual chassis.".format(escape(device))
+            msg = f"Unable to remove master device {escape(device)} from the virtual chassis."
             messages.error(request, mark_safe(msg))
             return redirect(device.get_absolute_url())
 
@@ -2963,7 +3003,7 @@ class VirtualChassisRemoveMemberView(ObjectPermissionRequiredMixin, GetReturnURL
                 device.vc_priority = None
                 device.save()
 
-            msg = "Removed {} from virtual chassis {}".format(device, device.virtual_chassis)
+            msg = f"Removed {device} from virtual chassis {device.virtual_chassis}"
             messages.success(request, msg)
 
             return redirect(self.get_return_url(request, device))

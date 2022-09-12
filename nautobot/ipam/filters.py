@@ -316,10 +316,19 @@ class PrefixFilterSet(
         except (AddrFormatError, ValueError):
             return queryset.none()
 
+    def generate_query_filter_present_in_vrf(self, value):
+        if isinstance(value, str):
+            value = VRF.objects.get(pk=value)
+
+        # This stringification is done to make the `pretty_print_query()` output look human-readable,
+        # and nothing more. It would work as complex objects but looks bad in the web UI.
+        targets = [str(t) for t in value.import_targets.values_list("pk", flat=True)]
+        query = Q(vrf=str(value.pk)) | Q(vrf__export_targets__in=targets)
+        return query
+
     def filter_present_in_vrf(self, queryset, name, value):
-        if value is None:
-            return queryset.none
-        return queryset.filter(Q(vrf=value) | Q(vrf__export_targets__in=value.import_targets.all()))
+        params = self.generate_query_filter_present_in_vrf(value)
+        return queryset.filter(params)
 
 
 class IPAddressFilterSet(NautobotFilterSet, IPAMFilterSetMixin, TenancyFilterSet, StatusModelFilterSetMixin):
@@ -438,7 +447,7 @@ class IPAddressFilterSet(NautobotFilterSet, IPAMFilterSetMixin, TenancyFilterSet
         return queryset.filter(Q(vrf=value) | Q(vrf__export_targets__in=value.import_targets.all()))
 
     def filter_device(self, queryset, name, value):
-        devices = Device.objects.filter(**{"{}__in".format(name): value})
+        devices = Device.objects.filter(**{f"{name}__in": value})
         if not devices.exists():
             return queryset.none()
         interface_ids = []
@@ -447,7 +456,7 @@ class IPAddressFilterSet(NautobotFilterSet, IPAMFilterSetMixin, TenancyFilterSet
         return queryset.filter(interface__in=interface_ids)
 
     def filter_virtual_machine(self, queryset, name, value):
-        virtual_machines = VirtualMachine.objects.filter(**{"{}__in".format(name): value})
+        virtual_machines = VirtualMachine.objects.filter(**{f"{name}__in": value})
         if not virtual_machines.exists():
             return queryset.none()
         interface_ids = []

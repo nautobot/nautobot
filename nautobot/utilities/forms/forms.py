@@ -64,7 +64,7 @@ class BootstrapMixin(forms.BaseForm):
             forms.RadioSelect,
         ]
 
-        for field_name, field in self.fields.items():
+        for field in self.fields.values():
             if field.widget.__class__ not in exempt_widgets:
                 css = field.widget.attrs.get("class", "")
                 field.widget.attrs["class"] = " ".join([css, "form-control"]).strip()
@@ -188,17 +188,17 @@ class ImportForm(BootstrapMixin, forms.Form):
         super().clean()
 
         data = self.cleaned_data["data"]
-        format = self.cleaned_data["format"]
+        format_ = self.cleaned_data["format"]
 
         # Process JSON/YAML data
-        if format == "json":
+        if format_ == "json":
             try:
                 self.cleaned_data["data"] = json.loads(data)
                 # Check for multiple JSON objects
                 if not isinstance(self.cleaned_data["data"], dict):
                     raise forms.ValidationError({"data": "Import is limited to one object at a time."})
             except json.decoder.JSONDecodeError as err:
-                raise forms.ValidationError({"data": "Invalid JSON data: {}".format(err)})
+                raise forms.ValidationError({"data": f"Invalid JSON data: {err}"})
         else:
             # Check for multiple YAML documents
             if "\n---" in data:
@@ -206,7 +206,7 @@ class ImportForm(BootstrapMixin, forms.Form):
             try:
                 self.cleaned_data["data"] = yaml.load(data, Loader=yaml.SafeLoader)
             except yaml.error.YAMLError as err:
-                raise forms.ValidationError({"data": "Invalid YAML data: {}".format(err)})
+                raise forms.ValidationError({"data": f"Invalid YAML data: {err}"})
 
 
 class TableConfigForm(BootstrapMixin, forms.Form):

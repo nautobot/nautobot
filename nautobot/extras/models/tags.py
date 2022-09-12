@@ -1,7 +1,6 @@
 from django.contrib.contenttypes.models import ContentType
 from django.db import models
 from django.urls import reverse
-from django.utils.text import slugify
 from taggit.models import TagBase, GenericUUIDTaggedItemBase
 
 from nautobot.extras.models import ChangeLoggedModel, CustomFieldModel
@@ -29,6 +28,9 @@ class TagQuerySet(RestrictedQuerySet):
         content_type = ContentType.objects.get_for_model(model._meta.concrete_model)
         return self.filter(content_types=content_type)
 
+    def get_by_natural_key(self, name):
+        return self.get(name=name)
+
 
 @extras_features(
     "custom_fields",
@@ -54,15 +56,11 @@ class Tag(TagBase, BaseModel, ChangeLoggedModel, CustomFieldModel, RelationshipM
     class Meta:
         ordering = ["name"]
 
+    def natural_key(self):
+        return (self.name,)
+
     def get_absolute_url(self):
         return reverse("extras:tag", args=[self.slug])
-
-    def slugify(self, tag, i=None):
-        # Allow Unicode in Tag slugs (avoids empty slugs for Tags with all-Unicode names)
-        slug = slugify(tag, allow_unicode=True)
-        if i is not None:
-            slug += "_%d" % i
-        return slug
 
     def to_csv(self):
         return (self.name, self.slug, self.color, self.description)

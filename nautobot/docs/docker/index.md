@@ -100,6 +100,9 @@ Default: unset
 
 When starting, the container attempts to connect to the database and run database migrations and upgrade steps necessary when upgrading versions.  In normal operation this is harmless to run on every startup and validates the database is operating correctly.  However, in certain circumstances such as database maintenance when the database is in a read-only mode it may make sense to start Nautobot but skip these steps.  Setting this variable to `true` will start Nautobot without running these initial steps.
 
+!!! note
+    Setting this value to anything other than "false" (case-insensitive) will prevent migrations from occurring.
+
 ---
 
 #### `NAUTOBOT_SUPERUSER_API_TOKEN`
@@ -205,7 +208,7 @@ COPY nautobot_config.py /opt/nautobot/nautobot_config.py
 
 ## Building the Image
 
-If you have a [development environment](../development/getting-started/#setting-up-your-development-environment) you can use invoke to build the docker images.  By default `invoke build` will build the development containers:
+If you have a [development environment](../development/getting-started.md#setting-up-your-development-environment) you can use invoke to build the docker images.  By default `invoke build` will build the development containers:
 
 ```no-highlight
 $ invoke build

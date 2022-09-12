@@ -14,6 +14,8 @@ class PrefixHierarchyTest(SeleniumTestCase):
     default it is disabled.
     """
 
+    fixtures = ("status",)
+
     def setUp(self):
         super().setUp()
 

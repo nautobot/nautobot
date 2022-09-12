@@ -6,29 +6,16 @@ logan.importer
 :license: Apache License 2.0, see LICENSE for more details.
 """
 
-from __future__ import absolute_import, unicode_literals
-
-try:
-    unicode
-except NameError:
-    basestring = unicode = str  # Python 3
-
-try:
-    execfile
-except NameError:  # Python3
-
-    def execfile(afile, globalz=None, localz=None):
-        with open(afile, "r") as fh:
-            exec(fh.read(), globalz, localz)
-
-
 import sys
 
-try:
-    from django.utils.importlib import import_module  # django<=1.9
-except ImportError:
-    from importlib import import_module
+from importlib import import_module
 from .settings import load_settings, create_module
+
+
+def execfile(afile, globalz=None, localz=None):
+    with open(afile, "r") as fh:
+        exec(fh.read(), globalz, localz)
+
 
 installed = False
 
@@ -56,7 +43,7 @@ class ConfigurationError(Exception):
     pass
 
 
-class LoganImporter(object):
+class LoganImporter:
     """Implementation of importlib.abc.MetaPathFinder interface."""
 
     def __init__(self, name, config_path, default_settings=None, allow_extras=True, callback=None):
@@ -77,7 +64,7 @@ class LoganImporter(object):
         self.validate()
 
     def __repr__(self):
-        return "<%s for '%s' (%s)>" % (type(self), self.name, self.config_path)
+        return f"<{type(self)} for '{self.name}' ({self.config_path})>"
 
     def validate(self):
         # TODO(dcramer): is there a better way to handle validation so it
@@ -86,7 +73,7 @@ class LoganImporter(object):
             execfile(self.config_path, {"__file__": self.config_path})
         except Exception as e:
             exc_info = sys.exc_info()
-            raise ConfigurationError(unicode(e), exc_info[2])
+            raise ConfigurationError(str(e), exc_info[2])
 
     def find_module(self, fullname, path=None):
         """Meta path finder API function implementation.
@@ -97,7 +84,7 @@ class LoganImporter(object):
         """
         # Only find/load the module matching self.name - otherwise let the standard Python import machinery handle it
         if fullname != self.name:
-            return
+            return None
 
         return LoganLoader(
             name=self.name,
@@ -108,7 +95,7 @@ class LoganImporter(object):
         )
 
 
-class LoganLoader(object):
+class LoganLoader:
     """Implementation of importlib.abc.Loader interface."""
 
     def __init__(self, name, config_path, default_settings=None, allow_extras=True, callback=None):
@@ -127,7 +114,7 @@ class LoganLoader(object):
             return self._load_module(fullname)
         except Exception as e:
             exc_info = sys.exc_info()
-            raise ConfigurationError(unicode(e), exc_info[2])
+            raise ConfigurationError(str(e), exc_info[2])
 
     def _load_module(self, fullname):
         # TODO: is this needed?

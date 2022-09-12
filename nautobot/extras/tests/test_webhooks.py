@@ -26,6 +26,8 @@ User = get_user_model()
 
 
 class WebhookTest(APITestCase):
+    fixtures = ("status",)
+
     @classmethod
     def setUpTestData(cls):
 

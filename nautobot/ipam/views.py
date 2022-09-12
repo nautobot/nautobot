@@ -517,8 +517,8 @@ class PrefixPrefixesView(generic.ObjectView):
             "change": request.user.has_perm("ipam.change_prefix"),
             "delete": request.user.has_perm("ipam.delete_prefix"),
         }
-
-        bulk_querystring = "vrf_id={}&within={}".format(instance.vrf.pk if instance.vrf else "0", instance.prefix)
+        vrf_id = instance.vrf.pk if instance.vrf else "0"
+        bulk_querystring = f"vrf_id={vrf_id}&within={instance.prefix}"
 
         return {
             "first_available_prefix": instance.get_first_available_prefix(),
@@ -562,8 +562,8 @@ class PrefixIPAddressesView(generic.ObjectView):
             "change": request.user.has_perm("ipam.change_ipaddress"),
             "delete": request.user.has_perm("ipam.delete_ipaddress"),
         }
-
-        bulk_querystring = "vrf_id={}&parent={}".format(instance.vrf.pk if instance.vrf else "0", instance.prefix)
+        vrf_id = instance.vrf.pk if instance.vrf else "0"
+        bulk_querystring = f"vrf_id={vrf_id}&parent={instance.prefix}"
 
         return {
             "first_available_ip": instance.get_first_available_ip(),
@@ -705,7 +705,7 @@ class IPAddressAssignView(generic.ObjectView):
 
         return super().dispatch(request, *args, **kwargs)
 
-    def get(self, request):
+    def get(self, request, *args, **kwargs):
         form = forms.IPAddressAssignForm()
 
         return render(

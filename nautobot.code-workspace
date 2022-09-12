@@ -10,10 +10,12 @@
 		]
 	},
 	"settings": {
-		"editor.formatOnSave": true,
 		"python.formatting.provider": "black",
 		"python.linting.enabled": true,
-		"python.linting.flake8Enabled": true
+		"python.linting.flake8Enabled": true,
+		"[python]": {
+			"editor.formatOnSave": true
+		}
 	},
 	"launch": {
 		"version": "0.2.0",

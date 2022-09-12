@@ -2,6 +2,8 @@
 
 While there are many different development interfaces in Nautobot that each expose unique functionality, there are a common set of a best practices that have broad applicability to users and developers alike. This includes elements of writing Jobs, Plugins, and scripts for execution through the `nbshell`.
 
+The below best practices apply to test code as well as feature code, and there are additional [test-specific best practices](testing.md) to be aware of as well.
+
 ## Base Classes
 
 For models that support change-logging, custom fields, and relationships (which includes all subclasses of `OrganizationalModel` and `PrimaryModel`), the "Full-featured models" base classes below should always be used. For less full-featured models, refer to the "Minimal models" column instead.
@@ -310,3 +312,8 @@ filterset.qs.filter(query).count()  # 339
 - Reversibility may not always necessarily be required, but by properly defining `field_name`, `lookup_expr`, and `exclude` on filter fields, **introspection becomes deterministic and reversible queries can be reliably generated as needed.**
 - For exceptions such as `DeviceFilterSet.has_primary_ip` where it checks for both `Device.primary_ip4` OR `Device.primary_ip6`, method filters may still be necessary, however, they would be **the exception and not the norm.**
 - The good news is that in the core there are not that many of these filter methods defined, but we also don’t want to see them continue to proliferate.
+
+## Using NautobotUIViewSet for Plugin Development
+
+- Starting from Nautobot v1.4, using `NautobotUIViewSet` for plugin development is strongly recommended.
+- To see how to use `NautobotUIViewSet`, check out [plugins/development.md](../plugins/development.md#nautobotuiviewset).

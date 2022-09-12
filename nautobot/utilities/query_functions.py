@@ -41,7 +41,7 @@ class JSONBAgg(Aggregate):
     # TODO: Django's JSONBAgg has `allow_distinct=True`, we might want to think about adding that at some point?
 
     # Borrowed from `django.contrib.postgres.aggregates.JSONBagg`.
-    def convert_value(self, value, expression, connection):
+    def convert_value(self, value, expression, connection):  # pylint: disable=arguments-differ
         if not value:
             return "[]"
         return value

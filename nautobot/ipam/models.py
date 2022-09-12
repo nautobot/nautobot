@@ -312,8 +312,9 @@ class Aggregate(PrimaryModel):
             if covering_aggregates:
                 raise ValidationError(
                     {
-                        "prefix": "Aggregates cannot overlap. {} is already covered by an existing aggregate ({}).".format(
-                            self.prefix, covering_aggregates[0]
+                        "prefix": (
+                            "Aggregates cannot overlap. "
+                            f"{self.prefix} is already covered by an existing aggregate ({covering_aggregates[0]})."
                         )
                     }
                 )
@@ -325,9 +326,7 @@ class Aggregate(PrimaryModel):
             if covered_aggregates:
                 raise ValidationError(
                     {
-                        "prefix": "Aggregates cannot overlap. {} covers an existing aggregate ({}).".format(
-                            self.prefix, covered_aggregates[0]
-                        )
+                        "prefix": f"Aggregates cannot overlap. {self.prefix} covers an existing aggregate ({covered_aggregates[0]})."
                     }
                 )
 
@@ -343,12 +342,14 @@ class Aggregate(PrimaryModel):
     @property
     def cidr_str(self):
         if self.network is not None and self.prefix_length is not None:
-            return "%s/%s" % (self.network, self.prefix_length)
+            return f"{self.network}/{self.prefix_length}"
+        return None
 
     @property
     def prefix(self):
         if self.cidr_str:
             return netaddr.IPNetwork(self.cidr_str)
+        return None
 
     @prefix.setter
     def prefix(self, prefix):
@@ -424,6 +425,7 @@ class Role(OrganizationalModel):
     "custom_fields",
     "custom_links",
     "custom_validators",
+    "dynamic_groups",
     "export_templates",
     "graphql",
     "locations",
@@ -524,6 +526,9 @@ class Prefix(PrimaryModel, StatusModel):
         "is_pool",
         "description",
     ]
+    dynamic_group_filter_fields = {
+        "vrf": "vrf_id",  # Duplicate filter fields that will be collapsed in 2.0
+    }
 
     class Meta:
         ordering = (
@@ -561,8 +566,8 @@ class Prefix(PrimaryModel, StatusModel):
     def get_absolute_url(self):
         return reverse("ipam:prefix", args=[self.pk])
 
-    @classproperty
-    def STATUS_CONTAINER(cls):
+    @classproperty  # https://github.com/PyCQA/pylint-django/issues/240
+    def STATUS_CONTAINER(cls):  # pylint: disable=no-self-argument
         """Return a cached "container" `Status` object for later reference."""
         if getattr(cls, "__status_container", None) is None:
             cls.__status_container = Status.objects.get_for_model(Prefix).get(slug="container")
@@ -581,14 +586,8 @@ class Prefix(PrimaryModel, StatusModel):
             if (self.vrf is None and settings.ENFORCE_GLOBAL_UNIQUE) or (self.vrf and self.vrf.enforce_unique):
                 duplicate_prefixes = self.get_duplicates()
                 if duplicate_prefixes:
-                    raise ValidationError(
-                        {
-                            "prefix": "Duplicate prefix found in {}: {}".format(
-                                "VRF {}".format(self.vrf) if self.vrf else "global table",
-                                duplicate_prefixes.first(),
-                            )
-                        }
-                    )
+                    vrf = f"VRF {self.vrf}" if self.vrf else "global table"
+                    raise ValidationError({"prefix": f"Duplicate prefix found in {vrf}: {duplicate_prefixes.first()}"})
 
         # Validate location
         if self.location is not None:
@@ -629,12 +628,14 @@ class Prefix(PrimaryModel, StatusModel):
     @property
     def cidr_str(self):
         if self.network is not None and self.prefix_length is not None:
-            return "%s/%s" % (self.network, self.prefix_length)
+            return f"{self.network}/{self.prefix_length}"
+        return None
 
     @property
     def prefix(self):
         if self.cidr_str:
             return netaddr.IPNetwork(self.cidr_str)
+        return None
 
     @prefix.setter
     def prefix(self, prefix):
@@ -717,7 +718,7 @@ class Prefix(PrimaryModel, StatusModel):
         available_ips = self.get_available_ips()
         if not available_ips:
             return None
-        return "{}/{}".format(next(available_ips.__iter__()), self.prefix.prefixlen)
+        return f"{next(available_ips.__iter__())}/{self.prefix.prefixlen}"
 
     def get_utilization(self):
         """Get the child prefix size and parent size.
@@ -744,6 +745,7 @@ class Prefix(PrimaryModel, StatusModel):
     "custom_fields",
     "custom_links",
     "custom_validators",
+    "dynamic_groups",
     "export_templates",
     "graphql",
     "relationships",
@@ -839,6 +841,7 @@ class IPAddress(PrimaryModel, StatusModel):
         "role",
         "description",
     ]
+    dynamic_group_skip_missing_fields = True  # Problematic form labels for `vminterface` and `interface`
 
     objects = IPAddressQuerySet.as_manager()
 
@@ -878,8 +881,8 @@ class IPAddress(PrimaryModel, StatusModel):
     def get_duplicates(self):
         return IPAddress.objects.filter(vrf=self.vrf, host=self.host).exclude(pk=self.pk)
 
-    @classproperty
-    def STATUS_SLAAC(cls):
+    @classproperty  # https://github.com/PyCQA/pylint-django/issues/240
+    def STATUS_SLAAC(cls):  # pylint: disable=no-self-argument
         """Return a cached "slaac" `Status` object for later reference."""
         cls.__status_slaac = getattr(cls, "__status_slaac", None)
         if cls.__status_slaac is None:
@@ -911,14 +914,8 @@ class IPAddress(PrimaryModel, StatusModel):
             ):
                 duplicate_ips = self.get_duplicates()
                 if duplicate_ips:
-                    raise ValidationError(
-                        {
-                            "address": "Duplicate IP address found in {}: {}".format(
-                                "VRF {}".format(self.vrf) if self.vrf else "global table",
-                                duplicate_ips.first(),
-                            )
-                        }
-                    )
+                    vrf = f"VRF {self.vrf}" if self.vrf else "global table"
+                    raise ValidationError({"address": f"Duplicate IP address found in {vrf}: {duplicate_ips.first()}"})
 
         # This attribute will have been set by `IPAddressForm.clean()` to indicate that the
         # `primary_ip{version}` field on `self.assigned_object.parent` has been nullified but not yet saved.
@@ -947,9 +944,9 @@ class IPAddress(PrimaryModel, StatusModel):
         # Force dns_name to lowercase
         self.dns_name = self.dns_name.lower()
 
-    def to_objectchange(self, action):
+    def to_objectchange(self, action, related_object=None, **kwargs):
         # Annotate the assigned object, if any
-        return super().to_objectchange(action, related_object=self.assigned_object)
+        return super().to_objectchange(action, related_object=self.assigned_object, **kwargs)
 
     def to_csv(self):
 
@@ -980,8 +977,9 @@ class IPAddress(PrimaryModel, StatusModel):
     @property
     def address(self):
         if self.host is not None and self.prefix_length is not None:
-            cidr = "%s/%s" % (self.host, self.prefix_length)
+            cidr = f"{self.host}/{self.prefix_length}"
             return netaddr.IPNetwork(cidr)
+        return None
 
     @address.setter
     def address(self, address):
@@ -1241,7 +1239,7 @@ class VLAN(PrimaryModel, StatusModel):
 
         # Validate VLAN group
         if self.group and self.group.site != self.site:
-            raise ValidationError({"group": "VLAN group must belong to the assigned site ({}).".format(self.site)})
+            raise ValidationError({"group": f"VLAN group must belong to the assigned site ({self.site})."})
 
         if (
             self.group is not None

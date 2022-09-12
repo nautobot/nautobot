@@ -76,7 +76,6 @@ GIT_ROOT = os.getenv("NAUTOBOT_GIT_ROOT", os.path.join(NAUTOBOT_ROOT, "git").rst
 HTTP_PROXIES = None
 JOBS_ROOT = os.getenv("NAUTOBOT_JOBS_ROOT", os.path.join(NAUTOBOT_ROOT, "jobs").rstrip("/"))
 MAINTENANCE_MODE = False
-
 # Metrics
 METRICS_ENABLED = False
 
@@ -202,6 +201,7 @@ SPECTACULAR_SETTINGS = {
     # trim it from all of the individual paths correspondingly.
     # See also https://github.com/nautobot/nautobot-ansible/pull/135 for an example of why this is desirable.
     "SERVERS": [{"url": "/api"}],
+    "SCHEMA_PATH_PREFIX": "/api",
     "SCHEMA_PATH_PREFIX_TRIM": True,
     # use sidecar - locally packaged UI files, not CDN
     "SWAGGER_UI_DIST": "SIDECAR",
@@ -247,7 +247,7 @@ DATABASES = {
         "PASSWORD": os.getenv("NAUTOBOT_PASSWORD", ""),
         "HOST": os.getenv("NAUTOBOT_DB_HOST", "localhost"),
         "PORT": os.getenv("NAUTOBOT_DB_PORT", ""),
-        "CONN_MAX_AGE": int(os.getenv("NAUTOBOT_DB_TIMEOUT", 300)),
+        "CONN_MAX_AGE": int(os.getenv("NAUTOBOT_DB_TIMEOUT", "300")),
         "ENGINE": os.getenv("NAUTOBOT_DB_ENGINE", "django.db.backends.postgresql"),
     }
 }
@@ -308,7 +308,7 @@ INSTALLED_APPS = [
     "health_check",
     "health_check.storage",
     "django_extensions",
-    "nautobot.core.apps.ConstanceDatabaseAppConfig",  # fix default_auto_field
+    "constance.backends.database",
     "django_ajax_tables",
 ]
 
@@ -632,8 +632,8 @@ CELERY_TASK_TRACK_STARTED = True
 # Global task time limits (seconds)
 # Exceeding the soft limit will result in a SoftTimeLimitExceeded exception,
 # while exceeding the hard limit will result in a SIGKILL.
-CELERY_TASK_SOFT_TIME_LIMIT = int(os.getenv("NAUTOBOT_CELERY_TASK_SOFT_TIME_LIMIT", 5 * 60))
-CELERY_TASK_TIME_LIMIT = int(os.getenv("NAUTOBOT_CELERY_TASK_TIME_LIMIT", 10 * 60))
+CELERY_TASK_SOFT_TIME_LIMIT = int(os.getenv("NAUTOBOT_CELERY_TASK_SOFT_TIME_LIMIT", str(5 * 60)))
+CELERY_TASK_TIME_LIMIT = int(os.getenv("NAUTOBOT_CELERY_TASK_TIME_LIMIT", str(10 * 60)))
 
 # These settings define the custom nautobot serialization encoding as an accepted data encoding format
 # and register that format for task input and result serialization
@@ -643,6 +643,10 @@ CELERY_TASK_SERIALIZER = "nautobot_json"
 CELERY_RESULT_SERIALIZER = "nautobot_json"
 
 CELERY_BEAT_SCHEDULER = "nautobot.core.celery.schedulers:NautobotDatabaseScheduler"
+
+# Sets an age out timer of redis lock. This is NOT implicitially applied to locks, must be added
+# to a lock creation as `timeout=settings.REDIS_LOCK_TIMEOUT`
+REDIS_LOCK_TIMEOUT = int(os.getenv("NAUTOBOT_REDIS_LOCK_TIMEOUT", "600"))
 
 #
 # Custom branding (logo and title)

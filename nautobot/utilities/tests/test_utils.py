@@ -32,7 +32,7 @@ class DictToFilterParamsTest(TestCase):
 
     def test_dict_to_filter_params(self):
 
-        input = {
+        input_ = {
             "a": True,
             "foo": {
                 "bar": 123,
@@ -48,11 +48,11 @@ class DictToFilterParamsTest(TestCase):
             "x__y__z": False,
         }
 
-        self.assertEqual(dict_to_filter_params(input), output)
+        self.assertEqual(dict_to_filter_params(input_), output)
 
-        input["x"]["y"]["z"] = True
+        input_["x"]["y"]["z"] = True
 
-        self.assertNotEqual(dict_to_filter_params(input), output)
+        self.assertNotEqual(dict_to_filter_params(input_), output)
 
 
 class NormalizeQueryDictTest(TestCase):
@@ -262,20 +262,57 @@ class PrettyPrintQueryTest(TestCase):
             Q(site__slug__in=["ams01", "ang01"]),
         ]
         results = [
-            "(((site__slug='ams01' OR site__slug='ang01') AND (NOT status__slug='active')) OR status__slug='planned')",
-            "((site__slug='ams01' OR site__slug='ang01') AND (NOT status__slug='active'))",
-            "(site__slug='ams01' OR site__slug='ang01')",
-            "(site__slug='ang01' AND (NOT status__slug='active'))",
-            "(site__slug='ams01' AND status__slug='planned')",
-            "(site__slug='ang01')",
-            "(status__id=12345)",
-            "(site__slug__in=['ams01', 'ang01'])",
+            """\
+(
+  (
+    (
+      site__slug='ams01' OR site__slug='ang01'
+    ) AND (
+      NOT (status__slug='active')
+    )
+  ) OR status__slug='planned'
+)""",
+            """\
+(
+  (
+    site__slug='ams01' OR site__slug='ang01'
+  ) AND (
+    NOT (status__slug='active')
+  )
+)""",
+            """\
+(
+  site__slug='ams01' OR site__slug='ang01'
+)""",
+            """\
+(
+  site__slug='ang01' AND (
+    NOT (status__slug='active')
+  )
+)""",
+            """\
+(
+  site__slug='ams01' AND status__slug='planned'
+)""",
+            """\
+(
+  site__slug='ang01'
+)""",
+            """\
+(
+  status__id=12345
+)""",
+            """\
+(
+  site__slug__in=['ams01', 'ang01']
+)""",
         ]
 
         tests = zip(queries, results)
 
         for query, expected in tests:
-            self.assertEqual(pretty_print_query(query), expected)
+            with self.subTest(query=query):
+                self.assertEqual(pretty_print_query(query), expected)
 
 
 class SlugifyFunctionsTest(TestCase):
