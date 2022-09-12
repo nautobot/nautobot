@@ -824,7 +824,7 @@ class DynamicGroupFilterTest(DynamicGroupTestBase):
 
     def test_content_type(self):
         params = {"content_type": ["dcim.device", "virtualization.virtualmachine"]}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 6)
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 7)
 
     def test_search(self):
         tests = {
@@ -832,8 +832,8 @@ class DynamicGroupFilterTest(DynamicGroupTestBase):
             "Invalid Filter": 1,  # name
             "invalid-filter": 1,  # slug
             "A group with a non-matching filter": 1,  # description
-            "dcim": 6,  # content_type__app_label
-            "device": 6,  # content_type__model
+            "dcim": 7,  # content_type__app_label
+            "device": 7,  # content_type__model
         }
         for value, cnt in tests.items():
             params = {"q": value}
