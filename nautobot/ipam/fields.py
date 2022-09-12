@@ -48,7 +48,7 @@ class VarbinaryIPField(models.BinaryField):
         try:
             return netaddr.IPAddress(value, version=version)
         except netaddr.AddrFormatError:
-            raise ValidationError("Invalid IP address format: {}".format(value))
+            raise ValidationError(f"Invalid IP address format: {value}")
         except (TypeError, ValueError) as e:
             raise ValidationError(e)
 

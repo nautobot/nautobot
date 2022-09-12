@@ -65,7 +65,7 @@ def parse_alphanumeric_range(string):
             else:
                 # Not a valid range (more than a single character)
                 if not len(begin) == len(end) == 1:
-                    raise forms.ValidationError('Range "{}" is invalid.'.format(dash_range))
+                    raise forms.ValidationError(f'Range "{dash_range}" is invalid.')
                 for n in list(range(ord(begin), ord(end) + 1)):
                     values.append(chr(n))
     return values
@@ -80,9 +80,9 @@ def expand_alphanumeric_pattern(string):
     for i in parsed_range:
         if re.search(ALPHANUMERIC_EXPANSION_PATTERN, remnant):
             for string2 in expand_alphanumeric_pattern(remnant):
-                yield "{}{}{}".format(lead, i, string2)
+                yield f"{lead}{i}{string2}"
         else:
-            yield "{}{}{}".format(lead, i, remnant)
+            yield f"{lead}{i}{remnant}"
 
 
 def expand_ipaddress_pattern(string, family):
@@ -92,7 +92,7 @@ def expand_ipaddress_pattern(string, family):
       '2001:db8:0:[0,fd-ff]::/64' => ['2001:db8:0:0::/64', '2001:db8:0:fd::/64', ... '2001:db8:0:ff::/64']
     """
     if family not in [4, 6]:
-        raise Exception("Invalid IP address family: {}".format(family))
+        raise Exception(f"Invalid IP address family: {family}")
     if family == 4:
         regex = IP4_EXPANSION_PATTERN
         base = 10

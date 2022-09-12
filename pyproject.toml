@@ -28,6 +28,8 @@ include = [
     "CONTRIBUTING.md",
     "LICENSE.txt",
     "NOTICE",
+    # Poetry by default will exclude these files as they are in .gitignore
+    "nautobot/project-static/docs/**/*",
 ]
 
 [tool.poetry.dependencies]
@@ -45,7 +47,7 @@ django-cacheops = "~6.0"
 # Base functionality for task scheduling with Celery
 django-celery-beat = "~2.2.1"
 # Management of app configuration via the Django admin UI
-django-constance = {version = "~2.8.0", extras = ["database"]}
+django-constance = {version = "~2.9.0", extras = ["database"]}
 # Permit cross-domain API requests
 django-cors-headers = "~3.13.0"
 # Support for encrypted database fields
@@ -100,7 +102,7 @@ graphene-django-optimizer = "~0.8.0"
 #       Python 3.8+ where our direct dependency becomes part of stdlib.
 importlib-metadata = {version = "^4.4", python = "<3.8"}
 # Template rendering engine
-Jinja2 = "~3.0.3"
+Jinja2 = "~3.1.0"
 # Optional data validation of config contexts
 jsonschema = "~4.7.0"
 # Rendering of markdown files to HTML
@@ -148,7 +150,7 @@ sso = ["social-auth-core"]
 
 [tool.poetry.dev-dependencies]
 # Code style enforcement
-black = "~22.6.0"
+black = "~22.8.0"
 # Test code coverage measurement
 coverage = "~6.4.1"
 # Tool for debugging Django
@@ -166,6 +168,11 @@ invoke = "~1.7.1"
 mkdocs-include-markdown-plugin = "~3.6.0"
 # Rendering docs to HTML
 mkdocs = "~1.3.0"
+# Material for mkdocs theme
+mkdocs-material = "~8.4.2"
+# Automatic documentation from sources, for MkDocs
+mkdocstrings = "0.19"
+mkdocstrings-python = "0.7.1"
 # Code static analysis
 pylint = {version = "~2.14.5", python = "^3.7.2"}
 # Pylint extensions for Django
@@ -225,12 +232,10 @@ good-names = """_,i,j,k,pk"""
 # unused-import is already covered by flake8
 disable=""",
     abstract-method,
-    access-member-before-definition,
     arguments-renamed,
     attribute-defined-outside-init,
     broad-except,
     consider-iterating-dictionary,
-    consider-using-f-string,
     consider-using-from-import,
     consider-using-in,
     consider-using-generator,
@@ -255,8 +260,6 @@ disable=""",
     no-else-raise,
     no-else-return,
     no-member,
-    no-value-for-parameter,
-    not-an-iterable,
     not-callable,
     pointless-statement,
     pointless-string-statement,
@@ -282,7 +285,6 @@ disable=""",
     ungrouped-imports,
     unnecessary-dunder-call,
     unspecified-encoding,
-    unsubscriptable-object,
     unused-argument,
     unused-import,
     unused-wildcard-import,
@@ -298,3 +300,7 @@ notes = """,
     FIXME,
     XXX,
     """
+
+[tool.pylint.typecheck]
+# @patch changes the signature of a function it's applied to; don't raise "no-value-for-parameter" here
+signature-mutators=["unittest.mock.patch"]

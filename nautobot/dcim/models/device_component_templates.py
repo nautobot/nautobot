@@ -223,7 +223,7 @@ class PowerOutletTemplate(ComponentTemplateModel):
 
         # Validate power port assignment
         if self.power_port and self.power_port.device_type != self.device_type:
-            raise ValidationError("Parent power port ({}) must belong to the same device type".format(self.power_port))
+            raise ValidationError(f"Parent power port ({self.power_port}) must belong to the same device type")
 
     def instantiate(self, device):
         if self.power_port:
@@ -308,15 +308,14 @@ class FrontPortTemplate(ComponentTemplateModel):
 
         # Validate rear port assignment
         if self.rear_port.device_type != self.device_type:
-            raise ValidationError("Rear port ({}) must belong to the same device type".format(self.rear_port))
+            raise ValidationError(f"Rear port ({self.rear_port}) must belong to the same device type")
 
         # Validate rear port position assignment
         if self.rear_port_position > self.rear_port.positions:
             raise ValidationError(
-                "Invalid rear port position ({}); rear port {} has only {} positions".format(
-                    self.rear_port_position,
-                    self.rear_port.name,
-                    self.rear_port.positions,
+                (
+                    f"Invalid rear port position ({self.rear_port_position}); "
+                    f"rear port {self.rear_port.name} has only {self.rear_port.positions} positions"
                 )
             )
 

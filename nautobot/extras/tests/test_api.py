@@ -71,7 +71,7 @@ User = get_user_model()
 class AppTest(APITestCase):
     def test_root(self):
         url = reverse("extras-api:api-root")
-        response = self.client.get("{}?format=api".format(url), **self.header)
+        response = self.client.get(f"{url}?format=api", **self.header)
 
         self.assertEqual(response.status_code, 200)
 
@@ -385,7 +385,7 @@ class CreatedUpdatedFilterTest(APITestCase):
     def test_get_rack_created(self):
         self.add_permissions("dcim.view_rack")
         url = reverse("dcim-api:rack-list")
-        response = self.client.get("{}?created=2001-02-03".format(url), **self.header)
+        response = self.client.get(f"{url}?created=2001-02-03", **self.header)
 
         self.assertHttpStatus(response, status.HTTP_200_OK)
         self.assertEqual(response.data["count"], 1)
@@ -394,7 +394,7 @@ class CreatedUpdatedFilterTest(APITestCase):
     def test_get_rack_created_gte(self):
         self.add_permissions("dcim.view_rack")
         url = reverse("dcim-api:rack-list")
-        response = self.client.get("{}?created__gte=2001-02-04".format(url), **self.header)
+        response = self.client.get(f"{url}?created__gte=2001-02-04", **self.header)
 
         self.assertHttpStatus(response, status.HTTP_200_OK)
         self.assertEqual(response.data["count"], 1)
@@ -403,7 +403,7 @@ class CreatedUpdatedFilterTest(APITestCase):
     def test_get_rack_created_lte(self):
         self.add_permissions("dcim.view_rack")
         url = reverse("dcim-api:rack-list")
-        response = self.client.get("{}?created__lte=2001-02-04".format(url), **self.header)
+        response = self.client.get(f"{url}?created__lte=2001-02-04", **self.header)
 
         self.assertHttpStatus(response, status.HTTP_200_OK)
         self.assertEqual(response.data["count"], 1)
@@ -412,7 +412,7 @@ class CreatedUpdatedFilterTest(APITestCase):
     def test_get_rack_last_updated(self):
         self.add_permissions("dcim.view_rack")
         url = reverse("dcim-api:rack-list")
-        response = self.client.get("{}?last_updated=2001-02-03%2001:02:03.000004".format(url), **self.header)
+        response = self.client.get(f"{url}?last_updated=2001-02-03%2001:02:03.000004", **self.header)
 
         self.assertHttpStatus(response, status.HTTP_200_OK)
         self.assertEqual(response.data["count"], 1)
@@ -421,7 +421,7 @@ class CreatedUpdatedFilterTest(APITestCase):
     def test_get_rack_last_updated_gte(self):
         self.add_permissions("dcim.view_rack")
         url = reverse("dcim-api:rack-list")
-        response = self.client.get("{}?last_updated__gte=2001-02-04%2001:02:03.000004".format(url), **self.header)
+        response = self.client.get(f"{url}?last_updated__gte=2001-02-04%2001:02:03.000004", **self.header)
 
         self.assertHttpStatus(response, status.HTTP_200_OK)
         self.assertEqual(response.data["count"], 1)
@@ -430,7 +430,7 @@ class CreatedUpdatedFilterTest(APITestCase):
     def test_get_rack_last_updated_lte(self):
         self.add_permissions("dcim.view_rack")
         url = reverse("dcim-api:rack-list")
-        response = self.client.get("{}?last_updated__lte=2001-02-04%2001:02:03.000004".format(url), **self.header)
+        response = self.client.get(f"{url}?last_updated__lte=2001-02-04%2001:02:03.000004", **self.header)
 
         self.assertHttpStatus(response, status.HTTP_200_OK)
         self.assertEqual(response.data["count"], 1)
