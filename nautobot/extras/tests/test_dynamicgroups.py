@@ -459,7 +459,7 @@ class DynamicGroupModelTest(DynamicGroupTestBase):
         group1 = self.first_child  # Filter has `site`
         self.assertEqual(group1.get_initial(), group1.filter)
         # Test if MultiValueCharField is properly pre-populated
-        group2 = self.groups[6] # Filter has `name`
+        group2 = self.groups[6]  # Filter has `name`
         initial = group2.get_initial()
         expected = {"name": ["device-1", "device-2", "device-3"]}
         self.assertEqual(initial, expected)
