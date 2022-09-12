@@ -90,7 +90,7 @@ class LocationType(TreeNode, OrganizationalModel):
         # prefix with parent name allows location type name identity if there are the same name exists under different parents.
         display_str = self.name
         parent = self.parent
-        for i in range(10):  # "10 levels iteration"
+        for _ in range(10):  # "10 levels iteration"
             if parent is None:
                 break
             display_str = f"{parent.name} → {display_str}"
@@ -216,7 +216,7 @@ class Location(TreeNode, StatusModel, PrimaryModel):
         # prefix with parent name allows location name identity if there are the same name exists under different parents.
         display_str = self.name
         parent = self.parent
-        for i in range(10):  # "10 levels iteration"
+        for _ in range(10):  # "10 levels iteration"
             if parent is None:
                 break
             display_str = f"{parent.name} → {display_str}"
