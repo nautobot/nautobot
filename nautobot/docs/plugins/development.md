@@ -298,7 +298,7 @@ template_extensions = [DeviceExtraTabs, SiteAnimalCount]
 
 #### Adding Extra Tabs
 
-!!! check "Added in version 1.4.0"
++++ 1.4.0
 
 In order for any extra tabs to work properly, the `"url"` key must reference a view which inherits from the `nautobot.core.views.generic.ObjectView` class and the template must extend the object's detail template such as:
 
@@ -351,7 +351,7 @@ urlpatterns = [
 
 ### Adding a Banner
 
-!!! check "Added in version 1.2.0"
++++ 1.2.0
 
 A plugin can provide a function that renders a custom banner on any number of Nautobot views. By default Nautobot looks for a function `banner()` inside of `banner.py`. (This can be overridden by setting `banner_function` to a custom value on the plugin's `PluginConfig`.)
 
@@ -392,6 +392,8 @@ More documentation and examples can be found in the [Navigation Menu](../develop
 
 ### Adding Home Page Content
 
++++ 1.2.0
+
 Plugins can add content to the Nautobot home page. By default, Nautobot looks for a `layout` list inside of `homepage.py`. (This can be overridden by setting `homepage_layout` to a custom value on the plugin's `PluginConfig`.)
 
 Using a key and weight system, a developer can integrate the plugin content amongst existing panels, groups, and items and/or create entirely new panels as desired.
@@ -400,7 +402,7 @@ More documentation and examples can be found in the guide on [Home Page Panels](
 
 ### Adding Links to the Installed Plugins View
 
-!!! check "Added in version 1.2.0"
++++ 1.2.0
 
 It's common for many plugins to provide a "plugin configuration" [view](#adding-web-ui-views) used for interactive configuration of aspects of the plugin that don't necessarily need to be managed by a system administrator via `PLUGINS_CONFIG`. The `PluginConfig` setting of `config_view_name` lets you provide the URL pattern name defined for this view, which will then be accessible via a button on the **Plugins -> Installed Plugins** UI view.
 
@@ -438,7 +440,7 @@ Similarly, if your plugin provides a "plugin home" or "dashboard" view, you can 
 
 ### Adding Jinja2 Filters
 
-!!! check "Added in version 1.1.0"
++++ 1.1.0
 
 Plugins can define custom Jinja2 filters to be used when rendering templates defined in computed fields. Check out the [official Jinja2 documentation](https://jinja.palletsprojects.com/en/3.0.x/api/#custom-filters) on how to create filter functions.
 
@@ -587,7 +589,7 @@ With this code, once your plugin is installed, the Git repository creation/editi
 
 ### Populating Extensibility Features
 
-!!! check "Added in version 1.2.0"
++++ 1.2.0
 
 In many cases, a plugin may wish to make use of Nautobot's various extensibility features, such as [custom fields](../models/extras/customfield.md) or [relationships](../models/extras/relationship.md). It can be useful for a plugin to automatically create a custom field definition or relationship definition as a consequence of being installed and activated, so that everyday usage of the plugin can rely upon these definitions to be present.
 
@@ -708,7 +710,7 @@ After installing and enabling your plugin, you should now be able to navigate to
 
 ### Extending Filters
 
-!!! check "Added in version 1.3.0"
++++ 1.3.0
 
 Plugins can extend any model-based `FilterSet` and `FilterForm` classes that are provided by the Nautobot core.
 
@@ -1037,7 +1039,7 @@ This makes our view accessible at the URL `/plugins/animal-sounds/random/`. (Rem
 
 ### NautobotUIViewSet
 
-!!! check "Added in version 1.4.0"
++++ 1.4.0
 
 New in Nautobot 1.4 is the debut of `NautobotUIViewSet`: A powerful plugin development tool that can save plugin developer hundreds of lines of code compared to using legacy `generic.views`. Using it to gain access to default functionalities previous provided by `generic.views` such as `create()`, `bulk_create()`, `update()`, `partial_update()`, `bulk_update()`, `destroy()`, `bulk_destroy()`, `retrieve()` and `list()` actions.
 
@@ -1290,7 +1292,7 @@ plugin_name/                   # "nautobot_animal_sounds"
 
 ### Replacing Views
 
-!!! check "Added in version 1.4.0"
++++ 1.4.0
 
 You may override any of the core or plugin views by providing an `override_views` `dict` in a plugin's `views.py` file.
 
@@ -1317,7 +1319,7 @@ override_views = {
 
 ## Note URL Endpoint
 
-!!! check "Added in version 1.4.0"
++++ 1.4.0
 
 Models that inherit from `PrimaryModel` and `OrganizationalModel` can have notes associated. In order to utilize this new feature you will need to add the endpoint to `urls.py`. Here is an option to be able to support both 1.4+ and older versions of Nautobot:
 

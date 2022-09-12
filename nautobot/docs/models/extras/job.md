@@ -1,6 +1,6 @@
 # Jobs
 
-!!! check "Added in version 1.3.0"
++++ 1.3.0
 
 The Job data model provides a database representation of metadata describing a specific installed Job. It also serves as an anchor point for other data models (JobResult and ScheduledJob in particular) to link against.
 

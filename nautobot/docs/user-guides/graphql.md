@@ -242,7 +242,7 @@ query {
 <img src="../images/graphql/11-graphql-query-06.png">
 </details>
 
-!!! check "Enhanced in version 1.3.0"
++++ 1.3.0
     You can also paginate the results returned to you when the data set gets larger. To do so, use the keywords "limit" and "offset". The "limit" keyword will limit the count of results returned after the "offset". If no "offset" is specified, then the default offset is zero.
 
     ```graphql
@@ -331,7 +331,7 @@ In the updated script, we add the `variables = {"site_name": "ams"}` variable. W
 
 ### Saving Queries
 
-!!! check "Added in version 1.1.0"
++++ 1.1.0
 
 Queries can now be stored inside of Nautobot, allowing the user to easily rerun previously defined queries.
 

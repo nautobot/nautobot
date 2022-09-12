@@ -1,6 +1,6 @@
 # Secrets
 
-!!! check "Added in version 1.2.0"
++++ 1.2.0
 
 For security reasons, Nautobot generally does not store sensitive secrets (device access credentials, systems-integration API tokens, etc.) in its own database. There are other approaches and systems better suited to this purpose, ranging from simple solutions such as process-specific environment variables or restricted-access files on disk, all the way through to dedicated systems such as Hashicorp Vault or AWS Secrets Manager.
 

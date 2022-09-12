@@ -1,6 +1,6 @@
 # Job Scheduling and Approvals
 
-!!! check "Added in version 1.2.0"
++++ 1.2.0
 
 Oftentimes jobs will need to be run at a later date or periodically, or require approval from someone before they can be started. To this end, Nautobot offers facilities for scheduling and approving jobs.
 
@@ -45,8 +45,8 @@ Jobs that have `approval_required` set to `True` on their `Meta` object require 
 
 Scheduled jobs can be approved or denied via the UI and API by any user that has the `extras.approve_job` permission for the job in question, as well as the appropriate `extras.change_scheduledjob` and/or `extras.delete_scheduledjob` permissions.
 
-!!! caution "Changed in version 1.3.0"
-    The `extras.approve_job` permission is required for job approvers in Nautobot 1.3.0 and later.
++/- 1.3.0
+    The `extras.approve_job` permission is now required for job approvers.
 
 !!! note
     Jobs that are past their scheduled run date can still be approved, but the approver will be asked to confirm the operation.

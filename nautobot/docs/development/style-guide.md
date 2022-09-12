@@ -59,7 +59,7 @@ New dependencies can be added to the project via the `poetry add` command. This 
 
 * The combination of `nautobot.utilities.forms.BootstrapMixin`, `nautobot.extras.forms.CustomFieldModelFormMixin`, `nautobot.extras.forms.RelationshipModelFormMixin` and `nautobot.extras.forms.NoteModelFormMixin` is such a common use case throughout the code base that they have a helper class which combines all of these at `nautobot.extras.forms.NautobotModelForm`. Use this helper class if you need the functionality from these classes.
 
-!!! check "Added in version 1.4"
++++ 1.4.0
 
     * Similarly, for filter forms, `nautobot.extras.forms.NautobotFilterForm` combines `nautobot.utilities.forms.BootstrapMixin`, `nautobot.extras.forms.CustomFieldModelFilterFormMixin`, and `nautobot.extras.forms.RelationshipModelFilterFormMixin`, and should be used where appropriate.
 

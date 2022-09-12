@@ -1,6 +1,6 @@
 # Computed Fields
 
-!!! check "Added in version 1.1.0"
++++ 1.1.0
 
 Computed fields are very similar in design and implementation to custom fields. See the overview of [Custom Fields](./customfield.md). As the name suggests, computed fields serve the need for a custom field where the value is generated using data that Nautobot stores in its database and merging it into a Jinja2 template and associated filters.
 

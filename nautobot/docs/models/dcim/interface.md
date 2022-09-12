@@ -10,8 +10,7 @@ The following operational statuses are available by default:
 * Decommissioning
 * Failed
 
-!!! check "Enhanced in version 1.4.0"
-
++++ 1.4.0
     - Added `bridge` field.
     - Added `parent_interface` field.
     - Added `status` field.

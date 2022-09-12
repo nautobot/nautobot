@@ -132,7 +132,7 @@ A list of strings (field names) representing the order your job [variables](#var
 
 #### `has_sensitive_variables`
 
-!!! check "Added in version 1.3.10"
++++ 1.3.10
 
 Default: `True`
 
@@ -161,13 +161,15 @@ Important notes about hidden jobs:
 
 #### `read_only`
 
-!!! check "Added in version 1.1.0"
++++ 1.1.0
 
 Default: `False`
 
 A boolean that designates whether the job is able to make changes to data in the database. The value defaults to `False` but when set to `True`, any data modifications executed from the job's code will be automatically aborted at the end of the job. The job input form is also modified to remove the `commit` checkbox as it is irrelevant for read-only jobs. When a job is marked as read-only, log messages that are normally automatically emitted about the DB transaction state are not included because no changes to data are allowed. Note that user input may still be optionally collected with read-only jobs via job variables, as described below.
 
 #### `soft_time_limit`
+
++++ 1.3.0
 
 An int or float value, in seconds, which can be used to override the default [soft time limit](../configuration/optional-settings.md#celery_task_soft_time_limit) for a job task to complete.
 
@@ -194,7 +196,7 @@ class ExampleJobWithSoftTimeLimit(Job):
 
 #### `template_name`
 
-!!! check "Added in version 1.4.0"
++++ 1.4.0
 
 A path relative to the job source code containing a Django template which provides additional code to customize the Job's submission form. This template should extend the existing job template, `extras/job.html`, otherwise the base form and functionality may not be available.
 
@@ -220,6 +222,8 @@ A template can provide additional JavaScript, CSS, or even display HTML. A good 
 For another example checkout [the template used in example plugin](https://github.com/nautobot/nautobot/blob/next/examples/example_plugin/example_plugin/templates/example_plugin/example_with_custom_template.html) in the GitHub repo.
 
 #### `time_limit`
+
++++ 1.3.0
 
 An int or float value, in seconds, which can be used to override the
 default [hard time limit](../configuration/optional-settings.md#celery_task_time_limit) (10 minutes by default) for a job task to complete.
@@ -453,7 +457,7 @@ It is advised to log a message for each object that is evaluated so that the res
 
 Markdown rendering is supported for log messages.
 
-!!! note
++/- 1.3.4
     As a security measure, the `message` passed to any of these methods will be passed through the `nautobot.utilities.logging.sanitize()` function in an attempt to strip out information such as usernames/passwords that should not be saved to the logs. This is of course best-effort only, and Job authors should take pains to ensure that such information is not passed to the logging APIs in the first place. The set of redaction rules used by the `sanitize()` function can be configured as [settings.SANITIZER_PATTERNS](../configuration/optional-settings.md#sanitizer_patterns).
 
 !!! note
@@ -537,8 +541,8 @@ The `class_path` is often represented as a string in the format of `<grouping_na
 `local/example/MyJobWithNoVars` or `plugins/nautobot_golden_config.jobs/BackupJob`. Understanding the definitions of these
 elements will be important in running jobs programmatically.
 
-!!! note
-    In Nautobot 1.3 and later, with the addition of Job database models, it is now generally possible and preferable to refer to a job by its UUID primary key, similar to other Nautobot database models, rather than its `class_path`.
++/- 1.3.0
+    With the addition of Job database models, it is now generally possible and preferable to refer to a job by its UUID primary key, similar to other Nautobot database models, rather than its `class_path`.
 
 ### Via the Web UI
 
@@ -588,8 +592,8 @@ nautobot-server runjob [--username <username>] [--commit] [--local] [--data <dat
 !!! note
     [See above](#jobs-and-class_path) for `class_path` definitions.
 
-!!! check "Enhanced in version 1.3.10"
-    The `--data` and `--local` parameters were added in Nautobot 1.3.10.
++++ 1.3.10
+    The `--data` and `--local` parameters were added.
 
     The `--data` parameter must be a JSON string, e.g. `--data='{"string_variable": "somevalue", "integer_variable": 123}'`
 

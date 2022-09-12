@@ -2,7 +2,7 @@
 
 ## Administratively Configurable Settings
 
-!!! check "Added in version 1.2.0"
++++ 1.2.0
 
 A number of settings can alternatively be configured via the Nautobot Admin UI. To do so, these settings must **not** be defined in your `nautobot_config.py`, as any settings defined there will take precedence over any values defined in the Admin UI. Settings that are currently configurable via the Admin UI include:
 
@@ -76,7 +76,7 @@ BANNER_TOP = 'Your banner text'
 BANNER_BOTTOM = BANNER_TOP
 ```
 
-!!! check "Enhanced in version 1.2.0"
++++ 1.2.0
     If you do not set a value for these settings in your `nautobot_config.py`, they can be configured dynamically by an admin user via the Nautobot Admin UI. If you do have a value for either setting in `nautobot_config.py`, it will override any dynamically configured value.
 
 ---
@@ -87,7 +87,7 @@ Default: `""` (Empty string)
 
 This defines custom content to be displayed on the login page above the login form. HTML is allowed.
 
-!!! check "Enhanced in version 1.2.0"
++++ 1.2.0
     If you do not set a value for this setting in your `nautobot_config.py`, it can be configured dynamically by an admin user via the Nautobot Admin UI. If you do have a value for this setting in `nautobot_config.py`, it will override any dynamically configured value.
 
 ---
@@ -160,7 +160,7 @@ If a custom URL is not provided for any of the links, the default link within th
 
 ## BRANDING_PREPENDED_FILENAME
 
-!!! check "Added in version 1.3.4"
++++ 1.3.4
 
 Default: `"nautobot_"`
 
@@ -278,7 +278,7 @@ The number of days to retain logged changes (object creations, updates, and dele
 !!! warning
     If enabling indefinite changelog retention, it is recommended to periodically delete old entries. Otherwise, the database may eventually exceed capacity.
 
-!!! check "Enhanced in version 1.2.0"
++++ 1.2.0
     If you do not set a value for this setting in your `nautobot_config.py`, it can be configured dynamically by an admin user via the Nautobot Admin UI. If you do have a value for this setting in `nautobot_config.py`, it will override any dynamically configured value.
 
 ---
@@ -508,10 +508,10 @@ Default: `False`
 
 When set to `True`, users with limited permissions will only be able to see items in the UI they have access to.
 
-!!! check "Enhanced in version 1.2.0"
++++ 1.2.0
     If you do not set a value for this setting in your `nautobot_config.py`, it can be configured dynamically by an admin user via the Nautobot Admin UI. If you do have a value for this setting in `nautobot_config.py`, it will override any dynamically configured value.
 
-!!! check "Enhanced in version 1.3.10"
++++ 1.3.10
     When this setting is set to `True`, logged out users will be redirected to the login page when navigating to the Nautobot home page.
 
 ---
@@ -558,7 +558,7 @@ Environment Variable: `NAUTOBOT_JOBS_ROOT`
 
 The file path to a directory where [Jobs](../additional-features/jobs.md) can be discovered.
 
-!!! note
+!!! caution
     This directory **must** contain an `__init__.py` file.
 
 ---
@@ -638,7 +638,7 @@ Default: `1000`
 
 A web user or API consumer can request an arbitrary number of objects by appending the "limit" parameter to the URL (e.g. `?limit=1000`). This parameter defines the maximum acceptable limit. Setting this to `0` or `None` will allow a client to retrieve _all_ matching objects at once with no limit by specifying `?limit=0`.
 
-!!! check "Enhanced in version 1.2.0"
++++ 1.2.0
     If you do not set a value for this setting in your `nautobot_config.py`, it can be configured dynamically by an admin user via the Nautobot Admin UI. If you do have a value for this setting in `nautobot_config.py`, it will override any dynamically configured value.
 
 ---
@@ -735,7 +735,7 @@ Default: `50`
 
 The default maximum number of objects to display per page within each list of objects. Applies to both the UI and the REST API.
 
-!!! check "Enhanced in version 1.2.0"
++++ 1.2.0
     If you do not set a value for this setting in your `nautobot_config.py`, it can be configured dynamically by an admin user via the Nautobot Admin UI. If you do have a value for this setting in `nautobot_config.py`, it will override any dynamically configured value.
 
 ---
@@ -779,7 +779,7 @@ Default: `False`
 
 When determining the primary IP address for a device, IPv6 is preferred over IPv4 by default. Set this to True to prefer IPv4 instead.
 
-!!! check "Enhanced in version 1.2.0"
++++ 1.2.0
     If you do not set a value for this setting in your `nautobot_config.py`, it can be configured dynamically by an admin user via the Nautobot Admin UI. If you do have a value for this setting in `nautobot_config.py`, it will override any dynamically configured value.
 
 ---
@@ -790,7 +790,7 @@ Default: `22`
 
 Default height (in pixels) of a unit within a rack elevation. For best results, this should be approximately one tenth of `RACK_ELEVATION_DEFAULT_UNIT_WIDTH`.
 
-!!! check "Enhanced in version 1.2.0"
++++ 1.2.0
     If you do not set a value for this setting in your `nautobot_config.py`, it can be configured dynamically by an admin user via the Nautobot Admin UI. If you do have a value for this setting in `nautobot_config.py`, it will override any dynamically configured value.
 
 ---
@@ -801,7 +801,7 @@ Default: `220`
 
 Default width (in pixels) of a unit within a rack elevation.
 
-!!! check "Enhanced in version 1.2.0"
++++ 1.2.0
     If you do not set a value for this setting in your `nautobot_config.py`, it can be configured dynamically by an admin user via the Nautobot Admin UI. If you do have a value for this setting in `nautobot_config.py`, it will override any dynamically configured value.
 
 ---
@@ -825,7 +825,7 @@ The number of seconds to retain the latest version that is fetched from the GitH
 !!! warning
     This must be set to at least one hour (`3600` seconds). Setting it to a value lower than this is an error.
 
-!!! check "Enhanced in version 1.2.0"
++++ 1.2.0
     If you do not set a value for this setting in your `nautobot_config.py`, it can be configured dynamically by an admin user via the Nautobot Admin UI. If you do have a value for this setting in `nautobot_config.py`, it will override any dynamically configured value.
 
 ---
@@ -839,14 +839,14 @@ This parameter defines the URL of the repository that will be checked periodical
 !!! note
     The URL provided **must** be compatible with the [GitHub REST API](https://docs.github.com/en/rest).
 
-!!! check "Enhanced in version 1.2.0"
++++ 1.2.0
     If you do not set a value for this setting in your `nautobot_config.py`, it can be configured dynamically by an admin user via the Nautobot Admin UI. If you do have a value for this setting in `nautobot_config.py`, it will override any dynamically configured value.
 
 ---
 
 ## SANITIZER_PATTERNS
 
-!!! check "Added in version 1.3.4"
++++ 1.3.4
 
 Default:
 
@@ -930,7 +930,7 @@ If [`STORAGE_BACKEND`](#storage_backend) is not defined, this setting will be ig
 
 ## STRICT_FILTERING
 
-!!! check "Added in version 1.4.0"
++++ 1.4.0
 
 Default: `True`
 
@@ -982,7 +982,7 @@ Environment Variables:
 
 ## UI_RACK_VIEW_TRUNCATE_FUNCTION
 
-!!! check "Added in version 1.4.0"
++++ 1.4.0
 
 Default:
 

@@ -1,6 +1,6 @@
 # Job Log Entry
 
-!!! check "Added in version 1.2.0"
++++ 1.2.0
 
 Log messages from [Jobs](../../additional-features/jobs.md) are stored in as `JobLogEntry` objects. This allows more performant querying of log messages and even allows viewing of logs while the job is still running.
 
@@ -12,5 +12,5 @@ Records of this type store the following data:
 - The log message.
 - If provided, the string format of the logged object and it's absolute url.
 
-!!! check "Enhanced in version 1.2.2"
-    REST API and GraphQL support for querying `JobLogEntry` records was added in Nautobot 1.2.2.
++++ 1.2.2
+    REST API and GraphQL support for querying `JobLogEntry` records were added.

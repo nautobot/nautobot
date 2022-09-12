@@ -9,7 +9,7 @@ at the top of your template file.
 
 ## Object Detail
 
-!!! check "Added in version 1.2.0"
++++ 1.2.0
 
 The most customizable template is `generic/object_detail.html`, as object detail views have a wide range of specific requirements to be accommodated. It provides the following blocks:
 

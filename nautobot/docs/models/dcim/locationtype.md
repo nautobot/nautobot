@@ -1,6 +1,6 @@
 # Location Types
 
-!!! check "Added in version 1.4.0"
++++ 1.4.0
 
 Before defining individual Locations, you must first define the hierarchy of Location Types that you wish to use for the organization of your network. An example hierarchy might be `Building ← Floor ← Room`, but you might have more or fewer distinct types depending on your specific organizational requirements.
 

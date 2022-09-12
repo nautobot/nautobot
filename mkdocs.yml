@@ -83,6 +83,7 @@ markdown_extensions:
 plugins:
   - "search"
   - "include-markdown"
+  - "nautobot-mkdocs-extensions"
   - mkdocstrings:
       default_handler: "python"
       handlers:
