@@ -58,11 +58,15 @@ class TextFileSecretsProvider(SecretsProvider):
 
     @classmethod
     def get_value_for_secret(cls, secret, obj=None, **kwargs):
-        """Retrieve the appropriate text file's contents."""
+        """
+        Retrieve the appropriate text file's contents.
+
+        The value will be stripped of leading and trailing whitespace and newlines.
+        """
         rendered_parameters = secret.rendered_parameters(obj=obj)
         if "path" not in rendered_parameters:
             raise SecretParametersError(secret, cls, 'The "path" parameter is mandatory!')
         if not os.path.isfile(rendered_parameters["path"]):
             raise SecretValueNotFoundError(secret, cls, f'File "{rendered_parameters["path"]}" not found!')
         with open(rendered_parameters["path"], "rt", encoding="utf8") as file_handle:
-            return file_handle.read()
+            return file_handle.read().strip()
