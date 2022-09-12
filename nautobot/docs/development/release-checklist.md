@@ -131,7 +131,7 @@ Generate release notes with `towncrier build --version 1.4.3` and answer `yes` t
 
 Run `invoke markdownlint` to make sure the generated release notes pass the linter checks.
 
-Check the git diff to verify the changes are correct (`git diff --cached`)
+Check the git diff to verify the changes are correct (`git diff --cached`).
 
 Commit and push the staged changes.
 
