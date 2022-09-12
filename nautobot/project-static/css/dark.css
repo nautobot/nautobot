@@ -11,34 +11,33 @@ html[data-theme="dark"] img {
 }
 /* Makes badge text white in dark mode */
 html[data-theme="dark"] .badge {
-  color: black;
+  filter: invert(1) hue-rotate(180deg);
 }
 /* White text on buttons */
 html[data-theme="dark"] button {
-  color: black;
+  filter: invert(1) hue-rotate(180deg);
 }
 /* White text on buttons */
 html[data-theme="dark"] .btn {
-  color: black;
+  filter: invert(1) hue-rotate(180deg);
 }
 /* White text on labels */
 html[data-theme="dark"] .label {
-  color: black !important;
+  filter: invert(1) hue-rotate(180deg);
 }
 /* Colors for labels like with device role, status, etc */
 html[data-theme="dark"] .color-block {
   filter: invert(1) hue-rotate(180deg);
 }
 /* Dropdown list when selecting a color for status, device role, etc */
-/* html[data-theme="dark"] .select2-results__option {
+html[data-theme="dark"] .select2-results__option {
   filter: invert(1) hue-rotate(180deg);
-  color: #ccc !important;
-} */
+  color: #ccc;
+}
 /* Dropdown list for showing selected color for status, device role, etc */
-/* html[data-theme="dark"] .select2-selection__rendered {
+html[data-theme="dark"] .select2-selection__rendered {
   filter: invert(1) hue-rotate(180deg);
-  color: #ccc !important;
-} */
+}
 /* Labels in API Swagger docs */
 html[data-theme="dark"] .opblock-summary-method {
   color: black !important;
