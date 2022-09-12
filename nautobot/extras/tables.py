@@ -324,47 +324,11 @@ class DynamicGroupMembershipTable(DynamicGroupTable):
             "operator",
             "name",
             "weight",
-            # "filter",  # FIXME(jathan): Revisit rendering this in a future release.
             "members",
             "description",
             "actions",
         )
         exclude = ("content_type",)
-
-    def render_filter(self, value, record):
-        """Turns the filter dict into a prettified list of HTML links."""
-        # Display an empty filter as None
-        if not value:
-            return None
-
-        # Use the filterset for the record to construct links to the objects used in the filter.
-        fs = record.group.filterset_class(record.filter, record.group.get_queryset())
-        fs.is_valid()  # Required or we don't get the inner form's `cleaned_data`
-
-        # Iterate over each key in the filter and extract the value from the inner form's
-        # cleaned_data`, calling `get_absolute_url()` on each to create links.
-        # TODO(jathan): If an instance doesn't have `get_absolute_url()` we're gonna have a bad time.
-        items = []
-        for field_name in record.filter:
-            filters = fs.form.cleaned_data[field_name]
-            links = []
-
-            for item in filters:
-                if isinstance(item, (str, int)):  # single-value char/int filter
-                    multi = False
-                    links.append(repr(item))
-                else:
-                    multi = True
-                    links.append(format_html('<a href="{}">{}</a>', item.get_absolute_url(), item))
-
-            # Only wrap the values in [] if it's a multi-value filter.
-            links_str = ", ".join(links)
-            if multi:
-                links_str = f"[{links_str}]"
-
-            items.append(f"{field_name.title()}: {links_str}")
-
-        return format_html("<br/>".join(items))
 
 
 DESCENDANTS_LINK = """
