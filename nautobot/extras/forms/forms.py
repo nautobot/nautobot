@@ -777,8 +777,10 @@ class JobEditForm(NautobotModelForm):
             "soft_time_limit",
             "time_limit_override",
             "time_limit",
-            "has_sensitive_variables",
             "has_sensitive_variables_override",
+            "has_sensitive_variables",
+            "worker_queues_override",
+            "worker_queues",
             "tags",
         ]
 

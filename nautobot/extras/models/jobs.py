@@ -175,6 +175,7 @@ class Job(PrimaryModel):
         base_field=models.CharField(blank=True, null=True, max_length=100),
         default=list,
         blank=True,
+        help_text="Comma separated list of worker queues that this job can run on. A blank value will use the default queue",
     )
 
     # Flags to indicate whether the above properties are inherited from the source code or overridden by the database
