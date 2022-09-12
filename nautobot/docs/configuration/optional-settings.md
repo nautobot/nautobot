@@ -806,6 +806,16 @@ Default width (in pixels) of a unit within a rack elevation.
 
 ---
 
+## REDIS_LOCK_TIMEOUT
+
+Default: `600`
+
+Environment Variable: `NAUTOBOT_REDIS_LOCK_TIMEOUT`
+
+Maximum duration of a Redis lock created when calling `/api/ipam/prefixes/{id}/available-prefixes/` or `/api/ipam/prefixes/{id}/available-ips/` to avoid inadvertently allocating the same prefix or IP to multiple simultaneous callers. Default is set to 600 seconds (10 minutes) to be longer than any theoretical API call time. This is to prevent a deadlock scenario where the server did not gracefully exit the `with` block when acquiring the Redis lock.
+
+---
+
 ## RELEASE_CHECK_TIMEOUT
 
 Default: `86400` (24 hours)
