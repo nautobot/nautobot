@@ -7,18 +7,20 @@ import nautobot.utilities.fields
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('extras', '0049_customfield_grouping'),
+        ("extras", "0049_customfield_grouping"),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='job',
-            name='worker_queues',
-            field=nautobot.utilities.fields.JSONArrayField(base_field=models.CharField(blank=True, max_length=100, null=True), blank=True, default=list),
+            model_name="job",
+            name="worker_queues",
+            field=nautobot.utilities.fields.JSONArrayField(
+                base_field=models.CharField(blank=True, max_length=100, null=True), blank=True, default=list
+            ),
         ),
         migrations.AddField(
-            model_name='job',
-            name='worker_queues_override',
+            model_name="job",
+            name="worker_queues_override",
             field=models.BooleanField(default=False),
         ),
     ]
