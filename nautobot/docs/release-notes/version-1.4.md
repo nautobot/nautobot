@@ -1,4 +1,4 @@
-<!-- markdownlint-disable MD024 -->
+<!-- markdownlint-disable MD012 MD024 -->
 
 # Nautobot v1.4
 
@@ -161,22 +161,7 @@ A new configuration setting, [`STRICT_FILTERING`](../configuration/optional-sett
 
 The `settings_and_registry` default context processor was changed to purely `settings` - the (large) Nautobot application registry dictionary is no longer provided as part of the render context for all templates by default. Added a new `registry` template tag that can be invoked by specific templates to provide this variable where needed.
 
-## v1.4.3 (2022-MM-DD)
-
-### Added
-
-- [#2327](https://github.com/nautobot/nautobot/issues/2327) - Added help text to the Job scheduling datetime picker to indicate the applicable time zone.
-
-### Changed
-
-- [#2383](https://github.com/nautobot/nautobot/pull/2383) - Updated documentation link for Nautobot ChatOps plugin.
-
-### Fixed
-
-- [#2338](https://github.com/nautobot/nautobot/issues/2338) - Fixed whitespace issue with Text File secrets and they are now stripped of leading/trailing whitespace and newlines.
-- [#2382](https://github.com/nautobot/nautobot/pull/2382) - Removed extraneous cache and temporary files from the `dev` and `final-dev` Docker images to reduce image size.
-- [#2389](https://github.com/nautobot/nautobot/pull/2389) - Removed extraneous `inspect.getsource()` call from Job class.
-
+<!-- towncrier release notes start -->
 ## v1.4.2 (2022-09-05)
 
 ### Added
