@@ -211,10 +211,13 @@ class DynamicGroup(OrganizationalModel):
             # Get the missing model form field so we can use it to add to the filterform_fields.
             modelform_field = modelform_fields[missing_field]
 
-            # Replace the modelform_field with the correct type for the UI. At this time this is
-            # only being done for CharField since in the filterset form this ends up being a
-            # `MultiValueCharField` (dynamically generated from from `MultiValueCharFilter`) which is
-            # not correct for char fields. For boolean fields, we want them to be nullable.
+            # Use filterset_field to generate the correct filterform_field for CharField.
+            # Which is `MultiValueCharField`.
+            if isinstance(modelform_field, forms.CharField):
+                new_modelform_field = filterset_field.field
+                modelform_field = new_modelform_field
+
+            # For boolean fields, we want them to be nullable.
             if isinstance(modelform_field, forms.BooleanField):
                 # Get ready to replace the form field w/ correct widget.
                 new_modelform_field = filterset_field.field

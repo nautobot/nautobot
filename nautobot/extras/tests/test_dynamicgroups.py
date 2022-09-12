@@ -13,6 +13,8 @@ from nautobot.extras.choices import DynamicGroupOperatorChoices
 from nautobot.extras.models import DynamicGroup, DynamicGroupMembership, Status
 from nautobot.extras.filters import DynamicGroupFilterSet, DynamicGroupMembershipFilterSet
 from nautobot.ipam.models import Prefix
+from nautobot.utilities.forms.fields import MultiValueCharField
+from nautobot.utilities.forms.widgets import MultiValueCharInput
 from nautobot.utilities.testing import TestCase
 
 
@@ -329,6 +331,9 @@ class DynamicGroupModelTest(DynamicGroupTestBase):
         self.assertNotEqual(fields, {})
         self.assertNotIn("q", fields)
         self.assertIn("name", fields)
+        # See if a CharField is properly converted to a MultiValueCharField In DynamicGroupEditForm.
+        self.assertIsInstance(fields["name"], MultiValueCharField)
+        self.assertIsInstance(fields["name"].widget, MultiValueCharInput)
 
     def test_map_filter_fields_skip_missing(self):
         """
