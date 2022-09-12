@@ -97,6 +97,7 @@ class LocationType(TreeNode, OrganizationalModel):
             parent = parent.parent
         return display_str
 
+
 @extras_features(
     "custom_fields",
     "custom_links",
