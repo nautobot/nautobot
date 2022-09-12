@@ -85,6 +85,17 @@ class LocationType(TreeNode, OrganizationalModel):
         ]:
             raise ValidationError({"name": "This name is reserved for future use."})
 
+    @property
+    def display(self):
+        # prefix with parent name allows location type name identity if there are the same name exists under different parents.
+        display_str = self.name
+        parent = self.parent
+        for i in range(10):  # "10 levels iteration"
+            if parent is None:
+                break
+            display_str = f"{parent.name} → {display_str}"
+            parent = parent.parent
+        return display_str
 
 @extras_features(
     "custom_fields",
