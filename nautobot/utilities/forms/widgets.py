@@ -235,7 +235,8 @@ class TimePicker(forms.TextInput):
 
 class MultiValueCharInput(StaticSelect2Multiple):
     """
-    Manual text input tag with multi-value select boxes.
+    Manual text input with tagging enabled.
+    Press enter to create a new entry.
     """
 
     def __init__(self, *args, **kwargs):
