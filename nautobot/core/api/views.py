@@ -688,3 +688,28 @@ class GraphQLDRFAPIView(NautobotAPIVersionMixin, APIView):
             return document.execute(**options)
         except Exception as e:
             return ExecutionResult(errors=[e], invalid=True)
+
+
+class GetMenu(NautobotAPIVersionMixin, APIView):
+    permission_classes = [AllowAny]
+
+    @extend_schema(
+        responses={
+            200: {
+                "type": "object",
+                "properties": {
+                    "django-version": {"type": "string"},
+                    "installed-apps": {"type": "object"},
+                    "nautobot-version": {"type": "string"},
+                    "plugins": {"type": "object"},
+                    "python-version": {"type": "string"},
+                    "rq-workers-running": {"type": "integer"},
+                    "celery-workers-running": {"type": "integer"},
+                },
+            }
+        }
+    )
+    def get(self, request):
+        from nautobot.extras.registry import registry
+
+        return Response([{"id": 1, "name": item[0], "properties": item[1]} for item in registry["nav_menu"]["tabs"].items()])

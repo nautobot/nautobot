@@ -11,7 +11,7 @@ from nautobot.core.api.views import (
     StatusView,
     GraphQLDRFAPIView,
     NautobotSpectacularSwaggerView,
-    NautobotSpectacularRedocView,
+    NautobotSpectacularRedocView, GetMenu,
 )
 from nautobot.extras.plugins.urls import plugin_api_patterns
 
@@ -36,4 +36,6 @@ urlpatterns = [
     path("graphql/", GraphQLDRFAPIView.as_view(), name="graphql-api"),
     # Plugins
     path("plugins/", include((plugin_api_patterns, "plugins-api"))),
+    # Core Apps
+    path("get-menu/", GetMenu.as_view(), name="get-menu"),
 ]

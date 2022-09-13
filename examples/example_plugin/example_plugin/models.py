@@ -1,6 +1,7 @@
 from django.db import models
 from django.urls import reverse
 
+from example_plugin.choices import FeatureChoices
 from nautobot.core.models.generics import OrganizationalModel
 from nautobot.extras.utils import extras_features
 
@@ -52,3 +53,51 @@ class AnotherExampleModel(OrganizationalModel):
 
     class Meta:
         ordering = ["name"]
+
+
+@extras_features(
+    "custom_fields",
+    "custom_validators",
+    "dynamic_groups",
+    "export_templates",
+    "graphql",
+    "relationships",
+    "webhooks",
+)
+class EasyModel(OrganizationalModel):
+    name = models.CharField(max_length=20)
+    description = models.TextField()
+
+    class Meta:
+        ordering = ["name"]
+
+
+@extras_features(
+    "custom_fields",
+    "custom_validators",
+    "dynamic_groups",
+    "export_templates",
+    "graphql",
+    "relationships",
+    "webhooks",
+)
+class CustomModel(OrganizationalModel):
+    name = models.CharField(max_length=20)
+    description = models.TextField()
+
+    class Meta:
+        ordering = ["name"]
+
+
+@extras_features(
+    "custom_fields",
+    "custom_validators",
+    "dynamic_groups",
+    "export_templates",
+    "graphql",
+    "relationships",
+    "webhooks",
+)
+class DynamicModel(OrganizationalModel):
+    has_feature = models.CharField(max_length=20, choices=FeatureChoices)
+    description = models.TextField()
