@@ -34,6 +34,11 @@ class ExampleLoggingJob(Job):
     class Meta:
         name = "Example logging job."
         description = "I log stuff to demonstrate how UI logging works."
+        worker_queues = [
+            "",  # blank string is the default celery queue
+            "priority",  # any queue names can be defined
+            "bulk",
+        ]
 
     def run(self, data, commit):
         interval = data["interval"]
