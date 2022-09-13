@@ -186,6 +186,8 @@ rich = "~12.5.1"
 selenium = "~4.3.0"
 # Abstraction layer for working with Selenium
 splinter = "~0.18.0"
+# Change log management and generation
+towncrier = "~22.8.0"
 
 [tool.poetry.scripts]
 nautobot-server = "nautobot.core.cli:main"
@@ -305,3 +307,18 @@ notes = """,
 [tool.pylint.typecheck]
 # @patch changes the signature of a function it's applied to; don't raise "no-value-for-parameter" here
 signature-mutators=["unittest.mock.patch"]
+
+[tool.towncrier]
+package = "nautobot"
+directory = "changes"
+filename = "nautobot/docs/release-notes/version-1.4.md"
+template = "towncrier_template.j2"
+start_string = "<!-- towncrier release notes start -->"
+issue_format = "[#{issue}](https://github.com/nautobot/nautobot/issues/{issue})"
+
+[tool.towncrier.fragment.added]
+[tool.towncrier.fragment.changed]
+[tool.towncrier.fragment.deprecated]
+[tool.towncrier.fragment.fixed]
+[tool.towncrier.fragment.removed]
+[tool.towncrier.fragment.security]
