@@ -1765,6 +1765,8 @@ class JobTestVersion13(
         "time_limit": 650,
         "has_sensitive_variables": False,
         "has_sensitive_variables_override": True,
+        "worker_queues": ["celery", "priority"],
+        "worker_queues_override": True,
     }
     bulk_update_data = {
         "enabled": True,

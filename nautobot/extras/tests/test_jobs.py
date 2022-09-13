@@ -382,22 +382,50 @@ class JobTest(TransactionTestCase):
         latest_job_result = job_model.latest_result
         self.assertEqual(job_result_2.completed, latest_job_result.completed)
 
-    @mock.patch("nautobot.extras.forms.forms.get_celery_queues")
+    @mock.patch("nautobot.extras.utils.get_celery_queues")
     def test_job_class_worker_queues(self, mock_get_celery_queues):
         """
         Test job form with custom worker queues defined on the job class
         """
         module = "test_worker_queues"
         name = "TestWorkerQueues"
-        mock_get_celery_queues.return_value = {"celery": 1, "irrelevant": 5}
+        mock_get_celery_queues.return_value = {"celery": 4, "irrelevant": 5}
         job_class, job_model = get_job_class_and_model(module, name)
         form = job_class().as_form()
         self.assertInHTML(
             """<tr><th><label for="id__worker_queue">Worker queue:</label></th>
             <td><select name="_worker_queue" class="form-control" placeholder="Worker queue" id="id__worker_queue">
-            <option value="" selected>This is the default celery queue (1 worker)</option>
-            <option value="nonexistent">This queue doesn&#x27;t exist and should have zero workers (0 workers)</option>
-            </select><br><span class="helptext">The worker queue to send this job to.</span></td></tr>""",
+            <option value="" selected>default queue (4 workers)</option>
+            <option value="nonexistent">nonexistent (0 workers)</option></select><br>
+            <span class="helptext">The worker queue to send this job to</span></td></tr>
+            <tr><th><label for="id__commit">Commit changes:</label></th>
+            <td><input type="checkbox" name="_commit" placeholder="Commit changes" id="id__commit" checked><br>
+            <span class="helptext">Commit changes to the database (uncheck for a dry-run)</span></td></tr>""",
+            form.as_table(),
+        )
+
+    @mock.patch("nautobot.extras.utils.get_celery_queues")
+    def test_job_class_worker_queues_override(self, mock_get_celery_queues):
+        """
+        Test job form with custom worker queues defined on the job class and overridden on the model
+        """
+        module = "test_worker_queues"
+        name = "TestWorkerQueues"
+        mock_get_celery_queues.return_value = {"celery": 1, "irrelevant": 5}
+        job_class, job_model = get_job_class_and_model(module, name)
+        job_model.worker_queues = ["celery", "priority"]
+        job_model.worker_queues_override = True
+        job_model.save()
+        form = job_class().as_form()
+        self.assertInHTML(
+            """<tr><th><label for="id__worker_queue">Worker queue:</label></th>
+            <td><select name="_worker_queue" class="form-control" placeholder="Worker queue" id="id__worker_queue">
+            <option value="celery">celery (1 worker)</option>
+            <option value="priority">priority (0 workers)</option>
+            </select><br><span class="helptext">The worker queue to send this job to</span></td></tr>
+            <tr><th><label for="id__commit">Commit changes:</label></th>
+            <td><input type="checkbox" name="_commit" placeholder="Commit changes" id="id__commit" checked><br>
+            <span class="helptext">Commit changes to the database (uncheck for a dry-run)</span></td></tr>""",
             form.as_table(),
         )
 

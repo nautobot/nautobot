@@ -341,8 +341,6 @@ class BaseJob:
 
         # Update worker queue choices
         form.fields["_worker_queue"].choices = worker_queues_as_choices(worker_queues)
-        if not worker_queues or worker_queues == [None]:
-            form.fields["_worker_queue"].widget = forms.HiddenInput()
 
         # https://github.com/PyCQA/pylint/issues/3484
         if self.field_order:  # pylint: disable=using-constant-test

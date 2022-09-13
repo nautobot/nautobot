@@ -11,7 +11,7 @@ class TestWorkerQueues(Job):
     class Meta:
         has_sensitive_variables = False
         worker_queues = [
-            None,  # None defaults to the default celery queue
+            "",  # defaults to the default celery queue
             "nonexistent",  # This queue doesn't exist and should have zero workers
         ]
 
