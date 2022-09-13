@@ -1076,10 +1076,10 @@ class JobView(ObjectPermissionRequiredMixin, View):
             job_model.job_class().as_form(request.POST, request.FILES) if job_model.job_class is not None else None
         )
         schedule_form = forms.JobScheduleForm(request.POST)
-        celery_queue = request.POST.get("_worker_queue")
+        worker_queue = request.POST.get("_worker_queue")
 
         # Allow execution only if a worker process is running and the job is runnable.
-        if not get_worker_count(queue=celery_queue):
+        if not get_worker_count(queue=worker_queue):
             messages.error(request, "Unable to run or schedule job: Celery worker process not running.")
         elif not job_model.installed or job_model.job_class is None:
             messages.error(request, "Unable to run or schedule job: Job is not presently installed.")
@@ -1124,8 +1124,9 @@ class JobView(ObjectPermissionRequiredMixin, View):
                     "user": request.user.pk,
                     "commit": commit,
                     "name": job_model.class_path,
-                    "celery_kwargs": {"queue": celery_queue},
                 }
+                if worker_queue:
+                    job_kwargs["celery_kwargs"] = {"queue": worker_queue}
 
                 scheduled_job = ScheduledJob(
                     name=schedule_name,
@@ -1137,7 +1138,7 @@ class JobView(ObjectPermissionRequiredMixin, View):
                     kwargs=job_kwargs,
                     interval=schedule_type,
                     one_off=schedule_type == JobExecutionType.TYPE_FUTURE,
-                    queue=celery_queue,
+                    queue=worker_queue,
                     user=request.user,
                     approval_required=job_model.approval_required,
                     crontab=crontab,
@@ -1159,7 +1160,7 @@ class JobView(ObjectPermissionRequiredMixin, View):
                     job_model.class_path,
                     job_content_type,
                     request.user,
-                    celery_kwargs={"queue": celery_queue},
+                    celery_kwargs={"queue": worker_queue},
                     data=job_model.job_class.serialize_data(job_form.cleaned_data),
                     request=copy_safe_request(request),
                     commit=commit,
@@ -1271,7 +1272,7 @@ class JobApprovalRequestView(generic.ObjectView):
                 job_content_type = get_job_content_type()
                 initial = scheduled_job.kwargs.get("data", {})
                 initial["_commit"] = False
-                celery_kwargs = scheduled_job.kwargs.get("celery_kwargs", {"queue": None})
+                celery_kwargs = scheduled_job.kwargs.get("celery_kwargs", {})
                 job_result = JobResult.enqueue_job(
                     run_job,
                     job_model.job_class.class_path,

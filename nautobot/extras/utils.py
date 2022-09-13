@@ -202,7 +202,7 @@ def get_celery_queues():
     return celery_queues
 
 
-def get_worker_count(request=None, queue=None):
+def get_worker_count(request=None, queue=""):
     """
     Return a count of the active Celery workers in a specified queue. Defaults to the default queue "celery"
     """
@@ -223,7 +223,7 @@ def worker_queues_as_choices(worker_queues):
     from nautobot.core.celery import app  # prevent circular import
 
     if not worker_queues:
-        worker_queues = [None]
+        worker_queues = [""]
 
     choices = []
     celery_queues = get_celery_queues()

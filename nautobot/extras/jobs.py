@@ -1272,7 +1272,7 @@ def scheduled_job_handler(*args, **kwargs):
     user = User.objects.get(pk=user_pk)
     name = kwargs.pop("name")
     scheduled_job_pk = kwargs.pop("scheduled_job_pk")
-    celery_kwargs = kwargs.pop("celery_kwargs")
+    celery_kwargs = kwargs.pop("celery_kwargs", {})
     schedule = ScheduledJob.objects.get(pk=scheduled_job_pk)
 
     job_content_type = get_job_content_type()

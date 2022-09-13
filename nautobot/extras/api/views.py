@@ -443,7 +443,7 @@ class ImageAttachmentViewSet(ModelViewSet):
 #
 
 
-def _create_schedule(serializer, data, commit, job, job_model, request, celery_queue):
+def _create_schedule(serializer, data, commit, job, job_model, request, worker_queue=""):
     """
     This is an internal function to create a scheduled job from API data.
     It has to handle both once-offs (i.e. of type TYPE_FUTURE) and interval
@@ -455,8 +455,9 @@ def _create_schedule(serializer, data, commit, job, job_model, request, celery_q
         "user": request.user.pk,
         "commit": commit,
         "name": job.class_path,
-        "celery_kwargs": {"queue": celery_queue},
     }
+    if worker_queue:
+        job_kwargs["celery_kwargs"] = {"queue": worker_queue}
     type_ = serializer["interval"]
     if type_ == JobExecutionType.TYPE_IMMEDIATELY:
         time = timezone.now()
@@ -493,7 +494,7 @@ def _create_schedule(serializer, data, commit, job, job_model, request, celery_q
         user=request.user,
         approval_required=job_model.approval_required,
         crontab=crontab,
-        queue=celery_queue,
+        queue=worker_queue,
     )
     scheduled_job.save()
     return scheduled_job
