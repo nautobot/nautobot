@@ -301,6 +301,19 @@ function jsify_form(context) {
     }
     initializeDynamicChoiceSelection()
 
+    this_context.find('.nautobot-select2-multi-value-char').select2({
+        allowClear: true,
+        tags: true,
+        theme: "bootstrap",
+        placeholder: "---------",
+        multiple: true,
+        width: "off",
+        "language": {
+            "noResults": function(){
+                return "Type something to add it as an option";
+            }
+        },
+    });
     // Flatpickr selectors
     function initializeDateTimePicker(){
         this_context.find('.date-picker').flatpickr({
