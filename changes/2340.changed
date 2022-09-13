@@ -1,1 +1,1 @@
-Added inversion for .badge .label .button .btn and removed the font color restriction on select2-results__option and select-selection__rendered.
+Improved rendering of badges, labels, buttons, and color selection menus in dark mode.
