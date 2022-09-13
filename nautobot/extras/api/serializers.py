@@ -758,6 +758,8 @@ class JobSerializer(NautobotModelSerializer, TaggedObjectSerializer):
             "soft_time_limit_override",
             "time_limit",
             "time_limit_override",
+            "worker_queues",
+            "worker_queues_override",
             "tags",
         ]
 
