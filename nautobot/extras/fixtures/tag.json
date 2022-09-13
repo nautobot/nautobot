@@ -1,7 +1,6 @@
 [
 {
   "model": "extras.tag",
-  "pk": "0a2ab102-5c27-4426-ac02-8460234bbe16",
   "fields": {
     "name": "Tag ALL The Things!",
     "slug": "tag-all-the-things",
@@ -164,7 +163,6 @@
 },
 {
   "model": "extras.tag",
-  "pk": "0e54533e-455f-470c-9826-cd9de62d5b38",
   "fields": {
     "name": "Neutral Grey",
     "slug": "neutral-grey",
@@ -327,7 +325,6 @@
 },
 {
   "model": "extras.tag",
-  "pk": "270600fd-351f-4201-b266-61d9cf556f72",
   "fields": {
     "name": "Devices and Sites Only",
     "slug": "devices-and-sites-only",
@@ -350,7 +347,6 @@
 },
 {
   "model": "extras.tag",
-  "pk": "f71111f6-5d32-4737-9df1-e962e27ffcca",
   "fields": {
     "name": "Happy 😊",
     "slug": "unicode-tag",

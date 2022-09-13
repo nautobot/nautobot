@@ -1573,7 +1573,7 @@ class JobAPIRunTestMixin:
         )
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
-    def test_run_job_with_worker_queue(self):
+    def test_run_job_with_invalid_worker_queue(self):
         self.add_permissions("extras.run_job")
         d = DeviceRole.objects.create(name="role", slug="role")
         data = {
@@ -1589,6 +1589,33 @@ class JobAPIRunTestMixin:
             response.data,
             {"worker_queue": ['"invalid" is not a valid choice.']},
         )
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
+    def test_run_job_with_valid_worker_queue(self):
+        self.add_permissions("extras.run_job")
+        d = DeviceRole.objects.create(name="role", slug="role")
+        data = {
+            "data": {"var1": "x", "var2": 1, "var3": False, "var4": d.pk},
+            "commit": True,
+            "worker_queue": "",
+        }
+
+        url = self.get_run_url()
+        response = self.client.post(url, data, format="json", **self.header)
+        self.assertHttpStatus(response, self.run_success_response_status)
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
+    def test_run_job_with_no_worker_queue(self):
+        self.add_permissions("extras.run_job")
+        d = DeviceRole.objects.create(name="role", slug="role")
+        data = {
+            "data": {"var1": "x", "var2": 1, "var3": False, "var4": d.pk},
+            "commit": True,
+        }
+
+        url = self.get_run_url()
+        response = self.client.post(url, data, format="json", **self.header)
+        self.assertHttpStatus(response, self.run_success_response_status)
 
 
 class JobHookTest(APIViewTestCases.APIViewTestCase):
