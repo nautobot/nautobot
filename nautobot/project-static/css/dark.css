@@ -22,9 +22,8 @@ html[data-theme="dark"] .color-block {
 /* Dropdown list when selecting a color for status, device role, etc */
 /* Dropdown list for showing selected color for status, device role, etc */
 /* Dropdown list when selecting a color for status, device role, etc */
-html[data-theme="dark"] .select2-results__option, html[data-theme="dark"] .select2-selection__rendered  {
+html[data-theme="dark"] #select2-id_color-results, html[data-theme="dark"] #select2-id_color-container {
   filter: invert(1) hue-rotate(180deg);
-  color: #ccc;
 }
 /* Labels in API Swagger docs */
 html[data-theme="dark"] .opblock-summary-method {
