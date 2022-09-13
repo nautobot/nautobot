@@ -417,7 +417,7 @@ class RelationshipColumn(tables.Column):
     def render(self, record, value):  # pylint: disable=arguments-differ
         if value is None:
             # This returns None if value is None
-            return self.default
+            return "—"
 
         # Filter the relationship associations by the relationship instance.
         # Since associations accessor returns all the relationship associations regardless of the relationship.
@@ -432,7 +432,7 @@ class RelationshipColumn(tables.Column):
         # Handle Symmetric Relationships
         if len(value) < 1:
             # If no relationship association, render None
-            return self.default
+            return "—"
         else:
             # Handle Relationships on the many side.
             if self.relationship.has_many(self.peer_side):
