@@ -185,11 +185,14 @@ Various defaults for caching, the most important of which being the cache timeou
 
 ## CACHEOPS_ENABLED
 
-Default: `True`
+Default: `False`
 
 Environment Variable: `NAUTOBOT_CACHEOPS_ENABLED`
 
 A boolean that turns on/off caching.
+
+!!! check "Changed in 1.5.0"
+    Cachopes is disabled by default and will be removed entirely in a future release.
 
 If set to `False`, all caching is bypassed and Nautobot operates as if there is no cache.
 
