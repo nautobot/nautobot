@@ -16,7 +16,8 @@ html[data-theme="dark"] .badge,
 html[data-theme="dark"] button,
 html[data-theme="dark"] .btn,
 html[data-theme="dark"] .label,
-html[data-theme="dark"] .color-block {
+html[data-theme="dark"] .color-block,
+html[data-theme="dark"] .select2-selection__choice{
   filter: invert(1) hue-rotate(180deg);
 }
 /* Dropdown list when selecting a color for status, device role, etc */
