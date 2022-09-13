@@ -1,4 +1,3 @@
-import re
 from datetime import datetime, timedelta
 import urllib.parse
 import uuid
@@ -1823,9 +1822,9 @@ class JobTestCase(
             )
 
             # Assert run button is disabled
-            search = re.search(r'<button[^>]+id="id__run"[^>]+disabled="disabled"', content)
-            self.assertTrue(search)
-
+            self.assertInHTML(
+                "<button type='submit' name='_run' id='id__run' class='btn btn-primary' disabled='disabled'>", content
+            )
             # Assert error message shows after post
             response = self.client.post(run_url, data)
             self.assertHttpStatus(response, 200, msg=self.run_urls[1])
