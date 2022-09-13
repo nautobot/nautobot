@@ -1823,7 +1823,12 @@ class JobTestCase(
 
             # Assert run button is disabled
             self.assertInHTML(
-                "<button type='submit' name='_run' id='id__run' class='btn btn-primary' disabled='disabled'>", content
+                """
+                <button type="submit" name="_run" id="id__run" class="btn btn-primary" disabled="disabled">
+                    <i class="mdi mdi-play"></i> Run Job Now
+                </button>
+                """,
+                content,
             )
             # Assert error message shows after post
             response = self.client.post(run_url, data)
