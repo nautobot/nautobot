@@ -5,15 +5,7 @@ html[data-theme="dark"] {
   background: rgb(12, 12, 12);
   filter: invert(1) hue-rotate(180deg);
 }
-/* Ignores inverting images for dark theme */
-/* Makes badge text white in dark mode */
-/* White text on buttons */
-/* White text on buttons */
-/* White text on labels */
-/* Colors for labels like with device role, status, etc */
-/* Selected choice in a select2 widget (rendered as a tag) */
-/* Dropdown list when selecting a color for status, device role, etc */
-/* Dropdown list for showing selected color for status, device role, etc */
+/* Double-invert the following elements, restoring them to the original non-inverted colors */
 html[data-theme="dark"] img,
 html[data-theme="dark"] .badge,
 html[data-theme="dark"] button,
