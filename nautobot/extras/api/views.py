@@ -67,6 +67,7 @@ from nautobot.utilities.utils import (
     count_related,
     SerializerForAPIVersions,
     versioned_serializer_selector,
+    get_data_for_serializer_parameter,
 )
 from . import nested_serializers, serializers
 
@@ -110,6 +111,30 @@ class NotesViewSetMixin:
             serializer = serializers.NoteSerializer(notes, many=True, context={"request": request})
 
         return self.get_paginated_response(serializer.data)
+
+
+class FormFieldsViewSetMixin:
+    @extend_schema(
+        responses={
+            200: {
+                "type": "array",
+                "items": {
+                    "type": "object",
+                    "properties": {
+                        "type": {"type": "string"},
+                        "label": {"type": "string"},
+                        "required": {"type": "string"},
+                        "help_text": {"type": "string"},
+                        "choices": {"type": "array", "items": {"type": "array"}},
+                    },
+                },
+            }
+        }
+    )
+    @action(detail=False, url_path="form-fields", methods=["get"])
+    def form_fields(self, request):
+        data = get_data_for_serializer_parameter(self.queryset.model)
+        return Response(data)
 
 
 #
@@ -294,7 +319,7 @@ class CustomFieldModelViewSet(ModelViewSet):
         return context
 
 
-class NautobotModelViewSet(CustomFieldModelViewSet, NotesViewSetMixin):
+class NautobotModelViewSet(CustomFieldModelViewSet, NotesViewSetMixin, FormFieldsViewSetMixin):
     """Base class to use for API ViewSets based on OrganizationalModel or PrimaryModel.
 
     Can also be used for models derived from BaseModel, so long as they support Notes.
