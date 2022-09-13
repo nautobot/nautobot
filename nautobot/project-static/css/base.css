@@ -388,6 +388,21 @@ ul.nav-tabs li a {
     border: none;
 }
 
+/* Filters */
+.select2-container--bootstrap.display-inline {
+    display: inline-block;
+}
+.select2-selection--multiple.p-5 {
+    padding: 5px;
+}
+.select2-container--bootstrap .select2-selection--multiple .select2-selection__clear.remove-filter-param.m-0 {
+    margin: 0px
+}
+.select2-container--bootstrap .select2-selection--multiple .select2-selection__choice.chip {
+    margin-left: 0px;
+    margin-right: 3px;
+}
+
 /* Fix progress bar margin inside table cells */
 td .progress {
     margin-bottom: 0;
