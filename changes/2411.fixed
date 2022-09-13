@@ -1,0 +1,1 @@
+Fixed SwaggerUI use of Authorization Token, API calls in SwaggerUI now use appropriate token pattern and curl command match the correct pattern.
