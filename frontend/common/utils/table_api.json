@@ -1,0 +1,100 @@
+{
+    "title": "Site",
+    "header": [
+        "Name",
+        "Status",
+        "Facility",
+        "Region",
+        "Tenant",
+        "ASN",
+        "Description"
+    ],
+    "data": [
+        {
+            "name": "Site 1",
+            "status": "Active",
+            "facility": "-",
+            "region": "-",
+            "tenant": "-",
+            "asn": "-",
+            "description": "-"
+        },
+        {
+            "name": "Site 2",
+            "status": "Active",
+            "facility": "-",
+            "region": "-",
+            "tenant": "-",
+            "asn": "-",
+            "description": "-"
+        },
+        {
+            "name": "Site 3",
+            "status": "Active",
+            "facility": "-",
+            "region": "-",
+            "tenant": "-",
+            "asn": "-",
+            "description": "-"
+        },
+        {
+            "name": "Site 4",
+            "status": "Active",
+            "facility": "-",
+            "region": "-",
+            "tenant": "-",
+            "asn": "-",
+            "description": "-"
+        },
+        {
+            "name": "Site 5",
+            "status": "Active",
+            "facility": "-",
+            "region": "-",
+            "tenant": "-",
+            "asn": "-",
+            "description": "-"
+        }
+    ],
+    "filter_form": [
+        {
+            "type": "text",
+            "placeholder": "Status",
+            "label": "Status"
+        },
+        {
+            "type": "text",
+            "placeholder": "Region",
+            "label": "Region"
+        },
+        {
+            "type": "text",
+            "placeholder": "Tenant group",
+            "label": "Tenant group"
+        },
+        {
+            "type": "select",
+            "placeholder": "Tenant",
+            "label": "Tenant",
+            "options": [
+                {
+                    "value": "tenant_one",
+                    "label": "Tenant One"
+                },
+                {
+                    "value": "tenant_two",
+                    "label": "Tenant Two"
+                },
+                {
+                    "value": "tenant_three",
+                    "label": "Tenant Three"
+                }
+            ]
+        },
+        {
+            "type": "text",
+            "placeholder": "Example Plugin Automatically Added Custom Field",
+            "label": "Example Plugin Automatically Added Custom Field"
+        }
+    ]
+}

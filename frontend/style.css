@@ -1,0 +1,17 @@
+a {
+    text-decoration: none !important;
+}
+.page-container {
+    margin-top: 75px;
+    max-width: 100%;
+    margin-bottom: 50px;
+}
+.action-btn {
+    margin-right: 5px;
+}
+.action-items-container {
+    text-align: right;
+    display: flex;
+    justify-content: flex-end;
+    flex-wrap: wrap;
+}
