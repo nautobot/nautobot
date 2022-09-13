@@ -1357,7 +1357,7 @@ class ScheduledJobView(generic.ObjectView):
     def get_extra_context(self, request, instance):
         job_class = get_job(instance.job_class)
         labels = {}
-        if job_class:
+        if job_class is not None:
             for name, var in job_class._get_vars().items():
                 field = var.as_field()
                 if field.label:
