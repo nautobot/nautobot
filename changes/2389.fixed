@@ -1,0 +1,1 @@
+Removed extraneous `inspect.getsource()` call from Job class.
