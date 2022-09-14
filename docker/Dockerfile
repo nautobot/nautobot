@@ -1,6 +1,6 @@
 # syntax=docker/dockerfile:1
 ARG PYTHON_VER
-ARG DEP_BASE
+ARG DEPENDENCIES_BASE_BRANCH
 
 ################################ Overview
 # This builds the following hierarchy of images:
@@ -175,7 +175,7 @@ RUN --mount=type=cache,target="/root/.cache/pip" \
 # COPY --from= requires the from target to be stage name or untagged image name
 # We can "alias" that here to make things easier
 
-FROM ghcr.io/nautobot/nautobot-dependencies:${DEP_BASE}-py${PYTHON_VER} as dependencies-as-stage 
+FROM ghcr.io/nautobot/nautobot-dependencies:${DEPENDENCIES_BASE_BRANCH}-py${PYTHON_VER} as dependencies-as-stage 
 
 ################################ Stage: dependencies-dev-python (intermediate build target)
 # We need dev dependencies for building the docs but don't want them in the final build image

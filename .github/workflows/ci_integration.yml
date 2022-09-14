@@ -279,30 +279,8 @@ jobs:
       - "pylint"
       - "tests-postgres"
       - "tests-mysql"
-  dep-container-build:
-    runs-on: "ubuntu-20.04"
-    if: "github.event_name == 'push' && (github.ref == 'refs/heads/develop' || github.ref == 'refs/heads/next')"
-    needs:
-      - "integration-test"
-    steps:
-      - name: "Check out repository code"
-        uses: "actions/checkout@v2"
-        with:
-          fetch-depth: 2
-      - name: "dependency files changed"
-        id: fileschanged
-        continue-on-error: true
-        run: |
-          git diff HEAD~1 --name-only | grep "^README\.md\|^docker/docker-entrypoint\.sh\|^examples/\|^poetry\.lock\|^pyproject\.toml"
-      - name: "no files changed"
-        if: ${{ steps.fileschanged.outcome == 'failure' }}
-        run: |
-          echo "::notice::No dependency files changed"
-      - name: "files changed" #TODO Update with nested workflow
-        if: ${{ steps.fileschanged.outcome == 'success' }}
-        run: |
-          echo "::notice::Files changed!"
   container-build:
+    name: "Build Container Images (GHCR Only)"
     runs-on: "ubuntu-20.04"
     if: "github.event_name == 'push' && (github.ref == 'refs/heads/develop' || github.ref == 'refs/heads/next')"
     needs:
@@ -316,6 +294,8 @@ jobs:
     steps:
       - name: "Check out repository code"
         uses: "actions/checkout@v2"
+      - name: "Check & Build Dependencies Container Image"
+        uses: "./.github/workflows/build_dependency_image_conditional.yml"
       - run: echo "##[set-output name=branch;]$(echo ${GITHUB_REF#refs/heads/})"
         id: "gitbranch"
       - name: "Set up QEMU"
@@ -358,7 +338,7 @@ jobs:
           context: "."
           build-args: |
             PYTHON_VER=${{ matrix.python-version }}
-            DEP_BASE_BRANCH=${{ steps.gitbranch.outputs.branch }}
+            DEPENDENCIES_BASE_BRANCH=${{ steps.gitbranch.outputs.branch }}
             POETRY_PARALLEL=true
       - name: "Docker Dev Metadata"
         id: "dockerdevmeta"
@@ -390,5 +370,5 @@ jobs:
           context: "."
           build-args: |
             PYTHON_VER=${{ matrix.python-version }}
-            DEP_BASE_BRANCH=${{ steps.gitbranch.outputs.branch }}
+            DEPENDENCIES_BASE_BRANCH=${{ steps.gitbranch.outputs.branch }}
             POETRY_PARALLEL=true
