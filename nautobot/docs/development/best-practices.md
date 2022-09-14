@@ -81,7 +81,7 @@ class ExampleModel(PrimaryModel):
 
 ## Getting URL Routes
 
-When developing new models a need often arises to retrieve a reversible route for a model to access it in either the web UI or the REST API. When this time comes, you **must** always use `nautobot.utilities.utils.get_route_for_model`. You **must not** write your own logic to construct route names.
+When developing new models a need often arises to retrieve a reversible route for a model to access it in either the web UI or the REST API. When this time comes, you **must** use `nautobot.utilities.utils.get_route_for_model`. You **must not** write your own logic to construct route names.
 
 ```python
 from nautobot.utilities.utils import get_route_for_model
@@ -89,7 +89,10 @@ from nautobot.utilities.utils import get_route_for_model
 
 This utility function supports both UI and API views for both Nautobot core apps and Nautobot plugins.
 
-## UI Routes
+!!! check "Added in 1.4.3"
+    Support for generating API routes was added to `get_route_for_model()` by passing the argument `api=True`.
+
+### UI Routes
 
 Instead of:
 
@@ -118,7 +121,7 @@ if model._meta.app_label in settings.PLUGINS:
 Use:
 
 ```python
-route = get_route_for_model(model, "list", api=True)
+api_route = get_route_for_model(model, "list", api=True)
 ```
 
 ### Examples
@@ -143,6 +146,21 @@ Plugin models:
 
 !!! tip
     The first argument may also optionally be an instance of a model, or a string using the dotted notation of `{app_label}.{model}` (e.g. `dcim.device`).
+
+Using an instance:
+
+```python
+>>> instance = Device.objects.first()
+>>> get_route_for_model(instance, "list")
+"dcim:device_list"
+```
+
+Using dotted notation:
+
+```python
+>>> get_route_for_model("dcim.device", "list")
+"dcim:device_list"
+```
 
 ## Filtering Models with FilterSets
 
