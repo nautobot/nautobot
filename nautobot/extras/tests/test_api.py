@@ -62,7 +62,7 @@ from nautobot.users.models import ObjectPermission
 from nautobot.utilities.choices import ColorChoices
 from nautobot.utilities.testing import APITestCase, APIViewTestCases
 from nautobot.utilities.testing.utils import disable_warnings
-from nautobot.utilities.utils import slugify_dashes_to_underscores
+from nautobot.utilities.utils import get_route_for_model, slugify_dashes_to_underscores
 
 
 User = get_user_model()
@@ -1733,10 +1733,8 @@ class JobTestVersion13(
     def test_get_job_variables(self):
         """Test the job/<pk>/variables API endpoint."""
         self.add_permissions("extras.view_job")
-        response = self.client.get(
-            reverse(f"{self._get_view_namespace()}:job-variables", kwargs={"pk": self.job_model.pk}),
-            **self.header,
-        )
+        route = get_route_for_model(self.model, "variables", api=True)
+        response = self.client.get(reverse(route, kwargs={"pk": self.job_model.pk}), **self.header)
         self.assertEqual(4, len(response.data))  # 4 variables, in order
         self.assertEqual(response.data[0], {"name": "var1", "type": "StringVar", "required": True})
         self.assertEqual(response.data[1], {"name": "var2", "type": "IntegerVar", "required": True})
