@@ -782,7 +782,7 @@ wmi = ["wmi (>=1.5.1,<2.0.0)"]
 
 [[package]]
 name = "drf-spectacular"
-version = "0.23.1"
+version = "0.24.0"
 description = "Sane and flexible OpenAPI 3 schema generation for Django REST framework"
 category = "main"
 optional = false
@@ -2558,7 +2558,7 @@ sso = ["social-auth-core"]
 [metadata]
 lock-version = "1.1"
 python-versions = "^3.7"
-content-hash = "c99bf5df1f47ab46546cd6ed712aeccf629d3683ebb521b1f09aef57e6412a20"
+content-hash = "3e8bcf0245ac3c0ac16f8cb71dc9c16e539c2c85aec18a0d599ca525083d8a60"
 
 [metadata.files]
 amqp = [
@@ -2947,8 +2947,8 @@ dnspython = [
     {file = "dnspython-2.2.1.tar.gz", hash = "sha256:0f7569a4a6ff151958b64304071d370daa3243d15941a7beedf0c9fe5105603e"},
 ]
 drf-spectacular = [
-    {file = "drf-spectacular-0.23.1.tar.gz", hash = "sha256:d1724da1fd4ae99d66333b1c8530f3c51788d87b380f5951830bf8405f234120"},
-    {file = "drf_spectacular-0.23.1-py3-none-any.whl", hash = "sha256:2e42ae16717a5c3b2ae8632ac2b92f7eeb7b4fb9a941bc7879a92343e50ddeb6"},
+    {file = "drf-spectacular-0.24.0.tar.gz", hash = "sha256:bf22390e8d0aa53d81c5abf718ad4989c4e2eab133decc411a15c7e4ae3f6baf"},
+    {file = "drf_spectacular-0.24.0-py3-none-any.whl", hash = "sha256:a59e33cfc87555dde027bc1bd0e379fbfd558e55a3abd9ebf975dee8c9e5052e"},
 ]
 drf-spectacular-sidecar = [
     {file = "drf-spectacular-sidecar-2022.7.1.tar.gz", hash = "sha256:2dd95042a515e860993bbf945a49b78c454b824507a370bd8ba43f2b51b76399"},

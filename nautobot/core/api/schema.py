@@ -234,14 +234,14 @@ class NautobotAutoSchema(AutoSchema):
             ref_name = ref_name[: -len("Serializer")]
         return ref_name
 
-    def resolve_serializer(self, serializer, direction):
+    def resolve_serializer(self, serializer, direction, bypass_extensions=False):
         """
         Re-add required `id` field on bulk_partial_update action.
 
         drf-spectacular clears the `required` list for any partial serializers in its `_map_basic_serializer()`,
         but Nautobot bulk partial updates require the `id` field to be specified for each object to update.
         """
-        component = super().resolve_serializer(serializer, direction)
+        component = super().resolve_serializer(serializer, direction, bypass_extensions)
         if self.is_bulk_action and self.is_partial_action and direction == "request":
             component.schema["required"] = ["id"]
         return component
