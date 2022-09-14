@@ -371,6 +371,9 @@ class CustomFieldColumn(tables.Column):
     Display custom fields in the appropriate format.
     """
 
+    # Add [] to empty_values so when there is no choice populated for multiselect_cf i.e. [], "—" is returned automatically.
+    empty_values = (None, "", [])
+
     def __init__(self, customfield, *args, **kwargs):
         self.customfield = customfield
         # 2.0 TODO: #824 replace customfield.name with customfield.slug
@@ -380,15 +383,10 @@ class CustomFieldColumn(tables.Column):
         super().__init__(*args, **kwargs)
 
     def render(self, record, bound_column, value):  # pylint: disable=arguments-differ
-        if value is None:
-            return self.default
-
         template = ""
         if self.customfield.type == CustomFieldTypeChoices.TYPE_BOOLEAN:
             template = render_boolean(value)
         elif self.customfield.type == CustomFieldTypeChoices.TYPE_MULTISELECT:
-            if not value:
-                return self.default
             for v in value:
                 template += format_html('<span class="label label-default">{}</span> ', v)
         elif self.customfield.type == CustomFieldTypeChoices.TYPE_SELECT:
@@ -406,6 +404,9 @@ class RelationshipColumn(tables.Column):
     Display relationship association instances in the appropriate format.
     """
 
+    # Add [] to empty_values so when there is no relationship associations i.e. [], "—" is returned automatically.
+    empty_values = (None, "", [])
+
     def __init__(self, relationship, side, *args, **kwargs):
         self.relationship = relationship
         self.side = side
@@ -415,10 +416,6 @@ class RelationshipColumn(tables.Column):
         super().__init__(orderable=False, *args, **kwargs)
 
     def render(self, record, value):  # pylint: disable=arguments-differ
-        if value is None:
-            # This returns None if value is None
-            return self.default
-
         # Filter the relationship associations by the relationship instance.
         # Since associations accessor returns all the relationship associations regardless of the relationship.
         value = [v for v in value if v.relationship == self.relationship]
@@ -430,9 +427,9 @@ class RelationshipColumn(tables.Column):
 
         template = ""
         # Handle Symmetric Relationships
+        # List `value` could be empty here [] after the filtering from above
         if len(value) < 1:
-            # If no relationship association, render None
-            return self.default
+            return "—"
         else:
             # Handle Relationships on the many side.
             if self.relationship.has_many(self.peer_side):
