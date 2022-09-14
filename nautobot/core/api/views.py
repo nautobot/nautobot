@@ -712,4 +712,4 @@ class GetMenu(NautobotAPIVersionMixin, APIView):
     def get(self, request):
         from nautobot.extras.registry import registry
 
-        return Response([{"id": 1, "name": item[0], "properties": item[1]} for item in registry["nav_menu"]["tabs"].items()])
+        return Response([{"name": item[0], "properties": item[1]} for item in registry["nav_menu"]["tabs"].items()])

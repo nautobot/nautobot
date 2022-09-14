@@ -68,6 +68,7 @@ from nautobot.utilities.utils import (
     SerializerForAPIVersions,
     versioned_serializer_selector,
     get_data_for_serializer_parameter,
+    get_table_for_model,
 )
 from . import nested_serializers, serializers
 
@@ -135,6 +136,36 @@ class FormFieldsViewSetMixin:
     def form_fields(self, request):
         data = get_data_for_serializer_parameter(self.queryset.model)
         return Response(data)
+
+
+class TableFieldsViewSetMixin:
+    @extend_schema(
+        responses={
+            200: {
+                "type": "array",
+                "items": {
+                    "type": "object",
+                    "properties": {
+                        "type": {"type": "string"},
+                        "label": {"type": "string"},
+                        "required": {"type": "string"},
+                        "help_text": {"type": "string"},
+                        "choices": {"type": "array", "items": {"type": "array"}},
+                    },
+                },
+            }
+        }
+    )
+    @action(detail=False, url_path="table-fields", methods=["get"])
+    def table_fields(self, request):
+        table = get_table_for_model(self.queryset.model)
+        table_instance = table(user=request.user, data=[])
+        data = [
+            {"name": item[0], "label": item[1]}
+            for item in table_instance.configurable_columns
+            if item[0] in table_instance.visible_columns
+        ]
+        return Response({"data": data})
 
 
 #
@@ -319,7 +350,7 @@ class CustomFieldModelViewSet(ModelViewSet):
         return context
 
 
-class NautobotModelViewSet(CustomFieldModelViewSet, NotesViewSetMixin, FormFieldsViewSetMixin):
+class NautobotModelViewSet(CustomFieldModelViewSet, NotesViewSetMixin, FormFieldsViewSetMixin, TableFieldsViewSetMixin):
     """Base class to use for API ViewSets based on OrganizationalModel or PrimaryModel.
 
     Can also be used for models derived from BaseModel, so long as they support Notes.
