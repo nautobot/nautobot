@@ -41,7 +41,7 @@ jobs:
         id: "dockerdepmeta"
         uses: "docker/metadata-action@v3"
         with:
-          images: "ghcr.io/nautobot/nautobot-dependencies"
+          images: "ghcr.io/nautobot/nautobot-dependencies-dryrun" #TODO Change name
           flavor: |
             latest=false
           tags: |
@@ -54,7 +54,7 @@ jobs:
       - name: "Build Dependencies Containers"
         uses: "docker/build-push-action@v2"
         with:
-          push: false
+          push: false #TODO Change to true
           target: dependencies
           file: "docker/Dockerfile"
           platforms: "linux/amd64,linux/arm64"
