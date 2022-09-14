@@ -463,6 +463,24 @@ class Relationship(BaseModel, ChangeLoggedModel, NotesMixin):
 
         return field
 
+    def skip_required(self, referenced_instance, side):
+
+        # Not enforcing required symmetric relationships
+        if self.symmetric:
+            return True
+
+        # Skip self-referencing
+        if ContentType.objects.get_for_model(referenced_instance) == getattr(self, f"{self.required_side}_type"):
+            return True
+
+        required_model_class = getattr(self, f"{side}_type").model_class()
+        # Handle the case where required_model_class is None (e.g., relationship to a plugin
+        # model for a plugin that's not installed at present):
+        if required_model_class is None:
+            return True
+
+        return False
+
     def clean(self):
 
         # Check if source and destination filters are valid
@@ -764,19 +782,23 @@ def get_relationships_errors(request, obj, output_for="ui"):
     for side, relations in required_relationships.items():
         for relation in relations:
 
-            # Skip referencing itself
-            if ContentType.objects.get_for_model(obj) == getattr(relation, f"{relation.required_side}_type"):
+            if relation.skip_required(obj, side):
                 continue
 
             required_model_class = getattr(relation, f"{side}_type").model_class()
-            # Handle the case where required_model_class is None (e.g., relationship to a plugin
-            # model for a plugin that's not installed at present):
-            if required_model_class is None:
-                continue
 
             if required_model_class.objects.count() == 0:
                 model_meta = required_model_class._meta
                 required = model_meta.verbose_name
+
+                if relation.type in [
+                    RelationshipTypeChoices.TYPE_ONE_TO_MANY,
+                    RelationshipTypeChoices.TYPE_MANY_TO_MANY,
+                ]:
+                    num_required_verbose = "at least one"
+                else:
+                    num_required_verbose = "a"
+
                 if output_for == "ui":
                     try:
                         add_url = reverse(get_route_for_model(required_model_class, "add"))
@@ -785,25 +807,17 @@ def get_relationships_errors(request, obj, output_for="ui"):
                         add_message = f"You need to create a {required} first"
 
                     relationships_errors.append(
-                        f"{obj._meta.verbose_name_plural.capitalize()} require a {required}, "
+                        f"{obj._meta.verbose_name_plural.capitalize()} require {num_required_verbose} {required}, "
                         f"but no {model_meta.verbose_name_plural} exist yet. {add_message}"
                     )
                 elif output_for == "api":
-                    if relation.type in [
-                        RelationshipTypeChoices.TYPE_ONE_TO_MANY,
-                        RelationshipTypeChoices.TYPE_MANY_TO_MANY,
-                    ]:
-                        num_required_verbose = "at least one"
-                    else:
-                        num_required_verbose = "a"
-
                     cr_field_name = f"cr_{relation.slug}__{relation.required_side}"
 
                     try:
                         api_post_url = reverse(f"{model_meta.app_label}-api:{model_meta.model_name}-list")
                         api_hint = f"Create a {required} by posting to {api_post_url}"
                     except NoReverseMatch:
-                        api_hint = f"You need to create a {required} first"
+                        api_hint = f"You need to create {num_required_verbose} {required} first"
 
                     relationships_errors.append(
                         {

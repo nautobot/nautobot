@@ -10,7 +10,8 @@ from django.urls import reverse
 from django.utils import timezone
 from unittest import mock
 
-from nautobot.dcim.models import ConsolePort, Device, DeviceRole, DeviceType, Interface, Manufacturer, Site
+from nautobot.dcim.models import ConsolePort, Device, DeviceRole, DeviceType, Interface, Manufacturer, Platform, Site
+from nautobot.dcim.tests.test_views import create_test_device
 from nautobot.extras.choices import (
     CustomFieldTypeChoices,
     JobExecutionType,
@@ -50,6 +51,7 @@ from nautobot.users.models import ObjectPermission
 from nautobot.utilities.testing import ViewTestCases, TestCase, extract_page_body, extract_form_failures
 from nautobot.utilities.testing.utils import disable_warnings, post_data
 from nautobot.utilities.utils import slugify_dashes_to_underscores
+from nautobot.tenancy.models import Tenant
 
 
 # Use the proper swappable User model
@@ -1851,8 +1853,10 @@ class RelationshipTestCase(
 
     @classmethod
     def setUpTestData(cls):
-        device_type = ContentType.objects.get_for_model(Device)
         interface_type = ContentType.objects.get_for_model(Interface)
+        device_type = ContentType.objects.get_for_model(Device)
+        platform_type = ContentType.objects.get_for_model(Platform)
+        tenant_type = ContentType.objects.get_for_model(Tenant)
         vlan_type = ContentType.objects.get_for_model(VLAN)
 
         Relationship(
@@ -1891,6 +1895,68 @@ class RelationshipTestCase(
         }
 
         cls.slug_test_object = "Primary Interface"
+
+        cls.required_relationships = (
+            Relationship(
+                name="VLANs require at least one device (destination objects)",
+                slug="vlans-devices",
+                type="many-to-many",
+                source_type=vlan_type,
+                destination_type=device_type,
+                required_side="destination",
+            ),
+            Relationship(
+                name="Platform requires at least one device (destination objects)",
+                slug="platform-devices",
+                type="one-to-many",
+                source_type=platform_type,
+                destination_type=device_type,
+                required_side="destination",
+            ),
+            Relationship(
+                name="Tenant requires one platform (one source object)",
+                slug="platform-tenant",
+                type="one-to-one",
+                source_type=platform_type,
+                destination_type=tenant_type,
+                required_side="source",
+            ),
+        )
+        for relationship in cls.required_relationships:
+            relationship.validated_save()
+
+        cls.active_status_pk = str(Status.objects.get(slug="active").pk)
+
+    def test_create_vlan_with_required_device_destinations_m2m(self):
+        self.user.is_superuser = True
+        self.user.save()
+
+        create_data = {
+            "vid": 1,
+            "name": "New VLAN",
+            "status": self.active_status_pk,
+        }
+
+        # 1. Try visiting the add vlan page when no device exists
+        response = self.client.get(reverse("ipam:vlan_add"))
+        self.assertRedirects(response, reverse("ipam:vlan_list"))
+        response = self.client.get(reverse("ipam:vlan_add"), follow=True)
+        self.assertContains(response, "Vlans require at least one device, but no devices exist yet.")
+
+        # 2. Try visiting the add vlan page and submitting the form without any devices specified
+        device1 = create_test_device("Device 1")
+        device2 = create_test_device("Device 2")
+        response = self.client.get(reverse("ipam:vlan_add"))
+        self.assertHttpStatus(response, 200)
+        response = self.client.post(reverse("ipam:vlan_add"), data=create_data)
+        self.assertContains(response, "You must select at least one device")
+
+        # 3. Try visiting the add vlan page and submitting the form with devices specified
+        create_data["cr_vlans-devices__destination"] = [str(device1.pk), str(device2.pk)]
+        response = self.client.post(reverse("ipam:vlan_add"), data=create_data, follow=True)
+        self.assertHttpStatus(response, 200)
+        self.assertContains(response, "New VLAN")
+        self.assertContains(response, "Relationships")
 
 
 class RelationshipAssociationTestCase(

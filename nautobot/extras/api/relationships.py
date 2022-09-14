@@ -262,12 +262,7 @@ def api_relationships_errors(instance, relationships_data):
     for side, relations in required_relationships.items():
         for relation in relations:
 
-            # Not enforcing required symmetric relationships
-            if relation.symmetric:
-                continue
-
-            # Skip self-referencing
-            if ContentType.objects.get_for_model(instance) == getattr(relation, f"{relation.required_side}_type"):
+            if relation.skip_required(instance, side):
                 continue
 
             model_name = getattr(relation, f"{side}_type").model_class()._meta.verbose_name
@@ -288,7 +283,7 @@ def api_relationships_errors(instance, relationships_data):
                 relationships_errors.append(
                     {
                         relation.slug: f"You must specify {num_required_verbose} {model_name} id or slug "
-                        f"in the request body's relationships[{relation.slug}][{side}][objects] list data"
+                        f"in the request body's relationships[“{relation.slug}”][”{side}”][”objects”] list data"
                     }
                 )
     return relationships_errors
@@ -312,7 +307,6 @@ class RelationshipModelSerializerMixin(ValidatedModelSerializer):
     def create(self, validated_data):
         relationships = validated_data.pop("relationships", {})
         instance = super().create(validated_data)
-
         validate_relationships(self.context["request"], instance, relationships)
 
         if relationships:
@@ -321,10 +315,9 @@ class RelationshipModelSerializerMixin(ValidatedModelSerializer):
 
     def update(self, instance, validated_data):
         relationships = validated_data.pop("relationships", {})
-
         validate_relationships(self.context["request"], instance, relationships)
-
         instance = super().update(instance, validated_data)
+
         if relationships:
             self._save_relationships(instance, relationships)
         return instance
