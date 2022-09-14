@@ -6,4 +6,4 @@ jobs:
   build-test:
     uses: "./.github/workflows/build_dependency_image.yml"  # TODO: Update to core base once available
     with:  # Below could potentially be collapsed into a single argument if a concrete relationship between both is enforced
-      branch-base: "develop"
+      branch_base: "develop"

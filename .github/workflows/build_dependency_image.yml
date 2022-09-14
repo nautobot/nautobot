@@ -2,13 +2,13 @@ name: "Build Dependencies Image"
 on:  # yamllint disable
   workflow_call:
     inputs:
-      branch-base:
+      branch_base:
         description: "Base branch name"
         required: true
         type: string
   workflow_dispatch:  # yamllint disable-line rule:empty-values
     inputs:
-      branch-base:
+      branch_base:
         description: "Base branch name"
         required: true
         type: string
@@ -45,10 +45,10 @@ jobs:
           flavor: |
             latest=false
           tags: |
-            type=raw,value=${{ github.event.inputs.branch-base }}-py${{ matrix.python-version }}
-            type=raw,value=${{ github.event.inputs.branch-base }}-{{sha}}-{{date 'X'}}-py${{ matrix.python-version }}
-            type=raw,value=${{ github.event.inputs.branch-base }},enable=${{ matrix.python-version == 3.7 }}
-            type=raw,value=${{ github.event.inputs.branch-base }}-{{sha}}-{{date 'X'}},enable=${{ matrix.python-version == 3.7 }}
+            type=raw,value=${{ github.event.inputs.branch_base }}-py${{ matrix.python-version }}
+            type=raw,value=${{ github.event.inputs.branch_base }}-{{sha}}-{{date 'X'}}-py${{ matrix.python-version }}
+            type=raw,value=${{ github.event.inputs.branch_base }},enable=${{ matrix.python-version == 3.7 }}
+            type=raw,value=${{ github.event.inputs.branch_base }}-{{sha}}-{{date 'X'}},enable=${{ matrix.python-version == 3.7 }}
           labels: |
             org.opencontainers.image.title=Nautobot Dependencies Base Image
       - name: "Build Dependencies Containers"
@@ -63,4 +63,4 @@ jobs:
           context: "."
           build-args: |
             PYTHON_VER=${{ matrix.python-version }}
-            DEP_BASE_BRANCH=${{ github.event.inputs.branch-base }}
+            DEP_BASE_BRANCH=${{ github.event.inputs.branch_base }}
