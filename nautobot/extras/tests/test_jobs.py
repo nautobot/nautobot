@@ -390,7 +390,7 @@ class JobTest(TransactionTestCase):
         module = "test_worker_queues"
         name = "TestWorkerQueues"
         mock_get_celery_queues.return_value = {"celery": 4, "irrelevant": 5}
-        job_class, job_model = get_job_class_and_model(module, name)
+        job_class, _ = get_job_class_and_model(module, name)
         form = job_class().as_form()
         self.assertInHTML(
             """<tr><th><label for="id__worker_queue">Worker queue:</label></th>
