@@ -20,13 +20,14 @@ jobs:
       fail-fast: true
       matrix:
         python-version: [ "3.7", "3.8", "3.9", "3.10" ]
+        branch_base: "${{ github.event.inputs.branch_base }}"
     env:
       INVOKE_NAUTOBOT_PYTHON_VER: "${{ matrix.python-version }}"
     steps:
       - name: "Check out repository code"
         uses: "actions/checkout@v3"
         with:
-          ref: "${{ github.event.inputs.branch-base }}"
+          ref: "${{ matrix.branch_base }}"
       - name: "Set up QEMU"
         uses: "docker/setup-qemu-action@v1"
       - name: "Set up Docker Buildx"
@@ -45,10 +46,10 @@ jobs:
           flavor: |
             latest=false
           tags: |
-            type=raw,value=${{ github.event.inputs.branch_base }}-py${{ matrix.python-version }}
-            type=raw,value=${{ github.event.inputs.branch_base }}-{{sha}}-{{date 'X'}}-py${{ matrix.python-version }}
-            type=raw,value=${{ github.event.inputs.branch_base }},enable=${{ matrix.python-version == 3.7 }}
-            type=raw,value=${{ github.event.inputs.branch_base }}-{{sha}}-{{date 'X'}},enable=${{ matrix.python-version == 3.7 }}
+            type=raw,value=${{ matrix.branch_base }}-py${{ matrix.python-version }}
+            type=raw,value=${{ matrix.branch_base }}-{{sha}}-{{date 'X'}}-py${{ matrix.python-version }}
+            type=raw,value=${{ matrix.branch_base }},enable=${{ matrix.python-version == 3.7 }}
+            type=raw,value=${{ matrix.branch_base }}-{{sha}}-{{date 'X'}},enable=${{ matrix.python-version == 3.7 }}
           labels: |
             org.opencontainers.image.title=Nautobot Dependencies Base Image
       - name: "Build Dependencies Containers"
@@ -63,4 +64,4 @@ jobs:
           context: "."
           build-args: |
             PYTHON_VER=${{ matrix.python-version }}
-            DEP_BASE_BRANCH=${{ github.event.inputs.branch_base }}
+            DEP_BASE_BRANCH=${{ matrix.branch_base }}
