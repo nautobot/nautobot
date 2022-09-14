@@ -610,7 +610,8 @@ class GitTest(TransactionTestCase):
                 )
                 failure_logs.get(
                     grouping="jobs",
-                    message__contains="Error in loading Jobs from `syntaxerror`: `unexpected EOF while parsing",
+                    # The specific exception message differs between Python versions
+                    message__contains="Error in loading Jobs from `syntaxerror`: ",
                 )
                 failure_logs.get(
                     grouping="jobs",
