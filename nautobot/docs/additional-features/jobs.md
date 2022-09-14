@@ -245,7 +245,7 @@ class ExampleJobWithHardTimeLimit(Job):
 
 Default: `[]`
 
-A list of worker queue names that will be presented to the user to select the queue that the job will be sent to. An empty list will default to only allowing the user to select the default queue (`celery` unless changed by an administrator). An empty string can also be used to specify the default queue.
+A list of worker queue names that will be presented to the user to select the queue that the job will be sent to. An empty list will default to only allowing the user to select the default queue (`celery` unless changed by an administrator). An empty string can also be used to specify the default queue. The first queue in the list will be selected by default in the job run form and will be used if a queue is not specified in a job run API call.
 
 !!! note
     A worker must be listening on the requested queue or the job will not run. See the documentation on [celery queues](../administration/celery-queues.md) for more information.
