@@ -185,14 +185,15 @@ def buildx(
     cache_dir="",
     platforms="linux/amd64",
     tag="networktocode/nautobot-dev-py3.7:local",
+    dep_base_branch="develop",
     target="dev",
     poetry_parallel=False,
 ):
     """Build Nautobot docker image using the experimental buildx docker functionality (multi-arch capablility)."""
     print(f"Building Nautobot with Python {context.nautobot.python_ver} for {platforms}...")
     command = (
-        f"docker buildx build --platform {platforms} -t {tag} --target {target} --load -f ./docker/Dockerfile"
-        f" --build-arg PYTHON_VER={context.nautobot.python_ver}"
+        f"docker buildx build --platform {platforms} -t {tag} --target {target} --load -f ./docker/Dockerfile-revamp"
+        f" --build-arg PYTHON_VER={context.nautobot.python_ver} --build-arg DEP_BASE_BRANCH={branch}"
         " ."
     )
     if not cache:
