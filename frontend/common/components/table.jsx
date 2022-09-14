@@ -10,26 +10,30 @@ export default function NautobotTable(props){
                     <th><input type="checkbox" name="" id="" /></th>
                     {
                         props.header.map((item, idx) => (
-                            <th key={idx}>{item}</th>
+                            <th key={idx}>{item.label}</th>
                         ))
                     }
                 </tr>
             </thead>
             <tbody>
                 {
-                    props.data.map((item, idx) => (
-                        <tr key={idx}>
+                    props.data.map((item) => (
+                        <tr key={item.id}>
                             <td><input type="checkbox" name="" id="" /></td>
                             {
-                                Object.entries(item).map((value, idx) => (
+                                props.header.map((header, idx) => (
                                     <td key={idx}>
                                         {
-                                            idx == 0 ? 
-                                            <Link href="#" style={{textDecoration: "none"}}> 
-                                                {value[1]}
-                                            </Link>
-                                            : 
-                                            value[1]
+                                            item[header.name] == null ?
+                                            "-"
+                                            :
+                                            Array.isArray(item[header.name]) ?
+                                            item[header.name].join(", ")
+                                            :
+                                            typeof(item[header.name]) == "object" ?
+                                            item[header.name].label || item[header.name].display
+                                            :
+                                            item[header.name]
                                         }
                                     </td>
                                 ))

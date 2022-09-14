@@ -1,16 +1,16 @@
-import axios from "axios";
 import {useEffect, useState} from "react"
 import { Container } from "react-bootstrap";
 import Nav from 'react-bootstrap/Nav';
 import Navbar from 'react-bootstrap/Navbar';
 import NavDropdown from 'react-bootstrap/NavDropdown';
+import { axios_instance } from "../utils/utils";
 
 export default function Menu() {
     const [NavMenu, setNavMenu] = useState([])
     useEffect(async () => {
-        const nav_api = await axios.get(process.env["NEXT_PUBLIC_NAUTOBOT_BASE_URL"] + "/api/get-menu/")
+        const nav_api = await axios_instance.get("/get-menu/")
         setNavMenu(nav_api.data)
-    }, [NavMenu])
+    }, [])
 
     return (
         <Navbar bg="light" expand="lg" fixed="top">

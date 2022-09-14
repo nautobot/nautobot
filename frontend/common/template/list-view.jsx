@@ -9,6 +9,8 @@ import { useState, useEffect } from "react";
 import Home from '../../pages';
 import { NavLink } from 'react-bootstrap';
 import { useRouter } from 'next/router';
+import { axios_instance } from '../utils/utils';
+
 
 export default function ListView(props){
     const router = useRouter()
@@ -38,12 +40,15 @@ export default function ListView(props){
                     "color": "success",
                 },
             },
-            "data": require("../../common/utils/table_api.json"),
-            "filter_form": require("../../common/utils/table_api.json")["filter_form"],
         }
     )
+    const [tableData, setTableData] = useState(require("../../common/utils/table_api.json"))
 
-    useEffect(() => {
+    useEffect(async () => {
+        const api_url =  location.pathname + "/"
+        const response = await axios_instance.get(api_url)
+        // setTableData(response.data.results)
+
         let newPageConfig = pageConfig
         if (props.config) {
             if (props.config.buttons) {
@@ -54,10 +59,6 @@ export default function ListView(props){
                 let pageData = props.config.data
                 newPageConfig = {...newPageConfig, "data": {...pageData}}
             }
-            if (props.config.filter_form) {
-                let pageFilterForm = props.config.filter_form
-                newPageConfig = {...newPageConfig, "filter_form": [...pageFilterForm]}
-            }
         }
         setPageConfig(newPageConfig)
     }, [])
@@ -66,7 +67,7 @@ export default function ListView(props){
         <Home>
             <Row>
                 <Col xs={8}>
-                    <h3>{pageConfig.data.title}</h3>
+                    {/* <h3>{pageConfig.data.title}</h3> */}
                 </Col>
                 <Col style={{textAlign: "right"}} className="action-items-container">
                     {
@@ -88,36 +89,10 @@ export default function ListView(props){
                 </Col>
             </Row>
             <Row>
-                <Col xs={9}>
-                    <NautobotTable 
-                        data={
-                            pageConfig.data ? 
-                                pageConfig.data.data ?
-                                    pageConfig.data.data
-                                    :
-                                    {}
-                                :
-                                {}
-                        } 
-                        header={
-                            pageConfig.data ? 
-                                pageConfig.data.header ?
-                                    pageConfig.data.header
-                                    :
-                                    []
-                                :
-                                []
-                        } 
-                    />
-                </Col>
                 <Col>
-                    <NautobotFilterForm 
-                        fields={
-                            pageConfig.filter_form ? 
-                                pageConfig.filter_form
-                                :
-                                []
-                        }
+                    <NautobotTable 
+                        data={tableData.data} 
+                        header={tableData.header} 
                     />
                 </Col>
             </Row>
