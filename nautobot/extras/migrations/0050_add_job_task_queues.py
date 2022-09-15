@@ -13,14 +13,14 @@ class Migration(migrations.Migration):
     operations = [
         migrations.AddField(
             model_name="job",
-            name="worker_queues",
+            name="task_queues",
             field=nautobot.utilities.fields.JSONArrayField(
-                base_field=models.CharField(blank=True, max_length=100, null=True), blank=True, default=list
+                base_field=models.CharField(max_length=100, blank=True), blank=True, default=list
             ),
         ),
         migrations.AddField(
             model_name="job",
-            name="worker_queues_override",
+            name="task_queues_override",
             field=models.BooleanField(default=False),
         ),
     ]

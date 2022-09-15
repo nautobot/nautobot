@@ -193,8 +193,8 @@ def get_celery_queues():
     active_queues = celery_inspect.active_queues()
     if active_queues is None:
         return celery_queues
-    for worker_queue_list in active_queues.values():
-        distinct_queues = {q["name"] for q in worker_queue_list}
+    for task_queue_list in active_queues.values():
+        distinct_queues = {q["name"] for q in task_queue_list}
         for queue in distinct_queues:
             celery_queues.setdefault(queue, 0)
             celery_queues[queue] += 1
@@ -215,19 +215,19 @@ def get_worker_count(request=None, queue=""):
     return celery_queues.get(queue, 0)
 
 
-def worker_queues_as_choices(worker_queues):
+def task_queues_as_choices(task_queues):
     """
     Returns a list of 2-tuples for use in the form field `choices` argument. Appends
     worker count to the description.
     """
     from nautobot.core.celery import app  # prevent circular import
 
-    if not worker_queues:
-        worker_queues = [""]
+    if not task_queues:
+        task_queues = [""]
 
     choices = []
     celery_queues = get_celery_queues()
-    for queue in worker_queues:
+    for queue in task_queues:
         if not queue:
             worker_count = celery_queues.get(app.conf.task_default_queue, 0)
         else:

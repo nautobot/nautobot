@@ -161,7 +161,7 @@ class JobTest(TransactionTestCase):
         name = "TestFieldOrder"
         job_class = get_job(f"local/{module}/{name}")
         form = job_class().as_form()
-        self.assertSequenceEqual(list(form.fields.keys()), ["var1", "var2", "var23", "_worker_queue", "_commit"])
+        self.assertSequenceEqual(list(form.fields.keys()), ["var1", "var2", "var23", "_task_queue", "_commit"])
 
     def test_no_field_order(self):
         """
@@ -171,7 +171,7 @@ class JobTest(TransactionTestCase):
         name = "TestNoFieldOrder"
         job_class = get_job(f"local/{module}/{name}")
         form = job_class().as_form()
-        self.assertSequenceEqual(list(form.fields.keys()), ["var23", "var2", "_worker_queue", "_commit"])
+        self.assertSequenceEqual(list(form.fields.keys()), ["var23", "var2", "_task_queue", "_commit"])
 
     def test_no_field_order_inherited_variable(self):
         """
@@ -183,7 +183,7 @@ class JobTest(TransactionTestCase):
         form = job_class().as_form()
         self.assertSequenceEqual(
             list(form.fields.keys()),
-            ["testvar1", "b_testvar2", "a_testvar3", "_worker_queue", "_commit"],
+            ["testvar1", "b_testvar2", "a_testvar3", "_task_queue", "_commit"],
         )
 
     def test_read_only_job_pass(self):
@@ -383,21 +383,21 @@ class JobTest(TransactionTestCase):
         self.assertEqual(job_result_2.completed, latest_job_result.completed)
 
     @mock.patch("nautobot.extras.utils.get_celery_queues")
-    def test_job_class_worker_queues(self, mock_get_celery_queues):
+    def test_job_class_task_queues(self, mock_get_celery_queues):
         """
-        Test job form with custom worker queues defined on the job class
+        Test job form with custom task queues defined on the job class
         """
-        module = "test_worker_queues"
+        module = "test_task_queues"
         name = "TestWorkerQueues"
         mock_get_celery_queues.return_value = {"celery": 4, "irrelevant": 5}
         job_class, _ = get_job_class_and_model(module, name)
         form = job_class().as_form()
         self.assertInHTML(
-            """<tr><th><label for="id__worker_queue">Worker queue:</label></th>
-            <td><select name="_worker_queue" class="form-control" placeholder="Worker queue" id="id__worker_queue">
-            <option value="" selected>default queue (4 workers)</option>
+            """<tr><th><label for="id__task_queue">Task queue:</label></th>
+            <td><select name="_task_queue" class="form-control" placeholder="Task queue" id="id__task_queue">
+            <option value="celery">celery (4 workers)</option>
             <option value="nonexistent">nonexistent (0 workers)</option></select><br>
-            <span class="helptext">The worker queue to send this job to</span></td></tr>
+            <span class="helptext">The task queue to send this job to</span></td></tr>
             <tr><th><label for="id__commit">Commit changes:</label></th>
             <td><input type="checkbox" name="_commit" placeholder="Commit changes" id="id__commit" checked><br>
             <span class="helptext">Commit changes to the database (uncheck for a dry-run)</span></td></tr>""",
@@ -405,24 +405,24 @@ class JobTest(TransactionTestCase):
         )
 
     @mock.patch("nautobot.extras.utils.get_celery_queues")
-    def test_job_class_worker_queues_override(self, mock_get_celery_queues):
+    def test_job_class_task_queues_override(self, mock_get_celery_queues):
         """
-        Test job form with custom worker queues defined on the job class and overridden on the model
+        Test job form with custom task queues defined on the job class and overridden on the model
         """
-        module = "test_worker_queues"
+        module = "test_task_queues"
         name = "TestWorkerQueues"
         mock_get_celery_queues.return_value = {"celery": 1, "irrelevant": 5}
         job_class, job_model = get_job_class_and_model(module, name)
-        job_model.worker_queues = ["celery", "priority"]
-        job_model.worker_queues_override = True
+        job_model.task_queues = ["celery", "priority"]
+        job_model.task_queues_override = True
         job_model.save()
         form = job_class().as_form()
         self.assertInHTML(
-            """<tr><th><label for="id__worker_queue">Worker queue:</label></th>
-            <td><select name="_worker_queue" class="form-control" placeholder="Worker queue" id="id__worker_queue">
+            """<tr><th><label for="id__task_queue">Task queue:</label></th>
+            <td><select name="_task_queue" class="form-control" placeholder="Task queue" id="id__task_queue">
             <option value="celery">celery (1 worker)</option>
             <option value="priority">priority (0 workers)</option>
-            </select><br><span class="helptext">The worker queue to send this job to</span></td></tr>
+            </select><br><span class="helptext">The task queue to send this job to</span></td></tr>
             <tr><th><label for="id__commit">Commit changes:</label></th>
             <td><input type="checkbox" name="_commit" placeholder="Commit changes" id="id__commit" checked><br>
             <span class="helptext">Commit changes to the database (uncheck for a dry-run)</span></td></tr>""",
@@ -672,7 +672,7 @@ class JobHookReceiverTest(TransactionTestCase):
         name = "TestJobHookReceiverLog"
         job_class, _job_model = get_job_class_and_model(module, name)
         form = job_class().as_form()
-        self.assertSequenceEqual(list(form.fields.keys()), ["object_change", "_worker_queue", "_commit"])
+        self.assertSequenceEqual(list(form.fields.keys()), ["object_change", "_task_queue", "_commit"])
 
     def test_hidden(self):
         module = "test_job_hook_receiver"

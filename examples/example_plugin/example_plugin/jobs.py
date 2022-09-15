@@ -34,9 +34,9 @@ class ExampleLoggingJob(Job):
     class Meta:
         name = "Example logging job."
         description = "I log stuff to demonstrate how UI logging works."
-        worker_queues = [
-            "",  # blank string is the default celery queue
-            "priority",  # any queue names can be defined
+        task_queues = [
+            "celery",
+            "priority",
             "bulk",
         ]
 

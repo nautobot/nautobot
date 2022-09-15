@@ -443,7 +443,7 @@ class ImageAttachmentViewSet(ModelViewSet):
 #
 
 
-def _create_schedule(serializer, data, commit, job, job_model, request, worker_queue=""):
+def _create_schedule(serializer, data, commit, job, job_model, request, task_queue=""):
     """
     This is an internal function to create a scheduled job from API data.
     It has to handle both once-offs (i.e. of type TYPE_FUTURE) and interval
@@ -456,8 +456,8 @@ def _create_schedule(serializer, data, commit, job, job_model, request, worker_q
         "commit": commit,
         "name": job.class_path,
     }
-    if worker_queue:
-        job_kwargs["celery_kwargs"] = {"queue": worker_queue}
+    if task_queue:
+        job_kwargs["celery_kwargs"] = {"queue": task_queue}
     type_ = serializer["interval"]
     if type_ == JobExecutionType.TYPE_IMMEDIATELY:
         time = timezone.now()
@@ -494,7 +494,7 @@ def _create_schedule(serializer, data, commit, job, job_model, request, worker_q
         user=request.user,
         approval_required=job_model.approval_required,
         crontab=crontab,
-        queue=worker_queue,
+        queue=task_queue,
     )
     scheduled_job.save()
     return scheduled_job
@@ -526,13 +526,13 @@ def _run_job(request, job_model, legacy_response=False):
     commit = input_serializer.validated_data.get("commit", None)
     if commit is None:
         commit = job_model.commit_default
-    # default to first queue in job_model.worker_queues if worker_queue not specified
-    if "worker_queue" not in input_serializer.validated_data:
-        worker_queue = job_model.worker_queues[0] if job_model.worker_queues else ""
+    # default to first queue in job_model.task_queues if task_queue not specified
+    if "task_queue" not in input_serializer.validated_data:
+        task_queue = job_model.task_queues[0] if job_model.task_queues else ""
     else:
-        worker_queue = input_serializer.validated_data["worker_queue"]
-        if worker_queue not in job_model.worker_queues:
-            raise ValidationError({"worker_queue": [f'"{worker_queue}" is not a valid choice.']})
+        task_queue = input_serializer.validated_data["task_queue"]
+        if task_queue not in job_model.task_queues:
+            raise ValidationError({"task_queue": [f'"{task_queue}" is not a valid choice.']})
 
     try:
         job.validate_data(data)
@@ -542,8 +542,8 @@ def _run_job(request, job_model, legacy_response=False):
         # of errors under messages
         return Response({"errors": e.message_dict if hasattr(e, "error_dict") else e.messages}, status=400)
 
-    if not get_worker_count(queue=worker_queue):
-        raise CeleryWorkerNotRunningException(queue=worker_queue)
+    if not get_worker_count(queue=task_queue):
+        raise CeleryWorkerNotRunningException(queue=task_queue)
 
     job_content_type = get_job_content_type()
     schedule_data = input_serializer.validated_data.get("schedule")
@@ -566,7 +566,7 @@ def _run_job(request, job_model, legacy_response=False):
 
     # Try to create a ScheduledJob, or...
     if schedule_data:
-        schedule = _create_schedule(schedule_data, data, commit, job, job_model, request, worker_queue)
+        schedule = _create_schedule(schedule_data, data, commit, job, job_model, request, task_queue)
     else:
         schedule = None
 
@@ -577,7 +577,7 @@ def _run_job(request, job_model, legacy_response=False):
             job.class_path,
             job_content_type,
             request.user,
-            celery_kwargs={"queue": worker_queue},
+            celery_kwargs={"queue": task_queue},
             data=data,
             request=copy_safe_request(request),
             commit=commit,

@@ -171,11 +171,11 @@ class Job(PrimaryModel):
         help_text="Maximum runtime in seconds before the job will be forcibly terminated."
         "<br>Set to 0 to use Nautobot system default",
     )
-    worker_queues = JSONArrayField(
-        base_field=models.CharField(blank=True, null=True, max_length=100),
+    task_queues = JSONArrayField(
+        base_field=models.CharField(max_length=100, blank=True),
         default=list,
         blank=True,
-        help_text="Comma separated list of worker queues that this job can run on. A blank value will use the default queue",
+        help_text="Comma separated list of task queues that this job can run on. A blank list will use the default queue",
     )
 
     # Flags to indicate whether the above properties are inherited from the source code or overridden by the database
@@ -220,7 +220,7 @@ class Job(PrimaryModel):
         default=False,
         help_text="If set, the configured value will remain even if the underlying Job source code changes",
     )
-    worker_queues_override = models.BooleanField(
+    task_queues_override = models.BooleanField(
         default=False,
         help_text="If set, the configured value will remain even if the underlying Job source code changes",
     )

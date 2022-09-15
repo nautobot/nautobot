@@ -1573,13 +1573,13 @@ class JobAPIRunTestMixin:
         )
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
-    def test_run_job_with_invalid_worker_queue(self):
+    def test_run_job_with_invalid_task_queue(self):
         self.add_permissions("extras.run_job")
         d = DeviceRole.objects.create(name="role", slug="role")
         data = {
             "data": {"var1": "x", "var2": 1, "var3": False, "var4": d.pk},
             "commit": True,
-            "worker_queue": "invalid",
+            "task_queue": "invalid",
         }
 
         url = self.get_run_url()
@@ -1587,18 +1587,18 @@ class JobAPIRunTestMixin:
         self.assertHttpStatus(response, status.HTTP_400_BAD_REQUEST)
         self.assertEqual(
             response.data,
-            {"worker_queue": ['"invalid" is not a valid choice.']},
+            {"task_queue": ['"invalid" is not a valid choice.']},
         )
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
     @mock.patch("nautobot.extras.api.views.get_worker_count", return_value=1)
-    def test_run_job_with_valid_worker_queue(self, _):
+    def test_run_job_with_valid_task_queue(self, _):
         self.add_permissions("extras.run_job")
         d = DeviceRole.objects.create(name="role", slug="role")
         data = {
             "data": {"var1": "x", "var2": 1, "var3": False, "var4": d.pk},
             "commit": True,
-            "worker_queue": "",
+            "task_queue": "celery",
         }
 
         url = self.get_run_url()
@@ -1753,8 +1753,8 @@ class JobTestVersion13(
         "time_limit": 650,
         "has_sensitive_variables": False,
         "has_sensitive_variables_override": True,
-        "worker_queues": ["celery", "priority"],
-        "worker_queues_override": True,
+        "task_queues": ["celery", "priority"],
+        "task_queues_override": True,
     }
     bulk_update_data = {
         "enabled": True,

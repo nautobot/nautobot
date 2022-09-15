@@ -3,15 +3,15 @@ from nautobot.extras.jobs import Job
 
 class TestWorkerQueues(Job):
     """
-    Job with custom worker queues.
+    Job with custom task queues.
     """
 
-    description = "Custom worker queues"
+    description = "Custom task queues"
 
     class Meta:
         has_sensitive_variables = False
-        worker_queues = [
-            "",  # defaults to the default celery queue
+        task_queues = [
+            "celery",
             "nonexistent",  # This queue doesn't exist and should have zero workers
         ]
 

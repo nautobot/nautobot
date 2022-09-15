@@ -241,11 +241,11 @@ class ExampleJobWithHardTimeLimit(Job):
 !!! note
     If the `time_limit` is set to a value less than or equal to the `soft_time_limit`, a warning log is generated to inform the user that this job will fail silently after the `time_limit` as the `soft_time_limit` will never be reached.
 
-#### `worker_queues`
+#### `task_queues`
 
 Default: `[]`
 
-A list of worker queue names that will be presented to the user to select the queue that the job will be sent to. An empty list will default to only allowing the user to select the default queue (`celery` unless changed by an administrator). An empty string can also be used to specify the default queue. The first queue in the list will be selected by default in the job run form and will be used if a queue is not specified in a job run API call.
+A list of task queue names that will be presented to the user to select the queue that the job will be sent to. An empty list will default to only allowing the user to select the default queue (`celery` unless changed by an administrator). An empty string can also be used to specify the default queue. The first queue in the list will be selected by default in the job run form and will be used if a queue is not specified in a job run API call.
 
 !!! note
     A worker must be listening on the requested queue or the job will not run. See the documentation on [celery queues](../administration/celery-queues.md) for more information.
@@ -514,7 +514,7 @@ An administrator or user with `extras.change_job` permission can also edit a Job
 * `read_only`
 * `soft_time_limit`
 * `time_limit`
-* `worker_queues`
+* `task_queues`
 
 This is done by setting the corresponding "override" flag (`grouping_override`, `name_override`, etc.) to `True` then providing a new value for the attribute in question. An overridden attribute will remain set to its overridden value even if the underlying Job class definition changes and `nautobot-server <migrate|post_upgrade>` gets run again. Conversely, clearing the "override" flag for an attribute and saving the database record will revert the attribute to the underlying value defined within the Job class source code.
 
@@ -556,7 +556,7 @@ Once a job has been run, the latest [`JobResult`](../models/extras/jobresult.md)
 
 ### Via the API
 
-To run a job via the REST API, issue a POST request to the job's endpoint `/api/extras/jobs/<uuid>/run/`. You can optionally provide JSON data to set the `commit` flag, specify any required user input `data`, optional `worker_queue`, and/or provide optional scheduling information as described in [the section on scheduling and approvals](./job-scheduling-and-approvals.md).
+To run a job via the REST API, issue a POST request to the job's endpoint `/api/extras/jobs/<uuid>/run/`. You can optionally provide JSON data to set the `commit` flag, specify any required user input `data`, optional `task_queue`, and/or provide optional scheduling information as described in [the section on scheduling and approvals](./job-scheduling-and-approvals.md).
 
 For example, to run a job with no user inputs and without committing any anything to the database:
 
