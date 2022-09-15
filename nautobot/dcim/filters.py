@@ -15,7 +15,6 @@ from nautobot.extras.utils import FeatureQuery
 from nautobot.ipam.models import VLAN, VLANGroup
 from nautobot.tenancy.filters import TenancyFilterSet
 from nautobot.tenancy.models import Tenant
-from nautobot.utilities.choices import ColorChoices
 from nautobot.utilities.filters import (
     BaseFilterSet,
     ContentTypeMultipleChoiceFilter,
@@ -29,7 +28,6 @@ from nautobot.utilities.filters import (
     TagFilter,
     TreeNodeMultipleChoiceFilter,
 )
-from nautobot.utilities.forms import add_blank_choice
 from nautobot.virtualization.models import Cluster
 from .choices import (
     CableTypeChoices,

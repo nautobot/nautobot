@@ -3929,10 +3929,6 @@ class CableFilterForm(BootstrapMixin, StatusModelFilterFormMixin):
     )
     tag = TagFilterField(model)
 
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        print(self.data)
-
 
 #
 # Connections
