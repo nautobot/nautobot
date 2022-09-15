@@ -1,0 +1,10 @@
+{
+  "compilerOptions": {
+    "baseUrl": "./",
+    "paths": {
+      "@component/*": ["common/components/*"],
+      "@utils/*": ["common/utils/*"],
+      "@template/*": ["common/template/*"]
+    }
+  }
+}
