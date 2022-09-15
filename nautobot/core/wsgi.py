@@ -24,7 +24,7 @@ try:
     def fix_uwsgi():
         import uwsgi
 
-        logging.getLogger("nautobot").info(
+        logging.getLogger(__name__).info(
             f"Closing existing DB and cache connections on worker {uwsgi.worker_id()} after uWSGI forked ..."
         )
         connections.close_all()

@@ -1,1 +1,1 @@
-Fix database concurrency issues with uWSGI pre-forking.
+Fixed database concurrency issues with uWSGI pre-forking.
