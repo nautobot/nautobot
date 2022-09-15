@@ -12,6 +12,7 @@
 
 name: "Build Dependencies Image - Conditional Change Detection"
 on:  # yamllint disable
+  push: # TODO: For testing purposes
   workflow_call:
 
 jobs:
@@ -39,6 +40,9 @@ jobs:
           echo "::notice::No dependency files changed"
       - name: "Rebuild Dependencies Image"
         if: ${{ steps.fileschanged.outcome == 'success' }}
-        uses: "./.github/workflows/build_dependency_image.yml"
-        with:
-          branch_base: "${{ steps.gitbranch.outputs.branch }}"
+        run: |
+          echo "::notice::Dependency files changed"
+        # TODO: Above for testing purposes
+        # uses: "./.github/workflows/build_dependency_image.yml"
+        # with:
+        #   branch_base: "${{ steps.gitbranch.outputs.branch }}"
