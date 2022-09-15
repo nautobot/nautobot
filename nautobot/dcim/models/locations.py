@@ -96,7 +96,7 @@ class LocationType(TreeNode, OrganizationalModel):
          /
         C
         This method will return \"A → B → C\".
-        If self.ancestor() throw an ObjectDoesNotExist Exception during bulk operations, we handle it by only returning the name of the current node.
+        If self.ancestor() throws an ObjectDoesNotExist Exception during bulk operations, we handle it by only returning the name of the current node.
         """
         display_str = ""
         try:
@@ -233,7 +233,7 @@ class Location(TreeNode, StatusModel, PrimaryModel):
          /
         C
         This method will return \"A → B → C\".
-        If self.ancestor() throw an ObjectDoesNotExist Exception during bulk operations, we handle it by only returning the name of the current node.
+        If self.ancestor() throws an ObjectDoesNotExist Exception during bulk operations, we handle it by only returning the name of the current node.
         """
         display_str = ""
         try:
