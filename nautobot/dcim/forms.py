@@ -3893,7 +3893,7 @@ class CableBulkEditForm(TagsBulkEditFormMixin, StatusModelBulkEditFormMixin, Nau
             raise forms.ValidationError({"length_unit": "Must specify a unit when setting length"})
 
 
-class CableFilterForm(BootstrapMixin, StatusModelFilterFormMixin, forms.Form):
+class CableFilterForm(BootstrapMixin, StatusModelFilterFormMixin):
     model = Cable
     q = forms.CharField(required=False, label="Search")
     region = DynamicModelMultipleChoiceField(queryset=Region.objects.all(), to_field_name="slug", required=False)

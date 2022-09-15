@@ -1540,8 +1540,8 @@ class VirtualChassisFilterSet(NautobotFilterSet):
 
 class CableFilterSet(NautobotFilterSet, StatusModelFilterSetMixin):
     q = SearchFilter(filter_predicates={"label": "icontains"})
-    type = django_filters.MultipleChoiceFilter(choices=CableTypeChoices)
-    color = django_filters.MultipleChoiceFilter(choices=ColorChoices)
+    type = django_filters.ChoiceFilter(choices=CableTypeChoices)
+    color = django_filters.ChoiceFilter(choices=ColorChoices)
     device_id = MultiValueUUIDFilter(method="filter_device", label="Device (ID)")
     device = MultiValueCharFilter(method="filter_device", field_name="device__name", label="Device (name)")
     rack_id = MultiValueUUIDFilter(method="filter_device", field_name="device__rack_id", label="Rack (ID)")
