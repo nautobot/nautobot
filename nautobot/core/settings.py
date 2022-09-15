@@ -221,8 +221,10 @@ SPECTACULAR_SETTINGS = {
         "PowerPortTypeChoices": "nautobot.dcim.choices.PowerPortTypeChoices",
         "RackTypeChoices": "nautobot.dcim.choices.RackTypeChoices",
         "RelationshipTypeChoices": "nautobot.extras.choices.RelationshipTypeChoices",
-        # Each of these StatusModels has bulk and non-bulk serializers, with the same status options, so we'd get error:
+        # Each of these StatusModels has bulk and non-bulk serializers, with the same status options,
+        # which confounds drf-spectacular's automatic naming of enums, resulting in the below warning:
         #   enum naming encountered a non-optimally resolvable collision for fields named "status"
+        # By explicitly naming the enums ourselves we avoid this warning.
         "CableStatusChoices": "nautobot.dcim.api.serializers.CableSerializer.status_choices",
         "CircuitStatusChoices": "nautobot.circuits.api.serializers.CircuitSerializer.status_choices",
         "DeviceStatusChoices": "nautobot.dcim.api.serializers.DeviceWithConfigContextSerializer.status_choices",
