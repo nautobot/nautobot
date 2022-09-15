@@ -1,6 +1,6 @@
 from django.contrib.contenttypes.fields import GenericRelation
 from django.contrib.contenttypes.models import ContentType
-from django.core.exceptions import ValidationError
+from django.core.exceptions import ObjectDoesNotExist, ValidationError
 from django.db import models
 from django.urls import reverse
 
@@ -88,14 +88,15 @@ class LocationType(TreeNode, OrganizationalModel):
     @property
     def display(self):
         # prefix with parent name allows location type name identity if there are the same name exists under different parents.
-        display_str = self.name
-        parent = self.parent
-        for _ in range(10):  # "10 levels iteration"
-            if parent is None:
-                break
-            display_str = f"{parent.name} → {display_str}"
-            parent = parent.parent
-        return display_str
+        display_str = ""
+        try:
+            for ancestor in self.ancestors():
+                display_str += ancestor.name
+                display_str += " → "
+            display_str += self.name
+            return display_str
+        except ObjectDoesNotExist:
+            return display_str
 
 
 @extras_features(
@@ -214,14 +215,15 @@ class Location(TreeNode, StatusModel, PrimaryModel):
     @property
     def display(self):
         # prefix with parent name allows location name identity if there are the same name exists under different parents.
-        display_str = self.name
-        parent = self.parent
-        for _ in range(10):  # "10 levels iteration"
-            if parent is None:
-                break
-            display_str = f"{parent.name} → {display_str}"
-            parent = parent.parent
-        return display_str
+        display_str = ""
+        try:
+            for ancestor in self.ancestors():
+                display_str += ancestor.name
+                display_str += " → "
+            display_str += self.name
+            return display_str
+        except ObjectDoesNotExist:
+            return display_str
 
     def validate_unique(self, exclude=None):
         # Check for a duplicate name on a Location with no parent.
