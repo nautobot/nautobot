@@ -29,6 +29,7 @@ from nautobot.utilities.filters import (
     TagFilter,
     TreeNodeMultipleChoiceFilter,
 )
+from nautobot.utilities.forms import add_blank_choice
 from nautobot.virtualization.models import Cluster
 from .choices import (
     CableTypeChoices,
@@ -1541,7 +1542,7 @@ class VirtualChassisFilterSet(NautobotFilterSet):
 class CableFilterSet(NautobotFilterSet, StatusModelFilterSetMixin):
     q = SearchFilter(filter_predicates={"label": "icontains"})
     type = django_filters.MultipleChoiceFilter(choices=CableTypeChoices)
-    color = django_filters.MultipleChoiceFilter(choices=ColorChoices)
+    color = django_filters.MultipleChoiceFilter(choices=ColorChoices, empty_value=None)
     device_id = MultiValueUUIDFilter(method="filter_device", label="Device (ID)")
     device = MultiValueCharFilter(method="filter_device", field_name="device__name", label="Device (name)")
     rack_id = MultiValueUUIDFilter(method="filter_device", field_name="device__rack_id", label="Rack (ID)")

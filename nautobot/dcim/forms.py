@@ -3914,7 +3914,7 @@ class CableFilterForm(BootstrapMixin, StatusModelFilterFormMixin):
     type = forms.MultipleChoiceField(
         choices=add_blank_choice(CableTypeChoices),
         required=False,
-        widget=StaticSelect2(),
+        widget=StaticSelect2Multiple(),
     )
     color = forms.CharField(max_length=6, required=False, widget=ColorSelect())  # RGB color code
     device_id = DynamicModelMultipleChoiceField(
@@ -3928,6 +3928,10 @@ class CableFilterForm(BootstrapMixin, StatusModelFilterFormMixin):
         },
     )
     tag = TagFilterField(model)
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        print(self.data)
 
 
 #

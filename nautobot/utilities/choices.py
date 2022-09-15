@@ -96,7 +96,6 @@ class ColorChoices(ChoiceSet):
     COLOR_WHITE = "ffffff"
 
     CHOICES = (
-        ("", "---------"),
         (COLOR_DARK_RED, "Dark red"),
         (COLOR_RED, "Red"),
         (COLOR_PINK, "Pink"),
