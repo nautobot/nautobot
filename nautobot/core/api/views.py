@@ -172,6 +172,8 @@ class BulkDestroyModelMixin:
 
 class ModelViewSetMixin:
     brief = False
+    # v2 TODO(jathan): Revisit whether this is still valid post-cacheops. Re: prefetch_related vs.
+    # select_related
     brief_prefetch_fields = []
 
     def get_serializer(self, *args, **kwargs):
@@ -201,6 +203,7 @@ class ModelViewSetMixin:
     def get_queryset(self):
         # If using brief mode, clear all prefetches from the queryset and append only brief_prefetch_fields (if any)
         if self.brief:
+            # v2 TODO(jathan): Replace prefetch_related with select_related
             return super().get_queryset().prefetch_related(None).prefetch_related(*self.brief_prefetch_fields)
 
         return super().get_queryset()

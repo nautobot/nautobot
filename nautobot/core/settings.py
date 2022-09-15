@@ -277,7 +277,7 @@ INSTALLED_APPS = [
     "django.contrib.messages",
     "django.contrib.staticfiles",
     "django.contrib.humanize",
-    "cacheops",
+    "cacheops",  # v2 TODO(jathan); Remove cacheops.
     "corsheaders",
     "django_filters",
     "django_jinja",
@@ -558,6 +558,7 @@ GRAPHQL_COMPUTED_FIELD_PREFIX = "cpf"
 # Caching
 #
 
+# v2 TODO(jathan): Remove all cacheops settings.
 # The django-cacheops plugin is used to cache querysets. The built-in Django
 # caching is not used.
 CACHEOPS = {
@@ -577,7 +578,7 @@ CACHEOPS = {
     "virtualization.*": {"ops": "all"},
 }
 CACHEOPS_DEGRADE_ON_FAILURE = True
-CACHEOPS_ENABLED = True
+CACHEOPS_ENABLED = False
 CACHEOPS_REDIS = "redis://localhost:6379/1"
 CACHEOPS_DEFAULTS = {"timeout": 900}
 

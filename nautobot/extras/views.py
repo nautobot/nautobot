@@ -270,6 +270,7 @@ class ConfigContextSchemaObjectValidationView(generic.ObjectView):
 
         # Device table
         device_table = DeviceTable(
+            # v2 TODO(jathan): Replace prefetch_related with select_related
             data=instance.device_set.prefetch_related(
                 "tenant", "site", "rack", "device_type", "device_role", "primary_ip"
             ),
@@ -290,6 +291,7 @@ class ConfigContextSchemaObjectValidationView(generic.ObjectView):
 
         # Virtual machine table
         virtual_machine_table = VirtualMachineTable(
+            # v2 TODO(jathan): Replace prefetch_related with select_related
             data=instance.virtualmachine_set.prefetch_related("cluster", "role", "tenant", "primary_ip"),
             orderable=False,
             extra_columns=[
@@ -807,6 +809,7 @@ class GitRepositoryBulkImportView(generic.BulkImportView):
 
 
 class GitRepositoryBulkEditView(generic.BulkEditView):
+    # v2 TODO(jathan): Replace prefetch_related with select_related
     queryset = GitRepository.objects.prefetch_related("secrets_group")
     filterset = filters.GitRepositoryFilterSet
     table = tables.GitRepositoryBulkTable
@@ -993,6 +996,7 @@ class JobListView(generic.ObjectListView):
             queryset = queryset.filter(installed=True)
         if "is_job_hook_receiver" not in request.GET:
             queryset = queryset.filter(is_job_hook_receiver=False)
+        # v2 TODO(jathan): Replace prefetch_related with select_related
         queryset = queryset.prefetch_related("results")
         return queryset
 
@@ -1429,6 +1433,7 @@ class JobResultListView(generic.ObjectListView):
     List JobResults
     """
 
+    # v2 TODO(jathan): Replace prefetch_related with select_related
     queryset = JobResult.objects.prefetch_related("job_model", "logs", "obj_type", "user")
     filterset = filters.JobResultFilterSet
     filterset_form = forms.JobResultFilterForm
@@ -1557,6 +1562,7 @@ class ObjectChangeLogView(View):
 
         # Gather all changes for this object (and its related objects)
         content_type = ContentType.objects.get_for_model(model)
+        # v2 TODO(jathan): Replace prefetch_related with select_related
         objectchanges = (
             ObjectChange.objects.restrict(request.user, "view")
             .prefetch_related("user", "changed_object_type")
@@ -1997,6 +2003,7 @@ class TagView(generic.ObjectView):
     queryset = Tag.objects.all()
 
     def get_extra_context(self, request, instance):
+        # v2 TODO(jathan): Replace prefetch_related with select_related
         tagged_items = TaggedItem.objects.filter(tag=instance).prefetch_related("content_type", "content_object")
 
         # Generate a table of all items tagged with this Tag

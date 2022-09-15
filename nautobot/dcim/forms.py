@@ -948,6 +948,7 @@ class RackReservationFilterForm(NautobotFilterForm, TenancyFilterForm):
         query_params={"region": "$region"},
     )
     group_id = DynamicModelMultipleChoiceField(
+        # v2 TODO(jathan): Replace prefetch_related with select_related
         queryset=RackGroup.objects.prefetch_related("site"),
         required=False,
         label="Rack group",
@@ -1893,6 +1894,7 @@ class DeviceForm(LocatableModelFormMixin, NautobotModelForm, TenancyForm, LocalC
                 interface_ids = self.instance.vc_interfaces.values_list("pk", flat=True)
 
                 # Collect interface IPs
+                # v2 TODO(jathan): Replace prefetch_related with select_related
                 interface_ips = (
                     IPAddress.objects.ip_family(family)
                     .filter(
@@ -1905,6 +1907,7 @@ class DeviceForm(LocatableModelFormMixin, NautobotModelForm, TenancyForm, LocalC
                     ip_list = [(ip.id, f"{ip.address} ({ip.assigned_object})") for ip in interface_ips]
                     ip_choices.append(("Interface IPs", ip_list))
                 # Collect NAT IPs
+                # v2 TODO(jathan): Replace prefetch_related with select_related
                 nat_ips = (
                     IPAddress.objects.prefetch_related("nat_inside")
                     .ip_family(family)
@@ -2945,6 +2948,7 @@ class InterfaceBulkEditForm(
             # See netbox-community/netbox#4523
             if "pk" in self.initial:
                 site = None
+                # v2 TODO(jathan): Replace prefetch_related with select_related
                 interfaces = Interface.objects.filter(pk__in=self.initial["pk"]).prefetch_related("device__site")
 
                 # Check interface sites.  First interface should set site, further interfaces will either continue the

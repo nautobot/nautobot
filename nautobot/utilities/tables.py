@@ -98,6 +98,7 @@ class BaseTable(tables.Table):
 
         # Dynamically update the table's QuerySet to ensure related fields are pre-fetched
         if isinstance(self.data, TableQuerysetData):
+            # v2 TODO(jathan): Replace prefetch_related with select_related
             prefetch_fields = []
             for column in self.columns:
                 if column.visible:
