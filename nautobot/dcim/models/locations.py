@@ -87,7 +87,17 @@ class LocationType(TreeNode, OrganizationalModel):
 
     @property
     def display(self):
-        # prefix with parent name allows location type name identity if there are the same name exists under different parents.
+        """
+        Prefix with parent name allows location type name identity if there are the same name exists under different parents.
+        self.ancestors() return all the preceding nodes from top down. So if we are looking at node C and its node structure is the following:
+            A
+           /
+          B
+         /
+        C
+        This method will return \"A → B → C\".
+        If self.ancestor() throw an ObjectDoesNotExist Exception during bulk operations, we handle it by only returning the name of the current node.
+        """
         display_str = ""
         try:
             for ancestor in self.ancestors():
@@ -96,7 +106,7 @@ class LocationType(TreeNode, OrganizationalModel):
             display_str += self.name
             return display_str
         except ObjectDoesNotExist:
-            return display_str
+            return self.name
 
 
 @extras_features(
@@ -214,7 +224,17 @@ class Location(TreeNode, StatusModel, PrimaryModel):
 
     @property
     def display(self):
-        # prefix with parent name allows location type name identity if there are the same name exists under different parents.
+        """
+        Prefix with parent name allows location name identity if there are the same name exists under different parents.
+        self.ancestors() return all the preceding nodes from top down. So if we are looking at node C and its node structure is the following:
+            A
+           /
+          B
+         /
+        C
+        This method will return \"A → B → C\".
+        If self.ancestor() throw an ObjectDoesNotExist Exception during bulk operations, we handle it by only returning the name of the current node.
+        """
         display_str = ""
         try:
             for ancestor in self.ancestors():
@@ -223,7 +243,7 @@ class Location(TreeNode, StatusModel, PrimaryModel):
             display_str += self.name
             return display_str
         except ObjectDoesNotExist:
-            return display_str
+            return self.name
 
     def validate_unique(self, exclude=None):
         # Check for a duplicate name on a Location with no parent.
