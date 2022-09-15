@@ -939,8 +939,6 @@ def get_jobs():
     return jobs
 
 
-# @file_cache.cached(timeout=60)
-# @cache.memoize(timeout=60)
 def _get_job_source_paths():
     """
     Helper function to get_jobs().
