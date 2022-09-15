@@ -34,3 +34,4 @@ If you are a user migrating from NetBox to Nautobot, please refer to the ["Migra
 ### Fixed
 
 - [#192](https://github.com/nautobot/nautobot/issues/192) - Eliminated Unit Test noisy output.
+- [#2388](https://github.com/nautobot/nautobot/issues/2388) - Return "—" instead of "None" when relationship column is empty.
