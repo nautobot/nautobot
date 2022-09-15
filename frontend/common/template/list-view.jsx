@@ -42,12 +42,16 @@ export default function ListView(props){
             },
         }
     )
-    const [tableData, setTableData] = useState(require("../../common/utils/table_api.json"))
+    const [tableData, setTableData] = useState([])
+    const [tableHeader, setTableHeader] = useState([])
 
     useEffect(async () => {
-        const api_url =  location.pathname + "/"
-        const response = await axios_instance.get(api_url)
-        // setTableData(response.data.results)
+        const data_url =  location.pathname + "/"
+        const header_url =  location.pathname + "/table-fields/"
+        const table_data = await axios_instance.get(data_url)
+        const table_header = await axios_instance.get(header_url)
+        setTableData(table_data.data.results)
+        setTableHeader(table_header.data.data)
 
         let newPageConfig = pageConfig
         if (props.config) {
@@ -55,13 +59,10 @@ export default function ListView(props){
                 let pageButtons = props.config.buttons
                 newPageConfig = {...newPageConfig, "buttons": {...newPageConfig.buttons, ...pageButtons}}
             }
-            if (props.config.data) {
-                let pageData = props.config.data
-                newPageConfig = {...newPageConfig, "data": {...pageData}}
-            }
+            // TODO: incase a diffrent api is passed for table daata and header
         }
         setPageConfig(newPageConfig)
-    }, [])
+    }, [setTableData, setTableHeader])
 
     return (
         <Home>
@@ -91,8 +92,8 @@ export default function ListView(props){
             <Row>
                 <Col>
                     <NautobotTable 
-                        data={tableData.data} 
-                        header={tableData.header} 
+                        data={tableData} 
+                        header={tableHeader} 
                     />
                 </Col>
             </Row>
