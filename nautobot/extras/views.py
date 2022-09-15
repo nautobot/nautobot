@@ -1168,7 +1168,7 @@ class JobView(ObjectPermissionRequiredMixin, View):
                     commit=commit,
                 )
 
-                return redirect("extras:job_jobresult", pk=job_result.pk)
+                return redirect("extras:jobresult", pk=job_result.pk)
 
         template_name = "extras/job.html"
         if job_model.job_class is not None and hasattr(job_model.job_class, "template_name"):
@@ -1284,7 +1284,7 @@ class JobApprovalRequestView(generic.ObjectView):
                     commit=False,  # force a dry-run
                 )
 
-                return redirect("extras:job_jobresult", pk=job_result.pk)
+                return redirect("extras:jobresult", pk=job_result.pk)
         elif deny:
             if not (
                 self.queryset.check_perms(request.user, instance=scheduled_job, action="delete")
