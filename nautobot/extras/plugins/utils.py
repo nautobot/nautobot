@@ -111,11 +111,15 @@ def load_plugin(plugin_name, settings):
     copy_react_files_from_plugin_into_nautobot_frontend(plugin_name, os.path.dirname(plugin.__file__))
 
 
+def slugify(item):
+    return item.replace("_", "-")
+
+
 def copy_react_files_from_plugin_into_nautobot_frontend(plugin_name, plugin_dir):
     """Copy files(pages, utils and components) from plugin into nautobot frontend"""
-    pages_dst = os.path.join("/source/frontend/pages/plugins/", plugin_name)
-    components_dst = os.path.join("/source/frontend/common/components/plugins/", plugin_name)
-    utils_dst = os.path.join("/source/frontend/common/utils/plugins/", plugin_name)
+    pages_dst = os.path.join("/source/frontend/pages/plugins/", slugify(plugin_name))
+    components_dst = os.path.join("/source/frontend/common/components/plugins/", slugify(plugin_name))
+    utils_dst = os.path.join("/source/frontend/common/utils/plugins/", slugify(plugin_name))
 
     if not os.path.isdir(pages_dst):
         src = os.path.join(plugin_dir, "templates/react/pages")
