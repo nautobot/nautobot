@@ -269,6 +269,10 @@ SHORT_DATETIME_FORMAT = "Y-m-d H:i"
 TIME_FORMAT = "g:i a"
 TIME_ZONE = "UTC"
 
+# Disable importing the WSGI module before starting the server application. This is required for
+# uWSGI postfork callbacks to execute as is currently required in `nautobot.core.wsgi`.
+WEBSERVER_WARMUP = False
+
 # Installed apps and Django plugins. Nautobot plugins will be appended here later.
 INSTALLED_APPS = [
     "django.contrib.auth",
