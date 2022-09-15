@@ -1060,6 +1060,7 @@ class CableTypeChoices(ChoiceSet):
     TYPE_POWER = "power"
 
     CHOICES = (
+        ("", "---------"),
         (
             "Copper",
             (
