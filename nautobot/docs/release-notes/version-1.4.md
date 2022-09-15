@@ -382,3 +382,5 @@ The `settings_and_registry` default context processor was changed to purely `set
 
 - [#1815](https://github.com/nautobot/nautobot/issues/1815) - Fix theme link style in footer.
 - [#1831](https://github.com/nautobot/nautobot/issues/1831) - Fixed missing `parent_interface` and `bridge` from 1.4 serializer of Interfaces.
+- [#1831](https://github.com/nautobot/nautobot/issues/2380) - Fix job from with `approval_required=True` and `has_sensitive_variables=True` can be scheduled.
+.

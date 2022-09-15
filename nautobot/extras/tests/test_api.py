@@ -1442,6 +1442,37 @@ class JobAPIRunTestMixin:
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     @mock.patch("nautobot.extras.api.views.get_worker_count")
+    def test_run_a_job_with_sensitive_variables_and_requires_approval(self, mock_get_worker_count):
+        mock_get_worker_count.return_value = 1
+        self.add_permissions("extras.run_job")
+
+        job_model = Job.objects.get(job_class_name="ExampleJob")
+        job_model.enabled = True
+        job_model.has_sensitive_variables = True
+        job_model.approval_required = True
+        job_model.save()
+
+        url = reverse("extras-api:job-run", kwargs={"pk": job_model.pk})
+        data = {
+            "data": {},
+            "commit": True,
+            "schedule": {
+                "interval": "immediately",
+                "name": "test",
+            },
+        }
+
+        response = self.client.post(url, data, format="json", **self.header)
+        self.assertHttpStatus(response, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(
+            response.data[0],
+            "Unable to run or schedule job: "
+            "This job is flagged as possibly having sensitive variables but is also flagged as requiring approval."
+            "One of these two flags must be removed before this job can be scheduled or run.",
+        )
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    @mock.patch("nautobot.extras.api.views.get_worker_count")
     def test_run_a_job_with_sensitive_variables_immediately(self, mock_get_worker_count):
         mock_get_worker_count.return_value = 1
         self.add_permissions("extras.run_job")
