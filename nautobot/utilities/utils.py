@@ -742,9 +742,9 @@ def get_data_for_serializer_parameter(model):
     from nautobot.utilities.api import get_serializer_for_model
 
     serializer = get_serializer_for_model(model)
-    writeable_fields = [
-        format_output(field_name, field_value)
+    writeable_fields = {
+        field_name: format_output(field_name, field_value)
         for field_name, field_value in serializer().get_fields().items()
         if not field_value.read_only
-    ]
+    }
     return writeable_fields

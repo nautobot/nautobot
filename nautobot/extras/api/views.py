@@ -115,6 +115,9 @@ class NotesViewSetMixin:
 
 
 class FormFieldsViewSetMixin:
+    def get_field_group(self):
+        return []
+
     @extend_schema(
         responses={
             200: {
@@ -134,7 +137,17 @@ class FormFieldsViewSetMixin:
     )
     @action(detail=False, url_path="form-fields", methods=["get"])
     def form_fields(self, request):
-        data = get_data_for_serializer_parameter(self.queryset.model)
+        groups = self.get_field_group()
+        model = self.queryset.model
+        fields = get_data_for_serializer_parameter(model)
+        if groups:
+            data = {
+                group_name: [fields.get(field) for field in group_fields] for group_name, group_fields in groups.items()
+            }
+        else:
+            model_name = model._meta.model_name
+            data = {model_name.capitalize(): fields}
+
         return Response(data)
 
 

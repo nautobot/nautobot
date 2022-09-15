@@ -158,6 +158,25 @@ class SiteViewSet(StatusViewSetMixin, NautobotModelViewSet):
     serializer_class = serializers.SiteSerializer
     filterset_class = filters.SiteFilterSet
 
+    def get_field_group(self):
+        groups = {
+            "Site": ["name", "slug", "status", "region", "facility", "asn", "time_zone", "description"],
+            "Tenancy": ["tenant"],
+            "Contact Info": [
+                "physical_address",
+                "shipping_address",
+                "latitude",
+                "longitude",
+                "contact_name",
+                "contact_phone",
+                "contact_email",
+            ],
+            "Notes": ["notes"],
+            "Tags": ["tags"],
+            "Comments": ["comments"],
+        }
+        return groups
+
 
 #
 # Location types
