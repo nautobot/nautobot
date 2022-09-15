@@ -146,7 +146,7 @@ class FormFieldsViewSetMixin:
             }
         else:
             model_name = model._meta.model_name
-            data = {model_name.capitalize(): fields}
+            data = {model_name.capitalize(): fields.values()}
 
         return Response(data)
 

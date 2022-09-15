@@ -3,13 +3,12 @@ import Row from 'react-bootstrap/Row';
 import Col from 'react-bootstrap/Col';
 import Button from 'react-bootstrap/Button';
 import * as Icon from 'react-feather';
-import NautobotTable from "../../common/components/table"
-import NautobotFilterForm from "../../common/components/filter-form";
+import NautobotTable from "@component/table"
 import { useState, useEffect } from "react";
 import Home from '../../pages';
 import { NavLink } from 'react-bootstrap';
 import { useRouter } from 'next/router';
-import { axios_instance } from '../utils/utils';
+import { axios_instance } from '@utils/utils';
 
 
 export default function ListView(props){

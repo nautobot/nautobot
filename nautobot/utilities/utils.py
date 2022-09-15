@@ -19,6 +19,7 @@ from django.utils.tree import Node
 from django.template import engines
 from django.utils.module_loading import import_string
 from django.utils.text import slugify
+from rest_framework.serializers import ListSerializer
 from taggit.managers import _TaggableManager
 
 from nautobot.dcim.choices import CableLengthUnitChoices
@@ -693,7 +694,7 @@ def format_output(field, field_value):
         "choices": [],  # Param choices for select fields
         "help_text": None,  # Form field placeholder
         "label": None,  # Form field placeholder
-        "required": None,  # Form field placeholder
+        "required": False,  # Form field placeholder
     }
     # choice field, char field, nested-serializer field, integer-field
     # nested serializer
@@ -701,16 +702,32 @@ def format_output(field, field_value):
     from rest_framework.fields import CharField
     from rest_framework.fields import IntegerField
     from nautobot.core.api import ChoiceField
+    from nautobot.extras.api.fields import StatusSerializerField
 
     kwargs = {}
-    if isinstance(field_value, WritableNestedSerializer):
+    if isinstance(field_value, (WritableNestedSerializer, ListSerializer, StatusSerializerField)):
         kwargs = {
             "type": "dynamic-choice-field",
-            "label": getattr(field_value, "label", None) or field,
-            "required": field_value.required,
-            "help_text": field_value.help_text,
-            # "url": field_value.fields.get("url").view_name,
         }
+        extra_kwargs = {}
+
+        if isinstance(field_value, WritableNestedSerializer):
+            extra_kwargs = {
+                "label": getattr(field_value, "label", None) or field,
+                "required": field_value.required,
+                "help_text": field_value.help_text,
+            }
+        elif isinstance(field_value, ListSerializer):
+            extra_kwargs = {
+                "label": "Tags",
+                "required": False,
+            }
+        elif isinstance(field_value, StatusSerializerField):
+            extra_kwargs = {
+                "label": "Status",
+                "required": True,
+            }
+        kwargs.update(extra_kwargs)
     elif isinstance(field_value, ChoiceField):
         kwargs = {
             "type": "choice-field",

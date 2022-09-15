@@ -6,7 +6,8 @@ import Button from 'react-bootstrap/Button';
 import Card from 'react-bootstrap/Card';
 import Form from 'react-bootstrap/Form';
 import { useState, useEffect } from "react";
-import NautobotInput from "../../common/components/nautobot-default-input"
+import NautobotInput from "@component/nautobot-default-input"
+import { axios_instance } from "@utils/utils";
 
 
 export default function CreateViewTemplate({children}, props){
@@ -15,16 +16,13 @@ export default function CreateViewTemplate({children}, props){
             "form_fields": require("../../common/utils/api/sites/add-form-fields.json"),
         }
     )
+    const [formFields, setFormFields] = useState({})
 
-    useEffect(() => {
-        // setTableData(props.list_url ? props.list_url : tableDataAPI)
-        // if () {
-        //     if (props.config.buttons) {
-        //         console.log()
-        //     }
-        // }
-
-    }, [pageConfig])
+    useEffect(async () => {
+        const form_fields_url =  location.pathname.replace("add", "") + "form-fields/"
+        const formFields = await axios_instance.get(form_fields_url)
+        setFormFields(formFields.data)
+    }, [])
 
     return (
         <Home>
@@ -34,25 +32,34 @@ export default function CreateViewTemplate({children}, props){
                     {
                         !children ?
                         <>
-                            <h4>Add a new site</h4>
+                            <h4>Add New</h4>
                             {
-                                pageConfig.form_fields.map((item, idx) => (
+                                Object.entries(formFields).map((group, idx) => (
                                     <Card className="mb-4" key={idx}>
-                                        <Card.Header><b>{item.title}</b></Card.Header>
+                                        <Card.Header><b>{group[0]}</b></Card.Header>
                                         <Card.Body>
                                             {
-                                                item.fields.map((field, idx) => (
-                                                    field.type == "text" ? 
-                                                    <NautobotInput _type="text" label={field.label} />
+                                                group[1].map((field, idx) => (
+                                                    field ?
+                                                        ["char-field", "integer-field", "others"].includes(field.type) ? 
+                                                        <NautobotInput key={idx} _type="text" label={field.label} />
+                                                        :
+                                                        field.type == "dynamic-choice-field" ? 
+                                                        <NautobotInput 
+                                                            key={idx} 
+                                                            _type="select" 
+                                                            label={field.label} 
+                                                            options={field.choices} 
+                                                        />
+                                                        :
+                                                        <NautobotInput key={idx} _type="checkbox" label="" />
                                                     :
-                                                    field.type == "select" ? 
-                                                    <NautobotInput _type="select" label={field.label} options={field.options} />
-                                                    :
-                                                    <NautobotInput _type="checkbox" label={field.label} />
+                                                        <></>
                                                 ))
                                             }
                                         </Card.Body>
                                     </Card>
+                                    
                                 ))
                             }
                         </>
