@@ -13,7 +13,7 @@ from nautobot.extras.choices import ObjectChangeActionChoices
 from nautobot.extras.models import ChangeLoggedModel
 from nautobot.extras.registry import registry
 from nautobot.utilities.testing.mixins import NautobotTestCaseMixin
-from nautobot.utilities.utils import get_changes_for_model, get_filterset_for_model
+from nautobot.utilities.utils import get_changes_for_model, get_filterset_for_model, get_route_for_model
 from .utils import disable_warnings
 from .views import ModelTestCase
 
@@ -35,12 +35,10 @@ class APITestCase(ModelTestCase):
     Base test case for API requests.
 
     client_class: Test client class
-    view_namespace: Namespace for API views. If None, the model's app_label will be used.
     api_version: Specific API version to test. Leave unset to test the default behavior. Override with set_api_version()
     """
 
     client_class = APIClient
-    view_namespace = None
     api_version = None
 
     def setUp(self):
@@ -61,19 +59,12 @@ class APITestCase(ModelTestCase):
         else:
             self.header["HTTP_ACCEPT"] = f"application/json; version={api_version}"
 
-    def _get_view_namespace(self):
-        if self.view_namespace:
-            return f"{self.view_namespace}-api"
-        if self.model._meta.app_label in settings.PLUGINS:
-            return f"plugins-api:{self.model._meta.app_label}-api"
-        return f"{self.model._meta.app_label}-api"
-
     def _get_detail_url(self, instance):
-        viewname = f"{self._get_view_namespace()}:{instance._meta.model_name}-detail"
+        viewname = get_route_for_model(instance, "detail", api=True)
         return reverse(viewname, kwargs={"pk": instance.pk})
 
     def _get_list_url(self):
-        viewname = f"{self._get_view_namespace()}:{self.model._meta.model_name}-list"
+        viewname = get_route_for_model(self.model, "list", api=True)
         return reverse(viewname)
 
 

@@ -41,6 +41,7 @@ from nautobot.utilities.permissions import get_permission_for_model
 from nautobot.utilities.templatetags.helpers import validated_viewname
 from nautobot.utilities.utils import (
     csv_format,
+    get_route_for_model,
     normalize_querydict,
     prepare_cloned_fields,
 )
@@ -96,9 +97,7 @@ class ObjectView(ObjectPermissionRequiredMixin, View):
         if meta.model_name == "objectchange":
             return None
 
-        route = f"{meta.app_label}:{meta.model_name}_changelog"
-        if meta.app_label in settings.PLUGINS:
-            route = f"plugins:{route}"
+        route = get_route_for_model(instance, "changelog")
 
         # Iterate the pk-like fields and try to get a URL, or return None.
         fields = ["pk", "slug"]
