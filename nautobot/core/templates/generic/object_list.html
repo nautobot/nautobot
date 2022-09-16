@@ -131,6 +131,14 @@
         added: jsify_form
     });
 
+    // By default on lookup_value field names are form-\d-lookup_value, thats why
+    // on page load we change all `lookup_value` name to its relevant `lookup_type` value
+    $(".dynamic-filterform").each(function(){
+        lookup_type_value = $(this).find(".lookup_type-select").val()
+        lookup_value = $(this).find(".lookup_value-input")
+        lookup_value.attr("name", lookup_type_value)
+    })
+
     // Remove applied filters
     $(".remove-filter-param").on("click", function(){
         let query_params = location.search
