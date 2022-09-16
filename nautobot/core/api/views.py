@@ -730,7 +730,7 @@ class LookupTypeChoicesView(NautobotAPIVersionMixin, APIView):
     def get(self, request):
         if "contenttype" not in request.GET or "field_name" not in request.GET:
             return Response(
-                "contentype and field_name are required parameters",
+                "contenttype and field_name are required parameters",
                 status=400,
             )
         contenttype = request.GET.get("contenttype")
@@ -768,7 +768,7 @@ class GenerateLookupFieldDataView(NautobotAPIVersionMixin, APIView):
     def get(self, request):
         if "contenttype" not in request.GET or "field_name" not in request.GET:
             return Response(
-                "contentype and field_name are required parameters",
+                "contenttype and field_name are required parameters",
                 status=400,
             )
         field_name = request.GET.get("field_name")

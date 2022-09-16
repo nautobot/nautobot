@@ -224,7 +224,7 @@ class LookupTypeChoicesTestCase(APITestCase):
         response = self.client.get(url, **self.header)
 
         self.assertEqual(response.status_code, 400)
-        self.assertEqual(response.data, "contentype and field_name are required parameters")
+        self.assertEqual(response.data, "contenttype and field_name are required parameters")
 
     def test_get_lookup_choices(self):
         url = reverse("lookup_choices")
@@ -248,7 +248,7 @@ class GenerateLookupFieldDataViewTestCase(APITestCase):
         response = self.client.get(url, **self.header)
 
         self.assertEqual(response.status_code, 400)
-        self.assertEqual(response.data, "contentype and field_name are required parameters")
+        self.assertEqual(response.data, "contenttype and field_name are required parameters")
 
     def test_get_lookup_field_data(self):
         url = reverse("lookup_field_type")
