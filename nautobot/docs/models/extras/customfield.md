@@ -68,6 +68,15 @@ There are a number of available built-in filters for custom fields.
 
 Filtering on an object's list view follows the same pattern as [custom field filtering on the API](../../rest-api/filtering.md#filtering-by-custom-field).
 
+When using the ORM, you can filter on custom fields as follows (assuming a custom field of string type called 'site_code' was created for Site objects):
+
+```python
+from nautobot.dcim.models import Site
+
+all_sites = Site.objects.all()  # -> ['Raleigh', 'Charlotte']
+filtered_sites = Site.objects.filter(_custom_field_data__site_code="US-NC-RAL42")  # -> ['Raleigh']
+```
+
 ## Custom Fields and the REST API
 
 When retrieving an object via the REST API, all of its custom field data will be included within the `custom_fields` attribute. For example, below is the partial output of a site with two custom fields defined:
