@@ -1575,7 +1575,6 @@ class CableFilterSet(NautobotFilterSet, StatusModelFilterSetMixin):
         ]
 
     def filter_device(self, queryset, name, value):
-        print(name, value)
         queryset = queryset.filter(
             Q(**{f"_termination_a_{name}__in": value}) | Q(**{f"_termination_b_{name}__in": value})
         )
