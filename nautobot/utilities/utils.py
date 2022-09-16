@@ -27,7 +27,6 @@ from django_filters import (
     DateFilter,
     DateTimeFilter,
     filters,
-    ModelMultipleChoiceFilter,
     TimeFilter,
     NumberFilter,
 )
@@ -751,156 +750,9 @@ def get_all_lookup_exper_for_field(model, field_name):
     return lookup_expr
 
 
-def get_data_for_filterset_parameter(model, parameter, initial_choice=None):
+def get_filterset_parameter_form_field(model, parameter):
     """
-    Return relevant data for a filterset parameter which can include `model` api_url, the parameter-type,
-    parameter choices etc.
-
-    Args:
-        model: Filterset model
-        parameter: The filterset parameter e.g has_vlans, last_updated__lte, slug e.t.c
-        initial_choice: [Optional] The filterset parameter value
-
-    Examples:
-        >>> get_data_for_filterset_parameter(<class: nautobot.dcim.models.Site>, "has_vlans")
-        >>> {
-                "type": "select-field",
-                "widget": "static-select,
-                "choices": [("True", "Yes"), ("False", "No)],
-                "allow_multiple": False,
-                "api_url": None,
-                "content_type": None,
-                "value_field": None,
-                "css_classes": "",
-                "placeholder": None,
-            }
-
-        >>> get_data_for_filterset_parameter(<class: nautobot.dcim.models.Site>, "status")
-        >>> {
-                "type": "select-field",
-                "widget": "api-select-multiple,
-                "choices": [],
-                "allow_multiple": True,
-                "api_url": /api/dcim/sites/,
-                "content_type": None,
-                "value_field": "slug",
-                "css_classes": "",
-                "placeholder": None,
-            }
-
-    Returns:
-        Returns a dict which keys may vary depending on the parameter type
-        e.g relational filed(ForeignKey, ManyToMany e.t.c.), choice field including boolean or char/int field:
-            type: param type either staic-choice/dynamic-choice/others,
-            data_url[for relational field]: param models api endpoint,
-            content_type[for relational field]: (model contenttype),
-            choices[for choice field or if initial_choice is not None]:  param available choices,
-            allow_multiple[for choice field]:  allow multiple choices or not
-    """
-    # Avoid circular import
-    from nautobot.extras.filters import StatusFilter
-    from nautobot.extras.models import Status, Tag
-    from nautobot.utilities.forms import BOOLEAN_WITH_BLANK_CHOICES
-
-    contenttype = model._meta.app_label + "." + model._meta.model_name
-
-    filterset = get_filterset_for_model(model)
-    if filterset is None:
-        # TODO Timizuo Raise Error if filterset not found
-        pass
-
-    field = filterset.base_filters.get(parameter)
-    if field is None:
-        # TODO Timizuo Raise Error if field not found
-        pass
-
-    default_css_classes = "lookup_value-input form-control"
-    data = {
-        "type": "others",  # Param type e.g select field, char field, datetime field etc.
-        "widget": None,  # Param relevant widget e.g APISelectMultiple, DateTimePicker etc.
-        "choices": [],  # Param choices for select fields
-        "allow_multiple": True,  # Allow multiple selection of choices
-        "api_url": None,  # Param's related model api endpoint
-        "content_type": None,  # `model` contenttype
-        "value_field": None,  #
-        "css_classes": default_css_classes,  # css classes used in UI for form fields
-        "placeholder": None,  # Form field placeholder
-    }
-    kwargs = {}
-
-    if isinstance(field, (NumberFilter,)):
-        kwargs = {"type": "number-field"}
-
-    elif isinstance(field, (filters.MultipleChoiceFilter, ModelMultipleChoiceFilter)):
-        if "choices" in field.extra:  # Field choices
-            kwargs = {
-                "type": "select-field",
-                "choices": field.extra["choices"].CHOICES,
-                "widget": "static-select",
-                "css_classes": default_css_classes + " nautobot-select2-static select2-hidden-accessible",
-            }
-
-        elif hasattr(field, "queryset"):  # Dynamically populated choices
-            if isinstance(field, StatusFilter):
-                related_model = Status
-            else:
-                related_model = field.extra["queryset"].model
-            # TODO: timizuo use get_route_for_model() inplace of get_model_api_endpoint when PR-#2223 gets merged
-            api_endpoint = get_model_api_endpoint(related_model)
-
-            if api_endpoint:
-                kwargs = {
-                    "type": "select-field",
-                    "api_url": api_endpoint,
-                    "widget": "api-select-multiple",
-                    "value_field": field.extra.get("to_field_name"),
-                    "css_classes": default_css_classes + " nautobot-select2-api select2-hidden-accessible",
-                }
-
-            # Status and Tag api requires content_type, to limit result to only related content_types
-            if related_model in [Status, Tag]:
-                kwargs["content_type"] = json.dumps([contenttype])
-
-            # Add initial choices if initial_choice is not none
-            # This can be used to populate the selected options for the select field
-            if initial_choice is not None:
-                search_by = field.extra.get("to_field_name") or "id"
-                values = initial_choice if isinstance(initial_choice, (list, tuple)) else [initial_choice]
-                kwargs["choices"] = get_values_display_names(related_model, search_by, values)
-
-    elif isinstance(field, (BooleanFilter,)):  # Yes / No choice
-        kwargs = {
-            "type": "select-field",
-            "choices": BOOLEAN_WITH_BLANK_CHOICES,
-            "allow_multiple": False,
-            "widget": "static-select",
-            "css_classes": default_css_classes + " nautobot-select2-static select2-hidden-accessible",
-        }
-    elif isinstance(field, (DateFilter, DateTimeFilter, TimeFilter)):
-        css_classes = "form-control flatpickr-input active lookup_value-input"
-        kwargs = {
-            "type": "datetime-field",
-            "css_classes": css_classes + " time-picker",
-            "placeholder": "hh:mm:ss",
-            "widget": "time",
-        }
-        if isinstance(field, DateTimeFilter):
-            kwargs["css_class"] = css_classes + " datetime-picker"
-            kwargs["placeholder"] = "YYYY-MM-DD hh:mm:ss"
-            kwargs["widget"] = "datetime"
-        elif isinstance(field, DateFilter):
-            kwargs["css_classes"] = css_classes + " date-picker"
-            kwargs["placeholder"] = "YYYY-MM-DD"
-            kwargs["widget"] = "date"
-
-    data.update(kwargs)
-    return data
-
-
-def get_filterset_parameter_form_field(model, parameter, initial_choice=None):
-    """
-    Return relevant data for a filterset parameter which can include `model` api_url, the parameter-type,
-    parameter choices etc.
+    Return the relevant form field instance for a filterset parameter e.g DynamicModelMultipleChoiceField, forms.IntegerField e.t.c
     """
     # Avoid circular import
     from nautobot.extras.filters import StatusFilter
@@ -932,15 +784,6 @@ def get_filterset_parameter_form_field(model, parameter, initial_choice=None):
         # Status and Tag api requires content_type, to limit result to only related content_types
         if related_model in [Status, Tag]:
             form_attr["query_params"] = {"content_types": model._meta.label_lower}
-
-        # TODO: timizuo find a way to add choices to DynamicModelMultipleChoiceField
-        #  initial choices needs to be added in order for DOM to select the selected fields in a dynamic select
-        # Add initial choices if initial_choice is not none
-        # This can be used to populate the selected options for the select field
-        # if initial_choice is not None:
-        #     search_by = field.extra.get("to_field_name") or "id"
-        #     values = initial_choice if isinstance(initial_choice, (list, tuple)) else [initial_choice]
-        #     form_attr["choices"] = get_values_display_names(related_model, search_by, values)
     elif isinstance(field, (filters.MultipleChoiceFilter, filters.ChoiceFilter)) and "choices" in field.extra:
         form_field_class = forms.ChoiceField
         form_field_class.widget = StaticSelect2Multiple()

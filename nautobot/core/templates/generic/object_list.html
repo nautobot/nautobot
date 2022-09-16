@@ -150,14 +150,6 @@
     // On submit of filter form
     $("#dynamic-filter-form").on("submit", function(e){
         e.preventDefault()
-        $(this).find(".dynamic-filterform").each((idx, element) => {
-            // Exclude rows with display == none because those are deleted rows
-            if ($(element).css("display") != "none") {
-                let lookup_type = $(element).find(".lookup_type-select")
-                let lookup_value = $(element).find(".lookup_value-input")
-                lookup_value.attr("name", lookup_type.val())
-            }
-        })
         // By removing all name attr with 'form-' prefix form input/select elements
         // only filterable fields would be picked up by `$(this).serialize()`
         $(this).find(`input[name*="form-"], select[name*="form-"]`).removeAttr("name")

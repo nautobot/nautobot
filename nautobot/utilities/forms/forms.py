@@ -9,8 +9,8 @@ from django.urls import reverse
 from nautobot.ipam.formfields import IPNetworkFormField
 from nautobot.utilities.utils import (
     build_lookup_label,
-    get_data_for_filterset_parameter,
     get_filterset_for_model,
+    get_filterset_parameter_form_field,
 )
 
 __all__ = (
@@ -291,7 +291,6 @@ class DynamicFilterForm(BootstrapMixin, forms.Form):
         if kwargs.get("data") and kwargs.get("prefix"):
             data = kwargs["data"]
             prefix = kwargs["prefix"]
-
             lookup_type = data.get(prefix + "-lookup_type")
             lookup_value = data.getlist(prefix + "-lookup_value")
 
@@ -299,7 +298,7 @@ class DynamicFilterForm(BootstrapMixin, forms.Form):
                 verbose_name = self.filterset_base_filters[lookup_type].lookup_expr
                 label = build_lookup_label(lookup_type, verbose_name)
                 self.fields["lookup_type"].choices = [(lookup_type, label)]
-                self.update_lookup_value_field(lookup_type, lookup_value)
+                self.fields["lookup_value"] = get_filterset_parameter_form_field(self.model, lookup_type)
 
         self.fields["lookup_type"].widget.attrs["data-query-param-field_name"] = json.dumps(["$lookup_field"])
         self.fields["lookup_type"].widget.attrs["data-contenttype"] = contenttype
@@ -310,47 +309,6 @@ class DynamicFilterForm(BootstrapMixin, forms.Form):
         self.fields["lookup_value"].widget.attrs["class"] = " ".join(
             [lookup_value_css, "lookup_value-input form-control"]
         )
-
-    def update_lookup_value_field(self, field_name, choice):
-        """
-        Update `lookup_value` field to an appropriate field for the `field_name`
-
-        If `field_name` is a relational field(ForeignKey, ManyToMany e.t.c) `lookup_value`
-        should be `forms.ChoiceField(...widget=APISelectMultiple(...))` while if `field_name` is a
-        choice field then `lookup_value` should be `forms.ChoiceField(...widget=StaticSelect2(...))`
-        """
-        # Avoid circular import
-        from nautobot.utilities.forms import APISelectMultiple, DatePicker, DateTimePicker, StaticSelect2, TimePicker
-
-        data = get_data_for_filterset_parameter(self.model, field_name, choice)
-        if data["type"] == "select-field":
-            attr = {}
-            widget = StaticSelect2 if data["widget"] == "static-select" else APISelectMultiple
-
-            if data["allow_multiple"] is True:
-                attr["multiple"] = "true"
-            if data["content_type"] is not None:
-                attr["data-query-param-content_types"] = data["content_type"]
-            if data["value_field"] is not None:
-                attr["value-field"] = data["value_field"]
-            if data["api_url"] is not None:
-                attr["data-url"] = data["api_url"]
-
-            self.fields["lookup_value"] = forms.ChoiceField(
-                choices=data["choices"],
-                required=False,
-                widget=widget(attrs={**attr}),
-                initial=choice,
-            )
-        elif data["type"] == "datetime-field":
-            _format = data["widget"]
-            widget = DatePicker if _format == "date" else DateTimePicker if _format == "datetime" else TimePicker
-            self.fields["lookup_value"] = forms.CharField(
-                required=False,
-                widget=widget(),
-            )
-        elif data["type"] == "number-field":
-            self.fields["lookup_value"] = forms.IntegerField(required=False)
 
     @staticmethod
     def capitalize(field):

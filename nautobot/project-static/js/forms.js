@@ -445,29 +445,26 @@ function initializeDynamicFilterForm(context){
     // Dynamic filter form
     this_context.find(".lookup_type-select").bind("change", function(){
         let parent_element = $(this).parents("tr")
-        
-        let lookup_field_val = parent_element.find(".lookup_field-select").val()
-        
         let lookup_type = parent_element.find(".lookup_type-select")
         let lookup_type_val = lookup_type.val()
         let contenttype = lookup_type.attr("data-contenttype")
-        
         let lookup_value_element = parent_element.find(".lookup_value-input")
 
-        $.ajax({
-            url: `/api/lookup-field/?field_name=${lookup_type_val}&contenttype=${contenttype}`,
-            async: true,
-            contentType: 'application/json',
-            dataType: 'json',
-            type: 'GET',
-        }).done(function (response) {
-            lookup_value_element.parent().html(response.dom_element)
-//            initializeDateTimePicker()
-//            initializeStaticChoiceSelection()
-//            initializeDynamicChoiceSelection()
-        }).fail(function (xhr, status, error) {
-            createInput(lookup_value_element)
-        });
+        if(lookup_type_val){
+            $.ajax({
+                url: `/api/lookup-field/?field_name=${lookup_type_val}&contenttype=${contenttype}`,
+                async: true,
+                contentType: 'application/json',
+                dataType: 'json',
+                type: 'GET',
+            }).done(function (response) {
+                replaceEl(lookup_value_element, response.dom_element)
+            }).fail(function (xhr, status, error) {
+                // Default to Input:text field if error occurs
+                createInput(lookup_value_element)
+            });
+        }
+
     })
     
     // On change of lookup_field or lookup_type field in filter form reset field value
@@ -608,66 +605,18 @@ function jsify_form(context) {
 *  Input Creators
 */
 
-function createDynamicSelect(element, response){
-    let value_name = element.attr("name")
-    let value_id = element.attr("id")
-    
-    select_field = `
-    <select
-    name="${value_name}"
-    class="${response.css_classes}"
-    data-url="${response.api_url}"
-    id="${value_id}"
-    data-select2-id="${value_id}"
-    tabindex="-1"
-    aria-hidden="true"
-    multiple
-    ${response.content_type ? "data-query-param-content_types=" + response.content_type + "" : null}
-    ${response.value_field ? "value-field=" + response.value_field + "" : null}
-    ></select>
-    `
-    replaceEl(element, select_field)
-}
-    
-function createInput(element, response){
+
+function createInput(element){
     input_field = `
     <input
-    type="${response && response.type == "number-field" ? "number" : "text"}"
+    type="text"
     name="${element.attr('name')}"
     class="lookup_value-input form-control"
     id="${element.attr('id')}"
     />`
     replaceEl(element, input_field)
 }
-    
-function createStaticSelect(element, response){
-    select_field = `
-    <select
-    name="${element.attr("name")}"
-    class="${response.css_classes}"
-    id="${element.attr("id")}"
-    data-select2-id="${element.attr("id")}"
-    tabindex="-1"
-    aria-hidden="true"
-    ${response.allow_multiple ? "multiple" : ""}
-    >
-    `
-    response.choices.forEach(([value, label]) => select_field += `<option value="${value}">${label}</option>`)
-    select_field += `</select>`
-    replaceEl(element, select_field)
-}
-    
-function createDateTimeField(element, css_classes, placeholder){
-    input_field = `
-    <input
-    type="text"
-    name="${element.attr('name')}"
-    class="${css_classes}"
-    placeholder="${placeholder}"
-    id="${element.attr('id')}"
-    >`
-    replaceEl(element, input_field)
-}
+
 
 $(document).ready((e) => {
     jsify_form(this.document);

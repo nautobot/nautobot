@@ -37,7 +37,11 @@ from nautobot.core.celery import app as celery_app
 from nautobot.core.api import BulkOperationSerializer
 from nautobot.core.api.exceptions import SerializerNotFound
 from nautobot.utilities.api import get_serializer_for_model
-from nautobot.utilities.utils import get_all_lookup_exper_for_field, get_data_for_filterset_parameter, get_filterset_parameter_form_field, get_form_for_model
+from nautobot.utilities.utils import (
+    get_all_lookup_exper_for_field,
+    get_filterset_parameter_form_field,
+    get_form_for_model,
+)
 from . import serializers
 
 HTTP_ACTIONS = {
@@ -756,13 +760,7 @@ class GenerateLookupFieldDataView(NautobotAPIVersionMixin, APIView):
             200: {
                 "type": "object",
                 "properties": {
-                    "choices": {
-                        "type": "array",
-                        "items": {"type": "array", "minItems": 2, "maxItems": 2, "items": {"type": "string"}},
-                    },
-                    "data_url": {"type": "string"},
-                    "type": {"type": "string"},
-                    "allow_multiple": {"type": "boolean"},
+                    "dom_element": {"type": "string"},
                 },
             }
         }
