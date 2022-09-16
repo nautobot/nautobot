@@ -37,7 +37,7 @@ from nautobot.core.celery import app as celery_app
 from nautobot.core.api import BulkOperationSerializer
 from nautobot.core.api.exceptions import SerializerNotFound
 from nautobot.utilities.api import get_serializer_for_model
-from nautobot.utilities.utils import get_all_lookup_exper_for_field, get_data_for_filterset_parameter
+from nautobot.utilities.utils import get_all_lookup_exper_for_field, get_data_for_filterset_parameter, get_filterset_parameter_form_field, get_form_for_model
 from . import serializers
 
 HTTP_ACTIONS = {
@@ -777,7 +777,7 @@ class GenerateLookupFieldDataView(NautobotAPIVersionMixin, APIView):
         contenttype = request.GET.get("contenttype")
         app_label, model_name = contenttype.split(".")
         model = ContentType.objects.get(app_label=app_label, model=model_name).model_class()
-        data = get_data_for_filterset_parameter(model, field_name)
-        # TODO: timizuo for choices instead of returning an array of array([["True", "Yes"]])
-        #  return a list of object e.g [{"value": "True", "label": "Yes"}]
-        return Response(data)
+        model_form = get_form_for_model(model)
+        form_field = get_filterset_parameter_form_field(model, field_name)
+        field_dom_representation = form_field.get_bound_field(model_form(), field_name).as_widget()
+        return Response({"dom_element": field_dom_representation})

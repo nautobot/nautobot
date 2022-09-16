@@ -8,6 +8,7 @@ from collections import OrderedDict, namedtuple
 from itertools import count, groupby
 from decimal import Decimal
 
+from django import forms
 from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.contrib.contenttypes.models import ContentType
@@ -34,7 +35,6 @@ from taggit.managers import _TaggableManager
 
 from nautobot.dcim.choices import CableLengthUnitChoices
 from nautobot.utilities.constants import FILTER_LOOKUP_MAP, HTTP_REQUEST_META_SAFE_COPY
-from nautobot.utilities.forms import BOOLEAN_WITH_BLANK_CHOICES
 
 
 def csv_format(data):
@@ -763,10 +763,30 @@ def get_data_for_filterset_parameter(model, parameter, initial_choice=None):
 
     Examples:
         >>> get_data_for_filterset_parameter(<class: nautobot.dcim.models.Site>, "has_vlans")
-        >>> {"type": "static-choice", "choices": [["True", "Yes", ["False", "No"]]], "allow_multiple": False}
+        >>> {
+                "type": "select-field",
+                "widget": "static-select,
+                "choices": [("True", "Yes"), ("False", "No)],
+                "allow_multiple": False,
+                "api_url": None,
+                "content_type": None,
+                "value_field": None,
+                "css_classes": "",
+                "placeholder": None,
+            }
 
         >>> get_data_for_filterset_parameter(<class: nautobot.dcim.models.Site>, "status")
-        >>> {"type": "dynamic-choice", "choices": [], "data_url": "/api/dcim/sites/"}
+        >>> {
+                "type": "select-field",
+                "widget": "api-select-multiple,
+                "choices": [],
+                "allow_multiple": True,
+                "api_url": /api/dcim/sites/,
+                "content_type": None,
+                "value_field": "slug",
+                "css_classes": "",
+                "placeholder": None,
+            }
 
     Returns:
         Returns a dict which keys may vary depending on the parameter type
@@ -780,6 +800,7 @@ def get_data_for_filterset_parameter(model, parameter, initial_choice=None):
     # Avoid circular import
     from nautobot.extras.filters import StatusFilter
     from nautobot.extras.models import Status, Tag
+    from nautobot.utilities.forms import BOOLEAN_WITH_BLANK_CHOICES
 
     contenttype = model._meta.app_label + "." + model._meta.model_name
 
@@ -874,6 +895,71 @@ def get_data_for_filterset_parameter(model, parameter, initial_choice=None):
 
     data.update(kwargs)
     return data
+
+
+def get_filterset_parameter_form_field(model, parameter, initial_choice=None):
+    """
+    Return relevant data for a filterset parameter which can include `model` api_url, the parameter-type,
+    parameter choices etc.
+    """
+    # Avoid circular import
+    from nautobot.extras.filters import StatusFilter
+    from nautobot.extras.models import Status, Tag
+    from nautobot.utilities.forms import (
+        BOOLEAN_WITH_BLANK_CHOICES,
+        DatePicker,
+        DateTimePicker,
+        DynamicModelMultipleChoiceField,
+        StaticSelect2,
+        StaticSelect2Multiple,
+        TimePicker,
+    )
+
+    filterset = get_filterset_for_model(model)  # TODO Timizuo Raise Error if filterset not found
+    field = filterset.base_filters.get(parameter)  # TODO Timizuo Raise Error if field not found
+    form_field_class = forms.CharField
+    form_attr = {}
+
+    if isinstance(field, NumberFilter):
+        form_field_class = forms.IntegerField
+    elif isinstance(field, filters.ModelMultipleChoiceFilter):
+        related_model = Status if isinstance(field, StatusFilter) else field.extra["queryset"].model
+        form_field_class = DynamicModelMultipleChoiceField
+        form_attr = {
+            "queryset": related_model.objects.all(),
+            "to_field_name": field.extra.get("to_field_name", "id"),
+        }
+        # Status and Tag api requires content_type, to limit result to only related content_types
+        if related_model in [Status, Tag]:
+            form_attr["query_params"] = {"content_types": model._meta.label_lower}
+
+        # TODO: timizuo find a way to add choices to DynamicModelMultipleChoiceField
+        #  initial choices needs to be added in order for DOM to select the selected fields in a dynamic select
+        # Add initial choices if initial_choice is not none
+        # This can be used to populate the selected options for the select field
+        # if initial_choice is not None:
+        #     search_by = field.extra.get("to_field_name") or "id"
+        #     values = initial_choice if isinstance(initial_choice, (list, tuple)) else [initial_choice]
+        #     form_attr["choices"] = get_values_display_names(related_model, search_by, values)
+    elif isinstance(field, (filters.MultipleChoiceFilter, filters.ChoiceFilter)) and "choices" in field.extra:
+        form_field_class = forms.ChoiceField
+        form_field_class.widget = StaticSelect2Multiple()
+        form_attr = {"choices": field.extra["choices"].CHOICES}
+    elif isinstance(field, (BooleanFilter,)):  # Yes / No choice
+        form_field_class = forms.ChoiceField
+        form_field_class.widget = StaticSelect2()
+        form_attr = {"choices": BOOLEAN_WITH_BLANK_CHOICES}
+    elif isinstance(field, DateTimeFilter):
+        form_field_class.widget = DateTimePicker
+    elif isinstance(field, DateFilter):
+        form_field_class.widget = DatePicker
+    elif isinstance(field, TimeFilter):
+        form_field_class.widget = TimePicker
+
+    form_field = form_field_class(**form_attr)
+    css_classes = form_field.widget.attrs.get("class", "")
+    form_field.widget.attrs["class"] = "lookup_value-input form-control " + css_classes
+    return form_field
 
 
 def get_values_display_names(model, search_by, values):

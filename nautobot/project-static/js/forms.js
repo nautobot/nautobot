@@ -453,34 +453,21 @@ function initializeDynamicFilterForm(context){
         let contenttype = lookup_type.attr("data-contenttype")
         
         let lookup_value_element = parent_element.find(".lookup_value-input")
-        
-        
 
-        // if `lookup_field_val` == `lookup_type_val` lookup expr is exact
-        if(lookup_field_val == lookup_type_val){
-            $.ajax({
-                url: `/api/lookup-field/?field_name=${lookup_field_val}&contenttype=${contenttype}`,
-                async: true,
-                contentType: 'application/json',
-                dataType: 'json',
-                type: 'GET',
-            }).done(function (response) {
-                if(response.type == "select-field" && response.widget == "api-select-multiple") {
-                    createDynamicSelect(lookup_value_element, response)
-                } else if (response.type == "select-field" && response.widget == "static-select") {
-                    createStaticSelect(lookup_value_element, response)
-                } else if (response.type == "datetime-field") {
-                    createDateTimeField(lookup_value_element, response.css_classes, response.placeholder)
-                } else {
-                    createInput(lookup_value_element, response)
-                }
-            }).fail(function (xhr, status, error) {
-                createInput(lookup_value_element)
-            });
-        }
-        else {
+        $.ajax({
+            url: `/api/lookup-field/?field_name=${lookup_type_val}&contenttype=${contenttype}`,
+            async: true,
+            contentType: 'application/json',
+            dataType: 'json',
+            type: 'GET',
+        }).done(function (response) {
+            lookup_value_element.parent().html(response.dom_element)
+//            initializeDateTimePicker()
+//            initializeStaticChoiceSelection()
+//            initializeDynamicChoiceSelection()
+        }).fail(function (xhr, status, error) {
             createInput(lookup_value_element)
-        }
+        });
     })
     
     // On change of lookup_field or lookup_type field in filter form reset field value
