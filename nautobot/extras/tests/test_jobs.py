@@ -397,7 +397,7 @@ class JobTest(TransactionTestCase):
             <td><select name="_task_queue" class="form-control" placeholder="Task queue" id="id__task_queue">
             <option value="celery">celery (4 workers)</option>
             <option value="nonexistent">nonexistent (0 workers)</option></select><br>
-            <span class="helptext">The task queue to send this job to</span></td></tr>
+            <span class="helptext">The task queue to route this job to</span></td></tr>
             <tr><th><label for="id__commit">Commit changes:</label></th>
             <td><input type="checkbox" name="_commit" placeholder="Commit changes" id="id__commit" checked><br>
             <span class="helptext">Commit changes to the database (uncheck for a dry-run)</span></td></tr>""",
@@ -411,18 +411,18 @@ class JobTest(TransactionTestCase):
         """
         module = "test_task_queues"
         name = "TestWorkerQueues"
-        mock_get_celery_queues.return_value = {"celery": 1, "irrelevant": 5}
+        mock_get_celery_queues.return_value = {"default": 1, "irrelevant": 5}
         job_class, job_model = get_job_class_and_model(module, name)
-        job_model.task_queues = ["celery", "priority"]
+        job_model.task_queues = ["default", "priority"]
         job_model.task_queues_override = True
         job_model.save()
         form = job_class().as_form()
         self.assertInHTML(
             """<tr><th><label for="id__task_queue">Task queue:</label></th>
             <td><select name="_task_queue" class="form-control" placeholder="Task queue" id="id__task_queue">
-            <option value="celery">celery (1 worker)</option>
+            <option value="default">default (1 worker)</option>
             <option value="priority">priority (0 workers)</option>
-            </select><br><span class="helptext">The task queue to send this job to</span></td></tr>
+            </select><br><span class="helptext">The task queue to route this job to</span></td></tr>
             <tr><th><label for="id__commit">Commit changes:</label></th>
             <td><input type="checkbox" name="_commit" placeholder="Commit changes" id="id__commit" checked><br>
             <span class="helptext">Commit changes to the database (uncheck for a dry-run)</span></td></tr>""",
