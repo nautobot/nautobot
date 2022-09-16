@@ -1547,6 +1547,8 @@ class CableFilterSet(NautobotFilterSet, StatusModelFilterSetMixin):
     rack = MultiValueCharFilter(method="filter_device", field_name="device__rack__name", label="Rack (name)")
     site_id = MultiValueUUIDFilter(method="filter_device", field_name="device__site_id", label="Site (ID)")
     site = MultiValueCharFilter(method="filter_device", field_name="device__site__slug", label="Site (name)")
+    region_id = MultiValueUUIDFilter(method="filter_device", field_name="device__site__region_id", label="Region (ID)")
+    region = MultiValueCharFilter(method="filter_device", field_name="device__site__region__slug", label="Region (name)")
     tenant_id = MultiValueUUIDFilter(method="filter_device", field_name="device__tenant_id", label="Tenant (ID)")
     tenant = MultiValueCharFilter(method="filter_device", field_name="device__tenant__slug", label="Tenant (name)")
     termination_a_type = ContentTypeMultipleChoiceFilter(
@@ -1571,6 +1573,7 @@ class CableFilterSet(NautobotFilterSet, StatusModelFilterSetMixin):
         ]
 
     def filter_device(self, queryset, name, value):
+        print(name, value)
         queryset = queryset.filter(
             Q(**{f"_termination_a_{name}__in": value}) | Q(**{f"_termination_b_{name}__in": value})
         )
