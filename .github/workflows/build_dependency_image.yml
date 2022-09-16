@@ -1,5 +1,5 @@
 ---
-# This resuable workflow always builds & tags a Docker image for the Nautobot dependencies stage
+# This reusable workflow always builds & tags a Docker image for the Nautobot dependencies stage
 # Published as ghcr.io/nautobot/nautobot-dependencies
 #
 # This allows the same steps to be followed in CI on push as well as a manual trigger if so desired
@@ -33,7 +33,7 @@ jobs:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
-      - name: "Docker Dependenices Metadata"
+      - name: "Docker Dependencies Metadata"
         id: "dockerdepmeta"
         uses: "docker/metadata-action@v3"
         with:

@@ -1,1 +1,1 @@
-Moved to building a published intermediate dependencies images to speed up container build times.
+Reworked Docker builds in CI to publish an intermediate "dependencies-only" image to speed up rebuild times.
