@@ -21,9 +21,13 @@ Nautobot supports these custom field types:
 * Selection: A selection of one of several pre-defined custom choices
 * Multiple selection: A selection field which supports the assignment of multiple values
 
++++ 1.3.0
+    Support for JSON-type custom fields was added.
+
 Each custom field must have a name and slug; this should be a simple database-friendly string, e.g. `tps_report`. You may also assign a corresponding human-friendly label (e.g. "TPS report"); the label will be displayed on web forms. A weight is also required: Higher-weight fields will be ordered lower within a form. (The default weight is 100.) If a description is provided, it will appear beneath the field in a form.
 
-_Changed in version 1.4.0_ Custom fields now have both a `name` and a `slug`; in older versions there was no `slug` field. When migrating existing data to 1.4.0 or later, the `label` and `slug` will be automatically populated for existing custom fields if necessary.
++/- 1.4.0
+    Custom fields now have both a `name` and a `slug`; in older versions there was no `slug` field. When migrating existing data to Nautobot 1.4.0 or later, the `label` and `slug` will be automatically populated for existing custom fields if necessary.
 
 !!! warning
     In all Nautobot 1.x versions, the custom field `name` is used as the key to store and retrieve custom field data via the database and GraphQL. In a future major release, the `name` field will be removed and custom field data will be accessible via the `slug` instead. See [below](#custom-fields-and-the-rest-api) for REST API versioning behavior in this area.
@@ -85,7 +89,7 @@ When retrieving an object via the REST API, all of its custom field data will be
     ...
 ```
 
-!!! info
+!!! version-changed "Changed in API version 1.4"
     In REST API versions 1.3 and earlier, each custom field's `name` is used as the key under `custom_fields` in the REST API. As part of the planned future transition to removing the `name` attribute entirely from custom fields, when REST API version 1.4 or later is requested, the `custom_fields` data in the REST API is instead indexed by custom field `slug`.
 
     Refer to the documentation on [REST API versioning](../../rest-api/overview.md#versioning) for more information about REST API versioning and how to request a specific version of the REST API.

@@ -26,7 +26,7 @@ Nautobot requires at least one worker to consume background tasks required for a
 $ nautobot-server celery --help
 ```
 
-!!! important
++/- 1.1.0
     Prior to version 1.1.0, Nautobot utilized RQ as the primary background task worker. As of Nautobot 1.1.0, RQ is now *deprecated*. RQ and the `@job` decorator for custom tasks are still supported for now, but users should [migrate the primary worker to Celery](#migrating-to-celery-from-rq) and then, *only if still required*, [run RQ concurrently with the Celery worker](#concurrent-celery-and-rq-nautobot-workers). RQ and the `@job` decorator will no longer be documented, and support for RQ will be removed in a future release.
 
 ## Configuration
@@ -137,12 +137,14 @@ WantedBy=multi-user.target
 
 ### Nautobot Background Services
 
-!!! note
++/- 1.1.0
     Prior to version 1.1.0, Nautobot utilized RQ as the primary background task worker. As of Nautobot 1.1.0, RQ is now *deprecated* and has been replaced with Celery. RQ can still be used by plugins for now, but will be removed in a future release. Please [migrate your deployment to utilize Celery as documented below](#migrating-to-celery-from-rq).
 
 Next, we will setup the `systemd` units for the Celery worker and Celery Beat scheduler.
 
 #### Celery Worker
+
++++ 1.1.0
 
 The Celery worker service consumes tasks from background task queues and is required for taking advantage of advanced
 Nautobot features including [Jobs](../additional-features/jobs.md), [Custom
@@ -177,6 +179,8 @@ WantedBy=multi-user.target
 ```
 
 #### Celery Beat Scheduler
+
++++ 1.2.0
 
 The Celery Beat scheduler enables the periodic execution of and scheduling of background tasks. It is required to take
 advantage of the [job scheduling and approval](../additional-features/job-scheduling-and-approvals.md) features.
