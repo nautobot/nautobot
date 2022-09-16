@@ -96,17 +96,17 @@ class LocationType(TreeNode, OrganizationalModel):
          /
         C
         This method will return \"A → B → C\".
-        If self.ancestor() throws an ObjectDoesNotExist Exception during bulk operations, we handle it by only returning the name of the current node.
+        If self.ancestor() throws an ObjectDoesNotExist Exception during bulk operations, we handle it by only returning the names of the current node and the existing ancestors.
         """
         display_str = ""
         try:
             for ancestor in self.ancestors():
-                display_str += ancestor.name
-                display_str += " → "
+                display_str += ancestor.name + " → "
+        except ObjectDoesNotExist:
+            pass
+        finally:
             display_str += self.name
             return display_str
-        except ObjectDoesNotExist:
-            return self.name
 
 
 @extras_features(
@@ -233,17 +233,16 @@ class Location(TreeNode, StatusModel, PrimaryModel):
          /
         C
         This method will return \"A → B → C\".
-        If self.ancestor() throws an ObjectDoesNotExist Exception during bulk operations, we handle it by only returning the name of the current node.
-        """
+        If self.ancestor() throws an ObjectDoesNotExist Exception during bulk operations, we handle it by only returning the names of the current node and the existing ancestors."""
         display_str = ""
         try:
             for ancestor in self.ancestors():
-                display_str += ancestor.name
-                display_str += " → "
+                display_str += ancestor.name + " → "
+        except ObjectDoesNotExist:
+            pass
+        finally:
             display_str += self.name
             return display_str
-        except ObjectDoesNotExist:
-            return self.name
 
     def validate_unique(self, exclude=None):
         # Check for a duplicate name on a Location with no parent.
