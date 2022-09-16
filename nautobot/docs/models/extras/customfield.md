@@ -68,13 +68,14 @@ There are a number of available built-in filters for custom fields.
 
 Filtering on an object's list view follows the same pattern as [custom field filtering on the API](../../rest-api/filtering.md#filtering-by-custom-field).
 
-When using the ORM, you can filter on custom fields as follows (assuming a custom field of string type called 'site_code' was created for Site objects):
+When using the ORM, you can filter on custom fields using `_custom_field_data__<field name>` (note the underscore before `custom_field_data` and the double-underscore before the field name). For example, if a custom field of string type with a `name` of  `"site_code"` was created for Site objects, you could filter as follows:
 
 ```python
 from nautobot.dcim.models import Site
 
-all_sites = Site.objects.all()  # -> ['Raleigh', 'Charlotte']
-filtered_sites = Site.objects.filter(_custom_field_data__site_code="US-NC-RAL42")  # -> ['Raleigh']
+all_sites = Site.objects.all()  # -> ['Raleigh', 'Charlotte', 'Greensboro']
+filtered_sites_1 = Site.objects.filter(_custom_field_data__site_code="US-NC-RAL42")  # -> ['Raleigh']
+filtered_sites_2 = Site.objects.filter(_custom_field_data__site_code__in=["US-NC-RAL42", "US-NC-CLT22"])  # -> ['Raleigh', 'Charlotte']
 ```
 
 ## Custom Fields and the REST API
