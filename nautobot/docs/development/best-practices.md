@@ -89,7 +89,7 @@ from nautobot.utilities.utils import get_route_for_model
 
 This utility function supports both UI and API views for both Nautobot core apps and Nautobot plugins.
 
-!!! check "Added in 1.4.3"
++++ 1.4.3
     Support for generating API routes was added to `get_route_for_model()` by passing the argument `api=True`.
 
 ### UI Routes
