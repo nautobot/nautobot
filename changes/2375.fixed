@@ -1,1 +1,1 @@
-Fixed must Supply `color` and `type` Filter on Cable List View.
+Fixed error in Cable list view filtering when `color` and `type` filters are not set.
