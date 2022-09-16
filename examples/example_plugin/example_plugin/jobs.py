@@ -1,5 +1,7 @@
 import time
 
+from django.conf import settings
+
 from nautobot.extras.choices import ObjectChangeActionChoices
 from nautobot.extras.jobs import IntegerVar, Job, JobHookReceiver
 
@@ -35,7 +37,7 @@ class ExampleLoggingJob(Job):
         name = "Example logging job."
         description = "I log stuff to demonstrate how UI logging works."
         task_queues = [
-            "celery",
+            settings.CELERY_TASK_DEFAULT_QUEUE,
             "priority",
             "bulk",
         ]

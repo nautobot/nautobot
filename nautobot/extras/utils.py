@@ -8,6 +8,7 @@ import sys
 
 from cacheops import file_cache
 from django.apps import apps
+from django.conf import settings
 from django.contrib.contenttypes.models import ContentType
 from django.db.models import Q
 from django.utils.deconstruct import deconstructible
@@ -202,16 +203,13 @@ def get_celery_queues():
     return celery_queues
 
 
-def get_worker_count(request=None, queue=""):
+def get_worker_count(request=None, queue=None):
     """
     Return a count of the active Celery workers in a specified queue. Defaults to the default queue "celery"
     """
-
-    from nautobot.core.celery import app  # prevent circular import
-
     celery_queues = get_celery_queues()
     if not queue:
-        queue = app.conf.task_default_queue
+        queue = settings.CELERY_TASK_DEFAULT_QUEUE
     return celery_queues.get(queue, 0)
 
 
@@ -220,16 +218,14 @@ def task_queues_as_choices(task_queues):
     Returns a list of 2-tuples for use in the form field `choices` argument. Appends
     worker count to the description.
     """
-    from nautobot.core.celery import app  # prevent circular import
-
     if not task_queues:
-        task_queues = [""]
+        task_queues = [settings.CELERY_TASK_DEFAULT_QUEUE]
 
     choices = []
     celery_queues = get_celery_queues()
     for queue in task_queues:
         if not queue:
-            worker_count = celery_queues.get(app.conf.task_default_queue, 0)
+            worker_count = celery_queues.get(settings.CELERY_TASK_DEFAULT_QUEUE, 0)
         else:
             worker_count = celery_queues.get(queue, 0)
         description = f"{queue if queue else 'default queue'} ({worker_count} worker{'s'[:worker_count^1]})"

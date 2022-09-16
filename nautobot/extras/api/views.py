@@ -1,4 +1,5 @@
 from datetime import timedelta
+from django.conf import settings
 from django.contrib.contenttypes.models import ContentType
 from django.forms import ValidationError as FormsValidationError
 from django.http import Http404
@@ -443,7 +444,7 @@ class ImageAttachmentViewSet(ModelViewSet):
 #
 
 
-def _create_schedule(serializer, data, commit, job, job_model, request, task_queue=""):
+def _create_schedule(serializer, data, commit, job, job_model, request, task_queue=None):
     """
     This is an internal function to create a scheduled job from API data.
     It has to handle both once-offs (i.e. of type TYPE_FUTURE) and interval
@@ -527,12 +528,10 @@ def _run_job(request, job_model, legacy_response=False):
     if commit is None:
         commit = job_model.commit_default
     # default to first queue in job_model.task_queues if task_queue not specified
-    if "task_queue" not in input_serializer.validated_data:
-        task_queue = job_model.task_queues[0] if job_model.task_queues else ""
-    else:
-        task_queue = input_serializer.validated_data["task_queue"]
-        if task_queue not in job_model.task_queues:
-            raise ValidationError({"task_queue": [f'"{task_queue}" is not a valid choice.']})
+    valid_queues = job_model.task_queues if job_model.task_queues else [settings.CELERY_TASK_DEFAULT_QUEUE]
+    task_queue = input_serializer.validated_data.get("task_queue", valid_queues[0])
+    if task_queue not in valid_queues:
+        raise ValidationError({"task_queue": [f'"{task_queue}" is not a valid choice.']})
 
     try:
         job.validate_data(data)

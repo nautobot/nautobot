@@ -2,6 +2,7 @@ from datetime import datetime, timedelta
 import uuid
 from unittest import mock
 
+from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.contrib.contenttypes.models import ContentType
 from django.test import override_settings
@@ -914,7 +915,7 @@ class GitRepositoryTest(APIViewTestCases.APIViewTestCase):
         response = self.client.post(url, format="json", **self.header)
         self.assertHttpStatus(response, status.HTTP_503_SERVICE_UNAVAILABLE)
         self.assertEqual(
-            response.data["detail"], "Unable to process request: No celery workers running on queue celery."
+            response.data["detail"], "Unable to process request: No celery workers running on queue default."
         )
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
@@ -1284,7 +1285,7 @@ class JobAPIRunTestMixin:
         response = self.client.post(url, data, format="json", **self.header)
         self.assertHttpStatus(response, status.HTTP_503_SERVICE_UNAVAILABLE)
         self.assertEqual(
-            response.data["detail"], "Unable to process request: No celery workers running on queue celery."
+            response.data["detail"], "Unable to process request: No celery workers running on queue default."
         )
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
@@ -1598,10 +1599,27 @@ class JobAPIRunTestMixin:
         data = {
             "data": {"var1": "x", "var2": 1, "var3": False, "var4": d.pk},
             "commit": True,
-            "task_queue": "celery",
+            "task_queue": settings.CELERY_TASK_DEFAULT_QUEUE,
         }
 
         url = self.get_run_url()
+        response = self.client.post(url, data, format="json", **self.header)
+        self.assertHttpStatus(response, self.run_success_response_status)
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
+    @mock.patch("nautobot.extras.api.views.get_worker_count", return_value=1)
+    def test_run_job_with_default_queue_with_empty_job_model_task_queues(self, _):
+        self.add_permissions("extras.run_job")
+        d = DeviceRole.objects.create(name="role", slug="role")
+        data = {
+            "commit": True,
+            "task_queue": settings.CELERY_TASK_DEFAULT_QUEUE,
+        }
+
+        job_model = Job.objects.get_for_class_path("local/test_pass/TestPass")
+        job_model.enabled = True
+        job_model.validated_save()
+        url = self.get_run_url("local/test_pass/TestPass")
         response = self.client.post(url, data, format="json", **self.header)
         self.assertHttpStatus(response, self.run_success_response_status)
 
@@ -1753,7 +1771,7 @@ class JobTestVersion13(
         "time_limit": 650,
         "has_sensitive_variables": False,
         "has_sensitive_variables_override": True,
-        "task_queues": ["celery", "priority"],
+        "task_queues": ["default", "priority"],
         "task_queues_override": True,
     }
     bulk_update_data = {

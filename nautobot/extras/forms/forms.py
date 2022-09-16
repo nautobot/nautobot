@@ -730,7 +730,7 @@ class JobForm(BootstrapMixin, forms.Form):
     )
     _task_queue = forms.ChoiceField(
         required=False,
-        help_text="The task queue to send this job to",
+        help_text="The task queue to route this job to",
         label="Task queue",
     )
 

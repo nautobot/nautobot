@@ -243,12 +243,15 @@ class ExampleJobWithHardTimeLimit(Job):
 
 #### `task_queues`
 
+<!-- markdownlint-disable-next-line MD036 MD049 -->
+_Added in version 1.5.0_
+
 Default: `[]`
 
-A list of task queue names that will be presented to the user to select the queue that the job will be sent to. An empty list will default to only allowing the user to select the default queue (`celery` unless changed by an administrator). An empty string can also be used to specify the default queue. The first queue in the list will be selected by default in the job run form and will be used if a queue is not specified in a job run API call.
+A list of task queue names that will be presented to the user to select the queue that the job will be routed to. An empty list will default to only allowing the user to select the [default queue](../configuration/optional-settings.md#celery_task_default_queue) (`default` unless changed by an administrator). The first queue in the list will be used if a queue is not specified in a job run API call.
 
 !!! note
-    A worker must be listening on the requested queue or the job will not run. See the documentation on [celery queues](../administration/celery-queues.md) for more information.
+    A worker must be listening on the requested queue or the job will not run. See the documentation on [task queues](../administration/celery-queues.md) for more information.
 
 ### Variables
 
