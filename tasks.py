@@ -19,8 +19,13 @@ import re
 from invoke import Collection, task as invoke_task
 from invoke.exceptions import Exit
 
-# Override built-in print function with rich's pretty-printer function
-from rich import print  # pylint: disable=redefined-builtin
+try:
+    # Override built-in print function with rich's pretty-printer function, if available
+    from rich import print  # pylint: disable=redefined-builtin
+
+    HAS_RICH = True
+except ModuleNotFoundError:
+    HAS_RICH = False
 
 
 def is_truthy(arg):
@@ -117,7 +122,10 @@ def docker_compose(context, command, **kwargs):
     env.update({"PYTHON_VER": context.nautobot.python_ver})
     if "hide" not in kwargs:
         env_str = " \\\n    ".join(f"{var}={value}" for var, value in env.items())
-        print(f"[dim]{env_str} \\\n    {compose_command}[/dim]")
+        if HAS_RICH:
+            print(f"[dim]{env_str} \\\n    {compose_command}[/dim]")
+        else:
+            print(f"{env_str} \\\n    {compose_command}")
     return context.run(compose_command, env=env, **kwargs)
 
 

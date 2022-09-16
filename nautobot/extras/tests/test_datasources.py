@@ -117,7 +117,7 @@ class GitTest(TransactionTestCase):
 
     def populate_repo(self, path, url, *args, **kwargs):
         os.makedirs(path)
-        # Just make config_contexts and export_templates directories as we don't load jobs
+        # TODO: populate Jobs as well?
         os.makedirs(os.path.join(path, "config_contexts"))
         os.makedirs(os.path.join(path, "config_contexts", "devices"))
         os.makedirs(os.path.join(path, "config_context_schemas"))
@@ -266,7 +266,10 @@ class GitTest(TransactionTestCase):
                 self.repo.refresh_from_db()
                 self.assertEqual(self.repo.current_head, self.COMMIT_HEXSHA, self.job_result.data)
                 MockGitRepo.assert_called_with(os.path.join(tempdir, self.repo.slug), "http://localhost/git.git")
-                # TODO: inspect the logs in job_result.data?
+
+                log_entries = JobLogEntry.objects.filter(job_result=self.job_result)
+                warning_logs = log_entries.filter(log_level=LogLevelChoices.LOG_WARNING)
+                warning_logs.get(grouping="jobs", message__contains="No `jobs` subdirectory found")
 
     def test_pull_git_repository_and_refresh_data_with_token(self, MockGitRepo):
         """
@@ -506,12 +509,12 @@ class GitTest(TransactionTestCase):
 
                 def populate_repo(path, url):
                     os.makedirs(path)
-                    # Just make config_contexts and export_templates directories as we don't load jobs
                     os.makedirs(os.path.join(path, "config_contexts"))
                     os.makedirs(os.path.join(path, "config_contexts", "devices"))
                     os.makedirs(os.path.join(path, "config_context_schemas"))
                     os.makedirs(os.path.join(path, "export_templates", "nosuchapp", "device"))
                     os.makedirs(os.path.join(path, "export_templates", "dcim", "nosuchmodel"))
+                    os.makedirs(os.path.join(path, "jobs"))
                     # Incorrect directories
                     os.makedirs(os.path.join(path, "devices"))
                     os.makedirs(os.path.join(path, "dcim"))
@@ -537,6 +540,11 @@ class GitTest(TransactionTestCase):
                         fd.write("{% for device in queryset %}\n{{ device.name }}\n{% endfor %}")
                     with open(os.path.join(path, "export_templates", "dcim", "nosuchmodel", "template.j2"), "w") as fd:
                         fd.write("{% for device in queryset %}\n{{ device.name }}\n{% endfor %}")
+                    # Malformed Python
+                    with open(os.path.join(path, "jobs", "syntaxerror.py"), "w") as fd:
+                        fd.write("print(")
+                    with open(os.path.join(path, "jobs", "importerror.py"), "w") as fd:
+                        fd.write("import nosuchmodule")
                     return mock.DEFAULT
 
                 MockGitRepo.side_effect = populate_repo
@@ -560,7 +568,6 @@ class GitTest(TransactionTestCase):
                 warning_logs.get(
                     grouping="config contexts", message__contains='Found "devices" directory in the repository root'
                 )
-                warning_logs.get(grouping="jobs", message__contains="No `jobs` subdirectory found")
                 warning_logs.get(
                     grouping="export templates", message__contains='Found "dcim" directory in the repository root'
                 )
@@ -600,6 +607,15 @@ class GitTest(TransactionTestCase):
                     grouping="local config contexts",
                     message__contains="Error in loading local config context from `devices/nosuchdevice.json`: "
                     "record not found",
+                )
+                failure_logs.get(
+                    grouping="jobs",
+                    # The specific exception message differs between Python versions
+                    message__contains="Error in loading Jobs from `syntaxerror`: ",
+                )
+                failure_logs.get(
+                    grouping="jobs",
+                    message__contains="Error in loading Jobs from `importerror`: `No module named 'nosuchmodule'`",
                 )
 
     def test_delete_git_repository_cleanup(self, MockGitRepo):
