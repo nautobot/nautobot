@@ -1610,7 +1610,6 @@ class JobAPIRunTestMixin:
     @mock.patch("nautobot.extras.api.views.get_worker_count", return_value=1)
     def test_run_job_with_default_queue_with_empty_job_model_task_queues(self, _):
         self.add_permissions("extras.run_job")
-        d = DeviceRole.objects.create(name="role", slug="role")
         data = {
             "commit": True,
             "task_queue": settings.CELERY_TASK_DEFAULT_QUEUE,
