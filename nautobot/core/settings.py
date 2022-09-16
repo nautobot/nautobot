@@ -221,11 +221,26 @@ SPECTACULAR_SETTINGS = {
         "PowerPortTypeChoices": "nautobot.dcim.choices.PowerPortTypeChoices",
         "RackTypeChoices": "nautobot.dcim.choices.RackTypeChoices",
         "RelationshipTypeChoices": "nautobot.extras.choices.RelationshipTypeChoices",
-        # Because Interface and VMInterface, and Site and Location, have the same default statuses, we get the error:
+        # Each of these StatusModels has bulk and non-bulk serializers, with the same status options,
+        # which confounds drf-spectacular's automatic naming of enums, resulting in the below warning:
         #   enum naming encountered a non-optimally resolvable collision for fields named "status"
-        "LocationStatusChoices": "nautobot.dcim.api.serializers.LocationSerializer.status_choices",
+        # By explicitly naming the enums ourselves we avoid this warning.
+        "CableStatusChoices": "nautobot.dcim.api.serializers.CableSerializer.status_choices",
+        "CircuitStatusChoices": "nautobot.circuits.api.serializers.CircuitSerializer.status_choices",
+        "DeviceStatusChoices": "nautobot.dcim.api.serializers.DeviceWithConfigContextSerializer.status_choices",
         "InterfaceStatusChoices": "nautobot.dcim.api.serializers.InterfaceSerializer.status_choices",
+        "IPAddressStatusChoices": "nautobot.ipam.api.serializers.IPAddressSerializer.status_choices",
+        "LocationStatusChoices": "nautobot.dcim.api.serializers.LocationSerializer.status_choices",
+        "PowerFeedStatusChoices": "nautobot.dcim.api.serializers.PowerFeedSerializer.status_choices",
+        "PrefixStatusChoices": "nautobot.ipam.api.serializers.PrefixSerializer.status_choices",
+        "RackStatusChoices": "nautobot.dcim.api.serializers.RackSerializer.status_choices",
+        "VirtualMachineStatusChoices": "nautobot.virtualization.api.serializers.VirtualMachineWithConfigContextSerializer.status_choices",
+        "VLANStatusChoices": "nautobot.ipam.api.serializers.VLANSerializer.status_choices",
     },
+    # Create separate schema components for PATCH requests (fields generally are not `required` on PATCH)
+    "COMPONENT_SPLIT_PATCH": True,
+    # Create separate schema components for request vs response where appropriate
+    "COMPONENT_SPLIT_REQUEST": True,
 }
 
 
@@ -268,6 +283,10 @@ SHORT_DATE_FORMAT = "Y-m-d"
 SHORT_DATETIME_FORMAT = "Y-m-d H:i"
 TIME_FORMAT = "g:i a"
 TIME_ZONE = "UTC"
+
+# Disable importing the WSGI module before starting the server application. This is required for
+# uWSGI postfork callbacks to execute as is currently required in `nautobot.core.wsgi`.
+WEBSERVER_WARMUP = False
 
 # Installed apps and Django plugins. Nautobot plugins will be appended here later.
 INSTALLED_APPS = [

@@ -83,6 +83,7 @@ markdown_extensions:
 plugins:
   - "search"
   - "include-markdown"
+  - "mkdocs-version-annotations"
   - mkdocstrings:
       default_handler: "python"
       handlers:
