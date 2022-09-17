@@ -1,0 +1,1 @@
+Catch 403 CSRF errors and return stylized nautobot view.
