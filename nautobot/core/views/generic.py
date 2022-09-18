@@ -43,6 +43,7 @@ from nautobot.utilities.templatetags.helpers import validated_viewname
 from nautobot.utilities.utils import (
     convert_querydict_to_factory_formset_acceptable_querydict,
     csv_format,
+    get_route_for_model,
     get_filterable_params_from_filter_params,
     normalize_querydict,
     prepare_cloned_fields,
@@ -99,9 +100,7 @@ class ObjectView(ObjectPermissionRequiredMixin, View):
         if meta.model_name == "objectchange":
             return None
 
-        route = f"{meta.app_label}:{meta.model_name}_changelog"
-        if meta.app_label in settings.PLUGINS:
-            route = f"plugins:{route}"
+        route = get_route_for_model(instance, "changelog")
 
         # Iterate the pk-like fields and try to get a URL, or return None.
         fields = ["pk", "slug"]
@@ -220,7 +219,9 @@ class ObjectListView(ObjectPermissionRequiredMixin, View):
         always_valid_actions = ("export",)
         valid_actions = []
         invalid_actions = []
-
+        # added check for whether the action_buttons exist because of issue #2107
+        if self.action_buttons is None:
+            self.action_buttons = []
         for action in self.action_buttons:
             if action in always_valid_actions or validated_viewname(self.queryset.model, action) is not None:
                 valid_actions.append(action)
@@ -264,25 +265,21 @@ class ObjectListView(ObjectPermissionRequiredMixin, View):
             except Exception as e:
                 messages.error(
                     request,
-                    "There was an error rendering the selected export template ({}): {}".format(et.name, e),
+                    f"There was an error rendering the selected export template ({et.name}): {e}",
                 )
 
         # Check for YAML export support
         elif "export" in request.GET and hasattr(model, "to_yaml"):
             response = HttpResponse(self.queryset_to_yaml(), content_type="text/yaml")
-            filename = "{}{}.yaml".format(
-                settings.BRANDING_PREPENDED_FILENAME, self.queryset.model._meta.verbose_name_plural
-            )
-            response["Content-Disposition"] = 'attachment; filename="{}"'.format(filename)
+            filename = f"{settings.BRANDING_PREPENDED_FILENAME}{self.queryset.model._meta.verbose_name_plural}.yaml"
+            response["Content-Disposition"] = f'attachment; filename="{filename}"'
             return response
 
         # Fall back to built-in CSV formatting if export requested but no template specified
         elif "export" in request.GET and hasattr(model, "to_csv"):
             response = HttpResponse(self.queryset_to_csv(), content_type="text/csv")
-            filename = "{}{}.csv".format(
-                settings.BRANDING_PREPENDED_FILENAME, self.queryset.model._meta.verbose_name_plural
-            )
-            response["Content-Disposition"] = 'attachment; filename="{}"'.format(filename)
+            filename = f"{settings.BRANDING_PREPENDED_FILENAME}{self.queryset.model._meta.verbose_name_plural}.csv"
+            response["Content-Disposition"] = f'attachment; filename="{filename}"'
             return response
 
         # Provide a hook to tweak the queryset based on the request immediately prior to rendering the object list
@@ -427,23 +424,20 @@ class ObjectEditView(GetReturnURLMixin, ObjectPermissionRequiredMixin, View):
 
                 if hasattr(form, "save_note") and callable(form.save_note):
                     form.save_note(instance=obj, user=request.user)
-
-                msg = "{} {}".format(
-                    "Created" if object_created else "Modified",
-                    self.queryset.model._meta.verbose_name,
-                )
+                verb = "Created" if object_created else "Modified"
+                msg = f"{verb} {self.queryset.model._meta.verbose_name}"
                 logger.info(f"{msg} {obj} (PK: {obj.pk})")
                 if hasattr(obj, "get_absolute_url"):
-                    msg = '{} <a href="{}">{}</a>'.format(msg, obj.get_absolute_url(), escape(obj))
+                    msg = f'{msg} <a href="{obj.get_absolute_url()}">{escape(obj)}</a>'
                 else:
-                    msg = "{} {}".format(msg, escape(obj))
+                    msg = f"{msg} {escape(obj)}"
                 messages.success(request, mark_safe(msg))
 
                 if "_addanother" in request.POST:
 
                     # If the object has clone_fields, pre-populate a new instance of the form
                     if hasattr(obj, "clone_fields"):
-                        url = "{}?{}".format(request.path, prepare_cloned_fields(obj))
+                        url = f"{request.path}?{prepare_cloned_fields(obj)}"
                         return redirect(url)
 
                     return redirect(request.get_full_path())
@@ -528,7 +522,7 @@ class ObjectDeleteView(GetReturnURLMixin, ObjectPermissionRequiredMixin, View):
                 handle_protectederror([obj], request, e)
                 return redirect(obj.get_absolute_url())
 
-            msg = "Deleted {} {}".format(self.queryset.model._meta.verbose_name, obj)
+            msg = f"Deleted {self.queryset.model._meta.verbose_name} {obj}"
             logger.info(msg)
             messages.success(request, msg)
 
@@ -634,7 +628,7 @@ class BulkCreateView(GetReturnURLMixin, ObjectPermissionRequiredMixin, View):
                         raise ObjectDoesNotExist
 
                     # If we make it to this point, validation has succeeded on all new objects.
-                    msg = "Added {} {}".format(len(new_objs), model._meta.verbose_name_plural)
+                    msg = f"Added {len(new_objs)} {model._meta.verbose_name_plural}"
                     logger.info(msg)
                     messages.success(request, msg)
 
@@ -677,7 +671,7 @@ class ObjectImportView(GetReturnURLMixin, ObjectPermissionRequiredMixin, View):
 
     queryset = None
     model_form = None
-    related_object_forms = dict()
+    related_object_forms = {}
     template_name = "generic/object_import.html"
 
     def get_required_permission(self):
@@ -737,7 +731,7 @@ class ObjectImportView(GetReturnURLMixin, ObjectPermissionRequiredMixin, View):
                             logger.debug("Processing form for related objects: {related_object_form}")
 
                             related_obj_pks = []
-                            for i, rel_obj_data in enumerate(data.get(field_name, list())):
+                            for i, rel_obj_data in enumerate(data.get(field_name, [])):
 
                                 f = related_object_form(obj, rel_obj_data)
 
@@ -752,7 +746,7 @@ class ObjectImportView(GetReturnURLMixin, ObjectPermissionRequiredMixin, View):
                                     # Replicate errors on the related object form to the primary form for display
                                     for subfield_name, errors in f.errors.items():
                                         for err in errors:
-                                            err_msg = "{}[{}] {}: {}".format(field_name, i, subfield_name, err)
+                                            err_msg = f"{field_name}[{i}] {subfield_name}: {err}"
                                             model_form.add_error(None, err_msg)
                                     raise AbortTransaction()
 
@@ -773,7 +767,7 @@ class ObjectImportView(GetReturnURLMixin, ObjectPermissionRequiredMixin, View):
                 logger.info(f"Import object {obj} (PK: {obj.pk})")
                 messages.success(
                     request,
-                    mark_safe('Imported object: <a href="{}">{}</a>'.format(obj.get_absolute_url(), obj)),
+                    mark_safe(f'Imported object: <a href="{obj.get_absolute_url()}">{obj}</a>'),
                 )
 
                 if "_addanother" in request.POST:
@@ -794,7 +788,7 @@ class ObjectImportView(GetReturnURLMixin, ObjectPermissionRequiredMixin, View):
                         if field == "__all__":
                             form.add_error(None, err)
                         else:
-                            form.add_error(None, "{}: {}".format(field, err))
+                            form.add_error(None, f"{field}: {err}")
 
         else:
             logger.debug("Import form validation failed")
@@ -828,11 +822,11 @@ class BulkImportView(GetReturnURLMixin, ObjectPermissionRequiredMixin, View):
     widget_attrs = {}
 
     def _import_form(self, *args, **kwargs):
-        class ImportForm(BootstrapMixin, Form):
+        class CSVImportForm(BootstrapMixin, Form):
             csv_data = CSVDataField(from_form=self.model_form, widget=Textarea(attrs=self.widget_attrs))
             csv_file = CSVFileField(from_form=self.model_form)
 
-        return ImportForm(*args, **kwargs)
+        return CSVImportForm(*args, **kwargs)
 
     def _save_obj(self, obj_form, request):
         """
@@ -882,7 +876,7 @@ class BulkImportView(GetReturnURLMixin, ObjectPermissionRequiredMixin, View):
                             new_objs.append(obj)
                         else:
                             for field, err in obj_form.errors.items():
-                                form.add_error(field_name, "Row {} {}: {}".format(row, field, err[0]))
+                                form.add_error(field_name, f"Row {row} {field}: {err[0]}")
                             raise ValidationError("")
 
                     # Enforce object-level permissions
@@ -893,7 +887,7 @@ class BulkImportView(GetReturnURLMixin, ObjectPermissionRequiredMixin, View):
                 obj_table = self.table(new_objs)
 
                 if new_objs:
-                    msg = "Imported {} {}".format(len(new_objs), new_objs[0]._meta.verbose_name_plural)
+                    msg = f"Imported {len(new_objs)} {new_objs[0]._meta.verbose_name_plural}"
                     logger.info(msg)
                     messages.success(request, msg)
 
@@ -1052,14 +1046,14 @@ class BulkEditView(GetReturnURLMixin, ObjectPermissionRequiredMixin, View):
                             raise ObjectDoesNotExist
 
                     if updated_objects:
-                        msg = "Updated {} {}".format(len(updated_objects), model._meta.verbose_name_plural)
+                        msg = f"Updated {len(updated_objects)} {model._meta.verbose_name_plural}"
                         logger.info(msg)
                         messages.success(self.request, msg)
 
                     return redirect(self.get_return_url(request))
 
                 except ValidationError as e:
-                    messages.error(self.request, "{} failed validation: {}".format(obj, e))
+                    messages.error(self.request, f"{obj} failed validation: {e}")
 
                 except ObjectDoesNotExist:
                     msg = "Object update failed due to object-level permissions violation"
@@ -1087,7 +1081,7 @@ class BulkEditView(GetReturnURLMixin, ObjectPermissionRequiredMixin, View):
         # Retrieve objects being edited
         table = self.table(self.queryset.filter(pk__in=pk_list), orderable=False)
         if not table.rows:
-            messages.warning(request, "No {} were selected.".format(model._meta.verbose_name_plural))
+            messages.warning(request, f"No {model._meta.verbose_name_plural} were selected.")
             return redirect(self.get_return_url(request))
 
         context = {
@@ -1158,10 +1152,7 @@ class BulkRenameView(GetReturnURLMixin, ObjectPermissionRequiredMixin, View):
 
                             messages.success(
                                 request,
-                                "Renamed {} {}".format(
-                                    len(selected_objects),
-                                    self.queryset.model._meta.verbose_name_plural,
-                                ),
+                                f"Renamed {len(selected_objects)} {self.queryset.model._meta.verbose_name_plural}",
                             )
                             return redirect(self.get_return_url(request))
 
@@ -1241,7 +1232,7 @@ class BulkDeleteView(GetReturnURLMixin, ObjectPermissionRequiredMixin, View):
                     handle_protectederror(queryset, request, e)
                     return redirect(self.get_return_url(request))
 
-                msg = "Deleted {} {}".format(deleted_count, model._meta.verbose_name_plural)
+                msg = f"Deleted {deleted_count} {model._meta.verbose_name_plural}"
                 logger.info(msg)
                 messages.success(request, msg)
                 return redirect(self.get_return_url(request))
@@ -1262,7 +1253,7 @@ class BulkDeleteView(GetReturnURLMixin, ObjectPermissionRequiredMixin, View):
         if not table.rows:
             messages.warning(
                 request,
-                "No {} were selected for deletion.".format(model._meta.verbose_name_plural),
+                f"No {model._meta.verbose_name_plural} were selected for deletion.",
             )
             return redirect(self.get_return_url(request))
 
@@ -1360,7 +1351,8 @@ class ComponentCreateView(GetReturnURLMixin, ObjectPermissionRequiredMixin, View
                         elif field == "label":
                             field = "label_pattern"
                         for e in errors:
-                            form.add_error(field, "{}: {}".format(name, ", ".join(e)))
+                            err_str = ", ".join(e)
+                            form.add_error(field, f"{name}: {err_str}")
 
             if not form.errors:
 
@@ -1380,10 +1372,7 @@ class ComponentCreateView(GetReturnURLMixin, ObjectPermissionRequiredMixin, View
 
                     messages.success(
                         request,
-                        "Added {} {}".format(
-                            len(new_components),
-                            self.queryset.model._meta.verbose_name_plural,
-                        ),
+                        f"Added {len(new_components)} {self.queryset.model._meta.verbose_name_plural}",
                     )
                     if "_addanother" in request.POST:
                         return redirect(request.get_full_path())
@@ -1440,7 +1429,7 @@ class BulkComponentCreateView(GetReturnURLMixin, ObjectPermissionRequiredMixin, 
         if not selected_objects:
             messages.warning(
                 request,
-                "No {} were selected.".format(self.parent_model._meta.verbose_name_plural),
+                f"No {self.parent_model._meta.verbose_name_plural} were selected.",
             )
             return redirect(self.get_return_url(request))
         table = self.table(selected_objects)
@@ -1481,9 +1470,10 @@ class BulkComponentCreateView(GetReturnURLMixin, ObjectPermissionRequiredMixin, 
                                         errors,
                                     ) in component_form.errors.as_data().items():
                                         for e in errors:
+                                            err_str = ", ".join(e)
                                             form.add_error(
                                                 field,
-                                                "{} {}: {}".format(obj, name, ", ".join(e)),
+                                                f"{obj} {name}: {err_str}",
                                             )
 
                         # Enforce object-level permissions
@@ -1501,12 +1491,7 @@ class BulkComponentCreateView(GetReturnURLMixin, ObjectPermissionRequiredMixin, 
                     form.add_error(None, msg)
 
                 if not form.errors:
-                    msg = "Added {} {} to {} {}.".format(
-                        len(new_components),
-                        model_name,
-                        len(form.cleaned_data["pk"]),
-                        parent_model_name,
-                    )
+                    msg = f"Added {len(new_components)} {model_name} to {len(form.cleaned_data['pk'])} {parent_model_name}."
                     logger.info(msg)
                     messages.success(request, msg)
 
