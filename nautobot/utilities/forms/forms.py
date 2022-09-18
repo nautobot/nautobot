@@ -262,17 +262,14 @@ class DynamicFilterForm(BootstrapMixin, forms.Form):
         label="Value",
     )
 
-    def __init__(self, *args, model=None, filterset_base_filters=None, **kwargs):
+    def __init__(self, *args, model=None, **kwargs):
         super().__init__(*args, **kwargs)
         from nautobot.utilities.forms import add_blank_choice  # Avoid circular import
 
         if model:
             self.model = model
-        if filterset_base_filters:
-            self.filterset_base_filters = filterset_base_filters
 
-        # If filterset_base_filters is not provided, get base filters from its model
-        if hasattr(self, "model") and not hasattr(self, "filterset_base_filters"):
+        if hasattr(self, "model"):
             filterset = get_filterset_for_model(self.model)
             if filterset is not None:
                 self.filterset_base_filters = filterset.base_filters

@@ -452,7 +452,7 @@ function initializeDynamicFilterForm(context){
 
         if(lookup_type_val){
             $.ajax({
-                url: `/api/lookup-field/?field_name=${lookup_type_val}&contenttype=${contenttype}`,
+                url: `/api/lookup-value-dom-element/?field_name=${lookup_type_val}&contenttype=${contenttype}`,
                 async: true,
                 contentType: 'application/json',
                 dataType: 'json',

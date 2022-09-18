@@ -785,12 +785,11 @@ class DynamicFilterFormTest(TestCase):
             self.assertEqual(
                 form.fields["lookup_value"].widget.attrs,
                 {
-                    "multiple": "true",
-                    "data-query-param-content_types": '["dcim.site"]',
-                    "value-field": "slug",
-                    "data-url": "/api/extras/statuses/",
-                    "class": "nautobot-select2-api lookup_value-input form-control",
+                    "class": "lookup_value-input form-control nautobot-select2-api lookup_value-input form-control",
                     "data-multiple": 1,
+                    "data-query-param-content_types": '["dcim.site"]',
+                    "display-field": "display",
+                    "value-field": "slug",
                 },
             )
 
@@ -811,7 +810,7 @@ class DynamicFilterFormTest(TestCase):
             self.assertTrue(isinstance(form.fields["lookup_value"], forms.ChoiceField))
             self.assertEqual(
                 form.fields["lookup_value"].widget.attrs,
-                {"class": "nautobot-select2-static lookup_value-input form-control"},
+                {"class": "lookup_value-input form-control nautobot-select2-static lookup_value-input form-control"},
             )
             self.assertTrue(isinstance(form.fields["lookup_value"].widget, StaticSelect2))
             self.assertEqual(

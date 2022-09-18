@@ -765,7 +765,7 @@ class LookupTypeChoicesView(NautobotAPIVersionMixin, APIView):
         )
 
 
-class GenerateLookupFieldDataView(NautobotAPIVersionMixin, APIView):
+class LookupValueDomElementView(NautobotAPIVersionMixin, APIView):
     permission_classes = [IsAuthenticated]
 
     # TODO timizuo: add contenttype, field_name parameters to schema
