@@ -28,6 +28,8 @@ include = [
     "CONTRIBUTING.md",
     "LICENSE.txt",
     "NOTICE",
+    # Poetry by default will exclude these files as they are in .gitignore
+    "nautobot/project-static/docs/**/*",
 ]
 
 [tool.poetry.dependencies]
@@ -45,7 +47,7 @@ django-cacheops = "~6.0"
 # Base functionality for task scheduling with Celery
 django-celery-beat = "~2.2.1"
 # Management of app configuration via the Django admin UI
-django-constance = {version = "~2.8.0", extras = ["database"]}
+django-constance = {version = "~2.9.0", extras = ["database"]}
 # Permit cross-domain API requests
 django-cors-headers = "~3.13.0"
 # Support for encrypted database fields
@@ -84,7 +86,7 @@ django-webserver = "~1.2.0"
 # REST API framework
 djangorestframework = "~3.13.1"
 # OpenAPI 3.0 schema generation for the REST API
-drf-spectacular = {version = "~0.22.1", extras = ["sidecar"]}
+drf-spectacular = {version = "~0.24.0", extras = ["sidecar"]}
 # 2.0 TODO: no longer used, but retained for now to avoid breaking plugin expectations
 drf-yasg = {version = "^1.20.0", extras = ["validation"]}
 # Git integrations for Python
@@ -100,7 +102,7 @@ graphene-django-optimizer = "~0.8.0"
 #       Python 3.8+ where our direct dependency becomes part of stdlib.
 importlib-metadata = {version = "^4.4", python = "<3.8"}
 # Template rendering engine
-Jinja2 = "~3.0.3"
+Jinja2 = "~3.1.0"
 # Optional data validation of config contexts
 jsonschema = "~4.7.0"
 # Rendering of markdown files to HTML
@@ -114,7 +116,7 @@ napalm = {version = "~3.4.1", optional = true}
 # IP prefix and address handling
 netaddr = "~0.8.0"
 # Library of network related Jinja Filters
-netutils = "~1.1.0"
+netutils = "~1.2.0"
 # Image processing library
 Pillow = "~9.2.0"
 # PostgreSQL database adapter
@@ -148,7 +150,7 @@ sso = ["social-auth-core"]
 
 [tool.poetry.dev-dependencies]
 # Code style enforcement
-black = "~22.6.0"
+black = "~22.8.0"
 # Test code coverage measurement
 coverage = "~6.4.1"
 # Tool for debugging Django
@@ -162,10 +164,21 @@ example-plugin-with-view-override = { path = "examples/example_plugin_with_view_
 flake8 = "~3.9.1"
 # Alternative to Make, CLI based on `tasks.py`
 invoke = "~1.7.1"
-# Allow Markdown files to include other files
-mkdocs-include-markdown-plugin = "~3.6.0"
 # Rendering docs to HTML
 mkdocs = "~1.3.0"
+# Allow Markdown files to include other files
+mkdocs-include-markdown-plugin = "~3.6.0"
+# Material for mkdocs theme
+mkdocs-material = "~8.4.2"
+# Render custom markdown for version added/changed/remove notes
+mkdocs-version-annotations = "~1.0.0"
+# Automatic documentation from sources, for MkDocs
+mkdocstrings = "0.19"
+mkdocstrings-python = "0.7.1"
+# Code static analysis
+pylint = {version = "~2.14.5", python = "^3.7.2"}
+# Pylint extensions for Django
+pylint-django = {version = "~2.5.3", python = "^3.7.2"}
 # Integration Tests
 requests = "~2.27.1"
 # Colorization and autoformatting of CLI output, used for Invoke tasks
@@ -174,6 +187,8 @@ rich = "~12.5.1"
 selenium = "~4.3.0"
 # Abstraction layer for working with Selenium
 splinter = "~0.18.0"
+# Change log management and generation
+towncrier = "~22.8.0"
 
 [tool.poetry.scripts]
 nautobot-server = "nautobot.core.cli:main"
@@ -202,3 +217,109 @@ exclude = '''
   )/
 )
 '''
+
+[tool.pylint.master]
+load-plugins = "pylint_django"
+py-version = "3.7"
+ignore-paths = [
+    ".*third_party.*"
+]
+
+[tool.pylint.basic]
+# No docstrings required yet for private functions, or for test_* functions, or for inner Meta classes.
+no-docstring-rgx="^(_|test_|Meta$)"
+# Don't complain about "pk" as a variable name
+good-names = """_,i,j,k,pk"""
+
+[tool.pylint.message_control]
+# TODO: re-enable and fix these as time permits
+# unused-import is already covered by flake8
+disable=""",
+    abstract-method,
+    arguments-renamed,
+    attribute-defined-outside-init,
+    broad-except,
+    consider-iterating-dictionary,
+    consider-using-from-import,
+    consider-using-in,
+    consider-using-generator,
+    cyclic-import,
+    duplicate-code,
+    empty-docstring,
+    exec-used,
+    fixme,
+    global-statement,
+    global-variable-not-assigned,
+    hard-coded-auth-user,
+    import-outside-toplevel,
+    invalid-name,
+    keyword-arg-before-vararg,
+    line-too-long,
+    logging-format-interpolation,
+    logging-fstring-interpolation,
+    missing-class-docstring,
+    missing-function-docstring,
+    missing-module-docstring,
+    modelform-uses-exclude,
+    no-else-raise,
+    no-else-return,
+    no-member,
+    not-callable,
+    pointless-statement,
+    pointless-string-statement,
+    protected-access,
+    raise-missing-from,
+    self-assigning-variable,
+    signature-differs,
+    super-init-not-called,
+    super-with-arguments,
+    superfluous-parens,
+    too-few-public-methods,
+    too-many-ancestors,
+    too-many-arguments,
+    too-many-boolean-expressions,
+    too-many-branches,
+    too-many-instance-attributes,
+    too-many-lines,
+    too-many-locals,
+    too-many-nested-blocks,
+    too-many-public-methods,
+    too-many-return-statements,
+    too-many-statements,
+    ungrouped-imports,
+    unnecessary-dunder-call,
+    unspecified-encoding,
+    unused-argument,
+    unused-import,
+    unused-wildcard-import,
+    use-maxsplit-arg,
+    wildcard-import,
+    wrong-import-order,
+    wrong-import-position,
+    """
+
+[tool.pylint.miscellaneous]
+# We don't want to fail on "TODO" comments as there are plenty of those in our code for good reason
+notes = """,
+    FIXME,
+    XXX,
+    """
+
+[tool.pylint.typecheck]
+# @patch changes the signature of a function it's applied to; don't raise "no-value-for-parameter" here
+signature-mutators=["unittest.mock.patch"]
+
+[tool.towncrier]
+package = "nautobot"
+directory = "changes"
+filename = "nautobot/docs/release-notes/version-1.4.md"
+template = "towncrier_template.j2"
+start_string = "<!-- towncrier release notes start -->"
+issue_format = "[#{issue}](https://github.com/nautobot/nautobot/issues/{issue})"
+
+[tool.towncrier.fragment.added]
+[tool.towncrier.fragment.changed]
+[tool.towncrier.fragment.deprecated]
+[tool.towncrier.fragment.fixed]
+[tool.towncrier.fragment.removed]
+[tool.towncrier.fragment.security]

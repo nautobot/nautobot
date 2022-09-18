@@ -24,6 +24,7 @@ from nautobot.core.api.views import (
     ModelViewSet,
     ReadOnlyModelViewSet,
 )
+from nautobot.core.celery import app
 from nautobot.core.graphql import execute_saved_query
 from nautobot.extras import filters
 from nautobot.extras.choices import JobExecutionType, JobResultStatusChoices
@@ -173,6 +174,8 @@ class ConfigContextQuerySetMixin:
 
 
 class ConfigContextViewSet(ModelViewSet, NotesViewSetMixin):
+    # v2 TODO(jathan): Replace prefetch_related with select_related (except the
+    # plural ones are b2 m2m)
     queryset = ConfigContext.objects.prefetch_related(
         "regions",
         "sites",
@@ -325,6 +328,7 @@ class DynamicGroupViewSet(ModelViewSet, NotesViewSetMixin):
     Manage Dynamic Groups through DELETE, GET, POST, PUT, and PATCH requests.
     """
 
+    # v2 TODO(jathan): Replace prefetch_related with select_related
     queryset = DynamicGroup.objects.prefetch_related("content_type")
     serializer_class = serializers.DynamicGroupSerializer
     filterset_class = filters.DynamicGroupFilterSet
@@ -350,6 +354,7 @@ class DynamicGroupMembershipViewSet(ModelViewSet):
     Manage Dynamic Group Memberships through DELETE, GET, POST, PUT, and PATCH requests.
     """
 
+    # v2 TODO(jathan): Replace prefetch_related with select_related
     queryset = DynamicGroupMembership.objects.prefetch_related("group", "parent_group")
     serializer_class = serializers.DynamicGroupMembershipSerializer
     filterset_class = filters.DynamicGroupMembershipFilterSet
@@ -443,7 +448,7 @@ class ImageAttachmentViewSet(ModelViewSet):
 #
 
 
-def _create_schedule(serializer, data, commit, job, job_model, request):
+def _create_schedule(serializer, data, commit, job, job_model, request, celery_queue):
     """
     This is an internal function to create a scheduled job from API data.
     It has to handle both once-offs (i.e. of type TYPE_FUTURE) and interval
@@ -455,6 +460,7 @@ def _create_schedule(serializer, data, commit, job, job_model, request):
         "user": request.user.pk,
         "commit": commit,
         "name": job.class_path,
+        "celery_kwargs": {"queue": celery_queue},
     }
     type_ = serializer["interval"]
     if type_ == JobExecutionType.TYPE_IMMEDIATELY:
@@ -492,6 +498,7 @@ def _create_schedule(serializer, data, commit, job, job_model, request):
         user=request.user,
         approval_required=job_model.approval_required,
         crontab=crontab,
+        queue=celery_queue,
     )
     scheduled_job.save()
     return scheduled_job
@@ -510,6 +517,12 @@ def _run_job(request, job_model, legacy_response=False):
             raise ValidationError(
                 {"schedule": {"interval": ["Unable to schedule job: Job may have sensitive input variables"]}}
             )
+        if job_model.approval_required:
+            raise ValidationError(
+                "Unable to run or schedule job: "
+                "This job is flagged as possibly having sensitive variables but is also flagged as requiring approval."
+                "One of these two flags must be removed before this job can be scheduled or run."
+            )
 
     job_class = job_model.job_class
     if job_class is None:
@@ -520,6 +533,8 @@ def _run_job(request, job_model, legacy_response=False):
     input_serializer.is_valid(raise_exception=True)
 
     data = input_serializer.validated_data.get("data", {})
+    # TODO: retrieve celery queue name from api serializer, move default value to serializer
+    celery_queue = app.conf.task_default_queue
     commit = input_serializer.validated_data.get("commit", None)
     if commit is None:
         commit = job_model.commit_default
@@ -532,8 +547,8 @@ def _run_job(request, job_model, legacy_response=False):
         # of errors under messages
         return Response({"errors": e.message_dict if hasattr(e, "error_dict") else e.messages}, status=400)
 
-    if not get_worker_count():
-        raise CeleryWorkerNotRunningException()
+    if not get_worker_count(queue=celery_queue):
+        raise CeleryWorkerNotRunningException(queue=celery_queue)
 
     job_content_type = get_job_content_type()
     schedule_data = input_serializer.validated_data.get("schedule")
@@ -556,7 +571,7 @@ def _run_job(request, job_model, legacy_response=False):
 
     # Try to create a ScheduledJob, or...
     if schedule_data:
-        schedule = _create_schedule(schedule_data, data, commit, job, job_model, request)
+        schedule = _create_schedule(schedule_data, data, commit, job, job_model, request, celery_queue)
     else:
         schedule = None
 
@@ -567,6 +582,7 @@ def _run_job(request, job_model, legacy_response=False):
             job.class_path,
             job_content_type,
             request.user,
+            celery_kwargs={"queue": celery_queue},
             data=data,
             request=copy_safe_request(request),
             commit=commit,
@@ -797,6 +813,7 @@ class JobLogEntryViewSet(ReadOnlyModelViewSet):
     Retrieve a list of job log entries.
     """
 
+    # v2 TODO(jathan): Replace prefetch_related with select_related
     queryset = JobLogEntry.objects.prefetch_related("job_result")
     serializer_class = serializers.JobLogEntrySerializer
     filterset_class = filters.JobLogEntryFilterSet
@@ -815,6 +832,7 @@ class JobResultViewSet(
     Retrieve a list of job results
     """
 
+    # v2 TODO(jathan): Replace prefetch_related with select_related
     queryset = JobResult.objects.prefetch_related("job_model", "obj_type", "user")
     serializer_class = serializers.JobResultSerializer
     filterset_class = filters.JobResultFilterSet
@@ -837,6 +855,7 @@ class ScheduledJobViewSet(ReadOnlyModelViewSet):
     Retrieve a list of scheduled jobs
     """
 
+    # v2 TODO(jathan): Replace prefetch_related with select_related
     queryset = ScheduledJob.objects.prefetch_related("user")
     serializer_class = serializers.ScheduledJobSerializer
     filterset_class = filters.ScheduledJobFilterSet
@@ -953,11 +972,14 @@ class ScheduledJobViewSet(ReadOnlyModelViewSet):
 
         # Immediately enqueue the job with commit=False
         job_content_type = get_job_content_type()
+        # TODO: retrieve celery queue name from api serializer, move default value to serializer
+        celery_queue = app.conf.task_default_queue
         job_result = JobResult.enqueue_job(
             run_job,
             job_model.class_path,
             job_content_type,
             request.user,
+            celery_kwargs={"queue": celery_queue},
             data=scheduled_job.kwargs.get("data", {}),
             request=copy_safe_request(request),
             commit=False,  # force a dry-run
@@ -974,6 +996,7 @@ class ScheduledJobViewSet(ReadOnlyModelViewSet):
 
 class NoteViewSet(ModelViewSet):
     metadata_class = ContentTypeMetadata
+    # v2 TODO(jathan): Replace prefetch_related with select_related
     queryset = Note.objects.prefetch_related("user")
     serializer_class = serializers.NoteSerializer
     filterset_class = filters.NoteFilterSet
@@ -994,6 +1017,7 @@ class ObjectChangeViewSet(ReadOnlyModelViewSet):
     """
 
     metadata_class = ContentTypeMetadata
+    # v2 TODO(jathan): Replace prefetch_related with select_related
     queryset = ObjectChange.objects.prefetch_related("user")
     serializer_class = serializers.ObjectChangeSerializer
     filterset_class = filters.ObjectChangeFilterSet

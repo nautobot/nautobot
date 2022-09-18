@@ -92,6 +92,8 @@ class BulkCreateModelMixin:
         with transaction.atomic():
             serializer = self.get_serializer(data=request.data, many=True)
             serializer.is_valid(raise_exception=True)
+            # 2.0 TODO: this should be wrapped with a paginator so as to match the same format as the list endpoint,
+            # i.e. `{"results": [{instance}, {instance}, ...]}` instead of bare list `[{instance}, {instance}, ...]`
             return Response(serializer.data, status=status.HTTP_201_CREATED)
 
 
@@ -114,9 +116,11 @@ class BulkUpdateModelMixin:
     ]
     """
 
+    bulk_operation_serializer_class = BulkOperationSerializer
+
     def bulk_update(self, request, *args, **kwargs):
         partial = kwargs.pop("partial", False)
-        serializer = BulkOperationSerializer(data=request.data, many=True)
+        serializer = self.bulk_operation_serializer_class(data=request.data, many=True)
         serializer.is_valid(raise_exception=True)
         qs = self.get_queryset().filter(pk__in=[o["id"] for o in serializer.data])
 
@@ -125,6 +129,8 @@ class BulkUpdateModelMixin:
 
         data = self.perform_bulk_update(qs, update_data, partial=partial)
 
+        # 2.0 TODO: this should be wrapped with a paginator so as to match the same format as the list endpoint,
+        # i.e. `{"results": [{instance}, {instance}, ...]}` instead of bare list `[{instance}, {instance}, ...]`
         return Response(data, status=status.HTTP_200_OK)
 
     def perform_bulk_update(self, objects, update_data, partial):
@@ -156,8 +162,13 @@ class BulkDestroyModelMixin:
     ]
     """
 
+    bulk_operation_serializer_class = BulkOperationSerializer
+
+    @extend_schema(
+        request=BulkOperationSerializer(many=True),
+    )
     def bulk_destroy(self, request, *args, **kwargs):
-        serializer = BulkOperationSerializer(data=request.data, many=True)
+        serializer = self.bulk_operation_serializer_class(data=request.data, many=True)
         serializer.is_valid(raise_exception=True)
         qs = self.get_queryset().filter(pk__in=[o["id"] for o in serializer.data])
 
@@ -178,6 +189,8 @@ class BulkDestroyModelMixin:
 
 class ModelViewSetMixin:
     brief = False
+    # v2 TODO(jathan): Revisit whether this is still valid post-cacheops. Re: prefetch_related vs.
+    # select_related
     brief_prefetch_fields = []
 
     def get_serializer(self, *args, **kwargs):
@@ -207,6 +220,7 @@ class ModelViewSetMixin:
     def get_queryset(self):
         # If using brief mode, clear all prefetches from the queryset and append only brief_prefetch_fields (if any)
         if self.brief:
+            # v2 TODO(jathan): Replace prefetch_related with select_related
             return super().get_queryset().prefetch_related(None).prefetch_related(*self.brief_prefetch_fields)
 
         return super().get_queryset()
@@ -342,7 +356,7 @@ class APIRootView(NautobotAPIVersionMixin, APIView):
         return "API Root"
 
     @extend_schema(exclude=True)
-    def get(self, request, format=None):
+    def get(self, request, format=None):  # pylint: disable=redefined-builtin
 
         return Response(
             OrderedDict(
@@ -424,7 +438,7 @@ class StatusView(NautobotAPIVersionMixin, APIView):
                 if isinstance(version, tuple):
                     version = ".".join(str(n) for n in version)
             installed_apps[app_config.name] = version
-        installed_apps = {k: v for k, v in sorted(installed_apps.items())}
+        installed_apps = dict(sorted(installed_apps.items()))
 
         # Gather installed plugins
         plugins = {}
@@ -432,7 +446,7 @@ class StatusView(NautobotAPIVersionMixin, APIView):
             plugin_name = plugin_name.rsplit(".", 1)[-1]
             plugin_config = apps.get_app_config(plugin_name)
             plugins[plugin_name] = getattr(plugin_config, "version", None)
-        plugins = {k: v for k, v in sorted(plugins.items())}
+        plugins = dict(sorted(plugins.items()))
 
         # Gather Celery workers
         workers = celery_app.control.inspect().active()  # list or None
@@ -599,7 +613,7 @@ class GraphQLDRFAPIView(NautobotAPIVersionMixin, APIView):
         Returns:
             response (dict), status_code (int): Payload of the response to send and the status code.
         """
-        query, variables, operation_name, id = GraphQLView.get_graphql_params(request, data)
+        query, variables, operation_name, _id = GraphQLView.get_graphql_params(request, data)
 
         execution_result = self.execute_graphql_request(request, data, query, variables, operation_name)
 

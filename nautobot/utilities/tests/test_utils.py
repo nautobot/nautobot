@@ -41,7 +41,7 @@ class DictToFilterParamsTest(TestCase):
 
     def test_dict_to_filter_params(self):
 
-        input = {
+        input_ = {
             "a": True,
             "foo": {
                 "bar": 123,
@@ -57,11 +57,11 @@ class DictToFilterParamsTest(TestCase):
             "x__y__z": False,
         }
 
-        self.assertEqual(dict_to_filter_params(input), output)
+        self.assertEqual(dict_to_filter_params(input_), output)
 
-        input["x"]["y"]["z"] = True
+        input_["x"]["y"]["z"] = True
 
-        self.assertNotEqual(dict_to_filter_params(input), output)
+        self.assertNotEqual(dict_to_filter_params(input_), output)
 
 
 class NormalizeQueryDictTest(TestCase):
@@ -185,6 +185,7 @@ class GetFooForModelTest(TestCase):
         """
         Test the util function `get_route_for_model` returns the appropriate URL route name, if model (as dotted string or class) provided.
         """
+        # UI
         self.assertEqual(get_route_for_model("dcim.device", "list"), "dcim:device_list")
         self.assertEqual(get_route_for_model(Device, "list"), "dcim:device_list")
         self.assertEqual(get_route_for_model("dcim.site", "list"), "dcim:site_list")
@@ -193,6 +194,19 @@ class GetFooForModelTest(TestCase):
             get_route_for_model("example_plugin.examplemodel", "list"), "plugins:example_plugin:examplemodel_list"
         )
         self.assertEqual(get_route_for_model(ExampleModel, "list"), "plugins:example_plugin:examplemodel_list")
+
+        # API
+        self.assertEqual(get_route_for_model("dcim.device", "list", api=True), "dcim-api:device-list")
+        self.assertEqual(get_route_for_model(Device, "list", api=True), "dcim-api:device-list")
+        self.assertEqual(get_route_for_model("dcim.site", "detail", api=True), "dcim-api:site-detail")
+        self.assertEqual(get_route_for_model(Site, "detail", api=True), "dcim-api:site-detail")
+        self.assertEqual(
+            get_route_for_model("example_plugin.examplemodel", "list", api=True),
+            "plugins-api:example_plugin-api:examplemodel-list",
+        )
+        self.assertEqual(
+            get_route_for_model(ExampleModel, "list", api=True), "plugins-api:example_plugin-api:examplemodel-list"
+        )
 
     def test_get_table_for_model(self):
         """

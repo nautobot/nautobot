@@ -105,9 +105,12 @@ class RackGroup(MPTTModel, OrganizationalModel):
             self.description,
         )
 
-    def to_objectchange(self, action):
+    def to_objectchange(self, action, object_data_exclude=None, **kwargs):
+        if object_data_exclude is None:
+            object_data_exclude = []
         # Remove MPTT-internal fields
-        return super().to_objectchange(action, object_data_exclude=["level", "lft", "rght", "tree_id"])
+        object_data_exclude += ["level", "lft", "rght", "tree_id"]
+        return super().to_objectchange(action, object_data_exclude=object_data_exclude, **kwargs)
 
     def clean(self):
         super().clean()
@@ -375,16 +378,12 @@ class Rack(PrimaryModel, StatusModel):
                 min_height = top_device.position + top_device.device_type.u_height - 1
                 if self.u_height < min_height:
                     raise ValidationError(
-                        {
-                            "u_height": "Rack must be at least {}U tall to house currently installed devices.".format(
-                                min_height
-                            )
-                        }
+                        {"u_height": f"Rack must be at least {min_height}U tall to house currently installed devices."}
                     )
             # Validate that Rack was assigned a group of its same site, if applicable
             if self.group:
                 if self.group.site != self.site:
-                    raise ValidationError({"group": "Rack group must be from the same site, {}.".format(self.site)})
+                    raise ValidationError({"group": f"Rack group must be from the same site, {self.site}."})
 
     def to_csv(self):
         return (
@@ -456,6 +455,7 @@ class Rack(PrimaryModel, StatusModel):
 
             # Retrieve all devices installed within the rack
             queryset = (
+                # v2 TODO(jathan): Replace prefetch_related with select_related
                 Device.objects.prefetch_related("device_type", "device_type__manufacturer", "device_role")
                 .annotate(devicebay_count=Count("devicebays"))
                 .exclude(pk=exclude)
@@ -485,7 +485,7 @@ class Rack(PrimaryModel, StatusModel):
                     ):
                         elevation.pop(u, None)
 
-        return [u for u in elevation.values()]
+        return list(elevation.values())
 
     def get_available_units(self, u_height=1, rack_face=None, exclude=None):
         """
@@ -498,6 +498,7 @@ class Rack(PrimaryModel, StatusModel):
         :param exclude: List of devices IDs to exclude (useful when moving a device within a rack)
         """
         # Gather all devices which consume U space within the rack
+        # v2 TODO(jathan): Replace prefetch_related with select_related
         devices = self.devices.prefetch_related("device_type").filter(position__gte=1)
         if exclude is not None:
             devices = devices.exclude(pk__in=exclude)
@@ -657,7 +658,7 @@ class RackReservation(PrimaryModel):
         ordering = ["created"]
 
     def __str__(self):
-        return "Reservation for rack {}".format(self.rack)
+        return f"Reservation for rack {self.rack}"
 
     def get_absolute_url(self):
         return reverse("dcim:rackreservation", args=[self.pk])
@@ -670,12 +671,10 @@ class RackReservation(PrimaryModel):
             # Validate that all specified units exist in the Rack.
             invalid_units = [u for u in self.units if u not in self.rack.units]
             if invalid_units:
+                error = ", ".join([str(u) for u in invalid_units])
                 raise ValidationError(
                     {
-                        "units": "Invalid unit(s) for {}U rack: {}".format(
-                            self.rack.u_height,
-                            ", ".join([str(u) for u in invalid_units]),
-                        ),
+                        "units": f"Invalid unit(s) for {self.rack.u_height}U rack: {error}",
                     }
                 )
 
@@ -685,13 +684,8 @@ class RackReservation(PrimaryModel):
                 reserved_units += resv.units
             conflicting_units = [u for u in self.units if u in reserved_units]
             if conflicting_units:
-                raise ValidationError(
-                    {
-                        "units": "The following units have already been reserved: {}".format(
-                            ", ".join([str(u) for u in conflicting_units]),
-                        )
-                    }
-                )
+                error = ", ".join([str(u) for u in conflicting_units])
+                raise ValidationError({"units": f"The following units have already been reserved: {error}"})
 
     def to_csv(self):
         return (

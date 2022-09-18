@@ -54,19 +54,19 @@ def csv_format(data):
 
         # Force conversion to string first so we can check for any commas
         if not isinstance(value, str):
-            value = "{}".format(value)
+            value = f"{value}"
 
         # Double-quote the value if it contains a comma or line break
         if "," in value or "\n" in value:
             value = value.replace('"', '""')  # Escape double-quotes
-            csv.append('"{}"'.format(value))
+            csv.append(f'"{value}"')
         else:
-            csv.append("{}".format(value))
+            csv.append(f"{value}")
 
     return ",".join(csv)
 
 
-def get_route_for_model(model, action):
+def get_route_for_model(model, action, api=False):
     """
     Return the URL route name for the given model and action. Does not perform any validation.
     Supports both core and plugin routes.
@@ -74,35 +74,52 @@ def get_route_for_model(model, action):
     Args:
         model (models.Model, str): Class, Instance, or dotted string of a Django Model
         action (str): name of the action in the route
+        api (bool): If set, return an API route.
 
     Returns:
         str: return the name of the view for the model/action provided.
+
     Examples:
         >>> get_route_for_model(Device, "list")
         "dcim:device_list"
+        >>> get_route_for_model(Device, "list", api=True)
+        "dcim-api:device-list"
+        >>> get_route_for_model("dcim.site", "list")
+        "dcim:site_list"
+        >>> get_route_for_model("dcim.site", "list", api=True)
+        "dcim-api:site-list"
+        >>> get_route_for_model(ExampleModel, "list")
+        "plugins:example_plugin:examplemodel_list"
+        >>> get_route_for_model(ExampleModel, "list", api=True)
+        "plugins-api:example_plugin-api:examplemodel-list"
     """
 
     if isinstance(model, str):
         model = get_model_from_name(model)
-    viewname = f"{model._meta.app_label}:{model._meta.model_name}_{action}"
+
+    suffix = "" if not api else "-api"
+    prefix = f"{model._meta.app_label}{suffix}:{model._meta.model_name}"
+    sep = "_" if not api else "-"
+    viewname = f"{prefix}{sep}{action}"
+
     if model._meta.app_label in settings.PLUGINS:
-        viewname = f"plugins:{viewname}"
+        viewname = f"plugins{suffix}:{viewname}"
 
     return viewname
 
 
-def hex_to_rgb(hex):
+def hex_to_rgb(hex_str):
     """
     Map a hex string like "00ff00" to individual r, g, b integer values.
     """
-    return [int(hex[c : c + 2], 16) for c in (0, 2, 4)]  # noqa: E203
+    return [int(hex_str[c : c + 2], 16) for c in (0, 2, 4)]  # noqa: E203
 
 
 def rgb_to_hex(r, g, b):
     """
     Map r, g, b values to a hex string.
     """
-    return "%02x%02x%02x" % (r, g, b)
+    return "%02x%02x%02x" % (r, g, b)  # pylint: disable=consider-using-f-string
 
 
 def foreground_color(bg_color):
@@ -297,7 +314,7 @@ def to_meters(length, unit):
 
     valid_units = CableLengthUnitChoices.values()
     if unit not in valid_units:
-        raise ValueError("Unknown unit {}. Must be one of the following: {}".format(unit, ", ".join(valid_units)))
+        raise ValueError(f"Unknown unit {unit}. Must be one of the following: {', '.join(valid_units)}")
 
     if unit == CableLengthUnitChoices.UNIT_METER:
         return length
@@ -307,7 +324,7 @@ def to_meters(length, unit):
         return length * Decimal("0.3048")
     if unit == CableLengthUnitChoices.UNIT_INCH:
         return length * Decimal("0.3048") * 12
-    raise ValueError("Unknown unit {}. Must be 'm', 'cm', 'ft', or 'in'.".format(unit))
+    raise ValueError(f"Unknown unit {unit}. Must be 'm', 'cm', 'ft', or 'in'.")
 
 
 def render_jinja2(template_code, context):

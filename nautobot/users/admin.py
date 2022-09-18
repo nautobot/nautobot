@@ -25,6 +25,7 @@ class ObjectPermissionInline(admin.TabularInline):
     verbose_name_plural = "Permissions"
 
     def get_queryset(self, request):
+        # v2 TODO(jathan): Replace prefetch_related with select_related
         return super().get_queryset(request).prefetch_related("objectpermission__object_types").nocache()
 
     @staticmethod
@@ -180,7 +181,7 @@ class ObjectPermissionForm(forms.ModelForm):
 
         # Append any of the selected CRUD checkboxes to the actions list
         if not self.cleaned_data.get("actions"):
-            self.cleaned_data["actions"] = list()
+            self.cleaned_data["actions"] = []
         for action in ["view", "add", "change", "delete"]:
             if self.cleaned_data[f"can_{action}"] and action not in self.cleaned_data["actions"]:
                 self.cleaned_data["actions"].append(action)
@@ -216,6 +217,7 @@ class ActionListFilter(admin.SimpleListFilter):
     def queryset(self, request, queryset):
         if self.value():
             return queryset.filter(actions=[self.value()])
+        return None
 
 
 class ObjectTypeListFilter(admin.SimpleListFilter):
@@ -230,6 +232,7 @@ class ObjectTypeListFilter(admin.SimpleListFilter):
     def queryset(self, request, queryset):
         if self.value():
             return queryset.filter(object_types=self.value())
+        return None
 
 
 @admin.register(ObjectPermission)
@@ -266,6 +269,7 @@ class ObjectPermissionAdmin(NautobotModelAdmin):
     search_fields = ["actions", "constraints", "description", "name"]
 
     def get_queryset(self, request):
+        # v2 TODO(jathan): Replace prefetch_related with select_related (these # might be m2m)
         return super().get_queryset(request).prefetch_related("object_types", "users", "groups")
 
     def list_models(self, obj):

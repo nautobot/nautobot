@@ -17,6 +17,8 @@ class CableConnectFormTestCase(SeleniumTestCase):
        (except the name dropdown)
     """
 
+    fixtures = ("status",)
+
     def test_js_functionality(self):
         """
         This test:

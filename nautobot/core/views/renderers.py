@@ -88,8 +88,8 @@ class NautobotHTMLRenderer(renderers.BrowsableAPIRenderer):
         valid_actions = []
         invalid_actions = []
         # added check for whether the action_buttons exist because of issue #2107
-        if not view.action_buttons:
-            view.actions_buttons = ("add", "import", "export")
+        if view.action_buttons is None:
+            view.action_buttons = []
         for action in view.action_buttons:
             if action in always_valid_actions or validated_viewname(queryset.model, action) is not None:
                 valid_actions.append(action)

@@ -12,6 +12,7 @@ class BaseNetworkFormTest:
     field_name = None
     object_name = None
     extra_data = {}
+    fixtures = ("status",)
 
     def test_valid_ip_address(self):
         data = {self.field_name: "192.168.1.0/24", "status": Status.objects.get(slug="active")}

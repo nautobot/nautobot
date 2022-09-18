@@ -26,8 +26,12 @@ Nautobot requires at least one worker to consume background tasks required for a
 $ nautobot-server celery --help
 ```
 
-!!! important
++/- 1.1.0
     Prior to version 1.1.0, Nautobot utilized RQ as the primary background task worker. As of Nautobot 1.1.0, RQ is now *deprecated*. RQ and the `@job` decorator for custom tasks are still supported for now, but users should [migrate the primary worker to Celery](#migrating-to-celery-from-rq) and then, *only if still required*, [run RQ concurrently with the Celery worker](#concurrent-celery-and-rq-nautobot-workers). RQ and the `@job` decorator will no longer be documented, and support for RQ will be removed in a future release.
+
+#### Advanced Worker Queue Configuration
+
+You may want to deploy multiple workers and/or multiple queues. For more information see the [worker queues](../administration/celery-queues.md) documentation.
 
 ## Configuration
 
@@ -137,12 +141,14 @@ WantedBy=multi-user.target
 
 ### Nautobot Background Services
 
-!!! note
++/- 1.1.0
     Prior to version 1.1.0, Nautobot utilized RQ as the primary background task worker. As of Nautobot 1.1.0, RQ is now *deprecated* and has been replaced with Celery. RQ can still be used by plugins for now, but will be removed in a future release. Please [migrate your deployment to utilize Celery as documented below](#migrating-to-celery-from-rq).
 
 Next, we will setup the `systemd` units for the Celery worker and Celery Beat scheduler.
 
 #### Celery Worker
+
++++ 1.1.0
 
 The Celery worker service consumes tasks from background task queues and is required for taking advantage of advanced
 Nautobot features including [Jobs](../additional-features/jobs.md), [Custom
@@ -177,6 +183,8 @@ WantedBy=multi-user.target
 ```
 
 #### Celery Beat Scheduler
+
++++ 1.2.0
 
 The Celery Beat scheduler enables the periodic execution of and scheduling of background tasks. It is required to take
 advantage of the [job scheduling and approval](../additional-features/job-scheduling-and-approvals.md) features.
@@ -330,35 +338,15 @@ You can use the command `systemctl status nautobot.service` to verify that the W
     If the Nautobot service fails to start, issue the command `journalctl -eu nautobot.service` to check for log messages that
     may indicate the problem.
 
-Once you've verified that the WSGI service and worker are up and running, move on to [HTTP server setup](../http-server).
+Once you've verified that the WSGI service and worker are up and running, move on to [HTTP server setup](http-server.md).
 
 ## Troubleshooting
-
-### SSL Error
-
-If you see the error `SSL error: decryption failed or bad record mac`, it is likely due to a mismatch in the uWSGI
-configuration and Nautobot's database settings.
-
-* Set `DATABASES` -> `default` -> `CONN_MAX_AGE=0` in `nautobot_config.py` and restart the Nautobot service.
-
-For example:
-
-```python
-DATABASES = {
-    "default": {
-        # Other settings...
-        "CONN_MAX_AGE": int(os.getenv("NAUTOBOT_DB_TIMEOUT", 0)),  # Change the value to 0
-    }
-}
-```
-
-Please see [SSL error: decryption failed or bad record mac & SSL SYSCALL error: EOF detected (#127)](https://github.com/nautobot/nautobot/issues/127) for more details.
 
 ### Operational Error: Incorrect string value
 
 When using MySQL as a database backend, if you encounter a server error along the lines of `Incorrect string value: '\\xF0\\x9F\\x92\\x80' for column`, it is because you are running afoul of the legacy implementation of Unicode (aka `utf8`) encoding in MySQL. This often occurs when using modern Unicode glyphs like the famous poop emoji.
 
-Please see the [configuration guide on MySQL Unicode settings](../../configuration/required-settings/#mysql-unicode-settings) for instructions on how to address this.
+Please see the [configuration guide on MySQL Unicode settings](../configuration/required-settings.md#mysql-unicode-settings) for instructions on how to address this.
 
 Please see [Computed fields with fallback value that is unicode results in OperationalError (#645)](https://github.com/nautobot/nautobot/issues/645) for more details.
 
@@ -370,4 +358,4 @@ When serving Nautobot directly from uWSGI on RedHat or CentOS there may be a pro
 mime-file = /opt/nautobot/mime.types
 ```
 
-Alternatively, host Nautobot behind Nginx as instructed in [HTTP server setup](../http-server).
+Alternatively, host Nautobot behind Nginx as instructed in [HTTP server setup](http-server.md).

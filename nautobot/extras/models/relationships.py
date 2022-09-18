@@ -450,12 +450,12 @@ class Relationship(BaseModel, ChangeLoggedModel, NotesMixin):
             if not getattr(self, f"{side}_filter"):
                 continue
 
-            filter = getattr(self, f"{side}_filter")
+            filter_ = getattr(self, f"{side}_filter")
             side_model = getattr(self, f"{side}_type").model_class()
             if not side_model:  # can happen if for example a plugin providing the model was uninstalled
                 raise ValidationError({f"{side}_type": "Unable to locate model class"})
             model_name = side_model._meta.label
-            if not isinstance(filter, dict):
+            if not isinstance(filter_, dict):
                 raise ValidationError({f"{side}_filter": f"Filter for {model_name} must be a dictionary"})
 
             filterset_class = get_filterset_for_model(side_model)
@@ -465,7 +465,7 @@ class Relationship(BaseModel, ChangeLoggedModel, NotesMixin):
                         f"{side}_filter": f"Filters are not supported for {model_name} object (Unable to find a FilterSet)"
                     }
                 )
-            filterset = filterset_class(filter, side_model.objects.all())
+            filterset = filterset_class(filter_, side_model.objects.all())
 
             error_messages = []
             if filterset.errors:
@@ -479,7 +479,7 @@ class Relationship(BaseModel, ChangeLoggedModel, NotesMixin):
                         error_messages.append(f"'{key}': " + ", ".join(errors_list))
 
             filterset_params = set(filterset.filters.keys())
-            for key in filter.keys():
+            for key in filter_.keys():
                 if key not in filterset_params:
                     error_messages.append(f"'{key}' is not a valid filter parameter for {model_name} object")
 

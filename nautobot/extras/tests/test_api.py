@@ -62,7 +62,7 @@ from nautobot.users.models import ObjectPermission
 from nautobot.utilities.choices import ColorChoices
 from nautobot.utilities.testing import APITestCase, APIViewTestCases
 from nautobot.utilities.testing.utils import disable_warnings
-from nautobot.utilities.utils import slugify_dashes_to_underscores
+from nautobot.utilities.utils import get_route_for_model, slugify_dashes_to_underscores
 
 
 User = get_user_model()
@@ -71,7 +71,7 @@ User = get_user_model()
 class AppTest(APITestCase):
     def test_root(self):
         url = reverse("extras-api:api-root")
-        response = self.client.get("{}?format=api".format(url), **self.header)
+        response = self.client.get(f"{url}?format=api", **self.header)
 
         self.assertEqual(response.status_code, 200)
 
@@ -139,14 +139,14 @@ class ComputedFieldTest(APIViewTestCases.APIViewTestCase):
             template="{{ obj.name }}",
             fallback_value="error",
             content_type=site_ct,
-        ),
+        )
         ComputedField.objects.create(
             slug="cf2",
             label="Computed Field Two",
             template="{{ obj.name }}",
             fallback_value="error",
             content_type=site_ct,
-        ),
+        )
         ComputedField.objects.create(
             slug="cf3",
             label="Computed Field Three",
@@ -328,13 +328,13 @@ class ConfigContextSchemaTest(APIViewTestCases.APIViewTestCase):
     def setUpTestData(cls):
         ConfigContextSchema.objects.create(
             name="Schema 1", slug="schema-1", data_schema={"type": "object", "properties": {"foo": {"type": "string"}}}
-        ),
+        )
         ConfigContextSchema.objects.create(
             name="Schema 2", slug="schema-2", data_schema={"type": "object", "properties": {"bar": {"type": "string"}}}
-        ),
+        )
         ConfigContextSchema.objects.create(
             name="Schema 3", slug="schema-3", data_schema={"type": "object", "properties": {"baz": {"type": "string"}}}
-        ),
+        )
 
 
 class ContentTypeTest(APITestCase):
@@ -385,7 +385,7 @@ class CreatedUpdatedFilterTest(APITestCase):
     def test_get_rack_created(self):
         self.add_permissions("dcim.view_rack")
         url = reverse("dcim-api:rack-list")
-        response = self.client.get("{}?created=2001-02-03".format(url), **self.header)
+        response = self.client.get(f"{url}?created=2001-02-03", **self.header)
 
         self.assertHttpStatus(response, status.HTTP_200_OK)
         self.assertEqual(response.data["count"], 1)
@@ -394,7 +394,7 @@ class CreatedUpdatedFilterTest(APITestCase):
     def test_get_rack_created_gte(self):
         self.add_permissions("dcim.view_rack")
         url = reverse("dcim-api:rack-list")
-        response = self.client.get("{}?created__gte=2001-02-04".format(url), **self.header)
+        response = self.client.get(f"{url}?created__gte=2001-02-04", **self.header)
 
         self.assertHttpStatus(response, status.HTTP_200_OK)
         self.assertEqual(response.data["count"], 1)
@@ -403,7 +403,7 @@ class CreatedUpdatedFilterTest(APITestCase):
     def test_get_rack_created_lte(self):
         self.add_permissions("dcim.view_rack")
         url = reverse("dcim-api:rack-list")
-        response = self.client.get("{}?created__lte=2001-02-04".format(url), **self.header)
+        response = self.client.get(f"{url}?created__lte=2001-02-04", **self.header)
 
         self.assertHttpStatus(response, status.HTTP_200_OK)
         self.assertEqual(response.data["count"], 1)
@@ -412,7 +412,7 @@ class CreatedUpdatedFilterTest(APITestCase):
     def test_get_rack_last_updated(self):
         self.add_permissions("dcim.view_rack")
         url = reverse("dcim-api:rack-list")
-        response = self.client.get("{}?last_updated=2001-02-03%2001:02:03.000004".format(url), **self.header)
+        response = self.client.get(f"{url}?last_updated=2001-02-03%2001:02:03.000004", **self.header)
 
         self.assertHttpStatus(response, status.HTTP_200_OK)
         self.assertEqual(response.data["count"], 1)
@@ -421,7 +421,7 @@ class CreatedUpdatedFilterTest(APITestCase):
     def test_get_rack_last_updated_gte(self):
         self.add_permissions("dcim.view_rack")
         url = reverse("dcim-api:rack-list")
-        response = self.client.get("{}?last_updated__gte=2001-02-04%2001:02:03.000004".format(url), **self.header)
+        response = self.client.get(f"{url}?last_updated__gte=2001-02-04%2001:02:03.000004", **self.header)
 
         self.assertHttpStatus(response, status.HTTP_200_OK)
         self.assertEqual(response.data["count"], 1)
@@ -430,7 +430,7 @@ class CreatedUpdatedFilterTest(APITestCase):
     def test_get_rack_last_updated_lte(self):
         self.add_permissions("dcim.view_rack")
         url = reverse("dcim-api:rack-list")
-        response = self.client.get("{}?last_updated__lte=2001-02-04%2001:02:03.000004".format(url), **self.header)
+        response = self.client.get(f"{url}?last_updated__lte=2001-02-04%2001:02:03.000004", **self.header)
 
         self.assertHttpStatus(response, status.HTTP_200_OK)
         self.assertEqual(response.data["count"], 1)
@@ -631,6 +631,8 @@ class CustomLinkTest(APIViewTestCases.APIViewTestCase):
 
 class DynamicGroupTestMixin:
     """Mixin for Dynamic Group test cases to re-use the same set of common fixtures."""
+
+    fixtures = ("status",)
 
     @classmethod
     def setUpTestData(cls):
@@ -911,7 +913,9 @@ class GitRepositoryTest(APIViewTestCases.APIViewTestCase):
         url = reverse("extras-api:gitrepository-sync", kwargs={"pk": self.repos[0].id})
         response = self.client.post(url, format="json", **self.header)
         self.assertHttpStatus(response, status.HTTP_503_SERVICE_UNAVAILABLE)
-        self.assertEqual(response.data["detail"], "Unable to process request: Celery worker process not running.")
+        self.assertEqual(
+            response.data["detail"], "Unable to process request: No celery workers running on queue celery."
+        )
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
     @mock.patch("nautobot.extras.api.views.get_worker_count")
@@ -963,6 +967,7 @@ class GitRepositoryTest(APIViewTestCases.APIViewTestCase):
 class GraphQLQueryTest(APIViewTestCases.APIViewTestCase):
     model = GraphQLQuery
     brief_fields = ["display", "id", "name", "url"]
+    fixtures = ("status",)
 
     create_data = [
         {
@@ -1278,7 +1283,9 @@ class JobAPIRunTestMixin:
         url = self.get_run_url()
         response = self.client.post(url, data, format="json", **self.header)
         self.assertHttpStatus(response, status.HTTP_503_SERVICE_UNAVAILABLE)
-        self.assertEqual(response.data["detail"], "Unable to process request: Celery worker process not running.")
+        self.assertEqual(
+            response.data["detail"], "Unable to process request: No celery workers running on queue celery."
+        )
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     @mock.patch("nautobot.extras.api.views.get_worker_count")
@@ -1438,6 +1445,37 @@ class JobAPIRunTestMixin:
         self.assertEqual(
             response.data["schedule"]["interval"][0],
             "Unable to schedule job: Job may have sensitive input variables",
+        )
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    @mock.patch("nautobot.extras.api.views.get_worker_count")
+    def test_run_a_job_with_sensitive_variables_and_requires_approval(self, mock_get_worker_count):
+        mock_get_worker_count.return_value = 1
+        self.add_permissions("extras.run_job")
+
+        job_model = Job.objects.get(job_class_name="ExampleJob")
+        job_model.enabled = True
+        job_model.has_sensitive_variables = True
+        job_model.approval_required = True
+        job_model.save()
+
+        url = reverse("extras-api:job-run", kwargs={"pk": job_model.pk})
+        data = {
+            "data": {},
+            "commit": True,
+            "schedule": {
+                "interval": "immediately",
+                "name": "test",
+            },
+        }
+
+        response = self.client.post(url, data, format="json", **self.header)
+        self.assertHttpStatus(response, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(
+            response.data[0],
+            "Unable to run or schedule job: "
+            "This job is flagged as possibly having sensitive variables but is also flagged as requiring approval."
+            "One of these two flags must be removed before this job can be scheduled or run.",
         )
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
@@ -1733,10 +1771,8 @@ class JobTestVersion13(
     def test_get_job_variables(self):
         """Test the job/<pk>/variables API endpoint."""
         self.add_permissions("extras.view_job")
-        response = self.client.get(
-            reverse(f"{self._get_view_namespace()}:job-variables", kwargs={"pk": self.job_model.pk}),
-            **self.header,
-        )
+        route = get_route_for_model(self.model, "variables", api=True)
+        response = self.client.get(reverse(route, kwargs={"pk": self.job_model.pk}), **self.header)
         self.assertEqual(4, len(response.data))  # 4 variables, in order
         self.assertEqual(response.data[0], {"name": "var1", "type": "StringVar", "required": True})
         self.assertEqual(response.data[1], {"name": "var2", "type": "IntegerVar", "required": True})
@@ -1791,7 +1827,7 @@ class JobTestVersion13(
         )
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
-    def test_run_job_object_var(self):
+    def test_run_job_object_var(self):  # pylint: disable=arguments-differ
         """In addition to the base test case provided by JobAPIRunTestMixin, also verify the JSON response data."""
         response, schedule = super().test_run_job_object_var()
 
@@ -1808,7 +1844,7 @@ class JobTestVersion13(
         self.assertIsNone(response.data["job_result"])
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
-    def test_run_job_object_var_lookup(self):
+    def test_run_job_object_var_lookup(self):  # pylint: disable=arguments-differ
         """In addition to the base test case provided by JobAPIRunTestMixin, also verify the JSON response data."""
         response, job_result = super().test_run_job_object_var_lookup()
 
@@ -1825,7 +1861,7 @@ class JobTestVersion13(
         self.assertEqual(data_job_result, expected_data_job_result)
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
-    def test_run_job_future(self):
+    def test_run_job_future(self):  # pylint: disable=arguments-differ
         """In addition to the base test case provided by JobAPIRunTestMixin, also verify the JSON response data."""
         response, schedule = super().test_run_job_future()
 
@@ -1849,7 +1885,7 @@ class JobTestVersion13(
         self.assertEqual(schedule.kwargs["scheduled_job_pk"], str(schedule.pk))
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
-    def test_run_job_interval(self):
+    def test_run_job_interval(self):  # pylint: disable=arguments-differ
         """In addition to the base test case provided by JobAPIRunTestMixin, also verify the JSON response data."""
         response, schedule = super().test_run_job_interval()
 
@@ -2288,19 +2324,19 @@ class NoteTest(APIViewTestCases.APIViewTestCase):
             user=user1,
             assigned_object_type=ct,
             assigned_object_id=site1.pk,
-        ),
+        )
         Note.objects.create(
             note="Site maintenance has ended.",
             user=user1,
             assigned_object_type=ct,
             assigned_object_id=site1.pk,
-        ),
+        )
         Note.objects.create(
             note="Site is under duress.",
             user=user2,
             assigned_object_type=ct,
             assigned_object_id=site2.pk,
-        ),
+        )
 
 
 class RelationshipTest(APIViewTestCases.APIViewTestCase):
@@ -2345,6 +2381,7 @@ class RelationshipTest(APIViewTestCases.APIViewTestCase):
         "source_filter": {"slug": ["some-slug"]},
     }
     choices_fields = ["destination_type", "source_type", "type"]
+    fixtures = ("status",)
     slug_source = "name"
     slugify_function = staticmethod(slugify_dashes_to_underscores)
 
@@ -2547,6 +2584,7 @@ class RelationshipAssociationTest(APIViewTestCases.APIViewTestCase):
     model = RelationshipAssociation
     brief_fields = ["destination_id", "display", "id", "relationship", "source_id", "url"]
     choices_fields = ["destination_type", "source_type"]
+    fixtures = ("status",)
 
     @classmethod
     def setUpTestData(cls):
@@ -3088,6 +3126,7 @@ class StatusTest(APIViewTestCases.APIViewTestCase):
     bulk_update_data = {
         "color": "000000",
     }
+    fixtures = ("status",)
 
     create_data = [
         {
@@ -3116,19 +3155,6 @@ class StatusTest(APIViewTestCases.APIViewTestCase):
     ]
     slug_source = "name"
 
-    @classmethod
-    def setUpTestData(cls):
-        """
-        Since many `Status` objects are created as part of data migrations, we're
-        testing against those. If this seems magical, it's because they are
-        imported from `ChoiceSet` enum objects.
-
-        This method is defined just so it's clear that there is no need to
-        create test data for this test case.
-
-        See `extras.management.create_custom_statuses` for context.
-        """
-
 
 class TagTestVersion12(APIViewTestCases.APIViewTestCase):
     model = Tag
@@ -3150,17 +3176,7 @@ class TagTestVersion12(APIViewTestCases.APIViewTestCase):
     bulk_update_data = {
         "description": "New description",
     }
-
-    @classmethod
-    def setUpTestData(cls):
-        tags = (
-            Tag.objects.create(name="Tag 1", slug="tag-1"),
-            Tag.objects.create(name="Tag 2", slug="tag-2"),
-            Tag.objects.create(name="Tag 3", slug="tag-3"),
-        )
-
-        for tag in tags:
-            tag.content_types.add(ContentType.objects.get_for_model(Site))
+    fixtures = ("tag",)
 
     def test_all_relevant_content_types_assigned_to_tags_with_empty_content_types(self):
         self.add_permissions("extras.add_tag")
@@ -3188,17 +3204,7 @@ class TagTestVersion13(
     ]
     bulk_update_data = {"content_types": [Site._meta.label_lower]}
     choices_fields = []
-
-    @classmethod
-    def setUpTestData(cls):
-        tags = (
-            Tag.objects.create(name="Tag 1", slug="tag-1"),
-            Tag.objects.create(name="Tag 2", slug="tag-2"),
-            Tag.objects.create(name="Tag 3", slug="tag-3"),
-        )
-        for tag in tags:
-            tag.content_types.add(ContentType.objects.get_for_model(Site))
-            tag.content_types.add(ContentType.objects.get_for_model(Device))
+    fixtures = ("tag",)
 
     def test_create_tags_with_invalid_content_types(self):
         self.add_permissions("extras.add_tag")
@@ -3226,7 +3232,7 @@ class TagTestVersion13(
         """Test removing a tag content_type that is been tagged to a model"""
         self.add_permissions("extras.change_tag")
 
-        tag_1 = Tag.objects.get(slug="tag-1")
+        tag_1 = Tag.objects.get(slug="devices-and-sites-only")
         site = Site.objects.create(name="site 1", slug="site-1")
         site.tags.add(tag_1)
 
@@ -3243,7 +3249,7 @@ class TagTestVersion13(
         """Test updating a tag without changing its content-types."""
         self.add_permissions("extras.change_tag")
 
-        tag = Tag.objects.get(slug="tag-1")
+        tag = Tag.objects.get(slug="devices-and-sites-only")
         url = self._get_detail_url(tag)
         data = {"color": ColorChoices.COLOR_LIME}
 
@@ -3404,7 +3410,7 @@ class WebhookTest(APIViewTestCases.APIViewTestCase):
 
         response = self.client.post(self._get_list_url(), data, format="json", **self.header)
         self.assertHttpStatus(response, status.HTTP_400_BAD_REQUEST)
-        self.assertEquals(
+        self.assertEqual(
             response.data[0]["type_create"][0],
             "A webhook already exists for create on dcim | device type to URL http://example.com/test1",
         )
@@ -3419,7 +3425,7 @@ class WebhookTest(APIViewTestCases.APIViewTestCase):
 
         response = self.client.patch(self._get_detail_url(self.webhooks[2]), data, format="json", **self.header)
         self.assertHttpStatus(response, status.HTTP_400_BAD_REQUEST)
-        self.assertEquals(
+        self.assertEqual(
             response.data["type_update"][0],
             f"A webhook already exists for update on dcim | device type to URL {self.webhooks[1].payload_url}",
         )
@@ -3465,7 +3471,7 @@ class WebhookTest(APIViewTestCases.APIViewTestCase):
 
         data = {"payload_url": "http://example.com/test2"}
         response = self.client.patch(self._get_detail_url(instance_1), data, format="json", **self.header)
-        self.assertEquals(
+        self.assertEqual(
             response.data["type_update"][0],
             "A webhook already exists for update on dcim | device type to URL http://example.com/test2",
         )
@@ -3483,7 +3489,7 @@ class WebhookTest(APIViewTestCases.APIViewTestCase):
 
         data = {"content_types": ["dcim.devicetype"]}
         response = self.client.patch(self._get_detail_url(instance_2), data, format="json", **self.header)
-        self.assertEquals(
+        self.assertEqual(
             response.data["type_create"][0],
             "A webhook already exists for create on dcim | device type to URL http://example.com/test1",
         )

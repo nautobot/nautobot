@@ -17,6 +17,7 @@ class TokenAuthentication(authentication.TokenAuthentication):
     def authenticate_credentials(self, key):
         model = self.get_model()
         try:
+            # v2 TODO(jathan): Replace prefetch_related with select_related
             token = model.objects.prefetch_related("user").get(key=key)
         except model.DoesNotExist:
             raise exceptions.AuthenticationFailed("Invalid token")
@@ -53,6 +54,7 @@ class TokenPermissions(DjangoObjectPermissions):
         # If token authentication is in use, verify that the token allows write operations (for unsafe methods).
         if request.method in SAFE_METHODS or request.auth.write_enabled:
             return True
+        return False
 
     def has_permission(self, request, view):
 

@@ -1,3 +1,4 @@
+from typing import Optional, Sequence
 import uuid
 
 from django.conf import settings
@@ -8,7 +9,7 @@ from django.urls import reverse, NoReverseMatch
 from django.utils.text import slugify
 
 from nautobot.extras.choices import CustomFieldTypeChoices, RelationshipSideChoices, ObjectChangeActionChoices
-from nautobot.extras.models import ChangeLoggedModel
+from nautobot.extras.models import ChangeLoggedModel, CustomField, Relationship
 from nautobot.users.models import ObjectPermission
 from nautobot.utilities.testing.mixins import NautobotTestCaseMixin
 from nautobot.utilities.utils import get_changes_for_model, get_filterset_for_model
@@ -40,10 +41,10 @@ class ModelTestCase(TestCase):
     model = None
     # Optional, list of Relationships populated in setUpTestData for testing with this model
     # Be sure to also create RelationshipAssociations using these Relationships!
-    relationships = None
+    relationships: Optional[Sequence[Relationship]] = None
     # Optional, list of CustomFields populated in setUpTestData for testing with this model
     # Be sure to also populate these fields on your test data!
-    custom_fields = None
+    custom_fields: Optional[Sequence[CustomField]] = None
 
     def _get_queryset(self):
         """
@@ -69,15 +70,17 @@ class ModelViewTestCase(ModelTestCase):
     If unspecified, "slug" and "pk" will be tried, in that order.
     """
 
+    # 2.0 TODO(jathan): Eliminate the need to overload `_get_base_url()` at all and just rely on `get_route_for_model()`
     def _get_base_url(self):
         """
         Return the base format for a URL for the test's model. Override this to test for a model which belongs
         to a different app (e.g. testing Interfaces within the virtualization app).
         """
         if self.model._meta.app_label in settings.PLUGINS:
-            return "plugins:{}:{}_{{}}".format(self.model._meta.app_label, self.model._meta.model_name)
-        return "{}:{}_{{}}".format(self.model._meta.app_label, self.model._meta.model_name)
+            return f"plugins:{self.model._meta.app_label}:{self.model._meta.model_name}_{{}}"
+        return f"{self.model._meta.app_label}:{self.model._meta.model_name}_{{}}"
 
+    # 2.0 TODO(jathan): Eliminate the need to overload `_get_url()` at all and just rely on `get_route_for_model()`
     def _get_url(self, action, instance=None):
         """
         Return the URL name for a specific action and optionally a specific instance
@@ -156,8 +159,8 @@ class ViewTestCases:
             self.assertIn(getattr(instance, "display", str(instance)), response_body, msg=response_body)
 
             # If any Relationships are defined, they should appear in the response
-            if self.relationships:
-                for relationship in self.relationships:
+            if self.relationships is not None:
+                for relationship in self.relationships:  # false positive pylint: disable=not-an-iterable
                     content_type = ContentType.objects.get_for_model(instance)
                     if content_type == relationship.source_type:
                         self.assertIn(
@@ -173,8 +176,8 @@ class ViewTestCases:
                         )
 
             # If any Custom Fields are defined, they should appear in the response
-            if self.custom_fields:
-                for custom_field in self.custom_fields:
+            if self.custom_fields is not None:
+                for custom_field in self.custom_fields:  # false positive pylint: disable=not-an-iterable
                     self.assertIn(str(custom_field), response_body, msg=response_body)
                     # 2.0 TODO: #824 custom_field.slug rather than custom_field.name
                     if custom_field.type == CustomFieldTypeChoices.TYPE_MULTISELECT:
@@ -350,23 +353,23 @@ class ViewTestCases:
             """Test that slug is autocreated through ORM."""
             # This really should go on a models test page, but we don't have test structures for models.
             if self.slug_source is not None:
-                object = self.model.objects.get(**{self.slug_source: self.slug_test_object})
-                expected_slug = self.slugify_function(getattr(object, self.slug_source))
-                self.assertEqual(object.slug, expected_slug)
+                obj = self.model.objects.get(**{self.slug_source: self.slug_test_object})
+                expected_slug = self.slugify_function(getattr(obj, self.slug_source))
+                self.assertEqual(obj.slug, expected_slug)
 
         def test_slug_not_modified(self):
             """Ensure save method does not modify slug that is passed in."""
             # This really should go on a models test page, but we don't have test structures for models.
             if self.slug_source is not None:
-                object = self.model.objects.get(**{self.slug_source: self.slug_test_object})
-                expected_slug = self.slugify_function(getattr(object, self.slug_source))
+                obj = self.model.objects.get(**{self.slug_source: self.slug_test_object})
+                expected_slug = self.slugify_function(getattr(obj, self.slug_source))
                 # Update slug source field str
-                filter = self.slug_source + "__contains"
-                self.model.objects.filter(**{filter: self.slug_test_object}).update(**{self.slug_source: "Test"})
+                filter_ = self.slug_source + "__contains"
+                self.model.objects.filter(**{filter_: self.slug_test_object}).update(**{self.slug_source: "Test"})
 
-                object.refresh_from_db()
-                self.assertEqual(getattr(object, self.slug_source), "Test")
-                self.assertEqual(object.slug, expected_slug)
+                obj.refresh_from_db()
+                self.assertEqual(getattr(obj, self.slug_source), "Test")
+                self.assertEqual(obj.slug, expected_slug)
 
     class EditObjectViewTestCase(ModelViewTestCase):
         """
@@ -637,7 +640,7 @@ class ViewTestCases:
 
             # Built-in CSV export
             if hasattr(self.model, "csv_headers"):
-                response = self.client.get("{}?export".format(self._get_url("list")))
+                response = self.client.get(f"{self._get_url('list')}?export")
                 self.assertHttpStatus(response, 200)
                 self.assertEqual(response.get("Content-Type"), "text/csv")
 
@@ -873,7 +876,7 @@ class ViewTestCases:
 
             # Try POST with model-level permission
             self.assertHttpStatus(self.client.post(self._get_url("bulk_edit"), data), 302)
-            for i, instance in enumerate(self._get_queryset().filter(pk__in=pk_list)):
+            for instance in self._get_queryset().filter(pk__in=pk_list):
                 self.assertInstanceEqual(instance, self.bulk_edit_data)
 
         @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
@@ -912,7 +915,7 @@ class ViewTestCases:
 
             # Bulk edit permitted objects
             self.assertHttpStatus(self.client.post(self._get_url("bulk_edit"), data), 302)
-            for i, instance in enumerate(self._get_queryset().filter(pk__in=pk_list)):
+            for instance in self._get_queryset().filter(pk__in=pk_list):
                 self.assertInstanceEqual(instance, self.bulk_edit_data)
 
     class BulkDeleteObjectsViewTestCase(ModelViewTestCase):

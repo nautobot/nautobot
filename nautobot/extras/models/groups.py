@@ -458,14 +458,14 @@ class DynamicGroup(OrganizationalModel):
         if not filterset.is_valid():
             raise ValidationError(filterset.errors)
 
-    def delete(self):
+    def delete(self, *args, **kwargs):
         """Check if we're a child and attempt to block delete if we are."""
         if self.parents.exists():
             raise models.ProtectedError(
                 msg="Cannot delete DynamicGroup while child of other DynamicGroups.",
                 protected_objects=set(self.parents.all()),
             )
-        return super().delete()
+        return super().delete(*args, **kwargs)
 
     def clean(self):
         super().clean()

@@ -221,7 +221,7 @@ class ConfigContextTestCase(FilterTestCases.FilterTestCase):
         for i in range(0, 3):
             is_active = bool(i % 2)
             c = ConfigContext.objects.create(
-                name="Config Context {}".format(i + 1),
+                name=f"Config Context {i + 1}",
                 is_active=is_active,
                 data='{"foo": 123}',
             )
@@ -616,7 +616,7 @@ class ImageAttachmentTestCase(FilterTestCases.FilterTestCase):
             image="http://example.com/image1.png",
             image_height=100,
             image_width=100,
-        ),
+        )
         ImageAttachment.objects.create(
             content_type=site_ct,
             object_id=sites[1].pk,
@@ -624,7 +624,7 @@ class ImageAttachmentTestCase(FilterTestCases.FilterTestCase):
             image="http://example.com/image2.png",
             image_height=100,
             image_width=100,
-        ),
+        )
         ImageAttachment.objects.create(
             content_type=rack_ct,
             object_id=racks[0].pk,
@@ -632,7 +632,7 @@ class ImageAttachmentTestCase(FilterTestCases.FilterTestCase):
             image="http://example.com/image3.png",
             image_height=100,
             image_width=100,
-        ),
+        )
         ImageAttachment.objects.create(
             content_type=rack_ct,
             object_id=racks[1].pk,
@@ -819,6 +819,7 @@ class JobLogEntryTestCase(FilterTestCases.FilterTestCase):
 class ObjectChangeTestCase(FilterTestCases.FilterTestCase):
     queryset = ObjectChange.objects.all()
     filterset = ObjectChangeFilterSet
+    fixtures = ("status",)
 
     @classmethod
     def setUpTestData(cls):
@@ -1390,19 +1391,11 @@ class SecretsGroupAssociationTestCase(FilterTestCases.FilterTestCase):
 class StatusTestCase(FilterTestCases.NameSlugFilterTestCase):
     queryset = Status.objects.all()
     filterset = StatusFilterSet
+    fixtures = ("status",)
 
     @classmethod
     def setUpTestData(cls):
-        """
-        Since many `Status` objects are created as part of data migrations, we're
-        testing against those. If this seems magical, it's because they are
-        imported from `ChoiceSet` enum objects.
-
-        This method is defined just so it's clear that there is no need to
-        create test data for this test case.
-
-        See `extras.management.create_custom_statuses` for context.
-        """
+        """Handled by "status" fixture."""
 
     def test_content_types(self):
         ct = ContentType.objects.get_for_model(Device)
@@ -1431,32 +1424,24 @@ class StatusTestCase(FilterTestCases.NameSlugFilterTestCase):
 class TagTestCase(FilterTestCases.NameSlugFilterTestCase):
     queryset = Tag.objects.all()
     filterset = TagFilterSet
+    fixtures = ("tag",)
 
     @classmethod
     def setUpTestData(cls):
-        cls.tags = (
-            Tag.objects.create(name="Tag 1", slug="tag-1", color="ff0000"),
-            Tag.objects.create(name="Tag 2", slug="tag-2", color="00ff00"),
-            Tag.objects.create(name="Tag 3", slug="tag-3", color="0000ff"),
-        )
-        cls.site_content_type = ContentType.objects.get_for_model(Site)
-        cls.tags[0].content_types.add(cls.site_content_type)
-
-        for tag in cls.tags[1:]:
-            tag.content_types.add(ContentType.objects.get_for_model(Device))
+        cls.tags = Tag.objects.all()
 
     def test_color(self):
-        params = {"color": ["ff0000", "00ff00"]}
+        params = {"color": [self.tags[0].color, self.tags[1].color]}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
 
     def test_content_types(self):
-        params = {"content_types": [f"{self.site_content_type.app_label}.{self.site_content_type.model}"]}
+        params = {"content_types": ["dcim.site"]}
         filtered_data = self.filterset(params, self.queryset).qs
-        self.assertEqual(filtered_data.count(), 1)
-        self.assertEqual(filtered_data[0], self.tags[0])
+        self.assertEqual(filtered_data.count(), Tag.objects.get_for_model(Site).count())
+        self.assertEqual(filtered_data[0], Tag.objects.get_for_model(Site)[0])
 
     def test_search(self):
-        params = {"q": "tag-1"}
+        params = {"q": self.tags[0].slug}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 1)
         value = self.queryset.values_list("pk", flat=True)[0]
         params = {"q": value}

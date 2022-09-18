@@ -1,5 +1,5 @@
+# syntax=docker/dockerfile:1
 ARG PYTHON_VER
-ARG PYUWSGI_VER
 
 ################################ Overview
 # This builds the following hierarchy of images:
@@ -121,7 +121,6 @@ ENTRYPOINT ["/docker-entrypoint.sh"]
 ################################ Stage: dependencies (intermediate build target)
 
 FROM base as dependencies
-ARG PYUWSGI_VER
 ARG POETRY_PARALLEL
 
 # Install development/install-time OS dependencies
@@ -136,8 +135,9 @@ RUN apt-get update && \
 # if we instead used "pip install poetry" it would install its own dependencies globally which may conflict with ours.
 # https://python-poetry.org/docs/master/#installing-with-the-official-installer
 # This also makes it so that Poetry will *not* be included in the "final" image since it's not installed to /usr/local/
-RUN curl -sSL https://install.python-poetry.org -o /tmp/install-poetry.py && \
-    python /tmp/install-poetry.py && \
+RUN --mount=type=cache,target="/root/.cache/pip" \
+    curl -sSL https://install.python-poetry.org -o /tmp/install-poetry.py && \
+    python /tmp/install-poetry.py --version 1.2.0 && \
     rm -f /tmp/install-poetry.py
 
 # Add poetry install location to the $PATH
@@ -148,8 +148,11 @@ ENV PATH="${PATH}:/root/.local/bin"
 # unfortunately it seems to have some issues with installing/updating "requests" and "certifi"
 # while simultaneously atttempting to *use* those packages to install other packages.
 # This is disabled by default (safer), but can be re-enabled by setting POETRY_PARALLEL=true
+# pyuwsgi wheel doesn't support ssl so we build it from source
+# https://github.com/nautobot/nautobot/issues/193
 RUN poetry config virtualenvs.create false && \
-    poetry config installer.parallel ${POETRY_PARALLEL:-false}
+    poetry config installer.parallel ${POETRY_PARALLEL:-false} && \
+    poetry config installer.no-binary pyuwsgi
 
 COPY pyproject.toml poetry.lock README.md /source/
 
@@ -159,10 +162,10 @@ COPY examples /source/examples
 WORKDIR /source
 
 # Install (non-development) Python dependencies of Nautobot
-# pyuwsgi wheel doesn't support ssl so we build it from source
-# https://github.com/nautobot/nautobot/issues/193
-RUN pip install --no-cache-dir --no-binary=pyuwsgi pyuwsgi==${PYUWSGI_VER} && \
-    poetry install --no-root --no-dev --no-ansi --extras all
+RUN --mount=type=cache,target="/root/.cache/pip" \
+    --mount=type=cache,target="/root/.cache/pypoetry" \
+    poetry install --no-root --only main --no-ansi --extras all && \
+    rm -rf /tmp/tmp*
 
 ################################ Stage: dependencies-dev-python (intermediate build target)
 # We need dev dependencies for building the docs but don't want them in the final build image
@@ -171,8 +174,13 @@ RUN pip install --no-cache-dir --no-binary=pyuwsgi pyuwsgi==${PYUWSGI_VER} && \
 
 FROM dependencies as dependencies-dev-python
 
-# Development-specific dependencies of Nautobot
-RUN poetry install --no-root --no-ansi --extras all
+# Add development-specific dependencies of Nautobot to the installation
+# Poetry 1.2.0 leaves files in /tmp after doing an install
+# https://github.com/python-poetry/poetry/issues/6425
+RUN --mount=type=cache,target="/root/.cache/pip" \
+    --mount=type=cache,target="/root/.cache/pypoetry" \
+    poetry install --no-root --no-ansi --extras all && \
+    rm -rf /tmp/tmp*
 
 ################################ Stage: build-docs (intermediate build target)
 # Docs get built as their own stage because again we need dev dependencies as a base but
@@ -253,8 +261,13 @@ CMD ["nautobot-server", "runserver", "0.0.0.0:8080", "--insecure"]
 
 FROM dependencies-dev as dev
 
-RUN poetry install --no-ansi && \
-    rm -rf /source
+# Poetry 1.2.0 leaves files in /tmp after doing an install
+# https://github.com/python-poetry/poetry/issues/6425
+RUN --mount=type=cache,target="/root/.cache/pip" \
+    --mount=type=cache,target="/root/.cache/pypoetry" \
+    poetry install --no-ansi --extras all && \
+    rm -rf /source && \
+    rm -rf /tmp/tmp*
 
 ################################ Stage: final-dev (development environment for Nautobot plugins)
 

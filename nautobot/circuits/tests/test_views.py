@@ -9,12 +9,13 @@ from nautobot.circuits.models import (
     Provider,
     ProviderNetwork,
 )
-from nautobot.extras.models import Status
+from nautobot.extras.models import Status, Tag
 from nautobot.utilities.testing import TestCase as NautobotTestCase, ViewTestCases
 
 
 class ProviderTestCase(ViewTestCases.PrimaryObjectViewTestCase):
     model = Provider
+    fixtures = ("tag",)
 
     @classmethod
     def setUpTestData(cls):
@@ -23,8 +24,6 @@ class ProviderTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         Provider.objects.create(name="Provider 2", slug="provider-2", asn=65002)
         Provider.objects.create(name="Provider 3", slug="provider-3", asn=65003)
         Provider.objects.create(name="Provider 8", asn=65003)
-
-        tags = cls.create_tags("Alpha", "Bravo", "Charlie")
 
         cls.form_data = {
             "name": "Provider X",
@@ -35,7 +34,7 @@ class ProviderTestCase(ViewTestCases.PrimaryObjectViewTestCase):
             "noc_contact": "noc@example.com",
             "admin_contact": "admin@example.com",
             "comments": "Another provider",
-            "tags": [t.pk for t in tags],
+            "tags": [t.pk for t in Tag.objects.get_for_model(Provider)],
         }
 
         cls.csv_data = (
@@ -90,6 +89,10 @@ class CircuitTypeTestCase(ViewTestCases.OrganizationalObjectViewTestCase):
 
 class CircuitTestCase(ViewTestCases.PrimaryObjectViewTestCase):
     model = Circuit
+    fixtures = (
+        "status",
+        "tag",
+    )
 
     @classmethod
     def setUpTestData(cls):
@@ -125,8 +128,6 @@ class CircuitTestCase(ViewTestCases.PrimaryObjectViewTestCase):
             status=statuses[0],
         )
 
-        tags = cls.create_tags("Alpha", "Bravo", "Charlie")
-
         cls.form_data = {
             "cid": "Circuit X",
             "provider": providers[1].pk,
@@ -137,7 +138,7 @@ class CircuitTestCase(ViewTestCases.PrimaryObjectViewTestCase):
             "commit_rate": 1000,
             "description": "A new circuit",
             "comments": "Some comments",
-            "tags": [t.pk for t in tags],
+            "tags": [t.pk for t in Tag.objects.get_for_model(Circuit)],
         }
 
         cls.csv_data = (
@@ -160,6 +161,7 @@ class CircuitTestCase(ViewTestCases.PrimaryObjectViewTestCase):
 
 class ProviderNetworkTestCase(ViewTestCases.PrimaryObjectViewTestCase):
     model = ProviderNetwork
+    fixtures = ("tag",)
 
     @classmethod
     def setUpTestData(cls):
@@ -179,15 +181,13 @@ class ProviderNetworkTestCase(ViewTestCases.PrimaryObjectViewTestCase):
             ]
         )
 
-        tags = cls.create_tags("Alpha", "Bravo", "Charlie")
-
         cls.form_data = {
             "name": "ProviderNetwork X",
             "slug": "provider-network-x",
             "provider": providers[1].pk,
             "description": "A new ProviderNetwork",
             "comments": "Longer description goes here",
-            "tags": [t.pk for t in tags],
+            "tags": [t.pk for t in Tag.objects.get_for_model(ProviderNetwork)],
         }
 
         cls.csv_data = (
@@ -209,6 +209,8 @@ class ProviderNetworkTestCase(ViewTestCases.PrimaryObjectViewTestCase):
 
 
 class CircuitTerminationTestCase(NautobotTestCase):
+    fixtures = ("status",)
+
     def setUp(self):
         super().setUp()
         self.user.is_superuser = True

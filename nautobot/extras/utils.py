@@ -6,7 +6,6 @@ import logging
 import pkgutil
 import sys
 
-from cacheops import file_cache
 from django.apps import apps
 from django.contrib.contenttypes.models import ContentType
 from django.db.models import Q
@@ -29,7 +28,6 @@ from nautobot.extras.registry import registry
 logger = logging.getLogger(__name__)
 
 
-@file_cache.cached(timeout=60)
 def get_job_content_type():
     """Return a cached instance of the `ContentType` for `extras.Job`."""
     return ContentType.objects.get(app_label="extras", model="job")
@@ -48,7 +46,7 @@ def image_upload(instance, filename):
     elif instance.name:
         filename = instance.name
 
-    return "{}{}_{}_{}".format(path, instance.content_type.name, instance.object_id, filename)
+    return f"{path}{instance.content_type.name}_{instance.object_id}_{filename}"
 
 
 @deconstructible
@@ -166,7 +164,7 @@ def extras_features(*features):
                 app_label, model_name = model_class._meta.label_lower.split(".")
                 registry["model_features"][feature][app_label].append(model_name)
             else:
-                raise ValueError("{} is not a valid extras feature!".format(feature))
+                raise ValueError(f"{feature} is not a valid extras feature!")
         return model_class
 
     return wrapper
@@ -180,27 +178,48 @@ def generate_signature(request_body, secret):
     return hmac_prep.hexdigest()
 
 
-def get_worker_count(request=None):
+def get_celery_queues():
     """
-    Return a count of the active Celery workers.
+    Return a dictionary of celery queues and the number of workers active on the queue in
+    the form {queue_name: num_workers}
     """
-    # Inner imports so we don't risk circular imports
-    from nautobot.core.celery import app  # noqa
+    from nautobot.core.celery import app  # prevent circular import
 
-    # Count the number of active celery workers
-    inspect = app.control.inspect()
-    active = inspect.active()  # None if no active workers
-    celery_count = len(active) if active is not None else 0
+    celery_queues = {}
 
-    return celery_count
+    celery_inspect = app.control.inspect()
+    active_queues = celery_inspect.active_queues()
+    if active_queues is None:
+        return celery_queues
+    for worker_queue_list in active_queues.values():
+        distinct_queues = {q["name"] for q in worker_queue_list}
+        for queue in distinct_queues:
+            celery_queues.setdefault(queue, 0)
+            celery_queues[queue] += 1
+
+    return celery_queues
+
+
+def get_worker_count(request=None, queue="celery"):
+    """
+    Return a count of the active Celery workers in a specified queue. Defaults to the default queue "celery"
+    """
+
+    celery_queues = get_celery_queues()
+    return celery_queues.get(queue, 0)
 
 
 # namedtuple class yielded by the jobs_in_directory generator function, below
-# Example: ("devices", <module "devices">, "Hostname", <class "devices.Hostname">)
-JobClassInfo = collections.namedtuple("JobClassInfo", ["module_name", "module", "job_class_name", "job_class"])
+# Example: ("devices", <module "devices">, "Hostname", <class "devices.Hostname">, None)
+# Example: ("devices", None, None, None, "error at line 40")
+JobClassInfo = collections.namedtuple(
+    "JobClassInfo",
+    ["module_name", "module", "job_class_name", "job_class", "error"],
+    defaults=(None, None, None, None),  # all parameters except `module_name` are optional and default to None.
+)
 
 
-def jobs_in_directory(path, module_name=None, reload_modules=True):
+def jobs_in_directory(path, module_name=None, reload_modules=True, report_errors=False):
     """
     Walk the available Python modules in the given directory, and for each module, walk its Job class members.
 
@@ -208,9 +227,11 @@ def jobs_in_directory(path, module_name=None, reload_modules=True):
         path (str): Directory to import modules from, outside of sys.path
         module_name (str): Specific module name to select; if unspecified, all modules will be inspected
         reload_modules (bool): Whether to force reloading of modules even if previously loaded into Python.
+        report_errors (bool): If True, when an error is encountered, yield a JobClassInfo with the given error.
+                              If False (default), log the error but do not yield anything.
 
     Yields:
-        JobClassInfo: (module_name, module, job_class_name, job_class)
+        JobClassInfo: (module_name, module, job_class_name, job_class, error)
     """
     from .jobs import is_job  # avoid circular import
 
@@ -221,13 +242,13 @@ def jobs_in_directory(path, module_name=None, reload_modules=True):
             del sys.modules[discovered_module_name]
         try:
             module = importer.find_module(discovered_module_name).load_module(discovered_module_name)
+            # Get all members of the module that are Job subclasses
+            for job_class_name, job_class in inspect.getmembers(module, is_job):
+                yield JobClassInfo(discovered_module_name, module, job_class_name, job_class)
         except Exception as exc:
-            logger.error(f"Unable to load module {module_name} from {path}: {exc}")
-            # TODO: we want to be able to report these errors to the UI in some fashion?
-            continue
-        # Get all members of the module that are Job subclasses
-        for job_class_name, job_class in inspect.getmembers(module, is_job):
-            yield JobClassInfo(discovered_module_name, module, job_class_name, job_class)
+            logger.error(f"Unable to load module {discovered_module_name} from {path}: {exc}")
+            if report_errors:
+                yield JobClassInfo(module_name=discovered_module_name, error=exc)
 
 
 def refresh_job_model_from_job_class(job_model_class, job_source, job_class, *, git_repository=None):

@@ -19,6 +19,8 @@ from nautobot.virtualization.models import VirtualMachine
 
 
 class CustomFieldTest(TestCase):
+    fixtures = ("status",)
+
     def setUp(self):
         active_status = Status.objects.get_for_model(Site).get(slug="active")
         Site.objects.create(name="Site A", slug="site-a", status=active_status)
@@ -286,6 +288,8 @@ class CustomFieldDataAPITest(APITestCase):
 
     For tests of the api/extras/custom-fields/ REST API endpoint itself, see test_api.py.
     """
+
+    fixtures = ("status",)
 
     @classmethod
     def setUpTestData(cls):
@@ -638,7 +642,7 @@ class CustomFieldDataAPITest(APITestCase):
         self.assertHttpStatus(response, status.HTTP_201_CREATED)
         self.assertEqual(len(response.data), len(data))
 
-        for i, obj in enumerate(data):
+        for i, _obj in enumerate(data):
 
             # Validate response data
             response_cf = response.data[i]["custom_fields"]
@@ -706,7 +710,7 @@ class CustomFieldDataAPITest(APITestCase):
         self.assertHttpStatus(response, status.HTTP_201_CREATED)
         self.assertEqual(len(response.data), len(data))
 
-        for i, obj in enumerate(data):
+        for i, _obj in enumerate(data):
 
             # Validate response data
             response_cf = response.data[i]["custom_fields"]
@@ -968,6 +972,7 @@ class CustomFieldImportTest(TestCase):
     Test importing object custom field data along with the object itself.
     """
 
+    fixtures = ("status",)
     user_permissions = (
         "dcim.view_site",
         "dcim.add_site",
@@ -1123,6 +1128,8 @@ class CustomFieldModelTest(TestCase):
     """
     Test behavior of models that inherit from CustomFieldModel.
     """
+
+    fixtures = ("status",)
 
     @classmethod
     def setUpTestData(cls):
@@ -1490,6 +1497,8 @@ class CustomFieldFilterTest(TestCase):
 
 
 class CustomFieldChoiceTest(TestCase):
+    fixtures = ("status",)
+
     def setUp(self):
         obj_type = ContentType.objects.get_for_model(Site)
         self.cf = CustomField(
@@ -1568,6 +1577,7 @@ class CustomFieldBackgroundTasks(CeleryTestCase):
             type=CustomFieldTypeChoices.TYPE_TEXT,
         )
         cf.save()
+        logging.disable(logging.ERROR)
         cf.content_types.set([obj_type])
 
         site = Site(name="Site 1", slug="site-1", _custom_field_data={"cf1": "foo"})
@@ -1580,6 +1590,7 @@ class CustomFieldBackgroundTasks(CeleryTestCase):
         site.refresh_from_db()
 
         self.assertTrue("cf1" not in site.cf)
+        logging.disable(logging.NOTSET)
 
     def test_update_custom_field_choice_data_task(self):
         self.clear_worker()
@@ -1614,6 +1625,8 @@ class CustomFieldTableTest(TestCase):
     """
     Test inclusion of custom fields in object table views.
     """
+
+    fixtures = ("status",)
 
     def setUp(self):
         content_type = ContentType.objects.get_for_model(Site)

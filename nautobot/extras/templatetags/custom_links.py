@@ -28,8 +28,8 @@ def custom_links(context, obj):
     Render all applicable links for the given object.
     """
     content_type = ContentType.objects.get_for_model(obj)
-    custom_links = CustomLink.objects.filter(content_type=content_type)
-    if not custom_links:
+    links = CustomLink.objects.filter(content_type=content_type)
+    if not links:
         return ""
 
     # Pass select context data when rendering the CustomLink
@@ -43,7 +43,7 @@ def custom_links(context, obj):
     template_code = ""
     group_names = OrderedDict()
 
-    for cl in custom_links:
+    for cl in links:
 
         # Organize custom links by group
         if cl.group_name and cl.group_name in group_names:
@@ -61,8 +61,8 @@ def custom_links(context, obj):
                     template_code += LINK_BUTTON.format(link_rendered, link_target, cl.button_class, text_rendered)
             except Exception as e:
                 template_code += (
-                    '<a class="btn btn-sm btn-default" disabled="disabled" title="{}">'
-                    '<i class="mdi mdi-alert"></i> {}</a>\n'.format(e, cl.name)
+                    f'<a class="btn btn-sm btn-default" disabled="disabled" title="{e}">'
+                    f'<i class="mdi mdi-alert"></i> {cl.name}</a>\n'
                 )
 
     # Add grouped links to template
@@ -79,8 +79,8 @@ def custom_links(context, obj):
                     links_rendered.append(GROUP_LINK.format(link_rendered, link_target, text_rendered))
             except Exception as e:
                 links_rendered.append(
-                    '<li><a disabled="disabled" title="{}"><span class="text-muted">'
-                    '<i class="mdi mdi-alert"></i> {}</span></a></li>'.format(e, cl.name)
+                    f'<li><a disabled="disabled" title="{e}"><span class="text-muted">'
+                    f'<i class="mdi mdi-alert"></i> {cl.name}</span></a></li>'
                 )
 
         if links_rendered:

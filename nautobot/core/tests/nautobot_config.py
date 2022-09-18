@@ -18,7 +18,7 @@ DATABASES = {
         "PASSWORD": os.getenv("NAUTOBOT_DB_PASSWORD", ""),
         "HOST": os.getenv("NAUTOBOT_DB_HOST", "localhost"),
         "PORT": os.getenv("NAUTOBOT_DB_PORT", ""),
-        "CONN_MAX_AGE": int(os.getenv("NAUTOBOT_DB_TIMEOUT", 300)),
+        "CONN_MAX_AGE": int(os.getenv("NAUTOBOT_DB_TIMEOUT", "300")),
         "ENGINE": os.getenv("NAUTOBOT_DB_ENGINE", "django.db.backends.postgresql"),
     }
 }
@@ -62,8 +62,9 @@ CACHES = {
 # up top via `from nautobot.core.settings import *`.
 
 # REDIS CACHEOPS
+# v2 TODO(jathan): Remove all cacheops settings.
 CACHEOPS_REDIS = parse_redis_connection(redis_database=3)
-CACHEOPS_ENABLED = False  # TODO(john): we should revisit this, but caching has caused issues with testing
+CACHEOPS_ENABLED = False
 
 # Testing storages within cli.py
 STORAGE_CONFIG = {

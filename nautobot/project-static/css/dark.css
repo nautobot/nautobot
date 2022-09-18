@@ -5,39 +5,17 @@ html[data-theme="dark"] {
   background: rgb(12, 12, 12);
   filter: invert(1) hue-rotate(180deg);
 }
-/* Ignores inverting images for dark theme */
-html[data-theme="dark"] img {
+/* Double-invert the following elements, restoring them to the original non-inverted colors */
+html[data-theme="dark"] img,
+html[data-theme="dark"] .badge,
+html[data-theme="dark"] button,
+html[data-theme="dark"] .btn,
+html[data-theme="dark"] .label,
+html[data-theme="dark"] .color-block,
+html[data-theme="dark"] .select2-selection__choice,
+html[data-theme="dark"] #select2-id_color-results,
+html[data-theme="dark"] #select2-id_color-container {
   filter: invert(1) hue-rotate(180deg);
-}
-/* Makes badge text white in dark mode */
-html[data-theme="dark"] .badge {
-  color: black;
-}
-/* White text on buttons */
-html[data-theme="dark"] button {
-  color: black;
-}
-/* White text on buttons */
-html[data-theme="dark"] .btn {
-  color: black;
-}
-/* White text on labels */
-html[data-theme="dark"] .label {
-  color: black !important;
-}
-/* Colors for labels like with device role, status, etc */
-html[data-theme="dark"] .color-block {
-  filter: invert(1) hue-rotate(180deg);
-}
-/* Dropdown list when selecting a color for status, device role, etc */
-html[data-theme="dark"] .select2-results__option {
-  filter: invert(1) hue-rotate(180deg);
-  color: #ccc !important;
-}
-/* Dropdown list for showing selected color for status, device role, etc */
-html[data-theme="dark"] .select2-selection__rendered {
-  filter: invert(1) hue-rotate(180deg);
-  color: #ccc !important;
 }
 /* Labels in API Swagger docs */
 html[data-theme="dark"] .opblock-summary-method {

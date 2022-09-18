@@ -1,3 +1,4 @@
+from nautobot.extras.models import Tag
 from nautobot.tenancy.models import Tenant, TenantGroup
 from nautobot.utilities.testing import ViewTestCases
 
@@ -32,6 +33,7 @@ class TenantGroupTestCase(ViewTestCases.OrganizationalObjectViewTestCase):
 
 class TenantTestCase(ViewTestCases.PrimaryObjectViewTestCase):
     model = Tenant
+    fixtures = ("tag",)
 
     @classmethod
     def setUpTestData(cls):
@@ -46,15 +48,13 @@ class TenantTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         Tenant.objects.create(name="Tenant 3", slug="tenant-3", group=tenant_groups[0])
         Tenant.objects.create(name="Tenant 8", group=tenant_groups[0])
 
-        tags = cls.create_tags("Alpha", "Bravo", "Charlie")
-
         cls.form_data = {
             "name": "Tenant X",
             "slug": "tenant-x",
             "group": tenant_groups[1].pk,
             "description": "A new tenant",
             "comments": "Some comments",
-            "tags": [t.pk for t in tags],
+            "tags": [t.pk for t in Tag.objects.get_for_model(Tenant)],
         }
 
         cls.csv_data = (
