@@ -13,7 +13,7 @@
 name: "Build Dependencies Image - Conditional Change Detection"
 on:  # yamllint disable
   workflow_call:
-  run: # TODO: Remove from final PR
+  push: # TODO: Remove from final PR
 
 jobs:
   dep-container-build:
