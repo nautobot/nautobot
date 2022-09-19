@@ -106,7 +106,7 @@ class LocationType(TreeNode, OrganizationalModel):
             pass
         finally:
             display_str += self.name
-            return display_str
+            return display_str  # pylint: disable=lost-exception
 
 
 @extras_features(
@@ -242,7 +242,7 @@ class Location(TreeNode, StatusModel, PrimaryModel):
             pass
         finally:
             display_str += self.name
-            return display_str
+            return display_str  # pylint: disable=lost-exception
 
     def validate_unique(self, exclude=None):
         # Check for a duplicate name on a Location with no parent.
