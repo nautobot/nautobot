@@ -46,11 +46,22 @@ jobs:
           user: "__token__"
           password: "${{ secrets.PYPI_API_TOKEN }}"
 
+  dependency-container-build:
+    name: "Build Dependency Container Images (GHCR Only)"
+    runs-on: "ubuntu-20.04"
+    needs:
+      - "ci"
+    strategy:
+      fail-fast: true
+      matrix:
+        python-version: [ "3.7", "3.8", "3.9", "3.10" ]
+    uses: ./.github/workflows/build_dependency_image.yml 
+
   publish_containers:
     name: "Build & Publish Container Images"
     runs-on: "ubuntu-20.04"
     needs:
-      - "ci"
+      - "dependency-container-build"
     strategy:
       fail-fast: true
       matrix:
@@ -60,8 +71,6 @@ jobs:
     steps:
       - name: "Check out repository code"
         uses: "actions/checkout@v2"
-      - name: "Check & Build Dependencies Container Image"
-        uses: "./.github/workflows/build_dependency_image.yml"
       - run: echo "##[set-output name=branch;]$(echo ${GITHUB_REF#refs/heads/})"
         id: "gitbranch"
       - name: "Set up QEMU"
