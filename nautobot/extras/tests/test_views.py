@@ -1825,6 +1825,7 @@ class JobTestCase(
                 ["_task_queue: Select a valid choice. invalid is not one of the available choices."],
             )
 
+    @mock.patch("nautobot.extras.views.get_worker_count", return_value=1)
     def test_run_job_with_sensitive_variables_and_requires_approval(self, _):
         self.add_permissions("extras.run_job")
         self.add_permissions("extras.view_scheduledjob")
