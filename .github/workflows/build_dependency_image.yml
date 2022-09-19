@@ -42,9 +42,6 @@ jobs:
             latest=false
           tags: |
             type=raw,value=${{ steps.gitbranch.outputs.branch }}-py${{ matrix.python-version }}
-            type=raw,value=${{ steps.gitbranch.outputs.branch }}-{{sha}}-{{date 'X'}}-py${{ matrix.python-version }}
-            type=raw,value=${{ steps.gitbranch.outputs.branch }},enable=${{ matrix.python-version == 3.7 }}
-            type=raw,value=${{ steps.gitbranch.outputs.branch }}-{{sha}}-{{date 'X'}},enable=${{ matrix.python-version == 3.7 }}
           labels: |
             org.opencontainers.image.title=Nautobot Dependencies Base Image
       - name: "Build Dependencies Containers"

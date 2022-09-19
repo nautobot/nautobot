@@ -13,6 +13,7 @@
 name: "Build Dependencies Image - Conditional Change Detection"
 on:  # yamllint disable
   workflow_call:
+  run: # TODO: Remove from final PR
 
 jobs:
   dep-container-build:
@@ -23,8 +24,10 @@ jobs:
         with:
           fetch-depth: 2
       - name: "Get Git Branch Name"
-        run: echo "##[set-output name=branch;]$(echo ${GITHUB_REF#refs/heads/})"
+        run: echo "##[set-output name=branch;]$(echo $GITHUB_REF | awk -F \"/\" '{print $NF}')"
         id: "gitbranch"
+      - name: "Output branch"
+        run: "echo '${{ steps.gitbranch.outputs.branch }}'"
       - name: "Check if Dependency Files Changed"
         id: fileschanged
         continue-on-error: true
@@ -36,6 +39,7 @@ jobs:
           echo "::notice::No dependency files changed"
       - name: "Rebuild Dependencies Image"
         if: ${{ steps.fileschanged.outcome == 'success' }}
-        uses: "./.github/workflows/build_dependency_image.yml"
-        with:
-          branch_base: "${{ steps.gitbranch.outputs.branch }}"
+        run: |
+          echo "::notice::Dependency files changed"
+        # TODO: Restore below
+        # uses: "./.github/workflows/build_dependency_image.yml"
