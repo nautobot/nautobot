@@ -24,7 +24,7 @@ jobs:
         with:
           fetch-depth: 2
       - name: "Get Git Branch Name"
-        run: echo "##[set-output name=branch;]$(echo $GITHUB_REF | awk -F \"/\" '{print $NF}')"
+        run: echo "##[set-output name=branch;]$(echo $GITHUB_REF | awk -F '/' '{print $NF}')"
         id: "gitbranch"
       - name: "Output branch"
         run: "echo '${{ steps.gitbranch.outputs.branch }}'"
