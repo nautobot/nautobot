@@ -47,6 +47,7 @@ jobs:
           password: "${{ secrets.PYPI_API_TOKEN }}"
 
   publish_containers:
+    name: "Build & Publish Container Images"
     runs-on: "ubuntu-20.04"
     needs:
       - "ci"
@@ -59,6 +60,8 @@ jobs:
     steps:
       - name: "Check out repository code"
         uses: "actions/checkout@v2"
+      - name: "Check & Build Dependencies Container Image"
+        uses: "./.github/workflows/build_dependency_image.yml"
       - run: echo "##[set-output name=branch;]$(echo ${GITHUB_REF#refs/heads/})"
         id: "gitbranch"
       - name: "Set up QEMU"

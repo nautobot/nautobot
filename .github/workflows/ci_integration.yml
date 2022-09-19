@@ -281,6 +281,7 @@ jobs:
       - "tests-mysql"
 
   container-build:
+    name: "Build Container Images (GHCR Only)"
     runs-on: "ubuntu-20.04"
     if: "github.event_name == 'push' && (github.ref == 'refs/heads/develop' || github.ref == 'refs/heads/next')"
     needs:
@@ -294,6 +295,8 @@ jobs:
     steps:
       - name: "Check out repository code"
         uses: "actions/checkout@v2"
+      - name: "Check & Build Dependencies Container Image"
+        uses: "./.github/workflows/build_dependency_image_conditional.yml"
       - run: echo "##[set-output name=branch;]$(echo ${GITHUB_REF#refs/heads/})"
         id: "gitbranch"
       - name: "Set up QEMU"
@@ -336,6 +339,7 @@ jobs:
           context: "."
           build-args: |
             PYTHON_VER=${{ matrix.python-version }}
+            DEPENDENCIES_BASE_BRANCH=${{ steps.gitbranch.outputs.branch }}
             POETRY_PARALLEL=true
       - name: "Docker Dev Metadata"
         id: "dockerdevmeta"
@@ -367,4 +371,5 @@ jobs:
           context: "."
           build-args: |
             PYTHON_VER=${{ matrix.python-version }}
+            DEPENDENCIES_BASE_BRANCH=${{ steps.gitbranch.outputs.branch }}
             POETRY_PARALLEL=true

@@ -1,5 +1,6 @@
 # syntax=docker/dockerfile:1
 ARG PYTHON_VER
+ARG DEPENDENCIES_BASE_BRANCH
 
 ################################ Overview
 # This builds the following hierarchy of images:
@@ -58,6 +59,9 @@ ARG PYTHON_VER
 #   installs Poetry
 #   copies Nautobot source files and packaging definition into the image
 #   uses Pip/Poetry to install Nautobot's Python dependencies (but *not* development dependencies or Nautobot itself)
+#
+# dependencies-as-stage (intermediate build target)
+#   grabs `dependencies` as a stage
 #
 # dependencies-dev-python (intermediate build target)
 #   uses Poetry to additionally install Nautobot's *development* dependencies
@@ -167,12 +171,18 @@ RUN --mount=type=cache,target="/root/.cache/pip" \
     poetry install --no-root --only main --no-ansi --extras all && \
     rm -rf /tmp/tmp*
 
+################################ Stage: dependencies-as-stage (intermediate build target)
+# COPY --from= requires the from target to be stage name or untagged image name
+# We can "alias" that here to make things easier
+
+FROM ghcr.io/nautobot/nautobot-dependencies:${DEPENDENCIES_BASE_BRANCH}-py${PYTHON_VER} as dependencies-as-stage 
+
 ################################ Stage: dependencies-dev-python (intermediate build target)
 # We need dev dependencies for building the docs but don't want them in the final build image
 # We install more dependencies here and can copy where needed
 # Improves caching as well when these dependencies don't change
 
-FROM dependencies as dependencies-dev-python
+FROM dependencies-as-stage as dependencies-dev-python
 
 # Add development-specific dependencies of Nautobot to the installation
 # Poetry 1.2.0 leaves files in /tmp after doing an install
@@ -197,7 +207,7 @@ RUN mkdocs build --no-directory-urls
 
 ################################ Stage: build-nautobot (intermediate build target)
 
-FROM dependencies as build-nautobot
+FROM dependencies-as-stage as build-nautobot
 # Copy in the Nautobot source code to build the wheel from
 COPY nautobot /source/nautobot
 
@@ -283,8 +293,8 @@ ARG PYTHON_VER
 
 # Copy from "dependencies" the required python libraries and binaries
 # Copy from "build-nautobot" the built Nautobot wheel
-COPY --from=dependencies /usr/local/lib/python${PYTHON_VER}/site-packages /usr/local/lib/python${PYTHON_VER}/site-packages
-COPY --from=dependencies /usr/local/bin /usr/local/bin
+COPY --from=dependencies-as-stage /usr/local/lib/python${PYTHON_VER}/site-packages /usr/local/lib/python${PYTHON_VER}/site-packages
+COPY --from=dependencies-as-stage /usr/local/bin /usr/local/bin
 COPY --from=build-nautobot /source/dist/*.whl /tmp
 
 # Install the Nautobot wheel
