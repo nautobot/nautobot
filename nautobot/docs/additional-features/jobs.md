@@ -194,6 +194,17 @@ class ExampleJobWithSoftTimeLimit(Job):
             cleanup_in_a_hurry()
 ```
 
+#### `task_queues`
+
++++ 1.5.0
+
+Default: `[]`
+
+A list of task queue names that the job can be routed to. An empty list will default to only allowing the user to select the [default queue](../configuration/optional-settings.md#celery_task_default_queue) (`default` unless changed by an administrator). The first queue in the list will be used if a queue is not specified in a job run API call.
+
+!!! note
+    A worker must be listening on the requested queue or the job will not run. See the documentation on [task queues](../administration/celery-queues.md) for more information.
+
 #### `template_name`
 
 +++ 1.4.0
@@ -247,18 +258,6 @@ class ExampleJobWithHardTimeLimit(Job):
 
 !!! note
     If the `time_limit` is set to a value less than or equal to the `soft_time_limit`, a warning log is generated to inform the user that this job will fail silently after the `time_limit` as the `soft_time_limit` will never be reached.
-
-#### `task_queues`
-
-<!-- markdownlint-disable-next-line MD036 MD049 -->
-_Added in version 1.5.0_
-
-Default: `[]`
-
-A list of task queue names that will be presented to the user to select the queue that the job will be routed to. An empty list will default to only allowing the user to select the [default queue](../configuration/optional-settings.md#celery_task_default_queue) (`default` unless changed by an administrator). The first queue in the list will be used if a queue is not specified in a job run API call.
-
-!!! note
-    A worker must be listening on the requested queue or the job will not run. See the documentation on [task queues](../administration/celery-queues.md) for more information.
 
 ### Variables
 
