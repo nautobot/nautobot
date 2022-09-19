@@ -53,6 +53,9 @@ The following environment variables may also be set for each of the above values
 * `NAUTOBOT_DB_TIMEOUT`
 * `NAUTOBOT_DB_ENGINE`
 
++++ 1.1.0
+    The `NAUTOBOT_DB_ENGINE` setting was added along with support for MySQL.
+
 !!! warning
     Nautobot supports either MySQL or PostgreSQL as a database backend. You must make sure that the `ENGINE` setting matches your selected database backend or **you will be unable to connect to the database**.
 
@@ -202,8 +205,8 @@ CACHES = {
 
 ### Task Queuing with RQ
 
-!!! warning
-    As of Nautobot 1.1 using task queueing with RQ is deprecated in exchange for using Celery. Support for RQ will be removed entirely starting in Nautobot 2.0.
++/- 1.1.0
+    Using task queueing with RQ is deprecated in exchange for using Celery. Support for RQ will be removed entirely starting in Nautobot 2.0.
 
 Task queues are configured by defining them within the [`RQ_QUEUES`](#rq_queues) setting.
 
@@ -217,7 +220,7 @@ The default value for this setting defines the queues and instructs RQ to use th
 
 Please see the [official `django-rq` documentation on support for django-redis connection settings](https://github.com/rq/django-rq#support-for-django-redis-and-django-redis-cache) for more information.
 
-!!! note
++/- 1.1.0
     The `check_releases`, `custom_fields`, and `webhooks` queues are no longer in use by Nautobot but maintained here for backwards compatibility; they will be removed in Nautobot 2.0.
 
 Default:

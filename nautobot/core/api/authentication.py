@@ -17,6 +17,7 @@ class TokenAuthentication(authentication.TokenAuthentication):
     def authenticate_credentials(self, key):
         model = self.get_model()
         try:
+            # v2 TODO(jathan): Replace prefetch_related with select_related
             token = model.objects.prefetch_related("user").get(key=key)
         except model.DoesNotExist:
             raise exceptions.AuthenticationFailed("Invalid token")
