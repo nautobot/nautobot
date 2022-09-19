@@ -282,7 +282,7 @@ jobs:
 
   dependency-container-build:
     name: "Build Dependency Container Images (GHCR Only)"
-    runs-on: "ubuntu-20.04"
+    uses: ./.github/workflows/build_dependency_image_conditional.yml
     if: "github.event_name == 'push' && (github.ref == 'refs/heads/develop' || github.ref == 'refs/heads/next')"
     needs:
       - "integration-test"
@@ -290,7 +290,6 @@ jobs:
       fail-fast: true
       matrix:
         python-version: [ "3.7", "3.8", "3.9", "3.10" ]
-    uses: ./.github/workflows/build_dependency_image_conditional.yml 
 
   container-build:
     name: "Build Container Images (GHCR Only)"
