@@ -61,7 +61,7 @@ jobs:
       - name: "Check out repository code"
         uses: "actions/checkout@v2"
       - name: "Check & Build Dependencies Container Image"
-        uses: "./.github/workflows/build_dependency_image_conditional.yml"
+        uses: "./.github/workflows/build_dependency_image.yml"
       - run: echo "##[set-output name=branch;]$(echo ${GITHUB_REF#refs/heads/})"
         id: "gitbranch"
       - name: "Set up QEMU"
