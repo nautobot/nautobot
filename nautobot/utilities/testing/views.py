@@ -70,6 +70,7 @@ class ModelViewTestCase(ModelTestCase):
     If unspecified, "slug" and "pk" will be tried, in that order.
     """
 
+    # 2.0 TODO(jathan): Eliminate the need to overload `_get_base_url()` at all and just rely on `get_route_for_model()`
     def _get_base_url(self):
         """
         Return the base format for a URL for the test's model. Override this to test for a model which belongs
@@ -79,6 +80,7 @@ class ModelViewTestCase(ModelTestCase):
             return f"plugins:{self.model._meta.app_label}:{self.model._meta.model_name}_{{}}"
         return f"{self.model._meta.app_label}:{self.model._meta.model_name}_{{}}"
 
+    # 2.0 TODO(jathan): Eliminate the need to overload `_get_url()` at all and just rely on `get_route_for_model()`
     def _get_url(self, action, instance=None):
         """
         Return the URL name for a specific action and optionally a specific instance

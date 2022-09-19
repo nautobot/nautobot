@@ -319,7 +319,12 @@ class Job(PrimaryModel):
 
     @property
     def runnable(self):
-        return self.enabled and self.installed and self.job_class is not None
+        return (
+            self.enabled
+            and self.installed
+            and self.job_class is not None
+            and not (self.has_sensitive_variables and self.approval_required)
+        )
 
     def clean(self):
         """For any non-overridden fields, make sure they get reset to the actual underlying class value if known."""

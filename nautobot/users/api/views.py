@@ -1,13 +1,14 @@
 from django.contrib.auth import get_user_model
 from django.contrib.auth.models import Group
 from django.db.models import Count
-from drf_spectacular.utils import extend_schema, OpenApiTypes
+from drf_spectacular.utils import extend_schema, extend_schema_view, OpenApiTypes
 from rest_framework.authentication import BasicAuthentication
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.routers import APIRootView
 from rest_framework.viewsets import ViewSet
 
+from nautobot.core.api.serializers import BulkOperationIntegerIDSerializer
 from nautobot.core.api.views import ModelViewSet
 from nautobot.users import filters
 from nautobot.users.models import ObjectPermission, Token
@@ -36,9 +37,13 @@ class UserViewSet(ModelViewSet):
     filterset_class = filters.UserFilterSet
 
 
+@extend_schema_view(
+    bulk_destroy=extend_schema(request=BulkOperationIntegerIDSerializer(many=True)),
+)
 class GroupViewSet(ModelViewSet):
     queryset = RestrictedQuerySet(model=Group).annotate(user_count=Count("user")).order_by("name")
     serializer_class = serializers.GroupSerializer
+    bulk_operation_serializer_class = BulkOperationIntegerIDSerializer
     filterset_class = filters.GroupFilterSet
 
 

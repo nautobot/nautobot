@@ -23,7 +23,7 @@ A common Django pattern is to check whether a model instance's primary key (`pk`
 Because of the way Nautobot's UUID primary keys are implemented, **this check will not work as expected** because model instances are assigned a UUID in memory _at instance creation time_, not at the time they are written to the database (when the model's `save()` method is called).
 Instead, for any model which inherits from `nautobot.core.models.BaseModel`, you should check an instance's `present_in_database` property which will be either `True` or `False`.
 
-Wrong:
+Instead of:
 
 ```python
 if instance.pk:
@@ -35,7 +35,7 @@ else:
     ...
 ```
 
-Right:
+Use:
 
 ```python
 if instance.present_in_database:
@@ -77,6 +77,89 @@ from nautobot.core.models.generics import PrimaryModel
 class ExampleModel(PrimaryModel):
     name = models.CharField(max_length=100, unique=True)
     slug = AutoSlugField(populate_from='name')
+```
+
+## Getting URL Routes
+
+When developing new models a need often arises to retrieve a reversible route for a model to access it in either the web UI or the REST API. When this time comes, you **must** use `nautobot.utilities.utils.get_route_for_model`. You **must not** write your own logic to construct route names.
+
+```python
+from nautobot.utilities.utils import get_route_for_model
+```
+
+This utility function supports both UI and API views for both Nautobot core apps and Nautobot plugins.
+
++++ 1.4.3
+    Support for generating API routes was added to `get_route_for_model()` by passing the argument `api=True`.
+
+### UI Routes
+
+Instead of:
+
+```python
+route = f"{model._meta.app_label}:{model._meta.model_name}_list"
+if model._meta.app_label in settings.PLUGINS:
+    route = f"plugins:{route}"
+```
+
+Use:
+
+```python
+route = get_route_for_model(model, "list")
+```
+
+### REST API Routes
+
+Instead of:
+
+```python
+api_route = f"{model._meta.app_label}-api:{model._meta.model_name}-list"
+if model._meta.app_label in settings.PLUGINS:
+    api_route = f"plugins-api:{api_route}"
+```
+
+Use:
+
+```python
+api_route = get_route_for_model(model, "list", api=True)
+```
+
+### Examples
+
+Core models:
+
+```python
+>>> get_route_for_model(Device, "list")
+"dcim:device_list"
+>>> get_route_for_model(Device, "list", api=True)
+"dcim-api:device-list"
+```
+
+Plugin models:
+
+```python
+>>> get_route_for_model(ExampleModel, "list")
+"plugins:example_plugin:examplemodel_list"
+>>> get_route_for_model(ExampleModel, "list", api=True)
+"plugins-api:example_plugin-api:examplemodel-list"
+```
+
+!!! tip
+    The first argument may also optionally be an instance of a model, or a string using the dotted notation of `{app_label}.{model}` (e.g. `dcim.device`).
+
+Using an instance:
+
+```python
+>>> instance = Device.objects.first()
+>>> get_route_for_model(instance, "list")
+"dcim:device_list"
+```
+
+Using dotted notation:
+
+```python
+>>> get_route_for_model("dcim.device", "list")
+"dcim:device_list"
 ```
 
 ## Filtering Models with FilterSets
@@ -313,5 +396,5 @@ filterset.qs.filter(query).count()  # 339
 
 ## Using NautobotUIViewSet for Plugin Development
 
-- Starting from Nautobot v1.4, using `NautobotUIViewSet` for plugin development is strongly recommended.
-- To see how to use `NautobotUIViewSet`, check out [plugins/development.md](../plugins/development.md#nautobotuiviewset).
++++ 1.4.0
+    Using `NautobotUIViewSet` for [plugin development](../plugins/development.md#nautobotuiviewset) is strongly recommended.

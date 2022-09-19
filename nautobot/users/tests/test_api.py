@@ -27,7 +27,6 @@ class AppTest(APITestCase):
 
 class UserTest(APIViewTestCases.APIViewTestCase):
     model = User
-    view_namespace = "users"
     brief_fields = ["display", "id", "url", "username"]
     validation_excluded_fields = ["password"]
     create_data = [
@@ -56,7 +55,6 @@ class UserTest(APIViewTestCases.APIViewTestCase):
 class GroupTest(APIViewTestCases.APIViewTestCase):
     model = Group
     filterset = GroupFilterSet
-    view_namespace = "users"
     brief_fields = ["display", "id", "name", "url"]
     create_data = [
         {
@@ -69,6 +67,14 @@ class GroupTest(APIViewTestCases.APIViewTestCase):
             "name": "Group 6",
         },
     ]
+
+    def _get_detail_url(self, instance):
+        """Can't use get_route_for_model because this is not a Nautobot core model."""
+        return reverse("users-api:group-detail", kwargs={"pk": instance.pk})
+
+    def _get_list_url(self):
+        """Can't use get_route_for_model because this is not a Nautobot core model."""
+        return reverse("users-api:group-list")
 
     @classmethod
     def setUpTestData(cls):

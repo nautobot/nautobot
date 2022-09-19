@@ -9,7 +9,7 @@ from nautobot.core.celery import NautobotKombuJSONEncoder
 from nautobot.core.models import BaseModel
 from nautobot.extras.choices import ObjectChangeActionChoices, ObjectChangeEventContextChoices
 from nautobot.extras.utils import extras_features
-from nautobot.utilities.utils import serialize_object, serialize_object_v2, shallow_compare_dict
+from nautobot.utilities.utils import get_route_for_model, serialize_object, serialize_object_v2, shallow_compare_dict
 
 
 #
@@ -46,11 +46,7 @@ class ChangeLoggedModel(models.Model):
 
     def get_changelog_url(self):
         """Return the changelog URL for this object."""
-        meta = self._meta
-
-        route = f"{meta.app_label}:{meta.model_name}_changelog"
-        if meta.app_label in settings.PLUGINS:
-            route = f"plugins:{route}"
+        route = get_route_for_model(self, "changelog")
 
         # Iterate the pk-like fields and try to get a URL, or return None.
         fields = ["pk", "slug"]
