@@ -2,7 +2,7 @@
 
 A virtual machine represents a virtual compute instance hosted within a cluster. Each VM must be assigned to exactly one cluster.
 
-Like devices, each VM can be assigned a platform and/or functional role, and an operational [`status`](https://nautobot.readthedocs.io/en/latest/models/extras/status/). The following statuses are available by default:
+Like devices, each VM can be assigned a platform and/or functional role, and an operational [`status`](../../models/extras/status.md). The following statuses are available by default:
 
 * Active
 * Offline

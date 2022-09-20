@@ -65,7 +65,7 @@ Each attribute of the IP address is expressed as an attribute of the JSON object
 
 Comprehensive, interactive documentation of all REST API endpoints is available on a running Nautobot instance at `/api/docs/`. This interface provides a convenient sandbox for researching and experimenting with specific endpoints and request types. The API itself can also be explored using a web browser by navigating to its root at `/api/`.
 
-!!! tip
++++ 1.3.0
     You can view or explore a specific REST API [version](#versioning) by adding the API version as a query parameter, for example `/api/docs/?api_version=1.3` or `/api/?api_version=1.2`
 
 ## Endpoint Hierarchy
@@ -97,6 +97,8 @@ GET /api/dcim/interfaces/?device_id=6a522ebb-5739-4c5c-922f-ab4a2dc12eb0
 See the [filtering documentation](filtering.md) for more details.
 
 ## Versioning
+
++++ 1.3.0
 
 As of Nautobot 1.3, the REST API supports multiple versions. A REST API client may request a given API version by including a `major.minor` Nautobot version number in its request in one of two ways:
 
@@ -172,6 +174,8 @@ As an example, let us say that Nautobot 1.3 introduced a new, _non-backwards-com
 | `/api/dcim/racks/`  | `1.3`                 | 1.3-compatible REST API (unchanged from 1.2) |
 
 ### APISelect with versioning capability
+
++++ 1.3.0
 
 The constructor for Nautobot's `APISelect`/`APISelectMultiple` UI widgets now includes an optional `api_version` argument which if set overrides the default API version of the request.
 
@@ -329,7 +333,7 @@ Vary: Accept
 }
 ```
 
-The default page is determined by the [`PAGINATE_COUNT`](../../configuration/optional-settings/#paginate_count) configuration parameter, which defaults to 50. However, this can be overridden per request by specifying the desired `offset` and `limit` query parameters. For example, if you wish to retrieve a hundred devices at a time, you would make a request for:
+The default page is determined by the [`PAGINATE_COUNT`](../configuration/optional-settings.md#paginate_count) configuration parameter, which defaults to 50. However, this can be overridden per request by specifying the desired `offset` and `limit` query parameters. For example, if you wish to retrieve a hundred devices at a time, you would make a request for:
 
 ```no-highlight
 http://nautobot/api/dcim/devices/?limit=100
@@ -346,7 +350,7 @@ The response will return devices 1 through 100. The URL provided in the `next` a
 }
 ```
 
-The maximum number of objects that can be returned is limited by the [`MAX_PAGE_SIZE`](../../configuration/optional-settings/#max_page_size) configuration parameter, which is 1000 by default. Setting this to `0` or `None` will remove the maximum limit. An API consumer can then pass `?limit=0` to retrieve _all_ matching objects with a single request.
+The maximum number of objects that can be returned is limited by the [`MAX_PAGE_SIZE`](../configuration/optional-settings.md#max_page_size) configuration parameter, which is 1000 by default. Setting this to `0` or `None` will remove the maximum limit. An API consumer can then pass `?limit=0` to retrieve _all_ matching objects with a single request.
 
 !!! warning
     Disabling the page size limit introduces a potential for very resource-intensive requests, since one API request can effectively retrieve an entire table from the database.
@@ -474,7 +478,7 @@ The brief format is supported for both lists and individual objects.
 
 ### Retrieving Object Relationships and Relationship Associations
 
-_Added in version 1.4.0_ <!-- markdownlint-disable-line MD036 -->
++++ 1.4.0
 
 Objects that are associated with another object by a custom [Relationship](../models/extras/relationship.md) are also retrievable and modifiable via the REST API. Due to the additional processing overhead involved in retrieving and representing these relationships, they are _not_ included in default REST API `GET` responses. To include relationships data, pass `include=relationships` as a query parameter; in this case an additional key, `"relationships"`, will be included in the API response, as seen below:
 
@@ -534,11 +538,11 @@ In the example above we can see that a single VRF, `green`, is a destination for
 
 ### Excluding Config Contexts
 
-When retrieving devices and virtual machines via the REST API, each will include its rendered [configuration context data](../models/extras/configcontext/) by default. Users with large amounts of context data will likely observe suboptimal performance when returning multiple objects, particularly with very high page sizes. To combat this, context data may be excluded from the response data by attaching the query parameter `?exclude=config_context` to the request. This parameter works for both list and detail views.
+When retrieving devices and virtual machines via the REST API, each will include its rendered [configuration context data](../models/extras/configcontext.md) by default. Users with large amounts of context data will likely observe suboptimal performance when returning multiple objects, particularly with very high page sizes. To combat this, context data may be excluded from the response data by attaching the query parameter `?exclude=config_context` to the request. This parameter works for both list and detail views.
 
 ### Creating a New Object
 
-To create a new object, make a `POST` request to the model's _list_ endpoint with JSON data pertaining to the object being created. Note that a REST API token is required for all write operations; see the [authentication documentation](../authentication/) for more information. Also be sure to set the `Content-Type` HTTP header to `application/json`. As always, it's a good practice to also set the `Accept` HTTP header to include the requested REST API version.
+To create a new object, make a `POST` request to the model's _list_ endpoint with JSON data pertaining to the object being created. Note that a REST API token is required for all write operations; see the [authentication documentation](authentication.md) for more information. Also be sure to set the `Content-Type` HTTP header to `application/json`. As always, it's a good practice to also set the `Accept` HTTP header to include the requested REST API version.
 
 ```no-highlight
 curl -s -X POST \
@@ -668,9 +672,9 @@ http://nautobot/api/ipam/prefixes/b484b0ac-12e3-484a-84c0-aa17955eaedc/ \
 !!! note "PUT versus PATCH"
     The Nautobot REST API support the use of either `PUT` or `PATCH` to modify an existing object. The difference is that a `PUT` request requires the user to specify a _complete_ representation of the object being modified, whereas a `PATCH` request need include only the attributes that are being updated. For most purposes, using `PATCH` is recommended.
 
-### Updating Relationship Associations
+#### Updating Relationship Associations
 
-_Added in version 1.4.0_ <!-- markdownlint-disable-line MD036 -->
++++ 1.4.0
 
 It is possible to modify the objects associated via Relationship with an object as part of a REST API `PATCH` request by specifying the `"relationships"` key, any or all of the relevant Relationships, and the list of desired related objects for each such Relationship. Since nested serializers are used for the related objects, they can be identified by ID (primary key) or by one or more attributes in a dictionary. For example, either of the following requests would be valid:
 

@@ -37,7 +37,11 @@ from nautobot.core.celery import app as celery_app
 from nautobot.core.api import BulkOperationSerializer
 from nautobot.core.api.exceptions import SerializerNotFound
 from nautobot.utilities.api import get_serializer_for_model
-from nautobot.utilities.utils import get_all_lookup_exper_for_field, get_data_for_filterset_parameter
+from nautobot.utilities.utils import (
+    get_all_lookup_exper_for_field,
+    get_filterset_parameter_form_field,
+    get_form_for_model,
+)
 from . import serializers
 
 HTTP_ACTIONS = {
@@ -88,6 +92,8 @@ class BulkCreateModelMixin:
         with transaction.atomic():
             serializer = self.get_serializer(data=request.data, many=True)
             serializer.is_valid(raise_exception=True)
+            # 2.0 TODO: this should be wrapped with a paginator so as to match the same format as the list endpoint,
+            # i.e. `{"results": [{instance}, {instance}, ...]}` instead of bare list `[{instance}, {instance}, ...]`
             return Response(serializer.data, status=status.HTTP_201_CREATED)
 
 
@@ -110,9 +116,11 @@ class BulkUpdateModelMixin:
     ]
     """
 
+    bulk_operation_serializer_class = BulkOperationSerializer
+
     def bulk_update(self, request, *args, **kwargs):
         partial = kwargs.pop("partial", False)
-        serializer = BulkOperationSerializer(data=request.data, many=True)
+        serializer = self.bulk_operation_serializer_class(data=request.data, many=True)
         serializer.is_valid(raise_exception=True)
         qs = self.get_queryset().filter(pk__in=[o["id"] for o in serializer.data])
 
@@ -121,6 +129,8 @@ class BulkUpdateModelMixin:
 
         data = self.perform_bulk_update(qs, update_data, partial=partial)
 
+        # 2.0 TODO: this should be wrapped with a paginator so as to match the same format as the list endpoint,
+        # i.e. `{"results": [{instance}, {instance}, ...]}` instead of bare list `[{instance}, {instance}, ...]`
         return Response(data, status=status.HTTP_200_OK)
 
     def perform_bulk_update(self, objects, update_data, partial):
@@ -152,8 +162,13 @@ class BulkDestroyModelMixin:
     ]
     """
 
+    bulk_operation_serializer_class = BulkOperationSerializer
+
+    @extend_schema(
+        request=BulkOperationSerializer(many=True),
+    )
     def bulk_destroy(self, request, *args, **kwargs):
-        serializer = BulkOperationSerializer(data=request.data, many=True)
+        serializer = self.bulk_operation_serializer_class(data=request.data, many=True)
         serializer.is_valid(raise_exception=True)
         qs = self.get_queryset().filter(pk__in=[o["id"] for o in serializer.data])
 
@@ -174,6 +189,8 @@ class BulkDestroyModelMixin:
 
 class ModelViewSetMixin:
     brief = False
+    # v2 TODO(jathan): Revisit whether this is still valid post-cacheops. Re: prefetch_related vs.
+    # select_related
     brief_prefetch_fields = []
 
     def get_serializer(self, *args, **kwargs):
@@ -203,6 +220,7 @@ class ModelViewSetMixin:
     def get_queryset(self):
         # If using brief mode, clear all prefetches from the queryset and append only brief_prefetch_fields (if any)
         if self.brief:
+            # v2 TODO(jathan): Replace prefetch_related with select_related
             return super().get_queryset().prefetch_related(None).prefetch_related(*self.brief_prefetch_fields)
 
         return super().get_queryset()
@@ -338,7 +356,7 @@ class APIRootView(NautobotAPIVersionMixin, APIView):
         return "API Root"
 
     @extend_schema(exclude=True)
-    def get(self, request, format=None):
+    def get(self, request, format=None):  # pylint: disable=redefined-builtin
 
         return Response(
             OrderedDict(
@@ -420,7 +438,7 @@ class StatusView(NautobotAPIVersionMixin, APIView):
                 if isinstance(version, tuple):
                     version = ".".join(str(n) for n in version)
             installed_apps[app_config.name] = version
-        installed_apps = {k: v for k, v in sorted(installed_apps.items())}
+        installed_apps = dict(sorted(installed_apps.items()))
 
         # Gather installed plugins
         plugins = {}
@@ -428,7 +446,7 @@ class StatusView(NautobotAPIVersionMixin, APIView):
             plugin_name = plugin_name.rsplit(".", 1)[-1]
             plugin_config = apps.get_app_config(plugin_name)
             plugins[plugin_name] = getattr(plugin_config, "version", None)
-        plugins = {k: v for k, v in sorted(plugins.items())}
+        plugins = dict(sorted(plugins.items()))
 
         # Gather Celery workers
         workers = celery_app.control.inspect().active()  # list or None
@@ -595,7 +613,7 @@ class GraphQLDRFAPIView(NautobotAPIVersionMixin, APIView):
         Returns:
             response (dict), status_code (int): Payload of the response to send and the status code.
         """
-        query, variables, operation_name, id = GraphQLView.get_graphql_params(request, data)
+        query, variables, operation_name, _id = GraphQLView.get_graphql_params(request, data)
 
         execution_result = self.execute_graphql_request(request, data, query, variables, operation_name)
 
@@ -726,7 +744,7 @@ class LookupTypeChoicesView(NautobotAPIVersionMixin, APIView):
     def get(self, request):
         if "contenttype" not in request.GET or "field_name" not in request.GET:
             return Response(
-                "contentype and field_name are required parameters",
+                "contenttype and field_name are required parameters",
                 status=400,
             )
         contenttype = request.GET.get("contenttype")
@@ -747,7 +765,7 @@ class LookupTypeChoicesView(NautobotAPIVersionMixin, APIView):
         )
 
 
-class GenerateLookupFieldDataView(NautobotAPIVersionMixin, APIView):
+class LookupValueDomElementView(NautobotAPIVersionMixin, APIView):
     permission_classes = [IsAuthenticated]
 
     # TODO timizuo: add contenttype, field_name parameters to schema
@@ -756,13 +774,7 @@ class GenerateLookupFieldDataView(NautobotAPIVersionMixin, APIView):
             200: {
                 "type": "object",
                 "properties": {
-                    "choices": {
-                        "type": "array",
-                        "items": {"type": "array", "minItems": 2, "maxItems": 2, "items": {"type": "string"}},
-                    },
-                    "data_url": {"type": "string"},
-                    "type": {"type": "string"},
-                    "allow_multiple": {"type": "boolean"},
+                    "dom_element": {"type": "string"},
                 },
             }
         }
@@ -770,14 +782,14 @@ class GenerateLookupFieldDataView(NautobotAPIVersionMixin, APIView):
     def get(self, request):
         if "contenttype" not in request.GET or "field_name" not in request.GET:
             return Response(
-                "contentype and field_name are required parameters",
+                "contenttype and field_name are required parameters",
                 status=400,
             )
         field_name = request.GET.get("field_name")
         contenttype = request.GET.get("contenttype")
         app_label, model_name = contenttype.split(".")
         model = ContentType.objects.get(app_label=app_label, model=model_name).model_class()
-        data = get_data_for_filterset_parameter(model, field_name)
-        # TODO: timizuo for choices instead of returning an array of array([["True", "Yes"]])
-        #  return a list of object e.g [{"value": "True", "label": "Yes"}]
-        return Response(data)
+        model_form = get_form_for_model(model)
+        form_field = get_filterset_parameter_form_field(model, field_name)
+        field_dom_representation = form_field.get_bound_field(model_form(), field_name).as_widget()
+        return Response({"dom_element": field_dom_representation})

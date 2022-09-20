@@ -72,7 +72,7 @@ class CustomFieldModelFilterFormMixin(forms.Form):
         )
         for cf in custom_fields:
             # 2.0 TODO: #824 cf.name to cf.slug throughout
-            field_name = "cf_{}".format(cf.name)
+            field_name = f"cf_{cf.name}"
             if cf.type == "json":
                 self.fields[field_name] = cf.to_form_field(
                     set_initial=False, enforce_required=False, simple_json_filter=True
@@ -97,7 +97,7 @@ class CustomFieldModelFormMixin(forms.ModelForm):
         """
         # Append form fields; assign initial values if modifying and existing object
         for cf in CustomField.objects.filter(content_types=self.obj_type):
-            field_name = "cf_{}".format(cf.slug)
+            field_name = f"cf_{cf.slug}"
             if self.instance.present_in_database:
                 self.fields[field_name] = cf.to_form_field(set_initial=False)
                 # 2.0 TODO: #824 self.instance.cf.get(cf.slug)
@@ -132,7 +132,7 @@ class CustomFieldModelBulkEditFormMixin(BulkEditForm):
         # Add all applicable CustomFields to the form
         custom_fields = CustomField.objects.filter(content_types=self.obj_type)
         for cf in custom_fields:
-            field_name = "cf_{}".format(cf.slug)
+            field_name = f"cf_{cf.slug}"
             # Annotate non-required custom fields as nullable
             if not cf.required:
                 self.nullable_fields.append(field_name)
@@ -407,7 +407,7 @@ class RelationshipModelFormMixin(forms.ModelForm):
 
                 # Are any of the objects we want a relationship with already entangled with another object?
                 if relationship.has_many(peer_side):
-                    target_peers = [item for item in self.cleaned_data[field_name]]
+                    target_peers = list(self.cleaned_data[field_name])
                 else:
                     target_peers = [self.cleaned_data[field_name]]
 

@@ -12,6 +12,17 @@ If you are a user migrating from NetBox to Nautobot, please refer to the ["Migra
 
 ### Changed
 
+#### Database Query Caching is now Disabled by Default
+
+In prior versions of Nautobot, database query caching using the [`django-cacheops`](https://github.com/Suor/django-cacheops) application (aka Cacheops) was enabled by default. This is determined by the default value of the [`CACHEOPS_ENABLED`](../configuration/optional-settings.md#cacheops_enabled) setting being set to `True`.
+
+Through much trial and error we ultimately decided that this feature is more trouble than it is worth and we have begun to put more emphasis on improving performance of complex database queries over continuing to rely upon the various benefits and pitfalls of utilizing Cacheops.
+
+As a result, the value of this setting now defaults to `False`, disabling database query caching entirely for new deployments. Cacheops will be removed entirely in a future release.
+
+!!! important
+    Users with existing `nautobot_config.py` files generated from earlier versions of Nautobot will still have `CACHEOPS_ENABLED = True` unless they modify or regenerate their configuration. If users no longer desire caching, please be sure to explicitly toggle the value of this setting to `False` and restart your Nautobot services.
+
 ### Fixed
 
 ### Removed
@@ -20,8 +31,18 @@ If you are a user migrating from NetBox to Nautobot, please refer to the ["Migra
 
 ### Added
 
+- [#899](https://github.com/nautobot/nautobot/issues/899) - Added support for grouping of Custom Fields.
+- [#1468](https://github.com/nautobot/nautobot/issues/1468) - Added relationship columns to ObjectListTableView and disabled sorting.
+- [#2063](https://github.com/nautobot/nautobot/issues/2063) - Added documentation and initial support for custom celery queues.
+- [#2281](https://github.com/nautobot/nautobot/issues/2281) - Added test database fixtures for Tag and Status models.
+
 ### Changed
 
-- [#1983](https://github.com/nautobot/nautobot/issues/1983) - Updated `django-taggit` dependency to 3.0.0
+- [#1983](https://github.com/nautobot/nautobot/issues/1983) - Updated `django-taggit` dependency to 3.0.0.
+- [#2170](https://github.com/nautobot/nautobot/pull/2170) - Updated `django-constance` dependency to 2.9.1; updated `Jinja2` dependency to 3.1.2; updated `black` development dependency to 22.8.0.
+- [#2320](https://github.com/nautobot/nautobot/pull/2320) - Removed PKs from Tag test database fixture.
 
 ### Fixed
+
+- [#192](https://github.com/nautobot/nautobot/issues/192) - Eliminated Unit Test noisy output.
+- [#2388](https://github.com/nautobot/nautobot/issues/2388) - Return "—" instead of "None" when relationship column is empty.

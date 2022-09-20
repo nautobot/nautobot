@@ -9,8 +9,8 @@ from django.urls import reverse
 from nautobot.ipam.formfields import IPNetworkFormField
 from nautobot.utilities.utils import (
     build_lookup_label,
-    get_data_for_filterset_parameter,
     get_filterset_for_model,
+    get_filterset_parameter_form_field,
 )
 
 __all__ = (
@@ -72,7 +72,7 @@ class BootstrapMixin(forms.BaseForm):
             forms.RadioSelect,
         ]
 
-        for field_name, field in self.fields.items():
+        for field in self.fields.values():
             if field.widget.__class__ not in exempt_widgets:
                 css = field.widget.attrs.get("class", "")
                 field.widget.attrs["class"] = " ".join([css, "form-control"]).strip()
@@ -196,17 +196,17 @@ class ImportForm(BootstrapMixin, forms.Form):
         super().clean()
 
         data = self.cleaned_data["data"]
-        format = self.cleaned_data["format"]
+        format_ = self.cleaned_data["format"]
 
         # Process JSON/YAML data
-        if format == "json":
+        if format_ == "json":
             try:
                 self.cleaned_data["data"] = json.loads(data)
                 # Check for multiple JSON objects
                 if not isinstance(self.cleaned_data["data"], dict):
                     raise forms.ValidationError({"data": "Import is limited to one object at a time."})
             except json.decoder.JSONDecodeError as err:
-                raise forms.ValidationError({"data": "Invalid JSON data: {}".format(err)})
+                raise forms.ValidationError({"data": f"Invalid JSON data: {err}"})
         else:
             # Check for multiple YAML documents
             if "\n---" in data:
@@ -214,7 +214,7 @@ class ImportForm(BootstrapMixin, forms.Form):
             try:
                 self.cleaned_data["data"] = yaml.load(data, Loader=yaml.SafeLoader)
             except yaml.error.YAMLError as err:
-                raise forms.ValidationError({"data": "Invalid YAML data: {}".format(err)})
+                raise forms.ValidationError({"data": f"Invalid YAML data: {err}"})
 
 
 class TableConfigForm(BootstrapMixin, forms.Form):
@@ -262,17 +262,14 @@ class DynamicFilterForm(BootstrapMixin, forms.Form):
         label="Value",
     )
 
-    def __init__(self, *args, model=None, filterset_base_filters=None, **kwargs):
+    def __init__(self, *args, model=None, **kwargs):
         super().__init__(*args, **kwargs)
         from nautobot.utilities.forms import add_blank_choice  # Avoid circular import
 
         if model:
             self.model = model
-        if filterset_base_filters:
-            self.filterset_base_filters = filterset_base_filters
 
-        # If filterset_base_filters is not provided, get base filters from its model
-        if hasattr(self, "model") and not hasattr(self, "filterset_base_filters"):
+        if hasattr(self, "model"):
             filterset = get_filterset_for_model(self.model)
             if filterset is not None:
                 self.filterset_base_filters = filterset.base_filters
@@ -291,7 +288,6 @@ class DynamicFilterForm(BootstrapMixin, forms.Form):
         if kwargs.get("data") and kwargs.get("prefix"):
             data = kwargs["data"]
             prefix = kwargs["prefix"]
-
             lookup_type = data.get(prefix + "-lookup_type")
             lookup_value = data.getlist(prefix + "-lookup_value")
 
@@ -299,7 +295,7 @@ class DynamicFilterForm(BootstrapMixin, forms.Form):
                 verbose_name = self.filterset_base_filters[lookup_type].lookup_expr
                 label = build_lookup_label(lookup_type, verbose_name)
                 self.fields["lookup_type"].choices = [(lookup_type, label)]
-                self.update_lookup_value_field(lookup_type, lookup_value)
+                self.fields["lookup_value"] = get_filterset_parameter_form_field(self.model, lookup_type)
 
         self.fields["lookup_type"].widget.attrs["data-query-param-field_name"] = json.dumps(["$lookup_field"])
         self.fields["lookup_type"].widget.attrs["data-contenttype"] = contenttype
@@ -310,47 +306,6 @@ class DynamicFilterForm(BootstrapMixin, forms.Form):
         self.fields["lookup_value"].widget.attrs["class"] = " ".join(
             [lookup_value_css, "lookup_value-input form-control"]
         )
-
-    def update_lookup_value_field(self, field_name, choice):
-        """
-        Update `lookup_value` field to an appropriate field for the `field_name`
-
-        If `field_name` is a relational field(ForeignKey, ManyToMany e.t.c) `lookup_value`
-        should be `forms.ChoiceField(...widget=APISelectMultiple(...))` while if `field_name` is a
-        choice field then `lookup_value` should be `forms.ChoiceField(...widget=StaticSelect2(...))`
-        """
-        # Avoid circular import
-        from nautobot.utilities.forms import APISelectMultiple, DatePicker, DateTimePicker, StaticSelect2, TimePicker
-
-        data = get_data_for_filterset_parameter(self.model, field_name, choice)
-        if data["type"] == "select-field":
-            attr = {}
-            widget = StaticSelect2 if data["widget"] == "static-select" else APISelectMultiple
-
-            if data["allow_multiple"] is True:
-                attr["multiple"] = "true"
-            if data["content_type"] is not None:
-                attr["data-query-param-content_types"] = data["content_type"]
-            if data["value_field"] is not None:
-                attr["value-field"] = data["value_field"]
-            if data["api_url"] is not None:
-                attr["data-url"] = data["api_url"]
-
-            self.fields["lookup_value"] = forms.ChoiceField(
-                choices=data["choices"],
-                required=False,
-                widget=widget(attrs={**attr}),
-                initial=choice,
-            )
-        elif data["type"] == "datetime-field":
-            _format = data["widget"]
-            widget = DatePicker if _format == "date" else DateTimePicker if _format == "datetime" else TimePicker
-            self.fields["lookup_value"] = forms.CharField(
-                required=False,
-                widget=widget(),
-            )
-        elif data["type"] == "number-field":
-            self.fields["lookup_value"] = forms.IntegerField(required=False)
 
     @staticmethod
     def capitalize(field):

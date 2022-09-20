@@ -21,7 +21,7 @@ class OptionalLimitOffsetPagination(LimitOffsetPagination):
             self.display_page_controls = True
 
         if self.count == 0 or self.offset > self.count:
-            return list()
+            return []
 
         if self.limit:
             return list(queryset[self.offset : self.offset + self.limit])  # noqa: E203

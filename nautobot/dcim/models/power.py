@@ -92,9 +92,7 @@ class PowerPanel(PrimaryModel):
         if self.rack_group:
             if self.rack_group.site != self.site:
                 raise ValidationError(
-                    "Rack group {} ({}) is in a different site than {}".format(
-                        self.rack_group, self.rack_group.site, self.site
-                    )
+                    f"Rack group {self.rack_group} ({self.rack_group.site}) is in a different site than {self.site}"
                 )
             if (
                 self.location is not None
@@ -214,9 +212,7 @@ class PowerFeed(PrimaryModel, PathEndpoint, CableTermination, StatusModel):
         # Rack must belong to same Site as PowerPanel
         if self.rack and self.rack.site != self.power_panel.site:
             raise ValidationError(
-                "Rack {} ({}) and power panel {} ({}) are in different sites".format(
-                    self.rack, self.rack.site, self.power_panel, self.power_panel.site
-                )
+                f"Rack {self.rack} ({self.rack.site}) and power panel {self.power_panel} ({self.power_panel.site}) are in different sites"
             )
 
         # AC voltage cannot be negative

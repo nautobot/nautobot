@@ -139,6 +139,8 @@ class TestAggregate(TestCase):
 
 
 class TestPrefix(TestCase):
+    fixtures = ("status",)
+
     def setUp(self):
         super().setUp()
         self.statuses = Status.objects.get_for_model(Prefix)
@@ -332,7 +334,7 @@ class TestPrefix(TestCase):
         prefix.save()
         IPAddress.objects.bulk_create(
             # Create 32 IPAddresses within the Prefix
-            [IPAddress(address=netaddr.IPNetwork("10.0.0.{}/24".format(i))) for i in range(1, 33)]
+            [IPAddress(address=netaddr.IPNetwork(f"10.0.0.{i}/24")) for i in range(1, 33)]
         )
         # Create IPAddress objects for network and broadcast addresses
         IPAddress.objects.bulk_create(
@@ -389,6 +391,8 @@ class TestPrefix(TestCase):
 
 
 class TestIPAddress(TestCase):
+    fixtures = ("status",)
+
     def test_get_duplicates(self):
         ips = (
             IPAddress.objects.create(address=netaddr.IPNetwork("192.0.2.1/24")),
@@ -558,6 +562,8 @@ class TestVLANGroup(TestCase):
 
 
 class VLANTestCase(TestCase):
+    fixtures = ("status",)
+
     def test_vlan_validation(self):
         site = Site.objects.create(name="Site 1")
         location_type = LocationType.objects.create(name="Location Type 1")

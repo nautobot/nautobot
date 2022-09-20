@@ -8,6 +8,7 @@ from collections import OrderedDict, namedtuple
 from itertools import count, groupby
 from decimal import Decimal
 
+from django import forms
 from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.contrib.contenttypes.models import ContentType
@@ -26,7 +27,6 @@ from django_filters import (
     DateFilter,
     DateTimeFilter,
     filters,
-    ModelMultipleChoiceFilter,
     TimeFilter,
     NumberFilter,
 )
@@ -34,7 +34,6 @@ from taggit.managers import _TaggableManager
 
 from nautobot.dcim.choices import CableLengthUnitChoices
 from nautobot.utilities.constants import FILTER_LOOKUP_MAP, HTTP_REQUEST_META_SAFE_COPY
-from nautobot.utilities.forms import BOOLEAN_WITH_BLANK_CHOICES
 
 
 def csv_format(data):
@@ -55,19 +54,19 @@ def csv_format(data):
 
         # Force conversion to string first so we can check for any commas
         if not isinstance(value, str):
-            value = "{}".format(value)
+            value = f"{value}"
 
         # Double-quote the value if it contains a comma or line break
         if "," in value or "\n" in value:
             value = value.replace('"', '""')  # Escape double-quotes
-            csv.append('"{}"'.format(value))
+            csv.append(f'"{value}"')
         else:
-            csv.append("{}".format(value))
+            csv.append(f"{value}")
 
     return ",".join(csv)
 
 
-def get_route_for_model(model, action):
+def get_route_for_model(model, action, api=False):
     """
     Return the URL route name for the given model and action. Does not perform any validation.
     Supports both core and plugin routes.
@@ -75,35 +74,52 @@ def get_route_for_model(model, action):
     Args:
         model (models.Model, str): Class, Instance, or dotted string of a Django Model
         action (str): name of the action in the route
+        api (bool): If set, return an API route.
 
     Returns:
         str: return the name of the view for the model/action provided.
+
     Examples:
         >>> get_route_for_model(Device, "list")
         "dcim:device_list"
+        >>> get_route_for_model(Device, "list", api=True)
+        "dcim-api:device-list"
+        >>> get_route_for_model("dcim.site", "list")
+        "dcim:site_list"
+        >>> get_route_for_model("dcim.site", "list", api=True)
+        "dcim-api:site-list"
+        >>> get_route_for_model(ExampleModel, "list")
+        "plugins:example_plugin:examplemodel_list"
+        >>> get_route_for_model(ExampleModel, "list", api=True)
+        "plugins-api:example_plugin-api:examplemodel-list"
     """
 
     if isinstance(model, str):
         model = get_model_from_name(model)
-    viewname = f"{model._meta.app_label}:{model._meta.model_name}_{action}"
+
+    suffix = "" if not api else "-api"
+    prefix = f"{model._meta.app_label}{suffix}:{model._meta.model_name}"
+    sep = "_" if not api else "-"
+    viewname = f"{prefix}{sep}{action}"
+
     if model._meta.app_label in settings.PLUGINS:
-        viewname = f"plugins:{viewname}"
+        viewname = f"plugins{suffix}:{viewname}"
 
     return viewname
 
 
-def hex_to_rgb(hex):
+def hex_to_rgb(hex_str):
     """
     Map a hex string like "00ff00" to individual r, g, b integer values.
     """
-    return [int(hex[c : c + 2], 16) for c in (0, 2, 4)]  # noqa: E203
+    return [int(hex_str[c : c + 2], 16) for c in (0, 2, 4)]  # noqa: E203
 
 
 def rgb_to_hex(r, g, b):
     """
     Map r, g, b values to a hex string.
     """
-    return "%02x%02x%02x" % (r, g, b)
+    return "%02x%02x%02x" % (r, g, b)  # pylint: disable=consider-using-f-string
 
 
 def foreground_color(bg_color):
@@ -298,7 +314,7 @@ def to_meters(length, unit):
 
     valid_units = CableLengthUnitChoices.values()
     if unit not in valid_units:
-        raise ValueError("Unknown unit {}. Must be one of the following: {}".format(unit, ", ".join(valid_units)))
+        raise ValueError(f"Unknown unit {unit}. Must be one of the following: {', '.join(valid_units)}")
 
     if unit == CableLengthUnitChoices.UNIT_METER:
         return length
@@ -308,7 +324,7 @@ def to_meters(length, unit):
         return length * Decimal("0.3048")
     if unit == CableLengthUnitChoices.UNIT_INCH:
         return length * Decimal("0.3048") * 12
-    raise ValueError("Unknown unit {}. Must be 'm', 'cm', 'ft', or 'in'.".format(unit))
+    raise ValueError(f"Unknown unit {unit}. Must be 'm', 'cm', 'ft', or 'in'.")
 
 
 def render_jinja2(template_code, context):
@@ -751,129 +767,59 @@ def get_all_lookup_exper_for_field(model, field_name):
     return lookup_expr
 
 
-def get_data_for_filterset_parameter(model, parameter, initial_choice=None):
+def get_filterset_parameter_form_field(model, parameter):
     """
-    Return relevant data for a filterset parameter which can include `model` api_url, the parameter-type,
-    parameter choices etc.
-
-    Args:
-        model: Filterset model
-        parameter: The filterset parameter e.g has_vlans, last_updated__lte, slug e.t.c
-        initial_choice: [Optional] The filterset parameter value
-
-    Examples:
-        >>> get_data_for_filterset_parameter(<class: nautobot.dcim.models.Site>, "has_vlans")
-        >>> {"type": "static-choice", "choices": [["True", "Yes", ["False", "No"]]], "allow_multiple": False}
-
-        >>> get_data_for_filterset_parameter(<class: nautobot.dcim.models.Site>, "status")
-        >>> {"type": "dynamic-choice", "choices": [], "data_url": "/api/dcim/sites/"}
-
-    Returns:
-        Returns a dict which keys may vary depending on the parameter type
-        e.g relational filed(ForeignKey, ManyToMany e.t.c.), choice field including boolean or char/int field:
-            type: param type either staic-choice/dynamic-choice/others,
-            data_url[for relational field]: param models api endpoint,
-            content_type[for relational field]: (model contenttype),
-            choices[for choice field or if initial_choice is not None]:  param available choices,
-            allow_multiple[for choice field]:  allow multiple choices or not
+    Return the relevant form field instance for a filterset parameter e.g DynamicModelMultipleChoiceField, forms.IntegerField e.t.c
     """
     # Avoid circular import
     from nautobot.extras.filters import StatusFilter
     from nautobot.extras.models import Status, Tag
+    from nautobot.utilities.forms import (
+        BOOLEAN_WITH_BLANK_CHOICES,
+        DatePicker,
+        DateTimePicker,
+        DynamicModelMultipleChoiceField,
+        StaticSelect2,
+        StaticSelect2Multiple,
+        TimePicker,
+    )
 
-    contenttype = model._meta.app_label + "." + model._meta.model_name
+    filterset = get_filterset_for_model(model)  # TODO Timizuo Raise Error if filterset not found
+    field = filterset.base_filters.get(parameter)  # TODO Timizuo Raise Error if field not found
+    form_field_class = forms.CharField
+    form_attr = {}
 
-    filterset = get_filterset_for_model(model)
-    if filterset is None:
-        # TODO Timizuo Raise Error if filterset not found
-        pass
-
-    field = filterset.base_filters.get(parameter)
-    if field is None:
-        # TODO Timizuo Raise Error if field not found
-        pass
-
-    default_css_classes = "lookup_value-input form-control"
-    data = {
-        "type": "others",  # Param type e.g select field, char field, datetime field etc.
-        "widget": None,  # Param relevant widget e.g APISelectMultiple, DateTimePicker etc.
-        "choices": [],  # Param choices for select fields
-        "allow_multiple": True,  # Allow multiple selection of choices
-        "api_url": None,  # Param's related model api endpoint
-        "content_type": None,  # `model` contenttype
-        "value_field": None,  #
-        "css_classes": default_css_classes,  # css classes used in UI for form fields
-        "placeholder": None,  # Form field placeholder
-    }
-    kwargs = {}
-
-    if isinstance(field, (NumberFilter,)):
-        kwargs = {"type": "number-field"}
-
-    elif isinstance(field, (filters.MultipleChoiceFilter, ModelMultipleChoiceFilter)):
-        if "choices" in field.extra:  # Field choices
-            kwargs = {
-                "type": "select-field",
-                "choices": field.extra["choices"].CHOICES,
-                "widget": "static-select",
-                "css_classes": default_css_classes + " nautobot-select2-static select2-hidden-accessible",
-            }
-
-        elif hasattr(field, "queryset"):  # Dynamically populated choices
-            if isinstance(field, StatusFilter):
-                related_model = Status
-            else:
-                related_model = field.extra["queryset"].model
-            # TODO: timizuo use get_route_for_model() inplace of get_model_api_endpoint when PR-#2223 gets merged
-            api_endpoint = get_model_api_endpoint(related_model)
-
-            if api_endpoint:
-                kwargs = {
-                    "type": "select-field",
-                    "api_url": api_endpoint,
-                    "widget": "api-select-multiple",
-                    "value_field": field.extra.get("to_field_name"),
-                    "css_classes": default_css_classes + " nautobot-select2-api select2-hidden-accessible",
-                }
-
-            # Status and Tag api requires content_type, to limit result to only related content_types
-            if related_model in [Status, Tag]:
-                kwargs["content_type"] = json.dumps([contenttype])
-
-            # Add initial choices if initial_choice is not none
-            # This can be used to populate the selected options for the select field
-            if initial_choice is not None:
-                search_by = field.extra.get("to_field_name") or "id"
-                values = initial_choice if isinstance(initial_choice, (list, tuple)) else [initial_choice]
-                kwargs["choices"] = get_values_display_names(related_model, search_by, values)
-
+    if isinstance(field, NumberFilter):
+        form_field_class = forms.IntegerField
+    elif isinstance(field, filters.ModelMultipleChoiceFilter):
+        related_model = Status if isinstance(field, StatusFilter) else field.extra["queryset"].model
+        form_field_class = DynamicModelMultipleChoiceField
+        form_attr = {
+            "queryset": related_model.objects.all(),
+            "to_field_name": field.extra.get("to_field_name", "id"),
+        }
+        # Status and Tag api requires content_type, to limit result to only related content_types
+        if related_model in [Status, Tag]:
+            form_attr["query_params"] = {"content_types": model._meta.label_lower}
+    elif isinstance(field, (filters.MultipleChoiceFilter, filters.ChoiceFilter)) and "choices" in field.extra:
+        form_field_class = forms.ChoiceField
+        form_field_class.widget = StaticSelect2Multiple()
+        form_attr = {"choices": field.extra["choices"].CHOICES}
     elif isinstance(field, (BooleanFilter,)):  # Yes / No choice
-        kwargs = {
-            "type": "select-field",
-            "choices": BOOLEAN_WITH_BLANK_CHOICES,
-            "allow_multiple": False,
-            "widget": "static-select",
-            "css_classes": default_css_classes + " nautobot-select2-static select2-hidden-accessible",
-        }
-    elif isinstance(field, (DateFilter, DateTimeFilter, TimeFilter)):
-        css_classes = "form-control flatpickr-input active lookup_value-input"
-        kwargs = {
-            "type": "datetime-field",
-            "css_classes": css_classes + " time-picker",
-            "placeholder": "hh:mm:ss",
-            "widget": "time",
-        }
-        if isinstance(field, DateTimeFilter):
-            kwargs["css_class"] = css_classes + " datetime-picker"
-            kwargs["placeholder"] = "YYYY-MM-DD hh:mm:ss"
-            kwargs["widget"] = "datetime"
-        elif isinstance(field, DateFilter):
-            kwargs["css_classes"] = css_classes + " date-picker"
-            kwargs["placeholder"] = "YYYY-MM-DD"
-            kwargs["widget"] = "date"
+        form_field_class = forms.ChoiceField
+        form_field_class.widget = StaticSelect2()
+        form_attr = {"choices": BOOLEAN_WITH_BLANK_CHOICES}
+    elif isinstance(field, DateTimeFilter):
+        form_field_class.widget = DateTimePicker
+    elif isinstance(field, DateFilter):
+        form_field_class.widget = DatePicker
+    elif isinstance(field, TimeFilter):
+        form_field_class.widget = TimePicker
 
-    data.update(kwargs)
-    return data
+    form_field = form_field_class(**form_attr)
+    css_classes = form_field.widget.attrs.get("class", "")
+    form_field.widget.attrs["class"] = "lookup_value-input form-control " + css_classes
+    return form_field
 
 
 def get_values_display_names(model, search_by, values):

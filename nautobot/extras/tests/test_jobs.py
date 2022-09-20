@@ -1,5 +1,6 @@
 import datetime
 import json
+import logging
 import re
 import uuid
 from io import StringIO
@@ -49,7 +50,7 @@ def create_job_result_and_run_job(module, name, *, data=None, commit=True, reque
     """Test helper function to call get_job_class_and_model() then and call run_job_for_testing()."""
     if data is None:
         data = {}
-    job_class, job_model = get_job_class_and_model(module, name)
+    _job_class, job_model = get_job_class_and_model(module, name)
     job_result = run_job_for_testing(job=job_model, data=data, commit=commit, request=request)
     job_result.refresh_from_db()
     return job_result
@@ -97,7 +98,7 @@ class JobTest(TransactionTestCase):
         """
         module = "test_pass"
         name = "TestPass"
-        job_class, job_model = get_job_class_and_model(module, name)
+        _job_class, job_model = get_job_class_and_model(module, name)
         job_model.enabled = True
         job_model.validated_save()
         job_content_type = ContentType.objects.get(app_label="extras", model="job")
@@ -127,7 +128,9 @@ class JobTest(TransactionTestCase):
         """
         module = "test_fail"
         name = "TestFail"
+        logging.disable(logging.ERROR)
         job_result = create_job_result_and_run_job(module, name, commit=False)
+        logging.disable(logging.NOTSET)
         self.assertEqual(job_result.status, JobResultStatusChoices.STATUS_ERRORED)
 
     def test_field_default(self):
@@ -199,7 +202,9 @@ class JobTest(TransactionTestCase):
         """
         module = "test_read_only_fail"
         name = "TestReadOnlyFail"
+        logging.disable(logging.ERROR)
         job_result = create_job_result_and_run_job(module, name, commit=False)
+        logging.disable(logging.NOTSET)
         self.assertEqual(job_result.status, JobResultStatusChoices.STATUS_ERRORED)
         self.assertEqual(Site.objects.count(), 0)  # Ensure DB transaction was aborted
         # Also ensure the standard log message about aborting the transaction is *not* present
@@ -236,7 +241,7 @@ class JobTest(TransactionTestCase):
         """
         module = "test_ipaddress_vars"
         name = "TestIPAddresses"
-        job_class, job_model = get_job_class_and_model(module, name)
+        job_class, _job_model = get_job_class_and_model(module, name)
 
         # Fill out the form
         form_data = dict(
@@ -336,8 +341,9 @@ class JobTest(TransactionTestCase):
         module = "test_object_var_required"
         name = "TestRequiredObjectVar"
         data = {"region": None}
-
+        logging.disable(logging.ERROR)
         job_result = create_job_result_and_run_job(module, name, data=data, commit=False)
+        logging.disable(logging.NOTSET)
 
         # Assert stuff
         self.assertEqual(job_result.status, JobResultStatusChoices.STATUS_ERRORED)
@@ -353,9 +359,9 @@ class JobTest(TransactionTestCase):
         module = "test_object_vars"
         name = "TestObjectVars"
         data = "BAD DATA STRING"
-
+        logging.disable(logging.ERROR)
         job_result = create_job_result_and_run_job(module, name, data=data, commit=False)
-
+        logging.disable(logging.NOTSET)
         # Assert stuff
         self.assertEqual(job_result.status, JobResultStatusChoices.STATUS_ERRORED)
         log_failure = JobLogEntry.objects.filter(
@@ -373,7 +379,7 @@ class JobTest(TransactionTestCase):
         self.assertEqual(job_result_1.status, JobResultStatusChoices.STATUS_COMPLETED)
         job_result_2 = create_job_result_and_run_job(module, name, commit=False)
         self.assertEqual(job_result_2.status, JobResultStatusChoices.STATUS_COMPLETED)
-        job_class, job_model = get_job_class_and_model(module, name)
+        _job_class, job_model = get_job_class_and_model(module, name)
         self.assertGreaterEqual(job_model.results.count(), 2)
         latest_job_result = job_model.latest_result
         self.assertEqual(job_result_2.completed, latest_job_result.completed)
@@ -399,7 +405,7 @@ class JobFileUploadTest(TransactionTestCase):
         """Test that file upload succeeds; job SUCCEEDS; and files are deleted."""
         module = "test_file_upload_pass"
         name = "TestFileUploadPass"
-        job_class, job_model = get_job_class_and_model(module, name)
+        job_class, _job_model = get_job_class_and_model(module, name)
 
         # Serialize the file to FileProxy
         data = {"file": self.test_file}
@@ -431,7 +437,7 @@ class JobFileUploadTest(TransactionTestCase):
         """Test that file upload succeeds; job FAILS; files deleted."""
         module = "test_file_upload_fail"
         name = "TestFileUploadFail"
-        job_class, job_model = get_job_class_and_model(module, name)
+        job_class, _job_model = get_job_class_and_model(module, name)
 
         # Serialize the file to FileProxy
         data = {"file": self.test_file}
@@ -445,7 +451,9 @@ class JobFileUploadTest(TransactionTestCase):
         self.assertEqual(FileProxy.objects.count(), 1)
 
         # Run the job
+        logging.disable(logging.ERROR)
         job_result = create_job_result_and_run_job(module, name, data=serialized_data, commit=False)
+        logging.disable(logging.NOTSET)
 
         # Assert that file contents were correctly read
         self.assertEqual(
@@ -485,7 +493,7 @@ class RunJobManagementCommandTest(CeleryTestCase):
         """Basic success-path test for Jobs that don't modify the Nautobot database."""
         module = "test_pass"
         name = "TestPass"
-        job_class, job_model = get_job_class_and_model(module, name)
+        _job_class, job_model = get_job_class_and_model(module, name)
 
         out, err = self.run_command(job_model.class_path)
         self.assertIn(f"Running {job_model.class_path}...", out)
@@ -502,7 +510,7 @@ class RunJobManagementCommandTest(CeleryTestCase):
 
         module = "test_modify_db"
         name = "TestModifyDB"
-        job_class, job_model = get_job_class_and_model(module, name)
+        _job_class, job_model = get_job_class_and_model(module, name)
 
         out, err = self.run_command(job_model.class_path)
         self.assertIn(f"Running {job_model.class_path}...", out)
@@ -522,7 +530,7 @@ class RunJobManagementCommandTest(CeleryTestCase):
         """A job that changes the DB, when run with commit=True but no username, is rejected."""
         module = "test_modify_db"
         name = "TestModifyDB"
-        job_class, job_model = get_job_class_and_model(module, name)
+        _job_class, job_model = get_job_class_and_model(module, name)
         with self.assertRaises(CommandError):
             self.run_command("--commit", job_model.class_path)
 
@@ -530,7 +538,7 @@ class RunJobManagementCommandTest(CeleryTestCase):
         """A job that changes the DB, when run with commit=True and a nonexistent username, is rejected."""
         module = "test_modify_db"
         name = "TestModifyDB"
-        job_class, job_model = get_job_class_and_model(module, name)
+        _job_class, job_model = get_job_class_and_model(module, name)
         with self.assertRaises(CommandError):
             self.run_command("--commit", "--username", "nosuchuser", job_model.class_path)
 
@@ -540,7 +548,7 @@ class RunJobManagementCommandTest(CeleryTestCase):
 
         module = "test_modify_db"
         name = "TestModifyDB"
-        job_class, job_model = get_job_class_and_model(module, name)
+        _job_class, job_model = get_job_class_and_model(module, name)
 
         out, err = self.run_command("--commit", "--username", "test_user", job_model.class_path)
         self.assertIn(f"Running {job_model.class_path}...", out)
@@ -617,14 +625,14 @@ class JobHookReceiverTest(TransactionTestCase):
     def test_form_field(self):
         module = "test_job_hook_receiver"
         name = "TestJobHookReceiverLog"
-        job_class, job_model = get_job_class_and_model(module, name)
+        job_class, _job_model = get_job_class_and_model(module, name)
         form = job_class().as_form()
         self.assertCountEqual(form.fields.keys(), ["object_change", "_commit"])
 
     def test_hidden(self):
         module = "test_job_hook_receiver"
         name = "TestJobHookReceiverLog"
-        job_class, job_model = get_job_class_and_model(module, name)
+        _job_class, job_model = get_job_class_and_model(module, name)
         self.assertFalse(job_model.hidden)
 
     def test_is_job_hook(self):
@@ -632,13 +640,13 @@ class JobHookReceiverTest(TransactionTestCase):
         with self.subTest(expected=False):
             module = "test_pass"
             name = "TestPass"
-            job_class, job_model = get_job_class_and_model(module, name)
+            _job_class, job_model = get_job_class_and_model(module, name)
             self.assertFalse(job_model.is_job_hook_receiver)
 
         with self.subTest(expected=True):
             module = "test_job_hook_receiver"
             name = "TestJobHookReceiverLog"
-            job_class, job_model = get_job_class_and_model(module, name)
+            _job_class, job_model = get_job_class_and_model(module, name)
             self.assertTrue(job_model.is_job_hook_receiver)
 
     def test_object_change_context(self):
@@ -653,7 +661,9 @@ class JobHookReceiverTest(TransactionTestCase):
     def test_missing_receive_job_hook_method(self):
         module = "test_job_hook_receiver"
         name = "TestJobHookReceiverFail"
+        logging.disable(logging.ERROR)
         job_result = create_job_result_and_run_job(module, name, data=self.data, commit=False)
+        logging.disable(logging.NOTSET)
         self.assertEqual(job_result.status, JobResultStatusChoices.STATUS_ERRORED)
 
 
@@ -693,12 +703,12 @@ class JobHookTest(CeleryTestCase):
             self.assertSequenceEqual(log_messages, expected_log_messages)
 
     @mock.patch.object(JobResult, "enqueue_job")
-    def test_enqueue_job_hook_skipped(self, mock):
+    def test_enqueue_job_hook_skipped(self, mock_enqueue_job):
         change_context = JobHookChangeContext(user=self.user)
         with change_logging(change_context):
             Site.objects.create(name="Test Job Hook Site 2")
 
-        self.assertFalse(mock.called)
+        self.assertFalse(mock_enqueue_job.called)
 
 
 class RemoveScheduledJobManagementCommandTestCase(TestCase):

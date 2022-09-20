@@ -16,6 +16,7 @@ from django_filters.utils import get_model_field, resolve_field
 from mptt.models import MPTTModel
 from tree_queries.models import TreeNode
 
+from nautobot.dcim.fields import MACAddressCharField
 from nautobot.dcim.forms import MACAddressField
 from nautobot.extras.models import Tag
 from nautobot.utilities.constants import (
@@ -51,12 +52,12 @@ def multivalue_field_factory(field_class):
 
             return [
                 # Only append non-empty values (this avoids e.g. trying to cast '' as an integer)
-                super(field_class, self).to_python(v)
+                super(field_class, self).to_python(v)  # pylint: disable=bad-super-call
                 for v in value
                 if v
             ]
 
-    return type("MultiValue{}".format(field_class.__name__), (NewField,), dict())
+    return type(f"MultiValue{field_class.__name__}", (NewField,), {})
 
 
 #
@@ -157,7 +158,7 @@ class NullableCharFieldFilter(django_filters.CharFilter):
     def filter(self, qs, value):
         if value != settings.FILTERS_NULL_CHOICE_VALUE:
             return super().filter(qs, value)
-        qs = self.get_method(qs)(**{"{}__isnull".format(self.field_name): True})
+        qs = self.get_method(qs)(**{f"{self.field_name}__isnull": True})
         return qs.distinct() if self.distinct else qs
 
 
@@ -540,7 +541,7 @@ class BaseFilterSet(django_filters.FilterSet):
             models.TimeField: {"filter_class": MultiValueTimeFilter},
             models.URLField: {"filter_class": MultiValueCharFilter},
             models.UUIDField: {"filter_class": MultiValueUUIDFilter},
-            MACAddressField: {"filter_class": MultiValueMACAddressFilter},
+            MACAddressCharField: {"filter_class": MultiValueMACAddressFilter},
             TaggableManager: {"filter_class": TagFilter},
         }
     )
@@ -618,7 +619,7 @@ class BaseFilterSet(django_filters.FilterSet):
 
         # Create new filters for each lookup expression in the map
         for lookup_name, lookup_expr in lookup_map.items():
-            new_filter_name = "{}__{}".format(filter_name, lookup_name)
+            new_filter_name = f"{filter_name}__{lookup_name}"
 
             try:
                 if filter_name in cls.declared_filters:
@@ -663,7 +664,7 @@ class BaseFilterSet(django_filters.FilterSet):
 
         if new_filter_name in cls.base_filters:
             raise AttributeError(
-                "There was a conflict with filter `%s`, the custom filter was ignored." % new_filter_name
+                f"There was a conflict with filter `{new_filter_name}`, the custom filter was ignored."
             )
 
         cls.base_filters[new_filter_name] = new_filter_field

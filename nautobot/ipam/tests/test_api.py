@@ -1,5 +1,6 @@
 from concurrent.futures.thread import ThreadPoolExecutor
 import json
+import logging
 from random import shuffle
 
 from django.db import connection
@@ -30,7 +31,7 @@ class AppTest(APITestCase):
     def test_root(self):
 
         url = reverse("ipam-api:api-root")
-        response = self.client.get("{}?format=api".format(url), **self.header)
+        response = self.client.get(f"{url}?format=api", **self.header)
 
         self.assertEqual(response.status_code, 200)
 
@@ -208,6 +209,7 @@ class RoleTest(APIViewTestCases.APIViewTestCase):
 class PrefixTest(APIViewTestCases.APIViewTestCase):
     model = Prefix
     brief_fields = ["display", "family", "id", "prefix", "url"]
+    fixtures = ("status",)
 
     create_data = [
         {
@@ -292,7 +294,7 @@ class PrefixTest(APIViewTestCases.APIViewTestCase):
             data = {
                 "prefix_length": 30,
                 "status": "active",
-                "description": "Test Prefix {}".format(i + 1),
+                "description": f"Test Prefix {i + 1}",
             }
             response = self.client.post(url, data, format="json", **self.header)
             self.assertHttpStatus(response, status.HTTP_201_CREATED)
@@ -375,7 +377,7 @@ class PrefixTest(APIViewTestCases.APIViewTestCase):
         # Create all four available IPs with individual requests
         for i in range(1, 5):
             data = {
-                "description": "Test IP {}".format(i),
+                "description": f"Test IP {i}",
                 "status": "active",
             }
             response = self.client.post(url, data, format="json", **self.header)
@@ -414,14 +416,17 @@ class ParallelPrefixTest(APITransactionTestCase):
     Adapted from https://github.com/netbox-community/netbox/pull/3726
     """
 
+    fixtures = ("status",)
+
     def test_create_multiple_available_prefixes_parallel(self):
         prefix = Prefix.objects.create(prefix=IPNetwork("192.0.2.0/28"), is_pool=True)
 
         # 5 Prefixes
         requests = [{"prefix_length": 30, "description": f"Test Prefix {i}", "status": "active"} for i in range(1, 6)]
         url = reverse("ipam-api:prefix-available-prefixes", kwargs={"pk": prefix.pk})
-
+        logging.disable(logging.ERROR)
         self._do_parallel_requests(url, requests)
+        logging.disable(logging.NOTSET)
 
         prefixes = [str(o) for o in Prefix.objects.filter(prefix_length=30).all()]
         self.assertEqual(len(prefixes), len(set(prefixes)), "Duplicate prefixes should not exist")
@@ -432,9 +437,9 @@ class ParallelPrefixTest(APITransactionTestCase):
         # 8 IPs
         requests = [{"description": f"Test IP {i}", "status": "active"} for i in range(1, 9)]
         url = reverse("ipam-api:prefix-available-ips", kwargs={"pk": prefix.pk})
-
+        logging.disable(logging.ERROR)
         self._do_parallel_requests(url, requests)
-
+        logging.disable(logging.NOTSET)
         ips = [str(o) for o in IPAddress.objects.filter().all()]
         self.assertEqual(len(ips), len(set(ips)), "Duplicate IPs should not exist")
 
@@ -477,6 +482,7 @@ class IPAddressTest(APIViewTestCases.APIViewTestCase):
         "description": "New description",
     }
     choices_fields = ["assigned_object_type", "role", "status"]
+    fixtures = ("status",)
 
     @classmethod
     def setUpTestData(cls):
@@ -590,6 +596,7 @@ class VLANTest(APIViewTestCases.APIViewTestCase):
         "description": "New description",
     }
     choices_fields = ["status"]
+    fixtures = ("status",)
 
     @classmethod
     def setUpTestData(cls):
@@ -689,19 +696,19 @@ class ServiceTest(APIViewTestCases.APIViewTestCase):
             name="Service 1",
             protocol=ServiceProtocolChoices.PROTOCOL_TCP,
             ports=[1],
-        ),
+        )
         Service.objects.create(
             device=devices[0],
             name="Service 2",
             protocol=ServiceProtocolChoices.PROTOCOL_TCP,
             ports=[2],
-        ),
+        )
         Service.objects.create(
             device=devices[0],
             name="Service 3",
             protocol=ServiceProtocolChoices.PROTOCOL_TCP,
             ports=[3],
-        ),
+        )
 
         cls.create_data = [
             {

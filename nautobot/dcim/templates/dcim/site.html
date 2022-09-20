@@ -212,3 +212,20 @@
             {% endif %}
         </div>
 {% endblock content_right_page%}
+
+{% block content_full_width_page %}
+    <div class="panel panel-default">
+        <div class="panel-heading">
+            <strong>Locations</strong>
+        </div>
+        {% include 'inc/table.html' with table=locations_table %}
+        {% if perms.dcim.add_location %}
+            <div class="panel-footer text-right noprint">
+                <a href="{% url 'dcim:location_add' %}?site={{ object.pk }}" class="btn btn-xs btn-primary">
+                    <span class="mdi mdi-plus-thick" aria-hidden="true"></span> Add location
+                </a>
+            </div>
+        {% endif %}
+    </div>
+    {% include 'inc/paginator.html' with paginator=locations_table.paginator page=locations_table.page %}
+{% endblock content_full_width_page %}

@@ -76,7 +76,6 @@ GIT_ROOT = os.getenv("NAUTOBOT_GIT_ROOT", os.path.join(NAUTOBOT_ROOT, "git").rst
 HTTP_PROXIES = None
 JOBS_ROOT = os.getenv("NAUTOBOT_JOBS_ROOT", os.path.join(NAUTOBOT_ROOT, "jobs").rstrip("/"))
 MAINTENANCE_MODE = False
-
 # Metrics
 METRICS_ENABLED = False
 
@@ -222,11 +221,26 @@ SPECTACULAR_SETTINGS = {
         "PowerPortTypeChoices": "nautobot.dcim.choices.PowerPortTypeChoices",
         "RackTypeChoices": "nautobot.dcim.choices.RackTypeChoices",
         "RelationshipTypeChoices": "nautobot.extras.choices.RelationshipTypeChoices",
-        # Because Interface and VMInterface, and Site and Location, have the same default statuses, we get the error:
+        # Each of these StatusModels has bulk and non-bulk serializers, with the same status options,
+        # which confounds drf-spectacular's automatic naming of enums, resulting in the below warning:
         #   enum naming encountered a non-optimally resolvable collision for fields named "status"
-        "LocationStatusChoices": "nautobot.dcim.api.serializers.LocationSerializer.status_choices",
+        # By explicitly naming the enums ourselves we avoid this warning.
+        "CableStatusChoices": "nautobot.dcim.api.serializers.CableSerializer.status_choices",
+        "CircuitStatusChoices": "nautobot.circuits.api.serializers.CircuitSerializer.status_choices",
+        "DeviceStatusChoices": "nautobot.dcim.api.serializers.DeviceWithConfigContextSerializer.status_choices",
         "InterfaceStatusChoices": "nautobot.dcim.api.serializers.InterfaceSerializer.status_choices",
+        "IPAddressStatusChoices": "nautobot.ipam.api.serializers.IPAddressSerializer.status_choices",
+        "LocationStatusChoices": "nautobot.dcim.api.serializers.LocationSerializer.status_choices",
+        "PowerFeedStatusChoices": "nautobot.dcim.api.serializers.PowerFeedSerializer.status_choices",
+        "PrefixStatusChoices": "nautobot.ipam.api.serializers.PrefixSerializer.status_choices",
+        "RackStatusChoices": "nautobot.dcim.api.serializers.RackSerializer.status_choices",
+        "VirtualMachineStatusChoices": "nautobot.virtualization.api.serializers.VirtualMachineWithConfigContextSerializer.status_choices",
+        "VLANStatusChoices": "nautobot.ipam.api.serializers.VLANSerializer.status_choices",
     },
+    # Create separate schema components for PATCH requests (fields generally are not `required` on PATCH)
+    "COMPONENT_SPLIT_PATCH": True,
+    # Create separate schema components for request vs response where appropriate
+    "COMPONENT_SPLIT_REQUEST": True,
 }
 
 
@@ -248,7 +262,7 @@ DATABASES = {
         "PASSWORD": os.getenv("NAUTOBOT_PASSWORD", ""),
         "HOST": os.getenv("NAUTOBOT_DB_HOST", "localhost"),
         "PORT": os.getenv("NAUTOBOT_DB_PORT", ""),
-        "CONN_MAX_AGE": int(os.getenv("NAUTOBOT_DB_TIMEOUT", 300)),
+        "CONN_MAX_AGE": int(os.getenv("NAUTOBOT_DB_TIMEOUT", "300")),
         "ENGINE": os.getenv("NAUTOBOT_DB_ENGINE", "django.db.backends.postgresql"),
     }
 }
@@ -270,6 +284,10 @@ SHORT_DATETIME_FORMAT = "Y-m-d H:i"
 TIME_FORMAT = "g:i a"
 TIME_ZONE = "UTC"
 
+# Disable importing the WSGI module before starting the server application. This is required for
+# uWSGI postfork callbacks to execute as is currently required in `nautobot.core.wsgi`.
+WEBSERVER_WARMUP = False
+
 # Installed apps and Django plugins. Nautobot plugins will be appended here later.
 INSTALLED_APPS = [
     "django.contrib.auth",
@@ -278,7 +296,7 @@ INSTALLED_APPS = [
     "django.contrib.messages",
     "django.contrib.staticfiles",
     "django.contrib.humanize",
-    "cacheops",
+    "cacheops",  # v2 TODO(jathan); Remove cacheops.
     "corsheaders",
     "django_filters",
     "django_jinja",
@@ -309,7 +327,7 @@ INSTALLED_APPS = [
     "health_check",
     "health_check.storage",
     "django_extensions",
-    "nautobot.core.apps.ConstanceDatabaseAppConfig",  # fix default_auto_field
+    "constance.backends.database",
     "django_ajax_tables",
 ]
 
@@ -559,6 +577,7 @@ GRAPHQL_COMPUTED_FIELD_PREFIX = "cpf"
 # Caching
 #
 
+# v2 TODO(jathan): Remove all cacheops settings.
 # The django-cacheops plugin is used to cache querysets. The built-in Django
 # caching is not used.
 CACHEOPS = {
@@ -578,7 +597,7 @@ CACHEOPS = {
     "virtualization.*": {"ops": "all"},
 }
 CACHEOPS_DEGRADE_ON_FAILURE = True
-CACHEOPS_ENABLED = True
+CACHEOPS_ENABLED = False
 CACHEOPS_REDIS = "redis://localhost:6379/1"
 CACHEOPS_DEFAULTS = {"timeout": 900}
 
@@ -633,8 +652,8 @@ CELERY_TASK_TRACK_STARTED = True
 # Global task time limits (seconds)
 # Exceeding the soft limit will result in a SoftTimeLimitExceeded exception,
 # while exceeding the hard limit will result in a SIGKILL.
-CELERY_TASK_SOFT_TIME_LIMIT = int(os.getenv("NAUTOBOT_CELERY_TASK_SOFT_TIME_LIMIT", 5 * 60))
-CELERY_TASK_TIME_LIMIT = int(os.getenv("NAUTOBOT_CELERY_TASK_TIME_LIMIT", 10 * 60))
+CELERY_TASK_SOFT_TIME_LIMIT = int(os.getenv("NAUTOBOT_CELERY_TASK_SOFT_TIME_LIMIT", str(5 * 60)))
+CELERY_TASK_TIME_LIMIT = int(os.getenv("NAUTOBOT_CELERY_TASK_TIME_LIMIT", str(10 * 60)))
 
 # These settings define the custom nautobot serialization encoding as an accepted data encoding format
 # and register that format for task input and result serialization
@@ -644,6 +663,10 @@ CELERY_TASK_SERIALIZER = "nautobot_json"
 CELERY_RESULT_SERIALIZER = "nautobot_json"
 
 CELERY_BEAT_SCHEDULER = "nautobot.core.celery.schedulers:NautobotDatabaseScheduler"
+
+# Sets an age out timer of redis lock. This is NOT implicitially applied to locks, must be added
+# to a lock creation as `timeout=settings.REDIS_LOCK_TIMEOUT`
+REDIS_LOCK_TIMEOUT = int(os.getenv("NAUTOBOT_REDIS_LOCK_TIMEOUT", "600"))
 
 #
 # Custom branding (logo and title)

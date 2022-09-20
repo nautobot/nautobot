@@ -39,7 +39,7 @@ class ExpandIPAddress(TestCase):
     """
 
     def test_ipv4_range(self):
-        input = "1.2.3.[9-10]/32"
+        input_ = "1.2.3.[9-10]/32"
         output = sorted(
             [
                 "1.2.3.9/32",
@@ -47,10 +47,10 @@ class ExpandIPAddress(TestCase):
             ]
         )
 
-        self.assertEqual(sorted(expand_ipaddress_pattern(input, 4)), output)
+        self.assertEqual(sorted(expand_ipaddress_pattern(input_, 4)), output)
 
     def test_ipv4_set(self):
-        input = "1.2.3.[4,44]/32"
+        input_ = "1.2.3.[4,44]/32"
         output = sorted(
             [
                 "1.2.3.4/32",
@@ -58,10 +58,10 @@ class ExpandIPAddress(TestCase):
             ]
         )
 
-        self.assertEqual(sorted(expand_ipaddress_pattern(input, 4)), output)
+        self.assertEqual(sorted(expand_ipaddress_pattern(input_, 4)), output)
 
     def test_ipv4_multiple_ranges(self):
-        input = "1.[9-10].3.[9-11]/32"
+        input_ = "1.[9-10].3.[9-11]/32"
         output = sorted(
             [
                 "1.9.3.9/32",
@@ -73,10 +73,10 @@ class ExpandIPAddress(TestCase):
             ]
         )
 
-        self.assertEqual(sorted(expand_ipaddress_pattern(input, 4)), output)
+        self.assertEqual(sorted(expand_ipaddress_pattern(input_, 4)), output)
 
     def test_ipv4_multiple_sets(self):
-        input = "1.[2,22].3.[4,44]/32"
+        input_ = "1.[2,22].3.[4,44]/32"
         output = sorted(
             [
                 "1.2.3.4/32",
@@ -86,10 +86,10 @@ class ExpandIPAddress(TestCase):
             ]
         )
 
-        self.assertEqual(sorted(expand_ipaddress_pattern(input, 4)), output)
+        self.assertEqual(sorted(expand_ipaddress_pattern(input_, 4)), output)
 
     def test_ipv4_set_and_range(self):
-        input = "1.[2,22].3.[9-11]/32"
+        input_ = "1.[2,22].3.[9-11]/32"
         output = sorted(
             [
                 "1.2.3.9/32",
@@ -101,10 +101,10 @@ class ExpandIPAddress(TestCase):
             ]
         )
 
-        self.assertEqual(sorted(expand_ipaddress_pattern(input, 4)), output)
+        self.assertEqual(sorted(expand_ipaddress_pattern(input_, 4)), output)
 
     def test_ipv6_range(self):
-        input = "fec::abcd:[9-b]/64"
+        input_ = "fec::abcd:[9-b]/64"
         output = sorted(
             [
                 "fec::abcd:9/64",
@@ -113,10 +113,10 @@ class ExpandIPAddress(TestCase):
             ]
         )
 
-        self.assertEqual(sorted(expand_ipaddress_pattern(input, 6)), output)
+        self.assertEqual(sorted(expand_ipaddress_pattern(input_, 6)), output)
 
     def test_ipv6_range_multichar_field(self):
-        input = "fec::abcd:[f-11]/64"
+        input_ = "fec::abcd:[f-11]/64"
         output = sorted(
             [
                 "fec::abcd:f/64",
@@ -125,10 +125,10 @@ class ExpandIPAddress(TestCase):
             ]
         )
 
-        self.assertEqual(sorted(expand_ipaddress_pattern(input, 6)), output)
+        self.assertEqual(sorted(expand_ipaddress_pattern(input_, 6)), output)
 
     def test_ipv6_set(self):
-        input = "fec::abcd:[9,ab]/64"
+        input_ = "fec::abcd:[9,ab]/64"
         output = sorted(
             [
                 "fec::abcd:9/64",
@@ -136,10 +136,10 @@ class ExpandIPAddress(TestCase):
             ]
         )
 
-        self.assertEqual(sorted(expand_ipaddress_pattern(input, 6)), output)
+        self.assertEqual(sorted(expand_ipaddress_pattern(input_, 6)), output)
 
     def test_ipv6_multiple_ranges(self):
-        input = "fec::[1-2]bcd:[9-b]/64"
+        input_ = "fec::[1-2]bcd:[9-b]/64"
         output = sorted(
             [
                 "fec::1bcd:9/64",
@@ -151,10 +151,10 @@ class ExpandIPAddress(TestCase):
             ]
         )
 
-        self.assertEqual(sorted(expand_ipaddress_pattern(input, 6)), output)
+        self.assertEqual(sorted(expand_ipaddress_pattern(input_, 6)), output)
 
     def test_ipv6_multiple_sets(self):
-        input = "fec::[a,f]bcd:[9,ab]/64"
+        input_ = "fec::[a,f]bcd:[9,ab]/64"
         output = sorted(
             [
                 "fec::abcd:9/64",
@@ -164,10 +164,10 @@ class ExpandIPAddress(TestCase):
             ]
         )
 
-        self.assertEqual(sorted(expand_ipaddress_pattern(input, 6)), output)
+        self.assertEqual(sorted(expand_ipaddress_pattern(input_, 6)), output)
 
     def test_ipv6_set_and_range(self):
-        input = "fec::[dead,beaf]:[9-b]/64"
+        input_ = "fec::[dead,beaf]:[9-b]/64"
         output = sorted(
             [
                 "fec::dead:9/64",
@@ -179,7 +179,7 @@ class ExpandIPAddress(TestCase):
             ]
         )
 
-        self.assertEqual(sorted(expand_ipaddress_pattern(input, 6)), output)
+        self.assertEqual(sorted(expand_ipaddress_pattern(input_, 6)), output)
 
     def test_invalid_address_family(self):
         with self.assertRaisesRegex(Exception, "Invalid IP address family: 5"):
@@ -222,7 +222,7 @@ class ExpandAlphanumeric(TestCase):
     """
 
     def test_range_numberic(self):
-        input = "r[9-11]a"
+        input_ = "r[9-11]a"
         output = sorted(
             [
                 "r9a",
@@ -231,10 +231,10 @@ class ExpandAlphanumeric(TestCase):
             ]
         )
 
-        self.assertEqual(sorted(expand_alphanumeric_pattern(input)), output)
+        self.assertEqual(sorted(expand_alphanumeric_pattern(input_)), output)
 
     def test_range_alpha(self):
-        input = "[r-t]1a"
+        input_ = "[r-t]1a"
         output = sorted(
             [
                 "r1a",
@@ -243,10 +243,10 @@ class ExpandAlphanumeric(TestCase):
             ]
         )
 
-        self.assertEqual(sorted(expand_alphanumeric_pattern(input)), output)
+        self.assertEqual(sorted(expand_alphanumeric_pattern(input_)), output)
 
     def test_set(self):
-        input = "[r,t]1a"
+        input_ = "[r,t]1a"
         output = sorted(
             [
                 "r1a",
@@ -254,10 +254,10 @@ class ExpandAlphanumeric(TestCase):
             ]
         )
 
-        self.assertEqual(sorted(expand_alphanumeric_pattern(input)), output)
+        self.assertEqual(sorted(expand_alphanumeric_pattern(input_)), output)
 
     def test_set_multichar(self):
-        input = "[ra,tb]1a"
+        input_ = "[ra,tb]1a"
         output = sorted(
             [
                 "ra1a",
@@ -265,10 +265,10 @@ class ExpandAlphanumeric(TestCase):
             ]
         )
 
-        self.assertEqual(sorted(expand_alphanumeric_pattern(input)), output)
+        self.assertEqual(sorted(expand_alphanumeric_pattern(input_)), output)
 
     def test_multiple_ranges(self):
-        input = "[r-t]1[a-b]"
+        input_ = "[r-t]1[a-b]"
         output = sorted(
             [
                 "r1a",
@@ -280,10 +280,10 @@ class ExpandAlphanumeric(TestCase):
             ]
         )
 
-        self.assertEqual(sorted(expand_alphanumeric_pattern(input)), output)
+        self.assertEqual(sorted(expand_alphanumeric_pattern(input_)), output)
 
     def test_multiple_sets(self):
-        input = "[ra,tb]1[ax,by]"
+        input_ = "[ra,tb]1[ax,by]"
         output = sorted(
             [
                 "ra1ax",
@@ -293,10 +293,10 @@ class ExpandAlphanumeric(TestCase):
             ]
         )
 
-        self.assertEqual(sorted(expand_alphanumeric_pattern(input)), output)
+        self.assertEqual(sorted(expand_alphanumeric_pattern(input_)), output)
 
     def test_set_and_range(self):
-        input = "[ra,tb]1[a-c]"
+        input_ = "[ra,tb]1[a-c]"
         output = sorted(
             [
                 "ra1a",
@@ -308,7 +308,7 @@ class ExpandAlphanumeric(TestCase):
             ]
         )
 
-        self.assertEqual(sorted(expand_alphanumeric_pattern(input)), output)
+        self.assertEqual(sorted(expand_alphanumeric_pattern(input_)), output)
 
     def test_invalid_non_pattern(self):
         with self.assertRaises(ValueError):
@@ -380,7 +380,7 @@ class CSVDataFieldTest(TestCase):
         self.field = CSVDataField(from_form=IPAddressCSVForm)
 
     def test_clean(self):
-        input = """
+        input_ = """
         address,status,vrf
         192.0.2.1/32,Active,Test VRF
         """
@@ -388,26 +388,26 @@ class CSVDataFieldTest(TestCase):
             {"address": None, "status": None, "vrf": None},
             [{"address": "192.0.2.1/32", "status": "Active", "vrf": "Test VRF"}],
         )
-        self.assertEqual(self.field.clean(input), output)
+        self.assertEqual(self.field.clean(input_), output)
 
     def test_clean_invalid_header(self):
-        input = """
+        input_ = """
         address,status,vrf,xxx
         192.0.2.1/32,Active,Test VRF,123
         """
         with self.assertRaises(forms.ValidationError):
-            self.field.clean(input)
+            self.field.clean(input_)
 
     def test_clean_missing_required_header(self):
-        input = """
+        input_ = """
         status,vrf
         Active,Test VRF
         """
         with self.assertRaises(forms.ValidationError):
-            self.field.clean(input)
+            self.field.clean(input_)
 
     def test_clean_default_to_field(self):
-        input = """
+        input_ = """
         address,status,vrf.name
         192.0.2.1/32,Active,Test VRF
         """
@@ -415,10 +415,10 @@ class CSVDataFieldTest(TestCase):
             {"address": None, "status": None, "vrf": "name"},
             [{"address": "192.0.2.1/32", "status": "Active", "vrf": "Test VRF"}],
         )
-        self.assertEqual(self.field.clean(input), output)
+        self.assertEqual(self.field.clean(input_), output)
 
     def test_clean_pk_to_field(self):
-        input = """
+        input_ = """
         address,status,vrf.pk
         192.0.2.1/32,Active,123
         """
@@ -426,10 +426,10 @@ class CSVDataFieldTest(TestCase):
             {"address": None, "status": None, "vrf": "pk"},
             [{"address": "192.0.2.1/32", "status": "Active", "vrf": "123"}],
         )
-        self.assertEqual(self.field.clean(input), output)
+        self.assertEqual(self.field.clean(input_), output)
 
     def test_clean_custom_to_field(self):
-        input = """
+        input_ = """
         address,status,vrf.rd
         192.0.2.1/32,Active,123:456
         """
@@ -437,23 +437,23 @@ class CSVDataFieldTest(TestCase):
             {"address": None, "status": None, "vrf": "rd"},
             [{"address": "192.0.2.1/32", "status": "Active", "vrf": "123:456"}],
         )
-        self.assertEqual(self.field.clean(input), output)
+        self.assertEqual(self.field.clean(input_), output)
 
     def test_clean_invalid_to_field(self):
-        input = """
+        input_ = """
         address,status,vrf.xxx
         192.0.2.1/32,Active,123:456
         """
         with self.assertRaises(forms.ValidationError):
-            self.field.clean(input)
+            self.field.clean(input_)
 
     def test_clean_to_field_on_non_object(self):
-        input = """
+        input_ = """
         address,status.foo,vrf
         192.0.2.1/32,Bar,Test VRF
         """
         with self.assertRaises(forms.ValidationError):
-            self.field.clean(input)
+            self.field.clean(input_)
 
 
 class DynamicModelMultipleChoiceFieldTest(TestCase):
@@ -631,8 +631,8 @@ class MultiMatchModelMultipleChoiceFieldTest(TestCase):
             VLANGroup.objects.create(name="VLAN Group 2", slug="vlan-group-2"),
             VLANGroup.objects.create(name="VLAN Group 3", slug="vlan-group-3"),
         )
-        input = [vlan_groups[0].pk, vlan_groups[1].slug]
-        qs = field.clean(input)
+        input_ = [vlan_groups[0].pk, vlan_groups[1].slug]
+        qs = field.clean(input_)
         expected_output = [vlan_groups[0].pk, vlan_groups[1].pk]
         self.assertQuerysetEqual(qs, values=expected_output, transform=lambda x: x.pk)
 
@@ -820,12 +820,11 @@ class DynamicFilterFormTest(TestCase):
             self.assertEqual(
                 form.fields["lookup_value"].widget.attrs,
                 {
-                    "multiple": "true",
-                    "data-query-param-content_types": '["dcim.site"]',
-                    "value-field": "slug",
-                    "data-url": "/api/extras/statuses/",
-                    "class": "nautobot-select2-api lookup_value-input form-control",
+                    "class": "lookup_value-input form-control nautobot-select2-api lookup_value-input form-control",
                     "data-multiple": 1,
+                    "data-query-param-content_types": '["dcim.site"]',
+                    "display-field": "display",
+                    "value-field": "slug",
                 },
             )
 
@@ -846,7 +845,7 @@ class DynamicFilterFormTest(TestCase):
             self.assertTrue(isinstance(form.fields["lookup_value"], forms.ChoiceField))
             self.assertEqual(
                 form.fields["lookup_value"].widget.attrs,
-                {"class": "nautobot-select2-static lookup_value-input form-control"},
+                {"class": "lookup_value-input form-control nautobot-select2-static lookup_value-input form-control"},
             )
             self.assertTrue(isinstance(form.fields["lookup_value"].widget, StaticSelect2))
             self.assertEqual(

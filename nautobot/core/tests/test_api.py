@@ -14,13 +14,13 @@ from nautobot.utilities.testing import APITestCase
 class AppTest(APITestCase):
     def test_root(self):
         url = reverse("api-root")
-        response = self.client.get("{}?format=api".format(url), **self.header)
+        response = self.client.get(f"{url}?format=api", **self.header)
 
         self.assertEqual(response.status_code, 200)
 
     def test_status(self):
         url = reverse("api-status")
-        response = self.client.get("{}?format=api".format(url), **self.header)
+        response = self.client.get(f"{url}?format=api", **self.header)
 
         self.assertEqual(response.status_code, 200)
 
@@ -224,7 +224,7 @@ class LookupTypeChoicesTestCase(APITestCase):
         response = self.client.get(url, **self.header)
 
         self.assertEqual(response.status_code, 400)
-        self.assertEqual(response.data, "contentype and field_name are required parameters")
+        self.assertEqual(response.data, "contenttype and field_name are required parameters")
 
     def test_get_lookup_choices(self):
         url = reverse("lookup_choices")
@@ -242,30 +242,22 @@ class LookupTypeChoicesTestCase(APITestCase):
         )
 
 
-class GenerateLookupFieldDataViewTestCase(APITestCase):
+class GenerateLookupValueDomElementViewTestCase(APITestCase):
     def test_get_lookup_field_data_without_query_params(self):
-        url = reverse("lookup_field_type")
+        url = reverse("lookup_value_dom_element")
         response = self.client.get(url, **self.header)
 
         self.assertEqual(response.status_code, 400)
-        self.assertEqual(response.data, "contentype and field_name are required parameters")
+        self.assertEqual(response.data, "contenttype and field_name are required parameters")
 
-    def test_get_lookup_field_data(self):
-        url = reverse("lookup_field_type")
-        response = self.client.get(url + "?contenttype=dcim.site&field_name=status__n", **self.header)
+    def test_get_lookup_value_dom_element(self):
+        url = reverse("lookup_value_dom_element")
+        response = self.client.get(url + "?contenttype=dcim.site&field_name=name", **self.header)
 
         self.assertEqual(response.status_code, 200)
         self.assertEqual(
             response.data,
             {
-                "type": "select-field",
-                "widget": "api-select-multiple",
-                "choices": [],
-                "allow_multiple": True,
-                "api_url": "/api/extras/statuses/",
-                "content_type": '["dcim.site"]',
-                "value_field": "slug",
-                "css_classes": "lookup_value-input form-control nautobot-select2-api select2-hidden-accessible",
-                "placeholder": None,
+                "dom_element": '<input type="text" name="name" class="lookup_value-input form-control " required id="id_name">'
             },
         )

@@ -49,7 +49,7 @@ class ExternalAuthenticationTestCase(TestCase):
         self.assertEqual(settings.REMOTE_AUTH_HEADER, "HTTP_REMOTE_USER")
 
         # Client should not be authenticated
-        response = self.client.get(reverse("home"), follow=True, **headers)  # noqa
+        self.client.get(reverse("home"), follow=True, **headers)  # noqa
         self.assertNotIn("_auth_user_id", self.client.session)
 
     @override_settings(AUTHENTICATION_BACKENDS=TEST_AUTHENTICATION_BACKENDS)
@@ -235,6 +235,7 @@ class ExternalAuthenticationTestCase(TestCase):
 
 class ObjectPermissionAPIViewTestCase(TestCase):
     client_class = APIClient
+    fixtures = ("status",)
 
     @classmethod
     def setUpTestData(cls):
@@ -265,7 +266,7 @@ class ObjectPermissionAPIViewTestCase(TestCase):
         """
         self.user = User.objects.create(username="testuser")
         self.token = Token.objects.create(user=self.user)
-        self.header = {"HTTP_AUTHORIZATION": "Token {}".format(self.token.key)}
+        self.header = {"HTTP_AUTHORIZATION": f"Token {self.token.key}"}
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
     def test_get_object(self):

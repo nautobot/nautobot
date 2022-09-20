@@ -46,7 +46,7 @@ class RedisHealthCheck(BaseHealthCheckBackend):
             with sentinel.master_for(service_name=service_name, db=db) as master:
                 master.ping()
         except (ConnectionRefusedError, exceptions.ConnectionError, exceptions.TimeoutError) as e:
-            self.add_error(ServiceUnavailable("Unable to connect to Redis Sentinel: %s" % type(e).__name__), e)
+            self.add_error(ServiceUnavailable(f"Unable to connect to Redis Sentinel: {type(e).__name__}"), e)
         except Exception as e:
             self.add_error(ServiceUnavailable("Unknown error"), e)
 
@@ -59,7 +59,7 @@ class RedisHealthCheck(BaseHealthCheckBackend):
                 with Redis(**kwargs) as conn:
                     conn.ping()  # exceptions may be raised upon ping
         except (ConnectionRefusedError, exceptions.ConnectionError, exceptions.TimeoutError) as e:
-            self.add_error(ServiceUnavailable("Unable to connect to Redis: %s" % type(e).__name__), e)
+            self.add_error(ServiceUnavailable(f"Unable to connect to Redis: {type(e).__name__}"), e)
         except Exception as e:
             self.add_error(ServiceUnavailable("Unknown error"), e)
 

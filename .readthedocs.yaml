@@ -1,3 +1,4 @@
+---
 # .readthedocs.yaml
 # Read the Docs configuration file
 # See https://docs.readthedocs.io/en/stable/config-file/v2.html for details
@@ -7,15 +8,16 @@ version: 2
 
 # Set the version of Python in the build environment.
 build:
-  os: ubuntu-20.04
+  os: "ubuntu-20.04"
   tools:
     python: "3.9"
 
 # MKDocs configuration file
 mkdocs:
-  configuration: mkdocs.yml
+  configuration: "mkdocs.yml"
+  # fail_on_warning: true
 
 # Use our docs/requirements.txt during installation.
 python:
   install:
-    - requirements: docs/requirements.txt
+    - requirements: "docs/requirements.txt"

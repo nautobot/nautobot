@@ -6,6 +6,8 @@ from nautobot.ipam.models import IPAddress, Prefix, VRF
 
 
 class OrderingTestBase(TestCase):
+    fixtures = ("status",)
+
     vrfs = None
 
     def setUp(self):
@@ -37,12 +39,14 @@ class OrderingTestBase(TestCase):
 
 
 class PrefixOrderingTestCase(OrderingTestBase):
+    fixtures = ("status",)
+
     def test_prefix_vrf_ordering(self):
         """
         This is a very basic test, which tests both prefixes without VRFs and prefixes with VRFs
         """
         # Setup VRFs
-        vrfa, vrfb, vrfc = self.vrfs
+        vrfa, vrfb = self.vrfs[:2]
 
         # Setup Prefixes
         prefixes = (
@@ -253,7 +257,7 @@ class PrefixOrderingTestCase(OrderingTestBase):
             None: 192.168.0.0/16
         """
         # Setup VRFs
-        vrfa, vrfb, vrfc = self.vrfs
+        vrfa = self.vrfs[0]
 
         # Setup Prefixes
         prefixes = [
@@ -309,12 +313,14 @@ class PrefixOrderingTestCase(OrderingTestBase):
 
 
 class IPAddressOrderingTestCase(OrderingTestBase):
+    fixtures = ("status",)
+
     def test_address_vrf_ordering(self):
         """
         This function tests ordering with the inclusion of vrfs
         """
         # Setup VRFs
-        vrfa, vrfb, vrfc = self.vrfs
+        vrfa, vrfb = self.vrfs[:2]
 
         status_active = Status.objects.get_for_model(IPAddress).get(slug="active")
 

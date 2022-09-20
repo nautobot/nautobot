@@ -7,8 +7,6 @@ class AbortTransaction(Exception):
     An exception used to trigger a database transaction rollback.
     """
 
-    pass
-
 
 # TODO remove this in 2.0
 class RQWorkerNotRunningException(APIException):
@@ -28,5 +26,8 @@ class CeleryWorkerNotRunningException(APIException):
     """
 
     status_code = status.HTTP_503_SERVICE_UNAVAILABLE
-    default_detail = "Unable to process request: Celery worker process not running."
     default_code = "celery_worker_not_running"
+
+    def __init__(self, queue="celery"):
+        detail = f"Unable to process request: No celery workers running on queue {queue}."
+        super().__init__(detail=detail)

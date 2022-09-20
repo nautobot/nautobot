@@ -1,3 +1,4 @@
+from django.conf import settings
 from django.core.cache import cache
 from django.shortcuts import get_object_or_404
 from drf_spectacular.utils import extend_schema, extend_schema_view
@@ -45,6 +46,7 @@ class IPAMRootView(APIRootView):
 
 
 class VRFViewSet(NautobotModelViewSet):
+    # v2 TODO(jathan): Replace prefetch_related with select_related (except tags: m2m)
     queryset = (
         VRF.objects.prefetch_related("tenant")
         .prefetch_related("import_targets", "export_targets", "tags")
@@ -63,6 +65,7 @@ class VRFViewSet(NautobotModelViewSet):
 
 
 class RouteTargetViewSet(NautobotModelViewSet):
+    # v2 TODO(jathan): Replace prefetch_related with select_related (except tags: m2m)
     queryset = RouteTarget.objects.prefetch_related("tenant").prefetch_related("tags")
     serializer_class = serializers.RouteTargetSerializer
     filterset_class = filters.RouteTargetFilterSet
@@ -85,6 +88,7 @@ class RIRViewSet(NautobotModelViewSet):
 
 
 class AggregateViewSet(NautobotModelViewSet):
+    # v2 TODO(jathan): Replace prefetch_related with select_related (except tags: m2m)
     queryset = Aggregate.objects.prefetch_related("rir").prefetch_related("tags")
     serializer_class = serializers.AggregateSerializer
     filterset_class = filters.AggregateFilterSet
@@ -110,6 +114,7 @@ class RoleViewSet(NautobotModelViewSet):
 
 
 class PrefixViewSet(StatusViewSetMixin, NautobotModelViewSet):
+    # v2 TODO(jathan): Replace prefetch_related with select_related (except tgs: m2m)
     queryset = Prefix.objects.prefetch_related(
         "role",
         "site",
@@ -140,7 +145,7 @@ class PrefixViewSet(StatusViewSetMixin, NautobotModelViewSet):
         prefix = get_object_or_404(self.queryset, pk=pk)
         if request.method == "POST":
 
-            with cache.lock("available-prefixes", blocking_timeout=5):
+            with cache.lock("available-prefixes", blocking_timeout=5, timeout=settings.REDIS_LOCK_TIMEOUT):
                 available_prefixes = prefix.get_available_prefixes()
 
                 # Validate Requested Prefixes' length
@@ -156,14 +161,12 @@ class PrefixViewSet(StatusViewSetMixin, NautobotModelViewSet):
 
                 requested_prefixes = serializer.validated_data
                 # Allocate prefixes to the requested objects based on availability within the parent
-                for i, requested_prefix in enumerate(requested_prefixes):
+                for requested_prefix in requested_prefixes:
 
                     # Find the first available prefix equal to or larger than the requested size
                     for available_prefix in available_prefixes.iter_cidrs():
                         if requested_prefix["prefix_length"] >= available_prefix.prefixlen:
-                            allocated_prefix = "{}/{}".format(
-                                available_prefix.network, requested_prefix["prefix_length"]
-                            )
+                            allocated_prefix = f"{available_prefix.network}/{requested_prefix['prefix_length']}"
                             requested_prefix["prefix"] = allocated_prefix
                             requested_prefix["vrf"] = prefix.vrf.pk if prefix.vrf else None
                             break
@@ -228,7 +231,7 @@ class PrefixViewSet(StatusViewSetMixin, NautobotModelViewSet):
         # Create the next available IP within the prefix
         if request.method == "POST":
 
-            with cache.lock("available-ips", blocking_timeout=5):
+            with cache.lock("available-ips", blocking_timeout=5, timeout=settings.REDIS_LOCK_TIMEOUT):
 
                 # Normalize to a list of objects
                 requested_ips = request.data if isinstance(request.data, list) else [request.data]
@@ -238,8 +241,10 @@ class PrefixViewSet(StatusViewSetMixin, NautobotModelViewSet):
                 if available_ips.size < len(requested_ips):
                     return Response(
                         {
-                            "detail": "An insufficient number of IP addresses are available within the prefix {} ({} "
-                            "requested, {} available)".format(prefix, len(requested_ips), len(available_ips))
+                            "detail": (
+                                f"An insufficient number of IP addresses are available within the prefix {prefix} "
+                                f"({len(requested_ips)} requested, {len(available_ips)} available)"
+                            )
                         },
                         status=status.HTTP_204_NO_CONTENT,
                     )
@@ -248,7 +253,7 @@ class PrefixViewSet(StatusViewSetMixin, NautobotModelViewSet):
                 available_ips = iter(available_ips)
                 prefix_length = prefix.prefix.prefixlen
                 for requested_ip in requested_ips:
-                    requested_ip["address"] = "{}/{}".format(next(available_ips), prefix_length)
+                    requested_ip["address"] = f"{next(available_ips)}/{prefix_length}"
                     requested_ip["vrf"] = prefix.vrf.pk if prefix.vrf else None
 
                 # Initialize the serializer with a list or a single object depending on what was requested
@@ -308,6 +313,7 @@ class PrefixViewSet(StatusViewSetMixin, NautobotModelViewSet):
     update=extend_schema(responses={"200": serializers.IPAddressSerializerLegacy}, versions=["1.2"]),
 )
 class IPAddressViewSet(StatusViewSetMixin, NautobotModelViewSet):
+    # v2 TODO(jathan): Replace prefetch_related with select_related (except tags: m2m)
     queryset = IPAddress.objects.prefetch_related(
         "assigned_object",
         "nat_inside",
@@ -337,13 +343,13 @@ class IPAddressViewSet(StatusViewSetMixin, NautobotModelViewSet):
         default_detail = "This object does not conform to pre-1.3 behavior. Please correct data or use API version 1.3"
         default_code = "precondition_failed"
 
-    def retrieve(self, request, pk=None):
+    def retrieve(self, request, pk=None, *args, **kwargs):
         try:
             return super().retrieve(request, pk)
         except IPAddress.NATOutsideMultipleObjectsReturned:
             raise self.NATOutsideIncompatibleLegacyBehavior
 
-    def list(self, request):
+    def list(self, request, *args, **kwargs):
         try:
             return super().list(request)
         except IPAddress.NATOutsideMultipleObjectsReturned as e:
@@ -358,6 +364,7 @@ class IPAddressViewSet(StatusViewSetMixin, NautobotModelViewSet):
 
 
 class VLANGroupViewSet(NautobotModelViewSet):
+    # v2 TODO(jathan): Replace prefetch_related with select_related
     queryset = VLANGroup.objects.prefetch_related("site").annotate(vlan_count=count_related(VLAN, "group"))
     serializer_class = serializers.VLANGroupSerializer
     filterset_class = filters.VLANGroupFilterSet
@@ -369,6 +376,7 @@ class VLANGroupViewSet(NautobotModelViewSet):
 
 
 class VLANViewSet(StatusViewSetMixin, NautobotModelViewSet):
+    # v2 TODO(jathan): Replace prefetch_related with select_related (except tags: m2m)
     queryset = VLAN.objects.prefetch_related(
         "group",
         "site",
@@ -387,6 +395,7 @@ class VLANViewSet(StatusViewSetMixin, NautobotModelViewSet):
 
 
 class ServiceViewSet(NautobotModelViewSet):
+    # v2 TODO(jathan): Replace prefetch_related with select_related (except tags: m2m)
     queryset = Service.objects.prefetch_related("device", "virtual_machine", "tags", "ipaddresses")
     serializer_class = serializers.ServiceSerializer
     filterset_class = filters.ServiceFilterSet

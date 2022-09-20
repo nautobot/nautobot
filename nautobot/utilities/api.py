@@ -25,9 +25,7 @@ def get_serializer_for_model(model, prefix=""):
     try:
         return dynamic_import(serializer_name)
     except AttributeError:
-        raise SerializerNotFound(
-            "Could not determine serializer for {}.{} with prefix '{}'".format(app_name, model_name, prefix)
-        )
+        raise SerializerNotFound(f"Could not determine serializer for {app_name}.{model_name} with prefix '{prefix}'")
 
 
 def is_api_request(request):
@@ -64,7 +62,7 @@ def rest_api_server_error(request, *args, **kwargs):
     """
     Handle exceptions and return a useful error message for REST API requests.
     """
-    type_, error, traceback = sys.exc_info()
+    type_, error, _traceback = sys.exc_info()
     data = {
         "error": str(error),
         "exception": type_.__name__,

@@ -466,7 +466,6 @@ class LocationForm(NautobotModelForm, TenancyForm):
     parent = DynamicModelChoiceField(
         queryset=Location.objects.all(),
         query_params={"child_location_type": "$location_type"},
-        to_field_name="slug",
         required=False,
     )
     site = DynamicModelChoiceField(queryset=Site.objects.all(), required=False)
@@ -949,6 +948,7 @@ class RackReservationFilterForm(NautobotFilterForm, TenancyFilterForm):
         query_params={"region": "$region"},
     )
     group_id = DynamicModelMultipleChoiceField(
+        # v2 TODO(jathan): Replace prefetch_related with select_related
         queryset=RackGroup.objects.prefetch_related("site"),
         required=False,
         label="Rack group",
@@ -1454,8 +1454,8 @@ class FrontPortTemplateCreateForm(ComponentTemplateCreateForm):
                 if (rear_port.pk, i) not in occupied_port_positions:
                     choices.append(
                         (
-                            "{}:{}".format(rear_port.pk, i),
-                            "{}:{}".format(rear_port.name, i),
+                            f"{rear_port.pk}:{i}",
+                            f"{rear_port.name}:{i}",
                         )
                     )
         self.fields["rear_port_set"].choices = choices
@@ -1469,8 +1469,10 @@ class FrontPortTemplateCreateForm(ComponentTemplateCreateForm):
         if front_port_count != rear_port_count:
             raise forms.ValidationError(
                 {
-                    "rear_port_set": "The provided name pattern will create {} ports, however {} rear port assignments "
-                    "were selected. These counts must match.".format(front_port_count, rear_port_count)
+                    "rear_port_set": (
+                        f"The provided name pattern will create {front_port_count} ports, "
+                        f"however {rear_port_count} rear port assignments were selected. These counts must match."
+                    )
                 }
             )
 
@@ -1892,6 +1894,7 @@ class DeviceForm(LocatableModelFormMixin, NautobotModelForm, TenancyForm, LocalC
                 interface_ids = self.instance.vc_interfaces.values_list("pk", flat=True)
 
                 # Collect interface IPs
+                # v2 TODO(jathan): Replace prefetch_related with select_related
                 interface_ips = (
                     IPAddress.objects.ip_family(family)
                     .filter(
@@ -1904,6 +1907,7 @@ class DeviceForm(LocatableModelFormMixin, NautobotModelForm, TenancyForm, LocalC
                     ip_list = [(ip.id, f"{ip.address} ({ip.assigned_object})") for ip in interface_ips]
                     ip_choices.append(("Interface IPs", ip_list))
                 # Collect NAT IPs
+                # v2 TODO(jathan): Replace prefetch_related with select_related
                 nat_ips = (
                     IPAddress.objects.prefetch_related("nat_inside")
                     .ip_family(family)
@@ -1916,7 +1920,7 @@ class DeviceForm(LocatableModelFormMixin, NautobotModelForm, TenancyForm, LocalC
                 if nat_ips:
                     ip_list = [(ip.id, f"{ip.address} (NAT)") for ip in nat_ips]
                     ip_choices.append(("NAT IPs", ip_list))
-                self.fields["primary_ip{}".format(family)].choices = ip_choices
+                self.fields[f"primary_ip{family}"].choices = ip_choices
 
             # If editing an existing device, exclude it from the list of occupied rack units. This ensures that a device
             # can be flipped from one face to another.
@@ -2944,6 +2948,7 @@ class InterfaceBulkEditForm(
             # See netbox-community/netbox#4523
             if "pk" in self.initial:
                 site = None
+                # v2 TODO(jathan): Replace prefetch_related with select_related
                 interfaces = Interface.objects.filter(pk__in=self.initial["pk"]).prefetch_related("device__site")
 
                 # Check interface sites.  First interface should set site, further interfaces will either continue the
@@ -3117,8 +3122,8 @@ class FrontPortCreateForm(ComponentCreateForm):
                 if (rear_port.pk, i) not in occupied_port_positions:
                     choices.append(
                         (
-                            "{}:{}".format(rear_port.pk, i),
-                            "{}:{}".format(rear_port.name, i),
+                            f"{rear_port.pk}:{i}",
+                            f"{rear_port.name}:{i}",
                         )
                     )
         self.fields["rear_port_set"].choices = choices
@@ -3132,8 +3137,10 @@ class FrontPortCreateForm(ComponentCreateForm):
         if front_port_count != rear_port_count:
             raise forms.ValidationError(
                 {
-                    "rear_port_set": "The provided name pattern will create {} ports, however {} rear port assignments "
-                    "were selected. These counts must match.".format(front_port_count, rear_port_count)
+                    "rear_port_set": (
+                        f"The provided name pattern will create {front_port_count} ports, "
+                        f"however {rear_port_count} rear port assignments were selected. These counts must match."
+                    )
                 }
             )
 
@@ -3847,7 +3854,7 @@ class CableCSVForm(StatusModelCSVFormMixin, CustomFieldModelCSVForm):
             for error_field in termination_keys:
                 side_value = error_field.split("_")[1]
                 error_msg = error_dict.pop(error_field)
-                error_dict["side_%s_name" % side_value] = error_msg
+                error_dict[f"side_{side_value}_name"] = error_msg
 
             final_error = ValidationError(error_dict)
         super().add_error(field, final_error)
@@ -4077,7 +4084,7 @@ class BaseVCMemberFormSet(forms.BaseModelFormSet):
             vc_position = form.cleaned_data.get("vc_position")
             if vc_position:
                 if vc_position in vc_position_list:
-                    error_msg = "A virtual chassis member already exists in position {}.".format(vc_position)
+                    error_msg = f"A virtual chassis member already exists in position {vc_position}."
                     form.add_error("vc_position", error_msg)
                 vc_position_list.append(vc_position)
 
@@ -4112,9 +4119,7 @@ class DeviceVCMembershipForm(forms.ModelForm):
                 virtual_chassis=self.instance.virtual_chassis, vc_position=vc_position
             )
             if conflicting_members.exists():
-                raise forms.ValidationError(
-                    "A virtual chassis member already exists in position {}.".format(vc_position)
-                )
+                raise forms.ValidationError(f"A virtual chassis member already exists in position {vc_position}.")
 
         return vc_position
 

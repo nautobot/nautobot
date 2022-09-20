@@ -59,7 +59,7 @@ The `NAUTOBOT_ROOT` configuration setting specifies where these files will be st
 $ export NAUTOBOT_ROOT=/opt/nautobot
 ```
 
-This setting is also used in the [Nautobot deployment guide](../installation/nautobot/) to make the `nautobot-server` command easier to find and use.
+This setting is also used in the [Nautobot deployment guide](../installation/nautobot.md) to make the `nautobot-server` command easier to find and use.
 
 !!! note
     The `--config` argument and the `NAUTOBOT_CONFIG` environment variable will always take precedence over `NAUTOBOT_ROOT` for the purpose of telling Nautobot where your `nautobot_config.py` can be found.
@@ -69,7 +69,7 @@ This setting is also used in the [Nautobot deployment guide](../installation/nau
 
 ## File Storage
 
-Nautobot is capable of storing various types of files. This includes [Jobs](../additional-features/jobs), [Git repositories](../models/extras/gitrepository), [image attachments](../models/extras/imageattachment), and [static files](../configuration/optional-settings/#static_root) (CSS, JavaScript, etc.).
+Nautobot is capable of storing various types of files. This includes [Jobs](../additional-features/jobs.md), [Git repositories](../models/extras/gitrepository.md), [image attachments](../models/extras/imageattachment.md), and [static files](optional-settings.md#static_root) (CSS, JavaScript, etc.).
 
 Each of the features requiring use of file storage default to being stored in `NAUTOBOT_ROOT`. If desired, you may customize each one individually. Please see each feature's respective documentation linked above for how to do that.
 
@@ -126,7 +126,7 @@ $ echo $NAUTOBOT_CONFIG
 ### Adding your own dependencies
 
 !!! warning
-    Be cautious not to confuse extra applications with Nautobot plugins which are installed using the [`PLUGINS`](optional-settings#plugins) setting. They are similar, but distinctly different!
+    Be cautious not to confuse extra applications with Nautobot plugins which are installed using the [`PLUGINS`](optional-settings.md#plugins) setting. They are similar, but distinctly different!
 
 Nautobot, being a Django application, allows for installation of additional dependencies utilizing the [`INSTALLED_APPS`](https://docs.djangoproject.com/en/stable/ref/settings/#std:setting-INSTALLED_APPS) settings. Due to the highly specialized nature of Nautobot, *you cannot safely do this*.
 
@@ -162,6 +162,6 @@ EXTRA_INSTALLED_APPS = [
 ]
 ```
 
-For more information on installing extra applications, please see the documentation on [Extra Applications](optional-settings#extra-applications).
+For more information on installing extra applications, please see the documentation on [Extra Applications](optional-settings.md#extra-applications).
 
-For more information on installing or developing Nautobot plugins, please see the [documentation on Plugins](../plugins).
+For more information on installing or developing Nautobot plugins, please see the [documentation on Plugins](../plugins/index.md).

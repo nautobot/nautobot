@@ -1,8 +1,10 @@
+from django import forms
 from django.db.models import Q
 from django.http import QueryDict
 from django.test import TestCase
 
 from nautobot.core.settings_funcs import is_truthy
+from nautobot.utilities.forms import DatePicker, DateTimePicker, DynamicModelMultipleChoiceField
 from nautobot.utilities.utils import (
     build_lookup_label,
     get_values_display_names,
@@ -10,10 +12,10 @@ from nautobot.utilities.utils import (
     deepmerge,
     dict_to_filter_params,
     get_all_lookup_exper_for_field,
-    get_data_for_filterset_parameter,
-    get_form_for_model,
     get_filterable_params_from_filter_params,
     get_filterset_for_model,
+    get_filterset_parameter_form_field,
+    get_form_for_model,
     get_model_from_name,
     get_route_for_model,
     get_table_for_model,
@@ -24,7 +26,7 @@ from nautobot.utilities.utils import (
     slugify_dots_to_dashes,
     slugify_dashes_to_underscores,
 )
-from nautobot.dcim.models import Device, Rack, Region, Site
+from nautobot.dcim.models import Device, Region, Site
 from nautobot.dcim.filters import DeviceFilterSet, SiteFilterSet
 from nautobot.dcim.forms import DeviceForm, DeviceFilterForm, SiteForm, SiteFilterForm
 from nautobot.dcim.tables import DeviceTable, SiteTable
@@ -39,7 +41,7 @@ class DictToFilterParamsTest(TestCase):
 
     def test_dict_to_filter_params(self):
 
-        input = {
+        input_ = {
             "a": True,
             "foo": {
                 "bar": 123,
@@ -55,11 +57,11 @@ class DictToFilterParamsTest(TestCase):
             "x__y__z": False,
         }
 
-        self.assertEqual(dict_to_filter_params(input), output)
+        self.assertEqual(dict_to_filter_params(input_), output)
 
-        input["x"]["y"]["z"] = True
+        input_["x"]["y"]["z"] = True
 
-        self.assertNotEqual(dict_to_filter_params(input), output)
+        self.assertNotEqual(dict_to_filter_params(input_), output)
 
 
 class NormalizeQueryDictTest(TestCase):
@@ -183,6 +185,7 @@ class GetFooForModelTest(TestCase):
         """
         Test the util function `get_route_for_model` returns the appropriate URL route name, if model (as dotted string or class) provided.
         """
+        # UI
         self.assertEqual(get_route_for_model("dcim.device", "list"), "dcim:device_list")
         self.assertEqual(get_route_for_model(Device, "list"), "dcim:device_list")
         self.assertEqual(get_route_for_model("dcim.site", "list"), "dcim:site_list")
@@ -191,6 +194,19 @@ class GetFooForModelTest(TestCase):
             get_route_for_model("example_plugin.examplemodel", "list"), "plugins:example_plugin:examplemodel_list"
         )
         self.assertEqual(get_route_for_model(ExampleModel, "list"), "plugins:example_plugin:examplemodel_list")
+
+        # API
+        self.assertEqual(get_route_for_model("dcim.device", "list", api=True), "dcim-api:device-list")
+        self.assertEqual(get_route_for_model(Device, "list", api=True), "dcim-api:device-list")
+        self.assertEqual(get_route_for_model("dcim.site", "detail", api=True), "dcim-api:site-detail")
+        self.assertEqual(get_route_for_model(Site, "detail", api=True), "dcim-api:site-detail")
+        self.assertEqual(
+            get_route_for_model("example_plugin.examplemodel", "list", api=True),
+            "plugins-api:example_plugin-api:examplemodel-list",
+        )
+        self.assertEqual(
+            get_route_for_model(ExampleModel, "list", api=True), "plugins-api:example_plugin-api:examplemodel-list"
+        )
 
     def test_get_table_for_model(self):
         """
@@ -387,128 +403,62 @@ class LookupRelatedFunctionTest(TestCase):
             lookup_expr = get_all_lookup_exper_for_field(Site, "unknown_field")
             self.assertEqual(lookup_expr, [])
 
-    def test_get_data_for_filterset_parameter(self):
-        with self.subTest("Get data for field with dynamic choices i.e relational fields"):
-            data = get_data_for_filterset_parameter(Site, "status")
-            self.assertEqual(
-                data,
-                {
-                    "type": "select-field",
-                    "widget": "api-select-multiple",
-                    "choices": [],
-                    "allow_multiple": True,
-                    "api_url": "/api/extras/statuses/",
-                    "content_type": '["dcim.site"]',
-                    "value_field": "slug",
-                    "css_classes": "lookup_value-input form-control nautobot-select2-api select2-hidden-accessible",
-                    "placeholder": None,
-                },
-            )
+    def test_get_filterset_parameter_form_field(self):
+        with self.subTest("Test get CharFields"):
+            site_fields = ["comments", "name", "contact_email", "physical_address", "shipping_address"]
+            for field_name in site_fields:
+                form_field = get_filterset_parameter_form_field(Site, field_name)
+                self.assertTrue(isinstance(form_field, forms.CharField))
 
-            data = get_data_for_filterset_parameter(Site, "tenant")
-            self.assertEqual(
-                data,
-                {
-                    "type": "select-field",
-                    "widget": "api-select-multiple",
-                    "choices": [],
-                    "allow_multiple": True,
-                    "api_url": "/api/tenancy/tenants/",
-                    "content_type": None,
-                    "value_field": "slug",
-                    "css_classes": "lookup_value-input form-control nautobot-select2-api select2-hidden-accessible",
-                    "placeholder": None,
-                },
-            )
+            device_fields = ["comments", "name"]
+            for field_name in device_fields:
+                form_field = get_filterset_parameter_form_field(Device, field_name)
+                self.assertTrue(isinstance(form_field, forms.CharField))
 
-        with self.subTest("Get data for field with dynamic choices with an initial choices"):
-            data = get_data_for_filterset_parameter(Site, "status", ["active", "planned"])
-            self.assertEqual(
-                data,
-                {
-                    "type": "select-field",
-                    "widget": "api-select-multiple",
-                    "choices": [("active", "Active"), ("planned", "Planned")],
-                    "allow_multiple": True,
-                    "api_url": "/api/extras/statuses/",
-                    "content_type": '["dcim.site"]',
-                    "value_field": "slug",
-                    "css_classes": "lookup_value-input form-control nautobot-select2-api select2-hidden-accessible",
-                    "placeholder": None,
-                },
-            )
+        with self.subTest("Test IntegerField"):
+            form_field = get_filterset_parameter_form_field(Site, "asn")
+            self.assertTrue(isinstance(form_field, forms.IntegerField))
 
-        with self.subTest("Get data for fields with static choices i.e choice or bool fields"):
-            data = get_data_for_filterset_parameter(Rack, "type")
-            self.assertEqual(
-                data,
-                {
-                    "type": "select-field",
-                    "widget": "static-select",
-                    "choices": (
-                        ("2-post-frame", "2-post frame"),
-                        ("4-post-frame", "4-post frame"),
-                        ("4-post-cabinet", "4-post cabinet"),
-                        ("wall-frame", "Wall-mounted frame"),
-                        ("wall-cabinet", "Wall-mounted cabinet"),
-                    ),
-                    "allow_multiple": True,
-                    "api_url": None,
-                    "content_type": None,
-                    "value_field": None,
-                    "css_classes": "lookup_value-input form-control nautobot-select2-static select2-hidden-accessible",
-                    "placeholder": None,
-                },
-            )
-            data = get_data_for_filterset_parameter(Site, "has_vlans")
-            self.assertEqual(
-                data,
-                {
-                    "type": "select-field",
-                    "widget": "static-select",
-                    "choices": (("", "---------"), ("True", "Yes"), ("False", "No")),
-                    "allow_multiple": False,
-                    "api_url": None,
-                    "content_type": None,
-                    "value_field": None,
-                    "css_classes": "lookup_value-input form-control nautobot-select2-static select2-hidden-accessible",
-                    "placeholder": None,
-                },
-            )
+            device_fields = ["vc_position", "vc_priority"]
+            for field_name in device_fields:
+                form_field = get_filterset_parameter_form_field(Device, field_name)
+                self.assertTrue(isinstance(form_field, forms.IntegerField))
 
-        with self.subTest("Get data for Integer fields"):
-            data = get_data_for_filterset_parameter(Site, "asn")
-            self.assertEqual(
-                data,
-                {
-                    "type": "number-field",
-                    "widget": None,
-                    "choices": [],
-                    "allow_multiple": True,
-                    "api_url": None,
-                    "content_type": None,
-                    "value_field": None,
-                    "css_classes": "lookup_value-input form-control",
-                    "placeholder": None,
-                },
-            )
+        with self.subTest("Test DynamicModelMultipleChoiceField"):
+            site_fields = ["region", "tenant", "status"]
+            for field_name in site_fields:
+                form_field = get_filterset_parameter_form_field(Site, field_name)
+                self.assertTrue(isinstance(form_field, DynamicModelMultipleChoiceField))
 
-        with self.subTest("Get data for other fields i.e Char fields"):
-            data = get_data_for_filterset_parameter(Site, "comment__iew")
-            self.assertEqual(
-                data,
-                {
-                    "type": "others",
-                    "widget": None,
-                    "choices": [],
-                    "allow_multiple": True,
-                    "api_url": None,
-                    "content_type": None,
-                    "value_field": None,
-                    "css_classes": "lookup_value-input form-control",
-                    "placeholder": None,
-                },
-            )
+            device_fields = ["cluster_id", "device_type_id", "region"]
+            for field_name in device_fields:
+                form_field = get_filterset_parameter_form_field(Device, field_name)
+                self.assertTrue(isinstance(form_field, DynamicModelMultipleChoiceField))
+
+        with self.subTest("Test ChoiceField"):
+            site_fields = ["has_locations", "has_circuit_terminations", "has_devices"]
+            for field_name in site_fields:
+                form_field = get_filterset_parameter_form_field(Site, field_name)
+                self.assertTrue(isinstance(form_field, forms.ChoiceField))
+
+            device_fields = ["has_console_ports", "has_interfaces", "face"]
+            for field_name in device_fields:
+                form_field = get_filterset_parameter_form_field(Device, field_name)
+                self.assertTrue(isinstance(form_field, forms.ChoiceField))
+
+        with self.subTest("Test DateTimePicker"):
+            form_field = get_filterset_parameter_form_field(Site, "last_updated")
+            self.assertTrue(isinstance(form_field.widget, DateTimePicker))
+
+            form_field = get_filterset_parameter_form_field(Device, "last_updated")
+            self.assertTrue(isinstance(form_field.widget, DateTimePicker))
+
+        with self.subTest("Test DatePicker"):
+            form_field = get_filterset_parameter_form_field(Site, "created")
+            self.assertTrue(isinstance(form_field.widget, DatePicker))
+
+            form_field = get_filterset_parameter_form_field(Device, "created")
+            self.assertTrue(isinstance(form_field.widget, DatePicker))
 
     def test_compile_model_instance_choices(self):
         sites = (
