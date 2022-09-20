@@ -28,6 +28,23 @@ class DynamicGroupMixin:
 
         return self._dynamic_group_queryset
 
+    def get_dynamic_groups_url(self):
+        """Return the dynamic groups URL for a given instance."""
+        route = get_route_for_model(self, "dynamicgroups")
+
+        # Iterate the pk-like fields and try to get a URL, or return None.
+        fields = ["pk", "slug"]
+        for field in fields:
+            if not hasattr(self, field):
+                continue
+
+            try:
+                return reverse(route, kwargs={field: getattr(self, field)})
+            except NoReverseMatch:
+                continue
+
+        return None
+
 
 class NotesMixin:
     """
@@ -46,7 +63,7 @@ class NotesMixin:
         return self._notes_queryset
 
     def get_notes_url(self):
-        """Return the changelog URL for a given instance."""
+        """Return the notes URL for a given instance."""
         route = get_route_for_model(self, "notes")
 
         # Iterate the pk-like fields and try to get a URL, or return None.
