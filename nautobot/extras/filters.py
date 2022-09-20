@@ -7,7 +7,7 @@ from django.forms import IntegerField
 from nautobot.dcim.models import DeviceRole, DeviceType, Location, Platform, Region, Site
 from nautobot.extras.utils import ChangeLoggedModelsQuery, FeatureQuery, TaggableClassesQuery
 from nautobot.tenancy.models import Tenant, TenantGroup
-from nautobot.utilities.constants import FILTER_CHAR_BASED_LOOKUP_MAP, FILTER_NUMERIC_BASED_LOOKUP_MAP
+from nautobot.utilities.constants import FILTER_CHAR_BASED_LOOKUP_MAP, FILTER_NUMERIC_BASED_LOOKUP_MAP, FILTER_LOOKUP_MAP
 from nautobot.utilities.filters import (
     BaseFilterSet,
     ContentTypeFilter,
@@ -536,6 +536,7 @@ class CustomFieldModelFilterSet(django_filters.FilterSet):
             new_filter_name = f"cf_{cf.name}"
             filter_class = custom_field_filter_classes.get(cf.type, CustomFieldCharFilter)
             new_filter_field = filter_class(field_name=cf.name, custom_field=cf)
+            new_filter_field.label = f"{cf.label}"
 
             # Create base filter (cf_customfieldname)
             self.filters[new_filter_name] = new_filter_field
@@ -588,6 +589,7 @@ class CustomFieldModelFilterSet(django_filters.FilterSet):
                 field_name=custom_field.name,
                 lookup_expr=lookup_expr,
                 custom_field=custom_field,
+                label=f"{custom_field.label} ({FILTER_LOOKUP_MAP[lookup_expr]})",
                 exclude=lookup_name.startswith("n"),
             )
 

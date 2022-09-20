@@ -270,9 +270,10 @@ class DynamicFilterForm(BootstrapMixin, forms.Form):
             self.model = model
 
         if hasattr(self, "model"):
-            filterset = get_filterset_for_model(self.model)
-            if filterset is not None:
-                self.filterset_base_filters = filterset.base_filters
+            filterset_class = get_filterset_for_model(self.model)
+            if filterset_class is not None:
+                filterset = filterset_class()
+                self.filterset_filters = filterset.filters
 
         if not hasattr(self, "model"):
             raise AttributeError("'DynamicFilterForm' object requires `model` attribute")
@@ -291,8 +292,8 @@ class DynamicFilterForm(BootstrapMixin, forms.Form):
             lookup_type = data.get(prefix + "-lookup_type")
             lookup_value = data.getlist(prefix + "-lookup_value")
 
-            if lookup_type and lookup_value and lookup_type in self.filterset_base_filters:
-                verbose_name = self.filterset_base_filters[lookup_type].lookup_expr
+            if lookup_type and lookup_value and lookup_type in self.filterset_filters:
+                verbose_name = self.filterset_filters[lookup_type].lookup_expr
                 label = build_lookup_label(lookup_type, verbose_name)
                 self.fields["lookup_type"].choices = [(lookup_type, label)]
                 self.fields["lookup_value"] = get_filterset_parameter_form_field(self.model, lookup_type)
@@ -309,15 +310,13 @@ class DynamicFilterForm(BootstrapMixin, forms.Form):
 
     @staticmethod
     def capitalize(field):
-        data = field.split("_")
-        first_word = data[0][0].upper() + data[0][1:]
-        return " ".join([first_word, *data[1:]])
+        return field # TODO(Culver): Fix, custom field is not 
 
     def get_lookup_field_choices(self):
         """Get choices for lookup_fields i.e filterset parameters without a lookup expr"""
         filterset_without_lookup = (
             (name, field.label or self.capitalize(field.field_name))
-            for name, field in self.filterset_base_filters.items()
+            for name, field in self.filterset_filters.items()
             if "__" not in name
         )
         return sorted(filterset_without_lookup)

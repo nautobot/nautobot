@@ -751,7 +751,7 @@ def get_all_lookup_exper_for_field(model, field_name):
     """
     Return all lookup expressions for `field_name` in `model` filterset
     """
-    filterset = get_filterset_for_model(model).base_filters
+    filterset = get_filterset_for_model(model)().filters
     if field_name.startswith("has_"):
         return [{"id": field_name, "name": "exact"}]
 
@@ -784,16 +784,15 @@ def get_filterset_parameter_form_field(model, parameter):
         TimePicker,
     )
 
-    filterset = get_filterset_for_model(model)  # TODO Timizuo Raise Error if filterset not found
-    field = filterset.base_filters.get(parameter)  # TODO Timizuo Raise Error if field not found
-    form_field_class = forms.CharField
-    form_attr = {}
+    filterset = get_filterset_for_model(model)()  # TODO Timizuo Raise Error if filterset not found
+    field = filterset.filters.get(parameter)  # TODO Timizuo Raise Error if field not found
+    form_field = field.field
 
+    # TODO(Culver): We are having to replace some widgets here because multivalue_field_factory that generates these isn't smart enough
     if isinstance(field, NumberFilter):
-        form_field_class = forms.IntegerField
+        form_field = forms.IntegerField()
     elif isinstance(field, filters.ModelMultipleChoiceFilter):
         related_model = Status if isinstance(field, StatusFilter) else field.extra["queryset"].model
-        form_field_class = DynamicModelMultipleChoiceField
         form_attr = {
             "queryset": related_model.objects.all(),
             "to_field_name": field.extra.get("to_field_name", "id"),
@@ -801,24 +800,33 @@ def get_filterset_parameter_form_field(model, parameter):
         # Status and Tag api requires content_type, to limit result to only related content_types
         if related_model in [Status, Tag]:
             form_attr["query_params"] = {"content_types": model._meta.label_lower}
+
+        form_field = DynamicModelMultipleChoiceField(**form_attr)
     elif isinstance(field, (filters.MultipleChoiceFilter, filters.ChoiceFilter)) and "choices" in field.extra:
         form_field_class = forms.ChoiceField
         form_field_class.widget = StaticSelect2Multiple()
-        form_attr = {"choices": field.extra["choices"].CHOICES}
+        form_attr = {"choices": field.extra.get("choices")}
+
+        form_field = form_field_class(**form_attr)
     elif isinstance(field, (BooleanFilter,)):  # Yes / No choice
         form_field_class = forms.ChoiceField
         form_field_class.widget = StaticSelect2()
         form_attr = {"choices": BOOLEAN_WITH_BLANK_CHOICES}
-    elif isinstance(field, DateTimeFilter):
-        form_field_class.widget = DateTimePicker
-    elif isinstance(field, DateFilter):
-        form_field_class.widget = DatePicker
-    elif isinstance(field, TimeFilter):
-        form_field_class.widget = TimePicker
 
-    form_field = form_field_class(**form_attr)
+        form_field = form_field_class(**form_attr)
+    elif isinstance(field, DateTimeFilter):
+        form_field.widget = DateTimePicker()
+    elif isinstance(field, DateFilter):
+        form_field.widget = DatePicker()
+    elif isinstance(field, TimeFilter):
+        form_field.widget = TimePicker()
+
+    form_field.required = False
+    form_field.initial = None
+    form_field.widget.attrs.pop("required", None)
+
     css_classes = form_field.widget.attrs.get("class", "")
-    form_field.widget.attrs["class"] = "lookup_value-input form-control " + css_classes
+    form_field.widget.attrs["class"] = "form-control " + css_classes
     return form_field
 
 

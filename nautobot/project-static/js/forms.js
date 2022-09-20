@@ -475,7 +475,9 @@ function initializeDynamicFilterForm(context){
                 dataType: 'json',
                 type: 'GET',
             }).done(function (response) {
-                replaceEl(lookup_value_element, response.dom_element)
+                newEl = $(response.dom_element)
+                newEl.addClass("lookup_value-input")
+                replaceEl(lookup_value_element, newEl)
             }).fail(function (xhr, status, error) {
                 // Default to Input:text field if error occurs
                 createInput(lookup_value_element)
