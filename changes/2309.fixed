@@ -1,1 +1,0 @@
-Fixed 404 on ScheduledJobView, `job_class` no longer found behavior.

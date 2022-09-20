@@ -1,1 +1,0 @@
-Allow `invoke` tasks to be run even if `rich` is not installed.
