@@ -66,7 +66,7 @@ function initializeCheckboxes(context){
     // "Toggle" checkbox for object lists (PK column)
     this_context.find('input:checkbox.toggle').click(function() {
         $(this).closest('table').find('input:checkbox[name=pk]:visible').prop('checked', $(this).prop('checked'));
-        
+
         // Show the "select all" box if present
         if ($(this).is(':checked')) {
             $('#select_all_box').removeClass('hidden');
@@ -74,7 +74,7 @@ function initializeCheckboxes(context){
             $('#select_all').prop('checked', false);
         }
     });
-    
+
     // Uncheck the "toggle" and "select all" checkboxes if an item is unchecked
     this_context.find('input:checkbox[name=pk]').click(function (event) {
         if (!$(this).attr('checked')) {
@@ -106,7 +106,7 @@ function initializeSlugField(context){
             }
             slug_field.val(slugify(slug_str, (slug_length ? slug_length : 100)));
         };
-        
+
         for (slug_source_str of slug_source_arr) {
             let slug_source = $('#id_' + slug_source_str);
             slug_source.on('keyup change', function() {
@@ -161,18 +161,18 @@ function initializeDynamicChoiceSelection(context){
         width: "off",
         ajax: {
             delay: 500,
-            
+
             url: function(params) {
                 var element = this[0];
                 var url = parseURL(element.getAttribute("data-url"));
-                
+
                 if (url.includes("{{")) {
                     // URL is not fully rendered yet, abort the request
                     return false;
                 }
                 return url;
             },
-            
+
             data: function(params) {
                 var element = this[0];
                 // Paging. Note that `params.page` indexes at 1
@@ -183,34 +183,34 @@ function initializeDynamicChoiceSelection(context){
                     limit: 50,
                     offset: offset,
                 };
-                
+
                 // Set api_version
                 api_version = $(element).attr("data-api-version")
                 if(api_version)
                 parameters["api_version"] = api_version
-                
-                
+
+
                 // Allow for controlling the brief setting from within APISelect
                 parameters.brief = ( $(element).is('[data-full]') ? undefined : true );
-                
+
                 // Attach any extra query parameters
                 $.each(element.attributes, function(index, attr){
                     if (attr.name.includes("data-query-param-")){
                         var param_name = attr.name.split("data-query-param-")[1];
-                        
+
                         $.each($.parseJSON(attr.value), function(index, value) {
                             // Referencing the value of another form field
                             if (value.startsWith('$')) {
                                 let element_id = $(element).attr("id")
                                 let ref_field;
-                                
+
                                 if(element_id.includes("id_form-")){
                                     let id_prefix = element_id.match(/id_form-[0-9]+-/i, "")[0]
                                     ref_field = $("#" + id_prefix + value.slice(1));
                                 }
                                 else
                                 ref_field = $('#id_' + value.slice(1));
-                                
+
                                 if (ref_field.val() && ref_field.is(":visible")) {
                                     value = ref_field.val();
                                 } else if (ref_field.attr("required") && ref_field.attr("data-null-option")) {
@@ -231,21 +231,21 @@ function initializeDynamicChoiceSelection(context){
                         });
                     }
                 });
-                
+
                 // Attach contenttype to parameters
                 contenttype = $(element).attr("data-contenttype")
                 if(contenttype)
                 parameters["contenttype"] = contenttype
-                
+
                 // This will handle params with multiple values (i.e. for list filter forms)
                 return $.param(parameters, true);
             },
-            
+
             processResults: function (data) {
                 var element = this.$element[0];
                 $(element).children('option').attr('disabled', false);
                 var results = data.results;
-                
+
                 results = results.reduce((results,record,idx) => {
                     record.text = record[element.getAttribute('display-field')] || record.name;
                     if (record._depth) {
@@ -261,7 +261,7 @@ function initializeDynamicChoiceSelection(context){
                         // The disabled-indicator equated to true, so we disable this option
                         record.disabled = true;
                     }
-                    
+
                     if( record.group !== undefined && record.group !== null && record.site !== undefined && record.site !== null ) {
                         results[record.site.name + ":" + record.group.name] = results[record.site.name + ":" + record.group.name] || { text: record.site.name + " / " + record.group.name, children: [] };
                         results[record.site.name + ":" + record.group.name].children.push(record);
@@ -281,12 +281,12 @@ function initializeDynamicChoiceSelection(context){
                     else {
                         results[idx] = record
                     }
-                    
+
                     return results;
                 },Object.create(null));
-                
+
                 results = Object.values(results);
-                
+
                 // Handle the null option, but only add it once
                 if (element.getAttribute('data-null-option') && data.previous === null) {
                     results.unshift({
@@ -294,7 +294,7 @@ function initializeDynamicChoiceSelection(context){
                         text: element.getAttribute('data-null-option')
                     });
                 }
-                
+
                 // Check if there are more results to page
                 var page = data.next !== null;
                 return {
@@ -358,7 +358,7 @@ function initializeTags(context){
         ajax: {
             delay: 250,
             url: nautobot_api_path + "extras/tags/",
-            
+
             data: function(params) {
                 // Paging. Note that `params.page` indexes at 1
                 var offset = (params.page - 1) * 50 || 0;
@@ -370,19 +370,19 @@ function initializeTags(context){
                 };
                 return parameters;
             },
-            
+
             processResults: function (data) {
                 var results = $.map(data.results, function (obj) {
                     // If tag contains space add double quotes
                     if (/\s/.test(obj.name))
                     obj.name = '"' + obj.name + '"'
-                    
+
                     return {
                         id: obj.name,
                         text: obj.name
                     }
                 });
-                
+
                 // Check if there are more results to page
                 var page = data.next !== null;
                 return {
@@ -440,6 +440,23 @@ function initializeVLANModeSelection(context){
     }
 }
 
+function initializeMultiValueChar(context){
+    this_context = $(context)
+    this_context.find('.nautobot-select2-multi-value-char').select2({
+        allowClear: true,
+        tags: true,
+        theme: "bootstrap",
+        placeholder: "---------",
+        multiple: true,
+        width: "off",
+        "language": {
+            "noResults": function(){
+                return "Type something to add it as an option";
+            }
+        },
+    });
+}
+
 function initializeDynamicFilterForm(context){
     this_context = $(context)
     // Dynamic filter form
@@ -466,18 +483,18 @@ function initializeDynamicFilterForm(context){
         }
 
     })
-    
+
     // On change of lookup_field or lookup_type field in filter form reset field value
     this_context.find(".lookup_field-select, .lookup_type-select").on("change", function(){
         let parent_element = $(this).parents("tr")
         let lookup_field_element = parent_element.find(".lookup_field-select")
         let lookup_type_element = parent_element.find(".lookup_type-select")
         let lookup_value_element = parent_element.find(".lookup_value-input")
-        
+
         if ($(this)[0] == lookup_field_element[0])
         lookup_type_element.val(null).trigger('change')
         lookup_value_element.val(null).trigger('change')
-        
+
     })
 }
 
@@ -531,22 +548,22 @@ function initializeImagePreview(context){
             top: e.pageY + IMAGE_PREVIEW_OFFSET_Y + 'px',
             boxShadow: '0 0px 12px 3px rgba(0, 0, 0, 0.4)',
         });
-        
+
         // Remove any existing preview windows and add the current one
         $('#image-preview-window').remove();
         $('body').append(img);
-        
+
         // Once loaded, show the preview if the image is indeed an image
         img.on('load', function(e) {
             if (e.target.complete && e.target.naturalWidth) {
                 $('#image-preview-window').fadeIn('fast');
             }
         });
-        
+
         // Begin loading
         img.attr('src', e.target.href);
     });
-    
+
     // Fade the image out; it will be deleted when another one is previewed
     this_context.find('a.image-preview').on('mouseout', function() {
         $('#image-preview-window').fadeOut('fast');
@@ -593,6 +610,7 @@ function initializeInputs(context) {
     initializeImagePreview(this_context)
     initializeDynamicFilterForm(this_context)
     initializeSelectAllForm(this_context)
+    initializeMultiValueChar(this_context)
 }
 
 function jsify_form(context) {

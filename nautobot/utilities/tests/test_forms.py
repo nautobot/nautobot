@@ -14,11 +14,13 @@ from nautobot.extras.filters import StatusFilterSet
 from nautobot.extras.models import CustomField, Status
 from nautobot.ipam.forms import IPAddressCSVForm, ServiceForm, ServiceFilterForm
 from nautobot.ipam.models import IPAddress, Prefix, VLANGroup
+from nautobot.utilities.filters import MultiValueCharFilter
 from nautobot.utilities.forms.fields import (
     CSVDataField,
     DynamicModelMultipleChoiceField,
     JSONField,
     MultiMatchModelMultipleChoiceField,
+    MultiValueCharField,
 )
 from nautobot.utilities.forms.utils import (
     expand_alphanumeric_pattern,
@@ -489,6 +491,39 @@ class DynamicModelMultipleChoiceFieldTest(TestCase):
         self.assertEqual(
             self.field.prepare_value([address_1, address_2]),
             [address_1.pk, address_2.pk],
+        )
+
+
+class MultiValueCharFieldTest(TestCase):
+    def setUp(self):
+        self.filter = MultiValueCharFilter()
+        self.field = MultiValueCharField()
+
+    def test_field_class(self):
+        """
+        A MultiValueCharFilter should have a MultiValueCharField field_class attribute.
+        """
+        self.assertEqual(
+            self.filter.field_class,
+            MultiValueCharField,
+        )
+
+    def test_to_python_single_str(self):
+        """
+        A single str value should be converted to a list containing a single str value.
+        """
+        self.assertEqual(
+            self.field.to_python("device-1"),
+            ["device-1"],
+        )
+
+    def test_to_python_multiple_str(self):
+        """
+        Multiple str values in a list should be handled as is.
+        """
+        self.assertEqual(
+            self.field.to_python(["device-1", "device-2", "rack-1"]),
+            ["device-1", "device-2", "rack-1"],
         )
 
 
