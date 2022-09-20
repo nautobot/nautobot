@@ -1,0 +1,1 @@
+Return "—" instead of "None" when relationship column is empty.
