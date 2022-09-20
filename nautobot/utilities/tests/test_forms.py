@@ -10,7 +10,6 @@ from netaddr import IPNetwork
 from nautobot.dcim.filters import SiteFilterSet
 from nautobot.dcim.models import Device, Site
 from nautobot.dcim.tests.test_views import create_test_device
-from nautobot.extras.filters import StatusFilterSet
 from nautobot.extras.models import CustomField, Status
 from nautobot.ipam.forms import IPAddressCSVForm, ServiceForm, ServiceFilterForm
 from nautobot.ipam.models import IPAddress, Prefix, VLANGroup
@@ -691,7 +690,7 @@ class DynamicFilterFormTest(TestCase):
                 site_form.get_lookup_field_choices(),
                 [
                     ("asn", "ASN"),
-                    ('cf_example_plugin_auto_custom_field', 'Example Plugin Automatically Added Custom Field'),
+                    ("cf_example_plugin_auto_custom_field", "Example Plugin Automatically Added Custom Field"),
                     ("circuit_terminations", "Circuit terminations"),
                     ("clusters", "Clusters"),
                     ("comments", "Comments"),

@@ -310,7 +310,7 @@ class DynamicFilterForm(BootstrapMixin, forms.Form):
 
     @staticmethod
     def capitalize(field):
-        return field # TODO(Culver): Fix, custom field is not 
+        return field  # TODO(Culver): Fix, custom field is not
 
     def get_lookup_field_choices(self):
         """Get choices for lookup_fields i.e filterset parameters without a lookup expr"""
