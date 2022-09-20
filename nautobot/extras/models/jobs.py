@@ -44,6 +44,7 @@ from nautobot.extras.utils import (
     get_job_content_type,
     jobs_in_directory,
 )
+from nautobot.utilities.fields import JSONArrayField
 from nautobot.utilities.logging import sanitize
 
 from .customfields import CustomFieldModel
@@ -170,6 +171,12 @@ class Job(PrimaryModel):
         help_text="Maximum runtime in seconds before the job will be forcibly terminated."
         "<br>Set to 0 to use Nautobot system default",
     )
+    task_queues = JSONArrayField(
+        base_field=models.CharField(max_length=100, blank=True),
+        default=list,
+        blank=True,
+        help_text="Comma separated list of task queues that this job can run on. A blank list will use the default queue",
+    )
 
     # Flags to indicate whether the above properties are inherited from the source code or overridden by the database
     grouping_override = models.BooleanField(
@@ -210,6 +217,10 @@ class Job(PrimaryModel):
         help_text="If set, the configured value will remain even if the underlying Job source code changes",
     )
     has_sensitive_variables_override = models.BooleanField(
+        default=False,
+        help_text="If set, the configured value will remain even if the underlying Job source code changes",
+    )
+    task_queues_override = models.BooleanField(
         default=False,
         help_text="If set, the configured value will remain even if the underlying Job source code changes",
     )

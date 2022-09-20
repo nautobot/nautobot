@@ -120,7 +120,7 @@ nav:
           - Nautobot Shell: "administration/nautobot-shell.md"
           - Permissions: "administration/permissions.md"
           - Replicating Nautobot: "administration/replicating-nautobot.md"
-          - Worker Queues: 'administration/celery-queues.md'
+          - Task Queues: 'administration/celery-queues.md'
       - User Guides:
           - Getting Started In the Web UI: "user-guides/getting-started/index.md"
           - Creating Devices: "user-guides/getting-started/creating-devices.md"

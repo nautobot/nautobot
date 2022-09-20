@@ -34,7 +34,7 @@ from .datasources.git import ensure_git_repository
 from .forms import JobForm
 from .models import FileProxy, GitRepository, Job as JobModel, JobHook, ObjectChange, ScheduledJob
 from .registry import registry
-from .utils import ChangeLoggedModelsQuery, get_job_content_type, jobs_in_directory
+from .utils import ChangeLoggedModelsQuery, get_job_content_type, jobs_in_directory, task_queues_as_choices
 
 from nautobot.core.celery import nautobot_task
 from nautobot.ipam.formfields import IPAddressFormField, IPNetworkFormField
@@ -100,6 +100,7 @@ class BaseJob:
         - soft_time_limit (int)
         - time_limit (int)
         - has_sensitive_variables (bool)
+        - task_queues (list)
         """
 
     def __init__(self):
@@ -223,6 +224,10 @@ class BaseJob:
         return getattr(cls.Meta, "has_sensitive_variables", True)
 
     @classproperty
+    def task_queues(cls):  # pylint: disable=no-self-argument
+        return getattr(cls.Meta, "task_queues", [])
+
+    @classproperty
     def properties_dict(cls):  # pylint: disable=no-self-argument
         """
         Return all relevant classproperties as a dict.
@@ -240,6 +245,7 @@ class BaseJob:
             "soft_time_limit": cls.soft_time_limit,
             "time_limit": cls.time_limit,
             "has_sensitive_variables": cls.has_sensitive_variables,
+            "task_queues": cls.task_queues,
         }
 
     @classmethod
@@ -313,11 +319,13 @@ class BaseJob:
             job_model = JobModel.objects.get_for_class_path(self.class_path)
             read_only = job_model.read_only if job_model.read_only_override else self.read_only
             commit_default = job_model.commit_default if job_model.commit_default_override else self.commit_default
+            task_queues = job_model.task_queues if job_model.task_queues_override else self.task_queues
         except JobModel.DoesNotExist:
             # 2.0 TODO: remove this fallback, Job records should always exist.
             logger.error("No Job instance found in the database corresponding to %s", self.class_path)
             read_only = self.read_only
             commit_default = self.commit_default
+            task_queues = self.task_queues
 
         if read_only:
             # Hide the commit field for read only jobs
@@ -326,6 +334,9 @@ class BaseJob:
         elif not initial or "_commit" not in initial:
             # Set initial "commit" checkbox state based on the Meta parameter
             form.fields["_commit"].initial = commit_default
+
+        # Update task queue choices
+        form.fields["_task_queue"].choices = task_queues_as_choices(task_queues)
 
         # https://github.com/PyCQA/pylint/issues/3484
         if self.field_order:  # pylint: disable=using-constant-test
@@ -1260,7 +1271,7 @@ def scheduled_job_handler(*args, **kwargs):
     user = User.objects.get(pk=user_pk)
     name = kwargs.pop("name")
     scheduled_job_pk = kwargs.pop("scheduled_job_pk")
-    celery_kwargs = kwargs.pop("celery_kwargs")
+    celery_kwargs = kwargs.pop("celery_kwargs", {})
     schedule = ScheduledJob.objects.get(pk=scheduled_job_pk)
 
     job_content_type = get_job_content_type()

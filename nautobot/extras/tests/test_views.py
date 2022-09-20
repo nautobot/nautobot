@@ -1515,6 +1515,8 @@ class JobTestCase(
             "time_limit": 650,
             "has_sensitive_variables": False,
             "has_sensitive_variables_override": True,
+            "task_queues": "overridden,priority",
+            "task_queues_override": True,
         }
 
     #
@@ -1798,6 +1800,30 @@ class JobTestCase(
 
             content = extract_page_body(response.content.decode(response.charset))
             self.assertIn("Unable to schedule job: Job may have sensitive input variables.", content)
+
+    @mock.patch("nautobot.extras.views.get_worker_count", return_value=1)
+    def test_run_job_with_invalid_task_queue(self, _):
+        self.add_permissions("extras.run_job")
+        self.add_permissions("extras.view_jobresult")
+
+        self.test_pass.task_queues = []
+        self.test_pass.task_queues_override = True
+        self.test_pass.validated_save()
+
+        data = {
+            "_schedule_type": "immediately",
+            "_task_queue": "invalid",
+        }
+
+        for run_url in self.run_urls:
+            response = self.client.post(run_url, data)
+            self.assertHttpStatus(response, 200, msg=run_url)
+
+            errors = extract_form_failures(response.content.decode(response.charset))
+            self.assertEqual(
+                errors,
+                ["_task_queue: Select a valid choice. invalid is not one of the available choices."],
+            )
 
     @mock.patch("nautobot.extras.views.get_worker_count", return_value=1)
     def test_run_job_with_sensitive_variables_and_requires_approval(self, _):

@@ -1,4 +1,4 @@
-# Celery Worker Queues
+# Celery Task Queues
 
 If you're planning to run multiple jobs, leverage job hooks or are finding that your jobs are taking too long to complete you may want to consider deploying multiple celery workers with different queues for different types of tasks.
 

@@ -7,6 +7,7 @@ import pkgutil
 import sys
 
 from django.apps import apps
+from django.conf import settings
 from django.contrib.contenttypes.models import ContentType
 from django.db.models import Q
 from django.utils.deconstruct import deconstructible
@@ -191,8 +192,8 @@ def get_celery_queues():
     active_queues = celery_inspect.active_queues()
     if active_queues is None:
         return celery_queues
-    for worker_queue_list in active_queues.values():
-        distinct_queues = {q["name"] for q in worker_queue_list}
+    for task_queue_list in active_queues.values():
+        distinct_queues = {q["name"] for q in task_queue_list}
         for queue in distinct_queues:
             celery_queues.setdefault(queue, 0)
             celery_queues[queue] += 1
@@ -200,13 +201,34 @@ def get_celery_queues():
     return celery_queues
 
 
-def get_worker_count(request=None, queue="celery"):
+def get_worker_count(request=None, queue=None):
     """
-    Return a count of the active Celery workers in a specified queue. Defaults to the default queue "celery"
+    Return a count of the active Celery workers in a specified queue. Defaults to the `CELERY_TASK_DEFAULT_QUEUE` setting.
     """
-
     celery_queues = get_celery_queues()
+    if not queue:
+        queue = settings.CELERY_TASK_DEFAULT_QUEUE
     return celery_queues.get(queue, 0)
+
+
+def task_queues_as_choices(task_queues):
+    """
+    Returns a list of 2-tuples for use in the form field `choices` argument. Appends
+    worker count to the description.
+    """
+    if not task_queues:
+        task_queues = [settings.CELERY_TASK_DEFAULT_QUEUE]
+
+    choices = []
+    celery_queues = get_celery_queues()
+    for queue in task_queues:
+        if not queue:
+            worker_count = celery_queues.get(settings.CELERY_TASK_DEFAULT_QUEUE, 0)
+        else:
+            worker_count = celery_queues.get(queue, 0)
+        description = f"{queue if queue else 'default queue'} ({worker_count} worker{'s'[:worker_count^1]})"
+        choices.append((queue, description))
+    return choices
 
 
 # namedtuple class yielded by the jobs_in_directory generator function, below

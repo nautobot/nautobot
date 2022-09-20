@@ -115,6 +115,9 @@ CACHEOPS_DEFAULTS = {"timeout": int(os.getenv("NAUTOBOT_CACHEOPS_TIMEOUT", "900"
 # Set to False to disable caching with cacheops. (Default: True)
 CACHEOPS_ENABLED = is_truthy(os.getenv("NAUTOBOT_CACHEOPS_ENABLED", "False"))
 
+# Default celery queue name that will be used by workers and tasks if no queue is specified
+# CELERY_TASK_DEFAULT_QUEUE = os.getenv("NAUTOBOT_CELERY_TASK_DEFAULT_QUEUE", "default")
+
 # If True, all origins will be allowed. Other settings restricting allowed origins will be ignored.
 # Defaults to False. Setting this to True can be dangerous, as it allows any website to make
 # cross-origin requests to yours. Generally you'll want to restrict the list of allowed origins with
