@@ -1,6 +1,5 @@
 # syntax=docker/dockerfile:1
 ARG PYTHON_VER
-ARG DEPENDENCIES_BASE_BRANCH
 
 ################################ Overview
 # This builds the following hierarchy of images:
@@ -59,9 +58,6 @@ ARG DEPENDENCIES_BASE_BRANCH
 #   installs Poetry
 #   copies Nautobot source files and packaging definition into the image
 #   uses Pip/Poetry to install Nautobot's Python dependencies (but *not* development dependencies or Nautobot itself)
-#
-# dependencies-as-stage (intermediate build target)
-#   grabs `dependencies` as a stage
 #
 # dependencies-dev-python (intermediate build target)
 #   uses Poetry to additionally install Nautobot's *development* dependencies
@@ -170,12 +166,6 @@ RUN --mount=type=cache,target="/root/.cache/pip" \
     --mount=type=cache,target="/root/.cache/pypoetry" \
     poetry install --no-root --only main --no-ansi --extras all && \
     rm -rf /tmp/tmp*
-
-################################ Stage: dependencies-as-stage (intermediate build target)
-# COPY --from= requires the from target to be stage name or untagged image name
-# We can "alias" that here to make things easier
-
-FROM ghcr.io/nautobot/nautobot-dependencies:${DEPENDENCIES_BASE_BRANCH}-py${PYTHON_VER} as dependencies-as-stage 
 
 ################################ Stage: dependencies-dev-python (intermediate build target)
 # We need dev dependencies for building the docs but don't want them in the final build image

@@ -153,12 +153,11 @@ def run_command(context, command, **kwargs):
     help={
         "force_rm": "Always remove intermediate containers.",
         "cache": "Whether to use Docker's cache when building the image. (Default: enabled)",
-        "dependencies_base": "Speed up dependencies base by using a pre-built, non-local image. (Default: 'local', local build) (Options: 'local', 'develop', 'main', 'next')",
         "poetry_parallel": "Enable/disable poetry to install packages in parallel. (Default: True)",
         "pull": "Whether to pull Docker images when building the image. (Default: disabled)",
     }
 )
-def build(context, force_rm=False, cache=True, dependencies_base="local", poetry_parallel=True, pull=False):
+def build(context, force_rm=False, cache=True, poetry_parallel=True, pull=False):
     """Build Nautobot docker image."""
     command = f"build --build-arg PYTHON_VER={context.nautobot.python_ver}"
 
@@ -171,16 +170,7 @@ def build(context, force_rm=False, cache=True, dependencies_base="local", poetry
     if pull:
         command += " --pull"
 
-    if dependencies_base not in ["local", "develop", "main", "next"]:
-        print(f"Invalid dependencies base, '{dependencies_base}', defaulting to 'local'.")
-        dependencies_base = "local"
-
-    command += f" --build-arg DEPENDENCIES_BASE_BRANCH={dependencies_base}"
-
     print(f"Building Nautobot with Python {context.nautobot.python_ver}...")
-
-    if dependencies_base == "local":
-        build_dependencies(context)
 
     docker_compose(context, command, env={"DOCKER_BUILDKIT": "1", "COMPOSE_DOCKER_CLI_BUILD": "1"})
 
@@ -219,7 +209,6 @@ def build_dependencies(context, poetry_parallel=True):
     help={
         "cache": "Whether to use Docker's cache when building the image. (Default: enabled)",
         "cache_dir": "Directory to use for caching buildx output. (Default: /home/travis/.cache/docker)",
-        "dependencies_base_branch": "Name of branch of dependencies to pull",
         "platforms": "Comma-separated list of strings for which to build. (Default: linux/amd64)",
         "tag": "Tags to be applied to the built image. (Default: networktocode/nautobot-dev:local)",
         "target": "Build target from the Dockerfile. (Default: dev)",
@@ -230,7 +219,6 @@ def buildx(
     context,
     cache=False,
     cache_dir="",
-    dependencies_base_branch="local",
     platforms="linux/amd64",
     tag="networktocode/nautobot-dev-py3.7:local",
     target="dev",
@@ -240,7 +228,7 @@ def buildx(
     print(f"Building Nautobot with Python {context.nautobot.python_ver} for {platforms}...")
     command = (
         f"docker buildx build --platform {platforms} -t {tag} --target {target} --load -f ./docker/Dockerfile"
-        f" --build-arg PYTHON_VER={context.nautobot.python_ver} --build-arg DEPENDENCIES_BASE_BRANCH={dependencies_base_branch}"
+        f" --build-arg PYTHON_VER={context.nautobot.python_ver}"
         " ."
     )
     if not cache:
