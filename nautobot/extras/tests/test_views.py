@@ -1241,7 +1241,7 @@ class ApprovalQueueTestCase(
         job_result = JobResult.objects.first()
         self.assertEqual(job_result.job_model, instance.job_model)
         self.assertEqual(job_result.user, self.user)
-        self.assertRedirects(response, reverse("extras:job_jobresult", kwargs={"pk": job_result.pk}))
+        self.assertRedirects(response, reverse("extras:jobresult", kwargs={"pk": job_result.pk}))
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     def test_post_deny_different_user_lacking_permissions(self):
@@ -1598,7 +1598,7 @@ class JobTestCase(
             response = self.client.post(run_url, self.data_run_immediately)
 
             result = JobResult.objects.latest()
-            self.assertRedirects(response, reverse("extras:job_jobresult", kwargs={"pk": result.pk}))
+            self.assertRedirects(response, reverse("extras:jobresult", kwargs={"pk": result.pk}))
 
     @mock.patch("nautobot.extras.views.get_worker_count", return_value=1)
     def test_run_now_constrained_permissions(self, _):
@@ -1619,7 +1619,7 @@ class JobTestCase(
 
             result = JobResult.objects.latest()
             self.assertIsNotNone(result, msg=run_url)
-            self.assertRedirects(response, reverse("extras:job_jobresult", kwargs={"pk": result.pk}))
+            self.assertRedirects(response, reverse("extras:jobresult", kwargs={"pk": result.pk}))
 
         # Try POST with a non-permitted object
         for run_url in self.extra_run_urls:
@@ -1679,7 +1679,7 @@ class JobTestCase(
             response = self.client.post(run_url, data)
 
             result = JobResult.objects.latest()
-            self.assertRedirects(response, reverse("extras:job_jobresult", kwargs={"pk": result.pk}))
+            self.assertRedirects(response, reverse("extras:jobresult", kwargs={"pk": result.pk}))
 
     @mock.patch("nautobot.extras.views.get_worker_count", return_value=1)
     def test_run_later_missing_name(self, _):
@@ -1799,6 +1799,48 @@ class JobTestCase(
 
             content = extract_page_body(response.content.decode(response.charset))
             self.assertIn("Unable to schedule job: Job may have sensitive input variables.", content)
+
+    @mock.patch("nautobot.extras.views.get_worker_count", return_value=1)
+    def test_run_job_with_sensitive_variables_and_requires_approval(self, _):
+        self.add_permissions("extras.run_job")
+        self.add_permissions("extras.view_scheduledjob")
+
+        self.test_pass.has_sensitive_variables = True
+        self.test_pass.approval_required = True
+        self.test_pass.save()
+
+        data = {
+            "_schedule_type": "immediately",
+        }
+        for run_url in self.run_urls:
+            # Assert warning message shows in get
+            response = self.client.get(run_url)
+            content = extract_page_body(response.content.decode(response.charset))
+            self.assertIn(
+                "This job is flagged as possibly having sensitive variables but is also flagged as requiring approval.",
+                content,
+            )
+
+            # Assert run button is disabled
+            self.assertInHTML(
+                """
+                <button type="submit" name="_run" id="id__run" class="btn btn-primary" disabled="disabled">
+                    <i class="mdi mdi-play"></i> Run Job Now
+                </button>
+                """,
+                content,
+            )
+            # Assert error message shows after post
+            response = self.client.post(run_url, data)
+            self.assertHttpStatus(response, 200, msg=self.run_urls[1])
+
+            content = extract_page_body(response.content.decode(response.charset))
+            self.assertIn(
+                "Unable to run or schedule job: "
+                "This job is flagged as possibly having sensitive variables but is also flagged as requiring approval."
+                "One of these two flags must be removed before this job can be scheduled or run.",
+                content,
+            )
 
 
 # TODO: Convert to StandardTestCases.Views

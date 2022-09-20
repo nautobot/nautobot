@@ -30,12 +30,6 @@
       "rangeStrategy": "update-lockfile"
     },
     {
-      "description": "Group updates to next cut down on PR noise.",
-      "excludePackageNames": ["graphene-django-optimizer", "django-timezone-field", "django-taggit", "flake8"],
-      "groupName": "Releases Batched for Next",
-      "matchBaseBranches": ["next"]
-    },
-    {
       "description": "Require dashboard approval for non-patch updates to graphene-django-optimizer and django-timezone-field.",
       "dependencyDashboardApproval": true,
       "matchBaseBranches": ["next"],

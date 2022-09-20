@@ -62,7 +62,7 @@ from nautobot.users.models import ObjectPermission
 from nautobot.utilities.choices import ColorChoices
 from nautobot.utilities.testing import APITestCase, APIViewTestCases
 from nautobot.utilities.testing.utils import disable_warnings
-from nautobot.utilities.utils import slugify_dashes_to_underscores
+from nautobot.utilities.utils import get_route_for_model, slugify_dashes_to_underscores
 
 
 User = get_user_model()
@@ -1442,6 +1442,37 @@ class JobAPIRunTestMixin:
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     @mock.patch("nautobot.extras.api.views.get_worker_count")
+    def test_run_a_job_with_sensitive_variables_and_requires_approval(self, mock_get_worker_count):
+        mock_get_worker_count.return_value = 1
+        self.add_permissions("extras.run_job")
+
+        job_model = Job.objects.get(job_class_name="ExampleJob")
+        job_model.enabled = True
+        job_model.has_sensitive_variables = True
+        job_model.approval_required = True
+        job_model.save()
+
+        url = reverse("extras-api:job-run", kwargs={"pk": job_model.pk})
+        data = {
+            "data": {},
+            "commit": True,
+            "schedule": {
+                "interval": "immediately",
+                "name": "test",
+            },
+        }
+
+        response = self.client.post(url, data, format="json", **self.header)
+        self.assertHttpStatus(response, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(
+            response.data[0],
+            "Unable to run or schedule job: "
+            "This job is flagged as possibly having sensitive variables but is also flagged as requiring approval."
+            "One of these two flags must be removed before this job can be scheduled or run.",
+        )
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    @mock.patch("nautobot.extras.api.views.get_worker_count")
     def test_run_a_job_with_sensitive_variables_immediately(self, mock_get_worker_count):
         mock_get_worker_count.return_value = 1
         self.add_permissions("extras.run_job")
@@ -1733,10 +1764,8 @@ class JobTestVersion13(
     def test_get_job_variables(self):
         """Test the job/<pk>/variables API endpoint."""
         self.add_permissions("extras.view_job")
-        response = self.client.get(
-            reverse(f"{self._get_view_namespace()}:job-variables", kwargs={"pk": self.job_model.pk}),
-            **self.header,
-        )
+        route = get_route_for_model(self.model, "variables", api=True)
+        response = self.client.get(reverse(route, kwargs={"pk": self.job_model.pk}), **self.header)
         self.assertEqual(4, len(response.data))  # 4 variables, in order
         self.assertEqual(response.data[0], {"name": "var1", "type": "StringVar", "required": True})
         self.assertEqual(response.data[1], {"name": "var2", "type": "IntegerVar", "required": True})
