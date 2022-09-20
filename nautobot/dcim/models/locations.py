@@ -88,15 +88,16 @@ class LocationType(TreeNode, OrganizationalModel):
     @property
     def display(self):
         """
-        Prefix with parent name allows location type name identity if there are the same name exists under different parents.
-        self.ancestors() return all the preceding nodes from top down. So if we are looking at node C and its node structure is the following:
+        Include the parent type names as well in order to provide UI clarity.
+        `self.ancestors()` returns all the preceding nodes from the top down.
+        So if we are looking at node C and its node structure is the following:
             A
            /
           B
          /
         C
         This method will return "A → B → C".
-        If `self.ancestors()` throws an `ObjectDoesNotExist` exception during bulk operations, we handle it by only returning the names of the current node and the existing ancestors.
+        Note that `self.ancestors()` may throw an `ObjectDoesNotExist` during bulk-delete operations.
         """
         display_str = ""
         try:
@@ -225,15 +226,18 @@ class Location(TreeNode, StatusModel, PrimaryModel):
     @property
     def display(self):
         """
-        Prefix with parent name allows location name identity if there are the same name exists under different parents.
-        self.ancestors() return all the preceding nodes from top down. So if we are looking at node C and its node structure is the following:
+        Location name is unique per parent but not globally unique, so include parent information as context.
+        `self.ancestors()` returns all the preceding nodes from the top down.
+        So if we are looking at node C and its node structure is the following:
             A
            /
           B
          /
         C
         This method will return "A → B → C".
-        If `self.ancestors()` throws an `ObjectDoesNotExist` exception during bulk operations, we handle it by only returning the names of the current node and the existing ancestors."""
+
+        Note that `self.ancestors()` may throw an `ObjectDoesNotExist` during bulk-delete operations.
+        """
         display_str = ""
         try:
             for ancestor in self.ancestors():
