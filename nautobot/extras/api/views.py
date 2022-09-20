@@ -448,7 +448,7 @@ class ImageAttachmentViewSet(ModelViewSet):
 #
 
 
-def _create_schedule(serializer, data, commit, job, job_model, request, celery_kwargs={}, task_queue=None):
+def _create_schedule(serializer, data, commit, job, job_model, request, celery_kwargs=dict, task_queue=None):
     """
     This is an internal function to create a scheduled job from API data.
     It has to handle both once-offs (i.e. of type TYPE_FUTURE) and interval
