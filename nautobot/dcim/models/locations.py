@@ -87,16 +87,27 @@ class LocationType(TreeNode, OrganizationalModel):
 
     @property
     def display(self):
-        # prefix with parent name allows location type name identity if there are the same name exists under different parents.
+        """
+        Include the parent type names as well in order to provide UI clarity.
+        `self.ancestors()` returns all the preceding nodes from the top down.
+        So if we are looking at node C and its node structure is the following:
+            A
+           /
+          B
+         /
+        C
+        This method will return "A → B → C".
+        Note that `self.ancestors()` may throw an `ObjectDoesNotExist` during bulk-delete operations.
+        """
         display_str = ""
         try:
             for ancestor in self.ancestors():
-                display_str += ancestor.name
-                display_str += " → "
-            display_str += self.name
-            return display_str
+                display_str += ancestor.name + " → "
         except ObjectDoesNotExist:
-            return display_str
+            pass
+        finally:
+            display_str += self.name
+            return display_str  # pylint: disable=lost-exception
 
 
 @extras_features(
@@ -214,16 +225,28 @@ class Location(TreeNode, StatusModel, PrimaryModel):
 
     @property
     def display(self):
-        # prefix with parent name allows location name identity if there are the same name exists under different parents.
+        """
+        Location name is unique per parent but not globally unique, so include parent information as context.
+        `self.ancestors()` returns all the preceding nodes from the top down.
+        So if we are looking at node C and its node structure is the following:
+            A
+           /
+          B
+         /
+        C
+        This method will return "A → B → C".
+
+        Note that `self.ancestors()` may throw an `ObjectDoesNotExist` during bulk-delete operations.
+        """
         display_str = ""
         try:
             for ancestor in self.ancestors():
-                display_str += ancestor.name
-                display_str += " → "
-            display_str += self.name
-            return display_str
+                display_str += ancestor.name + " → "
         except ObjectDoesNotExist:
-            return display_str
+            pass
+        finally:
+            display_str += self.name
+            return display_str  # pylint: disable=lost-exception
 
     def validate_unique(self, exclude=None):
         # Check for a duplicate name on a Location with no parent.
