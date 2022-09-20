@@ -162,6 +162,42 @@ A new configuration setting, [`STRICT_FILTERING`](../configuration/optional-sett
 The `settings_and_registry` default context processor was changed to purely `settings` - the (large) Nautobot application registry dictionary is no longer provided as part of the render context for all templates by default. Added a new `registry` template tag that can be invoked by specific templates to provide this variable where needed.
 
 <!-- towncrier release notes start -->
+## v1.4.3 (2022-09-19)
+
+### Added
+
+- [#2327](https://github.com/nautobot/nautobot/issues/2327) - Added help text to the Job scheduling datetime picker to indicate the applicable time zone.
+- [#2362](https://github.com/nautobot/nautobot/issues/2362) - Added documentation and automation for Nautobot Github project to use `towncrier` for changelog fragments.
+- [#2431](https://github.com/nautobot/nautobot/issues/2431) - Add section to the custom field documentation on ORM filtering.
+
+### Changed
+
+- [#1619](https://github.com/nautobot/nautobot/issues/1619) - Updated `drf-spectacular` dependency to version 0.24.
+- [#2223](https://github.com/nautobot/nautobot/issues/2223) - Augment `get_route_for_model()` to support REST API routes.
+- [#2340](https://github.com/nautobot/nautobot/issues/2340) - Improved rendering of badges, labels, buttons, and color selection menus in dark mode.
+- [#2383](https://github.com/nautobot/nautobot/issues/2383) - Updated documentation link for Nautobot ChatOps plugin.
+- [#2392](https://github.com/nautobot/nautobot/issues/2392) - Un-group Renovate `next` updates to address code changes per package.
+- [#2400](https://github.com/nautobot/nautobot/issues/2400) - Improved formatting of version changes in the documentation.
+- [#2417](https://github.com/nautobot/nautobot/issues/2417) - Reworked Docker builds in CI to publish an intermediate "dependencies-only" image to speed up rebuild times.
+- [#2447](https://github.com/nautobot/nautobot/issues/2447) - Moved Dynamic Groups tab on object detail view to it's own view as a generic `ObjectDynamicGroupsView`.
+
+### Fixed
+
+- [#138](https://github.com/nautobot/nautobot/issues/138) - Fixed lack of user-facing message when an exception occurs while discovering Jobs from a Git repository.
+- [#950](https://github.com/nautobot/nautobot/issues/950) - Fixed database concurrency issues with uWSGI pre-forking.
+- [#1619](https://github.com/nautobot/nautobot/issues/1619) - Improved accuracy of OpenAPI schema for bulk REST API operations.
+- [#2299](https://github.com/nautobot/nautobot/issues/2299) - Remove `render_filter()` method and `filter` field from table columns
+- [#2309](https://github.com/nautobot/nautobot/issues/2309) - Fixed 404 on ScheduledJobView, `job_class` no longer found behavior.
+- [#2324](https://github.com/nautobot/nautobot/issues/2324) - Fixed errors encountered when a job model is deleted while a job is running.
+- [#2338](https://github.com/nautobot/nautobot/issues/2338) - Fixed whitespace issue with Text File secrets and they are now stripped of leading/trailing whitespace and newlines.
+- [#2364](https://github.com/nautobot/nautobot/issues/2364) - Allow `invoke` tasks to be run even if `rich` is not installed.
+- [#2378](https://github.com/nautobot/nautobot/issues/2378) - Fix Job Result redirection on submit.
+- [#2382](https://github.com/nautobot/nautobot/issues/2382) - Removed extraneous cache and temporary files from the `dev` and `final-dev` Docker images to reduce image size.
+- [#2389](https://github.com/nautobot/nautobot/issues/2389) - Removed extraneous `inspect.getsource()` call from Job class.
+- [#2407](https://github.com/nautobot/nautobot/issues/2407) - Corrected SSO Backend reference for Azure AD Tenant.
+- [#2449](https://github.com/nautobot/nautobot/issues/2449) - CI: Moved dependency build to be a job, not a step.
+
+
 ## v1.4.2 (2022-09-05)
 
 ### Added
