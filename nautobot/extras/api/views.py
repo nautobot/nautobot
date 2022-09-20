@@ -448,7 +448,7 @@ class ImageAttachmentViewSet(ModelViewSet):
 #
 
 
-def _create_schedule(serializer, data, commit, job, job_model, request, task_queue=None):
+def _create_schedule(serializer, data, commit, job, job_model, request, celery_kwargs={}, task_queue=None):
     """
     This is an internal function to create a scheduled job from API data.
     It has to handle both once-offs (i.e. of type TYPE_FUTURE) and interval
@@ -460,9 +460,9 @@ def _create_schedule(serializer, data, commit, job, job_model, request, task_que
         "user": request.user.pk,
         "commit": commit,
         "name": job.class_path,
+        "celery_kwargs": celery_kwargs,
+        "task_queue": task_queue,
     }
-    if task_queue:
-        job_kwargs["celery_kwargs"] = {"queue": task_queue}
     type_ = serializer["interval"]
     if type_ == JobExecutionType.TYPE_IMMEDIATELY:
         time = timezone.now()
@@ -575,7 +575,16 @@ def _run_job(request, job_model, legacy_response=False):
 
     # Try to create a ScheduledJob, or...
     if schedule_data:
-        schedule = _create_schedule(schedule_data, data, commit, job, job_model, request, task_queue)
+        schedule = _create_schedule(
+            schedule_data,
+            data,
+            commit,
+            job,
+            job_model,
+            request,
+            celery_kwargs={"queue": task_queue},
+            task_queue=input_serializer.validated_data.get("task_queue", None),
+        )
     else:
         schedule = None
 
@@ -590,6 +599,7 @@ def _run_job(request, job_model, legacy_response=False):
             data=data,
             request=copy_safe_request(request),
             commit=commit,
+            task_queue=input_serializer.validated_data.get("task_queue", None),
         )
         job.result = job_result
 
@@ -985,6 +995,7 @@ class ScheduledJobViewSet(ReadOnlyModelViewSet):
             data=scheduled_job.kwargs.get("data", {}),
             request=copy_safe_request(request),
             commit=False,  # force a dry-run
+            task_queue=scheduled_job.kwargs.get("task_queue", None),
         )
         serializer = serializers.JobResultSerializer(job_result, context={"request": request})
 

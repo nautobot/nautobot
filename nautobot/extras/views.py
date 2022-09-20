@@ -1043,6 +1043,9 @@ class JobView(ObjectPermissionRequiredMixin, View):
                 commit = job_result.job_kwargs.get("commit")
                 if commit is not None:
                     initial.setdefault("_commit", commit)
+                task_queue = job_result.job_kwargs.get("task_queue")
+                if task_queue is not None:
+                    initial.setdefault("_task_queue", task_queue)
                 initial.update(explicit_initial)
             except JobResult.DoesNotExist:
                 messages.warning(request, f"JobResult {job_result_pk} not found, cannot use it to pre-populate inputs.")
@@ -1135,6 +1138,7 @@ class JobView(ObjectPermissionRequiredMixin, View):
                     "user": request.user.pk,
                     "commit": commit,
                     "name": job_model.class_path,
+                    "task_queue": job_form.cleaned_data.get("_task_queue", None),
                 }
                 if task_queue:
                     job_kwargs["celery_kwargs"] = {"queue": task_queue}
@@ -1175,6 +1179,7 @@ class JobView(ObjectPermissionRequiredMixin, View):
                     data=job_model.job_class.serialize_data(job_form.cleaned_data),
                     request=copy_safe_request(request),
                     commit=commit,
+                    task_queue=job_form.cleaned_data.get("_task_queue", None),
                 )
 
                 return redirect("extras:jobresult", pk=job_result.pk)
@@ -1293,6 +1298,7 @@ class JobApprovalRequestView(generic.ObjectView):
                     data=job_model.job_class.serialize_data(initial),
                     request=copy_safe_request(request),
                     commit=False,  # force a dry-run
+                    task_queue=scheduled_job.kwargs.get("task_queue", None),
                 )
 
                 return redirect("extras:jobresult", pk=job_result.pk)
