@@ -234,6 +234,18 @@ Celery broker URL used to tell workers where queues are located.
 
 ---
 
+## CELERY_TASK_DEFAULT_QUEUE
+
++++ 1.5.0
+
+Environment Variable: `NAUTOBOT_CELERY_TASK_DEFAULT_QUEUE`
+
+Default: `'default'`
+
+The default celery queue name that will be used by workers if no queue is specified in the `nautobot-server celery worker` command. This queue will also be used by celery tasks if no queue is specified when a task is run.
+
+---
+
 ## CELERY_RESULT_BACKEND
 
 Environment Variable: `NAUTOBOT_CELERY_RESULT_BACKEND`

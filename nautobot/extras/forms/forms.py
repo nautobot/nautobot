@@ -729,11 +729,18 @@ class JobForm(BootstrapMixin, forms.Form):
         label="Commit changes",
         help_text="Commit changes to the database (uncheck for a dry-run)",
     )
+    _task_queue = forms.ChoiceField(
+        required=False,
+        help_text="The task queue to route this job to",
+        label="Task queue",
+    )
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-        # Move _commit to the end of the form
+        # Move _task_queue and _commit to the end of the form
+        task_queue = self.fields.pop("_task_queue")
+        self.fields["_task_queue"] = task_queue
         commit = self.fields.pop("_commit")
         self.fields["_commit"] = commit
 
@@ -771,8 +778,10 @@ class JobEditForm(NautobotModelForm):
             "soft_time_limit",
             "time_limit_override",
             "time_limit",
-            "has_sensitive_variables",
             "has_sensitive_variables_override",
+            "has_sensitive_variables",
+            "task_queues_override",
+            "task_queues",
             "tags",
         ]
 

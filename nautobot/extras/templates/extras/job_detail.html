@@ -262,6 +262,22 @@
                     {% endif %}
                 </td>
             </tr>
+            <tr>
+                <td>Task Queues</td>
+                <td colspan="2">
+                    {% include 'extras/inc/json_data.html' with data=object.task_queues format="json" %}
+                    {% if object.task_queues_override %}
+                        <span class="text-muted">
+                            overridden; default is:<br>
+                            {% if object.installed %}
+                                {% include 'extras/inc/json_data.html' with data=object.job_class.task_queues format="json" %}
+                            {% else %}
+                                unknown (not currently installed)
+                            {% endif %}
+                        </span>
+                    {% endif %}
+                </td>
+            </tr>
         </table>
     </div>
 {% endblock content_right_page %}

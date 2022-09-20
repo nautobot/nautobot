@@ -755,6 +755,8 @@ class JobSerializer(NautobotModelSerializer, TaggedObjectSerializer):
             "soft_time_limit_override",
             "time_limit",
             "time_limit_override",
+            "task_queues",
+            "task_queues_override",
             "tags",
         ]
 
@@ -951,6 +953,7 @@ class JobInputSerializer(serializers.Serializer):
     data = serializers.JSONField(required=False, default=dict)
     commit = serializers.BooleanField(required=False, default=None)
     schedule = NestedScheduledJobSerializer(required=False)
+    task_queue = serializers.CharField(required=False, allow_blank=True)
 
 
 class JobLogEntrySerializer(BaseModelSerializer):
