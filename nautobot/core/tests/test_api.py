@@ -258,6 +258,6 @@ class GenerateLookupValueDomElementViewTestCase(APITestCase):
         self.assertEqual(
             response.data,
             {
-                "dom_element": '<input type="text" name="name" class="lookup_value-input form-control " required id="id_name">'
+                "dom_element": '<select name="name" class="form-control nautobot-select2-multi-value-char" data-multiple="1" id="id_name" multiple>\n</select>'
             },
         )
