@@ -236,6 +236,8 @@ Celery broker URL used to tell workers where queues are located.
 
 ## CELERY_TASK_DEFAULT_QUEUE
 
++++ 1.5.0
+
 Environment Variable: `NAUTOBOT_CELERY_TASK_DEFAULT_QUEUE`
 
 Default: `'default'`
