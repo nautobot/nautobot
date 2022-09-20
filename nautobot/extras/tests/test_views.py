@@ -1515,7 +1515,7 @@ class JobTestCase(
             "time_limit": 650,
             "has_sensitive_variables": False,
             "has_sensitive_variables_override": True,
-            "task_queues": "celery,priority",
+            "task_queues": "overridden,priority",
             "task_queues_override": True,
         }
 
