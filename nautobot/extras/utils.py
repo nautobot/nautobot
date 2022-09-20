@@ -203,7 +203,7 @@ def get_celery_queues():
 
 def get_worker_count(request=None, queue=None):
     """
-    Return a count of the active Celery workers in a specified queue. Defaults to the default queue "celery"
+    Return a count of the active Celery workers in a specified queue. Defaults to the `CELERY_TASK_DEFAULT_QUEUE` setting.
     """
     celery_queues = get_celery_queues()
     if not queue:
