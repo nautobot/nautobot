@@ -593,7 +593,8 @@ def check_schema(context, api_version=None):
         "verbose": "Enable verbose test output.",
         "append": "Append coverage data to .coverage, otherwise it starts clean each time.",
         "skip_docs_build": "Skip (re)build of documentation before running the test.",
-        "report": "Generate Performance Testing report",
+        "report": "Generate Performance Testing report in the terminal.",
+        "generate_report": "Generating a new performance testing report to report.json",
     },
     iterable=["tag", "exclude_tag"],
 )
@@ -608,7 +609,8 @@ def unittest(
     verbose=False,
     append=False,
     skip_docs_build=False,
-    report=True,
+    report=False,
+    generate_report=True,
 ):
     """Run Nautobot unit tests."""
     if not skip_docs_build:
@@ -628,6 +630,8 @@ def unittest(
         command += " --verbosity 2"
     if report:
         command += " --slowreport"
+    if generate_report:
+        command += " --slowreport --slowreportpath report.json"
 
     # lists
     if tag:
@@ -659,7 +663,8 @@ def unittest_coverage(context):
         "verbose": "Enable verbose test output.",
         "append": "Append coverage data to .coverage, otherwise it starts clean each time.",
         "skip_docs_build": "Skip (re)build of documentation before running the test.",
-        "report": "Generate Performance Testing report",
+        "report": "Generate Performance Testing report in the terminal.",
+        "generate_report": "Generating a new performance testing report to report.json",
     },
     iterable=["tag", "exclude_tag"],
 )
@@ -674,7 +679,8 @@ def integration_test(
     verbose=False,
     append=False,
     skip_docs_build=False,
-    report=True,
+    report=False,
+    generate_report=True,
 ):
     """Run Nautobot integration tests."""
 
@@ -693,6 +699,7 @@ def integration_test(
         append=append,
         skip_docs_build=skip_docs_build,
         report=report,
+        generate_report=generate_report,
     )
 
 
