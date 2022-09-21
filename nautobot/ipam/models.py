@@ -28,7 +28,7 @@ from .constants import (
     VRF_RD_MAX_LENGTH,
 )
 from .fields import VarbinaryIPField
-from .querysets import PrefixQuerySet, AggregateQuerySet, IPAddressQuerySet
+from .querysets import AggregateQuerySet, IPAddressQuerySet, PrefixQuerySet, RIRQuerySet
 from .validators import DNSValidator
 
 
@@ -194,6 +194,8 @@ class RIR(OrganizationalModel):
 
     csv_headers = ["name", "slug", "is_private", "description"]
 
+    objects = RIRQuerySet.as_manager()
+
     class Meta:
         ordering = ["name"]
         verbose_name = "RIR"
@@ -201,6 +203,9 @@ class RIR(OrganizationalModel):
 
     def __str__(self):
         return self.name
+
+    def natural_key(self):
+        return (self.name,)
 
     def get_absolute_url(self):
         return reverse("ipam:rir", args=[self.slug])

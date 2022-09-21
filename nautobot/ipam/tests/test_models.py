@@ -113,9 +113,10 @@ class TestVarbinaryIPField(TestCase):
 
 
 class TestAggregate(TestCase):
+    fixtures = ("rir",)
+
     def test_get_utilization(self):
-        rir = RIR.objects.create(name="RIR 1", slug="rir-1")
-        aggregate = Aggregate(prefix=netaddr.IPNetwork("10.0.0.0/8"), rir=rir)
+        aggregate = Aggregate(prefix=netaddr.IPNetwork("10.0.0.0/8"), rir=RIR.objects.get(slug="rfc-1918"))
         aggregate.save()
 
         # 25% utilization

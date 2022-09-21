@@ -6,11 +6,12 @@ from nautobot.utilities.testing import TestCase
 
 class AggregateQuerysetTestCase(TestCase):
     queryset = Aggregate.objects.all()
+    fixtures = ("rir",)
 
     @classmethod
     def setUpTestData(cls):
 
-        rir = RIR.objects.create(name="RIR 1", slug="rir-1")
+        rir = RIR.objects.get(slug="rfc-1918")
 
         Aggregate.objects.create(prefix=netaddr.IPNetwork("192.168.0.0/16"), rir=rir)
 

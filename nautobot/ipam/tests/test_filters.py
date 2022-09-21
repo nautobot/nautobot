@@ -222,41 +222,26 @@ class RouteTargetTestCase(FilterTestCases.FilterTestCase):
 class RIRTestCase(FilterTestCases.NameSlugFilterTestCase):
     queryset = RIR.objects.all()
     filterset = RIRFilterSet
-
-    @classmethod
-    def setUpTestData(cls):
-
-        RIR.objects.create(name="RIR 1", slug="rir-1", is_private=False, description="A")
-        RIR.objects.create(name="RIR 2", slug="rir-2", is_private=False, description="B")
-        RIR.objects.create(name="RIR 3", slug="rir-3", is_private=False, description="C")
-        RIR.objects.create(name="RIR 4", slug="rir-4", is_private=True, description="D")
-        RIR.objects.create(name="RIR 5", slug="rir-5", is_private=True, description="E")
-        RIR.objects.create(name="RIR 6", slug="rir-6", is_private=True, description="F")
+    fixtures = ("rir",)
 
     def test_description(self):
-        params = {"description": ["A", "B"]}
+        params = {"description": ["RFC 1918 private address space", "IPv6 Address Prefix Reserved for Documentation"]}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
 
     def test_is_private(self):
         params = {"is_private": "true"}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 3)
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 4)
         params = {"is_private": "false"}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 3)
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 5)
 
 
 class AggregateTestCase(FilterTestCases.FilterTestCase):
     queryset = Aggregate.objects.all()
     filterset = AggregateFilterSet
+    fixtures = ("rir",)
 
     @classmethod
     def setUpTestData(cls):
-
-        rirs = (
-            RIR.objects.create(name="RIR 1", slug="rir-1"),
-            RIR.objects.create(name="RIR 2", slug="rir-2"),
-            RIR.objects.create(name="RIR 3", slug="rir-3"),
-        )
-        cls.rirs = rirs
 
         tenant_groups = (
             TenantGroup.objects.create(name="Tenant group 1", slug="tenant-group-1"),
@@ -270,50 +255,55 @@ class AggregateTestCase(FilterTestCases.FilterTestCase):
             Tenant.objects.create(name="Tenant 3", slug="tenant-3", group=tenant_groups[2]),
         )
 
+        rfc1918 = RIR.objects.get(slug="rfc-1918")
+        rfc3849 = RIR.objects.get(slug="rfc-3849")
+        rfc6598 = RIR.objects.get(slug="rfc-6598")
+        arin = RIR.objects.get(slug="arin")
+
         Aggregate.objects.create(
             prefix="10.1.0.0/16",
-            rir=rirs[0],
+            rir=rfc1918,
             tenant=tenants[0],
             date_added="2020-01-01",
         )
         Aggregate.objects.create(
             prefix="10.2.0.0/16",
-            rir=rirs[0],
+            rir=rfc1918,
             tenant=tenants[1],
             date_added="2020-01-02",
         )
         Aggregate.objects.create(
-            prefix="10.3.0.0/16",
-            rir=rirs[1],
+            prefix="100.64.0.0/10",
+            rir=rfc6598,
             tenant=tenants[2],
             date_added="2020-01-03",
         )
         Aggregate.objects.create(
             prefix="2001:db8:1::/48",
-            rir=rirs[1],
+            rir=rfc3849,
             tenant=tenants[0],
             date_added="2020-01-04",
         )
         Aggregate.objects.create(
             prefix="2001:db8:3::/48",
-            rir=rirs[2],
+            rir=rfc3849,
             tenant=tenants[2],
             date_added="2020-01-06",
         )
         Aggregate.objects.create(
-            prefix="2001:db8:2::/48",
-            rir=rirs[2],
+            prefix="2001:400::/23",
+            rir=arin,
             tenant=tenants[1],
             date_added="2020-01-05",
         )
 
     def test_search(self):
-        Aggregate.objects.create(prefix="10.150.255.0/31", rir=self.rirs[0])
-        Aggregate.objects.create(prefix="10.150.255.2/31", rir=self.rirs[0])
         test_values = [
-            "10.150.255.0/31",
-            "10.150.255.0",
-            "10.150.255.2",
+            "10.1.0.0/16",
+            "10.1.0.0",
+            "2001:db8:1::/48",
+            "2001:db8:1::",
+            "2001:db8:1",
         ]
         for value in test_values:
             params = {"q": value}
@@ -333,7 +323,7 @@ class AggregateTestCase(FilterTestCases.FilterTestCase):
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 1)
 
     def test_rir(self):
-        rirs = RIR.objects.all()[:2]
+        rirs = (RIR.objects.get(slug="rfc-1918"), RIR.objects.get(slug="rfc-3849"))
         params = {"rir_id": [rirs[0].pk, rirs[1].pk]}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 4)
         params = {"rir": [rirs[0].slug, rirs[1].slug]}

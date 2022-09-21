@@ -101,18 +101,11 @@ class RouteTargetTestCase(ViewTestCases.PrimaryObjectViewTestCase):
 
 class RIRTestCase(ViewTestCases.OrganizationalObjectViewTestCase):
     model = RIR
+    fixtures = ("rir",)
 
     @classmethod
     def setUpTestData(cls):
-
-        RIR.objects.bulk_create(
-            [
-                RIR(name="RIR 1", slug="rir-1"),
-                RIR(name="RIR 2", slug="rir-2"),
-                RIR(name="RIR 3", slug="rir-3"),
-                RIR(name="RIR 8"),
-            ]
-        )
+        RIR.objects.create(name="RIR 8")
 
         cls.form_data = {
             "name": "RIR X",
@@ -134,23 +127,22 @@ class RIRTestCase(ViewTestCases.OrganizationalObjectViewTestCase):
 
 class AggregateTestCase(ViewTestCases.PrimaryObjectViewTestCase):
     model = Aggregate
-    fixtures = ("tag",)
+    fixtures = (
+        "rir",
+        "tag",
+    )
 
     @classmethod
     def setUpTestData(cls):
+        rfc1918 = RIR.objects.get(slug="rfc-1918")
 
-        rirs = (
-            RIR.objects.create(name="RIR 1", slug="rir-1"),
-            RIR.objects.create(name="RIR 2", slug="rir-2"),
-        )
-
-        Aggregate.objects.create(prefix=IPNetwork("10.1.0.0/16"), rir=rirs[0])
-        Aggregate.objects.create(prefix=IPNetwork("10.2.0.0/16"), rir=rirs[0])
-        Aggregate.objects.create(prefix=IPNetwork("10.3.0.0/16"), rir=rirs[0])
+        Aggregate.objects.create(prefix=IPNetwork("10.1.0.0/16"), rir=rfc1918)
+        Aggregate.objects.create(prefix=IPNetwork("10.2.0.0/16"), rir=rfc1918)
+        Aggregate.objects.create(prefix=IPNetwork("10.3.0.0/16"), rir=rfc1918)
 
         cls.form_data = {
             "prefix": IPNetwork("10.99.0.0/16"),
-            "rir": rirs[1].pk,
+            "rir": rfc1918.pk,
             "date_added": datetime.date(2020, 1, 1),
             "description": "A new aggregate",
             "tags": [t.pk for t in Tag.objects.get_for_model(Aggregate)],
@@ -158,13 +150,13 @@ class AggregateTestCase(ViewTestCases.PrimaryObjectViewTestCase):
 
         cls.csv_data = (
             "prefix,rir",
-            "10.4.0.0/16,RIR 1",
-            "10.5.0.0/16,RIR 1",
-            "10.6.0.0/16,RIR 1",
+            "10.4.0.0/16,RFC 1918",
+            "10.5.0.0/16,RFC 1918",
+            "10.6.0.0/16,RFC 1918",
         )
 
         cls.bulk_edit_data = {
-            "rir": rirs[1].pk,
+            "rir": RIR.objects.get(name="ARIN").pk,
             "date_added": datetime.date(2020, 1, 1),
             "description": "New description",
         }

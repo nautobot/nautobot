@@ -120,18 +120,9 @@ class RIRTest(APIViewTestCases.APIViewTestCase):
     bulk_update_data = {
         "description": "New description",
     }
+    fixtures = ("rir",)
 
     slug_source = "name"
-
-    @classmethod
-    def setUpTestData(cls):
-
-        rirs = (
-            RIR(name="RIR 1", slug="rir-1"),
-            RIR(name="RIR 2", slug="rir-2"),
-            RIR(name="RIR 3", slug="rir-3"),
-        )
-        RIR.objects.bulk_create(rirs)
 
 
 class AggregateTest(APIViewTestCases.APIViewTestCase):
@@ -140,32 +131,32 @@ class AggregateTest(APIViewTestCases.APIViewTestCase):
     bulk_update_data = {
         "description": "New description",
     }
+    fixtures = ("rir",)
 
     @classmethod
     def setUpTestData(cls):
 
-        rirs = (
-            RIR.objects.create(name="RIR 1", slug="rir-1"),
-            RIR.objects.create(name="RIR 2", slug="rir-2"),
-        )
+        rfc1918 = RIR.objects.get(name="RFC 1918")
+        rfc3849 = RIR.objects.get(name="RFC 3849")
+        arin = RIR.objects.get(name="ARIN")
 
-        Aggregate.objects.create(prefix=IPNetwork("10.0.0.0/8"), rir=rirs[0])
-        Aggregate.objects.create(prefix=IPNetwork("172.16.0.0/12"), rir=rirs[0])
-        Aggregate.objects.create(prefix=IPNetwork("192.168.0.0/16"), rir=rirs[0])
-        Aggregate.objects.create(prefix=IPNetwork("2001:db8:abcd::/64"), rir=rirs[0])
+        Aggregate.objects.create(prefix=IPNetwork("10.0.0.0/8"), rir=rfc1918)
+        Aggregate.objects.create(prefix=IPNetwork("172.16.0.0/12"), rir=rfc1918)
+        Aggregate.objects.create(prefix=IPNetwork("192.168.0.0/16"), rir=rfc1918)
+        Aggregate.objects.create(prefix=IPNetwork("2001:db8:abcd::/64"), rir=rfc3849)
 
         cls.create_data = [
             {
-                "prefix": "100.0.0.0/8",
-                "rir": rirs[1].pk,
+                "prefix": "12.0.0.0/8",
+                "rir": arin.pk,
             },
             {
                 "prefix": "2001:db8:abcd:12::/64",
-                "rir": rirs[1].pk,
+                "rir": rfc3849.pk,
             },
             {
-                "prefix": "102.0.0.0/8",
-                "rir": rirs[1].pk,
+                "prefix": "17.0.0.0/16",
+                "rir": arin.pk,
             },
         ]
 

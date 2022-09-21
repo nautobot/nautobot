@@ -1,0 +1,110 @@
+[
+{
+  "model": "ipam.rir",
+  "fields": {
+    "created": "2022-09-20",
+    "last_updated": "2022-09-20T21:48:18.751Z",
+    "_custom_field_data": {},
+    "name": "RFC 3849",
+    "slug": "rfc-3849",
+    "is_private": true,
+    "description": "IPv6 Address Prefix Reserved for Documentation"
+  }
+},
+{
+  "model": "ipam.rir",
+  "fields": {
+    "created": "2022-09-20",
+    "last_updated": "2022-09-20T21:33:09.062Z",
+    "_custom_field_data": {},
+    "name": "AFRINIC",
+    "slug": "afrinic",
+    "is_private": false,
+    "description": "African Network Information Center"
+  }
+},
+{
+  "model": "ipam.rir",
+  "fields": {
+    "created": "2022-09-20",
+    "last_updated": "2022-09-20T16:55:30.906Z",
+    "_custom_field_data": {},
+    "name": "RFC 6598",
+    "slug": "rfc-6598",
+    "is_private": true,
+    "description": "RFC 6598 address space for Carrier-Grade NAT"
+  }
+},
+{
+  "model": "ipam.rir",
+  "fields": {
+    "created": "2022-09-20",
+    "last_updated": "2022-09-20T21:33:40.628Z",
+    "_custom_field_data": {},
+    "name": "LACNIC",
+    "slug": "lacnic",
+    "is_private": false,
+    "description": "Latin America and Caribbean Network Information Centre"
+  }
+},
+{
+  "model": "ipam.rir",
+  "fields": {
+    "created": "2022-09-20",
+    "last_updated": "2022-09-20T17:03:10.108Z",
+    "_custom_field_data": {},
+    "name": "ARIN",
+    "slug": "arin",
+    "is_private": false,
+    "description": "American Registry for Internet Numbers, arin.net"
+  }
+},
+{
+  "model": "ipam.rir",
+  "fields": {
+    "created": "2022-09-20",
+    "last_updated": "2022-09-20T17:11:13.107Z",
+    "_custom_field_data": {},
+    "name": "RFC 4193",
+    "slug": "rfc-4193",
+    "is_private": true,
+    "description": "IPv6 Unique Local Addresses"
+  }
+},
+{
+  "model": "ipam.rir",
+  "fields": {
+    "created": "2022-09-20",
+    "last_updated": "2022-09-20T21:33:25.802Z",
+    "_custom_field_data": {},
+    "name": "APNIC",
+    "slug": "apnic",
+    "is_private": false,
+    "description": "Asia-Pacific Network Information Centre"
+  }
+},
+{
+  "model": "ipam.rir",
+  "fields": {
+    "created": "2022-09-20",
+    "last_updated": "2022-09-20T21:33:54.817Z",
+    "_custom_field_data": {},
+    "name": "RIPE NCC",
+    "slug": "ripe-ncc",
+    "is_private": false,
+    "description": "Réseaux IP Européens Network Coordination Centre"
+  }
+},
+{
+  "model": "ipam.rir",
+  "fields": {
+    "created": "2022-09-20",
+    "last_updated": "2022-09-20T16:54:44.681Z",
+    "_custom_field_data": {},
+    "name": "RFC 1918",
+    "slug": "rfc-1918",
+    "is_private": true,
+    "description": "RFC 1918 private address space"
+  }
+}
+]
