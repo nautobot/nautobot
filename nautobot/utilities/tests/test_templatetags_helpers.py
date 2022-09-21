@@ -29,6 +29,7 @@ from nautobot.utilities.templatetags.helpers import (
 )
 from nautobot.extras.models import Status
 from nautobot.dcim.models import Site
+from nautobot.ipam.models import IPAddress
 from example_plugin.models import AnotherExampleModel, ExampleModel
 
 
@@ -51,6 +52,11 @@ class NautobotTemplatetagsHelperTest(TestCase):
         site.save()
         self.assertEqual(
             hyperlinked_object(site), '<a href="/dcim/sites/test-site/" title="An important site">Test Site</a>'
+        )
+        # An IP address object gives a hyperlink with a proper element id
+        ipaddr1 = IPAddress.objects.create(address="1.1.1.1/32")
+        self.assertEqual(
+            hyperlinked_object(ipaddr1), f'<a href="/ipam/ip-addresses/{ipaddr1.id}/" id=ipv4>1.1.1.1/32</a>'
         )
 
     def test_placeholder(self):
