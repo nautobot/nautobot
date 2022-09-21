@@ -116,6 +116,8 @@ STORAGE_CONFIG = {}
 # Test runner that is aware of our use of "integration" tags and only runs
 # integration tests if explicitly passed in with `nautobot-server test --tag integration`.
 TEST_RUNNER = "nautobot.core.tests.runner.NautobotTestRunner"
+NUM_SLOW_TESTS = None
+ALWAYS_GENERATE_SLOW_REPORT = False
 
 #
 # Django cryptography

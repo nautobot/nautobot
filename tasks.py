@@ -607,6 +607,7 @@ def unittest(
     verbose=False,
     append=False,
     skip_docs_build=False,
+    report=False,
 ):
     """Run Nautobot unit tests."""
     if not skip_docs_build:
@@ -624,6 +625,8 @@ def unittest(
         command += " --buffer"
     if verbose:
         command += " --verbosity 2"
+    if report:
+        command += " --slowreport"
 
     # lists
     if tag:

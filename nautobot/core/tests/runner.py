@@ -1,7 +1,7 @@
-from django.test.runner import DiscoverRunner
+from django_slowtests.testrunner import DiscoverSlowestTestsRunner
 
 
-class NautobotTestRunner(DiscoverRunner):
+class NautobotTestRunner(DiscoverSlowestTestsRunner):
     """
     Custom test runner that excludes integration tests by default.
 
