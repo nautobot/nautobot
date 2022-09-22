@@ -705,6 +705,57 @@ def integration_test(
 
 @task(
     help={
+        "keepdb": "Save and re-use test database between test runs for faster re-testing.",
+        "label": "Specify a directory or module to test instead of running all Nautobot tests.",
+        "failfast": "Fail as soon as a single test fails don't run the entire test suite.",
+        "buffer": "Discard output from passing tests.",
+        "tag": "Run only tests with the specified tag. Can be used multiple times.",
+        "exclude_tag": "Do not run tests with the specified tag. Can be used multiple times.",
+        "verbose": "Enable verbose test output.",
+        "append": "Append coverage data to .coverage, otherwise it starts clean each time.",
+        "skip_docs_build": "Skip (re)build of documentation before running the test.",
+        "report": "Generate Performance Testing report in the terminal.",
+        "generate_report": "Generating a new performance testing report to report.json",
+    },
+    iterable=["tag", "exclude_tag"],
+)
+def performance_test(
+    context,
+    keepdb=False,
+    label="nautobot",
+    failfast=False,
+    buffer=True,
+    tag=None,
+    exclude_tag=None,
+    verbose=False,
+    append=False,
+    skip_docs_build=False,
+    report=True,
+    generate_report=False,
+):
+    """Run Nautobot performance tests."""
+
+    # Enforce "performance" tag
+    tag.append("performance")
+
+    unittest(
+        context,
+        keepdb=keepdb,
+        label=label,
+        failfast=failfast,
+        buffer=buffer,
+        tag=tag,
+        exclude_tag=exclude_tag,
+        verbose=verbose,
+        append=append,
+        skip_docs_build=skip_docs_build,
+        report=report,
+        generate_report=generate_report,
+    )
+
+
+@task(
+    help={
         "lint-only": "Only run linters; unit tests will be excluded.",
         "keepdb": "Save and re-use test database between test runs for faster re-testing.",
     }
