@@ -2,7 +2,7 @@ import json
 from django.conf import settings
 from django_slowtests.testrunner import DiscoverSlowestTestsRunner
 
-from nautobot.core.tests import PERFORMANCE_BASELINES
+from nautobot.core.tests.__init__ import PERFORMANCE_BASELINES
 
 
 class NautobotTestRunner(DiscoverSlowestTestsRunner):
@@ -51,16 +51,14 @@ class NautobotTestRunner(DiscoverSlowestTestsRunner):
                 json.dump(data, outfile)
         else:
             if test_result_count:
-                print("\n{r} abnormally slower tests:".format(r=test_result_count))
+                print(f"\n{test_result_count} abnormally slower tests:")
 
             for func_name, timing in test_results:
-                print(
-                    "{t:.4f}s {f} is significantly slower than the baseline {b:.4f}s".format(
-                        f=func_name, t=float(timing), b=float(self.baselines[func_name])
-                    )
-                )
+                time = float(timing)
+                baseline = float(self.baselines[func_name])
+                print(f"{time:.4f}s {func_name} is significantly slower than the baseline {baseline:.4f}s")
 
-            if not len(test_results):
+            if not test_results:
                 print("\nNo tests signficantly slower than baseline")
 
     def get_baselines(self):
@@ -92,13 +90,13 @@ class NautobotTestRunner(DiscoverSlowestTestsRunner):
             # Filter tests by threshold
             test_results = []
 
-            for result in by_time:
+            for entry in by_time:
                 # Convert test time from seconds to miliseconds for comparison
-                result_time_ms = result[1] * 1000
+                result_time_ms = entry[1] * 1000
 
                 # If the test completed under 1.5 times the baseline
                 # don't show it to the user
-                if result_time_ms <= self.baselines[result[0]] * 1000 * 1.8:
+                if result_time_ms <= self.baselines[entry[0]] * 1000 * 1.8:
                     continue
 
                 test_results.append(result)

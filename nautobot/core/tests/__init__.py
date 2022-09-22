@@ -1,4 +1,4 @@
-{
+PERFORMANCE_BASELINES = {
     "threshold": 0,
     "slower_tests": [
         {
