@@ -279,7 +279,7 @@ jobs:
       - "tests-postgres"
       - "tests-mysql"
 
-performance-test:
+  performance-test:
     runs-on: "ubuntu-20.04"
     strategy:
       fail-fast: true
