@@ -3,6 +3,7 @@ from django.test.runner import DiscoverRunner
 
 import factory.random
 
+from nautobot.ipam.factory import AggregateFactory, RIRFactory
 from nautobot.tenancy.factory import TenantFactory, TenantGroupFactory
 
 
@@ -47,6 +48,9 @@ class NautobotTestRunner(DiscoverRunner):
         print("Creating Tenants...")
         TenantFactory.create_batch(10, has_group=False)
         TenantFactory.create_batch(10, has_group=True)
+        print("Creating RIRs...")
+        RIRFactory.create_batch(9)  # 9 unique RIR names are hard-coded presently
+        AggregateFactory.create_batch(20)
 
         print("Database pre-population completed!")
         return result

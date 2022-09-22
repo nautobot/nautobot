@@ -19,6 +19,7 @@ class TenantGroupFactory(DjangoModelFactory):
     has_parent = factory.Faker("pybool")
     parent = factory.Maybe("has_parent", random_instance(TenantGroup), None)
 
+    # TODO custom field data?
 
 class TenantFactory(DjangoModelFactory):
     class Meta:
@@ -35,6 +36,8 @@ class TenantFactory(DjangoModelFactory):
 
     has_group = factory.Faker("pybool")
     group = factory.Maybe("has_group", random_instance(TenantGroup), None)
+
+    # TODO custom field data?
 
     @factory.post_generation
     def tags(self, create, extracted, **kwargs):
