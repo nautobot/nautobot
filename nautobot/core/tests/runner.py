@@ -1,4 +1,9 @@
+from django.core.management import call_command
 from django.test.runner import DiscoverRunner
+
+import factory.random
+
+from nautobot.tenancy.factory import TenantFactory, TenantGroupFactory
 
 
 class NautobotTestRunner(DiscoverRunner):
@@ -30,3 +35,22 @@ class NautobotTestRunner(DiscoverRunner):
             kwargs["exclude_tags"] = incoming_exclude_tags
 
         super().__init__(**kwargs)
+
+    def setup_databases(self, **kwargs):
+        result = super().setup_databases(**kwargs)
+        print("Beginning database pre-population...")
+
+        factory.random.reseed_random("Nautobot")
+        print("Creating TenantGroups...")
+        TenantGroupFactory.create_batch(10, has_parent=False)
+        TenantGroupFactory.create_batch(10, has_parent=True)
+        print("Creating Tenants...")
+        TenantFactory.create_batch(10, has_group=False)
+        TenantFactory.create_batch(10, has_group=True)
+
+        print("Database pre-population completed!")
+        return result
+
+    def teardown_databases(self, old_config, **kwargs):
+        call_command("flush", "--no-input")
+        super().teardown_databases(old_config, **kwargs)

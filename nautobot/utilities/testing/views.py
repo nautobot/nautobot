@@ -535,12 +535,15 @@ class ViewTestCases:
                 self._get_queryset().get(pk=instance1.pk)
 
             # Try to delete a non-permitted object
+            # Note that in the case of tree models, deleting instance1 above may have cascade-deleted to instance2,
+            # so to be safe, we need to get another object instance that definitely exists:
+            instance3 = self._get_queryset().first()
             request = {
-                "path": self._get_url("delete", instance2),
+                "path": self._get_url("delete", instance3),
                 "data": post_data({"confirm": True}),
             }
             self.assertHttpStatus(self.client.post(**request), 404)
-            self.assertTrue(self._get_queryset().filter(pk=instance2.pk).exists())
+            self.assertTrue(self._get_queryset().filter(pk=instance3.pk).exists())
 
     class ListObjectsViewTestCase(ModelViewTestCase):
         """

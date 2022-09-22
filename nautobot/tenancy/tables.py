@@ -72,7 +72,8 @@ class TenantGroupTable(BaseTable):
 
 class TenantTable(BaseTable):
     pk = ToggleColumn()
-    name = tables.LinkColumn()
+    name = tables.Column(linkify=True)
+    group = tables.Column(linkify=True)
     tags = TagColumn(url_name="tenancy:tenant_list")
 
     class Meta(BaseTable.Meta):
