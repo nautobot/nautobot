@@ -1,4 +1,8 @@
+import json
+from django.conf import settings
 from django_slowtests.testrunner import DiscoverSlowestTestsRunner
+
+from nautobot.core.tests import PERFORMANCE_BASELINES
 
 
 class NautobotTestRunner(DiscoverSlowestTestsRunner):
@@ -30,3 +34,74 @@ class NautobotTestRunner(DiscoverSlowestTestsRunner):
             kwargs["exclude_tags"] = incoming_exclude_tags
 
         super().__init__(**kwargs)
+
+    def generate_report(self, test_results, result):
+        test_result_count = len(test_results)
+
+        if self.report_path:
+            data = {
+                "slower_tests": [
+                    {"name": func_name, "execution_time": float(timing)} for func_name, timing in test_results
+                ],
+                "nb_tests": result.testsRun,
+                "nb_failed": len(result.errors + result.failures),
+                "total_execution_time": result.timeTaken,
+            }
+            with open(self.report_path, "w") as outfile:
+                json.dump(data, outfile)
+        else:
+            if test_result_count:
+                print("\n{r} abnormally slower tests:".format(r=test_result_count))
+
+            for func_name, timing in test_results:
+                print(
+                    "{t:.4f}s {f} is significantly slower than the baseline {b:.4f}s".format(
+                        f=func_name, t=float(timing), b=float(self.baselines[func_name])
+                    )
+                )
+
+            if not len(test_results):
+                print("\nNo tests signficantly slower than baseline")
+
+    def get_baselines(self):
+        """Get the performance baselines for comparison"""
+        baselines = {}
+        data = PERFORMANCE_BASELINES["slower_tests"]
+        for entry in data:
+            baselines[entry["name"]] = entry["execution_time"]
+        return baselines
+
+    def suite_result(self, suite, result):
+        return_value = super(DiscoverSlowestTestsRunner, self).suite_result(suite, result)
+        NUM_SLOW_TESTS = getattr(settings, "NUM_SLOW_TESTS", 10)
+        self.baselines = self.get_baselines()
+
+        should_generate_report = getattr(settings, "ALWAYS_GENERATE_SLOW_REPORT", True) or self.should_generate_report
+        if not should_generate_report:
+            self.remove_timing_tmp_files()
+            return return_value
+
+        # Grab slowest tests
+        timings = self.get_timings()
+        by_time = sorted(timings, key=lambda x: x[1], reverse=True)
+        if by_time is not None:
+            by_time = by_time[:NUM_SLOW_TESTS]
+        test_results = by_time
+
+        if self.baselines:
+            # Filter tests by threshold
+            test_results = []
+
+            for result in by_time:
+                # Convert test time from seconds to miliseconds for comparison
+                result_time_ms = result[1] * 1000
+
+                # If the test completed under 1.5 times the baseline
+                # don't show it to the user
+                if result_time_ms <= self.baselines[result[0]] * 1000 * 1.8:
+                    continue
+
+                test_results.append(result)
+
+        self.generate_report(test_results, result)
+        return return_value

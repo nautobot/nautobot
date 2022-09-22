@@ -610,7 +610,7 @@ def unittest(
     append=False,
     skip_docs_build=False,
     report=False,
-    generate_report=True,
+    generate_report=False,
 ):
     """Run Nautobot unit tests."""
     if not skip_docs_build:
@@ -680,7 +680,7 @@ def integration_test(
     append=False,
     skip_docs_build=False,
     report=False,
-    generate_report=True,
+    generate_report=False,
 ):
     """Run Nautobot integration tests."""
 
