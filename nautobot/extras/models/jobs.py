@@ -42,10 +42,13 @@ from nautobot.extras.utils import (
     FeatureQuery,
     extras_features,
     get_job_content_type,
+    get_worker_count,
     jobs_in_directory,
 )
 from nautobot.utilities.fields import JSONArrayField
+from nautobot.utilities.exceptions import CeleryWorkerNotRunningException
 from nautobot.utilities.logging import sanitize
+from nautobot.utilities.utils import copy_safe_request
 
 from .customfields import CustomFieldModel
 
@@ -368,6 +371,99 @@ class Job(PrimaryModel):
 
     def get_absolute_url(self):
         return reverse("extras:job_detail", kwargs={"slug": self.slug})
+
+    def get_default_task_queue(self):
+        if not self.task_queues:
+            return settings.CELERY_TASK_DEFAULT_QUEUE
+        else:
+            return self.task_queues[0]
+
+    def schedule_job(self, request, data, commit, schedule_type, start_time=None, schedule_name=None, task_queue=None):
+        # TODO: start_time will also apply to crontab schedules (0 1 * * *), better name for this arg?
+        if schedule_type not in JobExecutionType.values():
+            raise ValidationError(f"Select a valid schedule type. {schedule_type} is not a valid choice.")
+        if not request.user.has_perm("extras.run_job"):
+            raise ValidationError("This user does not have permission to run jobs.")
+        if not self.enabled:
+            raise ValidationError("This job is not enabled to be run.")
+        if not self.installed:
+            raise ValidationError("This job is not presently installed and cannot be run.")
+        if self.has_sensitive_variables:
+            if self.approval_required:
+                raise ValidationError("Jobs with sensitive variables and requiring approval cannot be run.")
+            if schedule_type != JobExecutionType.TYPE_IMMEDIATELY:
+                raise ValidationError("Job has sensitive variables and can only be run immediately.")
+
+        self.job_class().validate_data(data)
+
+        if start_time is None:
+            if schedule_type == JobExecutionType.TYPE_CUSTOM:
+                raise ValueError("start_time must be supplied for custom schedules.")
+            else:
+                start_time = timezone.now()
+
+        if task_queue is None:
+            task_queue = self.get_default_task_queue()
+
+        if schedule_name is None:
+            schedule_name = f"{self.name} - {schedule_type} - {start_time}"
+
+        # Run job immediately
+        if schedule_type == JobExecutionType.TYPE_IMMEDIATELY:
+            self._run_job(request, data, commit, task_queue)
+
+        # Schedule job
+        else:
+            self._schedule_job(request, data, commit, schedule_type, start_time, schedule_name, task_queue)
+
+    def _run_job(self, request, data, commit, task_queue):
+        from nautobot.extras.jobs import run_job
+
+        if not get_worker_count():
+            raise CeleryWorkerNotRunningException()
+
+        job_result = JobResult.enqueue_job(
+            run_job,
+            self.job_class.class_path,
+            get_job_content_type(),
+            request.user,
+            data=data,
+            request=copy_safe_request(request),
+            commit=commit,
+            celery_kwargs={"queue": task_queue},
+            task_queue=task_queue,
+        )
+        return job_result
+
+    def _schedule_job(self, request, data, commit, schedule_type, start_time=None, schedule_name=None, task_queue=None):
+        job_kwargs = {
+            "data": data,
+            "request": copy_safe_request(request),
+            "user": request.user.pk,
+            "commit": commit,
+            "name": self.class_path,
+            "celery_kwargs": {"queue": task_queue},
+            "task_queue": task_queue,
+        }
+        crontab = start_time if schedule_type == "crontab" else ""
+        scheduled_job = ScheduledJob(
+            name=schedule_name,
+            task="nautobot.extras.jobs.scheduled_job_handler",
+            job_class=self.class_path,
+            job_model=self,
+            start_time=start_time,
+            description=f"Nautobot job {schedule_name} scheduled by {request.user} on {start_time}",
+            kwargs=job_kwargs,
+            interval=schedule_type,
+            one_off=(schedule_type not in JobExecutionType.RECURRING_CHOICES),
+            user=request.user,
+            approval_required=self.approval_required,
+            crontab=crontab,
+            queue=task_queue,
+        )
+        scheduled_job.save()
+
+        return scheduled_job
 
 
 @extras_features("graphql")
