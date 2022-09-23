@@ -18,7 +18,7 @@ from django.contrib.auth import get_user_model
 from django.contrib.contenttypes.models import ContentType
 from django.core.files.uploadedfile import InMemoryUploadedFile
 from django.core.validators import RegexValidator
-from django.db import transaction
+from django.db import IntegrityError, transaction
 from django.db.models import Model
 from django.db.models.query import QuerySet
 from django.forms import ValidationError
@@ -110,9 +110,6 @@ class BaseJob:
         self.active_test = "main"
         self.failed = False
         self._job_result = None
-
-        # Grab some info about the job
-        self.source = inspect.getsource(self.__class__)
 
         # Compile test methods and initialize results skeleton
         self.test_methods = []
@@ -1202,7 +1199,12 @@ def run_job(data, request, job_result_pk, commit=True, *args, **kwargs):
             job_result.set_status(JobResultStatusChoices.STATUS_ERRORED)
 
         finally:
-            job_result.save()
+            try:
+                job_result.save()
+            except IntegrityError:
+                # handle job_model deleted while job was running
+                job_result.job_model = None
+                job_result.save()
             if file_ids:
                 job.delete_files(*file_ids)  # Cleanup FileProxy objects
 

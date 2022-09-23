@@ -209,7 +209,7 @@ Feature requests will follow our published workflow from inbound triage to ultim
   [getting started](getting-started.md)
   documentation for tips on setting up your development environment.
 
-* It is recommended to open an issue **before** starting work on a pull request, and discuss your idea with the Nautobot maintainers before beginning work. This will help prevent wasting time on something that might we might not be able to implement. When suggesting a new feature, also make sure it won't conflict with any work that's already in progress.
+* It is recommended to open an issue **before** starting work on a pull request, and discuss your idea with the Nautobot maintainers before beginning work. This will help prevent wasting time on something that we might not be able to implement. When suggesting a new feature, also make sure it won't conflict with any work that's already in progress.
 
 * Once you've opened or identified an issue you'd like to work on, ask that it
   be assigned to you so that others are aware it's being worked on. A maintainer
@@ -223,3 +223,20 @@ Feature requests will follow our published workflow from inbound triage to ultim
     * All unit tests pass successfully
     * PEP 8 compliance is enforced, with the exception that lines may be
       greater than 80 characters in length
+    * At least one [changelog fragment](#creating-changelog-fragments) has
+      been included in the feature branch
+
+#### Creating Changelog Fragments
+
+All pull requests to `next` or `develop` must include a changelog fragment file in the `./changes` directory. To create a fragment, use your github issue number and fragment type as the filename. For example, `2362.added`. Valid fragment types are `added`, `changed`, `deprecated`, `fixed`, `removed`, and `security`. The change summary is added to the file in plain text. Change summaries should be complete sentences, starting with a capital letter and ending with a period, and be in past tense. Change fragments must only contain a single line of text with an optional trailing newline.
+
+!!! example
+
+    ```sh
+    # Wrong
+    echo "fix critical bug in documentation" > changes/1234.fixed
+    echo "fixes critical bug in documentation" > changes/1234.fixed
+
+    # Right
+    echo "Fixed critical bug in documentation." > changes/1234.fixed
+    ```

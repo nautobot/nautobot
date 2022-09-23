@@ -41,6 +41,7 @@ python-versions = ">=3.6.2"
 
 [package.dependencies]
 lazy-object-proxy = ">=1.4.0"
+setuptools = ">=20.0"
 typed-ast = {version = ">=1.4.0,<2.0", markers = "implementation_name == \"cpython\" and python_version < \"3.8\""}
 typing-extensions = {version = ">=3.10", markers = "python_version < \"3.10\""}
 wrapt = ">=1.11,<2"
@@ -178,7 +179,7 @@ s3 = ["boto3 (>=1.9.125)"]
 slmq = ["softlayer-messaging (>=1.0.3)"]
 solar = ["ephem"]
 sqlalchemy = ["sqlalchemy"]
-sqs = ["kombu"]
+sqs = ["kombu[sqs]"]
 tblib = ["tblib (>=1.3.0)", "tblib (>=1.5.0)"]
 yaml = ["PyYAML (>=3.10)"]
 zookeeper = ["kazoo (>=1.3.1)"]
@@ -239,6 +240,17 @@ python-versions = ">=3.7"
 [package.dependencies]
 colorama = {version = "*", markers = "platform_system == \"Windows\""}
 importlib-metadata = {version = "*", markers = "python_version < \"3.8\""}
+
+[[package]]
+name = "click-default-group"
+version = "1.2.2"
+description = "Extends click.Group to invoke a command without explicit subcommand name"
+category = "dev"
+optional = false
+python-versions = "*"
+
+[package.dependencies]
+click = "*"
 
 [[package]]
 name = "click-didyoumean"
@@ -345,7 +357,7 @@ python-versions = ">=3.6"
 cffi = ">=1.12"
 
 [package.extras]
-docs = ["sphinx (>=1.6.5,!=1.8.0,!=3.1.0,!=3.1.1)", "sphinx-rtd-theme"]
+docs = ["sphinx (>=1.6.5,!=1.8.0,!=3.1.0,!=3.1.1)", "sphinx_rtd_theme"]
 docstest = ["pyenchant (>=1.6.11)", "sphinxcontrib-spelling (>=4.0.1)", "twine (>=1.12.0)"]
 pep8test = ["black", "flake8", "flake8-import-order", "pep8-naming"]
 sdist = ["setuptools_rust (>=0.11.4)"]
@@ -372,7 +384,7 @@ python-versions = ">=2.7, !=3.0.*, !=3.1.*, !=3.2.*, !=3.3.*"
 wrapt = ">=1.10,<2"
 
 [package.extras]
-dev = ["PyTest (<5)", "PyTest-Cov (<2.6)", "bump2version (<1)", "configparser (<5)", "importlib-metadata (<3)", "importlib-resources (<4)", "pytest", "pytest-cov", "sphinx (<2)", "sphinxcontrib-websupport (<2)", "tox", "zipp (<2)"]
+dev = ["PyTest", "PyTest (<5)", "PyTest-Cov", "PyTest-Cov (<2.6)", "bump2version (<1)", "configparser (<5)", "importlib-metadata (<3)", "importlib-resources (<4)", "sphinx (<2)", "sphinxcontrib-websupport (<2)", "tox", "zipp (<2)"]
 
 [[package]]
 name = "dill"
@@ -770,7 +782,7 @@ wmi = ["wmi (>=1.5.1,<2.0.0)"]
 
 [[package]]
 name = "drf-spectacular"
-version = "0.22.1"
+version = "0.24.0"
 description = "Sane and flexible OpenAPI 3 schema generation for Django REST framework"
 category = "main"
 optional = false
@@ -1080,6 +1092,17 @@ docs = ["jaraco.packaging (>=9)", "jaraco.tidelift (>=1.4)", "rst.linker (>=1.9)
 testing = ["pytest (>=6)", "pytest-black (>=0.3.7)", "pytest-checkdocs (>=2.4)", "pytest-cov", "pytest-enabler (>=1.3)", "pytest-flake8", "pytest-mypy (>=0.9.1)"]
 
 [[package]]
+name = "incremental"
+version = "21.3.0"
+description = "A small library that versions your Python projects."
+category = "dev"
+optional = false
+python-versions = "*"
+
+[package.extras]
+scripts = ["click (>=6.0)", "twisted (>=16.4.0)"]
+
+[[package]]
 name = "inflection"
 version = "0.5.1"
 description = "A port of Ruby on Rails inflector to Python"
@@ -1247,7 +1270,7 @@ python-versions = ">=2.7, !=3.0.*, !=3.1.*, !=3.2.*, !=3.3.*, != 3.4.*"
 [package.extras]
 cssselect = ["cssselect (>=0.7)"]
 html5 = ["html5lib"]
-htmlsoup = ["beautifulsoup4"]
+htmlsoup = ["BeautifulSoup4"]
 source = ["Cython (>=0.29.7)"]
 
 [[package]]
@@ -1360,6 +1383,14 @@ optional = false
 python-versions = ">=3.6"
 
 [[package]]
+name = "mkdocs-version-annotations"
+version = "1.0.0"
+description = "MkDocs plugin to add custom admonitions for documenting version differences"
+category = "dev"
+optional = false
+python-versions = ">=3.7,<4.0"
+
+[[package]]
 name = "mkdocstrings"
 version = "0.19.0"
 description = "Automatic documentation from sources, for MkDocs."
@@ -1431,6 +1462,7 @@ pyeapi = ">=0.8.2"
 pyYAML = "*"
 requests = ">=2.7.0"
 scp = "*"
+setuptools = ">=38.4.0"
 textfsm = "*"
 
 [[package]]
@@ -1444,6 +1476,7 @@ python-versions = ">=2.7, !=3.0.*, !=3.1.*, !=3.2.*, !=3.3.*, !=3.4.*"
 [package.dependencies]
 lxml = ">=3.3.0"
 paramiko = ">=1.15.0"
+setuptools = ">0.6"
 six = "*"
 
 [[package]]
@@ -1467,6 +1500,7 @@ ntc-templates = "*"
 paramiko = ">=2.6.0"
 pyserial = "*"
 scp = ">=0.13.2"
+setuptools = ">=38.4.0"
 tenacity = "*"
 
 [package.extras]
@@ -1764,7 +1798,7 @@ pylint-plugin-utils = ">=0.7"
 
 [package.extras]
 for_tests = ["coverage", "django-tables2", "django-tastypie", "factory-boy", "pylint (>=2.13)", "pytest", "wheel"]
-with_django = ["django"]
+with_django = ["Django"]
 
 [[package]]
 name = "pylint-plugin-utils"
@@ -1800,7 +1834,7 @@ python-versions = ">=3.6"
 cffi = ">=1.4.1"
 
 [package.extras]
-docs = ["sphinx (>=1.6.5)", "sphinx-rtd-theme"]
+docs = ["sphinx (>=1.6.5)", "sphinx_rtd_theme"]
 tests = ["hypothesis (>=3.27.0)", "pytest (>=3.2.1,!=3.3.0)"]
 
 [[package]]
@@ -2125,6 +2159,19 @@ trio-websocket = ">=0.9,<1.0"
 urllib3 = {version = ">=1.26,<2.0", extras = ["secure", "socks"]}
 
 [[package]]
+name = "setuptools"
+version = "65.3.0"
+description = "Easily download, build, install, upgrade, and uninstall Python packages"
+category = "main"
+optional = false
+python-versions = ">=3.7"
+
+[package.extras]
+docs = ["furo", "jaraco.packaging (>=9)", "jaraco.tidelift (>=1.4)", "pygments-github-lexers (==0.0.5)", "rst.linker (>=1.9)", "sphinx", "sphinx-favicon", "sphinx-hoverxref (<2)", "sphinx-inline-tabs", "sphinx-notfound-page (==0.8.3)", "sphinx-reredirects", "sphinxcontrib-towncrier"]
+testing = ["build[virtualenv]", "filelock (>=3.4.0)", "flake8 (<5)", "flake8-2020", "ini2toml[lite] (>=0.9)", "jaraco.envs (>=2.2)", "jaraco.path (>=3.2.0)", "mock", "pip (>=19.1)", "pip-run (>=8.8)", "pytest (>=6)", "pytest-black (>=0.3.7)", "pytest-checkdocs (>=2.4)", "pytest-cov", "pytest-enabler (>=1.3)", "pytest-flake8", "pytest-mypy (>=0.9.1)", "pytest-perf", "pytest-xdist", "tomli-w (>=1.0.0)", "virtualenv (>=13.0.0)", "wheel"]
+testing-integration = ["build[virtualenv]", "filelock (>=3.4.0)", "jaraco.envs (>=2.2)", "jaraco.path (>=3.2.0)", "pytest", "pytest-enabler", "pytest-xdist", "tomli", "virtualenv (>=13.0.0)", "wheel"]
+
+[[package]]
 name = "singledispatch"
 version = "3.7.0"
 description = "Backport functools.singledispatch from Python 3.4 to Python 2.6-3.3."
@@ -2308,6 +2355,25 @@ description = "Style preserving TOML library"
 category = "dev"
 optional = false
 python-versions = ">=3.6,<4.0"
+
+[[package]]
+name = "towncrier"
+version = "22.8.0"
+description = "Building newsfiles for your project."
+category = "dev"
+optional = false
+python-versions = ">=3.7"
+
+[package.dependencies]
+click = "*"
+click-default-group = "*"
+incremental = "*"
+jinja2 = "*"
+setuptools = "*"
+tomli = "*"
+
+[package.extras]
+dev = ["packaging"]
 
 [[package]]
 name = "transitions"
@@ -2500,7 +2566,7 @@ sso = ["social-auth-core"]
 [metadata]
 lock-version = "1.1"
 python-versions = "^3.7"
-content-hash = "2a1cbd497d4a5ce8e5e7d5b88093780d1b67868ab202576641d7b03ae53b6f95"
+content-hash = "c924161fbbca1b8862d7d6737ddc32ba9a36103fad2d72547a3aab8b5d62106f"
 
 [metadata.files]
 amqp = [
@@ -2662,6 +2728,9 @@ ciscoconfparse = [
 click = [
     {file = "click-8.1.3-py3-none-any.whl", hash = "sha256:bb4d8133cb15a609f44e8213d9b391b0809795062913b383c62be0ee95b1db48"},
     {file = "click-8.1.3.tar.gz", hash = "sha256:7682dc8afb30297001674575ea00d1814d808d6a36af415a82bd481d37ba7b8e"},
+]
+click-default-group = [
+    {file = "click-default-group-1.2.2.tar.gz", hash = "sha256:d9560e8e8dfa44b3562fbc9425042a0fd6d21956fcc2db0077f63f34253ab904"},
 ]
 click-didyoumean = [
     {file = "click-didyoumean-0.3.0.tar.gz", hash = "sha256:f184f0d851d96b6d29297354ed981b7dd71df7ff500d82fa6d11f0856bee8035"},
@@ -2886,8 +2955,8 @@ dnspython = [
     {file = "dnspython-2.2.1.tar.gz", hash = "sha256:0f7569a4a6ff151958b64304071d370daa3243d15941a7beedf0c9fe5105603e"},
 ]
 drf-spectacular = [
-    {file = "drf-spectacular-0.22.1.tar.gz", hash = "sha256:866e16ddaae167a1234c76cd8c351161373551db994ce9665b347b32d5daf38b"},
-    {file = "drf_spectacular-0.22.1-py3-none-any.whl", hash = "sha256:17ac5e31e5d6150dd5fa10843b429202f4f38069202acc44394cc5a771de63d9"},
+    {file = "drf-spectacular-0.24.0.tar.gz", hash = "sha256:bf22390e8d0aa53d81c5abf718ad4989c4e2eab133decc411a15c7e4ae3f6baf"},
+    {file = "drf_spectacular-0.24.0-py3-none-any.whl", hash = "sha256:a59e33cfc87555dde027bc1bd0e379fbfd558e55a3abd9ebf975dee8c9e5052e"},
 ]
 drf-spectacular-sidecar = [
     {file = "drf-spectacular-sidecar-2022.7.1.tar.gz", hash = "sha256:2dd95042a515e860993bbf945a49b78c454b824507a370bd8ba43f2b51b76399"},
@@ -2964,6 +3033,10 @@ importlib-metadata = [
 importlib-resources = [
     {file = "importlib_resources-5.9.0-py3-none-any.whl", hash = "sha256:f78a8df21a79bcc30cfd400bdc38f314333de7c0fb619763f6b9dabab8268bb7"},
     {file = "importlib_resources-5.9.0.tar.gz", hash = "sha256:5481e97fb45af8dcf2f798952625591c58fe599d0735d86b10f54de086a61681"},
+]
+incremental = [
+    {file = "incremental-21.3.0-py2.py3-none-any.whl", hash = "sha256:92014aebc6a20b78a8084cdd5645eeaa7f74b8933f70fa3ada2cfbd1e3b54321"},
+    {file = "incremental-21.3.0.tar.gz", hash = "sha256:02f5de5aff48f6b9f665d99d48bfc7ec03b6e3943210de7cfc88856d755d6f57"},
 ]
 inflection = [
     {file = "inflection-0.5.1-py2.py3-none-any.whl", hash = "sha256:f38b2b640938a4f35ade69ac3d053042959b62a0f1076a5bbaa1b9526605a8a2"},
@@ -3180,6 +3253,10 @@ mkdocs-material-extensions = [
     {file = "mkdocs-material-extensions-1.0.3.tar.gz", hash = "sha256:bfd24dfdef7b41c312ede42648f9eb83476ea168ec163b613f9abd12bbfddba2"},
     {file = "mkdocs_material_extensions-1.0.3-py3-none-any.whl", hash = "sha256:a82b70e533ce060b2a5d9eb2bc2e1be201cf61f901f93704b4acf6e3d5983a44"},
 ]
+mkdocs-version-annotations = [
+    {file = "mkdocs-version-annotations-1.0.0.tar.gz", hash = "sha256:6786024b37d27b330fda240b76ebec8e7ce48bd5a9d7a66e99804559d088dffa"},
+    {file = "mkdocs_version_annotations-1.0.0-py3-none-any.whl", hash = "sha256:385004eb4a7530dd87a227e08cd907ce7a8fe21fdf297720a4149c511bcf05f5"},
+]
 mkdocstrings = [
     {file = "mkdocstrings-0.19.0-py3-none-any.whl", hash = "sha256:3217d510d385c961f69385a670b2677e68e07b5fea4a504d86bf54c006c87c7d"},
     {file = "mkdocstrings-0.19.0.tar.gz", hash = "sha256:efa34a67bad11229d532d89f6836a8a215937548623b64f3698a1df62e01cc3e"},
@@ -3259,8 +3336,8 @@ pillow = [
     {file = "Pillow-9.2.0-cp310-cp310-musllinux_1_1_x86_64.whl", hash = "sha256:37ff6b522a26d0538b753f0b4e8e164fdada12db6c6f00f62145d732d8a3152e"},
     {file = "Pillow-9.2.0-cp310-cp310-win32.whl", hash = "sha256:c79698d4cd9318d9481d89a77e2d3fcaeff5486be641e60a4b49f3d2ecca4e28"},
     {file = "Pillow-9.2.0-cp310-cp310-win_amd64.whl", hash = "sha256:254164c57bab4b459f14c64e93df11eff5ded575192c294a0c49270f22c5d93d"},
-    {file = "Pillow-9.2.0-cp311-cp311-macosx_10_10_universal2.whl", hash = "sha256:408673ed75594933714482501fe97e055a42996087eeca7e5d06e33218d05aa8"},
-    {file = "Pillow-9.2.0-cp311-cp311-macosx_11_0_universal2.whl", hash = "sha256:727dd1389bc5cb9827cbd1f9d40d2c2a1a0c9b32dd2261db522d22a604a6eec9"},
+    {file = "Pillow-9.2.0-cp311-cp311-macosx_10_10_x86_64.whl", hash = "sha256:adabc0bce035467fb537ef3e5e74f2847c8af217ee0be0455d4fec8adc0462fc"},
+    {file = "Pillow-9.2.0-cp311-cp311-macosx_11_0_arm64.whl", hash = "sha256:336b9036127eab855beec9662ac3ea13a4544a523ae273cbf108b228ecac8437"},
     {file = "Pillow-9.2.0-cp311-cp311-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:50dff9cc21826d2977ef2d2a205504034e3a4563ca6f5db739b0d1026658e004"},
     {file = "Pillow-9.2.0-cp311-cp311-manylinux_2_17_i686.manylinux2014_i686.whl", hash = "sha256:cb6259196a589123d755380b65127ddc60f4c64b21fc3bb46ce3a6ea663659b0"},
     {file = "Pillow-9.2.0-cp311-cp311-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:7b0554af24df2bf96618dac71ddada02420f946be943b181108cac55a7a2dcd4"},
@@ -3709,6 +3786,10 @@ scp = [
 selenium = [
     {file = "selenium-4.3.0-py3-none-any.whl", hash = "sha256:f67402b8f973aaa98d9c55b8f9aa63532009cd1859b2222a8b9800354942d8bc"},
 ]
+setuptools = [
+    {file = "setuptools-65.3.0-py3-none-any.whl", hash = "sha256:2e24e0bec025f035a2e72cdd1961119f557d78ad331bb00ff82efb2ab8da8e82"},
+    {file = "setuptools-65.3.0.tar.gz", hash = "sha256:7732871f4f7fa58fb6bdcaeadb0161b2bd046c85905dbaa066bdcbcc81953b57"},
+]
 singledispatch = [
     {file = "singledispatch-3.7.0-py2.py3-none-any.whl", hash = "sha256:bc77afa97c8a22596d6d4fc20f1b7bdd2b86edc2a65a4262bdd7cc3cc19aa989"},
     {file = "singledispatch-3.7.0.tar.gz", hash = "sha256:c1a4d5c1da310c3fd8fccfb8d4e1cb7df076148fd5d858a819e37fffe44f3092"},
@@ -3776,6 +3857,10 @@ tomli = [
 tomlkit = [
     {file = "tomlkit-0.11.4-py3-none-any.whl", hash = "sha256:25d4e2e446c453be6360c67ddfb88838cfc42026322770ba13d1fbd403a93a5c"},
     {file = "tomlkit-0.11.4.tar.gz", hash = "sha256:3235a9010fae54323e727c3ac06fb720752fe6635b3426e379daec60fbd44a83"},
+]
+towncrier = [
+    {file = "towncrier-22.8.0-py2.py3-none-any.whl", hash = "sha256:3b780c3d966e1b26414830aec3d15000654b31e64e024f3e5fd128b4c6eb8f47"},
+    {file = "towncrier-22.8.0.tar.gz", hash = "sha256:7d3839b033859b45fb55df82b74cfd702431933c0cc9f287a5a7ea3e05d042cb"},
 ]
 transitions = [
     {file = "transitions-0.8.11-py2.py3-none-any.whl", hash = "sha256:9525dd9b708b0a54bb4562a06a483d237e75c94547ba9831c81c6872d0ea1522"},
