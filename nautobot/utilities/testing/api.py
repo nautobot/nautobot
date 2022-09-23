@@ -661,9 +661,7 @@ class APIViewTestCases:
             """
             DELETE a set of objects in a single request.
             """
-            # Get deletable objects first, in case they have to be created, influencing `initial_count`
             id_list = self.get_deletable_object_pks()
-            initial_count = self._get_queryset().count()
             # Add object-level permission
             obj_perm = ObjectPermission(name="Test permission", actions=["delete"])
             obj_perm.save()
@@ -672,6 +670,7 @@ class APIViewTestCases:
 
             data = [{"id": id} for id in id_list]
 
+            initial_count = self._get_queryset().count()
             response = self.client.delete(self._get_list_url(), data, format="json", **self.header)
             self.assertHttpStatus(response, status.HTTP_204_NO_CONTENT)
             self.assertEqual(self._get_queryset().count(), initial_count - len(id_list))
