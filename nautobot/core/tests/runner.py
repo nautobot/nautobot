@@ -44,7 +44,9 @@ class NautobotTestRunner(DiscoverRunner):
         print("Flushing any leftover test data from previous runs...")
         call_command("flush", "--no-input")
 
-        # Set constant seed for reproducible randomness
+        # Set constant seed for reproducible "randomness"
+        # TODO: it would be nice to use a random seed each time (for test robustness)
+        #       but also provide an option to use a specified seed to reproduce problems.
         factory.random.reseed_random("Nautobot")
 
         print("Creating TenantGroups...")
