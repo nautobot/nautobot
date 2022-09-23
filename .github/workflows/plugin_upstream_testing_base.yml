@@ -1,5 +1,5 @@
 ---
-name: "Nautobot Plugin Upstream Monitor - Base"
+name: "Nautobot Plugin Upstream Testing - Base"
 
 on:
   workflow_call:
@@ -19,7 +19,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        nautobot-version: ["next", "develop", "stable", "1.4", "1.3"]
+        nautobot-version: ["next", "develop"]
     runs-on: "ubuntu-20.04"
     steps:
       - name: "Check out repository code"
