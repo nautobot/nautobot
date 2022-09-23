@@ -23,10 +23,10 @@
             <li>Site: {{ location.base_site|hyperlinked_object }}
                 <ul>
         {% for ancestor in location.ancestors %}
-            <li>{{ancestor.location_type|hyperlinked_object }}: {{ ancestor|hyperlinked_object }}
+            <li><a href="{{ ancestor.location_type.get_absolute_url }}">{{ ancestor.location_type.name }}</a>: <a href="{{ ancestor.get_absolute_url }}">{{ ancestor.name }}</a>
                 <ul>
         {% endfor %}
-        <li><strong>{{ location.location_type|hyperlinked_object }}: {{ location|hyperlinked_object }}</strong></li>
+        <li><strong><a href="{{ location.location_type.get_absolute_url }}">{{ location.location_type.name }}</a>: <a href="{{ location.get_absolute_url }}">{{ location.name }}</a></strong></li>
         {% for ancestor in location.ancestors %}
                 </ul>
             </li>
