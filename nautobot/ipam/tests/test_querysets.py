@@ -1,6 +1,6 @@
 import netaddr
 
-from nautobot.ipam.models import Prefix, Aggregate, IPAddress, RIR
+from nautobot.ipam.models import Prefix, Aggregate, IPAddress
 from nautobot.utilities.testing import TestCase
 
 
@@ -32,7 +32,7 @@ class AggregateQuerysetTestCase(TestCase):
     def test_net_contained(self):
         self.assertEqual(
             self.queryset.net_contained(self.parent_network).count(),
-            1 if not self.parent_covers_second_aggregate else 2
+            1 if not self.parent_covers_second_aggregate else 2,
         )
         self.assertEqual(self.queryset.net_contained(self.exact_network).count(), 0)
         self.assertEqual(self.queryset.net_contained(self.child_network).count(), 0)
@@ -40,7 +40,7 @@ class AggregateQuerysetTestCase(TestCase):
     def test_net_contained_or_equal(self):
         self.assertEqual(
             self.queryset.net_contained_or_equal(self.parent_network).count(),
-            1 if not self.parent_covers_second_aggregate else 2
+            1 if not self.parent_covers_second_aggregate else 2,
         )
         self.assertEqual(self.queryset.net_contained_or_equal(self.exact_network).count(), 1)
         self.assertEqual(self.queryset.net_contained_or_equal(self.child_network).count(), 0)

@@ -9,7 +9,10 @@ from nautobot.utilities.factory import random_instance, UniqueFaker
 class TenantGroupFactory(DjangoModelFactory):
     class Meta:
         model = TenantGroup
-        exclude = ("has_description", "has_parent",)
+        exclude = (
+            "has_description",
+            "has_parent",
+        )
 
     name = UniqueFaker("company")
 
@@ -21,10 +24,15 @@ class TenantGroupFactory(DjangoModelFactory):
 
     # TODO custom field data?
 
+
 class TenantFactory(DjangoModelFactory):
     class Meta:
         model = Tenant
-        exclude = ("has_comments", "has_description", "has_group",)
+        exclude = (
+            "has_comments",
+            "has_description",
+            "has_group",
+        )
 
     name = UniqueFaker("company")
 

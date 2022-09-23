@@ -201,7 +201,8 @@ class RouteTargetTestCase(FilterTestCases.FilterTestCase):
         )
 
     def test_tenant_group(self):
-        tenant_groups = list(TenantGroup.objects.filter(tenants__isnull=False, tenants__route_targets__isnull=False))[:2]
+        tenant_groups = list(TenantGroup.objects.filter(tenants__isnull=False, tenants__route_targets__isnull=False))
+        tenant_groups = tenant_groups[:2]
         params = {"tenant_group_id": [tenant_groups[0].pk, tenant_groups[1].pk]}
         self.assertEqual(
             self.filterset(params, self.queryset).qs.count(),
@@ -298,12 +299,12 @@ class AggregateTestCase(FilterTestCases.FilterTestCase):
         params = {"tenant_group_id": [tenant_groups[0].pk, tenant_groups[1].pk]}
         self.assertEqual(
             self.filterset(params, self.queryset).qs.count(),
-            self.queryset.filter(tenant__group__in=tenant_groups).count()
+            self.queryset.filter(tenant__group__in=tenant_groups).count(),
         )
         params = {"tenant_group": [tenant_groups[0].slug, tenant_groups[1].slug]}
         self.assertEqual(
             self.filterset(params, self.queryset).qs.count(),
-            self.queryset.filter(tenant__group__in=tenant_groups).count()
+            self.queryset.filter(tenant__group__in=tenant_groups).count(),
         )
 
 

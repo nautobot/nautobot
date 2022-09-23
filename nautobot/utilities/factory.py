@@ -1,6 +1,7 @@
 import factory
 import factory.random
 
+
 def random_instance(model):
     """
     Factory helper - construct a lambda function that retrieves a random instance of the given model.
@@ -18,7 +19,9 @@ def random_instance(model):
             has_group = factory.Faker("pybool")
             group = factory.Maybe("has_group", random_instance(Group), None)
     """
-    return factory.LazyFunction(lambda: factory.random.randgen.choice(model.objects.all()) if model.objects.count() else None)
+    return factory.LazyFunction(
+        lambda: factory.random.randgen.choice(model.objects.all()) if model.objects.count() else None
+    )
 
 
 class UniqueFaker(factory.Faker):

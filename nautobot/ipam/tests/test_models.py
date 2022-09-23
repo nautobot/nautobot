@@ -113,7 +113,6 @@ class TestVarbinaryIPField(TestCase):
 
 
 class TestAggregate(TestCase):
-
     def test_get_utilization(self):
         aggregate = Aggregate(prefix=netaddr.IPNetwork("22.0.0.0/8"), rir=RIR.objects.first())
         aggregate.save()

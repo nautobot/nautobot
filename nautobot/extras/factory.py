@@ -2,6 +2,7 @@ import factory.random
 
 from nautobot.extras.models import Tag
 
+
 def get_random_tags_for_model(model):
     """Return between 0 and n tags applicable to the given model, where n is the total number of applicable tags.
 

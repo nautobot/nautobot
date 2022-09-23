@@ -28,7 +28,12 @@ class RIRFactory(DjangoModelFactory):
 class AggregateFactory(DjangoModelFactory):
     class Meta:
         model = Aggregate
-        exclude = ("has_date_added", "has_description", "has_tenant", "is_ipv6",)
+        exclude = (
+            "has_date_added",
+            "has_description",
+            "has_tenant",
+            "is_ipv6",
+        )
 
     rir = random_instance(RIR)
 
@@ -69,8 +74,8 @@ class AggregateFactory(DjangoModelFactory):
         if self.rir.name == "RFC 3849":
             return f"2001:DB8:{n:x}::/48"
         if self.rir.name == "RFC 4193":
-            unique_id = factory.random.randgen.randint(0, 2 ** 32 - 1)
-            hextets = (unique_id // (2 ** 16), unique_id % (2 ** 16))
+            unique_id = factory.random.randgen.randint(0, 2**32 - 1)
+            hextets = (unique_id // (2**16), unique_id % (2**16))
             return f"FD{n:02X}:{hextets[0]:X}:{hextets[1]:X}::/48"
         if self.rir.name == "RFC 6598":
             return f"100.{n + 64}.0.0/16"
