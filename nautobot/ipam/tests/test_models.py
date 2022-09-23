@@ -113,30 +113,31 @@ class TestVarbinaryIPField(TestCase):
 
 
 class TestAggregate(TestCase):
-    fixtures = ("rir",)
 
     def test_get_utilization(self):
-        aggregate = Aggregate(prefix=netaddr.IPNetwork("10.0.0.0/8"), rir=RIR.objects.get(slug="rfc-1918"))
+        aggregate = Aggregate(prefix=netaddr.IPNetwork("22.0.0.0/8"), rir=RIR.objects.first())
         aggregate.save()
 
         # 25% utilization
         Prefix.objects.bulk_create(
             (
-                Prefix(prefix=netaddr.IPNetwork("10.0.0.0/12")),
-                Prefix(prefix=netaddr.IPNetwork("10.16.0.0/12")),
-                Prefix(prefix=netaddr.IPNetwork("10.32.0.0/12")),
-                Prefix(prefix=netaddr.IPNetwork("10.48.0.0/12")),
+                Prefix(prefix=netaddr.IPNetwork("22.0.0.0/12")),
+                Prefix(prefix=netaddr.IPNetwork("22.16.0.0/12")),
+                Prefix(prefix=netaddr.IPNetwork("22.32.0.0/12")),
+                Prefix(prefix=netaddr.IPNetwork("22.48.0.0/12")),
             )
         )
         self.assertEqual(aggregate.get_utilization(), (4194304, 16777216))
 
         # 50% utilization
-        Prefix.objects.bulk_create((Prefix(prefix=netaddr.IPNetwork("10.64.0.0/10")),))
+        Prefix.objects.bulk_create((Prefix(prefix=netaddr.IPNetwork("22.64.0.0/10")),))
         self.assertEqual(aggregate.get_utilization(), (8388608, 16777216))
 
         # 100% utilization
-        Prefix.objects.bulk_create((Prefix(prefix=netaddr.IPNetwork("10.128.0.0/9")),))
+        Prefix.objects.bulk_create((Prefix(prefix=netaddr.IPNetwork("22.128.0.0/9")),))
         self.assertEqual(aggregate.get_utilization(), (16777216, 16777216))
+
+        # TODO: equivalent IPv6 tests for thoroughness?
 
 
 class TestPrefix(TestCase):

@@ -41,7 +41,12 @@ class NautobotTestRunner(DiscoverRunner):
         result = super().setup_databases(**kwargs)
         print("Beginning database pre-population...")
 
+        print("Flushing any leftover test data from previous runs...")
+        call_command("flush", "--no-input")
+
+        # Set constant seed for reproducible randomness
         factory.random.reseed_random("Nautobot")
+
         print("Creating TenantGroups...")
         TenantGroupFactory.create_batch(10, has_parent=False)
         TenantGroupFactory.create_batch(10, has_parent=True)
@@ -49,12 +54,16 @@ class NautobotTestRunner(DiscoverRunner):
         TenantFactory.create_batch(10, has_group=False)
         TenantFactory.create_batch(10, has_group=True)
         print("Creating RIRs...")
-        RIRFactory.create_batch(9)  # 9 unique RIR names are hard-coded presently
+        RIRFactory.create_batch(9)  # only 9 unique RIR names are hard-coded presently
+        print("Creating Aggregates...")
         AggregateFactory.create_batch(20)
 
         print("Database pre-population completed!")
         return result
 
     def teardown_databases(self, old_config, **kwargs):
+        print("Emptying test database...")
         call_command("flush", "--no-input")
+        print("Database emptied!")
+
         super().teardown_databases(old_config, **kwargs)

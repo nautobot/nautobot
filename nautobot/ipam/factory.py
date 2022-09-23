@@ -15,7 +15,7 @@ class RIRFactory(DjangoModelFactory):
     # 9 RIRs should be enough for anybody
     name = UniqueFaker(
         "random_element",
-        elements=["AFRINIC", "APNIC", "ARIN", "LACNIC", "RIPE NCC", "RFC 1918", "RFC 3849", "RFC 4193", "RFC 6598"],
+        elements=("AFRINIC", "APNIC", "ARIN", "LACNIC", "RIPE NCC", "RFC 1918", "RFC 3849", "RFC 4193", "RFC 6598"),
     )
     is_private = factory.LazyAttribute(lambda rir: rir.name.startswith("RFC"))
 

@@ -462,8 +462,17 @@ class ViewTestCases:
         Delete a single instance.
         """
 
+        def get_deletable_object(self):
+            """
+            Get an instance that can be deleted.
+
+            For some models this may just be any random object, but when we have FKs with `on_delete=models.PROTECT`
+            (as is often the case) we need to find or create an instance that doesn't have such entanglements.
+            """
+            return self._get_queryset().first()
+
         def test_delete_object_without_permission(self):
-            instance = self._get_queryset().first()
+            instance = self.get_deletable_object()
 
             # Try GET without permission
             with disable_warnings("django.request"):
@@ -479,7 +488,7 @@ class ViewTestCases:
 
         @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
         def test_delete_object_with_permission(self):
-            instance = self._get_queryset().first()
+            instance = self.get_deletable_object()
 
             # Assign model-level permission
             obj_perm = ObjectPermission(name="Test permission", actions=["delete"])
@@ -507,7 +516,8 @@ class ViewTestCases:
 
         @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
         def test_delete_object_with_constrained_permission(self):
-            instance1, instance2 = self._get_queryset().all()[:2]
+            instance1 = self.get_deletable_object()
+            instance2 = self._get_queryset().exclude(pk=instance1.pk)[0]
 
             # Assign object-level permission
             obj_perm = ObjectPermission(
@@ -926,9 +936,18 @@ class ViewTestCases:
         Delete multiple instances.
         """
 
+        def get_deletable_object_pks(self):
+            """
+            Get a list of PKs corresponding to objects that can be safely bulk-deleted.
+
+            For some models this may just be any random objects, but when we have FKs with `on_delete=models.PROTECT`
+            (as is often the case) we need to find or create an instance that doesn't have such entanglements.
+            """
+            return list(self._get_queryset().values_list("pk", flat=True)[:3])
+
         @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
         def test_bulk_delete_objects_without_permission(self):
-            pk_list = list(self._get_queryset().values_list("pk", flat=True)[:3])
+            pk_list = self.get_deletable_object_pks()
             data = {
                 "pk": pk_list,
                 "confirm": True,
@@ -941,7 +960,8 @@ class ViewTestCases:
 
         @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
         def test_bulk_delete_objects_with_permission(self):
-            pk_list = self._get_queryset().values_list("pk", flat=True)
+            pk_list = self.get_deletable_object_pks()
+            initial_count = self._get_queryset().count()
             data = {
                 "pk": pk_list,
                 "confirm": True,
@@ -956,12 +976,12 @@ class ViewTestCases:
 
             # Try POST with model-level permission
             self.assertHttpStatus(self.client.post(self._get_url("bulk_delete"), data), 302)
-            self.assertEqual(self._get_queryset().count(), 0)
+            self.assertEqual(self._get_queryset().count(), initial_count - len(pk_list))
 
         @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
         def test_bulk_delete_objects_with_constrained_permission(self):
+            pk_list = self.get_deletable_object_pks()
             initial_count = self._get_queryset().count()
-            pk_list = self._get_queryset().values_list("pk", flat=True)
             data = {
                 "pk": pk_list,
                 "confirm": True,
@@ -988,7 +1008,7 @@ class ViewTestCases:
 
             # Bulk delete permitted objects
             self.assertHttpStatus(self.client.post(self._get_url("bulk_delete"), data), 302)
-            self.assertEqual(self._get_queryset().count(), 0)
+            self.assertEqual(self._get_queryset().count(), initial_count - len(pk_list))
 
     class BulkRenameObjectsViewTestCase(ModelViewTestCase):
         """

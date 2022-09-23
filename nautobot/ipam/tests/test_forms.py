@@ -50,11 +50,10 @@ class AggregateFormTest(BaseNetworkFormTest, TestCase):
     form_class = forms.AggregateForm
     field_name = "prefix"
     object_name = "aggregate"
-    fixtures = ("rir",)
 
     def setUp(self):
         super().setUp()
-        self.extra_data = {"rir": models.RIR.objects.get(slug="rfc-1918")}
+        self.extra_data = {"rir": models.RIR.objects.first()}
 
 
 class PrefixFormTest(BaseNetworkFormTest, TestCase):
