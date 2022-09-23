@@ -43,6 +43,17 @@ class TenantGroupTest(APIViewTestCases.APIViewTestCase):
             },
         ]
 
+    def get_deletable_object(self):
+        return TenantGroup.objects.create(name="Tenant Group X")
+
+    def get_deletable_object_pks(self):
+        groups = [
+            TenantGroup.objects.create(name="Alpha"),
+            TenantGroup.objects.create(name="Beta"),
+            TenantGroup.objects.create(name="Gamma"),
+        ]
+        return [group.pk for group in groups]
+
 
 class TenantTest(APIViewTestCases.APIViewTestCase):
     model = Tenant
@@ -73,3 +84,14 @@ class TenantTest(APIViewTestCases.APIViewTestCase):
                 "name": "Tenant 7",
             },
         ]
+
+    def get_deletable_object(self):
+        return Tenant.objects.create(name="Unencumbered Tenant")
+
+    def get_deletable_object_pks(self):
+        tenants = [
+            Tenant.objects.create(name="Tenant A"),
+            Tenant.objects.create(name="Tenant B"),
+            Tenant.objects.create(name="Tenant C", group=TenantGroup.objects.first()),
+        ]
+        return [tenant.pk for tenant in tenants]
