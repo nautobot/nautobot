@@ -7,31 +7,35 @@ const tdSystemTheme = document.getElementById('td-system-theme');
 // CSS file in base.html
 var darkElement = document.getElementById("dark-theme");
 
-// CurrentTheme overrides auto-detection when specified by manually clicking theme button
-if (currentTheme && currentTheme != "system") {
-    // Set theme setting to HTML dataset element, for CSS rendering
-    htmlEl.dataset.theme = currentTheme;
+// Only show page after it has fully loaded to prevent white screen flash
+window.addEventListener('DOMContentLoaded', function () {
+    // CurrentTheme overrides auto-detection when specified by manually clicking theme button
+    if (currentTheme && currentTheme != "system") {
+        // Set theme setting to HTML dataset element, for CSS rendering
+        htmlEl.dataset.theme = currentTheme;
 
-    // Set theme to light or dark if manually specified
-    if (currentTheme == "light") {
-        setLightThemeActive();
-        setLightTheme();
+        // Set theme to light or dark if manually specified
+        if (currentTheme == "light") {
+            setLightThemeActive();
+            setLightTheme();
+        }
+        else if (currentTheme == "dark") {
+            setDarkThemeActive();
+            setDarkTheme();
+        }
     }
-    else if (currentTheme == "dark") {
-        setDarkThemeActive();
-        setDarkTheme();
+    else {
+        setSystemThemeActive();
+        // If user changes system theme, detect and change theme automatically
+        window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', function(e) {
+            // Detect and set theme based on what it was just changed to
+            detectThemeSettings();
+        })
+        // Attempt to detect current system theme preferences and set theme to match
+        detectThemeSettings();
     }
-}
-else {
-    setSystemThemeActive();
-    // If user changes system theme, detect and change theme automatically
-    window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', function(e) {
-        // Detect and set theme based on what it was just changed to
-        detectThemeSettings()
-    })
-    // Attempt to detect current system theme preferences and set theme to match
-    detectThemeSettings()
-}
+    showPageContent();
+});
 
 // When the user manually changes the theme, we need to save the new value on local storage
 const toggleTheme = (theme) => {
@@ -44,7 +48,7 @@ const toggleTheme = (theme) => {
         // If user changes system theme, detect and change theme automatically
         window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', function(e) {
             // Detect and set theme based on what it was just changed to
-            detectThemeSettings()
+            detectThemeSettings();
         })
         // Attempt to detect current system theme preferences and set theme to match
         detectThemeSettings()
@@ -78,9 +82,10 @@ function detectThemeSettings() {
 }
 
 function setDarkTheme() {
+    // Set theme to dark
     htmlEl.dataset.theme = "dark";
+    // Highlight dark theme image to show it's active
     darkElement.disabled = undefined;
-    /* Highlight dark theme image to show it's active */
 }
 
 function setLightTheme() {
@@ -105,4 +110,10 @@ function setSystemThemeActive() {
     tdSystemTheme.classList.add("active-theme");
     tdDarkTheme.classList.remove("active-theme");
     tdLightTheme.classList.remove("active-theme");
+}
+
+function showPageContent() {
+    // Show HTML body attribute AFTER CSS is loaded to prevent white screen flash
+    document.body.style.visibility = 'visible';
+    document.body.style.opacity = 1;
 }

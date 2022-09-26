@@ -7,6 +7,13 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+    <!-- Hide page until after JS and theme load to prevent white flash -->
+    <style>
+        body {
+            visibility: hidden;
+            opacity: 0;
+        }
+    </style>
     <title>{% block title %}Admin Home{% endblock %} - Nautobot</title>
     <link rel="stylesheet"
           href="{% static 'bootstrap-3.4.1-dist/css/bootstrap.min.css' %}"
@@ -95,6 +102,15 @@
     </style>
 </head>
 <body {% if is_popup %}style="padding-top: 0px;"{% endif %}>
+<!-- In case JavaScript is disabled -->
+<noscript>
+    <style>
+        body {
+            visibility: visible;
+            opacity: 1;
+        }
+    </style>
+</noscript>
 {% if not is_popup %}
     {% include 'inc/nav_menu.html' %}
 {% endif %}
