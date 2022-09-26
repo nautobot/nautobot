@@ -133,6 +133,7 @@ nav:
           - The Search Bar: "user-guides/getting-started/search-bar.md"
           - Git as a Data Source: "user-guides/git-data-source.md"
           - GraphQL: "user-guides/graphql.md"
+          - Custom Fields: "user-guides/custom-fields.md"
       - Core Functionality:
           - Circuits: "core-functionality/circuits.md"
           - Devices and Cabling: "core-functionality/devices.md"
