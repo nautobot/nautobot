@@ -1,0 +1,1 @@
+Fixed MultiSelect CustomField being emptied unintentionally after bulk update.
