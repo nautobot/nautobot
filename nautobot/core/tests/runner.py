@@ -109,9 +109,13 @@ class NautobotTestRunner(DiscoverSlowestTestsRunner):
                 if self.report_path:
                     test_results.append(entry)
                 else:
-                    # If the test completed under 1.8 times the baseline result
-                    # don't show it to the user
-                    if result_time_ms <= self.baselines.get(entry[0], 0) * 1000 * 1.8:
+                    # If the test completed under 1.5 times the baseline or the difference between the result and the baseline is less than 5 seconds,
+                    # dont show the test to the user.
+
+                    # baseline duration in milliseconds
+                    baseline_ms = self.baselines.get(entry[0], 0) * 1000
+
+                    if result_time_ms <= baseline_ms * 1.5 or result_time_ms - baseline_ms <= 5000:
                         continue
 
                     test_results.append(entry)
