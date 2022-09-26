@@ -272,8 +272,6 @@ jobs:
         run: "poetry install"
       - name: "Run Performance Tests"
         run: "poetry run invoke  performance-test --failfast --keepdb"
-      - name: "Run coverage"
-        run: "poetry run invoke unittest-coverage"
     needs:
       - "pylint"
       - "tests-postgres"

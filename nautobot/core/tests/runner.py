@@ -1,8 +1,7 @@
 import json
 from django.conf import settings
 from django_slowtests.testrunner import DiscoverSlowestTestsRunner
-
-from nautobot.core.tests.__init__ import PERFORMANCE_BASELINES
+from ruamel.yaml import YAML
 
 
 class NautobotTestRunner(DiscoverSlowestTestsRunner):
@@ -75,8 +74,10 @@ class NautobotTestRunner(DiscoverSlowestTestsRunner):
     def get_baselines(self):
         """Get the performance baselines for comparison"""
         baselines = {}
-        data = PERFORMANCE_BASELINES["slower_tests"]
-        for entry in data:
+        yaml = YAML()
+        input_file = "nautobot/core/tests/performance_baselines.yml"
+
+        for entry in yaml.load(open(input_file))["tests"]:
             baselines[entry["name"]] = entry["execution_time"]
         return baselines
 
