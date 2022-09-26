@@ -1,7 +1,8 @@
 import json
 from django.conf import settings
 from django_slowtests.testrunner import DiscoverSlowestTestsRunner
-from ruamel.yaml import YAML
+import yaml
+from yaml.loader import SafeLoader
 
 
 class NautobotTestRunner(DiscoverSlowestTestsRunner):
@@ -62,11 +63,11 @@ class NautobotTestRunner(DiscoverSlowestTestsRunner):
         else:
             if test_result_count:
                 print(f"\n{test_result_count} abnormally slower tests:")
-
-            for func_name, timing in test_results:
-                time = float(timing)
-                baseline = float(self.baselines[func_name])
-                print(f"{time:.4f}s {func_name} is significantly slower than the baseline {baseline:.4f}s")
+                for func_name, timing in test_results:
+                    time = float(timing)
+                    baseline = float(self.baselines[func_name])
+                    print(f"{time:.4f}s {func_name} is significantly slower than the baseline {baseline:.4f}s")
+                assert test_result_count != 0, "Performance Tests failed due to significantly slower tests"
 
             if not test_results:
                 print("\nNo tests signficantly slower than baseline")
@@ -74,11 +75,11 @@ class NautobotTestRunner(DiscoverSlowestTestsRunner):
     def get_baselines(self):
         """Get the performance baselines for comparison"""
         baselines = {}
-        yaml = YAML()
         input_file = "nautobot/core/tests/performance_baselines.yml"
 
-        with yaml.load(open(input_file))["tests"] as data:
-            for entry in data:
+        with open(input_file) as f:
+            data = yaml.load(f, Loader=SafeLoader)
+            for entry in data["tests"]:
                 baselines[entry["name"]] = entry["execution_time"]
         return baselines
 
