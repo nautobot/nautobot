@@ -162,6 +162,26 @@ A new configuration setting, [`STRICT_FILTERING`](../configuration/optional-sett
 The `settings_and_registry` default context processor was changed to purely `settings` - the (large) Nautobot application registry dictionary is no longer provided as part of the render context for all templates by default. Added a new `registry` template tag that can be invoked by specific templates to provide this variable where needed.
 
 <!-- towncrier release notes start -->
+## v1.4.4 (2022-09-26)
+
+### Added
+
+- [#2023](https://github.com/nautobot/nautobot/issues/2023) - Added reusable GitHub Action workflow for use by plugins to test against `next`, `develop` routinely.
+
+### Changed
+
+- [#2153](https://github.com/nautobot/nautobot/issues/2153) - Updated optional settings documentation to provide clarity on Nautobot vs Django settings.
+- [#2235](https://github.com/nautobot/nautobot/issues/2235) - Added ancestor information to Location and LocationType display names to provide additional context in the UI.
+- [#2457](https://github.com/nautobot/nautobot/issues/2457) - Moved `towncrier_template.j2` from root to develop directory.
+- [#2468](https://github.com/nautobot/nautobot/issues/2468) - Upgraded CI gh-action-setup-poetry-environment action to v3
+
+### Fixed
+
+- [#2353](https://github.com/nautobot/nautobot/issues/2353) - Fixed MultiSelect CustomField being emptied unintentionally after bulk update.
+- [#2375](https://github.com/nautobot/nautobot/issues/2375) - Fixed error in Cable list view filtering when `color` and `type` filters are not set.
+- [#2461](https://github.com/nautobot/nautobot/issues/2461) - Fixed an exception during OpenAPI schema generation when certain Nautobot apps (including `nautobot-firewall-models`) were installed.
+
+
 ## v1.4.3 (2022-09-19)
 
 ### Added
