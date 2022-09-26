@@ -77,8 +77,9 @@ class NautobotTestRunner(DiscoverSlowestTestsRunner):
         yaml = YAML()
         input_file = "nautobot/core/tests/performance_baselines.yml"
 
-        for entry in yaml.load(open(input_file))["tests"]:
-            baselines[entry["name"]] = entry["execution_time"]
+        with yaml.load(open(input_file))["tests"] as data:
+            for entry in data:
+                baselines[entry["name"]] = entry["execution_time"]
         return baselines
 
     def suite_result(self, suite, result):
