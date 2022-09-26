@@ -27,27 +27,34 @@ html[data-theme="dark"] .version {
 }
 /* Lighten the background color a bit */
 html[data-theme="dark"] body {
-  background-color: rgb(240, 240, 240) !important;
+  background-color: rgb(235, 235, 235) !important;
   /* background-color: rgb(23, 27, 29) !important; */
   /* background-color: rgb(33, 37, 41) !important; */
 }
 
 /* Dark more than background */
 html[data-theme="dark"] .navbar,
+html[data-theme="dark"] .footer,
 html[data-theme="dark"] .panel,
 html[data-theme="dark"] .panel-body,
 html[data-theme="dark"] .list-group,
 html[data-theme="dark"] .list-group-item,
-html[data-theme="dark"] .CodeMirror {
-  background-color: rgb(243, 243, 243) !important;
+html[data-theme="dark"] .CodeMirror,
+html[data-theme="dark"] .modal-body {
+  background-color: rgb(225, 225, 225) !important;
 }
 
 /* Dark more than background */
-html[data-theme="dark"] .panel-heading {
-  background-color: rgb(250, 250, 250) !important;
+html[data-theme="dark"] .breadcrumb,
+html[data-theme="dark"] ul li.active a,
+html[data-theme="dark"] .panel-heading,
+html[data-theme="dark"] .panel-footer,
+html[data-theme="dark"] .model-header,
+html[data-theme="dark"] .table-headings th {
+  background-color: rgb(230, 230, 230) !important;
 }
 
-html[data-theme="dark"] input,
+html[data-theme="dark"] #per_page,
 html[data-theme="dark"] .dropdown-menu,
 html[data-theme="dark"] .form-control,
 html[data-theme="dark"] .select2-container--default,
@@ -55,8 +62,13 @@ html[data-theme="dark"] .select2-container--classic,
 html[data-theme="dark"] .select2-container--bootstrap,
 html[data-theme="dark"] .select2-selection--single,
 html[data-theme="dark"] .select2-selection--multiple,
+html[data-theme="dark"] .select2-search--dropdown,
+html[data-theme="dark"] .select2-search__field,
 html[data-theme="dark"] .select2-search--inline,
 html[data-theme="dark"] .select2-close-mask,
 html[data-theme="dark"] .select2-dropdown {
-  background: rgb(248, 248, 248);
+  background-color: rgb(223, 223, 223) !important;
+}
+html[data-theme="dark"] label input.checkbox {
+  background-color: rgb(150, 150, 150);
 }
