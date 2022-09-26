@@ -10,6 +10,13 @@ If you are a user migrating from NetBox to Nautobot, please refer to the ["Migra
 
 ### Added
 
+#### Custom Celery Task Queues
+
+A new optional job property `task_queues` has been introduced to allow Nautobot to leverage custom celery queues for jobs. This will allow you to send jobs to specific workers based on which queue is selected. This property can be set on the job class and overridden in the Job model, similar to other overridable job fields. If `task_queues` is not defined on the job class or Job model, the job will only be able to use the default queue. A new field has been added to the job run form to allow you to select a queue when you run the job and  an optional field `task_queue` has been added to the REST API [job run endpoint](../additional-features/jobs.md#via-the-api) for the same purpose.
+
+!!! important
+    The default celery queue name has been changed from `celery` to `default`. If you have any workers or tasks hard coded to use `celery` you will need to update those workers/tasks or change the [`CELERY_TASK_DEFAULT_QUEUE`](../configuration/optional-settings.md#celery_task_default_queue) setting in your `nautobot_config.py`.
+
 ### Changed
 
 #### Database Query Caching is now Disabled by Default
@@ -27,22 +34,4 @@ As a result, the value of this setting now defaults to `False`, disabling databa
 
 ### Removed
 
-## v1.5.0a1 (2022-MM-DD)
-
-### Added
-
-- [#899](https://github.com/nautobot/nautobot/issues/899) - Added support for grouping of Custom Fields.
-- [#1468](https://github.com/nautobot/nautobot/issues/1468) - Added relationship columns to ObjectListTableView and disabled sorting.
-- [#2063](https://github.com/nautobot/nautobot/issues/2063) - Added documentation and initial support for custom celery queues.
-- [#2281](https://github.com/nautobot/nautobot/issues/2281) - Added test database fixtures for Tag and Status models.
-
-### Changed
-
-- [#1983](https://github.com/nautobot/nautobot/issues/1983) - Updated `django-taggit` dependency to 3.0.0.
-- [#2170](https://github.com/nautobot/nautobot/pull/2170) - Updated `django-constance` dependency to 2.9.1; updated `Jinja2` dependency to 3.1.2; updated `black` development dependency to 22.8.0.
-- [#2320](https://github.com/nautobot/nautobot/pull/2320) - Removed PKs from Tag test database fixture.
-
-### Fixed
-
-- [#192](https://github.com/nautobot/nautobot/issues/192) - Eliminated Unit Test noisy output.
-- [#2388](https://github.com/nautobot/nautobot/issues/2388) - Return "—" instead of "None" when relationship column is empty.
+<!-- towncrier release notes start -->

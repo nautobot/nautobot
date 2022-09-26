@@ -1090,6 +1090,8 @@ class JobEditFormTestCase(TestCase):
             "time_limit": 650,
             "has_sensitive_variables": True,
             "has_sensitive_variables_override": True,
+            "task_queues": [],
+            "task_queues_override": True,
         }
         form = JobEditForm(data=form_data)
 

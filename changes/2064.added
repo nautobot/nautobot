@@ -1,0 +1,1 @@
+Added `task_queues` job property to support custom celery queues.
