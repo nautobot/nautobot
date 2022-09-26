@@ -67,7 +67,7 @@ class NautobotTestRunner(DiscoverSlowestTestsRunner):
                     time = float(timing)
                     baseline = float(self.baselines[func_name])
                     print(f"{time:.4f}s {func_name} is significantly slower than the baseline {baseline:.4f}s")
-                assert test_result_count != 0, "Performance Tests failed due to significantly slower tests"
+                assert test_result_count == 0, "Performance Tests failed due to significantly slower tests"
 
             if not test_results:
                 print("\nNo tests signficantly slower than baseline")
