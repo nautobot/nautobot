@@ -13,8 +13,10 @@ from nautobot.dcim.models import Site, Rack, Device
 from nautobot.dcim.tables import SiteTable
 from nautobot.extras.choices import CustomFieldTypeChoices, CustomFieldFilterLogicChoices
 from nautobot.extras.models import ComputedField, CustomField, CustomFieldChoice, Status
+from nautobot.users.models import ObjectPermission
 from nautobot.utilities.tables import CustomFieldColumn
 from nautobot.utilities.testing import APITestCase, CeleryTestCase, TestCase
+from nautobot.utilities.testing.utils import post_data
 from nautobot.virtualization.models import VirtualMachine
 
 
@@ -22,6 +24,7 @@ class CustomFieldTest(TestCase):
     fixtures = ("status",)
 
     def setUp(self):
+        super().setUp()
         active_status = Status.objects.get_for_model(Site).get(slug="active")
         Site.objects.create(name="Site A", slug="site-a", status=active_status)
         Site.objects.create(name="Site B", slug="site-b", status=active_status)
@@ -222,6 +225,65 @@ class CustomFieldTest(TestCase):
         self.assertIsNone(site.cf.get(cf.name))
 
         # Delete the custom field
+        cf.delete()
+
+    def test_multi_select_field_value_after_bulk_update(self):
+        obj_type = ContentType.objects.get_for_model(Site)
+
+        # Create a custom field
+        cf = CustomField(
+            type=CustomFieldTypeChoices.TYPE_MULTISELECT,
+            name="my_field",
+            required=False,
+        )
+        cf.save()
+        cf.content_types.set([obj_type])
+        CustomFieldChoice.objects.create(field=cf, value="Option A")
+        CustomFieldChoice.objects.create(field=cf, value="Option B")
+        CustomFieldChoice.objects.create(field=cf, value="Option C")
+        cf.validated_save()
+
+        # Assign values to all sites
+        sites = Site.objects.all()
+        # 2.0 TODO: #824 cf.slug rather than cf.name
+        for site in sites:
+            site.cf[cf.name] = ["Option A", "Option B", "Option C"]
+            site.validated_save()
+
+            # Retrieve the stored value
+            site.refresh_from_db()
+            # 2.0 TODO: #824 cf.slug rather than cf.name
+            self.assertEqual(site.cf[cf.name], ["Option A", "Option B", "Option C"])
+
+        pk_list = list(Site.objects.values_list("pk", flat=True))
+        data = {
+            "pk": pk_list,
+            "_apply": True,  # Form button
+        }
+        # set my_field to [] to emulate form submission when the user does not make any changes to the multiselect cf.
+        bulk_edit_data = {
+            f"cf_{cf.slug}": [],
+        }
+        # Append the form data to the request
+        data.update(post_data(bulk_edit_data))
+        # Assign model-level permission
+        obj_perm = ObjectPermission(
+            name="Test permission",
+            actions=["view", "change"],
+        )
+        obj_perm.save()
+        obj_perm.users.add(self.user)
+        obj_perm.object_types.add(ContentType.objects.get_for_model(Site))
+
+        # Try POST with model-level permission
+        bulk_edit_url = reverse("dcim:site_bulk_edit")
+        self.assertHttpStatus(self.client.post(bulk_edit_url, data), 302)
+
+        # Assert the values are unchanged after bulk edit
+        for site in sites:
+            site.refresh_from_db()
+            self.assertEqual(site.cf[cf.name], ["Option A", "Option B", "Option C"])
+
         cf.delete()
 
     def test_text_field_value(self):
