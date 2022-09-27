@@ -37,7 +37,7 @@ The type of data that the custom field will store. Valid choices are documented 
 
 #### Weight
 
-Weight determines how custom fields are sorted in a form and object detail views. Higher-weight fields will be ordered lower within a form.
+Weight determines how custom fields are sorted in forms and object detail views. Higher-weight fields will be ordered lower on the page.
 
 #### Description
 
