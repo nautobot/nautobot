@@ -410,7 +410,7 @@ class LookupRelatedFunctionTest(TestCase):
                 form_field = get_filterset_parameter_form_field(Site, field_name)
                 self.assertTrue(isinstance(form_field, forms.CharField))
 
-            device_fields = ["comments", "name"]
+            device_fields = ["serial", "name"]
             for field_name in device_fields:
                 form_field = get_filterset_parameter_form_field(Device, field_name)
                 self.assertTrue(isinstance(form_field, forms.CharField))

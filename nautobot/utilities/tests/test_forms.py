@@ -659,7 +659,8 @@ class DynamicFilterFormTest(TestCase):
     def test_dynamic_filter_form_with_missing_attr(self):
         with self.assertRaises(AttributeError) as err:
             DynamicFilterForm()
-        self.assertIn("'DynamicFilterForm' object requires `model` attribute", str(err.exception))
+        print(str(err.exception))
+        self.assertEqual("'DynamicFilterForm' object requires `model` attribute", str(err.exception))
 
     def test_dynamic_filter_form(self):
         # TODO: timizuo Find a way to test for all models

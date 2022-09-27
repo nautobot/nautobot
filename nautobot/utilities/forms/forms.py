@@ -266,10 +266,12 @@ class DynamicFilterForm(BootstrapMixin, forms.Form):
         super().__init__(*args, **kwargs)
         from nautobot.utilities.forms import add_blank_choice  # Avoid circular import
 
-        if model is None:
-            raise AttributeError("'DynamicFilterForm' object requires `model` attribute")
+        # cls.model is set at `dynamic_formset_factory()`
+        self.model = model or getattr(self, "model", None)
 
-        self.model = model
+        # Raise exception if `cls.model` not set and `model` not passed
+        if self.model is None:
+            raise AttributeError("'DynamicFilterForm' object requires `model` attribute")
 
         filterset_class = get_filterset_for_model(self.model)
         if filterset_class is not None:
