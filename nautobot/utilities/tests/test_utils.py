@@ -11,7 +11,7 @@ from nautobot.utilities.utils import (
     convert_querydict_to_factory_formset_acceptable_querydict,
     deepmerge,
     dict_to_filter_params,
-    get_all_lookup_exper_for_field,
+    get_all_lookup_expr_for_field,
     get_filterable_params_from_filter_params,
     get_filterset_for_model,
     get_filterset_parameter_form_field,
@@ -384,23 +384,23 @@ class LookupRelatedFunctionTest(TestCase):
             label = build_lookup_label("slug", "exact")
             self.assertEqual(label, "exact")
 
-    def test_get_all_lookup_exper_for_field(self):
+    def test_get_all_lookup_expr_for_field(self):
         with self.subTest():
-            lookup_expr = get_all_lookup_exper_for_field(Site, "status")
+            lookup_expr = get_all_lookup_expr_for_field(Site, "status")
             self.assertEqual(
                 lookup_expr,
                 [{"id": "status", "name": "exact"}, {"id": "status__n", "name": "not-exact(n)"}],
             )
 
         with self.subTest("Test field with has_ prefix"):
-            lookup_expr = get_all_lookup_exper_for_field(Site, "has_vlans")
+            lookup_expr = get_all_lookup_expr_for_field(Site, "has_vlans")
             self.assertEqual(
                 lookup_expr,
                 [{"id": "has_vlans", "name": "exact"}],
             )
 
         with self.subTest("Test unknown field"):
-            lookup_expr = get_all_lookup_exper_for_field(Site, "unknown_field")
+            lookup_expr = get_all_lookup_expr_for_field(Site, "unknown_field")
             self.assertEqual(lookup_expr, [])
 
     def test_get_filterset_parameter_form_field(self):

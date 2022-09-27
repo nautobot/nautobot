@@ -16,7 +16,6 @@ from django.core.serializers import serialize
 from django.db.models import Count, Model, OuterRef, Subquery
 from django.db.models.functions import Coalesce
 from django.http import QueryDict
-from django.urls import NoReverseMatch, reverse
 from django.utils.tree import Node
 
 from django.template import engines
@@ -34,6 +33,9 @@ from taggit.managers import _TaggableManager
 
 from nautobot.dcim.choices import CableLengthUnitChoices
 from nautobot.utilities.constants import FILTER_LOOKUP_MAP, HTTP_REQUEST_META_SAFE_COPY
+
+
+SEARCH_RE = re.compile(r"(?<=__)\w+")
 
 
 def csv_format(data):
@@ -568,25 +570,6 @@ def get_filterset_for_model(model):
     return get_related_class_for_model(model, module_name="filters", object_suffix="FilterSet")
 
 
-def get_model_api_endpoint(model):
-    """Return the API endpoint associated with a given `model`.
-
-    Returns:
-        Either the endpoint or `None`
-    """
-    app_label = model._meta.app_label
-    model_name = model._meta.model_name
-
-    try:
-        if app_label in settings.PLUGINS:
-            data_url = reverse(f"plugins-api:{app_label}-api:{model_name}-list")
-        else:
-            data_url = reverse(f"{app_label}-api:{model_name}-list")
-        return data_url
-    except NoReverseMatch:
-        return None
-
-
 def get_form_for_model(model, form_prefix=""):
     """Return the `Form` class associated with a given `model`.
 
@@ -736,7 +719,7 @@ def build_lookup_label(field_name, verbose_name):
     """
 
     label = ""
-    search = re.search(r"(?<=__)\w+", field_name)
+    search = SEARCH_RE.search(field_name)
     if search:
         label = f"({search.group()})"
 
@@ -747,7 +730,7 @@ def build_lookup_label(field_name, verbose_name):
     return verbose_name + label
 
 
-def get_all_lookup_exper_for_field(model, field_name):
+def get_all_lookup_expr_for_field(model, field_name):
     """
     Return all lookup expressions for `field_name` in `model` filterset
     """

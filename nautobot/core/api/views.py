@@ -38,7 +38,7 @@ from nautobot.core.api import BulkOperationSerializer
 from nautobot.core.api.exceptions import SerializerNotFound
 from nautobot.utilities.api import get_serializer_for_model
 from nautobot.utilities.utils import (
-    get_all_lookup_exper_for_field,
+    get_all_lookup_expr_for_field,
     get_filterset_parameter_form_field,
     get_form_for_model,
 )
@@ -751,7 +751,7 @@ class LookupTypeChoicesView(NautobotAPIVersionMixin, APIView):
         field_name = request.GET.get("field_name")
         app_label, model_name = contenttype.split(".")
         model = ContentType.objects.get(app_label=app_label, model=model_name).model_class()
-        data = get_all_lookup_exper_for_field(model, field_name)
+        data = get_all_lookup_expr_for_field(model, field_name)
 
         # Needs to be returned in this format because this endpoint is used by
         # DynamicModelChoiceField which requires the response of an api in this exact format
