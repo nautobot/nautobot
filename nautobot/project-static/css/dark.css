@@ -84,3 +84,13 @@ html[data-theme="dark"] pre {
   background-color: rgb(211, 221, 222);
   color: rgb(29, 40, 42);
 }
+
+/* Breadcrumbs */
+html[data-theme="dark"] .breadcrumb>li+li:before {
+  color: rgb(142, 142, 142);
+}
+
+/* Code */
+html[data-theme="dark"] code {
+  color: rgb(0, 255, 0);
+}
