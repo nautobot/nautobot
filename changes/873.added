@@ -1,1 +1,1 @@
-Relationships were given the ability to be required.
+Made it possible to require Relationships to be included when editing the related models.
