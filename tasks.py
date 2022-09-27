@@ -594,7 +594,7 @@ def check_schema(context, api_version=None):
         "append": "Append coverage data to .coverage, otherwise it starts clean each time.",
         "skip_docs_build": "Skip (re)build of documentation before running the test.",
         "report": "Generate Performance Testing report in the terminal.",
-        "generate_report": "Generating a new performance testing report to report.json",
+        "generate_report": "Generate a new performance testing report to report.json",
     },
     iterable=["tag", "exclude_tag"],
 )
@@ -664,7 +664,7 @@ def unittest_coverage(context):
         "append": "Append coverage data to .coverage, otherwise it starts clean each time.",
         "skip_docs_build": "Skip (re)build of documentation before running the test.",
         "report": "Generate Performance Testing report in the terminal.",
-        "generate_report": "Generating a new performance testing report to report.json",
+        "generate_report": "Generate a new performance testing report to report.json",
     },
     iterable=["tag", "exclude_tag"],
 )
@@ -715,7 +715,7 @@ def integration_test(
         "append": "Append coverage data to .coverage, otherwise it starts clean each time.",
         "skip_docs_build": "Skip (re)build of documentation before running the test.",
         "report": "Generate Performance Testing report in the terminal.",
-        "generate_report": "Generating a new performance testing report to report.json",
+        "generate_report": "Generate a new performance testing report to report.json",
     },
     iterable=["tag", "exclude_tag"],
 )
