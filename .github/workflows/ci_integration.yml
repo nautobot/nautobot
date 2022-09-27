@@ -18,7 +18,7 @@ jobs:
       - name: "Check out repository code"
         uses: "actions/checkout@v2"
       - name: "Setup environment"
-        uses: "networktocode/gh-action-setup-poetry-environment@v3"
+        uses: "networktocode/gh-action-setup-poetry-environment@v2"
       - name: "Linting: black"
         run: "poetry run invoke black"
   flake8:
@@ -29,7 +29,7 @@ jobs:
       - name: "Check out repository code"
         uses: "actions/checkout@v2"
       - name: "Setup environment"
-        uses: "networktocode/gh-action-setup-poetry-environment@v3"
+        uses: "networktocode/gh-action-setup-poetry-environment@v2"
       - name: "Linting: flake8"
         run: "poetry run invoke flake8"
   markdownlint:
@@ -77,7 +77,7 @@ jobs:
       - name: "Check out repository code"
         uses: "actions/checkout@v2"
       - name: "Setup environment"
-        uses: "networktocode/gh-action-setup-poetry-environment@v3"
+        uses: "networktocode/gh-action-setup-poetry-environment@v2"
       - name: "Run check migrations"
         run: "poetry run invoke check-migrations"
     needs:
@@ -106,7 +106,7 @@ jobs:
       - name: "Check out repository code"
         uses: "actions/checkout@v2"
       - name: "Setup environment"
-        uses: "networktocode/gh-action-setup-poetry-environment@v3"
+        uses: "networktocode/gh-action-setup-poetry-environment@v2"
       - name: "Run check-schema"
         # REST API schema generation currently includes GraphQL schema generation, which is dependent on the DB :-(
         run: "poetry run invoke migrate check-schema"
@@ -137,7 +137,7 @@ jobs:
       - name: "Check out repository code"
         uses: "actions/checkout@v2"
       - name: "Setup environment"
-        uses: "networktocode/gh-action-setup-poetry-environment@v3"
+        uses: "networktocode/gh-action-setup-poetry-environment@v2"
       - name: "Run pylint"
         run: "poetry run invoke pylint"
     needs:
@@ -172,7 +172,7 @@ jobs:
       - name: "Check out repository code"
         uses: "actions/checkout@v2"
       - name: "Setup environment"
-        uses: "networktocode/gh-action-setup-poetry-environment@v3"
+        uses: "networktocode/gh-action-setup-poetry-environment@v2"
         with:
           python-version: "${{ matrix.python-version }}"
       - name: "Remove Installed Nautobots (Poetry Workaround)" # Workaround for https://github.com/python-poetry/poetry/issues/2918
@@ -217,7 +217,7 @@ jobs:
       - name: "Check out repository code"
         uses: "actions/checkout@v2"
       - name: "Setup environment"
-        uses: "networktocode/gh-action-setup-poetry-environment@v3"
+        uses: "networktocode/gh-action-setup-poetry-environment@v2"
         with:
           python-version: "${{ matrix.python-version }}"
       - name: "Remove Installed Nautobots (Poetry Workaround)" # Workaround for https://github.com/python-poetry/poetry/issues/2918
@@ -265,7 +265,7 @@ jobs:
       - name: "Check out repository code"
         uses: "actions/checkout@v2"
       - name: "Setup environment"
-        uses: "networktocode/gh-action-setup-poetry-environment@v3"
+        uses: "networktocode/gh-action-setup-poetry-environment@v2"
       - name: "Remove Installed Nautobots (Poetry Workaround)" # Workaround for https://github.com/python-poetry/poetry/issues/2918
         run: "for i in $(ls -d1 ~/.cache/pypoetry/virtualenvs/*/lib/*/site-packages/nautobot-*.dist-info); do poetry run pip uninstall -y nautobot; done"
       - name: "Reinstall Nautobot Local"

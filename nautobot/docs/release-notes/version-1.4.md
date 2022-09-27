@@ -180,6 +180,7 @@ The `settings_and_registry` default context processor was changed to purely `set
 - [#2353](https://github.com/nautobot/nautobot/issues/2353) - Fixed MultiSelect CustomField being emptied unintentionally after bulk update.
 - [#2375](https://github.com/nautobot/nautobot/issues/2375) - Fixed error in Cable list view filtering when `color` and `type` filters are not set.
 - [#2461](https://github.com/nautobot/nautobot/issues/2461) - Fixed an exception during OpenAPI schema generation when certain Nautobot apps (including `nautobot-firewall-models`) were installed.
+- [#2496](https://github.com/nautobot/nautobot/pull/2496) - Fixed failing CI due to #2468
 
 
 ## v1.4.3 (2022-09-19)
