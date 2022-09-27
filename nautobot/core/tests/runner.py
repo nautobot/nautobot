@@ -47,12 +47,10 @@ class NautobotTestRunner(DiscoverSlowestTestsRunner):
         """
         test_result_count = len(test_results)
 
-        # Generate a report.json file consist of the performance tests result
+        # Add `--generate_report` to the end of `invoke` commands to generate a report.json file consist of the performance tests result
         if self.report_path:
             data = {
-                "slower_tests": [
-                    {"name": func_name, "execution_time": float(timing)} for func_name, timing in test_results
-                ],
+                "tests": [{"name": func_name, "execution_time": float(timing)} for func_name, timing in test_results],
                 "nb_tests": result.testsRun,
                 "nb_failed": len(result.errors + result.failures),
                 "total_execution_time": result.timeTaken,
@@ -67,13 +65,14 @@ class NautobotTestRunner(DiscoverSlowestTestsRunner):
                     time = float(timing)
                     baseline = float(self.baselines[func_name])
                     print(f"{time:.4f}s {func_name} is significantly slower than the baseline {baseline:.4f}s")
+                # Make the test fail if there are tests significantly slower
                 assert test_result_count == 0, "Performance Tests failed due to significantly slower tests"
 
             if not test_results:
-                print("\nNo tests signficantly slower than baseline")
+                print("\nNo tests signficantly slower than baseline. Success!")
 
     def get_baselines(self):
-        """Get the performance baselines for comparison"""
+        """Load the performance_baselines.yml file for result comparison."""
         baselines = {}
         input_file = "nautobot/core/tests/performance_baselines.yml"
 
@@ -84,9 +83,12 @@ class NautobotTestRunner(DiscoverSlowestTestsRunner):
         return baselines
 
     def suite_result(self, suite, result):
+        """Compile the performance test results"""
         return_value = super(DiscoverSlowestTestsRunner, self).suite_result(suite, result)
         self.baselines = self.get_baselines()
 
+        # You can set `ALWAYS_GENERATE_SLOW_REPORT` to True or add `--report` to `invoke` commands to generate report.
+        # e.g. `invoke unittest --report`
         should_generate_report = getattr(settings, "ALWAYS_GENERATE_SLOW_REPORT", True) or self.should_generate_report
         if not should_generate_report:
             self.remove_timing_tmp_files()
@@ -98,7 +100,7 @@ class NautobotTestRunner(DiscoverSlowestTestsRunner):
         test_results = by_time
 
         if self.baselines:
-            # Filter tests by threshold
+            # Filter tests by baseline numbers
             test_results = []
 
             for entry in by_time:
@@ -114,7 +116,7 @@ class NautobotTestRunner(DiscoverSlowestTestsRunner):
 
                     # baseline duration in milliseconds
                     baseline_ms = self.baselines.get(entry[0], 0) * 1000
-
+                    # Arbitrary criteria to not make performance test fail easily
                     if result_time_ms <= baseline_ms * 1.5 or result_time_ms - baseline_ms <= 5000:
                         continue
 
