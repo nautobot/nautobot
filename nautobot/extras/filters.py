@@ -2,6 +2,7 @@ import django_filters
 from django.contrib.auth import get_user_model
 from django.contrib.contenttypes.models import ContentType
 from django.db.models import Q
+from django_filters.utils import verbose_lookup_expr
 from django.forms import IntegerField
 
 from nautobot.dcim.models import DeviceRole, DeviceType, Location, Platform, Region, Site
@@ -10,7 +11,6 @@ from nautobot.tenancy.models import Tenant, TenantGroup
 from nautobot.utilities.constants import (
     FILTER_CHAR_BASED_LOOKUP_MAP,
     FILTER_NUMERIC_BASED_LOOKUP_MAP,
-    FILTER_LOOKUP_MAP,
 )
 from nautobot.utilities.filters import (
     BaseFilterSet,
@@ -593,7 +593,7 @@ class CustomFieldModelFilterSet(django_filters.FilterSet):
                 field_name=custom_field.name,
                 lookup_expr=lookup_expr,
                 custom_field=custom_field,
-                label=f"{custom_field.label} ({FILTER_LOOKUP_MAP[lookup_expr]})",
+                label=f"{custom_field.label} ({verbose_lookup_expr(lookup_expr)})",
                 exclude=lookup_name.startswith("n"),
             )
 

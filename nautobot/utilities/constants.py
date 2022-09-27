@@ -24,21 +24,6 @@ FILTER_NEGATION_LOOKUP_MAP = dict(n="exact")
 
 FILTER_TREENODE_NEGATION_LOOKUP_MAP = dict(n="in")
 
-FILTER_LOOKUP_MAP = {
-    "exact": "exact",
-    "icontains": "contains",
-    "iendswith": "ends-with",
-    "istartswith": "starts-with",
-    "iexact": "exact",
-    "regex": "regex",
-    "iregex": "regex",
-    "lte": "less-than-or-equal",
-    "lt": "less-than",
-    "gte": "greater-than-or-equal",
-    "gt": "greater-than",
-    "in": "in",
-}
-
 
 #
 # HTTP Request META safe copy

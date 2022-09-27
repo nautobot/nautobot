@@ -29,10 +29,11 @@ from django_filters import (
     TimeFilter,
     NumberFilter,
 )
+from django_filters.utils import verbose_lookup_expr
 from taggit.managers import _TaggableManager
 
 from nautobot.dcim.choices import CableLengthUnitChoices
-from nautobot.utilities.constants import FILTER_LOOKUP_MAP, HTTP_REQUEST_META_SAFE_COPY
+from nautobot.utilities.constants import HTTP_REQUEST_META_SAFE_COPY
 
 
 SEARCH_RE = re.compile(r"(?<=__)\w+")
@@ -705,27 +706,25 @@ def pretty_print_query(query):
     return pretty_str(query)
 
 
-def build_lookup_label(field_name, verbose_name):
+def build_lookup_label(field_name, _verbose_name):
     """
     Return lookup expr with its verbose name
 
     Args:
         field_name (str): Field name e.g slug__iew
-        verbose_name (str): The verbose name for the lookup exper which is suffixed to the field name e.g iew -> iendswith
+        _verbose_name (str): The verbose name for the lookup exper which is suffixed to the field name e.g iew -> iendswith
 
     Examples:
         >>> build_lookup_label("slug__iew", "iendswith")
         >>> "ends-with(iew)"
     """
-
+    verbose_name = verbose_lookup_expr(_verbose_name)
     label = ""
     search = SEARCH_RE.search(field_name)
     if search:
         label = f"({search.group()})"
 
-    if FILTER_LOOKUP_MAP.get(verbose_name):
-        lookup_label = FILTER_LOOKUP_MAP[verbose_name]
-        verbose_name = "not-" + lookup_label if label.startswith("(n") else lookup_label
+    verbose_name = "not-" + verbose_name if label.startswith("(n") else verbose_name
 
     return verbose_name + label
 
