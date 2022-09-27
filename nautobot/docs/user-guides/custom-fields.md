@@ -169,7 +169,7 @@ Custom fields are returned in the API for all supported models in the `custom_fi
 
 ### GraphQL
 
-#### Retrieve a Custom Field
+#### Retrieve Data for a Custom Field in GraphQL
 
 Individual custom fields can be retrieved in GraphQL queries by using the `cf_<fieldname>` field name format:
 
@@ -212,7 +212,7 @@ Individual custom fields can be retrieved in GraphQL queries by using the `cf_<f
 
 </details>
 
-#### Retrieve Data For All Custom Fields
+#### Retrieve Data For All Custom Fields in GraphQL
 
 All custom field data can be retrieved in GraphQL queries by using the `_custom_field_data` field:
 
@@ -253,7 +253,7 @@ All custom field data can be retrieved in GraphQL queries by using the `_custom_
 
 </details>
 
-#### Filter Queries on Custom Field Data
+#### Filter Queries on Custom Field Data in GraphQL
 
 Queries can also be filtered by custom field values using any of the filters available in the UI and Rest API:
 
