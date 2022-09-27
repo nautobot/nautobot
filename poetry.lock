@@ -2566,7 +2566,7 @@ sso = ["social-auth-core"]
 [metadata]
 lock-version = "1.1"
 python-versions = "^3.7"
-content-hash = "c924161fbbca1b8862d7d6737ddc32ba9a36103fad2d72547a3aab8b5d62106f"
+content-hash = "7f5c68865a17fe2ecf1c31d787d7ed3085a3d802162d5229b5d95053cb5258dc"
 
 [metadata.files]
 amqp = [
