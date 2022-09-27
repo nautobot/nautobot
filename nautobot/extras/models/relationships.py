@@ -13,7 +13,7 @@ from django.utils.safestring import mark_safe
 
 from nautobot.core.fields import AutoSlugField
 from nautobot.core.models import BaseModel
-from nautobot.extras.choices import RelationshipTypeChoices, RelationshipSideChoices, RelationshipSidesRequiredChoices
+from nautobot.extras.choices import RelationshipTypeChoices, RelationshipSideChoices, RelationshipRequiredSideChoices
 from nautobot.extras.utils import FeatureQuery, extras_features
 from nautobot.extras.models import ChangeLoggedModel
 from nautobot.extras.models.mixins import NotesMixin
@@ -239,7 +239,7 @@ class RelationshipManager(models.Manager.from_queryset(RestrictedQuerySet)):
         """
         Return all required Relationships assigned to the given model.
         """
-        required_types = [req_type for req_type in RelationshipSidesRequiredChoices.values() if req_type]
+        required_types = [req_type for req_type in RelationshipRequiredSideChoices.values() if req_type]
         source, destination = self.get_for_model(model)
         return {
             "source": destination.filter(required_side__in=required_types),
@@ -264,8 +264,8 @@ class Relationship(BaseModel, ChangeLoggedModel, NotesMixin):
     )
     required_side = models.CharField(
         max_length=12,
-        choices=RelationshipSidesRequiredChoices,
-        default=RelationshipSidesRequiredChoices.NEITHER_SIDE_REQUIRED,
+        choices=RelationshipRequiredSideChoices,
+        default=RelationshipRequiredSideChoices.NEITHER_SIDE_REQUIRED,
         help_text="Force this relationship to be required. This does not effect symmetrical relationships.",
         verbose_name="Required Side",
         blank=True,

@@ -271,10 +271,7 @@ def validate_relationships(request, instance, submitted_relationships_data):
 
             model_name = getattr(relation, f"{side}_type").model_class()._meta.verbose_name
 
-            try:
-                submitted_data = submitted_relationships_data.get(relation, {}).get(side, "")
-            except AttributeError:
-                submitted_data = []
+            submitted_data = submitted_relationships_data.get(relation, {}).get(side, "")
 
             if len(submitted_data) == 0:
                 if relation.type in [
@@ -287,7 +284,7 @@ def validate_relationships(request, instance, submitted_relationships_data):
                 submitted_relationships_data_errors.append(
                     {
                         relation.slug: f"You must specify {num_required_verbose} {model_name} id or slug "
-                        f"in the request body's relationships[“{relation.slug}”][”{side}”][”objects”] list data"
+                        f'in the request body\'s relationships["{relation.slug}"]["{side}"]["objects"] list data'
                     }
                 )
     if len(submitted_relationships_data_errors) > 0:

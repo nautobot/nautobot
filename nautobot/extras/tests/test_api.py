@@ -2705,7 +2705,7 @@ class RelationshipTest(APIViewTestCases.APIViewTestCase):
         expected_error_json = [
             {
                 "vlans-devices": "You must specify at least one device id or slug in the request "
-                "body's relationships[“vlans-devices”][”destination”][”objects”] list data"
+                'body\'s relationships["vlans-devices"]["destination"]["objects"] list data'
             }
         ]
         self.assertHttpStatus(response, 400)
@@ -2773,7 +2773,7 @@ class RelationshipTest(APIViewTestCases.APIViewTestCase):
         expected_error_json = [
             {
                 "platform-devices": "You must specify at least one device id or "
-                "slug in the request body's relationships[“platform-devices”][”destination”][”objects”] list data"
+                'slug in the request body\'s relationships["platform-devices"]["destination"]["objects"] list data'
             }
         ]
         self.assertHttpStatus(response, 400)
@@ -2831,7 +2831,7 @@ class RelationshipTest(APIViewTestCases.APIViewTestCase):
         expected_error_json = [
             {
                 "platform-tenant": "You must specify a platform id or slug in the request "
-                "body's relationships[“platform-tenant”][”source”][”objects”] list data"
+                'body\'s relationships["platform-tenant"]["source"]["objects"] list data'
             }
         ]
         self.assertHttpStatus(response, 400)

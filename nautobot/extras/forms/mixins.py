@@ -370,8 +370,8 @@ class RelationshipModelFormMixin(forms.ModelForm):
                 self.fields[field_name] = relationship.to_form_field(side=side)
 
                 # if relationship.required in [
-                #     RelationshipSidesRequiredChoices.BOTH_SIDES_REQUIRED,
-                #     RelationshipSidesRequiredChoices.DESTINATION_SIDE_REQUIRED,
+                #     RelationshipRequiredSideChoices.BOTH_SIDES_REQUIRED,
+                #     RelationshipRequiredSideChoices.DESTINATION_SIDE_REQUIRED,
                 # ]:
                 #     self.fields[field_name].required = True
 

@@ -304,7 +304,7 @@ class RelationshipTypeChoices(ChoiceSet):
     )
 
 
-class RelationshipSidesRequiredChoices(ChoiceSet):
+class RelationshipRequiredSideChoices(ChoiceSet):
 
     NEITHER_SIDE_REQUIRED = ""
     SOURCE_SIDE_REQUIRED = "source"
