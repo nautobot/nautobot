@@ -4,7 +4,7 @@ from django.core.validators import BaseValidator, RegexValidator
 
 def prefix_validator(prefix):
     if prefix.ip != prefix.cidr.ip:
-        raise ValidationError("{} is not a valid prefix. Did you mean {}?".format(prefix, prefix.cidr))
+        raise ValidationError(f"{prefix} is not a valid prefix. Did you mean {prefix.cidr}?")
 
 
 class MaxPrefixLengthValidator(BaseValidator):

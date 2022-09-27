@@ -1,5 +1,7 @@
 # Populating the Home Page
 
++++ 1.2.0
+
 Both core applications and plugins can contribute items to the Nautobot home page by defining `layout` inside of their app's `homepage.py`. Using a key and weight system, a developer can integrate amongst existing home page panels or can create entirely new panels as desired.
 
 ## Adding a new Home Page Panel

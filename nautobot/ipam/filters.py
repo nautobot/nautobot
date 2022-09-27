@@ -447,7 +447,7 @@ class IPAddressFilterSet(NautobotFilterSet, IPAMFilterSetMixin, TenancyFilterSet
         return queryset.filter(Q(vrf=value) | Q(vrf__export_targets__in=value.import_targets.all()))
 
     def filter_device(self, queryset, name, value):
-        devices = Device.objects.filter(**{"{}__in".format(name): value})
+        devices = Device.objects.filter(**{f"{name}__in": value})
         if not devices.exists():
             return queryset.none()
         interface_ids = []
@@ -456,7 +456,7 @@ class IPAddressFilterSet(NautobotFilterSet, IPAMFilterSetMixin, TenancyFilterSet
         return queryset.filter(interface__in=interface_ids)
 
     def filter_virtual_machine(self, queryset, name, value):
-        virtual_machines = VirtualMachine.objects.filter(**{"{}__in".format(name): value})
+        virtual_machines = VirtualMachine.objects.filter(**{f"{name}__in": value})
         if not virtual_machines.exists():
             return queryset.none()
         interface_ids = []

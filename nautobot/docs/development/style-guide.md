@@ -59,15 +59,17 @@ New dependencies can be added to the project via the `poetry add` command. This 
 
 * The combination of `nautobot.utilities.forms.BootstrapMixin`, `nautobot.extras.forms.CustomFieldModelFormMixin`, `nautobot.extras.forms.RelationshipModelFormMixin` and `nautobot.extras.forms.NoteModelFormMixin` is such a common use case throughout the code base that they have a helper class which combines all of these at `nautobot.extras.forms.NautobotModelForm`. Use this helper class if you need the functionality from these classes.
 
-* _Added in version 1.4_: Similarly, for filter forms, `nautobot.extras.forms.NautobotFilterForm` combines `nautobot.utilities.forms.BootstrapMixin`, `nautobot.extras.forms.CustomFieldModelFilterFormMixin`, and `nautobot.extras.forms.RelationshipModelFilterFormMixin`, and should be used where appropriate.
++++ 1.4.0
 
-* _Added in version 1.4_: Similarly, for bulk-edit forms, `nautobot.extras.forms.NautobotBulkEditForm` combines `nautobot.utilities.forms.BulkEditForm` and `nautobot.utilities.forms.BootstrapMixin` with `nautobot.extras.forms.CustomFieldModelBulkEditFormMixin`, `nautobot.extras.forms.RelationshipModelBulkEditFormMixin` and `nautobot.extras.forms.NoteModelBulkEditFormMixin`, and should be used where appropriate.
+    * Similarly, for filter forms, `nautobot.extras.forms.NautobotFilterForm` combines `nautobot.utilities.forms.BootstrapMixin`, `nautobot.extras.forms.CustomFieldModelFilterFormMixin`, and `nautobot.extras.forms.RelationshipModelFilterFormMixin`, and should be used where appropriate.
 
-* _Added in version 1.4_: API serializers for most models should inherit from `nautobot.extras.api.serializers.NautobotModelSerializer` and any appropriate mixins. Only use more abstract base classes such as ValidatedModelSerializer where absolutely required.
+    * Similarly, for bulk-edit forms, `nautobot.extras.forms.NautobotBulkEditForm` combines `nautobot.utilities.forms.BulkEditForm` and `nautobot.utilities.forms.BootstrapMixin` with `nautobot.extras.forms.CustomFieldModelBulkEditFormMixin`, `nautobot.extras.forms.RelationshipModelBulkEditFormMixin` and `nautobot.extras.forms.NoteModelBulkEditFormMixin`, and should be used where appropriate.
 
-* _Added in version 1.4_: `NautobotModelSerializer` will automatically add serializer fields for `id`, `created`/`last_updated` (if applicable), `custom_fields`, `computed_fields`, and `relationships`, so there's generally no need to explicitly declare these fields in `.Meta.fields` of each serializer class. Similarly, `TaggedObjectSerializer` and `StatusModelSerializerMixin` will automatically add the `tags` and `status` fields when included in a serializer class.
+    * API serializers for most models should inherit from `nautobot.extras.api.serializers.NautobotModelSerializer` and any appropriate mixins. Only use more abstract base classes such as ValidatedModelSerializer where absolutely required.
 
-* _Added in version 1.4_: API Views for most models should inherit from `nautobot.extras.api.views.NautobotModelViewSet`. Only use more abstract base classes such as `ModelViewSet` where absolutely required.
+    * `NautobotModelSerializer` will automatically add serializer fields for `id`, `created`/`last_updated` (if applicable), `custom_fields`, `computed_fields`, and `relationships`, so there's generally no need to explicitly declare these fields in `.Meta.fields` of each serializer class. Similarly, `TaggedObjectSerializer` and `StatusModelSerializerMixin` will automatically add the `tags` and `status` fields when included in a serializer class.
+
+    * API Views for most models should inherit from `nautobot.extras.api.views.NautobotModelViewSet`. Only use more abstract base classes such as `ModelViewSet` where absolutely required.
 
 ## Branding
 

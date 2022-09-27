@@ -1,5 +1,7 @@
 # Jobs
 
++++ 1.3.0
+
 The Job data model provides a database representation of metadata describing a specific installed Job. It also serves as an anchor point for other data models (JobResult and ScheduledJob in particular) to link against.
 
 For any given Job record, most of its fields are populated initially from data defined in the source code of the corresponding job class. These fields may be explicitly overridden by editing the Job record via the Nautobot UI or REST API if desired. This is generally accomplished by setting a value for the desired field (e.g. `grouping`) and also setting the corresponding `override` flag (e.g. `grouping_override`) to `True`. If the `override` flag for a field is cleared (set back to `False`) then the corresponding flag will automatically revert to the original value defined by the Job class source code when the record is saved.

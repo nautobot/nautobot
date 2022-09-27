@@ -64,7 +64,7 @@ class LoganImporter:
         self.validate()
 
     def __repr__(self):
-        return "<%s for '%s' (%s)>" % (type(self), self.name, self.config_path)
+        return f"<{type(self)} for '{self.name}' ({self.config_path})>"
 
     def validate(self):
         # TODO(dcramer): is there a better way to handle validation so it

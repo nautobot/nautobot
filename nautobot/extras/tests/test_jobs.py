@@ -1,5 +1,6 @@
 import datetime
 import json
+import logging
 import re
 import uuid
 from io import StringIO
@@ -127,7 +128,9 @@ class JobTest(TransactionTestCase):
         """
         module = "test_fail"
         name = "TestFail"
+        logging.disable(logging.ERROR)
         job_result = create_job_result_and_run_job(module, name, commit=False)
+        logging.disable(logging.NOTSET)
         self.assertEqual(job_result.status, JobResultStatusChoices.STATUS_ERRORED)
 
     def test_field_default(self):
@@ -140,17 +143,14 @@ class JobTest(TransactionTestCase):
         job_class = get_job(f"local/{module}/{name}")
         form = job_class().as_form()
 
-        self.assertHTMLEqual(
-            form.as_table(),
+        self.assertInHTML(
             """<tr><th><label for="id_var_int">Var int:</label></th><td>
 <input class="form-control form-control" id="id_var_int" max="3600" name="var_int" placeholder="None" required type="number" value="0">
 <br><span class="helptext">Test default of 0 Falsey</span></td></tr>
 <tr><th><label for="id_var_int_no_default">Var int no default:</label></th><td>
 <input class="form-control form-control" id="id_var_int_no_default" max="3600" name="var_int_no_default" placeholder="None" type="number">
-<br><span class="helptext">Test default without default</span></td></tr>
-<tr><th><label for="id__commit">Commit changes:</label></th><td>
-<input checked id="id__commit" name="_commit" placeholder="Commit changes" type="checkbox">
-<br><span class="helptext">Commit changes to the database (uncheck for a dry-run)</span></td></tr>""",
+<br><span class="helptext">Test default without default</span></td></tr>""",
+            form.as_table(),
         )
 
     def test_field_order(self):
@@ -161,7 +161,7 @@ class JobTest(TransactionTestCase):
         name = "TestFieldOrder"
         job_class = get_job(f"local/{module}/{name}")
         form = job_class().as_form()
-        self.assertSequenceEqual(list(form.fields.keys()), ["var1", "var2", "var23", "_commit"])
+        self.assertSequenceEqual(list(form.fields.keys()), ["var1", "var2", "var23", "_task_queue", "_commit"])
 
     def test_no_field_order(self):
         """
@@ -171,7 +171,7 @@ class JobTest(TransactionTestCase):
         name = "TestNoFieldOrder"
         job_class = get_job(f"local/{module}/{name}")
         form = job_class().as_form()
-        self.assertSequenceEqual(list(form.fields.keys()), ["var23", "var2", "_commit"])
+        self.assertSequenceEqual(list(form.fields.keys()), ["var23", "var2", "_task_queue", "_commit"])
 
     def test_no_field_order_inherited_variable(self):
         """
@@ -181,7 +181,10 @@ class JobTest(TransactionTestCase):
         name = "TestDefaultFieldOrderWithInheritance"
         job_class = get_job(f"local/{module}/{name}")
         form = job_class().as_form()
-        self.assertSequenceEqual(list(form.fields.keys()), ["testvar1", "b_testvar2", "a_testvar3", "_commit"])
+        self.assertSequenceEqual(
+            list(form.fields.keys()),
+            ["testvar1", "b_testvar2", "a_testvar3", "_task_queue", "_commit"],
+        )
 
     def test_read_only_job_pass(self):
         """
@@ -199,7 +202,9 @@ class JobTest(TransactionTestCase):
         """
         module = "test_read_only_fail"
         name = "TestReadOnlyFail"
+        logging.disable(logging.ERROR)
         job_result = create_job_result_and_run_job(module, name, commit=False)
+        logging.disable(logging.NOTSET)
         self.assertEqual(job_result.status, JobResultStatusChoices.STATUS_ERRORED)
         self.assertEqual(Site.objects.count(), 0)  # Ensure DB transaction was aborted
         # Also ensure the standard log message about aborting the transaction is *not* present
@@ -217,11 +222,9 @@ class JobTest(TransactionTestCase):
 
         form = job_class().as_form()
 
-        self.assertHTMLEqual(
+        self.assertInHTML(
+            "<input id='id__commit' name='_commit' type='hidden' value='False'>",
             form.as_table(),
-            """<tr><th><label for="id_var">Var:</label></th><td>
-<input class="form-control form-control" id="id_var" name="var" placeholder="None" required type="text">
-<br><span class="helptext">Hello</span><input id="id__commit" name="_commit" type="hidden" value="False"></td></tr>""",
         )
 
     def test_ip_address_vars(self):
@@ -336,8 +339,9 @@ class JobTest(TransactionTestCase):
         module = "test_object_var_required"
         name = "TestRequiredObjectVar"
         data = {"region": None}
-
+        logging.disable(logging.ERROR)
         job_result = create_job_result_and_run_job(module, name, data=data, commit=False)
+        logging.disable(logging.NOTSET)
 
         # Assert stuff
         self.assertEqual(job_result.status, JobResultStatusChoices.STATUS_ERRORED)
@@ -353,9 +357,9 @@ class JobTest(TransactionTestCase):
         module = "test_object_vars"
         name = "TestObjectVars"
         data = "BAD DATA STRING"
-
+        logging.disable(logging.ERROR)
         job_result = create_job_result_and_run_job(module, name, data=data, commit=False)
-
+        logging.disable(logging.NOTSET)
         # Assert stuff
         self.assertEqual(job_result.status, JobResultStatusChoices.STATUS_ERRORED)
         log_failure = JobLogEntry.objects.filter(
@@ -377,6 +381,53 @@ class JobTest(TransactionTestCase):
         self.assertGreaterEqual(job_model.results.count(), 2)
         latest_job_result = job_model.latest_result
         self.assertEqual(job_result_2.completed, latest_job_result.completed)
+
+    @mock.patch("nautobot.extras.utils.get_celery_queues")
+    def test_job_class_task_queues(self, mock_get_celery_queues):
+        """
+        Test job form with custom task queues defined on the job class
+        """
+        module = "test_task_queues"
+        name = "TestWorkerQueues"
+        mock_get_celery_queues.return_value = {"celery": 4, "irrelevant": 5}
+        job_class, _ = get_job_class_and_model(module, name)
+        form = job_class().as_form()
+        self.assertInHTML(
+            """<tr><th><label for="id__task_queue">Task queue:</label></th>
+            <td><select name="_task_queue" class="form-control" placeholder="Task queue" id="id__task_queue">
+            <option value="celery">celery (4 workers)</option>
+            <option value="nonexistent">nonexistent (0 workers)</option></select><br>
+            <span class="helptext">The task queue to route this job to</span></td></tr>
+            <tr><th><label for="id__commit">Commit changes:</label></th>
+            <td><input type="checkbox" name="_commit" placeholder="Commit changes" id="id__commit" checked><br>
+            <span class="helptext">Commit changes to the database (uncheck for a dry-run)</span></td></tr>""",
+            form.as_table(),
+        )
+
+    @mock.patch("nautobot.extras.utils.get_celery_queues")
+    def test_job_class_task_queues_override(self, mock_get_celery_queues):
+        """
+        Test job form with custom task queues defined on the job class and overridden on the model
+        """
+        module = "test_task_queues"
+        name = "TestWorkerQueues"
+        mock_get_celery_queues.return_value = {"default": 1, "irrelevant": 5}
+        job_class, job_model = get_job_class_and_model(module, name)
+        job_model.task_queues = ["default", "priority"]
+        job_model.task_queues_override = True
+        job_model.save()
+        form = job_class().as_form()
+        self.assertInHTML(
+            """<tr><th><label for="id__task_queue">Task queue:</label></th>
+            <td><select name="_task_queue" class="form-control" placeholder="Task queue" id="id__task_queue">
+            <option value="default">default (1 worker)</option>
+            <option value="priority">priority (0 workers)</option>
+            </select><br><span class="helptext">The task queue to route this job to</span></td></tr>
+            <tr><th><label for="id__commit">Commit changes:</label></th>
+            <td><input type="checkbox" name="_commit" placeholder="Commit changes" id="id__commit" checked><br>
+            <span class="helptext">Commit changes to the database (uncheck for a dry-run)</span></td></tr>""",
+            form.as_table(),
+        )
 
 
 class JobFileUploadTest(TransactionTestCase):
@@ -445,7 +496,9 @@ class JobFileUploadTest(TransactionTestCase):
         self.assertEqual(FileProxy.objects.count(), 1)
 
         # Run the job
+        logging.disable(logging.ERROR)
         job_result = create_job_result_and_run_job(module, name, data=serialized_data, commit=False)
+        logging.disable(logging.NOTSET)
 
         # Assert that file contents were correctly read
         self.assertEqual(
@@ -619,7 +672,7 @@ class JobHookReceiverTest(TransactionTestCase):
         name = "TestJobHookReceiverLog"
         job_class, _job_model = get_job_class_and_model(module, name)
         form = job_class().as_form()
-        self.assertCountEqual(form.fields.keys(), ["object_change", "_commit"])
+        self.assertSequenceEqual(list(form.fields.keys()), ["object_change", "_task_queue", "_commit"])
 
     def test_hidden(self):
         module = "test_job_hook_receiver"
@@ -653,7 +706,9 @@ class JobHookReceiverTest(TransactionTestCase):
     def test_missing_receive_job_hook_method(self):
         module = "test_job_hook_receiver"
         name = "TestJobHookReceiverFail"
+        logging.disable(logging.ERROR)
         job_result = create_job_result_and_run_job(module, name, data=self.data, commit=False)
+        logging.disable(logging.NOTSET)
         self.assertEqual(job_result.status, JobResultStatusChoices.STATUS_ERRORED)
 
 

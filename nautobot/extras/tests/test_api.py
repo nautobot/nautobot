@@ -2,6 +2,7 @@ from datetime import datetime, timedelta
 import uuid
 from unittest import mock
 
+from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.contrib.contenttypes.models import ContentType
 from django.test import override_settings
@@ -65,7 +66,7 @@ from nautobot.users.models import ObjectPermission
 from nautobot.utilities.choices import ColorChoices
 from nautobot.utilities.testing import APITestCase, APIViewTestCases
 from nautobot.utilities.testing.utils import disable_warnings
-from nautobot.utilities.utils import slugify_dashes_to_underscores
+from nautobot.utilities.utils import get_route_for_model, slugify_dashes_to_underscores
 
 
 User = get_user_model()
@@ -74,7 +75,7 @@ User = get_user_model()
 class AppTest(APITestCase):
     def test_root(self):
         url = reverse("extras-api:api-root")
-        response = self.client.get("{}?format=api".format(url), **self.header)
+        response = self.client.get(f"{url}?format=api", **self.header)
 
         self.assertEqual(response.status_code, 200)
 
@@ -388,7 +389,7 @@ class CreatedUpdatedFilterTest(APITestCase):
     def test_get_rack_created(self):
         self.add_permissions("dcim.view_rack")
         url = reverse("dcim-api:rack-list")
-        response = self.client.get("{}?created=2001-02-03".format(url), **self.header)
+        response = self.client.get(f"{url}?created=2001-02-03", **self.header)
 
         self.assertHttpStatus(response, status.HTTP_200_OK)
         self.assertEqual(response.data["count"], 1)
@@ -397,7 +398,7 @@ class CreatedUpdatedFilterTest(APITestCase):
     def test_get_rack_created_gte(self):
         self.add_permissions("dcim.view_rack")
         url = reverse("dcim-api:rack-list")
-        response = self.client.get("{}?created__gte=2001-02-04".format(url), **self.header)
+        response = self.client.get(f"{url}?created__gte=2001-02-04", **self.header)
 
         self.assertHttpStatus(response, status.HTTP_200_OK)
         self.assertEqual(response.data["count"], 1)
@@ -406,7 +407,7 @@ class CreatedUpdatedFilterTest(APITestCase):
     def test_get_rack_created_lte(self):
         self.add_permissions("dcim.view_rack")
         url = reverse("dcim-api:rack-list")
-        response = self.client.get("{}?created__lte=2001-02-04".format(url), **self.header)
+        response = self.client.get(f"{url}?created__lte=2001-02-04", **self.header)
 
         self.assertHttpStatus(response, status.HTTP_200_OK)
         self.assertEqual(response.data["count"], 1)
@@ -415,7 +416,7 @@ class CreatedUpdatedFilterTest(APITestCase):
     def test_get_rack_last_updated(self):
         self.add_permissions("dcim.view_rack")
         url = reverse("dcim-api:rack-list")
-        response = self.client.get("{}?last_updated=2001-02-03%2001:02:03.000004".format(url), **self.header)
+        response = self.client.get(f"{url}?last_updated=2001-02-03%2001:02:03.000004", **self.header)
 
         self.assertHttpStatus(response, status.HTTP_200_OK)
         self.assertEqual(response.data["count"], 1)
@@ -424,7 +425,7 @@ class CreatedUpdatedFilterTest(APITestCase):
     def test_get_rack_last_updated_gte(self):
         self.add_permissions("dcim.view_rack")
         url = reverse("dcim-api:rack-list")
-        response = self.client.get("{}?last_updated__gte=2001-02-04%2001:02:03.000004".format(url), **self.header)
+        response = self.client.get(f"{url}?last_updated__gte=2001-02-04%2001:02:03.000004", **self.header)
 
         self.assertHttpStatus(response, status.HTTP_200_OK)
         self.assertEqual(response.data["count"], 1)
@@ -433,7 +434,7 @@ class CreatedUpdatedFilterTest(APITestCase):
     def test_get_rack_last_updated_lte(self):
         self.add_permissions("dcim.view_rack")
         url = reverse("dcim-api:rack-list")
-        response = self.client.get("{}?last_updated__lte=2001-02-04%2001:02:03.000004".format(url), **self.header)
+        response = self.client.get(f"{url}?last_updated__lte=2001-02-04%2001:02:03.000004", **self.header)
 
         self.assertHttpStatus(response, status.HTTP_200_OK)
         self.assertEqual(response.data["count"], 1)
@@ -917,7 +918,7 @@ class GitRepositoryTest(APIViewTestCases.APIViewTestCase):
         response = self.client.post(url, format="json", **self.header)
         self.assertHttpStatus(response, status.HTTP_503_SERVICE_UNAVAILABLE)
         self.assertEqual(
-            response.data["detail"], "Unable to process request: No celery workers running on queue celery."
+            response.data["detail"], "Unable to process request: No celery workers running on queue default."
         )
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
@@ -1287,7 +1288,7 @@ class JobAPIRunTestMixin:
         response = self.client.post(url, data, format="json", **self.header)
         self.assertHttpStatus(response, status.HTTP_503_SERVICE_UNAVAILABLE)
         self.assertEqual(
-            response.data["detail"], "Unable to process request: No celery workers running on queue celery."
+            response.data["detail"], "Unable to process request: No celery workers running on queue default."
         )
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
@@ -1452,6 +1453,37 @@ class JobAPIRunTestMixin:
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     @mock.patch("nautobot.extras.api.views.get_worker_count")
+    def test_run_a_job_with_sensitive_variables_and_requires_approval(self, mock_get_worker_count):
+        mock_get_worker_count.return_value = 1
+        self.add_permissions("extras.run_job")
+
+        job_model = Job.objects.get(job_class_name="ExampleJob")
+        job_model.enabled = True
+        job_model.has_sensitive_variables = True
+        job_model.approval_required = True
+        job_model.save()
+
+        url = reverse("extras-api:job-run", kwargs={"pk": job_model.pk})
+        data = {
+            "data": {},
+            "commit": True,
+            "schedule": {
+                "interval": "immediately",
+                "name": "test",
+            },
+        }
+
+        response = self.client.post(url, data, format="json", **self.header)
+        self.assertHttpStatus(response, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(
+            response.data[0],
+            "Unable to run or schedule job: "
+            "This job is flagged as possibly having sensitive variables but is also flagged as requiring approval."
+            "One of these two flags must be removed before this job can be scheduled or run.",
+        )
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    @mock.patch("nautobot.extras.api.views.get_worker_count")
     def test_run_a_job_with_sensitive_variables_immediately(self, mock_get_worker_count):
         mock_get_worker_count.return_value = 1
         self.add_permissions("extras.run_job")
@@ -1574,6 +1606,55 @@ class JobAPIRunTestMixin:
         self.assertEqual(
             response.data, {"errors": {"var2": ["This field is required."], "var4": ["This field is required."]}}
         )
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
+    def test_run_job_with_invalid_task_queue(self):
+        self.add_permissions("extras.run_job")
+        d = DeviceRole.objects.create(name="role", slug="role")
+        data = {
+            "data": {"var1": "x", "var2": 1, "var3": False, "var4": d.pk},
+            "commit": True,
+            "task_queue": "invalid",
+        }
+
+        url = self.get_run_url()
+        response = self.client.post(url, data, format="json", **self.header)
+        self.assertHttpStatus(response, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(
+            response.data,
+            {"task_queue": ['"invalid" is not a valid choice.']},
+        )
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
+    @mock.patch("nautobot.extras.api.views.get_worker_count", return_value=1)
+    def test_run_job_with_valid_task_queue(self, _):
+        self.add_permissions("extras.run_job")
+        d = DeviceRole.objects.create(name="role", slug="role")
+        data = {
+            "data": {"var1": "x", "var2": 1, "var3": False, "var4": d.pk},
+            "commit": True,
+            "task_queue": settings.CELERY_TASK_DEFAULT_QUEUE,
+        }
+
+        url = self.get_run_url()
+        response = self.client.post(url, data, format="json", **self.header)
+        self.assertHttpStatus(response, self.run_success_response_status)
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
+    @mock.patch("nautobot.extras.api.views.get_worker_count", return_value=1)
+    def test_run_job_with_default_queue_with_empty_job_model_task_queues(self, _):
+        self.add_permissions("extras.run_job")
+        data = {
+            "commit": True,
+            "task_queue": settings.CELERY_TASK_DEFAULT_QUEUE,
+        }
+
+        job_model = Job.objects.get_for_class_path("local/test_pass/TestPass")
+        job_model.enabled = True
+        job_model.validated_save()
+        url = self.get_run_url("local/test_pass/TestPass")
+        response = self.client.post(url, data, format="json", **self.header)
+        self.assertHttpStatus(response, self.run_success_response_status)
 
 
 class JobHookTest(APIViewTestCases.APIViewTestCase):
@@ -1723,6 +1804,8 @@ class JobTestVersion13(
         "time_limit": 650,
         "has_sensitive_variables": False,
         "has_sensitive_variables_override": True,
+        "task_queues": ["default", "priority"],
+        "task_queues_override": True,
     }
     bulk_update_data = {
         "enabled": True,
@@ -1743,10 +1826,8 @@ class JobTestVersion13(
     def test_get_job_variables(self):
         """Test the job/<pk>/variables API endpoint."""
         self.add_permissions("extras.view_job")
-        response = self.client.get(
-            reverse(f"{self._get_view_namespace()}:job-variables", kwargs={"pk": self.job_model.pk}),
-            **self.header,
-        )
+        route = get_route_for_model(self.model, "variables", api=True)
+        response = self.client.get(reverse(route, kwargs={"pk": self.job_model.pk}), **self.header)
         self.assertEqual(4, len(response.data))  # 4 variables, in order
         self.assertEqual(response.data[0], {"name": "var1", "type": "StringVar", "required": True})
         self.assertEqual(response.data[1], {"name": "var2", "type": "IntegerVar", "required": True})

@@ -160,7 +160,7 @@ class NetworkQuerySet(BaseNetworkQuerySet):
         try:
             byte_len = self.ip_family_map[family]
         except KeyError:
-            raise ValueError("invalid IP family {}".format(family))
+            raise ValueError(f"invalid IP family {family}")
 
         return self.annotate(address_len=Length(F("network"))).filter(address_len=byte_len)
 
@@ -322,7 +322,7 @@ class IPAddressQuerySet(BaseNetworkQuerySet):
         try:
             byte_len = self.ip_family_map[family]
         except KeyError:
-            raise ValueError("invalid IP family {}".format(family))
+            raise ValueError(f"invalid IP family {family}")
 
         return self.annotate(address_len=Length(F("host"))).filter(address_len=byte_len)
 

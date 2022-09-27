@@ -19,8 +19,13 @@ import re
 from invoke import Collection, task as invoke_task
 from invoke.exceptions import Exit
 
-# Override built-in print function with rich's pretty-printer function
-from rich import print  # pylint: disable=redefined-builtin
+try:
+    # Override built-in print function with rich's pretty-printer function, if available
+    from rich import print  # pylint: disable=redefined-builtin
+
+    HAS_RICH = True
+except ModuleNotFoundError:
+    HAS_RICH = False
 
 
 def is_truthy(arg):
@@ -113,9 +118,15 @@ def docker_compose(context, command, **kwargs):
 
     print(f'Running docker-compose command "{command}"')
     compose_command = " \\\n    ".join(compose_command_tokens)
+    env = kwargs.pop("env", {})
+    env.update({"PYTHON_VER": context.nautobot.python_ver})
     if "hide" not in kwargs:
-        print(f"[dim]PYTHON_VER={context.nautobot.python_ver} \\\n    {compose_command}[/dim]")
-    return context.run(compose_command, env={"PYTHON_VER": context.nautobot.python_ver}, **kwargs)
+        env_str = " \\\n    ".join(f"{var}={value}" for var, value in env.items())
+        if HAS_RICH:
+            print(f"[dim]{env_str} \\\n    {compose_command}[/dim]")
+        else:
+            print(f"{env_str} \\\n    {compose_command}")
+    return context.run(compose_command, env=env, **kwargs)
 
 
 def run_command(context, command, **kwargs):
@@ -148,11 +159,7 @@ def run_command(context, command, **kwargs):
 )
 def build(context, force_rm=False, cache=True, poetry_parallel=True, pull=False):
     """Build Nautobot docker image."""
-    command = (
-        "build"
-        f" --build-arg PYTHON_VER={context.nautobot.python_ver}"
-        f" --build-arg PYUWSGI_VER={get_dependency_version('pyuwsgi')}"
-    )
+    command = f"build --build-arg PYTHON_VER={context.nautobot.python_ver}"
 
     if not cache:
         command += " --no-cache"
@@ -164,7 +171,7 @@ def build(context, force_rm=False, cache=True, poetry_parallel=True, pull=False)
         command += " --pull"
 
     print(f"Building Nautobot with Python {context.nautobot.python_ver}...")
-    docker_compose(context, command)
+    docker_compose(context, command, env={"DOCKER_BUILDKIT": "1", "COMPOSE_DOCKER_CLI_BUILD": "1"})
 
     # Build the docs so they are available.
     build_nautobot_docs(context)
@@ -194,7 +201,6 @@ def buildx(
     command = (
         f"docker buildx build --platform {platforms} -t {tag} --target {target} --load -f ./docker/Dockerfile"
         f" --build-arg PYTHON_VER={context.nautobot.python_ver}"
-        f" --build-arg PYUWSGI_VER={get_dependency_version('pyuwsgi')}"
         " ."
     )
     if not cache:
@@ -508,15 +514,29 @@ def flake8(context):
     run_command(context, command)
 
 
-@task
-def pylint(context):
+@task(
+    help={
+        "target": "Module or file or directory to inspect, repeatable",
+        "recursive": "Must be set if target is a directory rather than a module or file name",
+    },
+    iterable=["target"],
+)
+def pylint(context, target=None, recursive=False):
     """Perform static analysis of Nautobot code."""
-    # Lint the installed nautobot package and the file tasks.py in the current directory
-    command = "nautobot-server pylint nautobot tasks.py"
-    run_command(context, command)
-    # Lint Python files discovered recursively in the development/ and examples/ directories
-    command = "nautobot-server pylint --recursive development/ examples/"
-    run_command(context, command)
+    if not target:
+        # Lint everything
+        # Lint the installed nautobot package and the file tasks.py in the current directory
+        command = "nautobot-server pylint nautobot tasks.py"
+        run_command(context, command)
+        # Lint Python files discovered recursively in the development/ and examples/ directories
+        command = "nautobot-server pylint --recursive development/ examples/"
+        run_command(context, command)
+    else:
+        command = "nautobot-server pylint "
+        if recursive:
+            command += "--recursive "
+        command += " ".join(target)
+        run_command(context, command)
 
 
 @task

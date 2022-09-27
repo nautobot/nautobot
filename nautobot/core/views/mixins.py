@@ -84,7 +84,7 @@ class NautobotViewSetMixin(GenericViewSet, AccessMixin, GetReturnURLMixin, FormV
         for action in actions:
             if action not in ("view", "add", "change", "delete"):
                 raise ValueError(f"Unsupported action: {action}")
-            permissions.append("{}.{}_{}".format(model._meta.app_label, action, model._meta.model_name))
+            permissions.append(f"{model._meta.app_label}.{action}_{model._meta.model_name}")
         return permissions
 
     def get_required_permission(self):
@@ -131,9 +131,9 @@ class NautobotViewSetMixin(GenericViewSet, AccessMixin, GetReturnURLMixin, FormV
     def get_table_class(self):
         # Check if self.table_class is specified in the ModelViewSet before performing subsequent actions
         # If not, display an error message
-        assert self.table_class is not None, (
-            "'%s' should include a `table_class` attribute for bulk operations" % self.__class__.__name__
-        )
+        assert (
+            self.table_class is not None
+        ), f"'{self.__class__.__name__}' should include a `table_class` attribute for bulk operations"
 
         return self.table_class
 

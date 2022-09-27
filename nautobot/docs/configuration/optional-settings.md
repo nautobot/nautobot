@@ -2,7 +2,9 @@
 
 ## Administratively Configurable Settings
 
-As of Nautobot 1.2.0, it is now possible to configure a number of settings via the Nautobot Admin UI. To do so, these settings must **not** be defined in your `nautobot_config.py`, as any settings defined there will take precedence over any values defined in the Admin UI. Settings that are currently configurable via the Admin UI include:
++++ 1.2.0
+
+A number of settings can alternatively be configured via the Nautobot Admin UI. To do so, these settings must **not** be defined in your `nautobot_config.py`, as any settings defined there will take precedence over any values defined in the Admin UI. Settings that are currently configurable via the Admin UI include:
 
 * [BANNER_BOTTOM](#banner_bottom)
 * [BANNER_LOGIN](#banner_login)
@@ -74,8 +76,8 @@ BANNER_TOP = 'Your banner text'
 BANNER_BOTTOM = BANNER_TOP
 ```
 
-!!! tip
-    As of Nautobot 1.2.0, if you do not set a value for these settings in your `nautobot_config.py`, they can be configured dynamically by an admin user via the Nautobot Admin UI. If you do have a value for either setting in `nautobot_config.py`, it will override any dynamically configured value.
++++ 1.2.0
+    If you do not set a value for these settings in your `nautobot_config.py`, they can be configured dynamically by an admin user via the Nautobot Admin UI. If you do have a value for either setting in `nautobot_config.py`, it will override any dynamically configured value.
 
 ---
 
@@ -85,8 +87,8 @@ Default: `""` (Empty string)
 
 This defines custom content to be displayed on the login page above the login form. HTML is allowed.
 
-!!! tip
-    As of Nautobot 1.2.0, if you do not set a value for this setting in your `nautobot_config.py`, it can be configured dynamically by an admin user via the Nautobot Admin UI. If you do have a value for this setting in `nautobot_config.py`, it will override any dynamically configured value.
++++ 1.2.0
+    If you do not set a value for this setting in your `nautobot_config.py`, it can be configured dynamically by an admin user via the Nautobot Admin UI. If you do have a value for this setting in `nautobot_config.py`, it will override any dynamically configured value.
 
 ---
 
@@ -158,9 +160,7 @@ If a custom URL is not provided for any of the links, the default link within th
 
 ## BRANDING_PREPENDED_FILENAME
 
-<!-- markdownlint-disable MD036 -->
-_Added in version 1.3.4_
-<!-- markdownlint-enable MD036 -->
++++ 1.3.4
 
 Default: `"nautobot_"`
 
@@ -185,11 +185,14 @@ Various defaults for caching, the most important of which being the cache timeou
 
 ## CACHEOPS_ENABLED
 
-Default: `True`
+Default: `False`
 
 Environment Variable: `NAUTOBOT_CACHEOPS_ENABLED`
 
 A boolean that turns on/off caching.
+
+!!! check "Changed in 1.5.0"
+    Cachopes is disabled by default and will be removed entirely in a future release.
 
 If set to `False`, all caching is bypassed and Nautobot operates as if there is no cache.
 
@@ -228,6 +231,18 @@ Environment Variable: `NAUTOBOT_CELERY_BROKER_URL`
 Default: `'redis://localhost:6379/0'`
 
 Celery broker URL used to tell workers where queues are located.
+
+---
+
+## CELERY_TASK_DEFAULT_QUEUE
+
++++ 1.5.0
+
+Environment Variable: `NAUTOBOT_CELERY_TASK_DEFAULT_QUEUE`
+
+Default: `'default'`
+
+The default celery queue name that will be used by workers if no queue is specified in the `nautobot-server celery worker` command. This queue will also be used by celery tasks if no queue is specified when a task is run.
 
 ---
 
@@ -278,8 +293,8 @@ The number of days to retain logged changes (object creations, updates, and dele
 !!! warning
     If enabling indefinite changelog retention, it is recommended to periodically delete old entries. Otherwise, the database may eventually exceed capacity.
 
-!!! tip
-    As of Nautobot 1.2.0, if you do not set a value for this setting in your `nautobot_config.py`, it can be configured dynamically by an admin user via the Nautobot Admin UI. If you do have a value for this setting in `nautobot_config.py`, it will override any dynamically configured value.
++++ 1.2.0
+    If you do not set a value for this setting in your `nautobot_config.py`, it can be configured dynamically by an admin user via the Nautobot Admin UI. If you do have a value for this setting in `nautobot_config.py`, it will override any dynamically configured value.
 
 ---
 
@@ -508,11 +523,11 @@ Default: `False`
 
 When set to `True`, users with limited permissions will only be able to see items in the UI they have access to.
 
-!!! tip
-    As of Nautobot 1.2.0, if you do not set a value for this setting in your `nautobot_config.py`, it can be configured dynamically by an admin user via the Nautobot Admin UI. If you do have a value for this setting in `nautobot_config.py`, it will override any dynamically configured value.
++++ 1.2.0
+    If you do not set a value for this setting in your `nautobot_config.py`, it can be configured dynamically by an admin user via the Nautobot Admin UI. If you do have a value for this setting in `nautobot_config.py`, it will override any dynamically configured value.
 
-!!! note
-    As of Nautobot 1.3.10, when this setting is set to `True`, logged out users will be redirected to the login page when navigating to the Nautobot home page.
++++ 1.3.10
+    When this setting is set to `True`, logged out users will be redirected to the login page when navigating to the Nautobot home page.
 
 ---
 
@@ -558,7 +573,7 @@ Environment Variable: `NAUTOBOT_JOBS_ROOT`
 
 The file path to a directory where [Jobs](../additional-features/jobs.md) can be discovered.
 
-!!! note
+!!! caution
     This directory **must** contain an `__init__.py` file.
 
 ---
@@ -638,8 +653,8 @@ Default: `1000`
 
 A web user or API consumer can request an arbitrary number of objects by appending the "limit" parameter to the URL (e.g. `?limit=1000`). This parameter defines the maximum acceptable limit. Setting this to `0` or `None` will allow a client to retrieve _all_ matching objects at once with no limit by specifying `?limit=0`.
 
-!!! tip
-    As of Nautobot 1.2.0, if you do not set a value for this setting in your `nautobot_config.py`, it can be configured dynamically by an admin user via the Nautobot Admin UI. If you do have a value for this setting in `nautobot_config.py`, it will override any dynamically configured value.
++++ 1.2.0
+    If you do not set a value for this setting in your `nautobot_config.py`, it can be configured dynamically by an admin user via the Nautobot Admin UI. If you do have a value for this setting in `nautobot_config.py`, it will override any dynamically configured value.
 
 ---
 
@@ -735,8 +750,8 @@ Default: `50`
 
 The default maximum number of objects to display per page within each list of objects. Applies to both the UI and the REST API.
 
-!!! tip
-    As of Nautobot 1.2.0, if you do not set a value for this setting in your `nautobot_config.py`, it can be configured dynamically by an admin user via the Nautobot Admin UI. If you do have a value for this setting in `nautobot_config.py`, it will override any dynamically configured value.
++++ 1.2.0
+    If you do not set a value for this setting in your `nautobot_config.py`, it can be configured dynamically by an admin user via the Nautobot Admin UI. If you do have a value for this setting in `nautobot_config.py`, it will override any dynamically configured value.
 
 ---
 
@@ -779,8 +794,8 @@ Default: `False`
 
 When determining the primary IP address for a device, IPv6 is preferred over IPv4 by default. Set this to True to prefer IPv4 instead.
 
-!!! tip
-    As of Nautobot 1.2.0, if you do not set a value for this setting in your `nautobot_config.py`, it can be configured dynamically by an admin user via the Nautobot Admin UI. If you do have a value for this setting in `nautobot_config.py`, it will override any dynamically configured value.
++++ 1.2.0
+    If you do not set a value for this setting in your `nautobot_config.py`, it can be configured dynamically by an admin user via the Nautobot Admin UI. If you do have a value for this setting in `nautobot_config.py`, it will override any dynamically configured value.
 
 ---
 
@@ -790,8 +805,8 @@ Default: `22`
 
 Default height (in pixels) of a unit within a rack elevation. For best results, this should be approximately one tenth of `RACK_ELEVATION_DEFAULT_UNIT_WIDTH`.
 
-!!! tip
-    As of Nautobot 1.2.0, if you do not set a value for this setting in your `nautobot_config.py`, it can be configured dynamically by an admin user via the Nautobot Admin UI. If you do have a value for this setting in `nautobot_config.py`, it will override any dynamically configured value.
++++ 1.2.0
+    If you do not set a value for this setting in your `nautobot_config.py`, it can be configured dynamically by an admin user via the Nautobot Admin UI. If you do have a value for this setting in `nautobot_config.py`, it will override any dynamically configured value.
 
 ---
 
@@ -801,8 +816,18 @@ Default: `220`
 
 Default width (in pixels) of a unit within a rack elevation.
 
-!!! tip
-    As of Nautobot 1.2.0, if you do not set a value for this setting in your `nautobot_config.py`, it can be configured dynamically by an admin user via the Nautobot Admin UI. If you do have a value for this setting in `nautobot_config.py`, it will override any dynamically configured value.
++++ 1.2.0
+    If you do not set a value for this setting in your `nautobot_config.py`, it can be configured dynamically by an admin user via the Nautobot Admin UI. If you do have a value for this setting in `nautobot_config.py`, it will override any dynamically configured value.
+
+---
+
+## REDIS_LOCK_TIMEOUT
+
+Default: `600`
+
+Environment Variable: `NAUTOBOT_REDIS_LOCK_TIMEOUT`
+
+Maximum duration of a Redis lock created when calling `/api/ipam/prefixes/{id}/available-prefixes/` or `/api/ipam/prefixes/{id}/available-ips/` to avoid inadvertently allocating the same prefix or IP to multiple simultaneous callers. Default is set to 600 seconds (10 minutes) to be longer than any theoretical API call time. This is to prevent a deadlock scenario where the server did not gracefully exit the `with` block when acquiring the Redis lock.
 
 ---
 
@@ -815,8 +840,8 @@ The number of seconds to retain the latest version that is fetched from the GitH
 !!! warning
     This must be set to at least one hour (`3600` seconds). Setting it to a value lower than this is an error.
 
-!!! tip
-    As of Nautobot 1.2.0, if you do not set a value for this setting in your `nautobot_config.py`, it can be configured dynamically by an admin user via the Nautobot Admin UI. If you do have a value for this setting in `nautobot_config.py`, it will override any dynamically configured value.
++++ 1.2.0
+    If you do not set a value for this setting in your `nautobot_config.py`, it can be configured dynamically by an admin user via the Nautobot Admin UI. If you do have a value for this setting in `nautobot_config.py`, it will override any dynamically configured value.
 
 ---
 
@@ -829,16 +854,14 @@ This parameter defines the URL of the repository that will be checked periodical
 !!! note
     The URL provided **must** be compatible with the [GitHub REST API](https://docs.github.com/en/rest).
 
-!!! tip
-    As of Nautobot 1.2.0, if you do not set a value for this setting in your `nautobot_config.py`, it can be configured dynamically by an admin user via the Nautobot Admin UI. If you do have a value for this setting in `nautobot_config.py`, it will override any dynamically configured value.
++++ 1.2.0
+    If you do not set a value for this setting in your `nautobot_config.py`, it can be configured dynamically by an admin user via the Nautobot Admin UI. If you do have a value for this setting in `nautobot_config.py`, it will override any dynamically configured value.
 
 ---
 
 ## SANITIZER_PATTERNS
 
-<!-- markdownlint-disable MD036 -->
-_Added in version 1.3.4_
-<!-- markdownlint-enable MD036 -->
++++ 1.3.4
 
 Default:
 
@@ -922,7 +945,7 @@ If [`STORAGE_BACKEND`](#storage_backend) is not defined, this setting will be ig
 
 ## STRICT_FILTERING
 
-_Added in version 1.4.0_ <!-- markdownlint-disable-line MD036 -->
++++ 1.4.0
 
 Default: `True`
 
@@ -974,7 +997,7 @@ Environment Variables:
 
 ## UI_RACK_VIEW_TRUNCATE_FUNCTION
 
-_Added in version 1.4.0_ <!-- markdownlint-disable-line MD036 -->
++++ 1.4.0
 
 Default:
 

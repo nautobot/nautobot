@@ -83,6 +83,7 @@
             {% include "extras/inc/overridable_field.html" with field=form.soft_time_limit override_field=form.soft_time_limit_override %}
             {% include "extras/inc/overridable_field.html" with field=form.time_limit override_field=form.time_limit_override %}
             {% include "extras/inc/overridable_field.html" with field=form.has_sensitive_variables override_field=form.has_sensitive_variables_override %}
+            {% include "extras/inc/overridable_field.html" with field=form.task_queues override_field=form.task_queues_override %}
         </div>
     </div>
     {% include 'inc/extras_features_edit_form_fields.html' %}

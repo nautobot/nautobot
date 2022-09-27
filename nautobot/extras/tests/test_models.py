@@ -756,6 +756,7 @@ class JobModelTest(TestCase):
             "has_sensitive_variables": not self.job_containing_sensitive_variables.has_sensitive_variables,
             "soft_time_limit": 350,
             "time_limit": 650,
+            "task_queues": ["overridden", "worker", "queues"],
         }
 
         # Override values to non-defaults and ensure they are preserved
@@ -1029,6 +1030,17 @@ class SecretTest(TestCase):
         """Successful retrieval of a text file secret."""
         with open(self.text_file_secret.parameters["path"], "w", encoding="utf8") as file_handle:
             file_handle.write("Hello world!")
+        try:
+            self.assertEqual(self.text_file_secret.get_value(), "Hello world!")
+            # It's OK to pass a context obj even if the secret in question isn't templated
+            self.assertEqual(self.text_file_secret.get_value(obj=self.site), "Hello world!")
+        finally:
+            os.remove(self.text_file_secret.parameters["path"])
+
+    def test_text_file_value_stripped(self):
+        """Assert that retrieval of a text file secret value is stripped."""
+        with open(self.text_file_secret.parameters["path"], "w", encoding="utf8") as file_handle:
+            file_handle.write(" Hello world!  \n\n")
         try:
             self.assertEqual(self.text_file_secret.get_value(), "Hello world!")
             # It's OK to pass a context obj even if the secret in question isn't templated

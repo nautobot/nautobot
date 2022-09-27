@@ -39,6 +39,7 @@ class TenantGroupViewSet(NautobotModelViewSet):
 
 
 class TenantViewSet(NautobotModelViewSet):
+    # v2 TODO(jathan): Replace prefetch_related with select_related (it should stay for tags)
     queryset = Tenant.objects.prefetch_related("group", "tags").annotate(
         circuit_count=count_related(Circuit, "tenant"),
         device_count=count_related(Device, "tenant"),

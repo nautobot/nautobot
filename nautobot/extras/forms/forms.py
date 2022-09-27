@@ -1,4 +1,5 @@
 from django import forms
+from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ValidationError
@@ -375,7 +376,7 @@ class CustomFieldModelCSVForm(CSVModelForm, CustomFieldModelFormMixin):
 
         # Append form fields
         for cf in CustomField.objects.filter(content_types=self.obj_type):
-            field_name = "cf_{}".format(cf.slug)
+            field_name = f"cf_{cf.slug}"
             self.fields[field_name] = cf.to_form_field(for_csv_import=True)
 
             # Annotate the field in the list of CustomField form fields
@@ -728,11 +729,18 @@ class JobForm(BootstrapMixin, forms.Form):
         label="Commit changes",
         help_text="Commit changes to the database (uncheck for a dry-run)",
     )
+    _task_queue = forms.ChoiceField(
+        required=False,
+        help_text="The task queue to route this job to",
+        label="Task queue",
+    )
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-        # Move _commit to the end of the form
+        # Move _task_queue and _commit to the end of the form
+        task_queue = self.fields.pop("_task_queue")
+        self.fields["_task_queue"] = task_queue
         commit = self.fields.pop("_commit")
         self.fields["_commit"] = commit
 
@@ -770,8 +778,10 @@ class JobEditForm(NautobotModelForm):
             "soft_time_limit",
             "time_limit_override",
             "time_limit",
-            "has_sensitive_variables",
             "has_sensitive_variables_override",
+            "has_sensitive_variables",
+            "task_queues_override",
+            "task_queues",
             "tags",
         ]
 
@@ -895,6 +905,7 @@ class JobScheduleForm(BootstrapMixin, forms.Form):
         required=False,
         label="Starting date and time",
         widget=DateTimePicker(),
+        help_text=f"The scheduled time is relative to the Nautobot configured timezone: {settings.TIME_ZONE}.",
     )
     _recurrence_custom_time = forms.CharField(
         required=False,

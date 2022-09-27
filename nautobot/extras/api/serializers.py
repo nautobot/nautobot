@@ -1,4 +1,3 @@
-from django.conf import settings
 from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ObjectDoesNotExist
 from django.utils.functional import classproperty
@@ -70,7 +69,7 @@ from nautobot.tenancy.api.nested_serializers import (
 from nautobot.tenancy.models import Tenant, TenantGroup
 from nautobot.users.api.nested_serializers import NestedUserSerializer
 from nautobot.utilities.api import get_serializer_for_model
-from nautobot.utilities.utils import slugify_dashes_to_underscores
+from nautobot.utilities.utils import get_route_for_model, slugify_dashes_to_underscores
 from nautobot.virtualization.api.nested_serializers import (
     NestedClusterGroupSerializer,
     NestedClusterSerializer,
@@ -129,9 +128,7 @@ class NotesSerializerMixin(BaseModelSerializer):
 
     @extend_schema_field(serializers.URLField())
     def get_notes_url(self, instance):
-        notes_url = f"{instance._meta.app_label}-api:{instance._meta.model_name}-notes"
-        if instance._meta.app_label in settings.PLUGINS:
-            notes_url = f"plugins-api:{notes_url}"
+        notes_url = get_route_for_model(instance, "notes", api=True)
         return reverse(notes_url, args=[instance.id], request=self.context["request"])
 
 
@@ -694,9 +691,7 @@ class ImageAttachmentSerializer(ValidatedModelSerializer):
         try:
             data["content_type"].get_object_for_this_type(id=data["object_id"])
         except ObjectDoesNotExist:
-            raise serializers.ValidationError(
-                "Invalid parent object: {} ID {}".format(data["content_type"], data["object_id"])
-            )
+            raise serializers.ValidationError(f"Invalid parent object: {data['content_type']} ID {data['object_id']}")
 
         # Enforce model validation
         super().validate(data)
@@ -760,6 +755,8 @@ class JobSerializer(NautobotModelSerializer, TaggedObjectSerializer):
             "soft_time_limit_override",
             "time_limit",
             "time_limit_override",
+            "task_queues",
+            "task_queues_override",
             "tags",
         ]
 
@@ -956,6 +953,7 @@ class JobInputSerializer(serializers.Serializer):
     data = serializers.JSONField(required=False, default=dict)
     commit = serializers.BooleanField(required=False, default=None)
     schedule = NestedScheduledJobSerializer(required=False)
+    task_queue = serializers.CharField(required=False, allow_blank=True)
 
 
 class JobLogEntrySerializer(BaseModelSerializer):

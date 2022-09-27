@@ -72,6 +72,7 @@ SEARCH_TYPES = OrderedDict(
         (
             "circuit",
             {
+                # v2 TODO(jathan): Replace prefetch_related with select_related
                 "queryset": Circuit.objects.prefetch_related("type", "provider", "tenant", "terminations__site"),
                 "filterset": CircuitFilterSet,
                 "table": CircuitTable,
@@ -81,6 +82,7 @@ SEARCH_TYPES = OrderedDict(
         (
             "providernetwork",
             {
+                # v2 TODO(jathan): Replace prefetch_related with select_related
                 "queryset": ProviderNetwork.objects.prefetch_related("provider"),
                 "filterset": ProviderNetworkFilterSet,
                 "table": ProviderNetworkTable,
@@ -91,6 +93,7 @@ SEARCH_TYPES = OrderedDict(
         (
             "site",
             {
+                # v2 TODO(jathan): Replace prefetch_related with select_related
                 "queryset": Site.objects.prefetch_related("region", "tenant"),
                 "filterset": SiteFilterSet,
                 "table": SiteTable,
@@ -100,6 +103,7 @@ SEARCH_TYPES = OrderedDict(
         (
             "rack",
             {
+                # v2 TODO(jathan): Replace prefetch_related with select_related
                 "queryset": Rack.objects.prefetch_related("site", "group", "tenant", "role"),
                 "filterset": RackFilterSet,
                 "table": RackTable,
@@ -109,6 +113,7 @@ SEARCH_TYPES = OrderedDict(
         (
             "rackgroup",
             {
+                # v2 TODO(jathan): Replace prefetch_related with select_related
                 "queryset": RackGroup.objects.add_related_count(
                     RackGroup.objects.all(),
                     Rack,
@@ -124,6 +129,7 @@ SEARCH_TYPES = OrderedDict(
         (
             "devicetype",
             {
+                # v2 TODO(jathan): Replace prefetch_related with select_related
                 "queryset": DeviceType.objects.prefetch_related("manufacturer").annotate(
                     instance_count=count_related(Device, "device_type")
                 ),
@@ -135,6 +141,7 @@ SEARCH_TYPES = OrderedDict(
         (
             "device",
             {
+                # v2 TODO(jathan): Replace prefetch_related with select_related
                 "queryset": Device.objects.prefetch_related(
                     "device_type__manufacturer",
                     "device_role",
@@ -152,6 +159,7 @@ SEARCH_TYPES = OrderedDict(
         (
             "virtualchassis",
             {
+                # v2 TODO(jathan): Replace prefetch_related with select_related
                 "queryset": VirtualChassis.objects.prefetch_related("master").annotate(
                     member_count=count_related(Device, "virtual_chassis")
                 ),
@@ -182,6 +190,7 @@ SEARCH_TYPES = OrderedDict(
         (
             "cluster",
             {
+                # v2 TODO(jathan): Replace prefetch_related with select_related
                 "queryset": Cluster.objects.prefetch_related("type", "group").annotate(
                     device_count=count_related(Device, "cluster"),
                     vm_count=count_related(VirtualMachine, "cluster"),
@@ -194,6 +203,7 @@ SEARCH_TYPES = OrderedDict(
         (
             "virtualmachine",
             {
+                # v2 TODO(jathan): Replace prefetch_related with select_related
                 "queryset": VirtualMachine.objects.prefetch_related(
                     "cluster",
                     "tenant",
@@ -210,6 +220,7 @@ SEARCH_TYPES = OrderedDict(
         (
             "vrf",
             {
+                # v2 TODO(jathan): Replace prefetch_related with select_related
                 "queryset": VRF.objects.prefetch_related("tenant"),
                 "filterset": VRFFilterSet,
                 "table": VRFTable,
@@ -219,6 +230,7 @@ SEARCH_TYPES = OrderedDict(
         (
             "aggregate",
             {
+                # v2 TODO(jathan): Replace prefetch_related with select_related
                 "queryset": Aggregate.objects.prefetch_related("rir"),
                 "filterset": AggregateFilterSet,
                 "table": AggregateTable,
@@ -228,6 +240,7 @@ SEARCH_TYPES = OrderedDict(
         (
             "prefix",
             {
+                # v2 TODO(jathan): Replace prefetch_related with select_related
                 "queryset": Prefix.objects.prefetch_related("site", "vrf__tenant", "tenant", "vlan", "role"),
                 "filterset": PrefixFilterSet,
                 "table": PrefixTable,
@@ -237,6 +250,7 @@ SEARCH_TYPES = OrderedDict(
         (
             "ipaddress",
             {
+                # v2 TODO(jathan): Replace prefetch_related with select_related
                 "queryset": IPAddress.objects.prefetch_related("vrf__tenant", "tenant"),
                 "filterset": IPAddressFilterSet,
                 "table": IPAddressTable,
@@ -246,6 +260,7 @@ SEARCH_TYPES = OrderedDict(
         (
             "vlan",
             {
+                # v2 TODO(jathan): Replace prefetch_related with select_related
                 "queryset": VLAN.objects.prefetch_related("site", "group", "tenant", "role"),
                 "filterset": VLANFilterSet,
                 "table": VLANTable,
@@ -256,6 +271,7 @@ SEARCH_TYPES = OrderedDict(
         (
             "tenant",
             {
+                # v2 TODO(jathan): Replace prefetch_related with select_related
                 "queryset": Tenant.objects.prefetch_related("group"),
                 "filterset": TenantFilterSet,
                 "table": TenantTable,
