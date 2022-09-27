@@ -70,6 +70,8 @@ django-prometheus = "~2.2.0"
 django-redis = "~5.2.0"
 # RQ (Redis Queueing) for background handling of webhooks, jobs, etc.
 django-rq = "~2.5.1"
+# DiscoverSlowestTestsRunner for running CI performance tests and benchmarking.
+django-slowtests = "^1.1.1"
 # External Storage support (i.e. S3)
 django-storages = {version = "~1.12.3", optional = true}
 # Advanced HTML tables
@@ -134,7 +136,6 @@ social-auth-core = {version = "~4.3.0", optional = true, extras = ["openidconnec
 social-auth-app-django = "~5.0.0"
 # Rendering of SVG images (for rack elevations, etc.)
 svgwrite = "~1.4.2"
-django-slowtests = "^1.1.1"
 
 
 [tool.poetry.extras]

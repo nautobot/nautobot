@@ -116,8 +116,9 @@ STORAGE_CONFIG = {}
 # Test runner that is aware of our use of "integration" tags and only runs
 # integration tests if explicitly passed in with `nautobot-server test --tag integration`.
 TEST_RUNNER = "nautobot.core.tests.runner.NautobotTestRunner"
-NUM_SLOW_TESTS = None
-ALWAYS_GENERATE_SLOW_REPORT = False
+# django-slowtests setting and it is set so that only adding `--report` at the end of the `invoke` command
+# will output the performance test results. e.g. `invoke unittest --report`.
+TEST_ALWAYS_GENERATE_SLOW_REPORT = False
 
 #
 # Django cryptography

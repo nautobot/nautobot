@@ -317,7 +317,9 @@ jobs:
       - name: "Run coverage"
         run: "poetry run invoke unittest-coverage"
     needs:
-      - "performance-test"
+      - "pylint"
+      - "tests-postgres"
+      - "tests-mysql"
 
   changelog:
     if: github.base_ref == 'develop' || github.base_ref == 'next'
