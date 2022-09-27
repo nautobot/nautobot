@@ -95,7 +95,7 @@ from nautobot.dcim.models import (
 from nautobot.circuits.models import Circuit, CircuitTermination, CircuitType, Provider
 from nautobot.extras.models import SecretsGroup, Status
 from nautobot.ipam.models import IPAddress, Prefix, Service, VLAN, VLANGroup
-from nautobot.tenancy.models import Tenant, TenantGroup
+from nautobot.tenancy.models import Tenant
 from nautobot.utilities.testing import FilterTestCases
 from nautobot.virtualization.models import Cluster, ClusterType, VirtualMachine
 
@@ -717,10 +717,11 @@ class RegionTestCase(FilterTestCases.NameSlugFilterTestCase):
             self.assertEqual(self.filterset(params, self.queryset).qs.count(), 6)
 
 
-class SiteTestCase(FilterTestCases.NameSlugFilterTestCase):
+class SiteTestCase(FilterTestCases.NameSlugFilterTestCase, FilterTestCases.TenancyFilterTestCaseMixin):
     queryset = Site.objects.all()
     filterset = SiteFilterSet
     fixtures = ("status",)
+    tenancy_related_name = "sites"
 
     @classmethod
     def setUpTestData(cls):
@@ -768,34 +769,6 @@ class SiteTestCase(FilterTestCases.NameSlugFilterTestCase):
         with self.subTest():
             params = {"region": [regions[0].slug, regions[1].slug]}
             self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
-
-    def test_tenant(self):
-        tenants = list(Tenant.objects.filter(sites__isnull=False))[:2]
-        with self.subTest():
-            params = {"tenant_id": [tenants[0].pk, tenants[1].pk]}
-            self.assertEqual(
-                self.filterset(params, self.queryset).qs.count(), self.queryset.filter(tenant__in=tenants).count()
-            )
-        with self.subTest():
-            params = {"tenant": [tenants[0].slug, tenants[1].slug]}
-            self.assertEqual(
-                self.filterset(params, self.queryset).qs.count(), self.queryset.filter(tenant__in=tenants).count()
-            )
-
-    def test_tenant_group(self):
-        tenant_groups = list(TenantGroup.objects.filter(tenants__isnull=False, tenants__sites__isnull=False))[:2]
-        with self.subTest():
-            params = {"tenant_group_id": [tenant_groups[0].pk, tenant_groups[1].pk]}
-            self.assertEqual(
-                self.filterset(params, self.queryset).qs.count(),
-                self.queryset.filter(tenant__group__in=tenant_groups).count(),
-            )
-        with self.subTest():
-            params = {"tenant_group": [tenant_groups[0].slug, tenant_groups[1].slug]}
-            self.assertEqual(
-                self.filterset(params, self.queryset).qs.count(),
-                self.queryset.filter(tenant__group__in=tenant_groups).count(),
-            )
 
     def test_search(self):
         value = self.queryset.values_list("pk", flat=True)[0]
@@ -995,10 +968,11 @@ class LocationTypeFilterSetTestCase(FilterTestCases.NameSlugFilterTestCase):
             self.assertEqual(self.filterset(params, self.queryset).qs.count(), 1)
 
 
-class LocationFilterSetTestCase(FilterTestCases.NameSlugFilterTestCase):
+class LocationFilterSetTestCase(FilterTestCases.NameSlugFilterTestCase, FilterTestCases.TenancyFilterTestCaseMixin):
     queryset = Location.objects.all()
     filterset = LocationFilterSet
     fixtures = ("status",)
+    tenancy_related_name = "locations"
 
     @classmethod
     def setUpTestData(cls):
@@ -1010,15 +984,22 @@ class LocationFilterSetTestCase(FilterTestCases.NameSlugFilterTestCase):
 
         status_active = Status.objects.get(slug="active")
         site = Site.objects.create(name="Research Triangle Area", status=status_active)
-        tenant = Tenant.objects.first()
+        tenants = Tenant.objects.filter(group__isnull=False)[:2]
 
         loc1 = Location.objects.create(
             name="RTP", location_type=lt1, status=status_active, site=site, description="Research Triangle Park"
         )
         loc2 = Location.objects.create(name="RTP4E", location_type=lt2, status=status_active, parent=loc1)
-        loc3 = Location.objects.create(name="RTP4E-3", location_type=lt3, status=status_active, parent=loc2)
+        loc3 = Location.objects.create(
+            name="RTP4E-3", location_type=lt3, status=status_active, parent=loc2, tenant=tenants[0]
+        )
         loc4 = Location.objects.create(
-            name="RTP4E-3-0101", location_type=lt4, status=status_active, parent=loc3, tenant=tenant, description="Cube"
+            name="RTP4E-3-0101",
+            location_type=lt4,
+            status=status_active,
+            parent=loc3,
+            tenant=tenants[1],
+            description="Cube",
         )
         for loc in [loc1, loc2, loc3, loc4]:
             loc.validated_save()
@@ -1048,15 +1029,6 @@ class LocationFilterSetTestCase(FilterTestCases.NameSlugFilterTestCase):
     def test_site(self):
         params = {"site": [Site.objects.first().slug, Site.objects.first().pk]}
         # TODO: should this filter return descendant locations as well?
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 1)
-
-    def test_tenant_id(self):
-        params = {"tenant_id": [Tenant.objects.filter(locations__isnull=False).first().pk]}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 1)
-
-    def test_tenant(self):
-        tenant = Tenant.objects.filter(locations__isnull=False).first()
-        params = {"tenant": [tenant.slug, tenant.pk]}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 1)
 
 
@@ -1196,10 +1168,11 @@ class RackRoleTestCase(FilterTestCases.NameSlugFilterTestCase):
             self.assertEqual(self.filterset({"has_racks": False}, self.queryset).qs.count(), 1)
 
 
-class RackTestCase(FilterTestCases.FilterTestCase):
+class RackTestCase(FilterTestCases.FilterTestCase, FilterTestCases.TenancyFilterTestCaseMixin):
     queryset = Rack.objects.all()
     filterset = RackFilterSet
     fixtures = ("status",)
+    tenancy_related_name = "racks"
 
     @classmethod
     def setUpTestData(cls):
@@ -1323,34 +1296,6 @@ class RackTestCase(FilterTestCases.FilterTestCase):
             params = {"serial": "abc"}
             self.assertEqual(self.filterset(params, self.queryset).qs.count(), 1)
 
-    def test_tenant(self):
-        tenants = list(Tenant.objects.filter(racks__isnull=False))[:2]
-        with self.subTest():
-            params = {"tenant_id": [tenants[0].pk, tenants[1].pk]}
-            self.assertEqual(
-                self.filterset(params, self.queryset).qs.count(), self.queryset.filter(tenant__in=tenants).count()
-            )
-        with self.subTest():
-            params = {"tenant": [tenants[0].slug, tenants[1].slug]}
-            self.assertEqual(
-                self.filterset(params, self.queryset).qs.count(), self.queryset.filter(tenant__in=tenants).count()
-            )
-
-    def test_tenant_group(self):
-        tenant_groups = list(TenantGroup.objects.filter(tenants__isnull=False, tenants__racks__isnull=False))[:2]
-        with self.subTest():
-            params = {"tenant_group_id": [tenant_groups[0].pk, tenant_groups[1].pk]}
-            self.assertEqual(
-                self.filterset(params, self.queryset).qs.count(),
-                self.queryset.filter(tenant__group__in=tenant_groups).count(),
-            )
-        with self.subTest():
-            params = {"tenant_group": [tenant_groups[0].slug, tenant_groups[1].slug]}
-            self.assertEqual(
-                self.filterset(params, self.queryset).qs.count(),
-                self.queryset.filter(tenant__group__in=tenant_groups).count(),
-            )
-
     def test_search(self):
         value = self.queryset.values_list("pk", flat=True)[0]
         params = {"q": value}
@@ -1403,10 +1348,11 @@ class RackTestCase(FilterTestCases.FilterTestCase):
             self.assertEqual(self.filterset(params, self.queryset).qs.count(), 1)
 
 
-class RackReservationTestCase(FilterTestCases.FilterTestCase):
+class RackReservationTestCase(FilterTestCases.FilterTestCase, FilterTestCases.TenancyFilterTestCaseMixin):
     queryset = RackReservation.objects.all()
     filterset = RackReservationFilterSet
     fixtures = ("status",)
+    tenancy_related_name = "rackreservations"
 
     @classmethod
     def setUpTestData(cls):
@@ -1438,35 +1384,6 @@ class RackReservationTestCase(FilterTestCases.FilterTestCase):
         with self.subTest():
             params = {"user": [users[0].username, users[1].username]}
             self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
-
-    def test_tenant(self):
-        tenants = list(Tenant.objects.filter(rackreservations__isnull=False))[:2]
-        with self.subTest():
-            params = {"tenant_id": [tenants[0].pk, tenants[1].pk]}
-            self.assertEqual(
-                self.filterset(params, self.queryset).qs.count(), self.queryset.filter(tenant__in=tenants).count()
-            )
-        with self.subTest():
-            params = {"tenant": [tenants[0].slug, tenants[1].slug]}
-            self.assertEqual(
-                self.filterset(params, self.queryset).qs.count(), self.queryset.filter(tenant__in=tenants).count()
-            )
-
-    def test_tenant_group(self):
-        tenant_groups = list(TenantGroup.objects.filter(tenants__isnull=False, tenants__rackreservations__isnull=False))
-        tenant_groups = tenant_groups[:2]
-        with self.subTest():
-            params = {"tenant_group_id": [tenant_groups[0].pk, tenant_groups[1].pk]}
-            self.assertEqual(
-                self.filterset(params, self.queryset).qs.count(),
-                self.queryset.filter(tenant__group__in=tenant_groups).count(),
-            )
-        with self.subTest():
-            params = {"tenant_group": [tenant_groups[0].slug, tenant_groups[1].slug]}
-            self.assertEqual(
-                self.filterset(params, self.queryset).qs.count(),
-                self.queryset.filter(tenant__group__in=tenant_groups).count(),
-            )
 
     def test_search(self):
         value = self.queryset.values_list("pk", flat=True)[0]
@@ -2302,10 +2219,11 @@ class PlatformTestCase(FilterTestCases.NameSlugFilterTestCase):
             self.assertEqual(self.filterset(params, self.queryset).qs.count(), 1)
 
 
-class DeviceTestCase(FilterTestCases.FilterTestCase):
+class DeviceTestCase(FilterTestCases.FilterTestCase, FilterTestCases.TenancyFilterTestCaseMixin):
     queryset = Device.objects.all()
     filterset = DeviceFilterSet
     fixtures = ("status",)
+    tenancy_related_name = "devices"
 
     @classmethod
     def setUpTestData(cls):
@@ -2636,34 +2554,6 @@ class DeviceTestCase(FilterTestCases.FilterTestCase):
         with self.subTest():
             params = {"local_context_data": "false"}
             self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
-
-    def test_tenant(self):
-        tenants = list(Tenant.objects.filter(devices__isnull=False))[:2]
-        with self.subTest():
-            params = {"tenant_id": [tenants[0].pk, tenants[1].pk]}
-            self.assertEqual(
-                self.filterset(params, self.queryset).qs.count(), self.queryset.filter(tenant__in=tenants).count()
-            )
-        with self.subTest():
-            params = {"tenant": [tenants[0].slug, tenants[1].slug]}
-            self.assertEqual(
-                self.filterset(params, self.queryset).qs.count(), self.queryset.filter(tenant__in=tenants).count()
-            )
-
-    def test_tenant_group(self):
-        tenant_groups = list(TenantGroup.objects.filter(tenants__isnull=False, tenants__devices__isnull=False))[:2]
-        with self.subTest():
-            params = {"tenant_group_id": [tenant_groups[0].pk, tenant_groups[1].pk]}
-            self.assertEqual(
-                self.filterset(params, self.queryset).qs.count(),
-                self.queryset.filter(tenant__group__in=tenant_groups).count(),
-            )
-        with self.subTest():
-            params = {"tenant_group": [tenant_groups[0].slug, tenant_groups[1].slug]}
-            self.assertEqual(
-                self.filterset(params, self.queryset).qs.count(),
-                self.queryset.filter(tenant__group__in=tenant_groups).count(),
-            )
 
     def test_search(self):
         value = self.queryset.values_list("pk", flat=True)[0]

@@ -57,16 +57,6 @@ class VRFTest(APIViewTestCases.APIViewTestCase):
         "description": "New description",
     }
 
-    @classmethod
-    def setUpTestData(cls):
-
-        vrfs = (
-            VRF(name="VRF 1", rd="65000:1"),
-            VRF(name="VRF 2", rd="65000:2"),
-            VRF(name="VRF 3"),  # No RD
-        )
-        VRF.objects.bulk_create(vrfs)
-
 
 class RouteTargetTest(APIViewTestCases.APIViewTestCase):
     model = RouteTarget
@@ -85,16 +75,6 @@ class RouteTargetTest(APIViewTestCases.APIViewTestCase):
     bulk_update_data = {
         "description": "New description",
     }
-
-    @classmethod
-    def setUpTestData(cls):
-
-        route_targets = (
-            RouteTarget(name="65000:1001"),
-            RouteTarget(name="65000:1002"),
-            RouteTarget(name="65000:1003"),
-        )
-        RouteTarget.objects.bulk_create(route_targets)
 
 
 class RIRTest(APIViewTestCases.APIViewTestCase):

@@ -37,10 +37,6 @@ class VRFTestCase(ViewTestCases.PrimaryObjectViewTestCase):
             Tenant.objects.create(name="Tenant B", slug="tenant-b"),
         )
 
-        VRF.objects.create(name="VRF 1", rd="65000:1")
-        VRF.objects.create(name="VRF 2", rd="65000:2")
-        VRF.objects.create(name="VRF 3", rd="65000:3")
-
         cls.form_data = {
             "name": "VRF X",
             "rd": "65000:999",
@@ -75,10 +71,6 @@ class RouteTargetTestCase(ViewTestCases.PrimaryObjectViewTestCase):
             Tenant.objects.create(name="Tenant A", slug="tenant-a"),
             Tenant.objects.create(name="Tenant B", slug="tenant-b"),
         )
-
-        RouteTarget.objects.create(name="65000:1001", tenant=tenants[0])
-        RouteTarget.objects.create(name="65000:1002", tenant=tenants[1])
-        RouteTarget.objects.create(name="65000:1003")
 
         cls.form_data = {
             "name": "65000:100",
@@ -215,10 +207,7 @@ class PrefixTestCase(ViewTestCases.PrimaryObjectViewTestCase, ViewTestCases.List
             Site.objects.create(name="Site 2", slug="site-2"),
         )
 
-        vrfs = (
-            VRF.objects.create(name="VRF 1", rd="65000:1"),
-            VRF.objects.create(name="VRF 2", rd="65000:2"),
-        )
+        vrfs = VRF.objects.all()[:2]
 
         roles = (
             Role.objects.create(name="Role 1", slug="role-1"),
@@ -265,9 +254,9 @@ class PrefixTestCase(ViewTestCases.PrimaryObjectViewTestCase, ViewTestCases.List
 
         cls.csv_data = (
             "vrf,prefix,status",
-            "VRF 1,10.4.0.0/16,active",
-            "VRF 1,10.5.0.0/16,active",
-            "VRF 1,10.6.0.0/16,active",
+            f"{vrfs[0].name},10.4.0.0/16,active",
+            f"{vrfs[0].name},10.5.0.0/16,active",
+            f"{vrfs[0].name},10.6.0.0/16,active",
         )
 
         cls.bulk_edit_data = {
@@ -309,10 +298,7 @@ class IPAddressTestCase(ViewTestCases.PrimaryObjectViewTestCase):
     @classmethod
     def setUpTestData(cls):
 
-        vrfs = (
-            VRF.objects.create(name="VRF 1", rd="65000:1"),
-            VRF.objects.create(name="VRF 2", rd="65000:2"),
-        )
+        vrfs = VRF.objects.all()[:2]
 
         statuses = Status.objects.get_for_model(IPAddress)
         status_reserved = statuses.get(slug="reserved")
@@ -335,9 +321,9 @@ class IPAddressTestCase(ViewTestCases.PrimaryObjectViewTestCase):
 
         cls.csv_data = (
             "vrf,address,status",
-            "VRF 1,192.0.2.4/24,active",
-            "VRF 1,192.0.2.5/24,active",
-            "VRF 1,192.0.2.6/24,active",
+            f"{vrfs[0].name},192.0.2.4/24,active",
+            f"{vrfs[0].name},192.0.2.5/24,active",
+            f"{vrfs[0].name},192.0.2.6/24,active",
         )
 
         cls.bulk_edit_data = {
