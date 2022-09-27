@@ -25,35 +25,39 @@ html[data-theme="dark"] .opblock-summary-method {
 html[data-theme="dark"] .version {
   color: black !important;
 }
-/* Lighten the background color a bit */
+
+/* Darker background color */
 html[data-theme="dark"] body {
-  background-color: rgb(235, 235, 235) !important;
-  /* background-color: rgb(23, 27, 29) !important; */
-  /* background-color: rgb(33, 37, 41) !important; */
+  background-color: rgb(217, 217, 217) !important;
 }
 
-/* Dark more than background */
+/* Lighter than the background */
 html[data-theme="dark"] .navbar,
-html[data-theme="dark"] .footer,
+html[data-theme="dark"] .footer {
+  background-color: rgb(209, 216, 221) !important;
+}
+
 html[data-theme="dark"] .panel,
+html[data-theme="dark"] .panel-default,
 html[data-theme="dark"] .panel-body,
 html[data-theme="dark"] .list-group,
 html[data-theme="dark"] .list-group-item,
 html[data-theme="dark"] .CodeMirror,
 html[data-theme="dark"] .modal-body {
-  background-color: rgb(225, 225, 225) !important;
+  background-color: rgb(222, 222, 222) !important;
 }
 
-/* Dark more than background */
+/* Slightly lighter than background to standout */
 html[data-theme="dark"] .breadcrumb,
 html[data-theme="dark"] ul li.active a,
 html[data-theme="dark"] .panel-heading,
 html[data-theme="dark"] .panel-footer,
 html[data-theme="dark"] .model-header,
 html[data-theme="dark"] .table-headings th {
-  background-color: rgb(230, 230, 230) !important;
+  background-color: rgb(196, 204, 210) !important;
 }
 
+/* Form fields and backdrops, lighter than headers, navbars, etc */
 html[data-theme="dark"] #per_page,
 html[data-theme="dark"] .dropdown-menu,
 html[data-theme="dark"] .form-control,
@@ -67,8 +71,16 @@ html[data-theme="dark"] .select2-search__field,
 html[data-theme="dark"] .select2-search--inline,
 html[data-theme="dark"] .select2-close-mask,
 html[data-theme="dark"] .select2-dropdown {
-  background-color: rgb(223, 223, 223) !important;
+  background-color: rgb(222, 222, 222) !important;
 }
-html[data-theme="dark"] label input.checkbox {
-  background-color: rgb(150, 150, 150);
+
+/* X button to close modals in top right */
+html[data-theme="dark"] .close {
+  color: rgb(243, 243, 243);
+}
+
+/* Code blocks */
+html[data-theme="dark"] pre {
+  background-color: rgb(211, 221, 222);
+  color: rgb(29, 40, 42);
 }
