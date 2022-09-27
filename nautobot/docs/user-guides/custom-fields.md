@@ -56,6 +56,17 @@ Check the required box if this field cannot be null on the associated objects.
 
 The default value for the custom field. This form field only accepts JSON data so if you want to set the field default to a string of `foo` you must supply the JSON string `"foo"`. Boolean field valid values are `true` and `false` (all lowercase). Date fields are strings in the format `YYYY-MM-DD`.
 
+#### Filter Logic
+
++/- 1.4.0
+    Custom field [extended filtering](../rest-api/filtering.md#lookup-expressions) introduced extended lookup expression filters for `exact` and `icontains`, duplicating the functionality of both the `Strict` and `Loose` settings.
+
+The filter logic setting applies to filtering on custom fields in the UI and API. For example, when filtering in the API to find a device with the custom field `cf1` set to `"abc"` you would query `/api/dcim/devices/?cf_cf1=abc`. If the filter logic setting is set to `Loose` this would match on `"ABC"` and `"abcdef"`. If the filter logic setting is set to `Strict` only devices with the custom field set to exactly "abc" (case sensitive) would be returned. If the filter logic setting is set to `disabled`, no filters will be available for this custom field, including extended lookup filters. The `Loose` and `Strict` settings only change the behavior of the default filter (`cf_customfieldname`) on `text`, `url` and `json` custom fields.
+
+#### Move to Advanced Tab
+
+When selected, the custom field will appear in the advanced tab of the object detail view instead of the default tab.
+
 ### Assignment
 
 #### Content Types
@@ -104,10 +115,230 @@ The choices to be presented for `Selection` and `Multiple selection` custom fiel
 
 ![Custom Field Select](../images/custom-fields/custom_field_select.png)
 
-## Modifying Custom Fields
+## Editing Custom Fields
 
-Since automatic provisioning is only performed when a custom field's content types change, some changes made to custom fields are not reflected on the associated objects automatically. Some examples of cases where this might cause unexpected behavior are changes to the `required`, `default` and validation fields.
+Since automatic provisioning is only performed when a custom field's content types change, some changes made to existing custom fields are not reflected on the associated objects automatically. Some examples of cases where this might cause unexpected behavior are changes to the `required`, `default` and validation fields. If a custom field is created with `required=False` and then later changed to `required=True`, all of the associated objects will fail validation the next time they're saved unless the custom field is updated with a valid value.
 
 ## Deleting Custom Fields
 
 Custom fields are removed from associated objects when a content type is removed from the custom field, including when the custom field is deleted.
+
+## Retrieving Custom Field Data
+
+Custom fields augment an existing model so retrieving custom field values is different from native fields. All custom field data is stored as a dictionary in the model field named `_custom_field_data` but there is a property named `cf` to make accessing this field easier. Example:
+
+### Retrieve Custom Field Data in Nautobot Shell
+
+```py
+# retrieve all custom field data
+>>> device.cf
+{'date_custom_field': '1970-01-01', 'text_custom_field': 'This is the custom field value', 'boolean_custom_field': True, 'integer_custom_field': 12345, 'grouped_custom_field_1': '', 'grouped_custom_field_2': '', 'grouped_custom_field_3': ''}
+
+# retrieve a single field
+>>> device.cf.get("date_custom_field")
+'1970-01-01'
+```
+
+### Retrieve Custom Field Data in the Rest API
+
+Custom fields are returned in the API for all supported models in the `custom_fields` key:
+
+`GET http://localhost:8080/api/dcim/devices/ffd8df99-6d1a-41c3-b19f-b8357eefc481/`
+
+<!-- markdownlint-disable MD033 -->
+<details>
+<summary>View API Results</summary>
+
+```json
+{
+  "id": "ffd8df99-6d1a-41c3-b19f-b8357eefc481",
+  ...
+  "custom_fields": {
+    "boolean_custom_field": true,
+    "date_custom_field": "1970-01-01",
+    "grouped_custom_field_1": "",
+    "grouped_custom_field_2": "",
+    "grouped_custom_field_3": "",
+    "integer_custom_field": 12345,
+    "text_custom_field": "This is the custom field value"
+  }
+}
+```
+
+</details>
+
+### GraphQL
+
+#### Retrieve a Custom Field
+
+Individual custom fields can be retrieved in GraphQL queries by using the `cf_<fieldname>` field name format:
+
+```graphql
+{
+  devices {
+    cf_text_custom_field
+    name
+    id
+  }
+}
+```
+
+<details>
+<summary>View GraphQL Results</summary>
+
+```json
+{
+  "data": {
+    "devices": [
+      {
+        "name": "phx-leaf1-1-1",
+        "cf_text_custom_field": "This is the custom field value",
+        "id": "8bd9ed2b-3774-4806-9d17-c9f21f2c73e4"        
+      },
+      {
+        "name": "stl-leaf1-2-1",
+        "cf_text_custom_field": "New value",
+        "id": "b22bb7f4-6a6d-4426-9d27-5dcb0471ed2a"        
+      },
+      {
+        "name": "Test Device",
+        "cf_text_custom_field": "Some other value",
+        "id": "ffd8df99-6d1a-41c3-b19f-b8357eefc481"
+      }
+    ]
+  }
+}
+```
+
+</details>
+
+#### Retrieve Data For All Custom Fields
+
+All custom field data can be retrieved in GraphQL queries by using the `_custom_field_data` field:
+
+```graphql
+{
+  devices(id:"8bd9ed2b-3774-4806-9d17-c9f21f2c73e4") {
+    name
+    id
+    _custom_field_data
+  }
+}
+```
+
+<details>
+<summary>View GraphQL Results</summary>
+
+```json
+{
+  "data": {
+    "devices": [
+      {
+        "name": "phx-leaf1-1-1",
+        "id": "8bd9ed2b-3774-4806-9d17-c9f21f2c73e4",        
+        "_custom_field_data": {
+          "date_custom_field": null,
+          "text_custom_field": "This is the custom field value",
+          "boolean_custom_field": true,
+          "integer_custom_field": 12345,
+          "grouped_custom_field_1": null,
+          "grouped_custom_field_2": null,
+          "grouped_custom_field_3": null
+        }
+      }
+    ]
+  }
+}
+```
+
+</details>
+
+#### Filter Queries on Custom Field Data
+
+Queries can also be filtered by custom field values using any of the filters available in the UI and Rest API:
+
+```graphql
+# Retrieve devices where custom field text_custom_field
+# does not contain "this" (case insensitive)
+{
+  devices(cf_text_custom_field__nic: "this") {
+    name
+    id
+    cf_text_custom_field
+  }
+}
+```
+
+<details>
+<summary>View GraphQL Results</summary>
+
+```json
+{
+  "data": {
+    "devices": [
+      {
+        "name": "Test Device",
+        "id": "ffd8df99-6d1a-41c3-b19f-b8357eefc481",
+        "cf_text_custom_field": "Some other value"
+      },
+      {
+        "name": "stl-leaf1-2-1",
+        "id": "b22bb7f4-6a6d-4426-9d27-5dcb0471ed2a",
+        "cf_text_custom_field": "New value"
+      }
+    ]
+  }
+}
+```
+
+</details>
+
+## Modifying Custom Field Data
+
+### Modify Custom Field Data in Nautobot Shell
+
+Custom field data behaves like a python dictionary in the Nautobot Shell. When modifying custom fields through the Nautobot Shell, make sure to use the `.validated_save()` method to save the object to ensure that custom field validation is performed.  Example:
+
+```py
+>>> device.cf["text_custom_field"]
+'Some other value'
+>>> d.cf["text_custom_field"] = "Changed"
+>>> d.validated_save()
+>>> device.cf["text_custom_field"]
+'Changed'
+```
+
+### Modify Custom Field Data in the Rest API
+
+Individual custom field data can be modified by sending a PATCH to the Rest API and setting the new value in the `custom_fields` key:
+
+```no-highlight
+PATCH http://localhost:8080/api/dcim/devices/ffd8df99-6d1a-41c3-b19f-b8357eefc481/
+{
+    "custom_fields": {
+        "text_custom_field": "Rest API test"
+    }
+}
+```
+
+<!-- markdownlint-disable MD033 -->
+<details>
+<summary>View API Results</summary>
+
+```json
+{
+  "id": "ffd8df99-6d1a-41c3-b19f-b8357eefc481",
+  ...
+  "custom_fields": {
+    "boolean_custom_field": true,
+    "date_custom_field": "1970-01-01",
+    "grouped_custom_field_1": "",
+    "grouped_custom_field_2": "",
+    "grouped_custom_field_3": "",
+    "integer_custom_field": 12345,
+    "text_custom_field": "Rest API test"
+  }
+}
+```
+
+</details>
