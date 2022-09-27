@@ -256,9 +256,13 @@ class RelationshipsDataField(JSONField):
         return {self.field_name: output_data}
 
 
-def api_relationships_errors(instance, relationships_data):
+def validate_relationships(request, instance, submitted_relationships_data):
+    relationships_errors = get_relationships_errors(request, instance, output_for="api")
+    if len(relationships_errors) > 0:
+        raise ValidationError(relationships_errors)
+
     required_relationships = Relationship.objects.get_required_for_model(instance)
-    relationships_errors = []
+    submitted_relationships_data_errors = []
     for side, relations in required_relationships.items():
         for relation in relations:
 
@@ -268,7 +272,7 @@ def api_relationships_errors(instance, relationships_data):
             model_name = getattr(relation, f"{side}_type").model_class()._meta.verbose_name
 
             try:
-                submitted_data = relationships_data.get(relation, "").get(side, "")
+                submitted_data = submitted_relationships_data.get(relation, "").get(side, "")
             except AttributeError:
                 submitted_data = []
 
@@ -280,23 +284,14 @@ def api_relationships_errors(instance, relationships_data):
                     num_required_verbose = "at least one"
                 else:
                     num_required_verbose = "a"
-                relationships_errors.append(
+                submitted_relationships_data_errors.append(
                     {
                         relation.slug: f"You must specify {num_required_verbose} {model_name} id or slug "
                         f"in the request body's relationships[“{relation.slug}”][”{side}”][”objects”] list data"
                     }
                 )
-    return relationships_errors
-
-
-def validate_relationships(request, instance, relationships_data):
-    relationships_errors = get_relationships_errors(request, instance, output_for="api")
-    if len(relationships_errors) > 0:
-        raise ValidationError(relationships_errors)
-
-    relationships_data_errors = api_relationships_errors(instance, relationships_data)
-    if len(relationships_data_errors) > 0:
-        raise ValidationError(relationships_data_errors)
+    if len(submitted_relationships_data_errors) > 0:
+        raise ValidationError(submitted_relationships_data_errors)
 
 
 class RelationshipModelSerializerMixin(ValidatedModelSerializer):
