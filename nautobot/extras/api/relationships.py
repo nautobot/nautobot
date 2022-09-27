@@ -272,7 +272,7 @@ def validate_relationships(request, instance, submitted_relationships_data):
             model_name = getattr(relation, f"{side}_type").model_class()._meta.verbose_name
 
             try:
-                submitted_data = submitted_relationships_data.get(relation, "").get(side, "")
+                submitted_data = submitted_relationships_data.get(relation, {}).get(side, "")
             except AttributeError:
                 submitted_data = []
 
