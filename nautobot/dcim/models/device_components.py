@@ -6,7 +6,6 @@ from django.db import models
 from django.db.models import Sum
 from django.urls import reverse
 from mptt.models import MPTTModel, TreeForeignKey
-from taggit.managers import TaggableManager
 
 from nautobot.dcim.choices import (
     ConsolePortTypeChoices,
@@ -29,16 +28,13 @@ from nautobot.dcim.constants import (
 
 from nautobot.dcim.fields import MACAddressCharField
 from nautobot.extras.models import (
-    CustomFieldModel,
     ObjectChange,
     RelationshipModel,
     Status,
     StatusModel,
-    TaggedItem,
 )
-from nautobot.extras.models.mixins import NotesMixin
 from nautobot.extras.utils import extras_features
-from nautobot.core.models import BaseModel
+from nautobot.core.models.generics import PrimaryModel
 from nautobot.utilities.fields import NaturalOrderingField
 from nautobot.utilities.mptt import TreeManager
 from nautobot.utilities.ordering import naturalize_interface
@@ -61,7 +57,7 @@ __all__ = (
 )
 
 
-class ComponentModel(BaseModel, CustomFieldModel, RelationshipModel, NotesMixin):
+class ComponentModel(PrimaryModel):
     """
     An abstract model inherited by any model which has a parent Device.
     """
@@ -71,7 +67,6 @@ class ComponentModel(BaseModel, CustomFieldModel, RelationshipModel, NotesMixin)
     _name = NaturalOrderingField(target_field="name", max_length=100, blank=True, db_index=True)
     label = models.CharField(max_length=64, blank=True, help_text="Physical label")
     description = models.CharField(max_length=200, blank=True)
-    tags = TaggableManager(through=TaggedItem)
 
     class Meta:
         abstract = True
@@ -81,7 +76,10 @@ class ComponentModel(BaseModel, CustomFieldModel, RelationshipModel, NotesMixin)
             return f"{self.name} ({self.label})"
         return self.name
 
-    def to_objectchange(self, action):
+    def to_objectchange(self, action, *, related_object=None, object_data_extra=None, object_data_exclude=None):
+        """
+        Return a new ObjectChange with the `related_object` pinned to the `device` by default.
+        """
         # Annotate the parent Device
         try:
             device = self.device

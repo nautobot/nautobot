@@ -15,7 +15,7 @@ from nautobot.dcim.choices import (
 
 from nautobot.core.models import BaseModel
 from nautobot.dcim.constants import REARPORT_POSITIONS_MAX, REARPORT_POSITIONS_MIN
-from nautobot.extras.models import CustomField, CustomFieldModel, ObjectChange, RelationshipModel
+from nautobot.extras.models import ChangeLoggedModel, CustomField, CustomFieldModel, ObjectChange, RelationshipModel
 from nautobot.extras.utils import extras_features
 from nautobot.utilities.fields import NaturalOrderingField
 from nautobot.utilities.ordering import naturalize_interface
@@ -43,7 +43,7 @@ __all__ = (
 )
 
 
-class ComponentTemplateModel(BaseModel, CustomFieldModel, RelationshipModel):
+class ComponentTemplateModel(BaseModel, ChangeLoggedModel, CustomFieldModel, RelationshipModel):
     device_type = models.ForeignKey(to="dcim.DeviceType", on_delete=models.CASCADE, related_name="%(class)ss")
     name = models.CharField(max_length=64)
     _name = NaturalOrderingField(target_field="name", max_length=100, blank=True)
@@ -64,8 +64,10 @@ class ComponentTemplateModel(BaseModel, CustomFieldModel, RelationshipModel):
         """
         raise NotImplementedError()
 
-    def to_objectchange(self, action):
-        # Annotate the parent DeviceType
+    def to_objectchange(self, action, *, related_object=None, object_data_extra=None, object_data_exclude=None):
+        """
+        Return a new ObjectChange with the `related_object` pinned to the `device_type` by default.
+        """
         try:
             device_type = self.device_type
         except ObjectDoesNotExist:
