@@ -5,27 +5,12 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <!-- Hide page until after JS and theme load to prevent white flash -->
-    <style>
-        body {
-            visibility: hidden;
-            opacity: 0;
-        }
-    </style>
     <title>{% block title %}Home{% endblock %} - {{ settings.BRANDING_TITLE }}</title>
     {% include 'inc/media.html' %}
     {% block extra_styles %}{% endblock %}
 </head>
 <body>
-    <!-- In case JavaScript is disabled -->
-    <noscript>
-      <style>
-          body {
-             visibility: visible;
-             opacity: 1;
-         }
-      </style>
-    </noscript>
+    {% include 'inc/noscript.html' %}
     {% include 'inc/nav_menu.html' %}
     <div class="container-fluid wrapper">
         {% if "BANNER_TOP"|settings_or_config %}

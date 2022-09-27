@@ -115,5 +115,6 @@ function setSystemThemeActive() {
 function showPageContent() {
     // Show HTML body attribute AFTER CSS is loaded to prevent white screen flash
     document.body.style.visibility = 'visible';
+    document.body.style.display = 'block';
     document.body.style.opacity = 1;
 }
