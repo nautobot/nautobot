@@ -787,7 +787,7 @@ def get_relationships_errors(request, obj, output_for="ui"):
 
             required_model_class = getattr(relation, f"{side}_type").model_class()
 
-            if required_model_class.objects.count() == 0:
+            if not required_model_class.objects.exists()
                 model_meta = required_model_class._meta
                 required = model_meta.verbose_name
 
