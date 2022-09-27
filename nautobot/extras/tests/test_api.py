@@ -2679,7 +2679,7 @@ class RelationshipTest(APIViewTestCases.APIViewTestCase):
 
         # Try creating a vlan when no device exists
         response = self.client.post(
-            reverse("ipam-api:vlan-list"),
+            reverse(get_route_for_model(VLAN, "list", api=True)),
             data=create_data,
             format="json",
             **self.header,
@@ -2697,7 +2697,7 @@ class RelationshipTest(APIViewTestCases.APIViewTestCase):
         device1 = create_test_device("Device 1")
         device2 = create_test_device("Device 2")
         response = self.client.post(
-            reverse("ipam-api:vlan-list"),
+            reverse(get_route_for_model(VLAN, "list", api=True)),
             data=create_data,
             format="json",
             **self.header,
@@ -2723,7 +2723,7 @@ class RelationshipTest(APIViewTestCases.APIViewTestCase):
             }
         }
         response = self.client.post(
-            reverse("ipam-api:vlan-list"),
+            reverse(get_route_for_model(VLAN, "list", api=True)),
             data=create_data,
             format="json",
             **self.header,
@@ -2747,7 +2747,7 @@ class RelationshipTest(APIViewTestCases.APIViewTestCase):
 
         # Try creating a platform when no device exists
         response = self.client.post(
-            reverse("dcim-api:platform-list"),
+            reverse(get_route_for_model(Platform, "list", api=True)),
             data=create_data,
             format="json",
             **self.header,
@@ -2765,7 +2765,7 @@ class RelationshipTest(APIViewTestCases.APIViewTestCase):
         # Try creating a platform when we haven't specified any device data in the list of required objects
         device = create_test_device("Device 1")
         response = self.client.post(
-            reverse("dcim-api:platform-list"),
+            reverse(get_route_for_model(Platform, "list", api=True)),
             data=create_data,
             format="json",
             **self.header,
@@ -2783,7 +2783,7 @@ class RelationshipTest(APIViewTestCases.APIViewTestCase):
 
         create_data["relationships"] = {"platform-devices": {"destination": {"objects": [{"pk": str(device.pk)}]}}}
         response = self.client.post(
-            reverse("dcim-api:platform-list"),
+            reverse(get_route_for_model(Platform, "list", api=True)),
             data=create_data,
             format="json",
             **self.header,
@@ -2806,7 +2806,7 @@ class RelationshipTest(APIViewTestCases.APIViewTestCase):
 
         # Try creating a tenant when no platform exists
         response = self.client.post(
-            reverse("tenancy-api:tenant-list"),
+            reverse(get_route_for_model(Tenant, "list", api=True)),
             data=create_data,
             format="json",
             **self.header,
@@ -2823,7 +2823,7 @@ class RelationshipTest(APIViewTestCases.APIViewTestCase):
         # Try creating a tenant with no specified platform data
         platform = Platform.objects.create(name="Platform 1")
         response = self.client.post(
-            reverse("tenancy-api:tenant-list"),
+            reverse(get_route_for_model(Tenant, "list", api=True)),
             data=create_data,
             format="json",
             **self.header,
@@ -2840,7 +2840,7 @@ class RelationshipTest(APIViewTestCases.APIViewTestCase):
         # Try creating a tenant when all required data is present
         create_data["relationships"] = {"platform-tenant": {"source": {"objects": [{"pk": str(platform.pk)}]}}}
         response = self.client.post(
-            reverse("tenancy-api:tenant-list"),
+            reverse(get_route_for_model(Tenant, "list", api=True)),
             data=create_data,
             format="json",
             **self.header,

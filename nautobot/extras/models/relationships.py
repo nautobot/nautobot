@@ -814,7 +814,7 @@ def get_relationships_errors(request, obj, output_for="ui"):
                     cr_field_name = f"cr_{relation.slug}__{relation.required_side}"
 
                     try:
-                        api_post_url = reverse(f"{model_meta.app_label}-api:{model_meta.model_name}-list")
+                        api_post_url = reverse(get_route_for_model(required_model_class, "list", api=True))
                         api_hint = f"Create a {required} by posting to {api_post_url}"
                     except NoReverseMatch:
                         api_hint = f"You need to create {num_required_verbose} {required} first"

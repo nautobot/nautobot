@@ -50,7 +50,7 @@ from nautobot.ipam.models import VLAN, VLANGroup
 from nautobot.users.models import ObjectPermission
 from nautobot.utilities.testing import ViewTestCases, TestCase, extract_page_body, extract_form_failures
 from nautobot.utilities.testing.utils import disable_warnings, post_data
-from nautobot.utilities.utils import slugify_dashes_to_underscores
+from nautobot.utilities.utils import get_route_for_model, slugify_dashes_to_underscores
 from nautobot.tenancy.models import Tenant
 
 
@@ -2012,22 +2012,22 @@ class RelationshipTestCase(
         }
 
         # 1. Try visiting the add vlan page when no device exists
-        response = self.client.get(reverse("ipam:vlan_add"))
-        self.assertRedirects(response, reverse("ipam:vlan_list"))
-        response = self.client.get(reverse("ipam:vlan_add"), follow=True)
+        response = self.client.get(reverse(get_route_for_model(VLAN, "add")))
+        self.assertRedirects(response, reverse(get_route_for_model(VLAN, "list")))
+        response = self.client.get(reverse(get_route_for_model(VLAN, "add")), follow=True)
         self.assertContains(response, "Vlans require at least one device, but no devices exist yet.")
 
         # 2. Try visiting the add vlan page and submitting the form without any devices specified
         device1 = create_test_device("Device 1")
         device2 = create_test_device("Device 2")
-        response = self.client.get(reverse("ipam:vlan_add"))
+        response = self.client.get(reverse(get_route_for_model(VLAN, "add")))
         self.assertHttpStatus(response, 200)
-        response = self.client.post(reverse("ipam:vlan_add"), data=create_data)
+        response = self.client.post(reverse(get_route_for_model(VLAN, "add")), data=create_data)
         self.assertContains(response, "You must select at least one device")
 
         # 3. Try visiting the add vlan page and submitting the form with devices specified
         create_data["cr_vlans-devices__destination"] = [str(device1.pk), str(device2.pk)]
-        response = self.client.post(reverse("ipam:vlan_add"), data=create_data, follow=True)
+        response = self.client.post(reverse(get_route_for_model(VLAN, "add")), data=create_data, follow=True)
         self.assertHttpStatus(response, 200)
         self.assertContains(response, "New VLAN")
         self.assertContains(response, "Relationships")
@@ -2049,22 +2049,22 @@ class RelationshipTestCase(
         }
 
         # 1. Try visiting the add platform page when no device exists
-        response = self.client.get(reverse("dcim:platform_add"))
-        self.assertRedirects(response, reverse("dcim:platform_list"))
-        response = self.client.get(reverse("dcim:platform_add"), follow=True)
+        response = self.client.get(reverse(get_route_for_model(Platform, "add")))
+        self.assertRedirects(response, reverse(get_route_for_model(Platform, "list")))
+        response = self.client.get(reverse(get_route_for_model(Platform, "add")), follow=True)
         self.assertContains(response, "Platforms require at least one device, but no devices exist yet.")
 
         # 2. Try visiting the add platform page and submitting the form without any devices specified
         device1 = create_test_device("Device 1")
         device2 = create_test_device("Device 2")
-        response = self.client.get(reverse("dcim:platform_add"))
+        response = self.client.get(reverse(get_route_for_model(Platform, "add")))
         self.assertHttpStatus(response, 200)
-        response = self.client.post(reverse("dcim:platform_add"), data=create_data)
+        response = self.client.post(reverse(get_route_for_model(Platform, "add")), data=create_data)
         self.assertContains(response, "You must select at least one device")
 
         # 3. Try visiting the add vlan page and submitting the form with devices specified
         create_data["cr_platform-devices__destination"] = [str(device1.pk), str(device2.pk)]
-        response = self.client.post(reverse("dcim:platform_add"), data=create_data, follow=True)
+        response = self.client.post(reverse(get_route_for_model(Platform, "add")), data=create_data, follow=True)
         self.assertHttpStatus(response, 200)
         self.assertContains(response, "New Platform")
         self.assertContains(response, "Relationships")
@@ -2084,21 +2084,21 @@ class RelationshipTestCase(
         }
 
         # Try visiting the add tenant page when no platform exists
-        response = self.client.get(reverse("tenancy:tenant_add"))
-        self.assertRedirects(response, reverse("tenancy:tenant_list"))
-        response = self.client.get(reverse("tenancy:tenant_add"), follow=True)
+        response = self.client.get(reverse(get_route_for_model(Tenant, "add")))
+        self.assertRedirects(response, reverse(get_route_for_model(Tenant, "list")))
+        response = self.client.get(reverse(get_route_for_model(Tenant, "add")), follow=True)
         self.assertContains(response, "Tenants require a platform, but no platforms exist yet.")
 
         # Try visiting the add tenant page and submitting the form without any devices specified
         platform = Platform.objects.create(name="Platform 1")
-        response = self.client.get(reverse("tenancy:tenant_add"))
+        response = self.client.get(reverse(get_route_for_model(Tenant, "add")))
         self.assertHttpStatus(response, 200)
-        response = self.client.post(reverse("tenancy:tenant_add"), data=create_data)
+        response = self.client.post(reverse(get_route_for_model(Tenant, "add")), data=create_data)
         self.assertContains(response, "You must select a platform")
 
         # Try visiting the add tenant page and submitting the form when all required data is present
         create_data["cr_platform-tenant__destination"] = str(platform.pk)
-        response = self.client.post(reverse("tenancy:tenant_add"), data=create_data, follow=True)
+        response = self.client.post(reverse(get_route_for_model(Tenant, "add")), data=create_data, follow=True)
         self.assertHttpStatus(response, 200)
         self.assertContains(response, "New Tenant")
         self.assertContains(response, "Relationships")
