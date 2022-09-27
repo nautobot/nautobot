@@ -266,7 +266,7 @@ class Relationship(BaseModel, ChangeLoggedModel, NotesMixin):
         max_length=12,
         choices=RelationshipRequiredSideChoices,
         default=RelationshipRequiredSideChoices.NEITHER_SIDE_REQUIRED,
-        help_text="Force this relationship to be required. This does not effect symmetrical relationships.",
+        help_text="Objects on the specified side MUST implement this relationship. Not permitted for symmetric relationships.",
         verbose_name="Required Side",
         blank=True,
     )
