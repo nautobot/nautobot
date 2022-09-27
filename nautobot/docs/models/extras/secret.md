@@ -15,7 +15,7 @@ Each Secret is associated with a secrets provider (not to be confused with a cir
 - *Environment Variable* - for retrieving a secret value defined in an environment variable; Secrets using this provider must specify the `variable` name to retrieve.
 - *Text File* - for retrieving a secret value stored in a text file; Secrets using this provider must specify the absolute `path` of the file to retrieve.
 
-!!! note
++/- 1.4.3
     When using the Text File secrets provider, any leading and trailing whitespace or newlines will be stripped.
 
 When defining a new Secret, you will need to select the desired secrets provider and then fill in the specific parameters required by that provider in order to have a completely specified, usable Secret record.
