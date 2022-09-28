@@ -28,7 +28,6 @@ from nautobot.dcim.constants import (
 
 from nautobot.dcim.fields import MACAddressCharField
 from nautobot.extras.models import (
-    ObjectChange,
     RelationshipModel,
     Status,
     StatusModel,
@@ -39,7 +38,7 @@ from nautobot.utilities.fields import NaturalOrderingField
 from nautobot.utilities.mptt import TreeManager
 from nautobot.utilities.ordering import naturalize_interface
 from nautobot.utilities.query_functions import CollateAsChar
-from nautobot.utilities.utils import UtilizationData, serialize_object, serialize_object_v2
+from nautobot.utilities.utils import UtilizationData
 
 __all__ = (
     "BaseInterface",
@@ -76,7 +75,7 @@ class ComponentModel(PrimaryModel):
             return f"{self.name} ({self.label})"
         return self.name
 
-    def to_objectchange(self, action, *, related_object=None, object_data_extra=None, object_data_exclude=None):
+    def to_objectchange(self, action, **kwargs):
         """
         Return a new ObjectChange with the `related_object` pinned to the `device` by default.
         """
@@ -87,14 +86,7 @@ class ComponentModel(PrimaryModel):
             # The parent Device has already been deleted
             device = None
 
-        return ObjectChange(
-            changed_object=self,
-            object_repr=str(self),
-            action=action,
-            object_data=serialize_object(self),
-            object_data_v2=serialize_object_v2(self),
-            related_object=device,
-        )
+        return super().to_objectchange(action, related_object=device, **kwargs)
 
     @property
     def parent(self):

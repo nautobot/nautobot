@@ -15,11 +15,10 @@ from nautobot.dcim.choices import (
 
 from nautobot.core.models import BaseModel
 from nautobot.dcim.constants import REARPORT_POSITIONS_MAX, REARPORT_POSITIONS_MIN
-from nautobot.extras.models import ChangeLoggedModel, CustomField, CustomFieldModel, ObjectChange, RelationshipModel
+from nautobot.extras.models import ChangeLoggedModel, CustomField, CustomFieldModel, RelationshipModel
 from nautobot.extras.utils import extras_features
 from nautobot.utilities.fields import NaturalOrderingField
 from nautobot.utilities.ordering import naturalize_interface
-from nautobot.utilities.utils import serialize_object, serialize_object_v2
 from .device_components import (
     ConsolePort,
     ConsoleServerPort,
@@ -64,7 +63,7 @@ class ComponentTemplateModel(BaseModel, ChangeLoggedModel, CustomFieldModel, Rel
         """
         raise NotImplementedError()
 
-    def to_objectchange(self, action, *, related_object=None, object_data_extra=None, object_data_exclude=None):
+    def to_objectchange(self, action, **kwargs):
         """
         Return a new ObjectChange with the `related_object` pinned to the `device_type` by default.
         """
@@ -74,14 +73,7 @@ class ComponentTemplateModel(BaseModel, ChangeLoggedModel, CustomFieldModel, Rel
             # The parent DeviceType has already been deleted
             device_type = None
 
-        return ObjectChange(
-            changed_object=self,
-            object_repr=str(self),
-            action=action,
-            object_data=serialize_object(self),
-            object_data_v2=serialize_object_v2(self),
-            related_object=device_type,
-        )
+        return super().to_objectchange(action, related_object=device_type, **kwargs)
 
     def instantiate_model(self, model, device, **kwargs):
         """
