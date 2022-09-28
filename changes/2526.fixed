@@ -1,0 +1,1 @@
+Fixed unable to create an instance of `AnotherExampleModel` by adding `get_absolute_url()` method to `AnotherExampleModel` class and an `AnotherExampleModel` detail view template.
