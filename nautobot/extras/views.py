@@ -3,7 +3,6 @@ from datetime import timedelta
 import logging
 
 from celery import chain
-from django import template
 from django.contrib import messages
 from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ObjectDoesNotExist
