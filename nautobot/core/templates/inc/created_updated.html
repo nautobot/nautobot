@@ -1,5 +1,10 @@
 {% if object.last_updated %}
 <p>
-    <small class="text-muted">Created {{ object.created }} &middot; Updated <span title="{{ object.last_updated }}">{{ object.last_updated|timesince }}</span> ago</small>
+    <small class="text-muted">
+    {% if object.created %}
+    Created {{ object.created }} &middot;</small>
+    {% endif %}
+    Updated <span title="{{ object.last_updated }}">{{ object.last_updated|timesince }}</span> ago
+    </small>
 </p>
 {% endif %}
