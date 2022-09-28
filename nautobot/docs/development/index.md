@@ -67,6 +67,8 @@ Nautobot adheres to the Semantic Versioning ("SemVer") strategy, which gives us 
 * `Y` is the minor release number. Contains new functionality and bug fixes. May introduce deprecation warnings but will not remove or change default behavior.
 * `Z` is the patch release number. Will only contain bug fixes and small feature enhancements aimed at addressing user-experience bugs.
 
+For more information, please visit [SemVer.org](https://semver.org/).
+
 ### Release Schedule
 
 Nautobot aims to publish against following release schedule:
@@ -84,7 +86,7 @@ Using `2.0` as a release cycle example, that would mean we would publish:
 
 After the third minor release (`2.3.0`), we would plan for another major release, in this case `3.0.0`.
 
-We estimate non-patch releases will be released quarterly but dates are not set in stone at this time. Dates and notifications will occur by updating the GitHub Release Milestone and on Slack.
+We estimate non-patch releases will be released quarterly but dates are not set in stone. Dates and notifications will occur by updating the GitHub Release Milestone and on Slack.
 
 An example of the release timeline for the `2.0` release cycle:
 
@@ -108,17 +110,13 @@ Should a patch release contain a fix for security vulnerability(s) (i.e. CVE(s))
 * Strongly urge you to upgrade to address these more serious issues as soon as possible.
 * Not adjust any subsequent release dates (the next scheduled release will still occur as scheduled).
 
-### Maintenance Release
+### Maintenance Release (LTM)
 
 #### Overview
 
-For the abundance of clarity sake, we are officially naming what is sometimes called an "LTS" release of software a "Maintenance" release of Nautobot. The mindset is we always aim to release stable software and new users choosing to install an LTS release because it appears to be more stable, will almost immediately be presented with breaking changes upon their next upgrade.
+For the abundance of clarity sake, we are officially naming what is sometimes called an "LTS" release of software a "Maintenance" or "Long Term Maintenance (LTM)" release of Nautobot. The mindset is we always aim to release stable software and new users choosing to install an LTS release because it appears to be more stable, will almost immediately be presented with breaking changes upon their next upgrade.
 
-#### Maintenance Releases
-
-To facilitate smooth upgrades to breaking changes on newer major releases, we publish a "Maintenance Release" of Nautobot. This release will be the last minor of the previous major release.
-
-At the time of this writing `1.5.z` will be our maintenance release of Nautobot for the `1.y` release cycle. Version 1 of Nautobot had an extended release cycle as it was our first major release of the platform. Going forward it can be expected that the `x.3` version of the platform will be the maintenance train of any major version.
+Our LTM release will be the last minor of the previous major release. At the time of this writing `1.5.z` will be our maintenance release of Nautobot for the `1.y` release cycle. Version 1 of Nautobot had an extended release cycle as it was our first major release of the platform. Going forward it can be expected that the `x.3` version of the platform will be the maintenance train of any major version.
 
 With this schedule you can expect a few things per major/minor release:
 
@@ -132,13 +130,12 @@ With this schedule you can expect a few things per major/minor release:
 * `x.3.z`
     * Maintenance release candidate.
     * Features may be added in `x.3.0` but nothing further in this cycle.
-    * Drop support for any dependency that will not be actively maintained during our maintenance release window.
 
 A release will only be marked as "In Maintenance" when the next major release is published. Active bug fixes will be applied to a `x.3` until that time. Once a new major release has been published, the following will apply to the `x.3` codebase:
 
 * Dependencies are frozen/pinned to a specific release. Will only be upgraded if addressing a vulnerability.
 * Data-loss and CVE related fixes will be back ported from the new active release cycle. All other fixes will be back ported on a case-by-case basis.
-* Patch releases for this phase will be on an as-needed basis. Back-ported fixes will be published within two weeks of their merge, sooner if critical.
+* Patch releases for this phase will be on an as-needed basis.
 * Features from newer releases will NOT be back ported.
 
 A maintenance release will be actively maintained until the next maintenance release is available, roughly a year from the launch of the previous one.
@@ -159,9 +156,8 @@ To provide assistance for knowing what features and functionality have been depr
 
 - Classes that have been deprecated will emit a `DeprecationWarning`, along with a message to which classes will be replacing them. The new classes may not be a direct replacement so please check the release notes and documentation for more migration information.
 - APIs now support versioning. Newer versions of the API become the default behavior on a major release (`x.0.0`) and older versions become deprecated. Along with classes and other functionality the deprecated versions will be removed in the `x.2` release. For more information, see the [Versioning section of our REST API documentation](../rest-api/overview.md#versioning).
+- We will drop support for Python versions on a case-by-case basis: A patch release my drop support for a Python version if a dependency security update would require split or conditional support, for example if the dependency has not published a vulnerability fix for an older Python version, we will drop support at that time. All other cases will be documented and tend to occur on minor release boundaries.
 - Any deprecation notice (announcement or removal) will be available in our release notes.
-
-For more information, please visit: ([SemVer.org](https://semver.org/)).
 
 ## Communication
 
