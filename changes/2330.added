@@ -1,0 +1,1 @@
+Added `created` and `last_updated` fields to Device `Component` and `ComponentTemplate` models.
