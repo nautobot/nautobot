@@ -10,7 +10,7 @@ from nautobot.circuits.models import (
     ProviderNetwork,
 )
 from nautobot.extras.models import Status
-from nautobot.utilities.testing import TestCase as NautobotTestCase, ViewTestCases, post_data
+from nautobot.utilities.testing import post_data, TestCase as NautobotTestCase, ViewTestCases
 
 
 class ProviderTestCase(ViewTestCases.PrimaryObjectViewTestCase):
