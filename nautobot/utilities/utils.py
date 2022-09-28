@@ -718,7 +718,7 @@ def build_lookup_label(field_name, _verbose_name):
         >>> build_lookup_label("slug__iew", "iendswith")
         >>> "ends-with(iew)"
     """
-    verbose_name = verbose_lookup_expr(_verbose_name)
+    verbose_name = verbose_lookup_expr(_verbose_name) or "exact"
     label = ""
     search = SEARCH_RE.search(field_name)
     if search:

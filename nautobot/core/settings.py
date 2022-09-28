@@ -734,7 +734,7 @@ def UI_RACK_VIEW_TRUNCATE_FUNCTION(device_display_name):
 
 # Filter lookup Expr verbose name
 FILTERS_VERBOSE_LOOKUPS = {
-    "exact": "exact",
+    "exact": "",
     "icontains": "contains",
     "iendswith": "ends-with",
     "istartswith": "starts-with",
