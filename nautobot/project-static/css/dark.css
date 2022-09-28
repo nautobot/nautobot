@@ -65,8 +65,11 @@ html[data-theme="dark"] .table-headings th {
   background-color: rgb(196, 204, 210) !important;
 }
 
-/* html[data-theme="dark"] .graphiql-container .editorBar, */
-   /* GraphiQL editor bar background */
+html[data-theme="dark"] .scheme-container {                /* Swagger docs container header bar */
+  background-color: rgb(217, 217, 217) !important;
+}
+
+/* GraphiQL */
 html[data-theme="dark"] .doc-explorer,                     /* GraphiQL docs tab background */
 html[data-theme="dark"] .doc-explorer-contents,            /* GraphiQL docs tab background */
 html[data-theme="dark"] .CodeMirror-gutters {              /* GraphiQL primary background */
@@ -78,10 +81,38 @@ html[data-theme="dark"] .nav-tabs>li.active>a {
   color: rgb(72, 133, 204);                             
 }
 
+/* Swagger API Docs */
+/* html[data-theme="dark"] .swagger-ui select, */
+/* html[data-theme="dark"] .swagger-ui select, */
+html[data-theme="dark"] .swagger-ui select {
+  background-color: rgb(222, 222, 222) !important;
+}
+
+
+html[data-theme="dark"] .swagger-ui input,                /* Swagger docs item input input box */
+html[data-theme="dark"] .swagger-ui select,               /* Swagger docs item select input box */
+html[data-theme="dark"] .swagger-ui textarea{             /* Swagger docs item text area input box */
+  background: transparent !important;
+  border: 1px solid #888 !important;
+}
+
+/* Section headers in swagger docs items */
+html[data-theme="dark"] .swagger-ui .opblock .opblock-section-header {
+  background: transparent !important;
+  border: 1px solid #888 !important;
+  background-color: rgb(217, 217, 217, 0.5) !important;
+}
+
+html[data-theme="dark"] .swagger-ui .tab li button.tablinks, /* Example tab links for each API item */
+html[data-theme="dark"] .swagger-ui .btn {                /* Swagger button text */
+  color: rgb(174, 190, 196) !important;
+}
+
 /* Form fields and backdrops, lighter than headers, navbars, etc */
 html[data-theme="dark"] #per_page,                        /* Pagination page selection dropdown menu */
 html[data-theme="dark"] .dropdown-menu,                   /* Dropdown menu from navbar */
 html[data-theme="dark"] .form-control,                    /* Multi-line text fields, eg add device: notes, comments, etc */
+html[data-theme="dark"] .swagger-ui .servers>label select /* Swagger docs server dropdown selection */
 html[data-theme="dark"] .select2-container--default,      /* Drop down menu selections, eg adding new item */
 html[data-theme="dark"] .select2-container--classic,      /* Drop down menu selections, eg adding new item */
 html[data-theme="dark"] .select2-container--bootstrap,    /* Drop down menu selections, eg adding new item */
