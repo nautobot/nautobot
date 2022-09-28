@@ -10,7 +10,7 @@ from nautobot.circuits.models import (
     ProviderNetwork,
 )
 from nautobot.extras.models import Status
-from nautobot.utilities.testing import TestCase as NautobotTestCase, ViewTestCases
+from nautobot.utilities.testing import TestCase as NautobotTestCase, ViewTestCases, post_data
 
 
 class ProviderTestCase(ViewTestCases.PrimaryObjectViewTestCase):
@@ -248,3 +248,66 @@ class CircuitTerminationTestCase(NautobotTestCase):
         # Visit the circuit object detail page and check there is no connect button present:
         response = self.client.get(reverse("circuits:circuit", kwargs={"pk": circuit.pk}))
         self.assertNotIn("</span> Connect", str(response.content))
+
+
+class CircuitSwapTerminationsTestCase(ViewTestCases.EditObjectViewTestCase):
+    model = Circuit
+    form_data = {"confirm": True}
+
+    def setUp(self):
+        super().setUp()
+        self.user.is_superuser = True
+        self.user.save()
+
+    def test_swap_circuit_termination(self):
+        self.add_permissions("circuits.change_circuittermination")
+
+        # Set up the required objects:
+        provider = Provider.objects.create(name="Test Provider", slug="test-provider", asn=12345)
+        provider_networks = (
+            ProviderNetwork.objects.create(
+                name="Test Provider Network 1",
+                slug="test-provider-network-1",
+                provider=provider,
+            ),
+            ProviderNetwork.objects.create(
+                name="Test Provider Network 2",
+                slug="test-provider-network-2",
+                provider=provider,
+            ),
+        )
+        circuit_type = CircuitType.objects.create(name="Test Circuit Type", slug="test-circuit-type")
+        active_status = Status.objects.get_for_model(Circuit).get(slug="active")
+        circuit = Circuit.objects.create(
+            cid="Test Circuit",
+            provider=provider,
+            type=circuit_type,
+            status=active_status,
+        )
+        CircuitTermination.objects.create(
+            circuit=circuit,
+            provider_network=provider_networks[0],
+            term_side=CircuitTerminationSideChoices.SIDE_A,
+        )
+        CircuitTermination.objects.create(
+            circuit=circuit,
+            provider_network=provider_networks[1],
+            term_side=CircuitTerminationSideChoices.SIDE_Z,
+        )
+        request = {
+            "path": reverse("circuits:circuit_terminations_swap", kwargs={"pk": circuit.pk}),
+            "data": post_data({"confirm": True}),
+        }
+        response = self.client.post(**request)
+        self.assertHttpStatus(response, 302)
+
+        termination_a = CircuitTermination.objects.filter(
+            circuit=circuit, term_side=CircuitTerminationSideChoices.SIDE_A
+        ).first()
+        termination_z = CircuitTermination.objects.filter(
+            circuit=circuit, term_side=CircuitTerminationSideChoices.SIDE_Z
+        ).first()
+
+        # Assert Swap
+        self.assertEqual(termination_a.provider_network, provider_networks[1])
+        self.assertEqual(termination_z.provider_network, provider_networks[0])
