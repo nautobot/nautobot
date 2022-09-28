@@ -59,21 +59,34 @@ Over time, the process of moving work from _Future_ to _Near Term_ to _Current_ 
 
 Please read through the [Nautobot Roadmap](https://www.networktocode.com/nautobot/roadmap) so you can understand the current backlog and roadmap and which items are already in _Current, Near Term, and Future_.
 
+### Versioning
+
+Nautobot adheres to the Semantic Versioning ("SemVer") strategy, which gives us versions of the format `x.y.z`.
+
+* `X` is the major release number. Contains breaking changes or switching default behavior and shadowing legacy/deprecated behavior. May contain new functionality and bug fixes as well.
+* `Y` is the minor release number. Contains new functionality and bug fixes. May introduce deprecation warnings but will not remove or change default behavior.
+* `Z` is the patch release number. Will only contain bug fixes and small feature enhancements aimed at addressing user-experience bugs.
+
 ### Release Schedule
 
-Here is what you need to know about Nautobot releases:
+Nautobot aims to publish against following release schedule:
 
-* The initial launch of Nautobot is version 1.0.0beta1 (major.minor.patch) released on February 24, 2021.
-* The core team estimates quarterly releases with the majority of them being minor releases.
-* It is an aspirational goal that there will be no more than one major release per year as major releases do indicate a break in backwards compatibility.
-* For information pertaining to patch releases, which will be released on a schedule, please see the [Patch Releases](#patch-releases) section below.
-* Given the core team is estimating quarterly releases, there will not be firm dates for releases.
-* In order to provide more visibility into the development and release schedule of Nautobot, there will be structured notifications as follows:
-    * At the start of a release cycle, the estimated timeframe for release will be a 4-6 week window.
-    * Halfway through the release cycle (~6 weeks), the estimated timeframe for release will be narrowed to a 3-4 week window
-    * After 8-9 weeks within the development cycle, the estimated timeframe for release will be narrowed further to a 2 week window.
-    * The final notification will be provided 3-5 days before the release drops.
-* The dates and notifications will occur by updating the GitHub Release Milestone and on Slack.
+* One (1) major release per year
+* Three (3) minor releases per year
+* At minimum one (1) patch release every two weeks or more frequently as needed.
+
+Using `2.0` as a release cycle example, that would mean we would publish:
+
+* `2.0.z`
+* `2.1.z`
+* `2.2.z`
+* `2.3.z`
+
+After the third minor release (`2.3.0`), we would plan for another major release, in this case `3.0.0`.
+
+We estimate non-patch releases will be released quarterly but dates are not set in stone at this time. Dates and notifications will occur by updating the GitHub Release Milestone and on Slack.
+
+An example of the release timeline for the `2.0` release cycle:
 
 ![Visual diagram of Nautobot release cadence.](../media/development/index_release_cadence.jpg)
 
@@ -101,46 +114,15 @@ Should a patch release contain a fix for security vulnerability(s) (i.e. CVE(s))
 
 For the abundance of clarity sake, we are officially naming what is sometimes called an "LTS" release of software a "Maintenance" release of Nautobot. The mindset is we always aim to release stable software and new users choosing to install an LTS release because it appears to be more stable, will almost immediately be presented with breaking changes upon their next upgrade.
 
-#### SemVer Summary
-
-**TODO: _Link to existing SemVer section with more detail copied_**
-
-Nautobot adheres to the SemVer versioning strategy, which gives us versions of the format `x.y.z`.
-
-* `X` is the major release number. Contains breaking changes or switching default behavior and shadowing legacy/deprecated behavior. May contain new functionality and bug fixes as well.
-* `Y` is the minor release number. Contains new functionality and bug fixes. May introduce deprecation warnings but will not remove or change default behavior.
-* `Z` is the patch release number. Will only contain bug fixes and small feature enhancements aimed at addressing user-experience bugs.
-
-#### Summary Release Schedule
-
-**TODO: _Link to release schedule with updated examples from below_**
-
-Nautobot aims to publish against following release schedule:
-
-* One (1) major release per year
-* Three (3) minor releases per year
-* At minimum one (1) patch release every two weeks or more frequently as needed.
-
-Using `2.0` as a release cycle example, that would mean we would publish:
-
-* `2.0.z`
-* `2.1.z`
-* `2.2.z`
-* `2.3.z`
-
-After the third minor release (`2.3.z`), we would plan for another major release, in this case `3.0.0`.
-
 #### Maintenance Releases
 
 To facilitate smooth upgrades to breaking changes on newer major releases, we publish a "Maintenance Release" of Nautobot. This release will be the last minor of the previous major release.
 
-At the time of this writing `1.5.z` will be our maintenance release of Nautobot for the `1.y` release cycle. Version 1 of Nautobot had an extended release cycle as it was our first major release of the platform. Going forward it can be expected that the `x.3.z` version of the platform will be the maintenance release of any major version.
-
-**TODO: _Link to deprecation policy which should be more detailed with examples from below_**
+At the time of this writing `1.5.z` will be our maintenance release of Nautobot for the `1.y` release cycle. Version 1 of Nautobot had an extended release cycle as it was our first major release of the platform. Going forward it can be expected that the `x.3` version of the platform will be the maintenance train of any major version.
 
 With this schedule you can expect a few things per major/minor release:
 
-* `x.0.z`
+* `x.0.0`
     * Introduce breaking changes
     * Changing default behavior for APIs, functions
 * `x.1.z`
@@ -171,11 +153,15 @@ If for any reason the next maintenance release is delayed, we will continue to s
 
 ### Deprecation Policy
 
-The deprecation policy will be such that there will be at least one release that makes users aware of a feature that will be deprecated in the next release.
+Functionality, features, or Python classes that have been deprecated will be removed in the following major train's `x.2` release (ex: if deprecated in `1.y`, removed in `2.2`).
 
-### Versioning
+To provide assistance for knowing what features and functionality have been deprecated, additional transition features are as follows:
 
-Semantic Versioning ([SemVer](https://semver.org/)) is used for Nautobot versioning.
+- Classes that have been deprecated will emit a `DeprecationWarning`, along with a message to which classes will be replacing them. The new classes may not be a direct replacement so please check the release notes and documentation for more migration information.
+- APIs now support versioning. Newer versions of the API become the default behavior on a major release (`x.0.0`) and older versions become deprecated. Along with classes and other functionality the deprecated versions will be removed in the `x.2` release. For more information, see the [Versioning section of our REST API documentation](../rest-api/overview.md#versioning).
+- Any deprecation notice (announcement or removal) will be available in our release notes.
+
+For more information, please visit: ([SemVer.org](https://semver.org/)).
 
 ## Communication
 
