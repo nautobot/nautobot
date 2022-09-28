@@ -250,18 +250,13 @@ class CircuitTerminationTestCase(NautobotTestCase):
         self.assertNotIn("</span> Connect", str(response.content))
 
 
-class CircuitSwapTerminationsTestCase(ViewTestCases.EditObjectViewTestCase):
-    model = Circuit
-    form_data = {"confirm": True}
-
+class CircuitSwapTerminationsTestCase(NautobotTestCase):
     def setUp(self):
         super().setUp()
         self.user.is_superuser = True
         self.user.save()
 
     def test_swap_circuit_termination(self):
-        self.add_permissions("circuits.change_circuittermination")
-
         # Set up the required objects:
         provider = Provider.objects.create(name="Test Provider", slug="test-provider", asn=12345)
         provider_networks = (
