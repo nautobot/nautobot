@@ -12,6 +12,7 @@ from django.db import transaction
 from django.db.models import ProtectedError
 from django.shortcuts import redirect
 from django_rq.queues import get_connection as get_rq_connection
+from drf_spectacular.types import OpenApiTypes
 from rest_framework import status
 from rest_framework.response import Response
 from rest_framework.reverse import reverse
@@ -22,7 +23,7 @@ from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.exceptions import PermissionDenied, ParseError
 from drf_spectacular.plumbing import get_relative_url, set_query_parameters
 from drf_spectacular.renderers import OpenApiJsonRenderer
-from drf_spectacular.utils import extend_schema
+from drf_spectacular.utils import extend_schema, OpenApiParameter
 from drf_spectacular.views import SpectacularSwaggerView, SpectacularRedocView
 from rq.worker import Worker as RQWorker
 
@@ -718,8 +719,19 @@ class GraphQLDRFAPIView(NautobotAPIVersionMixin, APIView):
 class LookupTypeChoicesView(NautobotAPIVersionMixin, APIView):
     permission_classes = [IsAuthenticated]
 
-    # TODO timizuo: add contenttype, field_name parameters to schema
     @extend_schema(
+        parameters=[
+            OpenApiParameter(
+                name="contenttype",
+                required=True,
+                type=OpenApiTypes.STR,
+            ),
+            OpenApiParameter(
+                name="field_name",
+                required=True,
+                type=OpenApiTypes.STR,
+            ),
+        ],
         responses={
             200: {
                 "type": "object",
@@ -739,7 +751,7 @@ class LookupTypeChoicesView(NautobotAPIVersionMixin, APIView):
                     },
                 },
             }
-        }
+        },
     )
     def get(self, request):
         if "contenttype" not in request.GET or "field_name" not in request.GET:
@@ -768,8 +780,14 @@ class LookupTypeChoicesView(NautobotAPIVersionMixin, APIView):
 class LookupValueDomElementView(NautobotAPIVersionMixin, APIView):
     permission_classes = [IsAuthenticated]
 
-    # TODO timizuo: add contenttype, field_name parameters to schema
     @extend_schema(
+        parameters=[
+            OpenApiParameter(
+                name="contenttype",
+                required=True,
+                type=OpenApiTypes.STR,
+            ),
+        ],
         responses={
             200: {
                 "type": "object",
@@ -777,7 +795,7 @@ class LookupValueDomElementView(NautobotAPIVersionMixin, APIView):
                     "dom_element": {"type": "string"},
                 },
             }
-        }
+        },
     )
     def get(self, request):
         if "contenttype" not in request.GET or "field_name" not in request.GET:

@@ -304,7 +304,6 @@ class ObjectListView(ObjectPermissionRequiredMixin, View):
         RequestConfig(request, paginate).configure(table)
 
         if request.GET:
-            # TODO Raise Error if queryset model filterset not found
             factory_formset_params = convert_querydict_to_factory_formset_acceptable_querydict(
                 request.GET, self.filterset
             )

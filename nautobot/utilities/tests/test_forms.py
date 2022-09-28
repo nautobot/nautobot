@@ -656,14 +656,13 @@ class WidgetsTest(TestCase):
 
 
 class DynamicFilterFormTest(TestCase):
-    # Todo: timizuo investigate why test fails on CI
+    # TODO(timizuo): investigate why test fails on CI
     # def test_dynamic_filter_form_with_missing_attr(self):
     #     with self.assertRaises(AttributeError) as err:
     #         DynamicFilterForm()
     #     self.assertEqual("'DynamicFilterForm' object requires `model` attribute", str(err.exception))
 
     def test_dynamic_filter_form(self):
-        # TODO: timizuo Find a way to test for all models
         form = DynamicFilterForm(model=Status)
         site_form = DynamicFilterForm(model=Site)
         self.maxDiff = None

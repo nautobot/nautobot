@@ -766,8 +766,10 @@ def get_filterset_parameter_form_field(model, parameter):
         TimePicker,
     )
 
-    filterset = get_filterset_for_model(model)()  # TODO Timizuo Raise Error if filterset not found
-    field = filterset.filters.get(parameter)  # TODO Timizuo Raise Error if field not found
+    # TODO(timizuo): Raise Error if filterset not found
+    filterset = get_filterset_for_model(model)()
+    # TODO(T=timizuo): Raise Error if field not found
+    field = filterset.filters.get(parameter)
     form_field = field.field
 
     # TODO(Culver): We are having to replace some widgets here because multivalue_field_factory that generates these isn't smart enough
