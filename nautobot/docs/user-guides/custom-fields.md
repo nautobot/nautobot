@@ -19,13 +19,13 @@ Navigate to the custom fields page by clicking on **Extensibility -> Custom Fiel
 
 The label is the human readable label of the custom field that will be displayed on the associated object detail view.
 
-![Custom Field Labels](../images/custom-fields/custom_field_detail_label.png)
+![Custom Field Labels](./images/custom-fields/custom_field_detail_label.png)
 
 #### Grouping
 
 The optional grouping field allows you to group custom fields into collapsible menus.
 
-![Custom Field Grouping](../images/custom-fields/custom_field_detail_grouped.png)
+![Custom Field Grouping](./images/custom-fields/custom_field_detail_grouped.png)
 
 #### Slug
 
@@ -43,7 +43,7 @@ Weight determines how custom fields are sorted in forms and object detail views.
 
 The description of a custom field is shown as a mouseover tooltip in object detail views and as help text under form fields.
 
-![Custom Field Edit](../images/custom-fields/custom_field_edit.png)
+![Custom Field Edit](./images/custom-fields/custom_field_edit.png)
 
 #### Required
 
@@ -111,9 +111,9 @@ Must contain anything that is not whitespace
 
 The choices to be presented for `Selection` and `Multiple selection` custom field types. These are displayed in the order of the weight values supplied with the lowest weight on top. If regex validation is being used, these choices must match the regular expression.
 
-![Custom Field Choices](../images/custom-fields/custom_field_choices.png)
+![Custom Field Choices](./images/custom-fields/custom_field_choices.png)
 
-![Custom Field Select](../images/custom-fields/custom_field_select.png)
+![Custom Field Select](./images/custom-fields/custom_field_select.png)
 
 ## Editing Custom Fields
 
