@@ -25,7 +25,7 @@ from nautobot.core.views import generic
 from nautobot.dcim.models import Device
 from nautobot.dcim.tables import DeviceTable
 from nautobot.extras.tasks import delete_custom_field_data
-from nautobot.extras.utils import get_job_content_type, get_worker_count
+from nautobot.extras.utils import get_base_template, get_job_content_type, get_worker_count
 from nautobot.utilities.paginator import EnhancedPaginator, get_paginate_count
 from nautobot.utilities.forms import restrict_form_fields
 from nautobot.utilities.utils import (
@@ -726,20 +726,7 @@ class ObjectDynamicGroupsView(View):
         }
         RequestConfig(request, paginate).configure(dynamicsgroups_table)
 
-        # Default to using "<app>/<model>.html" as the template, if it exists. Otherwise,
-        # check if "<app>/<model>_retrieve.html" used in `NautobotUIViewSet` exists.
-        # If both templates do not exist, fall back to "base.html".
-        if self.base_template is None:
-            self.base_template = f"{model._meta.app_label}/{model._meta.model_name}.html"
-            # TODO: This can be removed once an object view has been established for every model.
-            try:
-                get_template(self.base_template)
-            except TemplateDoesNotExist:
-                self.base_template = f"{model._meta.app_label}/{model._meta.model_name}_retrieve.html"
-                try:
-                    get_template(self.base_template)
-                except TemplateDoesNotExist:
-                    self.base_template = "base.html"
+        self.base_template = get_base_template(self.base_template, model)
 
         return render(
             request,
@@ -1621,20 +1608,7 @@ class ObjectChangeLogView(View):
         }
         RequestConfig(request, paginate).configure(objectchanges_table)
 
-        # Default to using "<app>/<model>.html" as the template, if it exists. Otherwise,
-        # check if "<app>/<model>_retrieve.html" used in `NautobotUIViewSet` exists.
-        # If both templates do not exist, fall back to "base.html".
-        if self.base_template is None:
-            self.base_template = f"{model._meta.app_label}/{model._meta.model_name}.html"
-            # TODO: This can be removed once an object view has been established for every model.
-            try:
-                get_template(self.base_template)
-            except TemplateDoesNotExist:
-                self.base_template = f"{model._meta.app_label}/{model._meta.model_name}_retrieve.html"
-                try:
-                    get_template(self.base_template)
-                except TemplateDoesNotExist:
-                    self.base_template = "base.html"
+        self.base_template = get_base_template(self.base_template, model)
 
         return render(
             request,
@@ -1703,20 +1677,7 @@ class ObjectNotesView(View):
         }
         RequestConfig(request, paginate).configure(notes_table)
 
-        # Default to using "<app>/<model>.html" as the template, if it exists. Otherwise,
-        # check if "<app>/<model>_retrieve.html" used in `NautobotUIViewSet` exists.
-        # If both templates do not exist, fall back to "base.html".
-        if self.base_template is None:
-            self.base_template = f"{model._meta.app_label}/{model._meta.model_name}.html"
-            # TODO: This can be removed once an object view has been established for every model.
-            try:
-                get_template(self.base_template)
-            except TemplateDoesNotExist:
-                self.base_template = f"{model._meta.app_label}/{model._meta.model_name}_retrieve.html"
-                try:
-                    get_template(self.base_template)
-                except TemplateDoesNotExist:
-                    self.base_template = "base.html"
+        self.base_template = get_base_template(self.base_template, model)
 
         return render(
             request,
