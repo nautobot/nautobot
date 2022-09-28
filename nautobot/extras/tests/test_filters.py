@@ -206,17 +206,9 @@ class ConfigContextTestCase(FilterTestCases.FilterTestCase):
             Cluster.objects.create(name="Cluster 3", type=cluster_type),
         )
 
-        tenant_groups = (
-            TenantGroup.objects.create(name="Tenant Group 1", slug="tenant-group-1"),
-            TenantGroup.objects.create(name="Tenant Group 2", slug="tenant-group-2"),
-            TenantGroup.objects.create(name="Tenant Group 3", slug="tenant-group-3"),
-        )
+        cls.tenant_groups = TenantGroup.objects.filter(tenants__isnull=True)[:3]
 
-        tenants = (
-            Tenant.objects.create(name="Tenant 1", slug="tenant-1"),
-            Tenant.objects.create(name="Tenant 2", slug="tenant-2"),
-            Tenant.objects.create(name="Tenant 3", slug="tenant-3"),
-        )
+        cls.tenants = Tenant.objects.filter(group__isnull=True)[:3]
 
         for i in range(0, 3):
             is_active = bool(i % 2)
@@ -232,8 +224,8 @@ class ConfigContextTestCase(FilterTestCases.FilterTestCase):
             c.platforms.set([platforms[i]])
             c.cluster_groups.set([cluster_groups[i]])
             c.clusters.set([clusters[i]])
-            c.tenant_groups.set([tenant_groups[i]])
-            c.tenants.set([tenants[i]])
+            c.tenant_groups.set([cls.tenant_groups[i]])
+            c.tenants.set([cls.tenants[i]])
 
     def test_name(self):
         params = {"name": ["Config Context 1", "Config Context 2"]}
@@ -293,14 +285,14 @@ class ConfigContextTestCase(FilterTestCases.FilterTestCase):
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
 
     def test_tenant_group(self):
-        tenant_groups = TenantGroup.objects.all()[:2]
+        tenant_groups = self.tenant_groups[:2]
         params = {"tenant_group_id": [tenant_groups[0].pk, tenant_groups[1].pk]}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
         params = {"tenant_group": [tenant_groups[0].slug, tenant_groups[1].slug]}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
 
-    def test_tenant_(self):
-        tenants = Tenant.objects.all()[:2]
+    def test_tenant_id(self):
+        tenants = self.tenants[:2]
         params = {"tenant_id": [tenants[0].pk, tenants[1].pk]}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
         params = {"tenant": [tenants[0].slug, tenants[1].slug]}

@@ -306,6 +306,10 @@ class LocationTypeTest(APIViewTestCases.APIViewTestCase):
             },
         ]
 
+    def get_deletable_object_pks(self):
+        """To get the correct bulk-delete object count, make sure we avoid a cascade deletion."""
+        return [loctype.pk for loctype in list(LocationType.objects.filter(children__isnull=True))[:3]]
+
 
 class LocationTest(APIViewTestCases.APIViewTestCase):
     model = Location
@@ -375,6 +379,10 @@ class LocationTest(APIViewTestCases.APIViewTestCase):
             "slug": "a-different-slug",
             "status": "planned",
         }
+
+    def get_deletable_object_pks(self):
+        """Only return objects without children so that the deletion count is as expected."""
+        return [loc.pk for loc in list(Location.objects.filter(children__isnull=True))[:3]]
 
 
 class RackGroupTest(APIViewTestCases.APIViewTestCase):
@@ -458,6 +466,10 @@ class RackGroupTest(APIViewTestCases.APIViewTestCase):
                 "parent": cls.parent_rack_groups[1].pk,
             },
         ]
+
+    def get_deletable_object_pks(self):
+        """To get the correct bulk-delete object count, make sure we avoid a cascade deletion."""
+        return [group.pk for group in list(RackGroup.objects.filter(children__isnull=True))[:3]]
 
     def test_site_location_mismatch(self):
         """The specified location (if any) must belong to the specified site."""

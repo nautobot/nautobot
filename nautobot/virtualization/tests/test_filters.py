@@ -128,17 +128,7 @@ class ClusterTestCase(FilterTestCases.FilterTestCase):
             Site.objects.create(name="Test Site 3", slug="test-site-3", region=regions[2]),
         )
 
-        tenant_groups = (
-            TenantGroup.objects.create(name="Tenant group 1", slug="tenant-group-1"),
-            TenantGroup.objects.create(name="Tenant group 2", slug="tenant-group-2"),
-            TenantGroup.objects.create(name="Tenant group 3", slug="tenant-group-3"),
-        )
-
-        tenants = (
-            Tenant.objects.create(name="Tenant 1", slug="tenant-1", group=tenant_groups[0]),
-            Tenant.objects.create(name="Tenant 2", slug="tenant-2", group=tenant_groups[1]),
-            Tenant.objects.create(name="Tenant 3", slug="tenant-3", group=tenant_groups[2]),
-        )
+        tenants = Tenant.objects.filter(group__isnull=False)[:3]
 
         clusters = (
             Cluster.objects.create(
@@ -246,18 +236,28 @@ class ClusterTestCase(FilterTestCases.FilterTestCase):
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
 
     def test_tenant(self):
-        tenants = Tenant.objects.all()[:2]
+        tenants = list(Tenant.objects.filter(clusters__isnull=False))[:2]
         params = {"tenant_id": [tenants[0].pk, tenants[1].pk]}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+        self.assertEqual(
+            self.filterset(params, self.queryset).qs.count(), self.queryset.filter(tenant__in=tenants).count()
+        )
         params = {"tenant": [tenants[0].slug, tenants[1].slug]}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+        self.assertEqual(
+            self.filterset(params, self.queryset).qs.count(), self.queryset.filter(tenant__in=tenants).count()
+        )
 
     def test_tenant_group(self):
-        tenant_groups = TenantGroup.objects.all()[:2]
+        tenant_groups = list(TenantGroup.objects.filter(tenants__isnull=False, tenants__clusters__isnull=False))[:2]
         params = {"tenant_group_id": [tenant_groups[0].pk, tenant_groups[1].pk]}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+        self.assertEqual(
+            self.filterset(params, self.queryset).qs.count(),
+            self.queryset.filter(tenant__group__in=tenant_groups).count(),
+        )
         params = {"tenant_group": [tenant_groups[0].slug, tenant_groups[1].slug]}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+        self.assertEqual(
+            self.filterset(params, self.queryset).qs.count(),
+            self.queryset.filter(tenant__group__in=tenant_groups).count(),
+        )
 
     def test_search(self):
         value = self.queryset.values_list("pk", flat=True)[0]
@@ -333,17 +333,7 @@ class VirtualMachineTestCase(FilterTestCases.FilterTestCase):
             DeviceRole.objects.create(name="Device Role 3", slug="device-role-3"),
         )
 
-        tenant_groups = (
-            TenantGroup.objects.create(name="Tenant group 1", slug="tenant-group-1"),
-            TenantGroup.objects.create(name="Tenant group 2", slug="tenant-group-2"),
-            TenantGroup.objects.create(name="Tenant group 3", slug="tenant-group-3"),
-        )
-
-        tenants = (
-            Tenant.objects.create(name="Tenant 1", slug="tenant-1", group=tenant_groups[0]),
-            Tenant.objects.create(name="Tenant 2", slug="tenant-2", group=tenant_groups[1]),
-            Tenant.objects.create(name="Tenant 3", slug="tenant-3", group=tenant_groups[2]),
-        )
+        tenants = Tenant.objects.filter(group__isnull=False)[:3]
 
         statuses = Status.objects.get_for_model(VirtualMachine)
         status_map = {s.slug: s for s in statuses.all()}
@@ -561,18 +551,29 @@ class VirtualMachineTestCase(FilterTestCases.FilterTestCase):
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
 
     def test_tenant(self):
-        tenants = Tenant.objects.all()[:2]
+        tenants = list(Tenant.objects.filter(virtual_machines__isnull=False))[:2]
         params = {"tenant_id": [tenants[0].pk, tenants[1].pk]}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+        self.assertEqual(
+            self.filterset(params, self.queryset).qs.count(), self.queryset.filter(tenant__in=tenants).count()
+        )
         params = {"tenant": [tenants[0].slug, tenants[1].slug]}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+        self.assertEqual(
+            self.filterset(params, self.queryset).qs.count(), self.queryset.filter(tenant__in=tenants).count()
+        )
 
     def test_tenant_group(self):
-        tenant_groups = TenantGroup.objects.all()[:2]
+        tenant_groups = list(TenantGroup.objects.filter(tenants__isnull=False, tenants__virtual_machines__isnull=False))
+        tenant_groups = tenant_groups[:2]
         params = {"tenant_group_id": [tenant_groups[0].pk, tenant_groups[1].pk]}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+        self.assertEqual(
+            self.filterset(params, self.queryset).qs.count(),
+            self.queryset.filter(tenant__group__in=tenant_groups).count(),
+        )
         params = {"tenant_group": [tenant_groups[0].slug, tenant_groups[1].slug]}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+        self.assertEqual(
+            self.filterset(params, self.queryset).qs.count(),
+            self.queryset.filter(tenant__group__in=tenant_groups).count(),
+        )
 
     def test_search(self):
         value = self.queryset.values_list("pk", flat=True)[0]

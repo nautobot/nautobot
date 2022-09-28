@@ -605,11 +605,29 @@ class APIViewTestCases:
             self.assertEqual(set(self.choices_fields), field_choices)
 
     class DeleteObjectViewTestCase(APITestCase):
+        def get_deletable_object(self):
+            """
+            Get an instance that can be deleted.
+
+            For some models this may just be any random object, but when we have FKs with `on_delete=models.PROTECT`
+            (as is often the case) we need to find or create an instance that doesn't have such entanglements.
+            """
+            return self._get_queryset().first()
+
+        def get_deletable_object_pks(self):
+            """
+            Get a list of PKs corresponding to objects that can be safely bulk-deleted.
+
+            For some models this may just be any random objects, but when we have FKs with `on_delete=models.PROTECT`
+            (as is often the case) we need to find or create an instance that doesn't have such entanglements.
+            """
+            return list(self._get_queryset().values_list("pk", flat=True)[:3])
+
         def test_delete_object_without_permission(self):
             """
             DELETE a single object without permission.
             """
-            url = self._get_detail_url(self._get_queryset().first())
+            url = self._get_detail_url(self.get_deletable_object())
 
             # Try DELETE without permission
             with disable_warnings("django.request"):
@@ -620,7 +638,7 @@ class APIViewTestCases:
             """
             DELETE a single object identified by its primary key.
             """
-            instance = self._get_queryset().first()
+            instance = self.get_deletable_object()
             url = self._get_detail_url(instance)
 
             # Add object-level permission
@@ -643,18 +661,19 @@ class APIViewTestCases:
             """
             DELETE a set of objects in a single request.
             """
+            id_list = self.get_deletable_object_pks()
             # Add object-level permission
             obj_perm = ObjectPermission(name="Test permission", actions=["delete"])
             obj_perm.save()
             obj_perm.users.add(self.user)
             obj_perm.object_types.add(ContentType.objects.get_for_model(self.model))
 
-            id_list = self._get_queryset().values_list("id", flat=True)
             data = [{"id": id} for id in id_list]
 
+            initial_count = self._get_queryset().count()
             response = self.client.delete(self._get_list_url(), data, format="json", **self.header)
             self.assertHttpStatus(response, status.HTTP_204_NO_CONTENT)
-            self.assertEqual(self._get_queryset().count(), 0)
+            self.assertEqual(self._get_queryset().count(), initial_count - len(id_list))
 
     class NotesURLViewTestCase(APITestCase):
         """Validate Notes URL on objects that have the Note model Mixin."""
