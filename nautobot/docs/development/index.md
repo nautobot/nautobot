@@ -154,10 +154,10 @@ Functionality, features, or Python classes that have been deprecated will be rem
 
 To provide assistance for knowing what features and functionality have been deprecated, additional transition features are as follows:
 
-- Classes that have been deprecated will emit a `DeprecationWarning`, along with a message to which classes will be replacing them. The new classes may not be a direct replacement so please check the release notes and documentation for more migration information.
-- APIs now support versioning. Newer versions of the API become the default behavior on a major release (`x.0.0`) and older versions become deprecated. Along with classes and other functionality the deprecated versions will be removed in the `x.2` release. For more information, see the [Versioning section of our REST API documentation](../rest-api/overview.md#versioning).
-- We will drop support for Python versions on a case-by-case basis: A patch release my drop support for a Python version if a dependency security update would require split or conditional support, for example if the dependency has not published a vulnerability fix for an older Python version, we will drop support at that time. All other cases will be documented and tend to occur on minor release boundaries.
-- Any deprecation notice (announcement or removal) will be available in our release notes.
+* Classes that have been deprecated will emit a `DeprecationWarning`, along with a message to which classes will be replacing them. The new classes may not be a direct replacement so please check the release notes and documentation for more migration information.
+* APIs now support versioning. Newer versions of the API become the default behavior on a major release (`x.0.0`) and older versions become deprecated. Along with classes and other functionality the deprecated versions will be removed in the `x.2` release. For more information, see the [Versioning section of our REST API documentation](../rest-api/overview.md#versioning).
+* We will drop support for Python versions on a case-by-case basis: A patch release my drop support for a Python version if a dependency security update would require split or conditional support, for example if the dependency has not published a vulnerability fix for an older Python version, we will drop support at that time. All other cases will be documented and tend to occur on minor release boundaries.
+* Any deprecation notice (announcement or removal) will be available in our release notes.
 
 ## Communication
 
