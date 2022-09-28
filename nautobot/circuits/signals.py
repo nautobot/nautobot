@@ -7,7 +7,7 @@ from django.dispatch import receiver
 from django.utils import timezone
 
 from .choices import CircuitTerminationSideChoices
-from .models import Circuit, CircuitTermination
+from .models import CircuitTermination
 from nautobot.dcim.models import CablePath
 from nautobot.dcim.signals import create_cablepath
 
