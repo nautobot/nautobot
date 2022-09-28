@@ -285,6 +285,10 @@ class LocationTypeTestCase(ViewTestCases.OrganizationalObjectViewTestCase):
         cls.slug_source = "name"
         cls.slug_test_object = "Intermediate 1"
 
+    def get_deletable_object_pks(self):
+        """To get the correct bulk-delete object count, make sure we avoid a cascade deletion."""
+        return [loctype.pk for loctype in list(LocationType.objects.filter(children__isnull=True))[:3]]
+
 
 class LocationTestCase(ViewTestCases.PrimaryObjectViewTestCase):
     model = Location
@@ -337,6 +341,10 @@ class LocationTestCase(ViewTestCases.PrimaryObjectViewTestCase):
 
         # No slug_source/slug_test_object here because Location uses the composite [parent__name, name]
         # and the test doesn't support that idea yet
+
+    def get_deletable_object_pks(self):
+        """To get the correct bulk-delete object count, make sure we avoid a cascade deletion."""
+        return [loc.pk for loc in list(Location.objects.filter(children__isnull=True))[:3]]
 
 
 class RackGroupTestCase(ViewTestCases.OrganizationalObjectViewTestCase):

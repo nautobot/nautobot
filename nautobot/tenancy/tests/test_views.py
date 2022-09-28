@@ -8,10 +8,6 @@ class TenantGroupTestCase(ViewTestCases.OrganizationalObjectViewTestCase):
 
     @classmethod
     def setUpTestData(cls):
-
-        TenantGroup.objects.create(name="Tenant Group 1", slug="tenant-group-1")
-        TenantGroup.objects.create(name="Tenant Group 2", slug="tenant-group-2")
-        TenantGroup.objects.create(name="Tenant Group 3", slug="tenant-group-3")
         TenantGroup.objects.create(name="Tenant Group 8")
 
         cls.form_data = {
@@ -30,6 +26,17 @@ class TenantGroupTestCase(ViewTestCases.OrganizationalObjectViewTestCase):
         cls.slug_source = "name"
         cls.slug_test_object = "Tenant Group 8"
 
+    def get_deletable_object(self):
+        return TenantGroup.objects.create(name="Tenant Group X")
+
+    def get_deletable_object_pks(self):
+        groups = [
+            TenantGroup.objects.create(name="Alpha"),
+            TenantGroup.objects.create(name="Beta"),
+            TenantGroup.objects.create(name="Gamma"),
+        ]
+        return [group.pk for group in groups]
+
 
 class TenantTestCase(ViewTestCases.PrimaryObjectViewTestCase):
     model = Tenant
@@ -38,14 +45,8 @@ class TenantTestCase(ViewTestCases.PrimaryObjectViewTestCase):
     @classmethod
     def setUpTestData(cls):
 
-        tenant_groups = (
-            TenantGroup.objects.create(name="Tenant Group 1", slug="tenant-group-1"),
-            TenantGroup.objects.create(name="Tenant Group 2", slug="tenant-group-2"),
-        )
+        tenant_groups = TenantGroup.objects.all()[:2]
 
-        Tenant.objects.create(name="Tenant 1", slug="tenant-1", group=tenant_groups[0])
-        Tenant.objects.create(name="Tenant 2", slug="tenant-2", group=tenant_groups[0])
-        Tenant.objects.create(name="Tenant 3", slug="tenant-3", group=tenant_groups[0])
         Tenant.objects.create(name="Tenant 8", group=tenant_groups[0])
 
         cls.form_data = {
@@ -70,3 +71,14 @@ class TenantTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         }
         cls.slug_source = "name"
         cls.slug_test_object = "Tenant 8"
+
+    def get_deletable_object(self):
+        return Tenant.objects.create(name="Unencumbered Tenant")
+
+    def get_deletable_object_pks(self):
+        tenants = [
+            Tenant.objects.create(name="Tenant A"),
+            Tenant.objects.create(name="Tenant B"),
+            Tenant.objects.create(name="Tenant C", group=TenantGroup.objects.first()),
+        ]
+        return [tenant.pk for tenant in tenants]

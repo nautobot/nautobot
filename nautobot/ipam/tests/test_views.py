@@ -104,15 +104,7 @@ class RIRTestCase(ViewTestCases.OrganizationalObjectViewTestCase):
 
     @classmethod
     def setUpTestData(cls):
-
-        RIR.objects.bulk_create(
-            [
-                RIR(name="RIR 1", slug="rir-1"),
-                RIR(name="RIR 2", slug="rir-2"),
-                RIR(name="RIR 3", slug="rir-3"),
-                RIR(name="RIR 8"),
-            ]
-        )
+        RIR.objects.create(name="RIR 8")
 
         cls.form_data = {
             "name": "RIR X",
@@ -131,6 +123,19 @@ class RIRTestCase(ViewTestCases.OrganizationalObjectViewTestCase):
         cls.slug_source = "name"
         cls.slug_test_object = "RIR 8"
 
+    def get_deletable_object(self):
+        """Return an RIR without any associated Aggregates."""
+        return RIR.objects.get(name="RIR 8")
+
+    def get_deletable_object_pks(self):
+        """Return a list of PKs corresponding to RIRs without any associated Aggregates."""
+        rirs = [
+            RIR.objects.create(name="RFC N/A"),
+            RIR.objects.create(name="MAGICNIC"),
+            RIR.objects.create(name="NOTANIC"),
+        ]
+        return [rir.pk for rir in rirs]
+
 
 class AggregateTestCase(ViewTestCases.PrimaryObjectViewTestCase):
     model = Aggregate
@@ -138,19 +143,11 @@ class AggregateTestCase(ViewTestCases.PrimaryObjectViewTestCase):
 
     @classmethod
     def setUpTestData(cls):
-
-        rirs = (
-            RIR.objects.create(name="RIR 1", slug="rir-1"),
-            RIR.objects.create(name="RIR 2", slug="rir-2"),
-        )
-
-        Aggregate.objects.create(prefix=IPNetwork("10.1.0.0/16"), rir=rirs[0])
-        Aggregate.objects.create(prefix=IPNetwork("10.2.0.0/16"), rir=rirs[0])
-        Aggregate.objects.create(prefix=IPNetwork("10.3.0.0/16"), rir=rirs[0])
+        rir = RIR.objects.first()
 
         cls.form_data = {
-            "prefix": IPNetwork("10.99.0.0/16"),
-            "rir": rirs[1].pk,
+            "prefix": IPNetwork("22.99.0.0/16"),
+            "rir": rir.pk,
             "date_added": datetime.date(2020, 1, 1),
             "description": "A new aggregate",
             "tags": [t.pk for t in Tag.objects.get_for_model(Aggregate)],
@@ -158,13 +155,13 @@ class AggregateTestCase(ViewTestCases.PrimaryObjectViewTestCase):
 
         cls.csv_data = (
             "prefix,rir",
-            "10.4.0.0/16,RIR 1",
-            "10.5.0.0/16,RIR 1",
-            "10.6.0.0/16,RIR 1",
+            f"22.4.0.0/16,{rir.name}",
+            f"22.5.0.0/16,{rir.name}",
+            f"22.6.0.0/16,{rir.name}",
         )
 
         cls.bulk_edit_data = {
-            "rir": rirs[1].pk,
+            "rir": RIR.objects.last().pk,
             "date_added": datetime.date(2020, 1, 1),
             "description": "New description",
         }
