@@ -13,9 +13,6 @@ class VarbinaryIPField(models.BinaryField):
 
     description = "IP network address"
 
-    def __init__(self, **kwargs):
-        super().__init__(**kwargs)
-
     def db_type(self, connection):
         """Returns the correct field type for a given database vendor."""
 
@@ -51,7 +48,7 @@ class VarbinaryIPField(models.BinaryField):
         try:
             return netaddr.IPAddress(value, version=version)
         except netaddr.AddrFormatError:
-            raise ValidationError("Invalid IP address format: {}".format(value))
+            raise ValidationError(f"Invalid IP address format: {value}")
         except (TypeError, ValueError) as e:
             raise ValidationError(e)
 
@@ -86,10 +83,10 @@ class VarbinaryIPField(models.BinaryField):
     def form_class(self):
         return IPNetworkFormField
 
-    def formfield(self, **kwargs):
+    def formfield(self, *args, **kwargs):
         defaults = {"form_class": self.form_class()}
         defaults.update(kwargs)
-        return super().formfield(**defaults)
+        return super().formfield(*args, **defaults)
 
 
 VarbinaryIPField.register_lookup(lookups.IExact)

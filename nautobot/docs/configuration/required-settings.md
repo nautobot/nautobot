@@ -53,6 +53,9 @@ The following environment variables may also be set for each of the above values
 * `NAUTOBOT_DB_TIMEOUT`
 * `NAUTOBOT_DB_ENGINE`
 
++++ 1.1.0
+    The `NAUTOBOT_DB_ENGINE` setting was added along with support for MySQL.
+
 !!! warning
     Nautobot supports either MySQL or PostgreSQL as a database backend. You must make sure that the `ENGINE` setting matches your selected database backend or **you will be unable to connect to the database**.
 
@@ -120,7 +123,7 @@ Nautobot supports database query caching using [`django-cacheops`](https://githu
 
 Caching is configured by defining the [`CACHEOPS_REDIS`](#cacheops_redis) setting which in its simplest form is just a URL.
 
-For more details on Nautobot's caching, including TLS and HA configuration, see the guide on [Caching](../../additional-features/caching).
+For more details on Nautobot's caching, including TLS and HA configuration, see the guide on [Caching](../additional-features/caching.md).
 
 !!! important
     Nautobot does not utilize the built-in [Django cache framework](https://docs.djangoproject.com/en/stable/topics/cache/) to perform caching, as `django-cacheops` takes its place.
@@ -160,7 +163,7 @@ Additional settings may be available and are not covered here. Please see the of
 
 Default: `undefined`
 
-If you are using [Redis Sentinel](https://redis.io/topics/sentinel) for high-availability purposes, you must replace the [`CACHEOPS_REDIS`](#cacheops_redis) setting with [`CACHEOPS_SENTINEL`](#cacheops_sentinel).  For more details on configuring Nautobot to use Redis Sentinel see [Using Redis Sentinel](../../additional-features/caching/#using-redis-sentinel). For more details on how to configure Cacheops specifically to use Redis Sentinel see the official guide on [Cacheops
+If you are using [Redis Sentinel](https://redis.io/topics/sentinel) for high-availability purposes, you must replace the [`CACHEOPS_REDIS`](#cacheops_redis) setting with [`CACHEOPS_SENTINEL`](#cacheops_sentinel).  For more details on configuring Nautobot to use Redis Sentinel see [Using Redis Sentinel](../additional-features/caching.md#using-redis-sentinel). For more details on how to configure Cacheops specifically to use Redis Sentinel see the official guide on [Cacheops
 setup](https://github.com/Suor/django-cacheops#setup).
 
 !!! warning
@@ -202,8 +205,8 @@ CACHES = {
 
 ### Task Queuing with RQ
 
-!!! warning
-    As of Nautobot 1.1 using task queueing with RQ is deprecated in exchange for using Celery. Support for RQ will be removed entirely starting in Nautobot 2.0.
++/- 1.1.0
+    Using task queueing with RQ is deprecated in exchange for using Celery. Support for RQ will be removed entirely starting in Nautobot 2.0.
 
 Task queues are configured by defining them within the [`RQ_QUEUES`](#rq_queues) setting.
 
@@ -217,7 +220,7 @@ The default value for this setting defines the queues and instructs RQ to use th
 
 Please see the [official `django-rq` documentation on support for django-redis connection settings](https://github.com/rq/django-rq#support-for-django-redis-and-django-redis-cache) for more information.
 
-!!! note
++/- 1.1.0
     The `check_releases`, `custom_fields`, and `webhooks` queues are no longer in use by Nautobot but maintained here for backwards compatibility; they will be removed in Nautobot 2.0.
 
 Default:
@@ -307,11 +310,11 @@ In the event you do need to make customizations to how Celery interacts with the
 
 #### CELERY_BROKER_URL
 
-This setting tells Celery and its workers how and where to communicate with the message broker. The default value for this points to `redis://localhost:6379/0`. Please see the [optional settings documentation for `CELERY_BROKER_URL`](../optional-settings#celery_broker_url) for more information on customizing this setting.
+This setting tells Celery and its workers how and where to communicate with the message broker. The default value for this points to `redis://localhost:6379/0`. Please see the [optional settings documentation for `CELERY_BROKER_URL`](optional-settings.md#celery_broker_url) for more information on customizing this setting.
 
 #### CELERY_RESULT_BACKEND
 
-This setting tells Celery and its workers how and where to store message results. This defaults to the same value as `CELERY_BROKER_URL`. In some more advanced setups it may be required for these to be separate locations, however in our configuration guides these are always the same. Please see the [optional settings documentation for `CELERY_RESULT_BACKEND`](../optional-settings#celery_result_backend) for more information on customizing this setting.
+This setting tells Celery and its workers how and where to store message results. This defaults to the same value as `CELERY_BROKER_URL`. In some more advanced setups it may be required for these to be separate locations, however in our configuration guides these are always the same. Please see the [optional settings documentation for `CELERY_RESULT_BACKEND`](optional-settings.md#celery_result_backend) for more information on customizing this setting.
 
 #### Configuring Celery with TLS
 
@@ -333,7 +336,7 @@ Please see the celery [documentation](https://docs.celeryq.dev/en/stable/usergui
 
 #### Configuring Celery for High Availability
 
-High availability clustering of Redis for use with Celery can be performed using Redis Sentinel. Please see documentation section on configuring [Celery for Redis Sentinel](../../additional-features/caching#celery-sentinel-configuration) for more information.
+High availability clustering of Redis for use with Celery can be performed using Redis Sentinel. Please see documentation section on configuring [Celery for Redis Sentinel](../additional-features/caching.md#celery-sentinel-configuration) for more information.
 
 ---
 

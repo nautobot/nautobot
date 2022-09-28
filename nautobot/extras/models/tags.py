@@ -29,6 +29,9 @@ class TagQuerySet(RestrictedQuerySet):
         content_type = ContentType.objects.get_for_model(model._meta.concrete_model)
         return self.filter(content_types=content_type)
 
+    def get_by_natural_key(self, name):
+        return self.get(name=name)
+
 
 @extras_features(
     "custom_fields",
@@ -54,6 +57,9 @@ class Tag(TagBase, BaseModel, ChangeLoggedModel, CustomFieldModel, RelationshipM
     class Meta:
         ordering = ["name"]
 
+    def natural_key(self):
+        return (self.name,)
+
     def get_absolute_url(self):
         return reverse("extras:tag", args=[self.slug])
 
@@ -61,7 +67,7 @@ class Tag(TagBase, BaseModel, ChangeLoggedModel, CustomFieldModel, RelationshipM
         # Allow Unicode in Tag slugs (avoids empty slugs for Tags with all-Unicode names)
         slug = slugify(tag, allow_unicode=True)
         if i is not None:
-            slug += "_%d" % i
+            slug += f"_{i}"
         return slug
 
     def to_csv(self):

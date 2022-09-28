@@ -56,6 +56,8 @@ def update_custom_field_choice_data(field_id, old_value, new_value):
         logger.error(f"Unknown field type, failing to act on choice data for this field {field.name}.")
         return False
 
+    return True
+
 
 # 2.0 TODO: #824 rename field_name to field_slug
 @nautobot_task
@@ -99,6 +101,8 @@ def provision_field(field_id, content_type_pk_set):
                 # 2.0 TODO: #824 field.slug rather than field.name
                 obj._custom_field_data.setdefault(field.name, field.default)
                 obj.save()
+
+    return True
 
 
 @nautobot_task
@@ -165,11 +169,9 @@ def process_webhook(webhook_pk, data, model_name, event, timestamp, username, re
 
     if response.ok:
         logger.info("Request succeeded; response status %s", response.status_code)
-        return "Status {} returned, webhook successfully processed.".format(response.status_code)
+        return f"Status {response.status_code} returned, webhook successfully processed."
     else:
         logger.warning("Request failed; response status %s: %s", response.status_code, response.content)
         raise requests.exceptions.RequestException(
-            "Status {} returned with content '{}', webhook FAILED to process.".format(
-                response.status_code, response.content
-            )
+            f"Status {response.status_code} returned with content '{response.content}', webhook FAILED to process."
         )

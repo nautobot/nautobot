@@ -136,16 +136,16 @@ class ConfigContextView(generic.ObjectView):
     def get_extra_context(self, request, instance):
         # Determine user's preferred output format
         if request.GET.get("format") in ["json", "yaml"]:
-            format = request.GET.get("format")
+            format_ = request.GET.get("format")
             if request.user.is_authenticated:
-                request.user.set_config("extras.configcontext.format", format, commit=True)
+                request.user.set_config("extras.configcontext.format", format_, commit=True)
         elif request.user.is_authenticated:
-            format = request.user.get_config("extras.configcontext.format", "json")
+            format_ = request.user.get_config("extras.configcontext.format", "json")
         else:
-            format = "json"
+            format_ = "json"
 
         return {
-            "format": format,
+            "format": format_,
         }
 
 
@@ -180,18 +180,18 @@ class ObjectConfigContextView(generic.ObjectView):
 
         # Determine user's preferred output format
         if request.GET.get("format") in ["json", "yaml"]:
-            format = request.GET.get("format")
+            format_ = request.GET.get("format")
             if request.user.is_authenticated:
-                request.user.set_config("extras.configcontext.format", format, commit=True)
+                request.user.set_config("extras.configcontext.format", format_, commit=True)
         elif request.user.is_authenticated:
-            format = request.user.get_config("extras.configcontext.format", "json")
+            format_ = request.user.get_config("extras.configcontext.format", "json")
         else:
-            format = "json"
+            format_ = "json"
 
         return {
             "rendered_context": instance.get_config_context(),
             "source_contexts": source_contexts,
-            "format": format,
+            "format": format_,
             "base_template": self.base_template,
             "active_tab": "config-context",
         }
@@ -219,16 +219,16 @@ class ConfigContextSchemaView(generic.ObjectView):
     def get_extra_context(self, request, instance):
         # Determine user's preferred output format
         if request.GET.get("format") in ["json", "yaml"]:
-            format = request.GET.get("format")
+            format_ = request.GET.get("format")
             if request.user.is_authenticated:
-                request.user.set_config("extras.configcontextschema.format", format, commit=True)
+                request.user.set_config("extras.configcontextschema.format", format_, commit=True)
         elif request.user.is_authenticated:
-            format = request.user.get_config("extras.configcontextschema.format", "json")
+            format_ = request.user.get_config("extras.configcontextschema.format", "json")
         else:
-            format = "json"
+            format_ = "json"
 
         return {
-            "format": format,
+            "format": format_,
         }
 
 
@@ -391,23 +391,20 @@ class CustomFieldEditView(generic.ObjectEditView):
                     else:
                         raise RuntimeError(choices.errors)
                     # <--- END difference from ObjectEditView.post()
-
-                msg = "{} {}".format(
-                    "Created" if object_created else "Modified",
-                    self.queryset.model._meta.verbose_name,
-                )
+                verb = "Created" if object_created else "Modified"
+                msg = f"{verb} {self.queryset.model._meta.verbose_name}"
                 logger.info(f"{msg} {obj} (PK: {obj.pk})")
                 if hasattr(obj, "get_absolute_url"):
-                    msg = '{} <a href="{}">{}</a>'.format(msg, obj.get_absolute_url(), escape(obj))
+                    msg = f'{msg} <a href="{obj.get_absolute_url()}">{escape(obj)}</a>'
                 else:
-                    msg = "{} {}".format(msg, escape(obj))
+                    msg = f"{msg} {escape(obj)}"
                 messages.success(request, mark_safe(msg))
 
                 if "_addanother" in request.POST:
 
                     # If the object has clone_fields, pre-populate a new instance of the form
                     if hasattr(obj, "clone_fields"):
-                        url = "{}?{}".format(request.path, prepare_cloned_fields(obj))
+                        url = f"{request.path}?{prepare_cloned_fields(obj)}"
                         return redirect(url)
 
                     return redirect(request.get_full_path())
@@ -429,7 +426,8 @@ class CustomFieldEditView(generic.ObjectEditView):
                 form.add_error(None, msg)
             except ProtectedError as err:
                 # e.g. Trying to delete a choice that is in use.
-                protected_obj, err_msg = err.args
+                err_msg = err.args[0]
+                protected_obj = err.protected_objects[0]
                 msg = f"{protected_obj.value}: {err_msg} Please cancel this edit and start again."
                 logger.debug(msg)
                 form.add_error(None, msg)
@@ -637,23 +635,20 @@ class DynamicGroupEditView(generic.ObjectEditView):
                         children.save()
                     else:
                         raise RuntimeError(children.errors)
-
-                msg = "{} {}".format(
-                    "Created" if object_created else "Modified",
-                    self.queryset.model._meta.verbose_name,
-                )
+                verb = "Created" if object_created else "Modified"
+                msg = f"{verb} {self.queryset.model._meta.verbose_name}"
                 logger.info(f"{msg} {obj} (PK: {obj.pk})")
                 if hasattr(obj, "get_absolute_url"):
-                    msg = '{} <a href="{}">{}</a>'.format(msg, obj.get_absolute_url(), escape(obj))
+                    msg = f'{msg} <a href="{obj.get_absolute_url()}">{escape(obj)}</a>'
                 else:
-                    msg = "{} {}".format(msg, escape(obj))
+                    msg = f"{msg} {escape(obj)}"
                 messages.success(request, mark_safe(msg))
 
                 if "_addanother" in request.POST:
 
                     # If the object has clone_fields, pre-populate a new instance of the form
                     if hasattr(obj, "clone_fields"):
-                        url = "{}?{}".format(request.path, prepare_cloned_fields(obj))
+                        url = f"{request.path}?{prepare_cloned_fields(obj)}"
                         return redirect(url)
 
                     return redirect(request.get_full_path())
@@ -674,7 +669,8 @@ class DynamicGroupEditView(generic.ObjectEditView):
                 form.add_error(None, msg)
             except ProtectedError as err:
                 # e.g. Trying to delete a something that is in use.
-                protected_obj, err_msg = err.args
+                err_msg = err.args[0]
+                protected_obj = err.protected_objects[0]
                 msg = f"{protected_obj.value}: {err_msg} Please cancel this edit and start again."
                 logger.debug(msg)
                 form.add_error(None, msg)
@@ -703,6 +699,56 @@ class DynamicGroupDeleteView(generic.ObjectDeleteView):
 class DynamicGroupBulkDeleteView(generic.BulkDeleteView):
     queryset = DynamicGroup.objects.all()
     table = tables.DynamicGroupTable
+
+
+class ObjectDynamicGroupsView(View):
+    """
+    Present a list of dynamic groups associated to a particular object.
+    base_template: The name of the template to extend. If not provided, "<app>/<model>.html" will be used.
+    """
+
+    base_template = None
+
+    def get(self, request, model, **kwargs):
+
+        # Handle QuerySet restriction of parent object if needed
+        if hasattr(model.objects, "restrict"):
+            obj = get_object_or_404(model.objects.restrict(request.user, "view"), **kwargs)
+        else:
+            obj = get_object_or_404(model, **kwargs)
+
+        # Gather all dynamic groups for this object (and its related objects)
+        dynamicsgroups_table = tables.DynamicGroupTable(data=obj.dynamic_groups, orderable=False)
+
+        # Apply the request context
+        paginate = {
+            "paginator_class": EnhancedPaginator,
+            "per_page": get_paginate_count(request),
+        }
+        RequestConfig(request, paginate).configure(dynamicsgroups_table)
+
+        # Default to using "<app>/<model>.html" as the template, if it exists. Otherwise,
+        # fall back to using base.html.
+        if self.base_template is None:
+            self.base_template = f"{model._meta.app_label}/{model._meta.model_name}.html"
+            # TODO: This can be removed once an object view has been established for every model.
+            try:
+                template.loader.get_template(self.base_template)
+            except template.TemplateDoesNotExist:
+                self.base_template = "base.html"
+
+        return render(
+            request,
+            "extras/object_dynamicgroups.html",
+            {
+                "object": obj,
+                "verbose_name": obj._meta.verbose_name,
+                "verbose_name_plural": obj._meta.verbose_name_plural,
+                "table": dynamicsgroups_table,
+                "base_template": self.base_template,
+                "active_tab": "dynamic-groups",
+            },
+        )
 
 
 #
@@ -1090,6 +1136,13 @@ class JobView(ObjectPermissionRequiredMixin, View):
             messages.error(request, "Unable to run or schedule job: Job is not enabled to be run.")
         elif job_model.has_sensitive_variables and request.POST["_schedule_type"] != JobExecutionType.TYPE_IMMEDIATELY:
             messages.error(request, "Unable to schedule job: Job may have sensitive input variables.")
+        elif job_model.has_sensitive_variables and job_model.approval_required:
+            messages.error(
+                request,
+                "Unable to run or schedule job: "
+                "This job is flagged as possibly having sensitive variables but is also flagged as requiring approval."
+                "One of these two flags must be removed before this job can be scheduled or run.",
+            )
         elif job_form is not None and job_form.is_valid() and schedule_form.is_valid():
             # Run the job. A new JobResult is created.
             commit = job_form.cleaned_data.pop("_commit")
@@ -1165,7 +1218,7 @@ class JobView(ObjectPermissionRequiredMixin, View):
                     commit=commit,
                 )
 
-                return redirect("extras:job_jobresult", pk=job_result.pk)
+                return redirect("extras:jobresult", pk=job_result.pk)
 
         template_name = "extras/job.html"
         if job_model.job_class is not None and hasattr(job_model.job_class, "template_name"):
@@ -1281,7 +1334,7 @@ class JobApprovalRequestView(generic.ObjectView):
                     commit=False,  # force a dry-run
                 )
 
-                return redirect("extras:job_jobresult", pk=job_result.pk)
+                return redirect("extras:jobresult", pk=job_result.pk)
         elif deny:
             if not (
                 self.queryset.check_perms(request.user, instance=scheduled_job, action="delete")
@@ -1358,22 +1411,17 @@ class ScheduledJobApprovalQueueListView(generic.ObjectListView):
 class ScheduledJobView(generic.ObjectView):
     queryset = ScheduledJob.objects.all()
 
-    def _get_job(self, class_path):
-        job_class = get_job(class_path)
-        if job_class is None:
-            raise Http404
-        return job_class
-
     def get_extra_context(self, request, instance):
-        job_class = self._get_job(instance.job_class)
+        job_class = get_job(instance.job_class)
         labels = {}
-        for name, var in job_class._get_vars().items():
-            field = var.as_field()
-            if field.label:
-                labels[name] = var
-            else:
-                labels[name] = pretty_name(name)
-        return {"labels": labels}
+        if job_class is not None:
+            for name, var in job_class._get_vars().items():
+                field = var.as_field()
+                if field.label:
+                    labels[name] = var
+                else:
+                    labels[name] = pretty_name(name)
+        return {"labels": labels, "job_class_found": (job_class is not None)}
 
 
 class ScheduledJobDeleteView(generic.ObjectDeleteView):
@@ -1445,7 +1493,7 @@ class JobResultView(generic.ObjectView):
     Display a JobResult and its Job data.
     """
 
-    queryset = JobResult.objects.all()
+    queryset = JobResult.objects.prefetch_related("job_model", "obj_type", "user")
     template_name = "extras/jobresult.html"
 
     def get_extra_context(self, request, instance):
@@ -1738,13 +1786,13 @@ class SecretView(generic.ObjectView):
     def get_extra_context(self, request, instance):
         # Determine user's preferred output format
         if request.GET.get("format") in ["json", "yaml"]:
-            format = request.GET.get("format")
+            format_ = request.GET.get("format")
             if request.user.is_authenticated:
-                request.user.set_config("extras.configcontext.format", format, commit=True)
+                request.user.set_config("extras.configcontext.format", format_, commit=True)
         elif request.user.is_authenticated:
-            format = request.user.get_config("extras.configcontext.format", "json")
+            format_ = request.user.get_config("extras.configcontext.format", "json")
         else:
-            format = "json"
+            format_ = "json"
 
         provider = registry["secrets_providers"].get(instance.provider)
 
@@ -1752,7 +1800,7 @@ class SecretView(generic.ObjectView):
         groups_table = tables.SecretsGroupTable(groups, orderable=False)
 
         return {
-            "format": format,
+            "format": format_,
             "provider_name": provider.name if provider else instance.provider,
             "groups_table": groups_table,
         }
@@ -1849,23 +1897,20 @@ class SecretsGroupEditView(generic.ObjectEditView):
                         secrets.save()
                     else:
                         raise RuntimeError(secrets.errors)
-
-                msg = "{} {}".format(
-                    "Created" if object_created else "Modified",
-                    self.queryset.model._meta.verbose_name,
-                )
+                verb = "Created" if object_created else "Modified"
+                msg = f"{verb} {self.queryset.model._meta.verbose_name}"
                 logger.info(f"{msg} {obj} (PK: {obj.pk})")
                 if hasattr(obj, "get_absolute_url"):
-                    msg = '{} <a href="{}">{}</a>'.format(msg, obj.get_absolute_url(), escape(obj))
+                    msg = f'{msg} <a href="{obj.get_absolute_url()}">{escape(obj)}</a>'
                 else:
-                    msg = "{} {}".format(msg, escape(obj))
+                    msg = f"{msg} {escape(obj)}"
                 messages.success(request, mark_safe(msg))
 
                 if "_addanother" in request.POST:
 
                     # If the object has clone_fields, pre-populate a new instance of the form
                     if hasattr(obj, "clone_fields"):
-                        url = "{}?{}".format(request.path, prepare_cloned_fields(obj))
+                        url = f"{request.path}?{prepare_cloned_fields(obj)}"
                         return redirect(url)
 
                     return redirect(request.get_full_path())
@@ -1886,7 +1931,8 @@ class SecretsGroupEditView(generic.ObjectEditView):
                 form.add_error(None, msg)
             except ProtectedError as err:
                 # e.g. Trying to delete a choice that is in use.
-                protected_obj, err_msg = err.args
+                err_msg = err.args[0]
+                protected_obj = err.protected_objects[0]
                 msg = f"{protected_obj.value}: {err_msg} Please cancel this edit and start again."
                 logger.debug(msg)
                 form.add_error(None, msg)

@@ -1,4 +1,4 @@
-<!-- markdownlint-disable MD024 -->
+<!-- markdownlint-disable MD012 MD024 -->
 
 # Nautobot v1.4
 
@@ -12,7 +12,7 @@ If you are a user migrating from NetBox to Nautobot, please refer to the ["Migra
 
 #### Custom Field Extended Filtering ([#1498](https://github.com/nautobot/nautobot/issues/1498))
 
-Objects with custom fields now support [filter lookup expressions](../../rest-api/filtering/#lookup-expressions) for filtering by custom field values, such as `cf_date_field__gte=2022-08-11` to select objects whose `date_field` custom field has a date of 2022-08-11 or later.
+Objects with custom fields now support [filter lookup expressions](../rest-api/filtering.md#lookup-expressions) for filtering by custom field values, such as `cf_date_field__gte=2022-08-11` to select objects whose `date_field` custom field has a date of 2022-08-11 or later.
 
 #### Custom Field Slugs ([#1962](https://github.com/nautobot/nautobot/issues/1962))
 
@@ -53,7 +53,7 @@ The "Theme" link in the footer provides a modal popup to select the preferred th
 
 The DCIM, Virtualization FilterSets have been updated with over 150 new filters, including hybrid filters that support filtering on both `pk` and `slug` (or `pk` and `name` where `slug` is not available). A new filter class `NaturalKeyOrPKMultipleChoiceFilter` was added to `nautobot.utilities.filters` to support filtering on multiple fields of a related object.
 
-Please see the documentation on [best practices for mapping model fields to filters](../../development/best-practices/#mapping-model-fields-to-filters) for more information.
+Please see the documentation on [best practices for mapping model fields to filters](../development/best-practices.md#mapping-model-fields-to-filters) for more information.
 
 #### Job Hooks ([#1878](https://github.com/nautobot/nautobot/issues/1878))
 
@@ -96,7 +96,7 @@ Interface and VMInterface models now support a status. Default statuses that are
 
 A new version of the `/dcim/interfaces/*` REST API endpoints have been implemented. By default this endpoint continues to demonstrate the pre-1.4 behavior unless the REST API client explicitly requests API version=1.4. If you continue to use the pre-1.4 API endpoints, status is defaulted to "Active".
 
-Visit the documentation on [REST API versioning](../../rest-api/overview/#versioning) for more information on using the versioned APIs.
+Visit the documentation on [REST API versioning](../rest-api/overview.md#versioning) for more information on using the versioned APIs.
 
 #### NautobotUIViewSet ([#1812](https://github.com/nautobot/nautobot/issues/1812))
 
@@ -106,7 +106,7 @@ Note that this ViewSet is catered specifically to the UI, not the API.
 
 Concrete examples on how to use `NautobotUIViewSet` resides in `nautobot.circuits.views`.
 
-Please visit the [plugin development guide on `NautobotViewSet`](../../plugins/development/#nautobotuiviewset) for more information.
+Please visit the [plugin development guide on `NautobotViewSet`](../plugins/development.md#nautobotuiviewset) for more information.
 
 #### Notes ([#767](https://github.com/nautobot/nautobot/issues/767))
 
@@ -120,7 +120,7 @@ Notes can also be used via the REST API at endpoint `/api/extras/notes/` or per 
 !!! info
     For implementers of REST API views (core and/or plugins), a new `nautobot.extras.api.views.NautobotModelViewSet` base class has been added. Use of this class ensures that all features from `PrimaryModel` or `OrganizationalModel` are accessible through the API. This includes custom fields and notes.
 
-Please see the on [plugin development guide on Notes](../../plugins/development/#note-url-endpoint) for more details.
+Please see the on [plugin development guide on Notes](../plugins/development.md#note-url-endpoint) for more details.
 
 ### Changed
 
@@ -161,15 +161,104 @@ A new configuration setting, [`STRICT_FILTERING`](../configuration/optional-sett
 
 The `settings_and_registry` default context processor was changed to purely `settings` - the (large) Nautobot application registry dictionary is no longer provided as part of the render context for all templates by default. Added a new `registry` template tag that can be invoked by specific templates to provide this variable where needed.
 
-## v1.4.2 (2022-MM-DD)
+<!-- towncrier release notes start -->
+## v1.4.4 (2022-09-26)
+
+### Added
+
+- [#2023](https://github.com/nautobot/nautobot/issues/2023) - Added reusable GitHub Action workflow for use by plugins to test against `next`, `develop` routinely.
+
+### Changed
+
+- [#2153](https://github.com/nautobot/nautobot/issues/2153) - Updated optional settings documentation to provide clarity on Nautobot vs Django settings.
+- [#2235](https://github.com/nautobot/nautobot/issues/2235) - Added ancestor information to Location and LocationType display names to provide additional context in the UI.
+- [#2457](https://github.com/nautobot/nautobot/issues/2457) - Moved `towncrier_template.j2` from root to develop directory.
+- [#2468](https://github.com/nautobot/nautobot/issues/2468) - Upgraded CI gh-action-setup-poetry-environment action to v3
+
+### Fixed
+
+- [#2353](https://github.com/nautobot/nautobot/issues/2353) - Fixed MultiSelect CustomField being emptied unintentionally after bulk update.
+- [#2375](https://github.com/nautobot/nautobot/issues/2375) - Fixed error in Cable list view filtering when `color` and `type` filters are not set.
+- [#2461](https://github.com/nautobot/nautobot/issues/2461) - Fixed an exception during OpenAPI schema generation when certain Nautobot apps (including `nautobot-firewall-models`) were installed.
+- [#2496](https://github.com/nautobot/nautobot/pull/2496) - Fixed failing CI due to #2468
+
+
+## v1.4.3 (2022-09-19)
+
+### Added
+
+- [#2327](https://github.com/nautobot/nautobot/issues/2327) - Added help text to the Job scheduling datetime picker to indicate the applicable time zone.
+- [#2362](https://github.com/nautobot/nautobot/issues/2362) - Added documentation and automation for Nautobot Github project to use `towncrier` for changelog fragments.
+- [#2431](https://github.com/nautobot/nautobot/issues/2431) - Add section to the custom field documentation on ORM filtering.
+
+### Changed
+
+- [#1619](https://github.com/nautobot/nautobot/issues/1619) - Updated `drf-spectacular` dependency to version 0.24.
+- [#2223](https://github.com/nautobot/nautobot/issues/2223) - Augment `get_route_for_model()` to support REST API routes.
+- [#2340](https://github.com/nautobot/nautobot/issues/2340) - Improved rendering of badges, labels, buttons, and color selection menus in dark mode.
+- [#2383](https://github.com/nautobot/nautobot/issues/2383) - Updated documentation link for Nautobot ChatOps plugin.
+- [#2392](https://github.com/nautobot/nautobot/issues/2392) - Un-group Renovate `next` updates to address code changes per package.
+- [#2400](https://github.com/nautobot/nautobot/issues/2400) - Improved formatting of version changes in the documentation.
+- [#2417](https://github.com/nautobot/nautobot/issues/2417) - Reworked Docker builds in CI to publish an intermediate "dependencies-only" image to speed up rebuild times.
+- [#2447](https://github.com/nautobot/nautobot/issues/2447) - Moved Dynamic Groups tab on object detail view to it's own view as a generic `ObjectDynamicGroupsView`.
+
+### Fixed
+
+- [#138](https://github.com/nautobot/nautobot/issues/138) - Fixed lack of user-facing message when an exception occurs while discovering Jobs from a Git repository.
+- [#950](https://github.com/nautobot/nautobot/issues/950) - Fixed database concurrency issues with uWSGI pre-forking.
+- [#1619](https://github.com/nautobot/nautobot/issues/1619) - Improved accuracy of OpenAPI schema for bulk REST API operations.
+- [#2299](https://github.com/nautobot/nautobot/issues/2299) - Remove `render_filter()` method and `filter` field from table columns
+- [#2309](https://github.com/nautobot/nautobot/issues/2309) - Fixed 404 on ScheduledJobView, `job_class` no longer found behavior.
+- [#2324](https://github.com/nautobot/nautobot/issues/2324) - Fixed errors encountered when a job model is deleted while a job is running.
+- [#2338](https://github.com/nautobot/nautobot/issues/2338) - Fixed whitespace issue with Text File secrets and they are now stripped of leading/trailing whitespace and newlines.
+- [#2364](https://github.com/nautobot/nautobot/issues/2364) - Allow `invoke` tasks to be run even if `rich` is not installed.
+- [#2378](https://github.com/nautobot/nautobot/issues/2378) - Fix Job Result redirection on submit.
+- [#2382](https://github.com/nautobot/nautobot/issues/2382) - Removed extraneous cache and temporary files from the `dev` and `final-dev` Docker images to reduce image size.
+- [#2389](https://github.com/nautobot/nautobot/issues/2389) - Removed extraneous `inspect.getsource()` call from Job class.
+- [#2407](https://github.com/nautobot/nautobot/issues/2407) - Corrected SSO Backend reference for Azure AD Tenant.
+- [#2449](https://github.com/nautobot/nautobot/issues/2449) - CI: Moved dependency build to be a job, not a step.
+
+
+## v1.4.2 (2022-09-05)
 
 ### Added
 
 - [#983](https://github.com/nautobot/nautobot/issues/983) - Added functionalities to specify `args` and `kwargs` to `NavMenuItem`.
+- [#2250](https://github.com/nautobot/nautobot/issues/2250) - Added "Stats" and "Rack Groups" to Location detail view, added "Locations" to Site detail view.
+- [#2273](https://github.com/nautobot/nautobot/issues/2273) - Added custom markdownlint rule to check for invalid relative links in the documentation.
+- [#2307](https://github.com/nautobot/nautobot/issues/2307) - Added `dynamic_groups` field in GraphQL on objects that can belong to dynamic groups.
+- [#2314](https://github.com/nautobot/nautobot/pull/2314) - Added `pylint` to linting suite and CI.
+- [#2339](https://github.com/nautobot/nautobot/pull/2339) - Enabled and addressed additional `pylint` checkers.
+- [#2360](https://github.com/nautobot/nautobot/pull/2360) - Added Django natural key to `extras.Tag`.
 
 ### Changed
 
+- [#2011](https://github.com/nautobot/nautobot/issues/2011) - replaced all .format() strings and C format strings with fstrings.
+- [#2293](https://github.com/nautobot/nautobot/pull/2293) - Updated GitHub bug report template.
+- [#2296](https://github.com/nautobot/nautobot/pull/2296) - Updated `netutils` dependency from 1.1.x to 1.2.x.
+- [#2347](https://github.com/nautobot/nautobot/pull/2347) - Revamped documentation look and feel.
+- [#2349](https://github.com/nautobot/nautobot/pull/2349) - Docker images are now built with Poetry 1.2.0.
+- [#2360](https://github.com/nautobot/nautobot/pull/2360) - Django natural key for Status is now `name` rather than `slug`.
+- [#2363](https://github.com/nautobot/nautobot/pull/2363) - Update app icons for consistency
+- [#2365](https://github.com/nautobot/nautobot/pull/2365) - Update Network to Code branding name
+- [#2367](https://github.com/nautobot/nautobot/pull/2367) - Remove coming soon from projects that exists
+
 ### Fixed
+
+- [#449](https://github.com/nautobot/nautobot/issues/449) - Improved error checking and reporting when syncing Git repositories.
+- [#1227](https://github.com/nautobot/nautobot/issues/1227) - The NAUTOBOT_DOCKER_SKIP_INIT environment variable can now be set to "false" (case-insensitive),
+- [#1807](https://github.com/nautobot/nautobot/issues/1807) - Fixed post_run method fails to add exceptions to job log.
+- [#2085](https://github.com/nautobot/nautobot/issues/2085) - The log entries table on a job result page can now be filtered by log level or message and hitting the return key has no effect.
+- [#2107](https://github.com/nautobot/nautobot/issues/2107) - Fixed a TypeError when a view defines `action_buttons = None`.
+- [#2237](https://github.com/nautobot/nautobot/issues/2237) - Fixed several issues with permissions enforcement for Note creation and viewing.
+- [#2268](https://github.com/nautobot/nautobot/pull/2268) - Fixed broken links in documentation.
+- [#2269](https://github.com/nautobot/nautobot/issues/2269) - Fixed missing JS code causing rendering errors on GraphQL Query and Rack Reservation detail views.
+- [#2278](https://github.com/nautobot/nautobot/issues/2278) - Fixed incorrect permissions check on "Installed Plugins" menu item.
+- [#2290](https://github.com/nautobot/nautobot/issues/2290) - Fixed inheritance of ObjectListViewMixin for CircuitTypeUIViewSet.
+- [#2311](https://github.com/nautobot/nautobot/issues/2311) - Fixed autopopulation of "Parent" selection when editing an existing Location.
+- [#2341](https://github.com/nautobot/nautobot/issues/2341) - Fixed omission of docs from published Python packages.
+- [#2342](https://github.com/nautobot/nautobot/issues/2342) - Reduced file size of `nautobot-dev` Docker images by clearing Poetry cache
+- [#2350](https://github.com/nautobot/nautobot/issues/2350) - Fixed potential Redis deadlock if Nautobot server restarts at an unfortunate time.
 
 ## v1.4.1 (2022-08-22)
 
@@ -350,3 +439,5 @@ The `settings_and_registry` default context processor was changed to purely `set
 
 - [#1815](https://github.com/nautobot/nautobot/issues/1815) - Fix theme link style in footer.
 - [#1831](https://github.com/nautobot/nautobot/issues/1831) - Fixed missing `parent_interface` and `bridge` from 1.4 serializer of Interfaces.
+- [#1831](https://github.com/nautobot/nautobot/issues/2380) - Fix job from with `approval_required=True` and `has_sensitive_variables=True` can be scheduled.
+.

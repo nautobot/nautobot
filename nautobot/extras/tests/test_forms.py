@@ -139,11 +139,11 @@ class JobHookFormTestCase(TestCase):
 
         self.assertEqual(JobHook.objects.filter(name=self.job_hooks_data[3]["name"]).count(), 0)
         self.assertIn("type_create", error_msg)
-        self.assertEquals(
+        self.assertEqual(
             error_msg["type_create"][0]["message"],
             "A job hook already exists for create on dcim | device type to job TestJobHookReceiverLog",
         )
-        self.assertEquals(
+        self.assertEqual(
             error_msg["type_update"][0]["message"],
             "A job hook already exists for update on dcim | device type to job TestJobHookReceiverLog",
         )
@@ -994,11 +994,11 @@ class WebhookFormTestCase(TestCase):
 
         self.assertEqual(Webhook.objects.filter(name=self.webhooks_data[2]["name"]).count(), 0)
         self.assertIn("type_create", error_msg)
-        self.assertEquals(
+        self.assertEqual(
             error_msg["type_create"][0]["message"],
             "A webhook already exists for create on dcim | console port to URL http://example.com/test",
         )
-        self.assertEquals(
+        self.assertEqual(
             error_msg["type_update"][0]["message"],
             "A webhook already exists for update on dcim | console port to URL http://example.com/test",
         )
@@ -1036,7 +1036,7 @@ class DeprecatedAliasesTestCase(TestCase):
                     # Ensure that warnings are always triggered
                     warnings.simplefilter("always")
 
-                    class MyForm(deprecated_form_class):
+                    class MyForm(deprecated_form_class):  # pylint: disable=unused-variable
                         pass
 
                     self.assertEqual(len(warn_list), 1)
@@ -1051,7 +1051,7 @@ class DeprecatedAliasesTestCase(TestCase):
                     # Ensure that warnings are always triggered
                     warnings.simplefilter("always")
 
-                    class MyBetterForm(replacement_form_class):
+                    class MyBetterForm(replacement_form_class):  # pylint: disable=unused-variable
                         pass
 
                     self.assertEqual(len(warn_list), 0)

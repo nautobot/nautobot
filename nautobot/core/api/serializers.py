@@ -199,9 +199,9 @@ class WritableNestedSerializer(BaseModelSerializer):
             try:
                 return queryset.get(**params)
             except ObjectDoesNotExist:
-                raise ValidationError("Related object not found using the provided attributes: {}".format(params))
+                raise ValidationError(f"Related object not found using the provided attributes: {params}")
             except MultipleObjectsReturned:
-                raise ValidationError("Multiple objects match the provided attributes: {}".format(params))
+                raise ValidationError(f"Multiple objects match the provided attributes: {params}")
             except FieldError as e:
                 raise ValidationError(e)
 
@@ -215,7 +215,7 @@ class WritableNestedSerializer(BaseModelSerializer):
             except (TypeError, ValueError):
                 raise ValidationError(
                     "Related objects must be referenced by ID or by dictionary of attributes. Received an "
-                    "unrecognized value: {}".format(data)
+                    f"unrecognized value: {data}"
                 )
 
         else:
@@ -228,17 +228,27 @@ class WritableNestedSerializer(BaseModelSerializer):
             except (TypeError, ValueError):
                 raise ValidationError(
                     "Related objects must be referenced by ID or by dictionary of attributes. Received an "
-                    "unrecognized value: {}".format(data)
+                    f"unrecognized value: {data}"
                 )
 
         try:
             return queryset.get(pk=pk)
         except ObjectDoesNotExist:
-            raise ValidationError("Related object not found using the provided ID: {}".format(pk))
+            raise ValidationError(f"Related object not found using the provided ID: {pk}")
 
 
 class BulkOperationSerializer(serializers.Serializer):
-    id = serializers.CharField()  # This supports both UUIDs and numeric ID for the User model
+    """
+    Representation of bulk-DELETE request for most models; also used to validate required ID field for bulk-PATCH/PUT.
+    """
+
+    id = serializers.UUIDField()
+
+
+class BulkOperationIntegerIDSerializer(serializers.Serializer):
+    """As BulkOperationSerializer, but for models such as users.Group that have an integer ID field."""
+
+    id = serializers.IntegerField()
 
 
 #

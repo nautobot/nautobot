@@ -1,5 +1,4 @@
 import django_tables2 as tables
-from django.conf import settings
 from django.contrib.auth.models import AnonymousUser
 from django.contrib.contenttypes.fields import GenericForeignKey
 from django.contrib.contenttypes.models import ContentType
@@ -14,6 +13,7 @@ from django_tables2.utils import Accessor
 
 from nautobot.extras.models import ComputedField, CustomField
 from nautobot.extras.choices import CustomFieldTypeChoices
+from nautobot.utilities.utils import get_route_for_model
 
 from .templatetags.helpers import render_boolean
 
@@ -35,7 +35,7 @@ class BaseTable(tables.Table):
         obj_type = ContentType.objects.get_for_model(self._meta.model)
 
         for cf in CustomField.objects.filter(content_types=obj_type):
-            name = "cf_{}".format(cf.slug)
+            name = f"cf_{cf.slug}"
             self.base_columns[name] = CustomFieldColumn(cf)
 
         for cpf in ComputedField.objects.filter(content_type=obj_type):
@@ -49,8 +49,8 @@ class BaseTable(tables.Table):
             self.empty_text = f"No {self._meta.model._meta.verbose_name_plural} found"
 
         # Hide non-default columns
-        default_columns = list(getattr(self.Meta, "default_columns", list()))
-        extra_columns = [c[0] for c in kwargs.get("extra_columns", list())]  # extra_columns is a list of tuples
+        default_columns = list(getattr(self.Meta, "default_columns", []))
+        extra_columns = [c[0] for c in kwargs.get("extra_columns", [])]  # extra_columns is a list of tuples
         if default_columns:
             for column in self.columns:
                 if column.name not in default_columns and column.name not in extra_columns:
@@ -167,17 +167,17 @@ class ButtonsColumn(tables.TemplateColumn):
     # Note that braces are escaped to allow for string formatting prior to template rendering
     template_code = """
     {{% if "changelog" in buttons %}}
-        <a href="{{% url '{prefix}{app_label}:{model_name}_changelog' {pk_field}=record.{pk_field} %}}" class="btn btn-default btn-xs" title="Change log">
+        <a href="{{% url '{changelog_route}' {pk_field}=record.{pk_field} %}}" class="btn btn-default btn-xs" title="Change log">
             <i class="mdi mdi-history"></i>
         </a>
     {{% endif %}}
     {{% if "edit" in buttons and perms.{app_label}.change_{model_name} %}}
-        <a href="{{% url '{prefix}{app_label}:{model_name}_edit' {pk_field}=record.{pk_field} %}}?return_url={{{{ request.path }}}}{{{{ return_url_extra }}}}" class="btn btn-xs btn-warning" title="Edit">
+        <a href="{{% url '{edit_route}' {pk_field}=record.{pk_field} %}}?return_url={{{{ request.path }}}}{{{{ return_url_extra }}}}" class="btn btn-xs btn-warning" title="Edit">
             <i class="mdi mdi-pencil"></i>
         </a>
     {{% endif %}}
     {{% if "delete" in buttons and perms.{app_label}.delete_{model_name} %}}
-        <a href="{{% url '{prefix}{app_label}:{model_name}_delete' {pk_field}=record.{pk_field} %}}?return_url={{{{ request.path }}}}{{{{ return_url_extra }}}}" class="btn btn-xs btn-danger" title="Delete">
+        <a href="{{% url '{delete_route}' {pk_field}=record.{pk_field} %}}?return_url={{{{ request.path }}}}{{{{ return_url_extra }}}}" class="btn btn-xs btn-danger" title="Delete">
             <i class="mdi mdi-trash-can-outline"></i>
         </a>
     {{% endif %}}
@@ -199,12 +199,16 @@ class ButtonsColumn(tables.TemplateColumn):
             self.template_code = prepend_template + self.template_code
 
         app_label = model._meta.app_label
-        prefix = "plugins:" if app_label in settings.PLUGINS else ""
+        changelog_route = get_route_for_model(model, "changelog")
+        edit_route = get_route_for_model(model, "edit")
+        delete_route = get_route_for_model(model, "delete")
 
         template_code = self.template_code.format(
-            prefix=prefix,
             app_label=app_label,
             model_name=model._meta.model_name,
+            changelog_route=changelog_route,
+            edit_route=edit_route,
+            delete_route=delete_route,
             pk_field=pk_field,
             buttons=buttons,
         )
@@ -218,7 +222,7 @@ class ButtonsColumn(tables.TemplateColumn):
             }
         )
 
-    def header(self):
+    def header(self):  # pylint: disable=invalid-overridden-method
         return ""
 
 
@@ -228,7 +232,7 @@ class ChoiceFieldColumn(tables.Column):
     choices. The CSS class is derived by calling .get_FOO_class() on the row record.
     """
 
-    def render(self, record, bound_column, value):
+    def render(self, record, bound_column, value):  # pylint: disable=arguments-differ
         if value:
             name = bound_column.name
             css_class = getattr(record, f"get_{name}_class")()
@@ -275,7 +279,7 @@ class LinkedCountColumn(tables.Column):
         self.url_params = url_params
         super().__init__(*args, default=default, **kwargs)
 
-    def render(self, record, value):
+    def render(self, record, value):  # pylint: disable=arguments-differ
         if value:
             url = reverse(self.viewname, kwargs=self.view_kwargs)
             if self.url_params:
@@ -362,7 +366,7 @@ class CustomFieldColumn(tables.Column):
 
         super().__init__(*args, **kwargs)
 
-    def render(self, record, bound_column, value):
+    def render(self, record, bound_column, value):  # pylint: disable=arguments-differ
         if value is None:
             return self.default
 

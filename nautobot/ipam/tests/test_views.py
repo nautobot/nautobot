@@ -36,9 +36,9 @@ class VRFTestCase(ViewTestCases.PrimaryObjectViewTestCase):
             Tenant.objects.create(name="Tenant B", slug="tenant-b"),
         )
 
-        VRF.objects.create(name="VRF 1", rd="65000:1"),
-        VRF.objects.create(name="VRF 2", rd="65000:2"),
-        VRF.objects.create(name="VRF 3", rd="65000:3"),
+        VRF.objects.create(name="VRF 1", rd="65000:1")
+        VRF.objects.create(name="VRF 2", rd="65000:2")
+        VRF.objects.create(name="VRF 3", rd="65000:3")
 
         tags = cls.create_tags("Alpha", "Bravo", "Charlie")
 
@@ -78,9 +78,9 @@ class RouteTargetTestCase(ViewTestCases.PrimaryObjectViewTestCase):
 
         tags = cls.create_tags("Alpha", "Bravo", "Charlie")
 
-        RouteTarget.objects.create(name="65000:1001", tenant=tenants[0]),
-        RouteTarget.objects.create(name="65000:1002", tenant=tenants[1]),
-        RouteTarget.objects.create(name="65000:1003"),
+        RouteTarget.objects.create(name="65000:1001", tenant=tenants[0])
+        RouteTarget.objects.create(name="65000:1002", tenant=tenants[1])
+        RouteTarget.objects.create(name="65000:1003")
 
         cls.form_data = {
             "name": "65000:100",
@@ -145,9 +145,9 @@ class AggregateTestCase(ViewTestCases.PrimaryObjectViewTestCase):
             RIR.objects.create(name="RIR 2", slug="rir-2"),
         )
 
-        Aggregate.objects.create(prefix=IPNetwork("10.1.0.0/16"), rir=rirs[0]),
-        Aggregate.objects.create(prefix=IPNetwork("10.2.0.0/16"), rir=rirs[0]),
-        Aggregate.objects.create(prefix=IPNetwork("10.3.0.0/16"), rir=rirs[0]),
+        Aggregate.objects.create(prefix=IPNetwork("10.1.0.0/16"), rir=rirs[0])
+        Aggregate.objects.create(prefix=IPNetwork("10.2.0.0/16"), rir=rirs[0])
+        Aggregate.objects.create(prefix=IPNetwork("10.3.0.0/16"), rir=rirs[0])
 
         tags = cls.create_tags("Alpha", "Bravo", "Charlie")
 
@@ -475,7 +475,7 @@ class VLANTestCase(ViewTestCases.PrimaryObjectViewTestCase):
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     def test_queryset_to_csv(self):
         """This view has a custom queryset_to_csv() implementation."""
-        response = self.client.get("{}?export".format(self._get_url("list")))
+        response = self.client.get(f"{self._get_url('list')}?export")
         self.assertHttpStatus(response, 200)
         self.assertEqual(response.get("Content-Type"), "text/csv")
         self.assertEqual(

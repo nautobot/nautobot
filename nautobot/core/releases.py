@@ -21,7 +21,7 @@ def get_latest_release(pre_releases=False):
         try:
             latest_release = cache.get("latest_release")
             if latest_release:
-                logger.debug("Found cached release: {}".format(latest_release))
+                logger.debug(f"Found cached release: {latest_release}")
                 return latest_release
         except CacheMiss:
             # Get the releases in the background worker, it will fill the cache

@@ -15,7 +15,6 @@ from nautobot.extras.utils import FeatureQuery
 from nautobot.ipam.models import VLAN, VLANGroup
 from nautobot.tenancy.filters import TenancyFilterSet
 from nautobot.tenancy.models import Tenant
-from nautobot.utilities.choices import ColorChoices
 from nautobot.utilities.filters import (
     BaseFilterSet,
     ContentTypeMultipleChoiceFilter,
@@ -1300,7 +1299,7 @@ class InterfaceFilterSet(
 
     def filter_device(self, queryset, name, value):
         try:
-            devices = Device.objects.filter(**{"{}__in".format(name): value})
+            devices = Device.objects.filter(**{f"{name}__in": value})
             vc_interface_ids = []
             for device in devices:
                 vc_interface_ids.extend(device.vc_interfaces.values_list("id", flat=True))
@@ -1541,13 +1540,17 @@ class VirtualChassisFilterSet(NautobotFilterSet):
 class CableFilterSet(NautobotFilterSet, StatusModelFilterSetMixin):
     q = SearchFilter(filter_predicates={"label": "icontains"})
     type = django_filters.MultipleChoiceFilter(choices=CableTypeChoices)
-    color = django_filters.MultipleChoiceFilter(choices=ColorChoices)
+    color = MultiValueCharFilter()
     device_id = MultiValueUUIDFilter(method="filter_device", label="Device (ID)")
     device = MultiValueCharFilter(method="filter_device", field_name="device__name", label="Device (name)")
     rack_id = MultiValueUUIDFilter(method="filter_device", field_name="device__rack_id", label="Rack (ID)")
     rack = MultiValueCharFilter(method="filter_device", field_name="device__rack__name", label="Rack (name)")
     site_id = MultiValueUUIDFilter(method="filter_device", field_name="device__site_id", label="Site (ID)")
     site = MultiValueCharFilter(method="filter_device", field_name="device__site__slug", label="Site (name)")
+    region_id = MultiValueUUIDFilter(method="filter_device", field_name="device__site__region_id", label="Region (ID)")
+    region = MultiValueCharFilter(
+        method="filter_device", field_name="device__site__region__slug", label="Region (name)"
+    )
     tenant_id = MultiValueUUIDFilter(method="filter_device", field_name="device__tenant_id", label="Tenant (ID)")
     tenant = MultiValueCharFilter(method="filter_device", field_name="device__tenant__slug", label="Tenant (name)")
     termination_a_type = ContentTypeMultipleChoiceFilter(
@@ -1573,7 +1576,7 @@ class CableFilterSet(NautobotFilterSet, StatusModelFilterSetMixin):
 
     def filter_device(self, queryset, name, value):
         queryset = queryset.filter(
-            Q(**{"_termination_a_{}__in".format(name): value}) | Q(**{"_termination_b_{}__in".format(name): value})
+            Q(**{f"_termination_a_{name}__in": value}) | Q(**{f"_termination_b_{name}__in": value})
         )
         return queryset
 

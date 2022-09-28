@@ -30,7 +30,7 @@ class AppTest(APITestCase):
     def test_root(self):
 
         url = reverse("ipam-api:api-root")
-        response = self.client.get("{}?format=api".format(url), **self.header)
+        response = self.client.get(f"{url}?format=api", **self.header)
 
         self.assertEqual(response.status_code, 200)
 
@@ -292,7 +292,7 @@ class PrefixTest(APIViewTestCases.APIViewTestCase):
             data = {
                 "prefix_length": 30,
                 "status": "active",
-                "description": "Test Prefix {}".format(i + 1),
+                "description": f"Test Prefix {i + 1}",
             }
             response = self.client.post(url, data, format="json", **self.header)
             self.assertHttpStatus(response, status.HTTP_201_CREATED)
@@ -375,7 +375,7 @@ class PrefixTest(APIViewTestCases.APIViewTestCase):
         # Create all four available IPs with individual requests
         for i in range(1, 5):
             data = {
-                "description": "Test IP {}".format(i),
+                "description": f"Test IP {i}",
                 "status": "active",
             }
             response = self.client.post(url, data, format="json", **self.header)
@@ -689,19 +689,19 @@ class ServiceTest(APIViewTestCases.APIViewTestCase):
             name="Service 1",
             protocol=ServiceProtocolChoices.PROTOCOL_TCP,
             ports=[1],
-        ),
+        )
         Service.objects.create(
             device=devices[0],
             name="Service 2",
             protocol=ServiceProtocolChoices.PROTOCOL_TCP,
             ports=[2],
-        ),
+        )
         Service.objects.create(
             device=devices[0],
             name="Service 3",
             protocol=ServiceProtocolChoices.PROTOCOL_TCP,
             ports=[3],
-        ),
+        )
 
         cls.create_data = [
             {

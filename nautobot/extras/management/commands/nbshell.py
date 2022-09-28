@@ -11,14 +11,14 @@ from django.core.management.base import BaseCommand
 
 APPS = ["circuits", "dcim", "extras", "ipam", "tenancy", "users", "virtualization"]
 
-BANNER_TEXT = """### Nautobot interactive shell ({node})
+node = platform.node()
+python = platform.python_version()
+django = get_version()
+nautobot = settings.VERSION
+
+BANNER_TEXT = f"""### Nautobot interactive shell ({node})
 ### Python {python} | Django {django} | Nautobot {nautobot}
-### lsmodels() will show available models. Use help(<model>) for more info.""".format(
-    node=platform.node(),
-    python=platform.python_version(),
-    django=get_version(),
-    nautobot=settings.VERSION,
-)
+### lsmodels() will show available models. Use help(<model>) for more info."""
 
 
 class Command(BaseCommand):
@@ -72,11 +72,10 @@ class Command(BaseCommand):
 
         return namespace
 
-    def handle(self, **options):
+    def handle(self, *args, **options):
         # If Python code has been passed, execute it and exit.
         if options["command"]:
             exec(options["command"], self.get_namespace())
             return
 
-        shell = code.interact(banner=BANNER_TEXT, local=self.get_namespace())
-        return shell
+        code.interact(banner=BANNER_TEXT, local=self.get_namespace())

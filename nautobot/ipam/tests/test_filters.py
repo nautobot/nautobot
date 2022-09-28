@@ -226,12 +226,12 @@ class RIRTestCase(FilterTestCases.NameSlugFilterTestCase):
     @classmethod
     def setUpTestData(cls):
 
-        RIR.objects.create(name="RIR 1", slug="rir-1", is_private=False, description="A"),
-        RIR.objects.create(name="RIR 2", slug="rir-2", is_private=False, description="B"),
-        RIR.objects.create(name="RIR 3", slug="rir-3", is_private=False, description="C"),
-        RIR.objects.create(name="RIR 4", slug="rir-4", is_private=True, description="D"),
-        RIR.objects.create(name="RIR 5", slug="rir-5", is_private=True, description="E"),
-        RIR.objects.create(name="RIR 6", slug="rir-6", is_private=True, description="F"),
+        RIR.objects.create(name="RIR 1", slug="rir-1", is_private=False, description="A")
+        RIR.objects.create(name="RIR 2", slug="rir-2", is_private=False, description="B")
+        RIR.objects.create(name="RIR 3", slug="rir-3", is_private=False, description="C")
+        RIR.objects.create(name="RIR 4", slug="rir-4", is_private=True, description="D")
+        RIR.objects.create(name="RIR 5", slug="rir-5", is_private=True, description="E")
+        RIR.objects.create(name="RIR 6", slug="rir-6", is_private=True, description="F")
 
     def test_description(self):
         params = {"description": ["A", "B"]}
@@ -361,9 +361,9 @@ class RoleTestCase(FilterTestCases.NameSlugFilterTestCase):
     @classmethod
     def setUpTestData(cls):
 
-        Role.objects.create(name="Role 1", slug="role-1"),
-        Role.objects.create(name="Role 2", slug="role-2"),
-        Role.objects.create(name="Role 3", slug="role-3"),
+        Role.objects.create(name="Role 1", slug="role-1")
+        Role.objects.create(name="Role 2", slug="role-2")
+        Role.objects.create(name="Role 3", slug="role-3")
 
 
 class PrefixTestCase(FilterTestCases.FilterTestCase):
@@ -689,7 +689,7 @@ class IPAddressTestCase(FilterTestCases.FilterTestCase):
             assigned_object=None,
             status=status_map["active"],
             dns_name="ipaddress-a",
-        ),
+        )
         IPAddress.objects.create(
             address="10.0.0.2/24",
             tenant=tenants[0],
@@ -697,7 +697,7 @@ class IPAddressTestCase(FilterTestCases.FilterTestCase):
             assigned_object=interfaces[0],
             status=status_map["active"],
             dns_name="ipaddress-b",
-        ),
+        )
         IPAddress.objects.create(
             address="10.0.0.3/24",
             tenant=tenants[1],
@@ -706,7 +706,7 @@ class IPAddressTestCase(FilterTestCases.FilterTestCase):
             status=status_map["reserved"],
             role=IPAddressRoleChoices.ROLE_VIP,
             dns_name="ipaddress-c",
-        ),
+        )
         IPAddress.objects.create(
             address="10.0.0.4/24",
             tenant=tenants[2],
@@ -715,14 +715,14 @@ class IPAddressTestCase(FilterTestCases.FilterTestCase):
             status=status_map["deprecated"],
             role=IPAddressRoleChoices.ROLE_SECONDARY,
             dns_name="ipaddress-d",
-        ),
+        )
         IPAddress.objects.create(
             address="10.0.0.1/25",
             tenant=None,
             vrf=None,
             assigned_object=None,
             status=status_map["active"],
-        ),
+        )
         IPAddress.objects.create(
             address="2001:db8::1/64",
             tenant=None,
@@ -730,7 +730,7 @@ class IPAddressTestCase(FilterTestCases.FilterTestCase):
             assigned_object=None,
             status=status_map["active"],
             dns_name="ipaddress-a",
-        ),
+        )
         IPAddress.objects.create(
             address="2001:db8::2/64",
             tenant=tenants[0],
@@ -738,7 +738,7 @@ class IPAddressTestCase(FilterTestCases.FilterTestCase):
             assigned_object=vminterfaces[0],
             status=status_map["active"],
             dns_name="ipaddress-b",
-        ),
+        )
         IPAddress.objects.create(
             address="2001:db8::3/64",
             tenant=tenants[1],
@@ -747,7 +747,7 @@ class IPAddressTestCase(FilterTestCases.FilterTestCase):
             status=status_map["reserved"],
             role=IPAddressRoleChoices.ROLE_VIP,
             dns_name="ipaddress-c",
-        ),
+        )
         IPAddress.objects.create(
             address="2001:db8::4/64",
             tenant=tenants[2],
@@ -756,14 +756,14 @@ class IPAddressTestCase(FilterTestCases.FilterTestCase):
             status=status_map["deprecated"],
             role=IPAddressRoleChoices.ROLE_SECONDARY,
             dns_name="ipaddress-d",
-        ),
+        )
         IPAddress.objects.create(
             address="2001:db8::1/65",
             tenant=None,
             vrf=None,
             assigned_object=None,
             status=status_map["active"],
-        ),
+        )
 
     def test_search(self):
         search_terms = {
@@ -914,10 +914,10 @@ class VLANGroupTestCase(FilterTestCases.NameSlugFilterTestCase):
             Site.objects.create(name="Test Site 3", slug="test-site-3", region=regions[2]),
         )
 
-        VLANGroup.objects.create(name="VLAN Group 1", slug="vlan-group-1", site=sites[0], description="A"),
-        VLANGroup.objects.create(name="VLAN Group 2", slug="vlan-group-2", site=sites[1], description="B"),
-        VLANGroup.objects.create(name="VLAN Group 3", slug="vlan-group-3", site=sites[2], description="C"),
-        VLANGroup.objects.create(name="VLAN Group 4", slug="vlan-group-4", site=None),
+        VLANGroup.objects.create(name="VLAN Group 1", slug="vlan-group-1", site=sites[0], description="A")
+        VLANGroup.objects.create(name="VLAN Group 2", slug="vlan-group-2", site=sites[1], description="B")
+        VLANGroup.objects.create(name="VLAN Group 3", slug="vlan-group-3", site=sites[2], description="C")
+        VLANGroup.objects.create(name="VLAN Group 4", slug="vlan-group-4", site=None)
 
     def test_description(self):
         params = {"description": ["A", "B"]}
@@ -1155,37 +1155,37 @@ class ServiceTestCase(FilterTestCases.FilterTestCase):
             name="Service 1",
             protocol=ServiceProtocolChoices.PROTOCOL_TCP,
             ports=[1001],
-        ),
+        )
         Service.objects.create(
             device=devices[1],
             name="Service 2",
             protocol=ServiceProtocolChoices.PROTOCOL_TCP,
             ports=[1002],
-        ),
+        )
         Service.objects.create(
             device=devices[2],
             name="Service 3",
             protocol=ServiceProtocolChoices.PROTOCOL_UDP,
             ports=[1003],
-        ),
+        )
         Service.objects.create(
             virtual_machine=virtual_machines[0],
             name="Service 4",
             protocol=ServiceProtocolChoices.PROTOCOL_TCP,
             ports=[2001],
-        ),
+        )
         Service.objects.create(
             virtual_machine=virtual_machines[1],
             name="Service 5",
             protocol=ServiceProtocolChoices.PROTOCOL_TCP,
             ports=[2002],
-        ),
+        )
         Service.objects.create(
             virtual_machine=virtual_machines[2],
             name="Service 6",
             protocol=ServiceProtocolChoices.PROTOCOL_UDP,
             ports=[2003],
-        ),
+        )
 
     def test_name(self):
         params = {"name": ["Service 1", "Service 2"]}

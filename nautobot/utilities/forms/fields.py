@@ -16,7 +16,7 @@ from django.urls import reverse
 
 from nautobot.extras.utils import FeatureQuery
 from nautobot.utilities.choices import unpack_grouped_choices
-from nautobot.utilities.utils import is_uuid
+from nautobot.utilities.utils import get_route_for_model, is_uuid
 from nautobot.utilities.validators import EnhancedURLValidator
 from . import widgets
 from .constants import ALPHANUMERIC_EXPANSION_PATTERN, IP4_EXPANSION_PATTERN, IP6_EXPANSION_PATTERN
@@ -87,7 +87,7 @@ class CSVDataField(forms.CharField):
     def validate(self, value):
         if value is None:
             return None
-        headers, records = value
+        headers, _records = value
         validate_csv(headers, self.fields, self.required_fields)
 
         return value
@@ -137,7 +137,7 @@ class CSVFileField(forms.FileField):
         if value is None:
             return None
 
-        headers, records = value
+        headers, _records = value
         validate_csv(headers, self.fields, self.required_fields)
 
         return value
@@ -332,7 +332,7 @@ class ExpandableIPAddressField(forms.CharField):
         super().__init__(*args, **kwargs)
         if not self.help_text:
             self.help_text = (
-                "Specify a numeric range to create multiple IPs.<br />" "Example: <code>192.0.2.[1,5,100-254]/24</code>"
+                "Specify a numeric range to create multiple IPs.<br />Example: <code>192.0.2.[1,5,100-254]/24</code>"
             )
 
     def to_python(self, value):
@@ -398,7 +398,7 @@ class TagFilterField(forms.MultipleChoiceField):
     def __init__(self, model, *args, **kwargs):
         def get_choices():
             tags = model.tags.annotate(count=Count("extras_taggeditem_items")).order_by("name")
-            return [(str(tag.slug), "{} ({})".format(tag.name, tag.count)) for tag in tags]
+            return [(str(tag.slug), f"{tag.name} ({tag.count})") for tag in tags]
 
         # Choices are fetched each time the form is initialized
         super().__init__(label="Tags", choices=get_choices, required=False, *args, **kwargs)
@@ -415,7 +415,7 @@ class DynamicModelChoiceMixin:
     :param brief_mode: Use the "brief" format (?brief=true) when making API requests (default)
     """
 
-    filter = django_filters.ModelChoiceFilter
+    filter = django_filters.ModelChoiceFilter  # TODO can we change this? pylint: disable=redefined-builtin
     widget = widgets.APISelect
 
     def __init__(
@@ -487,9 +487,9 @@ class DynamicModelChoiceMixin:
         data = bound_field.value()
         if data:
             field_name = getattr(self, "to_field_name") or "pk"
-            filter = self.filter(field_name=field_name)
+            filter_ = self.filter(field_name=field_name)
             try:
-                self.queryset = filter.filter(self.queryset, data)
+                self.queryset = filter_.filter(self.queryset, data)
             except TypeError:
                 # Catch any error caused by invalid initial data passed from the user
                 self.queryset = self.queryset.none()
@@ -499,12 +499,8 @@ class DynamicModelChoiceMixin:
         # Set the data URL on the APISelect widget (if not already set)
         widget = bound_field.field.widget
         if not widget.attrs.get("data-url"):
-            app_label = self.queryset.model._meta.app_label
-            model_name = self.queryset.model._meta.model_name
-            if app_label in settings.PLUGINS:
-                data_url = reverse(f"plugins-api:{app_label}-api:{model_name}-list")
-            else:
-                data_url = reverse(f"{app_label}-api:{model_name}-list")
+            route = get_route_for_model(self.queryset.model, "list", api=True)
+            data_url = reverse(route)
             widget.attrs["data-url"] = data_url
 
         return bound_field

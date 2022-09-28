@@ -67,7 +67,7 @@
 
     <ul id="tabs" class="nav nav-tabs">
     {% block nav_tabs %}
-        <li role="presentation"{% if not active_tab and not request.GET.tab or request.GET.tab == "main" %} class="active"{% endif %}>
+        <li role="presentation"{% if active_tab == "main" or request.GET.tab == "main" %} class="active"{% endif %}>
             <a href="{{ object.get_absolute_url }}#main" onclick="switch_tab(this.href)" aria-controls="main" role="tab" data-toggle="tab">
                 {{ verbose_name|bettertitle }}
             </a>
@@ -78,19 +78,19 @@
             </a>
         </li>
         {% block extra_nav_tabs %}{% endblock extra_nav_tabs %}
-        {% if perms.extras.view_notes %}
+        {% if perms.extras.view_note %}
             {% if active_tab != 'notes' and object.get_notes_url or active_tab == 'notes' %}
                 <li role="presentation"{% if active_tab == 'notes' %} class="active"{% endif %}>
                     <a href="{{ object.get_notes_url }}">Notes</a>
                 </li>
             {% endif %}
         {% endif %}
-        {% if perms.extras.view_dynamicgroup and object.dynamic_groups %}
-            <li role="presentation"{% if request.GET.tab == 'dynamic-groups' %} class="active"{% endif %}>
-                <a href="{{ object.get_absolute_url }}#dynamic-groups" onclick="switch_tab(this.href)" aria-controls="advanced" role="tab" data-toggle="tab">
-                    Dynamic Groups
-                </a>
-            </li>
+        {% if perms.extras.view_dynamicgroup and object.get_dynamic_groups_url %}
+            {% if active_tab != 'dynamic-groups' and object.get_dynamic_groups_url or active_tab == 'dynamic-groups' %}
+                <li role="presentation"{% if active_tab == 'dynamic-groups' %} class="active"{% endif %}>
+                    <a href="{{ object.get_dynamic_groups_url }}">Dynamic Groups</a>
+                </li>
+            {% endif %}
         {% endif %}
         {% if perms.extras.view_objectchange %}
             {% if active_tab != 'changelog' and object.get_changelog_url or active_tab == 'changelog' %}
@@ -106,7 +106,7 @@
 
 {% block content %}
     <div class="tab-content">
-        <div id="main" role="tabpanel" class="tab-pane {% if not active_tab and not request.GET.tab or request.GET.tab == "main" %}active{% else %}fade{% endif %}">
+        <div id="main" role="tabpanel" class="tab-pane {% if active_tab == "main" or request.GET.tab == "main" %}active{% else %}fade{% endif %}">
             <div class="row">
                 <div class="col-md-6">
                     {% block content_left_page %}{% endblock content_left_page %}
@@ -143,13 +143,6 @@
             </div>
         </div>
         {% block extra_tab_content %}{% endblock extra_tab_content %}
-        <div id="dynamic-groups" role="tabpanel" class="tab-pane {% if request.GET.tab == 'dynamic-groups' %}active{% else %}fade{% endif %}">
-            <div class="row">
-                <div class="col-md-6">
-                    {% include 'inc/dynamic_groups_panel.html' %}
-                </div>
-            </div>
-        </div>
     </div>
 {% endblock content %}
 
