@@ -1,6 +1,6 @@
 # Custom Fields
 
-Custom fields are a method of adding new fields to existing Nautobot models. For more general information on how custom fields work, refer to the [custom fields model documentation](../models/extras/customfield.md).
+Custom fields are a convenient method of adding new fields to existing Nautobot models without needing to modify the underlying source code or database schema. For more general information on how custom fields work, refer to the [custom fields model documentation](../models/extras/customfield.md).
 
 ## When to use Custom Fields
 
@@ -9,9 +9,6 @@ Custom fields are commonly used for fields that need different values across ind
 ## Create a Custom Field
 
 Navigate to the custom fields page by clicking on **Extensibility -> Custom Fields** in the Nautobot menu. Click on **Add** to create a new custom field.
-
-!!! note
-    Custom fields are initialized on associated objects when a content type is added to the custom field, including when the custom field is created. The initial value will be set to the `default` value of the custom field.
 
 ### Custom Field Attributes
 
@@ -29,7 +26,7 @@ The optional grouping field allows you to group custom fields into collapsible m
 
 #### Slug
 
-The slug is used to create the URL endpoint for the custom field and is also used as the key in the custom field dictionary. This is automatically created from the label if not supplied. The default value should be sufficient for most deployments.
+The slug is used to create the URL endpoint for the custom field and is also used as the key in the underlying custom field data dictionary. This is automatically created from the label if not supplied. The default value should be sufficient for most deployments.
 
 #### Type
 
@@ -54,7 +51,10 @@ Check the required box if this field cannot be null on the associated objects.
 
 #### Default
 
-The default value for the custom field. This form field only accepts JSON data so if you want to set the field default to a string of `foo` you must supply the JSON string `"foo"`. Boolean field valid values are `true` and `false` (all lowercase). Date fields are strings in the format `YYYY-MM-DD`.
+The default value for the custom field. This form field only accepts JSON data so if you want to set the field default to a string of `foo` you must supply the JSON string `"foo"`. Boolean field valid values are `true` and `false` (all lowercase). Date fields are strings in the format `YYYY-MM-DD`. Select and multiselect field default must match one of the field's choices.
+
+!!! note
+    The default value for a select or multiselect field must match one of the existing choices. If the desired default value is not in the list of choices, the choices must be updated and saved before the default can be changed. As a result of this behavior, default values cannot be set on select and multiselect fields when a custom field is created.
 
 #### Filter Logic
 
@@ -72,6 +72,9 @@ When selected, the custom field will appear in the advanced tab of the object de
 #### Content Types
 
 The list of content types to add this custom field to. Only models that subclass the `nautobot.extras.models.customfields.CustomFieldModel` model class can be selected.
+
+!!! note
+    When a custom field is created or associated to a new content type (model), all affected existing objects will be updated to add the custom field. The initial value will be set to the `default` value of the custom field. This update runs as a background task via [Celery](../installation/services.md#worker-service), so it may take a few seconds or more before all objects reflect the new custom field, depending on the size of your database.
 
 ### Validation Rules
 
@@ -132,10 +135,10 @@ Custom fields augment an existing model so retrieving custom field values is dif
 ```py
 # retrieve all custom field data
 >>> device.cf
-{'date_custom_field': '1970-01-01', 'text_custom_field': 'This is the custom field value', 'boolean_custom_field': True, 'integer_custom_field': 12345, 'grouped_custom_field_1': '', 'grouped_custom_field_2': '', 'grouped_custom_field_3': ''}
+{'eol_date': '1970-01-01', 'support_group': 'Network Operations (555-4357)', 'dmz_device': True, 'cmdb_id': 12345}
 
 # retrieve a single field
->>> device.cf.get("date_custom_field")
+>>> device.cf.get("eol_date")
 '1970-01-01'
 ```
 
@@ -154,13 +157,10 @@ Custom fields are returned in the API for all supported models in the `custom_fi
   "id": "ffd8df99-6d1a-41c3-b19f-b8357eefc481",
   ...
   "custom_fields": {
-    "boolean_custom_field": true,
-    "date_custom_field": "1970-01-01",
-    "grouped_custom_field_1": "",
-    "grouped_custom_field_2": "",
-    "grouped_custom_field_3": "",
-    "integer_custom_field": 12345,
-    "text_custom_field": "This is the custom field value"
+    "dmz_device": true,
+    "eol_date": "1970-01-01",
+    "cmdb_id": 12345,
+    "support_group": "Network Operations (555-4357)"
   }
 }
 ```
@@ -176,7 +176,7 @@ Individual custom fields can be retrieved in GraphQL queries by using the `cf_<f
 ```graphql
 {
   devices {
-    cf_text_custom_field
+    cf_support_group
     name
     id
   }
@@ -192,17 +192,17 @@ Individual custom fields can be retrieved in GraphQL queries by using the `cf_<f
     "devices": [
       {
         "name": "phx-leaf1-1-1",
-        "cf_text_custom_field": "This is the custom field value",
+        "cf_support_group": "Network Operations (555-4357)",
         "id": "8bd9ed2b-3774-4806-9d17-c9f21f2c73e4"        
       },
       {
         "name": "stl-leaf1-2-1",
-        "cf_text_custom_field": "New value",
+        "cf_support_group": "Network Operations (555-4357)",
         "id": "b22bb7f4-6a6d-4426-9d27-5dcb0471ed2a"        
       },
       {
         "name": "Test Device",
-        "cf_text_custom_field": "Some other value",
+        "cf_support_group": "Network Testing (555-8080)",
         "id": "ffd8df99-6d1a-41c3-b19f-b8357eefc481"
       }
     ]
@@ -237,13 +237,10 @@ All custom field data can be retrieved in GraphQL queries by using the `_custom_
         "name": "phx-leaf1-1-1",
         "id": "8bd9ed2b-3774-4806-9d17-c9f21f2c73e4",        
         "_custom_field_data": {
-          "date_custom_field": null,
-          "text_custom_field": "This is the custom field value",
-          "boolean_custom_field": true,
-          "integer_custom_field": 12345,
-          "grouped_custom_field_1": null,
-          "grouped_custom_field_2": null,
-          "grouped_custom_field_3": null
+          "eol_date": "1970-01-01",
+          "support_group": "Network Operations (555-4357)",
+          "dmz_device": true,
+          "cmdb_id": 12345,
         }
       }
     ]
@@ -258,13 +255,13 @@ All custom field data can be retrieved in GraphQL queries by using the `_custom_
 Queries can also be filtered by custom field values using any of the filters available in the UI and Rest API:
 
 ```graphql
-# Retrieve devices where custom field text_custom_field
-# does not contain "this" (case insensitive)
+# Retrieve devices where custom field support_group
+# does not contain "Network Operations" (case insensitive)
 {
-  devices(cf_text_custom_field__nic: "this") {
+  devices(cf_support_group__nic: "Network Operations") {
     name
     id
-    cf_text_custom_field
+    cf_support_group
   }
 }
 ```
@@ -279,12 +276,7 @@ Queries can also be filtered by custom field values using any of the filters ava
       {
         "name": "Test Device",
         "id": "ffd8df99-6d1a-41c3-b19f-b8357eefc481",
-        "cf_text_custom_field": "Some other value"
-      },
-      {
-        "name": "stl-leaf1-2-1",
-        "id": "b22bb7f4-6a6d-4426-9d27-5dcb0471ed2a",
-        "cf_text_custom_field": "New value"
+        "cf_support_group": "Network Testing (555-8080)"
       }
     ]
   }
@@ -300,12 +292,12 @@ Queries can also be filtered by custom field values using any of the filters ava
 Custom field data behaves like a python dictionary in the Nautobot Shell. When modifying custom fields through the Nautobot Shell, make sure to use the `.validated_save()` method to save the object to ensure that custom field validation is performed.  Example:
 
 ```py
->>> device.cf["text_custom_field"]
-'Some other value'
->>> d.cf["text_custom_field"] = "Changed"
->>> d.validated_save()
->>> device.cf["text_custom_field"]
-'Changed'
+>>> device.cf["support_group"]
+'Network Operations (555-4357)'
+>>> device.cf["support_group"] = "Network Testing (555-8080)"
+>>> device.validated_save()
+>>> device.cf["support_group"]
+'Network Testing (555-8080)'
 ```
 
 ### Modify Custom Field Data in the Rest API
@@ -316,7 +308,7 @@ Individual custom field data can be modified by sending a PATCH to the Rest API 
 PATCH http://localhost:8080/api/dcim/devices/ffd8df99-6d1a-41c3-b19f-b8357eefc481/
 {
     "custom_fields": {
-        "text_custom_field": "Rest API test"
+        "support_group": "Rest API test"
     }
 }
 ```
@@ -330,13 +322,10 @@ PATCH http://localhost:8080/api/dcim/devices/ffd8df99-6d1a-41c3-b19f-b8357eefc48
   "id": "ffd8df99-6d1a-41c3-b19f-b8357eefc481",
   ...
   "custom_fields": {
-    "boolean_custom_field": true,
-    "date_custom_field": "1970-01-01",
-    "grouped_custom_field_1": "",
-    "grouped_custom_field_2": "",
-    "grouped_custom_field_3": "",
-    "integer_custom_field": 12345,
-    "text_custom_field": "Rest API test"
+    "dmz_device": true,
+    "eol_date": "1970-01-01",
+    "cmdb_id": 12345,
+    "support_group": "Rest API test"
   }
 }
 ```
