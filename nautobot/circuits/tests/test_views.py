@@ -296,12 +296,8 @@ class CircuitSwapTerminationsTestCase(NautobotTestCase):
         response = self.client.post(**request)
         self.assertHttpStatus(response, 302)
 
-        termination_a = CircuitTermination.objects.filter(
-            circuit=circuit, term_side=CircuitTerminationSideChoices.SIDE_A
-        ).first()
-        termination_z = CircuitTermination.objects.filter(
-            circuit=circuit, term_side=CircuitTerminationSideChoices.SIDE_Z
-        ).first()
+        termination_a = CircuitTermination.objects.get(circuit=circuit, term_side=CircuitTerminationSideChoices.SIDE_A)
+        termination_z = CircuitTermination.objects.get(circuit=circuit, term_side=CircuitTerminationSideChoices.SIDE_Z)
 
         # Assert Swap
         self.assertEqual(termination_a.provider_network, provider_networks[1])
