@@ -208,8 +208,9 @@ function initializeDynamicChoiceSelection(context){
                                     let id_prefix = element_id.match(/id_form-[0-9]+-/i, "")[0]
                                     ref_field = $("#" + id_prefix + value.slice(1));
                                 }
-                                else
-                                ref_field = $('#id_' + value.slice(1));
+                                else {
+                                    ref_field = $('#id_' + value.slice(1));
+                                }
 
                                 if (ref_field.val() && ref_field.is(":visible")) {
                                     value = ref_field.val();
@@ -233,9 +234,10 @@ function initializeDynamicChoiceSelection(context){
                 });
 
                 // Attach contenttype to parameters
-                contenttype = $(element).attr("data-contenttype")
-                if(contenttype)
-                parameters["contenttype"] = contenttype
+                contenttype = $(element).attr("data-contenttype");
+                if(contenttype){
+                    parameters["contenttype"] = contenttype;
+                }
 
                 // This will handle params with multiple values (i.e. for list filter forms)
                 return $.param(parameters, true);
@@ -310,7 +312,7 @@ function initializeDynamicChoiceSelection(context){
 
 // Flatpickr selectors
 function initializeDateTimePicker(context){
-    this_context = $(context)
+    this_context = $(context);
     this_context.find('.date-picker').flatpickr({
         allowInput: true
     });
@@ -330,7 +332,7 @@ function initializeDateTimePicker(context){
 }
 
 function initializeTags(context){
-    this_context = $(context)
+    this_context = $(context);
     this_tag_field = this_context.find('#id_tags.tagfield')
     var tags = this_tag_field;
     if (tags.length > 0 && tags.val().length > 0){

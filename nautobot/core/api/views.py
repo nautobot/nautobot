@@ -716,13 +716,13 @@ class GraphQLDRFAPIView(NautobotAPIVersionMixin, APIView):
 #
 
 
-class LookupTypeChoicesView(NautobotAPIVersionMixin, APIView):
+class GetFilterFieldLookupExpressionChoicesView(NautobotAPIVersionMixin, APIView):
     permission_classes = [IsAuthenticated]
 
     @extend_schema(
         parameters=[
             OpenApiParameter(
-                name="contenttype",
+                name="content_type",
                 required=True,
                 type=OpenApiTypes.STR,
             ),
@@ -754,12 +754,12 @@ class LookupTypeChoicesView(NautobotAPIVersionMixin, APIView):
         },
     )
     def get(self, request):
-        if "contenttype" not in request.GET or "field_name" not in request.GET:
+        if "content_type" not in request.GET or "field_name" not in request.GET:
             return Response(
-                "contenttype and field_name are required parameters",
+                "content_type and field_name are required parameters",
                 status=400,
             )
-        contenttype = request.GET.get("contenttype")
+        contenttype = request.GET.get("content_type")
         field_name = request.GET.get("field_name")
         app_label, model_name = contenttype.split(".")
         model = ContentType.objects.get(app_label=app_label, model=model_name).model_class()
@@ -777,13 +777,18 @@ class LookupTypeChoicesView(NautobotAPIVersionMixin, APIView):
         )
 
 
-class LookupValueDomElementView(NautobotAPIVersionMixin, APIView):
+class GetFilterFormFieldDOMElementView(NautobotAPIVersionMixin, APIView):
     permission_classes = [IsAuthenticated]
 
     @extend_schema(
         parameters=[
             OpenApiParameter(
-                name="contenttype",
+                name="content_type",
+                required=True,
+                type=OpenApiTypes.STR,
+            ),
+            OpenApiParameter(
+                name="field_name",
                 required=True,
                 type=OpenApiTypes.STR,
             ),
@@ -798,13 +803,13 @@ class LookupValueDomElementView(NautobotAPIVersionMixin, APIView):
         },
     )
     def get(self, request):
-        if "contenttype" not in request.GET or "field_name" not in request.GET:
+        if "content_type" not in request.GET or "field_name" not in request.GET:
             return Response(
-                "contenttype and field_name are required parameters",
+                "content_type and field_name are required parameters",
                 status=400,
             )
         field_name = request.GET.get("field_name")
-        contenttype = request.GET.get("contenttype")
+        contenttype = request.GET.get("content_type")
         app_label, model_name = contenttype.split(".")
         model = ContentType.objects.get(app_label=app_label, model=model_name).model_class()
         model_form = get_form_for_model(model)
