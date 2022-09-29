@@ -602,9 +602,9 @@ class ViewTestCases:
             filterset = self.get_filterset()
             if not filterset:
                 self.fail(
-                    f"Couldn't find filterset for model {self.model}. The FilterSet class is expected to be in the"
-                    f"filters module within the application associated with the model and its name is expected to be"
-                    f"{self.model.__name__}FilterSet))"
+                    f"Couldn't find filterset for model {self.model}. The FilterSet class is expected to be in the "
+                    "filters module within the application associated with the model and its name is expected to be "
+                    f"{self.model.__name__}FilterSet."
                 )
             self.assertEqual(
                 cm.output,
