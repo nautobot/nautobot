@@ -839,7 +839,7 @@ def get_values_display_names(model, search_by, values):
 def convert_querydict_to_factory_formset_acceptable_querydict(request_querydict, filterset_class):
     """
     Convert request QueryDict/GET into an acceptable factory formset QueryDict
-    while discarding `querdict` params which are not part of `filterset_class` params
+    while discarding `querydict` params which are not part of `filterset_class` params
 
     Args:
         request_querydict (QueryDict): QueryDict to convert
@@ -894,9 +894,7 @@ def is_single_choice_field(filterset_class, field_name):
     if field is None:
         pass
         # TODO (timizuo): handle filed not exist
-    if isinstance(field, (DateFilter, DateTimeFilter, TimeFilter, BooleanFilter)):
-        return True
-    return False
+    return isinstance(field, (DateFilter, DateTimeFilter, TimeFilter, BooleanFilter))
 
 
 def get_filterable_params_from_filter_params(filter_params, non_filter_params, filterset_class):

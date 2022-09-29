@@ -245,7 +245,7 @@ class TableConfigForm(BootstrapMixin, forms.Form):
 
 class DynamicFilterForm(BootstrapMixin, forms.Form):
     """
-    Form for configuring user's filter form preferences.
+    Form for dynamically inputting filter values for an object list.
     """
 
     lookup_field = forms.ChoiceField(
@@ -286,7 +286,7 @@ class DynamicFilterForm(BootstrapMixin, forms.Form):
 
         # Update lookup_type and lookup_value fields to match expected field types derived from data
         # e.g status expects a ChoiceField with APISelectMultiple widget, while name expects a CharField etc.
-        if kwargs.get("data") and kwargs.get("prefix"):
+        if "data" in kwargs and "prefix" in kwargs:
             data = kwargs["data"]
             prefix = kwargs["prefix"]
             lookup_type = data.get(prefix + "-lookup_type")

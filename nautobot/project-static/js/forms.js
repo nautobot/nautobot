@@ -495,8 +495,9 @@ function initializeDynamicFilterForm(context){
         let lookup_type_element = parent_element.find(".lookup_type-select")
         let lookup_value_element = parent_element.find(".lookup_value-input")
 
-        if ($(this)[0] == lookup_field_element[0])
-        lookup_type_element.val(null).trigger('change')
+        if ($(this)[0] == lookup_field_element[0]) {
+            lookup_type_element.val(null).trigger('change');
+        }
         lookup_value_element.val(null).trigger('change')
 
     })
