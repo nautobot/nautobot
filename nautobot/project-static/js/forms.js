@@ -236,7 +236,7 @@ function initializeDynamicChoiceSelection(context){
                 // Attach contenttype to parameters
                 contenttype = $(element).attr("data-contenttype");
                 if(contenttype){
-                    parameters["contenttype"] = contenttype;
+                    parameters["content_type"] = contenttype;
                 }
 
                 // This will handle params with multiple values (i.e. for list filter forms)
@@ -471,7 +471,7 @@ function initializeDynamicFilterForm(context){
 
         if(lookup_type_val){
             $.ajax({
-                url: `/api/lookup-value-dom-element/?field_name=${lookup_type_val}&contenttype=${contenttype}`,
+                url: `/api/lookup-value-dom-element/?field_name=${lookup_type_val}&content_type=${contenttype}`,
                 async: true,
                 contentType: 'application/json',
                 dataType: 'json',

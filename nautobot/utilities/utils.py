@@ -740,13 +740,13 @@ def get_all_lookup_expr_for_field(model, field_name):
 
     lookup_expr_choices = []
 
-    for field_name, field in filterset.items():
+    for name, field in filterset.items():
         # remove the lookup_expr from field_name e.g name__iew -> name
-        if re.sub(r"__\w+", "", field_name) == field_name and not field_name.startswith("has_"):
+        if re.sub(r"__\w+", "", name) == field_name and not name.startswith("has_"):
             lookup_expr_choices.append(
                 {
                     "id": field_name,
-                    "name": build_lookup_label(field_name, field.lookup_expr),
+                    "name": build_lookup_label(name, field.lookup_expr),
                 }
             )
 
