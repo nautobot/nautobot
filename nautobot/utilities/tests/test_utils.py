@@ -7,7 +7,6 @@ from nautobot.core.settings_funcs import is_truthy
 from nautobot.utilities.forms import DatePicker, DateTimePicker, DynamicModelMultipleChoiceField
 from nautobot.utilities.utils import (
     build_lookup_label,
-    get_values_display_names,
     convert_querydict_to_factory_formset_acceptable_querydict,
     deepmerge,
     dict_to_filter_params,
@@ -374,11 +373,11 @@ class LookupRelatedFunctionTest(TestCase):
     def test_build_lookup_label(self):
         with self.subTest():
             label = build_lookup_label("slug__iew", "iendswith")
-            self.assertEqual(label, "ends-with(iew)")
+            self.assertEqual(label, "ends-with (iew)")
 
         with self.subTest("Test negation"):
             label = build_lookup_label("slug__niew", "iendswith")
-            self.assertEqual(label, "not-ends-with(niew)")
+            self.assertEqual(label, "not-ends-with (niew)")
 
         with self.subTest("Test for exact: without a lookup expr"):
             label = build_lookup_label("slug", "exact")
@@ -389,7 +388,7 @@ class LookupRelatedFunctionTest(TestCase):
             lookup_expr = get_all_lookup_expr_for_field(Site, "status")
             self.assertEqual(
                 lookup_expr,
-                [{"id": "status", "name": "exact"}, {"id": "status__n", "name": "not-exact(n)"}],
+                [{"id": "status", "name": "exact"}, {"id": "status__n", "name": "not-exact (n)"}],
             )
 
         with self.subTest("Test field with has_ prefix"):
@@ -459,26 +458,6 @@ class LookupRelatedFunctionTest(TestCase):
 
             form_field = get_filterset_parameter_form_field(Device, "created")
             self.assertTrue(isinstance(form_field.widget, DatePicker))
-
-    def test_compile_model_instance_choices(self):
-        sites = (
-            Site.objects.create(name="Site 1", slug="site-1"),
-            Site.objects.create(name="Site 2", slug="site-2"),
-        )
-
-        with self.subTest("Get choices of valid fields"):
-            choices = get_values_display_names(Site, "slug", ["site-1", "site-2"])
-            self.assertEqual(
-                choices,
-                [
-                    (sites[0].slug, sites[0].name),
-                    (sites[1].slug, sites[1].name),
-                ],
-            )
-
-        with self.subTest("Get choices for invalid fields"):
-            choices = get_values_display_names(Site, "slug", ["site-3", "site-4"])
-            self.assertEqual(choices, [])
 
     def test_convert_querydict_to_factory_formset_dict(self):
         with self.subTest("Convert QueryDict to an acceptable factory formset QueryDict and discards invalid params"):

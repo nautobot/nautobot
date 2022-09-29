@@ -798,11 +798,11 @@ class DynamicFilterFormTest(TestCase):
             form = DynamicFilterForm(model=Site, data=data, prefix="form-0")
             self.assertEqual(form.fields["lookup_type"]._choices, [("name__ic", "contains(ic)")])
             # Assert lookup_value is a CharField
-            self.assertTrue(isinstance(form.fields["lookup_value"], forms.CharField))
+            self.assertIsInstance(form.fields["lookup_value"], forms.CharField)
 
             form = DynamicFilterForm(model=Site, data=data, prefix="form-1")
             self.assertEqual(form.fields["lookup_type"]._choices, [("slug", "exact")])
-            self.assertTrue(isinstance(form.fields["lookup_value"], forms.CharField))
+            self.assertIsInstance(form.fields["lookup_value"], forms.CharField)
 
         with self.subTest("Test for lookup_value with a ChoiceField and APISelectMultiple widget"):
             # If `lookup_field` value is a relational field(ManyToMany, ForeignKey etc.) and `lookup_type` lookup expr is `exact` or `in` then,
@@ -818,7 +818,7 @@ class DynamicFilterFormTest(TestCase):
                     "data-url": "/api/lookup-choices/",
                 },
             )
-            self.assertTrue(isinstance(form.fields["lookup_value"], forms.ChoiceField))
+            self.assertIsInstance(form.fields["lookup_value"], forms.ChoiceField)
             self.assertTrue(isinstance(form.fields["lookup_value"].widget, APISelectMultiple))
             self.assertEqual(
                 form.fields["lookup_value"].widget.attrs,
@@ -845,7 +845,7 @@ class DynamicFilterFormTest(TestCase):
                     "placeholder": None,
                 },
             )
-            self.assertTrue(isinstance(form.fields["lookup_value"], forms.ChoiceField))
+            self.assertIsInstance(form.fields["lookup_value"], forms.ChoiceField)
             self.assertEqual(
                 form.fields["lookup_value"].widget.attrs,
                 {"class": "form-control nautobot-select2-static lookup_value-input form-control"},
@@ -881,4 +881,4 @@ class DynamicFilterFormTest(TestCase):
                     "placeholder": None,
                 },
             )
-            self.assertTrue(isinstance(form.fields["lookup_value"], forms.IntegerField))
+            self.assertIsInstance(form.fields["lookup_value"], forms.IntegerField)

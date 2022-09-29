@@ -1,5 +1,6 @@
 from .constants import (
     ALPHANUMERIC_EXPANSION_PATTERN,
+    BOOLEAN_CHOICES,
     BOOLEAN_WITH_BLANK_CHOICES,
     IP4_EXPANSION_PATTERN,
     IP6_EXPANSION_PATTERN,
@@ -71,6 +72,7 @@ __all__ = (
     "ALPHANUMERIC_EXPANSION_PATTERN",
     "APISelect",
     "APISelectMultiple",
+    "BOOLEAN_CHOICES",
     "BOOLEAN_WITH_BLANK_CHOICES",
     "BootstrapMixin",
     "BulkEditForm",

@@ -7,8 +7,12 @@ IP4_EXPANSION_PATTERN = r"\[((?:[0-9]{1,3}[?:,-])+[0-9]{1,3})\]"
 IP6_EXPANSION_PATTERN = r"\[((?:[0-9a-f]{1,4}[?:,-])+[0-9a-f]{1,4})\]"
 
 # Boolean widget choices
-BOOLEAN_WITH_BLANK_CHOICES = (
-    ("", "---------"),
+BOOLEAN_CHOICES = (
     ("True", "Yes"),
     ("False", "No"),
+)
+
+BOOLEAN_WITH_BLANK_CHOICES = (
+    ("", "---------"),
+    *BOOLEAN_CHOICES,
 )

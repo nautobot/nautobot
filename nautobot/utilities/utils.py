@@ -35,8 +35,9 @@ from taggit.managers import _TaggableManager
 from nautobot.dcim.choices import CableLengthUnitChoices
 from nautobot.utilities.constants import HTTP_REQUEST_META_SAFE_COPY
 
-
-SEARCH_RE = re.compile(r"(?<=__)\w+")
+# Check if field name contains a lookup expr
+# e.g `name__ic` has lookup expr `ic (icontains)` while `name` has no lookup expr
+CONTAINS_LOOKUP_EXPR_RE = re.compile(r"(?<=__)\w+")
 
 
 def csv_format(data):
@@ -716,15 +717,15 @@ def build_lookup_label(field_name, _verbose_name):
 
     Examples:
         >>> build_lookup_label("slug__iew", "iendswith")
-        >>> "ends-with(iew)"
+        >>> "ends-with (iew)"
     """
     verbose_name = verbose_lookup_expr(_verbose_name) or "exact"
     label = ""
-    search = SEARCH_RE.search(field_name)
+    search = CONTAINS_LOOKUP_EXPR_RE.search(field_name)
     if search:
-        label = f"({search.group()})"
+        label = f" ({search.group()})"
 
-    verbose_name = "not-" + verbose_name if label.startswith("(n") else verbose_name
+    verbose_name = "not-" + verbose_name if label.startswith(" (n") else verbose_name
 
     return verbose_name + label
 
@@ -737,16 +738,19 @@ def get_all_lookup_expr_for_field(model, field_name):
     if field_name.startswith("has_"):
         return [{"id": field_name, "name": "exact"}]
 
-    lookup_expr = [
-        {
-            "id": name,
-            "name": build_lookup_label(name, field.lookup_expr),
-        }
-        for name, field in filterset.items()
-        # name without the lookup_expr e.g name__iew -> name
-        if re.sub(r"__\w+", "", name) == field_name and not name.startswith("has_")
-    ]
-    return lookup_expr
+    lookup_expr_choices = []
+
+    for field_name, field in filterset.items():
+        # remove the lookup_expr from field_name e.g name__iew -> name
+        if re.sub(r"__\w+", "", field_name) == field_name and not field_name.startswith("has_"):
+            lookup_expr_choices.append(
+                {
+                    "id": field_name,
+                    "name": build_lookup_label(field_name, field.lookup_expr),
+                }
+            )
+
+    return lookup_expr_choices
 
 
 def get_filterset_parameter_form_field(model, parameter):
@@ -757,7 +761,7 @@ def get_filterset_parameter_form_field(model, parameter):
     from nautobot.extras.filters import StatusFilter
     from nautobot.extras.models import Status, Tag
     from nautobot.utilities.forms import (
-        BOOLEAN_WITH_BLANK_CHOICES,
+        BOOLEAN_CHOICES,
         DatePicker,
         DateTimePicker,
         DynamicModelMultipleChoiceField,
@@ -795,7 +799,7 @@ def get_filterset_parameter_form_field(model, parameter):
     elif isinstance(field, (BooleanFilter,)):  # Yes / No choice
         form_field_class = forms.ChoiceField
         form_field_class.widget = StaticSelect2()
-        form_attr = {"choices": BOOLEAN_WITH_BLANK_CHOICES}
+        form_attr = {"choices": BOOLEAN_CHOICES}
 
         form_field = form_field_class(**form_attr)
     elif isinstance(field, DateTimeFilter):
@@ -812,28 +816,6 @@ def get_filterset_parameter_form_field(model, parameter):
     css_classes = form_field.widget.attrs.get("class", "")
     form_field.widget.attrs["class"] = "form-control " + css_classes
     return form_field
-
-
-def get_values_display_names(model, search_by, values):
-    """
-    Get all display names for values in `model` instance.
-
-    Examples:
-        >>> get_values_display_names(,,<class: nautobot.dcim.models.Site>, "slug", ["site-1", "site-2"] )
-        >>> [("site-1", "Site 1"), ("site-2", "Site 2")]
-    Args:
-        model: Model to query
-        search_by: Filter query by
-        values: List of values to get their display names
-    """
-    choices = []
-    for value in values:
-        try:
-            instance = model.objects.get(**{search_by: value})
-            choices.append((value, getattr(instance, "display", str(instance))))
-        except model.DoesNotExist:
-            pass
-    return choices
 
 
 def convert_querydict_to_factory_formset_acceptable_querydict(request_querydict, filterset_class):
@@ -911,11 +893,13 @@ def get_filterable_params_from_filter_params(filter_params, non_filter_params, f
 
     # Some FilterSet field only accept single choice not multiple choices
     # e.g datetime field, bool fields etc.
-    filter_params = {
-        field: filter_params.get(field)
-        if is_single_choice_field(filterset_class, field)
-        else filter_params.getlist(field)
-        for field in filter_params.keys()
-        if filter_params.get(field)  # Discard fields without values
-    }
-    return filter_params
+    final_filter_params = {}
+    for field in filter_params.keys():
+        if filter_params.get(field):
+            final_filter_params[field] = (
+                filter_params.get(field)
+                if is_single_choice_field(filterset_class, field)
+                else filter_params.getlist(field)
+            )
+
+    return final_filter_params
