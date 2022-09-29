@@ -791,10 +791,7 @@ def get_relationships_errors(request, obj, output_for="ui"):
                 model_meta = required_model_class._meta
                 required = model_meta.verbose_name
 
-                if relation.type in [
-                    RelationshipTypeChoices.TYPE_ONE_TO_MANY,
-                    RelationshipTypeChoices.TYPE_MANY_TO_MANY,
-                ]:
+                if relation.has_many():
                     num_required_verbose = "at least one"
                 else:
                     num_required_verbose = "a"
@@ -802,7 +799,7 @@ def get_relationships_errors(request, obj, output_for="ui"):
                 if output_for == "ui":
                     try:
                         add_url = reverse(get_route_for_model(required_model_class, "add"))
-                        add_message = f"<a href='{add_url}'>Click here</a> to create " f"a {model_meta.verbose_name}."
+                        add_message = f"<a href='{add_url}'>Click here</a> to create a {model_meta.verbose_name}."
                     except NoReverseMatch:
                         add_message = f"You need to create {num_required_verbose} {required} first"
 
@@ -827,13 +824,12 @@ def get_relationships_errors(request, obj, output_for="ui"):
                             f"{required}, but no {model_meta.verbose_name_plural} exist yet. {api_hint}"
                         }
                     )
-
-    if len(relationships_errors) > 0 and output_for == "ui":
-        for msg in relationships_errors:
-            messages.add_message(
-                request,
-                messages.ERROR,
-                mark_safe(msg),
-            )
+                    if len(relationships_errors) > 0:
+                        for msg in relationships_errors:
+                            messages.add_message(
+                                request,
+                                messages.ERROR,
+                                mark_safe(msg),
+                            )
 
     return relationships_errors

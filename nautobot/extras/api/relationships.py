@@ -274,10 +274,7 @@ def validate_relationships(request, instance, submitted_relationships_data):
             submitted_data = submitted_relationships_data.get(relation, {}).get(side, "")
 
             if len(submitted_data) == 0:
-                if relation.type in [
-                    RelationshipTypeChoices.TYPE_ONE_TO_MANY,
-                    RelationshipTypeChoices.TYPE_MANY_TO_MANY,
-                ]:
+                if relation.has_many():
                     num_required_verbose = "at least one"
                 else:
                     num_required_verbose = "a"
