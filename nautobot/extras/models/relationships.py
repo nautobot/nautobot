@@ -802,13 +802,14 @@ def get_relationships_errors(request, obj, output_for="ui"):
                 if output_for == "ui":
                     try:
                         add_url = reverse(get_route_for_model(required_model_class, "add"))
-                        add_message = f"<a href='{add_url}'>Click here</a> to create a {model_meta.verbose_name}."
+                        add_message = f"<a href='{add_url}'>Click here</a> to create " f"a {model_meta.verbose_name}."
                     except NoReverseMatch:
-                        add_message = f"You need to create a {required} first"
+                        add_message = f"You need to create {num_required_verbose} {required} first"
 
                     relationships_errors.append(
-                        f"{obj._meta.verbose_name_plural.capitalize()} require {num_required_verbose} {required}, "
-                        f"but no {model_meta.verbose_name_plural} exist yet. {add_message}"
+                        f"{obj._meta.verbose_name[0].upper()}{obj._meta.verbose_name_plural[1:]} require "
+                        f"{num_required_verbose} {required}, but no {model_meta.verbose_name_plural} "
+                        f"exist yet. {add_message}"
                     )
                 elif output_for == "api":
                     cr_field_name = f"cr_{relation.slug}__{relation.required_side}"
@@ -821,9 +822,9 @@ def get_relationships_errors(request, obj, output_for="ui"):
 
                     relationships_errors.append(
                         {
-                            cr_field_name: f"{obj._meta.verbose_name_plural.capitalize()} "
-                            f"require {num_required_verbose} {required}, "
-                            f"but no {model_meta.verbose_name_plural} exist yet. {api_hint}"
+                            cr_field_name: f"{obj._meta.verbose_name_plural[0].upper()}"
+                            f"{obj._meta.verbose_name_plural[1:]} require {num_required_verbose} "
+                            f"{required}, but no {model_meta.verbose_name_plural} exist yet. {api_hint}"
                         }
                     )
 

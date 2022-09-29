@@ -2686,7 +2686,7 @@ class RelationshipTest(APIViewTestCases.APIViewTestCase):
         )
         expected_error_json = [
             {
-                "cr_vlans-devices__destination": "Vlans require at least one device, but no devices exist yet. "
+                "cr_vlans-devices__destination": "VLANs require at least one device, but no devices exist yet. "
                 "Create a device by posting to /api/dcim/devices/"
             }
         ]

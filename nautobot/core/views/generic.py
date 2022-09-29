@@ -385,9 +385,7 @@ class ObjectEditView(GetReturnURLMixin, ObjectPermissionRequiredMixin, View):
         form = self.model_form(instance=obj, initial=initial_data)
         restrict_form_fields(form, request.user)
 
-        relationships_errors = get_relationships_errors(request, obj)
-        if len(relationships_errors) > 0:
-            return redirect(get_route_for_model(obj, "list"))
+        get_relationships_errors(request, obj)
 
         return render(
             request,
@@ -408,9 +406,7 @@ class ObjectEditView(GetReturnURLMixin, ObjectPermissionRequiredMixin, View):
         form = self.model_form(data=request.POST, files=request.FILES, instance=obj)
         restrict_form_fields(form, request.user)
 
-        relationships_errors = get_relationships_errors(request, obj)
-        if len(relationships_errors) > 0:
-            return redirect(get_route_for_model(obj, "list"))
+        get_relationships_errors(request, obj)
 
         if form.is_valid():
             logger.debug("Form validation was successful")
@@ -957,9 +953,7 @@ class BulkEditView(GetReturnURLMixin, ObjectPermissionRequiredMixin, View):
         logger = logging.getLogger("nautobot.views.BulkEditView")
         model = self.queryset.model
 
-        relationships_errors = get_relationships_errors(request, model)
-        if len(relationships_errors) > 0:
-            return redirect(get_route_for_model(model, "list"))
+        get_relationships_errors(request, model)
 
         # If we are editing *all* objects in the queryset, replace the PK list with all matched objects.
         if request.POST.get("_all") and self.filterset is not None:

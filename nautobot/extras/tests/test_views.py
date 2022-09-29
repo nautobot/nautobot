@@ -2015,7 +2015,7 @@ class RelationshipTestCase(
         response = self.client.get(reverse(get_route_for_model(VLAN, "add")))
         self.assertRedirects(response, reverse(get_route_for_model(VLAN, "list")))
         response = self.client.get(reverse(get_route_for_model(VLAN, "add")), follow=True)
-        self.assertContains(response, "Vlans require at least one device, but no devices exist yet.")
+        self.assertContains(response, "VLANs require at least one device, but no devices exist yet.")
 
         # 2. Try visiting the add vlan page and submitting the form without any devices specified
         device1 = create_test_device("Device 1")
