@@ -1,0 +1,1 @@
+Fixed template lookup logic in ObjectNotesView, ObjectDynamicGroupsView and ObjectChangeLogView.
