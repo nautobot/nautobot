@@ -10,7 +10,7 @@ from rest_framework.serializers import ValidationError
 
 from nautobot.core.api import ValidatedModelSerializer
 from nautobot.core.api.exceptions import SerializerNotFound
-from nautobot.extras.choices import RelationshipSideChoices, RelationshipTypeChoices
+from nautobot.extras.choices import RelationshipSideChoices
 from nautobot.extras.models import get_relationships_errors, Relationship, RelationshipAssociation
 from nautobot.utilities.api import get_serializer_for_model
 
