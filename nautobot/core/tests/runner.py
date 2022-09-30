@@ -5,6 +5,8 @@ import factory.random
 
 from nautobot.ipam.factory import AggregateFactory, RIRFactory
 from nautobot.tenancy.factory import TenantFactory, TenantGroupFactory
+from nautobot.dcim.factory import LocationTypeFactory, LocationFactory
+from nautobot.dcim.models import LocationType
 
 
 class NautobotTestRunner(DiscoverRunner):
@@ -49,6 +51,15 @@ class NautobotTestRunner(DiscoverRunner):
         #       but also provide an option to use a specified seed to reproduce problems.
         factory.random.reseed_random("Nautobot")
 
+        print("Creating Regions...")
+        print("Creating Sites...")
+        print("Creating LocationTypes...")
+        LocationTypeFactory.create_batch(2, has_parent=False)
+        LocationTypeFactory.create_batch(5, has_parent=True)
+        print("Creating Locations...")
+        for lt in LocationType.objects.all():
+            LocationFactory.create(location_type=lt)
+        LocationFactory.create_batch(10)
         print("Creating TenantGroups...")
         TenantGroupFactory.create_batch(10, has_parent=False)
         TenantGroupFactory.create_batch(10, has_parent=True)
