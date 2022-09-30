@@ -9,13 +9,12 @@ from nautobot.circuits.models import (
     Provider,
     ProviderNetwork,
 )
-from nautobot.extras.models import Status, Tag
-from nautobot.utilities.testing import TestCase as NautobotTestCase, ViewTestCases
+from nautobot.extras.models import Status
+from nautobot.utilities.testing import post_data, TestCase as NautobotTestCase, ViewTestCases
 
 
 class ProviderTestCase(ViewTestCases.PrimaryObjectViewTestCase):
     model = Provider
-    fixtures = ("tag",)
 
     @classmethod
     def setUpTestData(cls):
@@ -24,6 +23,8 @@ class ProviderTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         Provider.objects.create(name="Provider 2", slug="provider-2", asn=65002)
         Provider.objects.create(name="Provider 3", slug="provider-3", asn=65003)
         Provider.objects.create(name="Provider 8", asn=65003)
+
+        tags = cls.create_tags("Alpha", "Bravo", "Charlie")
 
         cls.form_data = {
             "name": "Provider X",
@@ -34,7 +35,7 @@ class ProviderTestCase(ViewTestCases.PrimaryObjectViewTestCase):
             "noc_contact": "noc@example.com",
             "admin_contact": "admin@example.com",
             "comments": "Another provider",
-            "tags": [t.pk for t in Tag.objects.get_for_model(Provider)],
+            "tags": [t.pk for t in tags],
         }
 
         cls.csv_data = (
@@ -89,10 +90,6 @@ class CircuitTypeTestCase(ViewTestCases.OrganizationalObjectViewTestCase):
 
 class CircuitTestCase(ViewTestCases.PrimaryObjectViewTestCase):
     model = Circuit
-    fixtures = (
-        "status",
-        "tag",
-    )
 
     @classmethod
     def setUpTestData(cls):
@@ -128,6 +125,8 @@ class CircuitTestCase(ViewTestCases.PrimaryObjectViewTestCase):
             status=statuses[0],
         )
 
+        tags = cls.create_tags("Alpha", "Bravo", "Charlie")
+
         cls.form_data = {
             "cid": "Circuit X",
             "provider": providers[1].pk,
@@ -138,7 +137,7 @@ class CircuitTestCase(ViewTestCases.PrimaryObjectViewTestCase):
             "commit_rate": 1000,
             "description": "A new circuit",
             "comments": "Some comments",
-            "tags": [t.pk for t in Tag.objects.get_for_model(Circuit)],
+            "tags": [t.pk for t in tags],
         }
 
         cls.csv_data = (
@@ -161,7 +160,6 @@ class CircuitTestCase(ViewTestCases.PrimaryObjectViewTestCase):
 
 class ProviderNetworkTestCase(ViewTestCases.PrimaryObjectViewTestCase):
     model = ProviderNetwork
-    fixtures = ("tag",)
 
     @classmethod
     def setUpTestData(cls):
@@ -181,13 +179,15 @@ class ProviderNetworkTestCase(ViewTestCases.PrimaryObjectViewTestCase):
             ]
         )
 
+        tags = cls.create_tags("Alpha", "Bravo", "Charlie")
+
         cls.form_data = {
             "name": "ProviderNetwork X",
             "slug": "provider-network-x",
             "provider": providers[1].pk,
             "description": "A new ProviderNetwork",
             "comments": "Longer description goes here",
-            "tags": [t.pk for t in Tag.objects.get_for_model(ProviderNetwork)],
+            "tags": [t.pk for t in tags],
         }
 
         cls.csv_data = (
@@ -209,8 +209,6 @@ class ProviderNetworkTestCase(ViewTestCases.PrimaryObjectViewTestCase):
 
 
 class CircuitTerminationTestCase(NautobotTestCase):
-    fixtures = ("status",)
-
     def setUp(self):
         super().setUp()
         self.user.is_superuser = True
@@ -250,3 +248,57 @@ class CircuitTerminationTestCase(NautobotTestCase):
         # Visit the circuit object detail page and check there is no connect button present:
         response = self.client.get(reverse("circuits:circuit", kwargs={"pk": circuit.pk}))
         self.assertNotIn("</span> Connect", str(response.content))
+
+
+class CircuitSwapTerminationsTestCase(NautobotTestCase):
+    def setUp(self):
+        super().setUp()
+        self.user.is_superuser = True
+        self.user.save()
+
+    def test_swap_circuit_termination(self):
+        # Set up the required objects:
+        provider = Provider.objects.create(name="Test Provider", slug="test-provider", asn=12345)
+        provider_networks = (
+            ProviderNetwork.objects.create(
+                name="Test Provider Network 1",
+                slug="test-provider-network-1",
+                provider=provider,
+            ),
+            ProviderNetwork.objects.create(
+                name="Test Provider Network 2",
+                slug="test-provider-network-2",
+                provider=provider,
+            ),
+        )
+        circuit_type = CircuitType.objects.create(name="Test Circuit Type", slug="test-circuit-type")
+        active_status = Status.objects.get_for_model(Circuit).get(slug="active")
+        circuit = Circuit.objects.create(
+            cid="Test Circuit",
+            provider=provider,
+            type=circuit_type,
+            status=active_status,
+        )
+        CircuitTermination.objects.create(
+            circuit=circuit,
+            provider_network=provider_networks[0],
+            term_side=CircuitTerminationSideChoices.SIDE_A,
+        )
+        CircuitTermination.objects.create(
+            circuit=circuit,
+            provider_network=provider_networks[1],
+            term_side=CircuitTerminationSideChoices.SIDE_Z,
+        )
+        request = {
+            "path": reverse("circuits:circuit_terminations_swap", kwargs={"pk": circuit.pk}),
+            "data": post_data({"confirm": True}),
+        }
+        response = self.client.post(**request)
+        self.assertHttpStatus(response, 302)
+
+        termination_a = CircuitTermination.objects.get(circuit=circuit, term_side=CircuitTerminationSideChoices.SIDE_A)
+        termination_z = CircuitTermination.objects.get(circuit=circuit, term_side=CircuitTerminationSideChoices.SIDE_Z)
+
+        # Assert Swap
+        self.assertEqual(termination_a.provider_network, provider_networks[1])
+        self.assertEqual(termination_z.provider_network, provider_networks[0])
