@@ -164,15 +164,7 @@ class RoleTestCase(ViewTestCases.OrganizationalObjectViewTestCase):
 
     @classmethod
     def setUpTestData(cls):
-
-        Role.objects.bulk_create(
-            [
-                Role(name="Role 1", slug="role-1"),
-                Role(name="Role 2", slug="role-2"),
-                Role(name="Role 3", slug="role-3"),
-                Role(name="Role 8"),
-            ]
-        )
+        Role.objects.create(name="Role 8")
 
         cls.form_data = {
             "name": "Role X",
@@ -209,10 +201,7 @@ class PrefixTestCase(ViewTestCases.PrimaryObjectViewTestCase, ViewTestCases.List
 
         vrfs = VRF.objects.all()[:2]
 
-        roles = (
-            Role.objects.create(name="Role 1", slug="role-1"),
-            Role.objects.create(name="Role 2", slug="role-2"),
-        )
+        roles = Role.objects.all()[:2]
 
         statuses = Status.objects.get_for_model(Prefix)
         status_reserved = statuses.get(slug="reserved")
@@ -344,14 +333,7 @@ class VLANGroupTestCase(ViewTestCases.OrganizationalObjectViewTestCase):
 
         site = Site.objects.create(name="Site 1", slug="site-1")
 
-        VLANGroup.objects.bulk_create(
-            [
-                VLANGroup(name="VLAN Group 1", slug="vlan-group-1", site=site),
-                VLANGroup(name="VLAN Group 2", slug="vlan-group-2", site=site),
-                VLANGroup(name="VLAN Group 3", slug="vlan-group-3", site=site),
-                VLANGroup(name="VLAN Group 8", site=site),
-            ]
-        )
+        VLANGroup.objects.create(name="VLAN Group 8", site=site)
 
         cls.form_data = {
             "name": "VLAN Group X",
@@ -453,26 +435,11 @@ class VLANTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         cls.bulk_edit_data = {
             "site": sites[1].pk,
             "group": vlangroups[1].pk,
-            "tenant": None,
+            "tenant": Tenant.objects.first().pk,
             "status": status_reserved.pk,
             "role": roles[1].pk,
             "description": "New description",
         }
-
-    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
-    def test_queryset_to_csv(self):
-        """This view has a custom queryset_to_csv() implementation."""
-        response = self.client.get(f"{self._get_url('list')}?export")
-        self.assertHttpStatus(response, 200)
-        self.assertEqual(response.get("Content-Type"), "text/csv")
-        self.assertEqual(
-            """\
-site,location,group,vid,name,tenant,status,role,description,cf_field
-Site 1,,VLAN Group 1,101,VLAN101,,Active,Role 1,,Value
-Site 1,,VLAN Group 1,102,VLAN102,,Active,Role 1,,Value
-Site 1,,VLAN Group 1,103,VLAN103,,Active,Role 1,,Value""",
-            response.content.decode(response.charset),
-        )
 
 
 # TODO: Update base class to PrimaryObjectViewTestCase

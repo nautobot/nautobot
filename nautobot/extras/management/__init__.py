@@ -85,7 +85,7 @@ DESCRIPTION_MAP = {
 #
 
 
-def populate_status_choices(apps, schema_editor, **kwargs):
+def populate_status_choices(apps=global_apps, schema_editor=None, **kwargs):
     """
     Populate `Status` model choices.
 

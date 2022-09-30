@@ -11,7 +11,7 @@ from nautobot.core.models.generics import OrganizationalModel, PrimaryModel
 from nautobot.extras.models import StatusModel
 from nautobot.extras.utils import extras_features, FeatureQuery
 from nautobot.utilities.fields import NaturalOrderingField
-from nautobot.utilities.tree_queries import TreeManager
+from nautobot.utilities.tree_queries import TreeManager, TreeQuerySet
 
 
 @extras_features(
@@ -86,6 +86,14 @@ class LocationType(TreeNode, OrganizationalModel):
             raise ValidationError({"name": "This name is reserved for future use."})
 
 
+class LocationQuerySet(TreeQuerySet):
+
+    def get_for_model(self, model):
+        """Filter locations to only those that can accept the given model class."""
+        content_type = ContentType.objects.get_for_model(model._meta.concrete_model)
+        return self.filter(location_type__content_types=content_type)
+
+
 @extras_features(
     "custom_fields",
     "custom_links",
@@ -150,7 +158,7 @@ class Location(TreeNode, StatusModel, PrimaryModel):
     description = models.CharField(max_length=200, blank=True)
     images = GenericRelation(to="extras.ImageAttachment")
 
-    objects = TreeManager()
+    objects = LocationQuerySet.as_manager()
 
     csv_headers = [
         "name",

@@ -1,10 +1,17 @@
+import logging
+
 import factory
 from factory.random import randgen
 
 from nautobot.core.factory import OrganizationalModelFactory, PrimaryModelFactory
-from nautobot.ipam.models import Aggregate, RIR, RouteTarget, VRF
+from nautobot.dcim.models import Location, Site
+from nautobot.extras.models import Status
+from nautobot.ipam.models import Aggregate, RIR, Role, RouteTarget, VLAN, VLANGroup, VRF
 from nautobot.tenancy.models import Tenant
 from nautobot.utilities.factory import get_random_instances, random_instance, UniqueFaker
+
+
+logger = logging.getLogger(__name__)
 
 
 class RIRFactory(OrganizationalModelFactory):
@@ -181,3 +188,123 @@ class VRFFactory(PrimaryModelFactory):
                 self.export_targets.set(extracted)
             else:
                 self.export_targets.set(get_random_instances(RouteTarget))
+
+
+class RoleFactory(OrganizationalModelFactory):
+    class Meta:
+        model = Role
+        exclude = ("has_description",)
+
+    name = factory.Faker("word", part_of_speech="adjective")
+
+    weight = factory.Faker("pyint", min_value=100, step=100)
+
+    has_description = factory.Faker("pybool")
+    description = factory.Maybe("has_description", factory.Faker("sentence"), "")
+
+
+class VLANGroupFactory(OrganizationalModelFactory):
+    class Meta:
+        model = VLANGroup
+        exclude = (
+            "has_description",
+            "has_location",
+            "has_site",
+        )
+
+    # TODO: name is not globally unique, but (site, name) tuple must be.
+    # The likelihood of collision with random names is pretty low, but non-zero.
+    # We might want to consider *intentionally* using non-globally-unique names for testing purposes?
+    name = factory.Faker("word", part_of_speech="noun")
+
+    has_description = factory.Faker("pybool")
+    description = factory.Maybe("has_description", factory.Faker("sentence"), "")
+
+    has_location = factory.Faker("pybool")
+    location = factory.Maybe(
+        "has_location", random_instance(Location, location_type__content_types__model="vlangroup"), None
+    )
+
+    has_site = factory.Faker("pybool")
+    site = factory.Maybe("has_site", random_instance(Site), None)
+
+    @classmethod
+    def _adjust_kwargs(cls, **kwargs):
+        """Fine-tune the randomly generated kwargs to ensure validity."""
+        if (
+            kwargs["site"] is not None
+            and kwargs["location"] is not None
+            and kwargs["location"].base_site != kwargs["site"]
+        ):
+            logger.debug("Fixing mismatch between `site` and `location.base_site` by overriding `site`")
+            kwargs["site"] = kwargs["location"].base_site
+
+        return kwargs
+
+
+class VLANFactory(PrimaryModelFactory):
+    class Meta:
+        model = VLAN
+        exclude = (
+            "has_description",
+            "has_group",
+            "has_location",
+            "has_role",
+            "has_site",
+            "has_tenant",
+        )
+
+    # TODO: VID and name do not need to be globally unique, but must be unique within a group (if any)
+    # As with VLANGroup, with fully random names and vids, non-uniqueness is unlikely but possible,
+    # and we might want to consider intentionally reusing non-unique values for test purposes?
+    vid = factory.Faker("pyint", min_value=1, max_value=4094)
+    name = factory.Faker("word", part_of_speech="noun")
+
+    status = random_instance(Status, content_types__model="vlan")
+
+    has_description = factory.Faker("pybool")
+    description = factory.Maybe("has_description", factory.Faker("sentence"), "")
+
+    has_group = factory.Faker("pybool")
+    group = factory.Maybe("has_group", random_instance(VLANGroup), None)
+
+    has_location = factory.Faker("pybool")
+    location = factory.Maybe(
+        "has_location", random_instance(Location, location_type__content_types__model="vlan"), None
+    )
+
+    has_role = factory.Faker("pybool")
+    role = factory.Maybe("has_role", random_instance(Role), None)
+
+    has_site = factory.Faker("pybool")
+    site = factory.Maybe("has_site", random_instance(Site), None)
+
+    has_tenant = factory.Faker("pybool")
+    tenant = factory.Maybe("has_tenant", random_instance(Tenant), None)
+
+    @classmethod
+    def _adjust_kwargs(cls, **kwargs):
+        """Fine-tune the randomly generated kwargs to ensure validity."""
+        if (
+            kwargs["group"] is not None
+            and kwargs["location"] is not None
+            and kwargs["group"].location is not None
+            and kwargs["group"].location not in kwargs["location"].ancestors(include_self=True)
+        ):
+            logger.debug("Fixing mismatch between `group.location` and `location` by overriding `location`")
+            kwargs["location"] = randgen.choice(kwargs["group"].location.descendants(include_self=True))
+
+        if (
+            kwargs["site"] is not None
+            and kwargs["location"] is not None
+            and kwargs["location"].base_site != kwargs["site"]
+        ):
+            logger.debug("Fixing mismatch between `site` and `location.base_site` by overriding `site`")
+            kwargs["site"] = kwargs["location"].base_site
+
+        if kwargs["group"] is not None and kwargs["group"].site != kwargs["site"]:
+            logger.debug("Fixing mismatch between `group.site` and `site` by overriding `site`")
+            # TODO: can this conflict with the fixup for site / location.base_site? Time will tell.
+            kwargs["site"] = kwargs["group"].site
+
+        return kwargs

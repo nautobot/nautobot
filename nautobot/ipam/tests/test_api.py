@@ -168,16 +168,6 @@ class RoleTest(APIViewTestCases.APIViewTestCase):
     }
     slug_source = "name"
 
-    @classmethod
-    def setUpTestData(cls):
-
-        roles = (
-            Role(name="Role 1", slug="role-1"),
-            Role(name="Role 2", slug="role-2"),
-            Role(name="Role 3", slug="role-3"),
-        )
-        Role.objects.bulk_create(roles)
-
 
 class PrefixTest(APIViewTestCases.APIViewTestCase):
     model = Prefix
@@ -551,16 +541,6 @@ class VLANGroupTest(APIViewTestCases.APIViewTestCase):
     }
     slug_source = "name"
 
-    @classmethod
-    def setUpTestData(cls):
-
-        vlan_groups = (
-            VLANGroup(name="VLAN Group 1", slug="vlan-group-1"),
-            VLANGroup(name="VLAN Group 2", slug="vlan-group-2"),
-            VLANGroup(name="VLAN Group 3", slug="vlan-group-3"),
-        )
-        VLANGroup.objects.bulk_create(vlan_groups)
-
 
 class VLANTest(APIViewTestCases.APIViewTestCase):
     model = VLAN
@@ -574,16 +554,7 @@ class VLANTest(APIViewTestCases.APIViewTestCase):
     @classmethod
     def setUpTestData(cls):
 
-        vlan_groups = (
-            VLANGroup.objects.create(name="VLAN Group 1", slug="vlan-group-1"),
-            VLANGroup.objects.create(name="VLAN Group 2", slug="vlan-group-2"),
-        )
-
-        statuses = Status.objects.get_for_model(VLAN)
-
-        VLAN.objects.create(name="VLAN 1", vid=1, group=vlan_groups[0], status=statuses[0])
-        VLAN.objects.create(name="VLAN 2", vid=2, group=vlan_groups[0], status=statuses[0])
-        VLAN.objects.create(name="VLAN 3", vid=3, group=vlan_groups[0], status=statuses[0])
+        vlan_groups = VLANGroup.objects.all()[:2]
 
         # FIXME(jathan): The writable serializer for `status` takes the
         # status `name` (str) and not the `pk` (int). Do not validate this

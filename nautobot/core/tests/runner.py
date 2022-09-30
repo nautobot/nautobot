@@ -3,7 +3,10 @@ from django.test.runner import DiscoverRunner
 
 import factory.random
 
-from nautobot.ipam.factory import AggregateFactory, RIRFactory, RouteTargetFactory, VRFFactory
+from nautobot.extras.management import populate_status_choices
+from nautobot.ipam.factory import (
+    AggregateFactory, RIRFactory, RoleFactory, RouteTargetFactory, VLANGroupFactory, VLANFactory, VRFFactory
+)
 from nautobot.tenancy.factory import TenantFactory, TenantGroupFactory
 
 
@@ -49,6 +52,8 @@ class NautobotTestRunner(DiscoverRunner):
         #       but also provide an option to use a specified seed to reproduce problems.
         factory.random.reseed_random("Nautobot")
 
+        print("Creating Statuses...")
+        populate_status_choices()  # for now just the basic ones; we should eventually add a factory for random ones too
         print("Creating TenantGroups...")
         TenantGroupFactory.create_batch(10, has_parent=False)
         TenantGroupFactory.create_batch(10, has_parent=True)
@@ -63,6 +68,12 @@ class NautobotTestRunner(DiscoverRunner):
         RouteTargetFactory.create_batch(20)
         print("Creating VRFs...")
         VRFFactory.create_batch(20)
+        print("Creating IP/VLAN Roles...")
+        RoleFactory.create_batch(10)
+        print("Creating VLANGroups...")
+        VLANGroupFactory.create_batch(20)
+        print("Creating VLANs...")
+        VLANFactory.create_batch(20)
 
         print("Database pre-population completed!")
         return result

@@ -579,14 +579,9 @@ class ViewTestCases:
             self.assertHttpStatus(response, 200)
             content = extract_page_body(response.content.decode(response.charset))
             # TODO: it'd make test failures more readable if we strip the page headers/footers from the content
-            if hasattr(self.model, "name"):
-                self.assertIn(instance1.name, content, msg=content)
-                self.assertNotIn(instance2.name, content, msg=content)
-            try:
-                self.assertIn(self._get_url("view", instance=instance1), content, msg=content)
-                self.assertNotIn(self._get_url("view", instance=instance2), content, msg=content)
-            except NoReverseMatch:
-                pass
+            # We should have exactly one table row, and that row is "even" (I guess counting from zero?)
+            self.assertIn('<tr class="even">', content, msg=content)
+            self.assertNotIn('<tr class="odd">', content, msg=content)
 
         @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"], STRICT_FILTERING=True)
         def test_list_objects_unknown_filter_strict_filtering(self):
@@ -597,14 +592,8 @@ class ViewTestCases:
             content = extract_page_body(response.content.decode(response.charset))
             # TODO: it'd make test failures more readable if we strip the page headers/footers from the content
             self.assertIn("Unknown filter field", content, msg=content)
-            if hasattr(self.model, "name"):
-                self.assertNotIn(instance1.name, content, msg=content)
-                self.assertNotIn(instance2.name, content, msg=content)
-            try:
-                self.assertNotIn(self._get_url("view", instance=instance1), content, msg=content)
-                self.assertNotIn(self._get_url("view", instance=instance2), content, msg=content)
-            except NoReverseMatch:
-                pass
+            # There should be no table rows displayed except for the empty results row
+            self.assertIn(f"No {self.model._meta.verbose_name_plural} found", content, msg=content)
 
         @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"], STRICT_FILTERING=False)
         def test_list_objects_unknown_filter_no_strict_filtering(self):
@@ -623,14 +612,9 @@ class ViewTestCases:
             content = extract_page_body(response.content.decode(response.charset))
             # TODO: it'd make test failures more readable if we strip the page headers/footers from the content
             self.assertNotIn("Unknown filter field", content, msg=content)
-            if hasattr(self.model, "name"):
-                self.assertIn(instance1.name, content, msg=content)
-                self.assertIn(instance2.name, content, msg=content)
-            try:
-                self.assertIn(self._get_url("view", instance=instance1), content, msg=content)
-                self.assertIn(self._get_url("view", instance=instance2), content, msg=content)
-            except NoReverseMatch:
-                pass
+            self.assertNotIn(f"No {self.model._meta.verbose_name_plural} found", content, msg=content)
+            self.assertIn('<tr class="even">', content, msg=content)
+            self.assertIn('<tr class="odd">', content, msg=content)
 
         @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
         def test_list_objects_without_permission(self):
