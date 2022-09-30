@@ -226,6 +226,13 @@ class LookupTypeChoicesTestCase(APITestCase):
         self.assertEqual(response.status_code, 400)
         self.assertEqual(response.data, "content_type and field_name are required parameters")
 
+    def test_get_lookup_field_data_invalid_query_params(self):
+        url = reverse("lookup_choices")
+        response = self.client.get(url + "?content_type=invalid.contenttypes&field_name=name", **self.header)
+
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(response.data, "content_type not found")
+
     def test_get_lookup_choices(self):
         url = reverse("lookup_choices")
         response = self.client.get(url + "?content_type=dcim.site&field_name=status", **self.header)
@@ -249,6 +256,13 @@ class GenerateLookupValueDomElementViewTestCase(APITestCase):
 
         self.assertEqual(response.status_code, 400)
         self.assertEqual(response.data, "content_type and field_name are required parameters")
+
+    def test_get_lookup_field_data_invalid_query_params(self):
+        url = reverse("lookup_value_dom_element")
+        response = self.client.get(url + "?content_type=invalid.contenttypes&field_name=name", **self.header)
+
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(response.data, "content_type not found")
 
     def test_get_lookup_value_dom_element(self):
         url = reverse("lookup_value_dom_element")

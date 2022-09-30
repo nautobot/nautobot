@@ -45,7 +45,7 @@ from nautobot.utilities.utils import (
     get_form_for_model,
 )
 from . import serializers
-from .pagination import OptionalLimitOffsetPagination
+from .pagination import LookupExpressionChoicesPagination
 
 HTTP_ACTIONS = {
     "GET": "view",
@@ -722,7 +722,7 @@ class GetFilterSetFieldLookupExpressionChoicesAPI(NautobotAPIVersionMixin, ListA
     """API View that gets all lookup expression choices for a FilterSet field."""
 
     permission_classes = [IsAuthenticated]
-    pagination_class = OptionalLimitOffsetPagination
+    pagination_class = LookupExpressionChoicesPagination
 
     @extend_schema(
         parameters=[
@@ -748,7 +748,13 @@ class GetFilterSetFieldLookupExpressionChoicesAPI(NautobotAPIVersionMixin, ListA
         contenttype = request.GET.get("content_type")
         field_name = request.GET.get("field_name")
         app_label, model_name = contenttype.split(".")
-        model = ContentType.objects.get(app_label=app_label, model=model_name).model_class()
+        try:
+            model = ContentType.objects.get(app_label=app_label, model=model_name).model_class()
+        except ContentType.DoesNotExist:
+            return Response(
+                "content_type not found",
+                status=400,
+            )
         data = get_all_lookup_expr_for_field(model, field_name)
 
         # Needs to be returned in this format because this endpoint is used by
@@ -799,7 +805,13 @@ class GetFilterSetFieldDOMElementAPI(NautobotAPIVersionMixin, APIView):
         field_name = request.GET.get("field_name")
         contenttype = request.GET.get("content_type")
         app_label, model_name = contenttype.split(".")
-        model = ContentType.objects.get(app_label=app_label, model=model_name).model_class()
+        try:
+            model = ContentType.objects.get(app_label=app_label, model=model_name).model_class()
+        except ContentType.DoesNotExist:
+            return Response(
+                "content_type not found",
+                status=400,
+            )
         model_form = get_form_for_model(model)
         form_field = get_filterset_parameter_form_field(model, field_name)
         field_dom_representation = form_field.get_bound_field(model_form(), field_name).as_widget()

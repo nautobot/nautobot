@@ -63,3 +63,27 @@ class OptionalLimitOffsetPagination(LimitOffsetPagination):
             return None
 
         return super().get_previous_link()
+
+
+class LookupExpressionChoicesPagination(LimitOffsetPagination):
+    """
+    Override the stock paginator to disable schema operation parameters and set `next` and `previous`
+    in `get_paginated_response_schema` examples to `None`.
+    """
+
+    def get_schema_operation_parameters(self, view):
+        return []
+
+    def get_paginated_response_schema(self, schema):
+        return {
+            "type": "object",
+            "properties": {
+                "count": {
+                    "type": "integer",
+                    "example": 123,
+                },
+                "next": {"type": "string", "nullable": True, "example": None},
+                "previous": {"type": "string", "nullable": True, "example": None},
+                "results": schema,
+            },
+        }
