@@ -5,7 +5,13 @@ import factory.random
 
 from nautobot.extras.management import populate_status_choices
 from nautobot.ipam.factory import (
-    AggregateFactory, RIRFactory, RoleFactory, RouteTargetFactory, VLANGroupFactory, VLANFactory, VRFFactory
+    AggregateFactory,
+    RIRFactory,
+    RoleFactory,
+    RouteTargetFactory,
+    VLANGroupFactory,
+    VLANFactory,
+    VRFFactory,
 )
 from nautobot.tenancy.factory import TenantFactory, TenantGroupFactory
 

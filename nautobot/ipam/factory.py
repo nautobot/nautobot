@@ -220,9 +220,7 @@ class VLANGroupFactory(OrganizationalModelFactory):
     description = factory.Maybe("has_description", factory.Faker("sentence"), "")
 
     has_location = factory.Faker("pybool")
-    location = factory.Maybe(
-        "has_location", random_instance(lambda: Location.objects.get_for_model(VLANGroup)), None
-    )
+    location = factory.Maybe("has_location", random_instance(lambda: Location.objects.get_for_model(VLANGroup)), None)
 
     has_site = factory.Faker("pybool")
     site = factory.Maybe("has_site", random_instance(Site), None)
@@ -268,9 +266,7 @@ class VLANFactory(PrimaryModelFactory):
     group = factory.Maybe("has_group", random_instance(VLANGroup), None)
 
     has_location = factory.Faker("pybool")
-    location = factory.Maybe(
-        "has_location", random_instance(lambda: Location.objects.get_for_model(VLAN)), None
-    )
+    location = factory.Maybe("has_location", random_instance(lambda: Location.objects.get_for_model(VLAN)), None)
 
     has_role = factory.Faker("pybool")
     role = factory.Maybe("has_role", random_instance(Role), None)

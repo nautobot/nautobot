@@ -50,6 +50,7 @@ def random_instance(model_or_queryset_or_lambda, allow_null=True):
             # and we need to defer evaluation of that queryset as well.
             status = random_instance(lambda: Status.objects.get_for_model(Object), allow_null=False)
     """
+
     def get_random_instance():
         queryset = _get_queryset_from_model_or_queryset_or_lambda(model_or_queryset_or_lambda)
 

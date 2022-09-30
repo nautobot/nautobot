@@ -87,7 +87,6 @@ class LocationType(TreeNode, OrganizationalModel):
 
 
 class LocationQuerySet(TreeQuerySet):
-
     def get_for_model(self, model):
         """Filter locations to only those that can accept the given model class."""
         content_type = ContentType.objects.get_for_model(model._meta.concrete_model)
