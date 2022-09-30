@@ -41,6 +41,4 @@ class PrimaryModelFactory(BaseModelFactory):
             if extracted:
                 self.tags.set(extracted)
             else:
-                self.tags.set(
-                    get_random_instances(Tag, content_types__model=self._meta.model._meta.model_name)
-                )
+                self.tags.set(get_random_instances(Tag.objects.get_for_model(self._meta.model)))

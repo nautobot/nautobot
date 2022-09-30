@@ -2,6 +2,7 @@ import logging
 
 import factory
 from factory.random import randgen
+import faker
 
 from nautobot.core.factory import OrganizationalModelFactory, PrimaryModelFactory
 from nautobot.dcim.models import Location, Site
@@ -122,9 +123,7 @@ def random_route_distinguisher():
         # 16-bit ASNs 64496–64511 are reserved for documentation and sample code
         return f"{randgen.randint(64496, 64511)}:{randgen.randint(0, 2**32 - 1)}"
     if branch == 1:
-        # The official stance of factory-boy maintainers is that evaluate() is a private method, but there doesn't
-        # seem to be any convenient alternative way to do this at present.
-        return f"{factory.Faker('ipv4_private').evaluate(None, None, {'locale': None})}:{randgen.randint(0, 2**16 - 1)}"
+        return f"{faker.Faker().ipv4_private()}:{randgen.randint(0, 2**16 - 1)}"
     # 32-bit ASNs 4200000000-4294967294 are reserved for private use
     return f"{randgen.randint(4200000000, 4294967294)}:{randgen.randint(0, 2**16 - 1)}"
 
@@ -222,7 +221,7 @@ class VLANGroupFactory(OrganizationalModelFactory):
 
     has_location = factory.Faker("pybool")
     location = factory.Maybe(
-        "has_location", random_instance(Location, location_type__content_types__model="vlangroup"), None
+        "has_location", random_instance(lambda: Location.objects.get_for_model(VLANGroup)), None
     )
 
     has_site = factory.Faker("pybool")
@@ -260,7 +259,7 @@ class VLANFactory(PrimaryModelFactory):
     vid = factory.Faker("pyint", min_value=1, max_value=4094)
     name = factory.Faker("word", part_of_speech="noun")
 
-    status = random_instance(Status, content_types__model="vlan")
+    status = random_instance(lambda: Status.objects.get_for_model(VLAN), allow_null=False)
 
     has_description = factory.Faker("pybool")
     description = factory.Maybe("has_description", factory.Faker("sentence"), "")
@@ -270,7 +269,7 @@ class VLANFactory(PrimaryModelFactory):
 
     has_location = factory.Faker("pybool")
     location = factory.Maybe(
-        "has_location", random_instance(Location, location_type__content_types__model="vlan"), None
+        "has_location", random_instance(lambda: Location.objects.get_for_model(VLAN)), None
     )
 
     has_role = factory.Faker("pybool")
