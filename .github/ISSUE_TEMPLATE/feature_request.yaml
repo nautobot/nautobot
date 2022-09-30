@@ -79,6 +79,7 @@ body:
         - label: Image Management
         - label: UI/UX
         - label: Documentation
+        - label: Jobs
         - label: Other (not directly a platform feature)
   - type: textarea
     id: database_changes
