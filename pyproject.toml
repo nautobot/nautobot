@@ -84,7 +84,7 @@ django-tree-queries = "~0.11"
 # Run production webservers such as uWSGI/gunicorn as a Django management command.
 django-webserver = "~1.2.0"
 # REST API framework
-djangorestframework = "~3.13.1"
+djangorestframework = "~3.14.0"
 # OpenAPI 3.0 schema generation for the REST API
 drf-spectacular = {version = "~0.24.0", extras = ["sidecar"]}
 # 2.0 TODO: no longer used, but retained for now to avoid breaking plugin expectations
