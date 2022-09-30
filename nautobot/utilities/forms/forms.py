@@ -277,36 +277,35 @@ class DynamicFilterForm(BootstrapMixin, forms.Form):
         if filterset_class is not None:
             filterset = filterset_class()
             self.filterset_filters = filterset.filters
+            contenttype = self.model._meta.app_label + "." + self.model._meta.model_name
 
-        contenttype = self.model._meta.app_label + "." + self.model._meta.model_name
+            # Configure fields: Add css class and set choices for lookup_field
+            self.fields["lookup_field"].choices = add_blank_choice(self.get_lookup_field_choices())
+            self.fields["lookup_field"].widget.attrs["class"] = "nautobot-select2-static lookup_field-select"
 
-        # Configure fields: Add css class and set choices for lookup_field
-        self.fields["lookup_field"].choices = add_blank_choice(self.get_lookup_field_choices())
-        self.fields["lookup_field"].widget.attrs["class"] = "nautobot-select2-static lookup_field-select"
+            # Update lookup_type and lookup_value fields to match expected field types derived from data
+            # e.g status expects a ChoiceField with APISelectMultiple widget, while name expects a CharField etc.
+            if "data" in kwargs and "prefix" in kwargs:
+                data = kwargs["data"]
+                prefix = kwargs["prefix"]
+                lookup_type = data.get(prefix + "-lookup_type")
+                lookup_value = data.getlist(prefix + "-lookup_value")
 
-        # Update lookup_type and lookup_value fields to match expected field types derived from data
-        # e.g status expects a ChoiceField with APISelectMultiple widget, while name expects a CharField etc.
-        if "data" in kwargs and "prefix" in kwargs:
-            data = kwargs["data"]
-            prefix = kwargs["prefix"]
-            lookup_type = data.get(prefix + "-lookup_type")
-            lookup_value = data.getlist(prefix + "-lookup_value")
+                if lookup_type and lookup_value and lookup_type in self.filterset_filters:
+                    verbose_name = self.filterset_filters[lookup_type].lookup_expr
+                    label = build_lookup_label(lookup_type, verbose_name)
+                    self.fields["lookup_type"].choices = [(lookup_type, label)]
+                    self.fields["lookup_value"] = get_filterset_parameter_form_field(self.model, lookup_type)
 
-            if lookup_type and lookup_value and lookup_type in self.filterset_filters:
-                verbose_name = self.filterset_filters[lookup_type].lookup_expr
-                label = build_lookup_label(lookup_type, verbose_name)
-                self.fields["lookup_type"].choices = [(lookup_type, label)]
-                self.fields["lookup_value"] = get_filterset_parameter_form_field(self.model, lookup_type)
+            self.fields["lookup_type"].widget.attrs["data-query-param-field_name"] = json.dumps(["$lookup_field"])
+            self.fields["lookup_type"].widget.attrs["data-contenttype"] = contenttype
+            self.fields["lookup_type"].widget.attrs["data-url"] = reverse("lookup_choices")
+            self.fields["lookup_type"].widget.attrs["class"] = "nautobot-select2-api lookup_type-select"
 
-        self.fields["lookup_type"].widget.attrs["data-query-param-field_name"] = json.dumps(["$lookup_field"])
-        self.fields["lookup_type"].widget.attrs["data-contenttype"] = contenttype
-        self.fields["lookup_type"].widget.attrs["data-url"] = reverse("lookup_choices")
-        self.fields["lookup_type"].widget.attrs["class"] = "nautobot-select2-api lookup_type-select"
-
-        lookup_value_css = self.fields["lookup_value"].widget.attrs.get("class") or ""
-        self.fields["lookup_value"].widget.attrs["class"] = " ".join(
-            [lookup_value_css, "lookup_value-input form-control"]
-        )
+            lookup_value_css = self.fields["lookup_value"].widget.attrs.get("class") or ""
+            self.fields["lookup_value"].widget.attrs["class"] = " ".join(
+                [lookup_value_css, "lookup_value-input form-control"]
+            )
 
     @staticmethod
     def capitalize(field):

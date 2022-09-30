@@ -228,7 +228,7 @@ class LookupTypeChoicesTestCase(APITestCase):
 
     def test_get_lookup_choices(self):
         url = reverse("lookup_choices")
-        response = self.client.get(url + "?contenttype=dcim.site&field_name=status", **self.header)
+        response = self.client.get(url + "?content_type=dcim.site&field_name=status", **self.header)
 
         self.assertEqual(response.status_code, 200)
         self.assertEqual(
@@ -237,7 +237,7 @@ class LookupTypeChoicesTestCase(APITestCase):
                 "count": 2,
                 "next": None,
                 "previous": None,
-                "results": [{"id": "status", "name": "exact"}, {"id": "status__n", "name": "not-exact(n)"}],
+                "results": [{"id": "status", "name": "exact"}, {"id": "status__n", "name": "not-exact (n)"}],
             },
         )
 
@@ -252,7 +252,7 @@ class GenerateLookupValueDomElementViewTestCase(APITestCase):
 
     def test_get_lookup_value_dom_element(self):
         url = reverse("lookup_value_dom_element")
-        response = self.client.get(url + "?contenttype=dcim.site&field_name=name", **self.header)
+        response = self.client.get(url + "?content_type=dcim.site&field_name=name", **self.header)
 
         self.assertEqual(response.status_code, 200)
         self.assertEqual(

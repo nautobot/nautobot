@@ -796,7 +796,7 @@ class DynamicFilterFormTest(TestCase):
             # `lookup_value` field should be a CharField
             data = convert_querydict_to_factory_formset_acceptable_querydict(request_querydict, SiteFilterSet)
             form = DynamicFilterForm(model=Site, data=data, prefix="form-0")
-            self.assertEqual(form.fields["lookup_type"]._choices, [("name__ic", "contains(ic)")])
+            self.assertEqual(form.fields["lookup_type"]._choices, [("name__ic", "contains (ic)")])
             # Assert lookup_value is a CharField
             self.assertIsInstance(form.fields["lookup_value"], forms.CharField)
 
@@ -851,9 +851,7 @@ class DynamicFilterFormTest(TestCase):
                 {"class": "form-control nautobot-select2-static lookup_value-input form-control"},
             )
             self.assertTrue(isinstance(form.fields["lookup_value"].widget, StaticSelect2))
-            self.assertEqual(
-                form.fields["lookup_value"]._choices, [("", "---------"), ("True", "Yes"), ("False", "No")]
-            )
+            self.assertEqual(form.fields["lookup_value"]._choices, [("True", "Yes"), ("False", "No")])
 
         with self.subTest("Test for lookup_value with a DateField"):
             form = DynamicFilterForm(model=Site, data=data, prefix="form-4")

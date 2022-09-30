@@ -745,7 +745,7 @@ def get_all_lookup_expr_for_field(model, field_name):
         if re.sub(r"__\w+", "", name) == field_name and not name.startswith("has_"):
             lookup_expr_choices.append(
                 {
-                    "id": field_name,
+                    "id": name,
                     "name": build_lookup_label(name, field.lookup_expr),
                 }
             )
@@ -843,7 +843,7 @@ def convert_querydict_to_factory_formset_acceptable_querydict(request_querydict,
         ... }
     """
     query_dict = QueryDict(mutable=True)
-    filterset_class_fields = filterset_class.base_filters.keys()
+    filterset_class_fields = filterset_class().filters.keys()
 
     query_dict.setdefault("form-INITIAL_FORMS", 0)
     query_dict.setdefault("form-MIN_NUM_FORMS", 0)
@@ -872,7 +872,7 @@ def convert_querydict_to_factory_formset_acceptable_querydict(request_querydict,
 
 def is_single_choice_field(filterset_class, field_name):
     # Some filter parameters do not accept multiple values, e.g DateTime fields, boolean fields etc.
-    field = filterset_class.base_filters.get(field_name)
+    field = filterset_class().filters.get(field_name)
     if field is None:
         pass
         # TODO (timizuo): handle filed not exist
