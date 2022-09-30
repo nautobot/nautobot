@@ -14,6 +14,7 @@ from django.shortcuts import redirect
 from django_rq.queues import get_connection as get_rq_connection
 from drf_spectacular.types import OpenApiTypes
 from rest_framework import status
+from rest_framework.generics import ListAPIView
 from rest_framework.response import Response
 from rest_framework.reverse import reverse
 from rest_framework.views import APIView
@@ -44,6 +45,7 @@ from nautobot.utilities.utils import (
     get_form_for_model,
 )
 from . import serializers
+from .pagination import OptionalLimitOffsetPagination
 
 HTTP_ACTIONS = {
     "GET": "view",
@@ -716,10 +718,11 @@ class GraphQLDRFAPIView(NautobotAPIVersionMixin, APIView):
 #
 
 
-class GetFilterSetFieldLookupExpressionChoicesView(NautobotAPIVersionMixin, APIView):
+class GetFilterSetFieldLookupExpressionChoicesAPI(NautobotAPIVersionMixin, ListAPIView):
     """API View that gets all lookup expression choices for a FilterSet field."""
 
     permission_classes = [IsAuthenticated]
+    pagination_class = OptionalLimitOffsetPagination
 
     @extend_schema(
         parameters=[
@@ -734,26 +737,7 @@ class GetFilterSetFieldLookupExpressionChoicesView(NautobotAPIVersionMixin, APIV
                 type=OpenApiTypes.STR,
             ),
         ],
-        responses={
-            200: {
-                "type": "object",
-                "properties": {
-                    "count": {"type": "integer"},
-                    "next": {"type": "string"},
-                    "previous": {"type": "string"},
-                    "data": {
-                        "type": "array",
-                        "items": {
-                            "type": "object",
-                            "properties": {
-                                "id": {"type": "string", "format": "uuid"},
-                                "name": {"type": "string"},
-                            },
-                        },
-                    },
-                },
-            }
-        },
+        responses={200: serializers.GetFilterSetFieldLookupExpressionChoicesAPISerializer},
     )
     def get(self, request):
         if "content_type" not in request.GET or "field_name" not in request.GET:
@@ -779,7 +763,7 @@ class GetFilterSetFieldLookupExpressionChoicesView(NautobotAPIVersionMixin, APIV
         )
 
 
-class GetFilterSetFieldDOMElementView(NautobotAPIVersionMixin, APIView):
+class GetFilterSetFieldDOMElementAPI(NautobotAPIVersionMixin, APIView):
     """API View that gets the dom element of a FilterSet field."""
 
     permission_classes = [IsAuthenticated]
