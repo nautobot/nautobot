@@ -85,7 +85,15 @@
         <div class="style-line">
             <span>Or</span>
         </div>
-        <a href="{% url 'social:begin' backends.backends.0 %}?next={{ request.get_full_path | urlencode }}&{{ SAML_IDP }}" class="btn btn-primary btn-block">Continue with SSO</a>
+        {% if not settings.CONSTANCE_MANAGE_SSO %}
+            <a href="{% url 'social:begin' backends.backends.0 %}?next={{ request.get_full_path | urlencode }}&{{ SAML_IDP }}" class="btn btn-primary btn-block">Continue with SSO</a>
+        {% else %}
+            {% for backend in "ALLOWED_SOCIAL_BACKENDS"|settings_or_config %}
+                <a href="{% url 'social:begin' backend|get_backend_name %}?next={{ request.get_full_path | urlencode }}&{{ SAML_IDP }}" class="btn btn-primary btn-block">Continue with {{ backend|split:"."|last }}</a>
+            {% empty %}
+                <span>SSO is enabled but no SSO backends are configured.</span>
+            {% endfor %}
+        {% endif %}
         {% endif %}
     </div>
 </div>
