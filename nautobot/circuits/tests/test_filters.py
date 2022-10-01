@@ -99,16 +99,12 @@ class CircuitTestCase(FilterTestCases.FilterTestCase):
     @classmethod
     def setUpTestData(cls):
 
-        regions = (
-            Region.objects.create(name="Test Region 1", slug="test-region-1"),
-            Region.objects.create(name="Test Region 2", slug="test-region-2"),
-            Region.objects.create(name="Test Region 3", slug="test-region-3"),
-        )
+        cls.regions = Region.objects.filter(sites__isnull=False)
 
-        sites = (
-            Site.objects.create(name="Test Site 1", slug="test-site-1", region=regions[0]),
-            Site.objects.create(name="Test Site 2", slug="test-site-2", region=regions[1]),
-            Site.objects.create(name="Test Site 3", slug="test-site-3", region=regions[2]),
+        cls.sites = (
+            Site.objects.filter(region=cls.regions[0])[0],
+            Site.objects.filter(region=cls.regions[1])[0],
+            Site.objects.filter(region=cls.regions[2])[0],
         )
 
         tenants = Tenant.objects.filter(group__isnull=False)
@@ -190,9 +186,9 @@ class CircuitTestCase(FilterTestCases.FilterTestCase):
             ),
         )
 
-        CircuitTermination.objects.create(circuit=circuits[0], site=sites[0], term_side="A")
-        CircuitTermination.objects.create(circuit=circuits[1], site=sites[1], term_side="A")
-        CircuitTermination.objects.create(circuit=circuits[2], site=sites[2], term_side="A")
+        CircuitTermination.objects.create(circuit=circuits[0], site=cls.sites[0], term_side="A")
+        CircuitTermination.objects.create(circuit=circuits[1], site=cls.sites[1], term_side="A")
+        CircuitTermination.objects.create(circuit=circuits[2], site=cls.sites[2], term_side="A")
         CircuitTermination.objects.create(circuit=circuits[3], provider_network=provider_network[0], term_side="A")
         CircuitTermination.objects.create(circuit=circuits[4], provider_network=provider_network[1], term_side="A")
         CircuitTermination.objects.create(circuit=circuits[5], provider_network=provider_network[2], term_side="A")
@@ -233,17 +229,15 @@ class CircuitTestCase(FilterTestCases.FilterTestCase):
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 4)
 
     def test_region(self):
-        regions = Region.objects.all()[:2]
-        params = {"region_id": [regions[0].pk, regions[1].pk]}
+        params = {"region_id": [self.regions[0].pk, self.regions[1].pk]}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
-        params = {"region": [regions[0].slug, regions[1].slug]}
+        params = {"region": [self.regions[0].slug, self.regions[1].slug]}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
 
     def test_site(self):
-        sites = Site.objects.all()[:2]
-        params = {"site_id": [sites[0].pk, sites[1].pk]}
+        params = {"site_id": [self.sites[0].pk, self.sites[1].pk]}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
-        params = {"site": [sites[0].slug, sites[1].slug]}
+        params = {"site": [self.sites[0].slug, self.sites[1].slug]}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
 
     def test_tenant(self):
@@ -284,11 +278,7 @@ class CircuitTerminationTestCase(FilterTestCases.FilterTestCase):
     @classmethod
     def setUpTestData(cls):
 
-        sites = (
-            Site.objects.create(name="Site 1", slug="site-1"),
-            Site.objects.create(name="Site 2", slug="site-2"),
-            Site.objects.create(name="Site 3", slug="site-3"),
-        )
+        sites = Site.objects.all()
         manufacturer = Manufacturer.objects.create(name="Test Manufacturer 1", slug="test-manufacturer-1")
         devicetype = DeviceType.objects.create(
             manufacturer=manufacturer,

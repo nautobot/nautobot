@@ -107,12 +107,7 @@ class RegionTestCase(ViewTestCases.OrganizationalObjectViewTestCase):
     def setUpTestData(cls):
 
         # Create three Regions
-        regions = (
-            Region.objects.create(name="Region ɑ", slug="region-alpha"),
-            Region.objects.create(name="Region β", slug="region-beta"),
-            Region.objects.create(name="Region γ", slug="region-gamma"),
-            Region.objects.create(name="Region 8"),
-        )
+        regions = Region.objects.all()[:3]
 
         cls.form_data = {
             "name": "Region χ",
@@ -129,7 +124,11 @@ class RegionTestCase(ViewTestCases.OrganizationalObjectViewTestCase):
             "Region 7,,Seventh region",
         )
         cls.slug_source = "name"
-        cls.slug_test_object = "Region 8"
+        cls.slug_test_object = regions[2]
+
+    def get_deletable_object_pks(self):
+        """Only return objects without children so that the deletion count is as expected."""
+        return [region.pk for region in list(Region.objects.filter(children__isnull=True))[:3]]
 
 
 class SiteTestCase(ViewTestCases.PrimaryObjectViewTestCase):
@@ -142,10 +141,7 @@ class SiteTestCase(ViewTestCases.PrimaryObjectViewTestCase):
     @classmethod
     def setUpTestData(cls):
 
-        regions = (
-            Region.objects.create(name="Region 1", slug="region-1"),
-            Region.objects.create(name="Region 2", slug="region-2"),
-        )
+        regions = Region.objects.all()[:2]
 
         statuses = Status.objects.get_for_model(Site)
         status_active = statuses.get(slug="active")
@@ -257,10 +253,11 @@ class LocationTypeTestCase(ViewTestCases.OrganizationalObjectViewTestCase):
         # note that we need two root objects because the DeleteObjectViewTestCase expects to be able to delete either
         # of the first two objects in the queryset independently; if lt2 were a child of lt1, then deleting lt1 would
         # cascade-delete lt2, resulting in a test failure.
-        lt1 = LocationType.objects.create(name="Root 1")
-        lt2 = LocationType.objects.create(name="Root 2")
-        lt3 = LocationType.objects.create(name="Intermediate 1", parent=lt2)
-        lt4 = LocationType.objects.create(name="Leaf 1", slug="leaf-1", parent=lt3, description="A leaf type")
+        lt1 = LocationType.objects.get(name="Root")
+        lt2 = LocationType.objects.get(name="Building")
+        lt3 = LocationType.objects.get(name="Floor")
+        lt4 = LocationType.objects.get(name="Room")
+        lt4.description = "A leaf type"
         for lt in [lt1, lt2, lt3, lt4]:
             lt.validated_save()
             lt.content_types.add(ContentType.objects.get_for_model(RackGroup))
@@ -270,24 +267,34 @@ class LocationTypeTestCase(ViewTestCases.OrganizationalObjectViewTestCase):
         cls.form_data = {
             "name": "Intermediate 2",
             "slug": "intermediate-2",
-            "parent": lt2.pk,
+            "parent": lt1.pk,
             "description": "Another intermediate type",
             "content_types": [ContentType.objects.get_for_model(Rack).pk, ContentType.objects.get_for_model(Device).pk],
         }
 
         cls.csv_data = (
             "name,slug,parent,description,content_types",
-            "Intermediate 3,intermediate-3,Root 1,Another intermediate type,ipam.prefix",
-            'Intermediate 4,intermediate-4,Root 1,Another intermediate type,"ipam.prefix,dcim.device"',
+            "Intermediate 3,intermediate-3,Root,Another intermediate type,ipam.prefix",
+            'Intermediate 4,intermediate-4,Root,Another intermediate type,"ipam.prefix,dcim.device"',
             "Root 3,root-3,,Another root type,",
         )
 
         cls.slug_source = "name"
-        cls.slug_test_object = "Intermediate 1"
+        cls.slug_test_object = "Root"
 
     def get_deletable_object_pks(self):
-        """To get the correct bulk-delete object count, make sure we avoid a cascade deletion."""
-        return [loctype.pk for loctype in list(LocationType.objects.filter(children__isnull=True))[:3]]
+        lts = [
+            LocationType.objects.create(name="Country"),
+            LocationType.objects.create(name="State"),
+            LocationType.objects.create(name="City"),
+        ]
+        return [lt.pk for lt in lts]
+
+    def get_deletable_object(self):
+        return LocationType.objects.create(name="LT delete")
+
+    def _get_queryset(self):
+        return super()._get_queryset().order_by("last_updated")
 
 
 class LocationTestCase(ViewTestCases.PrimaryObjectViewTestCase):
