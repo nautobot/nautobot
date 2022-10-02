@@ -259,13 +259,3 @@ class BulkOperationIntegerIDSerializer(serializers.Serializer):
 class GraphQLAPISerializer(serializers.Serializer):
     query = serializers.CharField(required=True, help_text="GraphQL query")
     variables = serializers.JSONField(required=False, help_text="Variables in JSON Format")
-
-
-#
-# Lookup Expr, used by the openapi doc, not by the view
-#
-
-
-class GetFilterSetFieldLookupExpressionChoicesAPISerializer(serializers.Serializer):
-    id = serializers.UUIDField(read_only=True, help_text="Lookup field name")
-    name = serializers.CharField(read_only=True, help_text="Lookup field expr verbose name")

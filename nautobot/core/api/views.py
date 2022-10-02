@@ -14,7 +14,6 @@ from django.shortcuts import redirect
 from django_rq.queues import get_connection as get_rq_connection
 from drf_spectacular.types import OpenApiTypes
 from rest_framework import status
-from rest_framework.generics import ListAPIView
 from rest_framework.response import Response
 from rest_framework.reverse import reverse
 from rest_framework.views import APIView
@@ -45,7 +44,6 @@ from nautobot.utilities.utils import (
     get_form_for_model,
 )
 from . import serializers
-from .pagination import LookupExpressionChoicesPagination
 
 HTTP_ACTIONS = {
     "GET": "view",
@@ -718,11 +716,10 @@ class GraphQLDRFAPIView(NautobotAPIVersionMixin, APIView):
 #
 
 
-class GetFilterSetFieldLookupExpressionChoicesAPI(NautobotAPIVersionMixin, ListAPIView):
+class GetFilterSetFieldLookupExpressionChoicesAPI(NautobotAPIVersionMixin, APIView):
     """API View that gets all lookup expression choices for a FilterSet field."""
 
     permission_classes = [IsAuthenticated]
-    pagination_class = LookupExpressionChoicesPagination
 
     @extend_schema(
         parameters=[
@@ -737,7 +734,33 @@ class GetFilterSetFieldLookupExpressionChoicesAPI(NautobotAPIVersionMixin, ListA
                 type=OpenApiTypes.STR,
             ),
         ],
-        responses={200: serializers.GetFilterSetFieldLookupExpressionChoicesAPISerializer},
+        # Response schema has to be hardcoded because of the pagination
+        # An alternative would have been to include a `pagination_class` class property but this would require
+        # an inheritance from serializers.ListView which in turns requires `queryset` class property which
+        # can not be provided because this is not a model specific view.
+        responses={
+            200: {
+                "type": "object",
+                "properties": {
+                    "count": {
+                        "type": "integer",
+                        "example": 123,
+                    },
+                    "next": {"type": "string", "nullable": True, "example": None},
+                    "previous": {"type": "string", "nullable": True, "example": None},
+                    "results": {
+                        "type": "array",
+                        "items": {
+                            "type": "object",
+                            "properties": {
+                                "id": {"type": "string", "format": "uuid"},
+                                "name": {"type": "string"},
+                            },
+                        },
+                    },
+                },
+            }
+        },
     )
     def get(self, request):
         if "content_type" not in request.GET or "field_name" not in request.GET:
