@@ -195,7 +195,7 @@ class RoleFactory(OrganizationalModelFactory):
         model = Role
         exclude = ("has_description",)
 
-    name = factory.Faker("word", part_of_speech="adjective")
+    name = factory.LazyFunction(lambda: faker.Faker().word(part_of_speech="adjective").title())
 
     weight = factory.Faker("pyint", min_value=100, step=100)
 
@@ -215,7 +215,7 @@ class VLANGroupFactory(OrganizationalModelFactory):
     # TODO: name is not globally unique, but (site, name) tuple must be.
     # The likelihood of collision with random names is pretty low, but non-zero.
     # We might want to consider *intentionally* using non-globally-unique names for testing purposes?
-    name = factory.Faker("word", part_of_speech="noun")
+    name = factory.LazyFunction(lambda: faker.Faker().word(part_of_speech="noun").upper())
 
     has_description = factory.Faker("pybool")
     description = factory.Maybe("has_description", factory.Faker("text", max_nb_chars=200), "")
@@ -256,7 +256,7 @@ class VLANFactory(PrimaryModelFactory):
     # As with VLANGroup, with fully random names and vids, non-uniqueness is unlikely but possible,
     # and we might want to consider intentionally reusing non-unique values for test purposes?
     vid = factory.Faker("pyint", min_value=1, max_value=4094)
-    name = factory.Faker("word", part_of_speech="noun")
+    name = factory.LazyFunction(lambda: faker.Faker().word(part_of_speech="noun").capitalize())
 
     status = random_instance(lambda: Status.objects.get_for_model(VLAN), allow_null=False)
 

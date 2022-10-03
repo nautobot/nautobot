@@ -54,6 +54,10 @@ class VRFTestCase(FilterTestCases.FilterTestCase, FilterTestCases.TenancyFilterT
     filterset = VRFFilterSet
     tenancy_related_name = "vrfs"
 
+    # Note: all assertQuerySetEqual() calls here must use ordered=False,
+    # because order_by=["name", "rd"] but name is not globally unique and rd can be null,
+    # so relative ordering of VRFs with identical name and null rd is not guaranteed.
+
     def test_name(self):
         params = {"name": [self.queryset[0].name, self.queryset[1].name]}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
@@ -65,30 +69,42 @@ class VRFTestCase(FilterTestCases.FilterTestCase, FilterTestCases.TenancyFilterT
 
     def test_enforce_unique(self):
         params = {"enforce_unique": "true"}
-        self.assertQuerysetEqual(self.filterset(params, self.queryset).qs, self.queryset.filter(enforce_unique=True))
+        self.assertQuerysetEqual(
+            self.filterset(params, self.queryset).qs, self.queryset.filter(enforce_unique=True), ordered=False
+        )
         params = {"enforce_unique": "false"}
-        self.assertQuerysetEqual(self.filterset(params, self.queryset).qs, self.queryset.filter(enforce_unique=False))
+        self.assertQuerysetEqual(
+            self.filterset(params, self.queryset).qs, self.queryset.filter(enforce_unique=False), ordered=False
+        )
 
     def test_import_target(self):
         route_targets = list(RouteTarget.objects.filter(importing_vrfs__isnull=False).distinct())[:2]
         params = {"import_target_id": [route_targets[0].pk, route_targets[1].pk]}
         self.assertQuerysetEqual(
-            self.filterset(params, self.queryset).qs, self.queryset.filter(import_targets__in=route_targets).distinct()
+            self.filterset(params, self.queryset).qs,
+            self.queryset.filter(import_targets__in=route_targets).distinct(),
+            ordered=False,
         )
         params = {"import_target": [route_targets[0].name, route_targets[1].name]}
         self.assertQuerysetEqual(
-            self.filterset(params, self.queryset).qs, self.queryset.filter(import_targets__in=route_targets).distinct()
+            self.filterset(params, self.queryset).qs,
+            self.queryset.filter(import_targets__in=route_targets).distinct(),
+            ordered=False,
         )
 
     def test_export_target(self):
         route_targets = list(RouteTarget.objects.filter(exporting_vrfs__isnull=False).distinct())[:2]
         params = {"export_target_id": [route_targets[0].pk, route_targets[1].pk]}
         self.assertQuerysetEqual(
-            self.filterset(params, self.queryset).qs, self.queryset.filter(export_targets__in=route_targets).distinct()
+            self.filterset(params, self.queryset).qs,
+            self.queryset.filter(export_targets__in=route_targets).distinct(),
+            ordered=False,
         )
         params = {"export_target": [route_targets[0].name, route_targets[1].name]}
         self.assertQuerysetEqual(
-            self.filterset(params, self.queryset).qs, self.queryset.filter(export_targets__in=route_targets).distinct()
+            self.filterset(params, self.queryset).qs,
+            self.queryset.filter(export_targets__in=route_targets).distinct(),
+            ordered=False,
         )
 
     def test_search(self):
@@ -226,7 +242,7 @@ class PrefixTestCase(FilterTestCases.FilterTestCase, FilterTestCases.TenancyFilt
         # 1. we have VRF(s) that are exporting to specific route_targets
         # 2. we have a VRF that imports these same route_targets
         # 3. we have prefixes in the former VRF(s)
-        # Maybe we could just create this specific data for that specific test case instead of in setUpTestData?
+        # Maybe we could just create this specific data for that specific test case, instead of here in setUpTestData?
         route_targets = (
             RouteTarget.objects.create(name="65000:100"),
             RouteTarget.objects.create(name="65000:200"),
