@@ -123,15 +123,16 @@ class RIRTest(APIViewTestCases.APIViewTestCase):
 
     slug_source = "name"
 
-    @classmethod
-    def setUpTestData(cls):
+    def get_deletable_object(self):
+        return RIR.objects.create(name="DELETE ME")
 
-        rirs = (
-            RIR(name="RIR 1", slug="rir-1"),
-            RIR(name="RIR 2", slug="rir-2"),
-            RIR(name="RIR 3", slug="rir-3"),
-        )
-        RIR.objects.bulk_create(rirs)
+    def get_deletable_object_pks(self):
+        rirs = [
+            RIR.objects.create(name="DELETE ME 1"),
+            RIR.objects.create(name="DELETE ME 2"),
+            RIR.objects.create(name="DELETE ME 3"),
+        ]
+        return [rir.pk for rir in rirs]
 
 
 class AggregateTest(APIViewTestCases.APIViewTestCase):
@@ -144,28 +145,20 @@ class AggregateTest(APIViewTestCases.APIViewTestCase):
     @classmethod
     def setUpTestData(cls):
 
-        rirs = (
-            RIR.objects.create(name="RIR 1", slug="rir-1"),
-            RIR.objects.create(name="RIR 2", slug="rir-2"),
-        )
-
-        Aggregate.objects.create(prefix=IPNetwork("10.0.0.0/8"), rir=rirs[0])
-        Aggregate.objects.create(prefix=IPNetwork("172.16.0.0/12"), rir=rirs[0])
-        Aggregate.objects.create(prefix=IPNetwork("192.168.0.0/16"), rir=rirs[0])
-        Aggregate.objects.create(prefix=IPNetwork("2001:db8:abcd::/64"), rir=rirs[0])
+        rir = RIR.objects.filter(is_private=False).first()
 
         cls.create_data = [
             {
-                "prefix": "100.0.0.0/8",
-                "rir": rirs[1].pk,
+                "prefix": "12.0.0.0/8",
+                "rir": rir.pk,
             },
             {
-                "prefix": "2001:db8:abcd:12::/64",
-                "rir": rirs[1].pk,
+                "prefix": "2d00::/8",
+                "rir": rir.pk,
             },
             {
-                "prefix": "102.0.0.0/8",
-                "rir": rirs[1].pk,
+                "prefix": "17.0.0.0/16",
+                "rir": rir.pk,
             },
         ]
 

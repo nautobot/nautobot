@@ -23,37 +23,36 @@ class TenantGroupTest(APIViewTestCases.APIViewTestCase):
 
     @classmethod
     def setUpTestData(cls):
-
-        parent_tenant_groups = (
-            TenantGroup.objects.create(name="Parent Tenant Group 1", slug="parent-tenant-group-1"),
-            TenantGroup.objects.create(name="Parent Tenant Group 2", slug="parent-tenant-group-2"),
-        )
-
-        TenantGroup.objects.create(name="Tenant Group 1", slug="tenant-group-1", parent=parent_tenant_groups[0])
-        TenantGroup.objects.create(name="Tenant Group 2", slug="tenant-group-2", parent=parent_tenant_groups[0])
-        TenantGroup.objects.create(name="Tenant Group 3", slug="tenant-group-3", parent=parent_tenant_groups[0])
-
         cls.create_data = [
             {
                 "name": "Tenant Group 4",
                 "slug": "tenant-group-4",
-                "parent": parent_tenant_groups[1].pk,
+                "parent": TenantGroup.objects.last().pk,
             },
             {
                 "name": "Tenant Group 5",
                 "slug": "tenant-group-5",
-                "parent": parent_tenant_groups[1].pk,
+                "parent": TenantGroup.objects.last().pk,
             },
             {
                 "name": "Tenant Group 6",
                 "slug": "tenant-group-6",
-                "parent": parent_tenant_groups[1].pk,
             },
             {
                 "name": "Tenant Group 7",
-                "parent": parent_tenant_groups[1].pk,
             },
         ]
+
+    def get_deletable_object(self):
+        return TenantGroup.objects.create(name="Tenant Group X")
+
+    def get_deletable_object_pks(self):
+        groups = [
+            TenantGroup.objects.create(name="Alpha"),
+            TenantGroup.objects.create(name="Beta"),
+            TenantGroup.objects.create(name="Gamma"),
+        ]
+        return [group.pk for group in groups]
 
 
 class TenantTest(APIViewTestCases.APIViewTestCase):
@@ -66,34 +65,33 @@ class TenantTest(APIViewTestCases.APIViewTestCase):
 
     @classmethod
     def setUpTestData(cls):
-
-        tenant_groups = (
-            TenantGroup.objects.create(name="Tenant Group 1", slug="tenant-group-1"),
-            TenantGroup.objects.create(name="Tenant Group 2", slug="tenant-group-2"),
-        )
-
-        Tenant.objects.create(name="Tenant 1", slug="tenant-1", group=tenant_groups[0])
-        Tenant.objects.create(name="Tenant 2", slug="tenant-2", group=tenant_groups[0])
-        Tenant.objects.create(name="Tenant 3", slug="tenant-3", group=tenant_groups[0])
-
         cls.create_data = [
             {
                 "name": "Tenant 4",
                 "slug": "tenant-4",
-                "group": tenant_groups[1].pk,
+                "group": TenantGroup.objects.first().pk,
             },
             {
                 "name": "Tenant 5",
                 "slug": "tenant-5",
-                "group": tenant_groups[1].pk,
+                "group": TenantGroup.objects.last().pk,
             },
             {
                 "name": "Tenant 6",
                 "slug": "tenant-6",
-                "group": tenant_groups[1].pk,
             },
             {
                 "name": "Tenant 7",
-                "group": tenant_groups[1].pk,
             },
         ]
+
+    def get_deletable_object(self):
+        return Tenant.objects.create(name="Unencumbered Tenant")
+
+    def get_deletable_object_pks(self):
+        tenants = [
+            Tenant.objects.create(name="Tenant A"),
+            Tenant.objects.create(name="Tenant B"),
+            Tenant.objects.create(name="Tenant C", group=TenantGroup.objects.first()),
+        ]
+        return [tenant.pk for tenant in tenants]

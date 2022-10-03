@@ -161,7 +161,6 @@ class RIRListView(generic.ObjectListView):
     filterset = filters.RIRFilterSet
     filterset_form = forms.RIRFilterForm
     table = tables.RIRTable
-    template_name = "ipam/rir_list.html"
 
 
 class RIRView(generic.ObjectView):
