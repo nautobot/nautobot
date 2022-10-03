@@ -157,7 +157,7 @@ class Location(TreeNode, StatusModel, PrimaryModel):
     description = models.CharField(max_length=200, blank=True)
     images = GenericRelation(to="extras.ImageAttachment")
 
-    objects = LocationQuerySet.as_manager()
+    objects = LocationQuerySet.as_manager(with_tree_fields=True)
 
     csv_headers = [
         "name",
@@ -220,8 +220,15 @@ class Location(TreeNode, StatusModel, PrimaryModel):
 
         # Prevent changing location type as that would require a whole bunch of cascading logic checks,
         # e.g. what if the new type doesn't allow all of the associated objects that the old type did?
-        if self.present_in_database and self.location_type != Location.objects.get(pk=self.pk).location_type:
-            raise ValidationError({"location_type": "Changing the type of an existing Location is not permitted."})
+        if self.present_in_database:
+            prior_location_type = Location.objects.get(pk=self.pk).location_type
+            if self.location_type != prior_location_type:
+                raise ValidationError(
+                    {
+                        "location_type": f"Changing the type of an existing Location (from {prior_location_type} to "
+                        f"{self.location_type} in this case) is not permitted."
+                    }
+                )
 
         if self.location_type.parent is not None:
             # We must have a parent and it must match the parent location_type.

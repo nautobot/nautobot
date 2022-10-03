@@ -65,38 +65,30 @@ class VRFTestCase(FilterTestCases.FilterTestCase, FilterTestCases.TenancyFilterT
 
     def test_enforce_unique(self):
         params = {"enforce_unique": "true"}
-        self.assertEqual(
-            self.filterset(params, self.queryset).qs.count(), self.queryset.filter(enforce_unique=True).count()
-        )
+        self.assertQuerysetEqual(self.filterset(params, self.queryset).qs, self.queryset.filter(enforce_unique=True))
         params = {"enforce_unique": "false"}
-        self.assertEqual(
-            self.filterset(params, self.queryset).qs.count(), self.queryset.filter(enforce_unique=False).count()
-        )
+        self.assertQuerysetEqual(self.filterset(params, self.queryset).qs, self.queryset.filter(enforce_unique=False))
 
     def test_import_target(self):
         route_targets = list(RouteTarget.objects.filter(importing_vrfs__isnull=False).distinct())[:2]
         params = {"import_target_id": [route_targets[0].pk, route_targets[1].pk]}
-        self.assertEqual(
-            self.filterset(params, self.queryset).qs.count(),
-            self.queryset.filter(import_targets__in=route_targets).distinct().count(),
+        self.assertQuerysetEqual(
+            self.filterset(params, self.queryset).qs, self.queryset.filter(import_targets__in=route_targets).distinct()
         )
         params = {"import_target": [route_targets[0].name, route_targets[1].name]}
-        self.assertEqual(
-            self.filterset(params, self.queryset).qs.count(),
-            self.queryset.filter(import_targets__in=route_targets).distinct().count(),
+        self.assertQuerysetEqual(
+            self.filterset(params, self.queryset).qs, self.queryset.filter(import_targets__in=route_targets).distinct()
         )
 
     def test_export_target(self):
         route_targets = list(RouteTarget.objects.filter(exporting_vrfs__isnull=False).distinct())[:2]
         params = {"export_target_id": [route_targets[0].pk, route_targets[1].pk]}
-        self.assertEqual(
-            self.filterset(params, self.queryset).qs.count(),
-            self.queryset.filter(export_targets__in=route_targets).distinct().count(),
+        self.assertQuerysetEqual(
+            self.filterset(params, self.queryset).qs, self.queryset.filter(export_targets__in=route_targets).distinct()
         )
         params = {"export_target": [route_targets[0].name, route_targets[1].name]}
-        self.assertEqual(
-            self.filterset(params, self.queryset).qs.count(),
-            self.queryset.filter(export_targets__in=route_targets).distinct().count(),
+        self.assertQuerysetEqual(
+            self.filterset(params, self.queryset).qs, self.queryset.filter(export_targets__in=route_targets).distinct()
         )
 
     def test_search(self):
@@ -117,27 +109,23 @@ class RouteTargetTestCase(FilterTestCases.FilterTestCase, FilterTestCases.Tenanc
     def test_importing_vrf(self):
         vrfs = list(VRF.objects.filter(import_targets__isnull=False, rd__isnull=False).distinct())[:2]
         params = {"importing_vrf_id": [vrfs[0].pk, vrfs[1].pk]}
-        self.assertEqual(
-            self.filterset(params, self.queryset).qs.count(),
-            self.queryset.filter(importing_vrfs__in=vrfs).distinct().count(),
+        self.assertQuerysetEqual(
+            self.filterset(params, self.queryset).qs, self.queryset.filter(importing_vrfs__in=vrfs).distinct()
         )
         params = {"importing_vrf": [vrfs[0].rd, vrfs[1].rd]}
-        self.assertEqual(
-            self.filterset(params, self.queryset).qs.count(),
-            self.queryset.filter(importing_vrfs__in=vrfs).distinct().count(),
+        self.assertQuerysetEqual(
+            self.filterset(params, self.queryset).qs, self.queryset.filter(importing_vrfs__in=vrfs).distinct()
         )
 
     def test_exporting_vrf(self):
         vrfs = list(VRF.objects.filter(export_targets__isnull=False, rd__isnull=False).distinct())[:2]
         params = {"exporting_vrf_id": [vrfs[0].pk, vrfs[1].pk]}
-        self.assertEqual(
-            self.filterset(params, self.queryset).qs.count(),
-            self.queryset.filter(exporting_vrfs__in=vrfs).distinct().count(),
+        self.assertQuerysetEqual(
+            self.filterset(params, self.queryset).qs, self.queryset.filter(exporting_vrfs__in=vrfs).distinct()
         )
         params = {"exporting_vrf": [vrfs[0].rd, vrfs[1].rd]}
-        self.assertEqual(
-            self.filterset(params, self.queryset).qs.count(),
-            self.queryset.filter(exporting_vrfs__in=vrfs).distinct().count(),
+        self.assertQuerysetEqual(
+            self.filterset(params, self.queryset).qs, self.queryset.filter(exporting_vrfs__in=vrfs).distinct()
         )
 
     def test_search(self):
@@ -157,13 +145,9 @@ class RIRTestCase(FilterTestCases.NameSlugFilterTestCase):
 
     def test_is_private(self):
         params = {"is_private": "true"}
-        self.assertEqual(
-            self.filterset(params, self.queryset).qs.count(), self.queryset.filter(is_private=True).count()
-        )
+        self.assertQuerysetEqual(self.filterset(params, self.queryset).qs, self.queryset.filter(is_private=True))
         params = {"is_private": "false"}
-        self.assertEqual(
-            self.filterset(params, self.queryset).qs.count(), self.queryset.filter(is_private=False).count()
-        )
+        self.assertQuerysetEqual(self.filterset(params, self.queryset).qs, self.queryset.filter(is_private=False))
 
 
 class AggregateTestCase(FilterTestCases.FilterTestCase, FilterTestCases.TenancyFilterTestCaseMixin):
@@ -206,9 +190,9 @@ class AggregateTestCase(FilterTestCases.FilterTestCase, FilterTestCases.TenancyF
     def test_rir(self):
         rirs = list(RIR.objects.filter(aggregates__isnull=False).distinct())[:2]
         params = {"rir_id": [rirs[0].pk, rirs[1].pk]}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), self.queryset.filter(rir__in=rirs).count())
+        self.assertQuerysetEqual(self.filterset(params, self.queryset).qs, self.queryset.filter(rir__in=rirs))
         params = {"rir": [rirs[0].slug, rirs[1].slug]}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), self.queryset.filter(rir__in=rirs).count())
+        self.assertQuerysetEqual(self.filterset(params, self.queryset).qs, self.queryset.filter(rir__in=rirs))
 
 
 class RoleTestCase(FilterTestCases.NameSlugFilterTestCase):
@@ -648,12 +632,12 @@ class IPAddressTestCase(FilterTestCases.FilterTestCase, FilterTestCases.TenancyF
     def test_vrf(self):
         vrfs = list(VRF.objects.filter(ip_addresses__isnull=False, rd__isnull=False).distinct())[:2]
         params = {"vrf_id": [vrfs[0].pk, vrfs[1].pk]}
-        self.assertEqual(
-            self.filterset(params, self.queryset).qs.count(), self.queryset.filter(vrf__in=vrfs).distinct().count()
+        self.assertQuerysetEqual(
+            self.filterset(params, self.queryset).qs, self.queryset.filter(vrf__in=vrfs).distinct()
         )
         params = {"vrf": [vrfs[0].rd, vrfs[1].rd]}
-        self.assertEqual(
-            self.filterset(params, self.queryset).qs.count(), self.queryset.filter(vrf__in=vrfs).distinct().count()
+        self.assertQuerysetEqual(
+            self.filterset(params, self.queryset).qs, self.queryset.filter(vrf__in=vrfs).distinct()
         )
 
     def test_device(self):
@@ -730,20 +714,20 @@ class VLANGroupTestCase(FilterTestCases.NameSlugFilterTestCase):
     def test_region(self):
         regions = list(Region.objects.filter(sites__isnull=False, sites__vlan_groups__isnull=False).distinct())[:2]
         params = {"region_id": [regions[0].pk, regions[1].pk]}
-        self.assertEqual(
-            self.filterset(params, self.queryset).qs.count(), self.queryset.filter(site__region__in=regions).count()
+        self.assertQuerysetEqual(
+            self.filterset(params, self.queryset).qs, self.queryset.filter(site__region__in=regions)
         )
         params = {"region": [regions[0].slug, regions[1].slug]}
-        self.assertEqual(
-            self.filterset(params, self.queryset).qs.count(), self.queryset.filter(site__region__in=regions).count()
+        self.assertQuerysetEqual(
+            self.filterset(params, self.queryset).qs, self.queryset.filter(site__region__in=regions)
         )
 
     def test_site(self):
         sites = list(Site.objects.filter(vlan_groups__isnull=False).distinct())[:2]
         params = {"site_id": [sites[0].pk, sites[1].pk]}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), self.queryset.filter(site__in=sites).count())
+        self.assertQuerysetEqual(self.filterset(params, self.queryset).qs, self.queryset.filter(site__in=sites))
         params = {"site": [sites[0].slug, sites[1].slug]}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), self.queryset.filter(site__in=sites).count())
+        self.assertQuerysetEqual(self.filterset(params, self.queryset).qs, self.queryset.filter(site__in=sites))
 
 
 class VLANTestCase(FilterTestCases.FilterTestCase, FilterTestCases.TenancyFilterTestCaseMixin):
@@ -846,45 +830,39 @@ class VLANTestCase(FilterTestCases.FilterTestCase, FilterTestCases.TenancyFilter
     def test_region(self):
         regions = list(Region.objects.filter(sites__isnull=False, sites__vlans__isnull=False).distinct())[:2]
         params = {"region_id": [regions[0].pk, regions[1].pk]}
-        self.assertEqual(
-            self.filterset(params, self.queryset).qs.count(), self.queryset.filter(site__region__in=regions).count()
+        self.assertQuerysetEqual(
+            self.filterset(params, self.queryset).qs, self.queryset.filter(site__region__in=regions)
         )
         params = {"region": [regions[0].slug, regions[1].slug]}
-        self.assertEqual(
-            self.filterset(params, self.queryset).qs.count(), self.queryset.filter(site__region__in=regions).count()
+        self.assertQuerysetEqual(
+            self.filterset(params, self.queryset).qs, self.queryset.filter(site__region__in=regions)
         )
 
     def test_site(self):
         sites = list(Site.objects.filter(vlans__isnull=False).distinct())[:2]
         params = {"site_id": [sites[0].pk, sites[1].pk]}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), self.queryset.filter(site__in=sites).count())
+        self.assertQuerysetEqual(self.filterset(params, self.queryset).qs, self.queryset.filter(site__in=sites))
         params = {"site": [sites[0].slug, sites[1].slug]}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), self.queryset.filter(site__in=sites).count())
+        self.assertQuerysetEqual(self.filterset(params, self.queryset).qs, self.queryset.filter(site__in=sites))
 
     def test_group(self):
         groups = list(VLANGroup.objects.filter(vlans__isnull=False).distinct())[:2]
         params = {"group_id": [groups[0].pk, groups[1].pk]}
-        self.assertEqual(
-            self.filterset(params, self.queryset).qs.count(), self.queryset.filter(group__in=groups).count()
-        )
+        self.assertQuerysetEqual(self.filterset(params, self.queryset).qs, self.queryset.filter(group__in=groups))
         params = {"group": [groups[0].slug, groups[1].slug]}
-        self.assertEqual(
-            self.filterset(params, self.queryset).qs.count(), self.queryset.filter(group__in=groups).count()
-        )
+        self.assertQuerysetEqual(self.filterset(params, self.queryset).qs, self.queryset.filter(group__in=groups))
 
     def test_role(self):
         roles = list(Role.objects.filter(vlans__isnull=False).distinct())[:2]
         params = {"role_id": [roles[0].pk, roles[1].pk]}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), self.queryset.filter(role__in=roles).count())
+        self.assertQuerysetEqual(self.filterset(params, self.queryset).qs, self.queryset.filter(role__in=roles))
         params = {"role": [roles[0].slug, roles[1].slug]}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), self.queryset.filter(role__in=roles).count())
+        self.assertQuerysetEqual(self.filterset(params, self.queryset).qs, self.queryset.filter(role__in=roles))
 
     def test_status(self):
         statuses = list(Status.objects.get_for_model(VLAN).filter(ipam_vlan_related__isnull=False).distinct())[:2]
         params = {"status": [statuses[0].slug, statuses[1].slug]}
-        self.assertEqual(
-            self.filterset(params, self.queryset).qs.count(), self.queryset.filter(status__in=statuses).count()
-        )
+        self.assertQuerysetEqual(self.filterset(params, self.queryset).qs, self.queryset.filter(status__in=statuses))
 
     def test_search(self):
         value = self.queryset.values_list("pk", flat=True)[0]
@@ -898,9 +876,8 @@ class VLANTestCase(FilterTestCases.FilterTestCase, FilterTestCases.TenancyFilter
         devicerole = DeviceRole.objects.create(name="Test Device Role 1", slug="test-device-role-1", color="ff0000")
         device = Device.objects.create(device_type=devicetype, device_role=devicerole, name="Device 1", site=site)
         params = {"available_on_device": device.pk}
-        self.assertEqual(
-            self.filterset(params, self.queryset).qs.count(),
-            self.queryset.filter(Q(site=device.site) | Q(site__isnull=True)).count(),
+        self.assertQuerysetEqual(
+            self.filterset(params, self.queryset).qs, self.queryset.filter(Q(site=device.site) | Q(site__isnull=True))
         )
 
 

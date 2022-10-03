@@ -49,13 +49,9 @@ class FilterTestCases:
         def test_tenant(self):
             tenants = list(Tenant.objects.filter(**{f"{self.tenancy_related_name}__isnull": False}))[:2]
             params = {"tenant_id": [tenants[0].pk, tenants[1].pk]}
-            self.assertEqual(
-                self.filterset(params, self.queryset).qs.count(), self.queryset.filter(tenant__in=tenants).count()
-            )
+            self.assertQuerysetEqual(self.filterset(params, self.queryset).qs, self.queryset.filter(tenant__in=tenants))
             params = {"tenant": [tenants[0].slug, tenants[1].slug]}
-            self.assertEqual(
-                self.filterset(params, self.queryset).qs.count(), self.queryset.filter(tenant__in=tenants).count()
-            )
+            self.assertQuerysetEqual(self.filterset(params, self.queryset).qs, self.queryset.filter(tenant__in=tenants))
 
         def test_tenant_group(self):
             tenant_groups = list(
@@ -68,13 +64,13 @@ class FilterTestCases:
                 tenant_groups_including_children += tenant_group.get_descendants(include_self=True)
 
             params = {"tenant_group_id": [tenant_groups[0].pk, tenant_groups[1].pk]}
-            self.assertEqual(
-                self.filterset(params, self.queryset).qs.count(),
-                self.queryset.filter(tenant__group__in=tenant_groups_including_children).count(),
+            self.assertQuerysetEqual(
+                self.filterset(params, self.queryset).qs,
+                self.queryset.filter(tenant__group__in=tenant_groups_including_children),
             )
 
             params = {"tenant_group": [tenant_groups[0].slug, tenant_groups[1].slug]}
-            self.assertEqual(
-                self.filterset(params, self.queryset).qs.count(),
-                self.queryset.filter(tenant__group__in=tenant_groups_including_children).count(),
+            self.assertQuerysetEqual(
+                self.filterset(params, self.queryset).qs,
+                self.queryset.filter(tenant__group__in=tenant_groups_including_children),
             )

@@ -16,7 +16,7 @@ class TenantGroupFactory(OrganizationalModelFactory):
     name = UniqueFaker("company")
 
     has_description = factory.Faker("pybool")
-    description = factory.Maybe("has_description", factory.Faker("sentence"), "")
+    description = factory.Maybe("has_description", factory.Faker("text", max_nb_chars=200), "")
 
     has_parent = factory.Faker("pybool")
     parent = factory.Maybe("has_parent", random_instance(TenantGroup), None)
@@ -37,7 +37,7 @@ class TenantFactory(PrimaryModelFactory):
     comments = factory.Maybe("has_comments", factory.Faker("paragraph"), "")
 
     has_description = factory.Faker("pybool")
-    description = factory.Maybe("has_description", factory.Faker("sentence"), "")
+    description = factory.Maybe("has_description", factory.Faker("text", max_nb_chars=200), "")
 
     has_group = factory.Faker("pybool")
     group = factory.Maybe("has_group", random_instance(TenantGroup), None)

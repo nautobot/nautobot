@@ -541,6 +541,13 @@ class VLANGroupTest(APIViewTestCases.APIViewTestCase):
     }
     slug_source = "name"
 
+    def get_deletable_object(self):
+        return VLANGroup.objects.filter(vlans__isnull=True).first()
+
+    def get_deletable_object_pks(self):
+        groups = list(VLANGroup.objects.filter(vlans__isnull=True))[:3]
+        return [group.pk for group in groups]
+
 
 class VLANTest(APIViewTestCases.APIViewTestCase):
     model = VLAN

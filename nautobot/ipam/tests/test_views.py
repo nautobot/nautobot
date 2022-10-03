@@ -352,6 +352,15 @@ class VLANGroupTestCase(ViewTestCases.OrganizationalObjectViewTestCase):
         cls.slug_source = "name"
         cls.slug_test_object = "VLAN Group 8"
 
+    def get_deletable_object(self):
+        """Return a VLANGroup without any associated VLANs."""
+        return VLANGroup.objects.filter(vlans__isnull=True).first()
+
+    def get_deletable_object_pks(self):
+        """Return a list of PKs corresponding to VLANGroups without any associated VLANs."""
+        groups = list(VLANGroup.objects.filter(vlans__isnull=True))[:3]
+        return [group.pk for group in groups]
+
 
 class VLANTestCase(ViewTestCases.PrimaryObjectViewTestCase):
     model = VLAN

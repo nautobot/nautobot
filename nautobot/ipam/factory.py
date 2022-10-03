@@ -28,7 +28,7 @@ class RIRFactory(OrganizationalModelFactory):
     is_private = factory.LazyAttribute(lambda rir: rir.name.startswith("RFC"))
 
     has_description = factory.Faker("pybool")
-    description = factory.Maybe("has_description", factory.Faker("sentence"), "")
+    description = factory.Maybe("has_description", factory.Faker("text", max_nb_chars=200), "")
 
 
 class AggregateFactory(PrimaryModelFactory):
@@ -50,7 +50,7 @@ class AggregateFactory(PrimaryModelFactory):
     date_added = factory.Maybe("has_date_added", factory.Faker("date"), None)
 
     has_description = factory.Faker("pybool")
-    description = factory.Maybe("has_description", factory.Faker("sentence"), "")
+    description = factory.Maybe("has_description", factory.Faker("text", max_nb_chars=200), "")
 
     is_ipv6 = factory.Faker("pybool")
 
@@ -70,7 +70,7 @@ class AggregateFactory(PrimaryModelFactory):
         if self.rir.name == "RFC 3849":
             return f"2001:DB8:{n:x}::/48"
         if self.rir.name == "RFC 4193":
-            unique_id = randgen.randint(0, 2**32 - 1)
+            unique_id = faker.Faker().pyint(0, 2**32 - 1)
             hextets = (unique_id // (2**16), unique_id % (2**16))
             return f"FD{n:02X}:{hextets[0]:X}:{hextets[1]:X}::/48"
         if self.rir.name == "RFC 6598":
@@ -118,14 +118,15 @@ def random_route_distinguisher():
     - "<IPv4 address>:<2-byte integer>"
     - "<4-byte ASN>:<2-byte integer>"
     """
-    branch = randgen.randint(0, 2)
+    fake = faker.Faker()
+    branch = fake.pyint(0, 2)
     if branch == 0:
         # 16-bit ASNs 64496–64511 are reserved for documentation and sample code
-        return f"{randgen.randint(64496, 64511)}:{randgen.randint(0, 2**32 - 1)}"
+        return f"{fake.pyint(64496, 64511)}:{fake.pyint(0, 2**32 - 1)}"
     if branch == 1:
-        return f"{faker.Faker().ipv4_private()}:{randgen.randint(0, 2**16 - 1)}"
+        return f"{fake.ipv4_private()}:{fake.pyint(0, 2**16 - 1)}"
     # 32-bit ASNs 4200000000-4294967294 are reserved for private use
-    return f"{randgen.randint(4200000000, 4294967294)}:{randgen.randint(0, 2**16 - 1)}"
+    return f"{fake.pyint(4200000000, 4294967294)}:{fake.pyint(0, 2**16 - 1)}"
 
 
 class RouteTargetFactory(PrimaryModelFactory):
@@ -141,7 +142,7 @@ class RouteTargetFactory(PrimaryModelFactory):
     name = factory.LazyFunction(random_route_distinguisher)
 
     has_description = factory.Faker("pybool")
-    description = factory.Maybe("has_description", factory.Faker("sentence"), "")
+    description = factory.Maybe("has_description", factory.Faker("text", max_nb_chars=200), "")
 
     has_tenant = factory.Faker("pybool")
     tenant = factory.Maybe("has_tenant", random_instance(Tenant), None)
@@ -170,7 +171,7 @@ class VRFFactory(PrimaryModelFactory):
     enforce_unique = factory.Faker("pybool")
 
     has_description = factory.Faker("pybool")
-    description = factory.Maybe("has_description", factory.Faker("sentence"), "")
+    description = factory.Maybe("has_description", factory.Faker("text", max_nb_chars=200), "")
 
     @factory.post_generation
     def import_targets(self, create, extracted, **kwargs):
@@ -199,7 +200,7 @@ class RoleFactory(OrganizationalModelFactory):
     weight = factory.Faker("pyint", min_value=100, step=100)
 
     has_description = factory.Faker("pybool")
-    description = factory.Maybe("has_description", factory.Faker("sentence"), "")
+    description = factory.Maybe("has_description", factory.Faker("text", max_nb_chars=200), "")
 
 
 class VLANGroupFactory(OrganizationalModelFactory):
@@ -217,7 +218,7 @@ class VLANGroupFactory(OrganizationalModelFactory):
     name = factory.Faker("word", part_of_speech="noun")
 
     has_description = factory.Faker("pybool")
-    description = factory.Maybe("has_description", factory.Faker("sentence"), "")
+    description = factory.Maybe("has_description", factory.Faker("text", max_nb_chars=200), "")
 
     has_location = factory.Faker("pybool")
     location = factory.Maybe("has_location", random_instance(lambda: Location.objects.get_for_model(VLANGroup)), None)
@@ -260,7 +261,7 @@ class VLANFactory(PrimaryModelFactory):
     status = random_instance(lambda: Status.objects.get_for_model(VLAN), allow_null=False)
 
     has_description = factory.Faker("pybool")
-    description = factory.Maybe("has_description", factory.Faker("sentence"), "")
+    description = factory.Maybe("has_description", factory.Faker("text", max_nb_chars=200), "")
 
     has_group = factory.Faker("pybool")
     group = factory.Maybe("has_group", random_instance(VLANGroup), None)
