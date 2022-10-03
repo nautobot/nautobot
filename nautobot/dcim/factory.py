@@ -14,7 +14,7 @@ class RegionFactory(DjangoModelFactory):
             "has_description",
         )
 
-    name = factory.Sequence(lambda n: "region-%02d" % n)
+    name = factory.Sequence(lambda n: f"region-{n:02d}")
 
     has_parent = factory.Faker("pybool")
     parent = factory.Maybe("has_description", random_instance(Region), None)
@@ -27,7 +27,7 @@ class SiteFactory(DjangoModelFactory):
     class Meta:
         model = Site
 
-    name = factory.Sequence(lambda n: "site-%02d" % n)
+    name = factory.Sequence(lambda n: f"site-{n:02d}")
     region = random_instance(Region)
 
 
@@ -61,9 +61,9 @@ class LocationFactory(DjangoModelFactory):
         )
 
     location_type = random_instance(LocationType)
-    name = factory.LazyAttributeSequence(lambda l, n: "%s - %02d" % (l.location_type.name, n))
+    name = factory.LazyAttributeSequence(lambda l, n: f"{l.location_type.name}-{n:02d}")
 
-    has_parent = factory.LazyAttribute(lambda l: True if l.location_type.parent else False)
+    has_parent = factory.LazyAttribute(lambda l: bool(l.location_type.parent))
     parent = factory.Maybe(
         "has_parent",
         factory.LazyAttribute(
@@ -73,7 +73,7 @@ class LocationFactory(DjangoModelFactory):
         ),
     )
 
-    has_site = factory.LazyAttribute(lambda l: False if l.has_parent else True)
+    has_site = factory.LazyAttribute(lambda l: not bool(l.has_parent))
     site = factory.Maybe("has_site", random_instance(Site))
 
     has_tenant = factory.Faker("pybool")
