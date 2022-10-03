@@ -57,11 +57,14 @@ Permissions can be related directly to users from the Admin UI or the API:
 
 | -                                                                      | Admin UI | API |
 | ---------------------------------------------------------------------- | -------- | --- |
-| Superusers                                                             | Yes      | Yes |
+| Superusers*                                                            | Yes      | Yes |
 | Staff users with `users.add_permission` or `users.change_permission`   | Yes      | Yes |
 | Regular users with `users.add_permission` or `users.change_permission` | No       | Yes |
 
 Multiple permissions can be assigned to a user account.
+!!! info
+
+    Superusers also required the Django Staff permission to view the Admin UI. 
 
 !!! info
 
