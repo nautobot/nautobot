@@ -70,8 +70,6 @@ django-prometheus = "~2.2.0"
 django-redis = "~5.2.0"
 # RQ (Redis Queueing) for background handling of webhooks, jobs, etc.
 django-rq = "~2.5.1"
-# DiscoverSlowestTestsRunner for running CI performance tests and benchmarking.
-django-slowtests = "^1.1.1"
 # External Storage support (i.e. S3)
 django-storages = {version = "~1.12.3", optional = true}
 # Advanced HTML tables
@@ -157,6 +155,8 @@ black = "~22.8.0"
 coverage = "~6.4.1"
 # Tool for debugging Django
 django-debug-toolbar = "~3.7.0"
+# DiscoverSlowestTestsRunner for running CI performance tests and benchmarking.
+django-slowtests = "^1.1.1"
 # Nautobot example plugin used for testing
 example-plugin = {path = "examples/example_plugin", develop = true}
 # Nautobot test plugin used for testing core view overrides
