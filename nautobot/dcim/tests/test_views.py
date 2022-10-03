@@ -1,6 +1,7 @@
 from decimal import Decimal
 
 import pytz
+import uuid
 import yaml
 
 from django.contrib.auth import get_user_model
@@ -67,7 +68,7 @@ from nautobot.dcim.models import (
     Site,
     VirtualChassis,
 )
-from nautobot.extras.choices import CustomFieldTypeChoices, RelationshipTypeChoices
+from nautobot.extras.choices import CustomFieldTypeChoices, RelationshipTypeChoices, ObjectChangeActionChoices
 from nautobot.extras.models import (
     ConfigContextSchema,
     CustomField,
@@ -82,6 +83,7 @@ from nautobot.ipam.models import VLAN, IPAddress
 from nautobot.tenancy.models import Tenant
 from nautobot.users.models import ObjectPermission
 from nautobot.utilities.testing import ViewTestCases, extract_page_body, post_data
+from nautobot.utilities.utils import get_changes_for_model
 
 # Use the proper swappable User model
 User = get_user_model()
@@ -296,6 +298,84 @@ class LocationTypeTestCase(ViewTestCases.OrganizationalObjectViewTestCase):
     def _get_queryset(self):
         return super()._get_queryset().order_by("last_updated")
 
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_create_object_with_permission(self):
+        initial_count = self._get_queryset().count()
+
+        # Assign unconstrained permission
+        obj_perm = ObjectPermission(name="Test permission", actions=["add"])
+        obj_perm.save()
+        obj_perm.users.add(self.user)
+        obj_perm.object_types.add(ContentType.objects.get_for_model(self.model))
+
+        # Try GET with model-level permission
+        self.assertHttpStatus(self.client.get(self._get_url("add")), 200)
+
+        # Try POST with model-level permission
+        request = {
+            "path": self._get_url("add"),
+            "data": post_data(self.form_data),
+        }
+        self.assertHttpStatus(self.client.post(**request), 302)
+        self.assertEqual(initial_count + 1, self._get_queryset().count())
+        instance = self._get_queryset().get(slug=self.form_data.get("slug"))
+        self.assertInstanceEqual(instance, self.form_data)
+        # if hasattr(self.model, "last_updated"):
+        #     instance = self._get_queryset().order_by("last_updated").last()
+        #     self.assertInstanceEqual(instance, self.form_data)
+        # else:
+        #     instance = self._get_queryset().last()
+        #     self.assertInstanceEqual(instance, self.form_data)
+
+        if hasattr(self.model, "to_objectchange"):
+            # Verify ObjectChange creation
+            objectchanges = get_changes_for_model(instance)
+            self.assertEqual(len(objectchanges), 1)
+            self.assertEqual(objectchanges[0].action, ObjectChangeActionChoices.ACTION_CREATE)
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_create_object_with_constrained_permission(self):
+        initial_count = self._get_queryset().count()
+
+        # Assign constrained permission
+        obj_perm = ObjectPermission(
+            name="Test permission",
+            constraints={"pk": str(uuid.uuid4())},  # Match a non-existent pk (i.e., deny all)
+            actions=["add"],
+        )
+        obj_perm.save()
+        obj_perm.users.add(self.user)
+        obj_perm.object_types.add(ContentType.objects.get_for_model(self.model))
+
+        # Try GET with object-level permission
+        self.assertHttpStatus(self.client.get(self._get_url("add")), 200)
+
+        # Try to create an object (not permitted)
+        request = {
+            "path": self._get_url("add"),
+            "data": post_data(self.form_data),
+        }
+        self.assertHttpStatus(self.client.post(**request), 200)
+        self.assertEqual(initial_count, self._get_queryset().count())  # Check that no object was created
+
+        # Update the ObjectPermission to allow creation
+        obj_perm.constraints = {"pk__isnull": False}
+        obj_perm.save()
+
+        # Try to create an object (permitted)
+        request = {
+            "path": self._get_url("add"),
+            "data": post_data(self.form_data),
+        }
+        self.assertHttpStatus(self.client.post(**request), 302)
+        self.assertEqual(initial_count + 1, self._get_queryset().count())
+        instance = self._get_queryset().get(slug=self.form_data.get("slug"))
+        self.assertInstanceEqual(instance, self.form_data)
+        # if hasattr(self.model, "last_updated"):
+        #     self.assertInstanceEqual(self._get_queryset().order_by("last_updated").last(), self.form_data)
+        # else:
+        #     self.assertInstanceEqual(self._get_queryset().last(), self.form_data)
+
 
 class LocationTestCase(ViewTestCases.PrimaryObjectViewTestCase):
     model = Location
@@ -303,14 +383,15 @@ class LocationTestCase(ViewTestCases.PrimaryObjectViewTestCase):
 
     @classmethod
     def setUpTestData(cls):
-        lt1 = LocationType.objects.create(name="Root Type 1")
-        lt2 = LocationType.objects.create(name="Intermediate Type 1", parent=lt1)
-        lt3 = LocationType.objects.create(name="Leaf Type 1", slug="leaf-1", parent=lt2, description="A leaf type")
+        lt1 = LocationType.objects.get(name="Building")
+        lt2 = LocationType.objects.get(name="Floor")
+        lt3 = LocationType.objects.get(name="Room")
+        lt3.description = "A leaf type"
         for lt in [lt1, lt2, lt3]:
             lt.validated_save()
 
         active = Status.objects.get(name="Active")
-        site = Site.objects.create(name="Site 1", slug="site-1", status=active)
+        site = Site.objects.first()
         tenant = Tenant.objects.create(name="Tenant 1")
 
         loc1 = Location.objects.create(name="Root 1", location_type=lt1, site=site, status=active)
@@ -333,9 +414,9 @@ class LocationTestCase(ViewTestCases.PrimaryObjectViewTestCase):
 
         cls.csv_data = (
             "name,slug,location_type,parent,site,status,tenant,description",
-            "Root 3,root-3,Root Type 1,,Site 1,active,,",
-            "Intermediate 2,intermediate-2,Intermediate Type 1,Root 2,,active,Tenant 1,Hello world!",
-            "Leaf 2,leaf-2,Leaf Type 1,Intermediate 1,,active,Tenant 1,",
+            f"Root 3,root-3,Building,,{site.slug},active,,",
+            "Intermediate 2,intermediate-2,Floor,Root 2,,active,Tenant 1,Hello world!",
+            "Leaf 2,leaf-2,Room,Intermediate 1,,active,Tenant 1,",
         )
 
         cls.bulk_edit_data = {
@@ -353,6 +434,74 @@ class LocationTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         """To get the correct bulk-delete object count, make sure we avoid a cascade deletion."""
         return [loc.pk for loc in list(Location.objects.filter(children__isnull=True))[:3]]
 
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_create_object_with_permission(self):
+        initial_count = self._get_queryset().count()
+
+        # Assign unconstrained permission
+        obj_perm = ObjectPermission(name="Test permission", actions=["add"])
+        obj_perm.save()
+        obj_perm.users.add(self.user)
+        obj_perm.object_types.add(ContentType.objects.get_for_model(self.model))
+
+        # Try GET with model-level permission
+        self.assertHttpStatus(self.client.get(self._get_url("add")), 200)
+
+        # Try POST with model-level permission
+        request = {
+            "path": self._get_url("add"),
+            "data": post_data(self.form_data),
+        }
+        self.assertHttpStatus(self.client.post(**request), 302)
+        self.assertEqual(initial_count + 1, self._get_queryset().count())
+        instance = self._get_queryset().get(slug=self.form_data.get("slug"))
+        self.assertInstanceEqual(instance, self.form_data)
+
+        if hasattr(self.model, "to_objectchange"):
+            # Verify ObjectChange creation
+            objectchanges = get_changes_for_model(instance)
+            self.assertEqual(len(objectchanges), 1)
+            self.assertEqual(objectchanges[0].action, ObjectChangeActionChoices.ACTION_CREATE)
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_create_object_with_constrained_permission(self):
+        initial_count = self._get_queryset().count()
+
+        # Assign constrained permission
+        obj_perm = ObjectPermission(
+            name="Test permission",
+            constraints={"pk": str(uuid.uuid4())},  # Match a non-existent pk (i.e., deny all)
+            actions=["add"],
+        )
+        obj_perm.save()
+        obj_perm.users.add(self.user)
+        obj_perm.object_types.add(ContentType.objects.get_for_model(self.model))
+
+        # Try GET with object-level permission
+        self.assertHttpStatus(self.client.get(self._get_url("add")), 200)
+
+        # Try to create an object (not permitted)
+        request = {
+            "path": self._get_url("add"),
+            "data": post_data(self.form_data),
+        }
+        self.assertHttpStatus(self.client.post(**request), 200)
+        self.assertEqual(initial_count, self._get_queryset().count())  # Check that no object was created
+
+        # Update the ObjectPermission to allow creation
+        obj_perm.constraints = {"pk__isnull": False}
+        obj_perm.save()
+
+        # Try to create an object (permitted)
+        request = {
+            "path": self._get_url("add"),
+            "data": post_data(self.form_data),
+        }
+        self.assertHttpStatus(self.client.post(**request), 302)
+        self.assertEqual(initial_count + 1, self._get_queryset().count())
+        instance = self._get_queryset().get(slug=self.form_data.get("slug"))
+        self.assertInstanceEqual(instance, self.form_data)
+
 
 class RackGroupTestCase(ViewTestCases.OrganizationalObjectViewTestCase):
     model = RackGroup
@@ -361,7 +510,7 @@ class RackGroupTestCase(ViewTestCases.OrganizationalObjectViewTestCase):
     @classmethod
     def setUpTestData(cls):
 
-        site = Site.objects.create(name="Site 1", slug="site-1")
+        site = Site.objects.first()
 
         RackGroup.objects.create(name="Rack Group 1", slug="rack-group-1", site=site)
         RackGroup.objects.create(name="Rack Group 2", slug="rack-group-2", site=site)
@@ -377,10 +526,10 @@ class RackGroupTestCase(ViewTestCases.OrganizationalObjectViewTestCase):
 
         cls.csv_data = (
             "site,name,slug,description",
-            "Site 1,Rack Group 4,rack-group-4,Fourth rack group",
-            "Site 1,Rack Group 5,rack-group-5,Fifth rack group",
-            "Site 1,Rack Group 6,rack-group-6,Sixth rack group",
-            "Site 1,Rack Group 7,,Seventh rack group",
+            f"{site.slug},Rack Group 4,rack-group-4,Fourth rack group",
+            f"{site.slug},Rack Group 5,rack-group-5,Fifth rack group",
+            f"{site.slug},Rack Group 6,rack-group-6,Sixth rack group",
+            f"{site.slug},Rack Group 7,,Seventh rack group",
         )
         cls.slug_test_object = "Rack Group 8"
         cls.slug_source = "name"
@@ -428,7 +577,7 @@ class RackReservationTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         user2 = User.objects.create_user(username="testuser2")
         user3 = User.objects.create_user(username="testuser3")
 
-        site = Site.objects.create(name="Site 1", slug="site-1")
+        site = Site.objects.first()
 
         rack_group = RackGroup.objects.create(name="Rack Group 1", slug="rack-group-1", site=site)
 
@@ -449,9 +598,9 @@ class RackReservationTestCase(ViewTestCases.PrimaryObjectViewTestCase):
 
         cls.csv_data = (
             "site,rack_group,rack,units,description",
-            'Site 1,Rack Group 1,Rack 1,"10,11,12",Reservation 1',
-            'Site 1,Rack Group 1,Rack 1,"13,14,15",Reservation 2',
-            'Site 1,Rack Group 1,Rack 1,"16,17,18",Reservation 3',
+            f'{site.slug},Rack Group 1,Rack 1,"10,11,12",Reservation 1',
+            f'{site.slug},Rack Group 1,Rack 1,"13,14,15",Reservation 2',
+            f'{site.slug},Rack Group 1,Rack 1,"16,17,18",Reservation 3',
         )
 
         cls.bulk_edit_data = {
@@ -471,10 +620,7 @@ class RackTestCase(ViewTestCases.PrimaryObjectViewTestCase):
     @classmethod
     def setUpTestData(cls):
 
-        cls.sites = (
-            Site.objects.create(name="Site 1", slug="site-1"),
-            Site.objects.create(name="Site 2", slug="site-2"),
-        )
+        cls.sites = Site.objects.all()[:2]
 
         powerpanels = (
             PowerPanel.objects.create(site=cls.sites[0], name="Power Panel 1"),
@@ -571,9 +717,9 @@ class RackTestCase(ViewTestCases.PrimaryObjectViewTestCase):
 
         cls.csv_data = (
             "site,group,name,width,u_height,status",
-            "Site 1,,Rack 4,19,42,planned",
-            "Site 1,Rack Group 1,Rack 5,19,42,active",
-            "Site 2,Rack Group 2,Rack 6,19,42,reserved",
+            f"{cls.sites[0].slug},,Rack 4,19,42,planned",
+            f"{cls.sites[0].slug},Rack Group 1,Rack 5,19,42,active",
+            f"{cls.sites[1].slug},Rack Group 2,Rack 6,19,42,reserved",
         )
 
         cls.bulk_edit_data = {
@@ -1313,10 +1459,7 @@ class DeviceTestCase(ViewTestCases.PrimaryObjectViewTestCase):
     @classmethod
     def setUpTestData(cls):
 
-        sites = (
-            Site.objects.create(name="Site 1", slug="site-1"),
-            Site.objects.create(name="Site 2", slug="site-2"),
-        )
+        sites = Site.objects.all()[:2]
 
         rack_group = RackGroup.objects.create(site=sites[0], name="Rack Group 1", slug="rack-group-1")
 
@@ -1443,9 +1586,9 @@ class DeviceTestCase(ViewTestCases.PrimaryObjectViewTestCase):
 
         cls.csv_data = (
             "device_role,manufacturer,device_type,status,name,site,rack_group,rack,position,face,secrets_group",
-            "Device Role 1,Manufacturer 1,Device Type 1,active,Device 4,Site 1,Rack Group 1,Rack 1,10,front,",
-            "Device Role 1,Manufacturer 1,Device Type 1,active,Device 5,Site 1,Rack Group 1,Rack 1,20,front,",
-            "Device Role 1,Manufacturer 1,Device Type 1,active,Device 6,Site 1,Rack Group 1,Rack 1,30,front,Secrets Group 2",
+            f"Device Role 1,Manufacturer 1,Device Type 1,active,Device 4,{sites[0].slug},Rack Group 1,Rack 1,10,front,",
+            f"Device Role 1,Manufacturer 1,Device Type 1,active,Device 5,{sites[0].slug},Rack Group 1,Rack 1,20,front,",
+            f"Device Role 1,Manufacturer 1,Device Type 1,active,Device 6,{sites[0].slug},Rack Group 1,Rack 1,30,front,Secrets Group 2",
         )
 
         cls.bulk_edit_data = {
@@ -2131,7 +2274,7 @@ class CableTestCase(
     @classmethod
     def setUpTestData(cls):
 
-        site = Site.objects.create(name="Site 1", slug="site-1")
+        site = Site.objects.first()
         manufacturer = Manufacturer.objects.create(name="Manufacturer 1", slug="manufacturer-1")
         devicetype = DeviceType.objects.create(model="Device Type 1", manufacturer=manufacturer)
         devicerole = DeviceRole.objects.create(name="Device Role 1", slug="device-role-1")
@@ -2409,7 +2552,7 @@ class PowerConnectionsTestCase(ViewTestCases.ListObjectsViewTestCase):
 
     @classmethod
     def setUpTestData(cls):
-        site = Site.objects.create(name="Site 1", slug="site-1")
+        site = Site.objects.first()
 
         device_1 = create_test_device("Device 1")
         device_2 = create_test_device("Device 2")
@@ -2469,7 +2612,7 @@ class InterfaceConnectionsTestCase(ViewTestCases.ListObjectsViewTestCase):
 
     @classmethod
     def setUpTestData(cls):
-        site = Site.objects.create(name="Site 1", slug="site-1")
+        site = Site.objects.first()
 
         device_1 = create_test_device("Device 1")
         device_2 = create_test_device("Device 2")
@@ -2559,7 +2702,7 @@ class VirtualChassisTestCase(ViewTestCases.PrimaryObjectViewTestCase):
     @classmethod
     def setUpTestData(cls):
 
-        site = Site.objects.create(name="Site 1", slug="site-1")
+        site = Site.objects.first()
         manufacturer = Manufacturer.objects.create(name="Manufacturer", slug="manufacturer-1")
         device_type = DeviceType.objects.create(manufacturer=manufacturer, model="Device Type 1", slug="device-type-1")
         device_role = DeviceRole.objects.create(name="Device Role", slug="device-role-1")
@@ -2708,11 +2851,7 @@ class PowerPanelTestCase(ViewTestCases.PrimaryObjectViewTestCase):
     @classmethod
     def setUpTestData(cls):
 
-        sites = (
-            Site.objects.create(name="Site 1", slug="site-1"),
-            Site.objects.create(name="Site 2", slug="site-2"),
-        )
-
+        sites = Site.objects.all()[:2]
         rackgroups = (
             RackGroup.objects.create(name="Rack Group 1", slug="rack-group-1", site=sites[0]),
             RackGroup.objects.create(name="Rack Group 2", slug="rack-group-2", site=sites[1]),
@@ -2731,9 +2870,9 @@ class PowerPanelTestCase(ViewTestCases.PrimaryObjectViewTestCase):
 
         cls.csv_data = (
             "site,rack_group,name",
-            "Site 1,Rack Group 1,Power Panel 4",
-            "Site 1,Rack Group 1,Power Panel 5",
-            "Site 1,Rack Group 1,Power Panel 6",
+            f"{sites[0].slug},Rack Group 1,Power Panel 4",
+            f"{sites[0].slug},Rack Group 1,Power Panel 5",
+            f"{sites[0].slug},Rack Group 1,Power Panel 6",
         )
 
         cls.bulk_edit_data = {
@@ -2749,7 +2888,7 @@ class PowerFeedTestCase(ViewTestCases.PrimaryObjectViewTestCase):
     @classmethod
     def setUpTestData(cls):
 
-        site = Site.objects.create(name="Site 1", slug="site-1")
+        site = Site.objects.first()
 
         # Assign site generated to the class object for use later.
         cls.site = site
@@ -2795,9 +2934,9 @@ class PowerFeedTestCase(ViewTestCases.PrimaryObjectViewTestCase):
 
         cls.csv_data = (
             "site,power_panel,name,voltage,amperage,max_utilization,status",
-            "Site 1,Power Panel 1,Power Feed 4,120,20,80,active",
-            "Site 1,Power Panel 1,Power Feed 5,120,20,80,failed",
-            "Site 1,Power Panel 1,Power Feed 6,120,20,80,offline",
+            f"{site.slug},Power Panel 1,Power Feed 4,120,20,80,active",
+            f"{site.slug},Power Panel 1,Power Feed 5,120,20,80,failed",
+            f"{site.slug},Power Panel 1,Power Feed 6,120,20,80,offline",
         )
 
         cls.bulk_edit_data = {
