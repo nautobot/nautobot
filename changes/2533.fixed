@@ -1,1 +1,0 @@
-Fixed `test_list_objects_unknown_filter_no_strict_filtering` failure if a filterset couldn't be found for a given model.
