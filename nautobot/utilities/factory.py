@@ -5,6 +5,16 @@ import factory.random
 
 
 def _get_queryset_from_model_or_queryset_or_lambda(model_or_queryset_or_lambda):
+    """
+    Get a queryset object given an input which may be a model class OR queryset OR lambda function that returns either.
+
+    This makes it possible for us to do any of the following:
+
+    random_instance(Location)
+    random_instance(Location.objects.filter(...))
+    random_instance(lambda: Location)
+    random_instance(lambda: Location.objects.get_for_model(...))
+    """
     if isinstance(model_or_queryset_or_lambda, type) and issubclass(model_or_queryset_or_lambda, Model):
         queryset = model_or_queryset_or_lambda.objects.all()
     elif callable(model_or_queryset_or_lambda):
@@ -85,9 +95,9 @@ def get_random_instances(model_or_queryset_or_lambda, maximum=None):
     count = queryset.count()
     if maximum is None:
         maximum = count
-    if branch == 0 or count == 0 or maximum == 0:
+    if any([branch == 0, count == 0, maximum == 0]):
         return []
-    if branch == 1 or count == 1 or maximum == 1:
+    if any([branch == 1, count == 1, maximum == 1]):
         return [factory.random.randgen.choice(queryset)]
     return factory.random.randgen.sample(
         population=list(queryset),
