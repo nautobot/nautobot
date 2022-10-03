@@ -179,12 +179,12 @@ The `settings_and_registry` default context processor was changed to purely `set
 
 - [#2326](https://github.com/nautobot/nautobot/issues/2326) - Fixed 500 error in Circuit Termination swap.
 - [#2330](https://github.com/nautobot/nautobot/issues/2330) - Fixed missing Change Log tab on device component detail views.
-- [#2445](https://github.com/nautobot/nautobot/issues/2445) - Fix invalid Renovate config with unnecessary constraint.
+- [#2445](https://github.com/nautobot/nautobot/issues/2445) - Fixed invalid Renovate config.
 - [#2466](https://github.com/nautobot/nautobot/issues/2466) - Fixed Jobs misleading sensitive variables or requiring approval error message.
 - [#2509](https://github.com/nautobot/nautobot/issues/2509) - Fixed template lookup logic in ObjectNotesView, ObjectDynamicGroupsView and ObjectChangeLogView.
 - [#2526](https://github.com/nautobot/nautobot/issues/2526) - Fixed error in rendering the example plugin's `AnotherExampleModel` list view by adding a `get_absolute_url()` method to the `AnotherExampleModel` class and adding an `AnotherExampleModel` detail view template.
 - [#2533](https://github.com/nautobot/nautobot/issues/2533) - Fixed `test_list_objects_unknown_filter_no_strict_filtering` failure if a filterset couldn't be found for a given model.
-- [#2539](https://github.com/nautobot/nautobot/issues/2539) - Update links from https://nautobot.readthedocs.io to https://docs.nautobot.com links.
+- [#2539](https://github.com/nautobot/nautobot/issues/2539) - Updated links from https://nautobot.readthedocs.io to https://docs.nautobot.com.
 
 
 ## v1.4.4 (2022-09-26)
