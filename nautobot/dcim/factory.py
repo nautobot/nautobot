@@ -20,7 +20,7 @@ class RegionFactory(DjangoModelFactory):
     parent = factory.Maybe("has_description", random_instance(Region), None)
 
     has_description = factory.Faker("pybool")
-    description = factory.Maybe("has_description", factory.Faker("sentence"), "")
+    description = factory.Maybe("has_description", factory.Faker("text", max_nb_chars=200), "")
 
 
 class SiteFactory(DjangoModelFactory):
@@ -34,10 +34,7 @@ class SiteFactory(DjangoModelFactory):
 class LocationTypeFactory(DjangoModelFactory):
     class Meta:
         model = LocationType
-        exclude = (
-            "has_parent",
-            "has_description",
-        )
+        exclude = ("has_description",)
 
     name = factory.Sequence(lambda n: "Root" if n == 0 else ("Building" if n == 1 else ("Floor" if n == 2 else "Room")))
     parent = factory.Sequence(
@@ -47,7 +44,7 @@ class LocationTypeFactory(DjangoModelFactory):
     )
 
     has_description = factory.Faker("pybool")
-    description = factory.Maybe("has_description", factory.Faker("sentence"), "")
+    description = factory.Maybe("has_description", factory.Faker("text", max_nb_chars=200), "")
 
 
 class LocationFactory(DjangoModelFactory):
@@ -80,4 +77,4 @@ class LocationFactory(DjangoModelFactory):
     tenant = factory.Maybe("has_tenant", random_instance(Tenant))
 
     has_description = factory.Faker("pybool")
-    description = factory.Maybe("has_description", factory.Faker("sentence"), "")
+    description = factory.Maybe("has_description", factory.Faker("text", max_nb_chars=200), "")
