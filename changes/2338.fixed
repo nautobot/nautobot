@@ -1,1 +1,0 @@
-Fixed whitespace issue with Text File secrets and they are now stripped of leading/trailing whitespace and newlines.

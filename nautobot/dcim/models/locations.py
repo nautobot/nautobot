@@ -1,6 +1,6 @@
 from django.contrib.contenttypes.fields import GenericRelation
 from django.contrib.contenttypes.models import ContentType
-from django.core.exceptions import ValidationError
+from django.core.exceptions import ObjectDoesNotExist, ValidationError
 from django.db import models
 from django.urls import reverse
 
@@ -84,6 +84,30 @@ class LocationType(TreeNode, OrganizationalModel):
             "rack groups",
         ]:
             raise ValidationError({"name": "This name is reserved for future use."})
+
+    @property
+    def display(self):
+        """
+        Include the parent type names as well in order to provide UI clarity.
+        `self.ancestors()` returns all the preceding nodes from the top down.
+        So if we are looking at node C and its node structure is the following:
+            A
+           /
+          B
+         /
+        C
+        This method will return "A → B → C".
+        Note that `self.ancestors()` may throw an `ObjectDoesNotExist` during bulk-delete operations.
+        """
+        display_str = ""
+        try:
+            for ancestor in self.ancestors():
+                display_str += ancestor.name + " → "
+        except ObjectDoesNotExist:
+            pass
+        finally:
+            display_str += self.name
+            return display_str  # pylint: disable=lost-exception
 
 
 @extras_features(
@@ -198,6 +222,31 @@ class Location(TreeNode, StatusModel, PrimaryModel):
     def base_site(self):
         """The site that this Location belongs to, if any, or that its root ancestor belongs to, if any."""
         return self.site or self.ancestors().first().site
+
+    @property
+    def display(self):
+        """
+        Location name is unique per parent but not globally unique, so include parent information as context.
+        `self.ancestors()` returns all the preceding nodes from the top down.
+        So if we are looking at node C and its node structure is the following:
+            A
+           /
+          B
+         /
+        C
+        This method will return "A → B → C".
+
+        Note that `self.ancestors()` may throw an `ObjectDoesNotExist` during bulk-delete operations.
+        """
+        display_str = ""
+        try:
+            for ancestor in self.ancestors():
+                display_str += ancestor.name + " → "
+        except ObjectDoesNotExist:
+            pass
+        finally:
+            display_str += self.name
+            return display_str  # pylint: disable=lost-exception
 
     def validate_unique(self, exclude=None):
         # Check for a duplicate name on a Location with no parent.
