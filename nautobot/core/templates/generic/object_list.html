@@ -180,7 +180,7 @@
 
         let query_params = $(this).serialize()
 
-        // // check if `?q=` or `&q=` in query_params
+        // check if `?q=` or `&q=` in query_params
         if(location.search && /(\?|\&)q/.test(location.search)){
             // Append `q` value to `query_params`
             query_params += "&q=" + /(?<=(\?|\&)q=)\w+/.exec(location.search)[0]
