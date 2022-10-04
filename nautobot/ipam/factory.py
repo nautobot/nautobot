@@ -3,11 +3,13 @@ import logging
 import factory
 from factory.random import randgen
 import faker
+import math
 
 from nautobot.core.factory import OrganizationalModelFactory, PrimaryModelFactory
 from nautobot.dcim.models import Location, Site
 from nautobot.extras.models import Status
-from nautobot.ipam.models import Aggregate, RIR, Role, RouteTarget, VLAN, VLANGroup, VRF
+from nautobot.ipam.choices import IPAddressRoleChoices
+from nautobot.ipam.models import Aggregate, RIR, IPAddress, Prefix, Role, RouteTarget, VLAN, VLANGroup, VRF
 from nautobot.tenancy.models import Tenant
 from nautobot.utilities.factory import get_random_instances, random_instance, UniqueFaker
 
@@ -32,6 +34,22 @@ class RIRFactory(OrganizationalModelFactory):
 
 
 class AggregateFactory(PrimaryModelFactory):
+    """
+    Create random aggregates and around half of those generate prefixes within the aggregate IP space. Child prefixes
+    create nested child prefixes and ip addresses within the prefix IP space. Defaults to creating 0-4 child prefixes
+    which generate 0-4 grandchildren. Set child_prefixes__max_count to an integer when calling the factory creation
+    methods (`create()`, `create_batch()`, etc) to override the maximum number of child prefixes generated. Set
+    child_prefixes__children__max_count to an integer when calling the factory creation methods (`create()`, `batch_create()`, etc)
+    to override the maximum number of grandchildren generated.
+
+    Examples:
+    AggregateFactory.create_batch(20) # create 20 aggregates, approximately half will generate 0-4 child prefixes
+                                      # which will create child prefixes and ip addresses
+    AggregateFactory.create_batch(child_prefixes__max_count=0) # create 20 aggregates with no child prefixes
+    AggregateFactory.create_batch(child_prefixes__children__max_count=0) # create 20 aggregates, approximately
+                                      # half will generate 0-4 child prefixes that will not create any children
+    """
+
     class Meta:
         model = Aggregate
         exclude = (
@@ -53,6 +71,32 @@ class AggregateFactory(PrimaryModelFactory):
     description = factory.Maybe("has_description", factory.Faker("text", max_nb_chars=200), "")
 
     is_ipv6 = factory.Faker("pybool")
+
+    @factory.post_generation
+    def child_prefixes(self, create, extracted, **kwargs):
+        if extracted:
+            # Objects have already been created, do nothing
+            return
+
+        # 50% chance to create child prefixes
+        if not faker.Faker().pybool():
+            return
+
+        # Generate 0-4 contained prefixes
+        action = "create" if create else "build"
+        method = getattr(PrefixFactory, action)
+        max_count = int(kwargs.pop("max_count", 4))
+        prefix_count = faker.Faker().pyint(min_value=0, max_value=min(max_count, self.prefix.size))
+        if prefix_count == 0:
+            return
+        # calculate optimal prefix size for this aggregate
+        prefix_cidr = self.prefix_length + math.ceil(math.log(prefix_count, 2))
+        if prefix_cidr > 128 or self.family == 4 and prefix_cidr > 32:
+            raise ValueError(f"Unable to create {prefix_count} prefixes in aggregate {self.cidr_str}")
+        subnets = list(self.prefix.subnet(prefix_cidr))
+        is_ipv6 = self.family == 6
+        for n in range(prefix_count):
+            method(prefix=str(subnets[n].cidr), tenant=self.tenant, is_ipv6=is_ipv6, **kwargs)
 
     @factory.lazy_attribute_sequence
     def prefix(self, n):
@@ -304,3 +348,168 @@ class VLANFactory(PrimaryModelFactory):
             kwargs["site"] = kwargs["group"].site
 
         return kwargs
+
+
+class VLANGetOrCreateFactory(VLANFactory):
+    class Meta:
+        django_get_or_create = ("location", "site", "tenant")
+
+
+class VRFGetOrCreateFactory(VRFFactory):
+    class Meta:
+        django_get_or_create = ("tenant",)
+
+
+class PrefixFactory(PrimaryModelFactory):
+    """
+    Create random prefixes and 50% of the time generate child prefixes and ip addresses within the prefix IP space.
+    Containers will create child prefixes while prefixes that are not containers will create ip addresses in the
+    prefix's address space. Defaults to creating 0-4 children. Set children__max_count to an integer when calling
+    the factory creation methods (`create()`, `create_batch()`, etc) to override the maximum number of children
+    generated.
+
+    Examples:
+    PrefixFactory.create_batch(20) # create 20 prefixes, approximately half will generate 0-4 children
+    AggregateFactory.create_batch(children__max_count=0) # create 20 prefixes with no children
+    """
+
+    class Meta:
+        model = Prefix
+
+    class Params:
+        has_description = factory.Faker("pybool")
+        has_location = factory.Faker("pybool")
+        has_role = factory.Faker("pybool")
+        has_site = factory.Faker("pybool")
+        has_tenant = factory.Faker("pybool")
+        has_vlan = factory.Faker("pybool")
+        has_vrf = factory.Faker("pybool")
+        is_container = factory.Faker("pybool")
+        is_ipv6 = factory.Faker("pybool")
+        ipv6_cidr = factory.Faker("ipv6", network=True)
+        # faker ipv6 provider generates networks with /0 cidr, change to anything but /0
+        ipv6_fixed = factory.LazyAttribute(
+            lambda o: o.ipv6_cidr.replace("/0", f"/{factory.Faker('pyint', min_length=1, max_length=128)!s}")
+        )
+
+    prefix = factory.Maybe(
+        "is_ipv6",
+        factory.SelfAttribute("ipv6_fixed"),
+        factory.Faker("ipv4", network=True, private=True),
+    )
+    description = factory.Maybe("has_description", factory.Faker("text", max_nb_chars=200), "")
+    is_pool = factory.Faker("pybool")
+    # TODO: create a LocationGetOrCreateFactory to get or create a location with matching site
+    location = factory.Maybe("has_location", random_instance(lambda: Location.objects.get_for_model(Prefix)), None)
+    role = factory.Maybe("has_role", random_instance(Role), None)
+    # TODO: create a SiteGetOrCreateFactory to get or create a site with matching tenant
+    site = factory.Maybe("has_site", random_instance(Site), None)
+    status = factory.Maybe(
+        "is_container",
+        factory.LazyFunction(lambda: Prefix.STATUS_CONTAINER),
+        random_instance(
+            lambda: Status.objects.get_for_model(Prefix).exclude(pk=Prefix.STATUS_CONTAINER.pk), allow_null=False
+        ),
+    )
+    tenant = factory.Maybe("has_tenant", random_instance(Tenant))
+    vlan = factory.Maybe(
+        "has_vlan",
+        factory.SubFactory(
+            VLANGetOrCreateFactory,
+            location=factory.SelfAttribute("..location"),
+            site=factory.SelfAttribute("..site"),
+            tenant=factory.SelfAttribute("..tenant"),
+        ),
+        None,
+    )
+    vrf = factory.Maybe(
+        "has_vrf",
+        factory.SubFactory(VRFGetOrCreateFactory, tenant=factory.SelfAttribute("..tenant")),
+        None,
+    )
+
+    @factory.post_generation
+    def children(self, create, extracted, **kwargs):
+        if extracted:
+            # Objects have already been created, do nothing
+            return
+
+        # 50% chance to create children
+        if not faker.Faker().pybool():
+            return
+
+        # Generate 0-4 child prefixes or ip addresses
+        action = "create" if create else "build"
+        factory = PrefixFactory if self.status == Prefix.STATUS_CONTAINER else IPAddressFactory
+        method = getattr(factory, action)
+        max_count = int(kwargs.pop("max_count", 4))
+        child_count = faker.Faker().pyint(min_value=0, max_value=min(max_count, self.prefix.size))
+        if child_count == 0:
+            return
+        is_ipv6 = self.family == 6
+
+        if factory == IPAddressFactory:
+            for count, address in enumerate(self.prefix.iter_hosts()):
+                if count == child_count:
+                    break
+                method(address=str(address), vrf=self.vrf, tenant=self.tenant, is_ipv6=is_ipv6, **kwargs)
+        else:
+            # calculate optimal prefix size for child prefixes
+            child_cidr = self.prefix_length + max(1, math.ceil(math.log(child_count, 2)))
+            if child_cidr > 128 or self.family == 4 and child_cidr > 32:
+                raise ValueError(f"Unable to create {child_count} child prefixes in container prefix {self.cidr_str}.")
+            subnets = list(self.prefix.subnet(child_cidr))
+            for n in range(child_count):
+                method(
+                    prefix=str(subnets[n].cidr),
+                    tenant=self.tenant,
+                    site=self.site,
+                    location=self.location,
+                    is_container=False,
+                    is_ipv6=is_ipv6,
+                    vrf=self.vrf,
+                    **kwargs,
+                )
+
+
+class IPAddressFactory(PrimaryModelFactory):
+    class Meta:
+        model = IPAddress
+
+    class Params:
+        has_assigned_object = factory.Faker("pybool")
+        has_description = factory.Faker("pybool")
+        has_dns_name = factory.Faker("pybool")
+        has_nat_inside = factory.Faker("pybool")
+        has_role = factory.Faker("pybool")
+        role_choice = factory.Faker("random_element", elements=IPAddressRoleChoices)
+        has_tenant = factory.Faker("pybool")
+        has_vrf = factory.Faker("pybool")
+        is_ipv6 = factory.Faker("pybool")
+
+    address = factory.Maybe(
+        "is_ipv6",
+        factory.Faker("ipv6"),
+        factory.Faker("ipv4_private"),
+    )
+    # TODO: add objects for assigned_object when factories for dcim.interface and virtualization.vminterface are ready
+    assigned_object = factory.Maybe("has_assigned_object", None, None)
+    description = factory.Maybe("has_description", factory.Faker("text", max_nb_chars=200), "")
+    dns_name = factory.Maybe("has_dns_name", factory.Faker("hostname"), "")
+    nat_inside = factory.SubFactory(
+        "nautobot.ipam.factory.IPAddressFactory",
+        nat_inside=None,
+        is_ipv6=factory.SelfAttribute("..is_ipv6"),
+    )
+    role = factory.Maybe("has_role", factory.LazyAttribute(lambda obj: obj.role_choice[0]), "")
+    status = factory.Maybe(
+        "is_ipv6",
+        random_instance(lambda: Status.objects.get_for_model(IPAddress), allow_null=False),
+        random_instance(lambda: Status.objects.get_for_model(IPAddress).exclude(name="SLAAC"), allow_null=False),
+    )
+    tenant = factory.Maybe("has_tenant", random_instance(Tenant))
+    vrf = factory.Maybe(
+        "has_vrf",
+        factory.SubFactory(VRFGetOrCreateFactory, tenant=factory.SelfAttribute("..tenant")),
+        None,
+    )
