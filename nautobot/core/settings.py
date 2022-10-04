@@ -117,10 +117,14 @@ STORAGE_CONFIG = {}
 # integration tests if explicitly passed in with `nautobot-server test --tag integration`.
 TEST_RUNNER = "nautobot.core.tests.runner.NautobotTestRunner"
 
+#
+# django-slowtests
+#
 
 # django-slowtests setting and it is set so that only adding `--report` at the end of the `invoke` command
 # will output the performance test results. e.g. `invoke unittest --report`.
 TEST_ALWAYS_GENERATE_SLOW_REPORT = False
+TEST_PERFORMANCE_BASELINE_FILE = "nautobot/core/tests/performance_baselines.yml"
 
 #
 # Django cryptography

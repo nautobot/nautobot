@@ -113,7 +113,9 @@ class NautobotTestRunner(DiscoverSlowestTestsRunner):
     def get_baselines(self):
         """Load the performance_baselines.yml file for result comparison."""
         baselines = {}
-        input_file = "nautobot/core/tests/performance_baselines.yml"
+        input_file = getattr(
+            settings, "TEST_PERFORMANCE_BASELINE_FILE", "nautobot/core/tests/performance_baselines.yml"
+        )
 
         with open(input_file) as f:
             data = yaml.safe_load(f)
