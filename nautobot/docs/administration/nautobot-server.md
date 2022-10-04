@@ -272,6 +272,40 @@ $ nautobot-server nbshell
 
 Please see the dedicated guide on the [Nautobot Shell](nautobot-shell.md) for more information.
 
+### `populate_database`
+
++++ 1.5.0
+
+`nautobot-server populate_database [--flush] --seed SEED`
+
+Populate the database with various data as a baseline for testing (automated or manual).
+
+`--flush`  
+Flush any existing data from the database before generating new data.
+
+!!! danger
+    Running this command with the `--flush` argument will clear all existing data in your database. You have been warned.
+
+`--seed SEED`  
+String to use as a random generator seed for reproducible results.
+
+```no-highlight
+$ nautobot-server populate_database --flush --seed "Nautobot"
+Flushing all existing data from the database...
+Seeding the pseudo-random number generator with seed "Nautobot"...
+Creating Statuses...
+Creating TenantGroups...
+Creating Tenants...
+Creating RIRs...
+Creating Aggregates...
+Creating RouteTargets...
+Creating VRFs...
+Creating IP/VLAN Roles...
+Creating VLANGroups...
+Creating VLANs...
+Database populated successfully!
+```
+
 ### `post_upgrade`
 
 `nautobot-server post_upgrade`
