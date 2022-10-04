@@ -682,7 +682,6 @@ class DynamicFilterFormTest(TestCase):
                     ("id", "Id"),
                     ("last_updated", "Last updated"),
                     ("name", "Name"),
-                    ("q", "Search"),
                     ("slug", "Slug"),
                 ],
             )
@@ -720,7 +719,6 @@ class DynamicFilterFormTest(TestCase):
                     ("physical_address", "Physical address"),
                     ("power_panels", "Power panels (name or ID)"),
                     ("prefixes", "Prefixes"),
-                    ("q", "Search"),
                     ("rack_groups", "Rack groups (slug or ID)"),
                     ("racks", "Racks"),
                     ("region", "Region (slug)"),
@@ -755,7 +753,6 @@ class DynamicFilterFormTest(TestCase):
                     ("id", "Id"),
                     ("last_updated", "Last updated"),
                     ("name", "Name"),
-                    ("q", "Search"),
                     ("slug", "Slug"),
                 ],
             )

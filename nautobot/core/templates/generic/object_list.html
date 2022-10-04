@@ -14,11 +14,27 @@
         margin-right: 5px;
         margin-bottom: 5px;
     }
+    .form-buttons{
+        display: flex;
+        justify-contents: center;
+        align-items: center;
+        gap: 5px;
+    }
 </style>
 {% endblock extra_styles %}
 
 {% block content %}
-<div class="pull-right noprint">
+<div class="pull-right noprint form-buttons">
+    <form action="#" method="get" id="search-form">
+        <div class="input-group">
+            {{ search_form.q }}
+            <span class="input-group-btn">
+                <button type="submit" class="btn btn-primary">
+                    <i class="mdi mdi-magnify"></i>
+                </button>
+            </span>
+        </div>
+    </form>
     {% block buttons %}{% endblock %}
     {% if request.user.is_authenticated and table_config_form %}
         <button type="button" class="btn btn-default" data-toggle="modal" data-target="#ObjectTable_config" title="Configure table"><i class="mdi mdi-cog"></i> Configure</button>
@@ -161,7 +177,38 @@
         // By removing all name attr with 'form-' prefix form input/select elements
         // only filterable fields would be picked up by `$(this).serialize()`
         $(this).find(`input[name*="form-"], select[name*="form-"]`).removeAttr("name")
-        location.replace("?" + $(this).serialize())
+
+        let query_params = $(this).serialize()
+
+        // // check if `?q=` or `&q=` in query_params
+        if(location.search && /(\?|\&)q/.test(location.search)){
+            // Append `q` value to `query_params`
+            query_params += "&q=" + /(?<=(\?|\&)q=)\w+/.exec(location.search)[0]
+        }
+        location.replace("?" + query_params)
+    })
+
+    // On submit of filter search form
+    $("#search-form").on("submit", function(e){
+        e.preventDefault();
+
+        let query_params = location.search;
+        let search_value = $(this).find("input[name='q']").val();
+
+        if(query_params){
+            // check if `?q=` or `&q=` in query_params
+            if(/(\?|\&)q/.test(query_params)){
+                // change value of q in the query string
+                query_params = query_params.replace(/(?<=(\?|\&)q=)\w+/, search_value);
+            }
+            else {
+                query_params += "&q=" + search_value;
+            }
+        }
+        else {
+            query_params = "?" + $(this).serialize();
+        }
+        location.replace(query_params)
     })
 
     // Clear new row values upon creation

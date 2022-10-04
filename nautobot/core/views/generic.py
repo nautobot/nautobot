@@ -22,6 +22,7 @@ from django.utils.safestring import mark_safe
 from django.views.generic import View
 from django_tables2 import RequestConfig
 
+from nautobot.core.forms import SearchForm
 from nautobot.extras.models import CustomField, ExportTemplate
 from nautobot.extras.models.change_logging import ChangeLoggedModel
 from nautobot.utilities.error_handlers import handle_protectederror
@@ -303,6 +304,7 @@ class ObjectListView(ObjectPermissionRequiredMixin, View):
         }
         RequestConfig(request, paginate).configure(table)
 
+        search_form = SearchForm(data=request.GET)
         if request.GET:
             factory_formset_params = convert_querydict_to_factory_formset_acceptable_querydict(
                 request.GET, self.filterset
@@ -321,6 +323,7 @@ class ObjectListView(ObjectPermissionRequiredMixin, View):
             "table_config_form": TableConfigForm(table=table),
             "filter_params": display_filter_params,
             "filter_form": dynamic_filter_form,
+            "search_form": search_form,
         }
         context.update(self.extra_context())
 
