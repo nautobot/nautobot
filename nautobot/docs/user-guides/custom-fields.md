@@ -33,7 +33,7 @@ The slug is used to create the URL endpoint for the custom field and is also use
 
 #### Type
 
-The type of data that the custom field will store. Valid choices are documented in the custom field [model documentation](../models/extras/customfield.md#creating-custom-fields).
+The type of data that the custom field will store. Valid choices are documented in the [custom field model documentation](../models/extras/customfield.md#creating-custom-fields).
 
 #### Weight
 
@@ -50,14 +50,14 @@ The description of a custom field is shown as a mouseover tooltip in object deta
 Check the required box if this field cannot be null on the associated objects.
 
 !!! warning
-    If an associated object does not have a valid value assigned to a required custom field, that field must be updated with a valid value before the object can be saved. Try to supply a valid default value when creating required custom fields. Since automatic provisioning is only performed when a custom field's content types change, if an existing custom field is changed from optional to required the associated objects will have to be updated manually.
+    If an associated object does not have a valid value assigned to a required custom field, that field must be updated with a valid value before the object can be saved. Try to supply a valid default value when creating required custom fields. Since automatic provisioning is only performed when the assigned content types for a custom field change, if an existing custom field is changed from optional to required the associated objects will need to be updated manually.
 
 #### Default
 
-The default value for the custom field. This form field only accepts JSON data so if you want to set the field default to a string of `foo` you must supply the JSON string `"foo"`. Boolean field valid values are `true` and `false` (all lowercase). Date fields are strings in the format `"YYYY-MM-DD"`. Select and multiselect field default must match one of the field's choices.
+The default value for the custom field. This form field only accepts JSON data so if you want to set the field default to a string of `foo` you must supply the JSON string `"foo"`. Boolean field valid values are `true` and `false` (all lowercase). Date fields are strings in the format `"YYYY-MM-DD"`. Select and multi-select field default must match one of the field's choices.
 
 !!! note
-    The default value for a select or multiselect field must match one of the existing choices. If the desired default value is not in the list of choices, the choices must be updated and saved before the default can be changed. As a result of this behavior, default values cannot be set on select and multiselect fields when a custom field is created.
+    The default value for a select or multi-select field must match one of the existing choices. If the desired default value is not in the list of choices, the choices must be updated and saved before the default can be changed. As a result of this behavior, default values cannot be set on select and multi-select fields when a custom field is created.
 
 #### Filter Logic
 
@@ -74,7 +74,7 @@ When selected, the custom field will appear in the "Advanced" tab of the object 
 
 #### Content Types
 
-The list of content types to add this custom field to. Only models that subclass the `nautobot.extras.models.customfields.CustomFieldModel` model class can be selected.
+The list of content types to add this custom field to. Only models that inherit from the `nautobot.extras.models.customfields.CustomFieldModel` model class can be selected.
 
 !!! note
     When a custom field is created or associated to a new content type (model), all affected existing objects will be updated to add the custom field. The initial value will be set to the `default` value of the custom field. This update runs as a background task via [Celery](../installation/services.md#worker-service), so it may take a few seconds or more before all objects reflect the new custom field, depending on the size of your database.
@@ -96,22 +96,40 @@ Maximum allowed value for `Integer` fields.
 Regular expression to enforce on `Text`, `URL`, `Selection` and `Multiple selection` field values. Regex validation is handled by the [python re engine](https://docs.python.org/3/library/re.html) which uses a PCRE or perl-like regular expression syntax. Examples of common regex validations:
 
 Must start with companyname
-> ^companyname
+
+```no-highlight
+^companyname
+```
 
 Must end with 5 digit zip code
-> [0-9]{5}$
+
+```no-highlight
+[0-9]{5}$
+```
 
 Must only contain digits
-> ^\d+$
+
+```no-highlight
+^\d+$
+```
 
 Must be exactly 8 alphanumeric characters
-> ^[0-9a-zA-Z]{8}$
+
+```no-highlight
+^[0-9a-zA-Z]{8}$
+```
 
 Must be between 8 and 10 alphanumeric characters and underscore
-> ^\w+{8,10}$
+
+```no-highlight
+^\w+{8,10}$
+```
 
 Must contain anything that is not whitespace
-> \S
+
+```no-highlight
+\S
+```
 
 ### Custom Field Choices
 
@@ -142,7 +160,10 @@ Custom fields augment an existing model so retrieving custom field values is dif
 ```py
 # retrieve all custom field data
 >>> device.cf
-{'eol_date': '1970-01-01', 'support_group': 'Network Operations (555-4357)', 'dmz_device': True, 'cmdb_id': 12345}
+{'eol_date': '1970-01-01',
+ 'support_group': 'Network Operations (555-4357)',
+ 'dmz_device': True,
+ 'cmdb_id': 12345}
 
 # retrieve a single field
 >>> device.cf.get("eol_date")
@@ -176,7 +197,7 @@ Custom fields are returned in the API for all supported models in the `custom_fi
 
 Individual custom fields can be retrieved in GraphQL queries by using the `cf_<fieldname>` field name format:
 
-```graphql
+```no-highlight
 {
   devices {
     cf_support_group
@@ -216,7 +237,7 @@ Individual custom fields can be retrieved in GraphQL queries by using the `cf_<f
 
 All custom field data can be retrieved in GraphQL queries by using the `_custom_field_data` field:
 
-```graphql
+```no-highlight
 {
   devices(id:"8bd9ed2b-3774-4806-9d17-c9f21f2c73e4") {
     name
@@ -251,7 +272,7 @@ All custom field data can be retrieved in GraphQL queries by using the `_custom_
 
 Queries can also be filtered by custom field values using any of the filters available in the UI and Rest API:
 
-```graphql
+```no-highlight
 # Retrieve devices where custom field support_group
 # does not contain "Network Operations" (case insensitive)
 {
