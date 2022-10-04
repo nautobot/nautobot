@@ -1,7 +1,6 @@
 from decimal import Decimal
 
 import pytz
-import uuid
 import yaml
 
 from django.contrib.auth import get_user_model
@@ -68,7 +67,7 @@ from nautobot.dcim.models import (
     Site,
     VirtualChassis,
 )
-from nautobot.extras.choices import CustomFieldTypeChoices, RelationshipTypeChoices, ObjectChangeActionChoices
+from nautobot.extras.choices import CustomFieldTypeChoices, RelationshipTypeChoices
 from nautobot.extras.models import (
     ConfigContextSchema,
     CustomField,
@@ -83,7 +82,6 @@ from nautobot.ipam.models import VLAN, IPAddress
 from nautobot.tenancy.models import Tenant
 from nautobot.users.models import ObjectPermission
 from nautobot.utilities.testing import ViewTestCases, extract_page_body, post_data
-from nautobot.utilities.utils import get_changes_for_model
 
 # Use the proper swappable User model
 User = get_user_model()
