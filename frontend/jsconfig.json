@@ -2,9 +2,11 @@
   "compilerOptions": {
     "baseUrl": "./",
     "paths": {
-      "@component/*": ["common/components/*"],
+      "@pages/*": ["pages/*"],
       "@utils/*": ["common/utils/*"],
-      "@template/*": ["common/template/*"]
+      "@component/*": ["common/components/*"],
+      "@template/*": ["common/template/*"],
+      "@shared/*": ["common/shared/*"]
     }
   }
 }

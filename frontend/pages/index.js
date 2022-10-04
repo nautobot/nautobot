@@ -4,11 +4,11 @@ import { Container } from "react-bootstrap";
 import Alert from 'react-bootstrap/Alert';
 
 
-export default function Home({children}) {
+export default function Home({pageTitle, children}) {
   return (
     <div className="">
       <Head>
-        <title>Nautobot</title>
+        <title>{`${pageTitle || 'Home'} - Nautobot`}</title>
         <link rel="icon" href={process.env.NEXT_PUBLIC_NAUTOBOT_STATIC_ROOT + "/img/favicon.ico"} />
       </Head>
       <Menu />

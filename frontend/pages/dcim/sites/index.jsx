@@ -1,7 +1,7 @@
-import ListView from "@template/list-view";
+import ListViewTemplate from "@template/ListViewTemplate";
 
 export default function SiteIndex(){
     return (
-        <ListView />
+        <ListViewTemplate pageTitle="Sites"/>
     )
 }
