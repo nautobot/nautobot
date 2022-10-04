@@ -95,7 +95,7 @@ class GraphQLTestCase(TestCase):
         query = "{ query: sites {name} }"
         resp = execute_query(query, user=self.user).to_dict()
         self.assertFalse(resp["data"].get("error"))
-        self.assertEqual(len(resp["data"]["query"]), 3)
+        self.assertEqual(len(resp["data"]["query"]), 8)
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     def test_execute_query_with_variable(self):
@@ -625,7 +625,10 @@ class GraphQLAPIPermissionTest(TestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertIsInstance(response.data["data"]["sites"], list)
         site_names = [item["name"] for item in response.data["data"]["sites"]]
-        self.assertEqual(site_names, ["Site 1", "Site 2"])
+        site_list = []
+        for site in Site.objects.all():
+            site_list.append(site.name)
+        self.assertEqual(site_names, site_list)
 
 
 class GraphQLQueryTest(TestCase):
@@ -1245,8 +1248,8 @@ query {
             ('name: "Site-1"', 1),
             ('name: ["Site-1"]', 1),
             ('name: ["Site-1", "Site-2"]', 2),
-            ('name__ic: "Site"', 2),
-            ('name__ic: ["Site"]', 2),
+            ('name__ic: "Site"', Site.objects.filter(name__icontains="Site").count()),
+            ('name__ic: ["Site"]', Site.objects.filter(name__icontains="Site").count()),
             ('name__nic: "Site"', 0),
             ('name__nic: ["Site"]', 0),
             ('region: "region1"', 1),
@@ -1445,7 +1448,14 @@ query {
                 query = "query { sites{ devices{ frontports(" + filterv + "){ id }}}}"
                 result = self.execute_query(query)
                 self.assertIsNone(result.errors)
-                self.assertEqual(len(result.data["sites"][0]["devices"][0]["frontports"]), nbr_expected_results)
+                non_empty_index = 0
+                while non_empty_index < len(result.data["sites"]):
+                    if result.data["sites"][non_empty_index]["devices"]:
+                        break
+                    non_empty_index += 1
+                self.assertEqual(
+                    len(result.data["sites"][non_empty_index]["devices"][0]["frontports"]), nbr_expected_results
+                )
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     def test_query_front_ports_cable_peer(self):
@@ -1594,7 +1604,14 @@ query {
                 query = "query { sites{ devices{ interfaces(" + filterv + "){ id }}}}"
                 result = self.execute_query(query)
                 self.assertIsNone(result.errors)
-                self.assertEqual(len(result.data["sites"][0]["devices"][0]["interfaces"]), nbr_expected_results)
+                non_empty_index = 0
+                while non_empty_index < len(result.data["sites"]):
+                    if result.data["sites"][non_empty_index]["devices"]:
+                        break
+                    non_empty_index += 1
+                self.assertEqual(
+                    len(result.data["sites"][non_empty_index]["devices"][0]["interfaces"]), nbr_expected_results
+                )
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     def test_query_interfaces_connected_endpoint(self):
