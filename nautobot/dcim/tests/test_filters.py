@@ -663,25 +663,24 @@ class RegionTestCase(FilterTestCases.NameSlugFilterTestCase):
     def setUpTestData(cls):
         common_test_data(cls)
 
-        parent_regions = Region.objects.filter(parent__isnull=True)
-        Region.objects.create(name="Region 1A", slug="region-1a", parent=parent_regions[0])
-        Region.objects.create(name="Region 1B", slug="region-1b", parent=parent_regions[0])
-        Region.objects.create(name="Region 2A", slug="region-2a", parent=parent_regions[1])
-        Region.objects.create(name="Region 2B", slug="region-2b", parent=parent_regions[1])
-        Region.objects.create(name="Region 3A", slug="region-3a", parent=parent_regions[2])
-        Region.objects.create(name="Region 3B", slug="region-3b", parent=parent_regions[2])
+        cls.parent_regions = Region.objects.filter(parent__isnull=True)
+        Region.objects.create(name="Region 1A", slug="region-1a", parent=cls.parent_regions[0])
+        Region.objects.create(name="Region 1B", slug="region-1b", parent=cls.parent_regions[0])
+        Region.objects.create(name="Region 2A", slug="region-2a", parent=cls.parent_regions[1])
+        Region.objects.create(name="Region 2B", slug="region-2b", parent=cls.parent_regions[1])
+        Region.objects.create(name="Region 3A", slug="region-3a", parent=cls.parent_regions[2])
+        Region.objects.create(name="Region 3B", slug="region-3b", parent=cls.parent_regions[2])
 
     def test_description(self):
         params = {"description": ["A", "B"]}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
 
     def test_parent(self):
-        parent_regions = Region.objects.filter(parent__isnull=True)[:2]
         with self.subTest():
-            params = {"parent_id": [parent_regions[0].pk, parent_regions[1].pk]}
+            params = {"parent_id": [self.parent_regions[0].pk, self.parent_regions[1].pk]}
             self.assertEqual(self.filterset(params, self.queryset).qs.count(), 4)
         with self.subTest():
-            params = {"parent": [parent_regions[0].slug, parent_regions[1].slug]}
+            params = {"parent": [self.parent_regions[0].slug, self.parent_regions[1].slug]}
             self.assertEqual(self.filterset(params, self.queryset).qs.count(), 4)
 
     def test_children(self):
@@ -698,10 +697,14 @@ class RegionTestCase(FilterTestCases.NameSlugFilterTestCase):
     def test_has_children(self):
         with self.subTest():
             params = {"has_children": True}
-            self.assertEqual(self.filterset(params, self.queryset).qs.count(), 3)
+            self.assertEqual(
+                self.filterset(params, self.queryset).qs.count(), self.queryset.filter(children__isnull=False).count()
+            )
         with self.subTest():
             params = {"has_children": False}
-            self.assertEqual(self.filterset(params, self.queryset).qs.count(), 6)
+            self.assertEqual(
+                self.filterset(params, self.queryset).qs.count(), self.queryset.filter(children__isnull=True).count()
+            )
 
     def test_sites(self):
         sites = Site.objects.all()
@@ -711,10 +714,14 @@ class RegionTestCase(FilterTestCases.NameSlugFilterTestCase):
     def test_has_sites(self):
         with self.subTest():
             params = {"has_sites": True}
-            self.assertEqual(self.filterset(params, self.queryset).qs.count(), 3)
+            self.assertEqual(
+                self.filterset(params, self.queryset).qs.count(), self.queryset.filter(sites__isnull=False).count()
+            )
         with self.subTest():
             params = {"has_sites": False}
-            self.assertEqual(self.filterset(params, self.queryset).qs.count(), 6)
+            self.assertEqual(
+                self.filterset(params, self.queryset).qs.count(), self.queryset.filter(sites__isnull=False).count()
+            )
 
 
 class SiteTestCase(FilterTestCases.NameSlugFilterTestCase):

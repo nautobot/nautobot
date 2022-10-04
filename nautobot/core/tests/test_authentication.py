@@ -240,11 +240,7 @@ class ObjectPermissionAPIViewTestCase(TestCase):
     @classmethod
     def setUpTestData(cls):
 
-        cls.sites = (
-            Site.objects.create(name="Site 1", slug="site-1"),
-            Site.objects.create(name="Site 2", slug="site-2"),
-            Site.objects.create(name="Site 3", slug="site-3"),
-        )
+        cls.sites = Site.objects.all()[:3]
 
         statuses = Status.objects.get_for_model(Prefix)
 
@@ -279,7 +275,7 @@ class ObjectPermissionAPIViewTestCase(TestCase):
         # Assign object permission
         obj_perm = ObjectPermission.objects.create(
             name="Test permission",
-            constraints={"site__name": "Site 1"},
+            constraints={"site__name": f"{self.sites[0].name}"},
             actions=["view"],
         )
         obj_perm.users.add(self.user)
@@ -306,7 +302,7 @@ class ObjectPermissionAPIViewTestCase(TestCase):
         # Assign object permission
         obj_perm = ObjectPermission.objects.create(
             name="Test permission",
-            constraints={"site__name": "Site 1"},
+            constraints={"site__name": f"{self.sites[0].name}"},
             actions=["view"],
         )
         obj_perm.users.add(self.user)
@@ -334,7 +330,7 @@ class ObjectPermissionAPIViewTestCase(TestCase):
         # Assign object permission
         obj_perm = ObjectPermission.objects.create(
             name="Test permission",
-            constraints={"site__name": "Site 1"},
+            constraints={"site__name": f"{self.sites[0].name}"},
             actions=["add"],
         )
         obj_perm.users.add(self.user)
@@ -363,7 +359,7 @@ class ObjectPermissionAPIViewTestCase(TestCase):
         # Assign object permission
         obj_perm = ObjectPermission.objects.create(
             name="Test permission",
-            constraints={"site__name": "Site 1"},
+            constraints={"site__name": f"{self.sites[0].name}"},
             actions=["change"],
         )
         obj_perm.users.add(self.user)
@@ -398,7 +394,7 @@ class ObjectPermissionAPIViewTestCase(TestCase):
         # Assign object permission
         obj_perm = ObjectPermission.objects.create(
             name="Test permission",
-            constraints={"site__name": "Site 1"},
+            constraints={"site__name": f"{self.sites[0].name}"},
             actions=["delete"],
         )
         obj_perm.users.add(self.user)

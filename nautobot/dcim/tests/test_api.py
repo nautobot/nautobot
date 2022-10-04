@@ -137,6 +137,14 @@ class RegionTest(APIViewTestCases.APIViewTestCase):
         Region.objects.create(name="Region 2", slug="region-2")
         Region.objects.create(name="Region 3", slug="region-3")
 
+    def get_deletable_object_pks(self):
+        """Only return objects without children so that the deletion count is as expected."""
+        r1 = Region.objects.create(name="Region 4", slug="region-4")
+        r2 = Region.objects.create(name="Region 5", slug="region-5")
+        r3 = Region.objects.create(name="Region 6", slug="region-6")
+
+        return [r1.pk, r2.pk, r3.pk]
+
 
 class SiteTest(APIViewTestCases.APIViewTestCase):
     model = Site
@@ -151,14 +159,7 @@ class SiteTest(APIViewTestCases.APIViewTestCase):
     @classmethod
     def setUpTestData(cls):
 
-        regions = (
-            Region.objects.create(name="Test Region 1", slug="test-region-1"),
-            Region.objects.create(name="Test Region 2", slug="test-region-2"),
-        )
-
-        Site.objects.create(region=regions[0], name="Site 1", slug="site-1")
-        Site.objects.create(region=regions[0], name="Site 2", slug="site-2")
-        Site.objects.create(region=regions[0], name="Site 3", slug="site-3")
+        regions = Region.objects.all()[:2]
 
         # FIXME(jathan): The writable serializer for `Device.status` takes the
         # status `name` (str) and not the `pk` (int). Do not validate this
@@ -263,7 +264,7 @@ class SiteTest(APIViewTestCases.APIViewTestCase):
         """
 
         self.add_permissions("dcim.view_site")
-        site = Site.objects.get(slug="site-1")
+        site = Site.objects.first()
         url = reverse("dcim-api:site-detail", kwargs={"pk": site.pk})
         response = self.client.get(url, **self.header)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
@@ -282,9 +283,9 @@ class LocationTypeTest(APIViewTestCases.APIViewTestCase):
     @classmethod
     def setUpTestData(cls):
         lt1 = LocationType.objects.create(name="Campus")
-        lt2 = LocationType.objects.create(name="Building", parent=lt1)
-        lt3 = LocationType.objects.create(name="Floor", slug="building-floor", parent=lt2)
-        lt4 = LocationType.objects.create(name="Room", parent=lt3)
+        lt2 = LocationType.objects.create(name="Building 1", parent=lt1)
+        lt3 = LocationType.objects.create(name="Floor 1", slug="building-floor", parent=lt2)
+        lt4 = LocationType.objects.create(name="Room 1", parent=lt3)
         for lt in [lt1, lt2, lt3, lt4]:
             lt.content_types.add(ContentType.objects.get_for_model(RackGroup))
 
@@ -308,7 +309,14 @@ class LocationTypeTest(APIViewTestCases.APIViewTestCase):
 
     def get_deletable_object_pks(self):
         """To get the correct bulk-delete object count, make sure we avoid a cascade deletion."""
-        return [loctype.pk for loctype in list(LocationType.objects.filter(children__isnull=True))[:3]]
+        lt1 = LocationType.objects.create(name="Country")
+        lt2 = LocationType.objects.create(name="State")
+        lt3 = LocationType.objects.create(name="County")
+        return [lt1.pk, lt2.pk, lt3.pk]
+
+    def get_deletable_object(self):
+        """To get the correct delete object count, make sure we avoid a cascade deletion."""
+        return LocationType.objects.create(name="delete this")
 
 
 class LocationTest(APIViewTestCases.APIViewTestCase):
@@ -324,9 +332,9 @@ class LocationTest(APIViewTestCases.APIViewTestCase):
     @classmethod
     def setUpTestData(cls):
         lt1 = LocationType.objects.create(name="Campus")
-        lt2 = LocationType.objects.create(name="Building", parent=lt1)
-        lt3 = LocationType.objects.create(name="Floor", slug="building-floor", parent=lt2)
-        lt4 = LocationType.objects.create(name="Room", parent=lt3)
+        lt2 = LocationType.objects.create(name="Building 1", parent=lt1)
+        lt3 = LocationType.objects.create(name="Floor 1", slug="building-floor", parent=lt2)
+        lt4 = LocationType.objects.create(name="Room 1", parent=lt3)
 
         status_active = Status.objects.get(slug="active")
         site = Site.objects.create(name="Research Triangle Area", status=status_active)
@@ -384,6 +392,11 @@ class LocationTest(APIViewTestCases.APIViewTestCase):
         """Only return objects without children so that the deletion count is as expected."""
         return [loc.pk for loc in list(Location.objects.filter(children__isnull=True))[:3]]
 
+    def get_deletable_object(self):
+        """To get the correct delete object count, make sure we avoid a cascade deletion."""
+        lt5 = LocationType.objects.create(name="Closet")
+        return Location.objects.create(name="delete this", location_type=lt5)
+
 
 class RackGroupTest(APIViewTestCases.APIViewTestCase):
     model = RackGroup
@@ -398,10 +411,7 @@ class RackGroupTest(APIViewTestCases.APIViewTestCase):
     def setUpTestData(cls):
         cls.active = Status.objects.get(slug="active")
 
-        cls.sites = (
-            Site.objects.create(name="Site 1", slug="site-1", status=cls.active),
-            Site.objects.create(name="Site 2", slug="site-2", status=cls.active),
-        )
+        cls.sites = Site.objects.all()[:2]
 
         cls.parent_rack_groups = (
             RackGroup.objects.create(site=cls.sites[0], name="Parent Rack Group 1", slug="parent-rack-group-1"),
@@ -488,7 +498,9 @@ class RackGroupTest(APIViewTestCases.APIViewTestCase):
         response = self.client.post(url, **self.header, data=data, format="json")
         self.assertHttpStatus(response, status.HTTP_400_BAD_REQUEST)
         self.assertIn("location", response.json())
-        self.assertEqual(response.json()["location"], ['Location "Peer Location" does not belong to site "Site 2".'])
+        self.assertEqual(
+            response.json()["location"], [f'Location "Peer Location" does not belong to site "{self.sites[1].name}".']
+        )
 
     def test_child_group_location_valid(self):
         """A child group with a location may fall within the parent group's location."""
@@ -587,10 +599,7 @@ class RackTest(APIViewTestCases.APIViewTestCase):
     @classmethod
     def setUpTestData(cls):
 
-        sites = (
-            Site.objects.create(name="Site 1", slug="site-1"),
-            Site.objects.create(name="Site 2", slug="site-2"),
-        )
+        sites = Site.objects.all()[:2]
 
         rack_groups = (
             RackGroup.objects.create(site=sites[0], name="Rack Group 1", slug="rack-group-1"),
@@ -747,7 +756,7 @@ class RackReservationTest(APIViewTestCases.APIViewTestCase):
     @classmethod
     def setUpTestData(cls):
         user = User.objects.create(username="user1", is_active=True)
-        site = Site.objects.create(name="Test Site 1", slug="test-site-1")
+        site = Site.objects.first()
 
         cls.racks = (
             Rack.objects.create(site=site, name="Rack 1"),
@@ -1294,10 +1303,7 @@ class DeviceTest(APIViewTestCases.APIViewTestCase):
     @classmethod
     def setUpTestData(cls):
 
-        sites = (
-            Site.objects.create(name="Site 1", slug="site-1"),
-            Site.objects.create(name="Site 2", slug="site-2"),
-        )
+        sites = Site.objects.all()[:2]
 
         racks = (
             Rack.objects.create(name="Rack 1", site=sites[0]),
@@ -1515,7 +1521,7 @@ class ConsolePortTest(Mixins.ComponentTraceMixin, APIViewTestCases.APIViewTestCa
     def setUpTestData(cls):
         manufacturer = Manufacturer.objects.create(name="Test Manufacturer 1", slug="test-manufacturer-1")
         devicetype = DeviceType.objects.create(manufacturer=manufacturer, model="Device Type 1", slug="device-type-1")
-        site = Site.objects.create(name="Site 1", slug="site-1")
+        site = Site.objects.first()
         devicerole = DeviceRole.objects.create(name="Test Device Role 1", slug="test-device-role-1", color="ff0000")
         device = Device.objects.create(device_type=devicetype, device_role=devicerole, name="Device 1", site=site)
 
@@ -1552,7 +1558,7 @@ class ConsoleServerPortTest(Mixins.ComponentTraceMixin, APIViewTestCases.APIView
     def setUpTestData(cls):
         manufacturer = Manufacturer.objects.create(name="Test Manufacturer 1", slug="test-manufacturer-1")
         devicetype = DeviceType.objects.create(manufacturer=manufacturer, model="Device Type 1", slug="device-type-1")
-        site = Site.objects.create(name="Site 1", slug="site-1")
+        site = Site.objects.first()
         devicerole = DeviceRole.objects.create(name="Test Device Role 1", slug="test-device-role-1", color="ff0000")
         device = Device.objects.create(device_type=devicetype, device_role=devicerole, name="Device 1", site=site)
 
@@ -1589,7 +1595,7 @@ class PowerPortTest(Mixins.ComponentTraceMixin, APIViewTestCases.APIViewTestCase
     def setUpTestData(cls):
         manufacturer = Manufacturer.objects.create(name="Test Manufacturer 1", slug="test-manufacturer-1")
         devicetype = DeviceType.objects.create(manufacturer=manufacturer, model="Device Type 1", slug="device-type-1")
-        site = Site.objects.create(name="Site 1", slug="site-1")
+        site = Site.objects.first()
         devicerole = DeviceRole.objects.create(name="Test Device Role 1", slug="test-device-role-1", color="ff0000")
         device = Device.objects.create(device_type=devicetype, device_role=devicerole, name="Device 1", site=site)
 
@@ -1626,7 +1632,7 @@ class PowerOutletTest(Mixins.ComponentTraceMixin, APIViewTestCases.APIViewTestCa
     def setUpTestData(cls):
         manufacturer = Manufacturer.objects.create(name="Test Manufacturer 1", slug="test-manufacturer-1")
         devicetype = DeviceType.objects.create(manufacturer=manufacturer, model="Device Type 1", slug="device-type-1")
-        site = Site.objects.create(name="Site 1", slug="site-1")
+        site = Site.objects.first()
         devicerole = DeviceRole.objects.create(name="Test Device Role 1", slug="test-device-role-1", color="ff0000")
         device = Device.objects.create(device_type=devicetype, device_role=devicerole, name="Device 1", site=site)
 
@@ -1664,7 +1670,7 @@ class InterfaceTestVersion12(Mixins.ComponentTraceMixin, APIViewTestCases.APIVie
     def setUpTestData(cls):
         manufacturer = Manufacturer.objects.create(name="Test Manufacturer 1", slug="test-manufacturer-1")
         devicetype = DeviceType.objects.create(manufacturer=manufacturer, model="Device Type 1", slug="device-type-1")
-        site = Site.objects.create(name="Site 1", slug="site-1")
+        site = Site.objects.first()
         devicerole = DeviceRole.objects.create(name="Test Device Role 1", slug="test-device-role-1", color="ff0000")
         cls.devices = (
             Device.objects.create(device_type=devicetype, device_role=devicerole, name="Device 1", site=site),
@@ -1904,7 +1910,7 @@ class FrontPortTest(APIViewTestCases.APIViewTestCase):
     def setUpTestData(cls):
         manufacturer = Manufacturer.objects.create(name="Test Manufacturer 1", slug="test-manufacturer-1")
         devicetype = DeviceType.objects.create(manufacturer=manufacturer, model="Device Type 1", slug="device-type-1")
-        site = Site.objects.create(name="Site 1", slug="site-1")
+        site = Site.objects.first()
         devicerole = DeviceRole.objects.create(name="Test Device Role 1", slug="test-device-role-1", color="ff0000")
         device = Device.objects.create(device_type=devicetype, device_role=devicerole, name="Device 1", site=site)
 
@@ -1974,7 +1980,7 @@ class RearPortTest(APIViewTestCases.APIViewTestCase):
     def setUpTestData(cls):
         manufacturer = Manufacturer.objects.create(name="Test Manufacturer 1", slug="test-manufacturer-1")
         devicetype = DeviceType.objects.create(manufacturer=manufacturer, model="Device Type 1", slug="device-type-1")
-        site = Site.objects.create(name="Site 1", slug="site-1")
+        site = Site.objects.first()
         devicerole = DeviceRole.objects.create(name="Test Device Role 1", slug="test-device-role-1", color="ff0000")
         device = Device.objects.create(device_type=devicetype, device_role=devicerole, name="Device 1", site=site)
 
@@ -2011,7 +2017,7 @@ class DeviceBayTest(APIViewTestCases.APIViewTestCase):
     @classmethod
     def setUpTestData(cls):
         manufacturer = Manufacturer.objects.create(name="Test Manufacturer 1", slug="test-manufacturer-1")
-        site = Site.objects.create(name="Site 1", slug="site-1")
+        site = Site.objects.first()
         devicerole = DeviceRole.objects.create(name="Test Device Role 1", slug="test-device-role-1", color="ff0000")
 
         device_types = (
@@ -2090,7 +2096,7 @@ class InventoryItemTest(APIViewTestCases.APIViewTestCase):
     def setUpTestData(cls):
         manufacturer = Manufacturer.objects.create(name="Test Manufacturer 1", slug="test-manufacturer-1")
         devicetype = DeviceType.objects.create(manufacturer=manufacturer, model="Device Type 1", slug="device-type-1")
-        site = Site.objects.create(name="Site 1", slug="site-1")
+        site = Site.objects.first()
         devicerole = DeviceRole.objects.create(name="Test Device Role 1", slug="test-device-role-1", color="ff0000")
         device = Device.objects.create(device_type=devicetype, device_role=devicerole, name="Device 1", site=site)
 
@@ -2132,7 +2138,7 @@ class CableTest(APIViewTestCases.APIViewTestCase):
 
     @classmethod
     def setUpTestData(cls):
-        site = Site.objects.create(name="Site 1", slug="site-1")
+        site = Site.objects.first()
         manufacturer = Manufacturer.objects.create(name="Manufacturer 1", slug="manufacturer-1")
         devicetype = DeviceType.objects.create(manufacturer=manufacturer, model="Device Type 1", slug="device-type-1")
         devicerole = DeviceRole.objects.create(name="Device Role 1", slug="device-role-1", color="ff0000")
@@ -2227,8 +2233,8 @@ class ConnectedDeviceTest(APITestCase):
 
         super().setUp()
 
-        self.site1 = Site.objects.create(name="Test Site 1", slug="test-site-1")
-        self.site2 = Site.objects.create(name="Test Site 2", slug="test-site-2")
+        self.site1 = Site.objects.first()
+        self.site2 = Site.objects.last()
         manufacturer = Manufacturer.objects.create(name="Test Manufacturer 1", slug="test-manufacturer-1")
         self.devicetype1 = DeviceType.objects.create(
             manufacturer=manufacturer,
@@ -2280,7 +2286,7 @@ class VirtualChassisTest(APIViewTestCases.APIViewTestCase):
 
     @classmethod
     def setUpTestData(cls):
-        site = Site.objects.create(name="Test Site", slug="test-site")
+        site = Site.objects.first()
         manufacturer = Manufacturer.objects.create(name="Manufacturer 1", slug="manufacturer-1")
         devicetype = DeviceType.objects.create(manufacturer=manufacturer, model="Device Type", slug="device-type")
         devicerole = DeviceRole.objects.create(name="Device Role", slug="device-role", color="ff0000")
@@ -2471,10 +2477,7 @@ class PowerPanelTest(APIViewTestCases.APIViewTestCase):
 
     @classmethod
     def setUpTestData(cls):
-        sites = (
-            Site.objects.create(name="Site 1", slug="site-1"),
-            Site.objects.create(name="Site 2", slug="site-2"),
-        )
+        sites = Site.objects.all()[:2]
 
         rack_groups = (
             RackGroup.objects.create(name="Rack Group 1", slug="rack-group-1", site=sites[0]),
@@ -2519,7 +2522,7 @@ class PowerFeedTest(APIViewTestCases.APIViewTestCase):
 
     @classmethod
     def setUpTestData(cls):
-        site = Site.objects.create(name="Site 1", slug="site-1")
+        site = Site.objects.first()
         rackgroup = RackGroup.objects.create(site=site, name="Rack Group 1", slug="rack-group-1")
         rackrole = RackRole.objects.create(name="Rack Role 1", slug="rack-role-1", color="ff0000")
 

@@ -33,14 +33,11 @@ class ProviderTestCase(FilterTestCases.NameSlugFilterTestCase):
             ),
         )
 
-        regions = (
-            Region.objects.create(name="Test Region 1", slug="test-region-1"),
-            Region.objects.create(name="Test Region 2", slug="test-region-2"),
-        )
+        cls.regions = Region.objects.filter(sites__isnull=False)[:2]
 
-        sites = (
-            Site.objects.create(name="Test Site 1", slug="test-site-1", region=regions[0]),
-            Site.objects.create(name="Test Site 2", slug="test-site-2", region=regions[1]),
+        cls.sites = (
+            Site.objects.filter(region=cls.regions[0])[0],
+            Site.objects.filter(region=cls.regions[1])[0],
         )
 
         circuit_types = (
@@ -53,8 +50,8 @@ class ProviderTestCase(FilterTestCases.NameSlugFilterTestCase):
             Circuit.objects.create(provider=providers[1], type=circuit_types[1], cid="Test Circuit 1"),
         )
 
-        CircuitTermination.objects.create(circuit=circuits[0], site=sites[0], term_side="A")
-        CircuitTermination.objects.create(circuit=circuits[1], site=sites[0], term_side="A")
+        CircuitTermination.objects.create(circuit=circuits[0], site=cls.sites[0], term_side="A")
+        CircuitTermination.objects.create(circuit=circuits[1], site=cls.sites[0], term_side="A")
 
     def test_asn(self):
         params = {"asn": ["65001", "65002"]}
@@ -65,17 +62,15 @@ class ProviderTestCase(FilterTestCases.NameSlugFilterTestCase):
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
 
     def test_site(self):
-        sites = Site.objects.all()[:2]
-        params = {"site_id": [sites[0].pk, sites[1].pk]}
+        params = {"site_id": [self.sites[0].pk, self.sites[1].pk]}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
-        params = {"site": [sites[0].slug, sites[1].slug]}
+        params = {"site": [self.sites[0].slug, self.sites[1].slug]}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
 
     def test_region(self):
-        regions = Region.objects.all()[:2]
-        params = {"region_id": [regions[0].pk, regions[1].pk]}
+        params = {"region_id": [self.regions[0].pk, self.regions[1].pk]}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
-        params = {"region": [regions[0].slug, regions[1].slug]}
+        params = {"region": [self.regions[0].slug, self.regions[1].slug]}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
 
 
@@ -102,9 +97,9 @@ class CircuitTestCase(FilterTestCases.FilterTestCase):
         cls.regions = Region.objects.filter(sites__isnull=False)
 
         cls.sites = (
-            Site.objects.filter(region=cls.regions[0])[0],
-            Site.objects.filter(region=cls.regions[1])[0],
-            Site.objects.filter(region=cls.regions[2])[0],
+            Site.objects.filter(region=cls.regions[0]).first(),
+            Site.objects.filter(region=cls.regions[1]).first(),
+            Site.objects.filter(region=cls.regions[2]).first(),
         )
 
         tenants = Tenant.objects.filter(group__isnull=False)
@@ -229,9 +224,9 @@ class CircuitTestCase(FilterTestCases.FilterTestCase):
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 4)
 
     def test_region(self):
-        params = {"region_id": [self.regions[0].pk, self.regions[1].pk]}
+        params = {"region_id": [self.regions[1].slug, self.regions[2].slug]}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
-        params = {"region": [self.regions[0].slug, self.regions[1].slug]}
+        params = {"region": [self.regions[1].slug, self.regions[2].slug]}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
 
     def test_site(self):
