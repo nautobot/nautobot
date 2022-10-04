@@ -1,1 +1,0 @@
-Removed extraneous cache and temporary files from the `dev` and `final-dev` Docker images to reduce image size.

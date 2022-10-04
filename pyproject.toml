@@ -8,7 +8,7 @@ authors = ["Network to Code <opensource@networktocode.com>"]
 license = "Apache-2.0"
 homepage = "https://nautobot.com"
 repository = "https://github.com/nautobot/nautobot"
-documentation = "https://nautobot.readthedocs.io"
+documentation = "https://docs.nautobot.com"
 readme = "README.md"
 keywords = ["Nautobot"]
 classifiers = [
@@ -315,7 +315,7 @@ signature-mutators=["unittest.mock.patch"]
 package = "nautobot"
 directory = "changes"
 filename = "nautobot/docs/release-notes/version-1.5.md"
-template = "towncrier_template.j2"
+template = "development/towncrier_template.j2"
 start_string = "<!-- towncrier release notes start -->"
 issue_format = "[#{issue}](https://github.com/nautobot/nautobot/issues/{issue})"
 

@@ -10,7 +10,9 @@
 
 {% if definitions[category]['showcontent'] %}
 {% for text, values in sections[section][category].items() %}
-- {{ values|join(', ') }} - {{ text }}
+{% for item in text.split('\n') %}
+- {{ values|join(', ') }} - {{ item.strip() }}
+{% endfor %}
 {% endfor %}
 
 {% else %}

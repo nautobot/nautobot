@@ -2,7 +2,7 @@ from django.templatetags.static import static
 from django.urls import path
 from django.views.generic import RedirectView
 
-from nautobot.extras.views import ObjectChangeLogView, ObjectNotesView
+from nautobot.extras.views import ObjectChangeLogView, ObjectDynamicGroupsView, ObjectNotesView
 
 from example_plugin import views
 from example_plugin.models import AnotherExampleModel, ExampleModel
@@ -48,6 +48,12 @@ urlpatterns = [
         kwargs={"model": ExampleModel},
     ),
     path(
+        "models/<uuid:pk>/dynamic-groups/",
+        ObjectDynamicGroupsView.as_view(),
+        name="examplemodel_dynamicgroups",
+        kwargs={"model": ExampleModel},
+    ),
+    path(
         "models/<uuid:pk>/notes/",
         ObjectNotesView.as_view(),
         name="examplemodel_notes",
@@ -80,6 +86,12 @@ urlpatterns = [
         "other-models/<uuid:pk>/changelog/",
         ObjectChangeLogView.as_view(),
         name="anotherexamplemodel_changelog",
+        kwargs={"model": AnotherExampleModel},
+    ),
+    path(
+        "other-models/<uuid:pk>/dynamic-groups/",
+        ObjectDynamicGroupsView.as_view(),
+        name="anotherexamplemodel_dynamicgroups",
         kwargs={"model": AnotherExampleModel},
     ),
     path(
