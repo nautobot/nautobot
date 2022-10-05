@@ -192,7 +192,6 @@ class NoteModelBulkEditFormMixinTestCase(TestCase):
 
     @classmethod
     def setUpTestData(cls):
-        active = Status.objects.get(slug="active")
         cls.sites = dcim_models.Site.objects.all()[:2]
         cls.user = User.objects.create(username="formuser1")
 

@@ -19,7 +19,6 @@ from nautobot.dcim.models import (
     Manufacturer,
     Platform,
     Site,
-    Region,
 )
 from nautobot.extras.constants import JOB_OVERRIDABLE_FIELDS
 from nautobot.extras.choices import LogLevelChoices, SecretsGroupAccessTypeChoices, SecretsGroupSecretTypeChoices
