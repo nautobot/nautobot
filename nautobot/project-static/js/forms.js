@@ -576,7 +576,7 @@ function initializeImagePreview(context){
 }
 
 function initializeSelectAllForm(context){
-    this_context = $(context)
+    this_context = $(context);
     this_context.find('#select_all').click(function() {
         if ($(this).is(':checked')) {
             $('#select_all_box').find('button').prop('disabled', '');
