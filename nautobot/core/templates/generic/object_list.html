@@ -27,7 +27,7 @@
 <div class="pull-right noprint form-buttons">
     <form action="#" method="get" id="search-form">
         <div class="input-group">
-            {{ search_form.q }}
+            <input type="text" name="q" class="form-control" required="" placeholder="Search {{ content_type.model_class|meta:'verbose_name_plural'|bettertitle }}" id="id_q">
             <span class="input-group-btn">
                 <button type="submit" class="btn btn-primary">
                     <i class="mdi mdi-magnify"></i>
@@ -67,7 +67,7 @@
         </span>
         </span>
         <span class="dropdown-wrapper" aria-hidden="true"></span>
-    </span> 
+    </span>
     {% endfor %}
 </div>
 <hr>

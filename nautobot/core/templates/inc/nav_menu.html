@@ -99,7 +99,7 @@
             {% if request.user.is_authenticated or not "HIDE_RESTRICTED_UI"|settings_or_config %}
                 <form action="{% url 'search' %}" method="get" class="navbar-form navbar-right" id="navbar_search" role="search">
                     <div class="input-group">
-                        <input type="text" name="q" class="form-control" placeholder="Search">
+                        <input type="text" name="q" class="form-control" placeholder="Search {{ settings.BRANDING_TITLE }}">
                         <span class="input-group-btn">
                             <button type="submit" class="btn btn-primary">
                                 <i class="mdi mdi-magnify"></i>
