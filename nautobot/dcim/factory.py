@@ -41,7 +41,7 @@ class SiteFactory(DjangoModelFactory):
     latitude = factory.Faker("latitude")
     longitude = factory.Faker("longitude")
     contact_name = factory.Faker("name")
-    contact_phone = factory.Sequence(lambda n: "1091-65912-%04d" % n)
+    contact_phone = factory.Sequence(lambda n: f"1091-65912-{n:04d}")
     contact_email = factory.Faker("company_email")
 
 

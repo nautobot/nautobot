@@ -44,7 +44,9 @@ class NautobotTemplatetagsHelperTest(TestCase):
         self.assertEqual(hyperlinked_object("hello"), "hello")
         # An object with get_absolute_url gives a hyperlink
         status = Status.objects.get_for_model(Site).first()
-        site = Site.objects.create(name="Test Site", slug="test-site", status=status)
+        site = Site.objects.first()
+        site.status = status
+        site.validated_save()
         self.assertEqual(hyperlinked_object(site), '<a href="/dcim/sites/test-site/">Test Site</a>')
         # An object with get_absolute_url and a description gives a titled hyperlink
         site.description = "An important site"
@@ -83,7 +85,9 @@ class NautobotTemplatetagsHelperTest(TestCase):
 
     def test_meta(self):
         status = Status.objects.get_for_model(Site).first()
-        site = Site.objects.create(name="test", slug="test", status=status)
+        site = Site.objects.first()
+        site.status = status
+        site.validated_save()
 
         self.assertEqual(meta(site, "app_label"), "dcim")
         self.assertEqual(meta(Site, "app_label"), "dcim")
@@ -93,7 +97,9 @@ class NautobotTemplatetagsHelperTest(TestCase):
 
     def test_viewname(self):
         status = Status.objects.get_for_model(Site).first()
-        site = Site.objects.create(name="test", slug="test", status=status)
+        site = Site.objects.first()
+        site.status = status
+        site.validated_save()
 
         self.assertEqual(viewname(site, "edit"), "dcim:site_edit")
         self.assertEqual(viewname(Site, "test"), "dcim:site_test")
@@ -102,7 +108,9 @@ class NautobotTemplatetagsHelperTest(TestCase):
 
     def test_validated_viewname(self):
         status = Status.objects.get_for_model(Site).first()
-        site = Site.objects.create(name="test", slug="test", status=status)
+        site = Site.objects.first()
+        site.status = status
+        site.validated_save()
 
         self.assertEqual(validated_viewname(site, "list"), "dcim:site_list")
         self.assertIsNone(validated_viewname(Site, "notvalid"))
@@ -142,7 +150,9 @@ class NautobotTemplatetagsHelperTest(TestCase):
     def test_get_docs_url(self):
         self.assertTrue(callable(get_docs_url))
         status = Status.objects.get_for_model(Site).first()
-        site = Site.objects.create(name="test", slug="test", status=status)
+        site = Site.objects.first()
+        site.status = status
+        site.validated_save()
         self.assertEqual(get_docs_url(site), static("docs/models/dcim/site.html"))
         example_model = ExampleModel.objects.create(name="test", number=1)
         self.assertEqual(get_docs_url(example_model), static("example_plugin/docs/models/examplemodel.html"))

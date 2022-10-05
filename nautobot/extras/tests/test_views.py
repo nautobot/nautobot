@@ -141,7 +141,7 @@ class ConfigContextTestCase(
     @classmethod
     def setUpTestData(cls):
 
-        site = Site.objects.create(name="Site 1", slug="site-1")
+        site = Site.objects.first()
 
         # Create three ConfigContexts
         for i in range(1, 4):
@@ -605,7 +605,7 @@ class NoteTestCase(
     def setUpTestData(cls):
 
         content_type = ContentType.objects.get_for_model(Site)
-        cls.site = Site.objects.create(name="Site 1", slug="site-1")
+        cls.site = Site.objects.first()
         user = User.objects.first()
 
         # Notes Objects to test
@@ -1987,7 +1987,7 @@ class RelationshipAssociationTestCase(
         manufacturer = Manufacturer.objects.create(name="Manufacturer 1", slug="manufacturer-1")
         devicetype = DeviceType.objects.create(manufacturer=manufacturer, model="Device Type 1", slug="device-type-1")
         devicerole = DeviceRole.objects.create(name="Device Role 1", slug="device-role-1")
-        site = Site.objects.create(name="Site 1", slug="site-1")
+        site = Site.objects.first()
         devices = (
             Device.objects.create(name="Device 1", device_type=devicetype, device_role=devicerole, site=site),
             Device.objects.create(name="Device 2", device_type=devicetype, device_role=devicerole, site=site),
@@ -2131,7 +2131,7 @@ class TagTestCase(ViewTestCases.OrganizationalObjectViewTestCase):
         self.add_permissions("extras.change_tag")
 
         tag_1 = Tag.objects.get_for_model(Site).first()
-        site = Site.objects.create(name="site 1", slug="site-1")
+        site = Site.objects.first()
         site.tags.add(tag_1)
 
         form_data = {

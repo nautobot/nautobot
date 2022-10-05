@@ -156,7 +156,7 @@ class ComputedFieldTest(APIViewTestCases.APIViewTestCase):
             content_type=site_ct,
         )
 
-        cls.site = Site.objects.create(name="Site 1", slug="site-1")
+        cls.site = Site.objects.first()
 
     def test_computed_field_include(self):
         """Test that explicitly including a computed field behaves as expected."""
@@ -207,7 +207,7 @@ class ConfigContextTest(APIViewTestCases.APIViewTestCase):
         manufacturer = Manufacturer.objects.create(name="Manufacturer 1", slug="manufacturer-1")
         devicetype = DeviceType.objects.create(manufacturer=manufacturer, model="Device Type 1", slug="device-type-1")
         devicerole = DeviceRole.objects.create(name="Device Role 1", slug="device-role-1")
-        site = Site.objects.create(name="Site-1", slug="site-1")
+        site = Site.objects.first()
         device = Device.objects.create(name="Device 1", device_type=devicetype, device_role=devicerole, site=site)
 
         # Test default config contexts (created at test setup)
@@ -247,7 +247,7 @@ class ConfigContextTest(APIViewTestCases.APIViewTestCase):
         self.assertEqual(response.data["config_context"]["foo"], 999, response.data["config_context"])
 
         # Add a context which does NOT match our device and ensure it does not apply
-        site2 = Site.objects.create(name="Site 2", slug="site-2")
+        site2 = Site.objects.all()[1]
         configcontext6 = ConfigContext(name="Config Context 6", weight=2000, data={"bar": 999})
         configcontext6.save()
         configcontext6.sites.add(site2)
@@ -359,7 +359,7 @@ class CreatedUpdatedFilterTest(APITestCase):
     def setUp(self):
         super().setUp()
 
-        self.site1 = Site.objects.create(name="Test Site 1", slug="test-site-1")
+        self.site1 = Site.objects.first()
         self.rackgroup1 = RackGroup.objects.create(site=self.site1, name="Test Rack Group 1", slug="test-rack-group-1")
         self.rackrole1 = RackRole.objects.create(name="Test Rack Role 1", slug="test-rack-role-1", color="ff0000")
         self.rack1 = Rack.objects.create(
@@ -638,11 +638,7 @@ class DynamicGroupTestMixin:
     @classmethod
     def setUpTestData(cls):
         # Create the objects required for devices.
-        sites = [
-            Site.objects.create(name="Site 1", slug="site-1"),
-            Site.objects.create(name="Site 2", slug="site-2"),
-            Site.objects.create(name="Site 3", slug="site-3"),
-        ]
+        sites = Site.objects.all().order_by("name")[:3]
 
         manufacturer = Manufacturer.objects.create(name="Manufacturer 1", slug="manufacturer-1")
         device_type = DeviceType.objects.create(
@@ -694,7 +690,7 @@ class DynamicGroupTestMixin:
                 name="API DynamicGroup 3",
                 slug="api-dynamicgroup-3",
                 content_type=cls.content_type,
-                filter={"site": ["site-3"]},
+                filter={"site": [cls.sites[2].slug]},
             ),
         ]
 
@@ -702,12 +698,13 @@ class DynamicGroupTestMixin:
 class DynamicGroupTest(DynamicGroupTestMixin, APIViewTestCases.APIViewTestCase):
     model = DynamicGroup
     brief_fields = ["content_type", "display", "id", "name", "slug", "url"]
+    sites = Site.objects.all()
     create_data = [
         {
             "name": "API DynamicGroup 4",
             "slug": "api-dynamicgroup-4",
             "content_type": "dcim.device",
-            "filter": {"site": ["site-1"]},
+            "filter": {"site": [sites[0].slug]},
         },
         {
             "name": "API DynamicGroup 5",
@@ -719,7 +716,7 @@ class DynamicGroupTest(DynamicGroupTestMixin, APIViewTestCases.APIViewTestCase):
             "name": "API DynamicGroup 6",
             "slug": "api-dynamicgroup-6",
             "content_type": "dcim.device",
-            "filter": {"site": ["site-2"]},
+            "filter": {"site": [sites[1].slug]},
         },
     ]
 
@@ -1131,7 +1128,7 @@ class ImageAttachmentTest(
     def setUpTestData(cls):
         ct = ContentType.objects.get_for_model(Site)
 
-        site = Site.objects.create(name="Site 1", slug="site-1")
+        site = Site.objects.first()
 
         ImageAttachment.objects.create(
             content_type=ct,
@@ -2345,8 +2342,8 @@ class NoteTest(APIViewTestCases.APIViewTestCase):
 
     @classmethod
     def setUpTestData(cls):
-        site1 = Site.objects.create(name="Site 1", slug="site-1")
-        site2 = Site.objects.create(name="Site 2", slug="site-2")
+        site1 = Site.objects.first()
+        site2 = Site.objects.all()[1]
         ct = ContentType.objects.get_for_model(Site)
         user1 = User.objects.create(username="user1", is_active=True)
         user2 = User.objects.create(username="user2", is_active=True)
@@ -2470,7 +2467,8 @@ class RelationshipTest(APIViewTestCases.APIViewTestCase):
         for relationship in cls.relationships:
             relationship.validated_save()
 
-        cls.site = Site.objects.create(name="Site 1", status=Status.objects.get(slug="active"))
+        cls.site = Site.objects.first()
+        cls.site.status = Status.objects.get(slug="active")
 
     def test_get_all_relationships_on_site(self):
         """Verify that all relationships are accurately represented when requested."""
@@ -2537,8 +2535,10 @@ class RelationshipTest(APIViewTestCases.APIViewTestCase):
 
     def test_populate_relationship_associations_on_site_create(self):
         """Verify that relationship associations can be populated at instance creation time."""
-        existing_site_1 = Site.objects.create(name="Existing Site 1", status=Status.objects.get(slug="active"))
-        existing_site_2 = Site.objects.create(name="Existing Site 2", status=Status.objects.get(slug="active"))
+        existing_site_1 = Site.objects.first()
+        existing_site_1.status = Status.objects.get(slug="active")
+        existing_site_2 = Site.objects.last()
+        existing_site_2.status = Status.objects.get(slug="active")
         manufacturer = Manufacturer.objects.create(name="Manufacturer 1", slug="manufacturer-1")
         device_type = DeviceType.objects.create(
             manufacturer=manufacturer,
@@ -3285,7 +3285,7 @@ class TagTestVersion13(
         self.add_permissions("extras.change_tag")
 
         tag_1 = Tag.objects.get(slug="devices-and-sites-only")
-        site = Site.objects.create(name="site 1", slug="site-1")
+        site = Site.objects.first()
         site.tags.add(tag_1)
 
         url = self._get_detail_url(tag_1)

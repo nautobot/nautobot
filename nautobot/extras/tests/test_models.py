@@ -85,7 +85,7 @@ class ComputedFieldTest(TestCase):
             template="{{ obj.location }}",
             weight=50,
         )
-        self.site1 = Site.objects.create(name="NYC")
+        self.site1 = Site.objects.first()
 
     def test_render_method(self):
         rendered_value = self.good_computed_field.render(context={"obj": self.site1})
@@ -116,8 +116,8 @@ class ConfigContextTest(TestCase):
             manufacturer=manufacturer, model="Device Type 1", slug="device-type-1"
         )
         self.devicerole = DeviceRole.objects.create(name="Device Role 1", slug="device-role-1")
-        self.region = Region.objects.create(name="Region")
-        self.site = Site.objects.create(name="Site-1", slug="site-1", region=self.region)
+        self.site = Site.objects.filter(region__isnull=False).first()
+        self.region = self.site.region
         location_type = LocationType.objects.create(name="Location Type 1")
         self.location = Location.objects.create(name="Location 1", location_type=location_type, site=self.site)
         self.platform = Platform.objects.create(name="Platform")
@@ -385,7 +385,8 @@ class ConfigContextSchemaTestCase(TestCase):
 
         # Device
         status = Status.objects.get(slug="active")
-        site = Site.objects.create(name="site", slug="site", status=status)
+        site = Site.objects.first()
+        site.status = status
         manufacturer = Manufacturer.objects.create(name="manufacturer", slug="manufacturer")
         device_type = DeviceType.objects.create(model="device_type", manufacturer=manufacturer)
         device_role = DeviceRole.objects.create(name="device_role", slug="device-role", color="ffffff")
@@ -930,7 +931,8 @@ class SecretTest(TestCase):
             parameters={"path": os.path.join(tempfile.gettempdir(), "{{ obj.slug }}", "secret-file.txt")},
         )
 
-        self.site = Site.objects.create(name="New York City", slug="nyc")
+        self.site = Site.objects.first()
+        self.site.slug = "NYC"
 
     def test_environment_variable_value_not_found(self):
         """Failure to retrieve an environment variable raises an exception."""
@@ -1170,7 +1172,7 @@ class StatusTest(TestCase):
         manufacturer = Manufacturer.objects.create(name="Manufacturer 1")
         devicetype = DeviceType.objects.create(manufacturer=manufacturer, model="Device Type 1")
         devicerole = DeviceRole.objects.create(name="Device Role 1")
-        site = Site.objects.create(name="Site-1")
+        site = Site.objects.first()
 
         self.device = Device.objects.create(
             name="Device 1",

@@ -210,11 +210,7 @@ class PrefixTestCase(ViewTestCases.PrimaryObjectViewTestCase, ViewTestCases.List
     @classmethod
     def setUpTestData(cls):
 
-        sites = (
-            Site.objects.create(name="Site 1", slug="site-1"),
-            Site.objects.create(name="Site 2", slug="site-2"),
-        )
-
+        sites = Site.objects.all()[:2]
         vrfs = (
             VRF.objects.create(name="VRF 1", rd="65000:1"),
             VRF.objects.create(name="VRF 2", rd="65000:2"),
@@ -356,7 +352,7 @@ class VLANGroupTestCase(ViewTestCases.OrganizationalObjectViewTestCase):
     @classmethod
     def setUpTestData(cls):
 
-        site = Site.objects.create(name="Site 1", slug="site-1")
+        site = Site.objects.first()
 
         VLANGroup.objects.bulk_create(
             [
@@ -395,10 +391,7 @@ class VLANTestCase(ViewTestCases.PrimaryObjectViewTestCase):
     @classmethod
     def setUpTestData(cls):
 
-        sites = (
-            Site.objects.create(name="Site 1", slug="site-1"),
-            Site.objects.create(name="Site 2", slug="site-2"),
-        )
+        sites = Site.objects.all()[:2]
 
         vlangroups = (
             VLANGroup.objects.create(name="VLAN Group 1", slug="vlan-group-1", site=sites[0]),
@@ -507,7 +500,7 @@ class ServiceTestCase(
     @classmethod
     def setUpTestData(cls):
 
-        site = Site.objects.create(name="Site 1", slug="site-1")
+        site = Site.objects.first()
         manufacturer = Manufacturer.objects.create(name="Manufacturer 1", slug="manufacturer-1")
         devicetype = DeviceType.objects.create(manufacturer=manufacturer, model="Device Type 1")
         devicerole = DeviceRole.objects.create(name="Device Role 1", slug="device-role-1")

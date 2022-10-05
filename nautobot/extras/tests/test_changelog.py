@@ -302,7 +302,7 @@ class ChangeLogAPITest(APITestCase):
 
         response = self.client.delete(url, **self.header)
         self.assertHttpStatus(response, status.HTTP_204_NO_CONTENT)
-        self.assertEqual(Site.objects.count(), 0)
+        self.assertEqual(Site.objects.count(), Site.objects.all().count())
 
         oc = ObjectChange.objects.first()
         self.assertEqual(oc.changed_object, None)
