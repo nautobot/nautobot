@@ -35,7 +35,7 @@ class RIRFactory(OrganizationalModelFactory):
 
 class AggregateFactory(PrimaryModelFactory):
     """
-    Create random aggregates and around half of those generate prefixes within the aggregate IP space. Child prefixes
+    Create random aggregates and 50% of the time generate prefixes within the aggregate IP space. Child prefixes
     create nested child prefixes and ip addresses within the prefix IP space. Defaults to creating 0-4 child prefixes
     which generate 0-4 grandchildren. Set child_prefixes__max_count to an integer when calling the factory creation
     methods (`create()`, `create_batch()`, etc) to override the maximum number of child prefixes generated. Set
