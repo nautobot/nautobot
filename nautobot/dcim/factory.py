@@ -14,10 +14,9 @@ class RegionFactory(DjangoModelFactory):
             "has_description",
         )
 
-    name = factory.Sequence(lambda n: f"region-{n:02d}")
-
     has_parent = factory.Faker("pybool")
-    parent = factory.Maybe("has_description", random_instance(Region), None)
+    parent = factory.Maybe("has_parent", random_instance(Region), None)
+    name = factory.Maybe("has_parent", factory.Faker("city"), factory.Faker("country"))
 
     has_description = factory.Faker("pybool")
     description = factory.Maybe("has_description", factory.Faker("text", max_nb_chars=200), "")
@@ -26,9 +25,24 @@ class RegionFactory(DjangoModelFactory):
 class SiteFactory(DjangoModelFactory):
     class Meta:
         model = Site
+        exclude = ("has_region", "has_tenant")
 
-    name = factory.Sequence(lambda n: f"site-{n:02d}")
-    region = random_instance(Region)
+    name = factory.Faker("street_address")
+
+    has_region = factory.Faker("pybool")
+    region = factory.Maybe("has_region", random_instance(Region), None)
+
+    has_tenant = factory.Faker("pybool")
+    tenant = factory.Maybe("has_tenant", random_instance(Tenant))
+
+    time_zone = factory.Faker("timezone")
+    physical_address = factory.Faker("address")
+    shipping_address = factory.Faker("address")
+    latitude = factory.Faker("latitude")
+    longitude = factory.Faker("longitude")
+    contact_name = factory.Faker("name")
+    contact_phone = factory.Sequence(lambda n: "1091-65912-%04d" % n)
+    contact_email = factory.Faker("company_email")
 
 
 class LocationTypeFactory(DjangoModelFactory):
@@ -36,11 +50,23 @@ class LocationTypeFactory(DjangoModelFactory):
         model = LocationType
         exclude = ("has_description",)
 
-    name = factory.Sequence(lambda n: "Root" if n == 0 else ("Building" if n == 1 else ("Floor" if n == 2 else "Room")))
+    name = factory.Sequence(
+        lambda n: "Root"
+        if n == 0
+        else (
+            "Building"
+            if n == 1
+            else ("Floor" if n == 2 else ("Elevator" if n == 3 else ("Room" if n == 4 else "Aisle")))
+        )
+    )
     parent = factory.Sequence(
         lambda n: None
         if (n == 0 or n == 1)
-        else (LocationType.objects.get(name="Building") if n == 2 else LocationType.objects.get(name="Floor"))
+        else (
+            LocationType.objects.get(name="Building")
+            if (n == 2 or n == 3)
+            else (LocationType.objects.get(name="Floor") if n == 4 else LocationType.objects.get(name="Room"))
+        )
     )
 
     has_description = factory.Faker("pybool")
@@ -57,7 +83,19 @@ class LocationFactory(DjangoModelFactory):
             "has_description",
         )
 
-    location_type = random_instance(LocationType)
+    location_type = factory.Sequence(
+        lambda n: LocationType.objects.get(name="Building")
+        if n == 0
+        else (
+            LocationType.objects.get(name="Floor")
+            if n == 1
+            else (
+                LocationType.objects.get(name="Room")
+                if n == 2
+                else LocationType.objects.all()[n % LocationType.objects.all().count()]
+            )
+        )
+    )
     name = factory.LazyAttributeSequence(lambda l, n: f"{l.location_type.name}-{n:02d}")
 
     has_parent = factory.LazyAttribute(lambda l: bool(l.location_type.parent))

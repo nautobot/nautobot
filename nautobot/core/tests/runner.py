@@ -6,7 +6,6 @@ import factory.random
 from nautobot.ipam.factory import AggregateFactory, RIRFactory
 from nautobot.tenancy.factory import TenantFactory, TenantGroupFactory
 from nautobot.dcim.factory import LocationTypeFactory, LocationFactory, RegionFactory, SiteFactory
-from nautobot.dcim.models import LocationType
 
 
 class NautobotTestRunner(DiscoverRunner):
@@ -58,15 +57,13 @@ class NautobotTestRunner(DiscoverRunner):
         TenantFactory.create_batch(10, has_group=False)
         TenantFactory.create_batch(10, has_group=True)
         print("Creating Regions...")
-        RegionFactory.create_batch(5, has_parent=False)
+        RegionFactory.create_batch(10, has_parent=False)
         RegionFactory.create_batch(5, has_parent=True)
         print("Creating Sites...")
-        SiteFactory.create_batch(5)
+        SiteFactory.create_batch(10)
         print("Creating LocationTypes...")
-        LocationTypeFactory.create_batch(4)
+        LocationTypeFactory.create_batch(6)
         print("Creating Locations...")
-        for lt in LocationType.objects.all():
-            LocationFactory.create(location_type=lt)
         LocationFactory.create_batch(10)
         print("Creating RIRs...")
         RIRFactory.create_batch(9)  # only 9 unique RIR names are hard-coded presently

@@ -240,6 +240,7 @@ class SiteTestCase(ViewTestCases.PrimaryObjectViewTestCase):
             "asn": 65009,
             "time_zone": pytz.timezone("US/Eastern"),
             "description": "New description",
+            "_nullify": ["tenant"],
         }
         cls.slug_source = "name"
         cls.slug_test_object = "Site 8"
@@ -334,7 +335,7 @@ class LocationTestCase(ViewTestCases.PrimaryObjectViewTestCase):
 
         cls.csv_data = (
             "name,slug,location_type,parent,site,status,tenant,description",
-            f"Root 3,root-3,Building,,{site.slug},active,,",
+            f"Root 3,root-3,Building,,{site.name},active,,",
             "Intermediate 2,intermediate-2,Floor,Root 2,,active,Tenant 1,Hello world!",
             "Leaf 2,leaf-2,Room,Intermediate 1,,active,Tenant 1,",
         )
@@ -378,10 +379,10 @@ class RackGroupTestCase(ViewTestCases.OrganizationalObjectViewTestCase):
 
         cls.csv_data = (
             "site,name,slug,description",
-            f"{site.slug},Rack Group 4,rack-group-4,Fourth rack group",
-            f"{site.slug},Rack Group 5,rack-group-5,Fifth rack group",
-            f"{site.slug},Rack Group 6,rack-group-6,Sixth rack group",
-            f"{site.slug},Rack Group 7,,Seventh rack group",
+            f"{site.name},Rack Group 4,rack-group-4,Fourth rack group",
+            f"{site.name},Rack Group 5,rack-group-5,Fifth rack group",
+            f"{site.name},Rack Group 6,rack-group-6,Sixth rack group",
+            f"{site.name},Rack Group 7,,Seventh rack group",
         )
         cls.slug_test_object = "Rack Group 8"
         cls.slug_source = "name"
@@ -450,9 +451,9 @@ class RackReservationTestCase(ViewTestCases.PrimaryObjectViewTestCase):
 
         cls.csv_data = (
             "site,rack_group,rack,units,description",
-            f'{site.slug},Rack Group 1,Rack 1,"10,11,12",Reservation 1',
-            f'{site.slug},Rack Group 1,Rack 1,"13,14,15",Reservation 2',
-            f'{site.slug},Rack Group 1,Rack 1,"16,17,18",Reservation 3',
+            f'{site.name},Rack Group 1,Rack 1,"10,11,12",Reservation 1',
+            f'{site.name},Rack Group 1,Rack 1,"13,14,15",Reservation 2',
+            f'{site.name},Rack Group 1,Rack 1,"16,17,18",Reservation 3',
         )
 
         cls.bulk_edit_data = {
@@ -569,9 +570,9 @@ class RackTestCase(ViewTestCases.PrimaryObjectViewTestCase):
 
         cls.csv_data = (
             "site,group,name,width,u_height,status",
-            f"{cls.sites[0].slug},,Rack 4,19,42,planned",
-            f"{cls.sites[0].slug},Rack Group 1,Rack 5,19,42,active",
-            f"{cls.sites[1].slug},Rack Group 2,Rack 6,19,42,reserved",
+            f"{cls.sites[0].name},,Rack 4,19,42,planned",
+            f"{cls.sites[0].name},Rack Group 1,Rack 5,19,42,active",
+            f"{cls.sites[1].name},Rack Group 2,Rack 6,19,42,reserved",
         )
 
         cls.bulk_edit_data = {
@@ -1438,9 +1439,9 @@ class DeviceTestCase(ViewTestCases.PrimaryObjectViewTestCase):
 
         cls.csv_data = (
             "device_role,manufacturer,device_type,status,name,site,rack_group,rack,position,face,secrets_group",
-            f"Device Role 1,Manufacturer 1,Device Type 1,active,Device 4,{sites[0].slug},Rack Group 1,Rack 1,10,front,",
-            f"Device Role 1,Manufacturer 1,Device Type 1,active,Device 5,{sites[0].slug},Rack Group 1,Rack 1,20,front,",
-            f"Device Role 1,Manufacturer 1,Device Type 1,active,Device 6,{sites[0].slug},Rack Group 1,Rack 1,30,front,Secrets Group 2",
+            f"Device Role 1,Manufacturer 1,Device Type 1,active,Device 4,{sites[0].name},Rack Group 1,Rack 1,10,front,",
+            f"Device Role 1,Manufacturer 1,Device Type 1,active,Device 5,{sites[0].name},Rack Group 1,Rack 1,20,front,",
+            f"Device Role 1,Manufacturer 1,Device Type 1,active,Device 6,{sites[0].name},Rack Group 1,Rack 1,30,front,Secrets Group 2",
         )
 
         cls.bulk_edit_data = {
@@ -2722,9 +2723,9 @@ class PowerPanelTestCase(ViewTestCases.PrimaryObjectViewTestCase):
 
         cls.csv_data = (
             "site,rack_group,name",
-            f"{sites[0].slug},Rack Group 1,Power Panel 4",
-            f"{sites[0].slug},Rack Group 1,Power Panel 5",
-            f"{sites[0].slug},Rack Group 1,Power Panel 6",
+            f"{sites[0].name},Rack Group 1,Power Panel 4",
+            f"{sites[0].name},Rack Group 1,Power Panel 5",
+            f"{sites[0].name},Rack Group 1,Power Panel 6",
         )
 
         cls.bulk_edit_data = {
@@ -2786,9 +2787,9 @@ class PowerFeedTestCase(ViewTestCases.PrimaryObjectViewTestCase):
 
         cls.csv_data = (
             "site,power_panel,name,voltage,amperage,max_utilization,status",
-            f"{site.slug},Power Panel 1,Power Feed 4,120,20,80,active",
-            f"{site.slug},Power Panel 1,Power Feed 5,120,20,80,failed",
-            f"{site.slug},Power Panel 1,Power Feed 6,120,20,80,offline",
+            f"{site.name},Power Panel 1,Power Feed 4,120,20,80,active",
+            f"{site.name},Power Panel 1,Power Feed 5,120,20,80,failed",
+            f"{site.name},Power Panel 1,Power Feed 6,120,20,80,offline",
         )
 
         cls.bulk_edit_data = {

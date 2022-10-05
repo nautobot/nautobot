@@ -717,7 +717,10 @@ class RegionTestCase(FilterTestCases.NameSlugFilterTestCase):
             )
 
     def test_sites(self):
-        sites = Site.objects.all()
+        sites = (
+            Site.objects.get(slug="site-1"),
+            Site.objects.get(slug="site-2"),
+        )
         params = {"sites": [sites[0].pk, sites[1].slug]}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
 
@@ -807,13 +810,15 @@ class SiteTestCase(FilterTestCases.NameSlugFilterTestCase):
             params = {"tenant_group_id": [tenant_groups[0].pk, tenant_groups[1].pk]}
             self.assertEqual(
                 self.filterset(params, self.queryset).qs.count(),
-                self.queryset.filter(tenant__group__in=tenant_groups).count(),
+                self.queryset.filter(tenant__group__in=tenant_groups).distinct().count()
+                + self.queryset.filter(tenant__group__parent__in=tenant_groups).distinct().count(),
             )
         with self.subTest():
             params = {"tenant_group": [tenant_groups[0].slug, tenant_groups[1].slug]}
             self.assertEqual(
                 self.filterset(params, self.queryset).qs.count(),
-                self.queryset.filter(tenant__group__in=tenant_groups).count(),
+                self.queryset.filter(tenant__group__in=tenant_groups).distinct().count()
+                + self.queryset.filter(tenant__group__parent__in=tenant_groups).distinct().count(),
             )
 
     def test_search(self):
@@ -1046,7 +1051,7 @@ class LocationTypeFilterSetTestCase(FilterTestCases.NameSlugFilterTestCase):
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
 
     def test_parent(self):
-        params = {"parent": ["building", LocationType.objects.get(name="Campus Type").pk]}
+        params = {"parent": ["building-type", LocationType.objects.get(name="Campus Type").pk]}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
 
     def test_content_types(self):
@@ -1114,7 +1119,9 @@ class LocationFilterSetTestCase(FilterTestCases.NameSlugFilterTestCase):
     def test_site(self):
         params = {"site": [Site.objects.first().slug, Site.objects.first().pk]}
         # TODO: should this filter return descendant locations as well?
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 1)
+        self.assertEqual(
+            self.filterset(params, self.queryset).qs.count(), Location.objects.filter(site=Site.objects.first()).count()
+        )
 
     def test_tenant_id(self):
         params = {"tenant_id": [Tenant.objects.filter(locations__isnull=False).first().pk]}
@@ -1135,7 +1142,11 @@ class RackGroupTestCase(FilterTestCases.NameSlugFilterTestCase):
     def setUpTestData(cls):
         common_test_data(cls)
 
-        sites = Site.objects.all()
+        sites = (
+            Site.objects.get(slug="site-1"),
+            Site.objects.get(slug="site-2"),
+            Site.objects.get(slug="site-3"),
+        )
         parent_rack_groups = RackGroup.objects.filter(parent__isnull=True)
 
         RackGroup.objects.create(
@@ -4368,12 +4379,7 @@ class CableTestCase(FilterTestCases.FilterTestCase):
 
         tenants = Tenant.objects.all()[:3]
 
-        cls.sites = (
-            Site.objects.get(slug="site-01"),
-            Site.objects.get(slug="site-02"),
-            Site.objects.get(slug="site-03"),
-        )
-
+        cls.sites = Site.objects.all()[:3]
         racks = (
             Rack.objects.get(name="Rack 1"),
             Rack.objects.get(name="Rack 2"),

@@ -94,7 +94,9 @@ class CircuitTestCase(FilterTestCases.FilterTestCase):
     @classmethod
     def setUpTestData(cls):
 
-        cls.regions = Region.objects.filter(sites__isnull=False)
+        cls.regions = (
+            Region.objects.filter(sites__isnull=False).filter(children__isnull=True).filter(parent__isnull=True)
+        )
 
         cls.sites = (
             Site.objects.filter(region=cls.regions[0]).first(),
@@ -224,7 +226,7 @@ class CircuitTestCase(FilterTestCases.FilterTestCase):
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 4)
 
     def test_region(self):
-        params = {"region_id": [self.regions[1].slug, self.regions[2].slug]}
+        params = {"region_id": [self.regions[1].pk, self.regions[2].pk]}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
         params = {"region": [self.regions[1].slug, self.regions[2].slug]}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)

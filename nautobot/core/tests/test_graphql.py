@@ -95,7 +95,7 @@ class GraphQLTestCase(TestCase):
         query = "{ query: sites {name} }"
         resp = execute_query(query, user=self.user).to_dict()
         self.assertFalse(resp["data"].get("error"))
-        self.assertEqual(len(resp["data"]["query"]), 8)
+        self.assertEqual(len(resp["data"]["query"]), Site.objects.all().count())
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     def test_execute_query_with_variable(self):
@@ -1250,8 +1250,8 @@ query {
             ('name: ["Site-1", "Site-2"]', 2),
             ('name__ic: "Site"', Site.objects.filter(name__icontains="Site").count()),
             ('name__ic: ["Site"]', Site.objects.filter(name__icontains="Site").count()),
-            ('name__nic: "Site"', 0),
-            ('name__nic: ["Site"]', 0),
+            ('name__nic: "Site"', Site.objects.exclude(name__icontains="Site").count()),
+            ('name__nic: ["Site"]', Site.objects.exclude(name__icontains="Site").count()),
             ('region: "region1"', 1),
             ('region: ["region1"]', 1),
             ('region: ["region1", "region2"]', 2),

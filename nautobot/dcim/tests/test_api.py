@@ -264,7 +264,7 @@ class SiteTest(APIViewTestCases.APIViewTestCase):
         """
 
         self.add_permissions("dcim.view_site")
-        site = Site.objects.first()
+        site = Site.objects.create(name="new site")
         url = reverse("dcim-api:site-detail", kwargs={"pk": site.pk})
         response = self.client.get(url, **self.header)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
@@ -282,10 +282,10 @@ class LocationTypeTest(APIViewTestCases.APIViewTestCase):
 
     @classmethod
     def setUpTestData(cls):
-        lt1 = LocationType.objects.create(name="Campus")
-        lt2 = LocationType.objects.create(name="Building 1", parent=lt1)
-        lt3 = LocationType.objects.create(name="Floor 1", slug="building-floor", parent=lt2)
-        lt4 = LocationType.objects.create(name="Room 1", parent=lt3)
+        lt1 = LocationType.objects.get(name="Building")
+        lt2 = LocationType.objects.get(name="Floor")
+        lt3 = LocationType.objects.get(name="Room")
+        lt4 = LocationType.objects.get(name="Aisle")
         for lt in [lt1, lt2, lt3, lt4]:
             lt.content_types.add(ContentType.objects.get_for_model(RackGroup))
 
@@ -294,7 +294,7 @@ class LocationTypeTest(APIViewTestCases.APIViewTestCase):
                 "name": "Standalone",
             },
             {
-                "name": "Elevator",
+                "name": "Elevator Type",
                 "parent": lt2.pk,
                 "content_types": ["ipam.prefix", "ipam.vlangroup", "ipam.vlan"],
             },
