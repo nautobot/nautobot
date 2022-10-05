@@ -46,7 +46,7 @@ from nautobot.utilities.utils import (
     get_route_for_model,
     get_filterable_params_from_filter_params,
     normalize_querydict,
-    prepare_cloned_fields,
+    prepare_cloned_fields, get_filterset_for_model,
 )
 from nautobot.utilities.views import GetReturnURLMixin, ObjectPermissionRequiredMixin
 
@@ -156,6 +156,7 @@ class ObjectListView(ObjectPermissionRequiredMixin, View):
     queryset = None
     filterset = None
     filterset_form = None
+    dynamic_filter_form = None
     table = None
     template_name = "generic/object_list.html"
     action_buttons = ("add", "import", "export")
@@ -303,13 +304,15 @@ class ObjectListView(ObjectPermissionRequiredMixin, View):
         }
         RequestConfig(request, paginate).configure(table)
 
-        if request.GET:
-            factory_formset_params = convert_querydict_to_factory_formset_acceptable_querydict(
-                request.GET, self.filterset
-            )
-            dynamic_filter_form = DynamicFilterFormSet(model=self.queryset.model, data=factory_formset_params)
-        else:
-            dynamic_filter_form = DynamicFilterFormSet(model=self.queryset.model)
+        # The model's FilterSet is required for DynamicFilterFormSet; if not found, ignore.
+        if get_filterset_for_model(model) is not None:
+            if request.GET:
+                factory_formset_params = convert_querydict_to_factory_formset_acceptable_querydict(
+                    request.GET, self.filterset
+                )
+                self.dynamic_filter_form = DynamicFilterFormSet(model=self.queryset.model, data=factory_formset_params)
+            else:
+                self.dynamic_filter_form = DynamicFilterFormSet(model=self.queryset.model)
 
         valid_actions = self.validate_action_buttons(request)
 
@@ -320,7 +323,7 @@ class ObjectListView(ObjectPermissionRequiredMixin, View):
             "action_buttons": valid_actions,
             "table_config_form": TableConfigForm(table=table),
             "filter_params": display_filter_params,
-            "filter_form": dynamic_filter_form,
+            "filter_form": self.dynamic_filter_form,
         }
         context.update(self.extra_context())
 
