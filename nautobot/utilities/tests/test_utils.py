@@ -4,6 +4,7 @@ from django.http import QueryDict
 from django.test import TestCase
 
 from nautobot.core.settings_funcs import is_truthy
+from nautobot.utilities.exceptions import FilterSetFieldNotFound
 from nautobot.utilities.forms import DatePicker, DateTimePicker, DynamicModelMultipleChoiceField
 from nautobot.utilities.utils import (
     build_lookup_label,
@@ -12,6 +13,7 @@ from nautobot.utilities.utils import (
     dict_to_filter_params,
     get_all_lookup_expr_for_field,
     get_filterable_params_from_filter_params,
+    get_filterset_field,
     get_filterset_for_model,
     get_filterset_parameter_form_field,
     get_form_for_model,
@@ -399,8 +401,19 @@ class LookupRelatedFunctionTest(TestCase):
             )
 
         with self.subTest("Test unknown field"):
-            lookup_expr = get_all_lookup_expr_for_field(Site, "unknown_field")
-            self.assertEqual(lookup_expr, [])
+            with self.assertRaises(FilterSetFieldNotFound) as err:
+                get_all_lookup_expr_for_field(Site, "unknown_field")
+            self.assertEqual(str(err.exception), "field_name not found")
+
+    def test_get_filterset_field(self):
+        with self.subTest():
+            field = get_filterset_field(SiteFilterSet, "name")
+            self.assertEqual(field.__class__, SiteFilterSet().filters.get("name").__class__)
+
+        with self.subTest("Test invalid field"):
+            with self.assertRaises(FilterSetFieldNotFound) as err:
+                get_filterset_field(SiteFilterSet, "unknown")
+            self.assertEqual(str(err.exception), "unknown is not a valid SiteFilterSet field")
 
     def test_get_filterset_parameter_form_field(self):
         with self.subTest("Test get CharFields"):
@@ -458,6 +471,11 @@ class LookupRelatedFunctionTest(TestCase):
 
             form_field = get_filterset_parameter_form_field(Device, "created")
             self.assertTrue(isinstance(form_field.widget, DatePicker))
+
+        with self.subTest("Test Invalid parameter"):
+            with self.assertRaises(FilterSetFieldNotFound) as err:
+                get_filterset_parameter_form_field(Site, "unknown")
+            self.assertEqual(str(err.exception), "unknown is not a valid SiteFilterSet field")
 
     def test_convert_querydict_to_factory_formset_dict(self):
         with self.subTest("Convert QueryDict to an acceptable factory formset QueryDict and discards invalid params"):

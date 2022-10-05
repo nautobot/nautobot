@@ -34,6 +34,7 @@ from taggit.managers import _TaggableManager
 
 from nautobot.dcim.choices import CableLengthUnitChoices
 from nautobot.utilities.constants import HTTP_REQUEST_META_SAFE_COPY
+from nautobot.utilities.exceptions import FilterSetFieldNotFound
 
 # Check if field name contains a lookup expr
 # e.g `name__ic` has lookup expr `ic (icontains)` while `name` has no lookup expr
@@ -735,6 +736,10 @@ def get_all_lookup_expr_for_field(model, field_name):
     Return all lookup expressions for `field_name` in `model` filterset
     """
     filterset = get_filterset_for_model(model)().filters
+
+    if not filterset.get(field_name):
+        raise FilterSetFieldNotFound("field_name not found")
+
     if field_name.startswith("has_"):
         return [{"id": field_name, "name": "exact"}]
 
@@ -751,6 +756,13 @@ def get_all_lookup_expr_for_field(model, field_name):
             )
 
     return lookup_expr_choices
+
+
+def get_filterset_field(filterset_class, field_name):
+    field = filterset_class().filters.get(field_name)
+    if field is None:
+        raise FilterSetFieldNotFound(f"{field_name} is not a valid {filterset_class.__name__} field")
+    return field
 
 
 def get_filterset_parameter_form_field(model, parameter):
@@ -770,10 +782,8 @@ def get_filterset_parameter_form_field(model, parameter):
         TimePicker,
     )
 
-    # TODO(timizuo): Raise Error if filterset not found
-    filterset = get_filterset_for_model(model)()
-    # TODO(T=timizuo): Raise Error if field not found
-    field = filterset.filters.get(parameter)
+    filterset_class = get_filterset_for_model(model)
+    field = get_filterset_field(filterset_class, parameter)
     form_field = field.field
 
     # TODO(Culver): We are having to replace some widgets here because multivalue_field_factory that generates these isn't smart enough
