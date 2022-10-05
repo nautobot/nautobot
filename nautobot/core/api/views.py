@@ -781,7 +781,7 @@ class GetFilterSetFieldLookupExpressionChoicesAPI(NautobotAPIVersionMixin, APIVi
             )
         try:
             data = get_all_lookup_expr_for_field(model, field_name)
-        except FilterSetFieldNotFound as e:
+        except FilterSetFieldNotFound:
             return Response("field_name not found", status=400)
 
         # Needs to be returned in this format because this endpoint is used by
@@ -842,7 +842,7 @@ class GetFilterSetFieldDOMElementAPI(NautobotAPIVersionMixin, APIView):
         model_form = get_form_for_model(model)
         try:
             form_field = get_filterset_parameter_form_field(model, field_name)
-        except FilterSetFieldNotFound as e:
+        except FilterSetFieldNotFound:
             return Response("field_name not found", 400)
 
         field_dom_representation = form_field.get_bound_field(model_form(), field_name).as_widget()

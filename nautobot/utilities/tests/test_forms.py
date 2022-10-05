@@ -771,7 +771,7 @@ class DynamicFilterFormTest(TestCase):
                     "placeholder": None,
                     "data-query-param-field_name": '["$lookup_field"]',
                     "data-contenttype": "extras.status",
-                    "data-url": "/api/lookup-choices/",
+                    "data-url": reverse("lookup_choices"),
                 },
             )
 
@@ -815,7 +815,7 @@ class DynamicFilterFormTest(TestCase):
                     "placeholder": None,
                     "data-query-param-field_name": '["$lookup_field"]',
                     "data-contenttype": "dcim.site",
-                    "data-url": "/api/lookup-choices/",
+                    "data-url": reverse("lookup_choices"),
                 },
             )
             self.assertIsInstance(form.fields["lookup_value"], forms.ChoiceField)
@@ -841,7 +841,7 @@ class DynamicFilterFormTest(TestCase):
                     "class": "nautobot-select2-api lookup_type-select",
                     "data-contenttype": "dcim.site",
                     "data-query-param-field_name": '["$lookup_field"]',
-                    "data-url": "/api/lookup-choices/",
+                    "data-url": reverse("lookup_choices"),
                     "placeholder": None,
                 },
             )
@@ -861,7 +861,7 @@ class DynamicFilterFormTest(TestCase):
                     "class": "nautobot-select2-api lookup_type-select",
                     "data-contenttype": "dcim.site",
                     "data-query-param-field_name": '["$lookup_field"]',
-                    "data-url": "/api/lookup-choices/",
+                    "data-url": reverse("lookup_choices"),
                     "placeholder": None,
                 },
             )
@@ -875,7 +875,7 @@ class DynamicFilterFormTest(TestCase):
                     "class": "nautobot-select2-api lookup_type-select",
                     "data-contenttype": "dcim.site",
                     "data-query-param-field_name": '["$lookup_field"]',
-                    "data-url": "/api/lookup-choices/",
+                    "data-url": reverse("lookup_choices"),
                     "placeholder": None,
                 },
             )
