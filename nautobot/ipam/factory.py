@@ -74,6 +74,12 @@ class AggregateFactory(PrimaryModelFactory):
 
     @factory.post_generation
     def child_prefixes(self, create, extracted, **kwargs):
+        """
+        Create child prefixes within the aggregate IP space. Defaults to generating 0-4 child
+        prefixes for 50% of aggregates. Set child_prefixes__max_count to an integer when calling
+        the factory creation methods (`create()`, `create_batch()`, etc) to override the maximum
+        number of children generated.
+        """
         if extracted:
             # Objects have already been created, do nothing
             return
@@ -437,6 +443,13 @@ class PrefixFactory(PrimaryModelFactory):
 
     @factory.post_generation
     def children(self, create, extracted, **kwargs):
+        """
+        Create child prefixes and ip addresses within the prefix IP space. Defaults to generating
+        0-4 child prefixes for parents that are containers, or generating 0-4 ip addresses within
+        the prefix's IP space for non-container prefixes. Only creates children on 50% of prefixes.
+        Set children__max_count to an integer when calling the factory creation methods
+        (`create()`, `create_batch()`, etc) to override the maximum number of children generated.
+        """
         if extracted:
             # Objects have already been created, do nothing
             return
