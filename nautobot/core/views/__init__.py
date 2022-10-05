@@ -207,7 +207,7 @@ def csrf_failure(request, reason="", template_name="403_csrf_failure.html"):
     if settings.DEBUG:
         return _csrf_failure(request, reason=reason)
     t = loader.get_template(template_name)
-    context = {"settings": settings}
+    context = {"settings": settings, "reason": reason}
     return HttpResponseForbidden(t.render(context), content_type="text/html")
 
 
