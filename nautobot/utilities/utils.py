@@ -882,10 +882,7 @@ def convert_querydict_to_factory_formset_acceptable_querydict(request_querydict,
 
 def is_single_choice_field(filterset_class, field_name):
     # Some filter parameters do not accept multiple values, e.g DateTime fields, boolean fields etc.
-    field = filterset_class().filters.get(field_name)
-    if field is None:
-        pass
-        # TODO (timizuo): handle filed not exist
+    field = get_filterset_field(filterset_class, field_name)
     return isinstance(field, (DateFilter, DateTimeFilter, TimeFilter, BooleanFilter))
 
 
@@ -906,10 +903,16 @@ def get_filterable_params_from_filter_params(filter_params, non_filter_params, f
     final_filter_params = {}
     for field in filter_params.keys():
         if filter_params.get(field):
+            # `is_single_choice_field` implements `get_filterset_field`, which throws an exception if a field is not found.
+            # If an exception is thrown, instead of throwing an exception, set `_is_single_choice_field` to 'False'
+            # because the fields that were not discovered are still necessary.
+            try:
+                _is_single_choice_field = is_single_choice_field(filterset_class, field)
+            except FilterSetFieldNotFound:
+                _is_single_choice_field = False
+
             final_filter_params[field] = (
-                filter_params.get(field)
-                if is_single_choice_field(filterset_class, field)
-                else filter_params.getlist(field)
+                filter_params.get(field) if is_single_choice_field else filter_params.getlist(field)
             )
 
     return final_filter_params

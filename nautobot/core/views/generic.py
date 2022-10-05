@@ -45,8 +45,9 @@ from nautobot.utilities.utils import (
     csv_format,
     get_route_for_model,
     get_filterable_params_from_filter_params,
+    get_filterset_for_model,
     normalize_querydict,
-    prepare_cloned_fields, get_filterset_for_model,
+    prepare_cloned_fields,
 )
 from nautobot.utilities.views import GetReturnURLMixin, ObjectPermissionRequiredMixin
 
