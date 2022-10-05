@@ -407,7 +407,7 @@ class LookupRelatedFunctionTest(TestCase):
             site_fields = ["comments", "name", "contact_email", "physical_address", "shipping_address"]
             for field_name in site_fields:
                 form_field = get_filterset_parameter_form_field(Site, field_name)
-                self.assertTrue(isinstance(form_field, forms.CharField))
+                self.assertIsInstance(form_field, forms.CharField)
 
             device_fields = ["serial", "name"]
             for field_name in device_fields:

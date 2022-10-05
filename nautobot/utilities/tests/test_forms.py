@@ -781,7 +781,7 @@ class DynamicFilterFormTest(TestCase):
             )
 
     def test_dynamic_filter_form_with_data_and_prefix(self):
-        """Assert that lookup value implements the right field(CharField, ChoicField etc) and widget"""
+        """Assert that lookup value implements the right field (CharField, ChoiceField etc.) and widget."""
 
         request_querydict = QueryDict(mutable=True)
         request_querydict.setlistdefault("name__ic", ["Site"])
@@ -819,7 +819,7 @@ class DynamicFilterFormTest(TestCase):
                 },
             )
             self.assertIsInstance(form.fields["lookup_value"], forms.ChoiceField)
-            self.assertTrue(isinstance(form.fields["lookup_value"].widget, APISelectMultiple))
+            self.assertIsInstance(form.fields["lookup_value"].widget, APISelectMultiple)
             self.assertEqual(
                 form.fields["lookup_value"].widget.attrs,
                 {
@@ -850,7 +850,7 @@ class DynamicFilterFormTest(TestCase):
                 form.fields["lookup_value"].widget.attrs,
                 {"class": "form-control nautobot-select2-static lookup_value-input form-control"},
             )
-            self.assertTrue(isinstance(form.fields["lookup_value"].widget, StaticSelect2))
+            self.assertIsInstance(form.fields["lookup_value"].widget, StaticSelect2)
             self.assertEqual(form.fields["lookup_value"]._choices, [("True", "Yes"), ("False", "No")])
 
         with self.subTest("Test for lookup_value with a DateField"):
@@ -865,7 +865,7 @@ class DynamicFilterFormTest(TestCase):
                     "placeholder": None,
                 },
             )
-            self.assertTrue(isinstance(form.fields["lookup_value"].widget, DatePicker))
+            self.assertIsInstance(form.fields["lookup_value"].widget, DatePicker)
 
         with self.subTest("Test for lookup_value with an IntegerField"):
             form = DynamicFilterForm(model=Site, data=data, prefix="form-5")

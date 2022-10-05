@@ -460,7 +460,7 @@ function initializeMultiValueChar(context){
 }
 
 function initializeDynamicFilterForm(context){
-    this_context = $(context)
+    this_context = $(context);
     // Dynamic filter form
     this_context.find(".lookup_type-select").bind("change", function(){
         let parent_element = $(this).parents("tr")
@@ -504,7 +504,7 @@ function initializeDynamicFilterForm(context){
 }
 
 function initializeSortableList(context){
-    this_context = $(context)
+    this_context = $(context);
     // Rearrange options within a <select> list
     this_context.find('#move-option-up').bind('click', function() {
         var select_id = '#' + $(this).attr('data-target');
@@ -535,7 +535,7 @@ function initializeSortableList(context){
 }
 
 function initializeImagePreview(context){
-    this_context = $(context)
+    this_context = $(context);
     // Offset between the preview window and the window edges
     const IMAGE_PREVIEW_OFFSET_X = 20;
     const IMAGE_PREVIEW_OFFSET_Y = 10;

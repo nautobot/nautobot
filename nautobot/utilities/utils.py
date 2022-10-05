@@ -866,7 +866,7 @@ def convert_querydict_to_factory_formset_acceptable_querydict(request_querydict,
                 query_dict.setlistdefault(lookup_value_placeholder % num, lookup_value)
                 num += 1
 
-    query_dict.setdefault("form-TOTAL_FORMS", num if num > 2 else 3)
+    query_dict.setdefault("form-TOTAL_FORMS", max(num, 3))
     return query_dict
 
 

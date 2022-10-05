@@ -793,7 +793,7 @@ class GetFilterSetFieldLookupExpressionChoicesAPI(NautobotAPIVersionMixin, APIVi
 
 
 class GetFilterSetFieldDOMElementAPI(NautobotAPIVersionMixin, APIView):
-    """API View that gets the dom element of a FilterSet field."""
+    """API View that gets the DOM element representation of a FilterSet field."""
 
     permission_classes = [IsAuthenticated]
 
