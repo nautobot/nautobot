@@ -420,7 +420,7 @@ class RelationshipModelFormMixin(forms.ModelForm):
                 cr_field_name = f"cr_{relation.slug}__{relation.required_side}"
 
                 if not self.cleaned_data[cr_field_name]:
-                    if relation.has_many():
+                    if relation.has_many(side):
                         num_required_verbose = "at least one"
                     else:
                         num_required_verbose = "a"

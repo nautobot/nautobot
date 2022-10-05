@@ -791,7 +791,7 @@ def get_relationships_errors(request, obj, output_for="ui"):
                 model_meta = required_model_class._meta
                 required = model_meta.verbose_name
 
-                if relation.has_many():
+                if relation.has_many(side):
                     num_required_verbose = "at least one"
                 else:
                     num_required_verbose = "a"

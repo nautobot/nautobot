@@ -274,7 +274,7 @@ def validate_relationships(request, instance, submitted_relationships_data):
             submitted_data = submitted_relationships_data.get(relation, {}).get(side, "")
 
             if len(submitted_data) == 0:
-                if relation.has_many():
+                if relation.has_many(side):
                     num_required_verbose = "at least one"
                 else:
                     num_required_verbose = "a"
