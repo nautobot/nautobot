@@ -82,21 +82,28 @@ class AggregateFactory(PrimaryModelFactory):
         if not faker.Faker().pybool():
             return
 
-        # Generate 0-4 contained prefixes
         action = "create" if create else "build"
         method = getattr(PrefixFactory, action)
+        is_ipv6 = self.family == 6
+
+        # Default to maximum of 4 children unless overridden in kwargs
         max_count = int(kwargs.pop("max_count", 4))
         prefix_count = faker.Faker().pyint(min_value=0, max_value=min(max_count, self.prefix.size))
         if prefix_count == 0:
             return
-        # calculate optimal prefix size for this aggregate
+
+        # Calculate prefix length for child prefixes to allow them to fit in the aggregate
         prefix_cidr = self.prefix_length + math.ceil(math.log(prefix_count, 2))
+
+        # Raise exception for invalid cidr length (>128 for ipv6, >32 for ipv4)
         if prefix_cidr > 128 or self.family == 4 and prefix_cidr > 32:
             raise ValueError(f"Unable to create {prefix_count} prefixes in aggregate {self.cidr_str}")
-        subnets = list(self.prefix.subnet(prefix_cidr))
-        is_ipv6 = self.family == 6
-        for n in range(prefix_count):
-            method(prefix=str(subnets[n].cidr), tenant=self.tenant, is_ipv6=is_ipv6, **kwargs)
+
+        # Create child prefixes, preserving tenant and is_ipv6 from aggregate
+        for count, subnet in enumerate(self.prefix.subnet(prefix_cidr)):
+            if count == max_count:
+                break
+            method(prefix=str(subnet.cidr), tenant=self.tenant, is_ipv6=is_ipv6, **kwargs)
 
     @factory.lazy_attribute_sequence
     def prefix(self, n):
@@ -438,30 +445,39 @@ class PrefixFactory(PrimaryModelFactory):
         if not faker.Faker().pybool():
             return
 
-        # Generate 0-4 child prefixes or ip addresses
         action = "create" if create else "build"
+        is_ipv6 = self.family == 6
+
+        # Create child prefixes for containers, otherwise create child ip addresses
         factory = PrefixFactory if self.status == Prefix.STATUS_CONTAINER else IPAddressFactory
         method = getattr(factory, action)
+
+        # Default to maximum of 4 children unless overridden in kwargs
         max_count = int(kwargs.pop("max_count", 4))
         child_count = faker.Faker().pyint(min_value=0, max_value=min(max_count, self.prefix.size))
         if child_count == 0:
             return
-        is_ipv6 = self.family == 6
 
         if factory == IPAddressFactory:
+            # Create child ip addresses, preserving vrf, tenant and is_ipv6 from parent
             for count, address in enumerate(self.prefix.iter_hosts()):
                 if count == child_count:
                     break
                 method(address=str(address), vrf=self.vrf, tenant=self.tenant, is_ipv6=is_ipv6, **kwargs)
         else:
-            # calculate optimal prefix size for child prefixes
+            # Calculate prefix length for child prefixes to allow them to fit in the parent prefix without creating duplicate prefix
             child_cidr = self.prefix_length + max(1, math.ceil(math.log(child_count, 2)))
+
+            # Raise exception for invalid cidr length (>128 for ipv6, >32 for ipv4)
             if child_cidr > 128 or self.family == 4 and child_cidr > 32:
                 raise ValueError(f"Unable to create {child_count} child prefixes in container prefix {self.cidr_str}.")
-            subnets = list(self.prefix.subnet(child_cidr))
-            for n in range(child_count):
+
+            # Create child prefixes, preserving tenant, site, location, vrf and is_ipv6 from parent
+            for count, address in enumerate(self.prefix.subnet(child_cidr)):
+                if count == child_count:
+                    break
                 method(
-                    prefix=str(subnets[n].cidr),
+                    prefix=str(address.cidr),
                     tenant=self.tenant,
                     site=self.site,
                     location=self.location,
