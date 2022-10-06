@@ -966,6 +966,8 @@ If set to `False`, unknown/unrecognized filter parameters will be discarded and 
 
 Default: `None`
 
+Environment Variable: `NAUTOBOT_TEST_FACTORY_SEED`
+
 When [`TEST_USE_FACTORIES`](#test_use_factories) is set to `True`, this configuration provides a fixed seed string for the pseudo-random generator used to populate test data into the database, providing for reproducible randomness across consecutive test runs. If unset, a random seed will be used each time.
 
 ---
@@ -976,10 +978,12 @@ When [`TEST_USE_FACTORIES`](#test_use_factories) is set to `True`, this configur
 
 Default: `False`
 
-If set to `True`, the Nautobot test runner will call `nautobot-server populate_database --flush --seed ...` before executing any test cases, pre-populating the test database with various pseudo-random instances of many models.
+Environment Variable: `NAUTOBOT_TEST_USE_FACTORIES`
+
+If set to `True`, the Nautobot test runner will call `nautobot-server populate_database ...` before executing any test cases, pre-populating the test database with various pseudo-random instances of many of Nautobot's data models.
 
 !!! warning
-    This functionality requires the installation of the [`factory-boy`](https://pypi.org/project/factory-boy/) Python package, which is present in any Nautobot development environment, but is _not_ an inherent dependency of the Nautobot package when installed otherwise.
+    This functionality requires the installation of the [`factory-boy`](https://pypi.org/project/factory-boy/) Python package, which is present in Nautobot's own development environment, but is _not_ an inherent dependency of the Nautobot package when installed otherwise, such as into a plugin's development environment.
 
 !!! info
     Setting this to `True` is a requirement for all Nautobot core tests as of 1.5.0, and it is set accordingly in `nautobot/core/tests/nautobot_config.py`, but defaults to `False` otherwise so as to remain backwards-compatible with plugins that also may use the Nautobot test runner in their own test environments, but have not yet updated their tests to account for the presence of this test data.

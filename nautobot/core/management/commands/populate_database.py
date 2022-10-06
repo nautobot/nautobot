@@ -1,5 +1,6 @@
 from django.core.management import call_command
 from django.core.management.base import BaseCommand, CommandError
+from django.db import DEFAULT_DB_ALIAS, connections
 from django.utils.crypto import get_random_string
 
 
@@ -15,6 +16,12 @@ class Command(BaseCommand):
             "--flush",
             action="store_true",
             help="Flush any existing data from the database before generating new data.",
+        )
+        parser.add_argument(
+            "--no-input",
+            action="store_false",
+            dest="interactive",
+            help="Do NOT prompt the user for input or confirmation of any kind.",
         )
 
     def handle(self, *args, **options):
@@ -36,6 +43,20 @@ class Command(BaseCommand):
             raise CommandError('Unable to load data factories. Is the "factory-boy" package installed?') from err
 
         if options["flush"]:
+            if options["interactive"]:
+                confirm = input(
+                    f"""\
+You have requested a flush of the database before generating new data.
+This will IRREVERSIBLY DESTROY all data in the "{connections[DEFAULT_DB_ALIAS].settings_dict['NAME']}" database,
+including all user accounts, and return each table to an empty state.
+Are you SURE you want to do this?
+
+Type 'yes' to continue, or 'no' to cancel:"""
+                )
+                if confirm != "yes":
+                    self.stdout.write("Cancelled.")
+                    return
+
             self.stdout.write(self.style.WARNING("Flushing all existing data from the database..."))
             call_command("flush", "--no-input")
 

@@ -38,7 +38,7 @@ class NautobotTestRunner(DiscoverRunner):
 
         if settings.TEST_USE_FACTORIES:
             print("Pre-populating test database with factory data...")
-            command = ["populate_database", "--flush"]
+            command = ["populate_database", "--flush", "--no-input"]
             if settings.TEST_FACTORY_SEED is not None:
                 command += ["--seed", settings.TEST_FACTORY_SEED]
             call_command(*command)
