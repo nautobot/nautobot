@@ -912,7 +912,7 @@ def get_filterable_params_from_filter_params(filter_params, non_filter_params, f
                 _is_single_choice_field = False
 
             final_filter_params[field] = (
-                filter_params.get(field) if is_single_choice_field else filter_params.getlist(field)
+                filter_params.get(field) if _is_single_choice_field else filter_params.getlist(field)
             )
 
     return final_filter_params
