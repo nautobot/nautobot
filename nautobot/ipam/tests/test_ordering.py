@@ -14,13 +14,6 @@ class OrderingTestBase(TestCase):
         for i, obj in enumerate(queryset):
             self.assertEqual(obj, objectset[i])
 
-    def _compare_ne(self, queryset, objectset):
-        """
-        Perform the comparison of the queryset object and the object used to instantiate the queryset.
-        """
-        for i, obj in enumerate(queryset):
-            self.assertNotEqual(obj, objectset[i])
-
 
 class PrefixOrderingTestCase(OrderingTestBase):
     fixtures = ("status",)
