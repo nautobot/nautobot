@@ -251,10 +251,6 @@ class IPAddressTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         statuses = Status.objects.get_for_model(IPAddress)
         status_reserved = statuses.get(slug="reserved")
 
-        IPAddress.objects.create(address=IPNetwork("192.0.2.1/24"), vrf=vrfs[0], status=statuses[0])
-        IPAddress.objects.create(address=IPNetwork("192.0.2.2/24"), vrf=vrfs[0], status=statuses[0])
-        IPAddress.objects.create(address=IPNetwork("192.0.2.3/24"), vrf=vrfs[0], status=statuses[0])
-
         cls.form_data = {
             "vrf": vrfs[1].pk,
             "address": IPNetwork("192.0.2.99/24"),
