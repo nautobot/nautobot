@@ -1,8 +1,8 @@
-from django.test import TestCase
 import netaddr
 
 from nautobot.extras.models import Status
 from nautobot.ipam.models import IPAddress, Prefix, VRF
+from nautobot.utilities.testing import TestCase
 
 
 class OrderingTestBase(TestCase):
@@ -43,6 +43,7 @@ class PrefixOrderingTestCase(OrderingTestBase):
         vrfa, vrfb = self.vrfs[:2]
 
         # Setup Prefixes
+        Prefix.objects.all().delete()
         prefixes = (
             Prefix.objects.create(
                 status=Prefix.STATUS_CONTAINER,
@@ -254,6 +255,7 @@ class PrefixOrderingTestCase(OrderingTestBase):
         vrfa = self.vrfs[0]
 
         # Setup Prefixes
+        Prefix.objects.all().delete()
         prefixes = [
             Prefix.objects.create(
                 status=Prefix.STATUS_CONTAINER,
@@ -319,6 +321,7 @@ class IPAddressOrderingTestCase(OrderingTestBase):
         status_active = Status.objects.get_for_model(IPAddress).get(slug="active")
 
         # Setup Addresses
+        IPAddress.objects.all().delete()
         addresses = (
             IPAddress.objects.create(status=status_active, vrf=vrfa, address=netaddr.IPNetwork("10.0.0.1/24")),
             IPAddress.objects.create(status=status_active, vrf=vrfa, address=netaddr.IPNetwork("10.0.1.1/24")),
