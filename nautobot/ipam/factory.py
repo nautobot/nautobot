@@ -383,7 +383,7 @@ class PrefixFactory(PrimaryModelFactory):
 
     Examples:
     PrefixFactory.create_batch(20) # create 20 prefixes, approximately half will generate 0-4 children
-    AggregateFactory.create_batch(children__max_count=0) # create 20 prefixes with no children
+    PrefixFactory.create_batch(children__max_count=0) # create 20 prefixes with no children
     """
 
     class Meta:
