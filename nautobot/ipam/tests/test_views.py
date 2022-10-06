@@ -391,11 +391,11 @@ class VLANTestCase(ViewTestCases.PrimaryObjectViewTestCase):
     @classmethod
     def setUpTestData(cls):
 
-        sites = Site.objects.all()[:2]
+        cls.sites = Site.objects.all()[:2]
 
         vlangroups = (
-            VLANGroup.objects.create(name="VLAN Group 1", slug="vlan-group-1", site=sites[0]),
-            VLANGroup.objects.create(name="VLAN Group 2", slug="vlan-group-2", site=sites[1]),
+            VLANGroup.objects.create(name="VLAN Group 1", slug="vlan-group-1", site=cls.sites[0]),
+            VLANGroup.objects.create(name="VLAN Group 2", slug="vlan-group-2", site=cls.sites[1]),
         )
 
         roles = (
@@ -411,7 +411,7 @@ class VLANTestCase(ViewTestCases.PrimaryObjectViewTestCase):
             group=vlangroups[0],
             vid=101,
             name="VLAN101",
-            site=sites[0],
+            site=cls.sites[0],
             role=roles[0],
             status=status_active,
             _custom_field_data={"field": "Value"},
@@ -420,7 +420,7 @@ class VLANTestCase(ViewTestCases.PrimaryObjectViewTestCase):
             group=vlangroups[0],
             vid=102,
             name="VLAN102",
-            site=sites[0],
+            site=cls.sites[0],
             role=roles[0],
             status=status_active,
             _custom_field_data={"field": "Value"},
@@ -429,7 +429,7 @@ class VLANTestCase(ViewTestCases.PrimaryObjectViewTestCase):
             group=vlangroups[0],
             vid=103,
             name="VLAN103",
-            site=sites[0],
+            site=cls.sites[0],
             role=roles[0],
             status=status_active,
             _custom_field_data={"field": "Value"},
@@ -439,7 +439,7 @@ class VLANTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         custom_field.content_types.set([ContentType.objects.get_for_model(VLAN)])
 
         cls.form_data = {
-            "site": sites[1].pk,
+            "site": cls.sites[1].pk,
             "group": vlangroups[1].pk,
             "vid": 999,
             "name": "VLAN999",
@@ -458,7 +458,7 @@ class VLANTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         )
 
         cls.bulk_edit_data = {
-            "site": sites[1].pk,
+            "site": cls.sites[1].pk,
             "group": vlangroups[1].pk,
             "tenant": None,
             "status": status_reserved.pk,
@@ -473,11 +473,11 @@ class VLANTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         self.assertHttpStatus(response, 200)
         self.assertEqual(response.get("Content-Type"), "text/csv")
         self.assertEqual(
-            """\
+            f"""\
 site,location,group,vid,name,tenant,status,role,description,cf_field
-Site 1,,VLAN Group 1,101,VLAN101,,Active,Role 1,,Value
-Site 1,,VLAN Group 1,102,VLAN102,,Active,Role 1,,Value
-Site 1,,VLAN Group 1,103,VLAN103,,Active,Role 1,,Value""",
+{self.sites[0].name},,VLAN Group 1,101,VLAN101,,Active,Role 1,,Value
+{self.sites[0].name},,VLAN Group 1,102,VLAN102,,Active,Role 1,,Value
+{self.sites[0].name},,VLAN Group 1,103,VLAN103,,Active,Role 1,,Value""",
             response.content.decode(response.charset),
         )
 
