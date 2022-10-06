@@ -2,6 +2,8 @@ from typing import Optional, Sequence, Union
 
 from django.conf import settings
 from django.contrib.contenttypes.models import ContentType
+from django.db.models import Q
+from django.db.models.deletion import PROTECT
 from django.urls import reverse
 from django.test import override_settings, tag
 from django.utils.text import slugify
@@ -621,7 +623,11 @@ class APIViewTestCases:
             For some models this may just be any random objects, but when we have FKs with `on_delete=models.PROTECT`
             (as is often the case) we need to find or create an instance that doesn't have such entanglements.
             """
-            return list(self._get_queryset().values_list("pk", flat=True)[:3])
+            q = Q()
+            for field in self.model._meta.get_fields(include_parents=True):
+                if getattr(field, "on_delete", None) is PROTECT:
+                    q &= Q(**{f"{field.name}__isnull": True})
+            return self._get_queryset().filter(q).values_list("pk", flat=True)[:3]
 
         def test_delete_object_without_permission(self):
             """
