@@ -61,7 +61,7 @@ Please read through the [Nautobot Roadmap](https://www.networktocode.com/nautobo
 
 ### Versioning
 
-Nautobot adheres to the Semantic Versioning ("SemVer") strategy, which gives us versions of the format `x.y.z`.
+Nautobot adheres to the Semantic Versioning ("SemVer") strategy, which gives us versions of the format `X.Y.Z`.
 
 * `X` is the major release number. Contains breaking changes or switching default behavior and shadowing legacy/deprecated behavior. May contain new functionality and bug fixes as well.
 * `Y` is the minor release number. Contains new functionality and bug fixes. May introduce deprecation warnings but will not remove or change default behavior.
@@ -114,17 +114,19 @@ Should a patch release contain a fix for security vulnerability(s) (i.e. CVE(s))
 
 #### Overview
 
-For the abundance of clarity sake, we are officially naming what is sometimes called an "LTS" release of software a "Maintenance" or "Long Term Maintenance (LTM)" release of Nautobot. The mindset is we always aim to release stable software and new users choosing to install an LTS release because it appears to be more stable, will almost immediately be presented with breaking changes upon their next upgrade.
+For the sake of abundance in clarity, we are officially naming what is sometimes called an "LTS" release of software a "Maintenance" or "Long Term Maintenance" (LTM) release of Nautobot. The mindset is that we always aim to release stable software and in fact label the latest releases of the current major version of Nautobot as "stable" (as seen in our documentation and in our Docker container tags).
 
-Our LTM release will be the last minor of the previous major release. At the time of this writing `1.5.z` will be our maintenance release of Nautobot for the `1.y` release cycle. Version 1 of Nautobot had an extended release cycle as it was our first major release of the platform. Going forward it can be expected that the `x.3` version of the platform will be the maintenance train of any major version.
+New users who may choose to install an "LTS" release because it is assumed to be more stable, may almost immediately be presented with breaking changes upon their next upgrade to a "stable" Nautobot release. We want to avoid any confusion that may arise between the term "stable" representing our latest stable release compared to "long term support" which is commonly interpreted to represent a stable release.
+
+Our LTM release will be the last minor version of the previous major release train. At the time of this writing `1.5.z` will be our maintenance release of Nautobot for the `1.y` release cycle. Version 1 of Nautobot had an extended release cycle as it was our first major release of the platform. Going forward it can be expected that the `x.3` version of the platform will be the maintenance train of any major version.
 
 With this schedule you can expect a few things per major/minor release:
 
 * `x.0.0`
-    * Introduce breaking changes
-    * Changing default behavior for APIs, functions
+    * Introduce breaking changes.
+    * Changing default behavior for user interfaces, APIs, and functions.
 * `x.1.z`
-    * Typical minor release, adding features, bug fixes, potential deprecations
+    * Typical minor release, adding features, bug fixes, potential deprecations.
 * `x.2.z`
     * Removal of deprecated functions, classes introduced in the previous major release (ex: only if deprecated in `1.y`, removed in `2.2`).
 * `x.3.z`
@@ -133,30 +135,30 @@ With this schedule you can expect a few things per major/minor release:
 
 A release will only be marked as "In Maintenance" when the next major release is published. Active bug fixes will be applied to a `x.3` until that time. Once a new major release has been published, the following will apply to the `x.3` codebase:
 
-* Dependencies are frozen/pinned to a specific release. Will only be upgraded if addressing a vulnerability.
-* Data-loss and CVE related fixes will be back ported from the new active release cycle. All other fixes will be back ported on a case-by-case basis.
+* Dependencies are frozen/pinned to a specific release; will only be upgraded if addressing a security vulnerability.
+* Data loss and CVE-related fixes will be back ported from the new active release cycle. All other fixes will be back ported on a case-by-case basis.
 * Patch releases for this phase will be on an as-needed basis.
-* Features from newer releases will NOT be back ported.
+* Core features from newer releases will never be back ported. In some cases, developer-centric features that ease the transition to the next major release train may be back ported if it is determined that they will alleviate transitions related to backwards incompatible changes.
 
 A maintenance release will be actively maintained until the next maintenance release is available, roughly a year from the launch of the previous one.
 
 #### Launch of Maintenance Release Schedule (as an Example)
 
-At the time of this writing we are in the active development of Nautobot 1.5. This will be our last minor release of the v1 series of release and therefor become our first "Maintenance Release" of Nautobot. We will be actively apply the normal category of bug fixes (including UI tweaks, display bugs, etc.) until the release of Nautobot 2.0.
+At the time of this writing we are in the active development of Nautobot 1.5. This will be our last minor release of the v1 series of releases and therefore become our first "Long Term Maintenance" (LTM) release of Nautobot. We will be actively apply the normal category of bug fixes (including UI tweaks, display bugs, etc.) until the release of Nautobot 2.0.
 
-Once we launch Nautobot 2.0, 1.5 will go into maintenance mode, continuing to receive data-loss and CVE related fixes. At that time we will encourage users to migrate to v2 as they are ready. Nautobot 1.5 will continue to receive these fixes until the release of Nautobot 2.3, where we will end the maintenance of Nautobot 1.5. Nautobot 2.3 will then become the maintenance release until Nautobot 3.3 is published the following year.
+Once we launch Nautobot 2.0, 1.5 will go into maintenance mode and be considered LTM, continuing to receive data loss and CVE-related fixes. At that time we will encourage users to migrate to v2 as they are ready. Nautobot 1.5 will continue to receive such fixes until the release of Nautobot 2.3, where we will end the maintenance of Nautobot 1.5 and it will formally become "End of Life" (EOL). Nautobot 2.3 will then become the LTM release until Nautobot 3.3 is published the following year.
 
 If for any reason the next maintenance release is delayed, we will continue to support the current maintenance release. There is no time limitation for this. We want to ensure our users always have a maintenance release available.
 
 ### Deprecation Policy
 
-Functionality, features, or Python classes that have been deprecated will be removed in the following major train's `x.2` release (ex: if deprecated in `1.y`, removed in `2.2`).
+Functionality, features, or Python primitives that have been deprecated will be removed in the following major train's `x.2` release (ex: if deprecated in `1.y`, removed in `2.2`).
 
 To provide assistance for knowing what features and functionality have been deprecated, additional transition features are as follows:
 
-* Classes that have been deprecated will emit a `DeprecationWarning`, along with a message to which classes will be replacing them. The new classes may not be a direct replacement so please check the release notes and documentation for more migration information.
-* APIs now support versioning. Newer versions of the API become the default behavior on a major release (`x.0.0`) and older versions become deprecated. Along with classes and other functionality the deprecated versions will be removed in the `x.2` release. For more information, see the [Versioning section of our REST API documentation](../rest-api/overview.md#versioning).
-* We will drop support for Python versions on a case-by-case basis: A patch release my drop support for a Python version if a dependency security update would require split or conditional support, for example if the dependency has not published a vulnerability fix for an older Python version, we will drop support at that time. All other cases will be documented and tend to occur on minor release boundaries.
+* Python primitives that have been deprecated will emit a `DeprecationWarning`, along with a message to which objects will be replacing them. The new objects may not be a direct replacement so please check the release notes and documentation for more migration information.
+* Nautobot 1.2 introduced REST APIs versioning. Newer versions of the API become the default behavior on a major release (`x.0.0`) and older versions become deprecated. Along with classes and other functionality the deprecated versions will be removed in the `x.2` release. For more information, see the [Versioning section of our REST API documentation](../rest-api/overview.md#versioning).
+* We will drop support for Python versions on a case-by-case basis: A patch release may drop support for a Python version if a security update of a critical dependency would require split or conditional support. For example, if the dependency has not published a vulnerability fix for an older Python version, we will drop support at that time. All other cases will be documented and will tend to occur on minor release boundaries.
 * Any deprecation notice (announcement or removal) will be available in our release notes.
 
 ## Communication
