@@ -8,7 +8,7 @@ authors = ["Network to Code <opensource@networktocode.com>"]
 license = "Apache-2.0"
 homepage = "https://nautobot.com"
 repository = "https://github.com/nautobot/nautobot"
-documentation = "https://nautobot.readthedocs.io"
+documentation = "https://docs.nautobot.com"
 readme = "README.md"
 keywords = ["Nautobot"]
 classifiers = [
@@ -154,11 +154,13 @@ black = "~22.8.0"
 # Test code coverage measurement
 coverage = "~6.4.1"
 # Tool for debugging Django
-django-debug-toolbar = "~3.5.0"
+django-debug-toolbar = "~3.7.0"
 # Nautobot example plugin used for testing
 example-plugin = {path = "examples/example_plugin", develop = true}
 # Nautobot test plugin used for testing core view overrides
 example-plugin-with-view-override = { path = "examples/example_plugin_with_view_override", develop = true }
+# Random data generation
+factory-boy = "~3.2.1"
 # Code style checking and limited static analysis
 # NOTE: flake8 4.x pins importlib-metadata<4.3; see https://github.com/PyCQA/flake8/pull/1438
 flake8 = "~3.9.1"
@@ -313,7 +315,7 @@ signature-mutators=["unittest.mock.patch"]
 package = "nautobot"
 directory = "changes"
 filename = "nautobot/docs/release-notes/version-1.5.md"
-template = "towncrier_template.j2"
+template = "development/towncrier_template.j2"
 start_string = "<!-- towncrier release notes start -->"
 issue_format = "[#{issue}](https://github.com/nautobot/nautobot/issues/{issue})"
 

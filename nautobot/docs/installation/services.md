@@ -114,7 +114,7 @@ First, we'll establish the `systemd` unit file for the Nautobot web service. Cop
 ```ini
 [Unit]
 Description=Nautobot WSGI Service
-Documentation=https://nautobot.readthedocs.io/en/stable/
+Documentation=https://docs.nautobot.com/en/stable/
 After=network-online.target
 Wants=network-online.target
 
@@ -159,7 +159,7 @@ To establish the `systemd` unit file for the Celery worker, copy and paste the f
 ```ini
 [Unit]
 Description=Nautobot Celery Worker
-Documentation=https://nautobot.readthedocs.io/en/stable/
+Documentation=https://docs.nautobot.com/en/stable/
 After=network-online.target
 Wants=network-online.target
 
@@ -194,7 +194,7 @@ To establish the `systemd` unit file for the Celery Beat scheduler, copy and pas
 ```ini
 [Unit]
 Description=Nautobot Celery Beat Scheduler
-Documentation=https://nautobot.readthedocs.io/en/stable/
+Documentation=https://docs.nautobot.com/en/stable/
 After=network-online.target
 Wants=network-online.target
 
@@ -268,7 +268,7 @@ Copy and paste the following into `/etc/systemd/system/nautobot-rq-worker.servic
 ```ini
 [Unit]
 Description=Nautobot Request Queue Worker
-Documentation=https://nautobot.readthedocs.io/en/stable/
+Documentation=https://docs.nautobot.com/en/stable/
 After=network-online.target
 Wants=network-online.target
 
@@ -321,7 +321,7 @@ You can use the command `systemctl status nautobot.service` to verify that the W
 ● nautobot.service - Nautobot WSGI Service
      Loaded: loaded (/etc/systemd/system/nautobot.service; enabled; vendor preset: enabled)
      Active: active (running) since Fri 2021-03-05 22:23:33 UTC; 35min ago
-       Docs: https://nautobot.readthedocs.io/en/stable/
+       Docs: https://docs.nautobot.com/en/stable/
    Main PID: 6992 (nautobot-server)
       Tasks: 16 (limit: 9513)
      Memory: 221.1M
