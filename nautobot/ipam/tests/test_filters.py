@@ -59,8 +59,9 @@ class VRFTestCase(FilterTestCases.FilterTestCase, FilterTestCases.TenancyFilterT
     # so relative ordering of VRFs with identical name and null rd is not guaranteed.
 
     def test_name(self):
-        params = {"name": [self.queryset[0].name, self.queryset[1].name]}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+        names = list(self.queryset.values_list("name", flat=True))[:2]
+        params = {"name": names}
+        self.assertQuerysetEqual(self.filterset(params, self.queryset).qs, self.queryset.filter(name__in=names))
 
     def test_rd(self):
         vrfs = self.queryset.filter(rd__isnull=False)[:2]
