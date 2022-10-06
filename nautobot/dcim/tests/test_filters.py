@@ -1086,7 +1086,7 @@ class LocationFilterSetTestCase(FilterTestCases.NameSlugFilterTestCase):
         lt4.content_types.add(ContentType.objects.get_for_model(Device))
 
         status_active = Status.objects.get(slug="active")
-        site = Site.objects.create(name="Research Triangle Area", status=status_active)
+        site = Site.objects.last()
         tenant = Tenant.objects.first()
 
         loc1 = Location.objects.create(

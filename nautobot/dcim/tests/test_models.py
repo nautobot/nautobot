@@ -193,7 +193,7 @@ class RackGroupTestCase(TestCase):
     def test_rackgroup_location_validation(self):
         """Check that rack group locations are validated correctly."""
         # Child group cannot belong to a different site than its parent
-        site_b = Site.objects.create(name="new site")
+        site_b = Site.objects.last()
         child = RackGroup(site=site_b, parent=self.rackgroup_a1, name="Child Group")
         with self.assertRaises(ValidationError) as cm:
             child.validated_save()
@@ -230,7 +230,7 @@ class RackGroupTestCase(TestCase):
         """
         Check that all child RackGroups, Racks, and PowerPanels get updated when a RackGroup is moved to a new Site.
         """
-        site_b = Site.objects.create(name="new site")
+        site_b = Site.objects.last()
 
         # Move RackGroup A1 to Site B
         self.rackgroup_a1.site = site_b
@@ -1097,7 +1097,8 @@ class PowerPanelTestCase(TestCase):
 
     def test_power_panel_validation(self):
         active = Status.objects.get(name="Active")
-        site_1 = Site.objects.create(name="Site 1", status=active)
+        site_1 = Site.objects.first()
+        site_1.status = active
         location_type_1 = LocationType.objects.create(name="Location Type 1")
         location_1 = Location.objects.create(
             name="Location 1", location_type=location_type_1, site=site_1, status=active

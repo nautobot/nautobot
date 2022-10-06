@@ -83,7 +83,7 @@ class GraphQLTestCase(TestCase):
         GraphQLQuery.objects.create(
             name="GQL 2", slug="gql-2", query="query ($name: [String!]) { sites(name:$name) {name} }"
         )
-        self.region = Region.objects.create(name="Region")
+        self.region = Region.objects.first()
         self.sites = (
             Site.objects.create(name="Site-1", slug="site-1", region=self.region),
             Site.objects.create(name="Site-2", slug="site-2", region=self.region),
