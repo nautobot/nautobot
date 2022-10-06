@@ -147,7 +147,7 @@ class TestPrefix(TestCase):
         self.statuses = Status.objects.get_for_model(Prefix)
 
     def test_prefix_validation(self):
-        location_type = LocationType.objects.get(name="Building")
+        location_type = LocationType.objects.get(name="Root")
         location = Location.objects.filter(location_type=location_type).first()
         prefix = Prefix(prefix=netaddr.IPNetwork("192.0.2.0/24"), location=location)
         with self.assertRaises(ValidationError) as cm:
@@ -529,7 +529,7 @@ class TestIPAddress(TestCase):
 
 class TestVLANGroup(TestCase):
     def test_vlan_group_validation(self):
-        location_type = LocationType.objects.get(name="Building")
+        location_type = LocationType.objects.get(name="Root")
         location = Location.objects.filter(location_type=location_type).first()
         group = VLANGroup(name="Group 1", location=location)
         with self.assertRaises(ValidationError) as cm:

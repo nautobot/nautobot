@@ -1057,10 +1057,19 @@ class LocationTypeFilterSetTestCase(FilterTestCases.NameSlugFilterTestCase):
     def test_content_types(self):
         with self.subTest():
             params = {"content_types": ["dcim.rackgroup"]}
-            self.assertEqual(self.filterset(params, self.queryset).qs.count(), 3)
+            ct = [ContentType.objects.get_for_model(RackGroup)]
+            self.assertEqual(
+                self.filterset(params, self.queryset).qs.count(),
+                LocationType.objects.filter(content_types__in=ct).count(),
+            )
         with self.subTest():
             params = {"content_types": ["dcim.device", "dcim.rack"]}
-            self.assertEqual(self.filterset(params, self.queryset).qs.count(), 1)
+            ct_1 = [ContentType.objects.get_for_model(Device)]
+            ct_2 = [ContentType.objects.get_for_model(Rack)]
+            self.assertEqual(
+                self.filterset(params, self.queryset).qs.count(),
+                LocationType.objects.filter(content_types__in=ct_1).filter(content_types__in=ct_2).count(),
+            )
 
 
 class LocationFilterSetTestCase(FilterTestCases.NameSlugFilterTestCase):
@@ -1110,7 +1119,10 @@ class LocationFilterSetTestCase(FilterTestCases.NameSlugFilterTestCase):
 
     def test_content_type(self):
         params = {"content_type": ["dcim.device"]}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 1)
+        ct = [ContentType.objects.get_for_model(Device)]
+        self.assertEqual(
+            self.filterset(params, self.queryset).qs.count(), LocationType.objects.filter(content_types__in=ct).count()
+        )
 
     def test_description(self):
         params = {"description": ["Research Triangle Park", "Cube"]}
