@@ -73,3 +73,9 @@ STORAGE_CONFIG = {
     "AWS_STORAGE_BUCKET_NAME": "nautobot",
     "AWS_S3_REGION_NAME": "us-west-1",
 }
+
+
+# Enable test data factories, as they're a pre-requisite for Nautobot core tests.
+TEST_USE_FACTORIES = True
+# For now, use a constant PRNG seed for consistent results. In the future we can remove this for fuzzier testing.
+TEST_FACTORY_SEED = "Nautobot"

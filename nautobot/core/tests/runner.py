@@ -1,11 +1,6 @@
+from django.conf import settings
 from django.core.management import call_command
 from django.test.runner import DiscoverRunner
-
-import factory.random
-
-from nautobot.ipam.factory import AggregateFactory, RIRFactory
-from nautobot.tenancy.factory import TenantFactory, TenantGroupFactory
-from nautobot.dcim.factory import LocationTypeFactory, LocationFactory, RegionFactory, SiteFactory
 
 
 class NautobotTestRunner(DiscoverRunner):
@@ -40,42 +35,20 @@ class NautobotTestRunner(DiscoverRunner):
 
     def setup_databases(self, **kwargs):
         result = super().setup_databases(**kwargs)
-        print("Beginning database pre-population...")
 
-        print("Flushing any leftover test data from previous runs...")
-        call_command("flush", "--no-input")
+        if settings.TEST_USE_FACTORIES:
+            print("Pre-populating test database with factory data...")
+            command = ["generate_test_data", "--flush", "--no-input"]
+            if settings.TEST_FACTORY_SEED is not None:
+                command += ["--seed", settings.TEST_FACTORY_SEED]
+            call_command(*command)
 
-        # Set constant seed for reproducible "randomness"
-        # TODO: it would be nice to use a random seed each time (for test robustness)
-        #       but also provide an option to use a specified seed to reproduce problems.
-        factory.random.reseed_random("Nautobot")
-
-        print("Creating TenantGroups...")
-        TenantGroupFactory.create_batch(10, has_parent=False)
-        TenantGroupFactory.create_batch(10, has_parent=True)
-        print("Creating Tenants...")
-        TenantFactory.create_batch(10, has_group=False)
-        TenantFactory.create_batch(10, has_group=True)
-        print("Creating Regions...")
-        RegionFactory.create_batch(10, has_parent=False)
-        RegionFactory.create_batch(5, has_parent=True)
-        print("Creating Sites...")
-        SiteFactory.create_batch(10)
-        print("Creating LocationTypes...")
-        LocationTypeFactory.create_batch(6)
-        print("Creating Locations...")
-        LocationFactory.create_batch(10)
-        print("Creating RIRs...")
-        RIRFactory.create_batch(9)  # only 9 unique RIR names are hard-coded presently
-        print("Creating Aggregates...")
-        AggregateFactory.create_batch(20)
-
-        print("Database pre-population completed!")
         return result
 
     def teardown_databases(self, old_config, **kwargs):
-        print("Emptying test database...")
-        call_command("flush", "--no-input")
-        print("Database emptied!")
+        if settings.TEST_USE_FACTORIES:
+            print("Emptying test database...")
+            call_command("flush", "--no-input")
+            print("Database emptied!")
 
         super().teardown_databases(old_config, **kwargs)
