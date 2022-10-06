@@ -1,4 +1,5 @@
 from django.contrib.contenttypes.models import ContentType
+from django.urls import reverse
 
 from nautobot.dcim.models import Device
 from nautobot.extras.models import DynamicGroup
@@ -76,3 +77,9 @@ class DynamicGroupTestCase(SeleniumTestCase):
         group = DynamicGroup.objects.get(name=name)
         self.assertEqual(group.count, len(devices))
         self.assertEqual(group.filter, {"status": ["active"]})
+
+        # Verify dynamic group shows up on device detail tab
+        self.browser.visit(
+            f'{self.live_server_url}{reverse("dcim:device_dynamicgroups", kwargs={"pk": devices[0].pk})}'
+        )
+        self.assertTrue(self.browser.is_text_present(name))

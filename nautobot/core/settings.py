@@ -705,7 +705,7 @@ BRANDING_URLS = {
 }
 
 # Undocumented link in the bottom right of the footer which is meant to persist any custom branding changes.
-BRANDING_POWERED_BY_URL = "https://nautobot.readthedocs.io/"
+BRANDING_POWERED_BY_URL = "https://docs.nautobot.com/"
 
 #
 # Django extensions settings
