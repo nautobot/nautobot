@@ -4,6 +4,8 @@ from contextlib import contextmanager
 
 from django.contrib.auth import get_user_model
 from django.contrib.auth.models import Permission
+from django.db.models import Q
+from django.db.models.deletion import PROTECT
 
 
 # Use the proper swappable User model
@@ -89,3 +91,14 @@ def disable_warnings(logger_name):
     logger.setLevel(logging.ERROR)
     yield
     logger.setLevel(current_level)
+
+
+def get_deletable_objects(model, queryset):
+    """
+    Returns a queryset of objects in the supplied queryset that have no protected relationships that would prevent deletion.
+    """
+    q = Q()
+    for field in model._meta.get_fields(include_parents=True):
+        if getattr(field, "on_delete", None) is PROTECT:
+            q &= Q(**{f"{field.name}__isnull": True})
+    return queryset.filter(q)

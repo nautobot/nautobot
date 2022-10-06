@@ -2,8 +2,6 @@ from typing import Optional, Sequence, Union
 
 from django.conf import settings
 from django.contrib.contenttypes.models import ContentType
-from django.db.models import Q
-from django.db.models.deletion import PROTECT
 from django.urls import reverse
 from django.test import override_settings, tag
 from django.utils.text import slugify
@@ -16,7 +14,7 @@ from nautobot.extras.models import ChangeLoggedModel
 from nautobot.extras.registry import registry
 from nautobot.utilities.testing.mixins import NautobotTestCaseMixin
 from nautobot.utilities.utils import get_changes_for_model, get_filterset_for_model, get_route_for_model
-from .utils import disable_warnings
+from .utils import disable_warnings, get_deletable_objects
 from .views import ModelTestCase
 
 
@@ -614,7 +612,7 @@ class APIViewTestCases:
             For some models this may just be any random object, but when we have FKs with `on_delete=models.PROTECT`
             (as is often the case) we need to find or create an instance that doesn't have such entanglements.
             """
-            return self._get_queryset().first()
+            return get_deletable_objects(self.model, self._get_queryset()).first()
 
         def get_deletable_object_pks(self):
             """
@@ -623,11 +621,7 @@ class APIViewTestCases:
             For some models this may just be any random objects, but when we have FKs with `on_delete=models.PROTECT`
             (as is often the case) we need to find or create an instance that doesn't have such entanglements.
             """
-            q = Q()
-            for field in self.model._meta.get_fields(include_parents=True):
-                if getattr(field, "on_delete", None) is PROTECT:
-                    q &= Q(**{f"{field.name}__isnull": True})
-            return self._get_queryset().filter(q).values_list("pk", flat=True)[:3]
+            return get_deletable_objects(self.model, self._get_queryset()).values_list("pk", flat=True)[:3]
 
         def test_delete_object_without_permission(self):
             """
