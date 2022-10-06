@@ -8,17 +8,11 @@ from nautobot.ipam.models import IPAddress, Prefix, VRF
 class OrderingTestBase(TestCase):
     fixtures = ("status",)
 
-    vrfs = None
-
     def setUp(self):
         """
         Setup the VRFs for the class as a whole
         """
-        self.vrfs = (
-            VRF.objects.create(name="VRF A"),
-            VRF.objects.create(name="VRF B"),
-            VRF.objects.create(name="VRF C"),
-        )
+        self.vrfs = VRF.objects.all()[:3]
 
         self.statuses = Status.objects.get_for_model(Prefix)
         self.status_active = self.statuses.get(slug="active")

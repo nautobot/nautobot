@@ -1,12 +1,11 @@
 import factory
-from factory.django import DjangoModelFactory
 
-from nautobot.extras.factory import get_random_tags_for_model
+from nautobot.core.factory import OrganizationalModelFactory, PrimaryModelFactory
 from nautobot.tenancy.models import TenantGroup, Tenant
 from nautobot.utilities.factory import random_instance, UniqueFaker
 
 
-class TenantGroupFactory(DjangoModelFactory):
+class TenantGroupFactory(OrganizationalModelFactory):
     class Meta:
         model = TenantGroup
         exclude = (
@@ -17,15 +16,13 @@ class TenantGroupFactory(DjangoModelFactory):
     name = UniqueFaker("company")
 
     has_description = factory.Faker("pybool")
-    description = factory.Maybe("has_description", factory.Faker("sentence"), "")
+    description = factory.Maybe("has_description", factory.Faker("text", max_nb_chars=200), "")
 
     has_parent = factory.Faker("pybool")
     parent = factory.Maybe("has_parent", random_instance(TenantGroup), None)
 
-    # TODO custom field data?
 
-
-class TenantFactory(DjangoModelFactory):
+class TenantFactory(PrimaryModelFactory):
     class Meta:
         model = Tenant
         exclude = (
@@ -40,17 +37,7 @@ class TenantFactory(DjangoModelFactory):
     comments = factory.Maybe("has_comments", factory.Faker("paragraph"), "")
 
     has_description = factory.Faker("pybool")
-    description = factory.Maybe("has_description", factory.Faker("sentence"), "")
+    description = factory.Maybe("has_description", factory.Faker("text", max_nb_chars=200), "")
 
     has_group = factory.Faker("pybool")
     group = factory.Maybe("has_group", random_instance(TenantGroup), None)
-
-    # TODO custom field data?
-
-    @factory.post_generation
-    def tags(self, create, extracted, **kwargs):
-        if create:
-            if extracted:
-                self.tags.set(extracted)
-            else:
-                self.tags.set(get_random_tags_for_model(self._meta.model))

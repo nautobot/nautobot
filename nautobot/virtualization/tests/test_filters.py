@@ -3,7 +3,7 @@ from nautobot.dcim.models import Device, DeviceRole, DeviceType, Manufacturer, P
 from nautobot.extras.models import Status, Tag
 from nautobot.ipam.choices import ServiceProtocolChoices
 from nautobot.ipam.models import IPAddress, VLAN, Service
-from nautobot.tenancy.models import Tenant, TenantGroup
+from nautobot.tenancy.models import Tenant
 from nautobot.utilities.testing import FilterTestCases
 from nautobot.virtualization.filters import (
     ClusterTypeFilterSet,
@@ -96,10 +96,11 @@ class ClusterGroupTestCase(FilterTestCases.NameSlugFilterTestCase):
             self.assertEqual(self.filterset(params, self.queryset).qs.count(), 1)
 
 
-class ClusterTestCase(FilterTestCases.FilterTestCase):
+class ClusterTestCase(FilterTestCases.FilterTestCase, FilterTestCases.TenancyFilterTestCaseMixin):
     queryset = Cluster.objects.all()
     filterset = ClusterFilterSet
     fixtures = ("tag",)
+    tenancy_related_name = "clusters"
 
     @classmethod
     def setUpTestData(cls):
@@ -235,43 +236,20 @@ class ClusterTestCase(FilterTestCases.FilterTestCase):
         params = {"type": [types[0].slug, types[1].slug]}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
 
-    def test_tenant(self):
-        tenants = list(Tenant.objects.filter(clusters__isnull=False))[:2]
-        params = {"tenant_id": [tenants[0].pk, tenants[1].pk]}
-        self.assertEqual(
-            self.filterset(params, self.queryset).qs.count(), self.queryset.filter(tenant__in=tenants).count()
-        )
-        params = {"tenant": [tenants[0].slug, tenants[1].slug]}
-        self.assertEqual(
-            self.filterset(params, self.queryset).qs.count(), self.queryset.filter(tenant__in=tenants).count()
-        )
-
-    def test_tenant_group(self):
-        tenant_groups = list(TenantGroup.objects.filter(tenants__isnull=False, tenants__clusters__isnull=False))[:2]
-        params = {"tenant_group_id": [tenant_groups[0].pk, tenant_groups[1].pk]}
-        self.assertEqual(
-            self.filterset(params, self.queryset).qs.count(),
-            self.queryset.filter(tenant__group__in=tenant_groups).count(),
-        )
-        params = {"tenant_group": [tenant_groups[0].slug, tenant_groups[1].slug]}
-        self.assertEqual(
-            self.filterset(params, self.queryset).qs.count(),
-            self.queryset.filter(tenant__group__in=tenant_groups).count(),
-        )
-
     def test_search(self):
         value = self.queryset.values_list("pk", flat=True)[0]
         params = {"q": value}
         self.assertEqual(self.filterset(params, self.queryset).qs.values_list("pk", flat=True)[0], value)
 
 
-class VirtualMachineTestCase(FilterTestCases.FilterTestCase):
+class VirtualMachineTestCase(FilterTestCases.FilterTestCase, FilterTestCases.TenancyFilterTestCaseMixin):
     queryset = VirtualMachine.objects.all()
     filterset = VirtualMachineFilterSet
     fixtures = (
         "status",
         "tag",
     )
+    tenancy_related_name = "virtual_machines"
 
     @classmethod
     def setUpTestData(cls):
@@ -549,31 +527,6 @@ class VirtualMachineTestCase(FilterTestCases.FilterTestCase):
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 1)
         params = {"local_context_data": "false"}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
-
-    def test_tenant(self):
-        tenants = list(Tenant.objects.filter(virtual_machines__isnull=False))[:2]
-        params = {"tenant_id": [tenants[0].pk, tenants[1].pk]}
-        self.assertEqual(
-            self.filterset(params, self.queryset).qs.count(), self.queryset.filter(tenant__in=tenants).count()
-        )
-        params = {"tenant": [tenants[0].slug, tenants[1].slug]}
-        self.assertEqual(
-            self.filterset(params, self.queryset).qs.count(), self.queryset.filter(tenant__in=tenants).count()
-        )
-
-    def test_tenant_group(self):
-        tenant_groups = list(TenantGroup.objects.filter(tenants__isnull=False, tenants__virtual_machines__isnull=False))
-        tenant_groups = tenant_groups[:2]
-        params = {"tenant_group_id": [tenant_groups[0].pk, tenant_groups[1].pk]}
-        self.assertEqual(
-            self.filterset(params, self.queryset).qs.count(),
-            self.queryset.filter(tenant__group__in=tenant_groups).count(),
-        )
-        params = {"tenant_group": [tenant_groups[0].slug, tenant_groups[1].slug]}
-        self.assertEqual(
-            self.filterset(params, self.queryset).qs.count(),
-            self.queryset.filter(tenant__group__in=tenant_groups).count(),
-        )
 
     def test_search(self):
         value = self.queryset.values_list("pk", flat=True)[0]
