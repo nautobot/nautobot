@@ -621,7 +621,7 @@ class DynamicGroupModelTest(DynamicGroupTestBase):
         self.assertQuerySetEqual(group_qs, device_qs)
 
         # Now do a non-multi-value filter.
-        # TODO(jathan): If we ever make "serial" a multi-value filter, this will need to be revised.
+        # 2.0 TODO(jathan): When "serial" becomes a multi-value filter, this will need to be revised or removed.
         solo_field = fs.filters["serial"]
         solo_value = "abc123"
         solo_query = group.generate_query_for_filter(filter_field=solo_field, value=solo_value)

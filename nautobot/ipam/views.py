@@ -427,7 +427,7 @@ class PrefixListView(generic.ObjectListView):
         When `settings.DISABLE_PREFIX_LIST_HIERARCHY` is True, we do not annotate the queryset, and the
         table is rendered as a flat list.
 
-        TODO(john): When the base views support a formal `get_queryset()` method, this approach is not needed
+        2.0 TODO(john): When the data model changes to 1.) be tree-based, 2.) use NautobotViewSet this can be removed
         """
         if self._queryset is not None:
             return self._queryset
@@ -711,7 +711,7 @@ class IPAddressEditView(generic.ObjectEditView):
         return obj
 
 
-# TODO: Standardize or remove this view
+# 2.0 TODO: Standardize or remove this view in exchange for a `NautobotViewSet` method
 class IPAddressAssignView(generic.ObjectView):
     """
     Search for IPAddresses to be assigned to an Interface.

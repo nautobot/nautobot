@@ -88,7 +88,7 @@ class CustomFieldsDataField(Field):
         return data
 
 
-# TODO: should be CustomFieldModelSerializerMixin
+# 2.0 TODO: should be CustomFieldModelSerializerMixin
 class CustomFieldModelSerializer(ValidatedModelSerializer):
     """
     Extends ModelSerializer to render any CustomFields and their values associated with an object.

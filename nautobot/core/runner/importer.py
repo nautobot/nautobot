@@ -31,7 +31,6 @@ def install(name, config_path, default_settings, **kwargs):
     global installed
 
     if installed:
-        # TODO: reinstall
         return
 
     # Ensure that our custom importer for the config module takes precedence over standard Python import machinery
@@ -67,7 +66,6 @@ class LoganImporter:
         return f"<{type(self)} for '{self.name}' ({self.config_path})>"
 
     def validate(self):
-        # TODO(dcramer): is there a better way to handle validation so it
         # is lazy and actually happens in LoganLoader?
         try:
             execfile(self.config_path, {"__file__": self.config_path})
@@ -80,7 +78,7 @@ class LoganImporter:
 
         Ref: https://docs.python.org/3/library/importlib.html#importlib.abc.MetaPathFinder.find_module
 
-        TODO: find_module() API is deprecated, convert this to find_spec() instead.
+        FIXME(jathan): find_module() API is deprecated, convert this to find_spec() instead.
         """
         # Only find/load the module matching self.name - otherwise let the standard Python import machinery handle it
         if fullname != self.name:
@@ -108,7 +106,7 @@ class LoganLoader:
     def load_module(self, fullname):
         """Loader API function implementation.
 
-        TODO: load_module() API is deprecated, convert this to create_module()/exec_module() instead.
+        FIXME(jathan): load_module() API is deprecated, convert this to create_module()/exec_module() instead.
         """
         try:
             return self._load_module(fullname)
@@ -117,7 +115,7 @@ class LoganLoader:
             raise ConfigurationError(str(e), exc_info[2])
 
     def _load_module(self, fullname):
-        # TODO: is this needed?
+        # FIXME(jathan): is this needed?
         if fullname in sys.modules:
             return sys.modules[fullname]  # pragma: no cover
 

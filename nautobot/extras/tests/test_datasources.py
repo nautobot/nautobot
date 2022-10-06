@@ -114,7 +114,7 @@ class GitTest(TransactionTestCase):
 
     def populate_repo(self, path, url, *args, **kwargs):
         os.makedirs(path)
-        # TODO: populate Jobs as well?
+        # TODO(Glenn): populate Jobs as well?
         os.makedirs(os.path.join(path, "config_contexts"))
         os.makedirs(os.path.join(path, "config_contexts", "devices"))
         os.makedirs(os.path.join(path, "config_context_schemas"))

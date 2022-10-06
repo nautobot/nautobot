@@ -466,7 +466,7 @@ class DynamicModelChoiceMixin:
     :param brief_mode: Use the "brief" format (?brief=true) when making API requests (default)
     """
 
-    filter = django_filters.ModelChoiceFilter  # TODO can we change this? pylint: disable=redefined-builtin
+    filter = django_filters.ModelChoiceFilter  # TODO(Glenn): can we change this? pylint: disable=redefined-builtin
     widget = widgets.APISelect
 
     def __init__(
