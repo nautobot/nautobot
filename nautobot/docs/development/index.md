@@ -164,7 +164,7 @@ To provide assistance for knowing what features and functionality have been depr
 !!! warning "Backwards-Incompatible Changes and Deprecations"
     Breaking changes in a `x.0.0` release may have an effect on deprecated APIs. While we do our best to keep the deprecated APIs intact to simplify migrations to newer releases, breaking changes are inherently breaking and will cause some changes to current and previous API versions. Types of breaking changes include, but are not limited to, removing or collapsing of objects and changing object relationships. This will also mean we will not publish deprecated APIs for models that no longer exist.
 
-    For example, in the upcoming `2.0.0` release we plan to collapse `Site` and `Region` to be `LocationType`s. This means there would no longer be a `site` property on objects such as `Device`.
+    For example, in the upcoming `2.0.0` release we plan to collapse `Site` and `Region` to be `LocationType`s. This means there would no longer be a `site` property on objects such as `Device` as well as no `/api/dcim/sites` or `/api/dcim/regions` API endpoints.
 
     We will document in major releases how breaking changes will affect existing APIs and Python primitives. Backwards-compatible changes would still be kept around following the normal deprecation policy.
 
