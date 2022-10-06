@@ -82,9 +82,11 @@ const injectAuthCredentials = (request) => {
     } else if (authDef.schema.type === "http" && authDef.schema.scheme === "basic") {
       request.headers["Authorization"] = "Basic " + btoa(authDef.value.username + ":" + authDef.value.password);
       return;
+    // This conditional resolves issue #2154 and is the only portion that is updated for this patch.
     } else if (authDef.schema.type === "apiKey" && authDef.schema.in === "header" && authDef.schema.description === 'Token-based authentication with required prefix "Token"') {
         request.headers["Authorization"] = "Token " + authDef.value;
         return;
+    // End of block for resolving issue #2154.
     } else if (authDef.schema.type === "apiKey" && authDef.schema.in === "header") {
       request.headers[authDef.schema.name] = authDef.value;
       return;
