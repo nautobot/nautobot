@@ -58,7 +58,7 @@ class TreeNodeMultipleChoiceFilterTest(TestCase):
         self.site2ab = Site.objects.create(region=self.region2ab, name="Test Site 2a-b", slug="test-site2a-b")
         self.site0 = Site.objects.create(region=None, name="Test Site 0", slug="test-site0")
 
-        self.queryset = Site.objects.all()
+        self.queryset = Site.objects.filter(name__icontains="Test Site")
 
     def test_filter_single_slug(self):
 
@@ -164,6 +164,7 @@ class NaturalKeyOrPKMultipleChoiceFilterTest(TestCase):
 
         super().setUp()
 
+        Site.objects.all().delete()
         self.site0 = Site.objects.create(name="Test Site 0", slug="test-site0")
         self.site1 = Site.objects.create(name="Test Site 1", slug="test-site1")
         self.site2 = Site.objects.create(name="Test Site 2", slug="test-site2")
@@ -738,25 +739,21 @@ class DynamicFilterLookupExpressionTest(TestCase):
         )
         Platform.objects.bulk_create(platforms)
 
-        regions = (
-            Region(name="Region 1", slug="region-1"),
-            Region(name="Region 2", slug="region-2"),
-            Region(name="Region 3", slug="region-3"),
-        )
-        for region in regions:
-            region.save()
+        cls.regions = Region.objects.filter(sites__isnull=False)[:3]
 
-        sites = (
-            Site(name="Site 1", slug="abc-site-1", region=regions[0], asn=65001),
-            Site(name="Site 2", slug="def-site-2", region=regions[1], asn=65101),
-            Site(name="Site 3", slug="ghi-site-3", region=regions[2], asn=65201),
+        cls.sites = (
+            Site.objects.filter(region=cls.regions[0]).first(),
+            Site.objects.filter(region=cls.regions[1]).first(),
+            Site.objects.filter(region=cls.regions[2]).first(),
         )
-        Site.objects.bulk_create(sites)
+        cls.sites[0].asn = 65001
+        cls.sites[1].asn = 65101
+        cls.sites[2].asn = 65201
 
         racks = (
-            Rack(name="Rack 1", site=sites[0]),
-            Rack(name="Rack 2", site=sites[1]),
-            Rack(name="Rack 3", site=sites[2]),
+            Rack(name="Rack 1", site=cls.sites[0]),
+            Rack(name="Rack 2", site=cls.sites[1]),
+            Rack(name="Rack 3", site=cls.sites[2]),
         )
         Rack.objects.bulk_create(racks)
 
@@ -768,7 +765,7 @@ class DynamicFilterLookupExpressionTest(TestCase):
                 platform=platforms[0],
                 serial="ABC",
                 asset_tag="1001",
-                site=sites[0],
+                site=cls.sites[0],
                 rack=racks[0],
                 position=1,
                 face=DeviceFaceChoices.FACE_FRONT,
@@ -783,7 +780,7 @@ class DynamicFilterLookupExpressionTest(TestCase):
                 platform=platforms[1],
                 serial="DEF",
                 asset_tag="1002",
-                site=sites[1],
+                site=cls.sites[1],
                 rack=racks[1],
                 position=2,
                 face=DeviceFaceChoices.FACE_FRONT,
@@ -797,7 +794,7 @@ class DynamicFilterLookupExpressionTest(TestCase):
                 platform=platforms[2],
                 serial="GHI",
                 asset_tag="1003",
-                site=sites[2],
+                site=cls.sites[2],
                 rack=racks[2],
                 position=3,
                 face=DeviceFaceChoices.FACE_REAR,
@@ -826,71 +823,106 @@ class DynamicFilterLookupExpressionTest(TestCase):
 
     def test_site_name_negation(self):
         params = {"name__n": ["Site 1"]}
-        self.assertEqual(SiteFilterSet(params, self.site_queryset).qs.count(), 2)
+        self.assertEqual(
+            SiteFilterSet(params, self.site_queryset).qs.count(), Site.objects.exclude(name="Site 1").count()
+        )
 
     def test_site_slug_icontains(self):
         params = {"slug__ic": ["-1"]}
-        self.assertEqual(SiteFilterSet(params, self.site_queryset).qs.count(), 1)
+        self.assertEqual(
+            SiteFilterSet(params, self.site_queryset).qs.count(), Site.objects.filter(slug__icontains="-1").count()
+        )
 
     def test_site_slug_icontains_negation(self):
         params = {"slug__nic": ["-1"]}
-        self.assertEqual(SiteFilterSet(params, self.site_queryset).qs.count(), 2)
+        self.assertEqual(
+            SiteFilterSet(params, self.site_queryset).qs.count(), Site.objects.exclude(slug__icontains="-1").count()
+        )
 
     def test_site_slug_startswith(self):
         params = {"slug__isw": ["abc"]}
-        self.assertEqual(SiteFilterSet(params, self.site_queryset).qs.count(), 1)
+        self.assertEqual(
+            SiteFilterSet(params, self.site_queryset).qs.count(), Site.objects.filter(slug__istartswith="abc").count()
+        )
 
     def test_site_slug_startswith_negation(self):
         params = {"slug__nisw": ["abc"]}
-        self.assertEqual(SiteFilterSet(params, self.site_queryset).qs.count(), 2)
+        self.assertEqual(
+            SiteFilterSet(params, self.site_queryset).qs.count(), Site.objects.exclude(slug__icontains="abc").count()
+        )
 
     def test_site_slug_endswith(self):
         params = {"slug__iew": ["-1"]}
-        self.assertEqual(SiteFilterSet(params, self.site_queryset).qs.count(), 1)
+        self.assertEqual(
+            SiteFilterSet(params, self.site_queryset).qs.count(), Site.objects.filter(slug__iendswith="-1").count()
+        )
 
     def test_site_slug_endswith_negation(self):
         params = {"slug__niew": ["-1"]}
-        self.assertEqual(SiteFilterSet(params, self.site_queryset).qs.count(), 2)
+        self.assertEqual(
+            SiteFilterSet(params, self.site_queryset).qs.count(), Site.objects.exclude(slug__iendswith="-1").count()
+        )
 
     def test_site_slug_regex(self):
         params = {"slug__re": ["-1$"]}
-        self.assertEqual(SiteFilterSet(params, self.site_queryset).qs.count(), 1)
+        self.assertEqual(
+            SiteFilterSet(params, self.site_queryset).qs.count(), Site.objects.filter(slug__regex="-1$").count()
+        )
 
     def test_site_slug_regex_negation(self):
         params = {"slug__nre": ["-1$"]}
-        self.assertEqual(SiteFilterSet(params, self.site_queryset).qs.count(), 2)
+        self.assertEqual(
+            SiteFilterSet(params, self.site_queryset).qs.count(), Site.objects.exclude(slug__regex="-1$").count()
+        )
 
     def test_site_slug_iregex(self):
         params = {"slug__ire": ["SITE"]}
-        self.assertEqual(SiteFilterSet(params, self.site_queryset).qs.count(), 3)
+        self.assertEqual(
+            SiteFilterSet(params, self.site_queryset).qs.count(), Site.objects.filter(slug__iregex="SITE").count()
+        )
 
     def test_site_slug_iregex_negation(self):
         params = {"slug__nire": ["SITE"]}
-        self.assertEqual(SiteFilterSet(params, self.site_queryset).qs.count(), 0)
+        self.assertEqual(
+            SiteFilterSet(params, self.site_queryset).qs.count(), Site.objects.exclude(slug__iregex="SITE").count()
+        )
 
     def test_site_asn_lt(self):
         params = {"asn__lt": [65101]}
-        self.assertEqual(SiteFilterSet(params, self.site_queryset).qs.count(), 1)
+        self.assertEqual(
+            SiteFilterSet(params, self.site_queryset).qs.count(), Site.objects.filter(asn__lt=65101).count()
+        )
 
     def test_site_asn_lte(self):
         params = {"asn__lte": [65101]}
-        self.assertEqual(SiteFilterSet(params, self.site_queryset).qs.count(), 2)
+        self.assertEqual(
+            SiteFilterSet(params, self.site_queryset).qs.count(), Site.objects.filter(asn__lte=65101).count()
+        )
 
     def test_site_asn_gt(self):
-        params = {"asn__lt": [65101]}
-        self.assertEqual(SiteFilterSet(params, self.site_queryset).qs.count(), 1)
+        params = {"asn__gt": [65101]}
+        self.assertEqual(
+            SiteFilterSet(params, self.site_queryset).qs.count(), Site.objects.filter(asn__gt=65101).count()
+        )
 
     def test_site_asn_gte(self):
         params = {"asn__gte": [65101]}
-        self.assertEqual(SiteFilterSet(params, self.site_queryset).qs.count(), 2)
+        self.assertEqual(
+            SiteFilterSet(params, self.site_queryset).qs.count(), Site.objects.filter(asn__gte=65101).count()
+        )
 
     def test_site_region_negation(self):
         params = {"region__n": ["region-1"]}
-        self.assertEqual(SiteFilterSet(params, self.site_queryset).qs.count(), 2)
+        self.assertEqual(
+            SiteFilterSet(params, self.site_queryset).qs.count(), Site.objects.exclude(region__slug="region-1").count()
+        )
 
     def test_site_region_id_negation(self):
-        params = {"region_id__n": [Region.objects.first().pk]}
-        self.assertEqual(SiteFilterSet(params, self.site_queryset).qs.count(), 2)
+        params = {"region_id__n": [self.regions[0].pk]}
+        self.assertEqual(
+            SiteFilterSet(params, self.site_queryset).qs.count(),
+            Site.objects.exclude(region__id=self.regions[0].pk).count(),
+        )
 
     def test_device_name_eq(self):
         params = {"name": ["Device 1"]}

@@ -14,6 +14,7 @@ class NaturalOrderByManagerTest(TestCase):
     def evaluate_ordering(self, names):
 
         # Create the Sites
+        Site.objects.all().delete()
         Site.objects.bulk_create(Site(name=name, slug=name.lower()) for name in names)
 
         # Validate forward ordering

@@ -1,3 +1,4 @@
+from django.contrib.contenttypes.models import ContentType
 from django.test import TestCase
 from django.templatetags.static import static
 from django.conf import settings
@@ -43,16 +44,18 @@ class NautobotTemplatetagsHelperTest(TestCase):
         # An object without get_absolute_url gives a string
         self.assertEqual(hyperlinked_object("hello"), "hello")
         # An object with get_absolute_url gives a hyperlink
-        status = Status.objects.get_for_model(Site).first()
         site = Site.objects.first()
+        status = Status.objects.create(name="Testing")
+        status.content_types.set([ContentType.objects.get_for_model(Site)])
+        status.validated_save()
         site.status = status
         site.validated_save()
-        self.assertEqual(hyperlinked_object(site), '<a href="/dcim/sites/test-site/">Test Site</a>')
+        self.assertEqual(hyperlinked_object(site), f'<a href="/dcim/sites/{site.slug}/">{site.name}</a>')
         # An object with get_absolute_url and a description gives a titled hyperlink
         site.description = "An important site"
         site.save()
         self.assertEqual(
-            hyperlinked_object(site), '<a href="/dcim/sites/test-site/" title="An important site">Test Site</a>'
+            hyperlinked_object(site), f'<a href="/dcim/sites/{site.slug}/" title="An important site">{site.name}</a>'
         )
 
     def test_placeholder(self):
@@ -84,7 +87,9 @@ class NautobotTemplatetagsHelperTest(TestCase):
         self.assertEqual("utf8:\n- 😀😀\n- 😀\n", render_yaml({"utf8": ["😀😀", "😀"]}))
 
     def test_meta(self):
-        status = Status.objects.get_for_model(Site).first()
+        status = Status.objects.create(name="Testing")
+        status.content_types.set([ContentType.objects.get_for_model(Site)])
+        status.validated_save()
         site = Site.objects.first()
         site.status = status
         site.validated_save()
@@ -96,7 +101,9 @@ class NautobotTemplatetagsHelperTest(TestCase):
         self.assertEqual(meta(ExampleModel, "app_label"), "example_plugin")
 
     def test_viewname(self):
-        status = Status.objects.get_for_model(Site).first()
+        status = Status.objects.create(name="Testing")
+        status.content_types.set([ContentType.objects.get_for_model(Site)])
+        status.validated_save()
         site = Site.objects.first()
         site.status = status
         site.validated_save()
@@ -107,7 +114,9 @@ class NautobotTemplatetagsHelperTest(TestCase):
         self.assertEqual(viewname(ExampleModel, "edit"), "plugins:example_plugin:examplemodel_edit")
 
     def test_validated_viewname(self):
-        status = Status.objects.get_for_model(Site).first()
+        status = Status.objects.create(name="Testing")
+        status.content_types.set([ContentType.objects.get_for_model(Site)])
+        status.validated_save()
         site = Site.objects.first()
         site.status = status
         site.validated_save()
@@ -149,7 +158,9 @@ class NautobotTemplatetagsHelperTest(TestCase):
 
     def test_get_docs_url(self):
         self.assertTrue(callable(get_docs_url))
-        status = Status.objects.get_for_model(Site).first()
+        status = Status.objects.create(name="Testing")
+        status.content_types.set([ContentType.objects.get_for_model(Site)])
+        status.validated_save()
         site = Site.objects.first()
         site.status = status
         site.validated_save()

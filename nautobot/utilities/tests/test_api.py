@@ -95,7 +95,7 @@ class WritableNestedSerializerTest(APITestCase):
             "status": "active",
             "site": {
                 "region": {
-                    "name": "Region A",
+                    "name": self.region_a.name,
                 },
             },
         }

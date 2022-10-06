@@ -245,9 +245,11 @@ class CustomFieldTest(TestCase):
 
         # Assign values to all sites
         sites = Site.objects.all()
+        statuses = Status.objects.get_for_model(Site)
         # 2.0 TODO: #824 cf.slug rather than cf.name
         for site in sites:
             site.cf[cf.name] = ["Option A", "Option B", "Option C"]
+            site.status = statuses.get(slug="active")
             site.validated_save()
 
             # Retrieve the stored value
