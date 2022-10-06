@@ -14,27 +14,43 @@
         margin-right: 5px;
         margin-bottom: 5px;
     }
-    .form-buttons{
-        display: flex;
-        justify-contents: center;
-        align-items: center;
-        gap: 5px;
-    }
 </style>
 {% endblock extra_styles %}
 
-{% block content %}
-<div class="pull-right noprint form-buttons">
-    <form action="#" method="get" id="search-form">
-        <div class="input-group">
-            <input type="text" name="q" class="form-control" required="" placeholder="Search {{ content_type.model_class|meta:'verbose_name_plural'|bettertitle }}" id="id_q">
-            <span class="input-group-btn">
-                <button type="submit" class="btn btn-primary">
-                    <i class="mdi mdi-magnify"></i>
-                </button>
-            </span>
+{% block header %}
+    <div class="row noprint">
+        {% with list_url=content_type.model_class|validated_viewname:"list" %}
+        <div class="col-sm-8 col-md-9">
+            <ol class="breadcrumb">
+            {% block breadcrumbs %}
+                {% if list_url %}
+                <li><a href="{% url list_url %}">
+                    {{ content_type.model_class|meta:'verbose_name_plural'|bettertitle }}
+                </a></li>
+                {% endif %}
+                {% block extra_breadcrumbs %}{% endblock extra_breadcrumbs %}
+            {% endblock breadcrumbs %}
+            </ol>
         </div>
-    </form>
+        <div class="col-sm-4 col-md-3">
+            <form action="#" method="get" id="search-form">
+                <div class="input-group">
+                    {{ search_form.q }}
+                    <span class="input-group-btn">
+                        <button type="submit" class="btn btn-primary">
+                            <i class="mdi mdi-magnify"></i>
+                        </button>
+                    </span>
+                </div>
+            </form>
+        </div>
+        {% endwith %}
+    </div>
+{% endblock header %}
+
+
+{% block content %}
+<div class="pull-right noprint">
     {% block buttons %}{% endblock %}
     {% if request.user.is_authenticated and table_config_form %}
         <button type="button" class="btn btn-default" data-toggle="modal" data-target="#ObjectTable_config" title="Configure table"><i class="mdi mdi-cog"></i> Configure</button>

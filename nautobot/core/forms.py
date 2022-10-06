@@ -48,3 +48,9 @@ OBJ_TYPE_CHOICES = (
 class SearchForm(BootstrapMixin, forms.Form):
     q = forms.CharField(label="Search")
     obj_type = forms.ChoiceField(choices=OBJ_TYPE_CHOICES, required=False, label="Type")
+
+    def __init__(self, *args, q_placeholder=None, **kwargs):
+        super().__init__(*args, **kwargs)
+
+        if q_placeholder:
+            self.fields["q"].widget.attrs["placeholder"] = q_placeholder

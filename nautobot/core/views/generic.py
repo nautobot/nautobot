@@ -40,7 +40,7 @@ from nautobot.utilities.forms import (
 from nautobot.utilities.forms.forms import DynamicFilterFormSet
 from nautobot.utilities.paginator import EnhancedPaginator, get_paginate_count
 from nautobot.utilities.permissions import get_permission_for_model
-from nautobot.utilities.templatetags.helpers import validated_viewname
+from nautobot.utilities.templatetags.helpers import bettertitle, validated_viewname
 from nautobot.utilities.utils import (
     convert_querydict_to_factory_formset_acceptable_querydict,
     csv_format,
@@ -306,7 +306,10 @@ class ObjectListView(ObjectPermissionRequiredMixin, View):
         }
         RequestConfig(request, paginate).configure(table)
 
-        search_form = SearchForm(data=request.GET)
+        # For the search form field, use a custom placeholder.
+        q_placeholder = "Search " + bettertitle(model._meta.verbose_name_plural)
+        search_form = SearchForm(data=request.GET, q_placeholder=q_placeholder)
+
         # The model's FilterSet is required for DynamicFilterFormSet; if not found, ignore.
         if get_filterset_for_model(model) is not None:
             if request.GET:
