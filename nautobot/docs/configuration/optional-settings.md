@@ -785,6 +785,38 @@ If set to `False`, unknown/unrecognized filter parameters will be discarded and 
 
 ---
 
+## TEST_FACTORY_SEED
+
++++ 1.5.0
+
+Default: `None`
+
+Environment Variable: `NAUTOBOT_TEST_FACTORY_SEED`
+
+When [`TEST_USE_FACTORIES`](#test_use_factories) is set to `True`, this configuration provides a fixed seed string for the pseudo-random generator used to populate test data into the database, providing for reproducible randomness across consecutive test runs. If unset, a random seed will be used each time.
+
+---
+
+## TEST_USE_FACTORIES
+
++++ 1.5.0
+
+Default: `False`
+
+Environment Variable: `NAUTOBOT_TEST_USE_FACTORIES`
+
+If set to `True`, the Nautobot test runner will call `nautobot-server generate_test_data ...` before executing any test cases, pre-populating the test database with various pseudo-random instances of many of Nautobot's data models.
+
+!!! warning
+    This functionality requires the installation of the [`factory-boy`](https://pypi.org/project/factory-boy/) Python package, which is present in Nautobot's own development environment, but is _not_ an inherent dependency of the Nautobot package when installed otherwise, such as into a plugin's development environment.
+
+!!! info
+    Setting this to `True` is a requirement for all Nautobot core tests as of 1.5.0, and it is set accordingly in `nautobot/core/tests/nautobot_config.py`, but defaults to `False` otherwise so as to remain backwards-compatible with plugins that also may use the Nautobot test runner in their own test environments, but have not yet updated their tests to account for the presence of this test data.
+
+    Because this test data can obviate the need to manually construct complex test data, and the random factor can improve test robustness, plugin developers are encouraged to set this to `True` in their configuration, ensure that their development environments include the `factory-boy` Python package as a test dependency, and update their tests as needed.
+
+---
+
 ## UI_RACK_VIEW_TRUNCATE_FUNCTION
 
 +++ 1.4.0

@@ -2205,6 +2205,19 @@ class StatusTestCase(
         cls.slug_source = "name"
         cls.slug_test_object = "Irradiated"
 
+    def get_deletable_object(self):
+        """Return a Status without any dependent objects."""
+        return Status.objects.create(name="DELETE ME", color="000000")
+
+    def get_deletable_object_pks(self):
+        """Return a list of Status PKs without any dependent objects."""
+        statuses = [
+            Status.objects.create(name="DELETE ME 1", color="0000ff"),
+            Status.objects.create(name="DELETE ME 2", color="00ff00"),
+            Status.objects.create(name="DELETE ME 3", color="ff0000"),
+        ]
+        return [status.pk for status in statuses]
+
 
 class TagTestCase(ViewTestCases.OrganizationalObjectViewTestCase):
     model = Tag

@@ -48,15 +48,18 @@ class TenantTestCase(FilterTestCases.NameSlugFilterTestCase):
 
     def test_group(self):
         groups = list(TenantGroup.objects.filter(tenants__isnull=False))[:2]
+        groups_including_children = []
+        for group in groups:
+            groups_including_children += group.get_descendants(include_self=True)
         params = {"group_id": [groups[0].pk, groups[1].pk]}
         self.assertEqual(
             self.filterset(params, self.queryset).qs.count(),
-            self.queryset.filter(group__in=groups).count(),
+            self.queryset.filter(group__in=groups_including_children).count(),
         )
         params = {"group": [groups[0].slug, groups[1].slug]}
         self.assertEqual(
             self.filterset(params, self.queryset).qs.count(),
-            self.queryset.filter(group__in=groups).count(),
+            self.queryset.filter(group__in=groups_including_children).count(),
         )
 
     def test_locations(self):
