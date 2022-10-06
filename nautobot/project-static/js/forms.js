@@ -254,10 +254,7 @@ function initializeDynamicChoiceSelection(context){
                         // Annotate hierarchical depth for MPTT objects
                         record.text = '--'.repeat(record._depth) + ' ' + record.text;
                     }
-                    if (record.tree_depth) {
-                        // Annotate hierarchical depth for django-tree-queries objects
-                        record.text = '--'.repeat(record.tree_depth) + ' ' + record.text;
-                    }
+
                     record.id = record[element.getAttribute('value-field')] || record.id;
                     if(element.getAttribute('disabled-indicator') && record[element.getAttribute('disabled-indicator')]) {
                         // The disabled-indicator equated to true, so we disable this option

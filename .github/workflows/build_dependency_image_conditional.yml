@@ -1,0 +1,36 @@
+---
+# To ensure we aren't always rebuilding the dependencies container,
+# this checks the last commit to evaluate if changes were made in the previous commit
+# that would result in a different image being built
+#
+# Files checked:
+# - pyproject.toml
+# - poetry.lock
+# - examples/*
+# - docker/docker-entrypoint.sh
+# - README.md
+
+name: "Build Dependencies Image - Conditional Change Detection"
+on:  # yamllint disable
+  workflow_call:
+
+jobs:
+  dep-container-build:
+    runs-on: "ubuntu-20.04"
+    steps:
+      - name: "Check out repository code"
+        uses: "actions/checkout@v2"
+        with:
+          fetch-depth: 2
+      - name: "Check if Dependency Files Changed"
+        id: fileschanged
+        continue-on-error: true
+        run: |
+          git diff HEAD~1 --name-only | grep "^README\.md\|^docker/docker-entrypoint\.sh\|^examples/\|^poetry\.lock\|^pyproject\.toml"
+      - name: "Skip Dependencies Image Build"
+        if: ${{ steps.fileschanged.outcome == 'failure' }}
+        run: |
+          echo "::notice::No dependency files changed"
+      - name: "Rebuild Dependencies Image"
+        if: ${{ steps.fileschanged.outcome == 'success' }}
+        uses: "./.github/workflows/build_dependency_image.yml"

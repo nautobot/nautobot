@@ -47,6 +47,7 @@ jobs:
           password: "${{ secrets.PYPI_API_TOKEN }}"
 
   publish_containers:
+    name: "Build & Publish Container Images"
     runs-on: "ubuntu-20.04"
     needs:
       - "ci"

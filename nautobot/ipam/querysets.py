@@ -19,6 +19,13 @@ from nautobot.ipam.constants import IPV4_BYTE_LENGTH, IPV6_BYTE_LENGTH
 from nautobot.utilities.querysets import RestrictedQuerySet
 
 
+class RIRQuerySet(RestrictedQuerySet):
+    """QuerySet for RIR objects."""
+
+    def get_by_natural_key(self, name):
+        return self.get(name=name)
+
+
 class BaseNetworkQuerySet(RestrictedQuerySet):
     """Base class for network-related querysets."""
 

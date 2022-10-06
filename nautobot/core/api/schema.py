@@ -242,7 +242,13 @@ class NautobotAutoSchema(AutoSchema):
         but Nautobot bulk partial updates require the `id` field to be specified for each object to update.
         """
         component = super().resolve_serializer(serializer, direction, bypass_extensions)
-        if self.is_bulk_action and self.is_partial_action and direction == "request":
+        if (
+            component
+            and component.schema is not None
+            and self.is_bulk_action
+            and self.is_partial_action
+            and direction == "request"
+        ):
             component.schema["required"] = ["id"]
         return component
 

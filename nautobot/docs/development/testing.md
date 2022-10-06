@@ -26,6 +26,30 @@ The `invoke unittest` and `invoke integration-test` commands are intentionally d
 - New unit tests **must always** inherit from `nautobot.utilities.testing.TestCase`. Do not use `django.test.TestCase`.
 - New integration tests **must always** inherit from `nautobot.utilities.testing.integration.SeleniumTestCase`. Do not use any other base class for integration tests.
 
+## Factories
+
+Nautobot uses the [`factory_boy`](https://factoryboy.readthedocs.io/en/stable/) library as a way to generate randomized but plausible database data for use in unit and integration tests, or for convenience in populating a local development instance.
+
+Factories for each Nautobot app's models are defined in the corresponding `nautobot/APPNAME/factory.py` files. Helper classes and functions for certain common patterns are defined in `nautobot/utilities/factory.py`. Factories can be used directly from `nbshell` so long as you have `factory_boy` installed. Examples:
+
+```python
+>>> from nautobot.tenancy.factory import TenantFactory, TenantGroupFactory
+>>> # Create a single TenantGroup instance
+>>> TenantGroupFactory.create()
+<TenantGroup: Peterson, Nunez and Miller>
+>>> # Create 5 Tenant instances
+>>> TenantFactory.create_batch(5)
+[<Tenant: Smith-Vance>, <Tenant: Sanchez, Brown and Davis>, <Tenant: Benson and Sons>, <Tenant: Pennington PLC>, <Tenant: Perez and Sons>]
+>>> # Create 5 more Tenant instances all with a specified "group" value
+>>> TenantFactory.create_batch(5, group=TenantGroup.objects.first())
+[<Tenant: Mercado, Wilson and Fuller>, <Tenant: Blackburn-Andrade>, <Tenant: Oliver-Ramirez>, <Tenant: Pugh-Clay>, <Tenant: Norman and Sons>]
+```
+
+!!! warning
+    `factory_boy` is only a *development* dependency of Nautobot. You cannot use the model factories in a production deployment of Nautobot unless you directly `pip install factory_boy` into such a deployment.
+
+Nautobot's custom [test runner](https://docs.djangoproject.com/en/3.2/topics/testing/advanced/#defining-a-test-runner) class (`nautobot.core.tests.runner.NautobotTestRunner`) makes use of the various factories to pre-populate the test database with data before running any tests. This reduces the need for individual tests to define their own baseline data sets.
+
 ## Fixtures
 
 Nautobot includes a number of [fixture](https://docs.djangoproject.com/en/stable/topics/testing/tools/#fixture-loading) files that are used in our unit and integration tests. You can also load these fixtures into your development database as an alternative to manually populating all data from scratch. A common approach when writing new tests or updating new tests would be to load the existing fixtures, manually design and execute tests, making any needed additions to the data set along the way, then re-exporting the updated data to a fixture and using that as part of the automated test development.
