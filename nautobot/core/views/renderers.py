@@ -154,41 +154,22 @@ class NautobotHTMLRenderer(renderers.BrowsableAPIRenderer):
                 form = form_class(instance=instance, initial=initial_data)
                 restrict_form_fields(form, request.user)
             elif view.action == "bulk_destroy":
-                if request.POST.get("_all"):
-                    if view.filterset_class is not None:
-                        pk_list = [obj.pk for obj in view.filterset_class(request.POST, model.objects.only("pk")).qs]
-                    else:
-                        pk_list = model.objects.values_list("pk", flat=True)
-                else:
-                    pk_list = request.POST.getlist("pk")
-                    initial = {
-                        "pk": pk_list,
-                        "return_url": return_url,
-                    }
-                    form = form_class(initial=initial)
-                table = self.construct_table(view, pk_list=pk_list)
+                initial = {
+                    "pk": view.pk_list,
+                    "return_url": return_url,
+                }
+                form = form_class(initial=initial)
+                table = self.construct_table(view, pk_list=view.pk_list)
             elif view.action == "bulk_create":
                 form = view.get_form()
                 if request.data:
                     table = data.get("table")
             elif view.action == "bulk_update":
-                if request.POST.get("_all"):
-                    if view.filterset_class is not None:
-                        pk_list = [obj.pk for obj in view.filterset_class(request.POST, queryset.only("pk")).qs]
-                    else:
-                        pk_list = model.objects.values_list("pk", flat=True)
-                else:
-                    pk_list = request.POST.getlist("pk")
-
-                if "_apply" in request.POST:
-                    form = form_class(model, request.POST)
-                else:
-                    # Include the PK list as initial data for the form
-                    initial_data = {"pk": pk_list}
-                    form = form_class(model, initial=initial_data)
+                initial_data = {"pk": view.pk_list}
+                form = form_class(model, initial=initial_data)
 
                 restrict_form_fields(form, request.user)
-                table = self.construct_table(view, pk_list=pk_list)
+                table = self.construct_table(view, pk_list=view.pk_list)
 
         context = {
             "changelog_url": changelog_url,  # NOTE: This context key is deprecated in favor of `object.get_changelog_url`.
