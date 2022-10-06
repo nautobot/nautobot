@@ -980,7 +980,7 @@ Default: `False`
 
 Environment Variable: `NAUTOBOT_TEST_USE_FACTORIES`
 
-If set to `True`, the Nautobot test runner will call `nautobot-server populate_database ...` before executing any test cases, pre-populating the test database with various pseudo-random instances of many of Nautobot's data models.
+If set to `True`, the Nautobot test runner will call `nautobot-server generate_test_data ...` before executing any test cases, pre-populating the test database with various pseudo-random instances of many of Nautobot's data models.
 
 !!! warning
     This functionality requires the installation of the [`factory-boy`](https://pypi.org/project/factory-boy/) Python package, which is present in Nautobot's own development environment, but is _not_ an inherent dependency of the Nautobot package when installed otherwise, such as into a plugin's development environment.

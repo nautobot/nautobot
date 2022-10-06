@@ -51,7 +51,7 @@ This will IRREVERSIBLY DESTROY all data in the "{connections[DEFAULT_DB_ALIAS].s
 including all user accounts, and return each table to an empty state.
 Are you SURE you want to do this?
 
-Type 'yes' to continue, or 'no' to cancel:"""
+Type 'yes' to continue, or 'no' to cancel: """
                 )
                 if confirm != "yes":
                     self.stdout.write("Cancelled.")
