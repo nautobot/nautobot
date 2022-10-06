@@ -457,7 +457,7 @@ function initializeMultiValueChar(context){
 }
 
 function initializeDynamicFilterForm(context){
-    this_context = $(context)
+    this_context = $(context);
     // Dynamic filter form
     this_context.find(".lookup_type-select").bind("change", function(){
         let parent_element = $(this).parents("tr")
@@ -468,7 +468,7 @@ function initializeDynamicFilterForm(context){
 
         if(lookup_type_val){
             $.ajax({
-                url: `/api/lookup-value-dom-element/?field_name=${lookup_type_val}&content_type=${contenttype}`,
+                url: `/api/filterset-fields/lookup-value-dom-element/?field_name=${lookup_type_val}&content_type=${contenttype}`,
                 async: true,
                 contentType: 'application/json',
                 dataType: 'json',
@@ -501,7 +501,7 @@ function initializeDynamicFilterForm(context){
 }
 
 function initializeSortableList(context){
-    this_context = $(context)
+    this_context = $(context);
     // Rearrange options within a <select> list
     this_context.find('#move-option-up').bind('click', function() {
         var select_id = '#' + $(this).attr('data-target');
@@ -532,7 +532,7 @@ function initializeSortableList(context){
 }
 
 function initializeImagePreview(context){
-    this_context = $(context)
+    this_context = $(context);
     // Offset between the preview window and the window edges
     const IMAGE_PREVIEW_OFFSET_X = 20;
     const IMAGE_PREVIEW_OFFSET_Y = 10;
@@ -573,7 +573,7 @@ function initializeImagePreview(context){
 }
 
 function initializeSelectAllForm(context){
-    this_context = $(context)
+    this_context = $(context);
     this_context.find('#select_all').click(function() {
         if ($(this).is(':checked')) {
             $('#select_all_box').find('button').prop('disabled', '');

@@ -39,6 +39,12 @@ urlpatterns = [
     # Plugins
     path("plugins/", include((plugin_api_patterns, "plugins-api"))),
     # Lookup Expr
-    path("lookup-choices/", GetFilterSetFieldLookupExpressionChoicesAPI.as_view(), name="lookup_choices"),
-    path("lookup-value-dom-element/", GetFilterSetFieldDOMElementAPI.as_view(), name="lookup_value_dom_element"),
+    path(
+        "filterset-fields/lookup-choices/", GetFilterSetFieldLookupExpressionChoicesAPI.as_view(), name="lookup_choices"
+    ),
+    path(
+        "filterset-fields/lookup-value-dom-element/",
+        GetFilterSetFieldDOMElementAPI.as_view(),
+        name="lookup_value_dom_element",
+    ),
 ]

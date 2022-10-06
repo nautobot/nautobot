@@ -1,4 +1,5 @@
 import json
+import logging
 import re
 
 import yaml
@@ -26,6 +27,9 @@ __all__ = (
     "ReturnURLForm",
     "TableConfigForm",
 )
+
+
+logger = logging.getLogger(__name__)
 
 
 class AddressFieldMixin(forms.ModelForm):
@@ -306,6 +310,8 @@ class DynamicFilterForm(BootstrapMixin, forms.Form):
             self.fields["lookup_value"].widget.attrs["class"] = " ".join(
                 [lookup_value_css, "lookup_value-input form-control"]
             )
+        else:
+            logger.warning(f"FilterSet for {self.model.__class__} not found.")
 
     @staticmethod
     def capitalize(field):

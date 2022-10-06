@@ -42,6 +42,7 @@ from nautobot.utilities.utils import (
     get_all_lookup_expr_for_field,
     get_filterset_parameter_form_field,
     get_form_for_model,
+    FilterSetFieldNotFound,
 )
 from . import serializers
 
@@ -778,7 +779,10 @@ class GetFilterSetFieldLookupExpressionChoicesAPI(NautobotAPIVersionMixin, APIVi
                 "content_type not found",
                 status=400,
             )
-        data = get_all_lookup_expr_for_field(model, field_name)
+        try:
+            data = get_all_lookup_expr_for_field(model, field_name)
+        except FilterSetFieldNotFound:
+            return Response("field_name not found", status=400)
 
         # Needs to be returned in this format because this endpoint is used by
         # DynamicModelChoiceField which requires the response of an api in this exact format
@@ -793,7 +797,7 @@ class GetFilterSetFieldLookupExpressionChoicesAPI(NautobotAPIVersionMixin, APIVi
 
 
 class GetFilterSetFieldDOMElementAPI(NautobotAPIVersionMixin, APIView):
-    """API View that gets the dom element of a FilterSet field."""
+    """API View that gets the DOM element representation of a FilterSet field."""
 
     permission_classes = [IsAuthenticated]
 
@@ -836,6 +840,10 @@ class GetFilterSetFieldDOMElementAPI(NautobotAPIVersionMixin, APIView):
                 status=400,
             )
         model_form = get_form_for_model(model)
-        form_field = get_filterset_parameter_form_field(model, field_name)
+        try:
+            form_field = get_filterset_parameter_form_field(model, field_name)
+        except FilterSetFieldNotFound:
+            return Response("field_name not found", 400)
+
         field_dom_representation = form_field.get_bound_field(model_form(), field_name).as_widget()
         return Response({"dom_element": field_dom_representation})
