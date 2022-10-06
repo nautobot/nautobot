@@ -65,7 +65,7 @@ Nautobot adheres to the Semantic Versioning ("SemVer") strategy, which gives us 
 
 * `X` is the major release number. Contains breaking changes or switching default behavior and shadowing legacy/deprecated behavior. May contain new functionality and bug fixes as well.
 * `Y` is the minor release number. Contains new functionality and bug fixes. May introduce deprecation warnings but will not remove or change default behavior.
-* `Z` is the patch release number. Will only contain bug fixes and small feature enhancements aimed at addressing user-experience bugs.
+* `Z` is the patch release number. Will only contain bug fixes, security updates, and small feature enhancements aimed at addressing user-experience bugs.
 
 For more information, please visit [SemVer.org](https://semver.org/).
 
@@ -118,7 +118,7 @@ For the sake of abundance in clarity, we are officially naming what is sometimes
 
 New users who may choose to install an "LTS" release because it is assumed to be more stable, may almost immediately be presented with breaking changes upon their next upgrade to a "stable" Nautobot release. We want to avoid any confusion that may arise between the term "stable" representing our latest stable release compared to "long term support" which is commonly interpreted to represent a stable release.
 
-Our LTM release will be the last minor version of the previous major release train. At the time of this writing `1.5.z` will be our maintenance release of Nautobot for the `1.y` release cycle. Version 1 of Nautobot had an extended release cycle as it was our first major release of the platform. Going forward it can be expected that the `x.3` version of the platform will be the maintenance train of any major version.
+Our LTM release will be the last minor version of the previous major release train. At the time of this writing `1.5` will be our maintenance release train of Nautobot for the `1.y` release cycle. Version 1 of Nautobot had an extended release cycle as it was our first major release of the platform. Going forward it can be expected that the `x.3` version of the platform will be the maintenance train of any major version.
 
 With this schedule you can expect a few things per major/minor release:
 
@@ -160,6 +160,13 @@ To provide assistance for knowing what features and functionality have been depr
 * Nautobot 1.2 introduced REST APIs versioning. Newer versions of the API become the default behavior on a major release (`x.0.0`) and older versions become deprecated. Along with classes and other functionality the deprecated versions will be removed in the `x.2` release. For more information, see the [Versioning section of our REST API documentation](../rest-api/overview.md#versioning).
 * We will drop support for Python versions on a case-by-case basis: A patch release may drop support for a Python version if a security update of a critical dependency would require split or conditional support. For example, if the dependency has not published a vulnerability fix for an older Python version, we will drop support at that time. All other cases will be documented and will tend to occur on minor release boundaries.
 * Any deprecation notice (announcement or removal) will be available in our release notes.
+
+!!! warning "Backwards-Incompatible Changes and Deprecations"
+    Breaking changes in a `x.0.0` release my have an effect on deprecated APIs. While we do our best to keep the deprecated APIs intact to simplify migrations to newer releases, breaking changes are inherently breaking and will cause some changes to existing versions.
+
+    For example, in the upcoming `2.0.0` release we plan to collapse `Site` and `Region` to be `LocationType`s. This means there will no longer be a `site` property on objects like `Device`. This would affect any current and previous API versions and is not limited to just removal of classes. This would also mean we would not publish deprecated APIs for models that no longer exist.
+
+    We will document in major releases how breaking changes will affect existing APIs and Python primitives. Backwards-compatible changes would still be kept around following the normal deprecation policy.
 
 ## Communication
 
