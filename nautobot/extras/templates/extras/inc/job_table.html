@@ -17,30 +17,28 @@
 {% load helpers %}
     <tbody>
         {% for row in table.page.object_list|default:table.rows %}
-            {% with forloop.counter0 as count %}
-                {% ifchanged row.record.grouping %}
-                <tr>
-                    <th colspan="{{ table.columns|length }}">
-                        <button type="button" class="btn-link accordion-toggle mdi mdi-chevron-down"
-                                name="grouping.{{ row.record.grouping }}" data-toggle="collapse"
-                                data-target=".collapseme-{{ count }}">
-                            {{ row.record.grouping|bettertitle }}
-                        </button>
-                    </th>
-                </tr>
-                {% endifchanged %}
-                <tr class="collapseme-{{ count }} collapse in" data-parent="#accordion" {{ row.attrs.as_html }}>
-                    {% for column, cell in row.items %}
-                        <td {{ column.attrs.td.as_html }}>{{ cell }}</td>
-                    {% endfor %}
-                </tr>
-            {% endwith %}
+            {% ifchanged row.record.grouping %}
+            <tr>
+                <th colspan="{{ table.columns|length }}">
+                    <button type="button" class="btn-link accordion-toggle mdi mdi-chevron-down"
+                            name="grouping.{{ row.record.grouping }}" data-toggle="collapse"
+                            data-target=".collapseme-{{ row.record.grouping|slugify }}">
+                        {{ row.record.grouping|bettertitle }}
+                    </button>
+                </th>
+            </tr>
+            {% endifchanged %}
+            <tr class="collapseme-{{ row.record.grouping|slugify }} collapse in" data-parent="#accordion" {{ row.attrs.as_html }}>
+                {% for column, cell in row.items %}
+                    <td {{ column.attrs.td.as_html }}>{{ cell }}</td>
+                {% endfor %}
+            </tr>
         {% empty %}
-                {% if table.empty_text %}
-                    <tr>
-                        <td colspan="{{ table.columns|length }}" class="text-center text-muted">&mdash; {{ table.empty_text }} &mdash;</td>
-                    </tr>
-                {% endif %}
+            {% if table.empty_text %}
+                <tr>
+                    <td colspan="{{ table.columns|length }}" class="text-center text-muted">&mdash; {{ table.empty_text }} &mdash;</td>
+                </tr>
+            {% endif %}
         {% endfor %}
     </tbody>
     {% if table.has_footer %}
