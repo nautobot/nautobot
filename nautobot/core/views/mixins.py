@@ -685,6 +685,7 @@ class ObjectBulkDestroyViewMixin(NautobotViewSetMixin, BulkDestroyModelMixin):
             else:
                 self.pk_list = model.objects.values_list("pk", flat=True)
         else:
+            print("hey")
             self.pk_list = request.POST.getlist("pk")
         form_class = self.get_form_class(**kwargs)
         data = {}

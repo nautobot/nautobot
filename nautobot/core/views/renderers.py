@@ -154,22 +154,26 @@ class NautobotHTMLRenderer(renderers.BrowsableAPIRenderer):
                 form = form_class(instance=instance, initial=initial_data)
                 restrict_form_fields(form, request.user)
             elif view.action == "bulk_destroy":
-                initial = {
-                    "pk": view.pk_list,
-                    "return_url": return_url,
-                }
-                form = form_class(initial=initial)
-                table = self.construct_table(view, pk_list=view.pk_list)
+                pk_list = getattr(view, "pk_list", [])
+                if pk_list:
+                    initial = {
+                        "pk": pk_list,
+                        "return_url": return_url,
+                    }
+                    form = form_class(initial=initial)
+                table = self.construct_table(view, pk_list=pk_list)
             elif view.action == "bulk_create":
                 form = view.get_form()
                 if request.data:
                     table = data.get("table")
             elif view.action == "bulk_update":
-                initial_data = {"pk": view.pk_list}
-                form = form_class(model, initial=initial_data)
+                pk_list = getattr(view, "pk_list", [])
+                if pk_list:
+                    initial_data = {"pk": pk_list}
+                    form = form_class(model, initial=initial_data)
 
-                restrict_form_fields(form, request.user)
-                table = self.construct_table(view, pk_list=view.pk_list)
+                    restrict_form_fields(form, request.user)
+                table = self.construct_table(view, pk_list=pk_list)
 
         context = {
             "changelog_url": changelog_url,  # NOTE: This context key is deprecated in favor of `object.get_changelog_url`.
