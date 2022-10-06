@@ -21,9 +21,10 @@
 
 # TODO
 <!--
-    Please feel free to update todos to keep of your own notes for WIP PRs.
+    Please feel free to update todos to keep track of your own notes for WIP PRs.
 -->
 - [ ] Explanation of Change(s)
+- [ ] Added change log fragment(s) (for more information see [the documentation](https://docs.nautobot.com/projects/core/en/stable/development/#creating-changelog-fragments))
 - [ ] Attached Screenshots, Payload Example
 - [ ] Unit, Integration Tests
 - [ ] Documentation Updates (when adding/changing features)

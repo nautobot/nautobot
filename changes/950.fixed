@@ -1,1 +1,0 @@
-Fixed database concurrency issues with uWSGI pre-forking.
