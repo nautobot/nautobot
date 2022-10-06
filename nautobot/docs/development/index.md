@@ -144,7 +144,7 @@ A maintenance release will be actively maintained until the next maintenance rel
 
 #### Launch of Maintenance Release Schedule (as an Example)
 
-At the time of this writing we are in the active development of Nautobot 1.5. This will be our last minor release of the v1 series of releases and therefore become our first "Long Term Maintenance" (LTM) release of Nautobot. We will be actively apply the normal category of bug fixes (including UI tweaks, display bugs, etc.) until the release of Nautobot 2.0.
+At the time of this writing we are in the active development of Nautobot 1.5. This will be our last minor release of the v1 series of releases and therefore become our first "Long Term Maintenance" (LTM) release of Nautobot. We will be actively applying the normal category of bug fixes (including UI tweaks, display bugs, etc.) to this release train until the release of Nautobot 2.0.
 
 Once we launch Nautobot 2.0, 1.5 will go into maintenance mode and be considered LTM, continuing to receive data loss and CVE-related fixes. At that time we will encourage users to migrate to v2 as they are ready. Nautobot 1.5 will continue to receive such fixes until the release of Nautobot 2.3, where we will end the maintenance of Nautobot 1.5 and it will formally become "End of Life" (EOL). Nautobot 2.3 will then become the LTM release until Nautobot 3.3 is published the following year.
 
@@ -162,7 +162,7 @@ To provide assistance for knowing what features and functionality have been depr
 * Any deprecation notice (announcement or removal) will be available in our release notes.
 
 !!! warning "Backwards-Incompatible Changes and Deprecations"
-    Breaking changes in a `x.0.0` release my have an effect on deprecated APIs. While we do our best to keep the deprecated APIs intact to simplify migrations to newer releases, breaking changes are inherently breaking and will cause some changes to current and previous API versions. Types of breaking changes include, but are not limited to, removing or collapsing of objects and changing object relationships. This will also mean we will not publish deprecated APIs for models that no longer exist.
+    Breaking changes in a `x.0.0` release may have an effect on deprecated APIs. While we do our best to keep the deprecated APIs intact to simplify migrations to newer releases, breaking changes are inherently breaking and will cause some changes to current and previous API versions. Types of breaking changes include, but are not limited to, removing or collapsing of objects and changing object relationships. This will also mean we will not publish deprecated APIs for models that no longer exist.
 
     For example, in the upcoming `2.0.0` release we plan to collapse `Site` and `Region` to be `LocationType`s. This means there would no longer be a `site` property on objects such as `Device`.
 
