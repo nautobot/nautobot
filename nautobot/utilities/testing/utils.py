@@ -21,6 +21,8 @@ def post_data(data):
     for key, value in data.items():
         if value is None:
             ret[key] = ""
+            ret.setdefault("_nullify", [])
+            ret["_nullify"].append(key)
         elif isinstance(value, (list, tuple)):
             if value and hasattr(value[0], "pk"):
                 # Value is a list of instances
