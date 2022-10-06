@@ -74,10 +74,6 @@ Type 'yes' to continue, or 'no' to cancel: """
         TenantFactory.create_batch(10, has_group=True)
         self.stdout.write("Creating RIRs...")
         RIRFactory.create_batch(9)  # only 9 unique RIR names are hard-coded presently
-        self.stdout.write("Creating Aggregates...")
-        AggregateFactory.create_batch(20)
-        self.stdout.write("Creating RouteTargets...")
-        RouteTargetFactory.create_batch(20)
         self.stdout.write("Creating VRFs...")
         VRFFactory.create_batch(20)
         self.stdout.write("Creating IP/VLAN Roles...")
@@ -86,5 +82,9 @@ Type 'yes' to continue, or 'no' to cancel: """
         VLANGroupFactory.create_batch(20)
         self.stdout.write("Creating VLANs...")
         VLANFactory.create_batch(20)
+        self.stdout.write("Creating Aggregates...")
+        AggregateFactory.create_batch(20)
+        self.stdout.write("Creating RouteTargets...")
+        RouteTargetFactory.create_batch(20)
 
         self.stdout.write(self.style.SUCCESS("Database populated successfully!"))
