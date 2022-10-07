@@ -34,20 +34,27 @@ class RIRFactory(OrganizationalModelFactory):
 
 
 class AggregateFactory(PrimaryModelFactory):
-    """
-    Create random aggregates and 50% of the time generate prefixes within the aggregate IP space. Child prefixes
-    create nested child prefixes and ip addresses within the prefix IP space. Defaults to creating 0-4 child prefixes
-    which generate 0-4 grandchildren. Set child_prefixes__max_count to an integer when calling the factory creation
-    methods (`create()`, `create_batch()`, etc) to override the maximum number of child prefixes generated. Set
-    child_prefixes__children__max_count to an integer when calling the factory creation methods (`create()`, `batch_create()`, etc)
-    to override the maximum number of grandchildren generated.
+    """Create random aggregates and 50% of the time generate prefixes within the aggregate IP space.
+
+    Child prefixes create nested child prefixes and ip addresses within the prefix IP space. Defaults
+    to creating 0-4 child prefixes which generate 0-4 grandchildren. Set `child_prefixes__max_count` to
+    an integer when calling the factory creation methods (`create()`, `create_batch()`, etc) to override
+    the maximum number of child prefixes generated. Set `child_prefixes__children__max_count` to an
+    integer when calling the factory creation methods (`create()`, `batch_create()`, etc) to override
+    the maximum number of grandchildren generated.
 
     Examples:
-    AggregateFactory.create_batch(20) # create 20 aggregates, approximately half will generate 0-4 child prefixes
-                                      # which will create child prefixes and ip addresses
-    AggregateFactory.create_batch(child_prefixes__max_count=0) # create 20 aggregates with no child prefixes
-    AggregateFactory.create_batch(child_prefixes__children__max_count=0) # create 20 aggregates, approximately
-                                      # half will generate 0-4 child prefixes that will not create any children
+        Create 20 aggregates, approximately half will generate 0-4 child prefixes which will create child prefixes and ip addresses:
+
+            >>> AggregateFactory.create_batch(20)
+
+        Create 20 aggregates with no child prefixes:
+
+            >>> AggregateFactory.create_batch(20, child_prefixes__max_count=0)
+
+        Create 20 aggregates, approximately half will generate 0-4 child prefixes that will not create any children:
+
+            >>> AggregateFactory.create_batch(20, child_prefixes__children__max_count=0)
     """
 
     class Meta:
@@ -74,11 +81,17 @@ class AggregateFactory(PrimaryModelFactory):
 
     @factory.post_generation
     def child_prefixes(self, create, extracted, **kwargs):
-        """
-        Create child prefixes within the aggregate IP space. Defaults to generating 0-4 child
-        prefixes for 50% of aggregates. Set child_prefixes__max_count to an integer when calling
-        the factory creation methods (`create()`, `create_batch()`, etc) to override the maximum
-        number of children generated.
+        """Create child prefixes within the aggregate IP space.
+
+        Defaults to generating 0-4 child prefixes for 50% of aggregates. Set
+        `child_prefixes__max_count` to an integer when calling the factory
+        creation methods (`create()`, `create_batch()`, etc) to override the
+        maximum number of children generated.
+
+        Args:
+            create: True if `create` strategy was used.
+            extracted: None unless a value was passed in for the PostGeneration declaration at Factory declaration time
+            kwargs: Any extra parameters passed as attr__key=value when calling the Factory
         """
         if extracted:
             # Objects have already been created, do nothing
@@ -381,16 +394,23 @@ class VRFGetOrCreateFactory(VRFFactory):
 
 
 class PrefixFactory(PrimaryModelFactory):
-    """
-    Create random prefixes and 50% of the time generate child prefixes and ip addresses within the prefix IP space.
-    Containers will create child prefixes while prefixes that are not containers will create ip addresses in the
-    prefix's address space. Defaults to creating 0-4 children. Set children__max_count to an integer when calling
-    the factory creation methods (`create()`, `create_batch()`, etc) to override the maximum number of children
-    generated.
+    """Create random Prefix objects with randomized data.
+
+    Generate child prefixes and ip addresses within the prefix IP space for 50% of prefixes generated.
+    Containers will create child prefixes while prefixes that are not containers will create ip addresses
+    in the prefix's address space. Defaults to creating 0-4 children. Set `children__max_count` to an
+    integer when calling the factory creation methods (`create()`, `create_batch()`, etc) to override
+    the maximum number of children generated.
 
     Examples:
-    PrefixFactory.create_batch(20) # create 20 prefixes, approximately half will generate 0-4 children
-    PrefixFactory.create_batch(children__max_count=0) # create 20 prefixes with no children
+
+        Create 20 prefixes, approximately half will generate 0-4 children:
+
+            >>> PrefixFactory.create_batch(20)
+
+        Create 20 prefixes with no children:
+
+            >>> PrefixFactory.create_batch(20, children__max_count=0)
     """
 
     class Meta:
@@ -450,12 +470,18 @@ class PrefixFactory(PrimaryModelFactory):
 
     @factory.post_generation
     def children(self, create, extracted, **kwargs):
-        """
-        Create child prefixes and ip addresses within the prefix IP space. Defaults to generating
-        0-4 child prefixes for parents that are containers, or generating 0-4 ip addresses within
-        the prefix's IP space for non-container prefixes. Only creates children on 50% of prefixes.
-        Set children__max_count to an integer when calling the factory creation methods
-        (`create()`, `create_batch()`, etc) to override the maximum number of children generated.
+        """Creates child prefixes and ip addresses within the prefix IP space.
+
+        Defaults to generating 0-4 child prefixes for parents that are containers,
+        or generating 0-4 ip addresses within the prefix's IP space for non-container
+        prefixes. Only creates children on 50% of prefixes. Set `children__max_count`
+        to an integer when calling the factory creation methods (`create()`,
+        `create_batch()`, etc) to override the maximum number of children generated.
+
+        Args:
+            create: True if `create` strategy was used.
+            extracted: None unless a value was passed in for the PostGeneration declaration at Factory declaration time
+            kwargs: Any extra parameters passed as attr__key=value when calling the Factory
         """
         if extracted:
             # Objects have already been created, do nothing
@@ -518,6 +544,24 @@ class PrefixFactory(PrimaryModelFactory):
 
 
 class IPAddressFactory(PrimaryModelFactory):
+    """Create random IPAddress objects with randomized data.
+
+    The fields `assigned_object`, `description`, `dns_name`, `nat_inside`, `role`, `tenant`, and `vrf`
+    have a 50% chance to be populated with randomized data, otherwise they are null or blank depending
+    on the field. The address has a 50% chance to be ipv4 or ipv6. Uses a self-referential SubFactory
+    to create random IPAddress objects to use for the `nat_inside` reference. This can be disabled by
+    passing `has_nat_inside=False` to the create/build methods.
+
+    Examples:
+        Create 20 IP addresses with 50% chance to generate IP addresses for `nat_inside`:
+
+            >>> IPAddressFactory.create_batch(20)
+
+        Create 20 IP Addresses with `nat_inside` forced to null:
+
+            >>> IPAddressFactory.create_batch(20, has_nat_inside=False)
+    """
+
     class Meta:
         model = IPAddress
 
