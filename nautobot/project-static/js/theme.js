@@ -34,7 +34,6 @@ window.addEventListener('DOMContentLoaded', function () {
         // Attempt to detect current system theme preferences and set theme to match
         detectThemeSettings();
     }
-    showPageContent();
 });
 
 // When the user manually changes the theme, we need to save the new value on local storage
@@ -84,14 +83,12 @@ function detectThemeSettings() {
 function setDarkTheme() {
     // Set theme to dark
     htmlEl.dataset.theme = "dark";
-    // Highlight dark theme image to show it's active
-    // darkElement.disabled = undefined;
+    // Set theme cookie
     document.cookie = "theme=dark; path=/";
 }
 
 function setLightTheme() {
     htmlEl.dataset.theme = "light";
-    // darkElement.disabled = "disabled";
     document.cookie = "theme=light; path=/";
 }
 
@@ -112,11 +109,4 @@ function setSystemThemeActive() {
     tdSystemTheme.classList.add("active-theme");
     tdDarkTheme.classList.remove("active-theme");
     tdLightTheme.classList.remove("active-theme");
-}
-
-function showPageContent() {
-    // Show HTML body attribute AFTER CSS is loaded to prevent white screen flash
-    document.body.style.visibility = 'visible';
-    document.body.style.display = 'block';
-    document.body.style.opacity = 1;
 }

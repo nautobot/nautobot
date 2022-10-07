@@ -5,12 +5,9 @@
 {% load static%}
 
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en"{% if request.COOKIES|get_item:"theme" == 'dark' %} data-theme="dark"{% endif %}>
 <head>
     <title>{% block title %}Admin Home{% endblock %} - Nautobot</title>
-    <link rel="stylesheet"
-          href="{% static 'css/hide_body.css' %}?v{{ settings.VERSION }}"
-          onerror="window.location='{% url 'media_failure' %}?filename=css/hide_body.css'">
     <link rel="stylesheet"
           href="{% static 'bootstrap-3.4.1-dist/css/bootstrap.min.css' %}"
           onerror="window.location='{% url 'media_failure' %}?filename=bootstrap-3.4.1-dist/css/bootstrap.min.css'">
@@ -31,8 +28,8 @@
           onerror="window.location='{% url 'media_failure' %}?filename=flatpickr-4.6.9/themes/light.min.css'">
     <link rel="stylesheet" id="dark-theme"
           href="{% static 'css/dark.css' %}?v{{ settings.VERSION }}"
-          onerror="window.location='{% url 'media_failure' %}?filename=css/dark.css'" disabled="disabled" />
-    <link rel="stylesheet"
+          onerror="window.location='{% url 'media_failure' %}?filename=css/dark.css'"{% if request.COOKIES|get_item:"theme" != 'dark' %} disabled="disabled"{% endif %} />
+    <link rel="stylesheet" id="base-theme"
           href="{% static 'css/base.css' %}?v{{ settings.VERSION }}"
           onerror="window.location='{% url 'media_failure' %}?filename=css/base.css'">
     <link rel="apple-touch-icon" sizes="180x180" href="{% static 'img/nautobot_icon_180x180.png' %}">
@@ -98,7 +95,6 @@
     </style>
 </head>
 <body {% if is_popup %}style="padding-top: 0px;"{% endif %}>
-{% include 'inc/noscript.html' %}
 {% if not is_popup %}
     {% include 'inc/nav_menu.html' %}
 {% endif %}

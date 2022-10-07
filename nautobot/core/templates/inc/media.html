@@ -3,9 +3,6 @@
 {% load plugins %}
 
     <link rel="stylesheet"
-          href="{% static 'css/hide_body.css' %}?v{{ settings.VERSION }}"
-          onerror="window.location='{% url 'media_failure' %}?filename=css/hide_body.css'">
-    <link rel="stylesheet"
           href="{% static 'bootstrap-3.4.1-dist/css/bootstrap.min.css' %}"
           onerror="window.location='{% url 'media_failure' %}?filename=bootstrap-3.4.1-dist/css/bootstrap.min.css'">
     <link rel="stylesheet"
