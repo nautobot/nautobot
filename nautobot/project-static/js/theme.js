@@ -85,11 +85,18 @@ function setDarkTheme() {
     htmlEl.dataset.theme = "dark";
     // Set theme cookie
     document.cookie = "theme=dark; path=/";
+    // Enable dark element after page load
+    // This is only needed for initial loading of page, before the cookie can be set and read (from above line)
+    // For example, if set to System theme, but your system is set to dark mode
+    //  Nautobot initially loads in as light theme, then any page refresh or new page will load in dark theme
+    // This line prevents that initial light screen load, with an initial, one-time "flash" from light to dark
+    darkElement.disabled = undefined;
 }
 
 function setLightTheme() {
     htmlEl.dataset.theme = "light";
     document.cookie = "theme=light; path=/";
+    darkElement.disabled = "disabled";
 }
 
 /* Highlights the active selection in the theme-selection modal */
