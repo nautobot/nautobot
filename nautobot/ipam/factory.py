@@ -105,11 +105,15 @@ class AggregateFactory(PrimaryModelFactory):
         if prefix_cidr > 128 or self.family == 4 and prefix_cidr > 32:
             raise ValueError(f"Unable to create {prefix_count} prefixes in aggregate {self.cidr_str}")
 
+        # Set prefix tenant to aggregate tenant if one is present
+        if self.tenant is not None:
+            kwargs.setdefault("tenant", self.tenant)
+
         # Create child prefixes, preserving tenant and is_ipv6 from aggregate
         for count, subnet in enumerate(self.prefix.subnet(prefix_cidr)):
             if count == max_count:
                 break
-            method(prefix=str(subnet.cidr), tenant=self.tenant, is_ipv6=is_ipv6, **kwargs)
+            method(prefix=str(subnet.cidr), is_ipv6=is_ipv6, **kwargs)
 
     @factory.lazy_attribute_sequence
     def prefix(self, n):
