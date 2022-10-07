@@ -216,11 +216,11 @@
         if(query_params){
             // check if `?q=` or `&q=` in query_params
             if(/(\?|\&)q/.test(query_params)){
-                // change value of q in the query string
+                // change value of q in the query_params
                 query_params = query_params.replace(/(?<=(\?|\&)q=)\w+/, search_value);
             }
             else {
-                query_params += "&q=" + search_value;
+                query_params += "&" + $(this).serialize();
             }
         }
         else {
