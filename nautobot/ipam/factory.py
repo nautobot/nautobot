@@ -1,7 +1,6 @@
 import logging
 
 import factory
-from factory.random import randgen
 import faker
 
 from nautobot.core.factory import OrganizationalModelFactory, PrimaryModelFactory
@@ -230,18 +229,18 @@ class VLANGroupFactory(OrganizationalModelFactory):
         factory.Maybe("has_site", random_instance(Site), None),
     )
 
-    @classmethod
-    def _adjust_kwargs(cls, **kwargs):
-        """Fine-tune the randomly generated kwargs to ensure validity."""
-        if (
-            kwargs["site"] is not None
-            and kwargs["location"] is not None
-            and kwargs["location"].base_site != kwargs["site"]
-        ):
-            logger.debug("Fixing mismatch between `site` and `location.base_site` by overriding `site`")
-            kwargs["site"] = kwargs["location"].base_site
+    # @classmethod
+    # def _adjust_kwargs(cls, **kwargs):
+    #     """Fine-tune the randomly generated kwargs to ensure validity."""
+    #     if (
+    #         kwargs["site"] is not None
+    #         and kwargs["location"] is not None
+    #         and kwargs["location"].base_site != kwargs["site"]
+    #     ):
+    #         logger.debug("Fixing mismatch between `site` and `location.base_site` by overriding `site`")
+    #         kwargs["site"] = kwargs["location"].base_site
 
-        return kwargs
+    #     return kwargs
 
 
 class VLANFactory(PrimaryModelFactory):
