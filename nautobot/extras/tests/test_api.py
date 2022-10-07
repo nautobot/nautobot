@@ -3239,7 +3239,6 @@ class TagTestVersion12(APIViewTestCases.APIViewTestCase):
     bulk_update_data = {
         "description": "New description",
     }
-    fixtures = ("tag",)
 
     def test_all_relevant_content_types_assigned_to_tags_with_empty_content_types(self):
         self.add_permissions("extras.add_tag")
@@ -3265,13 +3264,23 @@ class TagTestVersion13(
         {"name": "Tag 5", "slug": "tag-5", "content_types": [Site._meta.label_lower]},
         {"name": "Tag 6", "slug": "tag-6", "content_types": [Site._meta.label_lower]},
     ]
-    bulk_update_data = {"content_types": [Site._meta.label_lower]}
     choices_fields = []
-    fixtures = ("tag",)
+
+    @classmethod
+    def setUpTestData(cls):
+        cls.update_data = {
+            "name": "A new tag name",
+            "slug": "a-new-tag-name",
+            "content_types": [f"{ct.app_label}.{ct.model}" for ct in TaggableClassesQuery().as_queryset],
+        }
+        cls.bulk_update_data = {
+            "content_types": [f"{ct.app_label}.{ct.model}" for ct in TaggableClassesQuery().as_queryset]
+        }
 
     def test_create_tags_with_invalid_content_types(self):
         self.add_permissions("extras.add_tag")
 
+        # VLANGroup is an OrganizationalModel, not a PrimaryModel, and therefore does not support tags
         data = {**self.create_data[0], "content_types": [VLANGroup._meta.label_lower]}
         response = self.client.post(self._get_list_url(), data, format="json", **self.header)
 
@@ -3295,12 +3304,15 @@ class TagTestVersion13(
         """Test removing a tag content_type that is been tagged to a model"""
         self.add_permissions("extras.change_tag")
 
-        tag_1 = Tag.objects.get(slug="devices-and-sites-only")
+        tag_1 = Tag.objects.filter(content_types=ContentType.objects.get_for_model(Site)).first()
         site = Site.objects.create(name="site 1", slug="site-1")
         site.tags.add(tag_1)
 
+        tag_content_types = list(tag_1.content_types.all())
+        tag_content_types.remove(ContentType.objects.get_for_model(Site))
+
         url = self._get_detail_url(tag_1)
-        data = {"content_types": [Device._meta.label_lower]}
+        data = {"content_types": [f"{ct.app_label}.{ct.model}" for ct in tag_content_types]}
 
         response = self.client.patch(url, data, format="json", **self.header)
         self.assertHttpStatus(response, 400)
@@ -3312,21 +3324,21 @@ class TagTestVersion13(
         """Test updating a tag without changing its content-types."""
         self.add_permissions("extras.change_tag")
 
-        tag = Tag.objects.get(slug="devices-and-sites-only")
+        tag = Tag.objects.exclude(content_types=ContentType.objects.get_for_model(Site)).first()
+        tag_content_types = list(tag.content_types.all())
         url = self._get_detail_url(tag)
         data = {"color": ColorChoices.COLOR_LIME}
 
         response = self.client.patch(url, data, format="json", **self.header)
         self.assertHttpStatus(response, status.HTTP_200_OK)
         self.assertEqual(response.data["color"], ColorChoices.COLOR_LIME)
-        self.assertEqual(sorted(response.data["content_types"]), ["dcim.device", "dcim.site"])
+        self.assertEqual(
+            sorted(response.data["content_types"]), sorted([f"{ct.app_label}.{ct.model}" for ct in tag_content_types])
+        )
 
         tag.refresh_from_db()
         self.assertEqual(tag.color, ColorChoices.COLOR_LIME)
-        tag_content_types = tag.content_types.all()
-        self.assertIn(ContentType.objects.get_for_model(Device), tag_content_types)
-        self.assertIn(ContentType.objects.get_for_model(Site), tag_content_types)
-        self.assertNotIn(ContentType.objects.get_for_model(Rack), tag_content_types)
+        self.assertEqual(list(tag.content_types.all()), tag_content_types)
 
 
 class WebhookTest(APIViewTestCases.APIViewTestCase):

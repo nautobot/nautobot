@@ -195,7 +195,7 @@ class NautobotTestCaseMixin:
         """
         warnings.warn(
             "create_tags() is deprecated and will be removed in a future Nautobot release. "
-            "Use fixtures such as nautobot/extras/fixtures.tags.json (provided in Nautobot 1.5 and later) instead.",
+            "Use nautobot.extras.factory.TagFactory (provided in Nautobot 1.5 and later) instead.",
             DeprecationWarning,
             stacklevel=2,
         )

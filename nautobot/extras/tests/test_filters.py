@@ -1416,7 +1416,6 @@ class StatusTestCase(FilterTestCases.NameSlugFilterTestCase):
 class TagTestCase(FilterTestCases.NameSlugFilterTestCase):
     queryset = Tag.objects.all()
     filterset = TagFilterSet
-    fixtures = ("tag",)
 
     @classmethod
     def setUpTestData(cls):
@@ -1429,7 +1428,7 @@ class TagTestCase(FilterTestCases.NameSlugFilterTestCase):
     def test_content_types(self):
         params = {"content_types": ["dcim.site"]}
         filtered_data = self.filterset(params, self.queryset).qs
-        self.assertEqual(filtered_data.count(), Tag.objects.get_for_model(Site).count())
+        self.assertQuerysetEqual(filtered_data, Tag.objects.get_for_model(Site))
         self.assertEqual(filtered_data[0], Tag.objects.get_for_model(Site)[0])
 
     def test_search(self):

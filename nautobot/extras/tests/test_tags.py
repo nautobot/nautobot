@@ -42,10 +42,7 @@ class TaggedItemTest(APITestCase):
     Test the application of Tags to and item (a Site, for example) upon creation (POST) and modification (PATCH).
     """
 
-    fixtures = (
-        "status",
-        "tag",
-    )
+    fixtures = ("status",)
 
     @classmethod
     def setUpTestData(cls):

@@ -107,8 +107,6 @@ class ConfigContextTest(TestCase):
     It also ensures the various config context querysets are consistent.
     """
 
-    fixtures = ("tag",)
-
     def setUp(self):
 
         manufacturer = Manufacturer.objects.create(name="Manufacturer 1", slug="manufacturer-1")

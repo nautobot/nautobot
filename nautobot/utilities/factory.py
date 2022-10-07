@@ -72,7 +72,7 @@ def random_instance(model_or_queryset_or_lambda, allow_null=True):
     return factory.LazyFunction(get_random_instance)
 
 
-def get_random_instances(model_or_queryset_or_lambda, maximum=None):
+def get_random_instances(model_or_queryset_or_lambda, minimum=0, maximum=None):
     """
     Factory helper - retrieve a random number of instances of the given model.
 
@@ -95,13 +95,13 @@ def get_random_instances(model_or_queryset_or_lambda, maximum=None):
     count = queryset.count()
     if maximum is None:
         maximum = count
-    if any([branch == 0, count == 0, maximum == 0]):
+    if any([branch == 0 and minimum == 0, count == 0, maximum == 0]):
         return []
-    if any([branch == 1, count == 1, maximum == 1]):
+    if any([branch == 1 and minimum <= 1, count == 1, maximum == 1]):
         return [factory.random.randgen.choice(queryset)]
     return factory.random.randgen.sample(
         population=list(queryset),
-        k=factory.random.randgen.randint(2, min(maximum, count)),
+        k=factory.random.randgen.randint(max(2, minimum), min(maximum, count)),
     )
 
 

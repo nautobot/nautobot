@@ -99,7 +99,6 @@ class ClusterGroupTestCase(FilterTestCases.NameSlugFilterTestCase):
 class ClusterTestCase(FilterTestCases.FilterTestCase, FilterTestCases.TenancyFilterTestCaseMixin):
     queryset = Cluster.objects.all()
     filterset = ClusterFilterSet
-    fixtures = ("tag",)
     tenancy_related_name = "clusters"
 
     @classmethod
@@ -182,7 +181,7 @@ class ClusterTestCase(FilterTestCases.FilterTestCase, FilterTestCases.TenancyFil
 
     def test_tags(self):
         params = {"tag": [self.tag.slug]}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+        self.assertQuerysetEqual(self.filterset(params, self.queryset).qs, self.queryset.filter(tags=self.tag))
 
     def test_device(self):
         with self.subTest("Devices"):
@@ -245,10 +244,7 @@ class ClusterTestCase(FilterTestCases.FilterTestCase, FilterTestCases.TenancyFil
 class VirtualMachineTestCase(FilterTestCases.FilterTestCase, FilterTestCases.TenancyFilterTestCaseMixin):
     queryset = VirtualMachine.objects.all()
     filterset = VirtualMachineFilterSet
-    fixtures = (
-        "status",
-        "tag",
-    )
+    fixtures = ("status",)
     tenancy_related_name = "virtual_machines"
 
     @classmethod
@@ -444,7 +440,7 @@ class VirtualMachineTestCase(FilterTestCases.FilterTestCase, FilterTestCases.Ten
 
     def test_tags(self):
         params = {"tag": [self.tag.slug]}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+        self.assertQuerysetEqual(self.filterset(params, self.queryset).qs, self.queryset.filter(tags=self.tag))
 
     def test_vcpus(self):
         params = {"vcpus": [1, 2]}
@@ -537,10 +533,7 @@ class VirtualMachineTestCase(FilterTestCases.FilterTestCase, FilterTestCases.Ten
 class VMInterfaceTestCase(FilterTestCases.FilterTestCase):
     queryset = VMInterface.objects.all()
     filterset = VMInterfaceFilterSet
-    fixtures = (
-        "status",
-        "tag",
-    )
+    fixtures = ("status",)
 
     @classmethod
     def setUpTestData(cls):
@@ -623,7 +616,7 @@ class VMInterfaceTestCase(FilterTestCases.FilterTestCase):
 
     def test_tags(self):
         params = {"tag": [self.tag.slug]}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+        self.assertQuerysetEqual(self.filterset(params, self.queryset).qs, self.queryset.filter(tags=self.tag))
 
     def test_tagged_vlans(self):
         with self.subTest("Tagged VLANs"):
