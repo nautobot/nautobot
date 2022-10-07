@@ -930,6 +930,7 @@ class IPAddressFilterForm(NautobotFilterForm, TenancyFilterForm, StatusModelFilt
         "tenant_group",
         "tenant",
     ]
+    has_autofocus = "parent"
     q = forms.CharField(required=False, label="Search")
     parent = forms.CharField(
         required=False,

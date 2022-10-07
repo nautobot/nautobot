@@ -48,7 +48,25 @@ class AddressFieldMixin(forms.ModelForm):
         # Need to set instance attribute for `address` to run proper validation on Model.clean()
         self.instance.address = self.cleaned_data.get("address")
 
+class AutoFocusMixin():
+    def __init__(self, *args, **kwargs):
+        try:
+            self.has_autofocus
+        except AttributeError:
+            self.has_autofocus = None
 
+        autofocusable_widgets = [
+            forms.TextInput,
+            forms.Textarea
+        ]
+
+        autofocus_keys_list = (self.field_order if self.field_order else self.fields.keys())
+
+        for field_name in autofocus_keys_list:
+            if (self.has_autofocus is None or field_name == self.has_autofocus) and self.fields[field_name].widget.__class__ in autofocusable_widgets:
+                self.fields[field_name].widget.attrs["autofocus"] = True
+                break
+            
 class BootstrapMixin(forms.BaseForm):
     """
     Add the base Bootstrap CSS classes to form elements.
@@ -73,6 +91,22 @@ class BootstrapMixin(forms.BaseForm):
             if "placeholder" not in field.widget.attrs:
                 field.widget.attrs["placeholder"] = field.label
 
+        try:
+            self.has_autofocus
+        except AttributeError:
+            self.has_autofocus = None
+
+        autofocusable_widgets = [
+            forms.TextInput,
+            forms.Textarea
+        ]
+
+        autofocus_keys_list = (self.field_order if self.field_order else self.fields.keys())
+
+        for field_name in autofocus_keys_list:
+            if (self.has_autofocus is None or field_name == self.has_autofocus) and self.fields[field_name].widget.__class__ in autofocusable_widgets:
+                self.fields[field_name].widget.attrs["autofocus"] = True
+                break
 
 class ReturnURLForm(forms.Form):
     """

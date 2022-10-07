@@ -20,6 +20,7 @@ from nautobot.extras.models import (
 )
 from nautobot.utilities.deprecation import class_deprecated_in_favor_of
 from nautobot.utilities.forms import (
+    AutoFocusMixin,
     BulkEditForm,
     CommentField,
     CSVModelChoiceField,
@@ -86,6 +87,23 @@ class CustomFieldModelFormMixin(forms.ModelForm):
 
         self.obj_type = ContentType.objects.get_for_model(self._meta.model)
         self.custom_fields = []
+
+        try:
+            self.has_autofocus
+        except AttributeError:
+            self.has_autofocus = None
+
+        autofocusable_widgets = [
+            forms.TextInput,
+            forms.Textarea
+        ]
+
+        autofocus_keys_list = (self.field_order if self.field_order else self.fields.keys())
+
+        for field_name in autofocus_keys_list:
+            if (self.has_autofocus is None or field_name == self.has_autofocus) and self.fields[field_name].widget.__class__ in autofocusable_widgets:
+                self.fields[field_name].widget.attrs["autofocus"] = True
+                break
 
         super().__init__(*args, **kwargs)
 
