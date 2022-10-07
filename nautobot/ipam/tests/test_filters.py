@@ -239,7 +239,7 @@ class PrefixTestCase(FilterTestCases.FilterTestCase, FilterTestCases.TenancyFilt
     def test_family(self):
         params = {"family": "6"}
         ipv6_prefixes = Prefix.objects.ip_family(6)
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), len(ipv6_prefixes))
+        self.assertQuerysetEqual(self.filterset(params, self.queryset).qs, ipv6_prefixes)
 
     def test_is_pool(self):
         params = {"is_pool": "true"}
@@ -248,58 +248,69 @@ class PrefixTestCase(FilterTestCases.FilterTestCase, FilterTestCases.TenancyFilt
         self.assertQuerysetEqual(self.filterset(params, self.queryset).qs, Prefix.objects.exclude(is_pool=True))
 
     def test_within(self):
-        Prefix.objects.all().delete()
-        PrefixFactory(prefix="10.0.0.0/16")
-        PrefixFactory(prefix="10.0.1.2/31")
-        PrefixFactory(prefix="10.0.1.4/31")
-        PrefixFactory(prefix="2.2.2.2/31")
-        PrefixFactory(prefix="4.4.4.4/31")
+        unique_description = f"test_{__name__}"
+        qs = self.queryset.filter(description=unique_description)
+        matches = (
+            PrefixFactory(description=unique_description, prefix="10.0.1.2/31").pk,
+            PrefixFactory(description=unique_description, prefix="10.0.1.4/31").pk,
+        )
+        PrefixFactory(description=unique_description, prefix="10.0.0.0/16")
+        PrefixFactory(description=unique_description, prefix="2.2.2.2/31")
+        PrefixFactory(description=unique_description, prefix="4.4.4.4/31")
         params = {"within": "10.0.0.0/16"}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+        self.assertQuerysetEqual(self.filterset(params, qs).qs, qs.filter(pk__in=matches))
 
     def test_within_include(self):
-        Prefix.objects.all().delete()
-        PrefixFactory(prefix="10.0.0.0/16")
-        PrefixFactory(prefix="10.0.1.2/31")
-        PrefixFactory(prefix="10.0.1.4/31")
-        PrefixFactory(prefix="2.2.2.2/31")
-        PrefixFactory(prefix="4.4.4.4/31")
+        unique_description = f"test_{__name__}"
+        qs = self.queryset.filter(description=unique_description)
+        matches = (
+            PrefixFactory(description=unique_description, prefix="10.0.0.0/16").pk,
+            PrefixFactory(description=unique_description, prefix="10.0.1.2/31").pk,
+            PrefixFactory(description=unique_description, prefix="10.0.1.4/31").pk,
+        )
+        PrefixFactory(description=unique_description, prefix="2.2.2.2/31")
+        PrefixFactory(description=unique_description, prefix="4.4.4.4/31")
         params = {"within_include": "10.0.0.0/16"}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 3)
+        self.assertQuerysetEqual(self.filterset(params, qs).qs, qs.filter(pk__in=matches))
 
     def test_contains(self):
-        Prefix.objects.all().delete()
-        PrefixFactory(prefix="10.0.0.0/16")
-        PrefixFactory(prefix="10.0.1.0/24")
+        unique_description = f"test_{__name__}"
+        qs = self.queryset.filter(description=unique_description)
+        matches_ipv4 = (
+            PrefixFactory(description=unique_description, prefix="10.0.0.0/16").pk,
+            PrefixFactory(description=unique_description, prefix="10.0.1.0/24").pk,
+        )
+        matches_ipv6 = (
+            PrefixFactory(description=unique_description, prefix="2001:db8::/32").pk,
+            PrefixFactory(description=unique_description, prefix="2001:db8:0:1::/64").pk,
+        )
         PrefixFactory(prefix="10.2.2.0/31")
         PrefixFactory(prefix="192.168.0.0/16")
-        PrefixFactory(prefix="2001:db8::/32")
-        PrefixFactory(prefix="2001:db8:0:1::/64")
         PrefixFactory(prefix="2001:db8:0:2::/64")
         PrefixFactory(prefix="abcd::/32")
         params = {"contains": "10.0.1.0/24"}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+        self.assertQuerysetEqual(self.filterset(params, qs).qs, qs.filter(pk__in=matches_ipv4))
         params = {"contains": "2001:db8:0:1::/64"}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+        self.assertQuerysetEqual(self.filterset(params, qs).qs, qs.filter(pk__in=matches_ipv6))
 
     def test_mask_length(self):
         for prefix_length in self.queryset.values_list("prefix_length", flat=True):
             with self.subTest(prefix_length):
                 params = {"mask_length": prefix_length}
-                self.assertEqual(
-                    self.filterset(params, self.queryset).qs.count(),
-                    self.queryset.filter(prefix_length=prefix_length).count(),
+                self.assertQuerysetEqual(
+                    self.filterset(params, self.queryset).qs,
+                    self.queryset.filter(prefix_length=prefix_length),
                 )
 
     def test_vrf(self):
         prefixes = Prefix.objects.filter(vrf__rd__isnull=False)[:2]
         vrfs = [prefixes[0].vrf, prefixes[1].vrf]
         params = {"vrf_id": [vrfs[0].pk, vrfs[1].pk]}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), self.queryset.filter(vrf__in=vrfs).count())
+        self.assertQuerysetEqual(self.filterset(params, self.queryset).qs, self.queryset.filter(vrf__in=vrfs))
         params = {"vrf": [vrfs[0].rd, vrfs[1].rd]}
-        self.assertEqual(
-            self.filterset(params, self.queryset).qs.count(),
-            self.queryset.filter(vrf__rd__in=[vrfs[0].rd, vrfs[1].rd]).count(),
+        self.assertQuerysetEqual(
+            self.filterset(params, self.queryset).qs,
+            self.queryset.filter(vrf__rd__in=[vrfs[0].rd, vrfs[1].rd]),
         )
 
     def test_present_in_vrf(self):
@@ -307,6 +318,7 @@ class PrefixTestCase(FilterTestCases.FilterTestCase, FilterTestCases.TenancyFilt
         test_prefixes = Prefix.objects.all()[:10]
         Prefix.objects.exclude(pk__in=test_prefixes.values_list("pk", flat=True)).delete()
         Prefix.objects.all().update(vrf=None)
+        IPAddress.objects.all().update(vrf=None)
         VRF.objects.all().delete()
         RouteTarget.objects.all().delete()
         route_targets = (
@@ -331,43 +343,52 @@ class PrefixTestCase(FilterTestCases.FilterTestCase, FilterTestCases.TenancyFilt
         self.assertEqual(self.filterset({"present_in_vrf": vrfs[1].rd}, self.queryset).qs.count(), 2)
 
     def test_region(self):
-        regions = {Prefix.objects.filter(site__region__isnull=False).values_list("site__region", flat=True)}
-        self.assertSequenceEqual([], [regions])
-        if len(regions) < 2:
-            unique_site = Site.objects.filter(region__isnull=False).exclude(region__in=regions).first()
-            PrefixFactory(site=unique_site)
-            regions.add(unique_site.region)
+        regions = (
+            Region.objects.create(name="region1"),
+            Region.objects.create(name="region2"),
+            Region.objects.create(name="region3"),
+        )
+        test_sites = (
+            Site.objects.create(name="site1", region=regions[0], status=Status.objects.get_for_model(Site).first()),
+            Site.objects.create(name="site2", region=regions[1], status=Status.objects.get_for_model(Site).first()),
+            Site.objects.create(name="site3", region=regions[2], status=Status.objects.get_for_model(Site).first()),
+        )
+        PrefixFactory(site=test_sites[0])
+        PrefixFactory(site=test_sites[1])
         params = {"region_id": [regions[0].pk, regions[1].pk]}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 4)
+        self.assertQuerysetEqual(
+            self.filterset(params, self.queryset).qs, self.queryset.filter(site__region__in=params["region_id"])
+        )
         params = {"region": [regions[0].slug, regions[1].slug]}
+        self.assertQuerysetEqual(
+            self.filterset(params, self.queryset).qs, self.queryset.filter(site__region__slug__in=params["region"])
+        )
+
+    def test_site(self):
+        sites = Site.objects.all()[:2]
+        params = {"site_id": [sites[0].pk, sites[1].pk]}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 4)
+        params = {"site": [sites[0].slug, sites[1].slug]}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 4)
 
+    def test_vlan(self):
+        vlans = VLAN.objects.all()[:2]
+        params = {"vlan_id": [vlans[0].pk, vlans[1].pk]}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 4)
+        # TODO: Test for multiple values
+        params = {"vlan_vid": vlans[0].vid}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
 
-# def test_site(self):
-#     sites = Site.objects.all()[:2]
-#     params = {"site_id": [sites[0].pk, sites[1].pk]}
-#     self.assertEqual(self.filterset(params, self.queryset).qs.count(), 4)
-#     params = {"site": [sites[0].slug, sites[1].slug]}
-#     self.assertEqual(self.filterset(params, self.queryset).qs.count(), 4)
+    def test_role(self):
+        roles = Role.objects.all()[:2]
+        params = {"role_id": [roles[0].pk, roles[1].pk]}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 4)
+        params = {"role": [roles[0].slug, roles[1].slug]}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 4)
 
-# def test_vlan(self):
-#     vlans = VLAN.objects.all()[:2]
-#     params = {"vlan_id": [vlans[0].pk, vlans[1].pk]}
-#     self.assertEqual(self.filterset(params, self.queryset).qs.count(), 4)
-#     # TODO: Test for multiple values
-#     params = {"vlan_vid": vlans[0].vid}
-#     self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
-
-# def test_role(self):
-#     roles = Role.objects.all()[:2]
-#     params = {"role_id": [roles[0].pk, roles[1].pk]}
-#     self.assertEqual(self.filterset(params, self.queryset).qs.count(), 4)
-#     params = {"role": [roles[0].slug, roles[1].slug]}
-#     self.assertEqual(self.filterset(params, self.queryset).qs.count(), 4)
-
-# def test_status(self):
-#     params = {"status": ["deprecated", "reserved"]}
-#     self.assertEqual(self.filterset(params, self.queryset).qs.count(), 4)
+    def test_status(self):
+        params = {"status": ["deprecated", "reserved"]}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 4)
 
 
 class IPAddressTestCase(FilterTestCases.FilterTestCase, FilterTestCases.TenancyFilterTestCaseMixin):
