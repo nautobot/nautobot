@@ -55,6 +55,8 @@ HTTP_ACTIONS = {
     "DELETE": "delete",
 }
 
+logger = logging.getLogger(__name__)
+
 
 #
 # Mixins
@@ -777,9 +779,16 @@ class GetFilterSetFieldDOMElementAPI(NautobotAPIVersionMixin, APIView):
                 "content_type not found",
                 status=400,
             )
+
         model_form = get_form_for_model(model)
         if model_form is None:
-            return Response("field_name not found", 400)
+            logger.warning(f"Form for {model} model not found")
+            # Because the DOM Representation cannot be derived from a CharField without a Form, the DOM Representation must be hardcoded.
+            return Response(
+                {
+                    "dom_element": f"<input type='text' name='{field_name}' class='form-control lookup_value-input' id='id_{field_name}'>"
+                }
+            )
         try:
             form_field = get_filterset_parameter_form_field(model, field_name)
         except FilterSetFieldNotFound:

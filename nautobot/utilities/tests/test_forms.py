@@ -10,6 +10,7 @@ from netaddr import IPNetwork
 from nautobot.dcim.filters import SiteFilterSet
 from nautobot.dcim.models import Device, Site
 from nautobot.dcim.tests.test_views import create_test_device
+from nautobot.extras.filters import StatusFilterSet
 from nautobot.extras.models import CustomField, Status
 from nautobot.ipam.forms import IPAddressCSVForm, ServiceForm, ServiceFilterForm
 from nautobot.ipam.models import IPAddress, Prefix, VLANGroup
@@ -740,10 +741,24 @@ class DynamicFilterFormTest(TestCase):
                 ],
             )
 
-        # TODO(Culver): Assertion doesn't like instantiated filters
         with self.subTest("Assert form generates the correct base_filters"):
-            # self.assertEqual(form.filterset_filters, StatusFilterSet().filters)
-            self.assertEqual(site_form.filterset_filters, SiteFilterSet().filters)
+
+            def get_dict_of_field_and_value_class_from_filters(filters):
+                """return a dict of the filters' field and field value class.
+
+                This is required because instantiated classes of the same type are not equal.
+                For Example `Site()` != `Site()` but `Site().__class__` == `Site().__class__`
+                """
+                return {field: value.__class__ for field, value in filters.items()}
+
+            self.assertEqual(
+                get_dict_of_field_and_value_class_from_filters(form.filterset_filters),
+                get_dict_of_field_and_value_class_from_filters(StatusFilterSet().filters),
+            )
+            self.assertEqual(
+                get_dict_of_field_and_value_class_from_filters(site_form.filterset_filters),
+                get_dict_of_field_and_value_class_from_filters(SiteFilterSet().filters),
+            )
 
         with self.subTest("Assert lookup_field, lookup_value & lookup_type fields has accurate attributes"):
             self.assertEqual(
