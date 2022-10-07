@@ -667,10 +667,11 @@ class DynamicFilterFormTest(TestCase):
         site_form = DynamicFilterForm(model=Site)
         self.maxDiff = None
 
-        # TODO(Culver): Fix capitalization
-        # with self.subTest("Assert capitalize"):
-        #     self.assertEqual(form.capitalize("test"), "Test")
-        #     self.assertEqual(form.capitalize("test_one"), "Test one")
+        with self.subTest("Assert capitalize"):
+            self.assertEqual(form.capitalize("test"), "Test")
+            self.assertEqual(form.capitalize("test_one"), "Test one")
+            self.assertEqual(form.capitalize("tenant__group"), "Tenant group")
+            self.assertEqual(form.capitalize("_custom_field_data__example_field"), "Example field")
 
         with self.subTest("Assert get_lookup_field_choices"):
             self.assertEqual(
@@ -740,9 +741,9 @@ class DynamicFilterFormTest(TestCase):
             )
 
         # TODO(Culver): Assertion doesn't like instantiated filters
-        # with self.subTest("Assert form generates the correct base_filters"):
-        #     self.assertEqual(form.filterset_filters, StatusFilterSet().filters)
-        #     self.assertEqual(site_form.filterset_filters, SiteFilterSet().filters)
+        with self.subTest("Assert form generates the correct base_filters"):
+            # self.assertEqual(form.filterset_filters, StatusFilterSet().filters)
+            self.assertEqual(site_form.filterset_filters, SiteFilterSet().filters)
 
         with self.subTest("Assert lookup_field, lookup_value & lookup_type fields has accurate attributes"):
             self.assertEqual(
