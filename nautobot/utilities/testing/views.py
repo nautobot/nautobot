@@ -914,7 +914,9 @@ class ViewTestCases:
             # Dynamically determine a constraint that will *not* be matched by the updated objects.
             attr_name = list(self.bulk_edit_data.keys())[0]
             field = self.model._meta.get_field(attr_name)
-            value = field.value_from_object(self._get_queryset().first())
+            value = field.value_from_object(
+                self._get_queryset().exclude(**{attr_name: self.bulk_edit_data[attr_name]}).first()
+            )
 
             # Assign constrained permission
             obj_perm = ObjectPermission(
