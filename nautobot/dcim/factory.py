@@ -171,7 +171,7 @@ class LocationFactory(DjangoModelFactory):
     description = factory.Maybe("has_description", factory.Faker("text", max_nb_chars=200), "")
 
     @factory.iterator
-    def location_type():
+    def location_type():  # pylint: disable=no-method-argument
         lts = LocationType.objects.all()
         for lt in lts:
             yield lt
