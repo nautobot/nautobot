@@ -17,6 +17,9 @@
 
 ## Device Components
 
++++ 1.4.5
+    The fields `created` and `last_updated` were added to all device component models. If you upgraded from Nautobot 1.4.4 or earlier, the values for these fields will default to `None` (null).
+
 {%
     include-markdown "../models/dcim/consoleport.md"
     heading-offset=2

@@ -599,10 +599,17 @@ class ViewTestCases:
             instance1, instance2 = self._get_queryset().all()[:2]
             with self.assertLogs("nautobot.utilities.filters") as cm:
                 response = self.client.get(f"{self._get_url('list')}?ice_cream_flavor=chocolate")
+            filterset = self.get_filterset()
+            if not filterset:
+                self.fail(
+                    f"Couldn't find filterset for model {self.model}. The FilterSet class is expected to be in the "
+                    "filters module within the application associated with the model and its name is expected to be "
+                    f"{self.model.__name__}FilterSet."
+                )
             self.assertEqual(
                 cm.output,
                 [
-                    f"WARNING:nautobot.utilities.filters:{self.get_filterset().__name__}: "
+                    f"WARNING:nautobot.utilities.filters:{filterset.__name__}: "
                     'Unknown filter field "ice_cream_flavor"',
                 ],
             )
