@@ -59,22 +59,6 @@ class VRFTestCase(FilterTestCases.FilterTestCase, FilterTestCases.TenancyFilterT
     # because order_by=["name", "rd"] but name is not globally unique and rd can be null,
     # so relative ordering of VRFs with identical name and null rd is not guaranteed.
 
-    def test_gary(self):
-        # find the number of vrf, site and vlan with the same tenant
-        for p in Prefix.objects.all():
-            print(p)
-            print(f"tenant: {p.tenant}")
-            print(f"site: {p.site}")
-            print(f"vlan: {p.vlan}")
-            if p.vlan is not None:
-                print(f"vlan tenant: {p.vlan.tenant}")
-            print(f"vrf: {p.vrf}")
-            if p.vrf is not None:
-                print(f"vrf tenant: {p.vrf.tenant}")
-        print(f"vlan count: {VLAN.objects.count()}")
-        print(f"vrf count: {VRF.objects.count()}")
-        self.assertTrue(False)
-
     def test_name(self):
         names = list(self.queryset.values_list("name", flat=True))[:2]
         params = {"name": names}
