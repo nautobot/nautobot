@@ -811,7 +811,6 @@ class JobLogEntryTestCase(FilterTestCases.FilterTestCase):
 class ObjectChangeTestCase(FilterTestCases.FilterTestCase):
     queryset = ObjectChange.objects.all()
     filterset = ObjectChangeFilterSet
-    fixtures = ("status",)
 
     @classmethod
     def setUpTestData(cls):
@@ -1383,11 +1382,6 @@ class SecretsGroupAssociationTestCase(FilterTestCases.FilterTestCase):
 class StatusTestCase(FilterTestCases.NameSlugFilterTestCase):
     queryset = Status.objects.all()
     filterset = StatusFilterSet
-    fixtures = ("status",)
-
-    @classmethod
-    def setUpTestData(cls):
-        """Handled by "status" fixture."""
 
     def test_content_types(self):
         ct = ContentType.objects.get_for_model(Device)

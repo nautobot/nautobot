@@ -17,7 +17,6 @@ from nautobot.virtualization.models import Cluster, ClusterType, VMInterface, Vi
 
 class ChangeLogViewTest(ModelViewTestCase):
     model = Site
-    fixtures = ("status",)
 
     @classmethod
     def setUpTestData(cls):
@@ -160,8 +159,6 @@ class ChangeLogViewTest(ModelViewTestCase):
 
 
 class ChangeLogAPITest(APITestCase):
-    fixtures = ("status",)
-
     def setUp(self):
         super().setUp()
 

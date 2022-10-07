@@ -191,7 +191,7 @@ class NautobotTestCaseMixin:
         """
         Create and return a Tag instance for each name given.
 
-        DEPRECATED: use fixtures instead if at all possible.
+        DEPRECATED: use TagFactory instead.
         """
         warnings.warn(
             "create_tags() is deprecated and will be removed in a future Nautobot release. "

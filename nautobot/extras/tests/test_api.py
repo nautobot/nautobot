@@ -633,8 +633,6 @@ class CustomLinkTest(APIViewTestCases.APIViewTestCase):
 class DynamicGroupTestMixin:
     """Mixin for Dynamic Group test cases to re-use the same set of common fixtures."""
 
-    fixtures = ("status",)
-
     @classmethod
     def setUpTestData(cls):
         # Create the objects required for devices.
@@ -968,7 +966,6 @@ class GitRepositoryTest(APIViewTestCases.APIViewTestCase):
 class GraphQLQueryTest(APIViewTestCases.APIViewTestCase):
     model = GraphQLQuery
     brief_fields = ["display", "id", "name", "url"]
-    fixtures = ("status",)
 
     create_data = [
         {
@@ -2433,7 +2430,6 @@ class RelationshipTest(APIViewTestCases.APIViewTestCase):
         "source_filter": {"slug": ["some-slug"]},
     }
     choices_fields = ["destination_type", "source_type", "type"]
-    fixtures = ("status",)
     slug_source = "name"
     slugify_function = staticmethod(slugify_dashes_to_underscores)
 
@@ -2636,7 +2632,6 @@ class RelationshipAssociationTest(APIViewTestCases.APIViewTestCase):
     model = RelationshipAssociation
     brief_fields = ["destination_id", "display", "id", "relationship", "source_id", "url"]
     choices_fields = ["destination_type", "source_type"]
-    fixtures = ("status",)
 
     @classmethod
     def setUpTestData(cls):
@@ -3178,7 +3173,6 @@ class StatusTest(APIViewTestCases.APIViewTestCase):
     bulk_update_data = {
         "color": "000000",
     }
-    fixtures = ("status",)
 
     create_data = [
         {

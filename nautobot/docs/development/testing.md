@@ -55,26 +55,6 @@ Nautobot's custom [test runner](https://docs.djangoproject.com/en/3.2/topics/tes
 !!! info
     Because plugins also commonly use Nautobot's test runner, the base Nautobot `settings.py` currently defaults [`TEST_USE_FACTORIES`](../configuration/optional-settings.md#test_use_factories) to `False` so as to not negatively impact plugin tests that may not be designed to account for the presence of pre-populated test data in the database. This configuration is overridden to `True` in `nautobot/core/tests/nautobot_config.py` for Nautobot's own tests.
 
-## Fixtures
-
-Nautobot includes a number of [fixture](https://docs.djangoproject.com/en/stable/topics/testing/tools/#fixture-loading) files that are used in our unit and integration tests. You can also load these fixtures into your development database as an alternative to manually populating all data from scratch. A common approach when writing new tests or updating new tests would be to load the existing fixtures, manually design and execute tests, making any needed additions to the data set along the way, then re-exporting the updated data to a fixture and using that as part of the automated test development.
-
-Fixtures are stored as JSON files in the various `nautobot/APPNAME/fixtures/` directories. You can use the `invoke load-fixture --app APP --filename FIXTURE` command to load a given fixture; for example `invoke load-fixture --app extras --filename status` will populate some Status records defined in `nautobot/extras/fixtures/status.json` into the database.
-
-Conversely, you can create or update a fixture file via the `invoke write-fixture --app APP --filename FIXTURE --model MODEL [--model OTHER_MODEL...]` command, for example `invoke write-fixture --app extras --filename status --model extras.status` to save all defined Status records from the current development database to `nautobot/extras/fixtures/status.json`.
-
-Fixtures should be:
-
-- **small** - a fixture should represent instances of a single model or a small set of related models - don't try to represent the entire database in a single fixture.
-- **reusable** - a fixture that's only usable for a single test is not very useful - use fixtures to define data that applies to many different test cases.
-- **composable** - fixtures can build upon other fixtures - a "Site and Region" fixture will depend on a "Status" fixture, a "Device" fixture will depend on both of these, etc.
-
-Along the same lines, tests should:
-
-- **use fixtures, not code, for baseline data** - minimize creation of data in `setUp()` and `setUpTestData()`; prefer fixtures for this purpose.
-- **use only the fixtures that are required** - loading fixtures takes non-zero time, so don't include it if you don't need it.
-- **reuse existing fixtures when possible** - don't create new fixtures if an existing fixture meets needs or can be minimally augmented to do so.
-
 ## Test Code Style
 
 - Use more specific/feature-rich test assertion methods where available (e.g. `self.assertInHTML(fragment, html)` rather than `self.assertTrue(re.search(fragment, html))` or `assert re.search(fragment, html) is not None`).

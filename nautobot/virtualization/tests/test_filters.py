@@ -244,7 +244,6 @@ class ClusterTestCase(FilterTestCases.FilterTestCase, FilterTestCases.TenancyFil
 class VirtualMachineTestCase(FilterTestCases.FilterTestCase, FilterTestCases.TenancyFilterTestCaseMixin):
     queryset = VirtualMachine.objects.all()
     filterset = VirtualMachineFilterSet
-    fixtures = ("status",)
     tenancy_related_name = "virtual_machines"
 
     @classmethod
@@ -533,7 +532,6 @@ class VirtualMachineTestCase(FilterTestCases.FilterTestCase, FilterTestCases.Ten
 class VMInterfaceTestCase(FilterTestCases.FilterTestCase):
     queryset = VMInterface.objects.all()
     filterset = VMInterfaceFilterSet
-    fixtures = ("status",)
 
     @classmethod
     def setUpTestData(cls):

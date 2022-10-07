@@ -140,7 +140,6 @@ class ClusterTestCase(ViewTestCases.PrimaryObjectViewTestCase):
 
 class VirtualMachineTestCase(ViewTestCases.PrimaryObjectViewTestCase):
     model = VirtualMachine
-    fixtures = ("status",)
 
     @classmethod
     def setUpTestData(cls):
@@ -274,7 +273,6 @@ class VirtualMachineTestCase(ViewTestCases.PrimaryObjectViewTestCase):
 
 class VMInterfaceTestCase(ViewTestCases.DeviceComponentViewTestCase):
     model = VMInterface
-    fixtures = ("status",)
 
     @classmethod
     def setUpTestData(cls):

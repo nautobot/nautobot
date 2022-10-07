@@ -337,8 +337,6 @@ class ConfigContextSchemaTestCase(TestCase):
     Tests for the ConfigContextSchema model
     """
 
-    fixtures = ("status",)
-
     def setUp(self):
         context_data = {"a": 123, "b": "456", "c": "10.7.7.7"}
 
@@ -1160,10 +1158,9 @@ class StatusTest(TestCase):
     Tests for the `Status` model class.
     """
 
-    fixtures = ("status",)
-
     def setUp(self):
-        self.status = Status.objects.get(name="Irradiated")
+        self.status = Status.objects.create(name="New Device Status")
+        self.status.content_types.add(ContentType.objects.get_for_model(Device))
 
         manufacturer = Manufacturer.objects.create(name="Manufacturer 1")
         devicetype = DeviceType.objects.create(manufacturer=manufacturer, model="Device Type 1")
@@ -1179,7 +1176,6 @@ class StatusTest(TestCase):
         )
 
     def test_uniqueness(self):
-        # An `Irradiated` Status already exists.
         with self.assertRaises(IntegrityError):
             Status.objects.create(name=self.status.name)
 
@@ -1196,8 +1192,6 @@ class StatusTest(TestCase):
         self.assertEqual(self.status.pk, None)
 
     def test_color(self):
-        self.assertEqual(self.status.color, ColorChoices.COLOR_LIME)
-
         # Valid color
         self.status.color = ColorChoices.COLOR_PURPLE
         self.status.full_clean()

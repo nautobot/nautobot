@@ -143,7 +143,6 @@ class VirtualMachineTest(APIViewTestCases.APIViewTestCase):
         "status": "staged",
     }
     choices_fields = ["status"]
-    fixtures = ("status",)
 
     @classmethod
     def setUpTestData(cls):
@@ -291,7 +290,6 @@ class VMInterfaceTestVersion12(APIViewTestCases.APIViewTestCase):
         "description": "New description",
     }
     choices_fields = ["mode", "status"]
-    fixtures = ("status",)
 
     @classmethod
     def setUpTestData(cls):

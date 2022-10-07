@@ -172,7 +172,6 @@ class RoleTest(APIViewTestCases.APIViewTestCase):
 class PrefixTest(APIViewTestCases.APIViewTestCase):
     model = Prefix
     brief_fields = ["display", "family", "id", "prefix", "url"]
-    fixtures = ("status",)
 
     create_data = [
         {
@@ -379,8 +378,6 @@ class ParallelPrefixTest(APITransactionTestCase):
     Adapted from https://github.com/netbox-community/netbox/pull/3726
     """
 
-    fixtures = ("status",)
-
     def test_create_multiple_available_prefixes_parallel(self):
         prefix = Prefix.objects.create(prefix=IPNetwork("192.0.2.0/28"), is_pool=True)
 
@@ -445,7 +442,6 @@ class IPAddressTest(APIViewTestCases.APIViewTestCase):
         "description": "New description",
     }
     choices_fields = ["assigned_object_type", "role", "status"]
-    fixtures = ("status",)
 
     @classmethod
     def setUpTestData(cls):
@@ -556,7 +552,6 @@ class VLANTest(APIViewTestCases.APIViewTestCase):
         "description": "New description",
     }
     choices_fields = ["status"]
-    fixtures = ("status",)
 
     @classmethod
     def setUpTestData(cls):

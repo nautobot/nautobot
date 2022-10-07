@@ -88,7 +88,6 @@ class CircuitTypeTestCase(ViewTestCases.OrganizationalObjectViewTestCase):
 
 class CircuitTestCase(ViewTestCases.PrimaryObjectViewTestCase):
     model = Circuit
-    fixtures = ("status",)
 
     @classmethod
     def setUpTestData(cls):
@@ -204,8 +203,6 @@ class ProviderNetworkTestCase(ViewTestCases.PrimaryObjectViewTestCase):
 
 
 class CircuitTerminationTestCase(NautobotTestCase):
-    fixtures = ("status",)
-
     def setUp(self):
         super().setUp()
         self.user.is_superuser = True
@@ -248,8 +245,6 @@ class CircuitTerminationTestCase(NautobotTestCase):
 
 
 class CircuitSwapTerminationsTestCase(NautobotTestCase):
-    fixtures = ("status",)
-
     def setUp(self):
         super().setUp()
         self.user.is_superuser = True

@@ -183,7 +183,6 @@ class RoleTestCase(ViewTestCases.OrganizationalObjectViewTestCase):
 
 class PrefixTestCase(ViewTestCases.PrimaryObjectViewTestCase, ViewTestCases.ListObjectsViewTestCase):
     model = Prefix
-    fixtures = ("status",)
 
     @classmethod
     def setUpTestData(cls):
@@ -273,7 +272,6 @@ class PrefixTestCase(ViewTestCases.PrimaryObjectViewTestCase, ViewTestCases.List
 
 class IPAddressTestCase(ViewTestCases.PrimaryObjectViewTestCase):
     model = IPAddress
-    fixtures = ("status",)
 
     @classmethod
     def setUpTestData(cls):
@@ -355,7 +353,6 @@ class VLANGroupTestCase(ViewTestCases.OrganizationalObjectViewTestCase):
 
 class VLANTestCase(ViewTestCases.PrimaryObjectViewTestCase):
     model = VLAN
-    fixtures = ("status",)
 
     @classmethod
     def setUpTestData(cls):
