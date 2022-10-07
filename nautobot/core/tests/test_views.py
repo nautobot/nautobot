@@ -88,13 +88,13 @@ class SearchFieldsTestCase(TestCase):
         # Assert model search bar present in list UI
         response = self.client.get(reverse("dcim:site_list"))
         self.assertInHTML(
-            '<input type="text" name="q" class="form-control" required="" placeholder="Search Sites" id="id_q">',
+            '<input type="text" name="q" class="form-control" required placeholder="Search Sites" id="id_q">',
             response.content.decode(response.charset),
         )
 
         response = self.client.get(reverse("dcim:device_list"))
         self.assertInHTML(
-            '<input type="text" name="q" class="form-control" required="" placeholder="Search Devices" id="id_q">',
+            '<input type="text" name="q" class="form-control" required placeholder="Search Devices" id="id_q">',
             response.content.decode(response.charset),
         )
 
