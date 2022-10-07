@@ -85,12 +85,14 @@ function setDarkTheme() {
     // Set theme to dark
     htmlEl.dataset.theme = "dark";
     // Highlight dark theme image to show it's active
-    darkElement.disabled = undefined;
+    // darkElement.disabled = undefined;
+    document.cookie = "theme=dark; path=/";
 }
 
 function setLightTheme() {
     htmlEl.dataset.theme = "light";
-    darkElement.disabled = "disabled";
+    // darkElement.disabled = "disabled";
+    document.cookie = "theme=light; path=/";
 }
 
 /* Highlights the active selection in the theme-selection modal */
