@@ -12,7 +12,7 @@
                 <li><a href="{% url 'extras:job_list' %}">Jobs</a></li>
                 {% if object.job_model is not None %}
                     <li>{{ object.job_model.grouping | bettertitle }}</li>
-                    <li><a href="{{ object.job_model.get_absolute_url }}">{{ object.job_model }}</a></li>
+                    <li>{{ object.job_model|hyperlinked_object }}</li>
                 {% else %}
                     <li>{{ object.job_class }}</li>
                 {% endif %}

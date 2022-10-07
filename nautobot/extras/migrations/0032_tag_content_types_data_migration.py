@@ -11,8 +11,8 @@ def populate_existing_tags(app, schema):
     content_types = nautobot.extras.utils.TaggableClassesQuery().get_choices()
 
     for tag in Tag.objects.filter(content_types__isnull=True):
-        for _, id in content_types:
-            tag.content_types.add(id)
+        for _, pk in content_types:
+            tag.content_types.add(pk)
 
 
 def reverse_populate_tags(app, schema_editor):

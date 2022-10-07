@@ -9,9 +9,7 @@
             <table class="table table-hover panel-body attr-table">
                 <tr>
                     <td>Virtual Machine</td>
-                    <td>
-                        <a href="{{ object.virtual_machine.get_absolute_url }}">{{ object.virtual_machine }}</a>
-                    </td>
+                    <td>{{ object.virtual_machine|hyperlinked_object }}</td>
                 </tr>
                 <tr>
                     <td>Name</td>
@@ -27,6 +25,26 @@
                     <td>Enabled</td>
                     <td>{{ object.enabled | render_boolean }}</td>
                 </tr>
+                <tr>
+                     <td>Parent Interface</td>
+                     <td>
+                         {% if object.parent %}
+                             <a href="{{ object.parent_interface.get_absolute_url }}">{{ object.parent_interface }}</a>
+                         {% else %}
+                             <span class="text-muted">None</span>
+                         {% endif %}
+                     </td>
+                </tr>
+                <tr>
+                     <th scope="row">Bridge</th>
+                     <td>
+                         {% if object.bridge %}
+                             <a href="{{ object.bridge.get_absolute_url }}">{{ object.bridge }}</a>
+                         {% else %}
+                             <span class="text-muted">None</span>
+                         {% endif %}
+                     </td>
+                 </tr>
                 <tr>
                     <td>Description</td>
                     <td>{{ object.description|placeholder }} </td>
@@ -50,4 +68,5 @@
 {% block content_full_width_page %}
     {% include 'panel_table.html' with table=ipaddress_table heading="IP Addresses" %}
     {% include 'panel_table.html' with table=vlan_table heading="VLANs" %}
+    {% include 'panel_table.html' with table=child_interfaces_table heading="Child Interfaces" %}
 {% endblock content_full_width_page %}

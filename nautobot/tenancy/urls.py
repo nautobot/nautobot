@@ -1,6 +1,6 @@
 from django.urls import path
 
-from nautobot.extras.views import ObjectChangeLogView
+from nautobot.extras.views import ObjectChangeLogView, ObjectNotesView
 from . import views
 from .models import Tenant, TenantGroup
 
@@ -44,6 +44,12 @@ urlpatterns = [
         name="tenantgroup_changelog",
         kwargs={"model": TenantGroup},
     ),
+    path(
+        "tenant-groups/<slug:slug>/notes/",
+        ObjectNotesView.as_view(),
+        name="tenantgroup_notes",
+        kwargs={"model": TenantGroup},
+    ),
     # Tenants
     path("tenants/", views.TenantListView.as_view(), name="tenant_list"),
     path("tenants/add/", views.TenantEditView.as_view(), name="tenant_add"),
@@ -65,6 +71,12 @@ urlpatterns = [
         "tenants/<slug:slug>/changelog/",
         ObjectChangeLogView.as_view(),
         name="tenant_changelog",
+        kwargs={"model": Tenant},
+    ),
+    path(
+        "tenants/<slug:slug>/notes/",
+        ObjectNotesView.as_view(),
+        name="tenant_notes",
         kwargs={"model": Tenant},
     ),
 ]

@@ -19,25 +19,19 @@
                     <td>
                         {% if object.region %}
                             {% for region in object.region.get_ancestors %}
-                                <a href="{{ region.get_absolute_url }}">{{ region }}</a> /
+                                {{ region|hyperlinked_object }} /
                             {% endfor %}
-                            <a href="{{ object.region.get_absolute_url }}">{{ object.region }}</a>
-                        {% else %}
-                            <span class="text-muted">None</span>
                         {% endif %}
+                        {{ object.region|hyperlinked_object }}
                     </td>
                 </tr>
                 <tr>
                     <td>Tenant</td>
                     <td>
-                        {% if object.tenant %}
-                            {% if object.tenant.group %}
-                                <a href="{{ object.tenant.group.get_absolute_url }}">{{ object.tenant.group }}</a> /
-                            {% endif %}
-                            <a href="{{ object.tenant.get_absolute_url }}">{{ object.tenant }}</a>
-                        {% else %}
-                            <span class="text-muted">None</span>
+                        {% if object.tenant and object.tenant.group %}
+                            {{ object.tenant.group|hyperlinked_object }} /
                         {% endif %}
+                        {{ object.tenant|hyperlinked_object }}
                     </td>
                 </tr>
                 <tr>
@@ -218,3 +212,20 @@
             {% endif %}
         </div>
 {% endblock content_right_page%}
+
+{% block content_full_width_page %}
+    <div class="panel panel-default">
+        <div class="panel-heading">
+            <strong>Locations</strong>
+        </div>
+        {% include 'inc/table.html' with table=locations_table %}
+        {% if perms.dcim.add_location %}
+            <div class="panel-footer text-right noprint">
+                <a href="{% url 'dcim:location_add' %}?site={{ object.pk }}" class="btn btn-xs btn-primary">
+                    <span class="mdi mdi-plus-thick" aria-hidden="true"></span> Add location
+                </a>
+            </div>
+        {% endif %}
+    </div>
+    {% include 'inc/paginator.html' with paginator=locations_table.paginator page=locations_table.page %}
+{% endblock content_full_width_page %}

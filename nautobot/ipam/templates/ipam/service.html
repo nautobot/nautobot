@@ -2,7 +2,7 @@
 {% load helpers %}
 
 {% block extra_breadcrumbs %}
-            <li><a href="{{ object.parent.get_absolute_url }}">{{ object.parent }}</a></li>
+            <li>{{ object.parent|hyperlinked_object }}</li>
 {% endblock extra_breadcrumbs %}
 
 {% block content_left_page %}
@@ -17,9 +17,7 @@
                 </tr>
                 <tr>
                     <td>Parent</td>
-                    <td>
-                        <a href="{{ object.parent.get_absolute_url }}">{{ object.parent }}</a>
-                    </td>
+                    <td>{{ object.parent|hyperlinked_object }}</td>
                 </tr>
                 <tr>
                     <td>Protocol</td>
@@ -33,7 +31,7 @@
                     <td>IP Addresses</td>
                     <td>
                         {% for ipaddress in object.ipaddresses.all %}
-                            <a href="{{ ipaddress.get_absolute_url }}">{{ ipaddress }}</a><br />
+                            {{ ipaddress|hyperlinked_object }}<br>
                         {% empty %}
                             <span class="text-muted">None</span>
                         {% endfor %}

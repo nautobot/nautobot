@@ -31,6 +31,7 @@ class PrefixStatusChoices(ChoiceSet):
         (STATUS_DEPRECATED, "Deprecated"),
     )
 
+    # 2.0 TODO: No longer used (see extras.management.COLOR_MAP instead), remove in 2.0
     CSS_CLASSES = {
         STATUS_CONTAINER: "default",
         STATUS_ACTIVE: "primary",
@@ -60,6 +61,7 @@ class IPAddressStatusChoices(ChoiceSet):
         (STATUS_SLAAC, "SLAAC"),
     )
 
+    # 2.0 TODO: No longer used (see extras.management.COLOR_MAP instead), remove in 2.0
     CSS_CLASSES = {
         STATUS_ACTIVE: "primary",
         STATUS_RESERVED: "info",
@@ -120,6 +122,7 @@ class VLANStatusChoices(ChoiceSet):
         (STATUS_DEPRECATED, "Deprecated"),
     )
 
+    # 2.0 TODO: No longer used (see extras.management.COLOR_MAP instead), remove in 2.0
     CSS_CLASSES = {
         STATUS_ACTIVE: "primary",
         STATUS_RESERVED: "info",

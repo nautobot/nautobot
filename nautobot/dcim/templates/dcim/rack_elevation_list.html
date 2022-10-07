@@ -28,7 +28,7 @@
                     <div style="display: inline-block; margin-right: 12px; width: 254px">
                       <div style="margin-left: 30px">
                         <div class="text-center">
-                            <strong><a href="{% url 'dcim:rack' pk=rack.pk %}">{{ rack.name }}</a></strong>
+                            <strong>{{ rack|hyperlinked_object }}</strong>
                             {% if rack.role %}
                                 <br /><small class="label" style="color: {{ rack.role.color|fgcolor }}; background-color: #{{ rack.role.color }}">{{ rack.role }}</small>
                             {% endif %}
@@ -39,7 +39,7 @@
                         {% include 'dcim/inc/rack_elevation.html' with object=rack face=rack_face %}
                         <div class="clearfix"></div>
                         <div class="text-center">
-                            <strong><a href="{% url 'dcim:rack' pk=rack.pk %}">{{ rack.name }}</a></strong>
+                            <strong>{{ rack|hyperlinked_object }}</strong>
                             {% if rack.facility_id %}
                                 <small class="text-muted">({{ rack.facility_id }})</small>
                             {% endif %}
@@ -58,5 +58,6 @@
 {% endblock %}
 
 {% block javascript %}
+{{ block.super }}
 <script src="{% static 'js/rack_elevations.js' %}?v{{ settings.VERSION }}"></script>
 {% endblock %}

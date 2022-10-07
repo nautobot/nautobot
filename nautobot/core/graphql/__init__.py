@@ -67,3 +67,4 @@ class BigInteger(Scalar):
     def parse_literal(node):
         if isinstance(node, ast.IntValue):
             return int(node.value)
+        return None

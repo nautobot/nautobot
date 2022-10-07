@@ -1,5 +1,6 @@
 from concurrent.futures.thread import ThreadPoolExecutor
 import json
+import logging
 from random import shuffle
 
 from django.db import connection
@@ -30,7 +31,7 @@ class AppTest(APITestCase):
     def test_root(self):
 
         url = reverse("ipam-api:api-root")
-        response = self.client.get("{}?format=api".format(url), **self.header)
+        response = self.client.get(f"{url}?format=api", **self.header)
 
         self.assertEqual(response.status_code, 200)
 
@@ -56,16 +57,6 @@ class VRFTest(APIViewTestCases.APIViewTestCase):
         "description": "New description",
     }
 
-    @classmethod
-    def setUpTestData(cls):
-
-        vrfs = (
-            VRF(name="VRF 1", rd="65000:1"),
-            VRF(name="VRF 2", rd="65000:2"),
-            VRF(name="VRF 3"),  # No RD
-        )
-        VRF.objects.bulk_create(vrfs)
-
 
 class RouteTargetTest(APIViewTestCases.APIViewTestCase):
     model = RouteTarget
@@ -84,16 +75,6 @@ class RouteTargetTest(APIViewTestCases.APIViewTestCase):
     bulk_update_data = {
         "description": "New description",
     }
-
-    @classmethod
-    def setUpTestData(cls):
-
-        route_targets = (
-            RouteTarget(name="65000:1001"),
-            RouteTarget(name="65000:1002"),
-            RouteTarget(name="65000:1003"),
-        )
-        RouteTarget.objects.bulk_create(route_targets)
 
 
 class RIRTest(APIViewTestCases.APIViewTestCase):
@@ -122,15 +103,16 @@ class RIRTest(APIViewTestCases.APIViewTestCase):
 
     slug_source = "name"
 
-    @classmethod
-    def setUpTestData(cls):
+    def get_deletable_object(self):
+        return RIR.objects.create(name="DELETE ME")
 
-        rirs = (
-            RIR(name="RIR 1", slug="rir-1"),
-            RIR(name="RIR 2", slug="rir-2"),
-            RIR(name="RIR 3", slug="rir-3"),
-        )
-        RIR.objects.bulk_create(rirs)
+    def get_deletable_object_pks(self):
+        rirs = [
+            RIR.objects.create(name="DELETE ME 1"),
+            RIR.objects.create(name="DELETE ME 2"),
+            RIR.objects.create(name="DELETE ME 3"),
+        ]
+        return [rir.pk for rir in rirs]
 
 
 class AggregateTest(APIViewTestCases.APIViewTestCase):
@@ -143,28 +125,20 @@ class AggregateTest(APIViewTestCases.APIViewTestCase):
     @classmethod
     def setUpTestData(cls):
 
-        rirs = (
-            RIR.objects.create(name="RIR 1", slug="rir-1"),
-            RIR.objects.create(name="RIR 2", slug="rir-2"),
-        )
-
-        Aggregate.objects.create(prefix=IPNetwork("10.0.0.0/8"), rir=rirs[0])
-        Aggregate.objects.create(prefix=IPNetwork("172.16.0.0/12"), rir=rirs[0])
-        Aggregate.objects.create(prefix=IPNetwork("192.168.0.0/16"), rir=rirs[0])
-        Aggregate.objects.create(prefix=IPNetwork("2001:db8:abcd::/64"), rir=rirs[0])
+        rir = RIR.objects.filter(is_private=False).first()
 
         cls.create_data = [
             {
-                "prefix": "100.0.0.0/8",
-                "rir": rirs[1].pk,
+                "prefix": "12.0.0.0/8",
+                "rir": rir.pk,
             },
             {
-                "prefix": "2001:db8:abcd:12::/64",
-                "rir": rirs[1].pk,
+                "prefix": "2d00::/8",
+                "rir": rir.pk,
             },
             {
-                "prefix": "102.0.0.0/8",
-                "rir": rirs[1].pk,
+                "prefix": "17.0.0.0/16",
+                "rir": rir.pk,
             },
         ]
 
@@ -194,20 +168,11 @@ class RoleTest(APIViewTestCases.APIViewTestCase):
     }
     slug_source = "name"
 
-    @classmethod
-    def setUpTestData(cls):
-
-        roles = (
-            Role(name="Role 1", slug="role-1"),
-            Role(name="Role 2", slug="role-2"),
-            Role(name="Role 3", slug="role-3"),
-        )
-        Role.objects.bulk_create(roles)
-
 
 class PrefixTest(APIViewTestCases.APIViewTestCase):
     model = Prefix
     brief_fields = ["display", "family", "id", "prefix", "url"]
+    fixtures = ("status",)
 
     create_data = [
         {
@@ -292,7 +257,7 @@ class PrefixTest(APIViewTestCases.APIViewTestCase):
             data = {
                 "prefix_length": 30,
                 "status": "active",
-                "description": "Test Prefix {}".format(i + 1),
+                "description": f"Test Prefix {i + 1}",
             }
             response = self.client.post(url, data, format="json", **self.header)
             self.assertHttpStatus(response, status.HTTP_201_CREATED)
@@ -375,7 +340,7 @@ class PrefixTest(APIViewTestCases.APIViewTestCase):
         # Create all four available IPs with individual requests
         for i in range(1, 5):
             data = {
-                "description": "Test IP {}".format(i),
+                "description": f"Test IP {i}",
                 "status": "active",
             }
             response = self.client.post(url, data, format="json", **self.header)
@@ -414,14 +379,17 @@ class ParallelPrefixTest(APITransactionTestCase):
     Adapted from https://github.com/netbox-community/netbox/pull/3726
     """
 
+    fixtures = ("status",)
+
     def test_create_multiple_available_prefixes_parallel(self):
         prefix = Prefix.objects.create(prefix=IPNetwork("192.0.2.0/28"), is_pool=True)
 
         # 5 Prefixes
         requests = [{"prefix_length": 30, "description": f"Test Prefix {i}", "status": "active"} for i in range(1, 6)]
         url = reverse("ipam-api:prefix-available-prefixes", kwargs={"pk": prefix.pk})
-
+        logging.disable(logging.ERROR)
         self._do_parallel_requests(url, requests)
+        logging.disable(logging.NOTSET)
 
         prefixes = [str(o) for o in Prefix.objects.filter(prefix_length=30).all()]
         self.assertEqual(len(prefixes), len(set(prefixes)), "Duplicate prefixes should not exist")
@@ -432,9 +400,9 @@ class ParallelPrefixTest(APITransactionTestCase):
         # 8 IPs
         requests = [{"description": f"Test IP {i}", "status": "active"} for i in range(1, 9)]
         url = reverse("ipam-api:prefix-available-ips", kwargs={"pk": prefix.pk})
-
+        logging.disable(logging.ERROR)
         self._do_parallel_requests(url, requests)
-
+        logging.disable(logging.NOTSET)
         ips = [str(o) for o in IPAddress.objects.filter().all()]
         self.assertEqual(len(ips), len(set(ips)), "Duplicate IPs should not exist")
 
@@ -477,6 +445,7 @@ class IPAddressTest(APIViewTestCases.APIViewTestCase):
         "description": "New description",
     }
     choices_fields = ["assigned_object_type", "role", "status"]
+    fixtures = ("status",)
 
     @classmethod
     def setUpTestData(cls):
@@ -572,15 +541,12 @@ class VLANGroupTest(APIViewTestCases.APIViewTestCase):
     }
     slug_source = "name"
 
-    @classmethod
-    def setUpTestData(cls):
+    def get_deletable_object(self):
+        return VLANGroup.objects.filter(vlans__isnull=True).first()
 
-        vlan_groups = (
-            VLANGroup(name="VLAN Group 1", slug="vlan-group-1"),
-            VLANGroup(name="VLAN Group 2", slug="vlan-group-2"),
-            VLANGroup(name="VLAN Group 3", slug="vlan-group-3"),
-        )
-        VLANGroup.objects.bulk_create(vlan_groups)
+    def get_deletable_object_pks(self):
+        groups = list(VLANGroup.objects.filter(vlans__isnull=True))[:3]
+        return [group.pk for group in groups]
 
 
 class VLANTest(APIViewTestCases.APIViewTestCase):
@@ -590,20 +556,12 @@ class VLANTest(APIViewTestCases.APIViewTestCase):
         "description": "New description",
     }
     choices_fields = ["status"]
+    fixtures = ("status",)
 
     @classmethod
     def setUpTestData(cls):
 
-        vlan_groups = (
-            VLANGroup.objects.create(name="VLAN Group 1", slug="vlan-group-1"),
-            VLANGroup.objects.create(name="VLAN Group 2", slug="vlan-group-2"),
-        )
-
-        statuses = Status.objects.get_for_model(VLAN)
-
-        VLAN.objects.create(name="VLAN 1", vid=1, group=vlan_groups[0], status=statuses[0])
-        VLAN.objects.create(name="VLAN 2", vid=2, group=vlan_groups[0], status=statuses[0])
-        VLAN.objects.create(name="VLAN 3", vid=3, group=vlan_groups[0], status=statuses[0])
+        vlan_groups = VLANGroup.objects.all()[:2]
 
         # FIXME(jathan): The writable serializer for `status` takes the
         # status `name` (str) and not the `pk` (int). Do not validate this
@@ -689,19 +647,19 @@ class ServiceTest(APIViewTestCases.APIViewTestCase):
             name="Service 1",
             protocol=ServiceProtocolChoices.PROTOCOL_TCP,
             ports=[1],
-        ),
+        )
         Service.objects.create(
             device=devices[0],
             name="Service 2",
             protocol=ServiceProtocolChoices.PROTOCOL_TCP,
             ports=[2],
-        ),
+        )
         Service.objects.create(
             device=devices[0],
             name="Service 3",
             protocol=ServiceProtocolChoices.PROTOCOL_TCP,
             ports=[3],
-        ),
+        )
 
         cls.create_data = [
             {

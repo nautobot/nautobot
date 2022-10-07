@@ -1,0 +1,510 @@
+[
+{
+  "model": "extras.tag",
+  "fields": {
+    "name": "Tag ALL The Things!",
+    "slug": "tag-all-the-things",
+    "created": "2022-08-23",
+    "last_updated": "2022-08-23T19:57:07.847Z",
+    "_custom_field_data": {},
+    "color": "ff66ff",
+    "description": "Tag that can be applied to anything",
+    "content_types": [
+      [
+        "circuits",
+        "circuit"
+      ],
+      [
+        "dcim",
+        "cable"
+      ],
+      [
+        "dcim",
+        "device"
+      ],
+      [
+        "dcim",
+        "interface"
+      ],
+      [
+        "dcim",
+        "location"
+      ],
+      [
+        "dcim",
+        "powerfeed"
+      ],
+      [
+        "dcim",
+        "rack"
+      ],
+      [
+        "dcim",
+        "site"
+      ],
+      [
+        "ipam",
+        "ipaddress"
+      ],
+      [
+        "ipam",
+        "prefix"
+      ],
+      [
+        "ipam",
+        "vlan"
+      ],
+      [
+        "virtualization",
+        "virtualmachine"
+      ],
+      [
+        "virtualization",
+        "vminterface"
+      ],
+      [
+        "extras",
+        "job"
+      ],
+      [
+        "circuits",
+        "circuittermination"
+      ],
+      [
+        "circuits",
+        "provider"
+      ],
+      [
+        "circuits",
+        "providernetwork"
+      ],
+      [
+        "dcim",
+        "consoleport"
+      ],
+      [
+        "dcim",
+        "consoleserverport"
+      ],
+      [
+        "dcim",
+        "devicebay"
+      ],
+      [
+        "dcim",
+        "devicetype"
+      ],
+      [
+        "dcim",
+        "frontport"
+      ],
+      [
+        "dcim",
+        "inventoryitem"
+      ],
+      [
+        "dcim",
+        "poweroutlet"
+      ],
+      [
+        "dcim",
+        "powerpanel"
+      ],
+      [
+        "dcim",
+        "powerport"
+      ],
+      [
+        "dcim",
+        "rackreservation"
+      ],
+      [
+        "dcim",
+        "rearport"
+      ],
+      [
+        "dcim",
+        "virtualchassis"
+      ],
+      [
+        "ipam",
+        "aggregate"
+      ],
+      [
+        "ipam",
+        "routetarget"
+      ],
+      [
+        "ipam",
+        "vrf"
+      ],
+      [
+        "ipam",
+        "service"
+      ],
+      [
+        "extras",
+        "gitrepository"
+      ],
+      [
+        "extras",
+        "secret"
+      ],
+      [
+        "tenancy",
+        "tenant"
+      ],
+      [
+        "virtualization",
+        "cluster"
+      ]
+    ]
+  }
+},
+{
+  "model": "extras.tag",
+  "fields": {
+    "name": "Neutral Grey",
+    "slug": "neutral-grey",
+    "created": "2022-08-23",
+    "last_updated": "2022-08-24T13:47:57.038Z",
+    "_custom_field_data": {},
+    "color": "9e9e9e",
+    "description": "A neutral gray tag, soothing to the eye",
+    "content_types": [
+      [
+        "circuits",
+        "circuit"
+      ],
+      [
+        "dcim",
+        "cable"
+      ],
+      [
+        "dcim",
+        "device"
+      ],
+      [
+        "dcim",
+        "interface"
+      ],
+      [
+        "dcim",
+        "location"
+      ],
+      [
+        "dcim",
+        "powerfeed"
+      ],
+      [
+        "dcim",
+        "rack"
+      ],
+      [
+        "dcim",
+        "site"
+      ],
+      [
+        "ipam",
+        "ipaddress"
+      ],
+      [
+        "ipam",
+        "prefix"
+      ],
+      [
+        "ipam",
+        "vlan"
+      ],
+      [
+        "virtualization",
+        "virtualmachine"
+      ],
+      [
+        "virtualization",
+        "vminterface"
+      ],
+      [
+        "extras",
+        "job"
+      ],
+      [
+        "circuits",
+        "circuittermination"
+      ],
+      [
+        "circuits",
+        "provider"
+      ],
+      [
+        "circuits",
+        "providernetwork"
+      ],
+      [
+        "dcim",
+        "consoleport"
+      ],
+      [
+        "dcim",
+        "consoleserverport"
+      ],
+      [
+        "dcim",
+        "devicebay"
+      ],
+      [
+        "dcim",
+        "devicetype"
+      ],
+      [
+        "dcim",
+        "frontport"
+      ],
+      [
+        "dcim",
+        "inventoryitem"
+      ],
+      [
+        "dcim",
+        "poweroutlet"
+      ],
+      [
+        "dcim",
+        "powerpanel"
+      ],
+      [
+        "dcim",
+        "powerport"
+      ],
+      [
+        "dcim",
+        "rackreservation"
+      ],
+      [
+        "dcim",
+        "rearport"
+      ],
+      [
+        "dcim",
+        "virtualchassis"
+      ],
+      [
+        "ipam",
+        "aggregate"
+      ],
+      [
+        "ipam",
+        "routetarget"
+      ],
+      [
+        "ipam",
+        "vrf"
+      ],
+      [
+        "ipam",
+        "service"
+      ],
+      [
+        "extras",
+        "gitrepository"
+      ],
+      [
+        "extras",
+        "secret"
+      ],
+      [
+        "tenancy",
+        "tenant"
+      ],
+      [
+        "virtualization",
+        "cluster"
+      ]
+    ]
+  }
+},
+{
+  "model": "extras.tag",
+  "fields": {
+    "name": "Devices and Sites Only",
+    "slug": "devices-and-sites-only",
+    "created": "2022-08-23",
+    "last_updated": "2022-08-23T20:09:40.557Z",
+    "_custom_field_data": {},
+    "color": "4caf50",
+    "description": "A tag for devices and sites only",
+    "content_types": [
+      [
+        "dcim",
+        "device"
+      ],
+      [
+        "dcim",
+        "site"
+      ]
+    ]
+  }
+},
+{
+  "model": "extras.tag",
+  "fields": {
+    "name": "Happy 😊",
+    "slug": "unicode-tag",
+    "created": "2022-08-23",
+    "last_updated": "2022-08-24T13:42:48.073Z",
+    "_custom_field_data": {},
+    "color": "ffeb3b",
+    "description": "",
+    "content_types": [
+      [
+        "circuits",
+        "circuit"
+      ],
+      [
+        "dcim",
+        "cable"
+      ],
+      [
+        "dcim",
+        "device"
+      ],
+      [
+        "dcim",
+        "interface"
+      ],
+      [
+        "dcim",
+        "location"
+      ],
+      [
+        "dcim",
+        "powerfeed"
+      ],
+      [
+        "dcim",
+        "rack"
+      ],
+      [
+        "dcim",
+        "site"
+      ],
+      [
+        "ipam",
+        "ipaddress"
+      ],
+      [
+        "ipam",
+        "prefix"
+      ],
+      [
+        "ipam",
+        "vlan"
+      ],
+      [
+        "virtualization",
+        "virtualmachine"
+      ],
+      [
+        "virtualization",
+        "vminterface"
+      ],
+      [
+        "extras",
+        "job"
+      ],
+      [
+        "circuits",
+        "circuittermination"
+      ],
+      [
+        "circuits",
+        "provider"
+      ],
+      [
+        "circuits",
+        "providernetwork"
+      ],
+      [
+        "dcim",
+        "consoleport"
+      ],
+      [
+        "dcim",
+        "consoleserverport"
+      ],
+      [
+        "dcim",
+        "devicebay"
+      ],
+      [
+        "dcim",
+        "devicetype"
+      ],
+      [
+        "dcim",
+        "frontport"
+      ],
+      [
+        "dcim",
+        "inventoryitem"
+      ],
+      [
+        "dcim",
+        "poweroutlet"
+      ],
+      [
+        "dcim",
+        "powerpanel"
+      ],
+      [
+        "dcim",
+        "powerport"
+      ],
+      [
+        "dcim",
+        "rackreservation"
+      ],
+      [
+        "dcim",
+        "rearport"
+      ],
+      [
+        "dcim",
+        "virtualchassis"
+      ],
+      [
+        "ipam",
+        "aggregate"
+      ],
+      [
+        "ipam",
+        "routetarget"
+      ],
+      [
+        "ipam",
+        "vrf"
+      ],
+      [
+        "ipam",
+        "service"
+      ],
+      [
+        "extras",
+        "gitrepository"
+      ],
+      [
+        "extras",
+        "secret"
+      ],
+      [
+        "tenancy",
+        "tenant"
+      ],
+      [
+        "virtualization",
+        "cluster"
+      ]
+    ]
+  }
+}
+]

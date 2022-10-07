@@ -1,0 +1,230 @@
+{% extends 'base.html' %}
+{% load buttons %}
+{% load custom_links %}
+{% load helpers %}
+{% load perms %}
+{% load plugins %}
+{% load static %}
+{% load tz %}
+
+{% block header %}
+    <div class="row noprint">
+        {% with list_url=object|validated_viewname:"list" %}
+        <div class="col-sm-8 col-md-9">
+            <ol class="breadcrumb">
+            {% block breadcrumbs %}
+                {% if list_url %}
+                <li><a href="{% url list_url %}">
+                    {{ verbose_name_plural|bettertitle }}
+                </a></li>
+                {% endif %}
+                {% block extra_breadcrumbs %}{% endblock extra_breadcrumbs %}
+                <li>{{ object|hyperlinked_object }}</li>
+            {% endblock breadcrumbs %}
+            </ol>
+        </div>
+        {% if list_url %}
+        <div class="col-sm-4 col-md-3">
+            <form action="{% url list_url %}" method="get">
+                <div class="input-group">
+                    <input type="text" name="q" class="form-control" placeholder="Search {{ verbose_name_plural }}" />
+                    <span class="input-group-btn">
+                        <button type="submit" class="btn btn-primary">
+                            <span class="mdi mdi-magnify" aria-hidden="true"></span>
+                        </button>
+                    </span>
+                </div>
+            </form>
+        </div>
+        {% endif%}
+        {% endwith %}
+    </div>
+
+    <div class="pull-right noprint">
+    {% block buttons %}
+        {% plugin_buttons object %}
+        {% block extra_buttons %}{% endblock extra_buttons %}
+        {% if object.clone_fields and user|can_add:object %}
+            {% clone_button object %}
+        {% endif %}
+        {% if user|can_change:object %}
+            {% edit_button object %}
+        {% endif %}
+        {% if user|can_delete:object %}
+            {% delete_button object %}
+        {% endif %}
+    {% endblock buttons %}
+    </div>
+
+    {% block masthead %}
+        <h1>{% block title %}{{ object }}{% endblock %}</h1>
+    {% endblock masthead %}
+    {% include 'inc/created_updated.html' %}
+    <div class="pull-right noprint">
+        {% custom_links object %}
+        {% block panel_buttons %}{% endblock panel_buttons %}
+    </div>
+
+    <ul id="tabs" class="nav nav-tabs">
+    {% block nav_tabs %}
+        <li role="presentation"{% if active_tab == "main" or request.GET.tab == "main" %} class="active"{% endif %}>
+            <a href="{{ object.get_absolute_url }}#main" onclick="switch_tab(this.href)" aria-controls="main" role="tab" data-toggle="tab">
+                {{ verbose_name|bettertitle }}
+            </a>
+        </li>
+        <li role="presentation"{% if request.GET.tab == 'advanced' %} class="active"{% endif %}>
+            <a href="{{ object.get_absolute_url }}#advanced" onclick="switch_tab(this.href)" aria-controls="advanced" role="tab" data-toggle="tab">
+                Advanced
+            </a>
+        </li>
+        {% block extra_nav_tabs %}{% endblock extra_nav_tabs %}
+        {% if perms.extras.view_note %}
+            {% if active_tab != 'notes' and object.get_notes_url or active_tab == 'notes' %}
+                <li role="presentation"{% if active_tab == 'notes' %} class="active"{% endif %}>
+                    <a href="{{ object.get_notes_url }}">Notes</a>
+                </li>
+            {% endif %}
+        {% endif %}
+        {% if perms.extras.view_dynamicgroup and object.get_dynamic_groups_url %}
+            {% if active_tab != 'dynamic-groups' and object.get_dynamic_groups_url or active_tab == 'dynamic-groups' %}
+                <li role="presentation"{% if active_tab == 'dynamic-groups' %} class="active"{% endif %}>
+                    <a href="{{ object.get_dynamic_groups_url }}">Dynamic Groups</a>
+                </li>
+            {% endif %}
+        {% endif %}
+        {% if perms.extras.view_objectchange %}
+            {% if active_tab != 'changelog' and object.get_changelog_url or active_tab == 'changelog' %}
+                <li role="presentation"{% if active_tab == 'changelog' %} class="active"{% endif %}>
+                    <a href="{{ object.get_changelog_url }}">Change Log</a>
+                </li>
+            {% endif %}
+        {% endif %}
+    {% endblock nav_tabs %}
+    {% plugin_object_detail_tabs object %}
+    </ul>
+{% endblock header %}
+
+{% block content %}
+    <div class="tab-content">
+        <div id="main" role="tabpanel" class="tab-pane {% if active_tab == "main" or request.GET.tab == "main" %}active{% else %}fade{% endif %}">
+            <div class="row">
+                <div class="col-md-6">
+                    {% block content_left_page %}{% endblock content_left_page %}
+                    {% include 'inc/custom_fields/panel.html' with custom_fields=object.get_custom_field_groupings_basic computed_fields_advanced_ui=False %}
+                    {% include 'inc/relationships_panel.html' %}
+                    {% include 'extras/inc/tags_panel.html' %}
+                    {% plugin_left_page object %}
+                </div>
+                <div class="col-md-6">
+                    {% block content_right_page %}{% endblock content_right_page %}
+                    {% plugin_right_page object %}
+                </div>
+            </div>
+            <div class="row">
+                <div class="col-md-12">
+                    {% block content_full_width_page %}{% endblock content_full_width_page %}
+                    {% plugin_full_width_page object %}
+                </div>
+            </div>
+        </div>
+        <div id="advanced" role="tabpanel" class="tab-pane {% if request.GET.tab == 'advanced' %}active{% else %}fade{% endif %}">
+            <div class="row">
+                <div class="col-md-6">
+                    {% include 'inc/object_details_advanced_panel.html' %}
+                </div>
+                <div class="col-md-6">
+                    {% block advanced_content_right_page %}{% endblock advanced_content_right_page %}
+                </div>
+            </div>
+            <div class="row">
+                <div class="col-md-12">
+                    {% block advanced_content_full_width_page %}{% endblock advanced_content_full_width_page %}
+                </div>
+            </div>
+        </div>
+        {% block extra_tab_content %}{% endblock extra_tab_content %}
+    </div>
+{% endblock content %}
+
+
+{% block javascript %}
+<script>
+    var clipboard = new ClipboardJS('.btn');
+
+    clipboard.on('success', function (e) {});
+
+    clipboard.on('error', function (e) {});
+
+    
+    // Set initial history state
+    if (location.pathname == "{{ object.get_absolute_url }}"){
+        var tab_id = "main";
+        var tab_url = location.origin + location.pathname
+        var query_string = location.search.replace("?", "")
+
+        if(query_string.includes("tab")){
+            query_params = query_string.split("&")
+
+            tab_query_string = query_params.find(params => params.startsWith("tab"))
+            tab_id = tab_query_string.split("=")[1]
+
+            query_string_excluding_tab = query_params.filter(params => !params.startsWith("tab"))
+            query_string = query_string_excluding_tab.join("&")
+        }
+
+        final_query_string = query_string ? "&" + query_string : ""
+
+        window.history.replaceState({id: tab_id}, document.title, `${tab_url}?tab=${tab_id}${final_query_string}`);
+        $(`#tabs a[href="{{ object.get_absolute_url }}#${tab_id}"]`).tab('show');
+
+    }
+
+
+    function switch_tab(tab_href, reload=false) {
+
+        let [tab_url, tab_id] = tab_href.split("#")
+
+        if (location.pathname != "{{ object.get_absolute_url }}")
+            window.location.href = `${tab_url}?tab=${tab_id}`;
+        else if (window.history.state["id"] != tab_id){
+            window.history.pushState({id: tab_id}, document.title, `${tab_url}?tab=${tab_id}`);
+        }
+
+        // If set, reload the page after asserting state.
+        reload && window.location.reload();
+
+    }
+
+    window.onpopstate = function(event) {
+        if(event)
+            $(`#tabs a[href="{{ object.get_absolute_url }}#${event.state.id}"]`).tab('show');
+    }
+    // Toggle v -. >
+    $("#accordion .accordion-toggle").click(function () {
+        $(this).toggleClass("mdi-chevron-down mdi-chevron-right");
+    });
+    // Dynamically collapse/expand all when clicking the "Collapse All" button, and then update the button text.
+    $('#accordion-toggle-all').click(function () {
+
+        if ($(this).data("lastState") === null || $(this).data("lastState") === 1) {
+            $('.collapse').collapse('show');
+            $(this).data("lastState", 0);
+
+            $("#accordion .accordion-toggle").addClass("mdi-chevron-down").removeClass("mdi-chevron-right");
+
+            $(this).text("Collapse All");
+        }
+        else {
+            $('[class^=collapseme]').removeData('bs.collapse').collapse({parent: false, toggle: false})
+            .collapse('hide')
+            .removeData('bs.collapse')
+            .collapse({parent: '#accordion', toggle: false});
+
+            $(this).data("lastState", 1);
+            $("#accordion .accordion-toggle").addClass("mdi-chevron-right").removeClass("mdi-chevron-down");
+
+            $(this).text("Expand All");
+        }
+    });
+</script>
+{% endblock javascript %}

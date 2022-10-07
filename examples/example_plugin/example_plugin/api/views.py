@@ -7,14 +7,14 @@ from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from nautobot.core.api.views import ModelViewSet
+from nautobot.extras.api.views import NautobotModelViewSet
 
 from example_plugin.api.serializers import ExampleModelSerializer
 from example_plugin.filters import ExampleModelFilterSet
 from example_plugin.models import ExampleModel
 
 
-class ExampleModelViewSet(ModelViewSet):
+class ExampleModelViewSet(NautobotModelViewSet):
     queryset = ExampleModel.objects.all()
     serializer_class = ExampleModelSerializer
     filterset_class = ExampleModelFilterSet
@@ -33,7 +33,7 @@ class ExampleModelWebhook(APIView):
 
     permission_classes = [AllowAny]
 
-    def get(self, request, format=None):
+    def get(self, request, format=None):  # pylint: disable=redefined-builtin
         with open(
             os.path.join(tempfile.gettempdir(), self.request.META.get("HTTP_TEST_NAME", "NO-TEST-NAME")), "w+"
         ) as f:

@@ -3,13 +3,13 @@ from django.contrib.contenttypes.fields import GenericForeignKey
 from django.contrib.contenttypes.models import ContentType
 from django.core.serializers.json import DjangoJSONEncoder
 from django.db import models
-from django.urls import reverse
+from django.urls import NoReverseMatch, reverse
 
 from nautobot.core.celery import NautobotKombuJSONEncoder
 from nautobot.core.models import BaseModel
-from nautobot.extras.choices import ObjectChangeActionChoices
+from nautobot.extras.choices import ObjectChangeActionChoices, ObjectChangeEventContextChoices
 from nautobot.extras.utils import extras_features
-from nautobot.utilities.utils import serialize_object, serialize_object_v2
+from nautobot.utilities.utils import get_route_for_model, serialize_object, serialize_object_v2, shallow_compare_dict
 
 
 #
@@ -29,7 +29,7 @@ class ChangeLoggedModel(models.Model):
     class Meta:
         abstract = True
 
-    def to_objectchange(self, action, related_object=None, object_data_extra=None, object_data_exclude=None):
+    def to_objectchange(self, action, *, related_object=None, object_data_extra=None, object_data_exclude=None):
         """
         Return a new ObjectChange representing a change made to this object. This will typically be called automatically
         by ChangeLoggingMiddleware.
@@ -43,6 +43,23 @@ class ChangeLoggedModel(models.Model):
             object_data_v2=serialize_object_v2(self),
             related_object=related_object,
         )
+
+    def get_changelog_url(self):
+        """Return the changelog URL for this object."""
+        route = get_route_for_model(self, "changelog")
+
+        # Iterate the pk-like fields and try to get a URL, or return None.
+        fields = ["pk", "slug"]
+        for field in fields:
+            if not hasattr(self, field):
+                continue
+
+            try:
+                return reverse(route, kwargs={field: getattr(self, field)})
+            except NoReverseMatch:
+                continue
+
+        return None
 
 
 @extras_features("graphql")
@@ -67,6 +84,13 @@ class ObjectChange(BaseModel):
     changed_object_type = models.ForeignKey(to=ContentType, on_delete=models.PROTECT, related_name="+")
     changed_object_id = models.UUIDField(db_index=True)
     changed_object = GenericForeignKey(ct_field="changed_object_type", fk_field="changed_object_id")
+    change_context = models.CharField(
+        max_length=50,
+        choices=ObjectChangeEventContextChoices,
+        editable=False,
+        db_index=True,
+    )
+    change_context_detail = models.CharField(max_length=100, blank=True, editable=False)
     related_object_type = models.ForeignKey(
         to=ContentType,
         on_delete=models.PROTECT,
@@ -74,6 +98,7 @@ class ObjectChange(BaseModel):
         blank=True,
         null=True,
     )
+    # todoindex:
     related_object_id = models.UUIDField(blank=True, null=True)
     related_object = GenericForeignKey(ct_field="related_object_type", fk_field="related_object_id")
     object_repr = models.CharField(max_length=200, editable=False)
@@ -92,6 +117,8 @@ class ObjectChange(BaseModel):
         "related_object_id",
         "object_repr",
         "object_data",
+        "change_context",
+        "change_context_detail",
     ]
 
     class Meta:
@@ -109,12 +136,7 @@ class ObjectChange(BaseModel):
         ]
 
     def __str__(self):
-        return "{} {} {} by {}".format(
-            self.changed_object_type,
-            self.object_repr,
-            self.get_action_display().lower(),
-            self.user_name,
-        )
+        return f"{self.changed_object_type} {self.object_repr} {self.get_action_display().lower()} by {self.user_name}"
 
     def save(self, *args, **kwargs):
 
@@ -146,7 +168,73 @@ class ObjectChange(BaseModel):
             self.related_object_id,
             self.object_repr,
             self.object_data,
+            self.change_context,
+            self.change_context_detail,
         )
 
     def get_action_class(self):
         return ObjectChangeActionChoices.CSS_CLASSES.get(self.action)
+
+    def get_next_change(self, user=None):
+        """Return next change for this changed object, optionally restricting by user view permission"""
+        related_changes = self.get_related_changes(user=user)
+        return related_changes.filter(time__gt=self.time).order_by("time").first()
+
+    def get_prev_change(self, user=None):
+        """Return previous change for this changed object, optionally restricting by user view permission"""
+        related_changes = self.get_related_changes(user=user)
+        return related_changes.filter(time__lt=self.time).order_by("-time").first()
+
+    def get_related_changes(self, user=None, permission="view"):
+        """Return queryset of all ObjectChanges for this changed object, excluding this ObjectChange"""
+        related_changes = ObjectChange.objects.filter(
+            changed_object_type=self.changed_object_type,
+            changed_object_id=self.changed_object_id,
+        ).exclude(pk=self.pk)
+        if user is not None:
+            return related_changes.restrict(user, permission)
+        return related_changes
+
+    def get_snapshots(self):
+        """
+        Return a dictionary with the changed object's serialized data before and after this change
+        occurred and a key with a shallow diff of those dictionaries.
+
+        Returns:
+        {
+            "prechange": dict(),
+            "postchange": dict(),
+            "differences": {
+                "removed": dict(),
+                "added": dict(),
+            }
+        }
+        """
+        prechange = None
+        postchange = None
+
+        prior_change = ObjectChange.objects.filter(
+            changed_object_type=self.changed_object_type,
+            changed_object_id=self.changed_object_id,
+            time__lt=self.time,
+        )
+
+        if self.action != ObjectChangeActionChoices.ACTION_CREATE and prior_change.exists():
+            prechange = prior_change.first().object_data_v2
+
+        if self.action != ObjectChangeActionChoices.ACTION_DELETE:
+            postchange = self.object_data_v2
+
+        if prechange and postchange:
+            diff_added = shallow_compare_dict(prechange, postchange, exclude=["last_updated"])
+            diff_removed = {x: prechange.get(x) for x in diff_added}
+        elif prechange and not postchange:
+            diff_added, diff_removed = None, prechange
+        else:
+            diff_added, diff_removed = postchange, None
+
+        return {
+            "prechange": prechange,
+            "postchange": postchange,
+            "differences": {"removed": diff_removed, "added": diff_added},
+        }

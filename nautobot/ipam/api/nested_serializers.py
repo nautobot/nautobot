@@ -29,7 +29,7 @@ class IPFieldSerializer(serializers.CharField):
         try:
             return netaddr.IPNetwork(value)
         except netaddr.AddrFormatError:
-            raise serializers.ValidationError("Invalid IP address format: {}".format(value))
+            raise serializers.ValidationError(f"Invalid IP address format: {value}")
         except (TypeError, ValueError) as e:
             raise serializers.ValidationError(e)
 

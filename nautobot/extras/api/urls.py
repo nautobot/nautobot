@@ -26,6 +26,7 @@ router.register("custom-links", views.CustomLinkViewSet)
 
 # Dynamic Groups
 router.register("dynamic-groups", views.DynamicGroupViewSet)
+router.register("dynamic-group-memberships", views.DynamicGroupMembershipViewSet)
 
 # Export templates
 router.register("export-templates", views.ExportTemplateViewSet)
@@ -42,6 +43,9 @@ router.register("image-attachments", views.ImageAttachmentViewSet)
 # Jobs
 router.register("jobs", views.JobViewSet)
 
+# Job hooks
+router.register("job-hooks", views.JobHooksViewSet)
+
 # Job Log Entries
 router.register("job-logs", views.JobLogEntryViewSet)
 
@@ -50,6 +54,9 @@ router.register("job-results", views.JobResultViewSet)
 
 # Scheduled Jobs
 router.register("scheduled-jobs", views.ScheduledJobViewSet)
+
+# Notes
+router.register("notes", views.NoteViewSet)
 
 # Change logging
 router.register("object-changes", views.ObjectChangeViewSet)

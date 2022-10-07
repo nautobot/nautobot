@@ -12,13 +12,13 @@ Jobs are a way for users to execute custom logic on demand from within the Nauto
 ...and so on. Jobs are Python code and exist outside of the official Nautobot code base, so they can be updated and changed without interfering with the core Nautobot installation. And because they're completely customizable, there's practically no limit to what a job can accomplish.
 
 !!! note
-    Jobs unify and supersede the functionality previously provided in NetBox by "custom scripts" and "reports". Jobs are backwards-compatible for now with the `Script` and `Report` class APIs, but you are urged to move to the new `Job` class API described below. Jobs may be optionally marked as [read-only](./#read_only) which equates to the `Report` functionally, but in all cases, user input is supported via [job variables](./#variables).
+    Jobs unify and supersede the functionality previously provided in NetBox by "custom scripts" and "reports". Jobs are backwards-compatible for now with the `Script` and `Report` class APIs, but you are urged to move to the new `Job` class API described below. Jobs may be optionally marked as [read-only](#read_only) which equates to the `Report` functionally, but in all cases, user input is supported via [job variables](#variables).
 
 ## Writing Jobs
 
 Jobs may be installed in one of three ways:
 
-* Manually installed as files in the [`JOBS_ROOT`](../../configuration/optional-settings/#jobs_root) path (which defaults to `$NAUTOBOT_ROOT/jobs/`).
+* Manually installed as files in the [`JOBS_ROOT`](../configuration/optional-settings.md#jobs_root) path (which defaults to `$NAUTOBOT_ROOT/jobs/`).
     * The `JOBS_ROOT` directory *must* contain a file named `__init__.py`. Do not delete this file.
     * Each file created within this path is considered a separate module; there is no support for cross-file dependencies (such as a file acting as a common "library" module of functions shared between jobs) for files installed in this way.
 * Imported from an external [Git repository](../models/extras/gitrepository.md#jobs).
@@ -30,6 +30,9 @@ Jobs may be installed in one of three ways:
 In any case, each module holds one or more Jobs (Python classes), each of which serves a specific purpose. The logic of each job can be split into a number of distinct methods, each of which performs a discrete portion of the overall job logic.
 
 For example, we can create a module named `devices.py` to hold all of our jobs which pertain to devices in Nautobot. Within that module, we might define several jobs. Each job is defined as a Python class inheriting from `extras.jobs.Job`, which provides the base functionality needed to accept user input and log activity.
+
+!!! warning
+    Make sure you are *not* inheriting `extras.jobs.models.Job` instead, otherwise Django will think you want to define a new database model.
 
 ```python
 from nautobot.extras.jobs import Job
@@ -94,7 +97,7 @@ class ExampleJob(Job):
     class Meta:
         description = """
             This job does a number of interesting things.
-            
+
              1. It hacks the Gibson
              2. It immanentizes the eschaton
              3. It's a floor wax *and* a dessert topping
@@ -125,7 +128,20 @@ class MyJob(Job):
 
 Default: `[]`
 
-A list of strings (field names) representing the order your job [variables](#variables) should be rendered as form fields in the job submission UI. If not defined, the variables will be listed in order of their definition in the code.
+A list of strings (field names) representing the order your job [variables](#variables) should be rendered as form fields in the job submission UI. If not defined, the variables will be listed in order of their definition in the code. If variables are defined on a parent class and no field order is defined, the parent class variables will appear before the subclass variables.
+
+#### `has_sensitive_variables`
+
++++ 1.3.10
+
+Default: `True`
+
+Unless set to False, it prevents the job's input parameters from being saved to the database. This defaults to True so as to protect against inadvertent database exposure of input parameters that may include sensitive data such as passwords or other user credentials. Review whether each job's inputs contain any such variables before setting this to False; if a job *does* contain sensitive inputs, if possible you should consider whether the job could be re-implemented using Nautobot's [`Secrets`](../core-functionality/secrets.md) feature as a way to ensure that the sensitive data is not directly provided as a job variable at all.
+
+Important notes about jobs with sensitive variables:
+
+* Such jobs cannot be scheduled to run in the future or on a recurring schedule (as scheduled jobs must by necessity store their variables in the database for future reference).
+* Jobs with sensitive variables cannot be marked as requiring approval (as jobs pending approval must store their variables in the database until approved).
 
 #### `hidden`
 
@@ -145,11 +161,15 @@ Important notes about hidden jobs:
 
 #### `read_only`
 
++++ 1.1.0
+
 Default: `False`
 
 A boolean that designates whether the job is able to make changes to data in the database. The value defaults to `False` but when set to `True`, any data modifications executed from the job's code will be automatically aborted at the end of the job. The job input form is also modified to remove the `commit` checkbox as it is irrelevant for read-only jobs. When a job is marked as read-only, log messages that are normally automatically emitted about the DB transaction state are not included because no changes to data are allowed. Note that user input may still be optionally collected with read-only jobs via job variables, as described below.
 
 #### `soft_time_limit`
+
++++ 1.3.0
 
 An int or float value, in seconds, which can be used to override the default [soft time limit](../configuration/optional-settings.md#celery_task_soft_time_limit) for a job task to complete.
 
@@ -174,7 +194,47 @@ class ExampleJobWithSoftTimeLimit(Job):
             cleanup_in_a_hurry()
 ```
 
+#### `task_queues`
+
++++ 1.5.0
+
+Default: `[]`
+
+A list of task queue names that the job can be routed to. An empty list will default to only allowing the user to select the [default queue](../configuration/optional-settings.md#celery_task_default_queue) (`default` unless changed by an administrator). The first queue in the list will be used if a queue is not specified in a job run API call.
+
+!!! note
+    A worker must be listening on the requested queue or the job will not run. See the documentation on [task queues](../administration/celery-queues.md) for more information.
+
+#### `template_name`
+
++++ 1.4.0
+
+A path relative to the job source code containing a Django template which provides additional code to customize the Job's submission form. This template should extend the existing job template, `extras/job.html`, otherwise the base form and functionality may not be available.
+
+A template can provide additional JavaScript, CSS, or even display HTML. A good starting template would be:
+
+```html
+{% extends 'extras/job.html' %}
+
+{% block extra_styles %}
+    {{ block.super }}
+    <!-- Add additional CSS here. -->
+{% endblock %}
+{% block content %}
+    {{ block.super }}
+    <!-- Add additional HTML here. -->
+{% endblock content %}
+{% block javascript %}
+    {{ block.super }}
+    <!-- Add additional JavaScript here. -->
+{% endblock javascript %}
+```
+
+For another example checkout [the template used in example plugin](https://github.com/nautobot/nautobot/blob/next/examples/example_plugin/example_plugin/templates/example_plugin/example_with_custom_template.html) in the GitHub repo.
+
 #### `time_limit`
+
++++ 1.3.0
 
 An int or float value, in seconds, which can be used to override the
 default [hard time limit](../configuration/optional-settings.md#celery_task_time_limit) (10 minutes by default) for a job task to complete.
@@ -281,7 +341,7 @@ A particular object within Nautobot. Each ObjectVar must specify a particular mo
 
 * `model` - The model class
 * `display_field` - The name of the REST API object field to display in the selection list (default: `'display'`)
-* `query_params` - A dictionary of query parameters to use when retrieving available options (optional)
+* `query_params` - A dictionary of REST API query parameters to use when retrieving available options (optional)
 * `null_option` - A label representing a "null" or empty choice (optional)
 
 The `display_field` argument is useful in cases where using the `display` API field is not desired for referencing the object. For example, when displaying a list of IP Addresses, you might want to use the `dns_name` field:
@@ -304,16 +364,20 @@ device = ObjectVar(
 )
 ```
 
-Multiple values can be specified by assigning a list to the dictionary key. It is also possible to reference the value of other fields in the form by prepending a dollar sign (`$`) to the variable's name.
+Multiple values can be specified by assigning a list to the dictionary key. It is also possible to reference the value of other fields in the form by prepending a dollar sign (`$`) to the variable's name. The keys you can use in this dictionary are the same ones that are available in the REST API - as an example it is also possible to filter the `Site` `ObjectVar` for its `tenant_group_id`.
 
 ```python
 region = ObjectVar(
     model=Region
 )
+tenant_group = ObjectVar(
+    model=TenantGroup
+)
 site = ObjectVar(
     model=Site,
     query_params={
-        'region_id': '$region'
+        'region_id': '$region',
+        'tenant_group_id': '$tenant_group'
     }
 )
 ```
@@ -404,7 +468,7 @@ It is advised to log a message for each object that is evaluated so that the res
 
 Markdown rendering is supported for log messages.
 
-!!! note
++/- 1.3.4
     As a security measure, the `message` passed to any of these methods will be passed through the `nautobot.utilities.logging.sanitize()` function in an attempt to strip out information such as usernames/passwords that should not be saved to the logs. This is of course best-effort only, and Job authors should take pains to ensure that such information is not passed to the logging APIs in the first place. The set of redaction rules used by the `sanitize()` function can be configured as [settings.SANITIZER_PATTERNS](../configuration/optional-settings.md#sanitizer_patterns).
 
 !!! note
@@ -454,10 +518,12 @@ An administrator or user with `extras.change_job` permission can also edit a Job
 * `description`
 * `approval_required`
 * `commit_default`
+* `has_sensitive_variables`
 * `hidden`
 * `read_only`
 * `soft_time_limit`
 * `time_limit`
+* `task_queues`
 
 This is done by setting the corresponding "override" flag (`grouping_override`, `name_override`, etc.) to `True` then providing a new value for the attribute in question. An overridden attribute will remain set to its overridden value even if the underlying Job class definition changes and `nautobot-server <migrate|post_upgrade>` gets run again. Conversely, clearing the "override" flag for an attribute and saving the database record will revert the attribute to the underlying value defined within the Job class source code.
 
@@ -488,8 +554,8 @@ The `class_path` is often represented as a string in the format of `<grouping_na
 `local/example/MyJobWithNoVars` or `plugins/nautobot_golden_config.jobs/BackupJob`. Understanding the definitions of these
 elements will be important in running jobs programmatically.
 
-!!! note
-    In Nautobot 1.3 and later, with the addition of Job database models, it is now generally possible and preferable to refer to a job by its UUID primary key, similar to other Nautobot database models, rather than its `class_path`.
++/- 1.3.0
+    With the addition of Job database models, it is now generally possible and preferable to refer to a job by its UUID primary key, similar to other Nautobot database models, rather than its `class_path`.
 
 ### Via the Web UI
 
@@ -499,7 +565,7 @@ Once a job has been run, the latest [`JobResult`](../models/extras/jobresult.md)
 
 ### Via the API
 
-To run a job via the REST API, issue a POST request to the job's endpoint `/api/extras/jobs/<uuid>/run/`. You can optionally provide JSON data to set the `commit` flag, specify any required user input `data`, and/or provide optional scheduling information as described in [the section on scheduling and approvals](./job-scheduling-and-approvals.md).
+To run a job via the REST API, issue a POST request to the job's endpoint `/api/extras/jobs/<uuid>/run/`. You can optionally provide JSON data to set the `commit` flag, specify any required user input `data`, optional `task_queue`, and/or provide optional scheduling information as described in [the section on scheduling and approvals](./job-scheduling-and-approvals.md).
 
 For example, to run a job with no user inputs and without committing any anything to the database:
 
@@ -530,22 +596,25 @@ When providing input data, it is possible to specify complex values contained in
 
 ### Via the CLI
 
-Jobs that do not require user input can be run from the CLI by invoking the management command:
+Jobs can be run from the CLI by invoking the management command:
 
 ```no-highlight
-nautobot-server runjob [--username <username>] [--commit] <class_path>
+nautobot-server runjob [--username <username>] [--commit] [--local] [--data <data>] <class_path>
 ```
 
 !!! note
     [See above](#jobs-and-class_path) for `class_path` definitions.
+
++++ 1.3.10
+    The `--data` and `--local` parameters were added.
+
+    The `--data` parameter must be a JSON string, e.g. `--data='{"string_variable": "somevalue", "integer_variable": 123}'`
 
 Using the same example shown in the API:
 
 ```no-highlight
 nautobot-server runjob --username myusername local/example/MyJobWithNoVars
 ```
-
-Provision of user input (`data` values) via the CLI is not supported at this time.
 
 !!! warning
     The `--username <username>` parameter can be used to specify the user that will be identified as the requester of the job. It is optional if the job will not be modifying the database, but is mandatory if you are running with `--commit`, as the specified user will own any resulting database changes.
@@ -563,6 +632,8 @@ While individual methods within your Job can and should be tested in isolation, 
 The simplest way to test the entire execution of Jobs from 1.3.3 on is via calling the `nautobot.utilities.testing.run_job_for_testing()` method, which is a helper wrapper around the `run_job` function used to execute a Job via Nautobot's Celery worker process.
 
 Because of the way `run_job_for_testing` and more specifically `run_job()` works, which is somewhat complex behind the scenes, you need to inherit from `nautobot.utilities.testing.TransactionTestCase` instead of `django.test.TestCase` (Refer to the [Django documentation](https://docs.djangoproject.com/en/stable/topics/testing/tools/#provided-test-case-classes) if you're interested in the differences between these classes - `TransactionTestCase` from Nautobot is a small wrapper around Django's `TransactionTestCase`).
+
+When using `TransactionTestCase` (whether from Django or from Nautobot) each tests runs on a completely empty database. Furthermore, Nautobot requires new jobs to be enabled before they can run. Therefore, we need to make sure the job is enabled before each run which `run_job_for_testing` handles for us.
 
 A simple example of a Job test case for 1.3.3 and forward might look like the following:
 

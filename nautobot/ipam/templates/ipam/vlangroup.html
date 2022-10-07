@@ -28,13 +28,11 @@
                 </tr>
                 <tr>
                     <td>Site</td>
-                    <td>
-                        {% if object.site %}
-                            <a href="{{ object.site.get_absolute_url }}">{{ object.site }}</a>
-                        {% else %}
-                            <span class="text-muted">None</span>
-                        {% endif %}
-                    </td>
+                    <td>{{ object.site|hyperlinked_object }}</td>
+                </tr>
+                <tr>
+                    <td>Location</td>
+                    <td>{% include 'dcim/inc/location_hierarchy.html' with location=object.location %}</td>
                 </tr>
                 <tr>
                     <td>VLANs</td>

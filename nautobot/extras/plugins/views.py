@@ -19,9 +19,10 @@ from nautobot.core.api.views import NautobotAPIVersionMixin
 from nautobot.utilities.forms import TableConfigForm
 from nautobot.utilities.paginator import EnhancedPaginator, get_paginate_count
 from nautobot.extras.plugins.tables import InstalledPluginsTable
+from nautobot.utilities.views import AdminRequiredMixin
 
 
-class InstalledPluginsView(LoginRequiredMixin, View):
+class InstalledPluginsView(AdminRequiredMixin, View):
     """
     View for listing all installed plugins.
     """
@@ -110,7 +111,7 @@ class InstalledPluginsAPIView(NautobotAPIVersionMixin, APIView):
         }
 
     @extend_schema(exclude=True)
-    def get(self, request, format=None):
+    def get(self, request, format=None):  # pylint: disable=redefined-builtin
         return Response([self._get_plugin_data(apps.get_app_config(plugin)) for plugin in settings.PLUGINS])
 
 
@@ -121,7 +122,7 @@ class PluginsAPIRootView(NautobotAPIVersionMixin, APIView):
         return "Plugins"
 
     @staticmethod
-    def _get_plugin_entry(plugin, app_config, request, format):
+    def _get_plugin_entry(plugin, app_config, request, format_):
         # Check if the plugin specifies any API URLs
         api_app_name = f"{app_config.name}-api"
         try:
@@ -130,7 +131,7 @@ class PluginsAPIRootView(NautobotAPIVersionMixin, APIView):
                 reverse(
                     f"plugins-api:{api_app_name}:api-root",
                     request=request,
-                    format=format,
+                    format=format_,
                 ),
             )
         except NoReverseMatch:
@@ -140,7 +141,7 @@ class PluginsAPIRootView(NautobotAPIVersionMixin, APIView):
         return entry
 
     @extend_schema(exclude=True)
-    def get(self, request, format=None):
+    def get(self, request, format=None):  # pylint: disable=redefined-builtin
 
         entries = []
         for plugin in settings.PLUGINS:

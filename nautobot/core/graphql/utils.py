@@ -1,16 +1,23 @@
+import logging
+
 from django_filters.filters import BooleanFilter, NumberFilter, MultipleChoiceFilter
 import graphene
 
 from nautobot.core.graphql import BigInteger
 from nautobot.utilities.filters import MultiValueBigNumberFilter, MultiValueNumberFilter
+from nautobot.utilities.utils import slugify_dashes_to_underscores
+
+
+logger = logging.getLogger(__name__)
 
 
 def str_to_var_name(verbose_name):
     """Convert a string to a variable compatible name.
+
     Examples:
         IP Addresses > ip_addresses
     """
-    return verbose_name.lower().replace(" ", "_").replace("-", "_")
+    return slugify_dashes_to_underscores(verbose_name)
 
 
 def get_filtering_args_from_filterset(filterset_class):
@@ -36,7 +43,14 @@ def get_filtering_args_from_filterset(filterset_class):
     for filter_name, filter_field in instance.filters.items():
         # For general safety, but especially for the case of custom fields
         # (https://github.com/nautobot/nautobot/issues/464)
-        filter_name = str_to_var_name(filter_name)
+        # We don't have a way to map a GraphQL-sanitized filter name (such as "cf_my_custom_field") back to the
+        # actual filter name (such as "cf_my-custom-field"), so if the sanitized filter name doesn't match the original
+        # filter name, we just have to omit it for now. Better that than advertise a filter that doesn't actually work!
+        if str_to_var_name(filter_name) != filter_name:
+            logger.warning(
+                'Filter "%s" on %s is not GraphQL safe, and will be omitted', filter_name, filterset_class.__name__
+            )
+            continue
 
         field_type = graphene.String
         filter_field_class = type(filter_field)
@@ -82,20 +96,22 @@ def construct_resolver(model_name, resolver_type):
     """
     if resolver_type == "cable_peer":
 
-        def resolve(self, args):
+        def resolve_cable_peer(self, args):
             peer = self.get_cable_peer()
             if type(peer).__name__ == model_name:
                 return peer
             return None
 
-        return resolve
+        return resolve_cable_peer
 
     if resolver_type == "connected_endpoint":
 
-        def resolve(self, args):
+        def resolve_connected_endpoint(self, args):
             peer = self.connected_endpoint
             if type(peer).__name__ == model_name:
                 return peer
             return None
 
-        return resolve
+        return resolve_connected_endpoint
+
+    raise ValueError(f"resolver_type must be 'cable_peer' or 'connected_endpoint', not '{resolver_type}'")

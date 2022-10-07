@@ -138,7 +138,7 @@ class GitRepository(PrimaryModel):
         def on_commit_callback():
             if self.__initial_slug and self.slug != self.__initial_slug:
                 # Rename any previously existing repo directory to the new slug.
-                # TODO: In a distributed Nautobot deployment, each Django instance and/or RQ worker instance may
+                # TODO: In a distributed Nautobot deployment, each Django instance and/or worker instance may
                 # have its own clone of this repository on its own local filesystem; we need some way to ensure
                 # that all such clones are renamed.
                 # For now we just rename the one that we have locally and rely on other methods

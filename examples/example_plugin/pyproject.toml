@@ -10,7 +10,10 @@ packages = [
 
 [tool.poetry.dependencies]
 python = "^3.7"
-importlib-metadata = {version = "~4.4", python = "<3.10"}
+# NOTE: This mimics the version required by core, although any version 1.0+ is sufficient for example_plugin
+#       As a direct dependency on importlib-metadata it should be specified here and in most cases a plugin can
+#       benefit from a transient dependency from core.
+importlib-metadata = {version = "^4.4", python = "<3.8"}
 
 [tool.poetry.dev-dependencies]
 

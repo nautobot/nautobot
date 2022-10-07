@@ -1,0 +1,52 @@
+{% extends 'generic/object_detail.html' %}
+{% load helpers %}
+
+{% block content_left_page %}
+        <div class="panel panel-default">
+            <div class="panel-heading">
+                <strong>Job Hook</strong>
+            </div>
+
+            <table class="table table-hover panel-body attr-table">
+                <tr>
+                    <td>Object Type(s)</td>
+                    <td>
+                        <ul>
+                            {% for content_type in content_types %}
+                                <li>{{ content_type }}</li>
+                            {% endfor %}
+                        </ul>
+                    </td>
+                </tr>
+                <tr>
+                    <td>Job</td>
+                    <td>
+                        {% if object.job and object.job.get_absolute_url %}
+                            {{ object.job|hyperlinked_object }}
+                        {% else %}
+                            {{ object.job.object_repr }}
+                        {% endif %}
+                    </td>
+                </tr>
+                <tr>
+                    <td>Call On:</td>
+                    <td>
+                        {{ object.type_create | render_boolean }}
+                        <span>Create</span>
+
+                        <span style="margin-left: 2rem;">{{ object.type_update | render_boolean }}</span>
+                        <span>Update</span>
+
+                        <span style="margin-left: 2rem;">{{ object.type_delete | render_boolean }}</span>
+                        <span>Delete </span>
+                    </td>
+                </tr>
+                <tr>
+                    <td>Enabled</td>
+                    <td>{{ object.enabled | render_boolean }}</td>
+                </tr>
+            </table>
+
+        </div>
+
+{% endblock content_left_page %}

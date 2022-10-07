@@ -2,9 +2,9 @@
 
 A prefix is an IPv4 or IPv6 network and mask expressed in CIDR notation (e.g. 192.0.2.0/24). A prefix entails only the "network portion" of an IP address: All bits in the address not covered by the mask must be zero. (In other words, a prefix cannot be a specific IP address.)
 
-Prefixes are automatically organized by their parent aggregates. Additionally, each prefix can be assigned to a particular site and virtual routing and forwarding instance (VRF). Each VRF represents a separate IP space or routing table. All prefixes not assigned to a VRF are considered to be in the "global" table.
+Prefixes are automatically organized by their parent aggregates. Additionally, each prefix can be assigned to a particular site (optionally also to a location within the site) and a virtual routing and forwarding instance (VRF). Each VRF represents a separate IP space or routing table. All prefixes not assigned to a VRF are considered to be in the "global" table.
 
-Each prefix must be assigned a [`status`](https://nautobot.readthedocs.io/en/stable/models/extras/status/) and can optionally be assigned a role. These terms are often used interchangeably so it's important to recognize the difference between them. The **status** defines a prefix's operational state. The following statuses are provided by default:
+Each prefix must be assigned a [`status`](../../models/extras/status.md) and can optionally be assigned a role. These terms are often used interchangeably so it's important to recognize the difference between them. The **status** defines a prefix's operational state. The following statuses are provided by default:
 
 * Container - A summary of child prefixes
 * Active - Provisioned and in use

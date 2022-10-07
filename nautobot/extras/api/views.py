@@ -1,4 +1,5 @@
-from datetime import datetime
+from datetime import timedelta
+from django.conf import settings
 from django.contrib.contenttypes.models import ContentType
 from django.forms import ValidationError as FormsValidationError
 from django.http import Http404
@@ -10,12 +11,13 @@ from graphene_django.views import GraphQLView
 from graphql import GraphQLError
 from rest_framework import status
 from rest_framework.decorators import action
-from rest_framework.exceptions import MethodNotAllowed, PermissionDenied
+from rest_framework.exceptions import MethodNotAllowed, PermissionDenied, ValidationError
 from rest_framework.response import Response
 from rest_framework.routers import APIRootView
 from rest_framework import mixins, viewsets
 
 from nautobot.core.api.authentication import TokenPermissions
+from nautobot.core.api.filter_backends import NautobotFilterBackend
 from nautobot.core.api.metadata import ContentTypeMetadata, StatusFieldMetadata
 from nautobot.core.api.views import (
     BulkDestroyModelMixin,
@@ -32,14 +34,17 @@ from nautobot.extras.models import (
     ConfigContext,
     ConfigContextSchema,
     DynamicGroup,
+    DynamicGroupMembership,
     CustomLink,
     ExportTemplate,
     GitRepository,
     GraphQLQuery,
     ImageAttachment,
     Job,
+    JobHook,
     JobLogEntry,
     JobResult,
+    Note,
     ObjectChange,
     Relationship,
     RelationshipAssociation,
@@ -75,12 +80,44 @@ class ExtrasRootView(APIRootView):
         return "Extras"
 
 
+class NotesViewSetMixin:
+    @extend_schema(methods=["get"], filters=False, responses={200: serializers.NoteSerializer(many=True)})
+    @extend_schema(
+        methods=["post"],
+        request=serializers.NoteInputSerializer,
+        responses={201: serializers.NoteSerializer(many=False)},
+    )
+    @action(detail=True, url_path="notes", methods=["get", "post"])
+    def notes(self, request, pk=None):
+        """
+        API methods for returning or creating notes on an object.
+        """
+        obj = get_object_or_404(self.queryset, pk=pk)
+        if request.method == "POST":
+            content_type = ContentType.objects.get_for_model(obj)
+            data = request.data
+            data["assigned_object_id"] = obj.pk
+            data["assigned_object_type"] = f"{content_type.app_label}.{content_type.model}"
+            serializer = serializers.NoteSerializer(data=data, context={"request": request})
+
+            # Create the new Note.
+            serializer.is_valid(raise_exception=True)
+            serializer.save(user=request.user)
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+
+        else:
+            notes = self.paginate_queryset(obj.notes)
+            serializer = serializers.NoteSerializer(notes, many=True, context={"request": request})
+
+        return self.get_paginated_response(serializer.data)
+
+
 #
 #  Computed Fields
 #
 
 
-class ComputedFieldViewSet(ModelViewSet):
+class ComputedFieldViewSet(ModelViewSet, NotesViewSetMixin):
     """
     Manage Computed Fields through DELETE, GET, POST, PUT, and PATCH requests.
     """
@@ -95,12 +132,30 @@ class ComputedFieldViewSet(ModelViewSet):
 #
 
 
+class ConfigContextFilterBackend(NautobotFilterBackend):
+    """
+    Used by views that work with config context models (device and virtual machine).
+
+    Recognizes that "exclude" is not a filterset parameter but rather a view parameter (see ConfigContextQuerySetMixin)
+    """
+
+    def get_filterset_kwargs(self, request, queryset, view):
+        kwargs = super().get_filterset_kwargs(request, queryset, view)
+        try:
+            kwargs["data"].pop("exclude")
+        except KeyError:
+            pass
+        return kwargs
+
+
 class ConfigContextQuerySetMixin:
     """
     Used by views that work with config context models (device and virtual machine).
     Provides a get_queryset() method which deals with adding the config context
     data annotation or not.
     """
+
+    filter_backends = [ConfigContextFilterBackend]
 
     def get_queryset(self):
         """
@@ -118,7 +173,9 @@ class ConfigContextQuerySetMixin:
         return queryset.annotate_config_context_data()
 
 
-class ConfigContextViewSet(ModelViewSet):
+class ConfigContextViewSet(ModelViewSet, NotesViewSetMixin):
+    # v2 TODO(jathan): Replace prefetch_related with select_related (except the
+    # plural ones are b2 m2m)
     queryset = ConfigContext.objects.prefetch_related(
         "regions",
         "sites",
@@ -137,7 +194,7 @@ class ConfigContextViewSet(ModelViewSet):
 #
 
 
-class ConfigContextSchemaViewSet(ModelViewSet):
+class ConfigContextSchemaViewSet(ModelViewSet, NotesViewSetMixin):
     queryset = ConfigContextSchema.objects.all()
     serializer_class = serializers.ConfigContextSchemaSerializer
     filterset_class = filters.ConfigContextSchemaFilterSet
@@ -163,11 +220,54 @@ class ContentTypeViewSet(viewsets.ReadOnlyModelViewSet):
 #
 
 
-class CustomFieldViewSet(ModelViewSet):
+@extend_schema_view(
+    bulk_partial_update=extend_schema(
+        filters=False,
+        request=serializers.CustomFieldSerializerVersion12(many=True),
+        responses={"200": serializers.CustomFieldSerializerVersion12(many=True)},
+        versions=["1.2", "1.3"],
+    ),
+    bulk_update=extend_schema(
+        filters=False,
+        request=serializers.CustomFieldSerializerVersion12(many=True),
+        responses={"200": serializers.CustomFieldSerializerVersion12(many=True)},
+        versions=["1.2", "1.3"],
+    ),
+    create=extend_schema(
+        request=serializers.CustomFieldSerializerVersion12,
+        responses={"201": serializers.CustomFieldSerializerVersion12},
+        versions=["1.2", "1.3"],
+    ),
+    list=extend_schema(
+        responses={"200": serializers.CustomFieldSerializerVersion12(many=True)}, versions=["1.2", "1.3"]
+    ),
+    partial_update=extend_schema(
+        request=serializers.CustomFieldSerializerVersion12,
+        responses={"200": serializers.CustomFieldSerializerVersion12},
+        versions=["1.2", "1.3"],
+    ),
+    retrieve=extend_schema(responses={"200": serializers.CustomFieldSerializerVersion12}, versions=["1.2", "1.3"]),
+    update=extend_schema(
+        request=serializers.CustomFieldSerializerVersion12,
+        responses={"200": serializers.CustomFieldSerializerVersion12},
+        versions=["1.2", "1.3"],
+    ),
+)
+class CustomFieldViewSet(ModelViewSet, NotesViewSetMixin):
     metadata_class = ContentTypeMetadata
     queryset = CustomField.objects.all()
     serializer_class = serializers.CustomFieldSerializer
     filterset_class = filters.CustomFieldFilterSet
+
+    def get_serializer_class(self):
+        serializer_choices = (
+            SerializerForAPIVersions(versions=["1.2", "1.3"], serializer=serializers.CustomFieldSerializerVersion12),
+        )
+        return versioned_serializer_selector(
+            obj=self,
+            serializer_choices=serializer_choices,
+            default_serializer=super().get_serializer_class(),
+        )
 
 
 class CustomFieldChoiceViewSet(ModelViewSet):
@@ -196,12 +296,19 @@ class CustomFieldModelViewSet(ModelViewSet):
         return context
 
 
+class NautobotModelViewSet(CustomFieldModelViewSet, NotesViewSetMixin):
+    """Base class to use for API ViewSets based on OrganizationalModel or PrimaryModel.
+
+    Can also be used for models derived from BaseModel, so long as they support Notes.
+    """
+
+
 #
 # Custom Links
 #
 
 
-class CustomLinkViewSet(ModelViewSet):
+class CustomLinkViewSet(ModelViewSet, NotesViewSetMixin):
     """
     Manage Custom Links through DELETE, GET, POST, PUT, and PATCH requests.
     """
@@ -216,11 +323,12 @@ class CustomLinkViewSet(ModelViewSet):
 #
 
 
-class DynamicGroupViewSet(ModelViewSet):
+class DynamicGroupViewSet(ModelViewSet, NotesViewSetMixin):
     """
     Manage Dynamic Groups through DELETE, GET, POST, PUT, and PATCH requests.
     """
 
+    # v2 TODO(jathan): Replace prefetch_related with select_related
     queryset = DynamicGroup.objects.prefetch_related("content_type")
     serializer_class = serializers.DynamicGroupSerializer
     filterset_class = filters.DynamicGroupFilterSet
@@ -241,12 +349,23 @@ class DynamicGroupViewSet(ModelViewSet):
         return self.get_paginated_response(member_serializer.data)
 
 
+class DynamicGroupMembershipViewSet(ModelViewSet):
+    """
+    Manage Dynamic Group Memberships through DELETE, GET, POST, PUT, and PATCH requests.
+    """
+
+    # v2 TODO(jathan): Replace prefetch_related with select_related
+    queryset = DynamicGroupMembership.objects.prefetch_related("group", "parent_group")
+    serializer_class = serializers.DynamicGroupMembershipSerializer
+    filterset_class = filters.DynamicGroupMembershipFilterSet
+
+
 #
 # Export templates
 #
 
 
-class ExportTemplateViewSet(ModelViewSet):
+class ExportTemplateViewSet(ModelViewSet, NotesViewSetMixin):
     metadata_class = ContentTypeMetadata
     queryset = ExportTemplate.objects.all()
     serializer_class = serializers.ExportTemplateSerializer
@@ -258,7 +377,7 @@ class ExportTemplateViewSet(ModelViewSet):
 #
 
 
-class GitRepositoryViewSet(CustomFieldModelViewSet):
+class GitRepositoryViewSet(NautobotModelViewSet):
     """
     Manage the use of Git repositories as external data sources.
     """
@@ -289,7 +408,7 @@ class GitRepositoryViewSet(CustomFieldModelViewSet):
 #
 
 
-class GraphQLQueryViewSet(ModelViewSet):
+class GraphQLQueryViewSet(ModelViewSet, NotesViewSetMixin):
     queryset = GraphQLQuery.objects.all()
     serializer_class = serializers.GraphQLQuerySerializer
     filterset_class = filters.GraphQLQueryFilterSet
@@ -329,10 +448,10 @@ class ImageAttachmentViewSet(ModelViewSet):
 #
 
 
-def _create_schedule(serializer, data, commit, job, job_model, request):
+def _create_schedule(serializer, data, commit, job, job_model, request, celery_kwargs=dict, task_queue=None):
     """
     This is an internal function to create a scheduled job from API data.
-    It has to handle boths once-offs (i.e. of type TYPE_FUTURE) and interval
+    It has to handle both once-offs (i.e. of type TYPE_FUTURE) and interval
     jobs.
     """
     job_kwargs = {
@@ -341,14 +460,24 @@ def _create_schedule(serializer, data, commit, job, job_model, request):
         "user": request.user.pk,
         "commit": commit,
         "name": job.class_path,
+        "celery_kwargs": celery_kwargs,
+        "task_queue": task_queue,
     }
     type_ = serializer["interval"]
     if type_ == JobExecutionType.TYPE_IMMEDIATELY:
-        time = datetime.now()
+        time = timezone.now()
         name = serializer.get("name") or f"{job.name} - {time}"
+    elif type_ == JobExecutionType.TYPE_CUSTOM:
+        time = serializer.get("start_time")  # doing .get("key", "default") returns None instead of "default"
+        if time is None:
+            # "start_time" is checked against models.ScheduledJob.earliest_possible_time()
+            # which returns timezone.now() + timedelta(seconds=15)
+            time = timezone.now() + timedelta(seconds=20)
+        name = serializer["name"]
     else:
         time = serializer["start_time"]
         name = serializer["name"]
+    crontab = serializer.get("crontab", "")
 
     # 2.0 TODO: To revisit this as part of a larger Jobs cleanup in 2.0.
     #
@@ -369,6 +498,8 @@ def _create_schedule(serializer, data, commit, job, job_model, request):
         one_off=(type_ == JobExecutionType.TYPE_FUTURE),
         user=request.user,
         approval_required=job_model.approval_required,
+        crontab=crontab,
+        queue=task_queue,
     )
     scheduled_job.save()
     return scheduled_job
@@ -382,19 +513,35 @@ def _run_job(request, job_model, legacy_response=False):
         raise PermissionDenied("This job is not enabled to be run.")
     if not job_model.installed:
         raise MethodNotAllowed(request.method, detail="This job is not presently installed and cannot be run")
+    if job_model.has_sensitive_variables:
+        if request.data.get("schedule") and request.data["schedule"]["interval"] != JobExecutionType.TYPE_IMMEDIATELY:
+            raise ValidationError(
+                {"schedule": {"interval": ["Unable to schedule job: Job may have sensitive input variables"]}}
+            )
+        if job_model.approval_required:
+            raise ValidationError(
+                "Unable to run or schedule job: "
+                "This job is flagged as possibly having sensitive variables but is also flagged as requiring approval."
+                "One of these two flags must be removed before this job can be scheduled or run."
+            )
 
     job_class = job_model.job_class
     if job_class is None:
         raise MethodNotAllowed(request.method, detail="This job's source code could not be located and cannot be run")
     job = job_class()
 
-    input_serializer = serializers.JobInputSerializer(data=request.data)
+    input_serializer = serializers.JobInputSerializer(data=request.data, context={"request": request})
     input_serializer.is_valid(raise_exception=True)
 
-    data = input_serializer.data["data"] or {}
-    commit = input_serializer.data["commit"]
+    data = input_serializer.validated_data.get("data", {})
+    commit = input_serializer.validated_data.get("commit", None)
     if commit is None:
         commit = job_model.commit_default
+    # default to first queue in job_model.task_queues if task_queue not specified
+    valid_queues = job_model.task_queues if job_model.task_queues else [settings.CELERY_TASK_DEFAULT_QUEUE]
+    task_queue = input_serializer.validated_data.get("task_queue", valid_queues[0])
+    if task_queue not in valid_queues:
+        raise ValidationError({"task_queue": [f'"{task_queue}" is not a valid choice.']})
 
     try:
         job.validate_data(data)
@@ -404,11 +551,11 @@ def _run_job(request, job_model, legacy_response=False):
         # of errors under messages
         return Response({"errors": e.message_dict if hasattr(e, "error_dict") else e.messages}, status=400)
 
-    if not get_worker_count():
-        raise CeleryWorkerNotRunningException()
+    if not get_worker_count(queue=task_queue):
+        raise CeleryWorkerNotRunningException(queue=task_queue)
 
     job_content_type = get_job_content_type()
-    schedule_data = input_serializer.data.get("schedule")
+    schedule_data = input_serializer.validated_data.get("schedule")
 
     # Default to a null JobResult.
     job_result = None
@@ -418,9 +565,26 @@ def _run_job(request, job_model, legacy_response=False):
     if schedule_data is None and job_model.approval_required:
         schedule_data = {"interval": JobExecutionType.TYPE_IMMEDIATELY}
 
+    # Skip creating a ScheduledJob when job can be executed immediately
+    elif (
+        schedule_data
+        and schedule_data["interval"] == JobExecutionType.TYPE_IMMEDIATELY
+        and not job_model.approval_required
+    ):
+        schedule_data = None
+
     # Try to create a ScheduledJob, or...
     if schedule_data:
-        schedule = _create_schedule(schedule_data, data, commit, job, job_model, request)
+        schedule = _create_schedule(
+            schedule_data,
+            data,
+            commit,
+            job,
+            job_model,
+            request,
+            celery_kwargs={"queue": task_queue},
+            task_queue=input_serializer.validated_data.get("task_queue", None),
+        )
     else:
         schedule = None
 
@@ -431,9 +595,11 @@ def _run_job(request, job_model, legacy_response=False):
             job.class_path,
             job_content_type,
             request.user,
+            celery_kwargs={"queue": task_queue},
             data=data,
             request=copy_safe_request(request),
             commit=commit,
+            task_queue=input_serializer.validated_data.get("task_queue", None),
         )
         job.result = job_result
 
@@ -465,6 +631,7 @@ class JobViewSet(
     BulkDestroyModelMixin,
     # Base class
     ReadOnlyModelViewSet,
+    NotesViewSetMixin,
 ):
     queryset = Job.objects.all()
     serializer_class = serializers.JobSerializer
@@ -636,6 +803,21 @@ class JobViewSet(
 
 
 #
+# Job Hooks
+#
+
+
+class JobHooksViewSet(NautobotModelViewSet):
+    """
+    Manage job hooks through DELETE, GET, POST, PUT, and PATCH requests.
+    """
+
+    queryset = JobHook.objects.all()
+    serializer_class = serializers.JobHookSerializer
+    filterset_class = filters.JobHookFilterSet
+
+
+#
 # Job Results
 #
 
@@ -645,16 +827,26 @@ class JobLogEntryViewSet(ReadOnlyModelViewSet):
     Retrieve a list of job log entries.
     """
 
+    # v2 TODO(jathan): Replace prefetch_related with select_related
     queryset = JobLogEntry.objects.prefetch_related("job_result")
     serializer_class = serializers.JobLogEntrySerializer
     filterset_class = filters.JobLogEntryFilterSet
 
 
-class JobResultViewSet(ModelViewSet):
+class JobResultViewSet(
+    # DRF mixins:
+    # note no CreateModelMixin or UpdateModelMixin
+    mixins.DestroyModelMixin,
+    # Nautobot mixins:
+    BulkDestroyModelMixin,
+    # Base class
+    ReadOnlyModelViewSet,
+):
     """
     Retrieve a list of job results
     """
 
+    # v2 TODO(jathan): Replace prefetch_related with select_related
     queryset = JobResult.objects.prefetch_related("job_model", "obj_type", "user")
     serializer_class = serializers.JobResultSerializer
     filterset_class = filters.JobResultFilterSet
@@ -677,6 +869,7 @@ class ScheduledJobViewSet(ReadOnlyModelViewSet):
     Retrieve a list of scheduled jobs
     """
 
+    # v2 TODO(jathan): Replace prefetch_related with select_related
     queryset = ScheduledJob.objects.prefetch_related("user")
     serializer_class = serializers.ScheduledJobSerializer
     filterset_class = filters.ScheduledJobFilterSet
@@ -798,13 +991,32 @@ class ScheduledJobViewSet(ReadOnlyModelViewSet):
             job_model.class_path,
             job_content_type,
             request.user,
+            celery_kwargs=scheduled_job.kwargs.get("celery_kwargs", {}),
             data=scheduled_job.kwargs.get("data", {}),
             request=copy_safe_request(request),
             commit=False,  # force a dry-run
+            task_queue=scheduled_job.kwargs.get("task_queue", None),
         )
         serializer = serializers.JobResultSerializer(job_result, context={"request": request})
 
         return Response(serializer.data)
+
+
+#
+# Notes
+#
+
+
+class NoteViewSet(ModelViewSet):
+    metadata_class = ContentTypeMetadata
+    # v2 TODO(jathan): Replace prefetch_related with select_related
+    queryset = Note.objects.prefetch_related("user")
+    serializer_class = serializers.NoteSerializer
+    filterset_class = filters.NoteFilterSet
+
+    # Assign user from request
+    def perform_create(self, serializer):
+        serializer.save(user=self.request.user)
 
 
 #
@@ -818,6 +1030,7 @@ class ObjectChangeViewSet(ReadOnlyModelViewSet):
     """
 
     metadata_class = ContentTypeMetadata
+    # v2 TODO(jathan): Replace prefetch_related with select_related
     queryset = ObjectChange.objects.prefetch_related("user")
     serializer_class = serializers.ObjectChangeSerializer
     filterset_class = filters.ObjectChangeFilterSet
@@ -828,7 +1041,7 @@ class ObjectChangeViewSet(ReadOnlyModelViewSet):
 #
 
 
-class RelationshipViewSet(ModelViewSet):
+class RelationshipViewSet(ModelViewSet, NotesViewSetMixin):
     metadata_class = ContentTypeMetadata
     queryset = Relationship.objects.all()
     serializer_class = serializers.RelationshipSerializer
@@ -847,7 +1060,7 @@ class RelationshipAssociationViewSet(ModelViewSet):
 #
 
 
-class SecretsViewSet(ModelViewSet):
+class SecretsViewSet(NautobotModelViewSet):
     """
     Manage Secrets through DELETE, GET, POST, PUT, and PATCH requests.
     """
@@ -857,7 +1070,7 @@ class SecretsViewSet(ModelViewSet):
     filterset_class = filters.SecretFilterSet
 
 
-class SecretsGroupViewSet(ModelViewSet):
+class SecretsGroupViewSet(NautobotModelViewSet):
     """
     Manage Secrets Groups through DELETE, GET, POST, PUT, and PATCH requests.
     """
@@ -882,7 +1095,7 @@ class SecretsGroupAssociationViewSet(ModelViewSet):
 #
 
 
-class StatusViewSet(CustomFieldModelViewSet):
+class StatusViewSet(NautobotModelViewSet):
     """
     View and manage custom status choices for objects with a `status` field.
     """
@@ -906,15 +1119,31 @@ class StatusViewSetMixin(ModelViewSet):
 
 
 @extend_schema_view(
-    bulk_update=extend_schema(responses={"200": serializers.TagSerializer(many=True)}, versions=["1.2"]),
-    bulk_partial_update=extend_schema(responses={"200": serializers.TagSerializer(many=True)}, versions=["1.2"]),
-    create=extend_schema(responses={"201": serializers.TagSerializer}, versions=["1.2"]),
-    partial_update=extend_schema(responses={"200": serializers.TagSerializer}, versions=["1.2"]),
-    update=extend_schema(responses={"200": serializers.TagSerializer}, versions=["1.2"]),
+    bulk_update=extend_schema(
+        filters=False,
+        request=serializers.TagSerializer(many=True),
+        responses={"200": serializers.TagSerializer(many=True)},
+        versions=["1.2"],
+    ),
+    bulk_partial_update=extend_schema(
+        filters=False,
+        request=serializers.TagSerializer(many=True),
+        responses={"200": serializers.TagSerializer(many=True)},
+        versions=["1.2"],
+    ),
+    create=extend_schema(
+        request=serializers.TagSerializer, responses={"201": serializers.TagSerializer}, versions=["1.2"]
+    ),
+    partial_update=extend_schema(
+        request=serializers.TagSerializer, responses={"200": serializers.TagSerializer}, versions=["1.2"]
+    ),
+    update=extend_schema(
+        request=serializers.TagSerializer, responses={"200": serializers.TagSerializer}, versions=["1.2"]
+    ),
     list=extend_schema(responses={"200": serializers.TagSerializer(many=True)}, versions=["1.2"]),
     retrieve=extend_schema(responses={"200": serializers.TagSerializer}, versions=["1.2"]),
 )
-class TagViewSet(CustomFieldModelViewSet):
+class TagViewSet(NautobotModelViewSet):
     queryset = Tag.objects.annotate(tagged_items=count_related(TaggedItem, "tag"))
     serializer_class = serializers.TagSerializerVersion13
     filterset_class = filters.TagFilterSet
@@ -933,7 +1162,7 @@ class TagViewSet(CustomFieldModelViewSet):
 #
 
 
-class WebhooksViewSet(ModelViewSet):
+class WebhooksViewSet(ModelViewSet, NotesViewSetMixin):
     """
     Manage Webhooks through DELETE, GET, POST, PUT, and PATCH requests.
     """

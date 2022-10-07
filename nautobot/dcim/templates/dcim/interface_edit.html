@@ -1,5 +1,6 @@
 {% extends 'generic/object_edit.html' %}
 {% load form_helpers %}
+{% load helpers %}
 
 {% block form %}
     <div class="panel panel-default">
@@ -10,7 +11,7 @@
                     <label class="col-md-3 control-label required" for="id_device">Device</label>
                     <div class="col-md-9">
                         <p class="form-control-static">
-                            <a href="{{ form.instance.device.get_absolute_url }}">{{ form.instance.device }}</a>
+                            {{ form.instance.device|hyperlinked_object }}
                         </p>
                     </div>
                 </div>
@@ -20,6 +21,8 @@
             {% render_field form.label %}
             {% render_field form.type %}
             {% render_field form.enabled %}
+            {% render_field form.parent_interface %}
+            {% render_field form.bridge %}
             {% render_field form.lag %}
             {% render_field form.mac_address %}
             {% render_field form.mtu %}

@@ -4,8 +4,9 @@ from rest_framework.routers import APIRootView
 from nautobot.dcim.models import Device
 from nautobot.extras.api.views import (
     ConfigContextQuerySetMixin,
-    CustomFieldModelViewSet,
+    NautobotModelViewSet,
     ModelViewSet,
+    NotesViewSetMixin,
     StatusViewSetMixin,
 )
 from nautobot.utilities.utils import count_related, SerializerForAPIVersions, versioned_serializer_selector
@@ -34,19 +35,20 @@ class VirtualizationRootView(APIRootView):
 #
 
 
-class ClusterTypeViewSet(CustomFieldModelViewSet):
+class ClusterTypeViewSet(NautobotModelViewSet):
     queryset = ClusterType.objects.annotate(cluster_count=count_related(Cluster, "type"))
     serializer_class = serializers.ClusterTypeSerializer
     filterset_class = filters.ClusterTypeFilterSet
 
 
-class ClusterGroupViewSet(CustomFieldModelViewSet):
+class ClusterGroupViewSet(NautobotModelViewSet):
     queryset = ClusterGroup.objects.annotate(cluster_count=count_related(Cluster, "group"))
     serializer_class = serializers.ClusterGroupSerializer
     filterset_class = filters.ClusterGroupFilterSet
 
 
-class ClusterViewSet(CustomFieldModelViewSet):
+class ClusterViewSet(NautobotModelViewSet):
+    # v2 TODO(jathan): Replace prefetch_related with select_related
     queryset = Cluster.objects.prefetch_related("type", "group", "tenant", "site", "tags").annotate(
         device_count=count_related(Device, "cluster"),
         virtualmachine_count=count_related(VirtualMachine, "cluster"),
@@ -60,7 +62,8 @@ class ClusterViewSet(CustomFieldModelViewSet):
 #
 
 
-class VirtualMachineViewSet(ConfigContextQuerySetMixin, StatusViewSetMixin, CustomFieldModelViewSet):
+class VirtualMachineViewSet(ConfigContextQuerySetMixin, StatusViewSetMixin, NautobotModelViewSet):
+    # v2 TODO(jathan): Replace prefetch_related with select_related
     queryset = VirtualMachine.objects.prefetch_related(
         "cluster__site",
         "platform",
@@ -111,10 +114,14 @@ class VirtualMachineViewSet(ConfigContextQuerySetMixin, StatusViewSetMixin, Cust
     retrieve=extend_schema(responses={"200": serializers.VMInterfaceSerializerVersion12}, versions=["1.2", "1.3"]),
     update=extend_schema(responses={"200": serializers.VMInterfaceSerializerVersion12}, versions=["1.2", "1.3"]),
 )
-class VMInterfaceViewSet(StatusViewSetMixin, ModelViewSet):
-    queryset = VMInterface.objects.prefetch_related("virtual_machine", "status", "tags", "tagged_vlans")
+class VMInterfaceViewSet(StatusViewSetMixin, ModelViewSet, NotesViewSetMixin):
+    # v2 TODO(jathan): Replace prefetch_related with select_related
+    queryset = VMInterface.objects.prefetch_related(
+        "virtual_machine", "parent_interface", "bridge", "status", "tags", "tagged_vlans"
+    )
     serializer_class = serializers.VMInterfaceSerializer
     filterset_class = filters.VMInterfaceFilterSet
+    # v2 TODO(jathan): Replace prefetch_related with select_related
     brief_prefetch_fields = ["virtual_machine"]
 
     def get_serializer_class(self):

@@ -19,6 +19,7 @@ class TenantGroupListView(generic.ObjectListView):
     queryset = TenantGroup.objects.add_related_count(
         TenantGroup.objects.all(), Tenant, "group", "tenant_count", cumulative=True
     )
+    filterset = filters.TenantGroupFilterSet
     table = tables.TenantGroupTable
 
 
@@ -81,6 +82,7 @@ class TenantListView(generic.ObjectListView):
 
 
 class TenantView(generic.ObjectView):
+    # v2 TODO(jathan): Replace prefetch_related with select_related
     queryset = Tenant.objects.prefetch_related("group")
 
     def get_extra_context(self, request, instance):
@@ -124,6 +126,7 @@ class TenantBulkImportView(generic.BulkImportView):
 
 
 class TenantBulkEditView(generic.BulkEditView):
+    # v2 TODO(jathan): Replace prefetch_related with select_related
     queryset = Tenant.objects.prefetch_related("group")
     filterset = filters.TenantFilterSet
     table = tables.TenantTable
@@ -131,6 +134,7 @@ class TenantBulkEditView(generic.BulkEditView):
 
 
 class TenantBulkDeleteView(generic.BulkDeleteView):
+    # v2 TODO(jathan): Replace prefetch_related with select_related
     queryset = Tenant.objects.prefetch_related("group")
     filterset = filters.TenantFilterSet
     table = tables.TenantTable

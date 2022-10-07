@@ -1,0 +1,59 @@
+{% extends 'generic/object_retrieve.html' %}
+{% load static %}
+{% load helpers %}
+{% load plugins %}
+
+{% block breadcrumbs %}
+  <li><a href="{% url 'circuits:providernetwork_list' %}">Provider Networks</a></li>
+  <li><a href="{% url 'circuits:providernetwork_list' %}?provider_id={{ object.provider_id }}">{{ object.provider }}</a></li>
+  <li>{{ object }}</li>
+{% endblock %}
+
+{% block title %}{{ object.provider }} {{ object.name }}{% endblock title %}
+
+{% block content_left_page %}
+        <div class="panel panel-default">
+            <div class="panel-heading">
+                <strong>Provider Network</strong>
+            </div>
+            <table class="table table-hover panel-body attr-table">
+                <tr>
+                    <td>Provider</td>
+                    <td>{{ object.provider|hyperlinked_object }}</td>
+                </tr>
+                <tr>
+                    <td>Name</td>
+                    <td>{{ object.name }}</td>
+                </tr>
+                <tr>
+                    <td>Description</td>
+                    <td>{{ object.description }}</td>
+                </tr>
+            </table>
+        </div>
+{% endblock content_left_page %}
+
+{% block content_right_page %}
+        <div class="panel panel-default">
+            <div class="panel-heading">
+                <strong>Comments</strong>
+            </div>
+            <div class="panel-body rendered-markdown">
+                {% if object.comments %}
+                    {{ object.comments|render_markdown }}
+                {% else %}
+                    <span class="text-muted">None</span>
+                {% endif %}
+            </div>
+        </div>
+{% endblock content_right_page %}
+
+{% block content_full_width_page %}
+        <div class="panel panel-default">
+            <div class="panel-heading">
+                <strong>Circuits</strong>
+            </div>
+            {% include 'inc/table.html' with table=circuits_table %}
+        </div>
+        {% include 'inc/paginator.html' with paginator=circuits_table.paginator page=circuits_table.page %}
+{% endblock content_full_width_page %}

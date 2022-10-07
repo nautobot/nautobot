@@ -1,6 +1,6 @@
 from django.urls import path
 
-from nautobot.extras.views import ObjectChangeLogView
+from nautobot.extras.views import ObjectChangeLogView, ObjectDynamicGroupsView, ObjectNotesView
 from nautobot.ipam.views import ServiceEditView
 from . import views
 from .models import Cluster, ClusterGroup, ClusterType, VirtualMachine, VMInterface
@@ -45,6 +45,12 @@ urlpatterns = [
         name="clustertype_changelog",
         kwargs={"model": ClusterType},
     ),
+    path(
+        "cluster-types/<slug:slug>/notes/",
+        ObjectNotesView.as_view(),
+        name="clustertype_notes",
+        kwargs={"model": ClusterType},
+    ),
     # Cluster groups
     path(
         "cluster-groups/",
@@ -87,6 +93,12 @@ urlpatterns = [
         name="clustergroup_changelog",
         kwargs={"model": ClusterGroup},
     ),
+    path(
+        "cluster-groups/<slug:slug>/notes/",
+        ObjectNotesView.as_view(),
+        name="clustergroup_notes",
+        kwargs={"model": ClusterGroup},
+    ),
     # Clusters
     path("clusters/", views.ClusterListView.as_view(), name="cluster_list"),
     path("clusters/add/", views.ClusterEditView.as_view(), name="cluster_add"),
@@ -108,6 +120,18 @@ urlpatterns = [
         "clusters/<uuid:pk>/changelog/",
         ObjectChangeLogView.as_view(),
         name="cluster_changelog",
+        kwargs={"model": Cluster},
+    ),
+    path(
+        "clusters/<uuid:pk>/dynamic-groups/",
+        ObjectDynamicGroupsView.as_view(),
+        name="cluster_dynamicgroups",
+        kwargs={"model": Cluster},
+    ),
+    path(
+        "clusters/<uuid:pk>/notes/",
+        ObjectNotesView.as_view(),
+        name="cluster_notes",
         kwargs={"model": Cluster},
     ),
     path(
@@ -173,6 +197,18 @@ urlpatterns = [
         kwargs={"model": VirtualMachine},
     ),
     path(
+        "virtual-machines/<uuid:pk>/dynamic-groups/",
+        ObjectDynamicGroupsView.as_view(),
+        name="virtualmachine_dynamicgroups",
+        kwargs={"model": VirtualMachine},
+    ),
+    path(
+        "virtual-machines/<uuid:pk>/notes/",
+        ObjectNotesView.as_view(),
+        name="virtualmachine_notes",
+        kwargs={"model": VirtualMachine},
+    ),
+    path(
         "virtual-machines/<uuid:virtualmachine>/services/assign/",
         ServiceEditView.as_view(),
         name="virtualmachine_service_assign",
@@ -215,6 +251,12 @@ urlpatterns = [
         "interfaces/<uuid:pk>/changelog/",
         ObjectChangeLogView.as_view(),
         name="vminterface_changelog",
+        kwargs={"model": VMInterface},
+    ),
+    path(
+        "interfaces/<uuid:pk>/notes/",
+        ObjectNotesView.as_view(),
+        name="vminterface_notes",
         kwargs={"model": VMInterface},
     ),
     path(

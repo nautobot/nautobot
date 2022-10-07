@@ -2,7 +2,6 @@ import os
 import time
 
 from celery.contrib.testing.worker import start_worker
-from django.contrib.auth import get_user_model
 from django.contrib.staticfiles.testing import StaticLiveServerTestCase
 from django.conf import settings
 from django.test import tag
@@ -12,13 +11,8 @@ from selenium import webdriver
 from splinter.browser import Browser
 
 from nautobot.core.celery import app
-from nautobot.extras.management import create_custom_statuses
-from nautobot.users.models import ObjectPermission
-from nautobot.utilities.permissions import resolve_permission_ct
+from nautobot.utilities.testing.mixins import NautobotTestCaseMixin
 
-
-# Use the proper swappable User model
-User = get_user_model()
 
 # URL used to connect to the Selenium host
 SELENIUM_URL = os.getenv("NAUTOBOT_SELENIUM_URL", "http://localhost:4444/wd/hub")
@@ -67,7 +61,7 @@ FIREFOX_PROFILE_PREFERENCES = {
 
 
 @tag("integration")
-class SeleniumTestCase(StaticLiveServerTestCase):
+class SeleniumTestCase(StaticLiveServerTestCase, NautobotTestCaseMixin):
     """
     Base test case for Splinter Selenium integration testing with custom helper methods.
 
@@ -77,7 +71,6 @@ class SeleniumTestCase(StaticLiveServerTestCase):
 
     host = "0.0.0.0"  # Always listen publicly
     selenium_host = SELENIUM_HOST  # Docker: `nautobot`; else `host.docker.internal`
-    user_permissions = ()
 
     requires_celery = False  # If true, a celery instance will be started. TODO: create celery mixin?
 
@@ -101,29 +94,14 @@ class SeleniumTestCase(StaticLiveServerTestCase):
             cls.celery_worker.__enter__()
 
     def setUp(self):
-        # Repopulate custom statuses between test cases
-        create_custom_statuses(None, verbosity=0)
-
-        # Setup test user
-        self.user, _ = User.objects.get_or_create(username="testuser")
+        super().setUpNautobot(populate_status=True)
 
         self.password = "testpassword"
         self.user.set_password(self.password)
         self.user.save()
 
-    def add_permissions(self, *names):
-        """
-        Assign a set of permissions to the test user. Accepts permission names in the form <app>.<action>_<model>.
-        """
-        for name in names:
-            ct, action = resolve_permission_ct(name)
-            obj_perm = ObjectPermission(name=name, actions=[action])
-            obj_perm.save()
-            obj_perm.users.add(self.user)
-            obj_perm.object_types.add(ct)
-
-    @classproperty
-    def live_server_url(cls):
+    @classproperty  # https://github.com/PyCQA/pylint-django/issues/240
+    def live_server_url(cls):  # pylint: disable=no-self-argument
         return f"http://{cls.selenium_host}:{cls.server_thread.port}"
 
     @classmethod

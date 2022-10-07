@@ -2,6 +2,7 @@ from datetime import datetime, timedelta
 import uuid
 from unittest import mock
 
+from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.contrib.contenttypes.models import ContentType
 from django.test import override_settings
@@ -19,8 +20,15 @@ from nautobot.dcim.models import (
     RackRole,
     Site,
 )
-from nautobot.extras.api.nested_serializers import NestedJobResultSerializer, NestedScheduledJobSerializer
-from nautobot.extras.choices import JobExecutionType, SecretsGroupAccessTypeChoices, SecretsGroupSecretTypeChoices
+from nautobot.extras.api.nested_serializers import NestedJobResultSerializer
+from nautobot.extras.choices import (
+    DynamicGroupOperatorChoices,
+    JobExecutionType,
+    JobResultStatusChoices,
+    RelationshipTypeChoices,
+    SecretsGroupAccessTypeChoices,
+    SecretsGroupSecretTypeChoices,
+)
 from nautobot.extras.jobs import get_job
 from nautobot.extras.models import (
     ComputedField,
@@ -29,6 +37,7 @@ from nautobot.extras.models import (
     CustomField,
     CustomLink,
     DynamicGroup,
+    DynamicGroupMembership,
     ExportTemplate,
     GitRepository,
     GraphQLQuery,
@@ -36,6 +45,7 @@ from nautobot.extras.models import (
     Job,
     JobLogEntry,
     JobResult,
+    Note,
     Relationship,
     RelationshipAssociation,
     ScheduledJob,
@@ -46,11 +56,14 @@ from nautobot.extras.models import (
     Tag,
     Webhook,
 )
+from nautobot.extras.models.jobs import JobHook
 from nautobot.extras.utils import TaggableClassesQuery
 from nautobot.ipam.models import VLANGroup
 from nautobot.users.models import ObjectPermission
+from nautobot.utilities.choices import ColorChoices
 from nautobot.utilities.testing import APITestCase, APIViewTestCases
 from nautobot.utilities.testing.utils import disable_warnings
+from nautobot.utilities.utils import get_route_for_model, slugify_dashes_to_underscores
 
 
 User = get_user_model()
@@ -59,7 +72,7 @@ User = get_user_model()
 class AppTest(APITestCase):
     def test_root(self):
         url = reverse("extras-api:api-root")
-        response = self.client.get("{}?format=api".format(url), **self.header)
+        response = self.client.get(f"{url}?format=api", **self.header)
 
         self.assertEqual(response.status_code, 200)
 
@@ -73,15 +86,10 @@ class ComputedFieldTest(APIViewTestCases.APIViewTestCase):
     model = ComputedField
     brief_fields = [
         "content_type",
-        "description",
         "display",
-        "fallback_value",
         "id",
         "label",
-        "slug",
-        "template",
         "url",
-        "weight",
     ]
     create_data = [
         {
@@ -120,6 +128,7 @@ class ComputedFieldTest(APIViewTestCases.APIViewTestCase):
         "description": "New description",
     }
     slug_source = "label"
+    slugify_function = staticmethod(slugify_dashes_to_underscores)
 
     @classmethod
     def setUpTestData(cls):
@@ -131,14 +140,14 @@ class ComputedFieldTest(APIViewTestCases.APIViewTestCase):
             template="{{ obj.name }}",
             fallback_value="error",
             content_type=site_ct,
-        ),
+        )
         ComputedField.objects.create(
             slug="cf2",
             label="Computed Field Two",
             template="{{ obj.name }}",
             fallback_value="error",
             content_type=site_ct,
-        ),
+        )
         ComputedField.objects.create(
             slug="cf3",
             label="Computed Field Three",
@@ -320,13 +329,13 @@ class ConfigContextSchemaTest(APIViewTestCases.APIViewTestCase):
     def setUpTestData(cls):
         ConfigContextSchema.objects.create(
             name="Schema 1", slug="schema-1", data_schema={"type": "object", "properties": {"foo": {"type": "string"}}}
-        ),
+        )
         ConfigContextSchema.objects.create(
             name="Schema 2", slug="schema-2", data_schema={"type": "object", "properties": {"bar": {"type": "string"}}}
-        ),
+        )
         ConfigContextSchema.objects.create(
             name="Schema 3", slug="schema-3", data_schema={"type": "object", "properties": {"baz": {"type": "string"}}}
-        ),
+        )
 
 
 class ContentTypeTest(APITestCase):
@@ -377,54 +386,63 @@ class CreatedUpdatedFilterTest(APITestCase):
     def test_get_rack_created(self):
         self.add_permissions("dcim.view_rack")
         url = reverse("dcim-api:rack-list")
-        response = self.client.get("{}?created=2001-02-03".format(url), **self.header)
+        response = self.client.get(f"{url}?created=2001-02-03", **self.header)
 
+        self.assertHttpStatus(response, status.HTTP_200_OK)
         self.assertEqual(response.data["count"], 1)
         self.assertEqual(response.data["results"][0]["id"], str(self.rack2.pk))
 
     def test_get_rack_created_gte(self):
         self.add_permissions("dcim.view_rack")
         url = reverse("dcim-api:rack-list")
-        response = self.client.get("{}?created__gte=2001-02-04".format(url), **self.header)
+        response = self.client.get(f"{url}?created__gte=2001-02-04", **self.header)
 
+        self.assertHttpStatus(response, status.HTTP_200_OK)
         self.assertEqual(response.data["count"], 1)
         self.assertEqual(response.data["results"][0]["id"], str(self.rack1.pk))
 
     def test_get_rack_created_lte(self):
         self.add_permissions("dcim.view_rack")
         url = reverse("dcim-api:rack-list")
-        response = self.client.get("{}?created__lte=2001-02-04".format(url), **self.header)
+        response = self.client.get(f"{url}?created__lte=2001-02-04", **self.header)
 
+        self.assertHttpStatus(response, status.HTTP_200_OK)
         self.assertEqual(response.data["count"], 1)
         self.assertEqual(response.data["results"][0]["id"], str(self.rack2.pk))
 
     def test_get_rack_last_updated(self):
         self.add_permissions("dcim.view_rack")
         url = reverse("dcim-api:rack-list")
-        response = self.client.get("{}?last_updated=2001-02-03%2001:02:03.000004".format(url), **self.header)
+        response = self.client.get(f"{url}?last_updated=2001-02-03%2001:02:03.000004", **self.header)
 
+        self.assertHttpStatus(response, status.HTTP_200_OK)
         self.assertEqual(response.data["count"], 1)
         self.assertEqual(response.data["results"][0]["id"], str(self.rack2.pk))
 
     def test_get_rack_last_updated_gte(self):
         self.add_permissions("dcim.view_rack")
         url = reverse("dcim-api:rack-list")
-        response = self.client.get("{}?last_updated__gte=2001-02-04%2001:02:03.000004".format(url), **self.header)
+        response = self.client.get(f"{url}?last_updated__gte=2001-02-04%2001:02:03.000004", **self.header)
 
+        self.assertHttpStatus(response, status.HTTP_200_OK)
         self.assertEqual(response.data["count"], 1)
         self.assertEqual(response.data["results"][0]["id"], str(self.rack1.pk))
 
     def test_get_rack_last_updated_lte(self):
         self.add_permissions("dcim.view_rack")
         url = reverse("dcim-api:rack-list")
-        response = self.client.get("{}?last_updated__lte=2001-02-04%2001:02:03.000004".format(url), **self.header)
+        response = self.client.get(f"{url}?last_updated__lte=2001-02-04%2001:02:03.000004", **self.header)
 
+        self.assertHttpStatus(response, status.HTTP_200_OK)
         self.assertEqual(response.data["count"], 1)
         self.assertEqual(response.data["results"][0]["id"], str(self.rack2.pk))
 
 
-class CustomFieldTest(APIViewTestCases.APIViewTestCase):
+class CustomFieldTestVersion12(APIViewTestCases.APIViewTestCase):
+    """Tests for the API version 1.2/1.3 CustomField REST API."""
+
     model = CustomField
+    api_version = "1.2"
     brief_fields = ["display", "id", "name", "url"]
     create_data = [
         {
@@ -441,6 +459,7 @@ class CustomFieldTest(APIViewTestCases.APIViewTestCase):
             "content_types": ["dcim.site"],
             "name": "cf6",
             "type": "select",
+            "label": "Custom Field 6",
         },
     ]
     update_data = {
@@ -452,18 +471,102 @@ class CustomFieldTest(APIViewTestCases.APIViewTestCase):
         "description": "New description",
     }
     choices_fields = ["filter_logic", "type"]
+    slug_source = "label"
+    slugify_function = staticmethod(slugify_dashes_to_underscores)
 
     @classmethod
     def setUpTestData(cls):
         site_ct = ContentType.objects.get_for_model(Site)
 
         custom_fields = (
-            CustomField.objects.create(name="cf1", type="text"),
-            CustomField.objects.create(name="cf2", type="integer"),
-            CustomField.objects.create(name="cf3", type="boolean"),
+            CustomField(name="cf1", type="text"),
+            CustomField(name="cf2", type="integer"),
+            CustomField(name="cf3", type="boolean"),
         )
         for cf in custom_fields:
+            cf.validated_save()
             cf.content_types.add(site_ct)
+
+    def test_create_object(self):
+        super(APIViewTestCases.APIViewTestCase, self).test_create_object()
+        # Verify that label is auto-populated when not specified
+        for create_data in self.create_data:
+            instance = self._get_queryset().get(name=create_data["name"])
+            self.assertEqual(instance.label, create_data.get("label", instance.name))
+
+
+class CustomFieldTestVersion14(CustomFieldTestVersion12):
+    """Tests for the API version 1.4+ CustomField REST API."""
+
+    api_version = "1.4"
+    create_data = [
+        {
+            "content_types": ["dcim.site"],
+            "label": "Custom Field 4",
+            "slug": "cf4",
+            "type": "date",
+            "weight": 100,
+        },
+        {
+            "content_types": ["dcim.site", "dcim.device"],
+            "label": "Custom Field 5",
+            "slug": "cf5",
+            "type": "url",
+            "default": "http://example.com",
+            "weight": 200,
+        },
+        {
+            "content_types": ["dcim.site"],
+            "label": "Custom Field 6",
+            "slug": "cf6",
+            "type": "select",
+            "description": "A select custom field",
+            "weight": 300,
+        },
+    ]
+    update_data = {
+        "content_types": ["dcim.site"],
+        "description": "New description",
+        "label": "Non-unique label",
+    }
+
+    @classmethod
+    def setUpTestData(cls):
+        site_ct = ContentType.objects.get_for_model(Site)
+
+        custom_fields = (
+            CustomField(slug="cf1", label="Custom Field 1", type="text"),
+            CustomField(slug="cf2", label="Custom Field 2", type="integer"),
+            CustomField(slug="cf3", label="Custom Field 3", type="boolean"),
+        )
+        for cf in custom_fields:
+            cf.validated_save()
+            cf.content_types.add(site_ct)
+
+    def test_create_object(self):
+        super(APIViewTestCases.APIViewTestCase, self).test_create_object()
+        # 2.0 TODO: #824 remove name entirely
+        # For now, check that name is correctly populated in the model even though it's not an API field.
+        for create_data in self.create_data:
+            instance = self._get_queryset().get(slug=create_data["slug"])
+            self.assertEqual(instance.name, instance.slug)
+
+    def test_create_object_required_fields(self):
+        """For this API version, `label` and `slug` are required fields."""
+        self.add_permissions("extras.add_customfield")
+
+        incomplete_data = {
+            "content_types": ["dcim.site"],
+            "type": "date",
+        }
+
+        response = self.client.post(self._get_list_url(), incomplete_data, format="json", **self.header)
+        self.assertHttpStatus(response, status.HTTP_400_BAD_REQUEST)
+        self.maxDiff = None
+        self.assertEqual(
+            response.data,
+            {"slug": ["This field is required."], "label": ["This field is required."]},
+        )
 
 
 class CustomLinkTest(APIViewTestCases.APIViewTestCase):
@@ -527,29 +630,10 @@ class CustomLinkTest(APIViewTestCases.APIViewTestCase):
         )
 
 
-class DynamicGroupTest(APIViewTestCases.APIViewTestCase):
-    model = DynamicGroup
-    brief_fields = ["content_type", "display", "id", "name", "slug", "url"]
-    create_data = [
-        {
-            "name": "API DynamicGroup 4",
-            "slug": "api-dynamicgroup-4",
-            "content_type": "dcim.device",
-            "filter": {"site": ["site-1"]},
-        },
-        {
-            "name": "API DynamicGroup 5",
-            "slug": "api-dynamicgroup-5",
-            "content_type": "dcim.device",
-            "filter": {"has_interfaces": False},
-        },
-        {
-            "name": "API DynamicGroup 6",
-            "slug": "api-dynamicgroup-6",
-            "content_type": "dcim.device",
-            "filter": {"site": ["site-2"]},
-        },
-    ]
+class DynamicGroupTestMixin:
+    """Mixin for Dynamic Group test cases to re-use the same set of common fixtures."""
+
+    fixtures = ("status",)
 
     @classmethod
     def setUpTestData(cls):
@@ -592,25 +676,52 @@ class DynamicGroupTest(APIViewTestCases.APIViewTestCase):
         )
 
         # Then the DynamicGroups.
-        content_type = ContentType.objects.get_for_model(Device)
-        DynamicGroup.objects.create(
-            name="API DynamicGroup 1",
-            slug="api-dynamicgroup-1",
-            content_type=content_type,
-            filter={"status": ["active"]},
-        )
-        DynamicGroup.objects.create(
-            name="API DynamicGroup 2",
-            slug="api-dynamicgroup-2",
-            content_type=content_type,
-            filter={"status": ["planned"]},
-        )
-        DynamicGroup.objects.create(
-            name="API DynamicGroup 3",
-            slug="api-dynamicgroup-3",
-            content_type=content_type,
-            filter={"site": ["site-3"]},
-        )
+        cls.content_type = ContentType.objects.get_for_model(Device)
+        cls.groups = [
+            DynamicGroup.objects.create(
+                name="API DynamicGroup 1",
+                slug="api-dynamicgroup-1",
+                content_type=cls.content_type,
+                filter={"status": ["active"]},
+            ),
+            DynamicGroup.objects.create(
+                name="API DynamicGroup 2",
+                slug="api-dynamicgroup-2",
+                content_type=cls.content_type,
+                filter={"status": ["planned"]},
+            ),
+            DynamicGroup.objects.create(
+                name="API DynamicGroup 3",
+                slug="api-dynamicgroup-3",
+                content_type=cls.content_type,
+                filter={"site": ["site-3"]},
+            ),
+        ]
+
+
+class DynamicGroupTest(DynamicGroupTestMixin, APIViewTestCases.APIViewTestCase):
+    model = DynamicGroup
+    brief_fields = ["content_type", "display", "id", "name", "slug", "url"]
+    create_data = [
+        {
+            "name": "API DynamicGroup 4",
+            "slug": "api-dynamicgroup-4",
+            "content_type": "dcim.device",
+            "filter": {"site": ["site-1"]},
+        },
+        {
+            "name": "API DynamicGroup 5",
+            "slug": "api-dynamicgroup-5",
+            "content_type": "dcim.device",
+            "filter": {"has_interfaces": False},
+        },
+        {
+            "name": "API DynamicGroup 6",
+            "slug": "api-dynamicgroup-6",
+            "content_type": "dcim.device",
+            "filter": {"site": ["site-2"]},
+        },
+    ]
 
     def test_get_members(self):
         """Test that the `/members/` API endpoint returns what is expected."""
@@ -621,6 +732,70 @@ class DynamicGroupTest(APIViewTestCases.APIViewTestCase):
         response = self.client.get(url, **self.header)
         self.assertHttpStatus(response, status.HTTP_200_OK)
         self.assertEqual(member_count, len(response.json()["results"]))
+
+
+class DynamicGroupMembershipTest(DynamicGroupTestMixin, APIViewTestCases.APIViewTestCase):
+    model = DynamicGroupMembership
+    brief_fields = ["display", "group", "id", "operator", "parent_group", "url", "weight"]
+    choices_fields = ["operator"]
+
+    @classmethod
+    def setUpTestData(cls):
+        super().setUpTestData()
+
+        parent = DynamicGroup.objects.create(
+            name="parent",
+            slug="parent",
+            content_type=cls.content_type,
+            filter={},
+        )
+        parent2 = DynamicGroup.objects.create(
+            name="parent2",
+            slug="parent2",
+            content_type=cls.content_type,
+            filter={},
+        )
+        group1, group2, group3 = cls.groups
+
+        DynamicGroupMembership.objects.create(
+            parent_group=parent,
+            group=group1,
+            operator=DynamicGroupOperatorChoices.OPERATOR_INTERSECTION,
+            weight=10,
+        )
+        DynamicGroupMembership.objects.create(
+            parent_group=parent,
+            group=group2,
+            operator=DynamicGroupOperatorChoices.OPERATOR_UNION,
+            weight=20,
+        )
+        DynamicGroupMembership.objects.create(
+            parent_group=parent,
+            group=group3,
+            operator=DynamicGroupOperatorChoices.OPERATOR_DIFFERENCE,
+            weight=30,
+        )
+
+        cls.create_data = [
+            {
+                "parent_group": parent2.pk,
+                "group": group1.pk,
+                "operator": DynamicGroupOperatorChoices.OPERATOR_INTERSECTION,
+                "weight": 10,
+            },
+            {
+                "parent_group": parent2.pk,
+                "group": group2.pk,
+                "operator": DynamicGroupOperatorChoices.OPERATOR_UNION,
+                "weight": 20,
+            },
+            {
+                "parent_group": parent2.pk,
+                "group": group3.pk,
+                "operator": DynamicGroupOperatorChoices.OPERATOR_DIFFERENCE,
+                "weight": 30,
+            },
+        ]
 
 
 class ExportTemplateTest(APIViewTestCases.APIViewTestCase):
@@ -739,7 +914,9 @@ class GitRepositoryTest(APIViewTestCases.APIViewTestCase):
         url = reverse("extras-api:gitrepository-sync", kwargs={"pk": self.repos[0].id})
         response = self.client.post(url, format="json", **self.header)
         self.assertHttpStatus(response, status.HTTP_503_SERVICE_UNAVAILABLE)
-        self.assertEqual(response.data["detail"], "Unable to process request: Celery worker process not running.")
+        self.assertEqual(
+            response.data["detail"], "Unable to process request: No celery workers running on queue default."
+        )
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
     @mock.patch("nautobot.extras.api.views.get_worker_count")
@@ -791,6 +968,7 @@ class GitRepositoryTest(APIViewTestCases.APIViewTestCase):
 class GraphQLQueryTest(APIViewTestCases.APIViewTestCase):
     model = GraphQLQuery
     brief_fields = ["display", "id", "name", "url"]
+    fixtures = ("status",)
 
     create_data = [
         {
@@ -1106,7 +1284,9 @@ class JobAPIRunTestMixin:
         url = self.get_run_url()
         response = self.client.post(url, data, format="json", **self.header)
         self.assertHttpStatus(response, status.HTTP_503_SERVICE_UNAVAILABLE)
-        self.assertEqual(response.data["detail"], "Unable to process request: Celery worker process not running.")
+        self.assertEqual(
+            response.data["detail"], "Unable to process request: No celery workers running on queue default."
+        )
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     @mock.patch("nautobot.extras.api.views.get_worker_count")
@@ -1210,6 +1390,8 @@ class JobAPIRunTestMixin:
         self.assertHttpStatus(response, self.run_success_response_status)
 
         job_result = JobResult.objects.last()
+        self.assertIn("data", job_result.job_kwargs)
+        self.assertEqual(job_result.job_kwargs["data"], job_data)
 
         return (response, job_result)  # so subclasses can do additional testing
 
@@ -1236,6 +1418,92 @@ class JobAPIRunTestMixin:
         schedule = ScheduledJob.objects.last()
 
         return (response, schedule)  # so subclasses can do additional testing
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    @mock.patch("nautobot.extras.api.views.get_worker_count")
+    def test_run_a_job_with_sensitive_variables_for_future(self, mock_get_worker_count):
+        mock_get_worker_count.return_value = 1
+        self.add_permissions("extras.run_job")
+
+        job_model = Job.objects.get(job_class_name="ExampleJob")
+        job_model.enabled = True
+        job_model.validated_save()
+
+        url = reverse("extras-api:job-run", kwargs={"pk": job_model.pk})
+        data = {
+            "data": {},
+            "commit": True,
+            "schedule": {
+                "start_time": str(datetime.now() + timedelta(minutes=1)),
+                "interval": "future",
+                "name": "test",
+            },
+        }
+
+        # url = self.get_run_url()
+        response = self.client.post(url, data, format="json", **self.header)
+        self.assertHttpStatus(response, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(
+            response.data["schedule"]["interval"][0],
+            "Unable to schedule job: Job may have sensitive input variables",
+        )
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    @mock.patch("nautobot.extras.api.views.get_worker_count")
+    def test_run_a_job_with_sensitive_variables_and_requires_approval(self, mock_get_worker_count):
+        mock_get_worker_count.return_value = 1
+        self.add_permissions("extras.run_job")
+
+        job_model = Job.objects.get(job_class_name="ExampleJob")
+        job_model.enabled = True
+        job_model.has_sensitive_variables = True
+        job_model.approval_required = True
+        job_model.save()
+
+        url = reverse("extras-api:job-run", kwargs={"pk": job_model.pk})
+        data = {
+            "data": {},
+            "commit": True,
+            "schedule": {
+                "interval": "immediately",
+                "name": "test",
+            },
+        }
+
+        response = self.client.post(url, data, format="json", **self.header)
+        self.assertHttpStatus(response, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(
+            response.data[0],
+            "Unable to run or schedule job: "
+            "This job is flagged as possibly having sensitive variables but is also flagged as requiring approval."
+            "One of these two flags must be removed before this job can be scheduled or run.",
+        )
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    @mock.patch("nautobot.extras.api.views.get_worker_count")
+    def test_run_a_job_with_sensitive_variables_immediately(self, mock_get_worker_count):
+        mock_get_worker_count.return_value = 1
+        self.add_permissions("extras.run_job")
+        d = DeviceRole.objects.create(name="role", slug="role")
+        data = {
+            "data": {"var1": "x", "var2": 1, "var3": False, "var4": d.pk},
+            "commit": True,
+            "schedule": {
+                "interval": "immediately",
+                "name": "test",
+            },
+        }
+        job = Job.objects.get_for_class_path("local/api_test_job/APITestJob")
+        job.has_sensitive_variables = True
+        job.has_sensitive_variables_override = True
+        job.validated_save()
+
+        url = self.get_run_url()
+        response = self.client.post(url, data, format="json", **self.header)
+        self.assertHttpStatus(response, self.run_success_response_status)
+
+        job_result = JobResult.objects.last()
+        self.assertEqual(job_result.job_kwargs, None)
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     @mock.patch("nautobot.extras.api.views.get_worker_count")
@@ -1336,6 +1604,165 @@ class JobAPIRunTestMixin:
             response.data, {"errors": {"var2": ["This field is required."], "var4": ["This field is required."]}}
         )
 
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
+    def test_run_job_with_invalid_task_queue(self):
+        self.add_permissions("extras.run_job")
+        d = DeviceRole.objects.create(name="role", slug="role")
+        data = {
+            "data": {"var1": "x", "var2": 1, "var3": False, "var4": d.pk},
+            "commit": True,
+            "task_queue": "invalid",
+        }
+
+        url = self.get_run_url()
+        response = self.client.post(url, data, format="json", **self.header)
+        self.assertHttpStatus(response, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(
+            response.data,
+            {"task_queue": ['"invalid" is not a valid choice.']},
+        )
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
+    @mock.patch("nautobot.extras.api.views.get_worker_count", return_value=1)
+    def test_run_job_with_valid_task_queue(self, _):
+        self.add_permissions("extras.run_job")
+        d = DeviceRole.objects.create(name="role", slug="role")
+        data = {
+            "data": {"var1": "x", "var2": 1, "var3": False, "var4": d.pk},
+            "commit": True,
+            "task_queue": settings.CELERY_TASK_DEFAULT_QUEUE,
+        }
+
+        url = self.get_run_url()
+        response = self.client.post(url, data, format="json", **self.header)
+        self.assertHttpStatus(response, self.run_success_response_status)
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
+    @mock.patch("nautobot.extras.api.views.get_worker_count", return_value=1)
+    def test_run_job_with_default_queue_with_empty_job_model_task_queues(self, _):
+        self.add_permissions("extras.run_job")
+        data = {
+            "commit": True,
+            "task_queue": settings.CELERY_TASK_DEFAULT_QUEUE,
+        }
+
+        job_model = Job.objects.get_for_class_path("local/test_pass/TestPass")
+        job_model.enabled = True
+        job_model.validated_save()
+        url = self.get_run_url("local/test_pass/TestPass")
+        response = self.client.post(url, data, format="json", **self.header)
+        self.assertHttpStatus(response, self.run_success_response_status)
+
+
+class JobHookTest(APIViewTestCases.APIViewTestCase):
+
+    model = JobHook
+    brief_fields = ["display", "id", "name", "url"]
+    choices_fields = []
+    update_data = {
+        "name": "Overridden name",
+        "enabled": False,
+        "type_create": True,
+        "type_update": True,
+        "type_delete": False,
+    }
+    bulk_update_data = {
+        "enabled": False,
+        "type_create": True,
+        "type_update": True,
+        "type_delete": False,
+    }
+    validation_excluded_fields = []
+    api_version = "1.3"
+
+    @classmethod
+    def setUpTestData(cls):
+        cls.create_data = [
+            {
+                "name": "JobHook4",
+                "content_types": ["dcim.consoleport"],
+                "type_delete": True,
+                "job": Job.objects.get(job_class_name="TestJobHookReceiverLog").pk,
+                "enabled": False,
+            },
+            {
+                "name": "JobHook5",
+                "content_types": ["dcim.consoleport"],
+                "type_delete": True,
+                "job": Job.objects.get(job_class_name="TestJobHookReceiverChange").pk,
+                "enabled": False,
+            },
+            {
+                "name": "JobHook6",
+                "content_types": ["dcim.consoleport"],
+                "type_delete": True,
+                "job": Job.objects.get(job_class_name="TestJobHookReceiverFail").pk,
+                "enabled": False,
+            },
+        ]
+        cls.job_hooks = (
+            JobHook(
+                name="JobHook1",
+                type_create=True,
+                job=Job.objects.get(job_class_name="TestJobHookReceiverLog"),
+                type_delete=True,
+            ),
+            JobHook(
+                name="JobHook2",
+                type_create=True,
+                job=Job.objects.get(job_class_name="TestJobHookReceiverChange"),
+                type_delete=True,
+            ),
+            JobHook(
+                name="JobHook3",
+                type_create=True,
+                job=Job.objects.get(job_class_name="TestJobHookReceiverFail"),
+                type_delete=True,
+            ),
+        )
+
+        obj_type = ContentType.objects.get_for_model(DeviceType)
+
+        for job_hook in cls.job_hooks:
+            job_hook.save()
+            job_hook.content_types.set([obj_type])
+
+    def test_validate_post(self):
+        """POST a job hook with values that duplicate another job hook"""
+
+        data = {
+            "name": "JobHook4",
+            "content_types": ["dcim.devicetype"],
+            "job": Job.objects.get(job_class_name="TestJobHookReceiverLog").pk,
+            "type_create": False,
+            "type_delete": True,
+        }
+
+        self.add_permissions("extras.add_jobhook")
+        response = self.client.post(self._get_list_url(), data, format="json", **self.header)
+        self.assertContains(
+            response,
+            "A job hook already exists for delete on dcim | device type to job TestJobHookReceiverLog",
+            status_code=400,
+        )
+
+    def test_validate_patch(self):
+        """PATCH an existing job hook with values that duplicate another job hook"""
+
+        data = {
+            "job": Job.objects.get(job_class_name="TestJobHookReceiverLog").pk,
+            "type_delete": True,
+        }
+
+        self.add_permissions("extras.change_jobhook")
+        job_hook2 = JobHook.objects.get(name="JobHook2")
+        response = self.client.patch(self._get_detail_url(job_hook2), data, format="json", **self.header)
+        self.assertContains(
+            response,
+            "A job hook already exists for delete on dcim | device type to job TestJobHookReceiverLog",
+            status_code=400,
+        )
+
 
 class JobTestVersion13(
     JobAPIRunTestMixin,
@@ -1348,7 +1775,7 @@ class JobTestVersion13(
     """Test cases for the Jobs REST API under API version 1.3 - first version introducing JobModel-based APIs."""
 
     model = Job
-    brief_fields = ["grouping", "id", "job_class_name", "module_name", "name", "slug", "source", "url"]
+    brief_fields = ["display", "grouping", "id", "job_class_name", "module_name", "name", "slug", "source", "url"]
     choices_fields = None
     update_data = {
         # source, module_name, job_class_name, installed are NOT editable
@@ -1372,11 +1799,17 @@ class JobTestVersion13(
         "soft_time_limit": 350.1,
         "time_limit_override": True,
         "time_limit": 650,
+        "has_sensitive_variables": False,
+        "has_sensitive_variables_override": True,
+        "task_queues": ["default", "priority"],
+        "task_queues_override": True,
     }
     bulk_update_data = {
         "enabled": True,
         "approval_required_override": True,
         "approval_required": True,
+        "has_sensitive_variables": False,
+        "has_sensitive_variables_override": True,
     }
     validation_excluded_fields = []
 
@@ -1390,10 +1823,8 @@ class JobTestVersion13(
     def test_get_job_variables(self):
         """Test the job/<pk>/variables API endpoint."""
         self.add_permissions("extras.view_job")
-        response = self.client.get(
-            reverse(f"{self._get_view_namespace()}:job-variables", kwargs={"pk": self.job_model.pk}),
-            **self.header,
-        )
+        route = get_route_for_model(self.model, "variables", api=True)
+        response = self.client.get(reverse(route, kwargs={"pk": self.job_model.pk}), **self.header)
         self.assertEqual(4, len(response.data))  # 4 variables, in order
         self.assertEqual(response.data[0], {"name": "var1", "type": "StringVar", "required": True})
         self.assertEqual(response.data[1], {"name": "var2", "type": "IntegerVar", "required": True})
@@ -1404,17 +1835,68 @@ class JobTestVersion13(
         )
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
-    def test_run_job_object_var(self):
+    def test_update_job_with_sensitive_variables_set_approval_required_to_true(self):
+        job_model = Job.objects.get_for_class_path("local/api_test_job/APITestJob")
+        job_model.has_sensitive_variables = True
+        job_model.has_sensitive_variables_override = True
+        job_model.validated_save()
+
+        url = self._get_detail_url(job_model)
+        data = {
+            "approval_required_override": True,
+            "approval_required": True,
+        }
+
+        self.add_permissions("extras.change_job")
+
+        response = self.client.patch(url, data, format="json", **self.header)
+        self.assertHttpStatus(response, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(
+            response.data["approval_required"][0],
+            "A job with sensitive variables cannot also be marked as requiring approval",
+        )
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_update_approval_required_job_set_has_sensitive_variables_to_true(self):
+        job_model = Job.objects.get_for_class_path("local/api_test_job/APITestJob")
+        job_model.approval_required = True
+        job_model.approval_required_override = True
+        job_model.validated_save()
+
+        url = self._get_detail_url(job_model)
+        data = {
+            "has_sensitive_variables": True,
+            "has_sensitive_variables_override": True,
+        }
+
+        self.add_permissions("extras.change_job")
+
+        response = self.client.patch(url, data, format="json", **self.header)
+        self.assertHttpStatus(response, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(
+            response.data["has_sensitive_variables"][0],
+            "A job with sensitive variables cannot also be marked as requiring approval",
+        )
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_run_job_object_var(self):  # pylint: disable=arguments-differ
         """In addition to the base test case provided by JobAPIRunTestMixin, also verify the JSON response data."""
         response, schedule = super().test_run_job_object_var()
 
         self.assertIn("schedule", response.data)
         self.assertIn("job_result", response.data)
-        self.assertEqual(response.data["schedule"], NestedScheduledJobSerializer(schedule).data)
+        self.assertEqual(response.data["schedule"]["id"], str(schedule.pk))
+        self.assertEqual(
+            response.data["schedule"]["url"],
+            "http://testserver" + reverse("extras-api:scheduledjob-detail", kwargs={"pk": schedule.pk}),
+        )
+        self.assertEqual(response.data["schedule"]["name"], schedule.name)
+        self.assertEqual(response.data["schedule"]["start_time"], schedule.start_time)
+        self.assertEqual(response.data["schedule"]["interval"], schedule.interval)
         self.assertIsNone(response.data["job_result"])
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
-    def test_run_job_object_var_lookup(self):
+    def test_run_job_object_var_lookup(self):  # pylint: disable=arguments-differ
         """In addition to the base test case provided by JobAPIRunTestMixin, also verify the JSON response data."""
         response, job_result = super().test_run_job_object_var_lookup()
 
@@ -1431,23 +1913,44 @@ class JobTestVersion13(
         self.assertEqual(data_job_result, expected_data_job_result)
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
-    def test_run_job_future(self):
+    def test_run_job_future(self):  # pylint: disable=arguments-differ
         """In addition to the base test case provided by JobAPIRunTestMixin, also verify the JSON response data."""
         response, schedule = super().test_run_job_future()
 
         self.assertIn("schedule", response.data)
         self.assertIn("job_result", response.data)
-        self.assertEqual(response.data["schedule"], NestedScheduledJobSerializer(schedule).data)
+        self.assertEqual(response.data["schedule"]["id"], str(schedule.pk))
+        self.assertEqual(
+            response.data["schedule"]["url"],
+            "http://testserver" + reverse("extras-api:scheduledjob-detail", kwargs={"pk": schedule.pk}),
+        )
+        self.assertEqual(response.data["schedule"]["name"], schedule.name)
+        self.assertEqual(response.data["schedule"]["start_time"], schedule.start_time)
+        self.assertEqual(response.data["schedule"]["interval"], schedule.interval)
         self.assertIsNone(response.data["job_result"])
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
-    def test_run_job_interval(self):
+    def test_run_job_future_schedule_kwargs_pk(self):
+        """In addition to the base test case provided by JobAPIRunTestMixin, also verify that kwargs['scheduled_job_pk'] was set in the scheduled job."""
+        _, schedule = super().test_run_job_future()
+
+        self.assertEqual(schedule.kwargs["scheduled_job_pk"], str(schedule.pk))
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_run_job_interval(self):  # pylint: disable=arguments-differ
         """In addition to the base test case provided by JobAPIRunTestMixin, also verify the JSON response data."""
         response, schedule = super().test_run_job_interval()
 
         self.assertIn("schedule", response.data)
         self.assertIn("job_result", response.data)
-        self.assertEqual(response.data["schedule"], NestedScheduledJobSerializer(schedule).data)
+        self.assertEqual(response.data["schedule"]["id"], str(schedule.pk))
+        self.assertEqual(
+            response.data["schedule"]["url"],
+            "http://testserver" + reverse("extras-api:scheduledjob-detail", kwargs={"pk": schedule.pk}),
+        )
+        self.assertEqual(response.data["schedule"]["name"], schedule.name)
+        self.assertEqual(response.data["schedule"]["start_time"], schedule.start_time)
+        self.assertEqual(response.data["schedule"]["interval"], schedule.interval)
         self.assertIsNone(response.data["job_result"])
 
 
@@ -1532,31 +2035,56 @@ class JobTestVersionDefault(JobTestVersion12):
     api_version = None
 
 
-class JobResultTest(APITestCase):
-    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
-    def test_delete_job_result_anonymous(self):
-        url = reverse("extras-api:jobresult-detail", kwargs={"pk": 1})
-        response = self.client.delete(url, **self.header)
-        self.assertHttpStatus(response, status.HTTP_403_FORBIDDEN)
+class JobResultTest(
+    APIViewTestCases.GetObjectViewTestCase,
+    APIViewTestCases.ListObjectsViewTestCase,
+    APIViewTestCases.DeleteObjectViewTestCase,
+):
+    model = JobResult
+    brief_fields = ["completed", "created", "display", "id", "name", "status", "url", "user"]
 
-    @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
-    def test_delete_job_result_without_permission(self):
-        url = reverse("extras-api:jobresult-detail", kwargs={"pk": 1})
-        with disable_warnings("django.request"):
-            response = self.client.delete(url, **self.header)
-        self.assertHttpStatus(response, status.HTTP_403_FORBIDDEN)
+    @classmethod
+    def setUpTestData(cls):
+        jobs = Job.objects.all()[:2]
+        job_ct = ContentType.objects.get_for_model(Job)
+        git_ct = ContentType.objects.get_for_model(GitRepository)
 
-    @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
-    def test_delete_job_result_with_permission(self):
-        self.add_permissions("extras.delete_jobresult")
-        job_result = JobResult.objects.create(
-            name="test",
+        JobResult.objects.create(
+            job_model=jobs[0],
+            name=jobs[0].class_path,
+            obj_type=job_ct,
+            completed=datetime.now(),
+            user=None,
+            status=JobResultStatusChoices.STATUS_COMPLETED,
+            data={"output": "\nRan for 3 seconds"},
+            job_kwargs=None,
+            schedule=None,
             job_id=uuid.uuid4(),
-            obj_type=ContentType.objects.get_for_model(GitRepository),
         )
-        url = reverse("extras-api:jobresult-detail", kwargs={"pk": job_result.pk})
-        response = self.client.delete(url, **self.header)
-        self.assertHttpStatus(response, status.HTTP_204_NO_CONTENT)
+        JobResult.objects.create(
+            job_model=None,
+            name="Git Repository",
+            obj_type=git_ct,
+            completed=datetime.now(),
+            user=None,
+            status=JobResultStatusChoices.STATUS_COMPLETED,
+            data=None,
+            job_kwargs={"repository_pk": uuid.uuid4()},
+            schedule=None,
+            job_id=uuid.uuid4(),
+        )
+        JobResult.objects.create(
+            job_model=jobs[1],
+            name=jobs[1].class_path,
+            obj_type=job_ct,
+            completed=None,
+            user=None,
+            status=JobResultStatusChoices.STATUS_PENDING,
+            data=None,
+            job_kwargs={"data": {"device": uuid.uuid4(), "multichoices": ["red", "green"], "checkbox": False}},
+            schedule=None,
+            job_id=uuid.uuid4(),
+        )
 
 
 class JobLogEntryTest(
@@ -1567,6 +2095,7 @@ class JobLogEntryTest(
     brief_fields = [
         "absolute_url",
         "created",
+        "display",
         "grouping",
         "id",
         "job_result",
@@ -1600,19 +2129,13 @@ class JobLogEntryTest(
         response = self.client.get(url, **self.header)
         self.assertEqual(len(response.json()), JobLogEntry.objects.count())
 
-    def test_options_objects_returns_display_and_value(self):
-        """Overridden because this test case is not applicable to this viewset."""
-
-    def test_options_returns_expected_choices(self):
-        """Overridden because this test case is not applicable to this viewset."""
-
 
 class ScheduledJobTest(
     APIViewTestCases.GetObjectViewTestCase,
     APIViewTestCases.ListObjectsViewTestCase,
 ):
     model = ScheduledJob
-    brief_fields = ["interval", "name", "start_time"]
+    brief_fields = ["crontab", "display", "id", "interval", "name", "start_time", "url"]
     choices_fields = []
 
     @classmethod
@@ -1649,12 +2172,6 @@ class ScheduledJobTest(
             approval_required=True,
             start_time=now(),
         )
-
-    def test_options_objects_returns_display_and_value(self):
-        """Overriden because this test case is not applicable to this viewset"""
-
-    def test_options_returns_expected_choices(self):
-        """Overriden because this test case is not applicable to this viewset"""
 
 
 class JobApprovalTest(APITestCase):
@@ -1813,6 +2330,67 @@ class JobApprovalTest(APITestCase):
         self.assertHttpStatus(response, status.HTTP_200_OK)
 
 
+class NoteTest(APIViewTestCases.APIViewTestCase):
+    model = Note
+    brief_fields = [
+        "assigned_object",
+        "display",
+        "id",
+        "note",
+        "slug",
+        "url",
+        "user",
+    ]
+    choices_fields = ["assigned_object_type"]
+
+    @classmethod
+    def setUpTestData(cls):
+        site1 = Site.objects.create(name="Site 1", slug="site-1")
+        site2 = Site.objects.create(name="Site 2", slug="site-2")
+        ct = ContentType.objects.get_for_model(Site)
+        user1 = User.objects.create(username="user1", is_active=True)
+        user2 = User.objects.create(username="user2", is_active=True)
+
+        cls.create_data = [
+            {
+                "note": "This is a test.",
+                "assigned_object_id": site1.pk,
+                "assigned_object_type": f"{ct._meta.app_label}.{ct._meta.model_name}",
+            },
+            {
+                "note": "This is a test.",
+                "assigned_object_id": site2.pk,
+                "assigned_object_type": f"{ct._meta.app_label}.{ct._meta.model_name}",
+            },
+            {
+                "note": "This is a note on Site 1.",
+                "assigned_object_id": site1.pk,
+                "assigned_object_type": f"{ct._meta.app_label}.{ct._meta.model_name}",
+            },
+        ]
+        cls.bulk_update_data = {
+            "note": "Bulk change.",
+        }
+        Note.objects.create(
+            note="Site has been placed on maintenance.",
+            user=user1,
+            assigned_object_type=ct,
+            assigned_object_id=site1.pk,
+        )
+        Note.objects.create(
+            note="Site maintenance has ended.",
+            user=user1,
+            assigned_object_type=ct,
+            assigned_object_id=site1.pk,
+        )
+        Note.objects.create(
+            note="Site is under duress.",
+            user=user2,
+            assigned_object_type=ct,
+            assigned_object_id=site2.pk,
+        )
+
+
 class RelationshipTest(APIViewTestCases.APIViewTestCase):
     model = Relationship
     brief_fields = ["display", "id", "name", "slug", "url"]
@@ -1852,92 +2430,292 @@ class RelationshipTest(APIViewTestCases.APIViewTestCase):
     ]
 
     bulk_update_data = {
-        "destination_filter": {"role": {"slug": "controller"}},
+        "source_filter": {"slug": ["some-slug"]},
     }
     choices_fields = ["destination_type", "source_type", "type"]
+    fixtures = ("status",)
     slug_source = "name"
+    slugify_function = staticmethod(slugify_dashes_to_underscores)
 
     @classmethod
     def setUpTestData(cls):
         site_type = ContentType.objects.get_for_model(Site)
         device_type = ContentType.objects.get_for_model(Device)
 
-        Relationship(
-            name="Related Sites",
-            slug="related-sites",
-            type="many-to-many",
-            source_type=site_type,
-            destination_type=site_type,
-        ).validated_save()
-        Relationship(
-            name="Unrelated Sites",
-            slug="unrelated-sites",
-            type="many-to-many",
-            source_type=site_type,
-            destination_type=site_type,
-        ).validated_save()
-        Relationship(
-            name="Devices found elsewhere",
-            slug="devices-elsewhere",
-            type="many-to-many",
-            source_type=site_type,
-            destination_type=device_type,
-        ).validated_save()
+        cls.relationships = (
+            Relationship(
+                name="Related Sites",
+                slug="related-sites",
+                type="symmetric-many-to-many",
+                source_type=site_type,
+                destination_type=site_type,
+            ),
+            Relationship(
+                name="Unrelated Sites",
+                slug="unrelated-sites",
+                type="many-to-many",
+                source_type=site_type,
+                source_label="Other sites (from source side)",
+                destination_type=site_type,
+                destination_label="Other sites (from destination side)",
+            ),
+            Relationship(
+                name="Devices found elsewhere",
+                slug="devices-elsewhere",
+                type="many-to-many",
+                source_type=site_type,
+                destination_type=device_type,
+            ),
+        )
+        for relationship in cls.relationships:
+            relationship.validated_save()
+
+        cls.site = Site.objects.create(name="Site 1", status=Status.objects.get(slug="active"))
+
+    def test_get_all_relationships_on_site(self):
+        """Verify that all relationships are accurately represented when requested."""
+        self.add_permissions("dcim.view_site")
+        response = self.client.get(
+            reverse("dcim-api:site-detail", kwargs={"pk": self.site.pk}) + "?include=relationships", **self.header
+        )
+        self.assertHttpStatus(response, status.HTTP_200_OK)
+        self.assertIn("relationships", response.data)
+        self.assertIsInstance(response.data["relationships"], dict)
+        self.maxDiff = None
+        self.assertEqual(
+            {
+                self.relationships[0].slug: {
+                    "id": str(self.relationships[0].pk),
+                    "url": (
+                        "http://testserver"
+                        + reverse("extras-api:relationship-detail", kwargs={"pk": self.relationships[0].pk})
+                    ),
+                    "name": self.relationships[0].name,
+                    "type": self.relationships[0].type,
+                    "peer": {
+                        "label": "sites",
+                        "object_type": "dcim.site",
+                        "objects": [],
+                    },
+                },
+                self.relationships[1].slug: {
+                    "id": str(self.relationships[1].pk),
+                    "url": (
+                        "http://testserver"
+                        + reverse("extras-api:relationship-detail", kwargs={"pk": self.relationships[1].pk})
+                    ),
+                    "name": self.relationships[1].name,
+                    "type": self.relationships[1].type,
+                    "destination": {
+                        "label": self.relationships[1].source_label,  # yes -- it's a bit confusing
+                        "object_type": "dcim.site",
+                        "objects": [],
+                    },
+                    "source": {
+                        "label": self.relationships[1].destination_label,  # yes -- it's a bit confusing
+                        "object_type": "dcim.site",
+                        "objects": [],
+                    },
+                },
+                self.relationships[2].slug: {
+                    "id": str(self.relationships[2].pk),
+                    "url": (
+                        "http://testserver"
+                        + reverse("extras-api:relationship-detail", kwargs={"pk": self.relationships[2].pk})
+                    ),
+                    "name": self.relationships[2].name,
+                    "type": self.relationships[2].type,
+                    "destination": {
+                        "label": "devices",
+                        "object_type": "dcim.device",
+                        "objects": [],
+                    },
+                },
+            },
+            response.data["relationships"],
+        )
+
+    def test_populate_relationship_associations_on_site_create(self):
+        """Verify that relationship associations can be populated at instance creation time."""
+        existing_site_1 = Site.objects.create(name="Existing Site 1", status=Status.objects.get(slug="active"))
+        existing_site_2 = Site.objects.create(name="Existing Site 2", status=Status.objects.get(slug="active"))
+        manufacturer = Manufacturer.objects.create(name="Manufacturer 1", slug="manufacturer-1")
+        device_type = DeviceType.objects.create(
+            manufacturer=manufacturer,
+            model="device Type 1",
+            slug="device-type-1",
+        )
+        device_role = DeviceRole.objects.create(name="Device Role 1", slug="device-role-1", color="ff0000")
+        existing_device_1 = Device.objects.create(
+            name="existing-device-site-1",
+            status=Status.objects.get(slug="active"),
+            device_role=device_role,
+            device_type=device_type,
+            site=existing_site_1,
+        )
+        existing_device_2 = Device.objects.create(
+            name="existing-device-site-2",
+            status=Status.objects.get(slug="active"),
+            device_role=device_role,
+            device_type=device_type,
+            site=existing_site_2,
+        )
+
+        self.add_permissions("dcim.view_site", "dcim.add_site", "extras.add_relationshipassociation")
+        response = self.client.post(
+            reverse("dcim-api:site-list"),
+            data={
+                "name": "New Site",
+                "status": "active",
+                "relationships": {
+                    self.relationships[0].slug: {
+                        "peer": {
+                            "objects": [str(existing_site_1.pk)],
+                        },
+                    },
+                    self.relationships[1].slug: {
+                        "source": {
+                            "objects": [str(existing_site_2.pk)],
+                        },
+                    },
+                    self.relationships[2].slug: {
+                        "destination": {
+                            "objects": [
+                                {"name": "existing-device-site-1"},
+                                {"name": "existing-device-site-2"},
+                            ],
+                        },
+                    },
+                },
+            },
+            format="json",
+            **self.header,
+        )
+        self.assertHttpStatus(response, status.HTTP_201_CREATED)
+        new_site_id = response.data["id"]
+        # Peer case - don't distinguish source/destination
+        self.assertTrue(
+            RelationshipAssociation.objects.filter(
+                relationship=self.relationships[0],
+                source_type=self.relationships[0].source_type,
+                source_id__in=[existing_site_1.pk, new_site_id],
+                destination_type=self.relationships[0].destination_type,
+                destination_id__in=[existing_site_1.pk, new_site_id],
+            ).exists()
+        )
+        self.assertTrue(
+            RelationshipAssociation.objects.filter(
+                relationship=self.relationships[1],
+                source_type=self.relationships[1].source_type,
+                source_id=existing_site_2.pk,
+                destination_type=self.relationships[1].destination_type,
+                destination_id=new_site_id,
+            ).exists()
+        )
+        self.assertTrue(
+            RelationshipAssociation.objects.filter(
+                relationship=self.relationships[2],
+                source_type=self.relationships[2].source_type,
+                source_id=new_site_id,
+                destination_type=self.relationships[2].destination_type,
+                destination_id=existing_device_1.pk,
+            ).exists()
+        )
+        self.assertTrue(
+            RelationshipAssociation.objects.filter(
+                relationship=self.relationships[2],
+                source_type=self.relationships[2].source_type,
+                source_id=new_site_id,
+                destination_type=self.relationships[2].destination_type,
+                destination_id=existing_device_2.pk,
+            ).exists()
+        )
 
 
 class RelationshipAssociationTest(APIViewTestCases.APIViewTestCase):
     model = RelationshipAssociation
     brief_fields = ["destination_id", "display", "id", "relationship", "source_id", "url"]
     choices_fields = ["destination_type", "source_type"]
+    fixtures = ("status",)
 
     @classmethod
     def setUpTestData(cls):
-        site_type = ContentType.objects.get_for_model(Site)
-        device_type = ContentType.objects.get_for_model(Device)
+        cls.site_type = ContentType.objects.get_for_model(Site)
+        cls.device_type = ContentType.objects.get_for_model(Device)
+        cls.status_active = Status.objects.get(slug="active")
 
         cls.relationship = Relationship(
             name="Devices found elsewhere",
             slug="elsewhere-devices",
             type="many-to-many",
-            source_type=site_type,
-            destination_type=device_type,
+            source_type=cls.site_type,
+            destination_type=cls.device_type,
         )
         cls.relationship.validated_save()
         cls.sites = (
-            Site.objects.create(name="Empty Site", slug="empty"),
-            Site.objects.create(name="Occupied Site", slug="occupied"),
-            Site.objects.create(name="Another Empty Site", slug="another-empty"),
+            Site.objects.create(name="Empty Site", slug="empty", status=cls.status_active),
+            Site.objects.create(name="Occupied Site", slug="occupied", status=cls.status_active),
+            Site.objects.create(name="Another Empty Site", slug="another-empty", status=cls.status_active),
         )
         manufacturer = Manufacturer.objects.create(name="Manufacturer 1", slug="manufacturer-1")
         devicetype = DeviceType.objects.create(manufacturer=manufacturer, model="Device Type 1", slug="device-type-1")
         devicerole = DeviceRole.objects.create(name="Device Role 1", slug="device-role-1")
         cls.devices = (
-            Device.objects.create(name="Device 1", device_type=devicetype, device_role=devicerole, site=cls.sites[1]),
-            Device.objects.create(name="Device 2", device_type=devicetype, device_role=devicerole, site=cls.sites[1]),
-            Device.objects.create(name="Device 3", device_type=devicetype, device_role=devicerole, site=cls.sites[1]),
+            Device.objects.create(
+                name="Device 1",
+                device_type=devicetype,
+                device_role=devicerole,
+                site=cls.sites[1],
+                status=cls.status_active,
+            ),
+            Device.objects.create(
+                name="Device 2",
+                device_type=devicetype,
+                device_role=devicerole,
+                site=cls.sites[1],
+                status=cls.status_active,
+            ),
+            Device.objects.create(
+                name="Device 3",
+                device_type=devicetype,
+                device_role=devicerole,
+                site=cls.sites[1],
+                status=cls.status_active,
+            ),
+            Device.objects.create(
+                name="Device 4",
+                device_type=devicetype,
+                device_role=devicerole,
+                site=cls.sites[1],
+                status=cls.status_active,
+            ),
         )
 
-        RelationshipAssociation(
-            relationship=cls.relationship,
-            source_type=site_type,
-            source_id=cls.sites[0].pk,
-            destination_type=device_type,
-            destination_id=cls.devices[0].pk,
-        ).validated_save()
-        RelationshipAssociation(
-            relationship=cls.relationship,
-            source_type=site_type,
-            source_id=cls.sites[0].pk,
-            destination_type=device_type,
-            destination_id=cls.devices[1].pk,
-        ).validated_save()
-        RelationshipAssociation(
-            relationship=cls.relationship,
-            source_type=site_type,
-            source_id=cls.sites[0].pk,
-            destination_type=device_type,
-            destination_id=cls.devices[2].pk,
-        ).validated_save()
+        cls.associations = (
+            RelationshipAssociation(
+                relationship=cls.relationship,
+                source_type=cls.site_type,
+                source_id=cls.sites[0].pk,
+                destination_type=cls.device_type,
+                destination_id=cls.devices[0].pk,
+            ),
+            RelationshipAssociation(
+                relationship=cls.relationship,
+                source_type=cls.site_type,
+                source_id=cls.sites[0].pk,
+                destination_type=cls.device_type,
+                destination_id=cls.devices[1].pk,
+            ),
+            RelationshipAssociation(
+                relationship=cls.relationship,
+                source_type=cls.site_type,
+                source_id=cls.sites[0].pk,
+                destination_type=cls.device_type,
+                destination_id=cls.devices[2].pk,
+            ),
+        )
+        for association in cls.associations:
+            association.validated_save()
 
         cls.create_data = [
             {
@@ -1962,6 +2740,259 @@ class RelationshipAssociationTest(APIViewTestCases.APIViewTestCase):
                 "destination_id": cls.devices[2].pk,
             },
         ]
+
+    def test_create_invalid_relationship_association(self):
+        """Test creation of invalid relationship association restricted by destination/source filter."""
+
+        relationship = Relationship.objects.create(
+            name="Device to Site Rel 1",
+            slug="device-to-site-rel-1",
+            source_type=self.device_type,
+            source_filter={"name": [self.devices[0].name]},
+            destination_type=self.site_type,
+            destination_label="Primary Rack",
+            type=RelationshipTypeChoices.TYPE_ONE_TO_ONE,
+            destination_filter={"name": [self.sites[0].name]},
+        )
+
+        associations = [
+            (
+                "destination",  # side
+                self.sites[2].name,  # field name with an error
+                {
+                    "relationship": relationship.pk,
+                    "source_type": "dcim.device",
+                    "source_id": self.devices[0].pk,
+                    "destination_type": "dcim.site",
+                    "destination_id": self.sites[2].pk,
+                },
+            ),
+            (
+                "source",  # side
+                self.devices[1].name,  # field name with an error
+                {
+                    "relationship": relationship.pk,
+                    "source_type": "dcim.device",
+                    "source_id": self.devices[1].pk,
+                    "destination_type": "dcim.site",
+                    "destination_id": self.sites[0].pk,
+                },
+            ),
+        ]
+
+        self.add_permissions("extras.add_relationshipassociation")
+
+        for side, field_error_name, data in associations:
+            response = self.client.post(self._get_list_url(), data, format="json", **self.header)
+            self.assertHttpStatus(response, status.HTTP_400_BAD_REQUEST)
+            self.assertEqual(
+                response.data[side],
+                [f"{field_error_name} violates {relationship.name} {side}_filter restriction"],
+            )
+
+    def test_model_clean_method_is_called(self):
+        """Validate RelationshipAssociation clean method is called"""
+
+        data = {
+            "relationship": self.relationship.pk,
+            "source_type": "dcim.device",
+            "source_id": self.sites[2].pk,
+            "destination_type": "dcim.device",
+            "destination_id": self.devices[2].pk,
+        }
+
+        self.add_permissions("extras.add_relationshipassociation")
+
+        response = self.client.post(self._get_list_url(), data, format="json", **self.header)
+        self.assertHttpStatus(response, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(
+            response.data["source_type"], [f"source_type has a different value than defined in {self.relationship}"]
+        )
+
+    def test_get_association_data_on_site(self):
+        """
+        Check that `include=relationships` query parameter on a model endpoint includes relationships/associations.
+        """
+        self.add_permissions("dcim.view_site")
+        response = self.client.get(
+            reverse("dcim-api:site-detail", kwargs={"pk": self.sites[0].pk}) + "?include=relationships", **self.header
+        )
+        self.assertHttpStatus(response, status.HTTP_200_OK)
+        self.assertIn("relationships", response.data)
+        self.assertIsInstance(response.data["relationships"], dict)
+        # Ensure consistent ordering
+        response.data["relationships"][self.relationship.slug]["destination"]["objects"].sort(key=lambda v: v["name"])
+        self.maxDiff = None
+        self.assertEqual(
+            {
+                self.relationship.slug: {
+                    "id": str(self.relationship.pk),
+                    "url": (
+                        "http://testserver"
+                        + reverse("extras-api:relationship-detail", kwargs={"pk": self.relationship.pk})
+                    ),
+                    "name": self.relationship.name,
+                    "type": "many-to-many",
+                    "destination": {
+                        "label": "devices",
+                        "object_type": "dcim.device",
+                        "objects": [
+                            {
+                                "id": str(self.devices[0].pk),
+                                "url": (
+                                    "http://testserver"
+                                    + reverse("dcim-api:device-detail", kwargs={"pk": self.devices[0].pk})
+                                ),
+                                "display": self.devices[0].display,
+                                "name": self.devices[0].name,
+                            },
+                            {
+                                "id": str(self.devices[1].pk),
+                                "url": (
+                                    "http://testserver"
+                                    + reverse("dcim-api:device-detail", kwargs={"pk": self.devices[1].pk})
+                                ),
+                                "display": self.devices[1].display,
+                                "name": self.devices[1].name,
+                            },
+                            {
+                                "id": str(self.devices[2].pk),
+                                "url": (
+                                    "http://testserver"
+                                    + reverse("dcim-api:device-detail", kwargs={"pk": self.devices[2].pk})
+                                ),
+                                "display": self.devices[2].display,
+                                "name": self.devices[2].name,
+                            },
+                        ],
+                    },
+                },
+            },
+            response.data["relationships"],
+        )
+
+    def test_update_association_data_on_site(self):
+        """
+        Check that relationship-associations can be updated via the 'relationships' field.
+        """
+        self.add_permissions(
+            "dcim.view_site",
+            "dcim.change_site",
+            "extras.add_relationshipassociation",
+            "extras.delete_relationshipassociation",
+        )
+        initial_response = self.client.get(
+            reverse("dcim-api:site-detail", kwargs={"pk": self.sites[0].pk}) + "?include=relationships", **self.header
+        )
+        self.assertHttpStatus(initial_response, status.HTTP_200_OK)
+
+        url = reverse("dcim-api:site-detail", kwargs={"pk": self.sites[0].pk})
+
+        with self.subTest("Round-trip of same relationships data is a no-op"):
+            response = self.client.patch(
+                url,
+                {"relationships": initial_response.data["relationships"]},
+                format="json",
+                **self.header,
+            )
+            self.assertHttpStatus(response, status.HTTP_200_OK)
+            self.assertEqual(3, RelationshipAssociation.objects.filter(relationship=self.relationship).count())
+            for association in self.associations:
+                self.assertTrue(RelationshipAssociation.objects.filter(pk=association.pk).exists())
+
+        with self.subTest("Omitting relationships data entirely is valid"):
+            response = self.client.patch(
+                url,
+                {},
+                format="json",
+                **self.header,
+            )
+            self.assertHttpStatus(response, status.HTTP_200_OK)
+            self.assertEqual(3, RelationshipAssociation.objects.filter(relationship=self.relationship).count())
+            for association in self.associations:
+                self.assertTrue(RelationshipAssociation.objects.filter(pk=association.pk).exists())
+
+        with self.subTest("Error handling: nonexistent relationship"):
+            response = self.client.patch(
+                url,
+                {"relationships": {"nonexistent-relationship": {"peer": {"objects": []}}}},
+                format="json",
+                **self.header,
+            )
+            self.assertHttpStatus(response, status.HTTP_400_BAD_REQUEST)
+            self.assertEqual(
+                str(response.data["relationships"][0]), '"nonexistent-relationship" is not a relationship on dcim.Site'
+            )
+            self.assertEqual(3, RelationshipAssociation.objects.filter(relationship=self.relationship).count())
+            for association in self.associations:
+                self.assertTrue(RelationshipAssociation.objects.filter(pk=association.pk).exists())
+
+        with self.subTest("Error handling: wrong relationship"):
+            Relationship.objects.create(
+                name="Device-to-Device",
+                slug="device-to-device",
+                source_type=self.device_type,
+                destination_type=self.device_type,
+                type=RelationshipTypeChoices.TYPE_ONE_TO_ONE,
+            )
+            response = self.client.patch(
+                url,
+                {"relationships": {"device-to-device": {"peer": {"objects": []}}}},
+                format="json",
+                **self.header,
+            )
+            self.assertHttpStatus(response, status.HTTP_400_BAD_REQUEST)
+            self.assertEqual(
+                str(response.data["relationships"][0]), '"device-to-device" is not a relationship on dcim.Site'
+            )
+            self.assertEqual(3, RelationshipAssociation.objects.filter(relationship=self.relationship).count())
+            for association in self.associations:
+                self.assertTrue(RelationshipAssociation.objects.filter(pk=association.pk).exists())
+
+        with self.subTest("Error handling: wrong relationship side"):
+            response = self.client.patch(
+                url,
+                {"relationships": {self.relationship.slug: {"source": {"objects": []}}}},
+                format="json",
+                **self.header,
+            )
+            self.assertHttpStatus(response, status.HTTP_400_BAD_REQUEST)
+            self.assertEqual(
+                str(response.data["relationships"][0]),
+                '"source" is not a valid side for "Devices found elsewhere" on dcim.Site',
+            )
+            self.assertEqual(3, RelationshipAssociation.objects.filter(relationship=self.relationship).count())
+            for association in self.associations:
+                self.assertTrue(RelationshipAssociation.objects.filter(pk=association.pk).exists())
+
+        with self.subTest("Valid data: create/no-op/delete on RelationshipAssociations"):
+            response = self.client.patch(
+                url,
+                {
+                    "relationships": {
+                        self.relationship.slug: {
+                            "destination": {
+                                "objects": [
+                                    # remove devices[0] by omission
+                                    str(self.devices[1].pk),  # existing device identified by PK
+                                    {"name": self.devices[2].name},  # existing device identified by attributes
+                                    {"id": self.devices[3].pk},  # new device association
+                                ]
+                            }
+                        }
+                    },
+                },
+                format="json",
+                **self.header,
+            )
+            self.assertHttpStatus(response, status.HTTP_200_OK)
+            # Removed association
+            self.assertFalse(RelationshipAssociation.objects.filter(pk=self.associations[0].pk).exists())
+            # Unchanged associations
+            self.assertTrue(RelationshipAssociation.objects.filter(pk=self.associations[1].pk).exists())
+            self.assertTrue(RelationshipAssociation.objects.filter(pk=self.associations[2].pk).exists())
+            # Created association
+            self.assertTrue(RelationshipAssociation.objects.filter(destination_id=self.devices[3].pk).exists())
 
 
 class SecretTest(APIViewTestCases.APIViewTestCase):
@@ -2147,6 +3178,7 @@ class StatusTest(APIViewTestCases.APIViewTestCase):
     bulk_update_data = {
         "color": "000000",
     }
+    fixtures = ("status",)
 
     create_data = [
         {
@@ -2175,18 +3207,16 @@ class StatusTest(APIViewTestCases.APIViewTestCase):
     ]
     slug_source = "name"
 
-    @classmethod
-    def setUpTestData(cls):
-        """
-        Since many `Status` objects are created as part of data migrations, we're
-        testing against those. If this seems magical, it's because they are
-        imported from `ChoiceSet` enum objects.
+    def get_deletable_object(self):
+        return Status.objects.create(name="Delete Me", color="000000")
 
-        This method is defined just so it's clear that there is no need to
-        create test data for this test case.
-
-        See `extras.management.create_custom_statuses` for context.
-        """
+    def get_deletable_object_pks(self):
+        statuses = [
+            Status.objects.create(name="Delete Me 1", color="ff0000"),
+            Status.objects.create(name="Delete Me 2", color="00ff00"),
+            Status.objects.create(name="Delete Me 3", color="0000ff"),
+        ]
+        return [status.pk for status in statuses]
 
 
 class TagTestVersion12(APIViewTestCases.APIViewTestCase):
@@ -2209,17 +3239,7 @@ class TagTestVersion12(APIViewTestCases.APIViewTestCase):
     bulk_update_data = {
         "description": "New description",
     }
-
-    @classmethod
-    def setUpTestData(cls):
-        tags = (
-            Tag.objects.create(name="Tag 1", slug="tag-1"),
-            Tag.objects.create(name="Tag 2", slug="tag-2"),
-            Tag.objects.create(name="Tag 3", slug="tag-3"),
-        )
-
-        for tag in tags:
-            tag.content_types.add(ContentType.objects.get_for_model(Site))
+    fixtures = ("tag",)
 
     def test_all_relevant_content_types_assigned_to_tags_with_empty_content_types(self):
         self.add_permissions("extras.add_tag")
@@ -2246,17 +3266,8 @@ class TagTestVersion13(
         {"name": "Tag 6", "slug": "tag-6", "content_types": [Site._meta.label_lower]},
     ]
     bulk_update_data = {"content_types": [Site._meta.label_lower]}
-
-    @classmethod
-    def setUpTestData(cls):
-        tags = (
-            Tag.objects.create(name="Tag 1", slug="tag-1"),
-            Tag.objects.create(name="Tag 2", slug="tag-2"),
-            Tag.objects.create(name="Tag 3", slug="tag-3"),
-        )
-        for tag in tags:
-            tag.content_types.add(ContentType.objects.get_for_model(Site))
-            tag.content_types.add(ContentType.objects.get_for_model(Device))
+    choices_fields = []
+    fixtures = ("tag",)
 
     def test_create_tags_with_invalid_content_types(self):
         self.add_permissions("extras.add_tag")
@@ -2284,7 +3295,7 @@ class TagTestVersion13(
         """Test removing a tag content_type that is been tagged to a model"""
         self.add_permissions("extras.change_tag")
 
-        tag_1 = Tag.objects.get(slug="tag-1")
+        tag_1 = Tag.objects.get(slug="devices-and-sites-only")
         site = Site.objects.create(name="site 1", slug="site-1")
         site.tags.add(tag_1)
 
@@ -2296,6 +3307,26 @@ class TagTestVersion13(
         self.assertEqual(
             str(response.data["content_types"][0]), "Unable to remove dcim.site. Dependent objects were found."
         )
+
+    def test_update_tag_content_type_unchanged(self):
+        """Test updating a tag without changing its content-types."""
+        self.add_permissions("extras.change_tag")
+
+        tag = Tag.objects.get(slug="devices-and-sites-only")
+        url = self._get_detail_url(tag)
+        data = {"color": ColorChoices.COLOR_LIME}
+
+        response = self.client.patch(url, data, format="json", **self.header)
+        self.assertHttpStatus(response, status.HTTP_200_OK)
+        self.assertEqual(response.data["color"], ColorChoices.COLOR_LIME)
+        self.assertEqual(sorted(response.data["content_types"]), ["dcim.device", "dcim.site"])
+
+        tag.refresh_from_db()
+        self.assertEqual(tag.color, ColorChoices.COLOR_LIME)
+        tag_content_types = tag.content_types.all()
+        self.assertIn(ContentType.objects.get_for_model(Device), tag_content_types)
+        self.assertIn(ContentType.objects.get_for_model(Site), tag_content_types)
+        self.assertNotIn(ContentType.objects.get_for_model(Rack), tag_content_types)
 
 
 class WebhookTest(APIViewTestCases.APIViewTestCase):
@@ -2442,7 +3473,86 @@ class WebhookTest(APIViewTestCases.APIViewTestCase):
 
         response = self.client.post(self._get_list_url(), data, format="json", **self.header)
         self.assertHttpStatus(response, status.HTTP_400_BAD_REQUEST)
-        self.assertEquals(
+        self.assertEqual(
             response.data[0]["type_create"][0],
+            "A webhook already exists for create on dcim | device type to URL http://example.com/test1",
+        )
+
+    def test_patch_webhooks_with_same_content_type_same_url_common_action(self):
+        self.add_permissions("extras.change_webhook")
+
+        self.webhooks[2].payload_url = self.webhooks[1].payload_url
+        self.webhooks[2].save()
+
+        data = {"type_update": True}
+
+        response = self.client.patch(self._get_detail_url(self.webhooks[2]), data, format="json", **self.header)
+        self.assertHttpStatus(response, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(
+            response.data["type_update"][0],
+            f"A webhook already exists for update on dcim | device type to URL {self.webhooks[1].payload_url}",
+        )
+
+    def test_patch_webhooks(self):
+        self.add_permissions("extras.change_webhook")
+
+        instance = Webhook.objects.create(
+            name="api-test-4",
+            type_update=True,
+            payload_url=self.webhooks[1].payload_url,
+            http_method="POST",
+            http_content_type="application/json",
+            ssl_verification=True,
+        )
+        instance.content_types.set([ContentType.objects.get_for_model(DeviceType)])
+
+        data = {"type_delete": True}
+        response = self.client.patch(self._get_detail_url(self.webhooks[2]), data, format="json", **self.header)
+        self.assertHttpStatus(response, status.HTTP_200_OK)
+
+        data = {"content_types": ["dcim.device"]}
+        response = self.client.patch(self._get_detail_url(self.webhooks[2]), data, format="json", **self.header)
+        self.assertHttpStatus(response, status.HTTP_200_OK)
+
+        data = {"payload_url": "http://example.com/test4"}
+        response = self.client.patch(self._get_detail_url(self.webhooks[2]), data, format="json", **self.header)
+        self.assertHttpStatus(response, status.HTTP_200_OK)
+
+    def test_invalid_webhooks_patch(self):
+        self.add_permissions("extras.change_webhook")
+
+        # Test patch payload_url with conflicts
+        instance_1 = Webhook.objects.create(
+            name="api-test-4",
+            type_update=True,
+            payload_url="http://example.com/test4",
+            http_method="POST",
+            http_content_type="application/json",
+            ssl_verification=True,
+        )
+        instance_1.content_types.set([ContentType.objects.get_for_model(DeviceType)])
+
+        data = {"payload_url": "http://example.com/test2"}
+        response = self.client.patch(self._get_detail_url(instance_1), data, format="json", **self.header)
+        self.assertEqual(
+            response.data["type_update"][0],
+            "A webhook already exists for update on dcim | device type to URL http://example.com/test2",
+        )
+
+        # Test patch content_types with conflicts
+        instance_2 = Webhook.objects.create(
+            name="api-test-5",
+            type_create=True,
+            payload_url="http://example.com/test1",
+            http_method="POST",
+            http_content_type="application/json",
+            ssl_verification=True,
+        )
+        instance_2.content_types.set([ContentType.objects.get_for_model(Device)])
+
+        data = {"content_types": ["dcim.devicetype"]}
+        response = self.client.patch(self._get_detail_url(instance_2), data, format="json", **self.header)
+        self.assertEqual(
+            response.data["type_create"][0],
             "A webhook already exists for create on dcim | device type to URL http://example.com/test1",
         )

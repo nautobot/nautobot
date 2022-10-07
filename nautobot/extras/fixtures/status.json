@@ -1,0 +1,666 @@
+[
+{
+  "model": "extras.status",
+  "fields": {
+    "created": "2022-08-18",
+    "last_updated": "2022-08-18T17:47:53.399Z",
+    "_custom_field_data": {},
+    "name": "Deprecated",
+    "color": "f44336",
+    "slug": "deprecated",
+    "description": "Unit has been deprecated",
+    "content_types": [
+      [
+        "dcim",
+        "rack"
+      ],
+      [
+        "ipam",
+        "ipaddress"
+      ],
+      [
+        "ipam",
+        "prefix"
+      ],
+      [
+        "ipam",
+        "vlan"
+      ]
+    ]
+  }
+},
+{
+  "model": "extras.status",
+  "fields": {
+    "created": "2022-08-18",
+    "last_updated": "2022-08-18T17:47:53.154Z",
+    "_custom_field_data": {},
+    "name": "Decommissioning",
+    "color": "ffc107",
+    "slug": "decommissioning",
+    "description": "Unit is being decommissioned",
+    "content_types": [
+      [
+        "dcim",
+        "cable"
+      ],
+      [
+        "dcim",
+        "device"
+      ],
+      [
+        "dcim",
+        "interface"
+      ],
+      [
+        "dcim",
+        "location"
+      ],
+      [
+        "dcim",
+        "site"
+      ],
+      [
+        "virtualization",
+        "virtualmachine"
+      ],
+      [
+        "virtualization",
+        "vminterface"
+      ]
+    ]
+  }
+},
+{
+  "model": "extras.status",
+  "fields": {
+    "created": "2022-08-18",
+    "last_updated": "2022-08-18T17:47:53.123Z",
+    "_custom_field_data": {},
+    "name": "Decommissioned",
+    "color": "9e9e9e",
+    "slug": "decommissioned",
+    "description": "Circuit has been decommissioned",
+    "content_types": [
+      [
+        "circuits",
+        "circuit"
+      ]
+    ]
+  }
+},
+{
+  "model": "extras.status",
+  "fields": {
+    "created": "2022-08-18",
+    "last_updated": "2022-08-18T17:47:53.083Z",
+    "_custom_field_data": {},
+    "name": "Provisioning",
+    "color": "2196f3",
+    "slug": "provisioning",
+    "description": "Circuit is being provisioned",
+    "content_types": [
+      [
+        "circuits",
+        "circuit"
+      ]
+    ]
+  }
+},
+{
+  "model": "extras.status",
+  "fields": {
+    "created": "2022-08-18",
+    "last_updated": "2022-08-18T17:47:53.223Z",
+    "_custom_field_data": {},
+    "name": "Inventory",
+    "color": "9e9e9e",
+    "slug": "inventory",
+    "description": "Device is in inventory",
+    "content_types": [
+      [
+        "dcim",
+        "device"
+      ]
+    ]
+  }
+},
+{
+  "model": "extras.status",
+  "fields": {
+    "created": "2022-08-18",
+    "last_updated": "2022-08-18T17:47:53.093Z",
+    "_custom_field_data": {},
+    "name": "Active",
+    "color": "4caf50",
+    "slug": "active",
+    "description": "Unit is active",
+    "content_types": [
+      [
+        "circuits",
+        "circuit"
+      ],
+      [
+        "dcim",
+        "device"
+      ],
+      [
+        "dcim",
+        "interface"
+      ],
+      [
+        "dcim",
+        "location"
+      ],
+      [
+        "dcim",
+        "powerfeed"
+      ],
+      [
+        "dcim",
+        "rack"
+      ],
+      [
+        "dcim",
+        "site"
+      ],
+      [
+        "ipam",
+        "ipaddress"
+      ],
+      [
+        "ipam",
+        "prefix"
+      ],
+      [
+        "ipam",
+        "vlan"
+      ],
+      [
+        "virtualization",
+        "virtualmachine"
+      ],
+      [
+        "virtualization",
+        "vminterface"
+      ]
+    ]
+  }
+},
+{
+  "model": "extras.status",
+  "fields": {
+    "created": "2022-08-18",
+    "last_updated": "2022-08-18T17:47:53.292Z",
+    "_custom_field_data": {},
+    "name": "Staging",
+    "color": "2196f3",
+    "slug": "staging",
+    "description": "Site or Location is in the process of being staged",
+    "content_types": [
+      [
+        "dcim",
+        "location"
+      ],
+      [
+        "dcim",
+        "site"
+      ]
+    ]
+  }
+},
+{
+  "model": "extras.status",
+  "fields": {
+    "created": "2022-08-18",
+    "last_updated": "2022-08-18T17:47:53.113Z",
+    "_custom_field_data": {},
+    "name": "Deprovisioning",
+    "color": "ffc107",
+    "slug": "deprovisioning",
+    "description": "Circuit is being deprovisioned",
+    "content_types": [
+      [
+        "circuits",
+        "circuit"
+      ]
+    ]
+  }
+},
+{
+  "model": "extras.status",
+  "fields": {
+    "created": "2022-08-18",
+    "last_updated": "2022-08-18T17:47:53.475Z",
+    "_custom_field_data": {},
+    "name": "DHCP",
+    "color": "4caf50",
+    "slug": "dhcp",
+    "description": "Dynamically assigned IPv4/IPv6 address",
+    "content_types": [
+      [
+        "ipam",
+        "ipaddress"
+      ]
+    ]
+  }
+},
+{
+  "model": "extras.status",
+  "fields": {
+    "created": "2022-08-18",
+    "last_updated": "2022-08-18T17:47:53.197Z",
+    "_custom_field_data": {},
+    "name": "Staged",
+    "color": "2196f3",
+    "slug": "staged",
+    "description": "Unit has been staged",
+    "content_types": [
+      [
+        "dcim",
+        "device"
+      ],
+      [
+        "virtualization",
+        "virtualmachine"
+      ]
+    ]
+  }
+},
+{
+  "model": "extras.status",
+  "fields": {
+    "created": "2022-08-23",
+    "last_updated": "2022-08-23T13:26:01.883Z",
+    "_custom_field_data": {},
+    "name": "Irradiated",
+    "color": "cddc39",
+    "slug": "irradiated",
+    "description": "Custom status for models that have somehow become irradiated",
+    "content_types": [
+      [
+        "circuits",
+        "circuit"
+      ],
+      [
+        "dcim",
+        "cable"
+      ],
+      [
+        "dcim",
+        "device"
+      ],
+      [
+        "dcim",
+        "interface"
+      ],
+      [
+        "dcim",
+        "location"
+      ],
+      [
+        "dcim",
+        "powerfeed"
+      ],
+      [
+        "dcim",
+        "rack"
+      ],
+      [
+        "dcim",
+        "site"
+      ],
+      [
+        "ipam",
+        "ipaddress"
+      ],
+      [
+        "ipam",
+        "prefix"
+      ],
+      [
+        "ipam",
+        "vlan"
+      ],
+      [
+        "virtualization",
+        "virtualmachine"
+      ],
+      [
+        "virtualization",
+        "vminterface"
+      ]
+    ]
+  }
+},
+{
+  "model": "extras.status",
+  "fields": {
+    "created": "2022-08-18",
+    "last_updated": "2022-08-18T17:47:53.102Z",
+    "_custom_field_data": {},
+    "name": "Offline",
+    "color": "ffc107",
+    "slug": "offline",
+    "description": "Unit is offline",
+    "content_types": [
+      [
+        "circuits",
+        "circuit"
+      ],
+      [
+        "dcim",
+        "device"
+      ],
+      [
+        "dcim",
+        "powerfeed"
+      ],
+      [
+        "virtualization",
+        "virtualmachine"
+      ]
+    ]
+  }
+},
+{
+  "model": "extras.status",
+  "fields": {
+    "created": "2022-08-18",
+    "last_updated": "2022-08-18T17:47:53.210Z",
+    "_custom_field_data": {},
+    "name": "Failed",
+    "color": "f44336",
+    "slug": "failed",
+    "description": "Unit has failed",
+    "content_types": [
+      [
+        "dcim",
+        "device"
+      ],
+      [
+        "dcim",
+        "interface"
+      ],
+      [
+        "dcim",
+        "powerfeed"
+      ],
+      [
+        "virtualization",
+        "virtualmachine"
+      ],
+      [
+        "virtualization",
+        "vminterface"
+      ]
+    ]
+  }
+},
+{
+  "model": "extras.status",
+  "fields": {
+    "created": "2022-08-18",
+    "last_updated": "2022-08-18T17:47:53.137Z",
+    "_custom_field_data": {},
+    "name": "Connected",
+    "color": "4caf50",
+    "slug": "connected",
+    "description": "Cable is connected",
+    "content_types": [
+      [
+        "dcim",
+        "cable"
+      ]
+    ]
+  }
+},
+{
+  "model": "extras.status",
+  "fields": {
+    "created": "2022-08-18",
+    "last_updated": "2022-08-18T17:47:53.314Z",
+    "_custom_field_data": {},
+    "name": "Retired",
+    "color": "f44336",
+    "slug": "retired",
+    "description": "Site or Location has been retired",
+    "content_types": [
+      [
+        "dcim",
+        "location"
+      ],
+      [
+        "dcim",
+        "site"
+      ]
+    ]
+  }
+},
+{
+  "model": "extras.status",
+  "fields": {
+    "created": "2022-08-18",
+    "last_updated": "2022-08-18T17:47:53.072Z",
+    "_custom_field_data": {},
+    "name": "Planned",
+    "color": "00bcd4",
+    "slug": "planned",
+    "description": "Unit has been planned",
+    "content_types": [
+      [
+        "circuits",
+        "circuit"
+      ],
+      [
+        "dcim",
+        "cable"
+      ],
+      [
+        "dcim",
+        "device"
+      ],
+      [
+        "dcim",
+        "interface"
+      ],
+      [
+        "dcim",
+        "location"
+      ],
+      [
+        "dcim",
+        "powerfeed"
+      ],
+      [
+        "dcim",
+        "rack"
+      ],
+      [
+        "dcim",
+        "site"
+      ],
+      [
+        "virtualization",
+        "virtualmachine"
+      ],
+      [
+        "virtualization",
+        "vminterface"
+      ]
+    ]
+  }
+},
+{
+  "model": "extras.status",
+  "fields": {
+    "created": "2022-08-18",
+    "last_updated": "2022-08-18T17:47:53.510Z",
+    "_custom_field_data": {},
+    "name": "Container",
+    "color": "9e9e9e",
+    "slug": "container",
+    "description": "Network contains children",
+    "content_types": [
+      [
+        "ipam",
+        "prefix"
+      ]
+    ]
+  }
+},
+{
+  "model": "extras.status",
+  "fields": {
+    "created": "2022-08-18",
+    "last_updated": "2022-08-18T17:47:53.272Z",
+    "_custom_field_data": {},
+    "name": "Maintenance",
+    "color": "9e9e9e",
+    "slug": "maintenance",
+    "description": "Unit is under maintenance",
+    "content_types": [
+      [
+        "dcim",
+        "interface"
+      ],
+      [
+        "virtualization",
+        "vminterface"
+      ]
+    ]
+  }
+},
+{
+  "model": "extras.status",
+  "fields": {
+    "created": "2022-08-18",
+    "last_updated": "2022-08-18T17:47:53.492Z",
+    "_custom_field_data": {},
+    "name": "SLAAC",
+    "color": "4caf50",
+    "slug": "slaac",
+    "description": "Dynamically assigned IPv6 address",
+    "content_types": [
+      [
+        "ipam",
+        "ipaddress"
+      ]
+    ]
+  }
+},
+{
+  "model": "extras.status",
+  "fields": {
+    "created": "2022-08-23",
+    "last_updated": "2022-08-23T17:44:03.139Z",
+    "_custom_field_data": {},
+    "name": "❓",
+    "color": "c0c0c0",
+    "slug": "unknown",
+    "description": "Generic status for things we don't know the status of.",
+    "content_types": [
+      [
+        "circuits",
+        "circuit"
+      ],
+      [
+        "dcim",
+        "cable"
+      ],
+      [
+        "dcim",
+        "device"
+      ],
+      [
+        "dcim",
+        "interface"
+      ],
+      [
+        "dcim",
+        "location"
+      ],
+      [
+        "dcim",
+        "powerfeed"
+      ],
+      [
+        "dcim",
+        "rack"
+      ],
+      [
+        "dcim",
+        "site"
+      ],
+      [
+        "ipam",
+        "ipaddress"
+      ],
+      [
+        "ipam",
+        "prefix"
+      ],
+      [
+        "ipam",
+        "vlan"
+      ],
+      [
+        "virtualization",
+        "virtualmachine"
+      ],
+      [
+        "virtualization",
+        "vminterface"
+      ]
+    ]
+  }
+},
+{
+  "model": "extras.status",
+  "fields": {
+    "created": "2022-08-18",
+    "last_updated": "2022-08-18T17:47:53.363Z",
+    "_custom_field_data": {},
+    "name": "Reserved",
+    "color": "00bcd4",
+    "slug": "reserved",
+    "description": "Unit is reserved",
+    "content_types": [
+      [
+        "dcim",
+        "rack"
+      ],
+      [
+        "ipam",
+        "ipaddress"
+      ],
+      [
+        "ipam",
+        "prefix"
+      ],
+      [
+        "ipam",
+        "vlan"
+      ]
+    ]
+  }
+},
+{
+  "model": "extras.status",
+  "fields": {
+    "created": "2022-08-18",
+    "last_updated": "2022-08-18T17:47:53.373Z",
+    "_custom_field_data": {},
+    "name": "Available",
+    "color": "4caf50",
+    "slug": "available",
+    "description": "Unit is available",
+    "content_types": [
+      [
+        "dcim",
+        "rack"
+      ]
+    ]
+  }
+}
+]

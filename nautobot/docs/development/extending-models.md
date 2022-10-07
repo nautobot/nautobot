@@ -41,6 +41,7 @@ Add the name of the new field to `csv_headers` and included a CSV-friendly repre
 
 ## 4. Update relevant querysets
 
+<!-- v2 TODO(jathan): Replace prefetch_related with select_related -->
 If you're adding a relational field (e.g. `ForeignKey`) and intend to include the data when retrieving a list of objects, be sure to include the field using `prefetch_related()` as appropriate. This will optimize the view and avoid extraneous database queries.
 
 ## 5. Update API serializer
@@ -58,7 +59,9 @@ Extend any forms to include the new field as appropriate. Common forms include:
 
 ## 7. Extend object filter set
 
-If the new field should be filterable, add it to the `FilterSet` for the model. If the field should be searchable, remember to reference it in the FilterSet's `search()` method.
+If the new field should be filterable, add it to the `FilterSet` for the model. If the field should be searchable, remember to reference it in the FilterSet's `SearchFilter` definition.
+
+All filtersets should inherit from `BaseFilterSet` or `NautobotFilterSet` as appropriate to the scope of the model's functionality.
 
 ## 8. Add column to object table
 

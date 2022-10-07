@@ -1,7 +1,6 @@
 from django.conf import settings as django_settings
 
 from nautobot.core.settings_funcs import sso_auth_enabled
-from nautobot.extras.registry import registry
 
 
 def get_saml_idp():
@@ -30,14 +29,13 @@ def get_saml_idp():
     return value
 
 
-def settings_and_registry(request):
+def settings(request):
     """
-    Expose Django settings and Nautobot registry stores in the template context. Example: {{ settings.DEBUG }}
+    Expose Django settings in the template context. Example: {{ settings.DEBUG }}
     """
 
     return {
         "settings": django_settings,
-        "registry": registry,
     }
 
 

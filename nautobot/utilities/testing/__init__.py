@@ -5,7 +5,7 @@ from contextlib import contextmanager
 from celery.contrib.testing.worker import start_worker
 from django.apps import apps
 from django.contrib.auth import get_user_model
-from django.test import tag, TransactionTestCase as _TransactionTestCase
+from django.test import Client, tag, TransactionTestCase as _TransactionTestCase
 
 from nautobot.core.celery import app
 from nautobot.extras.context_managers import web_request_context
@@ -13,8 +13,10 @@ from nautobot.extras.jobs import run_job
 from nautobot.extras.management import populate_status_choices
 from nautobot.extras.models import JobResult
 from nautobot.extras.utils import get_job_content_type
+from nautobot.utilities.testing.mixins import NautobotTestCaseMixin
 
 from .api import APITestCase, APIViewTestCases
+from .filters import FilterTestCases
 from .utils import (
     post_data,
     create_test_user,
@@ -32,17 +34,21 @@ from .views import (
 __all__ = (
     "APITestCase",
     "APIViewTestCases",
-    "post_data",
-    "create_test_user",
-    "extract_form_failures",
-    "extract_page_body",
-    "disable_warnings",
-    "TestCase",
+    "FilterTestCases",
     "ModelTestCase",
     "ModelViewTestCase",
+    "TestCase",
     "ViewTestCases",
+    "create_test_user",
+    "disable_warnings",
+    "extract_form_failures",
+    "extract_page_body",
+    "post_data",
     "run_job_for_testing",
 )
+
+# Use the proper swappable User model
+User = get_user_model()
 
 
 def run_job_for_testing(job, data=None, commit=True, username="test-user", request=None):
@@ -62,16 +68,21 @@ def run_job_for_testing(job, data=None, commit=True, username="test-user", reque
     if data is None:
         data = {}
 
+    # Enable the job if it wasn't enabled before
+    if not job.enabled:
+        job.enabled = True
+        job.validated_save()
+
     # If the request has a user, ignore the username argument and use that user.
     if request and request.user:
         user_instance = request.user
     else:
-        User = get_user_model()
         user_instance, _ = User.objects.get_or_create(
             username=username, defaults={"is_superuser": True, "password": "password"}
         )
     job_result = JobResult.objects.create(
         name=job.class_path,
+        job_kwargs={"data": data, "commit": commit},
         obj_type=get_job_content_type(),
         user=user_instance,
         job_model=job,
@@ -85,16 +96,19 @@ def run_job_for_testing(job, data=None, commit=True, username="test-user", reque
         else:
             yield web_request_context(user=user)
 
-    with _web_request_context(user=user_instance) as request:
-        run_job(data=data, request=request, commit=commit, job_result_pk=job_result.pk)
+    with _web_request_context(user=user_instance) as wrapped_request:
+        run_job(data=data, request=wrapped_request, commit=commit, job_result_pk=job_result.pk)
     return job_result
 
 
 @tag("unit")
-class TransactionTestCase(_TransactionTestCase):
+class TransactionTestCase(_TransactionTestCase, NautobotTestCaseMixin):
     """
     Base test case class using the TransactionTestCase for unit testing
     """
+
+    # 'job_logs' is a proxy connection to the same (default) database that's used exclusively for Job logging
+    databases = ("default", "job_logs")
 
     def setUp(self):
         """Provide a clean, post-migration state before each test case.
@@ -105,6 +119,16 @@ class TransactionTestCase(_TransactionTestCase):
 
         # Re-populate status choices after database truncation by TransactionTestCase
         populate_status_choices(apps, None)
+
+        # Create the test user and assign permissions
+        self.user = User.objects.create_user(username="testuser")
+        self.add_permissions(*self.user_permissions)
+
+        # Initialize the test client
+        self.client = Client()
+
+        # Force login explicitly with the first-available backend
+        self.client.force_login(self.user)
 
 
 class CeleryTestCase(TransactionTestCase):
@@ -119,7 +143,9 @@ class CeleryTestCase(TransactionTestCase):
         # Special namespace loading of methods needed by start_worker, per the celery docs
         app.loader.import_module("celery.contrib.testing.tasks")
         cls.clear_worker()
-        cls.celery_worker = start_worker(app, concurrency=1)
+        # `celery.ping` not registered is a known issue https://github.com/celery/celery/issues/3642
+        # fixed by setting `perform_ping_check` to False
+        cls.celery_worker = start_worker(app, perform_ping_check=False, concurrency=1)
         cls.celery_worker.__enter__()
 
     @classmethod

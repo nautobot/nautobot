@@ -3,6 +3,7 @@ import platform
 import sys
 
 from django.conf import settings
+from django.contrib.auth.mixins import AccessMixin
 from django.http import HttpResponseServerError, JsonResponse
 from django.shortcuts import render
 from django.template import loader, RequestContext, Template
@@ -20,9 +21,10 @@ from nautobot.core.releases import get_latest_release
 from nautobot.extras.models import GraphQLQuery
 from nautobot.extras.registry import registry
 from nautobot.extras.forms import GraphQLQueryForm
+from nautobot.utilities.config import get_settings_or_config
 
 
-class HomeView(TemplateView):
+class HomeView(AccessMixin, TemplateView):
     template_name = "home.html"
 
     def render_additional_content(self, request, context, details):
@@ -46,7 +48,10 @@ class HomeView(TemplateView):
         additional_context = RequestContext(request, context)
         return template.render(additional_context)
 
-    def get(self, request):
+    def get(self, request, *args, **kwargs):
+        # Redirect user to login page if not authenticated and HIDE_RESTRICTED_UI is set to True
+        if not request.user.is_authenticated and get_settings_or_config("HIDE_RESTRICTED_UI"):
+            return self.handle_no_permission()
         # Check whether a new release is available. (Only for staff/superusers.)
         new_release = None
         if request.user.is_staff or request.user.is_superuser:
@@ -84,9 +89,14 @@ class HomeView(TemplateView):
                     elif item_details.get("items"):
                         # Collect count for grouped objects.
                         for group_item_details in item_details["items"].values():
-                            group_item_details["count"] = (
-                                group_item_details["model"].objects.restrict(request.user, "view").count()
-                            )
+                            if group_item_details.get("custom_template"):
+                                group_item_details["rendered_html"] = self.render_additional_content(
+                                    request, context, group_item_details
+                                )
+                            elif group_item_details.get("model"):
+                                group_item_details["count"] = (
+                                    group_item_details["model"].objects.restrict(request.user, "view").count()
+                                )
 
         return self.render_to_response(context)
 
@@ -172,7 +182,7 @@ def server_error(request, template_name=ERROR_500_TEMPLATE_NAME):
         template = loader.get_template(template_name)
     except TemplateDoesNotExist:
         return HttpResponseServerError("<h1>Server Error (500)</h1>", content_type="text/html")
-    type_, error, traceback = sys.exc_info()
+    type_, error, _traceback = sys.exc_info()
 
     return HttpResponseServerError(
         template.render(

@@ -1,8 +1,6 @@
 # Interfaces
 
-Interfaces in Nautobot represent network interfaces used to exchange data with connected devices. On modern networks, these are most commonly Ethernet, but other types are supported as well. Each interface must be assigned a type, an operational [`status`](https://nautobot.readthedocs.io/en/stable/models/extras/status/) and may optionally be assigned a MAC address, MTU, and IEEE 802.1Q mode (tagged or access). Each interface can also be enabled or disabled, and optionally designated as management-only (for out-of-band management).
-
-_Added in 1.4.0: `status` field_
+Interfaces in Nautobot represent network interfaces used to exchange data with connected devices. On modern networks, these are most commonly Ethernet, but other types are supported as well. Each interface must be assigned a type, an operational [`status`](../../models/extras/status.md) and may optionally be assigned a MAC address, MTU, and IEEE 802.1Q mode (tagged or access). Each interface can also be enabled or disabled, and optionally designated as management-only (for out-of-band management).
 
 The following operational statuses are available by default:
 
@@ -11,6 +9,11 @@ The following operational statuses are available by default:
 * Active
 * Decommissioning
 * Failed
+
++++ 1.4.0
+    - Added `bridge` field.
+    - Added `parent_interface` field.
+    - Added `status` field.
 
 Interfaces may be physical or virtual in nature, but only physical interfaces may be connected via cables. Cables can connect interfaces to pass-through ports, circuit terminations, or other interfaces.
 

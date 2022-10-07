@@ -4,7 +4,8 @@ from django.core.exceptions import ValidationError
 from django.db.models import Q
 from netaddr.core import AddrFormatError
 
-from nautobot.dcim.models import Device, Interface, Region, Site
+from nautobot.dcim.filter_mixins import LocatableModelFilterSetMixin
+from nautobot.dcim.models import Device, Interface
 from nautobot.extras.filters import NautobotFilterSet, StatusModelFilterSetMixin
 from nautobot.tenancy.filters import TenancyFilterSet
 from nautobot.utilities.filters import (
@@ -14,7 +15,6 @@ from nautobot.utilities.filters import (
     NumericArrayFilter,
     SearchFilter,
     TagFilter,
-    TreeNodeMultipleChoiceFilter,
 )
 from nautobot.virtualization.models import VirtualMachine, VMInterface
 from .choices import IPAddressRoleChoices
@@ -185,7 +185,13 @@ class RoleFilterSet(NautobotFilterSet, NameSlugSearchFilterSet):
         fields = ["id", "name", "slug"]
 
 
-class PrefixFilterSet(NautobotFilterSet, IPAMFilterSetMixin, TenancyFilterSet, StatusModelFilterSetMixin):
+class PrefixFilterSet(
+    NautobotFilterSet,
+    IPAMFilterSetMixin,
+    LocatableModelFilterSetMixin,
+    TenancyFilterSet,
+    StatusModelFilterSetMixin,
+):
     prefix = django_filters.CharFilter(
         method="filter_prefix",
         label="Prefix",
@@ -227,29 +233,6 @@ class PrefixFilterSet(NautobotFilterSet, IPAMFilterSetMixin, TenancyFilterSet, S
         method="filter_present_in_vrf",
         to_field_name="rd",
         label="VRF (RD)",
-    )
-    region_id = TreeNodeMultipleChoiceFilter(
-        queryset=Region.objects.all(),
-        field_name="site__region",
-        lookup_expr="in",
-        label="Region (ID)",
-    )
-    region = TreeNodeMultipleChoiceFilter(
-        queryset=Region.objects.all(),
-        field_name="site__region",
-        lookup_expr="in",
-        to_field_name="slug",
-        label="Region (slug)",
-    )
-    site_id = django_filters.ModelMultipleChoiceFilter(
-        queryset=Site.objects.all(),
-        label="Site (ID)",
-    )
-    site = django_filters.ModelMultipleChoiceFilter(
-        field_name="site__slug",
-        queryset=Site.objects.all(),
-        to_field_name="slug",
-        label="Site (slug)",
     )
     vlan_id = django_filters.ModelMultipleChoiceFilter(
         queryset=VLAN.objects.all(),
@@ -333,10 +316,19 @@ class PrefixFilterSet(NautobotFilterSet, IPAMFilterSetMixin, TenancyFilterSet, S
         except (AddrFormatError, ValueError):
             return queryset.none()
 
+    def generate_query_filter_present_in_vrf(self, value):
+        if isinstance(value, str):
+            value = VRF.objects.get(pk=value)
+
+        # This stringification is done to make the `pretty_print_query()` output look human-readable,
+        # and nothing more. It would work as complex objects but looks bad in the web UI.
+        targets = [str(t) for t in value.import_targets.values_list("pk", flat=True)]
+        query = Q(vrf=str(value.pk)) | Q(vrf__export_targets__in=targets)
+        return query
+
     def filter_present_in_vrf(self, queryset, name, value):
-        if value is None:
-            return queryset.none
-        return queryset.filter(Q(vrf=value) | Q(vrf__export_targets__in=value.import_targets.all()))
+        params = self.generate_query_filter_present_in_vrf(value)
+        return queryset.filter(params)
 
 
 class IPAddressFilterSet(NautobotFilterSet, IPAMFilterSetMixin, TenancyFilterSet, StatusModelFilterSetMixin):
@@ -455,7 +447,7 @@ class IPAddressFilterSet(NautobotFilterSet, IPAMFilterSetMixin, TenancyFilterSet
         return queryset.filter(Q(vrf=value) | Q(vrf__export_targets__in=value.import_targets.all()))
 
     def filter_device(self, queryset, name, value):
-        devices = Device.objects.filter(**{"{}__in".format(name): value})
+        devices = Device.objects.filter(**{f"{name}__in": value})
         if not devices.exists():
             return queryset.none()
         interface_ids = []
@@ -464,7 +456,7 @@ class IPAddressFilterSet(NautobotFilterSet, IPAMFilterSetMixin, TenancyFilterSet
         return queryset.filter(interface__in=interface_ids)
 
     def filter_virtual_machine(self, queryset, name, value):
-        virtual_machines = VirtualMachine.objects.filter(**{"{}__in".format(name): value})
+        virtual_machines = VirtualMachine.objects.filter(**{f"{name}__in": value})
         if not virtual_machines.exists():
             return queryset.none()
         interface_ids = []
@@ -476,37 +468,13 @@ class IPAddressFilterSet(NautobotFilterSet, IPAMFilterSetMixin, TenancyFilterSet
         return queryset.exclude(assigned_object_id__isnull=value)
 
 
-class VLANGroupFilterSet(NautobotFilterSet, NameSlugSearchFilterSet):
-    region_id = TreeNodeMultipleChoiceFilter(
-        queryset=Region.objects.all(),
-        field_name="site__region",
-        lookup_expr="in",
-        label="Region (ID)",
-    )
-    region = TreeNodeMultipleChoiceFilter(
-        queryset=Region.objects.all(),
-        field_name="site__region",
-        lookup_expr="in",
-        to_field_name="slug",
-        label="Region (slug)",
-    )
-    site_id = django_filters.ModelMultipleChoiceFilter(
-        queryset=Site.objects.all(),
-        label="Site (ID)",
-    )
-    site = django_filters.ModelMultipleChoiceFilter(
-        field_name="site__slug",
-        queryset=Site.objects.all(),
-        to_field_name="slug",
-        label="Site (slug)",
-    )
-
+class VLANGroupFilterSet(NautobotFilterSet, LocatableModelFilterSetMixin, NameSlugSearchFilterSet):
     class Meta:
         model = VLANGroup
         fields = ["id", "name", "slug", "description"]
 
 
-class VLANFilterSet(NautobotFilterSet, TenancyFilterSet, StatusModelFilterSetMixin):
+class VLANFilterSet(NautobotFilterSet, LocatableModelFilterSetMixin, TenancyFilterSet, StatusModelFilterSetMixin):
     q = SearchFilter(
         filter_predicates={
             "name": "icontains",
@@ -517,28 +485,10 @@ class VLANFilterSet(NautobotFilterSet, TenancyFilterSet, StatusModelFilterSetMix
             },
         },
     )
-    region_id = TreeNodeMultipleChoiceFilter(
-        queryset=Region.objects.all(),
-        field_name="site__region",
-        lookup_expr="in",
-        label="Region (ID)",
-    )
-    region = TreeNodeMultipleChoiceFilter(
-        queryset=Region.objects.all(),
-        field_name="site__region",
-        lookup_expr="in",
-        to_field_name="slug",
-        label="Region (slug)",
-    )
-    site_id = django_filters.ModelMultipleChoiceFilter(
-        queryset=Site.objects.all(),
-        label="Site (ID)",
-    )
-    site = django_filters.ModelMultipleChoiceFilter(
-        field_name="site__slug",
-        queryset=Site.objects.all(),
-        to_field_name="slug",
-        label="Site (slug)",
+    available_on_device = django_filters.UUIDFilter(
+        method="get_for_device",
+        label="Device (ID)",
+        field_name="pk",
     )
     group_id = django_filters.ModelMultipleChoiceFilter(
         queryset=VLANGroup.objects.all(),
@@ -565,6 +515,14 @@ class VLANFilterSet(NautobotFilterSet, TenancyFilterSet, StatusModelFilterSetMix
     class Meta:
         model = VLAN
         fields = ["id", "vid", "name"]
+
+    def get_for_device(self, queryset, name, value):
+        """Return all VLANs available to the specified Device(value)."""
+        try:
+            device = Device.objects.get(id=value)
+            return queryset.filter(Q(site__isnull=True) | Q(site=device.site))
+        except Device.DoesNotExist:
+            return queryset.none()
 
 
 class ServiceFilterSet(NautobotFilterSet):

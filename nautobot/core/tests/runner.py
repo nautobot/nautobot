@@ -1,3 +1,5 @@
+from django.conf import settings
+from django.core.management import call_command
 from django.test.runner import DiscoverRunner
 
 
@@ -30,3 +32,23 @@ class NautobotTestRunner(DiscoverRunner):
             kwargs["exclude_tags"] = incoming_exclude_tags
 
         super().__init__(**kwargs)
+
+    def setup_databases(self, **kwargs):
+        result = super().setup_databases(**kwargs)
+
+        if settings.TEST_USE_FACTORIES:
+            print("Pre-populating test database with factory data...")
+            command = ["generate_test_data", "--flush", "--no-input"]
+            if settings.TEST_FACTORY_SEED is not None:
+                command += ["--seed", settings.TEST_FACTORY_SEED]
+            call_command(*command)
+
+        return result
+
+    def teardown_databases(self, old_config, **kwargs):
+        if settings.TEST_USE_FACTORIES:
+            print("Emptying test database...")
+            call_command("flush", "--no-input")
+            print("Database emptied!")
+
+        super().teardown_databases(old_config, **kwargs)

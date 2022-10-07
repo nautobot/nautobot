@@ -1,3 +1,4 @@
+from django.contrib.contenttypes.models import ContentType
 from django.db.models import Model, OuterRef, Subquery, Q, F
 from django.db.models.functions import JSONObject
 from django_celery_beat.managers import ExtendedQuerySet
@@ -33,10 +34,18 @@ class ConfigContextQuerySet(RestrictedQuerySet):
         else:
             regions = []
 
+        # Match against the directly assigned location as well as any parent locations
+        location = getattr(obj, "location", None)
+        if location:
+            locations = location.ancestors(include_self=True)
+        else:
+            locations = []
+
         queryset = (
             self.filter(
                 Q(regions__in=regions) | Q(regions=None),
                 Q(sites=obj.site) | Q(sites=None),
+                Q(locations__in=locations) | Q(locations=None),
                 Q(roles=role) | Q(roles=None),
                 Q(device_types=device_type) | Q(device_types=None),
                 Q(platforms=obj.platform) | Q(platforms=None),
@@ -140,6 +149,8 @@ class ConfigContextModelQuerySet(RestrictedQuerySet):
 class DynamicGroupQuerySet(RestrictedQuerySet):
     """Queryset for `DynamicGroup` objects that provides a `get_for_object` method."""
 
+    # FIXME(jathan): Ideally replace this iteration with a reversible Q object
+    # of some sort.
     def get_for_object(self, obj):
         """Return all `DynamicGroup` assigned to the given object."""
         if not isinstance(obj, Model):
@@ -157,11 +168,38 @@ class DynamicGroupQuerySet(RestrictedQuerySet):
         my_groups = []
         # TODO(jathan): 3 queries per DynamicGroup instance
         for dynamic_group in eligible_groups.iterator():
-            if obj.pk in dynamic_group.get_queryset().values_list("pk", flat=True):
+            if obj.pk in dynamic_group.members.values_list("pk", flat=True):
                 my_groups.append(dynamic_group.pk)
 
         # TODO(jathan): 1 query
         return self.filter(pk__in=my_groups)
+
+    def get_by_natural_key(self, slug):
+        return self.get(slug=slug)
+
+
+class DynamicGroupMembershipQuerySet(RestrictedQuerySet):
+    """Queryset for `DynamicGroupMembership` objects."""
+
+    def get_by_natural_key(self, group_slug, parent_group_slug, operator, weight):
+        return self.get(
+            group__slug=group_slug,
+            parent_group__slug=parent_group_slug,
+            operator=operator,
+            weight=weight,
+        )
+
+
+class NotesQuerySet(RestrictedQuerySet):
+    """Queryset for `Notes` objects that provides a `get_for_object` method."""
+
+    def get_for_object(self, obj):
+        """Return all `Notes` assigned to the given object."""
+        if not isinstance(obj, Model):
+            raise TypeError(f"{obj} is not an instance of Django Model class")
+
+        content_type = ContentType.objects.get_for_model(obj)
+        return self.filter(assigned_object_id=obj.pk, assigned_object_type=content_type)
 
 
 class JobQuerySet(RestrictedQuerySet):

@@ -1,0 +1,35 @@
+{% load static %}
+{% load helpers %}
+{% load plugins %}
+
+    <footer class="footer">
+        <div class="container-fluid">
+            <div class="row">
+                <div class="col-xs-4">
+                    <p class="text-muted">
+                        {% if settings.BRANDING_FILEPATHS.logo and settings.BRANDING_POWERED_BY_URL %}<a href="{{ settings.BRANDING_POWERED_BY_URL }}"><img src="{% static 'img/nautobot_logo.svg' %}" height="20" /> Powered</a> &middot;{% endif %}
+                        {{ settings.HOSTNAME }} (v{{ settings.VERSION }})
+                    </p>
+                </div>
+                <div class="col-xs-4 text-center">
+                    <p class="text-muted">{% now 'Y-m-d H:i:s T' %}</p>
+                </div>
+                <div class="col-xs-4 text-right noprint">
+                    <p class="text-muted">
+                        <a href="#theme_modal" data-toggle="modal" data-target="#theme_modal" id="btn-theme-modal"><i class="mdi mdi-theme-light-dark text-primary"></i>Theme</a> &middot;
+                        <i class="mdi mdi-book-open-page-variant text-primary"></i>
+                        {% if settings.BRANDING_URLS.docs %}
+                            <a href="{{ settings.BRANDING_URLS.docs }}">Docs</a>
+                        {% else %}
+                            <a href="{% static 'docs/index.html' %}">Docs</a>
+                        {% endif %}
+                        &middot;
+                        <i class="mdi mdi-cloud-braces text-primary"></i> <a href="{% url 'api_docs' %}">API</a> &middot;
+                        <i class="mdi mdi-graphql text-primary"></i> <a href="{% url 'graphql' %}">GraphQL</a> &middot;
+                        <i class="mdi mdi-xml text-primary"></i> <a href="{{ settings.BRANDING_URLS.code }}">Code</a> &middot;
+                        <i class="mdi mdi-lifebuoy text-primary"></i> <a href="{{ settings.BRANDING_URLS.help }}">Help</a>
+                    </p>
+                </div>
+            </div>
+        </div>
+    </footer>

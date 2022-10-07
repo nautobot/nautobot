@@ -1,3 +1,4 @@
+from datetime import datetime
 import json
 from collections import OrderedDict
 
@@ -10,6 +11,7 @@ from django.core.serializers.json import DjangoJSONEncoder
 from django.core.exceptions import ValidationError
 from django.db import models
 from django.http import HttpResponse
+from django.utils.text import slugify
 from django.urls import reverse
 from graphene_django.settings import graphene_settings
 from graphql import get_default_backend
@@ -29,8 +31,9 @@ from nautobot.extras.choices import (
 )
 from nautobot.extras.constants import HTTP_CONTENT_TYPE_JSON
 from nautobot.extras.models import ChangeLoggedModel
+from nautobot.extras.models.mixins import NotesMixin
 from nautobot.extras.models.relationships import RelationshipModel
-from nautobot.extras.querysets import ConfigContextQuerySet
+from nautobot.extras.querysets import ConfigContextQuerySet, NotesQuerySet
 from nautobot.extras.utils import extras_features, FeatureQuery, image_upload
 from nautobot.utilities.utils import deepmerge, render_jinja2
 
@@ -61,7 +64,7 @@ class ConfigContextSchemaValidationMixin:
 
 
 @extras_features("graphql")
-class ConfigContext(BaseModel, ChangeLoggedModel, ConfigContextSchemaValidationMixin):
+class ConfigContext(BaseModel, ChangeLoggedModel, ConfigContextSchemaValidationMixin, NotesMixin):
     """
     A ConfigContext represents a set of arbitrary data available to any Device or VirtualMachine matching its assigned
     qualifiers (region, site, etc.). For example, the data stored in a ConfigContext assigned to site A and tenant B
@@ -99,6 +102,7 @@ class ConfigContext(BaseModel, ChangeLoggedModel, ConfigContextSchemaValidationM
     )
     regions = models.ManyToManyField(to="dcim.Region", related_name="+", blank=True)
     sites = models.ManyToManyField(to="dcim.Site", related_name="+", blank=True)
+    locations = models.ManyToManyField(to="dcim.Location", related_name="+", blank=True)
     roles = models.ManyToManyField(to="dcim.DeviceRole", related_name="+", blank=True)
     device_types = models.ManyToManyField(to="dcim.DeviceType", related_name="+", blank=True)
     platforms = models.ManyToManyField(to="dcim.Platform", related_name="+", blank=True)
@@ -178,6 +182,9 @@ class ConfigContextModel(models.Model, ConfigContextSchemaValidationMixin):
 
     class Meta:
         abstract = True
+        indexes = [
+            models.Index(fields=("local_context_data_owner_content_type", "local_context_data_owner_object_id")),
+        ]
 
     def get_config_context(self):
         """
@@ -230,7 +237,7 @@ class ConfigContextSchema(OrganizationalModel):
     This model stores jsonschema documents where are used to optionally validate config context data payloads.
     """
 
-    name = models.CharField(max_length=200, unique=True)
+    name = models.CharField(max_length=200)
     description = models.CharField(max_length=200, blank=True)
     slug = AutoSlugField(populate_from="name", max_length=200, unique=None, db_index=True)
     data_schema = models.JSONField(
@@ -250,6 +257,11 @@ class ConfigContextSchema(OrganizationalModel):
         ct_field="owner_content_type",
         fk_field="owner_object_id",
     )
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(fields=["name", "owner_content_type", "owner_object_id"], name="unique_name_owner"),
+        ]
 
     def __str__(self):
         if self.owner:
@@ -289,7 +301,7 @@ class ConfigContextSchema(OrganizationalModel):
 
 
 @extras_features("graphql")
-class CustomLink(BaseModel, ChangeLoggedModel):
+class CustomLink(BaseModel, ChangeLoggedModel, NotesMixin):
     """
     A custom link to an external representation of a Nautobot object. The link text and URL fields accept Jinja2 template
     code to be rendered with an object as context.
@@ -343,7 +355,7 @@ class CustomLink(BaseModel, ChangeLoggedModel):
     "graphql",
     "relationships",
 )
-class ExportTemplate(BaseModel, ChangeLoggedModel, RelationshipModel):
+class ExportTemplate(BaseModel, ChangeLoggedModel, RelationshipModel, NotesMixin):
     # An ExportTemplate *may* be owned by another model, such as a GitRepository, or it may be un-owned
     owner_content_type = models.ForeignKey(
         to=ContentType,
@@ -388,7 +400,7 @@ class ExportTemplate(BaseModel, ChangeLoggedModel, RelationshipModel):
     def __str__(self):
         if self.owner:
             return f"[{self.owner}] {self.content_type}: {self.name}"
-        return "{}: {}".format(self.content_type, self.name)
+        return f"{self.content_type}: {self.name}"
 
     def render(self, queryset):
         """
@@ -411,12 +423,9 @@ class ExportTemplate(BaseModel, ChangeLoggedModel, RelationshipModel):
 
         # Build the response
         response = HttpResponse(output, content_type=mime_type)
-        filename = "{}{}{}".format(
-            settings.BRANDING_PREPENDED_FILENAME,
-            queryset.model._meta.verbose_name_plural,
-            ".{}".format(self.file_extension) if self.file_extension else "",
-        )
-        response["Content-Disposition"] = 'attachment; filename="{}"'.format(filename)
+        extension = f".{self.file_extension}" if self.file_extension else ""
+        filename = f"{settings.BRANDING_PREPENDED_FILENAME}{queryset.model._meta.verbose_name_plural}{extension}"
+        response["Content-Disposition"] = f'attachment; filename="{filename}"'
 
         return response
 
@@ -458,7 +467,7 @@ class FileAttachment(BaseModel):
 
     bytes = models.BinaryField()
     filename = models.CharField(max_length=255)
-    mimetype = models.CharField(max_length=50)
+    mimetype = models.CharField(max_length=255)
 
     def __str__(self):
         return self.filename
@@ -515,7 +524,7 @@ class FileProxy(BaseModel):
 
 
 @extras_features("graphql")
-class GraphQLQuery(BaseModel, ChangeLoggedModel):
+class GraphQLQuery(BaseModel, ChangeLoggedModel, NotesMixin):
     name = models.CharField(max_length=100, unique=True)
     slug = AutoSlugField(populate_from="name")
     query = models.TextField()
@@ -637,12 +646,54 @@ class ImageAttachment(BaseModel):
 
 
 #
+# Notes
+#
+
+
+@extras_features("graphql", "webhooks")
+class Note(BaseModel, ChangeLoggedModel):
+    """
+    Notes allow anyone with proper permissions to add a note to an object.
+    """
+
+    assigned_object_type = models.ForeignKey(to=ContentType, on_delete=models.CASCADE)
+    assigned_object_id = models.UUIDField(db_index=True)
+    assigned_object = GenericForeignKey(ct_field="assigned_object_type", fk_field="assigned_object_id")
+    user = models.ForeignKey(
+        to=settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        related_name="note",
+        blank=True,
+        null=True,
+    )
+    user_name = models.CharField(max_length=150, editable=False)
+
+    slug = AutoSlugField(populate_from="assigned_object")
+    note = models.TextField()
+    objects = NotesQuerySet.as_manager()
+
+    class Meta:
+        ordering = ["created"]
+
+    def slugify_function(self, content):
+        return slugify(f"{str(content)[:50]}-{datetime.now().isoformat()}")
+
+    def __str__(self):
+        return str(self.slug)
+
+    def save(self, *args, **kwargs):
+        # Record the user's name as static strings
+        self.user_name = self.user.username if self.user else "Undefined"
+        return super().save(*args, **kwargs)
+
+
+#
 # Webhooks
 #
 
 
 @extras_features("graphql")
-class Webhook(BaseModel, ChangeLoggedModel):
+class Webhook(BaseModel, ChangeLoggedModel, NotesMixin):
     """
     A Webhook defines a request that will be sent to a remote application when an object is created, updated, and/or
     delete in Nautobot. The request will contain a representation of the object, which the remote application can act on.
@@ -758,7 +809,9 @@ class Webhook(BaseModel, ChangeLoggedModel):
         return reverse("extras:webhook", kwargs={"pk": self.pk})
 
     @classmethod
-    def check_for_conflicts(cls, instance, content_types, payload_url, type_create, type_update, type_delete):
+    def check_for_conflicts(
+        cls, instance=None, content_types=None, payload_url=None, type_create=None, type_update=None, type_delete=None
+    ):
         """
         Helper method for enforcing uniqueness.
 
@@ -769,28 +822,38 @@ class Webhook(BaseModel, ChangeLoggedModel):
         conflicts = {}
         webhook_error_msg = "A webhook already exists for {action} on {content_type} to URL {url}"
 
-        for content_type in content_types:
-            webhooks = cls.objects.filter(content_types__in=[content_type], payload_url=payload_url)
-            if instance and instance.present_in_database:
-                webhooks = webhooks.exclude(pk=instance.pk)
+        if instance is not None and instance.present_in_database:
+            # This is a PATCH and might not include all relevant data e.g content_types, payload_url or actions
+            # Therefore we get data not available from instance
+            content_types = instance.content_types.all() if content_types is None else content_types
+            payload_url = instance.payload_url if payload_url is None else payload_url
+            type_create = instance.type_create if type_create is None else type_create
+            type_update = instance.type_update if type_update is None else type_update
+            type_delete = instance.type_delete if type_delete is None else type_delete
 
-            existing_type_create = webhooks.filter(type_create=type_create).exists() if type_create else False
-            existing_type_update = webhooks.filter(type_update=type_update).exists() if type_update else False
-            existing_type_delete = webhooks.filter(type_delete=type_delete).exists() if type_delete else False
+        if content_types is not None:
+            for content_type in content_types:
+                webhooks = cls.objects.filter(content_types__in=[content_type], payload_url=payload_url)
+                if instance and instance.present_in_database:
+                    webhooks = webhooks.exclude(pk=instance.pk)
 
-            if existing_type_create:
-                conflicts.setdefault("type_create", []).append(
-                    webhook_error_msg.format(content_type=content_type, action="create", url=payload_url),
-                )
+                existing_type_create = webhooks.filter(type_create=type_create).exists() if type_create else False
+                existing_type_update = webhooks.filter(type_update=type_update).exists() if type_update else False
+                existing_type_delete = webhooks.filter(type_delete=type_delete).exists() if type_delete else False
 
-            if existing_type_update:
-                conflicts.setdefault("type_update", []).append(
-                    webhook_error_msg.format(content_type=content_type, action="update", url=payload_url),
-                )
+                if existing_type_create:
+                    conflicts.setdefault("type_create", []).append(
+                        webhook_error_msg.format(content_type=content_type, action="create", url=payload_url),
+                    )
 
-            if existing_type_delete:
-                conflicts.setdefault("type_delete", []).append(
-                    webhook_error_msg.format(content_type=content_type, action="delete", url=payload_url),
-                )
+                if existing_type_update:
+                    conflicts.setdefault("type_update", []).append(
+                        webhook_error_msg.format(content_type=content_type, action="update", url=payload_url),
+                    )
+
+                if existing_type_delete:
+                    conflicts.setdefault("type_delete", []).append(
+                        webhook_error_msg.format(content_type=content_type, action="delete", url=payload_url),
+                    )
 
         return conflicts

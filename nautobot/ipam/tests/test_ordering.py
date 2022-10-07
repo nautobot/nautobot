@@ -6,17 +6,13 @@ from nautobot.ipam.models import IPAddress, Prefix, VRF
 
 
 class OrderingTestBase(TestCase):
-    vrfs = None
+    fixtures = ("status",)
 
     def setUp(self):
         """
         Setup the VRFs for the class as a whole
         """
-        self.vrfs = (
-            VRF.objects.create(name="VRF A"),
-            VRF.objects.create(name="VRF B"),
-            VRF.objects.create(name="VRF C"),
-        )
+        self.vrfs = VRF.objects.all()[:3]
 
         self.statuses = Status.objects.get_for_model(Prefix)
         self.status_active = self.statuses.get(slug="active")
@@ -37,12 +33,14 @@ class OrderingTestBase(TestCase):
 
 
 class PrefixOrderingTestCase(OrderingTestBase):
+    fixtures = ("status",)
+
     def test_prefix_vrf_ordering(self):
         """
         This is a very basic test, which tests both prefixes without VRFs and prefixes with VRFs
         """
         # Setup VRFs
-        vrfa, vrfb, vrfc = self.vrfs
+        vrfa, vrfb = self.vrfs[:2]
 
         # Setup Prefixes
         prefixes = (
@@ -253,7 +251,7 @@ class PrefixOrderingTestCase(OrderingTestBase):
             None: 192.168.0.0/16
         """
         # Setup VRFs
-        vrfa, vrfb, vrfc = self.vrfs
+        vrfa = self.vrfs[0]
 
         # Setup Prefixes
         prefixes = [
@@ -309,12 +307,14 @@ class PrefixOrderingTestCase(OrderingTestBase):
 
 
 class IPAddressOrderingTestCase(OrderingTestBase):
+    fixtures = ("status",)
+
     def test_address_vrf_ordering(self):
         """
         This function tests ordering with the inclusion of vrfs
         """
         # Setup VRFs
-        vrfa, vrfb, vrfc = self.vrfs
+        vrfa, vrfb = self.vrfs[:2]
 
         status_active = Status.objects.get_for_model(IPAddress).get(slug="active")
 

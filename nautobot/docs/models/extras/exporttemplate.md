@@ -1,6 +1,6 @@
 # Export Templates
 
-Nautobot allows users to define custom templates that can be used when exporting objects. To create an export template, navigate to Other > Miscellaneous > Export Templates under the navigation bar. Export templates can also be managed within an external Git repository if desired.
+Nautobot allows users to define custom templates that can be used when exporting objects. To create an export template, navigate to Extensibility > Automation > Export Templates under the navigation bar. Export templates can also be managed within an external Git repository if desired.
 
 Each export template is associated with a certain type of object. For instance, if you create an export template for VLANs, your custom template will appear under the "Export" button on the VLANs list.
 

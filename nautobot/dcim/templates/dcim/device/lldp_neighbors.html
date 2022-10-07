@@ -1,4 +1,5 @@
 {% extends 'dcim/device/base.html' %}
+{% load helpers %}
 
 {% block title %}{{ object }} - LLDP Neighbors{% endblock %}
 
@@ -24,7 +25,7 @@
                         <td>{{ iface }}</td>
                         {% if iface.connected_endpoint.device %}
                             <td class="configured_device" data="{{ iface.connected_endpoint.device }}" data-chassis="{{ iface.connected_endpoint.device.virtual_chassis.name }}">
-                                <a href="{% url 'dcim:device' pk=iface.connected_endpoint.device.pk %}">{{ iface.connected_endpoint.device }}</a>
+                                {{ iface.connected_endpoint.device|hyperlinked_object }}
                             </td>
                             <td class="configured_interface" data="{{ iface.connected_endpoint }}">
                                 <span title="{{ iface.connected_endpoint.get_type_display }}">{{ iface.connected_endpoint }}</span>

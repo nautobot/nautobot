@@ -70,6 +70,7 @@
 {% endblock %}
 
 {% block javascript %}
+{{ block.super }}
 <script type="text/javascript">
 new ClipboardJS('.copy-token');
 </script>

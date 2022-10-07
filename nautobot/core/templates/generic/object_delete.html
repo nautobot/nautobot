@@ -1,9 +1,2 @@
-{% extends 'utilities/confirmation_form.html' %}
-{% load form_helpers %}
-
-{% block title %}Delete {{ obj_type }}?{% endblock %}
-
-{% block message %}
-    <p>Are you sure you want to delete {{ obj_type }} <strong>{{ obj }}</strong>?</p>
-    {% block message_extra %}{% endblock %}
-{% endblock %}
+{% extends 'generic/object_destroy.html' %}
+{% comment %}2.0 TODO: remove this template, which only exists for backward compatibility with 1.3 and earlier{% endcomment %}

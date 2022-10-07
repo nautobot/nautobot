@@ -8,7 +8,7 @@ from django.conf import settings
 from django.contrib.staticfiles.finders import find
 from django.templatetags.static import static, StaticNode
 from django.urls import NoReverseMatch, reverse
-from django.utils.html import strip_tags
+from django.utils.html import format_html, strip_tags
 from django.utils.safestring import mark_safe
 from markdown import markdown
 from django_jinja import library
@@ -27,6 +27,41 @@ register = template.Library()
 #
 # Filters
 #
+
+
+@library.filter()
+@register.filter()
+def hyperlinked_object(value):
+    """Render and link to a Django model instance, if any, or render a placeholder if not.
+
+    Uses `object.display` if available, otherwise uses the string representation of the object.
+    If the object defines `get_absolute_url()` this will be used to hyperlink the displayed object;
+    additionally if there is an `object.description` this will be used as the title of the hyperlink.
+
+    Args:
+        value (django.db.models.Model, None)
+
+    Returns:
+        str: String representation of the value (hyperlinked if it defines get_absolute_url()) or a placeholder.
+
+    Examples:
+        >>> hyperlinked_object(device)
+        '<a href="/dcim/devices/3faafe8c-bdd6-4317-88dc-f791e6988caa/">Device 1</a>'
+        >>> hyperlinked_object(device_role)
+        '<a href="/dcim/device-roles/router/" title="Devices that are routers, not switches">Router</a>'
+        >>> hyperlinked_object(None)
+        '<span class="text-muted">&mdash;</span>'
+        >>> hyperlinked_object("Hello")
+        'Hello'
+    """
+    if value is None:
+        return placeholder(value)
+    display = value.display if hasattr(value, "display") else str(value)
+    if hasattr(value, "get_absolute_url"):
+        if hasattr(value, "description") and value.description:
+            return format_html('<a href="{}" title="{}">{}</a>', value.get_absolute_url(), value.description, display)
+        return format_html('<a href="{}">{}</a>', value.get_absolute_url(), display)
+    return format_html("{}", display)
 
 
 @library.filter()
@@ -218,15 +253,15 @@ def humanize_speed(speed):
     if not speed:
         return ""
     if speed >= 1000000000 and speed % 1000000000 == 0:
-        return "{} Tbps".format(int(speed / 1000000000))
+        return f"{int(speed / 1000000000)} Tbps"
     elif speed >= 1000000 and speed % 1000000 == 0:
-        return "{} Gbps".format(int(speed / 1000000))
+        return f"{int(speed / 1000000)} Gbps"
     elif speed >= 1000 and speed % 1000 == 0:
-        return "{} Mbps".format(int(speed / 1000))
+        return f"{int(speed / 1000)} Mbps"
     elif speed >= 1000:
-        return "{} Mbps".format(float(speed) / 1000)
+        return f"{float(speed) / 1000} Mbps"
     else:
-        return "{} Kbps".format(speed)
+        return f"{speed} Kbps"
 
 
 @library.filter()
@@ -257,7 +292,7 @@ def fgcolor(value):
     value = value.lower().strip("#")
     if not re.match("^[0-9a-f]{6}$", value):
         return ""
-    return "#{}".format(foreground_color(value))
+    return f"#{foreground_color(value)}"
 
 
 @library.filter()
@@ -349,6 +384,7 @@ def has_one_or_more_perms(user, permissions_list):
     """
     Return True if the user has *at least one* permissions in the list.
     """
+
     for permission in permissions_list:
         if user.has_perm(permission):
             return True
@@ -389,7 +425,7 @@ def as_range(n):
     try:
         int(n)
     except (TypeError, ValueError):
-        return list()
+        return []
     return range(int(n))
 
 
@@ -463,9 +499,9 @@ def querystring(request, **kwargs):
             querydict[k] = str(v)
         elif k in querydict:
             querydict.pop(k)
-    querystring = querydict.urlencode(safe="/")
-    if querystring:
-        return "?" + querystring
+    query_string = querydict.urlencode(safe="/")
+    if query_string:
+        return "?" + query_string
     else:
         return ""
 
@@ -529,7 +565,7 @@ def utilization_graph_raw_data(numerator, denominator, warning_threshold=75, dan
 
 
 @register.inclusion_tag("utilities/templatetags/tag.html")
-def tag(tag, url_name=None):
+def tag(tag, url_name=None):  # pylint: disable=redefined-outer-name
     """
     Display a tag, optionally linked to a filtered list of objects.
     """

@@ -1,10 +1,10 @@
-from django.conf import settings
 from django.contrib.auth.mixins import AccessMixin
 from django.core.exceptions import ImproperlyConfigured
 from django.urls import reverse
 from django.urls.exceptions import NoReverseMatch
 from django.utils.http import is_safe_url
 
+from nautobot.utilities.utils import get_route_for_model
 from .permissions import resolve_permission
 
 
@@ -23,7 +23,7 @@ class ContentTypePermissionRequiredMixin(AccessMixin):
                             derived from the object type
     """
 
-    additional_permissions = list()
+    additional_permissions = []
 
     def get_required_permission(self):
         """
@@ -48,6 +48,25 @@ class ContentTypePermissionRequiredMixin(AccessMixin):
         return super().dispatch(request, *args, **kwargs)
 
 
+class AdminRequiredMixin(AccessMixin):
+    """
+    Allows access only to admin users.
+    """
+
+    def has_permission(self):
+        return bool(
+            self.request.user
+            and self.request.user.is_active
+            and (self.request.user.is_staff or self.request.user.is_superuser)
+        )
+
+    def dispatch(self, request, *args, **kwargs):
+        if not self.has_permission():
+            return self.handle_no_permission()
+
+        return super().dispatch(request, *args, **kwargs)
+
+
 class ObjectPermissionRequiredMixin(AccessMixin):
     """
     Similar to Django's built-in PermissionRequiredMixin, but extended to check for both model-level and object-level
@@ -58,7 +77,7 @@ class ObjectPermissionRequiredMixin(AccessMixin):
                             derived from the object type
     """
 
-    additional_permissions = list()
+    additional_permissions = []
 
     def get_required_permission(self):
         """
@@ -85,8 +104,10 @@ class ObjectPermissionRequiredMixin(AccessMixin):
 
         if not hasattr(self, "queryset"):
             raise ImproperlyConfigured(
-                "{} has no queryset defined. ObjectPermissionRequiredMixin may only be used on views which define "
-                "a base queryset".format(self.__class__.__name__)
+                (
+                    f"{self.__class__.__name__} has no queryset defined. "
+                    "ObjectPermissionRequiredMixin may only be used on views which define a base queryset"
+                )
             )
 
         if not self.has_permission():
@@ -123,10 +144,8 @@ class GetReturnURLMixin:
 
         # Attempt to dynamically resolve the list view for the object
         if hasattr(self, "queryset"):
-            model_opts = self.queryset.model._meta
             try:
-                prefix = "plugins:" if model_opts.app_label in settings.PLUGINS else ""
-                return reverse(f"{prefix}{model_opts.app_label}:{model_opts.model_name}_list")
+                return reverse(get_route_for_model(self.queryset.model, "list"))
             except NoReverseMatch:
                 pass
 

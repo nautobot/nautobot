@@ -1,0 +1,45 @@
+{
+  "baseBranches": ["develop", "next"],
+  "enabledManagers": ["pip_requirements", "poetry"],
+  "extends": [
+    "config:base"
+  ],
+  "labels": [
+    "dependencies"
+  ],
+  "packageRules": [
+    {
+      "description": "Group patch-only updates to develop weekly to cut down on PR noise.",
+      "groupName": "Lock-file Patch Releases for Develop",
+      "matchBaseBranches": ["develop"],
+      "schedule": [
+        "before 3am on Friday"
+      ],
+      "major": {"enabled": false},
+      "minor": {"enabled": false}
+    },
+    {
+      "description": "Schedule next updates.",
+      "matchBaseBranches": ["next"],
+      "schedule": [
+        "before 2am"
+      ],
+      "rangeStrategy": "update-lockfile"
+    },
+    {
+      "description": "Require dashboard approval for non-patch updates to graphene-django-optimizer and django-timezone-field.",
+      "dependencyDashboardApproval": true,
+      "matchBaseBranches": ["next"],
+      "matchPackageNames": ["graphene-django-optimizer", "django-timezone-field"],
+      "matchUpdateTypes": ["major", "minor"]
+    },
+    {
+      "description": "Require dashboard approval for major updates for packages known to have breaking changes.",
+      "dependencyDashboardApproval": true,
+      "matchBaseBranches": ["next"],
+      "matchPackageNames": ["django-taggit", "flake8"],
+      "matchUpdateTypes": ["major"]
+    }
+  ],
+  "rangeStrategy": "in-range-only"
+}

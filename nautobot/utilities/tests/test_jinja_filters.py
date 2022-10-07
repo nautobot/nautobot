@@ -12,10 +12,8 @@ class NautobotJinjaFilterTest(TestCase):
         helpers_not_valid = ["notvalid"]
 
         for helper in helpers_not_valid:
-            try:
+            with self.assertRaises(TemplateAssertionError):
                 render_jinja2("{{ data | " + helper + " }}", {"data": None})
-            except TemplateAssertionError:
-                self.assertTrue(True)
 
     def test_templatetags_helpers_in_jinja(self):
         """
@@ -53,16 +51,16 @@ class NautobotJinjaFilterTest(TestCase):
             except TemplateAssertionError:
                 raise
             except Exception:
-                self.assertTrue(True)
+                pass
 
     def test_netutils_filters_in_jinja(self):
         """Import the list of all Jinja filters from Netutils and validate that all of them have been properly loaded in Django Jinja"""
         filters = jinja2_convenience_function()
 
-        for filter in filters.keys():
+        for filter_ in filters.keys():
             try:
-                render_jinja2("{{ data | " + filter + " }}", {"data": None})
+                render_jinja2("{{ data | " + filter_ + " }}", {"data": None})
             except TemplateAssertionError:
                 raise
             except Exception:
-                self.assertTrue(True)
+                pass

@@ -4,16 +4,16 @@ from rest_framework import serializers
 from nautobot.core.api import (
     ChoiceField,
     SerializedPKRelatedField,
-    ValidatedModelSerializer,
 )
 from nautobot.dcim.api.nested_serializers import (
     NestedDeviceRoleSerializer,
+    NestedLocationSerializer,
     NestedPlatformSerializer,
     NestedSiteSerializer,
 )
 from nautobot.dcim.choices import InterfaceModeChoices
-from nautobot.extras.api.customfields import CustomFieldModelSerializer
 from nautobot.extras.api.serializers import (
+    NautobotModelSerializer,
     StatusModelSerializerMixin,
     TaggedObjectSerializer,
 )
@@ -49,77 +49,61 @@ from .nested_serializers import (  # noqa: F401
 #
 
 
-class ClusterTypeSerializer(CustomFieldModelSerializer):
+class ClusterTypeSerializer(NautobotModelSerializer):
     url = serializers.HyperlinkedIdentityField(view_name="virtualization-api:clustertype-detail")
     cluster_count = serializers.IntegerField(read_only=True)
 
     class Meta:
         model = ClusterType
         fields = [
-            "id",
             "url",
             "name",
             "slug",
             "description",
             "cluster_count",
-            "custom_fields",
-            "created",
-            "last_updated",
-            "computed_fields",
         ]
-        opt_in_fields = ["computed_fields"]
 
 
-class ClusterGroupSerializer(CustomFieldModelSerializer):
+class ClusterGroupSerializer(NautobotModelSerializer):
     url = serializers.HyperlinkedIdentityField(view_name="virtualization-api:clustergroup-detail")
     cluster_count = serializers.IntegerField(read_only=True)
 
     class Meta:
         model = ClusterGroup
         fields = [
-            "id",
             "url",
             "name",
             "slug",
             "description",
             "cluster_count",
-            "custom_fields",
-            "created",
-            "last_updated",
-            "computed_fields",
         ]
-        opt_in_fields = ["computed_fields"]
 
 
-class ClusterSerializer(TaggedObjectSerializer, CustomFieldModelSerializer):
+class ClusterSerializer(NautobotModelSerializer, TaggedObjectSerializer):
     url = serializers.HyperlinkedIdentityField(view_name="virtualization-api:cluster-detail")
     type = NestedClusterTypeSerializer()
     group = NestedClusterGroupSerializer(required=False, allow_null=True)
     tenant = NestedTenantSerializer(required=False, allow_null=True)
     site = NestedSiteSerializer(required=False, allow_null=True)
+    location = NestedLocationSerializer(required=False, allow_null=True)
     device_count = serializers.IntegerField(read_only=True)
     virtualmachine_count = serializers.IntegerField(read_only=True)
 
     class Meta:
         model = Cluster
         fields = [
-            "id",
             "url",
             "name",
             "type",
             "group",
             "tenant",
             "site",
+            "location",
             "comments",
             "tags",
-            "custom_fields",
-            "created",
-            "last_updated",
             "device_count",
             "virtualmachine_count",
-            "computed_fields",
         ]
-        opt_in_fields = ["computed_fields"]
 
 
 #
@@ -127,9 +111,10 @@ class ClusterSerializer(TaggedObjectSerializer, CustomFieldModelSerializer):
 #
 
 
-class VirtualMachineSerializer(TaggedObjectSerializer, StatusModelSerializerMixin, CustomFieldModelSerializer):
+class VirtualMachineSerializer(NautobotModelSerializer, TaggedObjectSerializer, StatusModelSerializerMixin):
     url = serializers.HyperlinkedIdentityField(view_name="virtualization-api:virtualmachine-detail")
     site = NestedSiteSerializer(read_only=True)
+    location = NestedLocationSerializer(read_only=True, required=False, allow_null=True)
     cluster = NestedClusterSerializer()
     role = NestedDeviceRoleSerializer(required=False, allow_null=True)
     tenant = NestedTenantSerializer(required=False, allow_null=True)
@@ -142,11 +127,11 @@ class VirtualMachineSerializer(TaggedObjectSerializer, StatusModelSerializerMixi
     class Meta:
         model = VirtualMachine
         fields = [
-            "id",
             "url",
             "name",
             "status",
             "site",
+            "location",
             "cluster",
             "role",
             "tenant",
@@ -160,14 +145,8 @@ class VirtualMachineSerializer(TaggedObjectSerializer, StatusModelSerializerMixi
             "comments",
             "local_context_data",
             "local_context_schema",
-            "tags",
-            "custom_fields",
-            "created",
-            "last_updated",
-            "computed_fields",
         ]
         validators = []
-        opt_in_fields = ["computed_fields"]
 
 
 class VirtualMachineWithConfigContextSerializer(VirtualMachineSerializer):
@@ -175,31 +154,7 @@ class VirtualMachineWithConfigContextSerializer(VirtualMachineSerializer):
     local_context_schema = NestedConfigContextSchemaSerializer(required=False, allow_null=True)
 
     class Meta(VirtualMachineSerializer.Meta):
-        fields = [
-            "id",
-            "url",
-            "name",
-            "status",
-            "site",
-            "cluster",
-            "role",
-            "tenant",
-            "platform",
-            "primary_ip",
-            "primary_ip4",
-            "primary_ip6",
-            "vcpus",
-            "memory",
-            "disk",
-            "comments",
-            "local_context_data",
-            "local_context_schema",
-            "tags",
-            "custom_fields",
-            "config_context",
-            "created",
-            "last_updated",
-        ]
+        fields = VirtualMachineSerializer.Meta.fields + ["config_context"]
 
     @extend_schema_field(serializers.DictField)
     def get_config_context(self, obj):
@@ -212,7 +167,7 @@ class VirtualMachineWithConfigContextSerializer(VirtualMachineSerializer):
 
 
 # TODO: collapse this with VMInterfaceSerializer in 2.0.
-class VMInterfaceSerializerVersion12(TaggedObjectSerializer, ValidatedModelSerializer):
+class VMInterfaceSerializerVersion12(NautobotModelSerializer, TaggedObjectSerializer):
     url = serializers.HyperlinkedIdentityField(view_name="virtualization-api:vminterface-detail")
     virtual_machine = NestedVirtualMachineSerializer()
     mode = ChoiceField(choices=InterfaceModeChoices, allow_blank=True, required=False)
@@ -223,15 +178,18 @@ class VMInterfaceSerializerVersion12(TaggedObjectSerializer, ValidatedModelSeria
         required=False,
         many=True,
     )
+    parent_interface = NestedVMInterfaceSerializer(required=False, allow_null=True)
+    bridge = NestedVMInterfaceSerializer(required=False, allow_null=True)
 
     class Meta:
         model = VMInterface
         fields = [
-            "id",
             "url",
             "virtual_machine",
             "name",
             "enabled",
+            "parent_interface",
+            "bridge",
             "mtu",
             "mac_address",
             "description",
@@ -275,18 +233,5 @@ class VMInterfaceSerializerVersion12(TaggedObjectSerializer, ValidatedModelSeria
 class VMInterfaceSerializer(VMInterfaceSerializerVersion12, StatusModelSerializerMixin):
     class Meta:
         model = VMInterface
-        fields = [
-            "id",
-            "url",
-            "virtual_machine",
-            "name",
-            "status",
-            "enabled",
-            "mtu",
-            "mac_address",
-            "description",
-            "mode",
-            "untagged_vlan",
-            "tagged_vlans",
-            "tags",
-        ]
+        fields = VMInterfaceSerializerVersion12.Meta.fields.copy()
+        fields.insert(4, "status")

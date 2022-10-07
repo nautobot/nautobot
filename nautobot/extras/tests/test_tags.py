@@ -2,9 +2,39 @@ from django.urls import reverse
 from django.contrib.contenttypes.models import ContentType
 from rest_framework import status
 
-from nautobot.dcim.models import Site, Device
+from nautobot.dcim.models import Site
 from nautobot.extras.models import Status, Tag
-from nautobot.utilities.testing import APITestCase
+from nautobot.utilities.testing import APITestCase, TestCase
+
+
+class TaggedItemORMTest(TestCase):
+    """
+    Test the application of tags via the Python API (ORM).
+    """
+
+    fixtures = ("status",)
+
+    @classmethod
+    def setUpTestData(cls):
+        super().setUpTestData()
+
+        cls.site = Site.objects.create(name="Test Site", slug="test-site", status=Status.objects.get(slug="active"))
+
+    def test_tags_set_taggit_1(self):
+        """Test that obj.tags.set() works when invoked like django-taggit 1.x."""
+        self.site.tags.set("Tag 1", "Tag 2")
+        self.assertListEqual(sorted([t.name for t in self.site.tags.all()]), ["Tag 1", "Tag 2"])
+
+        self.site.tags.set(Tag.objects.get(name="Tag 1"))
+        self.assertListEqual(sorted([t.name for t in self.site.tags.all()]), ["Tag 1"])
+
+    def test_tags_set_taggit_2(self):
+        """Test that obj.tags.set() works when invoked like django-taggit 2.x and later."""
+        self.site.tags.set(["Tag 1", "Tag 2"])
+        self.assertListEqual(sorted([t.name for t in self.site.tags.all()]), ["Tag 1", "Tag 2"])
+
+        self.site.tags.set([Tag.objects.get(name="Tag 1")])
+        self.assertListEqual(sorted([t.name for t in self.site.tags.all()]), ["Tag 1"])
 
 
 class TaggedItemTest(APITestCase):
@@ -12,13 +42,15 @@ class TaggedItemTest(APITestCase):
     Test the application of Tags to and item (a Site, for example) upon creation (POST) and modification (PATCH).
     """
 
+    fixtures = (
+        "status",
+        "tag",
+    )
+
     @classmethod
     def setUpTestData(cls):
         super().setUpTestData()
-
-        cls.tags = cls.create_tags("Foo", "Bar", "Baz", "New Tag")
-        for tag in cls.tags:
-            tag.content_types.add(ContentType.objects.get_for_model(Site))
+        cls.tags = Tag.objects.get_for_model(Site)
 
     def test_create_tagged_item(self):
         data = {
@@ -34,7 +66,7 @@ class TaggedItemTest(APITestCase):
         self.assertHttpStatus(response, status.HTTP_201_CREATED)
         self.assertListEqual(sorted([t["id"] for t in response.data["tags"]]), sorted(data["tags"]))
         site = Site.objects.get(pk=response.data["id"])
-        self.assertListEqual(sorted([t.name for t in site.tags.all()]), sorted(["Foo", "Bar", "Baz", "New Tag"]))
+        self.assertListEqual(sorted([t.name for t in site.tags.all()]), sorted([t.name for t in self.tags]))
 
     def test_update_tagged_item(self):
         site = Site.objects.create(
@@ -42,12 +74,12 @@ class TaggedItemTest(APITestCase):
             slug="test-site",
             status=Status.objects.get(slug="active"),
         )
-        site.tags.add("Foo", "Bar", "Baz")
+        site.tags.add(*self.tags[:3])
         data = {
             "tags": [
-                {"name": "Foo"},
-                {"name": "Bar"},
-                {"name": "New Tag"},
+                {"name": self.tags[0].name},
+                {"name": self.tags[1].name},
+                {"name": self.tags[3].name},
             ]
         }
         self.add_permissions("dcim.change_site")
@@ -60,7 +92,10 @@ class TaggedItemTest(APITestCase):
             sorted([t["name"] for t in data["tags"]]),
         )
         site = Site.objects.get(pk=response.data["id"])
-        self.assertListEqual(sorted([t.name for t in site.tags.all()]), sorted(["Foo", "Bar", "New Tag"]))
+        self.assertListEqual(
+            sorted([t.name for t in site.tags.all()]),
+            sorted([self.tags[0].name, self.tags[1].name, self.tags[3].name]),
+        )
 
     def test_clear_tagged_item(self):
         site = Site.objects.create(
@@ -68,7 +103,7 @@ class TaggedItemTest(APITestCase):
             slug="test-site",
             status=Status.objects.get(slug="active"),
         )
-        site.tags.add("Foo", "Bar", "Baz")
+        site.tags.add(*self.tags[:3])
         data = {"tags": []}
         self.add_permissions("dcim.change_site")
         url = reverse("dcim-api:site-detail", kwargs={"pk": site.pk})
@@ -81,9 +116,8 @@ class TaggedItemTest(APITestCase):
 
     def test_create_invalid_tagged_item(self):
         """Test creating a Site with a tag that does not include Site's Content type as its content_type"""
-        tag = Tag.objects.create(name="Tag One", slug="tag-one")
-        app_label, model = Device._meta.label_lower.split(".")
-        tag.content_types.add(ContentType.objects.get(app_label=app_label, model=model))
+        tag = self.tags[0]
+        tag.content_types.remove(ContentType.objects.get_for_model(Site))
         data = {
             "name": "Test Site",
             "slug": "test-site",

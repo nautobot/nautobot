@@ -73,9 +73,12 @@ class Region(MPTTModel, OrganizationalModel):
     def get_site_count(self):
         return Site.objects.filter(Q(region=self) | Q(region__in=self.get_descendants())).count()
 
-    def to_objectchange(self, action):
+    def to_objectchange(self, action, object_data_exclude=None, **kwargs):
+        if object_data_exclude is None:
+            object_data_exclude = []
         # Remove MPTT-internal fields
-        return super().to_objectchange(action, object_data_exclude=["level", "lft", "rght", "tree_id"])
+        object_data_exclude += ["level", "lft", "rght", "tree_id"]
+        return super().to_objectchange(action, object_data_exclude=object_data_exclude, **kwargs)
 
 
 #

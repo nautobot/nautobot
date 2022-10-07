@@ -1,3 +1,5 @@
+import uuid
+
 from django.contrib.contenttypes.models import ContentType
 
 from nautobot.circuits.models import Circuit, CircuitTermination, CircuitType, Provider
@@ -11,6 +13,8 @@ class CircuitRelationshipsTestCase(SeleniumTestCase):
     """
     Integration test to check relationships show on a circuit termination in the UI
     """
+
+    fixtures = ("status",)
 
     def setUp(self):
         super().setUp()
@@ -96,6 +100,20 @@ class CircuitRelationshipsTestCase(SeleniumTestCase):
             source=circuit_termination,
             destination=power_panel,
         )
+        # https://github.com/nautobot/nautobot/issues/2077
+        fake_ct = ContentType.objects.create(app_label="nonexistent", model="nonexistentmodel")
+        bad_relation = Relationship.objects.create(
+            name="Termination 2 Nonexistent",
+            source_type=circuit_termination_ct,
+            destination_type=fake_ct,
+            type=RelationshipTypeChoices.TYPE_MANY_TO_MANY,
+        )
+        RelationshipAssociation.objects.create(
+            relationship=bad_relation,
+            source=circuit_termination,
+            destination_type=fake_ct,
+            destination_id=uuid.uuid4(),
+        )
 
     def tearDown(self):
         self.logout()
@@ -120,3 +138,4 @@ class CircuitRelationshipsTestCase(SeleniumTestCase):
         self.assertTrue(self.browser.is_text_present("Power Panel"))
         self.assertTrue(self.browser.is_text_present("2 providers"))
         self.assertTrue(self.browser.is_text_present("1 site"))
+        self.assertTrue(self.browser.is_text_present("1 nonexistentmodel(s)"))

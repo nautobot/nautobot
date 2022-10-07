@@ -1,4 +1,5 @@
 from django.contrib.contenttypes.models import ContentType
+from django.urls import reverse
 
 from nautobot.dcim.models import Device
 from nautobot.extras.models import DynamicGroup
@@ -11,6 +12,8 @@ class DynamicGroupTestCase(SeleniumTestCase):
     """
     Integration test to check nautobot.extras.models.DynamicGroup add/edit functionality.
     """
+
+    fixtures = ("status",)
 
     def setUp(self):
         super().setUp()
@@ -28,6 +31,7 @@ class DynamicGroupTestCase(SeleniumTestCase):
         """
         devices = [create_test_device() for _ in range(5)]
         content_type = ContentType.objects.get_for_model(Device)
+        ct_label = f"{content_type.app_label}.{content_type.model}"
 
         # Navigate to the DynamicGroups list view
         self.browser.links.find_by_partial_text("Organization").click()
@@ -40,7 +44,7 @@ class DynamicGroupTestCase(SeleniumTestCase):
         name = "devices-active"
         self.browser.fill("name", name)
         # self.browser.fill("slug", name)  # slug should be auto-populated
-        self.browser.select("content_type", content_type.pk)
+        self.browser.select("content_type", ct_label)
 
         # Click that "Create" button
         self.browser.find_by_text("Create").click()
@@ -73,3 +77,9 @@ class DynamicGroupTestCase(SeleniumTestCase):
         group = DynamicGroup.objects.get(name=name)
         self.assertEqual(group.count, len(devices))
         self.assertEqual(group.filter, {"status": ["active"]})
+
+        # Verify dynamic group shows up on device detail tab
+        self.browser.visit(
+            f'{self.live_server_url}{reverse("dcim:device_dynamicgroups", kwargs={"pk": devices[0].pk})}'
+        )
+        self.assertTrue(self.browser.is_text_present(name))

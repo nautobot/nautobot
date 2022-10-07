@@ -10,7 +10,10 @@ Nautobot makes extensive use of caching; this is not a simple topic but it's a u
 
 ## How it Works
 
-Nautobot supports database query caching using [`django-cacheops`](https://github.com/Suor/django-cacheops) and Redis. When a query is made, the results are cached in Redis for a short period of time, as defined by the [`CACHEOPS_DEFAULTS`](../../configuration/optional-settings/#cacheops_defaults) parameter (15 minutes by default). Within that time, all recurrences of that specific query will return the pre-fetched results from the cache. Caching can be completely disabled by toggling [`CACHEOPS_ENABLED`](../../configuration/optional-settings/#cacheops_enabled) to `False` (it is `True` by default).
+Nautobot optionally supports database query caching using [`django-cacheops`](https://github.com/Suor/django-cacheops) and Redis. Caching can be enabled by toggling [`CACHEOPS_ENABLED`](../configuration/optional-settings.md#cacheops_enabled) to `True` (it is `False` by default). When caching is enabled, and a query is made, the results are cached in Redis for a short period of time, as defined by the [`CACHEOPS_DEFAULTS`](../configuration/optional-settings.md#cacheops_defaults) parameter (15 minutes by default). Within that time, all recurrences of that specific query will return the pre-fetched results from the cache.
+
+!!! caution "Changed in version 1.5.0"
+    Query caching is now disabled by default, and will be removed as a supported option in a future release.
 
 If a change is made to any of the objects returned by the cached query within that time, or if the timeout expires, the cached results are automatically invalidated and the next request for those results will be sent to the database.
 
@@ -22,11 +25,11 @@ Django includes with its own [cache framework](https://docs.djangoproject.com/en
 
 ### `CACHES` and `django-redis`
 
-The [`CACHES`](../../configuration/required-settings/#caches) setting is used to, among other things, configure Django's built-in caching. You'll observe that, even though we aren't using Django's built-in caching, *we still have this as a required setting*. Here's why:
+The [`CACHES`](../configuration/required-settings.md#caches) setting is used to, among other things, configure Django's built-in caching. You'll observe that, even though we aren't using Django's built-in caching, *we still have this as a required setting*. Here's why:
 
 Nautobot uses the [`django-redis`](https://github.com/jazzband/django-redis) Django plugin which allows it to use Redis as a backend for caching and session storage. This is used to provide a concurrent write lock for preventing race conditions when allocating IP address objects, and also to define centralized Redis connection settings that will be used by RQ.
 
-`django-redis` *also* uses the [`CACHES`](../../configuration/required-settings/#caches) setting, in its case to simplify the configuration for establishing concurrent write locks, and also for referencing the correct Redis connection information when defining RQ task queues using the  [`RQ_QUEUES`](../../configuration/required-settings/#rq_queues) setting.
+`django-redis` *also* uses the [`CACHES`](../configuration/required-settings.md#caches) setting, in its case to simplify the configuration for establishing concurrent write locks, and also for referencing the correct Redis connection information when defining RQ task queues using the  [`RQ_QUEUES`](../configuration/required-settings.md#rq_queues) setting.
 
 Again: **`CACHES` is not used for Django's built-in caching at this time, but it is still a required setting for `django-redis` to function properly.**
 
@@ -38,12 +41,12 @@ This technique allows Cacheops to do more advanced caching operations that are n
 
 For this purpose, Cacheops has its own `CACHEOPS_*` settings required to configure it that are not related to the `CACHES` setting.
 
-For more information on the required settings needed to configure Cacheops, please see the [Caching section of the required settings documentation](../../configuration/required-settings/#caching).
+For more information on the required settings needed to configure Cacheops, please see the [Caching section of the required settings documentation](../configuration/required-settings.md#caching).
 
 The optional settings include:
 
-* [`CACHEOPS_DEFAULTS`](../../configuration/optional-settings/#cacheops_defaults): To define the cache timeout value (Defaults to 15 minutes)
-* [`CACHEOPS_ENABLED`](../../configuration/optional-settings/#cacheops_enabled) : To turn on/off caching (Defaults to `True`)
+* [`CACHEOPS_DEFAULTS`](../configuration/optional-settings.md#cacheops_defaults): To define the cache timeout value (Defaults to 15 minutes)
+* [`CACHEOPS_ENABLED`](../configuration/optional-settings.md#cacheops_enabled) : To turn on/off caching (Defaults to `False`)
 
 ## Invalidating Cached Data
 
@@ -111,7 +114,7 @@ CACHES = {
 ```
 
 !!! note
-    It is permissible to use Sentinel for only one database and not the other, see [`RQ_QUEUES`](../../configuration/required-settings/#rq_queues) for details.
+    It is permissible to use Sentinel for only one database and not the other, see [`RQ_QUEUES`](../configuration/required-settings.md#rq_queues) for details.
 
 For more details on configuring django-redis with Redis Sentinel, please see the documentation for [Django Redis](https://github.com/jazzband/django-redis#use-the-sentinel-connection-factory).
 
@@ -128,7 +131,7 @@ of the Redis server and port for each sentinel instance to connect to
     `locations` for `django-cacheops` has a different meaning than the `LOCATION` value for `django-redis`
 
 !!! warning
-    [`CACHEOPS_REDIS`](#cacheops_redis) and [`CACHEOPS_SENTINEL`](#cacheops_sentinel) are mutually exclusive and will result in an error if both are set.
+    [`CACHEOPS_REDIS`](../configuration/required-settings.md#cacheops_redis) and [`CACHEOPS_SENTINEL`](../configuration/required-settings.md#cacheops_sentinel) are mutually exclusive and will result in an error if both are set.
 
 Example:
 
@@ -160,10 +163,10 @@ For more details on how to configure Cacheops to use Redis Sentinel see the docu
 
 Celery Sentinel configuration is controlled by four settings within your `nautobot_config.py`:
 
-* [`CELERY_BROKER_URL`](../../configuration/optional-settings#celery_broker_url)
-* [`CELERY_BROKER_TRANSPORT_OPTIONS`](../../configuration/optional-settings#celery_broker_transport_options)
-* [`CELERY_RESULT_BACKEND`](../../configuration/optional-settings#celery_result_backend)
-* [`CELERY_RESULT_BACKEND_TRANSPORT_OPTIONS`](../../configuration/optional-settings#celery_result_backend_transport_options)
+* [`CELERY_BROKER_URL`](../configuration/optional-settings.md#celery_broker_url)
+* [`CELERY_BROKER_TRANSPORT_OPTIONS`](../configuration/optional-settings.md#celery_broker_transport_options)
+* [`CELERY_RESULT_BACKEND`](../configuration/optional-settings.md#celery_result_backend)
+* [`CELERY_RESULT_BACKEND_TRANSPORT_OPTIONS`](../configuration/optional-settings.md#celery_result_backend_transport_options)
 
 By default Nautobot configures the celery broker and results backend with the same settings, so this pattern is mirrored here.
 
@@ -188,4 +191,4 @@ CELERY_RESULT_BACKEND_TRANSPORT_OPTIONS = CELERY_BROKER_TRANSPORT_OPTIONS
 
 Please see the official Celery documentation for more information on how to [configure Celery to use Redis Sentinel](https://docs.celeryq.dev/en/stable/getting-started/backends-and-brokers/redis.html?highlight=sentinel#configuration).
 
-Please also see the [Nautobot documentation on required settings for Celery](../../configuration/required-settings#task-queuing-with-celery) for additional information.
+Please also see the [Nautobot documentation on required settings for Celery](../configuration/required-settings.md#task-queuing-with-celery) for additional information.

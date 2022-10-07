@@ -1,6 +1,6 @@
 from django.urls import path
 
-from nautobot.extras.views import ObjectChangeLogView
+from nautobot.extras.views import ObjectChangeLogView, ObjectDynamicGroupsView, ObjectNotesView
 from . import views
 from .models import (
     Aggregate,
@@ -30,6 +30,12 @@ urlpatterns = [
         "vrfs/<uuid:pk>/changelog/",
         ObjectChangeLogView.as_view(),
         name="vrf_changelog",
+        kwargs={"model": VRF},
+    ),
+    path(
+        "vrfs/<uuid:pk>/notes/",
+        ObjectNotesView.as_view(),
+        name="vrf_notes",
         kwargs={"model": VRF},
     ),
     # Route targets
@@ -71,6 +77,12 @@ urlpatterns = [
         name="routetarget_changelog",
         kwargs={"model": RouteTarget},
     ),
+    path(
+        "route-targets/<uuid:pk>/notes/",
+        ObjectNotesView.as_view(),
+        name="routetarget_notes",
+        kwargs={"model": RouteTarget},
+    ),
     # RIRs
     path("rirs/", views.RIRListView.as_view(), name="rir_list"),
     path("rirs/add/", views.RIREditView.as_view(), name="rir_add"),
@@ -80,9 +92,15 @@ urlpatterns = [
     path("rirs/<slug:slug>/edit/", views.RIREditView.as_view(), name="rir_edit"),
     path("rirs/<slug:slug>/delete/", views.RIRDeleteView.as_view(), name="rir_delete"),
     path(
-        "vrfs/<slug:slug>/changelog/",
+        "rirs/<slug:slug>/changelog/",
         ObjectChangeLogView.as_view(),
         name="rir_changelog",
+        kwargs={"model": RIR},
+    ),
+    path(
+        "rirs/<slug:slug>/notes/",
+        ObjectNotesView.as_view(),
+        name="rir_notes",
         kwargs={"model": RIR},
     ),
     # Aggregates
@@ -120,6 +138,12 @@ urlpatterns = [
         name="aggregate_changelog",
         kwargs={"model": Aggregate},
     ),
+    path(
+        "aggregates/<uuid:pk>/notes/",
+        ObjectNotesView.as_view(),
+        name="aggregate_notes",
+        kwargs={"model": Aggregate},
+    ),
     # Roles
     path("roles/", views.RoleListView.as_view(), name="role_list"),
     path("roles/add/", views.RoleEditView.as_view(), name="role_add"),
@@ -132,6 +156,12 @@ urlpatterns = [
         "roles/<slug:slug>/changelog/",
         ObjectChangeLogView.as_view(),
         name="role_changelog",
+        kwargs={"model": Role},
+    ),
+    path(
+        "roles/<slug:slug>/notes/",
+        ObjectNotesView.as_view(),
+        name="role_notes",
         kwargs={"model": Role},
     ),
     # Prefixes
@@ -155,6 +185,18 @@ urlpatterns = [
         "prefixes/<uuid:pk>/changelog/",
         ObjectChangeLogView.as_view(),
         name="prefix_changelog",
+        kwargs={"model": Prefix},
+    ),
+    path(
+        "prefixes/<uuid:pk>/dynamic-groups/",
+        ObjectDynamicGroupsView.as_view(),
+        name="prefix_dynamicgroups",
+        kwargs={"model": Prefix},
+    ),
+    path(
+        "prefixes/<uuid:pk>/notes/",
+        ObjectNotesView.as_view(),
+        name="prefix_notes",
         kwargs={"model": Prefix},
     ),
     path(
@@ -194,6 +236,18 @@ urlpatterns = [
         "ip-addresses/<uuid:pk>/changelog/",
         ObjectChangeLogView.as_view(),
         name="ipaddress_changelog",
+        kwargs={"model": IPAddress},
+    ),
+    path(
+        "ip-addresses/<uuid:pk>/dynamic-groups/",
+        ObjectDynamicGroupsView.as_view(),
+        name="ipaddress_dynamicgroups",
+        kwargs={"model": IPAddress},
+    ),
+    path(
+        "ip-addresses/<uuid:pk>/notes/",
+        ObjectNotesView.as_view(),
+        name="ipaddress_notes",
         kwargs={"model": IPAddress},
     ),
     path(
@@ -242,6 +296,12 @@ urlpatterns = [
         name="vlangroup_changelog",
         kwargs={"model": VLANGroup},
     ),
+    path(
+        "vlan-groups/<uuid:pk>/notes/",
+        ObjectNotesView.as_view(),
+        name="vlangroup_notes",
+        kwargs={"model": VLANGroup},
+    ),
     # VLANs
     path("vlans/", views.VLANListView.as_view(), name="vlan_list"),
     path("vlans/add/", views.VLANEditView.as_view(), name="vlan_add"),
@@ -267,6 +327,12 @@ urlpatterns = [
         name="vlan_changelog",
         kwargs={"model": VLAN},
     ),
+    path(
+        "vlans/<uuid:pk>/notes/",
+        ObjectNotesView.as_view(),
+        name="vlan_notes",
+        kwargs={"model": VLAN},
+    ),
     # Services
     path("services/", views.ServiceListView.as_view(), name="service_list"),
     path("services/import/", views.ServiceBulkImportView.as_view(), name="service_import"),
@@ -287,6 +353,12 @@ urlpatterns = [
         "services/<uuid:pk>/changelog/",
         ObjectChangeLogView.as_view(),
         name="service_changelog",
+        kwargs={"model": Service},
+    ),
+    path(
+        "services/<uuid:pk>/notes/",
+        ObjectNotesView.as_view(),
+        name="service_notes",
         kwargs={"model": Service},
     ),
 ]

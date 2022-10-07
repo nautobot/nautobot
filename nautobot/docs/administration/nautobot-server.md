@@ -74,7 +74,7 @@ celery@worker1 v5.1.1 (sun-harmonics)
 
 `nautobot-server collectstatic`
 
-Collect static files into [`STATIC_ROOT`](../../configuration/optional-settings/#static_root).
+Collect static files into [`STATIC_ROOT`](../configuration/optional-settings.md#static_root).
 
 ```no-highlight
 $ nautobot-server collectstatic
@@ -129,10 +129,9 @@ nautobot=> \q
 
 ### `dumpdata`
 
-<!-- markdownlint-disable MD036 -->
-_Changed in version 1.3.0: `extras.job` should now be included (removed `--exclude extras.job`)_
-_Changed in version 1.3.0: `django_rq` should now be excluded (add `--exclude django_rq`)_
- <!-- markdownlint-enable MD036 -->
++/- 1.3.0
+    - `extras.job` should now be included in the dump (removed `--exclude extras.job` from the example usage)
+    - `django_rq` should now be excluded from the dump (added `--exclude django_rq` to the example usage)
 
 ```no-highlight
 $ nautobot-server dumpdata \
@@ -148,7 +147,7 @@ $ nautobot-server dumpdata \
 
 Use this command to generate a JSON dump of the database contents.
 
-One example of using this command would be to [`export data from PostgreSQL`](../../latest/installation/migrating-from-postgresql/#export-data-from-postgresql).
+One example of using this command would be to [`export data from PostgreSQL`](../installation/migrating-from-postgresql.md#export-data-from-postgresql).
 
 ### `fix_custom_fields`
 
@@ -172,11 +171,45 @@ Processing ContentType ipam | prefix
 
 `nautobot-server generate_secret_key`
 
-Generates a new [`SECRET_KEY`](../../configuration/required-settings/#secret_key) that can be used in your `nautobot_config.py`:
+Generates a new [`SECRET_KEY`](../configuration/required-settings.md#secret_key) that can be used in your `nautobot_config.py`:
 
 ```no-highlight
 $ nautobot-server generate_secret_key
 e!j=vrlhz-!wl8p_3+q5s5cph29nzj$xm81eap-!&n!_9^du09
+```
+
+### `generate_test_data`
+
++++ 1.5.0
+
+`nautobot-server generate_test_data [--flush] --seed SEED`
+
+Populate the database with various data as a baseline for testing (automated or manual).
+
+`--flush`  
+Flush any existing data from the database before generating new data.
+
+!!! danger
+    Running this command with the `--flush` argument will clear all existing data in your database. You have been warned.
+
+`--seed SEED`  
+String to use as a random generator seed for reproducible results.
+
+```no-highlight
+$ nautobot-server generate_test_data --flush --seed "Nautobot"
+Flushing all existing data from the database...
+Seeding the pseudo-random number generator with seed "Nautobot"...
+Creating Statuses...
+Creating TenantGroups...
+Creating Tenants...
+Creating RIRs...
+Creating Aggregates...
+Creating RouteTargets...
+Creating VRFs...
+Creating IP/VLAN Roles...
+Creating VLANGroups...
+Creating VLANs...
+Database populated successfully!
 ```
 
 ### `health_check`
@@ -198,7 +231,7 @@ Please see the [healthcheck documentation](../additional-features/healthcheck.md
 
 `nautobot-server init [config_path]`
 
-Generates a new configuration with all of the default settings provided for you, and will also generate a unique[`SECRET_KEY`](../../configuration/required-settings/#secret_key).
+Generates a new configuration with all of the default settings provided for you, and will also generate a unique[`SECRET_KEY`](../configuration/required-settings.md#secret_key).
 
 By default the file will be created at `$HOME/.nautobot/nautobot_config.py`:
 
@@ -207,7 +240,7 @@ $ nautobot-server init
 Configuration file created at '/home/example/.nautobot/nautobot_config.py
 ```
 
-For more information on configuring Nautobot for the first time or on more advanced configuration patterns, please see the guide on [Nautobot Configuration](../../configuration).
+For more information on configuring Nautobot for the first time or on more advanced configuration patterns, please see the guide on [Nautobot Configuration](../configuration/index.md).
 
 ### `invalidate`
 
@@ -230,8 +263,8 @@ There are a number of other options not covered here.
 
 To import the data that was exported with `nautobot-server dumpdata ...` see the following documentation:
 
-- [`Remove the auto-populated Status records from the database`](../../latest/installation/migrating-from-postgresql/#remove-the-auto-populated-status-records-from-the-mysql-database)
-- [`Import the database dump`](../../latest/installation/migrating-from-postgresql/#import-the-database-dump-into-mysql)
+- [`Remove the auto-populated Status records from the database`](../installation/migrating-from-postgresql.md#remove-the-auto-populated-status-records-from-the-mysql-database)
+- [`Import the database dump`](../installation/migrating-from-postgresql.md#import-the-database-dump-into-mysql)
 
 ### `migrate`
 
@@ -337,6 +370,14 @@ Removing expired sessions...
 
 Invalidating cache...
 ```
+
+### `remove_stale_scheduled_jobs`
+
++++ 1.3.10
+
+`nautobot-server remove_stale_scheduled_jobs [max-age of days]`
+
+Delete non-recurring scheduled jobs that were scheduled to run more than `max-age` days ago.
 
 ### `renaturalize`
 

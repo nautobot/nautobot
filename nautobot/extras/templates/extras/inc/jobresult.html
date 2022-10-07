@@ -12,6 +12,12 @@
         <strong>Summary of Results</strong>
     </div>
     <table class="table table-hover panel-body">
+        {% if result.job_model is not None %}
+            <tr>
+                <td>Job Description</td>
+                <td>{{ result.job_model.description | render_markdown }}</td>
+            </tr>
+        {% endif %}
         <tr>
             <td>Status</td>
             <td><span id="pending-result-label">{% include 'extras/inc/job_label.html' with result=result %}</span></td>
@@ -36,11 +42,6 @@
         </tr>
     </table>
 </div>
-{% plugin_left_page result %}
-<div class="col-md-6">
-{% include 'inc/custom_fields_panel.html' with custom_fields=object.get_custom_fields %}
-{% plugin_right_page result %}
-</div>
 
 <form method="post">
     {% csrf_token %}
@@ -48,7 +49,7 @@
         <div class="panel-heading">
             <strong>Logs</strong>
             <div class="pull-right col-md-2 noprint">
-                <input class="form-control log-filter" type="text" placeholder="Filter" title="Filter log level (regular expressions supported)" style="height: 23px" />
+                <input class="form-control log-filter" type="text" placeholder="Filter log level or message" title="Filter log level or message (regular expressions supported)" style="height: 23px" />
             </div>
         </div>
         {% ajax_table "log_table" "extras:jobresult_log-table" pk=result.pk %}

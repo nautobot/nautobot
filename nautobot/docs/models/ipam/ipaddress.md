@@ -4,7 +4,7 @@ An IP address comprises a single host address (either IPv4 or IPv6) and its subn
 
 Like a prefix, an IP address can optionally be assigned to a VRF (otherwise, it will appear in the "global" table). IP addresses are automatically arranged under parent prefixes within their respective VRFs according to the IP hierarchy.
 
-Each IP address can also be assigned an operational [`status`](https://nautobot.readthedocs.io/en/stable/models/extras/status/) and a functional role.  The following statuses are available by default:
+Each IP address can also be assigned an operational [`status`](../../models/extras/status.md) and a functional role.  The following statuses are available by default:
 
 * Active
 * Reserved
@@ -29,7 +29,7 @@ An IP address can be assigned to any device or virtual machine interface, and an
 
 ## Network Address Translation (NAT)
 
-An IP address can be designated as the network address translation (NAT) inside IP address for exactly one other IP address. This is useful primarily to denote a translation between public and private IP addresses. This relationship is followed in both directions: For example, if 10.0.0.1 is assigned as the inside IP for 192.0.2.1, 192.0.2.1 will be displayed as the outside IP for 10.0.0.1.
+An IP address can be designated as the network address translation (NAT) inside IP address for one or more other IP addresses. This is useful primarily to denote a translation between public and private IP addresses. This relationship is followed in both directions: For example, if 10.0.0.1 is assigned as the inside IP for 192.0.2.1, 192.0.2.1 will be displayed as the outside IP for 10.0.0.1.
 
-!!! note
-    Nautobot does not support tracking one-to-many NAT relationships (also called port address translation). This type of policy requires additional logic to model and cannot be fully represented by IP address alone.
++++ 1.3.0
+    Support for multiple outside NAT IP addresses was added.

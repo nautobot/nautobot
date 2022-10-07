@@ -22,7 +22,7 @@ logger = logging.getLogger("nautobot.authentication")
 class ObjectPermissionBackend(ModelBackend):
     def get_all_permissions(self, user_obj, obj=None):
         if not user_obj.is_active or user_obj.is_anonymous:
-            return dict()
+            return {}
         if not hasattr(user_obj, "_object_perm_cache"):
             user_obj._object_perm_cache = self.get_object_permissions(user_obj)
         return user_obj._object_perm_cache
@@ -32,6 +32,7 @@ class ObjectPermissionBackend(ModelBackend):
         Return all permissions granted to the user by an ObjectPermission.
         """
         # Retrieve all assigned and enabled ObjectPermissions
+        # v2 TODO(jathan): Replace prefetch_related with select_related
         object_permissions = ObjectPermission.objects.filter(
             Q(users=user_obj) | Q(groups__user=user_obj), enabled=True
         ).prefetch_related("object_types")
@@ -47,7 +48,13 @@ class ObjectPermissionBackend(ModelBackend):
         return perms
 
     def has_perm(self, user_obj, perm, obj=None):
-        app_label, action, model_name = resolve_permission(perm)
+        if perm == "is_staff":
+            return user_obj.is_active and (user_obj.is_staff or user_obj.is_superuser)
+
+        app_label, _action, model_name = resolve_permission(perm)
+
+        if app_label == "users" and model_name == "admingroup":
+            perm = perm.replace("users", "auth").replace("admingroup", "group")
 
         # Superusers implicitly have all permissions
         if user_obj.is_active and user_obj.is_superuser:

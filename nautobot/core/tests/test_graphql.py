@@ -631,6 +631,8 @@ class GraphQLAPIPermissionTest(TestCase):
 class GraphQLQueryTest(TestCase):
     """Execute various GraphQL queries and verify their correct responses."""
 
+    fixtures = ("status",)
+
     @classmethod
     def setUpTestData(cls):
         """Initialize the Database with some datas."""
@@ -653,12 +655,16 @@ class GraphQLQueryTest(TestCase):
         cls.devicerole1 = DeviceRole.objects.create(name="Device Role 1", slug="device-role-1")
         cls.devicerole2 = DeviceRole.objects.create(name="Device Role 2", slug="device-role-2")
         cls.upsdevicerole = DeviceRole.objects.create(name="UPS Device Role 1", slug="ups-device-role-1")
-        cls.status1 = Status.objects.create(name="status1", slug="status1")
-        cls.status2 = Status.objects.create(name="status2", slug="status2")
+        # Be sure cls.statuses are valid for all appropriate content-types they will be used with!
+        cls.statuses = [Status.objects.get(slug="irradiated"), Status.objects.get(slug="unknown")]
         cls.region1 = Region.objects.create(name="Region1", slug="region1")
         cls.region2 = Region.objects.create(name="Region2", slug="region2")
-        cls.site1 = Site.objects.create(name="Site-1", slug="site-1", asn=65000, status=cls.status1, region=cls.region1)
-        cls.site2 = Site.objects.create(name="Site-2", slug="site-2", asn=65099, status=cls.status2, region=cls.region2)
+        cls.site1 = Site.objects.create(
+            name="Site-1", slug="site-1", asn=65000, status=cls.statuses[0], region=cls.region1
+        )
+        cls.site2 = Site.objects.create(
+            name="Site-2", slug="site-2", asn=65099, status=cls.statuses[1], region=cls.region2
+        )
         cls.rack1 = Rack.objects.create(name="Rack 1", site=cls.site1)
         cls.rack2 = Rack.objects.create(name="Rack 2", site=cls.site2)
         cls.tenant1 = Tenant.objects.create(name="Tenant 1", slug="tenant-1")
@@ -686,7 +692,7 @@ class GraphQLQueryTest(TestCase):
             device_type=cls.upsdevicetype,
             device_role=cls.upsdevicerole,
             site=cls.site1,
-            status=cls.status1,
+            status=cls.statuses[0],
             rack=cls.rack1,
             tenant=cls.tenant1,
             face="front",
@@ -706,7 +712,7 @@ class GraphQLQueryTest(TestCase):
             device_type=cls.devicetype,
             device_role=cls.devicerole1,
             site=cls.site1,
-            status=cls.status1,
+            status=cls.statuses[0],
             rack=cls.rack1,
             tenant=cls.tenant1,
             face="front",
@@ -717,7 +723,7 @@ class GraphQLQueryTest(TestCase):
             RearPort.objects.create(device=cls.device1, name="Rear Port 1", type=PortTypeChoices.TYPE_8P8C),
             RearPort.objects.create(device=cls.device1, name="Rear Port 2", type=PortTypeChoices.TYPE_8P8C),
             RearPort.objects.create(device=cls.device1, name="Rear Port 3", type=PortTypeChoices.TYPE_8P8C),
-            RearPort.objects.create(device=cls.device1, name="Rear Port 4", type=PortTypeChoices.TYPE_8P8C),
+            RearPort.objects.create(device=cls.device1, name="Rear Port 4", type=PortTypeChoices.TYPE_8P4C),
         )
 
         cls.device1_console_ports = (
@@ -765,7 +771,7 @@ class GraphQLQueryTest(TestCase):
             FrontPort.objects.create(
                 device=cls.device1,
                 name="Front Port 4",
-                type=PortTypeChoices.TYPE_8P8C,
+                type=PortTypeChoices.TYPE_8P4C,
                 rear_port=cls.device1_rear_ports[3],
             ),
         ]
@@ -784,7 +790,7 @@ class GraphQLQueryTest(TestCase):
             device=cls.device1,
         )
         cls.ipaddr1 = IPAddress.objects.create(
-            address="10.0.1.1/24", status=cls.status1, assigned_object=cls.interface11
+            address="10.0.1.1/24", status=cls.statuses[0], assigned_object=cls.interface11
         )
 
         cls.device2 = Device.objects.create(
@@ -792,7 +798,7 @@ class GraphQLQueryTest(TestCase):
             device_type=cls.devicetype,
             device_role=cls.devicerole2,
             site=cls.site1,
-            status=cls.status2,
+            status=cls.statuses[1],
             rack=cls.rack2,
             tenant=cls.tenant2,
             face="rear",
@@ -809,7 +815,7 @@ class GraphQLQueryTest(TestCase):
             name="Int2", type=InterfaceTypeChoices.TYPE_1GE_FIXED, device=cls.device2, mac_address="00:12:12:12:12:12"
         )
         cls.ipaddr2 = IPAddress.objects.create(
-            address="10.0.2.1/30", status=cls.status2, assigned_object=cls.interface12
+            address="10.0.2.1/30", status=cls.statuses[1], assigned_object=cls.interface12
         )
 
         cls.device3 = Device.objects.create(
@@ -817,7 +823,7 @@ class GraphQLQueryTest(TestCase):
             device_type=cls.devicetype,
             device_role=cls.devicerole1,
             site=cls.site2,
-            status=cls.status1,
+            status=cls.statuses[0],
         )
 
         cls.interface31 = Interface.objects.create(
@@ -834,12 +840,12 @@ class GraphQLQueryTest(TestCase):
         cls.cable1 = Cable.objects.create(
             termination_a=cls.interface11,
             termination_b=cls.interface12,
-            status=cls.status1,
+            status=cls.statuses[0],
         )
         cls.cable2 = Cable.objects.create(
             termination_a=cls.interface31,
             termination_b=cls.interface21,
-            status=cls.status2,
+            status=cls.statuses[1],
         )
 
         # Power Cables
@@ -870,14 +876,14 @@ class GraphQLQueryTest(TestCase):
         cls.virtualmachine = VirtualMachine.objects.create(
             name="Virtual Machine 1",
             cluster=cluster,
-            status=cls.status1,
+            status=cls.statuses[0],
         )
         cls.vminterface = VMInterface.objects.create(
             virtual_machine=cls.virtualmachine,
             name="eth0",
         )
         cls.vmipaddr = IPAddress.objects.create(
-            address="1.1.1.1/32", status=cls.status1, assigned_object=cls.vminterface
+            address="1.1.1.1/32", status=cls.statuses[0], assigned_object=cls.vminterface
         )
 
         cls.relationship_o2o_1 = Relationship(
@@ -1006,21 +1012,23 @@ query {
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     def test_query_config_context_and_custom_field_data(self):
 
-        query = """
-        query {
-            devices {
-                name
-                config_context
-                _custom_field_data
-            }
-            device (id: "%s") {
-                name
-                config_context
-                _custom_field_data
-            }
-        }
-        """ % (
-            self.device1.id,
+        query = (
+            # pylint: disable=consider-using-f-string
+            """
+                query {
+                    devices {
+                        name
+                        config_context
+                        _custom_field_data
+                    }
+                    device (id: "%s") {
+                        name
+                        config_context
+                        _custom_field_data
+                    }
+                }
+            """
+            % (self.device1.id)
         )
 
         expected_data = {"a": 123, "b": 456, "c": 777}
@@ -1168,20 +1176,23 @@ query {
         """Test queries involving relationship associations."""
 
         # Query testing for https://github.com/nautobot/nautobot/issues/1228
-        query = """
-        query {
-            device (id: "%s") {
-                name
-                rel_device_to_vm {
-                    id
+
+        query = (
+            # pylint: disable=consider-using-f-string
+            """
+                query {
+                    device (id: "%s") {
+                        name
+                        rel_device_to_vm {
+                            id
+                        }
+                        rel_device_group {
+                            id
+                        }
+                    }
                 }
-                rel_device_group {
-                    id
-                }
-            }
-        }
-        """ % (
-            self.device1.id,
+            """
+            % (self.device1.id)
         )
         result = self.execute_query(query)
 
@@ -1247,14 +1258,14 @@ query {
             (f'id: "{self.site1.pk}"', 1),
             (f'id: ["{self.site1.pk}"]', 1),
             (f'id: ["{self.site1.pk}", "{self.site2.pk}"]', 2),
-            ('status: "status1"', 1),
-            ('status: ["status2"]', 1),
-            ('status: ["status1", "status2"]', 2),
+            (f'status: "{self.statuses[0].slug}"', 1),
+            (f'status: ["{self.statuses[1].slug}"]', 1),
+            (f'status: ["{self.statuses[0].slug}", "{self.statuses[1].slug}"]', 2),
         )
 
-        for filter, nbr_expected_results in filters:
-            with self.subTest(msg=f"Checking {filter}", filter=filter, nbr_expected_results=nbr_expected_results):
-                query = "query { sites(" + filter + "){ name }}"
+        for filterv, nbr_expected_results in filters:
+            with self.subTest(msg=f"Checking {filterv}", filterv=filterv, nbr_expected_results=nbr_expected_results):
+                query = "query { sites(" + filterv + "){ name }}"
                 result = self.execute_query(query)
                 self.assertIsNone(result.errors)
                 self.assertEqual(len(result.data["sites"]), nbr_expected_results)
@@ -1284,9 +1295,9 @@ query {
             ('region: ["region1", "region2"]', 4),
             ('face: "front"', 2),
             ('face: "rear"', 1),
-            ('status: "status1"', 3),
-            ('status: ["status2"]', 1),
-            ('status: ["status1", "status2"]', 4),
+            (f'status: "{self.statuses[0].slug}"', 3),
+            (f'status: ["{self.statuses[1].slug}"]', 1),
+            (f'status: ["{self.statuses[0].slug}", "{self.statuses[1].slug}"]', 4),
             ("is_full_depth: true", 4),
             ("is_full_depth: false", 0),
             ("has_primary_ip: true", 0),
@@ -1299,9 +1310,9 @@ query {
             ('q: "notthere"', 0),
         )
 
-        for filter, nbr_expected_results in filters:
-            with self.subTest(msg=f"Checking {filter}", filter=filter, nbr_expected_results=nbr_expected_results):
-                query = "query {devices(" + filter + "){ name }}"
+        for filterv, nbr_expected_results in filters:
+            with self.subTest(msg=f"Checking {filterv}", filterv=filterv, nbr_expected_results=nbr_expected_results):
+                query = "query {devices(" + filterv + "){ name }}"
                 result = self.execute_query(query)
                 self.assertIsNone(result.errors)
                 self.assertEqual(len(result.data["devices"]), nbr_expected_results)
@@ -1312,9 +1323,9 @@ query {
         filters = (
             ('address: "10.0.1.1"', 1),
             ("family: 4", 3),
-            ('status: "status1"', 2),
-            ('status: ["status2"]', 1),
-            ('status: ["status1", "status2"]', 3),
+            (f'status: "{self.statuses[0].slug}"', 2),
+            (f'status: ["{self.statuses[1].slug}"]', 1),
+            (f'status: ["{self.statuses[0].slug}", "{self.statuses[1].slug}"]', 3),
             ("mask_length: 24", 1),
             ("mask_length: 30", 1),
             ("mask_length: 32", 1),
@@ -1323,9 +1334,9 @@ query {
             ('parent: "10.0.2.0/24"', 1),
         )
 
-        for filter, nbr_expected_results in filters:
-            with self.subTest(msg=f"Checking {filter}", filter=filter, nbr_expected_results=nbr_expected_results):
-                query = "query { ip_addresses(" + filter + "){ address }}"
+        for filterv, nbr_expected_results in filters:
+            with self.subTest(msg=f"Checking {filterv}", filterv=filterv, nbr_expected_results=nbr_expected_results):
+                query = "query { ip_addresses(" + filterv + "){ address }}"
                 result = self.execute_query(query)
                 self.assertIsNone(result.errors)
                 self.assertEqual(len(result.data["ip_addresses"]), nbr_expected_results)
@@ -1395,9 +1406,9 @@ query {
             ('tenant: ["tenant-1", "tenant-2"]', 4),
         )
 
-        for filter, nbr_expected_results in filters:
-            with self.subTest(msg=f"Checking {filter}", filter=filter, nbr_expected_results=nbr_expected_results):
-                query = "query { cables(" + filter + "){ id }}"
+        for filterv, nbr_expected_results in filters:
+            with self.subTest(msg=f"Checking {filterv}", filterv=filterv, nbr_expected_results=nbr_expected_results):
+                query = "query { cables(" + filterv + "){ id }}"
                 result = self.execute_query(query)
                 self.assertIsNone(result.errors)
                 self.assertEqual(len(result.data["cables"]), nbr_expected_results)
@@ -1409,12 +1420,12 @@ query {
         filters = (
             (f'name: "{self.device1_frontports[0].name}"', 1),
             (f'device: "{self.device1.name}"', 4),
-            (f'_type: "{PortTypeChoices.TYPE_8P8C}"', 4),
+            (f'_type: "{PortTypeChoices.TYPE_8P8C}"', 3),
         )
 
-        for filter, nbr_expected_results in filters:
-            with self.subTest(msg=f"Checking {filter}", filter=filter, nbr_expected_results=nbr_expected_results):
-                query = "query { devices{ frontports(" + filter + "){ id }}}"
+        for filterv, nbr_expected_results in filters:
+            with self.subTest(msg=f"Checking {filterv}", filterv=filterv, nbr_expected_results=nbr_expected_results):
+                query = "query { devices{ frontports(" + filterv + "){ id }}}"
                 result = self.execute_query(query)
                 self.assertIsNone(result.errors)
                 self.assertEqual(len(result.data["devices"][0]["frontports"]), nbr_expected_results)
@@ -1426,12 +1437,12 @@ query {
         filters = (
             (f'name: "{self.device1_frontports[0].name}"', 1),
             (f'device: "{self.device1.name}"', 4),
-            (f'_type: "{PortTypeChoices.TYPE_8P8C}"', 4),
+            (f'_type: "{PortTypeChoices.TYPE_8P8C}"', 3),
         )
 
-        for filter, nbr_expected_results in filters:
-            with self.subTest(msg=f"Checking {filter}", filter=filter, nbr_expected_results=nbr_expected_results):
-                query = "query { sites{ devices{ frontports(" + filter + "){ id }}}}"
+        for filterv, nbr_expected_results in filters:
+            with self.subTest(msg=f"Checking {filterv}", filterv=filterv, nbr_expected_results=nbr_expected_results):
+                query = "query { sites{ devices{ frontports(" + filterv + "){ id }}}}"
                 result = self.execute_query(query)
                 self.assertIsNone(result.errors)
                 self.assertEqual(len(result.data["sites"][0]["devices"][0]["frontports"]), nbr_expected_results)
@@ -1540,9 +1551,9 @@ query {
             ("enabled: false", 1),
         )
 
-        for filter, nbr_expected_results in filters:
-            with self.subTest(msg=f"Checking {filter}", filter=filter, nbr_expected_results=nbr_expected_results):
-                query = "query { interfaces(" + filter + "){ id }}"
+        for filterv, nbr_expected_results in filters:
+            with self.subTest(msg=f"Checking {filterv}", filterv=filterv, nbr_expected_results=nbr_expected_results):
+                query = "query { interfaces(" + filterv + "){ id }}"
                 result = self.execute_query(query)
                 self.assertIsNone(result.errors)
                 self.assertEqual(len(result.data["interfaces"]), nbr_expected_results)
@@ -1559,9 +1570,9 @@ query {
             (f'vlan_id: "{self.vlan1.id}"', 1),
         )
 
-        for filter, nbr_expected_results in filters:
-            with self.subTest(msg=f"Checking {filter}", filter=filter, nbr_expected_results=nbr_expected_results):
-                query = "query { devices{ interfaces(" + filter + "){ id }}}"
+        for filterv, nbr_expected_results in filters:
+            with self.subTest(msg=f"Checking {filterv}", filterv=filterv, nbr_expected_results=nbr_expected_results):
+                query = "query { devices{ interfaces(" + filterv + "){ id }}}"
                 result = self.execute_query(query)
                 self.assertIsNone(result.errors)
                 self.assertEqual(len(result.data["devices"][0]["interfaces"]), nbr_expected_results)
@@ -1578,9 +1589,9 @@ query {
             (f'vlan_id: "{self.vlan1.id}"', 1),
         )
 
-        for filter, nbr_expected_results in filters:
-            with self.subTest(msg=f"Checking {filter}", filter=filter, nbr_expected_results=nbr_expected_results):
-                query = "query { sites{ devices{ interfaces(" + filter + "){ id }}}}"
+        for filterv, nbr_expected_results in filters:
+            with self.subTest(msg=f"Checking {filterv}", filterv=filterv, nbr_expected_results=nbr_expected_results):
+                query = "query { sites{ devices{ interfaces(" + filterv + "){ id }}}}"
                 result = self.execute_query(query)
                 self.assertIsNone(result.errors)
                 self.assertEqual(len(result.data["sites"][0]["devices"][0]["interfaces"]), nbr_expected_results)

@@ -13,10 +13,19 @@
                     <td>
                         <a href="{% url 'extras:relationshipassociation_list' %}?relationship={{relationship.slug}}&{{side}}_id={{object.id}}">
                             {{ value.queryset.count }}
-                            {% if value.queryset.count > 1 %}
-                                {{ value.peer_type.model_class|meta:"verbose_name_plural" }}
+                            {% comment %}
+                            If peer_type is a plugin model that has subsequently been uninstalled,
+                            peer_type.model_class will be None and we can't access its Meta.
+                            https://github.com/nautobot/nautobot/issues/2077
+                            {% endcomment %}
+                            {% if value.peer_type.model_class is not None %}
+                                {% if value.queryset.count > 1 %}
+                                    {{ value.peer_type.model_class|meta:"verbose_name_plural" }}
+                                {% else %}
+                                    {{ value.peer_type.model_class|meta:"verbose_name" }}
+                                {% endif %}
                             {% else %}
-                                {{ value.peer_type.model_class|meta:"verbose_name" }}
+                                {{ value.peer_type }}(s)
                             {% endif %}
                         </a>
                     </td>

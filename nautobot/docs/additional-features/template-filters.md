@@ -11,6 +11,8 @@ Both Django Template and Jinja2 can be extended with a library of functions, cal
 
 ## Netutils Filters
 
++++ 1.2.0
+
 [Netutils](https://netutils.readthedocs.io/en/latest/) is an external library, maintained by Network to Code, that is focusing on providing a collection of functions for common network automation tasks.
 
 Please [check the netutils documentation](https://netutils.readthedocs.io/en/latest/netutils/index.html) to see the list of available functions.
@@ -115,6 +117,20 @@ Humanize speeds given in Kbps.
 
 ```django
 {{ speed_value | humanize_speed }}
+```
+
+### hyperlinked_object
+
++++ 1.4.0
+
+Render and link to a Django model instance, if any, or render a placeholder if not.
+
+Uses `object.display` if available, otherwise uses the string representation of the object.
+If the object defines `get_absolute_url()` this will be used to hyperlink the displayed object;
+additionally if there is an `object.description` this will be used as the title of the hyperlink.
+
+```django
+{{ device|hyperlinked_object }}
 ```
 
 ### meta

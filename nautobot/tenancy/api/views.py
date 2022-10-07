@@ -2,7 +2,7 @@ from rest_framework.routers import APIRootView
 
 from nautobot.circuits.models import Circuit
 from nautobot.dcim.models import Device, Rack, Site
-from nautobot.extras.api.views import CustomFieldModelViewSet
+from nautobot.extras.api.views import NautobotModelViewSet
 from nautobot.ipam.models import IPAddress, Prefix, VLAN, VRF
 from nautobot.tenancy import filters
 from nautobot.tenancy.models import Tenant, TenantGroup
@@ -25,7 +25,7 @@ class TenancyRootView(APIRootView):
 #
 
 
-class TenantGroupViewSet(CustomFieldModelViewSet):
+class TenantGroupViewSet(NautobotModelViewSet):
     queryset = TenantGroup.objects.add_related_count(
         TenantGroup.objects.all(), Tenant, "group", "tenant_count", cumulative=True
     )
@@ -38,7 +38,8 @@ class TenantGroupViewSet(CustomFieldModelViewSet):
 #
 
 
-class TenantViewSet(CustomFieldModelViewSet):
+class TenantViewSet(NautobotModelViewSet):
+    # v2 TODO(jathan): Replace prefetch_related with select_related (it should stay for tags)
     queryset = Tenant.objects.prefetch_related("group", "tags").annotate(
         circuit_count=count_related(Circuit, "tenant"),
         device_count=count_related(Device, "tenant"),

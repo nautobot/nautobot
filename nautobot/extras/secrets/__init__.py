@@ -1,4 +1,4 @@
-from abc import ABC, abstractmethod, abstractproperty
+from abc import ABC, abstractmethod
 
 from nautobot.extras.registry import registry
 
@@ -11,7 +11,8 @@ class SecretsProvider(ABC):
     def __repr__(self):
         return f"<{self.name}>"
 
-    @abstractproperty
+    @property
+    @abstractmethod
     def slug(self):
         """String uniquely identifying this class; will be used as a key to look up the class owning a given Secret."""
 
@@ -20,7 +21,8 @@ class SecretsProvider(ABC):
         """Human-friendly name for this class, falling back to the slug if not overridden."""
         return self.slug
 
-    @abstractproperty
+    @property
+    @abstractmethod
     def ParametersForm(self):
         """Django Form class with inputs for describing the parameter(s) required for a Secret to use this Provider.
 

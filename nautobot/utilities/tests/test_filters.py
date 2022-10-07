@@ -6,7 +6,7 @@ from mptt.fields import TreeForeignKey
 from taggit.managers import TaggableManager
 
 from nautobot.dcim.choices import DeviceFaceChoices
-from nautobot.dcim.fields import MACAddressField
+from nautobot.dcim.fields import MACAddressCharField
 from nautobot.dcim.filters import DeviceFilterSet, SiteFilterSet
 from nautobot.dcim.models import (
     Device,
@@ -15,6 +15,7 @@ from nautobot.dcim.models import (
     Interface,
     Manufacturer,
     Platform,
+    PowerPanel,
     Rack,
     Region,
     Site,
@@ -28,6 +29,7 @@ from nautobot.utilities.filters import (
     MultiValueDateTimeFilter,
     MultiValueNumberFilter,
     MultiValueTimeFilter,
+    NaturalKeyOrPKMultipleChoiceFilter,
     SearchFilter,
     TagFilter,
     TreeNodeMultipleChoiceFilter,
@@ -35,13 +37,12 @@ from nautobot.utilities.filters import (
 
 
 class TreeNodeMultipleChoiceFilterTest(TestCase):
-    class SiteFilterSet(django_filters.FilterSet):
-        region = TreeNodeMultipleChoiceFilter(
-            queryset=Region.objects.all(),
-            field_name="region",
-            lookup_expr="in",
-            to_field_name="slug",
-        )
+    class SiteFilterSet(BaseFilterSet):
+        region = TreeNodeMultipleChoiceFilter(queryset=Region.objects.all())
+
+        class Meta:
+            model = Site
+            fields = []
 
     def setUp(self):
 
@@ -49,45 +50,264 @@ class TreeNodeMultipleChoiceFilterTest(TestCase):
 
         self.region1 = Region.objects.create(name="Test Region 1", slug="test-region-1")
         self.region2 = Region.objects.create(name="Test Region 2", slug="test-region-2")
+        self.region2a = Region.objects.create(name="Test Region 2A", slug="test-region-2a", parent=self.region2)
+        self.region2ab = Region.objects.create(name="Test Region 2A-B", slug="test-region-2a-b", parent=self.region2a)
         self.site1 = Site.objects.create(region=self.region1, name="Test Site 1", slug="test-site1")
         self.site2 = Site.objects.create(region=self.region2, name="Test Site 2", slug="test-site2")
-        self.site3 = Site.objects.create(region=None, name="Test Site 3", slug="test-site3")
+        self.site2a = Site.objects.create(region=self.region2a, name="Test Site 2a", slug="test-site2a")
+        self.site2ab = Site.objects.create(region=self.region2ab, name="Test Site 2a-b", slug="test-site2a-b")
+        self.site0 = Site.objects.create(region=None, name="Test Site 0", slug="test-site0")
 
         self.queryset = Site.objects.all()
 
-    def test_filter_single(self):
+    def test_filter_single_slug(self):
 
         kwargs = {"region": ["test-region-1"]}
         qs = self.SiteFilterSet(kwargs, self.queryset).qs
 
-        self.assertEqual(qs.count(), 1)
-        self.assertEqual(qs[0], self.site1)
+        self.assertCountEqual(list(qs), [self.site1])
 
-    def test_filter_multiple(self):
+    def test_filter_single_pk(self):
+
+        kwargs = {"region": [self.region1.pk]}
+        qs = self.SiteFilterSet(kwargs, self.queryset).qs
+
+        self.assertCountEqual(list(qs), [self.site1])
+
+    def test_filter_multiple_slug(self):
 
         kwargs = {"region": ["test-region-1", "test-region-2"]}
         qs = self.SiteFilterSet(kwargs, self.queryset).qs
 
-        self.assertEqual(qs.count(), 2)
-        self.assertEqual(qs[0], self.site1)
-        self.assertEqual(qs[1], self.site2)
+        self.assertCountEqual(list(qs), [self.site1, self.site2, self.site2a, self.site2ab])
 
     def test_filter_null(self):
 
         kwargs = {"region": [settings.FILTERS_NULL_CHOICE_VALUE]}
         qs = self.SiteFilterSet(kwargs, self.queryset).qs
 
-        self.assertEqual(qs.count(), 1)
-        self.assertEqual(qs[0], self.site3)
+        self.assertCountEqual(list(qs), [self.site0])
 
-    def test_filter_combined(self):
+    def test_filter_combined_slug(self):
 
         kwargs = {"region": ["test-region-1", settings.FILTERS_NULL_CHOICE_VALUE]}
         qs = self.SiteFilterSet(kwargs, self.queryset).qs
 
-        self.assertEqual(qs.count(), 2)
-        self.assertEqual(qs[0], self.site1)
-        self.assertEqual(qs[1], self.site3)
+        self.assertCountEqual(list(qs), [self.site0, self.site1])
+
+    def test_filter_combined_pk(self):
+
+        kwargs = {"region": [self.region2.pk, settings.FILTERS_NULL_CHOICE_VALUE]}
+        qs = self.SiteFilterSet(kwargs, self.queryset).qs
+
+        self.assertCountEqual(list(qs), [self.site0, self.site2, self.site2a, self.site2ab])
+
+    def test_filter_single_slug_exclude(self):
+
+        kwargs = {"region__n": ["test-region-1"]}
+        qs = self.SiteFilterSet(kwargs, self.queryset).qs
+
+        self.assertCountEqual(list(qs), [self.site0, self.site2, self.site2a, self.site2ab])
+
+    def test_filter_single_pk_exclude(self):
+
+        kwargs = {"region__n": [self.region2.pk]}
+        qs = self.SiteFilterSet(kwargs, self.queryset).qs
+
+        self.assertCountEqual(list(qs), [self.site0, self.site1])
+
+    def test_filter_multiple_slug_exclude(self):
+
+        kwargs = {"region__n": ["test-region-1", "test-region-2"]}
+        qs = self.SiteFilterSet(kwargs, self.queryset).qs
+
+        self.assertCountEqual(list(qs), [self.site0])
+
+    def test_filter_null_exclude(self):
+
+        kwargs = {"region__n": [settings.FILTERS_NULL_CHOICE_VALUE]}
+        qs = self.SiteFilterSet(kwargs, self.queryset).qs
+
+        self.assertCountEqual(list(qs), [self.site1, self.site2, self.site2a, self.site2ab])
+
+    def test_filter_combined_slug_exclude(self):
+
+        kwargs = {"region__n": ["test-region-1", settings.FILTERS_NULL_CHOICE_VALUE]}
+        qs = self.SiteFilterSet(kwargs, self.queryset).qs
+
+        self.assertCountEqual(list(qs), [self.site2, self.site2a, self.site2ab])
+
+    def test_filter_combined_pk_exclude(self):
+
+        kwargs = {"region__n": [self.region2.pk, settings.FILTERS_NULL_CHOICE_VALUE]}
+        qs = self.SiteFilterSet(kwargs, self.queryset).qs
+
+        self.assertCountEqual(list(qs), [self.site1])
+
+
+class NaturalKeyOrPKMultipleChoiceFilterTest(TestCase):
+    class SiteFilterSet(BaseFilterSet):
+        power_panels = NaturalKeyOrPKMultipleChoiceFilter(
+            field_name="powerpanel",
+            queryset=PowerPanel.objects.all(),
+            to_field_name="name",
+        )
+
+        class Meta:
+            model = Site
+            fields = []
+
+    queryset = Site.objects.all()
+    filterset = SiteFilterSet
+
+    def setUp(self):
+
+        super().setUp()
+
+        self.site0 = Site.objects.create(name="Test Site 0", slug="test-site0")
+        self.site1 = Site.objects.create(name="Test Site 1", slug="test-site1")
+        self.site2 = Site.objects.create(name="Test Site 2", slug="test-site2")
+
+        self.power_panel1 = PowerPanel.objects.create(site=self.site1, name="test-power-panel1")
+        self.power_panel2 = PowerPanel.objects.create(site=self.site2, name="test-power-panel2")
+        self.power_panel2a = PowerPanel.objects.create(site=self.site2, name="test-power-panel2a")
+        self.power_panel2b = PowerPanel.objects.create(site=self.site2, name="test-power-panel2b")
+        self.power_panel3 = PowerPanel.objects.create(site=self.site1, name="test-power-panel3")
+        self.power_panel3a = PowerPanel.objects.create(site=self.site2, name="test-power-panel3")
+
+    def test_filter_single_name(self):
+
+        kwargs = {"power_panels": ["test-power-panel1"]}
+        qs = self.SiteFilterSet(kwargs, self.queryset).qs
+
+        self.assertCountEqual(list(qs), [self.site1])
+
+    def test_filter_single_pk(self):
+
+        kwargs = {"power_panels": [self.power_panel1.pk]}
+        qs = self.SiteFilterSet(kwargs, self.queryset).qs
+
+        self.assertCountEqual(list(qs), [self.site1])
+
+    def test_filter_multiple_name(self):
+
+        kwargs = {"power_panels": ["test-power-panel1", "test-power-panel2"]}
+        qs = self.SiteFilterSet(kwargs, self.queryset).qs
+
+        self.assertCountEqual(list(qs), [self.site1, self.site2])
+
+    def test_filter_duplicate_name(self):
+
+        kwargs = {"power_panels": ["test-power-panel3"]}
+        qs = self.SiteFilterSet(kwargs, self.queryset).qs
+
+        self.assertCountEqual(list(qs), [self.site1, self.site2])
+
+    def test_filter_null(self):
+
+        kwargs = {"power_panels": [settings.FILTERS_NULL_CHOICE_VALUE]}
+        qs = self.SiteFilterSet(kwargs, self.queryset).qs
+
+        self.assertCountEqual(list(qs), [self.site0])
+
+    def test_filter_combined_name(self):
+
+        kwargs = {"power_panels": ["test-power-panel1", settings.FILTERS_NULL_CHOICE_VALUE]}
+        qs = self.SiteFilterSet(kwargs, self.queryset).qs
+
+        self.assertCountEqual(list(qs), [self.site0, self.site1])
+
+    def test_filter_combined_pk(self):
+
+        kwargs = {"power_panels": [self.power_panel2.pk, settings.FILTERS_NULL_CHOICE_VALUE]}
+        qs = self.SiteFilterSet(kwargs, self.queryset).qs
+
+        self.assertCountEqual(list(qs), [self.site0, self.site2])
+
+    def test_filter_single_name_exclude(self):
+
+        kwargs = {"power_panels__n": ["test-power-panel1"]}
+        qs = self.SiteFilterSet(kwargs, self.queryset).qs
+
+        self.assertCountEqual(list(qs), [self.site0, self.site2])
+
+    def test_filter_single_pk_exclude(self):
+
+        kwargs = {"power_panels__n": [self.power_panel2.pk]}
+        qs = self.SiteFilterSet(kwargs, self.queryset).qs
+
+        self.assertCountEqual(list(qs), [self.site0, self.site1])
+
+    def test_filter_multiple_name_exclude(self):
+
+        kwargs = {"power_panels__n": ["test-power-panel1", "test-power-panel2"]}
+        qs = self.SiteFilterSet(kwargs, self.queryset).qs
+
+        self.assertCountEqual(list(qs), [self.site0])
+
+    def test_filter_duplicate_name_exclude(self):
+
+        kwargs = {"power_panels__n": ["test-power-panel3"]}
+        qs = self.SiteFilterSet(kwargs, self.queryset).qs
+
+        self.assertCountEqual(list(qs), [self.site0])
+
+    def test_filter_null_exclude(self):
+
+        kwargs = {"power_panels__n": [settings.FILTERS_NULL_CHOICE_VALUE]}
+        qs = self.SiteFilterSet(kwargs, self.queryset).qs
+
+        self.assertCountEqual(list(qs), [self.site1, self.site2])
+
+    def test_filter_combined_name_exclude(self):
+
+        kwargs = {"power_panels__n": ["test-power-panel1", settings.FILTERS_NULL_CHOICE_VALUE]}
+        qs = self.SiteFilterSet(kwargs, self.queryset).qs
+
+        self.assertCountEqual(list(qs), [self.site2])
+
+    def test_filter_combined_pk_exclude(self):
+
+        kwargs = {"power_panels__n": [self.power_panel2.pk, settings.FILTERS_NULL_CHOICE_VALUE]}
+        qs = self.SiteFilterSet(kwargs, self.queryset).qs
+
+        self.assertCountEqual(list(qs), [self.site1])
+
+    def test_get_filter_predicate(self):
+        """
+        Test that `get_filter_predicate()` has hybrid results depending on whether value is a UUID
+        or a slug.
+        """
+
+        # Test UUID (pk)
+        uuid_obj = self.power_panel1.pk
+        kwargs = {"power_panels": [uuid_obj]}
+        fs = self.SiteFilterSet(kwargs, self.queryset)
+        self.assertCountEqual(list(fs.qs), [self.site1])
+        self.assertEqual(
+            fs.filters["power_panels"].get_filter_predicate(uuid_obj),
+            {"powerpanel": str(uuid_obj)},
+        )
+
+        # Test model instance (pk)
+        instance = self.power_panel1
+        kwargs = {"power_panels": [instance]}
+        fs = self.SiteFilterSet(kwargs, self.queryset)
+        self.assertCountEqual(list(fs.qs), [self.site1])
+        self.assertEqual(
+            fs.filters["power_panels"].get_filter_predicate(instance),
+            {"powerpanel": str(instance.pk)},
+        )
+
+        # Test string (name in this case)
+        name = self.power_panel1.name
+        kwargs = {"power_panels": [name]}
+        fs = self.SiteFilterSet(kwargs, self.queryset)
+        self.assertCountEqual(list(fs.qs), [self.site1])
+        self.assertEqual(
+            fs.filters["power_panels"].get_filter_predicate(name),
+            {"powerpanel__name": name},
+        )
 
 
 class TestModel(models.Model):
@@ -100,7 +320,7 @@ class TestModel(models.Model):
     datefield = models.DateField()
     datetimefield = models.DateTimeField()
     integerfield = models.IntegerField()
-    macaddressfield = MACAddressField()
+    macaddressfield = MACAddressCharField()
     textfield = models.TextField()
     timefield = models.TimeField()
     treeforeignkeyfield = TreeForeignKey(to="self", on_delete=models.CASCADE)
@@ -451,8 +671,7 @@ class BaseFilterSetTest(TestCase):
 
     def test_tree_node_multiple_choice_filter(self):
         self.assertIsInstance(self.filters["treeforeignkeyfield"], TreeNodeMultipleChoiceFilter)
-        # TODO: lookup_expr different for negation?
-        self.assertEqual(self.filters["treeforeignkeyfield"].lookup_expr, "exact")
+        self.assertEqual(self.filters["treeforeignkeyfield"].lookup_expr, "in")
         self.assertEqual(self.filters["treeforeignkeyfield"].exclude, False)
         self.assertEqual(self.filters["treeforeignkeyfield__n"].lookup_expr, "in")
         self.assertEqual(self.filters["treeforeignkeyfield__n"].exclude, True)
@@ -462,6 +681,8 @@ class DynamicFilterLookupExpressionTest(TestCase):
     """
     Validate function of automatically generated filters using the Device model as an example.
     """
+
+    fixtures = ("status",)
 
     device_queryset = Device.objects.all()
     device_filterset = DeviceFilterSet
@@ -864,7 +1085,7 @@ class SearchFilterTest(TestCase):
         with self.assertRaises(TypeError):
             barf = None
 
-            class BarfSiteFilterSet(SiteFilterSet):
+            class BarfSiteFilterSet(SiteFilterSet):  # pylint: disable=unused-variable
                 q = SearchFilter(
                     filter_predicates={
                         "asn": {"preprocessor": barf, "lookup_expr": "exact"},
@@ -874,11 +1095,11 @@ class SearchFilterTest(TestCase):
         # Missing preprocessor callable in expanded form should also fail
         with self.assertRaises(TypeError):
 
-            class MissingSiteFilterSet(SiteFilterSet):
+            class MissingSiteFilterSet(SiteFilterSet):  # pylint: disable=unused-variable
                 q = SearchFilter(filter_predicates={"asn": {"lookup_expr": "exact"}})
 
         # Incorrect lookup_info type (must be str or dict)
         with self.assertRaises(TypeError):
 
-            class InvalidSiteFilterSet(SiteFilterSet):
+            class InvalidSiteFilterSet(SiteFilterSet):  # pylint: disable=unused-variable
                 q = SearchFilter(filter_predicates={"asn": ["icontains"]})

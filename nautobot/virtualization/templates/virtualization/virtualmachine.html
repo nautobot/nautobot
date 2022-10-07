@@ -59,21 +59,17 @@
                 <tr>
                     <td>Tenant</td>
                     <td>
-                        {% if object.tenant %}
-                            {% if object.tenant.group %}
-                                <a href="{{ object.tenant.group.get_absolute_url }}">{{ object.tenant.group }}</a> /
-                            {% endif %}
-                            <a href="{{ object.tenant.get_absolute_url }}">{{ object.tenant }}</a>
-                        {% else %}
-                            <span class="text-muted">None</span>
+                        {% if object.tenant and object.tenant.group %}
+                            {{ object.tenant.group|hyperlinked_object }} /
                         {% endif %}
+                        {{ object.tenant|hyperlinked_object }}
                     </td>
                 </tr>
                 <tr>
                     <td>Primary IPv4</td>
                     <td>
                         {% if object.primary_ip4 %}
-                            <a href="{% url 'ipam:ipaddress' pk=object.primary_ip4.pk %}">{{ object.primary_ip4.address.ip }}</a>
+                            {{ object.primary_ip4|hyperlinked_object }}
                             {% if object.primary_ip4.nat_inside %}
                                 <span>(NAT for {{ object.primary_ip4.nat_inside.address.ip }})</span>
                             {% elif object.primary_ip4.nat_outside_list.exists %}
@@ -88,7 +84,7 @@
                     <td>Primary IPv6</td>
                     <td>
                         {% if object.primary_ip6 %}
-                            <a href="{% url 'ipam:ipaddress' pk=object.primary_ip6.pk %}">{{ object.primary_ip6.address.ip }}</a>
+                            {{ object.primary_ip6|hyperlinked_object }}
                             {% if object.primary_ip6.nat_inside %}
                                 <span>(NAT for {{ object.primary_ip6.nat_inside.address.ip }})</span>
                             {% elif object.primary_ip6.nat_outside_list.exists %}
@@ -125,9 +121,9 @@
                     <td>Cluster</td>
                     <td>
                         {% if object.cluster.group %}
-                            <a href="{{ object.cluster.group.get_absolute_url }}">{{ object.cluster.group }}</a> /
+                            {{ object.cluster.group|hyperlinked_object }} /
                         {% endif %}
-                        <a href="{{ object.cluster.get_absolute_url }}">{{ object.cluster }}</a>
+                        {{ object.cluster|hyperlinked_object }}
                     </td>
                 </tr>
                 <tr>

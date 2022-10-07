@@ -7,7 +7,7 @@ from packaging import version
 
 from django.core.exceptions import ValidationError
 from django.template.loader import get_template
-from django.urls import URLPattern
+from django.urls import get_resolver, URLPattern
 
 from nautobot.core.apps import (
     NautobotConfig,
@@ -95,6 +95,7 @@ class PluginConfig(NautobotConfig):
     menu_items = "navigation.menu_items"
     secrets_providers = "secrets.secrets_providers"
     template_extensions = "template_content.template_extensions"
+    override_views = "views.override_views"
 
     def ready(self):
         """Callback after plugin app is loaded."""
@@ -190,6 +191,15 @@ class PluginConfig(NautobotConfig):
                     self.features["filter_extensions"]["filterform_fields"].append(
                         f"{filter_extension.model} -> {filterform_field_name}"
                     )
+
+        # Register override view (if any)
+        override_views = import_object(f"{self.__module__}.{self.override_views}")
+        if override_views is not None:
+            for qualified_view_name, view in override_views.items():
+                self.features.setdefault("overridden_views", []).append(
+                    (qualified_view_name, f"{view.__module__}.{view.__name__}")
+                )
+            register_override_views(override_views, self.name)
 
     @classmethod
     def validate(cls, user_config, nautobot_version):
@@ -304,6 +314,25 @@ class PluginTemplateExtension:
         Buttons that will be rendered and added to the existing list of buttons on the detail page view. Content
         should be returned as an HTML string. Note that content does not need to be marked as safe because this is
         automatically handled.
+        """
+        raise NotImplementedError
+
+    def detail_tabs(self):
+        """
+        Tabs that will be rendered and added to the existing list of tabs on the detail page view.
+        Tabs will be ordered by their position in the list.
+
+        Content should be returned as a list of dicts in the format:
+        [
+            {
+                "title": "<title>",
+                "url": "<url for the tab link>",
+            },
+            {
+                "title": "<title>",
+                "url": "<url for the tab link>",
+            },
+        ]
         """
         raise NotImplementedError
 
@@ -561,7 +590,7 @@ class PluginCustomValidator:
     """
     This class is used to register plugin custom model validators which act on specified models. It contains the clean
     method which is overridden by plugin authors to execute custom validation logic. Plugin authors must raise
-    ValidationError within this method to trigger validation error messages which are propgated to the user.
+    ValidationError within this method to trigger validation error messages which are propagated to the user.
     A convenience method `validation_error(<message>)` may be used for this purpose.
 
     The `model` attribute on the class defines the model to which this validator is registered. It
@@ -576,7 +605,7 @@ class PluginCustomValidator:
     def validation_error(self, message):
         """
         Convenience method for raising `django.core.exceptions.ValidationError` which is required in order to
-        trigger validation error messages which are propgated to the user.
+        trigger validation error messages which are propagated to the user.
         """
         raise ValidationError(message)
 
@@ -584,7 +613,7 @@ class PluginCustomValidator:
         """
         Implement custom model validation in the standard Django clean method pattern. The model instance is accessed
         with the `object` key within `self.context`, e.g. `self.context['object']`. ValidationError must be raised to
-        prevent saving model instance changes, and propogate messages to the user. For convenience,
+        prevent saving model instance changes, and propagate messages to the user. For convenience,
         `self.validation_error(<message>)` may be called to raise a ValidationError.
         """
         raise NotImplementedError
@@ -604,3 +633,33 @@ def register_custom_validators(class_list):
             raise TypeError(f"PluginCustomValidator class {custom_validator} does not define a valid model!")
 
         registry["plugin_custom_validators"][custom_validator.model].append(custom_validator)
+
+
+def register_override_views(override_views, plugin):
+
+    validation_error = (
+        "Plugin '{}' tried to override view '{}' but did not contain a valid app name "
+        "(e.g. `dcim:device`, `plugins:myplugin:myview`)."
+    )
+
+    for qualified_view_name, view in override_views.items():
+        resolver = get_resolver()
+
+        try:
+            qualified_app_name, view_name = qualified_view_name.rsplit(":", 1)
+            app_resolver = resolver
+            for app_name in qualified_app_name.split(":"):
+                app_resolver_tupl = app_resolver.namespace_dict.get(app_name)
+                if app_resolver_tupl is None:
+                    # We couldn't find the app, regardless of nesting
+                    raise ValidationError(validation_error.format(plugin, qualified_view_name))
+
+                app_resolver = app_resolver_tupl[1]
+
+        except ValueError:
+            # This is only thrown when qualified_view_name does not contain ":"
+            raise ValidationError(validation_error.format(plugin, qualified_view_name))
+
+        for pattern in app_resolver.url_patterns:
+            if isinstance(pattern, URLPattern) and hasattr(pattern, "name") and pattern.name == view_name:
+                pattern.callback = view

@@ -25,9 +25,5 @@ LOGGING = {
             "handlers": ["normal_console"],
             "level": LOG_LEVEL,
         },
-        "rq.worker": {
-            "handlers": ["normal_console"],
-            "level": LOG_LEVEL,
-        },
     },
 }

@@ -4,11 +4,14 @@ import uuid
 from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ValidationError
 from django.urls import reverse
+from django.utils.html import format_html
 
 from nautobot.dcim.models import Site, Rack
+from nautobot.dcim.tables import SiteTable
 from nautobot.ipam.models import VLAN
 from nautobot.extras.choices import RelationshipTypeChoices
 from nautobot.extras.models import Relationship, RelationshipAssociation
+from nautobot.utilities.tables import RelationshipColumn
 from nautobot.utilities.testing import TestCase
 from nautobot.utilities.forms import (
     DynamicModelChoiceField,
@@ -48,7 +51,7 @@ class RelationshipBaseTest(TestCase):
             slug="vlan-rack",
             source_type=self.rack_ct,
             source_label="My Vlans",
-            source_filter={"site": ["site-a"]},
+            source_filter={"site": ["site-a", "site-b", "site-c"]},
             destination_type=self.vlan_ct,
             destination_label="My Racks",
             type=RelationshipTypeChoices.TYPE_MANY_TO_MANY,
@@ -315,7 +318,7 @@ class RelationshipTest(RelationshipBaseTest):
         self.assertFalse(field.required)
         self.assertIsInstance(field, DynamicModelMultipleChoiceField)
         self.assertEqual(field.label, "My Racks")
-        self.assertEqual(field.query_params, {"site": ["site-a"]})
+        self.assertEqual(field.query_params, {"site": ["site-a", "site-b", "site-c"]})
 
         field = self.m2ms_1.to_form_field("peer")
         self.assertFalse(field.required)
@@ -383,6 +386,38 @@ class RelationshipAssociationTest(RelationshipBaseTest):
         ]
         for cra in self.invalid_relationship_associations:
             cra.validated_save()
+
+    def test_create_invalid_relationship_association(self):
+        """Test creation of invalid relationship association restricted by destination/source filter."""
+
+        relationship = Relationship.objects.create(
+            name="Site to Rack Rel 1",
+            slug="site-to-rack-rel-1",
+            source_type=self.site_ct,
+            source_filter={"name": [self.sites[0].name]},
+            destination_type=self.rack_ct,
+            destination_label="Primary Rack",
+            type=RelationshipTypeChoices.TYPE_ONE_TO_ONE,
+            destination_filter={"name": [self.racks[0].name]},
+        )
+
+        associations = (
+            (
+                "source",
+                RelationshipAssociation(relationship=relationship, source=self.sites[1], destination=self.racks[0]),
+            ),
+            (
+                "destination",
+                RelationshipAssociation(relationship=relationship, source=self.sites[0], destination=self.racks[1]),
+            ),
+        )
+
+        for side_name, association in associations:
+            side = getattr(association, side_name)
+            with self.assertRaises(ValidationError) as handler:
+                association.validated_save()
+            expected_errors = {side_name: [f"{side} violates {relationship} {side_name}_filter restriction"]}
+            self.assertEqual(handler.exception.message_dict, expected_errors)
 
     def test_exception_not_raised_when_updating_instance_with_relationship_type_o2o_or_o2m(self):
         """Validate 'Unable to create more than one relationship-association...' not raise when updating instance with
@@ -771,3 +806,151 @@ class RelationshipAssociationTest(RelationshipBaseTest):
         self.assertEqual(1, RelationshipAssociation.objects.filter(destination_ipam_vlan=self.vlans[0]).count())
         self.assertEqual(1, RelationshipAssociation.objects.filter(destination_ipam_vlan=self.vlans[1]).count())
         self.assertEqual(1, RelationshipAssociation.objects.filter(destination_dcim_site=self.sites[0]).count())
+
+
+class RelationshipTableTest(RelationshipBaseTest):
+    """
+    Test inclusion of relationships in object table views.
+    """
+
+    def test_relationship_table_render(self):
+        queryset = Site.objects.filter(name=self.sites[0].name)
+        cr_1 = RelationshipAssociation(
+            relationship=self.o2m_1,
+            source_id=self.sites[0].id,
+            source_type=self.site_ct,
+            destination_id=self.vlans[0].id,
+            destination_type=self.vlan_ct,
+        )
+        cr_1.validated_save()
+        cr_2 = RelationshipAssociation(
+            relationship=self.o2m_1,
+            source_id=self.sites[0].id,
+            source_type=self.site_ct,
+            destination_id=self.vlans[1].id,
+            destination_type=self.vlan_ct,
+        )
+        cr_2.validated_save()
+        cr_3 = RelationshipAssociation(
+            relationship=self.o2o_1,
+            source_id=self.racks[0].id,
+            source_type=self.rack_ct,
+            destination_id=self.sites[0].id,
+            destination_type=self.site_ct,
+        )
+        cr_3.validated_save()
+        cr_4 = RelationshipAssociation(
+            relationship=self.o2o_2,
+            source_id=self.sites[0].id,
+            source_type=self.site_ct,
+            destination_id=self.sites[1].id,
+            destination_type=self.site_ct,
+        )
+        cr_4.validated_save()
+        cr_5 = RelationshipAssociation(
+            relationship=self.m2ms_1,
+            source_id=self.sites[0].id,
+            source_type=self.site_ct,
+            destination_id=self.sites[1].id,
+            destination_type=self.site_ct,
+        )
+        cr_5.validated_save()
+        cr_6 = RelationshipAssociation(
+            relationship=self.m2ms_1,
+            source_id=self.sites[0].id,
+            source_type=self.site_ct,
+            destination_id=self.sites[3].id,
+            destination_type=self.site_ct,
+        )
+        cr_6.validated_save()
+
+        # Test non-symmetric many to many with same source_type and same destination_type
+        self.m2m_same_type = Relationship(
+            name="Site to Site",
+            slug="site-to-site",
+            source_type=self.site_ct,
+            destination_type=self.site_ct,
+            type=RelationshipTypeChoices.TYPE_MANY_TO_MANY,
+        )
+        self.m2m_same_type.validated_save()
+        cr_7 = RelationshipAssociation(
+            relationship=self.m2m_same_type,
+            source_id=self.sites[0].id,
+            source_type=self.site_ct,
+            destination_id=self.sites[2].id,
+            destination_type=self.site_ct,
+        )
+        cr_7.validated_save()
+
+        cr_8 = RelationshipAssociation(
+            relationship=self.m2m_same_type,
+            source_id=self.sites[3].id,
+            source_type=self.site_ct,
+            destination_id=self.sites[0].id,
+            destination_type=self.site_ct,
+        )
+        cr_8.validated_save()
+
+        site_table = SiteTable(queryset)
+
+        relationship_column_expected = {
+            "site-vlan_src": [
+                format_html(
+                    '<a href="{}?relationship={}&{}_id={}">{} {}</a>',
+                    reverse("extras:relationshipassociation_list"),
+                    cr_1.relationship.slug,
+                    "source",
+                    self.sites[0].id,
+                    2,
+                    "VLANs",
+                )
+            ],
+            "primary-rack-site_dst": [f'<a href="{self.racks[0].get_absolute_url()}">{self.racks[0].__str__()}</a>'],
+            "alphabetical-sites_src": [f'<a href="{self.sites[1].get_absolute_url()}">{self.sites[1].__str__()}</a>'],
+            "related-sites_peer": [
+                format_html(
+                    '<a href="{}?relationship={}&{}_id={}">{} {}</a>',
+                    reverse("extras:relationshipassociation_list"),
+                    cr_5.relationship.slug,
+                    "peer",
+                    self.sites[0].id,
+                    2,
+                    "sites",
+                )
+            ],
+            "site-to-site_src": [
+                format_html(
+                    '<a href="{}?relationship={}&{}_id={}">{} {}</a>',
+                    reverse("extras:relationshipassociation_list"),
+                    cr_7.relationship.slug,
+                    "source",
+                    self.sites[0].id,
+                    1,
+                    "site",
+                )
+            ],
+            "site-to-site_dst": [
+                format_html(
+                    '<a href="{}?relationship={}&{}_id={}">{} {}</a>',
+                    reverse("extras:relationshipassociation_list"),
+                    cr_8.relationship.slug,
+                    "destination",
+                    self.sites[0].id,
+                    1,
+                    "site",
+                )
+            ],
+        }
+        bound_row = site_table.rows[0]
+
+        for col_name, col_expected_value in relationship_column_expected.items():
+            internal_col_name = "cr_" + col_name
+            relationship_column = site_table.base_columns.get(internal_col_name)
+            self.assertIsNotNone(relationship_column)
+            self.assertIsInstance(relationship_column, RelationshipColumn)
+
+            rendered_value = bound_row.get_cell(internal_col_name)
+            # Test if the expected value is in the rendered value.
+            # Exact match is difficult because the order of rendering is unpredictable.
+            for value in col_expected_value:
+                self.assertIn(value, rendered_value)

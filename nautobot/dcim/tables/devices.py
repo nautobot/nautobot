@@ -172,6 +172,7 @@ class DeviceTable(StatusTableMixin, BaseTable):
     name = tables.TemplateColumn(order_by=("_name",), template_code=DEVICE_LINK)
     tenant = TenantColumn()
     site = tables.Column(linkify=True)
+    location = tables.Column(linkify=True)
     rack = tables.Column(linkify=True)
     device_role = ColoredLabelColumn(verbose_name="Role")
     device_type = tables.LinkColumn(
@@ -203,6 +204,7 @@ class DeviceTable(StatusTableMixin, BaseTable):
             "serial",
             "asset_tag",
             "site",
+            "location",
             "rack",
             "position",
             "face",
@@ -222,6 +224,7 @@ class DeviceTable(StatusTableMixin, BaseTable):
             "status",
             "tenant",
             "site",
+            "location",
             "rack",
             "device_role",
             "device_type",
@@ -613,6 +616,8 @@ class DeviceInterfaceTable(InterfaceTable):
         '{% endif %}"></i> <a href="{{ record.get_absolute_url }}">{{ value }}</a>',
         attrs={"td": {"class": "text-nowrap"}},
     )
+    parent_interface = tables.Column(linkify=True, verbose_name="Parent")
+    bridge = tables.Column(linkify=True)
     lag = tables.Column(linkify=True, verbose_name="LAG")
     actions = ButtonsColumn(model=Interface, buttons=("edit", "delete"), prepend_template=INTERFACE_BUTTONS)
 
@@ -622,9 +627,12 @@ class DeviceInterfaceTable(InterfaceTable):
             "pk",
             "name",
             "status",
+            "device",
             "label",
             "enabled",
             "type",
+            "parent_interface",
+            "bridge",
             "lag",
             "mgmt_only",
             "mtu",
@@ -640,13 +648,14 @@ class DeviceInterfaceTable(InterfaceTable):
             "tagged_vlans",
             "actions",
         )
-        default_columns = (
+        default_columns = [
             "pk",
             "name",
             "status",
             "label",
             "enabled",
             "type",
+            "parent_interface",
             "lag",
             "mtu",
             "mode",
@@ -655,7 +664,7 @@ class DeviceInterfaceTable(InterfaceTable):
             "cable",
             "connection",
             "actions",
-        )
+        ]
         row_attrs = {
             "style": cable_status_color_css,
             "data-name": lambda record: record.name,

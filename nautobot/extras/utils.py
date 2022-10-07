@@ -6,15 +6,16 @@ import logging
 import pkgutil
 import sys
 
-from cacheops import file_cache
 from django.apps import apps
-from django.contrib import messages
+from django.conf import settings
 from django.contrib.contenttypes.models import ContentType
 from django.db.models import Q
+from django.template.loader import get_template, TemplateDoesNotExist
 from django.utils.deconstruct import deconstructible
 from taggit.managers import _TaggableManager
 
-from nautobot.core.fields import slugify_dots_to_dashes
+# 2.0 TODO: remove `is_taggable` import here; included for now for backwards compatibility with <1.4 code.
+from nautobot.utilities.utils import is_taggable, slugify_dots_to_dashes  # noqa: F401
 from nautobot.extras.constants import (
     EXTRAS_FEATURES,
     JOB_MAX_GROUPING_LENGTH,
@@ -29,20 +30,30 @@ from nautobot.extras.registry import registry
 logger = logging.getLogger(__name__)
 
 
-@file_cache.cached(timeout=60)
+def get_base_template(base_template, model):
+    """
+    Returns the name of the base template, if the base_template is not None
+    Otherwise, default to using "<app>/<model>.html" as the base template, if it exists.
+    Otherwise, check if "<app>/<model>_retrieve.html" used in `NautobotUIViewSet` exists.
+    If both templates do not exist, fall back to "base.html".
+    """
+    if base_template is None:
+        base_template = f"{model._meta.app_label}/{model._meta.model_name}.html"
+        # TODO: This can be removed once an object view has been established for every model.
+        try:
+            get_template(base_template)
+        except TemplateDoesNotExist:
+            base_template = f"{model._meta.app_label}/{model._meta.model_name}_retrieve.html"
+            try:
+                get_template(base_template)
+            except TemplateDoesNotExist:
+                base_template = "base.html"
+    return base_template
+
+
 def get_job_content_type():
     """Return a cached instance of the `ContentType` for `extras.Job`."""
     return ContentType.objects.get(app_label="extras", model="job")
-
-
-def is_taggable(obj):
-    """
-    Return True if the instance can have Tags assigned to it; False otherwise.
-    """
-    if hasattr(obj, "tags"):
-        if issubclass(obj.tags.__class__, _TaggableManager):
-            return True
-    return False
 
 
 def image_upload(instance, filename):
@@ -58,7 +69,40 @@ def image_upload(instance, filename):
     elif instance.name:
         filename = instance.name
 
-    return "{}{}_{}_{}".format(path, instance.content_type.name, instance.object_id, filename)
+    return f"{path}{instance.content_type.name}_{instance.object_id}_{filename}"
+
+
+@deconstructible
+class ChangeLoggedModelsQuery:
+    """
+    Helper class to get ContentType for models that implements the to_objectchange method for change logging.
+    """
+
+    def list_subclasses(self):
+        """
+        Return a list of classes that implement the to_objectchange method
+        """
+        return [_class for _class in apps.get_models() if hasattr(_class, "to_objectchange")]
+
+    def __call__(self):
+        return self.get_query()
+
+    def get_query(self):
+        """
+        Return a Q object for content type lookup
+        """
+        query = Q()
+        for model in self.list_subclasses():
+            app_label, model_name = model._meta.label_lower.split(".")
+            query |= Q(app_label=app_label, model=model_name)
+
+        return query
+
+    def as_queryset(self):
+        return ContentType.objects.filter(self.get_query()).order_by("app_label", "model")
+
+    def get_choices(self):
+        return [(f"{ct.app_label}.{ct.model}", ct.pk) for ct in self.as_queryset()]
 
 
 @deconstructible
@@ -143,7 +187,7 @@ def extras_features(*features):
                 app_label, model_name = model_class._meta.label_lower.split(".")
                 registry["model_features"][feature][app_label].append(model_name)
             else:
-                raise ValueError("{} is not a valid extras feature!".format(feature))
+                raise ValueError(f"{feature} is not a valid extras feature!")
         return model_class
 
     return wrapper
@@ -157,36 +201,69 @@ def generate_signature(request_body, secret):
     return hmac_prep.hexdigest()
 
 
-def get_worker_count(request=None):
+def get_celery_queues():
     """
-    Return a count of the active Celery workers.
+    Return a dictionary of celery queues and the number of workers active on the queue in
+    the form {queue_name: num_workers}
     """
-    # Inner imports so we don't risk circular imports
-    from nautobot.core.celery import app  # noqa
-    from rq.worker import Worker  # noqa
-    from django_rq.queues import get_connection  # noqa
+    from nautobot.core.celery import app  # prevent circular import
 
-    # Try RQ first since, it's faster.
-    rq_count = Worker.count(get_connection("default"))
+    celery_queues = {}
 
-    # Celery next, since it's slower.
-    inspect = app.control.inspect()
-    active = inspect.active()  # None if no active workers
-    celery_count = len(active) if active is not None else 0
+    celery_inspect = app.control.inspect()
+    active_queues = celery_inspect.active_queues()
+    if active_queues is None:
+        return celery_queues
+    for task_queue_list in active_queues.values():
+        distinct_queues = {q["name"] for q in task_queue_list}
+        for queue in distinct_queues:
+            celery_queues.setdefault(queue, 0)
+            celery_queues[queue] += 1
 
-    if rq_count and not celery_count:
-        if request:
-            messages.warning(request, "RQ workers are deprecated. Please migrate your workers to Celery.")
+    return celery_queues
 
-    return celery_count
+
+def get_worker_count(request=None, queue=None):
+    """
+    Return a count of the active Celery workers in a specified queue. Defaults to the `CELERY_TASK_DEFAULT_QUEUE` setting.
+    """
+    celery_queues = get_celery_queues()
+    if not queue:
+        queue = settings.CELERY_TASK_DEFAULT_QUEUE
+    return celery_queues.get(queue, 0)
+
+
+def task_queues_as_choices(task_queues):
+    """
+    Returns a list of 2-tuples for use in the form field `choices` argument. Appends
+    worker count to the description.
+    """
+    if not task_queues:
+        task_queues = [settings.CELERY_TASK_DEFAULT_QUEUE]
+
+    choices = []
+    celery_queues = get_celery_queues()
+    for queue in task_queues:
+        if not queue:
+            worker_count = celery_queues.get(settings.CELERY_TASK_DEFAULT_QUEUE, 0)
+        else:
+            worker_count = celery_queues.get(queue, 0)
+        description = f"{queue if queue else 'default queue'} ({worker_count} worker{'s'[:worker_count^1]})"
+        choices.append((queue, description))
+    return choices
 
 
 # namedtuple class yielded by the jobs_in_directory generator function, below
-# Example: ("devices", <module "devices">, "Hostname", <class "devices.Hostname">)
-JobClassInfo = collections.namedtuple("JobClassInfo", ["module_name", "module", "job_class_name", "job_class"])
+# Example: ("devices", <module "devices">, "Hostname", <class "devices.Hostname">, None)
+# Example: ("devices", None, None, None, "error at line 40")
+JobClassInfo = collections.namedtuple(
+    "JobClassInfo",
+    ["module_name", "module", "job_class_name", "job_class", "error"],
+    defaults=(None, None, None, None),  # all parameters except `module_name` are optional and default to None.
+)
 
 
-def jobs_in_directory(path, module_name=None, reload_modules=True):
+def jobs_in_directory(path, module_name=None, reload_modules=True, report_errors=False):
     """
     Walk the available Python modules in the given directory, and for each module, walk its Job class members.
 
@@ -194,9 +271,11 @@ def jobs_in_directory(path, module_name=None, reload_modules=True):
         path (str): Directory to import modules from, outside of sys.path
         module_name (str): Specific module name to select; if unspecified, all modules will be inspected
         reload_modules (bool): Whether to force reloading of modules even if previously loaded into Python.
+        report_errors (bool): If True, when an error is encountered, yield a JobClassInfo with the given error.
+                              If False (default), log the error but do not yield anything.
 
     Yields:
-        JobClassInfo: (module_name, module, job_class_name, job_class)
+        JobClassInfo: (module_name, module, job_class_name, job_class, error)
     """
     from .jobs import is_job  # avoid circular import
 
@@ -207,13 +286,13 @@ def jobs_in_directory(path, module_name=None, reload_modules=True):
             del sys.modules[discovered_module_name]
         try:
             module = importer.find_module(discovered_module_name).load_module(discovered_module_name)
+            # Get all members of the module that are Job subclasses
+            for job_class_name, job_class in inspect.getmembers(module, is_job):
+                yield JobClassInfo(discovered_module_name, module, job_class_name, job_class)
         except Exception as exc:
-            logger.error(f"Unable to load module {module_name} from {path}: {exc}")
-            # TODO: we want to be able to report these errors to the UI in some fashion?
-            continue
-        # Get all members of the module that are Job subclasses
-        for job_class_name, job_class in inspect.getmembers(module, is_job):
-            yield JobClassInfo(discovered_module_name, module, job_class_name, job_class)
+            logger.error(f"Unable to load module {discovered_module_name} from {path}: {exc}")
+            if report_errors:
+                yield JobClassInfo(module_name=discovered_module_name, error=exc)
 
 
 def refresh_job_model_from_job_class(job_model_class, job_source, job_class, *, git_repository=None):
@@ -224,6 +303,8 @@ def refresh_job_model_from_job_class(job_model_class, job_source, job_class, *, 
     this function may be called from various initialization processes (such as the "nautobot_database_ready" signal)
     and in that case we need to not import models ourselves.
     """
+    from nautobot.extras.jobs import JobHookReceiver  # imported here to prevent circular import problem
+
     if git_repository is not None:
         default_slug = slugify_dots_to_dashes(
             f"{job_source}-{git_repository.slug}-{job_class.__module__}-{job_class.__name__}"
@@ -279,6 +360,7 @@ def refresh_job_model_from_job_class(job_model_class, job_source, job_class, *, 
             "slug": default_slug[:JOB_MAX_SLUG_LENGTH],
             "grouping": job_class.grouping[:JOB_MAX_GROUPING_LENGTH],
             "name": job_class.name[:JOB_MAX_NAME_LENGTH],
+            "is_job_hook_receiver": issubclass(job_class, JobHookReceiver),
             "installed": True,
             "enabled": False,
         },

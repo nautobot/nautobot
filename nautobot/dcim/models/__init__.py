@@ -24,6 +24,7 @@ from .device_components import (
     RearPort,
 )
 from .devices import Device, DeviceRole, DeviceType, Manufacturer, Platform, VirtualChassis
+from .locations import Location, LocationType
 from .power import PowerFeed, PowerPanel
 from .racks import Rack, RackGroup, RackReservation, RackRole
 from .sites import Region, Site
@@ -47,6 +48,8 @@ __all__ = (
     "Interface",
     "InterfaceTemplate",
     "InventoryItem",
+    "Location",
+    "LocationType",
     "Manufacturer",
     "PathEndpoint",
     "Platform",

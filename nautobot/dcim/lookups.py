@@ -14,7 +14,7 @@ class PathContains(Lookup):
 
     def process_rhs(self, compiler, connection):
         rhs, rhs_params = super().process_rhs(compiler, connection)
-        rhs = "%s" % rhs_params[0]
+        rhs = f"{rhs_params[0]}"
         return rhs, []
 
     def as_sql(self, compiler, connection):

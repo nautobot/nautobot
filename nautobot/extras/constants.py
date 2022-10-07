@@ -3,6 +3,7 @@ HTTP_CONTENT_TYPE_JSON = "application/json"
 
 # Registerable extras features
 EXTRAS_FEATURES = [
+    "cable_terminations",
     "config_context_owners",
     "custom_fields",
     "custom_links",
@@ -12,6 +13,7 @@ EXTRAS_FEATURES = [
     "export_templates",
     "graphql",
     "job_results",
+    "locations",
     "relationships",
     "statuses",
     "webhooks",
@@ -28,6 +30,8 @@ JOB_OVERRIDABLE_FIELDS = (
     "approval_required",
     "soft_time_limit",
     "time_limit",
+    "has_sensitive_variables",
+    "task_queues",
 )
 
 

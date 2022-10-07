@@ -47,6 +47,7 @@ jobs:
           password: "${{ secrets.PYPI_API_TOKEN }}"
 
   publish_containers:
+    name: "Build & Publish Container Images"
     runs-on: "ubuntu-20.04"
     needs:
       - "ci"
@@ -61,8 +62,6 @@ jobs:
         uses: "actions/checkout@v2"
       - run: echo "##[set-output name=branch;]$(echo ${GITHUB_REF#refs/heads/})"
         id: "gitbranch"
-      - run: echo "##[set-output name=version;]$(egrep -m1 'file.*pyuwsgi-' poetry.lock | cut -f2 -d-)"
-        id: "pyuwsgi"
       - name: "Set up QEMU"
         uses: "docker/setup-qemu-action@v1"
       - name: "Set up Docker Buildx"
@@ -103,12 +102,11 @@ jobs:
           platforms: "linux/amd64,linux/arm64"
           tags: "${{ steps.dockermeta.outputs.tags }}"
           labels: "${{ steps.dockermeta.outputs.labels }}"
-          cache-from: "type=gha,scope=nautobot-${{ steps.gitbranch.outputs.branch }}"
-          cache-to: "type=gha,mode=max,scope=nautobot-${{ steps.gitbranch.outputs.branch }}"
+          cache-from: "type=gha,scope=nautobot-${{ steps.gitbranch.outputs.branch }}-${{ matrix.python-version }}"
+          cache-to: "type=gha,mode=max,scope=nautobot-${{ steps.gitbranch.outputs.branch }}-${{ matrix.python-version }}"
           context: "."
           build-args: |
             PYTHON_VER=${{ matrix.python-version }}
-            PYUWSGI_VER=${{ steps.pyuwsgi.outputs.version }}
             POETRY_PARALLEL=false
       - name: "Docker Dev Metadata"
         id: "dockerdevmeta"
@@ -135,12 +133,11 @@ jobs:
           platforms: "linux/amd64,linux/arm64"
           tags: "${{ steps.dockerdevmeta.outputs.tags }}"
           labels: "${{ steps.dockerdevmeta.outputs.labels }}"
-          cache-from: "type=gha,scope=nautobot-${{ steps.gitbranch.outputs.branch }}"
-          cache-to: "type=gha,mode=max,scope=nautobot-${{ steps.gitbranch.outputs.branch }}"
+          cache-from: "type=gha,scope=nautobot-${{ steps.gitbranch.outputs.branch }}-${{ matrix.python-version }}"
+          cache-to: "type=gha,mode=max,scope=nautobot-${{ steps.gitbranch.outputs.branch }}-${{ matrix.python-version }}"
           context: "."
           build-args: |
             PYTHON_VER=${{ matrix.python-version }}
-            PYUWSGI_VER=${{ steps.pyuwsgi.outputs.version }}
             POETRY_PARALLEL=false
 
   slack-notify:

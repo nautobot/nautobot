@@ -402,7 +402,7 @@ If your app is linked to a specific tenant instead of the common tenant, you'll 
 
 ```python
 AUTHENTICATION_BACKENDS = [
-    "social_core.backends.azuread.AzureADOAuth2",
+    "social_core.backends.azuread.AzureADTenantOAuth2",
     "nautobot.core.authentication.ObjectPermissionBackend",
 ]
 

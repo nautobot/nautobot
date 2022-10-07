@@ -3,7 +3,6 @@ import datetime
 from django.contrib.auth import get_user_model
 from django.contrib.auth.models import Group
 from django.contrib.contenttypes.models import ContentType
-from django.test import TestCase
 from django.utils.timezone import make_aware
 
 from nautobot.users.filters import (
@@ -13,13 +12,14 @@ from nautobot.users.filters import (
     UserFilterSet,
 )
 from nautobot.users.models import ObjectPermission, Token
+from nautobot.utilities.testing import FilterTestCases
 
 
 # Use the proper swappable User model
 User = get_user_model()
 
 
-class UserTestCase(TestCase):
+class UserTestCase(FilterTestCases.FilterTestCase):
     queryset = User.objects.all()
     filterset = UserFilterSet
 
@@ -70,10 +70,6 @@ class UserTestCase(TestCase):
         users[1].groups.set([groups[1]])
         users[2].groups.set([groups[2]])
 
-    def test_id(self):
-        params = {"id": self.queryset.values_list("pk", flat=True)[:2]}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
-
     def test_username(self):
         params = {"username": ["User1", "User2"]}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
@@ -96,7 +92,8 @@ class UserTestCase(TestCase):
 
     def test_is_active(self):
         params = {"is_active": True}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 4)
+        # 4 created active users in setUpTestData, plus one created active user in TestCase.setUp
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 5)
 
     def test_group(self):
         groups = Group.objects.all()[:2]
@@ -111,7 +108,7 @@ class UserTestCase(TestCase):
         self.assertEqual(self.filterset(params, self.queryset).qs.values_list("pk", flat=True)[0], value)
 
 
-class GroupTestCase(TestCase):
+class GroupTestCase(FilterTestCases.FilterTestCase):
     queryset = Group.objects.all()
     filterset = GroupFilterSet
 
@@ -121,10 +118,6 @@ class GroupTestCase(TestCase):
         Group.objects.create(name="Group 1")
         Group.objects.create(name="Group 2")
         Group.objects.create(name="Group 3")
-
-    def test_id(self):
-        params = {"id": self.queryset.values_list("pk", flat=True)[:2]}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
 
     def test_name(self):
         params = {"name": ["Group 1", "Group 2"]}
@@ -136,7 +129,7 @@ class GroupTestCase(TestCase):
         self.assertEqual(self.filterset(params, self.queryset).qs.values_list("pk", flat=True)[0], value)
 
 
-class ObjectPermissionTestCase(TestCase):
+class ObjectPermissionTestCase(FilterTestCases.FilterTestCase):
     queryset = ObjectPermission.objects.all()
     filterset = ObjectPermissionFilterSet
 
@@ -175,10 +168,6 @@ class ObjectPermissionTestCase(TestCase):
             permissions[i].users.set([users[i]])
             permissions[i].object_types.set([object_types[i]])
 
-    def test_id(self):
-        params = {"id": self.queryset.values_list("pk", flat=True)[:2]}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
-
     def test_name(self):
         params = {"name": ["Permission 1", "Permission 2"]}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
@@ -207,7 +196,7 @@ class ObjectPermissionTestCase(TestCase):
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
 
 
-class TokenTestCase(TestCase):
+class TokenTestCase(FilterTestCases.FilterTestCase):
     queryset = Token.objects.all()
     filterset = TokenFilterSet
 

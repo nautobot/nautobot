@@ -1,13 +1,22 @@
+from collections import OrderedDict
 from copy import deepcopy
+import logging
+import uuid
 
 from django import forms
 from django.conf import settings
 from django.core.validators import MaxValueValidator
 from django.db import models
+from django.forms.utils import ErrorDict, ErrorList
+
 import django_filters
 from django_filters.constants import EMPTY_VALUES
 from django_filters.utils import get_model_field, resolve_field
 
+from mptt.models import MPTTModel
+from tree_queries.models import TreeNode
+
+from nautobot.dcim.fields import MACAddressCharField
 from nautobot.dcim.forms import MACAddressField
 from nautobot.extras.models import Tag
 from nautobot.utilities.constants import (
@@ -16,6 +25,12 @@ from nautobot.utilities.constants import (
     FILTER_NUMERIC_BASED_LOOKUP_MAP,
     FILTER_TREENODE_NEGATION_LOOKUP_MAP,
 )
+from nautobot.utilities.forms.fields import MultiMatchModelMultipleChoiceField
+
+from taggit.managers import TaggableManager
+
+
+logger = logging.getLogger(__name__)
 
 
 def multivalue_field_factory(field_class):
@@ -37,12 +52,12 @@ def multivalue_field_factory(field_class):
 
             return [
                 # Only append non-empty values (this avoids e.g. trying to cast '' as an integer)
-                super(field_class, self).to_python(v)
+                super(field_class, self).to_python(v)  # pylint: disable=bad-super-call
                 for v in value
                 if v
             ]
 
-    return type("MultiValue{}".format(field_class.__name__), (NewField,), dict())
+    return type(f"MultiValue{field_class.__name__}", (NewField,), {})
 
 
 #
@@ -135,22 +150,6 @@ class RelatedMembershipBooleanFilter(django_filters.BooleanFilter):
         )
 
 
-class TreeNodeMultipleChoiceFilter(django_filters.ModelMultipleChoiceFilter):
-    """
-    Filters for a set of Models, including all descendant models within a Tree.  Example: [<Region: R1>,<Region: R2>]
-    """
-
-    def get_filter_predicate(self, v):
-        # Null value filtering
-        if v is None:
-            return {f"{self.field_name}__isnull": True}
-        return super().get_filter_predicate(v)
-
-    def filter(self, qs, value):
-        value = [node.get_descendants(include_self=True) if not isinstance(node, str) else node for node in value]
-        return super().filter(qs, value)
-
-
 class NullableCharFieldFilter(django_filters.CharFilter):
     """
     Allow matching on null field values by passing a special string used to signify NULL.
@@ -159,7 +158,7 @@ class NullableCharFieldFilter(django_filters.CharFilter):
     def filter(self, qs, value):
         if value != settings.FILTERS_NULL_CHOICE_VALUE:
             return super().filter(qs, value)
-        qs = self.get_method(qs)(**{"{}__isnull".format(self.field_name): True})
+        qs = self.get_method(qs)(**{f"{self.field_name}__isnull": True})
         return qs.distinct() if self.distinct else qs
 
 
@@ -408,6 +407,64 @@ class MappedPredicatesFilterMixin:
         return qs.distinct()
 
 
+class NaturalKeyOrPKMultipleChoiceFilter(django_filters.ModelMultipleChoiceFilter):
+    """
+    Filter that supports filtering on values matching the `pk` field and another
+    field of a foreign-key related object. The desired field is set using the `to_field_name`
+    keyword argument on filter initialization (defaults to `slug`).
+    """
+
+    field_class = MultiMatchModelMultipleChoiceField
+
+    def __init__(self, *args, **kwargs):
+        self.natural_key = kwargs.setdefault("to_field_name", "slug")
+        super().__init__(*args, **kwargs)
+
+    def get_filter_predicate(self, v):
+        """
+        Override base filter behavior to force the filter to use the `pk` field instead of
+        the natural key in the generated filter.
+        """
+
+        # Null value filtering
+        if v is None:
+            return {f"{self.field_name}__isnull": True}
+
+        # If value is a model instance, stringify it to a pk.
+        if isinstance(v, models.Model):
+            logger.debug("Model instance detected. Casting to a PK.")
+            v = str(v.pk)
+
+        # Try to cast the value to a UUID and set `is_pk` boolean.
+        try:
+            uuid.UUID(str(v))
+        except (AttributeError, TypeError, ValueError):
+            logger.debug("Non-UUID value detected: Filtering using natural key")
+            is_pk = False
+        else:
+            v = str(v)  # Cast possible UUID instance to a string
+            is_pk = True
+
+        # If it's not a pk and not a list/qs generate then it's a slug and the filter predicate
+        # needs to be nested (e.g. `{"site__slug": "ams01"}`) so that it can be useable in `Q`
+        # objects.
+        #
+        # FIXME(jathan): It feels weird to have a list/qs make its way to `get_filter_predicate()`
+        # which if you inspect the source for `django_filters.MultipleChoiceFilter.filter()` should
+        # be handling those to generate singular filter predicates and concatentating them.
+        if not is_pk and not isinstance(v, (list, models.QuerySet)):
+            name = f"{self.field_name}__{self.field.to_field_name}"
+        # Otherwise just trust the field_name
+        else:
+            logger.debug("UUID or list/qs detected: Filtering using field name")
+            name = self.field_name
+
+        if name and self.lookup_expr != django_filters.conf.settings.DEFAULT_LOOKUP_EXPR:
+            name = "__".join([name, self.lookup_expr])
+
+        return {name: v}
+
+
 class SearchFilter(MappedPredicatesFilterMixin, django_filters.CharFilter):
     """
     Provide a search filter for use on filtersets as the `q=` parameter.
@@ -418,6 +475,40 @@ class SearchFilter(MappedPredicatesFilterMixin, django_filters.CharFilter):
     label = "Search"
 
 
+class TreeNodeMultipleChoiceFilter(NaturalKeyOrPKMultipleChoiceFilter):
+    """
+    Filter that matches on the given model(s) (identified by slug and/or pk) _as well as their tree descendants._
+
+    For example, if we have:
+
+        Region "Earth"
+          Region "USA"
+            Region "GA" <- Site "Athens"
+            Region "NC" <- Site "Durham"
+
+    a NaturalKeyOrPKMultipleChoiceFilter on Site for {"region": "USA"} would have no matches,
+    since there are no Sites whose immediate Region is "USA",
+    but a TreeNodeMultipleChoiceFilter on Site for {"region": "USA"} or {"region": "Earth"}
+    would match both "Athens" and "Durham".
+    """
+
+    def __init__(self, *args, **kwargs):
+        kwargs.setdefault("lookup_expr", "in")
+        super().__init__(*args, **kwargs)
+
+    def filter(self, qs, value):
+        if value:
+            if any(isinstance(node, TreeNode) for node in value):
+                # django-tree-queries
+                value = [node.descendants(include_self=True) if not isinstance(node, str) else node for node in value]
+            elif any(isinstance(node, MPTTModel) for node in value):
+                # django-mptt
+                value = [
+                    node.get_descendants(include_self=True) if not isinstance(node, str) else node for node in value
+                ]
+        return super().filter(qs, value)
+
+
 #
 # FilterSets
 #
@@ -425,7 +516,7 @@ class SearchFilter(MappedPredicatesFilterMixin, django_filters.CharFilter):
 
 class BaseFilterSet(django_filters.FilterSet):
     """
-    A base filterset which provides common functionaly to all Nautobot filtersets
+    A base filterset which provides common functionality to all Nautobot filtersets.
     """
 
     FILTER_DEFAULTS = deepcopy(django_filters.filterset.FILTER_FOR_DBFIELD_DEFAULTS)
@@ -450,7 +541,8 @@ class BaseFilterSet(django_filters.FilterSet):
             models.TimeField: {"filter_class": MultiValueTimeFilter},
             models.URLField: {"filter_class": MultiValueCharFilter},
             models.UUIDField: {"filter_class": MultiValueUUIDFilter},
-            MACAddressField: {"filter_class": MultiValueMACAddressFilter},
+            MACAddressCharField: {"filter_class": MultiValueMACAddressFilter},
+            TaggableManager: {"filter_class": TagFilter},
         }
     )
 
@@ -527,7 +619,7 @@ class BaseFilterSet(django_filters.FilterSet):
 
         # Create new filters for each lookup expression in the map
         for lookup_name, lookup_expr in lookup_map.items():
-            new_filter_name = "{}__{}".format(filter_name, lookup_name)
+            new_filter_name = f"{filter_name}__{lookup_name}"
 
             try:
                 if filter_name in cls.declared_filters:
@@ -572,13 +664,21 @@ class BaseFilterSet(django_filters.FilterSet):
 
         if new_filter_name in cls.base_filters:
             raise AttributeError(
-                "There was a conflict with filter `%s`, the custom filter was ignored." % new_filter_name
+                f"There was a conflict with filter `{new_filter_name}`, the custom filter was ignored."
             )
 
         cls.base_filters[new_filter_name] = new_filter_field
         cls.base_filters.update(
             cls._generate_lookup_expression_filters(filter_name=new_filter_name, filter_field=new_filter_field)
         )
+
+    @classmethod
+    def get_fields(cls):
+        fields = super().get_fields()
+        if "id" not in fields and (cls._meta.exclude is None or "id" not in cls._meta.exclude):
+            # Add "id" as the first key in the `fields` OrderedDict
+            fields = OrderedDict(id=[django_filters.conf.settings.DEFAULT_LOOKUP_EXPR], **fields)
+        return fields
 
     @classmethod
     def get_filters(cls):
@@ -595,6 +695,37 @@ class BaseFilterSet(django_filters.FilterSet):
 
         filters.update(new_filters)
         return filters
+
+    def __init__(self, data=None, queryset=None, *, request=None, prefix=None):
+        super().__init__(data, queryset, request=request, prefix=prefix)
+        self._is_valid = None
+        self._errors = None
+
+    def is_valid(self):
+        """Extend FilterSet.is_valid() to potentially enforce settings.STRICT_FILTERING."""
+        if self._is_valid is None:
+            self._is_valid = super().is_valid()
+            if settings.STRICT_FILTERING:
+                self._is_valid = self._is_valid and set(self.form.data.keys()).issubset(self.form.cleaned_data.keys())
+            else:
+                # Trigger warning logs associated with generating self.errors
+                self.errors
+        return self._is_valid
+
+    @property
+    def errors(self):
+        """Extend FilterSet.errors to potentially include additional errors from settings.STRICT_FILTERING."""
+        if self._errors is None:
+            self._errors = ErrorDict(self.form.errors)
+            for extra_key in set(self.form.data.keys()).difference(self.form.cleaned_data.keys()):
+                # If a given field was invalid, it will be omitted from cleaned_data; don't report extra errors
+                if extra_key not in self._errors:
+                    if settings.STRICT_FILTERING:
+                        self._errors.setdefault(extra_key, ErrorList()).append("Unknown filter field")
+                    else:
+                        logger.warning('%s: Unknown filter field "%s"', self.__class__.__name__, extra_key)
+
+        return self._errors
 
 
 class NameSlugSearchFilterSet(django_filters.FilterSet):

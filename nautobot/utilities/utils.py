@@ -2,19 +2,25 @@ import copy
 import datetime
 import inspect
 import json
+import uuid
 from collections import OrderedDict, namedtuple
 from itertools import count, groupby
+from decimal import Decimal
 
 from django.conf import settings
 from django.contrib.auth import get_user_model
+from django.contrib.contenttypes.models import ContentType
 from django.core.serializers import serialize
 from django.db.models import Count, Model, OuterRef, Subquery
 from django.db.models.functions import Coalesce
+from django.utils.tree import Node
+
 from django.template import engines
 from django.utils.module_loading import import_string
+from django.utils.text import slugify
+from taggit.managers import _TaggableManager
 
 from nautobot.dcim.choices import CableLengthUnitChoices
-from nautobot.extras.utils import is_taggable
 from nautobot.utilities.constants import HTTP_REQUEST_META_SAFE_COPY
 
 
@@ -36,19 +42,19 @@ def csv_format(data):
 
         # Force conversion to string first so we can check for any commas
         if not isinstance(value, str):
-            value = "{}".format(value)
+            value = f"{value}"
 
         # Double-quote the value if it contains a comma or line break
         if "," in value or "\n" in value:
             value = value.replace('"', '""')  # Escape double-quotes
-            csv.append('"{}"'.format(value))
+            csv.append(f'"{value}"')
         else:
-            csv.append("{}".format(value))
+            csv.append(f"{value}")
 
     return ",".join(csv)
 
 
-def get_route_for_model(model, action):
+def get_route_for_model(model, action, api=False):
     """
     Return the URL route name for the given model and action. Does not perform any validation.
     Supports both core and plugin routes.
@@ -56,35 +62,52 @@ def get_route_for_model(model, action):
     Args:
         model (models.Model, str): Class, Instance, or dotted string of a Django Model
         action (str): name of the action in the route
+        api (bool): If set, return an API route.
 
     Returns:
         str: return the name of the view for the model/action provided.
+
     Examples:
-        >>> viewname(Device, "list")
+        >>> get_route_for_model(Device, "list")
         "dcim:device_list"
+        >>> get_route_for_model(Device, "list", api=True)
+        "dcim-api:device-list"
+        >>> get_route_for_model("dcim.site", "list")
+        "dcim:site_list"
+        >>> get_route_for_model("dcim.site", "list", api=True)
+        "dcim-api:site-list"
+        >>> get_route_for_model(ExampleModel, "list")
+        "plugins:example_plugin:examplemodel_list"
+        >>> get_route_for_model(ExampleModel, "list", api=True)
+        "plugins-api:example_plugin-api:examplemodel-list"
     """
 
     if isinstance(model, str):
         model = get_model_from_name(model)
-    viewname = f"{model._meta.app_label}:{model._meta.model_name}_{action}"
+
+    suffix = "" if not api else "-api"
+    prefix = f"{model._meta.app_label}{suffix}:{model._meta.model_name}"
+    sep = "_" if not api else "-"
+    viewname = f"{prefix}{sep}{action}"
+
     if model._meta.app_label in settings.PLUGINS:
-        viewname = f"plugins:{viewname}"
+        viewname = f"plugins{suffix}:{viewname}"
 
     return viewname
 
 
-def hex_to_rgb(hex):
+def hex_to_rgb(hex_str):
     """
     Map a hex string like "00ff00" to individual r, g, b integer values.
     """
-    return [int(hex[c : c + 2], 16) for c in (0, 2, 4)]  # noqa: E203
+    return [int(hex_str[c : c + 2], 16) for c in (0, 2, 4)]  # noqa: E203
 
 
 def rgb_to_hex(r, g, b):
     """
     Map r, g, b values to a hex string.
     """
-    return "%02x%02x%02x" % (r, g, b)
+    return "%02x%02x%02x" % (r, g, b)  # pylint: disable=consider-using-f-string
 
 
 def foreground_color(bg_color):
@@ -130,6 +153,16 @@ def count_related(model, field):
     )
 
     return Coalesce(subquery, 0)
+
+
+def is_taggable(obj):
+    """
+    Return True if the instance can have Tags assigned to it; False otherwise.
+    """
+    if hasattr(obj, "tags"):
+        if issubclass(obj.tags.__class__, _TaggableManager):
+            return True
+    return False
 
 
 def serialize_object(obj, extra=None, exclude=None):
@@ -186,6 +219,16 @@ def serialize_object_v2(obj):
     return data
 
 
+def slugify_dots_to_dashes(content):
+    """Custom slugify_function - convert '.' to '-' instead of removing dots outright."""
+    return slugify(content.replace(".", "-"))
+
+
+def slugify_dashes_to_underscores(content):
+    """Custom slugify_function - use underscores instead of dashes; resulting slug can be used as a variable name."""
+    return slugify(content).replace("-", "_")
+
+
 def dict_to_filter_params(d, prefix=""):
     """
     Translate a dictionary of attributes to a nested set of parameters suitable for QuerySet filtering. For example:
@@ -231,6 +274,8 @@ def normalize_querydict(querydict):
     This function is necessary because QueryDict does not provide any built-in mechanism which preserves multiple
     values.
     """
+    if not querydict:
+        return {}
     return {k: v if len(v) > 1 else v[0] for k, v in querydict.lists()}
 
 
@@ -257,17 +302,17 @@ def to_meters(length, unit):
 
     valid_units = CableLengthUnitChoices.values()
     if unit not in valid_units:
-        raise ValueError("Unknown unit {}. Must be one of the following: {}".format(unit, ", ".join(valid_units)))
+        raise ValueError(f"Unknown unit {unit}. Must be one of the following: {', '.join(valid_units)}")
 
     if unit == CableLengthUnitChoices.UNIT_METER:
         return length
     if unit == CableLengthUnitChoices.UNIT_CENTIMETER:
         return length / 100
     if unit == CableLengthUnitChoices.UNIT_FOOT:
-        return length * 0.3048
+        return length * Decimal("0.3048")
     if unit == CableLengthUnitChoices.UNIT_INCH:
-        return length * 0.3048 * 12
-    raise ValueError("Unknown unit {}. Must be 'm', 'cm', 'ft', or 'in'.".format(unit))
+        return length * Decimal("0.3048") * 12
+    raise ValueError(f"Unknown unit {unit}. Must be 'm', 'cm', 'ft', or 'in'.")
 
 
 def render_jinja2(template_code, context):
@@ -443,6 +488,23 @@ def get_model_from_name(model_name):
         raise TypeError(exc) from exc
 
 
+def get_changes_for_model(model):
+    """
+    Return a queryset of ObjectChanges for a model or instance. The queryset will be filtered
+    by the model class. If an instance is provided, the queryset will also be filtered by the instance id.
+    """
+    from nautobot.extras.models import ObjectChange  # prevent circular import
+
+    if isinstance(model, Model):
+        return ObjectChange.objects.filter(
+            changed_object_type=ContentType.objects.get_for_model(model._meta.model),
+            changed_object_id=model.pk,
+        )
+    if issubclass(model, Model):
+        return ObjectChange.objects.filter(changed_object_type=ContentType.objects.get_for_model(model._meta.model))
+    raise TypeError(f"{model!r} is not a Django Model class or instance")
+
+
 def get_related_class_for_model(model, module_name, object_suffix):
     """Return the appropriate class associated with a given model matching the `module_name` and
     `object_suffix`.
@@ -565,3 +627,65 @@ def versioned_serializer_selector(obj, serializer_choices, default_serializer):
         if serializer is not None:
             return serializer
     return default_serializer
+
+
+def is_uuid(value):
+    try:
+        if isinstance(value, uuid.UUID) or uuid.UUID(value):
+            return True
+    except (ValueError, TypeError, AttributeError):
+        pass
+    return False
+
+
+def pretty_print_query(query):
+    """
+    Given a `Q` object, display it in a more human-readable format.
+
+    Args:
+        query (Q): Query to display.
+
+    Returns:
+        str: Pretty-printed query logic
+
+    Example:
+        >>> print(pretty_print_query(Q))
+        (
+          site__slug='ams01' OR site__slug='bkk01' OR (
+            site__slug='can01' AND status__slug='active'
+          ) OR (
+            site__slug='del01' AND (
+              NOT (site__slug='del01' AND status__slug='decommissioning')
+            )
+          )
+        )
+    """
+
+    def pretty_str(self, node=None, depth=0):
+        """Improvement to default `Node.__str__` with a more human-readable style."""
+        template = f"(\n{'  ' * (depth + 1)}"
+        if self.negated:
+            template += "NOT (%s)"
+        else:
+            template += "%s"
+        template += f"\n{'  ' * depth})"
+        children = []
+
+        # If we don't have a node, we are the node!
+        if node is None:
+            node = self
+
+        # Iterate over children. They will be either a Q object (a Node subclass) or a 2-tuple.
+        for child in node.children:
+            # Trust that we can stringify the child if it is a Node instance.
+            if isinstance(child, Node):
+                children.append(pretty_str(child, depth=depth + 1))
+            # If a 2-tuple, stringify to key=value
+            else:
+                key, value = child
+                children.append(f"{key}={value!r}")
+
+        return template % (f" {self.connector} ".join(children))
+
+    # Use pretty_str() as the string generator vs. just stringify the `Q` object.
+    return pretty_str(query)

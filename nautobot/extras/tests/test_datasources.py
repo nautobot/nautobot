@@ -1,4 +1,5 @@
 import json
+import logging
 import os
 import tempfile
 from unittest import mock
@@ -6,7 +7,6 @@ import uuid
 
 import yaml
 
-from django.contrib.auth import get_user_model
 from django.contrib.contenttypes.models import ContentType
 from django.test import RequestFactory
 
@@ -18,14 +18,15 @@ from nautobot.extras.choices import (
     SecretsGroupAccessTypeChoices,
     SecretsGroupSecretTypeChoices,
 )
+from nautobot.extras.choices import LogLevelChoices
 from nautobot.extras.datasources.git import pull_git_repository_and_refresh_data, git_repository_diff_origin_and_local
 from nautobot.extras.datasources.registry import get_datasource_contents
-from nautobot.extras.management import create_custom_statuses
 from nautobot.extras.models import (
     ConfigContext,
     ConfigContextSchema,
     ExportTemplate,
     GitRepository,
+    JobLogEntry,
     JobResult,
     Secret,
     SecretsGroup,
@@ -33,10 +34,6 @@ from nautobot.extras.models import (
     Status,
 )
 from nautobot.utilities.testing import TransactionTestCase
-
-
-# Use the proper swappable User model
-User = get_user_model()
 
 
 @mock.patch("nautobot.extras.datasources.git.GitRepo")
@@ -48,14 +45,13 @@ class GitTest(TransactionTestCase):
     """
 
     databases = ("default", "job_logs")
+    fixtures = ("status",)
 
     COMMIT_HEXSHA = "88dd9cd78df89e887ee90a1d209a3e9a04e8c841"
 
     def setUp(self):
-        # Repopulate custom statuses between test cases, as TransactionTestCase deletes them during cleanup
-        create_custom_statuses(None, verbosity=0)
+        super().setUp()
 
-        self.user = User.objects.create_user(username="testuser")
         self.factory = RequestFactory()
         self.mock_request = self.factory.get("/no-op/")
         self.mock_request.user = self.user
@@ -120,7 +116,7 @@ class GitTest(TransactionTestCase):
 
     def populate_repo(self, path, url, *args, **kwargs):
         os.makedirs(path)
-        # Just make config_contexts and export_templates directories as we don't load jobs
+        # TODO: populate Jobs as well?
         os.makedirs(os.path.join(path, "config_contexts"))
         os.makedirs(os.path.join(path, "config_contexts", "devices"))
         os.makedirs(os.path.join(path, "config_context_schemas"))
@@ -269,7 +265,10 @@ class GitTest(TransactionTestCase):
                 self.repo.refresh_from_db()
                 self.assertEqual(self.repo.current_head, self.COMMIT_HEXSHA, self.job_result.data)
                 MockGitRepo.assert_called_with(os.path.join(tempdir, self.repo.slug), "http://localhost/git.git")
-                # TODO: inspect the logs in job_result.data?
+
+                log_entries = JobLogEntry.objects.filter(job_result=self.job_result)
+                warning_logs = log_entries.filter(log_level=LogLevelChoices.LOG_WARNING)
+                warning_logs.get(grouping="jobs", message__contains="No `jobs` subdirectory found")
 
     def test_pull_git_repository_and_refresh_data_with_token(self, MockGitRepo):
         """
@@ -509,65 +508,115 @@ class GitTest(TransactionTestCase):
 
                 def populate_repo(path, url):
                     os.makedirs(path)
-                    # Just make config_contexts and export_templates directories as we don't load jobs
                     os.makedirs(os.path.join(path, "config_contexts"))
                     os.makedirs(os.path.join(path, "config_contexts", "devices"))
                     os.makedirs(os.path.join(path, "config_context_schemas"))
                     os.makedirs(os.path.join(path, "export_templates", "nosuchapp", "device"))
                     os.makedirs(os.path.join(path, "export_templates", "dcim", "nosuchmodel"))
+                    os.makedirs(os.path.join(path, "jobs"))
+                    # Incorrect directories
+                    os.makedirs(os.path.join(path, "devices"))
+                    os.makedirs(os.path.join(path, "dcim"))
                     # Malformed JSON
                     with open(os.path.join(path, "config_contexts", "context.json"), "w") as fd:
                         fd.write('{"data": ')
                     # Valid JSON but missing required keys
                     with open(os.path.join(path, "config_contexts", "context2.json"), "w") as fd:
                         fd.write("{}")
+                    with open(os.path.join(path, "config_contexts", "context3.json"), "w") as fd:
+                        fd.write('{"_metadata": {}}')
+                    # Malformed JSON
                     with open(os.path.join(path, "config_context_schemas", "schema-1.yaml"), "w") as fd:
                         fd.write('{"data": ')
                     # Valid JSON but missing required keys
                     with open(os.path.join(path, "config_context_schemas", "schema-2.yaml"), "w") as fd:
                         fd.write("{}")
                     # No such device
-                    with open(
-                        os.path.join(path, "config_contexts", "devices", "nosuchdevice.json"),
-                        "w",
-                    ) as fd:
+                    with open(os.path.join(path, "config_contexts", "devices", "nosuchdevice.json"), "w") as fd:
                         fd.write("{}")
                     # Invalid paths
-                    with open(
-                        os.path.join(
-                            path,
-                            "export_templates",
-                            "nosuchapp",
-                            "device",
-                            "template.j2",
-                        ),
-                        "w",
-                    ) as fd:
+                    with open(os.path.join(path, "export_templates", "nosuchapp", "device", "template.j2"), "w") as fd:
                         fd.write("{% for device in queryset %}\n{{ device.name }}\n{% endfor %}")
-                    with open(
-                        os.path.join(
-                            path,
-                            "export_templates",
-                            "dcim",
-                            "nosuchmodel",
-                            "template.j2",
-                        ),
-                        "w",
-                    ) as fd:
+                    with open(os.path.join(path, "export_templates", "dcim", "nosuchmodel", "template.j2"), "w") as fd:
                         fd.write("{% for device in queryset %}\n{{ device.name }}\n{% endfor %}")
+                    # Malformed Python
+                    with open(os.path.join(path, "jobs", "syntaxerror.py"), "w") as fd:
+                        fd.write("print(")
+                    with open(os.path.join(path, "jobs", "importerror.py"), "w") as fd:
+                        fd.write("import nosuchmodule")
                     return mock.DEFAULT
 
                 MockGitRepo.side_effect = populate_repo
                 MockGitRepo.return_value.checkout.return_value = self.COMMIT_HEXSHA
 
                 # Run the Git operation and refresh the object from the DB
+                logging.disable(logging.ERROR)
                 pull_git_repository_and_refresh_data(self.repo.pk, self.mock_request, self.job_result.pk)
+                logging.disable(logging.NOTSET)
                 self.job_result.refresh_from_db()
 
                 self.assertEqual(
                     self.job_result.status,
                     JobResultStatusChoices.STATUS_FAILED,
                     self.job_result.data,
+                )
+
+                # Check for specific log messages
+                log_entries = JobLogEntry.objects.filter(job_result=self.job_result)
+                warning_logs = log_entries.filter(log_level=LogLevelChoices.LOG_WARNING)
+                failure_logs = log_entries.filter(log_level=LogLevelChoices.LOG_FAILURE)
+
+                warning_logs.get(
+                    grouping="config contexts", message__contains='Found "devices" directory in the repository root'
+                )
+                warning_logs.get(
+                    grouping="export templates", message__contains='Found "dcim" directory in the repository root'
+                )
+                warning_logs.get(
+                    grouping="export templates",
+                    message__contains="Skipping `dcim.nosuchmodel` as it isn't a known content type",
+                )
+                warning_logs.get(
+                    grouping="export templates",
+                    message__contains="Skipping `nosuchapp.device` as it isn't a known content type",
+                )
+
+                failure_logs.get(
+                    grouping="config context schemas",
+                    message__contains="Error in loading config context schema data from `schema-1.yaml`",
+                )
+                failure_logs.get(
+                    grouping="config context schemas",
+                    message__contains="Error in loading config context schema data from `schema-2.yaml`: "
+                    "data is missing the required `_metadata` key",
+                )
+                failure_logs.get(
+                    grouping="config contexts",
+                    message__contains="Error in loading config context data from `context.json`",
+                )
+                failure_logs.get(
+                    grouping="config contexts",
+                    message__contains="Error in loading config context data from `context2.json`: "
+                    "data is missing the required `_metadata` key",
+                )
+                failure_logs.get(
+                    grouping="config contexts",
+                    message__contains="Error in loading config context data from `context3.json`: "
+                    "data `_metadata` is missing the required `name` key",
+                )
+                failure_logs.get(
+                    grouping="local config contexts",
+                    message__contains="Error in loading local config context from `devices/nosuchdevice.json`: "
+                    "record not found",
+                )
+                failure_logs.get(
+                    grouping="jobs",
+                    # The specific exception message differs between Python versions
+                    message__contains="Error in loading Jobs from `syntaxerror`: ",
+                )
+                failure_logs.get(
+                    grouping="jobs",
+                    message__contains="Error in loading Jobs from `importerror`: `No module named 'nosuchmodule'`",
                 )
 
     def test_delete_git_repository_cleanup(self, MockGitRepo):

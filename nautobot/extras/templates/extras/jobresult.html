@@ -6,103 +6,93 @@
 {% load plugins %}
 {% load static %}
 
-{% block header %}
-    <div class="row noprint">
-        <div class="col-md-12">
-            <ol class="breadcrumb">
-                <li><a href="{% url 'extras:jobresult_list' %}">Job Results</a></li>
-                {% if result.job_model is not None %}
-                    <li>{{ result.job_model.grouping }}</li>
-                    <li><a href="{% url 'extras:jobresult_list' %}?job_model={{ result.job_model.slug }}">
-                        {{ result.job_model }}
-                    </a></li>
-                {% elif associated_record %}
-                    {% if associated_record.name %}
-                        <li><a href="{% url 'extras:jobresult_list' %}?name={{ associated_record.name|urlencode }}">
-                            {{ associated_record.name }}
-                        </a></li>
-                    {% else %}
-                        <li>{{ associated_record }}</li>
-                    {% endif %}
-                {% elif job %}
-                    <li><a href="{% url 'extras:jobresult_list' %}?name={{ job.class_path|urlencode }}">
-                        {{ job.class_path }}
-                    </a></li>
-                {% else %}
-                    <li>{{ result.name }}</li>
-                {% endif %}
-                <li>{{ result.created }}</li>
-            </ol>
-        </div>
-    </div>
-    <div class="pull-right noprint">
-        {% plugin_buttons result %}
-        {% if perms.extras.delete_jobresult %}
-            <a href="{% url 'extras:jobresult_delete' pk=result.pk %}" class="btn btn-danger">
-                <span class="mdi mdi-trash-can-outline" aria-hidden="true"></span> Delete
+{% block breadcrumbs %}
+    <li><a href="{% url 'extras:jobresult_list' %}">Job Results</a></li>
+    {% if result.job_model is not None %}
+        <li>{{ result.job_model.grouping }}</li>
+        <li><a href="{% url 'extras:jobresult_list' %}?job_model={{ result.job_model.slug }}">
+            {{ result.job_model }}
+        </a></li>
+    {% elif associated_record %}
+        {% if associated_record.name %}
+            <li><a href="{% url 'extras:jobresult_list' %}?name={{ associated_record.name|urlencode }}">
+                {{ associated_record.name }}
+            </a></li>
+        {% else %}
+            <li>{{ associated_record }}</li>
+        {% endif %}
+    {% elif job %}
+        <li><a href="{% url 'extras:jobresult_list' %}?name={{ job.class_path|urlencode }}">
+            {{ job.class_path }}
+        </a></li>
+    {% else %}
+        <li>{{ result.name }}</li>
+    {% endif %}
+    <li>{{ result.created }}</li>
+{% endblock breadcrumbs %}
+
+{% block buttons %}
+    {% if perms.extras.run_job %}
+        {% if result.job_model and result.job_kwargs %}
+            <a href="{% url 'extras:job_run' slug=result.job_model.slug %}?kwargs_from_job_result={{ result.pk }}"
+               class="btn btn-success">
+                <span class="mdi mdi-repeat" aria-hidden="true"></span> Re-Run
+            </a>
+        {% elif result.job_model is not None %}
+            <a href="{% url 'extras:job_run' slug=result.job_model.slug %}"
+               class="btn btn-primary">
+                <span class="mdi mdi-play" aria-hidden="true"></span> Run
             </a>
         {% endif %}
-    </div>
-    <h1>
-        {% block title %}
-        {% if result.job_model is not None %}
-            {{ result.job_model }}
-        {% elif associated_record %}
-            {{ associated_record }}
-        {% elif job %}
-            {{ job }}
-        {% else %}
-            {{ result.name }}
-        {% endif %}
-        - Job Result - {{ result.get_status_display }}
-        {% endblock %}
-    </h1>
-
-    <div class="pull-right noprint">
-        {% custom_links result %}
-    </div>
-    {% if result.job_model is not None %}
-        <p>{{ result.job_model.description | render_markdown }}</p>
-    {% elif job %}
-        <p>{{ job.description | render_markdown }}</p>
     {% endif %}
-    <ul class="nav nav-tabs" role="tablist">
-        <li role="presentation" class="active">
-            <a href="#log" role="tab" data-toggle="tab" class="active">Log</a>
-        </li>
-        <li role="presentation">
-            <a href="{{ object.get_absolute_url }}#advanced" role="tab" data-toggle="tab">Advanced</a>
-        </li>
-        <li role="presentation">
-            <a href="#json" role="tab" data-toggle="tab">Additional Data</a>
-        </li>
-        {% if result.data.output %}
-            <li role="presentation">
-                <a href="#output" role="tab" data-toggle="tab">Output</a>
-            </li>
-        {% endif %}
-        {% if job %}
-            <li role="presentation">
-                <a href="#source" role="tab" data-toggle="tab">Source</a>
-            </li>
-        {% endif %}
-    </ul>
+    {{ block.super }}
+{% endblock buttons %}
+
+{% block title %}
+    Job Result:
+    {% if result.job_model is not None %}
+        {{ result.job_model }}
+    {% elif associated_record %}
+        {{ associated_record }}
+    {% elif job %}
+        {{ job }}
+    {% else %}
+        {{ result.name }}
+    {% endif %}
 {% endblock %}
 
-{% block content %}
-    <div class="tab-content">
-        <div role="tabpanel" class="tab-pane active" id="log">
-            <div class="row">
-                <div class="col-md-12">
-                    {% include 'extras/inc/jobresult.html' with result=result log_table=log_table %}
-                </div>
-            </div>
-        </div>
-        <div role="tabpanel" class="tab-pane" id="json">
-            <div class="container-fluid">
+{% block extra_nav_tabs %}
+    <li role="presentation">
+        <a href="#json" role="tab" data-toggle="tab">Additional Data</a>
+    </li>
+    {% if result.data.output %}
+        <li role="presentation">
+            <a href="#output" role="tab" data-toggle="tab">Output</a>
+        </li>
+    {% endif %}
+{% endblock %}
+
+{% block content_full_width_page %}
+    {% include 'extras/inc/jobresult.html' with result=result log_table=log_table %}
+{% endblock content_full_width_page %}
+
+{% block extra_tab_content %}
+    <div role="tabpanel" class="tab-pane" id="json">
+        <div class="row">
+            <div class="col-md-6">
                 <div class="panel panel-default">
                     <div class="panel-heading">
-                        <strong>Additional Data</strong>
+                        <strong>Job Inputs</strong>
+                    </div>
+                    <div class="panel-body">
+                        {% include 'extras/inc/json_data.html' with data=result.job_kwargs format="json" %}
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="panel panel-default">
+                    <div class="panel-heading">
+                        <strong>Output Data</strong>
                     </div>
                     <div class="panel-body">
                         {% include 'extras/inc/json_data.html' with data=result.data format="json" %}
@@ -110,31 +100,13 @@
                 </div>
             </div>
         </div>
-        <div id="advanced" role="tabpanel" class="tab-pane">
-            <div class="row">
-                <div class="col-md-6">
-                    {% include 'inc/object_details_advanced_panel.html' %}
-                </div>
-            </div>
-        </div>
-        {% if result.data.output %}
-            <div role="tabpanel" class="tab-pane" id="output">
-                <pre>{{ result.data.output }}</pre>
-            </div>
-        {% endif %}
-        {% if job %}
-            <div role="tabpanel" class="tab-pane" id="source">
-                <p><code>{{ job.filename }}</code></p>
-                <pre>{{ job.source }}</pre>
-            </div>
-        {% endif %}
     </div>
-    <div class="row">
-        <div class="col-md-12">
-            {% plugin_full_width_page result %}
+    {% if result.data.output %}
+        <div role="tabpanel" class="tab-pane" id="output">
+            <pre>{{ result.data.output }}</pre>
         </div>
-    </div>
-{% endblock %}
+    {% endif %}
+{% endblock extra_tab_content %}
 
 {% block javascript %}
     {{ block.super }}

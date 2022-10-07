@@ -11,7 +11,7 @@ def order_content_types(field):
     Order the list of available ContentTypes by application
     """
     queryset = field.queryset.order_by("app_label", "model")
-    field.choices = [(ct.pk, "{} > {}".format(ct.app_label, ct.name)) for ct in queryset]
+    field.choices = [(ct.pk, f"{ct.app_label} > {ct.name}") for ct in queryset]
 
 
 #

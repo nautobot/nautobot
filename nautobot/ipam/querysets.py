@@ -19,6 +19,13 @@ from nautobot.ipam.constants import IPV4_BYTE_LENGTH, IPV6_BYTE_LENGTH
 from nautobot.utilities.querysets import RestrictedQuerySet
 
 
+class RIRQuerySet(RestrictedQuerySet):
+    """QuerySet for RIR objects."""
+
+    def get_by_natural_key(self, name):
+        return self.get(name=name)
+
+
 class BaseNetworkQuerySet(RestrictedQuerySet):
     """Base class for network-related querysets."""
 
@@ -160,7 +167,7 @@ class NetworkQuerySet(BaseNetworkQuerySet):
         try:
             byte_len = self.ip_family_map[family]
         except KeyError:
-            raise ValueError("invalid IP family {}".format(family))
+            raise ValueError(f"invalid IP family {family}")
 
         return self.annotate(address_len=Length(F("network"))).filter(address_len=byte_len)
 
@@ -322,7 +329,7 @@ class IPAddressQuerySet(BaseNetworkQuerySet):
         try:
             byte_len = self.ip_family_map[family]
         except KeyError:
-            raise ValueError("invalid IP family {}".format(family))
+            raise ValueError(f"invalid IP family {family}")
 
         return self.annotate(address_len=Length(F("host"))).filter(address_len=byte_len)
 
@@ -382,3 +389,23 @@ class IPAddressQuerySet(BaseNetworkQuerySet):
             kwargs["host"] = address.ip
             kwargs["broadcast"] = last_ip
         return super().filter(*args, **kwargs)
+
+    def filter_address_or_pk_in(self, addresses, pk_values=None):
+        """
+        Filters by a list of address and or pk
+
+        Similar to .filter(address__in=[<address>]`)
+        """
+        q = Q()
+        for _address in addresses:
+            _address = netaddr.IPNetwork(_address)
+            last_ip = self._get_last_ip(_address)
+            prefix_length = _address.prefixlen
+            host = _address.ip
+            broadcast = last_ip
+            q |= Q(prefix_length=prefix_length, host=host, broadcast=broadcast)
+
+        if pk_values is not None:
+            q |= Q(pk__in=pk_values)
+
+        return super().filter(q)

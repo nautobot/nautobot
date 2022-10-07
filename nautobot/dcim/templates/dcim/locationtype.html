@@ -1,0 +1,109 @@
+{% extends 'generic/object_detail.html' %}
+{% load helpers %}
+
+{% block extra_styles %}
+    <style>
+        .location-hierarchy {
+            list-style-type: none;
+            padding-left: 0px;
+        }
+
+        .location-hierarchy ul {
+            list-style-type: "↳ ";
+            padding-left: 18px;
+        }
+    </style>
+{% endblock %}
+
+{% block extra_breadcrumbs %}
+    {% for ancestor in object.ancestors %}
+        <li>{{ ancestor|hyperlinked_object }}</li>
+    {% endfor %}
+{% endblock %}
+
+{% block content_left_page %}
+    <div class="panel panel-default">
+        <div class="panel-heading">
+            <strong>Location Type</strong>
+        </div>
+        <table class="table table-hover panel-body attr-table">
+            <tr>
+                <td>Description</td>
+                <td>{{ object.description|placeholder }}</td>
+            </tr>
+            <tr>
+                <td>Hierarchy</td>
+                <td>
+                    <ul class="location-hierarchy">
+                    {% for ancestor in object.ancestors %}
+                        <li>{{ ancestor|hyperlinked_object }}
+                            <ul>
+                    {% endfor %}
+                    <li><strong>{{ object }}</strong></li>
+                    {% for ancestor in object.ancestors %}
+                            </ul>
+                        </li>
+                    {% endfor %}
+                </td>
+            </tr>
+            <tr>
+                <td>Content Type(s)</td>
+                <td>
+                    {% if object.content_types.all %}
+                        <ul>
+                            {% for content_type in object.content_types.all|dictsort:"model"|dictsort:"app_label" %}
+                                <li>{{ content_type }}</li>
+                            {% endfor %}
+                        </ul>
+                    {% else %}
+                        {{ None|placeholder }}
+                    {% endif %}
+                </td>
+            </tr>
+            <tr>
+                <td>Child Location Type(s)</td>
+                <td>
+                    <a href="{% url 'dcim:locationtype_list' %}?parent={{ object.slug }}">{{ children_table.rows|length }}</a>
+                </td>
+            </tr>
+            <tr>
+                <td>Locations</td>
+                <td>
+                    <a href="{% url 'dcim:location_list' %}?location_type={{ object.slug }}">{{ locations_table.rows|length }}</a>
+                </td>
+            </tr>
+        </table>
+    </div>
+{% endblock content_left_page %}
+
+{% block content_full_width_page %}
+    <div class="panel panel-default">
+        <div class="panel-heading">
+            <strong>Child Location Type(s)</strong>
+        </div>
+        {% include 'inc/table.html' with table=children_table %}
+        {% if perms.dcim.add_locationtype %}
+            <div class="panel-footer text-right noprint">
+                <a href="{% url 'dcim:locationtype_add' %}?parent={{ object.pk }}" class="btn btn-xs btn-primary">
+                    <span class="mdi mdi-plus-thick" aria-hidden="true"></span> Add child
+                </a>
+            </div>
+        {% endif %}
+    </div>
+    {% include 'inc/paginator.html' with paginator=children_table.paginator page=children_table.page %}
+    <div class="row"></div>
+    <div class="panel panel-default">
+        <div class="panel-heading">
+            <strong>Location(s) of this Type</strong>
+        </div>
+        {% include 'inc/table.html' with table=locations_table %}
+        {% if perms.dcim.add_location %}
+            <div class="panel-footer text-right noprint">
+                <a href="{% url 'dcim:location_add' %}?location_type={{ object.pk }}" class="btn btn-xs btn-primary">
+                    <span class="mdi mdi-plus-thick" aria-hidden="true"></span> Add location
+                </a>
+            </div>
+        {% endif %}
+    </div>
+    {% include 'inc/paginator.html' with paginator=locations_table.paginator page=locations_table.page %}
+{% endblock content_full_width_page %}

@@ -46,3 +46,56 @@ Site.objects.filter(
 ### Creating and Modifying Objects
 
 The same sort of logic is in play when a user attempts to create or modify an object in Nautobot, with a twist. Once validation has completed, Nautobot starts an atomic database transaction to facilitate the change, and the object is created or saved normally. Next, still within the transaction, Nautobot issues a second query to retrieve the newly created/updated object, filtering the restricted queryset with the object's primary key. If this query fails to return the object, Nautobot knows that the new revision does not match the constraints imposed by the permission. The transaction is then rolled back, leaving the database in its original state prior to the change, and the user is informed of the violation.
+
+## Assigning Permissions
+
+Permissions are implemented by assigning them to specific users and/or to groups of users. Users can have a combination of permissions and groups assigned to their account. All of the permissions granted to the user's groups and directly to the user's account will be used when determining authorization to access an object or view.
+
+### Assigning Permissions to Individual Users
+
+Permissions can be related directly to users from the Admin UI or the API:
+
+| -                                                                      | Admin UI | API |
+| ---------------------------------------------------------------------- | -------- | --- |
+| Superusers                                                             | Yes      | Yes |
+| Staff users with `users.add_permission` or `users.change_permission`   | Yes      | Yes |
+| Regular users with `users.add_permission` or `users.change_permission` | No       | Yes |
+
+Multiple permissions can be assigned to a user account.
+
+!!! info
+
+    User permission relationships can be managed in the Admin UI by modifying the user or the permission.
+
+!!! warning
+
+    Granting a user `users.change_permission` or `users.add_permission` gives the user the ability to modify their own permissions. This permission should be restricted to trusted accounts and should be considered the same as giving a user full access.
+
+### Creating Groups
+
+Groups of users can be created to provide role-based access control and simplify user permissions management. Permissions related to a group will apply to all users in the group. A user can belong to any number of groups. Groups can be created from the Admin UI or the API:
+
+| -                                                           | Admin UI | API |
+| ----------------------------------------------------------- | -------- | --- |
+| Superusers                                                  | Yes      | Yes |
+| Users with `auth.add_group` or `auth.change_group`          | No       | Yes |
+
+### Adding Users to Groups
+
+Users can be added to groups through the Admin UI by superusers or automatically assigned to externally authenticated users through the [`EXTERNAL_AUTH_DEFAULT_GROUPS`](../configuration/optional-settings.md#external_auth_default_groups) and [`EXTERNAL_AUTH_DEFAULT_PERMISSIONS`](../configuration/optional-settings.md#external_auth_default_permissions) settings. Nautobot groups can optionally be mapped to LDAP groups when using [LDAP authentication](../configuration/authentication/ldap.md#user-groups-for-permissions).
+
+### Assigning Permissions to Groups
+
+Permissions can be related to groups by superusers or users with `users.add_permission` or `users.change_permission` permissions.
+
+| -                                                                      | Admin UI | API |
+| ---------------------------------------------------------------------- | -------- | --- |
+| Superusers                                                             | Yes      | Yes |
+| Staff users with `users.add_permission` or `users.change_permission`   | Yes      | Yes |
+| Regular users with `users.add_permission` or `users.change_permission` | No       | Yes |
+
+Multiple permissions can be assigned to a user group.
+
+!!! info
+
+    Group permission relationships can be managed in the Admin UI by modifying the group (superusers only) or the permission.

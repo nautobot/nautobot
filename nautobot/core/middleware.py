@@ -1,13 +1,13 @@
-import uuid
-
 from django.conf import settings
 from django.contrib.auth.middleware import RemoteUserMiddleware as RemoteUserMiddleware_
 from django.db import ProgrammingError
 from django.http import Http404
+from django.urls import resolve
+from django.urls.exceptions import Resolver404
 from django.utils.deprecation import MiddlewareMixin
 
 from nautobot.core.views import server_error
-from nautobot.extras.context_managers import change_logging
+from nautobot.extras.context_managers import change_logging, WebChangeContext
 from nautobot.utilities.api import is_api_request, rest_api_server_error
 from nautobot.core.settings_funcs import (
     sso_auth_enabled,
@@ -34,7 +34,7 @@ class RemoteUserMiddleware(RemoteUserMiddleware_):
     def process_request(self, request):
         # Bypass middleware if remote authentication is not enabled
         if not remote_auth_enabled(auth_backends=settings.AUTHENTICATION_BACKENDS):
-            return
+            return None
 
         return super().process_request(request)
 
@@ -67,7 +67,7 @@ class ExternalAuthMiddleware(MiddlewareMixin):
             assign_permissions_to_user(request.user, settings.EXTERNAL_AUTH_DEFAULT_PERMISSIONS)
 
 
-class ObjectChangeMiddleware(object):
+class ObjectChangeMiddleware:
     """
     This middleware performs three functions in response to an object being created, updated, or deleted:
 
@@ -86,18 +86,23 @@ class ObjectChangeMiddleware(object):
         self.get_response = get_response
 
     def __call__(self, request):
-        # Assign a random unique ID to the request. This will be used to associate multiple object changes made during
-        # the same request.
-        request.id = uuid.uuid4()
+        # Determine the resolved path of the request that initiated the change
+        try:
+            change_context_detail = resolve(request.path).view_name
+        except Resolver404:
+            change_context_detail = ""
+
+        # Pass request rather than user here because at this point in the request handling logic, request.user may not have been set yet
+        change_context = WebChangeContext(request=request, context_detail=change_context_detail)
 
         # Process the request with change logging enabled
-        with change_logging(request):
+        with change_logging(change_context):
             response = self.get_response(request)
 
         return response
 
 
-class ExceptionHandlingMiddleware(object):
+class ExceptionHandlingMiddleware:
     """
     Intercept certain exceptions which are likely indicative of installation issues and provide helpful instructions
     to the user.
@@ -113,11 +118,11 @@ class ExceptionHandlingMiddleware(object):
 
         # Don't catch exceptions when in debug mode
         if settings.DEBUG:
-            return
+            return None
 
         # Ignore Http404s (defer to Django's built-in 404 handling)
         if isinstance(exception, Http404):
-            return
+            return None
 
         # Handle exceptions that occur from REST API requests
         if is_api_request(request):
@@ -135,3 +140,5 @@ class ExceptionHandlingMiddleware(object):
         # Return a custom error message, or fall back to Django's default 500 error handling
         if custom_template:
             return server_error(request, template_name=custom_template)
+
+        return None

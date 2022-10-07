@@ -65,7 +65,7 @@ Each attribute of the IP address is expressed as an attribute of the JSON object
 
 Comprehensive, interactive documentation of all REST API endpoints is available on a running Nautobot instance at `/api/docs/`. This interface provides a convenient sandbox for researching and experimenting with specific endpoints and request types. The API itself can also be explored using a web browser by navigating to its root at `/api/`.
 
-!!! tip
++++ 1.3.0
     You can view or explore a specific REST API [version](#versioning) by adding the API version as a query parameter, for example `/api/docs/?api_version=1.3` or `/api/?api_version=1.2`
 
 ## Endpoint Hierarchy
@@ -97,6 +97,8 @@ GET /api/dcim/interfaces/?device_id=6a522ebb-5739-4c5c-922f-ab4a2dc12eb0
 See the [filtering documentation](filtering.md) for more details.
 
 ## Versioning
+
++++ 1.3.0
 
 As of Nautobot 1.3, the REST API supports multiple versions. A REST API client may request a given API version by including a `major.minor` Nautobot version number in its request in one of two ways:
 
@@ -172,6 +174,8 @@ As an example, let us say that Nautobot 1.3 introduced a new, _non-backwards-com
 | `/api/dcim/racks/`  | `1.3`                 | 1.3-compatible REST API (unchanged from 1.2) |
 
 ### APISelect with versioning capability
+
++++ 1.3.0
 
 The constructor for Nautobot's `APISelect`/`APISelectMultiple` UI widgets now includes an optional `api_version` argument which if set overrides the default API version of the request.
 
@@ -291,72 +295,6 @@ http://nautobot/api/ipam/ip-addresses/ \
 
 If we wanted to assign this IP address to a virtual machine interface instead, we would have set `assigned_object_type` to `virtualization.vminterface` and updated the object ID appropriately.
 
-### Brief Format
-
-Most API endpoints support an optional "brief" format, which returns only a minimal representation of each object in the response. This is useful when you need only a list of available objects without any related data, such as when populating a drop-down list in a form. As an example, the default (complete) format of an IP address looks like this:
-
-```no-highlight
-GET /api/ipam/prefixes/7d2d24ac-4737-4fc1-a850-b30366618f3d/
-```
-
-```json
-{
-    "id": "7d2d24ac-4737-4fc1-a850-b30366618f3d",
-    "url": "http://nautobot/api/ipam/prefixes/7d2d24ac-4737-4fc1-a850-b30366618f3d/",
-    "family": {
-        "value": 4,
-        "label": "IPv4"
-    },
-    "prefix": "192.0.2.0/24",
-    "site": {
-        "id": "b9edf2ee-cad9-48be-9921-006294bff730",
-        "url": "http://nautobot/api/dcim/sites/b9edf2ee-cad9-48be-9921-006294bff730/",
-        "name": "Site 23A",
-        "slug": "site-23a"
-    },
-    "vrf": null,
-    "tenant": null,
-    "vlan": null,
-    "status": {
-        "value": "container",
-        "label": "Container"
-    },
-    "role": {
-        "id": "ae1470bc-a858-4ce7-b9ce-dd1cd46333fe",
-        "url": "http://nautobot/api/ipam/roles/ae1470bc-a858-4ce7-b9ce-dd1cd46333fe/",
-        "name": "Staging",
-        "slug": "staging"
-    },
-    "is_pool": false,
-    "description": "Example prefix",
-    "tags": [],
-    "custom_fields": {},
-    "created": "2018-12-10",
-    "last_updated": "2019-03-01T20:02:46.173540Z"
-}
-```
-
-The brief format is much more terse:
-
-```no-highlight
-GET /api/ipam/prefixes/7d2d24ac-4737-4fc1-a850-b30366618f3d/?brief=1
-```
-
-```json
-{
-    "id": "7d2d24ac-4737-4fc1-a850-b30366618f3d",
-    "url": "http://nautobot/api/ipam/prefixes/7d2d24ac-4737-4fc1-a850-b30366618f3d/",
-    "family": 4,
-    "prefix": "10.40.3.0/24"
-}
-```
-
-The brief format is supported for both lists and individual objects.
-
-### Excluding Config Contexts
-
-When retrieving devices and virtual machines via the REST API, each will included its rendered [configuration context data](../models/extras/configcontext/) by default. Users with large amounts of context data will likely observe suboptimal performance when returning multiple objects, particularly with very high page sizes. To combat this, context data may be excluded from the response data by attaching the query parameter `?exclude=config_context` to the request. This parameter works for both list and detail views.
-
 ## Pagination
 
 API responses which contain a list of many objects will be paginated for efficiency. The root JSON object returned by a list endpoint contains the following attributes:
@@ -395,7 +333,7 @@ Vary: Accept
 }
 ```
 
-The default page is determined by the [`PAGINATE_COUNT`](../../configuration/optional-settings/#paginate_count) configuration parameter, which defaults to 50. However, this can be overridden per request by specifying the desired `offset` and `limit` query parameters. For example, if you wish to retrieve a hundred devices at a time, you would make a request for:
+The default page is determined by the [`PAGINATE_COUNT`](../configuration/optional-settings.md#paginate_count) configuration parameter, which defaults to 50. However, this can be overridden per request by specifying the desired `offset` and `limit` query parameters. For example, if you wish to retrieve a hundred devices at a time, you would make a request for:
 
 ```no-highlight
 http://nautobot/api/dcim/devices/?limit=100
@@ -412,7 +350,7 @@ The response will return devices 1 through 100. The URL provided in the `next` a
 }
 ```
 
-The maximum number of objects that can be returned is limited by the [`MAX_PAGE_SIZE`](../../configuration/optional-settings/#max_page_size) configuration parameter, which is 1000 by default. Setting this to `0` or `None` will remove the maximum limit. An API consumer can then pass `?limit=0` to retrieve _all_ matching objects with a single request.
+The maximum number of objects that can be returned is limited by the [`MAX_PAGE_SIZE`](../configuration/optional-settings.md#max_page_size) configuration parameter, which is 1000 by default. Setting this to `0` or `None` will remove the maximum limit. An API consumer can then pass `?limit=0` to retrieve _all_ matching objects with a single request.
 
 !!! warning
     Disabling the page size limit introduces a potential for very resource-intensive requests, since one API request can effectively retrieve an entire table from the database.
@@ -476,9 +414,135 @@ http://nautobot/api/ipam/ip-addresses/bd307eca-de34-4bda-9195-d69ca52206d6/ | jq
 }
 ```
 
+### Brief Format
+
+The `GET` API endpoints support an optional "brief" format, which returns only a minimal representation of each object in the response. This is useful when you need only a list of available objects without any related data, such as when populating a drop-down list in a form. As an example, the default (complete) format of an IP address looks like this:
+
+```no-highlight
+GET /api/ipam/prefixes/7d2d24ac-4737-4fc1-a850-b30366618f3d/
+```
+
+```json
+{
+    "id": "7d2d24ac-4737-4fc1-a850-b30366618f3d",
+    "url": "http://nautobot/api/ipam/prefixes/7d2d24ac-4737-4fc1-a850-b30366618f3d/",
+    "family": {
+        "value": 4,
+        "label": "IPv4"
+    },
+    "prefix": "192.0.2.0/24",
+    "site": {
+        "id": "b9edf2ee-cad9-48be-9921-006294bff730",
+        "url": "http://nautobot/api/dcim/sites/b9edf2ee-cad9-48be-9921-006294bff730/",
+        "name": "Site 23A",
+        "slug": "site-23a"
+    },
+    "vrf": null,
+    "tenant": null,
+    "vlan": null,
+    "status": {
+        "value": "container",
+        "label": "Container"
+    },
+    "role": {
+        "id": "ae1470bc-a858-4ce7-b9ce-dd1cd46333fe",
+        "url": "http://nautobot/api/ipam/roles/ae1470bc-a858-4ce7-b9ce-dd1cd46333fe/",
+        "name": "Staging",
+        "slug": "staging"
+    },
+    "is_pool": false,
+    "description": "Example prefix",
+    "tags": [],
+    "custom_fields": {},
+    "created": "2018-12-10",
+    "last_updated": "2019-03-01T20:02:46.173540Z"
+}
+```
+
+The brief format is much more terse:
+
+```no-highlight
+GET /api/ipam/prefixes/7d2d24ac-4737-4fc1-a850-b30366618f3d/?brief=1
+```
+
+```json
+{
+    "id": "7d2d24ac-4737-4fc1-a850-b30366618f3d",
+    "url": "http://nautobot/api/ipam/prefixes/7d2d24ac-4737-4fc1-a850-b30366618f3d/",
+    "family": 4,
+    "prefix": "10.40.3.0/24"
+}
+```
+
+The brief format is supported for both lists and individual objects.
+
+### Retrieving Object Relationships and Relationship Associations
+
++++ 1.4.0
+
+Objects that are associated with another object by a custom [Relationship](../models/extras/relationship.md) are also retrievable and modifiable via the REST API. Due to the additional processing overhead involved in retrieving and representing these relationships, they are _not_ included in default REST API `GET` responses. To include relationships data, pass `include=relationships` as a query parameter; in this case an additional key, `"relationships"`, will be included in the API response, as seen below:
+
+```no-highlight
+GET /api/dcim/sites/f472bb77-7f56-4e79-ac25-2dc73eb63924/?include=relationships
+```
+
+```json
+{
+    "id": "f472bb77-7f56-4e79-ac25-2dc73eb63924",
+    "display": "alpha",
+    "url": "http://nautobot/api/dcim/sites/f472bb77-7f56-4e79-ac25-2dc73eb63924/",
+...
+    "relationships": {
+        "site-to-vrf": {
+            "id": "e74cb7f7-15b0-499d-9401-a0f01cb96a9a",
+            "url": "/api/extras/relationships/e74cb7f7-15b0-499d-9401-a0f01cb96a9a/",
+            "name": "Single Site to Single VRF",
+            "type": "one-to-one",
+            "destination": {
+                "label": "VRF",
+                "object_type": "ipam.vrf",
+                "objects": [
+                    {
+                        "id": "36641ba0-50d6-43be-b9b5-86aa992402e0",
+                        "url": "http://nautobot/api/ipam/vrfs/36641ba0-50d6-43be-b9b5-86aa992402e0/",
+                        "name": "red",
+                        "rd": null,
+                        "display": "red"
+                    }
+                ]
+            }
+        },
+        "vrfs-to-sites": {
+            "id": "e39c53e4-78cf-4572-b116-1d8830b81b2e",
+            "url": "/api/extras/relationships/e39c53e4-78cf-4572-b116-1d8830b81b2e/",
+            "name": "VRFs to Sites",
+            "type": "many-to-many",
+            "source": {
+                "label": "VRFs",
+                "object_type": "ipam.vrf",
+                "objects": []
+            }
+        },
+    }
+}
+```
+
+* Under the `"relationships"` key, there will be one key per Relationship that applies to this model, corresponding to the `slug` of that Relationship.
+    * Under each slug key, there will be information about the Relationship itself, plus any of `"source"`, `"destination"`, or `"peer"` keys (depending on the type and directionality of the Relationship).
+        * Under the `"source"`, `"destination"`, or `"peer"` keys, there are the following keys:
+            * `"label"` - a human-readable description of the related objects
+            * `"object_type"` - the content-type of the related objects
+            * `"objects"` - a list of all related objects, each represented in nested-serializer form as described under [Related Objects](#related-objects) above.
+
+In the example above we can see that a single VRF, `green`, is a destination for the `site-to-vrf` Relationship from this Site, while there are currently no VRFs associated as sources for the `vrfs-to-sites` Relationship to this Site.
+
+### Excluding Config Contexts
+
+When retrieving devices and virtual machines via the REST API, each will include its rendered [configuration context data](../models/extras/configcontext.md) by default. Users with large amounts of context data will likely observe suboptimal performance when returning multiple objects, particularly with very high page sizes. To combat this, context data may be excluded from the response data by attaching the query parameter `?exclude=config_context` to the request. This parameter works for both list and detail views.
+
 ### Creating a New Object
 
-To create a new object, make a `POST` request to the model's _list_ endpoint with JSON data pertaining to the object being created. Note that a REST API token is required for all write operations; see the [authentication documentation](../authentication/) for more information. Also be sure to set the `Content-Type` HTTP header to `application/json`. As always, it's a good practice to also set the `Accept` HTTP header to include the requested REST API version.
+To create a new object, make a `POST` request to the model's _list_ endpoint with JSON data pertaining to the object being created. Note that a REST API token is required for all write operations; see the [authentication documentation](authentication.md) for more information. Also be sure to set the `Content-Type` HTTP header to `application/json`. As always, it's a good practice to also set the `Accept` HTTP header to include the requested REST API version.
 
 ```no-highlight
 curl -s -X POST \
@@ -607,6 +671,49 @@ http://nautobot/api/ipam/prefixes/b484b0ac-12e3-484a-84c0-aa17955eaedc/ \
 
 !!! note "PUT versus PATCH"
     The Nautobot REST API support the use of either `PUT` or `PATCH` to modify an existing object. The difference is that a `PUT` request requires the user to specify a _complete_ representation of the object being modified, whereas a `PATCH` request need include only the attributes that are being updated. For most purposes, using `PATCH` is recommended.
+
+#### Updating Relationship Associations
+
++++ 1.4.0
+
+It is possible to modify the objects associated via Relationship with an object as part of a REST API `PATCH` request by specifying the `"relationships"` key, any or all of the relevant Relationships, and the list of desired related objects for each such Relationship. Since nested serializers are used for the related objects, they can be identified by ID (primary key) or by one or more attributes in a dictionary. For example, either of the following requests would be valid:
+
+```json
+{
+    "relationships": {
+        "site-to-vrf": {
+            "destination": {
+                "objects": [
+                    {"name": "blue"}
+                ]
+            }
+        },
+        "vrfs-to-sites": {
+            "source": {
+                "objects": [
+                    {"name": "green"},
+                    {"name": "red"},
+                ]
+            }
+        }
+    }
+}
+```
+
+```json
+{
+    "relationships": {
+        "site-to-vrf": {
+            "destination": {
+                "objects": ["3e3c58f9-4f63-44ba-acee-f0c42430eba7"]
+            }
+        }
+    }
+}
+```
+
+!!! Note
+    Relationship slugs can be omitted from the `"relationships"` dictionary, in which case the associations for that Relationship will be left unmodified. In the second example above, the existing association for the `"site-to-vrf"` Relationship would be replaced, but the `"vrfs-to-sites"` Relationship's associations would remain as-is.
 
 ### Updating Multiple Objects
 

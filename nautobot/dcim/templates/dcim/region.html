@@ -26,9 +26,7 @@
                 </tr>
                 <tr>
                     <td>Parent</td>
-                    <td>
-                        <a href="{{ object.parent.get_absolute_url }}">{{ object.parent|placeholder }}</a>
-                    </td>
+                    <td>{{ object.parent|hyperlinked_object }}</td>
                 </tr>
                 <tr>
                     <td>Sites</td>
@@ -54,6 +52,6 @@
                 </div>
             {% endif %}
         </div>
-        {% include 'inc/paginator.html' with paginator=site_table.paginator page=site_table.page %}
+        {% include 'inc/paginator.html' with paginator=sites_table.paginator page=sites_table.page %}
         <div class="row"></div>
 {% endblock content_full_width_page %}

@@ -12,7 +12,7 @@ def get_permission_for_model(model, action):
     if action not in ("view", "add", "change", "delete"):
         raise ValueError(f"Unsupported action: {action}")
 
-    return "{}.{}_{}".format(model._meta.app_label, action, model._meta.model_name)
+    return f"{model._meta.app_label}.{action}_{model._meta.model_name}"
 
 
 def resolve_permission(name):

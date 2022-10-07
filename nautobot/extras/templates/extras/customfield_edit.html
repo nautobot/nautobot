@@ -6,10 +6,11 @@
     <div class="panel panel-default">
         <div class="panel-heading"><strong>Custom Field</strong></div>
         <div class="panel-body">
-            {% render_field form.name %}
+            {% render_field form.label %}
+            {% render_field form.grouping %}
+            {% render_field form.slug %}
             {% render_field form.type %}
             {% render_field form.weight %}
-            {% render_field form.label %}
             {% render_field form.description %}
             {% render_field form.required %}
             {% render_field form.default %}
@@ -94,8 +95,10 @@
 {% endblock form %}
 
 {% block javascript %}
+{{ block.super }}
 <script src="{% static 'jquery/jquery.formset.js' %}"></script>
 <script type="text/javascript">
+    const slugify_prefer_underscores = true; // Custom fields work better in GraphQL (etc.) with underscore-based slugs
     $('.formset_row-{{ choices.prefix }}').formset({
         addText: '<span class="mdi mdi-plus-thick" aria-hidden="true"></span> Add another Custom Field Choice',
         addCssClass: 'btn btn-primary add-row',
@@ -103,7 +106,8 @@
         deleteCssClass: 'btn btn-danger delete-row',
         prefix: '{{ choices.prefix }}',
         formCssClass: 'dynamic-formset-{{ choices.prefix }}',
-        keepFieldValues: 'input[type="number"]'
+        keepFieldValues: 'input[type="number"]',
+        added: jsify_form
     });
 </script>
 {% endblock javascript %}

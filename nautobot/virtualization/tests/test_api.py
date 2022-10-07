@@ -1,3 +1,5 @@
+from unittest import skip
+
 from django.contrib.contenttypes.models import ContentType
 from django.urls import reverse
 from rest_framework import status
@@ -20,7 +22,7 @@ class AppTest(APITestCase):
     def test_root(self):
 
         url = reverse("virtualization-api:api-root")
-        response = self.client.get("{}?format=api".format(url), **self.header)
+        response = self.client.get(f"{url}?format=api", **self.header)
 
         self.assertEqual(response.status_code, 200)
 
@@ -141,6 +143,7 @@ class VirtualMachineTest(APIViewTestCases.APIViewTestCase):
         "status": "staged",
     }
     choices_fields = ["status"]
+    fixtures = ("status",)
 
     @classmethod
     def setUpTestData(cls):
@@ -159,19 +162,19 @@ class VirtualMachineTest(APIViewTestCases.APIViewTestCase):
             cluster=clusters[0],
             local_context_data={"A": 1},
             status=statuses[0],
-        ),
+        )
         VirtualMachine.objects.create(
             name="Virtual Machine 2",
             cluster=clusters[0],
             local_context_data={"B": 2},
             status=statuses[0],
-        ),
+        )
         VirtualMachine.objects.create(
             name="Virtual Machine 3",
             cluster=clusters[0],
             local_context_data={"C": 3},
             status=statuses[0],
-        ),
+        )
 
         # FIXME(jathan): The writable serializer for `status` takes the
         # status `name` (str) and not the `pk` (int). Do not validate this
@@ -204,7 +207,8 @@ class VirtualMachineTest(APIViewTestCases.APIViewTestCase):
         Check that config context data is included by default in the virtual machines list.
         """
         virtualmachine = VirtualMachine.objects.first()
-        url = "{}?id={}".format(reverse("virtualization-api:virtualmachine-list"), virtualmachine.pk)
+        reverse_url = reverse("virtualization-api:virtualmachine-list")
+        url = f"{reverse_url}?id={virtualmachine.pk}"
         self.add_permissions("virtualization.view_virtualmachine")
 
         response = self.client.get(url, **self.header)
@@ -287,6 +291,7 @@ class VMInterfaceTestVersion12(APIViewTestCases.APIViewTestCase):
         "description": "New description",
     }
     choices_fields = ["mode", "status"]
+    fixtures = ("status",)
 
     @classmethod
     def setUpTestData(cls):
@@ -295,9 +300,11 @@ class VMInterfaceTestVersion12(APIViewTestCases.APIViewTestCase):
         cluster = Cluster.objects.create(name="Test Cluster 1", type=clustertype)
         virtualmachine = VirtualMachine.objects.create(cluster=cluster, name="Test VM 1")
 
-        VMInterface.objects.create(virtual_machine=virtualmachine, name="Interface 1")
-        VMInterface.objects.create(virtual_machine=virtualmachine, name="Interface 2")
-        VMInterface.objects.create(virtual_machine=virtualmachine, name="Interface 3")
+        interfaces = (
+            VMInterface.objects.create(virtual_machine=virtualmachine, name="Interface 1"),
+            VMInterface.objects.create(virtual_machine=virtualmachine, name="Interface 2"),
+            VMInterface.objects.create(virtual_machine=virtualmachine, name="Interface 3"),
+        )
 
         vlans = (
             VLAN.objects.create(name="VLAN 1", vid=1),
@@ -317,6 +324,7 @@ class VMInterfaceTestVersion12(APIViewTestCases.APIViewTestCase):
                 "virtual_machine": virtualmachine.pk,
                 "name": "Interface 5",
                 "mode": InterfaceModeChoices.MODE_TAGGED,
+                "bridge": interfaces[0].pk,
                 "tagged_vlans": [vlans[0].pk, vlans[1].pk],
                 "untagged_vlan": vlans[2].pk,
             },
@@ -324,17 +332,24 @@ class VMInterfaceTestVersion12(APIViewTestCases.APIViewTestCase):
                 "virtual_machine": virtualmachine.pk,
                 "name": "Interface 6",
                 "mode": InterfaceModeChoices.MODE_TAGGED,
+                "parent_interface": interfaces[1].pk,
                 "tagged_vlans": [vlans[0].pk, vlans[1].pk],
                 "untagged_vlan": vlans[2].pk,
             },
         ]
 
+        cls.untagged_vlan_data = {
+            "virtual_machine": virtualmachine.pk,
+            "name": "expected-to-fail",
+            "untagged_vlan": vlans[0].pk,
+        }
+
     def test_active_status_not_found(self):
         self.add_permissions("virtualization.add_vminterface")
 
         vminterface_ct = ContentType.objects.get_for_model(VMInterface)
-        status = Status.objects.get_for_model(VMInterface).get(slug=VMInterfaceStatusChoices.STATUS_ACTIVE)
-        status.content_types.remove(vminterface_ct)
+        status_active = Status.objects.get_for_model(VMInterface).get(slug=VMInterfaceStatusChoices.STATUS_ACTIVE)
+        status_active.content_types.remove(vminterface_ct)
 
         data = {
             "virtual_machine": VirtualMachine.objects.first().id,
@@ -356,76 +371,33 @@ class VMInterfaceTestVersion12(APIViewTestCases.APIViewTestCase):
         """Test that when an `untagged_vlan` is specified, `mode` is also required."""
         self.add_permissions("virtualization.add_vminterface")
 
-        vlan = VLAN.objects.first()
-        virtual_machine = VirtualMachine.objects.first()
-
         # This will fail.
-        data = {
-            "virtual_machine": virtual_machine.pk,
-            "name": "expected-to-fail",
-            "untagged_vlan": vlan.pk,
-        }
-
         url = self._get_list_url()
-        self.assertHttpStatus(self.client.post(url, data, format="json", **self.header), status.HTTP_400_BAD_REQUEST)
+        self.assertHttpStatus(
+            self.client.post(url, self.untagged_vlan_data, format="json", **self.header), status.HTTP_400_BAD_REQUEST
+        )
 
         # Now let's add mode and it will work.
-        data["mode"] = InterfaceModeChoices.MODE_ACCESS
-        self.assertHttpStatus(self.client.post(url, data, format="json", **self.header), status.HTTP_201_CREATED)
+        self.untagged_vlan_data["mode"] = InterfaceModeChoices.MODE_ACCESS
+        self.assertHttpStatus(
+            self.client.post(url, self.untagged_vlan_data, format="json", **self.header), status.HTTP_201_CREATED
+        )
 
 
-class VMInterfaceTestVersion14(APIViewTestCases.APIViewTestCase):
+class VMInterfaceTestVersion14(VMInterfaceTestVersion12):
     api_version = "1.4"
     validation_excluded_fields = ["status"]
-    model = VMInterface
-    brief_fields = ["display", "id", "name", "url", "virtual_machine"]
-    bulk_update_data = {
-        "description": "New description",
-    }
-    choices_fields = ["mode", "status"]
 
     @classmethod
     def setUpTestData(cls):
+        super().setUpTestData()
 
-        clustertype = ClusterType.objects.create(name="Test Cluster Type 1", slug="test-cluster-type-1")
-        cluster = Cluster.objects.create(name="Test Cluster 1", type=clustertype)
-        virtualmachine = VirtualMachine.objects.create(cluster=cluster, name="Test VM 1")
+        # Add status to all payload because status is required in v1.4
+        for i, _ in enumerate(cls.create_data):
+            cls.create_data[i]["status"] = "active"
 
-        status_active = Status.objects.get_for_model(VMInterface).get(slug=VMInterfaceStatusChoices.STATUS_ACTIVE)
+        cls.untagged_vlan_data["status"] = "active"
 
-        VMInterface.objects.create(virtual_machine=virtualmachine, name="Interface 1", status=status_active)
-        VMInterface.objects.create(virtual_machine=virtualmachine, name="Interface 2", status=status_active)
-        VMInterface.objects.create(virtual_machine=virtualmachine, name="Interface 3", status=status_active)
-
-        vlans = (
-            VLAN.objects.create(name="VLAN 1", vid=1),
-            VLAN.objects.create(name="VLAN 2", vid=2),
-            VLAN.objects.create(name="VLAN 3", vid=3),
-        )
-
-        cls.create_data = [
-            {
-                "virtual_machine": virtualmachine.pk,
-                "name": "Interface 4",
-                "mode": InterfaceModeChoices.MODE_TAGGED,
-                "tagged_vlans": [vlans[0].pk, vlans[1].pk],
-                "untagged_vlan": vlans[2].pk,
-                "status": "active",
-            },
-            {
-                "virtual_machine": virtualmachine.pk,
-                "name": "Interface 5",
-                "mode": InterfaceModeChoices.MODE_TAGGED,
-                "tagged_vlans": [vlans[0].pk, vlans[1].pk],
-                "untagged_vlan": vlans[2].pk,
-                "status": "active",
-            },
-            {
-                "virtual_machine": virtualmachine.pk,
-                "name": "Interface 6",
-                "mode": InterfaceModeChoices.MODE_TAGGED,
-                "tagged_vlans": [vlans[0].pk, vlans[1].pk],
-                "untagged_vlan": vlans[2].pk,
-                "status": "active",
-            },
-        ]
+    @skip("Test not required in v1.4")
+    def test_active_status_not_found(self):
+        pass

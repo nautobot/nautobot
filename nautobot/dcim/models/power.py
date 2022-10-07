@@ -1,3 +1,4 @@
+from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ValidationError
 from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
@@ -33,6 +34,7 @@ __all__ = (
     "custom_validators",
     "export_templates",
     "graphql",
+    "locations",
     "relationships",
     "webhooks",
 )
@@ -42,10 +44,13 @@ class PowerPanel(PrimaryModel):
     """
 
     site = models.ForeignKey(to="Site", on_delete=models.PROTECT)
+    location = models.ForeignKey(
+        to="dcim.Location", on_delete=models.PROTECT, related_name="powerpanels", blank=True, null=True
+    )
     rack_group = models.ForeignKey(to="RackGroup", on_delete=models.PROTECT, blank=True, null=True)
     name = models.CharField(max_length=100, db_index=True)
 
-    csv_headers = ["site", "rack_group", "name"]
+    csv_headers = ["site", "location", "rack_group", "name"]
 
     class Meta:
         ordering = ["site", "name"]
@@ -60,6 +65,7 @@ class PowerPanel(PrimaryModel):
     def to_csv(self):
         return (
             self.site.name,
+            self.location.name if self.location else None,
             self.rack_group.name if self.rack_group else None,
             self.name,
         )
@@ -67,16 +73,42 @@ class PowerPanel(PrimaryModel):
     def clean(self):
         super().clean()
 
-        # RackGroup must belong to assigned Site
-        if self.rack_group and self.rack_group.site != self.site:
-            raise ValidationError(
-                "Rack group {} ({}) is in a different site than {}".format(
-                    self.rack_group, self.rack_group.site, self.site
+        # Validate location
+        if self.location is not None:
+            if self.location.base_site != self.site:
+                raise ValidationError(
+                    {"location": f'Location "{self.location}" does not belong to site "{self.site}".'}
                 )
-            )
+
+            if ContentType.objects.get_for_model(self) not in self.location.location_type.content_types.all():
+                raise ValidationError(
+                    {
+                        "location": "Power panels may not associate to locations of type "
+                        f'"{self.location.location_type}".'
+                    }
+                )
+
+        # RackGroup must belong to assigned Site and Location
+        if self.rack_group:
+            if self.rack_group.site != self.site:
+                raise ValidationError(
+                    f"Rack group {self.rack_group} ({self.rack_group.site}) is in a different site than {self.site}"
+                )
+            if (
+                self.location is not None
+                and self.rack_group.location is not None
+                and self.rack_group.location not in self.location.ancestors(include_self=True)
+            ):
+                raise ValidationError(
+                    {
+                        "rack_group": f'Rack group "{self.rack_group}" belongs to a location '
+                        f'("{self.rack_group.location}") that does not contain "{self.location}".'
+                    }
+                )
 
 
 @extras_features(
+    "cable_terminations",
     "custom_fields",
     "custom_links",
     "custom_validators",
@@ -180,9 +212,7 @@ class PowerFeed(PrimaryModel, PathEndpoint, CableTermination, StatusModel):
         # Rack must belong to same Site as PowerPanel
         if self.rack and self.rack.site != self.power_panel.site:
             raise ValidationError(
-                "Rack {} ({}) and power panel {} ({}) are in different sites".format(
-                    self.rack, self.rack.site, self.power_panel, self.power_panel.site
-                )
+                f"Rack {self.rack} ({self.rack.site}) and power panel {self.power_panel} ({self.power_panel.site}) are in different sites"
             )
 
         # AC voltage cannot be negative

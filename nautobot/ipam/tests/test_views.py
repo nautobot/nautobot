@@ -1,10 +1,12 @@
 import datetime
 
 from netaddr import IPNetwork
+from django.contrib.contenttypes.models import ContentType
 from django.test import override_settings
 
 from nautobot.dcim.models import Device, DeviceRole, DeviceType, Manufacturer, Site
-from nautobot.extras.models import Status
+from nautobot.extras.choices import CustomFieldTypeChoices
+from nautobot.extras.models import CustomField, Status, Tag
 from nautobot.ipam.choices import IPAddressRoleChoices, ServiceProtocolChoices
 from nautobot.ipam.models import (
     Aggregate,
@@ -25,6 +27,7 @@ from nautobot.utilities.testing.utils import extract_page_body
 
 class VRFTestCase(ViewTestCases.PrimaryObjectViewTestCase):
     model = VRF
+    fixtures = ("tag",)
 
     @classmethod
     def setUpTestData(cls):
@@ -34,19 +37,13 @@ class VRFTestCase(ViewTestCases.PrimaryObjectViewTestCase):
             Tenant.objects.create(name="Tenant B", slug="tenant-b"),
         )
 
-        VRF.objects.create(name="VRF 1", rd="65000:1"),
-        VRF.objects.create(name="VRF 2", rd="65000:2"),
-        VRF.objects.create(name="VRF 3", rd="65000:3"),
-
-        tags = cls.create_tags("Alpha", "Bravo", "Charlie")
-
         cls.form_data = {
             "name": "VRF X",
             "rd": "65000:999",
             "tenant": tenants[0].pk,
             "enforce_unique": True,
             "description": "A new VRF",
-            "tags": [t.pk for t in tags],
+            "tags": [t.pk for t in Tag.objects.get_for_model(VRF)],
         }
 
         cls.csv_data = (
@@ -65,6 +62,7 @@ class VRFTestCase(ViewTestCases.PrimaryObjectViewTestCase):
 
 class RouteTargetTestCase(ViewTestCases.PrimaryObjectViewTestCase):
     model = RouteTarget
+    fixtures = ("tag",)
 
     @classmethod
     def setUpTestData(cls):
@@ -74,16 +72,10 @@ class RouteTargetTestCase(ViewTestCases.PrimaryObjectViewTestCase):
             Tenant.objects.create(name="Tenant B", slug="tenant-b"),
         )
 
-        tags = cls.create_tags("Alpha", "Bravo", "Charlie")
-
-        RouteTarget.objects.create(name="65000:1001", tenant=tenants[0]),
-        RouteTarget.objects.create(name="65000:1002", tenant=tenants[1]),
-        RouteTarget.objects.create(name="65000:1003"),
-
         cls.form_data = {
             "name": "65000:100",
             "description": "A new route target",
-            "tags": [t.pk for t in tags],
+            "tags": [t.pk for t in Tag.objects.get_for_model(RouteTarget)],
         }
 
         cls.csv_data = (
@@ -104,15 +96,7 @@ class RIRTestCase(ViewTestCases.OrganizationalObjectViewTestCase):
 
     @classmethod
     def setUpTestData(cls):
-
-        RIR.objects.bulk_create(
-            [
-                RIR(name="RIR 1", slug="rir-1"),
-                RIR(name="RIR 2", slug="rir-2"),
-                RIR(name="RIR 3", slug="rir-3"),
-                RIR(name="RIR 8"),
-            ]
-        )
+        RIR.objects.create(name="RIR 8")
 
         cls.form_data = {
             "name": "RIR X",
@@ -131,41 +115,45 @@ class RIRTestCase(ViewTestCases.OrganizationalObjectViewTestCase):
         cls.slug_source = "name"
         cls.slug_test_object = "RIR 8"
 
+    def get_deletable_object(self):
+        """Return an RIR without any associated Aggregates."""
+        return RIR.objects.get(name="RIR 8")
+
+    def get_deletable_object_pks(self):
+        """Return a list of PKs corresponding to RIRs without any associated Aggregates."""
+        rirs = [
+            RIR.objects.create(name="RFC N/A"),
+            RIR.objects.create(name="MAGICNIC"),
+            RIR.objects.create(name="NOTANIC"),
+        ]
+        return [rir.pk for rir in rirs]
+
 
 class AggregateTestCase(ViewTestCases.PrimaryObjectViewTestCase):
     model = Aggregate
+    fixtures = ("tag",)
 
     @classmethod
     def setUpTestData(cls):
-
-        rirs = (
-            RIR.objects.create(name="RIR 1", slug="rir-1"),
-            RIR.objects.create(name="RIR 2", slug="rir-2"),
-        )
-
-        Aggregate.objects.create(prefix=IPNetwork("10.1.0.0/16"), rir=rirs[0]),
-        Aggregate.objects.create(prefix=IPNetwork("10.2.0.0/16"), rir=rirs[0]),
-        Aggregate.objects.create(prefix=IPNetwork("10.3.0.0/16"), rir=rirs[0]),
-
-        tags = cls.create_tags("Alpha", "Bravo", "Charlie")
+        rir = RIR.objects.first()
 
         cls.form_data = {
-            "prefix": IPNetwork("10.99.0.0/16"),
-            "rir": rirs[1].pk,
+            "prefix": IPNetwork("22.99.0.0/16"),
+            "rir": rir.pk,
             "date_added": datetime.date(2020, 1, 1),
             "description": "A new aggregate",
-            "tags": [t.pk for t in tags],
+            "tags": [t.pk for t in Tag.objects.get_for_model(Aggregate)],
         }
 
         cls.csv_data = (
             "prefix,rir",
-            "10.4.0.0/16,RIR 1",
-            "10.5.0.0/16,RIR 1",
-            "10.6.0.0/16,RIR 1",
+            f"22.4.0.0/16,{rir.name}",
+            f"22.5.0.0/16,{rir.name}",
+            f"22.6.0.0/16,{rir.name}",
         )
 
         cls.bulk_edit_data = {
-            "rir": rirs[1].pk,
+            "rir": RIR.objects.last().pk,
             "date_added": datetime.date(2020, 1, 1),
             "description": "New description",
         }
@@ -176,15 +164,7 @@ class RoleTestCase(ViewTestCases.OrganizationalObjectViewTestCase):
 
     @classmethod
     def setUpTestData(cls):
-
-        Role.objects.bulk_create(
-            [
-                Role(name="Role 1", slug="role-1"),
-                Role(name="Role 2", slug="role-2"),
-                Role(name="Role 3", slug="role-3"),
-                Role(name="Role 8"),
-            ]
-        )
+        Role.objects.create(name="Role 8")
 
         cls.form_data = {
             "name": "Role X",
@@ -206,6 +186,10 @@ class RoleTestCase(ViewTestCases.OrganizationalObjectViewTestCase):
 
 class PrefixTestCase(ViewTestCases.PrimaryObjectViewTestCase, ViewTestCases.ListObjectsViewTestCase):
     model = Prefix
+    fixtures = (
+        "status",
+        "tag",
+    )
 
     @classmethod
     def setUpTestData(cls):
@@ -215,15 +199,9 @@ class PrefixTestCase(ViewTestCases.PrimaryObjectViewTestCase, ViewTestCases.List
             Site.objects.create(name="Site 2", slug="site-2"),
         )
 
-        vrfs = (
-            VRF.objects.create(name="VRF 1", rd="65000:1"),
-            VRF.objects.create(name="VRF 2", rd="65000:2"),
-        )
+        vrfs = VRF.objects.all()[:2]
 
-        roles = (
-            Role.objects.create(name="Role 1", slug="role-1"),
-            Role.objects.create(name="Role 2", slug="role-2"),
-        )
+        roles = Role.objects.all()[:2]
 
         statuses = Status.objects.get_for_model(Prefix)
         status_reserved = statuses.get(slug="reserved")
@@ -250,8 +228,6 @@ class PrefixTestCase(ViewTestCases.PrimaryObjectViewTestCase, ViewTestCases.List
             status=statuses[0],
         )
 
-        tags = cls.create_tags("Alpha", "Bravo", "Charlie")
-
         cls.form_data = {
             "prefix": IPNetwork("192.0.2.0/24"),
             "site": sites[1].pk,
@@ -262,14 +238,14 @@ class PrefixTestCase(ViewTestCases.PrimaryObjectViewTestCase, ViewTestCases.List
             "role": roles[1].pk,
             "is_pool": True,
             "description": "A new prefix",
-            "tags": [t.pk for t in tags],
+            "tags": [t.pk for t in Tag.objects.get_for_model(Prefix)],
         }
 
         cls.csv_data = (
             "vrf,prefix,status",
-            "VRF 1,10.4.0.0/16,active",
-            "VRF 1,10.5.0.0/16,active",
-            "VRF 1,10.6.0.0/16,active",
+            f"{vrfs[0].name},10.4.0.0/16,active",
+            f"{vrfs[0].name},10.5.0.0/16,active",
+            f"{vrfs[0].name},10.6.0.0/16,active",
         )
 
         cls.bulk_edit_data = {
@@ -287,7 +263,7 @@ class PrefixTestCase(ViewTestCases.PrimaryObjectViewTestCase, ViewTestCases.List
         """
         Testing filtering items for non-existent Status actually returns 0 results. For issue #1312 in which the filter
         view expected to return 0 results was instead returning items in list. Used the Status of "deprecated" in this test,
-        but the same behavior was observerd in other filters, such as IPv4/IPv6.
+        but the same behavior was observed in other filters, such as IPv4/IPv6.
         """
         prefixes = self._get_queryset().all()
         self.assertEqual(prefixes.count(), 3)
@@ -303,14 +279,15 @@ class PrefixTestCase(ViewTestCases.PrimaryObjectViewTestCase, ViewTestCases.List
 
 class IPAddressTestCase(ViewTestCases.PrimaryObjectViewTestCase):
     model = IPAddress
+    fixtures = (
+        "status",
+        "tag",
+    )
 
     @classmethod
     def setUpTestData(cls):
 
-        vrfs = (
-            VRF.objects.create(name="VRF 1", rd="65000:1"),
-            VRF.objects.create(name="VRF 2", rd="65000:2"),
-        )
+        vrfs = VRF.objects.all()[:2]
 
         statuses = Status.objects.get_for_model(IPAddress)
         status_reserved = statuses.get(slug="reserved")
@@ -318,8 +295,6 @@ class IPAddressTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         IPAddress.objects.create(address=IPNetwork("192.0.2.1/24"), vrf=vrfs[0], status=statuses[0])
         IPAddress.objects.create(address=IPNetwork("192.0.2.2/24"), vrf=vrfs[0], status=statuses[0])
         IPAddress.objects.create(address=IPNetwork("192.0.2.3/24"), vrf=vrfs[0], status=statuses[0])
-
-        tags = cls.create_tags("Alpha", "Bravo", "Charlie")
 
         cls.form_data = {
             "vrf": vrfs[1].pk,
@@ -330,14 +305,14 @@ class IPAddressTestCase(ViewTestCases.PrimaryObjectViewTestCase):
             "nat_inside": None,
             "dns_name": "example",
             "description": "A new IP address",
-            "tags": [t.pk for t in tags],
+            "tags": [t.pk for t in Tag.objects.get_for_model(IPAddress)],
         }
 
         cls.csv_data = (
             "vrf,address,status",
-            "VRF 1,192.0.2.4/24,active",
-            "VRF 1,192.0.2.5/24,active",
-            "VRF 1,192.0.2.6/24,active",
+            f"{vrfs[0].name},192.0.2.4/24,active",
+            f"{vrfs[0].name},192.0.2.5/24,active",
+            f"{vrfs[0].name},192.0.2.6/24,active",
         )
 
         cls.bulk_edit_data = {
@@ -358,14 +333,7 @@ class VLANGroupTestCase(ViewTestCases.OrganizationalObjectViewTestCase):
 
         site = Site.objects.create(name="Site 1", slug="site-1")
 
-        VLANGroup.objects.bulk_create(
-            [
-                VLANGroup(name="VLAN Group 1", slug="vlan-group-1", site=site),
-                VLANGroup(name="VLAN Group 2", slug="vlan-group-2", site=site),
-                VLANGroup(name="VLAN Group 3", slug="vlan-group-3", site=site),
-                VLANGroup(name="VLAN Group 8", site=site),
-            ]
-        )
+        VLANGroup.objects.create(name="VLAN Group 8", site=site)
 
         cls.form_data = {
             "name": "VLAN Group X",
@@ -384,9 +352,22 @@ class VLANGroupTestCase(ViewTestCases.OrganizationalObjectViewTestCase):
         cls.slug_source = "name"
         cls.slug_test_object = "VLAN Group 8"
 
+    def get_deletable_object(self):
+        """Return a VLANGroup without any associated VLANs."""
+        return VLANGroup.objects.filter(vlans__isnull=True).first()
+
+    def get_deletable_object_pks(self):
+        """Return a list of PKs corresponding to VLANGroups without any associated VLANs."""
+        groups = list(VLANGroup.objects.filter(vlans__isnull=True))[:3]
+        return [group.pk for group in groups]
+
 
 class VLANTestCase(ViewTestCases.PrimaryObjectViewTestCase):
     model = VLAN
+    fixtures = (
+        "status",
+        "tag",
+    )
 
     @classmethod
     def setUpTestData(cls):
@@ -407,6 +388,7 @@ class VLANTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         )
 
         statuses = Status.objects.get_for_model(VLAN)
+        status_active = statuses.get(slug="active")
         status_reserved = statuses.get(slug="reserved")
 
         VLAN.objects.create(
@@ -415,7 +397,8 @@ class VLANTestCase(ViewTestCases.PrimaryObjectViewTestCase):
             name="VLAN101",
             site=sites[0],
             role=roles[0],
-            status=statuses[0],
+            status=status_active,
+            _custom_field_data={"field": "Value"},
         )
         VLAN.objects.create(
             group=vlangroups[0],
@@ -423,7 +406,8 @@ class VLANTestCase(ViewTestCases.PrimaryObjectViewTestCase):
             name="VLAN102",
             site=sites[0],
             role=roles[0],
-            status=statuses[0],
+            status=status_active,
+            _custom_field_data={"field": "Value"},
         )
         VLAN.objects.create(
             group=vlangroups[0],
@@ -431,10 +415,12 @@ class VLANTestCase(ViewTestCases.PrimaryObjectViewTestCase):
             name="VLAN103",
             site=sites[0],
             role=roles[0],
-            status=statuses[0],
+            status=status_active,
+            _custom_field_data={"field": "Value"},
         )
 
-        tags = cls.create_tags("Alpha", "Bravo", "Charlie")
+        custom_field = CustomField.objects.create(type=CustomFieldTypeChoices.TYPE_TEXT, name="field", default="")
+        custom_field.content_types.set([ContentType.objects.get_for_model(VLAN)])
 
         cls.form_data = {
             "site": sites[1].pk,
@@ -445,7 +431,7 @@ class VLANTestCase(ViewTestCases.PrimaryObjectViewTestCase):
             "status": status_reserved.pk,
             "role": roles[1].pk,
             "description": "A new VLAN",
-            "tags": [t.pk for t in tags],
+            "tags": [t.pk for t in Tag.objects.get_for_model(VLAN)],
         }
 
         cls.csv_data = (
@@ -458,7 +444,7 @@ class VLANTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         cls.bulk_edit_data = {
             "site": sites[1].pk,
             "group": vlangroups[1].pk,
-            "tenant": None,
+            "tenant": Tenant.objects.first().pk,
             "status": status_reserved.pk,
             "role": roles[1].pk,
             "description": "New description",
@@ -478,6 +464,7 @@ class ServiceTestCase(
     ViewTestCases.BulkDeleteObjectsViewTestCase,
 ):
     model = Service
+    fixtures = ("tag",)
 
     @classmethod
     def setUpTestData(cls):
@@ -511,8 +498,6 @@ class ServiceTestCase(
             ]
         )
 
-        tags = cls.create_tags("Alpha", "Bravo", "Charlie")
-
         cls.form_data = {
             "device": device.pk,
             "virtual_machine": None,
@@ -521,7 +506,7 @@ class ServiceTestCase(
             "ports": "104,105",
             "ipaddresses": [],
             "description": "A new service",
-            "tags": [t.pk for t in tags],
+            "tags": [t.pk for t in Tag.objects.get_for_model(Service)],
         }
 
         cls.csv_data = (

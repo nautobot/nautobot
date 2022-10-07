@@ -22,6 +22,7 @@ class SiteStatusChoices(ChoiceSet):
         (STATUS_RETIRED, "Retired"),
     )
 
+    # 2.0 TODO: No longer used (see extras.management.COLOR_MAP instead), remove in 2.0
     CSS_CLASSES = {
         STATUS_PLANNED: "info",
         STATUS_STAGING: "primary",
@@ -29,6 +30,28 @@ class SiteStatusChoices(ChoiceSet):
         STATUS_DECOMMISSIONING: "warning",
         STATUS_RETIRED: "danger",
     }
+
+
+#
+# Locations
+#
+
+
+class LocationStatusChoices(ChoiceSet):
+
+    STATUS_PLANNED = "planned"
+    STATUS_STAGING = "staging"
+    STATUS_ACTIVE = "active"
+    STATUS_DECOMMISSIONING = "decommissioning"
+    STATUS_RETIRED = "retired"
+
+    CHOICES = (
+        (STATUS_PLANNED, "Planned"),
+        (STATUS_STAGING, "Staging"),
+        (STATUS_ACTIVE, "Active"),
+        (STATUS_DECOMMISSIONING, "Decommissioning"),
+        (STATUS_RETIRED, "Retired"),
+    )
 
 
 #
@@ -84,6 +107,7 @@ class RackStatusChoices(ChoiceSet):
         (STATUS_DEPRECATED, "Deprecated"),
     )
 
+    # 2.0 TODO: No longer used (see extras.management.COLOR_MAP instead), remove in 2.0
     CSS_CLASSES = {
         STATUS_RESERVED: "warning",
         STATUS_AVAILABLE: "success",
@@ -164,6 +188,7 @@ class DeviceStatusChoices(ChoiceSet):
         (STATUS_DECOMMISSIONING, "Decommissioning"),
     )
 
+    # 2.0 TODO: No longer used (see extras.management.COLOR_MAP instead), remove in 2.0
     CSS_CLASSES = {
         STATUS_OFFLINE: "warning",
         STATUS_ACTIVE: "success",
@@ -678,6 +703,7 @@ class InterfaceTypeChoices(ChoiceSet):
 
     # Virtual
     TYPE_VIRTUAL = "virtual"
+    TYPE_BRIDGE = "bridge"
     TYPE_LAG = "lag"
 
     # Ethernet
@@ -774,6 +800,7 @@ class InterfaceTypeChoices(ChoiceSet):
             "Virtual interfaces",
             (
                 (TYPE_VIRTUAL, "Virtual"),
+                (TYPE_BRIDGE, "Bridge"),
                 (TYPE_LAG, "Link Aggregation Group (LAG)"),
             ),
         ),
@@ -924,14 +951,6 @@ class InterfaceStatusChoices(ChoiceSet):
         (STATUS_DECOMMISSIONING, "Decommissioning"),
         (STATUS_MAINTENANCE, "Maintenance"),
     )
-
-    CSS_CLASSES = {
-        STATUS_PLANNED: "info",
-        STATUS_FAILED: "danger",
-        STATUS_ACTIVE: "success",
-        STATUS_DECOMMISSIONING: "warning",
-        STATUS_MAINTENANCE: "default",
-    }
 
 
 #
@@ -1088,6 +1107,7 @@ class CableStatusChoices(ChoiceSet):
         (STATUS_DECOMMISSIONING, "Decommissioning"),
     )
 
+    # 2.0 TODO: No longer used (see extras.management.COLOR_MAP instead), remove in 2.0
     CSS_CLASSES = {
         STATUS_CONNECTED: "success",
         STATUS_PLANNED: "info",
@@ -1129,6 +1149,7 @@ class PowerFeedStatusChoices(ChoiceSet):
         (STATUS_FAILED, "Failed"),
     )
 
+    # 2.0 TODO: No longer used (see extras.management.COLOR_MAP instead), remove in 2.0
     CSS_CLASSES = {
         STATUS_OFFLINE: "warning",
         STATUS_ACTIVE: "success",

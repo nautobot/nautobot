@@ -12,6 +12,7 @@ In your existing installation of Nautobot with PostgreSQL, run the following com
     --natural-primary \
     --exclude contenttypes \
     --exclude auth.permission \
+    --exclude django_rq \
     --format json \
     --indent 2 \
     --traceback \

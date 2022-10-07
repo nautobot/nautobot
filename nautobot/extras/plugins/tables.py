@@ -60,7 +60,7 @@ class InstalledPluginsTable(tables.Table):
 
         # Hide non-default columns
         default_columns = list(self.Meta.default_columns)
-        extra_columns = [c[0] for c in kwargs.get("extra_columns", list())]  # extra_columns is a list of tuples
+        extra_columns = [c[0] for c in kwargs.get("extra_columns", [])]  # extra_columns is a list of tuples
         for column in self.columns:
             if column.name not in default_columns and column.name not in extra_columns:
                 self.columns.hide(column.name)

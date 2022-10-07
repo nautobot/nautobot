@@ -4,6 +4,7 @@ from django.conf import settings
 from unittest import skipIf
 
 from nautobot.utilities.templatetags.helpers import (
+    hyperlinked_object,
     placeholder,
     render_boolean,
     render_json,
@@ -36,6 +37,22 @@ from example_plugin.models import AnotherExampleModel, ExampleModel
     "example_plugin not in settings.PLUGINS",
 )
 class NautobotTemplatetagsHelperTest(TestCase):
+    def test_hyperlinked_object(self):
+        # None gives a placeholder
+        self.assertEqual(hyperlinked_object(None), placeholder(None))
+        # An object without get_absolute_url gives a string
+        self.assertEqual(hyperlinked_object("hello"), "hello")
+        # An object with get_absolute_url gives a hyperlink
+        status = Status.objects.get_for_model(Site).first()
+        site = Site.objects.create(name="Test Site", slug="test-site", status=status)
+        self.assertEqual(hyperlinked_object(site), '<a href="/dcim/sites/test-site/">Test Site</a>')
+        # An object with get_absolute_url and a description gives a titled hyperlink
+        site.description = "An important site"
+        site.save()
+        self.assertEqual(
+            hyperlinked_object(site), '<a href="/dcim/sites/test-site/" title="An important site">Test Site</a>'
+        )
+
     def test_placeholder(self):
         self.assertEqual(placeholder(None), '<span class="text-muted">&mdash;</span>')
         self.assertEqual(placeholder([]), '<span class="text-muted">&mdash;</span>')
@@ -43,7 +60,17 @@ class NautobotTemplatetagsHelperTest(TestCase):
 
     def test_render_markdown(self):
         self.assertTrue(callable(render_markdown))
-        # TODO add more unit tests for render_markdown
+        # Test common markdown formatting.
+        self.assertEqual(render_markdown("**bold**"), "<p><strong>bold</strong></p>")
+        self.assertEqual(render_markdown("__bold__"), "<p><strong>bold</strong></p>")
+        self.assertEqual(render_markdown("_italics_"), "<p><em>italics</em></p>")
+        self.assertEqual(render_markdown("*italics*"), "<p><em>italics</em></p>")
+        self.assertEqual(render_markdown("**bold and _italics_**"), "<p><strong>bold and <em>italics</em></strong></p>")
+        self.assertEqual(render_markdown("* list"), "<ul>\n<li>list</li>\n</ul>")
+        self.assertEqual(
+            render_markdown("[I am a link](https://www.example.com)"),
+            '<p><a href="https://www.example.com">I am a link</a></p>',
+        )
 
     def test_render_json(self):
         self.assertEqual(

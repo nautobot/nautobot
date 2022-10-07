@@ -82,7 +82,7 @@ def configure_app(
     project_filename = sanitize_name(project)
 
     if default_config_path is None:
-        default_config_path = "~/%s/%s.conf.py" % (project_filename, project_filename)
+        default_config_path = f"~/{project_filename}/{project_filename}.conf.py"
 
     if settings_envvar is None:
         settings_envvar = project_filename.upper() + "_CONF"
@@ -103,10 +103,8 @@ def configure_app(
 
     if not os.path.exists(config_path):
         if runner_name:
-            raise ValueError(
-                "Configuration file does not exist. Use '%s init' to initialize the file." % (runner_name,)
-            )
-        raise ValueError("Configuration file does not exist at %r" % (config_path,))
+            raise ValueError(f"Configuration file does not exist. Use '{runner_name} init' to initialize the file.")
+        raise ValueError(f"Configuration file does not exist at {config_path}")
 
     os.environ["DJANGO_SETTINGS_MODULE"] = config_module_name
 
@@ -124,7 +122,6 @@ def configure_app(
             )
         except Exception:
             # XXX: Django doesn't like various errors in this path
-            import sys
             import traceback
 
             traceback.print_exc()
@@ -245,9 +242,9 @@ def run_app(**kwargs):
         try:
             create_default_settings(config_path, settings_initializer)
         except OSError as e:
-            raise e.__class__("Unable to write default settings file to %r" % config_path)
+            raise e.__class__(f"Unable to write default settings file to {config_path}")
 
-        print("Configuration file created at %r" % config_path)
+        print(f"Configuration file created at {config_path}")
 
         return
 

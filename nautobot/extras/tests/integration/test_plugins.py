@@ -7,10 +7,16 @@ from django.conf import settings
 from django.contrib.contenttypes.models import ContentType
 from django.urls import reverse
 
-
+from nautobot.circuits.models import (
+    Circuit,
+    CircuitType,
+    Provider,
+    ProviderNetwork,
+)
+from nautobot.dcim.tests.test_views import create_test_device
 from nautobot.extras.choices import WebhookHttpMethodChoices
 from nautobot.extras.context_managers import web_request_context
-from nautobot.extras.models import Webhook
+from nautobot.extras.models import Status, Webhook
 from nautobot.utilities.testing.integration import SeleniumTestCase
 
 from example_plugin.models import ExampleModel
@@ -174,3 +180,61 @@ class PluginReturnUrlTestCase(SeleniumTestCase):
         self.assertEqual(
             element["href"], f'{self.live_server_url}{reverse("plugins:example_plugin:examplemodel_list")}'
         )
+
+
+class PluginTabsTestCase(SeleniumTestCase):
+    """
+    Integration tests for extra object detail UI tabs.
+    """
+
+    fixtures = ("status",)
+
+    def setUp(self):
+        super().setUp()
+        self.user.is_superuser = True
+        self.user.save()
+        self.login(self.user.username, self.password)
+
+    def test_circuit_detail_tab(self):
+        provider = Provider.objects.create(name="Test Provider", slug="test-provider", asn=12345)
+        ProviderNetwork.objects.create(
+            name="Test Provider Network",
+            slug="test-provider-network",
+            provider=provider,
+        )
+        circuit_type = CircuitType.objects.create(name="Test Circuit Type", slug="test-circuit-type")
+        active_status = Status.objects.get_for_model(Circuit).get(slug="active")
+        circuit = Circuit.objects.create(
+            cid="Test Circuit",
+            provider=provider,
+            type=circuit_type,
+            status=active_status,
+        )
+        # Visit the circuit's detail page and check that the tab is visible
+        self.browser.visit(f'{self.live_server_url}{reverse("circuits:circuit", args=[str(circuit.pk)])}')
+        self.assertTrue(self.browser.is_text_present("Plugin Tab"))
+        # Visit the tab link and check the view content
+        self.browser.links.find_by_partial_text("Plugin Tab")[0].click()
+        self.assertTrue(
+            self.browser.is_text_present(
+                f"I am some content for the example plugin's circuit ({str(circuit.pk)}) detail tab."
+            )
+        )
+
+    def test_device_detail_tab(self):
+        """
+        This test checks that both plugin device tabs from the example plugin are visible and render correctly.
+        """
+        # Set up the required objects:
+        device = create_test_device("Test Device")
+        # Visit the device's detail page and check that the tab is visible
+        self.browser.visit(f'{self.live_server_url}{reverse("dcim:device", args=[str(device.pk)])}')
+        for tab_i in [1, 2]:
+            self.assertTrue(self.browser.is_text_present(f"Plugin Tab {tab_i}"))
+            # Visit the tab link and check the view content
+            self.browser.links.find_by_partial_text(f"Plugin Tab {tab_i}")[0].click()
+            self.assertTrue(
+                self.browser.is_text_present(
+                    f"I am some content for the example plugin's device ({str(device.pk)}) detail tab {tab_i}."
+                )
+            )

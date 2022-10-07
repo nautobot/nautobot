@@ -31,7 +31,7 @@ def files_from_contenttype_directories(base_path, job_result, log_grouping):
             except ContentType.DoesNotExist:
                 job_result.log(
                     f"Skipping `{app_label}.{modelname}` as it isn't a known content type",
-                    level_choice=LogLevelChoices.LOG_FAILURE,
+                    level_choice=LogLevelChoices.LOG_WARNING,
                     grouping=log_grouping,
                     logger=logger,
                 )

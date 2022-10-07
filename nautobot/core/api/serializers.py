@@ -1,3 +1,4 @@
+import logging
 import uuid
 
 from django.core.exceptions import (
@@ -10,7 +11,10 @@ from drf_spectacular.utils import extend_schema_field
 from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
 
-from nautobot.utilities.utils import dict_to_filter_params
+from nautobot.utilities.utils import dict_to_filter_params, normalize_querydict
+
+
+logger = logging.getLogger(__name__)
 
 
 class OptInFieldsMixin:
@@ -52,12 +56,16 @@ class OptInFieldsMixin:
                 # No available request?
                 return fields
 
+            # opt-in fields only applies on GET requests, for other methods we support these fields regardless
+            if request is not None and request.method != "GET":
+                return fields
+
             # NOTE: drf test framework builds a request object where the query
             # parameters are found under the GET attribute.
-            params = getattr(request, "query_params", getattr(request, "GET", None))
+            params = normalize_querydict(getattr(request, "query_params", getattr(request, "GET", None)))
 
             try:
-                user_opt_in_fields = params.get("include", None).split(",")
+                user_opt_in_fields = params.get("include", [])
             except AttributeError:
                 # include parameter was not specified
                 user_opt_in_fields = []
@@ -75,7 +83,12 @@ class OptInFieldsMixin:
 class BaseModelSerializer(OptInFieldsMixin, serializers.ModelSerializer):
     """
     This base serializer implements common fields and logic for all ModelSerializers.
-    Namely it defines the `display` field which exposes a human friendly value for the given object.
+
+    Namely, it:
+
+    - defines the `display` field which exposes a human friendly value for the given object.
+    - ensures that `id` field is always present on the serializer as well
+    - ensures that `created` and `last_updated` fields are always present if applicable to this model and serializer.
     """
 
     display = serializers.SerializerMethodField(read_only=True, help_text="Human friendly display value")
@@ -87,20 +100,42 @@ class BaseModelSerializer(OptInFieldsMixin, serializers.ModelSerializer):
         """
         return getattr(instance, "display", str(instance))
 
+    def extend_field_names(self, fields, field_name, at_start=False, opt_in_only=False):
+        """Prepend or append the given field_name to `fields` and optionally self.Meta.opt_in_fields as well."""
+        if field_name not in fields:
+            if at_start:
+                fields.insert(0, field_name)
+            else:
+                fields.append(field_name)
+        if opt_in_only:
+            if not getattr(self.Meta, "opt_in_fields", None):
+                self.Meta.opt_in_fields = [field_name]
+            elif field_name not in self.Meta.opt_in_fields:
+                self.Meta.opt_in_fields.append(field_name)
+        return fields
+
     def get_field_names(self, declared_fields, info):
         """
-        Override get_field_names() to append the `display` field so it is always included in the
-        serializer's `Meta.fields`.
+        Override get_field_names() to ensure certain fields are present even when not explicitly stated in Meta.fields.
 
         DRF does not automatically add declared fields to `Meta.fields`, nor does it require that declared fields
         on a super class be included in `Meta.fields` to allow for a subclass to include only a subset of declared
-        fields from the super. This means either we intercept and append the display field at this level, or
-        enforce by convention that all consumers of BaseModelSerializer include `display` in their `Meta.fields`
-        which would surely lead to errors of omission; therefore we have chosen the former approach.
+        fields from the super. This means either we intercept and ensure the fields at this level, or
+        enforce by convention that all consumers of BaseModelSerializer include each of these standard fields in their
+        `Meta.fields` which would surely lead to errors of omission; therefore we have chosen the former approach.
+
+        Adds "id" and "display" to the start of `fields` for all models; also appends "created" and "last_updated"
+        to the end of `fields` if they are applicable to this model and this is not a Nested serializer.
         """
         fields = list(super().get_field_names(declared_fields, info))  # Meta.fields could be defined as a tuple
-        fields.append("display")
-
+        self.extend_field_names(fields, "display", at_start=True)
+        self.extend_field_names(fields, "id", at_start=True)
+        # Needed because we don't have a common base class for all nested serializers vs non-nested serializers
+        if not self.__class__.__name__.startswith("Nested"):
+            if hasattr(self.Meta.model, "created"):
+                self.extend_field_names(fields, "created")
+            if hasattr(self.Meta.model, "last_updated"):
+                self.extend_field_names(fields, "last_updated")
         return fields
 
 
@@ -115,6 +150,7 @@ class ValidatedModelSerializer(BaseModelSerializer):
         # Remove custom fields data and tags (if any) prior to model validation
         attrs = data.copy()
         attrs.pop("custom_fields", None)
+        attrs.pop("relationships", None)
         attrs.pop("tags", None)
 
         # Skip ManyToManyFields
@@ -151,13 +187,21 @@ class WritableNestedSerializer(BaseModelSerializer):
         # Dictionary of related object attributes
         if isinstance(data, dict):
             params = dict_to_filter_params(data)
+
+            # Make output from a WritableNestedSerializer "round-trip" capable by automatically stripping from the
+            # data any serializer fields that do not correspond to a specific model field
+            for field_name, field_instance in self.fields.items():
+                if field_name in params and field_instance.source == "*":
+                    logger.debug("Discarding non-database field %s", field_name)
+                    del params[field_name]
+
             queryset = self.get_queryset()
             try:
                 return queryset.get(**params)
             except ObjectDoesNotExist:
-                raise ValidationError("Related object not found using the provided attributes: {}".format(params))
+                raise ValidationError(f"Related object not found using the provided attributes: {params}")
             except MultipleObjectsReturned:
-                raise ValidationError("Multiple objects match the provided attributes: {}".format(params))
+                raise ValidationError(f"Multiple objects match the provided attributes: {params}")
             except FieldError as e:
                 raise ValidationError(e)
 
@@ -171,7 +215,7 @@ class WritableNestedSerializer(BaseModelSerializer):
             except (TypeError, ValueError):
                 raise ValidationError(
                     "Related objects must be referenced by ID or by dictionary of attributes. Received an "
-                    "unrecognized value: {}".format(data)
+                    f"unrecognized value: {data}"
                 )
 
         else:
@@ -184,17 +228,27 @@ class WritableNestedSerializer(BaseModelSerializer):
             except (TypeError, ValueError):
                 raise ValidationError(
                     "Related objects must be referenced by ID or by dictionary of attributes. Received an "
-                    "unrecognized value: {}".format(data)
+                    f"unrecognized value: {data}"
                 )
 
         try:
             return queryset.get(pk=pk)
         except ObjectDoesNotExist:
-            raise ValidationError("Related object not found using the provided ID: {}".format(pk))
+            raise ValidationError(f"Related object not found using the provided ID: {pk}")
 
 
 class BulkOperationSerializer(serializers.Serializer):
-    id = serializers.CharField()  # This supports both UUIDs and numeric ID for the User model
+    """
+    Representation of bulk-DELETE request for most models; also used to validate required ID field for bulk-PATCH/PUT.
+    """
+
+    id = serializers.UUIDField()
+
+
+class BulkOperationIntegerIDSerializer(serializers.Serializer):
+    """As BulkOperationSerializer, but for models such as users.Group that have an integer ID field."""
+
+    id = serializers.IntegerField()
 
 
 #

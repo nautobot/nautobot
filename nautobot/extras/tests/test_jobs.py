@@ -1,26 +1,39 @@
+import datetime
 import json
-from io import StringIO
+import logging
 import re
 import uuid
+from io import StringIO
+from unittest import mock
 
+from django.contrib.auth import get_user_model
 from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ObjectDoesNotExist
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.core.management import call_command
 from django.core.management.base import CommandError
-from django.contrib.auth import get_user_model
 from django.test import override_settings
 from django.test.client import RequestFactory
+from django.utils import timezone
 
 from nautobot.dcim.models import DeviceRole, Site
-from nautobot.extras.choices import JobResultStatusChoices, LogLevelChoices
+from nautobot.extras.choices import (
+    JobExecutionType,
+    JobResultStatusChoices,
+    LogLevelChoices,
+    ObjectChangeEventContextChoices,
+)
+from nautobot.extras.context_managers import JobHookChangeContext, change_logging, web_request_context
 from nautobot.extras.jobs import get_job, run_job
-from nautobot.extras.models import FileProxy, Job, Status, CustomField, JobResult
+from nautobot.extras.models import CustomField, FileProxy, Job, JobHook, JobResult, ScheduledJob, Status
 from nautobot.extras.models.models import JobLogEntry
-from nautobot.utilities.testing import CeleryTestCase, TransactionTestCase, run_job_for_testing
-
-# Use the proper swappable User model
-User = get_user_model()
+from nautobot.utilities.testing import (
+    CeleryTestCase,
+    TestCase,
+    TransactionTestCase,
+    run_job_for_testing,
+)
+from nautobot.utilities.utils import get_changes_for_model
 
 
 def get_job_class_and_model(module, name):
@@ -37,7 +50,7 @@ def create_job_result_and_run_job(module, name, *, data=None, commit=True, reque
     """Test helper function to call get_job_class_and_model() then and call run_job_for_testing()."""
     if data is None:
         data = {}
-    job_class, job_model = get_job_class_and_model(module, name)
+    _job_class, job_model = get_job_class_and_model(module, name)
     job_result = run_job_for_testing(job=job_model, data=data, commit=commit, request=request)
     job_result.refresh_from_db()
     return job_result
@@ -57,7 +70,6 @@ class JobTest(TransactionTestCase):
         # Initialize fake request that will be required to execute Webhooks (in jobs.)
         self.request = RequestFactory().request(SERVER_NAME="WebRequestContext")
         self.request.id = uuid.uuid4()
-        self.user = User.objects.create_user(username="testuser")
         self.request.user = self.user
 
     def test_job_hard_time_limit_less_than_soft_time_limit(self):
@@ -86,7 +98,9 @@ class JobTest(TransactionTestCase):
         """
         module = "test_pass"
         name = "TestPass"
-        job_class, job_model = get_job_class_and_model(module, name)
+        _job_class, job_model = get_job_class_and_model(module, name)
+        job_model.enabled = True
+        job_model.validated_save()
         job_content_type = ContentType.objects.get(app_label="extras", model="job")
         job_result = JobResult.objects.create(
             name=job_model.class_path,
@@ -114,8 +128,30 @@ class JobTest(TransactionTestCase):
         """
         module = "test_fail"
         name = "TestFail"
+        logging.disable(logging.ERROR)
         job_result = create_job_result_and_run_job(module, name, commit=False)
+        logging.disable(logging.NOTSET)
         self.assertEqual(job_result.status, JobResultStatusChoices.STATUS_ERRORED)
+
+    def test_field_default(self):
+        """
+        Job test with field that is a default value that is falsey.
+        https://github.com/nautobot/nautobot/issues/2039
+        """
+        module = "test_field_default"
+        name = "TestFieldDefault"
+        job_class = get_job(f"local/{module}/{name}")
+        form = job_class().as_form()
+
+        self.assertInHTML(
+            """<tr><th><label for="id_var_int">Var int:</label></th><td>
+<input class="form-control form-control" id="id_var_int" max="3600" name="var_int" placeholder="None" required type="number" value="0">
+<br><span class="helptext">Test default of 0 Falsey</span></td></tr>
+<tr><th><label for="id_var_int_no_default">Var int no default:</label></th><td>
+<input class="form-control form-control" id="id_var_int_no_default" max="3600" name="var_int_no_default" placeholder="None" type="number">
+<br><span class="helptext">Test default without default</span></td></tr>""",
+            form.as_table(),
+        )
 
     def test_field_order(self):
         """
@@ -124,24 +160,8 @@ class JobTest(TransactionTestCase):
         module = "test_field_order"
         name = "TestFieldOrder"
         job_class = get_job(f"local/{module}/{name}")
-
         form = job_class().as_form()
-
-        self.assertHTMLEqual(
-            form.as_table(),
-            """<tr><th><label for="id_var1">Var1:</label></th><td>
-<input class="form-control form-control" id="id_var1" name="var1" placeholder="None" required type="file">
-<br><span class="helptext">Some file wants to be first</span></td></tr>
-<tr><th><label for="id_var2">Var2:</label></th><td>
-<input class="form-control form-control" id="id_var2" name="var2" placeholder="None" required type="text">
-<br><span class="helptext">Hello</span></td></tr>
-<tr><th><label for="id_var23">Var23:</label></th><td>
-<input class="form-control form-control" id="id_var23" name="var23" placeholder="None" required type="text">
-<br><span class="helptext">I want to be second</span></td></tr>
-<tr><th><label for="id__commit">Commit changes:</label></th><td>
-<input checked id="id__commit" name="_commit" placeholder="Commit changes" type="checkbox">
-<br><span class="helptext">Commit changes to the database (uncheck for a dry-run)</span></td></tr>""",
-        )
+        self.assertSequenceEqual(list(form.fields.keys()), ["var1", "var2", "var23", "_task_queue", "_commit"])
 
     def test_no_field_order(self):
         """
@@ -150,20 +170,20 @@ class JobTest(TransactionTestCase):
         module = "test_no_field_order"
         name = "TestNoFieldOrder"
         job_class = get_job(f"local/{module}/{name}")
-
         form = job_class().as_form()
+        self.assertSequenceEqual(list(form.fields.keys()), ["var23", "var2", "_task_queue", "_commit"])
 
-        self.assertHTMLEqual(
-            form.as_table(),
-            """<tr><th><label for="id_var23">Var23:</label></th><td>
-<input class="form-control form-control" id="id_var23" name="var23" placeholder="None" required type="text">
-<br><span class="helptext">I want to be second</span></td></tr>
-<tr><th><label for="id_var2">Var2:</label></th><td>
-<input class="form-control form-control" id="id_var2" name="var2" placeholder="None" required type="text">
-<br><span class="helptext">Hello</span></td></tr>
-<tr><th><label for="id__commit">Commit changes:</label></th><td>
-<input checked id="id__commit" name="_commit" placeholder="Commit changes" type="checkbox">
-<br><span class="helptext">Commit changes to the database (uncheck for a dry-run)</span></td></tr>""",
+    def test_no_field_order_inherited_variable(self):
+        """
+        Job test without field_order with a variable inherited from the base class
+        """
+        module = "test_no_field_order"
+        name = "TestDefaultFieldOrderWithInheritance"
+        job_class = get_job(f"local/{module}/{name}")
+        form = job_class().as_form()
+        self.assertSequenceEqual(
+            list(form.fields.keys()),
+            ["testvar1", "b_testvar2", "a_testvar3", "_task_queue", "_commit"],
         )
 
     def test_read_only_job_pass(self):
@@ -182,7 +202,9 @@ class JobTest(TransactionTestCase):
         """
         module = "test_read_only_fail"
         name = "TestReadOnlyFail"
+        logging.disable(logging.ERROR)
         job_result = create_job_result_and_run_job(module, name, commit=False)
+        logging.disable(logging.NOTSET)
         self.assertEqual(job_result.status, JobResultStatusChoices.STATUS_ERRORED)
         self.assertEqual(Site.objects.count(), 0)  # Ensure DB transaction was aborted
         # Also ensure the standard log message about aborting the transaction is *not* present
@@ -200,11 +222,9 @@ class JobTest(TransactionTestCase):
 
         form = job_class().as_form()
 
-        self.assertHTMLEqual(
+        self.assertInHTML(
+            "<input id='id__commit' name='_commit' type='hidden' value='False'>",
             form.as_table(),
-            """<tr><th><label for="id_var">Var:</label></th><td>
-<input class="form-control form-control" id="id_var" name="var" placeholder="None" required type="text">
-<br><span class="helptext">Hello</span><input id="id__commit" name="_commit" type="hidden" value="False"></td></tr>""",
         )
 
     def test_ip_address_vars(self):
@@ -219,7 +239,7 @@ class JobTest(TransactionTestCase):
         """
         module = "test_ipaddress_vars"
         name = "TestIPAddresses"
-        job_class, job_model = get_job_class_and_model(module, name)
+        job_class, _job_model = get_job_class_and_model(module, name)
 
         # Fill out the form
         form_data = dict(
@@ -319,8 +339,9 @@ class JobTest(TransactionTestCase):
         module = "test_object_var_required"
         name = "TestRequiredObjectVar"
         data = {"region": None}
-
+        logging.disable(logging.ERROR)
         job_result = create_job_result_and_run_job(module, name, data=data, commit=False)
+        logging.disable(logging.NOTSET)
 
         # Assert stuff
         self.assertEqual(job_result.status, JobResultStatusChoices.STATUS_ERRORED)
@@ -336,15 +357,77 @@ class JobTest(TransactionTestCase):
         module = "test_object_vars"
         name = "TestObjectVars"
         data = "BAD DATA STRING"
-
+        logging.disable(logging.ERROR)
         job_result = create_job_result_and_run_job(module, name, data=data, commit=False)
-
+        logging.disable(logging.NOTSET)
         # Assert stuff
         self.assertEqual(job_result.status, JobResultStatusChoices.STATUS_ERRORED)
         log_failure = JobLogEntry.objects.filter(
             grouping="initialization", log_level=LogLevelChoices.LOG_FAILURE
         ).first()
         self.assertIn("Data should be a dictionary", log_failure.message)
+
+    def test_job_latest_result_property(self):
+        """
+        Job test to see if the latest_result property is indeed returning the most recent job result
+        """
+        module = "test_pass"
+        name = "TestPass"
+        job_result_1 = create_job_result_and_run_job(module, name, commit=False)
+        self.assertEqual(job_result_1.status, JobResultStatusChoices.STATUS_COMPLETED)
+        job_result_2 = create_job_result_and_run_job(module, name, commit=False)
+        self.assertEqual(job_result_2.status, JobResultStatusChoices.STATUS_COMPLETED)
+        _job_class, job_model = get_job_class_and_model(module, name)
+        self.assertGreaterEqual(job_model.results.count(), 2)
+        latest_job_result = job_model.latest_result
+        self.assertEqual(job_result_2.completed, latest_job_result.completed)
+
+    @mock.patch("nautobot.extras.utils.get_celery_queues")
+    def test_job_class_task_queues(self, mock_get_celery_queues):
+        """
+        Test job form with custom task queues defined on the job class
+        """
+        module = "test_task_queues"
+        name = "TestWorkerQueues"
+        mock_get_celery_queues.return_value = {"celery": 4, "irrelevant": 5}
+        job_class, _ = get_job_class_and_model(module, name)
+        form = job_class().as_form()
+        self.assertInHTML(
+            """<tr><th><label for="id__task_queue">Task queue:</label></th>
+            <td><select name="_task_queue" class="form-control" placeholder="Task queue" id="id__task_queue">
+            <option value="celery">celery (4 workers)</option>
+            <option value="nonexistent">nonexistent (0 workers)</option></select><br>
+            <span class="helptext">The task queue to route this job to</span></td></tr>
+            <tr><th><label for="id__commit">Commit changes:</label></th>
+            <td><input type="checkbox" name="_commit" placeholder="Commit changes" id="id__commit" checked><br>
+            <span class="helptext">Commit changes to the database (uncheck for a dry-run)</span></td></tr>""",
+            form.as_table(),
+        )
+
+    @mock.patch("nautobot.extras.utils.get_celery_queues")
+    def test_job_class_task_queues_override(self, mock_get_celery_queues):
+        """
+        Test job form with custom task queues defined on the job class and overridden on the model
+        """
+        module = "test_task_queues"
+        name = "TestWorkerQueues"
+        mock_get_celery_queues.return_value = {"default": 1, "irrelevant": 5}
+        job_class, job_model = get_job_class_and_model(module, name)
+        job_model.task_queues = ["default", "priority"]
+        job_model.task_queues_override = True
+        job_model.save()
+        form = job_class().as_form()
+        self.assertInHTML(
+            """<tr><th><label for="id__task_queue">Task queue:</label></th>
+            <td><select name="_task_queue" class="form-control" placeholder="Task queue" id="id__task_queue">
+            <option value="default">default (1 worker)</option>
+            <option value="priority">priority (0 workers)</option>
+            </select><br><span class="helptext">The task queue to route this job to</span></td></tr>
+            <tr><th><label for="id__commit">Commit changes:</label></th>
+            <td><input type="checkbox" name="_commit" placeholder="Commit changes" id="id__commit" checked><br>
+            <span class="helptext">Commit changes to the database (uncheck for a dry-run)</span></td></tr>""",
+            form.as_table(),
+        )
 
 
 class JobFileUploadTest(TransactionTestCase):
@@ -361,14 +444,13 @@ class JobFileUploadTest(TransactionTestCase):
         # Initialize fake request that will be required to execute Webhooks (in jobs.)
         self.request = RequestFactory().request(SERVER_NAME="WebRequestContext")
         self.request.id = uuid.uuid4()
-        self.user = User.objects.create_user(username="testuser")
         self.request.user = self.user
 
     def test_run_job_pass(self):
         """Test that file upload succeeds; job SUCCEEDS; and files are deleted."""
         module = "test_file_upload_pass"
         name = "TestFileUploadPass"
-        job_class, job_model = get_job_class_and_model(module, name)
+        job_class, _job_model = get_job_class_and_model(module, name)
 
         # Serialize the file to FileProxy
         data = {"file": self.test_file}
@@ -400,7 +482,7 @@ class JobFileUploadTest(TransactionTestCase):
         """Test that file upload succeeds; job FAILS; files deleted."""
         module = "test_file_upload_fail"
         name = "TestFileUploadFail"
-        job_class, job_model = get_job_class_and_model(module, name)
+        job_class, _job_model = get_job_class_and_model(module, name)
 
         # Serialize the file to FileProxy
         data = {"file": self.test_file}
@@ -414,7 +496,9 @@ class JobFileUploadTest(TransactionTestCase):
         self.assertEqual(FileProxy.objects.count(), 1)
 
         # Run the job
+        logging.disable(logging.ERROR)
         job_result = create_job_result_and_run_job(module, name, data=serialized_data, commit=False)
+        logging.disable(logging.NOTSET)
 
         # Assert that file contents were correctly read
         self.assertEqual(
@@ -454,7 +538,7 @@ class RunJobManagementCommandTest(CeleryTestCase):
         """Basic success-path test for Jobs that don't modify the Nautobot database."""
         module = "test_pass"
         name = "TestPass"
-        job_class, job_model = get_job_class_and_model(module, name)
+        _job_class, job_model = get_job_class_and_model(module, name)
 
         out, err = self.run_command(job_model.class_path)
         self.assertIn(f"Running {job_model.class_path}...", out)
@@ -471,7 +555,7 @@ class RunJobManagementCommandTest(CeleryTestCase):
 
         module = "test_modify_db"
         name = "TestModifyDB"
-        job_class, job_model = get_job_class_and_model(module, name)
+        _job_class, job_model = get_job_class_and_model(module, name)
 
         out, err = self.run_command(job_model.class_path)
         self.assertIn(f"Running {job_model.class_path}...", out)
@@ -491,7 +575,7 @@ class RunJobManagementCommandTest(CeleryTestCase):
         """A job that changes the DB, when run with commit=True but no username, is rejected."""
         module = "test_modify_db"
         name = "TestModifyDB"
-        job_class, job_model = get_job_class_and_model(module, name)
+        _job_class, job_model = get_job_class_and_model(module, name)
         with self.assertRaises(CommandError):
             self.run_command("--commit", job_model.class_path)
 
@@ -499,7 +583,7 @@ class RunJobManagementCommandTest(CeleryTestCase):
         """A job that changes the DB, when run with commit=True and a nonexistent username, is rejected."""
         module = "test_modify_db"
         name = "TestModifyDB"
-        job_class, job_model = get_job_class_and_model(module, name)
+        _job_class, job_model = get_job_class_and_model(module, name)
         with self.assertRaises(CommandError):
             self.run_command("--commit", "--username", "nosuchuser", job_model.class_path)
 
@@ -509,7 +593,7 @@ class RunJobManagementCommandTest(CeleryTestCase):
 
         module = "test_modify_db"
         name = "TestModifyDB"
-        job_class, job_model = get_job_class_and_model(module, name)
+        _job_class, job_model = get_job_class_and_model(module, name)
 
         out, err = self.run_command("--commit", "--username", "test_user", job_model.class_path)
         self.assertIn(f"Running {job_model.class_path}...", out)
@@ -534,11 +618,10 @@ class JobSiteCustomFieldTest(CeleryTestCase):
 
     def setUp(self):
         super().setUp()
-        user = User.objects.create(username="User1")
 
         self.request = RequestFactory().request(SERVER_NAME="WebRequestContext")
         self.request.id = uuid.uuid4()
-        self.request.user = user
+        self.request.user = self.user
 
     def test_run(self):
         self.clear_worker()
@@ -561,3 +644,145 @@ class JobSiteCustomFieldTest(CeleryTestCase):
         site_2 = Site.objects.filter(slug="test-site-two")
         self.assertEqual(site_2.count(), 1)
         self.assertEqual(site_2[0].cf["cf1"], "-")
+
+
+class JobHookReceiverTest(TransactionTestCase):
+    """
+    Test job hook receiver.
+    """
+
+    def setUp(self):
+        super().setUp()
+
+        # Initialize fake request that will be required to run jobs
+        self.request = RequestFactory().request(SERVER_NAME="WebRequestContext")
+        self.request.id = uuid.uuid4()
+        self.request.user = self.user
+
+        # generate an ObjectChange by creating a new site
+        with web_request_context(self.user):
+            site = Site(name="Test Site 1")
+            site.save()
+        site.refresh_from_db()
+        oc = get_changes_for_model(site).first()
+        self.data = {"object_change": oc.id}
+
+    def test_form_field(self):
+        module = "test_job_hook_receiver"
+        name = "TestJobHookReceiverLog"
+        job_class, _job_model = get_job_class_and_model(module, name)
+        form = job_class().as_form()
+        self.assertSequenceEqual(list(form.fields.keys()), ["object_change", "_task_queue", "_commit"])
+
+    def test_hidden(self):
+        module = "test_job_hook_receiver"
+        name = "TestJobHookReceiverLog"
+        _job_class, job_model = get_job_class_and_model(module, name)
+        self.assertFalse(job_model.hidden)
+
+    def test_is_job_hook(self):
+
+        with self.subTest(expected=False):
+            module = "test_pass"
+            name = "TestPass"
+            _job_class, job_model = get_job_class_and_model(module, name)
+            self.assertFalse(job_model.is_job_hook_receiver)
+
+        with self.subTest(expected=True):
+            module = "test_job_hook_receiver"
+            name = "TestJobHookReceiverLog"
+            _job_class, job_model = get_job_class_and_model(module, name)
+            self.assertTrue(job_model.is_job_hook_receiver)
+
+    def test_object_change_context(self):
+        module = "test_job_hook_receiver"
+        name = "TestJobHookReceiverChange"
+        create_job_result_and_run_job(module, name, data=self.data, request=self.request)
+        test_site = Site.objects.get(name="test_jhr")
+        oc = get_changes_for_model(test_site).first()
+        self.assertEqual(oc.change_context, ObjectChangeEventContextChoices.CONTEXT_JOB_HOOK)
+        self.assertEqual(oc.user_id, self.user.pk)
+
+    def test_missing_receive_job_hook_method(self):
+        module = "test_job_hook_receiver"
+        name = "TestJobHookReceiverFail"
+        logging.disable(logging.ERROR)
+        job_result = create_job_result_and_run_job(module, name, data=self.data, commit=False)
+        logging.disable(logging.NOTSET)
+        self.assertEqual(job_result.status, JobResultStatusChoices.STATUS_ERRORED)
+
+
+class JobHookTest(CeleryTestCase):
+    """
+    Test job hooks.
+    """
+
+    def setUp(self):
+        super().setUp()
+
+        module = "test_job_hook_receiver"
+        name = "TestJobHookReceiverLog"
+        self.job_class, self.job_model = get_job_class_and_model(module, name)
+        job_hook = JobHook(
+            name="JobHookTest",
+            type_create=True,
+            job=self.job_model,
+        )
+        obj_type = ContentType.objects.get_for_model(Site)
+        job_hook.save()
+        job_hook.content_types.set([obj_type])
+
+    def test_enqueue_job_hook(self):
+        self.clear_worker()
+        with web_request_context(user=self.user):
+            Site.objects.create(name="Test Job Hook Site 1")
+            self.wait_on_active_tasks()
+            job_result = JobResult.objects.get(job_model=self.job_model)
+            expected_log_messages = [
+                ("info", f"change: dcim | site Test Job Hook Site 1 created by {self.user.username}"),
+                ("info", "action: create"),
+                ("info", f"request.user: {self.user.username}"),
+                ("success", "Test Job Hook Site 1"),
+            ]
+            log_messages = JobLogEntry.objects.filter(job_result=job_result).values_list("log_level", "message")
+            self.assertSequenceEqual(log_messages, expected_log_messages)
+
+    @mock.patch.object(JobResult, "enqueue_job")
+    def test_enqueue_job_hook_skipped(self, mock_enqueue_job):
+        change_context = JobHookChangeContext(user=self.user)
+        with change_logging(change_context):
+            Site.objects.create(name="Test Job Hook Site 2")
+
+        self.assertFalse(mock_enqueue_job.called)
+
+
+class RemoveScheduledJobManagementCommandTestCase(TestCase):
+    def test_remove_stale_scheduled_jobs(self):
+        for i in range(1, 7):
+            ScheduledJob.objects.create(
+                name=f"test{i}",
+                task="nautobot.extras.jobs.scheduled_job_handler",
+                job_class="local/test_pass/TestPass",
+                interval=JobExecutionType.TYPE_FUTURE,
+                user=self.user,
+                start_time=timezone.now() - datetime.timedelta(days=i * 30),
+                one_off=i % 2 == 0,  # True / False
+            )
+
+        ScheduledJob.objects.create(
+            name="test7",
+            task="nautobot.extras.jobs.scheduled_job_handler",
+            job_class="local/test_pass/TestPass",
+            interval=JobExecutionType.TYPE_DAILY,
+            user=self.user,
+            start_time=timezone.now() - datetime.timedelta(days=180),
+        )
+
+        out = StringIO()
+        call_command("remove_stale_scheduled_jobs", 32, stdout=out)
+        self.assertEqual(ScheduledJob.objects.count(), 2)
+        self.assertIn("Stale scheduled jobs deleted successfully", out.getvalue())
+        self.assertTrue(ScheduledJob.objects.filter(name="test7").exists())
+        self.assertTrue(ScheduledJob.objects.filter(name="test1").exists())
+        for i in range(2, 7):
+            self.assertFalse(ScheduledJob.objects.filter(name=f"test{i}").exists())

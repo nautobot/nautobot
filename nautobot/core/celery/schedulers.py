@@ -19,7 +19,7 @@ class NautobotScheduleEntry(ModelEntry):
     def __init__(self, model, app=None):
         """Initialize the model entry."""
         self.app = app or current_app._get_current_object()
-        self.name = "{}_{}".format(model.name, model.pk)
+        self.name = f"{model.name}_{model.pk}"
         self.task = model.task
         try:
             # Nautobot scheduled jobs pass args/kwargs as constructed objects,

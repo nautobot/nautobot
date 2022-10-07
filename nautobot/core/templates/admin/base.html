@@ -27,11 +27,11 @@
           href="{% static 'flatpickr-4.6.9/themes/light.min.css' %}"
           onerror="window.location='{% url 'media_failure' %}?filename=flatpickr-4.6.9/themes/light.min.css'">
     <link rel="stylesheet" id="dark-theme"
-        href="{% static 'css/dark.css' %}?v{{ settings.VERSION }}"
-        onerror="window.location='{% url 'media_failure' %}?filename=css/dark.css'" disabled="disabled" />
+          href="{% static 'css/dark.css' %}?v{{ settings.VERSION }}"
+          onerror="window.location='{% url 'media_failure' %}?filename=css/dark.css'" disabled="disabled" />
     <link rel="stylesheet"
-        href="{% static 'css/base.css' %}?v{{ settings.VERSION }}"
-        onerror="window.location='{% url 'media_failure' %}?filename=css/base.css'">
+          href="{% static 'css/base.css' %}?v{{ settings.VERSION }}"
+          onerror="window.location='{% url 'media_failure' %}?filename=css/base.css'">
     <link rel="apple-touch-icon" sizes="180x180" href="{% static 'img/nautobot_icon_180x180.png' %}">
     <link rel="icon" type="image/png" sizes="32x32" href="{% static 'img/nautobot_icon_32x32.png' %}">
     <link rel="icon" type="image/png" sizes="16x16" href="{% static 'img/nautobot_icon_16x16.png' %}">
@@ -169,7 +169,7 @@
                 </div>
                 <div class="col-xs-4 text-right noprint">
                     <p class="text-muted">
-                        <a href="#theme_modal" data-toggle="modal" data-target="#theme_modal" id="btn-theme-modal"><i class="mdi mdi-theme-light-dark text-primary">Theme</i></a> &middot;
+                        <a href="#theme_modal" data-toggle="modal" data-target="#theme_modal" id="btn-theme-modal"><i class="mdi mdi-theme-light-dark text-primary"></i>Theme</a> &middot;
                         <i class="mdi mdi-book-open-page-variant text-primary"></i>
                         {% if settings.BRANDING_URLS.docs %}
                             <a href="{{ settings.BRANDING_URLS.docs }}">Docs</a>

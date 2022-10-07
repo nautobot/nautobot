@@ -14,7 +14,7 @@ class BaseNetworkFormTest:
     extra_data = {}
 
     def test_valid_ip_address(self):
-        data = {self.field_name: "192.168.1.0/24", "status": Status.objects.get(slug="active")}
+        data = {self.field_name: "192.168.1.0/24"}
         data.update(self.extra_data)
         form = self.form_class(data)
 
@@ -22,7 +22,7 @@ class BaseNetworkFormTest:
         self.assertTrue(form.save())
 
     def test_address_invalid_ipv4(self):
-        data = {self.field_name: "192.168.0.1/64", "status": Status.objects.get(slug="active")}
+        data = {self.field_name: "192.168.0.1/64"}
         data.update(self.extra_data)
         form = self.form_class(data)
 
@@ -30,7 +30,7 @@ class BaseNetworkFormTest:
         self.assertEqual("Please specify a valid IPv4 or IPv6 address.", form.errors[self.field_name][0])
 
     def test_address_zero_mask(self):
-        data = {self.field_name: "192.168.0.1/0", "status": Status.objects.get(slug="active")}
+        data = {self.field_name: "192.168.0.1/0"}
         data.update(self.extra_data)
         form = self.form_class(data)
 
@@ -38,7 +38,7 @@ class BaseNetworkFormTest:
         self.assertEqual(f"Cannot create {self.object_name} with /0 mask.", form.errors[self.field_name][0])
 
     def test_address_missing_mask(self):
-        data = {self.field_name: "192.168.0.1", "status": Status.objects.get(slug="active")}
+        data = {self.field_name: "192.168.0.1"}
         data.update(self.extra_data)
         form = self.form_class(data)
 
@@ -53,19 +53,29 @@ class AggregateFormTest(BaseNetworkFormTest, TestCase):
 
     def setUp(self):
         super().setUp()
-        self.extra_data = {"rir": models.RIR.objects.create(name="RIR", slug="rir")}
+        self.extra_data = {"rir": models.RIR.objects.first()}
 
 
 class PrefixFormTest(BaseNetworkFormTest, TestCase):
     form_class = forms.PrefixForm
     field_name = "prefix"
     object_name = "prefix"
+    fixtures = ("status",)
+
+    def setUp(self):
+        super().setUp()
+        self.extra_data = {"status": Status.objects.get(slug="active")}
 
 
 class IPAddressFormTest(BaseNetworkFormTest, TestCase):
     form_class = forms.IPAddressForm
     field_name = "address"
     object_name = "IP address"
+    fixtures = ("status",)
+
+    def setUp(self):
+        super().setUp()
+        self.extra_data = {"status": Status.objects.get(slug="active")}
 
     def test_slaac_valid_ipv6(self):
         form = self.form_class(
@@ -83,7 +93,7 @@ class IPAddressFormTest(BaseNetworkFormTest, TestCase):
         self.assertEqual("Only IPv6 addresses can be assigned SLAAC status", form.errors["status"][0])
 
     def test_primary_ip_not_altered_if_adding_a_new_IP_to_diff_interface(self):
-        """Test primary IP of device not lost when adding new IP to diffrent interface"""
+        """Test primary IP of a device is not lost when adding a new IP to a different interface."""
         manufacturer = Manufacturer.objects.create(name="Manufacturer 1", slug="manufacturer-1")
         devicetype = DeviceType.objects.create(model="Device Type 1", slug="device-type-1", manufacturer=manufacturer)
         devicerole = DeviceRole.objects.create(name="Device Role 1", slug="device-role-1")

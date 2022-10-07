@@ -12,6 +12,10 @@ class EnhancedPaginator(Paginator):
         except ValueError:
             per_page = get_settings_or_config("PAGINATE_COUNT")
 
+        max_page_size = get_settings_or_config("MAX_PAGE_SIZE")
+        if max_page_size:
+            per_page = min(per_page, max_page_size)
+
         super().__init__(object_list, per_page, **kwargs)
 
     def _get_page(self, *args, **kwargs):

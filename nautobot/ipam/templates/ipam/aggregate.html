@@ -21,9 +21,7 @@
                 </tr>
                 <tr>
                     <td>RIR</td>
-                    <td>
-                        <a href="{{ object.rir.get_absolute_url }}">{{ object.rir }}</a>
-                    </td>
+                    <td>{{ object.rir|hyperlinked_object }}</td>
                 </tr>
                 <tr>
                     <td>Utilization</td>
@@ -34,14 +32,10 @@
                 <tr>
                     <td>Tenant</td>
                     <td>
-                        {% if object.tenant %}
-                            {% if prefix.object.group %}
-                                <a href="{{ object.tenant.group.get_absolute_url }}">{{ object.tenant.group }}</a> /
-                            {% endif %}
-                            <a href="{{ object.tenant.get_absolute_url }}">{{ object.tenant }}</a>
-                        {% else %}
-                            <span class="text-muted">None</span>
+                        {% if object.tenant and object.tenant.group %}
+                            {{ object.tenant.group|hyperlinked_object }} /
                         {% endif %}
+                        {{ object.tenant|hyperlinked_object }}
                     </td>
                 </tr>
                 <tr>

@@ -1,12 +1,12 @@
-$(document).ready(function() {
-
+function jsify_form(context) {
+    this_context = $(context)
     // Pagination
-    $('select#per_page').change(function() {
+    this_context.find('select#per_page').change(function() {
         this.form.submit();
     });
 
     // "Toggle" checkbox for object lists (PK column)
-    $('input:checkbox.toggle').click(function() {
+    this_context.find('input:checkbox.toggle').click(function() {
         $(this).closest('table').find('input:checkbox[name=pk]:visible').prop('checked', $(this).prop('checked'));
 
         // Show the "select all" box if present
@@ -18,14 +18,14 @@ $(document).ready(function() {
     });
 
     // Uncheck the "toggle" and "select all" checkboxes if an item is unchecked
-    $('input:checkbox[name=pk]').click(function (event) {
+    this_context.find('input:checkbox[name=pk]').click(function (event) {
         if (!$(this).attr('checked')) {
             $('input:checkbox.toggle, #select_all').prop('checked', false);
         }
     });
 
     // Enable hidden buttons when "select all" is checked
-    $('#select_all').click(function() {
+    this_context.find('#select_all').click(function() {
         if ($(this).is(':checked')) {
             $('#select_all_box').find('button').prop('disabled', '');
         } else {
@@ -39,11 +39,15 @@ $(document).ready(function() {
         s = s.replace(/^[\s\.]+|[\s\.]+$/g, '');    // Trim leading/trailing spaces
         s = s.replace(/[\-\.\s]+/g, '-');           // Convert spaces and decimals to hyphens
         s = s.toLowerCase();                        // Convert to lowercase
+        // Declare `const slugify_prefer_underscores = true` globally if you want to use underscores instead of hyphens
+        if (typeof slugify_prefer_underscores !== "undefined") {
+            s = s.replace(/-/g, '_');
+        }
         return s.substring(0, num_chars);           // Trim to first num_chars chars
     }
     var slug_field = $('#id_slug');
-    if (slug_field) {
-        var slug_source = $('#id_' + slug_field.attr('slug-source'));
+    if (slug_field.length != 0) {
+        var slug_source_arr = slug_field.attr('slug-source').split(" ");
         var slug_length = slug_field.attr('maxlength');
         if (slug_field.val()) {
             slug_field.attr('_changed', true);
@@ -51,23 +55,36 @@ $(document).ready(function() {
         slug_field.change(function() {
             $(this).attr('_changed', true);
         });
-        slug_source.on('keyup change', function() {
-            if (slug_field && !slug_field.attr('_changed')) {
-                slug_field.val(slugify($(this).val(), (slug_length ? slug_length : 50)));
+        function reslugify() {
+            let slug_str = "";
+            for (slug_source_str of slug_source_arr) {
+                if (slug_str != "") {
+                    slug_str += " ";
+                }
+                let slug_source = $('#id_' + slug_source_str);
+                slug_str += slug_source.val();
             }
-        });
-        $('button.reslugify').click(function() {
-            slug_field.val(slugify(slug_source.val(), (slug_length ? slug_length : 50)));
-        });
+            slug_field.val(slugify(slug_str, (slug_length ? slug_length : 100)));
+        };
+
+        for (slug_source_str of slug_source_arr) {
+            let slug_source = $('#id_' + slug_source_str);
+            slug_source.on('keyup change', function() {
+                if (slug_field && !slug_field.attr('_changed')) {
+                    reslugify();
+                }
+            });
+        }
+        $('button.reslugify').click(reslugify);
     }
 
     // Bulk edit nullification
-    $('input:checkbox[name=_nullify]').click(function() {
+    this_context.find('input:checkbox[name=_nullify]').click(function() {
         $('#id_' + this.value).toggle('disabled');
     });
 
     // Set formaction and submit using a link
-    $('a.formaction').click(function(event) {
+    this_context.find('a.formaction').click(function(event) {
         event.preventDefault();
         var form = $(this).closest('form');
         form.attr('action', $(this).attr('href'));
@@ -104,7 +121,7 @@ $(document).ready(function() {
     }
 
     // Color Picker
-    $('.nautobot-select2-color-picker').select2({
+    this_context.find('.nautobot-select2-color-picker').select2({
         allowClear: true,
         placeholder: "---------",
         theme: "bootstrap",
@@ -114,7 +131,7 @@ $(document).ready(function() {
     });
 
     // Static choice selection
-    $('.nautobot-select2-static').select2({
+    this_context.find('.nautobot-select2-static').select2({
         allowClear: true,
         placeholder: "---------",
         theme: "bootstrap",
@@ -125,7 +142,7 @@ $(document).ready(function() {
     // Includes live search and chained fields
     // The `multiple` setting may be controlled via a data-* attribute
 
-    $('.nautobot-select2-api').select2({
+    this_context.find('.nautobot-select2-api').select2({
         allowClear: true,
         placeholder: "---------",
         theme: "bootstrap",
@@ -209,6 +226,7 @@ $(document).ready(function() {
                         // Annotate hierarchical depth for MPTT objects
                         record.text = '--'.repeat(record._depth) + ' ' + record.text;
                     }
+
                     record.id = record[element.getAttribute('value-field')] || record.id;
                     if(element.getAttribute('disabled-indicator') && record[element.getAttribute('disabled-indicator')]) {
                         // The disabled-indicator equated to true, so we disable this option
@@ -261,16 +279,16 @@ $(document).ready(function() {
     });
 
     // Flatpickr selectors
-    $('.date-picker').flatpickr({
+    this_context.find('.date-picker').flatpickr({
         allowInput: true
     });
-    $('.datetime-picker').flatpickr({
+    this_context.find('.datetime-picker').flatpickr({
         allowInput: true,
         enableSeconds: true,
         enableTime: true,
         time_24hr: true
     });
-    $('.time-picker').flatpickr({
+    this_context.find('.time-picker').flatpickr({
         allowInput: true,
         enableSeconds: true,
         enableTime: true,
@@ -293,8 +311,8 @@ $(document).ready(function() {
         }
     });
     // Replace the django issued text input with a select element
-    $('#id_tags.tagfield').replaceWith('<select name="tags" id="id_tags" class="form-control tagfield"></select>');
-    $('#id_tags.tagfield').select2({
+    this_context.find('#id_tags.tagfield').replaceWith('<select name="tags" id="id_tags" class="form-control tagfield"></select>');
+    this_context.find('#id_tags.tagfield').select2({
         tags: true,
         data: tag_objs,
         multiple: true,
@@ -341,7 +359,7 @@ $(document).ready(function() {
             }
         }
     });
-    $('#id_tags.tagfield').closest('form').submit(function(event){
+    this_context.find('#id_tags.tagfield').closest('form').submit(function(event){
         // django-taggit can only accept a single comma seperated string value
         var value = $('#id_tags.tagfield').val();
         if (value.length > 0){
@@ -352,8 +370,8 @@ $(document).ready(function() {
         }
     });
 
-    if( $('select#id_mode').length > 0 ) {
-        $('select#id_mode').on('change', function () {
+    if( this_context.find('select#id_mode').length > 0 ) { // Not certain for the length check here as if none is find it should not apply the onChange
+        this_context.find('select#id_mode').on('change', function () {
             if ($(this).val() == '') {
                 $('select#id_untagged_vlan').val('');
                 $('select#id_untagged_vlan').trigger('change');
@@ -379,7 +397,7 @@ $(document).ready(function() {
                 $('select#id_tagged_vlans').parent().parent().hide();
             }
         });
-        $('select#id_mode').trigger('change');
+        this_context.find('select#id_mode').trigger('change');
     }
 
     // Scroll up an offset equal to the first nav element if a hash is present
@@ -402,7 +420,7 @@ $(document).ready(function() {
     const IMAGE_PREVIEW_OFFSET_Y = 10;
 
     // Preview an image attachment when the link is hovered over
-    $('a.image-preview').on('mouseover', function(e) {
+    this_context.find('a.image-preview').on('mouseover', function(e) {
         // Twice the offset to account for all sides of the picture
         var maxWidth = window.innerWidth - (e.clientX + (IMAGE_PREVIEW_OFFSET_X * 2));
         var maxHeight = window.innerHeight - (e.clientY + (IMAGE_PREVIEW_OFFSET_Y * 2));
@@ -432,12 +450,12 @@ $(document).ready(function() {
     });
 
     // Fade the image out; it will be deleted when another one is previewed
-    $('a.image-preview').on('mouseout', function() {
+    this_context.find('a.image-preview').on('mouseout', function() {
         $('#image-preview-window').fadeOut('fast');
     });
 
     // Rearrange options within a <select> list
-    $('#move-option-up').bind('click', function() {
+    this_context.find('#move-option-up').bind('click', function() {
         var select_id = '#' + $(this).attr('data-target');
         $(select_id + ' option:selected').each(function () {
             var newPos = $(select_id + ' option').index(this) - 1;
@@ -447,7 +465,7 @@ $(document).ready(function() {
             }
         });
     });
-    $('#move-option-down').bind('click', function() {
+    this_context.find('#move-option-down').bind('click', function() {
         var select_id = '#' + $(this).attr('data-target');
         var countOptions = $(select_id + ' option').length;
         var countSelectedOptions = $(select_id + ' option:selected').length;
@@ -459,9 +477,13 @@ $(document).ready(function() {
             }
         });
     });
-    $('#select-all-options').bind('click', function() {
+    this_context.find('#select-all-options').bind('click', function() {
         var select_id = '#' + $(this).attr('data-target');
         $(select_id + ' option').prop('selected',true);
     });
 
-});
+}
+
+$(document).ready((e) => {
+    jsify_form(this.document);
+})

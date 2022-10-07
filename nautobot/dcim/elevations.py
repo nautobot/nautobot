@@ -19,9 +19,10 @@ class RackElevationSVG:
     :param base_url: Base URL for links within the SVG document. If none, links will be relative.
     """
 
-    def __init__(self, rack, user=None, include_images=True, base_url=None):
+    def __init__(self, rack, user=None, include_images=True, base_url=None, display_fullname=True):
         self.rack = rack
         self.include_images = include_images
+        self.display_fullname = display_fullname
         if base_url is not None:
             self.base_url = base_url.rstrip("/")
         else:
@@ -35,7 +36,7 @@ class RackElevationSVG:
 
     @staticmethod
     def _get_device_description(device):
-        return "{} ({}) — {} ({}U) {} {}".format(
+        return "{} ({}) — {} ({}U) {} {}".format(  # pylint: disable=consider-using-f-string
             device.name,
             device.device_role,
             device.device_type.display,
@@ -65,7 +66,7 @@ class RackElevationSVG:
         drawing = svgwrite.Drawing(size=(width, height))
 
         # add the stylesheet
-        with open("{}/css/rack_elevation.css".format(settings.STATICFILES_DIRS[0])) as css_file:
+        with open(f"{settings.STATICFILES_DIRS[0]}/css/rack_elevation.css") as css_file:
             drawing.defs.add(drawing.style(css_file.read()))
 
         # add gradients
@@ -76,22 +77,41 @@ class RackElevationSVG:
         return drawing
 
     def _draw_device_front(self, drawing, device, start, end, text):
-        name = str(device)
+        devicebay_details = ""
         if device.devicebay_count:
-            name += " ({}/{})".format(device.get_children().count(), device.devicebay_count)
+            devicebay_details += f" ({device.get_children().count()}/{device.devicebay_count})"
+
+        device_fullname = str(device) + devicebay_details
+        device_shortname = settings.UI_RACK_VIEW_TRUNCATE_FUNCTION(str(device)) + devicebay_details
 
         color = device.device_role.color
+        reverse_url = reverse("dcim:device", kwargs={"pk": device.pk})
         link = drawing.add(
             drawing.a(
-                href="{}{}".format(self.base_url, reverse("dcim:device", kwargs={"pk": device.pk})),
+                href=f"{self.base_url}{reverse_url}",
                 target="_top",
                 fill="black",
             )
         )
         link.set_desc(self._get_device_description(device))
-        link.add(drawing.rect(start, end, style="fill: #{}".format(color), class_="slot"))
-        hex_color = "#{}".format(foreground_color(color))
-        link.add(drawing.text(str(name), insert=text, fill=hex_color))
+        link.add(drawing.rect(start, end, style=f"fill: #{color}", class_="slot"))
+        hex_color = f"#{foreground_color(color)}"
+        link.add(
+            drawing.text(
+                device_fullname,
+                insert=text,
+                fill=hex_color,
+                class_=f"rack-device-fullname{'' if self.display_fullname else ' hidden'}",
+            )
+        )
+        link.add(
+            drawing.text(
+                device_shortname,
+                insert=text,
+                fill=hex_color,
+                class_=f"rack-device-shortname{' hidden' if self.display_fullname else ''}",
+            )
+        )
 
         # Embed front device type image if one exists
         if self.include_images and device.device_type.front_image:
@@ -107,8 +127,23 @@ class RackElevationSVG:
     def _draw_device_rear(self, drawing, device, start, end, text):
         rect = drawing.rect(start, end, class_="slot blocked")
         rect.set_desc(self._get_device_description(device))
+
+        device_fullname = str(device)
+        device_shortname = settings.UI_RACK_VIEW_TRUNCATE_FUNCTION(str(device))
+
         drawing.add(rect)
-        drawing.add(drawing.text(str(device), insert=text))
+        drawing.add(
+            drawing.text(
+                device_fullname, insert=text, class_=f"rack-device-fullname{'' if self.display_fullname else ' hidden'}"
+            )
+        )
+        drawing.add(
+            drawing.text(
+                device_shortname,
+                insert=text,
+                class_=f"rack-device-shortname{' hidden' if self.display_fullname else ''}",
+            )
+        )
 
         # Embed rear device type image if one exists
         if self.include_images and device.device_type.rear_image:
@@ -123,24 +158,23 @@ class RackElevationSVG:
 
     @staticmethod
     def _draw_empty(drawing, rack, start, end, text, id_, face_id, class_, reservation):
+        reverse_url = reverse("dcim:device_add")
+        query_params = urlencode(
+            {
+                "rack": rack.pk,
+                "site": rack.site.pk,
+                "face": face_id,
+                "position": id_,
+            }
+        )
         link = drawing.add(
             drawing.a(
-                href="{}?{}".format(
-                    reverse("dcim:device_add"),
-                    urlencode(
-                        {
-                            "rack": rack.pk,
-                            "site": rack.site.pk,
-                            "face": face_id,
-                            "position": id_,
-                        }
-                    ),
-                ),
+                href=f"{reverse_url}?{query_params}",
                 target="_top",
             )
         )
         if reservation:
-            link.set_desc("{} — {} · {}".format(reservation.description, reservation.user, reservation.created))
+            link.set_desc(f"{reservation.description} — {reservation.user} · {reservation.created}")
         link.add(drawing.rect(start, end, class_=class_))
         link.add(drawing.text("add device", insert=text, class_="add-device"))
 

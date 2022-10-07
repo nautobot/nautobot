@@ -245,4 +245,4 @@ PONG
 
 ## Deploy Nautobot
 
-Now that Nautobot dependencies are installed and configured, you're ready to [Install Nautobot](../nautobot)!
+Now that Nautobot dependencies are installed and configured, you're ready to [Install Nautobot](nautobot.md)!

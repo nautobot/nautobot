@@ -12,6 +12,17 @@
     {% endif %}
 {% endblock buttons %}
 
+{% block content %}
+{% if not job_class_found %}
+<div class="alert alert-danger">
+    <i class="mdi mdi-alert"></i>
+    This job source for this scheduled job is no longer installed.
+    This scheduled job will fail to run unless reinstalled at the original location.
+</div>
+{% endif %}
+{{ block.super }}
+{% endblock content %}
+
 {% block content_left_page %}
       <div class="panel panel-default">
           <div class="panel-heading">
@@ -73,6 +84,7 @@
                   <td>Interval</td>
                   <td>
                       {{ object.interval }}
+                      {% if object.interval == "custom" %}({{ object.crontab }}){% endif %}
                   </td>
               </tr>
               <tr>
@@ -101,6 +113,7 @@
       </div>
 {% endblock %}
 {% block content_right_page %}
+    {% if job_class_found %}
       <div class="panel panel-default">
           <div class="panel-heading">
               <strong>User Inputs</strong>
@@ -116,4 +129,5 @@
               {% endfor %}
           </table>
       </div>
+    {% endif %}
 {% endblock %}

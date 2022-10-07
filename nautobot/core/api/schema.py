@@ -1,8 +1,10 @@
 import logging
 import re
 
+from drf_spectacular.contrib.django_filters import DjangoFilterExtension
 from drf_spectacular.extensions import OpenApiSerializerFieldExtension
 from drf_spectacular.openapi import AutoSchema
+from drf_spectacular.plumbing import build_array_type, build_media_type_object, is_serializer
 from rest_framework import serializers
 from rest_framework.relations import ManyRelatedField
 
@@ -35,6 +37,49 @@ class NautobotAutoSchema(AutoSchema):
         }
     )
 
+    @property
+    def is_bulk_action(self):
+        """Custom property for convenience."""
+        return hasattr(self.view, "action") and self.view.action in self.custom_actions
+
+    @property
+    def is_partial_action(self):
+        """Custom property for convenience."""
+        return hasattr(self.view, "action") and self.view.action in ["partial_update", "bulk_partial_update"]
+
+    def _get_paginator(self):
+        """Nautobot's custom bulk operations, even though they return a list of records, are NOT paginated."""
+        if self.is_bulk_action:
+            return None
+        return super()._get_paginator()
+
+    def get_filter_backends(self):
+        """Nautobot's custom bulk operations, even though they return a list of records, are NOT filterable."""
+        if self.is_bulk_action:
+            return []
+        return super().get_filter_backends()
+
+    def get_operation(self, *args, **kwargs):
+        operation = super().get_operation(*args, **kwargs)
+        # drf-spectacular never generates a requestBody for DELETE operations, but our bulk-delete operations need one
+        if "requestBody" not in operation and self.is_bulk_action and self.method == "DELETE":
+            # based on drf-spectacular's `_get_request_body()`, `_get_request_for_media_type()`,
+            # `_unwrap_list_serializer()`, and `_get_request_for_media_type()` methods
+            request_serializer = self.get_request_serializer()
+
+            # We skip past a number of checks from the aforementioned private methods, as this is a very specific case
+            component = self.resolve_serializer(request_serializer.child, "request")
+
+            operation["requestBody"] = {
+                "content": {
+                    media_type: build_media_type_object(build_array_type(component.ref))
+                    for media_type in self.map_parsers()
+                },
+                "required": True,
+            }
+
+        return operation
+
     def get_operation_id(self):
         """Extend the base method to handle Nautobot's REST API bulk operations.
 
@@ -44,7 +89,7 @@ class NautobotAutoSchema(AutoSchema):
 
         With this extension, the bulk endpoints automatically get a different operation-id from the non-bulk endpoints.
         """
-        if hasattr(self.view, "action") and self.view.action in self.custom_actions:
+        if self.is_bulk_action:
             # Same basic sequence of calls as AutoSchema.get_operation_id,
             # except we use "self.view.action" instead of "self.method_mapping[self.method]" to get the action verb
             tokenized_path = self._tokenize_path()
@@ -63,33 +108,56 @@ class NautobotAutoSchema(AutoSchema):
         return super().get_operation_id()
 
     def get_request_serializer(self):
-        """Return the request serializer (used for parsing the request payload) for this endpoint.
+        """
+        Return the request serializer (used for describing/parsing the request payload) for this endpoint.
 
         We override the default drf-spectacular behavior for the case where the endpoint describes a write request
         with required data (PATCH, POST, PUT). In those cases we replace FooSerializer with a dynamically-defined
         WritableFooSerializer class in order to more accurately represent the available options on write.
+
+        We also override for the case where the endpoint is one of Nautobot's custom bulk API endpoints, which
+        require a list of serializers as input, rather than a single one.
         """
         serializer = super().get_request_serializer()
 
+        # For bulk operations, make sure we use a "many" serializer.
+        many = self.is_bulk_action
+        partial = self.is_partial_action
+
         if serializer is not None and self.method in ["PATCH", "POST", "PUT"]:
-            writable_class = self.get_writable_class(serializer)
+            writable_class = self.get_writable_class(serializer, bulk=many)
             if writable_class is not None:
                 if hasattr(serializer, "child"):
-                    child_serializer = self.get_writable_class(serializer.child)
-                    serializer = writable_class(child=child_serializer)
+                    child_serializer = self.get_writable_class(serializer.child, bulk=many)
+                    serializer = writable_class(child=child_serializer, many=many, partial=partial)
                 else:
-                    serializer = writable_class()
+                    serializer = writable_class(many=many, partial=partial)
 
         return serializer
+
+    def get_response_serializers(self):
+        """
+        Return the response serializer (used for describing the response payload) for this endpoint.
+
+        We override the default drf-spectacular behavior for the case where the endpoint describes a write request
+        to a bulk endpoint, which returns a list of serializers, rather than a single one.
+        """
+        response_serializers = super().get_response_serializers()
+
+        if self.is_bulk_action:
+            if is_serializer(response_serializers):
+                return type(response_serializers)(many=True)
+
+        return response_serializers
 
     # Cache of existing dynamically-defined WritableFooSerializer classes.
     writable_serializers = {}
 
-    def get_writable_class(self, serializer):
+    def get_writable_class(self, serializer, bulk=False):
         """
-        Given a FooSerializer class, look up or construct a corresponding WritableFooSerializer class if necessary.
+        Given a FooSerializer instance, look up or construct a [Bulk]WritableFooSerializer class if necessary.
 
-        If no WritableFooSerializer class is needed, returns None instead.
+        If no [Bulk]WritableFooSerializer class is needed, returns None instead.
         """
         properties = {}
         # Does this serializer have any fields of certain special types?
@@ -106,25 +174,47 @@ class NautobotAutoSchema(AutoSchema):
             elif isinstance(child, ManyRelatedField) and isinstance(child.child_relation, SerializedPKRelatedField):
                 properties[child_name] = None
 
+        if bulk:
+            # The "id" field is always different in bulk serializers
+            properties["id"] = None
+
         if not properties:
             # There's nothing about this serializer that requires a special WritableSerializer class to be defined.
             return None
 
-        # Have we already created a WritableFooSerializer class or do we need to do so now?
-        if not isinstance(serializer, tuple(self.writable_serializers)):
+        # Have we already created a [Bulk]WritableFooSerializer class or do we need to do so now?
+        writable_name = "Writable" + type(serializer).__name__
+        if bulk:
+            writable_name = f"Bulk{writable_name}"
+        if writable_name not in self.writable_serializers:
             # We need to create a new class to use
-            writable_name = "Writable" + type(serializer).__name__
             # If the original serializer class has a Meta, make sure we set Meta.ref_name appropriately
             meta_class = getattr(type(serializer), "Meta", None)
             if meta_class:
                 ref_name = "Writable" + self.get_serializer_ref_name(serializer)
+                if bulk:
+                    ref_name = f"Bulk{ref_name}"
                 writable_meta = type("Meta", (meta_class,), {"ref_name": ref_name})
                 properties["Meta"] = writable_meta
 
-            # Define and cache a new WritableFooSerializer class
-            self.writable_serializers[type(serializer)] = type(writable_name, (type(serializer),), properties)
+            # Define and cache a new [Bulk]WritableFooSerializer class
+            if bulk:
 
-        writable_class = self.writable_serializers[type(serializer)]
+                def get_fields(self):
+                    """For Nautobot's bulk_update/partial_update/delete APIs, the `id` field is mandatory."""
+                    new_fields = {}
+                    for name, field in type(serializer)().get_fields().items():
+                        if name == "id":
+                            field.read_only = False
+                            field.required = True
+                        new_fields[name] = field
+                    return new_fields
+
+                properties["get_fields"] = get_fields
+
+            self.writable_serializers[writable_name] = type(writable_name, (type(serializer),), properties)
+
+        writable_class = self.writable_serializers[writable_name]
         return writable_class
 
     def get_serializer_ref_name(self, serializer):
@@ -143,6 +233,34 @@ class NautobotAutoSchema(AutoSchema):
         if ref_name.endswith("Serializer"):
             ref_name = ref_name[: -len("Serializer")]
         return ref_name
+
+    def resolve_serializer(self, serializer, direction, bypass_extensions=False):
+        """
+        Re-add required `id` field on bulk_partial_update action.
+
+        drf-spectacular clears the `required` list for any partial serializers in its `_map_basic_serializer()`,
+        but Nautobot bulk partial updates require the `id` field to be specified for each object to update.
+        """
+        component = super().resolve_serializer(serializer, direction, bypass_extensions)
+        if (
+            component
+            and component.schema is not None
+            and self.is_bulk_action
+            and self.is_partial_action
+            and direction == "request"
+        ):
+            component.schema["required"] = ["id"]
+        return component
+
+
+class NautobotFilterExtension(DjangoFilterExtension):
+    """
+    Because drf-spectacular does extension registration by exact classpath matches, since we use a custom subclass
+    of django_filters.rest_framework.DjangoFilterBackend, we have to point drf-spectacular to our subclass since the
+    parent class isn't directly in use and therefore doesn't get extended??
+    """
+
+    target_class = "nautobot.core.api.filter_backends.NautobotFilterBackend"
 
 
 class ChoiceFieldFix(OpenApiSerializerFieldExtension):

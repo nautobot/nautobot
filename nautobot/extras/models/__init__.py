@@ -2,9 +2,10 @@ from .change_logging import ChangeLoggedModel, ObjectChange
 from .statuses import Status, StatusField, StatusModel
 from .customfields import ComputedField, CustomField, CustomFieldChoice, CustomFieldModel
 from .datasources import GitRepository
-from .groups import DynamicGroup
+from .groups import DynamicGroup, DynamicGroupMembership
 from .jobs import (
     Job,
+    JobHook,
     JobLogEntry,
     JobResult,
     ScheduledJob,
@@ -21,6 +22,7 @@ from .models import (
     GraphQLQuery,
     HealthCheckTestModel,
     ImageAttachment,
+    Note,
     Webhook,
 )
 from .relationships import Relationship, RelationshipAssociation, RelationshipModel
@@ -39,6 +41,7 @@ __all__ = (
     "CustomFieldModel",
     "CustomLink",
     "DynamicGroup",
+    "DynamicGroupMembership",
     "ExportTemplate",
     "FileAttachment",
     "FileProxy",
@@ -47,8 +50,10 @@ __all__ = (
     "HealthCheckTestModel",
     "ImageAttachment",
     "Job",
+    "JobHook",
     "JobLogEntry",
     "JobResult",
+    "Note",
     "ObjectChange",
     "Relationship",
     "RelationshipModel",

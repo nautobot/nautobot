@@ -1,0 +1,38 @@
+{% load static %}
+{% load helpers %}
+{% load plugins %}
+
+    <link rel="stylesheet"
+          href="{% static 'bootstrap-3.4.1-dist/css/bootstrap.min.css' %}"
+          onerror="window.location='{% url 'media_failure' %}?filename=bootstrap-3.4.1-dist/css/bootstrap.min.css'">
+    <link rel="stylesheet"
+          href="{% static 'materialdesignicons-6.5.95/css/materialdesignicons.min.css' %}"
+          onerror="window.location='{% url 'media_failure' %}?filename=materialdesignicons-6.5.95/css/materialdesignicons.min.css'">
+    <link rel="stylesheet"
+          href="{% static 'jquery-ui-1.13.1/jquery-ui.min.css' %}"
+          onerror="window.location='{% url 'media_failure' %}?filename=jquery-ui-1.13.1/jquery-ui.min.css'">
+    <link rel="stylesheet"
+          href="{% static 'select2-4.0.13/select2.min.css' %}"
+          onerror="window.location='{% url 'media_failure' %}?filename=select2-4.0.13/select2.min.css'">
+    <link rel="stylesheet"
+          href="{% static 'select2-bootstrap-0.1.0-beta.10/select2-bootstrap.min.css' %}"
+          onerror="window.location='{% url 'media_failure' %}?filename=select2-bootstrap-0.1.0-beta.10/select2-bootstrap.min.css'">
+    <link rel="stylesheet"
+          href="{% static 'flatpickr-4.6.9/themes/light.min.css' %}"
+          onerror="window.location='{% url 'media_failure' %}?filename=flatpickr-4.6.9/themes/light.min.css'">
+    <link rel="stylesheet" id="dark-theme"
+          href="{% static 'css/dark.css' %}?v{{ settings.VERSION }}"
+          onerror="window.location='{% url 'media_failure' %}?filename=css/dark.css'" disabled="disabled" />
+    <link rel="stylesheet"
+          href="{% static 'css/base.css' %}?v{{ settings.VERSION }}"
+          onerror="window.location='{% url 'media_failure' %}?filename=css/base.css'">
+    <link rel="apple-touch-icon" sizes="180x180" href="{% custom_branding_or_static 'icon_180' 'img/nautobot_icon_180x180.png' %}">
+    <link rel="icon" type="image/png" sizes="32x32" href="{% custom_branding_or_static 'icon_32' 'img/nautobot_icon_32x32.png' %}">
+    <link rel="icon" type="image/png" sizes="16x16" href="{% custom_branding_or_static 'icon_16' 'img/nautobot_icon_16x16.png' %}">
+    <link rel="icon" type="image/png" sizes="192x192" href="{% custom_branding_or_static 'icon_192' 'img/nautobot_icon_192x192.png' %}">
+    <link rel="mask-icon" type="image/png" color="#0097ff" href="{% custom_branding_or_static 'icon_mask' 'img/nautobot_icon_monochrome.png' %}">
+    <link rel="shortcut icon" href="{% custom_branding_or_static 'favicon' 'img/favicon.ico' %}">
+    <meta name="msapplication-TileColor" content="#2d89ef">
+    <meta name="theme-color" content="#ffffff">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="initial-scale=1, maximum-scale=1, user-scalable=no, width=device-width">

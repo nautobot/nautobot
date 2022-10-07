@@ -1,8 +1,21 @@
-<!-- markdownlint-disable MD041 -->
-![Nautobot](nautobot_logo.svg "Nautobot logo")
-<!-- markdownlint-enable MD041 -->
+---
+hide:
+  - navigation
+---
 
-# What is Nautobot?
+# Overview
+
+Welcome to the Nautobot Core Documentation! Use the top navigation bar to read about:
+
+- [Installing Nautobot](installation/index.md), [Configuring Nautobot](configuration/index.md), [Getting Started with the Web Interface](user-guides/getting-started/index.md), [REST](rest-api/overview.md) and [GraphQL](additional-features/graphql.md) APIs, [Plugins](plugins/index.md), additional features and much more can be found under the **Documentation** section.
+- Learn about how to [Develop and Contribute to Nautobot](development/index.md), [Set up your Development Environment](development/getting-started.md), and more under the **Development Guide** section.
+- Nautobot has a thriving ecosystem of **Apps** (also known as Plugins), developed as separate projects, for which you can find links to documentation under the [Nautobot Apps](apps/index.md) section.
+
+## What is Nautobot?
+
+<!-- markdownlint-disable MD033 -->
+<img src="assets/nautobot_logo.svg" class="logo">
+<!-- markdownlint-enable MD033 -->
 
 Nautobot is an open source Network Source of Truth and Network Automation Platform. Nautobot was initially developed as a fork of NetBox (v2.10.4), which was originally created by Jeremy Stretch at DigitalOcean and by the NetBox open source community.
 
@@ -14,12 +27,16 @@ Nautobot enables three (3) key use cases.
 
 2. **Extensible Data Platform for Automation** - Nautobot has a rich feature set to seamlessly integrate with network automation solutions.  Nautobot offers GraphQL and native Git integration along with REST APIs and webhooks.  Git integration dynamically loads YAML data files as Nautobot config contexts.  Nautobot also has an evolving plugin system that enables users to create custom models, APIs, and UI elements.  The plugin system is also used to unify and aggregate disparate data sources creating a Single Source of Truth to streamline data management for network automation.
 
-3. **Platform for Network Automation Apps** - The Nautobot plugin system enables users to create Network Automation Apps.  Apps can be as lightweight or robust as needed based on user needs.  Using Nautobot for creating custom applications saves up to 70% development time by re-using features such as authentication, permissions, webhooks, GraphQL, change logging, etc. all while having access to the data already stored in Nautobot. Some applications that are already launched include:
+3. **Platform for Network Automation Apps** - The Nautobot plugin system enables users to create Network Automation Apps.  Apps can be as lightweight or robust as needed based on user needs.  Using Nautobot for creating custom applications saves up to 70% development time by re-using features such as authentication, permissions, webhooks, GraphQL, change logging, etc. all while having access to the data already stored in Nautobot. Some production ready applications include:
 
-      * [Golden Configuration](https://github.com/nautobot/nautobot-plugin-golden-config)
-      * [ChatOps](https://github.com/nautobot/nautobot-plugin-chatops)
-      * [Capacity Metrics](https://github.com/nautobot/nautobot-plugin-capacity-metrics) and
-      * [Device Onboarding](https://github.com/nautobot/nautobot-plugin-device-onboarding)
+    - [Golden Configuration](https://github.com/nautobot/nautobot-plugin-golden-config)
+    - [Device Lifecycle](https://github.com/nautobot/nautobot-plugin-device-lifecycle-mgmt)
+    - [Firewall Models](https://github.com/nautobot/nautobot-plugin-firewall-models)
+    - [SSoT](https://github.com/nautobot/nautobot-plugin-ssot)
+    - [ChatOps](https://github.com/nautobot/nautobot-plugin-chatops)
+    - [Circuit Maintenance](https://github.com/nautobot/nautobot-plugin-circuit-maintenance)
+    - [Capacity Metrics](https://github.com/nautobot/nautobot-plugin-capacity-metrics)
+    - [Device Onboarding](https://github.com/nautobot/nautobot-plugin-device-onboarding)
 
 ## Design Philosophy
 
@@ -59,6 +76,9 @@ Nautobot is built on the [Django](https://djangoproject.com/) Python Web framewo
 | Task queuing       | Redis/Celery/django-rq          |
 | Live device access | NAPALM                          |
 
++++ 1.1.0
+    MySQL support was added.
+
 The following diagram displays how data travels through Nautobot's application stack.
 
 ![Application stack diagram](./media/nautobot_application_stack_low_level.png "Application stack diagram")
@@ -66,6 +86,12 @@ The following diagram displays how data travels through Nautobot's application s
 ## Supported Python Versions
 
 Nautobot supports Python 3.7, 3.8, 3.9, and 3.10.
+
++++ 1.3.0
+    Python 3.10 support was added.
+
+--- 1.3.0
+    Python 3.6 support was removed.
 
 ## Getting Started
 

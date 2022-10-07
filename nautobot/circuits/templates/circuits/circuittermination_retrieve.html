@@ -1,0 +1,125 @@
+{% extends 'generic/object_retrieve.html' %}
+{% load helpers %}
+
+{% block breadcrumbs %}
+    <li><a href="{% url 'circuits:circuit_list' %}">Circuits</a></li>
+    <li><a href="{% url 'circuits:circuit_list' %}?provider={{ object.circuit.provider.slug }}">{{ object.circuit.provider }}</a></li>
+    <li>{{ object.circuit|hyperlinked_object }}</li>
+    <li>{{ object|hyperlinked_object }}</li>
+{% endblock breadcrumbs %}
+
+{% block content_left_page %}
+    <div class="panel panel-default">
+            <table class="table table-hover panel-body attr-table">
+                <tr>
+                    {% if object.site %}
+                        <td>Site</td>
+                        <td>
+                            {% if object.site.region %}
+                                {{ object.site.region|hyperlinked_object }} /
+                            {% endif %}
+                            {{ object.site|hyperlinked_object }}
+                        </td>
+                    {% endif %}
+                    {% if object.provider_network %}
+                        <td>Provider Network</td>
+                        <td>
+                            {{ object.provider_network|hyperlinked_object }}
+                        </td>
+                    {% endif %}
+                </tr>
+                {% if object.location %}
+                    <tr>
+                        <td>Location</td>
+                        <td>{% include 'dcim/inc/location_hierarchy.html' with location=object.location %}</td>
+                    </tr>
+                {% endif %}
+                {% if object.site %}
+                <tr>
+                    <td>Cable</td>
+                    <td>
+                        {% if object.cable %}
+                            {% if perms.dcim.delete_cable %}
+                                <div class="pull-right">
+                                    <a href="{% url 'dcim:cable_delete' pk=object.cable.pk %}?return_url={{ object.circuit.get_absolute_url }}" title="Remove cable" class="btn btn-danger btn-xs">
+                                        <i class="mdi mdi-ethernet-cable-off" aria-hidden="true"></i> Disconnect
+                                    </a>
+                                </div>
+                            {% endif %}
+                            {{ object.cable|hyperlinked_object }}
+                            <a href="{% url 'circuits:circuittermination_trace' pk=object.pk %}" class="btn btn-primary btn-xs" title="Trace">
+                                <i class="mdi mdi-transit-connection-variant" aria-hidden="true"></i>
+                            </a>
+                            {% with peer=object.get_cable_peer %}
+                                to
+                                {% if peer.device %}
+                                    {{ peer.device|hyperlinked_object }}
+                                {% elif peer.circuit %}
+                                    {{ peer.circuit|hyperlinked_object }}
+                                {% endif %}
+                                ({{ peer }})
+                            {% endwith %}
+                        {% else %}
+                            {% if perms.dcim.add_cable and object.site %}
+                                <div class="pull-right">
+                                    <span class="dropdown">
+                                        <button type="button" class="btn btn-success btn-xs dropdown-toggle" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                                            <span class="mdi mdi-ethernet-cable" aria-hidden="true"></span> Connect
+                                        </button>
+                                        <ul class="dropdown-menu dropdown-menu-right">
+                                            <li><a href="{% url 'circuits:circuittermination_connect' termination_a_id=object.pk termination_b_type='interface' %}?termination_b_site={{ object.site.pk }}&return_url={{ object.get_absolute_url }}">Interface</a></li>
+                                            <li><a href="{% url 'circuits:circuittermination_connect' termination_a_id=object.pk termination_b_type='front-port' %}?termination_b_site={{ object.site.pk }}&return_url={{ object.get_absolute_url }}">Front Port</a></li>
+                                            <li><a href="{% url 'circuits:circuittermination_connect' termination_a_id=object.pk termination_b_type='rear-port' %}?termination_b_site={{ object.site.pk }}&return_url={{ object.get_absolute_url }}">Rear Port</a></li>
+                                            <li><a href="{% url 'circuits:circuittermination_connect' termination_a_id=object.pk termination_b_type='circuit-termination' %}?termination_b_site={{ object.site.pk }}&return_url={{ object.get_absolute_url }}">Circuit Termination</a></li>
+                                        </ul>
+                                    </span>
+                                </div>
+                            {% endif %}
+                            <span class="text-muted">Not defined</span>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% endif %}
+                <tr>
+                    <td>Speed</td>
+                    <td>
+                        {% if object.port_speed and object.upstream_speed %}
+                            <i class="mdi mdi-arrow-down-bold" title="Downstream"></i> {{ object.port_speed|humanize_speed }} &nbsp;
+                            <i class="mdi mdi-arrow-up-bold" title="Upstream"></i> {{ object.upstream_speed|humanize_speed }}
+                        {% elif object.port_speed %}
+                            {{ object.port_speed|humanize_speed }}
+                        {% else %}
+                            <span class="text-muted">&mdash;</span>
+                        {% endif %}
+                    </td>
+                </tr>
+                <tr>
+                    <td>IP Addressing</td>
+                    <td>
+                        {% if object.connected_endpoint %}
+                            {% for ip in object.ip_addresses %}
+                                {% if not forloop.first %}<br />{% endif %}
+                                {{ ip|hyperlinked_object }} ({{ ip.vrf|default:"Global" }})
+                            {% empty %}
+                                <span class="text-muted">None</span>
+                            {% endfor %}
+                        {% else %}
+                            <span class="text-muted">&mdash;</span>
+                        {% endif %}
+                    </td>
+                </tr>
+                <tr>
+                    <td>Cross-Connect</td>
+                    <td>{{ object.xconnect_id|placeholder }}</td>
+                </tr>
+                <tr>
+                    <td>Patch Panel/Port</td>
+                    <td>{{ object.pp_info|placeholder }}</td>
+                </tr>
+                <tr>
+                    <td>Description</td>
+                    <td>{{ object.description|placeholder }}</td>
+                </tr>
+            </table>
+    </div>
+{% endblock content_left_page %}

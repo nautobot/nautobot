@@ -2,7 +2,10 @@
 
 Sometimes it is desirable to create a new kind of relationship between one (or more) objects in your source of truth to reflect business logic or other relationships that may be useful to you but that haven't been defined. This is where the Relationships feature comes in: like defining custom fields to hold attributes specific to your use cases, relationships define specific links between objects that might be specific to your network or data.
 
-To create a relationship, from the top-level navigation menu select *Extensibility* --> *Relationships*
+To create a relationship, from the top-level navigation menu select **Extensibility > Data Management > Relationships**
+
+!!! tip
+    Because relationship information can be included in the REST API and in GraphQL, we strongly recommend that when defining a relationship, you provide a slug that contains underscores rather than dashes (`my_relationship_slug`, not `my-relationship-slug`), as some features may not work optimally if dashes are included in the slug.
 
 ## Relationship Types
 
@@ -10,17 +13,20 @@ To create a relationship, from the top-level navigation menu select *Extensibili
 * **One-to-many** - where one side of the connection can only have one object. For example, where a controller has many supplicants like FEX and parent switch. A FEX can be uplinked to one parent switch (in most cases), but the parent switch can have many FEX.
 * **One-to-one** - where there can be only one object on either side of the relationship. For example, an IP address serving as a router-id for a device. Each device has at most one router-id, and each IP address can be a router-id for at most one device.
 
-Additionally, there are two *symmetric* relationship types that can be used when defining a relationship between objects of the same type. These relationship types treat the two *sides* of a relationship as interchangeable (much like the A/Z sides of a circuit, or the endpoints of a cable) rather than distinguishing between the *source* and *destination* of a relationship as the non-symmetric relationship types above do.
++++ 1.2.0
+    Additionally, there are two _symmetric_ relationship types that can be used when defining a relationship between objects of the same type. These relationship types treat the two _sides_ of a relationship as interchangeable (much like the A/Z sides of a circuit, or the endpoints of a cable) rather than distinguishing between the _source_ and _destination_ of a relationship as the non-symmetric relationship types above do.
 
-* **Symmetric Many-to-many** - as in Many-to-many, but acting more as an *undirected graph* of similar objects. For example, this could be used to define a set of devices participating in a routing topology, where each device has some number of peers and there's no distinction between *source* and *destination* peers.
-* **Symmetric One-to-one** - as in One-to-one, but defining a relationship between exactly two objects of the same type. For example, a HSRP/VRRP pair of redundant devices, where each device has exactly one peer device.
+    * **Symmetric Many-to-many** - as in Many-to-many, but acting more as an _undirected graph_ of similar objects. For example, this could be used to define a set of devices participating in a routing topology, where each device has some number of peers and there's no distinction between _source_ and _destination_ peers.
+    * **Symmetric One-to-one** - as in One-to-one, but defining a relationship between exactly two objects of the same type. For example, a HSRP/VRRP pair of redundant devices, where each device has exactly one peer device.
 
 !!! note
-    A symmetric many-to-many relationship can be, but is not necessarily, a *complete graph* or *full mesh*. For example, in the routing topology example above, if Device *A* and Device *B* are peers, and Device *B* and Device *C* are peers, this does not automatically imply a relationship between Devices *A* and *C* -- they **might or might not** also be peers, depending on how you define and populate the specific associations for this relationship.
+    A symmetric many-to-many relationship can be, but is not necessarily, a _complete graph_ or _full mesh_. For example, in the routing topology example above, if Device _A_ and Device _B_ are peers, and Device _B_ and Device _C_ are peers, this does not automatically imply a relationship between Devices _A_ and _C_ -- they **might or might not** also be peers, depending on how you define and populate the specific associations for this relationship.
 
 ## Relationship Filters
 
 Filters can be defined to restrict the type or selection of objects for either side of the connection.
+
+An important note is that the filters have to be defined in **FilterSet** rather than QuerySet format. In practice this means that you can use any of the filters that are valid in the REST API for a given object type, but cannot necessarily use complex nested attribute lookups (such as `interfaces__ip_addresses__prefix_length` on a Device, for example).
 
 As an example, let's create a relationship between Circuits and Devices.
 In our situation we only would terminate Circuits on Devices with the Device Role of `edge`.
@@ -37,7 +43,7 @@ To prevent the Circuit Relationship from showing up on any other Device, use a J
 
 !!! note
     There are a few ways to tell what attributes are available to filter on for a given object.
-    In the case of the *Device* object used in the example, the user could:
+    In the case of the _Device_ object used in the example, the user could:
 
     - look at the code `nautobot/dcim/filters.py` -> `DeviceFilterSet` class (available options there include `manufacturer_id`, `manufacturer`, etc)
     - check the filter options available in the REST API: `https://<server-name>/api/docs`, and in this case checking the `dcim_devices_list` API endpoint for the parameter names
@@ -50,7 +56,7 @@ Now, the Circuit Relationship field will show up on a Device with an `edge` role
 
 ![Image of Edge Device Relationships](../../img/edge_dev_circuit_relationship.png)
 
-The Circuit Relationship field will *not* show up on a Device with a role `leaf`:
+The Circuit Relationship field will _not_ show up on a Device with a role `leaf`:
 
 ![Image of Leaf Device Relationships](../../img/leaf_dev_no_circuit_relationship.png)
 
@@ -95,7 +101,19 @@ From our many to many example above, we would use the following data to create t
 
 ### Configuring the Relationship between Objects
 
-Configuring the relationship is similarly easy. Send a request to `/extras/relationship-associations/` like the following:
+#### Via Object Endpoints
+
++++ 1.4.0
+
+To get object relationships and associations from the REST API, you can query any object endpoint with the `?include=relationships` query parameter included, for example `GET /api/dcim/devices/f472bb77-7f56-4e79-ac25-2dc73eb63924/?include=relationships`. The API response will include a nested dictionary of relationships and associations applicable to the object(s) retrieved.
+
+Similarly, you can update the relationship associations for a given object via an HTTP `POST` or `PATCH` request, generally by including the nested key `["relationships"][<relationship-slug>]["source"|"destination"|"peer"]["objects"]` with a list of objects to associate.
+
+For more details on this feature, refer to the [REST API documentation](../../rest-api/overview.md).
+
+#### Via Relationship-Associations Endpoint
+
+Alternatively, relationship associations may be configured by sending a request to `/extras/relationship-associations/` like the following:
 
 Here we specify the IDs of each object. We specify the UUID of each object in their respective fields.
 

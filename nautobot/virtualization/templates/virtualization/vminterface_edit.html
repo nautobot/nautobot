@@ -1,5 +1,6 @@
 {% extends 'generic/object_edit.html' %}
 {% load form_helpers %}
+{% load helpers %}
 
 {% block form %}
     <div class="panel panel-default">
@@ -10,7 +11,7 @@
                     <label class="col-md-3 control-label required" for="id_device">Virtual Machine</label>
                     <div class="col-md-9">
                         <p class="form-control-static">
-                            <a href="{{ form.instance.virtual_machine.get_absolute_url }}">{{ form.instance.virtual_machine }}</a>
+                            {{ form.instance.virtual_machine|hyperlinked_object }}
                         </p>
                     </div>
                 </div>
@@ -18,6 +19,8 @@
             {% render_field form.name %}
             {% render_field form.status %}
             {% render_field form.enabled %}
+            {% render_field form.parent_interface %}
+            {% render_field form.bridge %}
             {% render_field form.mac_address %}
             {% render_field form.mtu %}
             {% render_field form.description %}

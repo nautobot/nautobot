@@ -1,8 +1,9 @@
+{% load helpers %}
 <div class="node">
-    <strong><a href="{{ device.get_absolute_url }}">{{ device }}</a></strong><br />
+    <strong>{{ device|hyperlinked_object }}</strong><br />
     {{ device.device_type.manufacturer }} {{ device.device_type }}<br />
-    <a href="{{ device.site.get_absolute_url }}">{{ device.site }}</a>
+    {{ device.site|hyperlinked_object }}
     {% if device.rack %}
-        / <a href="{{ device.rack.get_absolute_url }}">{{ device.rack }}</a>
+        / {{ device.rack|hyperlinked_object }}
     {% endif %}
 </div>

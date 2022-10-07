@@ -1,6 +1,7 @@
 from django.core.exceptions import ObjectDoesNotExist, ValidationError
 from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
+from django.contrib.contenttypes.models import ContentType
 
 from nautobot.dcim.choices import (
     SubdeviceRoleChoices,
@@ -14,11 +15,10 @@ from nautobot.dcim.choices import (
 
 from nautobot.core.models import BaseModel
 from nautobot.dcim.constants import REARPORT_POSITIONS_MAX, REARPORT_POSITIONS_MIN
-from nautobot.extras.models import CustomFieldModel, ObjectChange, RelationshipModel
+from nautobot.extras.models import ChangeLoggedModel, CustomField, CustomFieldModel, RelationshipModel
 from nautobot.extras.utils import extras_features
 from nautobot.utilities.fields import NaturalOrderingField
 from nautobot.utilities.ordering import naturalize_interface
-from nautobot.utilities.utils import serialize_object, serialize_object_v2
 from .device_components import (
     ConsolePort,
     ConsoleServerPort,
@@ -42,7 +42,7 @@ __all__ = (
 )
 
 
-class ComponentTemplateModel(BaseModel, CustomFieldModel, RelationshipModel):
+class ComponentTemplateModel(BaseModel, ChangeLoggedModel, CustomFieldModel, RelationshipModel):
     device_type = models.ForeignKey(to="dcim.DeviceType", on_delete=models.CASCADE, related_name="%(class)ss")
     name = models.CharField(max_length=64)
     _name = NaturalOrderingField(target_field="name", max_length=100, blank=True)
@@ -63,28 +63,37 @@ class ComponentTemplateModel(BaseModel, CustomFieldModel, RelationshipModel):
         """
         raise NotImplementedError()
 
-    def to_objectchange(self, action):
-        # Annotate the parent DeviceType
+    def to_objectchange(self, action, **kwargs):
+        """
+        Return a new ObjectChange with the `related_object` pinned to the `device_type` by default.
+        """
         try:
             device_type = self.device_type
         except ObjectDoesNotExist:
             # The parent DeviceType has already been deleted
             device_type = None
 
-        return ObjectChange(
-            changed_object=self,
-            object_repr=str(self),
-            action=action,
-            object_data=serialize_object(self),
-            object_data_v2=serialize_object_v2(self),
-            related_object=device_type,
-        )
+        return super().to_objectchange(action, related_object=device_type, **kwargs)
 
     def instantiate_model(self, model, device, **kwargs):
         """
         Helper method to self.instantiate().
         """
-        return model(device=device, name=self.name, label=self.label, description=self.description, **kwargs)
+        custom_field_data = {}
+        content_type = ContentType.objects.get_for_model(model)
+        fields = CustomField.objects.filter(content_types=content_type)
+        for field in fields:
+            # 2.0 TODO: #824 use field.slug
+            custom_field_data[field.name] = field.default
+
+        return model(
+            device=device,
+            name=self.name,
+            label=self.label,
+            description=self.description,
+            _custom_field_data=custom_field_data,
+            **kwargs,
+        )
 
 
 @extras_features(
@@ -208,7 +217,7 @@ class PowerOutletTemplate(ComponentTemplateModel):
 
         # Validate power port assignment
         if self.power_port and self.power_port.device_type != self.device_type:
-            raise ValidationError("Parent power port ({}) must belong to the same device type".format(self.power_port))
+            raise ValidationError(f"Parent power port ({self.power_port}) must belong to the same device type")
 
     def instantiate(self, device):
         if self.power_port:
@@ -293,15 +302,14 @@ class FrontPortTemplate(ComponentTemplateModel):
 
         # Validate rear port assignment
         if self.rear_port.device_type != self.device_type:
-            raise ValidationError("Rear port ({}) must belong to the same device type".format(self.rear_port))
+            raise ValidationError(f"Rear port ({self.rear_port}) must belong to the same device type")
 
         # Validate rear port position assignment
         if self.rear_port_position > self.rear_port.positions:
             raise ValidationError(
-                "Invalid rear port position ({}); rear port {} has only {} positions".format(
-                    self.rear_port_position,
-                    self.rear_port.name,
-                    self.rear_port.positions,
+                (
+                    f"Invalid rear port position ({self.rear_port_position}); "
+                    f"rear port {self.rear_port.name} has only {self.rear_port.positions} positions"
                 )
             )
 

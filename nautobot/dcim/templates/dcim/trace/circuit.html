@@ -1,5 +1,6 @@
+{% load helpers %}
 <div class="node">
-    <strong><a href="{{ circuit.get_absolute_url }}">{{ circuit }}</a></strong><br />
+    <strong>{{ circuit|hyperlinked_object }}</strong><br />
     Circuit<br />
-    <a href="{{ circuit.provider.get_absolute_url }}">{{ circuit.provider }}</a>
+    {{ circuit.provider|hyperlinked_object }}
 </div>

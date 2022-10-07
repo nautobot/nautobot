@@ -25,6 +25,7 @@ from .models import Cluster, ClusterGroup, ClusterType, VirtualMachine, VMInterf
 
 class ClusterTypeListView(generic.ObjectListView):
     queryset = ClusterType.objects.annotate(cluster_count=count_related(Cluster, "type"))
+    filterset = filters.ClusterTypeFilterSet
     table = tables.ClusterTypeTable
 
 
@@ -34,6 +35,7 @@ class ClusterTypeView(generic.ObjectView):
     def get_extra_context(self, request, instance):
 
         # Clusters
+        # v2 TODO(jathan): Replace prefetch_related with select_related
         clusters = (
             Cluster.objects.restrict(request.user, "view")
             .filter(type=instance)
@@ -84,6 +86,7 @@ class ClusterTypeBulkDeleteView(generic.BulkDeleteView):
 
 class ClusterGroupListView(generic.ObjectListView):
     queryset = ClusterGroup.objects.annotate(cluster_count=count_related(Cluster, "group"))
+    filterset = filters.ClusterGroupFilterSet
     table = tables.ClusterGroupTable
 
 
@@ -93,6 +96,7 @@ class ClusterGroupView(generic.ObjectView):
     def get_extra_context(self, request, instance):
 
         # Clusters
+        # v2 TODO(jathan): Replace prefetch_related with select_related
         clusters = (
             Cluster.objects.restrict(request.user, "view")
             .filter(group=instance)
@@ -156,6 +160,7 @@ class ClusterView(generic.ObjectView):
     queryset = Cluster.objects.all()
 
     def get_extra_context(self, request, instance):
+        # v2 TODO(jathan): Replace prefetch_related with select_related
         devices = (
             Device.objects.restrict(request.user, "view")
             .filter(cluster=instance)
@@ -187,6 +192,7 @@ class ClusterBulkImportView(generic.BulkImportView):
 
 
 class ClusterBulkEditView(generic.BulkEditView):
+    # v2 TODO(jathan): Replace prefetch_related with select_related
     queryset = Cluster.objects.prefetch_related("type", "group", "site")
     filterset = filters.ClusterFilterSet
     table = tables.ClusterTable
@@ -194,6 +200,7 @@ class ClusterBulkEditView(generic.BulkEditView):
 
 
 class ClusterBulkDeleteView(generic.BulkDeleteView):
+    # v2 TODO(jathan): Replace prefetch_related with select_related
     queryset = Cluster.objects.prefetch_related("type", "group", "site")
     filterset = filters.ClusterFilterSet
     table = tables.ClusterTable
@@ -204,8 +211,8 @@ class ClusterAddDevicesView(generic.ObjectEditView):
     form = forms.ClusterAddDevicesForm
     template_name = "virtualization/cluster_add_devices.html"
 
-    def get(self, request, pk):
-        cluster = get_object_or_404(self.queryset, pk=pk)
+    def get(self, request, *args, **kwargs):
+        cluster = get_object_or_404(self.queryset, pk=kwargs["pk"])
         form = self.form(cluster, initial=normalize_querydict(request.GET))
 
         return render(
@@ -214,12 +221,12 @@ class ClusterAddDevicesView(generic.ObjectEditView):
             {
                 "cluster": cluster,
                 "form": form,
-                "return_url": reverse("virtualization:cluster", kwargs={"pk": pk}),
+                "return_url": reverse("virtualization:cluster", kwargs={"pk": kwargs["pk"]}),
             },
         )
 
-    def post(self, request, pk):
-        cluster = get_object_or_404(self.queryset, pk=pk)
+    def post(self, request, *args, **kwargs):
+        cluster = get_object_or_404(self.queryset, pk=kwargs["pk"])
         form = self.form(cluster, request.POST)
 
         if form.is_valid():
@@ -234,7 +241,7 @@ class ClusterAddDevicesView(generic.ObjectEditView):
 
             messages.success(
                 request,
-                "Added {} devices to cluster {}".format(len(device_pks), cluster),
+                f"Added {len(device_pks)} devices to cluster {cluster}",
             )
             return redirect(cluster.get_absolute_url())
 
@@ -254,9 +261,9 @@ class ClusterRemoveDevicesView(generic.ObjectEditView):
     form = forms.ClusterRemoveDevicesForm
     template_name = "generic/object_bulk_remove.html"
 
-    def post(self, request, pk):
+    def post(self, request, *args, **kwargs):
 
-        cluster = get_object_or_404(self.queryset, pk=pk)
+        cluster = get_object_or_404(self.queryset, pk=kwargs["pk"])
 
         if "_confirm" in request.POST:
             form = self.form(request.POST)
@@ -272,7 +279,7 @@ class ClusterRemoveDevicesView(generic.ObjectEditView):
 
                 messages.success(
                     request,
-                    "Removed {} devices from cluster {}".format(len(device_pks), cluster),
+                    f"Removed {len(device_pks)} devices from cluster {cluster}",
                 )
                 return redirect(cluster.get_absolute_url())
 
@@ -309,10 +316,13 @@ class VirtualMachineListView(generic.ObjectListView):
 
 
 class VirtualMachineView(generic.ObjectView):
+    # v2 TODO(jathan): Replace prefetch_related with select_related
     queryset = VirtualMachine.objects.prefetch_related("tenant__group")
 
     def get_extra_context(self, request, instance):
         # Interfaces
+        # v2 TODO(jathan): Replace prefetch_related with select_related although this one may be
+        # valid since `ip_addresses` is m2m.
         vminterfaces = (
             VMInterface.objects.restrict(request.user, "view")
             .filter(virtual_machine=instance)
@@ -325,6 +335,7 @@ class VirtualMachineView(generic.ObjectView):
             vminterface_table.columns.show("pk")
 
         # Services
+        # v2 TODO(jathan): Replace prefetch_related with select_related
         services = (
             Service.objects.restrict(request.user, "view")
             .filter(virtual_machine=instance)
@@ -359,6 +370,7 @@ class VirtualMachineBulkImportView(generic.BulkImportView):
 
 
 class VirtualMachineBulkEditView(generic.BulkEditView):
+    # v2 TODO(jathan): Replace prefetch_related with select_related
     queryset = VirtualMachine.objects.prefetch_related("cluster", "role", "status", "tenant")
     filterset = filters.VirtualMachineFilterSet
     table = tables.VirtualMachineTable
@@ -366,6 +378,7 @@ class VirtualMachineBulkEditView(generic.BulkEditView):
 
 
 class VirtualMachineBulkDeleteView(generic.BulkDeleteView):
+    # v2 TODO(jathan): Replace prefetch_related with select_related
     queryset = VirtualMachine.objects.prefetch_related("cluster", "role", "status", "tenant")
     filterset = filters.VirtualMachineFilterSet
     table = tables.VirtualMachineTable
@@ -389,9 +402,16 @@ class VMInterfaceView(generic.ObjectView):
 
     def get_extra_context(self, request, instance):
         # Get assigned IP addresses
+        # v2 TODO(jathan): Replace prefetch_related with select_related
         ipaddress_table = InterfaceIPAddressTable(
             data=instance.ip_addresses.restrict(request.user, "view").prefetch_related("vrf", "tenant"),
             orderable=False,
+        )
+
+        # Get child interfaces
+        child_interfaces = instance.child_interfaces.restrict(request.user, "view")
+        child_interfaces_tables = tables.VMInterfaceTable(
+            child_interfaces, orderable=False, exclude=("virtual_machine",)
         )
 
         # Get assigned VLANs and annotate whether each is tagged or untagged
@@ -399,6 +419,8 @@ class VMInterfaceView(generic.ObjectView):
         if instance.untagged_vlan is not None:
             vlans.append(instance.untagged_vlan)
             vlans[0].tagged = False
+
+        # v2 TODO(jathan): Replace prefetch_related with select_related
         for vlan in instance.tagged_vlans.restrict(request.user).prefetch_related("site", "group", "tenant", "role"):
             vlan.tagged = True
             vlans.append(vlan)
@@ -406,6 +428,7 @@ class VMInterfaceView(generic.ObjectView):
 
         return {
             "ipaddress_table": ipaddress_table,
+            "child_interfaces_table": child_interfaces_tables,
             "vlan_table": vlan_table,
         }
 
@@ -426,6 +449,7 @@ class VMInterfaceEditView(generic.ObjectEditView):
 
 class VMInterfaceDeleteView(generic.ObjectDeleteView):
     queryset = VMInterface.objects.all()
+    template_name = "virtualization/virtual_machine_vminterface_delete.html"
 
 
 class VMInterfaceBulkImportView(generic.BulkImportView):
@@ -448,6 +472,7 @@ class VMInterfaceBulkRenameView(generic.BulkRenameView):
 class VMInterfaceBulkDeleteView(generic.BulkDeleteView):
     queryset = VMInterface.objects.all()
     table = tables.VMInterfaceTable
+    template_name = "virtualization/virtual_machine_vminterface_delete.html"
 
 
 #

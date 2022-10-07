@@ -44,6 +44,7 @@ jobs:
           config_file: ".markdownlint.yml"
           files: "nautobot examples *.md"
           ignore_files: "nautobot/project-static"
+          rules: "scripts/use-relative-md-links.js"
   hadolint:
     runs-on: "ubuntu-20.04"
     env:
@@ -114,6 +115,34 @@ jobs:
       - "markdownlint"
       - "hadolint"
 
+  pylint:
+    runs-on: "ubuntu-20.04"
+    env:
+      INVOKE_NAUTOBOT_LOCAL: "True"
+      NAUTOBOT_DB_USER: "nautobot"
+      NAUTOBOT_DB_PASSWORD: "decinablesprewad"
+      NAUTOBOT_DB_ENGINE: "django.db.backends.postgresql"
+      NAUTOBOT_CONFIG: "nautobot/core/tests/nautobot_config.py"
+    services:
+      postgres:
+        image: "postgres:13-alpine"
+        env:
+          POSTGRES_USER: "nautobot"
+          POSTGRES_PASSWORD: "decinablesprewad"
+          POSTGRES_DB: "nautobot"
+        ports:
+          - "5432:5432"
+    steps:
+      - name: "Check out repository code"
+        uses: "actions/checkout@v2"
+      - name: "Setup environment"
+        uses: "networktocode/gh-action-setup-poetry-environment@v2"
+      - name: "Run pylint"
+        run: "poetry run invoke pylint"
+    needs:
+      - "check-migrations"
+      - "check-schema"
+
   tests-postgres:
     runs-on: "ubuntu-20.04"
     strategy:
@@ -145,6 +174,10 @@ jobs:
         uses: "networktocode/gh-action-setup-poetry-environment@v2"
         with:
           python-version: "${{ matrix.python-version }}"
+      - name: "Remove Installed Nautobots (Poetry Workaround)" # Workaround for https://github.com/python-poetry/poetry/issues/2918
+        run: "for i in $(ls -d1 ~/.cache/pypoetry/virtualenvs/*/lib/*/site-packages/nautobot-*.dist-info); do poetry run pip uninstall -y nautobot; done"
+      - name: "Reinstall Nautobot Local"
+        run: "poetry install"
       - name: "Run unittest"
         run: "poetry run invoke unittest --failfast --keepdb"
       - name: "Run coverage"
@@ -186,6 +219,10 @@ jobs:
         uses: "networktocode/gh-action-setup-poetry-environment@v2"
         with:
           python-version: "${{ matrix.python-version }}"
+      - name: "Remove Installed Nautobots (Poetry Workaround)" # Workaround for https://github.com/python-poetry/poetry/issues/2918
+        run: "for i in $(ls -d1 ~/.cache/pypoetry/virtualenvs/*/lib/*/site-packages/nautobot-*.dist-info); do poetry run pip uninstall -y nautobot; done"
+      - name: "Reinstall Nautobot Local"
+        run: "poetry install"
       - name: "Install Required Dependencies for MySql Client"
         run: "sudo apt-get update && sudo apt-get install --no-install-recommends -y default-libmysqlclient-dev gcc"
       - name: "Install MySql Dependencies"
@@ -228,11 +265,31 @@ jobs:
         uses: "actions/checkout@v2"
       - name: "Setup environment"
         uses: "networktocode/gh-action-setup-poetry-environment@v2"
+      - name: "Remove Installed Nautobots (Poetry Workaround)" # Workaround for https://github.com/python-poetry/poetry/issues/2918
+        run: "for i in $(ls -d1 ~/.cache/pypoetry/virtualenvs/*/lib/*/site-packages/nautobot-*.dist-info); do poetry run pip uninstall -y nautobot; done"
+      - name: "Reinstall Nautobot Local"
+        run: "poetry install"
       - name: "Run Integration Tests"
         # If NAUTOBOT_SELENIUM_HOST is set to 'localhost' or '127.0.0.1' the connection does not work
         run: "NAUTOBOT_SELENIUM_HOST=`hostname -f` poetry run invoke integration-test --keepdb"
       - name: "Run coverage"
         run: "poetry run invoke unittest-coverage"
     needs:
+      - "pylint"
       - "tests-postgres"
       - "tests-mysql"
+
+  changelog:
+    if: github.base_ref == 'develop' || github.base_ref == 'next'
+    runs-on: "ubuntu-20.04"
+    steps:
+      - name: "Check out repository code"
+        uses: "actions/checkout@v2"
+        with:
+          fetch-depth: "0"
+      - name: "Setup environment"
+        uses: "networktocode/gh-action-setup-poetry-environment@v2"
+      - name: "Check for changelog entry"
+        run: |
+          git fetch --no-tags origin +refs/heads/${{ github.base_ref }}:refs/remotes/origin/${{ github.base_ref }}
+          poetry run towncrier check --compare-with origin/${{ github.base_ref }}

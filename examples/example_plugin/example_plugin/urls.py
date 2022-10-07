@@ -2,7 +2,7 @@ from django.templatetags.static import static
 from django.urls import path
 from django.views.generic import RedirectView
 
-from nautobot.extras.views import ObjectChangeLogView
+from nautobot.extras.views import ObjectChangeLogView, ObjectDynamicGroupsView, ObjectNotesView
 
 from example_plugin import views
 from example_plugin.models import AnotherExampleModel, ExampleModel
@@ -47,6 +47,18 @@ urlpatterns = [
         name="examplemodel_changelog",
         kwargs={"model": ExampleModel},
     ),
+    path(
+        "models/<uuid:pk>/dynamic-groups/",
+        ObjectDynamicGroupsView.as_view(),
+        name="examplemodel_dynamicgroups",
+        kwargs={"model": ExampleModel},
+    ),
+    path(
+        "models/<uuid:pk>/notes/",
+        ObjectNotesView.as_view(),
+        name="examplemodel_notes",
+        kwargs={"model": ExampleModel},
+    ),
     path("other-models/", views.AnotherExampleModelListView.as_view(), name="anotherexamplemodel_list"),
     path("other-models/add/", views.AnotherExampleModelEditView.as_view(), name="anotherexamplemodel_add"),
     path(
@@ -77,8 +89,36 @@ urlpatterns = [
         kwargs={"model": AnotherExampleModel},
     ),
     path(
+        "other-models/<uuid:pk>/dynamic-groups/",
+        ObjectDynamicGroupsView.as_view(),
+        name="anotherexamplemodel_dynamicgroups",
+        kwargs={"model": AnotherExampleModel},
+    ),
+    path(
+        "other-models/<uuid:pk>/notes/",
+        ObjectNotesView.as_view(),
+        name="anotherexamplemodel_notes",
+        kwargs={"model": AnotherExampleModel},
+    ),
+    path(
         "docs/",
         RedirectView.as_view(url=static("example_plugin/docs/index.html")),
         name="docs",
     ),
+    path(
+        "circuits/<uuid:pk>/example-plugin-tab/", views.CircuitDetailPluginTabView.as_view(), name="circuit_detail_tab"
+    ),
+    path(
+        "devices/<uuid:pk>/example-plugin-tab-1/",
+        views.DeviceDetailPluginTabOneView.as_view(),
+        name="device_detail_tab_1",
+    ),
+    path(
+        "devices/<uuid:pk>/example-plugin-tab-2/",
+        views.DeviceDetailPluginTabTwoView.as_view(),
+        name="device_detail_tab_2",
+    ),
+    # This URL definition is here in order to test the override_views functionality which is defined
+    # in examples.plugin_with_view_override.plugin_with_view_override.views
+    path("override-target/", views.ViewToBeOverridden.as_view(), name="view_to_be_overridden"),
 ]

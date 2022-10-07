@@ -103,13 +103,13 @@ class JSONArrayField(models.JSONField):
 
     @property
     def description(self):
-        return "JSON Array of %s" % self.base_field.description
+        return f"JSON Array of {self.base_field.description}"
 
     def get_prep_value(self, value):
         """Perform preliminary non-db specific value checks and conversions."""
         if value is not None:
             if not isinstance(value, (list, tuple)):
-                raise ValueError("value {} is not list or tuple".format(value))
+                raise ValueError(f"value {value} is not list or tuple")
             value = [self.base_field.get_prep_value(v) for v in value]
         return super().get_prep_value(value)
 

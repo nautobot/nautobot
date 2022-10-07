@@ -5,9 +5,11 @@ import sys
 
 from cacheops.utils import family_has_profile
 from django.db.models import Q
+from django.urls import NoReverseMatch, reverse
 from funcy import once_per
 
 from nautobot.utilities.forms.fields import DynamicModelMultipleChoiceField
+from nautobot.utilities.utils import get_route_for_model
 
 
 class DynamicGroupMixin:
@@ -25,6 +27,57 @@ class DynamicGroupMixin:
             self._dynamic_group_queryset = queryset
 
         return self._dynamic_group_queryset
+
+    def get_dynamic_groups_url(self):
+        """Return the dynamic groups URL for a given instance."""
+        route = get_route_for_model(self, "dynamicgroups")
+
+        # Iterate the pk-like fields and try to get a URL, or return None.
+        fields = ["pk", "slug"]
+        for field in fields:
+            if not hasattr(self, field):
+                continue
+
+            try:
+                return reverse(route, kwargs={field: getattr(self, field)})
+            except NoReverseMatch:
+                continue
+
+        return None
+
+
+class NotesMixin:
+    """
+    Adds a `notes` property that returns a queryset of `Notes` membership.
+    """
+
+    @property
+    def notes(self):
+        """Return a `Notes` queryset for this instance."""
+        from nautobot.extras.models.models import Note
+
+        if not hasattr(self, "_notes_queryset"):
+            queryset = Note.objects.get_for_object(self)
+            self._notes_queryset = queryset
+
+        return self._notes_queryset
+
+    def get_notes_url(self):
+        """Return the notes URL for a given instance."""
+        route = get_route_for_model(self, "notes")
+
+        # Iterate the pk-like fields and try to get a URL, or return None.
+        fields = ["pk", "slug"]
+        for field in fields:
+            if not hasattr(self, field):
+                continue
+
+            try:
+                return reverse(route, kwargs={field: getattr(self, field)})
+            except NoReverseMatch:
+                continue
+
+        return None
 
 
 # 2.0 TODO: Remove after v2 since we will no longer care about backwards-incompatibility.

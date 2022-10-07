@@ -1,5 +1,6 @@
 {% extends 'generic/object_edit.html' %}
 {% load form_helpers %}
+{% load helpers %}
 
 {% block form_fields %}
     {% if form.instance.device %}
@@ -7,7 +8,7 @@
             <label class="col-md-3 control-label required" for="id_device">Device</label>
             <div class="col-md-9">
                 <p class="form-control-static">
-                    <a href="{{ form.instance.device.get_absolute_url }}">{{ form.instance.device }}</a>
+                    {{ form.instance.device|hyperlinked_object }}
                 </p>
             </div>
         </div>

@@ -4,7 +4,16 @@ The registry is an in-memory data structure which houses various application-wid
 
 The registry behaves essentially like a Python dictionary, with the notable exception that once a store (key) has been declared, it cannot be deleted or overwritten. The value of a store can, however, be modified; e.g. by appending a value to a list. Store values generally do not change once the application has been initialized.
 
-The registry can be inspected by importing `registry` from `nautobot.extras.registry`.
+The registry can be inspected by importing `registry` from `nautobot.extras.registry`. Page templates that need access to the registry can use the `registry` template tag to load it into the template context, for example:
+
+```django
+<!-- Load the "registry" template tag library -->
+{% load registry %}
+<!-- Load the registry into the template context as variable "registry"-->
+{% registry %}
+<!-- Use the registry variable in the template -->
+{{ registry.datasource_contents }}
+```
 
 ## Stores
 
@@ -40,6 +49,8 @@ Definition of data types that can be provided by data source models (such as [Gi
 Plugins may extend this dictionary with additional data sources and/or data types by calling `extras.registry.register_datasource_contents()` as desired.
 
 ### `homepage_layout`
+
++++ 1.2.0
 
 A dictionary holding information about the layout of Nautobot's homepage. Each app may register homepage panels and items using objects from the generic app class. Each object has a weight attribute allowing the developer to define the position of the object.
 
@@ -95,6 +106,8 @@ A dictionary of particular features (e.g. custom fields) mapped to the Nautobot 
 ```
 
 ### `nav_menu`
+
++++ 1.1.0
 
 Navigation menu items provided by Nautobot applications. Each app may register its navbar configuration inside of the `nav_menu` dictionary using `navigation.py`. Tabs are stored in the top level moving down to groups, items and buttons. Tabs, groups and items can be modified by using the key values inside other application and plugins. The `nav_menu` dict should never be modified directly.
 
@@ -194,21 +207,6 @@ List of GraphQL Type objects that will be added to the GraphQL schema. GraphQL o
     branch_creation_plugin.jobs.CreateNewMediumBranch,
     branch_creation_plugin.jobs.CreateNewLargeBranch,
 ]
-```
-
-### `plugin_menu_items`
-
-Navigation menu items provided by Nautobot plugins. Each plugin is registered as a key with the list of menu items it provides. An example:
-
-```python
-{
-    'Plugin A': (
-        <MenuItem>, <MenuItem>, <MenuItem>,
-    ),
-    'Plugin B': (
-        <MenuItem>, <MenuItem>, <MenuItem>,
-    ),
-}
 ```
 
 ### `plugin_template_extensions`

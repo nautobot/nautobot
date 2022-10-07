@@ -7,13 +7,15 @@ from django.core.exceptions import ValidationError
 from django.core.serializers.json import DjangoJSONEncoder
 from django.db import models
 from django.db.models import Q
+from django.urls import reverse
 
+from nautobot.core.fields import AutoSlugField
+from nautobot.core.models import BaseModel
 from nautobot.extras.choices import RelationshipTypeChoices, RelationshipSideChoices
 from nautobot.extras.utils import FeatureQuery, extras_features
 from nautobot.extras.models import ChangeLoggedModel
-from nautobot.core.fields import AutoSlugField
-from nautobot.core.models import BaseModel
-from nautobot.utilities.utils import get_filterset_for_model
+from nautobot.extras.models.mixins import NotesMixin
+from nautobot.utilities.utils import get_filterset_for_model, slugify_dashes_to_underscores
 from nautobot.utilities.forms import (
     DynamicModelChoiceField,
     DynamicModelMultipleChoiceField,
@@ -52,23 +54,27 @@ class RelationshipModel(models.Model):
         related_query_name="destination_%(app_label)s_%(class)s",  # e.g. 'destination_dcim_rack'
     )
 
+    @property
+    def associations(self):
+        return list(self.source_for_associations.all()) + list(self.destination_for_associations.all())
+
     def get_relationships(self, include_hidden=False, advanced_ui=None):
         """
-        Return a dictionary of queryset for all custom relationships
+        Return a dictionary of RelationshipAssociation querysets for all custom relationships
 
         Returns:
             response {
                 "source": {
-                    <relationship #1>: <queryset #1>,
-                    <relationship #2>: <queryset #2>,
+                    <Relationship instance #1>: <RelationshipAssociation queryset #1>,
+                    <Relationship instance #2>: <RelationshipAssociation queryset #2>,
                 },
                 "destination": {
-                    <relationship #3>: <queryset #3>,
-                    <relationship #4>: <queryset #4>,
+                    <Relationship instance #3>: <RelationshipAssociation queryset #3>,
+                    <Relationship instance #4>: <RelationshipAssociation queryset #4>,
                 },
                 "peer": {
-                    <relationship #5>: <queryset #5>,
-                    <relationship #6>: <queryset #6>,
+                    <Relationship instance #5>: <RelationshipAssociation queryset #5>,
+                    <Relationship instance #6>: <RelationshipAssociation queryset #6>,
                 },
             }
         """
@@ -124,38 +130,40 @@ class RelationshipModel(models.Model):
 
         return resp
 
-    def get_relationships_data(self, advanced_ui=None):
+    def get_relationships_data(self, **kwargs):
         """
         Return a dictionary of relationships with the label and the value or the queryset for each.
+
+        Used for rendering relationships in the UI; see nautobot/core/templates/inc/relationships_table_rows.html
 
         Returns:
             response {
                 "source": {
-                    <relationship #1>: {   # one-to-one relationship that self is the source of
+                    <Relationship instance #1>: {   # one-to-one relationship that self is the source of
                         "label": "...",
                         "peer_type": <ContentType>,
                         "has_many": False,
-                        "value": <model>,     # single destination for this relationship
+                        "value": <model instance>,     # single destination for this relationship
                         "url": "...",
                     },
-                    <relationship #2>: {   # one-to-many or many-to-many relationship that self is a source for
+                    <Relationship instance #2>: {   # one-to-many or many-to-many relationship that self is a source for
                         "label": "...",
                         "peer_type": <ContentType>,
                         "has_many": True,
                         "value": None,
-                        "queryset": <queryset #2>   # set of destinations for the relationship
+                        "queryset": <RelationshipAssociation queryset #2>   # set of destinations for the relationship
                     },
                 },
                 "destination": {
-                    (same format as source - relationships that self is the destination of)
+                    (same format as "source" dict - relationships that self is the destination of)
                 },
                 "peer": {
-                    (same format as source - symmetric relationships that self is involved in)
+                    (same format as "source" dict - symmetric relationships that self is involved in)
                 },
             }
         """
 
-        relationships_by_side = self.get_relationships(advanced_ui=advanced_ui)
+        relationships_by_side = self.get_relationships(**kwargs)
 
         resp = {
             RelationshipSideChoices.SIDE_SOURCE: {},
@@ -226,10 +234,14 @@ class RelationshipManager(models.Manager.from_queryset(RestrictedQuerySet)):
         )
 
 
-class Relationship(BaseModel, ChangeLoggedModel):
+class Relationship(BaseModel, ChangeLoggedModel, NotesMixin):
 
-    name = models.CharField(max_length=100, unique=True, help_text="Internal relationship name")
-    slug = AutoSlugField(populate_from="name")
+    name = models.CharField(max_length=100, unique=True, help_text="Name of the relationship as displayed to users")
+    slug = AutoSlugField(
+        populate_from="name",
+        slugify_function=slugify_dashes_to_underscores,
+        help_text="Internal relationship name. Please use underscores rather than dashes in this slug.",
+    )
     description = models.CharField(max_length=200, blank=True)
     type = models.CharField(
         max_length=50,
@@ -264,7 +276,7 @@ class Relationship(BaseModel, ChangeLoggedModel):
         encoder=DjangoJSONEncoder,
         blank=True,
         null=True,
-        help_text="Queryset filter matching the applicable source objects of the selected type",
+        help_text="Filterset filter matching the applicable source objects of the selected type",
     )
 
     #
@@ -293,7 +305,7 @@ class Relationship(BaseModel, ChangeLoggedModel):
         encoder=DjangoJSONEncoder,
         blank=True,
         null=True,
-        help_text="Queryset filter matching the applicable destination objects of the selected type",
+        help_text="Filterset filter matching the applicable destination objects of the selected type",
     )
     advanced_ui = models.BooleanField(
         default=False,
@@ -316,6 +328,16 @@ class Relationship(BaseModel, ChangeLoggedModel):
             RelationshipTypeChoices.TYPE_ONE_TO_ONE_SYMMETRIC,
             RelationshipTypeChoices.TYPE_MANY_TO_MANY_SYMMETRIC,
         )
+
+    @property
+    def peer_type(self):
+        """Virtual attribute for symmetric relationships only."""
+        if self.symmetric:
+            return self.source_type
+        return None
+
+    def get_absolute_url(self):
+        return reverse("extras:relationship", args=[self.slug])
 
     def get_label(self, side):
         """Return the label for a given side, source or destination.
@@ -428,12 +450,12 @@ class Relationship(BaseModel, ChangeLoggedModel):
             if not getattr(self, f"{side}_filter"):
                 continue
 
-            filter = getattr(self, f"{side}_filter")
+            filter_ = getattr(self, f"{side}_filter")
             side_model = getattr(self, f"{side}_type").model_class()
             if not side_model:  # can happen if for example a plugin providing the model was uninstalled
                 raise ValidationError({f"{side}_type": "Unable to locate model class"})
             model_name = side_model._meta.label
-            if not isinstance(filter, dict):
+            if not isinstance(filter_, dict):
                 raise ValidationError({f"{side}_filter": f"Filter for {model_name} must be a dictionary"})
 
             filterset_class = get_filterset_for_model(side_model)
@@ -443,15 +465,21 @@ class Relationship(BaseModel, ChangeLoggedModel):
                         f"{side}_filter": f"Filters are not supported for {model_name} object (Unable to find a FilterSet)"
                     }
                 )
-            filterset = filterset_class(filter, side_model.objects.all())
+            filterset = filterset_class(filter_, side_model.objects.all())
 
             error_messages = []
             if filterset.errors:
                 for key in filterset.errors:
-                    error_messages.append(f"'{key}': " + ", ".join(filterset.errors[key]))
+                    # When settings.STRICT_FILTERING is True, any extraneous filter parameters will result in
+                    # filterset.errors[key] = ["Unknown filter field"]
+                    # This is redundant with our custom (more specific) error message added below from filterset_params
+                    # So discard such a message if present.
+                    errors_list = [error for error in filterset.errors[key] if "Unknown filter field" not in str(error)]
+                    if errors_list:
+                        error_messages.append(f"'{key}': " + ", ".join(errors_list))
 
             filterset_params = set(filterset.filters.keys())
-            for key in filter.keys():
+            for key in filter_.keys():
                 if key not in filterset_params:
                     error_messages.append(f"'{key}' is not a valid filter parameter for {model_name} object")
 
@@ -682,3 +710,29 @@ class RelationshipAssociation(BaseModel):
                             )
                         }
                     )
+
+        if self.relationship.destination_filter or self.relationship.source_filter:
+            self._validate_relationship_filter_restriction()
+
+    def _validate_relationship_filter_restriction(self):
+        """Validate relationship association do not violate filter restrictions"""
+        sides = []
+
+        if self.relationship.destination_filter:
+            sides.append("destination")
+
+        if self.relationship.source_filter:
+            sides.append("source")
+
+        for side_name in sides:
+            side = getattr(self, side_name)  # destination / source
+            side_filter = getattr(self.relationship, f"{side_name}_filter")
+
+            filterset_class = get_filterset_for_model(side.__class__)
+            filterset = filterset_class(side_filter, side.__class__.objects.all())
+            queryset = filterset.qs.filter(id=side.id)
+
+            if queryset.exists() is False:
+                raise ValidationError(
+                    {side_name: (f"{side} violates {self.relationship} {side_name}_filter restriction")}
+                )

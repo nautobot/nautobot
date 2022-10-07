@@ -9,8 +9,8 @@ def compile_path_node(ct_id, object_id):
     return f"{ct_id}:{object_id}"
 
 
-def decompile_path_node(repr):
-    ct_id, object_id = repr.split(":")
+def decompile_path_node(representation):
+    ct_id, object_id = representation.split(":")
     # The value is stored as a string, but the lookup later uses UUID objects as keys so we convert it now.
     # Note that the content type ID is still an integer because we have no control over that model.
     return int(ct_id), uuid.UUID(object_id)
@@ -25,11 +25,11 @@ def object_to_path_node(obj):
     return compile_path_node(ct.pk, obj.pk)
 
 
-def path_node_to_object(repr):
+def path_node_to_object(representation):
     """
     Given the string representation of a path node, return the corresponding instance.
     """
-    ct_id, object_id = decompile_path_node(repr)
+    ct_id, object_id = decompile_path_node(representation)
     ct = ContentType.objects.get_for_id(ct_id)
     return ct.model_class().objects.get(pk=object_id)
 

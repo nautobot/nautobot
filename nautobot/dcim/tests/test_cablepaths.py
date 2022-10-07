@@ -36,6 +36,8 @@ class CablePathTestCase(TestCase):
         3XX: Test responses to changes in existing objects
     """
 
+    fixtures = ("status",)
+
     @classmethod
     def setUpTestData(cls):
 

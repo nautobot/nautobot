@@ -16,6 +16,14 @@
         </div>
     </div>
 {% endif %}
+{% if form.object_note and perms.extras.add_note %}
+    <div class="panel panel-default">
+        <div class="panel-heading"><strong>Notes</strong></div>
+        <div class="panel-body">
+            {% render_field form.object_note %}
+        </div>
+    </div>
+{% endif %}
 {% if form.tags %}
     <div class="panel panel-default">
         <div class="panel-heading"><strong>Tags</strong></div>

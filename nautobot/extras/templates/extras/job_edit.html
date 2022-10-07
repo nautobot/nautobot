@@ -48,6 +48,19 @@
                     </div>
                 </div>
             </div>
+            <div class="form-group">
+                <div class="col-md-9 col-md-offset-3">
+                    <div class="checkbox">
+                        <label>
+                            <input type="checkbox" disabled="true" {% if obj.is_job_hook_receiver %}checked="checked"{% endif %}>
+                            Is job hook receiver
+                        </label>
+                        <span class="help-block">
+                            Whether this job is a job hook receiver
+                        </span>
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
     <div class="panel panel-default">
@@ -69,6 +82,8 @@
             {% include "extras/inc/overridable_field.html" with field=form.read_only override_field=form.read_only_override %}
             {% include "extras/inc/overridable_field.html" with field=form.soft_time_limit override_field=form.soft_time_limit_override %}
             {% include "extras/inc/overridable_field.html" with field=form.time_limit override_field=form.time_limit_override %}
+            {% include "extras/inc/overridable_field.html" with field=form.has_sensitive_variables override_field=form.has_sensitive_variables_override %}
+            {% include "extras/inc/overridable_field.html" with field=form.task_queues override_field=form.task_queues_override %}
         </div>
     </div>
     {% include 'inc/extras_features_edit_form_fields.html' %}

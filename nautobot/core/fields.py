@@ -1,11 +1,6 @@
-from django.utils.text import slugify
-
 from django_extensions.db.fields import AutoSlugField as _AutoSlugField
 
-
-def slugify_dots_to_dashes(content):
-    """Example slugify_function. Preprocess the content to convert '.' to '-' instead of removing dots outright."""
-    return slugify(content.replace(".", "-"))
+from nautobot.utilities.utils import slugify_dots_to_dashes  # noqa: F401
 
 
 class AutoSlugField(_AutoSlugField):
@@ -66,3 +61,10 @@ class AutoSlugField(_AutoSlugField):
         kwargs.setdefault("overwrite_on_add", False)
         kwargs.setdefault("unique", True)
         super().__init__(*args, **kwargs)
+
+    def get_slug_fields(self, model_instance, lookup_value):
+        """Workaround for https://github.com/django-extensions/django-extensions/issues/1713."""
+        try:
+            return super().get_slug_fields(model_instance, lookup_value)
+        except AttributeError:
+            return ""

@@ -12,7 +12,7 @@ layout = (
                 link="ipam:vrf_list",
                 model=VRF,
                 description="Virtual routing and forwarding tables",
-                permissions=["circuits.view_vrf"],
+                permissions=["ipam.view_vrf"],
                 weight=100,
             ),
             HomePageItem(

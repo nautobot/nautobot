@@ -2,28 +2,18 @@
 
 from django.db import migrations
 from nautobot.dcim.choices import InterfaceStatusChoices
-from nautobot.extras.management import export_statuses_from_choiceset
+from nautobot.extras.management import clear_status_choices, populate_status_choices
 
 
-def populate_interface_status(app, schema):
-
-    Status = app.get_model("extras.Status")
-    Interface = app.get_model("dcim.Interface")
-    ContentType = app.get_model("contenttypes.ContentType")
-
-    interface_content_type = ContentType.objects.get_for_model(Interface)
-    choices = export_statuses_from_choiceset(InterfaceStatusChoices)
-
+def populate_interface_status(apps, schema_editor):
+    """
+    Create/link default Status records for the Interface content-type, and default all Interfaces to "active" status.
+    """
     # Create Interface Statuses and add dcim.Interface to its content_types
-    for choice_kwargs in choices:
-        try:
-            obj, created = Status.objects.get_or_create(**choice_kwargs)
-        except Exception as err:
-            raise SystemExit(
-                f"Unexpected error while running data migration to populate status for dcim.interface: {err}"
-            )
+    populate_status_choices(apps, schema_editor, models=["dcim.Interface"])
 
-        obj.content_types.add(interface_content_type)
+    Status = apps.get_model("extras.Status")
+    Interface = apps.get_model("dcim.Interface")
 
     # populate existing interfaces status
     active_status = Status.objects.get(slug=InterfaceStatusChoices.STATUS_ACTIVE)
@@ -32,19 +22,17 @@ def populate_interface_status(app, schema):
         interface.save()
 
 
-def reverse_populate_interface_status(app, schema_editor):
-    Status = app.get_model("extras.Status")
-    Interface = app.get_model("dcim.Interface")
-    ContentType = app.get_model("contenttypes.ContentType")
+def clear_interface_status(apps, schema_editor):
+    """
+    Clear the status field on all Interfaces, and de-link/delete all Status records from the Interface content-type.
+    """
+    Interface = apps.get_model("dcim.Interface")
 
-    interface_content_type = ContentType.objects.get_for_model(Interface)
-
-    for interface in Interface.objects.filter(status__slug=InterfaceStatusChoices.STATUS_ACTIVE):
+    for interface in Interface.objects.filter(status__isnull=False):
         interface.status = None
         interface.save()
 
-    for status in Status.objects.filter(content_types__in=[interface_content_type]):
-        status.content_types.remove(interface_content_type)
+    clear_status_choices(apps, schema_editor, models=["dcim.Interface"])
 
 
 class Migration(migrations.Migration):
@@ -54,5 +42,5 @@ class Migration(migrations.Migration):
     ]
 
     operations = [
-        migrations.RunPython(populate_interface_status, reverse_populate_interface_status),
+        migrations.RunPython(populate_interface_status, clear_interface_status),
     ]

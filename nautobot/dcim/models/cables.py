@@ -1,3 +1,4 @@
+import logging
 from collections import defaultdict
 
 from django.contrib.contenttypes.fields import GenericForeignKey
@@ -29,6 +30,8 @@ __all__ = (
     "Cable",
     "CablePath",
 )
+
+logger = logging.getLogger(__name__)
 
 
 #
@@ -131,11 +134,16 @@ class Cable(PrimaryModel, StatusModel):
     def get_absolute_url(self):
         return reverse("dcim:cable", args=[self.pk])
 
-    @classproperty
-    def STATUS_CONNECTED(cls):
+    @classproperty  # https://github.com/PyCQA/pylint-django/issues/240
+    def STATUS_CONNECTED(cls):  # pylint: disable=no-self-argument
         """Return a cached "connected" `Status` object for later reference."""
         if getattr(cls, "__status_connected", None) is None:
-            cls.__status_connected = Status.objects.get_for_model(Cable).get(slug="connected")
+            try:
+                cls.__status_connected = Status.objects.get_for_model(Cable).get(slug="connected")
+            except Status.DoesNotExist:
+                logger.warning("Status 'connected' not found for dcim.cable")
+                return None
+
         return cls.__status_connected
 
     def clean(self):
@@ -150,7 +158,7 @@ class Cable(PrimaryModel, StatusModel):
         try:
             self.termination_a_type.model_class().objects.get(pk=self.termination_a_id)
         except ObjectDoesNotExist:
-            raise ValidationError({"termination_a": "Invalid ID for type {}".format(self.termination_a_type)})
+            raise ValidationError({"termination_a": f"Invalid ID for type {self.termination_a_type}"})
 
         # Validate that termination B exists
         if not hasattr(self, "termination_b_type"):
@@ -158,7 +166,7 @@ class Cable(PrimaryModel, StatusModel):
         try:
             self.termination_b_type.model_class().objects.get(pk=self.termination_b_id)
         except ObjectDoesNotExist:
-            raise ValidationError({"termination_b": "Invalid ID for type {}".format(self.termination_b_type)})
+            raise ValidationError({"termination_b": f"Invalid ID for type {self.termination_b_type}"})
 
         # If editing an existing Cable instance, check that neither termination has been modified.
         if self.present_in_database:
@@ -184,17 +192,13 @@ class Cable(PrimaryModel, StatusModel):
         if type_a == "interface" and self.termination_a.type in NONCONNECTABLE_IFACE_TYPES:
             raise ValidationError(
                 {
-                    "termination_a_id": "Cables cannot be terminated to {} interfaces".format(
-                        self.termination_a.get_type_display()
-                    )
+                    "termination_a_id": f"Cables cannot be terminated to {self.termination_a.get_type_display()} interfaces"
                 }
             )
         if type_b == "interface" and self.termination_b.type in NONCONNECTABLE_IFACE_TYPES:
             raise ValidationError(
                 {
-                    "termination_b_id": "Cables cannot be terminated to {} interfaces".format(
-                        self.termination_b.get_type_display()
-                    )
+                    "termination_b_id": f"Cables cannot be terminated to {self.termination_b.get_type_display()} interfaces"
                 }
             )
 
@@ -241,13 +245,9 @@ class Cable(PrimaryModel, StatusModel):
 
         # Check for an existing Cable connected to either termination object
         if self.termination_a.cable not in (None, self):
-            raise ValidationError(
-                "{} already has a cable attached (#{})".format(self.termination_a, self.termination_a.cable_id)
-            )
+            raise ValidationError(f"{self.termination_a} already has a cable attached (#{self.termination_a.cable_id})")
         if self.termination_b.cable not in (None, self):
-            raise ValidationError(
-                "{} already has a cable attached (#{})".format(self.termination_b, self.termination_b.cable_id)
-            )
+            raise ValidationError(f"{self.termination_b} already has a cable attached (#{self.termination_b.cable_id})")
 
         # Validate length and length_unit
         if self.length is not None and not self.length_unit:
@@ -276,9 +276,9 @@ class Cable(PrimaryModel, StatusModel):
 
     def to_csv(self):
         return (
-            "{}.{}".format(self.termination_a_type.app_label, self.termination_a_type.model),
+            f"{self.termination_a_type.app_label}.{self.termination_a_type.model}",
             self.termination_a_id,
-            "{}.{}".format(self.termination_b_type.app_label, self.termination_b_type.model),
+            f"{self.termination_b_type.app_label}.{self.termination_b_type.model}",
             self.termination_b_id,
             self.get_type_display(),
             self.get_status_display(),
@@ -293,7 +293,7 @@ class Cable(PrimaryModel, StatusModel):
         Return all termination types compatible with termination A.
         """
         if self.termination_a is None:
-            return
+            return None
         return COMPATIBLE_TERMINATION_TYPES[self.termination_a._meta.model_name]
 
 
@@ -335,6 +335,7 @@ class CablePath(BaseModel):
     )
     destination_id = models.UUIDField(blank=True, null=True)
     destination = GenericForeignKey(ct_field="destination_type", fk_field="destination_id")
+    # TODO: Profile filtering on this field if it could benefit from an index
     path = JSONPathField()
     is_active = models.BooleanField(default=False)
     is_split = models.BooleanField(default=False)

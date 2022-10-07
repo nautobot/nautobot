@@ -9,16 +9,17 @@ Nautobot is a Network Source of Truth and Network Automation Platform.
 Nautobot runs as a web application atop the [Django](https://www.djangoproject.com/) Python framework with a
 [PostgreSQL](https://www.postgresql.org/) or [MySQL](https://www.mysql.com) database.
 
-The complete documentation for Nautobot can be found at [Read the Docs](https://nautobot.readthedocs.io/en/stable/).
+The complete documentation for Nautobot can be found at [Read the Docs](https://docs.nautobot.com/en/stable/).
 
-Questions? Comments? Start by perusing our [GitHub discussions](https://github.com/nautobot/nautobot/discussions) for the topic you have in mind, or join us in the **#nautobot** Slack channel on [Network to Code](https://networktocode.slack.com)!
+Questions? Comments? Start by perusing our [GitHub discussions](https://github.com/nautobot/nautobot/discussions) for the topic you have in mind, or join the **#nautobot** channel on [Network to Code's Slack community](https://slack.networktocode.com/)!
 
 ## Build Status
 
 | Branch      | Status |
 |-------------|------------|
-| **main** | [![Build Status](https://github.com/nautobot/nautobot/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/nautobot/nautobot/actions/workflows/ci.yml) |
-| **develop** | [![Build Status](https://github.com/nautobot/nautobot/actions/workflows/ci.yml/badge.svg?branch=develop)](https://github.com/nautobot/nautobot/actions/workflows/ci.yml) |
+| **main** | [![Build Status](https://github.com/nautobot/nautobot/actions/workflows/ci_integration.yml/badge.svg?branch=main)](https://github.com/nautobot/nautobot/actions/workflows/ci_integration.yml) |
+| **develop** | [![Build Status](https://github.com/nautobot/nautobot/actions/workflows/ci_integration.yml/badge.svg?branch=develop)](https://github.com/nautobot/nautobot/actions/workflows/ci_integration.yml) |
+| **next** | [![Build Status](https://github.com/nautobot/nautobot/actions/workflows/ci_integration.yml/badge.svg?branch=next)](https://github.com/nautobot/nautobot/actions/workflows/ci_integration.yml) |
 
 ## Screenshots
 
@@ -38,7 +39,7 @@ Questions? Comments? Start by perusing our [GitHub discussions](https://github.c
 
 ## Installation
 
-Please see [the documentation](https://nautobot.readthedocs.io/en/stable/installation/) for instructions on installing Nautobot.
+Please see [the documentation](https://docs.nautobot.com/en/stable/installation/) for instructions on installing Nautobot.
 
 ## Application Stack
 

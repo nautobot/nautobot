@@ -1,4 +1,60 @@
+from django.urls import reverse
+
 from nautobot.extras.plugins import PluginTemplateExtension
+
+
+class CircuitContent(PluginTemplateExtension):
+    model = "circuits.circuit"
+
+    def detail_tabs(self):
+        """
+        You may define extra tabs to render on a model's detail page by utilizing this method.
+        Each tab is defined as a dict in a list of dicts.
+
+        For each of the tabs defined:
+        - The <title> key's value will become the tab link's title.
+        - The <url> key's value is used to render the HTML link for the tab.
+
+        Since the `model` attribute of this class is set as "circuits.circuit",
+        these tabs will be added to the Circuit model's detail page.
+
+        This example demonstrates defining one tab.
+        """
+        return [
+            {
+                "title": "Plugin Tab",
+                "url": reverse("plugins:example_plugin:circuit_detail_tab", kwargs={"pk": self.context["object"].pk}),
+            },
+        ]
+
+
+class DeviceContent(PluginTemplateExtension):
+    model = "dcim.device"
+
+    def detail_tabs(self):
+        """
+        You may define extra tabs to render on a model's detail page by utilizing this method.
+        Each tab is defined as a dict in a list of dicts.
+
+        For each of the tabs defined:
+        - The <title> key's value will become the tab link's title.
+        - The <url> key's value is used to render the HTML link for the tab
+
+        Since the `model` attribute of this class is set as "dcim.device",
+        these tabs will be added to the Device model's detail page.
+
+        This example demonstrates defining two tabs. The tabs will be ordered by their position in list.
+        """
+        return [
+            {
+                "title": "Plugin Tab 1",
+                "url": reverse("plugins:example_plugin:device_detail_tab_1", kwargs={"pk": self.context["object"].pk}),
+            },
+            {
+                "title": "Plugin Tab 2",
+                "url": reverse("plugins:example_plugin:device_detail_tab_2", kwargs={"pk": self.context["object"].pk}),
+            },
+        ]
 
 
 class SiteContent(PluginTemplateExtension):
@@ -64,4 +120,4 @@ class ExampleModelContent(PluginTemplateExtension):
 
 
 # Don't forget to register your template extensions!
-template_extensions = [ExampleModelContent, SiteContent]
+template_extensions = [ExampleModelContent, SiteContent, CircuitContent, DeviceContent]

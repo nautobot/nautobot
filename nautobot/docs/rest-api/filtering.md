@@ -8,6 +8,9 @@ Multiple parameters can be joined to further narrow results. For example, `GET /
 
 Generally, passing multiple values for a single parameter will result in a logical OR operation. For example, `GET /api/dcim/sites/?region=north-america&region=south-america` will return sites in North America _or_ South America. However, a logical AND operation will be used in instances where a field may have multiple values, such as tags. For example, `GET /api/dcim/sites/?tag=foo&tag=bar` will return only sites which have both the "foo" _and_ "bar" tags applied.
 
++/- 1.4.0
+    If [STRICT_FILTERING](../configuration/optional-settings.md#strict_filtering) is True (its default value), unrecognized filter parameters now result in a 400 Bad Request response instead of being silently ignored.
+
 ### Filtering by Choice Field
 
 Some models have fields which are limited to specific choices, such as the `status` field on the Prefix model. To find all available choices for this field, make an authenticated `OPTIONS` request to the model's list endpoint, and use `jq` to extract the relevant parameters:
@@ -48,11 +51,17 @@ To filter results by a custom field value, prepend `cf_` to the custom field nam
 GET /api/dcim/sites/?cf_foo=123
 ```
 
+!!! note
+    For custom field filters, due to historical details of implementation, only a single filter value can be specified when matching a given field. In other words, in the above example, you could _not_ add `&cf_foo=456` to the query in order to get all sites where custom field `foo` is 123 _or_ 456; instead you would need to run two separate queries. This restriction does not apply to custom field filters using lookup expressions (next section) and will likely be changed in a future major version of Nautobot.
+
 Custom fields can be mixed with built-in fields to further narrow results. When creating a custom string field, the type of filtering selected (loose versus exact) determines whether partial or full matching is used.
+
++++ 1.4.0
+    Custom fields can use the lookup expressions listed in the next section by prepending `cf_` to the custom field `name` (and not the `slug`) followed by the required lookup type (see below).
 
 ## Lookup Expressions
 
-Certain model fields also support filtering using additional lookup expressions. This allows
+Certain model fields (including, in Nautobot 1.4.0 and later, custom fields of type `text`, `url`, `select`, `integer`, and `date`) also support filtering using additional lookup expressions. This allows
 for negation and other context-specific filtering.
 
 These lookup expressions can be applied by adding a suffix to the desired field's name, e.g. `mac_address__n`. In this case, the filter expression is for negation and it is separated by two underscores. Below are the lookup expressions that are supported across different field types.
@@ -80,10 +89,12 @@ String-based (char) fields (Name, Address, etc.) support these lookup expression
 - `niew` - negated case-insensitive ends-with
 - `ie` - case-insensitive exact match
 - `nie` - negated case-insensitive exact match
-- `re` - case-sensitive regular expression match
-- `nre` - negated case-sensitive regular expression match
-- `ire` - case-insensitive regular expression match
-- `nire` - negated case-insensitive regular expression match
+
++++ 1.3.0
+    - `re` - case-sensitive regular expression match
+    - `nre` - negated case-sensitive regular expression match
+    - `ire` - case-insensitive regular expression match
+    - `nire` - negated case-insensitive regular expression match
 
 ### Foreign Keys & Other Fields
 

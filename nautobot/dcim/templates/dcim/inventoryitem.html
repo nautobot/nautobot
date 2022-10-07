@@ -9,19 +9,11 @@
                 <table class="table table-hover panel-body attr-table">
                     <tr>
                         <td>Device</td>
-                        <td>
-                            <a href="{{ object.device.get_absolute_url }}">{{ object.device }}</a>
-                        </td>
+                        <td>{{ object.device|hyperlinked_object }}</td>
                     </tr>
                     <tr>
                         <td>Parent Item</td>
-                        <td>
-                            {% if object.parent %}
-                                <a href="{{ object.parent.get_absolute_url }}">{{ object.parent }}</a>
-                            {% else %}
-                                <span class="text-muted">&mdash;</span>
-                            {% endif %}
-                        </td>
+                        <td>{{ object.parent|hyperlinked_object }}</td>
                     </tr>
                     <tr>
                         <td>Name</td>
@@ -33,13 +25,7 @@
                     </tr>
                     <tr>
                         <td>Manufacturer</td>
-                        <td>
-                            {% if object.manufacturer %}
-                                <a href="{{ object.manufacturer.get_absolute_url }}">{{ object.manufacturer }}</a>
-                            {% else %}
-                                <span class="text-muted">&mdash;</span>
-                            {% endif %}
-                        </td>
+                        <td>{{ object.manufacturer|hyperlinked_object }}</td>
                     </tr>
                     <tr>
                         <td>Part ID</td>

@@ -6,27 +6,12 @@ logan.settings
 :license: Apache License 2.0, see NOTICE for more details.
 """
 
-from __future__ import absolute_import
-
-try:
-    unicode
-except NameError:
-    basestring = unicode = str  # Python 3
-
-try:
-    execfile
-except NameError:  # Python3
-
-    def execfile(afile, globalz=None, localz=None):
-        with open(afile, "r") as fh:
-            exec(fh.read(), globalz, localz)
-
-
-import errno
-import imp
+import importlib.machinery
+import importlib.util
 import os
 import sys
 from django.conf import settings as django_settings
+
 
 __all__ = ("create_default_settings", "load_settings")
 
@@ -48,27 +33,22 @@ def create_default_settings(filepath, settings_initializer):
 
 
 def create_module(name, install=True):
-    mod = imp.new_module(name)
+    spec = importlib.machinery.ModuleSpec(name, None)
+    mod = importlib.util.module_from_spec(spec)
     if install:
         sys.modules[name] = mod
     return mod
 
 
 def load_settings(mod_or_filename, silent=False, allow_extras=True, settings=django_settings):
-    if isinstance(mod_or_filename, basestring):
-        conf = create_module("temp_config", install=False)
-        conf.__file__ = mod_or_filename
-        try:
-            execfile(mod_or_filename, conf.__dict__)
-        except IOError as e:
-            if silent and e.errno in (errno.ENOENT, errno.EISDIR):
-                return settings
-            e.strerror = "Unable to load configuration file (%s)" % e.strerror
-            raise
+    if isinstance(mod_or_filename, str):
+        spec = importlib.util.spec_from_file_location("temp_config", mod_or_filename)
+        conf = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(conf)
     else:
         conf = mod_or_filename
 
-    add_settings(conf, allow_extras=allow_extras, settings=settings)
+    return add_settings(conf, allow_extras=allow_extras, settings=settings)
 
 
 def add_settings(mod, allow_extras=True, settings=django_settings):

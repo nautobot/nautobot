@@ -9,7 +9,9 @@ from django.urls import reverse
 
 import netaddr
 
+from nautobot.circuits.models import Circuit, CircuitType, Provider
 from nautobot.dcim.models import Device, DeviceType, DeviceRole, Manufacturer, Site
+from nautobot.dcim.tests.test_views import create_test_device
 from nautobot.tenancy.models import Tenant, TenantGroup
 from nautobot.tenancy.filters import TenantFilterSet
 from nautobot.tenancy.forms import TenantFilterForm
@@ -40,8 +42,6 @@ class PluginTest(TestCase):
         )
 
     def test_models(self):
-        from example_plugin.models import ExampleModel
-
         # Test saving an instance
         instance = ExampleModel(name="Instance 1", number=100)
         instance.save()
@@ -284,9 +284,10 @@ class PluginTest(TestCase):
         """
         self.assertTrue(registry["nav_menu"]["tabs"].get("Example Menu"))
         self.assertTrue(registry["nav_menu"]["tabs"]["Example Menu"]["groups"].get("Example Group 1"))
+        # Modified this statement since we are passing the url into registry directly instead of the reverse url string
         self.assertTrue(
             registry["nav_menu"]["tabs"]["Example Menu"]["groups"]["Example Group 1"]["items"].get(
-                "plugins:example_plugin:examplemodel_list"
+                "/plugins/example-plugin/models/"
             )
         )
 
@@ -295,7 +296,7 @@ class PluginTest(TestCase):
         Validate that the plugin's registered callback for the `nautobot_database_ready` signal got called,
         creating a custom field definition in the database.
         """
-        cf = CustomField.objects.get(name="example-plugin-auto-custom-field")
+        cf = CustomField.objects.get(name="example_plugin_auto_custom_field")
         self.assertEqual(cf.type, CustomFieldTypeChoices.TYPE_TEXT)
         self.assertEqual(cf.label, "Example Plugin Automatically Added Custom Field")
         self.assertEqual(list(cf.content_types.all()), [ContentType.objects.get_for_model(Site)])
@@ -355,16 +356,20 @@ class PluginListViewTest(TestCase):
         # Redirects to the login page
         self.assertHttpStatus(response, 302)
 
-    @skipIf(
-        "example_plugin" not in settings.PLUGINS,
-        "example_plugin not in settings.PLUGINS",
-    )
-    def test_list_plugins_authenticated(self):
+    def test_list_plugins_authenticated_superuser(self):
+        self.user.is_superuser = True
+        self.user.save()
+
         response = self.client.get(reverse("plugins:plugins_list"))
         self.assertHttpStatus(response, 200)
 
         response_body = extract_page_body(response.content.decode(response.charset)).lower()
         self.assertIn("example plugin", response_body, msg=response_body)
+
+    def test_list_plugins_authenticated_not_admin(self):
+        response = self.client.get(reverse("plugins:plugins_list"))
+        # Access Denied
+        self.assertHttpStatus(response, 403)
 
 
 @skipIf(
@@ -440,6 +445,8 @@ class PluginAPITest(APIViewTestCases.APIViewTestCase):
     "example_plugin not in settings.PLUGINS",
 )
 class PluginCustomValidationTest(TestCase):
+    fixtures = ("status",)
+
     def setUp(self):
         # When creating a fresh test DB, wrapping model clean methods fails, which is normal.
         # This always occurs during the first run of migrations, however, During testing we
@@ -454,9 +461,9 @@ class PluginCustomValidationTest(TestCase):
             site.clean()
 
     def test_relationship_association_validator_raises_exception(self):
-        status_active = Status.objects.create(name="status1", slug="status1")
+        status = Status.objects.get(name="Irradiated")
         prefix = Prefix.objects.create(prefix=netaddr.IPNetwork("192.168.10.0/24"))
-        ipaddress = IPAddress.objects.create(address="192.168.22.1/24", status=status_active)
+        ipaddress = IPAddress.objects.create(address="192.168.22.1/24", status=status)
         relationship = Relationship.objects.create(
             name="Test Relationship",
             slug="test-relationship",
@@ -623,3 +630,43 @@ class LoadPluginTest(TestCase):
         # Move to the example plugin. No errors should be raised (which is good).
         plugin_name = "example_plugin"
         load_plugin(plugin_name, settings)
+
+
+class TestPluginCoreViewOverrides(TestCase):
+    """
+    Validate that overridden core views work as expected.
+
+    The functionality is loaded and unloaded by this test case to isolate it from the rest of the test suite.
+    """
+
+    fixtures = ("status",)
+
+    def setUp(self):
+        super().setUp()
+        self.device = create_test_device("Device")
+        provider = Provider.objects.create(name="Provider", slug="provider", asn=65001)
+        circuit_type = CircuitType.objects.create(name="Circuit Type", slug="circuit-type")
+        self.circuit = Circuit.objects.create(
+            cid="Test Circuit",
+            provider=provider,
+            type=circuit_type,
+            status=Status.objects.get_for_model(Circuit).get(slug="active"),
+        )
+        self.user.is_superuser = True
+        self.user.save()
+
+    def test_views_are_overridden(self):
+
+        response = self.client.get(reverse("plugins:example_plugin:view_to_be_overridden"))
+        self.assertEqual(b"Hello world! I'm an overridden view.", response.content)
+
+        response = self.client.get(
+            f'{reverse("plugins:plugin_detail", kwargs={"plugin": "example_plugin_with_view_override"})}'
+        )
+        self.assertIn(
+            (
+                b"plugins:example_plugin:view_to_be_overridden <code>"
+                b"example_plugin_with_view_override.views.ViewOverride</code>"
+            ),
+            response.content,
+        )

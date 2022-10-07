@@ -3,7 +3,7 @@
 {% load static %}
 
 {% block extra_breadcrumbs %}
-                <li><a href="{{ object.rack.get_absolute_url }}">{{ object.rack }}</a></li>
+                <li>{{ object.rack|hyperlinked_object }}</li>
 {% endblock extra_breadcrumbs %}
 
 {% block content_left_page %}
@@ -17,9 +17,9 @@
                         <td>Site</td>
                         <td>
                             {% if rack.site.region %}
-                                <a href="{{ rack.site.region.get_absolute_url }}">{{ rack.site.region }}</a> /
+                                {{ rack.site.region|hyperlinked_object }} /
                             {% endif %}
-                            <a href="{% url 'dcim:site' slug=rack.site.slug %}">{{ rack.site }}</a>
+                            {{ rack.site|hyperlinked_object }}
                         </td>
                     </tr>
                     <tr>
@@ -34,9 +34,7 @@
                     </tr>
                     <tr>
                         <td>Rack</td>
-                        <td>
-                            <a href="{{ rack.get_absolute_url }}">{{ rack }}</a>
-                        </td>
+                        <td>{{ rack|hyperlinked_object }}</td>
                     </tr>
                 {% endwith %}
             </table>
@@ -53,14 +51,10 @@
                 <tr>
                     <td>Tenant</td>
                     <td>
-                        {% if object.tenant %}
-                            {% if object.tenant.group %}
-                                <a href="{{ object.tenant.group.get_absolute_url }}">{{ object.tenant.group }}</a> /
-                            {% endif %}
-                            <a href="{{ object.tenant.get_absolute_url }}">{{ object.tenant }}</a>
-                        {% else %}
-                            <span class="text-muted">None</span>
+                        {% if object.tenant and object.tenant.group %}
+                            {{ object.tenant.group|hyperlinked_object }} /
                         {% endif %}
+                        {{ object.tenant|hyperlinked_object }}
                     </td>
                 </tr>
                 <tr>
@@ -93,5 +87,6 @@
 {% endblock content_right_page %}
 
 {% block javascript %}
+    {{ block.super }}
     <script src="{% static 'js/rack_elevations.js' %}?v{{ settings.VERSION }}"></script>
 {% endblock javascript %}

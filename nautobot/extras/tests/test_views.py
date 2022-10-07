@@ -4,6 +4,7 @@ import uuid
 
 from django.contrib.auth import get_user_model
 from django.contrib.contenttypes.models import ContentType
+from django.core.exceptions import ValidationError
 from django.test import override_settings
 from django.urls import reverse
 from django.utils import timezone
@@ -30,6 +31,7 @@ from nautobot.extras.models import (
     GraphQLQuery,
     Job,
     JobResult,
+    Note,
     ObjectChange,
     Relationship,
     RelationshipAssociation,
@@ -47,6 +49,7 @@ from nautobot.ipam.models import VLAN, VLANGroup
 from nautobot.users.models import ObjectPermission
 from nautobot.utilities.testing import ViewTestCases, TestCase, extract_page_body, extract_form_failures
 from nautobot.utilities.testing.utils import disable_warnings, post_data
+from nautobot.utilities.utils import slugify_dashes_to_underscores
 
 
 # Use the proper swappable User model
@@ -63,6 +66,8 @@ class ComputedFieldTestCase(
     ViewTestCases.ListObjectsViewTestCase,
 ):
     model = ComputedField
+    slug_source = "label"
+    slugify_function = staticmethod(slugify_dashes_to_underscores)
 
     @classmethod
     def setUpTestData(cls):
@@ -116,7 +121,6 @@ class ComputedFieldTestCase(
             "weight": 100,
         }
 
-        cls.slug_source = "label"
         cls.slug_test_object = "Computed Field Five"
 
 
@@ -141,7 +145,7 @@ class ConfigContextTestCase(
 
         # Create three ConfigContexts
         for i in range(1, 4):
-            configcontext = ConfigContext(name="Config Context {}".format(i), data={"foo": i})
+            configcontext = ConfigContext(name=f"Config Context {i}", data={"foo": i})
             configcontext.save()
             configcontext.sites.add(site)
 
@@ -262,16 +266,16 @@ class ConfigContextSchemaTestCase(
         # Create three ConfigContextSchema records
         ConfigContextSchema.objects.create(
             name="Schema 1", slug="schema-1", data_schema={"type": "object", "properties": {"foo": {"type": "string"}}}
-        ),
+        )
         ConfigContextSchema.objects.create(
             name="Schema 2", slug="schema-2", data_schema={"type": "object", "properties": {"bar": {"type": "string"}}}
-        ),
+        )
         ConfigContextSchema.objects.create(
             name="Schema 3", slug="schema-3", data_schema={"type": "object", "properties": {"baz": {"type": "string"}}}
-        ),
+        )
         ConfigContextSchema.objects.create(
             name="Schema 4", data_schema={"type": "object", "properties": {"baz": {"type": "string"}}}
-        ),
+        )
 
         cls.form_data = {
             "name": "Schema X",
@@ -346,15 +350,18 @@ class CustomLinkTestCase(
 
 
 class CustomFieldTestCase(
+    # No NotesViewTestCase or BulkImportObjectsViewTestCase, at least for now
     ViewTestCases.BulkDeleteObjectsViewTestCase,
     ViewTestCases.CreateObjectViewTestCase,
     ViewTestCases.DeleteObjectViewTestCase,
     ViewTestCases.EditObjectViewTestCase,
     ViewTestCases.GetObjectViewTestCase,
+    ViewTestCases.GetObjectChangelogViewTestCase,
     ViewTestCases.ListObjectsViewTestCase,
 ):
     model = CustomField
-    reverse_url_attribute = "name"
+    slug_source = "label"
+    slugify_function = staticmethod(slugify_dashes_to_underscores)
 
     @classmethod
     def setUpTestData(cls):
@@ -379,7 +386,15 @@ class CustomFieldTestCase(
                 label="Custom Field Integer",
                 default="",
             ),
+            CustomField(
+                type=CustomFieldTypeChoices.TYPE_TEXT,
+                # https://github.com/nautobot/nautobot/issues/1962
+                name="Custom field? With special / unusual characters!",
+                default="",
+            ),
         ]
+
+        cls.slug_test_object = "Custom Field Integer"
 
         for custom_field in custom_fields:
             custom_field.validated_save()
@@ -387,8 +402,8 @@ class CustomFieldTestCase(
 
         cls.form_data = {
             "content_types": [obj_type.pk],
-            "type": CustomFieldTypeChoices.TYPE_BOOLEAN,
-            "name": "Custom Field Boolean",
+            "type": CustomFieldTypeChoices.TYPE_BOOLEAN,  # type is mandatory but cannot be changed once set.
+            "slug": "custom_field_boolean",  # slug is mandatory but cannot be changed once set.
             "label": "Custom Field Boolean",
             "default": None,
             "filter_logic": "loose",
@@ -401,21 +416,25 @@ class CustomFieldTestCase(
         }
 
     def test_create_object_without_permission(self):
-        # Can't have two CustomFields with the same "name"
-        for cf in CustomField.objects.all():
-            cf.delete()
+        # Can't have two CustomFields with the same "slug"
+        self.form_data = self.form_data.copy()
+        self.form_data["slug"] = "custom_field_boolean_2"
         super().test_create_object_without_permission()
 
     def test_create_object_with_permission(self):
-        # Can't have two CustomFields with the same "name"
-        for cf in CustomField.objects.all():
-            cf.delete()
+        # Can't have two CustomFields with the same "slug"
+        self.form_data = self.form_data.copy()
+        self.form_data["slug"] = "custom_field_boolean_2"
         super().test_create_object_with_permission()
+        instance = self._get_queryset().get(slug="custom_field_boolean_2")
+        # 2.0 TODO: #824 removal of `name` field altogether
+        # Assure that `name` was auto-populated from the given slug
+        self.assertEqual(instance.name, instance.slug)
 
     def test_create_object_with_constrained_permission(self):
-        # Can't have two CustomFields with the same "name"
-        for cf in CustomField.objects.all():
-            cf.delete()
+        # Can't have two CustomFields with the same "slug"
+        self.form_data = self.form_data.copy()
+        self.form_data["slug"] = "custom_field_boolean_2"
         super().test_create_object_with_constrained_permission()
 
 
@@ -470,6 +489,11 @@ class DynamicGroupTestCase(
             "slug": "new-dynamic-group",
             "description": "I am a new dynamic group object.",
             "content_type": content_type.pk,
+            # Management form fields required for the dynamic formset
+            "dynamic_group_memberships-TOTAL_FORMS": "0",
+            "dynamic_group_memberships-INITIAL_FORMS": "1",
+            "dynamic_group_memberships-MIN_NUM_FORMS": "0",
+            "dynamic_group_memberships-MAX_NUM_FORMS": "1000",
         }
 
 
@@ -569,6 +593,69 @@ class GitRepositoryTestCase(
         cls.slug_test_object = "Repo 4"
 
 
+class NoteTestCase(
+    ViewTestCases.CreateObjectViewTestCase,
+    ViewTestCases.DeleteObjectViewTestCase,
+    ViewTestCases.EditObjectViewTestCase,
+    ViewTestCases.GetObjectChangelogViewTestCase,
+):
+    model = Note
+
+    @classmethod
+    def setUpTestData(cls):
+
+        content_type = ContentType.objects.get_for_model(Site)
+        cls.site = Site.objects.create(name="Site 1", slug="site-1")
+        user = User.objects.first()
+
+        # Notes Objects to test
+        Note.objects.create(
+            note="Site has been placed on maintenance.",
+            user=user,
+            assigned_object_type=content_type,
+            assigned_object_id=cls.site.pk,
+        )
+        Note.objects.create(
+            note="Site maintenance has ended.",
+            user=user,
+            assigned_object_type=content_type,
+            assigned_object_id=cls.site.pk,
+        )
+        Note.objects.create(
+            note="Site is under duress.",
+            user=user,
+            assigned_object_type=content_type,
+            assigned_object_id=cls.site.pk,
+        )
+
+        cls.form_data = {
+            "note": "This is Site note.",
+            "assigned_object_type": content_type.pk,
+            "assigned_object_id": cls.site.pk,
+        }
+        cls.expected_object_note = '<textarea name="object_note" cols="40" rows="10" class="form-control" placeholder="Note" id="id_object_note"></textarea>'
+
+    def test_note_on_bulk_update_perms(self):
+        self.add_permissions("dcim.add_site", "extras.add_note")
+        response = self.client.get(reverse("dcim:site_add"))
+        self.assertContains(response, self.expected_object_note, html=True)
+
+    def test_note_on_bulk_update_no_perms(self):
+        self.add_permissions("dcim.add_site")
+        response = self.client.get(reverse("dcim:site_add"))
+        self.assertNotContains(response, self.expected_object_note, html=True)
+
+    def test_note_on_create_edit_perms(self):
+        self.add_permissions("dcim.change_site", "extras.add_note")
+        response = self.client.post(reverse("dcim:site_bulk_edit"), data={"pk": self.site.pk})
+        self.assertContains(response, self.expected_object_note, html=True)
+
+    def test_note_on_create_edit_no_perms(self):
+        self.add_permissions("dcim.change_site")
+        response = self.client.post(reverse("dcim:site_bulk_edit"), data={"pk": self.site.pk})
+        self.assertNotContains(response, self.expected_object_note, html=True)
+
+
 # Not a full-fledged PrimaryObjectViewTestCase as there's no BulkEditView for Secrets
 class SecretTestCase(
     ViewTestCases.GetObjectViewTestCase,
@@ -581,17 +668,16 @@ class SecretTestCase(
     ViewTestCases.BulkDeleteObjectsViewTestCase,
 ):
     model = Secret
+    fixtures = ("tag",)
 
     @classmethod
     def setUpTestData(cls):
-        tags = cls.create_tags("alpha", "beta", "gamma")
-
         secrets = (
             Secret(
                 name="View Test 1",
                 provider="environment-variable",
                 parameters={"variable": "VIEW_TEST_1"},
-                tags=[t.pk for t in tags],
+                tags=[t.pk for t in Tag.objects.get_for_model(Secret)],
             ),
             Secret(
                 name="View Test 2",
@@ -881,6 +967,57 @@ class ScheduledJobTestCase(
         self.assertHttpStatus(response, 200)
         self.assertNotIn("test4", extract_page_body(response.content.decode(response.charset)))
 
+    def test_non_valid_crontab_syntax(self):
+        self.add_permissions("extras.view_scheduledjob")
+
+        def scheduled_job_factory(name, crontab):
+            ScheduledJob.objects.create(
+                enabled=True,
+                name=name,
+                task="nautobot.extras.jobs.scheduled_job_handler",
+                job_class="local/test_pass/TestPass",
+                interval=JobExecutionType.TYPE_CUSTOM,
+                user=self.user,
+                start_time=timezone.now(),
+                crontab=crontab,
+            )
+
+        with self.assertRaises(ValidationError):
+            scheduled_job_factory("test5", None)
+
+        with self.assertRaises(ValidationError):
+            scheduled_job_factory("test6", "")
+
+        with self.assertRaises(ValidationError):
+            scheduled_job_factory("test7", "not_enough_values_to_unpack")
+
+        with self.assertRaises(ValidationError):
+            scheduled_job_factory("test8", "one too many values to unpack")
+
+        with self.assertRaises(ValidationError):
+            scheduled_job_factory("test9", "-1 * * * *")
+
+        with self.assertRaises(ValidationError):
+            scheduled_job_factory("test10", "invalid literal * * *")
+
+    def test_valid_crontab_syntax(self):
+        self.add_permissions("extras.view_scheduledjob")
+
+        ScheduledJob.objects.create(
+            enabled=True,
+            name="test11",
+            task="nautobot.extras.jobs.scheduled_job_handler",
+            job_class="local/test_pass/TestPass",
+            interval=JobExecutionType.TYPE_CUSTOM,
+            user=self.user,
+            start_time=datetime.now(),
+            crontab="*/15 9,17 3 * 1-5",
+        )
+
+        response = self.client.get(self._get_url("list"))
+        self.assertHttpStatus(response, 200)
+        self.assertIn("test11", extract_page_body(response.content.decode(response.charset)))
+
 
 class ApprovalQueueTestCase(
     # It would be nice to use ViewTestCases.GetObjectViewTestCase as well,
@@ -1103,7 +1240,7 @@ class ApprovalQueueTestCase(
         job_result = JobResult.objects.first()
         self.assertEqual(job_result.job_model, instance.job_model)
         self.assertEqual(job_result.user, self.user)
-        self.assertRedirects(response, reverse("extras:job_jobresult", kwargs={"pk": job_result.pk}))
+        self.assertRedirects(response, reverse("extras:jobresult", kwargs={"pk": job_result.pk}))
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     def test_post_deny_different_user_lacking_permissions(self):
@@ -1309,8 +1446,8 @@ class JobTestCase(
     model = Job
 
     def _get_queryset(self):
-        """Don't include hidden or non-installed Jobs as they won't appear in the UI by default."""
-        return self.model.objects.filter(installed=True, hidden=False)
+        """Don't include hidden Jobs, non-installed Jobs or JobHookReceivers as they won't appear in the UI by default."""
+        return self.model.objects.filter(installed=True, hidden=False, is_job_hook_receiver=False)
 
     @classmethod
     def setUpTestData(cls):
@@ -1376,6 +1513,10 @@ class JobTestCase(
             "soft_time_limit": 350,
             "time_limit_override": True,
             "time_limit": 650,
+            "has_sensitive_variables": False,
+            "has_sensitive_variables_override": True,
+            "task_queues": "overridden,priority",
+            "task_queues_override": True,
         }
 
     #
@@ -1458,7 +1599,7 @@ class JobTestCase(
             response = self.client.post(run_url, self.data_run_immediately)
 
             result = JobResult.objects.latest()
-            self.assertRedirects(response, reverse("extras:job_jobresult", kwargs={"pk": result.pk}))
+            self.assertRedirects(response, reverse("extras:jobresult", kwargs={"pk": result.pk}))
 
     @mock.patch("nautobot.extras.views.get_worker_count", return_value=1)
     def test_run_now_constrained_permissions(self, _):
@@ -1479,7 +1620,7 @@ class JobTestCase(
 
             result = JobResult.objects.latest()
             self.assertIsNotNone(result, msg=run_url)
-            self.assertRedirects(response, reverse("extras:job_jobresult", kwargs={"pk": result.pk}))
+            self.assertRedirects(response, reverse("extras:jobresult", kwargs={"pk": result.pk}))
 
         # Try POST with a non-permitted object
         for run_url in self.extra_run_urls:
@@ -1539,7 +1680,7 @@ class JobTestCase(
             response = self.client.post(run_url, data)
 
             result = JobResult.objects.latest()
-            self.assertRedirects(response, reverse("extras:job_jobresult", kwargs={"pk": result.pk}))
+            self.assertRedirects(response, reverse("extras:jobresult", kwargs={"pk": result.pk}))
 
     @mock.patch("nautobot.extras.views.get_worker_count", return_value=1)
     def test_run_later_missing_name(self, _):
@@ -1619,6 +1760,113 @@ class JobTestCase(
             self.assertEqual(scheduled.name, "test")
             self.assertEqual(scheduled.start_time, start_time)
 
+    @mock.patch("nautobot.extras.views.get_worker_count", return_value=1)
+    def test_run_later_sets_scheduled_job_kwargs_pk(self, _):
+        self.add_permissions("extras.run_job")
+        self.add_permissions("extras.view_scheduledjob")
+
+        start_time = timezone.now() + timedelta(minutes=1)
+        data = {
+            "_schedule_type": "future",
+            "_schedule_name": "test",
+            "_schedule_start_time": str(start_time),
+        }
+
+        for run_url in self.run_urls:
+            response = self.client.post(run_url, data)
+            self.assertRedirects(response, reverse("extras:scheduledjob_list"))
+
+            scheduled = ScheduledJob.objects.last()
+            self.assertEqual(scheduled.kwargs["scheduled_job_pk"], str(scheduled.pk))
+
+    @mock.patch("nautobot.extras.views.get_worker_count", return_value=1)
+    def test_run_job_with_sensitive_variables_for_future(self, _):
+        self.add_permissions("extras.run_job")
+        self.add_permissions("extras.view_scheduledjob")
+
+        self.test_pass.has_sensitive_variables = True
+        self.test_pass.has_sensitive_variables_override = True
+        self.test_pass.validated_save()
+
+        start_time = timezone.now() + timedelta(minutes=1)
+        data = {
+            "_schedule_type": "future",
+            "_schedule_name": "test",
+            "_schedule_start_time": str(start_time),
+        }
+        for run_url in self.run_urls:
+            response = self.client.post(run_url, data)
+            self.assertHttpStatus(response, 200, msg=self.run_urls[1])
+
+            content = extract_page_body(response.content.decode(response.charset))
+            self.assertIn("Unable to schedule job: Job may have sensitive input variables.", content)
+
+    @mock.patch("nautobot.extras.views.get_worker_count", return_value=1)
+    def test_run_job_with_invalid_task_queue(self, _):
+        self.add_permissions("extras.run_job")
+        self.add_permissions("extras.view_jobresult")
+
+        self.test_pass.task_queues = []
+        self.test_pass.task_queues_override = True
+        self.test_pass.validated_save()
+
+        data = {
+            "_schedule_type": "immediately",
+            "_task_queue": "invalid",
+        }
+
+        for run_url in self.run_urls:
+            response = self.client.post(run_url, data)
+            self.assertHttpStatus(response, 200, msg=run_url)
+
+            errors = extract_form_failures(response.content.decode(response.charset))
+            self.assertEqual(
+                errors,
+                ["_task_queue: Select a valid choice. invalid is not one of the available choices."],
+            )
+
+    @mock.patch("nautobot.extras.views.get_worker_count", return_value=1)
+    def test_run_job_with_sensitive_variables_and_requires_approval(self, _):
+        self.add_permissions("extras.run_job")
+        self.add_permissions("extras.view_scheduledjob")
+
+        self.test_pass.has_sensitive_variables = True
+        self.test_pass.approval_required = True
+        self.test_pass.save()
+
+        data = {
+            "_schedule_type": "immediately",
+        }
+        for run_url in self.run_urls:
+            # Assert warning message shows in get
+            response = self.client.get(run_url)
+            content = extract_page_body(response.content.decode(response.charset))
+            self.assertIn(
+                "This job is flagged as possibly having sensitive variables but is also flagged as requiring approval.",
+                content,
+            )
+
+            # Assert run button is disabled
+            self.assertInHTML(
+                """
+                <button type="submit" name="_run" id="id__run" class="btn btn-primary" disabled="disabled">
+                    <i class="mdi mdi-play"></i> Run Job Now
+                </button>
+                """,
+                content,
+            )
+            # Assert error message shows after post
+            response = self.client.post(run_url, data)
+            self.assertHttpStatus(response, 200, msg=self.run_urls[1])
+
+            content = extract_page_body(response.content.decode(response.charset))
+            self.assertIn(
+                "Unable to run or schedule job: "
+                "This job is flagged as possibly having sensitive variables but is also flagged as requiring approval."
+                "One of these two flags must be removed before this job can be scheduled or run.",
+                content,
+            )
+
 
 # TODO: Convert to StandardTestCases.Views
 class ObjectChangeTestCase(TestCase):
@@ -1632,7 +1880,7 @@ class ObjectChangeTestCase(TestCase):
 
         # Create three ObjectChanges
         user = User.objects.create_user(username="testuser2")
-        for i in range(1, 4):
+        for _ in range(1, 4):
             oc = site.to_objectchange(action=ObjectChangeActionChoices.ACTION_UPDATE)
             oc.user = user
             oc.request_id = uuid.uuid4()
@@ -1645,7 +1893,7 @@ class ObjectChangeTestCase(TestCase):
             "user": User.objects.first().pk,
         }
 
-        response = self.client.get("{}?{}".format(url, urllib.parse.urlencode(params)))
+        response = self.client.get(f"{url}?{urllib.parse.urlencode(params)}")
         self.assertHttpStatus(response, 200)
 
     def test_objectchange(self):
@@ -1660,11 +1908,14 @@ class RelationshipTestCase(
     ViewTestCases.DeleteObjectViewTestCase,
     ViewTestCases.EditObjectViewTestCase,
     ViewTestCases.BulkDeleteObjectsViewTestCase,
-    # TODO? ViewTestCases.GetObjectViewTestCase,
-    # TODO? ViewTestCases.GetObjectChangelogViewTestCase,
+    ViewTestCases.GetObjectViewTestCase,
+    ViewTestCases.GetObjectChangelogViewTestCase,
     ViewTestCases.ListObjectsViewTestCase,
 ):
     model = Relationship
+    fixtures = ("status",)
+    slug_source = "name"
+    slugify_function = staticmethod(slugify_dashes_to_underscores)
 
     @classmethod
     def setUpTestData(cls):
@@ -1707,7 +1958,6 @@ class RelationshipTestCase(
             "destination_filter": None,
         }
 
-        cls.slug_source = "name"
         cls.slug_test_object = "Primary Interface"
 
 
@@ -1781,16 +2031,12 @@ class StatusTestCase(
     ViewTestCases.ListObjectsViewTestCase,
 ):
     model = Status
+    fixtures = ("status",)
 
     @classmethod
     def setUpTestData(cls):
 
         # Status objects to test.
-        Status.objects.create(name="Status 1", slug="status-1")
-        Status.objects.create(name="Status 2", slug="status-2")
-        Status.objects.create(name="Status 3", slug="status-3")
-        Status.objects.create(name="Status 4")
-
         content_type = ContentType.objects.get_for_model(Device)
 
         cls.form_data = {
@@ -1814,23 +2060,28 @@ class StatusTestCase(
         }
 
         cls.slug_source = "name"
-        cls.slug_test_object = "Status 4"
+        cls.slug_test_object = "Irradiated"
+
+    def get_deletable_object(self):
+        """Return a Status without any dependent objects."""
+        return Status.objects.create(name="DELETE ME", color="000000")
+
+    def get_deletable_object_pks(self):
+        """Return a list of Status PKs without any dependent objects."""
+        statuses = [
+            Status.objects.create(name="DELETE ME 1", color="0000ff"),
+            Status.objects.create(name="DELETE ME 2", color="00ff00"),
+            Status.objects.create(name="DELETE ME 3", color="ff0000"),
+        ]
+        return [status.pk for status in statuses]
 
 
 class TagTestCase(ViewTestCases.OrganizationalObjectViewTestCase):
     model = Tag
+    fixtures = ("tag",)
 
     @classmethod
     def setUpTestData(cls):
-        tags = (
-            Tag.objects.create(name="Tag 1", slug="tag-1"),
-            Tag.objects.create(name="Tag 2", slug="tag-2"),
-            Tag.objects.create(name="Tag 3", slug="tag-3"),
-        )
-        for tag in tags:
-            tag.content_types.add(ContentType.objects.get_for_model(Site))
-            tag.content_types.add(ContentType.objects.get_for_model(Device))
-
         cls.form_data = {
             "name": "Tag X",
             "slug": "tag-x",
@@ -1892,7 +2143,7 @@ class TagTestCase(ViewTestCases.OrganizationalObjectViewTestCase):
         """Test removing a tag content_type that is been tagged to a model"""
         self.add_permissions("extras.change_tag")
 
-        tag_1 = Tag.objects.get(slug="tag-1")
+        tag_1 = Tag.objects.get_for_model(Site).first()
         site = Site.objects.create(name="site 1", slug="site-1")
         site.tags.add(tag_1)
 

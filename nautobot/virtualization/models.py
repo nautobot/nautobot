@@ -1,4 +1,5 @@
 from django.contrib.contenttypes.fields import GenericRelation
+from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ValidationError
 from django.db import models
 from django.urls import reverse
@@ -12,6 +13,7 @@ from nautobot.extras.models import (
     StatusModel,
     TaggedItem,
 )
+from nautobot.extras.models.mixins import NotesMixin
 from nautobot.extras.querysets import ConfigContextModelQuerySet
 from nautobot.extras.utils import extras_features
 from nautobot.core.fields import AutoSlugField
@@ -119,8 +121,10 @@ class ClusterGroup(OrganizationalModel):
     "custom_fields",
     "custom_links",
     "custom_validators",
+    "dynamic_groups",
     "export_templates",
     "graphql",
+    "locations",
     "relationships",
     "webhooks",
 )
@@ -152,14 +156,22 @@ class Cluster(PrimaryModel):
         blank=True,
         null=True,
     )
+    location = models.ForeignKey(
+        to="dcim.Location",
+        on_delete=models.PROTECT,
+        related_name="clusters",
+        blank=True,
+        null=True,
+    )
     comments = models.TextField(blank=True)
 
-    csv_headers = ["name", "type", "group", "site", "comments"]
+    csv_headers = ["name", "type", "group", "site", "location", "tenant", "comments"]
     clone_fields = [
         "type",
         "group",
         "tenant",
         "site",
+        "location",
     ]
 
     class Meta:
@@ -174,15 +186,41 @@ class Cluster(PrimaryModel):
     def clean(self):
         super().clean()
 
+        # Validate location
+        if self.location is not None:
+            if self.site is not None and self.location.base_site != self.site:
+                raise ValidationError(
+                    {"location": f'Location "{self.location}" does not belong to site "{self.site}".'}
+                )
+
+            if ContentType.objects.get_for_model(self) not in self.location.location_type.content_types.all():
+                raise ValidationError(
+                    {"location": f'Clusters may not associate to locations of type "{self.location.location_type}".'}
+                )
+
         # If the Cluster is assigned to a Site, verify that all host Devices belong to that Site.
         if self.present_in_database and self.site:
             nonsite_devices = Device.objects.filter(cluster=self).exclude(site=self.site).count()
             if nonsite_devices:
                 raise ValidationError(
                     {
-                        "site": "{} devices are assigned as hosts for this cluster but are not in site {}".format(
-                            nonsite_devices, self.site
-                        )
+                        "site": f"{nonsite_devices} devices are assigned as hosts for this cluster but are not in site {self.site}"
+                    }
+                )
+
+        # Likewise, verify that host Devices match Location of this Cluster if any
+        if self.present_in_database and self.location is not None:
+            nonlocation_devices = (
+                Device.objects.filter(cluster=self)
+                .exclude(location=self.location)
+                .exclude(location__isnull=True)
+                .count()
+            )
+            if nonlocation_devices:
+                raise ValidationError(
+                    {
+                        "location": f"{nonlocation_devices} devices are assigned as hosts for this cluster "
+                        f'but belong to a location other than "{self.location}".'
                     }
                 )
 
@@ -192,6 +230,7 @@ class Cluster(PrimaryModel):
             self.type.name,
             self.group.name if self.group else None,
             self.site.name if self.site else None,
+            self.location.name if self.location else None,
             self.tenant.name if self.tenant else None,
             self.comments,
         )
@@ -371,6 +410,18 @@ class VirtualMachine(PrimaryModel, ConfigContextModel, StatusModel):
     def site(self):
         return self.cluster.site
 
+    @property
+    def site_id(self):
+        return self.cluster.site_id
+
+    @property
+    def location(self):
+        return self.cluster.location
+
+    @property
+    def location_id(self):
+        return self.cluster.location_id
+
 
 #
 # Interfaces
@@ -387,7 +438,7 @@ class VirtualMachine(PrimaryModel, ConfigContextModel, StatusModel):
     "statuses",
     "webhooks",
 )
-class VMInterface(BaseModel, BaseInterface, CustomFieldModel):
+class VMInterface(BaseModel, BaseInterface, CustomFieldModel, NotesMixin):
     virtual_machine = models.ForeignKey(
         to="virtualization.VirtualMachine",
         on_delete=models.CASCADE,
@@ -429,6 +480,8 @@ class VMInterface(BaseModel, BaseInterface, CustomFieldModel):
         "description",
         "mode",
         "status",
+        "parent_interface",
+        "bridge",
     ]
 
     class Meta:
@@ -452,22 +505,9 @@ class VMInterface(BaseModel, BaseInterface, CustomFieldModel):
             self.description,
             self.get_mode_display(),
             self.get_status_display(),
+            self.parent_interface.name if self.parent_interface else None,
+            self.bridge.name if self.bridge else None,
         )
-
-    def clean(self):
-        super().clean()
-
-        # Validate untagged VLAN
-        if self.untagged_vlan and self.untagged_vlan.site not in [
-            self.virtual_machine.site,
-            None,
-        ]:
-            raise ValidationError(
-                {
-                    "untagged_vlan": f"The untagged VLAN ({self.untagged_vlan}) must belong to the same site as the "
-                    f"interface's parent virtual machine, or it must be global"
-                }
-            )
 
     def to_objectchange(self, action):
 

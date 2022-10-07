@@ -10,30 +10,31 @@ import traceback
 import warnings
 
 
-from cacheops import file_cache
 from db_file_storage.form_widgets import DBClearableFileInput
 from django import forms
 from django.conf import settings
 from django.contrib.auth import get_user_model
+from django.contrib.contenttypes.models import ContentType
 from django.core.files.uploadedfile import InMemoryUploadedFile
 from django.core.validators import RegexValidator
-from django.db import transaction
+from django.db import IntegrityError, transaction
 from django.db.models import Model
 from django.db.models.query import QuerySet
 from django.forms import ValidationError
+from django.test.client import RequestFactory
 from django.utils import timezone
 from django.utils.functional import classproperty
 import netaddr
 import yaml
 
 
-from .choices import JobResultStatusChoices, LogLevelChoices
-from .context_managers import change_logging
+from .choices import JobResultStatusChoices, LogLevelChoices, ObjectChangeActionChoices, ObjectChangeEventContextChoices
+from .context_managers import change_logging, JobChangeContext, JobHookChangeContext
 from .datasources.git import ensure_git_repository
 from .forms import JobForm
-from .models import FileProxy, GitRepository, Job as JobModel, ScheduledJob
+from .models import FileProxy, GitRepository, Job as JobModel, JobHook, ObjectChange, ScheduledJob
 from .registry import registry
-from .utils import get_job_content_type, jobs_in_directory
+from .utils import ChangeLoggedModelsQuery, get_job_content_type, jobs_in_directory, task_queues_as_choices
 
 from nautobot.core.celery import nautobot_task
 from nautobot.ipam.formfields import IPAddressFormField, IPNetworkFormField
@@ -47,6 +48,7 @@ from nautobot.utilities.forms import (
     DynamicModelChoiceField,
     DynamicModelMultipleChoiceField,
 )
+from nautobot.utilities.utils import copy_safe_request
 
 
 User = get_user_model()
@@ -97,9 +99,9 @@ class BaseJob:
         - approval_required (bool)
         - soft_time_limit (int)
         - time_limit (int)
+        - has_sensitive_variables (bool)
+        - task_queues (list)
         """
-
-        pass
 
     def __init__(self):
         self.logger = logging.getLogger(f"nautobot.jobs.{self.__class__.__name__}")
@@ -109,9 +111,6 @@ class BaseJob:
         self.failed = False
         self._job_result = None
 
-        # Grab some info about the job
-        self.source = inspect.getsource(self.__class__)
-
         # Compile test methods and initialize results skeleton
         self.test_methods = []
 
@@ -120,14 +119,16 @@ class BaseJob:
                 self.test_methods.append(method_name)
 
     def __str__(self):
-        return self.name
+        return str(self.name)
+
+    # See https://github.com/PyCQA/pylint-django/issues/240 for why we have a pylint disable on each classproperty below
 
     @classproperty
-    def file_path(cls):
+    def file_path(cls):  # pylint: disable=no-self-argument
         return inspect.getfile(cls)
 
     @classproperty
-    def class_path(cls):
+    def class_path(cls):  # pylint: disable=no-self-argument
         """
         Unique identifier of a specific Job class, in the form <source_grouping>/<module_name>/<ClassName>.
 
@@ -158,68 +159,76 @@ class BaseJob:
         return "/".join([source_grouping, cls.__module__, cls.__name__])
 
     @classproperty
-    def class_path_dotted(cls):
+    def class_path_dotted(cls):  # pylint: disable=no-self-argument
         """
         Dotted class_path, suitable for use in things like Python logger names.
         """
         return cls.class_path.replace("/", ".")
 
     @classproperty
-    def class_path_js_escaped(cls):
+    def class_path_js_escaped(cls):  # pylint: disable=no-self-argument
         """
         Escape various characters so that the class_path can be used as a jQuery selector.
         """
         return cls.class_path.replace("/", r"\/").replace(".", r"\.")
 
     @classproperty
-    def grouping(cls):
+    def grouping(cls):  # pylint: disable=no-self-argument
         module = inspect.getmodule(cls)
         return getattr(module, "name", module.__name__)
 
     @classproperty
-    def name(cls):
+    def name(cls):  # pylint: disable=no-self-argument
         return getattr(cls.Meta, "name", cls.__name__)
 
     @classproperty
-    def description(cls):
+    def description(cls):  # pylint: disable=no-self-argument
         return dedent(getattr(cls.Meta, "description", "")).strip()
 
     @classproperty
-    def description_first_line(cls):
-        if cls.description:
+    def description_first_line(cls):  # pylint: disable=no-self-argument
+        if cls.description:  # pylint: disable=using-constant-test
             return cls.description.splitlines()[0]
         return ""
 
     @classproperty
-    def commit_default(cls):
+    def commit_default(cls):  # pylint: disable=no-self-argument
         return getattr(cls.Meta, "commit_default", True)
 
     @classproperty
-    def hidden(cls):
+    def hidden(cls):  # pylint: disable=no-self-argument
         return getattr(cls.Meta, "hidden", False)
 
     @classproperty
-    def field_order(cls):
+    def field_order(cls):  # pylint: disable=no-self-argument
         return getattr(cls.Meta, "field_order", None)
 
     @classproperty
-    def read_only(cls):
+    def read_only(cls):  # pylint: disable=no-self-argument
         return getattr(cls.Meta, "read_only", False)
 
     @classproperty
-    def approval_required(cls):
+    def approval_required(cls):  # pylint: disable=no-self-argument
         return getattr(cls.Meta, "approval_required", False)
 
     @classproperty
-    def soft_time_limit(cls):
+    def soft_time_limit(cls):  # pylint: disable=no-self-argument
         return getattr(cls.Meta, "soft_time_limit", 0)
 
     @classproperty
-    def time_limit(cls):
+    def time_limit(cls):  # pylint: disable=no-self-argument
         return getattr(cls.Meta, "time_limit", 0)
 
     @classproperty
-    def properties_dict(cls):
+    def has_sensitive_variables(cls):  # pylint: disable=no-self-argument
+        return getattr(cls.Meta, "has_sensitive_variables", True)
+
+    @classproperty
+    def task_queues(cls):  # pylint: disable=no-self-argument
+        return getattr(cls.Meta, "task_queues", [])
+
+    @classproperty
+    def properties_dict(cls):  # pylint: disable=no-self-argument
         """
         Return all relevant classproperties as a dict.
 
@@ -235,23 +244,33 @@ class BaseJob:
             "read_only": cls.read_only,
             "soft_time_limit": cls.soft_time_limit,
             "time_limit": cls.time_limit,
+            "has_sensitive_variables": cls.has_sensitive_variables,
+            "task_queues": cls.task_queues,
         }
 
     @classmethod
     def _get_vars(cls):
-        vars = OrderedDict()
-        for name, attr in cls.__dict__.items():
-            if name not in vars and issubclass(attr.__class__, ScriptVariable):
-                vars[name] = attr
+        """
+        Return dictionary of ScriptVariable attributes defined on this class and any base classes to the top of the inheritance chain.
+        The variables are sorted in the order that they were defined, with variables defined on base classes appearing before subclass variables.
+        """
+        cls_vars = {}
+        # get list of base classes, including cls, in reverse method resolution order: [BaseJob, Job, cls]
+        base_classes = reversed(inspect.getmro(cls))
+        attr_names = [name for base in base_classes for name in base.__dict__.keys()]
+        for name in attr_names:
+            attr_class = getattr(cls, name, None).__class__
+            if name not in cls_vars and issubclass(attr_class, ScriptVariable):
+                cls_vars[name] = getattr(cls, name)
 
-        return vars
+        return cls_vars
 
     @classmethod
     def _get_file_vars(cls):
         """Return an ordered dict of FileVar fields."""
-        vars = cls._get_vars()
+        cls_vars = cls._get_vars()
         file_vars = OrderedDict()
-        for name, attr in vars.items():
+        for name, attr in cls_vars.items():
             if isinstance(attr, FileVar):
                 file_vars[name] = attr
 
@@ -300,21 +319,27 @@ class BaseJob:
             job_model = JobModel.objects.get_for_class_path(self.class_path)
             read_only = job_model.read_only if job_model.read_only_override else self.read_only
             commit_default = job_model.commit_default if job_model.commit_default_override else self.commit_default
+            task_queues = job_model.task_queues if job_model.task_queues_override else self.task_queues
         except JobModel.DoesNotExist:
             # 2.0 TODO: remove this fallback, Job records should always exist.
             logger.error("No Job instance found in the database corresponding to %s", self.class_path)
             read_only = self.read_only
             commit_default = self.commit_default
+            task_queues = self.task_queues
 
         if read_only:
             # Hide the commit field for read only jobs
             form.fields["_commit"].widget = forms.HiddenInput()
             form.fields["_commit"].initial = False
-        else:
+        elif not initial or "_commit" not in initial:
             # Set initial "commit" checkbox state based on the Meta parameter
             form.fields["_commit"].initial = commit_default
 
-        if self.field_order:
+        # Update task queue choices
+        form.fields["_task_queue"].choices = task_queues_as_choices(task_queues)
+
+        # https://github.com/PyCQA/pylint/issues/3484
+        if self.field_order:  # pylint: disable=using-constant-test
             form.order_fields(self.field_order)
 
         if approval_view:
@@ -370,7 +395,7 @@ class BaseJob:
         exceptions here, we leave it up the caller to handle those cases. The normal job execution code
         path would consider this a failure of the job execution, as described in `nautobot.extras.jobs.run_job`.
         """
-        vars = cls._get_vars()
+        cls_vars = cls._get_vars()
         return_data = {}
 
         if not isinstance(data, dict):
@@ -379,7 +404,7 @@ class BaseJob:
         for field_name, value in data.items():
             # If a field isn't a var, skip it (e.g. `_commit`).
             try:
-                var = vars[field_name]
+                var = cls_vars[field_name]
             except KeyError:
                 continue
 
@@ -419,13 +444,13 @@ class BaseJob:
         return return_data
 
     def validate_data(self, data):
-        vars = self._get_vars()
+        cls_vars = self._get_vars()
 
         if not isinstance(data, dict):
             raise ValidationError("Job data needs to be a dict")
 
-        for k, v in data.items():
-            if k not in vars:
+        for k in data:
+            if k not in cls_vars:
                 raise ValidationError({k: "Job data contained an unknown property"})
 
         # defer validation to the form object
@@ -483,13 +508,11 @@ class BaseJob:
         """
         Method invoked when this Job is run, before any "test_*" methods.
         """
-        pass
 
     def post_run(self):
         """
         Method invoked after "run()" and all "test_*" methods.
         """
-        pass
 
     # Logging
 
@@ -608,7 +631,7 @@ class ScriptVariable:
             self.field_attrs["label"] = label
         if description:
             self.field_attrs["help_text"] = description
-        if default:
+        if default is not None:
             self.field_attrs["initial"] = default
         if widget:
             self.field_attrs["widget"] = widget
@@ -647,7 +670,7 @@ class StringVar(ScriptVariable):
             self.field_attrs["validators"] = [
                 RegexValidator(
                     regex=regex,
-                    message="Invalid value. Must match regex: {}".format(regex),
+                    message=f"Invalid value. Must match regex: {regex}",
                     code="invalid",
                 )
             ]
@@ -827,6 +850,34 @@ class IPNetworkVar(ScriptVariable):
             self.field_attrs["validators"].append(MaxPrefixLengthValidator(max_prefix_length))
 
 
+class JobHookReceiver(Job):
+    """
+    Base class for job hook receivers. Job hook receivers are jobs that are initiated
+    from object changes and are not intended to be run from the UI or API like standard jobs.
+    """
+
+    object_change = ObjectVar(model=ObjectChange)
+
+    def run(self, data, commit):
+        """JobHookReceiver subclasses generally shouldn't need to override this method."""
+        object_change = data["object_change"]
+        self.receive_job_hook(
+            change=object_change,
+            action=object_change.action,
+            changed_object=object_change.changed_object,
+        )
+
+    def receive_job_hook(self, change, action, changed_object):
+        """
+        Method to be implemented by concrete JobHookReceiver subclasses.
+
+        :param change: an instance of `nautobot.extras.models.ObjectChange`
+        :param action: a string with the action performed on the changed object ("create", "update" or "delete")
+        :param changed_object: an instance of the object that was changed, or `None` if the object has been deleted
+        """
+        raise NotImplementedError
+
+
 def is_job(obj):
     """
     Returns True if the given object is a Job subclass.
@@ -835,7 +886,7 @@ def is_job(obj):
     from .reports import Report
 
     try:
-        return issubclass(obj, Job) and obj not in [Job, Script, BaseScript, Report]
+        return issubclass(obj, Job) and obj not in [Job, Script, BaseScript, Report, JobHookReceiver]
     except TypeError:
         return False
 
@@ -896,7 +947,6 @@ def get_jobs():
     return jobs
 
 
-@file_cache.cached(timeout=60)
 def _get_job_source_paths():
     """
     Helper function to get_jobs().
@@ -918,7 +968,7 @@ def _get_job_source_paths():
                 continue
 
             try:
-                # In the case where we have multiple Nautobot instances, or multiple RQ worker instances,
+                # In the case where we have multiple Nautobot instances, or multiple worker instances,
                 # they are not required to share a common filesystem; therefore, we may need to refresh our local clone
                 # of the Git repository to ensure that it is in sync with the latest repository clone from any instance.
                 ensure_git_repository(
@@ -955,7 +1005,6 @@ def _get_job_source_paths():
     return paths
 
 
-@file_cache.cached(timeout=60)
 def get_job_classpaths():
     """
     Get a list of all known Job class_path strings.
@@ -1067,9 +1116,9 @@ def run_job(data, request, job_result_pk, commit=True, *args, **kwargs):
             logger=logger,
         )
 
+    file_ids = None
     try:
         # Capture the file IDs for any FileProxy objects created so we can cleanup later.
-        file_ids = None
         file_fields = list(job._get_file_vars())
         file_ids = [data[f] for f in file_fields]
 
@@ -1091,7 +1140,8 @@ def run_job(data, request, job_result_pk, commit=True, *args, **kwargs):
         job_result.completed = timezone.now()
         job_result.save()
         if file_ids:
-            job.delete_files(*file_ids)  # Cleanup FileProxy objects
+            # Cleanup FileProxy objects
+            job.delete_files(*file_ids)  # pylint: disable=not-an-iterable
         return False
 
     if job_model.read_only:
@@ -1157,8 +1207,14 @@ def run_job(data, request, job_result_pk, commit=True, *args, **kwargs):
             job_result.set_status(JobResultStatusChoices.STATUS_ERRORED)
 
         finally:
-            job_result.save()
-            job.delete_files(*file_ids)  # Cleanup FileProxy objects
+            try:
+                job_result.save()
+            except IntegrityError:
+                # handle job_model deleted while job was running
+                job_result.job_model = None
+                job_result.save()
+            if file_ids:
+                job.delete_files(*file_ids)  # Cleanup FileProxy objects
 
         # record data about this jobrun in the schedule
         if job_result.schedule:
@@ -1167,23 +1223,38 @@ def run_job(data, request, job_result_pk, commit=True, *args, **kwargs):
             job_result.schedule.save()
 
         # Perform any post-run tasks
+        # 2.0 TODO Remove post_run() method entirely
         job.active_test = "post_run"
-        output = job.post_run()
-        if output:
-            job.results["output"] += "\n" + str(output)
+        try:
+            output = job.post_run()
+        except Exception as exc:
+            stacktrace = traceback.format_exc()
+            message = (
+                f"An exception occurred during job post_run(): `{type(exc).__name__}: {exc}`\n```\n{stacktrace}\n```"
+            )
+            output = message
+            job.log_failure(message=message)
+            job_result.set_status(JobResultStatusChoices.STATUS_ERRORED)
+        finally:
+            if output:
+                job.results["output"] += "\n" + str(output)
 
-        job_result.completed = timezone.now()
-        job_result.save()
+            job_result.completed = timezone.now()
+            job_result.save()
 
-        job.logger.info(f"Job completed in {job_result.duration}")
+            job.logger.info(f"Job completed in {job_result.duration}")
 
     # Execute the job. If commit == True, wrap it with the change_logging context manager to ensure we
     # process change logs, webhooks, etc.
     if commit:
-        with change_logging(request):
+        context_class = JobHookChangeContext if job_model.is_job_hook_receiver else JobChangeContext
+        change_context = context_class(user=request.user, context_detail=job_model.slug)
+        with change_logging(change_context):
             _run_job()
     else:
         _run_job()
+
+    return True
 
 
 @nautobot_task
@@ -1200,7 +1271,52 @@ def scheduled_job_handler(*args, **kwargs):
     user = User.objects.get(pk=user_pk)
     name = kwargs.pop("name")
     scheduled_job_pk = kwargs.pop("scheduled_job_pk")
+    celery_kwargs = kwargs.pop("celery_kwargs", {})
     schedule = ScheduledJob.objects.get(pk=scheduled_job_pk)
 
     job_content_type = get_job_content_type()
-    JobResult.enqueue_job(run_job, name, job_content_type, user, schedule=schedule, **kwargs)
+    JobResult.enqueue_job(
+        run_job, name, job_content_type, user, celery_kwargs=celery_kwargs, schedule=schedule, **kwargs
+    )
+
+
+def enqueue_job_hooks(object_change):
+    """
+    Find job hook(s) assigned to this changed object type + action and enqueue them
+    to be processed
+    """
+    from nautobot.extras.models import JobResult  # avoid circular import
+
+    # Job hooks cannot trigger other job hooks
+    if object_change.change_context == ObjectChangeEventContextChoices.CONTEXT_JOB_HOOK:
+        return
+
+    # Determine whether this type of object supports job hooks
+    model_type = object_change.changed_object._meta.model
+    if model_type not in ChangeLoggedModelsQuery().list_subclasses():
+        return
+
+    # Retrieve any applicable job hooks
+    content_type = ContentType.objects.get_for_model(object_change.changed_object)
+    action_flag = {
+        ObjectChangeActionChoices.ACTION_CREATE: "type_create",
+        ObjectChangeActionChoices.ACTION_UPDATE: "type_update",
+        ObjectChangeActionChoices.ACTION_DELETE: "type_delete",
+    }[object_change.action]
+    job_hooks = JobHook.objects.filter(content_types=content_type, enabled=True, **{action_flag: True})
+
+    # Enqueue the jobs related to the job_hooks
+    for job_hook in job_hooks:
+        job_content_type = get_job_content_type()
+        job_model = job_hook.job
+        request = RequestFactory().request(SERVER_NAME="job_hook")
+        request.user = object_change.user
+        JobResult.enqueue_job(
+            run_job,
+            job_model.class_path,
+            job_content_type,
+            object_change.user,
+            data=job_model.job_class.serialize_data({"object_change": object_change}),
+            request=copy_safe_request(request),
+            commit=True,
+        )

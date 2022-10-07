@@ -4,12 +4,6 @@ from nautobot.utilities.testing.integration import SeleniumTestCase
 class ThemeTestCase(SeleniumTestCase):
     """Integration test to check theme selection modal functionality."""
 
-    def setUp(self):
-        super().setUp()
-
-    def tearDown(self):
-        super().tearDown()
-
     def test_modal_not_rendered(self):
         """As implemented, modal dialog box does not render until activated."""
 

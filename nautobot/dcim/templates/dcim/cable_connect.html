@@ -166,3 +166,18 @@
     {% endwith %}
 </form>
 {% endblock %}
+
+{% block javascript %}
+{{ block.super }}
+<script>
+    $(() => {
+        $("{{ js_select_onchange_query }}").on("change", () => {
+            /*
+            * This clears the list of cable destination choices when any of the termination_b drop-downs
+            * (except the name/id drop-down) is changed.
+            * */
+            $('#id_termination_b_id').find("option").remove();
+        });
+    });
+</script>
+{% endblock %}

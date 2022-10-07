@@ -27,7 +27,7 @@ def parse_numeric_range(string, base=10):
       '0-3,5' => [0, 1, 2, 3, 5]
       '2,8-b,d,f' => [2, 8, 9, a, b, d, f]
     """
-    values = list()
+    values = []
     for dash_range in string.split(","):
         try:
             begin, end = dash_range.split("-")
@@ -65,7 +65,7 @@ def parse_alphanumeric_range(string):
             else:
                 # Not a valid range (more than a single character)
                 if not len(begin) == len(end) == 1:
-                    raise forms.ValidationError('Range "{}" is invalid.'.format(dash_range))
+                    raise forms.ValidationError(f'Range "{dash_range}" is invalid.')
                 for n in list(range(ord(begin), ord(end) + 1)):
                     values.append(chr(n))
     return values
@@ -79,10 +79,10 @@ def expand_alphanumeric_pattern(string):
     parsed_range = parse_alphanumeric_range(pattern)
     for i in parsed_range:
         if re.search(ALPHANUMERIC_EXPANSION_PATTERN, remnant):
-            for string in expand_alphanumeric_pattern(remnant):
-                yield "{}{}{}".format(lead, i, string)
+            for string2 in expand_alphanumeric_pattern(remnant):
+                yield f"{lead}{i}{string2}"
         else:
-            yield "{}{}{}".format(lead, i, remnant)
+            yield f"{lead}{i}{remnant}"
 
 
 def expand_ipaddress_pattern(string, family):
@@ -92,7 +92,7 @@ def expand_ipaddress_pattern(string, family):
       '2001:db8:0:[0,fd-ff]::/64' => ['2001:db8:0:0::/64', '2001:db8:0:fd::/64', ... '2001:db8:0:ff::/64']
     """
     if family not in [4, 6]:
-        raise Exception("Invalid IP address family: {}".format(family))
+        raise Exception(f"Invalid IP address family: {family}")
     if family == 4:
         regex = IP4_EXPANSION_PATTERN
         base = 10
@@ -103,8 +103,8 @@ def expand_ipaddress_pattern(string, family):
     parsed_range = parse_numeric_range(pattern, base)
     for i in parsed_range:
         if re.search(regex, remnant):
-            for string in expand_ipaddress_pattern(remnant, family):
-                yield "".join([lead, format(i, "x" if family == 6 else "d"), string])
+            for string2 in expand_ipaddress_pattern(remnant, family):
+                yield "".join([lead, format(i, "x" if family == 6 else "d"), string2])
         else:
             yield "".join([lead, format(i, "x" if family == 6 else "d"), remnant])
 

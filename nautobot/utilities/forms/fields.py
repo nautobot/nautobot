@@ -10,12 +10,13 @@ from django.conf import settings
 from django.contrib.contenttypes.models import ContentType
 from django.contrib.postgres.forms import SimpleArrayField
 from django.core.exceptions import MultipleObjectsReturned, ObjectDoesNotExist, ValidationError
-from django.db.models import Count
+from django.db.models import Count, Q
 from django.forms.fields import BoundField, JSONField as _JSONField, InvalidJSONInput
 from django.urls import reverse
 
 from nautobot.extras.utils import FeatureQuery
 from nautobot.utilities.choices import unpack_grouped_choices
+from nautobot.utilities.utils import get_route_for_model, is_uuid
 from nautobot.utilities.validators import EnhancedURLValidator
 from . import widgets
 from .constants import ALPHANUMERIC_EXPANSION_PATTERN, IP4_EXPANSION_PATTERN, IP6_EXPANSION_PATTERN
@@ -38,6 +39,7 @@ __all__ = (
     "JSONArrayFormField",
     "LaxURLField",
     "MultipleContentTypeField",
+    "MultiMatchModelMultipleChoiceField",
     "NumericArrayField",
     "SlugField",
     "TagFilterField",
@@ -85,7 +87,7 @@ class CSVDataField(forms.CharField):
     def validate(self, value):
         if value is None:
             return None
-        headers, records = value
+        headers, _records = value
         validate_csv(headers, self.fields, self.required_fields)
 
         return value
@@ -135,7 +137,7 @@ class CSVFileField(forms.FileField):
         if value is None:
             return None
 
-        headers, records = value
+        headers, _records = value
         validate_csv(headers, self.fields, self.required_fields)
 
         return value
@@ -200,14 +202,22 @@ class CSVContentTypeField(CSVModelChoiceField):
         """
         if value is None:
             return ""
+
+        # Only pass through strings if they aren't numeric. Otherwise cast to `int`.
         if isinstance(value, str):
-            return value
+            if not value.isdigit():
+                return value
+            else:
+                value = int(value)
+
+        # Integers are PKs
         if isinstance(value, int):
             value = self.queryset.get(pk=value)
 
         return f"{value.app_label}.{value.model}"
 
     def to_python(self, value):
+        value = self.prepare_value(value)
         try:
             app_label, model = value.split(".")
         except ValueError:
@@ -263,7 +273,8 @@ class CSVMultipleContentTypeField(MultipleContentTypeField):
 
     def prepare_value(self, value):
         """Parse a comma-separated string of model names into a list of PKs."""
-        if isinstance(value, str):
+        # "".split(",") yields [""] rather than [], which we don't want!
+        if isinstance(value, str) and value:
             value = value.split(",")
 
         # For each model name, retrieve the model object and extract its
@@ -321,7 +332,7 @@ class ExpandableIPAddressField(forms.CharField):
         super().__init__(*args, **kwargs)
         if not self.help_text:
             self.help_text = (
-                "Specify a numeric range to create multiple IPs.<br />" "Example: <code>192.0.2.[1,5,100-254]/24</code>"
+                "Specify a numeric range to create multiple IPs.<br />Example: <code>192.0.2.[1,5,100-254]/24</code>"
             )
 
     def to_python(self, value):
@@ -360,10 +371,18 @@ class SlugField(forms.SlugField):
     """
 
     def __init__(self, slug_source="name", *args, **kwargs):
-        label = kwargs.pop("label", "Slug")
-        help_text = kwargs.pop("help_text", "URL-friendly unique shorthand")
-        widget = kwargs.pop("widget", widgets.SlugWidget)
-        super().__init__(label=label, help_text=help_text, widget=widget, *args, **kwargs)
+        """
+        Instantiate a SlugField.
+
+        Args:
+            slug_source (str, tuple): Name of the field (or a list of field names) that will be used to suggest a slug.
+        """
+        kwargs.setdefault("label", "Slug")
+        kwargs.setdefault("help_text", "URL-friendly unique shorthand")
+        kwargs.setdefault("widget", widgets.SlugWidget)
+        super().__init__(*args, **kwargs)
+        if isinstance(slug_source, (tuple, list)):
+            slug_source = " ".join(slug_source)
         self.widget.attrs["slug-source"] = slug_source
 
 
@@ -379,7 +398,7 @@ class TagFilterField(forms.MultipleChoiceField):
     def __init__(self, model, *args, **kwargs):
         def get_choices():
             tags = model.tags.annotate(count=Count("extras_taggeditem_items")).order_by("name")
-            return [(str(tag.slug), "{} ({})".format(tag.name, tag.count)) for tag in tags]
+            return [(str(tag.slug), f"{tag.name} ({tag.count})") for tag in tags]
 
         # Choices are fetched each time the form is initialized
         super().__init__(label="Tags", choices=get_choices, required=False, *args, **kwargs)
@@ -396,7 +415,7 @@ class DynamicModelChoiceMixin:
     :param brief_mode: Use the "brief" format (?brief=true) when making API requests (default)
     """
 
-    filter = django_filters.ModelChoiceFilter
+    filter = django_filters.ModelChoiceFilter  # TODO can we change this? pylint: disable=redefined-builtin
     widget = widgets.APISelect
 
     def __init__(
@@ -468,9 +487,9 @@ class DynamicModelChoiceMixin:
         data = bound_field.value()
         if data:
             field_name = getattr(self, "to_field_name") or "pk"
-            filter = self.filter(field_name=field_name)
+            filter_ = self.filter(field_name=field_name)
             try:
-                self.queryset = filter.filter(self.queryset, data)
+                self.queryset = filter_.filter(self.queryset, data)
             except TypeError:
                 # Catch any error caused by invalid initial data passed from the user
                 self.queryset = self.queryset.none()
@@ -480,12 +499,8 @@ class DynamicModelChoiceMixin:
         # Set the data URL on the APISelect widget (if not already set)
         widget = bound_field.field.widget
         if not widget.attrs.get("data-url"):
-            app_label = self.queryset.model._meta.app_label
-            model_name = self.queryset.model._meta.model_name
-            if app_label in settings.PLUGINS:
-                data_url = reverse(f"plugins-api:{app_label}-api:{model_name}-list")
-            else:
-                data_url = reverse(f"{app_label}-api:{model_name}-list")
+            route = get_route_for_model(self.queryset.model, "list", api=True)
+            data_url = reverse(route)
             widget.attrs["data-url"] = data_url
 
         return bound_field
@@ -666,3 +681,58 @@ class NumericArrayField(SimpleArrayField):
         except ValueError as error:
             raise ValidationError(error)
         return super().to_python(value)
+
+
+class MultiMatchModelMultipleChoiceField(django_filters.fields.ModelMultipleChoiceField):
+    """
+    Filter field to support matching on the PK *or* `to_field_name` fields (defaulting to `slug` if not specified).
+
+    Raises ValidationError if none of the fields match the requested value.
+    """
+
+    def __init__(self, *args, **kwargs):
+        self.natural_key = kwargs.setdefault("to_field_name", "slug")
+        super().__init__(*args, **kwargs)
+
+    def _check_values(self, values):
+        """
+        This method overloads the grandparent method in `django.forms.models.ModelMultipleChoiceField`,
+        re-using some of that method's existing logic and adding support for coupling this field with
+        multiple model fields.
+        """
+        null = self.null_label is not None and values and self.null_value in values
+        if null:
+            values = [v for v in values if v != self.null_value]
+        # deduplicate given values to avoid creating many querysets or
+        # requiring the database backend deduplicate efficiently.
+        try:
+            values = frozenset(values)
+        except TypeError:
+            # list of lists isn't hashable, for example
+            raise ValidationError(
+                self.error_messages["invalid_list"],
+                code="invalid_list",
+            )
+        pk_values = set()
+        natural_key_values = set()
+        for item in values:
+            query = Q()
+            if is_uuid(item):
+                pk_values.add(item)
+                query |= Q(pk=item)
+            else:
+                natural_key_values.add(item)
+                query |= Q(**{self.natural_key: item})
+            qs = self.queryset.filter(query)
+            if not qs.exists():
+                raise ValidationError(
+                    self.error_messages["invalid_choice"],
+                    code="invalid_choice",
+                    params={"value": item},
+                )
+        query = Q(pk__in=pk_values) | Q(**{f"{self.natural_key}__in": natural_key_values})
+        qs = self.queryset.filter(query)
+        result = list(qs)
+        if null:
+            result += [self.null_value]
+        return result

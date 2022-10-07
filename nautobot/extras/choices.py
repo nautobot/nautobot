@@ -90,6 +90,23 @@ class CustomLinkButtonClassChoices(ChoiceSet):
 
 
 #
+# Dynamic Groups
+#
+
+
+class DynamicGroupOperatorChoices(ChoiceSet):
+    OPERATOR_UNION = "union"
+    OPERATOR_INTERSECTION = "intersection"
+    OPERATOR_DIFFERENCE = "difference"
+
+    CHOICES = (
+        (OPERATOR_UNION, "Include (OR)"),
+        (OPERATOR_INTERSECTION, "Restrict (AND)"),
+        (OPERATOR_DIFFERENCE, "Exclude (NOT)"),
+    )
+
+
+#
 # Jobs
 #
 
@@ -114,6 +131,7 @@ class JobExecutionType(ChoiceSet):
     TYPE_HOURLY = "hourly"
     TYPE_DAILY = "daily"
     TYPE_WEEKLY = "weekly"
+    TYPE_CUSTOM = "custom"
 
     CHOICES = (
         (TYPE_IMMEDIATELY, "Once immediately"),
@@ -121,6 +139,7 @@ class JobExecutionType(ChoiceSet):
         (TYPE_HOURLY, "Recurring hourly"),
         (TYPE_DAILY, "Recurring daily"),
         (TYPE_WEEKLY, "Recurring weekly"),
+        (TYPE_CUSTOM, "Recurring custom"),
     )
 
     SCHEDULE_CHOICES = (
@@ -128,12 +147,14 @@ class JobExecutionType(ChoiceSet):
         TYPE_HOURLY,
         TYPE_DAILY,
         TYPE_WEEKLY,
+        TYPE_CUSTOM,
     )
 
     RECURRING_CHOICES = (
         TYPE_HOURLY,
         TYPE_DAILY,
         TYPE_WEEKLY,
+        TYPE_CUSTOM,
     )
 
     CELERY_INTERVAL_MAP = {
@@ -223,6 +244,23 @@ class ObjectChangeActionChoices(ChoiceSet):
         ACTION_UPDATE: "primary",
         ACTION_DELETE: "danger",
     }
+
+
+class ObjectChangeEventContextChoices(ChoiceSet):
+
+    CONTEXT_WEB = "web"
+    CONTEXT_JOB = "job"
+    CONTEXT_JOB_HOOK = "job-hook"
+    CONTEXT_ORM = "orm"
+    CONTEXT_UNKNOWN = "unknown"
+
+    CHOICES = (
+        (CONTEXT_WEB, "Web"),
+        (CONTEXT_JOB, "Job"),
+        (CONTEXT_JOB_HOOK, "Job hook"),
+        (CONTEXT_ORM, "ORM"),
+        (CONTEXT_UNKNOWN, "Unknown"),
+    )
 
 
 #

@@ -3,11 +3,11 @@
 
 {% block breadcrumbs %}
                 <li><a href="{% url 'dcim:device_list' %}">Devices</a></li>
-                <li><a href="{{ object.device.get_absolute_url }}">{{ object.device }}</a></li>
+                <li>{{ object.device|hyperlinked_object }}</li>
                 {% if breadcrumb_url %}
                     <li><a href="{% url breadcrumb_url pk=object.device.pk %}">{{ object|meta:"verbose_name_plural"|bettertitle }}</a></li>
                 {% endif %}
-                <li><a href="{{ object.get_absolute_url }}">{{ object }}</a></li>
+                <li>{{ object|hyperlinked_object }}</li>
 {% endblock breadcrumbs %}
 
 {% block title %}{{ object.device }} / {{ object }}{% endblock title %}

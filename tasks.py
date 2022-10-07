@@ -19,6 +19,14 @@ import re
 from invoke import Collection, task as invoke_task
 from invoke.exceptions import Exit
 
+try:
+    # Override built-in print function with rich's pretty-printer function, if available
+    from rich import print  # pylint: disable=redefined-builtin
+
+    HAS_RICH = True
+except ModuleNotFoundError:
+    HAS_RICH = False
+
 
 def is_truthy(arg):
     """Convert "truthy" strings into Booleans.
@@ -91,21 +99,34 @@ def docker_compose(context, command, **kwargs):
         command (str): Command string to append to the "docker-compose ..." command, such as "build", "up", etc.
         **kwargs: Passed through to the context.run() call.
     """
-    compose_command = f'docker-compose --project-name {context.nautobot.project_name} --project-directory "{context.nautobot.compose_dir}"'
+    compose_command_tokens = [
+        "docker-compose",
+        f'--project-name "{context.nautobot.project_name}"',
+        f'--project-directory "{context.nautobot.compose_dir}"',
+    ]
 
     for compose_file in context.nautobot.compose_files:
         compose_file_path = os.path.join(context.nautobot.compose_dir, compose_file)
-        compose_command += f' -f "{compose_file_path}"'
+        compose_command_tokens.append(f'-f "{compose_file_path}"')
 
-    compose_command += f" {command}"
+    compose_command_tokens.append(command)
 
     # If `service` was passed as a kwarg, add it to the end.
     service = kwargs.pop("service", None)
     if service is not None:
-        compose_command += f" {service}"
+        compose_command_tokens.append(service)
 
     print(f'Running docker-compose command "{command}"')
-    return context.run(compose_command, env={"PYTHON_VER": context.nautobot.python_ver}, **kwargs)
+    compose_command = " \\\n    ".join(compose_command_tokens)
+    env = kwargs.pop("env", {})
+    env.update({"PYTHON_VER": context.nautobot.python_ver})
+    if "hide" not in kwargs:
+        env_str = " \\\n    ".join(f"{var}={value}" for var, value in env.items())
+        if HAS_RICH:
+            print(f"[dim]{env_str} \\\n    {compose_command}[/dim]")
+        else:
+            print(f"{env_str} \\\n    {compose_command}")
+    return context.run(compose_command, env=env, **kwargs)
 
 
 def run_command(context, command, **kwargs):
@@ -133,15 +154,12 @@ def run_command(context, command, **kwargs):
         "force_rm": "Always remove intermediate containers.",
         "cache": "Whether to use Docker's cache when building the image. (Default: enabled)",
         "poetry_parallel": "Enable/disable poetry to install packages in parallel. (Default: True)",
+        "pull": "Whether to pull Docker images when building the image. (Default: disabled)",
     }
 )
-def build(context, force_rm=False, cache=True, poetry_parallel=True):
+def build(context, force_rm=False, cache=True, poetry_parallel=True, pull=False):
     """Build Nautobot docker image."""
-    command = (
-        "build"
-        f" --build-arg PYTHON_VER={context.nautobot.python_ver}"
-        f" --build-arg PYUWSGI_VER={get_dependency_version('pyuwsgi')}"
-    )
+    command = f"build --build-arg PYTHON_VER={context.nautobot.python_ver}"
 
     if not cache:
         command += " --no-cache"
@@ -149,12 +167,42 @@ def build(context, force_rm=False, cache=True, poetry_parallel=True):
         command += " --force-rm"
     if poetry_parallel:
         command += " --build-arg POETRY_PARALLEL=true"
+    if pull:
+        command += " --pull"
 
     print(f"Building Nautobot with Python {context.nautobot.python_ver}...")
-    docker_compose(context, command)
+
+    docker_compose(context, command, env={"DOCKER_BUILDKIT": "1", "COMPOSE_DOCKER_CLI_BUILD": "1"})
 
     # Build the docs so they are available.
     build_nautobot_docs(context)
+
+
+@task(
+    help={
+        "poetry_parallel": "Enable/disable poetry to install packages in parallel. (Default: True)",
+    }
+)
+def build_dependencies(context, poetry_parallel=True):
+
+    # Determine preferred/default target architecture
+    output = context.run("docker buildx inspect default", env={"PYTHON_VER": context.nautobot.python_ver}, hide=True)
+    result = re.search(r"Platforms: ([^,\n]+)", output.stdout)
+
+    build_kwargs = {
+        "dependencies_base_branch": "local",
+        "poetry_parallel": poetry_parallel,
+        "tag": f"ghcr.io/nautobot/nautobot-dependencies:local-py{context.nautobot.python_ver}",
+        "target": "dependencies",
+    }
+
+    if len(result.groups()) < 1:
+        print("Failed to identify platform building for, falling back to default.")
+
+    else:
+        build_kwargs["platforms"] = result.group(1)
+
+    buildx(context, **build_kwargs)
 
 
 @task(
@@ -181,7 +229,6 @@ def buildx(
     command = (
         f"docker buildx build --platform {platforms} -t {tag} --target {target} --load -f ./docker/Dockerfile"
         f" --build-arg PYTHON_VER={context.nautobot.python_ver}"
-        f" --build-arg PYUWSGI_VER={get_dependency_version('pyuwsgi')}"
         " ."
     )
     if not cache:
@@ -382,18 +429,65 @@ def post_upgrade(context):
     run_command(context, command)
 
 
-@task(help={"format": "Output serialization format for dumped data. (Choices: json, xml, yaml)"})
-def dumpdata(context, format="json"):
+@task(
+    help={
+        "filepath": "Path to the file to create or overwrite",
+        "format": "Output serialization format for dumped data. (Choices: json, xml, yaml)",
+        "model": "Model to include, such as 'dcim.device', repeat as needed",
+    },
+    iterable=["model"],
+)
+def dumpdata(context, format="json", model=None, filepath=None):  # pylint: disable=redefined-builtin
     """Dump data from database to db_output file."""
-    command = f"nautobot-server dumpdata --exclude django_rq --indent 4 --output db_output.{format} --format {format}"
-    run_command(context, command)
+    if not filepath:
+        filepath = f"db_output.{format}"
+    command_tokens = [
+        "nautobot-server dumpdata",
+        f"--indent 2 --format {format} --natural-foreign --natural-primary",
+        f"--output {filepath}",
+    ]
+    if model is not None:
+        command_tokens += [" ".join(model)]
+    run_command(context, " \\\n    ".join(command_tokens))
 
 
-@task(help={"file_name": "Name and path of file to load."})
-def loaddata(context, file_name):
+@task(help={"filepath": "Name and path of file to load."})
+def loaddata(context, filepath="db_output.json"):
     """Load data from file."""
-    command = f"nautobot-server loaddata {file_name}"
+    command = f"nautobot-server loaddata {filepath}"
     run_command(context, command)
+
+
+@task(
+    help={
+        "app": "Nautobot app such as 'dcim', defaults to 'core'",
+        "filename": "Name of the fixture to create or overwrite, without .extension",
+        "model": "Model to include, such as 'dcim.device', repeat as needed",
+    },
+    iterable=["model"],
+)
+def write_fixture(context, app="core", filename=None, model=None):
+    """Create or overwrite a data fixture."""
+    if filename:
+        filepath = f"nautobot/{app}/fixtures/{filename}.json"
+    else:
+        filepath = None
+    dumpdata(context, format="json", model=model, filepath=filepath)
+
+
+@task(
+    help={
+        "app": "Nautobot app such as 'dcim', defaults to 'core'",
+        "filename": "Name of the fixture to load, without .extension",
+    },
+)
+def load_fixture(context, app="core", filename=None):
+    """Load a data fixture into Nautobot."""
+    if filename:
+        filepath = f"nautobot/{app}/fixtures/{filename}.json"
+    else:
+        filepath = None
+    loaddata(context, filepath=filepath)
 
 
 @task()
@@ -448,6 +542,31 @@ def flake8(context):
     run_command(context, command)
 
 
+@task(
+    help={
+        "target": "Module or file or directory to inspect, repeatable",
+        "recursive": "Must be set if target is a directory rather than a module or file name",
+    },
+    iterable=["target"],
+)
+def pylint(context, target=None, recursive=False):
+    """Perform static analysis of Nautobot code."""
+    if not target:
+        # Lint everything
+        # Lint the installed nautobot package and the file tasks.py in the current directory
+        command = "nautobot-server pylint nautobot tasks.py"
+        run_command(context, command)
+        # Lint Python files discovered recursively in the development/ and examples/ directories
+        command = "nautobot-server pylint --recursive development/ examples/"
+        run_command(context, command)
+    else:
+        command = "nautobot-server pylint "
+        if recursive:
+            command += "--recursive "
+        command += " ".join(target)
+        run_command(context, command)
+
+
 @task
 def hadolint(context):
     """Check Dockerfile for hadolint compliance and other style issues."""
@@ -458,7 +577,7 @@ def hadolint(context):
 @task
 def markdownlint(context):
     """Lint Markdown files."""
-    command = "markdownlint --ignore nautobot/project-static --config .markdownlint.yml nautobot examples *.md"
+    command = "markdownlint --ignore nautobot/project-static --config .markdownlint.yml --rules scripts/use-relative-md-links.js nautobot examples *.md"
     run_command(context, command)
 
 
@@ -486,8 +605,8 @@ def check_schema(context, api_version=None):
         assert current_major == "1", f"check_schemas version calc must be updated to handle version {current_major}"
         api_versions = [f"{current_major}.{minor}" for minor in range(2, int(current_minor) + 1)]
 
-    for api_version in api_versions:
-        command = f"nautobot-server spectacular --api-version {api_version} --validate --fail-on-warn --file /dev/null"
+    for api_vers in api_versions:
+        command = f"nautobot-server spectacular --api-version {api_vers} --validate --fail-on-warn --file /dev/null"
         run_command(context, command)
 
 
@@ -501,6 +620,7 @@ def check_schema(context, api_version=None):
         "exclude_tag": "Do not run tests with the specified tag. Can be used multiple times.",
         "verbose": "Enable verbose test output.",
         "append": "Append coverage data to .coverage, otherwise it starts clean each time.",
+        "skip_docs_build": "Skip (re)build of documentation before running the test.",
     },
     iterable=["tag", "exclude_tag"],
 )
@@ -514,10 +634,12 @@ def unittest(
     tag=None,
     verbose=False,
     append=False,
+    skip_docs_build=False,
 ):
     """Run Nautobot unit tests."""
-    # First build the docs so they are available.
-    build_and_check_docs(context)
+    if not skip_docs_build:
+        # First build the docs so they are available.
+        build_and_check_docs(context)
 
     append_arg = " --append" if append else ""
     command = f"coverage run{append_arg} --module nautobot.core.cli --config=nautobot/core/tests/nautobot_config.py test {label}"
@@ -560,6 +682,7 @@ def unittest_coverage(context):
         "exclude_tag": "Do not run tests with the specified tag. Can be used multiple times.",
         "verbose": "Enable verbose test output.",
         "append": "Append coverage data to .coverage, otherwise it starts clean each time.",
+        "skip_docs_build": "Skip (re)build of documentation before running the test.",
     },
     iterable=["tag", "exclude_tag"],
 )
@@ -573,6 +696,7 @@ def integration_test(
     exclude_tag=None,
     verbose=False,
     append=False,
+    skip_docs_build=False,
 ):
     """Run Nautobot integration tests."""
 
@@ -589,6 +713,7 @@ def integration_test(
         exclude_tag=exclude_tag,
         verbose=verbose,
         append=append,
+        skip_docs_build=skip_docs_build,
     )
 
 
@@ -599,11 +724,12 @@ def integration_test(
     }
 )
 def tests(context, lint_only=False, keepdb=False):
-    """Run all tests and linters."""
+    """Run all linters and unit tests."""
     black(context)
     flake8(context)
     hadolint(context)
     markdownlint(context)
+    pylint(context)
     check_migrations(context)
     check_schema(context)
     build_and_check_docs(context)

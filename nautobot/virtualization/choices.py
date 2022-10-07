@@ -24,6 +24,7 @@ class VirtualMachineStatusChoices(ChoiceSet):
         (STATUS_DECOMMISSIONING, "Decommissioning"),
     )
 
+    # 2.0 TODO: No longer used (see extras.management.COLOR_MAP instead), remove in 2.0
     CSS_CLASSES = {
         STATUS_OFFLINE: "warning",
         STATUS_ACTIVE: "success",
@@ -49,11 +50,3 @@ class VMInterfaceStatusChoices(ChoiceSet):
         (STATUS_MAINTENANCE, "Maintenance"),
         (STATUS_PLANNED, "Planned"),
     )
-
-    CSS_CLASSES = {
-        STATUS_PLANNED: "info",
-        STATUS_FAILED: "danger",
-        STATUS_ACTIVE: "success",
-        STATUS_DECOMMISSIONING: "warning",
-        STATUS_MAINTENANCE: "default",
-    }

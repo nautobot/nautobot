@@ -1,76 +1,74 @@
 import netaddr
 
-from nautobot.ipam.models import Prefix, Aggregate, IPAddress, RIR
+from nautobot.ipam.models import Prefix, Aggregate, IPAddress
 from nautobot.utilities.testing import TestCase
 
 
 class AggregateQuerysetTestCase(TestCase):
     queryset = Aggregate.objects.all()
 
+    # Note: unlike Prefixes, Aggregates should never overlap; this is checked in Aggregate.clean().
+    # A previous implementation of this test disregarded this restriction in order to test the Aggregate queryset
+    # features more extensively, but this is shared logic between AggregateQueryset and PrefixQueryset and is
+    # covered thoroughly by the PrefixQuerysetTestCase later in this file, so we can get adequate test coverage for
+    # Aggregate querysets without violating the model's base assumptions.
+
     @classmethod
     def setUpTestData(cls):
-
-        rir = RIR.objects.create(name="RIR 1", slug="rir-1")
-
-        Aggregate.objects.create(prefix=netaddr.IPNetwork("192.168.0.0/16"), rir=rir)
-
-        Aggregate.objects.create(prefix=netaddr.IPNetwork("192.168.1.0/24"), rir=rir)
-        Aggregate.objects.create(prefix=netaddr.IPNetwork("192.168.2.0/24"), rir=rir)
-        Aggregate.objects.create(prefix=netaddr.IPNetwork("192.168.3.0/24"), rir=rir)
-
-        Aggregate.objects.create(prefix=netaddr.IPNetwork("192.168.3.192/28"), rir=rir)
-        Aggregate.objects.create(prefix=netaddr.IPNetwork("192.168.3.208/28"), rir=rir)
-        Aggregate.objects.create(prefix=netaddr.IPNetwork("192.168.3.224/28"), rir=rir)
+        agg = cls.queryset.first()
+        cls.exact_network = agg.prefix
+        cls.parent_network = cls.exact_network.supernet()[-1]
+        # Depending on random generation, parent_network *might* cover a second aggregate
+        cls.parent_covers_second_aggregate = (
+            cls.queryset.net_equals(list(cls.parent_network.subnet(cls.exact_network.prefixlen))[0]).exists()
+            and cls.queryset.net_equals(list(cls.parent_network.subnet(cls.exact_network.prefixlen))[1]).exists()
+        )
+        cls.child_network = list(cls.exact_network.subnet(cls.exact_network.prefixlen + 3))[0]
 
     def test_net_equals(self):
-        self.assertEqual(self.queryset.net_equals(netaddr.IPNetwork("192.168.0.0/16")).count(), 1)
-        self.assertEqual(self.queryset.net_equals(netaddr.IPNetwork("192.1.0.0/16")).count(), 0)
-        self.assertEqual(self.queryset.net_equals(netaddr.IPNetwork("192.1.1.1/32")).count(), 0)
+        self.assertEqual(self.queryset.net_equals(self.exact_network).count(), 1)
+        self.assertEqual(self.queryset.net_equals(self.parent_network).count(), 0)
+        self.assertEqual(self.queryset.net_equals(self.child_network).count(), 0)
 
     def test_net_contained(self):
-        self.assertEqual(self.queryset.net_contained(netaddr.IPNetwork("192.0.0.0/8")).count(), 7)
-        self.assertEqual(self.queryset.net_contained(netaddr.IPNetwork("192.168.0.0/16")).count(), 6)
-        self.assertEqual(self.queryset.net_contained(netaddr.IPNetwork("192.168.3.0/24")).count(), 3)
-        self.assertEqual(self.queryset.net_contained(netaddr.IPNetwork("192.168.1.0/24")).count(), 0)
-        self.assertEqual(self.queryset.net_contained(netaddr.IPNetwork("192.168.3.192/28")).count(), 0)
-        self.assertEqual(self.queryset.net_contained(netaddr.IPNetwork("192.168.3.192/32")).count(), 0)
+        self.assertEqual(
+            self.queryset.net_contained(self.parent_network).count(),
+            1 if not self.parent_covers_second_aggregate else 2,
+        )
+        self.assertEqual(self.queryset.net_contained(self.exact_network).count(), 0)
+        self.assertEqual(self.queryset.net_contained(self.child_network).count(), 0)
 
     def test_net_contained_or_equal(self):
-        self.assertEqual(self.queryset.net_contained_or_equal(netaddr.IPNetwork("192.0.0.0/8")).count(), 7)
-        self.assertEqual(self.queryset.net_contained_or_equal(netaddr.IPNetwork("192.168.0.0/16")).count(), 7)
-        self.assertEqual(self.queryset.net_contained_or_equal(netaddr.IPNetwork("192.168.3.0/24")).count(), 4)
-        self.assertEqual(self.queryset.net_contained_or_equal(netaddr.IPNetwork("192.168.1.0/24")).count(), 1)
-        self.assertEqual(self.queryset.net_contained_or_equal(netaddr.IPNetwork("192.168.3.192/28")).count(), 1)
-        self.assertEqual(self.queryset.net_contained_or_equal(netaddr.IPNetwork("192.168.3.192/32")).count(), 0)
+        self.assertEqual(
+            self.queryset.net_contained_or_equal(self.parent_network).count(),
+            1 if not self.parent_covers_second_aggregate else 2,
+        )
+        self.assertEqual(self.queryset.net_contained_or_equal(self.exact_network).count(), 1)
+        self.assertEqual(self.queryset.net_contained_or_equal(self.child_network).count(), 0)
 
     def test_net_contains(self):
-        self.assertEqual(self.queryset.net_contains(netaddr.IPNetwork("192.168.0.0/8")).count(), 0)
-        self.assertEqual(self.queryset.net_contains(netaddr.IPNetwork("192.168.0.0/16")).count(), 0)
-        self.assertEqual(self.queryset.net_contains(netaddr.IPNetwork("192.168.3.0/24")).count(), 1)
-        self.assertEqual(self.queryset.net_contains(netaddr.IPNetwork("192.168.3.192/28")).count(), 2)
-        self.assertEqual(self.queryset.net_contains(netaddr.IPNetwork("192.168.3.192/30")).count(), 3)
-        self.assertEqual(self.queryset.net_contains(netaddr.IPNetwork("192.168.3.192/32")).count(), 3)
+        self.assertEqual(self.queryset.net_contains(self.parent_network).count(), 0)
+        self.assertEqual(self.queryset.net_contains(self.exact_network).count(), 0)
+        self.assertEqual(self.queryset.net_contains(self.child_network).count(), 1)
 
     def test_net_contains_or_equals(self):
-        self.assertEqual(self.queryset.net_contains_or_equals(netaddr.IPNetwork("192.168.0.0/8")).count(), 0)
-        self.assertEqual(self.queryset.net_contains_or_equals(netaddr.IPNetwork("192.168.0.0/16")).count(), 1)
-        self.assertEqual(self.queryset.net_contains_or_equals(netaddr.IPNetwork("192.168.3.0/24")).count(), 2)
-        self.assertEqual(self.queryset.net_contains_or_equals(netaddr.IPNetwork("192.168.3.192/28")).count(), 3)
-        self.assertEqual(self.queryset.net_contains_or_equals(netaddr.IPNetwork("192.168.3.192/30")).count(), 3)
-        self.assertEqual(self.queryset.net_contains_or_equals(netaddr.IPNetwork("192.168.3.192/32")).count(), 3)
+        self.assertEqual(self.queryset.net_contains_or_equals(self.parent_network).count(), 0)
+        self.assertEqual(self.queryset.net_contains_or_equals(self.exact_network).count(), 1)
+        self.assertEqual(self.queryset.net_contains_or_equals(self.child_network).count(), 1)
 
     def test_get_by_prefix(self):
-        prefix = self.queryset.net_equals(netaddr.IPNetwork("192.168.0.0/16"))[0]
-        self.assertEqual(self.queryset.get(prefix="192.168.0.0/16"), prefix)
+        prefix = self.queryset.net_equals(self.exact_network)[0]
+        self.assertEqual(self.queryset.get(prefix=str(self.exact_network)), prefix)
 
     def test_get_by_prefix_fails(self):
-        _ = self.queryset.net_equals(netaddr.IPNetwork("192.168.0.0/16"))[0]
         with self.assertRaises(Aggregate.DoesNotExist):
-            self.queryset.get(prefix="192.168.3.0/16")
+            self.queryset.get(prefix=self.parent_network)
+        with self.assertRaises(Aggregate.DoesNotExist):
+            self.queryset.get(prefix=self.child_network)
 
     def test_filter_by_prefix(self):
-        prefix = self.queryset.net_equals(netaddr.IPNetwork("192.168.0.0/16"))[0]
-        self.assertEqual(self.queryset.filter(prefix="192.168.0.0/16")[0], prefix)
+        prefix = self.queryset.net_equals(self.exact_network)[0]
+        self.assertEqual(self.queryset.filter(prefix=self.exact_network)[0], prefix)
 
 
 class IPAddressQuerySet(TestCase):
@@ -126,7 +124,6 @@ class IPAddressQuerySet(TestCase):
             "10.0": "10.0.0.0/16",
             "10.0.0.4": "10.0.0.4/32",
             "10.0.0": "10.0.0.0/24",
-            "10.0.0.4/24": "10.0.0.4/32",
             "10.0.0.4/24": "10.0.0.4/32",
             "2001": "2001::/16",
             "2001:": "2001::/16",

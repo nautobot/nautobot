@@ -41,9 +41,6 @@ The following provides more detail on these.
 * Uses `current` label on GitHub.
 * The GitHub **Release Milestone** will track items for the _current_ release.
 
-!!! note
-    Release windows and dates will be updated per [Release Management](release-management).
-
 #### Near Term
 
 * Current tickets (GitHub issues) that are estimated to complete in one of the next two releases, e.g. 3-6 months to get into core, if accepted.
@@ -209,10 +206,10 @@ Feature requests will follow our published workflow from inbound triage to ultim
 ### Submitting Pull Requests
 
 * If you're interested in contributing to Nautobot, be sure to check out our
-  [getting started](getting-started)
+  [getting started](getting-started.md)
   documentation for tips on setting up your development environment.
 
-* It is recommended to open an issue **before** starting work on a pull request, and discuss your idea with the Nautobot maintainers before beginning work. This will help prevent wasting time on something that might we might not be able to implement. When suggesting a new feature, also make sure it won't conflict with any work that's already in progress.
+* It is recommended to open an issue **before** starting work on a pull request, and discuss your idea with the Nautobot maintainers before beginning work. This will help prevent wasting time on something that we might not be able to implement. When suggesting a new feature, also make sure it won't conflict with any work that's already in progress.
 
 * Once you've opened or identified an issue you'd like to work on, ask that it
   be assigned to you so that others are aware it's being worked on. A maintainer
@@ -226,3 +223,34 @@ Feature requests will follow our published workflow from inbound triage to ultim
     * All unit tests pass successfully
     * PEP 8 compliance is enforced, with the exception that lines may be
       greater than 80 characters in length
+    * At least one [changelog fragment](#creating-changelog-fragments) has
+      been included in the feature branch
+
+#### Creating Changelog Fragments
+
+All pull requests to `next` or `develop` must include a changelog fragment file in the `./changes` directory. To create a fragment, use your github issue number and fragment type as the filename. For example, `2362.added`. Valid fragment types are `added`, `changed`, `deprecated`, `fixed`, `removed`, and `security`. The change summary is added to the file in plain text. Change summaries should be complete sentences, starting with a capital letter and ending with a period, and be in past tense. Each line of the change fragment will generate a single change entry in the release notes. Use multiple lines in the same file if your change needs to generate multiple release notes in the same category. If the change needs to create multiple entries in separate categories, create multiple files.
+
+!!! example
+
+    **Wrong**
+    ```plaintext title="changes/1234.fixed"
+    fix critical bug in documentation
+    ```
+
+    **Right**
+    ```plaintext title="changes/1234.fixed"
+    Fixed critical bug in documentation.
+    ```
+
+!!! example "Multiple Entry Example"
+
+    This will generate 2 entries in the `fixed` category and one entry in the `changed` category.
+
+    ```plaintext title="changes/1234.fixed"
+    Fixed critical bug in documentation.
+    Fixed release notes generation.
+    ```
+
+    ```plaintext title="changes/1234.changed"
+    Changed release notes generation.
+    ```

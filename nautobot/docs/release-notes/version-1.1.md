@@ -11,7 +11,7 @@ If you are a user migrating from NetBox to Nautobot, please refer to the ["Migra
 
 #### Computed Fields ([#4](https://github.com/nautobot/nautobot/issues/4))
 
-[Computed fields](../additional-features/computed-fields.md) offers users the ability to create read-only custom fields using existing data already stored in the database. Users define Jinja2 templates that populate the value of these fields. Computed fields are available on all data models that currently support custom fields.
+[Computed fields](../models/extras/computedfield.md) offers users the ability to create read-only custom fields using existing data already stored in the database. Users define Jinja2 templates that populate the value of these fields. Computed fields are available on all data models that currently support custom fields.
 
 #### Config Context JSON Schemas ([#274](https://github.com/nautobot/nautobot/issues/274))
 

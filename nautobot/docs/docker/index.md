@@ -1,6 +1,6 @@
 # Nautobot Docker Images
 
-Nautobot is packaged as a Docker image for use in a production environment. The published image is based on the `python:3.7-slim` image to maintain the most compatibility with Nautobot deployments. The Docker image and deployment strategies are being actively developed, check back here or join the **#nautobot** Slack channel on [Network to Code](https://networktocode.slack.com) for the most up to date information.
+Nautobot is packaged as a Docker image for use in a production environment. The published image is based on the `python:3.7-slim` image to maintain the most compatibility with Nautobot deployments. The Docker image and deployment strategies are being actively developed, check back here or join the **#nautobot** channel on [Network to Code's Slack community](https://slack.networktocode.com/) for the most up to date information.
 
 ## Platforms
 
@@ -100,6 +100,9 @@ Default: unset
 
 When starting, the container attempts to connect to the database and run database migrations and upgrade steps necessary when upgrading versions.  In normal operation this is harmless to run on every startup and validates the database is operating correctly.  However, in certain circumstances such as database maintenance when the database is in a read-only mode it may make sense to start Nautobot but skip these steps.  Setting this variable to `true` will start Nautobot without running these initial steps.
 
+!!! note
+    Setting this value to anything other than "false" (case-insensitive) will prevent migrations from occurring.
+
 ---
 
 #### `NAUTOBOT_SUPERUSER_API_TOKEN`
@@ -136,7 +139,21 @@ If [`NAUTOBOT_CREATE_SUPERUSER`](#nautobot_create_superuser) is true, `NAUTOBOT_
 
 ### uWSGI
 
-The docker container uses [uWSGI](https://uwsgi-docs.readthedocs.io/) to serve Nautobot.  A default configuration is [provided](/docker/uwsgi.ini), and can be overridden by injecting a new `uwsgi.ini` file at `/opt/nautobot/uwsgi.ini`.  There are a couple of environment variables provided to override some uWSGI defaults:
+The docker container uses [uWSGI](https://uwsgi-docs.readthedocs.io/) to serve Nautobot.  A default configuration is [provided](https://github.com/nautobot/nautobot/blob/main/docker/uwsgi.ini), and can be overridden by injecting a new `uwsgi.ini` file at `/opt/nautobot/uwsgi.ini`.  There are a couple of environment variables provided to override some uWSGI defaults:
+
+#### `NAUTOBOT_UWSGI_BUFFER_SIZE`
+
++++ 1.3.9
+
+Default: `4096`
+
+Max: `65535`
+
+The max size of non-body request payload, roughly the size of request headers for uWSGI. Request headers that might contain lengthy query parameters, for example GraphQL or Relationship filtered lookups, might go well over the default limit. Increasing this limit will have an impact on running memory usage. Please see [the uWSGI documentation](https://uwsgi-docs.readthedocs.io/en/latest/Options.html?highlight=buffer-size#buffer-size) for more information.
+
+This can also be overridden by appending `-b DESIRED_BUFFER_SIZE`, ex: `-b 8192`, to the entry command in all Nautobot containers running uWSGI if you are on a release before `1.3.9`.
+
+---
 
 #### `NAUTOBOT_UWSGI_LISTEN`
 
@@ -191,7 +208,7 @@ COPY nautobot_config.py /opt/nautobot/nautobot_config.py
 
 ## Building the Image
 
-If you have a [development environment](/development/getting-started/#setting-up-your-development-environment) you can use invoke to build the docker images.  By default `invoke build` will build the development containers:
+If you have a [development environment](../development/getting-started.md#setting-up-your-development-environment) you can use invoke to build the docker images.  By default `invoke build` will build the development containers:
 
 ```no-highlight
 $ invoke build

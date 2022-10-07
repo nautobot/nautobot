@@ -1,20 +1,22 @@
 from django import forms
 
-from nautobot.dcim.models import Region, Site
+from nautobot.dcim.form_mixins import (
+    LocatableModelFilterFormMixin,
+    LocatableModelFormMixin,
+)
 from nautobot.extras.forms import (
-    AddRemoveTagsForm,
-    CustomFieldBulkEditForm,
-    CustomFieldFilterForm,
     CustomFieldModelCSVForm,
+    NautobotFilterForm,
+    NautobotBulkEditForm,
     NautobotModelForm,
-    StatusBulkEditFormMixin,
+    StatusModelBulkEditFormMixin,
     StatusModelCSVFormMixin,
-    StatusFilterFormMixin,
+    StatusModelFilterFormMixin,
+    TagsBulkEditFormMixin,
 )
 from nautobot.tenancy.forms import TenancyFilterForm, TenancyForm
 from nautobot.tenancy.models import Tenant
 from nautobot.utilities.forms import (
-    BootstrapMixin,
     CommentField,
     CSVModelChoiceField,
     DatePicker,
@@ -69,7 +71,7 @@ class ProviderCSVForm(CustomFieldModelCSVForm):
         fields = Provider.csv_headers
 
 
-class ProviderBulkEditForm(BootstrapMixin, AddRemoveTagsForm, CustomFieldBulkEditForm):
+class ProviderBulkEditForm(TagsBulkEditFormMixin, NautobotBulkEditForm):
     pk = forms.ModelMultipleChoiceField(queryset=Provider.objects.all(), widget=forms.MultipleHiddenInput)
     asn = forms.IntegerField(required=False, label="ASN")
     account = forms.CharField(max_length=100, required=False, label="Account number")
@@ -89,16 +91,10 @@ class ProviderBulkEditForm(BootstrapMixin, AddRemoveTagsForm, CustomFieldBulkEdi
         ]
 
 
-class ProviderFilterForm(BootstrapMixin, CustomFieldFilterForm):
+class ProviderFilterForm(NautobotFilterForm, LocatableModelFilterFormMixin):
     model = Provider
+    field_order = ["q"]
     q = forms.CharField(required=False, label="Search")
-    region = DynamicModelMultipleChoiceField(queryset=Region.objects.all(), to_field_name="slug", required=False)
-    site = DynamicModelMultipleChoiceField(
-        queryset=Site.objects.all(),
-        to_field_name="slug",
-        required=False,
-        query_params={"region": "$region"},
-    )
     asn = forms.IntegerField(required=False, label="ASN")
     tag = TagFilterField(model)
 
@@ -140,7 +136,7 @@ class ProviderNetworkCSVForm(CustomFieldModelCSVForm):
         ]
 
 
-class ProviderNetworkBulkEditForm(BootstrapMixin, AddRemoveTagsForm, CustomFieldBulkEditForm):
+class ProviderNetworkBulkEditForm(TagsBulkEditFormMixin, NautobotBulkEditForm):
     pk = forms.ModelMultipleChoiceField(queryset=ProviderNetwork.objects.all(), widget=forms.MultipleHiddenInput)
     provider = DynamicModelChoiceField(queryset=Provider.objects.all(), required=False)
     description = forms.CharField(max_length=100, required=False)
@@ -153,7 +149,7 @@ class ProviderNetworkBulkEditForm(BootstrapMixin, AddRemoveTagsForm, CustomField
         ]
 
 
-class ProviderNetworkFilterForm(BootstrapMixin, CustomFieldFilterForm):
+class ProviderNetworkFilterForm(NautobotFilterForm):
     model = ProviderNetwork
     field_order = ["q", "provider_id"]
     q = forms.CharField(required=False, label="Search")
@@ -258,7 +254,7 @@ class CircuitCSVForm(StatusModelCSVFormMixin, CustomFieldModelCSVForm):
         ]
 
 
-class CircuitBulkEditForm(BootstrapMixin, AddRemoveTagsForm, StatusBulkEditFormMixin, CustomFieldBulkEditForm):
+class CircuitBulkEditForm(TagsBulkEditFormMixin, StatusModelBulkEditFormMixin, NautobotBulkEditForm):
     pk = forms.ModelMultipleChoiceField(queryset=Circuit.objects.all(), widget=forms.MultipleHiddenInput)
     type = DynamicModelChoiceField(queryset=CircuitType.objects.all(), required=False)
     provider = DynamicModelChoiceField(queryset=Provider.objects.all(), required=False)
@@ -276,7 +272,12 @@ class CircuitBulkEditForm(BootstrapMixin, AddRemoveTagsForm, StatusBulkEditFormM
         ]
 
 
-class CircuitFilterForm(BootstrapMixin, TenancyFilterForm, StatusFilterFormMixin, CustomFieldFilterForm):
+class CircuitFilterForm(
+    NautobotFilterForm,
+    LocatableModelFilterFormMixin,
+    TenancyFilterForm,
+    StatusModelFilterFormMixin,
+):
     model = Circuit
     field_order = [
         "q",
@@ -286,6 +287,7 @@ class CircuitFilterForm(BootstrapMixin, TenancyFilterForm, StatusFilterFormMixin
         "status",
         "region",
         "site",
+        "location",
         "tenant_group",
         "tenant",
         "commit_rate",
@@ -299,13 +301,6 @@ class CircuitFilterForm(BootstrapMixin, TenancyFilterForm, StatusFilterFormMixin
         query_params={"provider_id": "$provider"},
         label="Provider Network",
     )
-    region = DynamicModelMultipleChoiceField(queryset=Region.objects.all(), to_field_name="slug", required=False)
-    site = DynamicModelMultipleChoiceField(
-        queryset=Site.objects.all(),
-        to_field_name="slug",
-        required=False,
-        query_params={"region": "$region"},
-    )
     commit_rate = forms.IntegerField(required=False, min_value=0, label="Commit rate (Kbps)")
     tag = TagFilterField(model)
 
@@ -315,9 +310,7 @@ class CircuitFilterForm(BootstrapMixin, TenancyFilterForm, StatusFilterFormMixin
 #
 
 
-class CircuitTerminationForm(NautobotModelForm):
-    region = DynamicModelChoiceField(queryset=Region.objects.all(), required=False, initial_params={"sites": "$site"})
-    site = DynamicModelChoiceField(queryset=Site.objects.all(), required=False, query_params={"region_id": "$region"})
+class CircuitTerminationForm(LocatableModelFormMixin, NautobotModelForm):
     provider_network = DynamicModelChoiceField(
         queryset=ProviderNetwork.objects.all(), required=False, label="Provider Network"
     )
@@ -328,6 +321,7 @@ class CircuitTerminationForm(NautobotModelForm):
             "term_side",
             "region",
             "site",
+            "location",
             "provider_network",
             "port_speed",
             "upstream_speed",

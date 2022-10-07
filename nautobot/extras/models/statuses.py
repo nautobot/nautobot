@@ -5,6 +5,7 @@ from django.db import models
 from django.urls import reverse
 from django.utils.encoding import force_str
 from django.utils.hashable import make_hashable
+from nautobot.extras.models.mixins import NotesMixin
 
 from nautobot.extras.utils import extras_features, FeatureQuery
 from nautobot.extras.models import ChangeLoggedModel
@@ -28,6 +29,9 @@ class StatusQuerySet(RestrictedQuerySet):
         content_type = ContentType.objects.get_for_model(model._meta.concrete_model)
         return self.filter(content_types=content_type)
 
+    def get_by_natural_key(self, name):
+        return self.get(name=name)
+
 
 @extras_features(
     "custom_fields",
@@ -38,7 +42,7 @@ class StatusQuerySet(RestrictedQuerySet):
     "relationships",
     "webhooks",
 )
-class Status(BaseModel, ChangeLoggedModel, CustomFieldModel, RelationshipModel):
+class Status(BaseModel, ChangeLoggedModel, CustomFieldModel, RelationshipModel, NotesMixin):
     """Model for database-backend enum choice objects."""
 
     content_types = models.ManyToManyField(
@@ -67,6 +71,9 @@ class Status(BaseModel, ChangeLoggedModel, CustomFieldModel, RelationshipModel):
 
     def __str__(self):
         return self.name
+
+    def natural_key(self):
+        return (self.name,)
 
     def get_absolute_url(self):
         return reverse("extras:status", args=[self.slug])
@@ -99,7 +106,7 @@ class StatusField(models.ForeignKey):
     def get_limit_choices_to(self):
         return {"content_types": ContentType.objects.get_for_model(self.model)}
 
-    def contribute_to_class(self, cls, name, private_only=False):
+    def contribute_to_class(self, cls, name, *args, private_only=False, **kwargs):
         """
         Overload default so that we can assert that `.get_FOO_display` is
         attached to any model that is using a `StatusField`.
@@ -111,7 +118,7 @@ class StatusField(models.ForeignKey):
         `.get_status_display()` and a `.get_status_color()` method without
         having to define it on the model yourself.
         """
-        super().contribute_to_class(cls, name, private_only=private_only)
+        super().contribute_to_class(cls, name, *args, private_only=private_only, **kwargs)
 
         def _get_FIELD_display(self, field):
             """
@@ -126,10 +133,10 @@ class StatusField(models.ForeignKey):
             return force_str(choices_dict.get(make_hashable(value), value), strings_only=True)
 
         # Install `.get_FOO_display()` onto the model using our own version.
-        if "get_%s_display" % self.name not in cls.__dict__:
+        if f"get_{self.name}_display" not in cls.__dict__:
             setattr(
                 cls,
-                "get_%s_display" % self.name,
+                f"get_{self.name}_display",
                 partialmethod(_get_FIELD_display, field=self),
             )
 
@@ -143,10 +150,10 @@ class StatusField(models.ForeignKey):
             return getattr(field_method, "color")
 
         # Install `.get_FOO_color()` onto the model using our own version.
-        if "get_%s_color" % self.name not in cls.__dict__:
+        if f"get_{self.name}_color" not in cls.__dict__:
             setattr(
                 cls,
-                "get_%s_color" % self.name,
+                f"get_{self.name}_color",
                 partialmethod(_get_FIELD_color, field=self),
             )
 

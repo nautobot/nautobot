@@ -6,9 +6,13 @@ from nautobot.extras.utils import extras_features
 
 
 @extras_features(
+    "custom_fields",
     "custom_links",
+    "custom_validators",
     "dynamic_groups",
+    "export_templates",
     "graphql",
+    "relationships",
     "webhooks",
 )
 class ExampleModel(OrganizationalModel):
@@ -35,7 +39,12 @@ class ExampleModel(OrganizationalModel):
 
 @extras_features(
     "custom_fields",
+    "custom_validators",
     "dynamic_groups",
+    "export_templates",
+    # "graphql", Not specified here as we have a custom type for this model, see example_plugin.graphql.types
+    "relationships",
+    "webhooks",
 )
 class AnotherExampleModel(OrganizationalModel):
     name = models.CharField(max_length=20)
@@ -43,3 +52,6 @@ class AnotherExampleModel(OrganizationalModel):
 
     class Meta:
         ordering = ["name"]
+
+    def get_absolute_url(self):
+        return reverse("plugins:example_plugin:anotherexamplemodel", kwargs={"pk": self.pk})

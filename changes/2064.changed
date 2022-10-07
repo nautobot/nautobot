@@ -1,0 +1,1 @@
+Changed default celery queue name from `celery` to `default`.

@@ -7,8 +7,9 @@ from datetime import timedelta
 
 from cacheops.signals import cache_invalidated, cache_read
 from django.contrib.contenttypes.models import ContentType
+from django.core.exceptions import ValidationError
 from django.db import transaction
-from django.db.models.signals import m2m_changed, pre_delete
+from django.db.models.signals import m2m_changed, pre_delete, pre_save
 from django.dispatch import receiver
 from django.utils import timezone
 from django_prometheus.models import model_deletes, model_inserts, model_updates
@@ -18,7 +19,7 @@ from nautobot.extras.tasks import delete_custom_field_data, provision_field
 from nautobot.extras.utils import refresh_job_model_from_job_class
 from nautobot.utilities.config import get_settings_or_config
 from .choices import JobResultStatusChoices, ObjectChangeActionChoices
-from .models import CustomField, GitRepository, JobResult, ObjectChange
+from .models import CustomField, DynamicGroup, DynamicGroupMembership, GitRepository, JobResult, ObjectChange
 from .webhooks import enqueue_webhooks
 
 logger = logging.getLogger("nautobot.extras.signals")
@@ -29,24 +30,27 @@ logger = logging.getLogger("nautobot.extras.signals")
 #
 
 
-def _get_user_if_authenticated(request, objectchange):
+def _get_user_if_authenticated(user, objectchange):
     """Return the user object associated with the request if the user is defined.
 
     If the user is not defined, log a warning to indicate that the user couldn't be retrived from the request
     This is a workaround to fix a recurring issue where the user shouldn't be present in the request object randomly.
     A similar issue was reported in NetBox https://github.com/netbox-community/netbox/issues/5142
     """
-    if request.user.is_authenticated:
-        return request.user
+    if user.is_authenticated:
+        return user
     else:
         logger.warning(f"Unable to retrieve the user while creating the changelog for {objectchange.changed_object}")
+        return None
 
 
-def _handle_changed_object(request, sender, instance, **kwargs):
+def _handle_changed_object(change_context, sender, instance, **kwargs):
     """
     Fires when an object is created or updated.
     """
-    m2m_changed = False
+    from .jobs import enqueue_job_hooks  # avoid circular import
+
+    object_m2m_changed = False
 
     # Determine the type of change being made
     if kwargs.get("created"):
@@ -55,27 +59,36 @@ def _handle_changed_object(request, sender, instance, **kwargs):
         action = ObjectChangeActionChoices.ACTION_UPDATE
     elif kwargs.get("action") in ["post_add", "post_remove"] and kwargs["pk_set"]:
         # m2m_changed with objects added or removed
-        m2m_changed = True
+        object_m2m_changed = True
         action = ObjectChangeActionChoices.ACTION_UPDATE
     else:
         return
 
     # Record an ObjectChange if applicable
     if hasattr(instance, "to_objectchange"):
-        if m2m_changed:
-            ObjectChange.objects.filter(
+        if object_m2m_changed:
+            related_changes = ObjectChange.objects.filter(
                 changed_object_type=ContentType.objects.get_for_model(instance),
                 changed_object_id=instance.pk,
-                request_id=request.id,
-            ).update(object_data=instance.to_objectchange(action).object_data)
+                request_id=change_context.change_id,
+            )
+            m2m_changes = instance.to_objectchange(action)
+            related_changes.update(object_data=m2m_changes.object_data, object_data_v2=m2m_changes.object_data_v2)
+            objectchange = related_changes.first() if related_changes.exists() else None
         else:
             objectchange = instance.to_objectchange(action)
-            objectchange.user = _get_user_if_authenticated(request, objectchange)
-            objectchange.request_id = request.id
+            objectchange.user = _get_user_if_authenticated(change_context.get_user(), objectchange)
+            objectchange.request_id = change_context.change_id
+            objectchange.change_context = change_context.context
+            objectchange.change_context_detail = change_context.context_detail
             objectchange.save()
 
+        # Enqueue job hooks
+        if objectchange is not None:
+            enqueue_job_hooks(objectchange)
+
     # Enqueue webhooks
-    enqueue_webhooks(instance, request.user, request.id, action)
+    enqueue_webhooks(instance, change_context.get_user(), change_context.change_id, action)
 
     # Increment metric counters
     if action == ObjectChangeActionChoices.ACTION_CREATE:
@@ -90,19 +103,28 @@ def _handle_changed_object(request, sender, instance, **kwargs):
         ObjectChange.objects.filter(time__lt=cutoff).delete()
 
 
-def _handle_deleted_object(request, sender, instance, **kwargs):
+def _handle_deleted_object(change_context, sender, instance, **kwargs):
     """
     Fires when an object is deleted.
     """
+    from .jobs import enqueue_job_hooks  # avoid circular import
+
     # Record an ObjectChange if applicable
     if hasattr(instance, "to_objectchange"):
         objectchange = instance.to_objectchange(ObjectChangeActionChoices.ACTION_DELETE)
-        objectchange.user = _get_user_if_authenticated(request, objectchange)
-        objectchange.request_id = request.id
+        objectchange.user = _get_user_if_authenticated(change_context.get_user(), objectchange)
+        objectchange.request_id = change_context.change_id
+        objectchange.change_context = change_context.context
+        objectchange.change_context_detail = change_context.context_detail
         objectchange.save()
 
+        # Enqueue job hooks
+        enqueue_job_hooks(objectchange)
+
     # Enqueue webhooks
-    enqueue_webhooks(instance, request.user, request.id, ObjectChangeActionChoices.ACTION_DELETE)
+    enqueue_webhooks(
+        instance, change_context.get_user(), change_context.change_id, ObjectChangeActionChoices.ACTION_DELETE
+    )
 
     # Increment metric counters
     model_deletes.labels(instance._meta.model_name).inc()
@@ -119,6 +141,7 @@ def handle_cf_removed_obj_types(instance, action, pk_set, **kwargs):
     """
     if action == "post_remove":
         # Existing content types have been removed from the custom field, delete their data
+        # 2.0 TODO: #824 instance.slug rather than instance.name
         transaction.on_commit(lambda: delete_custom_field_data.delay(instance.name, pk_set))
 
     elif action == "post_add":
@@ -188,12 +211,41 @@ def git_repository_pre_delete(instance, **kwargs):
         job_result.set_status(JobResultStatusChoices.STATUS_COMPLETED)
     job_result.save()
 
-    # TODO: In a distributed Nautobot deployment, each Django instance and/or RQ worker instance may have its own clone
+    # TODO: In a distributed Nautobot deployment, each Django instance and/or worker instance may have its own clone
     # of this repository; we need some way to ensure that all such clones are deleted.
     # For now we just delete the one that we have locally and rely on other methods (notably get_jobs())
     # to clean up other clones as they're encountered.
     if os.path.isdir(instance.filesystem_path):
         shutil.rmtree(instance.filesystem_path)
+
+
+#
+# Dynamic Groups
+#
+
+
+def dynamic_group_children_changed(sender, instance, action, reverse, model, pk_set, **kwargs):
+    """
+    Disallow adding DynamicGroup children if the parent has a filter.
+    """
+    if action == "pre_add" and instance.filter:
+        raise ValidationError(
+            {
+                "children": "A parent group may have either a filter or child groups, but not both. Clear the parent filter and try again."
+            }
+        )
+
+
+def dynamic_group_membership_created(sender, instance, **kwargs):
+    """
+    Forcibly call `full_clean()` when a new `DynamicGroupMembership` object
+    is manually created to prevent inadvertantly creating invalid memberships.
+    """
+    instance.full_clean()
+
+
+m2m_changed.connect(dynamic_group_children_changed, sender=DynamicGroup.children.through)
+pre_save.connect(dynamic_group_membership_created, sender=DynamicGroupMembership)
 
 
 #
@@ -206,7 +258,7 @@ def refresh_job_models(sender, *, apps, **kwargs):
     Callback for the nautobot_database_ready signal; updates Jobs in the database based on Job source file availability.
     """
     Job = apps.get_model("extras", "Job")
-    GitRepository = apps.get_model("extras", "GitRepository")
+    GitRepository = apps.get_model("extras", "GitRepository")  # pylint: disable=redefined-outer-name
 
     # To make reverse migrations safe
     if not hasattr(Job, "job_class_name") or not hasattr(Job, "git_repository"):
@@ -227,8 +279,8 @@ def refresh_job_models(sender, *, apps, **kwargs):
                 logger.warning('GitRepository "%s" not found?', source[4:])
             source = "git"
 
-        for module_name, module_details in modules.items():
-            for job_class_name, job_class in module_details["jobs"].items():
+        for module_details in modules.values():
+            for job_class in module_details["jobs"].values():
                 # TODO: catch DB error in case where multiple Jobs have the same grouping + name
                 job_model, _ = refresh_job_model_from_job_class(Job, source, job_class, git_repository=git_repository)
                 if job_model is not None:

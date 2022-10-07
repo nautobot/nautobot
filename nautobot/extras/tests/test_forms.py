@@ -1,21 +1,229 @@
 import json
+import warnings
+
 from django.contrib.contenttypes.models import ContentType
+from django.contrib.auth import get_user_model
 from django.db.models import Q
 from django.test import TestCase
 
-from nautobot.dcim.forms import DeviceForm
+from nautobot.dcim.forms import DeviceForm, SiteBulkEditForm, SiteForm
 import nautobot.dcim.models as dcim_models
 from nautobot.extras.choices import RelationshipTypeChoices
-from nautobot.extras.forms import WebhookForm
-from nautobot.extras.models import Relationship, RelationshipAssociation, Status, Webhook
-from nautobot.ipam.forms import IPAddressForm, VLANGroupForm
+from nautobot.extras.forms import (
+    CustomFieldModelBulkEditFormMixin,
+    CustomFieldModelFilterFormMixin,
+    CustomFieldModelFormMixin,
+    JobEditForm,
+    JobHookForm,
+    RelationshipModelFormMixin,
+    StatusModelBulkEditFormMixin,
+    StatusModelFilterFormMixin,
+    TagsBulkEditFormMixin,
+    WebhookForm,
+)
+from nautobot.extras.models import Job, JobHook, Note, Relationship, RelationshipAssociation, Status, Webhook
+from nautobot.ipam.forms import IPAddressForm, IPAddressBulkEditForm, VLANGroupForm
 import nautobot.ipam.models as ipam_models
+
+
+# Use the proper swappable User model
+User = get_user_model()
+
+
+class JobHookFormTestCase(TestCase):
+    @classmethod
+    def setUpTestData(cls):
+        job_hook = JobHook.objects.create(
+            name="JobHook1",
+            job=Job.objects.get(job_class_name="TestJobHookReceiverLog"),
+            type_create=True,
+            type_update=True,
+            type_delete=False,
+        )
+        devicetype_ct = ContentType.objects.get_for_model(dcim_models.DeviceType)
+        site_ct = ContentType.objects.get_for_model(dcim_models.Site)
+        job_hook.content_types.set([devicetype_ct])
+
+        cls.job_hooks_data = (
+            {
+                "name": "JobHook2",
+                "content_types": [devicetype_ct.pk],
+                "job": Job.objects.get(job_class_name="TestJobHookReceiverChange"),
+                "type_create": True,
+                "type_update": True,
+                "type_delete": False,
+            },
+            {
+                "name": "JobHook3",
+                "content_types": [devicetype_ct.pk],
+                "job": Job.objects.get(job_class_name="TestJobHookReceiverLog"),
+                "type_create": False,
+                "type_update": False,
+                "type_delete": True,
+            },
+            {
+                "name": "JobHook4",
+                "content_types": [site_ct.pk],
+                "job": Job.objects.get(job_class_name="TestJobHookReceiverLog"),
+                "type_create": True,
+                "type_update": True,
+                "type_delete": True,
+            },
+            {
+                "name": "JobHook5",
+                "content_types": [devicetype_ct.pk],
+                "job": Job.objects.get(job_class_name="TestJobHookReceiverLog"),
+                "type_create": True,
+                "type_update": True,
+                "type_delete": True,
+            },
+        )
+
+    def test_create_job_hooks_with_same_content_type_same_action_diff_job(self):
+        """
+        Create a new job hook with the same content_types, same action and different job from a job hook that exists
+
+        Example:
+            Job hook 1: dcim | device type, create, update, Job(job_class_name="TestJobHookReceiverLog")
+            Job hook 2: dcim | device type, create, update, Job(job_class_name="TestJobHookReceiverChange")
+        """
+        form = JobHookForm(data=self.job_hooks_data[0])
+
+        self.assertTrue(form.is_valid())
+        form.save()
+
+        self.assertEqual(JobHook.objects.filter(name=self.job_hooks_data[0]["name"]).count(), 1)
+
+    def test_create_job_hooks_with_same_content_type_same_job_diff_action(self):
+        """
+        Create a new job hook with the same content_types, same job and different actions from a job hook that exists
+
+        Example:
+            Job hook 1: dcim | device type, create, update, Job(job_class_name="TestJobHookReceiverLog")
+            Job hook 2: dcim | device type, delete, Job(job_class_name="TestJobHookReceiverLog")
+        """
+        form = JobHookForm(data=self.job_hooks_data[1])
+
+        self.assertTrue(form.is_valid())
+        form.save()
+
+        self.assertEqual(JobHook.objects.filter(name=self.job_hooks_data[1]["name"]).count(), 1)
+
+    def test_create_job_hooks_with_same_job_same_action_diff_content_type(self):
+        """
+        Create a new job hook with the same job, same actions and different content types from a job hook that exists
+
+        Example:
+            Job hook 1: dcim | device type, create, update, Job(job_class_name="TestJobHookReceiverLog")
+            Job hook 2: dcim | site, create, update, Job(job_class_name="TestJobHookReceiverLog")
+        """
+        form = JobHookForm(data=self.job_hooks_data[2])
+
+        self.assertTrue(form.is_valid())
+        form.save()
+
+        self.assertEqual(JobHook.objects.filter(name=self.job_hooks_data[2]["name"]).count(), 1)
+
+    def test_create_job_hooks_with_same_job_common_action_same_content_type(self):
+        """
+        Create a new job hook with the same job, common actions and same content types as a job hook that exists
+
+        Example:
+            Job hook 1: dcim | device type, create, update, Job(job_class_name="TestJobHookReceiverLog")
+            Job hook 2: dcim | device type, create, update, delete, Job(job_class_name="TestJobHookReceiverLog")
+        """
+        form = JobHookForm(data=self.job_hooks_data[3])
+
+        self.assertFalse(form.is_valid())
+        error_msg = json.loads(form.errors.as_json())
+
+        self.assertEqual(JobHook.objects.filter(name=self.job_hooks_data[3]["name"]).count(), 0)
+        self.assertIn("type_create", error_msg)
+        self.assertEqual(
+            error_msg["type_create"][0]["message"],
+            "A job hook already exists for create on dcim | device type to job TestJobHookReceiverLog",
+        )
+        self.assertEqual(
+            error_msg["type_update"][0]["message"],
+            "A job hook already exists for update on dcim | device type to job TestJobHookReceiverLog",
+        )
+
+
+class NoteModelFormTestCase(TestCase):
+    """
+    TestNoteModelForm validation and saving.
+    """
+
+    fixtures = ("status",)
+
+    @classmethod
+    def setUpTestData(cls):
+        active = Status.objects.get(slug="active")
+        cls.user = User.objects.create(username="formuser1")
+
+        cls.site_form_base_data = {
+            "name": "Site 1",
+            "slug": "site-1",
+            "status": active.pk,
+        }
+
+    def test_note_object_edit_form(self):
+
+        form = SiteForm(data=dict(**self.site_form_base_data, **{"object_note": "This is a test."}))
+        self.assertTrue(form.is_valid())
+        obj = form.save()
+        form.save_note(
+            instance=obj,
+            user=self.user,
+        )
+        note = Note.objects.first()
+        self.assertEqual(1, Note.objects.count())
+        self.assertEqual("This is a test.", note.note)
+        self.assertEqual(obj, note.assigned_object)
+        self.assertEqual(self.user, note.user)
+
+
+class NoteModelBulkEditFormMixinTestCase(TestCase):
+    """
+    TestNoteModelForm validation and saving.
+    """
+
+    fixtures = ("status",)
+
+    @classmethod
+    def setUpTestData(cls):
+        active = Status.objects.get(slug="active")
+        cls.sites = [
+            dcim_models.Site.objects.create(name="Site 1", slug="site-1", status=active),
+            dcim_models.Site.objects.create(name="Site 2", slug="site-2", status=active),
+        ]
+        cls.user = User.objects.create(username="formuser1")
+
+    def test_note_bulk_edit(self):
+        form = SiteBulkEditForm(
+            model=dcim_models.Site, data={"pks": [site.pk for site in self.sites], "object_note": "Test"}
+        )
+        form.is_valid()
+        form.save_note(
+            instance=self.sites[0],
+            user=self.user,
+        )
+        form.save_note(
+            instance=self.sites[1],
+            user=self.user,
+        )
+        notes = Note.objects.all()
+        self.assertEqual(2, Note.objects.count())
+        self.assertEqual("Test", notes[0].note)
+        self.assertEqual("Test", notes[1].note)
 
 
 class RelationshipModelFormTestCase(TestCase):
     """
     Test RelationshipModelForm validation and saving.
     """
+
+    fixtures = ("status",)
 
     @classmethod
     def setUpTestData(cls):
@@ -462,6 +670,238 @@ class RelationshipModelFormTestCase(TestCase):
         )
 
 
+class RelationshipModelBulkEditFormMixinTestCase(TestCase):
+    """
+    Test RelationshipModelBulkEditFormMixin validation and saving.
+    """
+
+    fixtures = ("status",)
+
+    @classmethod
+    def setUpTestData(cls):
+        active = Status.objects.get(slug="active")
+        cls.sites = [
+            dcim_models.Site.objects.create(name="Site 1", slug="site-1", status=active),
+            dcim_models.Site.objects.create(name="Site 2", slug="site-2", status=active),
+        ]
+        cls.ipaddresses = [
+            ipam_models.IPAddress.objects.create(address="10.1.1.1/24", status=active),
+            ipam_models.IPAddress.objects.create(address="10.2.2.2/24", status=active),
+        ]
+
+        cls.rel_1to1 = Relationship(
+            name="Primary IP Address",
+            slug="primary-ip-address",
+            source_type=ContentType.objects.get_for_model(dcim_models.Site),
+            destination_type=ContentType.objects.get_for_model(ipam_models.IPAddress),
+            type=RelationshipTypeChoices.TYPE_ONE_TO_ONE,
+        )
+        cls.rel_1to1.validated_save()
+
+        cls.rel_1tom = Relationship(
+            name="Addresses per site",
+            slug="addresses-per-site",
+            source_type=ContentType.objects.get_for_model(dcim_models.Site),
+            destination_type=ContentType.objects.get_for_model(ipam_models.IPAddress),
+            type=RelationshipTypeChoices.TYPE_ONE_TO_MANY,
+        )
+        cls.rel_1tom.validated_save()
+
+        cls.rel_mtom = Relationship(
+            name="Multiplexing",
+            slug="multiplexing",
+            source_type=ContentType.objects.get_for_model(dcim_models.Site),
+            destination_type=ContentType.objects.get_for_model(ipam_models.IPAddress),
+            type=RelationshipTypeChoices.TYPE_MANY_TO_MANY,
+        )
+        cls.rel_mtom.validated_save()
+
+        cls.rel_mtom_s = Relationship(
+            name="Peer Sites",
+            slug="peer-sites",
+            source_type=ContentType.objects.get_for_model(dcim_models.Site),
+            destination_type=ContentType.objects.get_for_model(dcim_models.Site),
+            type=RelationshipTypeChoices.TYPE_MANY_TO_MANY_SYMMETRIC,
+        )
+        cls.rel_mtom_s.validated_save()
+
+    def test_site_form_rendering(self):
+        form = SiteBulkEditForm(dcim_models.Site)
+        self.assertEqual(
+            set(form.relationships),
+            {
+                "cr_addresses-per-site__destination",
+                "cr_multiplexing__destination",
+                "cr_peer-sites__peer",
+                "cr_primary-ip-address__destination",
+            },
+        )
+
+        # One-to-many relationship is nullable but not editable
+        self.assertIn("cr_addresses-per-site__destination", form.fields)
+        self.assertTrue(form.fields["cr_addresses-per-site__destination"].disabled)
+        self.assertIn("cr_addresses-per-site__destination", form.nullable_fields)
+
+        # Many-to-many relationship has add/remove fields but is not directly editable or nullable
+        self.assertNotIn("cr_multiplexing__destination", form.fields)
+        self.assertIn("add_cr_multiplexing__destination", form.fields)
+        self.assertIn("remove_cr_multiplexing__destination", form.fields)
+        self.assertNotIn("cr_multiplexing__destination", form.nullable_fields)
+
+        # Symmetric many-to-many relationship has add/remove fields but is not directly editable or nullable
+        self.assertNotIn("cr_peer-sites__peer", form.fields)
+        self.assertIn("add_cr_peer-sites__peer", form.fields)
+        self.assertIn("remove_cr_peer-sites__peer", form.fields)
+        self.assertNotIn("cr_peer-sites__peer", form.nullable_fields)
+
+        # One-to-one relationship is nullable but not editable
+        self.assertIn("cr_primary-ip-address__destination", form.fields)
+        self.assertTrue(form.fields["cr_primary-ip-address__destination"].disabled)
+        self.assertIn("cr_primary-ip-address__destination", form.nullable_fields)
+
+    def test_ipaddress_form_rendering(self):
+        form = IPAddressBulkEditForm(ipam_models.IPAddress)
+        self.assertEqual(
+            set(form.relationships),
+            {
+                "cr_addresses-per-site__source",
+                "cr_multiplexing__source",
+                "cr_primary-ip-address__source",
+            },
+        )
+
+        # Many-to-one relationship is editable and nullable
+        self.assertIn("cr_addresses-per-site__source", form.fields)
+        self.assertIn("cr_addresses-per-site__source", form.nullable_fields)
+
+        # Many-to-many relationship has add/remove fields but is not directly editable or nullable
+        self.assertNotIn("cr_multiplexing__source", form.fields)
+        self.assertIn("add_cr_multiplexing__source", form.fields)
+        self.assertIn("remove_cr_multiplexing__source", form.fields)
+        self.assertNotIn("cr_multiplexing__source", form.nullable_fields)
+
+        # One-to-one relationship is nullable but not editable
+        self.assertIn("cr_primary-ip-address__source", form.fields)
+        self.assertTrue(form.fields["cr_primary-ip-address__source"].disabled)
+        self.assertIn("cr_primary-ip-address__source", form.nullable_fields)
+
+    def test_site_form_nullification(self):
+        """Test nullification of existing relationship-associations."""
+        RelationshipAssociation.objects.create(
+            relationship=self.rel_1to1,
+            source=self.sites[0],
+            destination=self.ipaddresses[0],
+        )
+        RelationshipAssociation.objects.create(
+            relationship=self.rel_1to1,
+            source=self.sites[1],
+            destination=self.ipaddresses[1],
+        )
+        RelationshipAssociation.objects.create(
+            relationship=self.rel_1tom,
+            source=self.sites[0],
+            destination=self.ipaddresses[0],
+        )
+        RelationshipAssociation.objects.create(
+            relationship=self.rel_1tom,
+            source=self.sites[0],
+            destination=self.ipaddresses[1],
+        )
+
+        form = SiteBulkEditForm(model=dcim_models.Site, data={"pks": [site.pk for site in self.sites]})
+        form.is_valid()
+        form.save_relationships(
+            instance=self.sites[0],
+            nullified_fields=["cr_primary-ip-address__destination", "cr_addresses-per-site__destination"],
+        )
+        form.save_relationships(
+            instance=self.sites[1],
+            nullified_fields=["cr_primary-ip-address__destination", "cr_addresses-per-site__destination"],
+        )
+
+        self.assertEqual(0, RelationshipAssociation.objects.count())
+
+    def test_site_form_add_mtom(self):
+        """Test addition of relationship-associations for many-to-many relationships."""
+        form = SiteBulkEditForm(
+            model=dcim_models.Site,
+            data={
+                "pks": [self.sites[0].pk],
+                "add_cr_multiplexing__destination": [ipaddress.pk for ipaddress in self.ipaddresses],
+                "add_cr_peer-sites__peer": [self.sites[1].pk],
+            },
+        )
+        form.is_valid()
+        form.save_relationships(instance=self.sites[0], nullified_fields=[])
+
+        ras = RelationshipAssociation.objects.filter(relationship=self.rel_mtom, source_id=self.sites[0].pk)
+        self.assertEqual(2, ras.count())
+        ras = RelationshipAssociation.objects.filter(relationship=self.rel_mtom_s)
+        self.assertEqual(1, ras.count())
+
+    def test_site_form_remove_mtom(self):
+        """Test removal of relationship-associations for many-to-many relationships."""
+        RelationshipAssociation.objects.create(
+            relationship=self.rel_mtom,
+            source=self.sites[0],
+            destination=self.ipaddresses[0],
+        )
+        RelationshipAssociation.objects.create(
+            relationship=self.rel_mtom,
+            source=self.sites[0],
+            destination=self.ipaddresses[1],
+        )
+        RelationshipAssociation.objects.create(
+            relationship=self.rel_mtom,
+            source=self.sites[1],
+            destination=self.ipaddresses[0],
+        )
+        RelationshipAssociation.objects.create(
+            relationship=self.rel_mtom,
+            source=self.sites[1],
+            destination=self.ipaddresses[1],
+        )
+        RelationshipAssociation.objects.create(
+            relationship=self.rel_mtom_s,
+            source=self.sites[0],
+            destination=self.sites[1],
+        )
+        form = SiteBulkEditForm(
+            model=dcim_models.Site,
+            data={
+                "pks": [self.sites[0].pk, self.sites[1].pk],
+                "remove_cr_multiplexing__destination": [self.ipaddresses[0].pk],
+                "remove_cr_peer-sites__peer": [self.sites[0].pk, self.sites[1].pk],
+            },
+        )
+        form.is_valid()
+        form.save_relationships(instance=self.sites[0], nullified_fields=[])
+        form.save_relationships(instance=self.sites[1], nullified_fields=[])
+
+        ras = RelationshipAssociation.objects.filter(relationship=self.rel_mtom)
+        self.assertEqual(2, ras.count())
+        for ra in ras:
+            self.assertEqual(self.ipaddresses[1], ra.destination)
+
+        ras = RelationshipAssociation.objects.filter(relationship=self.rel_mtom_s)
+        self.assertEqual(0, ras.count())
+
+    def test_ipaddress_form_add_mto1(self):
+        """Test addition of relationship-associations for many-to-one relationships."""
+        form = IPAddressBulkEditForm(
+            model=ipam_models.IPAddress,
+            data={
+                "pks": [self.ipaddresses[0].pk],
+                "cr_addresses-per-site__source": self.sites[0].pk,
+            },
+        )
+        form.is_valid()
+        form.save_relationships(instance=self.ipaddresses[0], nullified_fields=[])
+
+        ras = RelationshipAssociation.objects.filter(relationship=self.rel_1tom)
+        self.assertEqual(1, ras.count())
+
+
 class WebhookFormTestCase(TestCase):
     @classmethod
     def setUpTestData(cls):
@@ -562,11 +1002,102 @@ class WebhookFormTestCase(TestCase):
 
         self.assertEqual(Webhook.objects.filter(name=self.webhooks_data[2]["name"]).count(), 0)
         self.assertIn("type_create", error_msg)
-        self.assertEquals(
+        self.assertEqual(
             error_msg["type_create"][0]["message"],
             "A webhook already exists for create on dcim | console port to URL http://example.com/test",
         )
-        self.assertEquals(
+        self.assertEqual(
             error_msg["type_update"][0]["message"],
             "A webhook already exists for update on dcim | console port to URL http://example.com/test",
+        )
+
+
+class DeprecatedAliasesTestCase(TestCase):
+    """Test that deprecated class names still exist, but report a DeprecationWarning when used."""
+
+    def test_deprecated_form_mixin_classes(self):
+        # Importing these mixin classes doesn't directly warn, but subclassing them does.
+        from nautobot.extras.forms import (
+            AddRemoveTagsForm,
+            CustomFieldBulkEditForm,
+            CustomFieldBulkCreateForm,
+            CustomFieldFilterForm,
+            CustomFieldModelForm,
+            RelationshipModelForm,
+            StatusBulkEditFormMixin,
+            StatusFilterFormMixin,
+        )
+
+        for deprecated_form_class, replacement_form_class in (
+            (AddRemoveTagsForm, TagsBulkEditFormMixin),
+            (CustomFieldBulkEditForm, CustomFieldModelBulkEditFormMixin),
+            (CustomFieldBulkCreateForm, CustomFieldModelBulkEditFormMixin),
+            (CustomFieldFilterForm, CustomFieldModelFilterFormMixin),
+            (CustomFieldModelForm, CustomFieldModelFormMixin),
+            (RelationshipModelForm, RelationshipModelFormMixin),
+            (StatusBulkEditFormMixin, StatusModelBulkEditFormMixin),
+            (StatusFilterFormMixin, StatusModelFilterFormMixin),
+        ):
+            with self.subTest(msg=f"Replace {deprecated_form_class.__name__} with {replacement_form_class.__name__}"):
+                # Subclassing the deprecated class should raise a DeprecationWarning
+                with warnings.catch_warnings(record=True) as warn_list:
+                    # Ensure that warnings are always triggered
+                    warnings.simplefilter("always")
+
+                    class MyForm(deprecated_form_class):  # pylint: disable=unused-variable
+                        pass
+
+                    self.assertEqual(len(warn_list), 1)
+                    warning = warn_list[0]
+                    self.assertTrue(issubclass(warning.category, DeprecationWarning))
+                    self.assertIn(f"{deprecated_form_class.__name__} is deprecated", str(warning))
+                    self.assertIn(f"Instead of deriving MyForm from {deprecated_form_class.__name__}", str(warning))
+                    self.assertIn(f"inherit from class {replacement_form_class.__name__} instead", str(warning))
+
+                # Subclassing the replacement class should not warn
+                with warnings.catch_warnings(record=True) as warn_list:
+                    # Ensure that warnings are always triggered
+                    warnings.simplefilter("always")
+
+                    class MyBetterForm(replacement_form_class):  # pylint: disable=unused-variable
+                        pass
+
+                    self.assertEqual(len(warn_list), 0)
+
+
+class JobEditFormTestCase(TestCase):
+    def test_update_job_with_approval_required_and_has_has_sensitive_variables_is_true(self):
+        form_data = {
+            "grouping_override": True,
+            "grouping": "Overridden grouping",
+            "name_override": True,
+            "name": "Overridden name",
+            "slug": "overridden-slug",
+            "description_override": True,
+            "description": "This is an overridden description.",
+            "enabled": True,
+            "approval_required_override": True,
+            "approval_required": True,
+            "commit_default_override": True,
+            "commit_default": False,
+            "hidden_override": True,
+            "hidden": True,
+            "read_only_override": True,
+            "read_only": True,
+            "soft_time_limit_override": True,
+            "soft_time_limit": 350.1,
+            "time_limit_override": True,
+            "time_limit": 650,
+            "has_sensitive_variables": True,
+            "has_sensitive_variables_override": True,
+            "task_queues": [],
+            "task_queues_override": True,
+        }
+        form = JobEditForm(data=form_data)
+
+        self.assertFalse(form.is_valid())
+        error_msg = json.loads(form.errors.as_json())
+        self.assertEqual(
+            error_msg["approval_required"][0]["message"],
+            "A job that may have sensitive variables cannot be marked as requiring approval",
         )

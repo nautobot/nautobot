@@ -1,4 +1,5 @@
 import json
+from unittest import skip
 
 from django.contrib.auth import get_user_model
 from django.contrib.contenttypes.models import ContentType
@@ -32,6 +33,8 @@ from nautobot.dcim.models import (
     FrontPortTemplate,
     Interface,
     InterfaceTemplate,
+    Location,
+    LocationType,
     Manufacturer,
     InventoryItem,
     Platform,
@@ -53,6 +56,7 @@ from nautobot.dcim.models import (
 )
 from nautobot.extras.models import ConfigContextSchema, SecretsGroup, Status
 from nautobot.ipam.models import IPAddress, VLAN
+from nautobot.tenancy.models import Tenant
 from nautobot.utilities.testing import APITestCase, APIViewTestCases
 from nautobot.virtualization.models import Cluster, ClusterType
 
@@ -65,7 +69,7 @@ class AppTest(APITestCase):
     def test_root(self):
 
         url = reverse("dcim-api:api-root")
-        response = self.client.get("{}?format=api".format(url), **self.header)
+        response = self.client.get(f"{url}?format=api", **self.header)
 
         self.assertEqual(response.status_code, 200)
 
@@ -141,6 +145,7 @@ class SiteTest(APIViewTestCases.APIViewTestCase):
         "status": "planned",
     }
     choices_fields = ["status"]
+    fixtures = ("status",)
     slug_source = "name"
 
     @classmethod
@@ -265,71 +270,272 @@ class SiteTest(APIViewTestCases.APIViewTestCase):
         self.assertEqual(response.json()["time_zone"], None)
 
 
+class LocationTypeTest(APIViewTestCases.APIViewTestCase):
+    model = LocationType
+    brief_fields = ["display", "id", "name", "slug", "tree_depth", "url"]
+    bulk_update_data = {
+        "description": "Some generic description of multiple types. Not very useful.",
+    }
+    choices_fields = []  # TODO: what would we need to get ["content_types"] added as a choices field?
+    slug_source = "name"
+
+    @classmethod
+    def setUpTestData(cls):
+        lt1 = LocationType.objects.create(name="Campus")
+        lt2 = LocationType.objects.create(name="Building", parent=lt1)
+        lt3 = LocationType.objects.create(name="Floor", slug="building-floor", parent=lt2)
+        lt4 = LocationType.objects.create(name="Room", parent=lt3)
+        for lt in [lt1, lt2, lt3, lt4]:
+            lt.content_types.add(ContentType.objects.get_for_model(RackGroup))
+
+        cls.create_data = [
+            {
+                "name": "Standalone",
+            },
+            {
+                "name": "Elevator",
+                "parent": lt2.pk,
+                "content_types": ["ipam.prefix", "ipam.vlangroup", "ipam.vlan"],
+            },
+            {
+                "name": "Closet",
+                "slug": "closet",
+                "parent": lt3.pk,
+                "content_types": ["dcim.device"],
+                "description": "An enclosed space smaller than a room",
+            },
+        ]
+
+    def get_deletable_object_pks(self):
+        """To get the correct bulk-delete object count, make sure we avoid a cascade deletion."""
+        return [loctype.pk for loctype in list(LocationType.objects.filter(children__isnull=True))[:3]]
+
+
+class LocationTest(APIViewTestCases.APIViewTestCase):
+    model = Location
+    brief_fields = ["display", "id", "name", "slug", "tree_depth", "url"]
+    bulk_update_data = {
+        "status": "planned",
+    }
+    choices_fields = ["status"]
+    fixtures = ("status",)
+    slug_source = ["parent__slug", "name"]
+
+    @classmethod
+    def setUpTestData(cls):
+        lt1 = LocationType.objects.create(name="Campus")
+        lt2 = LocationType.objects.create(name="Building", parent=lt1)
+        lt3 = LocationType.objects.create(name="Floor", slug="building-floor", parent=lt2)
+        lt4 = LocationType.objects.create(name="Room", parent=lt3)
+
+        status_active = Status.objects.get(slug="active")
+        site = Site.objects.create(name="Research Triangle Area", status=status_active)
+        tenant = Tenant.objects.create(name="Test Tenant")
+
+        loc1 = Location.objects.create(name="RTP", location_type=lt1, status=status_active, site=site)
+        loc2 = Location.objects.create(name="RTP4E", location_type=lt2, status=status_active, parent=loc1)
+        loc3 = Location.objects.create(name="RTP4E-3", location_type=lt3, status=status_active, parent=loc2)
+        loc4 = Location.objects.create(
+            name="RTP4E-3-0101", location_type=lt4, status=status_active, parent=loc3, tenant=tenant
+        )
+        for loc in [loc1, loc2, loc3, loc4]:
+            loc.validated_save()
+
+        # FIXME(jathan): The writable serializer for `Device.status` takes the
+        # status `name` (str) and not the `pk` (int). Do not validate this
+        # field right now, since we are asserting that it does create correctly.
+        #
+        # The test code for utilities.testing.views.TestCase.model_to_dict()`
+        # needs to be enhanced to use the actual API serializers when `api=True`
+        cls.validation_excluded_fields = ["status"]
+
+        cls.create_data = [
+            {
+                "name": "Downtown Durham",
+                "location_type": lt1.pk,
+                "site": site.pk,
+                "status": "active",
+            },
+            {
+                "name": "RTP12",
+                "slug": "rtp-12",
+                "location_type": lt2.pk,
+                "parent": loc1.pk,
+                "status": "active",
+            },
+            {
+                "name": "RTP4E-2",
+                "location_type": lt3.pk,
+                "parent": loc2.pk,
+                "status": "active",
+                "description": "Second floor of RTP4E",
+                "tenant": tenant.pk,
+            },
+        ]
+
+        # Changing location_type of an existing instance is not permitted
+        cls.update_data = {
+            "name": "A revised location",
+            "slug": "a-different-slug",
+            "status": "planned",
+        }
+
+    def get_deletable_object_pks(self):
+        """Only return objects without children so that the deletion count is as expected."""
+        return [loc.pk for loc in list(Location.objects.filter(children__isnull=True))[:3]]
+
+
 class RackGroupTest(APIViewTestCases.APIViewTestCase):
     model = RackGroup
     brief_fields = ["_depth", "display", "id", "name", "rack_count", "slug", "url"]
     bulk_update_data = {
         "description": "New description",
     }
+    fixtures = ("status",)
     slug_source = "name"
 
     @classmethod
     def setUpTestData(cls):
+        cls.active = Status.objects.get(slug="active")
 
-        sites = (
-            Site.objects.create(name="Site 1", slug="site-1"),
-            Site.objects.create(name="Site 2", slug="site-2"),
+        cls.sites = (
+            Site.objects.create(name="Site 1", slug="site-1", status=cls.active),
+            Site.objects.create(name="Site 2", slug="site-2", status=cls.active),
         )
 
-        parent_rack_groups = (
-            RackGroup.objects.create(site=sites[0], name="Parent Rack Group 1", slug="parent-rack-group-1"),
-            RackGroup.objects.create(site=sites[1], name="Parent Rack Group 2", slug="parent-rack-group-2"),
+        cls.parent_rack_groups = (
+            RackGroup.objects.create(site=cls.sites[0], name="Parent Rack Group 1", slug="parent-rack-group-1"),
+            RackGroup.objects.create(site=cls.sites[1], name="Parent Rack Group 2", slug="parent-rack-group-2"),
+        )
+
+        location_type = LocationType.objects.create(name="Location Type 1")
+        location_type.content_types.add(ContentType.objects.get_for_model(RackGroup))
+
+        cls.locations = (
+            Location.objects.create(
+                name="Location 1", location_type=location_type, site=cls.sites[0], status=cls.active
+            ),
+            Location.objects.create(
+                name="Location 2", location_type=location_type, site=cls.sites[1], status=cls.active
+            ),
         )
 
         RackGroup.objects.create(
-            site=sites[0],
+            site=cls.sites[0],
             name="Rack Group 1",
             slug="rack-group-1",
-            parent=parent_rack_groups[0],
+            parent=cls.parent_rack_groups[0],
         )
         RackGroup.objects.create(
-            site=sites[0],
+            site=cls.sites[0],
             name="Rack Group 2",
             slug="rack-group-2",
-            parent=parent_rack_groups[0],
+            parent=cls.parent_rack_groups[0],
         )
         RackGroup.objects.create(
-            site=sites[0],
+            site=cls.sites[0],
+            location=cls.locations[0],
             name="Rack Group 3",
             slug="rack-group-3",
-            parent=parent_rack_groups[0],
+            parent=cls.parent_rack_groups[0],
         )
 
         cls.create_data = [
             {
                 "name": "Test Rack Group 4",
                 "slug": "test-rack-group-4",
-                "site": sites[1].pk,
-                "parent": parent_rack_groups[1].pk,
+                "site": cls.sites[1].pk,
+                "parent": cls.parent_rack_groups[1].pk,
             },
             {
                 "name": "Test Rack Group 5",
                 "slug": "test-rack-group-5",
-                "site": sites[1].pk,
-                "parent": parent_rack_groups[1].pk,
+                "site": cls.sites[1].pk,
+                "parent": cls.parent_rack_groups[1].pk,
             },
             {
                 "name": "Test Rack Group 6",
                 "slug": "test-rack-group-6",
-                "site": sites[1].pk,
-                "parent": parent_rack_groups[1].pk,
+                "site": cls.sites[1].pk,
+                "location": cls.locations[1].pk,
+                "parent": cls.parent_rack_groups[1].pk,
             },
             {
                 "name": "Test Rack Group 7",
-                "site": sites[1].pk,
-                "parent": parent_rack_groups[1].pk,
+                "site": cls.sites[1].pk,
+                "parent": cls.parent_rack_groups[1].pk,
             },
         ]
+
+    def get_deletable_object_pks(self):
+        """To get the correct bulk-delete object count, make sure we avoid a cascade deletion."""
+        return [group.pk for group in list(RackGroup.objects.filter(children__isnull=True))[:3]]
+
+    def test_site_location_mismatch(self):
+        """The specified location (if any) must belong to the specified site."""
+        self.add_permissions("dcim.add_rackgroup")
+        url = reverse("dcim-api:rackgroup-list")
+        location = Location.objects.create(
+            name="Peer Location", location_type=LocationType.objects.first(), site=self.sites[0], status=self.active
+        )
+        data = {
+            "name": "Bad Group",
+            "parent": self.parent_rack_groups[1].pk,
+            "site": self.sites[1].pk,
+            "location": location.pk,
+        }
+
+        response = self.client.post(url, **self.header, data=data, format="json")
+        self.assertHttpStatus(response, status.HTTP_400_BAD_REQUEST)
+        self.assertIn("location", response.json())
+        self.assertEqual(response.json()["location"], ['Location "Peer Location" does not belong to site "Site 2".'])
+
+    def test_child_group_location_valid(self):
+        """A child group with a location may fall within the parent group's location."""
+        self.add_permissions("dcim.add_rackgroup")
+        url = reverse("dcim-api:rackgroup-list")
+
+        parent_group = RackGroup.objects.filter(site=self.sites[0], location=self.locations[0]).first()
+        child_location_type = LocationType.objects.create(
+            name="Child Location Type", parent=self.locations[0].location_type
+        )
+        child_location_type.content_types.add(ContentType.objects.get_for_model(RackGroup))
+        child_location = Location.objects.create(
+            name="Child Location", location_type=child_location_type, parent=self.locations[0], status=self.active
+        )
+
+        data = {
+            "name": "Good Group",
+            "parent": parent_group.pk,
+            "site": self.sites[0].pk,
+            "location": child_location.pk,
+        }
+        response = self.client.post(url, **self.header, data=data, format="json")
+        self.assertHttpStatus(response, status.HTTP_201_CREATED)
+
+    def test_child_group_location_invalid(self):
+        """A child group with a location must not fall outside its parent group's location."""
+        self.add_permissions("dcim.add_rackgroup")
+        url = reverse("dcim-api:rackgroup-list")
+
+        parent_group = RackGroup.objects.filter(site=self.sites[0], location=self.locations[0]).first()
+        # Same site, but a sibling of locations[0], not a child of it.
+        sibling_location = Location.objects.create(
+            name="Location 1B", location_type=self.locations[0].location_type, site=self.sites[0], status=self.active
+        )
+
+        data = {
+            "name": "Good Group",
+            "parent": parent_group.pk,
+            "site": self.sites[0].pk,
+            "location": sibling_location.pk,
+        }
+        response = self.client.post(url, **self.header, data=data, format="json")
+        self.assertHttpStatus(response, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(
+            response.json()["location"],
+            ['Location "Location 1B" is not descended from parent rack group "Rack Group 3" location "Location 1".'],
+        )
 
 
 class RackRoleTest(APIViewTestCases.APIViewTestCase):
@@ -375,6 +581,7 @@ class RackTest(APIViewTestCases.APIViewTestCase):
     bulk_update_data = {
         "status": "planned",
     }
+    fixtures = ("status",)
     choices_fields = ["outer_unit", "status", "type", "width"]
 
     @classmethod
@@ -490,7 +697,8 @@ class RackTest(APIViewTestCases.APIViewTestCase):
         """
         rack = Rack.objects.first()
         self.add_permissions("dcim.view_rack")
-        url = "{}?render=svg".format(reverse("dcim-api:rack-elevation", kwargs={"pk": rack.pk}))
+        reverse_url = reverse("dcim-api:rack-elevation", kwargs={"pk": rack.pk})
+        url = f"{reverse_url}?render=svg"
 
         response = self.client.get(url, **self.header)
         self.assertHttpStatus(response, status.HTTP_200_OK)
@@ -505,7 +713,8 @@ class RackTest(APIViewTestCases.APIViewTestCase):
         """
         rack = Rack.objects.first()
         self.add_permissions("dcim.view_rack")
-        url = "{}?render=svg".format(reverse("dcim-api:rack-elevation", kwargs={"pk": rack.pk}))
+        reverse_url = reverse("dcim-api:rack-elevation", kwargs={"pk": rack.pk})
+        url = f"{reverse_url}?render=svg"
 
         response = self.client.get(url, **self.header)
         self.assertHttpStatus(response, status.HTTP_200_OK)
@@ -519,7 +728,8 @@ class RackTest(APIViewTestCases.APIViewTestCase):
         """
         rack = Rack.objects.first()
         self.add_permissions("dcim.view_rack")
-        url = "{}?render=svg".format(reverse("dcim-api:rack-elevation", kwargs={"pk": rack.pk}))
+        reverse_url = reverse("dcim-api:rack-elevation", kwargs={"pk": rack.pk})
+        url = f"{reverse_url}?render=svg"
 
         response = self.client.get(url, **self.header)
         self.assertHttpStatus(response, status.HTTP_200_OK)
@@ -878,19 +1088,19 @@ class FrontPortTemplateTest(APIViewTestCases.APIViewTestCase):
             name="Front Port Template 1",
             type=PortTypeChoices.TYPE_8P8C,
             rear_port=rear_port_templates[0],
-        ),
+        )
         FrontPortTemplate.objects.create(
             device_type=devicetype,
             name="Front Port Template 2",
             type=PortTypeChoices.TYPE_8P8C,
             rear_port=rear_port_templates[1],
-        ),
+        )
         FrontPortTemplate.objects.create(
             device_type=devicetype,
             name="Front Port Template 3",
             type=PortTypeChoices.TYPE_8P8C,
             rear_port=rear_port_templates[2],
-        ),
+        )
 
         cls.create_data = [
             {
@@ -1079,6 +1289,7 @@ class DeviceTest(APIViewTestCases.APIViewTestCase):
         "status": "failed",
     }
     choices_fields = ["face", "status"]
+    fixtures = ("status",)
 
     @classmethod
     def setUpTestData(cls):
@@ -1129,7 +1340,7 @@ class DeviceTest(APIViewTestCases.APIViewTestCase):
             cluster=clusters[0],
             secrets_group=secrets_groups[0],
             local_context_data={"A": 1},
-        ),
+        )
         Device.objects.create(
             device_type=device_types[0],
             device_role=device_roles[0],
@@ -1140,7 +1351,7 @@ class DeviceTest(APIViewTestCases.APIViewTestCase):
             cluster=clusters[0],
             secrets_group=secrets_groups[0],
             local_context_data={"B": 2},
-        ),
+        )
         Device.objects.create(
             device_type=device_types[0],
             device_role=device_roles[0],
@@ -1151,7 +1362,7 @@ class DeviceTest(APIViewTestCases.APIViewTestCase):
             cluster=clusters[0],
             secrets_group=secrets_groups[0],
             local_context_data={"C": 3},
-        ),
+        )
 
         # FIXME(jathan): The writable serializer for `Device.status` takes the
         # status `name` (str) and not the `pk` (int). Do not validate this
@@ -1199,9 +1410,10 @@ class DeviceTest(APIViewTestCases.APIViewTestCase):
         Check that config context data is included by default in the devices list.
         """
         self.add_permissions("dcim.view_device")
-        url = reverse("dcim-api:device-list") + "?slug=device-with-context-data"
+        url = reverse("dcim-api:device-list")
         response = self.client.get(url, **self.header)
 
+        self.assertHttpStatus(response, status.HTTP_200_OK)
         self.assertEqual(response.data["results"][0].get("config_context", {}).get("A"), 1)
 
     def test_config_context_excluded(self):
@@ -1212,6 +1424,7 @@ class DeviceTest(APIViewTestCases.APIViewTestCase):
         url = reverse("dcim-api:device-list") + "?exclude=config_context"
         response = self.client.get(url, **self.header)
 
+        self.assertHttpStatus(response, status.HTTP_200_OK)
         self.assertFalse("config_context" in response.data["results"][0])
 
     def test_unique_name_per_site_constraint(self):
@@ -1443,6 +1656,7 @@ class InterfaceTestVersion12(Mixins.ComponentTraceMixin, APIViewTestCases.APIVie
     bulk_update_data = {
         "description": "New description",
     }
+    fixtures = ("status",)
     peer_termination_type = Interface
     choices_fields = ["mode", "type", "status"]
 
@@ -1452,13 +1666,33 @@ class InterfaceTestVersion12(Mixins.ComponentTraceMixin, APIViewTestCases.APIVie
         devicetype = DeviceType.objects.create(manufacturer=manufacturer, model="Device Type 1", slug="device-type-1")
         site = Site.objects.create(name="Site 1", slug="site-1")
         devicerole = DeviceRole.objects.create(name="Test Device Role 1", slug="test-device-role-1", color="ff0000")
-        device = Device.objects.create(device_type=devicetype, device_role=devicerole, name="Device 1", site=site)
+        cls.devices = (
+            Device.objects.create(device_type=devicetype, device_role=devicerole, name="Device 1", site=site),
+            Device.objects.create(device_type=devicetype, device_role=devicerole, name="Device 2", site=site),
+            Device.objects.create(device_type=devicetype, device_role=devicerole, name="Device 3", site=site),
+        )
 
-        Interface.objects.create(device=device, name="Interface 1", type="1000base-t")
-        Interface.objects.create(device=device, name="Interface 2", type="1000base-t")
-        Interface.objects.create(device=device, name="Interface 3", type="1000base-t")
+        cls.virtualchassis = VirtualChassis.objects.create(
+            name="Virtual Chassis 1", master=cls.devices[0], domain="domain-1"
+        )
+        Device.objects.filter(id=cls.devices[0].id).update(virtual_chassis=cls.virtualchassis, vc_position=1)
+        Device.objects.filter(id=cls.devices[1].id).update(virtual_chassis=cls.virtualchassis, vc_position=2)
 
-        vlans = (
+        cls.interfaces = (
+            Interface.objects.create(device=cls.devices[0], name="Interface 1", type="1000base-t"),
+            Interface.objects.create(device=cls.devices[0], name="Interface 2", type="1000base-t"),
+            Interface.objects.create(device=cls.devices[0], name="Interface 3", type=InterfaceTypeChoices.TYPE_BRIDGE),
+            Interface.objects.create(
+                device=cls.devices[1], name="Interface 4", type=InterfaceTypeChoices.TYPE_1GE_GBIC
+            ),
+            Interface.objects.create(device=cls.devices[1], name="Interface 5", type=InterfaceTypeChoices.TYPE_LAG),
+            Interface.objects.create(device=cls.devices[2], name="Interface 6", type=InterfaceTypeChoices.TYPE_LAG),
+            Interface.objects.create(
+                device=cls.devices[2], name="Interface 7", type=InterfaceTypeChoices.TYPE_1GE_GBIC
+            ),
+        )
+
+        cls.vlans = (
             VLAN.objects.create(name="VLAN 1", vid=1),
             VLAN.objects.create(name="VLAN 2", vid=2),
             VLAN.objects.create(name="VLAN 3", vid=3),
@@ -1466,37 +1700,92 @@ class InterfaceTestVersion12(Mixins.ComponentTraceMixin, APIViewTestCases.APIVie
 
         cls.create_data = [
             {
-                "device": device.pk,
-                "name": "Interface 4",
+                "device": cls.devices[0].pk,
+                "name": "Interface 8",
                 "type": "1000base-t",
                 "mode": InterfaceModeChoices.MODE_TAGGED,
-                "tagged_vlans": [vlans[0].pk, vlans[1].pk],
-                "untagged_vlan": vlans[2].pk,
+                "tagged_vlans": [cls.vlans[0].pk, cls.vlans[1].pk],
+                "untagged_vlan": cls.vlans[2].pk,
             },
             {
-                "device": device.pk,
-                "name": "Interface 5",
+                "device": cls.devices[0].pk,
+                "name": "Interface 9",
                 "type": "1000base-t",
                 "mode": InterfaceModeChoices.MODE_TAGGED,
-                "tagged_vlans": [vlans[0].pk, vlans[1].pk],
-                "untagged_vlan": vlans[2].pk,
+                "bridge": cls.interfaces[3].pk,
+                "tagged_vlans": [cls.vlans[0].pk, cls.vlans[1].pk],
+                "untagged_vlan": cls.vlans[2].pk,
             },
             {
-                "device": device.pk,
-                "name": "Interface 6",
-                "type": "1000base-t",
+                "device": cls.devices[0].pk,
+                "name": "Interface 10",
+                "type": "virtual",
                 "mode": InterfaceModeChoices.MODE_TAGGED,
-                "tagged_vlans": [vlans[0].pk, vlans[1].pk],
-                "untagged_vlan": vlans[2].pk,
+                "parent_interface": cls.interfaces[1].pk,
+                "tagged_vlans": [cls.vlans[0].pk, cls.vlans[1].pk],
+                "untagged_vlan": cls.vlans[2].pk,
             },
+        ]
+
+        cls.untagged_vlan_data = {
+            "device": cls.devices[0].pk,
+            "name": "expected-to-fail",
+            "type": InterfaceTypeChoices.TYPE_VIRTUAL,
+            "untagged_vlan": cls.vlans[0].pk,
+        }
+
+        cls.common_device_or_vc_data = [
+            {
+                "device": cls.devices[0].pk,
+                "name": "interface test 1",
+                "type": InterfaceTypeChoices.TYPE_VIRTUAL,
+                "parent_interface": cls.interfaces[3].id,  # belongs to different device but same vc
+                "bridge": cls.interfaces[2].id,  # belongs to different device but same vc
+            },
+            {
+                "device": cls.devices[0].pk,
+                "name": "interface test 2",
+                "type": InterfaceTypeChoices.TYPE_1GE_GBIC,
+                "lag": cls.interfaces[4].id,  # belongs to different device but same vc
+            },
+        ]
+
+        cls.interfaces_not_belonging_to_same_device_data = [
+            [
+                "parent",
+                {
+                    "device": cls.devices[0].pk,
+                    "name": "interface test 1",
+                    "type": InterfaceTypeChoices.TYPE_VIRTUAL,
+                    "parent_interface": cls.interfaces[6].id,  # do not belong to same device or vc
+                },
+            ],
+            [
+                "bridge",
+                {
+                    "device": cls.devices[0].pk,
+                    "name": "interface test 2",
+                    "type": InterfaceTypeChoices.TYPE_1GE_GBIC,
+                    "bridge": cls.interfaces[6].id,  # does not belong to same device or vc
+                },
+            ],
+            [
+                "lag",
+                {
+                    "device": cls.devices[0].pk,
+                    "name": "interface test 3",
+                    "type": InterfaceTypeChoices.TYPE_1GE_GBIC,
+                    "lag": cls.interfaces[6].id,  # does not belong to same device or vc
+                },
+            ],
         ]
 
     def test_active_status_not_found(self):
         self.add_permissions("dcim.add_interface")
 
-        status = Status.objects.get_for_model(Interface).get(slug=InterfaceStatusChoices.STATUS_ACTIVE)
+        status_active = Status.objects.get_for_model(Interface).get(slug=InterfaceStatusChoices.STATUS_ACTIVE)
         interface_ct = ContentType.objects.get_for_model(Interface)
-        status.content_types.remove(interface_ct)
+        status_active.content_types.remove(interface_ct)
         device = Device.objects.first()
 
         data = {
@@ -1521,85 +1810,85 @@ class InterfaceTestVersion12(Mixins.ComponentTraceMixin, APIViewTestCases.APIVie
         """Test that when an `untagged_vlan` is specified, `mode` is also required."""
         self.add_permissions("dcim.add_interface")
 
-        vlan = VLAN.objects.first()
-        device = Device.objects.first()
-
         # This will fail.
-        data = {
-            "device": device.pk,
-            "name": "expected-to-fail",
-            "type": InterfaceTypeChoices.TYPE_VIRTUAL,
-            "untagged_vlan": vlan.pk,
-        }
-
         url = self._get_list_url()
-        self.assertHttpStatus(self.client.post(url, data, format="json", **self.header), status.HTTP_400_BAD_REQUEST)
+        self.assertHttpStatus(
+            self.client.post(url, self.untagged_vlan_data, format="json", **self.header), status.HTTP_400_BAD_REQUEST
+        )
 
         # Now let's add mode and it will work.
-        data["mode"] = InterfaceModeChoices.MODE_ACCESS
-        self.assertHttpStatus(self.client.post(url, data, format="json", **self.header), status.HTTP_201_CREATED)
+        self.untagged_vlan_data["mode"] = InterfaceModeChoices.MODE_ACCESS
+        self.assertHttpStatus(
+            self.client.post(url, self.untagged_vlan_data, format="json", **self.header), status.HTTP_201_CREATED
+        )
+
+    def test_interface_belonging_to_common_device_or_vc_allowed(self):
+        """Test parent, bridge, and LAG interfaces belonging to common device or VC is valid"""
+        self.add_permissions("dcim.add_interface")
+
+        response = self.client.post(
+            self._get_list_url(), data=self.common_device_or_vc_data[0], format="json", **self.header
+        )
+
+        self.assertHttpStatus(response, status.HTTP_201_CREATED)
+        queryset = Interface.objects.get(name="interface test 1", device=self.devices[0])
+        self.assertEqual(queryset.parent_interface, self.interfaces[3])
+        self.assertEqual(queryset.bridge, self.interfaces[2])
+
+        # Assert LAG
+        self.add_permissions("dcim.add_interface")
+
+        response = self.client.post(
+            self._get_list_url(), data=self.common_device_or_vc_data[1], format="json", **self.header
+        )
+
+        self.assertHttpStatus(response, status.HTTP_201_CREATED)
+        queryset = Interface.objects.get(name="interface test 2", device=self.devices[0])
+        self.assertEqual(queryset.lag, self.interfaces[4])
+
+    def test_interface_not_belonging_to_common_device_or_vc_not_allowed(self):
+        """Test parent, bridge, and LAG interfaces not belonging to common device or VC is invalid"""
+
+        self.add_permissions("dcim.add_interface")
+
+        for name, payload in self.interfaces_not_belonging_to_same_device_data:
+            response = self.client.post(self._get_list_url(), data=payload, format="json", **self.header)
+            self.assertHttpStatus(response, status.HTTP_400_BAD_REQUEST)
+
+            field_name = name.upper() if name == "lag" else name
+            error_field_name = f"{name}_interface" if name == "parent" else name
+
+            interface = Interface.objects.get(id=payload[error_field_name])
+            self.assertEqual(
+                str(response.data[error_field_name][0]),
+                f"The selected {field_name} interface ({interface}) belongs to {interface.parent}, which is "
+                f"not part of virtual chassis {self.virtualchassis}.",
+            )
 
 
-class InterfaceTestVersion14(Mixins.ComponentTraceMixin, APIViewTestCases.APIViewTestCase):
+class InterfaceTestVersion14(InterfaceTestVersion12):
     api_version = "1.4"
     validation_excluded_fields = ["status"]
-    model = Interface
-    brief_fields = ["cable", "device", "display", "id", "name", "url"]
-    bulk_update_data = {
-        "description": "New description",
-    }
-    peer_termination_type = Interface
-    choices_fields = ["mode", "type", "status"]
 
     @classmethod
     def setUpTestData(cls):
-        manufacturer = Manufacturer.objects.create(name="Test Manufacturer 1", slug="test-manufacturer-1")
-        devicetype = DeviceType.objects.create(manufacturer=manufacturer, model="Device Type 1", slug="device-type-1")
-        site = Site.objects.create(name="Site 1", slug="site-1")
-        devicerole = DeviceRole.objects.create(name="Test Device Role 1", slug="test-device-role-1", color="ff0000")
-        device = Device.objects.create(device_type=devicetype, device_role=devicerole, name="Device 1", site=site)
+        super().setUpTestData()
 
-        status_active = Status.objects.get_for_model(Interface).get(slug=InterfaceStatusChoices.STATUS_ACTIVE)
+        # Add status to all payload because status is required in v1.4
+        for i, _ in enumerate(cls.create_data):
+            cls.create_data[i]["status"] = "active"
 
-        Interface.objects.create(device=device, name="Interface 1", type="1000base-t", status=status_active)
-        Interface.objects.create(device=device, name="Interface 2", type="1000base-t", status=status_active)
-        Interface.objects.create(device=device, name="Interface 3", type="1000base-t", status=status_active)
+        cls.untagged_vlan_data["status"] = "active"
 
-        vlans = (
-            VLAN.objects.create(name="VLAN 1", vid=1),
-            VLAN.objects.create(name="VLAN 2", vid=2),
-            VLAN.objects.create(name="VLAN 3", vid=3),
-        )
+        for i, _ in enumerate(cls.common_device_or_vc_data):
+            cls.common_device_or_vc_data[i]["status"] = "active"
 
-        cls.create_data = [
-            {
-                "device": device.pk,
-                "name": "Interface 4",
-                "type": "1000base-t",
-                "mode": InterfaceModeChoices.MODE_TAGGED,
-                "tagged_vlans": [vlans[0].pk, vlans[1].pk],
-                "untagged_vlan": vlans[2].pk,
-                "status": "failed",
-            },
-            {
-                "device": device.pk,
-                "name": "Interface 5",
-                "type": "1000base-t",
-                "mode": InterfaceModeChoices.MODE_TAGGED,
-                "tagged_vlans": [vlans[0].pk, vlans[1].pk],
-                "untagged_vlan": vlans[2].pk,
-                "status": "active",
-            },
-            {
-                "device": device.pk,
-                "name": "Interface 6",
-                "type": "1000base-t",
-                "mode": InterfaceModeChoices.MODE_TAGGED,
-                "tagged_vlans": [vlans[0].pk, vlans[1].pk],
-                "untagged_vlan": vlans[2].pk,
-                "status": "active",
-            },
-        ]
+        for i, _ in enumerate(cls.interfaces_not_belonging_to_same_device_data):
+            cls.interfaces_not_belonging_to_same_device_data[i][1]["status"] = "active"
+
+    @skip("Test not required in v1.4")
+    def test_active_status_not_found(self):
+        pass
 
 
 class FrontPortTest(APIViewTestCases.APIViewTestCase):
@@ -1836,6 +2125,7 @@ class CableTest(APIViewTestCases.APIViewTestCase):
         "length_unit": "m",
     }
     choices_fields = ["termination_a_type", "termination_b_type", "type", "status", "length_unit"]
+    fixtures = ("status",)
 
     # TODO: Allow updating cable terminations
     test_update_object = None
@@ -1931,6 +2221,8 @@ class CableTest(APIViewTestCases.APIViewTestCase):
 
 
 class ConnectedDeviceTest(APITestCase):
+    fixtures = ("status",)
+
     def setUp(self):
 
         super().setUp()
@@ -1984,6 +2276,7 @@ class ConnectedDeviceTest(APITestCase):
 class VirtualChassisTest(APIViewTestCases.APIViewTestCase):
     model = VirtualChassis
     brief_fields = ["display", "id", "master", "member_count", "name", "url"]
+    fixtures = ("status",)
 
     @classmethod
     def setUpTestData(cls):
@@ -2190,9 +2483,9 @@ class PowerPanelTest(APIViewTestCases.APIViewTestCase):
             RackGroup.objects.create(name="Rack Group 4", slug="rack-group-3", site=sites[1]),
         )
 
-        PowerPanel.objects.create(site=sites[0], rack_group=rack_groups[0], name="Power Panel 1"),
-        PowerPanel.objects.create(site=sites[0], rack_group=rack_groups[1], name="Power Panel 2"),
-        PowerPanel.objects.create(site=sites[0], rack_group=rack_groups[2], name="Power Panel 3"),
+        PowerPanel.objects.create(site=sites[0], rack_group=rack_groups[0], name="Power Panel 1")
+        PowerPanel.objects.create(site=sites[0], rack_group=rack_groups[1], name="Power Panel 2")
+        PowerPanel.objects.create(site=sites[0], rack_group=rack_groups[2], name="Power Panel 3")
 
         cls.create_data = [
             {
@@ -2222,6 +2515,7 @@ class PowerFeedTest(APIViewTestCases.APIViewTestCase):
         "status": "planned",
     }
     choices_fields = ["phase", "status", "supply", "type"]
+    fixtures = ("status",)
 
     @classmethod
     def setUpTestData(cls):

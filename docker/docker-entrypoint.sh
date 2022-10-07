@@ -8,8 +8,12 @@ set -e
 DB_WAIT_TIMEOUT=${DB_WAIT_TIMEOUT-3}
 MAX_DB_WAIT_TIME=${MAX_DB_WAIT_TIME-30}
 CUR_DB_WAIT_TIME=0
+
+# set NAUTOBOT_DOCKER_SKIP_INIT to NAUTOBOT_DOCKER_SKIP_INIT, defaulting to false:
 NAUTOBOT_DOCKER_SKIP_INIT=${NAUTOBOT_DOCKER_SKIP_INIT-false}
-if [ "$NAUTOBOT_DOCKER_SKIP_INIT" == "false" ]; then
+# lowercase NAUTOBOT_DOCKER_SKIP_INIT:
+NAUTOBOT_DOCKER_SKIP_INIT=$(echo $NAUTOBOT_DOCKER_SKIP_INIT | tr '[:upper:]' '[:lower:]')
+if [[ "$NAUTOBOT_DOCKER_SKIP_INIT" == "false" ]]; then
   while ! nautobot-server post_upgrade --no-invalidate-all 2>&1 && [ "${CUR_DB_WAIT_TIME}" -lt "${MAX_DB_WAIT_TIME}" ]; do
     echo "⏳ Waiting on DB... (${CUR_DB_WAIT_TIME}s / ${MAX_DB_WAIT_TIME}s)"
     sleep "${DB_WAIT_TIMEOUT}"
@@ -82,6 +86,10 @@ fi
 
 if [ "$NAUTOBOT_UWSGI_LISTEN" ]; then
   sed -i "s@.*listen = .*\$@listen = $NAUTOBOT_UWSGI_LISTEN@" /opt/nautobot/uwsgi.ini
+fi
+
+if [ "$NAUTOBOT_UWSGI_BUFFER_SIZE" ]; then
+  sed -i "s@.*buffer-size = .*\$@buffer-size = $NAUTOBOT_UWSGI_BUFFER_SIZE@" /opt/nautobot/uwsgi.ini
 fi
 
 # Launch whatever is passed by docker
