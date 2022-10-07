@@ -750,7 +750,7 @@ class SiteTestCase(FilterTestCases.NameSlugFilterTestCase, FilterTestCases.Tenan
     def setUpTestData(cls):
         common_test_data(cls)
 
-        cls.regions = Region.objects.filter(parent__isnull=True).filter(children__isnull=True)[:2]
+        cls.regions = Region.objects.filter(sites__isnull=True, parent__isnull=True, children__isnull=True)[:2]
         Site.objects.create(name="Site 4", status=cls.site_status_map["retired"])
         Site.objects.create(name="Site 5", region=cls.regions[0], status=cls.site_status_map["active"])
         Site.objects.create(name="Site 6", region=cls.regions[1], status=cls.site_status_map["active"])
@@ -785,15 +785,24 @@ class SiteTestCase(FilterTestCases.NameSlugFilterTestCase, FilterTestCases.Tenan
 
     def test_status(self):
         params = {"status": ["active", "planned"]}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 4)
+        self.assertEqual(
+            self.filterset(params, self.queryset).qs.count(),
+            self.queryset.filter(status__slug__in=["active", "planned"]).count(),
+        )
 
     def test_region(self):
         with self.subTest():
             params = {"region_id": [self.regions[0].pk, self.regions[1].pk]}
-            self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+            self.assertEqual(
+                self.filterset(params, self.queryset).qs.count(),
+                self.queryset.filter(region__in=[self.regions[0].pk, self.regions[1].pk]).count(),
+            )
         with self.subTest():
             params = {"region": [self.regions[0].slug, self.regions[1].slug]}
-            self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+            self.assertEqual(
+                self.filterset(params, self.queryset).qs.count(),
+                self.queryset.filter(region__slug__in=[self.regions[0].slug, self.regions[1].slug]).count(),
+            )
 
     def test_search(self):
         value = self.queryset.values_list("pk", flat=True)[0]
@@ -1100,13 +1109,18 @@ class LocationFilterSetTestCase(FilterTestCases.NameSlugFilterTestCase, FilterTe
 
     def test_child_location_type(self):
         params = {"child_location_type": ["room-type", LocationType.objects.get(name="Building Type").pk]}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+        self.assertEqual(
+            self.filterset(params, self.queryset).qs.count(),
+            Location.objects.filter(location_type__slug="room-type").count()
+            + Location.objects.filter(location_type=LocationType.objects.get(name="Building Type").pk).count(),
+        )
 
     def test_content_type(self):
         params = {"content_type": ["dcim.device"]}
         ct = [ContentType.objects.get_for_model(Device)]
         self.assertEqual(
-            self.filterset(params, self.queryset).qs.count(), LocationType.objects.filter(content_types__in=ct).count()
+            self.filterset(params, self.queryset).qs.count(),
+            Location.objects.filter(location_type__content_types__in=ct).count(),
         )
 
     def test_description(self):
@@ -1116,7 +1130,10 @@ class LocationFilterSetTestCase(FilterTestCases.NameSlugFilterTestCase, FilterTe
     def test_site(self):
         params = {"site": [Site.objects.last().slug, Site.objects.last().pk]}
         # TODO: should this filter return descendant locations as well?
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 1)
+        self.assertEqual(
+            self.filterset(params, self.queryset).qs.count(),
+            Location.objects.filter(site=Site.objects.last().pk).count(),
+        )
 
 
 class RackGroupTestCase(FilterTestCases.NameSlugFilterTestCase):
@@ -4167,9 +4184,7 @@ class VirtualChassisTestCase(FilterTestCases.FilterTestCase):
         device_type = DeviceType.objects.create(manufacturer=manufacturer, model="Model 1", slug="model-1")
         device_role = DeviceRole.objects.create(name="Device Role 1", slug="device-role-1")
 
-        cls.regions = (
-            Region.objects.filter(sites__isnull=False).filter(parent__isnull=True).filter(children__isnull=True)[:3]
-        )
+        cls.regions = Region.objects.filter(sites__isnull=False, children__isnull=True, parent__isnull=True)[:3]
 
         cls.sites = (
             Site.objects.filter(region=cls.regions[0]).first(),

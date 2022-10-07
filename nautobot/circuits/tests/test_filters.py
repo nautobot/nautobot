@@ -33,11 +33,11 @@ class ProviderTestCase(FilterTestCases.NameSlugFilterTestCase):
             ),
         )
 
-        cls.regions = Region.objects.filter(sites__isnull=False).filter(parent__isnull=True)[:2]
+        cls.regions = Region.objects.filter(sites__isnull=False, children__isnull=True, parent__isnull=True)[:2]
 
         cls.sites = (
-            Site.objects.filter(region=cls.regions[0])[0],
-            Site.objects.filter(region=cls.regions[1])[0],
+            Site.objects.filter(region=cls.regions[0]).first(),
+            Site.objects.filter(region=cls.regions[1]).first(),
         )
 
         circuit_types = (
@@ -95,9 +95,7 @@ class CircuitTestCase(FilterTestCases.FilterTestCase, FilterTestCases.TenancyFil
     @classmethod
     def setUpTestData(cls):
 
-        cls.regions = (
-            Region.objects.filter(sites__isnull=False).filter(parent__isnull=True).filter(children__isnull=True)
-        )
+        cls.regions = Region.objects.filter(sites__isnull=False, children__isnull=True, parent__isnull=True)[:3]
 
         cls.sites = (
             Site.objects.filter(region=cls.regions[0]).first(),

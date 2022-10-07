@@ -143,7 +143,7 @@ class RouteTargetFactory(PrimaryModelFactory):
     has_description = factory.Faker("pybool")
     description = factory.Maybe("has_description", factory.Faker("text", max_nb_chars=200), "")
 
-    has_tenant = factory.Faker("pybool")
+    has_tenant = factory.Faker("boolean", chance_of_getting_true=75)
     tenant = factory.Maybe("has_tenant", random_instance(Tenant), None)
 
 

@@ -207,7 +207,7 @@ class RackGroupTestCase(TestCase):
         self.assertIn(f'Location "Location B" does not belong to site "{self.site_a.name}"', str(cm.exception))
 
         # Group location, if specified, must permit RackGroups
-        location_type_c = LocationType.objects.get(name="Floor")
+        location_type_c = LocationType.objects.get(name="Elevator")
         location_c = Location.objects.create(name="Location C", location_type=location_type_c, site=self.site_a)
         child = RackGroup(site=self.site_a, parent=self.rackgroup_a1, location=location_c, name="Child Group")
         with self.assertRaises(ValidationError) as cm:

@@ -234,8 +234,8 @@ class SiteTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         )
 
         cls.bulk_edit_data = {
-            "status": status_active.pk,
             "region": regions[1].pk,
+            "status": status_active.pk,
             "tenant": None,
             "asn": 65009,
             "time_zone": pytz.timezone("US/Eastern"),
@@ -363,11 +363,15 @@ class LocationTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         # and the test doesn't support that idea yet
 
     def get_deletable_object_pks(self):
-        """To get the correct bulk-delete object count, make sure we avoid a cascade deletion."""
-        return [loc.pk for loc in list(Location.objects.filter(parent__isnull=True).filter(children__isnull=True))[:3]]
+        """Create new locations without children so that the deletion count is as expected."""
+        lt5 = LocationType.objects.create(name="Delete Type")
+        loc_1 = Location.objects.create(name="delete 1", location_type=lt5)
+        loc_2 = Location.objects.create(name="delete 2", location_type=lt5)
+        loc_3 = Location.objects.create(name="delete 3", location_type=lt5)
+        return [loc_1.pk, loc_2.pk, loc_3.pk]
 
     def get_deletable_object(self):
-        """Return a deletable object"""
+        """Return a deletable location"""
         lt1 = LocationType.objects.get(name="Building")
         return Location.objects.create(location_type=lt1, name="delete this")
 

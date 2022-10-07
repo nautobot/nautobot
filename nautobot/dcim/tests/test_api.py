@@ -145,6 +145,10 @@ class RegionTest(APIViewTestCases.APIViewTestCase):
 
         return [r1.pk, r2.pk, r3.pk]
 
+    def get_deletable_object(self):
+        """Make a new region object and delete it so that the deleteion count is as expected."""
+        return Region.objects.create(name="Region 7", slug="region-4")
+
 
 class SiteTest(APIViewTestCases.APIViewTestCase):
     model = Site
@@ -401,8 +405,12 @@ class LocationTest(APIViewTestCases.APIViewTestCase):
         }
 
     def get_deletable_object_pks(self):
-        """Only return objects without children so that the deletion count is as expected."""
-        return [loc.pk for loc in list(Location.objects.filter(children__isnull=True).filter(parent__isnull=True))[:3]]
+        """Create new location objects without children so that the deletion count is as expected."""
+        lt5 = LocationType.objects.create(name="Delete Type")
+        loc_1 = Location.objects.create(name="delete 1", location_type=lt5)
+        loc_2 = Location.objects.create(name="delete 2", location_type=lt5)
+        loc_3 = Location.objects.create(name="delete 3", location_type=lt5)
+        return [loc_1.pk, loc_2.pk, loc_3.pk]
 
     def get_deletable_object(self):
         """To get the correct delete object count, make sure we avoid a cascade deletion."""
