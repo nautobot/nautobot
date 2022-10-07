@@ -17,9 +17,9 @@ A new optional job property `task_queues` has been introduced to allow Nautobot 
 !!! important
     The default celery queue name has been changed from `celery` to `default`. If you have any workers or tasks hard coded to use `celery` you will need to update those workers/tasks or change the [`CELERY_TASK_DEFAULT_QUEUE`](../configuration/optional-settings.md#celery_task_default_queue) setting in your `nautobot_config.py`.
 
-#### DynamicFilterForm to list views
+#### Redesigned List Filtering UI
 
-Added a dynamic filter form that allows users to filter the table by any field and lookup expression combination allowed by the FitlerSet.
+Added a dynamic filter form that allows users to filter object tables/lists by any field and lookup expression combination supported by the corresponding FilterSet and API.
 
 ### Changed
 
