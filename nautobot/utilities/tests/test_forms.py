@@ -674,7 +674,7 @@ class DynamicFilterFormTest(TestCase):
 
         with self.subTest("Assert get_lookup_field_choices"):
             self.assertEqual(
-                form.get_lookup_field_choices(),
+                form._get_lookup_field_choices(),
                 [
                     ("color", "Color"),
                     ("content_types", "Content type(s)"),
@@ -687,7 +687,7 @@ class DynamicFilterFormTest(TestCase):
                 ],
             )
             self.assertEqual(
-                site_form.get_lookup_field_choices(),
+                site_form._get_lookup_field_choices(),
                 [
                     ("asn", "ASN"),
                     ("cf_example_plugin_auto_custom_field", "Example Plugin Automatically Added Custom Field"),

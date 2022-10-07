@@ -284,7 +284,7 @@ class DynamicFilterForm(BootstrapMixin, forms.Form):
             contenttype = self.model._meta.app_label + "." + self.model._meta.model_name
 
             # Configure fields: Add css class and set choices for lookup_field
-            self.fields["lookup_field"].choices = add_blank_choice(self.get_lookup_field_choices())
+            self.fields["lookup_field"].choices = add_blank_choice(self._get_lookup_field_choices())
             self.fields["lookup_field"].widget.attrs["class"] = "nautobot-select2-static lookup_field-select"
 
             # Update lookup_type and lookup_value fields to match expected field types derived from data
@@ -317,7 +317,7 @@ class DynamicFilterForm(BootstrapMixin, forms.Form):
     def capitalize(field):
         return field  # TODO(Culver): Fix, custom field is not
 
-    def get_lookup_field_choices(self):
+    def _get_lookup_field_choices(self):
         """Get choices for lookup_fields i.e filterset parameters without a lookup expr"""
         filterset_without_lookup = (
             (name, field.label or self.capitalize(field.field_name))

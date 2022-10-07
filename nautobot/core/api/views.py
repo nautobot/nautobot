@@ -12,7 +12,6 @@ from django.db import transaction
 from django.db.models import ProtectedError
 from django.shortcuts import redirect
 from django_rq.queues import get_connection as get_rq_connection
-from drf_spectacular.types import OpenApiTypes
 from rest_framework import status
 from rest_framework.response import Response
 from rest_framework.reverse import reverse
@@ -23,7 +22,7 @@ from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.exceptions import PermissionDenied, ParseError
 from drf_spectacular.plumbing import get_relative_url, set_query_parameters
 from drf_spectacular.renderers import OpenApiJsonRenderer
-from drf_spectacular.utils import extend_schema, OpenApiParameter
+from drf_spectacular.utils import extend_schema
 from drf_spectacular.views import SpectacularSwaggerView, SpectacularRedocView
 from rq.worker import Worker as RQWorker
 
@@ -722,47 +721,7 @@ class GetFilterSetFieldLookupExpressionChoicesAPI(NautobotAPIVersionMixin, APIVi
 
     permission_classes = [IsAuthenticated]
 
-    @extend_schema(
-        parameters=[
-            OpenApiParameter(
-                name="content_type",
-                required=True,
-                type=OpenApiTypes.STR,
-            ),
-            OpenApiParameter(
-                name="field_name",
-                required=True,
-                type=OpenApiTypes.STR,
-            ),
-        ],
-        # Response schema has to be hardcoded because of the pagination
-        # An alternative would have been to include a `pagination_class` class property but this would require
-        # an inheritance from serializers.ListView which in turns requires `queryset` class property which
-        # can not be provided because this is not a model specific view.
-        responses={
-            200: {
-                "type": "object",
-                "properties": {
-                    "count": {
-                        "type": "integer",
-                        "example": 123,
-                    },
-                    "next": {"type": "string", "nullable": True, "example": None},
-                    "previous": {"type": "string", "nullable": True, "example": None},
-                    "results": {
-                        "type": "array",
-                        "items": {
-                            "type": "object",
-                            "properties": {
-                                "id": {"type": "string", "format": "uuid"},
-                                "name": {"type": "string"},
-                            },
-                        },
-                    },
-                },
-            }
-        },
-    )
+    @extend_schema(exclude=True)
     def get(self, request):
         if "content_type" not in request.GET or "field_name" not in request.GET:
             return Response(
@@ -801,28 +760,7 @@ class GetFilterSetFieldDOMElementAPI(NautobotAPIVersionMixin, APIView):
 
     permission_classes = [IsAuthenticated]
 
-    @extend_schema(
-        parameters=[
-            OpenApiParameter(
-                name="content_type",
-                required=True,
-                type=OpenApiTypes.STR,
-            ),
-            OpenApiParameter(
-                name="field_name",
-                required=True,
-                type=OpenApiTypes.STR,
-            ),
-        ],
-        responses={
-            200: {
-                "type": "object",
-                "properties": {
-                    "dom_element": {"type": "string"},
-                },
-            }
-        },
-    )
+    @extend_schema(exclude=True)
     def get(self, request):
         if "content_type" not in request.GET or "field_name" not in request.GET:
             return Response(
@@ -840,6 +778,8 @@ class GetFilterSetFieldDOMElementAPI(NautobotAPIVersionMixin, APIView):
                 status=400,
             )
         model_form = get_form_for_model(model)
+        if model_form is None:
+            return Response("field_name not found", 400)
         try:
             form_field = get_filterset_parameter_form_field(model, field_name)
         except FilterSetFieldNotFound:
