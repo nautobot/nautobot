@@ -10,7 +10,6 @@ from django.urls import reverse
 from nautobot.ipam.formfields import IPNetworkFormField
 from nautobot.utilities.utils import (
     build_lookup_label,
-    get_filterset_for_model,
     get_filterset_parameter_form_field,
 )
 
@@ -266,22 +265,23 @@ class DynamicFilterForm(BootstrapMixin, forms.Form):
         label="Value",
     )
 
-    def __init__(self, *args, model=None, **kwargs):
+    def __init__(self, *args, filterset=None, **kwargs):
         super().__init__(*args, **kwargs)
         from nautobot.utilities.forms import add_blank_choice  # Avoid circular import
 
         # cls.model is set at `dynamic_formset_factory()`
-        self.model = model or getattr(self, "model", None)
+        self.filterset = filterset or getattr(self, "filterset", None)
 
-        # Raise exception if `cls.model` not set and `model` not passed
-        if self.model is None:
-            raise AttributeError("'DynamicFilterForm' object requires `model` attribute")
+        # Raise exception if `cls.filterset` not set and `filterset` not passed
+        if self.filterset is None:
+            raise AttributeError("'DynamicFilterForm' object requires `filterset` attribute")
 
-        filterset_class = get_filterset_for_model(self.model)
-        if filterset_class is not None:
-            filterset = filterset_class()
+        model = self.filterset._meta.model
+
+        if self.filterset is not None:
+            filterset = self.filterset()
             self.filterset_filters = filterset.filters
-            contenttype = self.model._meta.app_label + "." + self.model._meta.model_name
+            contenttype = model._meta.app_label + "." + model._meta.model_name
 
             # Configure fields: Add css class and set choices for lookup_field
             self.fields["lookup_field"].choices = add_blank_choice(self._get_lookup_field_choices())
@@ -299,7 +299,7 @@ class DynamicFilterForm(BootstrapMixin, forms.Form):
                     verbose_name = self.filterset_filters[lookup_type].lookup_expr
                     label = build_lookup_label(lookup_type, verbose_name)
                     self.fields["lookup_type"].choices = [(lookup_type, label)]
-                    self.fields["lookup_value"] = get_filterset_parameter_form_field(self.model, lookup_type)
+                    self.fields["lookup_value"] = get_filterset_parameter_form_field(model, lookup_type)
 
             self.fields["lookup_type"].widget.attrs["data-query-param-field_name"] = json.dumps(["$lookup_field"])
             self.fields["lookup_type"].widget.attrs["data-contenttype"] = contenttype
@@ -311,7 +311,7 @@ class DynamicFilterForm(BootstrapMixin, forms.Form):
                 [lookup_value_css, "lookup_value-input form-control"]
             )
         else:
-            logger.warning(f"FilterSet for {self.model.__class__} not found.")
+            logger.warning(f"FilterSet for {model.__class__} not found.")
 
     @staticmethod
     def capitalize(field):
@@ -330,9 +330,9 @@ class DynamicFilterForm(BootstrapMixin, forms.Form):
         return sorted(filterset_without_lookup)
 
 
-def dynamic_formset_factory(model, data=None, **kwargs):
+def dynamic_formset_factory(filterset, data=None, **kwargs):
     filter_form = DynamicFilterForm
-    filter_form.model = model
+    filter_form.filterset = filterset
 
     params = {
         "can_delete_extra": True,
