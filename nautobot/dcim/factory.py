@@ -1,9 +1,11 @@
 import factory
+import pytz
 from factory.django import DjangoModelFactory
 
 from django.contrib.contenttypes.models import ContentType
 
 from nautobot.dcim.models import Location, LocationType, Region, Site, Device
+from nautobot.extras.models import Status
 from nautobot.ipam.models import Prefix, VLAN, VLANGroup
 from nautobot.tenancy.models import Tenant
 from nautobot.utilities.factory import random_instance, UniqueFaker
@@ -31,6 +33,7 @@ class SiteFactory(DjangoModelFactory):
         exclude = ("has_region", "has_tenant")
 
     name = UniqueFaker("street_address")
+    status = random_instance(lambda: Status.objects.get_for_model(Site), allow_null=False)
 
     has_region = factory.Faker("pybool")
     region = factory.Maybe("has_region", random_instance(Region), None)
@@ -38,7 +41,7 @@ class SiteFactory(DjangoModelFactory):
     has_tenant = factory.Faker("pybool")
     tenant = factory.Maybe("has_tenant", random_instance(Tenant))
 
-    time_zone = factory.Faker("timezone")
+    time_zone = pytz.timezone("US/Eastern")
     physical_address = factory.Faker("address")
     shipping_address = factory.Faker("address")
     latitude = factory.Faker("latitude")
@@ -62,13 +65,13 @@ class LocationTypeFactory(DjangoModelFactory):
             else ("Floor" if n == 2 else ("Elevator" if n == 3 else ("Room" if n == 4 else "Aisle")))
         )
     )
-    parent = factory.Sequence(
-        lambda n: None
-        if (n == 0 or n == 1)
+    parent = factory.LazyAttribute(
+        lambda l: LocationType.objects.get(name="Building")
+        if l.name in ["Floor", "Elevator"]
         else (
-            LocationType.objects.get(name="Building")
-            if (n == 2 or n == 3)
-            else (LocationType.objects.get(name="Floor") if n == 4 else LocationType.objects.get(name="Room"))
+            LocationType.objects.get(name="Floor")
+            if l.name == "Room"
+            else (LocationType.objects.get(name="Room") if l.name == "Aisle" else None)
         )
     )
 
@@ -80,12 +83,21 @@ class LocationTypeFactory(DjangoModelFactory):
         """Assign some contenttypes to a location after generation"""
         if self.name in ["Building", "Floor"]:
             self.content_types.set(
-                [ContentType.objects.get_for_model(Prefix), ContentType.objects.get_for_model(VLANGroup)]
+                [
+                    ContentType.objects.get_for_model(Prefix),
+                    ContentType.objects.get_for_model(VLANGroup),
+                    ContentType.objects.get_for_model(VLAN),
+                ]
             )
         elif self.name in ["Room", "Elevator"]:
             self.content_types.set([ContentType.objects.get_for_model(VLAN)])
         elif self.name in ["Aisle"]:
-            self.content_types.set([ContentType.objects.get_for_model(Device)])
+            self.content_types.set(
+                [
+                    ContentType.objects.get_for_model(Device),
+                    ContentType.objects.get_for_model(VLAN),
+                ]
+            )
 
 
 class LocationFactory(DjangoModelFactory):
@@ -112,6 +124,7 @@ class LocationFactory(DjangoModelFactory):
         )
     )
     name = factory.LazyAttributeSequence(lambda l, n: f"{l.location_type.name}-{n:02d}")
+    status = random_instance(lambda: Status.objects.get_for_model(Location), allow_null=False)
 
     has_parent = factory.LazyAttribute(lambda l: bool(l.location_type.parent))
     parent = factory.Maybe(

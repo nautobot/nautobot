@@ -29,6 +29,12 @@ class Command(BaseCommand):
             import factory.random
 
             from nautobot.extras.management import populate_status_choices
+            from nautobot.dcim.factory import (
+                RegionFactory,
+                SiteFactory,
+                LocationTypeFactory,
+                LocationFactory,
+            )
             from nautobot.ipam.factory import (
                 AggregateFactory,
                 RIRFactory,
@@ -67,11 +73,20 @@ Type 'yes' to continue, or 'no' to cancel: """
         self.stdout.write("Creating Statuses...")
         populate_status_choices(verbosity=0)  # for now just the basic ones; we should add a factory for random ones too
         self.stdout.write("Creating TenantGroups...")
-        TenantGroupFactory.create_batch(10, has_parent=False)
-        TenantGroupFactory.create_batch(10, has_parent=True)
+        TenantGroupFactory.create_batch(15, has_parent=False)
+        TenantGroupFactory.create_batch(15, has_parent=True)
         self.stdout.write("Creating Tenants...")
         TenantFactory.create_batch(10, has_group=False)
         TenantFactory.create_batch(10, has_group=True)
+        self.stdout.write("Creating Regions...")
+        RegionFactory.create_batch(15, has_parent=False)
+        RegionFactory.create_batch(5, has_parent=True)
+        self.stdout.write("Creating Sites...")
+        SiteFactory.create_batch(15)
+        self.stdout.write("Creating LocationTypes...")
+        LocationTypeFactory.create_batch(6)  # only 6 unique RIR names are hard-coded presently
+        self.stdout.write("Creating Locations...")
+        LocationFactory.create_batch(10)
         self.stdout.write("Creating RIRs...")
         RIRFactory.create_batch(9)  # only 9 unique RIR names are hard-coded presently
         self.stdout.write("Creating Aggregates...")

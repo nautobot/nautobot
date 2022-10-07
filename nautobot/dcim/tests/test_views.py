@@ -245,6 +245,17 @@ class SiteTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         cls.slug_source = "name"
         cls.slug_test_object = "Site 8"
 
+    def get_deletable_object(self):
+        return Site.objects.create(name="site-0")
+
+    def get_deletable_object_pks(self):
+        sites = [
+            Site.objects.create(name="site-1"),
+            Site.objects.create(name="site-2"),
+            Site.objects.create(name="site-3"),
+        ]
+        return [site.pk for site in sites]
+
 
 class LocationTypeTestCase(ViewTestCases.OrganizationalObjectViewTestCase):
     model = LocationType
@@ -353,7 +364,12 @@ class LocationTestCase(ViewTestCases.PrimaryObjectViewTestCase):
 
     def get_deletable_object_pks(self):
         """To get the correct bulk-delete object count, make sure we avoid a cascade deletion."""
-        return [loc.pk for loc in list(Location.objects.filter(children__isnull=True))[:3]]
+        return [loc.pk for loc in list(Location.objects.filter(parent__isnull=True).filter(children__isnull=True))[:3]]
+
+    def get_deletable_object(self):
+        """Return a deletable object"""
+        lt1 = LocationType.objects.get(name="Building")
+        return Location.objects.create(location_type=lt1, name="delete this")
 
 
 class RackGroupTestCase(ViewTestCases.OrganizationalObjectViewTestCase):

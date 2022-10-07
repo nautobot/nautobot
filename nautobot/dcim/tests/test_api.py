@@ -270,6 +270,17 @@ class SiteTest(APIViewTestCases.APIViewTestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(response.json()["time_zone"], None)
 
+    def get_deletable_object_pks(self):
+        """To get the correct bulk-delete object count, make sure we avoid a cascade deletion."""
+        site1 = Site.objects.create(name="Delete 1")
+        site2 = Site.objects.create(name="Delete 2")
+        site3 = Site.objects.create(name="Delete 3")
+        return [site1.pk, site2.pk, site3.pk]
+
+    def get_deletable_object(self):
+        """To get the correct delete object count, make sure we avoid a cascade deletion."""
+        return Site.objects.create(name="Delete 4")
+
 
 class LocationTypeTest(APIViewTestCases.APIViewTestCase):
     model = LocationType
@@ -391,7 +402,7 @@ class LocationTest(APIViewTestCases.APIViewTestCase):
 
     def get_deletable_object_pks(self):
         """Only return objects without children so that the deletion count is as expected."""
-        return [loc.pk for loc in list(Location.objects.filter(children__isnull=True))[:3]]
+        return [loc.pk for loc in list(Location.objects.filter(children__isnull=True).filter(parent__isnull=True))[:3]]
 
     def get_deletable_object(self):
         """To get the correct delete object count, make sure we avoid a cascade deletion."""

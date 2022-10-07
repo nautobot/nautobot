@@ -61,7 +61,9 @@ class VRFTestCase(FilterTestCases.FilterTestCase, FilterTestCases.TenancyFilterT
     def test_name(self):
         names = list(self.queryset.values_list("name", flat=True))[:2]
         params = {"name": names}
-        self.assertQuerysetEqual(self.filterset(params, self.queryset).qs, self.queryset.filter(name__in=names))
+        self.assertQuerysetEqual(
+            self.filterset(params, self.queryset).qs, self.queryset.filter(name__in=names).distinct()
+        )
 
     def test_rd(self):
         vrfs = self.queryset.filter(rd__isnull=False)[:2]
@@ -426,30 +428,6 @@ class PrefixTestCase(FilterTestCases.FilterTestCase, FilterTestCases.TenancyFilt
         params = {"status": ["deprecated", "reserved"]}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 4)
 
-    def test_tenant(self):
-        tenants = list(Tenant.objects.filter(prefixes__isnull=False))[:2]
-        params = {"tenant_id": [tenants[0].pk, tenants[1].pk]}
-        self.assertEqual(
-            self.filterset(params, self.queryset).qs.count(), self.queryset.filter(tenant__in=tenants).count()
-        )
-        params = {"tenant": [tenants[0].slug, tenants[1].slug]}
-        self.assertEqual(
-            self.filterset(params, self.queryset).qs.count(), self.queryset.filter(tenant__in=tenants).count()
-        )
-
-    def test_tenant_group(self):
-        tenant_groups = list(TenantGroup.objects.filter(tenants__isnull=False, tenants__prefixes__isnull=False))[:2]
-        params = {"tenant_group_id": [tenant_groups[0].pk, tenant_groups[1].pk]}
-        self.assertEqual(
-            self.filterset(params, self.queryset).qs.count(),
-            self.queryset.filter(tenant__group__in=tenant_groups).count(),
-        )
-        params = {"tenant_group": [tenant_groups[0].slug, tenant_groups[1].slug]}
-        self.assertEqual(
-            self.filterset(params, self.queryset).qs.count(),
-            self.queryset.filter(tenant__group__in=tenant_groups).count(),
-        )
-
 
 class IPAddressTestCase(FilterTestCases.FilterTestCase, FilterTestCases.TenancyFilterTestCaseMixin):
     queryset = IPAddress.objects.all()
@@ -741,7 +719,7 @@ class VLANGroupTestCase(FilterTestCases.NameSlugFilterTestCase):
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
 
     def test_region(self):
-        regions = list(Region.objects.filter(sites__isnull=False, sites__vlan_groups__isnull=False).distinct())[:2]
+        regions = self.regions[:2]
         params = {"region_id": [regions[0].pk, regions[1].pk]}
         self.assertQuerysetEqual(
             self.filterset(params, self.queryset).qs, self.queryset.filter(site__region__in=regions)
@@ -752,7 +730,7 @@ class VLANGroupTestCase(FilterTestCases.NameSlugFilterTestCase):
         )
 
     def test_site(self):
-        sites = list(Site.objects.filter(vlan_groups__isnull=False).distinct())[:2]
+        sites = self.sites[:2]
         params = {"site_id": [sites[0].pk, sites[1].pk]}
         self.assertQuerysetEqual(self.filterset(params, self.queryset).qs, self.queryset.filter(site__in=sites))
         params = {"site": [sites[0].slug, sites[1].slug]}
@@ -852,7 +830,7 @@ class VLANTestCase(FilterTestCases.FilterTestCase, FilterTestCases.TenancyFilter
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 3)
 
     def test_region(self):
-        regions = list(Region.objects.filter(sites__isnull=False, sites__vlans__isnull=False).distinct())[:2]
+        regions = self.regions[:2]
         params = {"region_id": [regions[0].pk, regions[1].pk]}
         self.assertQuerysetEqual(
             self.filterset(params, self.queryset).qs, self.queryset.filter(site__region__in=regions)
@@ -863,7 +841,7 @@ class VLANTestCase(FilterTestCases.FilterTestCase, FilterTestCases.TenancyFilter
         )
 
     def test_site(self):
-        sites = list(Site.objects.filter(vlans__isnull=False).distinct())[:2]
+        sites = self.sites[:2]
         params = {"site_id": [sites[0].pk, sites[1].pk]}
         self.assertQuerysetEqual(self.filterset(params, self.queryset).qs, self.queryset.filter(site__in=sites))
         params = {"site": [sites[0].slug, sites[1].slug]}

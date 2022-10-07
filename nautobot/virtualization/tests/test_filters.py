@@ -117,7 +117,9 @@ class ClusterTestCase(FilterTestCases.FilterTestCase, FilterTestCases.TenancyFil
             ClusterGroup.objects.create(name="Cluster Group 3", slug="cluster-group-3"),
         )
 
-        cls.regions = Region.objects.filter(sites__isnull=False)[:3]
+        cls.regions = (
+            Region.objects.filter(sites__isnull=False).filter(children__isnull=True).filter(parent__isnull=True)[:3]
+        )
 
         cls.sites = (
             Site.objects.filter(region=cls.regions[0]).first(),
@@ -260,7 +262,9 @@ class VirtualMachineTestCase(FilterTestCases.FilterTestCase, FilterTestCases.Ten
             ClusterGroup.objects.create(name="Cluster Group 3", slug="cluster-group-3"),
         )
 
-        cls.regions = Region.objects.filter(sites__isnull=False)[:3]
+        cls.regions = (
+            Region.objects.filter(sites__isnull=False).filter(children__isnull=True).filter(parent__isnull=True)[:3]
+        )
 
         cls.sites = (
             Site.objects.filter(region=cls.regions[0]).first(),

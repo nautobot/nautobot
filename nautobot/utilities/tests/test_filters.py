@@ -164,10 +164,10 @@ class NaturalKeyOrPKMultipleChoiceFilterTest(TestCase):
 
         super().setUp()
 
-        Site.objects.all().delete()
         self.site0 = Site.objects.create(name="Test Site 0", slug="test-site0")
         self.site1 = Site.objects.create(name="Test Site 1", slug="test-site1")
         self.site2 = Site.objects.create(name="Test Site 2", slug="test-site2")
+        self.site_pk_list = [self.site0.pk, self.site1.pk, self.site2.pk]
 
         self.power_panel1 = PowerPanel.objects.create(site=self.site1, name="test-power-panel1")
         self.power_panel2 = PowerPanel.objects.create(site=self.site2, name="test-power-panel2")
@@ -208,6 +208,7 @@ class NaturalKeyOrPKMultipleChoiceFilterTest(TestCase):
 
         kwargs = {"power_panels": [settings.FILTERS_NULL_CHOICE_VALUE]}
         qs = self.SiteFilterSet(kwargs, self.queryset).qs
+        qs = qs.filter(pk__in=self.site_pk_list)
 
         self.assertCountEqual(list(qs), [self.site0])
 
@@ -215,6 +216,7 @@ class NaturalKeyOrPKMultipleChoiceFilterTest(TestCase):
 
         kwargs = {"power_panels": ["test-power-panel1", settings.FILTERS_NULL_CHOICE_VALUE]}
         qs = self.SiteFilterSet(kwargs, self.queryset).qs
+        qs = qs.filter(pk__in=self.site_pk_list)
 
         self.assertCountEqual(list(qs), [self.site0, self.site1])
 
@@ -222,6 +224,7 @@ class NaturalKeyOrPKMultipleChoiceFilterTest(TestCase):
 
         kwargs = {"power_panels": [self.power_panel2.pk, settings.FILTERS_NULL_CHOICE_VALUE]}
         qs = self.SiteFilterSet(kwargs, self.queryset).qs
+        qs = qs.filter(pk__in=self.site_pk_list)
 
         self.assertCountEqual(list(qs), [self.site0, self.site2])
 
@@ -229,6 +232,7 @@ class NaturalKeyOrPKMultipleChoiceFilterTest(TestCase):
 
         kwargs = {"power_panels__n": ["test-power-panel1"]}
         qs = self.SiteFilterSet(kwargs, self.queryset).qs
+        qs = qs.filter(pk__in=self.site_pk_list)
 
         self.assertCountEqual(list(qs), [self.site0, self.site2])
 
@@ -236,6 +240,7 @@ class NaturalKeyOrPKMultipleChoiceFilterTest(TestCase):
 
         kwargs = {"power_panels__n": [self.power_panel2.pk]}
         qs = self.SiteFilterSet(kwargs, self.queryset).qs
+        qs = qs.filter(pk__in=self.site_pk_list)
 
         self.assertCountEqual(list(qs), [self.site0, self.site1])
 
@@ -243,6 +248,7 @@ class NaturalKeyOrPKMultipleChoiceFilterTest(TestCase):
 
         kwargs = {"power_panels__n": ["test-power-panel1", "test-power-panel2"]}
         qs = self.SiteFilterSet(kwargs, self.queryset).qs
+        qs = qs.filter(pk__in=self.site_pk_list)
 
         self.assertCountEqual(list(qs), [self.site0])
 
@@ -250,6 +256,7 @@ class NaturalKeyOrPKMultipleChoiceFilterTest(TestCase):
 
         kwargs = {"power_panels__n": ["test-power-panel3"]}
         qs = self.SiteFilterSet(kwargs, self.queryset).qs
+        qs = qs.filter(pk__in=self.site_pk_list)
 
         self.assertCountEqual(list(qs), [self.site0])
 
@@ -739,7 +746,9 @@ class DynamicFilterLookupExpressionTest(TestCase):
         )
         Platform.objects.bulk_create(platforms)
 
-        cls.regions = Region.objects.filter(sites__isnull=False)[:3]
+        cls.regions = (
+            Region.objects.filter(sites__isnull=False).filter(parent__isnull=True).filter(children__isnull=True)[:3]
+        )
 
         cls.sites = (
             Site.objects.filter(region=cls.regions[0]).first(),
@@ -921,7 +930,7 @@ class DynamicFilterLookupExpressionTest(TestCase):
         params = {"region_id__n": [self.regions[0].pk]}
         self.assertEqual(
             SiteFilterSet(params, self.site_queryset).qs.count(),
-            Site.objects.exclude(region__id=self.regions[0].pk).count(),
+            Site.objects.exclude(region__id=self.regions[0].pk).distinct().count(),
         )
 
     def test_device_name_eq(self):
