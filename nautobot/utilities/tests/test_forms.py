@@ -8,9 +8,10 @@ from unittest import mock
 from netaddr import IPNetwork
 
 from nautobot.dcim.filters import SiteFilterSet
-from nautobot.dcim.models import Device, Site
+from nautobot.dcim.models import Device
 from nautobot.dcim.tests.test_views import create_test_device
-from nautobot.extras.models import CustomField, Status
+from nautobot.extras.filters import StatusFilterSet
+from nautobot.extras.models import CustomField
 from nautobot.ipam.forms import IPAddressCSVForm, ServiceForm, ServiceFilterForm
 from nautobot.ipam.models import IPAddress, Prefix, VLANGroup
 from nautobot.utilities.filters import MultiValueCharFilter
@@ -660,21 +661,22 @@ class DynamicFilterFormTest(TestCase):
     # def test_dynamic_filter_form_with_missing_attr(self):
     #     with self.assertRaises(AttributeError) as err:
     #         DynamicFilterForm()
-    #     self.assertEqual("'DynamicFilterForm' object requires `model` attribute", str(err.exception))
+    #     self.assertEqual("'DynamicFilterForm' object requires `filterset` attribute", str(err.exception))
 
     def test_dynamic_filter_form(self):
-        form = DynamicFilterForm(model=Status)
-        site_form = DynamicFilterForm(model=Site)
+        form = DynamicFilterForm(filterset=StatusFilterSet)
+        site_form = DynamicFilterForm(filterset=SiteFilterSet)
         self.maxDiff = None
 
-        # TODO(Culver): Fix capitalization
-        # with self.subTest("Assert capitalize"):
-        #     self.assertEqual(form.capitalize("test"), "Test")
-        #     self.assertEqual(form.capitalize("test_one"), "Test one")
+        with self.subTest("Assert capitalize"):
+            self.assertEqual(form.capitalize("test"), "Test")
+            self.assertEqual(form.capitalize("test_one"), "Test one")
+            self.assertEqual(form.capitalize("tenant__group"), "Tenant group")
+            self.assertEqual(form.capitalize("_custom_field_data__example_field"), "Example field")
 
         with self.subTest("Assert get_lookup_field_choices"):
             self.assertEqual(
-                form.get_lookup_field_choices(),
+                form._get_lookup_field_choices(),
                 [
                     ("color", "Color"),
                     ("content_types", "Content type(s)"),
@@ -686,7 +688,7 @@ class DynamicFilterFormTest(TestCase):
                 ],
             )
             self.assertEqual(
-                site_form.get_lookup_field_choices(),
+                site_form._get_lookup_field_choices(),
                 [
                     ("asn", "ASN"),
                     ("cf_example_plugin_auto_custom_field", "Example Plugin Automatically Added Custom Field"),
@@ -737,10 +739,24 @@ class DynamicFilterFormTest(TestCase):
                 ],
             )
 
-        # TODO(Culver): Assertion doesn't like instantiated filters
-        # with self.subTest("Assert form generates the correct base_filters"):
-        #     self.assertEqual(form.filterset_filters, StatusFilterSet().filters)
-        #     self.assertEqual(site_form.filterset_filters, SiteFilterSet().filters)
+        with self.subTest("Assert form generates the correct base_filters"):
+
+            def get_dict_of_field_and_value_class_from_filters(filters):
+                """return a dict of the filters' field and field value class.
+
+                This is required because instantiated classes of the same type are not equal.
+                For Example `Site()` != `Site()` but `Site().__class__` == `Site().__class__`
+                """
+                return {field: value.__class__ for field, value in filters.items()}
+
+            self.assertEqual(
+                get_dict_of_field_and_value_class_from_filters(form.filterset_filters),
+                get_dict_of_field_and_value_class_from_filters(StatusFilterSet().filters),
+            )
+            self.assertEqual(
+                get_dict_of_field_and_value_class_from_filters(site_form.filterset_filters),
+                get_dict_of_field_and_value_class_from_filters(SiteFilterSet().filters),
+            )
 
         with self.subTest("Assert lookup_field, lookup_value & lookup_type fields has accurate attributes"):
             self.assertEqual(
@@ -792,19 +808,19 @@ class DynamicFilterFormTest(TestCase):
             # If `lookup_field` value is a CharField and or `lookup_type` lookup expr is not `exact` or `in` then,
             # `lookup_value` field should be a CharField
             data = convert_querydict_to_factory_formset_acceptable_querydict(request_querydict, SiteFilterSet)
-            form = DynamicFilterForm(model=Site, data=data, prefix="form-0")
+            form = DynamicFilterForm(filterset=SiteFilterSet, data=data, prefix="form-0")
             self.assertEqual(form.fields["lookup_type"]._choices, [("name__ic", "contains (ic)")])
             # Assert lookup_value is a CharField
             self.assertIsInstance(form.fields["lookup_value"], forms.CharField)
 
-            form = DynamicFilterForm(model=Site, data=data, prefix="form-1")
+            form = DynamicFilterForm(filterset=SiteFilterSet, data=data, prefix="form-1")
             self.assertEqual(form.fields["lookup_type"]._choices, [("slug", "exact")])
             self.assertIsInstance(form.fields["lookup_value"], forms.CharField)
 
         with self.subTest("Test for lookup_value with a ChoiceField and APISelectMultiple widget"):
             # If `lookup_field` value is a relational field(ManyToMany, ForeignKey etc.) and `lookup_type` lookup expr is `exact` or `in` then,
             # `lookup_value` field should be a ChoiceField with APISelectMultiple widget
-            form = DynamicFilterForm(model=Site, data=data, prefix="form-2")
+            form = DynamicFilterForm(filterset=SiteFilterSet, data=data, prefix="form-2")
             self.assertEqual(
                 form.fields["lookup_type"].widget.attrs,
                 {
@@ -831,7 +847,7 @@ class DynamicFilterFormTest(TestCase):
         with self.subTest("Test for lookup_value with a ChoiceField and StaticSelect2 widget"):
             # If `lookup_field` value is a ChoiceField and `lookup_type` lookup expr is `exact` or `in` then,
             # `lookup_value` field should be a ChoiceField with StaticSelect2 widget
-            form = DynamicFilterForm(model=Site, data=data, prefix="form-3")
+            form = DynamicFilterForm(filterset=SiteFilterSet, data=data, prefix="form-3")
             self.assertEqual(
                 form.fields["lookup_type"].widget.attrs,
                 {
@@ -851,7 +867,7 @@ class DynamicFilterFormTest(TestCase):
             self.assertEqual(form.fields["lookup_value"]._choices, [("True", "Yes"), ("False", "No")])
 
         with self.subTest("Test for lookup_value with a DateField"):
-            form = DynamicFilterForm(model=Site, data=data, prefix="form-4")
+            form = DynamicFilterForm(filterset=SiteFilterSet, data=data, prefix="form-4")
             self.assertEqual(
                 form.fields["lookup_type"].widget.attrs,
                 {
@@ -865,7 +881,7 @@ class DynamicFilterFormTest(TestCase):
             self.assertIsInstance(form.fields["lookup_value"].widget, DatePicker)
 
         with self.subTest("Test for lookup_value with an IntegerField"):
-            form = DynamicFilterForm(model=Site, data=data, prefix="form-5")
+            form = DynamicFilterForm(filterset=SiteFilterSet, data=data, prefix="form-5")
             self.assertEqual(
                 form.fields["lookup_type"].widget.attrs,
                 {

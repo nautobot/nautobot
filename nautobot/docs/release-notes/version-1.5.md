@@ -17,10 +17,6 @@ A new optional job property `task_queues` has been introduced to allow Nautobot 
 !!! important
     The default celery queue name has been changed from `celery` to `default`. If you have any workers or tasks hard coded to use `celery` you will need to update those workers/tasks or change the [`CELERY_TASK_DEFAULT_QUEUE`](../configuration/optional-settings.md#celery_task_default_queue) setting in your `nautobot_config.py`.
 
-#### DynamicFilterForm to list views
-
-Added a dynamic filter form that allows users to filter the table by any field and lookup expression combination allowed by the FitlerSet.
-
 ### Changed
 
 #### Database Query Caching is now Disabled by Default
@@ -33,6 +29,10 @@ As a result, the value of this setting now defaults to `False`, disabling databa
 
 !!! important
     Users with existing `nautobot_config.py` files generated from earlier versions of Nautobot will still have `CACHEOPS_ENABLED = True` unless they modify or regenerate their configuration. If users no longer desire caching, please be sure to explicitly toggle the value of this setting to `False` and restart your Nautobot services.
+
+#### Redesigned List Filtering UI
+
+Added a dynamic filter form that allows users to filter object tables/lists by any field and lookup expression combination supported by the corresponding FilterSet and API.
 
 ### Fixed
 

@@ -75,11 +75,35 @@
     {% for field, values in filter_params %}
     <span class="select2 select2-container select2-container--bootstrap display-inline" dir="ltr">
         <span class="selection">
-        <span class="select2-selection select2-selection--multiple p-5" role="combobox" aria-haspopup="true" aria-expanded="false" tabindex="-1" aria-disabled="false">
-            <b>{{ field }}:</b> <span class="select2-selection__clear remove-filter-param m-0" title="Remove all items" data-field-type="parent" data-field-value={{ field }}>×</span>
+        <span
+                class="select2-selection select2-selection--multiple p-5"
+                role="combobox"
+                aria-haspopup="true"
+                aria-expanded="false"
+                tabindex="-1"
+                aria-disabled="false"
+        >
+            <b>{{ field }}:</b>
+            <span
+                    class="select2-selection__clear remove-filter-param m-0"
+                    title="Remove all items"
+                    data-field-type="parent"
+                    data-field-value={{ field }}
+            >×</span>
             <ul class="select2-selection__rendered">
                 {% for value in values %}
-                <li class="select2-selection__choice chip" title="{{ value }}"><span class="select2-selection__choice__remove remove-filter-param" data-field-type="child"  data-field-parent={{ field }}  data-field-value={{ value }} role="presentation">×</span>{{ value }}</li>
+                <li
+                        class="select2-selection__choice chip"
+                        title="{{ value }}"
+                >
+                    <span
+                            class="select2-selection__choice__remove remove-filter-param"
+                            data-field-type="child"
+                            data-field-parent={{ field }}
+                            data-field-value={{ value }}
+                            role="presentation"
+                    >×</span>{{ value }}
+                </li>
                 {% endfor %}
             </ul>
         </span>

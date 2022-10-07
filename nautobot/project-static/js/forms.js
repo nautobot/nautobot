@@ -51,7 +51,7 @@ function colorPickerClassCopy(data, container) {
 
 // Static choice selection
 function initializeStaticChoiceSelection(context){
-    this_context = $(context)
+    this_context = $(context);
     this_context.find('.nautobot-select2-static').select2({
         allowClear: true,
         placeholder: "---------",
@@ -62,7 +62,7 @@ function initializeStaticChoiceSelection(context){
 
 // Static choice selection
 function initializeCheckboxes(context){
-    this_context = $(context)
+    this_context = $(context);
     // "Toggle" checkbox for object lists (PK column)
     this_context.find('input:checkbox.toggle').click(function() {
         $(this).closest('table').find('input:checkbox[name=pk]:visible').prop('checked', $(this).prop('checked'));
@@ -84,7 +84,7 @@ function initializeCheckboxes(context){
 }
 
 function initializeSlugField(context){
-    this_context = $(context)
+    this_context = $(context);
     var slug_field = this_context.find('#id_slug');
     if (slug_field.length != 0) {
         var slug_source_arr = slug_field.attr('slug-source').split(" ");
@@ -120,7 +120,7 @@ function initializeSlugField(context){
 }
 
 function initializeFormActionClick(context){
-    this_context = $(context)
+    this_context = $(context);
     // Set formaction and submit using a link
     this_context.find('a.formaction').click(function(event) {
         event.preventDefault();
@@ -132,7 +132,7 @@ function initializeFormActionClick(context){
 
 // Bulk edit nullification
 function initializeBulkEditNullification(context){
-    this_context = $(context)
+    this_context = $(context);
     this_context.find('input:checkbox[name=_nullify]').click(function() {
         $('#id_' + this.value).toggle('disabled');
     });
@@ -140,7 +140,7 @@ function initializeBulkEditNullification(context){
 
 // Color Picker
 function initializeColorPicker(context){
-    this_context = $(context)
+    this_context = $(context);
     this_context.find('.nautobot-select2-color-picker').select2({
         allowClear: true,
         placeholder: "---------",
@@ -153,7 +153,7 @@ function initializeColorPicker(context){
 
 // Dynamic Choice Selection
 function initializeDynamicChoiceSelection(context){
-    this_context = $(context)
+    this_context = $(context);
     this_context.find('.nautobot-select2-api').select2({
         allowClear: true,
         placeholder: "---------",
@@ -407,7 +407,7 @@ function initializeTags(context){
 }
 
 function initializeVLANModeSelection(context){
-    this_context = $(context)
+    this_context = $(context);
     if( this_context.find('select#id_mode').length > 0 ) { // Not certain for the length check here as if none is find it should not apply the onChange
         this_context.find('select#id_mode').on('change', function () {
             if ($(this).val() == '') {
@@ -440,7 +440,7 @@ function initializeVLANModeSelection(context){
 }
 
 function initializeMultiValueChar(context){
-    this_context = $(context)
+    this_context = $(context);
     this_context.find('.nautobot-select2-multi-value-char').select2({
         allowClear: true,
         tags: true,
@@ -584,7 +584,7 @@ function initializeSelectAllForm(context){
 }
 
 function initializeResultPerPageSelection(context){
-    this_context = $(context)
+    this_context = $(context);
     this_context.find('select#per_page').change(function() {
         this.form.submit();
     });
@@ -597,7 +597,7 @@ function replaceEl(replaced_el, replacing_el) {
 }
 
 function initializeInputs(context) {
-    this_context = $(context)
+    this_context = $(context);
     initializeStaticChoiceSelection(this_context)
     initializeCheckboxes(this_context)
     initializeSlugField(this_context)
@@ -616,7 +616,7 @@ function initializeInputs(context) {
 }
 
 function jsify_form(context) {
-    this_context = $(context)
+    this_context = $(context);
     // Pagination
     initializeInputs(this_context)
 }

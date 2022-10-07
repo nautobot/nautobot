@@ -594,7 +594,7 @@ def table_config_form(table, table_name=None):
     }
 
 
-@register.inclusion_tag("utilities/templatetags/filter_form.html")
+@register.inclusion_tag("utilities/templatetags/dynamic_filter_form_modal.html")
 def dynamic_filter_form_modal(form, form_name="DynamicFilterForm"):
     return {
         "form": form,

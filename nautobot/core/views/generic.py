@@ -46,7 +46,6 @@ from nautobot.utilities.utils import (
     csv_format,
     get_route_for_model,
     get_filterable_params_from_filter_params,
-    get_filterset_for_model,
     normalize_querydict,
     prepare_cloned_fields,
 )
@@ -311,14 +310,14 @@ class ObjectListView(ObjectPermissionRequiredMixin, View):
         search_form = SearchForm(data=request.GET, q_placeholder=q_placeholder)
 
         # The model's FilterSet is required for DynamicFilterFormSet; if not found, ignore.
-        if get_filterset_for_model(model) is not None:
+        if self.filterset is not None:
             if request.GET:
                 factory_formset_params = convert_querydict_to_factory_formset_acceptable_querydict(
                     request.GET, self.filterset
                 )
-                self.dynamic_filter_form = DynamicFilterFormSet(model=self.queryset.model, data=factory_formset_params)
+                self.dynamic_filter_form = DynamicFilterFormSet(filterset=self.filterset, data=factory_formset_params)
             else:
-                self.dynamic_filter_form = DynamicFilterFormSet(model=self.queryset.model)
+                self.dynamic_filter_form = DynamicFilterFormSet(filterset=self.filterset)
 
         valid_actions = self.validate_action_buttons(request)
 
