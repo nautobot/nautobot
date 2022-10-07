@@ -640,6 +640,7 @@ function createInput(element){
 
 $(document).ready((e) => {
     jsify_form(this.document);
+    initializeResultPerPageSelection(this.document);
 })
 
 // Scroll up an offset equal to the first nav element if a hash is present

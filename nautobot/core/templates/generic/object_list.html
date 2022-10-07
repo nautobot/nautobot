@@ -191,42 +191,20 @@
 
     // On submit of filter form
     $("#dynamic-filter-form").on("submit", function(e){
-        e.preventDefault()
-        // By removing all name attr with 'form-' prefix form input/select elements
-        // only filterable fields would be picked up by `$(this).serialize()`
-        $(this).find(`input[name*="form-"], select[name*="form-"]`).removeAttr("name")
-
-        let query_params = $(this).serialize()
-
-        // check if `?q=` or `&q=` in URL query params
-        if(location.search && /(\?|\&)q/.test(location.search)){
-            // Append `q` value to `query_params`
-            query_params += "&q=" + /(?<=(\?|\&)q=)\w+/.exec(location.search)[0]
-        }
-        location.replace("?" + query_params)
+        let this_form = $(this);
+        this_form.find(`input[name*="form-"], select[name*="form-"]`).removeAttr("name")
+        // Append q form field to to dynamic filter form via hidden input
+        let q_field = $('#id_q')
+        let q_field_phantom = $('<input type="hidden" name="q" />')
+        q_field_phantom.val(q_field.val())
+        this_form.append(q_field_phantom);
     })
 
     // On submit of filter search form
     $("#search-form").on("submit", function(e){
-        e.preventDefault();
-
-        let query_params = location.search;
-        let search_value = $(this).find("input[name='q']").val();
-
-        if(query_params){
-            // check if `?q=` or `&q=` in query_params
-            if(/(\?|\&)q/.test(query_params)){
-                // change value of q in the query_params
-                query_params = query_params.replace(/(?<=(\?|\&)q=)\w+/, search_value);
-            }
-            else {
-                query_params += "&" + $(this).serialize();
-            }
-        }
-        else {
-            query_params = "?" + $(this).serialize();
-        }
-        location.replace(query_params)
+        // Since the Dynamic Filter Form will already grab my q field, just have it do a majority of the work.
+        e.preventDefault()
+        $("#dynamic-filter-form").submit()
     })
 
     // Clear new row values upon creation
