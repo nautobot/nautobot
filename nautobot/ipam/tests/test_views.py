@@ -225,6 +225,8 @@ class PrefixTestCase(ViewTestCases.PrimaryObjectViewTestCase, ViewTestCases.List
         but the same behavior was observed in other filters, such as IPv4/IPv6.
         """
         prefixes = self._get_queryset().all()
+        s = Status.objects.create(name="nonexistentstatus")
+        s.content_types.add(ContentType.objects.get_for_model(Prefix))
         self.assertNotEqual(prefixes.count(), 0)
 
         url = self._get_url("list")
@@ -232,6 +234,7 @@ class PrefixTestCase(ViewTestCases.PrimaryObjectViewTestCase, ViewTestCases.List
         self.assertHttpStatus(response, 200)
         content = extract_page_body(response.content.decode(response.charset))
 
+        self.assertNotIn("Invalid filters were specified", content)
         for prefix in prefixes:
             self.assertNotIn(prefix.get_absolute_url(), content, msg=content)
 

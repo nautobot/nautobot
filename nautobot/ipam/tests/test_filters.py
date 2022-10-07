@@ -254,14 +254,14 @@ class PrefixTestCase(FilterTestCases.FilterTestCase, FilterTestCases.TenancyFilt
 
     def test_family(self):
         params = {"family": "6"}
-        ipv6_prefixes = [prefix for prefix in Prefix.objects.all() if prefix.family == 6]
+        ipv6_prefixes = Prefix.objects.ip_family(6)
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), len(ipv6_prefixes))
 
     def test_is_pool(self):
         params = {"is_pool": "true"}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), Prefix.objects.filter(is_pool=True).count())
+        self.assertQuerysetEqual(self.filterset(params, self.queryset).qs, Prefix.objects.filter(is_pool=True))
         params = {"is_pool": "false"}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), Prefix.objects.exclude(is_pool=True).count())
+        self.assertQuerysetEqual(self.filterset(params, self.queryset).qs, Prefix.objects.exclude(is_pool=True))
 
     def test_within(self):
         Prefix.objects.all().delete()

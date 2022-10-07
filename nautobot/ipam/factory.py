@@ -256,7 +256,10 @@ class RoleFactory(OrganizationalModelFactory):
         model = Role
         exclude = ("has_description",)
 
-    name = factory.LazyFunction(lambda: faker.Faker().word(part_of_speech="adjective").title())
+    class Params:
+        unique_name = UniqueFaker("word", part_of_speech="adjective")
+
+    name = factory.LazyAttribute(lambda o: o.unique_name.title())
 
     weight = factory.Faker("pyint", min_value=100, step=100)
 
@@ -406,13 +409,13 @@ class PrefixFactory(PrimaryModelFactory):
         ipv6_cidr = factory.Faker("ipv6", network=True)
         # faker ipv6 provider generates networks with /0 cidr, change to anything but /0
         ipv6_fixed = factory.LazyAttribute(
-            lambda o: o.ipv6_cidr.replace("/0", f"/{factory.Faker('pyint', min_length=1, max_length=128)!s}")
+            lambda o: o.ipv6_cidr.replace("/0", f"/{UniqueFaker('pyint', min_length=1, max_length=128)!s}")
         )
 
     prefix = factory.Maybe(
         "is_ipv6",
         factory.SelfAttribute("ipv6_fixed"),
-        factory.Faker("ipv4", network=True, private=True),
+        UniqueFaker("ipv4", network=True, private=True),
     )
     description = factory.Maybe("has_description", factory.Faker("text", max_nb_chars=200), "")
     is_pool = factory.Faker("pybool")
@@ -475,12 +478,22 @@ class PrefixFactory(PrimaryModelFactory):
         if child_count == 0:
             return
 
+        # Propogate parent tenant to children if parent tenant is set
+        if self.tenant is not None:
+            kwargs.setdefault("tenant", self.tenant)
+
         if factory == IPAddressFactory:
-            # Create child ip addresses, preserving vrf, tenant and is_ipv6 from parent
-            for count, address in enumerate(self.prefix.iter_hosts()):
-                if count == child_count:
+            # Create child ip addresses, preserving vrf and is_ipv6 from parent
+            created = 0
+            for address in self.prefix.iter_hosts():
+                if created == child_count:
                     break
-                method(address=str(address), vrf=self.vrf, tenant=self.tenant, is_ipv6=is_ipv6, **kwargs)
+                addresses_available = self.prefix.size - child_count
+                children_remaining = child_count - created
+                # Randomly skip addresses if there's enough space left in the prefix
+                if faker.Faker().pybool() or addresses_available <= children_remaining:
+                    method(address=str(address), vrf=self.vrf, is_ipv6=is_ipv6, **kwargs)
+                    created += 1
         else:
             # Calculate prefix length for child prefixes to allow them to fit in the parent prefix without creating duplicate prefix
             child_cidr = self.prefix_length + max(1, math.ceil(math.log(child_count, 2)))
@@ -495,10 +508,9 @@ class PrefixFactory(PrimaryModelFactory):
                     break
                 method(
                     prefix=str(address.cidr),
-                    tenant=self.tenant,
                     site=self.site,
                     location=self.location,
-                    is_container=False,
+                    children__max_count=4,
                     is_ipv6=is_ipv6,
                     vrf=self.vrf,
                     **kwargs,
@@ -522,8 +534,8 @@ class IPAddressFactory(PrimaryModelFactory):
 
     address = factory.Maybe(
         "is_ipv6",
-        factory.Faker("ipv6"),
-        factory.Faker("ipv4_private"),
+        UniqueFaker("ipv6"),
+        UniqueFaker("ipv4_private"),
     )
     # TODO: add objects for assigned_object when factories for dcim.interface and virtualization.vminterface are ready
     assigned_object = factory.Maybe("has_assigned_object", None, None)
