@@ -210,9 +210,7 @@ class ComponentForm(BootstrapMixin, forms.Form):
     a name pattern.
     """
 
-    name_pattern = ExpandableNameField(
-        label="Name", widget=forms.TextInput(attrs={"autofocus": True, "placeholder": "Name"})
-    )
+    name_pattern = ExpandableNameField(label="Name")
     label_pattern = ExpandableNameField(
         label="Label",
         required=False,
@@ -276,9 +274,6 @@ class RegionForm(NautobotModelForm):
             "slug",
             "description",
         )
-        widgets = {
-            "name": forms.TextInput(attrs={"autofocus": True, "placeholder": "Name"}),
-        }
 
 
 class RegionCSVForm(CustomFieldModelCSVForm):
@@ -344,7 +339,6 @@ class SiteForm(NautobotModelForm, TenancyForm):
                 }
             ),
             "time_zone": StaticSelect2(),
-            "name": forms.TextInput(attrs={"autofocus": True, "placeholder": "Name"}),
         }
         help_texts = {
             "name": "Full name of the site",
@@ -575,9 +569,6 @@ class RackGroupForm(LocatableModelFormMixin, NautobotModelForm):
             "slug",
             "description",
         )
-        widgets = {
-            "name": forms.TextInput(attrs={"autofocus": True, "placeholder": "Name"}),
-        }
 
 
 class RackGroupCSVForm(LocatableModelCSVFormMixin, CustomFieldModelCSVForm):
@@ -625,9 +616,6 @@ class RackRoleForm(NautobotModelForm):
             "color",
             "description",
         ]
-        widgets = {
-            "name": forms.TextInput(attrs={"autofocus": True, "placeholder": "Name"}),
-        }
 
 
 class RackRoleCSVForm(CustomFieldModelCSVForm):
@@ -689,7 +677,6 @@ class RackForm(LocatableModelFormMixin, NautobotModelForm, TenancyForm):
             "type": StaticSelect2(),
             "width": StaticSelect2(),
             "outer_unit": StaticSelect2(),
-            "name": forms.TextInput(attrs={"autofocus": True, "placeholder": "Name"}),
         }
 
 
@@ -883,9 +870,6 @@ class RackReservationForm(NautobotModelForm, TenancyForm):
             "description",
             "tags",
         ]
-        widgets = {
-            "description": forms.TextInput(attrs={"autofocus": True, "placeholder": "Description"}),
-        }
 
 
 class RackReservationCSVForm(CustomFieldModelCSVForm):
@@ -996,9 +980,6 @@ class ManufacturerForm(NautobotModelForm):
             "slug",
             "description",
         ]
-        widgets = {
-            "name": forms.TextInput(attrs={"autofocus": True, "placeholder": "Name"}),
-        }
 
 
 class ManufacturerCSVForm(CustomFieldModelCSVForm):
@@ -1041,7 +1022,6 @@ class DeviceTypeForm(NautobotModelForm):
             "rear_image": forms.ClearableFileInput(
                 attrs={"accept": "image/bmp,image/gif,image/jpeg,image/png,image/tiff"}
             ),
-            "model": forms.TextInput(attrs={"autofocus": True, "placeholder": "Model"}),
         }
 
 
@@ -1754,9 +1734,6 @@ class DeviceRoleForm(NautobotModelForm):
             "vm_role",
             "description",
         ]
-        widgets = {
-            "name": forms.TextInput(attrs={"autofocus": True, "placeholder": "Name"}),
-        }
 
 
 class DeviceRoleCSVForm(CustomFieldModelCSVForm):
@@ -1789,7 +1766,6 @@ class PlatformForm(NautobotModelForm):
         ]
         widgets = {
             "napalm_args": SmallTextarea(),
-            "name": forms.TextInput(attrs={"autofocus": True, "placeholder": "Name"}),
         }
 
 
@@ -1903,7 +1879,6 @@ class DeviceForm(LocatableModelFormMixin, NautobotModelForm, TenancyForm, LocalC
             "face": StaticSelect2(),
             "primary_ip4": StaticSelect2(),
             "primary_ip6": StaticSelect2(),
-            "name": forms.TextInput(attrs={"autofocus": True, "placeholder": "Name"}),
         }
 
     def __init__(self, *args, **kwargs):
@@ -4060,9 +4035,6 @@ class VirtualChassisCreateForm(NautobotModelForm):
             "initial_position",
             "tags",
         ]
-        widgets = {
-            "name": forms.TextInput(attrs={"autofocus": True, "placeholder": "Name"}),
-        }
 
     def save(self, *args, **kwargs):
         instance = super().save(*args, **kwargs)
@@ -4250,9 +4222,6 @@ class PowerPanelForm(LocatableModelFormMixin, NautobotModelForm):
             "name",
             "tags",
         ]
-        widgets = {
-            "name": forms.TextInput(attrs={"autofocus": True, "placeholder": "Name"}),
-        }
 
 
 class PowerPanelCSVForm(LocatableModelCSVFormMixin, CustomFieldModelCSVForm):
@@ -4349,7 +4318,6 @@ class PowerFeedForm(NautobotModelForm):
             "type": StaticSelect2(),
             "supply": StaticSelect2(),
             "phase": StaticSelect2(),
-            "name": forms.TextInput(attrs={"autofocus": True, "placeholder": "Name"}),
         }
 
 

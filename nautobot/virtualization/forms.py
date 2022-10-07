@@ -67,9 +67,6 @@ class ClusterTypeForm(NautobotModelForm):
             "slug",
             "description",
         ]
-        widgets = {
-            "name": forms.TextInput(attrs={"autofocus": True, "placeholder": "Name"}),
-        }
 
 
 class ClusterTypeCSVForm(CustomFieldModelCSVForm):
@@ -93,9 +90,6 @@ class ClusterGroupForm(NautobotModelForm):
             "slug",
             "description",
         ]
-        widgets = {
-            "name": forms.TextInput(attrs={"autofocus": True, "placeholder": "Name"}),
-        }
 
 
 class ClusterGroupCSVForm(CustomFieldModelCSVForm):
@@ -127,9 +121,6 @@ class ClusterForm(LocatableModelFormMixin, NautobotModelForm, TenancyForm):
             "comments",
             "tags",
         )
-        widgets = {
-            "name": forms.TextInput(attrs={"autofocus": True, "placeholder": "Name"}),
-        }
 
 
 class ClusterCSVForm(LocatableModelCSVFormMixin, CustomFieldModelCSVForm):
@@ -275,7 +266,6 @@ class ClusterRemoveDevicesForm(ConfirmationForm):
 
 
 class VirtualMachineForm(NautobotModelForm, TenancyForm, LocalContextModelForm):
-    name = forms.CharField(max_length=64, widget=forms.TextInput(attrs={"autofocus": True, "placeholder": "Name"}))
     cluster_group = DynamicModelChoiceField(
         queryset=ClusterGroup.objects.all(),
         required=False,
@@ -565,9 +555,7 @@ class VMInterfaceForm(NautobotModelForm, InterfaceCommonForm):
 
 class VMInterfaceCreateForm(BootstrapMixin, InterfaceCommonForm):
     virtual_machine = DynamicModelChoiceField(queryset=VirtualMachine.objects.all())
-    name_pattern = ExpandableNameField(
-        label="Name", widget=forms.TextInput(attrs={"autofocus": True, "placeholder": "Name"})
-    )
+    name_pattern = ExpandableNameField(label="Name")
     enabled = forms.BooleanField(required=False, initial=True)
     parent_interface = DynamicModelChoiceField(
         queryset=VMInterface.objects.all(),

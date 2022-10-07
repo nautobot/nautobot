@@ -54,7 +54,6 @@ class ProviderForm(NautobotModelForm):
         widgets = {
             "noc_contact": SmallTextarea(attrs={"rows": 5}),
             "admin_contact": SmallTextarea(attrs={"rows": 5}),
-            "name": forms.TextInput(attrs={"autofocus": True, "placeholder": "Name"}),
         }
         help_texts = {
             "name": "Full name of the provider",
@@ -172,9 +171,6 @@ class CircuitTypeForm(NautobotModelForm):
             "slug",
             "description",
         ]
-        widgets = {
-            "name": forms.TextInput(attrs={"autofocus": True, "placeholder": "Name"}),
-        }
 
 
 class CircuitTypeCSVForm(CustomFieldModelCSVForm):
@@ -217,7 +213,6 @@ class CircuitForm(NautobotModelForm, TenancyForm):
         }
         widgets = {
             "install_date": DatePicker(),
-            "cid": forms.TextInput(attrs={"autofocus": True, "placeholder": "Circuit ID"}),
         }
 
 

@@ -98,9 +98,6 @@ class VRFForm(NautobotModelForm, TenancyForm):
         help_texts = {
             "rd": "Route distinguisher in any format",
         }
-        widgets = {
-            "name": forms.TextInput(attrs={"autofocus": True, "placeholder": "Name"}),
-        }
 
 
 class VRFCSVForm(CustomFieldModelCSVForm):
@@ -159,9 +156,6 @@ class RouteTargetForm(NautobotModelForm, TenancyForm):
             "tenant",
             "tags",
         ]
-        widgets = {
-            "name": forms.TextInput(attrs={"autofocus": True, "placeholder": "Name"}),
-        }
 
 
 class RouteTargetCSVForm(CustomFieldModelCSVForm):
@@ -225,9 +219,6 @@ class RIRForm(NautobotModelForm):
             "is_private",
             "description",
         ]
-        widgets = {
-            "name": forms.TextInput(attrs={"autofocus": True, "placeholder": "Name"}),
-        }
 
 
 class RIRCSVForm(CustomFieldModelCSVForm):
@@ -341,9 +332,6 @@ class RoleForm(NautobotModelForm):
             "weight",
             "description",
         ]
-        widgets = {
-            "name": forms.TextInput(attrs={"autofocus": True}),
-        }
 
 
 class RoleCSVForm(CustomFieldModelCSVForm):
@@ -998,9 +986,6 @@ class VLANGroupForm(LocatableModelFormMixin, NautobotModelForm):
             "slug",
             "description",
         ]
-        widgets = {
-            "name": forms.TextInput(attrs={"autofocus": True, "placeholder": "Name"}),
-        }
 
 
 class VLANGroupCSVForm(LocatableModelCSVFormMixin, CustomFieldModelCSVForm):
@@ -1048,9 +1033,6 @@ class VLANForm(LocatableModelFormMixin, NautobotModelForm, TenancyForm):
             "name": "Configured VLAN name",
             "status": "Operational status of this VLAN",
             "role": "The primary function of this VLAN",
-        }
-        widgets = {
-            "vid": forms.TextInput(attrs={"autofocus": True, "placeholder": "ID"}),
         }
 
 

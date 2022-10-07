@@ -35,9 +35,6 @@ class TenantGroupForm(NautobotModelForm):
             "slug",
             "description",
         ]
-        widgets = {
-            "name": forms.TextInput(attrs={"autofocus": True, "placeholder": "Name"}),
-        }
 
 
 class TenantGroupCSVForm(CustomFieldModelCSVForm):
@@ -73,9 +70,6 @@ class TenantForm(NautobotModelForm):
             "comments",
             "tags",
         )
-        widgets = {
-            "name": forms.TextInput(attrs={"autofocus": True, "placeholder": "Name"}),
-        }
 
 
 class TenantCSVForm(CustomFieldModelCSVForm):
