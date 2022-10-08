@@ -8,7 +8,7 @@ from django.urls import reverse
 from netaddr import IPNetwork
 from rest_framework import status
 
-from nautobot.dcim.models import Device, DeviceRole, DeviceType, Manufacturer, Site
+from nautobot.dcim.models import Device, DeviceRole, DeviceType, Location, Manufacturer, Site
 from nautobot.extras.models import Status
 from nautobot.ipam.choices import ServiceProtocolChoices
 from nautobot.ipam.models import (
@@ -575,23 +575,26 @@ class VLANTest(APIViewTestCases.APIViewTestCase):
             {
                 "vid": 4,
                 "name": "VLAN 4",
-                "group": vlan_groups[1].pk,
+                "group": vlan_groups[0].pk,
                 "status": "active",
-                "site": vlan_groups[1].site.pk,
+                "site": vlan_groups[0].site.pk,
+                "location": Location.objects.filter(site=vlan_groups[0].site).first().pk,
             },
             {
                 "vid": 5,
                 "name": "VLAN 5",
-                "group": vlan_groups[1].pk,
+                "group": vlan_groups[0].pk,
                 "status": "active",
-                "site": vlan_groups[1].site.pk,
+                "site": vlan_groups[0].site.pk,
+                "location": Location.objects.filter(site=vlan_groups[0].site).first().pk,
             },
             {
                 "vid": 6,
                 "name": "VLAN 6",
-                "group": vlan_groups[1].pk,
+                "group": vlan_groups[0].pk,
                 "status": "active",
-                "site": vlan_groups[1].site.pk,
+                "site": vlan_groups[0].site.pk,
+                "location": Location.objects.filter(site=vlan_groups[0].site).first().pk,
             },
         ]
 
