@@ -370,9 +370,9 @@ class VLANTestCase(ViewTestCases.PrimaryObjectViewTestCase):
 
         locations = Location.objects.filter(site__isnull=False)
         cls.sites = []
-        for l in locations:
-            if l.site not in cls.sites:
-                cls.sites.append(l.site)
+        for location in locations:
+            if location.site not in cls.sites:
+                cls.sites.append(location.site)
 
         vlangroups = (
             VLANGroup.objects.create(name="VLAN Group 1", slug="vlan-group-1", site=cls.sites[0]),
