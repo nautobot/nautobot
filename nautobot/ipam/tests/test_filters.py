@@ -719,7 +719,7 @@ class VLANGroupTestCase(FilterTestCases.NameSlugFilterTestCase):
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
 
     def test_region(self):
-        regions = self.regions[:2]
+        regions = list(self.regions[:2])
         params = {"region_id": [regions[0].pk, regions[1].pk]}
         self.assertQuerysetEqual(
             self.filterset(params, self.queryset).qs, self.queryset.filter(site__region__in=regions)
@@ -730,7 +730,7 @@ class VLANGroupTestCase(FilterTestCases.NameSlugFilterTestCase):
         )
 
     def test_site(self):
-        sites = self.sites[:2]
+        sites = list(self.sites[:2])
         params = {"site_id": [sites[0].pk, sites[1].pk]}
         self.assertQuerysetEqual(self.filterset(params, self.queryset).qs, self.queryset.filter(site__in=sites))
         params = {"site": [sites[0].slug, sites[1].slug]}
@@ -830,7 +830,7 @@ class VLANTestCase(FilterTestCases.FilterTestCase, FilterTestCases.TenancyFilter
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 3)
 
     def test_region(self):
-        regions = self.regions[:2]
+        regions = list(self.regions[:2])
         params = {"region_id": [regions[0].pk, regions[1].pk]}
         self.assertQuerysetEqual(
             self.filterset(params, self.queryset).qs, self.queryset.filter(site__region__in=regions)
@@ -841,7 +841,7 @@ class VLANTestCase(FilterTestCases.FilterTestCase, FilterTestCases.TenancyFilter
         )
 
     def test_site(self):
-        sites = self.sites[:2]
+        sites = list(self.sites[:2])
         params = {"site_id": [sites[0].pk, sites[1].pk]}
         self.assertQuerysetEqual(self.filterset(params, self.queryset).qs, self.queryset.filter(site__in=sites))
         params = {"site": [sites[0].slug, sites[1].slug]}
