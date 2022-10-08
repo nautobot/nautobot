@@ -9,6 +9,7 @@ from django.core.validators import MinLengthValidator
 from django.db import models
 from django.db.models import Q
 from django.utils import timezone
+from django.utils.module_loading import import_string
 
 from nautobot.core.models import BaseModel
 from nautobot.utilities.fields import JSONArrayField
@@ -256,3 +257,43 @@ class ObjectPermission(BaseModel):
         if not isinstance(self.constraints, list):
             return [self.constraints]
         return self.constraints
+
+
+#
+# SSO Backend
+#
+
+
+BACKEND_CHOICES = [(backend, backend.split(".")[-1]) for backend in settings.AUTHENTICATION_BACKENDS[:-1]]
+
+class SSOBackend(BaseModel):
+    name = models.CharField(max_length=100, unique=True)
+    backend = models.CharField(max_length=100, choices=BACKEND_CHOICES, unique=True)
+    _backend_name = models.CharField(max_length=100, editable=False)
+    enabled = models.BooleanField(default=True)
+    configuration = models.ManyToManyField(to="extras.Secret", through="users.SSOBackendConfiguration")
+
+    class Meta:
+        ordering = ["name"]
+        verbose_name = "SSO Backend"
+        verbose_name_plural = "SSO Backends"
+
+    @property
+    def backend_var_namespace(self):
+        """Returns the variable namespace for a backend."""
+        return "SOCIAL_CORE_" + self._backend_name.upper().replace("-", "_") + "_"
+
+    def save(self, *args, **kwargs):
+        """Overload save to set _backend_name to provide filtering & help performance."""
+        self._backend_name = import_string(self.backend).name
+        return super().save(*args, **kwargs)
+
+
+SSO_CONFIG_TYPE_CHOICES = [("text", "Text"), ("secret", "Secret")]
+
+class SSOBackendConfiguration(BaseModel):
+    backend = models.ForeignKey(to="users.SSOBackend", on_delete=models.CASCADE)
+    secret = models.ForeignKey(to="extras.Secret", null=True, on_delete=models.SET_NULL)
+    type = models.CharField(max_length=10, choices=SSO_CONFIG_TYPE_CHOICES, default="text")
+    name = models.CharField(max_length=50)
+    text = models.CharField(max_length=200, blank=True, null=True)

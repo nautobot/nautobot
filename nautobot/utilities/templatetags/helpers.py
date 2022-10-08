@@ -481,9 +481,8 @@ def quote_string(value):
 
 @library.filter()
 @register.filter()
-def get_backend_name(value):
-    backend = import_string(value)
-    return backend.name
+def get_backend_name(backend):
+    return backend._backend_name
 
 
 #
