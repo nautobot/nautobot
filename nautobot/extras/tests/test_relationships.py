@@ -735,19 +735,24 @@ class RelationshipAssociationTest(RelationshipBaseTest):
     def test_delete_cascade(self):
         """Verify that a RelationshipAssociation is deleted if either of the associated records is deleted."""
         initial_count = RelationshipAssociation.objects.count()
-        site = Site.objects.create(name="new site")
+        sites = (
+            Site.objects.create(name="new site 1"),
+            Site.objects.create(name="new site 2"),
+            Site.objects.create(name="new site 3"),
+            Site.objects.create(name="new site 4"),
+        )
         associations = [
             RelationshipAssociation(relationship=self.m2m_1, source=self.racks[0], destination=self.vlans[0]),
             RelationshipAssociation(relationship=self.m2m_1, source=self.racks[0], destination=self.vlans[1]),
             RelationshipAssociation(relationship=self.m2m_1, source=self.racks[1], destination=self.vlans[0]),
             # Create an association loop just to make sure it works correctly on deletion
-            RelationshipAssociation(relationship=self.o2o_2, source=self.sites[2], destination=self.sites[3]),
-            RelationshipAssociation(relationship=self.o2o_2, source=self.sites[3], destination=self.sites[2]),
+            RelationshipAssociation(relationship=self.o2o_2, source=sites[2], destination=sites[3]),
+            RelationshipAssociation(relationship=self.o2o_2, source=sites[3], destination=sites[2]),
         ]
         for association in associations:
             association.validated_save()
         # Create a self-referential association as well; validated_save() would correctly reject this one as invalid
-        RelationshipAssociation.objects.create(relationship=self.o2o_2, source=site, destination=site)
+        RelationshipAssociation.objects.create(relationship=self.o2o_2, source=sites[0], destination=sites[0])
 
         self.assertEqual(6 + initial_count, RelationshipAssociation.objects.count())
 
@@ -765,11 +770,11 @@ class RelationshipAssociationTest(RelationshipBaseTest):
         self.assertEqual(3 + initial_count, RelationshipAssociation.objects.count())
 
         # Test automatic deletion of RelationshipAssociations when there's a loop of source/destination references
-        self.sites[3].delete()
+        sites[3].delete()
         self.assertEqual(1 + initial_count, RelationshipAssociation.objects.count())
 
         # Test automatic deletion of RelationshipAssociations when the same object is both source and destination
-        site.delete()
+        sites[0].delete()
         self.assertEqual(initial_count, RelationshipAssociation.objects.count())
 
     def test_generic_relation(self):

@@ -147,9 +147,10 @@ class TestPrefix(TestCase):
         self.statuses = Status.objects.get_for_model(Prefix)
 
     def test_prefix_validation(self):
-        location_type = LocationType.objects.get(name="Root")
+        location_type = LocationType.objects.get(name="Room")
         location = Location.objects.filter(location_type=location_type).first()
         prefix = Prefix(prefix=netaddr.IPNetwork("192.0.2.0/24"), location=location)
+        prefix.status = self.statuses.get(slug="active")
         with self.assertRaises(ValidationError) as cm:
             prefix.validated_save()
         self.assertIn(f'Prefixes may not associate to locations of type "{location_type.name}"', str(cm.exception))
@@ -521,7 +522,7 @@ class TestIPAddress(TestCase):
 
 class TestVLANGroup(TestCase):
     def test_vlan_group_validation(self):
-        location_type = LocationType.objects.get(name="Root")
+        location_type = LocationType.objects.get(name="Elevator")
         location = Location.objects.filter(location_type=location_type).first()
         group = VLANGroup(name="Group 1", location=location)
         with self.assertRaises(ValidationError) as cm:
@@ -557,6 +558,8 @@ class VLANTestCase(TestCase):
 
     def test_vlan_validation(self):
         location_type = LocationType.objects.get(name="Root")
+        location_type.content_types.set([])
+        location_type.validated_save()
         location = Location.objects.filter(location_type=location_type).first()
         vlan = VLAN(name="Group 1", vid=1, location=location)
         vlan.status = Status.objects.get_for_model(VLAN).get(slug="active")
