@@ -4,7 +4,7 @@ from netaddr import IPNetwork
 from django.contrib.contenttypes.models import ContentType
 from django.test import override_settings
 
-from nautobot.dcim.models import Device, DeviceRole, DeviceType, Manufacturer, Site
+from nautobot.dcim.models import Device, DeviceRole, DeviceType, Location, Manufacturer, Site
 from nautobot.extras.choices import CustomFieldTypeChoices
 from nautobot.extras.models import CustomField, Status, Tag
 from nautobot.ipam.choices import IPAddressRoleChoices, ServiceProtocolChoices
@@ -368,7 +368,11 @@ class VLANTestCase(ViewTestCases.PrimaryObjectViewTestCase):
     @classmethod
     def setUpTestData(cls):
 
-        cls.sites = Site.objects.all()[:2]
+        locations = Location.objects.filter(site__isnull=False)
+        cls.sites = []
+        for l in locations:
+            if l.site not in cls.sites:
+                cls.sites.append(l.site)
 
         vlangroups = (
             VLANGroup.objects.create(name="VLAN Group 1", slug="vlan-group-1", site=cls.sites[0]),
@@ -416,7 +420,8 @@ class VLANTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         custom_field.content_types.set([ContentType.objects.get_for_model(VLAN)])
 
         cls.form_data = {
-            "site": cls.sites[1].pk,
+            "location": Location.objects.filter(site=vlangroups[1].site).first().pk,
+            "site": vlangroups[1].site.pk,
             "group": vlangroups[1].pk,
             "vid": 999,
             "name": "VLAN999",
@@ -435,7 +440,8 @@ class VLANTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         )
 
         cls.bulk_edit_data = {
-            "site": cls.sites[1].pk,
+            "location": Location.objects.filter(site=vlangroups[1].site).first().pk,
+            "site": vlangroups[1].site.pk,
             "group": vlangroups[1].pk,
             "tenant": Tenant.objects.first().pk,
             "status": status_reserved.pk,
