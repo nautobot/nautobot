@@ -101,7 +101,7 @@ class NautobotViewSetMixin(GenericViewSet, AccessMixin, GetReturnURLMixin, FormV
             )
         return self.get_permissions_for_model(queryset.model, permissions)
 
-    def has_permission(self):
+    def check_permissions(self, request):
         """
         Check whether the user has the permissions needed to perform certain actions.
         """
@@ -120,13 +120,18 @@ class NautobotViewSetMixin(GenericViewSet, AccessMixin, GetReturnURLMixin, FormV
 
         return False
 
-    def check_permissions(self, request):
+    def dispatch(self, request, *args, **kwargs):
         """
-        Used to determine whether the user has permissions to a view and object-level permissions.
-        Using AccessMixin handle_no_permission() to deal with Object-Level permissions and API-Level permissions in one pass.
+        Check to see if the user in the request has the required
+        permission.
         """
-        if not self.has_permission():
-            self.handle_no_permission()
+        self.initialize_request(request, *args, **kwargs)
+        has_permission = self.check_permissions(request)
+
+        if not has_permission:
+            return self.handle_no_permission()
+
+        return super().dispatch(request, *args, **kwargs)
 
     def get_table_class(self):
         # Check if self.table_class is specified in the ModelViewSet before performing subsequent actions
