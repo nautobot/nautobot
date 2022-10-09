@@ -702,10 +702,6 @@ class RegionTestCase(FilterTestCases.NameSlugFilterTestCase):
     def test_has_children(self):
         with self.subTest():
             params = {"has_children": True}
-            for region in self.queryset:
-                print(region.name)
-            for region in self.queryset.filter(children__isnull=False):
-                print(region.name)
 
             self.assertEqual(
                 self.filterset(params, self.queryset).qs.count(),
