@@ -122,9 +122,11 @@ class NautobotViewSetMixin(GenericViewSet, AccessMixin, GetReturnURLMixin, FormV
 
     def dispatch(self, request, *args, **kwargs):
         """
-        Check to see if the user in the request has the required
-        permission.
+        Override the default dispatch() method to check permissions first.
+        Used to determine whether the user has permissions to a view and object-level permissions.
+        Using AccessMixin handle_no_permission() to deal with Object-Level permissions and API-Level permissions in one pass.
         """
+        # initialize_request also instantiates self.action which is needed for permission checks.
         self.initialize_request(request, *args, **kwargs)
         has_permission = self.check_permissions(request)
 
