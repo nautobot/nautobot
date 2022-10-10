@@ -986,6 +986,8 @@ The age of session cookies, in seconds.
 
 Default: `'django.contrib.sessions.backends.db'`
 
+Environment Variable: `NAUTOBOT_SESSION_ENGINE`
+
 Controls where Nautobot stores session data.
 
 To use cache-based sessions, set this to `'django.contrib.sessions.backends.cache'`.

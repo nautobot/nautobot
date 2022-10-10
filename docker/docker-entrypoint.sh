@@ -23,6 +23,9 @@ if [[ "$NAUTOBOT_DOCKER_SKIP_INIT" == "false" ]]; then
     echo "❌ Waited ${MAX_DB_WAIT_TIME}s or more for the DB to become ready."
     exit 1
   fi
+# if NAUTOBOT_DOCKER_SKIP_INIT=True then only deploy static files
+else
+  nautobot-server collectstatic
 fi
 
 # Run a quick healthcheck and bail if something fails, --deploy will warn on potential issues for production
