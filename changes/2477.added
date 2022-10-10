@@ -1,0 +1,1 @@
+Added envvar NAUTOBOT_SESSION_ENGINE to allow for overriding the SESSION_ENGINE setting.

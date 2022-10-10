@@ -1,0 +1,1 @@
+Fixed the Docker Entrypoint file so it runs nautobot-server collectstatic if envvar NAUTOBOT_DOCKER_SKIP_INIT is set to True.
