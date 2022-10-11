@@ -6,13 +6,13 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('extras', '0047_enforce_custom_field_slug'),
+        ("extras", "0047_enforce_custom_field_slug"),
     ]
 
     operations = [
         migrations.AlterField(
-            model_name='objectchange',
-            name='change_context_detail',
+            model_name="objectchange",
+            name="change_context_detail",
             field=models.CharField(blank=True, editable=False, max_length=200),
         ),
     ]
