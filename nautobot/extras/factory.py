@@ -11,8 +11,8 @@ from nautobot.utilities.choices import ColorChoices
 from nautobot.utilities.factory import get_random_instances
 
 
-# Status isn't technically an OrganizationalModel, but it has all of its features **except** dynamic-groups
 class StatusFactory(OrganizationalModelFactory):
+    """Status isn't technically an OrganizationalModel, but it has all of its features **except** dynamic-groups."""
     class Meta:
         model = Status
         exclude = ("has_description",)
@@ -39,8 +39,8 @@ class StatusFactory(OrganizationalModelFactory):
                 )
 
 
-# Tag isn't technically an OrganizationalModel, but it has all of its features **except** dynamic-groups
 class TagFactory(OrganizationalModelFactory):
+    """Tag isn't technically an OrganizationalModel, but it has all of its features **except** dynamic-groups."""
     class Meta:
         model = Tag
         exclude = ("has_description",)

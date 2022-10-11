@@ -88,6 +88,7 @@ def get_random_instances(model_or_queryset_or_lambda, minimum=0, maximum=None):
 
     Args:
         model_or_queryset_or_lambda: Either a model class, a model queryset, or a lambda that returns one of those
+        minimum (int): Minimum number of objects to return
         maximum (int): Maximum number of objects to return, or None for no limit
     """
     branch = factory.random.randgen.randint(0, 2)
