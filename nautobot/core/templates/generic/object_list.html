@@ -154,7 +154,8 @@
         deleteCssClass: 'btn btn-danger delete-row',
         prefix: 'form',
         formCssClass: 'dynamic-filterform',
-        added: jsify_form
+        added: jsify_form,
+        removed: (row) => { row.remove(); }
     });
 
     // By default on lookup_value field names are form-\d-lookup_value, thats why
