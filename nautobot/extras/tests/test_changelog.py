@@ -299,10 +299,11 @@ class ChangeLogAPITest(APITestCase):
         self.assertEqual(ObjectChange.objects.count(), 0)
         self.add_permissions("dcim.delete_site", "extras.view_status")
         url = reverse("dcim-api:site-detail", kwargs={"pk": site.pk})
+        initial_count = Site.objects.count()
 
         response = self.client.delete(url, **self.header)
         self.assertHttpStatus(response, status.HTTP_204_NO_CONTENT)
-        self.assertEqual(Site.objects.count(), Site.objects.all().count())
+        self.assertEqual(Site.objects.count(), initial_count - 1)
 
         oc = ObjectChange.objects.first()
         self.assertEqual(oc.changed_object, None)

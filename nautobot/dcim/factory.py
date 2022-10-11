@@ -23,7 +23,7 @@ class RegionFactory(DjangoModelFactory):
         )
 
     has_parent = factory.Faker("pybool")
-    parent = factory.Maybe("has_parent", random_instance(Region), None)
+    parent = factory.Maybe("has_parent", random_instance(Region, allow_null=False), None)
     name = factory.Maybe("has_parent", UniqueFaker("city"), UniqueFaker("country"))
 
     has_description = factory.Faker("pybool")
@@ -54,10 +54,10 @@ class SiteFactory(DjangoModelFactory):
     asn = factory.Maybe("has_asn", factory.Sequence(lambda n: 65000 + n), None)
 
     has_region = factory.Faker("pybool")
-    region = factory.Maybe("has_region", random_instance(Region), None)
+    region = factory.Maybe("has_region", random_instance(Region, allow_null=False), None)
 
     has_tenant = factory.Faker("pybool")
-    tenant = factory.Maybe("has_tenant", random_instance(Tenant))
+    tenant = factory.Maybe("has_tenant", random_instance(Tenant, allow_null=False), None)
 
     has_time_zone = factory.Faker("pybool")
     time_zone = factory.Maybe("has_time_zone", pytz.timezone("US/Eastern"))
@@ -66,7 +66,7 @@ class SiteFactory(DjangoModelFactory):
     physical_address = factory.Maybe("has_physical_address", factory.Faker("address"))
 
     has_shipping_address = factory.Faker("pybool")
-    shipping_address = factory.Maybe("has_physical_address", factory.Faker("address"))
+    shipping_address = factory.Maybe("has_shipping_address", factory.Faker("address"))
 
     has_latitude = factory.Faker("pybool")
     latitude = factory.Maybe("has_latitude", factory.Faker("latitude"))
@@ -78,6 +78,8 @@ class SiteFactory(DjangoModelFactory):
     contact_name = factory.Maybe("has_contact_name", factory.Faker("name"))
 
     has_contact_phone = factory.Faker("pybool")
+    # Opt not to use factory.Faker("phone_number") because contact_phone has a 20 char limit
+    # whereas factory.Faker("phone_number") generates more than 20 chars
     contact_phone = factory.Maybe("has_contact_phone", factory.Sequence(lambda n: f"1091-65912-{n:04d}"))
 
     has_contact_email = factory.Faker("pybool")
@@ -124,6 +126,8 @@ class LocationTypeFactory(DjangoModelFactory):
                 [
                     ContentType.objects.get_for_model(Cluster),
                     ContentType.objects.get_for_model(PowerPanel),
+                    ContentType.objects.get_for_model(Rack),
+                    ContentType.objects.get_for_model(RackGroup),
                     ContentType.objects.get_for_model(VLAN),
                 ]
             )
@@ -133,6 +137,8 @@ class LocationTypeFactory(DjangoModelFactory):
                     ContentType.objects.get_for_model(CircuitTermination),
                     ContentType.objects.get_for_model(Device),
                     ContentType.objects.get_for_model(PowerPanel),
+                    ContentType.objects.get_for_model(Rack),
+                    ContentType.objects.get_for_model(RackGroup),
                     ContentType.objects.get_for_model(VLAN),
                 ]
             )
@@ -162,10 +168,10 @@ class LocationFactory(DjangoModelFactory):
     )
 
     has_site = factory.LazyAttribute(lambda l: not bool(l.has_parent))
-    site = factory.Maybe("has_site", random_instance(Site))
+    site = factory.Maybe("has_site", random_instance(Site, allow_null=False), None)
 
     has_tenant = factory.Faker("pybool")
-    tenant = factory.Maybe("has_tenant", random_instance(Tenant))
+    tenant = factory.Maybe("has_tenant", random_instance(Tenant, allow_null=False), None)
 
     has_description = factory.Faker("pybool")
     description = factory.Maybe("has_description", factory.Faker("text", max_nb_chars=200), "")

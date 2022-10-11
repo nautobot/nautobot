@@ -1021,22 +1021,31 @@ class LocationTypeFilterSetTestCase(FilterTestCases.NameSlugFilterTestCase):
 
     @classmethod
     def setUpTestData(cls):
-        lt1 = LocationType.objects.create(name="Campus Type", description="A campus")
-        lt2 = LocationType.objects.create(name="Building Type", parent=lt1, description="A building")
-        lt3 = LocationType.objects.create(name="Floor Type", slug="building-floor", parent=lt2)
-        lt4 = LocationType.objects.create(name="Room Type", parent=lt3)
+        lt1 = LocationType.objects.get(name="Building")
+        lt1.description = "A building"
+        lt1.validated_save()
+        lt2 = LocationType.objects.get(name="Floor")
+        lt2.description = "A floor"
+        lt2.validated_save()
+        lt3 = LocationType.objects.get(name="Room")
+        lt4 = LocationType.objects.get(name="Aisle")
         for lt in [lt1, lt2, lt3]:
             lt.content_types.add(ContentType.objects.get_for_model(RackGroup))
         lt4.content_types.add(ContentType.objects.get_for_model(Rack))
         lt4.content_types.add(ContentType.objects.get_for_model(Device))
 
     def test_description(self):
-        params = {"description": ["A campus", "A building"]}
+        params = {"description": ["A floor", "A building"]}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
 
     def test_parent(self):
-        params = {"parent": ["building-type", LocationType.objects.get(name="Campus Type").pk]}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+        params = {"parent": ["building", LocationType.objects.get(name="Floor").pk]}
+        self.assertEqual(
+            self.filterset(params, self.queryset).qs.count(),
+            self.queryset.filter(
+                parent__in=[LocationType.objects.get(name="Building"), LocationType.objects.get(name="Floor")]
+            ).count(),
+        )
 
     def test_content_types(self):
         with self.subTest():
@@ -1064,10 +1073,10 @@ class LocationFilterSetTestCase(FilterTestCases.NameSlugFilterTestCase, FilterTe
 
     @classmethod
     def setUpTestData(cls):
-        lt1 = LocationType.objects.create(name="Campus Type")
-        lt2 = LocationType.objects.create(name="Building Type", parent=lt1)
-        lt3 = LocationType.objects.create(name="Floor Type", slug="building-floor", parent=lt2)
-        lt4 = LocationType.objects.create(name="Room Type", parent=lt3)
+        lt1 = LocationType.objects.get(name="Building")
+        lt2 = LocationType.objects.get(name="Floor")
+        lt3 = LocationType.objects.get(name="Room")
+        lt4 = LocationType.objects.get(name="Aisle")
         lt4.content_types.add(ContentType.objects.get_for_model(Device))
 
         status_active = Status.objects.get(slug="active")
@@ -1095,22 +1104,30 @@ class LocationFilterSetTestCase(FilterTestCases.NameSlugFilterTestCase, FilterTe
     def test_location_type(self):
         params = {
             "location_type": [
-                LocationType.objects.get(name="Campus Type").slug,
-                LocationType.objects.get(name="Room Type").pk,
+                LocationType.objects.get(name="Building").slug,
+                LocationType.objects.get(name="Floor").pk,
             ]
         }
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+        self.assertEqual(
+            self.filterset(params, self.queryset).qs.count(),
+            self.queryset.filter(
+                location_type__in=[
+                    LocationType.objects.get(name="Building"),
+                    LocationType.objects.get(name="Floor"),
+                ]
+            ).count(),
+        )
 
     def test_parent(self):
         params = {"parent": ["rtp", Location.objects.get(name="RTP4E").pk]}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
 
     def test_child_location_type(self):
-        params = {"child_location_type": ["room-type", LocationType.objects.get(name="Building Type").pk]}
+        params = {"child_location_type": ["room", LocationType.objects.get(name="Floor").pk]}
         self.assertEqual(
             self.filterset(params, self.queryset).qs.count(),
-            Location.objects.filter(location_type__slug="room-type").count()
-            + Location.objects.filter(location_type=LocationType.objects.get(name="Building Type").pk).count(),
+            Location.objects.filter(location_type__slug="room").count()
+            + Location.objects.filter(location_type=LocationType.objects.get(name="Floor").pk).count(),
         )
 
     def test_content_type(self):

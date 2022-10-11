@@ -45,11 +45,6 @@ class NautobotTemplatetagsHelperTest(TestCase):
         self.assertEqual(hyperlinked_object("hello"), "hello")
         # An object with get_absolute_url gives a hyperlink
         site = Site.objects.first()
-        status = Status.objects.create(name="Testing")
-        status.content_types.set([ContentType.objects.get_for_model(Site)])
-        status.validated_save()
-        site.status = status
-        site.validated_save()
         self.assertEqual(hyperlinked_object(site), f'<a href="/dcim/sites/{site.slug}/">{site.name}</a>')
         # An object with get_absolute_url and a description gives a titled hyperlink
         site.description = "An important site"

@@ -923,8 +923,6 @@ class ViewTestCases:
             attr_name = list(self.bulk_edit_data.keys())[0]
             field = self.model._meta.get_field(attr_name)
             value = field.value_from_object(self._get_queryset().first())
-            print(attr_name)
-            print(value)
 
             # Assign constrained permission
             obj_perm = ObjectPermission(
