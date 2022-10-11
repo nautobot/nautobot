@@ -528,7 +528,7 @@ class PrefixFactory(PrimaryModelFactory):
             if child_cidr > 128 or self.family == 4 and child_cidr > 32:
                 raise ValueError(f"Unable to create {child_count} child prefixes in container prefix {self.cidr_str}.")
 
-            # Create child prefixes, preserving tenant, site, location, vrf and is_ipv6 from parent
+            # Create child prefixes, preserving site, location, vrf and is_ipv6 from parent
             for count, address in enumerate(self.prefix.subnet(child_cidr)):
                 if count == child_count:
                     break
