@@ -90,7 +90,7 @@ class ObjectChange(BaseModel):
         editable=False,
         db_index=True,
     )
-    change_context_detail = models.CharField(max_length=100, blank=True, editable=False)
+    change_context_detail = models.CharField(max_length=200, blank=True, editable=False)
     related_object_type = models.ForeignKey(
         to=ContentType,
         on_delete=models.PROTECT,
