@@ -13,6 +13,7 @@ from nautobot.utilities.factory import get_random_instances
 
 class StatusFactory(OrganizationalModelFactory):
     """Status isn't technically an OrganizationalModel, but it has all of its features **except** dynamic-groups."""
+
     class Meta:
         model = Status
         exclude = ("has_description",)
@@ -41,6 +42,7 @@ class StatusFactory(OrganizationalModelFactory):
 
 class TagFactory(OrganizationalModelFactory):
     """Tag isn't technically an OrganizationalModel, but it has all of its features **except** dynamic-groups."""
+
     class Meta:
         model = Tag
         exclude = ("has_description",)
