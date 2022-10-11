@@ -55,8 +55,6 @@ HTTP_ACTIONS = {
     "DELETE": "delete",
 }
 
-logger = logging.getLogger(__name__)
-
 
 #
 # Mixins
@@ -782,6 +780,8 @@ class GetFilterSetFieldDOMElementAPI(NautobotAPIVersionMixin, APIView):
 
         model_form = get_form_for_model(model)
         if model_form is None:
+            logger = logging.getLogger(__name__)
+
             logger.warning(f"Form for {model} model not found")
             # Because the DOM Representation cannot be derived from a CharField without a Form, the DOM Representation must be hardcoded.
             return Response(
