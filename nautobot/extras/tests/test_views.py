@@ -728,7 +728,7 @@ class SecretsGroupTestCase(
     @classmethod
     def setUpTestData(cls):
         secrets_groups = (
-            SecretsGroup.objects.create(name="Group 1", slug="Group 1", description="First Group"),
+            SecretsGroup.objects.create(name="Group 1", slug="group-1", description="First Group"),
             SecretsGroup.objects.create(name="Group 2", slug="group-2"),
             SecretsGroup.objects.create(name="Group 3", slug="group-3"),
         )
