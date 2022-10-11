@@ -28,6 +28,7 @@ class Command(BaseCommand):
         try:
             import factory.random
 
+            from nautobto.dcim.factory import DeviceTypeFactory, ManufacturerFactory, PlatformFactory
             from nautobot.extras.factory import StatusFactory, TagFactory
             from nautobot.extras.management import populate_status_choices
             from nautobot.extras.utils import TaggableClassesQuery
@@ -96,5 +97,11 @@ Type 'yes' to continue, or 'no' to cancel: """
         AggregateFactory.create_batch(5, has_tenant_group=True)
         AggregateFactory.create_batch(5, has_tenant_group=False, has_tenant=True)
         AggregateFactory.create_batch(10)
+        self.stdout.write("Creating Manufacturers...")
+        ManufacturerFactory.create_batch(10)
+        self.stdout.write("Creating Platforms...")
+        PlatformFactory.create_batch(10)
+        self.stdout.write("Creating DeviceTypes...")
+        DeviceTypeFactory.create_batch(10)
 
         self.stdout.write(self.style.SUCCESS("Database populated successfully!"))

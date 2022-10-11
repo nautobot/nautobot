@@ -1,6 +1,7 @@
 import logging
 
 import factory
+import faker
 
 from nautobot.core.factory import OrganizationalModelFactory, PrimaryModelFactory
 from nautobot.dcim.models import DeviceType, Manufacturer, Platform
@@ -36,12 +37,10 @@ class PlatformFactory(OrganizationalModelFactory):
         model = Platform
         exclude = ("has_manufacturer", "has_description", "has_napalm_driver", "has_napalm_args")
 
-    class Params:
-        first = UniqueFaker("word")
-        last = UniqueFaker("word")
-
     # Slug isn't defined here since it will always inherit from name.
-    name = factory.LazyAttribute(lambda o: f"{o.first} {o.last}".title())
+    name = factory.LazyFunction(
+        lambda: faker.Faker().word(part_of_speech="adjective").title() + " " + faker.Faker().word().title()
+    )
 
     has_manufacturer = factory.Faker("pybool")
     manufacturer = factory.Maybe("has_manufacturer", random_instance(Manufacturer), None)
@@ -67,17 +66,13 @@ class DeviceTypeFactory(PrimaryModelFactory):
             "has_comments",
         )
 
-    class Params:
-        first = UniqueFaker("word")
-        last = UniqueFaker("word")
+    manufacturer = random_instance(Manufacturer)
 
-    # For now this is creating a new Manufacturer every time a DeviceType is created.
-    manufacturer = factory.SubFactory(ManufacturerGetOrCreateFactory)
-
-    model = factory.LazyAttribute(lambda o: f"{o.first} {o.last}".title())
+    model = factory.LazyFunction(
+        lambda: faker.Faker().word(part_of_speech="adjective").title() + " " + faker.Faker().word().title()
+    )
 
     slug = UniqueFaker("word")
-
     has_part_number = factory.Faker("pybool")
     part_number = factory.Maybe("has_part_number", factory.Faker("ean", length=8), "")
 
