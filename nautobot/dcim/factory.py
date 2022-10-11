@@ -104,7 +104,7 @@ class DeviceTypeFactory(PrimaryModelFactory):
 
     # If randomly a subdevice, set u_height to 0.
     is_subdevice_child = factory.Faker("boolean", chance_of_getting_true=33)
-    u_height = factory.Maybe("is_subdevice_child", 0, factory.fuzzy.FuzzyInteger(1, 4))
+    u_height = factory.Maybe("is_subdevice_child", 0, factory.fuzzy.FuzzyInteger(1, 2))
 
     is_full_depth = factory.Faker("pybool")
 
