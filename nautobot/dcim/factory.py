@@ -121,13 +121,21 @@ class LocationTypeFactory(DjangoModelFactory):
                     ContentType.objects.get_for_model(VLAN),
                 ]
             )
-        elif self.name in ["Room", "Elevator"]:
+        elif self.name in ["Room"]:
             self.content_types.set(
                 [
                     ContentType.objects.get_for_model(Cluster),
                     ContentType.objects.get_for_model(PowerPanel),
                     ContentType.objects.get_for_model(Rack),
                     ContentType.objects.get_for_model(RackGroup),
+                    ContentType.objects.get_for_model(VLAN),
+                ]
+            )
+        elif self.name in ["Elevator"]:
+            self.content_types.set(
+                [
+                    ContentType.objects.get_for_model(Cluster),
+                    ContentType.objects.get_for_model(PowerPanel),
                     ContentType.objects.get_for_model(VLAN),
                 ]
             )

@@ -693,20 +693,17 @@ class RegionTestCase(FilterTestCases.NameSlugFilterTestCase):
             )
 
     def test_children(self):
-        child_region_1a = self.child_regions[0]
-        child_region_1b = self.child_regions[1]
-        child_region_2a = self.child_regions[2]
         with self.subTest():
-            params = {"children": [child_region_1a.pk, child_region_1b.slug]}
+            params = {"children": [self.child_regions[0].pk, self.child_regions[1].slug]}
             self.assertEqual(
                 self.filterset(params, self.queryset).qs.count(),
-                self.queryset.filter(children__in=[child_region_1a.pk, child_region_1b.pk]).count(),
+                self.queryset.filter(children__in=[self.child_regions[0].pk, self.child_regions[1].pk]).count(),
             )
         with self.subTest():
-            params = {"children": [child_region_1a.pk, child_region_2a.slug]}
+            params = {"children": [self.child_regions[0].pk, self.child_regions[2].slug]}
             self.assertEqual(
                 self.filterset(params, self.queryset).qs.count(),
-                self.queryset.filter(children__in=[child_region_1a.pk, child_region_2a.pk]).count(),
+                self.queryset.filter(children__in=[self.child_regions[0].pk, self.child_regions[2].pk]).count(),
             )
 
     def test_has_children(self):
@@ -940,35 +937,39 @@ class SiteTestCase(FilterTestCases.NameSlugFilterTestCase, FilterTestCases.Tenan
         vlan_groups = list(VLANGroup.objects.filter(site__isnull=False))[:2]
         params = {"vlan_groups": [vlan_groups[0].pk, vlan_groups[1].slug]}
         self.assertQuerysetEqual(
-            self.filterset(params, self.queryset).qs, self.queryset.filter(vlan_groups__in=vlan_groups)
+            self.filterset(params, self.queryset).qs, self.queryset.filter(vlan_groups__in=vlan_groups).distinct()
         )
 
     def test_has_vlan_groups(self):
         with self.subTest():
             params = {"has_vlan_groups": True}
             self.assertQuerysetEqual(
-                self.filterset(params, self.queryset).qs, self.queryset.filter(vlan_groups__isnull=False)
+                self.filterset(params, self.queryset).qs, self.queryset.filter(vlan_groups__isnull=False).distinct()
             )
         with self.subTest():
             params = {"has_vlan_groups": False}
             self.assertQuerysetEqual(
-                self.filterset(params, self.queryset).qs, self.queryset.filter(vlan_groups__isnull=True)
+                self.filterset(params, self.queryset).qs, self.queryset.filter(vlan_groups__isnull=True).distinct()
             )
 
     def test_vlans(self):
         vlans = list(VLAN.objects.filter(site__isnull=False))[:2]
         params = {"vlans": [vlans[0].pk, vlans[1].pk]}
-        self.assertQuerysetEqual(self.filterset(params, self.queryset).qs, self.queryset.filter(vlans__in=vlans))
+        self.assertQuerysetEqual(
+            self.filterset(params, self.queryset).qs, self.queryset.filter(vlans__in=vlans).distinct()
+        )
 
     def test_has_vlans(self):
         with self.subTest():
             params = {"has_vlans": True}
             self.assertQuerysetEqual(
-                self.filterset(params, self.queryset).qs, self.queryset.filter(vlans__isnull=False)
+                self.filterset(params, self.queryset).qs, self.queryset.filter(vlans__isnull=False).distinct()
             )
         with self.subTest():
             params = {"has_vlans": False}
-            self.assertQuerysetEqual(self.filterset(params, self.queryset).qs, self.queryset.filter(vlans__isnull=True))
+            self.assertQuerysetEqual(
+                self.filterset(params, self.queryset).qs, self.queryset.filter(vlans__isnull=True).distinct()
+            )
 
     def test_clusters(self):
         clusters = Cluster.objects.all()[:2]
