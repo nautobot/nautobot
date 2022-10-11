@@ -125,6 +125,10 @@ class ViewTestCases:
             self.client.logout()
             response = self.client.get(self._get_queryset().first().get_absolute_url())
             self.assertHttpStatus(response, 200)
+            response_body = response.content.decode(response.charset)
+            self.assertIn(
+                "/login/?next=" + self._get_queryset().first().get_absolute_url(), response_body, msg=response_body
+            )
 
             # The "Change Log" tab should appear in the response since we have all exempt permissions
             if issubclass(self.model, ChangeLoggedModel):
@@ -558,6 +562,8 @@ class ViewTestCases:
             self.client.logout()
             response = self.client.get(self._get_url("list"))
             self.assertHttpStatus(response, 200)
+            response_body = response.content.decode(response.charset)
+            self.assertIn("/login/?next=" + self._get_url("list"), response_body, msg=response_body)
 
         @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
         def test_list_objects_filtered(self):
