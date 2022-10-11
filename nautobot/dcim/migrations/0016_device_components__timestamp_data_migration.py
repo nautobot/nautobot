@@ -27,8 +27,7 @@ COMPONENT_MODELS = [
 
 def populate_device_component_timestamps(apps, schema_editor):
     """
-    Set each device component that now has created/last_updated fields to use that of their parent
-    object (device or device_type).
+    Set created/last_updated fields of existing components to None, rather than the time of the migration.
     """
     for model_path in COMPONENT_MODELS:
         model = apps.get_model(model_path)

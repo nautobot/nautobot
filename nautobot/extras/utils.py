@@ -10,6 +10,7 @@ from cacheops import file_cache
 from django.apps import apps
 from django.contrib.contenttypes.models import ContentType
 from django.db.models import Q
+from django.template.loader import get_template, TemplateDoesNotExist
 from django.utils.deconstruct import deconstructible
 from taggit.managers import _TaggableManager
 
@@ -27,6 +28,27 @@ from nautobot.extras.registry import registry
 
 
 logger = logging.getLogger(__name__)
+
+
+def get_base_template(base_template, model):
+    """
+    Returns the name of the base template, if the base_template is not None
+    Otherwise, default to using "<app>/<model>.html" as the base template, if it exists.
+    Otherwise, check if "<app>/<model>_retrieve.html" used in `NautobotUIViewSet` exists.
+    If both templates do not exist, fall back to "base.html".
+    """
+    if base_template is None:
+        base_template = f"{model._meta.app_label}/{model._meta.model_name}.html"
+        # TODO: This can be removed once an object view has been established for every model.
+        try:
+            get_template(base_template)
+        except TemplateDoesNotExist:
+            base_template = f"{model._meta.app_label}/{model._meta.model_name}_retrieve.html"
+            try:
+                get_template(base_template)
+            except TemplateDoesNotExist:
+                base_template = "base.html"
+    return base_template
 
 
 @file_cache.cached(timeout=60)

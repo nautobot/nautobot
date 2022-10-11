@@ -59,21 +59,38 @@ Over time, the process of moving work from _Future_ to _Near Term_ to _Current_ 
 
 Please read through the [Nautobot Roadmap](https://www.networktocode.com/nautobot/roadmap) so you can understand the current backlog and roadmap and which items are already in _Current, Near Term, and Future_.
 
+### Versioning
+
+Nautobot adheres to the Semantic Versioning ("SemVer") strategy, which gives us versions of the format `X.Y.Z`.
+
+* `X` is the major release number. Contains breaking changes or switching default behavior and shadowing legacy/deprecated behavior. May contain new functionality and bug fixes as well.
+* `Y` is the minor release number. Contains new functionality and bug fixes. May introduce deprecation warnings but will not remove or change default behavior.
+* `Z` is the patch release number. Will only contain bug fixes, security updates, and small feature enhancements aimed at addressing user-experience bugs.
+
+For more information, please visit [SemVer.org](https://semver.org/).
+
 ### Release Schedule
 
-Here is what you need to know about Nautobot releases:
+Nautobot aims to publish against following release schedule:
 
-* The initial launch of Nautobot is version 1.0.0beta1 (major.minor.patch) released on February 24, 2021.
-* The core team estimates quarterly releases with the majority of them being minor releases.
-* It is an aspirational goal that there will be no more than one major release per year as major releases do indicate a break in backwards compatibility.
-* For information pertaining to patch releases, which will be released on a schedule, please see the [Patch Releases](#patch-releases) section below.
-* Given the core team is estimating quarterly releases, there will not be firm dates for releases.
-* In order to provide more visibility into the development and release schedule of Nautobot, there will be structured notifications as follows:
-    * At the start of a release cycle, the estimated timeframe for release will be a 4-6 week window.
-    * Halfway through the release cycle (~6 weeks), the estimated timeframe for release will be narrowed to a 3-4 week window
-    * After 8-9 weeks within the development cycle, the estimated timeframe for release will be narrowed further to a 2 week window.
-    * The final notification will be provided 3-5 days before the release drops.
-* The dates and notifications will occur by updating the GitHub Release Milestone and on Slack.
+* One (1) major release per year
+* Three (3) minor releases per year
+* At minimum one (1) patch release every two weeks or more frequently as needed.
+
+Using `2.0` as a release cycle example, that would mean we would publish:
+
+* `2.0.z`
+* `2.1.z`
+* `2.2.z`
+* `2.3.z`
+
+After the third minor release (`2.3.0`), we would plan for another major release, in this case `3.0.0`.
+
+We estimate non-patch releases will be released quarterly but dates are not set in stone. Dates and notifications will occur by updating the GitHub Release Milestone and on Slack.
+
+An example of the release timeline for the `2.0` release cycle:
+
+![Visual diagram of Nautobot release cadence.](../media/development/index_release_cadence.jpg)
 
 #### Patch Releases
 
@@ -93,17 +110,63 @@ Should a patch release contain a fix for security vulnerability(s) (i.e. CVE(s))
 * Strongly urge you to upgrade to address these more serious issues as soon as possible.
 * Not adjust any subsequent release dates (the next scheduled release will still occur as scheduled).
 
-### Long Term Support (LTS)
+### Maintenance Release (LTM)
 
-The core team is currently evaluating the possibility of publishing a Long Term Support (LTS) version of Nautobot. At this time there is no formal target for this initial release. Our goal is to collect feedback from users of Nautobot to help identify a maintainable and reliable LTS model. If you have interest in deploying an LTS version of Nautobot, or useful information to help inform the final LTS model, please contribute to the [GitHub Discussion thread](https://github.com/nautobot/nautobot/discussions/1291) around LTS.
+#### Overview
+
+For the sake of abundance in clarity, we are officially naming what is sometimes called an "LTS" release of software a "Maintenance" or "Long Term Maintenance" (LTM) release of Nautobot. The mindset is that we always aim to release stable software and in fact label the latest releases of the current major version of Nautobot as "stable" (as seen in our documentation and in our Docker container tags).
+
+New users who may choose to install an "LTS" release because it is assumed to be more stable, may almost immediately be presented with breaking changes upon their next upgrade to a "stable" Nautobot release. We want to avoid any confusion that may arise between the term "stable" representing our latest stable release compared to "long term support" which is commonly interpreted to represent a stable release.
+
+Our LTM release will be the last minor version of the previous major release train. At the time of this writing `1.5` will be our maintenance release train of Nautobot for the `1.y` release cycle. Version 1 of Nautobot had an extended release cycle as it was our first major release of the platform. Going forward it can be expected that the `x.3` version of the platform will be the maintenance train of any major version.
+
+With this schedule you can expect a few things per major/minor release:
+
+* `x.0.0`
+    * Introduce breaking changes.
+    * Changing default behavior for user interfaces, APIs, and functions.
+* `x.1.z`
+    * Typical minor release, adding features, bug fixes, potential deprecations.
+* `x.2.z`
+    * Removal of deprecated functions, classes introduced in the previous major release (ex: only if deprecated in `1.y`, removed in `2.2`).
+* `x.3.z`
+    * Maintenance release candidate.
+    * Features may be added in `x.3.0` but nothing further in this cycle.
+
+A release will only be marked as "In Maintenance" when the next major release is published. Active bug fixes will be applied to a `x.3` until that time. Once a new major release has been published, the following will apply to the `x.3` codebase:
+
+* Dependencies are frozen/pinned to a specific release; will only be upgraded if addressing a security vulnerability.
+* Data loss and CVE-related fixes will be back ported from the new active release cycle. All other fixes will be back ported on a case-by-case basis.
+* Patch releases for this phase will be on an as-needed basis.
+* Core features from newer releases will never be back ported. In some cases, developer-centric features that ease the transition to the next major release train may be back ported if it is determined that they will alleviate transitions related to backwards incompatible changes.
+
+A maintenance release will be actively maintained until the next maintenance release is available, roughly a year from the launch of the previous one.
+
+#### Launch of Maintenance Release Schedule (as an Example)
+
+At the time of this writing we are in the active development of Nautobot 1.5. This will be our last minor release of the v1 series of releases and therefore become our first "Long Term Maintenance" (LTM) release of Nautobot. We will be actively applying the normal category of bug fixes (including UI tweaks, display bugs, etc.) to this release train until the release of Nautobot 2.0.
+
+Once we launch Nautobot 2.0, 1.5 will go into maintenance mode and be considered LTM, continuing to receive data loss and CVE-related fixes. At that time we will encourage users to migrate to v2 as they are ready. Nautobot 1.5 will continue to receive such fixes until the release of Nautobot 2.3, where we will end the maintenance of Nautobot 1.5 and it will formally become "End of Life" (EOL). Nautobot 2.3 will then become the LTM release until Nautobot 3.3 is published the following year.
+
+If for any reason the next maintenance release is delayed, we will continue to support the current maintenance release. There is no time limitation for this. We want to ensure our users always have a maintenance release available.
 
 ### Deprecation Policy
 
-The deprecation policy will be such that there will be at least one release that makes users aware of a feature that will be deprecated in the next release.
+Functionality, features, or Python primitives that have been deprecated will be removed in the following major train's `x.2` release (ex: if deprecated in `1.y`, removed in `2.2`).
 
-### Versioning
+To provide assistance for knowing what features and functionality have been deprecated, additional transition features are as follows:
 
-Semantic Versioning ([SemVer](https://semver.org/)) is used for Nautobot versioning.
+* Python primitives that have been deprecated will emit a `DeprecationWarning`, along with a message to which objects will be replacing them. The new objects may not be a direct replacement so please check the release notes and documentation for more migration information.
+* Nautobot 1.2 introduced REST APIs versioning. Newer versions of the API become the default behavior on a major release (`x.0.0`) and older versions become deprecated. Along with classes and other functionality the deprecated versions will be removed in the `x.2` release. For more information, see the [Versioning section of our REST API documentation](../rest-api/overview.md#versioning).
+* We will drop support for Python versions on a case-by-case basis: A patch release may drop support for a Python version if a security update of a critical dependency would require split or conditional support. For example, if the dependency has not published a vulnerability fix for an older Python version, we will drop support at that time. All other cases will be documented and will tend to occur on minor release boundaries.
+* Any deprecation notice (announcement or removal) will be available in our release notes.
+
+!!! warning "Backwards-Incompatible Changes and Deprecations"
+    Breaking changes in a `x.0.0` release may have an effect on deprecated APIs. While we do our best to keep the deprecated APIs intact to simplify migrations to newer releases, breaking changes are inherently breaking and will cause some changes to current and previous API versions. Types of breaking changes include, but are not limited to, removing or collapsing of objects and changing object relationships. This will also mean we will not publish deprecated APIs for models that no longer exist.
+
+    For example, in the upcoming `2.0.0` release we plan to collapse `Site` and `Region` to be `LocationType`s. This means there would no longer be a `site` property on objects such as `Device` as well as no `/api/dcim/sites` or `/api/dcim/regions` API endpoints.
+
+    We will document in major releases how breaking changes will affect existing APIs and Python primitives. Backwards-compatible changes would still be kept around following the normal deprecation policy.
 
 ## Communication
 
@@ -228,15 +291,29 @@ Feature requests will follow our published workflow from inbound triage to ultim
 
 #### Creating Changelog Fragments
 
-All pull requests to `next` or `develop` must include a changelog fragment file in the `./changes` directory. To create a fragment, use your github issue number and fragment type as the filename. For example, `2362.added`. Valid fragment types are `added`, `changed`, `deprecated`, `fixed`, `removed`, and `security`. The change summary is added to the file in plain text. Change summaries should be complete sentences, starting with a capital letter and ending with a period, and be in past tense. Change fragments must only contain a single line of text with an optional trailing newline.
+All pull requests to `next` or `develop` must include a changelog fragment file in the `./changes` directory. To create a fragment, use your github issue number and fragment type as the filename. For example, `2362.added`. Valid fragment types are `added`, `changed`, `deprecated`, `fixed`, `removed`, and `security`. The change summary is added to the file in plain text. Change summaries should be complete sentences, starting with a capital letter and ending with a period, and be in past tense. Each line of the change fragment will generate a single change entry in the release notes. Use multiple lines in the same file if your change needs to generate multiple release notes in the same category. If the change needs to create multiple entries in separate categories, create multiple files.
 
 !!! example
 
-    ```sh
-    # Wrong
-    echo "fix critical bug in documentation" > changes/1234.fixed
-    echo "fixes critical bug in documentation" > changes/1234.fixed
+    **Wrong**
+    ```plaintext title="changes/1234.fixed"
+    fix critical bug in documentation
+    ```
 
-    # Right
-    echo "Fixed critical bug in documentation." > changes/1234.fixed
+    **Right**
+    ```plaintext title="changes/1234.fixed"
+    Fixed critical bug in documentation.
+    ```
+
+!!! example "Multiple Entry Example"
+
+    This will generate 2 entries in the `fixed` category and one entry in the `changed` category.
+
+    ```plaintext title="changes/1234.fixed"
+    Fixed critical bug in documentation.
+    Fixed release notes generation.
+    ```
+
+    ```plaintext title="changes/1234.changed"
+    Changed release notes generation.
     ```

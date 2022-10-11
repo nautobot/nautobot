@@ -3,7 +3,6 @@ from datetime import timedelta
 import logging
 
 from celery import chain
-from django import template
 from django.contrib import messages
 from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ObjectDoesNotExist
@@ -26,7 +25,7 @@ from nautobot.core.views import generic
 from nautobot.dcim.models import Device
 from nautobot.dcim.tables import DeviceTable
 from nautobot.extras.tasks import delete_custom_field_data
-from nautobot.extras.utils import get_job_content_type, get_worker_count
+from nautobot.extras.utils import get_base_template, get_job_content_type, get_worker_count
 from nautobot.utilities.paginator import EnhancedPaginator, get_paginate_count
 from nautobot.utilities.forms import restrict_form_fields
 from nautobot.utilities.utils import (
@@ -727,15 +726,7 @@ class ObjectDynamicGroupsView(View):
         }
         RequestConfig(request, paginate).configure(dynamicsgroups_table)
 
-        # Default to using "<app>/<model>.html" as the template, if it exists. Otherwise,
-        # fall back to using base.html.
-        if self.base_template is None:
-            self.base_template = f"{model._meta.app_label}/{model._meta.model_name}.html"
-            # TODO: This can be removed once an object view has been established for every model.
-            try:
-                template.loader.get_template(self.base_template)
-            except template.TemplateDoesNotExist:
-                self.base_template = "base.html"
+        self.base_template = get_base_template(self.base_template, model)
 
         return render(
             request,
@@ -1617,15 +1608,7 @@ class ObjectChangeLogView(View):
         }
         RequestConfig(request, paginate).configure(objectchanges_table)
 
-        # Default to using "<app>/<model>.html" as the template, if it exists. Otherwise,
-        # fall back to using base.html.
-        if self.base_template is None:
-            self.base_template = f"{model._meta.app_label}/{model._meta.model_name}.html"
-            # TODO: This can be removed once an object view has been established for every model.
-            try:
-                template.loader.get_template(self.base_template)
-            except template.TemplateDoesNotExist:
-                self.base_template = "base.html"
+        self.base_template = get_base_template(self.base_template, model)
 
         return render(
             request,
@@ -1694,15 +1677,7 @@ class ObjectNotesView(View):
         }
         RequestConfig(request, paginate).configure(notes_table)
 
-        # Default to using "<app>/<model>.html" as the template, if it exists. Otherwise,
-        # fall back to using base.html.
-        if self.base_template is None:
-            self.base_template = f"{model._meta.app_label}/{model._meta.model_name}.html"
-            # TODO: This can be removed once an object view has been established for every model.
-            try:
-                template.loader.get_template(self.base_template)
-            except template.TemplateDoesNotExist:
-                self.base_template = "base.html"
+        self.base_template = get_base_template(self.base_template, model)
 
         return render(
             request,
