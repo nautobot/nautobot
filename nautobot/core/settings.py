@@ -273,6 +273,7 @@ SECRET_KEY = os.getenv("SECRET_KEY")
 # Default overrides
 ALLOWED_HOSTS = []
 CSRF_TRUSTED_ORIGINS = []
+CSRF_FAILURE_VIEW = "nautobot.core.views.csrf_failure"
 DATETIME_FORMAT = "N j, Y g:i a"
 INTERNAL_IPS = ("127.0.0.1", "::1")
 FORCE_SCRIPT_NAME = None
