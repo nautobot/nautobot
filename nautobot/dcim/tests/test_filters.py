@@ -757,7 +757,7 @@ class SiteTestCase(FilterTestCases.NameSlugFilterTestCase, FilterTestCases.Tenan
 
     def test_asn(self):
         params = {"asn": [65001, 65002]}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 4)
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), self.queryset.filter(asn__in=[65001, 65002]).count())
 
     def test_latitude(self):
         params = {"latitude": [10, 20]}

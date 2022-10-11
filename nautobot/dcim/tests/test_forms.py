@@ -155,7 +155,7 @@ class LabelTestCase(TestCase):
 
     @classmethod
     def setUpTestData(cls):
-        site = Site.objects.all()[1]
+        site = Site.objects.first()
         manufacturer = Manufacturer.objects.create(name="Manufacturer 2", slug="manufacturer-2")
         cls.device_type = DeviceType.objects.create(
             manufacturer=manufacturer,
@@ -204,7 +204,7 @@ class TestCableCSVForm(TestCase):
 
     @classmethod
     def setUpTestData(cls):
-        site = Site.objects.all()[1]
+        site = Site.objects.first()
         manufacturer = Manufacturer.objects.create(name="Manufacturer 2", slug="manufacturer-2")
         device_type = DeviceType.objects.create(
             manufacturer=manufacturer,
