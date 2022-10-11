@@ -229,19 +229,6 @@ class VLANGroupFactory(OrganizationalModelFactory):
         factory.Maybe("has_site", random_instance(Site), None),
     )
 
-    # @classmethod
-    # def _adjust_kwargs(cls, **kwargs):
-    #     """Fine-tune the randomly generated kwargs to ensure validity."""
-    #     if (
-    #         kwargs["site"] is not None
-    #         and kwargs["location"] is not None
-    #         and kwargs["location"].base_site != kwargs["site"]
-    #     ):
-    #         logger.debug("Fixing mismatch between `site` and `location.base_site` by overriding `site`")
-    #         kwargs["site"] = kwargs["location"].base_site
-
-    #     return kwargs
-
 
 class VLANFactory(PrimaryModelFactory):
     class Meta:
@@ -292,30 +279,3 @@ class VLANFactory(PrimaryModelFactory):
 
     has_tenant = factory.Faker("pybool")
     tenant = factory.Maybe("has_tenant", random_instance(Tenant), None)
-
-    # @classmethod
-    # def _adjust_kwargs(cls, **kwargs):
-    #     """Fine-tune the randomly generated kwargs to ensure validity."""
-    #     if (
-    #         kwargs["group"] is not None
-    #         and kwargs["location"] is not None
-    #         and kwargs["group"].location is not None
-    #         and kwargs["group"].location not in kwargs["location"].ancestors(include_self=True)
-    #     ):
-    #         logger.debug("Fixing mismatch between `group.location` and `location` by overriding `location`")
-    #         kwargs["location"] = randgen.choice(kwargs["group"].location.descendants(include_self=True))
-
-    #     if (
-    #         kwargs["site"] is not None
-    #         and kwargs["location"] is not None
-    #         and kwargs["location"].base_site != kwargs["site"]
-    #     ):
-    #         logger.debug("Fixing mismatch between `site` and `location.base_site` by overriding `site`")
-    #         kwargs["site"] = kwargs["location"].base_site
-
-    #     if kwargs["group"] is not None and kwargs["group"].site != kwargs["site"]:
-    #         logger.debug("Fixing mismatch between `group.site` and `site` by overriding `site`")
-    #         # TODO: can this conflict with the fixup for site / location.base_site? Time will tell.
-    #         kwargs["site"] = kwargs["group"].site
-
-    #     return kwargs

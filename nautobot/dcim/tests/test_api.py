@@ -268,7 +268,7 @@ class SiteTest(APIViewTestCases.APIViewTestCase):
         """
 
         self.add_permissions("dcim.view_site")
-        site = Site.objects.filter(time_zone__isnull=True).first()
+        site = Site.objects.filter(time_zone="").first()
         url = reverse("dcim-api:site-detail", kwargs={"pk": site.pk})
         response = self.client.get(url, **self.header)
         self.assertEqual(response.status_code, status.HTTP_200_OK)

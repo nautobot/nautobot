@@ -664,53 +664,64 @@ class RegionTestCase(FilterTestCases.NameSlugFilterTestCase):
     def setUpTestData(cls):
         common_test_data(cls)
 
-        cls.parent_regions = (
-            Region.objects.create(name="Parent Region 1", slug="parent-region-1"),
-            Region.objects.create(name="Parent Region 2", slug="parent-region-2"),
-            Region.objects.create(name="Parent Region 3", slug="parent-region-3"),
-        )
-        Region.objects.create(name="Region 1A", slug="region-1a", parent=cls.parent_regions[0])
-        Region.objects.create(name="Region 1B", slug="region-1b", parent=cls.parent_regions[0])
-        Region.objects.create(name="Region 2A", slug="region-2a", parent=cls.parent_regions[1])
-        Region.objects.create(name="Region 2B", slug="region-2b", parent=cls.parent_regions[1])
-        Region.objects.create(name="Region 3A", slug="region-3a", parent=cls.parent_regions[2])
-        Region.objects.create(name="Region 3B", slug="region-3b", parent=cls.parent_regions[2])
+        cls.parent_regions = Region.objects.filter(children__isnull=False)[:3]
+        cls.child_regions = Region.objects.filter(parent__in=cls.parent_regions)
 
     def test_description(self):
-        params = {"description": ["A", "B"]}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+        regions = Region.objects.filter(description__isnull=False).exclude(description="")[:2]
+        params = {"description": [regions[0].description, regions[1].description]}
+        self.assertEqual(
+            self.filterset(params, self.queryset).qs.count(),
+            self.queryset.filter(description__exact=regions[0].description).count()
+            + self.queryset.filter(description__exact=regions[1].description).count(),
+        )
 
     def test_parent(self):
         with self.subTest():
             params = {"parent_id": [self.parent_regions[0].pk, self.parent_regions[1].pk]}
-            self.assertEqual(self.filterset(params, self.queryset).qs.count(), 4)
+            self.assertEqual(
+                self.filterset(params, self.queryset).qs.count(),
+                self.queryset.filter(parent__in=[self.parent_regions[0].pk, self.parent_regions[1].pk]).count(),
+            )
         with self.subTest():
             params = {"parent": [self.parent_regions[0].slug, self.parent_regions[1].slug]}
-            self.assertEqual(self.filterset(params, self.queryset).qs.count(), 4)
+            self.assertEqual(
+                self.filterset(params, self.queryset).qs.count(),
+                self.queryset.filter(
+                    parent__slug__in=[self.parent_regions[0].slug, self.parent_regions[1].slug]
+                ).count(),
+            )
 
     def test_children(self):
-        child_region_1a = Region.objects.get(slug="region-1a")
-        child_region_1b = Region.objects.get(slug="region-1b")
-        child_region_2a = Region.objects.get(slug="region-2a")
+        child_region_1a = self.child_regions[0]
+        child_region_1b = self.child_regions[1]
+        child_region_2a = self.child_regions[2]
         with self.subTest():
             params = {"children": [child_region_1a.pk, child_region_1b.slug]}
-            self.assertEqual(self.filterset(params, self.queryset).qs.count(), 1)
+            self.assertEqual(
+                self.filterset(params, self.queryset).qs.count(),
+                self.queryset.filter(children__in=[child_region_1a.pk, child_region_1b.pk]).count(),
+            )
         with self.subTest():
             params = {"children": [child_region_1a.pk, child_region_2a.slug]}
-            self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+            self.assertEqual(
+                self.filterset(params, self.queryset).qs.count(),
+                self.queryset.filter(children__in=[child_region_1a.pk, child_region_2a.pk]).count(),
+            )
 
     def test_has_children(self):
         with self.subTest():
             params = {"has_children": True}
 
-            self.assertEqual(
-                self.filterset(params, self.queryset).qs.count(),
-                self.queryset.filter(children__isnull=False).distinct().count(),
+            self.assertQuerysetEqual(
+                self.filterset(params, self.queryset).qs,
+                self.queryset.filter(children__isnull=False),
             )
         with self.subTest():
             params = {"has_children": False}
-            self.assertEqual(
-                self.filterset(params, self.queryset).qs.count(), self.queryset.filter(children__isnull=True).count()
+            self.assertQuerysetEqual(
+                self.filterset(params, self.queryset).qs,
+                self.queryset.filter(children__isnull=True),
             )
 
     def test_sites(self):
@@ -726,13 +737,13 @@ class RegionTestCase(FilterTestCases.NameSlugFilterTestCase):
             params = {"has_sites": True}
             self.assertEqual(
                 self.filterset(params, self.queryset).qs.count(),
-                self.queryset.filter(sites__isnull=False).distinct().count(),
+                self.queryset.filter(sites__isnull=False).count(),
             )
         with self.subTest():
             params = {"has_sites": False}
             self.assertEqual(
                 self.filterset(params, self.queryset).qs.count(),
-                self.queryset.filter(sites__isnull=True).distinct().count(),
+                self.queryset.filter(sites__isnull=True).count(),
             )
 
 
@@ -929,39 +940,35 @@ class SiteTestCase(FilterTestCases.NameSlugFilterTestCase, FilterTestCases.Tenan
         vlan_groups = list(VLANGroup.objects.filter(site__isnull=False))[:2]
         params = {"vlan_groups": [vlan_groups[0].pk, vlan_groups[1].slug]}
         self.assertQuerysetEqual(
-            self.filterset(params, self.queryset).qs, self.queryset.filter(vlan_groups__in=vlan_groups).distinct()
+            self.filterset(params, self.queryset).qs, self.queryset.filter(vlan_groups__in=vlan_groups)
         )
 
     def test_has_vlan_groups(self):
         with self.subTest():
             params = {"has_vlan_groups": True}
             self.assertQuerysetEqual(
-                self.filterset(params, self.queryset).qs, self.queryset.filter(vlan_groups__isnull=False).distinct()
+                self.filterset(params, self.queryset).qs, self.queryset.filter(vlan_groups__isnull=False)
             )
         with self.subTest():
             params = {"has_vlan_groups": False}
             self.assertQuerysetEqual(
-                self.filterset(params, self.queryset).qs, self.queryset.filter(vlan_groups__isnull=True).distinct()
+                self.filterset(params, self.queryset).qs, self.queryset.filter(vlan_groups__isnull=True)
             )
 
     def test_vlans(self):
         vlans = list(VLAN.objects.filter(site__isnull=False))[:2]
         params = {"vlans": [vlans[0].pk, vlans[1].pk]}
-        self.assertQuerysetEqual(
-            self.filterset(params, self.queryset).qs, self.queryset.filter(vlans__in=vlans).distinct()
-        )
+        self.assertQuerysetEqual(self.filterset(params, self.queryset).qs, self.queryset.filter(vlans__in=vlans))
 
     def test_has_vlans(self):
         with self.subTest():
             params = {"has_vlans": True}
             self.assertQuerysetEqual(
-                self.filterset(params, self.queryset).qs, self.queryset.filter(vlans__isnull=False).distinct()
+                self.filterset(params, self.queryset).qs, self.queryset.filter(vlans__isnull=False)
             )
         with self.subTest():
             params = {"has_vlans": False}
-            self.assertQuerysetEqual(
-                self.filterset(params, self.queryset).qs, self.queryset.filter(vlans__isnull=True).distinct()
-            )
+            self.assertQuerysetEqual(self.filterset(params, self.queryset).qs, self.queryset.filter(vlans__isnull=True))
 
     def test_clusters(self):
         clusters = Cluster.objects.all()[:2]

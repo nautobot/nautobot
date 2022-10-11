@@ -208,57 +208,66 @@ class NaturalKeyOrPKMultipleChoiceFilterTest(TestCase):
 
         kwargs = {"power_panels": [settings.FILTERS_NULL_CHOICE_VALUE]}
         qs = self.SiteFilterSet(kwargs, self.queryset).qs
-        qs = qs.filter(pk__in=self.site_pk_list)
+        expected_result = list(Site.objects.filter(powerpanel__isnull=True))
 
-        self.assertCountEqual(list(qs), [self.site0])
+        self.assertCountEqual(list(qs), expected_result)
 
     def test_filter_combined_name(self):
 
         kwargs = {"power_panels": ["test-power-panel1", settings.FILTERS_NULL_CHOICE_VALUE]}
         qs = self.SiteFilterSet(kwargs, self.queryset).qs
-        qs = qs.filter(pk__in=self.site_pk_list)
+        expected_result = list(
+            Site.objects.filter(powerpanel__isnull=True) | Site.objects.filter(powerpanel__name="test-power-panel1")
+        )
 
-        self.assertCountEqual(list(qs), [self.site0, self.site1])
+        self.assertCountEqual(list(qs), expected_result)
 
     def test_filter_combined_pk(self):
 
         kwargs = {"power_panels": [self.power_panel2.pk, settings.FILTERS_NULL_CHOICE_VALUE]}
         qs = self.SiteFilterSet(kwargs, self.queryset).qs
-        qs = qs.filter(pk__in=self.site_pk_list)
+        expected_result = list(
+            Site.objects.filter(powerpanel__isnull=True) | Site.objects.filter(powerpanel__pk=self.power_panel2.pk)
+        )
 
-        self.assertCountEqual(list(qs), [self.site0, self.site2])
+        self.assertCountEqual(list(qs), expected_result)
 
     def test_filter_single_name_exclude(self):
 
         kwargs = {"power_panels__n": ["test-power-panel1"]}
         qs = self.SiteFilterSet(kwargs, self.queryset).qs
-        qs = qs.filter(pk__in=self.site_pk_list)
+        expected_result = list(Site.objects.exclude(powerpanel__name="test-power-panel1"))
 
-        self.assertCountEqual(list(qs), [self.site0, self.site2])
+        self.assertCountEqual(list(qs), expected_result)
 
     def test_filter_single_pk_exclude(self):
 
         kwargs = {"power_panels__n": [self.power_panel2.pk]}
         qs = self.SiteFilterSet(kwargs, self.queryset).qs
-        qs = qs.filter(pk__in=self.site_pk_list)
+        expected_result = list(Site.objects.exclude(powerpanel__pk=self.power_panel2.pk))
 
-        self.assertCountEqual(list(qs), [self.site0, self.site1])
+        self.assertCountEqual(list(qs), expected_result)
 
     def test_filter_multiple_name_exclude(self):
 
         kwargs = {"power_panels__n": ["test-power-panel1", "test-power-panel2"]}
         qs = self.SiteFilterSet(kwargs, self.queryset).qs
-        qs = qs.filter(pk__in=self.site_pk_list)
+        expected_result = list(
+            Site.objects.filter(powerpanel__isnull=True)
+            | Site.objects.exclude(powerpanel__name="test-power-panel1").exclude(powerpanel__name="test-power-panel2")
+        )
 
-        self.assertCountEqual(list(qs), [self.site0])
+        self.assertCountEqual(list(qs), expected_result)
 
     def test_filter_duplicate_name_exclude(self):
 
         kwargs = {"power_panels__n": ["test-power-panel3"]}
         qs = self.SiteFilterSet(kwargs, self.queryset).qs
-        qs = qs.filter(pk__in=self.site_pk_list)
+        expected_result = list(
+            Site.objects.filter(powerpanel__isnull=True) | Site.objects.exclude(powerpanel__name="test-power-panel3")
+        )
 
-        self.assertCountEqual(list(qs), [self.site0])
+        self.assertCountEqual(list(qs), expected_result)
 
     def test_filter_null_exclude(self):
 
