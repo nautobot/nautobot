@@ -63,13 +63,19 @@ class AggregateFactory(PrimaryModelFactory):
             "has_date_added",
             "has_description",
             "has_tenant",
+            "has_tenant_group",
             "is_ipv6",
         )
 
     rir = random_instance(RIR)
 
     has_tenant = factory.Faker("pybool")
-    tenant = factory.Maybe("has_tenant", random_instance(Tenant), None)
+    has_tenant_group = factory.Faker("pybool")
+    tenant = factory.Maybe(
+        "has_tenant_group",
+        random_instance(Tenant.objects.filter(group__isnull=False), allow_null=False),
+        factory.Maybe("has_tenant", random_instance(Tenant), None),
+    )
 
     has_date_added = factory.Faker("pybool")
     date_added = factory.Maybe("has_date_added", factory.Faker("date"), None)
