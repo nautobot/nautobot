@@ -108,17 +108,19 @@ class NautobotViewSetMixin(GenericViewSet, AccessMixin, GetReturnURLMixin, FormV
         user = self.request.user
         queryset = self.get_queryset()
         permission_required = self.get_required_permission()
-        # Check that the user has been granted the required permission(s).
-        if user.has_perms(permission_required):
-
-            # Update the view's QuerySet to filter only the permitted objects
-            for permission in permission_required:
+        # Check that the user has been granted the required permission(s) one by one.
+        # In case the permission has `message` or `code`` attribute, we want to include those information in the permission_denied error.
+        for permission in permission_required:
+            if user.has_perms(permission_required):
+                # Update the view's QuerySet to filter only the permitted objects
                 action = resolve_permission(permission)[1]
                 queryset = queryset.restrict(user, action)
-
-            return True
-
-        return False
+            else:
+                self.permission_denied(
+                    request,
+                    message=getattr(permission, "message", None),
+                    code=getattr(permission, "code", None),
+                )
 
     def dispatch(self, request, *args, **kwargs):
         """
@@ -128,9 +130,11 @@ class NautobotViewSetMixin(GenericViewSet, AccessMixin, GetReturnURLMixin, FormV
         """
         # initialize_request also instantiates self.action which is needed for permission checks.
         self.initialize_request(request, *args, **kwargs)
-        has_permission = self.check_permissions(request)
-
-        if not has_permission:
+        try:
+            self.check_permissions(request)
+        # check_permissions() could raise NotAuthenticated and PermissionDenied Error.
+        # We handle them by a single except statement since handle_no_permission() is able to handle both errors
+        except:  # noqa: E722
             return self.handle_no_permission()
 
         return super().dispatch(request, *args, **kwargs)
