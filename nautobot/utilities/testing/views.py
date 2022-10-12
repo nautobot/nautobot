@@ -25,7 +25,7 @@ __all__ = (
 
 
 @tag("unit")
-@override_settings(PAGINATE_COUNT=0)
+@override_settings(PAGINATE_COUNT=65000)
 class TestCase(_TestCase, NautobotTestCaseMixin):
     """Base class for all Nautobot-specific unit tests."""
 

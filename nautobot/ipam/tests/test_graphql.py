@@ -14,10 +14,8 @@ class TestPrefix(APITestCase):
         super().setUp()
         self.api_url = reverse("graphql-api")
         self.statuses = Status.objects.get_for_model(Prefix)
-        self.prefixv4 = Prefix.objects.create(prefix="10.0.0.0/24", status=self.statuses.get(slug="active"))
-        self.prefixv6 = Prefix.objects.create(prefix="2001:DB8::/32", status=self.statuses.get(slug="active"))
-        self.prefixv4.validated_save()
-        self.prefixv6.validated_save()
+        self.prefixv4 = Prefix.objects.ip_family(4).first()
+        self.prefixv6 = Prefix.objects.ip_family(6).first()
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     def test_prefix_family(self):
