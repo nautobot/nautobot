@@ -18,7 +18,7 @@ from django_tables2 import RequestConfig
 
 from nautobot.circuits.models import Circuit
 from nautobot.core.views import generic
-from nautobot.extras.views import ObjectChangeLogView, ObjectConfigContextView
+from nautobot.extras.views import ObjectChangeLogView, ObjectConfigContextView, ObjectDynamicGroupsView
 from nautobot.ipam.models import IPAddress, Prefix, Service, VLAN
 from nautobot.ipam.tables import InterfaceIPAddressTable, InterfaceVLANTable
 from nautobot.utilities.forms import ConfirmationForm
@@ -1636,6 +1636,10 @@ class DeviceConfigContextView(ObjectConfigContextView):
 
 
 class DeviceChangeLogView(ObjectChangeLogView):
+    base_template = "dcim/device/base.html"
+
+
+class DeviceDynamicGroupsView(ObjectDynamicGroupsView):
     base_template = "dcim/device/base.html"
 
 

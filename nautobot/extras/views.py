@@ -3,7 +3,6 @@ from datetime import timedelta
 import logging
 
 from celery import chain
-from django import template
 from django.contrib import messages
 from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ObjectDoesNotExist
@@ -26,7 +25,7 @@ from nautobot.core.views import generic
 from nautobot.dcim.models import Device
 from nautobot.dcim.tables import DeviceTable
 from nautobot.extras.tasks import delete_custom_field_data
-from nautobot.extras.utils import get_job_content_type, get_worker_count
+from nautobot.extras.utils import get_base_template, get_job_content_type, get_worker_count
 from nautobot.utilities.paginator import EnhancedPaginator, get_paginate_count
 from nautobot.utilities.forms import restrict_form_fields
 from nautobot.utilities.utils import (
@@ -701,6 +700,48 @@ class DynamicGroupBulkDeleteView(generic.BulkDeleteView):
     table = tables.DynamicGroupTable
 
 
+class ObjectDynamicGroupsView(View):
+    """
+    Present a list of dynamic groups associated to a particular object.
+    base_template: The name of the template to extend. If not provided, "<app>/<model>.html" will be used.
+    """
+
+    base_template = None
+
+    def get(self, request, model, **kwargs):
+
+        # Handle QuerySet restriction of parent object if needed
+        if hasattr(model.objects, "restrict"):
+            obj = get_object_or_404(model.objects.restrict(request.user, "view"), **kwargs)
+        else:
+            obj = get_object_or_404(model, **kwargs)
+
+        # Gather all dynamic groups for this object (and its related objects)
+        dynamicsgroups_table = tables.DynamicGroupTable(data=obj.dynamic_groups, orderable=False)
+
+        # Apply the request context
+        paginate = {
+            "paginator_class": EnhancedPaginator,
+            "per_page": get_paginate_count(request),
+        }
+        RequestConfig(request, paginate).configure(dynamicsgroups_table)
+
+        self.base_template = get_base_template(self.base_template, model)
+
+        return render(
+            request,
+            "extras/object_dynamicgroups.html",
+            {
+                "object": obj,
+                "verbose_name": obj._meta.verbose_name,
+                "verbose_name_plural": obj._meta.verbose_name_plural,
+                "table": dynamicsgroups_table,
+                "base_template": self.base_template,
+                "active_tab": "dynamic-groups",
+            },
+        )
+
+
 #
 # Export Templates
 #
@@ -1086,6 +1127,13 @@ class JobView(ObjectPermissionRequiredMixin, View):
             messages.error(request, "Unable to run or schedule job: Job is not enabled to be run.")
         elif job_model.has_sensitive_variables and request.POST["_schedule_type"] != JobExecutionType.TYPE_IMMEDIATELY:
             messages.error(request, "Unable to schedule job: Job may have sensitive input variables.")
+        elif job_model.has_sensitive_variables and job_model.approval_required:
+            messages.error(
+                request,
+                "Unable to run or schedule job: "
+                "This job is flagged as possibly having sensitive variables but is also flagged as requiring approval."
+                "One of these two flags must be removed before this job can be scheduled or run.",
+            )
         elif job_form is not None and job_form.is_valid() and schedule_form.is_valid():
             # Run the job. A new JobResult is created.
             commit = job_form.cleaned_data.pop("_commit")
@@ -1161,7 +1209,7 @@ class JobView(ObjectPermissionRequiredMixin, View):
                     commit=commit,
                 )
 
-                return redirect("extras:job_jobresult", pk=job_result.pk)
+                return redirect("extras:jobresult", pk=job_result.pk)
 
         template_name = "extras/job.html"
         if job_model.job_class is not None and hasattr(job_model.job_class, "template_name"):
@@ -1277,7 +1325,7 @@ class JobApprovalRequestView(generic.ObjectView):
                     commit=False,  # force a dry-run
                 )
 
-                return redirect("extras:job_jobresult", pk=job_result.pk)
+                return redirect("extras:jobresult", pk=job_result.pk)
         elif deny:
             if not (
                 self.queryset.check_perms(request.user, instance=scheduled_job, action="delete")
@@ -1354,22 +1402,17 @@ class ScheduledJobApprovalQueueListView(generic.ObjectListView):
 class ScheduledJobView(generic.ObjectView):
     queryset = ScheduledJob.objects.all()
 
-    def _get_job(self, class_path):
-        job_class = get_job(class_path)
-        if job_class is None:
-            raise Http404
-        return job_class
-
     def get_extra_context(self, request, instance):
-        job_class = self._get_job(instance.job_class)
+        job_class = get_job(instance.job_class)
         labels = {}
-        for name, var in job_class._get_vars().items():
-            field = var.as_field()
-            if field.label:
-                labels[name] = var
-            else:
-                labels[name] = pretty_name(name)
-        return {"labels": labels}
+        if job_class is not None:
+            for name, var in job_class._get_vars().items():
+                field = var.as_field()
+                if field.label:
+                    labels[name] = var
+                else:
+                    labels[name] = pretty_name(name)
+        return {"labels": labels, "job_class_found": (job_class is not None)}
 
 
 class ScheduledJobDeleteView(generic.ObjectDeleteView):
@@ -1441,7 +1484,7 @@ class JobResultView(generic.ObjectView):
     Display a JobResult and its Job data.
     """
 
-    queryset = JobResult.objects.all()
+    queryset = JobResult.objects.prefetch_related("job_model", "obj_type", "user")
     template_name = "extras/jobresult.html"
 
     def get_extra_context(self, request, instance):
@@ -1565,15 +1608,7 @@ class ObjectChangeLogView(View):
         }
         RequestConfig(request, paginate).configure(objectchanges_table)
 
-        # Default to using "<app>/<model>.html" as the template, if it exists. Otherwise,
-        # fall back to using base.html.
-        if self.base_template is None:
-            self.base_template = f"{model._meta.app_label}/{model._meta.model_name}.html"
-            # TODO: This can be removed once an object view has been established for every model.
-            try:
-                template.loader.get_template(self.base_template)
-            except template.TemplateDoesNotExist:
-                self.base_template = "base.html"
+        self.base_template = get_base_template(self.base_template, model)
 
         return render(
             request,
@@ -1642,15 +1677,7 @@ class ObjectNotesView(View):
         }
         RequestConfig(request, paginate).configure(notes_table)
 
-        # Default to using "<app>/<model>.html" as the template, if it exists. Otherwise,
-        # fall back to using base.html.
-        if self.base_template is None:
-            self.base_template = f"{model._meta.app_label}/{model._meta.model_name}.html"
-            # TODO: This can be removed once an object view has been established for every model.
-            try:
-                template.loader.get_template(self.base_template)
-            except template.TemplateDoesNotExist:
-                self.base_template = "base.html"
+        self.base_template = get_base_template(self.base_template, model)
 
         return render(
             request,

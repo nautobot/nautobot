@@ -81,9 +81,9 @@ METRICS_ENABLED = False
 
 # Napalm
 NAPALM_ARGS = {}
-NAPALM_PASSWORD = ""
-NAPALM_TIMEOUT = 30
-NAPALM_USERNAME = ""
+NAPALM_PASSWORD = os.getenv("NAUTOBOT_NAPALM_PASSWORD", "")
+NAPALM_TIMEOUT = int(os.getenv("NAUTOBOT_NAPALM_TIMEOUT", "30"))
+NAPALM_USERNAME = os.getenv("NAUTOBOT_NAPALM_USERNAME", "")
 
 # Plugins
 PLUGINS = []
@@ -221,11 +221,26 @@ SPECTACULAR_SETTINGS = {
         "PowerPortTypeChoices": "nautobot.dcim.choices.PowerPortTypeChoices",
         "RackTypeChoices": "nautobot.dcim.choices.RackTypeChoices",
         "RelationshipTypeChoices": "nautobot.extras.choices.RelationshipTypeChoices",
-        # Because Interface and VMInterface, and Site and Location, have the same default statuses, we get the error:
+        # Each of these StatusModels has bulk and non-bulk serializers, with the same status options,
+        # which confounds drf-spectacular's automatic naming of enums, resulting in the below warning:
         #   enum naming encountered a non-optimally resolvable collision for fields named "status"
-        "LocationStatusChoices": "nautobot.dcim.api.serializers.LocationSerializer.status_choices",
+        # By explicitly naming the enums ourselves we avoid this warning.
+        "CableStatusChoices": "nautobot.dcim.api.serializers.CableSerializer.status_choices",
+        "CircuitStatusChoices": "nautobot.circuits.api.serializers.CircuitSerializer.status_choices",
+        "DeviceStatusChoices": "nautobot.dcim.api.serializers.DeviceWithConfigContextSerializer.status_choices",
         "InterfaceStatusChoices": "nautobot.dcim.api.serializers.InterfaceSerializer.status_choices",
+        "IPAddressStatusChoices": "nautobot.ipam.api.serializers.IPAddressSerializer.status_choices",
+        "LocationStatusChoices": "nautobot.dcim.api.serializers.LocationSerializer.status_choices",
+        "PowerFeedStatusChoices": "nautobot.dcim.api.serializers.PowerFeedSerializer.status_choices",
+        "PrefixStatusChoices": "nautobot.ipam.api.serializers.PrefixSerializer.status_choices",
+        "RackStatusChoices": "nautobot.dcim.api.serializers.RackSerializer.status_choices",
+        "VirtualMachineStatusChoices": "nautobot.virtualization.api.serializers.VirtualMachineWithConfigContextSerializer.status_choices",
+        "VLANStatusChoices": "nautobot.ipam.api.serializers.VLANSerializer.status_choices",
     },
+    # Create separate schema components for PATCH requests (fields generally are not `required` on PATCH)
+    "COMPONENT_SPLIT_PATCH": True,
+    # Create separate schema components for request vs response where appropriate
+    "COMPONENT_SPLIT_REQUEST": True,
 }
 
 
@@ -258,6 +273,7 @@ SECRET_KEY = os.getenv("SECRET_KEY")
 # Default overrides
 ALLOWED_HOSTS = []
 CSRF_TRUSTED_ORIGINS = []
+CSRF_FAILURE_VIEW = "nautobot.core.views.csrf_failure"
 DATETIME_FORMAT = "N j, Y g:i a"
 INTERNAL_IPS = ("127.0.0.1", "::1")
 FORCE_SCRIPT_NAME = None
@@ -268,6 +284,10 @@ SHORT_DATE_FORMAT = "Y-m-d"
 SHORT_DATETIME_FORMAT = "Y-m-d H:i"
 TIME_FORMAT = "g:i a"
 TIME_ZONE = "UTC"
+
+# Disable importing the WSGI module before starting the server application. This is required for
+# uWSGI postfork callbacks to execute as is currently required in `nautobot.core.wsgi`.
+WEBSERVER_WARMUP = False
 
 # Installed apps and Django plugins. Nautobot plugins will be appended here later.
 INSTALLED_APPS = [
@@ -682,7 +702,7 @@ BRANDING_URLS = {
 }
 
 # Undocumented link in the bottom right of the footer which is meant to persist any custom branding changes.
-BRANDING_POWERED_BY_URL = "https://nautobot.readthedocs.io/"
+BRANDING_POWERED_BY_URL = "https://docs.nautobot.com/"
 
 #
 # Django extensions settings

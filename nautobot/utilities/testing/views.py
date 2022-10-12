@@ -70,6 +70,7 @@ class ModelViewTestCase(ModelTestCase):
     If unspecified, "slug" and "pk" will be tried, in that order.
     """
 
+    # 2.0 TODO(jathan): Eliminate the need to overload `_get_base_url()` at all and just rely on `get_route_for_model()`
     def _get_base_url(self):
         """
         Return the base format for a URL for the test's model. Override this to test for a model which belongs
@@ -79,6 +80,7 @@ class ModelViewTestCase(ModelTestCase):
             return f"plugins:{self.model._meta.app_label}:{self.model._meta.model_name}_{{}}"
         return f"{self.model._meta.app_label}:{self.model._meta.model_name}_{{}}"
 
+    # 2.0 TODO(jathan): Eliminate the need to overload `_get_url()` at all and just rely on `get_route_for_model()`
     def _get_url(self, action, instance=None):
         """
         Return the URL name for a specific action and optionally a specific instance
@@ -597,10 +599,17 @@ class ViewTestCases:
             instance1, instance2 = self._get_queryset().all()[:2]
             with self.assertLogs("nautobot.utilities.filters") as cm:
                 response = self.client.get(f"{self._get_url('list')}?ice_cream_flavor=chocolate")
+            filterset = self.get_filterset()
+            if not filterset:
+                self.fail(
+                    f"Couldn't find filterset for model {self.model}. The FilterSet class is expected to be in the "
+                    "filters module within the application associated with the model and its name is expected to be "
+                    f"{self.model.__name__}FilterSet."
+                )
             self.assertEqual(
                 cm.output,
                 [
-                    f"WARNING:nautobot.utilities.filters:{self.get_filterset().__name__}: "
+                    f"WARNING:nautobot.utilities.filters:{filterset.__name__}: "
                     'Unknown filter field "ice_cream_flavor"',
                 ],
             )

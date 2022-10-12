@@ -16,7 +16,7 @@ from django.urls import reverse
 
 from nautobot.extras.utils import FeatureQuery
 from nautobot.utilities.choices import unpack_grouped_choices
-from nautobot.utilities.utils import is_uuid
+from nautobot.utilities.utils import get_route_for_model, is_uuid
 from nautobot.utilities.validators import EnhancedURLValidator
 from . import widgets
 from .constants import ALPHANUMERIC_EXPANSION_PATTERN, IP4_EXPANSION_PATTERN, IP6_EXPANSION_PATTERN
@@ -499,12 +499,8 @@ class DynamicModelChoiceMixin:
         # Set the data URL on the APISelect widget (if not already set)
         widget = bound_field.field.widget
         if not widget.attrs.get("data-url"):
-            app_label = self.queryset.model._meta.app_label
-            model_name = self.queryset.model._meta.model_name
-            if app_label in settings.PLUGINS:
-                data_url = reverse(f"plugins-api:{app_label}-api:{model_name}-list")
-            else:
-                data_url = reverse(f"{app_label}-api:{model_name}-list")
+            route = get_route_for_model(self.queryset.model, "list", api=True)
+            data_url = reverse(route)
             widget.attrs["data-url"] = data_url
 
         return bound_field

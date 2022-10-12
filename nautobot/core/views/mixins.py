@@ -223,7 +223,7 @@ class NautobotViewSetMixin(GenericViewSet, AccessMixin, GetReturnURLMixin, FormV
             # render the form with the error message.
             data = {}
             if self.action in ["bulk_update", "bulk_destroy"]:
-                pk_list = self.request.POST.getlist("pk")
+                pk_list = self.pk_list
                 table_class = self.get_table_class()
                 table = table_class(queryset.filter(pk__in=pk_list), orderable=False)
                 if not table.rows:
@@ -245,7 +245,7 @@ class NautobotViewSetMixin(GenericViewSet, AccessMixin, GetReturnURLMixin, FormV
         request = self.request
         queryset = self.get_queryset()
         if self.action in ["bulk_update", "bulk_destroy"]:
-            pk_list = self.request.POST.getlist("pk")
+            pk_list = self.pk_list
             table_class = self.get_table_class()
             table = table_class(queryset.filter(pk__in=pk_list), orderable=False)
             if not table.rows:
@@ -645,7 +645,7 @@ class ObjectBulkDestroyViewMixin(NautobotViewSetMixin, BulkDestroyModelMixin):
 
     def _process_bulk_destroy_form(self, form):
         request = self.request
-        pk_list = self.request.POST.getlist("pk")
+        pk_list = self.pk_list
         queryset = self.get_queryset()
         model = queryset.model
         # Delete objects
@@ -818,7 +818,7 @@ class ObjectBulkUpdateViewMixin(NautobotViewSetMixin, BulkUpdateModelMixin):
                 for field_name in form_custom_fields:
                     if field_name in form.nullable_fields and field_name in nullified_fields:
                         obj.cf[form_cf_to_key[field_name]] = None
-                    elif form.cleaned_data.get(field_name) not in (None, ""):
+                    elif form.cleaned_data.get(field_name) not in (None, "", []):
                         obj.cf[form_cf_to_key[field_name]] = form.cleaned_data[field_name]
 
                 obj.validated_save()

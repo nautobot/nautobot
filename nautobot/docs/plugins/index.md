@@ -9,19 +9,31 @@ The Nautobot plugin architecture allows for plugins to do any or all of the foll
 ### Extend the existing Nautobot UI
 
 * **Add navigation menu items.** A plugin can extend the navigation menus with new links and buttons or even entirely new menus.
-* **Add a banner.** A plugin can add a custom banner to the top of any appropriate views.
 * **Add home page content.** A plugin can add custom items or custom panels to the Nautobot home page.
-* **Add content to existing model detail views.** A plugin can inject custom HTML content within the view of a core Nautobot model. This content can appear in the left column, right column, or full width of the page, include custom buttons at the top of the page and (in Nautobot 1.4 and later) include extra tabs which appear at the end of the object detail tabs list.
+* **Add content to existing model detail views.** A plugin can inject custom HTML content within the view of a core Nautobot model. This content can appear in the left column, right column, or full width of the page, and can also include custom buttons at the top of the page.
+
++++ 1.2.0
+    * **Add a banner.** A plugin can add a custom banner to the top of any appropriate views.
+
++++ 1.4.0
+    * **Add extra tabs to existing model detail views.** A plugin can inject additional tabs which will appear at the end of the object detail tabs list.
 
 ### Extend and customize existing Nautobot functionality
 
 * **Add custom validation logic to existing data models.** A plugin can provide additional logic to customize the rules for validating created/updated data records.
 * **Provide Jobs.** A plugin can serve as a convenient way to package and install [Jobs](../additional-features/jobs.md).
 * **Add additional Git data types.** A plugin can add support for processing additional types of data stored in a [Git repository](../models/extras/gitrepository.md).
-* **Register additional Jinja2 filters.** A plugin can define custom Jinja2 filters to be used in computed fields, webhooks, custom links, and export templates.
-* **Populate extensibility features in the database.** A plugin can add content to the Nautobot database when installed, such as automatically creating new custom fields, relationships, and so forth.
-* **Add additional secrets providers.** A plugin can add support for retrieving [Secret](../models/extras/secret.md) values from additional sources or external systems.
-* **Override already-defined views.** _Added in version 1.4.0_: A plugin can define a view which can be set to override a view from the core set of views or another plugin's view.
+
++++ 1.1.0
+    * **Register additional Jinja2 filters.** A plugin can define custom Jinja2 filters to be used in computed fields, webhooks, custom links, and export templates.
+
++++ 1.2.0
+    * **Populate extensibility features in the database.** A plugin can add content to the Nautobot database when installed, such as automatically creating new custom fields, relationships, and so forth.
+
+    * **Add additional secrets providers.** A plugin can add support for retrieving [Secret](../models/extras/secret.md) values from additional sources or external systems.
+
++++ 1.4.0
+    * **Override already-defined views.** A plugin can define a view which can be set to override a view from the core set of views or another plugin's view.
 
 ### Add entirely new features
 

@@ -86,6 +86,8 @@ class BulkCreateModelMixin:
         with transaction.atomic():
             serializer = self.get_serializer(data=request.data, many=True)
             serializer.is_valid(raise_exception=True)
+            # 2.0 TODO: this should be wrapped with a paginator so as to match the same format as the list endpoint,
+            # i.e. `{"results": [{instance}, {instance}, ...]}` instead of bare list `[{instance}, {instance}, ...]`
             return Response(serializer.data, status=status.HTTP_201_CREATED)
 
 
@@ -108,9 +110,11 @@ class BulkUpdateModelMixin:
     ]
     """
 
+    bulk_operation_serializer_class = BulkOperationSerializer
+
     def bulk_update(self, request, *args, **kwargs):
         partial = kwargs.pop("partial", False)
-        serializer = BulkOperationSerializer(data=request.data, many=True)
+        serializer = self.bulk_operation_serializer_class(data=request.data, many=True)
         serializer.is_valid(raise_exception=True)
         qs = self.get_queryset().filter(pk__in=[o["id"] for o in serializer.data])
 
@@ -119,6 +123,8 @@ class BulkUpdateModelMixin:
 
         data = self.perform_bulk_update(qs, update_data, partial=partial)
 
+        # 2.0 TODO: this should be wrapped with a paginator so as to match the same format as the list endpoint,
+        # i.e. `{"results": [{instance}, {instance}, ...]}` instead of bare list `[{instance}, {instance}, ...]`
         return Response(data, status=status.HTTP_200_OK)
 
     def perform_bulk_update(self, objects, update_data, partial):
@@ -150,8 +156,13 @@ class BulkDestroyModelMixin:
     ]
     """
 
+    bulk_operation_serializer_class = BulkOperationSerializer
+
+    @extend_schema(
+        request=BulkOperationSerializer(many=True),
+    )
     def bulk_destroy(self, request, *args, **kwargs):
-        serializer = BulkOperationSerializer(data=request.data, many=True)
+        serializer = self.bulk_operation_serializer_class(data=request.data, many=True)
         serializer.is_valid(raise_exception=True)
         qs = self.get_queryset().filter(pk__in=[o["id"] for o in serializer.data])
 

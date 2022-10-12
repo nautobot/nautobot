@@ -1,4 +1,5 @@
 from django import forms
+from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ValidationError
@@ -894,6 +895,7 @@ class JobScheduleForm(BootstrapMixin, forms.Form):
         required=False,
         label="Starting date and time",
         widget=DateTimePicker(),
+        help_text=f"The scheduled time is relative to the Nautobot configured timezone: {settings.TIME_ZONE}.",
     )
     _recurrence_custom_time = forms.CharField(
         required=False,

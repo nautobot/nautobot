@@ -125,14 +125,22 @@ Please see the [official Poetry documentation on `version`](https://python-poetr
 
 ### Update the Changelog
 
-Update the release notes for the new version and commit these changes to the `develop` branch.
+Create a release branch off of `develop` (`git checkout -b release-1.4.3 develop`)
+
+Generate release notes with `towncrier build --version 1.4.3` and answer `yes` to the prompt `Is it okay if I remove those files? [Y/n]:`. This will update the release notes in `nautobot/docs/release-notes/version-1.4.md`, stage that file in git, and `git rm` all of the fragments that have now been incorporated into the release notes.
+
+Run `invoke markdownlint` to make sure the generated release notes pass the linter checks.
+
+Check the git diff to verify the changes are correct (`git diff --cached`).
+
+Commit and push the staged changes.
 
 !!! important
     The changelog must adhere to the [Keep a Changelog](https://keepachangelog.com/) style guide.
 
-### Submit a Pull Request
+### Submit Pull Requests
 
-Submit a pull request title **"Release vX.Y.Z"** to merge the `develop` branch into `main`. Copy the documented release notes into the pull request's body.
+Submit a pull request to merge your release branch into `develop`. Once merged, submit another pull request titled **"Release vX.Y.Z"** to merge the `develop` branch into `main`. Copy the documented release notes into the pull request's body.
 
 Once CI has completed on the PR, merge it.
 

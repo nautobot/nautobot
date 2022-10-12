@@ -5,40 +5,20 @@ html[data-theme="dark"] {
   background: rgb(12, 12, 12);
   filter: invert(1) hue-rotate(180deg);
 }
-/* Ignores inverting images for dark theme */
-html[data-theme="dark"] img {
+
+/* Double-invert the following elements, restoring them to the original non-inverted colors */
+html[data-theme="dark"] img,                              /* Images like .png, .jpg, etc */
+html[data-theme="dark"] .badge,
+html[data-theme="dark"] button,                           /* Buttons */
+html[data-theme="dark"] .btn,                             /* Buttons */
+html[data-theme="dark"] .label,                           /* Labels */
+html[data-theme="dark"] .color-block,                     /* Colored choices, like statuses */
+html[data-theme="dark"] .select2-selection__choice,       /* Colored choices, like statuses */
+html[data-theme="dark"] #select2-id_color-results,        /* Colored choices, like statuses */
+html[data-theme="dark"] #select2-id_color-container {     /* Colored choices, like statuses */
   filter: invert(1) hue-rotate(180deg);
 }
-/* Makes badge text white in dark mode */
-html[data-theme="dark"] .badge {
-  color: black;
-}
-/* White text on buttons */
-html[data-theme="dark"] button {
-  color: black;
-}
-/* White text on buttons */
-html[data-theme="dark"] .btn {
-  color: black;
-}
-/* White text on labels */
-html[data-theme="dark"] .label {
-  color: black !important;
-}
-/* Colors for labels like with device role, status, etc */
-html[data-theme="dark"] .color-block {
-  filter: invert(1) hue-rotate(180deg);
-}
-/* Dropdown list when selecting a color for status, device role, etc */
-html[data-theme="dark"] .select2-results__option {
-  filter: invert(1) hue-rotate(180deg);
-  color: #ccc !important;
-}
-/* Dropdown list for showing selected color for status, device role, etc */
-html[data-theme="dark"] .select2-selection__rendered {
-  filter: invert(1) hue-rotate(180deg);
-  color: #ccc !important;
-}
+
 /* Labels in API Swagger docs */
 html[data-theme="dark"] .opblock-summary-method {
   color: black !important;
@@ -46,4 +26,129 @@ html[data-theme="dark"] .opblock-summary-method {
 /* Version stamp in API Swagger docs */
 html[data-theme="dark"] .version {
   color: black !important;
+}
+
+/* Darker background color, offset to not be fully black */
+html[data-theme="dark"] body {
+  background-color: rgb(217, 217, 217) !important;
+}
+
+/* Lighter than the background */
+html[data-theme="dark"] .navbar,                          /* Top menu navbar */
+html[data-theme="dark"] .footer {                         /* Bottom footer bar */
+  background-color: rgb(209, 216, 221) !important;
+}
+
+html[data-theme="dark"] .panel,                           /* Section panels, like on home page */
+html[data-theme="dark"] .panel-default,                   /* Section panels, like on home page */
+html[data-theme="dark"] .panel-body,                      /* Section panels content, like on home page */
+html[data-theme="dark"] .list-group,                      /* Section panels content, like on home page */
+html[data-theme="dark"] .list-group-item,                 /* Item in section panels content, like on home page */
+html[data-theme="dark"] .CodeMirror,                      /* GraphiQL page */
+html[data-theme="dark"] .search-box input,                /* GraphiQL docs tab search box */
+html[data-theme="dark"] .modal-body {                     /* Modal background */
+  background-color: rgb(222, 222, 222) !important;
+}
+
+/* Slightly lighter than background to standout */
+html[data-theme="dark"] .breadcrumb,                      /* Background bar for breadcrumbs */
+html[data-theme="dark"] ul li.active a,                   /* Active tab highlight, eg device details page */
+html[data-theme="dark"] .dropdown-menu>li>a:hover,        /* Navbar menu item when hovering */
+html[data-theme="dark"] .table-responsive>table>tbody>tr:hover, /* Display objects table when hovering over row */
+html[data-theme="dark"] .nav-tabs>li>a:hover,             /* Tab selection when hovering */
+html[data-theme="dark"] .nav-tabs>li>a:focus,             /* Tab selection when clicked */
+html[data-theme="dark"] .panel-heading,                   /* Panel header bars */
+html[data-theme="dark"] .panel-footer,                    /* Panel footer bars */
+html[data-theme="dark"] .modal-header,                    /* Header bar in modals */
+html[data-theme="dark"] .modal-footer,                    /* Footer bar in modals */
+html[data-theme="dark"] .table-headings th {
+  background-color: rgb(196, 204, 210) !important;
+}
+
+html[data-theme="dark"] .scheme-container {                /* Swagger docs container header bar */
+  background-color: rgb(217, 217, 217) !important;
+}
+
+/* GraphiQL */
+html[data-theme="dark"] .doc-explorer,                     /* GraphiQL docs tab background */
+html[data-theme="dark"] .doc-explorer-contents,            /* GraphiQL docs tab background */
+html[data-theme="dark"] .CodeMirror-gutters {              /* GraphiQL primary background */
+  background-color: rgb(217, 217, 217) !important;
+}
+
+/* Preserve blue text color on selected tabs */
+html[data-theme="dark"] .nav-tabs>li.active>a {
+  color: rgb(72, 133, 204);                             
+}
+
+/* Swagger API Docs */
+/* html[data-theme="dark"] .swagger-ui select, */
+/* html[data-theme="dark"] .swagger-ui select, */
+html[data-theme="dark"] .swagger-ui select {
+  background-color: rgb(222, 222, 222) !important;
+}
+
+
+html[data-theme="dark"] .swagger-ui input,                /* Swagger docs item input input box */
+html[data-theme="dark"] .swagger-ui select,               /* Swagger docs item select input box */
+html[data-theme="dark"] .swagger-ui textarea{             /* Swagger docs item text area input box */
+  background: transparent !important;
+  border: 1px solid #888 !important;
+}
+
+/* Section headers in swagger docs items */
+html[data-theme="dark"] .swagger-ui .opblock .opblock-section-header {
+  background: transparent !important;
+  border: 1px solid #888 !important;
+  background-color: rgb(217, 217, 217, 0.5) !important;
+}
+
+html[data-theme="dark"] .swagger-ui .tab li button.tablinks, /* Example tab links for each API item */
+html[data-theme="dark"] .swagger-ui .btn {                /* Swagger button text */
+  color: rgb(174, 190, 196) !important;
+}
+
+/* Form fields and backdrops, lighter than headers, navbars, etc */
+html[data-theme="dark"] #per_page,                        /* Pagination page selection dropdown menu */
+html[data-theme="dark"] .dropdown-menu,                   /* Dropdown menu from navbar */
+html[data-theme="dark"] .form-control,                    /* Multi-line text fields, eg add device: notes, comments, etc */
+html[data-theme="dark"] .swagger-ui .servers>label select /* Swagger docs server dropdown selection */
+html[data-theme="dark"] .select2-container--default,      /* Drop down menu selections, eg adding new item */
+html[data-theme="dark"] .select2-container--classic,      /* Drop down menu selections, eg adding new item */
+html[data-theme="dark"] .select2-container--bootstrap,    /* Drop down menu selections, eg adding new item */
+html[data-theme="dark"] .select2-selection--single,       /* Drop down menu selections, eg adding new item */
+html[data-theme="dark"] .select2-selection--multiple,     /* Drop down menu selections, eg adding new item */
+html[data-theme="dark"] .select2-search--dropdown,        /* Drop down menu selections for filter form */
+html[data-theme="dark"] .select2-search__field,           /* Search field in filter form */
+html[data-theme="dark"] .select2-search--inline,          /* Search field in filter form */
+html[data-theme="dark"] .select2-close-mask,              /* Close selection */
+html[data-theme="dark"] .select2-dropdown {               /* Dropdown form fields */
+  background-color: rgb(222, 222, 222) !important;
+}
+
+/* This is already inverted as a button above, however we do not want it to be */
+html[data-theme="dark"] .accordion-toggle {               /* Accordion dropdown header, like on Jobs page */
+  filter: invert(0);                                      /* Do not invert */
+  color: rgb(51, 51, 51);
+}
+
+html[data-theme="dark"] .docExplorerHide,                 /* X button to close GraphiQL docs tab */
+html[data-theme="dark"] .close {                          /* X button to close modals in top right */
+  color: rgb(243, 243, 243);
+}
+
+/* Code blocks */
+html[data-theme="dark"] pre {
+  background-color: rgb(211, 221, 222);
+  color: rgb(29, 40, 42);
+}
+
+/* Breadcrumbs */
+html[data-theme="dark"] .breadcrumb>li+li:before {
+  color: rgb(142, 142, 142);
+}
+
+/* Code */
+html[data-theme="dark"] code {
+  color: rgb(0, 255, 0);
 }

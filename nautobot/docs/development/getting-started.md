@@ -229,6 +229,13 @@ You may install Poetry in your user environment by running:
 $ curl -sSL https://install.python-poetry.org | python3 -
 ```
 
+!!! danger
+    Always utilize this documented method to install Poetry for use when developing Nautobot.
+
+    Never use `pip` to install Poetry into your Nautobot virtual environment, as it will result in dependency version conflicts that will very likely break Nautobot. Poetry is used as a package manager for Python packages, so you should not install it into the Nautobot environment, because it relies upon a number of the same dependencies as Nautobot, but with conflicting versions.
+
+    While there are certain cases where running `pip install poetry` is valid, such as in Nautobot's automated release deployments where Nautobot is not actually installed, installing Poetry into Nautobot's runtime development environment is not one of them!
+
 For detailed installation instructions, please see the [official Poetry installation guide](https://python-poetry.org/docs/#installation).
 
 #### Install Hadolint
@@ -608,6 +615,31 @@ When modifying model field attributes, modify the test data in the tests too to 
 ## Working on Documentation
 
 Some features require documentation updates or new documentation to be written. The documentation files can be found in the `docs` directory. To preview these changes locally, you can use `mkdocs`.
+
+For substantial changes to the code (including new features, removal of existing features, or significant changes in behavior) you should always make corresponding documentation updates. Nautobot's documentation pipeline includes a custom plugin for `mkdocs` that adds a few useful macros for annotating such changes:
+
+* `+++ 1.4.3`, on a line by itself, is a shorthand for `!!! version-added "Added in version 1.4.3"`
+* `+/- 1.4.3`, on a line by itself, is a shorthand for `!!! version-changed "Changed in version 1.4.3"`
+* `--- 1.4.3`, on a line by itself, is a shorthand for `!!! version-removed "Removed in version 1.4.3"`
+
+These admonitions in turn appear in the rendered documentation as follows:
+
++++ 1.4.3
++/- 1.4.3
+--- 1.4.3
+
+You can also add text to any of these admonitions for further clarity, for example:
+
+    +++ 1.4.3
+        The custom `mkdocs` plugin was added.
+
+will render as:
+
++++ 1.4.3
+    The custom `mkdocs` plugin was added.
+
+!!! caution
+    While you *can* use the `version-added` / `version-changed` / `version-removed` admonitions directly to add a custom title to a specific admonition, in general, you should use the macros for consistency across the documentation.
 
 ### Writing Documentation
 

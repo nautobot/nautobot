@@ -129,10 +129,9 @@ nautobot=> \q
 
 ### `dumpdata`
 
-<!-- markdownlint-disable MD036 -->
-_Changed in version 1.3.0: `extras.job` should now be included (removed `--exclude extras.job`)_
-_Changed in version 1.3.0: `django_rq` should now be excluded (add `--exclude django_rq`)_
- <!-- markdownlint-enable MD036 -->
++/- 1.3.0
+    - `extras.job` should now be included in the dump (removed `--exclude extras.job` from the example usage)
+    - `django_rq` should now be excluded from the dump (added `--exclude django_rq` to the example usage)
 
 ```no-highlight
 $ nautobot-server dumpdata \
@@ -339,6 +338,8 @@ Invalidating cache...
 ```
 
 ### `remove_stale_scheduled_jobs`
+
++++ 1.3.10
 
 `nautobot-server remove_stale_scheduled_jobs [max-age of days]`
 

@@ -143,7 +143,7 @@ The docker container uses [uWSGI](https://uwsgi-docs.readthedocs.io/) to serve N
 
 #### `NAUTOBOT_UWSGI_BUFFER_SIZE`
 
-_Added in version 1.3.9_ <!-- markdownlint-disable-line MD036 -->
++++ 1.3.9
 
 Default: `4096`
 

@@ -54,7 +54,7 @@ def csv_format(data):
     return ",".join(csv)
 
 
-def get_route_for_model(model, action):
+def get_route_for_model(model, action, api=False):
     """
     Return the URL route name for the given model and action. Does not perform any validation.
     Supports both core and plugin routes.
@@ -62,19 +62,36 @@ def get_route_for_model(model, action):
     Args:
         model (models.Model, str): Class, Instance, or dotted string of a Django Model
         action (str): name of the action in the route
+        api (bool): If set, return an API route.
 
     Returns:
         str: return the name of the view for the model/action provided.
+
     Examples:
         >>> get_route_for_model(Device, "list")
         "dcim:device_list"
+        >>> get_route_for_model(Device, "list", api=True)
+        "dcim-api:device-list"
+        >>> get_route_for_model("dcim.site", "list")
+        "dcim:site_list"
+        >>> get_route_for_model("dcim.site", "list", api=True)
+        "dcim-api:site-list"
+        >>> get_route_for_model(ExampleModel, "list")
+        "plugins:example_plugin:examplemodel_list"
+        >>> get_route_for_model(ExampleModel, "list", api=True)
+        "plugins-api:example_plugin-api:examplemodel-list"
     """
 
     if isinstance(model, str):
         model = get_model_from_name(model)
-    viewname = f"{model._meta.app_label}:{model._meta.model_name}_{action}"
+
+    suffix = "" if not api else "-api"
+    prefix = f"{model._meta.app_label}{suffix}:{model._meta.model_name}"
+    sep = "_" if not api else "-"
+    viewname = f"{prefix}{sep}{action}"
+
     if model._meta.app_label in settings.PLUGINS:
-        viewname = f"plugins:{viewname}"
+        viewname = f"plugins{suffix}:{viewname}"
 
     return viewname
 

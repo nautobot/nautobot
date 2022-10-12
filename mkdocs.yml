@@ -3,7 +3,7 @@ dev_addr: "127.0.0.1:8001"
 edit_uri: "edit/main/nautobot/docs"
 site_dir: "nautobot/project-static/docs"
 site_name: "Nautobot Documentation"
-site_url: "https://nautobot.readthedocs.io/en/stable/"
+site_url: "https://docs.nautobot.com/en/stable/"
 # TODO: replace when switching domain
 # site_url: "https://docs.nautobot.com/projects/core/en/stable/"
 repo_url: "https://github.com/nautobot/nautobot"
@@ -83,6 +83,7 @@ markdown_extensions:
 plugins:
   - "search"
   - "include-markdown"
+  - "mkdocs-version-annotations"
   - mkdocstrings:
       default_handler: "python"
       handlers:
@@ -198,8 +199,10 @@ nav:
   - Nautobot Apps:
       - Overview: "apps/index.md"
       - Network to Code App Docs:
+          - Nautobot ChatOps: "https://docs.nautobot.com/projects/chatops/en/latest/"
+          - Nautobot Firewall Models: "https://nautobot-plugin-firewall-models.readthedocs.io/en/latest/"
+          - Nautobot Plugin Nornir: "https://docs.nautobot.com/projects/plugin-nornir/en/latest/"
           - Nautobot Golden Configuration: "https://docs.nautobot.com/projects/golden-config/"
           - Nautobot Single Source of Truth: "https://nautobot-plugin-ssot.readthedocs.io/en/latest/"
-          - Nautobot Firewall Models: "https://nautobot-plugin-firewall-models.readthedocs.io/en/latest/"
       - Community Apps: "apps/nautobot-apps.md"
   - Nautobot Docs Home ↗︎: "https://docs.nautobot.com/"

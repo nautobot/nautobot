@@ -1033,6 +1033,17 @@ class SecretTest(TestCase):
         finally:
             os.remove(self.text_file_secret.parameters["path"])
 
+    def test_text_file_value_stripped(self):
+        """Assert that retrieval of a text file secret value is stripped."""
+        with open(self.text_file_secret.parameters["path"], "w", encoding="utf8") as file_handle:
+            file_handle.write(" Hello world!  \n\n")
+        try:
+            self.assertEqual(self.text_file_secret.get_value(), "Hello world!")
+            # It's OK to pass a context obj even if the secret in question isn't templated
+            self.assertEqual(self.text_file_secret.get_value(obj=self.site), "Hello world!")
+        finally:
+            os.remove(self.text_file_secret.parameters["path"])
+
     def test_text_file_value_success_empty(self):
         """Successful retrieval of a text file secret from an empty file."""
         with open(self.text_file_secret.parameters["path"], "w", encoding="utf8"):

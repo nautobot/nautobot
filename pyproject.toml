@@ -2,13 +2,13 @@
 name = "nautobot"
 # Primary package version gets set here. This is used for publishing, and once
 # installed, `nautobot.__version__` will have this version number.
-version = "1.4.3-beta.1"
+version = "1.4.6-beta.1"
 description = "Source of truth and network automation platform."
 authors = ["Network to Code <opensource@networktocode.com>"]
 license = "Apache-2.0"
 homepage = "https://nautobot.com"
 repository = "https://github.com/nautobot/nautobot"
-documentation = "https://nautobot.readthedocs.io"
+documentation = "https://docs.nautobot.com"
 readme = "README.md"
 keywords = ["Nautobot"]
 classifiers = [
@@ -87,7 +87,7 @@ django-webserver = "~1.2.0"
 # REST API framework
 djangorestframework = "~3.13.1"
 # OpenAPI 3.0 schema generation for the REST API
-drf-spectacular = {version = "~0.22.1", extras = ["sidecar"]}
+drf-spectacular = {version = "~0.24.0", extras = ["sidecar"]}
 # 2.0 TODO: no longer used, but retained for now to avoid breaking plugin expectations
 drf-yasg = {version = "^1.20.0", extras = ["validation"]}
 # Git integrations for Python
@@ -165,12 +165,14 @@ example-plugin-with-view-override = { path = "examples/example_plugin_with_view_
 flake8 = "~3.9.1"
 # Alternative to Make, CLI based on `tasks.py`
 invoke = "~1.7.1"
-# Allow Markdown files to include other files
-mkdocs-include-markdown-plugin = "~3.6.0"
 # Rendering docs to HTML
 mkdocs = "~1.3.0"
+# Allow Markdown files to include other files
+mkdocs-include-markdown-plugin = "~3.6.0"
 # Material for mkdocs theme
 mkdocs-material = "~8.4.2"
+# Render custom markdown for version added/changed/remove notes
+mkdocs-version-annotations = "~1.0.0"
 # Automatic documentation from sources, for MkDocs
 mkdocstrings = "0.19"
 mkdocstrings-python = "0.7.1"
@@ -186,6 +188,8 @@ rich = "~12.5.1"
 selenium = "~4.3.0"
 # Abstraction layer for working with Selenium
 splinter = "~0.18.0"
+# Change log management and generation
+towncrier = "~22.8.0"
 
 [tool.poetry.scripts]
 nautobot-server = "nautobot.core.cli:main"
@@ -305,3 +309,18 @@ notes = """,
 [tool.pylint.typecheck]
 # @patch changes the signature of a function it's applied to; don't raise "no-value-for-parameter" here
 signature-mutators=["unittest.mock.patch"]
+
+[tool.towncrier]
+package = "nautobot"
+directory = "changes"
+filename = "nautobot/docs/release-notes/version-1.4.md"
+template = "development/towncrier_template.j2"
+start_string = "<!-- towncrier release notes start -->"
+issue_format = "[#{issue}](https://github.com/nautobot/nautobot/issues/{issue})"
+
+[tool.towncrier.fragment.added]
+[tool.towncrier.fragment.changed]
+[tool.towncrier.fragment.deprecated]
+[tool.towncrier.fragment.fixed]
+[tool.towncrier.fragment.removed]
+[tool.towncrier.fragment.security]

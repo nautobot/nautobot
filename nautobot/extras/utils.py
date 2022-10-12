@@ -10,6 +10,7 @@ from cacheops import file_cache
 from django.apps import apps
 from django.contrib.contenttypes.models import ContentType
 from django.db.models import Q
+from django.template.loader import get_template, TemplateDoesNotExist
 from django.utils.deconstruct import deconstructible
 from taggit.managers import _TaggableManager
 
@@ -27,6 +28,27 @@ from nautobot.extras.registry import registry
 
 
 logger = logging.getLogger(__name__)
+
+
+def get_base_template(base_template, model):
+    """
+    Returns the name of the base template, if the base_template is not None
+    Otherwise, default to using "<app>/<model>.html" as the base template, if it exists.
+    Otherwise, check if "<app>/<model>_retrieve.html" used in `NautobotUIViewSet` exists.
+    If both templates do not exist, fall back to "base.html".
+    """
+    if base_template is None:
+        base_template = f"{model._meta.app_label}/{model._meta.model_name}.html"
+        # TODO: This can be removed once an object view has been established for every model.
+        try:
+            get_template(base_template)
+        except TemplateDoesNotExist:
+            base_template = f"{model._meta.app_label}/{model._meta.model_name}_retrieve.html"
+            try:
+                get_template(base_template)
+            except TemplateDoesNotExist:
+                base_template = "base.html"
+    return base_template
 
 
 @file_cache.cached(timeout=60)
@@ -196,11 +218,16 @@ def get_worker_count(request=None):
 
 
 # namedtuple class yielded by the jobs_in_directory generator function, below
-# Example: ("devices", <module "devices">, "Hostname", <class "devices.Hostname">)
-JobClassInfo = collections.namedtuple("JobClassInfo", ["module_name", "module", "job_class_name", "job_class"])
+# Example: ("devices", <module "devices">, "Hostname", <class "devices.Hostname">, None)
+# Example: ("devices", None, None, None, "error at line 40")
+JobClassInfo = collections.namedtuple(
+    "JobClassInfo",
+    ["module_name", "module", "job_class_name", "job_class", "error"],
+    defaults=(None, None, None, None),  # all parameters except `module_name` are optional and default to None.
+)
 
 
-def jobs_in_directory(path, module_name=None, reload_modules=True):
+def jobs_in_directory(path, module_name=None, reload_modules=True, report_errors=False):
     """
     Walk the available Python modules in the given directory, and for each module, walk its Job class members.
 
@@ -208,9 +235,11 @@ def jobs_in_directory(path, module_name=None, reload_modules=True):
         path (str): Directory to import modules from, outside of sys.path
         module_name (str): Specific module name to select; if unspecified, all modules will be inspected
         reload_modules (bool): Whether to force reloading of modules even if previously loaded into Python.
+        report_errors (bool): If True, when an error is encountered, yield a JobClassInfo with the given error.
+                              If False (default), log the error but do not yield anything.
 
     Yields:
-        JobClassInfo: (module_name, module, job_class_name, job_class)
+        JobClassInfo: (module_name, module, job_class_name, job_class, error)
     """
     from .jobs import is_job  # avoid circular import
 
@@ -221,13 +250,13 @@ def jobs_in_directory(path, module_name=None, reload_modules=True):
             del sys.modules[discovered_module_name]
         try:
             module = importer.find_module(discovered_module_name).load_module(discovered_module_name)
+            # Get all members of the module that are Job subclasses
+            for job_class_name, job_class in inspect.getmembers(module, is_job):
+                yield JobClassInfo(discovered_module_name, module, job_class_name, job_class)
         except Exception as exc:
-            logger.error(f"Unable to load module {module_name} from {path}: {exc}")
-            # TODO: we want to be able to report these errors to the UI in some fashion?
-            continue
-        # Get all members of the module that are Job subclasses
-        for job_class_name, job_class in inspect.getmembers(module, is_job):
-            yield JobClassInfo(discovered_module_name, module, job_class_name, job_class)
+            logger.error(f"Unable to load module {discovered_module_name} from {path}: {exc}")
+            if report_errors:
+                yield JobClassInfo(module_name=discovered_module_name, error=exc)
 
 
 def refresh_job_model_from_job_class(job_model_class, job_source, job_class, *, git_repository=None):

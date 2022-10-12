@@ -1,0 +1,10 @@
+{% extends base_template %}
+{% load helpers %}
+{% load form_helpers %}
+
+{% block title %}{{ block.super }} - Dynamic Groups{% endblock %}
+
+{% block content %}
+    {% include 'responsive_table.html' %}
+    {% include 'inc/paginator.html' with paginator=table.paginator page=table.page %}
+{% endblock %}

@@ -510,6 +510,12 @@ def _run_job(request, job_model, legacy_response=False):
             raise ValidationError(
                 {"schedule": {"interval": ["Unable to schedule job: Job may have sensitive input variables"]}}
             )
+        if job_model.approval_required:
+            raise ValidationError(
+                "Unable to run or schedule job: "
+                "This job is flagged as possibly having sensitive variables but is also flagged as requiring approval."
+                "One of these two flags must be removed before this job can be scheduled or run."
+            )
 
     job_class = job_model.job_class
     if job_class is None:

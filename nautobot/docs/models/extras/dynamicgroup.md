@@ -1,5 +1,7 @@
 # Dynamic Groups
 
++++ 1.3.0
+
 Dynamic Groups provide a way to organize objects of the same Content Type by matching filters. A Dynamic Group can be used to create unique groups of objects matching a given filter, such as Devices for a specific site location or set of locations. As indicated by the name, Dynamic Groups update in real time as potential member objects are created, updated, or deleted.
 
 When creating a Dynamic Group, one must select a Content Type to which it is associated, for example `dcim.device`. The filtering parameters saved to the group behave as a bi-directional search query that is used to identify members of that group, and can also be used to determine from an individual object the list of Dynamic Groups to which an individual object belongs.
@@ -35,9 +37,7 @@ An object is considered to be a member of a Dynamic Group if it is of the same C
 
 For example, for a Dynamic Group with Content Type of `dcim.device` and an empty filter, the list of members would be equivalent to the default Device list view, which in turn is equivalent to the queryset for `Device.objects.all()` from the database ORM.
 
-!!! warning
-    _Changed in version 1.4.0_  <!-- markdownlint-disable-line MD036 -->
-
++/- 1.4.0
     In Nautobot v1.3.0 the default for a Dynamic Group with an empty filter was to "fail closed" and have zero members.
 
     As of v1.4.0, this behavior has been inverted to default to include all objects matching the Content Type, instead of matching no objects as was previously the case. This was necessary to implement the progressive layering of child filters similarly to how we use filters to reduce desired objects from basic list view filters. This will be described in more detail below.
@@ -48,7 +48,7 @@ When editing a Dynamic Group, under the **Filter Options** section, you will fin
 
 #### Advanced Filtering
 
-_Added in version 1.4.0_  <!-- markdownlint-disable-line MD036 -->
++++ 1.4.0
 
 Advanced filtering is performed using nested Dynamic Group memberships.
 
@@ -91,7 +91,7 @@ A key to understand here is that generally, within a single Dynamic Group, addit
 
 ### Advanced Filtering - Combining Two Dynamic Groups into a Third
 
-_Added in version 1.4.0_  <!-- markdownlint-disable-line MD036 -->
++++ 1.4.0
 
 Now, let's say that you add a third site to your network. This site is currently being built out, and you don't care about Devices from this site that are Offline status at present. What you want for your "Devices of Interest" Dynamic Group is logic similar to:
 
@@ -149,7 +149,7 @@ The "Devices of Interest" Dynamic Group now contains the filtered Devices from b
 
 ### Advanced Filtering: Nested Groups and Negation
 
-_Added in version 1.4.0_  <!-- markdownlint-disable-line MD036 -->
++++ 1.4.0
 
 Next, let's say you add a fourth site to your network. This site is in bad shape, and has Devices in a wide range of statuses. You want your "Devices of Interest" group to include all Devices from this site, _except for those in Decommissioning status_. To express this logic and add these devices to our parent group, we will need to use a combination of groups and the "Exclude (NOT)" operator.
 
@@ -382,9 +382,7 @@ Any invalid field values for valid field names will also result in a `Validation
 !!! note
     Please refer to either the source code definition of the `{model_name}FilterSet` (e.g. for `Device` it would be `nautobot.dcim.filters.DeviceFilterSet`) or the API documentation for the list endpoint (e.g. `/api/dcim/devices/`) for a given model object, to view the available filter fields and their expectations.
 
-!!! warning
-    _Changed in version 1.4.0_  <!-- markdownlint-disable-line MD036 -->
-
++/- 1.4.0
     Prior to v1.4.0, any invalid field names that are not eligible for filtering objects will be discarded upon validation.
 
     As of v1.4.0, [strict filtering is enabled by default](../../configuration/optional-settings.md#strict_filtering), which causes any invalid field names to result in a `ValidationError`.

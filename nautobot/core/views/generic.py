@@ -41,6 +41,7 @@ from nautobot.utilities.permissions import get_permission_for_model
 from nautobot.utilities.templatetags.helpers import validated_viewname
 from nautobot.utilities.utils import (
     csv_format,
+    get_route_for_model,
     normalize_querydict,
     prepare_cloned_fields,
 )
@@ -96,9 +97,7 @@ class ObjectView(ObjectPermissionRequiredMixin, View):
         if meta.model_name == "objectchange":
             return None
 
-        route = f"{meta.app_label}:{meta.model_name}_changelog"
-        if meta.app_label in settings.PLUGINS:
-            route = f"plugins:{route}"
+        route = get_route_for_model(instance, "changelog")
 
         # Iterate the pk-like fields and try to get a URL, or return None.
         fields = ["pk", "slug"]
@@ -1011,7 +1010,7 @@ class BulkEditView(GetReturnURLMixin, ObjectPermissionRequiredMixin, View):
                                 # 2.0 TODO: #824 when we use slug in obj.cf we can just do obj.cf[field_name[3:]]
                                 if field_name in form.nullable_fields and field_name in nullified_fields:
                                     obj.cf[form_cf_to_key[field_name]] = None
-                                elif form.cleaned_data.get(field_name) not in (None, ""):
+                                elif form.cleaned_data.get(field_name) not in (None, "", []):
                                     obj.cf[form_cf_to_key[field_name]] = form.cleaned_data[field_name]
 
                             obj.full_clean()
