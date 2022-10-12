@@ -300,6 +300,8 @@ class DynamicFilterForm(BootstrapMixin, forms.Form):
                     label = build_lookup_label(lookup_type, verbose_name)
                     self.fields["lookup_type"].choices = [(lookup_type, label)]
                     self.fields["lookup_value"] = get_filterset_parameter_form_field(model, lookup_type)
+                elif lookup_type and lookup_type not in self.filterset_filters:
+                    logger.warning(f"{lookup_type} is not a valid {filterset_class.__class__.__name__} field")
 
             self.fields["lookup_type"].widget.attrs["data-query-param-field_name"] = json.dumps(["$lookup_field"])
             self.fields["lookup_type"].widget.attrs["data-contenttype"] = contenttype
