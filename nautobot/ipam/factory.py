@@ -506,8 +506,8 @@ class PrefixFactory(PrimaryModelFactory):
         is_ipv6 = self.family == 6
 
         # Create child prefixes for containers, otherwise create child ip addresses
-        factory = PrefixFactory if self.status == Prefix.STATUS_CONTAINER else IPAddressFactory
-        method = getattr(factory, action)
+        child_factory = PrefixFactory if self.status == Prefix.STATUS_CONTAINER else IPAddressFactory
+        method = getattr(child_factory, action)
 
         # Default to maximum of 4 children unless overridden in kwargs
         max_count = int(kwargs.pop("max_count", 4))
@@ -519,7 +519,7 @@ class PrefixFactory(PrimaryModelFactory):
         if self.tenant is not None:
             kwargs.setdefault("tenant", self.tenant)
 
-        if factory == IPAddressFactory:
+        if child_factory == IPAddressFactory:
             # Create child ip addresses, preserving vrf and is_ipv6 from parent
             created = 0
             for address in self.prefix.iter_hosts():
