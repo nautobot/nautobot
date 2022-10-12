@@ -51,7 +51,7 @@ class ManufacturerFactory(OrganizationalModelFactory):
     name = UniqueFaker("word", ext_word_list=MANUFACTURER_NAMES)
 
     has_description = factory.Faker("pybool")
-    description = factory.Maybe("has_description", factory.Faker("text", max_nb_chars=200), "")
+    description = factory.Maybe("has_description", factory.Faker("sentence"), "")
 
 
 class PlatformFactory(OrganizationalModelFactory):
@@ -84,7 +84,7 @@ class PlatformFactory(OrganizationalModelFactory):
     )
 
     has_description = factory.Faker("pybool")
-    description = factory.Maybe("has_description", factory.Faker("text", max_nb_chars=200), "")
+    description = factory.Maybe("has_description", factory.Faker("sentence"), "")
 
 
 class DeviceTypeFactory(PrimaryModelFactory):
@@ -134,4 +134,4 @@ class DeviceRoleFactory(OrganizationalModelFactory):
     vm_role = factory.Faker("pybool")
 
     has_description = factory.Faker("pybool")
-    description = factory.Maybe("has_description", factory.Faker("text", max_nb_chars=200), "")
+    description = factory.Maybe("has_description", factory.Faker("sentence"), "")
