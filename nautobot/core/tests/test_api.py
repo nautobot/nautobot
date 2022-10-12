@@ -231,13 +231,13 @@ class LookupTypeChoicesTestCase(APITestCase):
         with self.subTest("Test invalid content_type"):
             response = self.client.get(url + "?content_type=invalid.contenttypes&field_name=name", **self.header)
 
-            self.assertEqual(response.status_code, 400)
+            self.assertEqual(response.status_code, 404)
             self.assertEqual(response.data, "content_type not found")
 
         with self.subTest("Test invalid field_name"):
             response = self.client.get(url + "?content_type=dcim.site&field_name=fake", **self.header)
 
-            self.assertEqual(response.status_code, 400)
+            self.assertEqual(response.status_code, 404)
             self.assertEqual(response.data, "field_name not found")
 
     def test_get_lookup_choices(self):
@@ -270,13 +270,13 @@ class GenerateLookupValueDomElementViewTestCase(APITestCase):
         with self.subTest("Test invalid content_type"):
             response = self.client.get(url + "?content_type=invalid.contenttypes&field_name=name", **self.header)
 
-            self.assertEqual(response.status_code, 400)
+            self.assertEqual(response.status_code, 404)
             self.assertEqual(response.data, "content_type not found")
 
         with self.subTest("Test invalid field_name"):
             response = self.client.get(url + "?content_type=dcim.site&field_name=fake", **self.header)
 
-            self.assertEqual(response.status_code, 400)
+            self.assertEqual(response.status_code, 404)
             self.assertEqual(response.data, "field_name not found")
 
     def test_get_lookup_value_dom_element(self):
