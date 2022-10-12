@@ -515,6 +515,7 @@ class TestIPAddress(TestCase):
         self.assertIsNone(ipaddress_2.clean())
 
     def test_create_ip_address_without_slaac_status(self):
+        IPAddress.objects.filter(status__slug=IPAddressStatusChoices.STATUS_SLAAC).delete()
         Status.objects.get(slug=IPAddressStatusChoices.STATUS_SLAAC).delete()
         IPAddress.objects.create(address="1.1.1.1/32")
         self.assertTrue(IPAddress.objects.filter(address="1.1.1.1/32").exists())
