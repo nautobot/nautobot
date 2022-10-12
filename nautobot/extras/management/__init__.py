@@ -85,7 +85,7 @@ DESCRIPTION_MAP = {
 #
 
 
-def populate_status_choices(apps, schema_editor, **kwargs):
+def populate_status_choices(apps=global_apps, schema_editor=None, **kwargs):
     """
     Populate `Status` model choices.
 
@@ -213,7 +213,8 @@ def clear_status_choices(
     **kwargs,
 ):
     """
-    Remove content types from statuses, and if no content types remain, delete the statuses as well.
+    Remove content types from statuses, delete objects of those content types using those statuses,
+    and if no content types remain, delete the statuses as well.
     """
     if "test" in sys.argv:
         # Do not print output during unit testing migrations
@@ -233,7 +234,8 @@ def clear_status_choices(
 
     for model_path in models:
         choiceset = CHOICESET_MAP[model_path]
-        content_type = ContentType.objects.get_for_model(apps.get_model(model_path))
+        model = apps.get_model(model_path)
+        content_type = ContentType.objects.get_for_model(model)
         choices = export_statuses_from_choiceset(choiceset)
 
         if verbosity >= 2:
@@ -242,9 +244,16 @@ def clear_status_choices(
         if not clear_all_model_statuses:
             # Only clear default statuses for this model
             slugs = [choice_kwargs["slug"] for choice_kwargs in choices]
+            deleted_count, deleted_details = model.objects.filter(status__slug__in=slugs).delete()
         else:
             # Clear all statuses for this model
             slugs = Status.objects.filter(content_types=content_type).values_list("slug", flat=True)
+            deleted_count, deleted_details = model.objects.all().delete()
+
+        if verbosity >= 2:
+            print(
+                f"      Deleted {deleted_count} related objects, including {deleted_details[model_path]} {model_path}"
+            )
 
         for slug in slugs:
             try:

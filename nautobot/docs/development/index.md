@@ -228,15 +228,29 @@ Feature requests will follow our published workflow from inbound triage to ultim
 
 #### Creating Changelog Fragments
 
-All pull requests to `next` or `develop` must include a changelog fragment file in the `./changes` directory. To create a fragment, use your github issue number and fragment type as the filename. For example, `2362.added`. Valid fragment types are `added`, `changed`, `deprecated`, `fixed`, `removed`, and `security`. The change summary is added to the file in plain text. Change summaries should be complete sentences, starting with a capital letter and ending with a period, and be in past tense. Change fragments must only contain a single line of text with an optional trailing newline.
+All pull requests to `next` or `develop` must include a changelog fragment file in the `./changes` directory. To create a fragment, use your github issue number and fragment type as the filename. For example, `2362.added`. Valid fragment types are `added`, `changed`, `deprecated`, `fixed`, `removed`, and `security`. The change summary is added to the file in plain text. Change summaries should be complete sentences, starting with a capital letter and ending with a period, and be in past tense. Each line of the change fragment will generate a single change entry in the release notes. Use multiple lines in the same file if your change needs to generate multiple release notes in the same category. If the change needs to create multiple entries in separate categories, create multiple files.
 
 !!! example
 
-    ```sh
-    # Wrong
-    echo "fix critical bug in documentation" > changes/1234.fixed
-    echo "fixes critical bug in documentation" > changes/1234.fixed
+    **Wrong**
+    ```plaintext title="changes/1234.fixed"
+    fix critical bug in documentation
+    ```
 
-    # Right
-    echo "Fixed critical bug in documentation." > changes/1234.fixed
+    **Right**
+    ```plaintext title="changes/1234.fixed"
+    Fixed critical bug in documentation.
+    ```
+
+!!! example "Multiple Entry Example"
+
+    This will generate 2 entries in the `fixed` category and one entry in the `changed` category.
+
+    ```plaintext title="changes/1234.fixed"
+    Fixed critical bug in documentation.
+    Fixed release notes generation.
+    ```
+
+    ```plaintext title="changes/1234.changed"
+    Changed release notes generation.
     ```

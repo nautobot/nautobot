@@ -1,6 +1,6 @@
 from django.urls import path
 
-from nautobot.extras.views import ObjectChangeLogView, ObjectNotesView
+from nautobot.extras.views import ObjectChangeLogView, ObjectDynamicGroupsView, ObjectNotesView
 from nautobot.ipam.views import ServiceEditView
 from . import views
 from .models import Cluster, ClusterGroup, ClusterType, VirtualMachine, VMInterface
@@ -123,6 +123,12 @@ urlpatterns = [
         kwargs={"model": Cluster},
     ),
     path(
+        "clusters/<uuid:pk>/dynamic-groups/",
+        ObjectDynamicGroupsView.as_view(),
+        name="cluster_dynamicgroups",
+        kwargs={"model": Cluster},
+    ),
+    path(
         "clusters/<uuid:pk>/notes/",
         ObjectNotesView.as_view(),
         name="cluster_notes",
@@ -188,6 +194,12 @@ urlpatterns = [
         "virtual-machines/<uuid:pk>/changelog/",
         ObjectChangeLogView.as_view(),
         name="virtualmachine_changelog",
+        kwargs={"model": VirtualMachine},
+    ),
+    path(
+        "virtual-machines/<uuid:pk>/dynamic-groups/",
+        ObjectDynamicGroupsView.as_view(),
+        name="virtualmachine_dynamicgroups",
         kwargs={"model": VirtualMachine},
     ),
     path(

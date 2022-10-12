@@ -1,1 +1,0 @@
-Remove `render_filter()` method and `filter` field from table columns

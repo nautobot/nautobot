@@ -818,7 +818,7 @@ class ObjectBulkUpdateViewMixin(NautobotViewSetMixin, BulkUpdateModelMixin):
                 for field_name in form_custom_fields:
                     if field_name in form.nullable_fields and field_name in nullified_fields:
                         obj.cf[form_cf_to_key[field_name]] = None
-                    elif form.cleaned_data.get(field_name) not in (None, ""):
+                    elif form.cleaned_data.get(field_name) not in (None, "", []):
                         obj.cf[form_cf_to_key[field_name]] = form.cleaned_data[field_name]
 
                 obj.validated_save()
