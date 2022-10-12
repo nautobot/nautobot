@@ -265,22 +265,22 @@ class DynamicFilterForm(BootstrapMixin, forms.Form):
         label="Value",
     )
 
-    def __init__(self, *args, filterset=None, **kwargs):
+    def __init__(self, *args, filterset_class=None, **kwargs):
         super().__init__(*args, **kwargs)
         from nautobot.utilities.forms import add_blank_choice  # Avoid circular import
 
         # cls.model is set at `dynamic_formset_factory()`
-        self.filterset = filterset or getattr(self, "filterset", None)
+        self.filterset_class = filterset_class or getattr(self, "filterset_class", None)
 
-        # Raise exception if `cls.filterset` not set and `filterset` not passed
-        if self.filterset is None:
-            raise AttributeError("'DynamicFilterForm' object requires `filterset` attribute")
+        # Raise exception if `cls.filterset_class` not set and `filterset_class` not passed
+        if self.filterset_class is None:
+            raise AttributeError("'DynamicFilterForm' object requires `filterset_class` attribute")
 
-        model = self.filterset._meta.model
+        model = self.filterset_class._meta.model
 
-        if self.filterset is not None:
-            filterset = self.filterset()
-            self.filterset_filters = filterset.filters
+        if self.filterset_class is not None:
+            filterset_class = self.filterset_class()
+            self.filterset_filters = filterset_class.filters
             contenttype = model._meta.app_label + "." + model._meta.model_name
 
             # Configure fields: Add css class and set choices for lookup_field
@@ -330,9 +330,9 @@ class DynamicFilterForm(BootstrapMixin, forms.Form):
         return sorted(filterset_without_lookup)
 
 
-def dynamic_formset_factory(filterset, data=None, **kwargs):
+def dynamic_formset_factory(filterset_class, data=None, **kwargs):
     filter_form = DynamicFilterForm
-    filter_form.filterset = filterset
+    filter_form.filterset_class = filterset_class
 
     params = {
         "can_delete_extra": True,
