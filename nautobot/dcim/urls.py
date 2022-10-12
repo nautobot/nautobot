@@ -1,6 +1,6 @@
 from django.urls import path
 
-from nautobot.extras.views import ObjectChangeLogView, ObjectNotesView, ImageAttachmentEditView
+from nautobot.extras.views import ObjectChangeLogView, ObjectDynamicGroupsView, ObjectNotesView, ImageAttachmentEditView
 from nautobot.ipam.views import ServiceEditView
 from . import views
 from .models import (
@@ -285,6 +285,12 @@ urlpatterns = [
         "racks/<uuid:pk>/notes/",
         ObjectNotesView.as_view(),
         name="rack_notes",
+        kwargs={"model": Rack},
+    ),
+    path(
+        "racks/<uuid:pk>/dynamic-groups/",
+        ObjectDynamicGroupsView.as_view(),
+        name="rack_dynamicgroups",
         kwargs={"model": Rack},
     ),
     path(
@@ -780,6 +786,12 @@ urlpatterns = [
         "devices/<uuid:pk>/notes/",
         ObjectNotesView.as_view(),
         name="device_notes",
+        kwargs={"model": Device},
+    ),
+    path(
+        "devices/<uuid:pk>/dynamic-groups/",
+        views.DeviceDynamicGroupsView.as_view(),
+        name="device_dynamicgroups",
         kwargs={"model": Device},
     ),
     path(

@@ -92,7 +92,7 @@ TREE_LINK = """
 {% for i in record.tree_depth|as_range %}
     <i class="mdi mdi-circle-small"></i>
 {% endfor %}
-{{ record|hyperlinked_object }}
+<a href="{{ record.get_absolute_url }}">{{ record.name }}</a>
 """
 
 

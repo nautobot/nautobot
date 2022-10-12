@@ -19,9 +19,10 @@ class AggregateQuerysetTestCase(TestCase):
         cls.exact_network = agg.prefix
         cls.parent_network = cls.exact_network.supernet()[-1]
         # Depending on random generation, parent_network *might* cover a second aggregate
-        cls.parent_covers_second_aggregate = cls.queryset.net_equals(
-            list(cls.parent_network.subnet(cls.exact_network.prefixlen))[1]
-        ).exists()
+        cls.parent_covers_second_aggregate = (
+            cls.queryset.net_equals(list(cls.parent_network.subnet(cls.exact_network.prefixlen))[0]).exists()
+            and cls.queryset.net_equals(list(cls.parent_network.subnet(cls.exact_network.prefixlen))[1]).exists()
+        )
         cls.child_network = list(cls.exact_network.subnet(cls.exact_network.prefixlen + 3))[0]
 
     def test_net_equals(self):

@@ -171,10 +171,38 @@ def build(context, force_rm=False, cache=True, poetry_parallel=True, pull=False)
         command += " --pull"
 
     print(f"Building Nautobot with Python {context.nautobot.python_ver}...")
+
     docker_compose(context, command, env={"DOCKER_BUILDKIT": "1", "COMPOSE_DOCKER_CLI_BUILD": "1"})
 
     # Build the docs so they are available.
     build_nautobot_docs(context)
+
+
+@task(
+    help={
+        "poetry_parallel": "Enable/disable poetry to install packages in parallel. (Default: True)",
+    }
+)
+def build_dependencies(context, poetry_parallel=True):
+
+    # Determine preferred/default target architecture
+    output = context.run("docker buildx inspect default", env={"PYTHON_VER": context.nautobot.python_ver}, hide=True)
+    result = re.search(r"Platforms: ([^,\n]+)", output.stdout)
+
+    build_kwargs = {
+        "dependencies_base_branch": "local",
+        "poetry_parallel": poetry_parallel,
+        "tag": f"ghcr.io/nautobot/nautobot-dependencies:local-py{context.nautobot.python_ver}",
+        "target": "dependencies",
+    }
+
+    if len(result.groups()) < 1:
+        print("Failed to identify platform building for, falling back to default.")
+
+    else:
+        build_kwargs["platforms"] = result.group(1)
+
+    buildx(context, **build_kwargs)
 
 
 @task(

@@ -1,6 +1,6 @@
 from django.contrib.contenttypes.fields import GenericRelation
 from django.contrib.contenttypes.models import ContentType
-from django.core.exceptions import ValidationError
+from django.core.exceptions import ObjectDoesNotExist, ValidationError
 from django.db import models
 from django.urls import reverse
 
@@ -11,7 +11,7 @@ from nautobot.core.models.generics import OrganizationalModel, PrimaryModel
 from nautobot.extras.models import StatusModel
 from nautobot.extras.utils import extras_features, FeatureQuery
 from nautobot.utilities.fields import NaturalOrderingField
-from nautobot.utilities.tree_queries import TreeManager
+from nautobot.utilities.tree_queries import TreeManager, TreeQuerySet
 
 
 @extras_features(
@@ -85,6 +85,37 @@ class LocationType(TreeNode, OrganizationalModel):
         ]:
             raise ValidationError({"name": "This name is reserved for future use."})
 
+    @property
+    def display(self):
+        """
+        Include the parent type names as well in order to provide UI clarity.
+        `self.ancestors()` returns all the preceding nodes from the top down.
+        So if we are looking at node C and its node structure is the following:
+            A
+           /
+          B
+         /
+        C
+        This method will return "A → B → C".
+        Note that `self.ancestors()` may throw an `ObjectDoesNotExist` during bulk-delete operations.
+        """
+        display_str = ""
+        try:
+            for ancestor in self.ancestors():
+                display_str += ancestor.name + " → "
+        except ObjectDoesNotExist:
+            pass
+        finally:
+            display_str += self.name
+            return display_str  # pylint: disable=lost-exception
+
+
+class LocationQuerySet(TreeQuerySet):
+    def get_for_model(self, model):
+        """Filter locations to only those that can accept the given model class."""
+        content_type = ContentType.objects.get_for_model(model._meta.concrete_model)
+        return self.filter(location_type__content_types=content_type)
+
 
 @extras_features(
     "custom_fields",
@@ -150,7 +181,7 @@ class Location(TreeNode, StatusModel, PrimaryModel):
     description = models.CharField(max_length=200, blank=True)
     images = GenericRelation(to="extras.ImageAttachment")
 
-    objects = TreeManager()
+    objects = LocationQuerySet.as_manager(with_tree_fields=True)
 
     csv_headers = [
         "name",
@@ -199,6 +230,31 @@ class Location(TreeNode, StatusModel, PrimaryModel):
         """The site that this Location belongs to, if any, or that its root ancestor belongs to, if any."""
         return self.site or self.ancestors().first().site
 
+    @property
+    def display(self):
+        """
+        Location name is unique per parent but not globally unique, so include parent information as context.
+        `self.ancestors()` returns all the preceding nodes from the top down.
+        So if we are looking at node C and its node structure is the following:
+            A
+           /
+          B
+         /
+        C
+        This method will return "A → B → C".
+
+        Note that `self.ancestors()` may throw an `ObjectDoesNotExist` during bulk-delete operations.
+        """
+        display_str = ""
+        try:
+            for ancestor in self.ancestors():
+                display_str += ancestor.name + " → "
+        except ObjectDoesNotExist:
+            pass
+        finally:
+            display_str += self.name
+            return display_str  # pylint: disable=lost-exception
+
     def validate_unique(self, exclude=None):
         # Check for a duplicate name on a Location with no parent.
         # This is necessary because Django does not consider two NULL fields to be equal.
@@ -213,8 +269,15 @@ class Location(TreeNode, StatusModel, PrimaryModel):
 
         # Prevent changing location type as that would require a whole bunch of cascading logic checks,
         # e.g. what if the new type doesn't allow all of the associated objects that the old type did?
-        if self.present_in_database and self.location_type != Location.objects.get(pk=self.pk).location_type:
-            raise ValidationError({"location_type": "Changing the type of an existing Location is not permitted."})
+        if self.present_in_database:
+            prior_location_type = Location.objects.get(pk=self.pk).location_type
+            if self.location_type != prior_location_type:
+                raise ValidationError(
+                    {
+                        "location_type": f"Changing the type of an existing Location (from {prior_location_type} to "
+                        f"{self.location_type} in this case) is not permitted."
+                    }
+                )
 
         if self.location_type.parent is not None:
             # We must have a parent and it must match the parent location_type.

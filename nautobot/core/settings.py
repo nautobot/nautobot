@@ -116,6 +116,11 @@ STORAGE_CONFIG = {}
 # Test runner that is aware of our use of "integration" tags and only runs
 # integration tests if explicitly passed in with `nautobot-server test --tag integration`.
 TEST_RUNNER = "nautobot.core.tests.runner.NautobotTestRunner"
+# Disable test data factories by default so as not to cause issues for plugins.
+# The nautobot_config.py that Nautobot core uses for its own tests will override this to True.
+TEST_USE_FACTORIES = is_truthy(os.getenv("NAUTOBOT_TEST_USE_FACTORIES", "False"))
+# Pseudo-random number generator seed, for reproducibility of test results.
+TEST_FACTORY_SEED = os.getenv("NAUTOBOT_TEST_FACTORY_SEED", None)
 
 #
 # Django cryptography
@@ -705,7 +710,7 @@ BRANDING_URLS = {
 }
 
 # Undocumented link in the bottom right of the footer which is meant to persist any custom branding changes.
-BRANDING_POWERED_BY_URL = "https://nautobot.readthedocs.io/"
+BRANDING_POWERED_BY_URL = "https://docs.nautobot.com/"
 
 #
 # Django extensions settings

@@ -1,6 +1,6 @@
 from django.urls import path
 
-from nautobot.extras.views import ObjectChangeLogView, ObjectNotesView
+from nautobot.extras.views import ObjectChangeLogView, ObjectDynamicGroupsView, ObjectNotesView
 from . import views
 from .models import (
     Aggregate,
@@ -188,6 +188,12 @@ urlpatterns = [
         kwargs={"model": Prefix},
     ),
     path(
+        "prefixes/<uuid:pk>/dynamic-groups/",
+        ObjectDynamicGroupsView.as_view(),
+        name="prefix_dynamicgroups",
+        kwargs={"model": Prefix},
+    ),
+    path(
         "prefixes/<uuid:pk>/notes/",
         ObjectNotesView.as_view(),
         name="prefix_notes",
@@ -230,6 +236,12 @@ urlpatterns = [
         "ip-addresses/<uuid:pk>/changelog/",
         ObjectChangeLogView.as_view(),
         name="ipaddress_changelog",
+        kwargs={"model": IPAddress},
+    ),
+    path(
+        "ip-addresses/<uuid:pk>/dynamic-groups/",
+        ObjectDynamicGroupsView.as_view(),
+        name="ipaddress_dynamicgroups",
         kwargs={"model": IPAddress},
     ),
     path(

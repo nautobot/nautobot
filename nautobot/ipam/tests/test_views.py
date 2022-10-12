@@ -37,10 +37,6 @@ class VRFTestCase(ViewTestCases.PrimaryObjectViewTestCase):
             Tenant.objects.create(name="Tenant B", slug="tenant-b"),
         )
 
-        VRF.objects.create(name="VRF 1", rd="65000:1")
-        VRF.objects.create(name="VRF 2", rd="65000:2")
-        VRF.objects.create(name="VRF 3", rd="65000:3")
-
         cls.form_data = {
             "name": "VRF X",
             "rd": "65000:999",
@@ -75,10 +71,6 @@ class RouteTargetTestCase(ViewTestCases.PrimaryObjectViewTestCase):
             Tenant.objects.create(name="Tenant A", slug="tenant-a"),
             Tenant.objects.create(name="Tenant B", slug="tenant-b"),
         )
-
-        RouteTarget.objects.create(name="65000:1001", tenant=tenants[0])
-        RouteTarget.objects.create(name="65000:1002", tenant=tenants[1])
-        RouteTarget.objects.create(name="65000:1003")
 
         cls.form_data = {
             "name": "65000:100",
@@ -172,15 +164,7 @@ class RoleTestCase(ViewTestCases.OrganizationalObjectViewTestCase):
 
     @classmethod
     def setUpTestData(cls):
-
-        Role.objects.bulk_create(
-            [
-                Role(name="Role 1", slug="role-1"),
-                Role(name="Role 2", slug="role-2"),
-                Role(name="Role 3", slug="role-3"),
-                Role(name="Role 8"),
-            ]
-        )
+        Role.objects.create(name="Role 8")
 
         cls.form_data = {
             "name": "Role X",
@@ -215,15 +199,9 @@ class PrefixTestCase(ViewTestCases.PrimaryObjectViewTestCase, ViewTestCases.List
             Site.objects.create(name="Site 2", slug="site-2"),
         )
 
-        vrfs = (
-            VRF.objects.create(name="VRF 1", rd="65000:1"),
-            VRF.objects.create(name="VRF 2", rd="65000:2"),
-        )
+        vrfs = VRF.objects.all()[:2]
 
-        roles = (
-            Role.objects.create(name="Role 1", slug="role-1"),
-            Role.objects.create(name="Role 2", slug="role-2"),
-        )
+        roles = Role.objects.all()[:2]
 
         statuses = Status.objects.get_for_model(Prefix)
         status_reserved = statuses.get(slug="reserved")
@@ -265,9 +243,9 @@ class PrefixTestCase(ViewTestCases.PrimaryObjectViewTestCase, ViewTestCases.List
 
         cls.csv_data = (
             "vrf,prefix,status",
-            "VRF 1,10.4.0.0/16,active",
-            "VRF 1,10.5.0.0/16,active",
-            "VRF 1,10.6.0.0/16,active",
+            f"{vrfs[0].name},10.4.0.0/16,active",
+            f"{vrfs[0].name},10.5.0.0/16,active",
+            f"{vrfs[0].name},10.6.0.0/16,active",
         )
 
         cls.bulk_edit_data = {
@@ -309,10 +287,7 @@ class IPAddressTestCase(ViewTestCases.PrimaryObjectViewTestCase):
     @classmethod
     def setUpTestData(cls):
 
-        vrfs = (
-            VRF.objects.create(name="VRF 1", rd="65000:1"),
-            VRF.objects.create(name="VRF 2", rd="65000:2"),
-        )
+        vrfs = VRF.objects.all()[:2]
 
         statuses = Status.objects.get_for_model(IPAddress)
         status_reserved = statuses.get(slug="reserved")
@@ -335,9 +310,9 @@ class IPAddressTestCase(ViewTestCases.PrimaryObjectViewTestCase):
 
         cls.csv_data = (
             "vrf,address,status",
-            "VRF 1,192.0.2.4/24,active",
-            "VRF 1,192.0.2.5/24,active",
-            "VRF 1,192.0.2.6/24,active",
+            f"{vrfs[0].name},192.0.2.4/24,active",
+            f"{vrfs[0].name},192.0.2.5/24,active",
+            f"{vrfs[0].name},192.0.2.6/24,active",
         )
 
         cls.bulk_edit_data = {
@@ -358,14 +333,7 @@ class VLANGroupTestCase(ViewTestCases.OrganizationalObjectViewTestCase):
 
         site = Site.objects.create(name="Site 1", slug="site-1")
 
-        VLANGroup.objects.bulk_create(
-            [
-                VLANGroup(name="VLAN Group 1", slug="vlan-group-1", site=site),
-                VLANGroup(name="VLAN Group 2", slug="vlan-group-2", site=site),
-                VLANGroup(name="VLAN Group 3", slug="vlan-group-3", site=site),
-                VLANGroup(name="VLAN Group 8", site=site),
-            ]
-        )
+        VLANGroup.objects.create(name="VLAN Group 8", site=site)
 
         cls.form_data = {
             "name": "VLAN Group X",
@@ -383,6 +351,15 @@ class VLANGroupTestCase(ViewTestCases.OrganizationalObjectViewTestCase):
         )
         cls.slug_source = "name"
         cls.slug_test_object = "VLAN Group 8"
+
+    def get_deletable_object(self):
+        """Return a VLANGroup without any associated VLANs."""
+        return VLANGroup.objects.filter(vlans__isnull=True).first()
+
+    def get_deletable_object_pks(self):
+        """Return a list of PKs corresponding to VLANGroups without any associated VLANs."""
+        groups = list(VLANGroup.objects.filter(vlans__isnull=True))[:3]
+        return [group.pk for group in groups]
 
 
 class VLANTestCase(ViewTestCases.PrimaryObjectViewTestCase):
@@ -467,26 +444,11 @@ class VLANTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         cls.bulk_edit_data = {
             "site": sites[1].pk,
             "group": vlangroups[1].pk,
-            "tenant": None,
+            "tenant": Tenant.objects.first().pk,
             "status": status_reserved.pk,
             "role": roles[1].pk,
             "description": "New description",
         }
-
-    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
-    def test_queryset_to_csv(self):
-        """This view has a custom queryset_to_csv() implementation."""
-        response = self.client.get(f"{self._get_url('list')}?export")
-        self.assertHttpStatus(response, 200)
-        self.assertEqual(response.get("Content-Type"), "text/csv")
-        self.assertEqual(
-            """\
-site,location,group,vid,name,tenant,status,role,description,cf_field
-Site 1,,VLAN Group 1,101,VLAN101,,Active,Role 1,,Value
-Site 1,,VLAN Group 1,102,VLAN102,,Active,Role 1,,Value
-Site 1,,VLAN Group 1,103,VLAN103,,Active,Role 1,,Value""",
-            response.content.decode(response.charset),
-        )
 
 
 # TODO: Update base class to PrimaryObjectViewTestCase
