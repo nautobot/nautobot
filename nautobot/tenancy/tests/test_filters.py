@@ -38,8 +38,6 @@ class TenantTestCase(FilterTestCases.NameSlugFilterTestCase):
     def setUpTestData(cls):
         active = Status.objects.get(name="Active")
         site = Site.objects.first()
-        site.status = active
-        site.validated_save()
         location_type = LocationType.objects.create(name="Root Type")
         cls.locations = (
             Location.objects.create(

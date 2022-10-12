@@ -82,12 +82,7 @@ class NautobotTemplatetagsHelperTest(TestCase):
         self.assertEqual("utf8:\n- 😀😀\n- 😀\n", render_yaml({"utf8": ["😀😀", "😀"]}))
 
     def test_meta(self):
-        status = Status.objects.create(name="Testing")
-        status.content_types.set([ContentType.objects.get_for_model(Site)])
-        status.validated_save()
         site = Site.objects.first()
-        site.status = status
-        site.validated_save()
 
         self.assertEqual(meta(site, "app_label"), "dcim")
         self.assertEqual(meta(Site, "app_label"), "dcim")
@@ -96,12 +91,7 @@ class NautobotTemplatetagsHelperTest(TestCase):
         self.assertEqual(meta(ExampleModel, "app_label"), "example_plugin")
 
     def test_viewname(self):
-        status = Status.objects.create(name="Testing")
-        status.content_types.set([ContentType.objects.get_for_model(Site)])
-        status.validated_save()
         site = Site.objects.first()
-        site.status = status
-        site.validated_save()
 
         self.assertEqual(viewname(site, "edit"), "dcim:site_edit")
         self.assertEqual(viewname(Site, "test"), "dcim:site_test")
@@ -109,12 +99,7 @@ class NautobotTemplatetagsHelperTest(TestCase):
         self.assertEqual(viewname(ExampleModel, "edit"), "plugins:example_plugin:examplemodel_edit")
 
     def test_validated_viewname(self):
-        status = Status.objects.create(name="Testing")
-        status.content_types.set([ContentType.objects.get_for_model(Site)])
-        status.validated_save()
         site = Site.objects.first()
-        site.status = status
-        site.validated_save()
 
         self.assertEqual(validated_viewname(site, "list"), "dcim:site_list")
         self.assertIsNone(validated_viewname(Site, "notvalid"))
@@ -153,12 +138,7 @@ class NautobotTemplatetagsHelperTest(TestCase):
 
     def test_get_docs_url(self):
         self.assertTrue(callable(get_docs_url))
-        status = Status.objects.create(name="Testing")
-        status.content_types.set([ContentType.objects.get_for_model(Site)])
-        status.validated_save()
         site = Site.objects.first()
-        site.status = status
-        site.validated_save()
         self.assertEqual(get_docs_url(site), static("docs/models/dcim/site.html"))
         example_model = ExampleModel.objects.create(name="test", number=1)
         self.assertEqual(get_docs_url(example_model), static("example_plugin/docs/models/examplemodel.html"))

@@ -346,14 +346,13 @@ class LocationTest(APIViewTestCases.APIViewTestCase):
 
     @classmethod
     def setUpTestData(cls):
-        lt1 = LocationType.objects.create(name="Campus")
-        lt2 = LocationType.objects.create(name="Building Type", parent=lt1)
-        lt3 = LocationType.objects.create(name="Floor Type", slug="building-floor", parent=lt2)
-        lt4 = LocationType.objects.create(name="Room Type", parent=lt3)
+        lt1 = LocationType.objects.get(name="Building")
+        lt2 = LocationType.objects.get(name="Floor")
+        lt3 = LocationType.objects.get(name="Room")
+        lt4 = LocationType.objects.get(name="Aisle")
 
         status_active = Status.objects.get(slug="active")
         site = Site.objects.first()
-        site.status = status_active
         tenant = Tenant.objects.create(name="Test Tenant")
 
         loc1 = Location.objects.create(name="RTP", location_type=lt1, status=status_active, site=site)

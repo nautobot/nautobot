@@ -735,6 +735,7 @@ class RelationshipAssociationTest(RelationshipBaseTest):
     def test_delete_cascade(self):
         """Verify that a RelationshipAssociation is deleted if either of the associated records is deleted."""
         initial_count = RelationshipAssociation.objects.count()
+        # Create new sites because protected error might be raised if we use test fixtures here.
         sites = (
             Site.objects.create(name="new site 1"),
             Site.objects.create(name="new site 2"),

@@ -677,8 +677,6 @@ class RelationshipModelBulkEditFormMixinTestCase(TestCase):
     def setUpTestData(cls):
         active = Status.objects.get(slug="active")
         cls.sites = dcim_models.Site.objects.all()[:2]
-        cls.sites[0].status = active
-        cls.sites[1].status = active
         cls.ipaddresses = [
             ipam_models.IPAddress.objects.create(address="10.1.1.1/24", status=active),
             ipam_models.IPAddress.objects.create(address="10.2.2.2/24", status=active),

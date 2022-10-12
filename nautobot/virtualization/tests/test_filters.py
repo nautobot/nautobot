@@ -205,16 +205,22 @@ class ClusterTestCase(FilterTestCases.FilterTestCase, FilterTestCases.TenancyFil
             self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
 
     def test_region(self):
-        params = {"region_id": [self.regions[0].pk, self.regions[1].pk]}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
-        params = {"region": [self.regions[0].slug, self.regions[1].slug]}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+        regions = list(self.regions[:2])
+        params = {"region_id": [regions[0].pk, regions[1].pk]}
+        self.assertQuerysetEqual(
+            self.filterset(params, self.queryset).qs, self.queryset.filter(site__region__in=regions)
+        )
+        params = {"region": [regions[0].slug, regions[1].slug]}
+        self.assertQuerysetEqual(
+            self.filterset(params, self.queryset).qs, self.queryset.filter(site__region__in=regions)
+        )
 
     def test_site(self):
-        params = {"site_id": [self.sites[0].pk, self.sites[1].pk]}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
-        params = {"site": [self.sites[0].slug, self.sites[1].slug]}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+        sites = list(self.sites[:2])
+        params = {"site_id": [sites[0].pk, sites[1].pk]}
+        self.assertQuerysetEqual(self.filterset(params, self.queryset).qs, self.queryset.filter(site__in=sites))
+        params = {"site": [sites[0].slug, sites[1].slug]}
+        self.assertQuerysetEqual(self.filterset(params, self.queryset).qs, self.queryset.filter(site__in=sites))
 
     def test_group(self):
         groups = ClusterGroup.objects.all()[:2]
@@ -475,16 +481,26 @@ class VirtualMachineTestCase(FilterTestCases.FilterTestCase, FilterTestCases.Ten
         # self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
 
     def test_region(self):
-        params = {"region_id": [self.regions[0].pk, self.regions[1].pk]}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
-        params = {"region": [self.regions[0].slug, self.regions[1].slug]}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+        regions = list(self.regions[:2])
+        params = {"region_id": [regions[0].pk, regions[1].pk]}
+        self.assertQuerysetEqual(
+            self.filterset(params, self.queryset).qs, self.queryset.filter(cluster__site__region__in=regions)
+        )
+        params = {"region": [regions[0].slug, regions[1].slug]}
+        self.assertQuerysetEqual(
+            self.filterset(params, self.queryset).qs, self.queryset.filter(cluster__site__region__in=regions)
+        )
 
     def test_site(self):
-        params = {"site_id": [self.sites[0].pk, self.sites[1].pk]}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
-        params = {"site": [self.sites[0].slug, self.sites[1].slug]}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+        sites = list(self.sites[:2])
+        params = {"site_id": [sites[0].pk, sites[1].pk]}
+        self.assertQuerysetEqual(
+            self.filterset(params, self.queryset).qs, self.queryset.filter(cluster__site__in=sites)
+        )
+        params = {"site": [sites[0].slug, sites[1].slug]}
+        self.assertQuerysetEqual(
+            self.filterset(params, self.queryset).qs, self.queryset.filter(cluster__site__in=sites)
+        )
 
     def test_role(self):
         roles = DeviceRole.objects.all()[:2]

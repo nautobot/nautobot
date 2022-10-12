@@ -929,7 +929,7 @@ class DynamicFilterLookupExpressionTest(TestCase):
         params = {"region_id__n": [self.regions[0].pk]}
         self.assertQuerysetEqual(
             SiteFilterSet(params, self.site_queryset).qs,
-            Site.objects.exclude(region__id=self.regions[0].pk).distinct(),
+            Site.objects.exclude(region__id=self.regions[0].pk),
         )
 
     def test_device_name_eq(self):
@@ -1097,28 +1097,28 @@ class SearchFilterTest(TestCase):
     def test_default_icontains(self):
         """Test a default search for an "icontains" value."""
         params = {"q": "Test Site"}
-        self.assertEqual(self.get_filterset_count(params), 4)
+        self.assertEqual(self.get_filterset_count(params), self.queryset.filter(name__icontains="Test Site").count())
         params = {"q": "Test Site 3"}
-        self.assertEqual(self.get_filterset_count(params), 1)
+        self.assertEqual(self.get_filterset_count(params), self.queryset.filter(name__icontains="Test Site 3").count())
         # Trailing space should only match the first 3.
         params = {"q": "Test Site "}
-        self.assertEqual(self.get_filterset_count(params), 3)
+        self.assertEqual(self.get_filterset_count(params), self.queryset.filter(name__icontains="Test Site ").count())
 
     def test_default_exact(self):
         """Test a default search for an "exact" value."""
         params = {"q": "1234"}
-        self.assertEqual(self.get_filterset_count(params), 1)
-        params = {"q": "123"}
-        self.assertEqual(self.get_filterset_count(params), 1)
+        self.assertEqual(self.get_filterset_count(params), self.queryset.filter(asn__exact="1234").count())
+        params = {"q": "581"}
+        self.assertEqual(self.get_filterset_count(params), self.queryset.filter(asn__exact="581").count())
 
     def test_default_id(self):
         """Test default search on "id" field."""
         # Search is iexact so UUID search for lower/upper return the same result.
         obj_pk = str(self.site1.pk)
         params = {"q": obj_pk.lower()}
-        self.assertEqual(self.get_filterset_count(params), 1)
+        self.assertEqual(self.get_filterset_count(params), self.queryset.filter(id__iexact=obj_pk.lower()).count())
         params = {"q": obj_pk.upper()}
-        self.assertEqual(self.get_filterset_count(params), 1)
+        self.assertEqual(self.get_filterset_count(params), self.queryset.filter(id__iexact=obj_pk.upper()).count())
 
     def test_typed_valid(self):
         """Test that validly-typed predicate mappings are handled correctly."""
@@ -1129,9 +1129,13 @@ class SearchFilterTest(TestCase):
             q = SearchFilter(filter_predicates={"asn": {"lookup_expr": "exact", "preprocessor": int}})
 
         params = {"q": "1234"}
-        self.assertEqual(self.get_filterset_count(params, MySiteFilterSet), 1)
+        self.assertEqual(
+            self.get_filterset_count(params, MySiteFilterSet), self.queryset.filter(asn__exact="1234").count()
+        )
         params = {"q": "123"}
-        self.assertEqual(self.get_filterset_count(params, MySiteFilterSet), 0)
+        self.assertEqual(
+            self.get_filterset_count(params, MySiteFilterSet), self.queryset.filter(asn__exact="123").count()
+        )
 
         # Further an invalid type (e.g. dict) will just result in the predicate for ASN to be skipped
         class MySiteFilterSet2(SiteFilterSet):
@@ -1152,9 +1156,13 @@ class SearchFilterTest(TestCase):
 
         # Both searches should return the same results.
         params = {"q": "Test Site"}
-        self.assertEqual(self.get_filterset_count(params, MySiteFilterSet), 4)
+        self.assertEqual(
+            self.get_filterset_count(params, MySiteFilterSet), self.queryset.filter(name__icontains="Test Site").count()
+        )
         params = {"q": "Test Site "}
-        self.assertEqual(self.get_filterset_count(params, MySiteFilterSet), 4)
+        self.assertEqual(
+            self.get_filterset_count(params, MySiteFilterSet), self.queryset.filter(name__icontains="Test Site").count()
+        )
 
     def test_typed_invalid(self):
         """Test that incorrectly-typed predicate mappings are handled correctly."""

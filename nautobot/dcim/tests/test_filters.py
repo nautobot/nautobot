@@ -709,7 +709,6 @@ class RegionTestCase(FilterTestCases.NameSlugFilterTestCase):
     def test_has_children(self):
         with self.subTest():
             params = {"has_children": True}
-
             self.assertQuerysetEqual(
                 self.filterset(params, self.queryset).qs,
                 self.queryset.filter(children__isnull=False),
@@ -1035,12 +1034,6 @@ class LocationTypeFilterSetTestCase(FilterTestCases.NameSlugFilterTestCase):
         lt2 = LocationType.objects.get(name="Floor")
         lt2.description = "A floor"
         lt2.validated_save()
-        lt3 = LocationType.objects.get(name="Room")
-        lt4 = LocationType.objects.get(name="Aisle")
-        for lt in [lt1, lt2, lt3]:
-            lt.content_types.add(ContentType.objects.get_for_model(RackGroup))
-        lt4.content_types.add(ContentType.objects.get_for_model(Rack))
-        lt4.content_types.add(ContentType.objects.get_for_model(Device))
 
     def test_description(self):
         params = {"description": ["A floor", "A building"]}
@@ -1069,7 +1062,7 @@ class LocationTypeFilterSetTestCase(FilterTestCases.NameSlugFilterTestCase):
             ct_2 = [ContentType.objects.get_for_model(Rack)]
             self.assertEqual(
                 self.filterset(params, self.queryset).qs.count(),
-                LocationType.objects.filter(content_types__in=ct_1).filter(content_types__in=ct_2).count(),
+                LocationType.objects.filter(Q(content_types__in=ct_1)).filter(Q(content_types__in=ct_2)).count(),
             )
 
 
