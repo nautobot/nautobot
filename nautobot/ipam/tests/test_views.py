@@ -440,12 +440,12 @@ class VLANTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         )
 
         cls.bulk_edit_data = {
-            "location": Location.objects.filter(site=vlangroups[1].site).first().pk,
-            "site": vlangroups[1].site.pk,
-            "group": vlangroups[1].pk,
+            "location": Location.objects.filter(site=cls.sites[0].pk).first().pk,
+            "site": cls.sites[0].pk,
+            "group": vlangroups[0].pk,
             "tenant": Tenant.objects.first().pk,
             "status": status_reserved.pk,
-            "role": roles[1].pk,
+            "role": roles[0].pk,
             "description": "New description",
         }
 

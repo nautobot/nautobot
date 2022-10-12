@@ -664,8 +664,8 @@ class RegionTestCase(FilterTestCases.NameSlugFilterTestCase):
     def setUpTestData(cls):
         common_test_data(cls)
 
-        cls.parent_regions = Region.objects.filter(children__isnull=False)[:3]
-        cls.child_regions = Region.objects.filter(parent__in=cls.parent_regions)
+        cls.parent_regions = list(Region.objects.filter(children__isnull=False)[:3])
+        cls.child_regions = list(Region.objects.filter(parent__in=cls.parent_regions)[:3])
 
     def test_description(self):
         regions = Region.objects.filter(description__isnull=False).exclude(description="")[:2]

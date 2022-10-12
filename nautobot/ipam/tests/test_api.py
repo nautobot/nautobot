@@ -561,7 +561,7 @@ class VLANTest(APIViewTestCases.APIViewTestCase):
     @classmethod
     def setUpTestData(cls):
 
-        vlan_groups = VLANGroup.objects.filter(site__isnull=False)[:2]
+        vlan_groups = VLANGroup.objects.filter(site__isnull=False, location__isnull=False)[:2]
 
         # FIXME(jathan): The writable serializer for `status` takes the
         # status `name` (str) and not the `pk` (int). Do not validate this
@@ -578,7 +578,7 @@ class VLANTest(APIViewTestCases.APIViewTestCase):
                 "group": vlan_groups[0].pk,
                 "status": "active",
                 "site": vlan_groups[0].site.pk,
-                "location": Location.objects.filter(site=vlan_groups[0].site).first().pk,
+                "location": Location.objects.filter(site=vlan_groups[0].site.pk).first().pk,
             },
             {
                 "vid": 5,
@@ -586,7 +586,7 @@ class VLANTest(APIViewTestCases.APIViewTestCase):
                 "group": vlan_groups[0].pk,
                 "status": "active",
                 "site": vlan_groups[0].site.pk,
-                "location": Location.objects.filter(site=vlan_groups[0].site).first().pk,
+                "location": Location.objects.filter(site=vlan_groups[0].site.pk).first().pk,
             },
             {
                 "vid": 6,
@@ -594,7 +594,7 @@ class VLANTest(APIViewTestCases.APIViewTestCase):
                 "group": vlan_groups[0].pk,
                 "status": "active",
                 "site": vlan_groups[0].site.pk,
-                "location": Location.objects.filter(site=vlan_groups[0].site).first().pk,
+                "location": Location.objects.filter(site=vlan_groups[0].site.pk).first().pk,
             },
         ]
 

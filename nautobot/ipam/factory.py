@@ -40,10 +40,10 @@ class AggregateFactory(PrimaryModelFactory):
             "is_ipv6",
         )
 
-    rir = random_instance(RIR)
+    rir = random_instance(RIR, allow_null=False)
 
     has_tenant = factory.Faker("pybool")
-    tenant = factory.Maybe("has_tenant", random_instance(Tenant), None)
+    tenant = factory.Maybe("has_tenant", random_instance(Tenant, allow_null=False), None)
 
     has_date_added = factory.Faker("pybool")
     date_added = factory.Maybe("has_date_added", factory.Faker("date"), None)
@@ -144,7 +144,7 @@ class RouteTargetFactory(PrimaryModelFactory):
     description = factory.Maybe("has_description", factory.Faker("text", max_nb_chars=200), "")
 
     has_tenant = factory.Faker("boolean", chance_of_getting_true=75)
-    tenant = factory.Maybe("has_tenant", random_instance(Tenant), None)
+    tenant = factory.Maybe("has_tenant", random_instance(Tenant, allow_null=False), None)
 
 
 class VRFFactory(PrimaryModelFactory):
@@ -165,7 +165,7 @@ class VRFFactory(PrimaryModelFactory):
     rd = factory.Maybe("has_rd", factory.LazyFunction(random_route_distinguisher), None)
 
     has_tenant = factory.Faker("pybool")
-    tenant = factory.Maybe("has_tenant", random_instance(Tenant), None)
+    tenant = factory.Maybe("has_tenant", random_instance(Tenant, allow_null=False), None)
 
     enforce_unique = factory.Faker("pybool")
 
@@ -220,13 +220,15 @@ class VLANGroupFactory(OrganizationalModelFactory):
     description = factory.Maybe("has_description", factory.Faker("text", max_nb_chars=200), "")
 
     has_location = factory.Faker("pybool")
-    location = factory.Maybe("has_location", random_instance(lambda: Location.objects.get_for_model(VLANGroup)), None)
+    location = factory.Maybe(
+        "has_location", random_instance(lambda: Location.objects.get_for_model(VLANGroup), allow_null=False), None
+    )
 
     has_site = factory.Faker("pybool")
     site = factory.Maybe(
         "has_location",
         factory.LazyAttribute(lambda l: l.location.site or l.location.base_site),
-        factory.Maybe("has_site", random_instance(Site), None),
+        factory.Maybe("has_site", random_instance(Site, allow_null=False), None),
     )
 
 
@@ -254,17 +256,17 @@ class VLANFactory(PrimaryModelFactory):
     description = factory.Maybe("has_description", factory.Faker("text", max_nb_chars=200), "")
 
     has_group = factory.Faker("pybool")
-    group = factory.Maybe("has_group", random_instance(VLANGroup), None)
+    group = factory.Maybe("has_group", random_instance(VLANGroup, allow_null=False), None)
 
     has_location = factory.Faker("pybool")
     location = factory.Maybe(
         "has_group",
         factory.LazyAttribute(lambda l: l.group.location),
-        factory.Maybe("has_location", random_instance(Location), None),
+        factory.Maybe("has_location", random_instance(Location, allow_null=False), None),
     )
 
     has_role = factory.Faker("pybool")
-    role = factory.Maybe("has_role", random_instance(Role), None)
+    role = factory.Maybe("has_role", random_instance(Role, allow_null=False), None)
 
     has_site = factory.Faker("pybool")
     site = factory.Maybe(
@@ -273,9 +275,9 @@ class VLANFactory(PrimaryModelFactory):
         factory.Maybe(
             "has_location",
             factory.LazyAttribute(lambda l: l.location.site),
-            factory.Maybe("has_site", random_instance(Site), None),
+            factory.Maybe("has_site", random_instance(Site, allow_null=False), None),
         ),
     )
 
     has_tenant = factory.Faker("pybool")
-    tenant = factory.Maybe("has_tenant", random_instance(Tenant), None)
+    tenant = factory.Maybe("has_tenant", random_instance(Tenant, allow_null=False), None)
