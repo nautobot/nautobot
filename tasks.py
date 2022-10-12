@@ -621,8 +621,8 @@ def check_schema(context, api_version=None):
         "verbose": "Enable verbose test output.",
         "append": "Append coverage data to .coverage, otherwise it starts clean each time.",
         "skip_docs_build": "Skip (re)build of documentation before running the test.",
-        "report": "Generate Performance Testing report in the terminal.",
-        "generate_report": "Generate a new performance testing report to report.json",
+        "report": "Generate Performance Testing report in the terminal. Has to set GENERATE_PERFORMANCE_REPORT=True in settings.py",
+        "generate_report": "Generate a new performance testing report to report.json. Has to set GENERATE_PERFORMANCE_REPORT=True in settings.py",
     },
     iterable=["tag", "exclude_tag"],
 )
@@ -656,11 +656,13 @@ def unittest(
         command += " --buffer"
     if verbose:
         command += " --verbosity 2"
-    if report:
+    if report or (tag and "performance" in tag):
         command += " --slowreport"
     if generate_report:
         command += " --slowreport --slowreportpath report.json"
 
+    if "--slowreport" in command:
+        command += " --testrunner nautobot.core.tests.runner.NautobotPerformanceTestRunner"
     # lists
     if tag:
         for individual_tag in tag:
@@ -669,7 +671,12 @@ def unittest(
         for individual_exclude_tag in exclude_tag:
             command += f" --tag {individual_exclude_tag}"
 
-    run_command(context, command)
+    try:
+        run_command(context, command)
+    except Exception:
+        raise EnvironmentError(
+            "Please set GENERATE_PERFORMANCE_REPORT to True in settings.py before using this command"
+        )
 
 
 @task
@@ -691,8 +698,8 @@ def unittest_coverage(context):
         "verbose": "Enable verbose test output.",
         "append": "Append coverage data to .coverage, otherwise it starts clean each time.",
         "skip_docs_build": "Skip (re)build of documentation before running the test.",
-        "report": "Generate Performance Testing report in the terminal.",
-        "generate_report": "Generate a new performance testing report to report.json",
+        "report": "Generate Performance Testing report in the terminal. Set GENERATE_PERFORMANCE_REPORT=True in settings.py before using this flag",
+        "generate_report": "Generate a new performance testing report to report.json. Set GENERATE_PERFORMANCE_REPORT=True in settings.py before using this flag",
     },
     iterable=["tag", "exclude_tag"],
 )
@@ -742,8 +749,8 @@ def integration_test(
         "verbose": "Enable verbose test output.",
         "append": "Append coverage data to .coverage, otherwise it starts clean each time.",
         "skip_docs_build": "Skip (re)build of documentation before running the test.",
-        "report": "Generate Performance Testing report in the terminal.",
-        "generate_report": "Generate a new performance testing report to report.json",
+        "report": "Generate Performance Testing report in the terminal. Set GENERATE_PERFORMANCE_REPORT=True in settings.py before using this flag",
+        "generate_report": "Generate a new performance testing report to report.json. Set GENERATE_PERFORMANCE_REPORT=True in settings.py before using this flag",
     },
     iterable=["tag", "exclude_tag"],
 )
@@ -761,8 +768,11 @@ def performance_test(
     report=True,
     generate_report=False,
 ):
-    """Run Nautobot performance tests."""
-
+    """
+    Run Nautobot performance tests.
+    Prerequisite:
+        Has to set GENERATE_PERFORMANCE_REPORT=True in settings.py
+    """
     # Enforce "performance" tag
     tag.append("performance")
 
