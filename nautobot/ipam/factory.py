@@ -164,7 +164,7 @@ class VRFFactory(PrimaryModelFactory):
     has_rd = factory.Faker("pybool")
     rd = factory.Maybe("has_rd", factory.LazyFunction(random_route_distinguisher), None)
 
-    has_tenant = factory.Faker("pybool")
+    has_tenant = factory.Faker("boolean", chance_of_getting_true=75)
     tenant = factory.Maybe("has_tenant", random_instance(Tenant, allow_null=False), None)
 
     enforce_unique = factory.Faker("pybool")
