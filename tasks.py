@@ -628,7 +628,7 @@ def unittest(
         command += " --slowreport"
     if generate_report:
         command += " --slowreport --slowreportpath report.json"
-
+    # change the default testrunner only if performance testing is running
     if "--slowreport" in command:
         command += " --testrunner nautobot.core.tests.runner.NautobotPerformanceTestRunner"
     # lists
