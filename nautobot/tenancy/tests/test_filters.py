@@ -32,7 +32,6 @@ class TenantGroupTestCase(FilterTestCases.NameSlugFilterTestCase):
 class TenantTestCase(FilterTestCases.NameSlugFilterTestCase):
     queryset = Tenant.objects.all()
     filterset = TenantFilterSet
-    fixtures = ("status",)
 
     @classmethod
     def setUpTestData(cls):

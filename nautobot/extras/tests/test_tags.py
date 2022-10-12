@@ -12,8 +12,6 @@ class TaggedItemORMTest(TestCase):
     Test the application of tags via the Python API (ORM).
     """
 
-    fixtures = ("status",)
-
     @classmethod
     def setUpTestData(cls):
         super().setUpTestData()
@@ -41,11 +39,6 @@ class TaggedItemTest(APITestCase):
     """
     Test the application of Tags to and item (a Site, for example) upon creation (POST) and modification (PATCH).
     """
-
-    fixtures = (
-        "status",
-        "tag",
-    )
 
     @classmethod
     def setUpTestData(cls):

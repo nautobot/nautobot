@@ -28,7 +28,9 @@ class Command(BaseCommand):
         try:
             import factory.random
 
+            from nautobot.extras.factory import StatusFactory, TagFactory
             from nautobot.extras.management import populate_status_choices
+            from nautobot.extras.utils import TaggableClassesQuery
             from nautobot.ipam.factory import (
                 AggregateFactory,
                 RIRFactory,
@@ -65,7 +67,13 @@ Type 'yes' to continue, or 'no' to cancel: """
         factory.random.reseed_random(seed)
 
         self.stdout.write("Creating Statuses...")
-        populate_status_choices(verbosity=0)  # for now just the basic ones; we should add a factory for random ones too
+        populate_status_choices(verbosity=0)
+        StatusFactory.create_batch(10)
+        self.stdout.write("Creating Tags...")
+        # Ensure that we have some tags that are applicable to all relevant content-types
+        TagFactory.create_batch(5, content_types=TaggableClassesQuery().as_queryset)
+        # ...and some tags that apply to a random subset of content-types
+        TagFactory.create_batch(15)
         self.stdout.write("Creating TenantGroups...")
         TenantGroupFactory.create_batch(10, has_parent=False)
         TenantGroupFactory.create_batch(10, has_parent=True)

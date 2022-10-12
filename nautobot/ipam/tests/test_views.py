@@ -27,7 +27,6 @@ from nautobot.utilities.testing.utils import extract_page_body
 
 class VRFTestCase(ViewTestCases.PrimaryObjectViewTestCase):
     model = VRF
-    fixtures = ("tag",)
 
     @classmethod
     def setUpTestData(cls):
@@ -62,7 +61,6 @@ class VRFTestCase(ViewTestCases.PrimaryObjectViewTestCase):
 
 class RouteTargetTestCase(ViewTestCases.PrimaryObjectViewTestCase):
     model = RouteTarget
-    fixtures = ("tag",)
 
     @classmethod
     def setUpTestData(cls):
@@ -131,7 +129,6 @@ class RIRTestCase(ViewTestCases.OrganizationalObjectViewTestCase):
 
 class AggregateTestCase(ViewTestCases.PrimaryObjectViewTestCase):
     model = Aggregate
-    fixtures = ("tag",)
 
     @classmethod
     def setUpTestData(cls):
@@ -186,10 +183,6 @@ class RoleTestCase(ViewTestCases.OrganizationalObjectViewTestCase):
 
 class PrefixTestCase(ViewTestCases.PrimaryObjectViewTestCase, ViewTestCases.ListObjectsViewTestCase):
     model = Prefix
-    fixtures = (
-        "status",
-        "tag",
-    )
 
     @classmethod
     def setUpTestData(cls):
@@ -279,10 +272,6 @@ class PrefixTestCase(ViewTestCases.PrimaryObjectViewTestCase, ViewTestCases.List
 
 class IPAddressTestCase(ViewTestCases.PrimaryObjectViewTestCase):
     model = IPAddress
-    fixtures = (
-        "status",
-        "tag",
-    )
 
     @classmethod
     def setUpTestData(cls):
@@ -364,10 +353,6 @@ class VLANGroupTestCase(ViewTestCases.OrganizationalObjectViewTestCase):
 
 class VLANTestCase(ViewTestCases.PrimaryObjectViewTestCase):
     model = VLAN
-    fixtures = (
-        "status",
-        "tag",
-    )
 
     @classmethod
     def setUpTestData(cls):
@@ -464,7 +449,6 @@ class ServiceTestCase(
     ViewTestCases.BulkDeleteObjectsViewTestCase,
 ):
     model = Service
-    fixtures = ("tag",)
 
     @classmethod
     def setUpTestData(cls):

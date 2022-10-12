@@ -14,8 +14,6 @@ class CircuitRelationshipsTestCase(SeleniumTestCase):
     Integration test to check relationships show on a circuit termination in the UI
     """
 
-    fixtures = ("status",)
-
     def setUp(self):
         super().setUp()
         self.user.is_superuser = True

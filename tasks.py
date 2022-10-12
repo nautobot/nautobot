@@ -458,38 +458,6 @@ def loaddata(context, filepath="db_output.json"):
     run_command(context, command)
 
 
-@task(
-    help={
-        "app": "Nautobot app such as 'dcim', defaults to 'core'",
-        "filename": "Name of the fixture to create or overwrite, without .extension",
-        "model": "Model to include, such as 'dcim.device', repeat as needed",
-    },
-    iterable=["model"],
-)
-def write_fixture(context, app="core", filename=None, model=None):
-    """Create or overwrite a data fixture."""
-    if filename:
-        filepath = f"nautobot/{app}/fixtures/{filename}.json"
-    else:
-        filepath = None
-    dumpdata(context, format="json", model=model, filepath=filepath)
-
-
-@task(
-    help={
-        "app": "Nautobot app such as 'dcim', defaults to 'core'",
-        "filename": "Name of the fixture to load, without .extension",
-    },
-)
-def load_fixture(context, app="core", filename=None):
-    """Load a data fixture into Nautobot."""
-    if filename:
-        filepath = f"nautobot/{app}/fixtures/{filename}.json"
-    else:
-        filepath = None
-    loaddata(context, filepath=filepath)
-
-
 @task()
 def build_and_check_docs(context):
     """Build docs for use within Nautobot."""
