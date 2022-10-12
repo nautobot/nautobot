@@ -8,8 +8,6 @@ from nautobot.dcim.models import Location, LocationType, Site
 
 
 class CircuitTerminationModelTestCase(TestCase):
-    fixtures = ("status",)
-
     @classmethod
     def setUpTestData(cls):
         provider = Provider.objects.create(name="Provider 1", slug="provider-1")

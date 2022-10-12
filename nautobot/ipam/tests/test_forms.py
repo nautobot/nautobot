@@ -60,7 +60,6 @@ class PrefixFormTest(BaseNetworkFormTest, TestCase):
     form_class = forms.PrefixForm
     field_name = "prefix"
     object_name = "prefix"
-    fixtures = ("status",)
 
     def setUp(self):
         super().setUp()
@@ -71,7 +70,6 @@ class IPAddressFormTest(BaseNetworkFormTest, TestCase):
     form_class = forms.IPAddressForm
     field_name = "address"
     object_name = "IP address"
-    fixtures = ("status",)
 
     def setUp(self):
         super().setUp()

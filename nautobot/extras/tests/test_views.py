@@ -44,7 +44,7 @@ from nautobot.extras.models import (
     Webhook,
     ComputedField,
 )
-from nautobot.extras.utils import get_job_content_type
+from nautobot.extras.utils import get_job_content_type, TaggableClassesQuery
 from nautobot.ipam.models import VLAN, VLANGroup
 from nautobot.users.models import ObjectPermission
 from nautobot.utilities.testing import ViewTestCases, TestCase, extract_page_body, extract_form_failures
@@ -668,7 +668,6 @@ class SecretTestCase(
     ViewTestCases.BulkDeleteObjectsViewTestCase,
 ):
     model = Secret
-    fixtures = ("tag",)
 
     @classmethod
     def setUpTestData(cls):
@@ -1913,7 +1912,6 @@ class RelationshipTestCase(
     ViewTestCases.ListObjectsViewTestCase,
 ):
     model = Relationship
-    fixtures = ("status",)
     slug_source = "name"
     slugify_function = staticmethod(slugify_dashes_to_underscores)
 
@@ -2031,7 +2029,6 @@ class StatusTestCase(
     ViewTestCases.ListObjectsViewTestCase,
 ):
     model = Status
-    fixtures = ("status",)
 
     @classmethod
     def setUpTestData(cls):
@@ -2060,7 +2057,7 @@ class StatusTestCase(
         }
 
         cls.slug_source = "name"
-        cls.slug_test_object = "Irradiated"
+        cls.slug_test_object = Status.objects.first().name
 
     def get_deletable_object(self):
         """Return a Status without any dependent objects."""
@@ -2078,7 +2075,6 @@ class StatusTestCase(
 
 class TagTestCase(ViewTestCases.OrganizationalObjectViewTestCase):
     model = Tag
-    fixtures = ("tag",)
 
     @classmethod
     def setUpTestData(cls):
@@ -2087,7 +2083,7 @@ class TagTestCase(ViewTestCases.OrganizationalObjectViewTestCase):
             "slug": "tag-x",
             "color": "c0c0c0",
             "comments": "Some comments",
-            "content_types": [ContentType.objects.get_for_model(Site).id],
+            "content_types": [ct.id for ct in TaggableClassesQuery().as_queryset],
         }
 
         cls.csv_data = (

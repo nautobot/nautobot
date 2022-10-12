@@ -133,10 +133,6 @@ class RegionTestCase(ViewTestCases.OrganizationalObjectViewTestCase):
 
 class SiteTestCase(ViewTestCases.PrimaryObjectViewTestCase):
     model = Site
-    fixtures = (
-        "status",
-        "tag",
-    )
 
     @classmethod
     def setUpTestData(cls):
@@ -311,7 +307,6 @@ class LocationTypeTestCase(ViewTestCases.OrganizationalObjectViewTestCase):
 
 class LocationTestCase(ViewTestCases.PrimaryObjectViewTestCase):
     model = Location
-    fixtures = ("status",)
 
     @classmethod
     def setUpTestData(cls):
@@ -378,7 +373,6 @@ class LocationTestCase(ViewTestCases.PrimaryObjectViewTestCase):
 
 class RackGroupTestCase(ViewTestCases.OrganizationalObjectViewTestCase):
     model = RackGroup
-    fixtures = ("status",)
 
     @classmethod
     def setUpTestData(cls):
@@ -439,10 +433,6 @@ class RackRoleTestCase(ViewTestCases.OrganizationalObjectViewTestCase):
 
 class RackReservationTestCase(ViewTestCases.PrimaryObjectViewTestCase):
     model = RackReservation
-    fixtures = (
-        "status",
-        "tag",
-    )
 
     @classmethod
     def setUpTestData(cls):
@@ -485,10 +475,6 @@ class RackReservationTestCase(ViewTestCases.PrimaryObjectViewTestCase):
 
 class RackTestCase(ViewTestCases.PrimaryObjectViewTestCase):
     model = Rack
-    fixtures = (
-        "status",
-        "tag",
-    )
 
     @classmethod
     def setUpTestData(cls):
@@ -719,7 +705,6 @@ class DeviceTypeTestCase(
     ViewTestCases.BulkDeleteObjectsViewTestCase,
 ):
     model = DeviceType
-    fixtures = ("tag",)
 
     @classmethod
     def setUpTestData(cls):
@@ -1324,10 +1309,6 @@ class PlatformTestCase(ViewTestCases.OrganizationalObjectViewTestCase):
 
 class DeviceTestCase(ViewTestCases.PrimaryObjectViewTestCase):
     model = Device
-    fixtures = (
-        "status",
-        "tag",
-    )
 
     @classmethod
     def setUpTestData(cls):
@@ -1671,7 +1652,6 @@ class DeviceTestCase(ViewTestCases.PrimaryObjectViewTestCase):
 
 class ConsolePortTestCase(ViewTestCases.DeviceComponentViewTestCase):
     model = ConsolePort
-    fixtures = ("tag",)
 
     @classmethod
     def setUpTestData(cls):
@@ -1714,7 +1694,6 @@ class ConsolePortTestCase(ViewTestCases.DeviceComponentViewTestCase):
 
 class ConsoleServerPortTestCase(ViewTestCases.DeviceComponentViewTestCase):
     model = ConsoleServerPort
-    fixtures = ("tag",)
 
     @classmethod
     def setUpTestData(cls):
@@ -1755,7 +1734,6 @@ class ConsoleServerPortTestCase(ViewTestCases.DeviceComponentViewTestCase):
 
 class PowerPortTestCase(ViewTestCases.DeviceComponentViewTestCase):
     model = PowerPort
-    fixtures = ("tag",)
 
     @classmethod
     def setUpTestData(cls):
@@ -1802,7 +1780,6 @@ class PowerPortTestCase(ViewTestCases.DeviceComponentViewTestCase):
 
 class PowerOutletTestCase(ViewTestCases.DeviceComponentViewTestCase):
     model = PowerOutlet
-    fixtures = ("tag",)
 
     @classmethod
     def setUpTestData(cls):
@@ -1854,10 +1831,6 @@ class PowerOutletTestCase(ViewTestCases.DeviceComponentViewTestCase):
 
 class InterfaceTestCase(ViewTestCases.DeviceComponentViewTestCase):
     model = Interface
-    fixtures = (
-        "status",
-        "tag",
-    )
 
     @classmethod
     def setUpTestData(cls):
@@ -1940,7 +1913,6 @@ class InterfaceTestCase(ViewTestCases.DeviceComponentViewTestCase):
 
 class FrontPortTestCase(ViewTestCases.DeviceComponentViewTestCase):
     model = FrontPort
-    fixtures = ("tag",)
 
     @classmethod
     def setUpTestData(cls):
@@ -1993,7 +1965,6 @@ class FrontPortTestCase(ViewTestCases.DeviceComponentViewTestCase):
 
 class RearPortTestCase(ViewTestCases.DeviceComponentViewTestCase):
     model = RearPort
-    fixtures = ("tag",)
 
     @classmethod
     def setUpTestData(cls):
@@ -2036,7 +2007,6 @@ class RearPortTestCase(ViewTestCases.DeviceComponentViewTestCase):
 
 class DeviceBayTestCase(ViewTestCases.DeviceComponentViewTestCase):
     model = DeviceBay
-    fixtures = ("tag",)
 
     @classmethod
     def setUpTestData(cls):
@@ -2077,7 +2047,6 @@ class DeviceBayTestCase(ViewTestCases.DeviceComponentViewTestCase):
 
 class InventoryItemTestCase(ViewTestCases.DeviceComponentViewTestCase):
     model = InventoryItem
-    fixtures = ("tag",)
 
     @classmethod
     def setUpTestData(cls):
@@ -2139,10 +2108,6 @@ class CableTestCase(
     ViewTestCases.BulkDeleteObjectsViewTestCase,
 ):
     model = Cable
-    fixtures = (
-        "status",
-        "tag",
-    )
 
     @classmethod
     def setUpTestData(cls):
@@ -2366,7 +2331,6 @@ class ConsoleConnectionsTestCase(ViewTestCases.ListObjectsViewTestCase):
 
     model = ConsolePort
     filterset = ConsoleConnectionFilterSet
-    fixtures = ("status",)
 
     @classmethod
     def setUpTestData(cls):
@@ -2421,7 +2385,6 @@ class PowerConnectionsTestCase(ViewTestCases.ListObjectsViewTestCase):
 
     model = PowerPort
     filterset = PowerConnectionFilterSet
-    fixtures = ("status",)
 
     @classmethod
     def setUpTestData(cls):
@@ -2481,7 +2444,6 @@ class InterfaceConnectionsTestCase(ViewTestCases.ListObjectsViewTestCase):
 
     model = Interface
     filterset = InterfaceConnectionFilterSet
-    fixtures = ("status",)
 
     @classmethod
     def setUpTestData(cls):
@@ -2570,7 +2532,6 @@ Device 1,Interface 3,,,False""",
 
 class VirtualChassisTestCase(ViewTestCases.PrimaryObjectViewTestCase):
     model = VirtualChassis
-    fixtures = ("status",)
 
     @classmethod
     def setUpTestData(cls):
@@ -2719,7 +2680,6 @@ class VirtualChassisTestCase(ViewTestCases.PrimaryObjectViewTestCase):
 
 class PowerPanelTestCase(ViewTestCases.PrimaryObjectViewTestCase):
     model = PowerPanel
-    fixtures = ("status", "tag")
 
     @classmethod
     def setUpTestData(cls):
@@ -2756,7 +2716,6 @@ class PowerPanelTestCase(ViewTestCases.PrimaryObjectViewTestCase):
 
 class PowerFeedTestCase(ViewTestCases.PrimaryObjectViewTestCase):
     model = PowerFeed
-    fixtures = ("status", "tag")
 
     @classmethod
     def setUpTestData(cls):

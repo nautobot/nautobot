@@ -157,7 +157,6 @@ class SiteTest(APIViewTestCases.APIViewTestCase):
         "status": "planned",
     }
     choices_fields = ["status"]
-    fixtures = ("status",)
     slug_source = "name"
 
     @classmethod
@@ -341,7 +340,6 @@ class LocationTest(APIViewTestCases.APIViewTestCase):
         "status": "planned",
     }
     choices_fields = ["status"]
-    fixtures = ("status",)
     slug_source = ["parent__slug", "name"]
 
     @classmethod
@@ -423,7 +421,6 @@ class RackGroupTest(APIViewTestCases.APIViewTestCase):
     bulk_update_data = {
         "description": "New description",
     }
-    fixtures = ("status",)
     slug_source = "name"
 
     @classmethod
@@ -612,7 +609,6 @@ class RackTest(APIViewTestCases.APIViewTestCase):
     bulk_update_data = {
         "status": "planned",
     }
-    fixtures = ("status",)
     choices_fields = ["outer_unit", "status", "type", "width"]
 
     @classmethod
@@ -1317,7 +1313,6 @@ class DeviceTest(APIViewTestCases.APIViewTestCase):
         "status": "failed",
     }
     choices_fields = ["face", "status"]
-    fixtures = ("status",)
 
     @classmethod
     def setUpTestData(cls):
@@ -1681,7 +1676,6 @@ class InterfaceTestVersion12(Mixins.ComponentTraceMixin, APIViewTestCases.APIVie
     bulk_update_data = {
         "description": "New description",
     }
-    fixtures = ("status",)
     peer_termination_type = Interface
     choices_fields = ["mode", "type", "status"]
 
@@ -2150,7 +2144,6 @@ class CableTest(APIViewTestCases.APIViewTestCase):
         "length_unit": "m",
     }
     choices_fields = ["termination_a_type", "termination_b_type", "type", "status", "length_unit"]
-    fixtures = ("status",)
 
     # TODO: Allow updating cable terminations
     test_update_object = None
@@ -2246,8 +2239,6 @@ class CableTest(APIViewTestCases.APIViewTestCase):
 
 
 class ConnectedDeviceTest(APITestCase):
-    fixtures = ("status",)
-
     def setUp(self):
 
         super().setUp()
@@ -2301,7 +2292,6 @@ class ConnectedDeviceTest(APITestCase):
 class VirtualChassisTest(APIViewTestCases.APIViewTestCase):
     model = VirtualChassis
     brief_fields = ["display", "id", "master", "member_count", "name", "url"]
-    fixtures = ("status",)
 
     @classmethod
     def setUpTestData(cls):
@@ -2537,7 +2527,6 @@ class PowerFeedTest(APIViewTestCases.APIViewTestCase):
         "status": "planned",
     }
     choices_fields = ["phase", "status", "supply", "type"]
-    fixtures = ("status",)
 
     @classmethod
     def setUpTestData(cls):

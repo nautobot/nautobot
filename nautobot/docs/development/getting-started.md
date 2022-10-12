@@ -167,7 +167,6 @@ Available tasks:
   flake8                 Check for PEP8 compliance and other style issues.
   hadolint               Check Dockerfile for hadolint compliance and other style issues.
   integration-test       Run Nautobot integration tests.
-  load-fixture           Load a data fixture into Nautobot.
   loaddata               Load data from file.
   makemigrations         Perform makemigrations operation in Django.
   markdownlint           Lint Markdown files.
@@ -182,7 +181,6 @@ Available tasks:
   unittest               Run Nautobot unit tests.
   unittest-coverage      Report on code test coverage as measured by 'invoke unittest'.
   vscode                 Launch Visual Studio Code with the appropriate Environment variables to run in a container.
-  write-fixture          Create or overwrite a data fixture.
 ```
 
 #### Using Docker with Invoke
@@ -396,12 +394,6 @@ Quit the server with CONTROL-C.
 Please see the [official Django documentation on `runserver`](https://docs.djangoproject.com/en/stable/ref/django-admin/#runserver) for more information.
 
 You can then log into the development server at `localhost:8080` with the [superuser](#creating-a-superuser) you created.
-
-### Loading Data Fixtures
-
-Nautobot includes a number of [fixture](https://docs.djangoproject.com/en/stable/topics/testing/tools/#fixture-loading) files that are used in our [unit and integration tests](testing.md). You can also load these fixtures into your development database as an alternative to manually populating all data from scratch. Fixtures are stored as JSON files in the various `nautobot/APPNAME/fixtures/` directories. You can use the `invoke load-fixture --app APP --filename FIXTURE` command to load a given fixture; for example `invoke load-fixture --app extras --filename status` will populate some Status records defined in `nautobot/extras/fixtures/status.json` into the database.
-
-There is a corresponding `invoke write-fixture` command that can be used to create or update fixtures; more on this in the [testing](testing.md) documentation.
 
 ### Starting the Interactive Shell
 

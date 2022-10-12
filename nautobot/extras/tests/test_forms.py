@@ -154,8 +154,6 @@ class NoteModelFormTestCase(TestCase):
     TestNoteModelForm validation and saving.
     """
 
-    fixtures = ("status",)
-
     @classmethod
     def setUpTestData(cls):
         active = Status.objects.get(slug="active")
@@ -188,8 +186,6 @@ class NoteModelBulkEditFormMixinTestCase(TestCase):
     TestNoteModelForm validation and saving.
     """
 
-    fixtures = ("status",)
-
     @classmethod
     def setUpTestData(cls):
         cls.sites = dcim_models.Site.objects.all()[:2]
@@ -218,8 +214,6 @@ class RelationshipModelFormTestCase(TestCase):
     """
     Test RelationshipModelForm validation and saving.
     """
-
-    fixtures = ("status",)
 
     @classmethod
     def setUpTestData(cls):
@@ -670,8 +664,6 @@ class RelationshipModelBulkEditFormMixinTestCase(TestCase):
     """
     Test RelationshipModelBulkEditFormMixin validation and saving.
     """
-
-    fixtures = ("status",)
 
     @classmethod
     def setUpTestData(cls):

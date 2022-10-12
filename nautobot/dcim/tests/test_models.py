@@ -46,8 +46,6 @@ from nautobot.tenancy.models import Tenant
 
 
 class CableLengthTestCase(TestCase):
-    fixtures = ("status",)
-
     def setUp(self):
         self.site = Site.objects.first()
         self.manufacturer = Manufacturer.objects.create(name="Test Manufacturer 1", slug="test-manufacturer-1")
@@ -102,8 +100,6 @@ class CableLengthTestCase(TestCase):
 
 
 class InterfaceTemplateCustomFieldTestCase(TestCase):
-    fixtures = ("status",)
-
     def test_instantiate_model(self):
         """
         Check that all _custom_field_data is present and all customfields are filled with the correct default values.
@@ -287,8 +283,6 @@ class RackGroupTestCase(TestCase):
 
 
 class RackTestCase(TestCase):
-    fixtures = ("status",)
-
     def setUp(self):
 
         self.status = Status.objects.get_for_model(Rack).first()
@@ -563,8 +557,6 @@ class LocationTypeTestCase(TestCase):
 
 
 class LocationTestCase(TestCase):
-    fixtures = ("status",)
-
     def setUp(self):
         self.root_type = LocationType.objects.get(name="Building")
         self.intermediate_type = LocationType.objects.get(name="Floor")
@@ -625,8 +617,6 @@ class LocationTestCase(TestCase):
 
 
 class DeviceTestCase(TestCase):
-    fixtures = ("status",)
-
     def setUp(self):
 
         self.site = Site.objects.first()
@@ -831,8 +821,6 @@ class DeviceTestCase(TestCase):
 
 
 class CableTestCase(TestCase):
-    fixtures = ("status",)
-
     def setUp(self):
 
         site = Site.objects.first()
@@ -1093,8 +1081,6 @@ class CableTestCase(TestCase):
 
 
 class PowerPanelTestCase(TestCase):
-    fixtures = ("status",)
-
     def test_power_panel_validation(self):
         active = Status.objects.get(name="Active")
         site_1 = Site.objects.first()

@@ -157,7 +157,7 @@ class VRFFactory(PrimaryModelFactory):
         )
 
     # note that name is *not* globally unique
-    name = factory.Faker("color_name")
+    name = factory.LazyFunction(lambda: f"{faker.Faker().color_name()}{faker.Faker().pyint()}")
 
     # RD needs to be globally unique, but the random route-distinguisher generation space is large enough that
     # we'll deal with collisions as and when they occur.
@@ -248,7 +248,12 @@ class VLANFactory(PrimaryModelFactory):
     # As with VLANGroup, with fully random names and vids, non-uniqueness is unlikely but possible,
     # and we might want to consider intentionally reusing non-unique values for test purposes?
     vid = factory.Faker("pyint", min_value=1, max_value=4094)
-    name = factory.LazyFunction(lambda: faker.Faker().word(part_of_speech="noun").capitalize())
+    name = factory.LazyFunction(
+        lambda: (
+            faker.Faker().word(part_of_speech="adjective").capitalize()
+            + faker.Faker().word(part_of_speech="noun").capitalize()
+        )
+    )
 
     status = random_instance(lambda: Status.objects.get_for_model(VLAN), allow_null=False)
 

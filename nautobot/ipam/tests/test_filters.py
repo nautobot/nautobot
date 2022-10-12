@@ -220,7 +220,6 @@ class RoleTestCase(FilterTestCases.NameSlugFilterTestCase):
 class PrefixTestCase(FilterTestCases.FilterTestCase, FilterTestCases.TenancyFilterTestCaseMixin):
     queryset = Prefix.objects.all()
     filterset = PrefixFilterSet
-    fixtures = ("status",)
     tenancy_related_name = "prefixes"
 
     @classmethod
@@ -436,7 +435,6 @@ class PrefixTestCase(FilterTestCases.FilterTestCase, FilterTestCases.TenancyFilt
 class IPAddressTestCase(FilterTestCases.FilterTestCase, FilterTestCases.TenancyFilterTestCaseMixin):
     queryset = IPAddress.objects.all()
     filterset = IPAddressFilterSet
-    fixtures = ("status",)
     tenancy_related_name = "ip_addresses"
 
     @classmethod
@@ -744,7 +742,6 @@ class VLANGroupTestCase(FilterTestCases.NameSlugFilterTestCase):
 class VLANTestCase(FilterTestCases.FilterTestCase, FilterTestCases.TenancyFilterTestCaseMixin):
     queryset = VLAN.objects.all()
     filterset = VLANFilterSet
-    fixtures = ("status",)
     tenancy_related_name = "vlans"
 
     @classmethod
@@ -826,12 +823,14 @@ class VLANTestCase(FilterTestCases.FilterTestCase, FilterTestCases.TenancyFilter
         )
 
     def test_name(self):
-        params = {"name": VLAN.objects.all().values_list("name", flat=True)[:2]}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+        names = list(VLAN.objects.all().values_list("name", flat=True))[:2]
+        params = {"name": names}
+        self.assertQuerysetEqual(self.filterset(params, self.queryset).qs, self.queryset.filter(name__in=names))
 
     def test_vid(self):
-        params = {"vid": VLAN.objects.all().values_list("vid", flat=True)[:3]}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 3)
+        vids = list(VLAN.objects.all().values_list("vid", flat=True))[:3]
+        params = {"vid": vids}
+        self.assertQuerysetEqual(self.filterset(params, self.queryset).qs, self.queryset.filter(vid__in=vids))
 
     def test_region(self):
         regions = list(self.regions[:2])

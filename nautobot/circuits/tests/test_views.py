@@ -15,7 +15,6 @@ from nautobot.utilities.testing import post_data, TestCase as NautobotTestCase, 
 
 class ProviderTestCase(ViewTestCases.PrimaryObjectViewTestCase):
     model = Provider
-    fixtures = ("tag",)
 
     @classmethod
     def setUpTestData(cls):
@@ -89,10 +88,6 @@ class CircuitTypeTestCase(ViewTestCases.OrganizationalObjectViewTestCase):
 
 class CircuitTestCase(ViewTestCases.PrimaryObjectViewTestCase):
     model = Circuit
-    fixtures = (
-        "status",
-        "tag",
-    )
 
     @classmethod
     def setUpTestData(cls):
@@ -161,7 +156,6 @@ class CircuitTestCase(ViewTestCases.PrimaryObjectViewTestCase):
 
 class ProviderNetworkTestCase(ViewTestCases.PrimaryObjectViewTestCase):
     model = ProviderNetwork
-    fixtures = ("tag",)
 
     @classmethod
     def setUpTestData(cls):
@@ -209,8 +203,6 @@ class ProviderNetworkTestCase(ViewTestCases.PrimaryObjectViewTestCase):
 
 
 class CircuitTerminationTestCase(NautobotTestCase):
-    fixtures = ("status",)
-
     def setUp(self):
         super().setUp()
         self.user.is_superuser = True
@@ -253,8 +245,6 @@ class CircuitTerminationTestCase(NautobotTestCase):
 
 
 class CircuitSwapTerminationsTestCase(NautobotTestCase):
-    fixtures = ("status",)
-
     def setUp(self):
         super().setUp()
         self.user.is_superuser = True

@@ -8,9 +8,7 @@ from nautobot.utilities.testing import TestCase
 
 
 class StatusManagementTestCase(TestCase):
-    """Tests for the populate_status_choices and clear_status_choices helper functions."""
-
-    fixtures = ("status",)
+    """Tests for the populate_status_choices helper function."""
 
     def test_populate_status_choices_idempotent(self):
         """

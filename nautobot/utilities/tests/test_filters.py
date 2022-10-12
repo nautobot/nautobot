@@ -699,8 +699,6 @@ class DynamicFilterLookupExpressionTest(TestCase):
     Validate function of automatically generated filters using the Device model as an example.
     """
 
-    fixtures = ("status",)
-
     device_queryset = Device.objects.all()
     device_filterset = DeviceFilterSet
     site_queryset = Site.objects.all()

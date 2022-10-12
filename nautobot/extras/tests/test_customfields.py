@@ -21,8 +21,6 @@ from nautobot.virtualization.models import VirtualMachine
 
 
 class CustomFieldTest(TestCase):
-    fixtures = ("status",)
-
     def setUp(self):
         super().setUp()
         active_status = Status.objects.get_for_model(Site).get(slug="active")
@@ -350,8 +348,6 @@ class CustomFieldDataAPITest(APITestCase):
 
     For tests of the api/extras/custom-fields/ REST API endpoint itself, see test_api.py.
     """
-
-    fixtures = ("status",)
 
     @classmethod
     def setUpTestData(cls):
@@ -1034,7 +1030,6 @@ class CustomFieldImportTest(TestCase):
     Test importing object custom field data along with the object itself.
     """
 
-    fixtures = ("status",)
     user_permissions = (
         "dcim.view_site",
         "dcim.add_site",
@@ -1190,8 +1185,6 @@ class CustomFieldModelTest(TestCase):
     """
     Test behavior of models that inherit from CustomFieldModel.
     """
-
-    fixtures = ("status",)
 
     @classmethod
     def setUpTestData(cls):
@@ -1785,8 +1778,6 @@ class CustomFieldFilterTest(TestCase):
 
 
 class CustomFieldChoiceTest(TestCase):
-    fixtures = ("status",)
-
     def setUp(self):
         obj_type = ContentType.objects.get_for_model(Site)
         self.cf = CustomField(
@@ -1913,8 +1904,6 @@ class CustomFieldTableTest(TestCase):
     """
     Test inclusion of custom fields in object table views.
     """
-
-    fixtures = ("status",)
 
     def setUp(self):
         content_type = ContentType.objects.get_for_model(Site)

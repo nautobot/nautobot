@@ -658,7 +658,6 @@ def common_test_data(cls):
 class RegionTestCase(FilterTestCases.NameSlugFilterTestCase):
     queryset = Region.objects.all()
     filterset = RegionFilterSet
-    fixtures = ("status",)
 
     @classmethod
     def setUpTestData(cls):
@@ -746,7 +745,6 @@ class RegionTestCase(FilterTestCases.NameSlugFilterTestCase):
 class SiteTestCase(FilterTestCases.NameSlugFilterTestCase, FilterTestCases.TenancyFilterTestCaseMixin):
     queryset = Site.objects.all()
     filterset = SiteFilterSet
-    fixtures = ("status",)
     tenancy_related_name = "sites"
 
     @classmethod
@@ -1069,7 +1067,6 @@ class LocationTypeFilterSetTestCase(FilterTestCases.NameSlugFilterTestCase):
 class LocationFilterSetTestCase(FilterTestCases.NameSlugFilterTestCase, FilterTestCases.TenancyFilterTestCaseMixin):
     queryset = Location.objects.all()
     filterset = LocationFilterSet
-    fixtures = ("status",)
     tenancy_related_name = "locations"
 
     @classmethod
@@ -1155,7 +1152,6 @@ class LocationFilterSetTestCase(FilterTestCases.NameSlugFilterTestCase, FilterTe
 class RackGroupTestCase(FilterTestCases.NameSlugFilterTestCase):
     queryset = RackGroup.objects.all()
     filterset = RackGroupFilterSet
-    fixtures = ("status",)
 
     @classmethod
     def setUpTestData(cls):
@@ -1268,7 +1264,6 @@ class RackGroupTestCase(FilterTestCases.NameSlugFilterTestCase):
 class RackRoleTestCase(FilterTestCases.NameSlugFilterTestCase):
     queryset = RackRole.objects.all()
     filterset = RackRoleFilterSet
-    fixtures = ("status",)
 
     @classmethod
     def setUpTestData(cls):
@@ -1295,7 +1290,6 @@ class RackRoleTestCase(FilterTestCases.NameSlugFilterTestCase):
 class RackTestCase(FilterTestCases.FilterTestCase, FilterTestCases.TenancyFilterTestCaseMixin):
     queryset = Rack.objects.all()
     filterset = RackFilterSet
-    fixtures = ("status",)
     tenancy_related_name = "racks"
 
     @classmethod
@@ -1475,7 +1469,6 @@ class RackTestCase(FilterTestCases.FilterTestCase, FilterTestCases.TenancyFilter
 class RackReservationTestCase(FilterTestCases.FilterTestCase, FilterTestCases.TenancyFilterTestCaseMixin):
     queryset = RackReservation.objects.all()
     filterset = RackReservationFilterSet
-    fixtures = ("status",)
     tenancy_related_name = "rackreservations"
 
     @classmethod
@@ -1535,7 +1528,6 @@ class RackReservationTestCase(FilterTestCases.FilterTestCase, FilterTestCases.Te
 class ManufacturerTestCase(FilterTestCases.NameSlugFilterTestCase):
     queryset = Manufacturer.objects.all()
     filterset = ManufacturerFilterSet
-    fixtures = ("status",)
 
     @classmethod
     def setUpTestData(cls):
@@ -1600,7 +1592,6 @@ class ManufacturerTestCase(FilterTestCases.NameSlugFilterTestCase):
 class DeviceTypeTestCase(FilterTestCases.FilterTestCase):
     queryset = DeviceType.objects.all()
     filterset = DeviceTypeFilterSet
-    fixtures = ("status",)
 
     @classmethod
     def setUpTestData(cls):
@@ -1844,7 +1835,6 @@ class DeviceTypeTestCase(FilterTestCases.FilterTestCase):
 class ConsolePortTemplateTestCase(FilterTestCases.FilterTestCase):
     queryset = ConsolePortTemplate.objects.all()
     filterset = ConsolePortTemplateFilterSet
-    fixtures = ("status",)
 
     @classmethod
     def setUpTestData(cls):
@@ -1878,7 +1868,6 @@ class ConsolePortTemplateTestCase(FilterTestCases.FilterTestCase):
 class ConsoleServerPortTemplateTestCase(FilterTestCases.FilterTestCase):
     queryset = ConsoleServerPortTemplate.objects.all()
     filterset = ConsoleServerPortTemplateFilterSet
-    fixtures = ("status",)
 
     @classmethod
     def setUpTestData(cls):
@@ -1912,7 +1901,6 @@ class ConsoleServerPortTemplateTestCase(FilterTestCases.FilterTestCase):
 class PowerPortTemplateTestCase(FilterTestCases.FilterTestCase):
     queryset = PowerPortTemplate.objects.all()
     filterset = PowerPortTemplateFilterSet
-    fixtures = ("status",)
 
     @classmethod
     def setUpTestData(cls):
@@ -1977,7 +1965,6 @@ class PowerPortTemplateTestCase(FilterTestCases.FilterTestCase):
 class PowerOutletTemplateTestCase(FilterTestCases.FilterTestCase):
     queryset = PowerOutletTemplate.objects.all()
     filterset = PowerOutletTemplateFilterSet
-    fixtures = ("status",)
 
     @classmethod
     def setUpTestData(cls):
@@ -2030,7 +2017,6 @@ class PowerOutletTemplateTestCase(FilterTestCases.FilterTestCase):
 class InterfaceTemplateTestCase(FilterTestCases.FilterTestCase):
     queryset = InterfaceTemplate.objects.all()
     filterset = InterfaceTemplateFilterSet
-    fixtures = ("status",)
 
     @classmethod
     def setUpTestData(cls):
@@ -2077,7 +2063,6 @@ class InterfaceTemplateTestCase(FilterTestCases.FilterTestCase):
 class FrontPortTemplateTestCase(FilterTestCases.FilterTestCase):
     queryset = FrontPortTemplate.objects.all()
     filterset = FrontPortTemplateFilterSet
-    fixtures = ("status",)
 
     @classmethod
     def setUpTestData(cls):
@@ -2125,7 +2110,6 @@ class FrontPortTemplateTestCase(FilterTestCases.FilterTestCase):
 class RearPortTemplateTestCase(FilterTestCases.FilterTestCase):
     queryset = RearPortTemplate.objects.all()
     filterset = RearPortTemplateFilterSet
-    fixtures = ("status",)
 
     @classmethod
     def setUpTestData(cls):
@@ -2191,7 +2175,6 @@ class RearPortTemplateTestCase(FilterTestCases.FilterTestCase):
 class DeviceBayTemplateTestCase(FilterTestCases.FilterTestCase):
     queryset = DeviceBayTemplate.objects.all()
     filterset = DeviceBayTemplateFilterSet
-    fixtures = ("status",)
 
     @classmethod
     def setUpTestData(cls):
@@ -2225,7 +2208,6 @@ class DeviceBayTemplateTestCase(FilterTestCases.FilterTestCase):
 class DeviceRoleTestCase(FilterTestCases.NameSlugFilterTestCase):
     queryset = DeviceRole.objects.all()
     filterset = DeviceRoleFilterSet
-    fixtures = ("status",)
 
     @classmethod
     def setUpTestData(cls):
@@ -2286,7 +2268,6 @@ class DeviceRoleTestCase(FilterTestCases.NameSlugFilterTestCase):
 class PlatformTestCase(FilterTestCases.NameSlugFilterTestCase):
     queryset = Platform.objects.all()
     filterset = PlatformFilterSet
-    fixtures = ("status",)
 
     @classmethod
     def setUpTestData(cls):
@@ -2346,7 +2327,6 @@ class PlatformTestCase(FilterTestCases.NameSlugFilterTestCase):
 class DeviceTestCase(FilterTestCases.FilterTestCase, FilterTestCases.TenancyFilterTestCaseMixin):
     queryset = Device.objects.all()
     filterset = DeviceFilterSet
-    fixtures = ("status",)
     tenancy_related_name = "devices"
 
     @classmethod
@@ -2694,7 +2674,6 @@ class DeviceTestCase(FilterTestCases.FilterTestCase, FilterTestCases.TenancyFilt
 class ConsolePortTestCase(FilterTestCases.FilterTestCase):
     queryset = ConsolePort.objects.all()
     filterset = ConsolePortFilterSet
-    fixtures = ("status",)
 
     @classmethod
     def setUpTestData(cls):
@@ -2806,7 +2785,6 @@ class ConsolePortTestCase(FilterTestCases.FilterTestCase):
 class ConsoleServerPortTestCase(FilterTestCases.FilterTestCase):
     queryset = ConsoleServerPort.objects.all()
     filterset = ConsoleServerPortFilterSet
-    fixtures = ("status",)
 
     @classmethod
     def setUpTestData(cls):
@@ -2918,7 +2896,6 @@ class ConsoleServerPortTestCase(FilterTestCases.FilterTestCase):
 class PowerPortTestCase(FilterTestCases.FilterTestCase):
     queryset = PowerPort.objects.all()
     filterset = PowerPortFilterSet
-    fixtures = ("status",)
 
     @classmethod
     def setUpTestData(cls):
@@ -3052,7 +3029,6 @@ class PowerPortTestCase(FilterTestCases.FilterTestCase):
 class PowerOutletTestCase(FilterTestCases.FilterTestCase):
     queryset = PowerOutlet.objects.all()
     filterset = PowerOutletFilterSet
-    fixtures = ("status",)
 
     @classmethod
     def setUpTestData(cls):
@@ -3174,7 +3150,6 @@ class PowerOutletTestCase(FilterTestCases.FilterTestCase):
 class InterfaceTestCase(FilterTestCases.FilterTestCase):
     queryset = Interface.objects.all()
     filterset = InterfaceFilterSet
-    fixtures = ("status",)
 
     @classmethod
     def setUpTestData(cls):
@@ -3645,7 +3620,6 @@ class InterfaceTestCase(FilterTestCases.FilterTestCase):
 class FrontPortTestCase(FilterTestCases.FilterTestCase):
     queryset = FrontPort.objects.all()
     filterset = FrontPortFilterSet
-    fixtures = ("status",)
 
     @classmethod
     def setUpTestData(cls):
@@ -3785,7 +3759,6 @@ class FrontPortTestCase(FilterTestCases.FilterTestCase):
 class RearPortTestCase(FilterTestCases.FilterTestCase):
     queryset = RearPort.objects.all()
     filterset = RearPortFilterSet
-    fixtures = ("status",)
 
     @classmethod
     def setUpTestData(cls):
@@ -3913,7 +3886,6 @@ class RearPortTestCase(FilterTestCases.FilterTestCase):
 class DeviceBayTestCase(FilterTestCases.FilterTestCase):
     queryset = DeviceBay.objects.all()
     filterset = DeviceBayFilterSet
-    fixtures = ("status",)
 
     @classmethod
     def setUpTestData(cls):
@@ -4022,7 +3994,6 @@ class DeviceBayTestCase(FilterTestCases.FilterTestCase):
 class InventoryItemTestCase(FilterTestCases.FilterTestCase):
     queryset = InventoryItem.objects.all()
     filterset = InventoryItemFilterSet
-    fixtures = ("status",)
 
     @classmethod
     def setUpTestData(cls):
@@ -4332,7 +4303,6 @@ class VirtualChassisTestCase(FilterTestCases.FilterTestCase):
 class CableTestCase(FilterTestCases.FilterTestCase):
     queryset = Cable.objects.all()
     filterset = CableFilterSet
-    fixtures = ("status",)
 
     @classmethod
     def setUpTestData(cls):
@@ -4603,7 +4573,6 @@ class CableTestCase(FilterTestCases.FilterTestCase):
 class PowerPanelTestCase(FilterTestCases.FilterTestCase):
     queryset = PowerPanel.objects.all()
     filterset = PowerPanelFilterSet
-    fixtures = ("status",)
 
     @classmethod
     def setUpTestData(cls):
@@ -4666,7 +4635,6 @@ class PowerPanelTestCase(FilterTestCases.FilterTestCase):
 class PowerFeedTestCase(FilterTestCases.FilterTestCase):
     queryset = PowerFeed.objects.all()
     filterset = PowerFeedFilterSet
-    fixtures = ("status",)
 
     @classmethod
     def setUpTestData(cls):
