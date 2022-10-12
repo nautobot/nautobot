@@ -37,14 +37,14 @@ class AggregateFactory(PrimaryModelFactory):
     """Create random aggregates and 50% of the time generate prefixes within the aggregate IP space.
 
     Child prefixes create nested child prefixes and ip addresses within the prefix IP space. Defaults
-    to creating 0-4 child prefixes which generate 0-4 grandchildren. Set `child_prefixes__max_count` to
+    to creating 0-8 child prefixes which generate 0-4 grandchildren. Set `child_prefixes__max_count` to
     an integer when calling the factory creation methods (`create()`, `create_batch()`, etc) to override
     the maximum number of child prefixes generated. Set `child_prefixes__children__max_count` to an
     integer when calling the factory creation methods (`create()`, `batch_create()`, etc) to override
     the maximum number of grandchildren generated.
 
     Examples:
-        Create 20 aggregates, approximately half will generate 0-4 child prefixes which will create child prefixes and ip addresses:
+        Create 20 aggregates, approximately half will generate 0-8 child prefixes which will create child prefixes and ip addresses:
 
             >>> AggregateFactory.create_batch(20)
 
@@ -52,7 +52,7 @@ class AggregateFactory(PrimaryModelFactory):
 
             >>> AggregateFactory.create_batch(20, child_prefixes__max_count=0)
 
-        Create 20 aggregates, approximately half will generate 0-4 child prefixes that will not create any children:
+        Create 20 aggregates, approximately half will generate 0-8 child prefixes that will not create any children:
 
             >>> AggregateFactory.create_batch(20, child_prefixes__children__max_count=0)
     """
@@ -89,7 +89,7 @@ class AggregateFactory(PrimaryModelFactory):
     def child_prefixes(self, create, extracted, **kwargs):
         """Create child prefixes within the aggregate IP space.
 
-        Defaults to generating 0-4 child prefixes for 50% of aggregates. Set
+        Defaults to generating 0-8 child prefixes for 50% of aggregates. Set
         `child_prefixes__max_count` to an integer when calling the factory
         creation methods (`create()`, `create_batch()`, etc) to override the
         maximum number of children generated.
@@ -111,8 +111,8 @@ class AggregateFactory(PrimaryModelFactory):
         method = getattr(PrefixFactory, action)
         is_ipv6 = self.family == 6
 
-        # Default to maximum of 4 children unless overridden in kwargs
-        max_count = int(kwargs.pop("max_count", 4))
+        # Default to maximum of 8 children unless overridden in kwargs
+        max_count = int(kwargs.pop("max_count", 8))
         prefix_count = faker.Faker().pyint(min_value=0, max_value=min(max_count, self.prefix.size))
         if prefix_count == 0:
             return

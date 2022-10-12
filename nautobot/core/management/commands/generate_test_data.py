@@ -84,7 +84,7 @@ Type 'yes' to continue, or 'no' to cancel: """
         VLANGroupFactory.create_batch(20)
         self.stdout.write("Creating VLANs...")
         VLANFactory.create_batch(20)
-        self.stdout.write("Creating Aggregates...")
+        self.stdout.write("Creating Aggregates, Prefixes and IP Addresses...")
         AggregateFactory.create_batch(5, has_tenant_group=True)
         AggregateFactory.create_batch(5, has_tenant_group=False, has_tenant=True)
         AggregateFactory.create_batch(10)
