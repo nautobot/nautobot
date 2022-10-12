@@ -35,7 +35,6 @@ from nautobot.utilities.forms import (
     CSVFileField,
     restrict_form_fields,
 )
-from nautobot.utilities.permissions import resolve_permission
 from nautobot.core.views.renderers import NautobotHTMLRenderer
 from nautobot.utilities.utils import (
     csv_format,
@@ -106,16 +105,11 @@ class NautobotViewSetMixin(GenericViewSet, AccessMixin, GetReturnURLMixin, FormV
         Check whether the user has the permissions needed to perform certain actions.
         """
         user = self.request.user
-        queryset = self.get_queryset()
         permission_required = self.get_required_permission()
         # Check that the user has been granted the required permission(s) one by one.
         # In case the permission has `message` or `code`` attribute, we want to include those information in the permission_denied error.
         for permission in permission_required:
-            if user.has_perms(permission_required):
-                # Update the view's QuerySet to filter only the permitted objects
-                action = resolve_permission(permission)[1]
-                queryset = queryset.restrict(user, action)
-            else:
+            if not user.has_perms(permission_required):
                 self.permission_denied(
                     request,
                     message=getattr(permission, "message", None),
