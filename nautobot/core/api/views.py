@@ -737,7 +737,7 @@ class GetFilterSetFieldLookupExpressionChoicesAPI(NautobotAPIVersionMixin, APIVi
             if model is None:
                 return Response(
                     f"model for content_type: <{model_contenttype}> not found",
-                    status=400,
+                    status=500,
                 )
         except ContentType.DoesNotExist:
             return Response(
@@ -782,7 +782,7 @@ class GetFilterSetFieldDOMElementAPI(NautobotAPIVersionMixin, APIView):
             if model is None:
                 return Response(
                     f"model for content_type: <{model_contenttype}> not found",
-                    status=400,
+                    status=500,
                 )
         except ContentType.DoesNotExist:
             return Response(
