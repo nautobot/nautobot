@@ -5,8 +5,6 @@ from nautobot.utilities.testing import TestCase
 
 
 class OrderingTestBase(TestCase):
-    fixtures = ("status",)
-
     def _compare(self, queryset, objectset):
         """
         Perform the comparison of the queryset object and the object used to instantiate the queryset.
@@ -16,8 +14,6 @@ class OrderingTestBase(TestCase):
 
 
 class PrefixOrderingTestCase(OrderingTestBase):
-    fixtures = ("status",)
-
     def test_prefix_vrf_ordering(self):
         """
         Test Prefix ordering (vrf.name, then network, then prefix_length)
@@ -33,8 +29,6 @@ class PrefixOrderingTestCase(OrderingTestBase):
 
 
 class IPAddressOrderingTestCase(OrderingTestBase):
-    fixtures = ("status",)
-
     def test_address_vrf_ordering(self):
         """
         This function tests IPAddress ordering (host, then prefix_length)

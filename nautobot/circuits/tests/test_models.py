@@ -9,8 +9,6 @@ from nautobot.extras.models import Status
 
 
 class CircuitTerminationModelTestCase(TestCase):
-    fixtures = ("status",)
-
     @classmethod
     def setUpTestData(cls):
         active = Status.objects.get(name="Active")

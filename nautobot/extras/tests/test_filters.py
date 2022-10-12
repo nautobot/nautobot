@@ -811,7 +811,6 @@ class JobLogEntryTestCase(FilterTestCases.FilterTestCase):
 class ObjectChangeTestCase(FilterTestCases.FilterTestCase):
     queryset = ObjectChange.objects.all()
     filterset = ObjectChangeFilterSet
-    fixtures = ("status",)
 
     @classmethod
     def setUpTestData(cls):
@@ -1383,11 +1382,6 @@ class SecretsGroupAssociationTestCase(FilterTestCases.FilterTestCase):
 class StatusTestCase(FilterTestCases.NameSlugFilterTestCase):
     queryset = Status.objects.all()
     filterset = StatusFilterSet
-    fixtures = ("status",)
-
-    @classmethod
-    def setUpTestData(cls):
-        """Handled by "status" fixture."""
 
     def test_content_types(self):
         ct = ContentType.objects.get_for_model(Device)
@@ -1416,7 +1410,6 @@ class StatusTestCase(FilterTestCases.NameSlugFilterTestCase):
 class TagTestCase(FilterTestCases.NameSlugFilterTestCase):
     queryset = Tag.objects.all()
     filterset = TagFilterSet
-    fixtures = ("tag",)
 
     @classmethod
     def setUpTestData(cls):
@@ -1429,7 +1422,7 @@ class TagTestCase(FilterTestCases.NameSlugFilterTestCase):
     def test_content_types(self):
         params = {"content_types": ["dcim.site"]}
         filtered_data = self.filterset(params, self.queryset).qs
-        self.assertEqual(filtered_data.count(), Tag.objects.get_for_model(Site).count())
+        self.assertQuerysetEqual(filtered_data, Tag.objects.get_for_model(Site))
         self.assertEqual(filtered_data[0], Tag.objects.get_for_model(Site)[0])
 
     def test_search(self):

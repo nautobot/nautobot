@@ -8,8 +8,6 @@ from nautobot.utilities.testing import APITestCase
 
 
 class TestPrefix(APITestCase):
-    fixtures = ("status",)
-
     def setUp(self):
         super().setUp()
         self.api_url = reverse("graphql-api")
