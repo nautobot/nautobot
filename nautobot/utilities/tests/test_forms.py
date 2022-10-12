@@ -787,7 +787,7 @@ class DynamicFilterFormTest(TestCase):
                     "placeholder": None,
                     "data-query-param-field_name": '["$lookup_field"]',
                     "data-contenttype": "extras.status",
-                    "data-url": reverse("lookup_choices"),
+                    "data-url": reverse("core-api:filtersetfield-list-lookupchoices"),
                 },
             )
 
@@ -831,7 +831,7 @@ class DynamicFilterFormTest(TestCase):
                     "placeholder": None,
                     "data-query-param-field_name": '["$lookup_field"]',
                     "data-contenttype": "dcim.site",
-                    "data-url": reverse("lookup_choices"),
+                    "data-url": reverse("core-api:filtersetfield-list-lookupchoices"),
                 },
             )
             self.assertIsInstance(form.fields["lookup_value"], forms.ChoiceField)
@@ -857,7 +857,7 @@ class DynamicFilterFormTest(TestCase):
                     "class": "nautobot-select2-api lookup_type-select",
                     "data-contenttype": "dcim.site",
                     "data-query-param-field_name": '["$lookup_field"]',
-                    "data-url": reverse("lookup_choices"),
+                    "data-url": reverse("core-api:filtersetfield-list-lookupchoices"),
                     "placeholder": None,
                 },
             )
@@ -877,7 +877,7 @@ class DynamicFilterFormTest(TestCase):
                     "class": "nautobot-select2-api lookup_type-select",
                     "data-contenttype": "dcim.site",
                     "data-query-param-field_name": '["$lookup_field"]',
-                    "data-url": reverse("lookup_choices"),
+                    "data-url": reverse("core-api:filtersetfield-list-lookupchoices"),
                     "placeholder": None,
                 },
             )
@@ -891,7 +891,7 @@ class DynamicFilterFormTest(TestCase):
                     "class": "nautobot-select2-api lookup_type-select",
                     "data-contenttype": "dcim.site",
                     "data-query-param-field_name": '["$lookup_field"]',
-                    "data-url": reverse("lookup_choices"),
+                    "data-url": reverse("core-api:filtersetfield-list-lookupchoices"),
                     "placeholder": None,
                 },
             )

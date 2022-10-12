@@ -732,7 +732,13 @@ class GetFilterSetFieldLookupExpressionChoicesAPI(NautobotAPIVersionMixin, APIVi
         field_name = request.GET.get("field_name")
         app_label, model_name = contenttype.split(".")
         try:
-            model = ContentType.objects.get(app_label=app_label, model=model_name).model_class()
+            model_contenttype = ContentType.objects.get(app_label=app_label, model=model_name)
+            model = model_contenttype.model_class()
+            if model is None:
+                return Response(
+                    f"model for content_type: <{model_contenttype}> not found",
+                    status=400,
+                )
         except ContentType.DoesNotExist:
             return Response(
                 "content_type not found",
@@ -771,7 +777,13 @@ class GetFilterSetFieldDOMElementAPI(NautobotAPIVersionMixin, APIView):
         contenttype = request.GET.get("content_type")
         app_label, model_name = contenttype.split(".")
         try:
-            model = ContentType.objects.get(app_label=app_label, model=model_name).model_class()
+            model_contenttype = ContentType.objects.get(app_label=app_label, model=model_name)
+            model = model_contenttype.model_class()
+            if model is None:
+                return Response(
+                    f"model for content_type: <{model_contenttype}> not found",
+                    status=400,
+                )
         except ContentType.DoesNotExist:
             return Response(
                 "content_type not found",

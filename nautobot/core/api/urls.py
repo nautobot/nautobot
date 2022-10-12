@@ -18,6 +18,20 @@ from nautobot.core.api.views import (
 from nautobot.extras.plugins.urls import plugin_api_patterns
 
 
+core_api_patterns = [
+    # Lookup Expr
+    path(
+        "filterset-fields/lookup-choices/",
+        GetFilterSetFieldLookupExpressionChoicesAPI.as_view(),
+        name="filtersetfield-list-lookupchoices",
+    ),
+    path(
+        "filterset-fields/lookup-value-dom-element/",
+        GetFilterSetFieldDOMElementAPI.as_view(),
+        name="filtersetfield-retrieve-lookupvaluedomelement",
+    ),
+]
+
 urlpatterns = [
     # Base views
     path("", APIRootView.as_view(), name="api-root"),
@@ -38,13 +52,6 @@ urlpatterns = [
     path("graphql/", GraphQLDRFAPIView.as_view(), name="graphql-api"),
     # Plugins
     path("plugins/", include((plugin_api_patterns, "plugins-api"))),
-    # Lookup Expr
-    path(
-        "filterset-fields/lookup-choices/", GetFilterSetFieldLookupExpressionChoicesAPI.as_view(), name="lookup_choices"
-    ),
-    path(
-        "filterset-fields/lookup-value-dom-element/",
-        GetFilterSetFieldDOMElementAPI.as_view(),
-        name="lookup_value_dom_element",
-    ),
+    # Core
+    path("core/", include((core_api_patterns, "core-api"))),
 ]

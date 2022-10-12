@@ -220,14 +220,14 @@ class APIVersioningTestCase(APITestCase):
 
 class LookupTypeChoicesTestCase(APITestCase):
     def test_get_lookup_choices_without_query_params(self):
-        url = reverse("lookup_choices")
+        url = reverse("core-api:filtersetfield-list-lookupchoices")
         response = self.client.get(url, **self.header)
 
         self.assertEqual(response.status_code, 400)
         self.assertEqual(response.data, "content_type and field_name are required parameters")
 
     def test_get_lookup_field_data_invalid_query_params(self):
-        url = reverse("lookup_choices")
+        url = reverse("core-api:filtersetfield-list-lookupchoices")
         with self.subTest("Test invalid content_type"):
             response = self.client.get(url + "?content_type=invalid.contenttypes&field_name=name", **self.header)
 
@@ -241,7 +241,7 @@ class LookupTypeChoicesTestCase(APITestCase):
             self.assertEqual(response.data, "field_name not found")
 
     def test_get_lookup_choices(self):
-        url = reverse("lookup_choices")
+        url = reverse("core-api:filtersetfield-list-lookupchoices")
         response = self.client.get(url + "?content_type=dcim.site&field_name=status", **self.header)
 
         self.assertEqual(response.status_code, 200)
@@ -258,14 +258,14 @@ class LookupTypeChoicesTestCase(APITestCase):
 
 class GenerateLookupValueDomElementViewTestCase(APITestCase):
     def test_get_lookup_field_data_without_query_params(self):
-        url = reverse("lookup_value_dom_element")
+        url = reverse("core-api:filtersetfield-retrieve-lookupvaluedomelement")
         response = self.client.get(url, **self.header)
 
         self.assertEqual(response.status_code, 400)
         self.assertEqual(response.data, "content_type and field_name are required parameters")
 
     def test_get_lookup_field_data_invalid_query_params(self):
-        url = reverse("lookup_value_dom_element")
+        url = reverse("core-api:filtersetfield-retrieve-lookupvaluedomelement")
 
         with self.subTest("Test invalid content_type"):
             response = self.client.get(url + "?content_type=invalid.contenttypes&field_name=name", **self.header)
@@ -280,7 +280,7 @@ class GenerateLookupValueDomElementViewTestCase(APITestCase):
             self.assertEqual(response.data, "field_name not found")
 
     def test_get_lookup_value_dom_element(self):
-        url = reverse("lookup_value_dom_element")
+        url = reverse("core-api:filtersetfield-retrieve-lookupvaluedomelement")
         response = self.client.get(url + "?content_type=dcim.site&field_name=name", **self.header)
 
         self.assertEqual(response.status_code, 200)
