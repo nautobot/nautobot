@@ -3,10 +3,12 @@ import random
 
 import factory
 import factory.fuzzy
+import faker
 
 from nautobot.core.factory import OrganizationalModelFactory, PrimaryModelFactory
-from nautobot.dcim.models import DeviceType, Manufacturer, Platform
+from nautobot.dcim.models import DeviceRole, DeviceType, Manufacturer, Platform
 from nautobot.dcim.choices import SubdeviceRoleChoices
+from nautobot.utilities.choices import ColorChoices
 from nautobot.utilities.factory import random_instance, UniqueFaker
 
 
@@ -63,8 +65,8 @@ class PlatformFactory(OrganizationalModelFactory):
     # Slug isn't defined here since it will always inherit from name.
     name = factory.Maybe(
         "has_manufacturer",
-        factory.LazyAttributeSequence(lambda o, n: "%s Platform %d" % (o.manufacturer.name, n + 1)),
-        factory.Sequence(lambda n: "Platform %d" % n),
+        factory.LazyAttributeSequence(lambda o, n: f"{o.manufacturer.name} Platform {n + 1}"),
+        factory.Sequence(lambda n: f"Platform {n}"),
     )
 
     manufacturer = factory.Maybe("has_manufacturer", random_instance(Manufacturer), None)
@@ -97,7 +99,7 @@ class DeviceTypeFactory(PrimaryModelFactory):
     manufacturer = random_instance(Manufacturer)
 
     # Slug isn't defined here since it will always inherit from model.
-    model = factory.LazyAttributeSequence(lambda o, n: "%s DeviceType %d" % (o.manufacturer.name, n + 1))
+    model = factory.LazyAttributeSequence(lambda o, n: f"{o.manufacturer.name} DeviceType {n + 1}")
 
     has_part_number = factory.Faker("pybool")
     part_number = factory.Maybe("has_part_number", factory.Faker("ean", length=8), "")
@@ -117,3 +119,19 @@ class DeviceTypeFactory(PrimaryModelFactory):
 
     has_comments = factory.Faker("pybool")
     comments = factory.Maybe("has_comments", factory.Faker("paragraph"), "")
+
+
+class DeviceRoleFactory(OrganizationalModelFactory):
+    class Meta:
+        model = DeviceRole
+        exclude = ("has_description",)
+
+    # Slug isn't defined here since it will always inherit from name.
+    name = factory.LazyFunction(
+        lambda: "".join(word.title() for word in faker.Faker().words(nb=2, part_of_speech="adjective", unique=True))
+    )
+    color = factory.Iterator(ColorChoices.CHOICES, getter=lambda choice: choice[0])
+    vm_role = factory.Faker("pybool")
+
+    has_description = factory.Faker("pybool")
+    description = factory.Maybe("has_description", factory.Faker("text", max_nb_chars=200), "")
