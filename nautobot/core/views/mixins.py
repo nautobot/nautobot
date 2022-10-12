@@ -134,7 +134,7 @@ class NautobotViewSetMixin(GenericViewSet, AccessMixin, GetReturnURLMixin, FormV
             self.check_permissions(request)
         # check_permissions() could raise NotAuthenticated and PermissionDenied Error.
         # We handle them by a single except statement since handle_no_permission() is able to handle both errors
-        except:  # noqa: E722
+        except Exception:
             return self.handle_no_permission()
 
         return super().dispatch(request, *args, **kwargs)
