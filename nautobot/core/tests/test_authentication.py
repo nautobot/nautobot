@@ -235,7 +235,6 @@ class ExternalAuthenticationTestCase(TestCase):
 
 class ObjectPermissionAPIViewTestCase(TestCase):
     client_class = APIClient
-    fixtures = ("status",)
 
     @classmethod
     def setUpTestData(cls):

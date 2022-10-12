@@ -45,8 +45,6 @@ class GitTest(TransactionTestCase):
     """
 
     databases = ("default", "job_logs")
-    fixtures = ("status",)
-
     COMMIT_HEXSHA = "88dd9cd78df89e887ee90a1d209a3e9a04e8c841"
 
     def setUp(self):

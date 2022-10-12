@@ -127,7 +127,6 @@ class CircuitTest(APIViewTestCases.APIViewTestCase):
         "status": "planned",
     }
     choices_fields = ["status"]
-    fixtures = ("status",)
 
     @classmethod
     def setUpTestData(cls):

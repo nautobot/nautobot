@@ -11,8 +11,6 @@ from nautobot.dcim.models import (
 
 
 class NaturalOrderingTestCase(TestCase):
-    fixtures = ("status",)
-
     def setUp(self):
 
         site = Site.objects.create(name="Test Site 1", slug="test-site-1")

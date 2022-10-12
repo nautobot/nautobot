@@ -94,7 +94,6 @@ class CircuitTypeTestCase(FilterTestCases.NameSlugFilterTestCase):
 class CircuitTestCase(FilterTestCases.FilterTestCase, FilterTestCases.TenancyFilterTestCaseMixin):
     queryset = Circuit.objects.all()
     filterset = CircuitFilterSet
-    fixtures = ("status",)
     tenancy_related_name = "circuits"
 
     @classmethod
@@ -256,7 +255,6 @@ class CircuitTestCase(FilterTestCases.FilterTestCase, FilterTestCases.TenancyFil
 class CircuitTerminationTestCase(FilterTestCases.FilterTestCase):
     queryset = CircuitTermination.objects.all()
     filterset = CircuitTerminationFilterSet
-    fixtures = ("status",)
 
     @classmethod
     def setUpTestData(cls):

@@ -17,8 +17,6 @@ from nautobot.utilities.testing import TestCase
 
 
 class DynamicGroupTestBase(TestCase):
-    fixtures = ("status",)
-
     @classmethod
     def setUpTestData(cls):
 

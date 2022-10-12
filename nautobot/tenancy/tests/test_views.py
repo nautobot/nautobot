@@ -40,7 +40,6 @@ class TenantGroupTestCase(ViewTestCases.OrganizationalObjectViewTestCase):
 
 class TenantTestCase(ViewTestCases.PrimaryObjectViewTestCase):
     model = Tenant
-    fixtures = ("tag",)
 
     @classmethod
     def setUpTestData(cls):
