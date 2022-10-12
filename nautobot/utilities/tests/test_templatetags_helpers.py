@@ -1,4 +1,3 @@
-from django.contrib.contenttypes.models import ContentType
 from django.test import TestCase
 from django.templatetags.static import static
 from django.conf import settings
@@ -28,7 +27,6 @@ from nautobot.utilities.templatetags.helpers import (
     meters_to_feet,
     get_item,
 )
-from nautobot.extras.models import Status
 from nautobot.dcim.models import Site
 from example_plugin.models import AnotherExampleModel, ExampleModel
 
