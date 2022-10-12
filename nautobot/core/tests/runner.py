@@ -53,6 +53,7 @@ class NautobotTestRunner(DiscoverRunner):
         super().teardown_databases(old_config, **kwargs)
 
 
+# Use django_slowtests only when GENERATE_PERFORMANCE_REPORT flag is set to true
 if settings.GENERATE_PERFORMANCE_REPORT:
     import json
     import yaml
@@ -66,10 +67,14 @@ if settings.GENERATE_PERFORMANCE_REPORT:
 
     class NautobotPerformanceTestRunner(NautobotTestRunner, DiscoverSlowestTestsRunner):
         """
+        Pre-requisite:
+            Set `GENERATE_PERFORMANCE_REPORT` to True in settings.py
+        This test runner is designated to run performance specific unittest.
+
         `ModelViewTestCase` is tagged with `performance` to test the time it will take to retrieve, list, create, bulk_create,
         delete, bulk_delete, edit, bulk_edit object(s) and various other operations.
 
-        The results are compared to the corresponding entries in PERFORMANCE_BASELINES and only results that are significantly slower
+        The results are compared to the corresponding entries in `TEST_PERFORMANCE_BASELINE_FILE` and only results that are significantly slower
         than baseline will be exposed to the user.
         """
 
