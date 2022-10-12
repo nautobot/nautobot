@@ -1333,15 +1333,15 @@ query {
             ),
             (
                 f'status: "{self.ip_statuses[0].slug}"',
-                IPAddress.objects.filter(status=self.statuses[0]).count(),
+                IPAddress.objects.filter(status=self.ip_statuses[0]).count(),
             ),
             (
                 f'status: ["{self.ip_statuses[1].slug}"]',
-                IPAddress.objects.filter(status=self.statuses[1]).count(),
+                IPAddress.objects.filter(status=self.ip_statuses[1]).count(),
             ),
             (
-                f'status: ["{self.ip_statuses[0].slug}", "{self.statuses[1].slug}"]',
-                IPAddress.objects.filter(status__in=[self.statuses[0], self.statuses[1]]).count(),
+                f'status: ["{self.ip_statuses[0].slug}", "{self.ip_statuses[1].slug}"]',
+                IPAddress.objects.filter(status__in=[self.ip_statuses[0], self.ip_statuses[1]]).count(),
             ),
             (
                 "mask_length: 24",
