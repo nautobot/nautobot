@@ -1,6 +1,8 @@
 # Nautobot
 
-![Nautobot](https://raw.githubusercontent.com/nautobot/nautobot/develop/nautobot/docs/nautobot_logo.svg "Nautobot logo"). Nautobot is a Network Source of Truth and Network Automation Platform. Nautobot runs as a web application atop the [Django](https://www.djangoproject.com/) Python framework with a
+![Nautobot](https://raw.githubusercontent.com/nautobot/nautobot/develop/nautobot/docs/nautobot_logo.svg "Nautobot logo")
+
+Nautobot is a Network Source of Truth and Network Automation Platform built as a web application atop the [Django](https://www.djangoproject.com/) Python framework with a
 [PostgreSQL](https://www.postgresql.org/) or [MySQL](https://www.mysql.com) database.
 
 ## Key Use Cases
