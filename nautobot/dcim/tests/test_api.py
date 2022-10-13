@@ -1811,7 +1811,6 @@ class FrontPortTest(Mixins.BasePortTestMixin):
 
     def test_trace(self):
         """FrontPorts don't support trace."""
-        pass
 
     @classmethod
     def setUpTestData(cls):
@@ -1876,7 +1875,6 @@ class RearPortTest(Mixins.BasePortTestMixin):
 
     def test_trace(self):
         """RearPorts don't support trace."""
-        pass
 
     @classmethod
     def setUpTestData(cls):
