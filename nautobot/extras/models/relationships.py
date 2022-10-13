@@ -584,7 +584,7 @@ class Relationship(BaseModel, ChangeLoggedModel, NotesMixin):
 
         required_relationships = Relationship.objects.get_required_for_model(instance_or_class)
         relationships_field_errors = []
-        for side, relations in required_relationships.items():
+        for _, relations in required_relationships.items():
             for relation in relations:
 
                 opposite_side = RelationshipSideChoices.OPPOSITE[relation.required_side]
