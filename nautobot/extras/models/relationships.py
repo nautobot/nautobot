@@ -8,14 +8,16 @@ from django.core.serializers.json import DjangoJSONEncoder
 from django.db import models
 from django.db.models import Q
 from django.urls import reverse
+from django.urls.exceptions import NoReverseMatch
+from django.utils.safestring import mark_safe
 
 from nautobot.core.fields import AutoSlugField
 from nautobot.core.models import BaseModel
-from nautobot.extras.choices import RelationshipTypeChoices, RelationshipSideChoices
+from nautobot.extras.choices import RelationshipTypeChoices, RelationshipRequiredSideChoices, RelationshipSideChoices
 from nautobot.extras.utils import FeatureQuery, extras_features
 from nautobot.extras.models import ChangeLoggedModel
 from nautobot.extras.models.mixins import NotesMixin
-from nautobot.utilities.utils import get_filterset_for_model, slugify_dashes_to_underscores
+from nautobot.utilities.utils import get_filterset_for_model, get_route_for_model, slugify_dashes_to_underscores
 from nautobot.utilities.forms import (
     DynamicModelChoiceField,
     DynamicModelMultipleChoiceField,
@@ -233,6 +235,16 @@ class RelationshipManager(models.Manager.from_queryset(RestrictedQuerySet)):
             self.get_queryset().filter(destination_type=content_type),
         )
 
+    def get_required_for_model(self, model):
+        """
+        Return all required Relationships assigned to the given model.
+        """
+        source, destination = self.get_for_model(model)
+        return {
+            "source": source.filter(required_side="source"),
+            "destination": destination.filter(required_side="destination"),
+        }
+
 
 class Relationship(BaseModel, ChangeLoggedModel, NotesMixin):
 
@@ -248,6 +260,14 @@ class Relationship(BaseModel, ChangeLoggedModel, NotesMixin):
         choices=RelationshipTypeChoices,
         default=RelationshipTypeChoices.TYPE_MANY_TO_MANY,
         help_text="Cardinality of this relationship",
+    )
+    required_side = models.CharField(
+        max_length=12,
+        choices=RelationshipRequiredSideChoices,
+        default=RelationshipRequiredSideChoices.NEITHER_SIDE_REQUIRED,
+        help_text="Objects on the specified side MUST implement this relationship. Not permitted for symmetric relationships.",
+        verbose_name="Required Side",
+        blank=True,
     )
 
     #
@@ -532,6 +552,116 @@ class Relationship(BaseModel, ChangeLoggedModel, NotesMixin):
                     "Not supported to change the type of the destination object when some associations"
                     " are present in the database, delete all associations first before modifying the destination type."
                 )
+
+    def skip_required(self, referenced_instance_or_class, side):
+
+        # Not enforcing required symmetric relationships
+        if self.symmetric:
+            return True
+
+        # Skip self-referencing
+        if ContentType.objects.get_for_model(referenced_instance_or_class) == getattr(self, f"{side}_type"):
+            return True
+
+        required_model_class = getattr(self, f"{side}_type").model_class()
+        # Handle the case where required_model_class is None (e.g., relationship to a plugin
+        # model for a plugin that's not installed at present):
+        if required_model_class is None:
+            return True
+
+        return False
+
+    @classmethod
+    def required_related_objects_errors(cls, instance_or_class, output_for="ui", initial_data=None):
+        """
+        Args:
+            instance_or_class: either a model instance or class name to check its required relationships
+            output_for: either "ui" or "api" depending on usage
+            initial_data: submitted form/serializer data to validate against
+        Returns:
+            List of field error dicts if any are found
+        """
+
+        required_relationships = Relationship.objects.get_required_for_model(instance_or_class)
+        relationships_field_errors = []
+        for side, relations in required_relationships.items():
+            for relation in relations:
+
+                opposite_side = RelationshipSideChoices.OPPOSITE[relation.required_side]
+
+                if relation.skip_required(instance_or_class, opposite_side):
+                    continue
+
+                required_model_class = getattr(relation, f"{opposite_side}_type").model_class()
+                required_model_meta = required_model_class._meta
+                cr_field_name = f"cr_{relation.slug}__{opposite_side}"
+                name_plural = instance_or_class._meta.verbose_name_plural
+                field_key = relation.slug if output_for == "api" else cr_field_name
+                field_errors = {field_key: []}
+
+                if relation.has_many(opposite_side):
+                    num_required_verbose = "at least one"
+                else:
+                    num_required_verbose = "a"
+
+                if not required_model_class.objects.exists():
+
+                    hint = (
+                        f"You need to create {num_required_verbose} {required_model_meta.verbose_name} "
+                        f"before instantiating a {instance_or_class._meta.verbose_name}."
+                    )
+
+                    if output_for == "ui":
+                        try:
+                            add_url = reverse(get_route_for_model(required_model_class, "add"))
+                            hint = (
+                                f"<a target='_blank' href='{add_url}'>Click here</a> to create "
+                                f"a {required_model_meta.verbose_name}."
+                            )
+                        except NoReverseMatch:
+                            pass
+
+                    elif output_for == "api":
+                        try:
+                            api_post_url = reverse(get_route_for_model(required_model_class, "list", api=True))
+                            hint = f"Create a {required_model_meta.verbose_name} by posting to {api_post_url}"
+                        except NoReverseMatch:
+                            pass
+
+                    error_message = mark_safe(
+                        f"{name_plural[0].upper()}{name_plural[1:]} require "
+                        f"{num_required_verbose} {required_model_meta.verbose_name}, but no "
+                        f"{required_model_meta.verbose_name_plural} exist yet. {hint}"
+                    )
+                    field_errors[field_key].append(error_message)
+
+                if isinstance(initial_data, dict):
+
+                    supplied_data = []
+
+                    if output_for == "ui":
+                        supplied_data = initial_data.get(field_key, [])
+                    elif output_for == "api":
+                        supplied_data = initial_data.get(relation, {}).get(opposite_side, {})
+
+                    if len(supplied_data) == 0:
+                        verb = "select"
+                        api_tip = ""
+                        if output_for == "api":
+                            verb = "specify"
+                            api_tip = (
+                                f" [<{required_model_class._meta.model_name}.id>, ...] in relationships"
+                                f'["{relation.slug}"]["{opposite_side}"]["objects"]'
+                            )
+                        error_message = (
+                            f"You must {verb} {num_required_verbose} {required_model_meta.verbose_name}{api_tip}."
+                        )
+                        field_errors[field_key].append(error_message)
+
+                if len(field_errors[field_key]) > 0:
+                    relationships_field_errors.append(field_errors)
+
+        return relationships_field_errors
 
 
 @extras_features("custom_validators")

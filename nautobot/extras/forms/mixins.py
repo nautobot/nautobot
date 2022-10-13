@@ -394,6 +394,15 @@ class RelationshipModelFormMixin(forms.ModelForm):
           verify that the requested "source" object does not have an existing RelationshipAssociation to
           a different destination object.
         """
+
+        required_relationships_errors = Relationship.required_related_objects_errors(
+            self.instance, "ui", self.cleaned_data
+        )
+        for error_dict in required_relationships_errors:
+            self.add_error(None, error_dict)
+            for key in error_dict.keys():
+                self.add_error(None, error_dict[key])
+
         for side, relationships in self.instance.get_relationships().items():
             for relationship in relationships:
                 # The form field name reflects what it provides, i.e. the peer object(s) to link via this relationship.

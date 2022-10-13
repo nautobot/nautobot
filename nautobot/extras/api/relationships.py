@@ -265,17 +265,30 @@ class RelationshipModelSerializerMixin(ValidatedModelSerializer):
     relationships = RelationshipsDataField(required=False, source="*")
 
     def create(self, validated_data):
-        relationships = validated_data.pop("relationships", {})
+        relationships_data = validated_data.pop("relationships", {})
+
+        required_relationships_errors = Relationship.required_related_objects_errors(
+            self.Meta().model, "api", relationships_data
+        )
+        if required_relationships_errors:
+            raise ValidationError(required_relationships_errors)
+
         instance = super().create(validated_data)
-        if relationships:
-            self._save_relationships(instance, relationships)
+        if relationships_data:
+            self._save_relationships(instance, relationships_data)
         return instance
 
     def update(self, instance, validated_data):
-        relationships = validated_data.pop("relationships", {})
+        relationships_data = validated_data.pop("relationships", {})
+        required_relationships_errors = Relationship.required_related_objects_errors(
+            self.Meta().model, "api", relationships_data
+        )
+        if required_relationships_errors:
+            raise ValidationError(required_relationships_errors)
+
         instance = super().update(instance, validated_data)
-        if relationships:
-            self._save_relationships(instance, relationships)
+        if relationships_data:
+            self._save_relationships(instance, relationships_data)
         return instance
 
     def _save_relationships(self, instance, relationships):
