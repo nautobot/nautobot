@@ -25,7 +25,7 @@ from .models import (
     Note,
     Webhook,
 )
-from .relationships import get_relationships_errors, Relationship, RelationshipAssociation, RelationshipModel
+from .relationships import Relationship, RelationshipAssociation, RelationshipModel
 from .secrets import Secret, SecretsGroup, SecretsGroupAssociation
 from .tags import Tag, TaggedItem
 
@@ -45,7 +45,6 @@ __all__ = (
     "ExportTemplate",
     "FileAttachment",
     "FileProxy",
-    "get_relationships_errors",
     "GitRepository",
     "GraphQLQuery",
     "HealthCheckTestModel",

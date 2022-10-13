@@ -24,7 +24,7 @@ from django_tables2 import RequestConfig
 
 from nautobot.extras.models import CustomField, ExportTemplate
 from nautobot.extras.models.change_logging import ChangeLoggedModel
-from nautobot.extras.models import get_relationships_errors
+from nautobot.extras.models import Relationship
 from nautobot.utilities.error_handlers import handle_protectederror
 from nautobot.utilities.exceptions import AbortTransaction
 from nautobot.utilities.forms import (
@@ -385,7 +385,7 @@ class ObjectEditView(GetReturnURLMixin, ObjectPermissionRequiredMixin, View):
         form = self.model_form(instance=obj, initial=initial_data)
         restrict_form_fields(form, request.user)
 
-        get_relationships_errors(request, obj)
+        # Relationship.required_related_objects_errors(request, obj)
 
         return render(
             request,
@@ -406,7 +406,7 @@ class ObjectEditView(GetReturnURLMixin, ObjectPermissionRequiredMixin, View):
         form = self.model_form(data=request.POST, files=request.FILES, instance=obj)
         restrict_form_fields(form, request.user)
 
-        get_relationships_errors(request, obj)
+        # Relationship.required_related_objects_errors(request, obj)
 
         if form.is_valid():
             logger.debug("Form validation was successful")
@@ -953,7 +953,7 @@ class BulkEditView(GetReturnURLMixin, ObjectPermissionRequiredMixin, View):
         logger = logging.getLogger("nautobot.views.BulkEditView")
         model = self.queryset.model
 
-        get_relationships_errors(request, model)
+        Relationship.required_related_objects_errors(request, model)
 
         # If we are editing *all* objects in the queryset, replace the PK list with all matched objects.
         if request.POST.get("_all") and self.filterset is not None:

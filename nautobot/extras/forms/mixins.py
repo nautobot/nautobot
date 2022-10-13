@@ -401,33 +401,13 @@ class RelationshipModelFormMixin(forms.ModelForm):
           verify that the requested "source" object does not have an existing RelationshipAssociation to
           a different destination object.
         """
-
-        required_relationships = Relationship.objects.get_required_for_model(self.instance)
-        for side, relations in required_relationships.items():
-            for relation in relations:
-
-                # Not enforcing required symmetric relationships
-                if relation.symmetric:
-                    continue
-
-                # Skip self-referencing
-                if ContentType.objects.get_for_model(self.instance) == getattr(
-                    relation, f"{relation.required_side}_type"
-                ):
-                    continue
-
-                model_name = getattr(relation, f"{side}_type").model_class()._meta.verbose_name
-                cr_field_name = f"cr_{relation.slug}__{relation.required_side}"
-
-                if not self.cleaned_data[cr_field_name]:
-                    if relation.has_many(side):
-                        num_required_verbose = "at least one"
-                    else:
-                        num_required_verbose = "a"
-                    self.add_error(
-                        f"cr_{relation.slug}__{side}",
-                        forms.ValidationError(f"You must select {num_required_verbose} {model_name}"),
-                    )
+        required_relationships_errors = Relationship.required_related_objects_errors(
+            self.instance, "ui", self.cleaned_data
+        )
+        for error_dict in required_relationships_errors:
+            self.add_error(None, error_dict)
+            for key in error_dict.keys():
+                self.add_error(None, error_dict[key])
 
         for side, relationships in self.instance.get_relationships().items():
             for relationship in relationships:
