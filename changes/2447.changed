@@ -1,1 +1,0 @@
-Moved Dynamic Groups tab on object detail view to it's own view as a generic `ObjectDynamicGroupsView`.

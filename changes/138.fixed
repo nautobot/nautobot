@@ -1,1 +1,0 @@
-Fixed lack of user-facing message when an exception occurs while discovering Jobs from a Git repository.

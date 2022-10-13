@@ -182,7 +182,7 @@ FROM ghcr.io/nautobot/nautobot-dependencies:${DEPENDENCIES_BASE_BRANCH}-py${PYTH
 # We install more dependencies here and can copy where needed
 # Improves caching as well when these dependencies don't change
 
-FROM dependencies-as-stage as dependencies-dev-python
+FROM dependencies as dependencies-dev-python
 
 # Add development-specific dependencies of Nautobot to the installation
 # Poetry 1.2.0 leaves files in /tmp after doing an install
@@ -207,7 +207,7 @@ RUN mkdocs build --no-directory-urls
 
 ################################ Stage: build-nautobot (intermediate build target)
 
-FROM dependencies-as-stage as build-nautobot
+FROM dependencies as build-nautobot
 # Copy in the Nautobot source code to build the wheel from
 COPY nautobot /source/nautobot
 
@@ -293,8 +293,8 @@ ARG PYTHON_VER
 
 # Copy from "dependencies" the required python libraries and binaries
 # Copy from "build-nautobot" the built Nautobot wheel
-COPY --from=dependencies-as-stage /usr/local/lib/python${PYTHON_VER}/site-packages /usr/local/lib/python${PYTHON_VER}/site-packages
-COPY --from=dependencies-as-stage /usr/local/bin /usr/local/bin
+COPY --from=dependencies /usr/local/lib/python${PYTHON_VER}/site-packages /usr/local/lib/python${PYTHON_VER}/site-packages
+COPY --from=dependencies /usr/local/bin /usr/local/bin
 COPY --from=build-nautobot /source/dist/*.whl /tmp
 
 # Install the Nautobot wheel
