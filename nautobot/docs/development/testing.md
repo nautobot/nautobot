@@ -60,6 +60,7 @@ Nautobot's custom [test runner](https://docs.djangoproject.com/en/3.2/topics/tes
 +++ 1.5.0
 
 ### Running Performance Tests
+
 Nautobot uses [`django-slowtests`](https://pypi.org/project/django-slowtests/) to run performance tests. To run performance tests, you need to install the `django-slowtests` package and set `TEST_GENERATE_PERFORMANCE_REPORT` in `settings.py` to True.
 
 Once you satisify the above two prerequisites, you can do `invoke performance-test` or `invoke unittest --performance-test` to run unittests with `NautobotPerformanceTestRunner`.
@@ -67,6 +68,7 @@ Once you satisify the above two prerequisites, you can do `invoke performance-te
 `NautobotPerformanceTestRunner` which inherits from `DiscoverSlowestTestsRunner` will only be available when you have `django-slowtests` installed and set `TEST_GENERATE_PERFORMANCE_REPORT` in `settings.py` to True. When running performance tests, `NautobotPerformanceTestRunner` will replace the default test runner `NautobotTestRunner` and will output a performance evaluation at the end of each run.
 
 An example output of the performance evaluation would be:
+
 ```no-highlight
 0.9838s test_bulk_import_objects_with_constrained_permission (nautobot.ipam.tests.test_views.VLANTestCase) is significantly slower than the baseline 0.3692s
 1.2548s test_create_multiple_objects_with_constrained_permission (nautobot.dcim.tests.test_views.ConsolePortTestCase) is significantly slower than the baseline 0.5385s
@@ -86,6 +88,7 @@ You can add baselines for your own test to `nautobot/core/tests/performance_base
 `--performance-snapshot` flag will store the results of your performance test to `report.yml` and all you need to do is copy/paste the result to the file set by `TEST_PERFORMANCE_BASELINE_FILE`. Now you have baselines for your own tests!
 
 Example output of `invoke performance-test --performance-snapshot`:
+
 ```yaml
 - tests:
   - name: test_account (nautobot.circuits.tests.test_filters.ProviderTestCase)

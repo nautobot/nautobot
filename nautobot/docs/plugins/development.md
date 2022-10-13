@@ -1360,6 +1360,7 @@ The [`TEST_USE_FACTORIES`](../configuration/optional-settings.md#test_use_factor
 ### Running Performance Tests
 
 The [`TEST_GENERATE_PERFORMANCE_REPORT`](../configuration/optional-settings.md#test_generate_performance_report) setting defaults to `False` when testing plugins, primarily for backwards-compatibility reasons. However, it is a very intuitive way to track the performance baselines of your own tests for your plugins (all you have to do is tag your tests with `performance`) and do `invoke performance-test` to get the time to run your tests.
+
 ```python
 @tag("performance")
 def test_your_plugin(self)
@@ -1371,6 +1372,7 @@ def test_your_plugin(self)
 
 If you want to add baselines for your own test to `nautobot/core/tests/performance_baselines.yml` or have your own baseline yaml file for performance testing, specify a different file path for  `TEST_PERFORMANCE_BASELINE_FILE` in plugin's development/test `nautobot_config.py`, and store the output of `invoke performance-test --performance-snapshot` in that file. `--performance-snapshot` flag will store the results of your performance test to `report.yml` and all you need to do is copy/paste the result to the file set by `TEST_PERFORMANCE_BASELINE_FILE`. Now you have baselines for your own tests!
 Example output of `invoke performance-test --performance-snapshot`:
+
 ```yaml
 tests:
   - name: >-

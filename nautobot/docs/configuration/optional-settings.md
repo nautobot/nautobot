@@ -832,6 +832,7 @@ When [`TEST_GENERATE_PERFORMANCE_REPORT`](#test_generate_performance_report) is 
 
 !!! info
     If performance baselines for tests are not available:
+
 ```no-highlight
 175 abnormally slower tests:
 Performance baseline for test_account (nautobot.circuits.tests.test_filters.ProviderTestCase) is not available. Test took 0.0758s to run
@@ -849,6 +850,7 @@ Performance baseline for test_bulk_delete_objects (nautobot.circuits.tests.test_
 ```
 
     If performance baselines for tests are available and the time it take to run tests are siginificantly slower than baselines:
+
 ```no-highlight
 12 abnormally slower tests:
 0.9838s test_bulk_import_objects_with_constrained_permission (nautobot.ipam.tests.test_views.VLANTestCase) is significantly slower than the baseline 0.3692s
@@ -865,6 +867,7 @@ Performance baseline for test_bulk_delete_objects (nautobot.circuits.tests.test_
     To output the performance evaluation to a file for later use, i.e. as performance baselines for future test runs, do `invoke performance-test --performance-snapshot`. This command will collect the `name` of the test and their `execution_time` and store them in a .yml file default to `report.yml`. Subsequently, the data in that file will have to be added to the file set at [`TEST_PERFORMANCE_BASELINE_FILE`](#test_performance_baseline_file) to be used as baselines in performance tests.
 
     Example output of `invoke performance-test --performance-snapshot`:
+
 ```yaml
 - tests:
   - name: test_account (nautobot.circuits.tests.test_filters.ProviderTestCase)
@@ -888,7 +891,7 @@ Performance baseline for test_bulk_delete_objects (nautobot.circuits.tests.test_
 
 ---
 
-## TEST_PERFORMANCE_BASELINE_FILE 
+## TEST_PERFORMANCE_BASELINE_FILE
 
 +++ 1.5.0
 
@@ -897,6 +900,7 @@ Default: `nautobot/core/tests/performance_baselines.yml`
 Environment Variable: `TEST_PERFORMANCE_BASELINE_FILE`
 
 [`TEST_PERFORMANCE_BASELINE_FILE`](#test_performance_baseline_file) is set to a certain file path, this file path should point to a .yml file that conforms to the following format:
+
 ```yaml
 tests:
   - name: >-
@@ -917,6 +921,7 @@ tests:
     execution_time: 2.727531
 ...
 ```
+
 and store the performance baselines with the `name` of the test and the baseline `execution_time`. This file should provide the baseline times that all performance-related tests are running against.
 
 ---
