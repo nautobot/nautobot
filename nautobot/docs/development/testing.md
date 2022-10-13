@@ -55,6 +55,77 @@ Nautobot's custom [test runner](https://docs.djangoproject.com/en/3.2/topics/tes
 !!! info
     Because plugins also commonly use Nautobot's test runner, the base Nautobot `settings.py` currently defaults [`TEST_USE_FACTORIES`](../configuration/optional-settings.md#test_use_factories) to `False` so as to not negatively impact plugin tests that may not be designed to account for the presence of pre-populated test data in the database. This configuration is overridden to `True` in `nautobot/core/tests/nautobot_config.py` for Nautobot's own tests.
 
+## Performance Tests
+
++++ 1.5.0
+
+### Running Performance Tests
+Nautobot uses [`django-slowtests`](https://pypi.org/project/django-slowtests/) to run performance tests. To run performance tests, you need to install the `django-slowtests` package and set `TEST_GENERATE_PERFORMANCE_REPORT` in `settings.py` to True.
+
+Once you satisify the above two prerequisites, you can do `invoke performance-test` or `invoke unittest --performance-test` to run unittests with `NautobotPerformanceTestRunner`.
+
+`NautobotPerformanceTestRunner` which inherits from `DiscoverSlowestTestsRunner` will only be available when you have `django-slowtests` installed and set `TEST_GENERATE_PERFORMANCE_REPORT` in `settings.py` to True. When running performance tests, `NautobotPerformanceTestRunner` will replace the default test runner `NautobotTestRunner` and will output a performance evaluation at the end of each run.
+
+An example output of the performance evaluation would be:
+```no-highlight
+0.9838s test_bulk_import_objects_with_constrained_permission (nautobot.ipam.tests.test_views.VLANTestCase) is significantly slower than the baseline 0.3692s
+1.2548s test_create_multiple_objects_with_constrained_permission (nautobot.dcim.tests.test_views.ConsolePortTestCase) is significantly slower than the baseline 0.5385s
+1.4289s test_create_multiple_objects_with_constrained_permission (nautobot.dcim.tests.test_views.DeviceBayTestCase) is significantly slower than the baseline 0.5616s
+1.1551s test_create_multiple_objects_with_constrained_permission (nautobot.dcim.tests.test_views.InventoryItemTestCase) is significantly slower than the baseline 0.5822s
+1.4712s test_create_multiple_objects_with_constrained_permission (nautobot.dcim.tests.test_views.RearPortTestCase) is significantly slower than the baseline 0.5695s
+1.5958s test_create_multiple_objects_with_constrained_permission (nautobot.virtualization.tests.test_views.VMInterfaceTestCase) is significantly slower than the baseline 1.0020s
+1.0566s test_create_object_with_constrained_permission (nautobot.virtualization.tests.test_views.VirtualMachineTestCase) is significantly slower than the baseline 0.3627s
+...
+```
+
+### Gathering Performance Test Baseline Data
+
+`TEST_PERFORMANCE_BASELINE_FILE` specifies the file in which performance baselines are stored, defaults to `nautobot/core/tests/performance_baselines.yml`. Currently, only baselines for those unittests tagged with `performance` are stored.
+
+You can add baselines for your own test to `nautobot/core/tests/performance_baselines.yml` or have your own baseline yaml file for performance testing by specifying a different file path for  `TEST_PERFORMANCE_BASELINE_FILE` in plugin's development/test `nautobot_config.py`, and store the output of `invoke performance-test --performance-snapshot` in that file.
+`--performance-snapshot` flag will store the results of your performance test to `report.yml` and all you need to do is copy/paste the result to the file set by `TEST_PERFORMANCE_BASELINE_FILE`. Now you have baselines for your own tests!
+
+Example output of `invoke performance-test --performance-snapshot`:
+```yaml
+- tests:
+  - name: test_account (nautobot.circuits.tests.test_filters.ProviderTestCase)
+    execution_time: 0.07075
+  - name: test_asn (nautobot.circuits.tests.test_filters.ProviderTestCase)
+    execution_time: 0.041262
+  - name: test_cabled (nautobot.circuits.tests.test_filters.CircuitTerminationTestCase)
+    execution_time: 0.268673
+  - name: test_cid (nautobot.circuits.tests.test_filters.CircuitTestCase)
+    execution_time: 0.116057
+  - name: test_circuit_id (nautobot.circuits.tests.test_filters.CircuitTerminationTestCase)
+...
+```
+
+if you decide to run `invoke unittest --performance-test` which will run tests that currently do not have their baselines present in the file, your output could look something like this:
+
+```no-highlight
+175 abnormally slower tests:
+Performance baseline for test_account (nautobot.circuits.tests.test_filters.ProviderTestCase) is not available. Test took 0.0758s to run
+Performance baseline for test_asn (nautobot.circuits.tests.test_filters.ProviderTestCase) is not available. Test took 0.0427s to run
+Performance baseline for test_bulk_create_objects (nautobot.circuits.tests.test_api.CircuitTerminationTest) is not available. Test took 0.2900s to run
+Performance baseline for test_bulk_create_objects (nautobot.circuits.tests.test_api.CircuitTest) is not available. Test took 0.2292s to run
+Performance baseline for test_bulk_create_objects (nautobot.circuits.tests.test_api.CircuitTypeTest) is not available. Test took 0.1596s to run
+Performance baseline for test_bulk_create_objects (nautobot.circuits.tests.test_api.ProviderNetworkTest) is not available. Test took 0.1897s to run
+Performance baseline for test_bulk_create_objects (nautobot.circuits.tests.test_api.ProviderTest) is not available. Test took 0.2092s to run
+Performance baseline for test_bulk_delete_objects (nautobot.circuits.tests.test_api.CircuitTerminationTest) is not available. Test took 0.1168s to run
+Performance baseline for test_bulk_delete_objects (nautobot.circuits.tests.test_api.CircuitTest) is not available. Test took 0.2762s to run
+Performance baseline for test_bulk_delete_objects (nautobot.circuits.tests.test_api.CircuitTypeTest) is not available. Test took 0.0663s to run
+Performance baseline for test_bulk_delete_objects (nautobot.circuits.tests.test_api.ProviderNetworkTest) is not available. Test took 0.0875s to run
+...
+```
+
+### Caveats
+
+!!! warning
+    `django-slowtests` is only a *development* dependency of Nautobot. You cannot use the model factories in a production deployment of Nautobot unless you directly `pip install django-slowtests` into such a deployment.
+
+!!! info
+    Because plugins also commonly use Nautobot's default test runner `NautobotTestRunner`, the base Nautobot `settings.py` currently defaults [`TEST_GENERATE_PERFORMANCE_REPORT`](../configuration/optional-settings.md#test_generate_performance_report) to `False` so as to not coerce plugins to incorporate performance testing and to upgrade to Nautobot V1.5.0. This configuration is overridden to `True` in `nautobot/core/tests/nautobot_config.py` for Nautobot's own tests.
+
 ## Test Code Style
 
 - Use more specific/feature-rich test assertion methods where available (e.g. `self.assertInHTML(fragment, html)` rather than `self.assertTrue(re.search(fragment, html))` or `assert re.search(fragment, html) is not None`).

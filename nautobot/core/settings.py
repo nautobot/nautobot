@@ -131,13 +131,12 @@ TEST_FACTORY_SEED = os.getenv("NAUTOBOT_TEST_FACTORY_SEED", None)
 
 # Disable the generation of performance report in terminal by default so as not to cause issues for plugins.
 # The nautobot_config.py that Nautobot core uses for its own tests will override this to True.
-GENERATE_PERFORMANCE_REPORT = is_truthy(os.getenv("NAUTOBOT_GENERATE_PERFORMANCE_REPORT", "False"))
-# Disable the generation of performance baseline report by default so as not to cause issues for plugins.
-# The nautobot_config.py that Nautobot core uses for its own tests will override this to True.
-TEST_ALWAYS_GENERATE_BASELINE_REPORT = is_truthy(os.getenv("TEST_ALWAYS_GENERATE_BASELINE_REPORT", "False"))
+TEST_GENERATE_PERFORMANCE_REPORT = is_truthy(os.getenv("NAUTOBOT_TEST_GENERATE_PERFORMANCE_REPORT", "False"))
 # The baseline file that the performance test is running against
 # TODO we need to replace the baselines in this file with more consistent results at least for CI
-TEST_PERFORMANCE_BASELINE_FILE = "nautobot/core/tests/performance_baselines.yml"
+TEST_PERFORMANCE_BASELINE_FILE = os.getenv(
+    "NAUTOBOT_TEST_PERFORMANCE_BASELINE_FILE", "nautobot/core/tests/performance_baselines.yml"
+)
 
 #
 # Django cryptography

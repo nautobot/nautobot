@@ -80,5 +80,5 @@ TEST_USE_FACTORIES = True
 # For now, use a constant PRNG seed for consistent results. In the future we can remove this for fuzzier testing.
 TEST_FACTORY_SEED = "Nautobot"
 # Enable performance test by default in core.
-GENERATE_PERFORMANCE_REPORT = True
-TEST_ALWAYS_GENERATE_BASELINE_REPORT = False
+TEST_GENERATE_PERFORMANCE_REPORT = True
+TEST_PERFORMANCE_BASELINE_FILE = "nautobot/core/tests/performance_baselines.yml"

@@ -817,6 +817,110 @@ If set to `True`, the Nautobot test runner will call `nautobot-server generate_t
 
 ---
 
+## TEST_GENERATE_PERFORMANCE_REPORT
+
++++ 1.5.0
+
+Default: `False`
+
+Environment Variable: `NAUTOBOT_TEST_GENERATE_PERFORMANCE_REPORT`
+
+When [`TEST_GENERATE_PERFORMANCE_REPORT`](#test_generate_performance_report) is set to `True`, this configuration provides a new test runner `NautobotPerformanceTestRunner` that measures the time to run unittests against baselines stored in a designated .yml file (default to "nautobot/core/tests/performance_baselines.yml") in addition to running unittests themselves. `invoke performance-test` is enabled when this setting is set to true and when called, it will run and evaluate the performance of specific unittests that are tagged with `performance` i.e. `@tag("performance")`. `invoke unittest --performance-report` and `invoke integration-test --performance-report` will also be enabled and when called, they will generate a performance report for all the tests ran in the terminal.
+
+!!! warning
+    This functionality requires the installation of the [`django-slowtests`](https://pypi.org/project/django-slowtests/) Python package, which is present in Nautobot's own development environment, but is _not_ an inherent dependency of the Nautobot package when installed otherwise, such as into a plugin's development environment.
+
+!!! info
+    If performance baselines for tests are not available:
+```no-highlight
+175 abnormally slower tests:
+Performance baseline for test_account (nautobot.circuits.tests.test_filters.ProviderTestCase) is not available. Test took 0.0758s to run
+Performance baseline for test_asn (nautobot.circuits.tests.test_filters.ProviderTestCase) is not available. Test took 0.0427s to run
+Performance baseline for test_bulk_create_objects (nautobot.circuits.tests.test_api.CircuitTerminationTest) is not available. Test took 0.2900s to run
+Performance baseline for test_bulk_create_objects (nautobot.circuits.tests.test_api.CircuitTest) is not available. Test took 0.2292s to run
+Performance baseline for test_bulk_create_objects (nautobot.circuits.tests.test_api.CircuitTypeTest) is not available. Test took 0.1596s to run
+Performance baseline for test_bulk_create_objects (nautobot.circuits.tests.test_api.ProviderNetworkTest) is not available. Test took 0.1897s to run
+Performance baseline for test_bulk_create_objects (nautobot.circuits.tests.test_api.ProviderTest) is not available. Test took 0.2092s to run
+Performance baseline for test_bulk_delete_objects (nautobot.circuits.tests.test_api.CircuitTerminationTest) is not available. Test took 0.1168s to run
+Performance baseline for test_bulk_delete_objects (nautobot.circuits.tests.test_api.CircuitTest) is not available. Test took 0.2762s to run
+Performance baseline for test_bulk_delete_objects (nautobot.circuits.tests.test_api.CircuitTypeTest) is not available. Test took 0.0663s to run
+Performance baseline for test_bulk_delete_objects (nautobot.circuits.tests.test_api.ProviderNetworkTest) is not available. Test took 0.0875s to run
+...
+```
+
+    If performance baselines for tests are available and the time it take to run tests are siginificantly slower than baselines:
+```no-highlight
+12 abnormally slower tests:
+0.9838s test_bulk_import_objects_with_constrained_permission (nautobot.ipam.tests.test_views.VLANTestCase) is significantly slower than the baseline 0.3692s
+1.2548s test_create_multiple_objects_with_constrained_permission (nautobot.dcim.tests.test_views.ConsolePortTestCase) is significantly slower than the baseline 0.5385s
+1.4289s test_create_multiple_objects_with_constrained_permission (nautobot.dcim.tests.test_views.DeviceBayTestCase) is significantly slower than the baseline 0.5616s
+1.1551s test_create_multiple_objects_with_constrained_permission (nautobot.dcim.tests.test_views.InventoryItemTestCase) is significantly slower than the baseline 0.5822s
+1.4712s test_create_multiple_objects_with_constrained_permission (nautobot.dcim.tests.test_views.RearPortTestCase) is significantly slower than the baseline 0.5695s
+1.5958s test_create_multiple_objects_with_constrained_permission (nautobot.virtualization.tests.test_views.VMInterfaceTestCase) is significantly slower than the baseline 1.0020s
+1.0566s test_create_object_with_constrained_permission (nautobot.virtualization.tests.test_views.VirtualMachineTestCase) is significantly slower than the baseline 0.3627s
+...
+```
+
+!!! info
+    To output the performance evaluation to a file for later use, i.e. as performance baselines for future test runs, do `invoke performance-test --performance-snapshot`. This command will collect the `name` of the test and their `execution_time` and store them in a .yml file default to `report.yml`. Subsequently, the data in that file will have to be added to the file set at [`TEST_PERFORMANCE_BASELINE_FILE`](#test_performance_baseline_file) to be used as baselines in performance tests.
+
+    Example output of `invoke performance-test --performance-snapshot`:
+```yaml
+- tests:
+  - name: test_account (nautobot.circuits.tests.test_filters.ProviderTestCase)
+    execution_time: 0.07075
+  - name: test_asn (nautobot.circuits.tests.test_filters.ProviderTestCase)
+    execution_time: 0.041262
+  - name: test_cabled (nautobot.circuits.tests.test_filters.CircuitTerminationTestCase)
+    execution_time: 0.268673
+  - name: test_cid (nautobot.circuits.tests.test_filters.CircuitTestCase)
+    execution_time: 0.116057
+  - name: test_circuit_id (nautobot.circuits.tests.test_filters.CircuitTerminationTestCase)
+    execution_time: 0.042665
+  - name: test_commit_rate (nautobot.circuits.tests.test_filters.CircuitTestCase)
+    execution_time: 0.047894
+  - name: test_connected (nautobot.circuits.tests.test_filters.CircuitTerminationTestCase)
+    execution_time: 0.056196
+  - name: test_id (nautobot.circuits.tests.test_filters.CircuitTerminationTestCase)
+    execution_time: 0.03598
+...
+```
+
+---
+
+## TEST_PERFORMANCE_BASELINE_FILE 
+
++++ 1.5.0
+
+Default: `nautobot/core/tests/performance_baselines.yml`
+
+Environment Variable: `TEST_PERFORMANCE_BASELINE_FILE`
+
+[`TEST_PERFORMANCE_BASELINE_FILE`](#test_performance_baseline_file) is set to a certain file path, this file path should point to a .yml file that conforms to the following format:
+```yaml
+tests:
+  - name: >-
+      test_run_job_with_sensitive_variables_and_requires_approval
+      (nautobot.extras.tests.test_views.JobTestCase)
+    execution_time: 4.799533
+  - name: test_run_missing_schedule (nautobot.extras.tests.test_views.JobTestCase)
+    execution_time: 4.367563
+  - name: test_run_now_missing_args (nautobot.extras.tests.test_views.JobTestCase)
+    execution_time: 4.363194
+  - name: >-
+      test_create_object_with_constrained_permission
+      (nautobot.extras.tests.test_views.GraphQLQueriesTestCase)
+    execution_time: 3.474244
+  - name: >-
+      test_run_now_constrained_permissions
+      (nautobot.extras.tests.test_views.JobTestCase)
+    execution_time: 2.727531
+...
+```
+and store the performance baselines with the `name` of the test and the baseline `execution_time`. This file should provide the baseline times that all performance-related tests are running against.
+
+---
+
 ## UI_RACK_VIEW_TRUNCATE_FUNCTION
 
 +++ 1.4.0
