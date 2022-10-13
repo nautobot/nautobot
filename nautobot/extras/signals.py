@@ -80,7 +80,7 @@ def _handle_changed_object(change_context, sender, instance, **kwargs):
             objectchange.user = _get_user_if_authenticated(change_context.get_user(), objectchange)
             objectchange.request_id = change_context.change_id
             objectchange.change_context = change_context.context
-            objectchange.change_context_detail = change_context.context_detail
+            objectchange.change_context_detail = change_context.context_detail[:400]
             objectchange.save()
 
         # Enqueue job hooks
@@ -115,7 +115,7 @@ def _handle_deleted_object(change_context, sender, instance, **kwargs):
         objectchange.user = _get_user_if_authenticated(change_context.get_user(), objectchange)
         objectchange.request_id = change_context.change_id
         objectchange.change_context = change_context.context
-        objectchange.change_context_detail = change_context.context_detail
+        objectchange.change_context_detail = change_context.context_detail[:400]
         objectchange.save()
 
         # Enqueue job hooks

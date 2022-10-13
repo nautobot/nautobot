@@ -37,7 +37,7 @@ class ChangeLoggedModel(models.Model):
 
         return ObjectChange(
             changed_object=self,
-            object_repr=str(self),
+            object_repr=str(self)[:200],
             action=action,
             object_data=serialize_object(self, extra=object_data_extra, exclude=object_data_exclude),
             object_data_v2=serialize_object_v2(self),
@@ -90,7 +90,7 @@ class ObjectChange(BaseModel):
         editable=False,
         db_index=True,
     )
-    change_context_detail = models.CharField(max_length=200, blank=True, editable=False)
+    change_context_detail = models.CharField(max_length=400, blank=True, editable=False)
     related_object_type = models.ForeignKey(
         to=ContentType,
         on_delete=models.PROTECT,
@@ -148,7 +148,7 @@ class ObjectChange(BaseModel):
                 self.user_name = "Undefined"
 
         if not self.object_repr:
-            self.object_repr = str(self.changed_object)
+            self.object_repr = str(self.changed_object)[:200]
 
         return super().save(*args, **kwargs)
 

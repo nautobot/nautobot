@@ -1,1 +1,1 @@
-`ObjectChange.change_context_detail` extended from 100 to 200 chars
+Increased size of `ObjectChange.change_context_detail` field from 100 to 400 chars, and add truncation to it. Also adding truncation to `ObjectChange.object_repr`.

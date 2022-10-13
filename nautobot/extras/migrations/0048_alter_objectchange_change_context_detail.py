@@ -13,6 +13,6 @@ class Migration(migrations.Migration):
         migrations.AlterField(
             model_name="objectchange",
             name="change_context_detail",
-            field=models.CharField(blank=True, editable=False, max_length=200),
+            field=models.CharField(blank=True, editable=False, max_length=400),
         ),
     ]
