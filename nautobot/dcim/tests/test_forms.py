@@ -30,14 +30,24 @@ class DeviceTestCase(TestCase):
 
         cls.site = Site.objects.create(name="Site 1", slug="site-1")
         cls.rack = Rack.objects.create(name="Rack 1", site=cls.site)
-        cls.device_type = DeviceType.objects.filter(u_height=1).first()
+
+        # Platforms that have a manufacturer.
+        mfr_platforms = Platform.objects.filter(manufacturer__isnull=False)
+
+        # Get a DeviceType that has a manufacturer in line with one of the platforms.
+        cls.device_type = DeviceType.objects.filter(
+            manufacturer__in=mfr_platforms.values("manufacturer"),
+            u_height=1,
+            is_full_depth=True,
+        ).first()
         cls.platform = Platform.objects.filter(manufacturer=cls.device_type.manufacturer).first()
         cls.manufacturer = cls.device_type.manufacturer
-        device_role = DeviceRole.objects.create(name="Device Role 1", slug="device-role-1", color="ff0000")
+        cls.device_role = DeviceRole.objects.first()
+
         Device.objects.create(
             name="Device 1",
             device_type=cls.device_type,
-            device_role=device_role,
+            device_role=cls.device_role,
             site=cls.site,
             rack=cls.rack,
             position=1,
@@ -51,7 +61,7 @@ class DeviceTestCase(TestCase):
         form = DeviceForm(
             data={
                 "name": "New Device",
-                "device_role": DeviceRole.objects.first().pk,
+                "device_role": self.device_role.pk,
                 "tenant": None,
                 "manufacturer": self.manufacturer.pk,
                 "device_type": self.device_type.pk,
@@ -70,7 +80,7 @@ class DeviceTestCase(TestCase):
         form = DeviceForm(
             data={
                 "name": "test",
-                "device_role": DeviceRole.objects.first().pk,
+                "device_role": self.device_role.pk,
                 "tenant": None,
                 "manufacturer": self.manufacturer.pk,
                 "device_type": self.device_type.pk,
@@ -89,7 +99,7 @@ class DeviceTestCase(TestCase):
         form = DeviceForm(
             data={
                 "name": "New Device",
-                "device_role": DeviceRole.objects.first().pk,
+                "device_role": self.device_role.pk,
                 "tenant": None,
                 "manufacturer": self.manufacturer.pk,
                 "device_type": self.device_type.pk,
@@ -109,7 +119,7 @@ class DeviceTestCase(TestCase):
         form = DeviceForm(
             data={
                 "name": "New Device",
-                "device_role": DeviceRole.objects.first().pk,
+                "device_role": self.device_role.pk,
                 "tenant": None,
                 "manufacturer": self.manufacturer.pk,
                 "device_type": self.device_type.pk,
@@ -127,7 +137,7 @@ class DeviceTestCase(TestCase):
         form = DeviceForm(
             data={
                 "name": "New Device",
-                "device_role": DeviceRole.objects.first().pk,
+                "device_role": self.device_role.pk,
                 "tenant": None,
                 "manufacturer": self.manufacturer.pk,
                 "device_type": self.device_type.pk,
@@ -147,7 +157,7 @@ class LabelTestCase(TestCase):
     def setUpTestData(cls):
         site = Site.objects.create(name="Site 2", slug="site-2")
         device_type = DeviceType.objects.first()
-        device_role = DeviceRole.objects.create(name="Device Role 2", slug="device-role-2", color="ffff00")
+        device_role = DeviceRole.objects.first()
         cls.device = Device.objects.create(
             name="Device 2",
             device_type=device_type,
@@ -188,7 +198,7 @@ class TestCableCSVForm(TestCase):
     def setUpTestData(cls):
         site = Site.objects.create(name="Site 2", slug="site-2")
         device_type = DeviceType.objects.first()
-        device_role = DeviceRole.objects.create(name="Device Role 1", slug="device-role-1", color="ffff00")
+        device_role = DeviceRole.objects.first()
         cls.device_1 = Device.objects.create(
             name="Device 1",
             device_type=device_type,
@@ -243,7 +253,7 @@ class TestInterfaceCSVForm(TestCase):
     def setUpTestData(cls):
         site = Site.objects.create(name="Site 1", slug="site-1")
         device_type = DeviceType.objects.first()
-        device_role = DeviceRole.objects.create(name="Device Role 1", slug="device-role-1")
+        device_role = DeviceRole.objects.first()
 
         cls.devices = (
             Device.objects.create(
