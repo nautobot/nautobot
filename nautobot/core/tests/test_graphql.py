@@ -1254,15 +1254,24 @@ query {
             ('region: "region1"', 1),
             ('region: ["region1"]', 1),
             ('region: ["region1", "region2"]', 2),
-            ("asn: 65000", 2),
-            ("asn: [65099]", 1),
-            ("asn: [65000, 65099]", 3),
+            ("asn: 65000", Site.objects.filter(asn__in=["65000"]).count()),
+            ("asn: [65099]", Site.objects.filter(asn__in=["65099"]).count()),
+            ("asn: [65000, 65099]", Site.objects.filter(asn__in=["65000", "65099"]).count()),
             (f'id: "{self.site1.pk}"', 1),
             (f'id: ["{self.site1.pk}"]', 1),
             (f'id: ["{self.site1.pk}", "{self.site2.pk}"]', 2),
-            (f'status: "{self.site_statuses[0].slug}"', 1),
-            (f'status: ["{self.site_statuses[1].slug}"]', 1),
-            (f'status: ["{self.site_statuses[0].slug}", "{self.site_statuses[1].slug}"]', 2),
+            (
+                f'status: "{self.site_statuses[0].slug}"',
+                Site.objects.filter(status__slug__in=[self.site_statuses[0].slug]).count(),
+            ),
+            (
+                f'status: ["{self.site_statuses[1].slug}"]',
+                Site.objects.filter(status__slug__in=[self.site_statuses[1].slug]).count(),
+            ),
+            (
+                f'status: ["{self.site_statuses[0].slug}", "{self.site_statuses[1].slug}"]',
+                Site.objects.filter(status__slug__in=[self.site_statuses[0].slug, self.site_statuses[1].slug]).count(),
+            ),
         )
 
         for filterv, nbr_expected_results in filters:

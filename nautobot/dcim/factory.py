@@ -23,7 +23,7 @@ class RegionFactory(DjangoModelFactory):
         )
 
     has_parent = factory.Faker("pybool")
-    parent = factory.Maybe("has_parent", random_instance(Region, allow_null=False), None)
+    parent = factory.Maybe("has_parent", random_instance(Region), None)
     name = factory.Maybe("has_parent", UniqueFaker("city"), UniqueFaker("country"))
 
     has_description = factory.Faker("pybool")
@@ -54,10 +54,10 @@ class SiteFactory(DjangoModelFactory):
     asn = factory.Maybe("has_asn", factory.Sequence(lambda n: 65000 + n), None)
 
     has_region = factory.Faker("pybool")
-    region = factory.Maybe("has_region", random_instance(Region, allow_null=False), None)
+    region = factory.Maybe("has_region", random_instance(Region), None)
 
     has_tenant = factory.Faker("pybool")
-    tenant = factory.Maybe("has_tenant", random_instance(Tenant, allow_null=False), None)
+    tenant = factory.Maybe("has_tenant", random_instance(Tenant), None)
 
     has_time_zone = factory.Faker("pybool")
     time_zone = factory.Maybe("has_time_zone", pytz.timezone("US/Eastern"))
@@ -179,7 +179,7 @@ class LocationFactory(DjangoModelFactory):
     site = factory.Maybe("has_site", random_instance(Site, allow_null=False), None)
 
     has_tenant = factory.Faker("pybool")
-    tenant = factory.Maybe("has_tenant", random_instance(Tenant, allow_null=False), None)
+    tenant = factory.Maybe("has_tenant", random_instance(Tenant), None)
 
     has_description = factory.Faker("pybool")
     description = factory.Maybe("has_description", factory.Faker("text", max_nb_chars=200), "")

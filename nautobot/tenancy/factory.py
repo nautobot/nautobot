@@ -19,7 +19,7 @@ class TenantGroupFactory(OrganizationalModelFactory):
     description = factory.Maybe("has_description", factory.Faker("text", max_nb_chars=200), "")
 
     has_parent = factory.Faker("pybool")
-    parent = factory.Maybe("has_parent", random_instance(TenantGroup, allow_null=False), None)
+    parent = factory.Maybe("has_parent", random_instance(TenantGroup), None)
 
 
 class TenantFactory(PrimaryModelFactory):
@@ -40,4 +40,4 @@ class TenantFactory(PrimaryModelFactory):
     description = factory.Maybe("has_description", factory.Faker("text", max_nb_chars=200), "")
 
     has_group = factory.Faker("pybool")
-    group = factory.Maybe("has_group", random_instance(TenantGroup, allow_null=False), None)
+    group = factory.Maybe("has_group", random_instance(TenantGroup), None)

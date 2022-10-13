@@ -732,13 +732,13 @@ class RegionTestCase(FilterTestCases.NameSlugFilterTestCase):
             params = {"has_sites": True}
             self.assertEqual(
                 self.filterset(params, self.queryset).qs.count(),
-                self.queryset.filter(sites__isnull=False).count(),
+                self.queryset.filter(sites__isnull=False).distinct().count(),
             )
         with self.subTest():
             params = {"has_sites": False}
             self.assertEqual(
                 self.filterset(params, self.queryset).qs.count(),
-                self.queryset.filter(sites__isnull=True).count(),
+                self.queryset.filter(sites__isnull=True).distinct().count(),
             )
 
 
