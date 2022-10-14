@@ -289,7 +289,7 @@ class LocationTypeFilterSet(NautobotFilterSet, NameSlugSearchFilterSet):
 
     class Meta:
         model = LocationType
-        fields = ["id", "name", "slug", "description"]
+        fields = ["id", "name", "slug", "description", "nestable"]
 
 
 class LocationFilterSet(NautobotFilterSet, StatusModelFilterSetMixin, TenancyFilterSet):
@@ -308,7 +308,7 @@ class LocationFilterSet(NautobotFilterSet, StatusModelFilterSetMixin, TenancyFil
         label="Parent location (slug or ID)",
     )
     child_location_type = NaturalKeyOrPKMultipleChoiceFilter(
-        field_name="location_type__children",
+        method="_child_location_type",
         queryset=LocationType.objects.all(),
         label="Child location type (slug or ID)",
     )
@@ -325,6 +325,16 @@ class LocationFilterSet(NautobotFilterSet, StatusModelFilterSetMixin, TenancyFil
     class Meta:
         model = Location
         fields = ["id", "name", "slug", "description"]
+
+    def generate_query__child_location_type(self, value):
+        if value:
+            # Locations whose location type is a parent of value, or whose location type *is* value but can be nested
+            return Q(location_type__children__in=value) | Q(location_type__in=value, location_type__nestable=True)
+        return Q()
+
+    def _child_location_type(self, queryset, name, value):
+        params = self.generate_query__child_location_type(value)
+        return queryset.filter(params)
 
 
 class RackGroupFilterSet(NautobotFilterSet, LocatableModelFilterSetMixin, NameSlugSearchFilterSet):
