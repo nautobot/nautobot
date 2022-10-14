@@ -16,7 +16,6 @@ from distutils.util import strtobool
 import os
 import re
 
-from django.core.exceptions import ImproperlyConfigured
 from invoke import Collection, task as invoke_task
 from invoke.exceptions import Exit
 
@@ -640,12 +639,7 @@ def unittest(
         for individual_exclude_tag in exclude_tag:
             command += f" --tag {individual_exclude_tag}"
 
-    try:
-        run_command(context, command)
-    except Exception:
-        raise ImproperlyConfigured(
-            "Please set TEST_GENERATE_PERFORMANCE_REPORT to True in settings.py before using this command"
-        )
+    run_command(context, command)
 
 
 @task

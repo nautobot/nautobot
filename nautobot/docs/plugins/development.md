@@ -1359,7 +1359,8 @@ The [`TEST_USE_FACTORIES`](../configuration/optional-settings.md#test_use_factor
 
 ### Running Performance Tests
 
-The [`TEST_GENERATE_PERFORMANCE_REPORT`](../configuration/optional-settings.md#test_generate_performance_report) setting defaults to `False` when testing plugins, primarily for backwards-compatibility reasons. However, it is a very intuitive way to track the performance baselines of your own tests for your plugins (all you have to do is tag your tests with `performance`) and do `invoke performance-test` to get the time to run your tests.
+You need to install `django-slowtests` as a part of your plugin dev dependency to run performance tests. It has a very intuitive way to measure the performance of your own tests for your plugins (all you have to do is tag your tests with `performance`) and do `invoke performance-test` to get the time to run your tests.
+Checkout [Performance Test](../development/testing.md##performance_tests) for more detail.
 
 ```python
 @tag("performance")
@@ -1393,4 +1394,4 @@ tests:
     execution_time: 2.727531
 ```
 
-We recommend adding [`django-slowtests`](https://pypi.org/project/django-slowtests/) to your plugin's development dependencies and settings `TEST_GENERATE_PERFORMANCE_REPORT = True` in your plugin's development/test `nautobot_config.py` to leverage this functionality to build better performing plugins.
+We recommend adding [`django-slowtests`](https://pypi.org/project/django-slowtests/) to your plugin's development dependencies to leverage this functionality to build better performing plugins.

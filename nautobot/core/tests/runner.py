@@ -1,3 +1,5 @@
+import yaml
+
 from django.core.management import call_command
 from django.conf import settings
 from django.test.runner import DiscoverRunner
@@ -54,15 +56,10 @@ class NautobotTestRunner(DiscoverRunner):
 
 
 # Use django_slowtests only when GENERATE_PERFORMANCE_REPORT flag is set to true
-if settings.TEST_GENERATE_PERFORMANCE_REPORT:
-    import yaml
+try:
+    from django_slowtests.testrunner import DiscoverSlowestTestsRunner
 
-    try:
-        from django_slowtests.testrunner import DiscoverSlowestTestsRunner
-
-        print("Using NautobotPerformanceTestRunner to run tests ...")
-    except ImportError:
-        print("Unable to use NautobotPerformanceTestRunner to run tests. Is the 'django_slowtests' package installed?")
+    print("Using NautobotPerformanceTestRunner to run tests ...")
 
     class NautobotPerformanceTestRunner(NautobotTestRunner, DiscoverSlowestTestsRunner):
         """
@@ -181,3 +178,8 @@ if settings.TEST_GENERATE_PERFORMANCE_REPORT:
 
             self.generate_report(test_results, result)
             return return_value
+
+except ImportError:
+    print(
+        "Unable to import DiscoverSlowestTestsRunner from `django_slowtests`. Is the 'django_slowtests' package installed?"
+    )

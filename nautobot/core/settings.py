@@ -126,12 +126,10 @@ TEST_FACTORY_SEED = os.getenv("NAUTOBOT_TEST_FACTORY_SEED", None)
 # django-slowtests
 #
 
-# django-slowtests setting and it is set so that only adding `--report` at the end of the `invoke` command
-# will output the performance test results. e.g. `invoke unittest --report`.
+# Performance test uses `NautobotPerformanceTestRunner` to run, which is only available once you have `django-slowtests` installed in your dev environment.
+# `invoke performance-test` and adding `--performance-report` or `--performance-snapshot` at the end of the `invoke` command
+# will automatically opt to NautobotPerformanceTestRunner to run the tests.
 
-# Disable the generation of performance report in terminal by default so as not to cause issues for plugins.
-# The nautobot_config.py that Nautobot core uses for its own tests will override this to True.
-TEST_GENERATE_PERFORMANCE_REPORT = is_truthy(os.getenv("NAUTOBOT_TEST_GENERATE_PERFORMANCE_REPORT", "False"))
 # The baseline file that the performance test is running against
 # TODO we need to replace the baselines in this file with more consistent results at least for CI
 TEST_PERFORMANCE_BASELINE_FILE = os.getenv(
