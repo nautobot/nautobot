@@ -1360,7 +1360,7 @@ The [`TEST_USE_FACTORIES`](../configuration/optional-settings.md#test_use_factor
 ### Running Performance Tests
 
 You need to install `django-slowtests` as a part of your plugin dev dependency to run performance tests. It has a very intuitive way to measure the performance of your own tests for your plugins (all you have to do is tag your tests with `performance`) and do `invoke performance-test` to get the time to run your tests.
-Checkout [Performance Test](../development/testing.md##performance_tests) for more detail.
+Checkout [Performance Test](../development/testing.md#performance-tests) for more detail.
 
 ```python
 @tag("performance")

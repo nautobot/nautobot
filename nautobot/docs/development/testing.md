@@ -87,7 +87,7 @@ Performance baseline for test_bulk_delete_objects (nautobot.circuits.tests.test_
 Performance baseline for test_bulk_delete_objects (nautobot.circuits.tests.test_api.ProviderNetworkTest) is not available. Test took 0.0875s to run
 ...
 ```
-
+!!! info
     If performance baselines for tests are available and the time it take to run tests are siginificantly slower than baselines:
 
 ```no-highlight
@@ -105,7 +105,7 @@ Performance baseline for test_bulk_delete_objects (nautobot.circuits.tests.test_
 !!! info
     To output the performance evaluation to a file for later use, i.e. as performance baselines for future test runs, do `invoke performance-test --performance-snapshot`. This command will collect the `name` of the test and their `execution_time` and store them in a .yml file default to `report.yml`. Subsequently, the data in that file will have to be manually added to the baseline file set at [`TEST_PERFORMANCE_BASELINE_FILE`](../configuration/optional-settings.md#test_performance_baseline_file) to be used as baselines in performance tests.
 
-    Example output of `invoke performance-test --performance-snapshot`:
+Example output of `invoke performance-test --performance-snapshot`:
 
 ```yaml
 - tests:
