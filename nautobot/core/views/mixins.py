@@ -111,7 +111,8 @@ class NautobotViewSetMixin(GenericViewSet, AccessMixin, GetReturnURLMixin, FormV
         for permission in permission_required:
             # If the user does not have the permission required, we raise DRF's `NotAuthenticated` or `PermissionDenied` exception
             # which will be handled by self.handle_no_permission() in the UI appropriately in the dispatch() method
-            if not user.has_perms(permission):
+            # Cast permission to a list since has_perms() takes a list type parameter.
+            if not user.has_perms([permission]):
                 self.permission_denied(
                     request,
                     message=getattr(permission, "message", None),
