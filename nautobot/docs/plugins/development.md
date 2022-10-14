@@ -1360,7 +1360,7 @@ The [`TEST_USE_FACTORIES`](../configuration/optional-settings.md#test_use_factor
 ### Running Performance Tests
 
 You need to install `django-slowtests` as a part of your plugin dev dependency to run performance tests. It has a very intuitive way to measure the performance of your own tests for your plugins (all you have to do is tag your tests with `performance`) and do `invoke performance-test` to get the time to run your tests.
-Checkout [Performance Test](../development/testing.md#performance-tests) for more detail.
+Checkout [Performance Tests](../development/testing.md#performance-tests) for more detail.
 
 ```python
 @tag("performance")
@@ -1371,7 +1371,7 @@ def test_your_plugin(self)
 
 ### Gathering Performance Test Baseline Data
 
-If you want to add baselines for your own test to `nautobot/core/tests/performance_baselines.yml` or have your own baseline yaml file for performance testing, specify a different file path for  `TEST_PERFORMANCE_BASELINE_FILE` in plugin's development/test `nautobot_config.py`, and store the output of `invoke performance-test --performance-snapshot` in that file. `--performance-snapshot` flag will store the results of your performance test to `report.yml` and all you need to do is copy/paste the result to the file set by `TEST_PERFORMANCE_BASELINE_FILE`. Now you have baselines for your own tests!
+If you want to add baselines for your own test to `nautobot/core/tests/performance_baselines.yml` or have your own baseline yaml file for performance testing, specify a different file path for  `TEST_PERFORMANCE_BASELINE_FILE` in plugin's development/test `nautobot_config.py`, and store the output of `invoke performance-test --performance-snapshot` command in that file. `--performance-snapshot` flag will store the results of your performance test to `report.yml` and all you need to do is copy/paste the result to the file set by `TEST_PERFORMANCE_BASELINE_FILE`. Now you have baselines for your own tests!
 Example output of `invoke performance-test --performance-snapshot`:
 
 ```yaml
