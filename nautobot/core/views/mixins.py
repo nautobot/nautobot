@@ -19,7 +19,7 @@ from django.utils.html import escape
 from django.utils.safestring import mark_safe
 from django.views.generic.edit import FormView
 
-from rest_framework import mixins
+from rest_framework import mixins, exceptions
 from rest_framework.response import Response
 from rest_framework.viewsets import GenericViewSet
 
@@ -122,13 +122,16 @@ class NautobotViewSetMixin(GenericViewSet, AccessMixin, GetReturnURLMixin, FormV
         Used to determine whether the user has permissions to a view and object-level permissions.
         Using AccessMixin handle_no_permission() to deal with Object-Level permissions and API-Level permissions in one pass.
         """
-        # initialize_request also instantiates self.action which is needed for permission checks.
-        self.initialize_request(request, *args, **kwargs)
+        # self.initialize_request() convert a WSGI request and return an API request object which can be passed into self.check_permissions()
+        # If the user is not authenticated or does not have the permission to perform certain actions,
+        # DRF NotAuthenticated or PermissionDenied exceptions can be properly raised and handled by self.handle_no_permission() in the UI.
+        # initialize_request() also instantiates self.action which is needed for permission checks.
+        api_request = self.initialize_request(request, *args, **kwargs)
         try:
-            self.check_permissions(request)
+            self.check_permissions(api_request)
         # check_permissions() could raise NotAuthenticated and PermissionDenied Error.
         # We handle them by a single except statement since handle_no_permission() is able to handle both errors
-        except Exception:
+        except (exceptions.NotAuthenticated, exceptions.PermissionDenied):
             return self.handle_no_permission()
 
         return super().dispatch(request, *args, **kwargs)
