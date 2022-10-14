@@ -122,9 +122,9 @@ class NautobotViewSetMixin(GenericViewSet, AccessMixin, GetReturnURLMixin, FormV
         Used to determine whether the user has permissions to a view and object-level permissions.
         Using AccessMixin handle_no_permission() to deal with Object-Level permissions and API-Level permissions in one pass.
         """
-        # self.initialize_request() convert a WSGI request and return an API request object which can be passed into self.check_permissions()
+        # self.initialize_request() converts a WSGI request and returns an API request object which can be passed into self.check_permissions()
         # If the user is not authenticated or does not have the permission to perform certain actions,
-        # DRF NotAuthenticated or PermissionDenied exceptions can be properly raised and handled by self.handle_no_permission() in the UI.
+        # DRF NotAuthenticated or PermissionDenied exception can be raised appropriately and handled by self.handle_no_permission() in the UI.
         # initialize_request() also instantiates self.action which is needed for permission checks.
         api_request = self.initialize_request(request, *args, **kwargs)
         try:
