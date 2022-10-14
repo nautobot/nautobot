@@ -253,8 +253,7 @@ class NaturalKeyOrPKMultipleChoiceFilterTest(TestCase):
         kwargs = {"power_panels__n": ["test-power-panel1", "test-power-panel2"]}
         qs = self.SiteFilterSet(kwargs, self.queryset).qs
         expected_result = list(
-            Site.objects.filter(powerpanel__isnull=True)
-            | Site.objects.exclude(powerpanel__name="test-power-panel1").exclude(powerpanel__name="test-power-panel2")
+            Site.objects.exclude(powerpanel__name="test-power-panel1").exclude(powerpanel__name="test-power-panel2")
         )
 
         self.assertCountEqual(list(qs), expected_result)
@@ -263,9 +262,7 @@ class NaturalKeyOrPKMultipleChoiceFilterTest(TestCase):
 
         kwargs = {"power_panels__n": ["test-power-panel3"]}
         qs = self.SiteFilterSet(kwargs, self.queryset).qs
-        expected_result = list(
-            Site.objects.filter(powerpanel__isnull=True) | Site.objects.exclude(powerpanel__name="test-power-panel3")
-        )
+        expected_result = list(Site.objects.exclude(powerpanel__name="test-power-panel3"))
 
         self.assertCountEqual(list(qs), expected_result)
 
