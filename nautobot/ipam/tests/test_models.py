@@ -562,7 +562,7 @@ class VLANTestCase(TestCase):
         self.assertIn(f'VLANs may not associate to locations of type "{location_type.name}"', str(cm.exception))
 
         location_type.content_types.add(ContentType.objects.get_for_model(VLAN))
-        site_2 = Site.objects.last()
+        site_2 = Site.objects.exclude(pk=location.site.pk).first()
         vlan.site = site_2
         with self.assertRaises(ValidationError) as cm:
             vlan.validated_save()
