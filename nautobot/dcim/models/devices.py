@@ -11,7 +11,7 @@ from django.db.models import F, ProtectedError, Q
 from django.urls import reverse
 from django.utils.safestring import mark_safe
 
-from nautobot.dcim.choices import DeviceFaceChoices, SubdeviceRoleChoices, RedundancyGroupFailoverStrategyChoices
+from nautobot.dcim.choices import DeviceFaceChoices, RedundancyGroupFailoverStrategyChoices, SubdeviceRoleChoices
 
 from nautobot.extras.models import ConfigContextModel, StatusModel
 from nautobot.extras.querysets import ConfigContextModelQuerySet
@@ -546,7 +546,7 @@ class Device(PrimaryModel, ConfigContextModel, StatusModel):
         null=True,
     )
     redundancy_group = models.ForeignKey(
-        to="RedundancyGroup",
+        to="dcim.RedundancyGroup",
         on_delete=models.SET_NULL,
         related_name="members",
         blank=True,

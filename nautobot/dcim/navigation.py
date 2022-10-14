@@ -309,7 +309,7 @@ menu_items = (
                     ),
                     NavMenuItem(
                         link="dcim:redundancygroup_list",
-                        name="Redundancy Group",
+                        name="Redundancy Groups",
                         weight=500,
                         permissions=[
                             "dcim.view_redundancygroup",
