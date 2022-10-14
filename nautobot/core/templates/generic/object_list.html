@@ -5,19 +5,17 @@
 
 {% block header %}
     <div class="row noprint">
-        {% with list_url=content_type.model_class|validated_viewname:"list" %}
         <div class="col-sm-8 col-md-9">
             <ol class="breadcrumb">
             {% block breadcrumbs %}
                 {% if list_url %}
-                <li><a href="{% url list_url %}">
-                    {{ content_type.model_class|meta:'verbose_name_plural'|bettertitle }}
-                </a></li>
+                <li><a href="{% url list_url %}">{{ title }}</a></li>
                 {% endif %}
                 {% block extra_breadcrumbs %}{% endblock extra_breadcrumbs %}
             {% endblock breadcrumbs %}
             </ol>
         </div>
+        {% if search_form %}
         <div class="col-sm-4 col-md-3">
             <form action="#" method="get" id="search-form">
                 <div class="input-group">
@@ -30,7 +28,7 @@
                 </div>
             </form>
         </div>
-        {% endwith %}
+        {% endif %}
     </div>
 {% endblock header %}
 
@@ -54,7 +52,7 @@
         {% export_button content_type %}
     {% endif %}
 </div>
-<h1>{% block title %}{{ content_type.model_class|meta:"verbose_name_plural"|bettertitle }}{% endblock %}</h1>
+<h1>{% block title %}{{ title }}{% endblock %}</h1>
 {% if filter_params %}
 <div class="filters-applied">
     <b>Filters:</b>

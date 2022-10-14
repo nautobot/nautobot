@@ -332,6 +332,8 @@ class ObjectListView(ObjectPermissionRequiredMixin, View):
             "filter_params": display_filter_params,
             "filter_form": self.dynamic_filter_form,
             "search_form": search_form,
+            "list_url": validated_viewname(model, "list"),
+            "title": bettertitle(model._meta.verbose_name_plural),
         }
         context.update(self.extra_context())
 

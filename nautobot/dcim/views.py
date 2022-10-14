@@ -11,6 +11,7 @@ from django.forms import (
     modelformset_factory,
 )
 from django.shortcuts import get_object_or_404, redirect, render
+from django.urls import reverse
 from django.utils.html import escape
 from django.utils.safestring import mark_safe
 from django.views.generic import View
@@ -2762,7 +2763,7 @@ class ConsoleConnectionsListView(ConnectionsListView):
     filterset = filters.ConsoleConnectionFilterSet
     filterset_form = forms.ConsoleConnectionFilterForm
     table = tables.ConsoleConnectionTable
-    template_name = "dcim/connections_list.html"
+    action_buttons = ("export", )
 
     def queryset_to_csv(self):
         csv_data = [
@@ -2774,7 +2775,11 @@ class ConsoleConnectionsListView(ConnectionsListView):
         return "\n".join(csv_data)
 
     def extra_context(self):
-        return {"title": "Console Connections"}
+        return {
+            "title": "Console Connections",
+            "list_url": "dcim:console_connections_list",
+            "search_form": None,  # ConsoleConnectionFilterSet do not support q filter
+        }
 
 
 class PowerConnectionsListView(ConnectionsListView):
@@ -2782,7 +2787,7 @@ class PowerConnectionsListView(ConnectionsListView):
     filterset = filters.PowerConnectionFilterSet
     filterset_form = forms.PowerConnectionFilterForm
     table = tables.PowerConnectionTable
-    template_name = "dcim/connections_list.html"
+    action_buttons = ("export",)
 
     def queryset_to_csv(self):
         csv_data = [
@@ -2794,7 +2799,11 @@ class PowerConnectionsListView(ConnectionsListView):
         return "\n".join(csv_data)
 
     def extra_context(self):
-        return {"title": "Power Connections"}
+        return {
+            "title": "Power Connections",
+            "list_url": "dcim:power_connections_list",
+            "search_form": None,  # PowerConnectionFilterSet do not support q filter
+        }
 
 
 class InterfaceConnectionsListView(ConnectionsListView):
@@ -2802,7 +2811,7 @@ class InterfaceConnectionsListView(ConnectionsListView):
     filterset = filters.InterfaceConnectionFilterSet
     filterset_form = forms.InterfaceConnectionFilterForm
     table = tables.InterfaceConnectionTable
-    template_name = "dcim/connections_list.html"
+    action_buttons = ("export",)
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -2839,7 +2848,11 @@ class InterfaceConnectionsListView(ConnectionsListView):
         return "\n".join(csv_data)
 
     def extra_context(self):
-        return {"title": "Interface Connections"}
+        return {
+            "title": "Interface Connections",
+            "list_url": "dcim:interface_connections_list",
+            "search_form": None,  # InterfaceConnectionFilterSet do not support q filter
+        }
 
 
 #
