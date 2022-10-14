@@ -109,7 +109,9 @@ class NautobotViewSetMixin(GenericViewSet, AccessMixin, GetReturnURLMixin, FormV
         # Check that the user has been granted the required permission(s) one by one.
         # In case the permission has `message` or `code`` attribute, we want to include those information in the permission_denied error.
         for permission in permission_required:
-            if not user.has_perms(permission_required):
+            # If the user does not have the permission required, we raise DRF's `NotAuthenticated` or `PermissionDenied` exception
+            # which will be handled by self.handle_no_permission() in the UI appropriately in the dispatch() method
+            if not user.has_perms(permission):
                 self.permission_denied(
                     request,
                     message=getattr(permission, "message", None),
@@ -130,7 +132,7 @@ class NautobotViewSetMixin(GenericViewSet, AccessMixin, GetReturnURLMixin, FormV
         try:
             self.check_permissions(api_request)
         # check_permissions() could raise NotAuthenticated and PermissionDenied Error.
-        # We handle them by a single except statement since handle_no_permission() is able to handle both errors
+        # We handle them by a single except statement since self.handle_no_permission() is able to handle both errors
         except (exceptions.NotAuthenticated, exceptions.PermissionDenied):
             return self.handle_no_permission()
 
