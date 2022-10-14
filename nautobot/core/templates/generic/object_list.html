@@ -3,20 +3,6 @@
 {% load helpers %}
 {% load static %}
 
-
-{% block extra_styles %}
-<style>
-    .btn-filter-value {
-        background: #cfcfcf;
-        margin-right: 5px;
-    }
-    .filters-applied>.btn {
-        margin-right: 5px;
-        margin-bottom: 5px;
-    }
-</style>
-{% endblock extra_styles %}
-
 {% block header %}
     <div class="row noprint">
         {% with list_url=content_type.model_class|validated_viewname:"list" %}
