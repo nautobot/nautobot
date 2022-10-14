@@ -573,7 +573,7 @@ class VLANTest(APIViewTestCases.APIViewTestCase):
                 "group": vlan_groups[0].pk,
                 "status": "active",
                 "site": vlan_groups[0].site.pk,
-                "location": Location.objects.filter(site=vlan_groups[0].site.pk).first().pk,
+                "location": vlan_groups[0].location.pk,
             },
             {
                 "vid": 5,
@@ -581,7 +581,7 @@ class VLANTest(APIViewTestCases.APIViewTestCase):
                 "group": vlan_groups[0].pk,
                 "status": "active",
                 "site": vlan_groups[0].site.pk,
-                "location": Location.objects.filter(site=vlan_groups[0].site.pk).first().pk,
+                "location": vlan_groups[0].location.pk,
             },
             {
                 "vid": 6,
@@ -589,7 +589,7 @@ class VLANTest(APIViewTestCases.APIViewTestCase):
                 "group": vlan_groups[0].pk,
                 "status": "active",
                 "site": vlan_groups[0].site.pk,
-                "location": Location.objects.filter(site=vlan_groups[0].site.pk).first().pk,
+                "location": vlan_groups[0].location.pk,
             },
         ]
 
