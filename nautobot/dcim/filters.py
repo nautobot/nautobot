@@ -71,6 +71,7 @@ from .models import (
     RackRole,
     RearPort,
     RearPortTemplate,
+    RedundancyGroup,
     Region,
     Site,
     VirtualChassis,
@@ -114,6 +115,7 @@ __all__ = (
     "RackRoleFilterSet",
     "RearPortFilterSet",
     "RearPortTemplateFilterSet",
+    "RedundancyGroupFilterSet",
     "RegionFilterSet",
     "SiteFilterSet",
     "VirtualChassisFilterSet",
@@ -979,6 +981,12 @@ class DeviceFilterSet(
         field_name="virtual_chassis",
         label="Is a virtual chassis member",
     )
+    redundancy_group = NaturalKeyOrPKMultipleChoiceFilter(
+        field_name="redundancy_group",
+        to_field_name="name",
+        queryset=RedundancyGroup.objects.all(),
+        label="Power outlets (name or ID)",
+    )
     virtual_chassis_member = is_virtual_chassis_member
     has_console_ports = RelatedMembershipBooleanFilter(
         field_name="consoleports",
@@ -1721,4 +1729,20 @@ class PowerFeedFilterSet(
             "max_utilization",
             "comments",
             "available_power",
+        ]
+
+
+class RedundancyGroupFilterSet(NautobotFilterSet, StatusModelFilterSetMixin):
+    q = SearchFilter(filter_predicates={"name": "icontains", "comments": "icontains"})
+    tag = TagFilter()
+
+    class Meta:
+        model = RedundancyGroup
+        fields = [
+            "id",
+            "name",
+            "status",
+            "failover_strategy",
+            "secrets_group",
+            "comments",
         ]

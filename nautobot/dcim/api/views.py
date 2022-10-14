@@ -52,6 +52,7 @@ from nautobot.dcim.models import (
     RackRole,
     RearPort,
     RearPortTemplate,
+    RedundancyGroup,
     Region,
     Site,
     VirtualChassis,
@@ -818,6 +819,18 @@ class PowerFeedViewSet(PathEndpointMixin, StatusViewSetMixin, NautobotModelViewS
     )
     serializer_class = serializers.PowerFeedSerializer
     filterset_class = filters.PowerFeedFilterSet
+
+
+#
+# Redundancy Groups
+#
+
+
+class RedundancyGroupViewSet(StatusViewSetMixin, NautobotModelViewSet):
+    # v2 TODO(jathan): Replace prefetch_related with select_related
+    queryset = RedundancyGroup.objects.prefetch_related("status")
+    serializer_class = serializers.RedundancyGroupSerializer
+    filterset_class = filters.RedundancyGroupFilterSet
 
 
 #

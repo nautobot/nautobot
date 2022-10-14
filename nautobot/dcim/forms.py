@@ -81,6 +81,7 @@ from .choices import (
     RackDimensionUnitChoices,
     RackTypeChoices,
     RackWidthChoices,
+    RedundancyGroupFailoverStrategyChoices,
     SubdeviceRoleChoices,
 )
 from .constants import (
@@ -124,6 +125,7 @@ from .models import (
     RackRole,
     RearPort,
     RearPortTemplate,
+    RedundancyGroup,
     Region,
     Site,
     VirtualChassis,
@@ -1802,6 +1804,7 @@ class DeviceForm(LocatableModelFormMixin, NautobotModelForm, TenancyForm, LocalC
             "group_id": "$rack_group",
         },
     )
+    redundancy_group = DynamicModelChoiceField(queryset=RedundancyGroup.objects.all(), required=False)
     position = forms.IntegerField(
         required=False,
         help_text="The lowest-numbered unit occupied by the device",
@@ -1853,6 +1856,8 @@ class DeviceForm(LocatableModelFormMixin, NautobotModelForm, TenancyForm, LocalC
             "site",
             "location",
             "rack",
+            "redundancy_group",
+            "redundancy_group_priority",
             "position",
             "face",
             "status",
@@ -4445,4 +4450,33 @@ class PowerFeedFilterForm(NautobotFilterForm, StatusModelFilterFormMixin):
     voltage = forms.IntegerField(required=False)
     amperage = forms.IntegerField(required=False)
     max_utilization = forms.IntegerField(required=False)
+    tag = TagFilterField(model)
+
+
+class RedundancyGroupForm(NautobotModelForm):
+    secrets_group = DynamicModelChoiceField(queryset=SecretsGroup.objects.all(), required=False)
+    comments = CommentField()
+
+    class Meta:
+        model = RedundancyGroup
+        fields = [
+            "name",
+            "status",
+            "failover_strategy",
+            "comments",
+            "tags",
+        ]
+        widgets = {"failover_strategy": StaticSelect2()}
+
+
+class RedundancyGroupFilterForm(NautobotFilterForm, StatusModelFilterFormMixin):
+    model = RedundancyGroup
+    field_order = ["q", "name"]
+    q = forms.CharField(required=False, label="Search")
+    failover_strategy = forms.ChoiceField(
+        choices=add_blank_choice(RedundancyGroupFailoverStrategyChoices),
+        required=False,
+        widget=StaticSelect2(),
+    )
+
     tag = TagFilterField(model)

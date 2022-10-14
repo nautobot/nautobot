@@ -30,6 +30,7 @@ from nautobot.dcim.choices import (
     RackElevationDetailRenderChoices,
     RackTypeChoices,
     RackWidthChoices,
+    RedundancyGroupFailoverStrategyChoices,
     SubdeviceRoleChoices,
 )
 from nautobot.dcim.constants import CABLE_TERMINATION_MODELS, RACK_ELEVATION_LEGEND_WIDTH_DEFAULT
@@ -66,6 +67,7 @@ from nautobot.dcim.models import (
     RackRole,
     RearPort,
     RearPortTemplate,
+    RedundancyGroup,
     Region,
     Site,
     VirtualChassis,
@@ -1117,6 +1119,20 @@ class DeviceBaySerializer(NautobotModelSerializer, TaggedObjectSerializer):
             "label",
             "description",
             "installed_device",
+        ]
+
+
+class RedundancyGroupSerializer(NautobotModelSerializer, TaggedObjectSerializer, StatusModelSerializerMixin):
+    url = serializers.HyperlinkedIdentityField(view_name="dcim-api:redundancygroup-detail")
+    failover_strategy = ChoiceField(choices=RedundancyGroupFailoverStrategyChoices)
+
+    class Meta:
+        model = RedundancyGroup
+        fields = [
+            "url",
+            "name",
+            "failover_strategy",
+            "comments",
         ]
 
 

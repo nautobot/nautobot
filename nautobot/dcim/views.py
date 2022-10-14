@@ -18,6 +18,7 @@ from django_tables2 import RequestConfig
 
 from nautobot.circuits.models import Circuit
 from nautobot.core.views import generic
+from nautobot.core.views.viewsets import NautobotUIViewSet
 from nautobot.extras.views import ObjectChangeLogView, ObjectConfigContextView, ObjectDynamicGroupsView
 from nautobot.ipam.models import IPAddress, Prefix, Service, VLAN
 from nautobot.ipam.tables import InterfaceIPAddressTable, InterfaceVLANTable
@@ -28,6 +29,7 @@ from nautobot.utilities.utils import csv_format, count_related
 from nautobot.utilities.views import GetReturnURLMixin, ObjectPermissionRequiredMixin
 from nautobot.virtualization.models import VirtualMachine
 from . import filters, forms, tables
+from .api import serializers
 from .choices import DeviceFaceChoices
 from .constants import NONCONNECTABLE_IFACE_TYPES
 from .models import (
@@ -64,6 +66,7 @@ from .models import (
     RackRole,
     RearPort,
     RearPortTemplate,
+    RedundancyGroup,
     Region,
     Site,
     VirtualChassis,
@@ -3206,3 +3209,25 @@ class PowerFeedBulkDeleteView(generic.BulkDeleteView):
     queryset = PowerFeed.objects.prefetch_related("power_panel", "rack")
     filterset = filters.PowerFeedFilterSet
     table = tables.PowerFeedTable
+
+
+class RedundancyGroupUIViewSet(NautobotUIViewSet):
+    model = RedundancyGroup
+    # bulk_create_form_class = forms.*CSVForm
+    # bulk_update_form_class = forms.*BulkEditForm
+    filterset_class = filters.RedundancyGroupFilterSet
+    filterset_form_class = forms.RedundancyGroupFilterForm
+    form_class = forms.RedundancyGroupForm
+    queryset = RedundancyGroup.objects.prefetch_related("status").annotate(
+        member_count=count_related(Device, "redundancy_group")
+    )
+    serializer_class = serializers.RedundancyGroupSerializer
+    table_class = tables.RedundancyGroupTable
+    lookup_field = "pk"
+
+    def get_extra_context(self, request, instance):
+        members = Device.objects.restrict(request.user).filter(redundancy_group=instance)
+
+        return {
+            "members": members,
+        }

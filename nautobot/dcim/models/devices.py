@@ -11,7 +11,7 @@ from django.db.models import F, ProtectedError, Q
 from django.urls import reverse
 from django.utils.safestring import mark_safe
 
-from nautobot.dcim.choices import DeviceFaceChoices, SubdeviceRoleChoices
+from nautobot.dcim.choices import DeviceFaceChoices, SubdeviceRoleChoices, RedundancyGroupFailoverStrategyChoices
 
 from nautobot.extras.models import ConfigContextModel, StatusModel
 from nautobot.extras.querysets import ConfigContextModelQuerySet
@@ -39,6 +39,7 @@ __all__ = (
     "DeviceType",
     "Manufacturer",
     "Platform",
+    "RedundancyGroup",
     "VirtualChassis",
 )
 
@@ -544,6 +545,20 @@ class Device(PrimaryModel, ConfigContextModel, StatusModel):
         blank=True,
         null=True,
     )
+    redundancy_group = models.ForeignKey(
+        to="RedundancyGroup",
+        on_delete=models.SET_NULL,
+        related_name="members",
+        blank=True,
+        null=True,
+    )
+    redundancy_group_priority = models.PositiveSmallIntegerField(
+        blank=True,
+        null=True,
+        validators=[MinValueValidator(1)],
+        verbose_name="Redundancy Group Priority",
+        help_text="The priority the device has in the redundancy group.",
+    )
     # TODO: Profile filtering on this field if it could benefit from an index
     vc_position = models.PositiveSmallIntegerField(blank=True, null=True, validators=[MaxValueValidator(255)])
     vc_priority = models.PositiveSmallIntegerField(blank=True, null=True, validators=[MaxValueValidator(255)])
@@ -997,4 +1012,70 @@ class VirtualChassis(PrimaryModel):
             self.name,
             self.domain,
             self.master.name if self.master else None,
+        )
+
+
+@extras_features(
+    "custom_fields",
+    "custom_links",
+    "custom_validators",
+    "dynamic_groups",
+    "export_templates",
+    "graphql",
+    "relationships",
+    "statuses",
+    "webhooks",
+)
+class RedundancyGroup(PrimaryModel, ConfigContextModel, StatusModel):
+    """
+    A RedundancyGroup represents a logical grouping of physical hardware for the purposes of indicating redundancy pairs of high-availability.
+    """
+
+    name = models.CharField(max_length=100, unique=True)
+
+    failover_strategy = models.CharField(
+        max_length=50, blank=True, choices=RedundancyGroupFailoverStrategyChoices, verbose_name="Failover strategy"
+    )
+
+    comments = models.TextField(blank=True)
+
+    secrets_group = models.ForeignKey(
+        to="extras.SecretsGroup",
+        on_delete=models.SET_NULL,
+        default=None,
+        blank=True,
+        null=True,
+    )
+
+    objects = ConfigContextModelQuerySet.as_manager()
+
+    csv_headers = [
+        "name",
+        "status",
+        "failover_strategy",
+        "secrets_group",
+        "comments",
+    ]
+    clone_fields = [
+        "status",
+        "failover_strategy",
+        "secrets_group",
+    ]
+
+    class Meta:
+        ordering = ("name",)
+
+    def __str__(self):
+        return self.name
+
+    def get_absolute_url(self):
+        return reverse("dcim:redundancygroup", args=[self.pk])
+
+    def to_csv(self):
+        return (
+            self.name,
+            self.status,
+            self.get_failover_strategy_display(),
+            self.secrets_group.name if self.secrets_group else None,
+            self.comments,
         )

@@ -1,0 +1,22 @@
+{% extends 'generic/object_retrieve.html' %}
+{% load helpers %}
+
+{% block content_right_page %}
+        <div class="panel panel-default">
+            <div class="panel-heading">
+                <strong>Members</strong>
+            </div>
+            <table class="table table-hover panel-body attr-table">
+                <tr>
+                    <th>Device</th>
+                    <th>Priority</th>
+                </tr>
+                {% for member in members %}
+                    <tr>
+                        <td>{{ member|hyperlinked_object }}</td>
+                        <td><span class="badge badge-default">{{ member.redundancy_group_priority|placeholder}}</span></td>
+                    </tr>
+                {% endfor %}
+            </table>
+        </div>
+{% endblock content_right_page %}

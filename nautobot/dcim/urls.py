@@ -1,5 +1,6 @@
 from django.urls import path
 
+from nautobot.core.views.routers import NautobotUIViewSetRouter
 from nautobot.extras.views import ObjectChangeLogView, ObjectDynamicGroupsView, ObjectNotesView, ImageAttachmentEditView
 from nautobot.ipam.views import ServiceEditView
 from . import views
@@ -33,6 +34,10 @@ from .models import (
 )
 
 app_name = "dcim"
+
+router = NautobotUIViewSetRouter()
+router.register("redundancy-groups", views.RedundancyGroupUIViewSet)
+
 urlpatterns = [
     # Regions
     path("regions/", views.RegionListView.as_view(), name="region_list"),
@@ -1630,3 +1635,4 @@ urlpatterns = [
         kwargs={"termination_a_type": PowerFeed},
     ),
 ]
+urlpatterns += router.urls
