@@ -864,6 +864,8 @@ def convert_querydict_to_factory_formset_acceptable_querydict(request_querydict,
     lookup_value_placeholder = "form-%d-lookup_value"
 
     num = 0
+    request_querydict = request_querydict.copy()
+    request_querydict.pop("q", None)
     for lookup_type, value in request_querydict.items():
         # Discard fields without values
         if value:
@@ -881,9 +883,9 @@ def convert_querydict_to_factory_formset_acceptable_querydict(request_querydict,
 
 
 def is_single_choice_field(filterset_class, field_name):
-    # Some filter parameters do not accept multiple values, e.g DateTime fields, boolean fields etc.
+    # Some filter parameters do not accept multiple values, e.g DateTime fields, boolean fields, q field etc.
     field = get_filterset_field(filterset_class, field_name)
-    return isinstance(field, (DateFilter, DateTimeFilter, TimeFilter, BooleanFilter))
+    return isinstance(field, (DateFilter, DateTimeFilter, TimeFilter, BooleanFilter)) or field_name == "q"
 
 
 def get_filterable_params_from_filter_params(filter_params, non_filter_params, filterset_class):

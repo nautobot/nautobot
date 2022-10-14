@@ -80,6 +80,31 @@ class HomeViewTestCase(TestCase):
         self.assertIsNotNone(body_search_bar_result)
 
 
+@override_settings(BRANDING_TITLE="Nautobot")
+class SearchFieldsTestCase(TestCase):
+    def test_global_and_model_search_bar(self):
+        self.add_permissions("dcim.view_site", "dcim.view_device")
+
+        # Assert model search bar present in list UI
+        response = self.client.get(reverse("dcim:site_list"))
+        self.assertInHTML(
+            '<input type="text" name="q" class="form-control" required placeholder="Search Sites" id="id_q">',
+            response.content.decode(response.charset),
+        )
+
+        response = self.client.get(reverse("dcim:device_list"))
+        self.assertInHTML(
+            '<input type="text" name="q" class="form-control" required placeholder="Search Devices" id="id_q">',
+            response.content.decode(response.charset),
+        )
+
+        # Assert global search bar present in UI
+        self.assertInHTML(
+            '<input type="text" name="q" class="form-control" placeholder="Search Nautobot">',
+            response.content.decode(response.charset),
+        )
+
+
 class ForceScriptNameTestcase(TestCase):
     """Basic test to assert that `settings.FORCE_SCRIPT_NAME` works as intended."""
 

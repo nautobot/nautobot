@@ -22,6 +22,7 @@ from django.utils.safestring import mark_safe
 from django.views.generic import View
 from django_tables2 import RequestConfig
 
+from nautobot.core.forms import SearchForm
 from nautobot.extras.models import CustomField, ExportTemplate
 from nautobot.extras.models.change_logging import ChangeLoggedModel
 from nautobot.utilities.error_handlers import handle_protectederror
@@ -39,7 +40,7 @@ from nautobot.utilities.forms import (
 from nautobot.utilities.forms.forms import DynamicFilterFormSet
 from nautobot.utilities.paginator import EnhancedPaginator, get_paginate_count
 from nautobot.utilities.permissions import get_permission_for_model
-from nautobot.utilities.templatetags.helpers import validated_viewname
+from nautobot.utilities.templatetags.helpers import bettertitle, validated_viewname
 from nautobot.utilities.utils import (
     convert_querydict_to_factory_formset_acceptable_querydict,
     csv_format,
@@ -304,6 +305,10 @@ class ObjectListView(ObjectPermissionRequiredMixin, View):
         }
         RequestConfig(request, paginate).configure(table)
 
+        # For the search form field, use a custom placeholder.
+        q_placeholder = "Search " + bettertitle(model._meta.verbose_name_plural)
+        search_form = SearchForm(data=request.GET, q_placeholder=q_placeholder)
+
         # The model's FilterSet is required for DynamicFilterFormSet; if not found, ignore.
         if self.filterset is not None:
             if request.GET:
@@ -326,6 +331,7 @@ class ObjectListView(ObjectPermissionRequiredMixin, View):
             "table_config_form": TableConfigForm(table=table),
             "filter_params": display_filter_params,
             "filter_form": self.dynamic_filter_form,
+            "search_form": search_form,
         }
         context.update(self.extra_context())
 

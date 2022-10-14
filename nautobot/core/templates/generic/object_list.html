@@ -3,6 +3,52 @@
 {% load helpers %}
 {% load static %}
 
+
+{% block extra_styles %}
+<style>
+    .btn-filter-value {
+        background: #cfcfcf;
+        margin-right: 5px;
+    }
+    .filters-applied>.btn {
+        margin-right: 5px;
+        margin-bottom: 5px;
+    }
+</style>
+{% endblock extra_styles %}
+
+{% block header %}
+    <div class="row noprint">
+        {% with list_url=content_type.model_class|validated_viewname:"list" %}
+        <div class="col-sm-8 col-md-9">
+            <ol class="breadcrumb">
+            {% block breadcrumbs %}
+                {% if list_url %}
+                <li><a href="{% url list_url %}">
+                    {{ content_type.model_class|meta:'verbose_name_plural'|bettertitle }}
+                </a></li>
+                {% endif %}
+                {% block extra_breadcrumbs %}{% endblock extra_breadcrumbs %}
+            {% endblock breadcrumbs %}
+            </ol>
+        </div>
+        <div class="col-sm-4 col-md-3">
+            <form action="#" method="get" id="search-form">
+                <div class="input-group">
+                    {{ search_form.q }}
+                    <span class="input-group-btn">
+                        <button type="submit" class="btn btn-primary">
+                            <i class="mdi mdi-magnify"></i>
+                        </button>
+                    </span>
+                </div>
+            </form>
+        </div>
+        {% endwith %}
+    </div>
+{% endblock header %}
+
+
 {% block content %}
 <div class="pull-right noprint">
     {% block buttons %}{% endblock %}
@@ -63,7 +109,7 @@
         </span>
         </span>
         <span class="dropdown-wrapper" aria-hidden="true"></span>
-    </span> 
+    </span>
     {% endfor %}
 </div>
 <hr>
@@ -170,11 +216,20 @@
 
     // On submit of filter form
     $("#dynamic-filter-form").on("submit", function(e){
+        let this_form = $(this);
+        this_form.find(`input[name*="form-"], select[name*="form-"]`).removeAttr("name")
+        // Append q form field to to dynamic filter form via hidden input
+        let q_field = $('#id_q')
+        let q_field_phantom = $('<input type="hidden" name="q" />')
+        q_field_phantom.val(q_field.val())
+        this_form.append(q_field_phantom);
+    })
+
+    // On submit of filter search form
+    $("#search-form").on("submit", function(e){
+        // Since the Dynamic Filter Form will already grab my q field, just have it do a majority of the work.
         e.preventDefault()
-        // By removing all name attr with 'form-' prefix form input/select elements
-        // only filterable fields would be picked up by `$(this).serialize()`
-        $(this).find(`input[name*="form-"], select[name*="form-"]`).removeAttr("name")
-        location.replace("?" + $(this).serialize())
+        $("#dynamic-filter-form").submit()
     })
 
     // Clear new row values upon creation

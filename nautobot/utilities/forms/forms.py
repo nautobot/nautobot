@@ -327,7 +327,7 @@ class DynamicFilterForm(BootstrapMixin, forms.Form):
         filterset_without_lookup = (
             (name, field.label or self.capitalize(field.field_name))
             for name, field in self.filterset_filters.items()
-            if "__" not in name
+            if "__" not in name and name != "q"
         )
         return sorted(filterset_without_lookup)
 

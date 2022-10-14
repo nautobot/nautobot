@@ -364,7 +364,7 @@ class LookupRelatedFunctionTest(TestCase):
         # Cause these fields are either boolean fields or date time fields which one accepts single values
         filterset_class = SiteFilterSet
 
-        single_choice_fields = ("created", "created__gte", "has_vlans", "has_clusters")
+        single_choice_fields = ("created", "created__gte", "has_vlans", "has_clusters", "q")
         for field in single_choice_fields:
             self.assertTrue(is_single_choice_field(filterset_class, field))
 
@@ -509,6 +509,23 @@ class LookupRelatedFunctionTest(TestCase):
             expected_querydict.setlistdefault("form-INITIAL_FORMS", [0])
             expected_querydict.setlistdefault("form-MIN_NUM_FORMS", [0])
             expected_querydict.setlistdefault("form-MAX_NUM_FORMS", [100])
+
+            self.assertEqual(data, expected_querydict)
+
+        with self.subTest("Ignores q field"):
+            request_querydict = QueryDict(mutable=True)
+            request_querydict.setlistdefault("status", ["active"])
+            request_querydict.setlistdefault("q", "site")  # Should be ignored
+
+            data = convert_querydict_to_factory_formset_acceptable_querydict(request_querydict, SiteFilterSet)
+            expected_querydict = QueryDict(mutable=True)
+            expected_querydict.setlistdefault("form-TOTAL_FORMS", [3])
+            expected_querydict.setlistdefault("form-INITIAL_FORMS", [0])
+            expected_querydict.setlistdefault("form-MIN_NUM_FORMS", [0])
+            expected_querydict.setlistdefault("form-MAX_NUM_FORMS", [100])
+            expected_querydict.setlistdefault("form-0-lookup_field", ["status"])
+            expected_querydict.setlistdefault("form-0-lookup_type", ["status"])
+            expected_querydict.setlistdefault("form-0-lookup_value", ["active"])
 
             self.assertEqual(data, expected_querydict)
 

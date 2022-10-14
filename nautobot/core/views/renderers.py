@@ -6,6 +6,7 @@ from django.utils.safestring import mark_safe
 from django_tables2 import RequestConfig
 from rest_framework import renderers
 
+from nautobot.core.forms import SearchForm
 from nautobot.extras.models.change_logging import ChangeLoggedModel
 from nautobot.utilities.forms import (
     TableConfigForm,
@@ -121,6 +122,7 @@ class NautobotHTMLRenderer(renderers.BrowsableAPIRenderer):
         content_type = ContentType.objects.get_for_model(model)
         form = None
         table = None
+        search_form = None
         changelog_url = None
         instance = None
         queryset = view.alter_queryset(request)
@@ -156,6 +158,7 @@ class NautobotHTMLRenderer(renderers.BrowsableAPIRenderer):
                         for field_name, values in filter_params.items()
                     ]
                 table = self.construct_table(view, request=request, permissions=permissions)
+                search_form = SearchForm(data=request.GET)
             elif view.action == "destroy":
                 form = form_class(initial=request.GET)
             elif view.action in ["create", "update"]:
@@ -204,6 +207,7 @@ class NautobotHTMLRenderer(renderers.BrowsableAPIRenderer):
             "content_type": content_type,
             "form": form,
             "filter_form": self.get_filter_form(view, request, filterset_class=view.filterset_class),
+            "search_form": search_form,
             "filter_params": display_filter_params,
             "object": instance,
             "obj": instance,  # NOTE: This context key is deprecated in favor of `object`.
