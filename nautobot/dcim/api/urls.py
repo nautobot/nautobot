@@ -69,7 +69,7 @@ router.register("power-panels", views.PowerPanelViewSet)
 router.register("power-feeds", views.PowerFeedViewSet)
 
 # Redundancy Group
-router.register("redunancy-groups", views.RedundancyGroupViewSet)
+router.register("redundancy-groups", views.RedundancyGroupViewSet)
 
 # Miscellaneous
 router.register("connected-device", views.ConnectedDeviceViewSet, basename="connected-device")
