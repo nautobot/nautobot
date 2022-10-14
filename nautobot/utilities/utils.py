@@ -890,7 +890,8 @@ def is_single_choice_field(filterset_class, field_name):
 
 def get_filterable_params_from_filter_params(filter_params, non_filter_params, filterset_class):
     """
-    Return only queryset filterable params in filter_params.
+    Remove any `non_filter_params` and fields that are not a part of the filterset from  `filter_params`
+    to return only queryset filterable parameters.
 
     Args:
         filter_params(QueryDict): Filter param querydict

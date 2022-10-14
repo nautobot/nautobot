@@ -732,16 +732,22 @@ class GetFilterSetFieldLookupExpressionChoicesAPI(NautobotAPIVersionMixin, APIVi
         field_name = request.GET.get("field_name")
         app_label, model_name = contenttype.split(".")
         try:
-            model = ContentType.objects.get(app_label=app_label, model=model_name).model_class()
+            model_contenttype = ContentType.objects.get(app_label=app_label, model=model_name)
+            model = model_contenttype.model_class()
+            if model is None:
+                return Response(
+                    f"model for content_type: <{model_contenttype}> not found",
+                    status=500,
+                )
         except ContentType.DoesNotExist:
             return Response(
                 "content_type not found",
-                status=400,
+                status=404,
             )
         try:
             data = get_all_lookup_expr_for_field(model, field_name)
         except FilterSetFieldNotFound:
-            return Response("field_name not found", status=400)
+            return Response("field_name not found", status=404)
 
         # Needs to be returned in this format because this endpoint is used by
         # DynamicModelChoiceField which requires the response of an api in this exact format
@@ -771,11 +777,17 @@ class GetFilterSetFieldDOMElementAPI(NautobotAPIVersionMixin, APIView):
         contenttype = request.GET.get("content_type")
         app_label, model_name = contenttype.split(".")
         try:
-            model = ContentType.objects.get(app_label=app_label, model=model_name).model_class()
+            model_contenttype = ContentType.objects.get(app_label=app_label, model=model_name)
+            model = model_contenttype.model_class()
+            if model is None:
+                return Response(
+                    f"model for content_type: <{model_contenttype}> not found",
+                    status=500,
+                )
         except ContentType.DoesNotExist:
             return Response(
                 "content_type not found",
-                status=400,
+                status=404,
             )
 
         model_form = get_form_for_model(model)
@@ -792,7 +804,7 @@ class GetFilterSetFieldDOMElementAPI(NautobotAPIVersionMixin, APIView):
         try:
             form_field = get_filterset_parameter_form_field(model, field_name)
         except FilterSetFieldNotFound:
-            return Response("field_name not found", 400)
+            return Response("field_name not found", 404)
 
         field_dom_representation = form_field.get_bound_field(model_form(), field_name).as_widget()
         return Response({"dom_element": field_dom_representation})
