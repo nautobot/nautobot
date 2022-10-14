@@ -141,7 +141,12 @@ class ViewTestCases:
 
             # Try GET without permission
             with disable_warnings("django.request"):
-                self.assertHttpStatus(self.client.get(instance.get_absolute_url()), [403, 404])
+                response = self.client.get(instance.get_absolute_url())
+                self.assertHttpStatus(response, [403, 404])
+                response_body = response.content.decode(response.charset)
+                self.assertNotIn(
+                    "/login/?next=" + self._get_queryset().first().get_absolute_url(), response_body, msg=response_body
+                )
 
         @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
         def test_get_object_with_permission(self):
@@ -637,7 +642,10 @@ class ViewTestCases:
 
             # Try GET without permission
             with disable_warnings("django.request"):
-                self.assertHttpStatus(self.client.get(self._get_url("list")), 403)
+                response = self.client.get(self._get_url("list"))
+                self.assertHttpStatus(response, 403)
+                response_body = response.content.decode(response.charset)
+                self.assertNotIn("/login/?next=" + self._get_url("list"), response_body, msg=response_body)
 
         @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
         def test_list_objects_with_permission(self):
