@@ -1128,12 +1128,7 @@ class RedundancyGroupSerializer(NautobotModelSerializer, TaggedObjectSerializer,
 
     class Meta:
         model = RedundancyGroup
-        fields = [
-            "url",
-            "name",
-            "failover_strategy",
-            "comments",
-        ]
+        fields = "__all__"
 
 
 #

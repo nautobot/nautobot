@@ -985,7 +985,7 @@ class DeviceFilterSet(
         field_name="redundancy_group",
         to_field_name="name",
         queryset=RedundancyGroup.objects.all(),
-        label="Power outlets (name or ID)",
+        label="Redundancy Groups (name or ID)",
     )
     virtual_chassis_member = is_virtual_chassis_member
     has_console_ports = RelatedMembershipBooleanFilter(
@@ -1738,11 +1738,4 @@ class RedundancyGroupFilterSet(NautobotFilterSet, StatusModelFilterSetMixin):
 
     class Meta:
         model = RedundancyGroup
-        fields = [
-            "id",
-            "name",
-            "status",
-            "failover_strategy",
-            "secrets_group",
-            "comments",
-        ]
+        fields = "__all__"

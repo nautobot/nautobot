@@ -828,7 +828,7 @@ class PowerFeedViewSet(PathEndpointMixin, StatusViewSetMixin, NautobotModelViewS
 
 class RedundancyGroupViewSet(StatusViewSetMixin, NautobotModelViewSet):
     # v2 TODO(jathan): Replace prefetch_related with select_related
-    queryset = RedundancyGroup.objects.select_related("status", "members")
+    queryset = RedundancyGroup.objects.select_related("status").prefetch_related("members")
     serializer_class = serializers.RedundancyGroupSerializer
     filterset_class = filters.RedundancyGroupFilterSet
 

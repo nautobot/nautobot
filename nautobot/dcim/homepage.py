@@ -93,11 +93,11 @@ layout = (
                 model=models.RedundancyGroup,
                 permissions=["dcim.view_redundancygroup"],
                 description="Represents a set of devices which operate in a failover/HA group",
-                weight=400,
+                weight=500,
             ),
             HomePageGroup(
                 name="Connections",
-                weight=500,
+                weight=600,
                 items=(
                     HomePageItem(
                         name="Cables",

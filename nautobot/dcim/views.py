@@ -3218,7 +3218,7 @@ class RedundancyGroupUIViewSet(NautobotUIViewSet):
     filterset_class = filters.RedundancyGroupFilterSet
     filterset_form_class = forms.RedundancyGroupFilterForm
     form_class = forms.RedundancyGroupForm
-    queryset = RedundancyGroup.objects.select_related("status", "members").annotate(
+    queryset = RedundancyGroup.objects.select_related("status").prefetch_related("members").annotate(
         member_count=count_related(Device, "redundancy_group")
     )
     serializer_class = serializers.RedundancyGroupSerializer
@@ -3226,8 +3226,14 @@ class RedundancyGroupUIViewSet(NautobotUIViewSet):
     lookup_field = "pk"
 
     def get_extra_context(self, request, instance):
-        members = Device.objects.restrict(request.user).filter(redundancy_group=instance)
+        context = super().get_extra_context(request, instance)
 
-        return {
-            "members": members,
-        }
+        members = Device.objects.restrict(request.user).filter(redundancy_group=instance)
+        context["members"] = members
+
+        members_table = tables.DeviceTable(members)
+
+        members_table.columns.show("redundancy_group_priority")
+
+        context["members_table"] = members_table
+        return context

@@ -1,0 +1,1 @@
+Updated `Device` model to have `redundancy_group` relationship, `redundancy_group_priority` numeric property.
