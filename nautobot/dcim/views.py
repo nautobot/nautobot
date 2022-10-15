@@ -11,7 +11,6 @@ from django.forms import (
     modelformset_factory,
 )
 from django.shortcuts import get_object_or_404, redirect, render
-from django.urls import reverse
 from django.utils.html import escape
 from django.utils.safestring import mark_safe
 from django.views.generic import View
@@ -584,24 +583,18 @@ class RackElevationListView(generic.ObjectListView):
         "face",  # render front or rear of racks?
         "reverse",  # control of ordering
     )
+    filterset = filters.RackFilterSet
+    action_buttons = []
+    template_name = "dcim/rack_elevation_list.html"
 
-    def get(self, request):
-        filter_params = self.get_filter_params(request)
-        filterset = filters.RackFilterSet(filter_params, self.queryset)
-        if filterset.is_valid():
-            racks = filterset.qs
-        else:
-            messages.error(
-                request,
-                mark_safe(f"Invalid filters were specified: {filterset.errors}"),
-            )
-            racks = filterset.qs.none()
-
+    def extra_context(self):
+        racks = self.queryset
+        request = self.request
         total_count = racks.count()
 
         # Determine ordering
-        reverse = bool(request.GET.get("reverse", False))
-        if reverse:
+        racks_reverse = bool(request.GET.get("reverse", False))
+        if racks_reverse:
             racks = racks.reverse()
 
         # Pagination
@@ -620,18 +613,15 @@ class RackElevationListView(generic.ObjectListView):
         if rack_face not in DeviceFaceChoices.values():
             rack_face = DeviceFaceChoices.FACE_FRONT
 
-        return render(
-            request,
-            "dcim/rack_elevation_list.html",
-            {
-                "paginator": paginator,
-                "page": page,
-                "total_count": total_count,
-                "reverse": reverse,
-                "rack_face": rack_face,
-                "filter_form": forms.RackElevationFilterForm(filter_params),
-            },
-        )
+        return {
+            "paginator": paginator,
+            "page": page,
+            "total_count": total_count,
+            "reverse": racks_reverse,
+            "rack_face": rack_face,
+            "title": "Rack Elevation",
+            "list_url": "dcim:rack_elevation_list",
+        }
 
 
 class RackView(generic.ObjectView):
@@ -2763,7 +2753,7 @@ class ConsoleConnectionsListView(ConnectionsListView):
     filterset = filters.ConsoleConnectionFilterSet
     filterset_form = forms.ConsoleConnectionFilterForm
     table = tables.ConsoleConnectionTable
-    action_buttons = ("export", )
+    action_buttons = ("export",)
 
     def queryset_to_csv(self):
         csv_data = [

@@ -255,6 +255,16 @@ class ObjectListView(ObjectPermissionRequiredMixin, View):
                 for field_name, values in filter_params.items()
             ]
 
+            if request.GET:
+                factory_formset_params = convert_querydict_to_factory_formset_acceptable_querydict(
+                    request.GET, self.filterset
+                )
+                self.dynamic_filter_form = DynamicFilterFormSet(
+                    filterset_class=self.filterset, data=factory_formset_params
+                )
+            else:
+                self.dynamic_filter_form = DynamicFilterFormSet(filterset_class=self.filterset)
+
         # Check for export template rendering
         if request.GET.get("export"):
             et = get_object_or_404(
@@ -293,33 +303,25 @@ class ObjectListView(ObjectPermissionRequiredMixin, View):
             perm_name = get_permission_for_model(model, action)
             permissions[action] = request.user.has_perm(perm_name)
 
-        # Construct the objects table
-        table = self.table(self.queryset, user=request.user)
-        if "pk" in table.base_columns and (permissions["change"] or permissions["delete"]):
-            table.columns.show("pk")
+        table = None
+        table_config_form = None
+        if self.table:
+            # Construct the objects table
+            table = self.table(self.queryset, user=request.user)
+            if "pk" in table.base_columns and (permissions["change"] or permissions["delete"]):
+                table.columns.show("pk")
 
-        # Apply the request context
-        paginate = {
-            "paginator_class": EnhancedPaginator,
-            "per_page": get_paginate_count(request),
-        }
-        RequestConfig(request, paginate).configure(table)
+            # Apply the request context
+            paginate = {
+                "paginator_class": EnhancedPaginator,
+                "per_page": get_paginate_count(request),
+            }
+            RequestConfig(request, paginate).configure(table)
+            table_config_form = TableConfigForm(table=table)
 
         # For the search form field, use a custom placeholder.
         q_placeholder = "Search " + bettertitle(model._meta.verbose_name_plural)
         search_form = SearchForm(data=request.GET, q_placeholder=q_placeholder)
-
-        # The model's FilterSet is required for DynamicFilterFormSet; if not found, ignore.
-        if self.filterset is not None:
-            if request.GET:
-                factory_formset_params = convert_querydict_to_factory_formset_acceptable_querydict(
-                    request.GET, self.filterset
-                )
-                self.dynamic_filter_form = DynamicFilterFormSet(
-                    filterset_class=self.filterset, data=factory_formset_params
-                )
-            else:
-                self.dynamic_filter_form = DynamicFilterFormSet(filterset_class=self.filterset)
 
         valid_actions = self.validate_action_buttons(request)
 
@@ -328,13 +330,19 @@ class ObjectListView(ObjectPermissionRequiredMixin, View):
             "table": table,
             "permissions": permissions,
             "action_buttons": valid_actions,
-            "table_config_form": TableConfigForm(table=table),
+            "table_config_form": table_config_form,
             "filter_params": display_filter_params,
             "filter_form": self.dynamic_filter_form,
             "search_form": search_form,
             "list_url": validated_viewname(model, "list"),
             "title": bettertitle(model._meta.verbose_name_plural),
         }
+
+        # `extra_context()` would require `request` access, however `request` parameter cannot simply be
+        # added to `extra_context()` because  this method has been used by multiple apps without any parameters.
+        # Changing 'def extra context()' to 'def extra context(request)' might break current methods
+        # in plugins and core that either override or implement it without request.
+        setattr(self, "request", request)
         context.update(self.extra_context())
 
         return render(request, self.template_name, context)
