@@ -36,7 +36,7 @@
 {% block content %}
 <div class="pull-right noprint">
     {% block buttons %}{% endblock %}
-    {% if request.user.is_authenticated and table_config_form %}
+    {% if table and request.user.is_authenticated and table_config_form %}
         <button type="button" class="btn btn-default" data-toggle="modal" data-target="#ObjectTable_config" title="Configure table"><i class="mdi mdi-cog"></i> Configure</button>
     {% endif %}
     {% if filter_form %}
@@ -100,6 +100,7 @@
 {% endif %}
 
 <div class="row">
+    {% block table %}
     <div class="col-md-12">
         {% with bulk_edit_url=content_type.model_class|validated_viewname:"bulk_edit" bulk_delete_url=content_type.model_class|validated_viewname:"bulk_delete" %}
         {% if permissions.change or permissions.delete %}
@@ -154,8 +155,9 @@
         {% include 'inc/paginator.html' with paginator=table.paginator page=table.page %}
         <div class="clearfix"></div>
     </div>
+    {% endblock %}
 </div>
-{% table_config_form table table_name="ObjectTable" %}
+{% if table %}{% table_config_form table table_name="ObjectTable" %}{% endif %}
 {% dynamic_filter_form_modal filter_form %}
 {% endblock %}
 
