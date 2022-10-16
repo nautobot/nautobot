@@ -770,8 +770,9 @@ def get_filterset_parameter_form_field(model, parameter):
     Return the relevant form field instance for a filterset parameter e.g DynamicModelMultipleChoiceField, forms.IntegerField e.t.c
     """
     # Avoid circular import
-    from nautobot.extras.filters import StatusFilter
+    from nautobot.extras.filters import ContentTypeMultipleChoiceFilter, StatusFilter
     from nautobot.extras.models import Status, Tag
+    from nautobot.extras.utils import ChangeLoggedModelsQuery, TaggableClassesQuery
     from nautobot.utilities.forms import (
         BOOLEAN_CHOICES,
         DatePicker,
@@ -780,6 +781,7 @@ def get_filterset_parameter_form_field(model, parameter):
         StaticSelect2,
         StaticSelect2Multiple,
         TimePicker,
+        MultipleContentTypeField,
     )
 
     filterset_class = get_filterset_for_model(model)
@@ -800,6 +802,18 @@ def get_filterset_parameter_form_field(model, parameter):
             form_attr["query_params"] = {"content_types": model._meta.label_lower}
 
         form_field = DynamicModelMultipleChoiceField(**form_attr)
+    elif isinstance(field, ContentTypeMultipleChoiceFilter):
+        plural_name = model._meta.verbose_name_plural
+        try:
+            form_field = MultipleContentTypeField(choices_as_strings=True, feature=plural_name)
+        except KeyError:
+            # `MultipleContentTypeField` employs `registry["model features"][feature]`, which may
+            # result in an error if `feature` is not found in the `registry["model features"]` dict.
+            # In this case use queryset
+            queryset_map = {"tags": TaggableClassesQuery, "job hooks": ChangeLoggedModelsQuery}
+            form_field = MultipleContentTypeField(
+                choices_as_strings=True, queryset=queryset_map[plural_name]().as_queryset
+            )
     elif isinstance(field, (filters.MultipleChoiceFilter, filters.ChoiceFilter)) and "choices" in field.extra:
         form_field_class = forms.ChoiceField
         form_field_class.widget = StaticSelect2Multiple()

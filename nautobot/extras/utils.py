@@ -98,6 +98,7 @@ class ChangeLoggedModelsQuery:
 
         return query
 
+    @property
     def as_queryset(self):
         return ContentType.objects.filter(self.get_query()).order_by("app_label", "model")
 

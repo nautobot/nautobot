@@ -828,7 +828,7 @@ class JobFilterForm(BootstrapMixin, forms.Form):
 
 class JobHookForm(BootstrapMixin, forms.ModelForm):
     content_types = MultipleContentTypeField(
-        queryset=ChangeLoggedModelsQuery().as_queryset(), required=True, label="Content Type(s)"
+        queryset=ChangeLoggedModelsQuery().as_queryset, required=True, label="Content Type(s)"
     )
 
     class Meta:
@@ -865,7 +865,7 @@ class JobHookFilterForm(BootstrapMixin, forms.Form):
     model = JobHook
     q = forms.CharField(required=False, label="Search")
     content_types = MultipleContentTypeField(
-        queryset=ChangeLoggedModelsQuery().as_queryset(),
+        queryset=ChangeLoggedModelsQuery().as_queryset,
         choices_as_strings=True,
         required=False,
         label="Content Type(s)",

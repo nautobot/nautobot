@@ -913,7 +913,7 @@ class JobClassDetailSerializer(JobClassSerializer):
 class JobHookSerializer(NautobotModelSerializer):
     url = serializers.HyperlinkedIdentityField(view_name="extras-api:jobhook-detail")
     content_types = ContentTypeField(
-        queryset=ChangeLoggedModelsQuery().as_queryset(),
+        queryset=ChangeLoggedModelsQuery().as_queryset,
         many=True,
     )
 
