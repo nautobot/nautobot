@@ -15,6 +15,9 @@ services:
       - redis
       - selenium
       - db
+    environment:
+      - ENABLE_OIDC=${ENABLE_OIDC}
+      - SSO_HOST=${SSO_HOST}
     env_file:
       - dev.env
     tty: true

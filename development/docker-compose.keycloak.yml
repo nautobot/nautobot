@@ -1,0 +1,25 @@
+---
+version: "3.4"
+services:
+  keycloak:
+    image: "quay.io/keycloak/keycloak:15.0.2"
+    env_file:
+      - keycloak.env
+    environment:
+      - KEYCLOAK_IMPORT=/tmp/nautobot-realms.json
+    ports:
+      - 8087:8080
+    depends_on:
+      - keycloak_db
+    volumes:
+      - ./nautobot-realms.json:/tmp/nautobot-realms.json
+
+  keycloak_db:
+    image: postgres:13
+    env_file:
+      - keycloak.env
+    volumes:
+      - pgdata_keycloak:/var/lib/postgresql/data
+
+volumes:
+  pgdata_keycloak:

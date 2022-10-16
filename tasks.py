@@ -67,6 +67,12 @@ namespace.configure(
                 "networktocode/nautobot-dev",
                 "ghcr.io/nautobot/nautobot-dev",
             ],
+            # Development SSO Configuration
+            "enable_saml": "False",
+            "enable_oidc": "False",
+            # Endpoint reachable by user's browser
+            "sso_host": "http://localhost:8087",
+            "nautobot_host": "http://localhost:8080",
         }
     }
 )
@@ -119,7 +125,14 @@ def docker_compose(context, command, **kwargs):
     print(f'Running docker-compose command "{command}"')
     compose_command = " \\\n    ".join(compose_command_tokens)
     env = kwargs.pop("env", {})
-    env.update({"PYTHON_VER": context.nautobot.python_ver})
+    env.update(
+        {
+            "PYTHON_VER": context.nautobot.python_ver,
+            "ENABLE_SAML": context.nautobot.enable_saml,
+            "ENABLE_OIDC": context.nautobot.enable_oidc,
+            "SSO_HOST": context.nautobot.sso_host,
+        }
+    )
     if "hide" not in kwargs:
         env_str = " \\\n    ".join(f"{var}={value}" for var, value in env.items())
         if HAS_RICH:
@@ -466,6 +479,19 @@ def build_example_plugin_docs(context):
     else:
         docker_command = f"run --workdir='/source/examples/example_plugin' --entrypoint '{command}' nautobot"
         docker_compose(context, docker_command, pty=True)
+
+
+@task()
+def provision_sso(context):
+    """Templates Keycloak configurations and applies to keycloak container."""
+    try:
+        from jinja2 import Environment, FileSystemLoader
+    except ImportError:
+        raise ImportError("Unable to import Jinja, install & activate poetry virtual-env to run this command.")
+    template = Environment(loader=FileSystemLoader("development/")).get_template("nautobot-realms.json.j2")
+    content = template.render(nautobot_host=context.nautobot.nautobot_host)
+    with open("development/nautobot-realms.json", mode="w", encoding="utf-8") as file:
+        file.write(content)
 
 
 # ------------------------------------------------------------------------------

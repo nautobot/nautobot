@@ -25,3 +25,15 @@ nautobot:
 #     - "docker-compose.yml"
 #     - "docker-compose.mysql.yml"
 #     - "docker-compose.dev.yml"
+
+# The following is an example of using SSO development environment
+# ---
+# nautobot:
+#   compose_files:
+#     - "docker-compose.yml"
+#     - "docker-compose.mysql.yml"
+#     - "docker-compose.dev.yml"
+#     - "docker-compose.keycloak.yml"
+#   enable_oidc: "True"
+#   sso_host: "http://localhost:8087"
+#   nautobot_host: "http://localhost:8080"
