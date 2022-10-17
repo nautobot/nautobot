@@ -71,6 +71,8 @@ from .models import (
     RackRole,
     RearPort,
     RearPortTemplate,
+    RedundancyInterfaceGroup,
+    RedundancyInterfaceGroupAssociation,
     Region,
     Site,
     VirtualChassis,
@@ -114,6 +116,8 @@ __all__ = (
     "RackRoleFilterSet",
     "RearPortFilterSet",
     "RearPortTemplateFilterSet",
+    "ReliabilityInterfaceGroupFilterSet",
+    "ReliabilityInterfaceGroupAssociationFilterSet",
     "RegionFilterSet",
     "SiteFilterSet",
     "VirtualChassisFilterSet",
@@ -1722,3 +1726,27 @@ class PowerFeedFilterSet(
             "comments",
             "available_power",
         ]
+
+
+class ReliabilityInterfaceGroupFilterSet(BaseFilterSet, NameSlugSearchFilterSet):
+    """Filter for ReliabilityInterfaceGroup."""
+
+    class Meta:
+        """Meta attributes for filter."""
+
+        model = ReliabilityInterfaceGroup
+
+        # add any fields from the model that you would like to filter your searches by using those
+        fields = ["id", "name", "slug", "description", "members", "subscribers"]
+
+
+class ReliabilityInterfaceGroupAssociationFilterSet(BaseFilterSet, NameSlugSearchFilterSet):
+    """Filter for ReliabilityInterfaceGroupAssociation."""
+
+    class Meta:
+        """Meta attributes for filter."""
+
+        model = ReliabilityInterfaceGroupAssociation
+
+        # add any fields from the model that you would like to filter your searches by using those
+        fields = ["id", "group", "interface", "primary_ip", "standby_ip", "priority"]

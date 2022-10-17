@@ -4442,3 +4442,97 @@ class PowerFeedFilterForm(NautobotFilterForm, StatusModelFilterFormMixin):
     amperage = forms.IntegerField(required=False)
     max_utilization = forms.IntegerField(required=False)
     tag = TagFilterField(model)
+
+
+#
+# Redundancy Interface Groups
+#
+
+
+class RedundancyInterfaceGroupForm(
+    BootstrapMixin, StatusModelFilterFormMixin, CustomFieldModelFormMixin, RelationshipModelFormMixin, forms.ModelForm
+):
+    """RedundancyInterfaceGroup creation/edit form."""
+
+    model = models.RedundancyInterfaceGroup
+    slug = SlugField()
+    subscribers = DynamicModelMultipleChoiceField(
+        queryset=Device.objects.all(),
+        required=False,
+        help_text="Subscribers are Devices that have a dependency on the Redundancy group.",
+    )
+
+    class Meta:
+        """Meta attributes."""
+
+        model = models.RedundancyInterfaceGroup
+        fields = ["name", "slug", "description", "subscribers"]
+
+
+class RedundancyInterfaceGroupAssociationFormSetForm(forms.ModelForm):
+    """RedundancyInterfaceGroupAssociation model form for use inline on RedundancyInterfaceGroupAssociationFormSet."""
+
+    device = DynamicModelChoiceField(queryset=Device.objects.all(), required=False)
+    interface = DynamicModelChoiceField(queryset=Interface.objects.all(), query_params={"device_id": "$device"})
+    primary_ip = DynamicModelChoiceField(
+        queryset=IPAddress.objects.all(), query_params={"interface_id": "$interface"}, required=False
+    )
+    standby_ip = DynamicModelChoiceField(
+        queryset=IPAddress.objects.all(), query_params={"interface_id": "$interface"}, required=False
+    )
+
+    class Meta:
+        """Meta attributes."""
+
+        model = models.RedundancyInterfaceGroupAssociation
+        fields = ("device", "interface", "primary_ip", "standby_ip", "priority")
+
+
+# Inline formset for use with providing dynamic rows when creating/editing assignments of Interface to RedundancyGroup.
+RedundancyInterfaceGroupAssociationFormSet = forms.inlineformset_factory(
+    parent_model=models.RedundancyInterfaceGroup,
+    model=models.RedundancyInterfaceGroupAssociation,
+    form=RedundancyInterfaceGroupAssociationFormSetForm,
+    fk_name="group",
+    extra=3,
+)
+
+
+class RedundancyInterfaceGroupBulkEditForm(BootstrapMixin, BulkEditForm):
+    """RedundancyInterfaceGroup bulk edit form."""
+
+    pk = forms.ModelMultipleChoiceField(
+        queryset=models.RedundancyInterfaceGroup.objects.all(), widget=forms.MultipleHiddenInput
+    )
+    description = forms.CharField(required=False)
+
+    class Meta:
+        """Meta attributes."""
+
+        nullable_fields = [
+            "description",
+        ]
+
+
+class RedundancyInterfaceGroupFilterForm(BootstrapMixin, forms.ModelForm):
+    """Filter form to filter searches."""
+
+    q = forms.CharField(
+        required=False,
+        label="Search",
+        help_text="Search within Name or Slug.",
+    )
+    name = forms.CharField(required=False, label="Name")
+    slug = forms.CharField(required=False, label="Slug")
+
+    class Meta:
+        """Meta attributes."""
+
+        model = models.RedundancyInterfaceGroup
+        # Define the fields above for ordering and widget purposes
+        fields = [
+            "q",
+            "name",
+            "slug",
+            "description",
+        ]

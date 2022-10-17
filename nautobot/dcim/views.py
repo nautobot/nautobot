@@ -18,6 +18,7 @@ from django_tables2 import RequestConfig
 
 from nautobot.circuits.models import Circuit
 from nautobot.core.views import generic
+from nautobot.core.views.viewsets import NautobotUIViewSet
 from nautobot.extras.views import ObjectChangeLogView, ObjectConfigContextView, ObjectDynamicGroupsView
 from nautobot.ipam.models import IPAddress, Prefix, Service, VLAN
 from nautobot.ipam.tables import InterfaceIPAddressTable, InterfaceVLANTable
@@ -3143,3 +3144,130 @@ class PowerFeedBulkDeleteView(generic.BulkDeleteView):
     queryset = PowerFeed.objects.prefetch_related("power_panel", "rack")
     filterset = filters.PowerFeedFilterSet
     table = tables.PowerFeedTable
+
+
+class ReliabilityGroupEditView(generic.ObjectEditView):
+    """ReliabilityGroup create & update views."""
+
+    queryset = models.ReliabilityGroup.objects.all()
+    model_form = forms.ReliabilityGroupForm
+    template_name = "nautobot_reliability_models/reliabilitygroup_create.html"
+
+    def get_extra_context(self, request, instance):
+        """Populates formset."""
+        ctx = super().get_extra_context(request, instance)
+
+        formset_kwargs = {"instance": instance}
+        if request.POST:
+            formset_kwargs["data"] = request.POST
+
+        ctx["members"] = forms.ReliabilityGroupAssociationFormSet(**formset_kwargs)
+
+        return ctx
+
+    def post(self, request, *args, **kwargs):  # pylint: disable=too-many-locals,too-many-branches
+        """Overloads post to account for formset."""
+        obj = self.alter_obj(self.get_object(kwargs), request, args, kwargs)
+        form = self.model_form(data=request.POST, files=request.FILES, instance=obj)
+        restrict_form_fields(form, request.user)
+
+        if form.is_valid():
+            logger.debug("Form validation was successful")
+
+            try:
+                with transaction.atomic():
+                    object_created = not form.instance.present_in_database
+                    # Obtain the instance, but do not yet `save()` it to the database.
+                    obj = form.save(commit=False)
+
+                    ctx = self.get_extra_context(request, obj)
+
+                    # After filters have been set, now we save the object to the database.
+                    obj.save()
+                    # Check that the new object conforms with any assigned object-level permissions
+                    self.queryset.get(pk=obj.pk)
+
+                    # Process the formsets for children
+                    members = ctx["members"]
+                    if members.is_valid():
+                        members.save()
+                    else:
+                        raise RuntimeError(members.errors)
+                verb = "Created" if object_created else "Modified"
+                msg = f"{verb} {self.queryset.model._meta.verbose_name}"
+                logger.info("%s %s (PK: %s)", msg, obj, obj.pk)
+                if hasattr(obj, "get_absolute_url"):
+                    msg = f'{msg} <a href="{obj.get_absolute_url()}">{escape(obj)}</a>'
+                else:
+                    msg = f"{msg} {escape(obj)}"  # nosec
+                messages.success(request, mark_safe(msg))  # nosec
+
+                if "_addanother" in request.POST:
+
+                    # If the object has clone_fields, pre-populate a new instance of the form
+                    if hasattr(obj, "clone_fields"):
+                        url = f"{request.path}?{prepare_cloned_fields(obj)}"
+                        return redirect(url)
+
+                    return redirect(request.get_full_path())
+
+                return_url = form.cleaned_data.get("return_url")
+                if return_url is not None and is_safe_url(url=return_url, allowed_hosts=request.get_host()):
+                    return redirect(return_url)
+                return redirect(self.get_return_url(request, obj))
+
+            except ObjectDoesNotExist:
+                msg = "Object save failed due to object-level permissions violation."
+                logger.debug(msg)
+                form.add_error(None, msg)
+            except RuntimeError:
+                msg = "Errors encountered when saving Dynamic Group associations. See below."
+                logger.debug(msg)
+                form.add_error(None, msg)
+            except ProtectedError as err:
+                # e.g. Trying to delete a something that is in use.
+                err_msg = err.args[0]
+                protected_obj = err.protected_objects[0]
+                msg = f"{protected_obj.value}: {err_msg} Please cancel this edit and start again."
+                logger.debug(msg)
+                form.add_error(None, msg)
+
+        else:
+            logger.debug("Form validation failed")
+
+        return render(
+            request,
+            self.template_name,
+            {
+                "obj": obj,
+                "obj_type": self.queryset.model._meta.verbose_name,
+                "form": form,
+                "return_url": self.get_return_url(request, obj),
+                "editing": obj.present_in_database,
+                **self.get_extra_context(request, obj),
+            },
+        )
+
+
+class ReliabilityInterfaceGroupUIViewSet(
+    mixins.ObjectDetailViewMixin,
+    mixins.ObjectListViewMixin,
+    mixins.ObjectDestroyViewMixin,
+    mixins.ObjectBulkDestroyViewMixin,
+    mixins.ObjectBulkUpdateViewMixin,
+):
+    """ViewSet for the ReliabilityInterfaceGroup model."""
+
+    bulk_update_form_class = forms.ReliabilityInterfaceGroupBulkEditForm
+    filterset_class = filters.ReliabilityInterfaceGroupFilterSet
+    filterset_form_class = forms.ReliabilityInterfaceGroupFilterForm
+    queryset = models.ReliabilityInterfaceGroup.objects.all()
+    serializer_class = ReliabilityInterfaceGroupSerializer
+    table_class = tables.ReliabilityInterfaceGroupTable
+    # action_buttons = ("add",)
+
+    lookup_field = "pk"
+
+    def _process_bulk_create_form(self, form):
+        """Bulk creating (CSV import) is not supported."""
+        raise NotImplementedError()
