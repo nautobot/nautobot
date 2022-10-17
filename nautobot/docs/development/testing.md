@@ -62,7 +62,8 @@ Nautobot's custom [test runner](https://docs.djangoproject.com/en/3.2/topics/tes
 ### Running Performance Tests
 
 Nautobot uses [`django-slowtests`](https://pypi.org/project/django-slowtests/) to run performance tests. To run performance tests, you need to install the `django-slowtests` package.
-Once you install the package, you can do `invoke performance-test` or `invoke unittest --performance-test` to run unittests with `NautobotPerformanceTestRunner`.
+Once you install the package, you can do `invoke performance-test` or `invoke unittest --performance-test` to run unittests with `NautobotPerformanceTestRunner` by adding `--testrunner nautobot.core.tests.runner.NautobotPerformanceTestRunner` to the `coverage run` command. This flag will replace the default `NautobotTestRunner` while retaining all its functionalities with the addition of performance evaluation after test runs.
+
 `NautobotPerformanceTestRunner` which inherits from `DiscoverSlowestTestsRunner` will only be available when `django-slowtests` is installed. The runner measures the time to run unittests against baselines stored in a designated .yml file (default to "nautobot/core/tests/performance_baselines.yml") in addition to running the unittests themselves.
 
 !!! warning
