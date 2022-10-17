@@ -651,7 +651,7 @@ class IPAddressTestCase(FilterTestCases.FilterTestCase, FilterTestCases.TenancyF
 
     def test_device(self):
         interfaces = Interface.objects.filter(ip_addresses__isnull=False)
-        devices = list(Device.objects.filter(interfaces__in=interfaces)[:2])
+        devices = list(Device.objects.filter(interfaces__in=interfaces).distinct()[:2])
         params = {"device_id": [devices[0].pk, devices[1].pk]}
         self.assertQuerysetEqual(
             self.filterset(params, self.queryset).qs,
@@ -666,7 +666,7 @@ class IPAddressTestCase(FilterTestCases.FilterTestCase, FilterTestCases.TenancyF
 
     def test_virtual_machine(self):
         vm_interfaces = VMInterface.objects.filter(ip_addresses__isnull=False)
-        virtual_machines = list(VirtualMachine.objects.filter(interfaces__in=vm_interfaces)[:2])
+        virtual_machines = list(VirtualMachine.objects.filter(interfaces__in=vm_interfaces).distinct()[:2])
         params = {"virtual_machine_id": [virtual_machines[0].pk, virtual_machines[1].pk]}
         self.assertQuerysetEqual(
             self.filterset(params, self.queryset).qs,

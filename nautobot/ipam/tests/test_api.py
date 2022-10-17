@@ -210,7 +210,8 @@ class PrefixTest(APIViewTestCases.APIViewTestCase):
         Test retrieval of all available prefixes within a parent prefix.
         """
         prefix = Prefix.objects.ip_family(6).filter(prefix_length__lt=128).exclude(status__slug="container").first()
-        self.assertNotEqual(None, prefix, "Suitable prefix fixture not found")
+        if prefix == None:
+            self.fail("Suitable prefix fixture not found")
         url = reverse("ipam-api:prefix-available-prefixes", kwargs={"pk": prefix.pk})
         self.add_permissions("ipam.view_prefix")
 
@@ -230,7 +231,8 @@ class PrefixTest(APIViewTestCases.APIViewTestCase):
             if instance.get_child_prefixes().count() == 0 and instance.prefix.size > 2:
                 prefix = instance
                 break
-        self.assertNotEqual(None, prefix, "Suitable prefix fixture not found")
+        if prefix == None:
+            self.fail("Suitable prefix fixture not found")
         url = reverse("ipam-api:prefix-available-prefixes", kwargs={"pk": prefix.pk})
         self.add_permissions("ipam.add_prefix")
 
@@ -269,7 +271,8 @@ class PrefixTest(APIViewTestCases.APIViewTestCase):
             if instance.get_child_prefixes().count() == 0 and instance.prefix.size > 2:
                 prefix = instance
                 break
-        self.assertNotEqual(None, prefix, "Suitable prefix fixture not found")
+        if prefix == None:
+            self.fail("Suitable prefix fixture not found")
         url = reverse("ipam-api:prefix-available-prefixes", kwargs={"pk": prefix.pk})
         self.add_permissions("ipam.view_prefix", "ipam.add_prefix")
 
@@ -573,7 +576,7 @@ class VLANTest(APIViewTestCases.APIViewTestCase):
         """
         Attempt and fail to delete a VLAN with a Prefix assigned to it.
         """
-        vlan = Prefix.objects.filter(vlan__isnull=False).first().vlan
+        vlan = VLAN.objects.filter(prefixes__isnull=False).first()
 
         self.add_permissions("ipam.delete_vlan")
         url = reverse("ipam-api:vlan-detail", kwargs={"pk": vlan.pk})
