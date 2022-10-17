@@ -968,15 +968,14 @@ class RequiredRelationshipTestMixin(TestCase):
                 data=post_data,
                 follow=True,
             )
-        else:
-            return self.client.post(
-                reverse(get_route_for_model(model_class, "list", api=True)),
-                data=post_data,
-                format="json",
-                **self.header,
-            )
+        return self.client.post(
+            reverse(get_route_for_model(model_class, "list", api=True)),
+            data=post_data,
+            format="json",
+            **self.header,
+        )
 
-    def _test_required_relationships(self, interact_with="ui"):
+    def required_relationships_test(self, interact_with="ui"):
         """
 
         Args:

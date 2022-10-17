@@ -2635,7 +2635,7 @@ class RelationshipTest(APIViewTestCases.APIViewTestCase, RequiredRelationshipTes
         3. Try creating an object when all required data is present
         """
         # Parameterized test:
-        self._test_required_relationships(interact_with="api")
+        self.required_relationships_test(interact_with="api")
 
 
 class RelationshipAssociationTest(APIViewTestCases.APIViewTestCase):

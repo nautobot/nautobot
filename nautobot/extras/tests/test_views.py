@@ -1967,7 +1967,7 @@ class RelationshipTestCase(
         3. Try creating an object when all required data is present
         """
         # Parameterized test:
-        self._test_required_relationships(interact_with="ui")
+        self.required_relationships_test(interact_with="ui")
 
 
 class RelationshipAssociationTestCase(
