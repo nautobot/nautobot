@@ -1,6 +1,7 @@
 import django_filters
 from django.contrib.auth import get_user_model
 from django.db.models import Q
+from drf_spectacular.utils import extend_schema_field
 from timezone_field import TimeZoneField
 
 from nautobot.dcim.filter_mixins import LocatableModelFilterSetMixin
@@ -332,6 +333,7 @@ class LocationFilterSet(NautobotFilterSet, StatusModelFilterSetMixin, TenancyFil
             return Q(location_type__children__in=value) | Q(location_type__in=value, location_type__nestable=True)
         return Q()
 
+    @extend_schema_field({"type": "string"})
     def _child_location_type(self, queryset, name, value):
         params = self.generate_query__child_location_type(value)
         return queryset.filter(params)
