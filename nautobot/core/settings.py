@@ -81,9 +81,9 @@ METRICS_ENABLED = False
 
 # Napalm
 NAPALM_ARGS = {}
-NAPALM_PASSWORD = ""
-NAPALM_TIMEOUT = 30
-NAPALM_USERNAME = ""
+NAPALM_PASSWORD = os.getenv("NAUTOBOT_NAPALM_PASSWORD", "")
+NAPALM_TIMEOUT = int(os.getenv("NAUTOBOT_NAPALM_TIMEOUT", "30"))
+NAPALM_USERNAME = os.getenv("NAUTOBOT_NAPALM_USERNAME", "")
 
 # Plugins
 PLUGINS = []
@@ -273,6 +273,7 @@ SECRET_KEY = os.getenv("SECRET_KEY")
 # Default overrides
 ALLOWED_HOSTS = []
 CSRF_TRUSTED_ORIGINS = []
+CSRF_FAILURE_VIEW = "nautobot.core.views.csrf_failure"
 DATETIME_FORMAT = "N j, Y g:i a"
 INTERNAL_IPS = ("127.0.0.1", "::1")
 FORCE_SCRIPT_NAME = None
