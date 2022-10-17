@@ -812,7 +812,7 @@ def get_filterset_parameter_form_field(model, parameter):
             # In this case use queryset
             queryset_map = {"tags": TaggableClassesQuery, "job hooks": ChangeLoggedModelsQuery}
             form_field = MultipleContentTypeField(
-                choices_as_strings=True, queryset=queryset_map[plural_name]().as_queryset
+                choices_as_strings=True, queryset=queryset_map[plural_name]().as_queryset()
             )
     elif isinstance(field, (filters.MultipleChoiceFilter, filters.ChoiceFilter)) and "choices" in field.extra:
         form_field_class = forms.ChoiceField

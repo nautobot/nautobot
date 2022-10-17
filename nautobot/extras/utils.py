@@ -98,12 +98,11 @@ class ChangeLoggedModelsQuery:
 
         return query
 
-    @property
     def as_queryset(self):
         return ContentType.objects.filter(self.get_query()).order_by("app_label", "model")
 
     def get_choices(self):
-        return [(f"{ct.app_label}.{ct.model}", ct.pk) for ct in self.as_queryset]
+        return [(f"{ct.app_label}.{ct.model}", ct.pk) for ct in self.as_queryset()]
 
 
 @deconstructible
@@ -166,12 +165,11 @@ class TaggableClassesQuery:
 
         return query
 
-    @property
     def as_queryset(self):
         return ContentType.objects.filter(self()).order_by("app_label", "model")
 
     def get_choices(self):
-        return [(f"{ct.app_label}.{ct.model}", ct.pk) for ct in self.as_queryset]
+        return [(f"{ct.app_label}.{ct.model}", ct.pk) for ct in self.as_queryset()]
 
 
 def extras_features(*features):

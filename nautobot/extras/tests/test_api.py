@@ -3238,7 +3238,7 @@ class TagTestVersion12(APIViewTestCases.APIViewTestCase):
         tag = Tag.objects.get(slug=self.create_data[0]["slug"])
         self.assertEqual(
             tag.content_types.count(),
-            TaggableClassesQuery().as_queryset.count(),
+            TaggableClassesQuery().as_queryset().count(),
         )
 
 
