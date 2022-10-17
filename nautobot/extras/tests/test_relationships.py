@@ -968,7 +968,7 @@ class RequiredRelationshipTestMixin(TestCase):
                 data=post_data,
                 follow=True,
             )
-        elif interact_with == "api":
+        else:
             return self.client.post(
                 reverse(get_route_for_model(model_class, "list", api=True)),
                 data=post_data,
