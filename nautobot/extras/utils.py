@@ -103,7 +103,7 @@ class ChangeLoggedModelsQuery:
         return ContentType.objects.filter(self.get_query()).order_by("app_label", "model")
 
     def get_choices(self):
-        return [(f"{ct.app_label}.{ct.model}", ct.pk) for ct in self.as_queryset()]
+        return [(f"{ct.app_label}.{ct.model}", ct.pk) for ct in self.as_queryset]
 
 
 @deconstructible
