@@ -265,7 +265,8 @@ class Relationship(BaseModel, ChangeLoggedModel, NotesMixin):
         max_length=12,
         choices=RelationshipRequiredSideChoices,
         default=RelationshipRequiredSideChoices.NEITHER_SIDE_REQUIRED,
-        help_text="Objects on the specified side MUST implement this relationship. Not permitted for symmetric relationships.",
+        help_text="Objects on the specified side MUST implement this relationship. "
+        "Not permitted for symmetric relationships.",
         verbose_name="Required Side",
         blank=True,
     )
@@ -527,6 +528,10 @@ class Relationship(BaseModel, ChangeLoggedModel, NotesMixin):
                     self.destination_filter = self.source_filter
                 else:
                     error_messages["destination_filter"] = "Must match source_filter for a symmetric relationship"
+
+            # Marking a relationship as required is unsupported for symmetric relationships
+            if self.required_side != "":
+                error_messages["required_side"] = "Symmetric relationships cannot be marked as required."
 
             if error_messages:
                 raise ValidationError(error_messages)

@@ -254,6 +254,31 @@ class RelationshipTest(RelationshipBaseTest):
         }
         self.assertEqual(handler.exception.message_dict, expected_errors)
 
+        # Check ValidationError is raised when a relationship is marked as required and symmetric
+        expected_exception = ValidationError(
+            {"required_side": ["Symmetric relationships cannot be marked as required."]}
+        )
+        with self.assertRaises(ValidationError) as err:
+            Relationship(
+                name="This shouldn't pass validation",
+                slug="vlans-vlans-m2m",
+                type="symmetric-many-to-many",
+                source_type=self.vlan_ct,
+                destination_type=self.vlan_ct,
+                required_side="destination",
+            ).validated_save()
+        self.assertEqual(expected_exception, err.exception)
+        with self.assertRaises(ValidationError) as err:
+            Relationship(
+                name="This shouldn't pass validation",
+                slug="vlans-vlans-o2o",
+                type="symmetric-one-to-one",
+                source_type=self.vlan_ct,
+                destination_type=self.vlan_ct,
+                required_side="destination",
+            ).validated_save()
+        self.assertEqual(expected_exception, err.exception)
+
     def test_clean_valid_symmetric_implicit(self):
         """For a symmetric relationship, omitted relevant properties are autofilled on clean."""
         o2os = Relationship(
