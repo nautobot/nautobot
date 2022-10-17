@@ -554,7 +554,7 @@ class Relationship(BaseModel, ChangeLoggedModel, NotesMixin):
 
     def skip_required(self, referenced_instance_or_class, side):
         """
-        This take an instance or class and a side and checks if it should
+        This takes an instance or class and a side and checks if it should
         be skipped or not when validating required relationships.
         It will skip when any of the following conditions are True:
          - a relationship is marked as symmetric
