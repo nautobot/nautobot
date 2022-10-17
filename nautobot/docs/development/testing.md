@@ -62,9 +62,9 @@ Nautobot's custom [test runner](https://docs.djangoproject.com/en/3.2/topics/tes
 ### Running Performance Tests
 
 Nautobot uses [`django-slowtests`](https://pypi.org/project/django-slowtests/) to run performance tests. To run performance tests, you need to install the `django-slowtests` package.
-Once you install the package, you can do `invoke performance-test` or `invoke unittest --performance-test` to run unittests with `NautobotPerformanceTestRunner` by adding `--testrunner nautobot.core.tests.runner.NautobotPerformanceTestRunner` to the `coverage run` command. This flag will replace the default `NautobotTestRunner` while retaining all its functionalities with the addition of performance evaluation after test runs.
+Once you install the package, you can do `invoke performance-test` or `invoke unittest --performance-test` to run unittests with `NautobotPerformanceTestRunner`. The invoke commands will automatically add `--testrunner nautobot.core.tests.runner.NautobotPerformanceTestRunner` to the `coverage run` command and this flag will replace the default `NautobotTestRunner` while retaining all its functionalities with the addition of performance evaluation after test runs.
 
-`NautobotPerformanceTestRunner` which inherits from `DiscoverSlowestTestsRunner` will only be available when `django-slowtests` is installed. The runner measures the time to run unittests against baselines stored in a designated .yml file (default to "nautobot/core/tests/performance_baselines.yml") in addition to running the unittests themselves.
+`NautobotPerformanceTestRunner` which inherits from `DiscoverSlowestTestsRunner` will only be available when `django-slowtests` is installed. The runner measures the time to run unittests against baselines stored in a designated .yml file (defaults to `nautobot/core/tests/performance_baselines.yml`) in addition to running the unittests themselves.
 
 !!! warning
     This functionality requires the installation of the [`django-slowtests`](https://pypi.org/project/django-slowtests/) Python package, which is present in Nautobot's own development environment, but is *not* an inherent dependency of the Nautobot package when installed otherwise, such as into a plugin's development environment.
@@ -105,7 +105,7 @@ Performance baseline for test_bulk_delete_objects (nautobot.circuits.tests.test_
 ```
 
 !!! info
-    To output the performance evaluation to a file for later use, i.e. as performance baselines for future test runs, do `invoke performance-test --performance-snapshot`. This command will collect the `name` of the test and their `execution_time` and store them in a .yml file default to `report.yml`. Subsequently, the data in that file will have to be manually added to the baseline file set at [`TEST_PERFORMANCE_BASELINE_FILE`](../configuration/optional-settings.md#test_performance_baseline_file) to be used as baselines in performance tests.
+    To output the performance evaluation to a file for later use, i.e. as performance baselines for future test runs, do `invoke performance-test --performance-snapshot`. This command will collect the `names` of the test and their `execution_time` and store them in a .yml file default to `report.yml`. Subsequently, the data in that file will have to be manually added to the baseline file set at [`TEST_PERFORMANCE_BASELINE_FILE`](../configuration/optional-settings.md#test_performance_baseline_file) to be used as baselines in performance tests.
 
 Example output of `invoke performance-test --performance-snapshot`:
 
@@ -135,7 +135,7 @@ Example output of `invoke performance-test --performance-snapshot`:
 `TEST_PERFORMANCE_BASELINE_FILE` specifies the file in which performance baselines are stored, defaults to `nautobot/core/tests/performance_baselines.yml`. Currently, only baselines for those unittests tagged with `performance` are stored.
 
 You can add baselines for your own test to `nautobot/core/tests/performance_baselines.yml` or have your own baseline yaml file for performance testing by specifying a different file path for  `TEST_PERFORMANCE_BASELINE_FILE` in plugin's development/test `nautobot_config.py`, and store the output of `invoke performance-test --performance-snapshot` in that file.
-`--performance-snapshot` flag will store the results of your performance test to `report.yml` and all you need to do is copy/paste the result to the file set by `TEST_PERFORMANCE_BASELINE_FILE`. Now you have baselines for your own tests!
+`--performance-snapshot` flag will store the results of your performance test to a new `report.yml` and all you need to do is copy/paste the results to the file set by `TEST_PERFORMANCE_BASELINE_FILE`. Now you have baselines for your own tests!
 
 Example output of `invoke performance-test --performance-snapshot`:
 
