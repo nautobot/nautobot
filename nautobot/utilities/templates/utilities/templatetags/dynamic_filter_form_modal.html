@@ -1,6 +1,17 @@
 {% load form_helpers %}
 {% load static %}
 
+{% block extra_styles %}
+<style>
+    #filterform-table {
+        table-layout: fixed;
+    }
+    #filterform-table thead th:last-child {
+        width: 5em;
+    }
+</style>
+{% endblock %}
+
 <div class="modal fade" tabindex="-1" id="{{ form_name }}_modal">
     <div class="modal-dialog modal-lg" style="width: 90% !important;">
         <div class="modal-content">
@@ -12,7 +23,7 @@
                 {% if form %}
                     <form id="dynamic-filter-form" class="form-horizontal" method="get" action=".">
                         <div class="">
-                            <table class="table" id="secrets" style="table-layout: fixed;">
+                            <table class="table" id="filterform-table">
                                 {{ form.management_form }}
                                 {% for form in form %}
                                     {% if forloop.first %}
