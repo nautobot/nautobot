@@ -1,1 +1,1 @@
-Added factories for DCIM `DeviceType`, `Manufacturer`, and `Platform`.
+Added factories for DCIM `DeviceRole`, `DeviceType`, `Manufacturer`, and `Platform`.
