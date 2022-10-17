@@ -6,17 +6,20 @@ from django.core.exceptions import ValidationError
 from django.urls import reverse
 from django.utils.html import format_html
 
-from nautobot.dcim.models import Site, Rack
+from nautobot.dcim.models import Device, Platform, Rack, Site
 from nautobot.dcim.tables import SiteTable
+from nautobot.dcim.tests.test_views import create_test_device
 from nautobot.ipam.models import VLAN
 from nautobot.extras.choices import RelationshipTypeChoices
-from nautobot.extras.models import Relationship, RelationshipAssociation
+from nautobot.extras.models import Relationship, RelationshipAssociation, Status
+from nautobot.tenancy.models import Tenant
 from nautobot.utilities.tables import RelationshipColumn
 from nautobot.utilities.testing import TestCase
 from nautobot.utilities.forms import (
     DynamicModelChoiceField,
     DynamicModelMultipleChoiceField,
 )
+from nautobot.utilities.utils import get_route_for_model
 
 
 class RelationshipBaseTest(TestCase):
@@ -954,3 +957,249 @@ class RelationshipTableTest(RelationshipBaseTest):
             # Exact match is difficult because the order of rendering is unpredictable.
             for value in col_expected_value:
                 self.assertIn(value, rendered_value)
+
+
+class RequiredRelationshipTestMixin(TestCase):
+    def post_data_to(self, model_class, post_data, interact_with):
+        # Helper to post data to a URL
+        if interact_with == "ui":
+            return self.client.post(
+                reverse(get_route_for_model(model_class, "add")),
+                data=post_data,
+                follow=True,
+            )
+        elif interact_with == "api":
+            return self.client.post(
+                reverse(get_route_for_model(model_class, "list", api=True)),
+                data=post_data,
+                format="json",
+                **self.header,
+            )
+
+    def _test_required_relationships(self, interact_with="ui"):
+        """
+
+        Args:
+            interact_with: str: ("ui" or "api")
+
+        Note:
+            Where it is used, this test is parameterized to prevent code duplication.
+
+        It should not be possible to create an object that has a required relationship without specifying the
+        required amount of related objects. It performs the following checks:
+
+        1. Try creating an object when no required target object exists
+        2. Try creating an object without specifying required target object(s)
+        3. Try creating an object when all required data is present
+
+        """
+
+        device_ct = ContentType.objects.get_for_model(Device)
+        platform_ct = ContentType.objects.get_for_model(Platform)
+        tenant_ct = ContentType.objects.get_for_model(Tenant)
+        vlan_ct = ContentType.objects.get_for_model(VLAN)
+        Relationship(
+            name="VLANs require at least one Device",
+            slug="vlans-devices-m2m",
+            type="many-to-many",
+            source_type=device_ct,
+            destination_type=vlan_ct,
+            required_side="destination",
+        ).validated_save()
+        Relationship(
+            name="Platforms require at least one device",
+            slug="platform-devices-o2m",
+            type="one-to-many",
+            source_type=platform_ct,
+            destination_type=device_ct,
+            required_side="source",
+        ).validated_save()
+        Relationship(
+            name="Tenant requires one platform",
+            slug="tenant-platform-o2o",
+            type="one-to-one",
+            source_type=tenant_ct,
+            destination_type=platform_ct,
+            required_side="source",
+        ).validated_save()
+
+        try:
+            active_platform_status = str(Status.objects.get_for_model(Platform).get(slug="active").pk)
+        except Status.DoesNotExist:
+            active_platform_status = "active"
+
+        tests_params = [
+            # Required many-to-many:
+            {
+                "create_data": {
+                    "vid": 1,
+                    "name": "New VLAN",
+                    "status": str(Status.objects.get_for_model(VLAN).get(slug="active").pk)
+                    if interact_with == "ui"
+                    else "active",
+                },
+                "target_side": "source",
+                "relation_slug": "vlans-devices-m2m",
+                "required_objects": [
+                    lambda: create_test_device("Device 1"),
+                    lambda: create_test_device("Device 2"),
+                ],
+                "required_target": Device,
+                "required_from": VLAN,
+                "expected_errors": {
+                    "api": {
+                        "objects_nonexistent": "VLANs require at least one device, but no devices exist yet. "
+                        "Create a device by posting to /api/dcim/devices/",
+                        "objects_not_specified": 'You need to specify relationships["vlans-devices-m2m"]'
+                        '["source"]["objects"].',
+                    },
+                    "ui": {
+                        "objects_nonexistent": "VLANs require at least one device, but no devices exist yet.",
+                        "objects_not_specified": "You need to select at least one device.",
+                    },
+                },
+            },
+            # Required one-to-many:
+            {
+                "create_data": {
+                    "name": "New Platform",
+                    "status": active_platform_status,
+                    "napalm_args": "null",
+                },
+                "target_side": "destination",
+                "relation_slug": "platform-devices-o2m",
+                "required_objects": [
+                    lambda: create_test_device("Device 1"),
+                ],
+                "required_target": Device,
+                "required_from": Platform,
+                "expected_errors": {
+                    "api": {
+                        "objects_nonexistent": "Platforms require at least one device, but no devices exist yet. "
+                        "Create a device by posting to /api/dcim/devices/",
+                        "objects_not_specified": 'You need to specify relationships["platform-devices-o2m"]'
+                        '["destination"]["objects"].',
+                    },
+                    "ui": {
+                        "objects_nonexistent": "Platforms require at least one device, but no devices exist yet. ",
+                        "objects_not_specified": "You need to select at least one device.",
+                    },
+                },
+            },
+            # Required one-to-one:
+            {
+                "create_data": {
+                    "name": "New Tenant",
+                },
+                "target_side": "destination",
+                "relation_slug": "tenant-platform-o2o",
+                "required_objects": [
+                    lambda: Platform.objects.create(name="Platform 1"),
+                ],
+                "required_target": Platform,
+                "required_from": Tenant,
+                "expected_errors": {
+                    "api": {
+                        "objects_nonexistent": "Tenants require a platform, but no platforms exist yet. "
+                        "Create a platform by posting to /api/dcim/platforms/",
+                        "objects_not_specified": 'You need to specify relationships["tenant-platform-o2o"]'
+                        '["destination"]["objects"].',
+                    },
+                    "ui": {
+                        "objects_nonexistent": "Tenants require a platform, but no platforms exist yet.",
+                        "objects_not_specified": "You need to select a platform.",
+                    },
+                },
+            },
+        ]
+
+        self.user.is_superuser = True
+        self.user.save()
+        if interact_with == "ui":
+            self.client.force_login(self.user)
+
+        for params in tests_params:
+            msg = f"Testing {params['required_from']} relationship '{params['relation_slug']}'"
+            with self.subTest(msg, testinfo=msg):
+                # Clear any existing required target model objects that may have been created in previous subtests:
+                params["required_target"].objects.all().delete()
+
+                # Get count of existing objects:
+                existing_count = params["required_from"].objects.count()
+
+                related_field_key = params["relation_slug"]
+                if interact_with == "ui":
+                    related_field_key = f'cr_{params["relation_slug"]}__{params["target_side"]}'
+
+                # 1. Try creating an object when no required target object exists
+                response = self.post_data_to(params["required_from"], params["create_data"], interact_with)
+
+                if interact_with == "ui":
+                    for message in [
+                        params["expected_errors"]["ui"]["objects_nonexistent"],
+                        params["expected_errors"]["ui"]["objects_not_specified"],
+                    ]:
+                        self.assertContains(response, message)
+
+                elif interact_with == "api":
+                    self.assertHttpStatus(response, 400)
+                    expected_error_json = [
+                        {
+                            related_field_key: [
+                                params["expected_errors"]["api"]["objects_nonexistent"],
+                                params["expected_errors"]["api"]["objects_not_specified"],
+                            ]
+                        }
+                    ]
+                    self.assertEqual(expected_error_json, response.json())
+
+                # Check that no object was created:
+                self.assertEqual(params["required_from"].objects.count(), existing_count)
+
+                # 2. Try creating an object without specifying required target object(s)
+                # Create required target objects
+                required_pk_list = [create_object().pk for create_object in params["required_objects"]]
+                response = self.post_data_to(params["required_from"], params["create_data"], interact_with)
+
+                if interact_with == "ui":
+                    self.assertContains(response, params["expected_errors"]["ui"]["objects_not_specified"])
+
+                elif interact_with == "api":
+                    self.assertHttpStatus(response, 400)
+                    expected_error_json = [
+                        {
+                            related_field_key: [
+                                params["expected_errors"]["api"]["objects_not_specified"],
+                            ]
+                        }
+                    ]
+                    self.assertEqual(expected_error_json, response.json())
+
+                # Check that no object was created:
+                self.assertEqual(params["required_from"].objects.count(), existing_count)
+
+                # 3. Try creating an object when all required data is present
+                if interact_with == "ui":
+                    related_objects = {related_field_key: required_pk_list}
+
+                elif interact_with == "api":
+                    related_objects = {
+                        "relationships": {
+                            params["relation_slug"]: {params["target_side"]: {"objects": required_pk_list}}
+                        }
+                    }
+
+                response = self.post_data_to(
+                    params["required_from"], {**params["create_data"], **related_objects}, interact_with
+                )
+
+                if interact_with == "ui":
+                    self.assertHttpStatus(response, 200)
+                    self.assertContains(response, params["create_data"]["name"])
+                    self.assertContains(response, "Relationships")
+
+                elif interact_with == "api":
+                    self.assertHttpStatus(response, 201)
+
+                # Check that an object was created:
+                # self.assertEqual(params["required_from"].objects.count(), existing_count + 1)

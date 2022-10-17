@@ -15,13 +15,11 @@ from nautobot.dcim.models import (
     DeviceRole,
     DeviceType,
     Manufacturer,
-    Platform,
     Rack,
     RackGroup,
     RackRole,
     Site,
 )
-from nautobot.dcim.tests.test_views import create_test_device
 from nautobot.extras.api.nested_serializers import NestedJobResultSerializer
 from nautobot.extras.choices import (
     DynamicGroupOperatorChoices,
@@ -59,9 +57,9 @@ from nautobot.extras.models import (
     Webhook,
 )
 from nautobot.extras.models.jobs import JobHook
+from nautobot.extras.tests.test_relationships import RequiredRelationshipTestMixin
 from nautobot.extras.utils import TaggableClassesQuery
-from nautobot.ipam.models import VLAN, VLANGroup
-from nautobot.tenancy.models import Tenant
+from nautobot.ipam.models import VLANGroup
 from nautobot.users.models import ObjectPermission
 from nautobot.utilities.choices import ColorChoices
 from nautobot.utilities.testing import APITestCase, APIViewTestCases
@@ -2391,7 +2389,7 @@ class NoteTest(APIViewTestCases.APIViewTestCase):
         )
 
 
-class RelationshipTest(APIViewTestCases.APIViewTestCase):
+class RelationshipTest(APIViewTestCases.APIViewTestCase, RequiredRelationshipTestMixin):
     model = Relationship
     brief_fields = ["display", "id", "name", "slug", "url"]
 
@@ -2440,9 +2438,6 @@ class RelationshipTest(APIViewTestCases.APIViewTestCase):
     def setUpTestData(cls):
         site_type = ContentType.objects.get_for_model(Site)
         device_type = ContentType.objects.get_for_model(Device)
-        platform_type = ContentType.objects.get_for_model(Platform)
-        tenant_type = ContentType.objects.get_for_model(Tenant)
-        vlan_type = ContentType.objects.get_for_model(VLAN)
 
         cls.relationships = (
             Relationship(
@@ -2467,30 +2462,6 @@ class RelationshipTest(APIViewTestCases.APIViewTestCase):
                 type="many-to-many",
                 source_type=site_type,
                 destination_type=device_type,
-            ),
-            Relationship(
-                name="VLANs require at least one Device",
-                slug="vlans-devices",
-                type="many-to-many",
-                source_type=device_type,
-                destination_type=vlan_type,
-                required_side="destination",
-            ),
-            Relationship(
-                name="Platforms require at least one device",
-                slug="platform-devices",
-                type="one-to-many",
-                source_type=platform_type,
-                destination_type=device_type,
-                required_side="source",
-            ),
-            Relationship(
-                name="Tenant requires one platform",
-                slug="platform-tenant",
-                type="one-to-one",
-                source_type=tenant_type,
-                destination_type=platform_type,
-                required_side="source",
             ),
         )
         for relationship in cls.relationships:
@@ -2657,190 +2628,14 @@ class RelationshipTest(APIViewTestCases.APIViewTestCase):
             ).exists()
         )
 
-    def post_to_endpoint(self, model_class, post_data):
-        return self.client.post(
-            reverse(get_route_for_model(model_class, "list", api=True)),
-            data=post_data,
-            format="json",
-            **self.header,
-        )
-
-    def test_create_vlan_with_required_device_m2m(self):
+    def test_required_relationships(self):
         """
-        Test that we can't create a VLAN without specifying at least one Device for this required relationship
-        1. Try creating a VLAN when no Device exists
-        2. Try creating a VLAN with no specified device data in the list of required objects
-        3. Try creating a VLAN when all required data is present
+        1. Try creating an object when no required target object exists
+        2. Try creating an object without specifying required target object(s)
+        3. Try creating an object when all required data is present
         """
-        self.user.is_superuser = True
-        self.user.save()
-
-        existing_vlans_count = VLAN.objects.count()
-
-        create_data = {
-            "vid": 1,
-            "name": "New VLAN",
-            "status": "active",
-        }
-
-        # Try creating a vlan when no device exists
-        response = self.post_to_endpoint(VLAN, create_data)
-        expected_error_json = [
-            {
-                "vlans-devices": [
-                    "VLANs require at least one device, but no devices exist yet. "
-                    "Create a device by posting to /api/dcim/devices/",
-                    'You must specify at least one device [<device.id>, ...] in relationships["vlans-devices"]'
-                    '["source"]["objects"].',
-                ]
-            }
-        ]
-        self.assertHttpStatus(response, 400)
-        self.assertEqual(expected_error_json, response.json())
-        # Check that no VLAN was created:
-        self.assertEqual(VLAN.objects.count(), existing_vlans_count)
-
-        # Try creating a vlan when we haven't specified any device data in the list of required objects
-        device1 = create_test_device("Device 1")
-        device2 = create_test_device("Device 2")
-        response = self.post_to_endpoint(VLAN, create_data)
-        expected_error_json = [
-            {
-                "vlans-devices": [
-                    'You must specify at least one device [<device.id>, ...] in relationships["vlans-devices"]'
-                    '["source"]["objects"].'
-                ]
-            },
-        ]
-        self.assertHttpStatus(response, 400)
-        self.assertEqual(expected_error_json, response.json())
-        # Check that no VLAN was created:
-        self.assertEqual(VLAN.objects.count(), existing_vlans_count)
-
-        # Try creating a vlan when all two devices are provided for the m2m relationship
-        create_data["relationships"] = {
-            "vlans-devices": {
-                "source": {
-                    "objects": [
-                        str(device1.pk),
-                        str(device2.pk),
-                    ]
-                }
-            }
-        }
-        response = self.post_to_endpoint(VLAN, create_data)
-        self.assertHttpStatus(response, 201)
-        # Check that a VLAN was created:
-        self.assertEqual(VLAN.objects.count(), existing_vlans_count + 1)
-
-    def test_create_platform_with_required_device_o2m(self):
-        """
-        Test that we can't create a Platform without specifying a Device for this required relationship
-        1. Try creating a Platform when no Device exists
-        2. Try creating a Platform with no specified Device data in the list of required objects
-        3. Try creating a Platform when all required data is present
-        """
-        self.user.is_superuser = True
-        self.user.save()
-
-        existing_platforms_count = Platform.objects.count()
-
-        create_data = {
-            "name": "New Platform",
-            "status": "active",
-        }
-
-        # Try creating a platform when no device exists
-        response = self.post_to_endpoint(Platform, create_data)
-        expected_error_json = [
-            {
-                "platform-devices": [
-                    "Platforms require at least one device, but no devices exist yet. "
-                    "Create a device by posting to /api/dcim/devices/",
-                    'You must specify at least one device [<device.id>, ...] in relationships["platform-devices"]'
-                    '["destination"]["objects"].',
-                ]
-            }
-        ]
-        self.assertHttpStatus(response, 400)
-        self.assertEqual(expected_error_json, response.json())
-        # Check that no Platform was created:
-        self.assertEqual(Platform.objects.count(), existing_platforms_count)
-
-        # Try creating a platform when we haven't specified any device data in the list of required objects
-        device = create_test_device("Device 1")
-        response = self.post_to_endpoint(Platform, create_data)
-        expected_error_json = [
-            {
-                "platform-devices": [
-                    'You must specify at least one device [<device.id>, ...] in relationships["platform-devices"]'
-                    '["destination"]["objects"].',
-                ]
-            }
-        ]
-        self.assertHttpStatus(response, 400)
-        self.assertEqual(expected_error_json, response.json())
-        # Check that no Platform was created:
-        self.assertEqual(Platform.objects.count(), existing_platforms_count)
-
-        # Try creating a platform when all required data is present
-        create_data["relationships"] = {"platform-devices": {"destination": {"objects": [str(device.pk)]}}}
-        response = self.post_to_endpoint(Platform, create_data)
-        self.assertHttpStatus(response, 201)
-        # Check that a Platform was created:
-        self.assertEqual(Platform.objects.count(), existing_platforms_count + 1)
-
-    def test_create_tenant_with_required_platform_o2o(self):
-        """
-        Test  that we can't create a tenant without specifying a platform for this required relationship
-        1. Try creating a tenant when no platforms exist
-        2. Try creating a tenant with no specified platform data
-        3. Try creating a tenant when all required data is present
-        """
-        self.user.is_superuser = True
-        self.user.save()
-
-        existing_tenants_count = Tenant.objects.count()
-
-        create_data = {
-            "name": "New Tenant",
-        }
-
-        # Try creating a tenant when no platform exists
-        response = self.post_to_endpoint(Tenant, create_data)
-        expected_error_json = [
-            {
-                "platform-tenant": [
-                    "Tenants require a platform, but no platforms exist yet. "
-                    "Create a platform by posting to /api/dcim/platforms/",
-                    'You must specify a platform [<platform.id>, ...] in relationships["platform-tenant"]'
-                    '["destination"]["objects"].',
-                ]
-            }
-        ]
-        self.assertHttpStatus(response, 400)
-        self.assertEqual(expected_error_json, response.json())
-
-        # Try creating a tenant with no specified platform data
-        platform = Platform.objects.create(name="Platform 1")
-        response = self.post_to_endpoint(Tenant, create_data)
-        expected_error_json = [
-            {
-                "platform-tenant": [
-                    "You must specify a platform [<platform.id>, ...] in "
-                    'relationships["platform-tenant"]["destination"]["objects"].',
-                ]
-            }
-        ]
-        self.assertHttpStatus(response, 400)
-        self.assertEqual(expected_error_json, response.json())
-        self.assertEqual(Tenant.objects.count(), existing_tenants_count)
-
-        # Try creating a tenant when all required data is present
-        create_data["relationships"] = {"platform-tenant": {"destination": {"objects": [str(platform.pk)]}}}
-        response = self.post_to_endpoint(Tenant, create_data)
-        self.assertHttpStatus(response, 201)
-        self.assertEqual(Tenant.objects.count(), existing_tenants_count + 1)
+        # Parameterized test:
+        self._test_required_relationships(interact_with="api")
 
 
 class RelationshipAssociationTest(APIViewTestCases.APIViewTestCase):

@@ -267,7 +267,6 @@ class Relationship(BaseModel, ChangeLoggedModel, NotesMixin):
         default=RelationshipRequiredSideChoices.NEITHER_SIDE_REQUIRED,
         help_text="Objects on the specified side MUST implement this relationship. Not permitted for symmetric relationships.",
         verbose_name="Required Side",
-        blank=True,
     )
 
     #
@@ -554,6 +553,20 @@ class Relationship(BaseModel, ChangeLoggedModel, NotesMixin):
                 )
 
     def skip_required(self, referenced_instance_or_class, side):
+        """
+        This take an instance or class and a side and checks if it should
+        be skipped or not when validating required relationships.
+        It will skip when any of the following conditions are True:
+         - a relationship is marked as symmetric
+         - a relationship references itself
+         - if a required model class is None (if it doesn't exist yet -- unimplemented/uninstalled plugins for instance)
+
+        Args:
+            referenced_instance_or_class: model instance or class
+            side: side of the relationship being checked
+
+        Returns: Bool
+        """
 
         # Not enforcing required symmetric relationships
         if self.symmetric:
@@ -563,7 +576,7 @@ class Relationship(BaseModel, ChangeLoggedModel, NotesMixin):
         if ContentType.objects.get_for_model(referenced_instance_or_class) == getattr(self, f"{side}_type"):
             return True
 
-        required_model_class = getattr(self, f"{side}_type").model_class()
+        required_model_class = getattr(self, f"{RelationshipSideChoices.OPPOSITE[side]}_type").model_class()
         # Handle the case where required_model_class is None (e.g., relationship to a plugin
         # model for a plugin that's not installed at present):
         if required_model_class is None:
@@ -643,19 +656,15 @@ class Relationship(BaseModel, ChangeLoggedModel, NotesMixin):
                 elif output_for == "api":
                     supplied_data = initial_data.get(relation, {}).get(opposite_side, {})
 
-                if len(supplied_data) == 0:
-                    verb = "select"
-                    api_tip = ""
-                    if output_for == "api":
-                        verb = "specify"
-                        api_tip = (
-                            f" [<{required_model_class._meta.model_name}.id>, ...] in relationships"
-                            f'["{relation.slug}"]["{opposite_side}"]["objects"]'
+                if not supplied_data:
+                    if output_for == "ui":
+                        field_errors[field_key].append(
+                            f"You need to select {num_required_verbose} {required_model_meta.verbose_name}."
                         )
-                    error_message = (
-                        f"You must {verb} {num_required_verbose} {required_model_meta.verbose_name}{api_tip}."
-                    )
-                    field_errors[field_key].append(error_message)
+                    elif output_for == "api":
+                        field_errors[field_key].append(
+                            f'You need to specify relationships["{relation.slug}"]["{opposite_side}"]["objects"].'
+                        )
 
             if len(field_errors[field_key]) > 0:
                 relationships_field_errors.append(field_errors)

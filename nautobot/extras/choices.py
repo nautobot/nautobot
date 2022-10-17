@@ -269,7 +269,7 @@ class ObjectChangeEventContextChoices(ChoiceSet):
 
 
 class RelationshipRequiredSideChoices(ChoiceSet):
-    NEITHER_SIDE_REQUIRED = ""
+    NEITHER_SIDE_REQUIRED = "neither"
     SOURCE_SIDE_REQUIRED = "source"
     DESTINATION_SIDE_REQUIRED = "destination"
 
