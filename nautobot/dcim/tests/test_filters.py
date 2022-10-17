@@ -107,12 +107,14 @@ User = get_user_model()
 def common_test_data(cls):
 
     tenants = Tenant.objects.filter(group__isnull=False)
+    cls.tenants = tenants
 
     regions = (
         Region.objects.create(name="Region 1", slug="region-1", description="A"),
         Region.objects.create(name="Region 2", slug="region-2", description="B"),
         Region.objects.create(name="Region 3", slug="region-3", description="C"),
     )
+    cls.regions = regions
 
     site_statuses = Status.objects.get_for_model(Site)
     cls.site_status_map = {s.slug: s for s in site_statuses.all()}
@@ -181,6 +183,7 @@ def common_test_data(cls):
     CircuitTermination.objects.create(circuit=circuit, site=sites[1], term_side="Z")
 
     manufacturers = list(Manufacturer.objects.all()[:3])
+    cls.manufacturers = manufacturers
 
     platforms = (
         Platform.objects.create(
@@ -208,6 +211,7 @@ def common_test_data(cls):
             description="C",
         ),
     )
+    cls.platforms = platforms
 
     device_types = (
         DeviceType.objects.create(
@@ -240,6 +244,7 @@ def common_test_data(cls):
             subdevice_role=SubdeviceRoleChoices.ROLE_CHILD,
         ),
     )
+    cls.device_types = device_types
 
     rack_groups = (
         RackGroup.objects.create(name="Rack Group 1", slug="rack-group-1", site=sites[0]),
@@ -345,6 +350,7 @@ def common_test_data(cls):
             description="Device Role Description 3",
         ),
     )
+    cls.device_roles = device_roles
 
     cluster_type = ClusterType.objects.create(name="Cluster Type 1", slug="cluster-type-1")
     clusters = (
@@ -1426,7 +1432,6 @@ class ManufacturerTestCase(FilterTestCases.NameSlugFilterTestCase):
         common_test_data(cls)
 
         devices = list(Device.objects.all()[:3])
-        cls.manufacturers = list(Manufacturer.objects.exclude(description="")[:3])
 
         InventoryItem.objects.create(device=devices[0], name="Inventory Item 1", manufacturer=cls.manufacturers[0])
         InventoryItem.objects.create(device=devices[1], name="Inventory Item 2", manufacturer=cls.manufacturers[1])
@@ -1438,7 +1443,7 @@ class ManufacturerTestCase(FilterTestCases.NameSlugFilterTestCase):
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), len(descriptions))
 
     def test_inventory_items(self):
-        inventory_items = InventoryItem.objects.all()[:2]
+        inventory_items = list(InventoryItem.objects.all()[:2])
         params = {"inventory_items": [inventory_items[0].pk, inventory_items[1].pk]}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), len(inventory_items))
 
@@ -2368,39 +2373,39 @@ class DeviceTestCase(FilterTestCases.FilterTestCase, FilterTestCases.TenancyFilt
             self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
 
     def test_devicetype(self):
-        device_types = DeviceType.objects.all()[:2]
+        device_types = self.device_types[:2]
         params = {"device_type_id": [device_types[0].pk, device_types[1].pk]}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), len(device_types))
 
     def test_devicerole(self):
-        device_roles = DeviceRole.objects.all()[:2]
+        device_roles = self.device_roles[:2]
         with self.subTest():
             params = {"role_id": [device_roles[0].pk, device_roles[1].pk]}
-            self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+            self.assertEqual(self.filterset(params, self.queryset).qs.count(), len(device_roles))
         with self.subTest():
             params = {"role": [device_roles[0].slug, device_roles[1].slug]}
-            self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+            self.assertEqual(self.filterset(params, self.queryset).qs.count(), len(device_roles))
 
     def test_platform(self):
-        platforms = Platform.objects.all()[:2]
+        platforms = self.platforms[:2]
         with self.subTest():
             params = {"platform_id": [platforms[0].pk, platforms[1].pk]}
-            self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+            self.assertEqual(self.filterset(params, self.queryset).qs.count(), len(platforms))
         with self.subTest():
             params = {"platform": [platforms[0].slug, platforms[1].slug]}
-            self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+            self.assertEqual(self.filterset(params, self.queryset).qs.count(), len(platforms))
 
     def test_region(self):
-        regions = Region.objects.all()[:2]
+        regions = self.regions[:2]
         with self.subTest():
             params = {"region_id": [regions[0].pk, regions[1].pk]}
-            self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+            self.assertEqual(self.filterset(params, self.queryset).qs.count(), len(regions))
         with self.subTest():
             params = {"region": [regions[0].slug, regions[1].slug]}
-            self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+            self.assertEqual(self.filterset(params, self.queryset).qs.count(), len(regions))
 
     def test_secrets_group(self):
-        secrets_groups = SecretsGroup.objects.all()[:2]
+        secrets_groups = list(SecretsGroup.objects.all()[:2])
         with self.subTest():
             params = {"secrets_group_id": [secrets_groups[0].pk, secrets_groups[1].pk]}
             self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
@@ -2409,8 +2414,9 @@ class DeviceTestCase(FilterTestCases.FilterTestCase, FilterTestCases.TenancyFilt
             self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
 
     def test_site(self):
-        sites = Site.objects.all()[:2]
+        sites = list(Site.objects.all()[:2])
         with self.subTest():
+            params = {"site_id": [sites[0].pk, sites[1].pk]}
             params = {"site_id": [sites[0].pk, sites[1].pk]}
             self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
         with self.subTest():
@@ -3938,16 +3944,10 @@ class InventoryItemTestCase(FilterTestCases.FilterTestCase):
             Device.objects.get(name="Device 3"),
         )
 
-        manufacturers = (
-            Manufacturer.objects.get(name="Manufacturer 1"),
-            Manufacturer.objects.get(name="Manufacturer 2"),
-            Manufacturer.objects.get(name="Manufacturer 3"),
-        )
-
         inventory_items = (
             InventoryItem.objects.create(
                 device=devices[0],
-                manufacturer=manufacturers[0],
+                manufacturer=cls.manufacturers[0],
                 name="Inventory Item 1",
                 part_id="1001",
                 serial="ABC",
@@ -3958,7 +3958,7 @@ class InventoryItemTestCase(FilterTestCases.FilterTestCase):
             ),
             InventoryItem.objects.create(
                 device=devices[1],
-                manufacturer=manufacturers[1],
+                manufacturer=cls.manufacturers[1],
                 name="Inventory Item 2",
                 part_id="1002",
                 serial="DEF",
@@ -3969,7 +3969,7 @@ class InventoryItemTestCase(FilterTestCases.FilterTestCase):
             ),
             InventoryItem.objects.create(
                 device=devices[2],
-                manufacturer=manufacturers[2],
+                manufacturer=cls.manufacturers[2],
                 name="Inventory Item 3",
                 part_id="1003",
                 serial="GHI",
