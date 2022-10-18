@@ -1,4 +1,5 @@
 from django import forms
+from django.core.exceptions import ValidationError
 from django.db.models import Q
 from django.http import QueryDict
 from django.test import TestCase
@@ -11,6 +12,7 @@ from nautobot.utilities.utils import (
     convert_querydict_to_factory_formset_acceptable_querydict,
     deepmerge,
     dict_to_filter_params,
+    ensure_content_type_and_field_name_inquery_params,
     get_all_lookup_expr_for_field,
     get_filterable_params_from_filter_params,
     get_filterset_field,
@@ -539,3 +541,14 @@ class LookupRelatedFunctionTest(TestCase):
         data = get_filterable_params_from_filter_params(filter_params, non_filter_params, filterset_class)
 
         self.assertEqual(data, {"name": ["Site 1"], "status": ["active", "planned"]})
+
+    def test_ensure_content_type_and_field_name_inquery_params(self):
+        with self.assertRaises(ValidationError) as err:
+            ensure_content_type_and_field_name_inquery_params({})
+        self.assertEqual(str(err.exception.args[0]), "content_type and field_name are required parameters")
+        self.assertEqual(err.exception.code, 400)
+
+        with self.assertRaises(ValidationError) as err:
+            ensure_content_type_and_field_name_inquery_params({"field_name": "name", "content_type": "dcim.abc"})
+        self.assertEqual(str(err.exception.args[0]), "content_type not found")
+        self.assertEqual(err.exception.code, 404)

@@ -12,6 +12,7 @@ from django import forms
 from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.contrib.contenttypes.models import ContentType
+from django.core.exceptions import ValidationError
 from django.core.serializers import serialize
 from django.db.models import Count, Model, OuterRef, Subquery
 from django.db.models.functions import Coalesce
@@ -919,3 +920,26 @@ def get_filterable_params_from_filter_params(filter_params, non_filter_params, f
             )
 
     return final_filter_params
+
+
+def ensure_content_type_and_field_name_inquery_params(query_params):
+    """Ensure that the `query_params` include `content_type` and `field_name` and that
+    `content_type` is a valid ContentType value.
+    ensure_content_type_and_field_name_inquery_params
+
+    Return the 'ContentTypes' model and 'field_name' if validation was successful.
+    """
+    if "content_type" not in query_params or "field_name" not in query_params:
+        raise ValidationError("content_type and field_name are required parameters", code=400)
+    contenttype = query_params.get("content_type")
+    app_label, model_name = contenttype.split(".")
+    try:
+        model_contenttype = ContentType.objects.get(app_label=app_label, model=model_name)
+        model = model_contenttype.model_class()
+        if model is None:
+            raise ValidationError(f"model for content_type: <{model_contenttype}> not found", code=500)
+    except ContentType.DoesNotExist:
+        raise ValidationError("content_type not found", code=404)
+    field_name = query_params.get("field_name")
+
+    return field_name, model

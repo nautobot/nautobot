@@ -5,8 +5,7 @@ from collections import OrderedDict
 from django import __version__ as DJANGO_VERSION
 from django.apps import apps
 from django.conf import settings
-from django.contrib.contenttypes.models import ContentType
-from django.core.exceptions import ObjectDoesNotExist
+from django.core.exceptions import ObjectDoesNotExist, ValidationError
 from django.http.response import HttpResponseBadRequest
 from django.db import transaction
 from django.db.models import ProtectedError
@@ -42,6 +41,7 @@ from nautobot.utilities.utils import (
     get_filterset_parameter_form_field,
     get_form_for_model,
     FilterSetFieldNotFound,
+    ensure_content_type_and_field_name_inquery_params,
 )
 from . import serializers
 
@@ -723,31 +723,13 @@ class GetFilterSetFieldLookupExpressionChoicesAPI(NautobotAPIVersionMixin, APIVi
 
     @extend_schema(exclude=True)
     def get(self, request):
-        if "content_type" not in request.GET or "field_name" not in request.GET:
-            return Response(
-                "content_type and field_name are required parameters",
-                status=400,
-            )
-        contenttype = request.GET.get("content_type")
-        field_name = request.GET.get("field_name")
-        app_label, model_name = contenttype.split(".")
         try:
-            model_contenttype = ContentType.objects.get(app_label=app_label, model=model_name)
-            model = model_contenttype.model_class()
-            if model is None:
-                return Response(
-                    f"model for content_type: <{model_contenttype}> not found",
-                    status=500,
-                )
-        except ContentType.DoesNotExist:
-            return Response(
-                "content_type not found",
-                status=404,
-            )
-        try:
+            field_name, model = ensure_content_type_and_field_name_inquery_params(request.GET)
             data = get_all_lookup_expr_for_field(model, field_name)
         except FilterSetFieldNotFound:
             return Response("field_name not found", status=404)
+        except ValidationError as err:
+            return Response(err.args[0], status=err.code)
 
         # Needs to be returned in this format because this endpoint is used by
         # DynamicModelChoiceField which requires the response of an api in this exact format
@@ -768,28 +750,10 @@ class GetFilterSetFieldDOMElementAPI(NautobotAPIVersionMixin, APIView):
 
     @extend_schema(exclude=True)
     def get(self, request):
-        if "content_type" not in request.GET or "field_name" not in request.GET:
-            return Response(
-                "content_type and field_name are required parameters",
-                status=400,
-            )
-        field_name = request.GET.get("field_name")
-        contenttype = request.GET.get("content_type")
-        app_label, model_name = contenttype.split(".")
         try:
-            model_contenttype = ContentType.objects.get(app_label=app_label, model=model_name)
-            model = model_contenttype.model_class()
-            if model is None:
-                return Response(
-                    f"model for content_type: <{model_contenttype}> not found",
-                    status=500,
-                )
-        except ContentType.DoesNotExist:
-            return Response(
-                "content_type not found",
-                status=404,
-            )
-
+            field_name, model = ensure_content_type_and_field_name_inquery_params(request.GET)
+        except ValidationError as err:
+            return Response(err.args[0], status=err.code)
         model_form = get_form_for_model(model)
         if model_form is None:
             logger = logging.getLogger(__name__)
