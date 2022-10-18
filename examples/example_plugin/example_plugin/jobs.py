@@ -3,7 +3,7 @@ import time
 from django.conf import settings
 
 from nautobot.extras.choices import ObjectChangeActionChoices
-from nautobot.extras.jobs import IntegerVar, Job, JobHookReceiver
+from nautobot.extras.jobs import IntegerVar, Job, JobHookReceiver, FileVar
 
 
 name = "ExamplePlugin jobs"
@@ -11,8 +11,14 @@ name = "ExamplePlugin jobs"
 
 class ExampleJob(Job):
 
+    # interval = IntegerVar(default=4, description="The time in seconds to sleep.")
+    my_file = FileVar(description="The file.")
+
     # specify template_name to override the default job scheduling template
     template_name = "example_plugin/example_with_custom_template.html"
+
+    def run(self, data, commit):
+        print(data)
 
     class Meta:
         name = "Example job, does nothing"

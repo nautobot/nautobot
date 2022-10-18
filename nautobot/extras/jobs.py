@@ -456,6 +456,7 @@ class BaseJob:
         # defer validation to the form object
         f = self.as_form(data=self.deserialize_data(data))
         if not f.is_valid():
+            print("invalid data")
             raise ValidationError(f.errors)
 
     @staticmethod

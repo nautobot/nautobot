@@ -530,6 +530,19 @@ def _run_job(request, job_model, legacy_response=False):
         raise MethodNotAllowed(request.method, detail="This job's source code could not be located and cannot be run")
     job = job_class()
 
+    print("=================")
+    print(dir(request))
+    print(request.FILES)
+    print(request.content_type)
+    print(dir(request.data))
+    print(request.data)
+    print("=================")
+
+    # if 'application/json' in request.content_type:
+    #     data = request.data
+    # elif 'multipart/form-data' in request.content_type and 'body' in request.data:
+    #     data = request.data['body']
+
     input_serializer = serializers.JobInputSerializer(data=request.data, context={"request": request})
     input_serializer.is_valid(raise_exception=True)
 
