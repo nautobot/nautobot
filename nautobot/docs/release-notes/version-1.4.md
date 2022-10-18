@@ -162,6 +162,14 @@ A new configuration setting, [`STRICT_FILTERING`](../configuration/optional-sett
 The `settings_and_registry` default context processor was changed to purely `settings` - the (large) Nautobot application registry dictionary is no longer provided as part of the render context for all templates by default. Added a new `registry` template tag that can be invoked by specific templates to provide this variable where needed.
 
 <!-- towncrier release notes start -->
+## v1.4.7 (2022-10-18)
+
+### Fixed
+
+- [#2636](https://github.com/nautobot/nautobot/issues/2636) - Fixed `pyproject.toml` to be a proper full release.
+
+
+
 ## v1.4.6 (2022-10-17)
 
 ### Added
