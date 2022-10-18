@@ -899,6 +899,27 @@ class ViewTestCases:
                 self.assertInstanceEqual(instance, self.bulk_edit_data)
 
         @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+        def test_bulk_edit_form_contains_all_pks(self):
+            pk_list = self._get_queryset().values_list("pk", flat=True)
+            selected_data = {
+                "pk": pk_list,
+                "_all": "on",
+            }
+            # Assign model-level permission
+            obj_perm = ObjectPermission(name="Test permission", actions=["change"])
+            obj_perm.save()
+            obj_perm.users.add(self.user)
+            obj_perm.object_types.add(ContentType.objects.get_for_model(self.model))
+
+            # Try POST with model-level permission
+            response = self.client.post(self._get_url("bulk_edit"), selected_data)
+            self.assertHttpStatus(response, 200)
+            response_body = extract_page_body(response.content.decode(response.charset))
+            # Check if all the pks are passed into the BulkEditForm/BulkUpdateForm
+            for pk in pk_list:
+                self.assertIn(f'<input type="hidden" name="pk" value="{pk}"', response_body)
+
+        @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
         def test_bulk_edit_objects_with_constrained_permission(self):
             pk_list = list(self._get_queryset().values_list("pk", flat=True)[:3])
             data = {
@@ -973,6 +994,29 @@ class ViewTestCases:
             # Try POST with model-level permission
             self.assertHttpStatus(self.client.post(self._get_url("bulk_delete"), data), 302)
             self.assertEqual(self._get_queryset().count(), 0)
+
+        @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
+        def test_bulk_delete_form_contains_all_pks(self):
+            pk_list = self._get_queryset().values_list("pk", flat=True)
+            selected_data = {
+                "pk": pk_list,
+                "confirm": True,
+                "_all": "on",
+            }
+
+            # Assign unconstrained permission
+            obj_perm = ObjectPermission(name="Test permission", actions=["delete"])
+            obj_perm.save()
+            obj_perm.users.add(self.user)
+            obj_perm.object_types.add(ContentType.objects.get_for_model(self.model))
+
+            # Try POST with the selected data first. Emulating selecting all -> pressing delete selected button.
+            response = self.client.post(self._get_url("bulk_delete"), selected_data)
+            self.assertHttpStatus(response, 200)
+            response_body = extract_page_body(response.content.decode(response.charset))
+            # Check if all the pks are passed into the BulkDeleteForm/BulkDestroyForm
+            for pk in pk_list:
+                self.assertIn(f'<input type="hidden" name="pk" value="{pk}"', response_body)
 
         @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
         def test_bulk_delete_objects_with_constrained_permission(self):
