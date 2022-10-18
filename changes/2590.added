@@ -1,1 +1,1 @@
-Add unittests for BulkDeleteView and BulkUpdateView for deleting all instances of a model.
+Added unit tests for bulk-editing and bulk-deleting all instances of a model.
