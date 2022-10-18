@@ -13,6 +13,7 @@ from django.http import Http404, HttpResponse, HttpResponseForbidden
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.utils import timezone
+from django.utils.text import slugify
 from django.utils.html import escape
 from django.utils.http import is_safe_url
 from django.utils.safestring import mark_safe
@@ -34,6 +35,7 @@ from nautobot.utilities.utils import (
     get_table_for_model,
     prepare_cloned_fields,
     pretty_print_query,
+    csv_format
 )
 from nautobot.utilities.tables import ButtonsColumn
 from nautobot.utilities.views import ObjectPermissionRequiredMixin
@@ -61,6 +63,7 @@ from .models import (
     ImageAttachment,
     Job as JobModel,
     JobHook,
+    JobLogEntry,
     ObjectChange,
     JobResult,
     Relationship,
@@ -1486,6 +1489,48 @@ class JobResultView(generic.ObjectView):
 
     queryset = JobResult.objects.prefetch_related("job_model", "obj_type", "user")
     template_name = "extras/jobresult.html"
+
+    def queryset_to_csv(self, instance):
+        """Format queryset to csv."""
+        csv_data = []
+        headers = JobLogEntry.csv_headers.copy()
+        csv_data.append(",".join(headers))
+
+        for log_entry in instance.logs.all():
+            data = log_entry.to_csv()
+            csv_data.append(csv_format(data))
+
+        return "\n".join(csv_data)
+
+    def get(self, request, *args, **kwargs):
+        """
+        Generic GET handler for accessing an object by PK or slug
+        """
+        instance = get_object_or_404(self.queryset, **kwargs)
+
+        changelog_url = None
+
+        if isinstance(instance, ChangeLoggedModel):
+            changelog_url = instance.get_changelog_url()
+
+        if "export" in request.GET:
+            response = HttpResponse(self.queryset_to_csv(instance), content_type="text/csv")
+            underscore_filename = slugify(instance.job_model).replace("-", "_")
+            filename = f"{underscore_filename}_logs.csv"
+            response["Content-Disposition"] = f"attachment; filename={filename}"
+            return response
+
+        return render(
+            request,
+            self.get_template_name(),
+            {
+                "object": instance,
+                "verbose_name": self.queryset.model._meta.verbose_name,
+                "verbose_name_plural": self.queryset.model._meta.verbose_name_plural,
+                "changelog_url": changelog_url,  # TODO: Remove in 2.0. This information can be retrieved from the object itself now.
+                **self.get_extra_context(request, instance),
+            },
+        )
 
     def get_extra_context(self, request, instance):
         associated_record = None
