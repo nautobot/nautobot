@@ -1049,13 +1049,6 @@ class RedundancyGroup(PrimaryModel, ConfigContextModel, StatusModel):
 
     objects = ConfigContextModelQuerySet.as_manager()
 
-    csv_headers = [
-        "name",
-        "status",
-        "failover_strategy",
-        "secrets_group",
-        "comments",
-    ]
     clone_fields = [
         "status",
         "failover_strategy",
@@ -1068,14 +1061,8 @@ class RedundancyGroup(PrimaryModel, ConfigContextModel, StatusModel):
     def __str__(self):
         return self.name
 
+    def natural_key(self):
+        return (self.name,)
+
     def get_absolute_url(self):
         return reverse("dcim:redundancygroup", args=[self.pk])
-
-    def to_csv(self):
-        return (
-            self.name,
-            self.status,
-            self.get_failover_strategy_display(),
-            self.secrets_group.name if self.secrets_group else None,
-            self.comments,
-        )

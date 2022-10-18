@@ -4459,13 +4459,7 @@ class RedundancyGroupForm(NautobotModelForm):
 
     class Meta:
         model = RedundancyGroup
-        fields = [
-            "name",
-            "status",
-            "failover_strategy",
-            "comments",
-            "tags",
-        ]
+        fields = "__all__"
         widgets = {"failover_strategy": StaticSelect2()}
 
 
@@ -4478,5 +4472,7 @@ class RedundancyGroupFilterForm(NautobotFilterForm, StatusModelFilterFormMixin):
         required=False,
         widget=StaticSelect2(),
     )
+
+
 
     tag = TagFilterField(model)

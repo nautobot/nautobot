@@ -388,11 +388,10 @@ class NestedVirtualChassisSerializer(WritableNestedSerializer):
 
 class NestedRedundancyGroupSerializer(WritableNestedSerializer):
     url = serializers.HyperlinkedIdentityField(view_name="dcim-api:redundancygroup-detail")
-    member_count = serializers.IntegerField(read_only=True)
 
     class Meta:
         model = models.RedundancyGroup
-        fields = ["id", "name", "status", "failover_strategy", "member_count"]
+        fields = ["id", "name", "url", "failover_strategy"]
 
 
 #

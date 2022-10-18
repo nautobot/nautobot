@@ -28,6 +28,7 @@ from .models import (
     RackReservation,
     RackRole,
     RearPort,
+    RedundancyGroup,
     Region,
     Site,
     VirtualChassis,
@@ -1633,6 +1634,18 @@ urlpatterns = [
         views.CableCreateView.as_view(),
         name="powerfeed_connect",
         kwargs={"termination_a_type": PowerFeed},
+    ),
+    path(
+        "redundancy-groups/<uuid:pk>/changelog/",
+        ObjectChangeLogView.as_view(),
+        name="redundancygroup_changelog",
+        kwargs={"model": RedundancyGroup},
+    ),
+    path(
+        "redundancy-groups/<uuid:pk>/notes/",
+        ObjectNotesView.as_view(),
+        name="redundancygroup_notes",
+        kwargs={"model": RedundancyGroup},
     ),
 ]
 urlpatterns += router.urls

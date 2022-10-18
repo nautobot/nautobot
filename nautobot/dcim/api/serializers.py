@@ -125,6 +125,7 @@ from .nested_serializers import (  # noqa: F401
     NestedRackSerializer,
     NestedRearPortSerializer,
     NestedRearPortTemplateSerializer,
+    NestedRedundancyGroupSerializer,
     NestedRegionSerializer,
     NestedSiteSerializer,
     NestedVirtualChassisSerializer,
@@ -758,6 +759,7 @@ class DeviceSerializer(NautobotModelSerializer, TaggedObjectSerializer, StatusMo
     secrets_group = NestedSecretsGroupSerializer(required=False, allow_null=True)
     cluster = NestedClusterSerializer(required=False, allow_null=True)
     virtual_chassis = NestedVirtualChassisSerializer(required=False, allow_null=True)
+    redundancy_group = NestedRedundancyGroupSerializer(required=False, allow_null=True)
     local_context_schema = NestedConfigContextSchemaSerializer(required=False, allow_null=True)
 
     class Meta:
@@ -786,6 +788,7 @@ class DeviceSerializer(NautobotModelSerializer, TaggedObjectSerializer, StatusMo
             "virtual_chassis",
             "vc_position",
             "vc_priority",
+            "redundancy_group",
             "comments",
             "local_context_schema",
             "local_context_data",
@@ -1128,7 +1131,16 @@ class RedundancyGroupSerializer(NautobotModelSerializer, TaggedObjectSerializer,
 
     class Meta:
         model = RedundancyGroup
-        fields = "__all__"
+        fields = [
+            "url",
+            "name",
+            "status",
+            "failover_strategy",
+            "secrets_group",
+            "comments",
+            "local_context_schema",
+            "local_context_data",
+        ]
 
 
 #
