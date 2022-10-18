@@ -900,6 +900,8 @@ class ViewTestCases:
 
         @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
         def test_bulk_edit_form_contains_all_pks(self):
+            # We are testing the intermediary step of bulk_edit with pagination applied.
+            # i.e. "_all" passed in the form.
             pk_list = self._get_queryset().values_list("pk", flat=True)
             selected_data = {
                 "pk": pk_list,
@@ -913,6 +915,8 @@ class ViewTestCases:
 
             # Try POST with model-level permission
             response = self.client.post(self._get_url("bulk_edit"), selected_data)
+            # Expect a 200 status cause we are only rendering the bulk edit table.
+            # after pressing Edit Selected button.
             self.assertHttpStatus(response, 200)
             response_body = extract_page_body(response.content.decode(response.charset))
             # Check if all the pks are passed into the BulkEditForm/BulkUpdateForm
@@ -997,6 +1001,8 @@ class ViewTestCases:
 
         @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
         def test_bulk_delete_form_contains_all_pks(self):
+            # We are testing the intermediary step of bulk_delete with pagination applied.
+            # i.e. "_all" passed in the form.
             pk_list = self._get_queryset().values_list("pk", flat=True)
             selected_data = {
                 "pk": pk_list,
@@ -1010,7 +1016,7 @@ class ViewTestCases:
             obj_perm.users.add(self.user)
             obj_perm.object_types.add(ContentType.objects.get_for_model(self.model))
 
-            # Try POST with the selected data first. Emulating selecting all -> pressing delete selected button.
+            # Try POST with the selected data first. Emulating selecting all -> pressing Delete Selected button.
             response = self.client.post(self._get_url("bulk_delete"), selected_data)
             self.assertHttpStatus(response, 200)
             response_body = extract_page_body(response.content.decode(response.charset))
