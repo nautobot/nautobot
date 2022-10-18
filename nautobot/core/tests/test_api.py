@@ -251,7 +251,7 @@ class LookupTypeChoicesTestCase(APITestCase):
                 "count": 2,
                 "next": None,
                 "previous": None,
-                "results": [{"id": "status", "name": "exact"}, {"id": "status__n", "name": "not-exact (n)"}],
+                "results": [{"id": "status", "name": "exact"}, {"id": "status__n", "name": "not exact (n)"}],
             },
         )
 

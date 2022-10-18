@@ -727,7 +727,7 @@ def build_lookup_label(field_name, _verbose_name):
     if search:
         label = f" ({search.group()})"
 
-    verbose_name = "not-" + verbose_name if label.startswith(" (n") else verbose_name
+    verbose_name = "not " + verbose_name if label.startswith(" (n") else verbose_name
 
     return verbose_name + label
 

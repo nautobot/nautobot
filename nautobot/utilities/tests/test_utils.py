@@ -377,11 +377,11 @@ class LookupRelatedFunctionTest(TestCase):
     def test_build_lookup_label(self):
         with self.subTest():
             label = build_lookup_label("slug__iew", "iendswith")
-            self.assertEqual(label, "ends-with (iew)")
+            self.assertEqual(label, "ends with (iew)")
 
         with self.subTest("Test negation"):
             label = build_lookup_label("slug__niew", "iendswith")
-            self.assertEqual(label, "not-ends-with (niew)")
+            self.assertEqual(label, "not ends with (niew)")
 
         with self.subTest("Test for exact: without a lookup expr"):
             label = build_lookup_label("slug", "exact")
@@ -392,7 +392,7 @@ class LookupRelatedFunctionTest(TestCase):
             lookup_expr = get_all_lookup_expr_for_field(Site, "status")
             self.assertEqual(
                 lookup_expr,
-                [{"id": "status", "name": "exact"}, {"id": "status__n", "name": "not-exact (n)"}],
+                [{"id": "status", "name": "exact"}, {"id": "status__n", "name": "not exact (n)"}],
             )
 
         with self.subTest("Test field with has_ prefix"):

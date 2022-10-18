@@ -730,20 +730,3 @@ def UI_RACK_VIEW_TRUNCATE_FUNCTION(device_display_name):
     :type: str
     """
     return str(device_display_name).split(".")[0]
-
-
-# Filter lookup Expr verbose name
-FILTERS_VERBOSE_LOOKUPS = {
-    "exact": "",
-    "icontains": "contains",
-    "iendswith": "ends-with",
-    "istartswith": "starts-with",
-    "iexact": "exact",
-    "regex": "regex",
-    "iregex": "regex",
-    "lte": "less-than-or-equal",
-    "lt": "less-than",
-    "gte": "greater-than-or-equal",
-    "gt": "greater-than",
-    "in": "in",
-}
