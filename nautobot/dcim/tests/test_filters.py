@@ -851,9 +851,11 @@ class SiteTestCase(FilterTestCases.NameSlugFilterTestCase, FilterTestCases.Tenan
             self.assertEqual(self.filterset(params, self.queryset).qs.count(), 1)
 
     def test_prefixes(self):
-        prefixes = Prefix.objects.all()[:2]
+        prefixes = list(Prefix.objects.filter(site__isnull=False)[:2])
         params = {"prefixes": [prefixes[0].pk, prefixes[1].pk]}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+        self.assertQuerysetEqualAndNotEmpty(
+            self.filterset(params, self.queryset).qs, Site.objects.filter(prefixes__in=prefixes).distinct()
+        )
 
     def test_has_prefixes(self):
         with self.subTest():
