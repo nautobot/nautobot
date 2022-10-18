@@ -74,7 +74,7 @@ class AggregateFactory(PrimaryModelFactory):
     tenant = factory.Maybe(
         "has_tenant_group",
         random_instance(Tenant.objects.filter(group__isnull=False), allow_null=False),
-        factory.Maybe("has_tenant", random_instance(Tenant), None),
+        factory.Maybe("has_tenant", random_instance(Tenant.objects.filter(group__isnull=True)), None),
     )
 
     has_date_added = factory.Faker("pybool")

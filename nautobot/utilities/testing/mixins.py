@@ -5,7 +5,7 @@ from django.apps import apps
 from django.contrib.auth import get_user_model
 from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import FieldDoesNotExist
-from django.db.models import JSONField, ManyToManyField
+from django.db.models import JSONField, ManyToManyField, QuerySet
 from django.forms.models import model_to_dict
 from django.test import Client
 from django.utils.text import slugify
@@ -181,6 +181,17 @@ class NautobotTestCaseMixin:
                     relevant_data[k] = v
 
         self.assertEqual(new_model_dict, relevant_data)
+
+    def assertQuerysetEqualAndNotEmpty(self, qs, values, *args, **kwargs):
+        """Wrapper for assertQuerysetEqual with additional logic to assert input queryset and values are not empty"""
+
+        if isinstance(qs, QuerySet):
+            qs_count = qs.count()
+        else:
+            qs_count = len(qs)
+        self.assertNotEqual(qs_count, 0, "Queryset cannot be empty")
+        self.assertNotEqual(len(values), 0, "Values cannot be empty")
+        return self.assertQuerysetEqual(qs, values, *args, **kwargs)
 
     #
     # Convenience methods

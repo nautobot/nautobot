@@ -210,7 +210,7 @@ class PrefixTest(APIViewTestCases.APIViewTestCase):
         Test retrieval of all available prefixes within a parent prefix.
         """
         prefix = Prefix.objects.ip_family(6).filter(prefix_length__lt=128).exclude(status__slug="container").first()
-        if prefix == None:
+        if prefix is None:
             self.fail("Suitable prefix fixture not found")
         url = reverse("ipam-api:prefix-available-prefixes", kwargs={"pk": prefix.pk})
         self.add_permissions("ipam.view_prefix")
@@ -226,12 +226,11 @@ class PrefixTest(APIViewTestCases.APIViewTestCase):
         Test retrieval of the first available prefix within a parent prefix.
         """
         # Find prefix with no child prefixes and large enough to create 4 child prefixes
-        prefix = None
         for instance in Prefix.objects.filter(vrf__isnull=False):
             if instance.get_child_prefixes().count() == 0 and instance.prefix.size > 2:
                 prefix = instance
                 break
-        if prefix == None:
+        else:
             self.fail("Suitable prefix fixture not found")
         url = reverse("ipam-api:prefix-available-prefixes", kwargs={"pk": prefix.pk})
         self.add_permissions("ipam.add_prefix")
@@ -266,13 +265,13 @@ class PrefixTest(APIViewTestCases.APIViewTestCase):
         Test the creation of available prefixes within a parent prefix.
         """
         # Find prefix with no child prefixes and large enough to create 4 child prefixes
-        prefix = None
         for instance in Prefix.objects.filter(vrf__isnull=False):
             if instance.get_child_prefixes().count() == 0 and instance.prefix.size > 2:
                 prefix = instance
                 break
-        if prefix == None:
+        else:
             self.fail("Suitable prefix fixture not found")
+
         url = reverse("ipam-api:prefix-available-prefixes", kwargs={"pk": prefix.pk})
         self.add_permissions("ipam.view_prefix", "ipam.add_prefix")
 
