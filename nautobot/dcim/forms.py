@@ -4473,6 +4473,4 @@ class RedundancyGroupFilterForm(NautobotFilterForm, StatusModelFilterFormMixin):
         widget=StaticSelect2(),
     )
 
-
-
     tag = TagFilterField(model)

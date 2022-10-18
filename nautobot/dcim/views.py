@@ -3218,8 +3218,10 @@ class RedundancyGroupUIViewSet(NautobotUIViewSet):
     filterset_class = filters.RedundancyGroupFilterSet
     filterset_form_class = forms.RedundancyGroupFilterForm
     form_class = forms.RedundancyGroupForm
-    queryset = RedundancyGroup.objects.select_related("status").prefetch_related("members").annotate(
-        member_count=count_related(Device, "redundancy_group")
+    queryset = (
+        RedundancyGroup.objects.select_related("status")
+        .prefetch_related("members")
+        .annotate(member_count=count_related(Device, "redundancy_group"))
     )
     serializer_class = serializers.RedundancyGroupSerializer
     table_class = tables.RedundancyGroupTable
