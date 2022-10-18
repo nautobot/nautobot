@@ -903,8 +903,10 @@ class ViewTestCases:
             # We are testing the intermediary step of bulk_edit with pagination applied.
             # i.e. "_all" passed in the form.
             pk_list = self._get_queryset().values_list("pk", flat=True)
+            # We only pass in one pk to test the functionality of "_all"
+            # which should grab all instance pks regardless of "pk"
             selected_data = {
-                "pk": pk_list,
+                "pk": pk_list[:1],
                 "_all": "on",
             }
             # Assign model-level permission
@@ -1004,8 +1006,10 @@ class ViewTestCases:
             # We are testing the intermediary step of bulk_delete with pagination applied.
             # i.e. "_all" passed in the form.
             pk_list = self._get_queryset().values_list("pk", flat=True)
+            # We only pass in one pk to test the functionality of "_all"
+            # which should grab all instance pks regardless of "pks".
             selected_data = {
-                "pk": pk_list,
+                "pk": pk_list[:1],
                 "confirm": True,
                 "_all": "on",
             }
