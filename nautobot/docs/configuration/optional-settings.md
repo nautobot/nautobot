@@ -186,16 +186,6 @@ A boolean that turns on/off health checks for the Redis server connection utiliz
 
 ---
 
-## CACHEOPS_REDIS
-
-Default: `'redis://localhost:6379/1'`
-
-Environment Variable: `NAUTOBOT_CACHEOPS_REDIS`
-
-The Redis connection string to use for caching.
-
----
-
 ## CELERY_BROKER_TRANSPORT_OPTIONS
 
 Default: `{}`
@@ -327,8 +317,6 @@ Previously this setting was called `CORS_ORIGIN_REGEX_WHITELIST`, which still wo
 
 Default: `False`
 
-Environment Variable: `NAUTOBOT_DISABLE_PREFIX_LIST_HIERARCHY`
-
 This setting disables rendering of the IP prefix hierarchy (parent/child relationships) in the IPAM prefix list view. With large sets of prefixes, users may encounter a performance penalty when trying to load the prefix list view due to the nature of calculating the parent/child relationships. This setting allows users to disable the hierarchy and instead only render a flat list of all prefixes in the table.
 
 A later release of Nautobot will address the underlying performance issues, and likely remove this configuration option.
@@ -437,11 +425,27 @@ The value of this variable can also be customized by setting the environment var
 
 ---
 
+## GRAPHQL_COMPUTED_FIELD_PREFIX
+
+Default: `"cpf"`
+
+By default, all computed fields in GraphQL will be prefixed with `cf`. A computed field named `my_field` will appear in GraphQL as `cpf_my_field` by default. It's possible to change or remove the prefix by setting the value of `GRAPHQL_COMPUTED_FIELD_PREFIX`.
+
+---
+
 ## GRAPHQL_CUSTOM_FIELD_PREFIX
 
-Default: `cf`
+Default: `"cf"`
 
-By default, all custom fields in GraphQL will be prefixed with `cf`. A custom field name `my_field` will appear in GraphQL as `cf_my_field` by default. It's possible to change or remove the prefix by setting the value of `GRAPHQL_CUSTOM_FIELD_PREFIX`.
+By default, all custom fields in GraphQL will be prefixed with `cf`. A custom field named `my_field` will appear in GraphQL as `cf_my_field` by default. It's possible to change or remove the prefix by setting the value of `GRAPHQL_CUSTOM_FIELD_PREFIX`.
+
+---
+
+## GRAPHQL_RELATIONSHIP_PREFIX
+
+Default: `"rel"`
+
+By default, all relationship associations in GraphQL will be prefixed with `rel`. A relationship named `my_relationship` will appear in GraphQL as `rel_my_relationship` by default. It's possible to change or remove the prefix by setting the value of `GRAPHQL_RELATIONSHIP_PREFIX`.
 
 ---
 
