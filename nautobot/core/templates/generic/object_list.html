@@ -5,7 +5,7 @@
 
 {% block header %}
     <div class="row noprint">
-        <div class="col-sm-8 col-md-9">
+        <div class="{% if search_form %}col-sm-8 col-md-9 {% else %} col-md-12 {% endif %}">
             <ol class="breadcrumb">
             {% block breadcrumbs %}
                 {% if list_url %}

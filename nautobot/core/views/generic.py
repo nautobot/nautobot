@@ -157,7 +157,6 @@ class ObjectListView(ObjectPermissionRequiredMixin, View):
     queryset = None
     filterset = None
     filterset_form = None
-    dynamic_filter_form = None
     table = None
     template_name = "generic/object_list.html"
     action_buttons = ("add", "import", "export")
@@ -239,6 +238,7 @@ class ObjectListView(ObjectPermissionRequiredMixin, View):
         content_type = ContentType.objects.get_for_model(model)
 
         display_filter_params = []
+        dynamic_filter_form = None
         if self.filterset:
             filter_params = self.get_filter_params(request)
             filterset = self.filterset(filter_params, self.queryset)
@@ -259,11 +259,11 @@ class ObjectListView(ObjectPermissionRequiredMixin, View):
                 factory_formset_params = convert_querydict_to_factory_formset_acceptable_querydict(
                     request.GET, self.filterset
                 )
-                self.dynamic_filter_form = DynamicFilterFormSet(
+                dynamic_filter_form = DynamicFilterFormSet(
                     filterset_class=self.filterset, data=factory_formset_params
                 )
             else:
-                self.dynamic_filter_form = DynamicFilterFormSet(filterset_class=self.filterset)
+                dynamic_filter_form = DynamicFilterFormSet(filterset_class=self.filterset)
 
         # Check for export template rendering
         if request.GET.get("export"):
@@ -332,7 +332,7 @@ class ObjectListView(ObjectPermissionRequiredMixin, View):
             "action_buttons": valid_actions,
             "table_config_form": table_config_form,
             "filter_params": display_filter_params,
-            "filter_form": self.dynamic_filter_form,
+            "filter_form": dynamic_filter_form,
             "search_form": search_form,
             "list_url": validated_viewname(model, "list"),
             "title": bettertitle(model._meta.verbose_name_plural),
