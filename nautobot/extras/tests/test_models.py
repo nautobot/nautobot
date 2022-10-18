@@ -1,5 +1,6 @@
 import os
 import tempfile
+import datetime
 from unittest import mock
 import uuid
 
@@ -1230,22 +1231,23 @@ class JobLogEntryTest(TestCase):
     """
     Tests for the JobLogEntry Model.
     """
-
-    def test_log_entry_creation(self):
+    def setUp(self):
         module = "test_pass"
         name = "TestPass"
         job_class = get_job(f"local/{module}/{name}")
 
-        job_result = JobResult.objects.create(
+        self.job_result = JobResult.objects.create(
             name=job_class.class_path,
             obj_type=get_job_content_type(),
             user=None,
             job_id=uuid.uuid4(),
         )
 
+    def test_log_entry_creation(self):
+
         log = JobLogEntry(
             log_level=LogLevelChoices.LOG_SUCCESS,
-            job_result=job_result,
+            job_result=self.job_result,
             grouping="run",
             message="This is a test",
         )
@@ -1257,6 +1259,14 @@ class JobLogEntryTest(TestCase):
         self.assertEqual(log_object.log_level, log.log_level)
         self.assertEqual(log_object.grouping, log.grouping)
 
+    def test_to_csv(self):
+        """Check that `to_csv` returns the correct data from the JobLogEntry model."""
+        expected_data = (datetime.datetime(2020, 1, 26, 15, 37, 36), "run", "success", "", "Django Test")
+
+        joblogentry_a = JobLogEntry(job_result=self.job_result, log_level=LogLevelChoices.LOG_SUCCESS, grouping="run", message="Django Test", created=datetime.datetime(2020, 1, 26, 15, 37, 36),log_object="", absolute_url="")
+        joblogentry_a.validated_save()
+        csv_data = joblogentry_a.to_csv()
+        self.assertEqual(expected_data, csv_data)
 
 class WebhookTest(TestCase):
     def test_type_error_not_raised_when_calling_check_for_conflicts(self):
