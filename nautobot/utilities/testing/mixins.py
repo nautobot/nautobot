@@ -5,7 +5,7 @@ from django.apps import apps
 from django.contrib.auth import get_user_model
 from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import FieldDoesNotExist
-from django.db.models import JSONField, ManyToManyField, QuerySet
+from django.db.models import JSONField, ManyToManyField
 from django.forms.models import model_to_dict
 from django.test import Client
 from django.utils.text import slugify
