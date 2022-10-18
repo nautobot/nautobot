@@ -1,0 +1,1 @@
+Add unittests for BulkDeleteView and BulkUpdateView for deleting all instances of a model.
