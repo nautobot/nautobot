@@ -614,26 +614,74 @@ class RackTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         # Create Power Port for device
         powerport1 = PowerPort.objects.create(device=devices[0], name="Power Port 11")
         powerfeed1 = PowerFeed.objects.create(
-            power_panel=self.powerpanels[0], name="Power Feed 11", phase="three-phase"
+            power_panel=self.powerpanels[0],
+            name="Power Feed 11",
+            phase="single-phase",
+            voltage=240,
+            amperage=20,
+            rack=self.racks[0],
+        )
+        powerfeed2 = PowerFeed.objects.create(
+            power_panel=self.powerpanels[0],
+            name="Power Feed 12",
+            phase="single-phase",
+            voltage=240,
+            amperage=20,
+            rack=self.racks[0],
         )
 
         # Create power outlet to the power port
-        poweroutlet1 = PowerOutlet.objects.create(device=devices[0], name="Power Outlet 11")
+        poweroutlet1 = PowerOutlet.objects.create(device=devices[0], name="Power Outlet 11", power_port=powerport1)
 
-        # connect power port to power feed (3 phase)
+        # connect power port to power feed (single-phase)
         cable1 = Cable(termination_a=powerfeed1, termination_b=powerport1, status=self.cable_connected)
         cable1.save()
 
         # Create power port for 2nd device
-        powerport2 = PowerPort.objects.create(device=devices[1], name="Power Port 12")
+        powerport2 = PowerPort.objects.create(device=devices[1], name="Power Port 12", allocated_draw=1200)
 
         # Connect power port to power outlet (dev1)
         cable2 = Cable(termination_a=powerport2, termination_b=poweroutlet1, status=self.cable_connected)
         cable2.save()
 
+        # Create another power port for 2nd device and directly connect to the second PowerFeed.
+        powerport3 = PowerPort.objects.create(device=devices[1], name="Power Port 13", allocated_draw=2400)
+        cable3 = Cable(termination_a=powerfeed2, termination_b=powerport3, status=self.cable_connected)
+        cable3.save()
+
         # Test the view
         response = self.client.get(reverse("dcim:rack", args=[self.racks[0].pk]))
         self.assertHttpStatus(response, 200)
+        # Validate Power Utilization for PowerFeed 11 is displaying correctly on Rack View.
+        power_feed_11_html = """
+        <td><div title="Used: 1200&#13;Count: 3840" class="progress text-center">
+            <div class="progress-bar progress-bar-success"
+                role="progressbar" aria-valuenow="31" aria-valuemin="0" aria-valuemax="100" style="width: 31%">
+                31%
+            </div>
+        </div></td>
+        """
+        self.assertContains(response, power_feed_11_html, html=True)
+        # Validate Power Utilization for PowerFeed12 is displaying correctly on Rack View.
+        power_feed_12_html = """
+        <td><div title="Used: 2400&#13;Count: 3840" class="progress text-center">
+            <div class="progress-bar progress-bar-success"
+                role="progressbar" aria-valuenow="62" aria-valuemin="0" aria-valuemax="100" style="width: 62%">
+                62%
+            </div>
+        </div></td>
+        """
+        self.assertContains(response, power_feed_12_html, html=True)
+        # Validate Rack Power Utilization for Combined powerfeeds is displaying correctly on the Rack View
+        total_utilization_html = """
+        <td><div title="Used: 3600&#13;Count: 7680" class="progress text-center">
+            <div class="progress-bar progress-bar-success"
+                role="progressbar" aria-valuenow="46" aria-valuemin="0" aria-valuemax="100" style="width: 46%">
+                46%
+            </div>
+        </div></td>
+        """
+        self.assertContains(response, total_utilization_html, html=True)
 
 
 class ManufacturerTestCase(ViewTestCases.OrganizationalObjectViewTestCase):
