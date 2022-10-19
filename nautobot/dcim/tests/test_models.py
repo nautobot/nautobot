@@ -562,6 +562,11 @@ class LocationTestCase(TestCase):
         self.intermediate_type = LocationType.objects.get(name="Floor")
         self.leaf_type = LocationType.objects.get(name="Room")
 
+        self.root_nestable_type = LocationType.objects.create(name="Pseudo-Region", nestable=True)
+        self.leaf_nestable_type = LocationType.objects.create(
+            name="Pseudo-RackGroup", parent=self.root_nestable_type, nestable=True
+        )
+
         self.status = Status.objects.get(slug="active")
         self.site = Site.objects.first()
 
@@ -578,7 +583,7 @@ class LocationTestCase(TestCase):
         """Once created, a location cannot change location_type."""
         location = Location(name="Campus 1", location_type=self.root_type, site=self.site, status=self.status)
         location.validated_save()
-        location.location_type = self.intermediate_type
+        location.location_type = self.root_nestable_type
         with self.assertRaises(ValidationError) as cm:
             location.validated_save()
         self.assertIn("location_type", str(cm.exception))
@@ -593,12 +598,61 @@ class LocationTestCase(TestCase):
             location_2.validated_save()
         self.assertIn("must have a parent Location of type Floor", str(cm.exception))
 
+    def test_parent_type_nestable_logic(self):
+        """A location of a nestable type may have a parent of the same type."""
+        # A location using a root-level nestable type can have a site rather than a parent
+        location_1 = Location(
+            name="Region 1", location_type=self.root_nestable_type, site=self.site, status=self.status
+        )
+        location_1.validated_save()
+        # A location using a root-level nestable type can have a parent rather than a site
+        location_2 = Location(
+            name="Region 1-A", location_type=self.root_nestable_type, parent=location_1, status=self.status
+        )
+        location_2.validated_save()
+        # A location can't have both a parent and a site, even if it's a "root" location-type.
+        location_2.site = self.site
+        with self.assertRaises(ValidationError) as cm:
+            location_2.validated_save()
+        self.assertIn("cannot have both a parent Location and an associated Site", str(cm.exception))
+        # A location using a lower-level nestable type can be parented under the parent location type
+        location_3 = Location(
+            name="RackGroup 3", location_type=self.leaf_nestable_type, parent=location_2, status=self.status
+        )
+        location_3.validated_save()
+        # A location using a lower-level nestable type can be parented under its own type
+        location_4 = Location(
+            name="RackGroup 3-B", location_type=self.leaf_nestable_type, parent=location_3, status=self.status
+        )
+        location_4.validated_save()
+        # Can't mix and match location types though
+        with self.assertRaises(ValidationError) as cm:
+            location_5 = Location(
+                name="Region 5", location_type=self.root_nestable_type, parent=location_4, status=self.status
+            )
+            location_5.validated_save()
+        self.assertIn("only have a Location of the same type as its parent", str(cm.exception))
+        location_6 = Location(name="Campus 1", location_type=self.root_type, site=self.site, status=self.status)
+        location_6.validated_save()
+        with self.assertRaises(ValidationError) as cm:
+            location_7 = Location(
+                name="RackGroup 7",
+                location_type=self.leaf_nestable_type,
+                parent=location_6,
+                status=self.status,
+            )
+            location_7.validated_save()
+        self.assertIn(
+            f"only have a Location of the same type or of type {self.root_nestable_type} as its parent",
+            str(cm.exception),
+        )
+
     def test_site_required_for_root(self):
         """A Location of a root type must have a Site."""
         location = Location(name="Campus 1", location_type=self.root_type, status=self.status)
         with self.assertRaises(ValidationError) as cm:
             location.validated_save()
-        self.assertIn("must have a Site", str(cm.exception))
+        self.assertIn("must have an associated Site", str(cm.exception))
 
     def test_site_forbidden_for_non_root(self):
         """A Location of a non-root type must have a parent, not a Site."""

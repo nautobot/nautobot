@@ -281,13 +281,14 @@ class LocationTypeTestCase(ViewTestCases.OrganizationalObjectViewTestCase):
             "parent": lt1.pk,
             "description": "Another intermediate type",
             "content_types": [ContentType.objects.get_for_model(Rack).pk, ContentType.objects.get_for_model(Device).pk],
+            "nestable": True,
         }
 
         cls.csv_data = (
-            "name,slug,parent,description,content_types",
-            f"Intermediate 3,intermediate-3,{lt1.name},Another intermediate type,ipam.prefix",
-            f'Intermediate 4,intermediate-4,{lt1.name},Another intermediate type,"ipam.prefix,dcim.device"',
-            "Root 3,root-3,,Another root type,",
+            "name,slug,parent,description,content_types,nestable",
+            f"Intermediate 3,intermediate-3,{lt1.name},Another intermediate type,ipam.prefix,false",
+            f'Intermediate 4,intermediate-4,{lt1.name},Another intermediate type,"ipam.prefix,dcim.device",false',
+            "Root 3,root-3,,Another root type,,true",
         )
 
         cls.slug_source = "name"

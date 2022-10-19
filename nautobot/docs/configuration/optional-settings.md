@@ -817,6 +817,41 @@ If set to `True`, the Nautobot test runner will call `nautobot-server generate_t
 
 ---
 
+## TEST_PERFORMANCE_BASELINE_FILE
+
++++ 1.5.0
+
+Default: `nautobot/core/tests/performance_baselines.yml`
+
+Environment Variable: `TEST_PERFORMANCE_BASELINE_FILE`
+
+[`TEST_PERFORMANCE_BASELINE_FILE`](#test_performance_baseline_file) is set to a certain file path, this file path should point to a .yml file that conforms to the following format:
+
+```yaml
+tests:
+  - name: >-
+      test_run_job_with_sensitive_variables_and_requires_approval
+      (nautobot.extras.tests.test_views.JobTestCase)
+    execution_time: 4.799533
+  - name: test_run_missing_schedule (nautobot.extras.tests.test_views.JobTestCase)
+    execution_time: 4.367563
+  - name: test_run_now_missing_args (nautobot.extras.tests.test_views.JobTestCase)
+    execution_time: 4.363194
+  - name: >-
+      test_create_object_with_constrained_permission
+      (nautobot.extras.tests.test_views.GraphQLQueriesTestCase)
+    execution_time: 3.474244
+  - name: >-
+      test_run_now_constrained_permissions
+      (nautobot.extras.tests.test_views.JobTestCase)
+    execution_time: 2.727531
+...
+```
+
+and store the performance baselines with the `name` of the test and the baseline `execution_time`. This file should provide the baseline times that all performance-related tests are running against.
+
+---
+
 ## UI_RACK_VIEW_TRUNCATE_FUNCTION
 
 +++ 1.4.0

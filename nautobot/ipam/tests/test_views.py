@@ -31,10 +31,7 @@ class VRFTestCase(ViewTestCases.PrimaryObjectViewTestCase):
     @classmethod
     def setUpTestData(cls):
 
-        tenants = (
-            Tenant.objects.create(name="Tenant A", slug="tenant-a"),
-            Tenant.objects.create(name="Tenant B", slug="tenant-b"),
-        )
+        tenants = Tenant.objects.all()[:2]
 
         cls.form_data = {
             "name": "VRF X",
@@ -65,10 +62,7 @@ class RouteTargetTestCase(ViewTestCases.PrimaryObjectViewTestCase):
     @classmethod
     def setUpTestData(cls):
 
-        tenants = (
-            Tenant.objects.create(name="Tenant A", slug="tenant-a"),
-            Tenant.objects.create(name="Tenant B", slug="tenant-b"),
-        )
+        tenants = Tenant.objects.all()[:2]
 
         cls.form_data = {
             "name": "65000:100",
@@ -78,8 +72,8 @@ class RouteTargetTestCase(ViewTestCases.PrimaryObjectViewTestCase):
 
         cls.csv_data = (
             "name,tenant,description",
-            "65000:1004,Tenant A,Foo",
-            "65000:1005,Tenant B,Bar",
+            f"65000:1004,{tenants[0].name},Foo",
+            f"65000:1005,{tenants[1].name},Bar",
             "65000:1006,,No tenant",
         )
 
@@ -94,7 +88,9 @@ class RIRTestCase(ViewTestCases.OrganizationalObjectViewTestCase):
 
     @classmethod
     def setUpTestData(cls):
-        RIR.objects.create(name="RIR 8")
+        RIR.objects.create(name="RFC N/A")
+        RIR.objects.create(name="MAGICNIC")
+        RIR.objects.create(name="NOTANIC")
 
         cls.form_data = {
             "name": "RIR X",
@@ -111,20 +107,7 @@ class RIRTestCase(ViewTestCases.OrganizationalObjectViewTestCase):
             "RIR 7,,Seventh RIR",
         )
         cls.slug_source = "name"
-        cls.slug_test_object = "RIR 8"
-
-    def get_deletable_object(self):
-        """Return an RIR without any associated Aggregates."""
-        return RIR.objects.get(name="RIR 8")
-
-    def get_deletable_object_pks(self):
-        """Return a list of PKs corresponding to RIRs without any associated Aggregates."""
-        rirs = [
-            RIR.objects.create(name="RFC N/A"),
-            RIR.objects.create(name="MAGICNIC"),
-            RIR.objects.create(name="NOTANIC"),
-        ]
-        return [rir.pk for rir in rirs]
+        cls.slug_test_object = RIR.objects.first().name
 
 
 class AggregateTestCase(ViewTestCases.PrimaryObjectViewTestCase):
@@ -161,8 +144,6 @@ class RoleTestCase(ViewTestCases.OrganizationalObjectViewTestCase):
 
     @classmethod
     def setUpTestData(cls):
-        Role.objects.create(name="Role 8")
-
         cls.form_data = {
             "name": "Role X",
             "slug": "role-x",
@@ -178,7 +159,7 @@ class RoleTestCase(ViewTestCases.OrganizationalObjectViewTestCase):
             "Role 7,,1000",
         )
         cls.slug_source = "name"
-        cls.slug_test_object = "Role 8"
+        cls.slug_test_object = Role.objects.first().name
 
 
 class PrefixTestCase(ViewTestCases.PrimaryObjectViewTestCase, ViewTestCases.ListObjectsViewTestCase):
@@ -194,28 +175,6 @@ class PrefixTestCase(ViewTestCases.PrimaryObjectViewTestCase, ViewTestCases.List
 
         statuses = Status.objects.get_for_model(Prefix)
         status_reserved = statuses.get(slug="reserved")
-
-        Prefix.objects.create(
-            prefix=IPNetwork("10.1.0.0/16"),
-            vrf=vrfs[0],
-            site=sites[0],
-            role=roles[0],
-            status=statuses[0],
-        )
-        Prefix.objects.create(
-            prefix=IPNetwork("10.2.0.0/16"),
-            vrf=vrfs[0],
-            site=sites[0],
-            role=roles[0],
-            status=statuses[0],
-        )
-        Prefix.objects.create(
-            prefix=IPNetwork("10.3.0.0/16"),
-            vrf=vrfs[0],
-            site=sites[0],
-            role=roles[0],
-            status=statuses[0],
-        )
 
         cls.form_data = {
             "prefix": IPNetwork("192.0.2.0/24"),
@@ -255,13 +214,16 @@ class PrefixTestCase(ViewTestCases.PrimaryObjectViewTestCase, ViewTestCases.List
         but the same behavior was observed in other filters, such as IPv4/IPv6.
         """
         prefixes = self._get_queryset().all()
-        self.assertEqual(prefixes.count(), 3)
+        s = Status.objects.create(name="nonexistentstatus")
+        s.content_types.add(ContentType.objects.get_for_model(Prefix))
+        self.assertNotEqual(prefixes.count(), 0)
 
         url = self._get_url("list")
-        response = self.client.get(f"{url}?status=deprecated")
+        response = self.client.get(f"{url}?status=nonexistentstatus")
         self.assertHttpStatus(response, 200)
         content = extract_page_body(response.content.decode(response.charset))
 
+        self.assertNotIn("Invalid filters were specified", content)
         for prefix in prefixes:
             self.assertNotIn(prefix.get_absolute_url(), content, msg=content)
 
@@ -276,10 +238,6 @@ class IPAddressTestCase(ViewTestCases.PrimaryObjectViewTestCase):
 
         statuses = Status.objects.get_for_model(IPAddress)
         status_reserved = statuses.get(slug="reserved")
-
-        IPAddress.objects.create(address=IPNetwork("192.0.2.1/24"), vrf=vrfs[0], status=statuses[0])
-        IPAddress.objects.create(address=IPNetwork("192.0.2.2/24"), vrf=vrfs[0], status=statuses[0])
-        IPAddress.objects.create(address=IPNetwork("192.0.2.3/24"), vrf=vrfs[0], status=statuses[0])
 
         cls.form_data = {
             "vrf": vrfs[1].pk,
@@ -318,8 +276,6 @@ class VLANGroupTestCase(ViewTestCases.OrganizationalObjectViewTestCase):
 
         site = Site.objects.first()
 
-        VLANGroup.objects.create(name="VLAN Group 8", site=site)
-
         cls.form_data = {
             "name": "VLAN Group X",
             "slug": "vlan-group-x",
@@ -335,16 +291,7 @@ class VLANGroupTestCase(ViewTestCases.OrganizationalObjectViewTestCase):
             "VLAN Group 7,,Seventh VLAN group",
         )
         cls.slug_source = "name"
-        cls.slug_test_object = "VLAN Group 8"
-
-    def get_deletable_object(self):
-        """Return a VLANGroup without any associated VLANs."""
-        return VLANGroup.objects.filter(vlans__isnull=True).first()
-
-    def get_deletable_object_pks(self):
-        """Return a list of PKs corresponding to VLANGroups without any associated VLANs."""
-        groups = list(VLANGroup.objects.filter(vlans__isnull=True))[:3]
-        return [group.pk for group in groups]
+        cls.slug_test_object = VLANGroup.objects.first().name
 
 
 class VLANTestCase(ViewTestCases.PrimaryObjectViewTestCase):

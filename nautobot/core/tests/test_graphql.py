@@ -638,6 +638,9 @@ class GraphQLQueryTest(TestCase):
         super().setUpTestData()
         cls.user = User.objects.create(username="Super User", is_active=True, is_superuser=True)
 
+        # Remove random IPAddress fixtures for this custom test
+        IPAddress.objects.all().delete()
+
         # Initialize fake request that will be required to execute GraphQL query
         cls.request = RequestFactory().request(SERVER_NAME="WebRequestContext")
         cls.request.id = uuid.uuid4()
@@ -1330,17 +1333,50 @@ query {
     def test_query_ip_addresses_filter(self):
 
         filters = (
-            ('address: "10.0.1.1"', 1),
-            ("family: 4", 3),
-            (f'status: "{self.ip_statuses[0].slug}"', 2),
-            (f'status: ["{self.ip_statuses[1].slug}"]', 1),
-            (f'status: ["{self.ip_statuses[0].slug}", "{self.ip_statuses[1].slug}"]', 3),
-            ("mask_length: 24", 1),
-            ("mask_length: 30", 1),
-            ("mask_length: 32", 1),
-            ("mask_length: 28", 0),
-            ('parent: "10.0.0.0/16"', 2),
-            ('parent: "10.0.2.0/24"', 1),
+            (
+                'address: "10.0.1.1"',
+                IPAddress.objects.filter(host="10.0.1.1").count(),
+            ),
+            (
+                "family: 4",
+                IPAddress.objects.ip_family(4).count(),
+            ),
+            (
+                f'status: "{self.ip_statuses[0].slug}"',
+                IPAddress.objects.filter(status=self.ip_statuses[0]).count(),
+            ),
+            (
+                f'status: ["{self.ip_statuses[1].slug}"]',
+                IPAddress.objects.filter(status=self.ip_statuses[1]).count(),
+            ),
+            (
+                f'status: ["{self.ip_statuses[0].slug}", "{self.ip_statuses[1].slug}"]',
+                IPAddress.objects.filter(status__in=[self.ip_statuses[0], self.ip_statuses[1]]).count(),
+            ),
+            (
+                "mask_length: 24",
+                IPAddress.objects.filter(prefix_length=24).count(),
+            ),
+            (
+                "mask_length: 30",
+                IPAddress.objects.filter(prefix_length=30).count(),
+            ),
+            (
+                "mask_length: 32",
+                IPAddress.objects.filter(prefix_length=32).count(),
+            ),
+            (
+                "mask_length: 28",
+                IPAddress.objects.filter(prefix_length=28).count(),
+            ),
+            (
+                'parent: "10.0.0.0/16"',
+                IPAddress.objects.net_host_contained("10.0.0.0/16").count(),
+            ),
+            (
+                'parent: "10.0.2.0/24"',
+                IPAddress.objects.net_host_contained("10.0.2.0/24").count(),
+            ),
         )
 
         for filterv, nbr_expected_results in filters:

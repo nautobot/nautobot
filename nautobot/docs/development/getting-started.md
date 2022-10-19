@@ -172,6 +172,7 @@ Available tasks:
   markdownlint           Lint Markdown files.
   migrate                Perform migrate operation in Django.
   nbshell                Launch an interactive nbshell session.
+  performance-test       Run Nautobot performance specific unit tests.
   post-upgrade           Performs Nautobot common post-upgrade operations using a single entrypoint.
   pylint                 Perform static analysis of Nautobot code.
   restart                Gracefully restart containers.
