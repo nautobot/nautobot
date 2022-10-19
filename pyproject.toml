@@ -59,7 +59,7 @@ django-extensions = "~3.2.0"
 # Advanced query filters
 django-filter = "~21.1"
 # Health check endpoint
-django-health-check = "~3.16.5"
+django-health-check = "~3.17.0"
 # Django Jinja - jinja2 backend for django, used to easily register custom jinja filters and render jinja.
 django-jinja = "~2.10.2"
 # Modified Pre-order Tree Traversal - tree structure for Region, RackGroup, etc.
