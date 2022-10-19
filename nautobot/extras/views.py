@@ -36,7 +36,7 @@ from nautobot.utilities.utils import (
     get_table_for_model,
     prepare_cloned_fields,
     pretty_print_query,
-    csv_format
+    csv_format,
 )
 from nautobot.utilities.tables import ButtonsColumn
 from nautobot.utilities.views import ObjectPermissionRequiredMixin
