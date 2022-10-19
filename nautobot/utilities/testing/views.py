@@ -59,6 +59,7 @@ class ModelTestCase(TestCase):
 #
 
 
+@tag("performance")
 class ModelViewTestCase(ModelTestCase):
     """
     Base TestCase for model views. Subclass to test individual views.
