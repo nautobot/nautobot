@@ -117,7 +117,34 @@ SECRET_KEY = os.getenv("NAUTOBOT_SECRET_KEY", "{{ secret_key }}")
 # Enable custom logging. Please see the Django documentation for detailed guidance on configuring custom logs:
 #   https://docs.djangoproject.com/en/stable/topics/logging/
 #
-# LOGGING = {}
+# LOGGING = {
+#     "version": 1,
+#     "disable_existing_loggers": False,
+#     "formatters": {
+#         "normal": {
+#             "format": "%(asctime)s.%(msecs)03d %(levelname)-7s %(name)s :\n  %(message)s",
+#             "datefmt": "%H:%M:%S",
+#         },
+#         "verbose": {
+#             "format": "%(asctime)s.%(msecs)03d %(levelname)-7s %(name)-20s %(filename)-15s %(funcName)30s() :\n  %(message)s",
+#             "datefmt": "%H:%M:%S",
+#         },
+#     },
+#     "handlers": {
+#         "normal_console": {
+#             "level": "DEBUG",
+#             "class": "logging.StreamHandler",
+#             "formatter": "normal",
+#         },
+#     },
+#     "loggers": {
+#         "django": {"handlers": ["normal_console"], "level": "INFO"},
+#         "nautobot": {
+#             "handlers": ["verbose_console" if DEBUG else "normal_console"],
+#             "level": "DEBUG" if DEBUG else "INFO",
+#         },
+#     },
+# }
 
 # The file path where uploaded media such as image attachments are stored. A trailing slash is not needed.
 #

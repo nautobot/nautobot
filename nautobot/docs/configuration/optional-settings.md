@@ -918,51 +918,70 @@ addresses (and [`DEBUG`](#debug) is true).
 
 ### LOGGING
 
-Default: `{}` (Empty dictionary)
-
-By default, all messages of INFO severity or higher will be logged to the console. Additionally, if [`DEBUG`](#debug) is False and email access has been configured, ERROR and CRITICAL messages will be emailed to the users defined in [`ADMINS`](#admins).
-
-The Django framework on which Nautobot runs allows for the customization of logging format and destination. Please consult the [Django logging documentation](https://docs.djangoproject.com/en/stable/topics/logging/) for more information on configuring this setting. Below is an example which will write all INFO and higher messages to a local file and log DEBUG and higher messages from Nautobot itself with higher verbosity:
+Default:
 
 ```python
-LOGGING = {
-    'version': 1,
-    'disable_existing_loggers': False,
-    'formatters': {
-        'normal': {
-            'format': '%(asctime)s.%(msecs)03d %(levelname)-7s %(name)s : %(message)s',
-            'datefmt': '%H:%M:%S',
+{
+    "version": 1,
+    "disable_existing_loggers": False,
+    "formatters": {
+        "normal": {
+            "format": "%(asctime)s.%(msecs)03d %(levelname)-7s %(name)s :\n  %(message)s",
+            "datefmt": "%H:%M:%S",
         },
-        'verbose': {
-            'format': '%(asctime)s.%(msecs)03d %(levelname)-7s %(name)-20s %(filename)-15s %(funcName)30s() :\n  %(message)s',
-            'datefmt': '%H:%M:%S',
+        "verbose": {
+            "format": "%(asctime)s.%(msecs)03d %(levelname)-7s %(name)-20s %(filename)-15s %(funcName)30s() :\n  %(message)s",
+            "datefmt": "%H:%M:%S",
         },
     },
-    'handlers': {
-        'file': {'level': 'INFO', 'class': 'logging.FileHandler', 'filename': '/var/log/nautobot.log', 'formatter': 'normal'},
-        'normal_console': {'level': 'INFO', 'class': 'logging.StreamHandler', 'formatter': 'normal'},
-        'verbose_console': {'level': 'DEBUG', 'class': 'logging.StreamHandler', 'formatter': 'verbose'},
+    "handlers": {
+        "normal_console": {
+            "level": "DEBUG",
+            "class": "logging.StreamHandler",
+            "formatter": "normal",
+        },
     },
-    'loggers': {
-        'django': {'handlers': ['file', 'normal_console'], 'level': 'INFO'},
-        'nautobot': {'handlers': ['file', 'verbose_console'], 'level': 'DEBUG'},
+    "loggers": {
+        "django": {"handlers": ["normal_console"], "level": "INFO"},
+        "nautobot": {
+            "handlers": ["verbose_console" if DEBUG else "normal_console"],
+            "level": LOG_LEVEL,
+        },
     },
 }
 ```
 
-Additional examples are available in [`/examples/logging`](https://github.com/nautobot/nautobot/tree/develop/examples/logging).
+This translates to:
+
+* all messages from Django and from Nautobot of INFO severity or higher will be logged to the console.
+* if [`DEBUG`](#debug) is True, Nautobot DEBUG messages will also be logged, and all Nautobot messages will be logged with a more verbose format including the filename and function name that originated each log message.
+
+The above default log formatters split each log message across two lines of output for greater readability, which is useful for local observation and troubleshooting, but you may find it impractical to use in production environments that expect one line per log message. Fortunately, the Django framework on which Nautobot runs allows for extensive customization of logging format and destination. Please consult the [Django logging documentation](https://docs.djangoproject.com/en/stable/topics/logging/) for more information on configuring this setting.
+
+Below is an example configuration extension which will additionally write all INFO and higher messages to a local file:
+
+```python
+LOGGING["handlers"]["file"] = {
+    "level": "INFO",
+    "class": "logging.FileHandler",
+    "filename": "/var/log/nautobot.log",
+    "formatter": "normal",
+}
+LOGGING["loggers"]["django"]["handlers"] += ["file"]
+LOGGING["loggers"]["nautobot"]["handlers"] += ["file"]
+```
+
+Additional examples are available in the [`/examples/logging`](https://github.com/nautobot/nautobot/tree/develop/examples/logging) directory in the Nautobot repository.
 
 #### Available Loggers
 
 * `django.*` - Generic Django operations (HTTP requests/responses, etc.)
 * `nautobot.<app>.<module>` - Generic form for model- or module-specific log messages
 * `nautobot.auth.*` - Authentication events
-* `nautobot.api.views.*` - Views which handle business logic for the REST API
 * `nautobot.jobs.*` - Job execution (`* = JobClassName`)
 * `nautobot.graphql.*` - [GraphQL](../additional-features/graphql.md) initialization and operation.
 * `nautobot.plugins.*` - Plugin loading and activity
 * `nautobot.views.*` - Views which handle business logic for the web UI
-* `rq.worker` - Background task handling
 
 ---
 
