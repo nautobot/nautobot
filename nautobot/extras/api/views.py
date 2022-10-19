@@ -533,7 +533,7 @@ def _run_job(request, job_model, legacy_response=False):
     data = request.data
     files = None
 
-    if 'multipart/form-data' in request.content_type:
+    if "multipart/form-data" in request.content_type:
         data = request._data  # .data will return data and files, we just want the data
         files = request.FILES
 
