@@ -530,20 +530,14 @@ def _run_job(request, job_model, legacy_response=False):
         raise MethodNotAllowed(request.method, detail="This job's source code could not be located and cannot be run")
     job = job_class()
 
-    print("=================")
-    print(dir(request))
-    print(request.FILES)
-    print(request.content_type)
-    print(dir(request.data))
-    print(request.data)
-    print("=================")
+    data = request.data
+    files = None
 
-    # if 'application/json' in request.content_type:
-    #     data = request.data
-    # elif 'multipart/form-data' in request.content_type and 'body' in request.data:
-    #     data = request.data['body']
+    if 'multipart/form-data' in request.content_type:
+        data = request._data  # .data will return data and files, we just want the data
+        files = request.FILES
 
-    input_serializer = serializers.JobInputSerializer(data=request.data, context={"request": request})
+    input_serializer = serializers.JobInputSerializer(data=data, context={"request": request})
     input_serializer.is_valid(raise_exception=True)
 
     data = input_serializer.validated_data.get("data", {})
@@ -557,7 +551,7 @@ def _run_job(request, job_model, legacy_response=False):
         raise ValidationError({"task_queue": [f'"{task_queue}" is not a valid choice.']})
 
     try:
-        job.validate_data(data)
+        job.validate_data(data, files)
     except FormsValidationError as e:
         # message_dict can only be accessed if ValidationError got a dict
         # in the constructor (saved as error_dict). Otherwise we get a list
