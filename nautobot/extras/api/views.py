@@ -585,7 +585,7 @@ def _run_job(request, job_model, legacy_response=False):
     if schedule_data:
         schedule = _create_schedule(
             schedule_data,
-            job_model.job_class.serialize_data(cleaned_data),
+            job_class.serialize_data(cleaned_data),
             commit,
             job,
             job_model,
@@ -604,7 +604,7 @@ def _run_job(request, job_model, legacy_response=False):
             job_content_type,
             request.user,
             celery_kwargs={"queue": task_queue},
-            data=job_model.job_class.serialize_data(cleaned_data),
+            data=job_class.serialize_data(cleaned_data),
             request=copy_safe_request(request),
             commit=commit,
             task_queue=input_serializer.validated_data.get("task_queue", None),
