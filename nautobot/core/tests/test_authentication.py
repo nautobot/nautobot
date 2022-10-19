@@ -274,7 +274,7 @@ class ObjectPermissionAPIViewTestCase(TestCase):
         # Assign object permission
         obj_perm = ObjectPermission.objects.create(
             name="Test permission",
-            constraints={"site__name": f"{self.sites[0].name}"},
+            constraints={"site__name": self.sites[0].name},
             actions=["view"],
         )
         obj_perm.users.add(self.user)
@@ -301,7 +301,7 @@ class ObjectPermissionAPIViewTestCase(TestCase):
         # Assign object permission
         obj_perm = ObjectPermission.objects.create(
             name="Test permission",
-            constraints={"site__name": f"{self.sites[0].name}"},
+            constraints={"site__name": self.sites[0].name},
             actions=["view"],
         )
         obj_perm.users.add(self.user)
@@ -329,7 +329,7 @@ class ObjectPermissionAPIViewTestCase(TestCase):
         # Assign object permission
         obj_perm = ObjectPermission.objects.create(
             name="Test permission",
-            constraints={"site__name": f"{self.sites[0].name}"},
+            constraints={"site__name": self.sites[0].name},
             actions=["add"],
         )
         obj_perm.users.add(self.user)
@@ -393,7 +393,7 @@ class ObjectPermissionAPIViewTestCase(TestCase):
         # Assign object permission
         obj_perm = ObjectPermission.objects.create(
             name="Test permission",
-            constraints={"site__name": f"{self.sites[0].name}"},
+            constraints={"site__name": self.sites[0].name},
             actions=["delete"],
         )
         obj_perm.users.add(self.user)

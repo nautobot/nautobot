@@ -625,9 +625,7 @@ class GraphQLAPIPermissionTest(TestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertIsInstance(response.data["data"]["sites"], list)
         site_names = [item["name"] for item in response.data["data"]["sites"]]
-        site_list = []
-        for site in Site.objects.all():
-            site_list.append(site.name)
+        site_list = Site.objects.values_list("name", flat=True)
         self.assertEqual(site_names, site_list)
 
 
@@ -1262,15 +1260,15 @@ query {
             (f'id: ["{self.site1.pk}", "{self.site2.pk}"]', 2),
             (
                 f'status: "{self.site_statuses[0].slug}"',
-                Site.objects.filter(status__slug__in=[self.site_statuses[0].slug]).count(),
+                Site.objects.filter(status=self.site_statuses[0]).count(),
             ),
             (
                 f'status: ["{self.site_statuses[1].slug}"]',
-                Site.objects.filter(status__slug__in=[self.site_statuses[1].slug]).count(),
+                Site.objects.filter(status=self.site_statuses[1]).count(),
             ),
             (
                 f'status: ["{self.site_statuses[0].slug}", "{self.site_statuses[1].slug}"]',
-                Site.objects.filter(status__slug__in=[self.site_statuses[0].slug, self.site_statuses[1].slug]).count(),
+                Site.objects.filter(status__in=self.site_statuses[:2]).count(),
             ),
         )
 
@@ -1456,14 +1454,12 @@ query {
                 query = "query { sites{ devices{ frontports(" + filterv + "){ id }}}}"
                 result = self.execute_query(query)
                 self.assertIsNone(result.errors)
-                non_empty_index = 0
-                while non_empty_index < len(result.data["sites"]):
-                    if result.data["sites"][non_empty_index]["devices"]:
+                for count, _ in enumerate(result.data["sites"]):
+                    if result.data["sites"][count]["devices"]:
+                        self.assertEqual(
+                            len(result.data["sites"][count]["devices"][0]["frontports"]), nbr_expected_results
+                        )
                         break
-                    non_empty_index += 1
-                self.assertEqual(
-                    len(result.data["sites"][non_empty_index]["devices"][0]["frontports"]), nbr_expected_results
-                )
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     def test_query_front_ports_cable_peer(self):
@@ -1612,14 +1608,12 @@ query {
                 query = "query { sites{ devices{ interfaces(" + filterv + "){ id }}}}"
                 result = self.execute_query(query)
                 self.assertIsNone(result.errors)
-                non_empty_index = 0
-                while non_empty_index < len(result.data["sites"]):
-                    if result.data["sites"][non_empty_index]["devices"]:
+                for count, _ in enumerate(result.data["sites"]):
+                    if result.data["sites"][count]["devices"]:
+                        self.assertEqual(
+                            len(result.data["sites"][count]["devices"][0]["interfaces"]), nbr_expected_results
+                        )
                         break
-                    non_empty_index += 1
-                self.assertEqual(
-                    len(result.data["sites"][non_empty_index]["devices"][0]["interfaces"]), nbr_expected_results
-                )
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     def test_query_interfaces_connected_endpoint(self):

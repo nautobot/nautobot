@@ -2244,7 +2244,6 @@ class ConnectedDeviceTest(APITestCase):
         super().setUp()
 
         self.site1 = Site.objects.first()
-        self.site2 = Site.objects.last()
         manufacturer = Manufacturer.objects.create(name="Test Manufacturer 1", slug="test-manufacturer-1")
         self.devicetype1 = DeviceType.objects.create(
             manufacturer=manufacturer,

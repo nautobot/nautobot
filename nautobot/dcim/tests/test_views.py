@@ -130,6 +130,9 @@ class RegionTestCase(ViewTestCases.OrganizationalObjectViewTestCase):
         """Only return objects without children so that the deletion count is as expected."""
         return [region.pk for region in list(Region.objects.filter(children__isnull=True))[:3]]
 
+    def get_deletable_object(self):
+        return Region.objects.create(name="Region 0")
+
 
 class SiteTestCase(ViewTestCases.PrimaryObjectViewTestCase):
     model = Site
@@ -282,8 +285,8 @@ class LocationTypeTestCase(ViewTestCases.OrganizationalObjectViewTestCase):
 
         cls.csv_data = (
             "name,slug,parent,description,content_types",
-            "Intermediate 3,intermediate-3,Root,Another intermediate type,ipam.prefix",
-            'Intermediate 4,intermediate-4,Root,Another intermediate type,"ipam.prefix,dcim.device"',
+            f"Intermediate 3,intermediate-3,{lt1.name},Another intermediate type,ipam.prefix",
+            f'Intermediate 4,intermediate-4,{lt1.name},Another intermediate type,"ipam.prefix,dcim.device"',
             "Root 3,root-3,,Another root type,",
         )
 
@@ -319,7 +322,7 @@ class LocationTestCase(ViewTestCases.PrimaryObjectViewTestCase):
 
         active = Status.objects.get(name="Active")
         site = Site.objects.first()
-        tenant = Tenant.objects.create(name="Tenant 1")
+        tenant = Tenant.objects.first()
 
         loc1 = Location.objects.create(name="Root 1", location_type=lt1, site=site, status=active)
         loc2 = Location.objects.create(name="Root 2", location_type=lt1, site=site, status=active, tenant=tenant)
@@ -341,9 +344,9 @@ class LocationTestCase(ViewTestCases.PrimaryObjectViewTestCase):
 
         cls.csv_data = (
             "name,slug,location_type,parent,site,status,tenant,description",
-            f"Root 3,root-3,Building,,{site.name},active,,",
-            "Intermediate 2,intermediate-2,Floor,Root 2,,active,Tenant 1,Hello world!",
-            "Leaf 2,leaf-2,Room,Intermediate 1,,active,Tenant 1,",
+            f"Root 3,root-3,{lt1.name},,{site.name},active,,",
+            f"Intermediate 2,intermediate-2,{lt2.name},{loc2.name},,active,{tenant.name},Hello world!",
+            f"Leaf 2,leaf-2,{lt3.name},{loc3.name},,active,Tenant 1,",
         )
 
         cls.bulk_edit_data = {

@@ -60,7 +60,7 @@ class SiteFactory(DjangoModelFactory):
     tenant = factory.Maybe("has_tenant", random_instance(Tenant), None)
 
     has_time_zone = factory.Faker("pybool")
-    time_zone = factory.Maybe("has_time_zone", pytz.timezone("US/Eastern"))
+    time_zone = factory.Maybe("has_time_zone", pytz.timezone(factory.Faker().timezone()))
 
     has_physical_address = factory.Faker("pybool")
     physical_address = factory.Maybe("has_physical_address", factory.Faker("address"))
@@ -83,7 +83,7 @@ class SiteFactory(DjangoModelFactory):
     contact_phone = factory.Maybe("has_contact_phone", factory.Sequence(lambda n: f"1091-65912-{n:04d}"))
 
     has_contact_email = factory.Faker("pybool")
-    contact_email = factory.Maybe("has_contact_email", factory.Faker("company_email"))
+    contact_email = factory.Maybe("has_contact_email", factory.Faker("safe_email"))
 
 
 class LocationTypeFactory(DjangoModelFactory):

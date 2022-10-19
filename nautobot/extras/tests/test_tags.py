@@ -17,7 +17,6 @@ class TaggedItemORMTest(TestCase):
         super().setUpTestData()
 
         cls.site = Site.objects.first()
-        cls.site.status = Status.objects.get(slug="active")
 
     def test_tags_set_taggit_1(self):
         """Test that obj.tags.set() works when invoked like django-taggit 1.x."""
@@ -64,8 +63,6 @@ class TaggedItemTest(APITestCase):
 
     def test_update_tagged_item(self):
         site = Site.objects.first()
-        site.status = Status.objects.get(slug="active")
-        site.validated_save()
         site.tags.add(*self.tags[:3])
         data = {
             "tags": [
@@ -91,8 +88,6 @@ class TaggedItemTest(APITestCase):
 
     def test_clear_tagged_item(self):
         site = Site.objects.first()
-        site.status = Status.objects.get(slug="active")
-        site.validated_save()
         site.tags.add(*self.tags[:3])
         data = {"tags": []}
         self.add_permissions("dcim.change_site")

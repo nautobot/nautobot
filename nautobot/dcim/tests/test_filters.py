@@ -667,7 +667,7 @@ class RegionTestCase(FilterTestCases.NameSlugFilterTestCase):
         cls.child_regions = list(Region.objects.filter(parent__in=cls.parent_regions)[:3])
 
     def test_description(self):
-        regions = Region.objects.filter(description__isnull=False).exclude(description="")[:2]
+        regions = Region.objects.exclude(description="")[:2]
         params = {"description": [regions[0].description, regions[1].description]}
         self.assertEqual(
             self.filterset(params, self.queryset).qs.count(),
@@ -1060,7 +1060,7 @@ class LocationTypeFilterSetTestCase(FilterTestCases.NameSlugFilterTestCase):
             ct_2 = [ContentType.objects.get_for_model(Rack)]
             self.assertEqual(
                 self.filterset(params, self.queryset).qs.count(),
-                LocationType.objects.filter(Q(content_types__in=ct_1)).filter(Q(content_types__in=ct_2)).count(),
+                LocationType.objects.filter(content_types__in=[ct_1, ct_2]).distinct().count(),
             )
 
 
@@ -1141,11 +1141,11 @@ class LocationFilterSetTestCase(FilterTestCases.NameSlugFilterTestCase, FilterTe
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
 
     def test_site(self):
-        params = {"site": [Site.objects.last().slug, Site.objects.last().pk]}
+        params = {"site": [Site.objects.first().slug, Site.objects.last().pk]}
         # TODO: should this filter return descendant locations as well?
         self.assertEqual(
             self.filterset(params, self.queryset).qs.count(),
-            Location.objects.filter(site=Site.objects.last().pk).count(),
+            Location.objects.filter(site__in=[Site.objects.first().pk, Site.objects.last().pk]).count(),
         )
 
 

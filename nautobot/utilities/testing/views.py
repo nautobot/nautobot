@@ -296,6 +296,8 @@ class ViewTestCases:
             }
             self.assertHttpStatus(self.client.post(**request), 302)
             self.assertEqual(initial_count + 1, self._get_queryset().count())
+            # order_by() is no supported by django TreeNode,
+            # So we directly retrieve the instance by "slug".
             if isinstance(self._get_queryset().first(), TreeNode):
                 instance = self._get_queryset().get(slug=self.form_data.get("slug"))
                 self.assertInstanceEqual(instance, self.form_data)
@@ -349,6 +351,8 @@ class ViewTestCases:
             }
             self.assertHttpStatus(self.client.post(**request), 302)
             self.assertEqual(initial_count + 1, self._get_queryset().count())
+            # order_by() is no supported by django TreeNode,
+            # So we directly retrieve the instance by "slug".
             if isinstance(self._get_queryset().first(), TreeNode):
                 instance = self._get_queryset().get(slug=self.form_data.get("slug"))
                 self.assertInstanceEqual(instance, self.form_data)
