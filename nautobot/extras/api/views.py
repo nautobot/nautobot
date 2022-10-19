@@ -550,8 +550,9 @@ def _run_job(request, job_model, legacy_response=False):
     if task_queue not in valid_queues:
         raise ValidationError({"task_queue": [f'"{task_queue}" is not a valid choice.']})
 
+    cleaned_data = None
     try:
-        job.validate_data(data, files)
+        cleaned_data = job.validate_data(data, files)
     except FormsValidationError as e:
         # message_dict can only be accessed if ValidationError got a dict
         # in the constructor (saved as error_dict). Otherwise we get a list
@@ -584,7 +585,7 @@ def _run_job(request, job_model, legacy_response=False):
     if schedule_data:
         schedule = _create_schedule(
             schedule_data,
-            data,
+            job_model.job_class.serialize_data(cleaned_data),
             commit,
             job,
             job_model,
@@ -603,7 +604,7 @@ def _run_job(request, job_model, legacy_response=False):
             job_content_type,
             request.user,
             celery_kwargs={"queue": task_queue},
-            data=data,
+            data=job_model.job_class.serialize_data(cleaned_data),
             request=copy_safe_request(request),
             commit=commit,
             task_queue=input_serializer.validated_data.get("task_queue", None),

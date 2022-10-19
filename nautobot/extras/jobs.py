@@ -458,6 +458,8 @@ class BaseJob:
         if not f.is_valid():
             raise ValidationError(f.errors)
 
+        return f.cleaned_data
+
     @staticmethod
     def load_file(pk):
         """Load a file proxy stored in the database by primary key.
