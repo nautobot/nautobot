@@ -13,7 +13,7 @@ from nautobot.extras.models import ChangeLoggedModel, CustomField, Relationship
 from nautobot.users.models import ObjectPermission
 from nautobot.utilities.testing.mixins import NautobotTestCaseMixin
 from nautobot.utilities.utils import get_changes_for_model, get_filterset_for_model
-from .utils import disable_warnings, extract_page_body, post_data
+from .utils import disable_warnings, extract_page_body, get_deletable_objects, post_data
 
 
 __all__ = (
@@ -25,6 +25,7 @@ __all__ = (
 
 
 @tag("unit")
+@override_settings(PAGINATE_COUNT=65000)
 class TestCase(_TestCase, NautobotTestCaseMixin):
     """Base class for all Nautobot-specific unit tests."""
 
@@ -470,7 +471,7 @@ class ViewTestCases:
             For some models this may just be any random object, but when we have FKs with `on_delete=models.PROTECT`
             (as is often the case) we need to find or create an instance that doesn't have such entanglements.
             """
-            return self._get_queryset().first()
+            return get_deletable_objects(self.model, self._get_queryset()).first()
 
         def test_delete_object_without_permission(self):
             instance = self.get_deletable_object()
@@ -914,7 +915,9 @@ class ViewTestCases:
             # Dynamically determine a constraint that will *not* be matched by the updated objects.
             attr_name = list(self.bulk_edit_data.keys())[0]
             field = self.model._meta.get_field(attr_name)
-            value = field.value_from_object(self._get_queryset().first())
+            value = field.value_from_object(
+                self._get_queryset().exclude(**{attr_name: self.bulk_edit_data[attr_name]}).first()
+            )
 
             # Assign constrained permission
             obj_perm = ObjectPermission(
@@ -951,7 +954,7 @@ class ViewTestCases:
             For some models this may just be any random objects, but when we have FKs with `on_delete=models.PROTECT`
             (as is often the case) we need to find or create an instance that doesn't have such entanglements.
             """
-            return list(self._get_queryset().values_list("pk", flat=True)[:3])
+            return get_deletable_objects(self.model, self._get_queryset()).values_list("pk", flat=True)[:3]
 
         @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
         def test_bulk_delete_objects_without_permission(self):

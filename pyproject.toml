@@ -152,7 +152,7 @@ sso = ["social-auth-core"]
 # Code style enforcement
 black = "~22.8.0"
 # Test code coverage measurement
-coverage = "~6.4.1"
+coverage = "~6.5.0"
 # Tool for debugging Django
 django-debug-toolbar = "~3.7.0"
 # DiscoverSlowestTestsRunner for running CI performance tests and benchmarking.

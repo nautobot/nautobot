@@ -423,7 +423,7 @@ class LocationTypeForm(NautobotModelForm):
 
     class Meta:
         model = LocationType
-        fields = ("parent", "name", "slug", "description", "content_types")
+        fields = ("parent", "name", "slug", "description", "nestable", "content_types")
 
 
 class LocationTypeCSVForm(CustomFieldModelCSVForm):

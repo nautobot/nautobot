@@ -31,10 +31,10 @@ register = template.Library()
 
 @library.filter()
 @register.filter()
-def hyperlinked_object(value):
+def hyperlinked_object(value, field="display"):
     """Render and link to a Django model instance, if any, or render a placeholder if not.
 
-    Uses `object.display` if available, otherwise uses the string representation of the object.
+    Uses the specified object field if available, otherwise uses the string representation of the object.
     If the object defines `get_absolute_url()` this will be used to hyperlink the displayed object;
     additionally if there is an `object.description` this will be used as the title of the hyperlink.
 
@@ -53,10 +53,14 @@ def hyperlinked_object(value):
         '<span class="text-muted">&mdash;</span>'
         >>> hyperlinked_object("Hello")
         'Hello'
+        >>> hyperlinked_object(location)
+        '<a href="/dcim/locations/leaf/">Root → Intermediate → Leaf</a>'
+        >>> hyperlinked_object(location, "name")
+        '<a href="/dcim/locations/leaf/">Leaf</a>'
     """
     if value is None:
         return placeholder(value)
-    display = value.display if hasattr(value, "display") else str(value)
+    display = getattr(value, field) if hasattr(value, field) else str(value)
     if hasattr(value, "get_absolute_url"):
         if hasattr(value, "description") and value.description:
             return format_html('<a href="{}" title="{}">{}</a>', value.get_absolute_url(), value.description, display)
