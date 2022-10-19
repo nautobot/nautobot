@@ -65,7 +65,7 @@ try:
         """
         Pre-requisite:
             Set `GENERATE_PERFORMANCE_REPORT` to True in settings.py
-        This test runner is designated to run performance specific unittest.
+        This test runner is designated to run performance specific unit tests.
 
         `ModelViewTestCase` is tagged with `performance` to test the time it will take to retrieve, list, create, bulk_create,
         delete, bulk_delete, edit, bulk_edit object(s) and various other operations.
@@ -76,7 +76,7 @@ try:
 
         def generate_report(self, test_results, result):
             """
-            Generate Performance Report consists of unittests that are significantly slower than baseline.
+            Generate Performance Report consists of unit tests that are significantly slower than baseline.
             """
             test_result_count = len(test_results)
 

@@ -1361,7 +1361,7 @@ The [`TEST_USE_FACTORIES`](../configuration/optional-settings.md#test_use_factor
 
 You need to install `django-slowtests` as a part of your plugin dev dependency to run performance tests. It has a very intuitive way to measure the performance of your own tests for your plugin  (all you have to do is tag your tests with `performance`) and do `invoke performance-test` to get the time to run your tests with `NautobotPerformanceTestRunner`.
 
-`NautobotPerformanceTestRunner` is used by adding the flag `--testrunner nautobot.core.tests.runner.NautobotPerformanceTestRunner` to the `coverage run` command used for unittests. This flag will replace the default `NautobotTestRunner` while retaining all its functionalities with the addition of performance evaluation after test
+`NautobotPerformanceTestRunner` is used by adding the flag `--testrunner nautobot.core.tests.runner.NautobotPerformanceTestRunner` to the `coverage run` command used for unit tests. This flag will replace the default `NautobotTestRunner` while retaining all its functionalities with the addition of performance evaluation after test
 runs.
 Checkout [Performance Tests](../development/testing.md#performance-tests) for more detail.
 
