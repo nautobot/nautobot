@@ -1378,8 +1378,12 @@ class JobAPIRunTestMixin:
             "var4": {"name": "role"},
         }
 
+        # This handles things like ObjectVar fields looked up by non-UUID
+        # Jobs are executed with deserialized data
+        deserialized_data = get_job("local/api_test_job/APITestJob").deserialize_data(job_data)
+
         self.assertEqual(
-            get_job("local/api_test_job/APITestJob").deserialize_data(job_data),
+            deserialized_data,
             {"var1": "FooBar", "var2": 123, "var3": False, "var4": device_role},
         )
 
@@ -1389,7 +1393,11 @@ class JobAPIRunTestMixin:
 
         job_result = JobResult.objects.last()
         self.assertIn("data", job_result.job_kwargs)
-        self.assertEqual(job_result.job_kwargs["data"], job_data)
+
+        # Ensure the stored job_kwargs deserialize to the same as originally inputted
+        self.assertEqual(
+            get_job("local/api_test_job/APITestJob").deserialize_data(job_result.job_kwargs["data"]), deserialized_data
+        )
 
         return (response, job_result)  # so subclasses can do additional testing
 
