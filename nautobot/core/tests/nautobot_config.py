@@ -28,7 +28,7 @@ SECRET_KEY = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
 # Redis variables
 
 # Use *different* redis_databases than the ones (0 and 1) used during non-automated-testing operations.
-CACHES["default"]["LOCATION"] = parse_redis_connection(redis_database=2)
+CACHES["default"]["LOCATION"] = parse_redis_connection(redis_database=2)  # noqa: F405
 CACHEOPS_REDIS = parse_redis_connection(redis_database=3)
 
 CACHEOPS_ENABLED = False  # TODO(john): we should revisit this, but caching has caused issues with testing

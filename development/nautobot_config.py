@@ -1,9 +1,8 @@
 """Nautobot development configuration file."""
 import os
-import sys
 
 from nautobot.core.settings import *  # noqa: F403
-from nautobot.core.settings_funcs import is_truthy, parse_redis_connection
+from nautobot.core.settings_funcs import is_truthy
 
 #
 # Debugging defaults to True rather than False for the development environment
@@ -25,8 +24,8 @@ if DEBUG:
 #
 
 LOG_LEVEL = "DEBUG" if DEBUG else "INFO"
-LOGGING["loggers"]["nautobot"]["handlers"] = ["verbose_console" if DEBUG else "normal_console"]
-LOGGING["loggers"]["nautobot"]["level"] = LOG_LEVEL
+LOGGING["loggers"]["nautobot"]["handlers"] = ["verbose_console" if DEBUG else "normal_console"]  # noqa: F405
+LOGGING["loggers"]["nautobot"]["level"] = LOG_LEVEL  # noqa: F405
 
 #
 # Plugins
