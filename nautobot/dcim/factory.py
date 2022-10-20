@@ -97,7 +97,7 @@ class LocationTypeFactory(DjangoModelFactory):
     has_description = factory.Faker("pybool")
     description = factory.Maybe("has_description", factory.Faker("text", max_nb_chars=200), "")
 
-    nestable = factory.LazyAttribute(lambda l: True if l.name == "Campus" else False)
+    nestable = factory.LazyAttribute(lambda l: bool(l.name == "Campus"))
 
     @factory.lazy_attribute
     def parent(self):

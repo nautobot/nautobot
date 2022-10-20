@@ -94,7 +94,9 @@ class CircuitTestCase(FilterTestCases.FilterTestCase, FilterTestCases.TenancyFil
     @classmethod
     def setUpTestData(cls):
 
-        cls.regions = Region.objects.filter(sites__isnull=False, children__isnull=True, parent__isnull=True)[:3]
+        cls.regions = list(
+            Region.objects.filter(sites__isnull=False, children__isnull=True, parent__isnull=True).distinct()
+        )[:3]
 
         cls.sites = (
             Site.objects.filter(region=cls.regions[0]).first(),
