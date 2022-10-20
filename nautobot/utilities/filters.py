@@ -1,6 +1,7 @@
 from collections import OrderedDict
 from copy import deepcopy
 import logging
+import itertools
 import uuid
 
 from django import forms
@@ -445,16 +446,10 @@ class NaturalKeyOrPKMultipleChoiceFilter(django_filters.ModelMultipleChoiceFilte
             v = str(v)  # Cast possible UUID instance to a string
             is_pk = True
 
-        # If it's not a pk and not a list/qs generate then it's a slug and the filter predicate
-        # needs to be nested (e.g. `{"site__slug": "ams01"}`) so that it can be useable in `Q`
-        # objects.
-        #
-        # FIXME(jathan): It feels weird to have a list/qs make its way to `get_filter_predicate()`
-        # which if you inspect the source for `django_filters.MultipleChoiceFilter.filter()` should
-        # be handling those to generate singular filter predicates and concatentating them.
-        if not is_pk and not isinstance(v, (list, models.QuerySet)):
+        # If it's not a pk, then it's a slug and the filter predicate needs to be nested (e.g.
+        # `{"site__slug": "ams01"}`) so that it can be usable in `Q` objects.
+        if not is_pk:
             name = f"{self.field_name}__{self.field.to_field_name}"
-        # Otherwise just trust the field_name
         else:
             logger.debug("UUID or list/qs detected: Filtering using field name")
             name = self.field_name
@@ -492,20 +487,23 @@ class TreeNodeMultipleChoiceFilter(NaturalKeyOrPKMultipleChoiceFilter):
     would match both "Athens" and "Durham".
     """
 
-    def __init__(self, *args, **kwargs):
-        kwargs.setdefault("lookup_expr", "in")
-        super().__init__(*args, **kwargs)
-
     def filter(self, qs, value):
+        new_value = []
         if value:
-            if any(isinstance(node, TreeNode) for node in value):
-                # django-tree-queries
-                value = [node.descendants(include_self=True) if not isinstance(node, str) else node for node in value]
-            elif any(isinstance(node, MPTTModel) for node in value):
-                # django-mptt
-                value = [
-                    node.get_descendants(include_self=True) if not isinstance(node, str) else node for node in value
-                ]
+            for node in value:
+                if isinstance(node, TreeNode):
+                    method = "descendants"
+                elif isinstance(node, MPTTModel):
+                    method = "get_descendants"
+                else:
+                    continue
+
+                descendants = getattr(node, method)(include_self=True)
+                new_value.append(descendants)
+
+        # This new_value is going to be a list of querysets that needs to be flattened.
+        if new_value:
+            value = list(itertools.chain.from_iterable(new_value))
         return super().filter(qs, value)
 
 
