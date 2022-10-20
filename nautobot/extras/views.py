@@ -1609,6 +1609,7 @@ class ObjectChangeLogView(View):
         RequestConfig(request, paginate).configure(objectchanges_table)
 
         self.base_template = get_base_template(self.base_template, model)
+        print("\n\n ====>", self.base_template)
 
         return render(
             request,
@@ -2091,3 +2092,18 @@ class WebhookDeleteView(generic.ObjectDeleteView):
 class WebhookBulkDeleteView(generic.BulkDeleteView):
     queryset = Webhook.objects.all()
     table = tables.WebhookTable
+
+
+#
+# Job Extra Views
+#
+# NOTE: Due to inheritance, JobObjectChangeLogView and JobObjectNotesView can only be
+# constructed below # ObjectChangeLogView and ObjectNotesView.
+
+
+class JobObjectChangeLogView(ObjectChangeLogView):
+    base_template = "extras/job_detail.html"
+
+
+class JobObjectNotesView(ObjectNotesView):
+    base_template = "extras/job_detail.html"
