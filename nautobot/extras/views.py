@@ -1609,7 +1609,6 @@ class ObjectChangeLogView(View):
         RequestConfig(request, paginate).configure(objectchanges_table)
 
         self.base_template = get_base_template(self.base_template, model)
-        print("\n\n ====>", self.base_template)
 
         return render(
             request,
