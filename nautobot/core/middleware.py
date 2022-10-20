@@ -1,5 +1,7 @@
 from django.conf import settings
 from django.contrib.auth.middleware import RemoteUserMiddleware as RemoteUserMiddleware_
+from django.contrib.auth.signals import user_logged_in
+from django.contrib.auth.models import update_last_login
 from django.db import ProgrammingError
 from django.http import Http404
 from django.urls import resolve
@@ -35,6 +37,11 @@ class RemoteUserMiddleware(RemoteUserMiddleware_):
         # Bypass middleware if remote authentication is not enabled
         if not remote_auth_enabled(auth_backends=settings.AUTHENTICATION_BACKENDS):
             return None
+
+        # If maintenance mode is enabled, assume the database is read-only, and disable updating the user's
+        # last_login time upon authentication.
+        if settings.MAINTENANCE_MODE:
+            user_logged_in.disconnect(update_last_login, dispatch_uid="update_last_login")
 
         return super().process_request(request)
 
