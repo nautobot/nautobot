@@ -1250,7 +1250,7 @@ class DeviceRoleTestCase(ViewTestCases.OrganizationalObjectViewTestCase):
         DeviceRole.objects.create(name="Device Role 1", slug="device-role-1")
         DeviceRole.objects.create(name="Device Role 2", slug="device-role-2")
         DeviceRole.objects.create(name="Device Role 3", slug="device-role-3")
-        DeviceRole.objects.create(name="Device Role 8")
+        device_role = DeviceRole.objects.create(name="Slug Test Role 8", slug="slug-test-role-8")
 
         cls.form_data = {
             "name": "Device Role X",
@@ -1268,7 +1268,7 @@ class DeviceRoleTestCase(ViewTestCases.OrganizationalObjectViewTestCase):
             "Device Role 7,,0000ff",
         )
 
-        cls.slug_test_object = "Device Role 8"
+        cls.slug_test_object = device_role.name
         cls.slug_source = "name"
 
 
@@ -1298,8 +1298,8 @@ class PlatformTestCase(ViewTestCases.OrganizationalObjectViewTestCase):
             "Platform 7,,Seventh platform",
         )
 
-        cls.slug_source = "name"
         cls.slug_test_object = platform.name
+        cls.slug_source = "name"
 
 
 class DeviceTestCase(ViewTestCases.PrimaryObjectViewTestCase):

@@ -2110,20 +2110,19 @@ class ConnectedDeviceTest(APITestCase):
 
         cable_status = Status.objects.get_for_model(Cable).get(slug="connected")
 
-        device1 = Device.objects.create(
+        self.device1 = Device.objects.create(
             device_type=device_type,
             device_role=device_role,
             name="TestDevice1",
             site=site,
         )
-        self.device1 = device1
         device2 = Device.objects.create(
             device_type=device_type,
             device_role=device_role,
             name="TestDevice2",
             site=site,
         )
-        interface1 = Interface.objects.create(device=device1, name="eth0")
+        interface1 = Interface.objects.create(device=self.device1, name="eth0")
         interface2 = Interface.objects.create(device=device2, name="eth0")
 
         cable = Cable(termination_a=interface1, termination_b=interface2, status=cable_status)

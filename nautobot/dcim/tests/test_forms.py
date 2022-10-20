@@ -40,12 +40,13 @@ class DeviceTestCase(TestCase):
             u_height=1,
             is_full_depth=True,
         ).first()
-        cls.platform = Platform.objects.filter(manufacturer=cls.device_type.manufacturer).first()
         cls.manufacturer = cls.device_type.manufacturer
+        cls.platform = Platform.objects.filter(manufacturer=cls.device_type.manufacturer).first()
         cls.device_role = DeviceRole.objects.first()
 
         Device.objects.create(
             name="Device 1",
+            status=Status.objects.get_for_model(Device).get(slug="active"),
             device_type=cls.device_type,
             device_role=cls.device_role,
             site=cls.site,

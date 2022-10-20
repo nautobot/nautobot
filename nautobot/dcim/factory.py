@@ -2,8 +2,6 @@ import logging
 import random
 
 import factory
-import factory.fuzzy
-import faker
 
 from nautobot.core.factory import OrganizationalModelFactory, PrimaryModelFactory
 from nautobot.dcim.models import DeviceRole, DeviceType, Manufacturer, Platform
@@ -66,12 +64,12 @@ class PlatformFactory(OrganizationalModelFactory):
     name = factory.Maybe(
         "has_manufacturer",
         factory.LazyAttributeSequence(lambda o, n: f"{o.manufacturer.name} Platform {n + 1}"),
-        factory.Sequence(lambda n: f"Platform {n}"),
+        factory.Sequence(lambda n: f"Fake Platform {n}"),
     )
 
     manufacturer = factory.Maybe("has_manufacturer", random_instance(Manufacturer), None)
 
-    # If it has a manufacturer, it *might* have a naplam_driver.
+    # If it has a manufacturer, it *might* have a napalm_driver.
     napalm_driver = factory.Maybe(
         "has_manufacturer",
         factory.LazyAttribute(lambda o: random.choice(NAPALM_DRIVERS.get(o.manufacturer.slug, [""]))),
@@ -106,7 +104,7 @@ class DeviceTypeFactory(PrimaryModelFactory):
 
     # If randomly a subdevice, set u_height to 0.
     is_subdevice_child = factory.Faker("boolean", chance_of_getting_true=33)
-    u_height = factory.Maybe("is_subdevice_child", 0, factory.fuzzy.FuzzyInteger(1, 2))
+    u_height = factory.Maybe("is_subdevice_child", 0, factory.Faker("pyint", min_value=1, max_value=2))
 
     is_full_depth = factory.Faker("pybool")
 
@@ -127,9 +125,7 @@ class DeviceRoleFactory(OrganizationalModelFactory):
         exclude = ("has_description",)
 
     # Slug isn't defined here since it will always inherit from name.
-    name = factory.LazyFunction(
-        lambda: "".join(word.title() for word in faker.Faker().words(nb=2, part_of_speech="adjective", unique=True))
-    )
+    name = factory.Sequence(lambda n: f"Fake Device Role {n}")
     color = factory.Iterator(ColorChoices.CHOICES, getter=lambda choice: choice[0])
     vm_role = factory.Faker("pybool")
 

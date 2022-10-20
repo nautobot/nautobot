@@ -1438,7 +1438,7 @@ class ManufacturerTestCase(FilterTestCases.NameSlugFilterTestCase):
         InventoryItem.objects.create(device=devices[2], name="Inventory Item 3", manufacturer=cls.manufacturers[2])
 
     def test_description(self):
-        descriptions = [m.description for m in self.manufacturers[:2]]
+        descriptions = [m.description for m in self.manufacturers[::2]]
         params = {"description": descriptions}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), len(descriptions))
 
