@@ -692,10 +692,10 @@ class DeviceTypeTestCase(
             Manufacturer.objects.last(),
         )
 
-        DeviceType.objects.create(model="Device Type 1", slug="device-type-1", manufacturer=manufacturers[0])
-        DeviceType.objects.create(model="Device Type 2", slug="device-type-2", manufacturer=manufacturers[0])
-        DeviceType.objects.create(model="Device Type 3", slug="device-type-3", manufacturer=manufacturers[0])
-        DeviceType.objects.create(model="Device Type 4", manufacturer=manufacturers[1])
+        DeviceType.objects.create(model="Test Device Type 1", slug="device-type-1", manufacturer=manufacturers[0])
+        DeviceType.objects.create(model="Test Device Type 2", slug="device-type-2", manufacturer=manufacturers[0])
+        DeviceType.objects.create(model="Test Device Type 3", slug="device-type-3", manufacturer=manufacturers[0])
+        DeviceType.objects.create(model="Test Device Type 4", manufacturer=manufacturers[1])
 
         cls.form_data = {
             "manufacturer": manufacturers[1].pk,
@@ -717,6 +717,24 @@ class DeviceTypeTestCase(
 
         cls.slug_source = "model"
         cls.slug_test_object = "Device Type 4"
+
+    # Temporary FIXME(jathan): Literally just trying to get the tests running so
+    # we can keep moving on the fixture factories. This should be removed once
+    # we've cleaned up all the hard-coded object comparisons and are all in on
+    # factories.
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_bulk_edit_objects_with_constrained_permission(self):
+        DeviceType.objects.exclude(model__startswith="Test Device Type").delete()
+        super().test_bulk_edit_objects_with_constrained_permission()
+
+    # Temporary FIXME(jathan): Literally just trying to get the tests running so
+    # we can keep moving on the fixture factories. This should be removed once
+    # we've cleaned up all the hard-coded object comparisons and are all in on
+    # factories.
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_bulk_edit_objects_with_permission(self):
+        DeviceType.objects.exclude(model__startswith="Test Device Type").delete()
+        super().test_bulk_edit_objects_with_permission()
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     def test_import_objects(self):

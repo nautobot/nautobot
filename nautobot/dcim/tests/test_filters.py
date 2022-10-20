@@ -1462,7 +1462,7 @@ class ManufacturerTestCase(FilterTestCases.NameSlugFilterTestCase):
             )
 
     def test_device_types(self):
-        device_types = list(DeviceType.objects.all()[:2])
+        device_types = list(DeviceType.objects.filter(model__startswith="Model")[:2])
         params = {"device_types": [device_types[0].pk, device_types[1].slug]}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), len(device_types))
 
@@ -1481,7 +1481,7 @@ class ManufacturerTestCase(FilterTestCases.NameSlugFilterTestCase):
             )
 
     def test_platforms(self):
-        platforms = [Platform.objects.first(), Platform.objects.last()]
+        platforms = list(Platform.objects.filter(name__startswith="Platform")[:2])
         params = {"platforms": [platforms[0].pk, platforms[1].slug]}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), len(platforms))
 
@@ -3394,13 +3394,20 @@ class InterfaceTestCase(FilterTestCases.FilterTestCase):
 
         params = {"device_with_common_vc": devices[0].pk}
         queryset = self.filterset(params, self.queryset).qs
+
+        # Capture the first device so that we can use it in the next test.
+        device = Device.objects.get(pk=devices[0].pk)
         with self.subTest():
-            self.assertEqual(queryset.count(), 5)
+            self.assertQuerysetEqual(
+                queryset,
+                self.queryset.filter(pk__in=device.common_vc_interfaces.values_list("pk", flat=True)),
+            )
+        # Assert interface of a device belonging to same VC as `device` are returned
         with self.subTest():
-            # Assert interface of a device belonging to same VC as device[0] are returned
             self.assertTrue(queryset.filter(name="int3").exists())
+
+        # Assert interface of a device not belonging as `device` to same VC are not returned
         with self.subTest():
-            # Assert interface of a device not belonging as device[0] to same VC are not returned
             self.assertFalse(queryset.filter(name="int4").exists())
 
     def test_region(self):
