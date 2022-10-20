@@ -33,6 +33,7 @@ from nautobot.dcim.choices import (
 from nautobot.dcim.filters import ConsoleConnectionFilterSet, InterfaceConnectionFilterSet, PowerConnectionFilterSet
 from nautobot.dcim.models import (
     Cable,
+    CablePath,
     ConsolePort,
     ConsolePortTemplate,
     ConsoleServerPort,
@@ -80,7 +81,7 @@ from nautobot.extras.models import (
 from nautobot.ipam.models import VLAN, IPAddress
 from nautobot.tenancy.models import Tenant
 from nautobot.users.models import ObjectPermission
-from nautobot.utilities.testing import ViewTestCases, extract_page_body, post_data
+from nautobot.utilities.testing import ViewTestCases, extract_page_body, ModelViewTestCase, post_data
 
 # Use the proper swappable User model
 User = get_user_model()
@@ -2813,3 +2814,23 @@ class PowerFeedTestCase(ViewTestCases.PrimaryObjectViewTestCase):
 
         url = reverse("dcim:powerfeed", kwargs=dict(pk=powerfeed.pk))
         self.assertHttpStatus(self.client.get(url), 200)
+
+
+class PathTraceViewTestCase(ModelViewTestCase):
+    def test_get_cable_path_trace_do_not_throw_error(self):
+        """Assert selecting a related path in cable trace view loads successfully
+        See https://github.com/nautobot/nautobot/issues/1741 is Fixed"""
+        self.add_permissions("dcim.view_cable", "dcim.view_rearport")
+        manufacturer = Manufacturer.objects.create(name="Test Manufacturer 1", slug="test-manufacturer-1")
+        devicetype = DeviceType.objects.create(manufacturer=manufacturer, model="Device Type 1", slug="device-type-1")
+        devicerole = DeviceRole.objects.create(name="Test Device Role 1", slug="test-device-role-1", color="ff0000")
+        site = Site.objects.create(name="Site 1", slug="site-1")
+        device = Device.objects.create(device_type=devicetype, device_role=devicerole, name="Device 1", site=site)
+        obj = RearPort.objects.create(device=device, name="Rear Port 1", type=PortTypeChoices.TYPE_8P8C)
+        peer_obj = Interface.objects.create(device=device, name="eth0")
+        Cable.objects.create(termination_a=obj, termination_b=peer_obj, label="Cable 1")
+
+        url = reverse("dcim:rearport_trace", args=[obj.pk])
+        cablepath_id = CablePath.objects.first().id
+        response = self.client.get(url + f"?cablepath_id={cablepath_id}")
+        self.assertHttpStatus(response, 200)
