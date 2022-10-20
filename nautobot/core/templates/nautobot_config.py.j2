@@ -17,6 +17,33 @@ from nautobot.core.settings_funcs import is_truthy, parse_redis_connection
 #
 # ALLOWED_HOSTS = os.getenv("NAUTOBOT_ALLOWED_HOSTS", "").split(" ")
 
+# The django-redis cache is used to establish concurrent locks using Redis. The
+# django-rq settings will use the same instance/database by default.
+#
+# CACHES = {
+#     "default": {
+#         "BACKEND": "django_redis.cache.RedisCache",
+#         "LOCATION": parse_redis_connection(redis_database=0),
+#         "TIMEOUT": 300,
+#         "OPTIONS": {
+#             "CLIENT_CLASS": "django_redis.client.DefaultClient",
+#             "PASSWORD": "",
+#         },
+#     }
+# }
+
+# Redis connection to use for caching.
+#
+# CACHEOPS_REDIS = os.getenv("NAUTOBOT_CACHEOPS_REDIS", parse_redis_connection(redis_database=1))
+
+# Celery broker URL used to tell workers where queues are located
+#
+# CELERY_BROKER_URL = os.getenv("NAUTOBOT_CELERY_BROKER_URL", parse_redis_connection(redis_database=0))
+
+# Celery results backend URL to tell workers where to publish task results
+#
+# CELERY_RESULT_BACKEND = os.getenv("NAUTOBOT_CELERY_RESULT_BACKEND", parse_redis_connection(redis_database=0))
+
 # Database configuration. See the Django documentation for a complete list of available parameters:
 #   https://docs.djangoproject.com/en/stable/ref/settings/#databases
 #
@@ -39,28 +66,23 @@ from nautobot.core.settings_funcs import is_truthy, parse_redis_connection
 if DATABASES["default"]["ENGINE"] == "django.db.backends.mysql":
     DATABASES["default"]["OPTIONS"] = {"charset": "utf8mb4"}
 
-# The django-redis cache is used to establish concurrent locks using Redis. The
-# django-rq settings will use the same instance/database by default.
+# These defaults utilize the Django caches setting defined for django-redis.
+# See: https://github.com/rq/django-rq#support-for-django-redis-and-django-redis-cache
 #
-# CACHES = {
+# RQ_QUEUES = {
 #     "default": {
-#         "BACKEND": "django_redis.cache.RedisCache",
-#         "LOCATION": parse_redis_connection(redis_database=0),
-#         "TIMEOUT": 300,
-#         "OPTIONS": {
-#             "CLIENT_CLASS": "django_redis.client.DefaultClient",
-#             "PASSWORD": "",
-#         },
-#     }
+#         "USE_REDIS_CACHE": "default",
+#     },
+#     "check_releases": {
+#         "USE_REDIS_CACHE": "default",
+#     },
+#     "custom_fields": {
+#         "USE_REDIS_CACHE": "default",
+#     },
+#     "webhooks": {
+#         "USE_REDIS_CACHE": "default",
+#     },
 # }
-
-# Celery broker URL used to tell workers where queues are located
-#
-# CELERY_BROKER_URL = os.getenv("NAUTOBOT_CELERY_BROKER_URL", parse_redis_connection(redis_database=0))
-
-# Celery results backend URL to tell workers where to publish task results
-#
-# CELERY_RESULT_BACKEND = os.getenv("NAUTOBOT_CELERY_RESULT_BACKEND", parse_redis_connection(redis_database=0))
 
 # This key is used for secure generation of random numbers and strings. It must never be exposed outside of this file.
 # For optimal security, SECRET_KEY should be at least 50 characters in length and contain a mix of letters, numbers, and
@@ -109,8 +131,7 @@ SECRET_KEY = os.getenv("NAUTOBOT_SECRET_KEY", "{{ secret_key }}")
 #
 # FORCE_SCRIPT_NAME = None
 
-# IP addresses recognized as internal to the system. The debugging toolbar will be available only to clients accessing
-# Nautobot from an internal IP.
+# IP addresses recognized as internal to the system.
 #
 # INTERNAL_IPS = ("127.0.0.1", "::1")
 
@@ -206,9 +227,8 @@ SECRET_KEY = os.getenv("NAUTOBOT_SECRET_KEY", "{{ secret_key }}")
 # Banners (HTML is permitted) to display at the top and/or bottom of all Nautobot pages, and on the login page itself.
 #
 # BANNER_BOTTOM = ""
-# BANNER_TOP = ""
-#
 # BANNER_LOGIN = ""
+# BANNER_TOP = ""
 
 # Branding logo locations. The logo takes the place of the Nautobot logo in the top right of the nav bar.
 # The filepath should be relative to the `MEDIA_ROOT`.
@@ -254,10 +274,6 @@ SECRET_KEY = os.getenv("NAUTOBOT_SECRET_KEY", "{{ secret_key }}")
 # Set to True to enable periodic health checks for the Redis server connection used by cacheops.
 #
 # CACHEOPS_HEALTH_CHECK_ENABLED = False
-
-# Redis connection to use for caching.
-#
-# CACHEOPS_REDIS = os.getenv("NAUTOBOT_CACHEOPS_REDIS", parse_redis_connection(redis_database=1))
 
 # Options to pass to the Celery broker transport, for example when using Celery with Redis Sentinel.
 #
