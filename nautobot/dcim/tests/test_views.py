@@ -716,7 +716,7 @@ class DeviceTypeTestCase(
         }
 
         cls.slug_source = "model"
-        cls.slug_test_object = "Device Type 4"
+        cls.slug_test_object = "Test Device Type 4"
 
     # Temporary FIXME(jathan): Literally just trying to get the tests running so
     # we can keep moving on the fixture factories. This should be removed once
