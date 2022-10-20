@@ -290,7 +290,7 @@ class PrefixTestCase(FilterTestCases.FilterTestCase, FilterTestCases.TenancyFilt
             PrefixFactory(description=unique_description, prefix="2001:db8::/32", children__max_count=0).pk,
             PrefixFactory(description=unique_description, prefix="2001:db8:0:1::/64", children__max_count=0).pk,
         )
-        PrefixFactory(prefix="10.2.2.0/31")
+        PrefixFactory(prefix="10.2.2.0/30")
         PrefixFactory(prefix="192.168.0.0/16")
         PrefixFactory(prefix="2001:db8:0:2::/64")
         PrefixFactory(prefix="abcd::/32")
@@ -351,18 +351,14 @@ class PrefixTestCase(FilterTestCases.FilterTestCase, FilterTestCases.TenancyFilt
         self.assertEqual(self.filterset({"present_in_vrf": vrfs[1].rd}, self.queryset).qs.count(), 2)
 
     def test_region(self):
-        regions = (
-            Region.objects.create(name="region1"),
-            Region.objects.create(name="region2"),
-            Region.objects.create(name="region3"),
-        )
+        regions = Region.objects.filter(sites__isnull=False)[:3]
         test_sites = (
-            Site.objects.create(name="site1", region=regions[0], status=Status.objects.get_for_model(Site).first()),
-            Site.objects.create(name="site2", region=regions[1], status=Status.objects.get_for_model(Site).first()),
-            Site.objects.create(name="site3", region=regions[2], status=Status.objects.get_for_model(Site).first()),
+            Site.objects.filter(region=regions[0]).first(),
+            Site.objects.filter(region=regions[1]).first(),
+            Site.objects.filter(region=regions[2]).first(),
         )
-        PrefixFactory(site=test_sites[0])
-        PrefixFactory(site=test_sites[1])
+        PrefixFactory(location=None, site=test_sites[0])
+        PrefixFactory(location=None, site=test_sites[1])
         params = {"region_id": [regions[0].pk, regions[1].pk]}
         self.assertQuerysetEqualAndNotEmpty(
             self.filterset(params, self.queryset).qs, self.queryset.filter(site__region__in=params["region_id"])
@@ -378,8 +374,8 @@ class PrefixTestCase(FilterTestCases.FilterTestCase, FilterTestCases.TenancyFilt
             Site.objects.create(name="site2", status=Status.objects.get_for_model(Site).first()),
             Site.objects.create(name="site3", status=Status.objects.get_for_model(Site).first()),
         )
-        PrefixFactory(site=test_sites[0])
-        PrefixFactory(site=test_sites[1])
+        PrefixFactory(location=None, site=test_sites[0])
+        PrefixFactory(location=None, site=test_sites[1])
         params = {"site_id": [test_sites[0].pk, test_sites[1].pk]}
         self.assertQuerysetEqualAndNotEmpty(
             self.filterset(params, self.queryset).qs,

@@ -103,17 +103,6 @@ class RIRTest(APIViewTestCases.APIViewTestCase):
 
     slug_source = "name"
 
-    def get_deletable_object(self):
-        return RIR.objects.create(name="DELETE ME")
-
-    def get_deletable_object_pks(self):
-        rirs = [
-            RIR.objects.create(name="DELETE ME 1"),
-            RIR.objects.create(name="DELETE ME 2"),
-            RIR.objects.create(name="DELETE ME 3"),
-        ]
-        return [rir.pk for rir in rirs]
-
 
 class AggregateTest(APIViewTestCases.APIViewTestCase):
     model = Aggregate
@@ -520,13 +509,6 @@ class VLANGroupTest(APIViewTestCases.APIViewTestCase):
         "description": "New description",
     }
     slug_source = "name"
-
-    def get_deletable_object(self):
-        return VLANGroup.objects.filter(vlans__isnull=True).first()
-
-    def get_deletable_object_pks(self):
-        groups = list(VLANGroup.objects.filter(vlans__isnull=True))[:3]
-        return [group.pk for group in groups]
 
 
 class VLANTest(APIViewTestCases.APIViewTestCase):

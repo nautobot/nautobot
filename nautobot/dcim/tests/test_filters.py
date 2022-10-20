@@ -671,8 +671,7 @@ class RegionTestCase(FilterTestCases.NameSlugFilterTestCase):
         params = {"description": [regions[0].description, regions[1].description]}
         self.assertEqual(
             self.filterset(params, self.queryset).qs.count(),
-            self.queryset.filter(description__exact=regions[0].description).count()
-            + self.queryset.filter(description__exact=regions[1].description).count(),
+            self.queryset.filter(description__in=[regions[0].description, regions[1].description]).count(),
         )
 
     def test_parent(self):
@@ -720,12 +719,13 @@ class RegionTestCase(FilterTestCases.NameSlugFilterTestCase):
             )
 
     def test_sites(self):
-        sites = (
-            Site.objects.get(slug="site-1"),
-            Site.objects.get(slug="site-2"),
-        )
+        regions = Region.objects.filter(sites__isnull=False).distinct()[:2]
+        sites = [regions[0].sites.first(), regions[1].sites.first()]
         params = {"sites": [sites[0].pk, sites[1].slug]}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+        self.assertQuerysetEqual(
+            self.filterset(params, self.queryset).qs,
+            self.queryset.filter(sites__in=[sites[0].pk, sites[1].pk]).distinct(),
+        )
 
     def test_has_sites(self):
         with self.subTest():
@@ -738,7 +738,7 @@ class RegionTestCase(FilterTestCases.NameSlugFilterTestCase):
             params = {"has_sites": False}
             self.assertEqual(
                 self.filterset(params, self.queryset).qs.count(),
-                self.queryset.filter(sites__isnull=True).distinct().count(),
+                self.queryset.filter(sites__isnull=True).count(),
             )
 
 
@@ -787,10 +787,11 @@ class SiteTestCase(FilterTestCases.NameSlugFilterTestCase, FilterTestCases.Tenan
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
 
     def test_status(self):
-        params = {"status": ["active", "planned"]}
+        statuses = list(Status.objects.get_for_model(Site)[:2])
+        params = {"status": [statuses[0].slug, statuses[1].slug]}
         self.assertEqual(
             self.filterset(params, self.queryset).qs.count(),
-            self.queryset.filter(status__slug__in=["active", "planned"]).count(),
+            self.queryset.filter(status__slug__in=params["status"]).count(),
         )
 
     def test_region(self):
@@ -798,13 +799,13 @@ class SiteTestCase(FilterTestCases.NameSlugFilterTestCase, FilterTestCases.Tenan
             params = {"region_id": [self.regions[0].pk, self.regions[1].pk]}
             self.assertEqual(
                 self.filterset(params, self.queryset).qs.count(),
-                self.queryset.filter(region__in=[self.regions[0].pk, self.regions[1].pk]).count(),
+                self.queryset.filter(region__in=[self.regions[0].pk, self.regions[1].pk]).distinct().count(),
             )
         with self.subTest():
             params = {"region": [self.regions[0].slug, self.regions[1].slug]}
             self.assertEqual(
                 self.filterset(params, self.queryset).qs.count(),
-                self.queryset.filter(region__slug__in=[self.regions[0].slug, self.regions[1].slug]).count(),
+                self.queryset.filter(region__slug__in=[self.regions[0].slug, self.regions[1].slug]).distinct().count(),
             )
 
     def test_search(self):
@@ -833,7 +834,7 @@ class SiteTestCase(FilterTestCases.NameSlugFilterTestCase, FilterTestCases.Tenan
             params = {"has_circuit_terminations": True}
             self.assertEqual(
                 self.filterset(params, self.queryset).qs.count(),
-                Site.objects.filter(circuit_terminations__isnull=False).count(),
+                Site.objects.filter(circuit_terminations__isnull=False).distinct().count(),
             )
         with self.subTest():
             params = {"has_circuit_terminations": False}
@@ -851,7 +852,8 @@ class SiteTestCase(FilterTestCases.NameSlugFilterTestCase, FilterTestCases.Tenan
         with self.subTest():
             params = {"has_devices": True}
             self.assertEqual(
-                self.filterset(params, self.queryset).qs.count(), self.queryset.filter(devices__isnull=False).count()
+                self.filterset(params, self.queryset).qs.count(),
+                self.queryset.filter(devices__isnull=False).distinct().count(),
             )
         with self.subTest():
             params = {"has_devices": False}
@@ -869,7 +871,7 @@ class SiteTestCase(FilterTestCases.NameSlugFilterTestCase, FilterTestCases.Tenan
             params = {"has_power_panels": True}
             self.assertEqual(
                 self.filterset(params, self.queryset).qs.count(),
-                self.queryset.filter(powerpanel__isnull=False).count(),
+                self.queryset.filter(powerpanel__isnull=False).distinct().count(),
             )
         with self.subTest():
             params = {"has_power_panels": False}
@@ -888,12 +890,13 @@ class SiteTestCase(FilterTestCases.NameSlugFilterTestCase, FilterTestCases.Tenan
             params = {"has_rack_groups": True}
             self.assertEqual(
                 self.filterset(params, self.queryset).qs.count(),
-                self.queryset.filter(rack_groups__isnull=False).count(),
+                self.queryset.filter(rack_groups__isnull=False).distinct().count(),
             )
         with self.subTest():
             params = {"has_rack_groups": False}
             self.assertEqual(
-                self.filterset(params, self.queryset).qs.count(), self.queryset.filter(rack_groups__isnull=True).count()
+                self.filterset(params, self.queryset).qs.count(),
+                self.queryset.filter(rack_groups__isnull=True).distinct().count(),
             )
 
     def test_racks(self):
@@ -905,7 +908,8 @@ class SiteTestCase(FilterTestCases.NameSlugFilterTestCase, FilterTestCases.Tenan
         with self.subTest():
             params = {"has_racks": True}
             self.assertEqual(
-                self.filterset(params, self.queryset).qs.count(), self.queryset.filter(racks__isnull=False).count()
+                self.filterset(params, self.queryset).qs.count(),
+                self.queryset.filter(racks__isnull=False).distinct().count(),
             )
         with self.subTest():
             params = {"has_racks": False}
@@ -924,12 +928,14 @@ class SiteTestCase(FilterTestCases.NameSlugFilterTestCase, FilterTestCases.Tenan
         with self.subTest():
             params = {"has_prefixes": True}
             self.assertEqual(
-                self.filterset(params, self.queryset).qs.count(), self.queryset.filter(prefixes__isnull=False).count()
+                self.filterset(params, self.queryset).qs.count(),
+                self.queryset.filter(prefixes__isnull=False).distinct().count(),
             )
         with self.subTest():
             params = {"has_prefixes": False}
             self.assertEqual(
-                self.filterset(params, self.queryset).qs.count(), self.queryset.filter(prefixes__isnull=True).count()
+                self.filterset(params, self.queryset).qs.count(),
+                self.queryset.filter(prefixes__isnull=True).distinct().count(),
             )
 
     def test_vlan_groups(self):
@@ -979,7 +985,8 @@ class SiteTestCase(FilterTestCases.NameSlugFilterTestCase, FilterTestCases.Tenan
         with self.subTest():
             params = {"has_clusters": True}
             self.assertEqual(
-                self.filterset(params, self.queryset).qs.count(), self.queryset.filter(clusters__isnull=False).count()
+                self.filterset(params, self.queryset).qs.count(),
+                self.queryset.filter(clusters__isnull=False).distinct().count(),
             )
         with self.subTest():
             params = {"has_clusters": False}
@@ -990,7 +997,10 @@ class SiteTestCase(FilterTestCases.NameSlugFilterTestCase, FilterTestCases.Tenan
     def test_time_zone(self):
         with self.subTest():
             params = {"time_zone": ["America/Los_Angeles", "America/Chicago"]}
-            self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+            self.assertEqual(
+                self.filterset(params, self.queryset).qs.count(),
+                self.queryset.filter(time_zone__in=params["time_zone"]).count(),
+            )
         with self.subTest():
             params = {"time_zone": [""]}
             self.assertEqual(
@@ -1028,15 +1038,11 @@ class LocationTypeFilterSetTestCase(FilterTestCases.NameSlugFilterTestCase):
 
     @classmethod
     def setUpTestData(cls):
-        lt1 = LocationType.objects.get(name="Building")
-        lt1.description = "A building"
-        lt1.validated_save()
-        lt2 = LocationType.objects.get(name="Floor")
-        lt2.description = "A floor"
-        lt2.validated_save()
+        cls.lt1 = LocationType.objects.get(name="Building")
+        cls.lt2 = LocationType.objects.get(name="Floor")
 
     def test_description(self):
-        params = {"description": ["A floor", "A building"]}
+        params = {"description": [self.lt1.description, self.lt2.description]}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
 
     def test_parent(self):
@@ -1062,7 +1068,7 @@ class LocationTypeFilterSetTestCase(FilterTestCases.NameSlugFilterTestCase):
             ct_2 = [ContentType.objects.get_for_model(Rack)]
             self.assertEqual(
                 self.filterset(params, self.queryset).qs.count(),
-                LocationType.objects.filter(content_types__in=[ct_1, ct_2]).distinct().count(),
+                LocationType.objects.filter(Q(content_types__in=ct_1)).filter(Q(content_types__in=ct_2)).count(),
             )
 
 
@@ -1073,10 +1079,10 @@ class LocationFilterSetTestCase(FilterTestCases.NameSlugFilterTestCase, FilterTe
 
     @classmethod
     def setUpTestData(cls):
-        lt1 = LocationType.objects.get(name="Building")
-        lt2 = LocationType.objects.get(name="Floor")
-        lt3 = LocationType.objects.get(name="Room")
-        lt4 = LocationType.objects.get(name="Aisle")
+        lt1 = LocationType.objects.get(name="Campus")
+        lt2 = LocationType.objects.get(name="Building")
+        lt3 = LocationType.objects.get(name="Floor")
+        lt4 = LocationType.objects.get(name="Room")
         lt4.content_types.add(ContentType.objects.get_for_model(Device))
 
         status_active = Status.objects.get(slug="active")
@@ -1116,7 +1122,9 @@ class LocationFilterSetTestCase(FilterTestCases.NameSlugFilterTestCase, FilterTe
                     LocationType.objects.get(name="Building"),
                     LocationType.objects.get(name="Floor"),
                 ]
-            ).count(),
+            )
+            .distinct()
+            .count(),
         )
 
     def test_parent(self):
@@ -1125,10 +1133,14 @@ class LocationFilterSetTestCase(FilterTestCases.NameSlugFilterTestCase, FilterTe
 
     def test_child_location_type(self):
         params = {"child_location_type": ["room", LocationType.objects.get(name="Floor").pk]}
+        query_params = Q(
+            location_type__children__in=[LocationType.objects.get(name="Room"), LocationType.objects.get(name="Floor")]
+        ) | Q(
+            location_type__in=[LocationType.objects.get(name="Room"), LocationType.objects.get(name="Floor")],
+            location_type__nestable=True,
+        )
         self.assertEqual(
-            self.filterset(params, self.queryset).qs.count(),
-            Location.objects.filter(location_type__slug="room").count()
-            + Location.objects.filter(location_type=LocationType.objects.get(name="Floor").pk).count(),
+            self.filterset(params, self.queryset).qs.count(), Location.objects.filter(query_params).count()
         )
 
     def test_content_type(self):
@@ -1136,7 +1148,7 @@ class LocationFilterSetTestCase(FilterTestCases.NameSlugFilterTestCase, FilterTe
         ct = [ContentType.objects.get_for_model(Device)]
         self.assertEqual(
             self.filterset(params, self.queryset).qs.count(),
-            Location.objects.filter(location_type__content_types__in=ct).count(),
+            Location.objects.filter(location_type__content_types__in=ct).distinct().count(),
         )
 
     def test_description(self):
@@ -1160,11 +1172,7 @@ class RackGroupTestCase(FilterTestCases.NameSlugFilterTestCase):
     def setUpTestData(cls):
         common_test_data(cls)
 
-        sites = (
-            Site.objects.get(slug="site-1"),
-            Site.objects.get(slug="site-2"),
-            Site.objects.get(slug="site-3"),
-        )
+        sites = Site.objects.all()[:3]
         parent_rack_groups = RackGroup.objects.filter(parent__isnull=True)
 
         RackGroup.objects.create(
@@ -1202,19 +1210,31 @@ class RackGroupTestCase(FilterTestCases.NameSlugFilterTestCase):
         regions = Region.objects.filter(slug__in=["region-1", "region-2"])
         with self.subTest():
             params = {"region_id": [regions[0].pk, regions[1].pk]}
-            self.assertEqual(self.filterset(params, self.queryset).qs.count(), 4)
+            self.assertEqual(
+                self.filterset(params, self.queryset).qs.count(),
+                self.queryset.filter(site__region__in=params["region_id"]).count(),
+            )
         with self.subTest():
             params = {"region": [regions[0].slug, regions[1].slug]}
-            self.assertEqual(self.filterset(params, self.queryset).qs.count(), 4)
+            self.assertEqual(
+                self.filterset(params, self.queryset).qs.count(),
+                self.queryset.filter(site__region__slug__in=params["region"]).count(),
+            )
 
     def test_site(self):
         sites = Site.objects.filter(slug__in=["site-1", "site-2"])
         with self.subTest():
             params = {"site_id": [sites[0].pk, sites[1].pk]}
-            self.assertEqual(self.filterset(params, self.queryset).qs.count(), 4)
+            self.assertEqual(
+                self.filterset(params, self.queryset).qs.count(),
+                self.queryset.filter(site__in=params["site_id"]).count(),
+            )
         with self.subTest():
             params = {"site": [sites[0].slug, sites[1].slug]}
-            self.assertEqual(self.filterset(params, self.queryset).qs.count(), 4)
+            self.assertEqual(
+                self.filterset(params, self.queryset).qs.count(),
+                self.queryset.filter(site__slug__in=params["site"]).count(),
+            )
 
     def test_parent(self):
         parent_rack_groups = RackGroup.objects.filter(children__isnull=False)[:2]
@@ -1397,8 +1417,12 @@ class RackTestCase(FilterTestCases.FilterTestCase, FilterTestCases.TenancyFilter
             self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
 
     def test_status(self):
-        params = {"status": ["active", "planned"]}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 3)
+        statuses = list(Status.objects.get_for_model(Rack)[:2])
+        params = {"status": [statuses[0].slug, statuses[1].slug]}
+        self.assertEqual(
+            self.filterset(params, self.queryset).qs.count(),
+            self.queryset.filter(status__slug__in=params["status"]).count(),
+        )
 
     def test_role(self):
         roles = RackRole.objects.all()[:2]
@@ -2489,8 +2513,12 @@ class DeviceTestCase(FilterTestCases.FilterTestCase, FilterTestCases.TenancyFilt
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
 
     def test_status(self):
-        params = {"status": ["active", "staged"]}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+        statuses = list(Status.objects.get_for_model(Device)[:2])
+        params = {"status": [statuses[0].slug, statuses[1].slug]}
+        self.assertEqual(
+            self.filterset(params, self.queryset).qs.count(),
+            self.queryset.filter(status__slug__in=params["status"]).count(),
+        )
 
     def test_is_full_depth(self):
         with self.subTest():
@@ -3545,8 +3573,12 @@ class InterfaceTestCase(FilterTestCases.FilterTestCase):
         )
 
     def test_status(self):
-        params = {"status": ["active", "failed"]}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 4)
+        statuses = list(Status.objects.get_for_model(Interface)[:2])
+        params = {"status": [statuses[0].slug, statuses[1].slug]}
+        self.assertEqual(
+            self.filterset(params, self.queryset).qs.count(),
+            self.queryset.filter(status__slug__in=params["status"]).count(),
+        )
 
     def test_label(self):
         labels = ["interface1", "interface2"]
@@ -4259,15 +4291,17 @@ class VirtualChassisTestCase(FilterTestCases.FilterTestCase):
             params = {"region_id": [self.regions[0].pk, self.regions[1].pk]}
             self.assertEqual(
                 self.filterset(params, self.queryset).qs.count(),
-                self.queryset.filter(master__site__region__in=[self.regions[0].pk, self.regions[1].pk]).count(),
+                self.queryset.filter(master__site__region__in=[self.regions[0].pk, self.regions[1].pk])
+                .distinct()
+                .count(),
             )
         with self.subTest():
             params = {"region": [self.regions[0].slug, self.regions[1].slug]}
             self.assertEqual(
                 self.filterset(params, self.queryset).qs.count(),
-                self.queryset.filter(
-                    master__site__region__slug__in=[self.regions[0].slug, self.regions[1].slug]
-                ).count(),
+                self.queryset.filter(master__site__region__slug__in=[self.regions[0].slug, self.regions[1].slug])
+                .distinct()
+                .count(),
             )
 
     def test_site(self):
@@ -4275,13 +4309,15 @@ class VirtualChassisTestCase(FilterTestCases.FilterTestCase):
             params = {"site_id": [self.sites[0].pk, self.sites[1].pk]}
             self.assertEqual(
                 self.filterset(params, self.queryset).qs.count(),
-                self.queryset.filter(master__site__in=[self.sites[0].pk, self.sites[1].pk]).count(),
+                self.queryset.filter(master__site__in=[self.sites[0].pk, self.sites[1].pk]).distinct().count(),
             )
         with self.subTest():
             params = {"site": [self.sites[0].slug, self.sites[1].slug]}
             self.assertEqual(
                 self.filterset(params, self.queryset).qs.count(),
-                self.queryset.filter(master__site__slug__in=[self.sites[0].slug, self.sites[1].slug]).count(),
+                self.queryset.filter(master__site__slug__in=[self.sites[0].slug, self.sites[1].slug])
+                .distinct()
+                .count(),
             )
 
     def test_search(self):
@@ -4486,12 +4522,19 @@ class CableTestCase(FilterTestCases.FilterTestCase):
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 4)
 
     def test_status(self):
+        statuses = list(Status.objects.get_for_model(Site)[:2])
         with self.subTest():
-            params = {"status": ["connected"]}
-            self.assertEqual(self.filterset(params, self.queryset).qs.count(), 3)
+            params = {"status": [statuses[0].slug]}
+            self.assertEqual(
+                self.filterset(params, self.queryset).qs.count(),
+                self.queryset.filter(status__slug__in=params["status"]).count(),
+            )
         with self.subTest():
-            params = {"status": ["planned"]}
-            self.assertEqual(self.filterset(params, self.queryset).qs.count(), 3)
+            params = {"status": [statuses[1].slug]}
+            self.assertEqual(
+                self.filterset(params, self.queryset).qs.count(),
+                self.queryset.filter(status__slug__in=params["status"]).count(),
+            )
 
     def test_color(self):
         params = {"color": ["aa1409", "f44336"]}
@@ -4714,8 +4757,12 @@ class PowerFeedTestCase(FilterTestCases.FilterTestCase):
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
 
     def test_status(self):
-        params = {"status": ["active", "offline"]}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+        statuses = list(Status.objects.get_for_model(PowerFeed)[:2])
+        params = {"status": [statuses[0].slug, statuses[1].slug]}
+        self.assertEqual(
+            self.filterset(params, self.queryset).qs.count(),
+            self.queryset.filter(status__slug__in=params["status"]).count(),
+        )
 
     def test_type(self):
         params = {"type": PowerFeedTypeChoices.TYPE_PRIMARY}

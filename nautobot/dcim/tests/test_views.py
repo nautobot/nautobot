@@ -126,13 +126,6 @@ class RegionTestCase(ViewTestCases.OrganizationalObjectViewTestCase):
         cls.slug_source = "name"
         cls.slug_test_object = regions[2]
 
-    def get_deletable_object_pks(self):
-        """Only return objects without children so that the deletion count is as expected."""
-        return [region.pk for region in list(Region.objects.filter(children__isnull=True))[:3]]
-
-    def get_deletable_object(self):
-        return Region.objects.create(name="Region 0")
-
 
 class SiteTestCase(ViewTestCases.PrimaryObjectViewTestCase):
     model = Site
@@ -244,17 +237,6 @@ class SiteTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         cls.slug_source = "name"
         cls.slug_test_object = "Site 8"
 
-    def get_deletable_object(self):
-        return Site.objects.create(name="site-0")
-
-    def get_deletable_object_pks(self):
-        sites = [
-            Site.objects.create(name="site-1"),
-            Site.objects.create(name="site-2"),
-            Site.objects.create(name="site-3"),
-        ]
-        return [site.pk for site in sites]
-
 
 class LocationTypeTestCase(ViewTestCases.OrganizationalObjectViewTestCase):
     model = LocationType
@@ -265,13 +247,16 @@ class LocationTypeTestCase(ViewTestCases.OrganizationalObjectViewTestCase):
         # of the first two objects in the queryset independently; if lt2 were a child of lt1, then deleting lt1 would
         # cascade-delete lt2, resulting in a test failure.
         lt1 = LocationType.objects.get(name="Root")
-        lt2 = LocationType.objects.get(name="Building")
-        lt3 = LocationType.objects.get(name="Floor")
-        lt4 = LocationType.objects.get(name="Room")
-        lt4.description = "A leaf type"
+        lt2 = LocationType.objects.get(name="Campus")
+        lt3 = LocationType.objects.get(name="Building")
+        lt4 = LocationType.objects.get(name="Floor")
         for lt in [lt1, lt2, lt3, lt4]:
             lt.validated_save()
             lt.content_types.add(ContentType.objects.get_for_model(RackGroup))
+        # Deletable Location Types
+        LocationType.objects.create(name="Delete Me 1")
+        LocationType.objects.create(name="Delete Me 2")
+        LocationType.objects.create(name="Delete Me 3")
 
         # Similarly, EditObjectViewTestCase expects to be able to change lt1 with the below form_data,
         # so we need to make sure we're not trying to introduce a reference loop to the LocationType tree...
@@ -294,17 +279,6 @@ class LocationTypeTestCase(ViewTestCases.OrganizationalObjectViewTestCase):
         cls.slug_source = "name"
         cls.slug_test_object = "Root"
 
-    def get_deletable_object_pks(self):
-        lts = [
-            LocationType.objects.create(name="Country"),
-            LocationType.objects.create(name="State"),
-            LocationType.objects.create(name="City"),
-        ]
-        return [lt.pk for lt in lts]
-
-    def get_deletable_object(self):
-        return LocationType.objects.create(name="LT delete")
-
     def _get_queryset(self):
         return super()._get_queryset().order_by("last_updated")
 
@@ -314,10 +288,9 @@ class LocationTestCase(ViewTestCases.PrimaryObjectViewTestCase):
 
     @classmethod
     def setUpTestData(cls):
-        lt1 = LocationType.objects.get(name="Building")
-        lt2 = LocationType.objects.get(name="Floor")
-        lt3 = LocationType.objects.get(name="Room")
-        lt3.description = "A leaf type"
+        lt1 = LocationType.objects.get(name="Campus")
+        lt2 = LocationType.objects.get(name="Building")
+        lt3 = LocationType.objects.get(name="Floor")
         for lt in [lt1, lt2, lt3]:
             lt.validated_save()
 
@@ -347,7 +320,7 @@ class LocationTestCase(ViewTestCases.PrimaryObjectViewTestCase):
             "name,slug,location_type,parent,site,status,tenant,description",
             f"Root 3,root-3,{lt1.name},,{site.name},active,,",
             f"Intermediate 2,intermediate-2,{lt2.name},{loc2.name},,active,{tenant.name},Hello world!",
-            f"Leaf 2,leaf-2,{lt3.name},{loc3.name},,active,Tenant 1,",
+            f"Leaf 2,leaf-2,{lt3.name},{loc3.name},,active,{tenant.name},",
         )
 
         cls.bulk_edit_data = {
@@ -360,19 +333,6 @@ class LocationTestCase(ViewTestCases.PrimaryObjectViewTestCase):
 
         # No slug_source/slug_test_object here because Location uses the composite [parent__name, name]
         # and the test doesn't support that idea yet
-
-    def get_deletable_object_pks(self):
-        """Create new locations without children so that the deletion count is as expected."""
-        lt5 = LocationType.objects.create(name="Delete Type")
-        loc_1 = Location.objects.create(name="delete 1", location_type=lt5)
-        loc_2 = Location.objects.create(name="delete 2", location_type=lt5)
-        loc_3 = Location.objects.create(name="delete 3", location_type=lt5)
-        return [loc_1.pk, loc_2.pk, loc_3.pk]
-
-    def get_deletable_object(self):
-        """Return a deletable location"""
-        lt1 = LocationType.objects.get(name="Building")
-        return Location.objects.create(location_type=lt1, name="delete this")
 
 
 class RackGroupTestCase(ViewTestCases.OrganizationalObjectViewTestCase):

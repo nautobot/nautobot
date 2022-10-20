@@ -379,6 +379,7 @@ class ConfigContextSchemaTestCase(TestCase):
         self.config_context = ConfigContext.objects.create(name="context 1", weight=101, data=context_data)
 
         # Device
+        status = Status.objects.get(slug="active")
         site = Site.objects.first()
         manufacturer = Manufacturer.objects.create(name="manufacturer", slug="manufacturer")
         device_type = DeviceType.objects.create(model="device_type", manufacturer=manufacturer)
@@ -925,6 +926,7 @@ class SecretTest(TestCase):
         )
 
         self.site = Site.objects.first()
+        self.site.slug = "nyc"
 
     def test_environment_variable_value_not_found(self):
         """Failure to retrieve an environment variable raises an exception."""

@@ -13,8 +13,9 @@ class CircuitTerminationModelTestCase(TestCase):
         provider = Provider.objects.create(name="Provider 1", slug="provider-1")
         circuit_type = CircuitType.objects.create(name="Circuit Type 1", slug="circuit-type-1")
 
-        location_type_1 = LocationType.objects.get(name="Building")
-        location_type_2 = LocationType.objects.get(name="Floor")
+        location_type_1 = LocationType.objects.get(name="Campus")
+        location_type_1.content_types.set([])
+        location_type_2 = LocationType.objects.get(name="Building")
         location_type_2.content_types.add(ContentType.objects.get_for_model(CircuitTermination))
         cls.circuit = Circuit.objects.create(cid="Circuit 1", provider=provider, type=circuit_type)
         cls.provider_network = ProviderNetwork.objects.create(name="Provider Network 1", provider=provider)
@@ -78,4 +79,6 @@ class CircuitTerminationModelTestCase(TestCase):
         )
         with self.assertRaises(ValidationError) as cm:
             ct.validated_save()
-        self.assertIn('may not associate to locations of type "Building"', str(cm.exception))
+        self.assertIn(
+            f'may not associate to locations of type "{self.location_1.location_type.name}"', str(cm.exception)
+        )

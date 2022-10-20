@@ -1,6 +1,7 @@
 import factory
 import pytz
 from factory.django import DjangoModelFactory
+from faker import Faker
 
 from django.contrib.contenttypes.models import ContentType
 
@@ -60,7 +61,7 @@ class SiteFactory(DjangoModelFactory):
     tenant = factory.Maybe("has_tenant", random_instance(Tenant), None)
 
     has_time_zone = factory.Faker("pybool")
-    time_zone = factory.Maybe("has_time_zone", pytz.timezone(factory.Faker().timezone()))
+    time_zone = factory.Maybe("has_time_zone", pytz.timezone(Faker().timezone()), None)
 
     has_physical_address = factory.Faker("pybool")
     physical_address = factory.Maybe("has_physical_address", factory.Faker("address"))
@@ -91,13 +92,17 @@ class LocationTypeFactory(DjangoModelFactory):
         model = LocationType
         exclude = ("has_description",)
 
-    name = factory.Iterator(["Root", "Building", "Floor", "Elevator", "Room", "Aisle"])
+    name = factory.Iterator(["Root", "Campus", "Building", "Floor", "Elevator", "Room", "Aisle"])
 
     has_description = factory.Faker("pybool")
     description = factory.Maybe("has_description", factory.Faker("text", max_nb_chars=200), "")
 
+    nestable = factory.LazyAttribute(lambda l: True if l.name == "Campus" else False)
+
     @factory.lazy_attribute
     def parent(self):
+        if self.name == "Building":
+            return LocationType.objects.get(name="Campus")
         if self.name in ["Floor", "Elevator"]:
             return LocationType.objects.get(name="Building")
         if self.name == "Room":
@@ -109,7 +114,7 @@ class LocationTypeFactory(DjangoModelFactory):
     @factory.post_generation
     def content_types(self, create, extract, **kwargs):
         """Assign some contenttypes to a location after generation"""
-        if self.name in ["Root"]:
+        if self.name in ["Root", "Campus"]:
             self.content_types.set(ContentType.objects.filter(FeatureQuery("locations").get_query()))
         elif self.name in ["Building", "Floor"]:
             self.content_types.set(
@@ -170,7 +175,7 @@ class LocationFactory(DjangoModelFactory):
         "has_parent",
         factory.LazyAttribute(
             lambda l: factory.random.randgen.choice(Location.objects.filter(location_type=l.location_type.parent))
-            if Location.objects.count()
+            if Location.objects.filter(location_type=l.location_type.parent).exists()
             else None
         ),
     )

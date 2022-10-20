@@ -625,7 +625,7 @@ class GraphQLAPIPermissionTest(TestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertIsInstance(response.data["data"]["sites"], list)
         site_names = [item["name"] for item in response.data["data"]["sites"]]
-        site_list = Site.objects.values_list("name", flat=True)
+        site_list = list(Site.objects.values_list("name", flat=True))
         self.assertEqual(site_names, site_list)
 
 

@@ -92,7 +92,7 @@ Type 'yes' to continue, or 'no' to cancel: """
         self.stdout.write("Creating Sites...")
         SiteFactory.create_batch(15)
         self.stdout.write("Creating LocationTypes...")
-        LocationTypeFactory.create_batch(6)  # only 6 unique LocationTypes are hard-coded presently
+        LocationTypeFactory.create_batch(7)  # only 7 unique LocationTypes are hard-coded presently
         self.stdout.write("Creating Locations...")
         LocationFactory.create_batch(10)
         self.stdout.write("Creating RIRs...")

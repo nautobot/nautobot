@@ -220,8 +220,12 @@ class CircuitTestCase(FilterTestCases.FilterTestCase, FilterTestCases.TenancyFil
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 3)
 
     def test_status(self):
-        params = {"status": ["active", "planned"]}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 4)
+        statuses = list(Status.objects.get_for_model(Circuit)[:2])
+        params = {"status": [statuses[0].slug, statuses[1].slug]}
+        self.assertEqual(
+            self.filterset(params, self.queryset).qs.count(),
+            self.queryset.filter(status__slug__in=params["status"]).count(),
+        )
 
     def test_region(self):
         params = {"region_id": [self.regions[0].pk, self.regions[1].pk]}

@@ -3,7 +3,7 @@ from django.contrib.contenttypes.models import ContentType
 from rest_framework import status
 
 from nautobot.dcim.models import Site
-from nautobot.extras.models import Status, Tag
+from nautobot.extras.models import Tag
 from nautobot.utilities.testing import APITestCase, TestCase
 
 

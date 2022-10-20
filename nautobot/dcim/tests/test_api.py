@@ -137,18 +137,6 @@ class RegionTest(APIViewTestCases.APIViewTestCase):
         Region.objects.create(name="Region 2", slug="region-2")
         Region.objects.create(name="Region 3", slug="region-3")
 
-    def get_deletable_object_pks(self):
-        """Only return objects without children so that the deletion count is as expected."""
-        r1 = Region.objects.create(name="Region 4", slug="region-4")
-        r2 = Region.objects.create(name="Region 5", slug="region-5")
-        r3 = Region.objects.create(name="Region 6", slug="region-6")
-
-        return [r1.pk, r2.pk, r3.pk]
-
-    def get_deletable_object(self):
-        """Make a new region object and delete it so that the deleteion count is as expected."""
-        return Region.objects.create(name="Region 7", slug="region-4")
-
 
 class SiteTest(APIViewTestCases.APIViewTestCase):
     model = Site
@@ -273,17 +261,6 @@ class SiteTest(APIViewTestCases.APIViewTestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(response.json()["time_zone"], None)
 
-    def get_deletable_object_pks(self):
-        """To get the correct bulk-delete object count, make sure we avoid a cascade deletion."""
-        site1 = Site.objects.create(name="Delete 1")
-        site2 = Site.objects.create(name="Delete 2")
-        site3 = Site.objects.create(name="Delete 3")
-        return [site1.pk, site2.pk, site3.pk]
-
-    def get_deletable_object(self):
-        """To get the correct delete object count, make sure we avoid a cascade deletion."""
-        return Site.objects.create(name="Delete 4")
-
 
 class LocationTypeTest(APIViewTestCases.APIViewTestCase):
     model = LocationType
@@ -301,6 +278,10 @@ class LocationTypeTest(APIViewTestCases.APIViewTestCase):
         lt2 = LocationType.objects.get(name="Floor")
         lt3 = LocationType.objects.get(name="Room")
         lt4 = LocationType.objects.get(name="Aisle")
+        # Deletable Location Types
+        LocationType.objects.create(name="Delete Me 1")
+        LocationType.objects.create(name="Delete Me 2")
+        LocationType.objects.create(name="Delete Me 3")
         for lt in [lt1, lt2, lt3, lt4]:
             lt.content_types.add(ContentType.objects.get_for_model(RackGroup))
 
@@ -323,17 +304,6 @@ class LocationTypeTest(APIViewTestCases.APIViewTestCase):
             },
         ]
 
-    def get_deletable_object_pks(self):
-        """To get the correct bulk-delete object count, make sure we avoid a cascade deletion."""
-        lt1 = LocationType.objects.create(name="Country")
-        lt2 = LocationType.objects.create(name="State")
-        lt3 = LocationType.objects.create(name="County")
-        return [lt1.pk, lt2.pk, lt3.pk]
-
-    def get_deletable_object(self):
-        """To get the correct delete object count, make sure we avoid a cascade deletion."""
-        return LocationType.objects.create(name="delete this")
-
 
 class LocationTest(APIViewTestCases.APIViewTestCase):
     model = Location
@@ -346,10 +316,10 @@ class LocationTest(APIViewTestCases.APIViewTestCase):
 
     @classmethod
     def setUpTestData(cls):
-        lt1 = LocationType.objects.get(name="Building")
-        lt2 = LocationType.objects.get(name="Floor")
-        lt3 = LocationType.objects.get(name="Room")
-        lt4 = LocationType.objects.get(name="Aisle")
+        lt1 = LocationType.objects.get(name="Campus")
+        lt2 = LocationType.objects.get(name="Building")
+        lt3 = LocationType.objects.get(name="Floor")
+        lt4 = LocationType.objects.get(name="Room")
 
         status_active = Status.objects.get(slug="active")
         site = Site.objects.first()
@@ -402,19 +372,6 @@ class LocationTest(APIViewTestCases.APIViewTestCase):
             "slug": "a-different-slug",
             "status": "planned",
         }
-
-    def get_deletable_object_pks(self):
-        """Create new location objects without children so that the deletion count is as expected."""
-        lt5 = LocationType.objects.create(name="Delete Type")
-        loc_1 = Location.objects.create(name="delete 1", location_type=lt5)
-        loc_2 = Location.objects.create(name="delete 2", location_type=lt5)
-        loc_3 = Location.objects.create(name="delete 3", location_type=lt5)
-        return [loc_1.pk, loc_2.pk, loc_3.pk]
-
-    def get_deletable_object(self):
-        """To get the correct delete object count, make sure we avoid a cascade deletion."""
-        lt5 = LocationType.objects.create(name="Closet")
-        return Location.objects.create(name="delete this", location_type=lt5)
 
 
 class RackGroupTest(APIViewTestCases.APIViewTestCase):
@@ -494,10 +451,6 @@ class RackGroupTest(APIViewTestCases.APIViewTestCase):
                 "parent": cls.parent_rack_groups[1].pk,
             },
         ]
-
-    def get_deletable_object_pks(self):
-        """To get the correct bulk-delete object count, make sure we avoid a cascade deletion."""
-        return [group.pk for group in list(RackGroup.objects.filter(children__isnull=True))[:3]]
 
     def test_site_location_mismatch(self):
         """The specified location (if any) must belong to the specified site."""

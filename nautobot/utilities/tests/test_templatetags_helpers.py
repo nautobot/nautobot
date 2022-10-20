@@ -52,11 +52,13 @@ class NautobotTemplatetagsHelperTest(TestCase):
         )
         # Optionally you can request a field other than the object's display string
         self.assertEqual(
-            hyperlinked_object(site, "slug"), '<a href="/dcim/sites/test-site/" title="An important site">test-site</a>'
+            hyperlinked_object(site, "slug"),
+            f'<a href="/dcim/sites/{site.slug}/" title="An important site">{site.slug}</a>',
         )
         # If you request a nonexistent field, it defaults to the string representation
         self.assertEqual(
-            hyperlinked_object(site, "foo"), '<a href="/dcim/sites/test-site/" title="An important site">Test Site</a>'
+            hyperlinked_object(site, "foo"),
+            f'<a href="/dcim/sites/{site.slug}/" title="An important site">{site.__str__()}</a>',
         )
 
     def test_placeholder(self):
