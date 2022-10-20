@@ -1219,7 +1219,7 @@ query {
         )
         result = self.execute_query(query)
 
-        self.assertEqual(len(result.data["devices"]), 3)
+        self.assertEqual(len(result.data["devices"]), 2)
         expected = list(Device.objects.filter(device_role=self.device_role1).values_list("name", flat=True))
         device_names = [item["name"] for item in result.data["devices"]]
         self.assertEqual(sorted(device_names), sorted(expected))
