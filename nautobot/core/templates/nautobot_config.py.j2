@@ -224,10 +224,6 @@ PLUGINS = []
 REMOTE_AUTH_AUTO_CREATE_USER = False
 REMOTE_AUTH_HEADER = "HTTP_REMOTE_USER"
 
-# Set the SESSION_ENGINE
-# By default, Nautobot will use 'django.contrib.sessions.backends.db' however if you need a maintenance mode / read-only instance then this can be overriden
-SESSION_ENGINE = os.getenv("NAUTOBOT_SESSION_ENGINE", "django.contrib.sessions.backends.db")
-
 # The length of time (in seconds) for which a user will remain logged into the web UI before being prompted to
 # re-authenticate. (Default: 1209600 [14 days])
 SESSION_COOKIE_AGE = int(os.getenv("NAUTOBOT_SESSION_COOKIE_AGE", "1209600"))  # 2 weeks, in seconds

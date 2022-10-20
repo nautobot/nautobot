@@ -270,6 +270,10 @@ DATABASES = {
 # The secret key is used to encrypt session keys and salt passwords.
 SECRET_KEY = os.getenv("SECRET_KEY")
 
+# Set the SESSION_ENGINE
+# By default, Nautobot will use 'django.contrib.sessions.backends.db' however if you need a maintenance mode / read-only instance then this can be overriden
+SESSION_ENGINE = os.getenv("NAUTOBOT_SESSION_ENGINE", "django.contrib.sessions.backends.db")
+
 # Default overrides
 ALLOWED_HOSTS = []
 CSRF_TRUSTED_ORIGINS = []
