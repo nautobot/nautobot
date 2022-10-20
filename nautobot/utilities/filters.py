@@ -491,14 +491,20 @@ class TreeNodeMultipleChoiceFilter(NaturalKeyOrPKMultipleChoiceFilter):
         new_value = []
         if value:
             for node in value:
+                # django-tree-queries
                 if isinstance(node, TreeNode):
                     method = "descendants"
+                # django-mptt
                 elif isinstance(node, MPTTModel):
                     method = "get_descendants"
                 else:
-                    continue
+                    method = None
 
-                descendants = getattr(node, method)(include_self=True)
+                if method is not None:
+                    descendants = getattr(node, method)(include_self=True)
+                else:
+                    descendants = node
+
                 new_value.append(descendants)
 
         # This new_value is going to be a list of querysets that needs to be flattened.
