@@ -936,9 +936,14 @@ Default:
     },
     "handlers": {
         "normal_console": {
-            "level": "DEBUG",
+            "level": "INFO",
             "class": "logging.StreamHandler",
             "formatter": "normal",
+        },
+        "verbose_console": {
+            "level": "DEBUG",
+            "class": "logging.StreamHandler",
+            "formatter": "verbose",
         },
     },
     "loggers": {

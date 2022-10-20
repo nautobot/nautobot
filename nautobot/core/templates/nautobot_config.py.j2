@@ -132,9 +132,14 @@ SECRET_KEY = os.getenv("NAUTOBOT_SECRET_KEY", "{{ secret_key }}")
 #     },
 #     "handlers": {
 #         "normal_console": {
-#             "level": "DEBUG",
+#             "level": "INFO",
 #             "class": "logging.StreamHandler",
 #             "formatter": "normal",
+#         },
+#         "verbose_console": {
+#             "level": "DEBUG",
+#             "class": "logging.StreamHandler",
+#             "formatter": "verbose",
 #         },
 #     },
 #     "loggers": {
