@@ -450,7 +450,7 @@ class NaturalKeyOrPKMultipleChoiceFilter(django_filters.ModelMultipleChoiceFilte
         if not is_pk:
             name = f"{self.field_name}__{self.field.to_field_name}"
         else:
-            logger.debug("UUID or list/qs detected: Filtering using field name")
+            logger.debug("UUID detected: Filtering using field name")
             name = self.field_name
 
         if name and self.lookup_expr != django_filters.conf.settings.DEFAULT_LOOKUP_EXPR:
