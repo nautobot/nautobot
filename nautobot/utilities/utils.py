@@ -401,7 +401,7 @@ def flatten_iterable(iterable):
     :returns: generator
     """
     for i in iterable:
-        if hasattr(i, '__iter__') and not isinstance(i, str):
+        if hasattr(i, "__iter__") and not isinstance(i, str):
             for j in flatten_iterable(i):
                 yield j
         else:
