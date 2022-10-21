@@ -2525,11 +2525,9 @@ class PathTraceView(generic.ObjectView):
             cablepath_id = request.GET.get("cablepath_id")
             if cablepath_id is not None:
                 try:
-                    # Try casting to UUID
                     path_id = uuid.UUID(cablepath_id)
                 except (AttributeError, TypeError, ValueError):
-                    # `cablepath_id` is a Non-UUID value
-                    path_id = int(cablepath_id)
+                    path_id = None
                 if path_id in list(related_paths.values_list("pk", flat=True)):
                     path = CablePath.objects.get(pk=path_id)
             else:

@@ -2824,14 +2824,18 @@ class PathTraceViewTestCase(ModelViewTestCase):
         (https://github.com/nautobot/nautobot/issues/1741)
         """
         self.add_permissions("dcim.view_cable", "dcim.view_rearport")
+        active = Status.objects.get(slug="active")
+        connected = Status.objects.get(slug="connected")
         manufacturer = Manufacturer.objects.create(name="Test Manufacturer 1", slug="test-manufacturer-1")
         devicetype = DeviceType.objects.create(manufacturer=manufacturer, model="Device Type 1", slug="device-type-1")
         devicerole = DeviceRole.objects.create(name="Test Device Role 1", slug="test-device-role-1", color="ff0000")
-        site = Site.objects.create(name="Site 1", slug="site-1")
-        device = Device.objects.create(device_type=devicetype, device_role=devicerole, name="Device 1", site=site)
+        site = Site.objects.create(name="Site 1", slug="site-1", status=active)
+        device = Device.objects.create(
+            device_type=devicetype, device_role=devicerole, name="Device 1", site=site, status=active
+        )
         obj = RearPort.objects.create(device=device, name="Rear Port 1", type=PortTypeChoices.TYPE_8P8C)
-        peer_obj = Interface.objects.create(device=device, name="eth0")
-        Cable.objects.create(termination_a=obj, termination_b=peer_obj, label="Cable 1")
+        peer_obj = Interface.objects.create(device=device, name="eth0", status=active)
+        Cable.objects.create(termination_a=obj, termination_b=peer_obj, label="Cable 1", status=connected)
 
         url = reverse("dcim:rearport_trace", args=[obj.pk])
         cablepath_id = CablePath.objects.first().id
