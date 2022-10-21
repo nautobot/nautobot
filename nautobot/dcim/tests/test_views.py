@@ -2818,8 +2818,11 @@ class PowerFeedTestCase(ViewTestCases.PrimaryObjectViewTestCase):
 
 class PathTraceViewTestCase(ModelViewTestCase):
     def test_get_cable_path_trace_do_not_throw_error(self):
-        """Assert selecting a related path in cable trace view loads successfully
-        See https://github.com/nautobot/nautobot/issues/1741 is Fixed"""
+        """
+        Assert selecting a related path in cable trace view loads successfully.
+        
+        (https://github.com/nautobot/nautobot/issues/1741)
+        """
         self.add_permissions("dcim.view_cable", "dcim.view_rearport")
         manufacturer = Manufacturer.objects.create(name="Test Manufacturer 1", slug="test-manufacturer-1")
         devicetype = DeviceType.objects.create(manufacturer=manufacturer, model="Device Type 1", slug="device-type-1")
