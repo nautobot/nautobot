@@ -24,7 +24,6 @@ from nautobot.utilities.constants import (
     FILTER_CHAR_BASED_LOOKUP_MAP,
     FILTER_NEGATION_LOOKUP_MAP,
     FILTER_NUMERIC_BASED_LOOKUP_MAP,
-    FILTER_TREENODE_NEGATION_LOOKUP_MAP,
 )
 from nautobot.utilities.forms.fields import MultiMatchModelMultipleChoiceField
 
@@ -564,10 +563,6 @@ class BaseFilterSet(django_filters.FilterSet):
         ):
             lookup_map = FILTER_NUMERIC_BASED_LOOKUP_MAP
 
-        elif isinstance(existing_filter, (TreeNodeMultipleChoiceFilter,)):
-            # TreeNodeMultipleChoiceFilter only support negation but must maintain the `in` lookup expression
-            lookup_map = FILTER_TREENODE_NEGATION_LOOKUP_MAP
-
         # These filter types support only negation
         elif isinstance(
             existing_filter,
@@ -575,12 +570,15 @@ class BaseFilterSet(django_filters.FilterSet):
                 django_filters.ModelChoiceFilter,
                 django_filters.ModelMultipleChoiceFilter,
                 TagFilter,
+                TreeNodeMultipleChoiceFilter,
             ),
         ):
             lookup_map = FILTER_NEGATION_LOOKUP_MAP
+
         # These filter types support only negation
         elif existing_filter.extra.get("choices"):
             lookup_map = FILTER_NEGATION_LOOKUP_MAP
+
         elif isinstance(
             existing_filter,
             (
