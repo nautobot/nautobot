@@ -317,6 +317,11 @@ class LocationFilterSet(NautobotFilterSet, StatusModelFilterSetMixin, TenancyFil
         queryset=Site.objects.all(),
         label="Site (slug or ID)",
     )
+    base_site = NaturalKeyOrPKMultipleChoiceFilter(
+        queryset=Site.objects.all(),
+        label="Base location's site (slug or ID)",
+        method="_base_site",
+    )
     content_type = ContentTypeMultipleChoiceFilter(
         field_name="location_type__content_types",
         choices=FeatureQuery("locations").get_choices,
@@ -336,6 +341,22 @@ class LocationFilterSet(NautobotFilterSet, StatusModelFilterSetMixin, TenancyFil
     @extend_schema_field({"type": "string"})
     def _child_location_type(self, queryset, name, value):
         params = self.generate_query__child_location_type(value)
+        return queryset.filter(params)
+
+    def generate_query__base_site(self, value):
+        if value:
+            max_depth = max(loc.tree_depth for loc in Location.objects.with_tree_fields())
+            filter_name = "site__in"
+            params = Q(**{filter_name: value})
+            for i in range(max_depth):
+                filter_name = f"parent__{filter_name}"
+                params |= Q(**{filter_name: value})
+            return params
+        return Q()
+
+    @extend_schema_field({"type": "string"})
+    def _base_site(self, queryset, name, value):
+        params = self.generate_query__base_site(value)
         return queryset.filter(params)
 
 
