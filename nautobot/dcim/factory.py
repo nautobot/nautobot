@@ -1,9 +1,11 @@
 import factory
 import pytz
+import random
 from factory.django import DjangoModelFactory
 from faker import Faker
 
 from django.contrib.contenttypes.models import ContentType
+from django.db.models import Q
 
 from nautobot.circuits.models import CircuitTermination
 from nautobot.dcim.models import Device, Location, LocationType, Region, Rack, RackGroup, PowerPanel, Site
@@ -28,7 +30,7 @@ class RegionFactory(DjangoModelFactory):
     name = factory.Maybe("has_parent", UniqueFaker("city"), UniqueFaker("country"))
 
     has_description = factory.Faker("pybool")
-    description = factory.Maybe("has_description", factory.Faker("text", max_nb_chars=200), "")
+    description = factory.Maybe("has_description", factory.Faker("sentence", nb_words=5), "")
 
 
 class SiteFactory(DjangoModelFactory):
@@ -61,7 +63,7 @@ class SiteFactory(DjangoModelFactory):
     tenant = factory.Maybe("has_tenant", random_instance(Tenant), None)
 
     has_time_zone = factory.Faker("pybool")
-    time_zone = factory.Maybe("has_time_zone", pytz.timezone(Faker().timezone()), None)
+    time_zone = factory.Maybe("has_time_zone", factory.LazyAttribute(lambda o: pytz.timezone(Faker().timezone())), None)
 
     has_physical_address = factory.Faker("pybool")
     physical_address = factory.Maybe("has_physical_address", factory.Faker("address"))
@@ -95,9 +97,9 @@ class LocationTypeFactory(DjangoModelFactory):
     name = factory.Iterator(["Root", "Campus", "Building", "Floor", "Elevator", "Room", "Aisle"])
 
     has_description = factory.Faker("pybool")
-    description = factory.Maybe("has_description", factory.Faker("text", max_nb_chars=200), "")
+    description = factory.Maybe("has_description", factory.Faker("sentence", nb_words=5), "")
 
-    nestable = factory.LazyAttribute(lambda l: bool(l.name == "Campus"))
+    nestable = factory.LazyAttribute(lambda l: bool(l.name in ["Campus", "Root"]))
 
     @factory.lazy_attribute
     def parent(self):
@@ -165,20 +167,46 @@ class LocationFactory(DjangoModelFactory):
             "has_site",
             "has_tenant",
             "has_description",
+            "_parent",
+            "_has_parent",
         )
 
     name = factory.LazyAttributeSequence(lambda l, n: f"{l.location_type.name}-{n:02d}")
     status = random_instance(lambda: Status.objects.get_for_model(Location), allow_null=False)
 
-    has_parent = factory.LazyAttribute(lambda l: bool(l.location_type.parent))
-    parent = factory.Maybe(
-        "has_parent",
-        factory.LazyAttribute(
-            lambda l: factory.random.randgen.choice(Location.objects.filter(location_type=l.location_type.parent))
-            if Location.objects.filter(location_type=l.location_type.parent).exists()
-            else None
-        ),
-    )
+    @factory.iterator
+    def location_type():  # pylint: disable=no-method-argument
+        lts = LocationType.objects.all()
+        for lt in lts:
+            yield lt
+
+    @factory.lazy_attribute
+    def _has_parent(self):
+        if not self.location_type.nestable:
+            return bool(self.location_type.parent)
+        else:
+            num = random.choice([0, 1])
+            if num == 0:
+                return False
+            return True
+
+    @factory.lazy_attribute
+    def _parent(self):
+        if not self.location_type.nestable:
+            candidate_parents = Location.objects.filter(location_type=self.location_type.parent)
+        elif self.location_type.parent is not None:
+            candidate_parents = Location.objects.filter(
+                Q(location_type=self.location_type.parent) | Q(location_type=self.location_type)
+            )
+        else:
+            candidate_parents = Location.objects.filter(location_type=self.location_type)
+
+        if candidate_parents.exists():
+            return factory.random.randgen.choice(candidate_parents)
+        return None
+
+    has_parent = _has_parent
+    parent = factory.Maybe("has_parent", _parent)
 
     has_site = factory.LazyAttribute(lambda l: not bool(l.has_parent))
     site = factory.Maybe("has_site", random_instance(Site, allow_null=False), None)
@@ -187,10 +215,4 @@ class LocationFactory(DjangoModelFactory):
     tenant = factory.Maybe("has_tenant", random_instance(Tenant), None)
 
     has_description = factory.Faker("pybool")
-    description = factory.Maybe("has_description", factory.Faker("text", max_nb_chars=200), "")
-
-    @factory.iterator
-    def location_type():  # pylint: disable=no-method-argument
-        lts = LocationType.objects.all()
-        for lt in lts:
-            yield lt
+    description = factory.Maybe("has_description", factory.Faker("sentence", nb_words=5), "")

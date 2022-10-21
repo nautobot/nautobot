@@ -311,7 +311,17 @@ class VLANGroupFactory(OrganizationalModelFactory):
     site = factory.Maybe(
         "has_location",
         factory.LazyAttribute(lambda l: l.location.site or l.location.base_site),
-        factory.Maybe("has_site", random_instance(Site, allow_null=False), None),
+        factory.Maybe(
+            "has_site",
+            factory.LazyAttribute(
+                lambda l: factory.random.randgen.choice(
+                    Site.objects.exclude(
+                        pk__in=list(VLANGroup.objects.filter(name=l.name).values_list("site", flat=True))
+                    ),
+                )
+            ),
+            None,
+        ),
     )
 
 
@@ -428,7 +438,9 @@ class PrefixFactory(PrimaryModelFactory):
     description = factory.Maybe("has_description", factory.Faker("text", max_nb_chars=200), "")
     is_pool = factory.Faker("pybool")
     # TODO: create a LocationGetOrCreateFactory to get or create a location with matching site
-    location = factory.Maybe("has_location", random_instance(lambda: Location.objects.get_for_model(Prefix)), None)
+    location = factory.Maybe(
+        "has_location", random_instance(lambda: Location.objects.get_for_model(Prefix), allow_null=False), None
+    )
     role = factory.Maybe("has_role", random_instance(Role), None)
     # TODO: create a SiteGetOrCreateFactory to get or create a site with matching tenant
     site = factory.Maybe(

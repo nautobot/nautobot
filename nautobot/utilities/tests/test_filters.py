@@ -1103,8 +1103,9 @@ class SearchFilterTest(TestCase):
         """Test a default search for an "exact" value."""
         params = {"q": "1234"}
         self.assertEqual(self.get_filterset_count(params), self.queryset.filter(asn__exact="1234").count())
-        params = {"q": "5819013"}
-        self.assertEqual(self.get_filterset_count(params), self.queryset.filter(asn__exact="5819013").count())
+        asn = Site.objects.values_list("asn", flat=True).first()
+        params = {"q": str(asn)}
+        self.assertEqual(self.get_filterset_count(params), self.queryset.filter(asn__exact=str(asn)).count())
 
     def test_default_id(self):
         """Test default search on "id" field."""

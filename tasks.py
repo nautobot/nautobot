@@ -630,7 +630,6 @@ def unittest(
         command += " --slowreport --slowreportpath report.yml"
     # change the default testrunner only if performance testing is running
     if "--slowreport" in command:
-        print("hey")
         command += " --testrunner nautobot.core.tests.runner.NautobotPerformanceTestRunner"
     # lists
     if tag:
