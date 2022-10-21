@@ -562,7 +562,7 @@ class LocationTestCase(TestCase):
         self.intermediate_type = LocationType.objects.get(name="Building")
         self.leaf_type = LocationType.objects.get(name="Floor")
 
-        self.root_nestable_type = LocationType.objects.create(name="Pseudo-Region", nestable=True)
+        self.root_nestable_type = LocationType.objects.get(name="Root")
         self.leaf_nestable_type = LocationType.objects.create(
             name="Pseudo-RackGroup", parent=self.root_nestable_type, nestable=True
         )

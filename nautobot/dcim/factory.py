@@ -1,6 +1,5 @@
 import factory
 import pytz
-import random
 from factory.django import DjangoModelFactory
 from faker import Faker
 
@@ -168,7 +167,6 @@ class LocationFactory(DjangoModelFactory):
             "has_tenant",
             "has_description",
             "_parent",
-            "_has_parent",
         )
 
     name = factory.LazyAttributeSequence(lambda l, n: f"{l.location_type.name}-{n:02d}")
@@ -181,14 +179,11 @@ class LocationFactory(DjangoModelFactory):
             yield lt
 
     @factory.lazy_attribute
-    def _has_parent(self):
+    def has_parent(self):
         if not self.location_type.nestable:
             return bool(self.location_type.parent)
         else:
-            num = random.choice([0, 1])
-            if num == 0:
-                return False
-            return True
+            return Faker().boolean()
 
     @factory.lazy_attribute
     def _parent(self):
@@ -205,10 +200,11 @@ class LocationFactory(DjangoModelFactory):
             return factory.random.randgen.choice(candidate_parents)
         return None
 
-    has_parent = _has_parent
     parent = factory.Maybe("has_parent", _parent)
 
-    has_site = factory.LazyAttribute(lambda l: not bool(l.has_parent))
+    # we can't use `l.has_parent`` here because even tho `has_parent` could be true, `parent`` attribute could still be None
+    # see _parent(), So we check l.parent directly
+    has_site = factory.LazyAttribute(lambda l: not bool(l.parent))
     site = factory.Maybe("has_site", random_instance(Site, allow_null=False), None)
 
     has_tenant = factory.Faker("pybool")
