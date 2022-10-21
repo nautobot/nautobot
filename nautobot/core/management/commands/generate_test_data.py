@@ -104,7 +104,7 @@ Type 'yes' to continue, or 'no' to cancel: """
         self.stdout.write("Creating IP/VLAN Roles...")
         RoleFactory.create_batch(10)
         self.stdout.write("Creating VLANGroups...")
-        VLANGroupFactory.create_batch(50)
+        VLANGroupFactory.create_batch(20)
         self.stdout.write("Creating VLANs...")
         VLANFactory.create_batch(20)
         self.stdout.write("Creating Aggregates, Prefixes and IP Addresses...")
