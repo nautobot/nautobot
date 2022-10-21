@@ -94,7 +94,7 @@ Type 'yes' to continue, or 'no' to cancel: """
         self.stdout.write("Creating LocationTypes...")
         LocationTypeFactory.create_batch(7)  # only 7 unique LocationTypes are hard-coded presently
         self.stdout.write("Creating Locations...")
-        LocationFactory.create_batch(100)
+        LocationFactory.create_batch(10)
         self.stdout.write("Creating RIRs...")
         RIRFactory.create_batch(9)  # only 9 unique RIR names are hard-coded presently
         self.stdout.write("Creating RouteTargets...")
@@ -104,7 +104,7 @@ Type 'yes' to continue, or 'no' to cancel: """
         self.stdout.write("Creating IP/VLAN Roles...")
         RoleFactory.create_batch(10)
         self.stdout.write("Creating VLANGroups...")
-        VLANGroupFactory.create_batch(20)
+        VLANGroupFactory.create_batch(50)
         self.stdout.write("Creating VLANs...")
         VLANFactory.create_batch(20)
         self.stdout.write("Creating Aggregates, Prefixes and IP Addresses...")

@@ -310,7 +310,7 @@ class ObjectPermissionAPIViewTestCase(TestCase):
         # Retrieve all objects. Only permitted objects should be returned.
         response = self.client.get(url, **self.header)
         self.assertEqual(response.status_code, 200)
-        self.assertEqual(response.data["count"], 3)
+        self.assertEqual(response.data["count"], 4)
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
     def test_create_object(self):
