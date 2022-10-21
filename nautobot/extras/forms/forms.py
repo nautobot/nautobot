@@ -1104,7 +1104,7 @@ class RelationshipForm(BootstrapMixin, forms.ModelForm):
             "slug",
             "description",
             "type",
-            "required_side",
+            "required_on",
             "advanced_ui",
             "source_type",
             "source_label",

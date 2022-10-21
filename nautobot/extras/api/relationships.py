@@ -266,7 +266,6 @@ class RelationshipModelSerializerMixin(ValidatedModelSerializer):
 
     def create(self, validated_data):
         relationships_data = validated_data.pop("relationships", {})
-
         required_relationships_errors = Relationship.required_related_objects_errors(
             self.Meta().model, "api", relationships_data
         )
@@ -280,11 +279,15 @@ class RelationshipModelSerializerMixin(ValidatedModelSerializer):
 
     def update(self, instance, validated_data):
         relationships_data = validated_data.pop("relationships", {})
-        required_relationships_errors = Relationship.required_related_objects_errors(
-            self.Meta().model, "api", relationships_data
-        )
-        if required_relationships_errors:
-            raise ValidationError(required_relationships_errors)
+
+        # We only want to validate the required relationships if "relationships" has been specified in the payload.
+        # If "relationships" hasn't been specified, we just update the other fields specified in the payload.
+        if relationships_data:
+            required_relationships_errors = Relationship.required_related_objects_errors(
+                self.Meta().model, "api", relationships_data
+            )
+            if required_relationships_errors:
+                raise ValidationError(required_relationships_errors)
 
         instance = super().update(instance, validated_data)
         if relationships_data:

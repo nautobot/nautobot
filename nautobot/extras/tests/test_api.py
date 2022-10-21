@@ -2430,7 +2430,7 @@ class RelationshipTest(APIViewTestCases.APIViewTestCase, RequiredRelationshipTes
     bulk_update_data = {
         "source_filter": {"slug": ["some-slug"]},
     }
-    choices_fields = ["destination_type", "source_type", "type", "required_side"]
+    choices_fields = ["destination_type", "source_type", "type", "required_on"]
     slug_source = "name"
     slugify_function = staticmethod(slugify_dashes_to_underscores)
 

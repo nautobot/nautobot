@@ -255,27 +255,25 @@ class RelationshipTest(RelationshipBaseTest):
         self.assertEqual(handler.exception.message_dict, expected_errors)
 
         # Check ValidationError is raised when a relationship is marked as required and symmetric
-        expected_exception = ValidationError(
-            {"required_side": ["Symmetric relationships cannot be marked as required."]}
-        )
+        expected_exception = ValidationError({"required_on": ["Symmetric relationships cannot be marked as required."]})
         with self.assertRaises(ValidationError) as err:
             Relationship(
-                name="This shouldn't pass validation",
+                name="This shouldn't validate",
                 slug="vlans-vlans-m2m",
                 type="symmetric-many-to-many",
                 source_type=self.vlan_ct,
                 destination_type=self.vlan_ct,
-                required_side="destination",
+                required_on="destination",
             ).validated_save()
         self.assertEqual(expected_exception, err.exception)
         with self.assertRaises(ValidationError) as err:
             Relationship(
-                name="This shouldn't pass validation",
+                name="This shouldn't validate",
                 slug="vlans-vlans-o2o",
                 type="symmetric-one-to-one",
                 source_type=self.vlan_ct,
                 destination_type=self.vlan_ct,
-                required_side="destination",
+                required_on="destination",
             ).validated_save()
         self.assertEqual(expected_exception, err.exception)
 
@@ -1015,6 +1013,23 @@ class RequiredRelationshipTestMixin(TestCase):
         1. Try creating an object when no required target object exists
         2. Try creating an object without specifying required target object(s)
         3. Try creating an object when all required data is present
+        4. Test different API-specific interaction scenarios:
+           =================
+           - Relationship is marked as being not required
+           - Object is created without the relationship (successful)
+           - Relationship is marked as being required
+           - Object is updated without the relationship (fails)
+           =================
+           - Relationship is marked as being not required
+           - Object is created without the relationship (successful)
+           - Relationship is marked as being required
+           - Object is updated to include the relationship (successful)
+           =================
+           - Object is created with the relationship (successful)
+           - Object is updated without specifying relationships (successful, relationship remains in place)
+           =================
+           - Object is created with the relationship (successful)
+           - Object is updated to remove the relationship data (fails)
 
         """
 
@@ -1028,7 +1043,7 @@ class RequiredRelationshipTestMixin(TestCase):
             type="many-to-many",
             source_type=device_ct,
             destination_type=vlan_ct,
-            required_side="destination",
+            required_on="destination",
         ).validated_save()
         Relationship(
             name="Platforms require at least one device",
@@ -1036,7 +1051,7 @@ class RequiredRelationshipTestMixin(TestCase):
             type="one-to-many",
             source_type=platform_ct,
             destination_type=device_ct,
-            required_side="source",
+            required_on="source",
         ).validated_save()
         Relationship(
             name="Tenant requires one platform",
@@ -1044,27 +1059,23 @@ class RequiredRelationshipTestMixin(TestCase):
             type="one-to-one",
             source_type=tenant_ct,
             destination_type=platform_ct,
-            required_side="source",
+            required_on="source",
         ).validated_save()
-
-        try:
-            active_platform_status = str(Status.objects.get_for_model(Platform).get(slug="active").pk)
-        except Status.DoesNotExist:
-            active_platform_status = "active"
 
         tests_params = [
             # Required many-to-many:
             {
                 "create_data": {
-                    "vid": 1,
+                    "vid": "1",
                     "name": "New VLAN",
                     "status": str(Status.objects.get_for_model(VLAN).get(slug="active").pk)
                     if interact_with == "ui"
                     else "active",
                 },
+                "relationship_type": "m2m",
                 "target_side": "source",
                 "relation_slug": "vlans-devices-m2m",
-                "required_objects": [
+                "required_object_generators": [
                     lambda: create_test_device("Device 1"),
                     lambda: create_test_device("Device 2"),
                 ],
@@ -1086,15 +1097,14 @@ class RequiredRelationshipTestMixin(TestCase):
             # Required one-to-many:
             {
                 "create_data": {
-                    "name": "New Platform",
-                    "status": active_platform_status,
+                    "name": "New Platform 1",
+                    "slug": "new-platform-1",
                     "napalm_args": "null",
                 },
+                "relationship_type": "o2m",
                 "target_side": "destination",
                 "relation_slug": "platform-devices-o2m",
-                "required_objects": [
-                    lambda: create_test_device("Device 1"),
-                ],
+                "required_object_generators": [lambda: create_test_device("Device 3")],
                 "required_target": Device,
                 "required_from": Platform,
                 "expected_errors": {
@@ -1114,11 +1124,13 @@ class RequiredRelationshipTestMixin(TestCase):
             {
                 "create_data": {
                     "name": "New Tenant",
+                    "slug": "new-tenant",
                 },
+                "relationship_type": "o2o",
                 "target_side": "destination",
                 "relation_slug": "tenant-platform-o2o",
-                "required_objects": [
-                    lambda: Platform.objects.create(name="Platform 1"),
+                "required_object_generators": [
+                    lambda: Platform.objects.create(name="New Platform 2", slug="new-platform-2", napalm_args="null")
                 ],
                 "required_target": Platform,
                 "required_from": Tenant,
@@ -1143,7 +1155,7 @@ class RequiredRelationshipTestMixin(TestCase):
             self.client.force_login(self.user)
 
         for params in tests_params:
-            msg = f"Testing {params['required_from']} relationship '{params['relation_slug']}'"
+            msg = f"Testing {params['required_from']._meta.verbose_name} relationship '{params['relation_slug']}'"
             with self.subTest(msg, testinfo=msg):
                 # Clear any existing required target model objects that may have been created in previous subtests:
                 params["required_target"].objects.all().delete()
@@ -1155,8 +1167,10 @@ class RequiredRelationshipTestMixin(TestCase):
                 if interact_with == "ui":
                     related_field_key = f'cr_{params["relation_slug"]}__{params["target_side"]}'
 
+                create_data = params["create_data"]
+
                 # 1. Try creating an object when no required target object exists
-                response = self.post_data_to(params["required_from"], params["create_data"], interact_with)
+                response = self.post_data_to(params["required_from"], create_data, interact_with)
 
                 if interact_with == "ui":
                     for message in [
@@ -1182,8 +1196,14 @@ class RequiredRelationshipTestMixin(TestCase):
 
                 # 2. Try creating an object without specifying required target object(s)
                 # Create required target objects
-                required_pk_list = [create_object().pk for create_object in params["required_objects"]]
-                response = self.post_data_to(params["required_from"], params["create_data"], interact_with)
+                required_object_pks = [instance().pk for instance in params["required_object_generators"]]
+
+                # one-to-one relationship objects vie the UI form need to specify a pk string
+                # instead of a list of pk strings
+                if interact_with == "ui" and params["relationship_type"] == "o2o":
+                    required_object_pks = required_object_pks[0]
+
+                response = self.post_data_to(params["required_from"], create_data, interact_with)
 
                 if interact_with == "ui":
                     self.assertContains(response, params["expected_errors"]["ui"]["objects_not_specified"])
@@ -1204,17 +1224,15 @@ class RequiredRelationshipTestMixin(TestCase):
 
                 # 3. Try creating an object when all required data is present
                 if interact_with == "ui":
-                    related_objects = {related_field_key: required_pk_list}
+                    related_objects_data = {related_field_key: required_object_pks}
 
                 elif interact_with == "api":
-                    related_objects = {
-                        "relationships": {
-                            params["relation_slug"]: {params["target_side"]: {"objects": required_pk_list}}
-                        }
+                    related_objects_data = {
+                        "relationships": {related_field_key: {params["target_side"]: {"objects": required_object_pks}}}
                     }
 
                 response = self.post_data_to(
-                    params["required_from"], {**params["create_data"], **related_objects}, interact_with
+                    params["required_from"], {**create_data, **related_objects_data}, interact_with
                 )
 
                 if interact_with == "ui":
@@ -1226,4 +1244,4 @@ class RequiredRelationshipTestMixin(TestCase):
                     self.assertHttpStatus(response, 201)
 
                 # Check that an object was created:
-                # self.assertEqual(params["required_from"].objects.count(), existing_count + 1)
+                self.assertEqual(params["required_from"].objects.count(), existing_count + 1)

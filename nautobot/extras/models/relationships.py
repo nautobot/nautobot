@@ -242,7 +242,7 @@ class RelationshipManager(models.Manager.from_queryset(RestrictedQuerySet)):
         content_type = ContentType.objects.get_for_model(model._meta.concrete_model)
         return self.get_queryset().filter(
             (Q(source_type=content_type) | Q(destination_type=content_type))
-            & Q(required_side__in=["source", "destination"])
+            & Q(required_on__in=["source", "destination"])
         )
 
 
@@ -261,13 +261,13 @@ class Relationship(BaseModel, ChangeLoggedModel, NotesMixin):
         default=RelationshipTypeChoices.TYPE_MANY_TO_MANY,
         help_text="Cardinality of this relationship",
     )
-    required_side = models.CharField(
+    required_on = models.CharField(
         max_length=12,
         choices=RelationshipRequiredSideChoices,
         default=RelationshipRequiredSideChoices.NEITHER_SIDE_REQUIRED,
         help_text="Objects on the specified side MUST implement this relationship. "
         "Not permitted for symmetric relationships.",
-        verbose_name="Required Side",
+        verbose_name="Required On",
         blank=True,
     )
 
@@ -530,8 +530,8 @@ class Relationship(BaseModel, ChangeLoggedModel, NotesMixin):
                     error_messages["destination_filter"] = "Must match source_filter for a symmetric relationship"
 
             # Marking a relationship as required is unsupported for symmetric relationships
-            if self.required_side != "":
-                error_messages["required_side"] = "Symmetric relationships cannot be marked as required."
+            if self.required_on != "":
+                error_messages["required_on"] = "Symmetric relationships cannot be marked as required."
 
             if error_messages:
                 raise ValidationError(error_messages)
@@ -605,7 +605,7 @@ class Relationship(BaseModel, ChangeLoggedModel, NotesMixin):
         relationships_field_errors = []
         for relation in required_relationships:
 
-            opposite_side = RelationshipSideChoices.OPPOSITE[relation.required_side]
+            opposite_side = RelationshipSideChoices.OPPOSITE[relation.required_on]
 
             if relation.skip_required(instance_or_class, opposite_side):
                 continue
