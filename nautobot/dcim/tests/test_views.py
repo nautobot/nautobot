@@ -2820,7 +2820,7 @@ class PathTraceViewTestCase(ModelViewTestCase):
     def test_get_cable_path_trace_do_not_throw_error(self):
         """
         Assert selecting a related path in cable trace view loads successfully.
-        
+
         (https://github.com/nautobot/nautobot/issues/1741)
         """
         self.add_permissions("dcim.view_cable", "dcim.view_rearport")
