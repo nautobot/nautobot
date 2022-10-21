@@ -393,6 +393,21 @@ def flatten_dict(d, prefix="", separator="."):
     return ret
 
 
+def flatten_iterable(iterable):
+    """
+    Flatten a nested iterable such as a list of lists, keeping strings intact.
+
+    :param iterable: The iterable to be flattened
+    :returns: generator
+    """
+    for i in iterable:
+        if hasattr(i, '__iter__') and not isinstance(i, str):
+            for j in flatten_iterable(i):
+                yield j
+        else:
+            yield i
+
+
 # Taken from django.utils.functional (<3.0)
 def curry(_curried_func, *args, **kwargs):
     def _curried(*moreargs, **morekwargs):

@@ -1,7 +1,6 @@
 from collections import OrderedDict
 from copy import deepcopy
 import logging
-import itertools
 import uuid
 
 from django import forms
@@ -26,6 +25,7 @@ from nautobot.utilities.constants import (
     FILTER_NUMERIC_BASED_LOOKUP_MAP,
 )
 from nautobot.utilities.forms.fields import MultiMatchModelMultipleChoiceField
+from nautobot.utilities.utils import flatten_iterable
 
 from taggit.managers import TaggableManager
 
@@ -487,28 +487,18 @@ class TreeNodeMultipleChoiceFilter(NaturalKeyOrPKMultipleChoiceFilter):
     """
 
     def filter(self, qs, value):
-        new_value = []
         if value:
-            for node in value:
+            if any(isinstance(node, TreeNode) for node in value):
                 # django-tree-queries
-                if isinstance(node, TreeNode):
-                    method = "descendants"
+                value = [node.descendants(include_self=True) if not isinstance(node, str) else node for node in value]
+            elif any(isinstance(node, MPTTModel) for node in value):
                 # django-mptt
-                elif isinstance(node, MPTTModel):
-                    method = "get_descendants"
-                else:
-                    method = None
-
-                if method is not None:
-                    descendants = getattr(node, method)(include_self=True)
-                else:
-                    descendants = node
-
-                new_value.append(descendants)
+                value = [
+                    node.get_descendants(include_self=True) if not isinstance(node, str) else node for node in value
+                ]
 
         # This new_value is going to be a list of querysets that needs to be flattened.
-        if new_value:
-            value = list(itertools.chain.from_iterable(new_value))
+        value = list(flatten_iterable(value))
         return super().filter(qs, value)
 
 
