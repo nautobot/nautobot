@@ -94,9 +94,7 @@ class CircuitTestCase(FilterTestCases.FilterTestCase, FilterTestCases.TenancyFil
     @classmethod
     def setUpTestData(cls):
 
-        cls.regions = list(
-            Region.objects.filter(sites__isnull=False, children__isnull=True, parent__isnull=True).distinct()
-        )[:3]
+        cls.regions = Region.objects.filter(sites__isnull=False).distinct()[:3]
 
         cls.sites = (
             Site.objects.filter(region=cls.regions[0]).first(),
@@ -231,15 +229,23 @@ class CircuitTestCase(FilterTestCases.FilterTestCase, FilterTestCases.TenancyFil
 
     def test_region(self):
         params = {"region_id": [self.regions[0].pk, self.regions[1].pk]}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+        cts = CircuitTermination.objects.filter(site__region__in=params["region_id"])
+        circuit_count = cts.values_list("circuit", flat=True).count()
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), circuit_count)
         params = {"region": [self.regions[0].slug, self.regions[1].slug]}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+        cts = CircuitTermination.objects.filter(site__region__slug__in=params["region"])
+        circuit_count = cts.values_list("circuit", flat=True).count()
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), circuit_count)
 
     def test_site(self):
         params = {"site_id": [self.sites[0].pk, self.sites[1].pk]}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+        cts = CircuitTermination.objects.filter(site__in=params["site_id"])
+        circuit_count = cts.values_list("circuit", flat=True).count()
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), circuit_count)
         params = {"site": [self.sites[0].slug, self.sites[1].slug]}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+        cts = CircuitTermination.objects.filter(site__slug__in=params["site"])
+        circuit_count = cts.values_list("circuit", flat=True).count()
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), circuit_count)
 
     def test_search(self):
         value = self.queryset.values_list("pk", flat=True)[0]
