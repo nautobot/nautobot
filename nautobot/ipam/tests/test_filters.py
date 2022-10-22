@@ -567,8 +567,22 @@ class IPAddressTestCase(FilterTestCases.FilterTestCase, FilterTestCases.TenancyF
         )
 
     def test_search(self):
-        ipv4_address = self.queryset.ip_family(4).exclude(dns_name="").exclude(dns_name__isnull=True).first()
-        ipv6_address = self.queryset.ip_family(6).exclude(dns_name="").exclude(dns_name__isnull=True).first()
+        ipv4_address = (
+            self.queryset.ip_family(4)
+            .exclude(dns_name="")
+            .exclude(dns_name__isnull=True)
+            .order_by("last_updated")
+            .last()
+        )
+        # This is not getting ipv6 address with mask: `2001:db8::1/64`` consistently
+        # instead it is getting `8ca:d203:559e:5211:e0fc:3ae8:72:623e/128`` so last test f"{ipv6_hextets[0]}::" would fail.
+        ipv6_address = (
+            self.queryset.ip_family(6)
+            .exclude(dns_name="")
+            .exclude(dns_name__isnull=True)
+            .order_by("last_updated")
+            .last()
+        )
         ipv4_octets = ipv4_address.host.split(".")
         ipv6_hextets = ipv6_address.host.split(":")
 

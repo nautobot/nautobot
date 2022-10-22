@@ -102,10 +102,10 @@ class RIRTest(APIViewTestCases.APIViewTestCase):
     }
 
     slug_source = "name"
-    # RIR objects to be deleted
-    RIR.objects.create(name="delete me 1")
-    RIR.objects.create(name="delete me 2")
-    RIR.objects.create(name="delete me 3")
+
+    def get_deletable_object(self):
+        # The generic version of this method for test_delete_object_without_permission and test_delete_object do not work for some reason.
+        return RIR.objects.create(name="delete me 1")
 
 
 class AggregateTest(APIViewTestCases.APIViewTestCase):
