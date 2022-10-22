@@ -2528,8 +2528,10 @@ class PathTraceView(generic.ObjectView):
                     path_id = uuid.UUID(cablepath_id)
                 except (AttributeError, TypeError, ValueError):
                     path_id = None
-                if path_id in list(related_paths.values_list("pk", flat=True)):
-                    path = CablePath.objects.get(pk=path_id)
+                try:
+                    path = related_paths.get(pk=path_id)
+                except CablePath.DoesNotExist:
+                    path = related_paths.first()
             else:
                 path = related_paths.first()
 
