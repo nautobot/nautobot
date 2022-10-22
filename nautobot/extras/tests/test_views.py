@@ -1842,6 +1842,16 @@ class JobTestCase(
                 content,
             )
 
+    def test_job_object_change_log_view(self):
+        """Assert Job change log view displays appropriate header"""
+        instance = self.test_pass
+        self.add_permissions("extras.view_objectchange", "extras.view_job")
+        response = self.client.get(instance.get_changelog_url())
+        content = extract_page_body(response.content.decode(response.charset))
+
+        self.assertHttpStatus(response, 200)
+        self.assertIn(f"<h1>{instance.name} - Change Log</h1>", content)
+
 
 # TODO: Convert to StandardTestCases.Views
 class ObjectChangeTestCase(TestCase):
