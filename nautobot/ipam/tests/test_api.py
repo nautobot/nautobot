@@ -102,6 +102,10 @@ class RIRTest(APIViewTestCases.APIViewTestCase):
     }
 
     slug_source = "name"
+    # RIR objects to be deleted
+    RIR.objects.create(name="delete me 1")
+    RIR.objects.create(name="delete me 2")
+    RIR.objects.create(name="delete me 3")
 
 
 class AggregateTest(APIViewTestCases.APIViewTestCase):
