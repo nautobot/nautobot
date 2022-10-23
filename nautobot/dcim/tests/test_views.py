@@ -2293,7 +2293,6 @@ class CableTestCase(
             "data": post_data({"confirm": True}),
         }
 
-        from nautobot.dcim.models import CablePath
         from django.db.models import Q
 
         termination_ct = ContentType.objects.get_for_model(CircuitTermination)
@@ -2841,3 +2840,5 @@ class PathTraceViewTestCase(ModelViewTestCase):
         cablepath_id = CablePath.objects.first().id
         response = self.client.get(url + f"?cablepath_id={cablepath_id}")
         self.assertHttpStatus(response, 200)
+        content = extract_page_body(response.content.decode(response.charset))
+        self.assertInHTML("<h1>Cable Trace for Rear Port Rear Port 1</h1>", content)
