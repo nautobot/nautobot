@@ -1438,7 +1438,10 @@ class ManufacturerTestCase(FilterTestCases.NameSlugFilterTestCase):
         InventoryItem.objects.create(device=devices[2], name="Inventory Item 3", manufacturer=cls.manufacturers[2])
 
     def test_description(self):
-        descriptions = [m.description for m in self.manufacturers[::2]]
+        # FIXME(jathan): We only want 1st/3rd manufacturer and only care right now because of random
+        # seed determinisim and mixed bag of static/dynamic fixture creation. Rip this out when all
+        # factories are done.
+        descriptions = [m.description for m in (self.manufacturers[0], self.manufacturers[-1])]
         params = {"description": descriptions}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), len(descriptions))
 
@@ -1462,6 +1465,8 @@ class ManufacturerTestCase(FilterTestCases.NameSlugFilterTestCase):
             )
 
     def test_device_types(self):
+        # FIXME(jathan): Hard-coding around expected values should be ripped out
+        # once all fixture factory work has completed.
         device_types = list(DeviceType.objects.filter(model__startswith="Model")[:2])
         params = {"device_types": [device_types[0].pk, device_types[1].slug]}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), len(device_types))
@@ -1481,6 +1486,8 @@ class ManufacturerTestCase(FilterTestCases.NameSlugFilterTestCase):
             )
 
     def test_platforms(self):
+        # FIXME(jathan): Hard-coding around expected values should be ripped out
+        # once all fixture factory work has completed.
         platforms = list(Platform.objects.filter(name__startswith="Platform")[:2])
         params = {"platforms": [platforms[0].pk, platforms[1].slug]}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), len(platforms))
@@ -1520,21 +1527,29 @@ class DeviceTypeTestCase(FilterTestCases.FilterTestCase):
         )
 
     def test_model(self):
+        # FIXME(jathan): Hard-coding around expected values should be ripped out
+        # once all fixture factory work has completed.
         models = ["Model 1", "Model 2"]
         params = {"model": models}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), len(models))
 
     def test_slug(self):
+        # FIXME(jathan): Hard-coding around expected values should be ripped out
+        # once all fixture factory work has completed.
         slugs = ["model-1", "model-2"]
         params = {"slug": slugs}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), len(slugs))
 
     def test_part_number(self):
+        # FIXME(jathan): Hard-coding around expected values should be ripped out
+        # once all fixture factory work has completed.
         part_numbers = ["Part Number 1", "Part Number 2"]
         params = {"part_number": part_numbers}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), len(part_numbers))
 
     def test_u_height(self):
+        # FIXME(jathan): Hard-coding around expected values should be ripped out
+        # once all fixture factory work has completed.
         heights = [1, 2]
         params = {"u_height": heights}
         self.assertEqual(
@@ -1691,6 +1706,8 @@ class DeviceTypeTestCase(FilterTestCases.FilterTestCase):
         self.assertEqual(self.filterset(params, self.queryset).qs.values_list("pk", flat=True)[0], value)
 
     def test_comments(self):
+        # FIXME(jathan): Hard-coding around expected values should be ripped out
+        # once all fixture factory work has completed.
         comments = ["Device type 1", "Device type 2"]
         params = {"comments": comments}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), len(comments))
@@ -2216,6 +2233,8 @@ class PlatformTestCase(FilterTestCases.NameSlugFilterTestCase):
         common_test_data(cls)
 
     def test_description(self):
+        # FIXME(jathan): Hard-coding around expected values should be ripped out
+        # once all fixture factory work has completed.
         descriptions = ["A", "B"]
         params = {"description": descriptions}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), len(descriptions))
@@ -2243,6 +2262,8 @@ class PlatformTestCase(FilterTestCases.NameSlugFilterTestCase):
             )
 
     def test_napalm_args(self):
+        # FIXME(jathan): Hard-coding around expected values should be ripped out
+        # once all fixture factory work has completed.
         napalm_args = ['["--test", "--arg1"]', '["--test", "--arg2"]']
         params = {"napalm_args": napalm_args}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), len(napalm_args))
