@@ -241,9 +241,13 @@ class RelationshipManager(models.Manager.from_queryset(RestrictedQuerySet)):
         """
         content_type = ContentType.objects.get_for_model(model._meta.concrete_model)
         return self.get_queryset().filter(
-            (Q(source_type=content_type) | Q(destination_type=content_type))
-            & Q(required_on__in=["source", "destination"])
+            Q(source_type=content_type, required_on="source")
+            | Q(destination_type=content_type, required_on="destination")
         )
+        # return self.get_queryset().filter(
+        #     (Q(source_type=content_type) | Q(destination_type=content_type))
+        #     & Q(required_on__in=["source", "destination"])
+        # )
 
 
 class Relationship(BaseModel, ChangeLoggedModel, NotesMixin):
@@ -591,12 +595,15 @@ class Relationship(BaseModel, ChangeLoggedModel, NotesMixin):
         return False
 
     @classmethod
-    def required_related_objects_errors(cls, instance_or_class, output_for="ui", initial_data=None):
+    def required_related_objects_errors(
+        cls, instance_or_class, output_for="ui", initial_data=None, relationships_key_specified=False
+    ):
         """
         Args:
             instance_or_class: either a model instance or class name to check its required relationships
             output_for: either "ui" or "api" depending on usage
             initial_data: submitted form/serializer data to validate against
+            relationships_key_specified: if the "relationships" key was provided or not
         Returns:
             List of field error dicts if any are found
         """
@@ -610,17 +617,33 @@ class Relationship(BaseModel, ChangeLoggedModel, NotesMixin):
             if relation.skip_required(instance_or_class, opposite_side):
                 continue
 
+            if relation.has_many(opposite_side):
+                num_required_verbose = "at least one"
+            else:
+                num_required_verbose = "a"
+
+            if output_for == "api":
+                # If this is a model instance and the relationships json data key is missing, check to see if
+                # required relationship associations already exist, and continue (ignore validation) if so
+                if (
+                    instance_or_class.present_in_database is True
+                    and initial_data.get(relation, {}).get(opposite_side, {}) == {}
+                    and not relationships_key_specified
+                ):
+                    existing_associations_count = 0
+                    for relationship, objects in instance_or_class.get_relationships()[relation.required_on].items():
+                        if len(objects) > 0:
+                            existing_associations_count += len(objects)
+
+                    if existing_associations_count > 0:
+                        continue
+
             required_model_class = getattr(relation, f"{opposite_side}_type").model_class()
             required_model_meta = required_model_class._meta
             cr_field_name = f"cr_{relation.slug}__{opposite_side}"
             name_plural = instance_or_class._meta.verbose_name_plural
             field_key = relation.slug if output_for == "api" else cr_field_name
             field_errors = {field_key: []}
-
-            if relation.has_many(opposite_side):
-                num_required_verbose = "at least one"
-            else:
-                num_required_verbose = "a"
 
             if not required_model_class.objects.exists():
 

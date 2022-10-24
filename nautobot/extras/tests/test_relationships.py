@@ -6,13 +6,13 @@ from django.core.exceptions import ValidationError
 from django.urls import reverse
 from django.utils.html import format_html
 
+from nautobot.circuits.models import CircuitType
 from nautobot.dcim.models import Device, Platform, Rack, Site
 from nautobot.dcim.tables import SiteTable
 from nautobot.dcim.tests.test_views import create_test_device
 from nautobot.ipam.models import VLAN
-from nautobot.extras.choices import RelationshipTypeChoices
+from nautobot.extras.choices import RelationshipRequiredSideChoices, RelationshipSideChoices, RelationshipTypeChoices
 from nautobot.extras.models import Relationship, RelationshipAssociation, Status
-from nautobot.tenancy.models import Tenant
 from nautobot.utilities.tables import RelationshipColumn
 from nautobot.utilities.testing import TestCase
 from nautobot.utilities.forms import (
@@ -983,17 +983,27 @@ class RelationshipTableTest(RelationshipBaseTest):
 
 
 class RequiredRelationshipTestMixin(TestCase):
-    def post_data_to(self, model_class, post_data, interact_with):
+    def send_data(self, model_class, data, interact_with, action="add", url_kwargs=None):
+
         # Helper to post data to a URL
+
         if interact_with == "ui":
             return self.client.post(
-                reverse(get_route_for_model(model_class, "add")),
-                data=post_data,
+                reverse(get_route_for_model(model_class, action), kwargs=url_kwargs),
+                data=data,
                 follow=True,
             )
-        return self.client.post(
-            reverse(get_route_for_model(model_class, "list", api=True)),
-            data=post_data,
+
+        if action == "edit":
+            http_method = "patch"
+            action = "detail"
+        else:
+            http_method = "post"
+            action = "list"
+
+        return getattr(self.client, http_method)(
+            reverse(get_route_for_model(model_class, action, api=True), kwargs=url_kwargs),
+            data=data,
             format="json",
             **self.header,
         )
@@ -1013,54 +1023,54 @@ class RequiredRelationshipTestMixin(TestCase):
         1. Try creating an object when no required target object exists
         2. Try creating an object without specifying required target object(s)
         3. Try creating an object when all required data is present
-        4. Test different API-specific interaction scenarios:
-           =================
+        4. API interaction scenarios:
+           =================================================================
            - Relationship is marked as being not required
-           - Object is created without the relationship (successful)
+           - Object is created without the required relationship data (succeeds)
            - Relationship is marked as being required
-           - Object is updated without the relationship (fails)
-           =================
-           - Relationship is marked as being not required
-           - Object is created without the relationship (successful)
-           - Relationship is marked as being required
-           - Object is updated to include the relationship (successful)
-           =================
-           - Object is created with the relationship (successful)
-           - Object is updated without specifying relationships (successful, relationship remains in place)
-           =================
-           - Object is created with the relationship (successful)
+           - Object is updated without the required relationship data (fails)
+           - Object is updated with the required relationship data (succeeds)
+           =================================================================
+           - Object is created with the required relationship data (succeeds)
+           - Object is updated without specifying "relationships" json key (succeeds, relationship remains in place)
+           - Object is created with the required relationship data (succeeds)
            - Object is updated to remove the relationship data (fails)
+           =================================================================
 
         """
 
+        # Create required relationships:
         device_ct = ContentType.objects.get_for_model(Device)
         platform_ct = ContentType.objects.get_for_model(Platform)
-        tenant_ct = ContentType.objects.get_for_model(Tenant)
+        circuittype_ct = ContentType.objects.get_for_model(CircuitType)
         vlan_ct = ContentType.objects.get_for_model(VLAN)
-        Relationship(
+        relationship_m2m = Relationship(
             name="VLANs require at least one Device",
             slug="vlans-devices-m2m",
             type="many-to-many",
             source_type=device_ct,
             destination_type=vlan_ct,
             required_on="destination",
-        ).validated_save()
-        Relationship(
+        )
+        relationship_m2m.validated_save()
+        relationship_o2m = Relationship(
             name="Platforms require at least one device",
             slug="platform-devices-o2m",
             type="one-to-many",
             source_type=platform_ct,
             destination_type=device_ct,
             required_on="source",
-        ).validated_save()
-        Relationship(
-            name="Tenant requires one platform",
-            slug="tenant-platform-o2o",
+        )
+        relationship_o2m.validated_save()
+        relationship_o2o = Relationship(
+            name="Circuit type requires one platform",
+            slug="circuittype-platform-o2o",
             type="one-to-one",
-            source_type=tenant_ct,
+            source_type=circuittype_ct,
             destination_type=platform_ct,
             required_on="source",
-        ).validated_save()
+        )
+        relationship_o2o.validated_save()
 
         tests_params = [
             # Required many-to-many:
@@ -1072,15 +1082,11 @@ class RequiredRelationshipTestMixin(TestCase):
                     if interact_with == "ui"
                     else "active",
                 },
-                "relationship_type": "m2m",
-                "target_side": "source",
-                "relation_slug": "vlans-devices-m2m",
-                "required_object_generators": [
+                "relationship": relationship_m2m,
+                "required_objects_generator": [
                     lambda: create_test_device("Device 1"),
                     lambda: create_test_device("Device 2"),
                 ],
-                "required_target": Device,
-                "required_from": VLAN,
                 "expected_errors": {
                     "api": {
                         "objects_nonexistent": "VLANs require at least one device, but no devices exist yet. "
@@ -1101,12 +1107,8 @@ class RequiredRelationshipTestMixin(TestCase):
                     "slug": "new-platform-1",
                     "napalm_args": "null",
                 },
-                "relationship_type": "o2m",
-                "target_side": "destination",
-                "relation_slug": "platform-devices-o2m",
-                "required_object_generators": [lambda: create_test_device("Device 3")],
-                "required_target": Device,
-                "required_from": Platform,
+                "relationship": relationship_o2m,
+                "required_objects_generator": [lambda: create_test_device("Device 3")],
                 "expected_errors": {
                     "api": {
                         "objects_nonexistent": "Platforms require at least one device, but no devices exist yet. "
@@ -1123,26 +1125,22 @@ class RequiredRelationshipTestMixin(TestCase):
             # Required one-to-one:
             {
                 "create_data": {
-                    "name": "New Tenant",
-                    "slug": "new-tenant",
+                    "name": "New Circuit Type",
+                    "slug": "new-circuit-type",
                 },
-                "relationship_type": "o2o",
-                "target_side": "destination",
-                "relation_slug": "tenant-platform-o2o",
-                "required_object_generators": [
+                "relationship": relationship_o2o,
+                "required_objects_generator": [
                     lambda: Platform.objects.create(name="New Platform 2", slug="new-platform-2", napalm_args="null")
                 ],
-                "required_target": Platform,
-                "required_from": Tenant,
                 "expected_errors": {
                     "api": {
-                        "objects_nonexistent": "Tenants require a platform, but no platforms exist yet. "
+                        "objects_nonexistent": "Circuit types require a platform, but no platforms exist yet. "
                         "Create a platform by posting to /api/dcim/platforms/",
-                        "objects_not_specified": 'You need to specify relationships["tenant-platform-o2o"]'
+                        "objects_not_specified": 'You need to specify relationships["circuittype-platform-o2o"]'
                         '["destination"]["objects"].',
                     },
                     "ui": {
-                        "objects_nonexistent": "Tenants require a platform, but no platforms exist yet.",
+                        "objects_nonexistent": "Circuit types require a platform, but no platforms exist yet.",
                         "objects_not_specified": "You need to select a platform.",
                     },
                 },
@@ -1155,22 +1153,29 @@ class RequiredRelationshipTestMixin(TestCase):
             self.client.force_login(self.user)
 
         for params in tests_params:
-            msg = f"Testing {params['required_from']._meta.verbose_name} relationship '{params['relation_slug']}'"
-            with self.subTest(msg, testinfo=msg):
-                # Clear any existing required target model objects that may have been created in previous subtests:
-                params["required_target"].objects.all().delete()
+
+            required_on = params["relationship"].required_on
+            target_side = RelationshipSideChoices.OPPOSITE[required_on]
+            from_model = getattr(params["relationship"], f"{required_on}_type").model_class()
+            to_model = getattr(params["relationship"], f"{target_side}_type").model_class()
+
+            test_msg = f"Testing {from_model._meta.verbose_name} relationship '{params['relationship'].slug}'"
+            with self.subTest(msg=test_msg):
+
+                # Clear any existing required target model objects that may have been created in previous subTests
+                to_model.objects.all().delete()
 
                 # Get count of existing objects:
-                existing_count = params["required_from"].objects.count()
+                existing_count = from_model.objects.count()
 
-                related_field_key = params["relation_slug"]
+                related_field_name = params["relationship"].slug
                 if interact_with == "ui":
-                    related_field_key = f'cr_{params["relation_slug"]}__{params["target_side"]}'
+                    related_field_name = f"cr_{related_field_name}__{target_side}"
 
                 create_data = params["create_data"]
 
                 # 1. Try creating an object when no required target object exists
-                response = self.post_data_to(params["required_from"], create_data, interact_with)
+                response = self.send_data(from_model, create_data, interact_with)
 
                 if interact_with == "ui":
                     for message in [
@@ -1183,7 +1188,7 @@ class RequiredRelationshipTestMixin(TestCase):
                     self.assertHttpStatus(response, 400)
                     expected_error_json = [
                         {
-                            related_field_key: [
+                            related_field_name: [
                                 params["expected_errors"]["api"]["objects_nonexistent"],
                                 params["expected_errors"]["api"]["objects_not_specified"],
                             ]
@@ -1192,18 +1197,18 @@ class RequiredRelationshipTestMixin(TestCase):
                     self.assertEqual(expected_error_json, response.json())
 
                 # Check that no object was created:
-                self.assertEqual(params["required_from"].objects.count(), existing_count)
+                self.assertEqual(from_model.objects.count(), existing_count)
 
                 # 2. Try creating an object without specifying required target object(s)
                 # Create required target objects
-                required_object_pks = [instance().pk for instance in params["required_object_generators"]]
+                required_object_pks = [instance().pk for instance in params["required_objects_generator"]]
 
                 # one-to-one relationship objects vie the UI form need to specify a pk string
                 # instead of a list of pk strings
-                if interact_with == "ui" and params["relationship_type"] == "o2o":
+                if interact_with == "ui" and params["relationship"].type == "one-to-one":
                     required_object_pks = required_object_pks[0]
 
-                response = self.post_data_to(params["required_from"], create_data, interact_with)
+                response = self.send_data(from_model, create_data, interact_with)
 
                 if interact_with == "ui":
                     self.assertContains(response, params["expected_errors"]["ui"]["objects_not_specified"])
@@ -1211,29 +1216,23 @@ class RequiredRelationshipTestMixin(TestCase):
                 elif interact_with == "api":
                     self.assertHttpStatus(response, 400)
                     expected_error_json = [
-                        {
-                            related_field_key: [
-                                params["expected_errors"]["api"]["objects_not_specified"],
-                            ]
-                        }
+                        {related_field_name: [params["expected_errors"]["api"]["objects_not_specified"]]}
                     ]
                     self.assertEqual(expected_error_json, response.json())
 
                 # Check that no object was created:
-                self.assertEqual(params["required_from"].objects.count(), existing_count)
+                self.assertEqual(from_model.objects.count(), existing_count)
 
                 # 3. Try creating an object when all required data is present
                 if interact_with == "ui":
-                    related_objects_data = {related_field_key: required_object_pks}
+                    related_objects_data = {related_field_name: required_object_pks}
 
                 elif interact_with == "api":
                     related_objects_data = {
-                        "relationships": {related_field_key: {params["target_side"]: {"objects": required_object_pks}}}
+                        "relationships": {related_field_name: {target_side: {"objects": required_object_pks}}}
                     }
 
-                response = self.post_data_to(
-                    params["required_from"], {**create_data, **related_objects_data}, interact_with
-                )
+                response = self.send_data(from_model, {**create_data, **related_objects_data}, interact_with)
 
                 if interact_with == "ui":
                     self.assertHttpStatus(response, 200)
@@ -1243,5 +1242,110 @@ class RequiredRelationshipTestMixin(TestCase):
                 elif interact_with == "api":
                     self.assertHttpStatus(response, 201)
 
-                # Check that an object was created:
-                self.assertEqual(params["required_from"].objects.count(), existing_count + 1)
+                # Check object was created:
+                self.assertEqual(from_model.objects.count(), existing_count + 1)
+
+                if interact_with == "api":
+
+                    """
+                    - Relationship is marked as being not required
+                    - Object is created without the required relationship data (succeeds)
+                    - Relationship is marked as being required
+                    - Object is updated without the required relationship data (fails)
+                    - Object is updated with the required relationship data (succeeds)
+                    """
+
+                    # Delete the object that was previously created, so we can test with the same data again
+                    from_model.objects.get(name=params["create_data"]["name"]).delete()
+                    self.assertEqual(from_model.objects.count(), existing_count)
+
+                    # Relationship is marked as being not required
+                    params["relationship"].required_on = RelationshipRequiredSideChoices.NEITHER_SIDE_REQUIRED
+                    params["relationship"].save()
+
+                    # Object is created without the required relationship data (succeeds)
+                    response = self.send_data(from_model, create_data, interact_with)
+
+                    # Check object was created
+                    self.assertHttpStatus(response, 201)
+                    self.assertEqual(from_model.objects.count(), existing_count + 1)
+
+                    # Relationship is marked as being required
+                    params["relationship"].required_on = required_on
+                    params["relationship"].save()
+
+                    # Object is updated without the required relationship data (fails)
+                    newly_created_object = from_model.objects.get(name=params["create_data"]["name"])
+                    response = self.send_data(
+                        from_model,
+                        {
+                            "name": f'{params["create_data"]["name"]} edited',
+                            "relationships": {},
+                        },
+                        interact_with,
+                        action="edit",
+                        url_kwargs={"pk": newly_created_object.pk},
+                    )
+                    self.assertHttpStatus(response, 400)
+                    expected_error_json = [
+                        {related_field_name: [params["expected_errors"]["api"]["objects_not_specified"]]}
+                    ]
+                    self.assertEqual(expected_error_json, response.json())
+
+                    # Object is updated with the required relationship data (succeeds)
+                    response = self.send_data(
+                        from_model,
+                        {**{"name": f'{params["create_data"]["name"]} edited'}, **related_objects_data},
+                        interact_with,
+                        action="edit",
+                        url_kwargs={"pk": newly_created_object.pk},
+                    )
+                    self.assertHttpStatus(response, 200)
+                    self.assertEqual(f'{params["create_data"]["name"]} edited', response.json()["name"])
+
+                    """
+                    - Object is created with the required relationship data (succeeds)
+                    - Object is updated without specifying "relationships" json key (succeeds, relationship
+                      remains in place)
+                    - Object is updated to remove the relationship data (fails)
+                    """
+
+                    # Delete the object that was previously created, so we can test with the same data again
+                    from_model.objects.get(name=f'{params["create_data"]["name"]} edited').delete()
+                    self.assertEqual(from_model.objects.count(), existing_count)
+
+                    # Object is created with the required relationship data (succeeds)
+                    response = self.send_data(from_model, {**create_data, **related_objects_data}, interact_with)
+                    self.assertHttpStatus(response, 201)
+                    self.assertEqual(params["create_data"]["name"], response.json()["name"])
+                    self.assertEqual(from_model.objects.count(), existing_count + 1)
+
+                    # Object is updated without specifying "relationships" json key
+                    # (succeeds, relationship remains in place)
+                    newly_created_object = from_model.objects.get(name=params["create_data"]["name"])
+                    response = self.send_data(
+                        from_model,
+                        {"name": f'{params["create_data"]["name"]} changed'},
+                        interact_with,
+                        action="edit",
+                        url_kwargs={"pk": newly_created_object.pk},
+                    )
+                    self.assertHttpStatus(response, 200)
+                    self.assertEqual(f'{params["create_data"]["name"]} changed', response.json()["name"])
+
+                    # Object is updated to remove the relationship data (fails)
+                    response = self.send_data(
+                        from_model,
+                        {
+                            "name": f'{params["create_data"]["name"]} changed again',
+                            "relationships": {},
+                        },
+                        interact_with,
+                        action="edit",
+                        url_kwargs={"pk": newly_created_object.pk},
+                    )
+                    self.assertHttpStatus(response, 400)
+                    expected_error_json = [
+                        {related_field_name: [params["expected_errors"]["api"]["objects_not_specified"]]}
+                    ]
+                    self.assertEqual(expected_error_json, response.json())
