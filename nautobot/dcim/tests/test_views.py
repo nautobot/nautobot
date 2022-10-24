@@ -5,6 +5,7 @@ import yaml
 
 from django.contrib.auth import get_user_model
 from django.contrib.contenttypes.models import ContentType
+from django.db.models import Q
 from django.test import override_settings
 from django.urls import reverse
 from netaddr import EUI
@@ -2292,8 +2293,6 @@ class CableTestCase(
             "path": self._get_url("delete", cables[0]),
             "data": post_data({"confirm": True}),
         }
-
-        from django.db.models import Q
 
         termination_ct = ContentType.objects.get_for_model(CircuitTermination)
         interface_ct = ContentType.objects.get_for_model(Interface)
