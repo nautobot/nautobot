@@ -244,10 +244,6 @@ class RelationshipManager(models.Manager.from_queryset(RestrictedQuerySet)):
             Q(source_type=content_type, required_on="source")
             | Q(destination_type=content_type, required_on="destination")
         )
-        # return self.get_queryset().filter(
-        #     (Q(source_type=content_type) | Q(destination_type=content_type))
-        #     & Q(required_on__in=["source", "destination"])
-        # )
 
 
 class Relationship(BaseModel, ChangeLoggedModel, NotesMixin):
