@@ -627,7 +627,7 @@ class Relationship(BaseModel, ChangeLoggedModel, NotesMixin):
                     and not relationships_key_specified
                 ):
                     existing_associations_count = 0
-                    for relationship, objects in instance_or_class.get_relationships()[relation.required_on].items():
+                    for _, objects in instance_or_class.get_relationships()[relation.required_on].items():
                         if len(objects) > 0:
                             existing_associations_count += len(objects)
 
