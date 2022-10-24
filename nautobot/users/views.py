@@ -70,7 +70,6 @@ class LoginView(View):
 
             # Authenticate user
             auth_login(request, form.get_user())
-            logger.info(f"User {request.user} successfully authenticated")
             messages.info(request, f"Logged in as {request.user}.")
 
             return self.redirect_to_next(request, logger)
@@ -106,12 +105,8 @@ class LogoutView(View):
     """
 
     def get(self, request):
-        logger = logging.getLogger("nautobot.auth.logout")
-
         # Log out the user
-        username = request.user
         auth_logout(request)
-        logger.info(f"User {username} has logged out")
         messages.info(request, "You have logged out.")
 
         # Delete session key cookie (if set) upon logout

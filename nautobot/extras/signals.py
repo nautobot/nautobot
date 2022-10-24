@@ -6,6 +6,7 @@ import logging
 from datetime import timedelta
 
 from cacheops.signals import cache_invalidated, cache_read
+from django.contrib.auth.signals import user_logged_in, user_logged_out
 from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ValidationError
 from django.db import transaction
@@ -298,3 +299,18 @@ def refresh_job_models(sender, *, apps, **kwargs):
             )
             job_model.installed = False
             job_model.save()
+
+
+#
+# Authentication
+#
+
+
+@receiver(user_logged_in)
+def user_logged_in_signal(sender, request, user, **kwargs):
+    logger.info(f"User {user} successfully authenticated")
+
+
+@receiver(user_logged_out)
+def user_logged_out_signal(sender, request, user, **kwargs):
+    logger.info(f"User {user} has logged out")
