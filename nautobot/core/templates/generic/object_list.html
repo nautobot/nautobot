@@ -59,25 +59,25 @@
 <div class="filters-applied">
     <b>Filters:</b>
     {% for field, values in filter_params %}
-    <span class="select2 select2-container select2-container--bootstrap display-inline" dir="ltr">
+    <span class="filter-container display-inline" dir="ltr">
         <span class="selection">
         <span
-                class="select2-selection select2-selection--multiple p-5">
+                class="filter-selection filter-selection--multiple p-5">
             <b>{{ field }}:</b>
             <span
-                    class="select2-selection__clear remove-filter-param m-0"
+                    class="filter-selection__clear remove-filter-param m-0"
                     title="Remove all items"
                     data-field-type="parent"
                     data-field-value={{ field }}
             >×</span>
-            <ul class="select2-selection__rendered">
+            <ul class="filter-selection__rendered">
                 {% for value in values %}
                 <li
-                        class="select2-selection__choice chip"
+                        class="filter-selection__choice chip"
                         title="{{ value }}"
                 >
                     <span
-                            class="select2-selection__choice__remove remove-filter-param"
+                            class="filter-selection__choice__remove remove-filter-param"
                             data-field-type="child"
                             data-field-parent={{ field }}
                             data-field-value={{ value }}
