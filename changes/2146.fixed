@@ -1,0 +1,1 @@
+Add signals to log when a user logs in and logs out to fix a bug when SSO logins were not being logged.
