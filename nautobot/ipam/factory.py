@@ -4,8 +4,6 @@ import factory
 import faker
 import math
 
-from django.db.models import Q
-
 from nautobot.core.factory import OrganizationalModelFactory, PrimaryModelFactory
 from nautobot.dcim.models import Location, Site
 from nautobot.extras.models import Status
@@ -294,43 +292,35 @@ class VLANGroupFactory(OrganizationalModelFactory):
             "has_description",
             "has_location",
             "has_site",
-            "_location",
-            "_site",
         )
+
+    class Params:
+        unique_name = UniqueFaker("word", part_of_speech="noun")
 
     # TODO: name is not globally unique, but (site, name) tuple must be.
     # The likelihood of collision with random names is pretty low, but non-zero.
     # We might want to consider *intentionally* using non-globally-unique names for testing purposes?
-    name = factory.LazyFunction(lambda: faker.Faker().word(part_of_speech="noun").upper())
+    name = factory.LazyAttribute(lambda o: o.unique_name.upper())
 
     has_description = factory.Faker("pybool")
     description = factory.Maybe("has_description", factory.Faker("text", max_nb_chars=200), "")
 
     has_location = factory.Faker("pybool")
-
-    @factory.lazy_attribute
-    def _location(self):
-        eligible_site_list = Site.objects.exclude(
-            pk__in=list(VLANGroup.objects.filter(name=self.name).values_list("site", flat=True))
-        )
-        eligible_locations = Location.objects.filter(Q(site__in=eligible_site_list))
-        if eligible_locations.exists():
-            return factory.random.randgen.choice(eligible_locations)
-        return None
-
-    location = factory.Maybe("has_location", _location, None)
+    location = factory.Maybe(
+        "has_location", random_instance(lambda: Location.objects.get_for_model(VLANGroup), allow_null=False), None
+    )
 
     has_site = factory.Faker("pybool")
 
-    @factory.lazy_attribute
-    def _site(self):
-        if self.location:
-            return self.location.site or self.location.base_site
-        return factory.random.randgen.choice(
-            Site.objects.exclude(pk__in=list(VLANGroup.objects.filter(name=self.name).values_list("site", flat=True)))
-        )
-
-    site = factory.Maybe("has_location", _site, None)
+    site = factory.Maybe(
+        "has_location",
+        factory.LazyAttribute(lambda l: l.location.site or l.location.base_site),
+        factory.Maybe(
+            "has_site",
+            factory.LazyAttribute(lambda l: factory.random.randgen.choice(Site.objects.all())),
+            None,
+        ),
+    )
 
 
 class VLANFactory(PrimaryModelFactory):

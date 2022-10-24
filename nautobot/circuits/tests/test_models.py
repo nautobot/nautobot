@@ -55,7 +55,7 @@ class CircuitTerminationModelTestCase(TestCase):
         ct = CircuitTermination(
             circuit=self.circuit,
             term_side=CircuitTerminationSideChoices.SIDE_A,
-            site=self.site,
+            site=self.location_2.site,
             location=self.location_2,
         )
         ct.validated_save()

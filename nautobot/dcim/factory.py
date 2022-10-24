@@ -179,31 +179,29 @@ class LocationFactory(DjangoModelFactory):
             yield lt
 
     @factory.lazy_attribute
-    def has_parent(self):
-        if not self.location_type.nestable:
-            return bool(self.location_type.parent)
+    def parent(self):
+        """
+        The parent attribute of all the location types other than root and campus are deterministic.
+        There is a 50% chance whether a root or campus type location (both nestable) have a parent.
+        """
+        candidate_parents = Q()
+        # LocationType that does have a parent
+        if self.location_type.parent is not None:
+            candidate_parents |= Q(location_type=self.location_type.parent)
+            if self.location_type.nestable:
+                candidate_parents |= Q(location_type=self.location_type)
+        # LocationType that does not have a parent, but could be nestable
         else:
-            return Faker().boolean()
-
-    @factory.lazy_attribute
-    def _parent(self):
-        if not self.location_type.nestable:
-            candidate_parents = Location.objects.filter(location_type=self.location_type.parent)
-        elif self.location_type.parent is not None:
-            candidate_parents = Location.objects.filter(
-                Q(location_type=self.location_type.parent) | Q(location_type=self.location_type)
-            )
-        else:
-            candidate_parents = Location.objects.filter(location_type=self.location_type)
-
-        if candidate_parents.exists():
-            return factory.random.randgen.choice(candidate_parents)
+            if self.location_type.nestable:
+                # 50% chance to have a parent
+                if not Faker().pybool():
+                    return
+                candidate_parents |= Q(location_type=self.location_type)
+        parents = Location.objects.filter(candidate_parents)
+        if parents.exists():
+            return factory.random.randgen.choice(parents)
         return None
 
-    parent = factory.Maybe("has_parent", _parent)
-
-    # we can't use `l.has_parent`` here because even tho `has_parent` could be true, `parent`` attribute could still be None
-    # see _parent(), So we check l.parent directly
     has_site = factory.LazyAttribute(lambda l: not bool(l.parent))
     site = factory.Maybe("has_site", random_instance(Site, allow_null=False), None)
 
