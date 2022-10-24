@@ -1,0 +1,1 @@
+Added `base_site` filter to `LocationFilterSet`, allowing for filtering Locations by their root ancestor's Site.

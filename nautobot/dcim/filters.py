@@ -348,7 +348,7 @@ class LocationFilterSet(NautobotFilterSet, StatusModelFilterSetMixin, TenancyFil
             max_depth = max(loc.tree_depth for loc in Location.objects.with_tree_fields())
             filter_name = "site__in"
             params = Q(**{filter_name: value})
-            for i in range(max_depth):
+            for _i in range(max_depth):
                 filter_name = f"parent__{filter_name}"
                 params |= Q(**{filter_name: value})
             return params
