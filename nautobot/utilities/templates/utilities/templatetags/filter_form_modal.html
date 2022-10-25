@@ -44,42 +44,40 @@
                     {% endif %}
                     {% if dynamic_filter_form %}
                     <div id="advanced-filter" role="tabpanel" class="tab-pane {% if not filter_form %} active {% endif %}">
-                        {% if dynamic_filter_form %}
-                            <form id="dynamic-filter-form" class="form-horizontal" method="get" action=".">
-                                <div class="">
-                                    <table class="table" id="filterform-table">
-                                        {{ dynamic_filter_form.management_form }}
-                                        {% for form in dynamic_filter_form %}
-                                            {% if forloop.first %}
-                                                <thead>
-                                                    <tr>
-                                                        {% for field in form.visible_fields %}
-                                                            <th>{{ field.label|capfirst }}</th>
-                                                        {% endfor %}
-                                                    </tr>
-                                                </thead>
-                                            {% endif %}
-                                            <tr class="formset_row-dynamic-filterform">
-                                                {% for field in form.visible_fields %}
-                                                    <td>
-                                                        {{ field }}
-                                                    </td>
-                                                {% endfor %}
-                                            </tr>
-                                        {% endfor %}
-                                    </table>
-                                </div>
+                        <form id="dynamic-filter-form" class="form-horizontal" method="get" action=".">
+                            <div class="">
+                                <table class="table" id="filterform-table">
+                                    {{ dynamic_filter_form.management_form }}
+                                    {% for form in dynamic_filter_form %}
+                                        {% if forloop.first %}
+                                            <thead>
+                                                <tr>
+                                                    {% for field in form.visible_fields %}
+                                                        <th>{{ field.label|capfirst }}</th>
+                                                    {% endfor %}
+                                                </tr>
+                                            </thead>
+                                        {% endif %}
+                                        <tr class="formset_row-dynamic-filterform">
+                                            {% for field in form.visible_fields %}
+                                                <td>
+                                                    {{ field }}
+                                                </td>
+                                            {% endfor %}
+                                        </tr>
+                                    {% endfor %}
+                                </table>
+                            </div>
 
-                                <div class="text-right noprint">
-                                    <button type="submit" class="btn btn-primary">
-                                        <span class="mdi mdi-magnify" aria-hidden="true"></span> Apply
-                                    </button>
-                                    <a href="." class="btn btn-default">
-                                        <span class="mdi mdi-close-thick" aria-hidden="true"></span> Cancel
-                                    </a>
-                                </div>
-                            </form>
-                        {% endif %}
+                            <div class="text-right noprint">
+                                <button type="submit" class="btn btn-primary">
+                                    <span class="mdi mdi-magnify" aria-hidden="true"></span> Apply
+                                </button>
+                                <a href="." class="btn btn-default">
+                                    <span class="mdi mdi-close-thick" aria-hidden="true"></span> Cancel
+                                </a>
+                            </div>
+                        </form>
                     </div>
                     {% endif %}
                 </div>

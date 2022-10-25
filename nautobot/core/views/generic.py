@@ -262,10 +262,11 @@ class ObjectListView(ObjectPermissionRequiredMixin, View):
                     request.GET, self.filterset
                 )
                 dynamic_filter_form = DynamicFilterFormSet(filterset_class=self.filterset, data=factory_formset_params)
-                filter_form = self.filterset_form(filter_params, label_suffix="")
             else:
                 dynamic_filter_form = DynamicFilterFormSet(filterset_class=self.filterset)
-                filter_form = self.filterset_form(label_suffix="")
+
+            if self.filterset_form:
+                filter_form = self.filterset_form(filter_params, label_suffix="")
 
         # Check for export template rendering
         if request.GET.get("export"):
