@@ -151,7 +151,7 @@
     {% endblock %}
 </div>
 {% if table %}{% table_config_form table table_name="ObjectTable" %}{% endif %}
-{% dynamic_filter_form_modal filter_form %}
+{% filter_form_modal filter_form dynamic_filter_form %}
 {% endblock %}
 
 {% block javascript %}

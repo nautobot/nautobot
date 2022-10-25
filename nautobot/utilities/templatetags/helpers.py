@@ -594,11 +594,15 @@ def table_config_form(table, table_name=None):
     }
 
 
-@register.inclusion_tag("utilities/templatetags/dynamic_filter_form_modal.html")
-def dynamic_filter_form_modal(form, form_name="DynamicFilterForm"):
+@register.inclusion_tag("utilities/templatetags/filter_form_modal.html")
+def filter_form_modal(
+    filter_form, dynamic_filter_form, filter_form_name="DynamicFilterForm", dynamic_filter_form_name="DynamicFilterForm"
+):
     return {
-        "form": form,
-        "form_name": form_name,
+        "filter_form": filter_form,
+        "filter_form_name": filter_form_name,
+        "dynamic_filter_form": dynamic_filter_form,
+        "dynamic_filter_form_name": dynamic_filter_form_name,
     }
 
 

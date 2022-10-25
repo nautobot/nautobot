@@ -239,6 +239,8 @@ class ObjectListView(ObjectPermissionRequiredMixin, View):
 
         display_filter_params = []
         dynamic_filter_form = None
+        filter_form = None
+
         if self.filterset:
             filter_params = self.get_filter_params(request)
             filterset = self.filterset(filter_params, self.queryset)
@@ -260,8 +262,10 @@ class ObjectListView(ObjectPermissionRequiredMixin, View):
                     request.GET, self.filterset
                 )
                 dynamic_filter_form = DynamicFilterFormSet(filterset_class=self.filterset, data=factory_formset_params)
+                filter_form = self.filterset_form(filter_params, label_suffix="")
             else:
                 dynamic_filter_form = DynamicFilterFormSet(filterset_class=self.filterset)
+                filter_form = self.filterset_form(label_suffix="")
 
         # Check for export template rendering
         if request.GET.get("export"):
@@ -330,7 +334,8 @@ class ObjectListView(ObjectPermissionRequiredMixin, View):
             "action_buttons": valid_actions,
             "table_config_form": table_config_form,
             "filter_params": display_filter_params,
-            "filter_form": dynamic_filter_form,
+            "filter_form": filter_form,
+            "dynamic_filter_form": dynamic_filter_form,
             "search_form": search_form,
             "list_url": validated_viewname(model, "list"),
             "title": bettertitle(model._meta.verbose_name_plural),
