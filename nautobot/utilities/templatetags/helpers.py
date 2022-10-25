@@ -596,7 +596,11 @@ def table_config_form(table, table_name=None):
 
 @register.inclusion_tag("utilities/templatetags/filter_form_modal.html")
 def filter_form_modal(
-    filter_form, dynamic_filter_form, model_plural_name, filter_form_name="FilterForm", dynamic_filter_form_name="DynamicFilterForm",
+    filter_form,
+    dynamic_filter_form,
+    model_plural_name,
+    filter_form_name="FilterForm",
+    dynamic_filter_form_name="DynamicFilterForm",
 ):
     return {
         "model_plural_name": model_plural_name,
