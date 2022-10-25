@@ -1279,7 +1279,7 @@ class JobLogEntryTest(TestCase):
 
     def test_to_csv_with_log_object(self):
         """Check that `to_csv` returns the correct data from the JobLogEntry model."""
-        expected_data = ("2030-05-26 15:37:36", "run", "success", "", "Django Test 2")
+        expected_data = ("2030-05-26 15:37:36", "run", "success", "ams01-dist-01", "Django Test 2")
 
         joblogentry_a = JobLogEntry(
             job_result=self.job_result,
