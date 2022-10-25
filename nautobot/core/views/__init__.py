@@ -4,13 +4,14 @@ import sys
 
 from django.conf import settings
 from django.contrib.auth.mixins import AccessMixin
-from django.http import HttpResponseServerError, JsonResponse
+from django.http import HttpResponseServerError, JsonResponse, HttpResponseForbidden
 from django.shortcuts import render
 from django.template import loader, RequestContext, Template
 from django.template.exceptions import TemplateDoesNotExist
 from django.urls import reverse
 from django.views.decorators.csrf import requires_csrf_token
 from django.views.defaults import ERROR_500_TEMPLATE_NAME, page_not_found
+from django.views.csrf import csrf_failure as _csrf_failure
 from django.views.generic import TemplateView, View
 from packaging import version
 from graphene_django.views import GraphQLView
@@ -194,6 +195,20 @@ def server_error(request, template_name=ERROR_500_TEMPLATE_NAME):
             }
         )
     )
+
+
+def csrf_failure(request, reason="", template_name="403_csrf_failure.html"):
+    """Custom 403 CSRF failure handler to account for additional context.
+
+    If Nautobot is set to DEBUG the default view for csrf_failure.
+    `403_csrf_failure.html` template name is used over `403_csrf.html` to account for
+    additional context that is required to render the inherited templates.
+    """
+    if settings.DEBUG:
+        return _csrf_failure(request, reason=reason)
+    t = loader.get_template(template_name)
+    context = {"settings": settings, "reason": reason}
+    return HttpResponseForbidden(t.render(context), content_type="text/html")
 
 
 class CustomGraphQLView(GraphQLView):

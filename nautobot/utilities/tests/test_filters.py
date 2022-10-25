@@ -671,9 +671,9 @@ class BaseFilterSetTest(TestCase):
 
     def test_tree_node_multiple_choice_filter(self):
         self.assertIsInstance(self.filters["treeforeignkeyfield"], TreeNodeMultipleChoiceFilter)
-        self.assertEqual(self.filters["treeforeignkeyfield"].lookup_expr, "in")
+        self.assertEqual(self.filters["treeforeignkeyfield"].lookup_expr, "exact")
         self.assertEqual(self.filters["treeforeignkeyfield"].exclude, False)
-        self.assertEqual(self.filters["treeforeignkeyfield__n"].lookup_expr, "in")
+        self.assertEqual(self.filters["treeforeignkeyfield__n"].lookup_expr, "exact")
         self.assertEqual(self.filters["treeforeignkeyfield__n"].exclude, True)
 
 

@@ -189,16 +189,6 @@ A boolean that turns on/off health checks for the Redis server connection utiliz
 
 ---
 
-## CACHEOPS_REDIS
-
-Default: `'redis://localhost:6379/1'`
-
-Environment Variable: `NAUTOBOT_CACHEOPS_REDIS`
-
-The Redis connection string to use for caching.
-
----
-
 ## CELERY_BROKER_TRANSPORT_OPTIONS
 
 Default: `{}`
@@ -342,8 +332,6 @@ Previously this setting was called `CORS_ORIGIN_REGEX_WHITELIST`, which still wo
 
 Default: `False`
 
-Environment Variable: `NAUTOBOT_DISABLE_PREFIX_LIST_HIERARCHY`
-
 This setting disables rendering of the IP prefix hierarchy (parent/child relationships) in the IPAM prefix list view. With large sets of prefixes, users may encounter a performance penalty when trying to load the prefix list view due to the nature of calculating the parent/child relationships. This setting allows users to disable the hierarchy and instead only render a flat list of all prefixes in the table.
 
 A later release of Nautobot will address the underlying performance issues, and likely remove this configuration option.
@@ -452,11 +440,27 @@ The value of this variable can also be customized by setting the environment var
 
 ---
 
+## GRAPHQL_COMPUTED_FIELD_PREFIX
+
+Default: `"cpf"`
+
+By default, all computed fields in GraphQL will be prefixed with `cf`. A computed field named `my_field` will appear in GraphQL as `cpf_my_field` by default. It's possible to change or remove the prefix by setting the value of `GRAPHQL_COMPUTED_FIELD_PREFIX`.
+
+---
+
 ## GRAPHQL_CUSTOM_FIELD_PREFIX
 
-Default: `cf`
+Default: `"cf"`
 
-By default, all custom fields in GraphQL will be prefixed with `cf`. A custom field name `my_field` will appear in GraphQL as `cf_my_field` by default. It's possible to change or remove the prefix by setting the value of `GRAPHQL_CUSTOM_FIELD_PREFIX`.
+By default, all custom fields in GraphQL will be prefixed with `cf`. A custom field named `my_field` will appear in GraphQL as `cf_my_field` by default. It's possible to change or remove the prefix by setting the value of `GRAPHQL_CUSTOM_FIELD_PREFIX`.
+
+---
+
+## GRAPHQL_RELATIONSHIP_PREFIX
+
+Default: `"rel"`
+
+By default, all relationship associations in GraphQL will be prefixed with `rel`. A relationship named `my_relationship` will appear in GraphQL as `rel_my_relationship` by default. It's possible to change or remove the prefix by setting the value of `GRAPHQL_RELATIONSHIP_PREFIX`.
 
 ---
 
@@ -996,51 +1000,75 @@ addresses (and [`DEBUG`](#debug) is true).
 
 ### LOGGING
 
-Default: `{}` (Empty dictionary)
-
-By default, all messages of INFO severity or higher will be logged to the console. Additionally, if [`DEBUG`](#debug) is False and email access has been configured, ERROR and CRITICAL messages will be emailed to the users defined in [`ADMINS`](#admins).
-
-The Django framework on which Nautobot runs allows for the customization of logging format and destination. Please consult the [Django logging documentation](https://docs.djangoproject.com/en/stable/topics/logging/) for more information on configuring this setting. Below is an example which will write all INFO and higher messages to a local file and log DEBUG and higher messages from Nautobot itself with higher verbosity:
+Default:
 
 ```python
-LOGGING = {
-    'version': 1,
-    'disable_existing_loggers': False,
-    'formatters': {
-        'normal': {
-            'format': '%(asctime)s.%(msecs)03d %(levelname)-7s %(name)s : %(message)s',
-            'datefmt': '%H:%M:%S',
+{
+    "version": 1,
+    "disable_existing_loggers": False,
+    "formatters": {
+        "normal": {
+            "format": "%(asctime)s.%(msecs)03d %(levelname)-7s %(name)s :\n  %(message)s",
+            "datefmt": "%H:%M:%S",
         },
-        'verbose': {
-            'format': '%(asctime)s.%(msecs)03d %(levelname)-7s %(name)-20s %(filename)-15s %(funcName)30s() :\n  %(message)s',
-            'datefmt': '%H:%M:%S',
+        "verbose": {
+            "format": "%(asctime)s.%(msecs)03d %(levelname)-7s %(name)-20s %(filename)-15s %(funcName)30s() :\n  %(message)s",
+            "datefmt": "%H:%M:%S",
         },
     },
-    'handlers': {
-        'file': {'level': 'INFO', 'class': 'logging.FileHandler', 'filename': '/var/log/nautobot.log', 'formatter': 'normal'},
-        'normal_console': {'level': 'INFO', 'class': 'logging.StreamHandler', 'formatter': 'normal'},
-        'verbose_console': {'level': 'DEBUG', 'class': 'logging.StreamHandler', 'formatter': 'verbose'},
+    "handlers": {
+        "normal_console": {
+            "level": "INFO",
+            "class": "logging.StreamHandler",
+            "formatter": "normal",
+        },
+        "verbose_console": {
+            "level": "DEBUG",
+            "class": "logging.StreamHandler",
+            "formatter": "verbose",
+        },
     },
-    'loggers': {
-        'django': {'handlers': ['file', 'normal_console'], 'level': 'INFO'},
-        'nautobot': {'handlers': ['file', 'verbose_console'], 'level': 'DEBUG'},
+    "loggers": {
+        "django": {"handlers": ["normal_console"], "level": "INFO"},
+        "nautobot": {
+            "handlers": ["verbose_console" if DEBUG else "normal_console"],
+            "level": LOG_LEVEL,
+        },
     },
 }
 ```
 
-Additional examples are available in [`/examples/logging`](https://github.com/nautobot/nautobot/tree/develop/examples/logging).
+This translates to:
+
+* all messages from Django and from Nautobot of INFO severity or higher will be logged to the console.
+* if [`DEBUG`](#debug) is True, Nautobot DEBUG messages will also be logged, and all Nautobot messages will be logged with a more verbose format including the filename and function name that originated each log message.
+
+The above default log formatters split each log message across two lines of output for greater readability, which is useful for local observation and troubleshooting, but you may find it impractical to use in production environments that expect one line per log message. Fortunately, the Django framework on which Nautobot runs allows for extensive customization of logging format and destination. Please consult the [Django logging documentation](https://docs.djangoproject.com/en/stable/topics/logging/) for more information on configuring this setting.
+
+Below is an example configuration extension which will additionally write all INFO and higher messages to a local file:
+
+```python
+LOGGING["handlers"]["file"] = {
+    "level": "INFO",
+    "class": "logging.FileHandler",
+    "filename": "/var/log/nautobot.log",
+    "formatter": "normal",
+}
+LOGGING["loggers"]["django"]["handlers"] += ["file"]
+LOGGING["loggers"]["nautobot"]["handlers"] += ["file"]
+```
+
+Additional examples are available in the [`/examples/logging`](https://github.com/nautobot/nautobot/tree/develop/examples/logging) directory in the Nautobot repository.
 
 #### Available Loggers
 
 * `django.*` - Generic Django operations (HTTP requests/responses, etc.)
 * `nautobot.<app>.<module>` - Generic form for model- or module-specific log messages
 * `nautobot.auth.*` - Authentication events
-* `nautobot.api.views.*` - Views which handle business logic for the REST API
 * `nautobot.jobs.*` - Job execution (`* = JobClassName`)
 * `nautobot.graphql.*` - [GraphQL](../additional-features/graphql.md) initialization and operation.
 * `nautobot.plugins.*` - Plugin loading and activity
 * `nautobot.views.*` - Views which handle business logic for the web UI
-* `rq.worker` - Background task handling
 
 ---
 

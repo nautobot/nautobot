@@ -5,6 +5,7 @@ import yaml
 
 from django.contrib.auth import get_user_model
 from django.contrib.contenttypes.models import ContentType
+from django.db.models import Q
 from django.test import override_settings
 from django.urls import reverse
 from netaddr import EUI
@@ -33,6 +34,7 @@ from nautobot.dcim.choices import (
 from nautobot.dcim.filters import ConsoleConnectionFilterSet, InterfaceConnectionFilterSet, PowerConnectionFilterSet
 from nautobot.dcim.models import (
     Cable,
+    CablePath,
     ConsolePort,
     ConsolePortTemplate,
     ConsoleServerPort,
@@ -81,7 +83,7 @@ from nautobot.extras.models import (
 from nautobot.ipam.models import VLAN, IPAddress
 from nautobot.tenancy.models import Tenant
 from nautobot.users.models import ObjectPermission
-from nautobot.utilities.testing import ViewTestCases, extract_page_body, post_data
+from nautobot.utilities.testing import ViewTestCases, extract_page_body, ModelViewTestCase, post_data
 
 # Use the proper swappable User model
 User = get_user_model()
@@ -2272,9 +2274,6 @@ class CableTestCase(
             "data": post_data({"confirm": True}),
         }
 
-        from nautobot.dcim.models import CablePath
-        from django.db.models import Q
-
         termination_ct = ContentType.objects.get_for_model(CircuitTermination)
         interface_ct = ContentType.objects.get_for_model(Interface)
 
@@ -2789,3 +2788,32 @@ class PowerFeedTestCase(ViewTestCases.PrimaryObjectViewTestCase):
 
         url = reverse("dcim:powerfeed", kwargs=dict(pk=powerfeed.pk))
         self.assertHttpStatus(self.client.get(url), 200)
+
+
+class PathTraceViewTestCase(ModelViewTestCase):
+    def test_get_cable_path_trace_do_not_throw_error(self):
+        """
+        Assert selecting a related path in cable trace view loads successfully.
+
+        (https://github.com/nautobot/nautobot/issues/1741)
+        """
+        self.add_permissions("dcim.view_cable", "dcim.view_rearport")
+        active = Status.objects.get(slug="active")
+        connected = Status.objects.get(slug="connected")
+        manufacturer = Manufacturer.objects.create(name="Test Manufacturer 1", slug="test-manufacturer-1")
+        devicetype = DeviceType.objects.create(manufacturer=manufacturer, model="Device Type 1", slug="device-type-1")
+        devicerole = DeviceRole.objects.create(name="Test Device Role 1", slug="test-device-role-1", color="ff0000")
+        site = Site.objects.create(name="Site 1", slug="site-1", status=active)
+        device = Device.objects.create(
+            device_type=devicetype, device_role=devicerole, name="Device 1", site=site, status=active
+        )
+        obj = RearPort.objects.create(device=device, name="Rear Port 1", type=PortTypeChoices.TYPE_8P8C)
+        peer_obj = Interface.objects.create(device=device, name="eth0", status=active)
+        Cable.objects.create(termination_a=obj, termination_b=peer_obj, label="Cable 1", status=connected)
+
+        url = reverse("dcim:rearport_trace", args=[obj.pk])
+        cablepath_id = CablePath.objects.first().id
+        response = self.client.get(url + f"?cablepath_id={cablepath_id}")
+        self.assertHttpStatus(response, 200)
+        content = extract_page_body(response.content.decode(response.charset))
+        self.assertInHTML("<h1>Cable Trace for Rear Port Rear Port 1</h1>", content)
