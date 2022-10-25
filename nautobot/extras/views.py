@@ -1516,22 +1516,7 @@ class JobResultView(generic.ObjectView):
             response["Content-Disposition"] = f"attachment; filename={filename}"
             return response
 
-        changelog_url = None
-
-        if isinstance(instance, ChangeLoggedModel):
-            changelog_url = instance.get_changelog_url()
-
-        return render(
-            request,
-            self.get_template_name(),
-            {
-                "object": instance,
-                "verbose_name": self.queryset.model._meta.verbose_name,
-                "verbose_name_plural": self.queryset.model._meta.verbose_name_plural,
-                "changelog_url": changelog_url,  # TODO: Remove in 2.0. This information can be retrieved from the object itself now.
-                **self.get_extra_context(request, instance),
-            },
-        )
+        return super().get(request, *args, **kwargs)
 
     def get_extra_context(self, request, instance):
         associated_record = None
