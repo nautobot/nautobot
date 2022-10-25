@@ -601,8 +601,10 @@ class VMInterfaceTestCase(FilterTestCases.FilterTestCase):
         vminterfaces[2].tagged_vlans.add(cls.vlan2)
 
         # Assign primary IPs for filtering
-        IPAddress.objects.create(address="192.0.2.1/24", assigned_object=vminterfaces[0])
-        IPAddress.objects.create(address="fe80::8ef:3eff:fe4c:3895/24", assigned_object=vminterfaces[1])
+        cls.ipaddresses = (
+            IPAddress.objects.create(address="192.0.2.1/24", assigned_object=vminterfaces[0]),
+            IPAddress.objects.create(address="fe80::8ef:3eff:fe4c:3895/24", assigned_object=vminterfaces[1]),
+        )
 
         cls.tag = Tag.objects.get_for_model(VMInterface).first()
         vminterfaces[0].tags.add(cls.tag)
@@ -642,8 +644,7 @@ class VMInterfaceTestCase(FilterTestCases.FilterTestCase):
 
     def test_ip_addresses(self):
         with self.subTest("Primary Addresses"):
-            ipaddress = IPAddress.objects.last()
-            params = {"ip_addresses": ["192.0.2.1/24", ipaddress.id]}
+            params = {"ip_addresses": [self.ipaddresses[0].address, self.ipaddresses[1].id]}
             self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
 
         with self.subTest("Has Primary Addresses"):
