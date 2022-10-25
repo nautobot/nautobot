@@ -33,10 +33,10 @@ from nautobot.utilities.forms import restrict_form_fields
 from nautobot.utilities.utils import (
     copy_safe_request,
     count_related,
+    csv_format,
     get_table_for_model,
     prepare_cloned_fields,
     pretty_print_query,
-    csv_format,
 )
 from nautobot.utilities.tables import ButtonsColumn
 from nautobot.utilities.views import ObjectPermissionRequiredMixin
@@ -1509,17 +1509,17 @@ class JobResultView(generic.ObjectView):
         """
         instance = get_object_or_404(self.queryset, **kwargs)
 
+        if "export" in request.GET:
+            response = HttpResponse(self.queryset_to_csv(instance), content_type="text/csv")
+            underscore_filename = f"{instance.job_model.slug.replace('-', '_')}_{instance.completed}"
+            filename = f"{underscore_filename}_logs.csv"
+            response["Content-Disposition"] = f"attachment; filename={filename}"
+            return response
+
         changelog_url = None
 
         if isinstance(instance, ChangeLoggedModel):
             changelog_url = instance.get_changelog_url()
-
-        if "export" in request.GET:
-            response = HttpResponse(self.queryset_to_csv(instance), content_type="text/csv")
-            underscore_filename = instance.job_model.slug.replace("-", "_")
-            filename = f"{underscore_filename}_logs.csv"
-            response["Content-Disposition"] = f"attachment; filename={filename}"
-            return response
 
         return render(
             request,
