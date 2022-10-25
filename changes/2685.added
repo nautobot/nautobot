@@ -1,0 +1,2 @@
+Added watchdog dev-dependency explicitly.
+Added watchmedo command to worker container to allow container to restart on file change and documented.
