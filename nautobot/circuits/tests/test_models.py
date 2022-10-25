@@ -21,7 +21,7 @@ class CircuitTerminationModelTestCase(TestCase):
         cls.provider_network = ProviderNetwork.objects.create(name="Provider Network 1", provider=provider)
         cls.location_1 = Location.objects.filter(location_type=location_type_1)[0]
         cls.location_2 = Location.objects.filter(location_type=location_type_2)[0]
-        cls.site = cls.location_1.site
+        cls.site = cls.location_2.base_site
 
     def test_site_or_provider_network_are_required(self):
         ct = CircuitTermination(circuit=self.circuit, term_side=CircuitTerminationSideChoices.SIDE_A)
@@ -55,7 +55,7 @@ class CircuitTerminationModelTestCase(TestCase):
         ct = CircuitTermination(
             circuit=self.circuit,
             term_side=CircuitTerminationSideChoices.SIDE_A,
-            site=self.location_2.site,
+            site=self.site,
             location=self.location_2,
         )
         ct.validated_save()

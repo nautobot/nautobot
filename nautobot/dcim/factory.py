@@ -195,7 +195,7 @@ class LocationFactory(DjangoModelFactory):
             if self.location_type.nestable:
                 # 50% chance to have a parent
                 if not Faker().pybool():
-                    return
+                    return None
                 candidate_parents |= Q(location_type=self.location_type)
         parents = Location.objects.filter(candidate_parents)
         if parents.exists():
