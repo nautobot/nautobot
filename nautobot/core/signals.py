@@ -1,6 +1,8 @@
 """Custom signals and handlers for the core Nautobot application."""
+import logging
 
-from django.dispatch import Signal
+from django.contrib.auth.signals import user_logged_in, user_logged_out
+from django.dispatch import receiver, Signal
 
 
 nautobot_database_ready = Signal()
@@ -17,3 +19,17 @@ The intended purpose of this signal is for apps and plugins that need to populat
 (**not** the database schema itself!), for example to ensure the existence of certain CustomFields, Jobs,
 Relationships, etc.
 """
+
+
+@receiver(user_logged_in)
+def user_logged_in_signal(sender, request, user, **kwargs):
+    """Generate a log message when a user logs in through the web ui"""
+    logger = logging.getLogger("nautobot.auth.login")
+    logger.info(f"User {user} successfully authenticated")
+
+
+@receiver(user_logged_out)
+def user_logged_out_signal(sender, request, user, **kwargs):
+    """Generate a log message when a user logs out from the web ui"""
+    logger = logging.getLogger("nautobot.auth.logout")
+    logger.info(f"User {user} has logged out")
