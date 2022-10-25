@@ -1511,8 +1511,9 @@ class JobResultView(generic.ObjectView):
 
         if "export" in request.GET:
             response = HttpResponse(self.queryset_to_csv(instance), content_type="text/csv")
-            underscore_filename = f"{instance.job_model.slug.replace('-', '_')}_{instance.completed}"
-            filename = f"{underscore_filename}_logs.csv"
+            underscore_filename = f"{instance.job_model.slug.replace('-', '_')}"
+            formated_completion_time = instance.completed.strftime("%Y-%m-%d_%H_%M")
+            filename = f"{underscore_filename}_{formated_completion_time}_logs.csv"
             response["Content-Disposition"] = f"attachment; filename={filename}"
             return response
 

@@ -487,7 +487,7 @@ class JobLogEntry(BaseModel):
 
     def to_csv(self):
         """Indicates model fields to return as csv."""
-        return (self.created, self.grouping, self.log_level, self.log_object, self.message)
+        return (str(self.created), self.grouping, self.log_level, self.log_object, self.message)
 
 
 #
