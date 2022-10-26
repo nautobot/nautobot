@@ -1489,8 +1489,8 @@ class JobResultView(generic.ObjectView):
     queryset = JobResult.objects.prefetch_related("job_model", "obj_type", "user")
     template_name = "extras/jobresult.html"
 
-    def queryset_to_csv(self, instance):
-        """Format queryset to csv."""
+    def instance_to_csv(self, instance):
+        """Format instance to csv."""
         csv_data = []
         headers = JobLogEntry.csv_headers.copy()
         csv_data.append(",".join(headers))
@@ -1508,7 +1508,7 @@ class JobResultView(generic.ObjectView):
         instance = get_object_or_404(self.queryset, **kwargs)
 
         if "export" in request.GET:
-            response = HttpResponse(self.queryset_to_csv(instance), content_type="text/csv")
+            response = HttpResponse(self.instance_to_csv(instance), content_type="text/csv")
             underscore_filename = f"{instance.job_model.slug.replace('-', '_')}"
             formated_completion_time = instance.completed.strftime("%Y-%m-%d_%H_%M")
             filename = f"{underscore_filename}_{formated_completion_time}_logs.csv"
