@@ -1438,12 +1438,11 @@ class ManufacturerTestCase(FilterTestCases.NameSlugFilterTestCase):
         InventoryItem.objects.create(device=devices[2], name="Inventory Item 3", manufacturer=cls.manufacturers[2])
 
     def test_description(self):
-        # FIXME(jathan): We only want 1st/3rd manufacturer and only care right now because of random
-        # seed determinisim and mixed bag of static/dynamic fixture creation. Rip this out when all
-        # factories are done.
-        descriptions = [m.description for m in (self.manufacturers[0], self.manufacturers[-1])]
-        params = {"description": descriptions}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), len(descriptions))
+        manufacturers = self.queryset.exclude(description="")[:2]
+        params = {"description": [manufacturers[0].description, manufacturers[1].description]}
+        self.assertQuerysetEqualAndNotEmpty(
+            self.filterset(params, self.queryset).qs, self.queryset.filter(description__in=params["description"])
+        )
 
     def test_inventory_items(self):
         inventory_items = list(InventoryItem.objects.all()[:2])
