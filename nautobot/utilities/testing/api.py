@@ -229,7 +229,12 @@ class APIViewTestCases:
             self.assertIsInstance(response.data, dict)
             self.assertIn("results", response.data)
             self.assertEqual(len(response.data["results"]), self._get_queryset().count())
-            self.assertEqual(sorted(response.data["results"][0]), self.brief_fields)
+            self.assertEqual(
+                sorted(response.data["results"][0]),
+                self.brief_fields,
+                "In order to test the brief API parameter the brief fields need to be manually added to "
+                "self.brief_fields. If this is already the case, perhaps the serializer is implemented incorrectly?",
+            )
 
         @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
         def test_list_objects_without_permission(self):
@@ -602,7 +607,12 @@ class APIViewTestCases:
             else:
                 self.fail(f"Neither PUT nor POST are available actions in: {data['actions']}")
 
-            self.assertEqual(set(self.choices_fields), field_choices)
+            self.assertEqual(
+                set(self.choices_fields),
+                field_choices,
+                "All field names of choice fields for a given model serializer need to be manually added to "
+                "self.choices_fields. If this is already the case, perhaps the serializer is implemented incorrectly?",
+            )
 
     class DeleteObjectViewTestCase(APITestCase):
         def test_delete_object_without_permission(self):
