@@ -495,13 +495,36 @@ class DynamicGroup(OrganizationalModel):
         """
         query = models.Q()
 
+        field_name = filter_field.field_name
+
+        # Attempt to account for `ModelChoiceFilter` where `to_field_name` MAY be set.
+        to_field_name = getattr(filter_field.field, "to_field_name", None)
+        if to_field_name is not None:
+            field_name = f"{field_name}__{to_field_name}"
+
+        lookup = f"{field_name}__{filter_field.lookup_expr}"
+
         # Explicitly call generate_query_{filter_method} for a method filter.
         if filter_field.method is not None and hasattr(filter_field.parent, "generate_query_" + filter_field.method):
             filter_method = getattr(filter_field.parent, "generate_query_" + filter_field.method)
-            query |= models.Q(filter_method(value))
+            query |= filter_method(value)
 
-        # In this case we want all values in a set union (boolean OR) because we want ANY of the
-        # filter values to match.
+        # Explicitly call `filter_field.generate_query` for a reversible filter.
+        elif hasattr(filter_field, "generate_query"):
+            filter_method = getattr(filter_field, "generate_query")
+
+            # Is this a list of strings? Well let's resolve it to related model objects so we can
+            # pass it to `generate_query` to get a correct Q object back out.
+            if value and isinstance(value, list) and isinstance(value[0], str):
+                related_model = self.model._meta.get_field(filter_field.field_name).related_model
+                lookup_kwargs = {f"{to_field_name}__in": value}
+                gq_value = related_model.objects.filter(**lookup_kwargs)
+            else:
+                gq_value = value
+            query |= filter_method(gq_value)
+
+        # For vanilla multiple-choice filters, we want all values in a set union (boolean OR)
+        # because we want ANY of the filter values to match.
         elif isinstance(filter_field, django_filters.MultipleChoiceFilter):
             for v in value:
                 query |= models.Q(**filter_field.get_filter_predicate(v))
@@ -511,14 +534,6 @@ class DynamicGroup(OrganizationalModel):
         # multiple-choice. This is safe for singular filters except `ModelChoiceFilter`, because they
         # do not support `to_field_name`.
         else:
-            field_name = filter_field.field_name
-
-            # Attempt to account for `ModelChoiceFilter` where `to_field_name` MAY be set.
-            to_field_name = getattr(filter_field.field, "to_field_name", None)
-            if to_field_name is not None:
-                field_name = f"{field_name}__{to_field_name}"
-
-            lookup = f"{field_name}__{filter_field.lookup_expr}"
             query |= models.Q(**{lookup: value})
 
         return query
