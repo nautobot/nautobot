@@ -1,3 +1,6 @@
+import random
+
+from django.db.models import Count
 from django.test import tag
 from nautobot.utilities.testing.views import TestCase
 
@@ -6,8 +9,48 @@ from nautobot.tenancy.models import Tenant, TenantGroup
 
 @tag("unit")
 class FilterTestCases:
-    class FilterTestCase(TestCase):
+    class BaseFilterTestCase(TestCase):
         """Base class for testing of FilterSets."""
+
+        def get_filterset_test_values(self, field_name, queryset=None):
+            """Returns a list of distinct values from the requested queryset field to use in filterset tests.
+
+            Returns a list for use in testing multiple choice filters. The size of the returned list is random
+            but will contain at minimum 2 unique values. The list of values will match at least 2 instances when
+            passed to the queryset's filter(field_name__in=[]) method but will fail to match at least one instance.
+
+            Args:
+                field_name: The name of the field to retrieve test values from.
+                queryset: The queryset to retrieve test values. Defaults to `self.queryset`.
+
+            Returns:
+                list: A list of unique values derived from the queryset.
+
+            Raises:
+                ValueError: Raised if unable to find a combination of 2 or more unique values
+                    to filter the queryset to a subset of the total instances.
+            """
+            test_values = []
+            if queryset is None:
+                queryset = self.queryset
+            qs_count = queryset.count()
+            values_with_count = queryset.values(field_name).annotate(count=Count(field_name)).order_by("count")
+            for value in values_with_count:
+                # randomly break out of loop after 2 values have been selected
+                if len(test_values) > 1 and random.choice([True, False]):
+                    break
+                if value["count"] < qs_count:
+                    qs_count -= value["count"]
+                    test_values.append(value[field_name])
+
+            if len(test_values) < 2:
+                raise ValueError(
+                    f"Cannot find valid test data for {queryset.model._meta.object_name} field {field_name}"
+                )
+            return test_values
+
+    class FilterTestCase(BaseFilterTestCase):
+        """Add common tests for all FilterSets."""
 
         queryset = None
         filterset = None
