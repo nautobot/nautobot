@@ -72,7 +72,7 @@ from .models import (
     RackRole,
     RearPort,
     RearPortTemplate,
-    RedundancyGroup,
+    DeviceRedundancyGroup,
     Region,
     Site,
     VirtualChassis,
@@ -116,7 +116,7 @@ __all__ = (
     "RackRoleFilterSet",
     "RearPortFilterSet",
     "RearPortTemplateFilterSet",
-    "RedundancyGroupFilterSet",
+    "DeviceRedundancyGroupFilterSet",
     "RegionFilterSet",
     "SiteFilterSet",
     "VirtualChassisFilterSet",
@@ -996,7 +996,7 @@ class DeviceFilterSet(
     redundancy_group = NaturalKeyOrPKMultipleChoiceFilter(
         field_name="redundancy_group",
         to_field_name="name",
-        queryset=RedundancyGroup.objects.all(),
+        queryset=DeviceRedundancyGroup.objects.all(),
         label="Redundancy Groups (name or ID)",
     )
     virtual_chassis_member = is_virtual_chassis_member
@@ -1744,10 +1744,10 @@ class PowerFeedFilterSet(
         ]
 
 
-class RedundancyGroupFilterSet(NautobotFilterSet, StatusModelFilterSetMixin):
+class DeviceRedundancyGroupFilterSet(NautobotFilterSet, StatusModelFilterSetMixin):
     q = SearchFilter(filter_predicates={"name": "icontains", "comments": "icontains"})
     tag = TagFilter()
 
     class Meta:
-        model = RedundancyGroup
+        model = DeviceRedundancyGroup
         fields = "__all__"

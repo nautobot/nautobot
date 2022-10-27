@@ -11,7 +11,7 @@ from django.db.models import F, ProtectedError, Q
 from django.urls import reverse
 from django.utils.safestring import mark_safe
 
-from nautobot.dcim.choices import DeviceFaceChoices, RedundancyGroupFailoverStrategyChoices, SubdeviceRoleChoices
+from nautobot.dcim.choices import DeviceFaceChoices, DeviceRedundancyGroupFailoverStrategyChoices, SubdeviceRoleChoices
 
 from nautobot.extras.models import ConfigContextModel, StatusModel
 from nautobot.extras.querysets import ConfigContextModelQuerySet
@@ -39,7 +39,7 @@ __all__ = (
     "DeviceType",
     "Manufacturer",
     "Platform",
-    "RedundancyGroup",
+    "DeviceRedundancyGroup",
     "VirtualChassis",
 )
 
@@ -546,7 +546,7 @@ class Device(PrimaryModel, ConfigContextModel, StatusModel):
         null=True,
     )
     redundancy_group = models.ForeignKey(
-        to="dcim.RedundancyGroup",
+        to="dcim.DeviceRedundancyGroup",
         on_delete=models.SET_NULL,
         related_name="members",
         blank=True,
@@ -1026,15 +1026,15 @@ class VirtualChassis(PrimaryModel):
     "statuses",
     "webhooks",
 )
-class RedundancyGroup(PrimaryModel, ConfigContextModel, StatusModel):
+class DeviceRedundancyGroup(PrimaryModel, ConfigContextModel, StatusModel):
     """
-    A RedundancyGroup represents a logical grouping of physical hardware for the purposes of indicating redundancy pairs of high-availability.
+    A DeviceRedundancyGroup represents a logical grouping of physical hardware for the purposes of indicating redundancy pairs of high-availability.
     """
 
     name = models.CharField(max_length=100, unique=True)
 
     failover_strategy = models.CharField(
-        max_length=50, blank=True, choices=RedundancyGroupFailoverStrategyChoices, verbose_name="Failover strategy"
+        max_length=50, blank=True, choices=DeviceRedundancyGroupFailoverStrategyChoices, verbose_name="Failover strategy"
     )
 
     comments = models.TextField(blank=True)
@@ -1065,4 +1065,4 @@ class RedundancyGroup(PrimaryModel, ConfigContextModel, StatusModel):
         return (self.name,)
 
     def get_absolute_url(self):
-        return reverse("dcim:redundancygroup", args=[self.pk])
+        return reverse("dcim:deviceredundancygroup", args=[self.pk])

@@ -28,7 +28,7 @@ from .models import (
     RackReservation,
     RackRole,
     RearPort,
-    RedundancyGroup,
+    DeviceRedundancyGroup,
     Region,
     Site,
     VirtualChassis,
@@ -37,7 +37,7 @@ from .models import (
 app_name = "dcim"
 
 router = NautobotUIViewSetRouter()
-router.register("redundancy-groups", views.RedundancyGroupUIViewSet)
+router.register("redundancy-groups", views.DeviceRedundancyGroupUIViewSet)
 
 urlpatterns = [
     # Regions
@@ -1638,14 +1638,14 @@ urlpatterns = [
     path(
         "redundancy-groups/<uuid:pk>/changelog/",
         ObjectChangeLogView.as_view(),
-        name="redundancygroup_changelog",
-        kwargs={"model": RedundancyGroup},
+        name="deviceredundancygroup_changelog",
+        kwargs={"model": DeviceRedundancyGroup},
     ),
     path(
         "redundancy-groups/<uuid:pk>/notes/",
         ObjectNotesView.as_view(),
-        name="redundancygroup_notes",
-        kwargs={"model": RedundancyGroup},
+        name="deviceredundancygroup_notes",
+        kwargs={"model": DeviceRedundancyGroup},
     ),
 ]
 urlpatterns += router.urls

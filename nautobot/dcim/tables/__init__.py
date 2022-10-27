@@ -27,7 +27,7 @@ from .devices import (
     PowerOutletTable,
     PowerPortTable,
     RearPortTable,
-    RedundancyGroupTable,
+    DeviceRedundancyGroupTable,
     VirtualChassisTable,
 )
 from .devicetypes import (
@@ -99,7 +99,7 @@ __all__ = (
     "RackTable",
     "RearPortTable",
     "RearPortTemplateTable",
-    "RedundancyGroupTable",
+    "DeviceRedundancyGroupTable",
     "RegionTable",
     "SiteTable",
     "VirtualChassisTable",

@@ -81,7 +81,7 @@ from .choices import (
     RackDimensionUnitChoices,
     RackTypeChoices,
     RackWidthChoices,
-    RedundancyGroupFailoverStrategyChoices,
+    DeviceRedundancyGroupFailoverStrategyChoices,
     SubdeviceRoleChoices,
 )
 from .constants import (
@@ -125,7 +125,7 @@ from .models import (
     RackRole,
     RearPort,
     RearPortTemplate,
-    RedundancyGroup,
+    DeviceRedundancyGroup,
     Region,
     Site,
     VirtualChassis,
@@ -1804,7 +1804,7 @@ class DeviceForm(LocatableModelFormMixin, NautobotModelForm, TenancyForm, LocalC
             "group_id": "$rack_group",
         },
     )
-    redundancy_group = DynamicModelChoiceField(queryset=RedundancyGroup.objects.all(), required=False)
+    redundancy_group = DynamicModelChoiceField(queryset=DeviceRedundancyGroup.objects.all(), required=False)
     position = forms.IntegerField(
         required=False,
         help_text="The lowest-numbered unit occupied by the device",
@@ -4453,22 +4453,22 @@ class PowerFeedFilterForm(NautobotFilterForm, StatusModelFilterFormMixin):
     tag = TagFilterField(model)
 
 
-class RedundancyGroupForm(NautobotModelForm):
+class DeviceRedundancyGroupForm(NautobotModelForm):
     secrets_group = DynamicModelChoiceField(queryset=SecretsGroup.objects.all(), required=False)
     comments = CommentField()
 
     class Meta:
-        model = RedundancyGroup
+        model = DeviceRedundancyGroup
         fields = "__all__"
         widgets = {"failover_strategy": StaticSelect2()}
 
 
-class RedundancyGroupFilterForm(NautobotFilterForm, StatusModelFilterFormMixin):
-    model = RedundancyGroup
+class DeviceRedundancyGroupFilterForm(NautobotFilterForm, StatusModelFilterFormMixin):
+    model = DeviceRedundancyGroup
     field_order = ["q", "name"]
     q = forms.CharField(required=False, label="Search")
     failover_strategy = forms.ChoiceField(
-        choices=add_blank_choice(RedundancyGroupFailoverStrategyChoices),
+        choices=add_blank_choice(DeviceRedundancyGroupFailoverStrategyChoices),
         required=False,
         widget=StaticSelect2(),
     )

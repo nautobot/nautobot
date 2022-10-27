@@ -20,7 +20,7 @@ CHOICESET_MAP = {
     "dcim.Location": dcim_choices.LocationStatusChoices,
     "dcim.PowerFeed": dcim_choices.PowerFeedStatusChoices,
     "dcim.Rack": dcim_choices.RackStatusChoices,
-    "dcim.RedundancyGroup": dcim_choices.RedundancyGroupStatusChoices,
+    "dcim.DeviceRedundancyGroup": dcim_choices.DeviceRedundancyGroupStatusChoices,
     "dcim.Site": dcim_choices.SiteStatusChoices,
     "ipam.IPAddress": ipam_choices.IPAddressStatusChoices,
     "ipam.Prefix": ipam_choices.PrefixStatusChoices,

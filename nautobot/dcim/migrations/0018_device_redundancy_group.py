@@ -29,7 +29,7 @@ class Migration(migrations.Migration):
             ),
         ),
         migrations.CreateModel(
-            name="RedundancyGroup",
+            name="DeviceRedundancyGroup",
             fields=[
                 (
                     "id",
@@ -86,7 +86,7 @@ class Migration(migrations.Migration):
                     nautobot.extras.models.statuses.StatusField(
                         null=True,
                         on_delete=django.db.models.deletion.PROTECT,
-                        related_name="dcim_redundancygroup_related",
+                        related_name="dcim_deviceredundancygroup_related",
                         to="extras.status",
                     ),
                 ),
@@ -110,7 +110,7 @@ class Migration(migrations.Migration):
                 null=True,
                 on_delete=django.db.models.deletion.SET_NULL,
                 related_name="members",
-                to="dcim.redundancygroup",
+                to="dcim.deviceredundancygroup",
             ),
         ),
     ]

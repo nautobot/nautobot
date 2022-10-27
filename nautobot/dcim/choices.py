@@ -1201,7 +1201,7 @@ class PowerFeedPhaseChoices(ChoiceSet):
 #
 
 
-class RedundancyGroupStatusChoices(ChoiceSet):
+class DeviceRedundancyGroupStatusChoices(ChoiceSet):
 
     STATUS_PLANNED = "planned"
     STATUS_STAGING = "staging"
@@ -1218,7 +1218,7 @@ class RedundancyGroupStatusChoices(ChoiceSet):
     )
 
 
-class RedundancyGroupFailoverStrategyChoices(ChoiceSet):
+class DeviceRedundancyGroupFailoverStrategyChoices(ChoiceSet):
     FAILOVER_ACTIVE_ACTIVE = "active-active"
     FAILOVER_ACTIVE_PASSIVE = "active-passive"
 

@@ -23,7 +23,7 @@ from .device_components import (
     PowerPort,
     RearPort,
 )
-from .devices import Device, DeviceRole, DeviceType, Manufacturer, Platform, RedundancyGroup, VirtualChassis
+from .devices import Device, DeviceRole, DeviceType, Manufacturer, Platform, DeviceRedundancyGroup, VirtualChassis
 from .locations import Location, LocationType
 from .power import PowerFeed, PowerPanel
 from .racks import Rack, RackGroup, RackReservation, RackRole
@@ -65,7 +65,7 @@ __all__ = (
     "RackRole",
     "RearPort",
     "RearPortTemplate",
-    "RedundancyGroup",
+    "DeviceRedundancyGroup",
     "Region",
     "Site",
     "VirtualChassis",

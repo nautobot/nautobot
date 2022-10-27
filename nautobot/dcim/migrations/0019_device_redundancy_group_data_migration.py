@@ -5,19 +5,19 @@ from nautobot.extras.management import clear_status_choices, populate_status_cho
 
 
 def populate_redundancy_group_status(apps, schema_editor):
-    """Create/link default Status records for the RedundancyGroup content-type."""
-    populate_status_choices(apps, schema_editor, models=["dcim.RedundancyGroup"])
+    """Create/link default Status records for the DeviceRedundancyGroup content-type."""
+    populate_status_choices(apps, schema_editor, models=["dcim.DeviceRedundancyGroup"])
 
 
 def clear_redundancy_group_status(apps, schema_editor):
-    """De-link/delete all Status records from the RedundancyGroup content-type."""
-    clear_status_choices(apps, schema_editor, models=["dcim.RedundancyGroup"])
+    """De-link/delete all Status records from the DeviceRedundancyGroup content-type."""
+    clear_status_choices(apps, schema_editor, models=["dcim.DeviceRedundancyGroup"])
 
 
 class Migration(migrations.Migration):
 
     dependencies = [
-        ("dcim", "0018_redundancy_group"),
+        ("dcim", "0018_device_redundancy_group"),
     ]
 
     operations = [

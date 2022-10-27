@@ -52,7 +52,7 @@ from nautobot.dcim.models import (
     RackRole,
     RearPort,
     RearPortTemplate,
-    RedundancyGroup,
+    DeviceRedundancyGroup,
     Region,
     Site,
     VirtualChassis,
@@ -826,10 +826,10 @@ class PowerFeedViewSet(PathEndpointMixin, StatusViewSetMixin, NautobotModelViewS
 #
 
 
-class RedundancyGroupViewSet(StatusViewSetMixin, NautobotModelViewSet):
-    queryset = RedundancyGroup.objects.select_related("status").prefetch_related("members")
-    serializer_class = serializers.RedundancyGroupSerializer
-    filterset_class = filters.RedundancyGroupFilterSet
+class DeviceRedundancyGroupViewSet(StatusViewSetMixin, NautobotModelViewSet):
+    queryset = DeviceRedundancyGroup.objects.select_related("status").prefetch_related("members")
+    serializer_class = serializers.DeviceRedundancyGroupSerializer
+    filterset_class = filters.DeviceRedundancyGroupFilterSet
 
 
 #

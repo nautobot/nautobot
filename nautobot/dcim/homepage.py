@@ -89,9 +89,9 @@ layout = (
             ),
             HomePageItem(
                 name="Redundancy Group",
-                link="dcim:redundancygroup_list",
-                model=models.RedundancyGroup,
-                permissions=["dcim.view_redundancygroup"],
+                link="dcim:deviceredundancygroup_list",
+                model=models.DeviceRedundancyGroup,
+                permissions=["dcim.view_deviceredundancygroup"],
                 description="Represents a set of devices which operate in a failover/HA group",
                 weight=500,
             ),

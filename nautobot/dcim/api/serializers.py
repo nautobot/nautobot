@@ -30,7 +30,7 @@ from nautobot.dcim.choices import (
     RackElevationDetailRenderChoices,
     RackTypeChoices,
     RackWidthChoices,
-    RedundancyGroupFailoverStrategyChoices,
+    DeviceRedundancyGroupFailoverStrategyChoices,
     SubdeviceRoleChoices,
 )
 from nautobot.dcim.constants import CABLE_TERMINATION_MODELS, RACK_ELEVATION_LEGEND_WIDTH_DEFAULT
@@ -67,7 +67,7 @@ from nautobot.dcim.models import (
     RackRole,
     RearPort,
     RearPortTemplate,
-    RedundancyGroup,
+    DeviceRedundancyGroup,
     Region,
     Site,
     VirtualChassis,
@@ -125,7 +125,7 @@ from .nested_serializers import (  # noqa: F401
     NestedRackSerializer,
     NestedRearPortSerializer,
     NestedRearPortTemplateSerializer,
-    NestedRedundancyGroupSerializer,
+    NestedDeviceRedundancyGroupSerializer,
     NestedRegionSerializer,
     NestedSiteSerializer,
     NestedVirtualChassisSerializer,
@@ -760,7 +760,7 @@ class DeviceSerializer(NautobotModelSerializer, TaggedObjectSerializer, StatusMo
     secrets_group = NestedSecretsGroupSerializer(required=False, allow_null=True)
     cluster = NestedClusterSerializer(required=False, allow_null=True)
     virtual_chassis = NestedVirtualChassisSerializer(required=False, allow_null=True)
-    redundancy_group = NestedRedundancyGroupSerializer(required=False, allow_null=True)
+    redundancy_group = NestedDeviceRedundancyGroupSerializer(required=False, allow_null=True)
     local_context_schema = NestedConfigContextSchemaSerializer(required=False, allow_null=True)
 
     class Meta:
@@ -1126,12 +1126,12 @@ class DeviceBaySerializer(NautobotModelSerializer, TaggedObjectSerializer):
         ]
 
 
-class RedundancyGroupSerializer(NautobotModelSerializer, TaggedObjectSerializer, StatusModelSerializerMixin):
-    url = serializers.HyperlinkedIdentityField(view_name="dcim-api:redundancygroup-detail")
-    failover_strategy = ChoiceField(choices=RedundancyGroupFailoverStrategyChoices)
+class DeviceRedundancyGroupSerializer(NautobotModelSerializer, TaggedObjectSerializer, StatusModelSerializerMixin):
+    url = serializers.HyperlinkedIdentityField(view_name="dcim-api:deviceredundancygroup-detail")
+    failover_strategy = ChoiceField(choices=DeviceRedundancyGroupFailoverStrategyChoices)
 
     class Meta:
-        model = RedundancyGroup
+        model = DeviceRedundancyGroup
         fields = [
             "url",
             "name",

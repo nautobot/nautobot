@@ -386,11 +386,11 @@ class NestedVirtualChassisSerializer(WritableNestedSerializer):
 #
 
 
-class NestedRedundancyGroupSerializer(WritableNestedSerializer):
-    url = serializers.HyperlinkedIdentityField(view_name="dcim-api:redundancygroup-detail")
+class NestedDeviceRedundancyGroupSerializer(WritableNestedSerializer):
+    url = serializers.HyperlinkedIdentityField(view_name="dcim-api:deviceredundancygroup-detail")
 
     class Meta:
-        model = models.RedundancyGroup
+        model = models.DeviceRedundancyGroup
         fields = ["id", "name", "url", "failover_strategy"]
 
 

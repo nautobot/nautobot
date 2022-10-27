@@ -67,7 +67,7 @@ from .models import (
     RackRole,
     RearPort,
     RearPortTemplate,
-    RedundancyGroup,
+    DeviceRedundancyGroup,
     Region,
     Site,
     VirtualChassis,
@@ -3217,20 +3217,20 @@ class PowerFeedBulkDeleteView(generic.BulkDeleteView):
     table = tables.PowerFeedTable
 
 
-class RedundancyGroupUIViewSet(NautobotUIViewSet):
-    model = RedundancyGroup
+class DeviceRedundancyGroupUIViewSet(NautobotUIViewSet):
+    model = DeviceRedundancyGroup
     # bulk_create_form_class = forms.*CSVForm
     # bulk_update_form_class = forms.*BulkEditForm
-    filterset_class = filters.RedundancyGroupFilterSet
-    filterset_form_class = forms.RedundancyGroupFilterForm
-    form_class = forms.RedundancyGroupForm
+    filterset_class = filters.DeviceRedundancyGroupFilterSet
+    filterset_form_class = forms.DeviceRedundancyGroupFilterForm
+    form_class = forms.DeviceRedundancyGroupForm
     queryset = (
-        RedundancyGroup.objects.select_related("status")
+        DeviceRedundancyGroup.objects.select_related("status")
         .prefetch_related("members")
         .annotate(member_count=count_related(Device, "redundancy_group"))
     )
-    serializer_class = serializers.RedundancyGroupSerializer
-    table_class = tables.RedundancyGroupTable
+    serializer_class = serializers.DeviceRedundancyGroupSerializer
+    table_class = tables.DeviceRedundancyGroupTable
     lookup_field = "pk"
 
     def get_extra_context(self, request, instance):

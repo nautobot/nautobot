@@ -14,7 +14,7 @@ from nautobot.dcim.models import (
     PowerOutlet,
     PowerPort,
     RearPort,
-    RedundancyGroup,
+    DeviceRedundancyGroup,
     VirtualChassis,
 )
 from nautobot.dcim.utils import cable_status_color_css
@@ -70,7 +70,7 @@ __all__ = (
     "PowerOutletTable",
     "PowerPortTable",
     "RearPortTable",
-    "RedundancyGroupTable",
+    "DeviceRedundancyGroupTable",
     "VirtualChassisTable",
 )
 
@@ -960,7 +960,7 @@ class VirtualChassisTable(BaseTable):
 #
 
 
-class RedundancyGroupTable(BaseTable):
+class DeviceRedundancyGroupTable(BaseTable):
     pk = ToggleColumn()
     name = tables.Column(linkify=True)
     member_count = LinkedCountColumn(
@@ -971,6 +971,6 @@ class RedundancyGroupTable(BaseTable):
     tags = TagColumn(url_name="dcim:virtualchassis_list")
 
     class Meta(BaseTable.Meta):
-        model = RedundancyGroup
+        model = DeviceRedundancyGroup
         fields = ("pk", "name", "status", "failover_strategy", "member_count", "tags")
         default_columns = ("pk", "name", "status", "failover_strategy", "member_count")
