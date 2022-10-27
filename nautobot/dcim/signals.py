@@ -287,5 +287,5 @@ def prevent_adding_tagged_vlans_if_mode_not_set_to_tagged(sender, instance, acti
 
     if instance.mode != InterfaceModeChoices.MODE_TAGGED:
         raise ValidationError(
-            {"tagged_vlans": f"Mode must be set to {InterfaceModeChoices.MODE_TAGGED} when specifying tagged_vlan"}
+            {"tagged_vlans": f"Mode must be set to {InterfaceModeChoices.MODE_TAGGED} when specifying tagged_vlans"}
         )

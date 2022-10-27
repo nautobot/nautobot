@@ -1028,7 +1028,7 @@ class InterfaceSerializerVersion12(
         tagged_vlans = data.get("tagged_vlans", [])
         if tagged_vlans and data.get("mode") != InterfaceModeChoices.MODE_TAGGED:
             raise serializers.ValidationError(
-                {"tagged_vlans": f"Mode must be set to {InterfaceModeChoices.MODE_TAGGED} when specifying tagged_vlan"}
+                {"tagged_vlans": f"Mode must be set to {InterfaceModeChoices.MODE_TAGGED} when specifying tagged_vlans"}
             )
 
         device = self.instance.device if self.instance else data.get("device")

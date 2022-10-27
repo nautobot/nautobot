@@ -1147,5 +1147,5 @@ class InterfaceTestCase(TestCase):
         with self.assertRaises(ValidationError) as err:
             interface.tagged_vlans.add(vlan1)
         self.assertEqual(
-            err.exception.message_dict["tagged_vlans"][0], "Mode must be set to tagged when specifying tagged_vlan"
+            err.exception.message_dict["tagged_vlans"][0], "Mode must be set to tagged when specifying tagged_vlans"
         )

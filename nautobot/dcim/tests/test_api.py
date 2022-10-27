@@ -1859,7 +1859,7 @@ class InterfaceTestVersion12(Mixins.ComponentTraceMixin, APIViewTestCases.APIVie
         }
         response = self.client.post(self._get_list_url(), data=payload, format="json", **self.header)
         self.assertHttpStatus(response, status.HTTP_400_BAD_REQUEST)
-        self.assertEqual(response.data["tagged_vlans"][0], "Mode must be set to tagged when specifying tagged_vlan")
+        self.assertEqual(response.data["tagged_vlans"][0], "Mode must be set to tagged when specifying tagged_vlans")
 
 
 class InterfaceTestVersion14(InterfaceTestVersion12):
