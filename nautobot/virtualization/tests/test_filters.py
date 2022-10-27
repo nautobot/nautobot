@@ -780,7 +780,7 @@ class VMInterfaceTestCase(FilterTestCases.FilterTestCase):
     def test_search(self):
         value = self.queryset.first().pk
         params = {"q": value}
-        q = Q(name__icontains=value) | Q(id__iexact=value)
+        q = Q(id__iexact=str(value)) | Q(name__icontains=value)
         self.assertQuerysetEqualAndNotEmpty(
             self.filterset(params, self.queryset).qs,
             self.queryset.filter(q),
