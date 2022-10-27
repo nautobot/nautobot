@@ -1848,18 +1848,39 @@ class InterfaceTestVersion12(Mixins.ComponentTraceMixin, APIViewTestCases.APIVie
             )
 
     def test_tagged_vlan_raise_error_if_mode_not_set_to_tagged(self):
-        self.add_permissions("dcim.add_interface")
-        payload = {
-            "device": self.devices[0].pk,
-            "name": "Tagged Interface",
-            "type": "1000base-t",
-            "mode": InterfaceModeChoices.MODE_ACCESS,
-            "tagged_vlans": [self.vlans[0].pk, self.vlans[1].pk],
-            "untagged_vlan": self.vlans[2].pk,
-        }
-        response = self.client.post(self._get_list_url(), data=payload, format="json", **self.header)
-        self.assertHttpStatus(response, status.HTTP_400_BAD_REQUEST)
-        self.assertEqual(response.data["tagged_vlans"][0], "Mode must be set to tagged when specifying tagged_vlans")
+        self.add_permissions("dcim.add_interface", "dcim.change_interface")
+        with self.subTest("On create, assert 400 status."):
+            payload = {
+                "device": self.devices[0].pk,
+                "name": "Tagged Interface",
+                "type": "1000base-t",
+                "status": "active",
+                "mode": InterfaceModeChoices.MODE_ACCESS,
+                "tagged_vlans": [self.vlans[0].pk, self.vlans[1].pk],
+                "untagged_vlan": self.vlans[2].pk,
+            }
+            response = self.client.post(self._get_list_url(), data=payload, format="json", **self.header)
+            self.assertHttpStatus(response, status.HTTP_400_BAD_REQUEST)
+            print(response.data)
+            self.assertEqual(
+                response.data["tagged_vlans"][0], "Mode must be set to tagged when specifying tagged_vlans"
+            )
+
+        with self.subTest("On update, assert 400 status."):
+            # Error
+            interface = Interface.objects.create(
+                device=self.devices[0],
+                name="Tagged Interface",
+                mode=InterfaceModeChoices.MODE_TAGGED,
+                type=InterfaceTypeChoices.TYPE_VIRTUAL,
+            )
+            interface.tagged_vlans.add(self.vlans[0])
+            payload = {"mode": None}
+            response = self.client.patch(self._get_detail_url(interface), data=payload, format="json", **self.header)
+            self.assertHttpStatus(response, status.HTTP_400_BAD_REQUEST)
+            self.assertEqual(
+                response.data["tagged_vlans"][0], "Mode must be set to tagged when specifying tagged_vlans"
+            )
 
 
 class InterfaceTestVersion14(InterfaceTestVersion12):
