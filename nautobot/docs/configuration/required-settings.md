@@ -295,6 +295,7 @@ RQ_QUEUES = {
 
 The following environment variables may also be set for some of the above values:
 
+* `NAUTOBOT_REDIS_SCHEME`
 * `NAUTOBOT_REDIS_HOST`
 * `NAUTOBOT_REDIS_PORT`
 * `NAUTOBOT_REDIS_PASSWORD`
