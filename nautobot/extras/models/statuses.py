@@ -12,14 +12,13 @@ from nautobot.extras.models import ChangeLoggedModel
 from nautobot.extras.models.customfields import CustomFieldModel
 from nautobot.extras.models.relationships import RelationshipModel
 from nautobot.core.fields import AutoSlugField
-from nautobot.core.models import BaseModel
-from nautobot.utilities.querysets import RestrictedQuerySet
+from nautobot.core.models import BaseModel, BaseManager
 from nautobot.utilities.choices import ColorChoices
 from nautobot.utilities.forms import DynamicModelChoiceField
 from nautobot.utilities.fields import ColorField
 
 
-class StatusQuerySet(RestrictedQuerySet):
+class StatusManager(BaseManager):
     """Queryset for `Status` objects."""
 
     def get_for_model(self, model):
@@ -29,8 +28,8 @@ class StatusQuerySet(RestrictedQuerySet):
         content_type = ContentType.objects.get_for_model(model._meta.concrete_model)
         return self.filter(content_types=content_type)
 
-    def get_by_natural_key(self, name):
-        return self.get(name=name)
+    # def get_by_natural_key(self, name):
+    #     return self.get(name=name)
 
 
 @extras_features(
@@ -60,7 +59,7 @@ class Status(BaseModel, ChangeLoggedModel, CustomFieldModel, RelationshipModel, 
         blank=True,
     )
 
-    objects = StatusQuerySet.as_manager()
+    objects = StatusManager()
 
     csv_headers = ["name", "slug", "color", "content_types", "description"]
     clone_fields = ["color", "content_types"]
@@ -72,8 +71,8 @@ class Status(BaseModel, ChangeLoggedModel, CustomFieldModel, RelationshipModel, 
     def __str__(self):
         return self.name
 
-    def natural_key(self):
-        return (self.name,)
+    # def natural_key(self):
+    #     return (self.name,)
 
     def get_absolute_url(self):
         return reverse("extras:status", args=[self.slug])

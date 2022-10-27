@@ -15,7 +15,7 @@ from nautobot.core.fields import AutoSlugField
 from nautobot.core.models import BaseModel
 from nautobot.core.models.generics import OrganizationalModel
 from nautobot.extras.choices import DynamicGroupOperatorChoices
-from nautobot.extras.querysets import DynamicGroupQuerySet, DynamicGroupMembershipQuerySet
+from nautobot.extras.querysets import DynamicGroupQuerySet
 from nautobot.extras.utils import extras_features
 from nautobot.utilities.forms.constants import BOOLEAN_WITH_BLANK_CHOICES
 from nautobot.utilities.forms.widgets import StaticSelect2
@@ -868,7 +868,7 @@ class DynamicGroupMembership(BaseModel):
     operator = models.CharField(choices=DynamicGroupOperatorChoices.CHOICES, max_length=12)
     weight = models.PositiveSmallIntegerField()
 
-    objects = DynamicGroupMembershipQuerySet.as_manager()
+    # objects = DynamicGroupMembershipQuerySet.as_manager()
 
     class Meta:
         unique_together = ["group", "parent_group", "operator", "weight"]
@@ -877,10 +877,10 @@ class DynamicGroupMembership(BaseModel):
     def __str__(self):
         return f"{self.parent_group} > {self.operator} ({self.weight}) > {self.group}"
 
-    def natural_key(self):
-        return self.group.natural_key() + self.parent_group.natural_key() + (self.operator, self.weight)
+    # def natural_key(self):
+    #     return self.group.natural_key() + self.parent_group.natural_key() + (self.operator, self.weight)
 
-    natural_key.dependencies = ["extras.dynamicgroup"]
+    # natural_key.dependencies = ["extras.dynamicgroup"]
 
     @property
     def name(self):

@@ -1,9 +1,10 @@
-from django.db.models import Q, QuerySet
+from django.db.models import Q
+from natural_keys.models import NaturalKeyQuerySet
 
 from nautobot.utilities.permissions import permission_is_exempt
 
 
-class RestrictedQuerySet(QuerySet):
+class RestrictedQuerySet(NaturalKeyQuerySet):
     def restrict(self, user, action="view"):
         """
         Filter the QuerySet to return only objects on which the specified user has been granted the specified
