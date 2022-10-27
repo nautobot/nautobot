@@ -851,9 +851,11 @@ class SiteTestCase(FilterTestCases.NameSlugFilterTestCase, FilterTestCases.Tenan
             self.assertEqual(self.filterset(params, self.queryset).qs.count(), 1)
 
     def test_prefixes(self):
-        prefixes = Prefix.objects.all()[:2]
+        prefixes = list(Prefix.objects.filter(site__isnull=False)[:2])
         params = {"prefixes": [prefixes[0].pk, prefixes[1].pk]}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+        self.assertQuerysetEqualAndNotEmpty(
+            self.filterset(params, self.queryset).qs, Site.objects.filter(prefixes__in=prefixes).distinct()
+        )
 
     def test_has_prefixes(self):
         with self.subTest():
@@ -986,7 +988,7 @@ class LocationFilterSetTestCase(FilterTestCases.NameSlugFilterTestCase, FilterTe
 
     @classmethod
     def setUpTestData(cls):
-        lt1 = LocationType.objects.create(name="Campus")
+        lt1 = LocationType.objects.create(name="Building Group", nestable=True)
         lt2 = LocationType.objects.create(name="Building", parent=lt1)
         lt3 = LocationType.objects.create(name="Floor", slug="building-floor", parent=lt2)
         lt4 = LocationType.objects.create(name="Room", parent=lt3)
@@ -1011,22 +1013,27 @@ class LocationFilterSetTestCase(FilterTestCases.NameSlugFilterTestCase, FilterTe
             tenant=tenants[1],
             description="Cube",
         )
-        for loc in [loc1, loc2, loc3, loc4]:
+        nested_loc = Location.objects.create(name="RTP South", location_type=lt1, status=status_active, parent=loc1)
+        for loc in [loc1, loc2, loc3, loc4, nested_loc]:
             loc.validated_save()
 
     def test_location_type(self):
         params = {
-            "location_type": [LocationType.objects.get(name="Campus").slug, LocationType.objects.get(name="Room").pk]
+            "location_type": [
+                LocationType.objects.get(name="Building Group").slug,
+                LocationType.objects.get(name="Room").pk,
+            ]
         }
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 3)
 
     def test_parent(self):
         params = {"parent": ["rtp", Location.objects.get(name="RTP4E").pk]}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 3)
 
     def test_child_location_type(self):
-        params = {"child_location_type": ["room", LocationType.objects.get(name="Building").pk]}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+        # Even though Building Group is a root type, it's nestable, so it can have another Building Group as a child.
+        params = {"child_location_type": ["room", LocationType.objects.get(name="Building Group").pk]}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 3)
 
     def test_content_type(self):
         params = {"content_type": ["dcim.device"]}

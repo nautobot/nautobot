@@ -274,6 +274,7 @@ class LocationTypeTest(APIViewTestCases.APIViewTestCase):
     brief_fields = ["display", "id", "name", "slug", "tree_depth", "url"]
     bulk_update_data = {
         "description": "Some generic description of multiple types. Not very useful.",
+        "nestable": True,
     }
     choices_fields = []  # TODO: what would we need to get ["content_types"] added as a choices field?
     slug_source = "name"
@@ -290,6 +291,7 @@ class LocationTypeTest(APIViewTestCases.APIViewTestCase):
         cls.create_data = [
             {
                 "name": "Standalone",
+                "nestable": True,
             },
             {
                 "name": "Elevator",

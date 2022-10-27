@@ -13,7 +13,7 @@ from nautobot.extras.models import ChangeLoggedModel, CustomField, Relationship
 from nautobot.users.models import ObjectPermission
 from nautobot.utilities.testing.mixins import NautobotTestCaseMixin
 from nautobot.utilities.utils import get_changes_for_model, get_filterset_for_model
-from .utils import disable_warnings, extract_page_body, post_data
+from .utils import disable_warnings, extract_page_body, get_deletable_objects, post_data
 
 
 __all__ = (
@@ -25,6 +25,7 @@ __all__ = (
 
 
 @tag("unit")
+@override_settings(PAGINATE_COUNT=65000)
 class TestCase(_TestCase, NautobotTestCaseMixin):
     """Base class for all Nautobot-specific unit tests."""
 
@@ -58,6 +59,7 @@ class ModelTestCase(TestCase):
 #
 
 
+@tag("performance")
 class ModelViewTestCase(ModelTestCase):
     """
     Base TestCase for model views. Subclass to test individual views.
@@ -125,6 +127,10 @@ class ViewTestCases:
             self.client.logout()
             response = self.client.get(self._get_queryset().first().get_absolute_url())
             self.assertHttpStatus(response, 200)
+            response_body = response.content.decode(response.charset)
+            self.assertIn(
+                "/login/?next=" + self._get_queryset().first().get_absolute_url(), response_body, msg=response_body
+            )
 
             # The "Change Log" tab should appear in the response since we have all exempt permissions
             if issubclass(self.model, ChangeLoggedModel):
@@ -137,7 +143,10 @@ class ViewTestCases:
 
             # Try GET without permission
             with disable_warnings("django.request"):
-                self.assertHttpStatus(self.client.get(instance.get_absolute_url()), [403, 404])
+                response = self.client.get(instance.get_absolute_url())
+                self.assertHttpStatus(response, [403, 404])
+                response_body = response.content.decode(response.charset)
+                self.assertNotIn("/login/", response_body, msg=response_body)
 
         @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
         def test_get_object_with_permission(self):
@@ -469,7 +478,7 @@ class ViewTestCases:
             For some models this may just be any random object, but when we have FKs with `on_delete=models.PROTECT`
             (as is often the case) we need to find or create an instance that doesn't have such entanglements.
             """
-            return self._get_queryset().first()
+            return get_deletable_objects(self.model, self._get_queryset()).first()
 
         def test_delete_object_without_permission(self):
             instance = self.get_deletable_object()
@@ -571,6 +580,8 @@ class ViewTestCases:
             self.client.logout()
             response = self.client.get(self._get_url("list"))
             self.assertHttpStatus(response, 200)
+            response_body = response.content.decode(response.charset)
+            self.assertIn("/login/?next=" + self._get_url("list"), response_body, msg=response_body)
 
         @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
         def test_list_objects_filtered(self):
@@ -644,7 +655,10 @@ class ViewTestCases:
 
             # Try GET without permission
             with disable_warnings("django.request"):
-                self.assertHttpStatus(self.client.get(self._get_url("list")), 403)
+                response = self.client.get(self._get_url("list"))
+                self.assertHttpStatus(response, 403)
+                response_body = response.content.decode(response.charset)
+                self.assertNotIn("/login/", response_body, msg=response_body)
 
         @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
         def test_list_objects_with_permission(self):
@@ -900,6 +914,33 @@ class ViewTestCases:
                 self.assertInstanceEqual(instance, self.bulk_edit_data)
 
         @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+        def test_bulk_edit_form_contains_all_pks(self):
+            # We are testing the intermediary step of bulk_edit with pagination applied.
+            # i.e. "_all" passed in the form.
+            pk_list = self._get_queryset().values_list("pk", flat=True)
+            # We only pass in one pk to test the functionality of "_all"
+            # which should grab all instance pks regardless of "pk"
+            selected_data = {
+                "pk": pk_list[:1],
+                "_all": "on",
+            }
+            # Assign model-level permission
+            obj_perm = ObjectPermission(name="Test permission", actions=["change"])
+            obj_perm.save()
+            obj_perm.users.add(self.user)
+            obj_perm.object_types.add(ContentType.objects.get_for_model(self.model))
+
+            # Try POST with model-level permission
+            response = self.client.post(self._get_url("bulk_edit"), selected_data)
+            # Expect a 200 status cause we are only rendering the bulk edit table.
+            # after pressing Edit Selected button.
+            self.assertHttpStatus(response, 200)
+            response_body = extract_page_body(response.content.decode(response.charset))
+            # Check if all the pks are passed into the BulkEditForm/BulkUpdateForm
+            for pk in pk_list:
+                self.assertIn(f'<input type="hidden" name="pk" value="{pk}"', response_body)
+
+        @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
         def test_bulk_edit_objects_with_constrained_permission(self):
             pk_list = list(self._get_queryset().values_list("pk", flat=True)[:3])
             data = {
@@ -913,7 +954,9 @@ class ViewTestCases:
             # Dynamically determine a constraint that will *not* be matched by the updated objects.
             attr_name = list(self.bulk_edit_data.keys())[0]
             field = self.model._meta.get_field(attr_name)
-            value = field.value_from_object(self._get_queryset().first())
+            value = field.value_from_object(
+                self._get_queryset().exclude(**{attr_name: self.bulk_edit_data[attr_name]}).first()
+            )
 
             # Assign constrained permission
             obj_perm = ObjectPermission(
@@ -950,7 +993,7 @@ class ViewTestCases:
             For some models this may just be any random objects, but when we have FKs with `on_delete=models.PROTECT`
             (as is often the case) we need to find or create an instance that doesn't have such entanglements.
             """
-            return list(self._get_queryset().values_list("pk", flat=True)[:3])
+            return get_deletable_objects(self.model, self._get_queryset()).values_list("pk", flat=True)[:3]
 
         @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
         def test_bulk_delete_objects_without_permission(self):
@@ -984,6 +1027,33 @@ class ViewTestCases:
             # Try POST with model-level permission
             self.assertHttpStatus(self.client.post(self._get_url("bulk_delete"), data), 302)
             self.assertEqual(self._get_queryset().count(), initial_count - len(pk_list))
+
+        @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
+        def test_bulk_delete_form_contains_all_pks(self):
+            # We are testing the intermediary step of bulk_delete with pagination applied.
+            # i.e. "_all" passed in the form.
+            pk_list = self._get_queryset().values_list("pk", flat=True)
+            # We only pass in one pk to test the functionality of "_all"
+            # which should grab all instance pks regardless of "pks".
+            selected_data = {
+                "pk": pk_list[:1],
+                "confirm": True,
+                "_all": "on",
+            }
+
+            # Assign unconstrained permission
+            obj_perm = ObjectPermission(name="Test permission", actions=["delete"])
+            obj_perm.save()
+            obj_perm.users.add(self.user)
+            obj_perm.object_types.add(ContentType.objects.get_for_model(self.model))
+
+            # Try POST with the selected data first. Emulating selecting all -> pressing Delete Selected button.
+            response = self.client.post(self._get_url("bulk_delete"), selected_data)
+            self.assertHttpStatus(response, 200)
+            response_body = extract_page_body(response.content.decode(response.charset))
+            # Check if all the pks are passed into the BulkDeleteForm/BulkDestroyForm
+            for pk in pk_list:
+                self.assertIn(f'<input type="hidden" name="pk" value="{pk}"', response_body)
 
         @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
         def test_bulk_delete_objects_with_constrained_permission(self):

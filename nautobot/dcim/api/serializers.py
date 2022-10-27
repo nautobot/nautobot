@@ -276,6 +276,7 @@ class LocationTypeSerializer(NautobotModelSerializer):
             "name",
             "slug",
             "parent",
+            "nestable",
             "content_types",
             "description",
             "tree_depth",

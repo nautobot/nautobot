@@ -1,5 +1,6 @@
 """Test the nautobot.utilities.paginator module."""
 
+from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.test import RequestFactory, override_settings
 from django.urls import reverse
@@ -22,6 +23,7 @@ class PaginatorTestCase(TestCase):
     @override_config(PAGINATE_COUNT=100)
     def test_get_paginate_count_config(self):
         """Get the default paginate count from Constance config."""
+        del settings.PAGINATE_COUNT
         self.assertEqual(get_paginate_count(self.request), 100)
 
     @override_settings(PAGINATE_COUNT=50)

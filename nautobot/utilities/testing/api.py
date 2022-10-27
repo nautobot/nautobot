@@ -14,7 +14,7 @@ from nautobot.extras.models import ChangeLoggedModel
 from nautobot.extras.registry import registry
 from nautobot.utilities.testing.mixins import NautobotTestCaseMixin
 from nautobot.utilities.utils import get_changes_for_model, get_filterset_for_model, get_route_for_model
-from .utils import disable_warnings
+from .utils import disable_warnings, get_deletable_objects
 from .views import ModelTestCase
 
 
@@ -612,7 +612,7 @@ class APIViewTestCases:
             For some models this may just be any random object, but when we have FKs with `on_delete=models.PROTECT`
             (as is often the case) we need to find or create an instance that doesn't have such entanglements.
             """
-            return self._get_queryset().first()
+            return get_deletable_objects(self.model, self._get_queryset()).first()
 
         def get_deletable_object_pks(self):
             """
@@ -621,7 +621,7 @@ class APIViewTestCases:
             For some models this may just be any random objects, but when we have FKs with `on_delete=models.PROTECT`
             (as is often the case) we need to find or create an instance that doesn't have such entanglements.
             """
-            return list(self._get_queryset().values_list("pk", flat=True)[:3])
+            return get_deletable_objects(self.model, self._get_queryset()).values_list("pk", flat=True)[:3]
 
         def test_delete_object_without_permission(self):
             """
