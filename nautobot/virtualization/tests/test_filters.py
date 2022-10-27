@@ -1,3 +1,5 @@
+from django.contrib.contenttypes.models import ContentType
+
 from nautobot.dcim.choices import InterfaceModeChoices
 from nautobot.dcim.models import Device, DeviceRole, DeviceType, Manufacturer, Platform, Region, Site
 from nautobot.extras.models import Status, Tag
@@ -638,22 +640,40 @@ class VMInterfaceTestCase(FilterTestCases.FilterTestCase):
 
     def test_ip_addresses(self):
         with self.subTest("Primary Addresses"):
-            ipaddress = IPAddress.objects.last()
-            params = {"ip_addresses": ["192.0.2.1/24", ipaddress.id]}
-            self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+            vminterface_ct = ContentType.objects.get_for_model(VMInterface)
+            ipaddresses = list(
+                IPAddress.objects.filter(assigned_object_id__isnull=False, assigned_object_type=vminterface_ct.pk)[:2]
+            )
+            params = {"ip_addresses": [ipaddresses[0].address, ipaddresses[1].id]}
+            self.assertQuerysetEqualAndNotEmpty(
+                self.filterset(params, self.queryset).qs,
+                self.queryset.filter(ip_addresses__in=ipaddresses),
+            )
 
         with self.subTest("Has Primary Addresses"):
             params = {"has_ip_addresses": False}
-            self.assertEqual(self.filterset(params, self.queryset).qs.count(), 1)
+            self.assertQuerysetEqualAndNotEmpty(
+                self.filterset(params, self.queryset).qs,
+                self.queryset.filter(ip_addresses__isnull=True),
+            )
 
             params = {"has_ip_addresses": True}
-            self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+            self.assertQuerysetEqualAndNotEmpty(
+                self.filterset(params, self.queryset).qs,
+                self.queryset.filter(ip_addresses__isnull=False),
+            )
 
     def test_assigned_to_interface(self):
         params = {"enabled": "true"}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+        self.assertQuerysetEqualAndNotEmpty(
+            self.filterset(params, self.queryset).qs,
+            self.queryset.filter(enabled=True),
+        )
         params = {"enabled": "false"}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 1)
+        self.assertQuerysetEqualAndNotEmpty(
+            self.filterset(params, self.queryset).qs,
+            self.queryset.filter(enabled=False),
+        )
 
     def test_parent(self):
         # Create child interfaces

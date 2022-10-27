@@ -2,6 +2,7 @@ import uuid
 
 from django.contrib.auth import get_user_model
 from django.contrib.contenttypes.models import ContentType
+from django.db.models import Q
 
 from nautobot.dcim.filters import DeviceFilterSet
 from nautobot.dcim.models import (
@@ -1401,10 +1402,17 @@ class StatusTestCase(FilterTestCases.NameSlugFilterTestCase):
 
     def test_search(self):
         params = {"q": "active"}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 1)
-        value = self.queryset.values_list("pk", flat=True)[0]
+        q = Q(name__icontains="active") | Q(slug__icontains="active") | Q(content_types__model__icontains="active")
+        self.assertQuerysetEqualAndNotEmpty(
+            self.filterset(params, self.queryset).qs,
+            self.queryset.filter(q).distinct(),
+        )
+        value = self.queryset.first().pk
         params = {"q": value}
-        self.assertEqual(self.filterset(params, self.queryset).qs.values_list("pk", flat=True)[0], value)
+        self.assertQuerysetEqualAndNotEmpty(
+            self.filterset(params, self.queryset).qs,
+            self.queryset.filter(pk=value),
+        )
 
 
 class TagTestCase(FilterTestCases.NameSlugFilterTestCase):
