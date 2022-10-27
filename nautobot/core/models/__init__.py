@@ -1,11 +1,17 @@
 import uuid
 
 from django.db import models
+from natural_keys import NaturalKeyModel, NaturalKeyModelManager
 
 from nautobot.core.models.querysets import RestrictedQuerySet
 
 
-class BaseModel(models.Model):
+class BaseManager(NaturalKeyModelManager):
+    def get_queryset(self):
+        return self._queryset_class(self.model, using=self._db, hints=self._hints)
+
+
+class BaseModel(NaturalKeyModel):
     """
     Base model class that all models should inherit from.
 
@@ -25,7 +31,7 @@ class BaseModel(models.Model):
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, unique=True, editable=False)
 
-    objects = RestrictedQuerySet.as_manager()
+    objects = BaseManager.from_queryset(RestrictedQuerySet)()
 
     @property
     def present_in_database(self):
@@ -50,3 +56,31 @@ class BaseModel(models.Model):
         """
         self.full_clean()
         self.save()
+
+    @classmethod
+    def get_natural_key_def(cls):
+        if hasattr(cls, "_natural_key"):
+            return cls._natural_key
+
+        for constraint in cls._meta.constraints:
+            if isinstance(constraint, models.UniqueConstraint):
+                return constraint.fields
+
+        if cls._meta.unique_together:
+            return cls._meta.unique_together[0]
+
+        unique = [
+            f
+            for f in cls._meta.fields
+            if f.unique
+            and f.__class__.__name__
+            not in [
+                "AutoField",
+                "BigAutoField",
+                "UUIDField",
+            ]
+        ]
+        if unique:
+            return (unique[0].name,)
+
+        raise Exception("Add a UniqueConstraint to use natural-keys")

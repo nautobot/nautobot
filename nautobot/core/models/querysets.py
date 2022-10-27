@@ -1,5 +1,6 @@
-from django.db.models import Count, OuterRef, Q, QuerySet, Subquery
+from django.db.models import Count, OuterRef, Q, Subquery
 from django.db.models.functions import Coalesce
+from natural_keys.models import NaturalKeyQuerySet
 
 from nautobot.core.utils import permissions
 
@@ -15,7 +16,7 @@ def count_related(model, field):
     return Coalesce(subquery, 0)
 
 
-class RestrictedQuerySet(QuerySet):
+class RestrictedQuerySet(NaturalKeyQuerySet):
     def restrict(self, user, action="view"):
         """
         Filter the QuerySet to return only objects on which the specified user has been granted the specified

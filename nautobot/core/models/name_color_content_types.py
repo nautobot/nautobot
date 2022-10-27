@@ -4,7 +4,7 @@ from django.db.models import Q
 from django.urls import reverse
 
 from nautobot.core.choices import ColorChoices
-from nautobot.core.models import BaseModel
+from nautobot.core.models import BaseManager, BaseModel
 from nautobot.core.models.fields import AutoSlugField, ColorField
 from nautobot.core.models.querysets import RestrictedQuerySet
 
@@ -36,9 +36,6 @@ class ContentTypeRelatedQuerySet(RestrictedQuerySet):
         content_types = ContentType.objects.filter(q)
         return self.filter(content_types__in=content_types)
 
-    def get_by_natural_key(self, name):
-        return self.get(name=name)
-
 
 # TODO(timizuo): Inheriting from OrganizationalModel here causes partial import error
 class NameColorContentTypesModel(
@@ -69,7 +66,7 @@ class NameColorContentTypesModel(
         blank=True,
     )
 
-    objects = ContentTypeRelatedQuerySet.as_manager()
+    objects = BaseManager.from_queryset(ContentTypeRelatedQuerySet)()
 
     csv_headers = ["name", "slug", "color", "content_types", "description"]
     clone_fields = ["color", "content_types"]
@@ -80,9 +77,6 @@ class NameColorContentTypesModel(
 
     def __str__(self):
         return self.name
-
-    def natural_key(self):
-        return (self.name,)
 
     def get_absolute_url(self):
         ct = f"{self._meta.app_label}:{self._meta.model_name}"
