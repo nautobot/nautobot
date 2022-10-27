@@ -101,7 +101,7 @@ Result
 }
 ```
 
-Additionally, by default, all custom fields in GraphQL will be prefixed with `cf_`. A custom field name `site_type` will appear in GraphQL as `cf_site_type` as an example. The prefix can be changed or remove the prefix by setting the value of `GRAPHQL_CUSTOM_FIELD_PREFIX`.
+Additionally, by default, all custom fields in GraphQL will be prefixed with `cf_`. A custom field name `site_type` will appear in GraphQL as `cf_site_type` as an example. The prefix can be changed by setting the value of [`GRAPHQL_CUSTOM_FIELD_PREFIX`](../configuration/optional-settings.md#graphql_custom_field_prefix).
 
 ```graphql
 query {
@@ -210,7 +210,7 @@ Result
 
 ## Working with Computed Fields
 
-By default, all custom fields in GraphQL will be prefixed with `cpf_`. A computed field name `ip_ptr_record` will appear in GraphQL as `cpf_ip_ptr_record` as an example. The prefix can be changed or remove the prefix by setting the value of `GRAPHQL_COMPUTED_FIELD_PREFIX`.
+By default, all custom fields in GraphQL will be prefixed with `cpf_`. A computed field name `ip_ptr_record` will appear in GraphQL as `cpf_ip_ptr_record` as an example. The prefix can be changed by setting the value of [`GRAPHQL_COMPUTED_FIELD_PREFIX`](../configuration/optional-settings.md#graphql_computed_field_prefix).
 
 ```graphql
 {
