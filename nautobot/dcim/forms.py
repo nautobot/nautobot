@@ -1804,7 +1804,7 @@ class DeviceForm(LocatableModelFormMixin, NautobotModelForm, TenancyForm, LocalC
             "group_id": "$rack_group",
         },
     )
-    redundancy_group = DynamicModelChoiceField(queryset=DeviceRedundancyGroup.objects.all(), required=False)
+    device_redundancy_group = DynamicModelChoiceField(queryset=DeviceRedundancyGroup.objects.all(), required=False)
     position = forms.IntegerField(
         required=False,
         help_text="The lowest-numbered unit occupied by the device",
@@ -1856,8 +1856,8 @@ class DeviceForm(LocatableModelFormMixin, NautobotModelForm, TenancyForm, LocalC
             "site",
             "location",
             "rack",
-            "redundancy_group",
-            "redundancy_group_priority",
+            "device_redundancy_group",
+            "device_redundancy_group_priority",
             "position",
             "face",
             "status",
@@ -2143,6 +2143,8 @@ class DeviceBulkEditForm(
     platform = DynamicModelChoiceField(queryset=Platform.objects.all(), required=False)
     serial = forms.CharField(max_length=255, required=False, label="Serial Number")
     secrets_group = DynamicModelChoiceField(queryset=SecretsGroup.objects.all(), required=False)
+    device_redundancy_group = DynamicModelChoiceField(queryset=DeviceRedundancyGroup.objects.all(), required=False)
+    device_redundancy_group_priority = forms.IntegerField(min_value=1, required=False)
 
     class Meta:
         model = Device
@@ -2156,6 +2158,8 @@ class DeviceBulkEditForm(
             "face",
             "rack_group",
             "secrets_group",
+            "device_redundancy_group",
+            "device_redundancy_group_priority"
         ]
 
     def __init__(self, *args, **kwrags):
@@ -2226,6 +2230,12 @@ class DeviceFilterForm(
         null_option="None",
     )
     mac_address = forms.CharField(required=False, label="MAC address")
+    device_redundancy_group = DynamicModelMultipleChoiceField(
+        queryset=DeviceRedundancyGroup.objects.all(),
+        to_field_name="pk",
+        required=False,
+        null_option="None",
+    )
     has_primary_ip = forms.NullBooleanField(
         required=False,
         label="Has a primary IP",

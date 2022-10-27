@@ -1197,7 +1197,7 @@ class PowerFeedPhaseChoices(ChoiceSet):
 
 
 #
-# Redundancy Groups
+# Device Redundancy Groups
 #
 
 

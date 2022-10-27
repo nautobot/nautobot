@@ -88,7 +88,7 @@ layout = (
                 weight=400,
             ),
             HomePageItem(
-                name="Redundancy Group",
+                name="Device Redundancy Group",
                 link="dcim:deviceredundancygroup_list",
                 model=models.DeviceRedundancyGroup,
                 permissions=["dcim.view_deviceredundancygroup"],

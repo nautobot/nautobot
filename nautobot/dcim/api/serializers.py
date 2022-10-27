@@ -760,7 +760,7 @@ class DeviceSerializer(NautobotModelSerializer, TaggedObjectSerializer, StatusMo
     secrets_group = NestedSecretsGroupSerializer(required=False, allow_null=True)
     cluster = NestedClusterSerializer(required=False, allow_null=True)
     virtual_chassis = NestedVirtualChassisSerializer(required=False, allow_null=True)
-    redundancy_group = NestedDeviceRedundancyGroupSerializer(required=False, allow_null=True)
+    device_redundancy_group = NestedDeviceRedundancyGroupSerializer(required=False, allow_null=True)
     local_context_schema = NestedConfigContextSchemaSerializer(required=False, allow_null=True)
 
     class Meta:
@@ -789,7 +789,7 @@ class DeviceSerializer(NautobotModelSerializer, TaggedObjectSerializer, StatusMo
             "virtual_chassis",
             "vc_position",
             "vc_priority",
-            "redundancy_group",
+            "device_redundancy_group",
             "comments",
             "local_context_schema",
             "local_context_data",

@@ -23,7 +23,7 @@ class Migration(migrations.Migration):
     operations = [
         migrations.AddField(
             model_name="device",
-            name="redundancy_group_priority",
+            name="device_redundancy_group_priority",
             field=models.PositiveSmallIntegerField(
                 blank=True, null=True, validators=[django.core.validators.MinValueValidator(1)]
             ),
@@ -104,7 +104,7 @@ class Migration(migrations.Migration):
         ),
         migrations.AddField(
             model_name="device",
-            name="redundancy_group",
+            name="device_redundancy_group",
             field=models.ForeignKey(
                 blank=True,
                 null=True,

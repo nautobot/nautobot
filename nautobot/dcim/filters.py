@@ -993,11 +993,11 @@ class DeviceFilterSet(
         field_name="virtual_chassis",
         label="Is a virtual chassis member",
     )
-    redundancy_group = NaturalKeyOrPKMultipleChoiceFilter(
-        field_name="redundancy_group",
+    device_redundancy_group = NaturalKeyOrPKMultipleChoiceFilter(
+        field_name="device_redundancy_group",
         to_field_name="name",
         queryset=DeviceRedundancyGroup.objects.all(),
-        label="Redundancy Groups (name or ID)",
+        label="Device Redundancy Groups (name or ID)",
     )
     virtual_chassis_member = is_virtual_chassis_member
     has_console_ports = RelatedMembershipBooleanFilter(

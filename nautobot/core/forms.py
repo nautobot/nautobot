@@ -20,7 +20,7 @@ OBJ_TYPE_CHOICES = (
             ("devicetype", "Device types"),
             ("device", "Devices"),
             ("virtualchassis", "Virtual Chassis"),
-            ("deviceredundancygroup", "Redundancy Groups"),
+            ("deviceredundancygroup", "Device Redundancy Groups"),
             ("cable", "Cables"),
             ("powerfeed", "Power Feeds"),
         ),

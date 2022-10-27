@@ -382,7 +382,7 @@ class NestedVirtualChassisSerializer(WritableNestedSerializer):
 
 
 #
-# Redundancy group
+# Device Redundancy group
 #
 
 

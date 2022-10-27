@@ -1728,7 +1728,7 @@ class ChildDeviceBulkImportView(generic.BulkImportView):
 class DeviceBulkEditView(generic.BulkEditView):
     # v2 TODO(jathan): Replace prefetch_related with select_related
     queryset = Device.objects.prefetch_related(
-        "tenant", "site", "rack", "device_role", "device_type__manufacturer", "secrets_group"
+        "tenant", "site", "rack", "device_role", "device_type__manufacturer", "secrets_group", "device_redundancy_group"
     )
     filterset = filters.DeviceFilterSet
     table = tables.DeviceTable
@@ -3227,7 +3227,7 @@ class DeviceRedundancyGroupUIViewSet(NautobotUIViewSet):
     queryset = (
         DeviceRedundancyGroup.objects.select_related("status")
         .prefetch_related("members")
-        .annotate(member_count=count_related(Device, "redundancy_group"))
+        .annotate(member_count=count_related(Device, "device_redundancy_group"))
     )
     serializer_class = serializers.DeviceRedundancyGroupSerializer
     table_class = tables.DeviceRedundancyGroupTable
@@ -3236,12 +3236,12 @@ class DeviceRedundancyGroupUIViewSet(NautobotUIViewSet):
     def get_extra_context(self, request, instance):
         context = super().get_extra_context(request, instance)
 
-        members = Device.objects.restrict(request.user).filter(redundancy_group=instance)
+        members = instance.members_sorted.restrict(request.user)
         context["members"] = members
 
         members_table = tables.DeviceTable(members)
 
-        members_table.columns.show("redundancy_group_priority")
+        members_table.columns.show("device_redundancy_group_priority")
 
         context["members_table"] = members_table
         return context

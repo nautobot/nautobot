@@ -822,7 +822,7 @@ class PowerFeedViewSet(PathEndpointMixin, StatusViewSetMixin, NautobotModelViewS
 
 
 #
-# Redundancy Groups
+# Device Redundancy Groups
 #
 
 

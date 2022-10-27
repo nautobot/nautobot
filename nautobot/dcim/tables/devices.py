@@ -190,8 +190,9 @@ class DeviceTable(StatusTableMixin, BaseTable):
     virtual_chassis = tables.LinkColumn(viewname="dcim:virtualchassis", args=[Accessor("virtual_chassis__pk")])
     vc_position = tables.Column(verbose_name="VC Position")
     vc_priority = tables.Column(verbose_name="VC Priority")
-    redundancy_group_priority = tables.TemplateColumn(
-        template_code="""<span class="badge badge-default">{{ record.redundancy_group_priority|default:'None' }}</span>"""
+    device_redundancy_group = tables.LinkColumn(viewname="dcim:deviceredundancygroup", args=[Accessor("device_redundancy_group__pk")])
+    device_redundancy_group_priority = tables.TemplateColumn(
+        template_code="""{% if record.device_redundancy_group %}<span class="badge badge-default">{{ record.device_redundancy_group_priority|default:'None' }}</span>{% else %}—{% endif %}"""
     )
     secrets_group = tables.Column(linkify=True)
     tags = TagColumn(url_name="dcim:device_list")
@@ -220,8 +221,8 @@ class DeviceTable(StatusTableMixin, BaseTable):
             "virtual_chassis",
             "vc_position",
             "vc_priority",
-            "redundancy_group",
-            "redundancy_group_priority",
+            "device_redundancy_group",
+            "device_redundancy_group_priority",
             "secrets_group",
             "tags",
         )
@@ -956,19 +957,18 @@ class VirtualChassisTable(BaseTable):
 
 
 #
-# Redundancy Group
+# Device Redundancy Group
 #
 
 
 class DeviceRedundancyGroupTable(BaseTable):
     pk = ToggleColumn()
     name = tables.Column(linkify=True)
-    member_count = LinkedCountColumn(
-        viewname="dcim:device_list",
-        url_params={"redundancy_group": "name"},
+    member_count = tables.TemplateColumn(
+        template_code="""<a href="{{ record.get_absolute_url }}">{{ value }}</a>""",
         verbose_name="Members",
     )
-    tags = TagColumn(url_name="dcim:virtualchassis_list")
+    tags = TagColumn(url_name="dcim:deviceredundancygroup_list")
 
     class Meta(BaseTable.Meta):
         model = DeviceRedundancyGroup

@@ -545,19 +545,20 @@ class Device(PrimaryModel, ConfigContextModel, StatusModel):
         blank=True,
         null=True,
     )
-    redundancy_group = models.ForeignKey(
+    device_redundancy_group = models.ForeignKey(
         to="dcim.DeviceRedundancyGroup",
         on_delete=models.SET_NULL,
         related_name="members",
         blank=True,
         null=True,
+        verbose_name="Device Redundancy Group",
     )
-    redundancy_group_priority = models.PositiveSmallIntegerField(
+    device_redundancy_group_priority = models.PositiveSmallIntegerField(
         blank=True,
         null=True,
         validators=[MinValueValidator(1)],
-        verbose_name="Redundancy Group Priority",
-        help_text="The priority the device has in the redundancy group.",
+        verbose_name="Device Redundancy Group Priority",
+        help_text="The priority the device has in the device redundancy group.",
     )
     # TODO: Profile filtering on this field if it could benefit from an index
     vc_position = models.PositiveSmallIntegerField(blank=True, null=True, validators=[MaxValueValidator(255)])
@@ -1057,6 +1058,10 @@ class DeviceRedundancyGroup(PrimaryModel, ConfigContextModel, StatusModel):
 
     class Meta:
         ordering = ("name",)
+
+    @property
+    def members_sorted(self):
+        return self.members.order_by("device_redundancy_group_priority")
 
     def __str__(self):
         return self.name
