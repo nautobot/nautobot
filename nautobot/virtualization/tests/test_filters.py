@@ -1,3 +1,6 @@
+from django.contrib.contenttypes.models import ContentType
+from django.db.models import Q
+
 from nautobot.dcim.choices import InterfaceModeChoices
 from nautobot.dcim.models import Device, DeviceRole, DeviceType, Manufacturer, Platform, Region, Site
 from nautobot.extras.models import Status, Tag
@@ -558,8 +561,8 @@ class VMInterfaceTestCase(FilterTestCases.FilterTestCase):
 
         statuses = Status.objects.get_for_model(VMInterface)
 
-        cls.vlan1 = VLAN.objects.create(name="VLAN 1", vid=1)
-        cls.vlan2 = VLAN.objects.create(name="VLAN 2", vid=2)
+        cls.vlan1 = VLAN.objects.first()
+        cls.vlan2 = VLAN.objects.last()
 
         vminterfaces = (
             VMInterface.objects.create(
@@ -599,8 +602,12 @@ class VMInterfaceTestCase(FilterTestCases.FilterTestCase):
         vminterfaces[2].tagged_vlans.add(cls.vlan2)
 
         # Assign primary IPs for filtering
-        IPAddress.objects.create(address="192.0.2.1/24", assigned_object=vminterfaces[0])
-        IPAddress.objects.create(address="fe80::8ef:3eff:fe4c:3895/24", assigned_object=vminterfaces[1])
+        ip_address4 = IPAddress.objects.ip_family(4).first()
+        ip_address4.assigned_object = vminterfaces[0]
+        ip_address4.validated_save()
+        ip_address6 = IPAddress.objects.ip_family(6).first()
+        ip_address6.assigned_object = vminterfaces[1]
+        ip_address6.validated_save()
 
         cls.tag = Tag.objects.get_for_model(VMInterface).first()
         vminterfaces[0].tags.add(cls.tag)
@@ -640,22 +647,40 @@ class VMInterfaceTestCase(FilterTestCases.FilterTestCase):
 
     def test_ip_addresses(self):
         with self.subTest("Primary Addresses"):
-            ipaddress = IPAddress.objects.last()
-            params = {"ip_addresses": ["192.0.2.1/24", ipaddress.id]}
-            self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+            vminterface_ct = ContentType.objects.get_for_model(VMInterface)
+            ipaddresses = list(
+                IPAddress.objects.filter(assigned_object_id__isnull=False, assigned_object_type=vminterface_ct)[:2]
+            )
+            params = {"ip_addresses": [ipaddresses[0].address, ipaddresses[1].id]}
+            self.assertQuerysetEqualAndNotEmpty(
+                self.filterset(params, self.queryset).qs,
+                self.queryset.filter(ip_addresses__in=ipaddresses),
+            )
 
         with self.subTest("Has Primary Addresses"):
             params = {"has_ip_addresses": False}
-            self.assertEqual(self.filterset(params, self.queryset).qs.count(), 1)
+            self.assertQuerysetEqualAndNotEmpty(
+                self.filterset(params, self.queryset).qs,
+                self.queryset.filter(ip_addresses__isnull=True),
+            )
 
             params = {"has_ip_addresses": True}
-            self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+            self.assertQuerysetEqualAndNotEmpty(
+                self.filterset(params, self.queryset).qs,
+                self.queryset.filter(ip_addresses__isnull=False),
+            )
 
     def test_assigned_to_interface(self):
         params = {"enabled": "true"}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+        self.assertQuerysetEqualAndNotEmpty(
+            self.filterset(params, self.queryset).qs,
+            self.queryset.filter(enabled=True),
+        )
         params = {"enabled": "false"}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 1)
+        self.assertQuerysetEqualAndNotEmpty(
+            self.filterset(params, self.queryset).qs,
+            self.queryset.filter(enabled=False),
+        )
 
     def test_parent(self):
         # Create child interfaces
@@ -755,6 +780,10 @@ class VMInterfaceTestCase(FilterTestCases.FilterTestCase):
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
 
     def test_search(self):
-        value = self.queryset.values_list("pk", flat=True)[0]
+        value = self.queryset.first().pk
         params = {"q": value}
-        self.assertEqual(self.filterset(params, self.queryset).qs.values_list("pk", flat=True)[0], value)
+        q = Q(id__iexact=str(value)) | Q(name__icontains=value)
+        self.assertQuerysetEqualAndNotEmpty(
+            self.filterset(params, self.queryset).qs,
+            self.queryset.filter(q),
+        )
