@@ -1402,7 +1402,8 @@ class StatusTestCase(FilterTestCases.NameSlugFilterTestCase):
 
     def test_search(self):
         params = {"q": "active"}
-        q = Q(name__icontains="active") | Q(slug__icontains="active") | Q(content_types__model__icontains="active")
+        q = Q(name__icontains="active") | Q(slug__icontains="active")
+        q |= Q(content_types__model__icontains="active") | Q(id__iexact="active")
         self.assertQuerysetEqualAndNotEmpty(
             self.filterset(params, self.queryset).qs,
             self.queryset.filter(q).distinct(),
