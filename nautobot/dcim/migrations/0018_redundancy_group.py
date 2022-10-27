@@ -16,8 +16,8 @@ class Migration(migrations.Migration):
 
     dependencies = [
         ("contenttypes", "0002_remove_content_type_name"),
-        ("extras", "0050_add_job_task_queues"),
-        ("dcim", "0016_device_components__timestamp_data_migration"),
+        ("extras", "0051_add_job_task_queues"),
+        ("dcim", "0017_locationtype_nestable"),
     ]
 
     operations = [
