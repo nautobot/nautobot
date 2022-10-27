@@ -48,3 +48,6 @@ TEST_USE_FACTORIES = True
 TEST_FACTORY_SEED = "Nautobot"
 # File in which all performance-specifc test baselines are stored
 TEST_PERFORMANCE_BASELINE_FILE = "nautobot/core/tests/performance_baselines.yml"
+
+# Disable logging for tests
+LOGGING = {}

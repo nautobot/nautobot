@@ -1,0 +1,1 @@
+Fixed default tagging of Docker images built with `invoke buildx`.
