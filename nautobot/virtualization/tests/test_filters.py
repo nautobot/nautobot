@@ -299,12 +299,14 @@ class VirtualMachineTestCase(FilterTestCases.FilterTestCase, FilterTestCases.Ten
             Platform.objects.create(name="Platform 2", slug="platform-2"),
             Platform.objects.create(name="Platform 3", slug="platform-3"),
         )
+        cls.platforms = platforms
 
         roles = (
             DeviceRole.objects.create(name="Device Role 1", slug="device-role-1"),
             DeviceRole.objects.create(name="Device Role 2", slug="device-role-2"),
             DeviceRole.objects.create(name="Device Role 3", slug="device-role-3"),
         )
+        cls.roles = roles
 
         tenants = Tenant.objects.filter(group__isnull=False)[:3]
 
@@ -494,18 +496,18 @@ class VirtualMachineTestCase(FilterTestCases.FilterTestCase, FilterTestCases.Ten
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
 
     def test_role(self):
-        roles = DeviceRole.objects.all()[:2]
+        roles = self.roles[:2]
         params = {"role_id": [roles[0].pk, roles[1].pk]}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), len(roles))
         params = {"role": [roles[0].slug, roles[1].slug]}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), len(roles))
 
     def test_platform(self):
-        platforms = Platform.objects.all()[:2]
+        platforms = self.platforms[:2]
         params = {"platform_id": [platforms[0].pk, platforms[1].pk]}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), len(platforms))
         params = {"platform": [platforms[0].slug, platforms[1].slug]}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), len(platforms))
 
     def test_mac_address(self):
         params = {"mac_address": ["00-00-00-00-00-01", "00-00-00-00-00-02"]}

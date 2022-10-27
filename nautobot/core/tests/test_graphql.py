@@ -1,3 +1,4 @@
+import random
 import types
 from unittest import skip
 import uuid
@@ -44,7 +45,6 @@ from nautobot.dcim.models import (
     DeviceType,
     FrontPort,
     Interface,
-    Manufacturer,
     PowerFeed,
     PowerPort,
     PowerOutlet,
@@ -646,16 +646,11 @@ class GraphQLQueryTest(TestCase):
         cls.request.user = cls.user
 
         # Populate Data
-        manufacturer = Manufacturer.objects.create(name="Manufacturer 1", slug="manufacturer-1")
-        cls.devicetype = DeviceType.objects.create(
-            manufacturer=manufacturer, model="Device Type 1", slug="device-type-1"
-        )
-        cls.upsdevicetype = DeviceType.objects.create(
-            manufacturer=manufacturer, model="UPS Device Type 1", slug="ups-device-type-1"
-        )
-        cls.devicerole1 = DeviceRole.objects.create(name="Device Role 1", slug="device-role-1")
-        cls.devicerole2 = DeviceRole.objects.create(name="Device Role 2", slug="device-role-2")
-        cls.upsdevicerole = DeviceRole.objects.create(name="UPS Device Role 1", slug="ups-device-role-1")
+        cls.device_type1 = DeviceType.objects.first()
+        cls.device_type2 = DeviceType.objects.last()
+        cls.device_role1 = DeviceRole.objects.first()
+        cls.device_role2 = DeviceRole.objects.last()
+        cls.device_role3 = random.choice(DeviceRole.objects.all())
         cls.site_statuses = list(Status.objects.get_for_model(Site))[:2]
         cls.region1 = Region.objects.create(name="Region1", slug="region1")
         cls.region2 = Region.objects.create(name="Region2", slug="region2")
@@ -690,8 +685,8 @@ class GraphQLQueryTest(TestCase):
         cls.device_statuses = list(Status.objects.get_for_model(Device))[:2]
         cls.upsdevice1 = Device.objects.create(
             name="UPS 1",
-            device_type=cls.upsdevicetype,
-            device_role=cls.upsdevicerole,
+            device_type=cls.device_type2,
+            device_role=cls.device_role3,
             site=cls.site1,
             status=cls.device_statuses[0],
             rack=cls.rack1,
@@ -710,8 +705,8 @@ class GraphQLQueryTest(TestCase):
 
         cls.device1 = Device.objects.create(
             name="Device 1",
-            device_type=cls.devicetype,
-            device_role=cls.devicerole1,
+            device_type=cls.device_type1,
+            device_role=cls.device_role1,
             site=cls.site1,
             status=cls.device_statuses[0],
             rack=cls.rack1,
@@ -797,8 +792,8 @@ class GraphQLQueryTest(TestCase):
 
         cls.device2 = Device.objects.create(
             name="Device 2",
-            device_type=cls.devicetype,
-            device_role=cls.devicerole2,
+            device_type=cls.device_type1,
+            device_role=cls.device_role2,
             site=cls.site1,
             status=cls.device_statuses[1],
             rack=cls.rack2,
@@ -822,8 +817,8 @@ class GraphQLQueryTest(TestCase):
 
         cls.device3 = Device.objects.create(
             name="Device 3",
-            device_type=cls.devicetype,
-            device_role=cls.devicerole1,
+            device_type=cls.device_type1,
+            device_role=cls.device_role1,
             site=cls.site2,
             status=cls.device_statuses[0],
         )
@@ -1210,19 +1205,24 @@ query {
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     def test_query_device_role_filter(self):
 
-        query = """
-            query {
-                devices(role: "device-role-1") {
-                    id
-                    name
+        query = (
+            # pylint: disable=consider-using-f-string
+            """
+                query {
+                    devices(role: "%s") {
+                        id
+                        name
+                    }
                 }
-            }
-        """
+            """
+            % (self.device_role1.slug,)
+        )
         result = self.execute_query(query)
 
-        self.assertEqual(len(result.data["devices"]), 2)
+        expected = list(Device.objects.filter(device_role=self.device_role1).values_list("name", flat=True))
+        self.assertEqual(len(result.data["devices"]), len(expected))
         device_names = [item["name"] for item in result.data["devices"]]
-        self.assertEqual(sorted(device_names), ["Device 1", "Device 3"])
+        self.assertEqual(sorted(device_names), sorted(expected))
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     def test_query_with_bad_filter(self):
@@ -1275,44 +1275,60 @@ query {
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     def test_query_devices_filter(self):
 
-        filters = (
-            ('name: "Device 1"', 1),
-            ('name: ["Device 1"]', 1),
-            ('name: ["Device 1", "Device 2"]', 2),
-            ('name__ic: "Device"', 3),
-            ('name__ic: ["Device"]', 3),
-            ('name__nic: "Device"', 1),
-            ('name__nic: ["Device"]', 1),
-            (f'id: "{self.device1.pk}"', 1),
-            (f'id: ["{self.device1.pk}"]', 1),
-            (f'id: ["{self.device1.pk}", "{self.device2.pk}"]', 2),
-            ('role: "device-role-1"', 2),
-            ('role: ["device-role-1"]', 2),
-            ('role: ["device-role-1", "device-role-2"]', 3),
-            ('site: "site-1"', 3),
-            ('site: ["site-1"]', 3),
-            ('site: ["site-1", "site-2"]', 4),
-            ('region: "region1"', 3),
-            ('region: ["region1"]', 3),
-            ('region: ["region1", "region2"]', 4),
-            ('face: "front"', 2),
-            ('face: "rear"', 1),
-            (f'status: "{self.device_statuses[0].slug}"', 3),
-            (f'status: ["{self.device_statuses[1].slug}"]', 1),
-            (f'status: ["{self.device_statuses[0].slug}", "{self.device_statuses[1].slug}"]', 4),
-            ("is_full_depth: true", 4),
-            ("is_full_depth: false", 0),
-            ("has_primary_ip: true", 0),
-            ("has_primary_ip: false", 4),
-            ('mac_address: "00:11:11:11:11:11"', 1),
-            ('mac_address: ["00:12:12:12:12:12"]', 1),
-            ('mac_address: ["00:11:11:11:11:11", "00:12:12:12:12:12"]', 2),
-            ('mac_address: "99:11:11:11:11:11"', 0),
-            ('q: "first"', 1),
-            ('q: "notthere"', 0),
-        )
+        filterset_class = DeviceFilterSet
+        queryset = Device.objects.all()
 
-        for filterv, nbr_expected_results in filters:
+        def _count(params, filterset_class=filterset_class, queryset=queryset):
+            return filterset_class(params, queryset).qs.count()
+
+        filters = {
+            f'name: "{self.device1.name}"': _count({"name": [self.device1.name]}),
+            f'name: ["{self.device1.name}"]': _count({"name": [self.device1.name]}),
+            f'name: ["{self.device1.name}", "{self.device2.name}"]': _count(
+                {"name": [self.device1.name, self.device2.name]}
+            ),
+            'name__ic: "Device"': _count({"name__ic": ["Device"]}),
+            'name__ic: ["Device"]': _count({"name__ic": ["Device"]}),
+            'name__nic: "Device"': _count({"name__nic": ["Device"]}),
+            'name__nic: ["Device"]': _count({"name__nic": ["Device"]}),
+            f'id: "{self.device1.pk}"': _count({"id": [self.device1.pk]}),
+            f'id: ["{self.device1.pk}"]': _count({"id": [self.device1.pk]}),
+            f'id: ["{self.device1.pk}", "{self.device2.pk}"]': _count({"id": [self.device1.pk, self.device2.pk]}),
+            f'role: "{self.device_role1.slug}"': _count({"role": [self.device_role1.slug]}),
+            f'role: ["{self.device_role1.slug}"]': _count({"role": [self.device_role1.slug]}),
+            f'role: ["{self.device_role1.slug}", "{self.device_role2.slug}"]': _count(
+                {"role": [self.device_role1.slug, self.device_role2.slug]}
+            ),
+            f'site: "{self.site1.slug}"': _count({"site": [self.site1.slug]}),
+            f'site: ["{self.site1.slug}"]': _count({"site": [self.site1.slug]}),
+            f'site: ["{self.site1.slug}", "{self.site2.slug}"]': _count({"site": [self.site1.slug, self.site2.slug]}),
+            f'region: "{self.region1.slug}"': _count({"region": [self.region1.slug]}),
+            f'region: ["{self.region1.slug}"]': _count({"region": [self.region1.slug]}),
+            f'region: ["{self.region1.slug}", "{self.region2.slug}"]': _count(
+                {"region": [self.region1.slug, self.region2.slug]}
+            ),
+            'face: "front"': _count({"face": "front"}),
+            'face: "rear"': _count({"face": "rear"}),
+            f'status: "{self.device_statuses[0].slug}"': _count({"status": [self.device_statuses[0].slug]}),
+            f'status: ["{self.device_statuses[1].slug}"]': _count({"status": [self.device_statuses[1].slug]}),
+            f'status: ["{self.device_statuses[0].slug}", "{self.device_statuses[1].slug}"]': _count(
+                {"status": [self.device_statuses[0].slug, self.device_statuses[1].slug]}
+            ),
+            "is_full_depth: true": _count({"is_full_depth": True}),
+            "is_full_depth: false": _count({"is_full_depth": False}),
+            "has_primary_ip: true": _count({"has_primary_ip": True}),
+            "has_primary_ip: false": _count({"has_primary_ip": False}),
+            'mac_address: "00:11:11:11:11:11"': _count({"mac_address": ["00:11:11:11:11:11"]}),
+            'mac_address: ["00:12:12:12:12:12"]': _count({"mac_address": ["00:12:12:12:12:12"]}),
+            'mac_address: ["00:11:11:11:11:11", "00:12:12:12:12:12"]': _count(
+                {"mac_address": ["00:11:11:11:11:11", "00:12:12:12:12:12"]}
+            ),
+            'mac_address: "99:11:11:11:11:11"': _count({"mac_address": ["99:11:11:11:11:11"]}),
+            'q: "first"': _count({"q": "first"}),
+            'q: "notthere"': _count({"q": "notthere"}),
+        }
+
+        for filterv, nbr_expected_results in filters.items():
             with self.subTest(msg=f"Checking {filterv}", filterv=filterv, nbr_expected_results=nbr_expected_results):
                 query = "query {devices(" + filterv + "){ name }}"
                 result = self.execute_query(query)
@@ -1778,7 +1794,7 @@ query {
         self.assertIsNone(result.errors)
         self.assertIsInstance(result.data, dict, result)
         self.assertIsInstance(result.data["device_types"], list, result)
-        self.assertEqual(result.data["device_types"][0]["model"], self.devicetype.model, result)
+        self.assertEqual(result.data["device_types"][0]["model"], self.device_type1.model, result)
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     def test_query_interface_pagination(self):
