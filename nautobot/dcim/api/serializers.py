@@ -1025,8 +1025,14 @@ class InterfaceSerializerVersion12(
                 )
 
         # Validate many-to-many VLAN assignments
+        tagged_vlans = data.get("tagged_vlans", [])
+        if tagged_vlans and data.get("mode") != InterfaceModeChoices.MODE_TAGGED:
+            raise serializers.ValidationError(
+                {"tagged_vlans": f"Mode must be set to {InterfaceModeChoices.MODE_TAGGED} when specifying tagged_vlan"}
+            )
+
         device = self.instance.device if self.instance else data.get("device")
-        for vlan in data.get("tagged_vlans", []):
+        for vlan in tagged_vlans:
             if vlan.site not in [device.site, None]:
                 raise serializers.ValidationError(
                     {

@@ -381,6 +381,19 @@ class VMInterfaceTestVersion12(APIViewTestCases.APIViewTestCase):
             self.client.post(url, self.untagged_vlan_data, format="json", **self.header), status.HTTP_201_CREATED
         )
 
+    def test_tagged_vlan_raise_error_if_mode_not_set_to_tagged(self):
+        self.add_permissions("virtualization.add_vminterface")
+        vlan = VLAN.objects.first()
+        virtualmachine = VirtualMachine.objects.first()
+        payload = {
+            "virtual_machine": virtualmachine.pk,
+            "name": "Tagged Interface",
+            "tagged_vlans": [vlan.pk],
+        }
+        response = self.client.post(self._get_list_url(), data=payload, format="json", **self.header)
+        self.assertHttpStatus(response, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(response.data["tagged_vlans"][0], "Mode must be set to tagged when specifying tagged_vlan")
+
 
 class VMInterfaceTestVersion14(VMInterfaceTestVersion12):
     api_version = "1.4"

@@ -42,6 +42,7 @@ from nautobot.dcim.models import (
 )
 from nautobot.extras.choices import CustomFieldTypeChoices
 from nautobot.extras.models import CustomField, Status
+from nautobot.ipam.models import VLAN
 from nautobot.tenancy.models import Tenant
 
 
@@ -1120,4 +1121,31 @@ class PowerPanelTestCase(TestCase):
         self.assertIn(
             'Rack group "Rack Group 1" belongs to a location ("Location 2") that does not contain "Location 1"',
             str(cm.exception),
+        )
+
+
+class InterfaceTestCase(TestCase):
+    def test_tagged_vlan_raise_error_if_mode_not_set_to_tagged(self):
+        manufacturer = Manufacturer.objects.create(name="Manufacturer 1", slug="manufacturer-1")
+        devicetype = DeviceType.objects.create(manufacturer=manufacturer, model="Device Type 1", slug="device-type-1")
+        devicerole = DeviceRole.objects.create(name="Device Role 1", slug="device-role-1")
+        site = Site.objects.create(name="Site-1", slug="site-1")
+        vlan1 = VLAN.objects.create(name="VLAN 1", vid=100, site=site)
+        status = Status.objects.get_for_model(Device)[0]
+        device = Device.objects.create(
+            name="Device 1",
+            device_type=devicetype,
+            device_role=devicerole,
+            site=site,
+            status=status,
+        )
+        interface = Interface.objects.create(
+            name="Int1",
+            type=InterfaceTypeChoices.TYPE_VIRTUAL,
+            device=device,
+        )
+        with self.assertRaises(ValidationError) as err:
+            interface.tagged_vlans.add(vlan1)
+        self.assertEqual(
+            err.exception.message_dict["tagged_vlans"][0], "Mode must be set to tagged when specifying tagged_vlan"
         )

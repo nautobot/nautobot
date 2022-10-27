@@ -1847,6 +1847,20 @@ class InterfaceTestVersion12(Mixins.ComponentTraceMixin, APIViewTestCases.APIVie
                 f"not part of virtual chassis {self.virtualchassis}.",
             )
 
+    def test_tagged_vlan_raise_error_if_mode_not_set_to_tagged(self):
+        self.add_permissions("dcim.add_interface")
+        payload = {
+            "device": self.devices[0].pk,
+            "name": "Tagged Interface",
+            "type": "1000base-t",
+            "mode": InterfaceModeChoices.MODE_ACCESS,
+            "tagged_vlans": [self.vlans[0].pk, self.vlans[1].pk],
+            "untagged_vlan": self.vlans[2].pk,
+        }
+        response = self.client.post(self._get_list_url(), data=payload, format="json", **self.header)
+        self.assertHttpStatus(response, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(response.data["tagged_vlans"][0], "Mode must be set to tagged when specifying tagged_vlan")
+
 
 class InterfaceTestVersion14(InterfaceTestVersion12):
     api_version = "1.4"
