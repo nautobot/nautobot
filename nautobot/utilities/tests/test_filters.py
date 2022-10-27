@@ -995,7 +995,7 @@ class DynamicFilterLookupExpressionTest(TestCase):
 class GetFiltersetTestValuesTest(FilterTestCases.BaseFilterTestCase):
     """Tests for `BaseFilterTestCase.get_filterset_test_values()`."""
 
-    queryset = Site.objects.all()
+    queryset = Site.objects.filter(name__startswith="getfiltersettest")
     exception_message = "Cannot find valid test data for Site field description"
 
     @classmethod
@@ -1003,32 +1003,32 @@ class GetFiltersetTestValuesTest(FilterTestCases.BaseFilterTestCase):
         statuses = Status.objects.get_for_model(Site)
         cls.status_active = statuses.get(slug="active")
 
-        Site.objects.all().delete()
-
     def test_empty_queryset(self):
         with self.assertRaisesMessage(ValueError, self.exception_message):
             self.get_filterset_test_values("description")
 
     def test_object_return_count(self):
         for n in range(1, 11):
-            Site.objects.create(name=f"Site{n}", status=self.status_active, description=f"description {n}")
-        test_values = self.get_filterset_test_values("description", Site.objects.all())
-        self.assertNotEqual(test_values, 0)
-        self.assertNotEqual(test_values, Site.objects.count())
+            Site.objects.create(
+                name=f"getfiltersettestSite{n}", status=self.status_active, description=f"description {n}"
+            )
+        test_values = self.get_filterset_test_values("description", self.queryset)
+        self.assertNotEqual(len(test_values), 0)
+        self.assertNotEqual(len(test_values), self.queryset.count())
 
     def test_insufficient_unique_values(self):
-        Site.objects.create(name="UniqueSite", description="UniqueSite description")
+        Site.objects.create(name="getfiltersettestUniqueSite", description="UniqueSite description")
         with self.assertRaisesMessage(ValueError, self.exception_message):
             self.get_filterset_test_values("description")
-        Site.objects.create(name="Site1", status=self.status_active)
-        Site.objects.create(name="Site2", status=self.status_active)
+        Site.objects.create(name="getfiltersettestSite1", status=self.status_active)
+        Site.objects.create(name="getfiltersettestSite2", status=self.status_active)
         with self.assertRaisesMessage(ValueError, self.exception_message):
             self.get_filterset_test_values("description")
 
     def test_no_unique_values(self):
         for n in range(1, 11):
-            Site.objects.create(name=f"Site{n}", status=self.status_active)
-        for site in Site.objects.all():
+            Site.objects.create(name=f"getfiltersettestSite{n}", status=self.status_active)
+        for site in self.queryset:
             site.delete()
             with self.assertRaisesMessage(ValueError, self.exception_message):
                 self.get_filterset_test_values("description")
