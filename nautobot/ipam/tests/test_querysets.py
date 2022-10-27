@@ -1,4 +1,7 @@
+from unittest import skipIf
+
 import netaddr
+from django.db import connection
 
 from nautobot.ipam.models import Prefix, Aggregate, IPAddress
 from nautobot.utilities.testing import TestCase
@@ -19,9 +22,10 @@ class AggregateQuerysetTestCase(TestCase):
         cls.exact_network = agg.prefix
         cls.parent_network = cls.exact_network.supernet()[-1]
         # Depending on random generation, parent_network *might* cover a second aggregate
-        cls.parent_covers_second_aggregate = cls.queryset.net_equals(
-            list(cls.parent_network.subnet(cls.exact_network.prefixlen))[1]
-        ).exists()
+        cls.parent_covers_second_aggregate = (
+            cls.queryset.net_equals(list(cls.parent_network.subnet(cls.exact_network.prefixlen))[0]).exists()
+            and cls.queryset.net_equals(list(cls.parent_network.subnet(cls.exact_network.prefixlen))[1]).exists()
+        )
         cls.child_network = list(cls.exact_network.subnet(cls.exact_network.prefixlen + 3))[0]
 
     def test_net_equals(self):
@@ -75,6 +79,8 @@ class IPAddressQuerySet(TestCase):
 
     @classmethod
     def setUpTestData(cls):
+
+        cls.queryset.delete()
 
         IPAddress.objects.create(address="10.0.0.1/24", vrf=None, tenant=None)
         IPAddress.objects.create(address="10.0.0.2/24", vrf=None, tenant=None)
@@ -160,12 +166,114 @@ class IPAddressQuerySet(TestCase):
         for term, cnt in search_terms.items():
             self.assertEqual(self.queryset.string_search(term).count(), cnt)
 
+    def test_host_family(self):
+        self.assertEqual(IPAddress.objects.filter(host__family=4).count(), 5)
+        self.assertEqual(IPAddress.objects.filter(host__family=6).count(), 3)
+
+    def test_host_net_host(self):
+        self.assertEqual(IPAddress.objects.filter(host__net_host="10.0.0.1").count(), 2)
+        self.assertEqual(IPAddress.objects.filter(host__net_host="10.0.0.2").count(), 1)
+        self.assertEqual(IPAddress.objects.filter(host__net_host="10.0.0.50").count(), 0)
+        self.assertEqual(IPAddress.objects.filter(host__net_host="2001:db8::1").count(), 1)
+        self.assertEqual(IPAddress.objects.filter(host__net_host="2001:db8::5").count(), 0)
+
+    def test_host_net_host_contained(self):
+        self.assertEqual(IPAddress.objects.filter(host__net_host_contained="10.0.0.0/24").count(), 5)
+        self.assertEqual(IPAddress.objects.filter(host__net_host_contained="10.0.0.0/30").count(), 4)
+        self.assertEqual(IPAddress.objects.filter(host__net_host_contained="10.0.0.0/31").count(), 2)
+        self.assertEqual(IPAddress.objects.filter(host__net_host_contained="10.0.0.2/31").count(), 2)
+        self.assertEqual(IPAddress.objects.filter(host__net_host_contained="10.0.10.0/24").count(), 0)
+        self.assertEqual(IPAddress.objects.filter(host__net_host_contained="2001:db8::/64").count(), 3)
+        self.assertEqual(IPAddress.objects.filter(host__net_host_contained="2222:db8::/64").count(), 0)
+
+    def test_host_net_in(self):
+        self.assertEqual(IPAddress.objects.filter(host__net_in=["10.0.0.0/31", "10.0.0.2/31"]).count(), 4)
+        self.assertEqual(IPAddress.objects.filter(host__net_in=["10.0.0.0/24"]).count(), 5)
+        self.assertEqual(IPAddress.objects.filter(host__net_in=["172.16.0.0/24"]).count(), 0)
+        self.assertEqual(IPAddress.objects.filter(host__net_in=["2001:db8::/64"]).count(), 3)
+        self.assertEqual(IPAddress.objects.filter(host__net_in=["10.0.0.0/24", "2001:db8::/64"]).count(), 8)
+
+        IPAddress.objects.create(address="192.168.0.1/24", vrf=None, tenant=None)
+        self.assertEqual(IPAddress.objects.filter(host__net_in=["192.168.0.0/31"]).count(), 1)
+
+    @skipIf(
+        connection.vendor == "postgresql",
+        "Not currently supported on postgresql",
+    )
+    def test_host_exact(self):
+        self.assertEqual(IPAddress.objects.filter(host__exact="10.0.0.1").count(), 2)
+        self.assertEqual(IPAddress.objects.filter(host__exact="10.0.0.2").count(), 1)
+        self.assertEqual(IPAddress.objects.filter(host__exact="10.0.0.10").count(), 0)
+        self.assertEqual(IPAddress.objects.filter(host__iexact="10.0.0.1").count(), 2)
+        self.assertEqual(IPAddress.objects.filter(host__iexact="10.0.0.2").count(), 1)
+        self.assertEqual(IPAddress.objects.filter(host__iexact="10.0.0.10").count(), 0)
+
+        self.assertEqual(IPAddress.objects.filter(host__exact="2001:db8::1").count(), 1)
+        self.assertEqual(IPAddress.objects.filter(host__exact="2001:db8::5").count(), 0)
+        self.assertEqual(IPAddress.objects.filter(host__iexact="2001:db8::1").count(), 1)
+        self.assertEqual(IPAddress.objects.filter(host__iexact="2001:db8::5").count(), 0)
+
+    @skipIf(
+        connection.vendor == "postgresql",
+        "Not currently supported on postgresql",
+    )
+    def test_host_endswith(self):
+        self.assertEqual(IPAddress.objects.filter(host__endswith="0.2").count(), 1)
+        self.assertEqual(IPAddress.objects.filter(host__endswith="0.1").count(), 2)
+        self.assertEqual(IPAddress.objects.filter(host__endswith="0.50").count(), 0)
+        self.assertEqual(IPAddress.objects.filter(host__iendswith="0.2").count(), 1)
+        self.assertEqual(IPAddress.objects.filter(host__iendswith="0.1").count(), 2)
+        self.assertEqual(IPAddress.objects.filter(host__iendswith="0.50").count(), 0)
+
+        self.assertEqual(IPAddress.objects.filter(host__endswith="8::1").count(), 1)
+        self.assertEqual(IPAddress.objects.filter(host__endswith="8::5").count(), 0)
+        self.assertEqual(IPAddress.objects.filter(host__iendswith="8::1").count(), 1)
+        self.assertEqual(IPAddress.objects.filter(host__iendswith="8::5").count(), 0)
+
+    @skipIf(
+        connection.vendor == "postgresql",
+        "Not currently supported on postgresql",
+    )
+    def test_host_startswith(self):
+        self.assertEqual(IPAddress.objects.filter(host__startswith="10.0.0.").count(), 5)
+        self.assertEqual(IPAddress.objects.filter(host__startswith="10.0.0.1").count(), 2)
+        self.assertEqual(IPAddress.objects.filter(host__startswith="10.50.0.").count(), 0)
+        self.assertEqual(IPAddress.objects.filter(host__istartswith="10.0.0.").count(), 5)
+        self.assertEqual(IPAddress.objects.filter(host__istartswith="10.0.0.1").count(), 2)
+        self.assertEqual(IPAddress.objects.filter(host__istartswith="10.50.0.").count(), 0)
+
+        self.assertEqual(IPAddress.objects.filter(host__startswith="2001:db8::").count(), 3)
+        self.assertEqual(IPAddress.objects.filter(host__startswith="2001:db8::1").count(), 1)
+        self.assertEqual(IPAddress.objects.filter(host__startswith="2001:db8::5").count(), 0)
+        self.assertEqual(IPAddress.objects.filter(host__istartswith="2001:db8::").count(), 3)
+        self.assertEqual(IPAddress.objects.filter(host__istartswith="2001:db8::1").count(), 1)
+        self.assertEqual(IPAddress.objects.filter(host__istartswith="2001:db8::5").count(), 0)
+
+    @skipIf(
+        connection.vendor == "postgresql",
+        "Not currently supported on postgresql",
+    )
+    def test_host_regex(self):
+        self.assertEqual(IPAddress.objects.filter(host__regex=r"10\.(.*)\.1").count(), 2)
+        self.assertEqual(IPAddress.objects.filter(host__regex=r"10\.(.*)\.4").count(), 1)
+        self.assertEqual(IPAddress.objects.filter(host__regex=r"10\.(.*)\.50").count(), 0)
+        self.assertEqual(IPAddress.objects.filter(host__iregex=r"10\.(.*)\.1").count(), 2)
+        self.assertEqual(IPAddress.objects.filter(host__iregex=r"10\.(.*)\.4").count(), 1)
+        self.assertEqual(IPAddress.objects.filter(host__iregex=r"10\.(.*)\.50").count(), 0)
+
+        self.assertEqual(IPAddress.objects.filter(host__regex=r"2001(.*)1").count(), 1)
+        self.assertEqual(IPAddress.objects.filter(host__regex=r"2001(.*)5").count(), 0)
+        self.assertEqual(IPAddress.objects.filter(host__iregex=r"2001(.*)1").count(), 1)
+        self.assertEqual(IPAddress.objects.filter(host__iregex=r"2001(.*)5").count(), 0)
+
 
 class PrefixQuerysetTestCase(TestCase):
     queryset = Prefix.objects.all()
 
     @classmethod
     def setUpTestData(cls):
+
+        cls.queryset.delete()
 
         Prefix.objects.create(prefix=netaddr.IPNetwork("192.168.0.0/16"))
 
@@ -273,3 +381,149 @@ class PrefixQuerysetTestCase(TestCase):
         }
         for term, cnt in search_terms.items():
             self.assertEqual(self.queryset.string_search(term).count(), cnt)
+
+    def test_network_family(self):
+        self.assertEqual(Prefix.objects.filter(network__family=4).count(), 7)
+        self.assertEqual(Prefix.objects.filter(network__family=6).count(), 3)
+
+    def test_network_net_equals(self):
+        self.assertEqual(Prefix.objects.filter(network__net_equals="192.168.0.0/16").count(), 1)
+        self.assertEqual(Prefix.objects.filter(network__net_equals="192.1.0.0/16").count(), 0)
+        self.assertEqual(Prefix.objects.filter(network__net_equals="192.1.0.0/28").count(), 0)
+        self.assertEqual(Prefix.objects.filter(network__net_equals="192.1.0.0/32").count(), 0)
+        self.assertEqual(Prefix.objects.filter(network__net_equals="fd78:da4f:e596:c217::/64").count(), 1)
+        self.assertEqual(Prefix.objects.filter(network__net_equals="fd78:da4f:e596:c218::/122").count(), 0)
+        self.assertEqual(Prefix.objects.filter(network__net_equals="fd78:da4f:e596:c218::/64").count(), 0)
+
+    def test_network_net_contained(self):
+        self.assertEqual(Prefix.objects.filter(network__net_contained="192.0.0.0/8").count(), 7)
+        self.assertEqual(Prefix.objects.filter(network__net_contained="192.168.0.0/16").count(), 6)
+        self.assertEqual(Prefix.objects.filter(network__net_contained="192.168.3.0/24").count(), 3)
+        self.assertEqual(Prefix.objects.filter(network__net_contained="192.168.1.0/24").count(), 0)
+        self.assertEqual(Prefix.objects.filter(network__net_contained="192.168.3.192/28").count(), 0)
+        self.assertEqual(Prefix.objects.filter(network__net_contained="192.168.3.192/32").count(), 0)
+
+        self.assertEqual(Prefix.objects.filter(network__net_contained="fd78:da4f:e596:c217::/64").count(), 2)
+        self.assertEqual(Prefix.objects.filter(network__net_contained="fd78:da4f:e596:c217::/120").count(), 1)
+        self.assertEqual(Prefix.objects.filter(network__net_contained="fd78:da4f:e596:c218::/64").count(), 0)
+
+    def test_network_net_contained_or_equal(self):
+        self.assertEqual(Prefix.objects.filter(network__net_contained_or_equal="192.0.0.0/8").count(), 7)
+        self.assertEqual(Prefix.objects.filter(network__net_contained_or_equal="192.168.0.0/16").count(), 7)
+        self.assertEqual(Prefix.objects.filter(network__net_contained_or_equal="192.168.3.0/24").count(), 4)
+        self.assertEqual(Prefix.objects.filter(network__net_contained_or_equal="192.168.1.0/24").count(), 1)
+        self.assertEqual(Prefix.objects.filter(network__net_contained_or_equal="192.168.3.192/28").count(), 1)
+        self.assertEqual(Prefix.objects.filter(network__net_contained_or_equal="192.168.3.192/32").count(), 0)
+
+        self.assertEqual(Prefix.objects.filter(network__net_contained_or_equal="fd78:da4f:e596:c217::/64").count(), 3)
+        self.assertEqual(Prefix.objects.filter(network__net_contained_or_equal="fd78:da4f:e596:c217::/120").count(), 2)
+        self.assertEqual(Prefix.objects.filter(network__net_contained_or_equal="fd78:da4f:e596:c218::/64").count(), 0)
+
+    def test_network_net_contains(self):
+        self.assertEqual(Prefix.objects.filter(network__net_contains="192.0.0.0/8").count(), 0)
+        self.assertEqual(Prefix.objects.filter(network__net_contains="192.168.0.0/16").count(), 0)
+        self.assertEqual(Prefix.objects.filter(network__net_contains="192.168.3.0/24").count(), 1)
+        self.assertEqual(Prefix.objects.filter(network__net_contains="192.168.3.192/28").count(), 2)
+        self.assertEqual(Prefix.objects.filter(network__net_contains="192.168.3.192/30").count(), 3)
+        self.assertEqual(Prefix.objects.filter(network__net_contains="192.168.3.192/32").count(), 3)
+
+        self.assertEqual(Prefix.objects.filter(network__net_contains="fd78:da4f:e596:c217::/64").count(), 0)
+        self.assertEqual(Prefix.objects.filter(network__net_contains="fd78:da4f:e596:c217::/120").count(), 1)
+        self.assertEqual(Prefix.objects.filter(network__net_contains="fd78:da4f:e596:c217::/122").count(), 2)
+        self.assertEqual(Prefix.objects.filter(network__net_contains="fd78:da4f:e596:c218::/64").count(), 0)
+
+    def test_network_net_contains_or_equals(self):
+        self.assertEqual(Prefix.objects.filter(network__net_contains_or_equals="192.0.0.0/8").count(), 0)
+        self.assertEqual(Prefix.objects.filter(network__net_contains_or_equals="192.168.0.0/16").count(), 1)
+        self.assertEqual(Prefix.objects.filter(network__net_contains_or_equals="192.168.3.0/24").count(), 2)
+        self.assertEqual(Prefix.objects.filter(network__net_contains_or_equals="192.168.3.192/28").count(), 3)
+        self.assertEqual(Prefix.objects.filter(network__net_contains_or_equals="192.168.3.192/30").count(), 3)
+        self.assertEqual(Prefix.objects.filter(network__net_contains_or_equals="192.168.3.192/32").count(), 3)
+
+        self.assertEqual(Prefix.objects.filter(network__net_contains_or_equals="fd78:da4f:e596:c217::/64").count(), 1)
+        self.assertEqual(Prefix.objects.filter(network__net_contains_or_equals="fd78:da4f:e596:c217::/120").count(), 2)
+        self.assertEqual(Prefix.objects.filter(network__net_contains_or_equals="fd78:da4f:e596:c217::/122").count(), 3)
+        self.assertEqual(Prefix.objects.filter(network__net_contains_or_equals="fd78:da4f:e596:c218::/64").count(), 0)
+
+    def test_network_get_by_prefix(self):
+        prefix = Prefix.objects.filter(network__net_equals="192.168.0.0/16")[0]
+        self.assertEqual(Prefix.objects.get(prefix="192.168.0.0/16"), prefix)
+
+    def test_network_get_by_prefix_fails(self):
+        _ = Prefix.objects.filter(network__net_equals="192.168.0.0/16")[0]
+        with self.assertRaises(Prefix.DoesNotExist):
+            Prefix.objects.get(prefix="192.168.3.0/16")
+
+    def test_network_filter_by_prefix(self):
+        prefix = Prefix.objects.filter(network__net_equals="192.168.0.0/16")[0]
+        self.assertEqual(Prefix.objects.filter(prefix="192.168.0.0/16")[0], prefix)
+
+    @skipIf(
+        connection.vendor == "postgresql",
+        "Not currently supported on postgresql",
+    )
+    def test_network_exact(self):
+        self.assertEqual(Prefix.objects.filter(network__exact="192.168.0.0").count(), 1)
+        self.assertEqual(Prefix.objects.filter(network__exact="192.168.1.0").count(), 1)
+        self.assertEqual(Prefix.objects.filter(network__exact="192.168.50.0").count(), 0)
+        self.assertEqual(Prefix.objects.filter(network__iexact="192.168.0.0").count(), 1)
+        self.assertEqual(Prefix.objects.filter(network__iexact="192.168.1.0").count(), 1)
+        self.assertEqual(Prefix.objects.filter(network__iexact="192.168.50.0").count(), 0)
+
+        self.assertEqual(Prefix.objects.filter(network__exact="fd78:da4f:e596:c217::").count(), 3)
+        self.assertEqual(Prefix.objects.filter(network__exact="fd78:da4f:e596:c218::").count(), 0)
+        self.assertEqual(Prefix.objects.filter(network__iexact="fd78:da4f:e596:c217::").count(), 3)
+        self.assertEqual(Prefix.objects.filter(network__iexact="fd78:da4f:e596:c218::").count(), 0)
+
+    @skipIf(
+        connection.vendor == "postgresql",
+        "Not currently supported on postgresql",
+    )
+    def test_network_endswith(self):
+        self.assertEqual(Prefix.objects.filter(network__endswith=".224").count(), 1)
+        self.assertEqual(Prefix.objects.filter(network__endswith=".0").count(), 4)
+        self.assertEqual(Prefix.objects.filter(network__endswith="0.0").count(), 1)
+        self.assertEqual(Prefix.objects.filter(network__iendswith=".224").count(), 1)
+        self.assertEqual(Prefix.objects.filter(network__iendswith=".0").count(), 4)
+        self.assertEqual(Prefix.objects.filter(network__iendswith="0.0").count(), 1)
+
+        self.assertEqual(Prefix.objects.filter(network__endswith="c217::").count(), 3)
+        self.assertEqual(Prefix.objects.filter(network__endswith="c218::").count(), 0)
+        self.assertEqual(Prefix.objects.filter(network__iendswith="c217::").count(), 3)
+        self.assertEqual(Prefix.objects.filter(network__iendswith="c218::").count(), 0)
+
+    @skipIf(
+        connection.vendor == "postgresql",
+        "Not currently supported on postgresql",
+    )
+    def test_network_startswith(self):
+        self.assertEqual(Prefix.objects.filter(network__startswith="192.").count(), 7)
+        self.assertEqual(Prefix.objects.filter(network__startswith="192.168.3.").count(), 4)
+        self.assertEqual(Prefix.objects.filter(network__startswith="192.168.3.2").count(), 2)
+        self.assertEqual(Prefix.objects.filter(network__startswith="192.168.50").count(), 0)
+        self.assertEqual(Prefix.objects.filter(network__istartswith="192.").count(), 7)
+        self.assertEqual(Prefix.objects.filter(network__istartswith="192.168.3.").count(), 4)
+        self.assertEqual(Prefix.objects.filter(network__istartswith="192.168.3.2").count(), 2)
+        self.assertEqual(Prefix.objects.filter(network__istartswith="192.168.50").count(), 0)
+
+        self.assertEqual(Prefix.objects.filter(network__startswith="fd78:").count(), 3)
+        self.assertEqual(Prefix.objects.filter(network__startswith="fd79:").count(), 0)
+        self.assertEqual(Prefix.objects.filter(network__istartswith="fd78:").count(), 3)
+        self.assertEqual(Prefix.objects.filter(network__istartswith="fd79:").count(), 0)
+
+    @skipIf(
+        connection.vendor == "postgresql",
+        "Not currently supported on postgresql",
+    )
+    def test_network_regex(self):
+        self.assertEqual(Prefix.objects.filter(network__regex=r"192\.(.*)\.0").count(), 4)
+        self.assertEqual(Prefix.objects.filter(network__regex=r"192\.\d+(.*)\.0").count(), 4)
+        self.assertEqual(Prefix.objects.filter(network__regex=r"10\.\d+(.*)\.0").count(), 0)
+        self.assertEqual(Prefix.objects.filter(network__iregex=r"192\.(.*)\.0").count(), 4)
+        self.assertEqual(Prefix.objects.filter(network__iregex=r"192\.\d+(.*)\.0").count(), 4)
+        self.assertEqual(Prefix.objects.filter(network__iregex=r"10\.\d+(.*)\.0").count(), 0)
+
+        self.assertEqual(Prefix.objects.filter(network__regex=r"fd78(.*)c217(.*)").count(), 3)
+        self.assertEqual(Prefix.objects.filter(network__regex=r"fd78(.*)c218(.*)").count(), 0)
+        self.assertEqual(Prefix.objects.filter(network__iregex=r"fd78(.*)c217(.*)").count(), 3)
+        self.assertEqual(Prefix.objects.filter(network__iregex=r"fd78(.*)c218(.*)").count(), 0)

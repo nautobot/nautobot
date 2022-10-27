@@ -1,0 +1,2 @@
+Added generating performance report options to 'invoke unittest'.
+Added `invoke performance-test` to `tasks.py`.

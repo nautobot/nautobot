@@ -140,8 +140,6 @@ class TestAggregate(TestCase):
 
 
 class TestPrefix(TestCase):
-    fixtures = ("status",)
-
     def setUp(self):
         super().setUp()
         self.statuses = Status.objects.get_for_model(Prefix)
@@ -173,11 +171,7 @@ class TestPrefix(TestCase):
         self.assertSetEqual(set(duplicate_prefix_pks), {prefixes[1].pk, prefixes[2].pk})
 
     def test_get_child_prefixes(self):
-        vrfs = (
-            VRF.objects.create(name="VRF 1"),
-            VRF.objects.create(name="VRF 2"),
-            VRF.objects.create(name="VRF 3"),
-        )
+        vrfs = VRF.objects.all()[:3]
         prefixes = (
             Prefix.objects.create(prefix=netaddr.IPNetwork("10.0.0.0/16"), status=Prefix.STATUS_CONTAINER),
             Prefix.objects.create(prefix=netaddr.IPNetwork("10.0.0.0/24"), vrf=None),
@@ -201,11 +195,7 @@ class TestPrefix(TestCase):
         self.assertSetEqual(child_prefix_pks, {prefixes[2].pk})
 
     def test_get_child_ips(self):
-        vrfs = (
-            VRF.objects.create(name="VRF 1"),
-            VRF.objects.create(name="VRF 2"),
-            VRF.objects.create(name="VRF 3"),
-        )
+        vrfs = VRF.objects.all()[:3]
         parent_prefix = Prefix.objects.create(prefix=netaddr.IPNetwork("10.0.0.0/16"), status=Prefix.STATUS_CONTAINER)
         ips = (
             IPAddress.objects.create(address=netaddr.IPNetwork("10.0.0.1/24"), vrf=None),
@@ -379,21 +369,19 @@ class TestPrefix(TestCase):
         self.assertRaises(ValidationError, duplicate_prefix.clean)
 
     def test_duplicate_vrf(self):
-        vrf = VRF.objects.create(name="Test", rd="1:1", enforce_unique=False)
+        vrf = VRF.objects.filter(enforce_unique=False).first()
         Prefix.objects.create(vrf=vrf, prefix=netaddr.IPNetwork("192.0.2.0/24"))
         duplicate_prefix = Prefix(vrf=vrf, prefix=netaddr.IPNetwork("192.0.2.0/24"))
         self.assertIsNone(duplicate_prefix.clean())
 
     def test_duplicate_vrf_unique(self):
-        vrf = VRF.objects.create(name="Test", rd="1:1", enforce_unique=True)
+        vrf = VRF.objects.filter(enforce_unique=True).first()
         Prefix.objects.create(vrf=vrf, prefix=netaddr.IPNetwork("192.0.2.0/24"))
         duplicate_prefix = Prefix(vrf=vrf, prefix=netaddr.IPNetwork("192.0.2.0/24"))
         self.assertRaises(ValidationError, duplicate_prefix.clean)
 
 
 class TestIPAddress(TestCase):
-    fixtures = ("status",)
-
     def test_get_duplicates(self):
         ips = (
             IPAddress.objects.create(address=netaddr.IPNetwork("192.0.2.1/24")),
@@ -421,13 +409,13 @@ class TestIPAddress(TestCase):
         self.assertRaises(ValidationError, duplicate_ip.clean)
 
     def test_duplicate_vrf(self):
-        vrf = VRF.objects.create(name="Test", rd="1:1", enforce_unique=False)
+        vrf = VRF.objects.filter(enforce_unique=False).first()
         IPAddress.objects.create(vrf=vrf, address=netaddr.IPNetwork("192.0.2.1/24"))
         duplicate_ip = IPAddress(vrf=vrf, address=netaddr.IPNetwork("192.0.2.1/24"))
         self.assertIsNone(duplicate_ip.clean())
 
     def test_duplicate_vrf_unique(self):
-        vrf = VRF.objects.create(name="Test", rd="1:1", enforce_unique=True)
+        vrf = VRF.objects.filter(enforce_unique=True).first()
         IPAddress.objects.create(vrf=vrf, address=netaddr.IPNetwork("192.0.2.1/24"))
         duplicate_ip = IPAddress(vrf=vrf, address=netaddr.IPNetwork("192.0.2.1/24"))
         self.assertRaises(ValidationError, duplicate_ip.clean)
@@ -523,6 +511,7 @@ class TestIPAddress(TestCase):
         self.assertIsNone(ipaddress_2.clean())
 
     def test_create_ip_address_without_slaac_status(self):
+        IPAddress.objects.filter(status__slug=IPAddressStatusChoices.STATUS_SLAAC).delete()
         Status.objects.get(slug=IPAddressStatusChoices.STATUS_SLAAC).delete()
         IPAddress.objects.create(address="1.1.1.1/32")
         self.assertTrue(IPAddress.objects.filter(address="1.1.1.1/32").exists())
@@ -563,8 +552,6 @@ class TestVLANGroup(TestCase):
 
 
 class VLANTestCase(TestCase):
-    fixtures = ("status",)
-
     def test_vlan_validation(self):
         site = Site.objects.create(name="Site 1")
         location_type = LocationType.objects.create(name="Location Type 1")

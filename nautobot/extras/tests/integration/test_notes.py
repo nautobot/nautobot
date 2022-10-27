@@ -9,8 +9,6 @@ class NoteTestCase(SeleniumTestCase):
     Integration test to check nautobot.extras.models.notes view, add and markdown functionality.
     """
 
-    fixtures = ("status",)
-
     def setUp(self):
         super().setUp()
         self.user.is_superuser = True

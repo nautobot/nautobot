@@ -5,6 +5,7 @@ import yaml
 
 from django.contrib.auth import get_user_model
 from django.contrib.contenttypes.models import ContentType
+from django.db.models import Q
 from django.test import override_settings
 from django.urls import reverse
 from netaddr import EUI
@@ -33,6 +34,7 @@ from nautobot.dcim.choices import (
 from nautobot.dcim.filters import ConsoleConnectionFilterSet, InterfaceConnectionFilterSet, PowerConnectionFilterSet
 from nautobot.dcim.models import (
     Cable,
+    CablePath,
     ConsolePort,
     ConsolePortTemplate,
     ConsoleServerPort,
@@ -81,7 +83,7 @@ from nautobot.extras.models import (
 from nautobot.ipam.models import VLAN, IPAddress
 from nautobot.tenancy.models import Tenant
 from nautobot.users.models import ObjectPermission
-from nautobot.utilities.testing import ViewTestCases, extract_page_body, post_data
+from nautobot.utilities.testing import ViewTestCases, extract_page_body, ModelViewTestCase, post_data
 
 # Use the proper swappable User model
 User = get_user_model()
@@ -134,10 +136,6 @@ class RegionTestCase(ViewTestCases.OrganizationalObjectViewTestCase):
 
 class SiteTestCase(ViewTestCases.PrimaryObjectViewTestCase):
     model = Site
-    fixtures = (
-        "status",
-        "tag",
-    )
 
     @classmethod
     def setUpTestData(cls):
@@ -273,13 +271,14 @@ class LocationTypeTestCase(ViewTestCases.OrganizationalObjectViewTestCase):
             "parent": lt2.pk,
             "description": "Another intermediate type",
             "content_types": [ContentType.objects.get_for_model(Rack).pk, ContentType.objects.get_for_model(Device).pk],
+            "nestable": True,
         }
 
         cls.csv_data = (
-            "name,slug,parent,description,content_types",
-            "Intermediate 3,intermediate-3,Root 1,Another intermediate type,ipam.prefix",
-            'Intermediate 4,intermediate-4,Root 1,Another intermediate type,"ipam.prefix,dcim.device"',
-            "Root 3,root-3,,Another root type,",
+            "name,slug,parent,description,content_types,nestable",
+            "Intermediate 3,intermediate-3,Root 1,Another intermediate type,ipam.prefix,false",
+            'Intermediate 4,intermediate-4,Root 1,Another intermediate type,"ipam.prefix,dcim.device",false',
+            "Root 3,root-3,,Another root type,,true",
         )
 
         cls.slug_source = "name"
@@ -292,7 +291,6 @@ class LocationTypeTestCase(ViewTestCases.OrganizationalObjectViewTestCase):
 
 class LocationTestCase(ViewTestCases.PrimaryObjectViewTestCase):
     model = Location
-    fixtures = ("status",)
 
     @classmethod
     def setUpTestData(cls):
@@ -349,7 +347,6 @@ class LocationTestCase(ViewTestCases.PrimaryObjectViewTestCase):
 
 class RackGroupTestCase(ViewTestCases.OrganizationalObjectViewTestCase):
     model = RackGroup
-    fixtures = ("status",)
 
     @classmethod
     def setUpTestData(cls):
@@ -410,10 +407,6 @@ class RackRoleTestCase(ViewTestCases.OrganizationalObjectViewTestCase):
 
 class RackReservationTestCase(ViewTestCases.PrimaryObjectViewTestCase):
     model = RackReservation
-    fixtures = (
-        "status",
-        "tag",
-    )
 
     @classmethod
     def setUpTestData(cls):
@@ -456,10 +449,6 @@ class RackReservationTestCase(ViewTestCases.PrimaryObjectViewTestCase):
 
 class RackTestCase(ViewTestCases.PrimaryObjectViewTestCase):
     model = Rack
-    fixtures = (
-        "status",
-        "tag",
-    )
 
     @classmethod
     def setUpTestData(cls):
@@ -693,7 +682,6 @@ class DeviceTypeTestCase(
     ViewTestCases.BulkDeleteObjectsViewTestCase,
 ):
     model = DeviceType
-    fixtures = ("tag",)
 
     @classmethod
     def setUpTestData(cls):
@@ -1298,10 +1286,6 @@ class PlatformTestCase(ViewTestCases.OrganizationalObjectViewTestCase):
 
 class DeviceTestCase(ViewTestCases.PrimaryObjectViewTestCase):
     model = Device
-    fixtures = (
-        "status",
-        "tag",
-    )
 
     @classmethod
     def setUpTestData(cls):
@@ -1648,7 +1632,6 @@ class DeviceTestCase(ViewTestCases.PrimaryObjectViewTestCase):
 
 class ConsolePortTestCase(ViewTestCases.DeviceComponentViewTestCase):
     model = ConsolePort
-    fixtures = ("tag",)
 
     @classmethod
     def setUpTestData(cls):
@@ -1691,7 +1674,6 @@ class ConsolePortTestCase(ViewTestCases.DeviceComponentViewTestCase):
 
 class ConsoleServerPortTestCase(ViewTestCases.DeviceComponentViewTestCase):
     model = ConsoleServerPort
-    fixtures = ("tag",)
 
     @classmethod
     def setUpTestData(cls):
@@ -1732,7 +1714,6 @@ class ConsoleServerPortTestCase(ViewTestCases.DeviceComponentViewTestCase):
 
 class PowerPortTestCase(ViewTestCases.DeviceComponentViewTestCase):
     model = PowerPort
-    fixtures = ("tag",)
 
     @classmethod
     def setUpTestData(cls):
@@ -1779,7 +1760,6 @@ class PowerPortTestCase(ViewTestCases.DeviceComponentViewTestCase):
 
 class PowerOutletTestCase(ViewTestCases.DeviceComponentViewTestCase):
     model = PowerOutlet
-    fixtures = ("tag",)
 
     @classmethod
     def setUpTestData(cls):
@@ -1831,10 +1811,6 @@ class PowerOutletTestCase(ViewTestCases.DeviceComponentViewTestCase):
 
 class InterfaceTestCase(ViewTestCases.DeviceComponentViewTestCase):
     model = Interface
-    fixtures = (
-        "status",
-        "tag",
-    )
 
     @classmethod
     def setUpTestData(cls):
@@ -1917,7 +1893,6 @@ class InterfaceTestCase(ViewTestCases.DeviceComponentViewTestCase):
 
 class FrontPortTestCase(ViewTestCases.DeviceComponentViewTestCase):
     model = FrontPort
-    fixtures = ("tag",)
 
     @classmethod
     def setUpTestData(cls):
@@ -1970,7 +1945,6 @@ class FrontPortTestCase(ViewTestCases.DeviceComponentViewTestCase):
 
 class RearPortTestCase(ViewTestCases.DeviceComponentViewTestCase):
     model = RearPort
-    fixtures = ("tag",)
 
     @classmethod
     def setUpTestData(cls):
@@ -2013,7 +1987,6 @@ class RearPortTestCase(ViewTestCases.DeviceComponentViewTestCase):
 
 class DeviceBayTestCase(ViewTestCases.DeviceComponentViewTestCase):
     model = DeviceBay
-    fixtures = ("tag",)
 
     @classmethod
     def setUpTestData(cls):
@@ -2054,7 +2027,6 @@ class DeviceBayTestCase(ViewTestCases.DeviceComponentViewTestCase):
 
 class InventoryItemTestCase(ViewTestCases.DeviceComponentViewTestCase):
     model = InventoryItem
-    fixtures = ("tag",)
 
     @classmethod
     def setUpTestData(cls):
@@ -2116,10 +2088,6 @@ class CableTestCase(
     ViewTestCases.BulkDeleteObjectsViewTestCase,
 ):
     model = Cable
-    fixtures = (
-        "status",
-        "tag",
-    )
 
     @classmethod
     def setUpTestData(cls):
@@ -2306,9 +2274,6 @@ class CableTestCase(
             "data": post_data({"confirm": True}),
         }
 
-        from nautobot.dcim.models import CablePath
-        from django.db.models import Q
-
         termination_ct = ContentType.objects.get_for_model(CircuitTermination)
         interface_ct = ContentType.objects.get_for_model(Interface)
 
@@ -2343,7 +2308,6 @@ class ConsoleConnectionsTestCase(ViewTestCases.ListObjectsViewTestCase):
 
     model = ConsolePort
     filterset = ConsoleConnectionFilterSet
-    fixtures = ("status",)
 
     @classmethod
     def setUpTestData(cls):
@@ -2398,7 +2362,6 @@ class PowerConnectionsTestCase(ViewTestCases.ListObjectsViewTestCase):
 
     model = PowerPort
     filterset = PowerConnectionFilterSet
-    fixtures = ("status",)
 
     @classmethod
     def setUpTestData(cls):
@@ -2458,7 +2421,6 @@ class InterfaceConnectionsTestCase(ViewTestCases.ListObjectsViewTestCase):
 
     model = Interface
     filterset = InterfaceConnectionFilterSet
-    fixtures = ("status",)
 
     @classmethod
     def setUpTestData(cls):
@@ -2547,7 +2509,6 @@ Device 1,Interface 3,,,False""",
 
 class VirtualChassisTestCase(ViewTestCases.PrimaryObjectViewTestCase):
     model = VirtualChassis
-    fixtures = ("status",)
 
     @classmethod
     def setUpTestData(cls):
@@ -2696,7 +2657,6 @@ class VirtualChassisTestCase(ViewTestCases.PrimaryObjectViewTestCase):
 
 class PowerPanelTestCase(ViewTestCases.PrimaryObjectViewTestCase):
     model = PowerPanel
-    fixtures = ("status", "tag")
 
     @classmethod
     def setUpTestData(cls):
@@ -2737,7 +2697,6 @@ class PowerPanelTestCase(ViewTestCases.PrimaryObjectViewTestCase):
 
 class PowerFeedTestCase(ViewTestCases.PrimaryObjectViewTestCase):
     model = PowerFeed
-    fixtures = ("status", "tag")
 
     @classmethod
     def setUpTestData(cls):
@@ -2829,3 +2788,32 @@ class PowerFeedTestCase(ViewTestCases.PrimaryObjectViewTestCase):
 
         url = reverse("dcim:powerfeed", kwargs=dict(pk=powerfeed.pk))
         self.assertHttpStatus(self.client.get(url), 200)
+
+
+class PathTraceViewTestCase(ModelViewTestCase):
+    def test_get_cable_path_trace_do_not_throw_error(self):
+        """
+        Assert selecting a related path in cable trace view loads successfully.
+
+        (https://github.com/nautobot/nautobot/issues/1741)
+        """
+        self.add_permissions("dcim.view_cable", "dcim.view_rearport")
+        active = Status.objects.get(slug="active")
+        connected = Status.objects.get(slug="connected")
+        manufacturer = Manufacturer.objects.create(name="Test Manufacturer 1", slug="test-manufacturer-1")
+        devicetype = DeviceType.objects.create(manufacturer=manufacturer, model="Device Type 1", slug="device-type-1")
+        devicerole = DeviceRole.objects.create(name="Test Device Role 1", slug="test-device-role-1", color="ff0000")
+        site = Site.objects.create(name="Site 1", slug="site-1", status=active)
+        device = Device.objects.create(
+            device_type=devicetype, device_role=devicerole, name="Device 1", site=site, status=active
+        )
+        obj = RearPort.objects.create(device=device, name="Rear Port 1", type=PortTypeChoices.TYPE_8P8C)
+        peer_obj = Interface.objects.create(device=device, name="eth0", status=active)
+        Cable.objects.create(termination_a=obj, termination_b=peer_obj, label="Cable 1", status=connected)
+
+        url = reverse("dcim:rearport_trace", args=[obj.pk])
+        cablepath_id = CablePath.objects.first().id
+        response = self.client.get(url + f"?cablepath_id={cablepath_id}")
+        self.assertHttpStatus(response, 200)
+        content = extract_page_body(response.content.decode(response.charset))
+        self.assertInHTML("<h1>Cable Trace for Rear Port Rear Port 1</h1>", content)

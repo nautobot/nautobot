@@ -17,6 +17,25 @@ A new optional job property `task_queues` has been introduced to allow Nautobot 
 !!! important
     The default celery queue name has been changed from `celery` to `default`. If you have any workers or tasks hard coded to use `celery` you will need to update those workers/tasks or change the [`CELERY_TASK_DEFAULT_QUEUE`](../configuration/optional-settings.md#celery_task_default_queue) setting in your `nautobot_config.py`.
 
+#### Nestable LocationTypes ([#2608](https://github.com/nautobot/nautobot/issues/2608))
+
+`LocationType` definitions can now be flagged as `nestable`. When this flag is set, Locations of this type may nest within one another, similar to how Regions work at present. This allows you to have a variable-depth hierarchy of Locations, for example:
+
+* Main Campus ("Building Group" location type)
+    * West Campus (Building Group)
+        * Building A ("Building" location type)
+        * Building B (Building)
+    * East Campus (Building Group)
+        * Building C (Building)
+        * Building D (Building)
+    * South Campus (Building Group)
+        * Western South Campus (Building Group)
+            * Building G (Building)
+* Satellite Campus (Building Group)
+    * Building Z (Building)
+
+In the above example, only two LocationTypes are defined ("Building Group" and "Building") but the "Building Group" type is flagged as nestable, so one Building Group may contain another Building Group.
+
 ### Changed
 
 #### Database Query Caching is now Disabled by Default

@@ -44,7 +44,7 @@ from nautobot.extras.models import (
     Webhook,
     ComputedField,
 )
-from nautobot.extras.utils import get_job_content_type
+from nautobot.extras.utils import get_job_content_type, TaggableClassesQuery
 from nautobot.ipam.models import VLAN, VLANGroup
 from nautobot.users.models import ObjectPermission
 from nautobot.utilities.testing import ViewTestCases, TestCase, extract_page_body, extract_form_failures
@@ -668,7 +668,6 @@ class SecretTestCase(
     ViewTestCases.BulkDeleteObjectsViewTestCase,
 ):
     model = Secret
-    fixtures = ("tag",)
 
     @classmethod
     def setUpTestData(cls):
@@ -727,7 +726,7 @@ class SecretsGroupTestCase(
     @classmethod
     def setUpTestData(cls):
         secrets_groups = (
-            SecretsGroup.objects.create(name="Group 1", slug="Group 1", description="First Group"),
+            SecretsGroup.objects.create(name="Group 1", slug="group-1", description="First Group"),
             SecretsGroup.objects.create(name="Group 2", slug="group-2"),
             SecretsGroup.objects.create(name="Group 3", slug="group-3"),
         )
@@ -1867,6 +1866,16 @@ class JobTestCase(
                 content,
             )
 
+    def test_job_object_change_log_view(self):
+        """Assert Job change log view displays appropriate header"""
+        instance = self.test_pass
+        self.add_permissions("extras.view_objectchange", "extras.view_job")
+        response = self.client.get(instance.get_changelog_url())
+        content = extract_page_body(response.content.decode(response.charset))
+
+        self.assertHttpStatus(response, 200)
+        self.assertIn(f"<h1>{instance.name} - Change Log</h1>", content)
+
 
 # TODO: Convert to StandardTestCases.Views
 class ObjectChangeTestCase(TestCase):
@@ -1913,7 +1922,6 @@ class RelationshipTestCase(
     ViewTestCases.ListObjectsViewTestCase,
 ):
     model = Relationship
-    fixtures = ("status",)
     slug_source = "name"
     slugify_function = staticmethod(slugify_dashes_to_underscores)
 
@@ -2031,7 +2039,6 @@ class StatusTestCase(
     ViewTestCases.ListObjectsViewTestCase,
 ):
     model = Status
-    fixtures = ("status",)
 
     @classmethod
     def setUpTestData(cls):
@@ -2060,12 +2067,24 @@ class StatusTestCase(
         }
 
         cls.slug_source = "name"
-        cls.slug_test_object = "Irradiated"
+        cls.slug_test_object = Status.objects.first().name
+
+    def get_deletable_object(self):
+        """Return a Status without any dependent objects."""
+        return Status.objects.create(name="DELETE ME", color="000000")
+
+    def get_deletable_object_pks(self):
+        """Return a list of Status PKs without any dependent objects."""
+        statuses = [
+            Status.objects.create(name="DELETE ME 1", color="0000ff"),
+            Status.objects.create(name="DELETE ME 2", color="00ff00"),
+            Status.objects.create(name="DELETE ME 3", color="ff0000"),
+        ]
+        return [status.pk for status in statuses]
 
 
 class TagTestCase(ViewTestCases.OrganizationalObjectViewTestCase):
     model = Tag
-    fixtures = ("tag",)
 
     @classmethod
     def setUpTestData(cls):
@@ -2074,7 +2093,7 @@ class TagTestCase(ViewTestCases.OrganizationalObjectViewTestCase):
             "slug": "tag-x",
             "color": "c0c0c0",
             "comments": "Some comments",
-            "content_types": [ContentType.objects.get_for_model(Site).id],
+            "content_types": [ct.id for ct in TaggableClassesQuery().as_queryset],
         }
 
         cls.csv_data = (

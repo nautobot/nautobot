@@ -7,7 +7,7 @@ import nautobot.utilities.fields
 class Migration(migrations.Migration):
 
     dependencies = [
-        ("extras", "0049_customfield_grouping"),
+        ("extras", "0050_customfield_grouping"),
     ]
 
     operations = [

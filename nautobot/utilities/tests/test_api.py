@@ -15,8 +15,6 @@ class WritableNestedSerializerTest(APITestCase):
     Test the operation of WritableNestedSerializer using VLANSerializer as our test subject.
     """
 
-    fixtures = ("status",)
-
     def setUp(self):
         super().setUp()
 
@@ -53,7 +51,7 @@ class WritableNestedSerializerTest(APITestCase):
         with disable_warnings("django.request"):
             response = self.client.post(url, data, format="json", **self.header)
         self.assertHttpStatus(response, status.HTTP_400_BAD_REQUEST)
-        self.assertEqual(VLAN.objects.count(), 0)
+        self.assertEqual(VLAN.objects.filter(name="Test VLAN 100").count(), 0)
         self.assertTrue(response.data["site"][0].startswith("Related object not found"))
 
     def test_related_by_attributes(self):
@@ -85,7 +83,7 @@ class WritableNestedSerializerTest(APITestCase):
         with disable_warnings("django.request"):
             response = self.client.post(url, data, format="json", **self.header)
         self.assertHttpStatus(response, status.HTTP_400_BAD_REQUEST)
-        self.assertEqual(VLAN.objects.count(), 0)
+        self.assertEqual(VLAN.objects.filter(name="Test VLAN 100").count(), 0)
         self.assertTrue(response.data["site"][0].startswith("Related object not found"))
 
     def test_related_by_attributes_multiple_matches(self):
@@ -105,7 +103,7 @@ class WritableNestedSerializerTest(APITestCase):
         with disable_warnings("django.request"):
             response = self.client.post(url, data, format="json", **self.header)
         self.assertHttpStatus(response, status.HTTP_400_BAD_REQUEST)
-        self.assertEqual(VLAN.objects.count(), 0)
+        self.assertEqual(VLAN.objects.filter(name="Test VLAN 100").count(), 0)
         self.assertTrue(response.data["site"][0].startswith("Multiple objects match"))
 
     def test_related_by_invalid(self):
@@ -121,7 +119,7 @@ class WritableNestedSerializerTest(APITestCase):
         with disable_warnings("django.request"):
             response = self.client.post(url, data, format="json", **self.header)
         self.assertHttpStatus(response, status.HTTP_400_BAD_REQUEST)
-        self.assertEqual(VLAN.objects.count(), 0)
+        self.assertEqual(VLAN.objects.filter(name="Test VLAN 100").count(), 0)
 
 
 class APIDocsTestCase(TestCase):

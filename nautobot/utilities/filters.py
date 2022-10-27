@@ -23,9 +23,10 @@ from nautobot.utilities.constants import (
     FILTER_CHAR_BASED_LOOKUP_MAP,
     FILTER_NEGATION_LOOKUP_MAP,
     FILTER_NUMERIC_BASED_LOOKUP_MAP,
-    FILTER_TREENODE_NEGATION_LOOKUP_MAP,
 )
 from nautobot.utilities.forms.fields import MultiMatchModelMultipleChoiceField, MultiValueCharField
+from nautobot.utilities.utils import flatten_iterable
+
 
 from taggit.managers import TaggableManager
 
@@ -445,18 +446,12 @@ class NaturalKeyOrPKMultipleChoiceFilter(django_filters.ModelMultipleChoiceFilte
             v = str(v)  # Cast possible UUID instance to a string
             is_pk = True
 
-        # If it's not a pk and not a list/qs generate then it's a slug and the filter predicate
-        # needs to be nested (e.g. `{"site__slug": "ams01"}`) so that it can be useable in `Q`
-        # objects.
-        #
-        # FIXME(jathan): It feels weird to have a list/qs make its way to `get_filter_predicate()`
-        # which if you inspect the source for `django_filters.MultipleChoiceFilter.filter()` should
-        # be handling those to generate singular filter predicates and concatentating them.
-        if not is_pk and not isinstance(v, (list, models.QuerySet)):
+        # If it's not a pk, then it's a slug and the filter predicate needs to be nested (e.g.
+        # `{"site__slug": "ams01"}`) so that it can be usable in `Q` objects.
+        if not is_pk:
             name = f"{self.field_name}__{self.field.to_field_name}"
-        # Otherwise just trust the field_name
         else:
-            logger.debug("UUID or list/qs detected: Filtering using field name")
+            logger.debug("UUID detected: Filtering using field name")
             name = self.field_name
 
         if name and self.lookup_expr != django_filters.conf.settings.DEFAULT_LOOKUP_EXPR:
@@ -492,10 +487,6 @@ class TreeNodeMultipleChoiceFilter(NaturalKeyOrPKMultipleChoiceFilter):
     would match both "Athens" and "Durham".
     """
 
-    def __init__(self, *args, **kwargs):
-        kwargs.setdefault("lookup_expr", "in")
-        super().__init__(*args, **kwargs)
-
     def filter(self, qs, value):
         if value:
             if any(isinstance(node, TreeNode) for node in value):
@@ -506,6 +497,9 @@ class TreeNodeMultipleChoiceFilter(NaturalKeyOrPKMultipleChoiceFilter):
                 value = [
                     node.get_descendants(include_self=True) if not isinstance(node, str) else node for node in value
                 ]
+
+        # This new_value is going to be a list of querysets that needs to be flattened.
+        value = list(flatten_iterable(value))
         return super().filter(qs, value)
 
 
@@ -560,10 +554,6 @@ class BaseFilterSet(django_filters.FilterSet):
         ):
             lookup_map = FILTER_NUMERIC_BASED_LOOKUP_MAP
 
-        elif isinstance(existing_filter, (TreeNodeMultipleChoiceFilter,)):
-            # TreeNodeMultipleChoiceFilter only support negation but must maintain the `in` lookup expression
-            lookup_map = FILTER_TREENODE_NEGATION_LOOKUP_MAP
-
         # These filter types support only negation
         elif isinstance(
             existing_filter,
@@ -571,12 +561,15 @@ class BaseFilterSet(django_filters.FilterSet):
                 django_filters.ModelChoiceFilter,
                 django_filters.ModelMultipleChoiceFilter,
                 TagFilter,
+                TreeNodeMultipleChoiceFilter,
             ),
         ):
             lookup_map = FILTER_NEGATION_LOOKUP_MAP
+
         # These filter types support only negation
         elif existing_filter.extra.get("choices"):
             lookup_map = FILTER_NEGATION_LOOKUP_MAP
+
         elif isinstance(
             existing_filter,
             (

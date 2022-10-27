@@ -169,13 +169,8 @@ class NautobotHTMLRenderer(renderers.BrowsableAPIRenderer):
                 form = form_class(instance=instance, initial=initial_data)
                 restrict_form_fields(form, request.user)
             elif view.action == "bulk_destroy":
-                if request.POST.get("_all"):
-                    if view.filterset_class is not None:
-                        pk_list = [obj.pk for obj in view.filterset_class(request.POST, model.objects.only("pk")).qs]
-                    else:
-                        pk_list = model.objects.values_list("pk", flat=True)
-                else:
-                    pk_list = request.POST.getlist("pk")
+                pk_list = getattr(view, "pk_list", [])
+                if pk_list:
                     initial = {
                         "pk": pk_list,
                         "return_url": return_url,
@@ -187,22 +182,12 @@ class NautobotHTMLRenderer(renderers.BrowsableAPIRenderer):
                 if request.data:
                     table = data.get("table")
             elif view.action == "bulk_update":
-                if request.POST.get("_all"):
-                    if view.filterset_class is not None:
-                        pk_list = [obj.pk for obj in view.filterset_class(request.POST, queryset.only("pk")).qs]
-                    else:
-                        pk_list = model.objects.values_list("pk", flat=True)
-                else:
-                    pk_list = request.POST.getlist("pk")
-
-                if "_apply" in request.POST:
-                    form = form_class(model, request.POST)
-                else:
-                    # Include the PK list as initial data for the form
+                pk_list = getattr(view, "pk_list", [])
+                if pk_list:
                     initial_data = {"pk": pk_list}
                     form = form_class(model, initial=initial_data)
 
-                restrict_form_fields(form, request.user)
+                    restrict_form_fields(form, request.user)
                 table = self.construct_table(view, pk_list=pk_list)
 
         context = {

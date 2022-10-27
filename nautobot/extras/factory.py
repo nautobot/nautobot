@@ -1,28 +1,63 @@
-import factory.random
+from django.contrib.contenttypes.models import ContentType
+from django.utils.text import slugify
 
-from nautobot.extras.models import Tag
+import factory
+import faker
+
+from nautobot.core.factory import OrganizationalModelFactory
+from nautobot.extras.models import Status, Tag
+from nautobot.extras.utils import FeatureQuery, TaggableClassesQuery
+from nautobot.utilities.choices import ColorChoices
+from nautobot.utilities.factory import get_random_instances
 
 
-def get_random_tags_for_model(model):
-    """Return between 0 and n tags applicable to the given model, where n is the total number of applicable tags.
+class StatusFactory(OrganizationalModelFactory):
+    """Status isn't technically an OrganizationalModel, but it has all of its features **except** dynamic-groups."""
 
-    This is not an evenly weighted distribution (all tag counts equally likely), because in most of our code,
-    the relevant code paths distinguish between 0 tags, 1 tag, or >1 tags - there's not a functional difference between
-    "2 tags" and "10 tags" in most cases. Therefore, this implementation provides:
-        - 1/3 chance of no tags
-        - 1/3 chance of 1 tag
-        - 1/3 chance of (2 to n) tags, where each possibility is equally likely within this range
-    """
-    branch = factory.random.randgen.randrange(0, 3)
-    tag_count = Tag.objects.get_for_model(model).count()
-    if branch == 0 or tag_count == 0:
-        # No tags
-        return []
-    if branch == 1 or tag_count < 2:
-        # Exactly one tag
-        return [factory.random.randgen.choice(Tag.objects.get_for_model(model))]
-    # Between 2 and n tags
-    return factory.random.randgen.sample(
-        population=list(Tag.objects.get_for_model(model)),
-        k=factory.random.randgen.randint(2, Tag.objects.get_for_model(model).count()),
+    class Meta:
+        model = Status
+        exclude = ("has_description",)
+
+    name = factory.LazyFunction(
+        lambda: "".join(word.title() for word in faker.Faker().words(nb=2, part_of_speech="adjective", unique=True))
     )
+    slug = factory.LazyAttribute(lambda status: slugify(status.name))
+    color = factory.Iterator(ColorChoices.CHOICES, getter=lambda choice: choice[0])
+
+    has_description = factory.Faker("pybool")
+    description = factory.Maybe("has_description", factory.Faker("text", max_nb_chars=200), "")
+
+    @factory.post_generation
+    def content_types(self, create, extracted, **kwargs):
+        if create:
+            if extracted:
+                self.content_types.set(extracted)
+            else:
+                self.content_types.set(
+                    get_random_instances(
+                        lambda: ContentType.objects.filter(FeatureQuery("statuses").get_query()), minimum=1
+                    )
+                )
+
+
+class TagFactory(OrganizationalModelFactory):
+    """Tag isn't technically an OrganizationalModel, but it has all of its features **except** dynamic-groups."""
+
+    class Meta:
+        model = Tag
+        exclude = ("has_description",)
+
+    name = factory.Iterator(ColorChoices.CHOICES, getter=lambda choice: choice[1])
+    slug = factory.LazyAttribute(lambda tag: slugify(tag.name))
+    color = factory.Iterator(ColorChoices.CHOICES, getter=lambda choice: choice[0])
+
+    has_description = factory.Faker("pybool")
+    description = factory.Maybe("has_description", factory.Faker("text", max_nb_chars=200), "")
+
+    @factory.post_generation
+    def content_types(self, create, extracted, **kwargs):
+        if create:
+            if extracted:
+                self.content_types.set(extracted)
+            else:
+                self.content_types.set(get_random_instances(lambda: TaggableClassesQuery().as_queryset, minimum=1))

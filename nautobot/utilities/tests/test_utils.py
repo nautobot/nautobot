@@ -20,6 +20,7 @@ from nautobot.utilities.utils import (
     deepmerge,
     dict_to_filter_params,
     ensure_content_type_and_field_name_inquery_params,
+    flatten_iterable,
     get_all_lookup_expr_for_field,
     get_filterable_params_from_filter_params,
     get_filterset_field,
@@ -164,6 +165,20 @@ class DeepMergeTest(TestCase):
         }
 
         self.assertEqual(deepmerge(dict1, dict2), merged)
+
+
+class FlattenIterableTest(TestCase):
+    """Tests for the `flatten_iterable()` function."""
+
+    def test_list_of_lists(self):
+        items = [[1, 2, 3], [4, 5], 6]
+        expected = [1, 2, 3, 4, 5, 6]
+        self.assertEqual(list(flatten_iterable(items)), expected)
+
+    def test_list_of_strings(self):
+        items = ["foo", ["bar"], ["baz"]]
+        expected = ["foo", "bar", "baz"]
+        self.assertEqual(list(flatten_iterable(items)), expected)
 
 
 class GetFooForModelTest(TestCase):
