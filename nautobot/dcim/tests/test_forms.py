@@ -37,7 +37,7 @@ class DeviceTestCase(TestCase):
         # Get a DeviceType that has a manufacturer in line with one of the platforms.
         cls.device_type = DeviceType.objects.filter(
             manufacturer__in=mfr_platforms.values("manufacturer"),
-            u_height=1,
+            u_height__gt=0,
             is_full_depth=True,
         ).first()
         cls.manufacturer = cls.device_type.manufacturer
@@ -69,7 +69,7 @@ class DeviceTestCase(TestCase):
                 "site": self.site.pk,
                 "rack": self.rack.pk,
                 "face": DeviceFaceChoices.FACE_FRONT,
-                "position": 2,
+                "position": 1 + self.device_type.u_height,
                 "platform": self.platform.pk,
                 "status": self.device_status.pk,
             }

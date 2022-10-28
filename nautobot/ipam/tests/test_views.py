@@ -72,8 +72,8 @@ class RouteTargetTestCase(ViewTestCases.PrimaryObjectViewTestCase):
 
         cls.csv_data = (
             "name,tenant,description",
-            f"65000:1004,{tenants[0].name},Foo",
-            f"65000:1005,{tenants[1].name},Bar",
+            f'65000:1004,"{tenants[0].name}",Foo',
+            f'65000:1005,"{tenants[1].name}",Bar',
             "65000:1006,,No tenant",
         )
 
