@@ -321,6 +321,12 @@ menu_items = (
                                     "dcim.add_deviceredundancygroup",
                                 ],
                             ),
+                            NavMenuImportButton(
+                                link="dcim:deviceredundancygroup_import",
+                                permissions=[
+                                    "dcim.add_deviceredundancygroup",
+                                ],
+                            ),
                         ),
                     ),
                 ),

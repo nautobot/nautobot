@@ -1054,6 +1054,7 @@ class DeviceFilterSet(
             "position",
             "vc_position",
             "vc_priority",
+            "device_redundancy_group_priority",
         ]
 
     def generate_query__has_primary_ip(self, value):
@@ -1747,6 +1748,12 @@ class PowerFeedFilterSet(
 class DeviceRedundancyGroupFilterSet(NautobotFilterSet, StatusModelFilterSetMixin):
     q = SearchFilter(filter_predicates={"name": "icontains", "comments": "icontains"})
     tag = TagFilter()
+    secrets_group = NaturalKeyOrPKMultipleChoiceFilter(
+        field_name="secrets_group",
+        queryset=SecretsGroup.objects.all(),
+        to_field_name="slug",
+        label="Secrets group",
+    )
 
     class Meta:
         model = DeviceRedundancyGroup

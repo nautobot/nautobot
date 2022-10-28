@@ -190,7 +190,9 @@ class DeviceTable(StatusTableMixin, BaseTable):
     virtual_chassis = tables.LinkColumn(viewname="dcim:virtualchassis", args=[Accessor("virtual_chassis__pk")])
     vc_position = tables.Column(verbose_name="VC Position")
     vc_priority = tables.Column(verbose_name="VC Priority")
-    device_redundancy_group = tables.LinkColumn(viewname="dcim:deviceredundancygroup", args=[Accessor("device_redundancy_group__pk")])
+    device_redundancy_group = tables.LinkColumn(
+        viewname="dcim:deviceredundancygroup", args=[Accessor("device_redundancy_group__pk")]
+    )
     device_redundancy_group_priority = tables.TemplateColumn(
         template_code="""{% if record.device_redundancy_group %}<span class="badge badge-default">{{ record.device_redundancy_group_priority|default:'None' }}</span>{% else %}—{% endif %}"""
     )

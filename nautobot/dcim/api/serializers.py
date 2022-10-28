@@ -790,6 +790,7 @@ class DeviceSerializer(NautobotModelSerializer, TaggedObjectSerializer, StatusMo
             "vc_position",
             "vc_priority",
             "device_redundancy_group",
+            "device_redundancy_group_priority",
             "comments",
             "local_context_schema",
             "local_context_data",

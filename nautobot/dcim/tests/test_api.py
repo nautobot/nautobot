@@ -10,6 +10,8 @@ from rest_framework import status
 from constance.test import override_config
 
 from nautobot.dcim.choices import (
+    DeviceRedundancyGroupStatusChoices,
+    DeviceRedundancyGroupFailoverStrategyChoices,
     InterfaceModeChoices,
     InterfaceStatusChoices,
     InterfaceTypeChoices,
@@ -27,6 +29,7 @@ from nautobot.dcim.models import (
     Device,
     DeviceBay,
     DeviceBayTemplate,
+    DeviceRedundancyGroup,
     DeviceRole,
     DeviceType,
     FrontPort,
@@ -1454,6 +1457,46 @@ class DeviceTest(APIViewTestCases.APIViewTestCase):
         )
         self.assertHttpStatus(response, status.HTTP_200_OK)
 
+    def test_patching_device_redundancy_group(self):
+        """
+        Validate we can set primary_ip4 on a device using a PATCH.
+        """
+        # Add object-level permission
+        self.add_permissions("dcim.change_device")
+
+        device_redundancy_group_status_active = Status.objects.get_for_model(DeviceRedundancyGroup).get(
+            slug=DeviceRedundancyGroupStatusChoices.STATUS_ACTIVE
+        )
+        device_redundancy_group = DeviceRedundancyGroup.objects.create(
+            name="DRG 1",
+            failover_strategy=DeviceRedundancyGroupFailoverStrategyChoices.FAILOVER_ACTIVE_ACTIVE,
+            status=device_redundancy_group_status_active,
+        )
+
+        # Validate set both redundancy group membership only
+        patch_data = {"device_redundancy_group": device_redundancy_group.pk}
+
+        response = self.client.patch(
+            self._get_detail_url(Device.objects.get(name="Device 3")), patch_data, format="json", **self.header
+        )
+        self.assertHttpStatus(response, status.HTTP_200_OK)
+
+        # Validate set both redundancy group membership and priority
+        patch_data = {"device_redundancy_group": device_redundancy_group.pk, "device_redundancy_group_priority": 1}
+
+        response = self.client.patch(
+            self._get_detail_url(Device.objects.get(name="Device 3")), patch_data, format="json", **self.header
+        )
+        self.assertHttpStatus(response, status.HTTP_200_OK)
+
+        # Validate error on priority patch only
+        patch_data = {"device_redundancy_group_priority": 1}
+
+        response = self.client.patch(
+            self._get_detail_url(Device.objects.get(name="Device 2")), patch_data, format="json", **self.header
+        )
+        self.assertHttpStatus(response, status.HTTP_400_BAD_REQUEST)
+
 
 class ConsolePortTest(Mixins.BasePortTestMixin):
     model = ConsolePort
@@ -2458,3 +2501,56 @@ class PowerFeedTest(APIViewTestCases.APIViewTestCase):
                 "type": REDUNDANT,
             },
         ]
+
+
+class DeviceRedundancyGroupTest(APIViewTestCases.APIViewTestCase):
+    model = DeviceRedundancyGroup
+    brief_fields = ["display", "failover_strategy", "id", "name", "url"]
+    create_data = [
+        {
+            "name": "Device Redundancy Group 4",
+            "failover_strategy": "active-active",
+            "status": "active",
+        },
+        {
+            "name": "Device Redundancy Group 5",
+            "failover_strategy": "active-passive",
+            "status": "planned",
+        },
+        {
+            "name": "Device Redundancy Group 6",
+            "failover_strategy": "active-active",
+            "status": "staging",
+        },
+    ]
+    bulk_update_data = {
+        "failover_strategy": "active-passive",
+    }
+    choices_fields = ["status", "failover_strategy"]
+
+    @classmethod
+    def setUpTestData(cls):
+        # FIXME(jathan): The writable serializer for `status` takes the
+        # status `name` (str) and not the `pk` (int). Do not validate this
+        # field right now, since we are asserting that it does create correctly.
+        #
+        # The test code for `utilities.testing.views.TestCase.model_to_dict()`
+        # needs to be enhanced to use the actual API serializers when `api=True`
+        cls.validation_excluded_fields = ["status"]
+
+        statuses = Status.objects.get_for_model(DeviceRedundancyGroup)
+        DeviceRedundancyGroup.objects.create(
+            name="DRG 1",
+            failover_strategy=DeviceRedundancyGroupFailoverStrategyChoices.FAILOVER_ACTIVE_ACTIVE,
+            status=statuses[0],
+        )
+        DeviceRedundancyGroup.objects.create(
+            name="DRG 2",
+            failover_strategy=DeviceRedundancyGroupFailoverStrategyChoices.FAILOVER_ACTIVE_PASSIVE,
+            status=statuses[1],
+        )
+        DeviceRedundancyGroup.objects.create(
+            name="DRG 3",
+            failover_strategy=DeviceRedundancyGroupFailoverStrategyChoices.FAILOVER_ACTIVE_PASSIVE,
+            status=statuses[2],
+        )

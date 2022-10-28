@@ -3218,9 +3218,8 @@ class PowerFeedBulkDeleteView(generic.BulkDeleteView):
 
 
 class DeviceRedundancyGroupUIViewSet(NautobotUIViewSet):
-    model = DeviceRedundancyGroup
-    # bulk_create_form_class = forms.*CSVForm
-    # bulk_update_form_class = forms.*BulkEditForm
+    bulk_create_form_class = forms.DeviceRedundancyGroupCSVForm
+    bulk_update_form_class = forms.DeviceRedundancyGroupBulkEditForm
     filterset_class = filters.DeviceRedundancyGroupFilterSet
     filterset_form_class = forms.DeviceRedundancyGroupFilterForm
     form_class = forms.DeviceRedundancyGroupForm
@@ -3236,12 +3235,9 @@ class DeviceRedundancyGroupUIViewSet(NautobotUIViewSet):
     def get_extra_context(self, request, instance):
         context = super().get_extra_context(request, instance)
 
-        members = instance.members_sorted.restrict(request.user)
-        context["members"] = members
-
-        members_table = tables.DeviceTable(members)
-
-        members_table.columns.show("device_redundancy_group_priority")
-
-        context["members_table"] = members_table
+        if self.action == "retrieve" and instance:
+            members = instance.members_sorted.restrict(request.user)
+            members_table = tables.DeviceTable(members)
+            members_table.columns.show("device_redundancy_group_priority")
+            context["members_table"] = members_table
         return context

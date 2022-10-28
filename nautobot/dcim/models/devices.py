@@ -802,6 +802,13 @@ class Device(PrimaryModel, ConfigContextModel, StatusModel):
                     }
                 )
 
+        if self.device_redundancy_group_priority is not None and self.device_redundancy_group is None:
+            raise ValidationError(
+                {
+                    "device_redundancy_group_priority": "Must assign a redundancy group when defining a redundancy group priority."
+                }
+            )
+
     def save(self, *args, **kwargs):
 
         is_new = not self.present_in_database
@@ -1035,7 +1042,10 @@ class DeviceRedundancyGroup(PrimaryModel, ConfigContextModel, StatusModel):
     name = models.CharField(max_length=100, unique=True)
 
     failover_strategy = models.CharField(
-        max_length=50, blank=True, choices=DeviceRedundancyGroupFailoverStrategyChoices, verbose_name="Failover strategy"
+        max_length=50,
+        blank=True,
+        choices=DeviceRedundancyGroupFailoverStrategyChoices,
+        verbose_name="Failover strategy",
     )
 
     comments = models.TextField(blank=True)
@@ -1051,10 +1061,12 @@ class DeviceRedundancyGroup(PrimaryModel, ConfigContextModel, StatusModel):
     objects = ConfigContextModelQuerySet.as_manager()
 
     clone_fields = [
-        "status",
         "failover_strategy",
+        "status",
         "secrets_group",
     ]
+
+    csv_headers = ["name", "failover_strategy", "status", "secrets_group", "comments"]
 
     class Meta:
         ordering = ("name",)
@@ -1071,3 +1083,12 @@ class DeviceRedundancyGroup(PrimaryModel, ConfigContextModel, StatusModel):
 
     def get_absolute_url(self):
         return reverse("dcim:deviceredundancygroup", args=[self.pk])
+
+    def to_csv(self):
+        return (
+            self.name,
+            self.failover_strategy,
+            self.get_status_display(),
+            self.secrets_group.name if self.secrets_group else None,
+            self.comments,
+        )

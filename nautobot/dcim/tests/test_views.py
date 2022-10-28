@@ -17,6 +17,7 @@ from nautobot.dcim.choices import (
     CableTypeChoices,
     ConsolePortTypeChoices,
     DeviceFaceChoices,
+    DeviceRedundancyGroupFailoverStrategyChoices,
     InterfaceModeChoices,
     InterfaceTypeChoices,
     PortTypeChoices,
@@ -42,6 +43,7 @@ from nautobot.dcim.models import (
     Device,
     DeviceBay,
     DeviceBayTemplate,
+    DeviceRedundancyGroup,
     DeviceRole,
     DeviceType,
     FrontPort,
@@ -2837,3 +2839,53 @@ class PathTraceViewTestCase(ModelViewTestCase):
         self.assertHttpStatus(response, 200)
         content = extract_page_body(response.content.decode(response.charset))
         self.assertInHTML("<h1>Cable Trace for Rear Port Rear Port 1</h1>", content)
+
+
+class DeviceRedundancyGroupTestCase(ViewTestCases.PrimaryObjectViewTestCase):
+    model = DeviceRedundancyGroup
+
+    @classmethod
+    def setUpTestData(cls):
+
+        statuses = Status.objects.get_for_model(DeviceRedundancyGroup)
+        # Create three Regions
+        device_redundancy_groups = (
+            DeviceRedundancyGroup.objects.create(
+                name="DRG ɑ",
+                failover_strategy=DeviceRedundancyGroupFailoverStrategyChoices.FAILOVER_ACTIVE_ACTIVE,
+                status=statuses[0],
+            ),
+            DeviceRedundancyGroup.objects.create(
+                name="DRG β",
+                failover_strategy=DeviceRedundancyGroupFailoverStrategyChoices.FAILOVER_ACTIVE_ACTIVE,
+                status=statuses[1],
+            ),
+            DeviceRedundancyGroup.objects.create(
+                name="DRG γ",
+                failover_strategy=DeviceRedundancyGroupFailoverStrategyChoices.FAILOVER_ACTIVE_PASSIVE,
+                status=statuses[2],
+            ),
+        )
+
+        for drg in device_redundancy_groups:
+            drg.validated_save()
+
+        cls.form_data = {
+            "name": "DRG χ",
+            "failover_strategy": DeviceRedundancyGroupFailoverStrategyChoices.FAILOVER_ACTIVE_PASSIVE,
+            "status": statuses[3].pk,
+            "local_context_data": None,
+        }
+
+        cls.csv_data = (
+            "name,failover_strategy,status",
+            "DRG δ,,active",
+            "DRG ε,,planned",
+            "DRG ζ,active-active,staging",
+            "DRG 7,active-passive,retired",
+        )
+
+        cls.bulk_edit_data = {
+            "failover_strategy": DeviceRedundancyGroupFailoverStrategyChoices.FAILOVER_ACTIVE_PASSIVE,
+            "status": statuses[0].pk,
+        }

@@ -2159,7 +2159,7 @@ class DeviceBulkEditForm(
             "rack_group",
             "secrets_group",
             "device_redundancy_group",
-            "device_redundancy_group_priority"
+            "device_redundancy_group_priority",
         ]
 
     def __init__(self, *args, **kwrags):
@@ -4484,3 +4484,40 @@ class DeviceRedundancyGroupFilterForm(NautobotFilterForm, StatusModelFilterFormM
     )
 
     tag = TagFilterField(model)
+
+
+class DeviceRedundancyGroupBulkEditForm(
+    TagsBulkEditFormMixin, StatusModelBulkEditFormMixin, NautobotBulkEditForm, LocalContextModelBulkEditForm
+):
+    pk = forms.ModelMultipleChoiceField(queryset=DeviceRedundancyGroup.objects.all(), widget=forms.MultipleHiddenInput)
+    failover_strategy = forms.ChoiceField(
+        choices=add_blank_choice(DeviceRedundancyGroupFailoverStrategyChoices),
+        required=False,
+        widget=StaticSelect2(),
+    )
+    secrets_group = DynamicModelChoiceField(queryset=SecretsGroup.objects.all(), required=False)
+    comments = CommentField(widget=SmallTextarea, label="Comments")
+
+    class Meta:
+        model = DeviceRedundancyGroup
+        nullable_fields = [
+            "failover_strategy",
+            "secrets_group",
+        ]
+
+
+class DeviceRedundancyGroupCSVForm(StatusModelCSVFormMixin, CustomFieldModelCSVForm):
+    failover_strategy = CSVChoiceField(
+        choices=DeviceRedundancyGroupFailoverStrategyChoices, required=False, help_text="Failover Strategy"
+    )
+
+    secrets_group = CSVModelChoiceField(
+        queryset=SecretsGroup.objects.all(),
+        required=False,
+        to_field_name="name",
+        help_text="Secrets group",
+    )
+
+    class Meta:
+        model = DeviceRedundancyGroup
+        fields = DeviceRedundancyGroup.csv_headers

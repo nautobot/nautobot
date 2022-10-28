@@ -37,7 +37,7 @@ from .models import (
 app_name = "dcim"
 
 router = NautobotUIViewSetRouter()
-router.register("redundancy-groups", views.DeviceRedundancyGroupUIViewSet)
+router.register("device-redundancy-groups", views.DeviceRedundancyGroupUIViewSet)
 
 urlpatterns = [
     # Regions
@@ -1636,13 +1636,13 @@ urlpatterns = [
         kwargs={"termination_a_type": PowerFeed},
     ),
     path(
-        "redundancy-groups/<uuid:pk>/changelog/",
+        "device-redundancy-groups/<uuid:pk>/changelog/",
         ObjectChangeLogView.as_view(),
         name="deviceredundancygroup_changelog",
         kwargs={"model": DeviceRedundancyGroup},
     ),
     path(
-        "redundancy-groups/<uuid:pk>/notes/",
+        "device-redundancy-groups/<uuid:pk>/notes/",
         ObjectNotesView.as_view(),
         name="deviceredundancygroup_notes",
         kwargs={"model": DeviceRedundancyGroup},
