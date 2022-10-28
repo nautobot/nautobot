@@ -57,25 +57,24 @@
 <div class="filters-applied">
     <b>Filters:</b>
     {% for field, values in filter_params %}
-    <span class="filter-container display-inline" dir="ltr">
-        <span class="selection">
+    <span class="filter-container" dir="ltr">
         <span
-                class="filter-selection filter-selection--multiple p-5">
+                class="filter-selection">
             <b>{{ field }}:</b>
             <span
-                    class="filter-selection__clear remove-filter-param m-0"
+                    class="remove-filter-param"
                     title="Remove all items"
                     data-field-type="parent"
                     data-field-value={{ field }}
             >×</span>
-            <ul class="filter-selection__rendered">
+            <ul class="filter-selection-rendered">
                 {% for value in values %}
                 <li
-                        class="filter-selection__choice chip"
+                        class="filter-selection-choice"
                         title="{{ value }}"
                 >
                     <span
-                            class="filter-selection__choice__remove remove-filter-param"
+                            class="filter-selection-choice-remove remove-filter-param"
                             data-field-type="child"
                             data-field-parent={{ field }}
                             data-field-value={{ value }}
@@ -84,8 +83,6 @@
                 {% endfor %}
             </ul>
         </span>
-        </span>
-        <span class="dropdown-wrapper" aria-hidden="true"></span>
     </span>
     {% endfor %}
 </div>

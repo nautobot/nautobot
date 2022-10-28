@@ -402,48 +402,15 @@ ul.nav-tabs li a {
 }
 
 .filter-container .filter-selection {
-    webkit-box-shadow: inset 0 1px 1px rgb(0 0 0 / 8%);
-    box-shadow: inset 0 1px 1px rgb(0 0 0 / 8%);
-    background-color: #fff;
-    border: 1px solid #ccc;
-    border-radius: 4px;
-    color: #555;
-    font-size: 14px;
-    outline: 0;  
-}
-
-.filter-container .filter-selection--multiple {
     min-height: 34px;
-    padding: 0;
-    height: auto;  
-}
-
-.filter-container .filter-selection--multiple {
+    padding: 5px;
+    height: auto;
     box-sizing: border-box;
     cursor: pointer;
     display: block;
-    min-height: 32px;
     user-select: none;
     -webkit-user-select: none;
-}
-
-.filter-selection--multiple.p-5 {
-    padding: 5px;
-}
-
-.filter-container .filter-selection--multiple .filter-selection__clear.remove-filter-param.m-0 {
-    margin: 0px;
-}
-
-.filter-container--bootstrap .filter-selection__clear {
-    color: #999;
-    cursor: pointer;
-    float: right;
-    font-weight: 700;
-    margin-right: 10px;
-}
-
-.filter-container .filter-selection {
+    margin: 0;
     webkit-box-shadow: inset 0 1px 1px rgb(0 0 0 / 8%);
     box-shadow: inset 0 1px 1px rgb(0 0 0 / 8%);
     background-color: #fff;
@@ -454,16 +421,15 @@ ul.nav-tabs li a {
     outline: 0;
 }
 
-.fitler-container .filter-selection--multiple {
-    box-sizing: border-box;
+.remove-filter-param {
+    color: #999;
     cursor: pointer;
-    display: block;
-    min-height: 32px;
-    user-select: none;
-    -webkit-user-select: none;
+    float: right;
+    font-weight: 700;
+    margin-left: 10px;
 }
 
-.fitler-container .filter-selection--multiple .filter-selection__rendered {
+.fitler-container .filter-selection .filter-selection-rendered {
     webkit-box-sizing: border-box;
     -moz-box-sizing: border-box;
     box-sizing: border-box;
@@ -478,43 +444,18 @@ ul.nav-tabs li a {
     white-space: nowrap;
 }
 
-.fitler-container--bootstrap .filter-selection {
-    -webkit-box-shadow: inset 0 1px 1px rgb(0 0 0 / 8%);
-    box-shadow: inset 0 1px 1px rgb(0 0 0 / 8%);
-    background-color: #fff;
-    border: 1px solid #ccc;
-    border-radius: 4px;
-    color: #555;
-    font-size: 14px;
-    outline: 0;
-}
-
-.fitler-container .filter-selection--multiple {
-    box-sizing: border-box;
-    cursor: pointer;
-    display: block;
-    min-height: 32px;
-    user-select: none;
-    -webkit-user-select: none;
-}
-
-.filter-container .filter-selection--multiple .filter-selection__choice.chip {
-    margin-left: 0px;
-    margin-right: 3px;
-}
-
-.filter-container .filter-selection--multiple .filter-selection__choice {
+.filter-container .filter-selection .filter-selection-choice {
     color: #555;
     background: #fff;
     border: 1px solid #ccc;
     border-radius: 4px;
     cursor: default;
     float: left;
-    margin: 5px 0 0 6px;
+    margin: 5px 3px 0 0;
     padding: 0 6px;
 }
 
-.filter-container .filter-selection--multiple .filter-selection__rendered {
+.filter-container .filter-selection .filter-selection-rendered {
     -webkit-box-sizing: border-box;
     -moz-box-sizing: border-box;
     box-sizing: border-box;
@@ -529,46 +470,14 @@ ul.nav-tabs li a {
     white-space: nowrap;
 }
 
-.filter-container .filter-selection {
-    -webkit-box-shadow: inset 0 1px 1px rgb(0 0 0 / 8%);
-    box-shadow: inset 0 1px 1px rgb(0 0 0 / 8%);
-    background-color: #fff;
-    border: 1px solid #ccc;
-    border-radius: 4px;
-    color: #555;
-    font-size: 14px;
-    outline: 0;
-}
-
-.filter-container .filter-selection--multiple {
-    box-sizing: border-box;
-    cursor: pointer;
-    display: block;
-    min-height: 32px;
-    user-select: none;
-    -webkit-user-select: none;
-}
-
-.filter-container .filter-selection--multiple .filter-selection__choice__remove {
-    color: #999;
-    cursor: pointer;
+.filter-container .filter-selection .filter-selection-choice-remove {
     display: inline-block;
-    font-weight: 700;
     margin-right: 3px;
+    margin-left: 0;
+    float: none;
 }
 
-.filter-container .filter-selection--multiple .filter-selection__choice {
-    color: #555;
-    background: #fff;
-    border: 1px solid #ccc;
-    border-radius: 4px;
-    cursor: default;
-    float: left;
-    margin: 5px 0 0 6px;
-    padding: 0 6px;
-}
-
-.filter-container .filter-selection--multiple .filter-selection__rendered {
+.filter-container .filter-selection .filter-selection-rendered {
     -webkit-box-sizing: border-box;
     -moz-box-sizing: border-box;
     box-sizing: border-box;
@@ -581,40 +490,6 @@ ul.nav-tabs li a {
     width: 100%;
     text-overflow: ellipsis;
     white-space: nowrap;
-}
-
-.filter-container--bootstrap .filter-selection {
-    -webkit-box-shadow: inset 0 1px 1px rgb(0 0 0 / 8%);
-    box-shadow: inset 0 1px 1px rgb(0 0 0 / 8%);
-    background-color: #fff;
-    border: 1px solid #ccc;
-    border-radius: 4px;
-    color: #555;
-    font-size: 14px;
-    outline: 0;
-}
-
-.filter-container .filter-selection--multiple {
-    box-sizing: border-box;
-    cursor: pointer;
-    display: block;
-    min-height: 32px;
-    user-select: none;
-    -webkit-user-select: none;
-}
-
-.select2-container--bootstrap.display-inline {
-    display: inline-block;
-}
-.select2-selection--multiple.p-5 {
-    padding: 5px;
-}
-.select2-container--bootstrap .select2-selection--multiple .select2-selection__clear.remove-filter-param.m-0 {
-    margin: 0px
-}
-.select2-container--bootstrap .select2-selection--multiple .select2-selection__choice.chip {
-    margin-left: 0px;
-    margin-right: 3px;
 }
 
 /* Fix progress bar margin inside table cells */
