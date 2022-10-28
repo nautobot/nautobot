@@ -298,7 +298,6 @@ RUN openssl req -new -newkey rsa:4096 -days 365 -nodes -x509 -subj \
 
 # Configure uWSGI
 COPY docker/uwsgi.ini /opt/nautobot
-COPY docker/nautobot_config.append.py /opt/nautobot
 
 # Make sure we don't run as a root user and make sure everything under /opt/nautobot and /prom_cache is owned by nautobot
 RUN useradd --system --shell /bin/bash --create-home --home-dir /opt/nautobot nautobot && \
@@ -309,9 +308,7 @@ USER nautobot
 
 WORKDIR /opt/nautobot
 
-RUN nautobot-server init && \
-    cat /opt/nautobot/nautobot_config.append.py >> /opt/nautobot/nautobot_config.py && \
-    rm -f /opt/nautobot/nautobot_config.append.py
+RUN nautobot-server init
 
 # Run Nautobot server under uwsgi by default
 EXPOSE 8080 8443

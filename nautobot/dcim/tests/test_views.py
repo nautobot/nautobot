@@ -5,6 +5,7 @@ import yaml
 
 from django.contrib.auth import get_user_model
 from django.contrib.contenttypes.models import ContentType
+from django.db.models import Q
 from django.test import override_settings
 from django.urls import reverse
 from netaddr import EUI
@@ -33,6 +34,7 @@ from nautobot.dcim.choices import (
 from nautobot.dcim.filters import ConsoleConnectionFilterSet, InterfaceConnectionFilterSet, PowerConnectionFilterSet
 from nautobot.dcim.models import (
     Cable,
+    CablePath,
     ConsolePort,
     ConsolePortTemplate,
     ConsoleServerPort,
@@ -81,7 +83,7 @@ from nautobot.extras.models import (
 from nautobot.ipam.models import VLAN, IPAddress
 from nautobot.tenancy.models import Tenant
 from nautobot.users.models import ObjectPermission
-from nautobot.utilities.testing import ViewTestCases, extract_page_body, post_data
+from nautobot.utilities.testing import ViewTestCases, extract_page_body, ModelViewTestCase, post_data
 
 # Use the proper swappable User model
 User = get_user_model()
@@ -635,16 +637,19 @@ class ManufacturerTestCase(ViewTestCases.OrganizationalObjectViewTestCase):
     @classmethod
     def setUpTestData(cls):
 
-        Manufacturer.objects.create(name="Manufacturer 1", slug="manufacturer-1")
-        Manufacturer.objects.create(name="Manufacturer 2", slug="manufacturer-2")
-        Manufacturer.objects.create(name="Manufacturer 3", slug="manufacturer-3")
-        Manufacturer.objects.create(name="Manufacturer 8")
+        manufacturer = Manufacturer.objects.first()
+
+        # FIXME(jathan): This has to be replaced with# `get_deletable_object` and
+        # `get_deletable_object_pks` but this is a workaround just so all of these objects are
+        # deletable for now.
+        DeviceType.objects.all().delete()
+        Platform.objects.all().delete()
+
         cls.form_data = {
             "name": "Manufacturer X",
             "slug": "manufacturer-x",
             "description": "A new manufacturer",
         }
-
         cls.csv_data = (
             "name,slug,description",
             "Manufacturer 4,manufacturer-4,Fourth manufacturer",
@@ -652,7 +657,7 @@ class ManufacturerTestCase(ViewTestCases.OrganizationalObjectViewTestCase):
             "Manufacturer 6,manufacturer-6,Sixth manufacturer",
             "Manufacturer 7,,Seventh manufacturer",
         )
-        cls.slug_test_object = "Manufacturer 8"
+        cls.slug_test_object = manufacturer.name
         cls.slug_source = "name"
 
 
@@ -674,14 +679,14 @@ class DeviceTypeTestCase(
     def setUpTestData(cls):
 
         manufacturers = (
-            Manufacturer.objects.create(name="Manufacturer 1", slug="manufacturer-1"),
-            Manufacturer.objects.create(name="Manufacturer 2", slug="manufacturer-2"),
+            Manufacturer.objects.first(),
+            Manufacturer.objects.last(),
         )
 
-        DeviceType.objects.create(model="Device Type 1", slug="device-type-1", manufacturer=manufacturers[0])
-        DeviceType.objects.create(model="Device Type 2", slug="device-type-2", manufacturer=manufacturers[0])
-        DeviceType.objects.create(model="Device Type 3", slug="device-type-3", manufacturer=manufacturers[0])
-        DeviceType.objects.create(model="Device Type 4", manufacturer=manufacturers[1])
+        DeviceType.objects.create(model="Test Device Type 1", slug="device-type-1", manufacturer=manufacturers[0])
+        DeviceType.objects.create(model="Test Device Type 2", slug="device-type-2", manufacturer=manufacturers[0])
+        DeviceType.objects.create(model="Test Device Type 3", slug="device-type-3", manufacturer=manufacturers[0])
+        DeviceType.objects.create(model="Test Device Type 4", manufacturer=manufacturers[1])
 
         cls.form_data = {
             "manufacturer": manufacturers[1].pk,
@@ -702,7 +707,25 @@ class DeviceTypeTestCase(
         }
 
         cls.slug_source = "model"
-        cls.slug_test_object = "Device Type 4"
+        cls.slug_test_object = "Test Device Type 4"
+
+    # Temporary FIXME(jathan): Literally just trying to get the tests running so
+    # we can keep moving on the fixture factories. This should be removed once
+    # we've cleaned up all the hard-coded object comparisons and are all in on
+    # factories.
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_bulk_edit_objects_with_constrained_permission(self):
+        DeviceType.objects.exclude(model__startswith="Test Device Type").delete()
+        super().test_bulk_edit_objects_with_constrained_permission()
+
+    # Temporary FIXME(jathan): Literally just trying to get the tests running so
+    # we can keep moving on the fixture factories. This should be removed once
+    # we've cleaned up all the hard-coded object comparisons and are all in on
+    # factories.
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_bulk_edit_objects_with_permission(self):
+        DeviceType.objects.exclude(model__startswith="Test Device Type").delete()
+        super().test_bulk_edit_objects_with_permission()
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     def test_import_objects(self):
@@ -856,9 +879,12 @@ device-bays:
         response = self.client.get(f"{url}?export")
         self.assertEqual(response.status_code, 200)
         data = list(yaml.load_all(response.content, Loader=yaml.SafeLoader))
-        self.assertEqual(len(data), 4)
-        self.assertEqual(data[0]["manufacturer"], "Manufacturer 1")
-        self.assertEqual(data[0]["model"], "Device Type 1")
+        device_types = DeviceType.objects.all()
+        device_type = device_types.first()
+
+        self.assertEqual(len(data), device_types.count())
+        self.assertEqual(data[0]["manufacturer"], device_type.manufacturer.name)
+        self.assertEqual(data[0]["model"], device_type.model)
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     def test_rack_height_bulk_edit_set_zero(self):
@@ -1215,7 +1241,7 @@ class DeviceRoleTestCase(ViewTestCases.OrganizationalObjectViewTestCase):
         DeviceRole.objects.create(name="Device Role 1", slug="device-role-1")
         DeviceRole.objects.create(name="Device Role 2", slug="device-role-2")
         DeviceRole.objects.create(name="Device Role 3", slug="device-role-3")
-        DeviceRole.objects.create(name="Device Role 8")
+        device_role = DeviceRole.objects.create(name="Slug Test Role 8", slug="slug-test-role-8")
 
         cls.form_data = {
             "name": "Device Role X",
@@ -1233,7 +1259,7 @@ class DeviceRoleTestCase(ViewTestCases.OrganizationalObjectViewTestCase):
             "Device Role 7,,0000ff",
         )
 
-        cls.slug_test_object = "Device Role 8"
+        cls.slug_test_object = device_role.name
         cls.slug_source = "name"
 
 
@@ -1243,12 +1269,8 @@ class PlatformTestCase(ViewTestCases.OrganizationalObjectViewTestCase):
     @classmethod
     def setUpTestData(cls):
 
-        manufacturer = Manufacturer.objects.create(name="Manufacturer 1", slug="manufacturer-1")
-
-        Platform.objects.create(name="Platform 1", slug="platform-1", manufacturer=manufacturer)
-        Platform.objects.create(name="Platform 2", slug="platform-2", manufacturer=manufacturer)
-        Platform.objects.create(name="Platform 3", slug="platform-3", manufacturer=manufacturer)
-        Platform.objects.create(name="Platform 8", manufacturer=manufacturer)
+        manufacturer = Manufacturer.objects.first()
+        platform = Platform.objects.first()
 
         cls.form_data = {
             "name": "Platform X",
@@ -1267,8 +1289,8 @@ class PlatformTestCase(ViewTestCases.OrganizationalObjectViewTestCase):
             "Platform 7,,Seventh platform",
         )
 
+        cls.slug_test_object = platform.name
         cls.slug_source = "name"
-        cls.slug_test_object = "Platform 8"
 
 
 class DeviceTestCase(ViewTestCases.PrimaryObjectViewTestCase):
@@ -2258,9 +2280,6 @@ class CableTestCase(
             "data": post_data({"confirm": True}),
         }
 
-        from nautobot.dcim.models import CablePath
-        from django.db.models import Q
-
         termination_ct = ContentType.objects.get_for_model(CircuitTermination)
         interface_ct = ContentType.objects.get_for_model(Interface)
 
@@ -2771,3 +2790,32 @@ class PowerFeedTestCase(ViewTestCases.PrimaryObjectViewTestCase):
 
         url = reverse("dcim:powerfeed", kwargs=dict(pk=powerfeed.pk))
         self.assertHttpStatus(self.client.get(url), 200)
+
+
+class PathTraceViewTestCase(ModelViewTestCase):
+    def test_get_cable_path_trace_do_not_throw_error(self):
+        """
+        Assert selecting a related path in cable trace view loads successfully.
+
+        (https://github.com/nautobot/nautobot/issues/1741)
+        """
+        self.add_permissions("dcim.view_cable", "dcim.view_rearport")
+        active = Status.objects.get(slug="active")
+        connected = Status.objects.get(slug="connected")
+        manufacturer = Manufacturer.objects.create(name="Test Manufacturer 1", slug="test-manufacturer-1")
+        devicetype = DeviceType.objects.create(manufacturer=manufacturer, model="Device Type 1", slug="device-type-1")
+        devicerole = DeviceRole.objects.create(name="Test Device Role 1", slug="test-device-role-1", color="ff0000")
+        site = Site.objects.create(name="Site 1", slug="site-1", status=active)
+        device = Device.objects.create(
+            device_type=devicetype, device_role=devicerole, name="Device 1", site=site, status=active
+        )
+        obj = RearPort.objects.create(device=device, name="Rear Port 1", type=PortTypeChoices.TYPE_8P8C)
+        peer_obj = Interface.objects.create(device=device, name="eth0", status=active)
+        Cable.objects.create(termination_a=obj, termination_b=peer_obj, label="Cable 1", status=connected)
+
+        url = reverse("dcim:rearport_trace", args=[obj.pk])
+        cablepath_id = CablePath.objects.first().id
+        response = self.client.get(url + f"?cablepath_id={cablepath_id}")
+        self.assertHttpStatus(response, 200)
+        content = extract_page_body(response.content.decode(response.charset))
+        self.assertInHTML("<h1>Cable Trace for Rear Port Rear Port 1</h1>", content)

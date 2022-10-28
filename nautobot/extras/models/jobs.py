@@ -1015,7 +1015,7 @@ class ScheduledJob(BaseModel):
         elif self.interval == JobExecutionType.TYPE_DAILY:
             return schedules.crontab(minute=t.minute, hour=t.hour)
         elif self.interval == JobExecutionType.TYPE_WEEKLY:
-            return schedules.crontab(minute=t.minute, hour=t.hour, day_of_week=t.weekday())
+            return schedules.crontab(minute=t.minute, hour=t.hour, day_of_week=t.strftime("%w"))
         elif self.interval == JobExecutionType.TYPE_CUSTOM:
             return self.get_crontab(self.crontab)
         raise ValueError(f"I do not know to convert {self.interval} to a Cronjob!")

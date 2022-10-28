@@ -19,7 +19,7 @@ from django.utils.html import escape
 from django.utils.safestring import mark_safe
 from django.views.generic.edit import FormView
 
-from rest_framework import mixins
+from rest_framework import mixins, exceptions
 from rest_framework.response import Response
 from rest_framework.viewsets import GenericViewSet
 
@@ -35,7 +35,6 @@ from nautobot.utilities.forms import (
     CSVFileField,
     restrict_form_fields,
 )
-from nautobot.utilities.permissions import resolve_permission
 from nautobot.core.views.renderers import NautobotHTMLRenderer
 from nautobot.utilities.utils import (
     csv_format,
@@ -101,32 +100,44 @@ class NautobotViewSetMixin(GenericViewSet, AccessMixin, GetReturnURLMixin, FormV
             )
         return self.get_permissions_for_model(queryset.model, permissions)
 
-    def has_permission(self):
+    def check_permissions(self, request):
         """
         Check whether the user has the permissions needed to perform certain actions.
         """
         user = self.request.user
-        queryset = self.get_queryset()
         permission_required = self.get_required_permission()
-        # Check that the user has been granted the required permission(s).
-        if user.has_perms(permission_required):
+        # Check that the user has been granted the required permission(s) one by one.
+        # In case the permission has `message` or `code`` attribute, we want to include those information in the permission_denied error.
+        for permission in permission_required:
+            # If the user does not have the permission required, we raise DRF's `NotAuthenticated` or `PermissionDenied` exception
+            # which will be handled by self.handle_no_permission() in the UI appropriately in the dispatch() method
+            # Cast permission to a list since has_perms() takes a list type parameter.
+            if not user.has_perms([permission]):
+                self.permission_denied(
+                    request,
+                    message=getattr(permission, "message", None),
+                    code=getattr(permission, "code", None),
+                )
 
-            # Update the view's QuerySet to filter only the permitted objects
-            for permission in permission_required:
-                action = resolve_permission(permission)[1]
-                queryset = queryset.restrict(user, action)
-
-            return True
-
-        return False
-
-    def check_permissions(self, request):
+    def dispatch(self, request, *args, **kwargs):
         """
+        Override the default dispatch() method to check permissions first.
         Used to determine whether the user has permissions to a view and object-level permissions.
         Using AccessMixin handle_no_permission() to deal with Object-Level permissions and API-Level permissions in one pass.
         """
-        if not self.has_permission():
-            self.handle_no_permission()
+        # self.initialize_request() converts a WSGI request and returns an API request object which can be passed into self.check_permissions()
+        # If the user is not authenticated or does not have the permission to perform certain actions,
+        # DRF NotAuthenticated or PermissionDenied exception can be raised appropriately and handled by self.handle_no_permission() in the UI.
+        # initialize_request() also instantiates self.action which is needed for permission checks.
+        api_request = self.initialize_request(request, *args, **kwargs)
+        try:
+            self.check_permissions(api_request)
+        # check_permissions() could raise NotAuthenticated and PermissionDenied Error.
+        # We handle them by a single except statement since self.handle_no_permission() is able to handle both errors
+        except (exceptions.NotAuthenticated, exceptions.PermissionDenied):
+            return self.handle_no_permission()
+
+        return super().dispatch(request, *args, **kwargs)
 
     def get_table_class(self):
         # Check if self.table_class is specified in the ModelViewSet before performing subsequent actions
@@ -223,7 +234,7 @@ class NautobotViewSetMixin(GenericViewSet, AccessMixin, GetReturnURLMixin, FormV
             # render the form with the error message.
             data = {}
             if self.action in ["bulk_update", "bulk_destroy"]:
-                pk_list = self.request.POST.getlist("pk")
+                pk_list = self.pk_list
                 table_class = self.get_table_class()
                 table = table_class(queryset.filter(pk__in=pk_list), orderable=False)
                 if not table.rows:
@@ -245,7 +256,7 @@ class NautobotViewSetMixin(GenericViewSet, AccessMixin, GetReturnURLMixin, FormV
         request = self.request
         queryset = self.get_queryset()
         if self.action in ["bulk_update", "bulk_destroy"]:
-            pk_list = self.request.POST.getlist("pk")
+            pk_list = self.pk_list
             table_class = self.get_table_class()
             table = table_class(queryset.filter(pk__in=pk_list), orderable=False)
             if not table.rows:
@@ -645,7 +656,7 @@ class ObjectBulkDestroyViewMixin(NautobotViewSetMixin, BulkDestroyModelMixin):
 
     def _process_bulk_destroy_form(self, form):
         request = self.request
-        pk_list = self.request.POST.getlist("pk")
+        pk_list = self.pk_list
         queryset = self.get_queryset()
         model = queryset.model
         # Delete objects

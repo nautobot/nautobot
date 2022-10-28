@@ -1,0 +1,23 @@
+{% extends '40x.html' %}
+
+{% block title %}Invalid Form Submission{% endblock %}
+
+{% block icon %}<i class="mdi mdi-alert"></i>{% endblock %}
+
+{% block message %}
+    CSRF failure has occurred.<br/>
+    <p>
+        There was a problem with your request. Please contact an administrator.
+    </p>
+    <p>
+        The reason for failure is provided below:
+    </p>
+<pre><strong>{{ reason }}</strong><br/>
+
+Python version: {{ python_version }}
+Nautobot version: {{ nautobot_version }}
+</pre>
+    <p>
+        If further assistance is required, please join the <b>#nautobot</b> channel on <a href="https://slack.networktocode.com/">Network to Code's Slack community</a> and post your question.
+    </p>
+{% endblock %}

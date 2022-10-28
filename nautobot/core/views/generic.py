@@ -949,8 +949,11 @@ class BulkEditView(GetReturnURLMixin, ObjectPermissionRequiredMixin, View):
         model = self.queryset.model
 
         # If we are editing *all* objects in the queryset, replace the PK list with all matched objects.
-        if request.POST.get("_all") and self.filterset is not None:
-            pk_list = [obj.pk for obj in self.filterset(request.GET, self.queryset.only("pk")).qs]
+        if request.POST.get("_all"):
+            if self.filterset is not None:
+                pk_list = [obj.pk for obj in self.filterset(request.GET, model.objects.only("pk")).qs]
+            else:
+                pk_list = model.objects.values_list("pk", flat=True)
         else:
             pk_list = request.POST.getlist("pk")
 
