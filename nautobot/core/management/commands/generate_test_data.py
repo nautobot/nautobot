@@ -28,7 +28,13 @@ class Command(BaseCommand):
         try:
             import factory.random
 
-            from nautobot.dcim.factory import DeviceRedundancyGroupFactory, DeviceRoleFactory, DeviceTypeFactory, ManufacturerFactory, PlatformFactory
+            from nautobot.dcim.factory import (
+                DeviceRedundancyGroupFactory,
+                DeviceRoleFactory,
+                DeviceTypeFactory,
+                ManufacturerFactory,
+                PlatformFactory,
+            )
             from nautobot.extras.factory import StatusFactory, TagFactory
             from nautobot.extras.management import populate_status_choices
             from nautobot.extras.utils import TaggableClassesQuery

@@ -126,7 +126,10 @@ class ConfigContextModelQuerySet(RestrictedQuerySet):
         if self.model._meta.model_name == "device":
             base_query.add((Q(roles=OuterRef("device_role")) | Q(roles=None)), Q.AND)
             base_query.add((Q(device_types=OuterRef("device_type")) | Q(device_types=None)), Q.AND)
-            base_query.add((Q(device_redundancy_group=OuterRef("device_redundancy_group")) | Q(device_redundancy_group=None)), Q.AND)
+            base_query.add(
+                (Q(device_redundancy_group=OuterRef("device_redundancy_group")) | Q(device_redundancy_group=None)),
+                Q.AND,
+            )
             base_query.add((Q(sites=OuterRef("site")) | Q(sites=None)), Q.AND)
             region_field = "site__region"
 
