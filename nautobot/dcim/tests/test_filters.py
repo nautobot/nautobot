@@ -687,9 +687,7 @@ class RegionTestCase(FilterTestCases.NameSlugFilterTestCase):
             params = {"parent": [self.parent_regions[0].slug, self.parent_regions[1].slug]}
             self.assertEqual(
                 self.filterset(params, self.queryset).qs.count(),
-                self.queryset.filter(
-                    parent__slug__in=[self.parent_regions[0].slug, self.parent_regions[1].slug]
-                ).count(),
+                self.queryset.filter(parent__in=[self.parent_regions[0], self.parent_regions[1]]).count(),
             )
 
     def test_children(self):
@@ -1059,10 +1057,10 @@ class LocationTypeFilterSetTestCase(FilterTestCases.NameSlugFilterTestCase):
     def test_content_types(self):
         with self.subTest():
             params = {"content_types": ["dcim.rackgroup"]}
-            ct = [ContentType.objects.get_for_model(RackGroup)]
+            ct = ContentType.objects.get_for_model(RackGroup)
             self.assertEqual(
                 self.filterset(params, self.queryset).qs.count(),
-                LocationType.objects.filter(content_types__in=ct).count(),
+                LocationType.objects.filter(content_types=ct).count(),
             )
         with self.subTest():
             params = {"content_types": ["dcim.device", "dcim.rack"]}
@@ -1147,10 +1145,10 @@ class LocationFilterSetTestCase(FilterTestCases.NameSlugFilterTestCase, FilterTe
 
     def test_content_type(self):
         params = {"content_type": ["dcim.device"]}
-        ct = [ContentType.objects.get_for_model(Device)]
+        ct = ContentType.objects.get_for_model(Device)
         self.assertEqual(
             self.filterset(params, self.queryset).qs.count(),
-            Location.objects.filter(location_type__content_types__in=ct).distinct().count(),
+            Location.objects.filter(location_type__content_types=ct).count(),
         )
 
     def test_description(self):

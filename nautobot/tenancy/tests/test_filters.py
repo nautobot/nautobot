@@ -67,7 +67,7 @@ class TenantTestCase(FilterTestCases.NameSlugFilterTestCase):
         params = {"locations": [self.locations[0].pk, self.locations[1].slug]}
         self.assertEqual(
             self.filterset(params, self.queryset).qs.count(),
-            self.queryset.filter(locations__in=[self.locations[0], self.locations[1]]).count(),
+            self.queryset.filter(locations__in=[self.locations[0], self.locations[1]]).distinct().count(),
         )
 
     def test_has_locations(self):
