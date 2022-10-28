@@ -308,6 +308,11 @@ class LocationFilterSet(NautobotFilterSet, StatusModelFilterSetMixin, TenancyFil
         queryset=Location.objects.all(),
         label="Parent location (slug or ID)",
     )
+    subtree = NaturalKeyOrPKMultipleChoiceFilter(
+        queryset=Location.objects.all(),
+        label="Location(s) and descendants thereof (slug or ID)",
+        method="_subtree",
+    )
     child_location_type = NaturalKeyOrPKMultipleChoiceFilter(
         method="_child_location_type",
         queryset=LocationType.objects.all(),
@@ -332,18 +337,8 @@ class LocationFilterSet(NautobotFilterSet, StatusModelFilterSetMixin, TenancyFil
         model = Location
         fields = ["id", "name", "slug", "description"]
 
-    def generate_query__child_location_type(self, value):
-        if value:
-            # Locations whose location type is a parent of value, or whose location type *is* value but can be nested
-            return Q(location_type__children__in=value) | Q(location_type__in=value, location_type__nestable=True)
-        return Q()
-
-    @extend_schema_field({"type": "string"})
-    def _child_location_type(self, queryset, name, value):
-        params = self.generate_query__child_location_type(value)
-        return queryset.filter(params)
-
     def generate_query__base_site(self, value):
+        """Helper method used by DynamicGroups and by _base_site() method."""
         if value:
             max_depth = max(loc.tree_depth for loc in Location.objects.with_tree_fields())
             filter_name = "site__in"
@@ -356,7 +351,39 @@ class LocationFilterSet(NautobotFilterSet, StatusModelFilterSetMixin, TenancyFil
 
     @extend_schema_field({"type": "string"})
     def _base_site(self, queryset, name, value):
+        """FilterSet method for getting Locations that are assigned to a given Site(s) or descended from one that is."""
         params = self.generate_query__base_site(value)
+        return queryset.filter(params)
+
+    def generate_query__child_location_type(self, value):
+        """Helper method used by DynamicGroups and by _child_location_type() method."""
+        if value:
+            # Locations whose location type is a parent of value, or whose location type *is* value but can be nested
+            return Q(location_type__children__in=value) | Q(location_type__in=value, location_type__nestable=True)
+        return Q()
+
+    @extend_schema_field({"type": "string"})
+    def _child_location_type(self, queryset, name, value):
+        """FilterSet method for getting Locations that can have a child of the given LocationType(s)."""
+        params = self.generate_query__child_location_type(value)
+        return queryset.filter(params)
+
+    def generate_query__subtree(self, value):
+        """Helper method used by DynamicGroups and by _subtree() method."""
+        if value:
+            max_depth = max(loc.tree_depth for loc in Location.objects.with_tree_fields())
+            params = Q(pk__in=[v.pk for v in value])
+            filter_name = "in"
+            for _i in range(max_depth):
+                filter_name = f"parent__{filter_name}"
+                params |= Q(**{filter_name: value})
+            return params
+        return Q()
+
+    @extend_schema_field({"type": "string"})
+    def _subtree(self, queryset, name, value):
+        """FilterSet method for getting Locations that are or are descended from a given Location(s)."""
+        params = self.generate_query__subtree(value)
         return queryset.filter(params)
 
 

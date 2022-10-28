@@ -97,6 +97,7 @@ from nautobot.extras.models import SecretsGroup, Status
 from nautobot.ipam.models import IPAddress, Prefix, Service, VLAN, VLANGroup
 from nautobot.tenancy.models import Tenant
 from nautobot.utilities.testing import FilterTestCases
+from nautobot.utilities.utils import flatten_iterable
 from nautobot.virtualization.models import Cluster, ClusterType, VirtualMachine
 
 
@@ -997,11 +998,11 @@ class LocationFilterSetTestCase(FilterTestCases.NameSlugFilterTestCase, FilterTe
         lt4.content_types.add(ContentType.objects.get_for_model(Device))
 
         status_active = Status.objects.get(slug="active")
-        site = Site.objects.create(name="Research Triangle Area", status=status_active)
+        cls.site = Site.objects.create(name="Research Triangle Area", status=status_active)
         tenants = Tenant.objects.filter(group__isnull=False)[:2]
 
         loc1 = Location.objects.create(
-            name="RTP", location_type=lt1, status=status_active, site=site, description="Research Triangle Park"
+            name="RTP", location_type=lt1, status=status_active, site=cls.site, description="Research Triangle Park"
         )
         loc2 = Location.objects.create(name="RTP4E", location_type=lt2, status=status_active, parent=loc1)
         loc3 = Location.objects.create(
@@ -1032,6 +1033,19 @@ class LocationFilterSetTestCase(FilterTestCases.NameSlugFilterTestCase, FilterTe
         params = {"parent": ["rtp", Location.objects.get(name="RTP4E").pk]}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 3)
 
+    def test_base_site(self):
+        params = {"base_site": [self.site.slug, self.site.pk]}
+        self.assertQuerysetEqualAndNotEmpty(
+            self.filterset(params, self.queryset).qs,
+            list(flatten_iterable([x.descendants(include_self=True) for x in Location.objects.filter(site=self.site)])),
+        )
+
+    def test_subtree(self):
+        params = {"subtree": [Location.objects.get(name="RTP").slug, Location.objects.get(name="RTP South").pk]}
+        self.assertQuerysetEqualAndNotEmpty(
+            self.filterset(params, self.queryset).qs, Location.objects.get(name="RTP").descendants(include_self=True)
+        )
+
     def test_child_location_type(self):
         # Even though Building Group is a root type, it's nestable, so it can have another Building Group as a child.
         params = {"child_location_type": ["room", LocationType.objects.get(name="Building Group").pk]}
@@ -1047,7 +1061,6 @@ class LocationFilterSetTestCase(FilterTestCases.NameSlugFilterTestCase, FilterTe
 
     def test_site(self):
         params = {"site": [Site.objects.first().slug, Site.objects.first().pk]}
-        # TODO: should this filter return descendant locations as well?
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 1)
 
 
