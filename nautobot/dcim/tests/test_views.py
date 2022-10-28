@@ -2872,6 +2872,7 @@ class DeviceRedundancyGroupTestCase(ViewTestCases.PrimaryObjectViewTestCase):
 
         cls.form_data = {
             "name": "DRG χ",
+            "slug": "region-chi",
             "failover_strategy": DeviceRedundancyGroupFailoverStrategyChoices.FAILOVER_ACTIVE_PASSIVE,
             "status": statuses[3].pk,
             "local_context_data": None,

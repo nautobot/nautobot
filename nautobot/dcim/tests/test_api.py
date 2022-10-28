@@ -1459,7 +1459,7 @@ class DeviceTest(APIViewTestCases.APIViewTestCase):
 
     def test_patching_device_redundancy_group(self):
         """
-        Validate we can set primary_ip4 on a device using a PATCH.
+        Validate we can set device redundancy group on a device using a PATCH.
         """
         # Add object-level permission
         self.add_permissions("dcim.change_device")
@@ -1473,21 +1473,32 @@ class DeviceTest(APIViewTestCases.APIViewTestCase):
             status=device_redundancy_group_status_active,
         )
 
+        d3 = Device.objects.get(name="Device 3")
+
         # Validate set both redundancy group membership only
         patch_data = {"device_redundancy_group": device_redundancy_group.pk}
 
-        response = self.client.patch(
-            self._get_detail_url(Device.objects.get(name="Device 3")), patch_data, format="json", **self.header
-        )
+        response = self.client.patch(self._get_detail_url(d3), patch_data, format="json", **self.header)
         self.assertHttpStatus(response, status.HTTP_200_OK)
 
+        d3.refresh_from_db()
+
+        self.assertEqual(
+            d3.device_redundancy_group,
+            device_redundancy_group,
+        )
         # Validate set both redundancy group membership and priority
         patch_data = {"device_redundancy_group": device_redundancy_group.pk, "device_redundancy_group_priority": 1}
 
-        response = self.client.patch(
-            self._get_detail_url(Device.objects.get(name="Device 3")), patch_data, format="json", **self.header
-        )
+        response = self.client.patch(self._get_detail_url(d3), patch_data, format="json", **self.header)
         self.assertHttpStatus(response, status.HTTP_200_OK)
+
+        d3.refresh_from_db()
+
+        self.assertEqual(
+            d3.device_redundancy_group_priority,
+            1,
+        )
 
         # Validate error on priority patch only
         patch_data = {"device_redundancy_group_priority": 1}
@@ -2505,7 +2516,7 @@ class PowerFeedTest(APIViewTestCases.APIViewTestCase):
 
 class DeviceRedundancyGroupTest(APIViewTestCases.APIViewTestCase):
     model = DeviceRedundancyGroup
-    brief_fields = ["display", "failover_strategy", "id", "name", "url"]
+    brief_fields = ["display", "failover_strategy", "id", "name", "slug", "url"]
     create_data = [
         {
             "name": "Device Redundancy Group 4",

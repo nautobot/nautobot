@@ -105,6 +105,7 @@ class ConfigContext(BaseModel, ChangeLoggedModel, ConfigContextSchemaValidationM
     locations = models.ManyToManyField(to="dcim.Location", related_name="+", blank=True)
     roles = models.ManyToManyField(to="dcim.DeviceRole", related_name="+", blank=True)
     device_types = models.ManyToManyField(to="dcim.DeviceType", related_name="+", blank=True)
+    device_redundancy_groups = models.ManyToManyField(to="dcim.DeviceRedundancyGroup", related_name="+", blank=True)
     platforms = models.ManyToManyField(to="dcim.Platform", related_name="+", blank=True)
     cluster_groups = models.ManyToManyField(to="virtualization.ClusterGroup", related_name="+", blank=True)
     clusters = models.ManyToManyField(to="virtualization.Cluster", related_name="+", blank=True)

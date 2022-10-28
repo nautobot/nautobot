@@ -28,7 +28,7 @@ class Command(BaseCommand):
         try:
             import factory.random
 
-            from nautobot.dcim.factory import DeviceRoleFactory, DeviceTypeFactory, ManufacturerFactory, PlatformFactory
+            from nautobot.dcim.factory import DeviceRedundancyGroupFactory, DeviceRoleFactory, DeviceTypeFactory, ManufacturerFactory, PlatformFactory
             from nautobot.extras.factory import StatusFactory, TagFactory
             from nautobot.extras.management import populate_status_choices
             from nautobot.extras.utils import TaggableClassesQuery
@@ -105,6 +105,8 @@ Type 'yes' to continue, or 'no' to cancel: """
         PlatformFactory.create_batch(5, has_manufacturer=False)
         self.stdout.write("Creating DeviceTypes...")
         DeviceTypeFactory.create_batch(20)
+        self.stdout.write("Creating DeviceRedundancyGroups...")
+        DeviceRedundancyGroupFactory.create_batch(10)
         self.stdout.write("Creating DeviceRoles...")
         DeviceRoleFactory.create_batch(10)
 

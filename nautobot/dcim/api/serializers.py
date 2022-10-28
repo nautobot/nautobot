@@ -16,6 +16,7 @@ from nautobot.dcim.choices import (
     CableLengthUnitChoices,
     ConsolePortTypeChoices,
     DeviceFaceChoices,
+    DeviceRedundancyGroupFailoverStrategyChoices,
     InterfaceModeChoices,
     InterfaceStatusChoices,
     InterfaceTypeChoices,
@@ -30,7 +31,6 @@ from nautobot.dcim.choices import (
     RackElevationDetailRenderChoices,
     RackTypeChoices,
     RackWidthChoices,
-    DeviceRedundancyGroupFailoverStrategyChoices,
     SubdeviceRoleChoices,
 )
 from nautobot.dcim.constants import CABLE_TERMINATION_MODELS, RACK_ELEVATION_LEGEND_WIDTH_DEFAULT
@@ -44,8 +44,9 @@ from nautobot.dcim.models import (
     Device,
     DeviceBay,
     DeviceBayTemplate,
-    DeviceType,
+    DeviceRedundancyGroup,
     DeviceRole,
+    DeviceType,
     FrontPort,
     FrontPortTemplate,
     Interface,
@@ -67,7 +68,6 @@ from nautobot.dcim.models import (
     RackRole,
     RearPort,
     RearPortTemplate,
-    DeviceRedundancyGroup,
     Region,
     Site,
     VirtualChassis,
@@ -101,6 +101,7 @@ from .nested_serializers import (  # noqa: F401
     NestedConsoleServerPortTemplateSerializer,
     NestedDeviceBaySerializer,
     NestedDeviceBayTemplateSerializer,
+    NestedDeviceRedundancyGroupSerializer,
     NestedDeviceRoleSerializer,
     NestedDeviceSerializer,
     NestedDeviceTypeSerializer,
@@ -125,7 +126,6 @@ from .nested_serializers import (  # noqa: F401
     NestedRackSerializer,
     NestedRearPortSerializer,
     NestedRearPortTemplateSerializer,
-    NestedDeviceRedundancyGroupSerializer,
     NestedRegionSerializer,
     NestedSiteSerializer,
     NestedVirtualChassisSerializer,
@@ -1136,12 +1136,11 @@ class DeviceRedundancyGroupSerializer(NautobotModelSerializer, TaggedObjectSeria
         fields = [
             "url",
             "name",
-            "status",
+            "slug",
+            "description",
             "failover_strategy",
             "secrets_group",
             "comments",
-            "local_context_schema",
-            "local_context_data",
         ]
 
 

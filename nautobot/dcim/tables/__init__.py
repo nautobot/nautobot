@@ -18,6 +18,7 @@ from .devices import (
     DevicePowerPortTable,
     DevicePowerOutletTable,
     DeviceRearPortTable,
+    DeviceRedundancyGroupTable,
     DeviceRoleTable,
     DeviceTable,
     FrontPortTable,
@@ -27,7 +28,6 @@ from .devices import (
     PowerOutletTable,
     PowerPortTable,
     RearPortTable,
-    DeviceRedundancyGroupTable,
     VirtualChassisTable,
 )
 from .devicetypes import (
@@ -72,6 +72,7 @@ __all__ = (
     "DevicePowerOutletTable",
     "DevicePowerPortTable",
     "DeviceRearPortTable",
+    "DeviceRedundancyGroupTable",
     "DeviceRoleTable",
     "DeviceTable",
     "DeviceTypeTable",
@@ -99,7 +100,6 @@ __all__ = (
     "RackTable",
     "RearPortTable",
     "RearPortTemplateTable",
-    "DeviceRedundancyGroupTable",
     "RegionTable",
     "SiteTable",
     "VirtualChassisTable",

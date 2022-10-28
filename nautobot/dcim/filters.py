@@ -49,6 +49,7 @@ from .models import (
     Device,
     DeviceBay,
     DeviceBayTemplate,
+    DeviceRedundancyGroup,
     DeviceRole,
     DeviceType,
     FrontPort,
@@ -72,7 +73,6 @@ from .models import (
     RackRole,
     RearPort,
     RearPortTemplate,
-    DeviceRedundancyGroup,
     Region,
     Site,
     VirtualChassis,
@@ -995,9 +995,8 @@ class DeviceFilterSet(
     )
     device_redundancy_group = NaturalKeyOrPKMultipleChoiceFilter(
         field_name="device_redundancy_group",
-        to_field_name="name",
         queryset=DeviceRedundancyGroup.objects.all(),
-        label="Device Redundancy Groups (name or ID)",
+        label="Device Redundancy Groups (slug or ID)",
     )
     virtual_chassis_member = is_virtual_chassis_member
     has_console_ports = RelatedMembershipBooleanFilter(
@@ -1745,7 +1744,7 @@ class PowerFeedFilterSet(
         ]
 
 
-class DeviceRedundancyGroupFilterSet(NautobotFilterSet, StatusModelFilterSetMixin):
+class DeviceRedundancyGroupFilterSet(NautobotFilterSet, StatusModelFilterSetMixin, NameSlugSearchFilterSet):
     q = SearchFilter(filter_predicates={"name": "icontains", "comments": "icontains"})
     tag = TagFilter()
     secrets_group = NaturalKeyOrPKMultipleChoiceFilter(
@@ -1757,4 +1756,4 @@ class DeviceRedundancyGroupFilterSet(NautobotFilterSet, StatusModelFilterSetMixi
 
     class Meta:
         model = DeviceRedundancyGroup
-        fields = ["id", "name", "failover_strategy"]
+        fields = ["id", "name", "slug", "failover_strategy"]

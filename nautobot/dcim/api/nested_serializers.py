@@ -391,7 +391,7 @@ class NestedDeviceRedundancyGroupSerializer(WritableNestedSerializer):
 
     class Meta:
         model = models.DeviceRedundancyGroup
-        fields = ["id", "name", "url", "failover_strategy"]
+        fields = ["id", "url", "name", "slug", "failover_strategy"]
 
 
 #

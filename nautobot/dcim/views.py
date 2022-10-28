@@ -43,6 +43,7 @@ from .models import (
     Device,
     DeviceBay,
     DeviceBayTemplate,
+    DeviceRedundancyGroup,
     DeviceRole,
     DeviceType,
     FrontPort,
@@ -67,7 +68,6 @@ from .models import (
     RackRole,
     RearPort,
     RearPortTemplate,
-    DeviceRedundancyGroup,
     Region,
     Site,
     VirtualChassis,
@@ -3230,7 +3230,6 @@ class DeviceRedundancyGroupUIViewSet(NautobotUIViewSet):
     )
     serializer_class = serializers.DeviceRedundancyGroupSerializer
     table_class = tables.DeviceRedundancyGroupTable
-    lookup_field = "pk"
 
     def get_extra_context(self, request, instance):
         context = super().get_extra_context(request, instance)

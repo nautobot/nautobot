@@ -6,6 +6,7 @@ from nautobot.dcim.models import (
     ConsoleServerPort,
     Device,
     DeviceBay,
+    DeviceRedundancyGroup,
     DeviceRole,
     FrontPort,
     Interface,
@@ -14,7 +15,6 @@ from nautobot.dcim.models import (
     PowerOutlet,
     PowerPort,
     RearPort,
-    DeviceRedundancyGroup,
     VirtualChassis,
 )
 from nautobot.dcim.utils import cable_status_color_css
@@ -61,6 +61,7 @@ __all__ = (
     "DevicePowerPortTable",
     "DevicePowerOutletTable",
     "DeviceRearPortTable",
+    "DeviceRedundancyGroupTable",
     "DeviceRoleTable",
     "DeviceTable",
     "FrontPortTable",
@@ -70,7 +71,6 @@ __all__ = (
     "PowerOutletTable",
     "PowerPortTable",
     "RearPortTable",
-    "DeviceRedundancyGroupTable",
     "VirtualChassisTable",
 )
 
@@ -190,9 +190,7 @@ class DeviceTable(StatusTableMixin, BaseTable):
     virtual_chassis = tables.LinkColumn(viewname="dcim:virtualchassis", args=[Accessor("virtual_chassis__pk")])
     vc_position = tables.Column(verbose_name="VC Position")
     vc_priority = tables.Column(verbose_name="VC Priority")
-    device_redundancy_group = tables.LinkColumn(
-        viewname="dcim:deviceredundancygroup", args=[Accessor("device_redundancy_group__pk")]
-    )
+    device_redundancy_group = tables.Column(linkify=True)
     device_redundancy_group_priority = tables.TemplateColumn(
         template_code="""{% if record.device_redundancy_group %}<span class="badge badge-default">{{ record.device_redundancy_group_priority|default:'None' }}</span>{% else %}—{% endif %}"""
     )
@@ -970,9 +968,10 @@ class DeviceRedundancyGroupTable(BaseTable):
         template_code="""<a href="{{ record.get_absolute_url }}">{{ value }}</a>""",
         verbose_name="Members",
     )
+    secrets_group = tables.Column(linkify=True)
     tags = TagColumn(url_name="dcim:deviceredundancygroup_list")
 
     class Meta(BaseTable.Meta):
         model = DeviceRedundancyGroup
-        fields = ("pk", "name", "status", "failover_strategy", "member_count", "tags")
+        fields = ("pk", "name", "slug", "status", "failover_strategy", "member_count", "secrets_group", "tags")
         default_columns = ("pk", "name", "status", "failover_strategy", "member_count")

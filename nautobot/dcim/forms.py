@@ -97,6 +97,7 @@ from .models import (
     Cable,
     DeviceBay,
     DeviceBayTemplate,
+    DeviceRedundancyGroup,
     ConsolePort,
     ConsolePortTemplate,
     ConsoleServerPort,
@@ -125,7 +126,6 @@ from .models import (
     RackRole,
     RearPort,
     RearPortTemplate,
-    DeviceRedundancyGroup,
     Region,
     Site,
     VirtualChassis,
@@ -2232,10 +2232,11 @@ class DeviceFilterForm(
     mac_address = forms.CharField(required=False, label="MAC address")
     device_redundancy_group = DynamicModelMultipleChoiceField(
         queryset=DeviceRedundancyGroup.objects.all(),
-        to_field_name="pk",
+        to_field_name="slug",
         required=False,
         null_option="None",
     )
+    device_redundancy_group_priority = forms.IntegerField(required=False, min_value=1)
     has_primary_ip = forms.NullBooleanField(
         required=False,
         label="Has a primary IP",
@@ -4466,6 +4467,7 @@ class PowerFeedFilterForm(NautobotFilterForm, StatusModelFilterFormMixin):
 class DeviceRedundancyGroupForm(NautobotModelForm):
     secrets_group = DynamicModelChoiceField(queryset=SecretsGroup.objects.all(), required=False)
     comments = CommentField()
+    slug = SlugField()
 
     class Meta:
         model = DeviceRedundancyGroup
@@ -4482,6 +4484,9 @@ class DeviceRedundancyGroupFilterForm(NautobotFilterForm, StatusModelFilterFormM
         required=False,
         widget=StaticSelect2(),
     )
+    secrets_group = DynamicModelMultipleChoiceField(
+        queryset=SecretsGroup.objects.all(), to_field_name="slug", required=False
+    )
 
     tag = TagFilterField(model)
 
@@ -4495,7 +4500,7 @@ class DeviceRedundancyGroupBulkEditForm(
         required=False,
         widget=StaticSelect2(),
     )
-    secrets_group = DynamicModelChoiceField(queryset=SecretsGroup.objects.all(), required=False)
+    secrets_group = DynamicModelChoiceField(queryset=SecretsGroup.objects.all(), to_field_name="name", required=False)
     comments = CommentField(widget=SmallTextarea, label="Comments")
 
     class Meta:

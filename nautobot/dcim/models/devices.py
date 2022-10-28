@@ -35,11 +35,11 @@ from .device_components import (
 
 __all__ = (
     "Device",
+    "DeviceRedundancyGroup",
     "DeviceRole",
     "DeviceType",
     "Manufacturer",
     "Platform",
-    "DeviceRedundancyGroup",
     "VirtualChassis",
 )
 
@@ -1034,12 +1034,14 @@ class VirtualChassis(PrimaryModel):
     "statuses",
     "webhooks",
 )
-class DeviceRedundancyGroup(PrimaryModel, ConfigContextModel, StatusModel):
+class DeviceRedundancyGroup(PrimaryModel, StatusModel):
     """
     A DeviceRedundancyGroup represents a logical grouping of physical hardware for the purposes of indicating redundancy pairs of high-availability.
     """
 
     name = models.CharField(max_length=100, unique=True)
+    slug = AutoSlugField(populate_from="name")
+    description = models.CharField(max_length=200, blank=True)
 
     failover_strategy = models.CharField(
         max_length=50,
@@ -1057,8 +1059,6 @@ class DeviceRedundancyGroup(PrimaryModel, ConfigContextModel, StatusModel):
         blank=True,
         null=True,
     )
-
-    objects = ConfigContextModelQuerySet.as_manager()
 
     clone_fields = [
         "failover_strategy",
@@ -1082,7 +1082,7 @@ class DeviceRedundancyGroup(PrimaryModel, ConfigContextModel, StatusModel):
         return (self.name,)
 
     def get_absolute_url(self):
-        return reverse("dcim:deviceredundancygroup", args=[self.pk])
+        return reverse("dcim:deviceredundancygroup", args=[self.slug])
 
     def to_csv(self):
         return (
