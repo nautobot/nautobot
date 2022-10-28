@@ -54,7 +54,7 @@ class ConfigContextQuerySet(RestrictedQuerySet):
                 Q(platforms=obj.platform) | Q(platforms=None),
                 Q(cluster_groups=cluster_group) | Q(cluster_groups=None),
                 Q(clusters=cluster) | Q(clusters=None),
-                Q(device_redundancy_group=device_redundancy_group) | Q(device_redundancy_group=None),
+                Q(device_redundancy_groups=device_redundancy_group) | Q(device_redundancy_groups=None),
                 Q(tenant_groups=tenant_group) | Q(tenant_groups=None),
                 Q(tenants=obj.tenant) | Q(tenants=None),
                 Q(tags__slug__in=obj.tags.slugs()) | Q(tags=None),
@@ -127,7 +127,7 @@ class ConfigContextModelQuerySet(RestrictedQuerySet):
             base_query.add((Q(roles=OuterRef("device_role")) | Q(roles=None)), Q.AND)
             base_query.add((Q(device_types=OuterRef("device_type")) | Q(device_types=None)), Q.AND)
             base_query.add(
-                (Q(device_redundancy_group=OuterRef("device_redundancy_group")) | Q(device_redundancy_group=None)),
+                (Q(device_redundancy_groups=OuterRef("device_redundancy_group")) | Q(device_redundancy_groups=None)),
                 Q.AND,
             )
             base_query.add((Q(sites=OuterRef("site")) | Q(sites=None)), Q.AND)
