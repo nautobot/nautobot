@@ -290,7 +290,7 @@ class PrefixTestCase(FilterTestCases.FilterTestCase, FilterTestCases.TenancyFilt
             PrefixFactory(description=unique_description, prefix="2001:db8::/32", children__max_count=0).pk,
             PrefixFactory(description=unique_description, prefix="2001:db8:0:1::/64", children__max_count=0).pk,
         )
-        PrefixFactory(prefix="10.2.2.0/30")
+        PrefixFactory(prefix="10.2.2.0/31")
         PrefixFactory(prefix="192.168.0.0/16")
         PrefixFactory(prefix="2001:db8:0:2::/64")
         PrefixFactory(prefix="abcd::/32")
@@ -483,7 +483,7 @@ class IPAddressTestCase(FilterTestCases.FilterTestCase, FilterTestCases.TenancyF
         statuses = Status.objects.get_for_model(IPAddress)
         status_map = {s.slug: s for s in statuses.all()}
 
-        IPAddress.objects.create(
+        cls.ipv4_address = IPAddress.objects.create(
             address="10.0.0.1/24",
             tenant=None,
             vrf=None,
@@ -524,7 +524,7 @@ class IPAddressTestCase(FilterTestCases.FilterTestCase, FilterTestCases.TenancyF
             assigned_object=None,
             status=status_map["active"],
         )
-        IPAddress.objects.create(
+        cls.ipv6_address = IPAddress.objects.create(
             address="2001:db8::1/64",
             tenant=None,
             vrf=None,
@@ -567,31 +567,15 @@ class IPAddressTestCase(FilterTestCases.FilterTestCase, FilterTestCases.TenancyF
         )
 
     def test_search(self):
-        ipv4_address = (
-            self.queryset.ip_family(4)
-            .exclude(dns_name="")
-            .exclude(dns_name__isnull=True)
-            .order_by("last_updated")
-            .last()
-        )
-        # This is not getting ipv6 address with mask: `2001:db8::1/64`` consistently
-        # instead it is getting `8ca:d203:559e:5211:e0fc:3ae8:72:623e/128`` so last test f"{ipv6_hextets[0]}::" would fail.
-        ipv6_address = (
-            self.queryset.ip_family(6)
-            .exclude(dns_name="")
-            .exclude(dns_name__isnull=True)
-            .order_by("last_updated")
-            .last()
-        )
-        ipv4_octets = ipv4_address.host.split(".")
-        ipv6_hextets = ipv6_address.host.split(":")
+        ipv4_octets = self.ipv4_address.host.split(".")
+        ipv6_hextets = self.ipv6_address.host.split(":")
 
         search_terms = [
-            str(ipv4_address.address),  # ipv4 address with mask: 10.0.0.1/24
-            ipv4_address.host,  # ipv4 address without mask: 10.0.0.1
-            str(ipv6_address.address),  # ipv6 address with mask: 2001:db8::1/64
-            ipv6_address.host,  # ipv6 address without mask: 2001:db8::1
-            ipv4_address.dns_name,
+            str(self.ipv4_address.address),  # ipv4 address with mask: 10.0.0.1/24
+            self.ipv4_address.host,  # ipv4 address without mask: 10.0.0.1
+            str(self.ipv6_address.address),  # ipv6 address with mask: 2001:db8::1/64
+            self.ipv6_address.host,  # ipv6 address without mask: 2001:db8::1
+            self.ipv4_address.dns_name,
             ipv4_octets[0],  # 10
             f"{ipv4_octets[0]}.",  # 10.
             f"{ipv4_octets[0]}.{ipv4_octets[1]}",  # 10.0

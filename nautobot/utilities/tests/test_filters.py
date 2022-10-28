@@ -35,6 +35,7 @@ from nautobot.utilities.filters import (
     TreeNodeMultipleChoiceFilter,
 )
 from nautobot.utilities.testing import FilterTestCases
+from nautobot.utilities.testing import mixins
 
 
 class TreeNodeMultipleChoiceFilterTest(TestCase):
@@ -146,7 +147,7 @@ class TreeNodeMultipleChoiceFilterTest(TestCase):
         self.assertQuerysetEqual(qs, [self.site1])
 
 
-class NaturalKeyOrPKMultipleChoiceFilterTest(TestCase):
+class NaturalKeyOrPKMultipleChoiceFilterTest(TestCase, mixins.NautobotTestCaseMixin):
     class SiteFilterSet(BaseFilterSet):
         power_panels = NaturalKeyOrPKMultipleChoiceFilter(
             field_name="powerpanel",
@@ -182,28 +183,28 @@ class NaturalKeyOrPKMultipleChoiceFilterTest(TestCase):
         kwargs = {"power_panels": ["test-power-panel1"]}
         qs = self.SiteFilterSet(kwargs, self.queryset).qs
 
-        self.assertQuerysetEqual(qs, [self.site1])
+        self.assertQuerysetEqualAndNotEmpty(qs, [self.site1])
 
     def test_filter_single_pk(self):
 
         kwargs = {"power_panels": [self.power_panel1.pk]}
         qs = self.SiteFilterSet(kwargs, self.queryset).qs
 
-        self.assertQuerysetEqual(qs, [self.site1])
+        self.assertQuerysetEqualAndNotEmpty(qs, [self.site1])
 
     def test_filter_multiple_name(self):
 
         kwargs = {"power_panels": ["test-power-panel1", "test-power-panel2"]}
         qs = self.SiteFilterSet(kwargs, self.queryset).qs
 
-        self.assertQuerysetEqual(qs, [self.site1, self.site2])
+        self.assertQuerysetEqualAndNotEmpty(qs, [self.site1, self.site2])
 
     def test_filter_duplicate_name(self):
 
         kwargs = {"power_panels": ["test-power-panel3"]}
         qs = self.SiteFilterSet(kwargs, self.queryset).qs
 
-        self.assertQuerysetEqual(qs, [self.site1, self.site2])
+        self.assertQuerysetEqualAndNotEmpty(qs, [self.site1, self.site2])
 
     def test_filter_null(self):
 
@@ -211,7 +212,7 @@ class NaturalKeyOrPKMultipleChoiceFilterTest(TestCase):
         qs = self.SiteFilterSet(kwargs, self.queryset).qs
         expected_result = Site.objects.filter(powerpanel__isnull=True)
 
-        self.assertQuerysetEqual(qs, expected_result)
+        self.assertQuerysetEqualAndNotEmpty(qs, expected_result)
 
     def test_filter_combined_name(self):
 
@@ -221,7 +222,7 @@ class NaturalKeyOrPKMultipleChoiceFilterTest(TestCase):
             powerpanel__name="test-power-panel1"
         )
 
-        self.assertQuerysetEqual(qs, expected_result)
+        self.assertQuerysetEqualAndNotEmpty(qs, expected_result)
 
     def test_filter_combined_pk(self):
 
@@ -231,7 +232,7 @@ class NaturalKeyOrPKMultipleChoiceFilterTest(TestCase):
             powerpanel__pk=self.power_panel2.pk
         )
 
-        self.assertQuerysetEqual(qs, expected_result)
+        self.assertQuerysetEqualAndNotEmpty(qs, expected_result)
 
     def test_filter_single_name_exclude(self):
 
@@ -239,7 +240,7 @@ class NaturalKeyOrPKMultipleChoiceFilterTest(TestCase):
         qs = self.SiteFilterSet(kwargs, self.queryset).qs
         expected_result = Site.objects.exclude(powerpanel__name="test-power-panel1")
 
-        self.assertQuerysetEqual(qs, expected_result)
+        self.assertQuerysetEqualAndNotEmpty(qs, expected_result)
 
     def test_filter_single_pk_exclude(self):
 
@@ -247,7 +248,7 @@ class NaturalKeyOrPKMultipleChoiceFilterTest(TestCase):
         qs = self.SiteFilterSet(kwargs, self.queryset).qs
         expected_result = Site.objects.exclude(powerpanel__pk=self.power_panel2.pk)
 
-        self.assertQuerysetEqual(qs, expected_result)
+        self.assertQuerysetEqualAndNotEmpty(qs, expected_result)
 
     def test_filter_multiple_name_exclude(self):
 
@@ -257,7 +258,7 @@ class NaturalKeyOrPKMultipleChoiceFilterTest(TestCase):
             powerpanel__name="test-power-panel2"
         )
 
-        self.assertQuerysetEqual(qs, expected_result)
+        self.assertQuerysetEqualAndNotEmpty(qs, expected_result)
 
     def test_filter_duplicate_name_exclude(self):
 
@@ -265,28 +266,28 @@ class NaturalKeyOrPKMultipleChoiceFilterTest(TestCase):
         qs = self.SiteFilterSet(kwargs, self.queryset).qs
         expected_result = Site.objects.exclude(powerpanel__name="test-power-panel3")
 
-        self.assertQuerysetEqual(qs, expected_result)
+        self.assertQuerysetEqualAndNotEmpty(qs, expected_result)
 
     def test_filter_null_exclude(self):
 
         kwargs = {"power_panels__n": [settings.FILTERS_NULL_CHOICE_VALUE]}
         qs = self.SiteFilterSet(kwargs, self.queryset).qs
 
-        self.assertQuerysetEqual(qs, [self.site1, self.site2])
+        self.assertQuerysetEqualAndNotEmpty(qs, [self.site1, self.site2])
 
     def test_filter_combined_name_exclude(self):
 
         kwargs = {"power_panels__n": ["test-power-panel1", settings.FILTERS_NULL_CHOICE_VALUE]}
         qs = self.SiteFilterSet(kwargs, self.queryset).qs
 
-        self.assertQuerysetEqual(qs, [self.site2])
+        self.assertQuerysetEqualAndNotEmpty(qs, [self.site2])
 
     def test_filter_combined_pk_exclude(self):
 
         kwargs = {"power_panels__n": [self.power_panel2.pk, settings.FILTERS_NULL_CHOICE_VALUE]}
         qs = self.SiteFilterSet(kwargs, self.queryset).qs
 
-        self.assertQuerysetEqual(qs, [self.site1])
+        self.assertQuerysetEqualAndNotEmpty(qs, [self.site1])
 
     def test_get_filter_predicate(self):
         """
@@ -298,7 +299,7 @@ class NaturalKeyOrPKMultipleChoiceFilterTest(TestCase):
         uuid_obj = self.power_panel1.pk
         kwargs = {"power_panels": [uuid_obj]}
         fs = self.SiteFilterSet(kwargs, self.queryset)
-        self.assertQuerysetEqual(fs.qs, [self.site1])
+        self.assertQuerysetEqualAndNotEmpty(fs.qs, [self.site1])
         self.assertEqual(
             fs.filters["power_panels"].get_filter_predicate(uuid_obj),
             {"powerpanel": str(uuid_obj)},
@@ -308,7 +309,7 @@ class NaturalKeyOrPKMultipleChoiceFilterTest(TestCase):
         instance = self.power_panel1
         kwargs = {"power_panels": [instance]}
         fs = self.SiteFilterSet(kwargs, self.queryset)
-        self.assertQuerysetEqual(fs.qs, [self.site1])
+        self.assertQuerysetEqualAndNotEmpty(fs.qs, [self.site1])
         self.assertEqual(
             fs.filters["power_panels"].get_filter_predicate(instance),
             {"powerpanel": str(instance.pk)},
@@ -318,7 +319,7 @@ class NaturalKeyOrPKMultipleChoiceFilterTest(TestCase):
         name = self.power_panel1.name
         kwargs = {"power_panels": [name]}
         fs = self.SiteFilterSet(kwargs, self.queryset)
-        self.assertQuerysetEqual(fs.qs, [self.site1])
+        self.assertQuerysetEqualAndNotEmpty(fs.qs, [self.site1])
         self.assertEqual(
             fs.filters["power_panels"].get_filter_predicate(name),
             {"powerpanel__name": name},
@@ -1108,7 +1109,7 @@ class GetFiltersetTestValuesTest(FilterTestCases.BaseFilterTestCase):
                 self.get_filterset_test_values("description")
 
 
-class SearchFilterTest(TestCase):
+class SearchFilterTest(TestCase, mixins.NautobotTestCaseMixin):
     """Tests for the `SearchFilter` filter class."""
 
     filterset_class = SiteFilterSet
@@ -1135,29 +1136,43 @@ class SearchFilterTest(TestCase):
     def test_default_icontains(self):
         """Test a default search for an "icontains" value."""
         params = {"q": "Test Site"}
-        self.assertEqual(self.get_filterset_count(params), self.queryset.filter(name__icontains="Test Site").count())
+        self.assertQuerysetEqualAndNotEmpty(
+            self.filterset_class(params, self.queryset).qs, self.queryset.filter(name__icontains="Test Site")
+        )
         params = {"q": "Test Site 3"}
-        self.assertEqual(self.get_filterset_count(params), self.queryset.filter(name__icontains="Test Site 3").count())
+        self.assertQuerysetEqualAndNotEmpty(
+            self.filterset_class(params, self.queryset).qs, self.queryset.filter(name__icontains="Test Site 3")
+        )
         # Trailing space should only match the first 3.
         params = {"q": "Test Site "}
-        self.assertEqual(self.get_filterset_count(params), self.queryset.filter(name__icontains="Test Site ").count())
+        self.assertQuerysetEqualAndNotEmpty(
+            self.filterset_class(params, self.queryset).qs, self.queryset.filter(name__icontains="Test Site ")
+        )
 
     def test_default_exact(self):
         """Test a default search for an "exact" value."""
         params = {"q": "1234"}
-        self.assertEqual(self.get_filterset_count(params), self.queryset.filter(asn__exact="1234").count())
+        self.assertQuerysetEqualAndNotEmpty(
+            self.filterset_class(params, self.queryset).qs, self.queryset.filter(asn__exact="1234")
+        )
         asn = Site.objects.values_list("asn", flat=True).first()
         params = {"q": str(asn)}
-        self.assertEqual(self.get_filterset_count(params), self.queryset.filter(asn__exact=str(asn)).count())
+        self.assertQuerysetEqualAndNotEmpty(
+            self.filterset_class(params, self.queryset).qs, self.queryset.filter(asn__exact=str(asn))
+        )
 
     def test_default_id(self):
         """Test default search on "id" field."""
         # Search is iexact so UUID search for lower/upper return the same result.
         obj_pk = str(self.site1.pk)
         params = {"q": obj_pk.lower()}
-        self.assertEqual(self.get_filterset_count(params), self.queryset.filter(id__iexact=obj_pk.lower()).count())
+        self.assertQuerysetEqualAndNotEmpty(
+            self.filterset_class(params, self.queryset).qs, self.queryset.filter(id__iexact=obj_pk.lower())
+        )
         params = {"q": obj_pk.upper()}
-        self.assertEqual(self.get_filterset_count(params), self.queryset.filter(id__iexact=obj_pk.upper()).count())
+        self.assertQuerysetEqualAndNotEmpty(
+            self.filterset_class(params, self.queryset).qs, self.queryset.filter(id__iexact=obj_pk.upper())
+        )
 
     def test_typed_valid(self):
         """Test that validly-typed predicate mappings are handled correctly."""
@@ -1168,13 +1183,12 @@ class SearchFilterTest(TestCase):
             q = SearchFilter(filter_predicates={"asn": {"lookup_expr": "exact", "preprocessor": int}})
 
         params = {"q": "1234"}
-        self.assertEqual(
-            self.get_filterset_count(params, MySiteFilterSet), self.queryset.filter(asn__exact="1234").count()
+        self.assertQuerysetEqualAndNotEmpty(
+            MySiteFilterSet(params, self.queryset).qs, self.queryset.filter(asn__exact="1234")
         )
         params = {"q": "123"}
-        self.assertEqual(
-            self.get_filterset_count(params, MySiteFilterSet), self.queryset.filter(asn__exact="123").count()
-        )
+        # Both querysets are empty so we dont use assertQuerysetEqualAndNotEmpty here.
+        self.assertQuerysetEqual(MySiteFilterSet(params, self.queryset).qs, self.queryset.filter(asn__exact="123"))
 
         # Further an invalid type (e.g. dict) will just result in the predicate for ASN to be skipped
         class MySiteFilterSet2(SiteFilterSet):
@@ -1183,6 +1197,7 @@ class SearchFilterTest(TestCase):
             q = SearchFilter(filter_predicates={"asn": {"lookup_expr": "exact", "preprocessor": dict}})
 
         params = {"q": "1234"}
+        # Both querysets are empty so we dont use assertQuerysetEqualAndNotEmpty here.
         self.assertEqual(self.get_filterset_count(params, MySiteFilterSet2), 0)
 
     def test_typed_icontains(self):
@@ -1195,12 +1210,12 @@ class SearchFilterTest(TestCase):
 
         # Both searches should return the same results.
         params = {"q": "Test Site"}
-        self.assertEqual(
-            self.get_filterset_count(params, MySiteFilterSet), self.queryset.filter(name__icontains="Test Site").count()
+        self.assertQuerysetEqualAndNotEmpty(
+            MySiteFilterSet(params, self.queryset).qs, self.queryset.filter(name__icontains="Test Site")
         )
         params = {"q": "Test Site "}
-        self.assertEqual(
-            self.get_filterset_count(params, MySiteFilterSet), self.queryset.filter(name__icontains="Test Site").count()
+        self.assertQuerysetEqualAndNotEmpty(
+            MySiteFilterSet(params, self.queryset).qs, self.queryset.filter(name__icontains="Test Site")
         )
 
     def test_typed_invalid(self):

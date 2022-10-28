@@ -324,7 +324,7 @@ class LocationFactory(DjangoModelFactory):
         The parent attribute of all the location types other than root and campus are deterministic.
         There is a 50% chance whether a root or campus type location (both nestable) have a parent.
         """
-        candidate_parents = Q()
+        candidate_parents = Q(pk=None)
         # LocationType that does have a parent
         if self.location_type.parent is not None:
             candidate_parents |= Q(location_type=self.location_type.parent)

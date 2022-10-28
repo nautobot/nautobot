@@ -317,7 +317,7 @@ class VLANGroupFactory(OrganizationalModelFactory):
         factory.LazyAttribute(lambda l: l.location.site or l.location.base_site),
         factory.Maybe(
             "has_site",
-            factory.LazyAttribute(lambda l: factory.random.randgen.choice(Site.objects.all())),
+            random_instance(Site),
             None,
         ),
     )
