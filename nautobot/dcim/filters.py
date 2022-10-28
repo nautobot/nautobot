@@ -1757,4 +1757,8 @@ class DeviceRedundancyGroupFilterSet(NautobotFilterSet, StatusModelFilterSetMixi
 
     class Meta:
         model = DeviceRedundancyGroup
-        fields = "__all__"
+        fields = [
+            "id",
+            "name",
+            "failover_strategy"
+        ]
