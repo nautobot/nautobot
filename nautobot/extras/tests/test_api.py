@@ -3265,10 +3265,10 @@ class TagTestVersion13(
         cls.update_data = {
             "name": "A new tag name",
             "slug": "a-new-tag-name",
-            "content_types": [f"{ct.app_label}.{ct.model}" for ct in TaggableClassesQuery().as_queryset],
+            "content_types": [f"{ct.app_label}.{ct.model}" for ct in TaggableClassesQuery().as_queryset()],
         }
         cls.bulk_update_data = {
-            "content_types": [f"{ct.app_label}.{ct.model}" for ct in TaggableClassesQuery().as_queryset]
+            "content_types": [f"{ct.app_label}.{ct.model}" for ct in TaggableClassesQuery().as_queryset()]
         }
 
     def test_create_tags_with_invalid_content_types(self):

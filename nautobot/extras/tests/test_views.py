@@ -2093,7 +2093,7 @@ class TagTestCase(ViewTestCases.OrganizationalObjectViewTestCase):
             "slug": "tag-x",
             "color": "c0c0c0",
             "comments": "Some comments",
-            "content_types": [ct.id for ct in TaggableClassesQuery().as_queryset],
+            "content_types": [ct.id for ct in TaggableClassesQuery().as_queryset()],
         }
 
         cls.csv_data = (
