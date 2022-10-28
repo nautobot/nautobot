@@ -202,7 +202,7 @@ class SiteFactory(DjangoModelFactory):
     tenant = factory.Maybe("has_tenant", random_instance(Tenant), None)
 
     has_time_zone = factory.Faker("pybool")
-    time_zone = factory.Maybe("has_time_zone", factory.LazyAttribute(lambda o: pytz.timezone(Faker().timezone())), None)
+    time_zone = factory.Maybe("has_time_zone", factory.LazyFunction(lambda: pytz.timezone(Faker().timezone())), None)
 
     has_physical_address = factory.Faker("pybool")
     physical_address = factory.Maybe("has_physical_address", factory.Faker("address"))
