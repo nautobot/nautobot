@@ -50,7 +50,8 @@ class BaseNetworkQuerySet(RestrictedQuerySet):
         """
         return network.broadcast if network.broadcast else network[-1]
 
-    def _is_ambiguous_network_string(self, search):
+    @staticmethod
+    def _is_ambiguous_network_string(search):
         """
         Determines if an inputted search could be both a valid IPv4 or IPv6 beginning octet or hextet respectively.
         """
@@ -111,7 +112,9 @@ class BaseNetworkQuerySet(RestrictedQuerySet):
         # Disregard netmask
         search = search.split("/")[0]
 
-        search = self._check_and_prep_ipv6(search)
+        # We don't want default ambiguous behavior to be IPv6
+        if not self._is_ambiguous_network_string(search):
+            search = self._check_and_prep_ipv6(search)
 
         # Attempt to quickly assess v6
         if ":" in search:
