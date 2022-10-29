@@ -136,7 +136,10 @@ class IPAddressQuerySet(TestCase):
         self.assertEqual(self.queryset._safe_parse_network_string("10:", 6), netaddr.IPNetwork("10::/16"))
 
         self.assertEqual(self.queryset._safe_parse_network_string("10.0.0.4", 4), netaddr.IPNetwork("10.0.0.4/32"))
-        self.assertEqual(self.queryset._safe_parse_network_string("2001:db8:abcd:0012::0", 6), netaddr.IPNetwork("2001:db8:abcd:12::/128"))
+        self.assertEqual(
+            self.queryset._safe_parse_network_string("2001:db8:abcd:0012::0", 6),
+            netaddr.IPNetwork("2001:db8:abcd:12::/128"),
+        )
 
     def test__check_and_prep_ipv6(self):
         self.assertEqual(self.queryset._check_and_prep_ipv6("10"), "10::")
