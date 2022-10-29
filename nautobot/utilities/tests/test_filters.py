@@ -169,7 +169,6 @@ class NaturalKeyOrPKMultipleChoiceFilterTest(TestCase, mixins.NautobotTestCaseMi
         self.site0 = Site.objects.create(name="Test Site 0", slug="test-site0")
         self.site1 = Site.objects.create(name="Test Site 1", slug="test-site1")
         self.site2 = Site.objects.create(name="Test Site 2", slug="test-site2")
-        self.site_pk_list = [self.site0.pk, self.site1.pk, self.site2.pk]
 
         self.power_panel1 = PowerPanel.objects.create(site=self.site1, name="test-power-panel1")
         self.power_panel2 = PowerPanel.objects.create(site=self.site2, name="test-power-panel2")
@@ -1155,7 +1154,7 @@ class SearchFilterTest(TestCase, mixins.NautobotTestCaseMixin):
         self.assertQuerysetEqualAndNotEmpty(
             self.filterset_class(params, self.queryset).qs, self.queryset.filter(asn__exact="1234")
         )
-        asn = Site.objects.values_list("asn", flat=True).first()
+        asn = Site.objects.exclude(asn="1234").values_list("asn", flat=True).first()
         params = {"q": str(asn)}
         self.assertQuerysetEqualAndNotEmpty(
             self.filterset_class(params, self.queryset).qs, self.queryset.filter(asn__exact=str(asn))

@@ -58,7 +58,7 @@ class NautobotTemplatetagsHelperTest(TestCase):
         # If you request a nonexistent field, it defaults to the string representation
         self.assertEqual(
             hyperlinked_object(site, "foo"),
-            f'<a href="/dcim/sites/{site.slug}/" title="An important site">{site.__str__()}</a>',
+            f'<a href="/dcim/sites/{site.slug}/" title="An important site">{site!s}</a>',
         )
 
     def test_placeholder(self):
