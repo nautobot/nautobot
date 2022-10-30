@@ -698,11 +698,7 @@ class DeviceTestCase(TestCase):
         self.location_2 = Location.objects.create(
             name="Leaf", status=self.device_status, location_type=self.location_type_2, parent=self.location_1
         )
-        self.device_redundancy_group = DeviceRedundancyGroup.objects.create(
-            name="Redundancy Group 1",
-            status=Status.objects.get_for_model(DeviceRedundancyGroup).get(slug="active"),
-            failover_strategy=DeviceRedundancyGroupFailoverStrategyChoices.FAILOVER_ACTIVE_ACTIVE,
-        )
+        self.device_redundancy_group = DeviceRedundancyGroup.objects.first()
 
         # Create DeviceType components
         ConsolePortTemplate(device_type=self.device_type, name="Console Port 1").save()

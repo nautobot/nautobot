@@ -37,7 +37,8 @@ class BaseNetworkQuerySet(RestrictedQuerySet):
     # Match string with ending in "::"
     RE_COLON = re.compile(".*::$")
 
-    # Match string from "0000" to "ffff" with no trailing ":"
+    # Match string from "0" to "ffff" with no trailing ":"
+    # Allows for abbreviated and non-abbreviated hextet forms
     RE_HEXTET = re.compile("^[a-f0-9]{4}$|^0{0,1}[a-f0-9]{3}$|^0{0,2}[a-f0-9]{2}$|^0{0,3}[a-f0-9]{1}$")
 
     @staticmethod

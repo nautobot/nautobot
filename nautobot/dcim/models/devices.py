@@ -1036,7 +1036,7 @@ class VirtualChassis(PrimaryModel):
 )
 class DeviceRedundancyGroup(PrimaryModel, StatusModel):
     """
-    A DeviceRedundancyGroup represents a logical grouping of physical hardware for the purposes of indicating redundancy pairs of high-availability.
+    A DeviceRedundancyGroup represents a logical grouping of physical hardware for the purposes of high-availability.
     """
 
     name = models.CharField(max_length=100, unique=True)

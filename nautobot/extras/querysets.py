@@ -24,7 +24,6 @@ class ConfigContextQuerySet(RestrictedQuerySet):
         cluster = getattr(obj, "cluster", None)
         cluster_group = getattr(cluster, "group", None)
 
-        # Virtualization cluster for VirtualMachine
         device_redundancy_group = getattr(obj, "device_redundancy_group", None)
 
         # Get the group of the assigned tenant, if any
