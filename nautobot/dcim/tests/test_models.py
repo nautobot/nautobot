@@ -7,7 +7,6 @@ from nautobot.dcim.choices import (
     CableStatusChoices,
     CableTypeChoices,
     DeviceFaceChoices,
-    DeviceRedundancyGroupFailoverStrategyChoices,
     InterfaceTypeChoices,
     PortTypeChoices,
     PowerOutletFeedLegChoices,

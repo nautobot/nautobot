@@ -2848,27 +2848,6 @@ class DeviceRedundancyGroupTestCase(ViewTestCases.PrimaryObjectViewTestCase):
     def setUpTestData(cls):
 
         statuses = Status.objects.get_for_model(DeviceRedundancyGroup)
-        # Create three Regions
-        device_redundancy_groups = (
-            DeviceRedundancyGroup.objects.create(
-                name="DRG ɑ",
-                failover_strategy=DeviceRedundancyGroupFailoverStrategyChoices.FAILOVER_ACTIVE_ACTIVE,
-                status=statuses[0],
-            ),
-            DeviceRedundancyGroup.objects.create(
-                name="DRG β",
-                failover_strategy=DeviceRedundancyGroupFailoverStrategyChoices.FAILOVER_ACTIVE_ACTIVE,
-                status=statuses[1],
-            ),
-            DeviceRedundancyGroup.objects.create(
-                name="DRG γ",
-                failover_strategy=DeviceRedundancyGroupFailoverStrategyChoices.FAILOVER_ACTIVE_PASSIVE,
-                status=statuses[2],
-            ),
-        )
-
-        for drg in device_redundancy_groups:
-            drg.validated_save()
 
         cls.form_data = {
             "name": "DRG χ",

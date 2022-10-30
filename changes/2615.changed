@@ -1,0 +1,3 @@
+Changed `ConfigContextFilterForm`s `schema` filter form field to support added filter field on `ConfigContextFilterSet`.
+Changed `BaseNetworkQuerySet` and `IPAddressQuerySet` to search both IPv6 and IPv4 when given search string is ambiguous.
+Changed `BaseNetworkQuerySet` and `IPAddressQuerySet` to permit searching IPv6 abbreviated addresses.

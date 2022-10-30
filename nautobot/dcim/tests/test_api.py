@@ -10,8 +10,6 @@ from rest_framework import status
 from constance.test import override_config
 
 from nautobot.dcim.choices import (
-    DeviceRedundancyGroupStatusChoices,
-    DeviceRedundancyGroupFailoverStrategyChoices,
     InterfaceModeChoices,
     InterfaceStatusChoices,
     InterfaceTypeChoices,
@@ -1464,14 +1462,7 @@ class DeviceTest(APIViewTestCases.APIViewTestCase):
         # Add object-level permission
         self.add_permissions("dcim.change_device")
 
-        device_redundancy_group_status_active = Status.objects.get_for_model(DeviceRedundancyGroup).get(
-            slug=DeviceRedundancyGroupStatusChoices.STATUS_ACTIVE
-        )
-        device_redundancy_group = DeviceRedundancyGroup.objects.create(
-            name="DRG 1",
-            failover_strategy=DeviceRedundancyGroupFailoverStrategyChoices.FAILOVER_ACTIVE_ACTIVE,
-            status=device_redundancy_group_status_active,
-        )
+        device_redundancy_group = DeviceRedundancyGroup.objects.first()
 
         d3 = Device.objects.get(name="Device 3")
 
@@ -2548,20 +2539,3 @@ class DeviceRedundancyGroupTest(APIViewTestCases.APIViewTestCase):
         # The test code for `utilities.testing.views.TestCase.model_to_dict()`
         # needs to be enhanced to use the actual API serializers when `api=True`
         cls.validation_excluded_fields = ["status"]
-
-        statuses = Status.objects.get_for_model(DeviceRedundancyGroup)
-        DeviceRedundancyGroup.objects.create(
-            name="DRG 1",
-            failover_strategy=DeviceRedundancyGroupFailoverStrategyChoices.FAILOVER_ACTIVE_ACTIVE,
-            status=statuses[0],
-        )
-        DeviceRedundancyGroup.objects.create(
-            name="DRG 2",
-            failover_strategy=DeviceRedundancyGroupFailoverStrategyChoices.FAILOVER_ACTIVE_PASSIVE,
-            status=statuses[1],
-        )
-        DeviceRedundancyGroup.objects.create(
-            name="DRG 3",
-            failover_strategy=DeviceRedundancyGroupFailoverStrategyChoices.FAILOVER_ACTIVE_PASSIVE,
-            status=statuses[2],
-        )
