@@ -385,7 +385,8 @@ class RelationshipModelFormMixin(forms.ModelForm):
 
     def clean(self):
         """
-        Verify that any requested RelationshipAssociations do not violate relationship cardinality restrictions.
+        First check for any required relationships errors and if there are any, add them via form field errors.
+        Then verify that any requested RelationshipAssociations do not violate relationship cardinality restrictions.
 
         - For TYPE_ONE_TO_MANY and TYPE_ONE_TO_ONE relations, if the form's object is on the "source" side of
           the relationship, verify that the requested "destination" object(s) do not already have any existing
@@ -394,8 +395,8 @@ class RelationshipModelFormMixin(forms.ModelForm):
           verify that the requested "source" object does not have an existing RelationshipAssociation to
           a different destination object.
         """
-        required_relationships_errors = Relationship.required_related_objects_errors(
-            self.instance, "ui", self.cleaned_data
+        required_relationships_errors = self.Meta().model.required_related_objects_errors(
+            output_for="ui", initial_data=self.cleaned_data, instance=self.instance
         )
         for error_dict in required_relationships_errors:
             for field, errors in error_dict.items():

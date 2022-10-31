@@ -1032,7 +1032,8 @@ class RequiredRelationshipTestMixin(TestCase):
            - Object is updated with the required relationship data (succeeds)
            =================================================================
            - Object is created with the required relationship data (succeeds)
-           - Object is updated without specifying "relationships" json key (succeeds, relationship remains in place)
+           - Object is updated without specifying "relationships" json key (succeeds, relationship associations
+             remain in place)
            - Object is created with the required relationship data (succeeds)
            - Object is updated to remove the relationship data (fails)
            =================================================================
@@ -1321,7 +1322,7 @@ class RequiredRelationshipTestMixin(TestCase):
                     self.assertEqual(from_model.objects.count(), existing_count + 1)
 
                     # Object is updated without specifying "relationships" json key
-                    # (succeeds, relationship remains in place)
+                    # (succeeds, relationship associations remain in place)
                     newly_created_object = from_model.objects.get(name=params["create_data"]["name"])
                     response = self.send_data(
                         from_model,

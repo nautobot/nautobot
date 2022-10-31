@@ -266,8 +266,8 @@ class RelationshipModelSerializerMixin(ValidatedModelSerializer):
 
     def create(self, validated_data):
         relationships_data = validated_data.pop("relationships", {})
-        required_relationships_errors = Relationship.required_related_objects_errors(
-            self.Meta().model, "api", relationships_data
+        required_relationships_errors = self.Meta().model.required_related_objects_errors(
+            output_for="api", initial_data=relationships_data
         )
         if required_relationships_errors:
             raise ValidationError(required_relationships_errors)
@@ -280,8 +280,11 @@ class RelationshipModelSerializerMixin(ValidatedModelSerializer):
     def update(self, instance, validated_data):
         relationships_key_specified = "relationships" in self.context["request"].data
         relationships_data = validated_data.pop("relationships", {})
-        required_relationships_errors = Relationship.required_related_objects_errors(
-            instance, "api", relationships_data, relationships_key_specified=relationships_key_specified
+        required_relationships_errors = self.Meta().model.required_related_objects_errors(
+            output_for="api",
+            initial_data=relationships_data,
+            relationships_key_specified=relationships_key_specified,
+            instance=instance,
         )
         if required_relationships_errors:
             raise ValidationError(required_relationships_errors)

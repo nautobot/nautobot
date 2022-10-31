@@ -221,6 +221,110 @@ class RelationshipModel(models.Model):
         """
         return self.get_relationships_data(advanced_ui=True)
 
+    @classmethod
+    def required_related_objects_errors(
+        cls, output_for="ui", initial_data=None, relationships_key_specified=False, instance=None
+    ):
+        """
+        Args:
+            output_for: either "ui" or "api" depending on usage
+            initial_data: submitted form/serializer data to validate against
+            relationships_key_specified: if the "relationships" key was provided or not
+            instance: an optional model instance to validate against
+        Returns:
+            List of field error dicts if any are found
+        """
+
+        required_relationships = Relationship.objects.get_required_for_model(cls)
+        relationships_field_errors = []
+        for relation in required_relationships:
+
+            opposite_side = RelationshipSideChoices.OPPOSITE[relation.required_on]
+
+            if relation.skip_required(cls, opposite_side):
+                continue
+
+            if relation.has_many(opposite_side):
+                num_required_verbose = "at least one"
+            else:
+                num_required_verbose = "a"
+
+            if output_for == "api":
+                # If this is a model instance and the relationships json data key is missing, check to see if
+                # required relationship associations already exist, and continue (ignore validation) if so
+                if (
+                    getattr(instance, "present_in_database", False) is True
+                    and initial_data.get(relation, {}).get(opposite_side, {}) == {}
+                    and not relationships_key_specified
+                ):
+                    if (
+                        RelationshipAssociation.objects.filter(**{f"{relation.required_on}_id": instance.pk}).count()
+                        > 0
+                    ):
+                        continue
+
+            required_model_class = getattr(relation, f"{opposite_side}_type").model_class()
+            required_model_meta = required_model_class._meta
+            cr_field_name = f"cr_{relation.slug}__{opposite_side}"
+            name_plural = cls._meta.verbose_name_plural
+            field_key = relation.slug if output_for == "api" else cr_field_name
+            field_errors = {field_key: []}
+
+            if not required_model_class.objects.exists():
+
+                hint = (
+                    f"You need to create {num_required_verbose} {required_model_meta.verbose_name} "
+                    f"before instantiating a {cls._meta.verbose_name}."
+                )
+
+                if output_for == "ui":
+                    try:
+                        add_url = reverse(get_route_for_model(required_model_class, "add"))
+                        hint = (
+                            f"<a target='_blank' href='{add_url}'>Click here</a> to create "
+                            f"a {required_model_meta.verbose_name}."
+                        )
+                    except NoReverseMatch:
+                        pass
+
+                elif output_for == "api":
+                    try:
+                        api_post_url = reverse(get_route_for_model(required_model_class, "list", api=True))
+                        hint = f"Create a {required_model_meta.verbose_name} by posting to {api_post_url}"
+                    except NoReverseMatch:
+                        pass
+
+                error_message = mark_safe(
+                    f"{name_plural[0].upper()}{name_plural[1:]} require "
+                    f"{num_required_verbose} {required_model_meta.verbose_name}, but no "
+                    f"{required_model_meta.verbose_name_plural} exist yet. {hint}"
+                )
+                field_errors[field_key].append(error_message)
+
+            if initial_data is not None:
+
+                supplied_data = []
+
+                if output_for == "ui":
+                    supplied_data = initial_data.get(field_key, [])
+                elif output_for == "api":
+                    supplied_data = initial_data.get(relation, {}).get(opposite_side, {})
+
+                if not supplied_data:
+                    if output_for == "ui":
+                        field_errors[field_key].append(
+                            f"You need to select {num_required_verbose} {required_model_meta.verbose_name}."
+                        )
+                    elif output_for == "api":
+                        field_errors[field_key].append(
+                            f'You need to specify relationships["{relation.slug}"]["{opposite_side}"]["objects"].'
+                        )
+
+            if len(field_errors[field_key]) > 0:
+                relationships_field_errors.append(field_errors)
+
+        return relationships_field_errors
+
 
 class RelationshipManager(models.Manager.from_queryset(RestrictedQuerySet)):
     use_in_migrations = True
@@ -241,8 +345,8 @@ class RelationshipManager(models.Manager.from_queryset(RestrictedQuerySet)):
         """
         content_type = ContentType.objects.get_for_model(model._meta.concrete_model)
         return self.get_queryset().filter(
-            Q(source_type=content_type, required_on="source")
-            | Q(destination_type=content_type, required_on="destination")
+            Q(source_type=content_type, required_on=RelationshipRequiredSideChoices.SOURCE_SIDE_REQUIRED)
+            | Q(destination_type=content_type, required_on=RelationshipRequiredSideChoices.DESTINATION_SIDE_REQUIRED)
         )
 
 
@@ -564,7 +668,6 @@ class Relationship(BaseModel, ChangeLoggedModel, NotesMixin):
         be skipped or not when validating required relationships.
         It will skip when any of the following conditions are True:
          - a relationship is marked as symmetric
-         - a relationship references itself
          - if a required model class is None (if it doesn't exist yet -- unimplemented/uninstalled plugins for instance)
 
         Args:
@@ -578,123 +681,17 @@ class Relationship(BaseModel, ChangeLoggedModel, NotesMixin):
         if self.symmetric:
             return True
 
-        # Skip self-referencing
-        if ContentType.objects.get_for_model(referenced_instance_or_class) == getattr(self, f"{side}_type"):
-            return True
-
         required_model_class = getattr(self, f"{RelationshipSideChoices.OPPOSITE[side]}_type").model_class()
         # Handle the case where required_model_class is None (e.g., relationship to a plugin
         # model for a plugin that's not installed at present):
         if required_model_class is None:
+            logger.info(
+                f"Relationship enforcement skipped as required model class "
+                f"({self}.{RelationshipSideChoices.OPPOSITE[side]}_type doesn't exist yet."
+            )
             return True
 
         return False
-
-    @classmethod
-    def required_related_objects_errors(
-        cls, instance_or_class, output_for="ui", initial_data=None, relationships_key_specified=False
-    ):
-        """
-        Args:
-            instance_or_class: either a model instance or class name to check its required relationships
-            output_for: either "ui" or "api" depending on usage
-            initial_data: submitted form/serializer data to validate against
-            relationships_key_specified: if the "relationships" key was provided or not
-        Returns:
-            List of field error dicts if any are found
-        """
-
-        required_relationships = Relationship.objects.get_required_for_model(instance_or_class)
-        relationships_field_errors = []
-        for relation in required_relationships:
-
-            opposite_side = RelationshipSideChoices.OPPOSITE[relation.required_on]
-
-            if relation.skip_required(instance_or_class, opposite_side):
-                continue
-
-            if relation.has_many(opposite_side):
-                num_required_verbose = "at least one"
-            else:
-                num_required_verbose = "a"
-
-            if output_for == "api":
-                # If this is a model instance and the relationships json data key is missing, check to see if
-                # required relationship associations already exist, and continue (ignore validation) if so
-                if (
-                    instance_or_class.present_in_database is True
-                    and initial_data.get(relation, {}).get(opposite_side, {}) == {}
-                    and not relationships_key_specified
-                ):
-                    existing_associations_count = 0
-                    for _, objects in instance_or_class.get_relationships()[relation.required_on].items():
-                        if len(objects) > 0:
-                            existing_associations_count += len(objects)
-
-                    if existing_associations_count > 0:
-                        continue
-
-            required_model_class = getattr(relation, f"{opposite_side}_type").model_class()
-            required_model_meta = required_model_class._meta
-            cr_field_name = f"cr_{relation.slug}__{opposite_side}"
-            name_plural = instance_or_class._meta.verbose_name_plural
-            field_key = relation.slug if output_for == "api" else cr_field_name
-            field_errors = {field_key: []}
-
-            if not required_model_class.objects.exists():
-
-                hint = (
-                    f"You need to create {num_required_verbose} {required_model_meta.verbose_name} "
-                    f"before instantiating a {instance_or_class._meta.verbose_name}."
-                )
-
-                if output_for == "ui":
-                    try:
-                        add_url = reverse(get_route_for_model(required_model_class, "add"))
-                        hint = (
-                            f"<a target='_blank' href='{add_url}'>Click here</a> to create "
-                            f"a {required_model_meta.verbose_name}."
-                        )
-                    except NoReverseMatch:
-                        pass
-
-                elif output_for == "api":
-                    try:
-                        api_post_url = reverse(get_route_for_model(required_model_class, "list", api=True))
-                        hint = f"Create a {required_model_meta.verbose_name} by posting to {api_post_url}"
-                    except NoReverseMatch:
-                        pass
-
-                error_message = mark_safe(
-                    f"{name_plural[0].upper()}{name_plural[1:]} require "
-                    f"{num_required_verbose} {required_model_meta.verbose_name}, but no "
-                    f"{required_model_meta.verbose_name_plural} exist yet. {hint}"
-                )
-                field_errors[field_key].append(error_message)
-
-            if isinstance(initial_data, dict):
-
-                supplied_data = []
-
-                if output_for == "ui":
-                    supplied_data = initial_data.get(field_key, [])
-                elif output_for == "api":
-                    supplied_data = initial_data.get(relation, {}).get(opposite_side, {})
-
-                if not supplied_data:
-                    if output_for == "ui":
-                        field_errors[field_key].append(
-                            f"You need to select {num_required_verbose} {required_model_meta.verbose_name}."
-                        )
-                    elif output_for == "api":
-                        field_errors[field_key].append(
-                            f'You need to specify relationships["{relation.slug}"]["{opposite_side}"]["objects"].'
-                        )
-
-            if len(field_errors[field_key]) > 0:
-                relationships_field_errors.append(field_errors)
-
-        return relationships_field_errors
 
 
 @extras_features("custom_validators")
