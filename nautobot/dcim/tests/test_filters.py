@@ -4784,39 +4784,24 @@ class DeviceRedundancyGroupTestCase(FilterTestCases.FilterTestCase):
     def setUpTestData(cls):
         common_test_data(cls)
 
-        statuses = Status.objects.get_for_model(DeviceRedundancyGroup)
-        status_active = statuses.get(slug="active")
-        status_planned = statuses.get(slug="planned")
+        device_redundancy_groups = list(DeviceRedundancyGroup.objects.all()[:2])
 
         secrets_groups = list(SecretsGroup.objects.all()[:2])
 
-        DeviceRedundancyGroup.objects.create(
-            name="Device Redundancy Group 1",
-            failover_strategy=DeviceRedundancyGroupFailoverStrategyChoices.FAILOVER_ACTIVE_ACTIVE,
-            status=status_active,
-            secrets_group=secrets_groups[0],
-        )
+        device_redundancy_groups[0].secrets_group = secrets_groups[0]
+        device_redundancy_groups[0].validated_save()
 
-        DeviceRedundancyGroup.objects.create(
-            name="Device Redundancy Group 2",
-            slug="drg-2",
-            failover_strategy=DeviceRedundancyGroupFailoverStrategyChoices.FAILOVER_ACTIVE_ACTIVE,
-            status=status_planned,
-        )
-
-        DeviceRedundancyGroup.objects.create(
-            name="Device Redundancy Group 3",
-            failover_strategy=DeviceRedundancyGroupFailoverStrategyChoices.FAILOVER_ACTIVE_PASSIVE,
-            status=status_planned,
-            secrets_group=secrets_groups[1],
-        )
+        device_redundancy_groups[1].secrets_group = secrets_groups[1]
+        device_redundancy_groups[1].validated_save()
 
     def test_name(self):
-        params = {"name": ["Device Redundancy Group 1", "Device Redundancy Group 2"]}
+        device_redundancy_groups = list(DeviceRedundancyGroup.objects.all()[:2])
+        params = {"name": [device_redundancy_groups[0].name, device_redundancy_groups[1].name]}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
 
     def test_slug(self):
-        params = {"slug": ["drg-2"]}
+        device_redundancy_group = DeviceRedundancyGroup.objects.first()
+        params = {"slug": [device_redundancy_group.slug]}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 1)
 
     def test_secrets_group(self):

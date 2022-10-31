@@ -69,6 +69,7 @@ from .choices import (
     CableTypeChoices,
     ConsolePortTypeChoices,
     DeviceFaceChoices,
+    DeviceRedundancyGroupFailoverStrategyChoices,
     InterfaceModeChoices,
     InterfaceTypeChoices,
     PortTypeChoices,
@@ -81,7 +82,6 @@ from .choices import (
     RackDimensionUnitChoices,
     RackTypeChoices,
     RackWidthChoices,
-    DeviceRedundancyGroupFailoverStrategyChoices,
     SubdeviceRoleChoices,
 )
 from .constants import (
@@ -2026,6 +2026,12 @@ class DeviceCSVForm(LocatableModelCSVFormMixin, BaseDeviceCSVForm):
         help_text="Assigned rack",
     )
     face = CSVChoiceField(choices=DeviceFaceChoices, required=False, help_text="Mounted rack face")
+    device_redundancy_group = CSVModelChoiceField(
+        queryset=DeviceRedundancyGroup.objects.all(),
+        to_field_name="slug",
+        required=False,
+        help_text="Associated device redundancy group (slug)",
+    )
 
     class Meta(BaseDeviceCSVForm.Meta):
         fields = [
@@ -2044,6 +2050,8 @@ class DeviceCSVForm(LocatableModelCSVFormMixin, BaseDeviceCSVForm):
             "rack",
             "position",
             "face",
+            "device_redundancy_group",
+            "device_redundancy_group_priority",
             "cluster",
             "comments",
         ]

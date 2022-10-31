@@ -878,46 +878,49 @@ class DeviceTestCase(TestCase):
 
     def test_device_redundancy_group_validation(self):
         d1 = Device(
-            site=self.site,
+            name="Test Device 1",
             device_type=self.device_type,
             device_role=self.device_role,
-            name="Test Device 1",
+            status=self.device_status,
+            site=self.site,
         )
-        d1.save()
+        d1.validated_save()
 
         d2 = Device(
-            site=self.site,
+            name="Test Device 2",
             device_type=self.device_type,
             device_role=self.device_role,
-            name="Test Device 2",
+            status=self.device_status,
+            site=self.site,
         )
-        d2.save()
+        d2.validated_save()
 
         # Validate we can set a redundancy group without any priority set
         d1.device_redundancy_group = self.device_redundancy_group
-        d1.save()
+        d1.validated_save()
 
         # Validate two devices can be a part of the same redundancy group without any priority set
         d2.device_redundancy_group = self.device_redundancy_group
-        d2.save()
+        d2.validated_save()
 
         # Validate we can assign a priority to at least one device in the group
         d1.device_redundancy_group_priority = 1
-        d1.save()
+        d1.validated_save()
 
         # Validate both devices in the same group can have the same priority
         d2.device_redundancy_group_priority = 1
-        d2.save()
+        d2.validated_save()
 
         # Validate devices in the same group can have different priority
         d2.device_redundancy_group_priority = 2
-        d2.save()
+        d2.validated_save()
 
         # Validate devices cannot have an assigned priority without an assigned group
         d1.device_redundancy_group = None
-        with self.assertRaises(ValidationError) as cm:
+        with self.assertRaisesMessage(
+            ValidationError, "Must assign a redundancy group when defining a redundancy group priority."
+        ):
             d1.validated_save()
-        self.assertIn("Must assign a redundancy group when defining a redundancy group priority.", str(cm.exception))
 
 
 class CableTestCase(TestCase):

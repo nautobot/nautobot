@@ -125,8 +125,6 @@ class DeviceRedundancyGroupFactory(PrimaryModelFactory):
         model = DeviceRedundancyGroup
         exclude = ("has_description", "has_comments")
 
-    name = factory.Sequence(lambda n: f"Fake Device Role {n}")
-
     class Params:
         unique_name = UniqueFaker("word", part_of_speech="adjective")
 
