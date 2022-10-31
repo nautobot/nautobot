@@ -351,9 +351,9 @@ class MappedPredicatesFilterMixin:
         super().__init__(*args, **kwargs)
 
         # Generate the query with a sentinel value to validate it and surface parse errors.
-        self.generate_query(self.filter_predicates, value="")
+        self.generate_query(value="", filter_predicates=self.filter_predicates)
 
-    def generate_query(self, filter_predicates, value, **kwargs):
+    def generate_query(self, value, filter_predicates=None, **kwargs):
         """
         Given a mapping of `filter_predicates` and a `value`, return a `Q` object for 2-tuple of
         predicate=value.
@@ -401,7 +401,7 @@ class MappedPredicatesFilterMixin:
             return qs
 
         # Evaluate the query and stash it for later use (such as introspection or debugging)
-        query = self.generate_query(filter_predicates=self.filter_predicates, value=value)
+        query = self.generate_query(value=value, filter_predicates=self.filter_predicates)
         qs = self.get_method(qs)(query)
         self._most_recent_query = query
         return qs.distinct()
@@ -519,9 +519,12 @@ class TreeNodeMultipleChoiceFilter(NaturalKeyOrPKMultipleChoiceFilter):
         return query
 
     def filter(self, qs, value):
+        if value in EMPTY_VALUES:
+            return qs
+
         # Fetch the generated Q object and filter the incoming qs with it before passing it along.
         query = self.generate_query(value)
-        return qs.filter(query)
+        return self.get_method(qs)(query)
 
 
 #
