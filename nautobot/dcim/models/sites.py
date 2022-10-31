@@ -215,3 +215,10 @@ class Site(PrimaryModel, StatusModel):
             self.contact_email,
             self.comments,
         )
+
+    def clean_fields(self, exclude=None):
+        if self.longitude is not None:
+            self.longitude = str(self.longitude)
+        if self.latitude is not None:
+            self.latitude = str(self.latitude)
+        super().clean_fields(exclude)

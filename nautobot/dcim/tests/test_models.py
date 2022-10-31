@@ -1121,3 +1121,19 @@ class PowerPanelTestCase(TestCase):
             'Rack group "Rack Group 1" belongs to a location ("Location 2") that does not contain "Location 1"',
             str(cm.exception),
         )
+
+
+class SiteTestCase(TestCase):
+    def test_latitude_or_longitude(self):
+        """Test latitude and longitude is parsed to sting"""
+        active_status = Status.objects.get_for_model(Site).get(slug="active")
+        site = Site(
+            name="Site A",
+            slug="site-a",
+            status=active_status,
+            longitude=55.22,
+            latitude=55.22,
+        )
+        site.validated_save()
+
+        self.assertTrue(site.present_in_database)
