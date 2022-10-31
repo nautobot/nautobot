@@ -1,1 +1,0 @@
-Fixed custom field regex validation always anchored to beginning of string.
