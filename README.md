@@ -79,4 +79,4 @@ Please see [our wiki](https://github.com/nautobot/nautobot/wiki/Related-Projects
 
 ## Notices
 
-> Nautobot was initially developed as a fork of NetBox (v2.10.4).  NetBox was originally developed by Jeremy Stretch at DigitalOcean and the NetBox Community. 
+> Nautobot was initially developed as a fork of NetBox (v2.10.4).  NetBox was originally developed by Jeremy Stretch at DigitalOcean and the NetBox Community.
