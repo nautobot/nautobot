@@ -4831,15 +4831,15 @@ class DeviceRedundancyGroupTestCase(FilterTestCases.FilterTestCase):
     def test_failover_strategy(self):
         with self.subTest():
             params = {"failover_strategy": "active-active"}
-            self.assertEqual(
-                self.filterset(params, self.queryset).qs.count(),
-                DeviceRedundancyGroup.objects.filter(failover_strategy="active-active").count(),
+            self.assertQuerysetEqualAndNotEmpty(
+                self.filterset(params, self.queryset).qs,
+                DeviceRedundancyGroup.objects.filter(failover_strategy="active-active"),
             )
         with self.subTest():
             params = {"failover_strategy": "active-passive"}
-            self.assertEqual(
-                self.filterset(params, self.queryset).qs.count(),
-                DeviceRedundancyGroup.objects.filter(failover_strategy="active-passive").count(),
+            self.assertQuerysetEqualAndNotEmpty(
+                self.filterset(params, self.queryset).qs,
+                DeviceRedundancyGroup.objects.filter(failover_strategy="active-passive"),
             )
 
 
