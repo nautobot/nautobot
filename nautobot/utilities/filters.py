@@ -508,6 +508,8 @@ class TreeNodeMultipleChoiceFilter(NaturalKeyOrPKMultipleChoiceFilter):
         for obj in value:
             # Try to get the `to_field_name` (e.g. `slug`) or just pass the object through.
             val = getattr(obj, self.field.to_field_name, obj)
+            if val == self.null_value:
+                val = None
             predicates.append(self.get_filter_predicate(val))
 
         # Construct a nested OR query from the list of filter predicates derived from the flattened
