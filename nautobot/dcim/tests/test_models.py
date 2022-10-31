@@ -172,7 +172,22 @@ class InterfaceTemplateTestCase(TestCase):
             site=site,
         )
 
-        self.assertEqual(device_1.interfaces.get(name="Test_Template_1").status.slug, "active")
+        active_status = Status.objects.get(slug="active")
+        self.assertEqual(device_1.interfaces.get(name="Test_Template_1").status, active_status)
+
+        # Assert that a different status is picked if active status is not found for interface
+        interface_ct = ContentType.objects.get_for_model(Interface)
+        active_status.content_types.remove(interface_ct)
+
+        device_2 = Device.objects.create(
+            device_type=device_type,
+            device_role=device_role,
+            status=statuses[0],
+            name="Test Device 2",
+            site=site,
+        )
+        first_status = Status.objects.get_for_model(Interface).first()
+        self.assertIsNotNone(device_2.interfaces.get(name="Test_Template_1").status, first_status)
 
 
 class RackGroupTestCase(TestCase):
