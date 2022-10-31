@@ -158,6 +158,7 @@ class ObjectListView(ObjectPermissionRequiredMixin, View):
     filterset = None
     filterset_form = None
     table = None
+    table_template_name = "generic/object_list_table.html"
     template_name = "generic/object_list.html"
     action_buttons = ("add", "import", "export")
     non_filter_params = (
@@ -165,6 +166,7 @@ class ObjectListView(ObjectPermissionRequiredMixin, View):
         "page",  # used by django-tables2.RequestConfig
         "per_page",  # used by get_paginate_count
         "sort",  # table sorting
+        "table_only",  # HTMX
     )
 
     def get_filter_params(self, request):
@@ -349,7 +351,15 @@ class ObjectListView(ObjectPermissionRequiredMixin, View):
         setattr(self, "request", request)
         context.update(self.extra_context())
 
-        return render(request, self.template_name, context)
+        get_copy = request.GET.copy()
+        if "table_only" in request.GET:
+            response = render(request, self.table_template_name, context)
+            get_copy.pop("table_only")
+        else:
+            response = render(request, self.template_name, context)
+
+        response["HX-Push"] = request.path + "?" + get_copy.urlencode()
+        return response
 
     def alter_queryset(self, request):
         # .all() is necessary to avoid caching queries

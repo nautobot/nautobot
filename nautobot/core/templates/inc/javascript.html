@@ -2,6 +2,8 @@
 {% load plugins %}
 {% load static %}
 
+<script src="{% static 'htmx-1.8.2/htmx.min.js' %}"
+        onerror="window.location='{% url 'media_failure' %}?filename=htmx-1.8.2/htmx.min.js'"></script>
 <script src="{% static 'jquery/jquery-3.6.0.min.js' %}"
         onerror="window.location='{% url 'media_failure' %}?filename=jquery/jquery-3.6.0.min.js'"></script>
 <script src="{% static 'jquery-ui-1.13.1/jquery-ui.min.js' %}"

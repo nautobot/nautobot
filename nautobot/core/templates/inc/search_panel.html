@@ -1,6 +1,6 @@
 {% load form_helpers %}
 
-<form action="." method="get" class="form" style="padding: 0 10px;">
+<form hx-get=".?table_only=1" hx-target="#object-list-table-wrapper" action="." method="get" class="form" style="padding: 0 10px;">
     {% for field in filter_form.hidden_fields %}
         {{ field }}
     {% endfor %}
