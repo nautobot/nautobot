@@ -340,7 +340,7 @@ class LocationFilterSet(NautobotFilterSet, StatusModelFilterSetMixin, TenancyFil
     def generate_query__base_site(self, value):
         """Helper method used by DynamicGroups and by _base_site() method."""
         if value:
-            max_depth = max(loc.tree_depth for loc in Location.objects.with_tree_fields())
+            max_depth = Location.objects.with_tree_fields().extra(order_by=["-__tree.tree_depth"]).first().tree_depth
             filter_name = "site__in"
             params = Q(**{filter_name: value})
             for _i in range(max_depth):
@@ -371,7 +371,7 @@ class LocationFilterSet(NautobotFilterSet, StatusModelFilterSetMixin, TenancyFil
     def generate_query__subtree(self, value):
         """Helper method used by DynamicGroups and by _subtree() method."""
         if value:
-            max_depth = max(loc.tree_depth for loc in Location.objects.with_tree_fields())
+            max_depth = Location.objects.with_tree_fields().extra(order_by=["-__tree.tree_depth"]).first().tree_depth
             params = Q(pk__in=[v.pk for v in value])
             filter_name = "in"
             for _i in range(max_depth):
