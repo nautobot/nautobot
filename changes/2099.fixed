@@ -1,0 +1,3 @@
+Fixed PowerFeed Utilization on Rack View not displaying correctly.
+Fixed Total Power Utilization on Rack View not taking into account direct-connected devices.
+Fixed created_updated template adding the end small tag twice.
