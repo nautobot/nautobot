@@ -14,4 +14,4 @@ Device names must be unique within a site, unless the device has been assigned t
 
 When a device has one or more interfaces with IP addresses assigned, a primary IP for the device can be designated, for both IPv4 and IPv6.
 
-For Devices forming a group (Failover, Load-Sharing, Redundacy or similar) refer to [Device Redundancy Groups](deviceredundancygroups.md) model documentation.
+For Devices forming a group (Failover, Load-Sharing, Redundacy or similar) refer to [Device Redundancy Groups](deviceredundancygroup.md) model documentation.
