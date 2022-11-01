@@ -6,7 +6,7 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ("extras", "0050_add_job_task_queues"),
+        ("extras", "0051_add_job_task_queues"),
     ]
 
     operations = [
