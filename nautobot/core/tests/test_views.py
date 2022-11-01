@@ -79,6 +79,7 @@ class HomeViewTestCase(TestCase):
         self.assertIsNotNone(nav_search_bar_result)
         self.assertIsNotNone(body_search_bar_result)
 
+    @override_settings(VERSION="1.2.3")
     def test_footer_version_visible_authenticated_users_only(self):
         url = reverse("home")
         response = self.client.get(url)
