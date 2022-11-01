@@ -2,7 +2,6 @@ import factory
 import logging
 import pytz
 import random
-from factory.django import DjangoModelFactory
 from faker import Faker
 
 from django.contrib.contenttypes.models import ContentType
@@ -156,7 +155,7 @@ class PlatformFactory(OrganizationalModelFactory):
     description = factory.Maybe("has_description", factory.Faker("sentence"), "")
 
 
-class RegionFactory(DjangoModelFactory):
+class RegionFactory(OrganizationalModelFactory):
     class Meta:
         model = Region
         exclude = (
@@ -172,7 +171,7 @@ class RegionFactory(DjangoModelFactory):
     description = factory.Maybe("has_description", factory.Faker("sentence", nb_words=5), "")
 
 
-class SiteFactory(DjangoModelFactory):
+class SiteFactory(PrimaryModelFactory):
     class Meta:
         model = Site
         exclude = (
@@ -210,11 +209,14 @@ class SiteFactory(DjangoModelFactory):
     has_shipping_address = factory.Faker("pybool")
     shipping_address = factory.Maybe("has_shipping_address", factory.Faker("address"))
 
+    # Faker().latitude()/longitude() sometimes will generate a decimal number with more than 8 digits.
+    # Which will make validations for those fields fail.
+    # This is a way to formulate the number to make sure it generates no more than 5 digits.
     has_latitude = factory.Faker("pybool")
-    latitude = factory.Maybe("has_latitude", factory.Faker("latitude"))
+    latitude = factory.Maybe("has_latitude", factory.LazyFunction(lambda: f"{Faker().latitude():.2f}"), None)
 
     has_longitude = factory.Faker("pybool")
-    longitude = factory.Maybe("has_longitude", factory.Faker("longitude"))
+    longitude = factory.Maybe("has_longitude", factory.LazyFunction(lambda: f"{Faker().longitude():.2f}"), None)
 
     has_contact_name = factory.Faker("pybool")
     contact_name = factory.Maybe("has_contact_name", factory.Faker("name"))
@@ -228,7 +230,7 @@ class SiteFactory(DjangoModelFactory):
     contact_email = factory.Maybe("has_contact_email", factory.Faker("safe_email"))
 
 
-class LocationTypeFactory(DjangoModelFactory):
+class LocationTypeFactory(OrganizationalModelFactory):
     class Meta:
         model = LocationType
         exclude = ("has_description",)
@@ -298,7 +300,7 @@ class LocationTypeFactory(DjangoModelFactory):
             )
 
 
-class LocationFactory(DjangoModelFactory):
+class LocationFactory(PrimaryModelFactory):
     class Meta:
         model = Location
         exclude = (
