@@ -79,6 +79,19 @@ class HomeViewTestCase(TestCase):
         self.assertIsNotNone(nav_search_bar_result)
         self.assertIsNotNone(body_search_bar_result)
 
+    def test_footer_version_visible_authenticated_users_only(self):
+        url = reverse("home")
+        response = self.client.get(url)
+        response_content = response.content.decode(response.charset).replace("\n", "")
+
+        footer_hostname_version_pattern = re.compile('<p class="text-muted">\\s+\\S+\\s+\\(v[\\d.]+\\)\\s+<\\/p>')
+        self.assertRegex(response_content, footer_hostname_version_pattern)
+
+        self.client.logout()
+        response = self.client.get(url)
+        response_content = response.content.decode(response.charset).replace("\n", "")
+        self.assertNotRegex(response_content, footer_hostname_version_pattern)
+
 
 class ForceScriptNameTestcase(TestCase):
     """Basic test to assert that `settings.FORCE_SCRIPT_NAME` works as intended."""

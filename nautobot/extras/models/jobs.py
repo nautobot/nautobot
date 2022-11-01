@@ -486,6 +486,8 @@ class JobLogEntry(BaseModel):
     log_object = models.CharField(max_length=JOB_LOG_MAX_LOG_OBJECT_LENGTH, null=True, blank=True)
     absolute_url = models.CharField(max_length=JOB_LOG_MAX_ABSOLUTE_URL_LENGTH, null=True, blank=True)
 
+    csv_headers = ["created", "grouping", "log_level", "log_object", "message"]
+
     def __str__(self):
         return self.message
 
@@ -493,6 +495,10 @@ class JobLogEntry(BaseModel):
         ordering = ["created"]
         get_latest_by = "created"
         verbose_name_plural = "job log entries"
+
+    def to_csv(self):
+        """Indicates model fields to return as csv."""
+        return (str(self.created), self.grouping, self.log_level, self.log_object, self.message)
 
 
 #

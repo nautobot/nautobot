@@ -31,6 +31,7 @@ from nautobot.utilities.forms import restrict_form_fields
 from nautobot.utilities.utils import (
     copy_safe_request,
     count_related,
+    csv_format,
     get_table_for_model,
     prepare_cloned_fields,
     pretty_print_query,
@@ -61,6 +62,7 @@ from .models import (
     ImageAttachment,
     Job as JobModel,
     JobHook,
+    JobLogEntry,
     ObjectChange,
     JobResult,
     Relationship,
@@ -1504,6 +1506,34 @@ class JobResultView(generic.ObjectView):
 
     queryset = JobResult.objects.prefetch_related("job_model", "obj_type", "user")
     template_name = "extras/jobresult.html"
+
+    def instance_to_csv(self, instance):
+        """Format instance to csv."""
+        csv_data = []
+        headers = JobLogEntry.csv_headers.copy()
+        csv_data.append(",".join(headers))
+
+        for log_entry in instance.logs.all():
+            data = log_entry.to_csv()
+            csv_data.append(csv_format(data))
+
+        return "\n".join(csv_data)
+
+    def get(self, request, *args, **kwargs):
+        """
+        Generic GET handler for accessing an object by PK or slug
+        """
+        instance = get_object_or_404(self.queryset, **kwargs)
+
+        if "export" in request.GET:
+            response = HttpResponse(self.instance_to_csv(instance), content_type="text/csv")
+            underscore_filename = f"{instance.job_model.slug.replace('-', '_')}"
+            formated_completion_time = instance.completed.strftime("%Y-%m-%d_%H_%M")
+            filename = f"{underscore_filename}_{formated_completion_time}_logs.csv"
+            response["Content-Disposition"] = f"attachment; filename={filename}"
+            return response
+
+        return super().get(request, *args, **kwargs)
 
     def get_extra_context(self, request, instance):
         associated_record = None

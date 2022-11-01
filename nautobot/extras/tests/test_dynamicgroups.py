@@ -278,7 +278,7 @@ class DynamicGroupModelTest(DynamicGroupTestBase):
         device2.location = loc_site
         device2.validated_save()
 
-        names = [device1.name, device2.name]
+        expected = sorted([device1.name, device2.name])
 
         # Create the Dynamic Group filtering on Location A
         group = DynamicGroup.objects.create(
@@ -292,7 +292,25 @@ class DynamicGroupModelTest(DynamicGroupTestBase):
         # that have a Location whose parent is "Location A".
         self.assertEqual(
             sorted(m.name for m in group.members),
-            sorted(names),
+            expected,
+        )
+
+        # Now also test that an advancted (nested) dynamic group, also reports
+        # the same number of members.
+        parent_group = DynamicGroup.objects.create(
+            name="Parent of Devices Location",
+            slug="parent-devices-location",
+            content_type=self.device_ct,
+            filter={},
+        )
+        parent_group.add_child(
+            child=group,
+            operator=DynamicGroupOperatorChoices.OPERATOR_INTERSECTION,
+            weight=10,
+        )
+        self.assertEqual(
+            sorted(m.name for m in parent_group.members),
+            expected,
         )
 
     def test_count(self):
