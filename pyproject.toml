@@ -121,7 +121,7 @@ netutils = "~1.2.0"
 Pillow = "~9.2.0"
 # PostgreSQL database adapter
 # NOTE: psycopg3 is avaiable now and nominally replaces psycopg2
-psycopg2-binary = "~2.9.3"
+psycopg2-binary = "~2.9.5"
 # Cryptographic library
 pycryptodome = "~3.13.0"
 # The uWSGI WSGI HTTP server as a Python module
