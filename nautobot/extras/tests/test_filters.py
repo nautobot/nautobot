@@ -2,6 +2,7 @@ import uuid
 
 from django.contrib.auth import get_user_model
 from django.contrib.contenttypes.models import ContentType
+from django.db.models import Q
 
 from nautobot.dcim.filters import DeviceFilterSet
 from nautobot.dcim.models import (
@@ -178,6 +179,7 @@ class ConfigContextTestCase(FilterTestCases.FilterTestCase):
             DeviceRole.objects.create(name="Device Role 2", slug="device-role-2"),
             DeviceRole.objects.create(name="Device Role 3", slug="device-role-3"),
         )
+        cls.device_roles = device_roles
 
         manufacturer = Manufacturer.objects.create(name="Manufacturer 1", slug="manufacturer-1")
 
@@ -186,12 +188,14 @@ class ConfigContextTestCase(FilterTestCases.FilterTestCase):
             DeviceType.objects.create(model="Device Type 2", slug="device-type-2", manufacturer=manufacturer),
             DeviceType.objects.create(model="Device Type 3", slug="device-type-3", manufacturer=manufacturer),
         )
+        cls.device_types = device_types
 
         platforms = (
             Platform.objects.create(name="Platform 1", slug="platform-1"),
             Platform.objects.create(name="Platform 2", slug="platform-2"),
             Platform.objects.create(name="Platform 3", slug="platform-3"),
         )
+        cls.platforms = platforms
 
         cluster_groups = (
             ClusterGroup.objects.create(name="Cluster Group 1", slug="cluster-group-1"),
@@ -252,25 +256,25 @@ class ConfigContextTestCase(FilterTestCases.FilterTestCase):
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
 
     def test_role(self):
-        device_roles = DeviceRole.objects.all()[:2]
+        device_roles = self.device_roles[:2]
         params = {"role_id": [device_roles[0].pk, device_roles[1].pk]}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), len(device_roles))
         params = {"role": [device_roles[0].slug, device_roles[1].slug]}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), len(device_roles))
 
     def test_type(self):
-        device_types = DeviceType.objects.all()[:2]
+        device_types = self.device_types[:2]
         params = {"device_type_id": [device_types[0].pk, device_types[1].pk]}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), len(device_types))
         params = {"device_type": [device_types[0].slug, device_types[1].slug]}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), len(device_types))
 
     def test_platform(self):
-        platforms = Platform.objects.all()[:2]
+        platforms = self.platforms[:2]
         params = {"platform_id": [platforms[0].pk, platforms[1].pk]}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), len(platforms))
         params = {"platform": [platforms[0].slug, platforms[1].slug]}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), len(platforms))
 
     def test_cluster_group(self):
         cluster_groups = ClusterGroup.objects.all()[:2]
@@ -1401,10 +1405,18 @@ class StatusTestCase(FilterTestCases.NameSlugFilterTestCase):
 
     def test_search(self):
         params = {"q": "active"}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 1)
-        value = self.queryset.values_list("pk", flat=True)[0]
+        q = Q(id__iexact="active") | Q(name__icontains="active") | Q(slug__icontains="active")
+        q |= Q(content_types__model__icontains="active")
+        self.assertQuerysetEqualAndNotEmpty(
+            self.filterset(params, self.queryset).qs,
+            self.queryset.filter(q).distinct(),
+        )
+        value = self.queryset.first().pk
         params = {"q": value}
-        self.assertEqual(self.filterset(params, self.queryset).qs.values_list("pk", flat=True)[0], value)
+        self.assertQuerysetEqualAndNotEmpty(
+            self.filterset(params, self.queryset).qs,
+            self.queryset.filter(pk=value),
+        )
 
 
 class TagTestCase(FilterTestCases.NameSlugFilterTestCase):

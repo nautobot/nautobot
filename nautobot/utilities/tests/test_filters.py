@@ -34,6 +34,7 @@ from nautobot.utilities.filters import (
     TagFilter,
     TreeNodeMultipleChoiceFilter,
 )
+from nautobot.utilities.testing import FilterTestCases
 
 
 class TreeNodeMultipleChoiceFilterTest(TestCase):
@@ -671,9 +672,9 @@ class BaseFilterSetTest(TestCase):
 
     def test_tree_node_multiple_choice_filter(self):
         self.assertIsInstance(self.filters["treeforeignkeyfield"], TreeNodeMultipleChoiceFilter)
-        self.assertEqual(self.filters["treeforeignkeyfield"].lookup_expr, "in")
+        self.assertEqual(self.filters["treeforeignkeyfield"].lookup_expr, "exact")
         self.assertEqual(self.filters["treeforeignkeyfield"].exclude, False)
-        self.assertEqual(self.filters["treeforeignkeyfield__n"].lookup_expr, "in")
+        self.assertEqual(self.filters["treeforeignkeyfield__n"].lookup_expr, "exact")
         self.assertEqual(self.filters["treeforeignkeyfield__n"].exclude, True)
 
 
@@ -989,6 +990,48 @@ class DynamicFilterLookupExpressionTest(TestCase):
     def test_device_comments_multiple_value_charfield_iregex_negation(self):
         params = {"comments__nire": ["^device"]}
         self.assertEqual(self.DeviceFilterSetWithComments(params, self.device_queryset).qs.count(), 0)
+
+
+class GetFiltersetTestValuesTest(FilterTestCases.BaseFilterTestCase):
+    """Tests for `BaseFilterTestCase.get_filterset_test_values()`."""
+
+    queryset = Site.objects.filter(name__startswith="getfiltersettest")
+    exception_message = "Cannot find valid test data for Site field description"
+
+    @classmethod
+    def setUpTestData(cls):
+        statuses = Status.objects.get_for_model(Site)
+        cls.status_active = statuses.get(slug="active")
+
+    def test_empty_queryset(self):
+        with self.assertRaisesMessage(ValueError, self.exception_message):
+            self.get_filterset_test_values("description")
+
+    def test_object_return_count(self):
+        for n in range(1, 11):
+            Site.objects.create(
+                name=f"getfiltersettestSite{n}", status=self.status_active, description=f"description {n}"
+            )
+        test_values = self.get_filterset_test_values("description", self.queryset)
+        self.assertNotEqual(len(test_values), 0)
+        self.assertNotEqual(len(test_values), self.queryset.count())
+
+    def test_insufficient_unique_values(self):
+        Site.objects.create(name="getfiltersettestUniqueSite", description="UniqueSite description")
+        with self.assertRaisesMessage(ValueError, self.exception_message):
+            self.get_filterset_test_values("description")
+        Site.objects.create(name="getfiltersettestSite1", status=self.status_active)
+        Site.objects.create(name="getfiltersettestSite2", status=self.status_active)
+        with self.assertRaisesMessage(ValueError, self.exception_message):
+            self.get_filterset_test_values("description")
+
+    def test_no_unique_values(self):
+        for n in range(1, 11):
+            Site.objects.create(name=f"getfiltersettestSite{n}", status=self.status_active)
+        for site in self.queryset:
+            site.delete()
+            with self.assertRaisesMessage(ValueError, self.exception_message):
+                self.get_filterset_test_values("description")
 
 
 class SearchFilterTest(TestCase):

@@ -727,7 +727,7 @@ class SecretsGroupTestCase(
     @classmethod
     def setUpTestData(cls):
         secrets_groups = (
-            SecretsGroup.objects.create(name="Group 1", slug="Group 1", description="First Group"),
+            SecretsGroup.objects.create(name="Group 1", slug="group-1", description="First Group"),
             SecretsGroup.objects.create(name="Group 2", slug="group-2"),
             SecretsGroup.objects.create(name="Group 3", slug="group-3"),
         )
@@ -1866,6 +1866,16 @@ class JobTestCase(
                 "One of these two flags must be removed before this job can be scheduled or run.",
                 content,
             )
+
+    def test_job_object_change_log_view(self):
+        """Assert Job change log view displays appropriate header"""
+        instance = self.test_pass
+        self.add_permissions("extras.view_objectchange", "extras.view_job")
+        response = self.client.get(instance.get_changelog_url())
+        content = extract_page_body(response.content.decode(response.charset))
+
+        self.assertHttpStatus(response, 200)
+        self.assertIn(f"<h1>{instance.name} - Change Log</h1>", content)
 
 
 # TODO: Convert to StandardTestCases.Views

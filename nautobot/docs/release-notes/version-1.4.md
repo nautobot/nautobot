@@ -162,6 +162,41 @@ A new configuration setting, [`STRICT_FILTERING`](../configuration/optional-sett
 The `settings_and_registry` default context processor was changed to purely `settings` - the (large) Nautobot application registry dictionary is no longer provided as part of the render context for all templates by default. Added a new `registry` template tag that can be invoked by specific templates to provide this variable where needed.
 
 <!-- towncrier release notes start -->
+## v1.4.7 (2022-10-18)
+
+### Fixed
+
+- [#2636](https://github.com/nautobot/nautobot/issues/2636) - Fixed `pyproject.toml` to be a proper full release.
+
+
+
+## v1.4.6 (2022-10-17)
+
+### Added
+
+- [#2437](https://github.com/nautobot/nautobot/issues/2437) - Added Nautobot-themed error page for handling 403 CSRF errors.
+- [#2512](https://github.com/nautobot/nautobot/issues/2512) - Added link to `nautobot-plugin-nornir` in the Apps section of the documentation.
+- [#2588](https://github.com/nautobot/nautobot/issues/2588) - Added a danger admonition to developer docs about never using `pip` to install Poetry into Nautobot dev environment.
+
+### Changed
+
+- [#2434](https://github.com/nautobot/nautobot/issues/2434) - Updated `oauthlib` to `3.2.1` for `CVE-2022-36087`. This is a dependency of `social-auth-core` so will not auto-update when upgrading. Please be sure to upgrade your local environment.
+- [#2530](https://github.com/nautobot/nautobot/issues/2530) - Updated development documentation to include LTM, additional release schedule information.
+- [#2565](https://github.com/nautobot/nautobot/issues/2565) - Updated version to 1.4.6-beta.1.
+- [#2602](https://github.com/nautobot/nautobot/issues/2602) - Increased size of `ObjectChange.change_context_detail` field from 100 to 400 chars, and add truncation to it. Also adding truncation to `ObjectChange.object_repr`.
+
+### Fixed
+
+- [#2075](https://github.com/nautobot/nautobot/issues/2075) - Fixed white screen flash in dark mode.
+- [#2546](https://github.com/nautobot/nautobot/issues/2546) - Applied a hotfix for multiple jobs executing from a single scheduled job.
+- [#2560](https://github.com/nautobot/nautobot/issues/2560) - Fixed NautobotHTMLRenderer incorrectly overrides selected pk_list for bulk_destroy and bulk_update.
+- [#2566](https://github.com/nautobot/nautobot/issues/2566) - Clarified documentation on superusers needing staff permission to access admin UI.
+- [#2573](https://github.com/nautobot/nautobot/issues/2573) - Fixed link from VLAN group detail view to filtered VLAN list.
+- [#2574](https://github.com/nautobot/nautobot/issues/2574) - Updated `nautobot.core.settings` to match expected behavior on `NAPALM_USERNAME`, `NAPALM_PASSWORD`, and `NAPALM_TIMEOUT` based on documentation.
+- [#2595](https://github.com/nautobot/nautobot/issues/2595) - Fixed NautobotUIViewSet handling of unauthenticated users.
+- [#2614](https://github.com/nautobot/nautobot/issues/2614) - Fixed CONTRIBUTING.md link to actual Nautobot documentation.
+
+
 ## v1.4.5 (2022-10-03)
 
 ### Added

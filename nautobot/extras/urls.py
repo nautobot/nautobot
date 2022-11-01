@@ -434,13 +434,13 @@ urlpatterns = [
     path("jobs/<slug:slug>/delete/", views.JobDeleteView.as_view(), name="job_delete"),
     path(
         "jobs/<slug:slug>/changelog/",
-        views.ObjectChangeLogView.as_view(),
+        views.JobObjectChangeLogView.as_view(),
         name="job_changelog",
         kwargs={"model": Job},
     ),
     path(
         "jobs/<slug:slug>/notes/",
-        views.ObjectNotesView.as_view(),
+        views.JobObjectNotesView.as_view(),
         name="job_notes",
         kwargs={"model": Job},
     ),

@@ -14,7 +14,7 @@ from nautobot.extras.models import ChangeLoggedModel
 from nautobot.extras.registry import registry
 from nautobot.utilities.testing.mixins import NautobotTestCaseMixin
 from nautobot.utilities.utils import get_changes_for_model, get_filterset_for_model, get_route_for_model
-from .utils import disable_warnings
+from .utils import disable_warnings, get_deletable_objects
 from .views import ModelTestCase
 
 
@@ -229,7 +229,12 @@ class APIViewTestCases:
             self.assertIsInstance(response.data, dict)
             self.assertIn("results", response.data)
             self.assertEqual(len(response.data["results"]), self._get_queryset().count())
-            self.assertEqual(sorted(response.data["results"][0]), self.brief_fields)
+            self.assertEqual(
+                sorted(response.data["results"][0]),
+                self.brief_fields,
+                "In order to test the brief API parameter the brief fields need to be manually added to "
+                "self.brief_fields. If this is already the case, perhaps the serializer is implemented incorrectly?",
+            )
 
         @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
         def test_list_objects_without_permission(self):
@@ -602,7 +607,12 @@ class APIViewTestCases:
             else:
                 self.fail(f"Neither PUT nor POST are available actions in: {data['actions']}")
 
-            self.assertEqual(set(self.choices_fields), field_choices)
+            self.assertEqual(
+                set(self.choices_fields),
+                field_choices,
+                "All field names of choice fields for a given model serializer need to be manually added to "
+                "self.choices_fields. If this is already the case, perhaps the serializer is implemented incorrectly?",
+            )
 
     class DeleteObjectViewTestCase(APITestCase):
         def get_deletable_object(self):
@@ -612,7 +622,7 @@ class APIViewTestCases:
             For some models this may just be any random object, but when we have FKs with `on_delete=models.PROTECT`
             (as is often the case) we need to find or create an instance that doesn't have such entanglements.
             """
-            return self._get_queryset().first()
+            return get_deletable_objects(self.model, self._get_queryset()).first()
 
         def get_deletable_object_pks(self):
             """
@@ -621,7 +631,7 @@ class APIViewTestCases:
             For some models this may just be any random objects, but when we have FKs with `on_delete=models.PROTECT`
             (as is often the case) we need to find or create an instance that doesn't have such entanglements.
             """
-            return list(self._get_queryset().values_list("pk", flat=True)[:3])
+            return get_deletable_objects(self.model, self._get_queryset()).values_list("pk", flat=True)[:3]
 
         def test_delete_object_without_permission(self):
             """

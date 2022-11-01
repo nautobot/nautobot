@@ -310,12 +310,16 @@ class DynamicGroup(OrganizationalModel):
     @property
     def members(self):
         """Return the member objects for this group."""
-        return self.get_group_queryset()
+        # If there are child groups, return the generated group queryset, otherwise use this group's
+        # `filter` directly.
+        if self.children.exists():
+            return self.get_group_queryset()
+        return self.get_queryset()
 
     @property
     def count(self):
         """Return the number of member objects in this group."""
-        return self.get_group_queryset().count()
+        return self.members.count()
 
     def get_absolute_url(self):
         return reverse("extras:dynamicgroup", kwargs={"slug": self.slug})

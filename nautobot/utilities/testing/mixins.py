@@ -182,6 +182,14 @@ class NautobotTestCaseMixin:
 
         self.assertEqual(new_model_dict, relevant_data)
 
+    def assertQuerysetEqualAndNotEmpty(self, qs, values, *args, **kwargs):
+        """Wrapper for assertQuerysetEqual with additional logic to assert input queryset and values are not empty"""
+
+        self.assertNotEqual(len(qs), 0, "Queryset cannot be empty")
+        self.assertNotEqual(len(values), 0, "Values cannot be empty")
+
+        return self.assertQuerysetEqual(qs, values, *args, **kwargs)
+
     #
     # Convenience methods
     #
