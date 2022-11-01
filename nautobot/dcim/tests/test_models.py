@@ -46,10 +46,8 @@ from nautobot.tenancy.models import Tenant
 
 
 class CableLengthTestCase(TestCase):
-    fixtures = ("status",)
-
     def setUp(self):
-        self.site = Site.objects.create(name="Test Site 1", slug="test-site-1")
+        self.site = Site.objects.first()
         self.manufacturer = Manufacturer.objects.create(name="Test Manufacturer 1", slug="test-manufacturer-1")
         self.devicetype = DeviceType.objects.create(
             manufacturer=self.manufacturer,
@@ -102,14 +100,12 @@ class CableLengthTestCase(TestCase):
 
 
 class InterfaceTemplateCustomFieldTestCase(TestCase):
-    fixtures = ("status",)
-
     def test_instantiate_model(self):
         """
         Check that all _custom_field_data is present and all customfields are filled with the correct default values.
         """
         statuses = Status.objects.get_for_model(Device)
-        site = Site.objects.create(name="Site 1", slug="site-1")
+        site = Site.objects.first()
         manufacturer = Manufacturer.objects.create(name="Acme", slug="acme")
         device_role = DeviceRole.objects.create(name="Device Role 1", slug="device-role-1", color="ff0000")
         custom_fields = [
@@ -161,17 +157,14 @@ class RackGroupTestCase(TestCase):
             - Rack 1
             - PowerPanel 1
         """
-        self.site_a = Site.objects.create(name="Site A", slug="site-a")
-
-        self.location_type_a = LocationType.objects.create(name="Location Type A")
+        self.location_type_a = LocationType.objects.get(name="Campus")
         self.location_type_a.content_types.add(
             ContentType.objects.get_for_model(RackGroup),
             ContentType.objects.get_for_model(Rack),
             ContentType.objects.get_for_model(PowerPanel),
         )
-        self.location_a = Location.objects.create(
-            name="Location A", location_type=self.location_type_a, site=self.site_a
-        )
+        self.location_a = Location.objects.filter(location_type=self.location_type_a)[0]
+        self.site_a = self.location_a.site
 
         self.rackgroup_a1 = RackGroup(
             site=self.site_a, location=self.location_a, name="RackGroup A1", slug="rackgroup-a1"
@@ -196,7 +189,7 @@ class RackGroupTestCase(TestCase):
     def test_rackgroup_location_validation(self):
         """Check that rack group locations are validated correctly."""
         # Child group cannot belong to a different site than its parent
-        site_b = Site.objects.create(name="Site B", slug="site-b")
+        site_b = Site.objects.exclude(locations__in=[self.location_a]).first()
         child = RackGroup(site=site_b, parent=self.rackgroup_a1, name="Child Group")
         with self.assertRaises(ValidationError) as cm:
             child.validated_save()
@@ -207,25 +200,25 @@ class RackGroupTestCase(TestCase):
         child = RackGroup(site=self.site_a, parent=self.rackgroup_a1, location=location_b, name="Child Group")
         with self.assertRaises(ValidationError) as cm:
             child.validated_save()
-        self.assertIn('Location "Location B" does not belong to site "Site A"', str(cm.exception))
+        self.assertIn(f'Location "{location_b.name}" does not belong to site "{self.site_a.name}"', str(cm.exception))
 
         # Group location, if specified, must permit RackGroups
-        location_type_c = LocationType.objects.create(name="Location Type C")
+        location_type_c = LocationType.objects.get(name="Elevator")
         location_c = Location.objects.create(name="Location C", location_type=location_type_c, site=self.site_a)
         child = RackGroup(site=self.site_a, parent=self.rackgroup_a1, location=location_c, name="Child Group")
         with self.assertRaises(ValidationError) as cm:
             child.validated_save()
-        self.assertIn('Rack groups may not associate to locations of type "Location Type C"', str(cm.exception))
+        self.assertIn(f'Rack groups may not associate to locations of type "{location_type_c}"', str(cm.exception))
 
         # Child group location must descend from parent group location
-        location_type_d = LocationType.objects.create(name="Location Type D", parent=location_type_c)
+        location_type_d = LocationType.objects.get(name="Room")
         location_type_d.content_types.add(ContentType.objects.get_for_model(RackGroup))
         location_d = Location.objects.create(name="Location D", location_type=location_type_d, parent=location_c)
         child = RackGroup(site=self.site_a, parent=self.rackgroup_a1, location=location_d, name="Child Group")
         with self.assertRaises(ValidationError) as cm:
             child.validated_save()
         self.assertIn(
-            'Location "Location D" is not descended from parent rack group "RackGroup A1" location "Location A"',
+            f'Location "Location D" is not descended from parent rack group "RackGroup A1" location "{self.location_a.name}"',
             str(cm.exception),
         )
 
@@ -233,7 +226,7 @@ class RackGroupTestCase(TestCase):
         """
         Check that all child RackGroups, Racks, and PowerPanels get updated when a RackGroup is moved to a new Site.
         """
-        site_b = Site.objects.create(name="Site B", slug="site-b")
+        site_b = Site.objects.last()
 
         # Move RackGroup A1 to Site B
         self.rackgroup_a1.site = site_b
@@ -290,8 +283,6 @@ class RackGroupTestCase(TestCase):
 
 
 class RackTestCase(TestCase):
-    fixtures = ("status",)
-
     def setUp(self):
 
         self.status = Status.objects.get_for_model(Rack).first()
@@ -302,9 +293,9 @@ class RackTestCase(TestCase):
             ContentType.objects.get_for_model(Device),
         )
 
-        self.site1 = Site.objects.create(name="TestSite1", slug="test-site-1")
+        self.site1 = Site.objects.first()
         self.location1 = Location.objects.create(name="Location1", location_type=self.location_type_a, site=self.site1)
-        self.site2 = Site.objects.create(name="TestSite2", slug="test-site-2")
+        self.site2 = Site.objects.all()[1]
         self.group1 = RackGroup.objects.create(
             name="TestGroup1", slug="test-group-1", site=self.site1, location=self.location1
         )
@@ -438,9 +429,9 @@ class RackTestCase(TestCase):
         """
         Check that child Devices get updated when a Rack is moved to a new Site.
         """
-        site_a = Site.objects.create(name="Site A", slug="site-a")
+        site_a = Site.objects.first()
         location_a = Location.objects.create(name="Location A", location_type=self.location_type_a, site=site_a)
-        site_b = Site.objects.create(name="Site B", slug="site-b")
+        site_b = Site.objects.all()[1]
         location_b = Location.objects.create(name="Location B", location_type=self.location_type_a, site=site_b)
 
         manufacturer = Manufacturer.objects.create(name="Manufacturer 1", slug="manufacturer-1")
@@ -528,7 +519,7 @@ class RackTestCase(TestCase):
         rack = Rack(name="Rack", site=self.site2, location=self.location1, status=self.status)
         with self.assertRaises(ValidationError) as cm:
             rack.validated_save()
-        self.assertIn('Location "Location1" does not belong to site "TestSite2"', str(cm.exception))
+        self.assertIn(f'Location "Location1" does not belong to site "{self.site2.name}"', str(cm.exception))
 
         # Rack group location and rack location must relate
         location2 = Location.objects.create(name="Location2", location_type=self.location_type_a, site=self.site1)
@@ -566,15 +557,18 @@ class LocationTypeTestCase(TestCase):
 
 
 class LocationTestCase(TestCase):
-    fixtures = ("status",)
-
     def setUp(self):
-        self.root_type = LocationType.objects.create(name="Campus")
-        self.intermediate_type = LocationType.objects.create(name="Building", parent=self.root_type)
-        self.leaf_type = LocationType.objects.create(name="Room", parent=self.intermediate_type)
+        self.root_type = LocationType.objects.get(name="Campus")
+        self.intermediate_type = LocationType.objects.get(name="Building")
+        self.leaf_type = LocationType.objects.get(name="Floor")
+
+        self.root_nestable_type = LocationType.objects.get(name="Root")
+        self.leaf_nestable_type = LocationType.objects.create(
+            name="Pseudo-RackGroup", parent=self.root_nestable_type, nestable=True
+        )
 
         self.status = Status.objects.get(slug="active")
-        self.site = Site.objects.create(name="Test Site", status=self.status)
+        self.site = Site.objects.first()
 
     def test_validate_unique(self):
         """Confirm that the uniqueness constraint on (parent, name) works when parent is None."""
@@ -589,7 +583,7 @@ class LocationTestCase(TestCase):
         """Once created, a location cannot change location_type."""
         location = Location(name="Campus 1", location_type=self.root_type, site=self.site, status=self.status)
         location.validated_save()
-        location.location_type = self.intermediate_type
+        location.location_type = self.root_nestable_type
         with self.assertRaises(ValidationError) as cm:
             location.validated_save()
         self.assertIn("location_type", str(cm.exception))
@@ -597,19 +591,70 @@ class LocationTestCase(TestCase):
 
     def test_parent_type_must_match(self):
         """A location's parent's location_type must match its location_type's parent."""
-        location_1 = Location(name="Campus 1", location_type=self.root_type, site=self.site, status=self.status)
+        location_1 = Location(name="Building 1", location_type=self.root_type, site=self.site, status=self.status)
         location_1.validated_save()
         location_2 = Location(name="Room 1", location_type=self.leaf_type, parent=location_1, status=self.status)
         with self.assertRaises(ValidationError) as cm:
             location_2.validated_save()
-        self.assertIn("must have a parent Location of type Building", str(cm.exception))
+        self.assertIn(
+            "A Location of type Floor can only have a Location of type Building as its parent.", str(cm.exception)
+        )
+
+    def test_parent_type_nestable_logic(self):
+        """A location of a nestable type may have a parent of the same type."""
+        # A location using a root-level nestable type can have a site rather than a parent
+        location_1 = Location(
+            name="Region 1", location_type=self.root_nestable_type, site=self.site, status=self.status
+        )
+        location_1.validated_save()
+        # A location using a root-level nestable type can have a parent rather than a site
+        location_2 = Location(
+            name="Region 1-A", location_type=self.root_nestable_type, parent=location_1, status=self.status
+        )
+        location_2.validated_save()
+        # A location can't have both a parent and a site, even if it's a "root" location-type.
+        location_2.site = self.site
+        with self.assertRaises(ValidationError) as cm:
+            location_2.validated_save()
+        self.assertIn("cannot have both a parent Location and an associated Site", str(cm.exception))
+        # A location using a lower-level nestable type can be parented under the parent location type
+        location_3 = Location(
+            name="RackGroup 3", location_type=self.leaf_nestable_type, parent=location_2, status=self.status
+        )
+        location_3.validated_save()
+        # A location using a lower-level nestable type can be parented under its own type
+        location_4 = Location(
+            name="RackGroup 3-B", location_type=self.leaf_nestable_type, parent=location_3, status=self.status
+        )
+        location_4.validated_save()
+        # Can't mix and match location types though
+        with self.assertRaises(ValidationError) as cm:
+            location_5 = Location(
+                name="Region 5", location_type=self.root_nestable_type, parent=location_4, status=self.status
+            )
+            location_5.validated_save()
+        self.assertIn("only have a Location of the same type as its parent", str(cm.exception))
+        location_6 = Location(name="Campus 1", location_type=self.root_type, site=self.site, status=self.status)
+        location_6.validated_save()
+        with self.assertRaises(ValidationError) as cm:
+            location_7 = Location(
+                name="RackGroup 7",
+                location_type=self.leaf_nestable_type,
+                parent=location_6,
+                status=self.status,
+            )
+            location_7.validated_save()
+        self.assertIn(
+            f"only have a Location of the same type or of type {self.root_nestable_type} as its parent",
+            str(cm.exception),
+        )
 
     def test_site_required_for_root(self):
         """A Location of a root type must have a Site."""
         location = Location(name="Campus 1", location_type=self.root_type, status=self.status)
         with self.assertRaises(ValidationError) as cm:
             location.validated_save()
-        self.assertIn("must have a Site", str(cm.exception))
+        self.assertIn("must have an associated Site", str(cm.exception))
 
     def test_site_forbidden_for_non_root(self):
         """A Location of a non-root type must have a parent, not a Site."""
@@ -628,11 +673,9 @@ class LocationTestCase(TestCase):
 
 
 class DeviceTestCase(TestCase):
-    fixtures = ("status",)
-
     def setUp(self):
 
-        self.site = Site.objects.create(name="Test Site 1", slug="test-site-1")
+        self.site = Site.objects.first()
         manufacturer = Manufacturer.objects.create(name="Test Manufacturer 1", slug="test-manufacturer-1")
         self.device_type = DeviceType.objects.create(
             manufacturer=manufacturer,
@@ -643,8 +686,8 @@ class DeviceTestCase(TestCase):
             name="Test Device Role 1", slug="test-device-role-1", color="ff0000"
         )
         self.device_status = Status.objects.get_for_model(Device).get(slug="active")
-        self.location_type_1 = LocationType.objects.create(name="Root Type")
-        self.location_type_2 = LocationType.objects.create(name="Leaf Type", parent=self.location_type_1)
+        self.location_type_1 = LocationType.objects.get(name="Building")
+        self.location_type_2 = LocationType.objects.get(name="Floor")
         self.location_type_2.content_types.add(ContentType.objects.get_for_model(Device))
         self.location_1 = Location.objects.create(
             name="Root", status=self.device_status, location_type=self.location_type_1, site=self.site
@@ -804,7 +847,7 @@ class DeviceTestCase(TestCase):
         device2.save()
 
     def test_device_location_site_mismatch(self):
-        other_site = Site.objects.create(name="Test Site 2", status=self.device_status)
+        other_site = Site.objects.all()[1]
         device = Device(
             name="Device 3",
             device_type=self.device_type,
@@ -815,7 +858,7 @@ class DeviceTestCase(TestCase):
         )
         with self.assertRaises(ValidationError) as cm:
             device.validated_save()
-        self.assertIn('Location "Leaf" does not belong to site "Test Site 2"', str(cm.exception))
+        self.assertIn(f'Location "Leaf" does not belong to site "{other_site.name}"', str(cm.exception))
 
     def test_device_location_content_type_not_allowed(self):
         device = Device(
@@ -828,15 +871,15 @@ class DeviceTestCase(TestCase):
         )
         with self.assertRaises(ValidationError) as cm:
             device.validated_save()
-        self.assertIn('Devices may not associate to locations of type "Root Type"', str(cm.exception))
+        self.assertIn(
+            f'Devices may not associate to locations of type "{self.location_type_1.name}"', str(cm.exception)
+        )
 
 
 class CableTestCase(TestCase):
-    fixtures = ("status",)
-
     def setUp(self):
 
-        site = Site.objects.create(name="Test Site 1", slug="test-site-1")
+        site = Site.objects.first()
         manufacturer = Manufacturer.objects.create(name="Test Manufacturer 1", slug="test-manufacturer-1")
         devicetype = DeviceType.objects.create(
             manufacturer=manufacturer,
@@ -1094,34 +1137,34 @@ class CableTestCase(TestCase):
 
 
 class PowerPanelTestCase(TestCase):
-    fixtures = ("status",)
-
     def test_power_panel_validation(self):
         active = Status.objects.get(name="Active")
-        site_1 = Site.objects.create(name="Site 1", status=active)
+        site_1 = Site.objects.first()
+        site_1.status = active
         location_type_1 = LocationType.objects.create(name="Location Type 1")
         location_1 = Location.objects.create(
             name="Location 1", location_type=location_type_1, site=site_1, status=active
         )
-
         power_panel = PowerPanel(name="Power Panel 1", site=site_1, location=location_1)
         with self.assertRaises(ValidationError) as cm:
             power_panel.validated_save()
-        self.assertIn('Power panels may not associate to locations of type "Location Type 1"', str(cm.exception))
+        self.assertIn(f'Power panels may not associate to locations of type "{location_type_1}"', str(cm.exception))
 
         location_type_1.content_types.add(ContentType.objects.get_for_model(PowerPanel))
-        site_2 = Site.objects.create(name="Site 2", status=active)
+        site_2 = Site.objects.all()[1]
         power_panel.site = site_2
         with self.assertRaises(ValidationError) as cm:
             power_panel.validated_save()
-        self.assertIn('Location "Location 1" does not belong to site "Site 2"', str(cm.exception))
+        self.assertIn(f'Location "{location_1.name}" does not belong to site "{site_2.name}"', str(cm.exception))
 
         power_panel.site = site_1
         rack_group = RackGroup.objects.create(name="Rack Group 1", site=site_2)
         power_panel.rack_group = rack_group
         with self.assertRaises(ValidationError) as cm:
             power_panel.validated_save()
-        self.assertIn("Rack group Rack Group 1 (Site 2) is in a different site than Site 1", str(cm.exception))
+        self.assertIn(
+            f"Rack group Rack Group 1 ({site_2.name}) is in a different site than {site_1.name}", str(cm.exception)
+        )
 
         rack_group.site = site_1
         location_2 = Location.objects.create(
@@ -1132,6 +1175,6 @@ class PowerPanelTestCase(TestCase):
         with self.assertRaises(ValidationError) as cm:
             power_panel.validated_save()
         self.assertIn(
-            'Rack group "Rack Group 1" belongs to a location ("Location 2") that does not contain "Location 1"',
+            f'Rack group "Rack Group 1" belongs to a location ("{location_2.name}") that does not contain "{location_1.name}"',
             str(cm.exception),
         )

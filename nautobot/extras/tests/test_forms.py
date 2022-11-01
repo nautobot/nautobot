@@ -154,8 +154,6 @@ class NoteModelFormTestCase(TestCase):
     TestNoteModelForm validation and saving.
     """
 
-    fixtures = ("status",)
-
     @classmethod
     def setUpTestData(cls):
         active = Status.objects.get(slug="active")
@@ -188,15 +186,9 @@ class NoteModelBulkEditFormMixinTestCase(TestCase):
     TestNoteModelForm validation and saving.
     """
 
-    fixtures = ("status",)
-
     @classmethod
     def setUpTestData(cls):
-        active = Status.objects.get(slug="active")
-        cls.sites = [
-            dcim_models.Site.objects.create(name="Site 1", slug="site-1", status=active),
-            dcim_models.Site.objects.create(name="Site 2", slug="site-2", status=active),
-        ]
+        cls.sites = dcim_models.Site.objects.all()[:2]
         cls.user = User.objects.create(username="formuser1")
 
     def test_note_bulk_edit(self):
@@ -223,11 +215,9 @@ class RelationshipModelFormTestCase(TestCase):
     Test RelationshipModelForm validation and saving.
     """
 
-    fixtures = ("status",)
-
     @classmethod
     def setUpTestData(cls):
-        cls.site = dcim_models.Site.objects.create(name="Site 1", slug="site-1")
+        cls.site = dcim_models.Site.objects.first()
         cls.manufacturer = dcim_models.Manufacturer.objects.create(name="Manufacturer 1", slug="manufacturer-1")
         cls.device_type = dcim_models.DeviceType.objects.create(model="Device Type 1", manufacturer=cls.manufacturer)
         cls.device_role = dcim_models.DeviceRole.objects.create(name="Device Role 1", slug="device-role-1")
@@ -675,15 +665,10 @@ class RelationshipModelBulkEditFormMixinTestCase(TestCase):
     Test RelationshipModelBulkEditFormMixin validation and saving.
     """
 
-    fixtures = ("status",)
-
     @classmethod
     def setUpTestData(cls):
         active = Status.objects.get(slug="active")
-        cls.sites = [
-            dcim_models.Site.objects.create(name="Site 1", slug="site-1", status=active),
-            dcim_models.Site.objects.create(name="Site 2", slug="site-2", status=active),
-        ]
+        cls.sites = dcim_models.Site.objects.all()[:2]
         cls.ipaddresses = [
             ipam_models.IPAddress.objects.create(address="10.1.1.1/24", status=active),
             ipam_models.IPAddress.objects.create(address="10.2.2.2/24", status=active),

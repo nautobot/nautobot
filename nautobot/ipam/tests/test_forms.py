@@ -60,7 +60,6 @@ class PrefixFormTest(BaseNetworkFormTest, TestCase):
     form_class = forms.PrefixForm
     field_name = "prefix"
     object_name = "prefix"
-    fixtures = ("status",)
 
     def setUp(self):
         super().setUp()
@@ -71,7 +70,6 @@ class IPAddressFormTest(BaseNetworkFormTest, TestCase):
     form_class = forms.IPAddressForm
     field_name = "address"
     object_name = "IP address"
-    fixtures = ("status",)
 
     def setUp(self):
         super().setUp()
@@ -98,7 +96,7 @@ class IPAddressFormTest(BaseNetworkFormTest, TestCase):
         devicetype = DeviceType.objects.create(model="Device Type 1", slug="device-type-1", manufacturer=manufacturer)
         devicerole = DeviceRole.objects.create(name="Device Role 1", slug="device-role-1")
         status_active = Status.objects.get_for_model(Device).get(slug="active")
-        site = Site.objects.create(name="Site 1", slug="site-1")
+        site = Site.objects.first()
         device = Device.objects.create(
             name="Device 1",
             site=site,

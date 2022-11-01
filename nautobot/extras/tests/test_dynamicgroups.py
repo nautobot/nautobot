@@ -7,18 +7,26 @@ from django.urls import reverse
 
 from nautobot.dcim.choices import PortTypeChoices
 from nautobot.dcim.filters import DeviceFilterSet
-from nautobot.dcim.forms import DeviceForm, DeviceFilterForm
-from nautobot.dcim.models import Device, DeviceRole, DeviceType, FrontPort, Manufacturer, RearPort, Site
+from nautobot.dcim.forms import DeviceFilterForm, DeviceForm
+from nautobot.dcim.models import (
+    Device,
+    DeviceRole,
+    DeviceType,
+    FrontPort,
+    Location,
+    LocationType,
+    Manufacturer,
+    RearPort,
+    Site,
+)
 from nautobot.extras.choices import DynamicGroupOperatorChoices
-from nautobot.extras.models import DynamicGroup, DynamicGroupMembership, Status
 from nautobot.extras.filters import DynamicGroupFilterSet, DynamicGroupMembershipFilterSet
+from nautobot.extras.models import DynamicGroup, DynamicGroupMembership, Status
 from nautobot.ipam.models import Prefix
 from nautobot.utilities.testing import TestCase
 
 
 class DynamicGroupTestBase(TestCase):
-    fixtures = ("status",)
-
     @classmethod
     def setUpTestData(cls):
 
@@ -239,6 +247,71 @@ class DynamicGroupModelTest(DynamicGroupTestBase):
 
         self.assertIn(device1, group.members)
         self.assertNotIn(device2, group.members)
+
+    def test_members_tree_nodes(self):
+        """
+        Test `DynamicGroup.members` when filtering on tree nodes like `Location`.
+        """
+        # Grab some values we'll used to setup the test case.
+        device1 = self.devices[0]
+        device2 = self.devices[1]
+        site = device1.site
+        status = Status.objects.get(slug="active")
+
+        # Create two LocationTypes (My Region > My Site)
+        loc_type_region = LocationType.objects.create(name="My Region", slug="my-region")
+        loc_type_region.content_types.add(self.device_ct)
+        loc_type_site = LocationType.objects.create(name="My Site", slug="my-site", parent=loc_type_region)
+        loc_type_site.content_types.add(self.device_ct)
+
+        loc_region = Location.objects.create(name="Location A", location_type=loc_type_region, site=site, status=status)
+        loc_site = Location.objects.create(
+            name="Location B", location_type=loc_type_site, parent=loc_region, status=status
+        )
+
+        # Add Location A to device1
+        device1.location = loc_region
+        device1.validated_save()
+
+        # Add Location B to device2
+        device2.site = device1.site
+        device2.location = loc_site
+        device2.validated_save()
+
+        expected = sorted([device1.name, device2.name])
+
+        # Create the Dynamic Group filtering on Location A
+        group = DynamicGroup.objects.create(
+            name="Devices Location",
+            slug="devices-location",
+            content_type=self.device_ct,
+            filter={"location": ["location-a"]},
+        )
+
+        # We are expecting that the group members here should be nested results from any devices
+        # that have a Location whose parent is "Location A".
+        self.assertEqual(
+            sorted(m.name for m in group.members),
+            expected,
+        )
+
+        # Now also test that an advancted (nested) dynamic group, also reports
+        # the same number of members.
+        parent_group = DynamicGroup.objects.create(
+            name="Parent of Devices Location",
+            slug="parent-devices-location",
+            content_type=self.device_ct,
+            filter={},
+        )
+        parent_group.add_child(
+            child=group,
+            operator=DynamicGroupOperatorChoices.OPERATOR_INTERSECTION,
+            weight=10,
+        )
+        self.assertEqual(
+            sorted(m.name for m in parent_group.members),
+            expected,
+        )
 
     def test_count(self):
         """Test `DynamicGroup.count`."""

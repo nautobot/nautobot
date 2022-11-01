@@ -28,7 +28,16 @@ class Command(BaseCommand):
         try:
             import factory.random
 
+            from nautobot.dcim.factory import DeviceRoleFactory, DeviceTypeFactory, ManufacturerFactory, PlatformFactory
+            from nautobot.extras.factory import StatusFactory, TagFactory
             from nautobot.extras.management import populate_status_choices
+            from nautobot.dcim.factory import (
+                RegionFactory,
+                SiteFactory,
+                LocationTypeFactory,
+                LocationFactory,
+            )
+            from nautobot.extras.utils import TaggableClassesQuery
             from nautobot.ipam.factory import (
                 AggregateFactory,
                 RIRFactory,
@@ -65,17 +74,30 @@ Type 'yes' to continue, or 'no' to cancel: """
         factory.random.reseed_random(seed)
 
         self.stdout.write("Creating Statuses...")
-        populate_status_choices(verbosity=0)  # for now just the basic ones; we should add a factory for random ones too
+        populate_status_choices(verbosity=0)
+        StatusFactory.create_batch(10)
+        self.stdout.write("Creating Tags...")
+        # Ensure that we have some tags that are applicable to all relevant content-types
+        TagFactory.create_batch(5, content_types=TaggableClassesQuery().as_queryset)
+        # ...and some tags that apply to a random subset of content-types
+        TagFactory.create_batch(15)
         self.stdout.write("Creating TenantGroups...")
         TenantGroupFactory.create_batch(10, has_parent=False)
         TenantGroupFactory.create_batch(10, has_parent=True)
         self.stdout.write("Creating Tenants...")
         TenantFactory.create_batch(10, has_group=False)
         TenantFactory.create_batch(10, has_group=True)
+        self.stdout.write("Creating Regions...")
+        RegionFactory.create_batch(15, has_parent=False)
+        RegionFactory.create_batch(5, has_parent=True)
+        self.stdout.write("Creating Sites...")
+        SiteFactory.create_batch(15)
+        self.stdout.write("Creating LocationTypes...")
+        LocationTypeFactory.create_batch(7)  # only 7 unique LocationTypes are hard-coded presently
+        self.stdout.write("Creating Locations...")
+        LocationFactory.create_batch(20)  # we need more locations with sites since it can be nested now.
         self.stdout.write("Creating RIRs...")
         RIRFactory.create_batch(9)  # only 9 unique RIR names are hard-coded presently
-        self.stdout.write("Creating Aggregates...")
-        AggregateFactory.create_batch(20)
         self.stdout.write("Creating RouteTargets...")
         RouteTargetFactory.create_batch(20)
         self.stdout.write("Creating VRFs...")
@@ -86,5 +108,19 @@ Type 'yes' to continue, or 'no' to cancel: """
         VLANGroupFactory.create_batch(20)
         self.stdout.write("Creating VLANs...")
         VLANFactory.create_batch(20)
+        self.stdout.write("Creating Aggregates, Prefixes and IP Addresses...")
+        AggregateFactory.create_batch(5, has_tenant_group=True)
+        AggregateFactory.create_batch(5, has_tenant_group=False, has_tenant=True)
+        AggregateFactory.create_batch(10)
+        self.stdout.write("Creating Manufacturers...")
+        ManufacturerFactory.create_batch(14)  # All 14 hard-coded Manufacturers for now.
+        self.stdout.write("Creating Platforms (with manufacturers)...")
+        PlatformFactory.create_batch(20, has_manufacturer=True)
+        self.stdout.write("Creating Platforms (without manufacturers)...")
+        PlatformFactory.create_batch(5, has_manufacturer=False)
+        self.stdout.write("Creating DeviceTypes...")
+        DeviceTypeFactory.create_batch(20)
+        self.stdout.write("Creating DeviceRoles...")
+        DeviceRoleFactory.create_batch(10)
 
         self.stdout.write(self.style.SUCCESS("Database populated successfully!"))

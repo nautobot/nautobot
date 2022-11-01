@@ -74,7 +74,6 @@ class ClusterTypeTestCase(ViewTestCases.OrganizationalObjectViewTestCase):
 
 class ClusterTestCase(ViewTestCases.PrimaryObjectViewTestCase):
     model = Cluster
-    fixtures = ("tag",)
 
     @classmethod
     def setUpTestData(cls):
@@ -141,10 +140,6 @@ class ClusterTestCase(ViewTestCases.PrimaryObjectViewTestCase):
 
 class VirtualMachineTestCase(ViewTestCases.PrimaryObjectViewTestCase):
     model = VirtualMachine
-    fixtures = (
-        "status",
-        "tag",
-    )
 
     @classmethod
     def setUpTestData(cls):
@@ -278,10 +273,6 @@ class VirtualMachineTestCase(ViewTestCases.PrimaryObjectViewTestCase):
 
 class VMInterfaceTestCase(ViewTestCases.DeviceComponentViewTestCase):
     model = VMInterface
-    fixtures = (
-        "status",
-        "tag",
-    )
 
     @classmethod
     def setUpTestData(cls):

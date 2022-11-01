@@ -33,14 +33,11 @@ class ProviderTestCase(FilterTestCases.NameSlugFilterTestCase):
             ),
         )
 
-        regions = (
-            Region.objects.create(name="Test Region 1", slug="test-region-1"),
-            Region.objects.create(name="Test Region 2", slug="test-region-2"),
-        )
+        cls.regions = Region.objects.filter(sites__isnull=False, children__isnull=True, parent__isnull=True)[:2]
 
-        sites = (
-            Site.objects.create(name="Test Site 1", slug="test-site-1", region=regions[0]),
-            Site.objects.create(name="Test Site 2", slug="test-site-2", region=regions[1]),
+        cls.sites = (
+            Site.objects.filter(region=cls.regions[0]).first(),
+            Site.objects.filter(region=cls.regions[1]).first(),
         )
 
         circuit_types = (
@@ -53,8 +50,8 @@ class ProviderTestCase(FilterTestCases.NameSlugFilterTestCase):
             Circuit.objects.create(provider=providers[1], type=circuit_types[1], cid="Test Circuit 1"),
         )
 
-        CircuitTermination.objects.create(circuit=circuits[0], site=sites[0], term_side="A")
-        CircuitTermination.objects.create(circuit=circuits[1], site=sites[0], term_side="A")
+        CircuitTermination.objects.create(circuit=circuits[0], site=cls.sites[0], term_side="A")
+        CircuitTermination.objects.create(circuit=circuits[1], site=cls.sites[0], term_side="A")
 
     def test_asn(self):
         params = {"asn": ["65001", "65002"]}
@@ -65,17 +62,15 @@ class ProviderTestCase(FilterTestCases.NameSlugFilterTestCase):
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
 
     def test_site(self):
-        sites = Site.objects.all()[:2]
-        params = {"site_id": [sites[0].pk, sites[1].pk]}
+        params = {"site_id": [self.sites[0].pk, self.sites[1].pk]}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
-        params = {"site": [sites[0].slug, sites[1].slug]}
+        params = {"site": [self.sites[0].slug, self.sites[1].slug]}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
 
     def test_region(self):
-        regions = Region.objects.all()[:2]
-        params = {"region_id": [regions[0].pk, regions[1].pk]}
+        params = {"region_id": [self.regions[0].pk, self.regions[1].pk]}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
-        params = {"region": [regions[0].slug, regions[1].slug]}
+        params = {"region": [self.regions[0].slug, self.regions[1].slug]}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
 
 
@@ -94,22 +89,17 @@ class CircuitTypeTestCase(FilterTestCases.NameSlugFilterTestCase):
 class CircuitTestCase(FilterTestCases.FilterTestCase, FilterTestCases.TenancyFilterTestCaseMixin):
     queryset = Circuit.objects.all()
     filterset = CircuitFilterSet
-    fixtures = ("status",)
     tenancy_related_name = "circuits"
 
     @classmethod
     def setUpTestData(cls):
 
-        regions = (
-            Region.objects.create(name="Test Region 1", slug="test-region-1"),
-            Region.objects.create(name="Test Region 2", slug="test-region-2"),
-            Region.objects.create(name="Test Region 3", slug="test-region-3"),
-        )
+        cls.regions = Region.objects.filter(sites__isnull=False).distinct()[:3]
 
-        sites = (
-            Site.objects.create(name="Test Site 1", slug="test-site-1", region=regions[0]),
-            Site.objects.create(name="Test Site 2", slug="test-site-2", region=regions[1]),
-            Site.objects.create(name="Test Site 3", slug="test-site-3", region=regions[2]),
+        cls.sites = (
+            Site.objects.filter(region=cls.regions[0]).first(),
+            Site.objects.filter(region=cls.regions[1]).first(),
+            Site.objects.filter(region=cls.regions[2]).first(),
         )
 
         tenants = Tenant.objects.filter(group__isnull=False)
@@ -191,9 +181,9 @@ class CircuitTestCase(FilterTestCases.FilterTestCase, FilterTestCases.TenancyFil
             ),
         )
 
-        CircuitTermination.objects.create(circuit=circuits[0], site=sites[0], term_side="A")
-        CircuitTermination.objects.create(circuit=circuits[1], site=sites[1], term_side="A")
-        CircuitTermination.objects.create(circuit=circuits[2], site=sites[2], term_side="A")
+        CircuitTermination.objects.create(circuit=circuits[0], site=cls.sites[0], term_side="A")
+        CircuitTermination.objects.create(circuit=circuits[1], site=cls.sites[1], term_side="A")
+        CircuitTermination.objects.create(circuit=circuits[2], site=cls.sites[2], term_side="A")
         CircuitTermination.objects.create(circuit=circuits[3], provider_network=provider_network[0], term_side="A")
         CircuitTermination.objects.create(circuit=circuits[4], provider_network=provider_network[1], term_side="A")
         CircuitTermination.objects.create(circuit=circuits[5], provider_network=provider_network[2], term_side="A")
@@ -230,22 +220,32 @@ class CircuitTestCase(FilterTestCases.FilterTestCase, FilterTestCases.TenancyFil
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 3)
 
     def test_status(self):
-        params = {"status": ["active", "planned"]}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 4)
+        statuses = list(Status.objects.get_for_model(Circuit)[:2])
+        params = {"status": [statuses[0].slug, statuses[1].slug]}
+        self.assertEqual(
+            self.filterset(params, self.queryset).qs.count(),
+            self.queryset.filter(status__slug__in=params["status"]).count(),
+        )
 
     def test_region(self):
-        regions = Region.objects.all()[:2]
-        params = {"region_id": [regions[0].pk, regions[1].pk]}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
-        params = {"region": [regions[0].slug, regions[1].slug]}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+        params = {"region_id": [self.regions[0].pk, self.regions[1].pk]}
+        cts = CircuitTermination.objects.filter(site__region__in=params["region_id"])
+        circuit_count = cts.values_list("circuit", flat=True).count()
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), circuit_count)
+        params = {"region": [self.regions[0].slug, self.regions[1].slug]}
+        cts = CircuitTermination.objects.filter(site__region__slug__in=params["region"])
+        circuit_count = cts.values_list("circuit", flat=True).count()
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), circuit_count)
 
     def test_site(self):
-        sites = Site.objects.all()[:2]
-        params = {"site_id": [sites[0].pk, sites[1].pk]}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
-        params = {"site": [sites[0].slug, sites[1].slug]}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+        params = {"site_id": [self.sites[0].pk, self.sites[1].pk]}
+        cts = CircuitTermination.objects.filter(site__in=params["site_id"])
+        circuit_count = cts.values_list("circuit", flat=True).count()
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), circuit_count)
+        params = {"site": [self.sites[0].slug, self.sites[1].slug]}
+        cts = CircuitTermination.objects.filter(site__slug__in=params["site"])
+        circuit_count = cts.values_list("circuit", flat=True).count()
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), circuit_count)
 
     def test_search(self):
         value = self.queryset.values_list("pk", flat=True)[0]
@@ -256,16 +256,11 @@ class CircuitTestCase(FilterTestCases.FilterTestCase, FilterTestCases.TenancyFil
 class CircuitTerminationTestCase(FilterTestCases.FilterTestCase):
     queryset = CircuitTermination.objects.all()
     filterset = CircuitTerminationFilterSet
-    fixtures = ("status",)
 
     @classmethod
     def setUpTestData(cls):
 
-        sites = (
-            Site.objects.create(name="Site 1", slug="site-1"),
-            Site.objects.create(name="Site 2", slug="site-2"),
-            Site.objects.create(name="Site 3", slug="site-3"),
-        )
+        sites = Site.objects.all()
         manufacturer = Manufacturer.objects.create(name="Test Manufacturer 1", slug="test-manufacturer-1")
         devicetype = DeviceType.objects.create(
             manufacturer=manufacturer,

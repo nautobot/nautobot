@@ -9,8 +9,6 @@ class ConfigContextSchemaTestCase(SeleniumTestCase):
     Integration tests for the ConfigContextSchema model
     """
 
-    fixtures = ("status",)
-
     def setUp(self):
         super().setUp()
         self.user.is_superuser = True
@@ -105,8 +103,7 @@ class ConfigContextSchemaTestCase(SeleniumTestCase):
         ConfigContext.objects.create(name="context 1", weight=101, data=context_data, schema=schema)
 
         # Device
-        status = Status.objects.get(name="Irradiated")
-        site = Site.objects.create(name="site", slug="site", status=status)
+        site = Site.objects.create(name="site", slug="site", status=Status.objects.get_for_model(Site).first())
         manufacturer = Manufacturer.objects.create(name="manufacturer", slug="manufacturer")
         device_type = DeviceType.objects.create(model="device_type", manufacturer=manufacturer)
         device_role = DeviceRole.objects.create(name="device_role", slug="device-role", color="ffffff")
@@ -115,7 +112,7 @@ class ConfigContextSchemaTestCase(SeleniumTestCase):
             site=site,
             device_type=device_type,
             device_role=device_role,
-            status=status,
+            status=Status.objects.get_for_model(Device).first(),
             local_context_data=context_data,
             local_context_schema=schema,
         )
@@ -126,7 +123,7 @@ class ConfigContextSchemaTestCase(SeleniumTestCase):
         VirtualMachine.objects.create(
             name="virtual_machine",
             cluster=cluster,
-            status=status,
+            status=Status.objects.get_for_model(VirtualMachine).first(),
             local_context_data=context_data,
             local_context_schema=schema,
         )

@@ -26,21 +26,9 @@ class TenantGroupTestCase(ViewTestCases.OrganizationalObjectViewTestCase):
         cls.slug_source = "name"
         cls.slug_test_object = "Tenant Group 8"
 
-    def get_deletable_object(self):
-        return TenantGroup.objects.create(name="Tenant Group X")
-
-    def get_deletable_object_pks(self):
-        groups = [
-            TenantGroup.objects.create(name="Alpha"),
-            TenantGroup.objects.create(name="Beta"),
-            TenantGroup.objects.create(name="Gamma"),
-        ]
-        return [group.pk for group in groups]
-
 
 class TenantTestCase(ViewTestCases.PrimaryObjectViewTestCase):
     model = Tenant
-    fixtures = ("tag",)
 
     @classmethod
     def setUpTestData(cls):
@@ -71,14 +59,3 @@ class TenantTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         }
         cls.slug_source = "name"
         cls.slug_test_object = "Tenant 8"
-
-    def get_deletable_object(self):
-        return Tenant.objects.create(name="Unencumbered Tenant")
-
-    def get_deletable_object_pks(self):
-        tenants = [
-            Tenant.objects.create(name="Tenant A"),
-            Tenant.objects.create(name="Tenant B"),
-            Tenant.objects.create(name="Tenant C", group=TenantGroup.objects.first()),
-        ]
-        return [tenant.pk for tenant in tenants]

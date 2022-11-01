@@ -15,12 +15,10 @@ class WritableNestedSerializerTest(APITestCase):
     Test the operation of WritableNestedSerializer using VLANSerializer as our test subject.
     """
 
-    fixtures = ("status",)
-
     def setUp(self):
         super().setUp()
 
-        self.region_a = Region.objects.create(name="Region A", slug="region-a")
+        self.region_a = Region.objects.filter(sites__isnull=True).first()
         self.site1 = Site.objects.create(region=self.region_a, name="Site 1", slug="site-1")
         self.site2 = Site.objects.create(region=self.region_a, name="Site 2", slug="site-2")
 
@@ -95,7 +93,7 @@ class WritableNestedSerializerTest(APITestCase):
             "status": "active",
             "site": {
                 "region": {
-                    "name": "Region A",
+                    "name": self.region_a.name,
                 },
             },
         }

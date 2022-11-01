@@ -17,7 +17,7 @@
 
 {% block extra_breadcrumbs %}
     {% for ancestor in object.ancestors %}
-        <li>{{ ancestor|hyperlinked_object }}</li>
+        <li>{{ ancestor|hyperlinked_object:"name" }}</li>
     {% endfor %}
 {% endblock %}
 
@@ -36,15 +36,19 @@
                 <td>
                     <ul class="location-hierarchy">
                     {% for ancestor in object.ancestors %}
-                        <li>{{ ancestor|hyperlinked_object }}
+                    <li>{{ ancestor|hyperlinked_object:"name" }}{% if ancestor.nestable %} <span title="nestable">↺</span>{% endif %}
                             <ul>
                     {% endfor %}
-                    <li><strong>{{ object }}</strong></li>
+                    <li><strong>{{ object }}{% if object.nestable %} <span title="nestable">↺</span>{% endif %}</strong></li>
                     {% for ancestor in object.ancestors %}
                             </ul>
                         </li>
                     {% endfor %}
                 </td>
+            </tr>
+            <tr>
+                <td>Nestable</td>
+                <td>{{ object.nestable|render_boolean }}</td>
             </tr>
             <tr>
                 <td>Content Type(s)</td>

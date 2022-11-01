@@ -10,11 +10,11 @@ Using the django-request-logging module can lead to password leaks if not config
 
 Before:
 
-> DEBUG django.request: b'csrfmiddlewaretoken=csrftoken&next=%2F&username=ntc&password=mysecretpassword
+> `DEBUG django.request: b'csrfmiddlewaretoken=csrftoken&next=%2F&username=ntc&password=mysecretpassword`
 
 After:
 
-> DEBUG django.request: b'csrfmiddlewaretoken=csrftoken&next=%2F&username=ntc&password=***
+> `DEBUG django.request: b'csrfmiddlewaretoken=csrftoken&next=%2F&username=ntc&password=***`
 
 ```python
 def add_username(record):

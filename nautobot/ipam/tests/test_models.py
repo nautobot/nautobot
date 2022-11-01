@@ -140,27 +140,25 @@ class TestAggregate(TestCase):
 
 
 class TestPrefix(TestCase):
-    fixtures = ("status",)
-
     def setUp(self):
         super().setUp()
         self.statuses = Status.objects.get_for_model(Prefix)
 
     def test_prefix_validation(self):
-        site = Site.objects.create(name="Site 1")
-        location_type = LocationType.objects.create(name="Location Type 1")
-        location = Location.objects.create(name="Location 1", location_type=location_type, site=site)
+        location_type = LocationType.objects.get(name="Room")
+        location = Location.objects.filter(location_type=location_type).first()
         prefix = Prefix(prefix=netaddr.IPNetwork("192.0.2.0/24"), location=location)
+        prefix.status = self.statuses.get(slug="active")
         with self.assertRaises(ValidationError) as cm:
             prefix.validated_save()
-        self.assertIn('Prefixes may not associate to locations of type "Location Type 1"', str(cm.exception))
+        self.assertIn(f'Prefixes may not associate to locations of type "{location_type.name}"', str(cm.exception))
 
         location_type.content_types.add(ContentType.objects.get_for_model(Prefix))
-        site_2 = Site.objects.create(name="Site 2")
+        site_2 = Site.objects.last()
         prefix.site = site_2
         with self.assertRaises(ValidationError) as cm:
             prefix.validated_save()
-        self.assertIn('Location "Location 1" does not belong to site "Site 2"', str(cm.exception))
+        self.assertIn(f'Location "{location.name}" does not belong to site "{site_2.name}"', str(cm.exception))
 
     def test_get_duplicates(self):
         prefixes = (
@@ -384,8 +382,6 @@ class TestPrefix(TestCase):
 
 
 class TestIPAddress(TestCase):
-    fixtures = ("status",)
-
     def test_get_duplicates(self):
         ips = (
             IPAddress.objects.create(address=netaddr.IPNetwork("192.0.2.1/24")),
@@ -479,7 +475,7 @@ class TestIPAddress(TestCase):
 
     @override_settings(ENFORCE_GLOBAL_UNIQUE=True)
     def test_not_null_assigned_object_type_and_null_assigned_object_id(self):
-        site = Site.objects.create(name="Test Site 1", slug="test-site-1")
+        site = Site.objects.first()
         manufacturer = Manufacturer.objects.create(name="Test Manufacturer 1", slug="test-manufacturer-1")
         devicetype = DeviceType.objects.create(
             manufacturer=manufacturer,
@@ -515,6 +511,7 @@ class TestIPAddress(TestCase):
         self.assertIsNone(ipaddress_2.clean())
 
     def test_create_ip_address_without_slaac_status(self):
+        IPAddress.objects.filter(status__slug=IPAddressStatusChoices.STATUS_SLAAC).delete()
         Status.objects.get(slug=IPAddressStatusChoices.STATUS_SLAAC).delete()
         IPAddress.objects.create(address="1.1.1.1/32")
         self.assertTrue(IPAddress.objects.filter(address="1.1.1.1/32").exists())
@@ -522,20 +519,19 @@ class TestIPAddress(TestCase):
 
 class TestVLANGroup(TestCase):
     def test_vlan_group_validation(self):
-        site = Site.objects.create(name="Site 1")
-        location_type = LocationType.objects.create(name="Location Type 1")
-        location = Location.objects.create(name="Location 1", location_type=location_type, site=site)
+        location_type = LocationType.objects.get(name="Elevator")
+        location = Location.objects.filter(location_type=location_type).first()
         group = VLANGroup(name="Group 1", location=location)
         with self.assertRaises(ValidationError) as cm:
             group.validated_save()
-        self.assertIn('VLAN groups may not associate to locations of type "Location Type 1"', str(cm.exception))
+        self.assertIn(f'VLAN groups may not associate to locations of type "{location_type.name}"', str(cm.exception))
 
         location_type.content_types.add(ContentType.objects.get_for_model(VLANGroup))
-        site_2 = Site.objects.create(name="Site 2")
+        site_2 = Site.objects.last()
         group.site = site_2
         with self.assertRaises(ValidationError) as cm:
             group.validated_save()
-        self.assertIn('Location "Location 1" does not belong to site "Site 2"', str(cm.exception))
+        self.assertIn(f'Location "{location.name}" does not belong to site "{site_2.name}"', str(cm.exception))
 
     def test_get_next_available_vid(self):
 
@@ -555,37 +551,38 @@ class TestVLANGroup(TestCase):
 
 
 class VLANTestCase(TestCase):
-    fixtures = ("status",)
-
     def test_vlan_validation(self):
-        site = Site.objects.create(name="Site 1")
-        location_type = LocationType.objects.create(name="Location Type 1")
-        location = Location.objects.create(name="Location 1", location_type=location_type, site=site)
+        location_type = LocationType.objects.get(name="Root")
+        location_type.content_types.set([])
+        location_type.validated_save()
+        location = Location.objects.filter(location_type=location_type).first()
         vlan = VLAN(name="Group 1", vid=1, location=location)
+        vlan.status = Status.objects.get_for_model(VLAN).get(slug="active")
         with self.assertRaises(ValidationError) as cm:
             vlan.validated_save()
-        self.assertIn('VLANs may not associate to locations of type "Location Type 1"', str(cm.exception))
+        self.assertIn(f'VLANs may not associate to locations of type "{location_type.name}"', str(cm.exception))
 
         location_type.content_types.add(ContentType.objects.get_for_model(VLAN))
-        site_2 = Site.objects.create(name="Site 2")
+        site_2 = Site.objects.exclude(pk=location.site.pk).first()
         vlan.site = site_2
         with self.assertRaises(ValidationError) as cm:
             vlan.validated_save()
-        self.assertIn('Location "Location 1" does not belong to site "Site 2"', str(cm.exception))
+        self.assertIn(f'Location "{location.name}" does not belong to site "{site_2.name}"', str(cm.exception))
 
-        vlan.site = site
+        vlan.site = location.site
         group = VLANGroup.objects.create(name="Group 1", site=site_2)
         vlan.group = group
         with self.assertRaises(ValidationError) as cm:
             vlan.validated_save()
-        self.assertIn("VLAN group must belong to the assigned site (Site 1)", str(cm.exception))
+        self.assertIn(f"VLAN group must belong to the assigned site ({location.site.name})", str(cm.exception))
 
-        group.site = site
-        location_2 = Location.objects.create(name="Location 2", location_type=location_type, site=site)
+        group.site = location.site
+        location_2 = Location.objects.create(name="Location 2", location_type=location_type, site=location.site)
         group.location = location_2
         group.save()
         with self.assertRaises(ValidationError) as cm:
             vlan.validated_save()
         self.assertIn(
-            'The assigned group belongs to a location that does not include location "Location 1"', str(cm.exception)
+            f'The assigned group belongs to a location that does not include location "{location.name}"',
+            str(cm.exception),
         )

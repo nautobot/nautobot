@@ -22,6 +22,10 @@ from invoke.exceptions import Exit
 try:
     # Override built-in print function with rich's pretty-printer function, if available
     from rich import print  # pylint: disable=redefined-builtin
+    from rich.console import Console
+    from rich.markup import escape
+
+    console = Console()
 
     HAS_RICH = True
 except ModuleNotFoundError:
@@ -91,6 +95,41 @@ def task(function=None, *args, **kwargs):
     return task_wrapper
 
 
+def print_command(command, env=None):
+    r"""
+    >>> command = "docker buildx build . --platform linux/amd64 --target final --load -f ./docker/Dockerfile --build-arg PYTHON_VER=3.9 -t networktocode/nautobot-py3.9:local --no-cache"
+    >>> print_command(command)
+    docker buildx build . \
+        --platform linux/amd64 \
+        --target final \
+        --load \
+        -f ./docker/Dockerfile \
+        --build-arg PYTHON_VER=3.9 \
+        -t networktocode/nautobot-py3.9:local \
+        --no-cache
+    >>> env = {"PYTHON_VER": "3.9"}
+    >>> print_command(command, env=env)
+    PYTHON_VER=3.9 \
+    docker buildx build . \
+        --platform linux/amd64 \
+        --target final \
+        --load \
+        -f ./docker/Dockerfile \
+        --build-arg PYTHON_VER=3.9 \
+        -t networktocode/nautobot-py3.9:local \
+        --no-cache
+    """
+    # Everywhere we have a `--foo`, a `-f`, a `--foo bar`, or a `-f bar`, wrap to a new line
+    formatted_command = re.sub(r"\s+(--?\w+(\s+[^-]\S*)?)", r" \\\n    \1", command)
+    formatted_env = ""
+    if env:
+        formatted_env = " \\\n".join(f"{var}={value}" for var, value in env.items()) + " \\\n"
+    if HAS_RICH:
+        console.print(f"[dim]{escape(formatted_env)}{escape(formatted_command)}[/dim]", soft_wrap=True)
+    else:
+        print(f"{formatted_env}{formatted_command}")
+
+
 def docker_compose(context, command, **kwargs):
     """Helper function for running a specific docker-compose command with all appropriate parameters and environment.
 
@@ -117,23 +156,21 @@ def docker_compose(context, command, **kwargs):
         compose_command_tokens.append(service)
 
     print(f'Running docker-compose command "{command}"')
-    compose_command = " \\\n    ".join(compose_command_tokens)
+    compose_command = " ".join(compose_command_tokens)
     env = kwargs.pop("env", {})
     env.update({"PYTHON_VER": context.nautobot.python_ver})
     if "hide" not in kwargs:
-        env_str = " \\\n    ".join(f"{var}={value}" for var, value in env.items())
-        if HAS_RICH:
-            print(f"[dim]{env_str} \\\n    {compose_command}[/dim]")
-        else:
-            print(f"{env_str} \\\n    {compose_command}")
+        print_command(compose_command, env=env)
     return context.run(compose_command, env=env, **kwargs)
 
 
 def run_command(context, command, **kwargs):
     """Wrapper to run a command locally or inside the nautobot container."""
     if is_truthy(context.nautobot.local):
-        print(f'Running command "{command}"')
-        context.run(command, pty=True, **kwargs)
+        env = kwargs.pop("env", {})
+        if "hide" not in kwargs:
+            print_command(command, env=env)
+        context.run(command, pty=True, env=env, **kwargs)
     else:
         # Check if Nautobot is running; no need to start another Nautobot container to run a command
         docker_compose_status = "ps --services --filter status=running"
@@ -208,9 +245,9 @@ def build_dependencies(context, poetry_parallel=True):
 @task(
     help={
         "cache": "Whether to use Docker's cache when building the image. (Default: enabled)",
-        "cache_dir": "Directory to use for caching buildx output. (Default: /home/travis/.cache/docker)",
+        "cache_dir": "Directory to use for caching buildx output. (Default: current directory)",
         "platforms": "Comma-separated list of strings for which to build. (Default: linux/amd64)",
-        "tag": "Tags to be applied to the built image. (Default: networktocode/nautobot-dev:local)",
+        "tag": "Tags to be applied to the built image. (Default: depends on the --target)",
         "target": "Build target from the Dockerfile. (Default: dev)",
         "poetry_parallel": "Enable/disable poetry to install packages in parallel. (Default: False)",
     }
@@ -220,28 +257,44 @@ def buildx(
     cache=False,
     cache_dir="",
     platforms="linux/amd64",
-    tag="networktocode/nautobot-dev-py3.7:local",
+    tag=None,
     target="dev",
     poetry_parallel=False,
 ):
-    """Build Nautobot docker image using the experimental buildx docker functionality (multi-arch capablility)."""
-    print(f"Building Nautobot with Python {context.nautobot.python_ver} for {platforms}...")
-    command = (
-        f"docker buildx build --platform {platforms} -t {tag} --target {target} --load -f ./docker/Dockerfile"
-        f" --build-arg PYTHON_VER={context.nautobot.python_ver}"
-        " ."
-    )
+    """Build Nautobot docker image using the experimental buildx docker functionality (multi-arch capability)."""
+    print(f"Building Nautobot {target} target with Python {context.nautobot.python_ver} for {platforms}...")
+    if tag is None:
+        if target == "dev":
+            tag = f"networktocode/nautobot-dev-py{context.nautobot.python_ver}:local"
+        elif target == "final":
+            tag = f"networktocode/nautobot-py{context.nautobot.python_ver}:local"
+        else:
+            print(f"Not sure what should be the standard tag for target {target}, will not tag.")
+    command_tokens = [
+        "docker buildx build .",
+        f"--platform {platforms}",
+        f"--target {target}",
+        "--load",
+        "-f ./docker/Dockerfile",
+        f"--build-arg PYTHON_VER={context.nautobot.python_ver}",
+    ]
+    if tag is not None:
+        command_tokens.append(f"-t {tag}")
     if not cache:
-        command += " --no-cache"
+        command_tokens.append("--no-cache")
     else:
-        command += (
-            f" --cache-to type=local,dest={cache_dir}/{context.nautobot.python_ver}"
-            f" --cache-from type=local,src={cache_dir}/{context.nautobot.python_ver}"
-        )
+        command_tokens += [
+            f"--cache-to type=local,dest={cache_dir}/{context.nautobot.python_ver}",
+            f"--cache-from type=local,src={cache_dir}/{context.nautobot.python_ver}",
+        ]
     if poetry_parallel:
-        command += " --build-arg POETRY_PARALLEL=true"
+        command_tokens.append("--build-arg POETRY_PARALLEL=true")
 
-    context.run(command, env={"PYTHON_VER": context.nautobot.python_ver})
+    command = " ".join(command_tokens)
+    env = {"PYTHON_VER": context.nautobot.python_ver}
+
+    print_command(command, env=env)
+    context.run(command, env=env)
 
 
 def get_nautobot_version():
@@ -458,38 +511,6 @@ def loaddata(context, filepath="db_output.json"):
     run_command(context, command)
 
 
-@task(
-    help={
-        "app": "Nautobot app such as 'dcim', defaults to 'core'",
-        "filename": "Name of the fixture to create or overwrite, without .extension",
-        "model": "Model to include, such as 'dcim.device', repeat as needed",
-    },
-    iterable=["model"],
-)
-def write_fixture(context, app="core", filename=None, model=None):
-    """Create or overwrite a data fixture."""
-    if filename:
-        filepath = f"nautobot/{app}/fixtures/{filename}.json"
-    else:
-        filepath = None
-    dumpdata(context, format="json", model=model, filepath=filepath)
-
-
-@task(
-    help={
-        "app": "Nautobot app such as 'dcim', defaults to 'core'",
-        "filename": "Name of the fixture to load, without .extension",
-    },
-)
-def load_fixture(context, app="core", filename=None):
-    """Load a data fixture into Nautobot."""
-    if filename:
-        filepath = f"nautobot/{app}/fixtures/{filename}.json"
-    else:
-        filepath = None
-    loaddata(context, filepath=filepath)
-
-
 @task()
 def build_and_check_docs(context):
     """Build docs for use within Nautobot."""
@@ -508,7 +529,7 @@ def build_example_plugin_docs(context):
     command = "mkdocs build --no-directory-urls --strict"
     if is_truthy(context.nautobot.local):
         local_command = f"cd examples/example_plugin && {command}"
-        print(f'Running command "{local_command}"')
+        print_command(local_command)
         context.run(local_command, pty=True)
     else:
         docker_command = f"run --workdir='/source/examples/example_plugin' --entrypoint '{command}' nautobot"
@@ -621,6 +642,8 @@ def check_schema(context, api_version=None):
         "verbose": "Enable verbose test output.",
         "append": "Append coverage data to .coverage, otherwise it starts clean each time.",
         "skip_docs_build": "Skip (re)build of documentation before running the test.",
+        "performance_report": "Generate Performance Testing report in the terminal. Has to set GENERATE_PERFORMANCE_REPORT=True in settings.py",
+        "performance_snapshot": "Generate a new performance testing report to report.yml. Has to set GENERATE_PERFORMANCE_REPORT=True in settings.py",
     },
     iterable=["tag", "exclude_tag"],
 )
@@ -635,6 +658,8 @@ def unittest(
     verbose=False,
     append=False,
     skip_docs_build=False,
+    performance_report=False,
+    performance_snapshot=False,
 ):
     """Run Nautobot unit tests."""
     if not skip_docs_build:
@@ -652,7 +677,13 @@ def unittest(
         command += " --buffer"
     if verbose:
         command += " --verbosity 2"
-
+    if performance_report or (tag and "performance" in tag):
+        command += " --slowreport"
+    if performance_snapshot:
+        command += " --slowreport --slowreportpath report.yml"
+    # change the default testrunner only if performance testing is running
+    if "--slowreport" in command:
+        command += " --testrunner nautobot.core.tests.runner.NautobotPerformanceTestRunner"
     # lists
     if tag:
         for individual_tag in tag:
@@ -683,6 +714,8 @@ def unittest_coverage(context):
         "verbose": "Enable verbose test output.",
         "append": "Append coverage data to .coverage, otherwise it starts clean each time.",
         "skip_docs_build": "Skip (re)build of documentation before running the test.",
+        "performance_report": "Generate Performance Testing report in the terminal. Set GENERATE_PERFORMANCE_REPORT=True in settings.py before using this flag",
+        "performance_snapshot": "Generate a new performance testing report to report.yml. Set GENERATE_PERFORMANCE_REPORT=True in settings.py before using this flag",
     },
     iterable=["tag", "exclude_tag"],
 )
@@ -697,6 +730,8 @@ def integration_test(
     verbose=False,
     append=False,
     skip_docs_build=False,
+    performance_report=False,
+    performance_snapshot=False,
 ):
     """Run Nautobot integration tests."""
 
@@ -714,6 +749,60 @@ def integration_test(
         verbose=verbose,
         append=append,
         skip_docs_build=skip_docs_build,
+        performance_report=performance_report,
+        performance_snapshot=performance_snapshot,
+    )
+
+
+@task(
+    help={
+        "keepdb": "Save and re-use test database between test runs for faster re-testing.",
+        "label": "Specify a directory or module to test instead of running all Nautobot tests.",
+        "failfast": "Fail as soon as a single test fails don't run the entire test suite.",
+        "buffer": "Discard output from passing tests.",
+        "tag": "Run only tests with the specified tag. Can be used multiple times.",
+        "exclude_tag": "Do not run tests with the specified tag. Can be used multiple times.",
+        "verbose": "Enable verbose test output.",
+        "append": "Append coverage data to .coverage, otherwise it starts clean each time.",
+        "skip_docs_build": "Skip (re)build of documentation before running the test.",
+        "performance_snapshot": "Generate a new performance testing report to report.json. Set GENERATE_PERFORMANCE_REPORT=True in settings.py before using this flag",
+    },
+    iterable=["tag", "exclude_tag"],
+)
+def performance_test(
+    context,
+    keepdb=False,
+    label="nautobot",
+    failfast=False,
+    buffer=True,
+    tag=None,
+    exclude_tag=None,
+    verbose=False,
+    append=False,
+    skip_docs_build=False,
+    performance_snapshot=False,
+):
+    """
+    Run Nautobot performance tests.
+    Prerequisite:
+        Has to set GENERATE_PERFORMANCE_REPORT=True in settings.py
+    """
+    # Enforce "performance" tag
+    tag.append("performance")
+
+    unittest(
+        context,
+        keepdb=keepdb,
+        label=label,
+        failfast=failfast,
+        buffer=buffer,
+        tag=tag,
+        exclude_tag=exclude_tag,
+        verbose=verbose,
+        append=append,
+        skip_docs_build=skip_docs_build,
+        performance_report=True,
+        performance_snapshot=performance_snapshot,
     )
 
 

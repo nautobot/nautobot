@@ -167,12 +167,12 @@ Available tasks:
   flake8                 Check for PEP8 compliance and other style issues.
   hadolint               Check Dockerfile for hadolint compliance and other style issues.
   integration-test       Run Nautobot integration tests.
-  load-fixture           Load a data fixture into Nautobot.
   loaddata               Load data from file.
   makemigrations         Perform makemigrations operation in Django.
   markdownlint           Lint Markdown files.
   migrate                Perform migrate operation in Django.
   nbshell                Launch an interactive nbshell session.
+  performance-test       Run Nautobot performance specific unit tests.
   post-upgrade           Performs Nautobot common post-upgrade operations using a single entrypoint.
   pylint                 Perform static analysis of Nautobot code.
   restart                Gracefully restart containers.
@@ -182,7 +182,6 @@ Available tasks:
   unittest               Run Nautobot unit tests.
   unittest-coverage      Report on code test coverage as measured by 'invoke unittest'.
   vscode                 Launch Visual Studio Code with the appropriate Environment variables to run in a container.
-  write-fixture          Create or overwrite a data fixture.
 ```
 
 #### Using Docker with Invoke
@@ -230,6 +229,13 @@ You may install Poetry in your user environment by running:
 ```no-highlight
 $ curl -sSL https://install.python-poetry.org | python3 -
 ```
+
+!!! danger
+    Always utilize this documented method to install Poetry for use when developing Nautobot.
+
+    Never use `pip` to install Poetry into your Nautobot virtual environment, as it will result in dependency version conflicts that will very likely break Nautobot. Poetry is used as a package manager for Python packages, so you should not install it into the Nautobot environment, because it relies upon a number of the same dependencies as Nautobot, but with conflicting versions.
+
+    While there are certain cases where running `pip install poetry` is valid, such as in Nautobot's automated release deployments where Nautobot is not actually installed, installing Poetry into Nautobot's runtime development environment is not one of them!
 
 For detailed installation instructions, please see the [official Poetry installation guide](https://python-poetry.org/docs/#installation).
 
@@ -396,12 +402,6 @@ Quit the server with CONTROL-C.
 Please see the [official Django documentation on `runserver`](https://docs.djangoproject.com/en/stable/ref/django-admin/#runserver) for more information.
 
 You can then log into the development server at `localhost:8080` with the [superuser](#creating-a-superuser) you created.
-
-### Loading Data Fixtures
-
-Nautobot includes a number of [fixture](https://docs.djangoproject.com/en/stable/topics/testing/tools/#fixture-loading) files that are used in our [unit and integration tests](testing.md). You can also load these fixtures into your development database as an alternative to manually populating all data from scratch. Fixtures are stored as JSON files in the various `nautobot/APPNAME/fixtures/` directories. You can use the `invoke load-fixture --app APP --filename FIXTURE` command to load a given fixture; for example `invoke load-fixture --app extras --filename status` will populate some Status records defined in `nautobot/extras/fixtures/status.json` into the database.
-
-There is a corresponding `invoke write-fixture` command that can be used to create or update fixtures; more on this in the [testing](testing.md) documentation.
 
 ### Starting the Interactive Shell
 

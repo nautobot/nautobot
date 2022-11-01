@@ -37,7 +37,7 @@ python = "^3.7"
 # Background task processing
 celery = "~5.2.7"
 # Fundamental web framework for Nautobot
-Django = "~3.2.15"
+Django = "~3.2.16"
 # Adds AJAX capabilities to django-tables2
 django-ajax-tables = "~1.1.1"
 # LDAP Support
@@ -90,7 +90,7 @@ drf-spectacular = {version = "~0.24.2", extras = ["sidecar"]}
 # 2.0 TODO: no longer used, but retained for now to avoid breaking plugin expectations
 drf-yasg = {version = "^1.20.0", extras = ["validation"]}
 # Git integrations for Python
-GitPython = "~3.1.27"
+GitPython = "~3.1.29"
 # GraphQL support
 graphene-django = "~2.15.0"
 # Graphene Optimizer
@@ -121,7 +121,7 @@ netutils = "~1.2.0"
 Pillow = "~9.2.0"
 # PostgreSQL database adapter
 # NOTE: psycopg3 is avaiable now and nominally replaces psycopg2
-psycopg2-binary = "~2.9.3"
+psycopg2-binary = "~2.9.5"
 # Cryptographic library
 pycryptodome = "~3.13.0"
 # The uWSGI WSGI HTTP server as a Python module
@@ -152,9 +152,11 @@ sso = ["social-auth-core"]
 # Code style enforcement
 black = "~22.8.0"
 # Test code coverage measurement
-coverage = "~6.4.1"
+coverage = "~6.5.0"
 # Tool for debugging Django
 django-debug-toolbar = "~3.7.0"
+# DiscoverSlowestTestsRunner for running CI performance tests and benchmarking.
+django-slowtests = "^1.1.1"
 # Nautobot example plugin used for testing
 example-plugin = {path = "examples/example_plugin", develop = true}
 # Nautobot test plugin used for testing core view overrides

@@ -42,10 +42,14 @@ class LocationType(TreeNode, OrganizationalModel):
         limit_choices_to=FeatureQuery("locations"),
         help_text="The object type(s) that can be associated to a Location of this type.",
     )
+    nestable = models.BooleanField(
+        default=False,
+        help_text="Allow Locations of this type to be parents/children of other Locations of this same type",
+    )
 
     objects = TreeManager()
 
-    csv_headers = ["name", "slug", "parent", "description", "content_types"]
+    csv_headers = ["name", "slug", "parent", "description", "nestable", "content_types"]
 
     class Meta:
         ordering = ("name",)
@@ -62,16 +66,33 @@ class LocationType(TreeNode, OrganizationalModel):
             self.slug,
             self.parent.name if self.parent else None,
             self.description,
+            self.nestable,
             ",".join(f"{ct.app_label}.{ct.model}" for ct in self.content_types.order_by("app_label", "model")),
         )
 
     def clean(self):
         """
-        Disallow LocationTypes whose name conflicts with existing location-related models, to avoid confusion.
+        Check changes to the nestable flag for validity.
+
+        Also, disallow LocationTypes whose name conflicts with existing location-related models, to avoid confusion.
 
         In the longer term we will collapse these other models into special cases of LocationType.
         """
         super().clean()
+
+        if self.present_in_database:
+            prior_nestable = LocationType.objects.get(pk=self.pk).nestable
+            if (
+                prior_nestable
+                and not self.nestable
+                and Location.objects.filter(location_type=self, parent__location_type=self).exists()
+            ):
+                raise ValidationError(
+                    {
+                        "nestable": "There are existing nested Locations of this type, "
+                        "so changing this Location Type to be non-nestable is not permitted."
+                    }
+                )
 
         if self.name.lower() in [
             "region",
@@ -279,15 +300,38 @@ class Location(TreeNode, StatusModel, PrimaryModel):
                     }
                 )
 
-        if self.location_type.parent is not None:
-            # We must have a parent and it must match the parent location_type.
-            if self.parent is None or self.parent.location_type != self.location_type.parent:
-                raise ValidationError(
-                    {
-                        "parent": f"A Location of type {self.location_type} must have "
-                        f"a parent Location of type {self.location_type.parent}"
-                    }
-                )
+        if self.location_type.parent is None:
+            # We shouldn't have a parent, *unless* our own location type is permitted to be nested.
+            if self.parent is not None:
+                if self.location_type.nestable:
+                    if self.parent.location_type != self.location_type:
+                        raise ValidationError(
+                            {
+                                "parent": f"A Location of type {self.location_type} may only have "
+                                "a Location of the same type as its parent."
+                            }
+                        )
+                else:  # No parent type, and not nestable, therefore should never have a parent.
+                    raise ValidationError(
+                        {"parent": f"A Location of type {self.location_type} must not have a parent Location."}
+                    )
+
+                # In a future release, Site will become a kind of Location, and the resulting data migration will be
+                # much cleaner if it doesn't have to deal with Locations that have two "parents".
+                if self.site is not None:
+                    raise ValidationError(
+                        {"site": "A Location cannot have both a parent Location and an associated Site."}
+                    )
+
+            else:  # No parent, which is good, but then we must have a site.
+                if self.site is None:
+                    # Remove this in the future once Site and Region become special cases of Location;
+                    # at that point a "root" LocationType will correctly have no site associated.
+                    raise ValidationError(
+                        {"site": f"A Location of type {self.location_type} must have an associated Site."}
+                    )
+
+        else:  # Our location type has a parent type of its own
             # We must *not* have a site.
             # In a future release, Site will become a kind of Location, and the resulting data migration will be
             # much cleaner if it doesn't have to deal with Locations that have two "parents".
@@ -296,11 +340,26 @@ class Location(TreeNode, StatusModel, PrimaryModel):
                     {"site": f"A location of type {self.location_type} must not have an associated Site."}
                 )
 
-        # If this location_type does *not* have a parent type,
-        # this location must have an associated Site.
-        # This check will be removed in the future once Site and Region become special cases of Location;
-        # at that point a "root" LocationType will correctly have no parent (or site) associated.
-        if self.location_type.parent is None and self.site is None:
-            raise ValidationError(
-                {"site": f"A Location of type {self.location_type} has no parent Location, but must have a Site."}
-            )
+            # We *must* have a parent location.
+            if self.parent is None:
+                raise ValidationError(
+                    {"parent": f"A Location of type {self.location_type} must have a parent Location."}
+                )
+
+            # Is the parent location of a correct type?
+            if self.location_type.nestable:
+                if self.parent.location_type not in (self.location_type, self.location_type.parent):
+                    raise ValidationError(
+                        {
+                            "parent": f"A Location of type {self.location_type} can only have a Location "
+                            f"of the same type or of type {self.location_type.parent} as its parent."
+                        }
+                    )
+            else:
+                if self.parent.location_type != self.location_type.parent:
+                    raise ValidationError(
+                        {
+                            "parent": f"A Location of type {self.location_type} can only have a Location "
+                            f"of type {self.location_type.parent} as its parent."
+                        }
+                    )

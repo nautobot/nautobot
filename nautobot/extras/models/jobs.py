@@ -486,6 +486,8 @@ class JobLogEntry(BaseModel):
     log_object = models.CharField(max_length=JOB_LOG_MAX_LOG_OBJECT_LENGTH, null=True, blank=True)
     absolute_url = models.CharField(max_length=JOB_LOG_MAX_ABSOLUTE_URL_LENGTH, null=True, blank=True)
 
+    csv_headers = ["created", "grouping", "log_level", "log_object", "message"]
+
     def __str__(self):
         return self.message
 
@@ -493,6 +495,10 @@ class JobLogEntry(BaseModel):
         ordering = ["created"]
         get_latest_by = "created"
         verbose_name_plural = "job log entries"
+
+    def to_csv(self):
+        """Indicates model fields to return as csv."""
+        return (str(self.created), self.grouping, self.log_level, self.log_object, self.message)
 
 
 #
@@ -1015,7 +1021,7 @@ class ScheduledJob(BaseModel):
         elif self.interval == JobExecutionType.TYPE_DAILY:
             return schedules.crontab(minute=t.minute, hour=t.hour)
         elif self.interval == JobExecutionType.TYPE_WEEKLY:
-            return schedules.crontab(minute=t.minute, hour=t.hour, day_of_week=t.weekday())
+            return schedules.crontab(minute=t.minute, hour=t.hour, day_of_week=t.strftime("%w"))
         elif self.interval == JobExecutionType.TYPE_CUSTOM:
             return self.get_crontab(self.crontab)
         raise ValueError(f"I do not know to convert {self.interval} to a Cronjob!")

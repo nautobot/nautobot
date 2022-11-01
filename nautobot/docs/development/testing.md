@@ -55,25 +55,129 @@ Nautobot's custom [test runner](https://docs.djangoproject.com/en/3.2/topics/tes
 !!! info
     Because plugins also commonly use Nautobot's test runner, the base Nautobot `settings.py` currently defaults [`TEST_USE_FACTORIES`](../configuration/optional-settings.md#test_use_factories) to `False` so as to not negatively impact plugin tests that may not be designed to account for the presence of pre-populated test data in the database. This configuration is overridden to `True` in `nautobot/core/tests/nautobot_config.py` for Nautobot's own tests.
 
-## Fixtures
+## Performance Tests
 
-Nautobot includes a number of [fixture](https://docs.djangoproject.com/en/stable/topics/testing/tools/#fixture-loading) files that are used in our unit and integration tests. You can also load these fixtures into your development database as an alternative to manually populating all data from scratch. A common approach when writing new tests or updating new tests would be to load the existing fixtures, manually design and execute tests, making any needed additions to the data set along the way, then re-exporting the updated data to a fixture and using that as part of the automated test development.
++++ 1.5.0
 
-Fixtures are stored as JSON files in the various `nautobot/APPNAME/fixtures/` directories. You can use the `invoke load-fixture --app APP --filename FIXTURE` command to load a given fixture; for example `invoke load-fixture --app extras --filename status` will populate some Status records defined in `nautobot/extras/fixtures/status.json` into the database.
+### Running Performance Tests
 
-Conversely, you can create or update a fixture file via the `invoke write-fixture --app APP --filename FIXTURE --model MODEL [--model OTHER_MODEL...]` command, for example `invoke write-fixture --app extras --filename status --model extras.status` to save all defined Status records from the current development database to `nautobot/extras/fixtures/status.json`.
+Nautobot uses [`django-slowtests`](https://pypi.org/project/django-slowtests/) to run performance tests. To run performance tests, you need to install the `django-slowtests` package.
+Once you install the package, you can do `invoke performance-test` or `invoke unittest --performance-test` to run unit tests with `NautobotPerformanceTestRunner`. The invoke commands will automatically add `--testrunner nautobot.core.tests.runner.NautobotPerformanceTestRunner` to the `coverage run` command and this flag will replace the default `NautobotTestRunner` while retaining all its functionalities with the addition of performance evaluation after test runs.
 
-Fixtures should be:
+`NautobotPerformanceTestRunner` which inherits from `DiscoverSlowestTestsRunner` will only be available when `django-slowtests` is installed. The runner measures the time to run unit tests against baselines stored in a designated .yml file (defaults to `nautobot/core/tests/performance_baselines.yml`) in addition to running the unit tests themselves.
 
-- **small** - a fixture should represent instances of a single model or a small set of related models - don't try to represent the entire database in a single fixture.
-- **reusable** - a fixture that's only usable for a single test is not very useful - use fixtures to define data that applies to many different test cases.
-- **composable** - fixtures can build upon other fixtures - a "Site and Region" fixture will depend on a "Status" fixture, a "Device" fixture will depend on both of these, etc.
+!!! warning
+    This functionality requires the installation of the [`django-slowtests`](https://pypi.org/project/django-slowtests/) Python package, which is present in Nautobot's own development environment, but is *not* an inherent dependency of the Nautobot package when installed otherwise, such as into a plugin's development environment.
 
-Along the same lines, tests should:
+!!! info
+    `invoke performance-test` is enabled when `django-slowtests` is installed and when called, it will run and evaluate the performance of specific unit tests that are tagged with `performance` i.e. `@tag("performance")`. `invoke unittest --performance-report` and `invoke integration-test --performance-report` will also be enabled and when called, they will generate a performance report for all the tests ran in the terminal.
+    If performance baselines for tests are not available:
 
-- **use fixtures, not code, for baseline data** - minimize creation of data in `setUp()` and `setUpTestData()`; prefer fixtures for this purpose.
-- **use only the fixtures that are required** - loading fixtures takes non-zero time, so don't include it if you don't need it.
-- **reuse existing fixtures when possible** - don't create new fixtures if an existing fixture meets needs or can be minimally augmented to do so.
+```no-highlight
+175 abnormally slower tests:
+Performance baseline for test_account (nautobot.circuits.tests.test_filters.ProviderTestCase) is not available. Test took 0.0758s to run
+Performance baseline for test_asn (nautobot.circuits.tests.test_filters.ProviderTestCase) is not available. Test took 0.0427s to run
+Performance baseline for test_bulk_create_objects (nautobot.circuits.tests.test_api.CircuitTerminationTest) is not available. Test took 0.2900s to run
+Performance baseline for test_bulk_create_objects (nautobot.circuits.tests.test_api.CircuitTest) is not available. Test took 0.2292s to run
+Performance baseline for test_bulk_create_objects (nautobot.circuits.tests.test_api.CircuitTypeTest) is not available. Test took 0.1596s to run
+Performance baseline for test_bulk_create_objects (nautobot.circuits.tests.test_api.ProviderNetworkTest) is not available. Test took 0.1897s to run
+Performance baseline for test_bulk_create_objects (nautobot.circuits.tests.test_api.ProviderTest) is not available. Test took 0.2092s to run
+Performance baseline for test_bulk_delete_objects (nautobot.circuits.tests.test_api.CircuitTerminationTest) is not available. Test took 0.1168s to run
+Performance baseline for test_bulk_delete_objects (nautobot.circuits.tests.test_api.CircuitTest) is not available. Test took 0.2762s to run
+Performance baseline for test_bulk_delete_objects (nautobot.circuits.tests.test_api.CircuitTypeTest) is not available. Test took 0.0663s to run
+Performance baseline for test_bulk_delete_objects (nautobot.circuits.tests.test_api.ProviderNetworkTest) is not available. Test took 0.0875s to run
+...
+```
+
+!!! info
+    If performance baselines for tests are available and the time it take to run tests are siginificantly slower than baselines:
+
+```no-highlight
+12 abnormally slower tests:
+0.9838s test_bulk_import_objects_with_constrained_permission (nautobot.ipam.tests.test_views.VLANTestCase) is significantly slower than the baseline 0.3692s
+1.2548s test_create_multiple_objects_with_constrained_permission (nautobot.dcim.tests.test_views.ConsolePortTestCase) is significantly slower than the baseline 0.5385s
+1.4289s test_create_multiple_objects_with_constrained_permission (nautobot.dcim.tests.test_views.DeviceBayTestCase) is significantly slower than the baseline 0.5616s
+1.1551s test_create_multiple_objects_with_constrained_permission (nautobot.dcim.tests.test_views.InventoryItemTestCase) is significantly slower than the baseline 0.5822s
+1.4712s test_create_multiple_objects_with_constrained_permission (nautobot.dcim.tests.test_views.RearPortTestCase) is significantly slower than the baseline 0.5695s
+1.5958s test_create_multiple_objects_with_constrained_permission (nautobot.virtualization.tests.test_views.VMInterfaceTestCase) is significantly slower than the baseline 1.0020s
+1.0566s test_create_object_with_constrained_permission (nautobot.virtualization.tests.test_views.VirtualMachineTestCase) is significantly slower than the baseline 0.3627s
+...
+```
+
+!!! info
+    To output the performance evaluation to a file for later use, i.e. as performance baselines for future test runs, do `invoke performance-test --performance-snapshot`. This command will collect the `names` of the test and their `execution_time` and store them in a .yml file default to `report.yml`. Subsequently, the data in that file will have to be manually added to the baseline file set at [`TEST_PERFORMANCE_BASELINE_FILE`](../configuration/optional-settings.md#test_performance_baseline_file) to be used as baselines in performance tests.
+
+Example output of `invoke performance-test --performance-snapshot`:
+
+```yaml
+- tests:
+  - name: test_account (nautobot.circuits.tests.test_filters.ProviderTestCase)
+    execution_time: 0.07075
+  - name: test_asn (nautobot.circuits.tests.test_filters.ProviderTestCase)
+    execution_time: 0.041262
+  - name: test_cabled (nautobot.circuits.tests.test_filters.CircuitTerminationTestCase)
+    execution_time: 0.268673
+  - name: test_cid (nautobot.circuits.tests.test_filters.CircuitTestCase)
+    execution_time: 0.116057
+  - name: test_circuit_id (nautobot.circuits.tests.test_filters.CircuitTerminationTestCase)
+    execution_time: 0.042665
+  - name: test_commit_rate (nautobot.circuits.tests.test_filters.CircuitTestCase)
+    execution_time: 0.047894
+  - name: test_connected (nautobot.circuits.tests.test_filters.CircuitTerminationTestCase)
+    execution_time: 0.056196
+  - name: test_id (nautobot.circuits.tests.test_filters.CircuitTerminationTestCase)
+    execution_time: 0.03598
+...
+```
+
+### Gathering Performance Test Baseline Data
+
+`TEST_PERFORMANCE_BASELINE_FILE` specifies the file in which performance baselines are stored, defaults to `nautobot/core/tests/performance_baselines.yml`. Currently, only baselines for those unit tests tagged with `performance` are stored.
+
+You can add baselines for your own test to `nautobot/core/tests/performance_baselines.yml` or have your own baseline yaml file for performance testing by specifying a different file path for  `TEST_PERFORMANCE_BASELINE_FILE` in plugin's development/test `nautobot_config.py`, and store the output of `invoke performance-test --performance-snapshot` in that file.
+`--performance-snapshot` flag will store the results of your performance test to a new `report.yml` and all you need to do is copy/paste the results to the file set by `TEST_PERFORMANCE_BASELINE_FILE`. Now you have baselines for your own tests!
+
+Example output of `invoke performance-test --performance-snapshot`:
+
+```yaml
+- tests:
+  - name: test_account (nautobot.circuits.tests.test_filters.ProviderTestCase)
+    execution_time: 0.07075
+  - name: test_asn (nautobot.circuits.tests.test_filters.ProviderTestCase)
+    execution_time: 0.041262
+  - name: test_cabled (nautobot.circuits.tests.test_filters.CircuitTerminationTestCase)
+    execution_time: 0.268673
+  - name: test_cid (nautobot.circuits.tests.test_filters.CircuitTestCase)
+    execution_time: 0.116057
+  - name: test_circuit_id (nautobot.circuits.tests.test_filters.CircuitTerminationTestCase)
+...
+```
+
+if you decide to run `invoke unittest --performance-test` which will run tests that currently do not have their baselines present in the file, your output could look something like this:
+
+```no-highlight
+175 abnormally slower tests:
+Performance baseline for test_account (nautobot.circuits.tests.test_filters.ProviderTestCase) is not available. Test took 0.0758s to run
+Performance baseline for test_asn (nautobot.circuits.tests.test_filters.ProviderTestCase) is not available. Test took 0.0427s to run
+Performance baseline for test_bulk_create_objects (nautobot.circuits.tests.test_api.CircuitTerminationTest) is not available. Test took 0.2900s to run
+Performance baseline for test_bulk_create_objects (nautobot.circuits.tests.test_api.CircuitTest) is not available. Test took 0.2292s to run
+Performance baseline for test_bulk_create_objects (nautobot.circuits.tests.test_api.CircuitTypeTest) is not available. Test took 0.1596s to run
+Performance baseline for test_bulk_create_objects (nautobot.circuits.tests.test_api.ProviderNetworkTest) is not available. Test took 0.1897s to run
+Performance baseline for test_bulk_create_objects (nautobot.circuits.tests.test_api.ProviderTest) is not available. Test took 0.2092s to run
+Performance baseline for test_bulk_delete_objects (nautobot.circuits.tests.test_api.CircuitTerminationTest) is not available. Test took 0.1168s to run
+Performance baseline for test_bulk_delete_objects (nautobot.circuits.tests.test_api.CircuitTest) is not available. Test took 0.2762s to run
+Performance baseline for test_bulk_delete_objects (nautobot.circuits.tests.test_api.CircuitTypeTest) is not available. Test took 0.0663s to run
+Performance baseline for test_bulk_delete_objects (nautobot.circuits.tests.test_api.ProviderNetworkTest) is not available. Test took 0.0875s to run
+...
+```
+
+### Caveats
+
+!!! warning
+    `django-slowtests` is only a *development* dependency of Nautobot. You cannot run performance tests in a production deployment of Nautobot unless you directly `pip install django-slowtests` into such a deployment.
+
+!!! info
+    Because plugins also commonly use Nautobot's default test runner `NautobotTestRunner`, in order to use `NautobotPerformanceTestRunner` you need to add `django-slowtests` as a part of your plugin dev dependencies.
 
 ## Test Code Style
 
