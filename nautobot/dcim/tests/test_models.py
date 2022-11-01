@@ -1136,5 +1136,5 @@ class SiteTestCase(TestCase):
         )
         site.validated_save()
 
-        self.assertTrue(site.longitude, 55.22)
-        self.assertTrue(site.latitude, 55.22)
+        self.assertEqual(site.longitude, 55.22)
+        self.assertEqual(site.latitude, 55.22)
