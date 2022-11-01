@@ -1172,7 +1172,9 @@ class LocationFilterSetTestCase(FilterTestCases.NameSlugFilterTestCase, FilterTe
     def test_site(self):
         params = {"site": [Site.objects.first().slug, Site.objects.first().pk]}
         # TODO: should this filter return descendant locations as well?
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 1)
+        self.assertEqual(
+            self.filterset(params, self.queryset).qs.count(), Location.objects.filter(site=self.site).count()
+        )
 
 
 class RackGroupTestCase(FilterTestCases.NameSlugFilterTestCase):
