@@ -6,6 +6,7 @@ from unittest import skipIf
 from nautobot.utilities.templatetags.helpers import (
     hyperlinked_object,
     placeholder,
+    add_html_id,
     render_boolean,
     render_json,
     render_yaml,
@@ -65,6 +66,21 @@ class NautobotTemplatetagsHelperTest(TestCase):
         self.assertEqual(placeholder(None), '<span class="text-muted">&mdash;</span>')
         self.assertEqual(placeholder([]), '<span class="text-muted">&mdash;</span>')
         self.assertEqual(placeholder("something"), "something")
+
+    def test_add_html_id(self):
+        # Case where what we have isn't actually a HTML element but just a bare string
+        self.assertEqual(add_html_id("hello", "my-id"), "hello")
+        # Basic success case
+        self.assertEqual(add_html_id("<div></div>", "my-div"), '<div id="my-div" ></div>')
+        # Cases of more complex HTML
+        self.assertEqual(
+            add_html_id('<a href="..." title="...">Hello!</a>', "my-a"),
+            '<a id="my-a" href="..." title="...">Hello!</a>',
+        )
+        self.assertEqual(
+            add_html_id('Hello\n<div class="...">\nGoodbye\n</div>', "my-div"),
+            'Hello\n<div id="my-div" class="...">\nGoodbye\n</div>',
+        )
 
     def test_render_markdown(self):
         self.assertTrue(callable(render_markdown))

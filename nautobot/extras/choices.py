@@ -62,6 +62,13 @@ class CustomFieldTypeChoices(ChoiceSet):
         (TYPE_JSON, "JSON"),
     )
 
+    REGEX_TYPES = (
+        TYPE_TEXT,
+        TYPE_URL,
+        TYPE_SELECT,
+        TYPE_MULTISELECT,
+    )
+
 
 #
 # CustomLinks

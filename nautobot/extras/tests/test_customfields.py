@@ -4,6 +4,7 @@ from django.conf import settings
 from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ValidationError
 from django.db.models import ProtectedError
+from django.test import override_settings
 from django.urls import reverse
 from rest_framework import status
 
@@ -328,6 +329,52 @@ class CustomFieldTest(TestCase):
 
         # Delete the custom field
         cf.delete()
+
+    @override_settings(
+        CELERY_TASK_ALWAYS_EAGER=True,
+        CELERY_TASK_EAGER_PROPOGATES=True,
+        CELERY_BROKER_URL="memory://",
+        CELERY_BACKEND="memory",
+    )
+    def test_regex_validation(self):
+        obj_type = ContentType.objects.get_for_model(Site)
+
+        for cf_type in CustomFieldTypeChoices.REGEX_TYPES:
+            # validation for select and multi-select are performed on the CustomFieldChoice model
+            if "select" in cf_type:
+                continue
+
+            # Create a custom field
+            cf = CustomField(
+                type=cf_type,
+                name=f"cf_test_{cf_type}",
+                required=False,
+                validation_regex="A.C[01]x?",
+            )
+            cf.save()
+            cf.content_types.set([obj_type])
+
+            # Assign values to the first Site
+            site = Site.objects.first()
+
+            non_matching_values = ["abc1", "AC1", "00AbC", "abc1x", "00abc1x00"]
+            error_message = f"Value must match regex '{cf.validation_regex}'"
+            for value in non_matching_values:
+                with self.subTest(cf_type=cf_type, value=value):
+                    with self.assertRaisesMessage(ValidationError, error_message):
+                        # 2.0 TODO: #824 cf.slug rather than cf.name
+                        site.cf[cf.name] = value
+                        site.validated_save()
+
+            matching_values = ["ABC1", "00AbC0", "00ABC0x00"]
+            for value in matching_values:
+                with self.subTest(cf_type=cf_type, value=value):
+                    # 2.0 TODO: #824 cf.slug rather than cf.name
+                    site.cf[cf.name] = value
+                    site.validated_save()
+
+            # Delete the custom field
+            cf.delete()
 
 
 class CustomFieldManagerTest(TestCase):
@@ -1598,6 +1645,49 @@ class CustomFieldChoiceTest(TestCase):
         else:
             self.assertEqual(CustomField.objects.count(), 0)
         self.assertEqual(CustomFieldChoice.objects.count(), 0)
+
+    @override_settings(
+        CELERY_TASK_ALWAYS_EAGER=True,
+        CELERY_TASK_EAGER_PROPOGATES=True,
+        CELERY_BROKER_URL="memory://",
+        CELERY_BACKEND="memory",
+    )
+    def test_regex_validation(self):
+        obj_type = ContentType.objects.get_for_model(Site)
+
+        for cf_type in CustomFieldTypeChoices.REGEX_TYPES:
+            # only validation for select and multi-select are performed on the CustomFieldChoice model
+            if "select" not in cf_type:
+                continue
+
+            # Create a custom field
+            cf = CustomField(
+                type=cf_type,
+                name=f"cf_test_{cf_type}",
+                required=False,
+                validation_regex="A.C[01]x?",
+            )
+            cf.save()
+            cf.content_types.set([obj_type])
+
+            non_matching_values = ["abc1", "AC1", "00AbC", "abc1x", "00abc1x00"]
+            for value in non_matching_values:
+                error_message = f"Value must match regex {cf.validation_regex} got {value}."
+                with self.subTest(cf_type=cf_type, value=value):
+                    with self.assertRaisesMessage(ValidationError, error_message):
+                        cfc = CustomFieldChoice.objects.create(field=cf, value=value)
+                        cfc.validated_save()
+
+            CustomFieldChoice.objects.all().delete()
+
+            matching_values = ["ABC1", "00AbC0", "00ABC0x00"]
+            for value in matching_values:
+                with self.subTest(cf_type=cf_type, value=value):
+                    cfc = CustomFieldChoice.objects.create(field=cf, value=value)
+                    cfc.validated_save()
+
+            # Delete the custom field
+            cf.delete()
 
 
 class CustomFieldBackgroundTasks(CeleryTestCase):

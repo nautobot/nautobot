@@ -351,9 +351,9 @@ class MappedPredicatesFilterMixin:
         super().__init__(*args, **kwargs)
 
         # Generate the query with a sentinel value to validate it and surface parse errors.
-        self.generate_query(self.filter_predicates, value="")
+        self.generate_query(value="", filter_predicates=self.filter_predicates)
 
-    def generate_query(self, filter_predicates, value):
+    def generate_query(self, value, filter_predicates=None, **kwargs):
         """
         Given a mapping of `filter_predicates` and a `value`, return a `Q` object for 2-tuple of
         predicate=value.
@@ -401,7 +401,7 @@ class MappedPredicatesFilterMixin:
             return qs
 
         # Evaluate the query and stash it for later use (such as introspection or debugging)
-        query = self.generate_query(self.filter_predicates, value)
+        query = self.generate_query(value=value, filter_predicates=self.filter_predicates)
         qs = self.get_method(qs)(query)
         self._most_recent_query = query
         return qs.distinct()
@@ -486,7 +486,10 @@ class TreeNodeMultipleChoiceFilter(NaturalKeyOrPKMultipleChoiceFilter):
     would match both "Athens" and "Durham".
     """
 
-    def filter(self, qs, value):
+    def generate_query(self, value, qs=None, **kwargs):
+        """
+        Given a filter value, return a `Q` object that accounts for nested tree node descendants.
+        """
         if value:
             if any(isinstance(node, TreeNode) for node in value):
                 # django-tree-queries
@@ -499,7 +502,31 @@ class TreeNodeMultipleChoiceFilter(NaturalKeyOrPKMultipleChoiceFilter):
 
         # This new_value is going to be a list of querysets that needs to be flattened.
         value = list(flatten_iterable(value))
-        return super().filter(qs, value)
+
+        # Construct a list of filter predicates that will be used to generate the Q object.
+        predicates = []
+        for obj in value:
+            # Try to get the `to_field_name` (e.g. `slug`) or just pass the object through.
+            val = getattr(obj, self.field.to_field_name, obj)
+            if val == self.null_value:
+                val = None
+            predicates.append(self.get_filter_predicate(val))
+
+        # Construct a nested OR query from the list of filter predicates derived from the flattened
+        # listed of descendant objects.
+        query = models.Q()
+        for predicate in predicates:
+            query |= models.Q(**predicate)
+
+        return query
+
+    def filter(self, qs, value):
+        if value in EMPTY_VALUES:
+            return qs
+
+        # Fetch the generated Q object and filter the incoming qs with it before passing it along.
+        query = self.generate_query(value)
+        return self.get_method(qs)(query)
 
 
 #
