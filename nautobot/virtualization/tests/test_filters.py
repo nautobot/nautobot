@@ -119,16 +119,12 @@ class ClusterTestCase(FilterTestCases.FilterTestCase, FilterTestCases.TenancyFil
             ClusterGroup.objects.create(name="Cluster Group 3", slug="cluster-group-3"),
         )
 
-        regions = (
-            Region.objects.create(name="Test Region 1", slug="test-region-1"),
-            Region.objects.create(name="Test Region 2", slug="test-region-2"),
-            Region.objects.create(name="Test Region 3", slug="test-region-3"),
-        )
+        cls.regions = Region.objects.filter(sites__isnull=False, children__isnull=True, parent__isnull=True)[:3]
 
-        sites = (
-            Site.objects.create(name="Test Site 1", slug="test-site-1", region=regions[0]),
-            Site.objects.create(name="Test Site 2", slug="test-site-2", region=regions[1]),
-            Site.objects.create(name="Test Site 3", slug="test-site-3", region=regions[2]),
+        cls.sites = (
+            Site.objects.filter(region=cls.regions[0]).first(),
+            Site.objects.filter(region=cls.regions[1]).first(),
+            Site.objects.filter(region=cls.regions[2]).first(),
         )
 
         tenants = Tenant.objects.filter(group__isnull=False)[:3]
@@ -138,7 +134,7 @@ class ClusterTestCase(FilterTestCases.FilterTestCase, FilterTestCases.TenancyFil
                 name="Cluster 1",
                 type=cluster_types[0],
                 group=cluster_groups[0],
-                site=sites[0],
+                site=cls.sites[0],
                 tenant=tenants[0],
                 comments="This is cluster 1",
             ),
@@ -146,7 +142,7 @@ class ClusterTestCase(FilterTestCases.FilterTestCase, FilterTestCases.TenancyFil
                 name="Cluster 2",
                 type=cluster_types[1],
                 group=cluster_groups[1],
-                site=sites[1],
+                site=cls.sites[1],
                 tenant=tenants[1],
                 comments="This is cluster 2",
             ),
@@ -154,7 +150,7 @@ class ClusterTestCase(FilterTestCases.FilterTestCase, FilterTestCases.TenancyFil
                 name="Cluster 3",
                 type=cluster_types[2],
                 group=cluster_groups[2],
-                site=sites[2],
+                site=cls.sites[2],
                 tenant=tenants[2],
                 comments="This is cluster 3",
             ),
@@ -165,7 +161,7 @@ class ClusterTestCase(FilterTestCases.FilterTestCase, FilterTestCases.TenancyFil
         devicerole = DeviceRole.objects.create(name="Device Role", slug="device-role", color="ff0000")
 
         cls.device = Device.objects.create(
-            name="Device 1", device_type=devicetype, device_role=devicerole, site=sites[0], cluster=clusters[0]
+            name="Device 1", device_type=devicetype, device_role=devicerole, site=cls.sites[0], cluster=clusters[0]
         )
 
         cls.virtualmachine = VirtualMachine.objects.create(name="Virtual Machine 1", cluster=clusters[1])
@@ -211,18 +207,22 @@ class ClusterTestCase(FilterTestCases.FilterTestCase, FilterTestCases.TenancyFil
             self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
 
     def test_region(self):
-        regions = Region.objects.all()[:2]
+        regions = list(self.regions[:2])
         params = {"region_id": [regions[0].pk, regions[1].pk]}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+        self.assertQuerysetEqual(
+            self.filterset(params, self.queryset).qs, self.queryset.filter(site__region__in=regions)
+        )
         params = {"region": [regions[0].slug, regions[1].slug]}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+        self.assertQuerysetEqual(
+            self.filterset(params, self.queryset).qs, self.queryset.filter(site__region__in=regions)
+        )
 
     def test_site(self):
-        sites = Site.objects.all()[:2]
+        sites = list(self.sites[:2])
         params = {"site_id": [sites[0].pk, sites[1].pk]}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+        self.assertQuerysetEqual(self.filterset(params, self.queryset).qs, self.queryset.filter(site__in=sites))
         params = {"site": [sites[0].slug, sites[1].slug]}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+        self.assertQuerysetEqual(self.filterset(params, self.queryset).qs, self.queryset.filter(site__in=sites))
 
     def test_group(self):
         groups = ClusterGroup.objects.all()[:2]
@@ -264,16 +264,12 @@ class VirtualMachineTestCase(FilterTestCases.FilterTestCase, FilterTestCases.Ten
             ClusterGroup.objects.create(name="Cluster Group 3", slug="cluster-group-3"),
         )
 
-        regions = (
-            Region.objects.create(name="Test Region 1", slug="test-region-1"),
-            Region.objects.create(name="Test Region 2", slug="test-region-2"),
-            Region.objects.create(name="Test Region 3", slug="test-region-3"),
-        )
+        cls.regions = Region.objects.filter(sites__isnull=False, children__isnull=True, parent__isnull=True)[:3]
 
-        sites = (
-            Site.objects.create(name="Test Site 1", slug="test-site-1", region=regions[0]),
-            Site.objects.create(name="Test Site 2", slug="test-site-2", region=regions[1]),
-            Site.objects.create(name="Test Site 3", slug="test-site-3", region=regions[2]),
+        cls.sites = (
+            Site.objects.filter(region=cls.regions[0]).first(),
+            Site.objects.filter(region=cls.regions[1]).first(),
+            Site.objects.filter(region=cls.regions[2]).first(),
         )
 
         clusters = (
@@ -281,19 +277,19 @@ class VirtualMachineTestCase(FilterTestCases.FilterTestCase, FilterTestCases.Ten
                 name="Cluster 1",
                 type=cluster_types[0],
                 group=cluster_groups[0],
-                site=sites[0],
+                site=cls.sites[0],
             ),
             Cluster.objects.create(
                 name="Cluster 2",
                 type=cluster_types[1],
                 group=cluster_groups[1],
-                site=sites[1],
+                site=cls.sites[1],
             ),
             Cluster.objects.create(
                 name="Cluster 3",
                 type=cluster_types[2],
                 group=cluster_groups[2],
-                site=sites[2],
+                site=cls.sites[2],
             ),
         )
 
@@ -485,18 +481,26 @@ class VirtualMachineTestCase(FilterTestCases.FilterTestCase, FilterTestCases.Ten
         # self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
 
     def test_region(self):
-        regions = Region.objects.all()[:2]
+        regions = list(self.regions[:2])
         params = {"region_id": [regions[0].pk, regions[1].pk]}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+        self.assertQuerysetEqual(
+            self.filterset(params, self.queryset).qs, self.queryset.filter(cluster__site__region__in=regions)
+        )
         params = {"region": [regions[0].slug, regions[1].slug]}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+        self.assertQuerysetEqual(
+            self.filterset(params, self.queryset).qs, self.queryset.filter(cluster__site__region__in=regions)
+        )
 
     def test_site(self):
-        sites = Site.objects.all()[:2]
+        sites = list(self.sites[:2])
         params = {"site_id": [sites[0].pk, sites[1].pk]}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+        self.assertQuerysetEqual(
+            self.filterset(params, self.queryset).qs, self.queryset.filter(cluster__site__in=sites)
+        )
         params = {"site": [sites[0].slug, sites[1].slug]}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+        self.assertQuerysetEqual(
+            self.filterset(params, self.queryset).qs, self.queryset.filter(cluster__site__in=sites)
+        )
 
     def test_role(self):
         roles = self.roles[:2]
