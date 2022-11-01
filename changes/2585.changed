@@ -1,5 +1,0 @@
-Updated dependency `django-health-check` from 3.16.5 to 3.16.7.
-Updated dependency `psycopg2-binary` from 2.9.3 to 2.9.4.
-Updated development dependency `coverage` from 6.4.2 to 6.4.4.
-Updated development dependency `invoke` from 1.7.1 to 1.7.3.
-Updated development dependency `mkdocs-material` from 8.4.2 to 8.4.4.
