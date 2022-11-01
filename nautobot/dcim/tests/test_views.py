@@ -5,6 +5,7 @@ import yaml
 
 from django.contrib.auth import get_user_model
 from django.contrib.contenttypes.models import ContentType
+from django.db.models import Q
 from django.test import override_settings
 from django.urls import reverse
 from netaddr import EUI
@@ -33,6 +34,7 @@ from nautobot.dcim.choices import (
 from nautobot.dcim.filters import ConsoleConnectionFilterSet, InterfaceConnectionFilterSet, PowerConnectionFilterSet
 from nautobot.dcim.models import (
     Cable,
+    CablePath,
     ConsolePort,
     ConsolePortTemplate,
     ConsoleServerPort,
@@ -80,7 +82,7 @@ from nautobot.extras.models import (
 from nautobot.ipam.models import VLAN, IPAddress
 from nautobot.tenancy.models import Tenant
 from nautobot.users.models import ObjectPermission
-from nautobot.utilities.testing import ViewTestCases, extract_page_body, post_data
+from nautobot.utilities.testing import ViewTestCases, extract_page_body, ModelViewTestCase, post_data
 
 # Use the proper swappable User model
 User = get_user_model()
@@ -614,26 +616,74 @@ class RackTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         # Create Power Port for device
         powerport1 = PowerPort.objects.create(device=devices[0], name="Power Port 11")
         powerfeed1 = PowerFeed.objects.create(
-            power_panel=self.powerpanels[0], name="Power Feed 11", phase="three-phase"
+            power_panel=self.powerpanels[0],
+            name="Power Feed 11",
+            phase="single-phase",
+            voltage=240,
+            amperage=20,
+            rack=self.racks[0],
+        )
+        powerfeed2 = PowerFeed.objects.create(
+            power_panel=self.powerpanels[0],
+            name="Power Feed 12",
+            phase="single-phase",
+            voltage=240,
+            amperage=20,
+            rack=self.racks[0],
         )
 
         # Create power outlet to the power port
-        poweroutlet1 = PowerOutlet.objects.create(device=devices[0], name="Power Outlet 11")
+        poweroutlet1 = PowerOutlet.objects.create(device=devices[0], name="Power Outlet 11", power_port=powerport1)
 
-        # connect power port to power feed (3 phase)
+        # connect power port to power feed (single-phase)
         cable1 = Cable(termination_a=powerfeed1, termination_b=powerport1, status=self.cable_connected)
         cable1.save()
 
         # Create power port for 2nd device
-        powerport2 = PowerPort.objects.create(device=devices[1], name="Power Port 12")
+        powerport2 = PowerPort.objects.create(device=devices[1], name="Power Port 12", allocated_draw=1200)
 
         # Connect power port to power outlet (dev1)
         cable2 = Cable(termination_a=powerport2, termination_b=poweroutlet1, status=self.cable_connected)
         cable2.save()
 
+        # Create another power port for 2nd device and directly connect to the second PowerFeed.
+        powerport3 = PowerPort.objects.create(device=devices[1], name="Power Port 13", allocated_draw=2400)
+        cable3 = Cable(termination_a=powerfeed2, termination_b=powerport3, status=self.cable_connected)
+        cable3.save()
+
         # Test the view
         response = self.client.get(reverse("dcim:rack", args=[self.racks[0].pk]))
         self.assertHttpStatus(response, 200)
+        # Validate Power Utilization for PowerFeed 11 is displaying correctly on Rack View.
+        power_feed_11_html = """
+        <td><div title="Used: 1200&#13;Count: 3840" class="progress text-center">
+            <div class="progress-bar progress-bar-success"
+                role="progressbar" aria-valuenow="31" aria-valuemin="0" aria-valuemax="100" style="width: 31%">
+                31%
+            </div>
+        </div></td>
+        """
+        self.assertContains(response, power_feed_11_html, html=True)
+        # Validate Power Utilization for PowerFeed12 is displaying correctly on Rack View.
+        power_feed_12_html = """
+        <td><div title="Used: 2400&#13;Count: 3840" class="progress text-center">
+            <div class="progress-bar progress-bar-success"
+                role="progressbar" aria-valuenow="62" aria-valuemin="0" aria-valuemax="100" style="width: 62%">
+                62%
+            </div>
+        </div></td>
+        """
+        self.assertContains(response, power_feed_12_html, html=True)
+        # Validate Rack Power Utilization for Combined powerfeeds is displaying correctly on the Rack View
+        total_utilization_html = """
+        <td><div title="Used: 3600&#13;Count: 7680" class="progress text-center">
+            <div class="progress-bar progress-bar-success"
+                role="progressbar" aria-valuenow="46" aria-valuemin="0" aria-valuemax="100" style="width: 46%">
+                46%
+            </div>
+        </div></td>
+        """
+        self.assertContains(response, total_utilization_html, html=True)
 
 
 class ManufacturerTestCase(ViewTestCases.OrganizationalObjectViewTestCase):
@@ -2292,9 +2342,6 @@ class CableTestCase(
             "data": post_data({"confirm": True}),
         }
 
-        from nautobot.dcim.models import CablePath
-        from django.db.models import Q
-
         termination_ct = ContentType.objects.get_for_model(CircuitTermination)
         interface_ct = ContentType.objects.get_for_model(Interface)
 
@@ -2813,3 +2860,32 @@ class PowerFeedTestCase(ViewTestCases.PrimaryObjectViewTestCase):
 
         url = reverse("dcim:powerfeed", kwargs=dict(pk=powerfeed.pk))
         self.assertHttpStatus(self.client.get(url), 200)
+
+
+class PathTraceViewTestCase(ModelViewTestCase):
+    def test_get_cable_path_trace_do_not_throw_error(self):
+        """
+        Assert selecting a related path in cable trace view loads successfully.
+
+        (https://github.com/nautobot/nautobot/issues/1741)
+        """
+        self.add_permissions("dcim.view_cable", "dcim.view_rearport")
+        active = Status.objects.get(slug="active")
+        connected = Status.objects.get(slug="connected")
+        manufacturer = Manufacturer.objects.create(name="Test Manufacturer 1", slug="test-manufacturer-1")
+        devicetype = DeviceType.objects.create(manufacturer=manufacturer, model="Device Type 1", slug="device-type-1")
+        devicerole = DeviceRole.objects.create(name="Test Device Role 1", slug="test-device-role-1", color="ff0000")
+        site = Site.objects.create(name="Site 1", slug="site-1", status=active)
+        device = Device.objects.create(
+            device_type=devicetype, device_role=devicerole, name="Device 1", site=site, status=active
+        )
+        obj = RearPort.objects.create(device=device, name="Rear Port 1", type=PortTypeChoices.TYPE_8P8C)
+        peer_obj = Interface.objects.create(device=device, name="eth0", status=active)
+        Cable.objects.create(termination_a=obj, termination_b=peer_obj, label="Cable 1", status=connected)
+
+        url = reverse("dcim:rearport_trace", args=[obj.pk])
+        cablepath_id = CablePath.objects.first().id
+        response = self.client.get(url + f"?cablepath_id={cablepath_id}")
+        self.assertHttpStatus(response, 200)
+        content = extract_page_body(response.content.decode(response.charset))
+        self.assertInHTML("<h1>Cable Trace for Rear Port Rear Port 1</h1>", content)

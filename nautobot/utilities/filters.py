@@ -23,9 +23,9 @@ from nautobot.utilities.constants import (
     FILTER_CHAR_BASED_LOOKUP_MAP,
     FILTER_NEGATION_LOOKUP_MAP,
     FILTER_NUMERIC_BASED_LOOKUP_MAP,
-    FILTER_TREENODE_NEGATION_LOOKUP_MAP,
 )
 from nautobot.utilities.forms.fields import MultiMatchModelMultipleChoiceField
+from nautobot.utilities.utils import flatten_iterable
 
 from taggit.managers import TaggableManager
 
@@ -351,9 +351,9 @@ class MappedPredicatesFilterMixin:
         super().__init__(*args, **kwargs)
 
         # Generate the query with a sentinel value to validate it and surface parse errors.
-        self.generate_query(self.filter_predicates, value="")
+        self.generate_query(value="", filter_predicates=self.filter_predicates)
 
-    def generate_query(self, filter_predicates, value):
+    def generate_query(self, value, filter_predicates=None, **kwargs):
         """
         Given a mapping of `filter_predicates` and a `value`, return a `Q` object for 2-tuple of
         predicate=value.
@@ -401,7 +401,7 @@ class MappedPredicatesFilterMixin:
             return qs
 
         # Evaluate the query and stash it for later use (such as introspection or debugging)
-        query = self.generate_query(self.filter_predicates, value)
+        query = self.generate_query(value=value, filter_predicates=self.filter_predicates)
         qs = self.get_method(qs)(query)
         self._most_recent_query = query
         return qs.distinct()
@@ -445,18 +445,12 @@ class NaturalKeyOrPKMultipleChoiceFilter(django_filters.ModelMultipleChoiceFilte
             v = str(v)  # Cast possible UUID instance to a string
             is_pk = True
 
-        # If it's not a pk and not a list/qs generate then it's a slug and the filter predicate
-        # needs to be nested (e.g. `{"site__slug": "ams01"}`) so that it can be useable in `Q`
-        # objects.
-        #
-        # FIXME(jathan): It feels weird to have a list/qs make its way to `get_filter_predicate()`
-        # which if you inspect the source for `django_filters.MultipleChoiceFilter.filter()` should
-        # be handling those to generate singular filter predicates and concatentating them.
-        if not is_pk and not isinstance(v, (list, models.QuerySet)):
+        # If it's not a pk, then it's a slug and the filter predicate needs to be nested (e.g.
+        # `{"site__slug": "ams01"}`) so that it can be usable in `Q` objects.
+        if not is_pk:
             name = f"{self.field_name}__{self.field.to_field_name}"
-        # Otherwise just trust the field_name
         else:
-            logger.debug("UUID or list/qs detected: Filtering using field name")
+            logger.debug("UUID detected: Filtering using field name")
             name = self.field_name
 
         if name and self.lookup_expr != django_filters.conf.settings.DEFAULT_LOOKUP_EXPR:
@@ -492,11 +486,10 @@ class TreeNodeMultipleChoiceFilter(NaturalKeyOrPKMultipleChoiceFilter):
     would match both "Athens" and "Durham".
     """
 
-    def __init__(self, *args, **kwargs):
-        kwargs.setdefault("lookup_expr", "in")
-        super().__init__(*args, **kwargs)
-
-    def filter(self, qs, value):
+    def generate_query(self, value, qs=None, **kwargs):
+        """
+        Given a filter value, return a `Q` object that accounts for nested tree node descendants.
+        """
         if value:
             if any(isinstance(node, TreeNode) for node in value):
                 # django-tree-queries
@@ -506,7 +499,34 @@ class TreeNodeMultipleChoiceFilter(NaturalKeyOrPKMultipleChoiceFilter):
                 value = [
                     node.get_descendants(include_self=True) if not isinstance(node, str) else node for node in value
                 ]
-        return super().filter(qs, value)
+
+        # This new_value is going to be a list of querysets that needs to be flattened.
+        value = list(flatten_iterable(value))
+
+        # Construct a list of filter predicates that will be used to generate the Q object.
+        predicates = []
+        for obj in value:
+            # Try to get the `to_field_name` (e.g. `slug`) or just pass the object through.
+            val = getattr(obj, self.field.to_field_name, obj)
+            if val == self.null_value:
+                val = None
+            predicates.append(self.get_filter_predicate(val))
+
+        # Construct a nested OR query from the list of filter predicates derived from the flattened
+        # listed of descendant objects.
+        query = models.Q()
+        for predicate in predicates:
+            query |= models.Q(**predicate)
+
+        return query
+
+    def filter(self, qs, value):
+        if value in EMPTY_VALUES:
+            return qs
+
+        # Fetch the generated Q object and filter the incoming qs with it before passing it along.
+        query = self.generate_query(value)
+        return self.get_method(qs)(query)
 
 
 #
@@ -560,10 +580,6 @@ class BaseFilterSet(django_filters.FilterSet):
         ):
             lookup_map = FILTER_NUMERIC_BASED_LOOKUP_MAP
 
-        elif isinstance(existing_filter, (TreeNodeMultipleChoiceFilter,)):
-            # TreeNodeMultipleChoiceFilter only support negation but must maintain the `in` lookup expression
-            lookup_map = FILTER_TREENODE_NEGATION_LOOKUP_MAP
-
         # These filter types support only negation
         elif isinstance(
             existing_filter,
@@ -571,12 +587,15 @@ class BaseFilterSet(django_filters.FilterSet):
                 django_filters.ModelChoiceFilter,
                 django_filters.ModelMultipleChoiceFilter,
                 TagFilter,
+                TreeNodeMultipleChoiceFilter,
             ),
         ):
             lookup_map = FILTER_NEGATION_LOOKUP_MAP
+
         # These filter types support only negation
         elif existing_filter.extra.get("choices"):
             lookup_map = FILTER_NEGATION_LOOKUP_MAP
+
         elif isinstance(
             existing_filter,
             (

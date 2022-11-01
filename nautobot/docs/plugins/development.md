@@ -835,6 +835,7 @@ Plugins can optionally expose their models via Django's built-in [administrative
 
 ```python
 # admin.py
+from django.contrib import admin
 from nautobot.core.admin import NautobotModelAdmin
 
 from .models import Animal
@@ -1188,7 +1189,7 @@ Below is a theoretical `urls.py` file for `YourPluginModel`:
 from django.urls import path
 
 from nautobot.core.views.routers import NautobotUIViewSetRouter
-from nautobot.plugins import views
+from your_plugin import views
 
 
 router = NautobotUIViewSetRouter()
