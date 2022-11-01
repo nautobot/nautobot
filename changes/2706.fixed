@@ -1,0 +1,1 @@
+Fixed site latitude or longitude field raise error if value specified is a float.
