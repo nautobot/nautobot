@@ -85,7 +85,7 @@ class HomeViewTestCase(TestCase):
         response = self.client.get(url)
         response_content = response.content.decode(response.charset).replace("\n", "")
 
-        footer_hostname_version_pattern = re.compile('<p class="text-muted">\\s+\\S+\\s+\\(v[\\d.]+\\)\\s+<\\/p>')
+        footer_hostname_version_pattern = re.compile(r'<p class="text-muted">\s+\S+\s+\(v1\.2\.3\)\s+</p>')
         self.assertRegex(response_content, footer_hostname_version_pattern)
 
         self.client.logout()
