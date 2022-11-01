@@ -7,13 +7,13 @@ Device Redundancy Groups are created first, before the devices are assigned to t
 
 A failover strategy represents intended operation mode of the group. Supported failover strategy are: Active/Active and Active/Standby.
 
-Secrets group are used to inform store secret information used by failover or a cluster of devices.
+Secrets groups could be used to inform store secret information used by failover or a cluster of devices.
 
-Device Redundancy Group Priority is a Device attribute defined during assigning a Device to a Device Redundancy Group. Device Redundancy Priority represents the priority the device has in the device redundancy group.
+Device Redundancy Group Priority is a Device attribute defined during assigning a Device to a Device Redundancy Group. This field represents the priority the device has in the device redundancy group.
 
 ## Example use of Device Redundancy Groups - Cisco ASA 5500 Series Active/Standby Failover
 
-This document provides an example of generating a Cisco ASA device's desired failover configuration based on data stored in Nautobot Device Redundancy Groups. 
+This document provides an example of generating a Cisco ASA device's desired failover configuration based on data stored in Nautobot Device Redundancy Groups.
 A GraphQL query is used to retrieve the relevant data, which is then rendered through a Jinja2 template to produce the desired configuration.
 
 As one of the use cases for Device Redundacy Groups, introduced in Nautobot 1.5 release, is to model failover pairs, we will use the ASA 5500 Series in this example with details as follows:
@@ -22,12 +22,12 @@ As one of the use cases for Device Redundacy Groups, introduced in Nautobot 1.5 
 * Each firewall device forming a failover cluster has a virtual interface dedicated for failover usage (named "failover-link") and addressed in 172.27.48.0/31 network
 * Virtual failover interface has a physical parent interface assigned ("gigabitethernet0/3")
 * Following redundancy group priorities are assigned in a failover pair:
-  * Priority 100 for a Primary Failover unit
-  * Priority 50 for a Secondary Failover unit
+    * Priority 100 for a Primary Failover unit
+    * Priority 50 for a Secondary Failover unit
 
 ### Querying for the data
 
-To retrieve information about devices forming an ASA Failover pair, we will use GraphQL query and the `get_gql_failover_details` Python method.
+To retrieve information about devices forming an ASA Failover pair, we will use a GraphQL query and the `get_gql_failover_details` Python method.
 This method takes a `device_name` as an argument.
 
 ```python
@@ -222,7 +222,7 @@ Before rendering the data, we will process the data to simplify data variables w
 
 ### Creating Cisco ASA Configuration Template - Common for Primary and Secondary Units
 
-Following snippet represents an example Cisco ASA Failover configuration template:
+The following snippet represents an example Cisco ASA failover configuration template:
 
 ```python
 # Configuration Template for Cisco ASA
@@ -284,20 +284,20 @@ failover
 !
 ```
 
-## Example use of Device Redundancy Groups - Spine Redundancy in a Leaf and Spine (Clos) Topology 
+## Example use of Device Redundancy Groups - Spine Redundancy in a Leaf and Spine (Clos) Topology
 
 Another example for the redundancy group use case could be a spine redundancy in the Leaf and Spine topology.
 Spine redundancy is important while performing the Day-2 operations, such as OS-updates.
 
 In this scenario, no more than 1 device participating in a Device Redundancy Group should be updated and rebooted at the same time. In order to track this, we will create a new Device custom field  named `upgrade_operational_state` and assign it one of the statues: `pre_upgrade`, `in_reboot`, `post_upgrade`. If a device with a spine role assigned is in state `in_reboot`, no other redundancy group members should be OS-upgraded at the same time.
 
-### Querying for the data - Spine Redundancy in a Leaf and Spine (Clos) Topology 
+### Querying for the data - Spine Redundancy in a Leaf and Spine (Clos) Topology
 
 To retrieve the data about devices forming a Spine redundancy group, we will use the following GraphQL query:
 
 ```text
 query {
-	device_redundancy_groups(name__ie: "nyc-spines") {
+    device_redundancy_groups(name__ie: "nyc-spines") {
         name
         members {
           name
@@ -310,7 +310,7 @@ query {
 }
 ```
 
-### Retrieving the data - - Spine Redundancy in a Leaf and Spine (Clos) Topology 
+### Retrieving the data - Spine Redundancy in a Leaf and Spine (Clos) Topology
 
 An example data returned from Nautobot is presented below.
 

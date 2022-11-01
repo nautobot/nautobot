@@ -13,3 +13,5 @@ Each device must be assigned a site, device role, and operational [`status`](../
 Device names must be unique within a site, unless the device has been assigned to a tenant. Devices may also be unnamed.
 
 When a device has one or more interfaces with IP addresses assigned, a primary IP for the device can be designated, for both IPv4 and IPv6.
+
+For Devices forming a group (Failover, Load-Sharing, Redundacy or similar) refer to [Device Redundancy Groups](deviceredundancygroups.md) model documentation.
