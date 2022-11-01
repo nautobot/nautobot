@@ -127,7 +127,7 @@ class CSVFileField(forms.FileField):
 
         file = super().to_python(file)
         csv_str = file.read().decode("utf-8-sig").strip()
-        dialect = csv.Sniffer().sniff(csv_str)
+        dialect = csv.Sniffer().sniff(csv_str, delimiters=",")
         reader = csv.reader(csv_str.splitlines(), dialect)
         headers, records = parse_csv(reader)
 
