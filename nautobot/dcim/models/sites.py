@@ -217,6 +217,7 @@ class Site(PrimaryModel, StatusModel):
         )
 
     def clean_fields(self, exclude=None):
+        """Explicitly convert latitude/longitude to strings to avoid floating-point precision errors."""
         if self.longitude is not None:
             self.longitude = str(self.longitude)
         if self.latitude is not None:
