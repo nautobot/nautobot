@@ -57,13 +57,10 @@ def hyperlinked_object(value):
     if value is None:
         return placeholder(value)
     display = value.display if hasattr(value, "display") else str(value)
-    element_id = f" id=ipv{value.family}" if hasattr(value, "family") else ""
     if hasattr(value, "get_absolute_url"):
         if hasattr(value, "description") and value.description:
-            return format_html(
-                '<a href="{}" title="{}"{}>{}</a>', value.get_absolute_url(), value.description, element_id, display
-            )
-        return format_html('<a href="{}"{}>{}</a>', value.get_absolute_url(), element_id, display)
+            return format_html('<a href="{}" title="{}">{}</a>', value.get_absolute_url(), value.description, display)
+        return format_html('<a href="{}">{}</a>', value.get_absolute_url(), display)
     return format_html("{}", display)
 
 
@@ -87,6 +84,30 @@ def placeholder(value):
     if value:
         return value
     return mark_safe(HTML_NONE)
+
+
+@library.filter()
+@register.filter()
+def add_html_id(element_str, id_str):
+    """Add an HTML `id="..."` attribute to the given HTML element string.
+
+    Args:
+        element_str (str): String describing an HTML element.
+        id_str (str): String to add as the `id` attribute of the element_str.
+
+    Returns:
+        str: HTML string with added `id`.
+
+    Example:
+        >>> add_html_id("<div></div>", "my-div")
+        '<div id="my-div"></div>'
+        >>> add_html_id('<a href="..." title="...">Hello!</a>', "my-a")
+        '<a id="my-a" href="..." title="...">Hello!</a>'
+    """
+    match = re.match(r"^(.*?<\w+) ?(.*)$", element_str, flags=re.DOTALL)
+    if not match:
+        return element_str
+    return mark_safe(match.group(1) + format_html(' id="{}" ', id_str) + match.group(2))
 
 
 @library.filter()

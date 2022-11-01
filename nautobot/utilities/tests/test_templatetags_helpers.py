@@ -6,6 +6,7 @@ from unittest import skipIf
 from nautobot.utilities.templatetags.helpers import (
     hyperlinked_object,
     placeholder,
+    add_html_id,
     render_boolean,
     render_json,
     render_yaml,
@@ -29,7 +30,6 @@ from nautobot.utilities.templatetags.helpers import (
 )
 from nautobot.extras.models import Status
 from nautobot.dcim.models import Site
-from nautobot.ipam.models import IPAddress
 from example_plugin.models import AnotherExampleModel, ExampleModel
 
 
@@ -53,16 +53,26 @@ class NautobotTemplatetagsHelperTest(TestCase):
         self.assertEqual(
             hyperlinked_object(site), '<a href="/dcim/sites/test-site/" title="An important site">Test Site</a>'
         )
-        # An IP address object gives a hyperlink with a proper element id
-        ipaddr1 = IPAddress.objects.create(address="1.1.1.1/32")
-        self.assertEqual(
-            hyperlinked_object(ipaddr1), f'<a href="/ipam/ip-addresses/{ipaddr1.id}/" id=ipv4>1.1.1.1/32</a>'
-        )
 
     def test_placeholder(self):
         self.assertEqual(placeholder(None), '<span class="text-muted">&mdash;</span>')
         self.assertEqual(placeholder([]), '<span class="text-muted">&mdash;</span>')
         self.assertEqual(placeholder("something"), "something")
+
+    def test_add_html_id(self):
+        # Case where what we have isn't actually a HTML element but just a bare string
+        self.assertEqual(add_html_id("hello", "my-id"), "hello")
+        # Basic success case
+        self.assertEqual(add_html_id("<div></div>", "my-div"), '<div id="my-div" ></div>')
+        # Cases of more complex HTML
+        self.assertEqual(
+            add_html_id('<a href="..." title="...">Hello!</a>', "my-a"),
+            '<a id="my-a" href="..." title="...">Hello!</a>',
+        )
+        self.assertEqual(
+            add_html_id('Hello\n<div class="...">\nGoodbye\n</div>', "my-div"),
+            'Hello\n<div id="my-div" class="...">\nGoodbye\n</div>',
+        )
 
     def test_render_markdown(self):
         self.assertTrue(callable(render_markdown))
