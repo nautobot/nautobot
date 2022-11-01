@@ -1136,4 +1136,5 @@ class SiteTestCase(TestCase):
         )
         site.validated_save()
 
-        self.assertTrue(site.present_in_database)
+        self.assertTrue(site.longitude, 55.22)
+        self.assertTrue(site.latitude, 55.22)
