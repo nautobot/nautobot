@@ -1,3 +1,4 @@
+from tree_queries.models import TreeNode
 from typing import Optional, Sequence
 import uuid
 
@@ -304,12 +305,18 @@ class ViewTestCases:
             }
             self.assertHttpStatus(self.client.post(**request), 302)
             self.assertEqual(initial_count + 1, self._get_queryset().count())
-            if hasattr(self.model, "last_updated"):
-                instance = self._get_queryset().order_by("last_updated").last()
+            # order_by() is no supported by django TreeNode,
+            # So we directly retrieve the instance by "slug".
+            if isinstance(self._get_queryset().first(), TreeNode):
+                instance = self._get_queryset().get(slug=self.form_data.get("slug"))
                 self.assertInstanceEqual(instance, self.form_data)
             else:
-                instance = self._get_queryset().last()
-                self.assertInstanceEqual(instance, self.form_data)
+                if hasattr(self.model, "last_updated"):
+                    instance = self._get_queryset().order_by("last_updated").last()
+                    self.assertInstanceEqual(instance, self.form_data)
+                else:
+                    instance = self._get_queryset().last()
+                    self.assertInstanceEqual(instance, self.form_data)
 
             if hasattr(self.model, "to_objectchange"):
                 # Verify ObjectChange creation
@@ -353,10 +360,16 @@ class ViewTestCases:
             }
             self.assertHttpStatus(self.client.post(**request), 302)
             self.assertEqual(initial_count + 1, self._get_queryset().count())
-            if hasattr(self.model, "last_updated"):
-                self.assertInstanceEqual(self._get_queryset().order_by("last_updated").last(), self.form_data)
+            # order_by() is no supported by django TreeNode,
+            # So we directly retrieve the instance by "slug".
+            if isinstance(self._get_queryset().first(), TreeNode):
+                instance = self._get_queryset().get(slug=self.form_data.get("slug"))
+                self.assertInstanceEqual(instance, self.form_data)
             else:
-                self.assertInstanceEqual(self._get_queryset().last(), self.form_data)
+                if hasattr(self.model, "last_updated"):
+                    self.assertInstanceEqual(self._get_queryset().order_by("last_updated").last(), self.form_data)
+                else:
+                    self.assertInstanceEqual(self._get_queryset().last(), self.form_data)
 
         def test_slug_autocreation(self):
             """Test that slug is autocreated through ORM."""

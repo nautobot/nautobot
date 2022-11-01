@@ -162,17 +162,8 @@ class ConfigContextTestCase(FilterTestCases.FilterTestCase):
     @classmethod
     def setUpTestData(cls):
 
-        regions = (
-            Region.objects.create(name="Test Region 1", slug="test-region-1"),
-            Region.objects.create(name="Test Region 2", slug="test-region-2"),
-            Region.objects.create(name="Test Region 3", slug="test-region-3"),
-        )
-
-        sites = (
-            Site.objects.create(name="Test Site 1", slug="test-site-1"),
-            Site.objects.create(name="Test Site 2", slug="test-site-2"),
-            Site.objects.create(name="Test Site 3", slug="test-site-3"),
-        )
+        regions = Region.objects.all()[:3]
+        sites = Site.objects.all()[:3]
 
         device_roles = (
             DeviceRole.objects.create(name="Device Role 1", slug="device-role-1"),
@@ -595,10 +586,7 @@ class ImageAttachmentTestCase(FilterTestCases.FilterTestCase):
         site_ct = ContentType.objects.get(app_label="dcim", model="site")
         rack_ct = ContentType.objects.get(app_label="dcim", model="rack")
 
-        sites = (
-            Site.objects.create(name="Site 1", slug="site-1"),
-            Site.objects.create(name="Site 2", slug="site-2"),
-        )
+        sites = Site.objects.all()[:2]
 
         racks = (
             Rack.objects.create(name="Rack 1", site=sites[0]),
@@ -824,7 +812,7 @@ class ObjectChangeTestCase(FilterTestCases.FilterTestCase):
             User.objects.create(username="user3"),
         )
 
-        site = Site.objects.create(name="Test Site 1", slug="test-site-1")
+        site = Site.objects.first()
         ipaddress = IPAddress.objects.create(address="192.0.2.1/24")
 
         ObjectChange.objects.create(
@@ -989,7 +977,7 @@ class RelationshipAssociationTestCase(FilterTestCases.FilterTestCase):
         manufacturer = Manufacturer.objects.create(name="Manufacturer 1", slug="manufacturer-1")
         devicetype = DeviceType.objects.create(manufacturer=manufacturer, model="Device Type 1", slug="device-type-1")
         devicerole = DeviceRole.objects.create(name="Device Role 1", slug="device-role-1")
-        site = Site.objects.create(name="Site 1", slug="site-1")
+        site = Site.objects.first()
         cls.devices = (
             Device.objects.create(name="Device 1", device_type=devicetype, device_role=devicerole, site=site),
             Device.objects.create(name="Device 2", device_type=devicetype, device_role=devicerole, site=site),
@@ -1107,7 +1095,7 @@ class RelationshipModelFilterSetTestCase(FilterTestCases.FilterTestCase):
         manufacturer = Manufacturer.objects.create(name="Manufacturer 1", slug="manufacturer-1")
         devicetype = DeviceType.objects.create(manufacturer=manufacturer, model="Device Type 1", slug="device-type-1")
         devicerole = DeviceRole.objects.create(name="Device Role 1", slug="device-role-1")
-        site = Site.objects.create(name="Site 1", slug="site-1")
+        site = Site.objects.first()
         cls.devices = (
             Device.objects.create(name="Device 1", device_type=devicetype, device_role=devicerole, site=site),
             Device.objects.create(name="Device 2", device_type=devicetype, device_role=devicerole, site=site),

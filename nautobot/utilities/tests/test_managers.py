@@ -17,12 +17,12 @@ class NaturalOrderByManagerTest(TestCase):
         Site.objects.bulk_create(Site(name=name, slug=name.lower()) for name in names)
 
         # Validate forward ordering
-        self.assertEqual(names, list(Site.objects.values_list("name", flat=True)))
+        self.assertEqual(names, list(Site.objects.filter(name__in=names).values_list("name", flat=True)))
 
         # Validate reverse ordering
         self.assertEqual(
             list(reversed(names)),
-            list(Site.objects.reverse().values_list("name", flat=True)),
+            list(Site.objects.filter(name__in=names).reverse().values_list("name", flat=True)),
         )
 
     def test_leading_digits(self):

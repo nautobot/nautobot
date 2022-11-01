@@ -3201,17 +3201,6 @@ class StatusTest(APIViewTestCases.APIViewTestCase):
     ]
     slug_source = "name"
 
-    def get_deletable_object(self):
-        return Status.objects.create(name="Delete Me", color="000000")
-
-    def get_deletable_object_pks(self):
-        statuses = [
-            Status.objects.create(name="Delete Me 1", color="ff0000"),
-            Status.objects.create(name="Delete Me 2", color="00ff00"),
-            Status.objects.create(name="Delete Me 3", color="0000ff"),
-        ]
-        return [status.pk for status in statuses]
-
 
 class TagTestVersion12(APIViewTestCases.APIViewTestCase):
     model = Tag

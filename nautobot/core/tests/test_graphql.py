@@ -83,7 +83,7 @@ class GraphQLTestCase(TestCase):
         GraphQLQuery.objects.create(
             name="GQL 2", slug="gql-2", query="query ($name: [String!]) { sites(name:$name) {name} }"
         )
-        self.region = Region.objects.create(name="Region")
+        self.region = Region.objects.first()
         self.sites = (
             Site.objects.create(name="Site-1", slug="site-1", region=self.region),
             Site.objects.create(name="Site-2", slug="site-2", region=self.region),
@@ -95,7 +95,7 @@ class GraphQLTestCase(TestCase):
         query = "{ query: sites {name} }"
         resp = execute_query(query, user=self.user).to_dict()
         self.assertFalse(resp["data"].get("error"))
-        self.assertEqual(len(resp["data"]["query"]), 3)
+        self.assertEqual(len(resp["data"]["query"]), Site.objects.all().count())
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     def test_execute_query_with_variable(self):
@@ -625,7 +625,8 @@ class GraphQLAPIPermissionTest(TestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertIsInstance(response.data["data"]["sites"], list)
         site_names = [item["name"] for item in response.data["data"]["sites"]]
-        self.assertEqual(site_names, ["Site 1", "Site 2"])
+        site_list = list(Site.objects.values_list("name", flat=True))
+        self.assertEqual(site_names, site_list)
 
 
 class GraphQLQueryTest(TestCase):
@@ -1247,22 +1248,31 @@ query {
             ('name: "Site-1"', 1),
             ('name: ["Site-1"]', 1),
             ('name: ["Site-1", "Site-2"]', 2),
-            ('name__ic: "Site"', 2),
-            ('name__ic: ["Site"]', 2),
-            ('name__nic: "Site"', 0),
-            ('name__nic: ["Site"]', 0),
+            ('name__ic: "Site"', Site.objects.filter(name__icontains="Site").count()),
+            ('name__ic: ["Site"]', Site.objects.filter(name__icontains="Site").count()),
+            ('name__nic: "Site"', Site.objects.exclude(name__icontains="Site").count()),
+            ('name__nic: ["Site"]', Site.objects.exclude(name__icontains="Site").count()),
             ('region: "region1"', 1),
             ('region: ["region1"]', 1),
             ('region: ["region1", "region2"]', 2),
-            ("asn: 65000", 1),
-            ("asn: [65099]", 1),
-            ("asn: [65000, 65099]", 2),
+            ("asn: 65000", Site.objects.filter(asn="65000").count()),
+            ("asn: [65099]", Site.objects.filter(asn="65099").count()),
+            ("asn: [65000, 65099]", Site.objects.filter(asn__in=["65000", "65099"]).count()),
             (f'id: "{self.site1.pk}"', 1),
             (f'id: ["{self.site1.pk}"]', 1),
             (f'id: ["{self.site1.pk}", "{self.site2.pk}"]', 2),
-            (f'status: "{self.site_statuses[0].slug}"', 1),
-            (f'status: ["{self.site_statuses[1].slug}"]', 1),
-            (f'status: ["{self.site_statuses[0].slug}", "{self.site_statuses[1].slug}"]', 2),
+            (
+                f'status: "{self.site_statuses[0].slug}"',
+                Site.objects.filter(status=self.site_statuses[0]).count(),
+            ),
+            (
+                f'status: ["{self.site_statuses[1].slug}"]',
+                Site.objects.filter(status=self.site_statuses[1]).count(),
+            ),
+            (
+                f'status: ["{self.site_statuses[0].slug}", "{self.site_statuses[1].slug}"]',
+                Site.objects.filter(status__in=self.site_statuses[:2]).count(),
+            ),
         )
 
         for filterv, nbr_expected_results in filters:
@@ -1496,7 +1506,12 @@ query {
                 query = "query { sites{ devices{ frontports(" + filterv + "){ id }}}}"
                 result = self.execute_query(query)
                 self.assertIsNone(result.errors)
-                self.assertEqual(len(result.data["sites"][0]["devices"][0]["frontports"]), nbr_expected_results)
+                for count, _ in enumerate(result.data["sites"]):
+                    if result.data["sites"][count]["devices"]:
+                        self.assertEqual(
+                            len(result.data["sites"][count]["devices"][0]["frontports"]), nbr_expected_results
+                        )
+                        break
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     def test_query_front_ports_cable_peer(self):
@@ -1645,7 +1660,12 @@ query {
                 query = "query { sites{ devices{ interfaces(" + filterv + "){ id }}}}"
                 result = self.execute_query(query)
                 self.assertIsNone(result.errors)
-                self.assertEqual(len(result.data["sites"][0]["devices"][0]["interfaces"]), nbr_expected_results)
+                for count, _ in enumerate(result.data["sites"]):
+                    if result.data["sites"][count]["devices"]:
+                        self.assertEqual(
+                            len(result.data["sites"][count]["devices"][0]["interfaces"]), nbr_expected_results
+                        )
+                        break
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     def test_query_interfaces_connected_endpoint(self):
