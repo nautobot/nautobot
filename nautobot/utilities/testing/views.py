@@ -388,7 +388,7 @@ class ViewTestCases:
                 obj = self.model.objects.get(**{self.slug_source: self.slug_test_object})
                 expected_slug = self.slugify_function(getattr(obj, self.slug_source))
                 # Update slug source field str
-                filter_ = self.slug_source + "__contains"
+                filter_ = self.slug_source + "__exact"
                 self.model.objects.filter(**{filter_: self.slug_test_object}).update(
                     **{self.slug_source: new_slug_source_value}
                 )

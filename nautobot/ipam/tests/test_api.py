@@ -103,6 +103,9 @@ class RIRTest(APIViewTestCases.APIViewTestCase):
 
     slug_source = "name"
 
+    def get_deletable_object(self):
+        return RIR.objects.create(name="DELETE ME")
+
 
 class AggregateTest(APIViewTestCases.APIViewTestCase):
     model = Aggregate
