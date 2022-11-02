@@ -84,9 +84,9 @@ django-tree-queries = "~0.11"
 # Run production webservers such as uWSGI/gunicorn as a Django management command.
 django-webserver = "~1.2.0"
 # REST API framework
-djangorestframework = "~3.13.1"
+djangorestframework = "~3.14.0"
 # OpenAPI 3.0 schema generation for the REST API
-drf-spectacular = {version = "~0.24.0", extras = ["sidecar"]}
+drf-spectacular = {version = "~0.24.2", extras = ["sidecar"]}
 # 2.0 TODO: no longer used, but retained for now to avoid breaking plugin expectations
 drf-yasg = {version = "^1.20.0", extras = ["validation"]}
 # Git integrations for Python
@@ -125,7 +125,7 @@ psycopg2-binary = "~2.9.5"
 # Cryptographic library
 pycryptodome = "~3.13.0"
 # The uWSGI WSGI HTTP server as a Python module
-pyuwsgi = "~2.0.20"
+pyuwsgi = "~2.0.21"
 # YAML parsing and rendering
 PyYAML = "~6.0"
 # Social authentication core
