@@ -125,7 +125,7 @@ psycopg2-binary = "~2.9.5"
 # Cryptographic library
 pycryptodome = "~3.13.0"
 # The uWSGI WSGI HTTP server as a Python module
-pyuwsgi = "~2.0.20"
+pyuwsgi = "~2.0.21"
 # YAML parsing and rendering
 PyYAML = "~6.0"
 # Social authentication core
