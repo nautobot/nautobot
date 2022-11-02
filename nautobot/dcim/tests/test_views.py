@@ -322,9 +322,9 @@ class LocationTestCase(ViewTestCases.PrimaryObjectViewTestCase):
 
         cls.csv_data = (
             "name,slug,location_type,parent,site,status,tenant,description",
-            f"Root 3,root-3,{lt1.name},,{site.name},active,,",
-            f"Intermediate 2,intermediate-2,{lt2.name},{loc2.name},,active,{tenant.name},Hello world!",
-            f"Leaf 2,leaf-2,{lt3.name},{loc3.name},,active,{tenant.name},",
+            f'Root 3,root-3,"{lt1.name}",,"{site.name}",active,,',
+            f'Intermediate 2,intermediate-2,"{lt2.name}","{loc2.name}",,active,"{tenant.name}",Hello world!',
+            f'Leaf 2,leaf-2,"{lt3.name}","{loc3.name}",,active,"{tenant.name}",',
         )
 
         cls.bulk_edit_data = {
