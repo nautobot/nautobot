@@ -1125,7 +1125,7 @@ class PowerPanelTestCase(TestCase):
 
 class SiteTestCase(TestCase):
     def test_latitude_or_longitude(self):
-        """Test latitude and longitude is parsed to sting"""
+        """Test latitude and longitude is parsed to string."""
         active_status = Status.objects.get_for_model(Site).get(slug="active")
         site = Site(
             name="Site A",
