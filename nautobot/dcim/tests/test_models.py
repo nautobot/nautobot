@@ -227,7 +227,8 @@ class RackGroupTestCase(TestCase):
         """
         Check that all child RackGroups, Racks, and PowerPanels get updated when a RackGroup is moved to a new Site.
         """
-        site_b = Site.objects.last()
+        existing_rackgroup_site = self.rackgroup_a1.site
+        site_b = Site.objects.exclude(pk=existing_rackgroup_site.pk).last()
 
         # Move RackGroup A1 to Site B
         self.rackgroup_a1.site = site_b

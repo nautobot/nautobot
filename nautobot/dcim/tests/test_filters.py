@@ -4327,7 +4327,7 @@ class VirtualChassisTestCase(FilterTestCases.FilterTestCase):
         device_type = DeviceType.objects.create(manufacturer=manufacturer, model="Model 1", slug="model-1")
         device_role = DeviceRole.objects.create(name="Device Role 1", slug="device-role-1")
 
-        cls.regions = Region.objects.filter(sites__isnull=False, children__isnull=True, parent__isnull=True)[:3]
+        cls.regions = Region.objects.filter(sites__isnull=False)[:3]
 
         cls.sites = (
             Site.objects.filter(region=cls.regions[0]).first(),
