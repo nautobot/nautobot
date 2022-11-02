@@ -1,3 +1,5 @@
+from decimal import Decimal
+
 from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ValidationError
 from django.test import TestCase
@@ -1136,5 +1138,5 @@ class SiteTestCase(TestCase):
         )
         site.validated_save()
 
-        self.assertEqual(site.longitude, 55.22)
-        self.assertEqual(site.latitude, 55.22)
+        self.assertEqual(site.longitude, Decimal("55.22"))
+        self.assertEqual(site.latitude, Decimal("55.22"))
