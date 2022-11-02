@@ -351,18 +351,14 @@ class PrefixTestCase(FilterTestCases.FilterTestCase, FilterTestCases.TenancyFilt
         self.assertEqual(self.filterset({"present_in_vrf": vrfs[1].rd}, self.queryset).qs.count(), 2)
 
     def test_region(self):
-        regions = (
-            Region.objects.create(name="region1"),
-            Region.objects.create(name="region2"),
-            Region.objects.create(name="region3"),
-        )
+        regions = Region.objects.filter(sites__isnull=False)[:3]
         test_sites = (
-            Site.objects.create(name="site1", region=regions[0], status=Status.objects.get_for_model(Site).first()),
-            Site.objects.create(name="site2", region=regions[1], status=Status.objects.get_for_model(Site).first()),
-            Site.objects.create(name="site3", region=regions[2], status=Status.objects.get_for_model(Site).first()),
+            Site.objects.filter(region=regions[0]).first(),
+            Site.objects.filter(region=regions[1]).first(),
+            Site.objects.filter(region=regions[2]).first(),
         )
-        PrefixFactory(site=test_sites[0])
-        PrefixFactory(site=test_sites[1])
+        PrefixFactory(location=None, site=test_sites[0])
+        PrefixFactory(location=None, site=test_sites[1])
         params = {"region_id": [regions[0].pk, regions[1].pk]}
         self.assertQuerysetEqualAndNotEmpty(
             self.filterset(params, self.queryset).qs, self.queryset.filter(site__region__in=params["region_id"])
@@ -378,8 +374,8 @@ class PrefixTestCase(FilterTestCases.FilterTestCase, FilterTestCases.TenancyFilt
             Site.objects.create(name="site2", status=Status.objects.get_for_model(Site).first()),
             Site.objects.create(name="site3", status=Status.objects.get_for_model(Site).first()),
         )
-        PrefixFactory(site=test_sites[0])
-        PrefixFactory(site=test_sites[1])
+        PrefixFactory(location=None, site=test_sites[0])
+        PrefixFactory(location=None, site=test_sites[1])
         params = {"site_id": [test_sites[0].pk, test_sites[1].pk]}
         self.assertQuerysetEqualAndNotEmpty(
             self.filterset(params, self.queryset).qs,
@@ -435,7 +431,7 @@ class IPAddressTestCase(FilterTestCases.FilterTestCase, FilterTestCases.TenancyF
         cls.interface_ct = ContentType.objects.get_for_model(Interface)
         cls.vm_interface_ct = ContentType.objects.get_for_model(VMInterface)
 
-        site = Site.objects.create(name="Site 1", slug="site-1")
+        site = Site.objects.first()
         manufacturer = Manufacturer.objects.create(name="Manufacturer 1", slug="manufacturer-1")
         device_type = DeviceType.objects.create(manufacturer=manufacturer, model="Device Type 1")
         device_role = DeviceRole.objects.create(name="Device Role 1", slug="device-role-1")
@@ -487,7 +483,7 @@ class IPAddressTestCase(FilterTestCases.FilterTestCase, FilterTestCases.TenancyF
         statuses = Status.objects.get_for_model(IPAddress)
         status_map = {s.slug: s for s in statuses.all()}
 
-        IPAddress.objects.create(
+        cls.ipv4_address = IPAddress.objects.create(
             address="10.0.0.1/24",
             tenant=None,
             vrf=None,
@@ -528,7 +524,7 @@ class IPAddressTestCase(FilterTestCases.FilterTestCase, FilterTestCases.TenancyF
             assigned_object=None,
             status=status_map["active"],
         )
-        IPAddress.objects.create(
+        cls.ipv6_address = IPAddress.objects.create(
             address="2001:db8::1/64",
             tenant=None,
             vrf=None,
@@ -571,17 +567,15 @@ class IPAddressTestCase(FilterTestCases.FilterTestCase, FilterTestCases.TenancyF
         )
 
     def test_search(self):
-        ipv4_address = self.queryset.ip_family(4).exclude(dns_name="").exclude(dns_name__isnull=True).first()
-        ipv6_address = self.queryset.ip_family(6).exclude(dns_name="").exclude(dns_name__isnull=True).first()
-        ipv4_octets = ipv4_address.host.split(".")
-        ipv6_hextets = ipv6_address.host.split(":")
+        ipv4_octets = self.ipv4_address.host.split(".")
+        ipv6_hextets = self.ipv6_address.host.split(":")
 
         search_terms = [
-            str(ipv4_address.address),  # ipv4 address with mask: 10.0.0.1/24
-            ipv4_address.host,  # ipv4 address without mask: 10.0.0.1
-            str(ipv6_address.address),  # ipv6 address with mask: 2001:db8::1/64
-            ipv6_address.host,  # ipv6 address without mask: 2001:db8::1
-            ipv4_address.dns_name,
+            str(self.ipv4_address.address),  # ipv4 address with mask: 10.0.0.1/24
+            self.ipv4_address.host,  # ipv4 address without mask: 10.0.0.1
+            str(self.ipv6_address.address),  # ipv6 address with mask: 2001:db8::1/64
+            self.ipv6_address.host,  # ipv6 address without mask: 2001:db8::1
+            self.ipv4_address.dns_name,
             ipv4_octets[0],  # 10
             f"{ipv4_octets[0]}.",  # 10.
             f"{ipv4_octets[0]}.{ipv4_octets[1]}",  # 10.0
@@ -781,21 +775,16 @@ class VLANGroupTestCase(FilterTestCases.NameSlugFilterTestCase):
     @classmethod
     def setUpTestData(cls):
 
-        regions = (
-            Region.objects.create(name="Test Region 1", slug="test-region-1"),
-            Region.objects.create(name="Test Region 2", slug="test-region-2"),
-            Region.objects.create(name="Test Region 3", slug="test-region-3"),
+        cls.regions = Region.objects.filter(sites__isnull=False)[:3]
+        cls.sites = (
+            Site.objects.filter(region=cls.regions[0]).first(),
+            Site.objects.filter(region=cls.regions[1]).first(),
+            Site.objects.filter(region=cls.regions[2]).first(),
         )
 
-        sites = (
-            Site.objects.create(name="Test Site 1", slug="test-site-1", region=regions[0]),
-            Site.objects.create(name="Test Site 2", slug="test-site-2", region=regions[1]),
-            Site.objects.create(name="Test Site 3", slug="test-site-3", region=regions[2]),
-        )
-
-        VLANGroup.objects.create(name="VLAN Group 1", slug="vlan-group-1", site=sites[0], description="A")
-        VLANGroup.objects.create(name="VLAN Group 2", slug="vlan-group-2", site=sites[1], description="B")
-        VLANGroup.objects.create(name="VLAN Group 3", slug="vlan-group-3", site=sites[2], description="C")
+        VLANGroup.objects.create(name="VLAN Group 1", slug="vlan-group-1", site=cls.sites[0], description="A")
+        VLANGroup.objects.create(name="VLAN Group 2", slug="vlan-group-2", site=cls.sites[1], description="B")
+        VLANGroup.objects.create(name="VLAN Group 3", slug="vlan-group-3", site=cls.sites[2], description="C")
         VLANGroup.objects.create(name="VLAN Group 4", slug="vlan-group-4", site=None)
 
     def test_description(self):
@@ -804,7 +793,7 @@ class VLANGroupTestCase(FilterTestCases.NameSlugFilterTestCase):
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
 
     def test_region(self):
-        regions = list(Region.objects.filter(sites__isnull=False, sites__vlan_groups__isnull=False).distinct())[:2]
+        regions = list(self.regions[:2])
         params = {"region_id": [regions[0].pk, regions[1].pk]}
         self.assertQuerysetEqual(
             self.filterset(params, self.queryset).qs, self.queryset.filter(site__region__in=regions)
@@ -815,7 +804,7 @@ class VLANGroupTestCase(FilterTestCases.NameSlugFilterTestCase):
         )
 
     def test_site(self):
-        sites = list(Site.objects.filter(vlan_groups__isnull=False).distinct())[:2]
+        sites = list(self.sites[:2])
         params = {"site_id": [sites[0].pk, sites[1].pk]}
         self.assertQuerysetEqual(self.filterset(params, self.queryset).qs, self.queryset.filter(site__in=sites))
         params = {"site": [sites[0].slug, sites[1].slug]}
@@ -830,23 +819,18 @@ class VLANTestCase(FilterTestCases.FilterTestCase, FilterTestCases.TenancyFilter
     @classmethod
     def setUpTestData(cls):
 
-        regions = (
-            Region.objects.create(name="Test Region 1", slug="test-region-1"),
-            Region.objects.create(name="Test Region 2", slug="test-region-2"),
-            Region.objects.create(name="Test Region 3", slug="test-region-3"),
-        )
-
-        sites = (
-            Site.objects.create(name="Test Site 1", slug="test-site-1", region=regions[0]),
-            Site.objects.create(name="Test Site 2", slug="test-site-2", region=regions[1]),
-            Site.objects.create(name="Test Site 3", slug="test-site-3", region=regions[2]),
+        cls.regions = Region.objects.filter(sites__isnull=False)
+        cls.sites = (
+            Site.objects.filter(region=cls.regions[0]).first(),
+            Site.objects.filter(region=cls.regions[1]).first(),
+            Site.objects.filter(region=cls.regions[2]).first(),
         )
 
         roles = Role.objects.all()[:3]
 
         groups = (
-            VLANGroup.objects.create(name="VLAN Group 1", slug="vlan-group-1", site=sites[0]),
-            VLANGroup.objects.create(name="VLAN Group 2", slug="vlan-group-2", site=sites[1]),
+            VLANGroup.objects.create(name="VLAN Group 1", slug="vlan-group-1", site=cls.sites[0]),
+            VLANGroup.objects.create(name="VLAN Group 2", slug="vlan-group-2", site=cls.sites[1]),
             VLANGroup.objects.create(name="VLAN Group 3", slug="vlan-group-3", site=None),
         )
 
@@ -858,7 +842,7 @@ class VLANTestCase(FilterTestCases.FilterTestCase, FilterTestCases.TenancyFilter
         VLAN.objects.create(
             vid=101,
             name="VLAN 101",
-            site=sites[0],
+            site=cls.sites[0],
             group=groups[0],
             role=roles[0],
             tenant=tenants[0],
@@ -867,7 +851,7 @@ class VLANTestCase(FilterTestCases.FilterTestCase, FilterTestCases.TenancyFilter
         VLAN.objects.create(
             vid=102,
             name="VLAN 102",
-            site=sites[0],
+            site=cls.sites[0],
             group=groups[0],
             role=roles[0],
             tenant=tenants[0],
@@ -876,7 +860,7 @@ class VLANTestCase(FilterTestCases.FilterTestCase, FilterTestCases.TenancyFilter
         VLAN.objects.create(
             vid=201,
             name="VLAN 201",
-            site=sites[1],
+            site=cls.sites[1],
             group=groups[1],
             role=roles[1],
             tenant=tenants[1],
@@ -885,7 +869,7 @@ class VLANTestCase(FilterTestCases.FilterTestCase, FilterTestCases.TenancyFilter
         VLAN.objects.create(
             vid=202,
             name="VLAN 202",
-            site=sites[1],
+            site=cls.sites[1],
             group=groups[1],
             role=roles[1],
             tenant=tenants[1],
@@ -894,7 +878,7 @@ class VLANTestCase(FilterTestCases.FilterTestCase, FilterTestCases.TenancyFilter
         VLAN.objects.create(
             vid=301,
             name="VLAN 301",
-            site=sites[2],
+            site=cls.sites[2],
             group=groups[2],
             role=roles[2],
             tenant=tenants[2],
@@ -903,7 +887,7 @@ class VLANTestCase(FilterTestCases.FilterTestCase, FilterTestCases.TenancyFilter
         VLAN.objects.create(
             vid=302,
             name="VLAN 302",
-            site=sites[2],
+            site=cls.sites[2],
             group=groups[2],
             role=roles[2],
             tenant=tenants[2],
@@ -921,7 +905,7 @@ class VLANTestCase(FilterTestCases.FilterTestCase, FilterTestCases.TenancyFilter
         self.assertQuerysetEqual(self.filterset(params, self.queryset).qs, self.queryset.filter(vid__in=vids))
 
     def test_region(self):
-        regions = list(Region.objects.filter(sites__isnull=False, sites__vlans__isnull=False).distinct())[:2]
+        regions = list(self.regions[:2])
         params = {"region_id": [regions[0].pk, regions[1].pk]}
         self.assertQuerysetEqual(
             self.filterset(params, self.queryset).qs, self.queryset.filter(site__region__in=regions)
@@ -932,7 +916,7 @@ class VLANTestCase(FilterTestCases.FilterTestCase, FilterTestCases.TenancyFilter
         )
 
     def test_site(self):
-        sites = list(Site.objects.filter(vlans__isnull=False).distinct())[:2]
+        sites = list(self.sites[:2])
         params = {"site_id": [sites[0].pk, sites[1].pk]}
         self.assertQuerysetEqual(self.filterset(params, self.queryset).qs, self.queryset.filter(site__in=sites))
         params = {"site": [sites[0].slug, sites[1].slug]}
@@ -965,7 +949,7 @@ class VLANTestCase(FilterTestCases.FilterTestCase, FilterTestCases.TenancyFilter
     def test_available_on_device(self):
         manufacturer = Manufacturer.objects.create(name="Test Manufacturer 1", slug="test-manufacturer-1")
         devicetype = DeviceType.objects.create(manufacturer=manufacturer, model="Device Type 1", slug="device-type-1")
-        site = Site.objects.get(slug="test-site-1")
+        site = self.sites[0]
         devicerole = DeviceRole.objects.create(name="Test Device Role 1", slug="test-device-role-1", color="ff0000")
         device = Device.objects.create(device_type=devicetype, device_role=devicerole, name="Device 1", site=site)
         params = {"available_on_device": device.pk}
@@ -981,7 +965,7 @@ class ServiceTestCase(FilterTestCases.FilterTestCase):
     @classmethod
     def setUpTestData(cls):
 
-        site = Site.objects.create(name="Site 1", slug="site-1")
+        site = Site.objects.first()
         manufacturer = Manufacturer.objects.create(name="Manufacturer 1", slug="manufacturer-1")
         device_type = DeviceType.objects.create(manufacturer=manufacturer, model="Device Type 1")
         device_role = DeviceRole.objects.create(name="Device Role 1", slug="device-role-1")

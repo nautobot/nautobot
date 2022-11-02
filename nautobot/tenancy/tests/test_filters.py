@@ -36,13 +36,15 @@ class TenantTestCase(FilterTestCases.NameSlugFilterTestCase):
     @classmethod
     def setUpTestData(cls):
         active = Status.objects.get(name="Active")
-        site = Site.objects.create(name="Site 1", status=active)
+        site = Site.objects.first()
         location_type = LocationType.objects.create(name="Root Type")
-        Location.objects.create(
-            name="Root 1", location_type=location_type, site=site, status=active, tenant=cls.queryset[0]
-        )
-        Location.objects.create(
-            name="Root 2", location_type=location_type, site=site, status=active, tenant=cls.queryset[1]
+        cls.locations = (
+            Location.objects.create(
+                name="Root 1", location_type=location_type, site=site, status=active, tenant=cls.queryset[0]
+            ),
+            Location.objects.create(
+                name="Root 2", location_type=location_type, site=site, status=active, tenant=cls.queryset[1]
+            ),
         )
 
     def test_group(self):
@@ -62,22 +64,22 @@ class TenantTestCase(FilterTestCases.NameSlugFilterTestCase):
         )
 
     def test_locations(self):
-        params = {"locations": [Location.objects.first().pk, Location.objects.last().slug]}
+        params = {"locations": [self.locations[0].pk, self.locations[1].slug]}
         self.assertEqual(
             self.filterset(params, self.queryset).qs.count(),
-            self.queryset.filter(locations__in=[Location.objects.first(), Location.objects.last()]).count(),
+            self.queryset.filter(locations__in=[self.locations[0], self.locations[1]]).distinct().count(),
         )
 
     def test_has_locations(self):
         params = {"has_locations": True}
         self.assertEqual(
             self.filterset(params, self.queryset).qs.count(),
-            self.queryset.filter(locations__isnull=False).count(),
+            self.queryset.filter(locations__isnull=False).distinct().count(),
         )
         params = {"has_locations": False}
         self.assertEqual(
             self.filterset(params, self.queryset).qs.count(),
-            self.queryset.filter(locations__isnull=True).count(),
+            self.queryset.filter(locations__isnull=True).distinct().count(),
         )
 
     def test_search(self):

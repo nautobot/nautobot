@@ -28,7 +28,7 @@ class DeviceTestCase(TestCase):
     @classmethod
     def setUpTestData(cls):
 
-        cls.site = Site.objects.create(name="Site 1", slug="site-1")
+        cls.site = Site.objects.first()
         cls.rack = Rack.objects.create(name="Rack 1", site=cls.site)
 
         # Platforms that have a manufacturer.
@@ -156,7 +156,7 @@ class DeviceTestCase(TestCase):
 class LabelTestCase(TestCase):
     @classmethod
     def setUpTestData(cls):
-        site = Site.objects.create(name="Site 2", slug="site-2")
+        site = Site.objects.first()
         device_type = DeviceType.objects.first()
         device_role = DeviceRole.objects.first()
         cls.device = Device.objects.create(
@@ -197,7 +197,7 @@ class LabelTestCase(TestCase):
 class TestCableCSVForm(TestCase):
     @classmethod
     def setUpTestData(cls):
-        site = Site.objects.create(name="Site 2", slug="site-2")
+        site = Site.objects.first()
         device_type = DeviceType.objects.first()
         device_role = DeviceRole.objects.first()
         cls.device_1 = Device.objects.create(
@@ -252,7 +252,7 @@ class TestCableCSVForm(TestCase):
 class TestInterfaceCSVForm(TestCase):
     @classmethod
     def setUpTestData(cls):
-        site = Site.objects.create(name="Site 1", slug="site-1")
+        site = Site.objects.first()
         device_type = DeviceType.objects.first()
         device_role = DeviceRole.objects.first()
 

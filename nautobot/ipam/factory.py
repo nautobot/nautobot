@@ -1,7 +1,6 @@
 import logging
 
 import factory
-from factory.random import randgen
 import faker
 import math
 
@@ -67,7 +66,7 @@ class AggregateFactory(PrimaryModelFactory):
             "is_ipv6",
         )
 
-    rir = random_instance(RIR)
+    rir = random_instance(RIR, allow_null=False)
 
     has_tenant = factory.Faker("pybool")
     has_tenant_group = factory.Faker("pybool")
@@ -224,7 +223,7 @@ class RouteTargetFactory(PrimaryModelFactory):
     has_description = factory.Faker("pybool")
     description = factory.Maybe("has_description", factory.Faker("text", max_nb_chars=200), "")
 
-    has_tenant = factory.Faker("pybool")
+    has_tenant = factory.Faker("boolean", chance_of_getting_true=75)
     tenant = factory.Maybe("has_tenant", random_instance(Tenant), None)
 
 
@@ -245,7 +244,7 @@ class VRFFactory(PrimaryModelFactory):
     has_rd = factory.Faker("pybool")
     rd = factory.Maybe("has_rd", factory.LazyFunction(random_route_distinguisher), None)
 
-    has_tenant = factory.Faker("pybool")
+    has_tenant = factory.Faker("boolean", chance_of_getting_true=75)
     tenant = factory.Maybe("has_tenant", random_instance(Tenant), None)
 
     enforce_unique = factory.Faker("pybool")
@@ -295,32 +294,33 @@ class VLANGroupFactory(OrganizationalModelFactory):
             "has_site",
         )
 
+    class Params:
+        unique_name = UniqueFaker("word", part_of_speech="noun")
+
     # TODO: name is not globally unique, but (site, name) tuple must be.
     # The likelihood of collision with random names is pretty low, but non-zero.
     # We might want to consider *intentionally* using non-globally-unique names for testing purposes?
-    name = factory.LazyFunction(lambda: faker.Faker().word(part_of_speech="noun").upper())
+    name = factory.LazyAttribute(lambda o: o.unique_name.upper())
 
     has_description = factory.Faker("pybool")
     description = factory.Maybe("has_description", factory.Faker("text", max_nb_chars=200), "")
 
     has_location = factory.Faker("pybool")
-    location = factory.Maybe("has_location", random_instance(lambda: Location.objects.get_for_model(VLANGroup)), None)
+    location = factory.Maybe(
+        "has_location", random_instance(lambda: Location.objects.get_for_model(VLANGroup), allow_null=False), None
+    )
 
     has_site = factory.Faker("pybool")
-    site = factory.Maybe("has_site", random_instance(Site), None)
 
-    @classmethod
-    def _adjust_kwargs(cls, **kwargs):
-        """Fine-tune the randomly generated kwargs to ensure validity."""
-        if (
-            kwargs["site"] is not None
-            and kwargs["location"] is not None
-            and kwargs["location"].base_site != kwargs["site"]
-        ):
-            logger.debug("Fixing mismatch between `site` and `location.base_site` by overriding `site`")
-            kwargs["site"] = kwargs["location"].base_site
-
-        return kwargs
+    site = factory.Maybe(
+        "has_location",
+        factory.LazyAttribute(lambda l: l.location.site or l.location.base_site),
+        factory.Maybe(
+            "has_site",
+            random_instance(Site),
+            None,
+        ),
+    )
 
 
 class VLANFactory(PrimaryModelFactory):
@@ -352,51 +352,36 @@ class VLANFactory(PrimaryModelFactory):
     description = factory.Maybe("has_description", factory.Faker("text", max_nb_chars=200), "")
 
     has_group = factory.Faker("pybool")
-    group = factory.Maybe("has_group", random_instance(VLANGroup), None)
+    group = factory.Maybe("has_group", random_instance(VLANGroup, allow_null=False), None)
 
     has_location = factory.Faker("pybool")
-    location = factory.Maybe("has_location", random_instance(lambda: Location.objects.get_for_model(VLAN)), None)
+    location = factory.Maybe(
+        "has_group",
+        factory.LazyAttribute(lambda l: l.group.location),
+        factory.Maybe("has_location", random_instance(Location, allow_null=False), None),
+    )
 
     has_role = factory.Faker("pybool")
     role = factory.Maybe("has_role", random_instance(Role), None)
 
     has_site = factory.Faker("pybool")
-    site = factory.Maybe("has_site", random_instance(Site), None)
+    site = factory.Maybe(
+        "has_group",
+        factory.LazyAttribute(lambda l: l.group.site),
+        factory.Maybe(
+            "has_location",
+            factory.LazyAttribute(lambda l: l.location.site),
+            factory.Maybe("has_site", random_instance(Site, allow_null=False), None),
+        ),
+    )
 
     has_tenant = factory.Faker("pybool")
     tenant = factory.Maybe("has_tenant", random_instance(Tenant), None)
 
-    @classmethod
-    def _adjust_kwargs(cls, **kwargs):
-        """Fine-tune the randomly generated kwargs to ensure validity."""
-        if (
-            kwargs["group"] is not None
-            and kwargs["location"] is not None
-            and kwargs["group"].location is not None
-            and kwargs["group"].location not in kwargs["location"].ancestors(include_self=True)
-        ):
-            logger.debug("Fixing mismatch between `group.location` and `location` by overriding `location`")
-            kwargs["location"] = randgen.choice(kwargs["group"].location.descendants(include_self=True))
-
-        if (
-            kwargs["site"] is not None
-            and kwargs["location"] is not None
-            and kwargs["location"].base_site != kwargs["site"]
-        ):
-            logger.debug("Fixing mismatch between `site` and `location.base_site` by overriding `site`")
-            kwargs["site"] = kwargs["location"].base_site
-
-        if kwargs["group"] is not None and kwargs["group"].site != kwargs["site"]:
-            logger.debug("Fixing mismatch between `group.site` and `site` by overriding `site`")
-            # TODO: can this conflict with the fixup for site / location.base_site? Time will tell.
-            kwargs["site"] = kwargs["group"].site
-
-        return kwargs
-
 
 class VLANGetOrCreateFactory(VLANFactory):
     class Meta:
-        django_get_or_create = ("location", "site", "tenant")
+        django_get_or_create = ("group", "location", "site", "tenant")
 
 
 class VRFGetOrCreateFactory(VRFFactory):
@@ -451,10 +436,16 @@ class PrefixFactory(PrimaryModelFactory):
     description = factory.Maybe("has_description", factory.Faker("text", max_nb_chars=200), "")
     is_pool = factory.Faker("pybool")
     # TODO: create a LocationGetOrCreateFactory to get or create a location with matching site
-    location = factory.Maybe("has_location", random_instance(lambda: Location.objects.get_for_model(Prefix)), None)
+    location = factory.Maybe(
+        "has_location", random_instance(lambda: Location.objects.get_for_model(Prefix), allow_null=False), None
+    )
     role = factory.Maybe("has_role", random_instance(Role), None)
     # TODO: create a SiteGetOrCreateFactory to get or create a site with matching tenant
-    site = factory.Maybe("has_site", random_instance(Site), None)
+    site = factory.Maybe(
+        "has_location",
+        factory.LazyAttribute(lambda l: l.location.site or l.location.base_site),
+        factory.Maybe("has_site", random_instance(Site, allow_null=False), None),
+    )
     status = factory.Maybe(
         "is_container",
         factory.LazyFunction(lambda: Prefix.STATUS_CONTAINER),
@@ -467,6 +458,7 @@ class PrefixFactory(PrimaryModelFactory):
         "has_vlan",
         factory.SubFactory(
             VLANGetOrCreateFactory,
+            group=None,
             location=factory.SelfAttribute("..location"),
             site=factory.SelfAttribute("..site"),
             tenant=factory.SelfAttribute("..tenant"),
@@ -538,7 +530,6 @@ class PrefixFactory(PrimaryModelFactory):
         else:
             # Calculate prefix length for child prefixes to allow them to fit in the parent prefix without creating duplicate prefix
             child_cidr = self.prefix_length + max(1, math.ceil(math.log(child_count, 2)))
-
             # Raise exception for invalid cidr length (>128 for ipv6, >32 for ipv4)
             if child_cidr > 128 or self.family == 4 and child_cidr > 32:
                 raise ValueError(f"Unable to create {child_count} child prefixes in container prefix {self.cidr_str}.")

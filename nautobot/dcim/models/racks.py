@@ -606,6 +606,7 @@ class Rack(PrimaryModel, StatusModel):
             _cable_peer_type=ContentType.objects.get_for_model(PowerFeed),
             _cable_peer_id__in=powerfeeds.values_list("id", flat=True),
         )
+        direct_allocated_draw = pf_powerports.aggregate(Sum("allocated_draw"))["allocated_draw__sum"] or 0
         poweroutlets = PowerOutlet.objects.filter(power_port_id__in=pf_powerports)
         allocated_draw_total = (
             PowerPort.objects.filter(
@@ -614,6 +615,7 @@ class Rack(PrimaryModel, StatusModel):
             ).aggregate(Sum("allocated_draw"))["allocated_draw__sum"]
             or 0
         )
+        allocated_draw_total += direct_allocated_draw
 
         return UtilizationData(numerator=allocated_draw_total, denominator=available_power_total)
 

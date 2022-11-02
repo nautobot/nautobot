@@ -6,6 +6,8 @@ from django.contrib.auth import get_user_model
 from django.contrib.auth.models import Permission
 from django.db.models import Q
 from django.db.models.deletion import PROTECT
+from tree_queries.models import TreeNodeForeignKey
+from mptt.models import TreeForeignKey
 
 
 # Use the proper swappable User model
@@ -103,4 +105,7 @@ def get_deletable_objects(model, queryset):
     for field in model._meta.get_fields(include_parents=True):
         if getattr(field, "on_delete", None) is PROTECT:
             q &= Q(**{f"{field.name}__isnull": True})
+        # Only delete leaf nodes of trees to reduce complexity
+        if isinstance(field, (TreeForeignKey, TreeNodeForeignKey)):
+            q &= Q(**{f"{field.related_query_name()}__isnull": True})
     return queryset.filter(q)

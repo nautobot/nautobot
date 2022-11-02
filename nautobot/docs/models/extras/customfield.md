@@ -54,6 +54,7 @@ When creating a custom field, if "Move to Advanced tab" is checked, this custom 
 Nautobot supports limited custom validation for custom field values. Following are the types of validation enforced for each field type:
 
 * Text: Regular expression (optional)
+* URL: Regular expression (optional)
 * Integer: Minimum and/or maximum value (optional)
 * JSON: If not empty, this field must contain valid JSON data
 * Selection: Must exactly match one of the prescribed choices

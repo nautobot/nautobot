@@ -103,17 +103,6 @@ class RIRTest(APIViewTestCases.APIViewTestCase):
 
     slug_source = "name"
 
-    def get_deletable_object(self):
-        return RIR.objects.create(name="DELETE ME")
-
-    def get_deletable_object_pks(self):
-        rirs = [
-            RIR.objects.create(name="DELETE ME 1"),
-            RIR.objects.create(name="DELETE ME 2"),
-            RIR.objects.create(name="DELETE ME 3"),
-        ]
-        return [rir.pk for rir in rirs]
-
 
 class AggregateTest(APIViewTestCases.APIViewTestCase):
     model = Aggregate
@@ -521,13 +510,6 @@ class VLANGroupTest(APIViewTestCases.APIViewTestCase):
     }
     slug_source = "name"
 
-    def get_deletable_object(self):
-        return VLANGroup.objects.filter(vlans__isnull=True).first()
-
-    def get_deletable_object_pks(self):
-        groups = list(VLANGroup.objects.filter(vlans__isnull=True))[:3]
-        return [group.pk for group in groups]
-
 
 class VLANTest(APIViewTestCases.APIViewTestCase):
     model = VLAN
@@ -540,7 +522,7 @@ class VLANTest(APIViewTestCases.APIViewTestCase):
     @classmethod
     def setUpTestData(cls):
 
-        vlan_groups = VLANGroup.objects.all()[:2]
+        vlan_groups = VLANGroup.objects.filter(site__isnull=False, location__isnull=False)[:2]
 
         # FIXME(jathan): The writable serializer for `status` takes the
         # status `name` (str) and not the `pk` (int). Do not validate this
@@ -554,20 +536,26 @@ class VLANTest(APIViewTestCases.APIViewTestCase):
             {
                 "vid": 4,
                 "name": "VLAN 4",
-                "group": vlan_groups[1].pk,
+                "group": vlan_groups[0].pk,
                 "status": "active",
+                "site": vlan_groups[0].site.pk,
+                "location": vlan_groups[0].location.pk,
             },
             {
                 "vid": 5,
                 "name": "VLAN 5",
-                "group": vlan_groups[1].pk,
+                "group": vlan_groups[0].pk,
                 "status": "active",
+                "site": vlan_groups[0].site.pk,
+                "location": vlan_groups[0].location.pk,
             },
             {
                 "vid": 6,
                 "name": "VLAN 6",
-                "group": vlan_groups[1].pk,
+                "group": vlan_groups[0].pk,
                 "status": "active",
+                "site": vlan_groups[0].site.pk,
+                "location": vlan_groups[0].location.pk,
             },
         ]
 
@@ -599,7 +587,7 @@ class ServiceTest(APIViewTestCases.APIViewTestCase):
 
     @classmethod
     def setUpTestData(cls):
-        site = Site.objects.create(name="Site 1", slug="site-1")
+        site = Site.objects.first()
         manufacturer = Manufacturer.objects.create(name="Manufacturer 1", slug="manufacturer-1")
         devicetype = DeviceType.objects.create(manufacturer=manufacturer, model="Device Type 1")
         devicerole = DeviceRole.objects.create(name="Device Role 1", slug="device-role-1")

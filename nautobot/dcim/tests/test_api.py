@@ -124,7 +124,7 @@ class Mixins:
             super().setUpTestData()
             cls.device_type = DeviceType.objects.exclude(manufacturer__isnull=True).first()
             cls.manufacturer = cls.device_type.manufacturer
-            cls.site = Site.objects.create(name="Site 1", slug="site-1")
+            cls.site = Site.objects.first()
             cls.device_role = DeviceRole.objects.first()
             cls.device = Device.objects.create(
                 device_type=cls.device_type, device_role=cls.device_role, name="Device 1", site=cls.site
@@ -185,14 +185,7 @@ class SiteTest(APIViewTestCases.APIViewTestCase):
     @classmethod
     def setUpTestData(cls):
 
-        regions = (
-            Region.objects.create(name="Test Region 1", slug="test-region-1"),
-            Region.objects.create(name="Test Region 2", slug="test-region-2"),
-        )
-
-        Site.objects.create(region=regions[0], name="Site 1", slug="site-1")
-        Site.objects.create(region=regions[0], name="Site 2", slug="site-2")
-        Site.objects.create(region=regions[0], name="Site 3", slug="site-3")
+        regions = Region.objects.all()[:2]
 
         # FIXME(jathan): The writable serializer for `Device.status` takes the
         # status `name` (str) and not the `pk` (int). Do not validate this
@@ -297,7 +290,7 @@ class SiteTest(APIViewTestCases.APIViewTestCase):
         """
 
         self.add_permissions("dcim.view_site")
-        site = Site.objects.get(slug="site-1")
+        site = Site.objects.filter(time_zone="").first()
         url = reverse("dcim-api:site-detail", kwargs={"pk": site.pk})
         response = self.client.get(url, **self.header)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
@@ -316,10 +309,14 @@ class LocationTypeTest(APIViewTestCases.APIViewTestCase):
 
     @classmethod
     def setUpTestData(cls):
-        lt1 = LocationType.objects.create(name="Campus")
-        lt2 = LocationType.objects.create(name="Building", parent=lt1)
-        lt3 = LocationType.objects.create(name="Floor", slug="building-floor", parent=lt2)
-        lt4 = LocationType.objects.create(name="Room", parent=lt3)
+        lt1 = LocationType.objects.get(name="Building")
+        lt2 = LocationType.objects.get(name="Floor")
+        lt3 = LocationType.objects.get(name="Room")
+        lt4 = LocationType.objects.get(name="Aisle")
+        # Deletable Location Types
+        LocationType.objects.create(name="Delete Me 1")
+        LocationType.objects.create(name="Delete Me 2")
+        LocationType.objects.create(name="Delete Me 3")
         for lt in [lt1, lt2, lt3, lt4]:
             lt.content_types.add(ContentType.objects.get_for_model(RackGroup))
 
@@ -329,7 +326,7 @@ class LocationTypeTest(APIViewTestCases.APIViewTestCase):
                 "nestable": True,
             },
             {
-                "name": "Elevator",
+                "name": "Elevator Type",
                 "parent": lt2.pk,
                 "content_types": ["ipam.prefix", "ipam.vlangroup", "ipam.vlan"],
             },
@@ -341,10 +338,6 @@ class LocationTypeTest(APIViewTestCases.APIViewTestCase):
                 "description": "An enclosed space smaller than a room",
             },
         ]
-
-    def get_deletable_object_pks(self):
-        """To get the correct bulk-delete object count, make sure we avoid a cascade deletion."""
-        return [loctype.pk for loctype in list(LocationType.objects.filter(children__isnull=True))[:3]]
 
 
 class LocationTest(APIViewTestCases.APIViewTestCase):
@@ -358,13 +351,13 @@ class LocationTest(APIViewTestCases.APIViewTestCase):
 
     @classmethod
     def setUpTestData(cls):
-        lt1 = LocationType.objects.create(name="Campus")
-        lt2 = LocationType.objects.create(name="Building", parent=lt1)
-        lt3 = LocationType.objects.create(name="Floor", slug="building-floor", parent=lt2)
-        lt4 = LocationType.objects.create(name="Room", parent=lt3)
+        lt1 = LocationType.objects.get(name="Campus")
+        lt2 = LocationType.objects.get(name="Building")
+        lt3 = LocationType.objects.get(name="Floor")
+        lt4 = LocationType.objects.get(name="Room")
 
         status_active = Status.objects.get(slug="active")
-        site = Site.objects.create(name="Research Triangle Area", status=status_active)
+        site = Site.objects.first()
         tenant = Tenant.objects.create(name="Test Tenant")
 
         loc1 = Location.objects.create(name="RTP", location_type=lt1, status=status_active, site=site)
@@ -415,10 +408,6 @@ class LocationTest(APIViewTestCases.APIViewTestCase):
             "status": "planned",
         }
 
-    def get_deletable_object_pks(self):
-        """Only return objects without children so that the deletion count is as expected."""
-        return [loc.pk for loc in list(Location.objects.filter(children__isnull=True))[:3]]
-
 
 class RackGroupTest(APIViewTestCases.APIViewTestCase):
     model = RackGroup
@@ -432,10 +421,7 @@ class RackGroupTest(APIViewTestCases.APIViewTestCase):
     def setUpTestData(cls):
         cls.active = Status.objects.get(slug="active")
 
-        cls.sites = (
-            Site.objects.create(name="Site 1", slug="site-1", status=cls.active),
-            Site.objects.create(name="Site 2", slug="site-2", status=cls.active),
-        )
+        cls.sites = Site.objects.all()[:2]
 
         cls.parent_rack_groups = (
             RackGroup.objects.create(site=cls.sites[0], name="Parent Rack Group 1", slug="parent-rack-group-1"),
@@ -501,10 +487,6 @@ class RackGroupTest(APIViewTestCases.APIViewTestCase):
             },
         ]
 
-    def get_deletable_object_pks(self):
-        """To get the correct bulk-delete object count, make sure we avoid a cascade deletion."""
-        return [group.pk for group in list(RackGroup.objects.filter(children__isnull=True))[:3]]
-
     def test_site_location_mismatch(self):
         """The specified location (if any) must belong to the specified site."""
         self.add_permissions("dcim.add_rackgroup")
@@ -522,7 +504,9 @@ class RackGroupTest(APIViewTestCases.APIViewTestCase):
         response = self.client.post(url, **self.header, data=data, format="json")
         self.assertHttpStatus(response, status.HTTP_400_BAD_REQUEST)
         self.assertIn("location", response.json())
-        self.assertEqual(response.json()["location"], ['Location "Peer Location" does not belong to site "Site 2".'])
+        self.assertEqual(
+            response.json()["location"], [f'Location "Peer Location" does not belong to site "{self.sites[1].name}".']
+        )
 
     def test_child_group_location_valid(self):
         """A child group with a location may fall within the parent group's location."""
@@ -620,10 +604,7 @@ class RackTest(APIViewTestCases.APIViewTestCase):
     @classmethod
     def setUpTestData(cls):
 
-        sites = (
-            Site.objects.create(name="Site 1", slug="site-1"),
-            Site.objects.create(name="Site 2", slug="site-2"),
-        )
+        sites = Site.objects.all()[:2]
 
         rack_groups = (
             RackGroup.objects.create(site=sites[0], name="Rack Group 1", slug="rack-group-1"),
@@ -780,7 +761,7 @@ class RackReservationTest(APIViewTestCases.APIViewTestCase):
     @classmethod
     def setUpTestData(cls):
         user = User.objects.create(username="user1", is_active=True)
-        site = Site.objects.create(name="Test Site 1", slug="test-site-1")
+        site = Site.objects.first()
 
         cls.racks = (
             Rack.objects.create(site=site, name="Rack 1"),
@@ -1257,10 +1238,7 @@ class DeviceTest(APIViewTestCases.APIViewTestCase):
     @classmethod
     def setUpTestData(cls):
 
-        sites = (
-            Site.objects.create(name="Site 1", slug="site-1"),
-            Site.objects.create(name="Site 2", slug="site-2"),
-        )
+        sites = Site.objects.all()[:2]
 
         racks = (
             Rack.objects.create(name="Rack 1", site=sites[0]),
@@ -2149,7 +2127,7 @@ class ConnectedDeviceTest(APITestCase):
 
         super().setUp()
 
-        site = Site.objects.create(name="Test Site 1", slug="test-site-1")
+        site = Site.objects.first()
         device_type = DeviceType.objects.exclude(manufacturer__isnull=True).first()
         device_role = DeviceRole.objects.first()
 
@@ -2187,7 +2165,7 @@ class VirtualChassisTest(APIViewTestCases.APIViewTestCase):
 
     @classmethod
     def setUpTestData(cls):
-        site = Site.objects.create(name="Test Site", slug="test-site")
+        site = Site.objects.first()
         device_type = DeviceType.objects.exclude(manufacturer__isnull=True).first()
         device_role = DeviceRole.objects.first()
 
@@ -2377,10 +2355,7 @@ class PowerPanelTest(APIViewTestCases.APIViewTestCase):
 
     @classmethod
     def setUpTestData(cls):
-        sites = (
-            Site.objects.create(name="Site 1", slug="site-1"),
-            Site.objects.create(name="Site 2", slug="site-2"),
-        )
+        sites = Site.objects.all()[:2]
 
         rack_groups = (
             RackGroup.objects.create(name="Rack Group 1", slug="rack-group-1", site=sites[0]),
@@ -2424,7 +2399,7 @@ class PowerFeedTest(APIViewTestCases.APIViewTestCase):
 
     @classmethod
     def setUpTestData(cls):
-        site = Site.objects.create(name="Site 1", slug="site-1")
+        site = Site.objects.first()
         rackgroup = RackGroup.objects.create(site=site, name="Rack Group 1", slug="rack-group-1")
         rackrole = RackRole.objects.create(name="Rack Role 1", slug="rack-role-1", color="ff0000")
 
