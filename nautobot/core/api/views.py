@@ -716,7 +716,7 @@ class GraphQLDRFAPIView(NautobotAPIVersionMixin, APIView):
 #
 
 
-class GetFilterSetFieldLookupExpressionChoicesAPI(NautobotAPIVersionMixin, APIView):
+class GetFilterSetFieldLookupExpressionChoicesAPIView(NautobotAPIVersionMixin, APIView):
     """API View that gets all lookup expression choices for a FilterSet field."""
 
     permission_classes = [IsAuthenticated]
@@ -743,7 +743,7 @@ class GetFilterSetFieldLookupExpressionChoicesAPI(NautobotAPIVersionMixin, APIVi
         )
 
 
-class GetFilterSetFieldDOMElementAPI(NautobotAPIVersionMixin, APIView):
+class GetFilterSetFieldDOMElementAPIView(NautobotAPIVersionMixin, APIView):
     """API View that gets the DOM element representation of a FilterSet field."""
 
     permission_classes = [IsAuthenticated]
