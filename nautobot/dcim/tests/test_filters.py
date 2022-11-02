@@ -5004,21 +5004,33 @@ class DeviceRedundancyGroupTestCase(FilterTestCases.FilterTestCase):
     def test_name(self):
         device_redundancy_groups = list(DeviceRedundancyGroup.objects.all()[:2])
         params = {"name": [device_redundancy_groups[0].name, device_redundancy_groups[1].name]}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+        self.assertEqual(
+            self.filterset(params, self.queryset).qs.count(),
+            DeviceRedundancyGroup.objects.filter(name__in=params["name"]).count(),
+        )
 
     def test_slug(self):
         device_redundancy_group = DeviceRedundancyGroup.objects.first()
         params = {"slug": [device_redundancy_group.slug]}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 1)
+        self.assertEqual(
+            self.filterset(params, self.queryset).qs.count(),
+            DeviceRedundancyGroup.objects.filter(slug__in=params["slug"]).count(),
+        )
 
     def test_secrets_group(self):
         secrets_groups = list(SecretsGroup.objects.all()[:2])
         with self.subTest():
             params = {"secrets_group": [secrets_groups[0].pk, secrets_groups[1].pk]}
-            self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+            self.assertEqual(
+                self.filterset(params, self.queryset).qs.count(),
+                DeviceRedundancyGroup.objects.filter(secrets_group__in=params["secrets_group"]).count(),
+            )
         with self.subTest():
             params = {"secrets_group": [secrets_groups[0].slug, secrets_groups[1].slug]}
-            self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+            self.assertEqual(
+                self.filterset(params, self.queryset).qs.count(),
+                DeviceRedundancyGroup.objects.filter(secrets_group__slug__in=params["secrets_group"]).count(),
+            )
 
     def test_failover_strategy(self):
         with self.subTest():

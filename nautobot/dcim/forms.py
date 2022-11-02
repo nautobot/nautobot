@@ -2154,7 +2154,7 @@ class DeviceBulkEditForm(
     serial = forms.CharField(max_length=255, required=False, label="Serial Number")
     secrets_group = DynamicModelChoiceField(queryset=SecretsGroup.objects.all(), required=False)
     device_redundancy_group = DynamicModelChoiceField(queryset=DeviceRedundancyGroup.objects.all(), required=False)
-    device_redundancy_group_priority = forms.IntegerField(min_value=1, required=False)
+    device_redundancy_group_priority = forms.IntegerField(required=False, min_value=1)
 
     class Meta:
         model = Device
@@ -2246,7 +2246,7 @@ class DeviceFilterForm(
         required=False,
         null_option="None",
     )
-    device_redundancy_group_priority = forms.IntegerField(required=False, min_value=1)
+    device_redundancy_group_priority = forms.IntegerField(min_value=1, required=False)
     has_primary_ip = forms.NullBooleanField(
         required=False,
         label="Has a primary IP",
