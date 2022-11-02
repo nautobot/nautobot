@@ -72,11 +72,11 @@ def get_gql_failover_details(device_name):
 
 ### Retrieving the data - Primary Failover Unit ("nyc-fw-primary")
 
-An example data returned from Nautobot is presented below.
+We will demonstrate how to execute the command for Primary Unit only, however you could repeat the process for a secondary unit. An example data returned from Nautobot is presented below.
 
 ```python
 >>> hostname = "nyc-fw-primary"
->>> primary_unit_details = get_gql_failover_details(hostname).json
+>>> gql_data = get_gql_failover_details(hostname).json
 ```
 
 ```json
@@ -136,90 +136,6 @@ An example data returned from Nautobot is presented below.
 }
 ```
 
-### Retrieving the data - Secondary Failover Unit ("nyc-fw-secondary")
-
-An example data returned from Nautobot is presented below.
-
-```python
->>> hostname_secondary = "nyc-fw-secondary"
->>> secondary_unit_details = get_gql_failover_details(hostname_secondary).json
-```
-
-```json
-{
-    "data": {
-        "devices": [
-            {
-                "name": "nyc-fw-secondary",
-                "device_redundancy_group": {
-                    "name": "nyc-firewalls",
-                    "members": [
-                        {
-                            "name": "nyc-fw-primary",
-                            "device_redundancy_group_priority": 100,
-                            "interfaces": [
-                                {
-                                    "type": "VIRTUAL",
-                                    "name": "failover-link",
-                                    "ip_addresses": [
-                                        {
-                                            "host": "172.27.48.0",
-                                            "prefix_length": 31
-                                        }
-                                    ],
-                                    "parent_interface": {
-                                        "name": "gigabitethernet0/3",
-                                        "type": "A_1000BASE_T"
-                                    }
-                                }
-                            ]
-                        },
-                        {
-                            "name": "nyc-fw-secondary",
-                            "device_redundancy_group_priority": 50,
-                            "interfaces": [
-                                {
-                                    "type": "VIRTUAL",
-                                    "name": "failover-link",
-                                    "ip_addresses": [
-                                        {
-                                            "host": "172.27.48.1",
-                                            "prefix_length": 31
-                                        }
-                                    ],
-                                    "parent_interface": {
-                                        "name": "gigabitethernet0/3",
-                                        "type": "A_1000BASE_T"
-                                    }
-                                }
-                            ]
-                        }
-                    ]
-                }
-            }
-        ]
-    }
-}
-```
-
-### Processing the data - Primary Failover Unit ("nyc-fw-primary")
-
-Before rendering the data, we will process the data to simplify data variables within the template:
-
-```python
->>> failover_members = primary_unit_details['data']['devices'][0]['device_redundancy_group']['members']
->>>
->>> device = [failover_member for failover_member in failover_members if failover_member['name'] == hostname][0]
->>>
->>> device
-{'name': 'nyc-fw-primary', 'device_redundancy_group_priority': 100, 'interfaces': [{'type': 'VIRTUAL', 'name': 'failover-link', 'ip_addresses': [{'address': '172.27.48.0/31'}], 'parent_interface': {'name': 'gigabitethernet0/3', 'type': 'A_1000BASE_T'}}]}
->>>
->>> failover_peer = [failover_member for failover_member in failover_members if failover_member['name'] != hostname][0]
->>>
->>> device_failover_interface = device['interfaces'][0]
->>> peer_failover_interface = failover_peer['interfaces'][0]
-```
-
 ### Creating Cisco ASA Configuration Template - Common for Primary and Secondary Units
 
 The following snippet represents an example Cisco ASA failover configuration template:
@@ -227,17 +143,22 @@ The following snippet represents an example Cisco ASA failover configuration tem
 ```python
 # Configuration Template for Cisco ASA
 template_body="""
+{% set redundancy_members = gql_data['data']['devices'][0]['device_redundancy_group']['members'] %}
+{% set failover_device_local = redundancy_members[0] if redundancy_members[0].name == device else redundancy_members[1] %}
+{% set failover_device_peer = redundancy_members[0] if redundancy_members[0].name != device else redundancy_members[1] %}
+{% set failover_local_vif = failover_device_local.interfaces | first %}
+{% set failover_peer_vif = failover_device_peer.interfaces | first %}
 !
 hostname {{ device.name }}
 !
-failover lan unit {{ priority_mapping[device.device_redundancy_group_priority] }}
-failover lan interface {{ device_failover_interface.name }} {{ device_failover_interface.parent_interface.name }} 
+failover lan unit {{ priority_mapping[failover_device_local.device_redundancy_group_priority] }}
+failover lan interface {{ failover_local_vif.name }} {{ failover_local_vif.parent_interface.name }} 
 !
-failover interface ip {{ device_failover_interface.name }} {{ device_failover_interface.ip_addresses[0].host }}/{{ device_failover_interface.ip_addresses[0].prefix_length }} standby {{ peer_failover_interface.ip_addresses[0].host }}
-interface {{ device_failover_interface.parent_interface.name }} 
+failover interface ip {{ failover_local_vif.name }} {{ failover_local_vif.ip_addresses[0].host }}/{{ failover_local_vif.ip_addresses[0].prefix_length }} standby {{ failover_peer_vif.ip_addresses[0].host }}
+interface {{ failover_local_vif.parent_interface.name }} 
   no shutdown
 !
-failover link {{ device_failover_interface.name }} {{ device_failover_interface.parent_interface.name }} 
+failover link {{ failover_local_vif.name }} {{ failover_local_vif.parent_interface.name }} 
 !
 !failover ipsec pre-shared-key !Nautobot Secrets
 !
@@ -255,10 +176,9 @@ from jinja2 import Template
 
 tm=Template(template_body)
 
-nyc_fw_primary_config = tm.render(device=device,
-    device_failover_interface=device_failover_interface,
-    peer_failover_interface=peer_failover_interface, 
-    failover_peer=failover_peer, 
+nyc_fw_primary_config = tm.render(
+    device=hostname,
+    gql_data=gql_data,
     priority_mapping={50: 'secondary', 100: 'primary'}
 )
 
