@@ -383,14 +383,18 @@ class ViewTestCases:
             """Ensure save method does not modify slug that is passed in."""
             # This really should go on a models test page, but we don't have test structures for models.
             if self.slug_source is not None:
+                new_slug_source_value = "kwyjibo"
+
                 obj = self.model.objects.get(**{self.slug_source: self.slug_test_object})
                 expected_slug = self.slugify_function(getattr(obj, self.slug_source))
                 # Update slug source field str
                 filter_ = self.slug_source + "__contains"
-                self.model.objects.filter(**{filter_: self.slug_test_object}).update(**{self.slug_source: "Test"})
+                self.model.objects.filter(**{filter_: self.slug_test_object}).update(
+                    **{self.slug_source: new_slug_source_value}
+                )
 
                 obj.refresh_from_db()
-                self.assertEqual(getattr(obj, self.slug_source), "Test")
+                self.assertEqual(getattr(obj, self.slug_source), new_slug_source_value)
                 self.assertEqual(obj.slug, expected_slug)
 
     class EditObjectViewTestCase(ModelViewTestCase):
