@@ -9,7 +9,7 @@ Nautobot is a Network Source of Truth and Network Automation Platform.
 Nautobot runs as a web application atop the [Django](https://www.djangoproject.com/) Python framework with a
 [PostgreSQL](https://www.postgresql.org/) or [MySQL](https://www.mysql.com) database.
 
-The complete documentation for Nautobot can be found at [Read the Docs](https://docs.nautobot.com/en/stable/).
+The complete documentation for Nautobot can be found at [Read the Docs](https://docs.nautobot.com/).
 
 Questions? Comments? Start by perusing our [GitHub discussions](https://github.com/nautobot/nautobot/discussions) for the topic you have in mind, or join the **#nautobot** channel on [Network to Code's Slack community](https://slack.networktocode.com/)!
 
@@ -39,7 +39,7 @@ Questions? Comments? Start by perusing our [GitHub discussions](https://github.c
 
 ## Installation
 
-Please see [the documentation](https://docs.nautobot.com/en/stable/installation/) for instructions on installing Nautobot.
+Please see [the documentation](https://docs.nautobot.com/projects/core/en/stable/installation/) for instructions on installing Nautobot.
 
 ## Application Stack
 
