@@ -13,7 +13,7 @@ Nautobot is a Network Source of Truth and Network Automation Platform built as a
 
 **3. Platform for Network Automation Apps** - The Nautobot plugin system enables users to create Network Automation Apps. Apps can be as lightweight or robust as needed based on user needs. Using Nautobot for creating custom applications saves up to 70% development time by re-using features such as authentication, permissions, webhooks, GraphQL, change logging, etc. all while having access to the data already stored in Nautobot. Some production ready applications include:
 
-The complete documentation for Nautobot can be found at [Read the Docs](https://docs.nautobot.com/en/stable/).
+The complete documentation for Nautobot can be found at [Read the Docs](https://docs.nautobot.com/).
 
 Questions? Comments? Start by perusing our [GitHub discussions](https://github.com/nautobot/nautobot/discussions) for the topic you have in mind, or join the **#nautobot** channel on [Network to Code's Slack community](https://slack.networktocode.com/)!
 
@@ -43,7 +43,7 @@ Questions? Comments? Start by perusing our [GitHub discussions](https://github.c
 
 ## Installation
 
-Please see [the documentation](https://docs.nautobot.com/en/stable/installation/) for instructions on installing Nautobot.
+Please see [the documentation](https://docs.nautobot.com/projects/core/en/stable/installation/) for instructions on installing Nautobot.
 
 ## Application Stack
 
