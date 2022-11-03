@@ -603,6 +603,36 @@ class LocationTypeTestCase(TestCase):
                 LocationType(name=candidate_name).clean()
             self.assertIn("This name is reserved", str(cm.exception))
 
+    def test_changing_parent(self):
+        """Validate clean logic around changing the parent of a LocationType."""
+        parent = LocationType.objects.create(name="Parent LocationType")
+        child = LocationType.objects.create(name="Child LocationType")
+
+        # If there are no Locations using it yet, parent can be freely changed
+        child.parent = None
+        child.validated_save()
+        child.parent = parent
+        child.validated_save()
+
+        # Once there are Locations using it, parent cannot be changed.
+        site = Site.objects.create(name="Test Site", status=Status.objects.get_for_model(Site).first())
+        parent_loc = Location.objects.create(
+            name="Parent 1", location_type=parent, site=site, status=Status.objects.get_for_model(Location).first()
+        )
+        child_loc = Location.objects.create(
+            name="Child 1", location_type=child, parent=parent_loc, status=Status.objects.get_for_model(Location).last()
+        )
+        child.parent = None
+        with self.assertRaisesMessage(
+            ValidationError,
+            "This LocationType currently has Locations using it, therefore its parent cannot be changed at this time.",
+        ):
+            child.validated_save()
+
+        # If the locations are deleted, it again becomes re-parent-able.
+        child_loc.delete()
+        child.validated_save()
+
 
 class LocationTestCase(TestCase):
     def setUp(self):
