@@ -1082,9 +1082,6 @@ class DeviceRedundancyGroup(PrimaryModel, StatusModel):
     def __str__(self):
         return self.name
 
-    def natural_key(self):
-        return (self.name,)
-
     def get_absolute_url(self):
         return reverse("dcim:deviceredundancygroup", args=[self.slug])
 
