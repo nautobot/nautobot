@@ -215,3 +215,14 @@ class Site(PrimaryModel, StatusModel):
             self.contact_email,
             self.comments,
         )
+
+    def clean_fields(self, exclude=None):
+        """Explicitly convert latitude/longitude to strings to avoid floating-point precision errors."""
+
+        if self.longitude is not None:
+            decimal_places = self._meta.get_field("longitude").decimal_places
+            self.longitude = f"{self.longitude:.{decimal_places}f}"
+        if self.latitude is not None:
+            decimal_places = self._meta.get_field("latitude").decimal_places
+            self.latitude = f"{self.latitude:.{decimal_places}f}"
+        super().clean_fields(exclude)
