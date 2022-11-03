@@ -500,18 +500,6 @@ class ViewTestCases:
                 self.fail("Couldn't find a single deletable object!")
             return instance
 
-        def get_deletable_object_pks(self):
-            """
-            Get a list of PKs corresponding to objects that can be safely bulk-deleted.
-
-            For some models this may just be any random objects, but when we have FKs with `on_delete=models.PROTECT`
-            (as is often the case) we need to find or create an instance that doesn't have such entanglements.
-            """
-            instances = get_deletable_objects(self.model, self._get_queryset()).values_list("pk", flat=True)[:3]
-            if len(instances) < 3:
-                self.fail(f"Couldn't find 3 deletable objects, only found {len(instances)}!")
-            return instances
-
         def test_delete_object_without_permission(self):
             instance = self.get_deletable_object()
 
