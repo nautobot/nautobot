@@ -59,3 +59,12 @@ class TenantTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         }
         cls.slug_source = "name"
         cls.slug_test_object = "Tenant 8"
+
+    @classmethod
+    def get_deletable_object_pks(cls):
+        tenants = [
+            Tenant.objects.create(name="Deletable Tenant 1"),
+            Tenant.objects.create(name="Deletable Tenant 2"),
+            Tenant.objects.create(name="Deletable Tenant 3"),
+        ]
+        return [t.pk for t in tenants]
