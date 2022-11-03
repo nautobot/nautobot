@@ -211,11 +211,14 @@ class DynamicGroup(OrganizationalModel):
             # Get the missing model form field so we can use it to add to the filterform_fields.
             modelform_field = modelform_fields[missing_field]
 
-            # Replace the modelform_field with the correct type for the UI. At this time this is
-            # only being done for CharField since in the filterset form this ends up being a
-            # `MultiValueCharField` (dynamically generated from from `MultiValueCharFilter`) which is
-            # not correct for char fields. For boolean fields, we want them to be nullable.
-            if isinstance(modelform_field, (forms.CharField, forms.BooleanField)):
+            # Use filterset_field to generate the correct filterform_field for CharField.
+            # Which is `MultiValueCharField`.
+            if isinstance(modelform_field, forms.CharField):
+                new_modelform_field = filterset_field.field
+                modelform_field = new_modelform_field
+
+            # For boolean fields, we want them to be nullable.
+            if isinstance(modelform_field, forms.BooleanField):
                 # Get ready to replace the form field w/ correct widget.
                 new_modelform_field = filterset_field.field
                 new_modelform_field.widget = modelform_field.widget
@@ -397,28 +400,7 @@ class DynamicGroup(OrganizationalModel):
         This is intended for use to populate the dynamically-generated filter form created by
         `generate_filter_form()`.
         """
-        filter_fields = self.get_filter_fields()
         initial_data = self.filter.copy()
-
-        # Brute force to capture the names of any `*CharField` fields.
-        char_fields = [f for (f, ftype) in filter_fields.items() if ftype.__class__.__name__.endswith("CharField")]
-
-        # Iterate the char fields and coerce their type to a singular value or
-        # an empty string in the case of an empty list.
-        for char_field in char_fields:
-            if char_field not in initial_data:
-                continue
-
-            field_value = initial_data[char_field]
-
-            if isinstance(field_value, list):
-                # Either the first (and should be only) item in this list.
-                if field_value:
-                    new_value = field_value[0]
-                # Or empty string if there isn't.
-                else:
-                    new_value = ""
-                initial_data[char_field] = new_value
 
         return initial_data
 

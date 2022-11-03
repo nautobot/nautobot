@@ -49,6 +49,10 @@ As a result, the value of this setting now defaults to `False`, disabling databa
 !!! important
     Users with existing `nautobot_config.py` files generated from earlier versions of Nautobot will still have `CACHEOPS_ENABLED = True` unless they modify or regenerate their configuration. If users no longer desire caching, please be sure to explicitly toggle the value of this setting to `False` and restart your Nautobot services.
 
+#### Redesigned List Filtering UI
+
+Added a dynamic filter form that allows users to filter object tables/lists by any field and lookup expression combination supported by the corresponding FilterSet and API.
+
 ### Fixed
 
 ### Removed

@@ -78,7 +78,7 @@ Type 'yes' to continue, or 'no' to cancel: """
         StatusFactory.create_batch(10)
         self.stdout.write("Creating Tags...")
         # Ensure that we have some tags that are applicable to all relevant content-types
-        TagFactory.create_batch(5, content_types=TaggableClassesQuery().as_queryset)
+        TagFactory.create_batch(5, content_types=TaggableClassesQuery().as_queryset())
         # ...and some tags that apply to a random subset of content-types
         TagFactory.create_batch(15)
         self.stdout.write("Creating TenantGroups...")
