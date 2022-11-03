@@ -217,6 +217,14 @@ class SiteTest(APIViewTestCases.APIViewTestCase):
             {"name": "Site 7", "region": regions[1].pk, "status": "active"},
         ]
 
+    def get_deletable_object_pks(self):
+        Sites = [
+            Site.objects.create(name="Deletable Site 1"),
+            Site.objects.create(name="Deletable Site 2"),
+            Site.objects.create(name="Deletable Site 3"),
+        ]
+        return [site.pk for site in Sites]
+
     def test_time_zone_field_post_null(self):
         """
         Test allow_null to time_zone field on site.
