@@ -45,7 +45,7 @@ django-auth-ldap = {version = "~4.1.0", optional = true}
 # Caching with Redis
 django-cacheops = "~6.0"
 # Base functionality for task scheduling with Celery
-django-celery-beat = "~2.2.1"
+django-celery-beat = "~2.4.0"
 # Management of app configuration via the Django admin UI
 django-constance = {version = "~2.9.0", extras = ["database"]}
 # Permit cross-domain API requests
