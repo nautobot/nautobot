@@ -118,7 +118,7 @@ netaddr = "~0.8.0"
 # Library of network related Jinja Filters
 netutils = "~1.2.0"
 # Image processing library
-Pillow = "~9.2.0"
+Pillow = "~9.3.0"
 # PostgreSQL database adapter
 # NOTE: psycopg3 is avaiable now and nominally replaces psycopg2
 psycopg2-binary = "~2.9.5"
