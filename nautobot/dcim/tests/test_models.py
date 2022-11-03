@@ -1133,10 +1133,10 @@ class SiteTestCase(TestCase):
             name="Site A",
             slug="site-a",
             status=active_status,
-            longitude=55.22,
-            latitude=55.22,
+            longitude=55.1234567896,
+            latitude=55.1234567896,
         )
         site.validated_save()
 
-        self.assertEqual(site.longitude, Decimal("55.22"))
-        self.assertEqual(site.latitude, Decimal("55.22"))
+        self.assertEqual(site.longitude, Decimal("55.123457"))
+        self.assertEqual(site.latitude, Decimal("55.123457"))
