@@ -320,20 +320,19 @@ class ContentTypeFilterSetTestCase(FilterTestCases.FilterTestCase):
 
     def test_app_label(self):
         params = {"app_label": ["dcim"]}
-        self.assertQuerysetEqual(self.filterset(params, self.queryset).qs, ContentType.objects.filter(app_label="dcim"))
+        self.assertQuerysetEqual(self.filterset(params, self.queryset).qs, self.queryset.filter(app_label="dcim"))
 
     def test_model(self):
         params = {"model": ["device", "virtualmachine"]}
         self.assertQuerysetEqual(
-            self.filterset(params, self.queryset).qs,
-            ContentType.objects.filter(model__in=["device", "virtualmachine"]),
+            self.filterset(params, self.queryset).qs, self.queryset.filter(model__in=["device", "virtualmachine"])
         )
 
     def test_search(self):
         params = {"q": "circ"}
         self.assertQuerysetEqual(
             self.filterset(params, self.queryset).qs,
-            ContentType.objects.filter(Q(app_label__icontains="circ") | Q(model__icontains="circ")),
+            self.queryset.filter(Q(app_label__icontains="circ") | Q(model__icontains="circ")),
         )
 
 
