@@ -1,0 +1,1 @@
+Fixed exception not raised when the interface contains a tagged vlan but mode is not set to tagged.
