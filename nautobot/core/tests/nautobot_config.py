@@ -40,3 +40,6 @@ STORAGE_CONFIG = {
     "AWS_STORAGE_BUCKET_NAME": "nautobot",
     "AWS_S3_REGION_NAME": "us-west-1",
 }
+
+# Disable logging for tests
+LOGGING = {}

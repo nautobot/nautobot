@@ -1,3 +1,5 @@
+from decimal import Decimal
+
 from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ValidationError
 from django.test import TestCase
@@ -147,6 +149,49 @@ class InterfaceTemplateCustomFieldTestCase(TestCase):
         self.assertEqual(Interface.objects.get(pk=interfaces[1].pk).cf["field_1"], "value_1")
         self.assertEqual(Interface.objects.get(pk=interfaces[1].pk).cf["field_2"], "value_2")
         self.assertEqual(Interface.objects.get(pk=interfaces[1].pk).cf["field_3"], "value_3")
+
+
+class InterfaceTemplateTestCase(TestCase):
+    def test_interface_template_sets_interface_status(self):
+        """
+        When a device is created with a device type associated with the template,
+        assert interface templates sets the interface status.
+        """
+        statuses = Status.objects.get_for_model(Device)
+        site = Site.objects.create(name="Site 1", slug="site-1")
+        manufacturer = Manufacturer.objects.create(name="Acme", slug="acme")
+        device_role = DeviceRole.objects.create(name="Device Role 1", slug="device-role-1", color="ff0000")
+        device_type = DeviceType.objects.create(manufacturer=manufacturer, model="FrameForwarder 2048", slug="ff2048")
+        InterfaceTemplate.objects.create(
+            device_type=device_type,
+            name="Test_Template_1",
+            type=InterfaceTypeChoices.TYPE_1GE_FIXED,
+            mgmt_only=True,
+        )
+        device_1 = Device.objects.create(
+            device_type=device_type,
+            device_role=device_role,
+            status=statuses[0],
+            name="Test Device 1",
+            site=site,
+        )
+
+        active_status = Status.objects.get(slug="active")
+        self.assertEqual(device_1.interfaces.get(name="Test_Template_1").status, active_status)
+
+        # Assert that a different status is picked if active status is not found for interface
+        interface_ct = ContentType.objects.get_for_model(Interface)
+        active_status.content_types.remove(interface_ct)
+
+        device_2 = Device.objects.create(
+            device_type=device_type,
+            device_role=device_role,
+            status=statuses[0],
+            name="Test Device 2",
+            site=site,
+        )
+        first_status = Status.objects.get_for_model(Interface).first()
+        self.assertIsNotNone(device_2.interfaces.get(name="Test_Template_1").status, first_status)
 
 
 class RackGroupTestCase(TestCase):
@@ -1166,3 +1211,20 @@ class InterfaceTestCase(TestCase):
         with self.assertRaises(ValidationError) as err:
             interface.validated_save()
         self.assertEqual(err.exception.message_dict["tagged_vlans"][0], "Clear tagged_vlans to set mode to access")
+
+
+class SiteTestCase(TestCase):
+    def test_latitude_or_longitude(self):
+        """Test latitude and longitude is parsed to string."""
+        active_status = Status.objects.get_for_model(Site).get(slug="active")
+        site = Site(
+            name="Site A",
+            slug="site-a",
+            status=active_status,
+            longitude=55.1234567896,
+            latitude=55.1234567896,
+        )
+        site.validated_save()
+
+        self.assertEqual(site.longitude, Decimal("55.123457"))
+        self.assertEqual(site.latitude, Decimal("55.123457"))
