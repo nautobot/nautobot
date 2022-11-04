@@ -10,7 +10,13 @@ If you are a user migrating from NetBox to Nautobot, please refer to the ["Migra
 
 ### Added
 
-#### Custom Celery Task Queues
+#### TODO: [#899](https://github.com/nautobot/nautobot/issues/899) - Added support for grouping of Custom Fields
+
+#### TODO: [#1892](https://github.com/nautobot/nautobot/issues/1892) - Added `DeviceRedundancyGroup` model for representing a logical grouping of physical hardware for the purposes of high-availability
+
+#### TODO: [#2536](https://github.com/nautobot/nautobot/issues/2536) - Added `nautobot-server generate_test_data` command
+
+#### Custom Celery Task Queues ([#2421](https://github.com/nautobot/nautobot/pull/2421))
 
 A new optional job property `task_queues` has been introduced to allow Nautobot to leverage custom celery queues for jobs. This will allow you to send jobs to specific workers based on which queue is selected. This property can be set on the job class and overridden in the Job model, similar to other overridable job fields. If `task_queues` is not defined on the job class or Job model, the job will only be able to use the default queue. A new field has been added to the job run form to allow you to select a queue when you run the job and  an optional field `task_queue` has been added to the REST API [job run endpoint](../additional-features/jobs.md#via-the-api) for the same purpose.
 
@@ -38,7 +44,7 @@ In the above example, only two LocationTypes are defined ("Building Group" and "
 
 ### Changed
 
-#### Database Query Caching is now Disabled by Default
+#### Database Query Caching is now Disabled by Default ([#1721](https://github.com/nautobot/nautobot/issues/1721))
 
 In prior versions of Nautobot, database query caching using the [`django-cacheops`](https://github.com/Suor/django-cacheops) application (aka Cacheops) was enabled by default. This is determined by the default value of the [`CACHEOPS_ENABLED`](../configuration/optional-settings.md#cacheops_enabled) setting being set to `True`.
 
@@ -49,12 +55,17 @@ As a result, the value of this setting now defaults to `False`, disabling databa
 !!! important
     Users with existing `nautobot_config.py` files generated from earlier versions of Nautobot will still have `CACHEOPS_ENABLED = True` unless they modify or regenerate their configuration. If users no longer desire caching, please be sure to explicitly toggle the value of this setting to `False` and restart your Nautobot services.
 
-#### Redesigned List Filtering UI
+#### TODO: Add more detail to the filter ui feature overview below?
+#### Redesigned List Filtering UI ([#1998](https://github.com/nautobot/nautobot/issues/1998))
 
 Added a dynamic filter form that allows users to filter object tables/lists by any field and lookup expression combination supported by the corresponding FilterSet and API.
 
 ### Fixed
 
+#### TODO: Remove fixed section?
+
 ### Removed
+
+#### TODO: Remove removed section?
 
 <!-- towncrier release notes start -->
