@@ -1,0 +1,1 @@
+Blocked changing the parent of a LocationType when it already has Locations using it.
