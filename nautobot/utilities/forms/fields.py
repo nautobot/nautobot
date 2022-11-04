@@ -127,7 +127,14 @@ class CSVFileField(forms.FileField):
 
         file = super().to_python(file)
         csv_str = file.read().decode("utf-8-sig").strip()
-        dialect = csv.Sniffer().sniff(csv_str)
+        # Check if there is only one column of input
+        # If so a delimiter cannot be determined and it will raise an exception.
+        # In that case we will use csv.excel class
+        # Which defines the usual properties of an Excel-generated CSV file.
+        try:
+            dialect = csv.Sniffer().sniff(csv_str, delimiters=",")
+        except csv.Error:
+            dialect = csv.excel
         reader = csv.reader(csv_str.splitlines(), dialect)
         headers, records = parse_csv(reader)
 
