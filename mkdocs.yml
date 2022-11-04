@@ -91,6 +91,7 @@ plugins:
           options:
             show_root_heading: true
             show_category_heading: true
+            show_root_members_full_path: true
 
 nav:
   - Overview: "index.md"
@@ -174,13 +175,28 @@ nav:
       - GraphQL API:
           - Overview: "additional-features/graphql.md"
       - Installing and Using Plugins: "plugins/index.md"
-  - Developer Guide:
+  - App Developer Guide:
+      - Developing Plugins: "plugins/development.md"
+      - Porting NetBox Plugins to Nautobot: "plugins/porting-from-netbox.md"
+      - Code Reference:
+          - Choice Sets: "apps/code-reference/choices.md"
+          - Data Sources (Git, etc.): "apps/code-reference/datasources.md"
+          - Filters: "apps/code-reference/filters.md"
+          - Forms: "apps/code-reference/forms.md"
+          - Home Page Content: "apps/code-reference/homepage.md"
+          - Jobs: "apps/code-reference/jobs.md"
+          - Models: "apps/code-reference/models.md"
+          - Navigation Menu: "apps/code-reference/navigation.md"
+          - REST API: "apps/code-reference/api.md"
+          - Tables: "apps/code-reference/tables.md"
+          - Template Content Extensions: "apps/code-reference/template_content.md"
+          - Testing: "apps/code-reference/testing.md"
+          - URLs: "apps/code-reference/urls.md"
+          - Views: "apps/code-reference/views.md"
+  - Core Developer Guide:
       - Introduction: "development/index.md"
       - Getting Started: "development/getting-started.md"
       - Advanced Docker Compose Usage: "development/docker-compose-advanced-use-cases.md"
-      - Plugins:
-          - Developing Plugins: "plugins/development.md"
-          - Porting NetBox Plugins to Nautobot: "plugins/porting-from-netbox.md"
       - Best Practices: "development/best-practices.md"
       - Style Guide: "development/style-guide.md"
       - Extending Models: "development/extending-models.md"

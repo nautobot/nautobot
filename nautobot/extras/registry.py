@@ -30,14 +30,15 @@ registry = Registry(
 
 class DatasourceContent:
     """
-    name (str): Human-readable name for this content type, such as "config contexts"
-    content_identifier (str): Brief unique identifier of this content type; by convention a string such as "extras.configcontext"
-    icon (str): Material Design Icons icon name, such as "mdi-code-json" or "mdi-script-text"
-    callback (callable): Callback function to invoke whenever a given datasource is created, updated, or deleted.
-        This callback should take three arguments (record, job_result, delete) where "record" is the GitRepository, etc.
-        that is being refreshed, "job_result" is an extras.JobResult record for logging purposes, and
-        "delete" is a boolean flag to distinguish between the "create/update" and "delete" cases.
-    weight (int): Defines the order in which datasources will be loaded.
+    Args:
+      name (str): Human-readable name for this content type, such as "config contexts"
+      content_identifier (str): Brief unique identifier of this content type; by convention a string such as "extras.configcontext"
+      icon (str): Material Design Icons icon name, such as "mdi-code-json" or "mdi-script-text"
+      callback (callable): Callback function to invoke whenever a given datasource is created, updated, or deleted.
+          This callback should take three arguments (record, job_result, delete) where "record" is the GitRepository, etc.
+          that is being refreshed, "job_result" is an extras.JobResult record for logging purposes, and
+          "delete" is a boolean flag to distinguish between the "create/update" and "delete" cases.
+      weight (int): Defines the order in which datasources will be loaded.
     """
 
     __slots__ = ["name", "content_identifier", "icon", "callback", "weight"]
