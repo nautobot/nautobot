@@ -72,8 +72,8 @@ class RouteTargetTestCase(ViewTestCases.PrimaryObjectViewTestCase):
 
         cls.csv_data = (
             "name,tenant,description",
-            f"65000:1004,{tenants[0].name},Foo",
-            f"65000:1005,{tenants[1].name},Bar",
+            f'65000:1004,"{tenants[0].name}",Foo',
+            f'65000:1005,"{tenants[1].name}",Bar',
             "65000:1006,,No tenant",
         )
 
@@ -302,11 +302,13 @@ class VLANTestCase(ViewTestCases.PrimaryObjectViewTestCase):
     def setUpTestData(cls):
 
         locations = Location.objects.filter(site__isnull=False)
-        cls.sites = sorted(set(locations.values_list("site", flat=True)))
+        cls.sites = Site.objects.filter(locations__in=locations)
+
+        site_1 = cls.sites.first()
 
         vlangroups = (
-            VLANGroup.objects.create(name="VLAN Group 1", slug="vlan-group-1", site=Site.objects.get(pk=cls.sites[0])),
-            VLANGroup.objects.create(name="VLAN Group 2", slug="vlan-group-2", site=Site.objects.get(pk=cls.sites[1])),
+            VLANGroup.objects.create(name="VLAN Group 1", slug="vlan-group-1", site=site_1),
+            VLANGroup.objects.create(name="VLAN Group 2", slug="vlan-group-2", site=cls.sites.last()),
         )
 
         roles = (
@@ -322,7 +324,7 @@ class VLANTestCase(ViewTestCases.PrimaryObjectViewTestCase):
             group=vlangroups[0],
             vid=101,
             name="VLAN101",
-            site=Site.objects.get(pk=cls.sites[0]),
+            site=site_1,
             role=roles[0],
             status=status_active,
             _custom_field_data={"field": "Value"},
@@ -331,7 +333,7 @@ class VLANTestCase(ViewTestCases.PrimaryObjectViewTestCase):
             group=vlangroups[0],
             vid=102,
             name="VLAN102",
-            site=Site.objects.get(pk=cls.sites[0]),
+            site=site_1,
             role=roles[0],
             status=status_active,
             _custom_field_data={"field": "Value"},
@@ -340,7 +342,7 @@ class VLANTestCase(ViewTestCases.PrimaryObjectViewTestCase):
             group=vlangroups[0],
             vid=103,
             name="VLAN103",
-            site=Site.objects.get(pk=cls.sites[0]),
+            site=site_1,
             role=roles[0],
             status=status_active,
             _custom_field_data={"field": "Value"},
@@ -370,8 +372,8 @@ class VLANTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         )
 
         cls.bulk_edit_data = {
-            "location": Location.objects.filter(site=cls.sites[0]).first().pk,
-            "site": cls.sites[0],
+            "location": Location.objects.filter(site=site_1).first().pk,
+            "site": site_1.pk,
             "group": vlangroups[0].pk,
             "tenant": Tenant.objects.first().pk,
             "status": status_reserved.pk,

@@ -69,6 +69,7 @@ from .choices import (
     CableTypeChoices,
     ConsolePortTypeChoices,
     DeviceFaceChoices,
+    DeviceRedundancyGroupFailoverStrategyChoices,
     InterfaceModeChoices,
     InterfaceTypeChoices,
     PortTypeChoices,
@@ -96,6 +97,7 @@ from .models import (
     Cable,
     DeviceBay,
     DeviceBayTemplate,
+    DeviceRedundancyGroup,
     ConsolePort,
     ConsolePortTemplate,
     ConsoleServerPort,
@@ -1804,6 +1806,7 @@ class DeviceForm(LocatableModelFormMixin, NautobotModelForm, TenancyForm, LocalC
             "group_id": "$rack_group",
         },
     )
+    device_redundancy_group = DynamicModelChoiceField(queryset=DeviceRedundancyGroup.objects.all(), required=False)
     position = forms.IntegerField(
         required=False,
         help_text="The lowest-numbered unit occupied by the device",
@@ -1855,6 +1858,8 @@ class DeviceForm(LocatableModelFormMixin, NautobotModelForm, TenancyForm, LocalC
             "site",
             "location",
             "rack",
+            "device_redundancy_group",
+            "device_redundancy_group_priority",
             "position",
             "face",
             "status",
@@ -2023,6 +2028,12 @@ class DeviceCSVForm(LocatableModelCSVFormMixin, BaseDeviceCSVForm):
         help_text="Assigned rack",
     )
     face = CSVChoiceField(choices=DeviceFaceChoices, required=False, help_text="Mounted rack face")
+    device_redundancy_group = CSVModelChoiceField(
+        queryset=DeviceRedundancyGroup.objects.all(),
+        to_field_name="slug",
+        required=False,
+        help_text="Associated device redundancy group (slug)",
+    )
 
     class Meta(BaseDeviceCSVForm.Meta):
         fields = [
@@ -2041,6 +2052,8 @@ class DeviceCSVForm(LocatableModelCSVFormMixin, BaseDeviceCSVForm):
             "rack",
             "position",
             "face",
+            "device_redundancy_group",
+            "device_redundancy_group_priority",
             "cluster",
             "comments",
         ]
@@ -2140,6 +2153,8 @@ class DeviceBulkEditForm(
     platform = DynamicModelChoiceField(queryset=Platform.objects.all(), required=False)
     serial = forms.CharField(max_length=255, required=False, label="Serial Number")
     secrets_group = DynamicModelChoiceField(queryset=SecretsGroup.objects.all(), required=False)
+    device_redundancy_group = DynamicModelChoiceField(queryset=DeviceRedundancyGroup.objects.all(), required=False)
+    device_redundancy_group_priority = forms.IntegerField(required=False, min_value=1)
 
     class Meta:
         model = Device
@@ -2153,6 +2168,8 @@ class DeviceBulkEditForm(
             "face",
             "rack_group",
             "secrets_group",
+            "device_redundancy_group",
+            "device_redundancy_group_priority",
         ]
 
     def __init__(self, *args, **kwrags):
@@ -2223,6 +2240,13 @@ class DeviceFilterForm(
         null_option="None",
     )
     mac_address = forms.CharField(required=False, label="MAC address")
+    device_redundancy_group = DynamicModelMultipleChoiceField(
+        queryset=DeviceRedundancyGroup.objects.all(),
+        to_field_name="slug",
+        required=False,
+        null_option="None",
+    )
+    device_redundancy_group_priority = forms.IntegerField(min_value=1, required=False)
     has_primary_ip = forms.NullBooleanField(
         required=False,
         label="Has a primary IP",
@@ -4448,3 +4472,67 @@ class PowerFeedFilterForm(NautobotFilterForm, StatusModelFilterFormMixin):
     amperage = forms.IntegerField(required=False)
     max_utilization = forms.IntegerField(required=False)
     tag = TagFilterField(model)
+
+
+class DeviceRedundancyGroupForm(NautobotModelForm):
+    secrets_group = DynamicModelChoiceField(queryset=SecretsGroup.objects.all(), required=False)
+    comments = CommentField()
+    slug = SlugField()
+
+    class Meta:
+        model = DeviceRedundancyGroup
+        fields = "__all__"
+        widgets = {"failover_strategy": StaticSelect2()}
+
+
+class DeviceRedundancyGroupFilterForm(NautobotFilterForm, StatusModelFilterFormMixin):
+    model = DeviceRedundancyGroup
+    field_order = ["q", "name"]
+    q = forms.CharField(required=False, label="Search")
+    failover_strategy = forms.ChoiceField(
+        choices=add_blank_choice(DeviceRedundancyGroupFailoverStrategyChoices),
+        required=False,
+        widget=StaticSelect2(),
+    )
+    secrets_group = DynamicModelMultipleChoiceField(
+        queryset=SecretsGroup.objects.all(), to_field_name="slug", required=False
+    )
+
+    tag = TagFilterField(model)
+
+
+class DeviceRedundancyGroupBulkEditForm(
+    TagsBulkEditFormMixin, StatusModelBulkEditFormMixin, NautobotBulkEditForm, LocalContextModelBulkEditForm
+):
+    pk = forms.ModelMultipleChoiceField(queryset=DeviceRedundancyGroup.objects.all(), widget=forms.MultipleHiddenInput)
+    failover_strategy = forms.ChoiceField(
+        choices=add_blank_choice(DeviceRedundancyGroupFailoverStrategyChoices),
+        required=False,
+        widget=StaticSelect2(),
+    )
+    secrets_group = DynamicModelChoiceField(queryset=SecretsGroup.objects.all(), to_field_name="name", required=False)
+    comments = CommentField(widget=SmallTextarea, label="Comments")
+
+    class Meta:
+        model = DeviceRedundancyGroup
+        nullable_fields = [
+            "failover_strategy",
+            "secrets_group",
+        ]
+
+
+class DeviceRedundancyGroupCSVForm(StatusModelCSVFormMixin, CustomFieldModelCSVForm):
+    failover_strategy = CSVChoiceField(
+        choices=DeviceRedundancyGroupFailoverStrategyChoices, required=False, help_text="Failover Strategy"
+    )
+
+    secrets_group = CSVModelChoiceField(
+        queryset=SecretsGroup.objects.all(),
+        required=False,
+        to_field_name="name",
+        help_text="Secrets group",
+    )
+
+    class Meta:
+        model = DeviceRedundancyGroup
+        fields = DeviceRedundancyGroup.csv_headers

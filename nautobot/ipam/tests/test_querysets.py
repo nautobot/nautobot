@@ -119,6 +119,36 @@ class IPAddressQuerySet(TestCase):
         address = self.queryset.net_in(["10.0.0.1/24"])[0]
         self.assertEqual(self.queryset.filter(address="10.0.0.1/24")[0], address)
 
+    def test__is_ambiguous_network_string(self):
+        self.assertTrue(self.queryset._is_ambiguous_network_string("10"))
+        self.assertTrue(self.queryset._is_ambiguous_network_string("123"))
+        self.assertFalse(self.queryset._is_ambiguous_network_string("10."))
+        self.assertFalse(self.queryset._is_ambiguous_network_string("b2a"))
+
+    def test__safe_parse_network_string(self):
+        fallback_ipv4 = netaddr.IPNetwork("0/32")
+        fallback_ipv6 = netaddr.IPNetwork("::/128")
+
+        self.assertEqual(self.queryset._safe_parse_network_string("taco", 4), fallback_ipv4)
+        self.assertEqual(self.queryset._safe_parse_network_string("taco", 6), fallback_ipv6)
+
+        self.assertEqual(self.queryset._safe_parse_network_string("10.", 4), netaddr.IPNetwork("10.0.0.0/8"))
+        self.assertEqual(self.queryset._safe_parse_network_string("10:", 6), netaddr.IPNetwork("10::/16"))
+
+        self.assertEqual(self.queryset._safe_parse_network_string("10.0.0.4", 4), netaddr.IPNetwork("10.0.0.4/32"))
+        self.assertEqual(
+            self.queryset._safe_parse_network_string("2001:db8:abcd:0012::0", 6),
+            netaddr.IPNetwork("2001:db8:abcd:12::/128"),
+        )
+
+    def test__check_and_prep_ipv6(self):
+        self.assertEqual(self.queryset._check_and_prep_ipv6("10"), "10::")
+        self.assertEqual(self.queryset._check_and_prep_ipv6("b2a"), "b2a::")
+        self.assertEqual(self.queryset._check_and_prep_ipv6("10:"), "10::")
+        self.assertEqual(self.queryset._check_and_prep_ipv6("b2a:"), "b2a::")
+        self.assertEqual(self.queryset._check_and_prep_ipv6("10::"), "10::")
+        self.assertEqual(self.queryset._check_and_prep_ipv6("b2a::"), "b2a::")
+
     def test_string_search_parse_network_string(self):
         """
         Tests that the parsing underlying `string_search` behaves as expected.

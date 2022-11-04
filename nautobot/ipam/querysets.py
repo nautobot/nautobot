@@ -37,8 +37,9 @@ class BaseNetworkQuerySet(RestrictedQuerySet):
     # Match string with ending in "::"
     RE_COLON = re.compile(".*::$")
 
-    # Match string from "0000" to "ffff" with no trailing ":"
-    RE_HEXTET = re.compile("^[a-f0-9]{4}$")
+    # Match string from "0" to "ffff" with no trailing ":"
+    # Allows for abbreviated and non-abbreviated hextet forms
+    RE_HEXTET = re.compile("^[a-f0-9]{4}$|^0{0,1}[a-f0-9]{3}$|^0{0,2}[a-f0-9]{2}$|^0{0,3}[a-f0-9]{1}$")
 
     @staticmethod
     def _get_last_ip(network):
@@ -50,45 +51,19 @@ class BaseNetworkQuerySet(RestrictedQuerySet):
         """
         return network.broadcast if network.broadcast else network[-1]
 
-    def parse_network_string(self, search):
+    @staticmethod
+    def _is_ambiguous_network_string(search):
         """
-        Attempts to parse a (potentially incomplete) IPAddress and return an IPNetwork.
-        eg: '10.10' should be interpreted as netaddr.IPNetwork('10.10.0.0/16')
+        Determines if an inputted search could be both a valid IPv4 or IPv6 beginning octet or hextet respectively.
         """
-        version = 4
+        return search.isdigit() and int(search) < 256
 
+    def _safe_parse_network_string(self, search, version):
+        """
+        Parses a input string into an IPNetwork object of input version.
+        Handles AddrFormatError exception and returns an empty address.
+        """
         try:
-            # Disregard netmask
-            search = search.split("/")[0]
-
-            # Attempt to quickly assess v6
-            if ":" in search:
-                version = 6
-
-            # (IPv6) If the value ends with ":" but it's not "::", make it so.
-            if search.endswith(":") and not self.RE_COLON.match(search):
-                search += ":"
-            # (IPv6) If the value has a colon in it, but doesn't end with one or
-            # contain "::"
-            elif all(
-                [
-                    not search.endswith(":"),
-                    version == 6,
-                    "::" not in search,
-                ]
-            ):
-                search += ":"
-            # (IPv6) If the value is numeric and > 255, append "::"
-            # (IPv6) If the value is a hextet (e.g. "fe80"), append "::"
-            elif any(
-                [
-                    search.isdigit() and int(search) > 255,
-                    self.RE_HEXTET.match(search),
-                ]
-            ):
-                search += "::"
-                version = 6
-
             call_map = {
                 4: self.parse_ipv4,
                 6: self.parse_ipv6,
@@ -98,6 +73,55 @@ class BaseNetworkQuerySet(RestrictedQuerySet):
         except netaddr.core.AddrFormatError:
             ver_map = {4: "0/32", 6: "::/128"}
             return netaddr.IPNetwork(ver_map[version])
+
+    def _check_and_prep_ipv6(self, search):
+        """
+        Checks to see if input search could be a valid IPv6 address and prepares it for parsing
+        """
+        # (IPv6) If the value ends with ":" but it's not "::", make it so.
+        if search.endswith(":") and not self.RE_COLON.match(search):
+            search += ":"
+        # (IPv6) If the value has a colon in it, but doesn't end with one or
+        # contain "::"
+        elif all(
+            [
+                not search.endswith(":"),
+                ":" in search,
+                "::" not in search,
+            ]
+        ):
+            search += ":"
+        # (IPv6) If the value is numeric and > 255, append "::"
+        # (IPv6) If the value is a hextet (e.g. "fe80"), append "::"
+        elif any(
+            [
+                search.isdigit() and int(search) > 255,
+                self.RE_HEXTET.match(search),
+            ]
+        ):
+            search += "::"
+
+        return search
+
+    def parse_network_string(self, search):
+        """
+        Attempts to parse a (potentially incomplete) IPAddress and return an IPNetwork.
+        eg: '10.10' should be interpreted as netaddr.IPNetwork('10.10.0.0/16')
+        """
+        version = 4
+
+        # Disregard netmask
+        search = search.split("/")[0]
+
+        # We don't want default ambiguous behavior to be IPv6
+        if not self._is_ambiguous_network_string(search):
+            search = self._check_and_prep_ipv6(search)
+
+        # Attempt to quickly assess v6
+        if ":" in search:
+            version = 6
+
+        return self._safe_parse_network_string(search, version)
 
     def parse_ipv6(self, value):
         """IPv6 addresses are 8, 16-bit fields."""
@@ -148,16 +172,36 @@ class BaseNetworkQuerySet(RestrictedQuerySet):
         if not search:
             return self.none()
 
-        network = self.parse_network_string(search)
-        last_ip = self._get_last_ip(network)
+        the_filter = Q(description__icontains=search)
 
-        return self.filter(
-            Q(description__icontains=search)
-            | Q(network__gte=network.network, broadcast__lte=last_ip)  # same as `net_contained()`
+        if self._is_ambiguous_network_string(search):
+            network = self._safe_parse_network_string(search, 4)  # network becomes always v4 Address in ambiguous case
+            last_ip = self._get_last_ip(network)
+
+            network_ip6 = self._safe_parse_network_string(self._check_and_prep_ipv6(search), 6)
+            last_ip_ip6 = self._get_last_ip(network_ip6)
+
+            the_filter = the_filter | (
+                Q(network__gte=network_ip6.network, broadcast__lte=last_ip_ip6)  # same as `net_contained()`
+                | Q(
+                    prefix_length__lte=network_ip6.prefixlen,
+                    network__lte=network_ip6.network,
+                    broadcast__gte=last_ip_ip6,
+                )  # same as `net_contains_or_equals()`
+            )
+
+        else:
+            network = self.parse_network_string(search)  # network may either be v4 or v6 in non-ambiguous case
+            last_ip = self._get_last_ip(network)
+
+        the_filter = the_filter | (
+            Q(network__gte=network.network, broadcast__lte=last_ip)  # same as `net_contained()`
             | Q(
                 prefix_length__lte=network.prefixlen, network__lte=network.network, broadcast__gte=last_ip
             )  # same as `net_contains_or_equals()`
         )
+
+        return self.filter(the_filter)
 
 
 class NetworkQuerySet(BaseNetworkQuerySet):
@@ -340,13 +384,24 @@ class IPAddressQuerySet(BaseNetworkQuerySet):
         if not search:
             return self.none()
 
-        network = self.parse_network_string(search)
-        last_ip = self._get_last_ip(network)
-        return self.filter(
-            Q(dns_name__icontains=search)
-            | Q(description__icontains=search)
-            | Q(host__lte=last_ip, host__gte=network.network)  # same as `net_host_contained()`
-        )
+        the_filter = Q(dns_name__icontains=search) | Q(description__icontains=search)
+
+        if self._is_ambiguous_network_string(search):
+            network = self._safe_parse_network_string(search, 4)  # network becomes always v4 Address in ambiguous case
+            last_ip = self._get_last_ip(network)
+
+            network_ip6 = self._safe_parse_network_string(self._check_and_prep_ipv6(search), 6)
+            last_ip_ip6 = self._get_last_ip(network_ip6)
+
+            the_filter |= Q(host__lte=last_ip_ip6, host__gte=network_ip6.network)  # same as `net_host_contained()`
+
+        else:
+            network = self.parse_network_string(search)  # network may either be v4 or v6 in non-ambiguous case
+            last_ip = self._get_last_ip(network)
+
+        the_filter |= Q(host__lte=last_ip, host__gte=network.network)  # same as `net_host_contained()`
+
+        return self.filter(the_filter)
 
     def net_host_contained(self, network):
         # consider only host ip address when

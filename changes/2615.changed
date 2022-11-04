@@ -1,0 +1,4 @@
+Changed `ConfigContextFilterForm`s `schema` filter form field to support added filter field on `ConfigContextFilterSet`.
+Changed `BaseNetworkQuerySet` and `IPAddressQuerySet` to search both IPv6 and IPv4 when given search string is ambiguous.
+Changed `test_slug_not_modified` to ensure no collision on new slug source value as well as changing lookup expression from `__contains` to `__exact`.
+Changed `DeleteObjectViewTestCase.get_deletable_object` to throw a helpful failure message when deletable object not found.

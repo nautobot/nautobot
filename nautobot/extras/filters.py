@@ -5,7 +5,7 @@ from django.db.models import Q
 from django_filters.utils import verbose_lookup_expr
 from django.forms import IntegerField
 
-from nautobot.dcim.models import DeviceRole, DeviceType, Location, Platform, Region, Site
+from nautobot.dcim.models import DeviceRedundancyGroup, DeviceRole, DeviceType, Location, Platform, Region, Site
 from nautobot.extras.utils import ChangeLoggedModelsQuery, FeatureQuery, TaggableClassesQuery
 from nautobot.tenancy.models import Tenant, TenantGroup
 from nautobot.utilities.constants import (
@@ -275,6 +275,12 @@ class ConfigContextFilterSet(BaseFilterSet):
         },
     )
     owner_content_type = ContentTypeFilter()
+    schema = NaturalKeyOrPKMultipleChoiceFilter(
+        field_name="schema",
+        queryset=ConfigContextSchema.objects.all(),
+        to_field_name="slug",
+        label="Schema (slug or PK)",
+    )
     region_id = django_filters.ModelMultipleChoiceFilter(
         field_name="regions",
         queryset=Region.objects.all(),
@@ -377,6 +383,12 @@ class ConfigContextFilterSet(BaseFilterSet):
         queryset=Tenant.objects.all(),
         to_field_name="slug",
         label="Tenant (slug)",
+    )
+    device_redundancy_group = NaturalKeyOrPKMultipleChoiceFilter(
+        field_name="device_redundancy_groups",
+        queryset=DeviceRedundancyGroup.objects.all(),
+        to_field_name="slug",
+        label="Device Redundancy Group (slug or PK)",
     )
     tag = django_filters.ModelMultipleChoiceFilter(
         field_name="tags__slug",

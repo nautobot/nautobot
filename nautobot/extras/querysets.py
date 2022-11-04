@@ -24,6 +24,8 @@ class ConfigContextQuerySet(RestrictedQuerySet):
         cluster = getattr(obj, "cluster", None)
         cluster_group = getattr(cluster, "group", None)
 
+        device_redundancy_group = getattr(obj, "device_redundancy_group", None)
+
         # Get the group of the assigned tenant, if any
         tenant_group = obj.tenant.group if obj.tenant else None
 
@@ -51,6 +53,7 @@ class ConfigContextQuerySet(RestrictedQuerySet):
                 Q(platforms=obj.platform) | Q(platforms=None),
                 Q(cluster_groups=cluster_group) | Q(cluster_groups=None),
                 Q(clusters=cluster) | Q(clusters=None),
+                Q(device_redundancy_groups=device_redundancy_group) | Q(device_redundancy_groups=None),
                 Q(tenant_groups=tenant_group) | Q(tenant_groups=None),
                 Q(tenants=obj.tenant) | Q(tenants=None),
                 Q(tags__slug__in=obj.tags.slugs()) | Q(tags=None),
@@ -122,6 +125,10 @@ class ConfigContextModelQuerySet(RestrictedQuerySet):
         if self.model._meta.model_name == "device":
             base_query.add((Q(roles=OuterRef("device_role")) | Q(roles=None)), Q.AND)
             base_query.add((Q(device_types=OuterRef("device_type")) | Q(device_types=None)), Q.AND)
+            base_query.add(
+                (Q(device_redundancy_groups=OuterRef("device_redundancy_group")) | Q(device_redundancy_groups=None)),
+                Q.AND,
+            )
             base_query.add((Q(sites=OuterRef("site")) | Q(sites=None)), Q.AND)
             region_field = "site__region"
 

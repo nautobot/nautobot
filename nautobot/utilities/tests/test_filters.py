@@ -751,7 +751,7 @@ class DynamicFilterLookupExpressionTest(TestCase):
         )
         Platform.objects.bulk_create(platforms)
 
-        cls.regions = Region.objects.filter(sites__isnull=False, children__isnull=True, parent__isnull=True)[:3]
+        cls.regions = Region.objects.filter(sites__isnull=False)[:3]
 
         cls.sites = (
             Site.objects.filter(region=cls.regions[0]).first(),
@@ -925,7 +925,7 @@ class DynamicFilterLookupExpressionTest(TestCase):
         params = {"region_id__n": [self.regions[0].pk]}
         self.assertQuerysetEqual(
             SiteFilterSet(params, self.site_queryset).qs,
-            Site.objects.exclude(region__id=self.regions[0].pk),
+            Site.objects.exclude(region__in=self.regions[0].get_descendants(include_self=True)),
         )
 
     def test_device_name_eq(self):
