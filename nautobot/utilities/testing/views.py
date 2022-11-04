@@ -4,6 +4,7 @@ import uuid
 from django.conf import settings
 from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ObjectDoesNotExist
+from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import TestCase as _TestCase, override_settings, tag
 from django.urls import reverse, NoReverseMatch
 from django.utils.text import slugify
@@ -811,6 +812,28 @@ class ViewTestCases:
             initial_count = self._get_queryset().count()
             data = {
                 "csv_data": self._get_csv_data(),
+            }
+
+            # Assign model-level permission
+            obj_perm = ObjectPermission(name="Test permission", actions=["add"])
+            obj_perm.save()
+            obj_perm.users.add(self.user)
+            obj_perm.object_types.add(ContentType.objects.get_for_model(self.model))
+
+            # Try GET with model-level permission
+            self.assertHttpStatus(self.client.get(self._get_url("import")), 200)
+
+            # Test POST with permission
+            self.assertHttpStatus(self.client.post(self._get_url("import"), data), 200)
+            self.assertEqual(self._get_queryset().count(), initial_count + len(self.csv_data) - 1)
+
+        @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+        def test_bulk_import_objects_with_permission_csv_file(self):
+            initial_count = self._get_queryset().count()
+            self.file_contents = bytes(self._get_csv_data(), "utf-8")
+            self.bulk_import_file = SimpleUploadedFile(name="bulk_import_data.csv", content=self.file_contents)
+            data = {
+                "csv_file": self.bulk_import_file,
             }
 
             # Assign model-level permission
