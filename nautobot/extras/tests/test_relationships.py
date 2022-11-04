@@ -29,13 +29,7 @@ class RelationshipBaseTest(TestCase):
         self.rack_ct = ContentType.objects.get_for_model(Rack)
         self.vlan_ct = ContentType.objects.get_for_model(VLAN)
 
-        self.sites = [
-            Site.objects.create(name="Site A", slug="site-a"),
-            Site.objects.create(name="Site B", slug="site-b"),
-            Site.objects.create(name="Site C", slug="site-c"),
-            Site.objects.create(name="Site D", slug="site-d"),
-            Site.objects.create(name="Site E", slug="site-e"),
-        ]
+        self.sites = Site.objects.all()[:5]
 
         self.racks = [
             Rack.objects.create(name="Rack A", site=self.sites[0]),
@@ -54,7 +48,7 @@ class RelationshipBaseTest(TestCase):
             slug="vlan-rack",
             source_type=self.rack_ct,
             source_label="My Vlans",
-            source_filter={"site": ["site-a", "site-b", "site-c"]},
+            source_filter={"site": [self.sites[0].slug, self.sites[1].slug, self.sites[2].slug]},
             destination_type=self.vlan_ct,
             destination_label="My Racks",
             type=RelationshipTypeChoices.TYPE_MANY_TO_MANY,
@@ -220,9 +214,9 @@ class RelationshipTest(RelationshipBaseTest):
             name="Another Vlan to Rack",
             slug="vlan-rack-2",
             source_type=self.site_ct,
-            source_filter={"name": ["site-b"]},
+            source_filter={"name": [self.sites[1].slug]},
             destination_type=self.rack_ct,
-            destination_filter={"site": ["site-a"]},
+            destination_filter={"site": [self.sites[0].slug]},
             type=RelationshipTypeChoices.TYPE_MANY_TO_MANY,
         )
 
@@ -344,7 +338,7 @@ class RelationshipTest(RelationshipBaseTest):
         self.assertFalse(field.required)
         self.assertIsInstance(field, DynamicModelMultipleChoiceField)
         self.assertEqual(field.label, "My Racks")
-        self.assertEqual(field.query_params, {"site": ["site-a", "site-b", "site-c"]})
+        self.assertEqual(field.query_params, {"site": [self.sites[0].slug, self.sites[1].slug, self.sites[2].slug]})
 
         field = self.m2ms_1.to_form_field("peer")
         self.assertFalse(field.required)
@@ -528,7 +522,9 @@ class RelationshipAssociationTest(RelationshipBaseTest):
             cra = RelationshipAssociation(relationship=self.o2o_1, source=self.racks[2], destination=self.sites[0])
             cra.clean()
         expected_errors = {
-            "destination": ["Unable to create more than one Primary Rack per Site association to Site A (destination)"]
+            "destination": [
+                f"Unable to create more than one Primary Rack per Site association to {self.sites[0].name} (destination)"
+            ]
         }
         self.assertEqual(handler.exception.message_dict, expected_errors)
 
@@ -618,7 +614,11 @@ class RelationshipAssociationTest(RelationshipBaseTest):
         with self.assertRaises(ValidationError) as handler:
             cra = RelationshipAssociation(relationship=self.m2ms_1, source=self.sites[1], destination=self.sites[0])
             cra.validated_save()
-        expected_errors = {"__all__": ["A Related Sites association already exists between Site B and Site A"]}
+        expected_errors = {
+            "__all__": [
+                f"A Related Sites association already exists between {self.sites[1].name} and {self.sites[0].name}"
+            ]
+        }
         self.assertEqual(handler.exception.message_dict, expected_errors)
 
     def test_get_peer(self):
@@ -761,18 +761,25 @@ class RelationshipAssociationTest(RelationshipBaseTest):
     def test_delete_cascade(self):
         """Verify that a RelationshipAssociation is deleted if either of the associated records is deleted."""
         initial_count = RelationshipAssociation.objects.count()
+        # Create new sites because protected error might be raised if we use test fixtures here.
+        sites = (
+            Site.objects.create(name="new site 1"),
+            Site.objects.create(name="new site 2"),
+            Site.objects.create(name="new site 3"),
+            Site.objects.create(name="new site 4"),
+        )
         associations = [
             RelationshipAssociation(relationship=self.m2m_1, source=self.racks[0], destination=self.vlans[0]),
             RelationshipAssociation(relationship=self.m2m_1, source=self.racks[0], destination=self.vlans[1]),
             RelationshipAssociation(relationship=self.m2m_1, source=self.racks[1], destination=self.vlans[0]),
             # Create an association loop just to make sure it works correctly on deletion
-            RelationshipAssociation(relationship=self.o2o_2, source=self.sites[2], destination=self.sites[3]),
-            RelationshipAssociation(relationship=self.o2o_2, source=self.sites[3], destination=self.sites[2]),
+            RelationshipAssociation(relationship=self.o2o_2, source=sites[2], destination=sites[3]),
+            RelationshipAssociation(relationship=self.o2o_2, source=sites[3], destination=sites[2]),
         ]
         for association in associations:
             association.validated_save()
         # Create a self-referential association as well; validated_save() would correctly reject this one as invalid
-        RelationshipAssociation.objects.create(relationship=self.o2o_2, source=self.sites[4], destination=self.sites[4])
+        RelationshipAssociation.objects.create(relationship=self.o2o_2, source=sites[0], destination=sites[0])
 
         self.assertEqual(6 + initial_count, RelationshipAssociation.objects.count())
 
@@ -790,11 +797,11 @@ class RelationshipAssociationTest(RelationshipBaseTest):
         self.assertEqual(3 + initial_count, RelationshipAssociation.objects.count())
 
         # Test automatic deletion of RelationshipAssociations when there's a loop of source/destination references
-        self.sites[3].delete()
+        sites[3].delete()
         self.assertEqual(1 + initial_count, RelationshipAssociation.objects.count())
 
         # Test automatic deletion of RelationshipAssociations when the same object is both source and destination
-        self.sites[4].delete()
+        sites[0].delete()
         self.assertEqual(initial_count, RelationshipAssociation.objects.count())
 
     def test_generic_relation(self):

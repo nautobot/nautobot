@@ -23,6 +23,8 @@ from nautobot.extras.choices import DynamicGroupOperatorChoices
 from nautobot.extras.filters import DynamicGroupFilterSet, DynamicGroupMembershipFilterSet
 from nautobot.extras.models import DynamicGroup, DynamicGroupMembership, Status
 from nautobot.ipam.models import Prefix
+from nautobot.utilities.forms.fields import MultiValueCharField
+from nautobot.utilities.forms.widgets import MultiValueCharInput
 from nautobot.utilities.testing import TestCase
 
 
@@ -129,6 +131,13 @@ class DynamicGroupTestBase(TestCase):
                 slug="invalid-filter",
                 description="A group with a non-matching filter",
                 filter={"name": ["bogus"]},
+                content_type=cls.device_ct,
+            ),
+            DynamicGroup.objects.create(
+                name="MultiValueCharFilter",
+                slug="multivaluecharfilter",
+                description="A group with a multivaluechar filter",
+                filter={"name": ["device-1", "device-2", "device-3"]},
                 content_type=cls.device_ct,
             ),
         ]
@@ -278,7 +287,7 @@ class DynamicGroupModelTest(DynamicGroupTestBase):
         device2.location = loc_site
         device2.validated_save()
 
-        names = [device1.name, device2.name]
+        expected = sorted([device1.name, device2.name])
 
         # Create the Dynamic Group filtering on Location A
         group = DynamicGroup.objects.create(
@@ -292,7 +301,25 @@ class DynamicGroupModelTest(DynamicGroupTestBase):
         # that have a Location whose parent is "Location A".
         self.assertEqual(
             sorted(m.name for m in group.members),
-            sorted(names),
+            expected,
+        )
+
+        # Now also test that an advancted (nested) dynamic group, also reports
+        # the same number of members.
+        parent_group = DynamicGroup.objects.create(
+            name="Parent of Devices Location",
+            slug="parent-devices-location",
+            content_type=self.device_ct,
+            filter={},
+        )
+        parent_group.add_child(
+            child=group,
+            operator=DynamicGroupOperatorChoices.OPERATOR_INTERSECTION,
+            weight=10,
+        )
+        self.assertEqual(
+            sorted(m.name for m in parent_group.members),
+            expected,
         )
 
     def test_count(self):
@@ -384,6 +411,9 @@ class DynamicGroupModelTest(DynamicGroupTestBase):
         self.assertNotEqual(fields, {})
         self.assertNotIn("q", fields)
         self.assertIn("name", fields)
+        # See if a CharField is properly converted to a MultiValueCharField In DynamicGroupEditForm.
+        self.assertIsInstance(fields["name"], MultiValueCharField)
+        self.assertIsInstance(fields["name"].widget, MultiValueCharInput)
 
     def test_map_filter_fields_skip_missing(self):
         """
@@ -500,15 +530,12 @@ class DynamicGroupModelTest(DynamicGroupTestBase):
     def test_get_initial(self):
         """Test `DynamicGroup.get_initial()`."""
         group1 = self.first_child  # Filter has `site`
-        group2 = self.invalid_filter  # Filter has `name`
-
-        # Test that a CharField (e.g. `name`) gets flattened. We use group2 for this.
-        initial = group2.get_initial()
-        expected = {"name": "bogus"}
-        self.assertEqual(initial, expected)
-
-        # Otherwise, it just passes through the filter.
         self.assertEqual(group1.get_initial(), group1.filter)
+        # Test if MultiValueCharField is properly pre-populated
+        group2 = self.groups[6]  # Filter has `name`
+        initial = group2.get_initial()
+        expected = {"name": ["device-1", "device-2", "device-3"]}
+        self.assertEqual(initial, expected)
 
     def test_set_filter(self):
         """Test `DynamicGroup.set_filter()`."""
@@ -870,7 +897,7 @@ class DynamicGroupFilterTest(DynamicGroupTestBase):
 
     def test_content_type(self):
         params = {"content_type": ["dcim.device", "virtualization.virtualmachine"]}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 6)
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 7)
 
     def test_search(self):
         tests = {
@@ -878,8 +905,8 @@ class DynamicGroupFilterTest(DynamicGroupTestBase):
             "Invalid Filter": 1,  # name
             "invalid-filter": 1,  # slug
             "A group with a non-matching filter": 1,  # description
-            "dcim": 6,  # content_type__app_label
-            "device": 6,  # content_type__model
+            "dcim": 7,  # content_type__app_label
+            "device": 7,  # content_type__model
         }
         for value, cnt in tests.items():
             params = {"q": value}

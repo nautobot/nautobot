@@ -1308,7 +1308,7 @@ class TagForm(NautobotModelForm):
     slug = SlugField()
     content_types = ModelMultipleChoiceField(
         label="Content Type(s)",
-        queryset=TaggableClassesQuery().as_queryset,
+        queryset=TaggableClassesQuery().as_queryset(),
     )
 
     class Meta:
@@ -1347,7 +1347,7 @@ class TagFilterForm(NautobotFilterForm):
         choices_as_strings=True,
         required=False,
         label="Content Type(s)",
-        queryset=TaggableClassesQuery().as_queryset,
+        queryset=TaggableClassesQuery().as_queryset(),
     )
 
 

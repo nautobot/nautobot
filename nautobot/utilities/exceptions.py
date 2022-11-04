@@ -38,3 +38,9 @@ class CeleryWorkerNotRunningException(APIException):
         else:
             detail = self.default_detail
         super().__init__(detail=detail)
+
+
+class FilterSetFieldNotFound(Exception):
+    """
+    An exception indicating that a filterset field could not be found.
+    """

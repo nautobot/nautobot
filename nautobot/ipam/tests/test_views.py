@@ -4,7 +4,7 @@ from netaddr import IPNetwork
 from django.contrib.contenttypes.models import ContentType
 from django.test import override_settings
 
-from nautobot.dcim.models import Device, DeviceRole, DeviceType, Manufacturer, Site
+from nautobot.dcim.models import Device, DeviceRole, DeviceType, Location, Manufacturer, Site
 from nautobot.extras.choices import CustomFieldTypeChoices
 from nautobot.extras.models import CustomField, Status, Tag
 from nautobot.ipam.choices import IPAddressRoleChoices, ServiceProtocolChoices
@@ -168,11 +168,7 @@ class PrefixTestCase(ViewTestCases.PrimaryObjectViewTestCase, ViewTestCases.List
     @classmethod
     def setUpTestData(cls):
 
-        sites = (
-            Site.objects.create(name="Site 1", slug="site-1"),
-            Site.objects.create(name="Site 2", slug="site-2"),
-        )
-
+        sites = Site.objects.all()[:2]
         vrfs = VRF.objects.all()[:2]
 
         roles = Role.objects.all()[:2]
@@ -201,6 +197,7 @@ class PrefixTestCase(ViewTestCases.PrimaryObjectViewTestCase, ViewTestCases.List
         )
 
         cls.bulk_edit_data = {
+            "location": None,
             "site": sites[1].pk,
             "vrf": vrfs[1].pk,
             "tenant": None,
@@ -278,7 +275,7 @@ class VLANGroupTestCase(ViewTestCases.OrganizationalObjectViewTestCase):
     @classmethod
     def setUpTestData(cls):
 
-        site = Site.objects.create(name="Site 1", slug="site-1")
+        site = Site.objects.first()
 
         cls.form_data = {
             "name": "VLAN Group X",
@@ -304,14 +301,12 @@ class VLANTestCase(ViewTestCases.PrimaryObjectViewTestCase):
     @classmethod
     def setUpTestData(cls):
 
-        sites = (
-            Site.objects.create(name="Site 1", slug="site-1"),
-            Site.objects.create(name="Site 2", slug="site-2"),
-        )
+        locations = Location.objects.filter(site__isnull=False)
+        cls.sites = sorted(set(locations.values_list("site", flat=True)))
 
         vlangroups = (
-            VLANGroup.objects.create(name="VLAN Group 1", slug="vlan-group-1", site=sites[0]),
-            VLANGroup.objects.create(name="VLAN Group 2", slug="vlan-group-2", site=sites[1]),
+            VLANGroup.objects.create(name="VLAN Group 1", slug="vlan-group-1", site=Site.objects.get(pk=cls.sites[0])),
+            VLANGroup.objects.create(name="VLAN Group 2", slug="vlan-group-2", site=Site.objects.get(pk=cls.sites[1])),
         )
 
         roles = (
@@ -327,7 +322,7 @@ class VLANTestCase(ViewTestCases.PrimaryObjectViewTestCase):
             group=vlangroups[0],
             vid=101,
             name="VLAN101",
-            site=sites[0],
+            site=Site.objects.get(pk=cls.sites[0]),
             role=roles[0],
             status=status_active,
             _custom_field_data={"field": "Value"},
@@ -336,7 +331,7 @@ class VLANTestCase(ViewTestCases.PrimaryObjectViewTestCase):
             group=vlangroups[0],
             vid=102,
             name="VLAN102",
-            site=sites[0],
+            site=Site.objects.get(pk=cls.sites[0]),
             role=roles[0],
             status=status_active,
             _custom_field_data={"field": "Value"},
@@ -345,7 +340,7 @@ class VLANTestCase(ViewTestCases.PrimaryObjectViewTestCase):
             group=vlangroups[0],
             vid=103,
             name="VLAN103",
-            site=sites[0],
+            site=Site.objects.get(pk=cls.sites[0]),
             role=roles[0],
             status=status_active,
             _custom_field_data={"field": "Value"},
@@ -355,7 +350,8 @@ class VLANTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         custom_field.content_types.set([ContentType.objects.get_for_model(VLAN)])
 
         cls.form_data = {
-            "site": sites[1].pk,
+            "location": Location.objects.filter(site=vlangroups[1].site).first().pk,
+            "site": vlangroups[1].site.pk,
             "group": vlangroups[1].pk,
             "vid": 999,
             "name": "VLAN999",
@@ -374,11 +370,12 @@ class VLANTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         )
 
         cls.bulk_edit_data = {
-            "site": sites[1].pk,
-            "group": vlangroups[1].pk,
+            "location": Location.objects.filter(site=cls.sites[0]).first().pk,
+            "site": cls.sites[0],
+            "group": vlangroups[0].pk,
             "tenant": Tenant.objects.first().pk,
             "status": status_reserved.pk,
-            "role": roles[1].pk,
+            "role": roles[0].pk,
             "description": "New description",
         }
 
@@ -400,7 +397,7 @@ class ServiceTestCase(
     @classmethod
     def setUpTestData(cls):
 
-        site = Site.objects.create(name="Site 1", slug="site-1")
+        site = Site.objects.first()
         manufacturer = Manufacturer.objects.create(name="Manufacturer 1", slug="manufacturer-1")
         devicetype = DeviceType.objects.create(manufacturer=manufacturer, model="Device Type 1")
         devicerole = DeviceRole.objects.create(name="Device Role 1", slug="device-role-1")

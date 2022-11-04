@@ -1,5 +1,6 @@
 import os
 import tempfile
+import datetime
 from unittest import mock
 import uuid
 
@@ -19,7 +20,6 @@ from nautobot.dcim.models import (
     Manufacturer,
     Platform,
     Site,
-    Region,
 )
 from nautobot.extras.constants import JOB_OVERRIDABLE_FIELDS
 from nautobot.extras.choices import LogLevelChoices, SecretsGroupAccessTypeChoices, SecretsGroupSecretTypeChoices
@@ -85,7 +85,7 @@ class ComputedFieldTest(TestCase):
             template="{{ obj.location }}",
             weight=50,
         )
-        self.site1 = Site.objects.create(name="NYC")
+        self.site1 = Site.objects.first()
 
     def test_render_method(self):
         rendered_value = self.good_computed_field.render(context={"obj": self.site1})
@@ -114,8 +114,8 @@ class ConfigContextTest(TestCase):
             manufacturer=manufacturer, model="Device Type 1", slug="device-type-1"
         )
         self.devicerole = DeviceRole.objects.create(name="Device Role 1", slug="device-role-1")
-        self.region = Region.objects.create(name="Region")
-        self.site = Site.objects.create(name="Site-1", slug="site-1", region=self.region)
+        self.site = Site.objects.filter(region__isnull=False).first()
+        self.region = self.site.region
         location_type = LocationType.objects.create(name="Location Type 1")
         self.location = Location.objects.create(name="Location 1", location_type=location_type, site=self.site)
         self.platform = Platform.objects.create(name="Platform")
@@ -381,7 +381,7 @@ class ConfigContextSchemaTestCase(TestCase):
 
         # Device
         status = Status.objects.get(slug="active")
-        site = Site.objects.create(name="site", slug="site", status=status)
+        site = Site.objects.first()
         manufacturer = Manufacturer.objects.create(name="manufacturer", slug="manufacturer")
         device_type = DeviceType.objects.create(model="device_type", manufacturer=manufacturer)
         device_role = DeviceRole.objects.create(name="device_role", slug="device-role", color="ffffff")
@@ -926,7 +926,8 @@ class SecretTest(TestCase):
             parameters={"path": os.path.join(tempfile.gettempdir(), "{{ obj.slug }}", "secret-file.txt")},
         )
 
-        self.site = Site.objects.create(name="New York City", slug="nyc")
+        self.site = Site.objects.first()
+        self.site.slug = "nyc"
 
     def test_environment_variable_value_not_found(self):
         """Failure to retrieve an environment variable raises an exception."""
@@ -1165,7 +1166,7 @@ class StatusTest(TestCase):
         manufacturer = Manufacturer.objects.create(name="Manufacturer 1")
         devicetype = DeviceType.objects.create(manufacturer=manufacturer, model="Device Type 1")
         devicerole = DeviceRole.objects.create(name="Device Role 1")
-        site = Site.objects.create(name="Site-1")
+        site = Site.objects.first()
 
         self.device = Device.objects.create(
             name="Device 1",
@@ -1229,21 +1230,23 @@ class JobLogEntryTest(TestCase):
     Tests for the JobLogEntry Model.
     """
 
-    def test_log_entry_creation(self):
+    def setUp(self):
         module = "test_pass"
         name = "TestPass"
         job_class = get_job(f"local/{module}/{name}")
 
-        job_result = JobResult.objects.create(
+        self.job_result = JobResult.objects.create(
             name=job_class.class_path,
             obj_type=get_job_content_type(),
             user=None,
             job_id=uuid.uuid4(),
         )
 
+    def test_log_entry_creation(self):
+
         log = JobLogEntry(
             log_level=LogLevelChoices.LOG_SUCCESS,
-            job_result=job_result,
+            job_result=self.job_result,
             grouping="run",
             message="This is a test",
         )
@@ -1254,6 +1257,40 @@ class JobLogEntryTest(TestCase):
         self.assertEqual(log_object.message, log.message)
         self.assertEqual(log_object.log_level, log.log_level)
         self.assertEqual(log_object.grouping, log.grouping)
+
+    def test_to_csv_no_log_object(self):
+        """Check that `to_csv` returns the correct data from the JobLogEntry model."""
+        expected_data = ("2020-01-26 15:37:36", "run", "success", "", "Django Test")
+
+        joblogentry_a = JobLogEntry(
+            job_result=self.job_result,
+            log_level=LogLevelChoices.LOG_SUCCESS,
+            grouping="run",
+            message="Django Test",
+            created=datetime.datetime(2020, 1, 26, 15, 37, 36),
+            log_object="",
+            absolute_url="",
+        )
+        joblogentry_a.validated_save()
+        csv_data = joblogentry_a.to_csv()
+        self.assertEqual(expected_data, csv_data)
+
+    def test_to_csv_with_log_object(self):
+        """Check that `to_csv` returns the correct data from the JobLogEntry model."""
+        expected_data = ("2030-05-26 15:37:36", "run", "success", "ams01-dist-01", "Django Test 2")
+
+        joblogentry_a = JobLogEntry(
+            job_result=self.job_result,
+            log_level=LogLevelChoices.LOG_SUCCESS,
+            grouping="run",
+            message="Django Test 2",
+            created=datetime.datetime(2030, 5, 26, 15, 37, 36),
+            log_object="ams01-dist-01",
+            absolute_url="https://nautobot.io/dcim/devices/8d769e14-286a-489c-b705-bd15c476abbb",
+        )
+        joblogentry_a.validated_save()
+        csv_data = joblogentry_a.to_csv()
+        self.assertEqual(expected_data, csv_data)
 
 
 class WebhookTest(TestCase):
