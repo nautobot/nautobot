@@ -1,1 +1,0 @@
-Fixed a ValidationError that could occur when specifying Site latitude/longitude as a float.
