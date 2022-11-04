@@ -89,7 +89,7 @@ class VMInterfaceTestCase(TestCase):
             err.exception.message_dict["tagged_vlans"][0], "Mode must be set to tagged when specifying tagged_vlans"
         )
 
-    def test_tagged_vlan_raise_error_if_mode_is_changed_withoout_cleating_tagged_vlans(self):
+    def test_tagged_vlan_raise_error_if_mode_is_changed_without_clearing_tagged_vlans(self):
         interface = VMInterface.objects.create(
             virtual_machine=self.virtualmachine, name="Interface 1", mode=InterfaceModeChoices.MODE_TAGGED
         )
