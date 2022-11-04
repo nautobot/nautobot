@@ -9,9 +9,10 @@ from django.db.models import Q
 
 from nautobot.core.factory import OrganizationalModelFactory, PrimaryModelFactory
 from nautobot.circuits.models import CircuitTermination
-from nautobot.dcim.choices import SubdeviceRoleChoices
+from nautobot.dcim.choices import DeviceRedundancyGroupFailoverStrategyChoices, SubdeviceRoleChoices
 from nautobot.dcim.models import (
     Device,
+    DeviceRedundancyGroup,
     DeviceRole,
     DeviceType,
     Manufacturer,
@@ -91,6 +92,30 @@ class DeviceTypeFactory(PrimaryModelFactory):
         SubdeviceRoleChoices.ROLE_CHILD,
         factory.Faker("random_element", elements=["", SubdeviceRoleChoices.ROLE_PARENT]),
     )
+
+    has_comments = factory.Faker("pybool")
+    comments = factory.Maybe("has_comments", factory.Faker("paragraph"), "")
+
+
+class DeviceRedundancyGroupFactory(PrimaryModelFactory):
+    class Meta:
+        model = DeviceRedundancyGroup
+        exclude = ("has_description", "has_comments")
+
+    class Params:
+        unique_name = UniqueFaker("word", part_of_speech="adjective")
+
+    # Slug isn't defined here since it will always inherit from name.
+    name = factory.LazyAttribute(lambda o: o.unique_name.title())
+
+    status = random_instance(lambda: Status.objects.get_for_model(DeviceRedundancyGroup), allow_null=False)
+
+    failover_strategy = factory.Iterator(
+        DeviceRedundancyGroupFailoverStrategyChoices.CHOICES, getter=lambda choice: choice[0]
+    )
+
+    has_description = factory.Faker("pybool")
+    description = factory.Maybe("has_description", factory.Faker("sentence"), "")
 
     has_comments = factory.Faker("pybool")
     comments = factory.Maybe("has_comments", factory.Faker("paragraph"), "")

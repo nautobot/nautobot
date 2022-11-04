@@ -8,6 +8,7 @@ from nautobot.ipam.choices import ServiceProtocolChoices
 from nautobot.ipam.models import IPAddress, VLAN, Service
 from nautobot.tenancy.models import Tenant
 from nautobot.utilities.testing import FilterTestCases
+from nautobot.utilities.utils import flatten_iterable
 from nautobot.virtualization.filters import (
     ClusterTypeFilterSet,
     ClusterGroupFilterSet,
@@ -119,7 +120,7 @@ class ClusterTestCase(FilterTestCases.FilterTestCase, FilterTestCases.TenancyFil
             ClusterGroup.objects.create(name="Cluster Group 3", slug="cluster-group-3"),
         )
 
-        cls.regions = Region.objects.filter(sites__isnull=False, children__isnull=True, parent__isnull=True)[:3]
+        cls.regions = Region.objects.filter(sites__isnull=False)[:3]
 
         cls.sites = (
             Site.objects.filter(region=cls.regions[0]).first(),
@@ -207,14 +208,17 @@ class ClusterTestCase(FilterTestCases.FilterTestCase, FilterTestCases.TenancyFil
             self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
 
     def test_region(self):
-        regions = list(self.regions[:2])
-        params = {"region_id": [regions[0].pk, regions[1].pk]}
-        self.assertQuerysetEqual(
-            self.filterset(params, self.queryset).qs, self.queryset.filter(site__region__in=regions)
+        filter_parent_regions = self.regions[:2]
+        nested_regions = list(
+            set(flatten_iterable(map(lambda r: r.get_descendants(include_self=True), filter_parent_regions)))
         )
-        params = {"region": [regions[0].slug, regions[1].slug]}
+        params = {"region_id": [filter_parent_regions[0].pk, filter_parent_regions[1].pk]}
         self.assertQuerysetEqual(
-            self.filterset(params, self.queryset).qs, self.queryset.filter(site__region__in=regions)
+            self.filterset(params, self.queryset).qs, self.queryset.filter(site__region__in=nested_regions)
+        )
+        params = {"region": [filter_parent_regions[0].slug, filter_parent_regions[1].slug]}
+        self.assertQuerysetEqual(
+            self.filterset(params, self.queryset).qs, self.queryset.filter(site__region__in=nested_regions)
         )
 
     def test_site(self):
@@ -264,7 +268,7 @@ class VirtualMachineTestCase(FilterTestCases.FilterTestCase, FilterTestCases.Ten
             ClusterGroup.objects.create(name="Cluster Group 3", slug="cluster-group-3"),
         )
 
-        cls.regions = Region.objects.filter(sites__isnull=False, children__isnull=True, parent__isnull=True)[:3]
+        cls.regions = Region.objects.filter(sites__isnull=False)[:3]
 
         cls.sites = (
             Site.objects.filter(region=cls.regions[0]).first(),
@@ -481,14 +485,17 @@ class VirtualMachineTestCase(FilterTestCases.FilterTestCase, FilterTestCases.Ten
         # self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
 
     def test_region(self):
-        regions = list(self.regions[:2])
-        params = {"region_id": [regions[0].pk, regions[1].pk]}
-        self.assertQuerysetEqual(
-            self.filterset(params, self.queryset).qs, self.queryset.filter(cluster__site__region__in=regions)
+        filter_parent_regions = self.regions[:2]
+        nested_regions = list(
+            set(flatten_iterable(map(lambda r: r.get_descendants(include_self=True), filter_parent_regions)))
         )
-        params = {"region": [regions[0].slug, regions[1].slug]}
+        params = {"region_id": [filter_parent_regions[0].pk, filter_parent_regions[1].pk]}
         self.assertQuerysetEqual(
-            self.filterset(params, self.queryset).qs, self.queryset.filter(cluster__site__region__in=regions)
+            self.filterset(params, self.queryset).qs, self.queryset.filter(cluster__site__region__in=nested_regions)
+        )
+        params = {"region": [filter_parent_regions[0].slug, filter_parent_regions[1].slug]}
+        self.assertQuerysetEqual(
+            self.filterset(params, self.queryset).qs, self.queryset.filter(cluster__site__region__in=nested_regions)
         )
 
     def test_site(self):

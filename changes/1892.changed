@@ -1,0 +1,2 @@
+Updated `Device` to have `device_redundancy_group` relationship, `device_redundancy_group_priority` numeric property.
+Updated `ConfigContext` to have `ManyToManyField` to `dcim.DeviceRedundancyGroup` for the purposes of applying a `ConfigContext` based upon a `Device`s `DeviceRedundancyGroup` membership.

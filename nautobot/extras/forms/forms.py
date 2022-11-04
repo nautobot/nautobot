@@ -8,7 +8,7 @@ from django.forms import ModelMultipleChoiceField, inlineformset_factory
 from django.urls.base import reverse
 from django.utils.safestring import mark_safe
 
-from nautobot.dcim.models import DeviceRole, DeviceType, Location, Platform, Region, Site
+from nautobot.dcim.models import DeviceRedundancyGroup, DeviceRole, DeviceType, Location, Platform, Region, Site
 from nautobot.tenancy.models import Tenant, TenantGroup
 from nautobot.utilities.deprecation import class_deprecated_in_favor_of
 from nautobot.utilities.forms import (
@@ -217,6 +217,9 @@ class ConfigContextForm(BootstrapMixin, NoteModelFormMixin, forms.ModelForm):
     clusters = DynamicModelMultipleChoiceField(queryset=Cluster.objects.all(), required=False)
     tenant_groups = DynamicModelMultipleChoiceField(queryset=TenantGroup.objects.all(), required=False)
     tenants = DynamicModelMultipleChoiceField(queryset=Tenant.objects.all(), required=False)
+    device_redundancy_groups = DynamicModelMultipleChoiceField(
+        queryset=DeviceRedundancyGroup.objects.all(), required=False
+    )
 
     data = JSONField(label="")
 
@@ -238,6 +241,7 @@ class ConfigContextForm(BootstrapMixin, NoteModelFormMixin, forms.ModelForm):
             "clusters",
             "tenant_groups",
             "tenants",
+            "device_redundancy_groups",
             "tags",
             "data",
         )
@@ -260,7 +264,9 @@ class ConfigContextBulkEditForm(BootstrapMixin, NoteModelBulkEditFormMixin, Bulk
 class ConfigContextFilterForm(BootstrapMixin, forms.Form):
     q = forms.CharField(required=False, label="Search")
     # FIXME(glenn) filtering by owner_content_type
-    schema = DynamicModelChoiceField(queryset=ConfigContextSchema.objects.all(), to_field_name="slug", required=False)
+    schema = DynamicModelMultipleChoiceField(
+        queryset=ConfigContextSchema.objects.all(), to_field_name="slug", required=False
+    )
     region = DynamicModelMultipleChoiceField(queryset=Region.objects.all(), to_field_name="slug", required=False)
     site = DynamicModelMultipleChoiceField(queryset=Site.objects.all(), to_field_name="slug", required=False)
     location = DynamicModelMultipleChoiceField(queryset=Location.objects.all(), to_field_name="slug", required=False)
@@ -275,6 +281,9 @@ class ConfigContextFilterForm(BootstrapMixin, forms.Form):
         queryset=TenantGroup.objects.all(), to_field_name="slug", required=False
     )
     tenant = DynamicModelMultipleChoiceField(queryset=Tenant.objects.all(), to_field_name="slug", required=False)
+    device_redundancy_group = DynamicModelMultipleChoiceField(
+        queryset=DeviceRedundancyGroup.objects.all(), to_field_name="slug", required=False
+    )
     tag = DynamicModelMultipleChoiceField(queryset=Tag.objects.all(), to_field_name="slug", required=False)
 
 

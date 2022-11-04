@@ -490,6 +490,10 @@ class PrefixFactory(PrimaryModelFactory):
             # Objects have already been created, do nothing
             return
 
+        # Leaf prefixes are of size 1 but can't have children
+        if self.prefix.size == 1:
+            return
+
         # 50% chance to create children
         if not faker.Faker().pybool():
             return
