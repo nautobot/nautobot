@@ -1,3 +1,0 @@
-Changed the published `nautobot-dev` images to use the same default `nautobot_config.py` as the published `nautobot` images, instead of using the Nautobot core development `nautobot_config.py` file.
-Renamed `development/docker-compose.build.yml` to `development/docker-compose.final.yml` to better reflect its meaning.
-Changed the image labels used in the docker-compose development workflow to reduce ambiguity.
