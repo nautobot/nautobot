@@ -1,3 +1,5 @@
+from decimal import Decimal
+
 from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ValidationError
 from django.test import TestCase
@@ -1164,3 +1166,20 @@ class PowerPanelTestCase(TestCase):
             'Rack group "Rack Group 1" belongs to a location ("Location 2") that does not contain "Location 1"',
             str(cm.exception),
         )
+
+
+class SiteTestCase(TestCase):
+    def test_latitude_or_longitude(self):
+        """Test latitude and longitude is parsed to string."""
+        active_status = Status.objects.get_for_model(Site).get(slug="active")
+        site = Site(
+            name="Site A",
+            slug="site-a",
+            status=active_status,
+            longitude=55.1234567896,
+            latitude=55.1234567896,
+        )
+        site.validated_save()
+
+        self.assertEqual(site.longitude, Decimal("55.123457"))
+        self.assertEqual(site.latitude, Decimal("55.123457"))
