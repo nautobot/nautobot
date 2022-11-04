@@ -10,6 +10,17 @@ If you are a user migrating from NetBox to Nautobot, please refer to the ["Migra
 
 ### Added
 
+#### Required Relationships ([#873](https://github.com/nautobot/nautobot/issues/873))
+
+Relationships can be marked as being required. By default, relationships are not marked as being required.
+
+To mark a relationship as being required, select "Source objects MUST implement this relationship" or conversely "
+Destination objects MUST implement this relationship" from the "Required on" field when editing or creating a
+relationship:
+
+* If "Destination objects MUST implement this relationship" is selected, objects of the type selected in "Destination Type" will enforce this relationship when they are created or edited.
+* If "Source objects MUST implement this relationship" is selected, objects of the type selected in "Source Type" will enforce this relationship when they are created or edited.
+
 #### Custom Celery Task Queues
 
 A new optional job property `task_queues` has been introduced to allow Nautobot to leverage custom celery queues for jobs. This will allow you to send jobs to specific workers based on which queue is selected. This property can be set on the job class and overridden in the Job model, similar to other overridable job fields. If `task_queues` is not defined on the job class or Job model, the job will only be able to use the default queue. A new field has been added to the job run form to allow you to select a queue when you run the job and  an optional field `task_queue` has been added to the REST API [job run endpoint](../additional-features/jobs.md#via-the-api) for the same purpose.
