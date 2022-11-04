@@ -144,6 +144,14 @@ class TreeNodeMultipleChoiceFilterTest(TestCase):
 
         self.assertCountEqual(list(qs), [self.site1])
 
+    def test_lookup_expr_param_ignored(self):
+        """
+        Test that the `lookup_expr` parameter is ignored when using this filter on filtersets.
+        """
+        # Since we deprecated `in` this should be ignored.
+        f = TreeNodeMultipleChoiceFilter(queryset=Region.objects.all(), lookup_expr="in")
+        self.assertEqual(f.lookup_expr, django_filters.conf.settings.DEFAULT_LOOKUP_EXPR)
+
 
 class NaturalKeyOrPKMultipleChoiceFilterTest(TestCase):
     class SiteFilterSet(BaseFilterSet):
@@ -671,9 +679,9 @@ class BaseFilterSetTest(TestCase):
 
     def test_tree_node_multiple_choice_filter(self):
         self.assertIsInstance(self.filters["treeforeignkeyfield"], TreeNodeMultipleChoiceFilter)
-        self.assertEqual(self.filters["treeforeignkeyfield"].lookup_expr, "in")
+        self.assertEqual(self.filters["treeforeignkeyfield"].lookup_expr, "exact")
         self.assertEqual(self.filters["treeforeignkeyfield"].exclude, False)
-        self.assertEqual(self.filters["treeforeignkeyfield__n"].lookup_expr, "in")
+        self.assertEqual(self.filters["treeforeignkeyfield__n"].lookup_expr, "exact")
         self.assertEqual(self.filters["treeforeignkeyfield__n"].exclude, True)
 
 

@@ -731,3 +731,28 @@ class RemoveScheduledJobManagementCommandTestCase(TestCase):
         self.assertTrue(ScheduledJob.objects.filter(name="test1").exists())
         for i in range(2, 7):
             self.assertFalse(ScheduledJob.objects.filter(name=f"test{i}").exists())
+
+
+class ScheduledJobIntervalTestCase(TestCase):
+    """Test scheduled job intervals"""
+
+    # cron schedule day_of_week starts on Sunday (Sunday = 0)
+    cron_days = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"]
+    # datetime weekday starts on Monday (Sunday = 6)
+    datetime_days = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
+
+    def test_weekly_interval(self):
+        start_time = timezone.now() + datetime.timedelta(days=6)
+        scheduled_job = ScheduledJob.objects.create(
+            name="weekly_interval",
+            task="nautobot.extras.jobs.scheduled_job_handler",
+            job_class="local/test_pass/TestPass",
+            interval=JobExecutionType.TYPE_WEEKLY,
+            user=self.user,
+            start_time=start_time,
+        )
+
+        requested_weekday = self.datetime_days[start_time.weekday()]
+        schedule_day_of_week = list(scheduled_job.schedule.day_of_week)[0]
+        scheduled_job_weekday = self.cron_days[schedule_day_of_week]
+        self.assertEqual(scheduled_job_weekday, requested_weekday)

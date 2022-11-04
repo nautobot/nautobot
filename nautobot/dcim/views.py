@@ -1,3 +1,4 @@
+import uuid
 from collections import OrderedDict, namedtuple
 
 from django.contrib import messages
@@ -2520,12 +2521,17 @@ class PathTraceView(generic.ObjectView):
         else:
             related_paths = CablePath.objects.filter(path__contains=instance).prefetch_related("origin")
             # Check for specification of a particular path (when tracing pass-through ports)
-            try:
-                path_id = int(request.GET.get("cablepath_id"))
-            except TypeError:
-                path_id = None
-            if path_id in list(related_paths.values_list("pk", flat=True)):
-                path = CablePath.objects.get(pk=path_id)
+
+            cablepath_id = request.GET.get("cablepath_id")
+            if cablepath_id is not None:
+                try:
+                    path_id = uuid.UUID(cablepath_id)
+                except (AttributeError, TypeError, ValueError):
+                    path_id = None
+                try:
+                    path = related_paths.get(pk=path_id)
+                except CablePath.DoesNotExist:
+                    path = related_paths.first()
             else:
                 path = related_paths.first()
 

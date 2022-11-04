@@ -1,0 +1,1 @@
+Fixed the null device interface status when a device is created with a device_role associated to an InterfaceTemplate.

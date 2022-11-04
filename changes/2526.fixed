@@ -1,1 +1,0 @@
-Fixed error in rendering the example plugin's `AnotherExampleModel` list view by adding a `get_absolute_url()` method to the `AnotherExampleModel` class and adding an `AnotherExampleModel` detail view template.
