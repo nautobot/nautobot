@@ -24,7 +24,7 @@ To create a relationship, from the top-level navigation menu select **Extensibil
 
 ## Requiring a Relationship
 
-Relationships can be marked as being required. By default, relationships are not marked as being required. 
+Relationships can be marked as being required. By default, relationships are not marked as being required.
 
 To mark a relationship as being required, select "Source objects MUST implement this relationship" or conversely "Destination objects MUST implement this relationship" from the "Required on" field when editing or creating a relationship:
 
