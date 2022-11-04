@@ -67,3 +67,22 @@ class RestrictedQuerySet(QuerySet):
             pk = instance.pk
 
         return self.restrict(user, action).filter(pk=pk).exists()
+
+    def distinct_values_list(self, *fields, flat=False, named=False):
+        """Wrapper for `QuerySet.values_list()` that adds the `distinct()` query to return a list of unique values.
+
+        Note:
+            Uses `QuerySet.order_by()` to disable ordering, preventing unexpected behavior when using `values_list` described
+            in the Django `distinct()` documentation at https://docs.djangoproject.com/en/stable/ref/models/querysets/#distinct
+
+        Args:
+            *fields: Optional positional arguments which specify field names.
+            flat (bool): Set to True to return a QuerySet of individual values instead of a QuerySet of tuples.
+                Defaults to False.
+            named (bool): Set to True to return a QuerySet of namedtuples. Defaults to False.
+
+        Returns:
+            QuerySet object: A QuerySet of tuples or, if `flat` is set to True, a queryset of individual values.
+
+        """
+        return self.order_by().values_list(*fields, flat=flat, named=named).distinct()

@@ -1,0 +1,1 @@
+Fixed so that unauthenticated users don't see the version number for Nautobot in the footer.

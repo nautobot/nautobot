@@ -74,6 +74,7 @@ markdown_extensions:
       permalink: true
   - "attr_list"
   - "md_in_html"
+  - "pymdownx.details"
   - "pymdownx.highlight":
       anchor_linenums: true
   - "pymdownx.inlinehilite"
@@ -120,18 +121,20 @@ nav:
           - Nautobot Shell: "administration/nautobot-shell.md"
           - Permissions: "administration/permissions.md"
           - Replicating Nautobot: "administration/replicating-nautobot.md"
+          - Task Queues: 'administration/celery-queues.md'
       - User Guides:
-          - Getting Started In the Web UI: "user-guides/getting-started/index.md"
           - Creating Devices: "user-guides/getting-started/creating-devices.md"
-          - Regions: "user-guides/getting-started/regions.md"
-          - Platforms: "user-guides/getting-started/platforms.md"
-          - Tenants: "user-guides/getting-started/tenants.md"
-          - Interfaces: "user-guides/getting-started/interfaces.md"
-          - VLANS and VLAN Groups: "user-guides/getting-started/vlans-and-vlan-groups.md"
-          - IP Address Management: "user-guides/getting-started/ipam.md"
-          - The Search Bar: "user-guides/getting-started/search-bar.md"
+          - Custom Fields: "user-guides/custom-fields.md"
+          - Getting Started In the Web UI: "user-guides/getting-started/index.md"
           - Git as a Data Source: "user-guides/git-data-source.md"
           - GraphQL: "user-guides/graphql.md"
+          - Interfaces: "user-guides/getting-started/interfaces.md"
+          - IP Address Management: "user-guides/getting-started/ipam.md"
+          - Platforms: "user-guides/getting-started/platforms.md"
+          - Regions: "user-guides/getting-started/regions.md"
+          - Tenants: "user-guides/getting-started/tenants.md"
+          - The Search Bar: "user-guides/getting-started/search-bar.md"
+          - VLANS and VLAN Groups: "user-guides/getting-started/vlans-and-vlan-groups.md"
       - Core Functionality:
           - Circuits: "core-functionality/circuits.md"
           - Devices and Cabling: "core-functionality/devices.md"
@@ -183,6 +186,7 @@ nav:
       - Best Practices: "development/best-practices.md"
       - Style Guide: "development/style-guide.md"
       - Extending Models: "development/extending-models.md"
+      - Testing: 'development/testing.md'
       - Application Registry: "development/application-registry.md"
       - Page Templates: "development/templates.md"
       - Navigation Menu: "development/navigation-menu.md"
@@ -191,6 +195,7 @@ nav:
       - Release Checklist: "development/release-checklist.md"
   - Release Notes:
       - Overview: "release-notes/index.md"
+      - Version 1.5: "release-notes/version-1.5.md"
       - Version 1.4: "release-notes/version-1.4.md"
       - Version 1.3: "release-notes/version-1.3.md"
       - Version 1.2: "release-notes/version-1.2.md"

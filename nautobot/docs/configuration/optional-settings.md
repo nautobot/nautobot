@@ -168,11 +168,14 @@ Various defaults for caching, the most important of which being the cache timeou
 
 ## CACHEOPS_ENABLED
 
-Default: `True`
+Default: `False`
 
 Environment Variable: `NAUTOBOT_CACHEOPS_ENABLED`
 
 A boolean that turns on/off caching.
+
+!!! check "Changed in 1.5.0"
+    Cachopes is disabled by default and will be removed entirely in a future release.
 
 If set to `False`, all caching is bypassed and Nautobot operates as if there is no cache.
 
@@ -183,16 +186,6 @@ If set to `False`, all caching is bypassed and Nautobot operates as if there is 
 Default: `False`
 
 A boolean that turns on/off health checks for the Redis server connection utilized by Cacheops. Most deployments share a Redis server with `django-redis` as such we only need to check the health of Redis one time.  If you are using a separate Redis deployment for Cacheops, please consider enabling this to monitor that Redis deployment.  Keep in mind the more health checks enabled the longer the health checks will take and timeouts might need to be increased.
-
----
-
-## CACHEOPS_REDIS
-
-Default: `'redis://localhost:6379/1'`
-
-Environment Variable: `NAUTOBOT_CACHEOPS_REDIS`
-
-The Redis connection string to use for caching.
 
 ---
 
@@ -211,6 +204,18 @@ Environment Variable: `NAUTOBOT_CELERY_BROKER_URL`
 Default: `'redis://localhost:6379/0'`
 
 Celery broker URL used to tell workers where queues are located.
+
+---
+
+## CELERY_TASK_DEFAULT_QUEUE
+
++++ 1.5.0
+
+Environment Variable: `NAUTOBOT_CELERY_TASK_DEFAULT_QUEUE`
+
+Default: `'default'`
+
+The default celery queue name that will be used by workers if no queue is specified in the `nautobot-server celery worker` command. This queue will also be used by celery tasks if no queue is specified when a task is run.
 
 ---
 
@@ -327,8 +332,6 @@ Previously this setting was called `CORS_ORIGIN_REGEX_WHITELIST`, which still wo
 
 Default: `False`
 
-Environment Variable: `NAUTOBOT_DISABLE_PREFIX_LIST_HIERARCHY`
-
 This setting disables rendering of the IP prefix hierarchy (parent/child relationships) in the IPAM prefix list view. With large sets of prefixes, users may encounter a performance penalty when trying to load the prefix list view due to the nature of calculating the parent/child relationships. This setting allows users to disable the hierarchy and instead only render a flat list of all prefixes in the table.
 
 A later release of Nautobot will address the underlying performance issues, and likely remove this configuration option.
@@ -437,11 +440,27 @@ The value of this variable can also be customized by setting the environment var
 
 ---
 
+## GRAPHQL_COMPUTED_FIELD_PREFIX
+
+Default: `"cpf"`
+
+By default, all computed fields in GraphQL will be prefixed with `cf`. A computed field named `my_field` will appear in GraphQL as `cpf_my_field` by default. It's possible to change or remove the prefix by setting the value of `GRAPHQL_COMPUTED_FIELD_PREFIX`.
+
+---
+
 ## GRAPHQL_CUSTOM_FIELD_PREFIX
 
-Default: `cf`
+Default: `"cf"`
 
-By default, all custom fields in GraphQL will be prefixed with `cf`. A custom field name `my_field` will appear in GraphQL as `cf_my_field` by default. It's possible to change or remove the prefix by setting the value of `GRAPHQL_CUSTOM_FIELD_PREFIX`.
+By default, all custom fields in GraphQL will be prefixed with `cf`. A custom field named `my_field` will appear in GraphQL as `cf_my_field` by default. It's possible to change or remove the prefix by setting the value of `GRAPHQL_CUSTOM_FIELD_PREFIX`.
+
+---
+
+## GRAPHQL_RELATIONSHIP_PREFIX
+
+Default: `"rel"`
+
+By default, all relationship associations in GraphQL will be prefixed with `rel`. A relationship named `my_relationship` will appear in GraphQL as `rel_my_relationship` by default. It's possible to change or remove the prefix by setting the value of `GRAPHQL_RELATIONSHIP_PREFIX`.
 
 ---
 
@@ -770,6 +789,73 @@ If set to `False`, unknown/unrecognized filter parameters will be discarded and 
 
 ---
 
+## TEST_FACTORY_SEED
+
++++ 1.5.0
+
+Default: `None`
+
+Environment Variable: `NAUTOBOT_TEST_FACTORY_SEED`
+
+When [`TEST_USE_FACTORIES`](#test_use_factories) is set to `True`, this configuration provides a fixed seed string for the pseudo-random generator used to populate test data into the database, providing for reproducible randomness across consecutive test runs. If unset, a random seed will be used each time.
+
+---
+
+## TEST_USE_FACTORIES
+
++++ 1.5.0
+
+Default: `False`
+
+Environment Variable: `NAUTOBOT_TEST_USE_FACTORIES`
+
+If set to `True`, the Nautobot test runner will call `nautobot-server generate_test_data ...` before executing any test cases, pre-populating the test database with various pseudo-random instances of many of Nautobot's data models.
+
+!!! warning
+    This functionality requires the installation of the [`factory-boy`](https://pypi.org/project/factory-boy/) Python package, which is present in Nautobot's own development environment, but is _not_ an inherent dependency of the Nautobot package when installed otherwise, such as into a plugin's development environment.
+
+!!! info
+    Setting this to `True` is a requirement for all Nautobot core tests as of 1.5.0, and it is set accordingly in `nautobot/core/tests/nautobot_config.py`, but defaults to `False` otherwise so as to remain backwards-compatible with plugins that also may use the Nautobot test runner in their own test environments, but have not yet updated their tests to account for the presence of this test data.
+
+    Because this test data can obviate the need to manually construct complex test data, and the random factor can improve test robustness, plugin developers are encouraged to set this to `True` in their configuration, ensure that their development environments include the `factory-boy` Python package as a test dependency, and update their tests as needed.
+
+---
+
+## TEST_PERFORMANCE_BASELINE_FILE
+
++++ 1.5.0
+
+Default: `nautobot/core/tests/performance_baselines.yml`
+
+Environment Variable: `TEST_PERFORMANCE_BASELINE_FILE`
+
+[`TEST_PERFORMANCE_BASELINE_FILE`](#test_performance_baseline_file) is set to a certain file path, this file path should point to a .yml file that conforms to the following format:
+
+```yaml
+tests:
+  - name: >-
+      test_run_job_with_sensitive_variables_and_requires_approval
+      (nautobot.extras.tests.test_views.JobTestCase)
+    execution_time: 4.799533
+  - name: test_run_missing_schedule (nautobot.extras.tests.test_views.JobTestCase)
+    execution_time: 4.367563
+  - name: test_run_now_missing_args (nautobot.extras.tests.test_views.JobTestCase)
+    execution_time: 4.363194
+  - name: >-
+      test_create_object_with_constrained_permission
+      (nautobot.extras.tests.test_views.GraphQLQueriesTestCase)
+    execution_time: 3.474244
+  - name: >-
+      test_run_now_constrained_permissions
+      (nautobot.extras.tests.test_views.JobTestCase)
+    execution_time: 2.727531
+...
+```
+
+and store the performance baselines with the `name` of the test and the baseline `execution_time`. This file should provide the baseline times that all performance-related tests are running against.
+
+---
+
 ## UI_RACK_VIEW_TRUNCATE_FUNCTION
 
 +++ 1.4.0
@@ -914,51 +1000,75 @@ addresses (and [`DEBUG`](#debug) is true).
 
 ### LOGGING
 
-Default: `{}` (Empty dictionary)
-
-By default, all messages of INFO severity or higher will be logged to the console. Additionally, if [`DEBUG`](#debug) is False and email access has been configured, ERROR and CRITICAL messages will be emailed to the users defined in [`ADMINS`](#admins).
-
-The Django framework on which Nautobot runs allows for the customization of logging format and destination. Please consult the [Django logging documentation](https://docs.djangoproject.com/en/stable/topics/logging/) for more information on configuring this setting. Below is an example which will write all INFO and higher messages to a local file and log DEBUG and higher messages from Nautobot itself with higher verbosity:
+Default:
 
 ```python
-LOGGING = {
-    'version': 1,
-    'disable_existing_loggers': False,
-    'formatters': {
-        'normal': {
-            'format': '%(asctime)s.%(msecs)03d %(levelname)-7s %(name)s : %(message)s',
-            'datefmt': '%H:%M:%S',
+{
+    "version": 1,
+    "disable_existing_loggers": False,
+    "formatters": {
+        "normal": {
+            "format": "%(asctime)s.%(msecs)03d %(levelname)-7s %(name)s :\n  %(message)s",
+            "datefmt": "%H:%M:%S",
         },
-        'verbose': {
-            'format': '%(asctime)s.%(msecs)03d %(levelname)-7s %(name)-20s %(filename)-15s %(funcName)30s() :\n  %(message)s',
-            'datefmt': '%H:%M:%S',
+        "verbose": {
+            "format": "%(asctime)s.%(msecs)03d %(levelname)-7s %(name)-20s %(filename)-15s %(funcName)30s() :\n  %(message)s",
+            "datefmt": "%H:%M:%S",
         },
     },
-    'handlers': {
-        'file': {'level': 'INFO', 'class': 'logging.FileHandler', 'filename': '/var/log/nautobot.log', 'formatter': 'normal'},
-        'normal_console': {'level': 'INFO', 'class': 'logging.StreamHandler', 'formatter': 'normal'},
-        'verbose_console': {'level': 'DEBUG', 'class': 'logging.StreamHandler', 'formatter': 'verbose'},
+    "handlers": {
+        "normal_console": {
+            "level": "INFO",
+            "class": "logging.StreamHandler",
+            "formatter": "normal",
+        },
+        "verbose_console": {
+            "level": "DEBUG",
+            "class": "logging.StreamHandler",
+            "formatter": "verbose",
+        },
     },
-    'loggers': {
-        'django': {'handlers': ['file', 'normal_console'], 'level': 'INFO'},
-        'nautobot': {'handlers': ['file', 'verbose_console'], 'level': 'DEBUG'},
+    "loggers": {
+        "django": {"handlers": ["normal_console"], "level": "INFO"},
+        "nautobot": {
+            "handlers": ["verbose_console" if DEBUG else "normal_console"],
+            "level": LOG_LEVEL,
+        },
     },
 }
 ```
 
-Additional examples are available in [`/examples/logging`](https://github.com/nautobot/nautobot/tree/develop/examples/logging).
+This translates to:
+
+* all messages from Django and from Nautobot of INFO severity or higher will be logged to the console.
+* if [`DEBUG`](#debug) is True, Nautobot DEBUG messages will also be logged, and all Nautobot messages will be logged with a more verbose format including the filename and function name that originated each log message.
+
+The above default log formatters split each log message across two lines of output for greater readability, which is useful for local observation and troubleshooting, but you may find it impractical to use in production environments that expect one line per log message. Fortunately, the Django framework on which Nautobot runs allows for extensive customization of logging format and destination. Please consult the [Django logging documentation](https://docs.djangoproject.com/en/stable/topics/logging/) for more information on configuring this setting.
+
+Below is an example configuration extension which will additionally write all INFO and higher messages to a local file:
+
+```python
+LOGGING["handlers"]["file"] = {
+    "level": "INFO",
+    "class": "logging.FileHandler",
+    "filename": "/var/log/nautobot.log",
+    "formatter": "normal",
+}
+LOGGING["loggers"]["django"]["handlers"] += ["file"]
+LOGGING["loggers"]["nautobot"]["handlers"] += ["file"]
+```
+
+Additional examples are available in the [`/examples/logging`](https://github.com/nautobot/nautobot/tree/develop/examples/logging) directory in the Nautobot repository.
 
 #### Available Loggers
 
 * `django.*` - Generic Django operations (HTTP requests/responses, etc.)
 * `nautobot.<app>.<module>` - Generic form for model- or module-specific log messages
 * `nautobot.auth.*` - Authentication events
-* `nautobot.api.views.*` - Views which handle business logic for the REST API
 * `nautobot.jobs.*` - Job execution (`* = JobClassName`)
 * `nautobot.graphql.*` - [GraphQL](../additional-features/graphql.md) initialization and operation.
 * `nautobot.plugins.*` - Plugin loading and activity
 * `nautobot.views.*` - Views which handle business logic for the web UI
-* `rq.worker` - Background task handling
 
 ---
 

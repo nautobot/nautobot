@@ -8,7 +8,7 @@ from django.forms import ModelMultipleChoiceField, inlineformset_factory
 from django.urls.base import reverse
 from django.utils.safestring import mark_safe
 
-from nautobot.dcim.models import DeviceRole, DeviceType, Location, Platform, Region, Site
+from nautobot.dcim.models import DeviceRedundancyGroup, DeviceRole, DeviceType, Location, Platform, Region, Site
 from nautobot.tenancy.models import Tenant, TenantGroup
 from nautobot.utilities.deprecation import class_deprecated_in_favor_of
 from nautobot.utilities.forms import (
@@ -217,6 +217,9 @@ class ConfigContextForm(BootstrapMixin, NoteModelFormMixin, forms.ModelForm):
     clusters = DynamicModelMultipleChoiceField(queryset=Cluster.objects.all(), required=False)
     tenant_groups = DynamicModelMultipleChoiceField(queryset=TenantGroup.objects.all(), required=False)
     tenants = DynamicModelMultipleChoiceField(queryset=Tenant.objects.all(), required=False)
+    device_redundancy_groups = DynamicModelMultipleChoiceField(
+        queryset=DeviceRedundancyGroup.objects.all(), required=False
+    )
 
     data = JSONField(label="")
 
@@ -238,6 +241,7 @@ class ConfigContextForm(BootstrapMixin, NoteModelFormMixin, forms.ModelForm):
             "clusters",
             "tenant_groups",
             "tenants",
+            "device_redundancy_groups",
             "tags",
             "data",
         )
@@ -260,7 +264,9 @@ class ConfigContextBulkEditForm(BootstrapMixin, NoteModelBulkEditFormMixin, Bulk
 class ConfigContextFilterForm(BootstrapMixin, forms.Form):
     q = forms.CharField(required=False, label="Search")
     # FIXME(glenn) filtering by owner_content_type
-    schema = DynamicModelChoiceField(queryset=ConfigContextSchema.objects.all(), to_field_name="slug", required=False)
+    schema = DynamicModelMultipleChoiceField(
+        queryset=ConfigContextSchema.objects.all(), to_field_name="slug", required=False
+    )
     region = DynamicModelMultipleChoiceField(queryset=Region.objects.all(), to_field_name="slug", required=False)
     site = DynamicModelMultipleChoiceField(queryset=Site.objects.all(), to_field_name="slug", required=False)
     location = DynamicModelMultipleChoiceField(queryset=Location.objects.all(), to_field_name="slug", required=False)
@@ -275,6 +281,9 @@ class ConfigContextFilterForm(BootstrapMixin, forms.Form):
         queryset=TenantGroup.objects.all(), to_field_name="slug", required=False
     )
     tenant = DynamicModelMultipleChoiceField(queryset=Tenant.objects.all(), to_field_name="slug", required=False)
+    device_redundancy_group = DynamicModelMultipleChoiceField(
+        queryset=DeviceRedundancyGroup.objects.all(), to_field_name="slug", required=False
+    )
     tag = DynamicModelMultipleChoiceField(queryset=Tag.objects.all(), to_field_name="slug", required=False)
 
 
@@ -353,6 +362,7 @@ class CustomFieldForm(BootstrapMixin, forms.ModelForm):
         model = CustomField
         fields = (
             "label",
+            "grouping",
             "slug",
             "type",
             "weight",
@@ -728,11 +738,18 @@ class JobForm(BootstrapMixin, forms.Form):
         label="Commit changes",
         help_text="Commit changes to the database (uncheck for a dry-run)",
     )
+    _task_queue = forms.ChoiceField(
+        required=False,
+        help_text="The task queue to route this job to",
+        label="Task queue",
+    )
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-        # Move _commit to the end of the form
+        # Move _task_queue and _commit to the end of the form
+        task_queue = self.fields.pop("_task_queue")
+        self.fields["_task_queue"] = task_queue
         commit = self.fields.pop("_commit")
         self.fields["_commit"] = commit
 
@@ -770,8 +787,10 @@ class JobEditForm(NautobotModelForm):
             "soft_time_limit",
             "time_limit_override",
             "time_limit",
-            "has_sensitive_variables",
             "has_sensitive_variables_override",
+            "has_sensitive_variables",
+            "task_queues_override",
+            "task_queues",
             "tags",
         ]
 

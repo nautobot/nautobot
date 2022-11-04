@@ -39,15 +39,16 @@ class ChangeLogViewTest(ModelViewTestCase):
         CustomFieldChoice.objects.create(field=cf_select, value="Bar")
         CustomFieldChoice.objects.create(field=cf_select, value="Foo")
 
+        cls.tags = Tag.objects.get_for_model(Site)
+
     def test_create_object(self):
-        tags = self.create_tags("Tag 1", "Tag 2")
         form_data = {
             "name": "Test Site 1",
             "slug": "test-site-1",
             "status": Status.objects.get(slug="active").pk,
             "cf_my_field": "ABC",
             "cf_my_field_select": "Bar",
-            "tags": [tag.pk for tag in tags],
+            "tags": [tag.pk for tag in self.tags],
         }
 
         request = {
@@ -66,7 +67,7 @@ class ChangeLogViewTest(ModelViewTestCase):
         self.assertEqual(oc.action, ObjectChangeActionChoices.ACTION_CREATE)
         self.assertEqual(oc.object_data["custom_fields"]["my_field"], form_data["cf_my_field"])
         self.assertEqual(oc.object_data["custom_fields"]["my_field_select"], form_data["cf_my_field_select"])
-        self.assertEqual(oc.object_data["tags"], ["Tag 1", "Tag 2"])
+        self.assertEqual(oc.object_data["tags"], sorted([tag.name for tag in self.tags]))
         self.assertEqual(oc.user_id, self.user.pk)
 
     def test_update_object(self):
@@ -76,8 +77,7 @@ class ChangeLogViewTest(ModelViewTestCase):
             status=Status.objects.get(slug="active"),
         )
         site.save()
-        tags = self.create_tags("Tag 1", "Tag 2", "Tag 3")
-        site.tags.set("Tag 1", "Tag 2")
+        site.tags.set(self.tags[:2])
 
         form_data = {
             "name": "Test Site X",
@@ -85,7 +85,7 @@ class ChangeLogViewTest(ModelViewTestCase):
             "status": Status.objects.get(slug="planned").pk,
             "cf_my_field": "DEF",
             "cf_my_field_select": "Foo",
-            "tags": [tags[2].pk],
+            "tags": [self.tags[2].pk],
         }
 
         request = {
@@ -106,7 +106,7 @@ class ChangeLogViewTest(ModelViewTestCase):
             oc.object_data["custom_fields"]["my_field_select"],
             form_data["cf_my_field_select"],
         )
-        self.assertEqual(oc.object_data["tags"], ["Tag 3"])
+        self.assertEqual(oc.object_data["tags"], [self.tags[2].name])
         self.assertEqual(oc.user_id, self.user.pk)
 
     def test_delete_object(self):
@@ -116,8 +116,7 @@ class ChangeLogViewTest(ModelViewTestCase):
             _custom_field_data={"my_field": "ABC", "my_field_select": "Bar"},
         )
         site.save()
-        self.create_tags("Tag 1", "Tag 2")
-        site.tags.set("Tag 1", "Tag 2")
+        site.tags.set(self.tags)
 
         request = {
             "path": self._get_url("delete", instance=site),
@@ -133,7 +132,7 @@ class ChangeLogViewTest(ModelViewTestCase):
         self.assertEqual(oc.action, ObjectChangeActionChoices.ACTION_DELETE)
         self.assertEqual(oc.object_data["custom_fields"]["my_field"], "ABC")
         self.assertEqual(oc.object_data["custom_fields"]["my_field_select"], "Bar")
-        self.assertEqual(oc.object_data["tags"], ["Tag 1", "Tag 2"])
+        self.assertEqual(oc.object_data["tags"], sorted([tag.name for tag in self.tags]))
         self.assertEqual(oc.user_id, self.user.pk)
 
     def test_change_context(self):
@@ -181,15 +180,7 @@ class ChangeLogAPITest(APITestCase):
         CustomFieldChoice.objects.create(field=cf_select, value="Bar")
         CustomFieldChoice.objects.create(field=cf_select, value="Foo")
 
-        # Create some tags
-        tags = (
-            Tag.objects.create(name="Tag 1", slug="tag-1"),
-            Tag.objects.create(name="Tag 2", slug="tag-2"),
-            Tag.objects.create(name="Tag 3", slug="tag-3"),
-        )
-        for tag in tags:
-            tag.content_types.add(ContentType.objects.get_for_model(Site))
-
+        self.tags = Tag.objects.get_for_model(Site)
         self.statuses = Status.objects.get_for_model(Site)
 
     def test_create_object(self):
@@ -202,8 +193,8 @@ class ChangeLogAPITest(APITestCase):
                 "my_field_select": "Bar",
             },
             "tags": [
-                {"name": "Tag 1"},
-                {"name": "Tag 2"},
+                {"name": self.tags[0].name},
+                {"name": self.tags[1].name},
             ],
         }
         self.assertEqual(ObjectChange.objects.count(), 0)
@@ -218,7 +209,7 @@ class ChangeLogAPITest(APITestCase):
         self.assertEqual(oc.changed_object, site)
         self.assertEqual(oc.action, ObjectChangeActionChoices.ACTION_CREATE)
         self.assertEqual(oc.object_data["custom_fields"], data["custom_fields"])
-        self.assertEqual(oc.object_data["tags"], ["Tag 1", "Tag 2"])
+        self.assertEqual(oc.object_data["tags"], sorted([self.tags[0].name, self.tags[1].name]))
         self.assertEqual(oc.user_id, self.user.pk)
 
     def test_update_object(self):
@@ -237,7 +228,7 @@ class ChangeLogAPITest(APITestCase):
                 "my_field": "DEF",
                 "my_field_select": "Foo",
             },
-            "tags": [{"name": "Tag 3"}],
+            "tags": [{"name": self.tags[2].name}],
         }
         self.assertEqual(ObjectChange.objects.count(), 0)
         self.add_permissions("dcim.change_site", "extras.view_status")
@@ -251,7 +242,7 @@ class ChangeLogAPITest(APITestCase):
         self.assertEqual(oc.changed_object, site)
         self.assertEqual(oc.action, ObjectChangeActionChoices.ACTION_UPDATE)
         self.assertEqual(oc.object_data["custom_fields"], data["custom_fields"])
-        self.assertEqual(oc.object_data["tags"], ["Tag 3"])
+        self.assertEqual(oc.object_data["tags"], [self.tags[2].name])
         self.assertEqual(oc.user_id, self.user.pk)
 
     def test_partial_update_object(self):
@@ -265,7 +256,7 @@ class ChangeLogAPITest(APITestCase):
                 "my_field_select": "Foo",
             },
         )
-        site.tags.add(Tag.objects.get(name="Tag 3"))
+        site.tags.add(self.tags[2])
 
         # We only want to update a single field.
         data = {
@@ -287,7 +278,7 @@ class ChangeLogAPITest(APITestCase):
         self.assertEqual(oc.object_data["description"], data["description"])
         self.assertEqual(oc.action, ObjectChangeActionChoices.ACTION_UPDATE)
         self.assertEqual(oc.object_data["custom_fields"], site.custom_field_data)
-        self.assertEqual(oc.object_data["tags"], ["Tag 3"])
+        self.assertEqual(oc.object_data["tags"], [self.tags[2].name])
         self.assertEqual(oc.user_id, self.user.pk)
 
     def test_delete_object(self):
@@ -298,14 +289,15 @@ class ChangeLogAPITest(APITestCase):
             _custom_field_data={"my_field": "ABC", "my_field_select": "Bar"},
         )
         site.save()
-        site.tags.set(*Tag.objects.all()[:2])
+        site.tags.set(self.tags[:2])
         self.assertEqual(ObjectChange.objects.count(), 0)
         self.add_permissions("dcim.delete_site", "extras.view_status")
         url = reverse("dcim-api:site-detail", kwargs={"pk": site.pk})
+        initial_count = Site.objects.count()
 
         response = self.client.delete(url, **self.header)
         self.assertHttpStatus(response, status.HTTP_204_NO_CONTENT)
-        self.assertEqual(Site.objects.count(), 0)
+        self.assertEqual(Site.objects.count(), initial_count - 1)
 
         oc = ObjectChange.objects.first()
         self.assertEqual(oc.changed_object, None)
@@ -313,7 +305,7 @@ class ChangeLogAPITest(APITestCase):
         self.assertEqual(oc.action, ObjectChangeActionChoices.ACTION_DELETE)
         self.assertEqual(oc.object_data["custom_fields"]["my_field"], "ABC")
         self.assertEqual(oc.object_data["custom_fields"]["my_field_select"], "Bar")
-        self.assertEqual(oc.object_data["tags"], ["Tag 1", "Tag 2"])
+        self.assertEqual(oc.object_data["tags"], sorted([tag.name for tag in self.tags[:2]]))
         self.assertEqual(oc.user_id, self.user.pk)
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])

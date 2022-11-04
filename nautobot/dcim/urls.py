@@ -1,5 +1,6 @@
 from django.urls import path
 
+from nautobot.core.views.routers import NautobotUIViewSetRouter
 from nautobot.extras.views import ObjectChangeLogView, ObjectDynamicGroupsView, ObjectNotesView, ImageAttachmentEditView
 from nautobot.ipam.views import ServiceEditView
 from . import views
@@ -9,6 +10,7 @@ from .models import (
     ConsoleServerPort,
     Device,
     DeviceBay,
+    DeviceRedundancyGroup,
     DeviceRole,
     DeviceType,
     FrontPort,
@@ -33,6 +35,11 @@ from .models import (
 )
 
 app_name = "dcim"
+
+router = NautobotUIViewSetRouter()
+router.register("device-redundancy-groups", views.DeviceRedundancyGroupUIViewSet)
+router.register("interface-redundancy-groups", views.InterfaceRedundancyGroupUIViewSet)
+
 urlpatterns = [
     # Regions
     path("regions/", views.RegionListView.as_view(), name="region_list"),
@@ -1629,4 +1636,17 @@ urlpatterns = [
         name="powerfeed_connect",
         kwargs={"termination_a_type": PowerFeed},
     ),
+    path(
+        "device-redundancy-groups/<slug:slug>/changelog/",
+        ObjectChangeLogView.as_view(),
+        name="deviceredundancygroup_changelog",
+        kwargs={"model": DeviceRedundancyGroup},
+    ),
+    path(
+        "device-redundancy-groups/<slug:slug>/notes/",
+        ObjectNotesView.as_view(),
+        name="deviceredundancygroup_notes",
+        kwargs={"model": DeviceRedundancyGroup},
+    ),
 ]
+urlpatterns += router.urls

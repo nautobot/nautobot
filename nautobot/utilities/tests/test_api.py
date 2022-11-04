@@ -18,7 +18,7 @@ class WritableNestedSerializerTest(APITestCase):
     def setUp(self):
         super().setUp()
 
-        self.region_a = Region.objects.create(name="Region A", slug="region-a")
+        self.region_a = Region.objects.filter(sites__isnull=True).first()
         self.site1 = Site.objects.create(region=self.region_a, name="Site 1", slug="site-1")
         self.site2 = Site.objects.create(region=self.region_a, name="Site 2", slug="site-2")
 
@@ -51,7 +51,7 @@ class WritableNestedSerializerTest(APITestCase):
         with disable_warnings("django.request"):
             response = self.client.post(url, data, format="json", **self.header)
         self.assertHttpStatus(response, status.HTTP_400_BAD_REQUEST)
-        self.assertEqual(VLAN.objects.count(), 0)
+        self.assertEqual(VLAN.objects.filter(name="Test VLAN 100").count(), 0)
         self.assertTrue(response.data["site"][0].startswith("Related object not found"))
 
     def test_related_by_attributes(self):
@@ -83,7 +83,7 @@ class WritableNestedSerializerTest(APITestCase):
         with disable_warnings("django.request"):
             response = self.client.post(url, data, format="json", **self.header)
         self.assertHttpStatus(response, status.HTTP_400_BAD_REQUEST)
-        self.assertEqual(VLAN.objects.count(), 0)
+        self.assertEqual(VLAN.objects.filter(name="Test VLAN 100").count(), 0)
         self.assertTrue(response.data["site"][0].startswith("Related object not found"))
 
     def test_related_by_attributes_multiple_matches(self):
@@ -93,7 +93,7 @@ class WritableNestedSerializerTest(APITestCase):
             "status": "active",
             "site": {
                 "region": {
-                    "name": "Region A",
+                    "name": self.region_a.name,
                 },
             },
         }
@@ -103,7 +103,7 @@ class WritableNestedSerializerTest(APITestCase):
         with disable_warnings("django.request"):
             response = self.client.post(url, data, format="json", **self.header)
         self.assertHttpStatus(response, status.HTTP_400_BAD_REQUEST)
-        self.assertEqual(VLAN.objects.count(), 0)
+        self.assertEqual(VLAN.objects.filter(name="Test VLAN 100").count(), 0)
         self.assertTrue(response.data["site"][0].startswith("Multiple objects match"))
 
     def test_related_by_invalid(self):
@@ -119,7 +119,7 @@ class WritableNestedSerializerTest(APITestCase):
         with disable_warnings("django.request"):
             response = self.client.post(url, data, format="json", **self.header)
         self.assertHttpStatus(response, status.HTTP_400_BAD_REQUEST)
-        self.assertEqual(VLAN.objects.count(), 0)
+        self.assertEqual(VLAN.objects.filter(name="Test VLAN 100").count(), 0)
 
 
 class APIDocsTestCase(TestCase):

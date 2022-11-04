@@ -14,6 +14,7 @@ def get_job_results(request):
 
 def get_changelog(request):
     """Callback function to collect changelog for panel."""
+    # v2 TODO(jathan): Replace prefetch_related with select_related
     return ObjectChange.objects.restrict(request.user, "view").prefetch_related("user", "changed_object_type")[:15]
 
 

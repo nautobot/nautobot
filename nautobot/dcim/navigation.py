@@ -308,17 +308,39 @@ menu_items = (
                         ),
                     ),
                     NavMenuItem(
-                        link="dcim:redundancyinterfacegroup_list",
-                        name="Redundancy Interface Groups",
-                        weight=600,
+                        link="dcim:deviceredundancygroup_list",
+                        name="Device Redundancy Groups",
+                        weight=500,
                         permissions=[
-                            "dcim.view_redundancyinterfacegroup",
+                            "dcim.view_deviceredundancygroup",
                         ],
                         buttons=(
                             NavMenuAddButton(
-                                link="dcim:redundancyinterfacegroup_add",
+                                link="dcim:deviceredundancygroup_add",
                                 permissions=[
-                                    "dcim.add_redundancyinterfacegroup",
+                                    "dcim.add_deviceredundancygroup",
+                                ],
+                            ),
+                            NavMenuImportButton(
+                                link="dcim:deviceredundancygroup_import",
+                                permissions=[
+                                    "dcim.add_deviceredundancygroup",
+                                ],
+                            ),
+                        ),
+                    ),
+                    NavMenuItem(
+                        link="dcim:interfaceredundancygroup_list",
+                        name="Interface Redundancy Groups",
+                        weight=600,
+                        permissions=[
+                            "dcim.view_interfaceredundancygroup",
+                        ],
+                        buttons=(
+                            NavMenuAddButton(
+                                link="dcim:interfaceredundancygroup_add",
+                                permissions=[
+                                    "dcim.add_interfaceredundancygroup",
                                 ],
                             ),
                         ),

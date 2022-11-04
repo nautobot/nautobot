@@ -139,6 +139,7 @@ class CustomFieldModel(models.Model):
 
     def get_custom_fields_basic(self):
         """
+        This method exists to help call get_custom_fields() in templates where a function argument (advanced_ui) cannot be specified.
         Return a dictionary of custom fields for a single object in the form {<field>: value}
         which have advanced_ui set to False
         """
@@ -146,6 +147,7 @@ class CustomFieldModel(models.Model):
 
     def get_custom_fields_advanced(self):
         """
+        This method exists to help call get_custom_fields() in templates where a function argument (advanced_ui) cannot be specified.
         Return a dictionary of custom fields for a single object in the form {<field>: value}
         which have advanced_ui set to True
         """
@@ -160,6 +162,55 @@ class CustomFieldModel(models.Model):
             fields = fields.filter(advanced_ui=advanced_ui)
         # 2.0 TODO: #824 field.slug rather than field.name
         return OrderedDict([(field, self.cf.get(field.name)) for field in fields])
+
+    def get_custom_field_groupings_basic(self):
+        """
+        This method exists to help call get_custom_field_groupings() in templates where a function argument (advanced_ui) cannot be specified.
+        Return a dictonary of custom fields grouped by the same grouping in the form
+        {
+            <grouping_1>: [(cf1, <value for cf1>), (cf2, <value for cf2>), ...],
+            ...
+            <grouping_5>: [(cf8, <value for cf8>), (cf9, <value for cf9>), ...],
+            ...
+        }
+        which have advanced_ui set to False
+        """
+        return self.get_custom_field_groupings(advanced_ui=False)
+
+    def get_custom_field_groupings_advanced(self):
+        """
+        This method exists to help call get_custom_field_groupings() in templates where a function argument (advanced_ui) cannot be specified.
+        Return a dictonary of custom fields grouped by the same grouping in the form
+        {
+            <grouping_1>: [(cf1, <value for cf1>), (cf2, <value for cf2>), ...],
+            ...
+            <grouping_5>: [(cf8, <value for cf8>), (cf9, <value for cf9>), ...],
+            ...
+        }
+        which have advanced_ui set to True
+        """
+        return self.get_custom_field_groupings(advanced_ui=True)
+
+    def get_custom_field_groupings(self, advanced_ui=None):
+        """
+        Return a dictonary of custom fields grouped by the same grouping in the form
+        {
+            <grouping_1>: [(cf1, <value for cf1>), (cf2, <value for cf2>), ...],
+            ...
+            <grouping_5>: [(cf8, <value for cf8>), (cf9, <value for cf9>), ...],
+            ...
+        }
+        """
+        record = {}
+        fields = CustomField.objects.get_for_model(self)
+        if advanced_ui is not None:
+            fields = fields.filter(advanced_ui=advanced_ui)
+
+        for field in fields:
+            data = (field, self.cf.get(field.name))
+            record.setdefault(field.grouping, []).append(data)
+        record = dict(sorted(record.items()))
+        return record
 
     def clean(self):
         super().clean()
@@ -250,6 +301,11 @@ class CustomField(BaseModel, ChangeLoggedModel, NotesMixin):
         verbose_name="Object(s)",
         limit_choices_to=FeatureQuery("custom_fields"),
         help_text="The object(s) to which this field applies.",
+    )
+    grouping = models.CharField(
+        max_length=255,
+        blank=True,
+        help_text="Human-readable grouping that this custom field belongs to.",
     )
     type = models.CharField(
         max_length=50,
@@ -385,14 +441,8 @@ class CustomField(BaseModel, ChangeLoggedModel, NotesMixin):
         if self.validation_maximum is not None and self.type != CustomFieldTypeChoices.TYPE_INTEGER:
             raise ValidationError({"validation_maximum": "A maximum value may be set only for numeric fields"})
 
-        # Regex validation can be set only for text fields
-        regex_types = (
-            CustomFieldTypeChoices.TYPE_TEXT,
-            CustomFieldTypeChoices.TYPE_URL,
-            CustomFieldTypeChoices.TYPE_SELECT,
-            CustomFieldTypeChoices.TYPE_MULTISELECT,
-        )
-        if self.validation_regex and self.type not in regex_types:
+        # Regex validation can be set only for text, url, select and multi-select fields
+        if self.validation_regex and self.type not in CustomFieldTypeChoices.REGEX_TYPES:
             raise ValidationError(
                 {"validation_regex": "Regular expression validation is supported only for text, URL and select fields"}
             )
@@ -461,13 +511,13 @@ class CustomField(BaseModel, ChangeLoggedModel, NotesMixin):
         elif self.type == CustomFieldTypeChoices.TYPE_DATE:
             field = forms.DateField(required=required, initial=initial, widget=DatePicker())
 
-        # URL
-        elif self.type == CustomFieldTypeChoices.TYPE_URL:
-            field = LaxURLField(required=required, initial=initial)
+        # Text and URL
+        elif self.type in (CustomFieldTypeChoices.TYPE_URL, CustomFieldTypeChoices.TYPE_TEXT):
+            if self.type == CustomFieldTypeChoices.TYPE_URL:
+                field = LaxURLField(required=required, initial=initial)
+            elif self.type == CustomFieldTypeChoices.TYPE_TEXT:
+                field = forms.CharField(max_length=255, required=required, initial=initial)
 
-        # Text
-        elif self.type == CustomFieldTypeChoices.TYPE_TEXT:
-            field = forms.CharField(max_length=255, required=required, initial=initial)
             if self.validation_regex:
                 field.validators = [
                     RegexValidator(
@@ -527,12 +577,12 @@ class CustomField(BaseModel, ChangeLoggedModel, NotesMixin):
         if value not in [None, "", []]:
 
             # Validate text field
-            if self.type == CustomFieldTypeChoices.TYPE_TEXT:
+            if self.type in (CustomFieldTypeChoices.TYPE_TEXT, CustomFieldTypeChoices.TYPE_URL):
 
                 if not isinstance(value, str):
                     raise ValidationError("Value must be a string")
 
-                if self.validation_regex and not re.match(self.validation_regex, value):
+                if self.validation_regex and not re.search(self.validation_regex, value):
                     raise ValidationError(f"Value must match regex '{self.validation_regex}'")
 
             # Validate integer
@@ -625,7 +675,7 @@ class CustomFieldChoice(BaseModel, ChangeLoggedModel):
         if self.field.type not in (CustomFieldTypeChoices.TYPE_SELECT, CustomFieldTypeChoices.TYPE_MULTISELECT):
             raise ValidationError("Custom field choices can only be assigned to selection fields.")
 
-        if not re.match(self.field.validation_regex, self.value):
+        if not re.search(self.field.validation_regex, self.value):
             raise ValidationError(f"Value must match regex {self.field.validation_regex} got {self.value}.")
 
     def save(self, *args, **kwargs):

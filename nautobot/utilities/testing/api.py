@@ -14,7 +14,7 @@ from nautobot.extras.models import ChangeLoggedModel
 from nautobot.extras.registry import registry
 from nautobot.utilities.testing.mixins import NautobotTestCaseMixin
 from nautobot.utilities.utils import get_changes_for_model, get_filterset_for_model, get_route_for_model
-from .utils import disable_warnings
+from .utils import disable_warnings, get_deletable_objects
 from .views import ModelTestCase
 
 
@@ -229,7 +229,12 @@ class APIViewTestCases:
             self.assertIsInstance(response.data, dict)
             self.assertIn("results", response.data)
             self.assertEqual(len(response.data["results"]), self._get_queryset().count())
-            self.assertEqual(sorted(response.data["results"][0]), self.brief_fields)
+            self.assertEqual(
+                sorted(response.data["results"][0]),
+                self.brief_fields,
+                "In order to test the brief API parameter the brief fields need to be manually added to "
+                "self.brief_fields. If this is already the case, perhaps the serializer is implemented incorrectly?",
+            )
 
         @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
         def test_list_objects_without_permission(self):
@@ -602,14 +607,37 @@ class APIViewTestCases:
             else:
                 self.fail(f"Neither PUT nor POST are available actions in: {data['actions']}")
 
-            self.assertEqual(set(self.choices_fields), field_choices)
+            self.assertEqual(
+                set(self.choices_fields),
+                field_choices,
+                "All field names of choice fields for a given model serializer need to be manually added to "
+                "self.choices_fields. If this is already the case, perhaps the serializer is implemented incorrectly?",
+            )
 
     class DeleteObjectViewTestCase(APITestCase):
+        def get_deletable_object(self):
+            """
+            Get an instance that can be deleted.
+
+            For some models this may just be any random object, but when we have FKs with `on_delete=models.PROTECT`
+            (as is often the case) we need to find or create an instance that doesn't have such entanglements.
+            """
+            return get_deletable_objects(self.model, self._get_queryset()).first()
+
+        def get_deletable_object_pks(self):
+            """
+            Get a list of PKs corresponding to objects that can be safely bulk-deleted.
+
+            For some models this may just be any random objects, but when we have FKs with `on_delete=models.PROTECT`
+            (as is often the case) we need to find or create an instance that doesn't have such entanglements.
+            """
+            return get_deletable_objects(self.model, self._get_queryset()).values_list("pk", flat=True)[:3]
+
         def test_delete_object_without_permission(self):
             """
             DELETE a single object without permission.
             """
-            url = self._get_detail_url(self._get_queryset().first())
+            url = self._get_detail_url(self.get_deletable_object())
 
             # Try DELETE without permission
             with disable_warnings("django.request"):
@@ -620,7 +648,7 @@ class APIViewTestCases:
             """
             DELETE a single object identified by its primary key.
             """
-            instance = self._get_queryset().first()
+            instance = self.get_deletable_object()
             url = self._get_detail_url(instance)
 
             # Add object-level permission
@@ -643,18 +671,19 @@ class APIViewTestCases:
             """
             DELETE a set of objects in a single request.
             """
+            id_list = self.get_deletable_object_pks()
             # Add object-level permission
             obj_perm = ObjectPermission(name="Test permission", actions=["delete"])
             obj_perm.save()
             obj_perm.users.add(self.user)
             obj_perm.object_types.add(ContentType.objects.get_for_model(self.model))
 
-            id_list = self._get_queryset().values_list("id", flat=True)
             data = [{"id": id} for id in id_list]
 
+            initial_count = self._get_queryset().count()
             response = self.client.delete(self._get_list_url(), data, format="json", **self.header)
             self.assertHttpStatus(response, status.HTTP_204_NO_CONTENT)
-            self.assertEqual(self._get_queryset().count(), 0)
+            self.assertEqual(self._get_queryset().count(), initial_count - len(id_list))
 
     class NotesURLViewTestCase(APITestCase):
         """Validate Notes URL on objects that have the Note model Mixin."""

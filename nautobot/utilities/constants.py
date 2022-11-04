@@ -22,8 +22,6 @@ FILTER_NUMERIC_BASED_LOOKUP_MAP = dict(n="exact", lte="lte", lt="lt", gte="gte",
 
 FILTER_NEGATION_LOOKUP_MAP = dict(n="exact")
 
-FILTER_TREENODE_NEGATION_LOOKUP_MAP = dict(n="in")
-
 
 #
 # HTTP Request META safe copy

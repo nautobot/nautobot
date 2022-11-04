@@ -3,6 +3,7 @@ from drf_spectacular.utils import extend_schema_field
 
 from nautobot.core.api import BaseModelSerializer, WritableNestedSerializer
 from nautobot.dcim import models
+from nautobot.ipam.api.nested_serializers import NestedIPAddressSerializer
 
 __all__ = [
     "NestedCableSerializer",
@@ -18,6 +19,8 @@ __all__ = [
     "NestedFrontPortSerializer",
     "NestedFrontPortTemplateSerializer",
     "NestedInterfaceSerializer",
+    "NestedInterfaceRedundancyGroupSerializer",
+    "NestedInterfaceRedundancyGroupAssociationSerializer",
     "NestedInterfaceTemplateSerializer",
     "NestedInventoryItemSerializer",
     "NestedLocationSerializer",
@@ -379,6 +382,51 @@ class NestedVirtualChassisSerializer(WritableNestedSerializer):
     class Meta:
         model = models.VirtualChassis
         fields = ["id", "name", "url", "master", "member_count"]
+
+
+#
+# Device Redundancy group
+#
+
+
+class NestedDeviceRedundancyGroupSerializer(WritableNestedSerializer):
+    url = serializers.HyperlinkedIdentityField(view_name="dcim-api:deviceredundancygroup-detail")
+
+    class Meta:
+        model = models.DeviceRedundancyGroup
+        fields = ["id", "url", "name", "slug", "failover_strategy"]
+
+
+#
+# Interface Redundancy group
+#
+
+
+class NestedInterfaceRedundancyGroupSerializer(WritableNestedSerializer):
+    """InterfaceRedundancyGroup Nested Serializer."""
+
+    url = serializers.HyperlinkedIdentityField(view_name="dcim-api:interfaceredundancygroup-detail")
+
+    class Meta:
+        """Meta attributes."""
+
+        model = models.InterfaceRedundancyGroup
+        fields = ["id", "url", "name", "slug", "status"]
+
+
+class NestedInterfaceRedundancyGroupAssociationSerializer(WritableNestedSerializer):
+    """ReliabilityGroupAssociation Nested Serializer."""
+
+    url = serializers.HyperlinkedIdentityField(view_name="dcim-api:interfaceredundancygroupassociation-detail")
+    interface = NestedInterfaceSerializer()
+    primary_ip = NestedIPAddressSerializer()
+    virtual_ip = NestedIPAddressSerializer()
+
+    class Meta:
+        """Meta attributes."""
+
+        model = models.InterfaceRedundancyGroupAssociation
+        fields = ["id", "url", "interface", "primary_ip", "virtual_ip", "priority"]
 
 
 #

@@ -1,10 +1,12 @@
+import uuid
 from collections import OrderedDict, namedtuple
 
 from django.contrib import messages
 from django.contrib.contenttypes.models import ContentType
+from django.core.exceptions import ObjectDoesNotExist
 from django.core.paginator import EmptyPage, PageNotAnInteger
 from django.db import transaction
-from django.db.models import F, Prefetch
+from django.db.models import F, Prefetch, ProtectedError
 from django.forms import (
     ModelMultipleChoiceField,
     MultipleHiddenInput,
@@ -12,6 +14,7 @@ from django.forms import (
 )
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils.html import escape
+from django.utils.http import is_safe_url
 from django.utils.safestring import mark_safe
 from django.views.generic import View
 from django_tables2 import RequestConfig
@@ -19,16 +22,24 @@ from django_tables2 import RequestConfig
 from nautobot.circuits.models import Circuit
 from nautobot.core.views import generic
 from nautobot.core.views.viewsets import NautobotUIViewSet
+from nautobot.core.views.mixins import (
+    ObjectDetailViewMixin,
+    ObjectListViewMixin,
+    ObjectDestroyViewMixin,
+    ObjectBulkDestroyViewMixin,
+    ObjectBulkUpdateViewMixin,
+)
 from nautobot.extras.views import ObjectChangeLogView, ObjectConfigContextView, ObjectDynamicGroupsView
 from nautobot.ipam.models import IPAddress, Prefix, Service, VLAN
 from nautobot.ipam.tables import InterfaceIPAddressTable, InterfaceVLANTable
-from nautobot.utilities.forms import ConfirmationForm
+from nautobot.utilities.forms import ConfirmationForm, restrict_form_fields
 from nautobot.utilities.paginator import EnhancedPaginator, get_paginate_count
 from nautobot.utilities.permissions import get_permission_for_model
-from nautobot.utilities.utils import csv_format, count_related
+from nautobot.utilities.utils import csv_format, count_related, prepare_cloned_fields
 from nautobot.utilities.views import GetReturnURLMixin, ObjectPermissionRequiredMixin
 from nautobot.virtualization.models import VirtualMachine
 from . import filters, forms, tables
+from .api import serializers
 from .choices import DeviceFaceChoices
 from .constants import NONCONNECTABLE_IFACE_TYPES
 from .models import (
@@ -41,11 +52,13 @@ from .models import (
     Device,
     DeviceBay,
     DeviceBayTemplate,
+    DeviceRedundancyGroup,
     DeviceRole,
     DeviceType,
     FrontPort,
     FrontPortTemplate,
     Interface,
+    InterfaceRedundancyGroup,
     InterfaceTemplate,
     InventoryItem,
     Location,
@@ -151,6 +164,7 @@ class RegionView(generic.ObjectView):
     def get_extra_context(self, request, instance):
 
         # Sites
+        # v2 TODO(jathan): Replace prefetch_related with select_related
         sites = (
             Site.objects.restrict(request.user, "view")
             .filter(region__in=instance.get_descendants(include_self=True))
@@ -204,6 +218,7 @@ class SiteListView(generic.ObjectListView):
 
 
 class SiteView(generic.ObjectView):
+    # v2 TODO(jathan): Replace prefetch_related with select_related
     queryset = Site.objects.prefetch_related("region", "tenant__group")
 
     def get_extra_context(self, request, instance):
@@ -220,6 +235,7 @@ class SiteView(generic.ObjectView):
             .restrict(request.user, "view")
             .filter(site=instance)
         )
+        # v2 TODO(jathan): Replace prefetch_related with select_related
         locations = (
             Location.objects.restrict(request.user, "view")
             .filter(site=instance)
@@ -258,6 +274,7 @@ class SiteBulkImportView(generic.BulkImportView):
 
 
 class SiteBulkEditView(generic.BulkEditView):
+    # v2 TODO(jathan): Replace prefetch_related with select_related
     queryset = Site.objects.prefetch_related("region", "tenant")
     filterset = filters.SiteFilterSet
     table = tables.SiteTable
@@ -265,6 +282,7 @@ class SiteBulkEditView(generic.BulkEditView):
 
 
 class SiteBulkDeleteView(generic.BulkDeleteView):
+    # v2 TODO(jathan): Replace prefetch_related with select_related
     queryset = Site.objects.prefetch_related("region", "tenant")
     filterset = filters.SiteFilterSet
     table = tables.SiteTable
@@ -286,9 +304,11 @@ class LocationTypeView(generic.ObjectView):
     queryset = LocationType.objects.all()
 
     def get_extra_context(self, request, instance):
+        # v2 TODO(jathan): Replace prefetch_related with select_related
         children = (
             LocationType.objects.restrict(request.user, "view").filter(parent=instance).prefetch_related("parent")
         )
+        # v2 TODO(jathan): Replace prefetch_related with select_related
         locations = (
             Location.objects.restrict(request.user, "view")
             .filter(location_type=instance)
@@ -339,6 +359,7 @@ class LocationTypeBulkDeleteView(generic.BulkDeleteView):
 
 
 class LocationListView(generic.ObjectListView):
+    # v2 TODO(jathan): Replace prefetch_related with select_related
     queryset = Location.objects.prefetch_related("location_type", "parent", "site", "tenant")
     filterset = filters.LocationFilterSet
     filterset_form = forms.LocationFilterForm
@@ -373,6 +394,7 @@ class LocationView(generic.ObjectView):
             .restrict(request.user, "view")
             .filter(location__in=related_locations)
         )
+        # v2 TODO(jathan): Replace prefetch_related with select_related
         children = (
             Location.objects.restrict(request.user, "view")
             .filter(parent=instance)
@@ -405,6 +427,7 @@ class LocationDeleteView(generic.ObjectDeleteView):
 
 
 class LocationBulkEditView(generic.BulkEditView):
+    # v2 TODO(jathan): Replace prefetch_related with select_related
     queryset = Location.objects.prefetch_related("location_type", "parent", "site", "tenant")
     filterset = filters.LocationFilterSet
     table = tables.LocationTable
@@ -418,6 +441,7 @@ class LocationBulkImportView(generic.BulkImportView):
 
 
 class LocationBulkDeleteView(generic.BulkDeleteView):
+    # v2 TODO(jathan): Replace prefetch_related with select_related
     queryset = Location.objects.prefetch_related("location_type", "parent", "site", "tenant")
     filterset = filters.LocationFilterSet
     table = tables.LocationTable
@@ -443,6 +467,7 @@ class RackGroupView(generic.ObjectView):
     def get_extra_context(self, request, instance):
 
         # Racks
+        # v2 TODO(jathan): Replace prefetch_related with select_related
         racks = (
             Rack.objects.restrict(request.user, "view")
             .filter(group__in=instance.get_descendants(include_self=True))
@@ -479,6 +504,7 @@ class RackGroupBulkImportView(generic.BulkImportView):
 
 
 class RackGroupBulkDeleteView(generic.BulkDeleteView):
+    # v2 TODO(jathan): Replace prefetch_related with select_related
     queryset = RackGroup.objects.add_related_count(
         RackGroup.objects.all(), Rack, "group", "rack_count", cumulative=True
     ).prefetch_related("site")
@@ -503,6 +529,7 @@ class RackRoleView(generic.ObjectView):
     def get_extra_context(self, request, instance):
 
         # Racks
+        # v2 TODO(jathan): Replace prefetch_related with select_related
         racks = (
             Rack.objects.restrict(request.user, "view")
             .filter(role=instance)
@@ -549,6 +576,7 @@ class RackRoleBulkDeleteView(generic.BulkDeleteView):
 
 
 class RackListView(generic.ObjectListView):
+    # v2 TODO(jathan): Replace prefetch_related with select_related
     queryset = Rack.objects.prefetch_related("site", "group", "tenant", "role", "devices__device_type").annotate(
         device_count=count_related(Device, "rack")
     )
@@ -562,6 +590,7 @@ class RackElevationListView(generic.ObjectListView):
     Display a set of rack elevations side-by-side.
     """
 
+    # v2 TODO(jathan): Replace prefetch_related with select_related
     queryset = Rack.objects.prefetch_related("role")
     non_filter_params = (
         *generic.ObjectListView.non_filter_params,
@@ -619,10 +648,12 @@ class RackElevationListView(generic.ObjectListView):
 
 
 class RackView(generic.ObjectView):
+    # v2 TODO(jathan): Replace prefetch_related with select_related
     queryset = Rack.objects.prefetch_related("site__region", "tenant__group", "group", "role")
 
     def get_extra_context(self, request, instance):
         # Get 0U and child devices located within the rack
+        # v2 TODO(jathan): Replace prefetch_related with select_related
         nonracked_devices = Device.objects.filter(rack=instance, position__isnull=True).prefetch_related(
             "device_type__manufacturer"
         )
@@ -637,6 +668,7 @@ class RackView(generic.ObjectView):
         prev_rack = peer_racks.filter(name__lt=instance.name).order_by("-name").first()
 
         reservations = RackReservation.objects.restrict(request.user, "view").filter(rack=instance)
+        # v2 TODO(jathan): Replace prefetch_related with select_related
         power_feeds = (
             PowerFeed.objects.restrict(request.user, "view").filter(rack=instance).prefetch_related("power_panel")
         )
@@ -670,6 +702,7 @@ class RackBulkImportView(generic.BulkImportView):
 
 
 class RackBulkEditView(generic.BulkEditView):
+    # v2 TODO(jathan): Replace prefetch_related with select_related
     queryset = Rack.objects.prefetch_related("site", "group", "tenant", "role")
     filterset = filters.RackFilterSet
     table = tables.RackTable
@@ -677,6 +710,7 @@ class RackBulkEditView(generic.BulkEditView):
 
 
 class RackBulkDeleteView(generic.BulkDeleteView):
+    # v2 TODO(jathan): Replace prefetch_related with select_related
     queryset = Rack.objects.prefetch_related("site", "group", "tenant", "role")
     filterset = filters.RackFilterSet
     table = tables.RackTable
@@ -695,6 +729,7 @@ class RackReservationListView(generic.ObjectListView):
 
 
 class RackReservationView(generic.ObjectView):
+    # v2 TODO(jathan): Replace prefetch_related with select_related
     queryset = RackReservation.objects.prefetch_related("rack")
 
 
@@ -732,6 +767,7 @@ class RackReservationImportView(generic.BulkImportView):
 
 
 class RackReservationBulkEditView(generic.BulkEditView):
+    # v2 TODO(jathan): Replace prefetch_related with select_related
     queryset = RackReservation.objects.prefetch_related("rack", "user")
     filterset = filters.RackReservationFilterSet
     table = tables.RackReservationTable
@@ -739,6 +775,7 @@ class RackReservationBulkEditView(generic.BulkEditView):
 
 
 class RackReservationBulkDeleteView(generic.BulkDeleteView):
+    # v2 TODO(jathan): Replace prefetch_related with select_related
     queryset = RackReservation.objects.prefetch_related("rack", "user")
     filterset = filters.RackReservationFilterSet
     table = tables.RackReservationTable
@@ -765,6 +802,7 @@ class ManufacturerView(generic.ObjectView):
     def get_extra_context(self, request, instance):
 
         # Devices
+        # v2 TODO(jathan): Replace prefetch_related with select_related
         devices = (
             Device.objects.restrict(request.user, "view")
             .filter(device_type__manufacturer=instance)
@@ -810,6 +848,7 @@ class ManufacturerBulkDeleteView(generic.BulkDeleteView):
 
 
 class DeviceTypeListView(generic.ObjectListView):
+    # v2 TODO(jathan): Replace prefetch_related with select_related
     queryset = DeviceType.objects.prefetch_related("manufacturer").annotate(
         instance_count=count_related(Device, "device_type")
     )
@@ -819,6 +858,7 @@ class DeviceTypeListView(generic.ObjectListView):
 
 
 class DeviceTypeView(generic.ObjectView):
+    # v2 TODO(jathan): Replace prefetch_related with select_related
     queryset = DeviceType.objects.prefetch_related("manufacturer")
 
     def get_extra_context(self, request, instance):
@@ -919,6 +959,7 @@ class DeviceTypeImportView(generic.ObjectImportView):
 
 
 class DeviceTypeBulkEditView(generic.BulkEditView):
+    # v2 TODO(jathan): Replace prefetch_related with select_related
     queryset = DeviceType.objects.prefetch_related("manufacturer").annotate(
         instance_count=count_related(Device, "device_type")
     )
@@ -928,6 +969,7 @@ class DeviceTypeBulkEditView(generic.BulkEditView):
 
 
 class DeviceTypeBulkDeleteView(generic.BulkDeleteView):
+    # v2 TODO(jathan): Replace prefetch_related with select_related
     queryset = DeviceType.objects.prefetch_related("manufacturer").annotate(
         instance_count=count_related(Device, "device_type")
     )
@@ -1243,6 +1285,7 @@ class DeviceRoleView(generic.ObjectView):
     def get_extra_context(self, request, instance):
 
         # Devices
+        # v2 TODO(jathan): Replace prefetch_related with select_related
         devices = (
             Device.objects.restrict(request.user, "view")
             .filter(device_role=instance)
@@ -1303,6 +1346,7 @@ class PlatformView(generic.ObjectView):
     def get_extra_context(self, request, instance):
 
         # Devices
+        # v2 TODO(jathan): Replace prefetch_related with select_related
         devices = (
             Device.objects.restrict(request.user, "view")
             .filter(platform=instance)
@@ -1356,6 +1400,7 @@ class DeviceListView(generic.ObjectListView):
 
 
 class DeviceView(generic.ObjectView):
+    # v2 TODO(jathan): Replace prefetch_related with select_related
     queryset = Device.objects.prefetch_related(
         "site__region",
         "rack__group",
@@ -1393,6 +1438,7 @@ class DeviceConsolePortsView(generic.ObjectView):
     template_name = "dcim/device/consoleports.html"
 
     def get_extra_context(self, request, instance):
+        # v2 TODO(jathan): Replace prefetch_related with select_related
         consoleports = (
             ConsolePort.objects.restrict(request.user, "view")
             .filter(device=instance)
@@ -1416,6 +1462,7 @@ class DeviceConsoleServerPortsView(generic.ObjectView):
     template_name = "dcim/device/consoleserverports.html"
 
     def get_extra_context(self, request, instance):
+        # v2 TODO(jathan): Replace prefetch_related with select_related
         consoleserverports = (
             ConsoleServerPort.objects.restrict(request.user, "view")
             .filter(device=instance)
@@ -1443,6 +1490,7 @@ class DevicePowerPortsView(generic.ObjectView):
     template_name = "dcim/device/powerports.html"
 
     def get_extra_context(self, request, instance):
+        # v2 TODO(jathan): Replace prefetch_related with select_related
         powerports = (
             PowerPort.objects.restrict(request.user, "view")
             .filter(device=instance)
@@ -1466,6 +1514,7 @@ class DevicePowerOutletsView(generic.ObjectView):
     template_name = "dcim/device/poweroutlets.html"
 
     def get_extra_context(self, request, instance):
+        # v2 TODO(jathan): Replace prefetch_related with select_related
         poweroutlets = (
             PowerOutlet.objects.restrict(request.user, "view")
             .filter(device=instance)
@@ -1490,6 +1539,8 @@ class DeviceInterfacesView(generic.ObjectView):
     template_name = "dcim/device/interfaces.html"
 
     def get_extra_context(self, request, instance):
+        # v2 TODO(jathan): Replace prefetch_related with select_related (except
+        # tags/ip_address/member_interfaces: m2m)
         interfaces = instance.vc_interfaces.restrict(request.user, "view").prefetch_related(
             Prefetch("ip_addresses", queryset=IPAddress.objects.restrict(request.user)),
             Prefetch("member_interfaces", queryset=Interface.objects.restrict(request.user)),
@@ -1515,6 +1566,7 @@ class DeviceFrontPortsView(generic.ObjectView):
     template_name = "dcim/device/frontports.html"
 
     def get_extra_context(self, request, instance):
+        # v2 TODO(jathan): Replace prefetch_related with select_related
         frontports = (
             FrontPort.objects.restrict(request.user, "view")
             .filter(device=instance)
@@ -1538,6 +1590,7 @@ class DeviceRearPortsView(generic.ObjectView):
     template_name = "dcim/device/rearports.html"
 
     def get_extra_context(self, request, instance):
+        # v2 TODO(jathan): Replace prefetch_related with select_related
         rearports = RearPort.objects.restrict(request.user, "view").filter(device=instance).prefetch_related("cable")
         rearport_table = tables.DeviceRearPortTable(data=rearports, user=request.user, orderable=False)
         if request.user.has_perm("dcim.change_rearport") or request.user.has_perm("dcim.delete_rearport"):
@@ -1554,6 +1607,7 @@ class DeviceDeviceBaysView(generic.ObjectView):
     template_name = "dcim/device/devicebays.html"
 
     def get_extra_context(self, request, instance):
+        # v2 TODO(jathan): Replace prefetch_related with select_related
         devicebays = (
             DeviceBay.objects.restrict(request.user, "view")
             .filter(device=instance)
@@ -1576,6 +1630,7 @@ class DeviceInventoryView(generic.ObjectView):
     template_name = "dcim/device/inventory.html"
 
     def get_extra_context(self, request, instance):
+        # v2 TODO(jathan): Replace prefetch_related with select_related
         inventoryitems = (
             InventoryItem.objects.restrict(request.user, "view")
             .filter(device=instance)
@@ -1608,6 +1663,7 @@ class DeviceLLDPNeighborsView(generic.ObjectView):
     template_name = "dcim/device/lldp_neighbors.html"
 
     def get_extra_context(self, request, instance):
+        # v2 TODO(jathan): Replace prefetch_related with select_related
         interfaces = (
             instance.vc_interfaces.restrict(request.user, "view")
             .prefetch_related("_path__destination")
@@ -1680,8 +1736,9 @@ class ChildDeviceBulkImportView(generic.BulkImportView):
 
 
 class DeviceBulkEditView(generic.BulkEditView):
+    # v2 TODO(jathan): Replace prefetch_related with select_related
     queryset = Device.objects.prefetch_related(
-        "tenant", "site", "rack", "device_role", "device_type__manufacturer", "secrets_group"
+        "tenant", "site", "rack", "device_role", "device_type__manufacturer", "secrets_group", "device_redundancy_group"
     )
     filterset = filters.DeviceFilterSet
     table = tables.DeviceTable
@@ -1689,6 +1746,7 @@ class DeviceBulkEditView(generic.BulkEditView):
 
 
 class DeviceBulkDeleteView(generic.BulkDeleteView):
+    # v2 TODO(jathan): Replace prefetch_related with select_related
     queryset = Device.objects.prefetch_related("tenant", "site", "rack", "device_role", "device_type__manufacturer")
     filterset = filters.DeviceFilterSet
     table = tables.DeviceTable
@@ -1968,6 +2026,7 @@ class InterfaceView(generic.ObjectView):
 
     def get_extra_context(self, request, instance):
         # Get assigned IP addresses
+        # v2 TODO(jathan): Replace prefetch_related with select_related
         ipaddress_table = InterfaceIPAddressTable(
             data=instance.ip_addresses.restrict(request.user, "view").prefetch_related("vrf", "tenant"),
             orderable=False,
@@ -1982,6 +2041,8 @@ class InterfaceView(generic.ObjectView):
         if instance.untagged_vlan is not None:
             vlans.append(instance.untagged_vlan)
             vlans[0].tagged = False
+
+        # v2 TODO(jathan): Replace prefetch_related with select_related
         for vlan in instance.tagged_vlans.restrict(request.user).prefetch_related("site", "group", "tenant", "role"):
             vlan.tagged = True
             vlans.append(vlan)
@@ -2359,6 +2420,7 @@ class InventoryItemBulkImportView(generic.BulkImportView):
 
 
 class InventoryItemBulkEditView(generic.BulkEditView):
+    # v2 TODO(jathan): Replace prefetch_related with select_related
     queryset = InventoryItem.objects.prefetch_related("device", "manufacturer")
     filterset = filters.InventoryItemFilterSet
     table = tables.InventoryItemTable
@@ -2370,6 +2432,7 @@ class InventoryItemBulkRenameView(generic.BulkRenameView):
 
 
 class InventoryItemBulkDeleteView(generic.BulkDeleteView):
+    # v2 TODO(jathan): Replace prefetch_related with select_related
     queryset = InventoryItem.objects.prefetch_related("device", "manufacturer")
     table = tables.InventoryItemTable
     template_name = "dcim/inventoryitem_bulk_delete.html"
@@ -2519,14 +2582,20 @@ class PathTraceView(generic.ObjectView):
 
         # Otherwise, find all CablePaths which traverse the specified object
         else:
+            # v2 TODO(jathan): Replace prefetch_related with select_related
             related_paths = CablePath.objects.filter(path__contains=instance).prefetch_related("origin")
             # Check for specification of a particular path (when tracing pass-through ports)
-            try:
-                path_id = int(request.GET.get("cablepath_id"))
-            except TypeError:
-                path_id = None
-            if path_id in list(related_paths.values_list("pk", flat=True)):
-                path = CablePath.objects.get(pk=path_id)
+
+            cablepath_id = request.GET.get("cablepath_id")
+            if cablepath_id is not None:
+                try:
+                    path_id = uuid.UUID(cablepath_id)
+                except (AttributeError, TypeError, ValueError):
+                    path_id = None
+                try:
+                    path = related_paths.get(pk=path_id)
+                except CablePath.DoesNotExist:
+                    path = related_paths.first()
             else:
                 path = related_paths.first()
 
@@ -2634,6 +2703,7 @@ class CableBulkImportView(generic.BulkImportView):
 
 
 class CableBulkEditView(generic.BulkEditView):
+    # v2 TODO(jathan): Replace prefetch_related with select_related
     queryset = Cable.objects.prefetch_related("termination_a", "termination_b")
     filterset = filters.CableFilterSet
     table = tables.CableTable
@@ -2641,6 +2711,7 @@ class CableBulkEditView(generic.BulkEditView):
 
 
 class CableBulkDeleteView(generic.BulkDeleteView):
+    # v2 TODO(jathan): Replace prefetch_related with select_related
     queryset = Cable.objects.prefetch_related("termination_a", "termination_b")
     filterset = filters.CableFilterSet
     table = tables.CableTable
@@ -2796,6 +2867,7 @@ class InterfaceConnectionsListView(ConnectionsListView):
 
 
 class VirtualChassisListView(generic.ObjectListView):
+    # v2 TODO(jathan): Replace prefetch_related with select_related
     queryset = VirtualChassis.objects.prefetch_related("master").annotate(
         member_count=count_related(Device, "virtual_chassis")
     )
@@ -2836,6 +2908,7 @@ class VirtualChassisEditView(ObjectPermissionRequiredMixin, GetReturnURLMixin, V
             formset=forms.BaseVCMemberFormSet,
             extra=0,
         )
+        # v2 TODO(jathan): Replace prefetch_related with select_related
         members_queryset = virtual_chassis.members.prefetch_related("rack").order_by("vc_position")
 
         vc_form = forms.VirtualChassisForm(instance=virtual_chassis)
@@ -2861,6 +2934,7 @@ class VirtualChassisEditView(ObjectPermissionRequiredMixin, GetReturnURLMixin, V
             formset=forms.BaseVCMemberFormSet,
             extra=0,
         )
+        # v2 TODO(jathan): Replace prefetch_related with select_related
         members_queryset = virtual_chassis.members.prefetch_related("rack").order_by("vc_position")
 
         vc_form = forms.VirtualChassisForm(request.POST, instance=virtual_chassis)
@@ -3049,6 +3123,7 @@ class VirtualChassisBulkDeleteView(generic.BulkDeleteView):
 
 
 class PowerPanelListView(generic.ObjectListView):
+    # v2 TODO(jathan): Replace prefetch_related with select_related
     queryset = PowerPanel.objects.prefetch_related("site", "rack_group").annotate(
         powerfeed_count=count_related(PowerFeed, "power_panel")
     )
@@ -3061,6 +3136,7 @@ class PowerPanelView(generic.ObjectView):
     queryset = PowerPanel.objects.prefetch_related("site", "rack_group")
 
     def get_extra_context(self, request, instance):
+        # v2 TODO(jathan): Replace prefetch_related with select_related
         power_feeds = PowerFeed.objects.restrict(request.user).filter(power_panel=instance).prefetch_related("rack")
         powerfeed_table = tables.PowerFeedTable(data=power_feeds, orderable=False)
         powerfeed_table.exclude = ["power_panel"]
@@ -3087,6 +3163,7 @@ class PowerPanelBulkImportView(generic.BulkImportView):
 
 
 class PowerPanelBulkEditView(generic.BulkEditView):
+    # v2 TODO(jathan): Replace prefetch_related with select_related
     queryset = PowerPanel.objects.prefetch_related("site", "rack_group")
     filterset = filters.PowerPanelFilterSet
     table = tables.PowerPanelTable
@@ -3094,6 +3171,7 @@ class PowerPanelBulkEditView(generic.BulkEditView):
 
 
 class PowerPanelBulkDeleteView(generic.BulkDeleteView):
+    # v2 TODO(jathan): Replace prefetch_related with select_related
     queryset = PowerPanel.objects.prefetch_related("site", "rack_group").annotate(
         powerfeed_count=count_related(PowerFeed, "power_panel")
     )
@@ -3114,6 +3192,7 @@ class PowerFeedListView(generic.ObjectListView):
 
 
 class PowerFeedView(generic.ObjectView):
+    # v2 TODO(jathan): Replace prefetch_related with select_related
     queryset = PowerFeed.objects.prefetch_related("power_panel", "rack")
 
 
@@ -3134,6 +3213,7 @@ class PowerFeedBulkImportView(generic.BulkImportView):
 
 
 class PowerFeedBulkEditView(generic.BulkEditView):
+    # v2 TODO(jathan): Replace prefetch_related with select_related
     queryset = PowerFeed.objects.prefetch_related("power_panel", "rack")
     filterset = filters.PowerFeedFilterSet
     table = tables.PowerFeedTable
@@ -3141,17 +3221,18 @@ class PowerFeedBulkEditView(generic.BulkEditView):
 
 
 class PowerFeedBulkDeleteView(generic.BulkDeleteView):
+    # v2 TODO(jathan): Replace prefetch_related with select_related
     queryset = PowerFeed.objects.prefetch_related("power_panel", "rack")
     filterset = filters.PowerFeedFilterSet
     table = tables.PowerFeedTable
 
 
-class ReliabilityGroupEditView(generic.ObjectEditView):
-    """ReliabilityGroup create & update views."""
+class InterfaceRedundancyGroupEditView(generic.ObjectEditView):
+    """InterfaceRedundancyGroup create & update views."""
 
-    queryset = models.ReliabilityGroup.objects.all()
-    model_form = forms.ReliabilityGroupForm
-    template_name = "nautobot_reliability_models/reliabilitygroup_create.html"
+    queryset = InterfaceRedundancyGroup
+    model_form = forms.InterfaceRedundancyGroupForm
+    template_name = "dcim/interfaceredundancygroup_create.html"
 
     def get_extra_context(self, request, instance):
         """Populates formset."""
@@ -3161,7 +3242,7 @@ class ReliabilityGroupEditView(generic.ObjectEditView):
         if request.POST:
             formset_kwargs["data"] = request.POST
 
-        ctx["members"] = forms.ReliabilityGroupAssociationFormSet(**formset_kwargs)
+        ctx["members"] = forms.InterfaceRedundancyGroupAssociationFormSet(**formset_kwargs)
 
         return ctx
 
@@ -3172,7 +3253,6 @@ class ReliabilityGroupEditView(generic.ObjectEditView):
         restrict_form_fields(form, request.user)
 
         if form.is_valid():
-            logger.debug("Form validation was successful")
 
             try:
                 with transaction.atomic():
@@ -3195,7 +3275,6 @@ class ReliabilityGroupEditView(generic.ObjectEditView):
                         raise RuntimeError(members.errors)
                 verb = "Created" if object_created else "Modified"
                 msg = f"{verb} {self.queryset.model._meta.verbose_name}"
-                logger.info("%s %s (PK: %s)", msg, obj, obj.pk)
                 if hasattr(obj, "get_absolute_url"):
                     msg = f'{msg} <a href="{obj.get_absolute_url()}">{escape(obj)}</a>'
                 else:
@@ -3218,22 +3297,19 @@ class ReliabilityGroupEditView(generic.ObjectEditView):
 
             except ObjectDoesNotExist:
                 msg = "Object save failed due to object-level permissions violation."
-                logger.debug(msg)
                 form.add_error(None, msg)
             except RuntimeError:
                 msg = "Errors encountered when saving Dynamic Group associations. See below."
-                logger.debug(msg)
                 form.add_error(None, msg)
             except ProtectedError as err:
                 # e.g. Trying to delete a something that is in use.
                 err_msg = err.args[0]
                 protected_obj = err.protected_objects[0]
                 msg = f"{protected_obj.value}: {err_msg} Please cancel this edit and start again."
-                logger.debug(msg)
                 form.add_error(None, msg)
 
         else:
-            logger.debug("Form validation failed")
+            form.add_error(None, "Form validation failed")
 
         return render(
             request,
@@ -3249,21 +3325,21 @@ class ReliabilityGroupEditView(generic.ObjectEditView):
         )
 
 
-class ReliabilityInterfaceGroupUIViewSet(
-    mixins.ObjectDetailViewMixin,
-    mixins.ObjectListViewMixin,
-    mixins.ObjectDestroyViewMixin,
-    mixins.ObjectBulkDestroyViewMixin,
-    mixins.ObjectBulkUpdateViewMixin,
+class InterfaceRedundancyGroupUIViewSet(
+    ObjectDetailViewMixin,
+    ObjectListViewMixin,
+    ObjectDestroyViewMixin,
+    ObjectBulkDestroyViewMixin,
+    ObjectBulkUpdateViewMixin,
 ):
-    """ViewSet for the ReliabilityInterfaceGroup model."""
+    """ViewSet for the InterfaceRedundancyGroup model."""
 
-    bulk_update_form_class = forms.ReliabilityInterfaceGroupBulkEditForm
-    filterset_class = filters.ReliabilityInterfaceGroupFilterSet
-    filterset_form_class = forms.ReliabilityInterfaceGroupFilterForm
-    queryset = models.ReliabilityInterfaceGroup.objects.all()
-    serializer_class = ReliabilityInterfaceGroupSerializer
-    table_class = tables.ReliabilityInterfaceGroupTable
+    bulk_update_form_class = forms.InterfaceRedundancyGroupBulkEditForm
+    filterset_class = filters.InterfaceRedundancyGroupFilterSet
+    filterset_form_class = forms.InterfaceRedundancyGroupFilterForm
+    queryset = InterfaceRedundancyGroup.objects.all()
+    serializer_class = serializers.InterfaceRedundancyGroupSerializer
+    table_class = tables.InterfaceRedundancyGroupTable
     # action_buttons = ("add",)
 
     lookup_field = "pk"
@@ -3271,3 +3347,28 @@ class ReliabilityInterfaceGroupUIViewSet(
     def _process_bulk_create_form(self, form):
         """Bulk creating (CSV import) is not supported."""
         raise NotImplementedError()
+
+
+class DeviceRedundancyGroupUIViewSet(NautobotUIViewSet):
+    bulk_create_form_class = forms.DeviceRedundancyGroupCSVForm
+    bulk_update_form_class = forms.DeviceRedundancyGroupBulkEditForm
+    filterset_class = filters.DeviceRedundancyGroupFilterSet
+    filterset_form_class = forms.DeviceRedundancyGroupFilterForm
+    form_class = forms.DeviceRedundancyGroupForm
+    queryset = (
+        DeviceRedundancyGroup.objects.select_related("status")
+        .prefetch_related("members")
+        .annotate(member_count=count_related(Device, "device_redundancy_group"))
+    )
+    serializer_class = serializers.DeviceRedundancyGroupSerializer
+    table_class = tables.DeviceRedundancyGroupTable
+
+    def get_extra_context(self, request, instance):
+        context = super().get_extra_context(request, instance)
+
+        if self.action == "retrieve" and instance:
+            members = instance.members_sorted.restrict(request.user)
+            members_table = tables.DeviceTable(members)
+            members_table.columns.show("device_redundancy_group_priority")
+            context["members_table"] = members_table
+        return context
