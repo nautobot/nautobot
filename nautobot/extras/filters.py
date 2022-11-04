@@ -416,6 +416,13 @@ class ConfigContextSchemaFilterSet(BaseFilterSet):
 
 
 class ContentTypeFilterSet(BaseFilterSet):
+    q = SearchFilter(
+        filter_predicates={
+            "app_label": "icontains",
+            "model": "icontains",
+        },
+    )
+
     class Meta:
         model = ContentType
         fields = ["id", "app_label", "model"]
