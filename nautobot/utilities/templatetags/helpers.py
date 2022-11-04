@@ -88,6 +88,30 @@ def placeholder(value):
 
 @library.filter()
 @register.filter()
+def add_html_id(element_str, id_str):
+    """Add an HTML `id="..."` attribute to the given HTML element string.
+
+    Args:
+        element_str (str): String describing an HTML element.
+        id_str (str): String to add as the `id` attribute of the element_str.
+
+    Returns:
+        str: HTML string with added `id`.
+
+    Example:
+        >>> add_html_id("<div></div>", "my-div")
+        '<div id="my-div"></div>'
+        >>> add_html_id('<a href="..." title="...">Hello!</a>', "my-a")
+        '<a id="my-a" href="..." title="...">Hello!</a>'
+    """
+    match = re.match(r"^(.*?<\w+) ?(.*)$", element_str, flags=re.DOTALL)
+    if not match:
+        return element_str
+    return mark_safe(match.group(1) + format_html(' id="{}" ', id_str) + match.group(2))
+
+
+@library.filter()
+@register.filter()
 def render_boolean(value):
     """Render HTML from a computed boolean value.
 
