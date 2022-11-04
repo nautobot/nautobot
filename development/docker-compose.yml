@@ -30,7 +30,7 @@ services:
         - "http://localhost:8080/health/"
   celery_worker:
     image: "local/nautobot-dev:local-py${PYTHON_VER}"
-    entrypoint: "nautobot-server celery worker -l INFO"
+    entrypoint: "watchmedo auto-restart --directory './' --pattern '*.py' --recursive -- nautobot-server celery worker -l INFO --events"
     healthcheck:
       interval: 60s
       timeout: 30s

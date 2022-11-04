@@ -190,6 +190,8 @@ selenium = "~4.3.0"
 splinter = "~0.18.0"
 # Change log management and generation
 towncrier = "~22.8.0"
+# Watch files for celery and mkdocs reload
+watchdog = "~2.1.9"
 
 [tool.poetry.scripts]
 nautobot-server = "nautobot.core.cli:main"
