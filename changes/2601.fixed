@@ -1,0 +1,1 @@
+Fixed an issue where a Git repository could provide Jobs even if not marked as a provider of Jobs.
