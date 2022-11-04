@@ -685,10 +685,7 @@ class Relationship(BaseModel, ChangeLoggedModel, NotesMixin):
         # Handle the case where required_model_class is None (e.g., relationship to a plugin
         # model for a plugin that's not installed at present):
         if required_model_class is None:
-            logger.info(
-                f"Relationship enforcement skipped as required model class "
-                f"({self}.{RelationshipSideChoices.OPPOSITE[side]}_type doesn't exist yet."
-            )
+            logger.info("Relationship enforcement skipped as required model class doesn't exist yet.")
             return True
 
         return False
