@@ -208,7 +208,7 @@ class TaggedObjectSerializer(BaseModelSerializer):
 
     def _save_tags(self, instance, tags):
         if tags:
-            instance.tags.set(*[t.name for t in tags])
+            instance.tags.set([t.name for t in tags])
         else:
             instance.tags.clear()
 
@@ -755,6 +755,8 @@ class JobSerializer(NautobotModelSerializer, TaggedObjectSerializer):
             "soft_time_limit_override",
             "time_limit",
             "time_limit_override",
+            "task_queues",
+            "task_queues_override",
             "tags",
         ]
 
@@ -951,6 +953,7 @@ class JobInputSerializer(serializers.Serializer):
     data = serializers.JSONField(required=False, default=dict)
     commit = serializers.BooleanField(required=False, default=None)
     schedule = NestedScheduledJobSerializer(required=False)
+    task_queue = serializers.CharField(required=False, allow_blank=True)
 
 
 class JobLogEntrySerializer(BaseModelSerializer):
@@ -1233,7 +1236,7 @@ class TagSerializer(NautobotModelSerializer):
 
         # All relevant content_types should be assigned to newly created tag for API Version <1.3
         if (self.instance is None or not self.instance.present_in_database) and "content_types" not in data:
-            data["content_types"] = TaggableClassesQuery().as_queryset
+            data["content_types"] = TaggableClassesQuery().as_queryset()
 
         # check if tag is assigned to any of the removed content_types
         if self.instance is not None and self.instance.present_in_database and "content_types" in data:
@@ -1248,7 +1251,7 @@ class TagSerializer(NautobotModelSerializer):
 
 class TagSerializerVersion13(TagSerializer):
     content_types = ContentTypeField(
-        queryset=TaggableClassesQuery().as_queryset,
+        queryset=TaggableClassesQuery().as_queryset(),
         many=True,
         required=True,
     )

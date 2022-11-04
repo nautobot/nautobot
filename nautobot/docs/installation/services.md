@@ -29,6 +29,10 @@ $ nautobot-server celery --help
 +/- 1.1.0
     Prior to version 1.1.0, Nautobot utilized RQ as the primary background task worker. As of Nautobot 1.1.0, RQ is now *deprecated*. RQ and the `@job` decorator for custom tasks are still supported for now, but users should [migrate the primary worker to Celery](#migrating-to-celery-from-rq) and then, *only if still required*, [run RQ concurrently with the Celery worker](#concurrent-celery-and-rq-nautobot-workers). RQ and the `@job` decorator will no longer be documented, and support for RQ will be removed in a future release.
 
+#### Advanced Task Queue Configuration
+
+You may want to deploy multiple workers and/or multiple queues. For more information see the [task queues](../administration/celery-queues.md) documentation.
+
 ## Configuration
 
 As the `nautobot` user, copy and paste the following into `$NAUTOBOT_ROOT/uwsgi.ini`:

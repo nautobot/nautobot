@@ -116,6 +116,25 @@ STORAGE_CONFIG = {}
 # Test runner that is aware of our use of "integration" tags and only runs
 # integration tests if explicitly passed in with `nautobot-server test --tag integration`.
 TEST_RUNNER = "nautobot.core.tests.runner.NautobotTestRunner"
+# Disable test data factories by default so as not to cause issues for plugins.
+# The nautobot_config.py that Nautobot core uses for its own tests will override this to True.
+TEST_USE_FACTORIES = is_truthy(os.getenv("NAUTOBOT_TEST_USE_FACTORIES", "False"))
+# Pseudo-random number generator seed, for reproducibility of test results.
+TEST_FACTORY_SEED = os.getenv("NAUTOBOT_TEST_FACTORY_SEED", None)
+
+#
+# django-slowtests
+#
+
+# Performance test uses `NautobotPerformanceTestRunner` to run, which is only available once you have `django-slowtests` installed in your dev environment.
+# `invoke performance-test` and adding `--performance-report` or `--performance-snapshot` at the end of the `invoke` command
+# will automatically opt to NautobotPerformanceTestRunner to run the tests.
+
+# The baseline file that the performance test is running against
+# TODO we need to replace the baselines in this file with more consistent results at least for CI
+TEST_PERFORMANCE_BASELINE_FILE = os.getenv(
+    "NAUTOBOT_TEST_PERFORMANCE_BASELINE_FILE", "nautobot/core/tests/performance_baselines.yml"
+)
 
 #
 # Django cryptography
@@ -338,7 +357,7 @@ INSTALLED_APPS = [
     "django.contrib.messages",
     "django.contrib.staticfiles",
     "django.contrib.humanize",
-    "cacheops",
+    "cacheops",  # v2 TODO(jathan); Remove cacheops.
     "corsheaders",
     "django_filters",
     "django_jinja",
@@ -369,7 +388,7 @@ INSTALLED_APPS = [
     "health_check",
     "health_check.storage",
     "django_extensions",
-    "nautobot.core.apps.ConstanceDatabaseAppConfig",  # fix default_auto_field
+    "constance.backends.database",
     "django_ajax_tables",
 ]
 
@@ -619,6 +638,7 @@ GRAPHQL_COMPUTED_FIELD_PREFIX = "cpf"
 # Caching
 #
 
+# v2 TODO(jathan): Remove all cacheops settings.
 # The django-cacheops plugin is used to cache querysets. The built-in Django
 # caching is not used.
 CACHEOPS = {
@@ -638,7 +658,7 @@ CACHEOPS = {
     "virtualization.*": {"ops": "all"},
 }
 CACHEOPS_DEGRADE_ON_FAILURE = True
-CACHEOPS_ENABLED = is_truthy(os.getenv("NAUTOBOT_CACHEOPS_ENABLED", "True"))
+CACHEOPS_ENABLED = is_truthy(os.getenv("NAUTOBOT_CACHEOPS_ENABLED", "False"))
 CACHEOPS_REDIS = os.getenv("NAUTOBOT_CACHEOPS_REDIS", parse_redis_connection(redis_database=1))
 CACHEOPS_DEFAULTS = {"timeout": int(os.getenv("NAUTOBOT_CACHEOPS_TIMEOUT", "900"))}
 
@@ -689,6 +709,9 @@ CELERY_RESULT_BACKEND = os.getenv("NAUTOBOT_CELERY_RESULT_BACKEND", parse_redis_
 
 # Instruct celery to report the started status of a job, instead of just `pending`, `finished`, or `failed`
 CELERY_TASK_TRACK_STARTED = True
+
+# Default celery queue name that will be used by workers and tasks if no queue is specified
+CELERY_TASK_DEFAULT_QUEUE = os.getenv("NAUTOBOT_CELERY_TASK_DEFAULT_QUEUE", "default")
 
 # Global task time limits (seconds)
 # Exceeding the soft limit will result in a SoftTimeLimitExceeded exception,

@@ -16,6 +16,7 @@ from nautobot.dcim.choices import (
     CableLengthUnitChoices,
     ConsolePortTypeChoices,
     DeviceFaceChoices,
+    DeviceRedundancyGroupFailoverStrategyChoices,
     InterfaceModeChoices,
     InterfaceStatusChoices,
     InterfaceTypeChoices,
@@ -43,8 +44,9 @@ from nautobot.dcim.models import (
     Device,
     DeviceBay,
     DeviceBayTemplate,
-    DeviceType,
+    DeviceRedundancyGroup,
     DeviceRole,
+    DeviceType,
     FrontPort,
     FrontPortTemplate,
     Interface,
@@ -99,6 +101,7 @@ from .nested_serializers import (  # noqa: F401
     NestedConsoleServerPortTemplateSerializer,
     NestedDeviceBaySerializer,
     NestedDeviceBayTemplateSerializer,
+    NestedDeviceRedundancyGroupSerializer,
     NestedDeviceRoleSerializer,
     NestedDeviceSerializer,
     NestedDeviceTypeSerializer,
@@ -273,6 +276,7 @@ class LocationTypeSerializer(NautobotModelSerializer):
             "name",
             "slug",
             "parent",
+            "nestable",
             "content_types",
             "description",
             "tree_depth",
@@ -756,6 +760,7 @@ class DeviceSerializer(NautobotModelSerializer, TaggedObjectSerializer, StatusMo
     secrets_group = NestedSecretsGroupSerializer(required=False, allow_null=True)
     cluster = NestedClusterSerializer(required=False, allow_null=True)
     virtual_chassis = NestedVirtualChassisSerializer(required=False, allow_null=True)
+    device_redundancy_group = NestedDeviceRedundancyGroupSerializer(required=False, allow_null=True)
     local_context_schema = NestedConfigContextSchemaSerializer(required=False, allow_null=True)
 
     class Meta:
@@ -784,6 +789,8 @@ class DeviceSerializer(NautobotModelSerializer, TaggedObjectSerializer, StatusMo
             "virtual_chassis",
             "vc_position",
             "vc_priority",
+            "device_redundancy_group",
+            "device_redundancy_group_priority",
             "comments",
             "local_context_schema",
             "local_context_data",
@@ -1127,6 +1134,23 @@ class DeviceBaySerializer(NautobotModelSerializer, TaggedObjectSerializer):
             "label",
             "description",
             "installed_device",
+        ]
+
+
+class DeviceRedundancyGroupSerializer(NautobotModelSerializer, TaggedObjectSerializer, StatusModelSerializerMixin):
+    url = serializers.HyperlinkedIdentityField(view_name="dcim-api:deviceredundancygroup-detail")
+    failover_strategy = ChoiceField(choices=DeviceRedundancyGroupFailoverStrategyChoices)
+
+    class Meta:
+        model = DeviceRedundancyGroup
+        fields = [
+            "url",
+            "name",
+            "slug",
+            "description",
+            "failover_strategy",
+            "secrets_group",
+            "comments",
         ]
 
 

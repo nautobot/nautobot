@@ -1,8 +1,5 @@
-from django.contrib.contenttypes.models import ContentType
-
 from nautobot.dcim.models import Device, DeviceRole, DeviceType, Manufacturer, Site
 from nautobot.extras.models import ConfigContext, ConfigContextSchema, Status
-from nautobot.utilities.choices import ColorChoices
 from nautobot.utilities.testing.integration import SeleniumTestCase
 from nautobot.virtualization.models import Cluster, ClusterType, VirtualMachine
 
@@ -78,7 +75,8 @@ class ConfigContextSchemaTestCase(SeleniumTestCase):
 
     def test_validation_tab(self):
         """
-        Given a config context schema that is assigned to a config context, and device, and a virtual machine with valid context data
+        Given a config context schema that is assigned to a config context, and device, and a VM with valid context data
+
         Navigate to the Validation tab
         Assert all three objects have a green checkmark in the `Validation state` column
         Then navigate to the schema edit view and modify the schema
@@ -105,9 +103,7 @@ class ConfigContextSchemaTestCase(SeleniumTestCase):
         ConfigContext.objects.create(name="context 1", weight=101, data=context_data, schema=schema)
 
         # Device
-        status = Status.objects.create(name="my-status", slug="my-status", color=ColorChoices.COLOR_RED)
-        status.content_types.add(ContentType.objects.get_for_model(Device))
-        site = Site.objects.create(name="site", slug="site", status=status)
+        site = Site.objects.create(name="site", slug="site", status=Status.objects.get_for_model(Site).first())
         manufacturer = Manufacturer.objects.create(name="manufacturer", slug="manufacturer")
         device_type = DeviceType.objects.create(model="device_type", manufacturer=manufacturer)
         device_role = DeviceRole.objects.create(name="device_role", slug="device-role", color="ffffff")
@@ -116,7 +112,7 @@ class ConfigContextSchemaTestCase(SeleniumTestCase):
             site=site,
             device_type=device_type,
             device_role=device_role,
-            status=status,
+            status=Status.objects.get_for_model(Device).first(),
             local_context_data=context_data,
             local_context_schema=schema,
         )
@@ -124,11 +120,10 @@ class ConfigContextSchemaTestCase(SeleniumTestCase):
         # Virtual Machine
         cluster_type = ClusterType.objects.create(name="cluster_type", slug="cluster-type")
         cluster = Cluster.objects.create(name="cluster", type=cluster_type)
-        status.content_types.add(ContentType.objects.get_for_model(VirtualMachine))
         VirtualMachine.objects.create(
             name="virtual_machine",
             cluster=cluster,
-            status=status,
+            status=Status.objects.get_for_model(VirtualMachine).first(),
             local_context_data=context_data,
             local_context_schema=schema,
         )

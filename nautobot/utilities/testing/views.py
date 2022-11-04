@@ -1,3 +1,4 @@
+from tree_queries.models import TreeNode
 from typing import Optional, Sequence
 import uuid
 
@@ -14,7 +15,7 @@ from nautobot.extras.models import ChangeLoggedModel, CustomField, Relationship
 from nautobot.users.models import ObjectPermission
 from nautobot.utilities.testing.mixins import NautobotTestCaseMixin
 from nautobot.utilities.utils import get_changes_for_model, get_filterset_for_model
-from .utils import disable_warnings, extract_page_body, post_data
+from .utils import disable_warnings, extract_page_body, get_deletable_objects, post_data
 
 
 __all__ = (
@@ -26,6 +27,7 @@ __all__ = (
 
 
 @tag("unit")
+@override_settings(PAGINATE_COUNT=65000)
 class TestCase(_TestCase, NautobotTestCaseMixin):
     """Base class for all Nautobot-specific unit tests."""
 
@@ -59,6 +61,7 @@ class ModelTestCase(TestCase):
 #
 
 
+@tag("performance")
 class ModelViewTestCase(ModelTestCase):
     """
     Base TestCase for model views. Subclass to test individual views.
@@ -303,12 +306,18 @@ class ViewTestCases:
             }
             self.assertHttpStatus(self.client.post(**request), 302)
             self.assertEqual(initial_count + 1, self._get_queryset().count())
-            if hasattr(self.model, "last_updated"):
-                instance = self._get_queryset().order_by("last_updated").last()
+            # order_by() is no supported by django TreeNode,
+            # So we directly retrieve the instance by "slug".
+            if isinstance(self._get_queryset().first(), TreeNode):
+                instance = self._get_queryset().get(slug=self.form_data.get("slug"))
                 self.assertInstanceEqual(instance, self.form_data)
             else:
-                instance = self._get_queryset().last()
-                self.assertInstanceEqual(instance, self.form_data)
+                if hasattr(self.model, "last_updated"):
+                    instance = self._get_queryset().order_by("last_updated").last()
+                    self.assertInstanceEqual(instance, self.form_data)
+                else:
+                    instance = self._get_queryset().last()
+                    self.assertInstanceEqual(instance, self.form_data)
 
             if hasattr(self.model, "to_objectchange"):
                 # Verify ObjectChange creation
@@ -352,10 +361,16 @@ class ViewTestCases:
             }
             self.assertHttpStatus(self.client.post(**request), 302)
             self.assertEqual(initial_count + 1, self._get_queryset().count())
-            if hasattr(self.model, "last_updated"):
-                self.assertInstanceEqual(self._get_queryset().order_by("last_updated").last(), self.form_data)
+            # order_by() is no supported by django TreeNode,
+            # So we directly retrieve the instance by "slug".
+            if isinstance(self._get_queryset().first(), TreeNode):
+                instance = self._get_queryset().get(slug=self.form_data.get("slug"))
+                self.assertInstanceEqual(instance, self.form_data)
             else:
-                self.assertInstanceEqual(self._get_queryset().last(), self.form_data)
+                if hasattr(self.model, "last_updated"):
+                    self.assertInstanceEqual(self._get_queryset().order_by("last_updated").last(), self.form_data)
+                else:
+                    self.assertInstanceEqual(self._get_queryset().last(), self.form_data)
 
         def test_slug_autocreation(self):
             """Test that slug is autocreated through ORM."""
@@ -369,14 +384,18 @@ class ViewTestCases:
             """Ensure save method does not modify slug that is passed in."""
             # This really should go on a models test page, but we don't have test structures for models.
             if self.slug_source is not None:
+                new_slug_source_value = "kwyjibo"
+
                 obj = self.model.objects.get(**{self.slug_source: self.slug_test_object})
                 expected_slug = self.slugify_function(getattr(obj, self.slug_source))
                 # Update slug source field str
-                filter_ = self.slug_source + "__contains"
-                self.model.objects.filter(**{filter_: self.slug_test_object}).update(**{self.slug_source: "Test"})
+                filter_ = self.slug_source + "__exact"
+                self.model.objects.filter(**{filter_: self.slug_test_object}).update(
+                    **{self.slug_source: new_slug_source_value}
+                )
 
                 obj.refresh_from_db()
-                self.assertEqual(getattr(obj, self.slug_source), "Test")
+                self.assertEqual(getattr(obj, self.slug_source), new_slug_source_value)
                 self.assertEqual(obj.slug, expected_slug)
 
     class EditObjectViewTestCase(ModelViewTestCase):
@@ -470,8 +489,20 @@ class ViewTestCases:
         Delete a single instance.
         """
 
+        def get_deletable_object(self):
+            """
+            Get an instance that can be deleted.
+
+            For some models this may just be any random object, but when we have FKs with `on_delete=models.PROTECT`
+            (as is often the case) we need to find or create an instance that doesn't have such entanglements.
+            """
+            instance = get_deletable_objects(self.model, self._get_queryset()).first()
+            if instance is None:
+                self.fail("Couldn't find a single deletable object!")
+            return instance
+
         def test_delete_object_without_permission(self):
-            instance = self._get_queryset().first()
+            instance = self.get_deletable_object()
 
             # Try GET without permission
             with disable_warnings("django.request"):
@@ -487,7 +518,7 @@ class ViewTestCases:
 
         @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
         def test_delete_object_with_permission(self):
-            instance = self._get_queryset().first()
+            instance = self.get_deletable_object()
 
             # Assign model-level permission
             obj_perm = ObjectPermission(name="Test permission", actions=["delete"])
@@ -515,7 +546,8 @@ class ViewTestCases:
 
         @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
         def test_delete_object_with_constrained_permission(self):
-            instance1, instance2 = self._get_queryset().all()[:2]
+            instance1 = self.get_deletable_object()
+            instance2 = self._get_queryset().exclude(pk=instance1.pk)[0]
 
             # Assign object-level permission
             obj_perm = ObjectPermission(
@@ -543,12 +575,15 @@ class ViewTestCases:
                 self._get_queryset().get(pk=instance1.pk)
 
             # Try to delete a non-permitted object
+            # Note that in the case of tree models, deleting instance1 above may have cascade-deleted to instance2,
+            # so to be safe, we need to get another object instance that definitely exists:
+            instance3 = self._get_queryset().first()
             request = {
-                "path": self._get_url("delete", instance2),
+                "path": self._get_url("delete", instance3),
                 "data": post_data({"confirm": True}),
             }
             self.assertHttpStatus(self.client.post(**request), 404)
-            self.assertTrue(self._get_queryset().filter(pk=instance2.pk).exists())
+            self.assertTrue(self._get_queryset().filter(pk=instance3.pk).exists())
 
     class ListObjectsViewTestCase(ModelViewTestCase):
         """
@@ -577,6 +612,9 @@ class ViewTestCases:
             content = extract_page_body(response.content.decode(response.charset))
             # TODO: it'd make test failures more readable if we strip the page headers/footers from the content
             if hasattr(self.model, "name"):
+                # TODO: https://github.com/nautobot/nautobot/issues/2580
+                #       This is fragile as we move toward more autogenerated test fixtures,
+                #       as "instance.name" may appear coincidentally in other page text if we're not careful.
                 self.assertIn(instance1.name, content, msg=content)
                 self.assertNotIn(instance2.name, content, msg=content)
             try:
@@ -588,20 +626,13 @@ class ViewTestCases:
         @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"], STRICT_FILTERING=True)
         def test_list_objects_unknown_filter_strict_filtering(self):
             """Verify that with STRICT_FILTERING, an unknown filter results in an error message and no matches."""
-            instance1, instance2 = self._get_queryset().all()[:2]
             response = self.client.get(f"{self._get_url('list')}?ice_cream_flavor=chocolate")
             self.assertHttpStatus(response, 200)
             content = extract_page_body(response.content.decode(response.charset))
             # TODO: it'd make test failures more readable if we strip the page headers/footers from the content
             self.assertIn("Unknown filter field", content, msg=content)
-            if hasattr(self.model, "name"):
-                self.assertNotIn(instance1.name, content, msg=content)
-                self.assertNotIn(instance2.name, content, msg=content)
-            try:
-                self.assertNotIn(self._get_url("view", instance=instance1), content, msg=content)
-                self.assertNotIn(self._get_url("view", instance=instance2), content, msg=content)
-            except NoReverseMatch:
-                pass
+            # There should be no table rows displayed except for the empty results row
+            self.assertIn(f"No {self.model._meta.verbose_name_plural} found", content, msg=content)
 
         @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"], STRICT_FILTERING=False)
         def test_list_objects_unknown_filter_no_strict_filtering(self):
@@ -627,7 +658,11 @@ class ViewTestCases:
             content = extract_page_body(response.content.decode(response.charset))
             # TODO: it'd make test failures more readable if we strip the page headers/footers from the content
             self.assertNotIn("Unknown filter field", content, msg=content)
+            self.assertNotIn(f"No {self.model._meta.verbose_name_plural} found", content, msg=content)
             if hasattr(self.model, "name"):
+                # TODO: https://github.com/nautobot/nautobot/issues/2580
+                #       This is fragile as we move toward more autogenerated test fixtures,
+                #       as "instance.name" may appear coincidentally in other page text if we're not careful.
                 self.assertIn(instance1.name, content, msg=content)
                 self.assertIn(instance2.name, content, msg=content)
             try:
@@ -962,7 +997,9 @@ class ViewTestCases:
             # Dynamically determine a constraint that will *not* be matched by the updated objects.
             attr_name = list(self.bulk_edit_data.keys())[0]
             field = self.model._meta.get_field(attr_name)
-            value = field.value_from_object(self._get_queryset().first())
+            value = field.value_from_object(
+                self._get_queryset().exclude(**{attr_name: self.bulk_edit_data[attr_name]}).first()
+            )
 
             # Assign constrained permission
             obj_perm = ObjectPermission(
@@ -992,9 +1029,18 @@ class ViewTestCases:
         Delete multiple instances.
         """
 
+        def get_deletable_object_pks(self):
+            """
+            Get a list of PKs corresponding to objects that can be safely bulk-deleted.
+
+            For some models this may just be any random objects, but when we have FKs with `on_delete=models.PROTECT`
+            (as is often the case) we need to find or create an instance that doesn't have such entanglements.
+            """
+            return get_deletable_objects(self.model, self._get_queryset()).values_list("pk", flat=True)[:3]
+
         @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
         def test_bulk_delete_objects_without_permission(self):
-            pk_list = list(self._get_queryset().values_list("pk", flat=True)[:3])
+            pk_list = self.get_deletable_object_pks()
             data = {
                 "pk": pk_list,
                 "confirm": True,
@@ -1007,7 +1053,8 @@ class ViewTestCases:
 
         @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
         def test_bulk_delete_objects_with_permission(self):
-            pk_list = self._get_queryset().values_list("pk", flat=True)
+            pk_list = self.get_deletable_object_pks()
+            initial_count = self._get_queryset().count()
             data = {
                 "pk": pk_list,
                 "confirm": True,
@@ -1022,7 +1069,7 @@ class ViewTestCases:
 
             # Try POST with model-level permission
             self.assertHttpStatus(self.client.post(self._get_url("bulk_delete"), data), 302)
-            self.assertEqual(self._get_queryset().count(), 0)
+            self.assertEqual(self._get_queryset().count(), initial_count - len(pk_list))
 
         @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
         def test_bulk_delete_form_contains_all_pks(self):
@@ -1053,8 +1100,8 @@ class ViewTestCases:
 
         @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
         def test_bulk_delete_objects_with_constrained_permission(self):
+            pk_list = self.get_deletable_object_pks()
             initial_count = self._get_queryset().count()
-            pk_list = self._get_queryset().values_list("pk", flat=True)
             data = {
                 "pk": pk_list,
                 "confirm": True,
@@ -1081,7 +1128,7 @@ class ViewTestCases:
 
             # Bulk delete permitted objects
             self.assertHttpStatus(self.client.post(self._get_url("bulk_delete"), data), 302)
-            self.assertEqual(self._get_queryset().count(), 0)
+            self.assertEqual(self._get_queryset().count(), initial_count - len(pk_list))
 
     class BulkRenameObjectsViewTestCase(ModelViewTestCase):
         """

@@ -17,7 +17,7 @@ class VirtualChassisTest(TestCase):
 
     def setUp(self):
         """Setup Test Data for VirtualChassis Signal tests."""
-        site = Site.objects.create(name="Test Site", slug="test-site")
+        site = Site.objects.first()
         manufacturer = Manufacturer.objects.create(name="Manufacturer 1", slug="manufacturer-1")
         devicetype = DeviceType.objects.create(manufacturer=manufacturer, model="Device Type", slug="device-type")
         devicerole = DeviceRole.objects.create(name="Device Role", slug="device-role", color="ff0000")

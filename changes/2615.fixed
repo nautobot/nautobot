@@ -1,0 +1,9 @@
+Fixed `ConfigContextFilterSet` missing `schema` filter but existed on form.
+Fixed `Device(Form)TestCase` flaky test setup possibly not finding a `DeviceType` with a `Manufacturer` with associated `Platform`s that is full depth and 1U height.
+Fixed `Location(View)TestCase`, `RouteTarget(View)TestCase` flaky test setup possibly finding names for `csv_data` that might include commas but not escaped.
+Fixed `PrefixFactory` may randomly decide to create a child of `2.2.2.2/32`.
+Fixed `BaseNetworkQuerySet` and `IPAddressQuerySet` only searching non-abbreviated first hextet IPv6 addresses.
+Fixed `DynamicFilterLookupExpressionTest`, `VirtualChassis(Filter)TestCase`, `Cluster(Filter)TestCase`, `VirtualMachine(Filter)TestCase` had too narrow of a region lookup for supported tests.
+Fixed `RackGroup(Model)Test`, `Prefix(Model)Test`, `VLANGroup(Model)Test` may randomly choose to update to the same site.
+Fixed `Tenant(View)TestCase`, `RIR(View)TestCase` may not find deletable objects.
+Fixed `VLAN(View)TestCase` may not find enough `Site`s with `Location`s.
