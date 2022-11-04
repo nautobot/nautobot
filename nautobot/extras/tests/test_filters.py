@@ -2,6 +2,7 @@ import uuid
 
 from django.contrib.auth import get_user_model
 from django.contrib.contenttypes.models import ContentType
+from django.db.models import Q
 
 from nautobot.dcim.filters import DeviceFilterSet
 from nautobot.dcim.models import (
@@ -24,6 +25,7 @@ from nautobot.extras.constants import HTTP_CONTENT_TYPE_JSON
 from nautobot.extras.filters import (
     ComputedFieldFilterSet,
     ConfigContextFilterSet,
+    ContentTypeFilterSet,
     CustomLinkFilterSet,
     ExportTemplateFilterSet,
     GitRepositoryFilterSet,
@@ -310,6 +312,28 @@ class ConfigContextTestCase(FilterTestCases.FilterTestCase):
         value = self.queryset.values_list("pk", flat=True)[0]
         params = {"q": value}
         self.assertEqual(self.filterset(params, self.queryset).qs.values_list("pk", flat=True)[0], value)
+
+
+class ContentTypeFilterSetTestCase(FilterTestCases.FilterTestCase):
+    queryset = ContentType.objects.order_by("app_label", "model")
+    filterset = ContentTypeFilterSet
+
+    def test_app_label(self):
+        params = {"app_label": ["dcim"]}
+        self.assertQuerysetEqual(self.filterset(params, self.queryset).qs, self.queryset.filter(app_label="dcim"))
+
+    def test_model(self):
+        params = {"model": ["device", "virtualmachine"]}
+        self.assertQuerysetEqual(
+            self.filterset(params, self.queryset).qs, self.queryset.filter(model__in=["device", "virtualmachine"])
+        )
+
+    def test_search(self):
+        params = {"q": "circ"}
+        self.assertQuerysetEqual(
+            self.filterset(params, self.queryset).qs,
+            self.queryset.filter(Q(app_label__icontains="circ") | Q(model__icontains="circ")),
+        )
 
 
 class CustomLinkTestCase(FilterTestCases.FilterTestCase):
