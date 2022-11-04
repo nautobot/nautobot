@@ -372,6 +372,15 @@ class CommentField(forms.CharField):
         super().__init__(required=required, label=label, help_text=help_text, *args, **kwargs)
 
 
+class NullableDateField(forms.DateField):
+    def to_python(self, value):
+        if not value:
+            return None
+        elif value == "null":
+            return value
+        return super().to_python(value)
+
+
 class SlugField(forms.SlugField):
     """
     Extend the built-in SlugField to automatically populate from a field called `name` unless otherwise specified.
