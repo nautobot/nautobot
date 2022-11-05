@@ -348,7 +348,7 @@ class RelationshipModelBulkEditFormMixin(BulkEditForm):
     def clean(self):
 
         # Get any initial required relationship objects errors (i.e. non-existent required objects)
-        required_objects_errors = self.Meta().model.required_related_objects_errors(output_for="ui")
+        required_objects_errors = self.model.required_related_objects_errors(output_for="ui")
         already_invalidated_slugs = []
         for error_dict in required_objects_errors:
             for field, errors in error_dict.items():
