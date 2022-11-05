@@ -1,12 +1,14 @@
 from django.shortcuts import HttpResponse, render
 from django.views.generic import View
 
-from nautobot.core.views import generic
+from nautobot.core.views import generic, mixins as view_mixins
+from nautobot.core.views.viewsets import NautobotUIViewSet
 from nautobot.circuits.models import Circuit
 from nautobot.dcim.models import Device
 
 from example_plugin.models import AnotherExampleModel, ExampleModel
 from example_plugin import filters, forms, tables
+from example_plugin.api import serializers
 
 
 class CircuitDetailPluginTabView(generic.ObjectView):
@@ -67,98 +69,38 @@ class ExamplePluginConfigView(View):
         return render(request, "example_plugin/config.html", {"form": form})
 
 
-class ExampleModelListView(generic.ObjectListView):
-    """List `ExampleModel` objects."""
-
+class ExampleModelUIViewSet(NautobotUIViewSet):
+    bulk_create_form_class = forms.ExampleModelCSVForm
+    bulk_update_form_class = forms.ExampleModelBulkEditForm
+    filterset_class = filters.ExampleModelFilterSet
+    filterset_form_class = forms.ExampleModelFilterForm
+    form_class = forms.ExampleModelForm
     queryset = ExampleModel.objects.all()
-    filterset = filters.ExampleModelFilterSet
-    filterset_form = forms.ExampleModelFilterForm
-    table = tables.ExampleModelTable
+    serializer_class = serializers.ExampleModelSerializer
+    table_class = tables.ExampleModelTable
+    lookup_field = "pk"
 
 
-class ExampleModelEditView(generic.ObjectEditView):
-    """Edit a single `ExampleModel` object."""
-
-    queryset = ExampleModel.objects.all()
-    model_form = forms.ExampleModelForm
-
-
-class ExampleModelBulkEditView(generic.BulkEditView):
-    """Edit multiple `ExampleModel` objects."""
-
-    queryset = ExampleModel.objects.all()
-    table = tables.ExampleModelTable
-    form = forms.ExampleModelBulkEditForm
-
-
-class ExampleModelBulkDeleteView(generic.BulkDeleteView):
-    """Delete multiple `ExampleModel` objects."""
-
-    queryset = ExampleModel.objects.all()
-    table = tables.ExampleModelTable
-
-
-class ExampleModelDeleteView(generic.ObjectDeleteView):
-    """Delete a single `ExampleModel` object."""
-
-    queryset = ExampleModel.objects.all()
-
-
-class ExampleModelBulkImportView(generic.BulkImportView):
-    """Bulk CSV import of multiple `ExampleModel` objects."""
-
-    queryset = ExampleModel.objects.all()
-    model_form = forms.ExampleModelCSVForm
-    table = tables.ExampleModelTable
-
-
-class ExampleModelView(generic.ObjectView):
-    """Detail view for a single `ExampleModel` object."""
-
-    queryset = ExampleModel.objects.all()
-
-
-class AnotherExampleModelListView(generic.ObjectListView):
-    """List `AnotherExampleModel` objects."""
-
+# Example excluding the BulkUpdateViewSet
+class AnotherExampleModelUIViewSet(
+    view_mixins.ObjectBulkDestroyViewMixin,
+    view_mixins.ObjectBulkUpdateViewMixin,
+    view_mixins.ObjectChangeLogViewMixin,
+    view_mixins.ObjectNotesViewMixin,
+    view_mixins.ObjectDestroyViewMixin,
+    view_mixins.ObjectDetailViewMixin,
+    view_mixins.ObjectEditViewMixin,
+    view_mixins.ObjectListViewMixin,
+):
+    bulk_update_form_class = forms.AnotherExampleModelBulkEditForm
+    filterset_class = filters.AnotherExampleModelFilterSet
+    filterset_form_class = forms.AnotherExampleModelFilterForm
+    form_class = forms.AnotherExampleModelForm
     queryset = AnotherExampleModel.objects.all()
-    filterset = filters.AnotherExampleModelFilterSet
-    filterset_form = forms.AnotherExampleModelFilterForm
-    table = tables.AnotherExampleModelTable
-
-
-class AnotherExampleModelEditView(generic.ObjectEditView):
-    """Edit a single `AnotherExampleModel` object."""
-
-    queryset = AnotherExampleModel.objects.all()
-    model_form = forms.AnotherExampleModelForm
-
-
-class AnotherExampleModelBulkEditView(generic.BulkEditView):
-    """Edit multiple `AnotherExampleModel` objects."""
-
-    queryset = AnotherExampleModel.objects.all()
-    table = tables.AnotherExampleModelTable
-    form = forms.AnotherExampleModelBulkEditForm
-
-
-class AnotherExampleModelBulkDeleteView(generic.BulkDeleteView):
-    """Delete multiple `AnotherExampleModel` objects."""
-
-    queryset = AnotherExampleModel.objects.all()
-    table = tables.AnotherExampleModelTable
-
-
-class AnotherExampleModelDeleteView(generic.ObjectDeleteView):
-    """Delete a single `AnotherExampleModel` object."""
-
-    queryset = AnotherExampleModel.objects.all()
-
-
-class AnotherExampleModelView(generic.ObjectView):
-    """Detail view for a single `AnotherExampleModel` object."""
-
-    queryset = AnotherExampleModel.objects.all()
+    serializer_class = serializers.AnotherExampleModelSerializer
+    table_class = tables.AnotherExampleModelTable
+    lookup_field = "pk"
+    action_buttons = ["add", "export"]
 
 
 class ViewToBeOverridden(generic.View):
