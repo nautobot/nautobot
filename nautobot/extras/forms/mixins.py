@@ -345,6 +345,67 @@ class RelationshipModelBulkEditFormMixin(BulkEditForm):
                             ).delete()
                         logger.debug("Deleted %s RelationshipAssociation(s)", source_count + destination_count)
 
+    def clean(self):
+
+        # Get any initial required relationship objects errors (i.e. non-existent required objects)
+        required_objects_errors = self.Meta().model.required_related_objects_errors(output_for="ui")
+        already_invalidated_slugs = []
+        for error_dict in required_objects_errors:
+            for field, errors in error_dict.items():
+                self.add_error(None, errors)
+                relationship_slug = field.split("__")[0][3:]
+                already_invalidated_slugs.append(relationship_slug)
+
+        required_relationships = []
+        # The following query excludes already invalidated relationships (this happened above
+        # by checking for the existence of required objects
+        # with the call to self.Meta().model.required_related_objects_errors(output_for="ui"))
+        for relationship in Relationship.objects.get_required_for_model(self.model).exclude(
+            slug__in=already_invalidated_slugs
+        ):
+            required_relationships.append(
+                {
+                    "slug": relationship.slug,
+                    "required_side": RelationshipSideChoices.OPPOSITE[relationship.required_on],
+                }
+            )
+
+        # Get difference of add/remove objects for each required relationship:
+        required_relationships_to_check = []
+        for required_relationship in required_relationships:
+
+            required_field = f"cr_{required_relationship['slug']}__{required_relationship['required_side']}"
+
+            add_list = []
+            if f"add_{required_field}" in self.cleaned_data:
+                add_list = self.cleaned_data[f"add_{required_field}"]
+
+            remove_list = []
+            if f"remove_{required_field}" in self.cleaned_data:
+                remove_list = self.cleaned_data[f"remove_{required_field}"]
+
+            # Determine difference of add/remove inputs
+            to_add = [obj for obj in add_list if obj not in remove_list]
+
+            # If we are adding at least one relationship association (and also not removing it), further validation is
+            # not necessary because at least one object is required for every type of required relationship (one-to-one,
+            # one-to-many and many-to-many)
+            if len(to_add) > 0:
+                continue
+
+            to_remove = [obj for obj in remove_list if obj not in add_list]
+
+            # Add to list of required relationships to enforce on each object being bulk-edited
+            required_relationships_to_check.append(
+                {
+                    "field": required_field,
+                    "to_add": to_add,
+                    "to_remove": to_remove,
+                }
+            )
+
+        return super().clean()
+
 
 class RelationshipModelFormMixin(forms.ModelForm):
     def __init__(self, *args, **kwargs):
