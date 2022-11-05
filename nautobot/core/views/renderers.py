@@ -7,17 +7,21 @@ from django.utils.safestring import mark_safe
 from django_tables2 import RequestConfig
 from rest_framework import renderers
 
+from nautobot.core.forms import SearchForm
 from nautobot.extras.models.change_logging import ChangeLoggedModel, ObjectChange
 from nautobot.extras.utils import get_base_template
 from nautobot.utilities.forms import (
     TableConfigForm,
     restrict_form_fields,
 )
+from nautobot.utilities.forms.forms import DynamicFilterFormSet
 from nautobot.utilities.paginator import EnhancedPaginator, get_paginate_count
 from nautobot.utilities.permissions import get_permission_for_model
 from nautobot.utilities.templatetags.helpers import validated_viewname
 from nautobot.utilities.utils import (
+    convert_querydict_to_factory_formset_acceptable_querydict,
     normalize_querydict,
+    get_filterable_params_from_filter_params,
 )
 
 
@@ -32,19 +36,19 @@ class NautobotHTMLRenderer(renderers.BrowsableAPIRenderer):
     def get_filter_params(self, view, request):
         """Helper function - take request.GET and discard any parameters that are not used for queryset filtering."""
         filter_params = request.GET.copy()
-        for non_filter_param in view.non_filter_params:
-            filter_params.pop(non_filter_param, None)
-        return filter_params
+        return get_filterable_params_from_filter_params(filter_params, view.non_filter_params, view.filterset_class)
 
-    def get_filter_form(self, view, request, *args, **kwargs):
+    def get_dynamic_filter_form(self, view, request, *args, filterset_class=None, **kwargs):
         """
-        Helper function to obtain the filter_form_class if there is one,
+        Helper function to obtain the filter_form_class,
         and then initialize and return the filter_form used in the ObjectListView UI.
         """
-        if view.filterset_form_class is not None:
-            return view.filterset_form_class(request.GET, label_suffix="", *args, **kwargs)
-        else:
-            return None
+        factory_formset_params = {}
+        if filterset_class:
+            factory_formset_params = convert_querydict_to_factory_formset_acceptable_querydict(
+                request.GET, filterset_class
+            )
+        return DynamicFilterFormSet(filterset_class=view.filterset_class, data=factory_formset_params)
 
     def construct_user_permissions(self, request, model):
         """
@@ -137,9 +141,12 @@ class NautobotHTMLRenderer(renderers.BrowsableAPIRenderer):
         content_type = ContentType.objects.get_for_model(model)
         form = None
         table = None
+        search_form = None
         changelog_url = None
         instance = None
+        filter_form = None
         queryset = view.alter_queryset(request)
+        display_filter_params = []
         # Compile a dictionary indicating which permissions are available to the current user for this model
         permissions = self.construct_user_permissions(request, model)
         if view.action in ["create", "retrieve", "update", "destroy", "changelog", "notes"]:
@@ -165,7 +172,15 @@ class NautobotHTMLRenderer(renderers.BrowsableAPIRenderer):
                             mark_safe(f"Invalid filters were specified: {filterset.errors}"),
                         )
                         view.queryset = view.queryset.none()
+
+                    display_filter_params = [
+                        [field_name, values if isinstance(values, (list, tuple)) else [values]]
+                        for field_name, values in filter_params.items()
+                    ]
+                    if view.filterset_form_class is not None:
+                        filter_form = view.filterset_form_class(request.GET, label_suffix="")
                 table = self.construct_table(view, request=request, permissions=permissions)
+                search_form = SearchForm(data=request.GET)
             elif view.action == "destroy":
                 form = form_class(initial=request.GET)
             elif view.action in ["create", "update"]:
@@ -207,7 +222,10 @@ class NautobotHTMLRenderer(renderers.BrowsableAPIRenderer):
             "changelog_url": changelog_url,  # NOTE: This context key is deprecated in favor of `object.get_changelog_url`.
             "content_type": content_type,
             "form": form,
-            "filter_form": self.get_filter_form(view, request),
+            "filter_form": filter_form,
+            "dynamic_filter_form": self.get_dynamic_filter_form(view, request, filterset_class=view.filterset_class),
+            "search_form": search_form,
+            "filter_params": display_filter_params,
             "object": instance,
             "obj": instance,  # NOTE: This context key is deprecated in favor of `object`.
             "obj_type": queryset.model._meta.verbose_name,  # NOTE: This context key is deprecated in favor of `verbose_name`.

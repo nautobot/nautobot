@@ -19,6 +19,7 @@ from django_tables2 import RequestConfig
 
 from nautobot.circuits.models import Circuit
 from nautobot.core.views import generic
+from nautobot.core.views.viewsets import NautobotUIViewSet
 from nautobot.extras.views import ObjectChangeLogView, ObjectConfigContextView, ObjectDynamicGroupsView
 from nautobot.ipam.models import IPAddress, Prefix, Service, VLAN
 from nautobot.ipam.tables import InterfaceIPAddressTable, InterfaceVLANTable
@@ -29,6 +30,7 @@ from nautobot.utilities.utils import csv_format, count_related
 from nautobot.utilities.views import GetReturnURLMixin, ObjectPermissionRequiredMixin
 from nautobot.virtualization.models import VirtualMachine
 from . import filters, forms, tables
+from .api import serializers
 from .choices import DeviceFaceChoices
 from .constants import NONCONNECTABLE_IFACE_TYPES
 from .models import (
@@ -41,6 +43,7 @@ from .models import (
     Device,
     DeviceBay,
     DeviceBayTemplate,
+    DeviceRedundancyGroup,
     DeviceRole,
     DeviceType,
     FrontPort,
@@ -584,24 +587,18 @@ class RackElevationListView(generic.ObjectListView):
         "face",  # render front or rear of racks?
         "reverse",  # control of ordering
     )
+    filterset = filters.RackFilterSet
+    action_buttons = []
+    template_name = "dcim/rack_elevation_list.html"
 
-    def get(self, request):
-        filter_params = self.get_filter_params(request)
-        filterset = filters.RackFilterSet(filter_params, self.queryset)
-        if filterset.is_valid():
-            racks = filterset.qs
-        else:
-            messages.error(
-                request,
-                mark_safe(f"Invalid filters were specified: {filterset.errors}"),
-            )
-            racks = filterset.qs.none()
-
+    def extra_context(self):
+        racks = self.queryset
+        request = self.request
         total_count = racks.count()
 
         # Determine ordering
-        reverse = bool(request.GET.get("reverse", False))
-        if reverse:
+        racks_reverse = bool(request.GET.get("reverse", False))
+        if racks_reverse:
             racks = racks.reverse()
 
         # Pagination
@@ -620,18 +617,15 @@ class RackElevationListView(generic.ObjectListView):
         if rack_face not in DeviceFaceChoices.values():
             rack_face = DeviceFaceChoices.FACE_FRONT
 
-        return render(
-            request,
-            "dcim/rack_elevation_list.html",
-            {
-                "paginator": paginator,
-                "page": page,
-                "total_count": total_count,
-                "reverse": reverse,
-                "rack_face": rack_face,
-                "filter_form": forms.RackElevationFilterForm(filter_params),
-            },
-        )
+        return {
+            "paginator": paginator,
+            "page": page,
+            "total_count": total_count,
+            "reverse": racks_reverse,
+            "rack_face": rack_face,
+            "title": "Rack Elevation",
+            "list_url": "dcim:rack_elevation_list",
+        }
 
 
 class RackView(generic.ObjectView):
@@ -1725,7 +1719,7 @@ class ChildDeviceBulkImportView(generic.BulkImportView):
 class DeviceBulkEditView(generic.BulkEditView):
     # v2 TODO(jathan): Replace prefetch_related with select_related
     queryset = Device.objects.prefetch_related(
-        "tenant", "site", "rack", "device_role", "device_type__manufacturer", "secrets_group"
+        "tenant", "site", "rack", "device_role", "device_type__manufacturer", "secrets_group", "device_redundancy_group"
     )
     filterset = filters.DeviceFilterSet
     table = tables.DeviceTable
@@ -2768,7 +2762,7 @@ class ConsoleConnectionsListView(ConnectionsListView):
     filterset = filters.ConsoleConnectionFilterSet
     filterset_form = forms.ConsoleConnectionFilterForm
     table = tables.ConsoleConnectionTable
-    template_name = "dcim/connections_list.html"
+    action_buttons = ("export",)
 
     def queryset_to_csv(self):
         csv_data = [
@@ -2780,7 +2774,11 @@ class ConsoleConnectionsListView(ConnectionsListView):
         return "\n".join(csv_data)
 
     def extra_context(self):
-        return {"title": "Console Connections"}
+        return {
+            "title": "Console Connections",
+            "list_url": "dcim:console_connections_list",
+            "search_form": None,  # ConsoleConnectionFilterSet do not support q filter
+        }
 
 
 class PowerConnectionsListView(ConnectionsListView):
@@ -2788,7 +2786,7 @@ class PowerConnectionsListView(ConnectionsListView):
     filterset = filters.PowerConnectionFilterSet
     filterset_form = forms.PowerConnectionFilterForm
     table = tables.PowerConnectionTable
-    template_name = "dcim/connections_list.html"
+    action_buttons = ("export",)
 
     def queryset_to_csv(self):
         csv_data = [
@@ -2800,7 +2798,11 @@ class PowerConnectionsListView(ConnectionsListView):
         return "\n".join(csv_data)
 
     def extra_context(self):
-        return {"title": "Power Connections"}
+        return {
+            "title": "Power Connections",
+            "list_url": "dcim:power_connections_list",
+            "search_form": None,  # PowerConnectionFilterSet do not support q filter
+        }
 
 
 class InterfaceConnectionsListView(ConnectionsListView):
@@ -2808,7 +2810,7 @@ class InterfaceConnectionsListView(ConnectionsListView):
     filterset = filters.InterfaceConnectionFilterSet
     filterset_form = forms.InterfaceConnectionFilterForm
     table = tables.InterfaceConnectionTable
-    template_name = "dcim/connections_list.html"
+    action_buttons = ("export",)
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -2845,7 +2847,11 @@ class InterfaceConnectionsListView(ConnectionsListView):
         return "\n".join(csv_data)
 
     def extra_context(self):
-        return {"title": "Interface Connections"}
+        return {
+            "title": "Interface Connections",
+            "list_url": "dcim:interface_connections_list",
+            "search_form": None,  # InterfaceConnectionFilterSet do not support q filter
+        }
 
 
 #
@@ -3212,3 +3218,28 @@ class PowerFeedBulkDeleteView(generic.BulkDeleteView):
     queryset = PowerFeed.objects.prefetch_related("power_panel", "rack")
     filterset = filters.PowerFeedFilterSet
     table = tables.PowerFeedTable
+
+
+class DeviceRedundancyGroupUIViewSet(NautobotUIViewSet):
+    bulk_create_form_class = forms.DeviceRedundancyGroupCSVForm
+    bulk_update_form_class = forms.DeviceRedundancyGroupBulkEditForm
+    filterset_class = filters.DeviceRedundancyGroupFilterSet
+    filterset_form_class = forms.DeviceRedundancyGroupFilterForm
+    form_class = forms.DeviceRedundancyGroupForm
+    queryset = (
+        DeviceRedundancyGroup.objects.select_related("status")
+        .prefetch_related("members")
+        .annotate(member_count=count_related(Device, "device_redundancy_group"))
+    )
+    serializer_class = serializers.DeviceRedundancyGroupSerializer
+    table_class = tables.DeviceRedundancyGroupTable
+
+    def get_extra_context(self, request, instance):
+        context = super().get_extra_context(request, instance)
+
+        if self.action == "retrieve" and instance:
+            members = instance.members_sorted.restrict(request.user)
+            members_table = tables.DeviceTable(members)
+            members_table.columns.show("device_redundancy_group_priority")
+            context["members_table"] = members_table
+        return context

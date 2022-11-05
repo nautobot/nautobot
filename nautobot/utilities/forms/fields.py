@@ -266,6 +266,41 @@ class MultipleContentTypeField(forms.ModelMultipleChoiceField):
         return [(f"{m.app_label}.{m.model}", m.app_labeled_name) for m in self.queryset.all()]
 
 
+class MultiValueCharField(forms.CharField):
+    """
+    CharField that takes multiple user character inputs and render them as tags in the form field.
+    Press enter to complete an input.
+    """
+
+    widget = widgets.MultiValueCharInput()
+
+    def get_bound_field(self, form, field_name):
+        bound_field = BoundField(form, self, field_name)
+        value = bound_field.value()
+        widget = bound_field.field.widget
+        # Save the selected choices in the widget even after the filterform is submitted
+        if value is not None:
+            widget.choices = [(v, v) for v in value]
+
+        return bound_field
+
+    def to_python(self, value):
+        self.field_class = forms.CharField
+        if not value:
+            return []
+
+        # Make it a list if it's a string.
+        if isinstance(value, str):
+            value = [value]
+
+        return [
+            # Only append non-empty values (this avoids e.g. trying to cast '' as an integer)
+            super(self.field_class, self).to_python(v)  # pylint: disable=bad-super-call
+            for v in value
+            if v
+        ]
+
+
 class CSVMultipleContentTypeField(MultipleContentTypeField):
     """
     Reference a list of `ContentType` objects in the form `{app_label}.{model}'.

@@ -28,6 +28,7 @@ from nautobot.dcim.filters import (
     DeviceBayFilterSet,
     DeviceBayTemplateFilterSet,
     DeviceFilterSet,
+    DeviceRedundancyGroupFilterSet,
     DeviceRoleFilterSet,
     DeviceTypeFilterSet,
     FrontPortFilterSet,
@@ -65,6 +66,7 @@ from nautobot.dcim.models import (
     Device,
     DeviceBay,
     DeviceBayTemplate,
+    DeviceRedundancyGroup,
     DeviceRole,
     DeviceType,
     FrontPort,
@@ -2472,6 +2474,12 @@ class DeviceTestCase(FilterTestCases.FilterTestCase, FilterTestCases.TenancyFilt
         Service.objects.create(device=devices[0], name="ssh", protocol="tcp", ports=[22])
         Service.objects.create(device=devices[1], name="dns", protocol="udp", ports=[53])
 
+        cls.device_redundancy_group = DeviceRedundancyGroup.objects.first()
+        Device.objects.filter(pk=devices[0].pk).update(device_redundancy_group=cls.device_redundancy_group)
+        Device.objects.filter(pk=devices[1].pk).update(
+            device_redundancy_group=cls.device_redundancy_group, device_redundancy_group_priority=1
+        )
+
         # Assign primary IPs for filtering
         interfaces = Interface.objects.all()
         ipaddresses = (
@@ -2798,6 +2806,20 @@ class DeviceTestCase(FilterTestCases.FilterTestCase, FilterTestCases.TenancyFilt
         value = self.queryset.values_list("pk", flat=True)[0]
         params = {"q": value}
         self.assertEqual(self.filterset(params, self.queryset).qs.values_list("pk", flat=True)[0], value)
+
+    def test_device_redundancy_group(self):
+        with self.subTest():
+            params = {"device_redundancy_group": [self.device_redundancy_group.pk]}
+            self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+        with self.subTest():
+            params = {"device_redundancy_group": [self.device_redundancy_group.slug]}
+            self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+        with self.subTest():
+            params = {
+                "device_redundancy_group": [self.device_redundancy_group.pk],
+                "device_redundancy_group_priority": [1],
+            }
+            self.assertEqual(self.filterset(params, self.queryset).qs.count(), 1)
 
 
 class ConsolePortTestCase(FilterTestCases.FilterTestCase):
@@ -4305,7 +4327,7 @@ class VirtualChassisTestCase(FilterTestCases.FilterTestCase):
         device_type = DeviceType.objects.create(manufacturer=manufacturer, model="Model 1", slug="model-1")
         device_role = DeviceRole.objects.create(name="Device Role 1", slug="device-role-1")
 
-        cls.regions = Region.objects.filter(sites__isnull=False, children__isnull=True, parent__isnull=True)[:3]
+        cls.regions = Region.objects.filter(sites__isnull=False)[:3]
 
         cls.sites = (
             Site.objects.filter(region=cls.regions[0]).first(),
@@ -4959,6 +4981,70 @@ class PowerFeedTestCase(FilterTestCases.FilterTestCase):
         cable = Cable.objects.all()[:2]
         params = {"cable": [cable[0].pk, cable[1].pk]}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+
+
+class DeviceRedundancyGroupTestCase(FilterTestCases.FilterTestCase):
+    queryset = DeviceRedundancyGroup.objects.all()
+    filterset = DeviceRedundancyGroupFilterSet
+
+    @classmethod
+    def setUpTestData(cls):
+        common_test_data(cls)
+
+        device_redundancy_groups = list(DeviceRedundancyGroup.objects.all()[:2])
+
+        secrets_groups = list(SecretsGroup.objects.all()[:2])
+
+        device_redundancy_groups[0].secrets_group = secrets_groups[0]
+        device_redundancy_groups[0].validated_save()
+
+        device_redundancy_groups[1].secrets_group = secrets_groups[1]
+        device_redundancy_groups[1].validated_save()
+
+    def test_name(self):
+        device_redundancy_groups = list(DeviceRedundancyGroup.objects.all()[:2])
+        params = {"name": [device_redundancy_groups[0].name, device_redundancy_groups[1].name]}
+        self.assertEqual(
+            self.filterset(params, self.queryset).qs.count(),
+            DeviceRedundancyGroup.objects.filter(name__in=params["name"]).count(),
+        )
+
+    def test_slug(self):
+        device_redundancy_group = DeviceRedundancyGroup.objects.first()
+        params = {"slug": [device_redundancy_group.slug]}
+        self.assertEqual(
+            self.filterset(params, self.queryset).qs.count(),
+            DeviceRedundancyGroup.objects.filter(slug__in=params["slug"]).count(),
+        )
+
+    def test_secrets_group(self):
+        secrets_groups = list(SecretsGroup.objects.all()[:2])
+        with self.subTest():
+            params = {"secrets_group": [secrets_groups[0].pk, secrets_groups[1].pk]}
+            self.assertEqual(
+                self.filterset(params, self.queryset).qs.count(),
+                DeviceRedundancyGroup.objects.filter(secrets_group__in=params["secrets_group"]).count(),
+            )
+        with self.subTest():
+            params = {"secrets_group": [secrets_groups[0].slug, secrets_groups[1].slug]}
+            self.assertEqual(
+                self.filterset(params, self.queryset).qs.count(),
+                DeviceRedundancyGroup.objects.filter(secrets_group__slug__in=params["secrets_group"]).count(),
+            )
+
+    def test_failover_strategy(self):
+        with self.subTest():
+            params = {"failover_strategy": "active-active"}
+            self.assertQuerysetEqualAndNotEmpty(
+                self.filterset(params, self.queryset).qs,
+                DeviceRedundancyGroup.objects.filter(failover_strategy="active-active"),
+            )
+        with self.subTest():
+            params = {"failover_strategy": "active-passive"}
+            self.assertQuerysetEqualAndNotEmpty(
+                self.filterset(params, self.queryset).qs,
+                DeviceRedundancyGroup.objects.filter(failover_strategy="active-passive"),
+            )
 
 
 # TODO: Connection filters

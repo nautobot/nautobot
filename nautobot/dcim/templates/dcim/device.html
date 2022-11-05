@@ -188,6 +188,16 @@
                                             {{ object.secrets_group|hyperlinked_object }}
                                         </td>
                                     </tr>
+                                    <tr>
+                                        <td>Device Redundancy Group</td>
+                                        <td>
+                                            {% if object.device_redundancy_group %}
+                                                {{ object.device_redundancy_group|hyperlinked_object }} <span class="badge badge-default">Priority: {{ object.device_redundancy_group_priority }}</span>
+                                            {% else %}
+                                                <span class="text-muted">&mdash;</span>
+                                            {% endif %}
+                                        </td>
+                                    </tr>
                                     {% if object.cluster %}
                                         <tr>
                                             <td>Cluster</td>

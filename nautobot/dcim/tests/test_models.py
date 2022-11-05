@@ -20,6 +20,7 @@ from nautobot.dcim.models import (
     Device,
     DeviceBay,
     DeviceBayTemplate,
+    DeviceRedundancyGroup,
     DeviceRole,
     DeviceType,
     FrontPort,
@@ -226,7 +227,8 @@ class RackGroupTestCase(TestCase):
         """
         Check that all child RackGroups, Racks, and PowerPanels get updated when a RackGroup is moved to a new Site.
         """
-        site_b = Site.objects.last()
+        existing_rackgroup_site = self.rackgroup_a1.site
+        site_b = Site.objects.exclude(pk=existing_rackgroup_site.pk).last()
 
         # Move RackGroup A1 to Site B
         self.rackgroup_a1.site = site_b
@@ -695,6 +697,7 @@ class DeviceTestCase(TestCase):
         self.location_2 = Location.objects.create(
             name="Leaf", status=self.device_status, location_type=self.location_type_2, parent=self.location_1
         )
+        self.device_redundancy_group = DeviceRedundancyGroup.objects.first()
 
         # Create DeviceType components
         ConsolePortTemplate(device_type=self.device_type, name="Console Port 1").save()
@@ -874,6 +877,52 @@ class DeviceTestCase(TestCase):
         self.assertIn(
             f'Devices may not associate to locations of type "{self.location_type_1.name}"', str(cm.exception)
         )
+
+    def test_device_redundancy_group_validation(self):
+        d1 = Device(
+            name="Test Device 1",
+            device_type=self.device_type,
+            device_role=self.device_role,
+            status=self.device_status,
+            site=self.site,
+        )
+        d1.validated_save()
+
+        d2 = Device(
+            name="Test Device 2",
+            device_type=self.device_type,
+            device_role=self.device_role,
+            status=self.device_status,
+            site=self.site,
+        )
+        d2.validated_save()
+
+        # Validate we can set a redundancy group without any priority set
+        d1.device_redundancy_group = self.device_redundancy_group
+        d1.validated_save()
+
+        # Validate two devices can be a part of the same redundancy group without any priority set
+        d2.device_redundancy_group = self.device_redundancy_group
+        d2.validated_save()
+
+        # Validate we can assign a priority to at least one device in the group
+        d1.device_redundancy_group_priority = 1
+        d1.validated_save()
+
+        # Validate both devices in the same group can have the same priority
+        d2.device_redundancy_group_priority = 1
+        d2.validated_save()
+
+        # Validate devices in the same group can have different priority
+        d2.device_redundancy_group_priority = 2
+        d2.validated_save()
+
+        # Validate devices cannot have an assigned priority without an assigned group
+        d1.device_redundancy_group = None
+        with self.assertRaisesMessage(
+            ValidationError, "Must assign a redundancy group when defining a redundancy group priority."
+        ):
+            d1.validated_save()
 
 
 class CableTestCase(TestCase):

@@ -57,6 +57,7 @@ from nautobot.extras.models import (
     Webhook,
 )
 from nautobot.extras.models.jobs import JobHook
+from nautobot.extras.tests.test_relationships import RequiredRelationshipTestMixin
 from nautobot.extras.utils import TaggableClassesQuery
 from nautobot.ipam.models import VLANGroup
 from nautobot.users.models import ObjectPermission
@@ -2388,7 +2389,7 @@ class NoteTest(APIViewTestCases.APIViewTestCase):
         )
 
 
-class RelationshipTest(APIViewTestCases.APIViewTestCase):
+class RelationshipTest(APIViewTestCases.APIViewTestCase, RequiredRelationshipTestMixin):
     model = Relationship
     brief_fields = ["display", "id", "name", "slug", "url"]
 
@@ -2429,7 +2430,7 @@ class RelationshipTest(APIViewTestCases.APIViewTestCase):
     bulk_update_data = {
         "source_filter": {"slug": ["some-slug"]},
     }
-    choices_fields = ["destination_type", "source_type", "type"]
+    choices_fields = ["destination_type", "source_type", "type", "required_on"]
     slug_source = "name"
     slugify_function = staticmethod(slugify_dashes_to_underscores)
 
@@ -2626,6 +2627,15 @@ class RelationshipTest(APIViewTestCases.APIViewTestCase):
                 destination_id=existing_device_2.pk,
             ).exists()
         )
+
+    def test_required_relationships(self):
+        """
+        1. Try creating an object when no required target object exists
+        2. Try creating an object without specifying required target object(s)
+        3. Try creating an object when all required data is present
+        """
+        # Parameterized test:
+        self.required_relationships_test(interact_with="api")
 
 
 class RelationshipAssociationTest(APIViewTestCases.APIViewTestCase):
@@ -3231,7 +3241,7 @@ class TagTestVersion12(APIViewTestCases.APIViewTestCase):
         tag = Tag.objects.get(slug=self.create_data[0]["slug"])
         self.assertEqual(
             tag.content_types.count(),
-            TaggableClassesQuery().as_queryset.count(),
+            TaggableClassesQuery().as_queryset().count(),
         )
 
 
@@ -3254,10 +3264,10 @@ class TagTestVersion13(
         cls.update_data = {
             "name": "A new tag name",
             "slug": "a-new-tag-name",
-            "content_types": [f"{ct.app_label}.{ct.model}" for ct in TaggableClassesQuery().as_queryset],
+            "content_types": [f"{ct.app_label}.{ct.model}" for ct in TaggableClassesQuery().as_queryset()],
         }
         cls.bulk_update_data = {
-            "content_types": [f"{ct.app_label}.{ct.model}" for ct in TaggableClassesQuery().as_queryset]
+            "content_types": [f"{ct.app_label}.{ct.model}" for ct in TaggableClassesQuery().as_queryset()]
         }
 
     def test_create_tags_with_invalid_content_types(self):

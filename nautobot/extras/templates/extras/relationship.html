@@ -19,6 +19,10 @@
                 <td>{{ object.type }}</td>
             </tr>
             <tr>
+                <td>Required On</td>
+                <td>{{ object.get_required_on_display }}</td>
+            </tr>
+            <tr>
                 <td>On Advanced Tab</td>
                 <td>{{ object.advanced_ui | render_boolean }}</td>
             </tr>

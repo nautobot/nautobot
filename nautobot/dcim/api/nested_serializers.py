@@ -382,6 +382,19 @@ class NestedVirtualChassisSerializer(WritableNestedSerializer):
 
 
 #
+# Device Redundancy group
+#
+
+
+class NestedDeviceRedundancyGroupSerializer(WritableNestedSerializer):
+    url = serializers.HyperlinkedIdentityField(view_name="dcim-api:deviceredundancygroup-detail")
+
+    class Meta:
+        model = models.DeviceRedundancyGroup
+        fields = ["id", "url", "name", "slug", "failover_strategy"]
+
+
+#
 # Power panels/feeds
 #
 

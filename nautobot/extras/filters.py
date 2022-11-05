@@ -2,12 +2,16 @@ import django_filters
 from django.contrib.auth import get_user_model
 from django.contrib.contenttypes.models import ContentType
 from django.db.models import Q
+from django_filters.utils import verbose_lookup_expr
 from django.forms import IntegerField
 
-from nautobot.dcim.models import DeviceRole, DeviceType, Location, Platform, Region, Site
+from nautobot.dcim.models import DeviceRedundancyGroup, DeviceRole, DeviceType, Location, Platform, Region, Site
 from nautobot.extras.utils import ChangeLoggedModelsQuery, FeatureQuery, TaggableClassesQuery
 from nautobot.tenancy.models import Tenant, TenantGroup
-from nautobot.utilities.constants import FILTER_CHAR_BASED_LOOKUP_MAP, FILTER_NUMERIC_BASED_LOOKUP_MAP
+from nautobot.utilities.constants import (
+    FILTER_CHAR_BASED_LOOKUP_MAP,
+    FILTER_NUMERIC_BASED_LOOKUP_MAP,
+)
 from nautobot.utilities.filters import (
     BaseFilterSet,
     ContentTypeFilter,
@@ -271,6 +275,12 @@ class ConfigContextFilterSet(BaseFilterSet):
         },
     )
     owner_content_type = ContentTypeFilter()
+    schema = NaturalKeyOrPKMultipleChoiceFilter(
+        field_name="schema",
+        queryset=ConfigContextSchema.objects.all(),
+        to_field_name="slug",
+        label="Schema (slug or PK)",
+    )
     region_id = django_filters.ModelMultipleChoiceFilter(
         field_name="regions",
         queryset=Region.objects.all(),
@@ -373,6 +383,12 @@ class ConfigContextFilterSet(BaseFilterSet):
         queryset=Tenant.objects.all(),
         to_field_name="slug",
         label="Tenant (slug)",
+    )
+    device_redundancy_group = NaturalKeyOrPKMultipleChoiceFilter(
+        field_name="device_redundancy_groups",
+        queryset=DeviceRedundancyGroup.objects.all(),
+        to_field_name="slug",
+        label="Device Redundancy Group (slug or PK)",
     )
     tag = django_filters.ModelMultipleChoiceFilter(
         field_name="tags__slug",
@@ -536,6 +552,7 @@ class CustomFieldModelFilterSet(django_filters.FilterSet):
             new_filter_name = f"cf_{cf.name}"
             filter_class = custom_field_filter_classes.get(cf.type, CustomFieldCharFilter)
             new_filter_field = filter_class(field_name=cf.name, custom_field=cf)
+            new_filter_field.label = f"{cf.label}"
 
             # Create base filter (cf_customfieldname)
             self.filters[new_filter_name] = new_filter_field
@@ -588,6 +605,7 @@ class CustomFieldModelFilterSet(django_filters.FilterSet):
                 field_name=custom_field.name,
                 lookup_expr=lookup_expr,
                 custom_field=custom_field,
+                label=f"{custom_field.label} ({verbose_lookup_expr(lookup_expr)})",
                 exclude=lookup_name.startswith("n"),
             )
 

@@ -27,6 +27,7 @@ from nautobot.dcim.models import (
     Device,
     DeviceBay,
     DeviceBayTemplate,
+    DeviceRedundancyGroup,
     DeviceRole,
     DeviceType,
     FrontPort,
@@ -215,6 +216,14 @@ class SiteTest(APIViewTestCases.APIViewTestCase):
             },
             {"name": "Site 7", "region": regions[1].pk, "status": "active"},
         ]
+
+    def get_deletable_object_pks(self):
+        Sites = [
+            Site.objects.create(name="Deletable Site 1"),
+            Site.objects.create(name="Deletable Site 2"),
+            Site.objects.create(name="Deletable Site 3"),
+        ]
+        return [site.pk for site in Sites]
 
     def test_time_zone_field_post_null(self):
         """
@@ -1432,6 +1441,50 @@ class DeviceTest(APIViewTestCases.APIViewTestCase):
         )
         self.assertHttpStatus(response, status.HTTP_200_OK)
 
+    def test_patching_device_redundancy_group(self):
+        """
+        Validate we can set device redundancy group on a device using a PATCH.
+        """
+        # Add object-level permission
+        self.add_permissions("dcim.change_device")
+
+        device_redundancy_group = DeviceRedundancyGroup.objects.first()
+
+        d3 = Device.objects.get(name="Device 3")
+
+        # Validate set both redundancy group membership only
+        patch_data = {"device_redundancy_group": device_redundancy_group.pk}
+
+        response = self.client.patch(self._get_detail_url(d3), patch_data, format="json", **self.header)
+        self.assertHttpStatus(response, status.HTTP_200_OK)
+
+        d3.refresh_from_db()
+
+        self.assertEqual(
+            d3.device_redundancy_group,
+            device_redundancy_group,
+        )
+        # Validate set both redundancy group membership and priority
+        patch_data = {"device_redundancy_group": device_redundancy_group.pk, "device_redundancy_group_priority": 1}
+
+        response = self.client.patch(self._get_detail_url(d3), patch_data, format="json", **self.header)
+        self.assertHttpStatus(response, status.HTTP_200_OK)
+
+        d3.refresh_from_db()
+
+        self.assertEqual(
+            d3.device_redundancy_group_priority,
+            1,
+        )
+
+        # Validate error on priority patch only
+        patch_data = {"device_redundancy_group_priority": 1}
+
+        response = self.client.patch(
+            self._get_detail_url(Device.objects.get(name="Device 2")), patch_data, format="json", **self.header
+        )
+        self.assertHttpStatus(response, status.HTTP_400_BAD_REQUEST)
+
 
 class ConsolePortTest(Mixins.BasePortTestMixin):
     model = ConsolePort
@@ -2433,3 +2486,39 @@ class PowerFeedTest(APIViewTestCases.APIViewTestCase):
                 "type": REDUNDANT,
             },
         ]
+
+
+class DeviceRedundancyGroupTest(APIViewTestCases.APIViewTestCase):
+    model = DeviceRedundancyGroup
+    brief_fields = ["display", "failover_strategy", "id", "name", "slug", "url"]
+    create_data = [
+        {
+            "name": "Device Redundancy Group 4",
+            "failover_strategy": "active-active",
+            "status": "active",
+        },
+        {
+            "name": "Device Redundancy Group 5",
+            "failover_strategy": "active-passive",
+            "status": "planned",
+        },
+        {
+            "name": "Device Redundancy Group 6",
+            "failover_strategy": "active-active",
+            "status": "staging",
+        },
+    ]
+    bulk_update_data = {
+        "failover_strategy": "active-passive",
+    }
+    choices_fields = ["status", "failover_strategy"]
+
+    @classmethod
+    def setUpTestData(cls):
+        # FIXME(jathan): The writable serializer for `status` takes the
+        # status `name` (str) and not the `pk` (int). Do not validate this
+        # field right now, since we are asserting that it does create correctly.
+        #
+        # The test code for `utilities.testing.views.TestCase.model_to_dict()`
+        # needs to be enhanced to use the actual API serializers when `api=True`
+        cls.validation_excluded_fields = ["status"]

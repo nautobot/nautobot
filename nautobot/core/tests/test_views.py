@@ -94,6 +94,63 @@ class HomeViewTestCase(TestCase):
         self.assertNotRegex(response_content, footer_hostname_version_pattern)
 
 
+@override_settings(BRANDING_TITLE="Nautobot")
+class SearchFieldsTestCase(TestCase):
+    def test_global_and_model_search_bar(self):
+        self.add_permissions("dcim.view_site", "dcim.view_device")
+
+        # Assert model search bar present in list UI
+        response = self.client.get(reverse("dcim:site_list"))
+        self.assertInHTML(
+            '<input type="text" name="q" class="form-control" required placeholder="Search Sites" id="id_q">',
+            response.content.decode(response.charset),
+        )
+
+        response = self.client.get(reverse("dcim:device_list"))
+        self.assertInHTML(
+            '<input type="text" name="q" class="form-control" required placeholder="Search Devices" id="id_q">',
+            response.content.decode(response.charset),
+        )
+
+        # Assert global search bar present in UI
+        self.assertInHTML(
+            '<input type="text" name="q" class="form-control" placeholder="Search Nautobot">',
+            response.content.decode(response.charset),
+        )
+
+
+class FilterFormsTestCase(TestCase):
+    def test_support_for_both_default_and_dynamic_filter_form_in_ui(self):
+        self.add_permissions("dcim.view_site", "circuits.view_circuit")
+
+        filter_tabs = """
+            <ul id="tabs" class="nav nav-tabs">
+                <li role="presentation" class="active">
+                    <a href="#default-filter" role="tab" data-toggle="tab">
+                        Default
+                    </a>
+                </li>
+                <li role="presentation" class="">
+                    <a href="#advanced-filter" role="tab" data-toggle="tab">
+                        Advanced
+                    </a>
+                </li>
+            </ul>
+            """
+
+        response = self.client.get(reverse("dcim:site_list"))
+        self.assertInHTML(
+            filter_tabs,
+            response.content.decode(response.charset),
+        )
+
+        response = self.client.get(reverse("circuits:circuit_list"))
+        self.assertInHTML(
+            filter_tabs,
+            response.content.decode(response.charset),
+        )
+
+
 class ForceScriptNameTestcase(TestCase):
     """Basic test to assert that `settings.FORCE_SCRIPT_NAME` works as intended."""
 

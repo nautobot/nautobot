@@ -383,14 +383,18 @@ class ViewTestCases:
             """Ensure save method does not modify slug that is passed in."""
             # This really should go on a models test page, but we don't have test structures for models.
             if self.slug_source is not None:
+                new_slug_source_value = "kwyjibo"
+
                 obj = self.model.objects.get(**{self.slug_source: self.slug_test_object})
                 expected_slug = self.slugify_function(getattr(obj, self.slug_source))
                 # Update slug source field str
-                filter_ = self.slug_source + "__contains"
-                self.model.objects.filter(**{filter_: self.slug_test_object}).update(**{self.slug_source: "Test"})
+                filter_ = self.slug_source + "__exact"
+                self.model.objects.filter(**{filter_: self.slug_test_object}).update(
+                    **{self.slug_source: new_slug_source_value}
+                )
 
                 obj.refresh_from_db()
-                self.assertEqual(getattr(obj, self.slug_source), "Test")
+                self.assertEqual(getattr(obj, self.slug_source), new_slug_source_value)
                 self.assertEqual(obj.slug, expected_slug)
 
     class EditObjectViewTestCase(ModelViewTestCase):
@@ -491,7 +495,10 @@ class ViewTestCases:
             For some models this may just be any random object, but when we have FKs with `on_delete=models.PROTECT`
             (as is often the case) we need to find or create an instance that doesn't have such entanglements.
             """
-            return get_deletable_objects(self.model, self._get_queryset()).first()
+            instance = get_deletable_objects(self.model, self._get_queryset()).first()
+            if instance is None:
+                self.fail("Couldn't find a single deletable object!")
+            return instance
 
         def test_delete_object_without_permission(self):
             instance = self.get_deletable_object()

@@ -44,6 +44,7 @@ from nautobot.extras.models import (
     Webhook,
     ComputedField,
 )
+from nautobot.extras.tests.test_relationships import RequiredRelationshipTestMixin
 from nautobot.extras.utils import get_job_content_type, TaggableClassesQuery
 from nautobot.ipam.models import VLAN, VLANGroup
 from nautobot.users.models import ObjectPermission
@@ -1920,6 +1921,7 @@ class RelationshipTestCase(
     ViewTestCases.GetObjectViewTestCase,
     ViewTestCases.GetObjectChangelogViewTestCase,
     ViewTestCases.ListObjectsViewTestCase,
+    RequiredRelationshipTestMixin,
 ):
     model = Relationship
     slug_source = "name"
@@ -1927,8 +1929,8 @@ class RelationshipTestCase(
 
     @classmethod
     def setUpTestData(cls):
-        device_type = ContentType.objects.get_for_model(Device)
         interface_type = ContentType.objects.get_for_model(Interface)
+        device_type = ContentType.objects.get_for_model(Device)
         vlan_type = ContentType.objects.get_for_model(VLAN)
 
         Relationship(
@@ -1967,6 +1969,15 @@ class RelationshipTestCase(
         }
 
         cls.slug_test_object = "Primary Interface"
+
+    def test_required_relationships(self):
+        """
+        1. Try creating an object when no required target object exists
+        2. Try creating an object without specifying required target object(s)
+        3. Try creating an object when all required data is present
+        """
+        # Parameterized test:
+        self.required_relationships_test(interact_with="ui")
 
 
 class RelationshipAssociationTestCase(
@@ -2080,7 +2091,7 @@ class TagTestCase(ViewTestCases.OrganizationalObjectViewTestCase):
             "slug": "tag-x",
             "color": "c0c0c0",
             "comments": "Some comments",
-            "content_types": [ct.id for ct in TaggableClassesQuery().as_queryset],
+            "content_types": [ct.id for ct in TaggableClassesQuery().as_queryset()],
         }
 
         cls.csv_data = (

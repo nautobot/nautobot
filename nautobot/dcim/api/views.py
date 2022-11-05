@@ -29,6 +29,7 @@ from nautobot.dcim.models import (
     Device,
     DeviceBay,
     DeviceBayTemplate,
+    DeviceRedundancyGroup,
     DeviceRole,
     DeviceType,
     FrontPort,
@@ -818,6 +819,17 @@ class PowerFeedViewSet(PathEndpointMixin, StatusViewSetMixin, NautobotModelViewS
     )
     serializer_class = serializers.PowerFeedSerializer
     filterset_class = filters.PowerFeedFilterSet
+
+
+#
+# Device Redundancy Groups
+#
+
+
+class DeviceRedundancyGroupViewSet(StatusViewSetMixin, NautobotModelViewSet):
+    queryset = DeviceRedundancyGroup.objects.select_related("status").prefetch_related("members")
+    serializer_class = serializers.DeviceRedundancyGroupSerializer
+    filterset_class = filters.DeviceRedundancyGroupFilterSet
 
 
 #
