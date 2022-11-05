@@ -26,7 +26,6 @@ class ExampleModelViewSet(NautobotModelViewSet):
     filterset_class = ExampleModelFilterSet
 
 
-
 #
 # Webhook Testing
 #
