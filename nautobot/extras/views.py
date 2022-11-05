@@ -1738,7 +1738,7 @@ class ObjectNotesView(View):
                 "table": notes_table,
                 "base_template": self.base_template,
                 "active_tab": "notes",
-                "notes_form": notes_form,
+                "form": notes_form,
             },
         )
 

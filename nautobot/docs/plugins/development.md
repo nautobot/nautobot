@@ -1216,6 +1216,9 @@ urlpatterns = [
 urlpatterns += router.urls
 ```
 
++++ 1.5.0
+    Changelog and Notes urls are now provided in the NautobotUIViewSet and NautobotUIViewSetRouter.
+
 ## Adding REST API Endpoints
 
 Plugins can declare custom endpoints on Nautobot's REST API to retrieve or manipulate models or other data. These behave very similarly to views, except that instead of rendering arbitrary content using a template, data is returned in JSON format using a serializer. Nautobot uses the [Django REST Framework](https://www.django-rest-framework.org/), which makes writing API serializers and views very simple.

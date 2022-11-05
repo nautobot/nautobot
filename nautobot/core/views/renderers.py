@@ -123,7 +123,7 @@ class NautobotHTMLRenderer(renderers.BrowsableAPIRenderer):
         queryset = view.alter_queryset(request)
         # Compile a dictionary indicating which permissions are available to the current user for this model
         permissions = self.construct_user_permissions(request, model)
-        if view.action in ["create", "retrieve", "update", "destroy"]:
+        if view.action in ["create", "retrieve", "update", "destroy", "changelog", "notes"]:
             instance = view.get_object()
             return_url = view.get_return_url(request, instance)
             if isinstance(instance, ChangeLoggedModel):
@@ -213,6 +213,15 @@ class NautobotHTMLRenderer(renderers.BrowsableAPIRenderer):
                     {
                         "active_tab": "csv-data",
                         "fields": view.bulk_create_form_class(model).fields if view.bulk_create_form_class else None,
+                    }
+                )
+            elif view.action == "changelog":
+                context.update({"base_template": data.get("base_template", None), "active_tab": "changelog"})
+            elif view.action == "notes":
+                context.update(
+                    {
+                        "base_template": data.get("base_template", None),
+                        "active_tab": "notes",
                     }
                 )
             context.update(view.get_extra_context(request, instance=None))

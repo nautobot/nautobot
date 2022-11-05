@@ -9,6 +9,8 @@ class NautobotUIViewSet(
     mixins.ObjectBulkDestroyViewMixin,
     mixins.ObjectBulkCreateViewMixin,
     mixins.ObjectBulkUpdateViewMixin,
+    mixins.ObjectChangeLogViewMixin,
+    mixins.ObjectNotesViewMixin,
 ):
     """
     Nautobot BaseViewSet that is intended for UI use only. It provides default Nautobot functionalities such as
