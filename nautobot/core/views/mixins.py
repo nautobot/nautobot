@@ -9,7 +9,7 @@ from django.core.exceptions import (
     ValidationError,
 )
 from django.db import transaction
-from django.db.models import ManyToManyField, ProtectedError, Q
+from django.db.models import ManyToManyField, ProtectedError
 from django.forms import Form, ModelMultipleChoiceField, MultipleHiddenInput, Textarea
 from django.http import HttpResponse
 from django.shortcuts import get_object_or_404, redirect
@@ -19,8 +19,6 @@ from django.utils.html import escape
 from django.utils.safestring import mark_safe
 from django.views.generic.edit import FormView
 
-from django_tables2 import RequestConfig
-
 from rest_framework import mixins, exceptions
 from rest_framework.response import Response
 from rest_framework.viewsets import GenericViewSet
@@ -28,10 +26,9 @@ from rest_framework.viewsets import GenericViewSet
 from drf_spectacular.utils import extend_schema
 
 from nautobot.core.api.views import BulkCreateModelMixin, BulkDestroyModelMixin, BulkUpdateModelMixin
-from nautobot.extras.models import CustomField, ExportTemplate, ObjectChange
+from nautobot.extras.models import CustomField, ExportTemplate
 from nautobot.extras.forms import NoteForm
 from nautobot.extras.tables import ObjectChangeTable, NoteTable
-from nautobot.extras.utils import get_base_template
 from nautobot.utilities.error_handlers import handle_protectederror
 from nautobot.utilities.forms import (
     BootstrapMixin,
@@ -40,7 +37,6 @@ from nautobot.utilities.forms import (
     CSVFileField,
     restrict_form_fields,
 )
-from nautobot.utilities.paginator import EnhancedPaginator, get_paginate_count
 from nautobot.core.views.renderers import NautobotHTMLRenderer
 from nautobot.utilities.utils import (
     csv_format,
@@ -150,6 +146,11 @@ class NautobotViewSetMixin(GenericViewSet, AccessMixin, GetReturnURLMixin, FormV
     def get_table_class(self):
         # Check if self.table_class is specified in the ModelViewSet before performing subsequent actions
         # If not, display an error message
+        if self.action == "notes":
+            return NoteTable
+        elif self.action == "changelog":
+            return ObjectChangeTable
+
         assert (
             self.table_class is not None
         ), f"'{self.__class__.__name__}' should include a `table_class` attribute for bulk operations"
@@ -377,6 +378,8 @@ class NautobotViewSetMixin(GenericViewSet, AccessMixin, GetReturnURLMixin, FormV
                 csv_file = CSVFileField(from_form=self.bulk_create_form_class)
 
             form_class = BulkCreateForm
+        elif self.action == "notes":
+            form_class = NoteForm
         else:
             form_class = getattr(self, f"{self.action}_form_class", None)
 
@@ -921,28 +924,8 @@ class ObjectChangeLogViewMixin(NautobotViewSetMixin):
     base_template = None
 
     def changelog(self, request, *args, **kwargs):
-        obj = self.get_object()
-        content_type = ContentType.objects.get_for_model(obj)
-        # v2 TODO(jathan): Replace prefetch_related with select_related
-        objectchanges = (
-            ObjectChange.objects.restrict(request.user, "view")
-            .prefetch_related("user", "changed_object_type")
-            .filter(
-                Q(changed_object_type=content_type, changed_object_id=obj.pk)
-                | Q(related_object_type=content_type, related_object_id=obj.pk)
-            )
-        )
-        objectchanges_table = ObjectChangeTable(data=objectchanges, orderable=False)
-
-        # Apply the request context
-        paginate = {
-            "paginator_class": EnhancedPaginator,
-            "per_page": get_paginate_count(request),
-        }
-        RequestConfig(request, paginate).configure(objectchanges_table)
         data = {
-            "table": objectchanges_table,
-            "base_template": get_base_template(self.base_template, content_type.model_class()),
+            "base_template": self.base_template,
             "template": "extras/object_changelog.html",
         }
         return Response(data)
@@ -956,27 +939,8 @@ class ObjectNotesViewMixin(NautobotViewSetMixin):
     base_template = None
 
     def notes(self, request, *args, **kwargs):
-        obj = self.get_object()
-        content_type = ContentType.objects.get_for_model(obj)
-        notes_form = NoteForm(
-            initial={
-                "assigned_object_type": content_type,
-                "assigned_object_id": obj.pk,
-            }
-        )
-        notes_table = NoteTable(obj.notes)
-
-        # Apply the request context
-        paginate = {
-            "paginator_class": EnhancedPaginator,
-            "per_page": get_paginate_count(request),
-        }
-        RequestConfig(request, paginate).configure(notes_table)
-
         data = {
-            "table": notes_table,
-            "base_template": get_base_template(self.base_template, content_type.model_class()),
+            "base_template": self.base_template,
             "template": "extras/object_notes.html",
-            "form": notes_form,
         }
         return Response(data)
