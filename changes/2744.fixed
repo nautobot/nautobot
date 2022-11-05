@@ -1,1 +1,1 @@
-Enforced required Relationships when bulk editing (via API or UI) or bulk creating (via API) objects with required relationships.
+Enforced required Relationships when bulk editing or creating objects that have required relationships. Bulk edit via API or UI. Bulk create via API.
