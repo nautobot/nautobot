@@ -370,6 +370,10 @@ class RelationshipModelFormMixin(forms.ModelForm):
                 field_name = f"cr_{relationship.slug}__{peer_side}"
                 self.fields[field_name] = relationship.to_form_field(side=side)
 
+                # HTML5 validation for required relationship field:
+                if relationship.required_on == side:
+                    self.fields[field_name].required = True
+
                 # if the object already exists, populate the field with existing values
                 if self.instance.present_in_database:
                     if relationship.has_many(peer_side):
@@ -385,7 +389,8 @@ class RelationshipModelFormMixin(forms.ModelForm):
 
     def clean(self):
         """
-        Verify that any requested RelationshipAssociations do not violate relationship cardinality restrictions.
+        First check for any required relationships errors and if there are any, add them via form field errors.
+        Then verify that any requested RelationshipAssociations do not violate relationship cardinality restrictions.
 
         - For TYPE_ONE_TO_MANY and TYPE_ONE_TO_ONE relations, if the form's object is on the "source" side of
           the relationship, verify that the requested "destination" object(s) do not already have any existing
@@ -394,6 +399,13 @@ class RelationshipModelFormMixin(forms.ModelForm):
           verify that the requested "source" object does not have an existing RelationshipAssociation to
           a different destination object.
         """
+        required_relationships_errors = self.Meta().model.required_related_objects_errors(
+            output_for="ui", initial_data=self.cleaned_data, instance=self.instance
+        )
+        for error_dict in required_relationships_errors:
+            for field, errors in error_dict.items():
+                self.add_error(field, errors)
+
         for side, relationships in self.instance.get_relationships().items():
             for relationship in relationships:
                 # The form field name reflects what it provides, i.e. the peer object(s) to link via this relationship.

@@ -22,6 +22,15 @@ To create a relationship, from the top-level navigation menu select **Extensibil
 !!! note
     A symmetric many-to-many relationship can be, but is not necessarily, a _complete graph_ or _full mesh_. For example, in the routing topology example above, if Device _A_ and Device _B_ are peers, and Device _B_ and Device _C_ are peers, this does not automatically imply a relationship between Devices _A_ and _C_ -- they **might or might not** also be peers, depending on how you define and populate the specific associations for this relationship.
 
+## Requiring a Relationship
+
+Relationships can be marked as being required. By default, relationships are not marked as being required.
+
+To mark a relationship as being required, select "Source objects MUST implement this relationship" or conversely "Destination objects MUST implement this relationship" from the "Required on" field when editing or creating a relationship:
+
+* If "Destination objects MUST implement this relationship" is selected, objects of the type selected in "Destination Type" will enforce this relationship when they are created or edited.
+* If "Source objects MUST implement this relationship" is selected, objects of the type selected in "Source Type" will enforce this relationship when they are created or edited.
+
 ## Relationship Filters
 
 Filters can be defined to restrict the type or selection of objects for either side of the connection.

@@ -36,6 +36,17 @@ A new optional job property `task_queues` has been introduced to allow Nautobot 
 
 In the above example, only two LocationTypes are defined ("Building Group" and "Building") but the "Building Group" type is flagged as nestable, so one Building Group may contain another Building Group.
 
+#### Required Relationships ([#873](https://github.com/nautobot/nautobot/issues/873))
+
+Relationships can be marked as being required. By default, relationships are not marked as being required.
+
+To mark a relationship as being required, select "Source objects MUST implement this relationship" or conversely "
+Destination objects MUST implement this relationship" from the "Required on" field when editing or creating a
+relationship:
+
+* If "Destination objects MUST implement this relationship" is selected, objects of the type selected in "Destination Type" will enforce this relationship when they are created or edited.
+* If "Source objects MUST implement this relationship" is selected, objects of the type selected in "Source Type" will enforce this relationship when they are created or edited.
+
 ### Changed
 
 #### Database Query Caching is now Disabled by Default
