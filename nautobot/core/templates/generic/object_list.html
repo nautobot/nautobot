@@ -225,45 +225,48 @@
         let field_name = $(this).attr("name");
         let field_values = $(this).select2('data');
 
-        let dynamic_filter_form_dom = $("#advanced-filter #filterform-table tbody")
         // TODO(timizuo): Check for not select2 instances
-        $("#advanced-filter #filterform-table tbody tr td:nth-child(3)").each(function(){
+        let dynamic_filter_form_dom = $("#advanced-filter #filterform-table tbody tr")
+        dynamic_filter_form_dom.find("td:nth-child(3)").each(function(){
             let input_field_dom = $(this).find(">:first-child");
-            // Check if this field already exists in dynamic filter form
+
+            // Check if this field already exists in dynamic filter form; Then replicate changes
+            // to that field;
             if(input_field_dom.attr("name") === field_name){
                 input_field_dom.val(null).trigger('change');
                 field_values.forEach(function (value){
                     let new_option = new Option(value.text, value.id, true, true);
                     input_field_dom.append(new_option).trigger('change');
                 })
-                // Breakout of each loop
-                // return false
+                // Breakout of `each` loop
+                return false;
             }
+
+            // Check if an empty filter field is found in dynamic filter form; Then replicate
+            // changes made to default filter form here
             else if(!input_field_dom.val()){
                 // If an empty field is found; Add field_values to this empty field
-                let lookup_value_td_dom = $(this)
-                let lookup_type_dom_td_dom = lookup_value_td_dom.prev()
-                let lookup_field_dom = lookup_type_dom_td_dom.prev().find(">:first-child")
+                let lookup_value_td_dom = $(this);
+                let lookup_type_dom_td_dom = lookup_value_td_dom.prev();
+                let lookup_field_dom = lookup_type_dom_td_dom.prev().find(">:first-child");
                 lookup_field_dom.val(field_name).trigger('change');
 
                 let new_lookup_type_option = new Option("exact", field_name, true, true);
                 lookup_type_dom_td_dom.find(">:first-child").append(new_lookup_type_option).trigger('change');
 
-                // TODO(timizuo): After triggering change above new dom element is created
-                //  find a way to get new created dom element for lookup value
-
-                // field_values.forEach(function (value){
-                //     let new_option = new Option("werwer", "adsa", true, true);
-                //     console.log(lookup_value_td_dom.find(">:first-child"))
-                //     lookup_value_td_dom.find(">:first-child").append(new_option).trigger('change');
-                // })
-                return false
+                setTimeout(function (){
+                    field_values.forEach(function (value){
+                        let new_option = new Option(value.text, value.id, true, true);
+                        lookup_value_td_dom.find(">:first-child").append(new_option).trigger('change');
+                    })
+                }, 500)
+                // Breakout of `each` loop
+                return false;
             }
         })
-        // Check if any field name in dynamic has this value
-        //   - if yes; change value to what we just got
-        // Else; if all field are taken add a new field
-        //  - do the rest
+
+        // If modified default fileter field not found in dynamic filter form; and
+        // there is not empty slot, add a new filter to dynamic filter form
     })
 </script>
 {% endblock %}
