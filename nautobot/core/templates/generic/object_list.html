@@ -191,14 +191,19 @@
     })
 
     // On submit of filter form
-    $("#dynamic-filter-form").on("submit", function(e){
-        let this_form = $(this);
-        this_form.find(`input[name*="form-"], select[name*="form-"]`).removeAttr("name")
-        // Append q form field to to dynamic filter form via hidden input
+    $("#dynamic-filter-form, #default-filter form").on("submit", function(e){
+        e.preventDefault()
+        let dynamic_form = $("#dynamic-filter-form");
+        dynamic_form.find(`input[name*="form-"], select[name*="form-"]`).removeAttr("name")
+        // Append q form field to dynamic filter form via hidden input
         let q_field = $('#id_q')
         let q_field_phantom = $('<input type="hidden" name="q" />')
         q_field_phantom.val(q_field.val())
-        this_form.append(q_field_phantom);
+        dynamic_form.append(q_field_phantom);
+
+        let search_query = $("#dynamic-filter-form, #default-filter form").serialize()
+        search_query = "&" + search_query.replace(/(.+=.+&)(?=.*\1)/g, "")
+        location.replace("?" + search_query)
     })
 
     // On submit of filter search form
@@ -220,16 +225,13 @@
         jsify_form($(document))
     })
 
-    // On change of any field in Default form; Replicate that change into dynamic filter form
+    // On change of any field in Default form; Replicate that change into dynamic filter form field
     $("#default-filter form input, #default-filter form select").on("change", function (e){
         let field_name = $(this).attr("name");
         let field_values = $(this).select2('data');
-        let dynamic_filter_form_modified = false;
-
 
         // TODO(timizuo): Check for not select2 instances
-        let dynamic_filter_form_dom = $("#advanced-filter #filterform-table tbody");
-        dynamic_filter_form_dom.find("tr td:nth-child(3)").each(function(){
+        $("#advanced-filter #filterform-table tbody tr td:nth-child(3)").each(function(){
             let input_field_dom = $(this).find(">:first-child");
 
             // Check if this field already exists in dynamic filter form; Then replicate changes
@@ -241,50 +243,9 @@
                     input_field_dom.append(new_option).trigger('change');
                 })
                 // Breakout of `each` loop
-                dynamic_filter_form_modified = true
-                return false;
-            }
-
-            // Check if an empty filter field is found in dynamic filter form; Then replicate
-            // changes made to default filter form here
-            else if(!input_field_dom.val()){
-                // If an empty field is found; Add field_values to this empty field
-                let lookup_value_td_dom = $(this);
-                let lookup_type_dom_td_dom = lookup_value_td_dom.prev();
-                let lookup_field_dom = lookup_type_dom_td_dom.prev().find(">:first-child");
-                lookup_field_dom.val(field_name).trigger('change');
-
-                let new_lookup_type_option = new Option("exact", field_name, true, true);
-                lookup_type_dom_td_dom.find(">:first-child").append(new_lookup_type_option).trigger('change');
-
-                // Above logic has updated DOM, that's why a .5s wait is required to get the current
-                // updated DOM element
-                setTimeout(function (){
-                    field_values.forEach(function (value){
-                        let new_option = new Option(value.text, value.id, true, true);
-                        lookup_value_td_dom.find(">:first-child").append(new_option).trigger('change');
-                    })
-                }, 500)
-                // Breakout of `each` loop
-                dynamic_filter_form_modified = true
                 return false;
             }
         })
-
-        // If dynamic filter form was not modified by the logic above;
-        // Add a new filter to dynamic filter form
-        if(!dynamic_filter_form_modified){
-            // Add new filter
-            setTimeout(function (){
-                dynamic_filter_form_dom.find(".add-row").click()
-
-
-            },500
-            )
-
-            console.log(dynamic_filter_form_dom.find("tr:nth-last-child(2)"))
-            console.log("Nit Modified")
-        }
     })
 </script>
 {% endblock %}
