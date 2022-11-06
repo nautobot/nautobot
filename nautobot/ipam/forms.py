@@ -1114,6 +1114,13 @@ class VLANFilterForm(NautobotFilterForm, LocatableModelFilterFormMixin, TenancyF
         "role",
         "tenant_group",
         "tenant",
+        "prefixes",
+        "has_prefixes",
+        "interfaces_as_untagged",
+        "interfaces_as_tagged",
+        "vminterfaces_as_untagged",
+        "vminterfaces_as_tagged",
+        "tags",
     ]
     q = forms.CharField(required=False, label="Search")
     group_id = DynamicModelMultipleChoiceField(
@@ -1126,6 +1133,41 @@ class VLANFilterForm(NautobotFilterForm, LocatableModelFilterFormMixin, TenancyF
     role = DynamicModelMultipleChoiceField(
         queryset=Role.objects.all(),
         to_field_name="slug",
+        required=False,
+        null_option="None",
+    )
+    prefixes = DynamicModelMultipleChoiceField(
+        queryset=Prefix.objects.all(),
+        to_field_name="vlan_id",
+        required=False,
+        null_option="None",
+    )
+    has_prefixes = forms.NullBooleanField(
+        required=False,
+        label="Has a prefix",
+        widget=StaticSelect2(choices=BOOLEAN_WITH_BLANK_CHOICES),
+    )
+    interfaces_as_untagged = DynamicModelMultipleChoiceField(
+        queryset=Interface.objects.all(),
+        to_field_name="untagged_vlan",
+        required=False,
+        null_option="None",
+    )
+    interfaces_as_tagged = DynamicModelMultipleChoiceField(
+        queryset=Interface.objects.all(),
+        to_field_name="tagged_vlans",
+        required=False,
+        null_option="None",
+    )
+    vminterfaces_as_untagged = DynamicModelMultipleChoiceField(
+        queryset=Interface.objects.all(),
+        to_field_name="untagged_vlan",
+        required=False,
+        null_option="None",
+    )
+    vminterfaces_as_tagged = DynamicModelMultipleChoiceField(
+        queryset=Interface.objects.all(),
+        to_field_name="tagged_vlans",
         required=False,
         null_option="None",
     )

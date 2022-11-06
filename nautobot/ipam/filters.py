@@ -12,10 +12,13 @@ from nautobot.utilities.filters import (
     MultiValueCharFilter,
     MultiValueUUIDFilter,
     NameSlugSearchFilterSet,
+    NaturalKeyOrPKMultipleChoiceFilter,
     NumericArrayFilter,
+    RelatedMembershipBooleanFilter,
     SearchFilter,
     TagFilter,
 )
+
 from nautobot.virtualization.models import VirtualMachine, VMInterface
 from .choices import IPAddressRoleChoices
 from .models import (
@@ -490,6 +493,11 @@ class VLANFilterSet(NautobotFilterSet, LocatableModelFilterSetMixin, TenancyFilt
         label="Device (ID)",
         field_name="pk",
     )
+    available_on_prefix = django_filters.UUIDFilter(
+        method="get_for_prefix",
+        label="Prefix (ID)",
+        field_name="pk",
+    )
     group_id = django_filters.ModelMultipleChoiceFilter(
         queryset=VLANGroup.objects.all(),
         label="Group (ID)",
@@ -510,11 +518,39 @@ class VLANFilterSet(NautobotFilterSet, LocatableModelFilterSetMixin, TenancyFilt
         to_field_name="slug",
         label="Role (slug)",
     )
+    prefixes = NaturalKeyOrPKMultipleChoiceFilter(
+        queryset=Prefix.objects.all(),
+        label="Prefix (name or ID)",
+    )
+    has_prefixes = RelatedMembershipBooleanFilter(
+        field_name="prefixes",
+        label="Has prefixes",
+    )
+    interfaces_as_untagged = NaturalKeyOrPKMultipleChoiceFilter(
+        queryset=Interface.objects.all(),
+        to_field_name="untagged_vlan_id",
+        label="Interfaces as untagged (name or ID)",
+    )
+    interfaces_as_tagged = NaturalKeyOrPKMultipleChoiceFilter(
+        queryset=Interface.objects.all(),
+        to_field_name="tagged_vlans",
+        label="Interfaces as tagged (name or ID)",
+    )
+    vminterfaces_as_untagged = NaturalKeyOrPKMultipleChoiceFilter(
+        queryset=Interface.objects.all(),
+        to_field_name="untagged_vlan_id",
+        label="Interfaces as untagged (name or ID)",
+    )
+    vminterfaces_as_tagged = NaturalKeyOrPKMultipleChoiceFilter(
+        queryset=Interface.objects.all(),
+        to_field_name="tagged_vlans",
+        label="Interfaces as tagged (name or ID)",
+    )
     tag = TagFilter()
 
     class Meta:
         model = VLAN
-        fields = ["id", "vid", "name"]
+        fields = "__all__"
 
     def get_for_device(self, queryset, name, value):
         """Return all VLANs available to the specified Device(value)."""
