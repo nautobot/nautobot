@@ -224,10 +224,12 @@
     $("#default-filter form input, #default-filter form select").on("change", function (e){
         let field_name = $(this).attr("name");
         let field_values = $(this).select2('data');
+        let dynamic_filter_form_modified = false;
+
 
         // TODO(timizuo): Check for not select2 instances
-        let dynamic_filter_form_dom = $("#advanced-filter #filterform-table tbody tr")
-        dynamic_filter_form_dom.find("td:nth-child(3)").each(function(){
+        let dynamic_filter_form_dom = $("#advanced-filter #filterform-table tbody");
+        dynamic_filter_form_dom.find("tr td:nth-child(3)").each(function(){
             let input_field_dom = $(this).find(">:first-child");
 
             // Check if this field already exists in dynamic filter form; Then replicate changes
@@ -239,6 +241,7 @@
                     input_field_dom.append(new_option).trigger('change');
                 })
                 // Breakout of `each` loop
+                dynamic_filter_form_modified = true
                 return false;
             }
 
@@ -254,6 +257,8 @@
                 let new_lookup_type_option = new Option("exact", field_name, true, true);
                 lookup_type_dom_td_dom.find(">:first-child").append(new_lookup_type_option).trigger('change');
 
+                // Above logic has updated DOM, that's why a .5s wait is required to get the current
+                // updated DOM element
                 setTimeout(function (){
                     field_values.forEach(function (value){
                         let new_option = new Option(value.text, value.id, true, true);
@@ -261,12 +266,25 @@
                     })
                 }, 500)
                 // Breakout of `each` loop
+                dynamic_filter_form_modified = true
                 return false;
             }
         })
 
-        // If modified default fileter field not found in dynamic filter form; and
-        // there is not empty slot, add a new filter to dynamic filter form
+        // If dynamic filter form was not modified by the logic above;
+        // Add a new filter to dynamic filter form
+        if(!dynamic_filter_form_modified){
+            // Add new filter
+            setTimeout(function (){
+                dynamic_filter_form_dom.find(".add-row").click()
+
+
+            },500
+            )
+
+            console.log(dynamic_filter_form_dom.find("tr:nth-last-child(2)"))
+            console.log("Nit Modified")
+        }
     })
 </script>
 {% endblock %}
