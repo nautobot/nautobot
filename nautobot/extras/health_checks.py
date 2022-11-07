@@ -6,11 +6,20 @@ from django.db import DatabaseError, IntegrityError, connection
 from funcy import omit
 from health_check.backends import BaseHealthCheckBackend
 from health_check.exceptions import ServiceReturnedUnexpectedResult, ServiceUnavailable
+from prometheus_client import Gauge
 from redis import exceptions, from_url
 from redis.client import Redis
 from redis.sentinel import Sentinel
 
 from .models import HealthCheckTestModel
+
+# Prometheus metrics for health checks.
+# We set multiprocess_mode to "min" in order to cause the metrics to become 0 when one of them fails.
+database_backend_metric = Gauge("health_check_database_info", "State of database backend", multiprocess_mode="min")
+cache_ops_redis_backend_metric = Gauge(
+    "health_check_cache_ops_redis_info", "State of cache ops redis backend", multiprocess_mode="min"
+)
+redis_backend_metric = Gauge("health_check_redis_backend_info", "State of redis backend", multiprocess_mode="min")
 
 
 class DatabaseBackend(BaseHealthCheckBackend):
@@ -28,9 +37,12 @@ class DatabaseBackend(BaseHealthCheckBackend):
                 obj.title = "newtest"
                 obj.save()
                 obj.delete()
+            database_backend_metric.set(1)
         except IntegrityError:
+            database_backend_metric.set(0)
             raise ServiceReturnedUnexpectedResult("Integrity Error")
         except DatabaseError:
+            database_backend_metric.set(0)
             raise ServiceUnavailable("Database error")
 
 
@@ -45,10 +57,13 @@ class RedisHealthCheck(BaseHealthCheckBackend):
             )
             with sentinel.master_for(service_name=service_name, db=db) as master:
                 master.ping()
+            redis_backend_metric.set(1)
         except (ConnectionRefusedError, exceptions.ConnectionError, exceptions.TimeoutError) as e:
             self.add_error(ServiceUnavailable(f"Unable to connect to Redis Sentinel: {type(e).__name__}"), e)
+            redis_backend_metric.set(0)
         except Exception as e:
             self.add_error(ServiceUnavailable("Unknown error"), e)
+            redis_backend_metric.set(0)
 
     def check_redis(self, redis_url=None, **kwargs):
         try:
@@ -58,10 +73,13 @@ class RedisHealthCheck(BaseHealthCheckBackend):
             else:
                 with Redis(**kwargs) as conn:
                     conn.ping()  # exceptions may be raised upon ping
+            redis_backend_metric.set(1)
         except (ConnectionRefusedError, exceptions.ConnectionError, exceptions.TimeoutError) as e:
             self.add_error(ServiceUnavailable(f"Unable to connect to Redis: {type(e).__name__}"), e)
+            redis_backend_metric.set(0)
         except Exception as e:
             self.add_error(ServiceUnavailable("Unknown error"), e)
+            redis_backend_metric.set(0)
 
 
 class CacheopsRedisBackend(RedisHealthCheck):
