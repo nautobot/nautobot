@@ -1160,13 +1160,13 @@ class VLANFilterForm(NautobotFilterForm, LocatableModelFilterFormMixin, TenancyF
         null_option="None",
     )
     vminterfaces_as_untagged = DynamicModelMultipleChoiceField(
-        queryset=Interface.objects.all(),
+        queryset=VMInterface.objects.all(),
         to_field_name="untagged_vlan",
         required=False,
         null_option="None",
     )
     vminterfaces_as_tagged = DynamicModelMultipleChoiceField(
-        queryset=Interface.objects.all(),
+        queryset=VMInterface.objects.all(),
         to_field_name="tagged_vlans",
         required=False,
         null_option="None",

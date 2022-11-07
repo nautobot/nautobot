@@ -5,7 +5,7 @@ from django.db.models import Q
 from netaddr.core import AddrFormatError
 
 from nautobot.dcim.filter_mixins import LocatableModelFilterSetMixin
-from nautobot.dcim.models import Device, Interface
+from nautobot.dcim.models import Device, Interface, VMInterface
 from nautobot.extras.filters import NautobotFilterSet, StatusModelFilterSetMixin
 from nautobot.tenancy.filters import TenancyFilterSet
 from nautobot.utilities.filters import (
@@ -537,14 +537,14 @@ class VLANFilterSet(NautobotFilterSet, LocatableModelFilterSetMixin, TenancyFilt
         label="Interfaces as tagged (name or ID)",
     )
     vminterfaces_as_untagged = NaturalKeyOrPKMultipleChoiceFilter(
-        queryset=Interface.objects.all(),
+        queryset=VMInterface.objects.all(),
         to_field_name="untagged_vlan_id",
-        label="Interfaces as untagged (name or ID)",
+        label="VM Interfaces as untagged (name or ID)",
     )
     vminterfaces_as_tagged = NaturalKeyOrPKMultipleChoiceFilter(
-        queryset=Interface.objects.all(),
+        queryset=VMInterface.objects.all(),
         to_field_name="tagged_vlans",
-        label="Interfaces as tagged (name or ID)",
+        label="VM Interfaces as tagged (name or ID)",
     )
     tag = TagFilter()
 
