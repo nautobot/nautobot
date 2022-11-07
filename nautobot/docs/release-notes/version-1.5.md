@@ -16,8 +16,7 @@ Custom fields can now be assigned to a free-text "grouping" to improve usability
 
 #### Device Redundancy Groups ([#1892](https://github.com/nautobot/nautobot/issues/1892))
 
-Device Redundancy Groups have been added to model groups of distinct devices that perform device clustering or failover high availability functions. This may be used to model whole device redundancy strategies across devices with separate control planes (ex: ASA failover), not devices that share a control plane (ex: stackwise switch stacks), or interface specific redundancy strategies (ex: hsrp). Device Redundancy Groups support grouping an arbitrary number of devices and may be assigned an optional secrets group and one or more optional failover strategies. 
-
+Device Redundancy Groups have been added to model groups of distinct devices that perform device clustering or failover high availability functions. This may be used to model whole device redundancy strategies across devices with separate control planes (ex: ASA failover), not devices that share a control plane (ex: stackwise switch stacks), or interface specific redundancy strategies (ex: hsrp). Device Redundancy Groups support grouping an arbitrary number of devices and may be assigned an optional secrets group and one or more optional failover strategies.
 
 #### Custom Celery Task Queues ([#2421](https://github.com/nautobot/nautobot/pull/2421))
 
