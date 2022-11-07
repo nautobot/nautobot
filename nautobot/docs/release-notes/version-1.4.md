@@ -162,6 +162,17 @@ A new configuration setting, [`STRICT_FILTERING`](../configuration/optional-sett
 The `settings_and_registry` default context processor was changed to purely `settings` - the (large) Nautobot application registry dictionary is no longer provided as part of the render context for all templates by default. Added a new `registry` template tag that can be invoked by specific templates to provide this variable where needed.
 
 <!-- towncrier release notes start -->
+## v1.4.10 (2022-11-07)
+
+### Changed
+
+- [#2758](https://github.com/nautobot/nautobot/issues/2758) - Changed console logging back to disabled by default when running `nautobot-server test ...`.
+
+### Fixed
+
+- [#2755](https://github.com/nautobot/nautobot/issues/2755) - Fixed incorrect file permissions on `/opt/nautobot/nautobot_config.py` in `final` Docker images.
+
+
 ## v1.4.9 (2022-11-04)
 
 ### Added
