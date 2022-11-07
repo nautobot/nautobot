@@ -652,7 +652,8 @@ def unittest(
         build_and_check_docs(context)
 
     append_arg = " --append" if append else ""
-    command = f"coverage run{append_arg} --module nautobot.core.cli --config=nautobot/core/tests/nautobot_config.py test {label}"
+    command = f"coverage run{append_arg} --module nautobot.core.cli test {label}"
+    command += " --config=nautobot/core/tests/nautobot_config.py"
     # booleans
     if keepdb:
         command += " --keepdb"
