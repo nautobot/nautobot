@@ -1,2 +1,0 @@
-Added `nautobot-server generate_test_data` command.
-Added `TEST_USE_FACTORIES` and `TEST_FACTORY_SEED` optional settings.

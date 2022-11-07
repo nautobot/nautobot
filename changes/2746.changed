@@ -1,1 +1,0 @@
-Changed `LocationType` test case to not attempt to re-parent a `LocationType` with descendant `Locations`.
