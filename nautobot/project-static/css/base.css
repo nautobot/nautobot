@@ -7,7 +7,6 @@ html {
 }
 html, body {
     height: 100%;
-    overflow: auto;
 }
 body {
     padding-top: 70px;
@@ -19,8 +18,10 @@ body {
     padding: 12px 15px 8px;
 }
 .footer {
-    background-color: #f5f5f5;
     border-top: 1px solid #d0d0d0;
+}
+.footer .row {
+    background-color: #f5f5f5;
 }
 footer p {
     margin: 12px 0;
