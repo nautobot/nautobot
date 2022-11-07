@@ -311,7 +311,7 @@ USER nautobot
 
 WORKDIR /opt/nautobot
 
-COPY --from=final-dev /opt/nautobot/nautobot_config.py /opt/nautobot/nautobot_config.py
+COPY --from=final-dev --chown=nautobot /opt/nautobot/nautobot_config.py /opt/nautobot/nautobot_config.py
 
 # Run Nautobot server under uwsgi by default
 EXPOSE 8080 8443
