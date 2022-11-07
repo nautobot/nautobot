@@ -10,12 +10,13 @@ from nautobot.dcim.choices import (
     PowerOutletTypeChoices,
     PowerOutletFeedLegChoices,
     InterfaceTypeChoices,
+    InterfaceStatusChoices,
     PortTypeChoices,
 )
 
 from nautobot.core.models import BaseModel
 from nautobot.dcim.constants import REARPORT_POSITIONS_MAX, REARPORT_POSITIONS_MIN
-from nautobot.extras.models import ChangeLoggedModel, CustomField, CustomFieldModel, RelationshipModel
+from nautobot.extras.models import ChangeLoggedModel, CustomField, CustomFieldModel, RelationshipModel, Status
 from nautobot.extras.utils import extras_features
 from nautobot.utilities.fields import NaturalOrderingField
 from nautobot.utilities.ordering import naturalize_interface
@@ -258,11 +259,16 @@ class InterfaceTemplate(ComponentTemplateModel):
         unique_together = ("device_type", "name")
 
     def instantiate(self, device):
+        try:
+            status = Status.objects.get_for_model(Interface).get(slug=InterfaceStatusChoices.STATUS_ACTIVE)
+        except Status.DoesNotExist:
+            status = Status.objects.get_for_model(Interface).first()
         return self.instantiate_model(
             model=Interface,
             device=device,
             type=self.type,
             mgmt_only=self.mgmt_only,
+            status=status,
         )
 
 

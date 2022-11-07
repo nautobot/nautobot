@@ -1,0 +1,1 @@
+Fixed Site `latitude`, `longitude` clean method for when valid string value entered.

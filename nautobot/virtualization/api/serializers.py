@@ -217,6 +217,17 @@ class VMInterfaceSerializerVersion12(NautobotModelSerializer, TaggedObjectSerial
                 )
 
         # Validate many-to-many VLAN assignments
+        # if self.instance and self.instance.tagged_vlans.exists()
+        mode = data.get("mode", getattr(self.instance, "mode", None))
+        has_tagged_vlans = data.get("tagged_vlans", False)
+        if not has_tagged_vlans and self.instance and self.instance.tagged_vlans.exists():
+            has_tagged_vlans = True
+
+        if has_tagged_vlans and mode != InterfaceModeChoices.MODE_TAGGED:
+            raise serializers.ValidationError(
+                {"tagged_vlans": f"Mode must be set to {InterfaceModeChoices.MODE_TAGGED} when specifying tagged_vlans"}
+            )
+
         virtual_machine = self.instance.virtual_machine if self.instance else data.get("virtual_machine")
         for vlan in data.get("tagged_vlans", []):
             if vlan.site not in [virtual_machine.site, None]:

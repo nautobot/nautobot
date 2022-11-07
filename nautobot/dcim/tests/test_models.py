@@ -1,3 +1,5 @@
+from decimal import Decimal
+
 from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ValidationError
 from django.test import TestCase
@@ -7,6 +9,7 @@ from nautobot.dcim.choices import (
     CableStatusChoices,
     CableTypeChoices,
     DeviceFaceChoices,
+    InterfaceModeChoices,
     InterfaceTypeChoices,
     PortTypeChoices,
     PowerOutletFeedLegChoices,
@@ -43,6 +46,7 @@ from nautobot.dcim.models import (
 )
 from nautobot.extras.choices import CustomFieldTypeChoices
 from nautobot.extras.models import CustomField, Status
+from nautobot.ipam.models import VLAN
 from nautobot.tenancy.models import Tenant
 
 
@@ -146,6 +150,49 @@ class InterfaceTemplateCustomFieldTestCase(TestCase):
         self.assertEqual(Interface.objects.get(pk=interfaces[1].pk).cf["field_1"], "value_1")
         self.assertEqual(Interface.objects.get(pk=interfaces[1].pk).cf["field_2"], "value_2")
         self.assertEqual(Interface.objects.get(pk=interfaces[1].pk).cf["field_3"], "value_3")
+
+
+class InterfaceTemplateTestCase(TestCase):
+    def test_interface_template_sets_interface_status(self):
+        """
+        When a device is created with a device type associated with the template,
+        assert interface templates sets the interface status.
+        """
+        statuses = Status.objects.get_for_model(Device)
+        site = Site.objects.create(name="Site 1", slug="site-1")
+        manufacturer = Manufacturer.objects.create(name="Acme", slug="acme")
+        device_role = DeviceRole.objects.create(name="Device Role 1", slug="device-role-1", color="ff0000")
+        device_type = DeviceType.objects.create(manufacturer=manufacturer, model="FrameForwarder 2048", slug="ff2048")
+        InterfaceTemplate.objects.create(
+            device_type=device_type,
+            name="Test_Template_1",
+            type=InterfaceTypeChoices.TYPE_1GE_FIXED,
+            mgmt_only=True,
+        )
+        device_1 = Device.objects.create(
+            device_type=device_type,
+            device_role=device_role,
+            status=statuses[0],
+            name="Test Device 1",
+            site=site,
+        )
+
+        active_status = Status.objects.get(slug="active")
+        self.assertEqual(device_1.interfaces.get(name="Test_Template_1").status, active_status)
+
+        # Assert that a different status is picked if active status is not found for interface
+        interface_ct = ContentType.objects.get_for_model(Interface)
+        active_status.content_types.remove(interface_ct)
+
+        device_2 = Device.objects.create(
+            device_type=device_type,
+            device_role=device_role,
+            status=statuses[0],
+            name="Test Device 2",
+            site=site,
+        )
+        first_status = Status.objects.get_for_model(Interface).first()
+        self.assertIsNotNone(device_2.interfaces.get(name="Test_Template_1").status, first_status)
 
 
 class RackGroupTestCase(TestCase):
@@ -556,6 +603,36 @@ class LocationTypeTestCase(TestCase):
             with self.assertRaises(ValidationError) as cm:
                 LocationType(name=candidate_name).clean()
             self.assertIn("This name is reserved", str(cm.exception))
+
+    def test_changing_parent(self):
+        """Validate clean logic around changing the parent of a LocationType."""
+        parent = LocationType.objects.create(name="Parent LocationType")
+        child = LocationType.objects.create(name="Child LocationType")
+
+        # If there are no Locations using it yet, parent can be freely changed
+        child.parent = None
+        child.validated_save()
+        child.parent = parent
+        child.validated_save()
+
+        # Once there are Locations using it, parent cannot be changed.
+        site = Site.objects.create(name="Test Site", status=Status.objects.get_for_model(Site).first())
+        parent_loc = Location.objects.create(
+            name="Parent 1", location_type=parent, site=site, status=Status.objects.get_for_model(Location).first()
+        )
+        child_loc = Location.objects.create(
+            name="Child 1", location_type=child, parent=parent_loc, status=Status.objects.get_for_model(Location).last()
+        )
+        child.parent = None
+        with self.assertRaisesMessage(
+            ValidationError,
+            "This LocationType currently has Locations using it, therefore its parent cannot be changed at this time.",
+        ):
+            child.validated_save()
+
+        # If the locations are deleted, it again becomes re-parent-able.
+        child_loc.delete()
+        child.validated_save()
 
 
 class LocationTestCase(TestCase):
@@ -1227,3 +1304,63 @@ class PowerPanelTestCase(TestCase):
             f'Rack group "Rack Group 1" belongs to a location ("{location_2.name}") that does not contain "{location_1.name}"',
             str(cm.exception),
         )
+
+
+class InterfaceTestCase(TestCase):
+    def setUp(self):
+        manufacturer = Manufacturer.objects.create(name="Manufacturer 1", slug="manufacturer-1")
+        devicetype = DeviceType.objects.create(manufacturer=manufacturer, model="Device Type 1", slug="device-type-1")
+        devicerole = DeviceRole.objects.create(name="Device Role 1", slug="device-role-1")
+        site = Site.objects.create(name="Site-1", slug="site-1")
+        self.vlan = VLAN.objects.create(name="VLAN 1", vid=100, site=site)
+        status = Status.objects.get_for_model(Device)[0]
+        self.device = Device.objects.create(
+            name="Device 1",
+            device_type=devicetype,
+            device_role=devicerole,
+            site=site,
+            status=status,
+        )
+
+    def test_tagged_vlan_raise_error_if_mode_not_set_to_tagged(self):
+        interface = Interface.objects.create(
+            name="Int1",
+            type=InterfaceTypeChoices.TYPE_VIRTUAL,
+            device=self.device,
+        )
+        with self.assertRaises(ValidationError) as err:
+            interface.tagged_vlans.add(self.vlan)
+        self.assertEqual(
+            err.exception.message_dict["tagged_vlans"][0], "Mode must be set to tagged when specifying tagged_vlans"
+        )
+
+    def test_tagged_vlan_raise_error_if_mode_is_changed_without_clearing_tagged_vlans(self):
+        interface = Interface.objects.create(
+            name="Int2",
+            type=InterfaceTypeChoices.TYPE_VIRTUAL,
+            device=self.device,
+            mode=InterfaceModeChoices.MODE_TAGGED,
+        )
+        interface.tagged_vlans.add(self.vlan)
+
+        interface.mode = InterfaceModeChoices.MODE_ACCESS
+        with self.assertRaises(ValidationError) as err:
+            interface.validated_save()
+        self.assertEqual(err.exception.message_dict["tagged_vlans"][0], "Clear tagged_vlans to set mode to access")
+
+
+class SiteTestCase(TestCase):
+    def test_latitude_or_longitude(self):
+        """Test latitude and longitude is parsed to string."""
+        active_status = Status.objects.get_for_model(Site).get(slug="active")
+        site = Site(
+            name="Site A",
+            slug="site-a",
+            status=active_status,
+            longitude=55.1234567896,
+            latitude=55.1234567896,
+        )
+        site.validated_save()
+
+        self.assertEqual(site.longitude, Decimal("55.123457"))
+        self.assertEqual(site.latitude, Decimal("55.123457"))
