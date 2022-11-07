@@ -14,7 +14,12 @@ If you are a user migrating from NetBox to Nautobot, please refer to the ["Migra
 
 #### TODO: [#1892](https://github.com/nautobot/nautobot/issues/1892) - Added `DeviceRedundancyGroup` model for representing a logical grouping of physical hardware for the purposes of high-availability
 
-#### TODO: [#2536](https://github.com/nautobot/nautobot/issues/2536) - Added `nautobot-server generate_test_data` command
+#### Added `nautobot-server generate_test_data` command [#2536](https://github.com/nautobot/nautobot/issues/2536)
+
+A new management command, [`nautobot-server generate_test_data`](../administration/nautobot-server.md#generate_test_data), has been added that can be used to populate the Nautobot database with various data as a baseline for manual or automated testing. This is now used internally by Nautobot's unit testing suite to create a synthetic data set that looks and feels like real data with randomly-generated values. Most importantly, the objects are created with all of the fields fully and correctly populated, to assert that each object in the database is properly exercising all features.
+
+!!! warning
+    Be very cautious about running this command on your server instance. It is not intended to be used in production environments and will result in data loss.
 
 #### Custom Celery Task Queues ([#2421](https://github.com/nautobot/nautobot/pull/2421))
 
