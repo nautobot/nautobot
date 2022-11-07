@@ -1,1 +1,0 @@
-Fixed incorrect file permissions on `/opt/nautobot/nautobot_config.py` in `final` Docker images.
