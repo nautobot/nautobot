@@ -411,7 +411,7 @@ class RelationshipModelBulkEditFormMixin(BulkEditForm):
             for editing in self.cleaned_data["pk"]:
                 editing_verbose_name = editing._meta.verbose_name
                 required_target_side = RelationshipSideChoices.OPPOSITE[relationship.required_on]
-                required_target_type = getattr(relationship, f'{required_target_side}_type')
+                required_target_type = getattr(relationship, f"{required_target_side}_type")
                 required_type_verbose_name = required_target_type.model_class()._meta.verbose_name
                 filter_kwargs = {
                     "relationship": relationship,
