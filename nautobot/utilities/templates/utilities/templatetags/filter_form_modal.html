@@ -1,0 +1,87 @@
+{% load form_helpers %}
+{% load static %}
+
+{% block extra_styles %}
+<style>
+    #filterform-table {
+        table-layout: fixed;
+    }
+    #filterform-table thead th:last-child {
+        width: 5em;
+    }
+</style>
+{% endblock %}
+
+<div class="modal fade" tabindex="-1" id="{{ filter_form_name }}_modal">
+    <div class="modal-dialog modal-lg" style="width: 90% !important;">
+        <div class="modal-content">
+            <div class="modal-header">
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+                <h4 class="modal-title">Filter {{ model_plural_name }}</h4>
+            </div>
+            <div class="modal-body">
+                <ul id="tabs" class="nav nav-tabs">
+                    {% if filter_form %}
+                    <li role="presentation" class="active">
+                        <a href="#default-filter" role="tab" data-toggle="tab">
+                            Default
+                        </a>
+                    </li>
+                    {% endif %}
+                    {% if dynamic_filter_form %}
+                    <li role="presentation" class="{% if not filter_form %} active {% endif %}">
+                        <a href="#advanced-filter" role="tab" data-toggle="tab">
+                            Advanced
+                        </a>
+                    </li>
+                    {% endif %}
+                </ul>
+                <div class="tab-content">
+                    {% if filter_form %}
+                    <div id="default-filter" role="tabpanel" class="tab-pane active">
+                        {% include 'inc/search_panel.html' %}
+                    </div>
+                    {% endif %}
+                    {% if dynamic_filter_form %}
+                    <div id="advanced-filter" role="tabpanel" class="tab-pane {% if not filter_form %} active {% endif %}">
+                        <form id="dynamic-filter-form" class="form-horizontal" method="get" action=".">
+                            <div class="">
+                                <table class="table" id="filterform-table">
+                                    {{ dynamic_filter_form.management_form }}
+                                    {% for form in dynamic_filter_form %}
+                                        {% if forloop.first %}
+                                            <thead>
+                                                <tr>
+                                                    {% for field in form.visible_fields %}
+                                                        <th>{{ field.label|capfirst }}</th>
+                                                    {% endfor %}
+                                                </tr>
+                                            </thead>
+                                        {% endif %}
+                                        <tr class="formset_row-dynamic-filterform">
+                                            {% for field in form.visible_fields %}
+                                                <td>
+                                                    {{ field }}
+                                                </td>
+                                            {% endfor %}
+                                        </tr>
+                                    {% endfor %}
+                                </table>
+                            </div>
+
+                            <div class="text-right noprint">
+                                <button type="submit" class="btn btn-primary">
+                                    <span class="mdi mdi-magnify" aria-hidden="true"></span> Apply
+                                </button>
+                                <a href="." class="btn btn-default">
+                                    <span class="mdi mdi-close-thick" aria-hidden="true"></span> Clear
+                                </a>
+                            </div>
+                        </form>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

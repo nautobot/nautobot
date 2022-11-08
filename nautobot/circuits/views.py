@@ -37,6 +37,7 @@ class CircuitTypeUIViewSet(
         # Circuits
         context = super().get_extra_context(request, instance)
         if self.action == "retrieve":
+            # v2 TODO(jathan): Replace prefetch_related with select_related
             circuits = (
                 Circuit.objects.restrict(request.user, "view")
                 .filter(type=instance)
@@ -88,6 +89,7 @@ class ProviderUIViewSet(NautobotUIViewSet):
     def get_extra_context(self, request, instance):
         context = super().get_extra_context(request, instance)
         if self.action == "retrieve":
+            # v2 TODO(jathan): Replace prefetch_related with select_related
             circuits = (
                 Circuit.objects.restrict(request.user, "view")
                 .filter(provider=instance)
@@ -113,6 +115,7 @@ class CircuitUIViewSet(NautobotUIViewSet):
     filterset_form_class = forms.CircuitFilterForm
     form_class = forms.CircuitForm
     lookup_field = "pk"
+    # v2 TODO(jathan): Replace prefetch_related with select_related
     prefetch_related = ["provider", "type", "tenant", "termination_a", "termination_z"]
     queryset = Circuit.objects.all()
     serializer_class = serializers.CircuitSerializer
@@ -122,6 +125,7 @@ class CircuitUIViewSet(NautobotUIViewSet):
         context = super().get_extra_context(request, instance)
         if self.action == "retrieve":
             # A-side termination
+            # v2 TODO(jathan): Replace prefetch_related with select_related
             termination_a = (
                 CircuitTermination.objects.restrict(request.user, "view")
                 .prefetch_related("site__region")
@@ -138,6 +142,7 @@ class CircuitUIViewSet(NautobotUIViewSet):
                 )
 
             # Z-side termination
+            # v2 TODO(jathan): Replace prefetch_related with select_related
             termination_z = (
                 CircuitTermination.objects.restrict(request.user, "view")
                 .prefetch_related("site__region")
@@ -172,6 +177,7 @@ class ProviderNetworkUIViewSet(NautobotUIViewSet):
     def get_extra_context(self, request, instance):
         context = super().get_extra_context(request, instance)
         if self.action == "retrieve":
+            # v2 TODO(jathan): Replace prefetch_related with select_related
             circuits = (
                 Circuit.objects.restrict(request.user, "view")
                 .filter(Q(termination_a__provider_network=instance.pk) | Q(termination_z__provider_network=instance.pk))

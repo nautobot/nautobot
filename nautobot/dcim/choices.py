@@ -1194,3 +1194,35 @@ class PowerFeedPhaseChoices(ChoiceSet):
         (PHASE_SINGLE, "Single phase"),
         (PHASE_3PHASE, "Three-phase"),
     )
+
+
+#
+# Device Redundancy Groups
+#
+
+
+class DeviceRedundancyGroupStatusChoices(ChoiceSet):
+
+    STATUS_PLANNED = "planned"
+    STATUS_STAGING = "staging"
+    STATUS_ACTIVE = "active"
+    STATUS_DECOMMISSIONING = "decommissioning"
+    STATUS_RETIRED = "retired"
+
+    CHOICES = (
+        (STATUS_PLANNED, "Planned"),
+        (STATUS_STAGING, "Staging"),
+        (STATUS_ACTIVE, "Active"),
+        (STATUS_DECOMMISSIONING, "Decommissioning"),
+        (STATUS_RETIRED, "Retired"),
+    )
+
+
+class DeviceRedundancyGroupFailoverStrategyChoices(ChoiceSet):
+    FAILOVER_ACTIVE_ACTIVE = "active-active"
+    FAILOVER_ACTIVE_PASSIVE = "active-passive"
+
+    CHOICES = (
+        (FAILOVER_ACTIVE_ACTIVE, "Active/Active"),
+        (FAILOVER_ACTIVE_PASSIVE, "Active/Passive"),
+    )

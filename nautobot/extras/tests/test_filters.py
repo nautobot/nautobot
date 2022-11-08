@@ -163,23 +163,15 @@ class ConfigContextTestCase(FilterTestCases.FilterTestCase):
     @classmethod
     def setUpTestData(cls):
 
-        regions = (
-            Region.objects.create(name="Test Region 1", slug="test-region-1"),
-            Region.objects.create(name="Test Region 2", slug="test-region-2"),
-            Region.objects.create(name="Test Region 3", slug="test-region-3"),
-        )
-
-        sites = (
-            Site.objects.create(name="Test Site 1", slug="test-site-1"),
-            Site.objects.create(name="Test Site 2", slug="test-site-2"),
-            Site.objects.create(name="Test Site 3", slug="test-site-3"),
-        )
+        regions = Region.objects.all()[:3]
+        sites = Site.objects.all()[:3]
 
         device_roles = (
             DeviceRole.objects.create(name="Device Role 1", slug="device-role-1"),
             DeviceRole.objects.create(name="Device Role 2", slug="device-role-2"),
             DeviceRole.objects.create(name="Device Role 3", slug="device-role-3"),
         )
+        cls.device_roles = device_roles
 
         manufacturer = Manufacturer.objects.create(name="Manufacturer 1", slug="manufacturer-1")
 
@@ -188,12 +180,14 @@ class ConfigContextTestCase(FilterTestCases.FilterTestCase):
             DeviceType.objects.create(model="Device Type 2", slug="device-type-2", manufacturer=manufacturer),
             DeviceType.objects.create(model="Device Type 3", slug="device-type-3", manufacturer=manufacturer),
         )
+        cls.device_types = device_types
 
         platforms = (
             Platform.objects.create(name="Platform 1", slug="platform-1"),
             Platform.objects.create(name="Platform 2", slug="platform-2"),
             Platform.objects.create(name="Platform 3", slug="platform-3"),
         )
+        cls.platforms = platforms
 
         cluster_groups = (
             ClusterGroup.objects.create(name="Cluster Group 1", slug="cluster-group-1"),
@@ -208,17 +202,9 @@ class ConfigContextTestCase(FilterTestCases.FilterTestCase):
             Cluster.objects.create(name="Cluster 3", type=cluster_type),
         )
 
-        tenant_groups = (
-            TenantGroup.objects.create(name="Tenant Group 1", slug="tenant-group-1"),
-            TenantGroup.objects.create(name="Tenant Group 2", slug="tenant-group-2"),
-            TenantGroup.objects.create(name="Tenant Group 3", slug="tenant-group-3"),
-        )
+        cls.tenant_groups = TenantGroup.objects.filter(tenants__isnull=True)[:3]
 
-        tenants = (
-            Tenant.objects.create(name="Tenant 1", slug="tenant-1"),
-            Tenant.objects.create(name="Tenant 2", slug="tenant-2"),
-            Tenant.objects.create(name="Tenant 3", slug="tenant-3"),
-        )
+        cls.tenants = Tenant.objects.filter(group__isnull=True)[:3]
 
         for i in range(0, 3):
             is_active = bool(i % 2)
@@ -234,8 +220,8 @@ class ConfigContextTestCase(FilterTestCases.FilterTestCase):
             c.platforms.set([platforms[i]])
             c.cluster_groups.set([cluster_groups[i]])
             c.clusters.set([clusters[i]])
-            c.tenant_groups.set([tenant_groups[i]])
-            c.tenants.set([tenants[i]])
+            c.tenant_groups.set([cls.tenant_groups[i]])
+            c.tenants.set([cls.tenants[i]])
 
     def test_name(self):
         params = {"name": ["Config Context 1", "Config Context 2"]}
@@ -262,25 +248,25 @@ class ConfigContextTestCase(FilterTestCases.FilterTestCase):
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
 
     def test_role(self):
-        device_roles = DeviceRole.objects.all()[:2]
+        device_roles = self.device_roles[:2]
         params = {"role_id": [device_roles[0].pk, device_roles[1].pk]}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), len(device_roles))
         params = {"role": [device_roles[0].slug, device_roles[1].slug]}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), len(device_roles))
 
     def test_type(self):
-        device_types = DeviceType.objects.all()[:2]
+        device_types = self.device_types[:2]
         params = {"device_type_id": [device_types[0].pk, device_types[1].pk]}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), len(device_types))
         params = {"device_type": [device_types[0].slug, device_types[1].slug]}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), len(device_types))
 
     def test_platform(self):
-        platforms = Platform.objects.all()[:2]
+        platforms = self.platforms[:2]
         params = {"platform_id": [platforms[0].pk, platforms[1].pk]}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), len(platforms))
         params = {"platform": [platforms[0].slug, platforms[1].slug]}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), len(platforms))
 
     def test_cluster_group(self):
         cluster_groups = ClusterGroup.objects.all()[:2]
@@ -295,14 +281,14 @@ class ConfigContextTestCase(FilterTestCases.FilterTestCase):
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
 
     def test_tenant_group(self):
-        tenant_groups = TenantGroup.objects.all()[:2]
+        tenant_groups = self.tenant_groups[:2]
         params = {"tenant_group_id": [tenant_groups[0].pk, tenant_groups[1].pk]}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
         params = {"tenant_group": [tenant_groups[0].slug, tenant_groups[1].slug]}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
 
-    def test_tenant_(self):
-        tenants = Tenant.objects.all()[:2]
+    def test_tenant_id(self):
+        tenants = self.tenants[:2]
         params = {"tenant_id": [tenants[0].pk, tenants[1].pk]}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
         params = {"tenant": [tenants[0].slug, tenants[1].slug]}
@@ -623,10 +609,7 @@ class ImageAttachmentTestCase(FilterTestCases.FilterTestCase):
         site_ct = ContentType.objects.get(app_label="dcim", model="site")
         rack_ct = ContentType.objects.get(app_label="dcim", model="rack")
 
-        sites = (
-            Site.objects.create(name="Site 1", slug="site-1"),
-            Site.objects.create(name="Site 2", slug="site-2"),
-        )
+        sites = Site.objects.all()[:2]
 
         racks = (
             Rack.objects.create(name="Rack 1", site=sites[0]),
@@ -852,7 +835,7 @@ class ObjectChangeTestCase(FilterTestCases.FilterTestCase):
             User.objects.create(username="user3"),
         )
 
-        site = Site.objects.create(name="Test Site 1", slug="test-site-1")
+        site = Site.objects.first()
         ipaddress = IPAddress.objects.create(address="192.0.2.1/24")
 
         ObjectChange.objects.create(
@@ -1017,7 +1000,7 @@ class RelationshipAssociationTestCase(FilterTestCases.FilterTestCase):
         manufacturer = Manufacturer.objects.create(name="Manufacturer 1", slug="manufacturer-1")
         devicetype = DeviceType.objects.create(manufacturer=manufacturer, model="Device Type 1", slug="device-type-1")
         devicerole = DeviceRole.objects.create(name="Device Role 1", slug="device-role-1")
-        site = Site.objects.create(name="Site 1", slug="site-1")
+        site = Site.objects.first()
         cls.devices = (
             Device.objects.create(name="Device 1", device_type=devicetype, device_role=devicerole, site=site),
             Device.objects.create(name="Device 2", device_type=devicetype, device_role=devicerole, site=site),
@@ -1135,7 +1118,7 @@ class RelationshipModelFilterSetTestCase(FilterTestCases.FilterTestCase):
         manufacturer = Manufacturer.objects.create(name="Manufacturer 1", slug="manufacturer-1")
         devicetype = DeviceType.objects.create(manufacturer=manufacturer, model="Device Type 1", slug="device-type-1")
         devicerole = DeviceRole.objects.create(name="Device Role 1", slug="device-role-1")
-        site = Site.objects.create(name="Site 1", slug="site-1")
+        site = Site.objects.first()
         cls.devices = (
             Device.objects.create(name="Device 1", device_type=devicetype, device_role=devicerole, site=site),
             Device.objects.create(name="Device 2", device_type=devicetype, device_role=devicerole, site=site),
@@ -1415,19 +1398,6 @@ class StatusTestCase(FilterTestCases.NameSlugFilterTestCase):
     queryset = Status.objects.all()
     filterset = StatusFilterSet
 
-    @classmethod
-    def setUpTestData(cls):
-        """
-        Since many `Status` objects are created as part of data migrations, we're
-        testing against those. If this seems magical, it's because they are
-        imported from `ChoiceSet` enum objects.
-
-        This method is defined just so it's clear that there is no need to
-        create test data for this test case.
-
-        See `extras.management.create_custom_statuses` for context.
-        """
-
     def test_content_types(self):
         ct = ContentType.objects.get_for_model(Device)
         status_count = self.queryset.filter(content_types=ct).count()
@@ -1446,10 +1416,18 @@ class StatusTestCase(FilterTestCases.NameSlugFilterTestCase):
 
     def test_search(self):
         params = {"q": "active"}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 1)
-        value = self.queryset.values_list("pk", flat=True)[0]
+        q = Q(id__iexact="active") | Q(name__icontains="active") | Q(slug__icontains="active")
+        q |= Q(content_types__model__icontains="active")
+        self.assertQuerysetEqualAndNotEmpty(
+            self.filterset(params, self.queryset).qs,
+            self.queryset.filter(q).distinct(),
+        )
+        value = self.queryset.first().pk
         params = {"q": value}
-        self.assertEqual(self.filterset(params, self.queryset).qs.values_list("pk", flat=True)[0], value)
+        self.assertQuerysetEqualAndNotEmpty(
+            self.filterset(params, self.queryset).qs,
+            self.queryset.filter(pk=value),
+        )
 
 
 class TagTestCase(FilterTestCases.NameSlugFilterTestCase):
@@ -1458,29 +1436,20 @@ class TagTestCase(FilterTestCases.NameSlugFilterTestCase):
 
     @classmethod
     def setUpTestData(cls):
-        cls.tags = (
-            Tag.objects.create(name="Tag 1", slug="tag-1", color="ff0000"),
-            Tag.objects.create(name="Tag 2", slug="tag-2", color="00ff00"),
-            Tag.objects.create(name="Tag 3", slug="tag-3", color="0000ff"),
-        )
-        cls.site_content_type = ContentType.objects.get_for_model(Site)
-        cls.tags[0].content_types.add(cls.site_content_type)
-
-        for tag in cls.tags[1:]:
-            tag.content_types.add(ContentType.objects.get_for_model(Device))
+        cls.tags = Tag.objects.all()
 
     def test_color(self):
-        params = {"color": ["ff0000", "00ff00"]}
+        params = {"color": [self.tags[0].color, self.tags[1].color]}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
 
     def test_content_types(self):
-        params = {"content_types": [f"{self.site_content_type.app_label}.{self.site_content_type.model}"]}
+        params = {"content_types": ["dcim.site"]}
         filtered_data = self.filterset(params, self.queryset).qs
-        self.assertEqual(filtered_data.count(), 1)
-        self.assertEqual(filtered_data[0], self.tags[0])
+        self.assertQuerysetEqual(filtered_data, Tag.objects.get_for_model(Site))
+        self.assertEqual(filtered_data[0], Tag.objects.get_for_model(Site)[0])
 
     def test_search(self):
-        params = {"q": "tag-1"}
+        params = {"q": self.tags[0].slug}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 1)
         value = self.queryset.values_list("pk", flat=True)[0]
         params = {"q": value}

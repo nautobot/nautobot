@@ -4,7 +4,14 @@ from nautobot.dcim.models import Location, LocationType
 from nautobot.dcim.tables.template_code import TREE_LINK
 from nautobot.extras.tables import StatusTableMixin
 from nautobot.tenancy.tables import TenantColumn
-from nautobot.utilities.tables import BaseTable, ButtonsColumn, ContentTypesColumn, TagColumn, ToggleColumn
+from nautobot.utilities.tables import (
+    BaseTable,
+    BooleanColumn,
+    ButtonsColumn,
+    ContentTypesColumn,
+    TagColumn,
+    ToggleColumn,
+)
 
 __all__ = (
     "LocationTable",
@@ -15,8 +22,9 @@ __all__ = (
 class LocationTypeTable(BaseTable):
     pk = ToggleColumn()
     name = tables.TemplateColumn(template_code=TREE_LINK, orderable=False, attrs={"td": {"class": "text-nowrap"}})
-    content_types = ContentTypesColumn(truncate_words=15)
     parent = tables.Column(linkify=True)
+    nestable = BooleanColumn()
+    content_types = ContentTypesColumn(truncate_words=15)
     actions = ButtonsColumn(LocationType, pk_field="slug")
 
     class Meta(BaseTable.Meta):
@@ -26,6 +34,7 @@ class LocationTypeTable(BaseTable):
             "name",
             "slug",
             "parent",
+            "nestable",
             "content_types",
             "description",
             "actions",
@@ -33,6 +42,7 @@ class LocationTypeTable(BaseTable):
         default_columns = (
             "pk",
             "name",
+            "nestable",
             "content_types",
             "description",
             "actions",

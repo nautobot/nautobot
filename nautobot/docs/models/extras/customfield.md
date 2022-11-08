@@ -1,6 +1,6 @@
 # Custom Fields
 
-Each model in Nautobot is represented in the database as a discrete table, and each attribute of a model exists as a column within its table. For example, sites are stored in the `dcim_site` table, which has columns named `name`, `facility`, `physical_address`, and so on. As new attributes are added to objects throughout the development of Nautobot, tables are expanded to include new rows.
+Each model in Nautobot is represented in the database as a discrete table, and each attribute of a model exists as a column within its table. For example, sites are stored in the `dcim_site` table, which has columns named `name`, `facility`, `physical_address`, and so on. As new attributes are added to objects throughout the development of Nautobot, tables are expanded to include new columns.
 
 However, some users might want to store additional object attributes that are somewhat esoteric in nature, and that would not make sense to include in the core Nautobot database schema. For instance, suppose your organization needs to associate each device with a ticket number correlating it with an internal support system record. This is certainly a legitimate use for Nautobot, but it's not a common enough need to warrant including a field for _every_ Nautobot installation. Instead, you can create a custom field to hold this data.
 
@@ -42,7 +42,10 @@ Marking a field as required will force the user to provide a value for the field
 
 The filter logic controls how values are matched when filtering objects by the custom field. Loose filtering (the default) matches on a partial value, whereas exact matching requires a complete match of the given string to a field's value. For example, exact filtering with the string "red" will only match the exact value "red", whereas loose filtering will match on the values "red", "red-orange", or "bored". Setting the filter logic to "disabled" disables filtering by the field entirely.
 
-A custom field must be assigned to one or object types, or models, in Nautobot. Once created, custom fields will automatically appear as part of these models in the web UI and REST API.
++/- 1.4.0
+    Custom field [extended filtering](../../rest-api/filtering.md#lookup-expressions) introduced extended lookup expression filters for `exact` and `icontains`, duplicating the functionality of both the `Strict` and `Loose` settings.
+
+A custom field must be assigned to one or more object types, or models, in Nautobot. Once created, custom fields will automatically appear as part of these models in the web UI and REST API.
 
 When creating a custom field, if "Move to Advanced tab" is checked, this custom field won't appear on the object's main detail tab in the UI, but will appear in the "Advanced" tab. This is useful when the requirement is to hide this field from the main detail tab when, for instance, it is only required for machine-to-machine communication and not user consumption.
 
@@ -116,3 +119,7 @@ To set or change custom field values, simply include nested JSON data in your RE
     }
 }
 ```
+
+## Custom Fields User Guide
+
+More in depth documentation on how to use custom fields can be found in the [custom fields user guide](../../user-guides/custom-fields.md).
