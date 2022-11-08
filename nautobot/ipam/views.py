@@ -418,6 +418,8 @@ class PrefixListView(generic.ObjectListView):
         self._queryset = None
         super().__init__(*args, **kwargs)
 
+    # 2.0 TODO: Remove this after IPAM models are trees in 2.0. When the data model changes to 1.)
+    # be tree-based, 2.) use NautobotViewSet this can be removed
     @property
     def queryset(self):
         """
@@ -427,7 +429,6 @@ class PrefixListView(generic.ObjectListView):
         When `settings.DISABLE_PREFIX_LIST_HIERARCHY` is True, we do not annotate the queryset, and the
         table is rendered as a flat list.
 
-        2.0 TODO(john): When the data model changes to 1.) be tree-based, 2.) use NautobotViewSet this can be removed
         """
         if self._queryset is not None:
             return self._queryset

@@ -774,7 +774,7 @@ class DeviceTypeFilterSet(NautobotFilterSet):
         return queryset.exclude(devicebaytemplates__isnull=value)
 
 
-# 2.0 TODO: should be DeviceTypeComponentFilterSetMixin
+# 2.0 TODO: Introduce DeviceTypeComponentFilterSetMixin in v2, rip out in v2.2.
 class DeviceTypeComponentFilterSet(NameSlugSearchFilterSet, CustomFieldModelFilterSet):
     devicetype_id = django_filters.ModelMultipleChoiceFilter(
         queryset=DeviceType.objects.all(),
@@ -1126,7 +1126,7 @@ class DeviceFilterSet(
         return queryset.filter(params)
 
 
-# 2.0 TODO: should be DeviceComponentFilterSetMixin
+# 2.0 TODO: Introduce DeviceComponentFilterSetMixin in 1.5, remove in 2.2.
 class DeviceComponentFilterSet(CustomFieldModelFilterSet):
     q = SearchFilter(
         filter_predicates={
@@ -1169,7 +1169,7 @@ class DeviceComponentFilterSet(CustomFieldModelFilterSet):
     tag = TagFilter()
 
 
-# 2.0 TODO: should be CableTerminationFilterSetMixin
+# 2.0 TODO: Introduce CableTerminationFilterSetMixin in 1.5, remove in 2.2
 class CableTerminationFilterSet(django_filters.FilterSet):
     cabled = django_filters.BooleanFilter(field_name="cable", lookup_expr="isnull", exclude=True)
     cable = django_filters.ModelMultipleChoiceFilter(
@@ -1178,7 +1178,7 @@ class CableTerminationFilterSet(django_filters.FilterSet):
     )
 
 
-# 2.0 TODO: should be PathEndpointFilterSetMixin
+# 2.0 TODO: Introduce PathEndpointFilterSetMixin in 1.5, remove in 2.2
 class PathEndpointFilterSet(django_filters.FilterSet):
     connected = django_filters.BooleanFilter(method="filter_connected", label="Connected status (bool)")
 
@@ -1649,7 +1649,7 @@ class CableFilterSet(NautobotFilterSet, StatusModelFilterSetMixin):
         return queryset
 
 
-# 2.0 TODO: should be ConnectionFilterSetMixin
+# TODO: Introduce ConnectionFilterSetMixin in 1.5, remove in 2.2.
 class ConnectionFilterSet:
     def filter_site(self, queryset, name, value):
         if not value.strip():

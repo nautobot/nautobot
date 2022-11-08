@@ -263,7 +263,6 @@ class ConfigContextBulkEditForm(BootstrapMixin, NoteModelBulkEditFormMixin, Bulk
 
 class ConfigContextFilterForm(BootstrapMixin, forms.Form):
     q = forms.CharField(required=False, label="Search")
-    # 2.0 TODO(glenn) filtering by owner_content_type should be solved by dynamic filter form generation
     schema = DynamicModelChoiceField(queryset=ConfigContextSchema.objects.all(), to_field_name="slug", required=False)
     region = DynamicModelMultipleChoiceField(queryset=Region.objects.all(), to_field_name="slug", required=False)
     site = DynamicModelMultipleChoiceField(queryset=Site.objects.all(), to_field_name="slug", required=False)
@@ -316,7 +315,6 @@ class ConfigContextSchemaBulkEditForm(NautobotBulkEditForm):
 
 class ConfigContextSchemaFilterForm(BootstrapMixin, forms.Form):
     q = forms.CharField(required=False, label="Search")
-    # 2.0 TODO(glenn) filtering by owner_content_type should be solved by dynamic filter form generation
 
 
 #

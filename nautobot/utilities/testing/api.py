@@ -209,7 +209,7 @@ class APIViewTestCases:
                 with disable_warnings("django.request"):
                     self.assertHttpStatus(self.client.get(url, **self.header), status.HTTP_403_FORBIDDEN)
             else:
-                # TODO FIXME(Glenn): if we're passing **self.header, we are *by definition* **NOT** anonymous!!
+                # TODO(Glenn): if we're passing **self.header, we are *by definition* **NOT** anonymous!!
                 response = self.client.get(url, **self.header)
                 self.assertHttpStatus(response, status.HTTP_200_OK)
                 self.assertIsInstance(response.data, dict)

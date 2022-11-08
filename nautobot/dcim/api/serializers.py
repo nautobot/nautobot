@@ -962,7 +962,7 @@ class PowerPortSerializer(
         ]
 
 
-# 2.0 TODO: collapse this with InterfaceSerializer in 2.0.
+# 2.0 TODO: This becomes non-default in 2.0, removed in 2.2.
 class InterfaceSerializerVersion12(
     NautobotModelSerializer,
     TaggedObjectSerializer,

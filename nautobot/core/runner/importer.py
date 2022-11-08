@@ -66,6 +66,7 @@ class LoganImporter:
         return f"<{type(self)} for '{self.name}' ({self.config_path})>"
 
     def validate(self):
+        # TODO(dcramer): is there a better way to handle validation so it
         # is lazy and actually happens in LoganLoader?
         try:
             execfile(self.config_path, {"__file__": self.config_path})
@@ -78,7 +79,7 @@ class LoganImporter:
 
         Ref: https://docs.python.org/3/library/importlib.html#importlib.abc.MetaPathFinder.find_module
 
-        FIXME(jathan): find_module() API is deprecated, convert this to find_spec() instead.
+        TODO(jathan): find_module() API is deprecated, convert this to find_spec() instead.
         """
         # Only find/load the module matching self.name - otherwise let the standard Python import machinery handle it
         if fullname != self.name:

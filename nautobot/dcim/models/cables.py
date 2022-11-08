@@ -335,7 +335,7 @@ class CablePath(BaseModel):
     )
     destination_id = models.UUIDField(blank=True, null=True)
     destination = GenericForeignKey(ct_field="destination_type", fk_field="destination_id")
-    # 2.0 TODO: Profile filtering on this field if it could benefit from an index
+    # TODO: Profile filtering on this field if it could benefit from an index
     path = JSONPathField()
     is_active = models.BooleanField(default=False)
     is_split = models.BooleanField(default=False)

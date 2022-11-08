@@ -115,7 +115,7 @@ __all__ = (
 #
 
 
-# 2.0 TODO: should be CreatedUpdatedFilterSetMixin.
+# TODO: Introduce CreatedUpdatedFilterSetMixin in 1.5. remove in 2.2.
 class CreatedUpdatedFilterSet(django_filters.FilterSet):
     created = django_filters.DateFilter()
     created__gte = django_filters.DateFilter(field_name="created", lookup_expr="gte")
@@ -535,7 +535,7 @@ class CustomFieldMultiValueNumberFilter(CustomFieldFilterMixin, MultiValueNumber
     """Custom field multi value number filter for extended lookup expressions"""
 
 
-# 2.0 TODO: should be CustomFieldModelFilterSetMixin
+# TODO: Introduce CustomFieldModelFilterSetMixin in 1.5, remove in 2.2.
 class CustomFieldModelFilterSet(django_filters.FilterSet):
     """
     Dynamically add a Filter for each CustomField applicable to the parent model. Add filters for
@@ -983,7 +983,7 @@ class ScheduledJobFilterSet(BaseFilterSet):
 #
 
 
-# 2.0 TODO: should be LocalContextFilterSetMixin
+# 2.0 TODO: Introduce LocalContextFilterSetMixin in 1.5, remove in 2.2.
 class LocalContextFilterSet(django_filters.FilterSet):
     local_context_data = django_filters.BooleanFilter(
         method="_local_context_data",
@@ -1137,7 +1137,8 @@ class SecretFilterSet(
             "slug": "icontains",
         },
     )
-    # 2.0 TODO(Glenn): dynamic choices needed. May be solved by `NaturalKeyorMultipleChoicePKFilter`?
+    # TODO(Glenn): dynamic choices needed. The issue being that secrets providers are Python
+    # classes, not database models.
     # provider = django_filters.MultipleChoiceFilter(choices=..., null_value=None)
 
     class Meta:

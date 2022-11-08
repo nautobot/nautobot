@@ -5047,4 +5047,4 @@ class DeviceRedundancyGroupTestCase(FilterTestCases.FilterTestCase):
             )
 
 
-# 2.0 TODO: Connection filters
+# TODO: Connection filters
