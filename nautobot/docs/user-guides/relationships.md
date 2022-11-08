@@ -4,7 +4,7 @@ Relationships are defined between one (or more) objects in your source of truth 
 
 For more technical details on how to use this feature, please see the documentation on [Relationships](../models/extras/relationship.md).
 
-### Relationship details
+## Relationship details
 
 This table defines repository parameters that are required to establish a relationship.
 

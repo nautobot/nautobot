@@ -62,10 +62,11 @@ STATICFILES_STORAGE = STORAGE_BACKEND
 If `AWS_ACCESS_KEY_ID` and `AWS_SECRET_ACCESS_KEY` are not set, `boto3` [internally looks up IAM credentials](https://boto3.amazonaws.com/v1/documentation/api/latest/guide/credentials.html).  Using an [IAM Role for EC2](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/iam-roles-for-amazon-ec2.html?icmpid=docs_ec2_console) is highly recommended.
 
 The `STORAGE_CONFIG` has some valuable pieces of information.
-  - Access Key and Secret Key are for authentication and authorization of the S3 bucket.
-  - Storage bucket name is the S3 bucket name, within the bucket provided the aws location will be used to build the parent directory structure.
+
+- Access Key and Secret Key are for authentication and authorization of the S3 bucket.
+- Storage bucket name is the S3 bucket name, within the bucket provided the aws location will be used to build the parent directory structure.
     - In the example above the static files will be stored in `f"{AWS_STORAGE_BUCKET_NAME}.s3.amazonaws.com/{AWS_LOCATION}"`
-  - Finally, region is where the s3 bucket resides.
+- Finally, region is where the s3 bucket resides.
 
 !!! info
     The remaining options are not required, but django-storages documentation should be reviewed to understand the security requirements.
@@ -140,4 +141,5 @@ When a user uploads a new software image to this model it will be stored in `<AW
 This is valuable because you may have certain models in a plugin or other enhancements that need to have more specific granularity in the S3 bucket they belong in, also it may be crucial to have different S3 IAM requirements for certain files over the general static files the Nautobot application needs to run appropriately.
 
 ## Summary
+
 Django-Storages is the backend library used to extend Nautobots backend storage flexibility. The same concepts above can be used for Azure Storage, Dropbox, GCP etc. As all of these have native support within the `django-storages` library.
