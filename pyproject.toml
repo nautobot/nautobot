@@ -67,7 +67,7 @@ django-mptt = "~0.14.0"
 # Prometheus metrics for Django
 django-prometheus = "~2.2.0"
 # Custom prometheus metrics
-prometheus-client = "~0.15.0"
+prometheus-client = "~0.14.1"
 # Redis cache for Django used for distributed locking
 django-redis = "~5.2.0"
 # RQ (Redis Queueing) for background handling of webhooks, jobs, etc.
