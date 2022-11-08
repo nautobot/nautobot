@@ -367,6 +367,7 @@ class RelationshipModelBulkEditFormMixin(BulkEditForm):
                 {
                     "slug": relationship.slug,
                     "required_side": RelationshipSideChoices.OPPOSITE[relationship.required_on],
+                    "relationship": relationship,
                 }
             )
 
@@ -401,9 +402,38 @@ class RelationshipModelBulkEditFormMixin(BulkEditForm):
                     "field": required_field,
                     "to_add": to_add,
                     "to_remove": to_remove,
+                    "relationship": required_relationship["relationship"],
                 }
             )
 
+        for relationship_to_check in required_relationships_to_check:
+            relationship = relationship_to_check["relationship"]
+            for editing in self.cleaned_data["pk"]:
+                editing_verbose_name = editing._meta.verbose_name
+                required_target_side = RelationshipSideChoices.OPPOSITE[relationship.required_on]
+                required_target_type = getattr(relationship, f'{required_target_side}_type')
+                required_type_verbose_name = required_target_type.model_class()._meta.verbose_name
+                filter_kwargs = {
+                    "relationship": relationship,
+                    f"{relationship.required_on}_id": editing.pk,
+                }
+                existing_objects = [
+                    getattr(association, f"get_{RelationshipSideChoices.OPPOSITE[relationship.required_on]}")()
+                    for association in RelationshipAssociation.objects.filter(**filter_kwargs)
+                ]
+                if len(existing_objects) == 0 and len(relationship_to_check["to_add"]) == 0:
+                    self.add_error(
+                        None,
+                        f"The {editing_verbose_name} {editing} requires a {required_type_verbose_name}",
+                    )
+                else:
+                    removed = relationship_to_check["to_remove"]
+                    difference = [obj for obj in existing_objects if obj not in removed]
+                    if len(difference) == 0:
+                        self.add_error(
+                            None,
+                            f"The {editing_verbose_name} {editing} requires a {required_type_verbose_name}",
+                        )
         return super().clean()
 
 
