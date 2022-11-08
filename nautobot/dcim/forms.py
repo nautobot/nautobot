@@ -468,6 +468,7 @@ class LocationForm(NautobotModelForm, TenancyForm):
     parent = DynamicModelChoiceField(
         queryset=Location.objects.all(),
         query_params={"child_location_type": "$location_type"},
+        to_field_name="slug",
         required=False,
     )
     site = DynamicModelChoiceField(queryset=Site.objects.all(), required=False)
