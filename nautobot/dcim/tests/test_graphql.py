@@ -10,7 +10,7 @@ from nautobot.utilities.testing import create_test_user, TestCase
 class GraphQLTestCase(TestCase):
     def setUp(self):
         self.user = create_test_user("graphql_testuser")
-        self.site = Site.objects.create(name="Site")
+        self.site = Site.objects.first()
         self.device_role = DeviceRole.objects.create(name="Switch")
         self.manufacturer = Manufacturer.objects.create(name="Brand")
         self.device_type = DeviceType.objects.create(model="Model", manufacturer=self.manufacturer)

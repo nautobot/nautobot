@@ -216,3 +216,77 @@ class APIVersioningTestCase(APITestCase):
         response = self.client.get(f"{url}?api_version={min_version}", **self.header)
         self.assertHttpStatus(response, 400)
         self.assertIn("Version mismatch", response.data["detail"])
+
+
+class LookupTypeChoicesTestCase(APITestCase):
+    def test_get_lookup_choices_without_query_params(self):
+        url = reverse("core-api:filtersetfield-list-lookupchoices")
+        response = self.client.get(url, **self.header)
+
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(response.data, "content_type and field_name are required parameters")
+
+    def test_get_lookup_field_data_invalid_query_params(self):
+        url = reverse("core-api:filtersetfield-list-lookupchoices")
+        with self.subTest("Test invalid content_type"):
+            response = self.client.get(url + "?content_type=invalid.contenttypes&field_name=name", **self.header)
+
+            self.assertEqual(response.status_code, 404)
+            self.assertEqual(response.data, "content_type not found")
+
+        with self.subTest("Test invalid field_name"):
+            response = self.client.get(url + "?content_type=dcim.site&field_name=fake", **self.header)
+
+            self.assertEqual(response.status_code, 404)
+            self.assertEqual(response.data, "field_name not found")
+
+    def test_get_lookup_choices(self):
+        url = reverse("core-api:filtersetfield-list-lookupchoices")
+        response = self.client.get(url + "?content_type=dcim.site&field_name=status", **self.header)
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(
+            response.data,
+            {
+                "count": 2,
+                "next": None,
+                "previous": None,
+                "results": [{"id": "status", "name": "exact"}, {"id": "status__n", "name": "not exact (n)"}],
+            },
+        )
+
+
+class GenerateLookupValueDomElementViewTestCase(APITestCase):
+    def test_get_lookup_field_data_without_query_params(self):
+        url = reverse("core-api:filtersetfield-retrieve-lookupvaluedomelement")
+        response = self.client.get(url, **self.header)
+
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(response.data, "content_type and field_name are required parameters")
+
+    def test_get_lookup_field_data_invalid_query_params(self):
+        url = reverse("core-api:filtersetfield-retrieve-lookupvaluedomelement")
+
+        with self.subTest("Test invalid content_type"):
+            response = self.client.get(url + "?content_type=invalid.contenttypes&field_name=name", **self.header)
+
+            self.assertEqual(response.status_code, 404)
+            self.assertEqual(response.data, "content_type not found")
+
+        with self.subTest("Test invalid field_name"):
+            response = self.client.get(url + "?content_type=dcim.site&field_name=fake", **self.header)
+
+            self.assertEqual(response.status_code, 404)
+            self.assertEqual(response.data, "field_name not found")
+
+    def test_get_lookup_value_dom_element(self):
+        url = reverse("core-api:filtersetfield-retrieve-lookupvaluedomelement")
+        response = self.client.get(url + "?content_type=dcim.site&field_name=name", **self.header)
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(
+            response.data,
+            {
+                "dom_element": '<select name="name" class="form-control nautobot-select2-multi-value-char" data-multiple="1" id="id_name" multiple>\n</select>'
+            },
+        )

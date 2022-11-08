@@ -27,6 +27,7 @@ from nautobot.dcim.models import (
     Device,
     DeviceBay,
     DeviceBayTemplate,
+    DeviceRedundancyGroup,
     DeviceRole,
     DeviceType,
     FrontPort,
@@ -76,6 +77,8 @@ class AppTest(APITestCase):
 
 class Mixins:
     class ComponentTraceMixin(APITestCase):
+        """Mixin for `ComponentModel` classes that support `trace` tests."""
+
         peer_termination_type = None
 
         def test_trace(self):
@@ -105,6 +108,38 @@ class Mixins:
             self.assertEqual(segment1[0]["name"], obj.name)
             self.assertEqual(segment1[1]["label"], cable.label)
             self.assertEqual(segment1[2]["name"], peer_obj.name)
+
+    class BaseComponentTestMixin(APIViewTestCases.APIViewTestCase):
+        """Mixin class for all `ComponentModel` model class tests."""
+
+        model = None
+        brief_fields = ["device", "display", "id", "name", "url"]
+        bulk_update_data = {
+            "description": "New description",
+        }
+        choices_fields = ["type"]
+
+        @classmethod
+        def setUpTestData(cls):
+            super().setUpTestData()
+            cls.device_type = DeviceType.objects.exclude(manufacturer__isnull=True).first()
+            cls.manufacturer = cls.device_type.manufacturer
+            cls.site = Site.objects.first()
+            cls.device_role = DeviceRole.objects.first()
+            cls.device = Device.objects.create(
+                device_type=cls.device_type, device_role=cls.device_role, name="Device 1", site=cls.site
+            )
+
+    class BasePortTestMixin(ComponentTraceMixin, BaseComponentTestMixin):
+        """Mixin class for all `FooPort` tests."""
+
+        peer_termination_type = None
+        brief_fields = ["cable", "device", "display", "id", "name", "url"]
+
+    class BasePortTemplateTestMixin(BaseComponentTestMixin):
+        """Mixin class for all `FooPortTemplate` tests."""
+
+        brief_fields = ["display", "id", "name", "url"]
 
 
 class RegionTest(APIViewTestCases.APIViewTestCase):
@@ -150,14 +185,7 @@ class SiteTest(APIViewTestCases.APIViewTestCase):
     @classmethod
     def setUpTestData(cls):
 
-        regions = (
-            Region.objects.create(name="Test Region 1", slug="test-region-1"),
-            Region.objects.create(name="Test Region 2", slug="test-region-2"),
-        )
-
-        Site.objects.create(region=regions[0], name="Site 1", slug="site-1")
-        Site.objects.create(region=regions[0], name="Site 2", slug="site-2")
-        Site.objects.create(region=regions[0], name="Site 3", slug="site-3")
+        regions = Region.objects.all()[:2]
 
         # FIXME(jathan): The writable serializer for `Device.status` takes the
         # status `name` (str) and not the `pk` (int). Do not validate this
@@ -188,6 +216,14 @@ class SiteTest(APIViewTestCases.APIViewTestCase):
             },
             {"name": "Site 7", "region": regions[1].pk, "status": "active"},
         ]
+
+    def get_deletable_object_pks(self):
+        Sites = [
+            Site.objects.create(name="Deletable Site 1"),
+            Site.objects.create(name="Deletable Site 2"),
+            Site.objects.create(name="Deletable Site 3"),
+        ]
+        return [site.pk for site in Sites]
 
     def test_time_zone_field_post_null(self):
         """
@@ -262,7 +298,7 @@ class SiteTest(APIViewTestCases.APIViewTestCase):
         """
 
         self.add_permissions("dcim.view_site")
-        site = Site.objects.get(slug="site-1")
+        site = Site.objects.filter(time_zone="").first()
         url = reverse("dcim-api:site-detail", kwargs={"pk": site.pk})
         response = self.client.get(url, **self.header)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
@@ -274,25 +310,31 @@ class LocationTypeTest(APIViewTestCases.APIViewTestCase):
     brief_fields = ["display", "id", "name", "slug", "tree_depth", "url"]
     bulk_update_data = {
         "description": "Some generic description of multiple types. Not very useful.",
+        "nestable": True,
     }
     choices_fields = []  # TODO: what would we need to get ["content_types"] added as a choices field?
     slug_source = "name"
 
     @classmethod
     def setUpTestData(cls):
-        lt1 = LocationType.objects.create(name="Campus")
-        lt2 = LocationType.objects.create(name="Building", parent=lt1)
-        lt3 = LocationType.objects.create(name="Floor", slug="building-floor", parent=lt2)
-        lt4 = LocationType.objects.create(name="Room", parent=lt3)
+        lt1 = LocationType.objects.get(name="Building")
+        lt2 = LocationType.objects.get(name="Floor")
+        lt3 = LocationType.objects.get(name="Room")
+        lt4 = LocationType.objects.get(name="Aisle")
+        # Deletable Location Types
+        LocationType.objects.create(name="Delete Me 1")
+        LocationType.objects.create(name="Delete Me 2")
+        LocationType.objects.create(name="Delete Me 3")
         for lt in [lt1, lt2, lt3, lt4]:
             lt.content_types.add(ContentType.objects.get_for_model(RackGroup))
 
         cls.create_data = [
             {
                 "name": "Standalone",
+                "nestable": True,
             },
             {
-                "name": "Elevator",
+                "name": "Elevator Type",
                 "parent": lt2.pk,
                 "content_types": ["ipam.prefix", "ipam.vlangroup", "ipam.vlan"],
             },
@@ -317,13 +359,13 @@ class LocationTest(APIViewTestCases.APIViewTestCase):
 
     @classmethod
     def setUpTestData(cls):
-        lt1 = LocationType.objects.create(name="Campus")
-        lt2 = LocationType.objects.create(name="Building", parent=lt1)
-        lt3 = LocationType.objects.create(name="Floor", slug="building-floor", parent=lt2)
-        lt4 = LocationType.objects.create(name="Room", parent=lt3)
+        lt1 = LocationType.objects.get(name="Campus")
+        lt2 = LocationType.objects.get(name="Building")
+        lt3 = LocationType.objects.get(name="Floor")
+        lt4 = LocationType.objects.get(name="Room")
 
         status_active = Status.objects.get(slug="active")
-        site = Site.objects.create(name="Research Triangle Area", status=status_active)
+        site = Site.objects.first()
         tenant = Tenant.objects.create(name="Test Tenant")
 
         loc1 = Location.objects.create(name="RTP", location_type=lt1, status=status_active, site=site)
@@ -387,10 +429,7 @@ class RackGroupTest(APIViewTestCases.APIViewTestCase):
     def setUpTestData(cls):
         cls.active = Status.objects.get(slug="active")
 
-        cls.sites = (
-            Site.objects.create(name="Site 1", slug="site-1", status=cls.active),
-            Site.objects.create(name="Site 2", slug="site-2", status=cls.active),
-        )
+        cls.sites = Site.objects.all()[:2]
 
         cls.parent_rack_groups = (
             RackGroup.objects.create(site=cls.sites[0], name="Parent Rack Group 1", slug="parent-rack-group-1"),
@@ -473,7 +512,9 @@ class RackGroupTest(APIViewTestCases.APIViewTestCase):
         response = self.client.post(url, **self.header, data=data, format="json")
         self.assertHttpStatus(response, status.HTTP_400_BAD_REQUEST)
         self.assertIn("location", response.json())
-        self.assertEqual(response.json()["location"], ['Location "Peer Location" does not belong to site "Site 2".'])
+        self.assertEqual(
+            response.json()["location"], [f'Location "Peer Location" does not belong to site "{self.sites[1].name}".']
+        )
 
     def test_child_group_location_valid(self):
         """A child group with a location may fall within the parent group's location."""
@@ -571,10 +612,7 @@ class RackTest(APIViewTestCases.APIViewTestCase):
     @classmethod
     def setUpTestData(cls):
 
-        sites = (
-            Site.objects.create(name="Site 1", slug="site-1"),
-            Site.objects.create(name="Site 2", slug="site-2"),
-        )
+        sites = Site.objects.all()[:2]
 
         rack_groups = (
             RackGroup.objects.create(site=sites[0], name="Rack Group 1", slug="rack-group-1"),
@@ -731,7 +769,7 @@ class RackReservationTest(APIViewTestCases.APIViewTestCase):
     @classmethod
     def setUpTestData(cls):
         user = User.objects.create(username="user1", is_active=True)
-        site = Site.objects.create(name="Test Site 1", slug="test-site-1")
+        site = Site.objects.first()
 
         cls.racks = (
             Rack.objects.create(site=site, name="Rack 1"),
@@ -773,19 +811,19 @@ class ManufacturerTest(APIViewTestCases.APIViewTestCase):
     brief_fields = ["devicetype_count", "display", "id", "name", "slug", "url"]
     create_data = [
         {
-            "name": "Manufacturer 4",
-            "slug": "manufacturer-4",
+            "name": "Test Manufacturer 4",
+            "slug": "test-manufacturer-4",
         },
         {
-            "name": "Manufacturer 5",
-            "slug": "manufacturer-5",
+            "name": "Test Manufacturer 5",
+            "slug": "test-manufacturer-5",
         },
         {
-            "name": "Manufacturer 6",
-            "slug": "manufacturer-6",
+            "name": "Test Manufacturer 6",
+            "slug": "test-manufacturer-6",
         },
         {
-            "name": "Manufacturer 7",
+            "name": "Test Manufacturer 7",
         },
     ]
     bulk_update_data = {
@@ -796,9 +834,11 @@ class ManufacturerTest(APIViewTestCases.APIViewTestCase):
     @classmethod
     def setUpTestData(cls):
 
-        Manufacturer.objects.create(name="Manufacturer 1", slug="manufacturer-1")
-        Manufacturer.objects.create(name="Manufacturer 2", slug="manufacturer-2")
-        Manufacturer.objects.create(name="Manufacturer 3", slug="manufacturer-3")
+        # FIXME(jathan): This has to be replaced with# `get_deletable_object` and
+        # `get_deletable_object_pks` but this is a workaround just so all of these objects are
+        # deletable for now.
+        DeviceType.objects.all().delete()
+        Platform.objects.all().delete()
 
 
 class DeviceTypeTest(APIViewTestCases.APIViewTestCase):
@@ -820,267 +860,224 @@ class DeviceTypeTest(APIViewTestCases.APIViewTestCase):
 
     @classmethod
     def setUpTestData(cls):
-
-        manufacturers = (
-            Manufacturer.objects.create(name="Manufacturer 1", slug="manufacturer-1"),
-            Manufacturer.objects.create(name="Manufacturer 2", slug="manufacturer-2"),
-        )
-
-        DeviceType.objects.create(manufacturer=manufacturers[0], model="Device Type 1", slug="device-type-1")
-        DeviceType.objects.create(manufacturer=manufacturers[0], model="Device Type 2", slug="device-type-2")
-        DeviceType.objects.create(manufacturer=manufacturers[0], model="Device Type 3", slug="device-type-3")
+        manufacturer_id = Manufacturer.objects.first().pk
 
         cls.create_data = [
             {
-                "manufacturer": manufacturers[1].pk,
+                "manufacturer": manufacturer_id,
                 "model": "Device Type 4",
                 "slug": "device-type-4",
             },
             {
-                "manufacturer": manufacturers[1].pk,
+                "manufacturer": manufacturer_id,
                 "model": "Device Type 5",
                 "slug": "device-type-5",
             },
             {
-                "manufacturer": manufacturers[1].pk,
+                "manufacturer": manufacturer_id,
                 "model": "Device Type 6",
                 "slug": "device-type-6",
             },
             {
-                "manufacturer": manufacturers[1].pk,
+                "manufacturer": manufacturer_id,
                 "model": "Device Type 7",
             },
         ]
 
 
-class ConsolePortTemplateTest(APIViewTestCases.APIViewTestCase):
+class ConsolePortTemplateTest(Mixins.BasePortTemplateTestMixin):
     model = ConsolePortTemplate
-    brief_fields = ["display", "id", "name", "url"]
-    bulk_update_data = {
-        "description": "New description",
-    }
-    choices_fields = ["type"]
 
     @classmethod
     def setUpTestData(cls):
-        manufacturer = Manufacturer.objects.create(name="Test Manufacturer 1", slug="test-manufacturer-1")
-        devicetype = DeviceType.objects.create(manufacturer=manufacturer, model="Device Type 1", slug="device-type-1")
+        super().setUpTestData()
 
-        ConsolePortTemplate.objects.create(device_type=devicetype, name="Console Port Template 1")
-        ConsolePortTemplate.objects.create(device_type=devicetype, name="Console Port Template 2")
-        ConsolePortTemplate.objects.create(device_type=devicetype, name="Console Port Template 3")
+        ConsolePortTemplate.objects.create(device_type=cls.device_type, name="Console Port Template 1")
+        ConsolePortTemplate.objects.create(device_type=cls.device_type, name="Console Port Template 2")
+        ConsolePortTemplate.objects.create(device_type=cls.device_type, name="Console Port Template 3")
 
         cls.create_data = [
             {
-                "device_type": devicetype.pk,
+                "device_type": cls.device_type.pk,
                 "name": "Console Port Template 4",
             },
             {
-                "device_type": devicetype.pk,
+                "device_type": cls.device_type.pk,
                 "name": "Console Port Template 5",
             },
             {
-                "device_type": devicetype.pk,
+                "device_type": cls.device_type.pk,
                 "name": "Console Port Template 6",
             },
         ]
 
 
-class ConsoleServerPortTemplateTest(APIViewTestCases.APIViewTestCase):
+class ConsoleServerPortTemplateTest(Mixins.BasePortTemplateTestMixin):
     model = ConsoleServerPortTemplate
-    brief_fields = ["display", "id", "name", "url"]
-    bulk_update_data = {
-        "description": "New description",
-    }
-    choices_fields = ["type"]
 
     @classmethod
     def setUpTestData(cls):
-        manufacturer = Manufacturer.objects.create(name="Test Manufacturer 1", slug="test-manufacturer-1")
-        devicetype = DeviceType.objects.create(manufacturer=manufacturer, model="Device Type 1", slug="device-type-1")
+        super().setUpTestData()
 
-        ConsoleServerPortTemplate.objects.create(device_type=devicetype, name="Console Server Port Template 1")
-        ConsoleServerPortTemplate.objects.create(device_type=devicetype, name="Console Server Port Template 2")
-        ConsoleServerPortTemplate.objects.create(device_type=devicetype, name="Console Server Port Template 3")
+        ConsoleServerPortTemplate.objects.create(device_type=cls.device_type, name="Console Server Port Template 1")
+        ConsoleServerPortTemplate.objects.create(device_type=cls.device_type, name="Console Server Port Template 2")
+        ConsoleServerPortTemplate.objects.create(device_type=cls.device_type, name="Console Server Port Template 3")
 
         cls.create_data = [
             {
-                "device_type": devicetype.pk,
+                "device_type": cls.device_type.pk,
                 "name": "Console Server Port Template 4",
             },
             {
-                "device_type": devicetype.pk,
+                "device_type": cls.device_type.pk,
                 "name": "Console Server Port Template 5",
             },
             {
-                "device_type": devicetype.pk,
+                "device_type": cls.device_type.pk,
                 "name": "Console Server Port Template 6",
             },
         ]
 
 
-class PowerPortTemplateTest(APIViewTestCases.APIViewTestCase):
+class PowerPortTemplateTest(Mixins.BasePortTemplateTestMixin):
     model = PowerPortTemplate
-    brief_fields = ["display", "id", "name", "url"]
-    bulk_update_data = {
-        "description": "New description",
-    }
-    choices_fields = ["type"]
 
     @classmethod
     def setUpTestData(cls):
-        manufacturer = Manufacturer.objects.create(name="Test Manufacturer 1", slug="test-manufacturer-1")
-        devicetype = DeviceType.objects.create(manufacturer=manufacturer, model="Device Type 1", slug="device-type-1")
+        super().setUpTestData()
 
-        PowerPortTemplate.objects.create(device_type=devicetype, name="Power Port Template 1")
-        PowerPortTemplate.objects.create(device_type=devicetype, name="Power Port Template 2")
-        PowerPortTemplate.objects.create(device_type=devicetype, name="Power Port Template 3")
+        PowerPortTemplate.objects.create(device_type=cls.device_type, name="Power Port Template 1")
+        PowerPortTemplate.objects.create(device_type=cls.device_type, name="Power Port Template 2")
+        PowerPortTemplate.objects.create(device_type=cls.device_type, name="Power Port Template 3")
 
         cls.create_data = [
             {
-                "device_type": devicetype.pk,
+                "device_type": cls.device_type.pk,
                 "name": "Power Port Template 4",
             },
             {
-                "device_type": devicetype.pk,
+                "device_type": cls.device_type.pk,
                 "name": "Power Port Template 5",
             },
             {
-                "device_type": devicetype.pk,
+                "device_type": cls.device_type.pk,
                 "name": "Power Port Template 6",
             },
         ]
 
 
-class PowerOutletTemplateTest(APIViewTestCases.APIViewTestCase):
+class PowerOutletTemplateTest(Mixins.BasePortTemplateTestMixin):
     model = PowerOutletTemplate
-    brief_fields = ["display", "id", "name", "url"]
-    bulk_update_data = {
-        "description": "New description",
-    }
     choices_fields = ["feed_leg", "type"]
 
     @classmethod
     def setUpTestData(cls):
-        manufacturer = Manufacturer.objects.create(name="Test Manufacturer 1", slug="test-manufacturer-1")
-        devicetype = DeviceType.objects.create(manufacturer=manufacturer, model="Device Type 1", slug="device-type-1")
+        super().setUpTestData()
 
-        PowerOutletTemplate.objects.create(device_type=devicetype, name="Power Outlet Template 1")
-        PowerOutletTemplate.objects.create(device_type=devicetype, name="Power Outlet Template 2")
-        PowerOutletTemplate.objects.create(device_type=devicetype, name="Power Outlet Template 3")
+        PowerOutletTemplate.objects.create(device_type=cls.device_type, name="Power Outlet Template 1")
+        PowerOutletTemplate.objects.create(device_type=cls.device_type, name="Power Outlet Template 2")
+        PowerOutletTemplate.objects.create(device_type=cls.device_type, name="Power Outlet Template 3")
 
         cls.create_data = [
             {
-                "device_type": devicetype.pk,
+                "device_type": cls.device_type.pk,
                 "name": "Power Outlet Template 4",
             },
             {
-                "device_type": devicetype.pk,
+                "device_type": cls.device_type.pk,
                 "name": "Power Outlet Template 5",
             },
             {
-                "device_type": devicetype.pk,
+                "device_type": cls.device_type.pk,
                 "name": "Power Outlet Template 6",
             },
         ]
 
 
-class InterfaceTemplateTest(APIViewTestCases.APIViewTestCase):
+class InterfaceTemplateTest(Mixins.BasePortTemplateTestMixin):
     model = InterfaceTemplate
-    brief_fields = ["display", "id", "name", "url"]
-    bulk_update_data = {
-        "description": "New description",
-    }
-    choices_fields = ["type"]
 
     @classmethod
     def setUpTestData(cls):
-        manufacturer = Manufacturer.objects.create(name="Test Manufacturer 1", slug="test-manufacturer-1")
-        devicetype = DeviceType.objects.create(manufacturer=manufacturer, model="Device Type 1", slug="device-type-1")
+        super().setUpTestData()
 
-        InterfaceTemplate.objects.create(device_type=devicetype, name="Interface Template 1", type="1000base-t")
-        InterfaceTemplate.objects.create(device_type=devicetype, name="Interface Template 2", type="1000base-t")
-        InterfaceTemplate.objects.create(device_type=devicetype, name="Interface Template 3", type="1000base-t")
+        InterfaceTemplate.objects.create(device_type=cls.device_type, name="Interface Template 1", type="1000base-t")
+        InterfaceTemplate.objects.create(device_type=cls.device_type, name="Interface Template 2", type="1000base-t")
+        InterfaceTemplate.objects.create(device_type=cls.device_type, name="Interface Template 3", type="1000base-t")
 
         cls.create_data = [
             {
-                "device_type": devicetype.pk,
+                "device_type": cls.device_type.pk,
                 "name": "Interface Template 4",
                 "type": "1000base-t",
             },
             {
-                "device_type": devicetype.pk,
+                "device_type": cls.device_type.pk,
                 "name": "Interface Template 5",
                 "type": "1000base-t",
             },
             {
-                "device_type": devicetype.pk,
+                "device_type": cls.device_type.pk,
                 "name": "Interface Template 6",
                 "type": "1000base-t",
             },
         ]
 
 
-class FrontPortTemplateTest(APIViewTestCases.APIViewTestCase):
+class FrontPortTemplateTest(Mixins.BasePortTemplateTestMixin):
     model = FrontPortTemplate
-    brief_fields = ["display", "id", "name", "url"]
-    bulk_update_data = {
-        "description": "New description",
-    }
-    choices_fields = ["type"]
 
     @classmethod
     def setUpTestData(cls):
-        manufacturer = Manufacturer.objects.create(name="Test Manufacturer 1", slug="test-manufacturer-1")
-        devicetype = DeviceType.objects.create(manufacturer=manufacturer, model="Device Type 1", slug="device-type-1")
+        super().setUpTestData()
 
         rear_port_templates = (
             RearPortTemplate.objects.create(
-                device_type=devicetype,
+                device_type=cls.device_type,
                 name="Rear Port Template 1",
                 type=PortTypeChoices.TYPE_8P8C,
             ),
             RearPortTemplate.objects.create(
-                device_type=devicetype,
+                device_type=cls.device_type,
                 name="Rear Port Template 2",
                 type=PortTypeChoices.TYPE_8P8C,
             ),
             RearPortTemplate.objects.create(
-                device_type=devicetype,
+                device_type=cls.device_type,
                 name="Rear Port Template 3",
                 type=PortTypeChoices.TYPE_8P8C,
             ),
             RearPortTemplate.objects.create(
-                device_type=devicetype,
+                device_type=cls.device_type,
                 name="Rear Port Template 4",
                 type=PortTypeChoices.TYPE_8P8C,
             ),
             RearPortTemplate.objects.create(
-                device_type=devicetype,
+                device_type=cls.device_type,
                 name="Rear Port Template 5",
                 type=PortTypeChoices.TYPE_8P8C,
             ),
             RearPortTemplate.objects.create(
-                device_type=devicetype,
+                device_type=cls.device_type,
                 name="Rear Port Template 6",
                 type=PortTypeChoices.TYPE_8P8C,
             ),
         )
 
         FrontPortTemplate.objects.create(
-            device_type=devicetype,
+            device_type=cls.device_type,
             name="Front Port Template 1",
             type=PortTypeChoices.TYPE_8P8C,
             rear_port=rear_port_templates[0],
         )
         FrontPortTemplate.objects.create(
-            device_type=devicetype,
+            device_type=cls.device_type,
             name="Front Port Template 2",
             type=PortTypeChoices.TYPE_8P8C,
             rear_port=rear_port_templates[1],
         )
         FrontPortTemplate.objects.create(
-            device_type=devicetype,
+            device_type=cls.device_type,
             name="Front Port Template 3",
             type=PortTypeChoices.TYPE_8P8C,
             rear_port=rear_port_templates[2],
@@ -1088,21 +1085,21 @@ class FrontPortTemplateTest(APIViewTestCases.APIViewTestCase):
 
         cls.create_data = [
             {
-                "device_type": devicetype.pk,
+                "device_type": cls.device_type.pk,
                 "name": "Front Port Template 4",
                 "type": PortTypeChoices.TYPE_8P8C,
                 "rear_port": rear_port_templates[3].pk,
                 "rear_port_position": 1,
             },
             {
-                "device_type": devicetype.pk,
+                "device_type": cls.device_type.pk,
                 "name": "Front Port Template 5",
                 "type": PortTypeChoices.TYPE_8P8C,
                 "rear_port": rear_port_templates[4].pk,
                 "rear_port_position": 1,
             },
             {
-                "device_type": devicetype.pk,
+                "device_type": cls.device_type.pk,
                 "name": "Front Port Template 6",
                 "type": PortTypeChoices.TYPE_8P8C,
                 "rear_port": rear_port_templates[5].pk,
@@ -1111,86 +1108,72 @@ class FrontPortTemplateTest(APIViewTestCases.APIViewTestCase):
         ]
 
 
-class RearPortTemplateTest(APIViewTestCases.APIViewTestCase):
+class RearPortTemplateTest(Mixins.BasePortTemplateTestMixin):
     model = RearPortTemplate
-    brief_fields = ["display", "id", "name", "url"]
-    bulk_update_data = {
-        "description": "New description",
-    }
-    choices_fields = ["type"]
 
     @classmethod
     def setUpTestData(cls):
-        manufacturer = Manufacturer.objects.create(name="Test Manufacturer 1", slug="test-manufacturer-1")
-        devicetype = DeviceType.objects.create(manufacturer=manufacturer, model="Device Type 1", slug="device-type-1")
+        super().setUpTestData()
 
         RearPortTemplate.objects.create(
-            device_type=devicetype,
+            device_type=cls.device_type,
             name="Rear Port Template 1",
             type=PortTypeChoices.TYPE_8P8C,
         )
         RearPortTemplate.objects.create(
-            device_type=devicetype,
+            device_type=cls.device_type,
             name="Rear Port Template 2",
             type=PortTypeChoices.TYPE_8P8C,
         )
         RearPortTemplate.objects.create(
-            device_type=devicetype,
+            device_type=cls.device_type,
             name="Rear Port Template 3",
             type=PortTypeChoices.TYPE_8P8C,
         )
 
         cls.create_data = [
             {
-                "device_type": devicetype.pk,
+                "device_type": cls.device_type.pk,
                 "name": "Rear Port Template 4",
                 "type": PortTypeChoices.TYPE_8P8C,
             },
             {
-                "device_type": devicetype.pk,
+                "device_type": cls.device_type.pk,
                 "name": "Rear Port Template 5",
                 "type": PortTypeChoices.TYPE_8P8C,
             },
             {
-                "device_type": devicetype.pk,
+                "device_type": cls.device_type.pk,
                 "name": "Rear Port Template 6",
                 "type": PortTypeChoices.TYPE_8P8C,
             },
         ]
 
 
-class DeviceBayTemplateTest(APIViewTestCases.APIViewTestCase):
+class DeviceBayTemplateTest(Mixins.BasePortTemplateTestMixin):
     model = DeviceBayTemplate
-    brief_fields = ["display", "id", "name", "url"]
-    bulk_update_data = {
-        "description": "New description",
-    }
+    choices_fields = []
 
     @classmethod
     def setUpTestData(cls):
-        manufacturer = Manufacturer.objects.create(name="Test Manufacturer 1", slug="test-manufacturer-1")
-        devicetype = DeviceType.objects.create(
-            manufacturer=manufacturer,
-            model="Device Type 1",
-            slug="device-type-1",
-            subdevice_role=SubdeviceRoleChoices.ROLE_PARENT,
-        )
+        super().setUpTestData()
+        device_type = DeviceType.objects.filter(subdevice_role=SubdeviceRoleChoices.ROLE_PARENT).first()
 
-        DeviceBayTemplate.objects.create(device_type=devicetype, name="Device Bay Template 1")
-        DeviceBayTemplate.objects.create(device_type=devicetype, name="Device Bay Template 2")
-        DeviceBayTemplate.objects.create(device_type=devicetype, name="Device Bay Template 3")
+        DeviceBayTemplate.objects.create(device_type=device_type, name="Device Bay Template 1")
+        DeviceBayTemplate.objects.create(device_type=device_type, name="Device Bay Template 2")
+        DeviceBayTemplate.objects.create(device_type=device_type, name="Device Bay Template 3")
 
         cls.create_data = [
             {
-                "device_type": devicetype.pk,
+                "device_type": device_type.pk,
                 "name": "Device Bay Template 4",
             },
             {
-                "device_type": devicetype.pk,
+                "device_type": device_type.pk,
                 "name": "Device Bay Template 5",
             },
             {
-                "device_type": devicetype.pk,
+                "device_type": device_type.pk,
                 "name": "Device Bay Template 6",
             },
         ]
@@ -1225,45 +1208,31 @@ class DeviceRoleTest(APIViewTestCases.APIViewTestCase):
     }
     slug_source = "name"
 
-    @classmethod
-    def setUpTestData(cls):
-
-        DeviceRole.objects.create(name="Device Role 1", slug="device-role-1", color="ff0000")
-        DeviceRole.objects.create(name="Device Role 2", slug="device-role-2", color="00ff00")
-        DeviceRole.objects.create(name="Device Role 3", slug="device-role-3", color="0000ff")
-
 
 class PlatformTest(APIViewTestCases.APIViewTestCase):
     model = Platform
     brief_fields = ["device_count", "display", "id", "name", "slug", "url", "virtualmachine_count"]
     create_data = [
         {
-            "name": "Platform 4",
-            "slug": "platform-4",
+            "name": "Test Platform 4",
+            "slug": "test-platform-4",
         },
         {
-            "name": "Platform 5",
-            "slug": "platform-5",
+            "name": "Test Platform 5",
+            "slug": "test-platform-5",
         },
         {
-            "name": "Platform 6",
-            "slug": "platform-6",
+            "name": "Test Platform 6",
+            "slug": "test-platform-6",
         },
         {
-            "name": "Platform 7",
+            "name": "Test Platform 7",
         },
     ]
     bulk_update_data = {
         "description": "New description",
     }
     slug_source = "name"
-
-    @classmethod
-    def setUpTestData(cls):
-
-        Platform.objects.create(name="Platform 1", slug="platform-1")
-        Platform.objects.create(name="Platform 2", slug="platform-2")
-        Platform.objects.create(name="Platform 3", slug="platform-3")
 
 
 class DeviceTest(APIViewTestCases.APIViewTestCase):
@@ -1277,26 +1246,11 @@ class DeviceTest(APIViewTestCases.APIViewTestCase):
     @classmethod
     def setUpTestData(cls):
 
-        sites = (
-            Site.objects.create(name="Site 1", slug="site-1"),
-            Site.objects.create(name="Site 2", slug="site-2"),
-        )
+        sites = Site.objects.all()[:2]
 
         racks = (
             Rack.objects.create(name="Rack 1", site=sites[0]),
             Rack.objects.create(name="Rack 2", site=sites[1]),
-        )
-
-        manufacturer = Manufacturer.objects.create(name="Manufacturer 1", slug="manufacturer-1")
-
-        device_types = (
-            DeviceType.objects.create(manufacturer=manufacturer, model="Device Type 1", slug="device-type-1"),
-            DeviceType.objects.create(manufacturer=manufacturer, model="Device Type 2", slug="device-type-2"),
-        )
-
-        device_roles = (
-            DeviceRole.objects.create(name="Device Role 1", slug="device-role-1", color="ff0000"),
-            DeviceRole.objects.create(name="Device Role 2", slug="device-role-2", color="00ff00"),
         )
 
         device_statuses = Status.objects.get_for_model(Device)
@@ -1313,9 +1267,12 @@ class DeviceTest(APIViewTestCases.APIViewTestCase):
             SecretsGroup.objects.create(name="Secrets Group 2", slug="secrets-group-2"),
         )
 
+        device_type = DeviceType.objects.first()
+        device_role = DeviceRole.objects.first()
+
         Device.objects.create(
-            device_type=device_types[0],
-            device_role=device_roles[0],
+            device_type=device_type,
+            device_role=device_role,
             status=device_statuses[0],
             name="Device 1",
             site=sites[0],
@@ -1325,8 +1282,8 @@ class DeviceTest(APIViewTestCases.APIViewTestCase):
             local_context_data={"A": 1},
         )
         Device.objects.create(
-            device_type=device_types[0],
-            device_role=device_roles[0],
+            device_type=device_type,
+            device_role=device_role,
             status=device_statuses[0],
             name="Device 2",
             site=sites[0],
@@ -1336,8 +1293,8 @@ class DeviceTest(APIViewTestCases.APIViewTestCase):
             local_context_data={"B": 2},
         )
         Device.objects.create(
-            device_type=device_types[0],
-            device_role=device_roles[0],
+            device_type=device_type,
+            device_role=device_role,
             status=device_statuses[0],
             name="Device 3",
             site=sites[0],
@@ -1357,8 +1314,8 @@ class DeviceTest(APIViewTestCases.APIViewTestCase):
 
         cls.create_data = [
             {
-                "device_type": device_types[1].pk,
-                "device_role": device_roles[1].pk,
+                "device_type": device_type.pk,
+                "device_role": device_role.pk,
                 "status": "offline",
                 "name": "Test Device 4",
                 "site": sites[1].pk,
@@ -1367,8 +1324,8 @@ class DeviceTest(APIViewTestCases.APIViewTestCase):
                 "secrets_group": secrets_groups[1].pk,
             },
             {
-                "device_type": device_types[1].pk,
-                "device_role": device_roles[1].pk,
+                "device_type": device_type.pk,
+                "device_role": device_role.pk,
                 "status": "offline",
                 "name": "Test Device 5",
                 "site": sites[1].pk,
@@ -1377,8 +1334,8 @@ class DeviceTest(APIViewTestCases.APIViewTestCase):
                 "secrets_group": secrets_groups[1].pk,
             },
             {
-                "device_type": device_types[1].pk,
-                "device_role": device_roles[1].pk,
+                "device_type": device_type.pk,
+                "device_role": device_role.pk,
                 "status": "offline",
                 "name": "Test Device 6",
                 "site": sites[1].pk,
@@ -1484,181 +1441,190 @@ class DeviceTest(APIViewTestCases.APIViewTestCase):
         )
         self.assertHttpStatus(response, status.HTTP_200_OK)
 
+    def test_patching_device_redundancy_group(self):
+        """
+        Validate we can set device redundancy group on a device using a PATCH.
+        """
+        # Add object-level permission
+        self.add_permissions("dcim.change_device")
 
-class ConsolePortTest(Mixins.ComponentTraceMixin, APIViewTestCases.APIViewTestCase):
+        device_redundancy_group = DeviceRedundancyGroup.objects.first()
+
+        d3 = Device.objects.get(name="Device 3")
+
+        # Validate set both redundancy group membership only
+        patch_data = {"device_redundancy_group": device_redundancy_group.pk}
+
+        response = self.client.patch(self._get_detail_url(d3), patch_data, format="json", **self.header)
+        self.assertHttpStatus(response, status.HTTP_200_OK)
+
+        d3.refresh_from_db()
+
+        self.assertEqual(
+            d3.device_redundancy_group,
+            device_redundancy_group,
+        )
+        # Validate set both redundancy group membership and priority
+        patch_data = {"device_redundancy_group": device_redundancy_group.pk, "device_redundancy_group_priority": 1}
+
+        response = self.client.patch(self._get_detail_url(d3), patch_data, format="json", **self.header)
+        self.assertHttpStatus(response, status.HTTP_200_OK)
+
+        d3.refresh_from_db()
+
+        self.assertEqual(
+            d3.device_redundancy_group_priority,
+            1,
+        )
+
+        # Validate error on priority patch only
+        patch_data = {"device_redundancy_group_priority": 1}
+
+        response = self.client.patch(
+            self._get_detail_url(Device.objects.get(name="Device 2")), patch_data, format="json", **self.header
+        )
+        self.assertHttpStatus(response, status.HTTP_400_BAD_REQUEST)
+
+
+class ConsolePortTest(Mixins.BasePortTestMixin):
     model = ConsolePort
-    brief_fields = ["cable", "device", "display", "id", "name", "url"]
-    bulk_update_data = {
-        "description": "New description",
-    }
     peer_termination_type = ConsoleServerPort
-    choices_fields = ["type"]
 
     @classmethod
     def setUpTestData(cls):
-        manufacturer = Manufacturer.objects.create(name="Test Manufacturer 1", slug="test-manufacturer-1")
-        devicetype = DeviceType.objects.create(manufacturer=manufacturer, model="Device Type 1", slug="device-type-1")
-        site = Site.objects.create(name="Site 1", slug="site-1")
-        devicerole = DeviceRole.objects.create(name="Test Device Role 1", slug="test-device-role-1", color="ff0000")
-        device = Device.objects.create(device_type=devicetype, device_role=devicerole, name="Device 1", site=site)
+        super().setUpTestData()
 
-        ConsolePort.objects.create(device=device, name="Console Port 1")
-        ConsolePort.objects.create(device=device, name="Console Port 2")
-        ConsolePort.objects.create(device=device, name="Console Port 3")
+        ConsolePort.objects.create(device=cls.device, name="Console Port 1")
+        ConsolePort.objects.create(device=cls.device, name="Console Port 2")
+        ConsolePort.objects.create(device=cls.device, name="Console Port 3")
 
         cls.create_data = [
             {
-                "device": device.pk,
+                "device": cls.device.pk,
                 "name": "Console Port 4",
             },
             {
-                "device": device.pk,
+                "device": cls.device.pk,
                 "name": "Console Port 5",
             },
             {
-                "device": device.pk,
+                "device": cls.device.pk,
                 "name": "Console Port 6",
             },
         ]
 
 
-class ConsoleServerPortTest(Mixins.ComponentTraceMixin, APIViewTestCases.APIViewTestCase):
+class ConsoleServerPortTest(Mixins.BasePortTestMixin):
     model = ConsoleServerPort
-    brief_fields = ["cable", "device", "display", "id", "name", "url"]
-    bulk_update_data = {
-        "description": "New description",
-    }
     peer_termination_type = ConsolePort
-    choices_fields = ["type"]
 
     @classmethod
     def setUpTestData(cls):
-        manufacturer = Manufacturer.objects.create(name="Test Manufacturer 1", slug="test-manufacturer-1")
-        devicetype = DeviceType.objects.create(manufacturer=manufacturer, model="Device Type 1", slug="device-type-1")
-        site = Site.objects.create(name="Site 1", slug="site-1")
-        devicerole = DeviceRole.objects.create(name="Test Device Role 1", slug="test-device-role-1", color="ff0000")
-        device = Device.objects.create(device_type=devicetype, device_role=devicerole, name="Device 1", site=site)
+        super().setUpTestData()
 
-        ConsoleServerPort.objects.create(device=device, name="Console Server Port 1")
-        ConsoleServerPort.objects.create(device=device, name="Console Server Port 2")
-        ConsoleServerPort.objects.create(device=device, name="Console Server Port 3")
+        ConsoleServerPort.objects.create(device=cls.device, name="Console Server Port 1")
+        ConsoleServerPort.objects.create(device=cls.device, name="Console Server Port 2")
+        ConsoleServerPort.objects.create(device=cls.device, name="Console Server Port 3")
 
         cls.create_data = [
             {
-                "device": device.pk,
+                "device": cls.device.pk,
                 "name": "Console Server Port 4",
             },
             {
-                "device": device.pk,
+                "device": cls.device.pk,
                 "name": "Console Server Port 5",
             },
             {
-                "device": device.pk,
+                "device": cls.device.pk,
                 "name": "Console Server Port 6",
             },
         ]
 
 
-class PowerPortTest(Mixins.ComponentTraceMixin, APIViewTestCases.APIViewTestCase):
+class PowerPortTest(Mixins.BasePortTestMixin):
     model = PowerPort
-    brief_fields = ["cable", "device", "display", "id", "name", "url"]
-    bulk_update_data = {
-        "description": "New description",
-    }
     peer_termination_type = PowerOutlet
-    choices_fields = ["type"]
 
     @classmethod
     def setUpTestData(cls):
-        manufacturer = Manufacturer.objects.create(name="Test Manufacturer 1", slug="test-manufacturer-1")
-        devicetype = DeviceType.objects.create(manufacturer=manufacturer, model="Device Type 1", slug="device-type-1")
-        site = Site.objects.create(name="Site 1", slug="site-1")
-        devicerole = DeviceRole.objects.create(name="Test Device Role 1", slug="test-device-role-1", color="ff0000")
-        device = Device.objects.create(device_type=devicetype, device_role=devicerole, name="Device 1", site=site)
+        super().setUpTestData()
 
-        PowerPort.objects.create(device=device, name="Power Port 1")
-        PowerPort.objects.create(device=device, name="Power Port 2")
-        PowerPort.objects.create(device=device, name="Power Port 3")
+        PowerPort.objects.create(device=cls.device, name="Power Port 1")
+        PowerPort.objects.create(device=cls.device, name="Power Port 2")
+        PowerPort.objects.create(device=cls.device, name="Power Port 3")
 
         cls.create_data = [
             {
-                "device": device.pk,
+                "device": cls.device.pk,
                 "name": "Power Port 4",
             },
             {
-                "device": device.pk,
+                "device": cls.device.pk,
                 "name": "Power Port 5",
             },
             {
-                "device": device.pk,
+                "device": cls.device.pk,
                 "name": "Power Port 6",
             },
         ]
 
 
-class PowerOutletTest(Mixins.ComponentTraceMixin, APIViewTestCases.APIViewTestCase):
+class PowerOutletTest(Mixins.BasePortTestMixin):
     model = PowerOutlet
-    brief_fields = ["cable", "device", "display", "id", "name", "url"]
-    bulk_update_data = {
-        "description": "New description",
-    }
     peer_termination_type = PowerPort
     choices_fields = ["feed_leg", "type"]
 
     @classmethod
     def setUpTestData(cls):
-        manufacturer = Manufacturer.objects.create(name="Test Manufacturer 1", slug="test-manufacturer-1")
-        devicetype = DeviceType.objects.create(manufacturer=manufacturer, model="Device Type 1", slug="device-type-1")
-        site = Site.objects.create(name="Site 1", slug="site-1")
-        devicerole = DeviceRole.objects.create(name="Test Device Role 1", slug="test-device-role-1", color="ff0000")
-        device = Device.objects.create(device_type=devicetype, device_role=devicerole, name="Device 1", site=site)
+        super().setUpTestData()
 
-        PowerOutlet.objects.create(device=device, name="Power Outlet 1")
-        PowerOutlet.objects.create(device=device, name="Power Outlet 2")
-        PowerOutlet.objects.create(device=device, name="Power Outlet 3")
+        PowerOutlet.objects.create(device=cls.device, name="Power Outlet 1")
+        PowerOutlet.objects.create(device=cls.device, name="Power Outlet 2")
+        PowerOutlet.objects.create(device=cls.device, name="Power Outlet 3")
 
         cls.create_data = [
             {
-                "device": device.pk,
+                "device": cls.device.pk,
                 "name": "Power Outlet 4",
             },
             {
-                "device": device.pk,
+                "device": cls.device.pk,
                 "name": "Power Outlet 5",
             },
             {
-                "device": device.pk,
+                "device": cls.device.pk,
                 "name": "Power Outlet 6",
             },
         ]
 
 
-class InterfaceTestVersion12(Mixins.ComponentTraceMixin, APIViewTestCases.APIViewTestCase):
+class InterfaceTestVersion12(Mixins.BasePortTestMixin):
     model = Interface
-    brief_fields = ["cable", "device", "display", "id", "name", "url"]
-    bulk_update_data = {
-        "description": "New description",
-    }
     peer_termination_type = Interface
     choices_fields = ["mode", "type", "status"]
 
     @classmethod
     def setUpTestData(cls):
-        manufacturer = Manufacturer.objects.create(name="Test Manufacturer 1", slug="test-manufacturer-1")
-        devicetype = DeviceType.objects.create(manufacturer=manufacturer, model="Device Type 1", slug="device-type-1")
-        site = Site.objects.create(name="Site 1", slug="site-1")
-        devicerole = DeviceRole.objects.create(name="Test Device Role 1", slug="test-device-role-1", color="ff0000")
+        super().setUpTestData()
+
         cls.devices = (
-            Device.objects.create(device_type=devicetype, device_role=devicerole, name="Device 1", site=site),
-            Device.objects.create(device_type=devicetype, device_role=devicerole, name="Device 2", site=site),
-            Device.objects.create(device_type=devicetype, device_role=devicerole, name="Device 3", site=site),
+            Device.objects.create(
+                device_type=cls.device_type, device_role=cls.device_role, name="Device 1", site=cls.site
+            ),
+            Device.objects.create(
+                device_type=cls.device_type, device_role=cls.device_role, name="Device 2", site=cls.site
+            ),
+            Device.objects.create(
+                device_type=cls.device_type, device_role=cls.device_role, name="Device 3", site=cls.site
+            ),
         )
 
-        cls.virtualchassis = VirtualChassis.objects.create(
+        cls.virtual_chassis = VirtualChassis.objects.create(
             name="Virtual Chassis 1", master=cls.devices[0], domain="domain-1"
         )
-        Device.objects.filter(id=cls.devices[0].id).update(virtual_chassis=cls.virtualchassis, vc_position=1)
-        Device.objects.filter(id=cls.devices[1].id).update(virtual_chassis=cls.virtualchassis, vc_position=2)
+        Device.objects.filter(id=cls.devices[0].id).update(virtual_chassis=cls.virtual_chassis, vc_position=1)
+        Device.objects.filter(id=cls.devices[1].id).update(virtual_chassis=cls.virtual_chassis, vc_position=2)
 
         cls.interfaces = (
             Interface.objects.create(device=cls.devices[0], name="Interface 1", type="1000base-t"),
@@ -1768,10 +1734,9 @@ class InterfaceTestVersion12(Mixins.ComponentTraceMixin, APIViewTestCases.APIVie
         status_active = Status.objects.get_for_model(Interface).get(slug=InterfaceStatusChoices.STATUS_ACTIVE)
         interface_ct = ContentType.objects.get_for_model(Interface)
         status_active.content_types.remove(interface_ct)
-        device = Device.objects.first()
 
         data = {
-            "device": device.pk,
+            "device": self.device.pk,
             "name": "int-001",
             "type": "1000base-t",
             "mode": InterfaceModeChoices.MODE_TAGGED,
@@ -1844,7 +1809,7 @@ class InterfaceTestVersion12(Mixins.ComponentTraceMixin, APIViewTestCases.APIVie
             self.assertEqual(
                 str(response.data[error_field_name][0]),
                 f"The selected {field_name} interface ({interface}) belongs to {interface.parent}, which is "
-                f"not part of virtual chassis {self.virtualchassis}.",
+                f"not part of virtual chassis {self.virtual_chassis}.",
             )
 
     def test_tagged_vlan_raise_error_if_mode_not_set_to_tagged(self):
@@ -1907,46 +1872,40 @@ class InterfaceTestVersion14(InterfaceTestVersion12):
         pass
 
 
-class FrontPortTest(APIViewTestCases.APIViewTestCase):
+class FrontPortTest(Mixins.BasePortTestMixin):
     model = FrontPort
-    brief_fields = ["cable", "device", "display", "id", "name", "url"]
-    bulk_update_data = {
-        "description": "New description",
-    }
     peer_termination_type = Interface
-    choices_fields = ["type"]
+
+    def test_trace(self):
+        """FrontPorts don't support trace."""
 
     @classmethod
     def setUpTestData(cls):
-        manufacturer = Manufacturer.objects.create(name="Test Manufacturer 1", slug="test-manufacturer-1")
-        devicetype = DeviceType.objects.create(manufacturer=manufacturer, model="Device Type 1", slug="device-type-1")
-        site = Site.objects.create(name="Site 1", slug="site-1")
-        devicerole = DeviceRole.objects.create(name="Test Device Role 1", slug="test-device-role-1", color="ff0000")
-        device = Device.objects.create(device_type=devicetype, device_role=devicerole, name="Device 1", site=site)
+        super().setUpTestData()
 
         rear_ports = (
-            RearPort.objects.create(device=device, name="Rear Port 1", type=PortTypeChoices.TYPE_8P8C),
-            RearPort.objects.create(device=device, name="Rear Port 2", type=PortTypeChoices.TYPE_8P8C),
-            RearPort.objects.create(device=device, name="Rear Port 3", type=PortTypeChoices.TYPE_8P8C),
-            RearPort.objects.create(device=device, name="Rear Port 4", type=PortTypeChoices.TYPE_8P8C),
-            RearPort.objects.create(device=device, name="Rear Port 5", type=PortTypeChoices.TYPE_8P8C),
-            RearPort.objects.create(device=device, name="Rear Port 6", type=PortTypeChoices.TYPE_8P8C),
+            RearPort.objects.create(device=cls.device, name="Rear Port 1", type=PortTypeChoices.TYPE_8P8C),
+            RearPort.objects.create(device=cls.device, name="Rear Port 2", type=PortTypeChoices.TYPE_8P8C),
+            RearPort.objects.create(device=cls.device, name="Rear Port 3", type=PortTypeChoices.TYPE_8P8C),
+            RearPort.objects.create(device=cls.device, name="Rear Port 4", type=PortTypeChoices.TYPE_8P8C),
+            RearPort.objects.create(device=cls.device, name="Rear Port 5", type=PortTypeChoices.TYPE_8P8C),
+            RearPort.objects.create(device=cls.device, name="Rear Port 6", type=PortTypeChoices.TYPE_8P8C),
         )
 
         FrontPort.objects.create(
-            device=device,
+            device=cls.device,
             name="Front Port 1",
             type=PortTypeChoices.TYPE_8P8C,
             rear_port=rear_ports[0],
         )
         FrontPort.objects.create(
-            device=device,
+            device=cls.device,
             name="Front Port 2",
             type=PortTypeChoices.TYPE_8P8C,
             rear_port=rear_ports[1],
         )
         FrontPort.objects.create(
-            device=device,
+            device=cls.device,
             name="Front Port 3",
             type=PortTypeChoices.TYPE_8P8C,
             rear_port=rear_ports[2],
@@ -1954,21 +1913,21 @@ class FrontPortTest(APIViewTestCases.APIViewTestCase):
 
         cls.create_data = [
             {
-                "device": device.pk,
+                "device": cls.device.pk,
                 "name": "Front Port 4",
                 "type": PortTypeChoices.TYPE_8P8C,
                 "rear_port": rear_ports[3].pk,
                 "rear_port_position": 1,
             },
             {
-                "device": device.pk,
+                "device": cls.device.pk,
                 "name": "Front Port 5",
                 "type": PortTypeChoices.TYPE_8P8C,
                 "rear_port": rear_ports[4].pk,
                 "rear_port_position": 1,
             },
             {
-                "device": device.pk,
+                "device": cls.device.pk,
                 "name": "Front Port 6",
                 "type": PortTypeChoices.TYPE_8P8C,
                 "rear_port": rear_ports[5].pk,
@@ -1977,98 +1936,77 @@ class FrontPortTest(APIViewTestCases.APIViewTestCase):
         ]
 
 
-class RearPortTest(APIViewTestCases.APIViewTestCase):
+class RearPortTest(Mixins.BasePortTestMixin):
     model = RearPort
-    brief_fields = ["cable", "device", "display", "id", "name", "url"]
-    bulk_update_data = {
-        "description": "New description",
-    }
     peer_termination_type = Interface
-    choices_fields = ["type"]
+
+    def test_trace(self):
+        """RearPorts don't support trace."""
 
     @classmethod
     def setUpTestData(cls):
-        manufacturer = Manufacturer.objects.create(name="Test Manufacturer 1", slug="test-manufacturer-1")
-        devicetype = DeviceType.objects.create(manufacturer=manufacturer, model="Device Type 1", slug="device-type-1")
-        site = Site.objects.create(name="Site 1", slug="site-1")
-        devicerole = DeviceRole.objects.create(name="Test Device Role 1", slug="test-device-role-1", color="ff0000")
-        device = Device.objects.create(device_type=devicetype, device_role=devicerole, name="Device 1", site=site)
+        super().setUpTestData()
 
-        RearPort.objects.create(device=device, name="Rear Port 1", type=PortTypeChoices.TYPE_8P8C)
-        RearPort.objects.create(device=device, name="Rear Port 2", type=PortTypeChoices.TYPE_8P8C)
-        RearPort.objects.create(device=device, name="Rear Port 3", type=PortTypeChoices.TYPE_8P8C)
+        RearPort.objects.create(device=cls.device, name="Rear Port 1", type=PortTypeChoices.TYPE_8P8C)
+        RearPort.objects.create(device=cls.device, name="Rear Port 2", type=PortTypeChoices.TYPE_8P8C)
+        RearPort.objects.create(device=cls.device, name="Rear Port 3", type=PortTypeChoices.TYPE_8P8C)
 
         cls.create_data = [
             {
-                "device": device.pk,
+                "device": cls.device.pk,
                 "name": "Rear Port 4",
                 "type": PortTypeChoices.TYPE_8P8C,
             },
             {
-                "device": device.pk,
+                "device": cls.device.pk,
                 "name": "Rear Port 5",
                 "type": PortTypeChoices.TYPE_8P8C,
             },
             {
-                "device": device.pk,
+                "device": cls.device.pk,
                 "name": "Rear Port 6",
                 "type": PortTypeChoices.TYPE_8P8C,
             },
         ]
 
 
-class DeviceBayTest(APIViewTestCases.APIViewTestCase):
+class DeviceBayTest(Mixins.BaseComponentTestMixin):
     model = DeviceBay
-    brief_fields = ["device", "display", "id", "name", "url"]
-    bulk_update_data = {
-        "description": "New description",
-    }
+    choices_fields = []
 
     @classmethod
     def setUpTestData(cls):
-        manufacturer = Manufacturer.objects.create(name="Test Manufacturer 1", slug="test-manufacturer-1")
-        site = Site.objects.create(name="Site 1", slug="site-1")
-        devicerole = DeviceRole.objects.create(name="Test Device Role 1", slug="test-device-role-1", color="ff0000")
+        super().setUpTestData()
 
         device_types = (
-            DeviceType.objects.create(
-                manufacturer=manufacturer,
-                model="Device Type 1",
-                slug="device-type-1",
-                subdevice_role=SubdeviceRoleChoices.ROLE_PARENT,
-            ),
-            DeviceType.objects.create(
-                manufacturer=manufacturer,
-                model="Device Type 2",
-                slug="device-type-2",
-                subdevice_role=SubdeviceRoleChoices.ROLE_CHILD,
-            ),
+            DeviceType.objects.filter(subdevice_role=SubdeviceRoleChoices.ROLE_PARENT).first(),
+            DeviceType.objects.filter(subdevice_role=SubdeviceRoleChoices.ROLE_CHILD).first(),
         )
 
         devices = (
             Device.objects.create(
                 device_type=device_types[0],
-                device_role=devicerole,
+                device_role=cls.device_role,
                 name="Device 1",
-                site=site,
+                site=cls.site,
             ),
             Device.objects.create(
                 device_type=device_types[1],
-                device_role=devicerole,
+                device_role=cls.device_role,
                 name="Device 2",
-                site=site,
+                site=cls.site,
             ),
             Device.objects.create(
                 device_type=device_types[1],
-                device_role=devicerole,
+                device_role=cls.device_role,
                 name="Device 3",
-                site=site,
+                site=cls.site,
             ),
             Device.objects.create(
                 device_type=device_types[1],
-                device_role=devicerole,
+                device_role=cls.device_role,
                 name="Device 4",
-                site=site,
+                site=cls.site,
             ),
         )
 
@@ -2095,45 +2033,39 @@ class DeviceBayTest(APIViewTestCases.APIViewTestCase):
         ]
 
 
-class InventoryItemTest(APIViewTestCases.APIViewTestCase):
+class InventoryItemTest(Mixins.BaseComponentTestMixin):
     model = InventoryItem
     brief_fields = ["_depth", "device", "display", "id", "name", "url"]
-    bulk_update_data = {
-        "description": "New description",
-    }
+    choices_fields = []
 
     @classmethod
     def setUpTestData(cls):
-        manufacturer = Manufacturer.objects.create(name="Test Manufacturer 1", slug="test-manufacturer-1")
-        devicetype = DeviceType.objects.create(manufacturer=manufacturer, model="Device Type 1", slug="device-type-1")
-        site = Site.objects.create(name="Site 1", slug="site-1")
-        devicerole = DeviceRole.objects.create(name="Test Device Role 1", slug="test-device-role-1", color="ff0000")
-        device = Device.objects.create(device_type=devicetype, device_role=devicerole, name="Device 1", site=site)
+        super().setUpTestData()
 
-        InventoryItem.objects.create(device=device, name="Inventory Item 1", manufacturer=manufacturer)
-        InventoryItem.objects.create(device=device, name="Inventory Item 2", manufacturer=manufacturer)
-        InventoryItem.objects.create(device=device, name="Inventory Item 3", manufacturer=manufacturer)
+        InventoryItem.objects.create(device=cls.device, name="Inventory Item 1", manufacturer=cls.manufacturer)
+        InventoryItem.objects.create(device=cls.device, name="Inventory Item 2", manufacturer=cls.manufacturer)
+        InventoryItem.objects.create(device=cls.device, name="Inventory Item 3", manufacturer=cls.manufacturer)
 
         cls.create_data = [
             {
-                "device": device.pk,
+                "device": cls.device.pk,
                 "name": "Inventory Item 4",
-                "manufacturer": manufacturer.pk,
+                "manufacturer": cls.manufacturer.pk,
             },
             {
-                "device": device.pk,
+                "device": cls.device.pk,
                 "name": "Inventory Item 5",
-                "manufacturer": manufacturer.pk,
+                "manufacturer": cls.manufacturer.pk,
             },
             {
-                "device": device.pk,
+                "device": cls.device.pk,
                 "name": "Inventory Item 6",
-                "manufacturer": manufacturer.pk,
+                "manufacturer": cls.manufacturer.pk,
             },
         ]
 
 
-class CableTest(APIViewTestCases.APIViewTestCase):
+class CableTest(Mixins.BaseComponentTestMixin):
     model = Cable
     brief_fields = ["display", "id", "label", "url"]
     bulk_update_data = {
@@ -2147,23 +2079,20 @@ class CableTest(APIViewTestCases.APIViewTestCase):
 
     @classmethod
     def setUpTestData(cls):
-        site = Site.objects.create(name="Site 1", slug="site-1")
-        manufacturer = Manufacturer.objects.create(name="Manufacturer 1", slug="manufacturer-1")
-        devicetype = DeviceType.objects.create(manufacturer=manufacturer, model="Device Type 1", slug="device-type-1")
-        devicerole = DeviceRole.objects.create(name="Device Role 1", slug="device-role-1", color="ff0000")
+        super().setUpTestData()
 
         devices = (
             Device.objects.create(
-                device_type=devicetype,
-                device_role=devicerole,
-                name="Device 1",
-                site=site,
+                device_type=cls.device_type,
+                device_role=cls.device_role,
+                name="Device 2",
+                site=cls.site,
             ),
             Device.objects.create(
-                device_type=devicetype,
-                device_role=devicerole,
-                name="Device 2",
-                site=site,
+                device_type=cls.device_type,
+                device_role=cls.device_role,
+                name="Device 3",
+                site=cls.site,
             ),
         )
 
@@ -2240,45 +2169,31 @@ class ConnectedDeviceTest(APITestCase):
 
         super().setUp()
 
-        self.site1 = Site.objects.create(name="Test Site 1", slug="test-site-1")
-        self.site2 = Site.objects.create(name="Test Site 2", slug="test-site-2")
-        manufacturer = Manufacturer.objects.create(name="Test Manufacturer 1", slug="test-manufacturer-1")
-        self.devicetype1 = DeviceType.objects.create(
-            manufacturer=manufacturer,
-            model="Test Device Type 1",
-            slug="test-device-type-1",
-        )
-        self.devicetype2 = DeviceType.objects.create(
-            manufacturer=manufacturer,
-            model="Test Device Type 2",
-            slug="test-device-type-2",
-        )
-        self.devicerole1 = DeviceRole.objects.create(
-            name="Test Device Role 1", slug="test-device-role-1", color="ff0000"
-        )
-        self.devicerole2 = DeviceRole.objects.create(
-            name="Test Device Role 2", slug="test-device-role-2", color="00ff00"
-        )
-        self.device1 = Device.objects.create(
-            device_type=self.devicetype1,
-            device_role=self.devicerole1,
-            name="TestDevice1",
-            site=self.site1,
-        )
-        self.device2 = Device.objects.create(
-            device_type=self.devicetype1,
-            device_role=self.devicerole1,
-            name="TestDevice2",
-            site=self.site1,
-        )
-        self.interface1 = Interface.objects.create(device=self.device1, name="eth0")
-        self.interface2 = Interface.objects.create(device=self.device2, name="eth0")
+        site = Site.objects.first()
+        device_type = DeviceType.objects.exclude(manufacturer__isnull=True).first()
+        device_role = DeviceRole.objects.first()
 
-        cable = Cable(termination_a=self.interface1, termination_b=self.interface2)
-        cable.save()
+        cable_status = Status.objects.get_for_model(Cable).get(slug="connected")
+
+        self.device1 = Device.objects.create(
+            device_type=device_type,
+            device_role=device_role,
+            name="TestDevice1",
+            site=site,
+        )
+        device2 = Device.objects.create(
+            device_type=device_type,
+            device_role=device_role,
+            name="TestDevice2",
+            site=site,
+        )
+        interface1 = Interface.objects.create(device=self.device1, name="eth0")
+        interface2 = Interface.objects.create(device=device2, name="eth0")
+
+        cable = Cable(termination_a=interface1, termination_b=interface2, status=cable_status)
+        cable.validated_save()
 
     def test_get_connected_device(self):
-
         url = reverse("dcim-api:connected-device-list")
         response = self.client.get(url + "?peer_device=TestDevice2&peer_interface=eth0", **self.header)
 
@@ -2292,82 +2207,81 @@ class VirtualChassisTest(APIViewTestCases.APIViewTestCase):
 
     @classmethod
     def setUpTestData(cls):
-        site = Site.objects.create(name="Test Site", slug="test-site")
-        manufacturer = Manufacturer.objects.create(name="Manufacturer 1", slug="manufacturer-1")
-        devicetype = DeviceType.objects.create(manufacturer=manufacturer, model="Device Type", slug="device-type")
-        devicerole = DeviceRole.objects.create(name="Device Role", slug="device-role", color="ff0000")
+        site = Site.objects.first()
+        device_type = DeviceType.objects.exclude(manufacturer__isnull=True).first()
+        device_role = DeviceRole.objects.first()
 
         devices = (
             Device.objects.create(
                 name="Device 1",
-                device_type=devicetype,
-                device_role=devicerole,
+                device_type=device_type,
+                device_role=device_role,
                 site=site,
             ),
             Device.objects.create(
                 name="Device 2",
-                device_type=devicetype,
-                device_role=devicerole,
+                device_type=device_type,
+                device_role=device_role,
                 site=site,
             ),
             Device.objects.create(
                 name="Device 3",
-                device_type=devicetype,
-                device_role=devicerole,
+                device_type=device_type,
+                device_role=device_role,
                 site=site,
             ),
             Device.objects.create(
                 name="Device 4",
-                device_type=devicetype,
-                device_role=devicerole,
+                device_type=device_type,
+                device_role=device_role,
                 site=site,
             ),
             Device.objects.create(
                 name="Device 5",
-                device_type=devicetype,
-                device_role=devicerole,
+                device_type=device_type,
+                device_role=device_role,
                 site=site,
             ),
             Device.objects.create(
                 name="Device 6",
-                device_type=devicetype,
-                device_role=devicerole,
+                device_type=device_type,
+                device_role=device_role,
                 site=site,
             ),
             Device.objects.create(
                 name="Device 7",
-                device_type=devicetype,
-                device_role=devicerole,
+                device_type=device_type,
+                device_role=device_role,
                 site=site,
             ),
             Device.objects.create(
                 name="Device 8",
-                device_type=devicetype,
-                device_role=devicerole,
+                device_type=device_type,
+                device_role=device_role,
                 site=site,
             ),
             Device.objects.create(
                 name="Device 9",
-                device_type=devicetype,
-                device_role=devicerole,
+                device_type=device_type,
+                device_role=device_role,
                 site=site,
             ),
             Device.objects.create(
                 name="Device 10",
-                device_type=devicetype,
-                device_role=devicerole,
+                device_type=device_type,
+                device_role=device_role,
                 site=site,
             ),
             Device.objects.create(
                 name="Device 11",
-                device_type=devicetype,
-                device_role=devicerole,
+                device_type=device_type,
+                device_role=device_role,
                 site=site,
             ),
             Device.objects.create(
                 name="Device 12",
-                device_type=devicetype,
-                device_role=devicerole,
+                device_type=device_type,
+                device_role=device_role,
                 site=site,
             ),
         )
@@ -2483,10 +2397,7 @@ class PowerPanelTest(APIViewTestCases.APIViewTestCase):
 
     @classmethod
     def setUpTestData(cls):
-        sites = (
-            Site.objects.create(name="Site 1", slug="site-1"),
-            Site.objects.create(name="Site 2", slug="site-2"),
-        )
+        sites = Site.objects.all()[:2]
 
         rack_groups = (
             RackGroup.objects.create(name="Rack Group 1", slug="rack-group-1", site=sites[0]),
@@ -2530,7 +2441,7 @@ class PowerFeedTest(APIViewTestCases.APIViewTestCase):
 
     @classmethod
     def setUpTestData(cls):
-        site = Site.objects.create(name="Site 1", slug="site-1")
+        site = Site.objects.first()
         rackgroup = RackGroup.objects.create(site=site, name="Rack Group 1", slug="rack-group-1")
         rackrole = RackRole.objects.create(name="Rack Role 1", slug="rack-role-1", color="ff0000")
 
@@ -2609,3 +2520,39 @@ class PowerFeedTest(APIViewTestCases.APIViewTestCase):
                 "type": REDUNDANT,
             },
         ]
+
+
+class DeviceRedundancyGroupTest(APIViewTestCases.APIViewTestCase):
+    model = DeviceRedundancyGroup
+    brief_fields = ["display", "failover_strategy", "id", "name", "slug", "url"]
+    create_data = [
+        {
+            "name": "Device Redundancy Group 4",
+            "failover_strategy": "active-active",
+            "status": "active",
+        },
+        {
+            "name": "Device Redundancy Group 5",
+            "failover_strategy": "active-passive",
+            "status": "planned",
+        },
+        {
+            "name": "Device Redundancy Group 6",
+            "failover_strategy": "active-active",
+            "status": "staging",
+        },
+    ]
+    bulk_update_data = {
+        "failover_strategy": "active-passive",
+    }
+    choices_fields = ["status", "failover_strategy"]
+
+    @classmethod
+    def setUpTestData(cls):
+        # FIXME(jathan): The writable serializer for `status` takes the
+        # status `name` (str) and not the `pk` (int). Do not validate this
+        # field right now, since we are asserting that it does create correctly.
+        #
+        # The test code for `utilities.testing.views.TestCase.model_to_dict()`
+        # needs to be enhanced to use the actual API serializers when `api=True`
+        cls.validation_excluded_fields = ["status"]

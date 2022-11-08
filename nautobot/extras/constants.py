@@ -31,6 +31,7 @@ JOB_OVERRIDABLE_FIELDS = (
     "soft_time_limit",
     "time_limit",
     "has_sensitive_variables",
+    "task_queues",
 )
 
 

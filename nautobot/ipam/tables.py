@@ -213,6 +213,7 @@ class RIRTable(BaseTable):
 class AggregateTable(BaseTable):
     pk = ToggleColumn()
     prefix = tables.LinkColumn(verbose_name="Aggregate", order_by=("network", "prefix_length"))
+    rir = tables.Column(linkify=True)
     tenant = TenantColumn()
     date_added = tables.DateColumn(format="Y-m-d", verbose_name="Added")
 

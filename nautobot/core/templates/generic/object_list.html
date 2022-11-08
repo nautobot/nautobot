@@ -3,11 +3,44 @@
 {% load helpers %}
 {% load static %}
 
+{% block header %}
+    <div class="row noprint">
+        <div class="{% if search_form %}col-sm-8 col-md-9 {% else %} col-md-12 {% endif %}">
+            <ol class="breadcrumb">
+            {% block breadcrumbs %}
+                {% if list_url %}
+                <li><a href="{% url list_url %}">{{ title }}</a></li>
+                {% endif %}
+                {% block extra_breadcrumbs %}{% endblock extra_breadcrumbs %}
+            {% endblock breadcrumbs %}
+            </ol>
+        </div>
+        {% if search_form %}
+        <div class="col-sm-4 col-md-3">
+            <form action="#" method="get" id="search-form">
+                <div class="input-group">
+                    {{ search_form.q }}
+                    <span class="input-group-btn">
+                        <button type="submit" class="btn btn-primary">
+                            <i class="mdi mdi-magnify"></i>
+                        </button>
+                    </span>
+                </div>
+            </form>
+        </div>
+        {% endif %}
+    </div>
+{% endblock header %}
+
+
 {% block content %}
 <div class="pull-right noprint">
     {% block buttons %}{% endblock %}
-    {% if request.user.is_authenticated and table_config_form %}
+    {% if table and request.user.is_authenticated and table_config_form %}
         <button type="button" class="btn btn-default" data-toggle="modal" data-target="#ObjectTable_config" title="Configure table"><i class="mdi mdi-cog"></i> Configure</button>
+    {% endif %}
+    {% if filter_form or dynamic_filter_form %}
+        <button type="button" class="btn btn-default" data-toggle="modal" data-target="#FilterForm_modal" title="Add filters"><i class="mdi mdi-filter"></i> Filter</button>
     {% endif %}
     {% if permissions.add and 'add' in action_buttons %}
         {% add_button content_type.model_class|validated_viewname:"add" %}
@@ -19,15 +52,46 @@
         {% export_button content_type %}
     {% endif %}
 </div>
-<h1>{% block title %}{{ content_type.model_class|meta:"verbose_name_plural"|bettertitle }}{% endblock %}</h1>
+<h1>{% block title %}{{ title }}{% endblock %}</h1>
+{% if filter_params %}
+<div class="filters-applied">
+    <b>Filters:</b>
+    {% for field, values in filter_params %}
+    <span class="filter-container" dir="ltr">
+        <span
+                class="filter-selection">
+            <b>{{ field }}:</b>
+            <span
+                    class="remove-filter-param"
+                    title="Remove all items"
+                    data-field-type="parent"
+                    data-field-value={{ field }}
+            >×</span>
+            <ul class="filter-selection-rendered">
+                {% for value in values %}
+                <li
+                        class="filter-selection-choice"
+                        title="{{ value }}"
+                >
+                    <span
+                            class="filter-selection-choice-remove remove-filter-param"
+                            data-field-type="child"
+                            data-field-parent={{ field }}
+                            data-field-value={{ value }}
+                    >×</span>{{ value }}
+                </li>
+                {% endfor %}
+            </ul>
+        </span>
+    </span>
+    {% endfor %}
+</div>
+<hr>
+{% endif %}
+
 <div class="row">
+    {% block table %}
     <div class="col-md-12">
-        {% if filter_form %}
-            <div class="col-md-3 pull-right right-side-panel noprint">
-                {% include 'inc/search_panel.html' %}
-                {% block sidebar %}{% endblock %}
-            </div>
-        {% endif %}
         {% with bulk_edit_url=content_type.model_class|validated_viewname:"bulk_edit" bulk_delete_url=content_type.model_class|validated_viewname:"bulk_delete" %}
         {% if permissions.change or permissions.delete %}
             <form method="post" class="form form-horizontal">
@@ -81,10 +145,80 @@
         {% include 'inc/paginator.html' with paginator=table.paginator page=table.page %}
         <div class="clearfix"></div>
     </div>
+    {% endblock %}
 </div>
-{% table_config_form table table_name="ObjectTable" %}
+{% if table %}{% table_config_form table table_name="ObjectTable" %}{% endif %}
+{% filter_form_modal filter_form dynamic_filter_form model_plural_name=title %}
 {% endblock %}
 
 {% block javascript %}
 <script src="{% static 'js/tableconfig.js' %}"></script>
+<script src="{% static 'jquery/jquery.formset.js' %}"></script>
+<script>
+    $('.formset_row-dynamic-filterform').formset({
+        addText: '<span class="mdi mdi-plus-thick" aria-hidden="true"></span> Add another Filter',
+        addCssClass: 'btn btn-primary add-row',
+        deleteText: '<span class="mdi mdi-trash-can-outline" aria-hidden="true"></span>',
+        deleteCssClass: 'btn btn-danger delete-row',
+        prefix: 'form',
+        formCssClass: 'dynamic-filterform',
+        added: jsify_form,
+        removed: (row) => { row.remove(); }
+    });
+
+    // By default on lookup_value field names are form-\d-lookup_value, thats why
+    // on page load we change all `lookup_value` name to its relevant `lookup_type` value
+    $(".dynamic-filterform").each(function(){
+        lookup_type_value = $(this).find(".lookup_type-select").val();
+        lookup_value = $(this).find(".lookup_value-input");
+        lookup_value.attr("name", lookup_type_value);
+    })
+
+    // Remove applied filters
+    $(".remove-filter-param").on("click", function(){
+        let query_params = location.search;
+        let type = $(this).attr("data-field-type");
+        let field_value = $(this).attr("data-field-value");
+        let query_string = location.search.substr(1).split("&");
+
+        if (type === "parent") {
+            query_string = query_string.filter(item => item.search(field_value) < 0);
+        } else {
+            let parent = $(this).attr("data-field-parent");
+            query_string = query_string.filter(item => item.search(parent + "=" + field_value) < 0)
+        }
+        location.replace("?" + query_string.join("&"))
+    })
+
+    // On submit of filter form
+    $("#dynamic-filter-form").on("submit", function(e){
+        let this_form = $(this);
+        this_form.find(`input[name*="form-"], select[name*="form-"]`).removeAttr("name")
+        // Append q form field to to dynamic filter form via hidden input
+        let q_field = $('#id_q')
+        let q_field_phantom = $('<input type="hidden" name="q" />')
+        q_field_phantom.val(q_field.val())
+        this_form.append(q_field_phantom);
+    })
+
+    // On submit of filter search form
+    $("#search-form").on("submit", function(e){
+        // Since the Dynamic Filter Form will already grab my q field, just have it do a majority of the work.
+        e.preventDefault()
+        $("#dynamic-filter-form").submit()
+    })
+
+    // Clear new row values upon creation
+    $(".dynamic-filterform-add .add-row").click(function(){
+        let new_fields_parent_element = $(".dynamic-filterform").last()
+        let lookup_field_classes = [".lookup_field-select", ".lookup_type-select", ".lookup_value-input"];
+        lookup_field_classes.forEach(field_class => {
+            let element = new_fields_parent_element.find(field_class);
+            element.val(null).trigger('change')
+        })
+        // reinitialize jsify_form
+        jsify_form($(document))
+    })
+
+</script>
 {% endblock %}
