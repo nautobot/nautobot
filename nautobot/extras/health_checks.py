@@ -1,4 +1,5 @@
 """Nautobot custom health checks."""
+from abc import ABC
 from urllib.parse import urlparse
 
 from django.conf import settings
@@ -13,17 +14,42 @@ from redis.sentinel import Sentinel
 
 from .models import HealthCheckTestModel
 
-# Prometheus metrics for health checks.
-# We set multiprocess_mode to "min" in order to cause the metrics to become 0 when one of them fails.
-database_backend_metric = Gauge("health_check_database_info", "State of database backend", multiprocess_mode="min")
-cache_ops_redis_backend_metric = Gauge(
-    "health_check_cache_ops_redis_info", "State of cache ops redis backend", multiprocess_mode="min"
-)
-redis_backend_metric = Gauge("health_check_redis_backend_info", "State of redis backend", multiprocess_mode="min")
+
+class NautobotHealthCheckBackend(BaseHealthCheckBackend, ABC):
+    """Automatically set metric based on the outcome of the check.
+
+    Due to the multiprocess nature of Nautobot we have multiple processes generating health check metrics. Most of these
+    seem to never run the health checks and therefore the value stays at the uninitiated value of -1. Therefore, we set
+    'multiprocess_mode' to "max", as the values 0 (down) or 1 (up) are always bigger than -1. Finally, we use a gauge
+    metric instead of the more intuitive enum, because the latter doesn't support multiprocessing.
+    """
+
+    MULTIPROCESS_MODE = "max"
+
+    states = {"unknown": -1, "down": 0, "up": 1}
+    metric: Gauge  # Set this in subclasses
+
+    def __init__(self):
+        super().__init__()
+        # Initialize the metric as -1
+        self.metric.set(self.states["unknown"])
+
+    def run_check(self):
+        super().run_check()
+        if self.errors:
+            self.metric.set(self.states["down"])
+        else:
+            self.metric.set(self.states["up"])
 
 
-class DatabaseBackend(BaseHealthCheckBackend):
+class DatabaseBackend(NautobotHealthCheckBackend):
     """Check database connectivity, test read/write if available."""
+
+    metric = Gauge(
+        "health_check_database_info",
+        "State of database backend",
+        multiprocess_mode=NautobotHealthCheckBackend.MULTIPROCESS_MODE,
+    )
 
     def check_status(self):
         """Check the database connection is available."""
@@ -37,16 +63,13 @@ class DatabaseBackend(BaseHealthCheckBackend):
                 obj.title = "newtest"
                 obj.save()
                 obj.delete()
-            database_backend_metric.set(1)
         except IntegrityError:
-            database_backend_metric.set(0)
             raise ServiceReturnedUnexpectedResult("Integrity Error")
         except DatabaseError:
-            database_backend_metric.set(0)
             raise ServiceUnavailable("Database error")
 
 
-class RedisHealthCheck(BaseHealthCheckBackend):
+class RedisHealthCheck(NautobotHealthCheckBackend):
     """Cacheops and django_redis have 2 different data structures for configuring redis, however, the checks are the same for both."""
 
     def check_sentinel(self, sentinel_servers, service_name, db, **kwargs):
@@ -57,13 +80,10 @@ class RedisHealthCheck(BaseHealthCheckBackend):
             )
             with sentinel.master_for(service_name=service_name, db=db) as master:
                 master.ping()
-            redis_backend_metric.set(1)
         except (ConnectionRefusedError, exceptions.ConnectionError, exceptions.TimeoutError) as e:
             self.add_error(ServiceUnavailable(f"Unable to connect to Redis Sentinel: {type(e).__name__}"), e)
-            redis_backend_metric.set(0)
         except Exception as e:
             self.add_error(ServiceUnavailable("Unknown error"), e)
-            redis_backend_metric.set(0)
 
     def check_redis(self, redis_url=None, **kwargs):
         try:
@@ -73,17 +93,20 @@ class RedisHealthCheck(BaseHealthCheckBackend):
             else:
                 with Redis(**kwargs) as conn:
                     conn.ping()  # exceptions may be raised upon ping
-            redis_backend_metric.set(1)
         except (ConnectionRefusedError, exceptions.ConnectionError, exceptions.TimeoutError) as e:
             self.add_error(ServiceUnavailable(f"Unable to connect to Redis: {type(e).__name__}"), e)
-            redis_backend_metric.set(0)
         except Exception as e:
             self.add_error(ServiceUnavailable("Unknown error"), e)
-            redis_backend_metric.set(0)
 
 
 class CacheopsRedisBackend(RedisHealthCheck):
     """Health check for Cacheops Redis."""
+
+    metric = Gauge(
+        "health_check_cache_ops_redis_info",
+        "State of cache ops redis backend",
+        multiprocess_mode=NautobotHealthCheckBackend.MULTIPROCESS_MODE,
+    )
 
     redis_url = getattr(settings, "CACHEOPS_REDIS", None)
     sentinel_url = getattr(settings, "CACHEOPS_SENTINEL", None)
@@ -111,6 +134,12 @@ class CacheopsRedisBackend(RedisHealthCheck):
 
 class RedisBackend(RedisHealthCheck):
     """Health check for Django Redis."""
+
+    metric = Gauge(
+        "health_check_redis_backend_info",
+        "State of redis backend",
+        multiprocess_mode=NautobotHealthCheckBackend.MULTIPROCESS_MODE,
+    )
 
     caches = getattr(settings, "CACHES", {}).get("default", {})
 
