@@ -81,7 +81,6 @@ class ExampleModelUIViewSet(NautobotUIViewSet):
     table_class = tables.ExampleModelTable
 
 
-
 # Example excluding the BulkUpdateViewSet
 class AnotherExampleModelUIViewSet(
     view_mixins.ObjectBulkDestroyViewMixin,
@@ -102,8 +101,6 @@ class AnotherExampleModelUIViewSet(
     queryset = AnotherExampleModel.objects.all()
     serializer_class = serializers.AnotherExampleModelSerializer
     table_class = tables.AnotherExampleModelTable
-
-
 
 
 class ViewToBeOverridden(generic.View):
