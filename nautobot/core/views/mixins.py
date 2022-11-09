@@ -346,9 +346,9 @@ class NautobotViewSetMixin(GenericViewSet, AccessMixin, GetReturnURLMixin, FormV
                     template_name = f"{app_label}/{model_opts.model_name}_create.html"
                     select_template([template_name])
                 elif action == "notes":
-                    select_template("extras/object_notes.html")
+                    select_template(["extras/object_notes.html"])
                 elif action == "changelog":
-                    select_template("extras/object_changelog.html")
+                    select_template(["extras/object_changelog.html"])
                 else:
                     # No special case fallback, fall back to generic/object_{action}.html
                     raise TemplateDoesNotExist("")
