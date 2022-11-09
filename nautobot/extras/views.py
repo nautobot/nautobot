@@ -583,9 +583,6 @@ class DynamicGroupEditView(generic.ObjectEditView):
         filterform_class = instance.generate_filter_form()
 
         if filterform_class is None:
-            # FIXME(jathan): There is currently an edge case here that needs to be addressed:
-            # `AttributeError: 'NoneType' object has no attribute 'is_valid'`
-            # See: https://sentry.io/share/issue/fb41c6afb40248f6931021574bc38a0d/
             filter_form = None
         elif request.POST:
             filter_form = filterform_class(data=request.POST)
