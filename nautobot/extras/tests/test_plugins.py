@@ -6,7 +6,6 @@ from django.core.exceptions import ValidationError
 from django.template import engines
 from django.test import override_settings
 from django.urls import reverse, NoReverseMatch
-from rest_framework import status
 
 import netaddr
 
@@ -463,7 +462,7 @@ class PluginAPITest(APIViewTestCases.APIViewTestCase):
         # Check if log messages and API data is properly rendered
         with self.assertLogs(logger="nautobot.extras.api", level="WARNING") as cm:
             response = self.client.get(url, **self.header)
-            self.assertHttpStatus(response, status.HTTP_200_OK)
+            self.assertHttpStatus(response, 200)
             self.assertIn('"notes_url":null', response.content.decode(response.charset))
             self.assertIn("notes_url", response.data)
             self.assertIn("None", str(response.data["notes_url"]))
