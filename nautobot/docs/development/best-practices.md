@@ -407,7 +407,7 @@ To prevent circular dependency errors and improve code readability, the followin
 
 ### PEP8 Style Guide
 
-Nautobot follows the [PEP8 style guide's](https://peps.python.org/pep-0008/#imports) standard for importing modules. Standard libraries should be imported first, followed by a blank line, then third party imports, a blank line, and finally `nautobot` package imports. Within these groups, top level packages should be imported first, then sub-package imports. Import lines should be sorted alphanumerically as well as lists of names imported from packages.
+Nautobot follows the [PEP8 style guide's](https://peps.python.org/pep-0008/#imports) standard for importing modules. Libraries should be imported in these groups: standard library, third party libraries, then `nautobot` packages and finally try/except imports. The groups should be separated by a single blank line. Within these groups, top level packages should be imported first, then sub-package imports. Import lines should be sorted alphanumerically as well as lists of names imported from packages.
 
 !!! example
 
@@ -482,4 +482,20 @@ When using external libraries you may need to import multiple different modules 
 
     # other libraries
     from mptt import models as mptt_models
+    ```
+
+#### Convenience Imports
+
+Nautobot uses convenience imports in the same way that [django](https://docs.djangoproject.com/en/dev/internals/contributing/writing-code/coding-style/#imports) implements them. These should be leveraged whenever possible.
+
+!!! example
+
+    ```py
+    from nautobot.extras import forms
+
+    # use top level import if available:
+    forms.NoteModelFormMixin()
+
+    # instead of the full path:
+    forms.mixins.NoteModelFormMixin()
     ```
