@@ -1,35 +1,24 @@
-from collections import OrderedDict
-from copy import deepcopy
 import logging
 import uuid
+from collections import OrderedDict
+from copy import deepcopy
 
-from django import forms
+import django_filters
+from django import forms as djforms
 from django.conf import settings
 from django.core.validators import MaxValueValidator
 from django.db import models
 from django.forms.utils import ErrorDict, ErrorList
-
-import django_filters
 from django_filters.constants import EMPTY_VALUES
 from django_filters.utils import get_model_field, resolve_field
-
 from mptt.models import MPTTModel
+from taggit.managers import TaggableManager
 from tree_queries.models import TreeNode
 
-from nautobot.dcim.fields import MACAddressCharField
-from nautobot.dcim.forms import MACAddressField
-from nautobot.extras.models import Tag
-from nautobot.utilities.constants import (
-    FILTER_CHAR_BASED_LOOKUP_MAP,
-    FILTER_NEGATION_LOOKUP_MAP,
-    FILTER_NUMERIC_BASED_LOOKUP_MAP,
-)
-from nautobot.utilities.forms.fields import MultiMatchModelMultipleChoiceField, MultiValueCharField
-from nautobot.utilities.utils import flatten_iterable
-
-
-from taggit.managers import TaggableManager
-
+from nautobot.dcim import fields as dcim_fields
+from nautobot.dcim import forms as dcim_forms
+from nautobot.extras import models as extras_models
+from nautobot.utilities import constants, forms, utils
 
 logger = logging.getLogger(__name__)
 
@@ -41,7 +30,7 @@ def multivalue_field_factory(field_class):
     """
 
     class NewField(field_class):
-        widget = forms.SelectMultiple
+        widget = djforms.SelectMultiple
 
         def to_python(self, value):
             if not value:
@@ -72,19 +61,19 @@ def multivalue_field_factory(field_class):
 
 
 class MultiValueCharFilter(django_filters.CharFilter, django_filters.MultipleChoiceFilter):
-    field_class = MultiValueCharField
+    field_class = forms.fields.MultiValueCharField
 
 
 class MultiValueDateFilter(django_filters.DateFilter, django_filters.MultipleChoiceFilter):
-    field_class = multivalue_field_factory(forms.DateField)
+    field_class = multivalue_field_factory(djforms.DateField)
 
 
 class MultiValueDateTimeFilter(django_filters.DateTimeFilter, django_filters.MultipleChoiceFilter):
-    field_class = multivalue_field_factory(forms.DateTimeField)
+    field_class = multivalue_field_factory(djforms.DateTimeField)
 
 
 class MultiValueNumberFilter(django_filters.NumberFilter, django_filters.MultipleChoiceFilter):
-    field_class = multivalue_field_factory(forms.IntegerField)
+    field_class = multivalue_field_factory(djforms.IntegerField)
 
     class MultiValueMaxValueValidator(MaxValueValidator):
         """As django.core.validators.MaxValueValidator, but apply to a list of values rather than a single value."""
@@ -102,19 +91,19 @@ class MultiValueBigNumberFilter(MultiValueNumberFilter):
 
 
 class MultiValueTimeFilter(django_filters.TimeFilter, django_filters.MultipleChoiceFilter):
-    field_class = multivalue_field_factory(forms.TimeField)
+    field_class = multivalue_field_factory(djforms.TimeField)
 
 
 class MACAddressFilter(django_filters.CharFilter):
-    field_class = MACAddressField
+    field_class = dcim_forms.MACAddressField
 
 
 class MultiValueMACAddressFilter(django_filters.MultipleChoiceFilter):
-    field_class = multivalue_field_factory(MACAddressField)
+    field_class = multivalue_field_factory(dcim_forms.MACAddressField)
 
 
 class MultiValueUUIDFilter(django_filters.UUIDFilter, django_filters.MultipleChoiceFilter):
-    field_class = multivalue_field_factory(forms.UUIDField)
+    field_class = multivalue_field_factory(djforms.UUIDField)
 
 
 class RelatedMembershipBooleanFilter(django_filters.BooleanFilter):
@@ -174,7 +163,7 @@ class TagFilter(django_filters.ModelMultipleChoiceFilter):
         kwargs.setdefault("field_name", "tags__slug")
         kwargs.setdefault("to_field_name", "slug")
         kwargs.setdefault("conjoined", True)
-        kwargs.setdefault("queryset", Tag.objects.all())
+        kwargs.setdefault("queryset", extras_models.Tag.objects.all())
 
         super().__init__(*args, **kwargs)
 
@@ -415,7 +404,7 @@ class NaturalKeyOrPKMultipleChoiceFilter(django_filters.ModelMultipleChoiceFilte
     keyword argument on filter initialization (defaults to `slug`).
     """
 
-    field_class = MultiMatchModelMultipleChoiceField
+    field_class = forms.fields.MultiMatchModelMultipleChoiceField
 
     def __init__(self, *args, **kwargs):
         self.natural_key = kwargs.setdefault("to_field_name", "slug")
@@ -506,7 +495,7 @@ class TreeNodeMultipleChoiceFilter(NaturalKeyOrPKMultipleChoiceFilter):
                 ]
 
         # This new_value is going to be a list of querysets that needs to be flattened.
-        value = list(flatten_iterable(value))
+        value = list(utils.flatten_iterable(value))
 
         # Construct a list of filter predicates that will be used to generate the Q object.
         predicates = []
@@ -566,7 +555,7 @@ class BaseFilterSet(django_filters.FilterSet):
             models.TimeField: {"filter_class": MultiValueTimeFilter},
             models.URLField: {"filter_class": MultiValueCharFilter},
             models.UUIDField: {"filter_class": MultiValueUUIDFilter},
-            MACAddressCharField: {"filter_class": MultiValueMACAddressFilter},
+            dcim_fields.MACAddressCharField: {"filter_class": MultiValueMACAddressFilter},
             TaggableManager: {"filter_class": TagFilter},
         }
     )
@@ -583,7 +572,7 @@ class BaseFilterSet(django_filters.FilterSet):
                 MultiValueTimeFilter,
             ),
         ):
-            lookup_map = FILTER_NUMERIC_BASED_LOOKUP_MAP
+            lookup_map = constants.FILTER_NUMERIC_BASED_LOOKUP_MAP
 
         # These filter types support only negation
         elif isinstance(
@@ -595,11 +584,11 @@ class BaseFilterSet(django_filters.FilterSet):
                 TreeNodeMultipleChoiceFilter,
             ),
         ):
-            lookup_map = FILTER_NEGATION_LOOKUP_MAP
+            lookup_map = constants.FILTER_NEGATION_LOOKUP_MAP
 
         # These filter types support only negation
         elif existing_filter.extra.get("choices"):
-            lookup_map = FILTER_NEGATION_LOOKUP_MAP
+            lookup_map = constants.FILTER_NEGATION_LOOKUP_MAP
 
         elif isinstance(
             existing_filter,
@@ -610,7 +599,7 @@ class BaseFilterSet(django_filters.FilterSet):
                 MultiValueMACAddressFilter,
             ),
         ):
-            lookup_map = FILTER_CHAR_BASED_LOOKUP_MAP
+            lookup_map = constants.FILTER_CHAR_BASED_LOOKUP_MAP
 
         else:
             lookup_map = None
