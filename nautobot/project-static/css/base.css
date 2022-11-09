@@ -24,6 +24,7 @@ body {
     height: 48px; /* .push must be the same height as .footer */
 }
 .footer {
+    background-color: #f5f5f5;
     border-top: 1px solid #d0d0d0;
 }
 .footer .row {
