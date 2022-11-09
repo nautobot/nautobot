@@ -61,7 +61,7 @@ def multivalue_field_factory(field_class):
 
 
 class MultiValueCharFilter(django_filters.CharFilter, django_filters.MultipleChoiceFilter):
-    field_class = forms.fields.MultiValueCharField
+    field_class = forms.MultiValueCharField
 
 
 class MultiValueDateFilter(django_filters.DateFilter, django_filters.MultipleChoiceFilter):
@@ -404,7 +404,7 @@ class NaturalKeyOrPKMultipleChoiceFilter(django_filters.ModelMultipleChoiceFilte
     keyword argument on filter initialization (defaults to `slug`).
     """
 
-    field_class = forms.fields.MultiMatchModelMultipleChoiceField
+    field_class = forms.MultiMatchModelMultipleChoiceField
 
     def __init__(self, *args, **kwargs):
         self.natural_key = kwargs.setdefault("to_field_name", "slug")
