@@ -133,7 +133,7 @@ class NotesSerializerMixin(BaseModelSerializer):
             notes_url = get_route_for_model(instance, "notes", api=True)
             return reverse(notes_url, args=[instance.id], request=self.context["request"])
         except NoReverseMatch:
-            return "Notes feature not available for this model."
+            return "Notes feature is not available for this model. Please implement it before including NotesSerializerMixin"
 
 
 class NautobotModelSerializer(
