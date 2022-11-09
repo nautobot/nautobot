@@ -75,10 +75,11 @@ class ExampleModelUIViewSet(NautobotUIViewSet):
     filterset_class = filters.ExampleModelFilterSet
     filterset_form_class = forms.ExampleModelFilterForm
     form_class = forms.ExampleModelForm
+    lookup_field = "pk"
     queryset = ExampleModel.objects.all()
     serializer_class = serializers.ExampleModelSerializer
     table_class = tables.ExampleModelTable
-    lookup_field = "pk"
+
 
 
 # Example excluding the BulkUpdateViewSet
@@ -92,15 +93,17 @@ class AnotherExampleModelUIViewSet(
     view_mixins.ObjectEditViewMixin,
     view_mixins.ObjectListViewMixin,
 ):
+    action_buttons = ["add", "export"]
     bulk_update_form_class = forms.AnotherExampleModelBulkEditForm
     filterset_class = filters.AnotherExampleModelFilterSet
     filterset_form_class = forms.AnotherExampleModelFilterForm
     form_class = forms.AnotherExampleModelForm
+    lookup_field = "pk"
     queryset = AnotherExampleModel.objects.all()
     serializer_class = serializers.AnotherExampleModelSerializer
     table_class = tables.AnotherExampleModelTable
-    lookup_field = "pk"
-    action_buttons = ["add", "export"]
+
+
 
 
 class ViewToBeOverridden(generic.View):

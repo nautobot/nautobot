@@ -75,6 +75,7 @@ class NautobotViewSetMixin(GenericViewSet, AccessMixin, GetReturnURLMixin, FormV
     # serializer_class has to be specified to eliminate the need to override retrieve() in the RetrieveModelMixin for now.
     serializer_class = None
     table_class = None
+    notes_form_class = NoteForm
 
     def get_permissions_for_model(self, model, actions):
         """
@@ -341,6 +342,10 @@ class NautobotViewSetMixin(GenericViewSet, AccessMixin, GetReturnURLMixin, FormV
                     # If both are not defined, fall back to generic/object_update.html
                     template_name = f"{app_label}/{model_opts.model_name}_create.html"
                     select_template([template_name])
+                elif action == "notes":
+                    select_template("extras/object_notes.html")
+                elif action == "changelog":
+                    select_template("extras/object_changelog.html")
                 else:
                     # No special case fallback, fall back to generic/object_{action}.html
                     raise TemplateDoesNotExist("")
@@ -378,8 +383,6 @@ class NautobotViewSetMixin(GenericViewSet, AccessMixin, GetReturnURLMixin, FormV
                 csv_file = CSVFileField(from_form=self.bulk_create_form_class)
 
             form_class = BulkCreateForm
-        elif self.action == "notes":
-            form_class = NoteForm
         else:
             form_class = getattr(self, f"{self.action}_form_class", None)
 
@@ -926,7 +929,6 @@ class ObjectChangeLogViewMixin(NautobotViewSetMixin):
     def changelog(self, request, *args, **kwargs):
         data = {
             "base_template": self.base_template,
-            "template": "extras/object_changelog.html",
         }
         return Response(data)
 
@@ -941,6 +943,5 @@ class ObjectNotesViewMixin(NautobotViewSetMixin):
     def notes(self, request, *args, **kwargs):
         data = {
             "base_template": self.base_template,
-            "template": "extras/object_notes.html",
         }
         return Response(data)
