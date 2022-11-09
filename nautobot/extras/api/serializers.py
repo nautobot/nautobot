@@ -1,3 +1,5 @@
+import logging
+
 from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ObjectDoesNotExist
 from django.urls import NoReverseMatch
@@ -114,6 +116,8 @@ from .nested_serializers import (  # noqa: F401
 # Mixins and Base Classes
 #
 
+logger = logging.getLogger("nautobot.extras.api")
+
 
 class NotesSerializerMixin(BaseModelSerializer):
     """Extend Serializer with a `notes` field."""
@@ -133,7 +137,10 @@ class NotesSerializerMixin(BaseModelSerializer):
             notes_url = get_route_for_model(instance, "notes", api=True)
             return reverse(notes_url, args=[instance.id], request=self.context["request"])
         except NoReverseMatch:
-            return "Notes feature is not available for this model. Please implement it before including NotesSerializerMixin"
+            logger.warning(
+                "Notes feature is not available for this model. Please implement it before including NotesSerializerMixin"
+            )
+            return None
 
 
 class NautobotModelSerializer(
