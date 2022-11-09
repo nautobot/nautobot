@@ -27,6 +27,7 @@ from nautobot.utilities.forms import (
     DatePicker,
     JSONField,
     LaxURLField,
+    NullableDateField,
     StaticSelect2,
     StaticSelect2Multiple,
     add_blank_choice,
@@ -509,7 +510,11 @@ class CustomField(BaseModel, ChangeLoggedModel, NotesMixin):
 
         # Date
         elif self.type == CustomFieldTypeChoices.TYPE_DATE:
-            field = forms.DateField(required=required, initial=initial, widget=DatePicker())
+            field = NullableDateField(
+                required=required,
+                initial=initial,
+                widget=DatePicker(),
+            )
 
         # Text and URL
         elif self.type in (CustomFieldTypeChoices.TYPE_URL, CustomFieldTypeChoices.TYPE_TEXT):

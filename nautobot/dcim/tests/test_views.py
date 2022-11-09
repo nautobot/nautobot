@@ -267,7 +267,7 @@ class LocationTypeTestCase(ViewTestCases.OrganizationalObjectViewTestCase):
         cls.form_data = {
             "name": "Intermediate 2",
             "slug": "intermediate-2",
-            "parent": lt1.pk,
+            # "parent": lt1.pk, # TODO: Either overload how EditObjectViewTestCase finds an editable object or write a specific test case for this.
             "description": "Another intermediate type",
             "content_types": [ContentType.objects.get_for_model(Rack).pk, ContentType.objects.get_for_model(Device).pk],
             "nestable": True,

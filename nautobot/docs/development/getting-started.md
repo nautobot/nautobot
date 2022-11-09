@@ -204,6 +204,9 @@ Additional useful commands for the development environment:
     `invoke start` or `invoke debug` commands.
 
 !!! tip
+    The Nautobot server uses a Django webservice and worker uses watchdog to provide automatic reload of your web and worker servers in **most** cases when using `invoke start` or `invoke debug`.
+
+!!! tip
     To learn about advanced use cases within the Docker Compose workflow, see the [Docker Compose Advanced Use Cases](docker-compose-advanced-use-cases.md) page.
 
 Proceed to the [Working in your Development Environment](#working-in-your-development-environment) section
@@ -375,7 +378,7 @@ You'll need to create a administrative superuser account to be able to log into 
 Django provides a lightweight HTTP/WSGI server for development use. The development server automatically reloads Python code for each request, as needed. You don’t need to restart the server for code changes to take effect. However, some actions like adding files don’t trigger a restart, so you’ll have to restart the server in these cases.
 
 !!! danger
-    **DO NOT USE THIS SERVER IN A PRODUCTION SETTING.** The development server is for development and testing purposes only. It is neither performant nor secure enough for production use.
+    **DO NOT USE THIS SERVER IN A PRODUCTION SETTING.** The development server and watchdog is for development and testing purposes only. It is neither performant nor secure enough for production use.
 
 You can start the Nautobot development server with the `invoke start` command (if using Docker), or the `nautobot-server runserver` management command:
 
@@ -402,6 +405,19 @@ Quit the server with CONTROL-C.
 Please see the [official Django documentation on `runserver`](https://docs.djangoproject.com/en/stable/ref/django-admin/#runserver) for more information.
 
 You can then log into the development server at `localhost:8080` with the [superuser](#creating-a-superuser) you created.
+
+### Starting the Worker Server
+
+In order to run Nautobot Jobs or anything that requires a worker you must start a Celery worker.
+
+The worker is started in Docker Workflow with [watchdog](https://pythonhosted.org/watchdog/) and can be setup to be started with watchdog in the Virtual Environment Workflow. Watchdog provides a similar experience to the Django lightweight HTTP/WSGI for restarting your application automatically. Watchdog can watch for changes on your filesystem, this is helpful when adjusting existing Python files to not have to restart the celery worker when testing jobs.
+
+| Docker Compose Workflow | Virtual Environment Workflow    |
+|-------------------------|---------------------------------|
+| `invoke start`          | `nautobot-server celery worker` |
+
+!!! tip
+    You can leverage watchdog for your celery worker as described above, with the following watchmedo command in your development environment `watchmedo auto-restart --directory './' --pattern '*.py' --recursive -- nautobot-server celery worker -l INFO --events`.
 
 ### Starting the Interactive Shell
 

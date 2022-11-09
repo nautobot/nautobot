@@ -4,6 +4,7 @@ from django.test import override_settings
 from rest_framework import status
 
 from nautobot.core.graphql import execute_query
+from nautobot.dcim.choices import InterfaceModeChoices
 from nautobot.dcim.models import Site
 from nautobot.extras.choices import CustomFieldTypeChoices, ObjectChangeActionChoices, ObjectChangeEventContextChoices
 from nautobot.extras.models import CustomField, CustomFieldChoice, ObjectChange, Status, Tag
@@ -401,6 +402,7 @@ class ChangeLogAPITest(APITestCase):
             name="vm interface 1",
             virtual_machine=vm,
             status=vminterface_statuses.get(slug="active"),
+            mode=InterfaceModeChoices.MODE_TAGGED,
         )
         vlan_statuses = Status.objects.get_for_model(VLAN)
         tagged_vlan = VLAN.objects.create(vid=100, name="Vlan100", status=vlan_statuses.get(slug="active"))

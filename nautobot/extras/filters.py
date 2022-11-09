@@ -12,6 +12,7 @@ from nautobot.utilities.constants import (
     FILTER_CHAR_BASED_LOOKUP_MAP,
     FILTER_NUMERIC_BASED_LOOKUP_MAP,
 )
+from nautobot.utilities.forms import NullableDateField
 from nautobot.utilities.filters import (
     BaseFilterSet,
     ContentTypeFilter,
@@ -432,6 +433,13 @@ class ConfigContextSchemaFilterSet(BaseFilterSet):
 
 
 class ContentTypeFilterSet(BaseFilterSet):
+    q = SearchFilter(
+        filter_predicates={
+            "app_label": "icontains",
+            "model": "icontains",
+        },
+    )
+
     class Meta:
         model = ContentType
         fields = ["id", "app_label", "model"]
@@ -493,6 +501,8 @@ class CustomFieldCharFilter(CustomFieldFilterMixin, django_filters.Filter):
 
 class CustomFieldDateFilter(CustomFieldFilterMixin, django_filters.DateFilter):
     """Custom field single value filter for backwards compatibility"""
+
+    field_class = NullableDateField
 
 
 class CustomFieldJSONFilter(CustomFieldFilterMixin, django_filters.Filter):

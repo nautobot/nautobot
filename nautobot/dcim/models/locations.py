@@ -77,6 +77,8 @@ class LocationType(TreeNode, OrganizationalModel):
         Also, disallow LocationTypes whose name conflicts with existing location-related models, to avoid confusion.
 
         In the longer term we will collapse these other models into special cases of LocationType.
+
+        Also, disallow re-parenting a LocationType if there are Locations already using this LocationType.
         """
         super().clean()
 
@@ -105,6 +107,18 @@ class LocationType(TreeNode, OrganizationalModel):
             "rack groups",
         ]:
             raise ValidationError({"name": "This name is reserved for future use."})
+
+        if (
+            self.present_in_database
+            and self.parent != LocationType.objects.get(pk=self.pk).parent
+            and self.locations.exists()
+        ):
+            raise ValidationError(
+                {
+                    "parent": "This LocationType currently has Locations using it, "
+                    "therefore its parent cannot be changed at this time."
+                }
+            )
 
     @property
     def display(self):

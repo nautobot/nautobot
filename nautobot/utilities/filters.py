@@ -487,6 +487,10 @@ class TreeNodeMultipleChoiceFilter(NaturalKeyOrPKMultipleChoiceFilter):
     would match both "Athens" and "Durham".
     """
 
+    def __init__(self, *args, **kwargs):
+        kwargs.pop("lookup_expr", None)  # Disallow overloading of `lookup_expr`.
+        super().__init__(*args, **kwargs)
+
     def generate_query(self, value, qs=None, **kwargs):
         """
         Given a filter value, return a `Q` object that accounts for nested tree node descendants.

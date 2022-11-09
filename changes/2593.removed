@@ -1,1 +1,0 @@
-Removed static test fixtures since we're using factories now instead.

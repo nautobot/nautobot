@@ -202,7 +202,10 @@ class NautobotViewSetMixin(GenericViewSet, AccessMixin, GetReturnURLMixin, FormV
         self.has_error = True
 
     def _handle_validation_error(self, e):
-        messages.error(self.request, f"{self.obj} failed validation: {e}")
+        # For bulk_create/bulk_update view, self.obj is not set since there are multiple
+        # The errors will be rendered on the form itself.
+        if self.action not in ["bulk_create", "bulk_update"]:
+            messages.error(self.request, f"{self.obj} failed validation: {e}")
         self.has_error = True
 
     def form_valid(self, form):
@@ -737,6 +740,7 @@ class ObjectBulkCreateViewMixin(NautobotViewSetMixin, BulkCreateModelMixin):
     UI mixin to bulk create model instances.
     """
 
+    bulk_create_active_tab = "csv-data"
     bulk_create_form_class = None
     bulk_create_widget_attrs = {}
 
@@ -748,6 +752,10 @@ class ObjectBulkCreateViewMixin(NautobotViewSetMixin, BulkCreateModelMixin):
         with transaction.atomic():
             if request.FILES:
                 field_name = "csv_file"
+                # Set the bulk_create_active_tab to "csv-file"
+                # In case the form validation fails, the user will be redirected
+                # to the tab with errors rendered on the form.
+                self.bulk_create_active_tab = "csv-file"
             else:
                 field_name = "csv_data"
             headers, records = form.cleaned_data[field_name]
@@ -760,7 +768,7 @@ class ObjectBulkCreateViewMixin(NautobotViewSetMixin, BulkCreateModelMixin):
                     new_objs.append(obj)
                 else:
                     for field, err in obj_form.errors.items():
-                        form.add_error("csv_data", f"Row {row} {field}: {err[0]}")
+                        form.add_error(field_name, f"Row {row} {field}: {err[0]}")
                     raise ValidationError("")
 
             # Enforce object-level permissions
@@ -784,7 +792,7 @@ class ObjectBulkCreateViewMixin(NautobotViewSetMixin, BulkCreateModelMixin):
 
     def perform_bulk_create(self, request):
         form_class = self.get_form_class()
-        form = form_class(request.POST)
+        form = form_class(request.POST, request.FILES)
         if form.is_valid():
             return self.form_valid(form)
         else:

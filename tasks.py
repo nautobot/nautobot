@@ -192,9 +192,10 @@ def run_command(context, command, **kwargs):
         "cache": "Whether to use Docker's cache when building the image. (Default: enabled)",
         "poetry_parallel": "Enable/disable poetry to install packages in parallel. (Default: True)",
         "pull": "Whether to pull Docker images when building the image. (Default: disabled)",
+        "skip_docs_build": "Skip (re)build of documentation after building the image.",
     }
 )
-def build(context, force_rm=False, cache=True, poetry_parallel=True, pull=False):
+def build(context, force_rm=False, cache=True, poetry_parallel=True, pull=False, skip_docs_build=False):
     """Build Nautobot docker image."""
     command = f"build --build-arg PYTHON_VER={context.nautobot.python_ver}"
 
@@ -211,8 +212,9 @@ def build(context, force_rm=False, cache=True, poetry_parallel=True, pull=False)
 
     docker_compose(context, command, env={"DOCKER_BUILDKIT": "1", "COMPOSE_DOCKER_CLI_BUILD": "1"})
 
-    # Build the docs so they are available.
-    build_nautobot_docs(context)
+    if not skip_docs_build:
+        # Build the docs so they are available. Skip if you're using a `final-dev` or `final` image instead of `dev`.
+        build_nautobot_docs(context)
 
 
 @task(
@@ -265,6 +267,8 @@ def buildx(
     print(f"Building Nautobot {target} target with Python {context.nautobot.python_ver} for {platforms}...")
     if tag is None:
         if target == "dev":
+            pass
+        if target == "final-dev":
             tag = f"networktocode/nautobot-dev-py{context.nautobot.python_ver}:local"
         elif target == "final":
             tag = f"networktocode/nautobot-py{context.nautobot.python_ver}:local"
@@ -667,7 +671,8 @@ def unittest(
         build_and_check_docs(context)
 
     append_arg = " --append" if append else ""
-    command = f"coverage run{append_arg} --module nautobot.core.cli --config=nautobot/core/tests/nautobot_config.py test {label}"
+    command = f"coverage run{append_arg} --module nautobot.core.cli test {label}"
+    command += " --config=nautobot/core/tests/nautobot_config.py"
     # booleans
     if keepdb:
         command += " --keepdb"

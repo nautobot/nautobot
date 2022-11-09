@@ -29,13 +29,14 @@ html[data-theme="dark"] .version {
 }
 
 /* Darker background color, offset to not be fully black */
-html[data-theme="dark"] body {
+html[data-theme="dark"] body,
+html[data-theme="dark"] .container-fluid.wrapper {
   background-color: rgb(217, 217, 217) !important;
 }
 
 /* Lighter than the background */
 html[data-theme="dark"] .navbar,                          /* Top menu navbar */
-html[data-theme="dark"] .footer {                         /* Bottom footer bar */
+html[data-theme="dark"] .footer .row {                    /* Bottom footer bar */
   background-color: rgb(209, 216, 221) !important;
 }
 
@@ -78,7 +79,7 @@ html[data-theme="dark"] .CodeMirror-gutters {              /* GraphiQL primary b
 
 /* Preserve blue text color on selected tabs */
 html[data-theme="dark"] .nav-tabs>li.active>a {
-  color: rgb(72, 133, 204);                             
+  color: rgb(72, 133, 204);
 }
 
 /* Swagger API Docs */

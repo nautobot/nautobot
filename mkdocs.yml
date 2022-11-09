@@ -3,9 +3,7 @@ dev_addr: "127.0.0.1:8001"
 edit_uri: "edit/main/nautobot/docs"
 site_dir: "nautobot/project-static/docs"
 site_name: "Nautobot Documentation"
-site_url: "https://docs.nautobot.com/en/stable/"
-# TODO: replace when switching domain
-# site_url: "https://docs.nautobot.com/projects/core/en/stable/"
+site_url: "https://docs.nautobot.com/projects/core/en/stable/"
 repo_url: "https://github.com/nautobot/nautobot"
 copyright: "Copyright &copy; The Authors"
 theme:

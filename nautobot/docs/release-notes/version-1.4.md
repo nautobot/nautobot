@@ -161,7 +161,52 @@ A new configuration setting, [`STRICT_FILTERING`](../configuration/optional-sett
 
 The `settings_and_registry` default context processor was changed to purely `settings` - the (large) Nautobot application registry dictionary is no longer provided as part of the render context for all templates by default. Added a new `registry` template tag that can be invoked by specific templates to provide this variable where needed.
 
-<!-- towncrier release notes start -->
+
+## v1.4.10 (2022-11-07)
+
+### Changed
+
+- [#2758](https://github.com/nautobot/nautobot/issues/2758) - Changed console logging back to disabled by default when running `nautobot-server test ...`.
+
+### Fixed
+
+- [#2755](https://github.com/nautobot/nautobot/issues/2755) - Fixed incorrect file permissions on `/opt/nautobot/nautobot_config.py` in `final` Docker images.
+
+
+## v1.4.9 (2022-11-04)
+
+### Added
+
+- [#1720](https://github.com/nautobot/nautobot/issues/1720) - Added NullableDateField to enable Date Type CustomField to filter on null value.
+- [#2685](https://github.com/nautobot/nautobot/issues/2685) - Added watchdog dev-dependency explicitly.
+- [#2685](https://github.com/nautobot/nautobot/issues/2685) - Added watchmedo command to worker container to allow container to restart on file change and documented.
+
+### Changed
+
+- [#2658](https://github.com/nautobot/nautobot/issues/2658) - Updated plugin development documentation to introduce `NautobotUIViewSet` as the first approach for the `Adding Web UI Views` section.
+- [#2669](https://github.com/nautobot/nautobot/issues/2669) - Blocked changing the parent of a LocationType when it already has Locations using it.
+- [#2671](https://github.com/nautobot/nautobot/issues/2671) - Changed the published `nautobot-dev` images to use the same default `nautobot_config.py` as the published `nautobot` images, instead of using the Nautobot core development `nautobot_config.py` file.
+- [#2671](https://github.com/nautobot/nautobot/issues/2671) - Renamed `development/docker-compose.build.yml` to `development/docker-compose.final.yml` to better reflect its meaning.
+- [#2671](https://github.com/nautobot/nautobot/issues/2671) - Changed the image labels used in the docker-compose development workflow to reduce ambiguity.
+
+### Fixed
+
+- [#2406](https://github.com/nautobot/nautobot/issues/2406) - Fixed missing HTML element ID for hyperlinks.
+- [#2419](https://github.com/nautobot/nautobot/issues/2419) - Fixed the null device interface status when a device is created with a device_role associated to an InterfaceTemplate.
+- [#2552](https://github.com/nautobot/nautobot/issues/2552) - Updated CSS to better account for footer resizing.
+- [#2601](https://github.com/nautobot/nautobot/issues/2601) - Fixed an issue where a Git repository could provide Jobs even if not marked as a provider of Jobs.
+- [#2682](https://github.com/nautobot/nautobot/issues/2682) - Fixed test failing when version number contains alpha characters.
+- [#2683](https://github.com/nautobot/nautobot/issues/2683) - Fixed so that unauthenticated users don't see the version number for Nautobot in the footer.
+- [#2684](https://github.com/nautobot/nautobot/issues/2684) - Fixed "The results could not be loaded" when filtering `ContentTypes` in the UI.
+- [#2688](https://github.com/nautobot/nautobot/issues/2688) - Fixed exception not raised when the interface contains a tagged vlan but mode is not set to tagged.
+- [#2702](https://github.com/nautobot/nautobot/issues/2702) - Fixed NautobotUIViewSet BulkCreateViewMixin validation error handling and .csv file import issue.
+- [#2706](https://github.com/nautobot/nautobot/issues/2706) - Fixed a ValidationError that could occur when specifying Site latitude/longitude as a float.
+- [#2712](https://github.com/nautobot/nautobot/issues/2712) - Updated docs links to include the `/projects/core` in the url path to link correctly.
+- [#2717](https://github.com/nautobot/nautobot/issues/2717) - Fixed backwards-compatibility with changes made to `TreeNodeMultipleChoiceFilter`.
+- [#2733](https://github.com/nautobot/nautobot/issues/2733) - Fixed bug in run_job_for_testing when no request is provided.
+- [#2736](https://github.com/nautobot/nautobot/issues/2736) - Fixed incorrect `site_url` setting for MkDocs.
+
+
 ## v1.4.8 (2022-10-31)
 
 ### Added

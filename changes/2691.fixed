@@ -1,1 +1,0 @@
-Fixed hard coded tests that were failing after factory fixtures were integrated.
