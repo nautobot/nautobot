@@ -102,7 +102,6 @@ A number of mixin classes have been renamed and/or relocated for improved self-c
 | `TaggedObjectSerializer`       | `TaggedModelSerializerMixin`                 |
 | `TenancyFilterSet`             | `TenancyModelFilterSetMixin`                 |
 
-
 <!-- towncrier release notes start -->
 
 ## v1.5.0 (2022-11-08)
