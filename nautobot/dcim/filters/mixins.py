@@ -1,6 +1,7 @@
+from django.db.models import Q
 import django_filters
 
-from nautobot.dcim.models import Device, DeviceType, Region, Site, Location
+from nautobot.dcim.models import Cable, Device, DeviceType, Region, Site, Location
 from nautobot.extras.filters import CustomFieldModelFilterSetMixin
 from nautobot.utilities.filters import (
     MultiValueCharFilter,
@@ -11,6 +12,14 @@ from nautobot.utilities.filters import (
     TagFilter,
     TreeNodeMultipleChoiceFilter,
 )
+
+
+class CableTerminationModelFilterSetMixin(django_filters.FilterSet):
+    cabled = django_filters.BooleanFilter(field_name="cable", lookup_expr="isnull", exclude=True)
+    cable = django_filters.ModelMultipleChoiceFilter(
+        queryset=Cable.objects.all(),
+        label="Cable",
+    )
 
 
 class DeviceComponentTemplateModelFilterSetMixin(NameSlugSearchFilterSet, CustomFieldModelFilterSetMixin):
@@ -100,3 +109,13 @@ class LocatableModelFilterSetMixin(django_filters.FilterSet):
         queryset=Location.objects.all(),
         label="Location (slug or ID)",
     )
+
+
+class PathEndpointModelFilterSetMixin(django_filters.FilterSet):
+    connected = django_filters.BooleanFilter(method="filter_connected", label="Connected status (bool)")
+
+    def filter_connected(self, queryset, name, value):
+        if value:
+            return queryset.filter(_path__is_active=True)
+        else:
+            return queryset.filter(Q(_path__isnull=True) | Q(_path__is_active=False))

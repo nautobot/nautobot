@@ -5,9 +5,11 @@ from drf_spectacular.utils import extend_schema_field
 from timezone_field import TimeZoneField
 
 from nautobot.dcim.filters.mixins import (
+    CableTerminationModelFilterSetMixin,
     DeviceComponentModelFilterSetMixin,
     DeviceComponentTemplateModelFilterSetMixin,
     LocatableModelFilterSetMixin,
+    PathEndpointModelFilterSetMixin,
 )
 from nautobot.dcim.choices import (
     CableTypeChoices,
@@ -1132,28 +1134,10 @@ class DeviceComponentFilterSet(DeviceComponentModelFilterSetMixin):
     pass
 
 
-class CableTerminationModelFilterSetMixin(django_filters.FilterSet):
-    cabled = django_filters.BooleanFilter(field_name="cable", lookup_expr="isnull", exclude=True)
-    cable = django_filters.ModelMultipleChoiceFilter(
-        queryset=Cable.objects.all(),
-        label="Cable",
-    )
-
-
 # TODO: remove in 2.2
 @class_deprecated_in_favor_of(CableTerminationModelFilterSetMixin)
 class CableTerminationFilterSet(CableTerminationModelFilterSetMixin):
     pass
-
-
-class PathEndpointModelFilterSetMixin(django_filters.FilterSet):
-    connected = django_filters.BooleanFilter(method="filter_connected", label="Connected status (bool)")
-
-    def filter_connected(self, queryset, name, value):
-        if value:
-            return queryset.filter(_path__is_active=True)
-        else:
-            return queryset.filter(Q(_path__isnull=True) | Q(_path__is_active=False))
 
 
 # TODO: remove in 2.2
