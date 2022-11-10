@@ -36,6 +36,7 @@ html[data-theme="dark"] .container-fluid.wrapper {
 
 /* Lighter than the background */
 html[data-theme="dark"] .navbar,                          /* Top menu navbar */
+html[data-theme="dark"] .footer,                          /* Bottom footer bar */
 html[data-theme="dark"] .footer .row {                    /* Bottom footer bar */
   background-color: rgb(209, 216, 221) !important;
 }

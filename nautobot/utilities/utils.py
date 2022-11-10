@@ -14,7 +14,7 @@ from django.contrib.auth import get_user_model
 from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ValidationError
 from django.core.serializers import serialize
-from django.db.models import Count, Model, OuterRef, Subquery
+from django.db.models import Count, ForeignKey, Model, OuterRef, Subquery
 from django.db.models.functions import Coalesce
 from django.http import QueryDict
 from django.utils.tree import Node
@@ -347,10 +347,26 @@ def prepare_cloned_fields(instance):
     Compile an object's `clone_fields` list into a string of URL query parameters. Tags are automatically cloned where
     applicable.
     """
+    form_class = get_form_for_model(instance)
+    form = form_class() if form_class is not None else None
     params = []
     for field_name in getattr(instance, "clone_fields", []):
         field = instance._meta.get_field(field_name)
         field_value = field.value_from_object(instance)
+
+        # For foreign-key fields, if the ModelForm's field has a defined `to_field_name`,
+        # use that field from the related object instead of its PK.
+        # Example: Location.parent, LocationForm().fields["parent"].to_field_name = "slug", so use slug rather than PK.
+        if isinstance(field, ForeignKey):
+            related_object = getattr(instance, field_name)
+            if (
+                related_object is not None
+                and form is not None
+                and field_name in form.fields
+                and hasattr(form.fields[field_name], "to_field_name")
+                and form.fields[field_name].to_field_name is not None
+            ):
+                field_value = getattr(related_object, form.fields[field_name].to_field_name)
 
         # Swap out False with URL-friendly value
         if field_value is False:
@@ -542,7 +558,7 @@ def get_related_class_for_model(model, module_name, object_suffix):
     """Return the appropriate class associated with a given model matching the `module_name` and
     `object_suffix`.
 
-    The given `model` can either be a model class or a dotted representation (ex: `dcim.device`).
+    The given `model` can either be a model class, a model instance, or a dotted representation (ex: `dcim.device`).
 
     The object class is expected to be in the module within the application
     associated with the model and its name is expected to be `{ModelName}{object_suffix}`.
@@ -554,6 +570,8 @@ def get_related_class_for_model(model, module_name, object_suffix):
     """
     if isinstance(model, str):
         model = get_model_from_name(model)
+    if isinstance(model, Model):
+        model = type(model)
     if not inspect.isclass(model):
         raise TypeError(f"{model!r} is not a Django Model class")
     if not issubclass(model, Model):
