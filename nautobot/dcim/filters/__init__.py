@@ -58,7 +58,6 @@ from nautobot.dcim.models import (
 )
 from nautobot.extras.filters import (
     NautobotFilterSet,
-    CustomFieldModelFilterSetMixin,
     LocalContextModelFilterSetMixin,
     StatusModelFilterSetMixin,
 )
