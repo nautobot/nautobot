@@ -116,7 +116,7 @@ from .nested_serializers import (  # noqa: F401
 # Mixins and Base Classes
 #
 
-logger = logging.getLogger("nautobot.extras.api")
+logger = logging.getLogger(__name__)
 
 
 class NotesSerializerMixin(BaseModelSerializer):
@@ -138,8 +138,13 @@ class NotesSerializerMixin(BaseModelSerializer):
             return reverse(notes_url, args=[instance.id], request=self.context["request"])
         except NoReverseMatch:
             logger.warning(
-                "Notes feature is not available for this model. Please implement it before including NotesSerializerMixin"
+                (
+                    f"Notes feature is not available for model {type(instance).__name__}. "
+                    "Please make sure to include NotesMixin from nautobot.extras.model.mixins in the model class definition "
+                    "before including NotesSerializerMixin in the model serializer"
+                )
             )
+
             return None
 
 

@@ -463,11 +463,14 @@ class PluginAPITest(APIViewTestCases.APIViewTestCase):
         with self.assertLogs(logger="nautobot.extras.api", level="WARNING") as cm:
             response = self.client.get(url, **self.header)
             self.assertHttpStatus(response, 200)
-            self.assertIn('"notes_url":null', response.content.decode(response.charset))
             self.assertIn("notes_url", response.data)
-            self.assertIn("None", str(response.data["notes_url"]))
+            self.assertIsNone(response.data["notes_url"])
             self.assertIn(
-                "Notes feature is not available for this model. Please implement it before including NotesSerializerMixin",
+                (
+                    f"Notes feature is not available for model {type(instance).__name__}."
+                    "Please make sure to include NotesMixin from nautobot.extras.model.mixins in the model class definition "
+                    "before including NotesSerializerMixin in the model serializer"
+                ),
                 cm.output[0],
             )
 
