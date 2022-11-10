@@ -2,10 +2,10 @@ import django_filters
 from django.db.models import Q
 
 from nautobot.dcim.filter_mixins import LocatableModelFilterSetMixin
-from nautobot.dcim.filters import CableTerminationFilterSet, PathEndpointFilterSet
+from nautobot.dcim.filters import CableTerminationModelFilterSetMixin, PathEndpointModelFilterSetMixin
 from nautobot.dcim.models import Location, Region, Site
 from nautobot.extras.filters import NautobotFilterSet, StatusModelFilterSetMixin
-from nautobot.tenancy.filters import TenancyFilterSet
+from nautobot.tenancy.filters import TenancyModelFilterSetMixin
 from nautobot.utilities.filters import (
     BaseFilterSet,
     NameSlugSearchFilterSet,
@@ -110,7 +110,7 @@ class CircuitTypeFilterSet(NautobotFilterSet, NameSlugSearchFilterSet):
         fields = ["id", "name", "slug"]
 
 
-class CircuitFilterSet(NautobotFilterSet, StatusModelFilterSetMixin, TenancyFilterSet):
+class CircuitFilterSet(NautobotFilterSet, StatusModelFilterSetMixin, TenancyModelFilterSetMixin):
     q = SearchFilter(
         filter_predicates={
             "cid": "icontains",
@@ -183,9 +183,9 @@ class CircuitFilterSet(NautobotFilterSet, StatusModelFilterSetMixin, TenancyFilt
 
 class CircuitTerminationFilterSet(
     BaseFilterSet,
-    CableTerminationFilterSet,
+    CableTerminationModelFilterSetMixin,
     LocatableModelFilterSetMixin,
-    PathEndpointFilterSet,
+    PathEndpointModelFilterSetMixin,
 ):
     q = SearchFilter(
         filter_predicates={

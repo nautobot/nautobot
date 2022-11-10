@@ -639,7 +639,7 @@ class TagsBulkEditFormMixin(forms.Form):
         self.fields["remove_tags"] = DynamicModelMultipleChoiceField(queryset=Tag.objects.all(), required=False)
 
 
-# 2.0 TODO: Names below are only for backward compatibility with Nautobot 1.3 and earlier. Remove in 2.0
+# 2.2 TODO: Names below are only for backward compatibility with Nautobot 1.3 and earlier. Remove in 2.2
 
 
 @class_deprecated_in_favor_of(TagsBulkEditFormMixin)

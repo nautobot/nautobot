@@ -2,6 +2,7 @@ import django_filters
 
 from nautobot.dcim.models import Location
 from nautobot.extras.filters import NautobotFilterSet
+from nautobot.utilities.deprecation import class_deprecated_in_favor_of
 from nautobot.utilities.filters import (
     NameSlugSearchFilterSet,
     NaturalKeyOrPKMultipleChoiceFilter,
@@ -15,6 +16,7 @@ from .models import Tenant, TenantGroup
 
 __all__ = (
     "TenancyFilterSet",
+    "TenancyModelFilterSetMixin",
     "TenantFilterSet",
     "TenantGroupFilterSet",
 )
@@ -72,8 +74,7 @@ class TenantFilterSet(NautobotFilterSet):
         fields = ["id", "name", "slug"]
 
 
-# TODO: Introduce TenancyFilterSetMixin in 1.5, remove in 2.2.
-class TenancyFilterSet(django_filters.FilterSet):
+class TenancyModelFilterSetMixin(django_filters.FilterSet):
     """
     An inheritable FilterSet for models which support Tenant assignment.
     """
@@ -97,3 +98,9 @@ class TenancyFilterSet(django_filters.FilterSet):
         queryset=Tenant.objects.all(),
         label="Tenant (slug or ID)",
     )
+
+
+# TODO: remove in 2.2
+@class_deprecated_in_favor_of(TenancyModelFilterSetMixin)
+class TenancyFilterSet(TenancyModelFilterSetMixin):
+    pass

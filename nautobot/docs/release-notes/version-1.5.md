@@ -79,6 +79,29 @@ As a result, the value of this setting now defaults to `False`, disabling databa
 
 Added a dynamic filter form that allows users to filter object tables/lists by any field and lookup expression combination supported by the corresponding FilterSet and API.
 
+#### Renamed Mixin Classes ([#2779](https://github.com/nautobot/nautobot/issues/2779))
+
++/- 1.5.2
+
+A number of mixin classes have been renamed and/or relocated for improved self-consistency and clarity of usage. The former names of these mixins are still available for now as aliases, but inheriting from these aliases will now raise a `DeprecationWarning`, and these aliases wil be removed in a future release.
+
+| Former Name                    | New Name                                     |
+| ------------------------------ | -------------------------------------------- |
+| `CableTerminationFilterSet`    | `CableTerminationModelFilterSetMixin`        |
+| `CableTerminationSerializer`   | `CableTerminationModelSerializerMixin`       |
+| `ConnectedEndpointSerializer`  | `PathEndpointModelSerializerMixin`           |
+| `ConnectionFilterSet`          | `ConnectionFilterSetMixin`                   |
+| `CreatedUpdatedFilterSet`      | `CreatedUpdatedModelFilterSetMixin`          |
+| `CustomFieldModelFilterSet`    | `CustomFieldModelFilterSetMixin`             |
+| `CustomFieldModelSerializer`   | `CustomFieldModelSerializerMixin`            |
+| `DeviceComponentFilterSet`     | `DeviceComponentModelFilterSetMixin`         |
+| `DeviceTypeComponentFilterSet` | `DeviceComponentTemplateModelFilterSetMixin` |
+| `LocalContextFilterSet`        | `LocalContextModelFilterSetMixin`            |
+| `PathEndpointFilterSet`        | `PathEndpointModelFilterSetMixin`            |
+| `TaggedObjectSerializer`       | `TaggedModelSerializerMixin`                 |
+| `TenancyFilterSet`             | `TenancyModelFilterSetMixin`                 |
+
+
 <!-- towncrier release notes start -->
 
 ## v1.5.0 (2022-11-08)

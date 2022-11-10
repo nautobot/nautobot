@@ -4,13 +4,13 @@ from django.db.models import Q
 from nautobot.dcim.filter_mixins import LocatableModelFilterSetMixin
 from nautobot.dcim.models import Device, DeviceRole, Location, Platform, Region, Site
 from nautobot.extras.filters import (
-    CustomFieldModelFilterSet,
-    LocalContextFilterSet,
+    CustomFieldModelFilterSetMixin,
+    LocalContextModelFilterSetMixin,
     NautobotFilterSet,
     StatusModelFilterSetMixin,
 )
 from nautobot.ipam.models import IPAddress, Service, VLAN
-from nautobot.tenancy.filters import TenancyFilterSet
+from nautobot.tenancy.filters import TenancyModelFilterSetMixin
 from nautobot.utilities.filters import (
     BaseFilterSet,
     MultiValueCharFilter,
@@ -67,7 +67,7 @@ class ClusterGroupFilterSet(NautobotFilterSet, NameSlugSearchFilterSet):
         fields = ["id", "name", "slug", "description"]
 
 
-class ClusterFilterSet(NautobotFilterSet, LocatableModelFilterSetMixin, TenancyFilterSet):
+class ClusterFilterSet(NautobotFilterSet, LocatableModelFilterSetMixin, TenancyModelFilterSetMixin):
     q = SearchFilter(
         filter_predicates={
             "name": "icontains",
@@ -117,7 +117,12 @@ class ClusterFilterSet(NautobotFilterSet, LocatableModelFilterSetMixin, TenancyF
         fields = ["id", "name", "comments"]
 
 
-class VirtualMachineFilterSet(NautobotFilterSet, LocalContextFilterSet, TenancyFilterSet, StatusModelFilterSetMixin):
+class VirtualMachineFilterSet(
+    NautobotFilterSet,
+    LocalContextModelFilterSetMixin,
+    TenancyModelFilterSetMixin,
+    StatusModelFilterSetMixin,
+):
     q = SearchFilter(
         filter_predicates={
             "name": "icontains",
@@ -260,7 +265,7 @@ class VirtualMachineFilterSet(NautobotFilterSet, LocalContextFilterSet, TenancyF
         return queryset.filter(primary_ip6__in=ip_queryset)
 
 
-class VMInterfaceFilterSet(BaseFilterSet, StatusModelFilterSetMixin, CustomFieldModelFilterSet):
+class VMInterfaceFilterSet(BaseFilterSet, StatusModelFilterSetMixin, CustomFieldModelFilterSetMixin):
     q = SearchFilter(filter_predicates={"name": "icontains"})
 
     cluster_id = django_filters.ModelMultipleChoiceFilter(

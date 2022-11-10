@@ -12,6 +12,7 @@ from nautobot.utilities.constants import (
     FILTER_CHAR_BASED_LOOKUP_MAP,
     FILTER_NUMERIC_BASED_LOOKUP_MAP,
 )
+from nautobot.utilities.deprecation import class_deprecated_in_favor_of
 from nautobot.utilities.forms import NullableDateField
 from nautobot.utilities.filters import (
     BaseFilterSet,
@@ -71,6 +72,7 @@ __all__ = (
     "ConfigContextFilterSet",
     "ContentTypeFilterSet",
     "CreatedUpdatedFilterSet",
+    "CreatedUpdatedModelFilterSetMixin",
     "CustomFieldBooleanFilter",
     "CustomFieldCharFilter",
     "CustomFieldDateFilter",
@@ -82,6 +84,7 @@ __all__ = (
     "CustomFieldMultiValueNumberFilter",
     "CustomFieldNumberFilter",
     "CustomFieldModelFilterSet",
+    "CustomFieldModelFilterSetMixin",
     "CustomLinkFilterSet",
     "DynamicGroupFilterSet",
     "DynamicGroupMembershipFilterSet",
@@ -93,6 +96,7 @@ __all__ = (
     "JobLogEntryFilterSet",
     "JobResultFilterSet",
     "LocalContextFilterSet",
+    "LocalContextModelFilterSetMixin",
     "NautobotFilterSet",
     "NoteFilterSet",
     "ObjectChangeFilterSet",
@@ -115,14 +119,19 @@ __all__ = (
 #
 
 
-# TODO: Introduce CreatedUpdatedFilterSetMixin in 1.5. remove in 2.2.
-class CreatedUpdatedFilterSet(django_filters.FilterSet):
+class CreatedUpdatedModelFilterSetMixin(django_filters.FilterSet):
     created = django_filters.DateFilter()
     created__gte = django_filters.DateFilter(field_name="created", lookup_expr="gte")
     created__lte = django_filters.DateFilter(field_name="created", lookup_expr="lte")
     last_updated = django_filters.DateTimeFilter()
     last_updated__gte = django_filters.DateTimeFilter(field_name="last_updated", lookup_expr="gte")
     last_updated__lte = django_filters.DateTimeFilter(field_name="last_updated", lookup_expr="lte")
+
+
+# TODO: remove in 2.2
+@class_deprecated_in_favor_of(CreatedUpdatedModelFilterSetMixin)
+class CreatedUpdatedFilterSet(CreatedUpdatedModelFilterSetMixin):
+    pass
 
 
 class RelationshipFilter(django_filters.ModelMultipleChoiceFilter):
@@ -535,8 +544,7 @@ class CustomFieldMultiValueNumberFilter(CustomFieldFilterMixin, MultiValueNumber
     """Custom field multi value number filter for extended lookup expressions"""
 
 
-# TODO: Introduce CustomFieldModelFilterSetMixin in 1.5, remove in 2.2.
-class CustomFieldModelFilterSet(django_filters.FilterSet):
+class CustomFieldModelFilterSetMixin(django_filters.FilterSet):
     """
     Dynamically add a Filter for each CustomField applicable to the parent model. Add filters for
     extra lookup expressions on supported CustomField types.
@@ -624,6 +632,12 @@ class CustomFieldModelFilterSet(django_filters.FilterSet):
         return magic_filters
 
 
+# TODO: remove in 2.2
+@class_deprecated_in_favor_of(CustomFieldModelFilterSetMixin)
+class CustomFieldModelFilterSet(CustomFieldModelFilterSetMixin):
+    pass
+
+
 class CustomFieldFilterSet(BaseFilterSet):
     q = SearchFilter(
         filter_predicates={
@@ -665,10 +679,15 @@ class CustomFieldChoiceFilterSet(BaseFilterSet):
 #
 
 
-class NautobotFilterSet(BaseFilterSet, CreatedUpdatedFilterSet, RelationshipModelFilterSet, CustomFieldModelFilterSet):
+class NautobotFilterSet(
+    BaseFilterSet,
+    CreatedUpdatedModelFilterSetMixin,
+    RelationshipModelFilterSet,
+    CustomFieldModelFilterSetMixin,
+):
     """
-    This class exists to combine common functionality and is used as a base class throughout the
-    codebase where all of BaseFilterSet, CreatedUpdatedFilterSet, RelationshipModelFilterSet and CustomFieldModelFilterSet
+    This class exists to combine common functionality and is used as a base class throughout the codebase where all of
+    BaseFilterSet, CreatedUpdatedModelFilterSetMixin, RelationshipModelFilterSet and CustomFieldModelFilterSetMixin
     are needed.
     """
 
@@ -841,7 +860,7 @@ class ImageAttachmentFilterSet(BaseFilterSet):
 #
 
 
-class JobFilterSet(BaseFilterSet, CustomFieldModelFilterSet):
+class JobFilterSet(BaseFilterSet, CustomFieldModelFilterSetMixin):
     q = SearchFilter(
         filter_predicates={
             "name": "icontains",
@@ -909,7 +928,7 @@ class JobHookFilterSet(BaseFilterSet):
         ]
 
 
-class JobResultFilterSet(BaseFilterSet, CustomFieldModelFilterSet):
+class JobResultFilterSet(BaseFilterSet, CustomFieldModelFilterSetMixin):
     q = SearchFilter(
         filter_predicates={
             "job_model__name": "icontains",
@@ -983,8 +1002,7 @@ class ScheduledJobFilterSet(BaseFilterSet):
 #
 
 
-# 2.0 TODO: Introduce LocalContextFilterSetMixin in 1.5, remove in 2.2.
-class LocalContextFilterSet(django_filters.FilterSet):
+class LocalContextModelFilterSetMixin(django_filters.FilterSet):
     local_context_data = django_filters.BooleanFilter(
         method="_local_context_data",
         label="Has local config context data",
@@ -1002,6 +1020,12 @@ class LocalContextFilterSet(django_filters.FilterSet):
 
     def _local_context_data(self, queryset, name, value):
         return queryset.exclude(local_context_data__isnull=value)
+
+
+# TODO: remove in 2.2
+@class_deprecated_in_favor_of(LocalContextModelFilterSetMixin)
+class LocalContextFilterSet(LocalContextModelFilterSetMixin):
+    pass
 
 
 class NoteFilterSet(BaseFilterSet):
@@ -1126,8 +1150,8 @@ class RelationshipAssociationFilterSet(BaseFilterSet):
 
 class SecretFilterSet(
     BaseFilterSet,
-    CustomFieldModelFilterSet,
-    CreatedUpdatedFilterSet,
+    CustomFieldModelFilterSetMixin,
+    CreatedUpdatedModelFilterSetMixin,
 ):
     """Filterset for the Secret model."""
 
@@ -1148,8 +1172,8 @@ class SecretFilterSet(
 
 class SecretsGroupFilterSet(
     BaseFilterSet,
-    CustomFieldModelFilterSet,
-    CreatedUpdatedFilterSet,
+    CustomFieldModelFilterSetMixin,
+    CreatedUpdatedModelFilterSetMixin,
 ):
     """Filterset for the SecretsGroup model."""
 
