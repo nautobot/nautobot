@@ -170,10 +170,8 @@ STRICT_FILTERING = is_truthy(os.getenv("NAUTOBOT_STRICT_FILTERING", "True"))
 REST_FRAMEWORK_VERSION = VERSION.rsplit(".", 1)[0]  # Use major.minor as API version
 current_major, current_minor = REST_FRAMEWORK_VERSION.split(".")
 # We support all major.minor API versions from 1.2 to the present latest version.
-# This will need to be elaborated upon when we move to version 2.0
 # Similar logic exists in tasks.py, please keep them in sync!
-assert current_major == "1", f"REST_FRAMEWORK_ALLOWED_VERSIONS needs to be updated to handle version {current_major}"
-REST_FRAMEWORK_ALLOWED_VERSIONS = [f"{current_major}.{minor}" for minor in range(2, int(current_minor) + 1)]
+REST_FRAMEWORK_ALLOWED_VERSIONS = ["1.2", "1.3", "1.4", "1.5"] + [f"{current_major}.{minor}" for minor in range(0, int(current_minor) + 1)]
 
 REST_FRAMEWORK = {
     "ALLOWED_VERSIONS": REST_FRAMEWORK_ALLOWED_VERSIONS,
