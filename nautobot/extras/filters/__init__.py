@@ -13,6 +13,7 @@ from nautobot.extras.filters.customfields import (
     CustomFieldBooleanFilter,
     CustomFieldCharFilter,
     CustomFieldDateFilter,
+    CustomFieldFilterMixin,
     CustomFieldJSONFilter,
     CustomFieldMultiSelectFilter,
     CustomFieldMultiValueCharFilter,
