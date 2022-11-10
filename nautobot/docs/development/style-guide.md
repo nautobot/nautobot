@@ -77,3 +77,123 @@ New dependencies can be added to the project via the `poetry add` command. This 
 
 <!-- markdownlint-disable-next-line NAUTOBOTMD001 -->
 * There is an SVG form of the Nautobot logo at [nautobot/docs/nautobot_logo.svg](../nautobot_logo.svg). It is preferred to use this logo for all purposes as it scales to arbitrary sizes without loss of resolution. If a raster image is required, the SVG logo should be converted to a PNG image of the prescribed size.
+
+## Style Guidelines for Importing Python Packages
+
+To prevent circular dependency errors and improve code readability, the following standards should be followed when importing from other python modules.
+
+### PEP8 Style Guide
+
+Nautobot follows the [PEP8 style guide's](https://peps.python.org/pep-0008/#imports) standard for importing modules. Libraries should be imported in these groups: standard library, third party libraries, then `nautobot` packages and finally try/except imports. The groups should be separated by a single blank line. Within these groups, top level packages should be imported first, then sub-package imports. Import lines should be sorted alphanumerically as well as lists of names imported from packages.
+
+!!! example
+
+    ```py
+    import logging
+    from uuid import UUID
+
+    import django_filters
+    from django.db.models import CharField, DecimalField, TextField
+
+    from nautobot.dcim import models as dcim_models
+    from nautobot.extras import models
+    ```
+
+### Wildcard Imports
+
+Wildcard imports (`from foo import *`) should only be used in `__init__.py` files to import names from submodules that have a `__all__` variable defined.
+
+!!! example
+
+    ```py title="nautobot/dcim/models/__init__.py"
+    from nautobot.dcim.models.cables import *
+    from nautobot.dcim.models.device_component_templates import *
+    from nautobot.dcim.models.device_components import *
+    # etc ...
+    ```
+
+### Importing from External Packages
+
+Individual names may be imported from external packages (`from foo import some_function, SomeClass`). This differs from the standard for [importing from the `nautobot` package](#module-name-imports).
+
+### Importing Nautobot Packages
+
+#### Module Name Imports
+
+Whenever possible, imports from the `nautobot` package should use module level imports, not individual names from a module.
+
+!!! example
+
+    ```py
+    # module import
+    from nautobot.utilities import xyz
+
+    # name import (do not use)
+    from nautobot.utilities.xyz import SomeClass, some_function
+    ```
+
+#### Absolute Imports
+
+Always use absolute imports instead of relative imports.
+
+!!! example
+
+    ```py
+    # absolute import
+    from nautobot.dcim import constants
+    from nautobot.dcim.models import Device
+
+    # relative import (do not use)
+    import constants
+    from .models import Device
+    ```
+
+#### Import Style Conventions
+
+To import modules from other apps under the `nautobot` namespace, use the convention `from nautobot.<app_name> import <module> as <app_name>_<module>`. If importing from within the same app do not alias the imported namespace.
+
+!!! example
+
+    ```py title="nautobot/extras/models.py"
+    # inter-app import
+    from nautobot.dcim import models as dcim_models
+
+    # intra-app import
+    from nautobot.extras import constants
+    ```
+
+#### Resolving Name Conflicts
+
+When using external libraries you may need to import multiple different modules with the same name. In this case, the namespace from the external package should be aliased. A common source of namespace conflicts in Nautobot are django packages. For django, packages should be renamed `dj<module>`. For other external libraries, use `<package>_<module>`.
+
+!!! example
+
+    ```py
+    # django
+    from django.db import models as djmodels
+
+    # from within the current app
+    from nautobot.extras import models
+
+    # from a different Nautobot app
+    from nautobot.dcim import models as dcim_models
+
+    # other libraries
+    from mptt import models as mptt_models
+    ```
+
+#### Convenience Imports
+
+Nautobot uses convenience imports in the same way that [django](https://docs.djangoproject.com/en/dev/internals/contributing/writing-code/coding-style/#imports) implements them. These should be leveraged whenever possible.
+
+!!! example
+
+    ```py
+    from nautobot.extras import forms
+
+    # use top level import if available:
+    forms.NoteModelFormMixin()
+
+    # instead of the full path:
+    forms.mixins.NoteModelFormMixin()
+    ```
