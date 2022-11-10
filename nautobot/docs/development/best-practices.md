@@ -170,10 +170,10 @@ The following best practices must be considered when establishing new `FilterSet
 
 ### Mapping Model Fields to Filters
 
-- Filtersets **must** inherit from `nautobot.extras.filters.NautobotFilterSet` (which inherits from `nautobot.utilities.filters.BaseFilterSet`)
+- FilterSets **must** inherit from `nautobot.extras.filters.NautobotFilterSet` (which inherits from `nautobot.utilities.filters.BaseFilterSet`)
     - This affords that automatically generated lookup expressions (`ic`, `nic`, `iew`, `niew`, etc.) are always included
     - This also asserts that the correct underlying `Form` class that maps the generated form field types and widgets will be included
-- Filtersets **must** publish all model fields from a model, including related fields.
+- FilterSets **must** publish all model fields from a model, including related fields.
     - All fields should be provided using `Meta.fields = "__all__"` and this would be preferable for the first and common case as it requires the least maintenance and overhead and asserts parity between the model fields and the filterset filters.
     - In some cases simply excluding certain fields would be the next most preferable e.g. `Meta.exclude = ["unwanted_field", "other_unwanted_field"]`
     - Finally, the last resort should be explicitly declaring the desired fields using `Meta.fields =`. This should be avoided because it incurs the highest technical debt in maintaining alignment between model fields and filters.
@@ -422,7 +422,40 @@ Nautobot follows the [PEP8 style guide's](https://peps.python.org/pep-0008/#impo
     from nautobot.extras import models
     ```
 
-### Absolute Imports
+### Wildcard Imports
+
+Wildcard imports (`from foo import *`) should only be used in `__init__.py` files to import names from submodules that have a `__all__` variable defined.
+
+!!! example
+
+    ```py title="nautobot/dcim/models/__init__.py"
+    from nautobot.dcim.models.cables import *
+    from nautobot.dcim.models.device_component_templates import *
+    from nautobot.dcim.models.device_components import *
+    # etc ...
+    ```
+
+### Importing from External Packages
+
+Individual names may be imported from external packages (`from foo import some_function, SomeClass`). This differs from the standard for [importing from the `nautobot` package](#module-name-imports).
+
+### Importing Nautobot Packages
+
+#### Module Name Imports
+
+Whenever possible, imports from the `nautobot` package should use module level imports, not individual names from a module. 
+
+!!! example
+
+    ```py
+    # module import
+    from nautobot.utilities import xyz
+
+    # name import (do not use)
+    from nautobot.utilities.xyz import SomeClass, some_function
+    ```
+
+#### Absolute Imports
 
 Always use absolute imports instead of relative imports.
 
@@ -436,22 +469,6 @@ Always use absolute imports instead of relative imports.
     # relative import (do not use)
     import constants
     from .models import Device
-    ```
-
-### Importing Nautobot Packages
-
-#### Module Name Imports
-
-Whenever possible, imports from the `nautobot` package should use module level imports, not individual names from a module. Individual names can be imported from external packages, but don't use wildcard imports (`from foo import *`).
-
-!!! example
-
-    ```py
-    # module import
-    from nautobot.utilities import xyz
-
-    # name import (do not use)
-    from nautobot.utilities.xyz import SomeClass, some_function
     ```
 
 #### Import Style Conventions
@@ -478,7 +495,11 @@ When using external libraries you may need to import multiple different modules 
     # django
     from django.db import models as djmodels
 
+    # from within the current app
     from nautobot.extras import models
+
+    # from a different Nautobot app
+    from nautobot.dcim import models as dcim_models
 
     # other libraries
     from mptt import models as mptt_models
