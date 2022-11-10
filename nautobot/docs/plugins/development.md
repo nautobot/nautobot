@@ -1124,8 +1124,8 @@ urlpatterns = [
 urlpatterns += router.urls
 ```
 
-+++ 1.5.0
-    Changelog and Notes views and urls are now provided in the NautobotUIViewSet and NautobotUIViewSetRouter.
++++ 1.5.1
+    Changelog and Notes views and URLs are now provided in the NautobotUIViewSet and NautobotUIViewSetRouter.
 
 ### Utilizing Generic Django Views
 
