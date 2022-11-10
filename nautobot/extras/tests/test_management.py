@@ -2,14 +2,13 @@
 
 from django.apps import apps
 
-from nautobot.dcim.models import Location
-from nautobot.extras.management import populate_status_choices, clear_status_choices
+from nautobot.extras.management import populate_status_choices
 from nautobot.extras.models import Status
 from nautobot.utilities.testing import TestCase
 
 
 class StatusManagementTestCase(TestCase):
-    """Tests for the populate_status_choices and clear_status_choices helper functions."""
+    """Tests for the populate_status_choices helper function."""
 
     def test_populate_status_choices_idempotent(self):
         """
@@ -36,33 +35,6 @@ class StatusManagementTestCase(TestCase):
 
         populate_status_choices(apps=apps, schema_editor=None)
         self.assertEqual(Status.objects.count(), initial_statuses_count)
-
-    def test_clear_and_repopulate_status_choices_all(self):
-        """
-        Verify that clear_status_choices() removes Statuses, and populate_status_choices() recreates the same set.
-        """
-        initial_statuses_count = Status.objects.count()
-        # Should successfully delete then regenerate all statuses
-        clear_status_choices(apps=apps)
-        self.assertEqual(Status.objects.count(), 0)
-        populate_status_choices(apps=apps, schema_editor=None)
-        self.assertEqual(Status.objects.count(), initial_statuses_count)
-
-    def test_clear_and_repopulate_status_choices_one_model(self):
-        """
-        Verify that clear_status_choices() and populate_status_choices() can be run for a single model if desired.
-        """
-        initial_statuses_count = Status.objects.count()
-        self.assertEqual(5, len(Status.objects.get_for_model(Location)))
-
-        clear_status_choices(models=["dcim.Location"])
-        self.assertEqual(0, len(Status.objects.get_for_model(Location)))
-        # All Location statuses also apply to other models, such as Site, so should not have been deleted
-        self.assertEqual(initial_statuses_count, Status.objects.count())
-
-        populate_status_choices(apps=apps, schema_editor=None, models=["dcim.Location"])
-        self.assertEqual(5, len(Status.objects.get_for_model(Location)))
-        self.assertEqual(initial_statuses_count, Status.objects.count())
 
     def test_populate_status_choices_error_handling(self):
         """

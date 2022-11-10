@@ -1,39 +1,60 @@
 {% load helpers %}
 {% if custom_fields %}
+<style>
+    .accordion-toggle {
+        font-size: 14px;
+    }
+</style>
     <div class="panel panel-default">
         <div class="panel-heading">
             <strong>Custom Fields</strong>
+            <button type="button" class="btn-xs btn-primary pull-right" id="accordion-toggle-all">Collapse All</button>
         </div>
-        <table class="table table-hover panel-body attr-table">
-            {% for field, value in custom_fields.items %}
-                <tr>
-                    <td><span title="{{ field.description }}">{{ field }}</span></td>
-                    <td>
-                        {% if field.type == 'boolean' %}
-                            {{ value | render_boolean }}
-                        {% elif field.type == 'url' and value %}
-                            <a href="{{ value }}">{{ value|truncatechars:70 }}</a>
-                        {% elif field.type == 'multi-select' and value %}
-                            {{ value|join:", " }}
-                        {% elif field.type == 'json' and value is not None %}
-                            <p>
-                                <button class="btn btn-xs btn-primary" type="button" data-toggle="collapse"
-                                        data-target="#cf_{{ field.name | slugify }}" aria-expanded="false"
-                                        aria-controls="cf_{{ field.name | slugify }}">
-                                    Show/Hide
-                                </button>
-                            </p>
-                            <pre class="collapse" id="cf_{{ field.name | slugify }}"><code>{{ value|render_json }}</code></pre>
-                        {% elif value or value == 0 %}
-                            {{ value }}
-                        {% elif field.required %}
-                            <span class="text-warning">Not defined</span>
-                        {% else %}
-                            <span class="text-muted">&mdash;</span>
-                        {% endif %}
-                    </td>
-                </tr>
-            {% endfor %}
+        <table id="accordion" class="table table-hover panel-body attr-table">
+            {% for grouping, fields in custom_fields.items %}
+            {% with forloop.counter0 as count %}
+                {% if grouping != "" %}
+                    <tr>
+                        <td colspan="2"><strong>
+                            <button type="button" class="accordion-toggle mdi mdi-chevron-down"
+                                    name="grouping.{{ grouping }}" data-toggle="collapse"
+                                    data-target=".collapseme-{{ count }}">
+                                {{ grouping }}
+                            </button></strong>
+                        </td>
+                    </tr>
+                {% endif %}
+                    {% for field, value in fields %}
+                        <tr class="collapseme-{{ count }} collapse in" data-parent="#accordion">
+                            <td><span title="{{ field.description }}">{{ field }}</span></td>
+                            <td>
+                                {% if field.type == 'boolean' %}
+                                    {{ value | render_boolean }}
+                                {% elif field.type == 'url' and value %}
+                                    <a href="{{ value }}">{{ value|truncatechars:70 }}</a>
+                                {% elif field.type == 'multi-select' and value %}
+                                    {{ value|join:", " }}
+                                {% elif field.type == 'json' and value is not None %}
+                                    <p>
+                                        <button class="btn btn-xs btn-primary" type="button" data-toggle="collapse"
+                                                data-target="#cf_{{ field.slug }}" aria-expanded="false"
+                                                aria-controls="cf_{{ field.slug }}">
+                                            Show/Hide
+                                        </button>
+                                    </p>
+                                    <pre class="collapse" id="cf_{{ field.slug }}"><code>{{ value|render_json }}</code></pre>
+                                {% elif value or value == 0 %}
+                                    {{ value }}
+                                {% elif field.required %}
+                                    <span class="text-warning">Not defined</span>
+                                {% else %}
+                                    <span class="text-muted">&mdash;</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                    {% endfor %}
+                {% endwith %}
+                {% endfor %}
         </table>
     </div>
 {% endif %}

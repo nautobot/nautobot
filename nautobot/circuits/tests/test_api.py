@@ -203,8 +203,8 @@ class CircuitTerminationTest(APIViewTestCases.APIViewTestCase):
         SIDE_Z = CircuitTerminationSideChoices.SIDE_Z
 
         sites = (
-            Site.objects.create(name="Site 1", slug="site-1"),
-            Site.objects.create(name="Site 2", slug="site-2"),
+            Site.objects.first(),
+            Site.objects.last(),
         )
 
         provider = Provider.objects.create(name="Provider 1", slug="provider-1")
