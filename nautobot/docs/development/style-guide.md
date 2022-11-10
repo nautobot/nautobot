@@ -49,7 +49,7 @@ New dependencies can be added to the project via the `poetry add` command. This 
 
 * No easter eggs. While they can be fun, Nautobot must be considered as a business-critical tool. The potential, however minor, for introducing a bug caused by unnecessary logic is best avoided entirely.
 
-* Constants (variables which generally do not change) should be declared in `constants.py` within each app. Wildcard imports from the file are acceptable.
+* Constants (variables which generally do not change) should be declared in `constants.py` within each app.
 
 * Every model should have a docstring. Every custom method should include an explanation of its function.
 
