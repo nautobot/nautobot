@@ -243,20 +243,24 @@
         let form_id = $(this).parents("form").attr("id");
 
         let default_filters_field_dom = $(`#default-filter form select[name=${field_name}]`);
-        let default_filters_field_ids = default_filters_field_dom.select2('data').map(data => data["id"]);
-
         let advanced_filters_field_dom = $(`#advanced-filter #filterform-table tbody tr td select[name=${field_name}]`);
-        let advanced_filters_field_ids = advanced_filters_field_dom.select2('data').map(data => data["id"]);
 
-        // Only change field value if both fields do not have equal values
-        if (JSON.stringify(advanced_filters_field_ids) !== JSON.stringify(default_filters_field_ids)){
-            if(form_id === "dynamic-filter-form"){
-                changeSelect2FieldValue(default_filters_field_dom, field_values);
-            }
-            else {
-                changeSelect2FieldValue(advanced_filters_field_dom, field_values);
+        // Only apply logic if fields with same name attr are on both advanced and default filter form
+        if(default_filters_field_dom.length && advanced_filters_field_dom.length){
+            let default_filters_field_ids = default_filters_field_dom.select2('data').map(data => data["id"]);
+            let advanced_filters_field_ids = advanced_filters_field_dom.select2('data').map(data => data["id"]);
+
+            // Only change field value if both fields do not have equal values
+            if (JSON.stringify(advanced_filters_field_ids) !== JSON.stringify(default_filters_field_ids)){
+                if(form_id === "dynamic-filter-form"){
+                    changeSelect2FieldValue(default_filters_field_dom, field_values);
+                }
+                else {
+                    changeSelect2FieldValue(advanced_filters_field_dom, field_values);
+                }
             }
         }
+
     })
 </script>
 {% endblock %}
