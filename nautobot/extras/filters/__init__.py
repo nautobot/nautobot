@@ -399,7 +399,7 @@ class NautobotFilterSet(
 ):
     """
     This class exists to combine common functionality and is used as a base class throughout the codebase where all of
-    BaseFilterSet, CreatedUpdatedModelFilterSetMixin, RelationshipModelFilterSet and CustomFieldModelFilterSetMixin
+    BaseFilterSet, CreatedUpdatedModelFilterSetMixin, RelationshipModelFilterSetMixin and CustomFieldModelFilterSetMixin
     are needed.
     """
 
