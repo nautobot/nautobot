@@ -168,6 +168,8 @@ factory-boy = "~3.2.1"
 flake8 = "~3.9.1"
 # Alternative to Make, CLI based on `tasks.py`
 invoke = "~1.7.1"
+# Code style checking for python import statements
+isort = "^5.10.1"
 # Rendering docs to HTML
 mkdocs = "~1.4.2"
 # Allow Markdown files to include other files
@@ -223,6 +225,10 @@ exclude = '''
   )/
 )
 '''
+
+[tool.isort]
+profile = "black"
+line_length = 120
 
 [tool.pylint.master]
 load-plugins = "pylint_django"

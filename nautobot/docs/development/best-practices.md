@@ -443,7 +443,7 @@ Individual names may be imported from external packages (`from foo import some_f
 
 #### Module Name Imports
 
-Whenever possible, imports from the `nautobot` package should use module level imports, not individual names from a module. 
+Whenever possible, imports from the `nautobot` package should use module level imports, not individual names from a module.
 
 !!! example
 
