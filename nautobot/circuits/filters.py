@@ -1,8 +1,11 @@
 import django_filters
 from django.db.models import Q
 
-from nautobot.dcim.filter_mixins import LocatableModelFilterSetMixin
-from nautobot.dcim.filters import CableTerminationModelFilterSetMixin, PathEndpointModelFilterSetMixin
+from nautobot.dcim.filters import (
+    CableTerminationModelFilterSetMixin,
+    LocatableModelFilterSetMixin,
+    PathEndpointModelFilterSetMixin,
+)
 from nautobot.dcim.models import Location, Region, Site
 from nautobot.extras.filters import NautobotFilterSet, StatusModelFilterSetMixin
 from nautobot.tenancy.filters import TenancyModelFilterSetMixin

@@ -4,34 +4,12 @@ from django.db.models import Q
 from drf_spectacular.utils import extend_schema_field
 from timezone_field import TimeZoneField
 
-from nautobot.dcim.filter_mixins import LocatableModelFilterSetMixin
-from nautobot.extras.filters import (
-    CustomFieldModelFilterSetMixin,
-    LocalContextModelFilterSetMixin,
-    NautobotFilterSet,
-    StatusModelFilterSetMixin,
+from nautobot.dcim.filters.mixins import (
+    DeviceComponentModelFilterSetMixin,
+    DeviceComponentTemplateModelFilterSetMixin,
+    LocatableModelFilterSetMixin,
 )
-from nautobot.extras.models import SecretsGroup
-from nautobot.extras.utils import FeatureQuery
-from nautobot.ipam.models import VLAN, VLANGroup
-from nautobot.tenancy.filters import TenancyModelFilterSetMixin
-from nautobot.tenancy.models import Tenant
-from nautobot.utilities.deprecation import class_deprecated_in_favor_of
-from nautobot.utilities.filters import (
-    BaseFilterSet,
-    ContentTypeMultipleChoiceFilter,
-    MultiValueCharFilter,
-    MultiValueMACAddressFilter,
-    MultiValueUUIDFilter,
-    NameSlugSearchFilterSet,
-    NaturalKeyOrPKMultipleChoiceFilter,
-    RelatedMembershipBooleanFilter,
-    SearchFilter,
-    TagFilter,
-    TreeNodeMultipleChoiceFilter,
-)
-from nautobot.virtualization.models import Cluster
-from .choices import (
+from nautobot.dcim.choices import (
     CableTypeChoices,
     ConsolePortTypeChoices,
     InterfaceTypeChoices,
@@ -40,8 +18,8 @@ from .choices import (
     RackTypeChoices,
     RackWidthChoices,
 )
-from .constants import NONCONNECTABLE_IFACE_TYPES, VIRTUAL_IFACE_TYPES, WIRELESS_IFACE_TYPES
-from .models import (
+from nautobot.dcim.constants import NONCONNECTABLE_IFACE_TYPES, VIRTUAL_IFACE_TYPES, WIRELESS_IFACE_TYPES
+from nautobot.dcim.models import (
     Cable,
     ConsolePort,
     ConsolePortTemplate,
@@ -78,6 +56,32 @@ from .models import (
     Site,
     VirtualChassis,
 )
+from nautobot.extras.filters import (
+    NautobotFilterSet,
+    CustomFieldModelFilterSetMixin,
+    LocalContextModelFilterSetMixin,
+    StatusModelFilterSetMixin,
+)
+from nautobot.extras.models import SecretsGroup
+from nautobot.extras.utils import FeatureQuery
+from nautobot.ipam.models import VLAN, VLANGroup
+from nautobot.tenancy.filters import TenancyModelFilterSetMixin
+from nautobot.tenancy.models import Tenant
+from nautobot.utilities.deprecation import class_deprecated_in_favor_of
+from nautobot.utilities.filters import (
+    BaseFilterSet,
+    ContentTypeMultipleChoiceFilter,
+    MultiValueCharFilter,
+    MultiValueMACAddressFilter,
+    MultiValueUUIDFilter,
+    NameSlugSearchFilterSet,
+    NaturalKeyOrPKMultipleChoiceFilter,
+    RelatedMembershipBooleanFilter,
+    SearchFilter,
+    TagFilter,
+    TreeNodeMultipleChoiceFilter,
+)
+from nautobot.virtualization.models import Cluster
 
 
 __all__ = (
@@ -782,22 +786,6 @@ class DeviceTypeFilterSet(NautobotFilterSet):
         return queryset.exclude(devicebaytemplates__isnull=value)
 
 
-class DeviceComponentTemplateModelFilterSetMixin(NameSlugSearchFilterSet, CustomFieldModelFilterSetMixin):
-    devicetype_id = django_filters.ModelMultipleChoiceFilter(
-        queryset=DeviceType.objects.all(),
-        field_name="device_type_id",
-        label="Device type (ID)",
-    )
-    device_type = NaturalKeyOrPKMultipleChoiceFilter(
-        queryset=DeviceType.objects.all(),
-        label="Device type (slug or ID)",
-    )
-    label = MultiValueCharFilter(label="Label")
-    description = MultiValueCharFilter(label="Description")
-    id = MultiValueUUIDFilter(label="ID")
-    name = MultiValueCharFilter(label="Name")
-
-
 # TODO: remove in 2.2
 @class_deprecated_in_favor_of(DeviceComponentTemplateModelFilterSetMixin)
 class DeviceTypeComponentFilterSet(DeviceComponentTemplateModelFilterSetMixin):
@@ -1137,48 +1125,6 @@ class DeviceFilterSet(
     def _pass_through_ports(self, queryset, name, value):
         params = self.generate_query__pass_through_ports(value)
         return queryset.filter(params)
-
-
-class DeviceComponentModelFilterSetMixin(CustomFieldModelFilterSetMixin):
-    q = SearchFilter(
-        filter_predicates={
-            "name": "icontains",
-            "label": "icontains",
-            "description": "icontains",
-        },
-    )
-    region_id = TreeNodeMultipleChoiceFilter(
-        queryset=Region.objects.all(),
-        field_name="device__site__region",
-        label="Region (ID)",
-    )
-    region = TreeNodeMultipleChoiceFilter(
-        queryset=Region.objects.all(),
-        field_name="device__site__region",
-        label="Region (slug)",
-    )
-    site_id = django_filters.ModelMultipleChoiceFilter(
-        field_name="device__site",
-        queryset=Site.objects.all(),
-        label="Site (ID)",
-    )
-    site = django_filters.ModelMultipleChoiceFilter(
-        field_name="device__site__slug",
-        queryset=Site.objects.all(),
-        to_field_name="slug",
-        label="Site name (slug)",
-    )
-    device_id = django_filters.ModelMultipleChoiceFilter(
-        queryset=Device.objects.all(),
-        label="Device (ID)",
-    )
-    device = django_filters.ModelMultipleChoiceFilter(
-        field_name="device__name",
-        queryset=Device.objects.all(),
-        to_field_name="name",
-        label="Device (name)",
-    )
-    tag = TagFilter()
 
 
 # TODO: remove in 2.2
