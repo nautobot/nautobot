@@ -5,7 +5,7 @@ from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ValidationError
 from django.template import engines
 from django.test import override_settings
-from django.urls import reverse, NoReverseMatch
+from django.urls import NoReverseMatch, reverse
 
 import netaddr
 

@@ -7,7 +7,7 @@ from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ObjectDoesNotExist
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import TestCase as _TestCase, override_settings, tag
-from django.urls import reverse, NoReverseMatch
+from django.urls import NoReverseMatch, reverse
 from django.utils.text import slugify
 
 from nautobot.extras.choices import CustomFieldTypeChoices, RelationshipSideChoices, ObjectChangeActionChoices
