@@ -226,23 +226,37 @@
         jsify_form($(document))
     })
 
-    // On change of a select field in Default form; Replicate that change into dynamic filter form field
-    $("#default-filter form select").on("change", function (e){
+    function changeSelect2FieldValue(dom_element, values){
+        dom_element.val(null)
+        values.forEach(function (value){
+            let new_option = new Option(value.text, value.id, true, true);
+            dom_element.append(new_option);
+        })
+        dom_element.trigger('change')
+    }
+
+    // On change of a select field in default filter form
+    // Replicate that change into dynamic filter form and vice-versa
+    $("#default-filter form select, #advanced-filter select").on("change", function (e){
         let field_name = $(this).attr("name");
         let field_values = $(this).select2('data');
+        let form_id = $(this).parents("form").attr("id");
 
-        $("#advanced-filter #filterform-table tbody tr td:nth-child(3)").each(function(){
-            let input_field_dom = $(this).find(">:first-child");
-            if(input_field_dom.attr("name") === field_name){
-                input_field_dom.val(null).trigger('change');
-                field_values.forEach(function (value){
-                    let new_option = new Option(value.text, value.id, true, true);
-                    input_field_dom.append(new_option).trigger('change');
-                })
-                // Breakout of `each` loop
-                return false;
+        let default_filters_field_dom = $(`#default-filter form select[name=${field_name}]`);
+        let default_filters_field_ids = default_filters_field_dom.select2('data').map(data => data["id"]);
+
+        let advanced_filters_field_dom = $(`#advanced-filter #filterform-table tbody tr td select[name=${field_name}]`);
+        let advanced_filters_field_ids = advanced_filters_field_dom.select2('data').map(data => data["id"]);
+
+        // Only change field value if both fields do not have equal values
+        if (JSON.stringify(advanced_filters_field_ids) !== JSON.stringify(default_filters_field_ids)){
+            if(form_id === "dynamic-filter-form"){
+                changeSelect2FieldValue(default_filters_field_dom, field_values);
             }
-        })
+            else {
+                changeSelect2FieldValue(advanced_filters_field_dom, field_values);
+            }
+        }
     })
 </script>
 {% endblock %}
