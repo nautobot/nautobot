@@ -261,18 +261,11 @@ class NautobotHTMLRenderer(renderers.BrowsableAPIRenderer):
                         "fields": view.bulk_create_form_class(model).fields if view.bulk_create_form_class else None,
                     }
                 )
-            elif view.action == "changelog":
+            elif view.action in ["changelog", "notes"]:
                 context.update(
                     {
                         "base_template": get_base_template(data.get("base_template"), model),
-                        "active_tab": "changelog",
-                    }
-                )
-            elif view.action == "notes":
-                context.update(
-                    {
-                        "base_template": get_base_template(data.get("base_template"), model),
-                        "active_tab": "notes",
+                        "active_tab": view.action,
                     }
                 )
             context.update(view.get_extra_context(request, instance=None))
