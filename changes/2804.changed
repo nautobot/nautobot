@@ -1,0 +1,1 @@
+Changed shadowed filterset fields in dcim filterset to use NaturalKeyOrPKMultipleChoiceFilter and modified related unittests.
