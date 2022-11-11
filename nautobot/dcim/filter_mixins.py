@@ -11,19 +11,10 @@ class LocatableModelFilterSetMixin(django_filters.FilterSet):
     while `region` is indirectly associated via the `site`.
     """
 
-    region_id = TreeNodeMultipleChoiceFilter(
-        queryset=Region.objects.all(),
-        field_name="site__region",
-        label='Region (ID) (deprecated, use "region" filter instead)',
-    )
     region = TreeNodeMultipleChoiceFilter(
         queryset=Region.objects.all(),
         field_name="site__region",
         label="Region (slug or ID)",
-    )
-    site_id = django_filters.ModelMultipleChoiceFilter(
-        queryset=Site.objects.all(),
-        label='Site (ID) (deprecated, use "site" filter instead)',
     )
     site = NaturalKeyOrPKMultipleChoiceFilter(
         queryset=Site.objects.all(),
