@@ -1385,6 +1385,17 @@ Markdown = ">=3.3"
 mkdocs = ">=1.1"
 
 [[package]]
+name = "mkdocs-gen-files"
+version = "0.4.0"
+description = "MkDocs plugin to programmatically generate documentation pages during the build"
+category = "dev"
+optional = false
+python-versions = ">=3.7,<4.0"
+
+[package.dependencies]
+mkdocs = ">=1.0.3,<2.0.0"
+
+[[package]]
 name = "mkdocs-include-markdown-plugin"
 version = "3.6.1"
 description = "Mkdocs Markdown includer plugin."
@@ -2614,7 +2625,7 @@ sso = ["social-auth-core"]
 [metadata]
 lock-version = "1.1"
 python-versions = "^3.7"
-content-hash = "1c3105ef2b3d15ab0382aba9cc6594159f5de8abf746d0fd7113043af2780a76"
+content-hash = "41ab583aa291d40eb14071f056a0ca1804f274fe39d14271e01241ef51e5844b"
 
 [metadata.files]
 amqp = [
@@ -3309,6 +3320,10 @@ mkdocs = [
 mkdocs-autorefs = [
     {file = "mkdocs-autorefs-0.4.1.tar.gz", hash = "sha256:70748a7bd025f9ecd6d6feeba8ba63f8e891a1af55f48e366d6d6e78493aba84"},
     {file = "mkdocs_autorefs-0.4.1-py3-none-any.whl", hash = "sha256:a2248a9501b29dc0cc8ba4c09f4f47ff121945f6ce33d760f145d6f89d313f5b"},
+]
+mkdocs-gen-files = [
+    {file = "mkdocs-gen-files-0.4.0.tar.gz", hash = "sha256:377bff8ee8e93515916689f483d971643f83a94eed7e92318854da8f344f0163"},
+    {file = "mkdocs_gen_files-0.4.0-py3-none-any.whl", hash = "sha256:3241a4c947ecd11763ca77cc645015305bf71a0e1b9b886801c114fcf9971e71"},
 ]
 mkdocs-include-markdown-plugin = [
     {file = "mkdocs_include_markdown_plugin-3.6.1-py3-none-any.whl", hash = "sha256:ea36a7d50ee98028f03574d7bf40a307e16211ad3013a4e42f64494b3c106e9e"},
