@@ -89,8 +89,8 @@ plugins:
         python:
           paths: ["."]
           options:
+            heading_level: 1
             show_root_heading: true
-            show_category_heading: true
             show_root_members_full_path: true
 
 nav:
@@ -189,7 +189,6 @@ nav:
           - Navigation Menu: "apps/code-reference/navigation.md"
           - REST API: "apps/code-reference/api.md"
           - Tables: "apps/code-reference/tables.md"
-          - Template Content Extensions: "apps/code-reference/template_content.md"
           - Testing: "apps/code-reference/testing.md"
           - URLs: "apps/code-reference/urls.md"
           - Views: "apps/code-reference/views.md"

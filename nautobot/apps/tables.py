@@ -1,6 +1,6 @@
 from nautobot.extras.tables import StatusTableMixin
 from nautobot.utilities.tables import (
-    BaseTable as NautobotTable,
+    BaseTable,
     BooleanColumn,
     ButtonsColumn,
     ColoredLabelColumn,
@@ -10,11 +10,11 @@ from nautobot.utilities.tables import (
 )
 
 __all__ = (
+    "BaseTable",
     "BooleanColumn",
     "ButtonsColumn",
     "ColoredLabelColumn",
     "ContentTypesColumn",
-    "NautobotTable",
     "StatusTableMixin",
     "TagColumn",
     "ToggleColumn",
