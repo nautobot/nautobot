@@ -467,7 +467,7 @@ class PluginAPITest(APIViewTestCases.APIViewTestCase):
             self.assertIsNone(response.data["notes_url"])
             self.assertIn(
                 (
-                    f"Notes feature is not available for model {type(instance).__name__}."
+                    f"Notes feature is not available for model {type(instance).__name__}. "
                     "Please make sure to include NotesMixin from nautobot.extras.model.mixins in the model class definition "
                     "before including NotesSerializerMixin in the model serializer"
                 ),
