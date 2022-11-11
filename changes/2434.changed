@@ -1,1 +1,0 @@
-Updated `oauthlib` to `3.2.1` for `CVE-2022-36087`. This is a dependency of `social-auth-core` so will not auto-update when upgrading. Please be sure to upgrade your local environment.

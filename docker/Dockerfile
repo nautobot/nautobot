@@ -250,9 +250,6 @@ RUN npm install --global markdownlint-cli@0.31.1
 # /source from build-nautobot will include docs from build-docs as well
 COPY --from=build-nautobot /source /source
 
-# TODO Use nautobot init to generate the same config for all use cases
-COPY development/nautobot_config.py /opt/nautobot/nautobot_config.py
-
 # Run Nautobot development server by default
 EXPOSE 8080
 CMD ["nautobot-server", "runserver", "0.0.0.0:8080", "--insecure"]
@@ -269,12 +266,18 @@ RUN --mount=type=cache,target="/root/.cache/pip" \
     rm -rf /source && \
     rm -rf /tmp/tmp*
 
+COPY development/nautobot_config.py /opt/nautobot/nautobot_config.py
+
 ################################ Stage: final-dev (development environment for Nautobot plugins)
 
 FROM dependencies-dev as final-dev
 
 RUN pip install --no-deps --no-cache-dir /source/dist/*.whl && \
     rm -rf /source
+
+WORKDIR /opt/nautobot
+
+RUN nautobot-server init
 
 ################################ Stage: final (production-ready image)
 
@@ -298,7 +301,6 @@ RUN openssl req -new -newkey rsa:4096 -days 365 -nodes -x509 -subj \
 
 # Configure uWSGI
 COPY docker/uwsgi.ini /opt/nautobot
-COPY docker/nautobot_config.append.py /opt/nautobot
 
 # Make sure we don't run as a root user and make sure everything under /opt/nautobot and /prom_cache is owned by nautobot
 RUN useradd --system --shell /bin/bash --create-home --home-dir /opt/nautobot nautobot && \
@@ -309,9 +311,7 @@ USER nautobot
 
 WORKDIR /opt/nautobot
 
-RUN nautobot-server init && \
-    cat /opt/nautobot/nautobot_config.append.py >> /opt/nautobot/nautobot_config.py && \
-    rm -f /opt/nautobot/nautobot_config.append.py
+COPY --from=final-dev --chown=nautobot /opt/nautobot/nautobot_config.py /opt/nautobot/nautobot_config.py
 
 # Run Nautobot server under uwsgi by default
 EXPOSE 8080 8443

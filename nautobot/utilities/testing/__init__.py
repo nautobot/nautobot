@@ -94,7 +94,8 @@ def run_job_for_testing(job, data=None, commit=True, username="test-user", reque
         if request:
             yield request
         else:
-            yield web_request_context(user=user)
+            with web_request_context(user=user) as ctx_request:
+                yield ctx_request
 
     with _web_request_context(user=user_instance) as wrapped_request:
         run_job(data=data, request=wrapped_request, commit=commit, job_result_pk=job_result.pk)
@@ -143,7 +144,9 @@ class CeleryTestCase(TransactionTestCase):
         # Special namespace loading of methods needed by start_worker, per the celery docs
         app.loader.import_module("celery.contrib.testing.tasks")
         cls.clear_worker()
-        cls.celery_worker = start_worker(app, concurrency=1)
+        # `celery.ping` not registered is a known issue https://github.com/celery/celery/issues/3642
+        # fixed by setting `perform_ping_check` to False
+        cls.celery_worker = start_worker(app, perform_ping_check=False, concurrency=1)
         cls.celery_worker.__enter__()
 
     @classmethod

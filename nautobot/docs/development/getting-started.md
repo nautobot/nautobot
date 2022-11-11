@@ -172,6 +172,7 @@ Available tasks:
   markdownlint           Lint Markdown files.
   migrate                Perform migrate operation in Django.
   nbshell                Launch an interactive nbshell session.
+  performance-test       Run Nautobot performance specific unit tests.
   post-upgrade           Performs Nautobot common post-upgrade operations using a single entrypoint.
   pylint                 Perform static analysis of Nautobot code.
   restart                Gracefully restart containers.
@@ -201,6 +202,9 @@ Additional useful commands for the development environment:
 !!! note
     The mkdocs container must be started manually with `invoke start -s mkdocs`. It will not start automatically with the
     `invoke start` or `invoke debug` commands.
+
+!!! tip
+    The Nautobot server uses a Django webservice and worker uses watchdog to provide automatic reload of your web and worker servers in **most** cases when using `invoke start` or `invoke debug`.
 
 !!! tip
     To learn about advanced use cases within the Docker Compose workflow, see the [Docker Compose Advanced Use Cases](docker-compose-advanced-use-cases.md) page.
@@ -374,7 +378,7 @@ You'll need to create a administrative superuser account to be able to log into 
 Django provides a lightweight HTTP/WSGI server for development use. The development server automatically reloads Python code for each request, as needed. You don’t need to restart the server for code changes to take effect. However, some actions like adding files don’t trigger a restart, so you’ll have to restart the server in these cases.
 
 !!! danger
-    **DO NOT USE THIS SERVER IN A PRODUCTION SETTING.** The development server is for development and testing purposes only. It is neither performant nor secure enough for production use.
+    **DO NOT USE THIS SERVER IN A PRODUCTION SETTING.** The development server and watchdog is for development and testing purposes only. It is neither performant nor secure enough for production use.
 
 You can start the Nautobot development server with the `invoke start` command (if using Docker), or the `nautobot-server runserver` management command:
 
@@ -401,6 +405,19 @@ Quit the server with CONTROL-C.
 Please see the [official Django documentation on `runserver`](https://docs.djangoproject.com/en/stable/ref/django-admin/#runserver) for more information.
 
 You can then log into the development server at `localhost:8080` with the [superuser](#creating-a-superuser) you created.
+
+### Starting the Worker Server
+
+In order to run Nautobot Jobs or anything that requires a worker you must start a Celery worker.
+
+The worker is started in Docker Workflow with [watchdog](https://pythonhosted.org/watchdog/) and can be setup to be started with watchdog in the Virtual Environment Workflow. Watchdog provides a similar experience to the Django lightweight HTTP/WSGI for restarting your application automatically. Watchdog can watch for changes on your filesystem, this is helpful when adjusting existing Python files to not have to restart the celery worker when testing jobs.
+
+| Docker Compose Workflow | Virtual Environment Workflow    |
+|-------------------------|---------------------------------|
+| `invoke start`          | `nautobot-server celery worker` |
+
+!!! tip
+    You can leverage watchdog for your celery worker as described above, with the following watchmedo command in your development environment `watchmedo auto-restart --directory './' --pattern '*.py' --recursive -- nautobot-server celery worker -l INFO --events`.
 
 ### Starting the Interactive Shell
 
@@ -465,34 +482,11 @@ Installing the current project: nautobot (1.0.0-beta.2)
 
 Throughout the course of development, it's a good idea to occasionally run Nautobot's test suite to catch any potential errors. Tests come in two primary flavors: Unit tests and integration tests.
 
+For information about **writing** tests, refer to the [testing documentation](testing.md).
+
 #### Unit Tests
 
 Unit tests are automated tests written and run to ensure that a section of the Nautobot application (known as the "unit") meets its design and behaves as intended and expected. Most commonly as a developer of or contributor to Nautobot you will be writing unit tests to exercise the code you have written. Unit tests are not meant to test how the application behaves, only the individual blocks of code, therefore use of mock data and phony connections is common in unit test code. As a guiding principle, unit tests should be fast, because they will be executed quite often.
-
-By Nautobot convention, unit tests must be [tagged](https://docs.djangoproject.com/en/stable/topics/testing/tools/#tagging-tests) with `unit`. The base test case class `nautobot.utilities.testing.TestCase` has this tag, therefore any test cases inheriting from that class do not need to be explicitly tagged. All existing view and API test cases in the Nautobot test suite utilities inherit from this class.
-
-!!! warning
-    New unit tests **must always** inherit from `nautobot.utilities.testing.TestCase`. Do not use `django.test.TestCase`.
-
-Wrong:
-
-```python
-from django.test import TestCase
-
-
-class MyTestCase(TestCase):
-    ...
-```
-
-Right:
-
-```python
-from nautobot.utilities.testing import TestCase
-
-
-class MyTestCase(TestCase):
-    ...
-```
 
 Unit tests are run using the `invoke unittest` command (if using the Docker development environment) or the `nautobot-server test` command:
 
@@ -519,8 +513,6 @@ In cases where you haven't made any changes to the database (which is most of th
 
 Integration tests are automated tests written and run to ensure that the Nautobot application behaves as expected when being used as it would be in practice. By contrast to unit tests, where individual units of code are being tested, integration tests rely upon the server code actually running, and web UI clients or API clients to make real connections to the service to exercise actual workflows, such as navigating to the login page, filling out the username/passwords fields, and clicking the "Log In" button.
 
-Integration testing is much more involved, and builds on top of the foundation laid by unit testing. As a guiding principle, integration tests should be comprehensive, because they are the last mile to asserting that Nautobot does what it is advertised to do. Without integration testing, we have to do it all manually, and that's no fun for anyone!
-
 Running integrations tests requires the use of Docker at this time. They can be directly invoked using `nautobot-server test` just as unit tests can, however, a headless Firefox browser provided by Selenium is required. Because Selenium installation and setup is complicated, we have included a configuration for this to work out of the box using Docker.
 
 The Selenium container is running a standalone, headless Firefox "web driver" browser that can be remotely controlled by Nautobot for use in integration testing.
@@ -530,33 +522,6 @@ Before running integration tests, the `selenium` container must be running. If y
 | Docker Compose Workflow   | Virtual Environment Workflow      |
 |---------------------------|-----------------------------------|
 | (automatic)               | `invoke start --service selenium` |
-
-By Nautobot convention, integration tests must be [tagged](https://docs.djangoproject.com/en/stable/topics/testing/tools/#tagging-tests) with `integration`. The base test case class `nautobot.utilities.testing.integration.SeleniumTestCase` has this tag, therefore any test cases inheriting from that class do not need to be explicitly tagged. All existing integration test cases in the Nautobot test suite utilities inherit from this class.
-
-!!! warning
-    New integration tests **must always** inherit from `nautobot.utilities.testing.integration.SeleniumTestCase` and added in the `integration` directory in the `tests` directory of an inner Nautobot application. Do not use any other base class for integration tests.
-
-We never want to risk running the unit tests and integration tests at the same time. The isolation from each other is critical to a clean and manageable continuous development cycle.
-
-Wrong:
-
-```python
-from django.contrib.staticfiles.testing import StaticLiveServerTestCase
-
-
-class MyIntegrationTestCase(StaticLiveServerTestCase):
-    ...
-```
-
-Right:
-
-```python
-from nautobot.utilities.testing.integration import SeleniumTestCase
-
-
-class MyIntegrationTestCase(SeleniumTestCase):
-    ...
-```
 
 Integration tests are run using the `invoke integration-test` command. All integration tests must inherit from `nautobot.utilities.testing.integration.SeleniumTestCase`, which itself is tagged with `integration`. A custom test runner has been implemented to automatically skip any test case tagged with `integration` by default, so normal unit tests run without any concern. To run the integration tests the `--tag integration` argument must be passed to `nautobot-server test`.
 

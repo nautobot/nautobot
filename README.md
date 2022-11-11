@@ -2,14 +2,18 @@
 
 ![Nautobot](https://raw.githubusercontent.com/nautobot/nautobot/develop/nautobot/docs/nautobot_logo.svg "Nautobot logo")
 
-Nautobot is a Network Source of Truth and Network Automation Platform.
-
-> Nautobot was initially developed as a fork of NetBox (v2.10.4).  NetBox was originally developed by Jeremy Stretch at DigitalOcean and the NetBox Community.
-
-Nautobot runs as a web application atop the [Django](https://www.djangoproject.com/) Python framework with a
+Nautobot is a Network Source of Truth and Network Automation Platform built as a web application atop the [Django](https://www.djangoproject.com/) Python framework with a
 [PostgreSQL](https://www.postgresql.org/) or [MySQL](https://www.mysql.com) database.
 
-The complete documentation for Nautobot can be found at [Read the Docs](https://docs.nautobot.com/en/stable/).
+## Key Use Cases
+
+**1. Flexible Source of Truth for Networking** - Nautobot core data models are used to define the intended state of network infrastructure enabling it as a Source of Truth. While a baseline set of models are provided (such as IP networks and addresses, devices and racks, circuits and cable, etc.) it is Nautobot's goal to offer maximum data model flexibility. This is enabled through features such as user-defined relationships, custom fields on any model, and data validation that permits users to codify everything from naming standards to having automated tests run before data can be populated into Nautobot.
+
+**2. Extensible Data Platform for Automation** - Nautobot has a rich feature set to seamlessly integrate with network automation solutions. Nautobot offers GraphQL and native Git integration along with REST APIs and webhooks. Git integration dynamically loads YAML data files as Nautobot config contexts. Nautobot also has an evolving plugin system that enables users to create custom models, APIs, and UI elements. The plugin system is also used to unify and aggregate disparate data sources creating a Single Source of Truth to streamline data management for network automation.
+
+**3. Platform for Network Automation Apps** - The Nautobot plugin system enables users to create Network Automation Apps. Apps can be as lightweight or robust as needed based on user needs. Using Nautobot for creating custom applications saves up to 70% development time by re-using features such as authentication, permissions, webhooks, GraphQL, change logging, etc. all while having access to the data already stored in Nautobot. Some production ready applications include:
+
+The complete documentation for Nautobot can be found at [Read the Docs](https://docs.nautobot.com/).
 
 Questions? Comments? Start by perusing our [GitHub discussions](https://github.com/nautobot/nautobot/discussions) for the topic you have in mind, or join the **#nautobot** channel on [Network to Code's Slack community](https://slack.networktocode.com/)!
 
@@ -39,7 +43,7 @@ Questions? Comments? Start by perusing our [GitHub discussions](https://github.c
 
 ## Installation
 
-Please see [the documentation](https://docs.nautobot.com/en/stable/installation/) for instructions on installing Nautobot.
+Please see [the documentation](https://docs.nautobot.com/projects/core/en/stable/installation/) for instructions on installing Nautobot.
 
 ## Application Stack
 
@@ -72,3 +76,7 @@ If you are interested in contributing to the development of Nautobot, please rea
 ## Related projects
 
 Please see [our wiki](https://github.com/nautobot/nautobot/wiki/Related-Projects) for a list of relevant community projects.
+
+## Notices
+
+> Nautobot was initially developed as a fork of NetBox (v2.10.4).  NetBox was originally developed by Jeremy Stretch at DigitalOcean and the NetBox Community.

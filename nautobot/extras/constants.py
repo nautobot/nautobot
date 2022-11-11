@@ -31,6 +31,7 @@ JOB_OVERRIDABLE_FIELDS = (
     "soft_time_limit",
     "time_limit",
     "has_sensitive_variables",
+    "task_queues",
 )
 
 
@@ -45,3 +46,7 @@ JOB_MAX_SOURCE_LENGTH = 16  # "git", "local", "plugins"
 JOB_LOG_MAX_GROUPING_LENGTH = 100
 JOB_LOG_MAX_LOG_OBJECT_LENGTH = 200
 JOB_LOG_MAX_ABSOLUTE_URL_LENGTH = 255
+
+# ChangeLog Truncation Length
+CHANGELOG_MAX_CHANGE_CONTEXT_DETAIL = 400
+CHANGELOG_MAX_OBJECT_REPR = 200

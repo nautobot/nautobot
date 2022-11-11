@@ -87,9 +87,17 @@ layout = (
                 description="Represents a set of devices which share a common control plane",
                 weight=400,
             ),
+            HomePageItem(
+                name="Device Redundancy Groups",
+                link="dcim:deviceredundancygroup_list",
+                model=models.DeviceRedundancyGroup,
+                permissions=["dcim.view_deviceredundancygroup"],
+                description="Represents a set of devices which operate in a failover/HA group",
+                weight=500,
+            ),
             HomePageGroup(
                 name="Connections",
-                weight=500,
+                weight=600,
                 items=(
                     HomePageItem(
                         name="Cables",

@@ -12,86 +12,84 @@ When interacting with APIs, It's often necessary to build relationships between 
 
 Simply querying the `/api/dcim/devices/` API route provides:
 
-<!-- markdownlint-disable MD033 -->
-<details>
-<summary>View API Results</summary>
+??? info "View API Results"
 
-```json
-{
-  "count": 2,
-  "next": "https://demo.nautobot.com/api/dcim/devices/?limit=1&offset=2",
-  "previous": "https://demo.nautobot.com/api/dcim/devices/?limit=1",
-  "results": [
+    ```json
     {
-      "id": "c8886c88-6eff-4c4f-a079-4ef16b53d4f6",
-      "url": "https://demo.nautobot.com/api/dcim/devices/c8886c88-6eff-4c4f-a079-4ef16b53d4f6/",
-      "name": "ams-edge-02",
-      "display": "ams-edge-02",
-      "device_type": {
-        "id": "244ea351-3c7a-4d23-ba80-5db6b65312cc",
-        "url": "https://demo.nautobot.com/api/dcim/device-types/244ea351-3c7a-4d23-ba80-5db6b65312cc/",
-        "manufacturer": {
-          "id": "687f53d9-2c51-40fd-83aa-875e43d01a05",
-          "url": "https://demo.nautobot.com/api/dcim/manufacturers/687f53d9-2c51-40fd-83aa-875e43d01a05/",
-          "name": "Arista",
-          "slug": "arista"
-        },
-        "model": "DCS-7280CR2-60",
-        "slug": "dcs-7280cr2-60",
-        "display": "Arista DCS-7280CR2-60"
-      },
-      "device_role": {
-        "id": "a3637471-6b4d-4f5a-a249-838d621abe60",
-        "url": "https://demo.nautobot.com/api/dcim/device-roles/a3637471-6b4d-4f5a-a249-838d621abe60/",
-        "name": "edge",
-        "slug": "edge"
-      },
-      "tenant": null,
-      "platform": null,
-      "serial": "",
-      "asset_tag": null,
-      "site": {
-        "id": "4ad439e9-4f1b-41c9-bc8c-dd7c1c921dc3",
-        "url": "https://demo.nautobot.com/api/dcim/sites/4ad439e9-4f1b-41c9-bc8c-dd7c1c921dc3/",
-        "name": "ams",
-        "slug": "ams"
-      },
-      "rack": {
-        "id": "bff3f7af-bd77-49b6-a57a-9c4b8fc7673a",
-        "url": "https://demo.nautobot.com/api/dcim/racks/bff3f7af-bd77-49b6-a57a-9c4b8fc7673a/",
-        "name": "ams-102",
-        "display": "ams-102"
-      },
-      "position": 40,
-      "face": {
-        "value": "front",
-        "label": "Front"
-      },
-      "parent_device": null,
-      "status": {
-        "value": "active",
-        "label": "Active"
-      },
-      "primary_ip": null,
-      "primary_ip4": null,
-      "primary_ip6": null,
-      "cluster": null,
-      "virtual_chassis": null,
-      "vc_position": null,
-      "vc_priority": null,
-      "comments": "",
-      "local_context_data": null,
-      "tags": [],
-      "custom_fields": {},
-      "config_context": {},
-      "created": "2021-02-25",
-      "last_updated": "2021-02-25T14:51:57.609598"
+      "count": 2,
+      "next": "https://demo.nautobot.com/api/dcim/devices/?limit=1&offset=2",
+      "previous": "https://demo.nautobot.com/api/dcim/devices/?limit=1",
+      "results": [
+        {
+          "id": "c8886c88-6eff-4c4f-a079-4ef16b53d4f6",
+          "url": "https://demo.nautobot.com/api/dcim/devices/c8886c88-6eff-4c4f-a079-4ef16b53d4f6/",
+          "name": "ams-edge-02",
+          "display": "ams-edge-02",
+          "device_type": {
+            "id": "244ea351-3c7a-4d23-ba80-5db6b65312cc",
+            "url": "https://demo.nautobot.com/api/dcim/device-types/244ea351-3c7a-4d23-ba80-5db6b65312cc/",
+            "manufacturer": {
+              "id": "687f53d9-2c51-40fd-83aa-875e43d01a05",
+              "url": "https://demo.nautobot.com/api/dcim/manufacturers/687f53d9-2c51-40fd-83aa-875e43d01a05/",
+              "name": "Arista",
+              "slug": "arista"
+            },
+            "model": "DCS-7280CR2-60",
+            "slug": "dcs-7280cr2-60",
+            "display": "Arista DCS-7280CR2-60"
+          },
+          "device_role": {
+            "id": "a3637471-6b4d-4f5a-a249-838d621abe60",
+            "url": "https://demo.nautobot.com/api/dcim/device-roles/a3637471-6b4d-4f5a-a249-838d621abe60/",
+            "name": "edge",
+            "slug": "edge"
+          },
+          "tenant": null,
+          "platform": null,
+          "serial": "",
+          "asset_tag": null,
+          "site": {
+            "id": "4ad439e9-4f1b-41c9-bc8c-dd7c1c921dc3",
+            "url": "https://demo.nautobot.com/api/dcim/sites/4ad439e9-4f1b-41c9-bc8c-dd7c1c921dc3/",
+            "name": "ams",
+            "slug": "ams"
+          },
+          "rack": {
+            "id": "bff3f7af-bd77-49b6-a57a-9c4b8fc7673a",
+            "url": "https://demo.nautobot.com/api/dcim/racks/bff3f7af-bd77-49b6-a57a-9c4b8fc7673a/",
+            "name": "ams-102",
+            "display": "ams-102"
+          },
+          "position": 40,
+          "face": {
+            "value": "front",
+            "label": "Front"
+          },
+          "parent_device": null,
+          "status": {
+            "value": "active",
+            "label": "Active"
+          },
+          "primary_ip": null,
+          "primary_ip4": null,
+          "primary_ip6": null,
+          "cluster": null,
+          "virtual_chassis": null,
+          "vc_position": null,
+          "vc_priority": null,
+          "comments": "",
+          "local_context_data": null,
+          "tags": [],
+          "custom_fields": {},
+          "config_context": {},
+          "created": "2021-02-25",
+          "last_updated": "2021-02-25T14:51:57.609598"
+        }
+      ]
     }
-  ]
-}
-```
+    ```
 
-</details>
+<!-- markdownlint-disable-next-line MD033 -->
 <br />
 There is a lot of useful information in that API call, but there is also a lot of information that is missing; such as interfaces and ip addresses associated with the devices. There is also potentially a lot of information that isn't needed for the specific task. To retrieve the missing information, subsequent API calls would need to be performed; and those API results would need to be correlated to the correct device.
 
@@ -133,10 +131,11 @@ query {
 
 This query will retrieve a list of all devices by their hostname.
 
-<details>
-<summary>View GraphQL Query Results</summary>
-<img src="../images/graphql/04-graphql-query-01.png">
-</details>
+??? info "View GraphQL Query Results"
+    <!-- markdownlint-disable-next-line MD033 -->
+    <img src="../images/graphql/04-graphql-query-01.png">
+
+<!-- markdownlint-disable-next-line MD033 -->
 <br />
 Now, let's modify the query to provide interface names for each device. We can do that by modifying the existing query to add `interfaces { name }` as a sub-query of `devices`. GraphiQL makes this process a bit easier, because it has syntax completion built in.
 
@@ -155,10 +154,11 @@ query {
 
 The result is a list of all the devices by their hostname and associated interfaces by their names.
 
-<details>
-<summary>View GraphQL Query Results</summary>
-<img src="../images/graphql/06-graphql-query-02.png">
-</details>
+??? info "View GraphQL Query Results"
+    <!-- markdownlint-disable-next-line MD033 -->
+    <img src="../images/graphql/06-graphql-query-02.png">
+
+<!-- markdownlint-disable-next-line MD033 -->
 <br />
 We can continue iterating on the query until we get exactly what we want from the query. For example, if I wanted to iterate on the previous query to not only display the interfaces of the devices, but also display the interface description, the IP Addresses associated with the interface, and whether or not the interface was a dedicated management interface; I would structure the query like:
 
@@ -180,21 +180,21 @@ query {
 
 The results of the query look like:
 
-<details>
-<summary>View GraphQL Query Results</summary>
-<img src="../images/graphql/07-graphql-query-03.png">
-</details>
-<br />
+??? info "View GraphQL Query Results"
+    <!-- markdownlint-disable-next-line MD033 -->
+    <img src="../images/graphql/07-graphql-query-03.png">
+
 ### Filtering Queries
 
 These queries are great, but they are displaying the interface attributes and device names for every device in the Nautobot inventory. Nautobot allows users to filter queries at any level as desired to narrow the scope of the returned data. As an example, we can filter the queried devices by their site location. This is done by adding `(site: "<site name>")` after `devices`. For example: `query { devices(site: "ams") { name }}` will display all devices in the `ams` site.
 
 As an example. We can query devices by their site location. This is done by adding `(site: "<site name>")` after `devices`. For example: `query { devices(site: "ams") { name }}` will display all devices in the `ams` site.
 
-<details>
-<summary>View GraphQL Query Results</summary>
-<img src="../images/graphql/08-graphql-query-04.png">
-</details>
+??? info "View GraphQL Query Results"
+    <!-- markdownlint-disable-next-line MD033 -->
+    <img src="../images/graphql/08-graphql-query-04.png">
+
+<!-- markdownlint-disable-next-line MD033 -->
 <br />
 GraphQL also allows you to filter by multiple attributes at once if desired. You can use the *Documentation Explorer* to assist you in finding criteria attributes to filter on. In this example, I add the `role` attribute in addition to `site`.
 
@@ -206,10 +206,11 @@ query {
 }
 ```
 
-<details>
-<summary>View GraphQL Query Results</summary>
-<img src="../images/graphql/09-graphql-query-05.png">
-</details>
+??? info "View GraphQL Query Results"
+    <!-- markdownlint-disable-next-line MD033 -->
+    <img src="../images/graphql/09-graphql-query-05.png">
+
+<!-- markdownlint-disable-next-line MD033 -->
 <br />
 You can also filter at deeper levels of the query. On many to one relationships you can filter the results based on an attribute of the field. Any attribute that relates to a GraphQLType can be filtered.
 
@@ -237,10 +238,9 @@ query {
 }
 ```
 
-<details>
-<summary>View GraphQL Query Results</summary>
-<img src="../images/graphql/11-graphql-query-06.png">
-</details>
+??? info "View GraphQL Query Results"
+    <!-- markdownlint-disable-next-line MD033 -->
+    <img src="../images/graphql/11-graphql-query-06.png">
 
 +++ 1.3.0
     You can also paginate the results returned to you when the data set gets larger. To do so, use the keywords "limit" and "offset". The "limit" keyword will limit the count of results returned after the "offset". If no "offset" is specified, then the default offset is zero.

@@ -195,7 +195,8 @@ Test the images locally - to do this you need to set the following in your `invo
 nautobot:
   compose_files:
     - "docker-compose.yml"
-    - "docker-compose.build.yml"
+    - "docker-compose.postgres.yml"
+    - "docker-compose.final.yml"
 ```
 
 !!! warning
