@@ -137,10 +137,13 @@ class NotesSerializerMixin(BaseModelSerializer):
             notes_url = get_route_for_model(instance, "notes", api=True)
             return reverse(notes_url, args=[instance.id], request=self.context["request"])
         except NoReverseMatch:
+            model_name = type(instance).__name__
             logger.warning(
                 (
-                    f"Notes feature is not available for model {type(instance).__name__}. "
-                    "Please make sure to include NotesMixin from nautobot.extras.model.mixins in the model class definition "
+                    f"Notes feature is not available for model {model_name}. "
+                    "Please make sure to: "
+                    f"1. Include NotesMixin from nautobot.extras.model.mixins in the {model_name} class definition "
+                    f"2. Include NotesViewSetMixin from nautobot.extras.api.mixins in the {model_name}ViewSet "
                     "before including NotesSerializerMixin in the model serializer"
                 )
             )
