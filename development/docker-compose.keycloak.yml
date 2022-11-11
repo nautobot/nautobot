@@ -2,7 +2,7 @@
 version: "3.4"
 services:
   keycloak:
-    image: "quay.io/keycloak/keycloak:15"
+    image: "quay.io/keycloak/keycloak:15.1.1"
     env_file:
       - keycloak.env
     environment:
