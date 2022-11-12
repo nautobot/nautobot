@@ -61,3 +61,18 @@ class NautobotDatabaseScheduler(DatabaseScheduler):
     Entry = NautobotScheduleEntry
     Model = ScheduledJob
     Changes = ScheduledJobs
+
+    def apply_async(self, entry, producer=None, advance=True, **kwargs):
+        """Send event to the worker to start task execution.
+
+        This is an override of the `celery.beat.Scheduler.apply_async()` method. After executing
+        original `apply_async()` call, it synchronizes `total_run_count` and saves the model. This
+        prevents the same task from being started again while it is still running.
+
+        Ref: https://github.com/celery/django-celery-beat/issues/558#issuecomment-1162730008
+        """
+        resp = super().apply_async(entry, producer=producer, advance=advance, **kwargs)
+        if entry.total_run_count != entry.model.total_run_count:
+            entry.total_run_count = entry.model.total_run_count
+            entry.model.save()
+        return resp

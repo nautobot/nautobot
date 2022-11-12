@@ -26,9 +26,10 @@ The files related to the Docker development environment can be found inside of t
 In this directory you'll find the following core files:
 
 - `docker-compose.yml` - Docker service containers and their relationships to the Nautobot container
-- `docker-compose.build.yml` - Docker compose override file used to start/build the production docker images for local testing.
 - `docker-compose.debug.yml` - Docker compose override file used to start the Nautobot container for use with [Visual Studio Code's dev container integration](#microsoft-visual-studio-code-integration).
 - `docker-compose.dev.yml` - Docker compose override file used to mount the Nautobot source code inside the container at `/source` and the `nautobot_config.py` from the same directory as `/opt/nautobot/nautobot_config.py` for the active configuration.
+- `docker-compose.final.yml` - Docker compose override file used to start/build the `final` (production) Docker images for local testing.
+- `docker-compose.final-dev.yml` - Docker compose override file used to start/build the `final-dev` (app development environment) Docker images for local testing.
 - `docker-compose.mysql.yml` - Docker compose override file used to add a MySQL container as the database backend for Nautobot.
 - `docker-compose.postgres.yml` - Docker compose override file used to add a Postgres container as the database backend for Nautobot.
 - `dev.env` - Environment variables used to setup the container services

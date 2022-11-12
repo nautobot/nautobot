@@ -13,8 +13,8 @@ from nautobot.extras.choices import ObjectChangeActionChoices
 from nautobot.extras.models import ChangeLoggedModel
 from nautobot.extras.registry import registry
 from nautobot.utilities.testing.mixins import NautobotTestCaseMixin
-from nautobot.utilities.utils import get_changes_for_model, get_filterset_for_model
-from .utils import disable_warnings
+from nautobot.utilities.utils import get_changes_for_model, get_filterset_for_model, get_route_for_model
+from .utils import disable_warnings, get_deletable_objects
 from .views import ModelTestCase
 
 
@@ -35,12 +35,10 @@ class APITestCase(ModelTestCase):
     Base test case for API requests.
 
     client_class: Test client class
-    view_namespace: Namespace for API views. If None, the model's app_label will be used.
     api_version: Specific API version to test. Leave unset to test the default behavior. Override with set_api_version()
     """
 
     client_class = APIClient
-    view_namespace = None
     api_version = None
 
     def setUp(self):
@@ -61,19 +59,12 @@ class APITestCase(ModelTestCase):
         else:
             self.header["HTTP_ACCEPT"] = f"application/json; version={api_version}"
 
-    def _get_view_namespace(self):
-        if self.view_namespace:
-            return f"{self.view_namespace}-api"
-        if self.model._meta.app_label in settings.PLUGINS:
-            return f"plugins-api:{self.model._meta.app_label}-api"
-        return f"{self.model._meta.app_label}-api"
-
     def _get_detail_url(self, instance):
-        viewname = f"{self._get_view_namespace()}:{instance._meta.model_name}-detail"
+        viewname = get_route_for_model(instance, "detail", api=True)
         return reverse(viewname, kwargs={"pk": instance.pk})
 
     def _get_list_url(self):
-        viewname = f"{self._get_view_namespace()}:{self.model._meta.model_name}-list"
+        viewname = get_route_for_model(self.model, "list", api=True)
         return reverse(viewname)
 
 
@@ -238,7 +229,12 @@ class APIViewTestCases:
             self.assertIsInstance(response.data, dict)
             self.assertIn("results", response.data)
             self.assertEqual(len(response.data["results"]), self._get_queryset().count())
-            self.assertEqual(sorted(response.data["results"][0]), self.brief_fields)
+            self.assertEqual(
+                sorted(response.data["results"][0]),
+                self.brief_fields,
+                "In order to test the brief API parameter the brief fields need to be manually added to "
+                "self.brief_fields. If this is already the case, perhaps the serializer is implemented incorrectly?",
+            )
 
         @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
         def test_list_objects_without_permission(self):
@@ -611,14 +607,43 @@ class APIViewTestCases:
             else:
                 self.fail(f"Neither PUT nor POST are available actions in: {data['actions']}")
 
-            self.assertEqual(set(self.choices_fields), field_choices)
+            self.assertEqual(
+                set(self.choices_fields),
+                field_choices,
+                "All field names of choice fields for a given model serializer need to be manually added to "
+                "self.choices_fields. If this is already the case, perhaps the serializer is implemented incorrectly?",
+            )
 
     class DeleteObjectViewTestCase(APITestCase):
+        def get_deletable_object(self):
+            """
+            Get an instance that can be deleted.
+
+            For some models this may just be any random object, but when we have FKs with `on_delete=models.PROTECT`
+            (as is often the case) we need to find or create an instance that doesn't have such entanglements.
+            """
+            instance = get_deletable_objects(self.model, self._get_queryset()).first()
+            if instance is None:
+                self.fail("Couldn't find a single deletable object!")
+            return instance
+
+        def get_deletable_object_pks(self):
+            """
+            Get a list of PKs corresponding to objects that can be safely bulk-deleted.
+
+            For some models this may just be any random objects, but when we have FKs with `on_delete=models.PROTECT`
+            (as is often the case) we need to find or create an instance that doesn't have such entanglements.
+            """
+            instances = get_deletable_objects(self.model, self._get_queryset()).values_list("pk", flat=True)[:3]
+            if len(instances) < 3:
+                self.fail(f"Couldn't find 3 deletable objects, only found {len(instances)}!")
+            return instances
+
         def test_delete_object_without_permission(self):
             """
             DELETE a single object without permission.
             """
-            url = self._get_detail_url(self._get_queryset().first())
+            url = self._get_detail_url(self.get_deletable_object())
 
             # Try DELETE without permission
             with disable_warnings("django.request"):
@@ -629,7 +654,7 @@ class APIViewTestCases:
             """
             DELETE a single object identified by its primary key.
             """
-            instance = self._get_queryset().first()
+            instance = self.get_deletable_object()
             url = self._get_detail_url(instance)
 
             # Add object-level permission
@@ -652,18 +677,19 @@ class APIViewTestCases:
             """
             DELETE a set of objects in a single request.
             """
+            id_list = self.get_deletable_object_pks()
             # Add object-level permission
             obj_perm = ObjectPermission(name="Test permission", actions=["delete"])
             obj_perm.save()
             obj_perm.users.add(self.user)
             obj_perm.object_types.add(ContentType.objects.get_for_model(self.model))
 
-            id_list = self._get_queryset().values_list("id", flat=True)
             data = [{"id": id} for id in id_list]
 
+            initial_count = self._get_queryset().count()
             response = self.client.delete(self._get_list_url(), data, format="json", **self.header)
             self.assertHttpStatus(response, status.HTTP_204_NO_CONTENT)
-            self.assertEqual(self._get_queryset().count(), 0)
+            self.assertEqual(self._get_queryset().count(), initial_count - len(id_list))
 
     class NotesURLViewTestCase(APITestCase):
         """Validate Notes URL on objects that have the Note model Mixin."""

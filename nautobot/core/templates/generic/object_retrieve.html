@@ -85,12 +85,12 @@
                 </li>
             {% endif %}
         {% endif %}
-        {% if perms.extras.view_dynamicgroup and object.dynamic_groups %}
-            <li role="presentation"{% if request.GET.tab == 'dynamic-groups' %} class="active"{% endif %}>
-                <a href="{{ object.get_absolute_url }}#dynamic-groups" onclick="switch_tab(this.href)" aria-controls="advanced" role="tab" data-toggle="tab">
-                    Dynamic Groups
-                </a>
-            </li>
+        {% if perms.extras.view_dynamicgroup and object.get_dynamic_groups_url %}
+            {% if active_tab != 'dynamic-groups' and object.get_dynamic_groups_url or active_tab == 'dynamic-groups' %}
+                <li role="presentation"{% if active_tab == 'dynamic-groups' %} class="active"{% endif %}>
+                    <a href="{{ object.get_dynamic_groups_url }}">Dynamic Groups</a>
+                </li>
+            {% endif %}
         {% endif %}
         {% if perms.extras.view_objectchange %}
             {% if active_tab != 'changelog' and object.get_changelog_url or active_tab == 'changelog' %}
@@ -110,7 +110,7 @@
             <div class="row">
                 <div class="col-md-6">
                     {% block content_left_page %}{% endblock content_left_page %}
-                    {% include 'inc/custom_fields/panel.html' with custom_fields=object.get_custom_fields_basic computed_fields_advanced_ui=False %}
+                    {% include 'inc/custom_fields/panel.html' with custom_fields=object.get_custom_field_groupings_basic computed_fields_advanced_ui=False %}
                     {% include 'inc/relationships_panel.html' %}
                     {% include 'extras/inc/tags_panel.html' %}
                     {% plugin_left_page object %}
@@ -143,13 +143,6 @@
             </div>
         </div>
         {% block extra_tab_content %}{% endblock extra_tab_content %}
-        <div id="dynamic-groups" role="tabpanel" class="tab-pane {% if request.GET.tab == 'dynamic-groups' %}active{% else %}fade{% endif %}">
-            <div class="row">
-                <div class="col-md-6">
-                    {% include 'inc/dynamic_groups_panel.html' %}
-                </div>
-            </div>
-        </div>
     </div>
 {% endblock content %}
 
@@ -206,6 +199,32 @@
         if(event)
             $(`#tabs a[href="{{ object.get_absolute_url }}#${event.state.id}"]`).tab('show');
     }
+    // Toggle v -. >
+    $("#accordion .accordion-toggle").click(function () {
+        $(this).toggleClass("mdi-chevron-down mdi-chevron-right");
+    });
+    // Dynamically collapse/expand all when clicking the "Collapse All" button, and then update the button text.
+    $('#accordion-toggle-all').click(function () {
 
+        if ($(this).data("lastState") === null || $(this).data("lastState") === 1) {
+            $('.collapse').collapse('show');
+            $(this).data("lastState", 0);
+
+            $("#accordion .accordion-toggle").addClass("mdi-chevron-down").removeClass("mdi-chevron-right");
+
+            $(this).text("Collapse All");
+        }
+        else {
+            $('[class^=collapseme]').removeData('bs.collapse').collapse({parent: false, toggle: false})
+            .collapse('hide')
+            .removeData('bs.collapse')
+            .collapse({parent: '#accordion', toggle: false});
+
+            $(this).data("lastState", 1);
+            $("#accordion .accordion-toggle").addClass("mdi-chevron-right").removeClass("mdi-chevron-down");
+
+            $(this).text("Expand All");
+        }
+    });
 </script>
 {% endblock javascript %}

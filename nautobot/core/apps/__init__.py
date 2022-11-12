@@ -687,13 +687,3 @@ class NautobotConstanceConfig(ConstanceConfig):
     """Override "Constance" app name to "Configuration"."""
 
     verbose_name = "Configuration"
-
-
-class ConstanceDatabaseAppConfig(AppConfig):
-    """
-    Add an AppConfig for constance.backends.database
-    to work around https://github.com/jazzband/django-constance/issues/454
-    """
-
-    name = "constance.backends.database"
-    default_auto_field = "django.db.models.AutoField"

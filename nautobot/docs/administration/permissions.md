@@ -57,9 +57,10 @@ Permissions can be related directly to users from the Admin UI or the API:
 
 | -                                                                      | Admin UI | API |
 | ---------------------------------------------------------------------- | -------- | --- |
-| Superusers                                                             | Yes      | Yes |
-| Staff users with `users.add_permission` or `users.change_permission`   | Yes      | Yes |
-| Regular users with `users.add_permission` or `users.change_permission` | No       | Yes |
+| Staff superusers                                                         | Yes      | Yes |
+| Non-staff superusers                                                     | No       | Yes |
+| Staff users with `users.add_permission` or `users.change_permission`     | Yes      | Yes |
+| Non-staff users with `users.add_permission` or `users.change_permission` | No       | Yes |
 
 Multiple permissions can be assigned to a user account.
 

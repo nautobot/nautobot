@@ -54,7 +54,7 @@ It is possible to explore the Graph and create some queries in a human friendly 
 
 ## Querying the GraphQL interface over the rest API
 
-It is possible to query the GraphQL interface via the rest API as well, the endpoint is available at `api/graphql` and supports the same Token based authentication as all other Nautobot APIs.
+It is possible to query the GraphQL interface via the rest API as well, the endpoint is available at `api/graphql/` and supports the same Token based authentication as all other Nautobot APIs.
 
 A GraphQL Query must be encapsulated in a JSON payload with the `query` key and sent with a POST request. Optionally it is possible to provide a list of `variables` in the same payload as presented below.
 
@@ -101,7 +101,7 @@ Result
 }
 ```
 
-Additionally, by default, all custom fields in GraphQL will be prefixed with `cf`. A custom field name `site_type` will appear in GraphQL as `cf_site_type` as an example. The prefix can be changed or remove the prefix by setting the value of `GRAPHQL_CUSTOM_FIELD_PREFIX`.
+Additionally, by default, all custom fields in GraphQL will be prefixed with `cf_`. A custom field name `site_type` will appear in GraphQL as `cf_site_type` as an example. The prefix can be changed by setting the value of [`GRAPHQL_CUSTOM_FIELD_PREFIX`](../configuration/optional-settings.md#graphql_custom_field_prefix).
 
 ```graphql
 query {
@@ -131,9 +131,15 @@ Result
 }
 ```
 
+!!! important
+    Custom Fields with the prefixed `cf_` are only available in GraphQL **after** the custom field is created **and** the web service is restarted.
+
 ## Working with Relationships
 
 Defined [relationships](../models/extras/relationship.md) are available in GraphQL as well. In most cases, the associated objects for a given relationship will be available under the key `rel_<relationship_slug>`. The one exception is for relationships between objects of the same type that are not defined as symmetric; for these relationships it's important to be able to distinguish between the two "sides" of the relationship, and so the associated objects will be available under `rel_<relationship_slug>_source` and/or `rel_<relationship_slug>_destination` as appropriate.
+
+!!! important
+    Relationships are only available in GraphQL **after** the relationship is created **and** the web service is restarted.
 
 ```graphql
 query {
@@ -202,7 +208,47 @@ Result
 }
 ```
 
+## Working with Computed Fields
+
+By default, all custom fields in GraphQL will be prefixed with `cpf_`. A computed field name `ip_ptr_record` will appear in GraphQL as `cpf_ip_ptr_record` as an example. The prefix can be changed by setting the value of [`GRAPHQL_COMPUTED_FIELD_PREFIX`](../configuration/optional-settings.md#graphql_computed_field_prefix).
+
+```graphql
+{
+  ip_addresses {
+    address
+    dns_name
+    cpf_ip_ptr_record
+  }
+}
+```
+
+Result
+
+```json
+{
+  "data": {
+    "ip_addresses": [
+      {
+        "address": "10.0.0.0/32",
+        "dns_name": "ip-10-0-0-0.server.atl01.atc.nautobot.com",
+        "cpf_ip_ptr_record": "0.0.0.10.in-addr.arpa"
+      },
+      {
+        "address": "10.0.1.0/32",
+        "dns_name": "ip-10-0-1-0.server.atl01.atc.nautobot.com",
+        "cpf_ip_ptr_record": "0.1.0.10.in-addr.arpa"
+      }
+    ]
+  }
+}
+```
+
+!!! important
+    Computed Fields with the prefixed `cpf_` are only available in GraphQL **after** the computed field is created **and** the web service is restarted.
+
 ## Saved Queries
+
++++ 1.1.0
 
 Queries can now be stored inside of Nautobot, allowing the user to easily rerun previously defined queries.
 

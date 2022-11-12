@@ -1,5 +1,5 @@
+# syntax=docker/dockerfile:1
 ARG PYTHON_VER
-ARG PYUWSGI_VER
 
 ################################ Overview
 # This builds the following hierarchy of images:
@@ -121,7 +121,6 @@ ENTRYPOINT ["/docker-entrypoint.sh"]
 ################################ Stage: dependencies (intermediate build target)
 
 FROM base as dependencies
-ARG PYUWSGI_VER
 ARG POETRY_PARALLEL
 
 # Install development/install-time OS dependencies
@@ -136,7 +135,8 @@ RUN apt-get update && \
 # if we instead used "pip install poetry" it would install its own dependencies globally which may conflict with ours.
 # https://python-poetry.org/docs/master/#installing-with-the-official-installer
 # This also makes it so that Poetry will *not* be included in the "final" image since it's not installed to /usr/local/
-RUN curl -sSL https://install.python-poetry.org -o /tmp/install-poetry.py && \
+RUN --mount=type=cache,target="/root/.cache/pip" \
+    curl -sSL https://install.python-poetry.org -o /tmp/install-poetry.py && \
     python /tmp/install-poetry.py --version 1.2.0 && \
     rm -f /tmp/install-poetry.py
 
@@ -148,8 +148,11 @@ ENV PATH="${PATH}:/root/.local/bin"
 # unfortunately it seems to have some issues with installing/updating "requests" and "certifi"
 # while simultaneously atttempting to *use* those packages to install other packages.
 # This is disabled by default (safer), but can be re-enabled by setting POETRY_PARALLEL=true
+# pyuwsgi wheel doesn't support ssl so we build it from source
+# https://github.com/nautobot/nautobot/issues/193
 RUN poetry config virtualenvs.create false && \
-    poetry config installer.parallel ${POETRY_PARALLEL:-false}
+    poetry config installer.parallel ${POETRY_PARALLEL:-false} && \
+    poetry config installer.no-binary pyuwsgi
 
 COPY pyproject.toml poetry.lock README.md /source/
 
@@ -159,10 +162,10 @@ COPY examples /source/examples
 WORKDIR /source
 
 # Install (non-development) Python dependencies of Nautobot
-# pyuwsgi wheel doesn't support ssl so we build it from source
-# https://github.com/nautobot/nautobot/issues/193
-RUN pip install --no-cache-dir --no-binary=pyuwsgi pyuwsgi==${PYUWSGI_VER} && \
-    poetry install --no-root --only main --no-ansi --extras all
+RUN --mount=type=cache,target="/root/.cache/pip" \
+    --mount=type=cache,target="/root/.cache/pypoetry" \
+    poetry install --no-root --only main --no-ansi --extras all && \
+    rm -rf /tmp/tmp*
 
 ################################ Stage: dependencies-dev-python (intermediate build target)
 # We need dev dependencies for building the docs but don't want them in the final build image
@@ -172,7 +175,12 @@ RUN pip install --no-cache-dir --no-binary=pyuwsgi pyuwsgi==${PYUWSGI_VER} && \
 FROM dependencies as dependencies-dev-python
 
 # Add development-specific dependencies of Nautobot to the installation
-RUN poetry install --no-root --no-ansi --extras all
+# Poetry 1.2.0 leaves files in /tmp after doing an install
+# https://github.com/python-poetry/poetry/issues/6425
+RUN --mount=type=cache,target="/root/.cache/pip" \
+    --mount=type=cache,target="/root/.cache/pypoetry" \
+    poetry install --no-root --no-ansi --extras all && \
+    rm -rf /tmp/tmp*
 
 ################################ Stage: build-docs (intermediate build target)
 # Docs get built as their own stage because again we need dev dependencies as a base but
@@ -242,9 +250,6 @@ RUN npm install --global markdownlint-cli@0.31.1
 # /source from build-nautobot will include docs from build-docs as well
 COPY --from=build-nautobot /source /source
 
-# TODO Use nautobot init to generate the same config for all use cases
-COPY development/nautobot_config.py /opt/nautobot/nautobot_config.py
-
 # Run Nautobot development server by default
 EXPOSE 8080
 CMD ["nautobot-server", "runserver", "0.0.0.0:8080", "--insecure"]
@@ -253,8 +258,15 @@ CMD ["nautobot-server", "runserver", "0.0.0.0:8080", "--insecure"]
 
 FROM dependencies-dev as dev
 
-RUN poetry install --no-ansi --extras all && \
-    rm -rf /source
+# Poetry 1.2.0 leaves files in /tmp after doing an install
+# https://github.com/python-poetry/poetry/issues/6425
+RUN --mount=type=cache,target="/root/.cache/pip" \
+    --mount=type=cache,target="/root/.cache/pypoetry" \
+    poetry install --no-ansi --extras all && \
+    rm -rf /source && \
+    rm -rf /tmp/tmp*
+
+COPY development/nautobot_config.py /opt/nautobot/nautobot_config.py
 
 ################################ Stage: final-dev (development environment for Nautobot plugins)
 
@@ -263,11 +275,9 @@ FROM dependencies-dev as final-dev
 RUN pip install --no-deps --no-cache-dir /source/dist/*.whl && \
     rm -rf /source
 
-# Remove Poetry's cache of PyPI files to keep image size down
-# poetry cache clear --no-interactive actually doesn't clear anything - see
-# https://github.com/python-poetry/poetry/issues/4998
-# hadolint ignore=DL4006
-RUN yes | poetry cache clear --all PyPI
+WORKDIR /opt/nautobot
+
+RUN nautobot-server init
 
 ################################ Stage: final (production-ready image)
 
@@ -291,7 +301,6 @@ RUN openssl req -new -newkey rsa:4096 -days 365 -nodes -x509 -subj \
 
 # Configure uWSGI
 COPY docker/uwsgi.ini /opt/nautobot
-COPY docker/nautobot_config.append.py /opt/nautobot
 
 # Make sure we don't run as a root user and make sure everything under /opt/nautobot and /prom_cache is owned by nautobot
 RUN useradd --system --shell /bin/bash --create-home --home-dir /opt/nautobot nautobot && \
@@ -302,9 +311,7 @@ USER nautobot
 
 WORKDIR /opt/nautobot
 
-RUN nautobot-server init && \
-    cat /opt/nautobot/nautobot_config.append.py >> /opt/nautobot/nautobot_config.py && \
-    rm -f /opt/nautobot/nautobot_config.append.py
+COPY --from=final-dev --chown=nautobot /opt/nautobot/nautobot_config.py /opt/nautobot/nautobot_config.py
 
 # Run Nautobot server under uwsgi by default
 EXPOSE 8080 8443

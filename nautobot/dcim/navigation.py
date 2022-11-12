@@ -307,6 +307,28 @@ menu_items = (
                             ),
                         ),
                     ),
+                    NavMenuItem(
+                        link="dcim:deviceredundancygroup_list",
+                        name="Device Redundancy Groups",
+                        weight=500,
+                        permissions=[
+                            "dcim.view_deviceredundancygroup",
+                        ],
+                        buttons=(
+                            NavMenuAddButton(
+                                link="dcim:deviceredundancygroup_add",
+                                permissions=[
+                                    "dcim.add_deviceredundancygroup",
+                                ],
+                            ),
+                            NavMenuImportButton(
+                                link="dcim:deviceredundancygroup_import",
+                                permissions=[
+                                    "dcim.add_deviceredundancygroup",
+                                ],
+                            ),
+                        ),
+                    ),
                 ),
             ),
             NavMenuGroup(

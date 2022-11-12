@@ -10,7 +10,6 @@ import traceback
 import warnings
 
 
-from cacheops import file_cache
 from db_file_storage.form_widgets import DBClearableFileInput
 from django import forms
 from django.conf import settings
@@ -18,7 +17,7 @@ from django.contrib.auth import get_user_model
 from django.contrib.contenttypes.models import ContentType
 from django.core.files.uploadedfile import InMemoryUploadedFile
 from django.core.validators import RegexValidator
-from django.db import transaction
+from django.db import IntegrityError, transaction
 from django.db.models import Model
 from django.db.models.query import QuerySet
 from django.forms import ValidationError
@@ -35,7 +34,7 @@ from .datasources.git import ensure_git_repository
 from .forms import JobForm
 from .models import FileProxy, GitRepository, Job as JobModel, JobHook, ObjectChange, ScheduledJob
 from .registry import registry
-from .utils import ChangeLoggedModelsQuery, get_job_content_type, jobs_in_directory
+from .utils import ChangeLoggedModelsQuery, get_job_content_type, jobs_in_directory, task_queues_as_choices
 
 from nautobot.core.celery import nautobot_task
 from nautobot.ipam.formfields import IPAddressFormField, IPNetworkFormField
@@ -101,6 +100,7 @@ class BaseJob:
         - soft_time_limit (int)
         - time_limit (int)
         - has_sensitive_variables (bool)
+        - task_queues (list)
         """
 
     def __init__(self):
@@ -110,9 +110,6 @@ class BaseJob:
         self.active_test = "main"
         self.failed = False
         self._job_result = None
-
-        # Grab some info about the job
-        self.source = inspect.getsource(self.__class__)
 
         # Compile test methods and initialize results skeleton
         self.test_methods = []
@@ -227,6 +224,10 @@ class BaseJob:
         return getattr(cls.Meta, "has_sensitive_variables", True)
 
     @classproperty
+    def task_queues(cls):  # pylint: disable=no-self-argument
+        return getattr(cls.Meta, "task_queues", [])
+
+    @classproperty
     def properties_dict(cls):  # pylint: disable=no-self-argument
         """
         Return all relevant classproperties as a dict.
@@ -244,6 +245,7 @@ class BaseJob:
             "soft_time_limit": cls.soft_time_limit,
             "time_limit": cls.time_limit,
             "has_sensitive_variables": cls.has_sensitive_variables,
+            "task_queues": cls.task_queues,
         }
 
     @classmethod
@@ -317,11 +319,13 @@ class BaseJob:
             job_model = JobModel.objects.get_for_class_path(self.class_path)
             read_only = job_model.read_only if job_model.read_only_override else self.read_only
             commit_default = job_model.commit_default if job_model.commit_default_override else self.commit_default
+            task_queues = job_model.task_queues if job_model.task_queues_override else self.task_queues
         except JobModel.DoesNotExist:
             # 2.0 TODO: remove this fallback, Job records should always exist.
             logger.error("No Job instance found in the database corresponding to %s", self.class_path)
             read_only = self.read_only
             commit_default = self.commit_default
+            task_queues = self.task_queues
 
         if read_only:
             # Hide the commit field for read only jobs
@@ -330,6 +334,9 @@ class BaseJob:
         elif not initial or "_commit" not in initial:
             # Set initial "commit" checkbox state based on the Meta parameter
             form.fields["_commit"].initial = commit_default
+
+        # Update task queue choices
+        form.fields["_task_queue"].choices = task_queues_as_choices(task_queues)
 
         # https://github.com/PyCQA/pylint/issues/3484
         if self.field_order:  # pylint: disable=using-constant-test
@@ -940,7 +947,6 @@ def get_jobs():
     return jobs
 
 
-@file_cache.cached(timeout=60)
 def _get_job_source_paths():
     """
     Helper function to get_jobs().
@@ -999,7 +1005,6 @@ def _get_job_source_paths():
     return paths
 
 
-@file_cache.cached(timeout=60)
 def get_job_classpaths():
     """
     Get a list of all known Job class_path strings.
@@ -1202,7 +1207,12 @@ def run_job(data, request, job_result_pk, commit=True, *args, **kwargs):
             job_result.set_status(JobResultStatusChoices.STATUS_ERRORED)
 
         finally:
-            job_result.save()
+            try:
+                job_result.save()
+            except IntegrityError:
+                # handle job_model deleted while job was running
+                job_result.job_model = None
+                job_result.save()
             if file_ids:
                 job.delete_files(*file_ids)  # Cleanup FileProxy objects
 
@@ -1261,10 +1271,13 @@ def scheduled_job_handler(*args, **kwargs):
     user = User.objects.get(pk=user_pk)
     name = kwargs.pop("name")
     scheduled_job_pk = kwargs.pop("scheduled_job_pk")
+    celery_kwargs = kwargs.pop("celery_kwargs", {})
     schedule = ScheduledJob.objects.get(pk=scheduled_job_pk)
 
     job_content_type = get_job_content_type()
-    JobResult.enqueue_job(run_job, name, job_content_type, user, schedule=schedule, **kwargs)
+    JobResult.enqueue_job(
+        run_job, name, job_content_type, user, celery_kwargs=celery_kwargs, schedule=schedule, **kwargs
+    )
 
 
 def enqueue_job_hooks(object_change):

@@ -13,7 +13,7 @@ from nautobot.dcim.models import (
 class NaturalOrderingTestCase(TestCase):
     def setUp(self):
 
-        site = Site.objects.create(name="Test Site 1", slug="test-site-1")
+        site = Site.objects.first()
         manufacturer = Manufacturer.objects.create(name="Test Manufacturer 1", slug="test-manufacturer-1")
         devicetype = DeviceType.objects.create(
             manufacturer=manufacturer,

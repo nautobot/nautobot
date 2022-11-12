@@ -53,6 +53,9 @@ The following environment variables may also be set for each of the above values
 * `NAUTOBOT_DB_TIMEOUT`
 * `NAUTOBOT_DB_ENGINE`
 
++++ 1.1.0
+    The `NAUTOBOT_DB_ENGINE` setting was added along with support for MySQL.
+
 !!! warning
     Nautobot supports either MySQL or PostgreSQL as a database backend. You must make sure that the `ENGINE` setting matches your selected database backend or **you will be unable to connect to the database**.
 
@@ -77,6 +80,8 @@ DATABASES = {
 
 ### MySQL Unicode Settings
 
++++ 1.1.0
+
 !!! tip
     By default, MySQL is case-insensitive in its handling of text strings. This is different from PostgreSQL which is case-sensitive by default. We strongly recommend that you configure MySQL to be case-sensitive for use with Nautobot, either when you enable the MySQL server, or when you create the Nautobot database in MySQL. If you follow the provided installation instructions for CentOS or Ubuntu, the recommended steps there will include the appropriate database configuration.
 
@@ -97,8 +102,11 @@ DATABASES = {
 }
 ```
 
-!!! tip
-    Starting in v1.1.0, if you have generated a new `nautobot_config.py` using `nautobot-server init`, this line is already there for you in your config. You'll just need to uncomment it!
++++ 1.1.0
+    If you have generated a new `nautobot_config.py` using `nautobot-server init`, this line is already there for you in your config. You'll just need to uncomment it!
+
++/- 1.1.5
+    If you have generated a new `nautobot_config.py` using `nautobot-server init`, this line is already present in your config and no action is required.
 
 ---
 
@@ -202,8 +210,8 @@ CACHES = {
 
 ### Task Queuing with RQ
 
-!!! warning
-    As of Nautobot 1.1 using task queueing with RQ is deprecated in exchange for using Celery. Support for RQ will be removed entirely starting in Nautobot 2.0.
++/- 1.1.0
+    Using task queueing with RQ is deprecated in exchange for using Celery. Support for RQ will be removed entirely starting in Nautobot 2.0.
 
 Task queues are configured by defining them within the [`RQ_QUEUES`](#rq_queues) setting.
 
@@ -217,7 +225,7 @@ The default value for this setting defines the queues and instructs RQ to use th
 
 Please see the [official `django-rq` documentation on support for django-redis connection settings](https://github.com/rq/django-rq#support-for-django-redis-and-django-redis-cache) for more information.
 
-!!! note
++/- 1.1.0
     The `check_releases`, `custom_fields`, and `webhooks` queues are no longer in use by Nautobot but maintained here for backwards compatibility; they will be removed in Nautobot 2.0.
 
 Default:
@@ -287,6 +295,7 @@ RQ_QUEUES = {
 
 The following environment variables may also be set for some of the above values:
 
+* `NAUTOBOT_REDIS_SCHEME`
 * `NAUTOBOT_REDIS_HOST`
 * `NAUTOBOT_REDIS_PORT`
 * `NAUTOBOT_REDIS_PASSWORD`
@@ -300,6 +309,8 @@ The following environment variables may also be set for some of the above values
 For more details on configuring RQ, please see the documentation for [Django RQ installation](https://github.com/rq/django-rq#installation).
 
 ### Task Queuing with Celery
+
++++ 1.1.0
 
 Out of the box you do not need to make any changes to utilize task queueing with Celery. All of the default settings are sufficient for most installations.
 
@@ -343,7 +354,21 @@ Environment Variable: `NAUTOBOT_SECRET_KEY`
 
 This is a secret, random string used to assist in the creation new cryptographic hashes for passwords and HTTP cookies. The key defined here should not be shared outside of the configuration file. `SECRET_KEY` can be changed at any time, however be aware that doing so will invalidate all existing sessions.
 
-Please note that this key is **not** used directly for hashing user passwords or for the encrypted storage of secret data in Nautobot.
+!!! bug
+    Due to an [unresolved bug in the `django-cryptography` library](https://github.com/georgemarshall/django-cryptography/issues/56), if you have any [Git repositories](../models/extras/gitrepository.md) configured in your database, changing the `SECRET_KEY` will cause errors like:
+
+    ```
+    <class 'django.core.signing.BadSignature'>
+
+    Signature "b'mG5+660ye92rJBEtyZxuorLD6A6tcRmeS7mrGCP9ayg=\n'" does not match
+    ```
+
+    If you encounter this error, it can be resolved in one of two ways:
+
+    1. Change the `SECRET_KEY` back to its previous value, and delete all Git repository records via the UI or API.
+    2. Connect to the database and use SQL commands to delete all Git repository records without needing to revert the `SECRET_KEY`.
+
+Please note that this key is **not** used directly for hashing user passwords or (with the exception of the aforementioned `django-cryptography` bug) for the encrypted storage of secret data in Nautobot.
 
 `SECRET_KEY` should be at least 50 characters in length and contain a random mix of letters, digits, and symbols.
 

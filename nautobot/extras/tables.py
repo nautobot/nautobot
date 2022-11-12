@@ -71,7 +71,7 @@ GITREPOSITORY_BUTTONS = """
 """
 
 JOB_BUTTONS = """
-<a href="{% url 'extras:job_run' slug=record.slug %}" class="btn btn-primary btn-xs" title="Run/Schedule" {% if not perms.extras.run_job or not record.enabled or not record.installed %}disabled="disabled"{% endif %}><i class="mdi mdi-play" aria-hidden="true"></i></a>
+<a href="{% url 'extras:job_run' slug=record.slug %}" class="btn btn-primary btn-xs" title="Run/Schedule" {% if not perms.extras.run_job or not record.runnable %}disabled="disabled"{% endif %}><i class="mdi mdi-play" aria-hidden="true"></i></a>
 """
 
 OBJECTCHANGE_OBJECT = """
@@ -324,34 +324,11 @@ class DynamicGroupMembershipTable(DynamicGroupTable):
             "operator",
             "name",
             "weight",
-            "filter",
             "members",
             "description",
             "actions",
         )
         exclude = ("content_type",)
-
-    def render_filter(self, value, record):
-        """Turns the filter dict into a prettified list of HTML links."""
-        # Display an empty filter as None
-        if not value:
-            return None
-
-        # Use the filterset for the record to construct links to the objects used in the filter.
-        fs = record.group.filterset_class(record.filter, record.group.get_queryset())
-        fs.is_valid()  # Required or we don't get the inner form's `cleaned_data`
-
-        # Iterate over each key in the filter and extract the value from the inner form's
-        # cleaned_data`, calling `get_absolute_url()` on each to create links.
-        # TODO(jathan): If an instance doesn't have `get_absolute_url()` we're gonna have a bad time.
-        items = []
-        for field_name in record.filter:
-            value = fs.form.cleaned_data[field_name]
-            links = [format_html('<a href="{}">{}</a>', item.get_absolute_url(), item) for item in value]
-            links_str = "[" + ", ".join(links) + "]"
-            items.append(f"{field_name.title()}: {links_str}")
-
-        return format_html("<br/>".join(items))
 
 
 DESCENDANTS_LINK = """
@@ -855,6 +832,7 @@ class RelationshipTable(BaseTable):
             "source_type",
             "destination_type",
             "actions",
+            "required_on",
         )
 
 

@@ -16,7 +16,7 @@ from django.urls import reverse
 
 from nautobot.extras.utils import FeatureQuery
 from nautobot.utilities.choices import unpack_grouped_choices
-from nautobot.utilities.utils import is_uuid
+from nautobot.utilities.utils import get_route_for_model, is_uuid
 from nautobot.utilities.validators import EnhancedURLValidator
 from . import widgets
 from .constants import ALPHANUMERIC_EXPANSION_PATTERN, IP4_EXPANSION_PATTERN, IP6_EXPANSION_PATTERN
@@ -127,7 +127,14 @@ class CSVFileField(forms.FileField):
 
         file = super().to_python(file)
         csv_str = file.read().decode("utf-8-sig").strip()
-        dialect = csv.Sniffer().sniff(csv_str)
+        # Check if there is only one column of input
+        # If so a delimiter cannot be determined and it will raise an exception.
+        # In that case we will use csv.excel class
+        # Which defines the usual properties of an Excel-generated CSV file.
+        try:
+            dialect = csv.Sniffer().sniff(csv_str, delimiters=",")
+        except csv.Error:
+            dialect = csv.excel
         reader = csv.reader(csv_str.splitlines(), dialect)
         headers, records = parse_csv(reader)
 
@@ -266,6 +273,41 @@ class MultipleContentTypeField(forms.ModelMultipleChoiceField):
         return [(f"{m.app_label}.{m.model}", m.app_labeled_name) for m in self.queryset.all()]
 
 
+class MultiValueCharField(forms.CharField):
+    """
+    CharField that takes multiple user character inputs and render them as tags in the form field.
+    Press enter to complete an input.
+    """
+
+    widget = widgets.MultiValueCharInput()
+
+    def get_bound_field(self, form, field_name):
+        bound_field = BoundField(form, self, field_name)
+        value = bound_field.value()
+        widget = bound_field.field.widget
+        # Save the selected choices in the widget even after the filterform is submitted
+        if value is not None:
+            widget.choices = [(v, v) for v in value]
+
+        return bound_field
+
+    def to_python(self, value):
+        self.field_class = forms.CharField
+        if not value:
+            return []
+
+        # Make it a list if it's a string.
+        if isinstance(value, str):
+            value = [value]
+
+        return [
+            # Only append non-empty values (this avoids e.g. trying to cast '' as an integer)
+            super(self.field_class, self).to_python(v)  # pylint: disable=bad-super-call
+            for v in value
+            if v
+        ]
+
+
 class CSVMultipleContentTypeField(MultipleContentTypeField):
     """
     Reference a list of `ContentType` objects in the form `{app_label}.{model}'.
@@ -363,6 +405,15 @@ class CommentField(forms.CharField):
         label = kwargs.pop("label", self.default_label)
         help_text = kwargs.pop("help_text", self.default_helptext)
         super().__init__(required=required, label=label, help_text=help_text, *args, **kwargs)
+
+
+class NullableDateField(forms.DateField):
+    def to_python(self, value):
+        if not value:
+            return None
+        elif value == "null":
+            return value
+        return super().to_python(value)
 
 
 class SlugField(forms.SlugField):
@@ -490,7 +541,7 @@ class DynamicModelChoiceMixin:
             filter_ = self.filter(field_name=field_name)
             try:
                 self.queryset = filter_.filter(self.queryset, data)
-            except TypeError:
+            except (TypeError, ValidationError):
                 # Catch any error caused by invalid initial data passed from the user
                 self.queryset = self.queryset.none()
         else:
@@ -499,12 +550,8 @@ class DynamicModelChoiceMixin:
         # Set the data URL on the APISelect widget (if not already set)
         widget = bound_field.field.widget
         if not widget.attrs.get("data-url"):
-            app_label = self.queryset.model._meta.app_label
-            model_name = self.queryset.model._meta.model_name
-            if app_label in settings.PLUGINS:
-                data_url = reverse(f"plugins-api:{app_label}-api:{model_name}-list")
-            else:
-                data_url = reverse(f"{app_label}-api:{model_name}-list")
+            route = get_route_for_model(self.queryset.model, "list", api=True)
+            data_url = reverse(route)
             widget.attrs["data-url"] = data_url
 
         return bound_field

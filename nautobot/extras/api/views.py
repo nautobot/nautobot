@@ -1,4 +1,5 @@
 from datetime import timedelta
+from django.conf import settings
 from django.contrib.contenttypes.models import ContentType
 from django.forms import ValidationError as FormsValidationError
 from django.http import Http404
@@ -173,6 +174,8 @@ class ConfigContextQuerySetMixin:
 
 
 class ConfigContextViewSet(ModelViewSet, NotesViewSetMixin):
+    # v2 TODO(jathan): Replace prefetch_related with select_related (except the
+    # plural ones are b2 m2m)
     queryset = ConfigContext.objects.prefetch_related(
         "regions",
         "sites",
@@ -325,6 +328,7 @@ class DynamicGroupViewSet(ModelViewSet, NotesViewSetMixin):
     Manage Dynamic Groups through DELETE, GET, POST, PUT, and PATCH requests.
     """
 
+    # v2 TODO(jathan): Replace prefetch_related with select_related
     queryset = DynamicGroup.objects.prefetch_related("content_type")
     serializer_class = serializers.DynamicGroupSerializer
     filterset_class = filters.DynamicGroupFilterSet
@@ -350,6 +354,7 @@ class DynamicGroupMembershipViewSet(ModelViewSet):
     Manage Dynamic Group Memberships through DELETE, GET, POST, PUT, and PATCH requests.
     """
 
+    # v2 TODO(jathan): Replace prefetch_related with select_related
     queryset = DynamicGroupMembership.objects.prefetch_related("group", "parent_group")
     serializer_class = serializers.DynamicGroupMembershipSerializer
     filterset_class = filters.DynamicGroupMembershipFilterSet
@@ -443,7 +448,7 @@ class ImageAttachmentViewSet(ModelViewSet):
 #
 
 
-def _create_schedule(serializer, data, commit, job, job_model, request):
+def _create_schedule(serializer, data, commit, job, job_model, request, celery_kwargs=dict, task_queue=None):
     """
     This is an internal function to create a scheduled job from API data.
     It has to handle both once-offs (i.e. of type TYPE_FUTURE) and interval
@@ -455,6 +460,8 @@ def _create_schedule(serializer, data, commit, job, job_model, request):
         "user": request.user.pk,
         "commit": commit,
         "name": job.class_path,
+        "celery_kwargs": celery_kwargs,
+        "task_queue": task_queue,
     }
     type_ = serializer["interval"]
     if type_ == JobExecutionType.TYPE_IMMEDIATELY:
@@ -492,6 +499,7 @@ def _create_schedule(serializer, data, commit, job, job_model, request):
         user=request.user,
         approval_required=job_model.approval_required,
         crontab=crontab,
+        queue=task_queue,
     )
     scheduled_job.save()
     return scheduled_job
@@ -510,6 +518,12 @@ def _run_job(request, job_model, legacy_response=False):
             raise ValidationError(
                 {"schedule": {"interval": ["Unable to schedule job: Job may have sensitive input variables"]}}
             )
+        if job_model.approval_required:
+            raise ValidationError(
+                "Unable to run or schedule job: "
+                "This job is flagged as possibly having sensitive variables but is also flagged as requiring approval."
+                "One of these two flags must be removed before this job can be scheduled or run."
+            )
 
     job_class = job_model.job_class
     if job_class is None:
@@ -523,6 +537,11 @@ def _run_job(request, job_model, legacy_response=False):
     commit = input_serializer.validated_data.get("commit", None)
     if commit is None:
         commit = job_model.commit_default
+    # default to first queue in job_model.task_queues if task_queue not specified
+    valid_queues = job_model.task_queues if job_model.task_queues else [settings.CELERY_TASK_DEFAULT_QUEUE]
+    task_queue = input_serializer.validated_data.get("task_queue", valid_queues[0])
+    if task_queue not in valid_queues:
+        raise ValidationError({"task_queue": [f'"{task_queue}" is not a valid choice.']})
 
     try:
         job.validate_data(data)
@@ -532,8 +551,8 @@ def _run_job(request, job_model, legacy_response=False):
         # of errors under messages
         return Response({"errors": e.message_dict if hasattr(e, "error_dict") else e.messages}, status=400)
 
-    if not get_worker_count():
-        raise CeleryWorkerNotRunningException()
+    if not get_worker_count(queue=task_queue):
+        raise CeleryWorkerNotRunningException(queue=task_queue)
 
     job_content_type = get_job_content_type()
     schedule_data = input_serializer.validated_data.get("schedule")
@@ -556,7 +575,16 @@ def _run_job(request, job_model, legacy_response=False):
 
     # Try to create a ScheduledJob, or...
     if schedule_data:
-        schedule = _create_schedule(schedule_data, data, commit, job, job_model, request)
+        schedule = _create_schedule(
+            schedule_data,
+            data,
+            commit,
+            job,
+            job_model,
+            request,
+            celery_kwargs={"queue": task_queue},
+            task_queue=input_serializer.validated_data.get("task_queue", None),
+        )
     else:
         schedule = None
 
@@ -567,9 +595,11 @@ def _run_job(request, job_model, legacy_response=False):
             job.class_path,
             job_content_type,
             request.user,
+            celery_kwargs={"queue": task_queue},
             data=data,
             request=copy_safe_request(request),
             commit=commit,
+            task_queue=input_serializer.validated_data.get("task_queue", None),
         )
         job.result = job_result
 
@@ -797,6 +827,7 @@ class JobLogEntryViewSet(ReadOnlyModelViewSet):
     Retrieve a list of job log entries.
     """
 
+    # v2 TODO(jathan): Replace prefetch_related with select_related
     queryset = JobLogEntry.objects.prefetch_related("job_result")
     serializer_class = serializers.JobLogEntrySerializer
     filterset_class = filters.JobLogEntryFilterSet
@@ -815,6 +846,7 @@ class JobResultViewSet(
     Retrieve a list of job results
     """
 
+    # v2 TODO(jathan): Replace prefetch_related with select_related
     queryset = JobResult.objects.prefetch_related("job_model", "obj_type", "user")
     serializer_class = serializers.JobResultSerializer
     filterset_class = filters.JobResultFilterSet
@@ -837,6 +869,7 @@ class ScheduledJobViewSet(ReadOnlyModelViewSet):
     Retrieve a list of scheduled jobs
     """
 
+    # v2 TODO(jathan): Replace prefetch_related with select_related
     queryset = ScheduledJob.objects.prefetch_related("user")
     serializer_class = serializers.ScheduledJobSerializer
     filterset_class = filters.ScheduledJobFilterSet
@@ -958,9 +991,11 @@ class ScheduledJobViewSet(ReadOnlyModelViewSet):
             job_model.class_path,
             job_content_type,
             request.user,
+            celery_kwargs=scheduled_job.kwargs.get("celery_kwargs", {}),
             data=scheduled_job.kwargs.get("data", {}),
             request=copy_safe_request(request),
             commit=False,  # force a dry-run
+            task_queue=scheduled_job.kwargs.get("task_queue", None),
         )
         serializer = serializers.JobResultSerializer(job_result, context={"request": request})
 
@@ -974,6 +1009,7 @@ class ScheduledJobViewSet(ReadOnlyModelViewSet):
 
 class NoteViewSet(ModelViewSet):
     metadata_class = ContentTypeMetadata
+    # v2 TODO(jathan): Replace prefetch_related with select_related
     queryset = Note.objects.prefetch_related("user")
     serializer_class = serializers.NoteSerializer
     filterset_class = filters.NoteFilterSet
@@ -994,6 +1030,7 @@ class ObjectChangeViewSet(ReadOnlyModelViewSet):
     """
 
     metadata_class = ContentTypeMetadata
+    # v2 TODO(jathan): Replace prefetch_related with select_related
     queryset = ObjectChange.objects.prefetch_related("user")
     serializer_class = serializers.ObjectChangeSerializer
     filterset_class = filters.ObjectChangeFilterSet

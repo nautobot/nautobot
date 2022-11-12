@@ -45,6 +45,7 @@ class CircuitTypeViewSet(NautobotModelViewSet):
 
 
 class CircuitViewSet(StatusViewSetMixin, NautobotModelViewSet):
+    # v2 TODO(jathan): Replace prefetch_related with select_related (for tags it should stay)
     queryset = Circuit.objects.prefetch_related(
         "status", "type", "tenant", "provider", "termination_a", "termination_z"
     ).prefetch_related("tags")
@@ -58,6 +59,7 @@ class CircuitViewSet(StatusViewSetMixin, NautobotModelViewSet):
 
 
 class CircuitTerminationViewSet(PathEndpointMixin, NautobotModelViewSet):
+    # v2 TODO(jathan): Replace prefetch_related with select_related
     queryset = CircuitTermination.objects.prefetch_related("circuit", "site", "_path__destination", "cable")
     serializer_class = serializers.CircuitTerminationSerializer
     filterset_class = filters.CircuitTerminationFilterSet

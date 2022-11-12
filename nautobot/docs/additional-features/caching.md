@@ -10,7 +10,10 @@ Nautobot makes extensive use of caching; this is not a simple topic but it's a u
 
 ## How it Works
 
-Nautobot supports database query caching using [`django-cacheops`](https://github.com/Suor/django-cacheops) and Redis. When a query is made, the results are cached in Redis for a short period of time, as defined by the [`CACHEOPS_DEFAULTS`](../configuration/optional-settings.md#cacheops_defaults) parameter (15 minutes by default). Within that time, all recurrences of that specific query will return the pre-fetched results from the cache. Caching can be completely disabled by toggling [`CACHEOPS_ENABLED`](../configuration/optional-settings.md#cacheops_enabled) to `False` (it is `True` by default).
+Nautobot optionally supports database query caching using [`django-cacheops`](https://github.com/Suor/django-cacheops) and Redis. Caching can be enabled by toggling [`CACHEOPS_ENABLED`](../configuration/optional-settings.md#cacheops_enabled) to `True` (it is `False` by default). When caching is enabled, and a query is made, the results are cached in Redis for a short period of time, as defined by the [`CACHEOPS_DEFAULTS`](../configuration/optional-settings.md#cacheops_defaults) parameter (15 minutes by default). Within that time, all recurrences of that specific query will return the pre-fetched results from the cache.
+
+!!! caution "Changed in version 1.5.0"
+    Query caching is now disabled by default, and will be removed as a supported option in a future release.
 
 If a change is made to any of the objects returned by the cached query within that time, or if the timeout expires, the cached results are automatically invalidated and the next request for those results will be sent to the database.
 
@@ -43,7 +46,7 @@ For more information on the required settings needed to configure Cacheops, plea
 The optional settings include:
 
 * [`CACHEOPS_DEFAULTS`](../configuration/optional-settings.md#cacheops_defaults): To define the cache timeout value (Defaults to 15 minutes)
-* [`CACHEOPS_ENABLED`](../configuration/optional-settings.md#cacheops_enabled) : To turn on/off caching (Defaults to `True`)
+* [`CACHEOPS_ENABLED`](../configuration/optional-settings.md#cacheops_enabled) : To turn on/off caching (Defaults to `False`)
 
 ## Invalidating Cached Data
 

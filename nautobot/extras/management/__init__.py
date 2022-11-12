@@ -20,6 +20,7 @@ CHOICESET_MAP = {
     "dcim.Location": dcim_choices.LocationStatusChoices,
     "dcim.PowerFeed": dcim_choices.PowerFeedStatusChoices,
     "dcim.Rack": dcim_choices.RackStatusChoices,
+    "dcim.DeviceRedundancyGroup": dcim_choices.DeviceRedundancyGroupStatusChoices,
     "dcim.Site": dcim_choices.SiteStatusChoices,
     "ipam.IPAddress": ipam_choices.IPAddressStatusChoices,
     "ipam.Prefix": ipam_choices.PrefixStatusChoices,
@@ -85,7 +86,7 @@ DESCRIPTION_MAP = {
 #
 
 
-def populate_status_choices(apps, schema_editor, **kwargs):
+def populate_status_choices(apps=global_apps, schema_editor=None, **kwargs):
     """
     Populate `Status` model choices.
 
@@ -233,7 +234,8 @@ def clear_status_choices(
 
     for model_path in models:
         choiceset = CHOICESET_MAP[model_path]
-        content_type = ContentType.objects.get_for_model(apps.get_model(model_path))
+        model = apps.get_model(model_path)
+        content_type = ContentType.objects.get_for_model(model)
         choices = export_statuses_from_choiceset(choiceset)
 
         if verbosity >= 2:

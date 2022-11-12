@@ -1,6 +1,7 @@
 import os
 import platform
 import re
+import sys
 
 from django.contrib.messages import constants as messages
 import django.forms
@@ -61,7 +62,7 @@ NAUTOBOT_ROOT = os.getenv("NAUTOBOT_ROOT", os.path.expanduser("~/.nautobot"))
 # By default, Nautobot will permit users to create duplicate prefixes and IP addresses in the global
 # table (that is, those which are not assigned to any VRF). This behavior can be disabled by setting
 # ENFORCE_GLOBAL_UNIQUE to True.
-ENFORCE_GLOBAL_UNIQUE = False
+ENFORCE_GLOBAL_UNIQUE = is_truthy(os.getenv("NAUTOBOT_ENFORCE_GLOBAL_UNIQUE", "False"))
 
 # Exclude potentially sensitive models from wildcard view exemption. These may still be exempted
 # by specifying the model individually in the EXEMPT_VIEW_PERMISSIONS configuration parameter.
@@ -75,15 +76,15 @@ EXEMPT_VIEW_PERMISSIONS = []
 GIT_ROOT = os.getenv("NAUTOBOT_GIT_ROOT", os.path.join(NAUTOBOT_ROOT, "git").rstrip("/"))
 HTTP_PROXIES = None
 JOBS_ROOT = os.getenv("NAUTOBOT_JOBS_ROOT", os.path.join(NAUTOBOT_ROOT, "jobs").rstrip("/"))
-MAINTENANCE_MODE = False
+MAINTENANCE_MODE = is_truthy(os.getenv("NAUTOBOT_MAINTENANCE_MODE", "False"))
 # Metrics
-METRICS_ENABLED = False
+METRICS_ENABLED = is_truthy(os.getenv("NAUTOBOT_METRICS_ENABLED", "False"))
 
 # Napalm
 NAPALM_ARGS = {}
-NAPALM_PASSWORD = ""
-NAPALM_TIMEOUT = 30
-NAPALM_USERNAME = ""
+NAPALM_PASSWORD = os.getenv("NAUTOBOT_NAPALM_PASSWORD", "")
+NAPALM_TIMEOUT = int(os.getenv("NAUTOBOT_NAPALM_TIMEOUT", "30"))
+NAPALM_USERNAME = os.getenv("NAUTOBOT_NAPALM_USERNAME", "")
 
 # Plugins
 PLUGINS = []
@@ -116,6 +117,25 @@ STORAGE_CONFIG = {}
 # Test runner that is aware of our use of "integration" tags and only runs
 # integration tests if explicitly passed in with `nautobot-server test --tag integration`.
 TEST_RUNNER = "nautobot.core.tests.runner.NautobotTestRunner"
+# Disable test data factories by default so as not to cause issues for plugins.
+# The nautobot_config.py that Nautobot core uses for its own tests will override this to True.
+TEST_USE_FACTORIES = is_truthy(os.getenv("NAUTOBOT_TEST_USE_FACTORIES", "False"))
+# Pseudo-random number generator seed, for reproducibility of test results.
+TEST_FACTORY_SEED = os.getenv("NAUTOBOT_TEST_FACTORY_SEED", None)
+
+#
+# django-slowtests
+#
+
+# Performance test uses `NautobotPerformanceTestRunner` to run, which is only available once you have `django-slowtests` installed in your dev environment.
+# `invoke performance-test` and adding `--performance-report` or `--performance-snapshot` at the end of the `invoke` command
+# will automatically opt to NautobotPerformanceTestRunner to run the tests.
+
+# The baseline file that the performance test is running against
+# TODO we need to replace the baselines in this file with more consistent results at least for CI
+TEST_PERFORMANCE_BASELINE_FILE = os.getenv(
+    "NAUTOBOT_TEST_PERFORMANCE_BASELINE_FILE", "nautobot/core/tests/performance_baselines.yml"
+)
 
 #
 # Django cryptography
@@ -141,7 +161,7 @@ PROMETHEUS_EXPORT_MIGRATIONS = False
 FILTERS_NULL_CHOICE_LABEL = "None"
 FILTERS_NULL_CHOICE_VALUE = "null"
 
-STRICT_FILTERING = True
+STRICT_FILTERING = is_truthy(os.getenv("NAUTOBOT_STRICT_FILTERING", "True"))
 
 #
 # Django REST framework (API)
@@ -221,11 +241,26 @@ SPECTACULAR_SETTINGS = {
         "PowerPortTypeChoices": "nautobot.dcim.choices.PowerPortTypeChoices",
         "RackTypeChoices": "nautobot.dcim.choices.RackTypeChoices",
         "RelationshipTypeChoices": "nautobot.extras.choices.RelationshipTypeChoices",
-        # Because Interface and VMInterface, and Site and Location, have the same default statuses, we get the error:
+        # Each of these StatusModels has bulk and non-bulk serializers, with the same status options,
+        # which confounds drf-spectacular's automatic naming of enums, resulting in the below warning:
         #   enum naming encountered a non-optimally resolvable collision for fields named "status"
-        "LocationStatusChoices": "nautobot.dcim.api.serializers.LocationSerializer.status_choices",
+        # By explicitly naming the enums ourselves we avoid this warning.
+        "CableStatusChoices": "nautobot.dcim.api.serializers.CableSerializer.status_choices",
+        "CircuitStatusChoices": "nautobot.circuits.api.serializers.CircuitSerializer.status_choices",
+        "DeviceStatusChoices": "nautobot.dcim.api.serializers.DeviceWithConfigContextSerializer.status_choices",
         "InterfaceStatusChoices": "nautobot.dcim.api.serializers.InterfaceSerializer.status_choices",
+        "IPAddressStatusChoices": "nautobot.ipam.api.serializers.IPAddressSerializer.status_choices",
+        "LocationStatusChoices": "nautobot.dcim.api.serializers.LocationSerializer.status_choices",
+        "PowerFeedStatusChoices": "nautobot.dcim.api.serializers.PowerFeedSerializer.status_choices",
+        "PrefixStatusChoices": "nautobot.ipam.api.serializers.PrefixSerializer.status_choices",
+        "RackStatusChoices": "nautobot.dcim.api.serializers.RackSerializer.status_choices",
+        "VirtualMachineStatusChoices": "nautobot.virtualization.api.serializers.VirtualMachineWithConfigContextSerializer.status_choices",
+        "VLANStatusChoices": "nautobot.ipam.api.serializers.VLANSerializer.status_choices",
     },
+    # Create separate schema components for PATCH requests (fields generally are not `required` on PATCH)
+    "COMPONENT_SPLIT_PATCH": True,
+    # Create separate schema components for request vs response where appropriate
+    "COMPONENT_SPLIT_REQUEST": True,
 }
 
 
@@ -242,9 +277,9 @@ SPECTACULAR_SETTINGS = {
 # https://docs.djangoproject.com/en/stable/ref/settings/#databases
 DATABASES = {
     "default": {
-        "NAME": os.getenv("NAUTOBOT_DATABASE", "nautobot"),
-        "USER": os.getenv("NAUTOBOT_USER", ""),
-        "PASSWORD": os.getenv("NAUTOBOT_PASSWORD", ""),
+        "NAME": os.getenv("NAUTOBOT_DB_NAME", "nautobot"),
+        "USER": os.getenv("NAUTOBOT_DB_USER", ""),
+        "PASSWORD": os.getenv("NAUTOBOT_DB_PASSWORD", ""),
         "HOST": os.getenv("NAUTOBOT_DB_HOST", "localhost"),
         "PORT": os.getenv("NAUTOBOT_DB_PORT", ""),
         "CONN_MAX_AGE": int(os.getenv("NAUTOBOT_DB_TIMEOUT", "300")),
@@ -252,22 +287,77 @@ DATABASES = {
     }
 }
 
+# Ensure proper Unicode handling for MySQL
+if DATABASES["default"]["ENGINE"] == "django.db.backends.mysql":
+    DATABASES["default"]["OPTIONS"] = {"charset": "utf8mb4"}
+
 # The secret key is used to encrypt session keys and salt passwords.
-SECRET_KEY = os.getenv("SECRET_KEY")
+SECRET_KEY = os.getenv("NAUTOBOT_SECRET_KEY")
 
 # Default overrides
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = os.getenv("NAUTOBOT_ALLOWED_HOSTS", "").split(" ")
 CSRF_TRUSTED_ORIGINS = []
-DATETIME_FORMAT = "N j, Y g:i a"
+CSRF_FAILURE_VIEW = "nautobot.core.views.csrf_failure"
+DATE_FORMAT = os.getenv("NAUTOBOT_DATE_FORMAT", "N j, Y")
+DATETIME_FORMAT = os.getenv("NAUTOBOT_DATETIME_FORMAT", "N j, Y g:i a")
+DEBUG = is_truthy(os.getenv("NAUTOBOT_DEBUG", "False"))
 INTERNAL_IPS = ("127.0.0.1", "::1")
 FORCE_SCRIPT_NAME = None
-LOGGING = {}
+
+TESTING = len(sys.argv) > 1 and sys.argv[1] == "test"
+
+LOG_LEVEL = "DEBUG" if DEBUG else "INFO"
+
+if TESTING:
+    # keep log quiet by default when running unit/integration tests
+    LOGGING = {}
+else:
+    LOGGING = {
+        "version": 1,
+        "disable_existing_loggers": False,
+        "formatters": {
+            "normal": {
+                "format": "%(asctime)s.%(msecs)03d %(levelname)-7s %(name)s :\n  %(message)s",
+                "datefmt": "%H:%M:%S",
+            },
+            "verbose": {
+                "format": "%(asctime)s.%(msecs)03d %(levelname)-7s %(name)-20s %(filename)-15s %(funcName)30s() :\n  %(message)s",
+                "datefmt": "%H:%M:%S",
+            },
+        },
+        "handlers": {
+            "normal_console": {
+                "level": "INFO",
+                "class": "logging.StreamHandler",
+                "formatter": "normal",
+            },
+            "verbose_console": {
+                "level": "DEBUG",
+                "class": "logging.StreamHandler",
+                "formatter": "verbose",
+            },
+        },
+        "loggers": {
+            "django": {"handlers": ["normal_console"], "level": "INFO"},
+            "nautobot": {
+                "handlers": ["verbose_console" if DEBUG else "normal_console"],
+                "level": LOG_LEVEL,
+            },
+        },
+    }
+
 MEDIA_ROOT = os.path.join(NAUTOBOT_ROOT, "media").rstrip("/")
-SESSION_FILE_PATH = None
-SHORT_DATE_FORMAT = "Y-m-d"
-SHORT_DATETIME_FORMAT = "Y-m-d H:i"
-TIME_FORMAT = "g:i a"
-TIME_ZONE = "UTC"
+SESSION_COOKIE_AGE = int(os.getenv("NAUTOBOT_SESSION_COOKIE_AGE", "1209600"))  # 2 weeks, in seconds
+SESSION_FILE_PATH = os.getenv("NAUTOBOT_SESSION_FILE_PATH", None)
+SHORT_DATE_FORMAT = os.getenv("NAUTOBOT_SHORT_DATE_FORMAT", "Y-m-d")
+SHORT_DATETIME_FORMAT = os.getenv("NAUTOBOT_SHORT_DATETIME_FORMAT", "Y-m-d H:i")
+SHORT_TIME_FORMAT = os.getenv("NAUTOBOT_SHORT_TIME_FORMAT", "H:i:s")
+TIME_FORMAT = os.getenv("NAUTOBOT_TIME_FORMAT", "g:i a")
+TIME_ZONE = os.getenv("NAUTOBOT_TIME_ZONE", "UTC")
+
+# Disable importing the WSGI module before starting the server application. This is required for
+# uWSGI postfork callbacks to execute as is currently required in `nautobot.core.wsgi`.
+WEBSERVER_WARMUP = False
 
 # Installed apps and Django plugins. Nautobot plugins will be appended here later.
 INSTALLED_APPS = [
@@ -277,7 +367,7 @@ INSTALLED_APPS = [
     "django.contrib.messages",
     "django.contrib.staticfiles",
     "django.contrib.humanize",
-    "cacheops",
+    "cacheops",  # v2 TODO(jathan); Remove cacheops.
     "corsheaders",
     "django_filters",
     "django_jinja",
@@ -308,7 +398,7 @@ INSTALLED_APPS = [
     "health_check",
     "health_check.storage",
     "django_extensions",
-    "nautobot.core.apps.ConstanceDatabaseAppConfig",  # fix default_auto_field
+    "constance.backends.database",
     "django_ajax_tables",
 ]
 
@@ -532,7 +622,7 @@ CONSTANCE_CONFIG_FIELDSETS = {
 # Defaults to False. Setting this to True can be dangerous, as it allows any website to make
 # cross-origin requests to yours. Generally you'll want to restrict the list of allowed origins with
 # CORS_ALLOWED_ORIGINS or CORS_ALLOWED_ORIGIN_REGEXES.
-CORS_ALLOW_ALL_ORIGINS = False
+CORS_ALLOW_ALL_ORIGINS = is_truthy(os.getenv("NAUTOBOT_CORS_ALLOW_ALL_ORIGINS", "False"))
 
 # A list of strings representing regexes that match Origins that are authorized to make cross-site
 # HTTP requests. Defaults to [].
@@ -558,6 +648,7 @@ GRAPHQL_COMPUTED_FIELD_PREFIX = "cpf"
 # Caching
 #
 
+# v2 TODO(jathan): Remove all cacheops settings.
 # The django-cacheops plugin is used to cache querysets. The built-in Django
 # caching is not used.
 CACHEOPS = {
@@ -577,16 +668,16 @@ CACHEOPS = {
     "virtualization.*": {"ops": "all"},
 }
 CACHEOPS_DEGRADE_ON_FAILURE = True
-CACHEOPS_ENABLED = True
-CACHEOPS_REDIS = "redis://localhost:6379/1"
-CACHEOPS_DEFAULTS = {"timeout": 900}
+CACHEOPS_ENABLED = is_truthy(os.getenv("NAUTOBOT_CACHEOPS_ENABLED", "False"))
+CACHEOPS_REDIS = os.getenv("NAUTOBOT_CACHEOPS_REDIS", parse_redis_connection(redis_database=1))
+CACHEOPS_DEFAULTS = {"timeout": int(os.getenv("NAUTOBOT_CACHEOPS_TIMEOUT", "900"))}
 
 # The django-redis cache is used to establish concurrent locks using Redis. The
 # django-rq settings will use the same instance/database by default.
 CACHES = {
     "default": {
         "BACKEND": "django_redis.cache.RedisCache",
-        "LOCATION": "redis://localhost:6379/0",
+        "LOCATION": parse_redis_connection(redis_database=0),
         "TIMEOUT": 300,
         "OPTIONS": {
             "CLIENT_CLASS": "django_redis.client.DefaultClient",
@@ -629,6 +720,9 @@ CELERY_RESULT_BACKEND = os.getenv("NAUTOBOT_CELERY_RESULT_BACKEND", parse_redis_
 # Instruct celery to report the started status of a job, instead of just `pending`, `finished`, or `failed`
 CELERY_TASK_TRACK_STARTED = True
 
+# Default celery queue name that will be used by workers and tasks if no queue is specified
+CELERY_TASK_DEFAULT_QUEUE = os.getenv("NAUTOBOT_CELERY_TASK_DEFAULT_QUEUE", "default")
+
 # Global task time limits (seconds)
 # Exceeding the soft limit will result in a SoftTimeLimitExceeded exception,
 # while exceeding the hard limit will result in a SIGKILL.
@@ -644,7 +738,7 @@ CELERY_RESULT_SERIALIZER = "nautobot_json"
 
 CELERY_BEAT_SCHEDULER = "nautobot.core.celery.schedulers:NautobotDatabaseScheduler"
 
-# Sets an age out timer of redis lock. This is NOT implicitially applied to locks, must be added
+# Sets an age out timer of redis lock. This is NOT implicitly applied to locks, must be added
 # to a lock creation as `timeout=settings.REDIS_LOCK_TIMEOUT`
 REDIS_LOCK_TIMEOUT = int(os.getenv("NAUTOBOT_REDIS_LOCK_TIMEOUT", "600"))
 
@@ -682,7 +776,7 @@ BRANDING_URLS = {
 }
 
 # Undocumented link in the bottom right of the footer which is meant to persist any custom branding changes.
-BRANDING_POWERED_BY_URL = "https://nautobot.readthedocs.io/"
+BRANDING_POWERED_BY_URL = "https://docs.nautobot.com/"
 
 #
 # Django extensions settings
