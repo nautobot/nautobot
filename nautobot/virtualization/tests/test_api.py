@@ -394,8 +394,6 @@ class VMInterfaceTestVersion12(APIViewTestCases.APIViewTestCase):
             }
             response = self.client.post(self._get_list_url(), data=payload, format="json", **self.header)
             self.assertHttpStatus(response, status.HTTP_400_BAD_REQUEST)
-            print(response.data)
-            print(vlan.site)
             self.assertEqual(
                 response.data["tagged_vlans"][0], "Mode must be set to tagged when specifying tagged_vlans"
             )
