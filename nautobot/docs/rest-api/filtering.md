@@ -9,17 +9,22 @@ Multiple parameters can be joined to further narrow results. For example, `GET /
 Generally, passing multiple values for a single parameter will result in a logical OR operation. For example, `GET /api/dcim/sites/?region=north-america&region=south-america` will return sites in North America _or_ South America. However, a logical AND operation will be used in instances where a field may have multiple values, such as tags. For example, `GET /api/dcim/sites/?tag=foo&tag=bar` will return only sites which have both the "foo" _and_ "bar" tags applied.
 
 +/- 1.4.0
-    If [STRICT_FILTERING](../configuration/optional-settings.md#strict_filtering) is True (its default value), unrecognized filter parameters now result in a 400 Bad Request response instead of being silently ignored.
+If [STRICT_FILTERING](../configuration/optional-settings.md#strict_filtering) is True (its default value), unrecognized filter parameters now result in a 400 Bad Request response instead of being silently ignored.
 
 ### Filtering by Choice Field
 
 Some models have fields which are limited to specific choices, such as the `status` field on the Prefix model. To find all available choices for this field, make an authenticated `OPTIONS` request to the model's list endpoint, and use `jq` to extract the relevant parameters:
 
 ```no-highlight
-$ curl -s -X OPTIONS \
+curl -s -X OPTIONS \
 -H "Authorization: Token $TOKEN" \
 -H "Content-Type: application/json" \
 http://nautobot/api/ipam/prefixes/ | jq ".actions.POST.status.choices"
+```
+
+Example output:
+
+```no-highlight
 [
   {
     "value": "container",
@@ -41,7 +46,7 @@ http://nautobot/api/ipam/prefixes/ | jq ".actions.POST.status.choices"
 ```
 
 !!! note
-    The above works only if the API token used to authenticate the request has permission to make a `POST` request to this endpoint.
+The above works only if the API token used to authenticate the request has permission to make a `POST` request to this endpoint.
 
 ### Filtering by Custom Field
 
@@ -52,12 +57,12 @@ GET /api/dcim/sites/?cf_foo=123
 ```
 
 !!! note
-    For custom field filters, due to historical details of implementation, only a single filter value can be specified when matching a given field. In other words, in the above example, you could _not_ add `&cf_foo=456` to the query in order to get all sites where custom field `foo` is 123 _or_ 456; instead you would need to run two separate queries. This restriction does not apply to custom field filters using lookup expressions (next section) and will likely be changed in a future major version of Nautobot.
+For custom field filters, due to historical details of implementation, only a single filter value can be specified when matching a given field. In other words, in the above example, you could _not_ add `&cf_foo=456` to the query in order to get all sites where custom field `foo` is 123 _or_ 456; instead you would need to run two separate queries. This restriction does not apply to custom field filters using lookup expressions (next section) and will likely be changed in a future major version of Nautobot.
 
 Custom fields can be mixed with built-in fields to further narrow results. When creating a custom string field, the type of filtering selected (loose versus exact) determines whether partial or full matching is used.
 
 +++ 1.4.0
-    Custom fields can use the lookup expressions listed in the next section by prepending `cf_` to the custom field `name` (and not the `slug`) followed by the required lookup type (see below).
+Custom fields can use the lookup expressions listed in the next section by prepending `cf_` to the custom field `name` (and not the `slug`) followed by the required lookup type (see below).
 
 ## Lookup Expressions
 
@@ -90,11 +95,7 @@ String-based (char) fields (Name, Address, etc.) support these lookup expression
 - `ie` - case-insensitive exact match
 - `nie` - negated case-insensitive exact match
 
-+++ 1.3.0
-    - `re` - case-sensitive regular expression match
-    - `nre` - negated case-sensitive regular expression match
-    - `ire` - case-insensitive regular expression match
-    - `nire` - negated case-insensitive regular expression match
++++ 1.3.0 - `re` - case-sensitive regular expression match - `nre` - negated case-sensitive regular expression match - `ire` - case-insensitive regular expression match - `nire` - negated case-insensitive regular expression match
 
 ### Foreign Keys & Other Fields
 
@@ -122,7 +123,7 @@ Nautobot core or plugin data model.
 - `net_contains` - Given a network, determine which networks contain the provided network e.g. `network__net_contains="192.168.0.0/16"` would include 192.0.0.0/8 in the result
 - `net_contains_or_equals` - Given a network, determine which networks contain or is the provided network e.g. `network__net_contains="192.168.0.0/16"` would include 192.0.0.0/8 and 192.168.0.0/16 in the result
 - `net_equals` - Given a network, determine which which networks are an exact match. e.g. `network__net_equals="192.168.0.0/16"` would include only 192.168.0.0/16 in the result
-- `net_host` - Determine which networks are parent of the provided IP, e.g. `host__net_host="10.0.0.1"`  would include 10.0.0.1/32 and 10.0.0.0/24 in the result
+- `net_host` - Determine which networks are parent of the provided IP, e.g. `host__net_host="10.0.0.1"` would include 10.0.0.1/32 and 10.0.0.0/24 in the result
 - `net_host_contained` - Given a network, select IPs whose host address (regardless of its subnet mask) falls within that network , e.g. `host__net_host_contained="10.0.0.0/24"` would include hosts 10.0.0.1/8 and 10.0.0.254/32 in the result
 - `net_in` - Given a list of networks, select addresses (regardless of their subnet masks) within those networks, e.g. `host__net_in=["10.0.0.0/24", "2001:db8::/64"]` would include hosts 10.0.0.1/16 and 2001:db8::1/65 in the result
 - `family` - Given an IP address family of 4 or 6, provide hosts or networks that are that IP version type, e.g. `host__family=6` would include 2001:db8::1 in the result

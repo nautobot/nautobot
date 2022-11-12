@@ -28,7 +28,7 @@ The other file is `poetry.lock`, which is managed by Poetry and contains package
 Each of the required packages pinned to its current stable version. When Nautobot is installed, this file is used to resolve and install all dependencies listed in `pyproject.toml`, but Poetry will use the exact versions found in `poetry.lock` to ensure that a new release of a dependency doesn't break Nautobot.
 
 !!! warning
-    You must never directly edit this file. You will use `poetry update` commands to manage it.
+You must never directly edit this file. You will use `poetry update` commands to manage it.
 
 #### Run `poetry update`
 
@@ -41,17 +41,17 @@ Every minor version release should refresh `poetry.lock`, so that it lists the m
 5. Run all tests and check that the UI and API function as expected.
 
 !!! hint
-    You may use `poetry update --dry-run` to have Poetry automatically tell you what package updates are available and the versions it would upgrade.
+You may use `poetry update --dry-run` to have Poetry automatically tell you what package updates are available and the versions it would upgrade.
 
 ### Update Static Libraries
 
 Update the following static libraries to their most recent stable release:
 
-* [Bootstrap 3](https://getbootstrap.com/docs/3.4)
-* [Material Design Icons](https://materialdesignicons.com/)
-* [Select2](https://github.com/select2/select2/releases)
-* [jQuery](https://jquery.com/download/)
-* [jQuery UI](https://jqueryui.com/)
+- [Bootstrap 3](https://getbootstrap.com/docs/3.4)
+- [Material Design Icons](https://materialdesignicons.com/)
+- [Select2](https://github.com/select2/select2/releases)
+- [jQuery](https://jquery.com/download/)
+- [jQuery UI](https://jqueryui.com/)
 
 ### Link to the Release Notes Page
 
@@ -61,10 +61,10 @@ Add the release notes (`docs/release-notes/X.Y.md`) to the table of contents wit
 
 Follow the [install instructions](../installation/nautobot.md) to perform a new production installation of Nautobot.
 
-The goal of this step is to walk through the entire install process *as documented* to make sure nothing there needs to be changed or updated, to catch any errors or omissions in the documentation, and to ensure that it is current with each release.
+The goal of this step is to walk through the entire install process _as documented_ to make sure nothing there needs to be changed or updated, to catch any errors or omissions in the documentation, and to ensure that it is current with each release.
 
 !!! tip
-    Fire up `mkdocs serve` in your development environment to start the documentation server! This allows you to view the documentation locally and automatically rebuilds the documents as you make changes.
+Fire up `mkdocs serve` in your development environment to start the documentation server! This allows you to view the documentation locally and automatically rebuilds the documents as you make changes.
 
 Commit any necessary changes to the documentation before proceeding with the release.
 
@@ -89,35 +89,60 @@ The new version should ideally be a valid semver string or a valid bump rule: `p
 Display the current version with no arguments:
 
 ```no-highlight
-$ poetry version
+poetry version
+```
+
+Example output:
+
+```no-highlight
 nautobot 1.0.0-beta.2
 ```
 
 Bump pre-release versions using `prerelease`:
 
 ```no-highlight
-$ poetry version prerelease
+poetry version prerelease
+```
+
+Example output:
+
+```no-highlight
 Bumping version from 1.0.0-beta.2 to 1.0.0-beta.3
 ```
 
 For major versions, use `major`:
 
 ```no-highlight
-$ poetry version major
+poetry version major
+```
+
+Example output:
+
+```no-highlight
 Bumping version from 1.0.0-beta.2 to 1.0.0
 ```
 
 For patch versions, use `minor`:
 
 ```no-highlight
-$ poetry version minor
+poetry version minor
+```
+
+Example output:
+
+```no-highlight
 Bumping version from 1.0.0 to 1.1.0
 ```
 
 And lastly, for patch versions, you guessed it, use `patch`:
 
 ```no-highlight
-$ poetry version patch
+poetry version patch
+```
+
+Example output:
+
+```no-highlight
 Bumping version from 1.1.0 to 1.1.1
 ```
 
@@ -136,7 +161,7 @@ Check the git diff to verify the changes are correct (`git diff --cached`).
 Commit and push the staged changes.
 
 !!! important
-    The changelog must adhere to the [Keep a Changelog](https://keepachangelog.com/) style guide.
+The changelog must adhere to the [Keep a Changelog](https://keepachangelog.com/) style guide.
 
 ### Submit Pull Requests
 
@@ -148,9 +173,9 @@ Once CI has completed on the PR, merge it.
 
 Draft a [new release](https://github.com/nautobot/nautobot/releases/new) with the following parameters.
 
-* **Tag:** Current version (e.g. `v1.0.0`)
-* **Target:** `main`
-* **Title:** Version and date (e.g. `v1.0.0 - 2021-06-01`)
+- **Tag:** Current version (e.g. `v1.0.0`)
+- **Target:** `main`
+- **Title:** Version and date (e.g. `v1.0.0 - 2021-06-01`)
 
 Copy the description from the pull request to the release.
 
@@ -167,13 +192,13 @@ poetry run mkdocs build --no-directory-urls --strict
 Second, you'll need to build the Python package distributions (which will include the rendered documentation):
 
 ```no-highlight
-$ poetry build
+poetry build
 ```
 
 Finally, publish to PyPI using the username `__token__` and the Nautobot PyPI API token as the password. The API token can be found in the Nautobot maintainers vault (if you're a maintainer, you'll have access to this vault):
 
 ```no-highlight
-$ poetry publish --username __token__ --password <api_token>
+poetry publish --username __token__ --password <api_token>
 ```
 
 ### Publish Docker Images
@@ -200,7 +225,7 @@ nautobot:
 ```
 
 !!! warning
-    You should *not* include `docker-compose.dev.yml` in this test scenario!
+You should _not_ include `docker-compose.dev.yml` in this test scenario!
 
 ```no-highlight
 for ver in 3.7 3.8 3.9 3.10; do
@@ -228,6 +253,11 @@ Use `poetry version prepatch` to bump the version to the next release and commit
 For example, if you just released `v1.1.0`:
 
 ```no-highlight
-$ poetry version prepatch
+poetry version prepatch
+```
+
+Example output:
+
+```no-highlight
 Bumping version from 1.1.0 to 1.1.1-alpha.0
 ```

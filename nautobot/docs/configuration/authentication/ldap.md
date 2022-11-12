@@ -9,33 +9,36 @@ This guide explains how to implement LDAP authentication using an external serve
 On Ubuntu:
 
 ```no-highlight
-$ sudo apt install -y libldap-dev libsasl2-dev
+sudo apt install -y libldap-dev libsasl2-dev
 ```
 
 On CentOS:
 
 ```no-highlight
-$ sudo dnf install -y openldap-devel
+sudo dnf install -y openldap-devel
 ```
 
 ### Install django-auth-ldap
 
 !!! warning
-    This and all remaining steps in this document should all be performed as the `nautobot` user!
+This and all remaining steps in this document should all be performed as the `nautobot` user!
 
     Hint: Use `sudo -iu nautobot`
 
 Activate the Python virtual environment and install the `django-auth-ldap` package using pip:
 
 ```no-highlight
-$ source /opt/nautobot/bin/activate
-(nautobot) $ pip3 install "nautobot[ldap]"
+source /opt/nautobot/bin/activate
+```
+
+```no-highlight
+pip3 install "nautobot[ldap]"
 ```
 
 Once installed, add the package to `local_requirements.txt` to ensure it is re-installed during future rebuilds of the virtual environment:
 
 ```no-highlight
-(nautobot) $ echo "nautobot[ldap]" >> /opt/nautobot/local_requirements.txt
+echo "nautobot[ldap]" >> /opt/nautobot/local_requirements.txt
 ```
 
 ## Configuration
@@ -43,8 +46,8 @@ Once installed, add the package to `local_requirements.txt` to ensure it is re-i
 Enable the LDAP authentication backend by adding the following to your `nautobot_config.py`:
 
 !!! note
-    It is critical that you include the `ObjectPermissionsBackend` provided by
-    Nautobot after the `LDAPBackend` so that object-level permissions features can work properly.
+It is critical that you include the `ObjectPermissionsBackend` provided by
+Nautobot after the `LDAPBackend` so that object-level permissions features can work properly.
 
 ```python
 AUTHENTICATION_BACKENDS = [
@@ -58,7 +61,7 @@ AUTHENTICATION_BACKENDS = [
 Define all of the parameters required below in your `nautobot_config.py`. Complete documentation of all `django-auth-ldap` configuration options is included in the project's [official documentation](http://django-auth-ldap.readthedocs.io/).
 
 !!! info
-    When using Windows Server 2012 you may wish to use the [Global Catalog](https://docs.microsoft.com/en-us/windows/win32/ad/global-catalog) by specifying a port on `AUTH_LDAP_SERVER_URI`. Use `3269` for secure (`ldaps://`), or `3268` for non-secure.
+When using Windows Server 2012 you may wish to use the [Global Catalog](https://docs.microsoft.com/en-us/windows/win32/ad/global-catalog) by specifying a port on `AUTH_LDAP_SERVER_URI`. Use `3269` for secure (`ldaps://`), or `3268` for non-secure.
 
 ```python
 import ldap
@@ -99,7 +102,7 @@ AUTH_LDAP_SERVER_URI = "ldaps://ad.example.com"
 
 #### Certificate Validation
 
-When using either TLS or SSL it is necessary to validate the certificate from your LDAP server.  Copy your CA cert to `/opt/nautobot/ca.pem`.
+When using either TLS or SSL it is necessary to validate the certificate from your LDAP server. Copy your CA cert to `/opt/nautobot/ca.pem`.
 
 ```python
 # Set the path to the trusted CA certificates and create a new internal SSL context.
@@ -123,7 +126,7 @@ Additional ldap connection options can be found in the [python-ldap documentatio
 ### User Authentication
 
 !!! info
-    When using Windows Server 2012, `AUTH_LDAP_USER_DN_TEMPLATE` should be set to None.
+When using Windows Server 2012, `AUTH_LDAP_USER_DN_TEMPLATE` should be set to None.
 
 ```python
 from django_auth_ldap.config import LDAPSearch
@@ -147,7 +150,7 @@ AUTH_LDAP_USER_ATTR_MAP = {
 
 #### Searching in Multiple LDAP Groups
 
-Define the user-groups in your environment, such as a *.env file (delimiter `';'`):
+Define the user-groups in your environment, such as a \*.env file (delimiter `';'`):
 
 ```python
 # Groups to search for user objects. "(sAMAccountName=%(user)s),..."
@@ -174,7 +177,7 @@ if AUTH_LDAP_USER_SEARCH_DN != "":
 ### User Groups for Permissions
 
 !!! info
-    When using Microsoft Active Directory, support for nested groups can be activated by using `NestedGroupOfNamesType()` instead of `GroupOfNamesType()` for `AUTH_LDAP_GROUP_TYPE`. You will also need to modify the import line to use `NestedGroupOfNamesType` instead of `GroupOfNamesType` .
+When using Microsoft Active Directory, support for nested groups can be activated by using `NestedGroupOfNamesType()` instead of `GroupOfNamesType()` for `AUTH_LDAP_GROUP_TYPE`. You will also need to modify the import line to use `NestedGroupOfNamesType` instead of `GroupOfNamesType` .
 
 ```python
 from django_auth_ldap.config import LDAPSearch, GroupOfNamesType
@@ -203,18 +206,18 @@ AUTH_LDAP_CACHE_TIMEOUT = 3600
 
 ```
 
-* `is_active` - All users must be mapped to at least this group to enable authentication. Without this, users cannot log in.
-* `is_staff` - Users mapped to this group are enabled for access to the administration tools; this is the equivalent of checking the "staff status" box on a manually created user. This doesn't grant any specific permissions.
-* `is_superuser` - Users mapped to this group will be granted superuser status. Superusers are implicitly granted all permissions.
+- `is_active` - All users must be mapped to at least this group to enable authentication. Without this, users cannot log in.
+- `is_staff` - Users mapped to this group are enabled for access to the administration tools; this is the equivalent of checking the "staff status" box on a manually created user. This doesn't grant any specific permissions.
+- `is_superuser` - Users mapped to this group will be granted superuser status. Superusers are implicitly granted all permissions.
 
 !!! warning
-    Authentication will fail if the groups (the distinguished names) do not exist in the LDAP directory.
+Authentication will fail if the groups (the distinguished names) do not exist in the LDAP directory.
 
 ## Multiple LDAP Server Support
 
 Multiple servers can be supported in `django-auth-ldap` by the use of additional LDAP backends, as described in the library's [documentation](https://django-auth-ldap.readthedocs.io/en/latest/multiconfig.html).
 
-In order to define and load additional backends into Nautobot a plugin can be used. This plugin will allow the backend(s) to be loaded into the Django settings for use within the `nautobot_config.py` file.  At the simplest form the plugin should have a custom backend(s) defined:
+In order to define and load additional backends into Nautobot a plugin can be used. This plugin will allow the backend(s) to be loaded into the Django settings for use within the `nautobot_config.py` file. At the simplest form the plugin should have a custom backend(s) defined:
 
 ```python
 # my_customer_backends.py
@@ -237,7 +240,7 @@ AUTHENTICATION_BACKENDS = [
 ]
 ```
 
-Once the custom backend is loaded into the settings all the configuration items mentioned previously need to be completed for each server.  As a simplified example defining the URIs would be accomplished by the following two lines in the `nautobot_config.py` file.  A similar approach would be done to define the rest of the settings.
+Once the custom backend is loaded into the settings all the configuration items mentioned previously need to be completed for each server. As a simplified example defining the URIs would be accomplished by the following two lines in the `nautobot_config.py` file. A similar approach would be done to define the rest of the settings.
 
 ```python
 # nautobot_config.py
@@ -250,7 +253,7 @@ AUTH_LDAP_SECONDARY_SERVER_URI = "ldap://secondary-ad.example.com"
 ```
 
 !!! info
-    In this example the default LDAPBackend was still used as the first LDAP server, which utilized the `AUTH_LDAP_*` environment variables. It is also possible to remove the default backend and create multiple custom backends instead to normalize the environment variable naming scheme.
+In this example the default LDAPBackend was still used as the first LDAP server, which utilized the `AUTH_LDAP_*` environment variables. It is also possible to remove the default backend and create multiple custom backends instead to normalize the environment variable naming scheme.
 
 ## Troubleshooting LDAP
 
