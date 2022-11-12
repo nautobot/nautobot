@@ -930,7 +930,7 @@ class DynamicFilterLookupExpressionTest(TestCase):
         )
 
     def test_site_region_id_negation(self):
-        params = {"region_id__n": [self.regions[0].pk]}
+        params = {"region__n": [self.regions[0].pk]}
         self.assertQuerysetEqual(
             SiteFilterSet(params, self.site_queryset).qs,
             Site.objects.exclude(region__in=self.regions[0].get_descendants(include_self=True)),
@@ -1162,7 +1162,7 @@ class SearchFilterTest(TestCase, mixins.NautobotTestCaseMixin):
         self.assertQuerysetEqualAndNotEmpty(
             self.filterset_class(params, self.queryset).qs, self.queryset.filter(asn__exact="1234")
         )
-        asn = Site.objects.exclude(asn="1234").values_list("asn", flat=True).first()
+        asn = Site.objects.exclude(asn="1234").exclude(asn__isnull=True).values_list("asn", flat=True).first()
         params = {"q": str(asn)}
         self.assertQuerysetEqualAndNotEmpty(
             self.filterset_class(params, self.queryset).qs, self.queryset.filter(asn__exact=str(asn))
