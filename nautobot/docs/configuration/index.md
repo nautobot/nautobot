@@ -12,13 +12,14 @@ By default (if you haven't set [`NAUTOBOT_ROOT`](#nautobot-root-directory) to so
 nautobot-server init
 ```
 
-Output:
+Example output:
+
 ```no-highlight
 Configuration file created at '/opt/nautobot/nautobot_config.py'
 ```
 
 !!! tip
-    The [Nautobot Installation Docs](../installation/nautobot.md#choose-your-nautobot_root) example sets `NAUTOBOT_ROOT` to `/opt/nautobot`, so `nautobot_config.py` would be found at `/opt/nautobot/nautobot_config.py`.
+The [Nautobot Installation Docs](../installation/nautobot.md#choose-your-nautobot_root) example sets `NAUTOBOT_ROOT` to `/opt/nautobot`, so `nautobot_config.py` would be found at `/opt/nautobot/nautobot_config.py`.
 
 You may specify a different location for the configuration as the argument to `init`:
 
@@ -31,7 +32,7 @@ Configuration file created at '/tmp/custom_config.py'
 ```
 
 !!! note
-    Throughout the documentation, the configuration file will be referred to by name as `nautobot_config.py`. If you use a custom file name, you must use that instead.
+Throughout the documentation, the configuration file will be referred to by name as `nautobot_config.py`. If you use a custom file name, you must use that instead.
 
 ## Specifying your Configuration
 
@@ -69,10 +70,10 @@ export NAUTOBOT_ROOT=/opt/nautobot
 This setting is also used in the [Nautobot deployment guide](../installation/nautobot.md) to make the `nautobot-server` command easier to find and use.
 
 !!! note
-    The `--config` argument and the `NAUTOBOT_CONFIG` environment variable will always take precedence over `NAUTOBOT_ROOT` for the purpose of telling Nautobot where your `nautobot_config.py` can be found.
+The `--config` argument and the `NAUTOBOT_CONFIG` environment variable will always take precedence over `NAUTOBOT_ROOT` for the purpose of telling Nautobot where your `nautobot_config.py` can be found.
 
 !!! warning
-    Do not override `NAUTOBOT_ROOT` in your `nautobot_config.py`. It will not work as expected. If you need to customize this setting, please always set the `NAUTOBOT_ROOT` environment variable.
+Do not override `NAUTOBOT_ROOT` in your `nautobot_config.py`. It will not work as expected. If you need to customize this setting, please always set the `NAUTOBOT_ROOT` environment variable.
 
 ## File Storage
 
@@ -82,16 +83,16 @@ Each of the features requiring use of file storage default to being stored in `N
 
 ## Configuration Parameters
 
-While Nautobot has many configuration settings, only a few of them must be defined at the time of installation.  These configuration parameters may be set in `nautobot_config.py` or by default many of them may also be set by environment variables. Please see the following links for more information:
+While Nautobot has many configuration settings, only a few of them must be defined at the time of installation. These configuration parameters may be set in `nautobot_config.py` or by default many of them may also be set by environment variables. Please see the following links for more information:
 
-* [Required settings](required-settings.md)
-* [Optional settings](optional-settings.md)
+- [Required settings](required-settings.md)
+- [Optional settings](optional-settings.md)
 
 ## Optional Authentication Configuration
 
-* [LDAP Authentication](authentication/ldap.md)
-* [Remote User Authentication](authentication/remote.md)
-* [SSO Authentication](authentication/sso.md)
+- [LDAP Authentication](authentication/ldap.md)
+- [Remote User Authentication](authentication/remote.md)
+- [SSO Authentication](authentication/sso.md)
 
 ## Changing the Configuration
 
@@ -114,6 +115,7 @@ nautobot-server nbshell
 ```
 
 Output:
+
 ```no-highlight
 ### Nautobot interactive shell (localhost)
 ### Python 3.9.1 | Django 3.1.3 | Nautobot 1.0.0
@@ -137,9 +139,9 @@ echo $NAUTOBOT_CONFIG
 ### Adding your own dependencies
 
 !!! warning
-    Be cautious not to confuse extra applications with Nautobot plugins which are installed using the [`PLUGINS`](optional-settings.md#plugins) setting. They are similar, but distinctly different!
+Be cautious not to confuse extra applications with Nautobot plugins which are installed using the [`PLUGINS`](optional-settings.md#plugins) setting. They are similar, but distinctly different!
 
-Nautobot, being a Django application, allows for installation of additional dependencies utilizing the [`INSTALLED_APPS`](https://docs.djangoproject.com/en/stable/ref/settings/#std:setting-INSTALLED_APPS) settings. Due to the highly specialized nature of Nautobot, *you cannot safely do this*.
+Nautobot, being a Django application, allows for installation of additional dependencies utilizing the [`INSTALLED_APPS`](https://docs.djangoproject.com/en/stable/ref/settings/#std:setting-INSTALLED_APPS) settings. Due to the highly specialized nature of Nautobot, _you cannot safely do this_.
 
 For example, let's assume that you want to install the popular [`django-health-check`](https://django-health-check.readthedocs.io/en/latest/) plugin to your Nautobot deployment which requires you to add one or more `health_check` entries to your `INSTALLED_APPS`.
 

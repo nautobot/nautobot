@@ -13,6 +13,7 @@ nautobot-server nbshell
 ```
 
 Example output:
+
 ```no-highlight
 ### Nautobot interactive shell (localhost)
 ### Python 3.6.9 | Django 3.1 | Nautobot 1.0.0
@@ -33,7 +34,7 @@ DCIM:
 ```
 
 !!! warning
-    The Nautobot shell affords direct access to Nautobot data and function with very little validation in place. As such, it is crucial to ensure that only authorized, knowledgeable users are ever granted access to it. Never perform any action in the management shell without having a full backup in place.
+The Nautobot shell affords direct access to Nautobot data and function with very little validation in place. As such, it is crucial to ensure that only authorized, knowledgeable users are ever granted access to it. Never perform any action in the management shell without having a full backup in place.
 
 ## Querying Objects
 
@@ -110,7 +111,7 @@ This approach can span multiple levels of relations. For example, the following 
 ```
 
 !!! note
-    While the above query is functional, it's not very efficient. There are ways to optimize such requests, however they are out of scope for this document. For more information, see the [Django queryset method reference](https://docs.djangoproject.com/en/stable/ref/models/querysets/) documentation.
+While the above query is functional, it's not very efficient. There are ways to optimize such requests, however they are out of scope for this document. For more information, see the [Django queryset method reference](https://docs.djangoproject.com/en/stable/ref/models/querysets/) documentation.
 
 Reverse relationships can be traversed as well. For example, the following will find all devices with an interface named "em0":
 
@@ -148,7 +149,7 @@ To return the inverse of a filtered queryset, use `exclude()` instead of `filter
 ```
 
 !!! info
-    The examples above are intended only to provide a cursory introduction to queryset filtering. For an exhaustive list of the available filters, please consult the [Django queryset API documentation](https://docs.djangoproject.com/en/stable/ref/models/querysets/).
+The examples above are intended only to provide a cursory introduction to queryset filtering. For an exhaustive list of the available filters, please consult the [Django queryset API documentation](https://docs.djangoproject.com/en/stable/ref/models/querysets/).
 
 ## Creating and Updating Objects
 
@@ -179,10 +180,10 @@ To modify an existing object, we retrieve it, update the desired field(s), and c
 ```
 
 !!! warning
-    It is recommended to make use of the `validated_save()` convenience method which exists on all core models. While the Django `save()` method still exists, the `validated_save()` method saves the instance data but first enforces model validation logic. Simply calling `save()` on the model instance **does not** enforce validation automatically and may lead to bad data. See the development [best practices](../development/best-practices.md).
+It is recommended to make use of the `validated_save()` convenience method which exists on all core models. While the Django `save()` method still exists, the `validated_save()` method saves the instance data but first enforces model validation logic. Simply calling `save()` on the model instance **does not** enforce validation automatically and may lead to bad data. See the development [best practices](../development/best-practices.md).
 
 !!! warning
-    The Django ORM provides methods to create/edit many objects at once, namely `bulk_create()` and `update()`. These are best avoided in most cases as they bypass a model's built-in validation and can easily lead to database corruption if not used carefully.
+The Django ORM provides methods to create/edit many objects at once, namely `bulk_create()` and `update()`. These are best avoided in most cases as they bypass a model's built-in validation and can easily lead to database corruption if not used carefully.
 
 ## Deleting Objects
 
@@ -207,7 +208,7 @@ To delete multiple objects at once, call `delete()` on a filtered queryset. It's
 ```
 
 !!! warning
-    Deletions are immediate and irreversible. Always consider the impact of deleting objects carefully before calling `delete()` on an instance or queryset.
+Deletions are immediate and irreversible. Always consider the impact of deleting objects carefully before calling `delete()` on an instance or queryset.
 
 ## Change Logging and Webhooks
 

@@ -250,7 +250,7 @@ nautobot-server health_check
 
 Output
 
-```
+```no-highlight
 DatabaseBackend          ... working
 DefaultFileStorageHealthCheck ... working
 RedisBackend             ... working
