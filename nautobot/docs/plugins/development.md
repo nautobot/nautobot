@@ -56,9 +56,9 @@ plugin_name/
 
 The top level is the project root. Immediately within the root should exist several items:
 
--   `pyproject.toml` - This is the new [unified Python project settings file](https://www.python.org/dev/peps/pep-0518/) that replaces `setup.py`, `requirements.txt`, and various other setup files (like `setup.cfg`, `MANIFEST.in`, among others).
--   `README.md` - A brief introduction to your plugin, how to install and configure it, where to find help, and any other pertinent information. It is recommended to write README files using a markup language such as Markdown.
--   The plugin source directory, with the same name as your plugin.
+- `pyproject.toml` - This is the new [unified Python project settings file](https://www.python.org/dev/peps/pep-0518/) that replaces `setup.py`, `requirements.txt`, and various other setup files (like `setup.cfg`, `MANIFEST.in`, among others).
+- `README.md` - A brief introduction to your plugin, how to install and configure it, where to find help, and any other pertinent information. It is recommended to write README files using a markup language such as Markdown.
+- The plugin source directory, with the same name as your plugin.
 
 The plugin source directory contains all of the actual Python code and other resources used by your plugin. Its structure is left to the author's discretion, however it is recommended to follow best practices as outlined in the [Django documentation](https://docs.djangoproject.com/en/stable/intro/reusable-apps/). At a minimum, this directory **must** contain an `__init__.py` file containing an instance of Nautobot's `PluginConfig` class.
 
@@ -195,9 +195,9 @@ Otherwise if using the pip install or Docker workflows, manually activate nautob
 
 To install the plugin for development the following steps should be taken:
 
--   Activate the Nautobot virtual environment (as detailed above)
--   Navigate to the project root, where the `pyproject.toml` file exists for the plugin
--   Execute the command `poetry install` to install the local package into the Nautobot virtual environment
+- Activate the Nautobot virtual environment (as detailed above)
+- Navigate to the project root, where the `pyproject.toml` file exists for the plugin
+- Execute the command `poetry install` to install the local package into the Nautobot virtual environment
 
 !!! note
 Poetry installs the current project and its dependencies in editable mode (aka ["development mode"](https://setuptools.readthedocs.io/en/latest/userguide/development_mode.html)).
@@ -225,20 +225,20 @@ In the Nautobot UI, navigate to **Plugins -> Installed Plugins**. The newly inst
 
 Plugins can inject custom content into certain areas of the detail views of applicable models. This is accomplished by subclassing `PluginTemplateExtension`, designating a particular Nautobot model, and defining the desired methods to render custom content. Four methods are available:
 
--   `left_page()` - Inject content on the left side of the page
--   `right_page()` - Inject content on the right side of the page
--   `full_width_page()` - Inject content across the entire bottom of the page
--   `buttons()` - Add buttons to the top of the page
--   `detail_tabs()` - Add extra tabs to the end of the list of tabs within the page tabs navigation
+- `left_page()` - Inject content on the left side of the page
+- `right_page()` - Inject content on the right side of the page
+- `full_width_page()` - Inject content across the entire bottom of the page
+- `buttons()` - Add buttons to the top of the page
+- `detail_tabs()` - Add extra tabs to the end of the list of tabs within the page tabs navigation
 
 Additionally, a `render()` method is available for convenience. This method accepts the name of a template to render, and any additional context data you want to pass. Its use is optional, however.
 
 When a PluginTemplateExtension is instantiated, context data is assigned to `self.context`. Available data include:
 
--   `object` - The object being viewed
--   `request` - The current request
--   `settings` - Global Nautobot settings
--   `config` - Plugin-specific configuration parameters
+- `object` - The object being viewed
+- `request` - The current request
+- `settings` - Global Nautobot settings
+- `config` - Plugin-specific configuration parameters
 
 For example, accessing `{{ request.user }}` within a template will return the current user.
 
@@ -307,8 +307,8 @@ In order for any extra tabs to work properly, the `"url"` key must reference a v
 {% extends 'dcim/device.html' %} {% block content %}
 <h2>Device Plugin Tab 1</h2>
 <p>
-    I am some content for the example plugin's device ({{ object.pk }}) detail
-    tab 1.
+  I am some content for the example plugin's device ({{ object.pk }}) detail tab
+  1.
 </p>
 {% endblock %}
 ```
@@ -654,10 +654,10 @@ A plugin can define and register additional providers (sources) for [Secrets](..
 
 To define a new `SecretsProvider` subclass, we must specify the following:
 
--   A unique `slug` string identifying this provider
--   A human-readable `name` string (optional; the `slug` will be used if this is not specified)
--   A Django form for entering the parameters required by this provider, as an inner class named `ParametersForm`
--   An implementation of the `get_value_for_secret()` API to actually retrieve the value of a given secret
+- A unique `slug` string identifying this provider
+- A human-readable `name` string (optional; the `slug` will be used if this is not specified)
+- A Django form for entering the parameters required by this provider, as an inner class named `ParametersForm`
+- An implementation of the `get_value_for_secret()` API to actually retrieve the value of a given secret
 
 For a simple (insecure!) example, we could define a "constant-value" provider that simply stores a constant value in Nautobot itself and returns this value on demand.
 
@@ -717,9 +717,9 @@ Plugins can extend any model-based `FilterSet` and `FilterForm` classes that are
 
 The requirements to extend a filter set or a filter form (or both) are:
 
--   The file must be named `filter_extensions.py`
--   The variable `filter_extensions` must be declared in that file, and contain a list of `PluginFilterExtension` subclasses
--   The `model` attribute of each `PluginFilterExtension` subclass must be set to a valid model name in the dotted pair format (`{app_label}.{model}`, e.g. `tenant.tenant` or `dcim.device`)
+- The file must be named `filter_extensions.py`
+- The variable `filter_extensions` must be declared in that file, and contain a list of `PluginFilterExtension` subclasses
+- The `model` attribute of each `PluginFilterExtension` subclass must be set to a valid model name in the dotted pair format (`{app_label}.{model}`, e.g. `tenant.tenant` or `dcim.device`)
 
 Nautobot dynamically creates many additional filters based upon the defined filter type. Specifically, there are additional lookup expressions (referred to in code as `lookup_expr`) that are created for each filter, when there is neither a `lookup_expr` nor `method` parameter already set. These dynamically-added lookup expressions are added using a shorthand notation (e.g. `icontains` is `ic`). Nautobot will also add the negation of each, for example, so `icontains` will be added along with _not_ `icontains` using the `ic` and `nic` expressions respectively.
 
@@ -730,26 +730,26 @@ For developers of plugins that define their own model filters, note that the abo
 
 However, that does not cover every possible use case, to list a few examples:
 
--   Usage of a custom `method` argument on a filter that points to a `FilterSet` method, which would allow arbitrary filtering using custom logic. This is how the `q` field search logic is currently performed.
--   Creation of a filter on a field that does not currently have filtering support
--   Convenience methods for highly nested fields
+- Usage of a custom `method` argument on a filter that points to a `FilterSet` method, which would allow arbitrary filtering using custom logic. This is how the `q` field search logic is currently performed.
+- Creation of a filter on a field that does not currently have filtering support
+- Convenience methods for highly nested fields
 
 There are several conditions that must be met in order to extend a filter:
 
--   The original FilterSet must follow the pattern: `f"{model.__name__}FilterSet"` e.g. `TenantFilterSet`
--   The `PluginFilterExtension.filterset_fields` attribute must be a valid dict, with each key being the filter name (which must start with the plugin's `name` + `_`, e.g. `"example_plugin_description"`, not merely `"description"`) and each value being a valid [django-filter](https://django-filter.readthedocs.io/en/main/) filter
+- The original FilterSet must follow the pattern: `f"{model.__name__}FilterSet"` e.g. `TenantFilterSet`
+- The `PluginFilterExtension.filterset_fields` attribute must be a valid dict, with each key being the filter name (which must start with the plugin's `name` + `_`, e.g. `"example_plugin_description"`, not merely `"description"`) and each value being a valid [django-filter](https://django-filter.readthedocs.io/en/main/) filter
 
 Nautobot will dynamically generate the additional relevant lookup expressions of a plugin's defined custom FilterSet field, so no need to additionally register `example_plugin_description__ic`, etc.
 
 Similar to `FilterSet` fields, Nautobot provides a default filter form for each model, however that does not cover every possible use case. To list a few examples of why one may want to extend a filter form:
 
--   The base filter form does not include a custom filter defined by the plugin as described above
--   The base filter form does not provide a specific lookup expression to a filterable field, such as allowing regex on name
+- The base filter form does not include a custom filter defined by the plugin as described above
+- The base filter form does not provide a specific lookup expression to a filterable field, such as allowing regex on name
 
 There are several conditions that must be met in order to extend a filter:
 
--   The original `FilterForm` must follow the pattern: `f"{model.__name__}FilterForm"`, e.g. `TenantFilterForm`
--   The `filterform_fields` attribute must be a valid dictionary of Django form fields
+- The original `FilterForm` must follow the pattern: `f"{model.__name__}FilterForm"`, e.g. `TenantFilterForm`
+- The `filterform_fields` attribute must be a valid dictionary of Django form fields
 
 !!! note
 A plugin is not required to define both `filterset_fields` and `filterform_fields`.
@@ -865,15 +865,15 @@ This will display the plugin and its model in the admin UI. Staff users can crea
 
 Plugins can optionally expose their models via the GraphQL interface to allow the models to be part of the Graph and to be queried easily. There are two mutually exclusive ways to expose a model to the GraphQL interface.
 
--   By using the `@extras_features` decorator
--   By creating your own GraphQL type definition and registering it within `graphql/types.py` of your plugin (the decorator _should not_ be used in this case)
+- By using the `@extras_features` decorator
+- By creating your own GraphQL type definition and registering it within `graphql/types.py` of your plugin (the decorator _should not_ be used in this case)
 
 All GraphQL model types defined by your plugin, regardless of which method is chosen, will automatically support some built-in Nautobot features:
 
--   Support for object permissions based on their associated `Model` class
--   Include any [custom fields](../models/extras/customfield.md) defined for their `Model`
--   Include any [relationships](../models/extras/relationship.md) defined for their `Model`
--   Include [tags](../models/extras/tag.md), if the `Model` supports them
+- Support for object permissions based on their associated `Model` class
+- Include any [custom fields](../models/extras/customfield.md) defined for their `Model`
+- Include any [relationships](../models/extras/relationship.md) defined for their `Model`
+- Include [tags](../models/extras/tag.md), if the `Model` supports them
 
 #### Using the `@extras_features` Decorator for GraphQL
 
@@ -940,16 +940,16 @@ For authentication either a request object or user object needs to be passed in.
 
 Arguments:
 
--   `execute_query()`:
-    -   `query` (str): String with GraphQL query.
-    -   `variables` (dict, optional): If the query has variables they need to be passed in as a dictionary.
-    -   `request` (django.test.client.RequestFactory, optional): Used to authenticate.
-    -   `user` (django.contrib.auth.models.User, optional): Used to authenticate.
--   `execute_saved_query()`:
-    -   `saved_query_slug` (str): Slug of a saved GraphQL query.
-    -   `variables` (dict, optional): If the query has variables they need to be passed in as a dictionary.
-    -   `request` (django.test.client.RequestFactory, optional): Used to authenticate.
-    -   `user` (django.contrib.auth.models.User, optional): Used to authenticate.
+- `execute_query()`:
+    - `query` (str): String with GraphQL query.
+    - `variables` (dict, optional): If the query has variables they need to be passed in as a dictionary.
+    - `request` (django.test.client.RequestFactory, optional): Used to authenticate.
+    - `user` (django.contrib.auth.models.User, optional): Used to authenticate.
+- `execute_saved_query()`:
+    - `saved_query_slug` (str): Slug of a saved GraphQL query.
+    - `variables` (dict, optional): If the query has variables they need to be passed in as a dictionary.
+    - `request` (django.test.client.RequestFactory, optional): Used to authenticate.
+    - `user` (django.contrib.auth.models.User, optional): Used to authenticate.
 
 Returned is a GraphQL object which holds the same data as returned from GraphiQL. Use `execute_query().to_dict()` to get the data back inside of a dictionary.
 
@@ -1002,16 +1002,16 @@ class YourPluginModelUIViewSet(NautobotUIViewSet):
 
 Templates can benefit from a very rich context passed down from the views and renderer, including forms, tables, as well as any other information that may be helpful for rendering templates. The keys it provides are as follows:
 
--   `content_type`: The ContentType object for the associated model
--   `filter_form`: The FilterForm object for the associated model
--   `form`: A Form object for the associated model if relevant (`None` for list and detail/retrieve views)
--   `object`: An instance of the associated mode if available (`None` for list and bulk operation views)
--   `permissions`: Summary of user permissions for the given model
--   `return_url`: The relevant return URL
--   `table`: A Table object for the associated model if relevant (`None` for detail/retrieve and update views)
--   `table_config_form`: A TableConfigForm object for the associated `table`, providing the ability to customize the table
--   `verbose_name`: The singular form of the model's name
--   `verbose_name_plural`: The plural form of the model's name
+- `content_type`: The ContentType object for the associated model
+- `filter_form`: The FilterForm object for the associated model
+- `form`: A Form object for the associated model if relevant (`None` for list and detail/retrieve views)
+- `object`: An instance of the associated mode if available (`None` for list and bulk operation views)
+- `permissions`: Summary of user permissions for the given model
+- `return_url`: The relevant return URL
+- `table`: A Table object for the associated model if relevant (`None` for detail/retrieve and update views)
+- `table_config_form`: A TableConfigForm object for the associated `table`, providing the ability to customize the table
+- `verbose_name`: The singular form of the model's name
+- `verbose_name_plural`: The plural form of the model's name
 
 An example from editing a Provider object:
 
@@ -1032,15 +1032,15 @@ An example from editing a Provider object:
 
 Other context keys may be available for certain views:
 
--   `editing`: Provided for create and update views to help the template determine if this is a new or existing object
--   `action_buttons`: Provided for the list view for the top of table buttons (such as "Add" and "Export")
+- `editing`: Provided for create and update views to help the template determine if this is a new or existing object
+- `action_buttons`: Provided for the list view for the top of table buttons (such as "Add" and "Export")
 
 You may see other context keys as well, but any not documented above should not be relied upon as they may be removed in a future release. Some examples of those are:
 
--   `changelog_url`: This can now be retrieved from the object itself, via `object.get_changelog_url`, if the object supports change-logging
--   `obj`: Please use `object` instead
--   `obj_type`: Please use `verbose_name` instead
--   `obj_type_plural`: Please use `verbose_name_plural` instead
+- `changelog_url`: This can now be retrieved from the object itself, via `object.get_changelog_url`, if the object supports change-logging
+- `obj`: Please use `object` instead
+- `obj_type`: Please use `verbose_name` instead
+- `obj_type_plural`: Please use `verbose_name_plural` instead
 
 #### Excluding ViewMixins from NautobotUIViewSet
 
@@ -1169,10 +1169,10 @@ More documentation and examples can be found in [Generic Views](../development/g
 
 Nautobot provides a base template to ensure a consistent user experience, which plugins can extend with their own content. This template includes four content blocks:
 
--   `title` - The page title
--   `header` - The upper portion of the page
--   `content` - The main page body
--   `javascript` - A section at the end of the page for including Javascript code
+- `title` - The page title
+- `header` - The upper portion of the page
+- `content` - The main page body
+- `javascript` - A section at the end of the page for including Javascript code
 
 For more information on how template blocks work, consult the [Django documentation](https://docs.djangoproject.com/en/stable/ref/templates/builtins/#block).
 
@@ -1222,9 +1222,9 @@ urlpatterns = [
 
 A URL pattern has three components:
 
--   `route` - The unique portion of the URL dedicated to this view
--   `view` - The view itself
--   `name` - A short name used to identify the URL path internally
+- `route` - The unique portion of the URL dedicated to this view
+- `view` - The view itself
+- `name` - A short name used to identify the URL path internally
 
 This makes our view accessible at the URL `/plugins/animal-sounds/random/`. (Remember, our `AnimalSoundsConfig` class sets our plugin's base URL to `animal-sounds`.) Viewing this URL should show the base Nautobot template with our custom content inside it.
 
@@ -1395,22 +1395,22 @@ Example output of `invoke performance-test --performance-snapshot`:
 
 ```yaml
 tests:
-    - name: >-
-          test_run_job_with_sensitive_variables_and_requires_approval
-          (nautobot.extras.tests.test_views.JobTestCase)
-      execution_time: 4.799533
-    - name: test_run_missing_schedule (nautobot.extras.tests.test_views.JobTestCase)
-      execution_time: 4.367563
-    - name: test_run_now_missing_args (nautobot.extras.tests.test_views.JobTestCase)
-      execution_time: 4.363194
-    - name: >-
-          test_create_object_with_constrained_permission
-          (nautobot.extras.tests.test_views.GraphQLQueriesTestCase)
-      execution_time: 3.474244
-    - name: >-
-          test_run_now_constrained_permissions
-          (nautobot.extras.tests.test_views.JobTestCase)
-      execution_time: 2.727531
+  - name: >-
+      test_run_job_with_sensitive_variables_and_requires_approval
+      (nautobot.extras.tests.test_views.JobTestCase)
+    execution_time: 4.799533
+  - name: test_run_missing_schedule (nautobot.extras.tests.test_views.JobTestCase)
+    execution_time: 4.367563
+  - name: test_run_now_missing_args (nautobot.extras.tests.test_views.JobTestCase)
+    execution_time: 4.363194
+  - name: >-
+      test_create_object_with_constrained_permission
+      (nautobot.extras.tests.test_views.GraphQLQueriesTestCase)
+    execution_time: 3.474244
+  - name: >-
+      test_run_now_constrained_permissions
+      (nautobot.extras.tests.test_views.JobTestCase)
+    execution_time: 2.727531
 ```
 
 We recommend adding [`django-slowtests`](https://pypi.org/project/django-slowtests/) to your plugin's development dependencies to leverage this functionality to build better performing plugins.
