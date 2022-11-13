@@ -318,6 +318,18 @@ It may not always be convenient to enter into the virtual shell just to run prog
 $ poetry run mkdocs serve
 ```
 
+In order to serve docs on a Mac:
+
+- Install mkdocs via homebrew
+```bash
+brew install mkdocs
+```
+- Get the proper mkdocs themes installed
+```bash
+poetry shell
+poetry install
+```
+
 Check out the [Poetry usage guide](https://python-poetry.org/docs/basic-usage/) for more tips.
 
 #### Configuring Nautobot
