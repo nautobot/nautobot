@@ -34,7 +34,7 @@ Installed Jobs are now represented by a data model in the Nautobot database. Thi
 - Job attributes (name, description, approval requirements, etc.) can now be managed via the Nautobot UI by an administrator or user with appropriate permissions to customize or override the attributes defined in the Job source code.
 - Jobs can now be identified by a `slug` as well as by their `class_path`.
 - A new set of REST API endpoints have been added to `/api/extras/jobs/<uuid>/`. The existing `/api/extras/jobs/<class_path>/` REST API endpoints continue to work but should be considered as deprecated.
-  - A new version of the REST API `/api/extras/jobs/` list endpoint has been implemented as well, but by default this endpoint continues to demonstrate the pre-1.3 behavior unless the REST API client explicitly requests API `version=1.3`. See the section on REST API versioning, below, for more details.
+    - A new version of the REST API `/api/extras/jobs/` list endpoint has been implemented as well, but by default this endpoint continues to demonstrate the pre-1.3 behavior unless the REST API client explicitly requests API `version=1.3`. See the section on REST API versioning, below, for more details.
 - As a minor security measure, newly installed Jobs default to `enabled = False`, preventing them from being run until an administrator or user with appropriate permissions updates them to be enabled for running.
 
 !!! note
@@ -102,9 +102,9 @@ This endpoint specifically supports Basic Authentication in addition to the othe
 Nautobot's REST API now supports multiple versions, which may be requested by modifying the HTTP Accept header on any requests sent by a REST API client. Details are in the [REST API documentation](../rest-api/overview.md#versioning), but in brief:
 
 - The REST API endpoints that are versioned in the 1.3.0 release are
-  - `/api/extras/jobs/` listing endpoint
-  - `/api/extras/tags/` create/put/patch endpoints
-  - all `/api/ipam/ip-addresses/` endpoints
+    - `/api/extras/jobs/` listing endpoint
+    - `/api/extras/tags/` create/put/patch endpoints
+    - all `/api/ipam/ip-addresses/` endpoints
 - All other REST API endpoints are currently non-versioned. However, over time more versioned REST APIs will be developed, so this is important to understand for all REST API consumers.
 - If a REST API client does not request a specific REST API version (in other words, requests `Accept: application/json` rather than `Accept: application/json; version=1.3`) the API behavior will be compatible with Nautobot 1.2, at a minimum for the remainder of the Nautobot 1.x release cycle.
 - The API behavior may change to a newer default version in a Nautobot major release (such as 2.0).
