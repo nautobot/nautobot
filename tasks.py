@@ -486,17 +486,32 @@ def post_upgrade(context):
     run_command(context, command)
 
 
-@task(help={"format": "Output serialization format for dumped data. (Choices: json, xml, yaml)"})
-def dumpdata(context, format="json"):  # pylint: disable=redefined-builtin
+@task(
+    help={
+        "filepath": "Path to the file to create or overwrite",
+        "format": "Output serialization format for dumped data. (Choices: json, xml, yaml)",
+        "model": "Model to include, such as 'dcim.device', repeat as needed",
+    },
+    iterable=["model"],
+)
+def dumpdata(context, format="json", model=None, filepath=None):  # pylint: disable=redefined-builtin
     """Dump data from database to db_output file."""
-    command = f"nautobot-server dumpdata --exclude django_rq --indent 4 --output db_output.{format} --format {format}"
-    run_command(context, command)
+    if not filepath:
+        filepath = f"db_output.{format}"
+    command_tokens = [
+        "nautobot-server dumpdata",
+        f"--indent 2 --format {format} --natural-foreign --natural-primary",
+        f"--output {filepath}",
+    ]
+    if model is not None:
+        command_tokens += [" ".join(model)]
+    run_command(context, " \\\n    ".join(command_tokens))
 
 
-@task(help={"file_name": "Name and path of file to load."})
-def loaddata(context, file_name):
+@task(help={"filepath": "Name and path of file to load."})
+def loaddata(context, filepath="db_output.json"):
     """Load data from file."""
-    command = f"nautobot-server loaddata {file_name}"
+    command = f"nautobot-server loaddata {filepath}"
     run_command(context, command)
 
 
@@ -631,6 +646,8 @@ def check_schema(context, api_version=None):
         "verbose": "Enable verbose test output.",
         "append": "Append coverage data to .coverage, otherwise it starts clean each time.",
         "skip_docs_build": "Skip (re)build of documentation before running the test.",
+        "performance_report": "Generate Performance Testing report in the terminal. Has to set GENERATE_PERFORMANCE_REPORT=True in settings.py",
+        "performance_snapshot": "Generate a new performance testing report to report.yml. Has to set GENERATE_PERFORMANCE_REPORT=True in settings.py",
     },
     iterable=["tag", "exclude_tag"],
 )
@@ -645,6 +662,8 @@ def unittest(
     verbose=False,
     append=False,
     skip_docs_build=False,
+    performance_report=False,
+    performance_snapshot=False,
 ):
     """Run Nautobot unit tests."""
     if not skip_docs_build:
@@ -663,7 +682,13 @@ def unittest(
         command += " --buffer"
     if verbose:
         command += " --verbosity 2"
-
+    if performance_report or (tag and "performance" in tag):
+        command += " --slowreport"
+    if performance_snapshot:
+        command += " --slowreport --slowreportpath report.yml"
+    # change the default testrunner only if performance testing is running
+    if "--slowreport" in command:
+        command += " --testrunner nautobot.core.tests.runner.NautobotPerformanceTestRunner"
     # lists
     if tag:
         for individual_tag in tag:
@@ -694,6 +719,8 @@ def unittest_coverage(context):
         "verbose": "Enable verbose test output.",
         "append": "Append coverage data to .coverage, otherwise it starts clean each time.",
         "skip_docs_build": "Skip (re)build of documentation before running the test.",
+        "performance_report": "Generate Performance Testing report in the terminal. Set GENERATE_PERFORMANCE_REPORT=True in settings.py before using this flag",
+        "performance_snapshot": "Generate a new performance testing report to report.yml. Set GENERATE_PERFORMANCE_REPORT=True in settings.py before using this flag",
     },
     iterable=["tag", "exclude_tag"],
 )
@@ -708,6 +735,8 @@ def integration_test(
     verbose=False,
     append=False,
     skip_docs_build=False,
+    performance_report=False,
+    performance_snapshot=False,
 ):
     """Run Nautobot integration tests."""
 
@@ -725,6 +754,60 @@ def integration_test(
         verbose=verbose,
         append=append,
         skip_docs_build=skip_docs_build,
+        performance_report=performance_report,
+        performance_snapshot=performance_snapshot,
+    )
+
+
+@task(
+    help={
+        "keepdb": "Save and re-use test database between test runs for faster re-testing.",
+        "label": "Specify a directory or module to test instead of running all Nautobot tests.",
+        "failfast": "Fail as soon as a single test fails don't run the entire test suite.",
+        "buffer": "Discard output from passing tests.",
+        "tag": "Run only tests with the specified tag. Can be used multiple times.",
+        "exclude_tag": "Do not run tests with the specified tag. Can be used multiple times.",
+        "verbose": "Enable verbose test output.",
+        "append": "Append coverage data to .coverage, otherwise it starts clean each time.",
+        "skip_docs_build": "Skip (re)build of documentation before running the test.",
+        "performance_snapshot": "Generate a new performance testing report to report.json. Set GENERATE_PERFORMANCE_REPORT=True in settings.py before using this flag",
+    },
+    iterable=["tag", "exclude_tag"],
+)
+def performance_test(
+    context,
+    keepdb=False,
+    label="nautobot",
+    failfast=False,
+    buffer=True,
+    tag=None,
+    exclude_tag=None,
+    verbose=False,
+    append=False,
+    skip_docs_build=False,
+    performance_snapshot=False,
+):
+    """
+    Run Nautobot performance tests.
+    Prerequisite:
+        Has to set GENERATE_PERFORMANCE_REPORT=True in settings.py
+    """
+    # Enforce "performance" tag
+    tag.append("performance")
+
+    unittest(
+        context,
+        keepdb=keepdb,
+        label=label,
+        failfast=failfast,
+        buffer=buffer,
+        tag=tag,
+        exclude_tag=exclude_tag,
+        verbose=verbose,
+        append=append,
+        skip_docs_build=skip_docs_build,
+        performance_report=True,
+        performance_snapshot=performance_snapshot,
     )
 
 

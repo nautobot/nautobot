@@ -5,29 +5,23 @@ from django.test import TestCase
 from nautobot.circuits.choices import CircuitTerminationSideChoices
 from nautobot.circuits.models import Circuit, CircuitTermination, CircuitType, Provider, ProviderNetwork
 from nautobot.dcim.models import Location, LocationType, Site
-from nautobot.extras.models import Status
 
 
 class CircuitTerminationModelTestCase(TestCase):
     @classmethod
     def setUpTestData(cls):
-        active = Status.objects.get(name="Active")
         provider = Provider.objects.create(name="Provider 1", slug="provider-1")
         circuit_type = CircuitType.objects.create(name="Circuit Type 1", slug="circuit-type-1")
 
-        location_type_1 = LocationType.objects.create(name="Root Type")
-        location_type_2 = LocationType.objects.create(name="Leaf Type", parent=location_type_1)
+        location_type_1 = LocationType.objects.get(name="Campus")
+        location_type_1.content_types.set([])
+        location_type_2 = LocationType.objects.get(name="Building")
         location_type_2.content_types.add(ContentType.objects.get_for_model(CircuitTermination))
-
         cls.circuit = Circuit.objects.create(cid="Circuit 1", provider=provider, type=circuit_type)
-        cls.site = Site.objects.create(name="Site 1", slug="site-1", status=active)
         cls.provider_network = ProviderNetwork.objects.create(name="Provider Network 1", provider=provider)
-        cls.location_1 = Location.objects.create(
-            name="Root", location_type=location_type_1, status=active, site=cls.site
-        )
-        cls.location_2 = Location.objects.create(
-            name="Leaf", location_type=location_type_2, status=active, parent=cls.location_1
-        )
+        cls.location_1 = Location.objects.filter(location_type=location_type_1)[0]
+        cls.location_2 = Location.objects.filter(location_type=location_type_2)[0]
+        cls.site = cls.location_2.base_site
 
     def test_site_or_provider_network_are_required(self):
         ct = CircuitTermination(circuit=self.circuit, term_side=CircuitTerminationSideChoices.SIDE_A)
@@ -85,4 +79,6 @@ class CircuitTerminationModelTestCase(TestCase):
         )
         with self.assertRaises(ValidationError) as cm:
             ct.validated_save()
-        self.assertIn('may not associate to locations of type "Root Type"', str(cm.exception))
+        self.assertIn(
+            f'may not associate to locations of type "{self.location_1.location_type.name}"', str(cm.exception)
+        )

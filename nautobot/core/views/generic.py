@@ -22,6 +22,7 @@ from django.utils.safestring import mark_safe
 from django.views.generic import View
 from django_tables2 import RequestConfig
 
+from nautobot.core.forms import SearchForm
 from nautobot.extras.models import CustomField, ExportTemplate
 from nautobot.extras.models.change_logging import ChangeLoggedModel
 from nautobot.utilities.error_handlers import handle_protectederror
@@ -36,12 +37,15 @@ from nautobot.utilities.forms import (
     TableConfigForm,
     restrict_form_fields,
 )
+from nautobot.utilities.forms.forms import DynamicFilterFormSet
 from nautobot.utilities.paginator import EnhancedPaginator, get_paginate_count
 from nautobot.utilities.permissions import get_permission_for_model
-from nautobot.utilities.templatetags.helpers import validated_viewname
+from nautobot.utilities.templatetags.helpers import bettertitle, validated_viewname
 from nautobot.utilities.utils import (
+    convert_querydict_to_factory_formset_acceptable_querydict,
     csv_format,
     get_route_for_model,
+    get_filterable_params_from_filter_params,
     normalize_querydict,
     prepare_cloned_fields,
 )
@@ -166,9 +170,7 @@ class ObjectListView(ObjectPermissionRequiredMixin, View):
     def get_filter_params(self, request):
         """Helper function - take request.GET and discard any parameters that are not used for queryset filtering."""
         filter_params = request.GET.copy()
-        for non_filter_param in self.non_filter_params:
-            filter_params.pop(non_filter_param, None)
-        return filter_params
+        return get_filterable_params_from_filter_params(filter_params, self.non_filter_params, self.filterset)
 
     def get_required_permission(self):
         return get_permission_for_model(self.queryset.model, "view")
@@ -235,8 +237,12 @@ class ObjectListView(ObjectPermissionRequiredMixin, View):
         model = self.queryset.model
         content_type = ContentType.objects.get_for_model(model)
 
-        filter_params = self.get_filter_params(request)
+        display_filter_params = []
+        dynamic_filter_form = None
+        filter_form = None
+
         if self.filterset:
+            filter_params = self.get_filter_params(request)
             filterset = self.filterset(filter_params, self.queryset)
             self.queryset = filterset.qs
             if not filterset.is_valid():
@@ -245,6 +251,22 @@ class ObjectListView(ObjectPermissionRequiredMixin, View):
                     mark_safe(f"Invalid filters were specified: {filterset.errors}"),
                 )
                 self.queryset = self.queryset.none()
+
+            display_filter_params = [
+                [field_name, values if isinstance(values, (list, tuple)) else [values]]
+                for field_name, values in filter_params.items()
+            ]
+
+            if request.GET:
+                factory_formset_params = convert_querydict_to_factory_formset_acceptable_querydict(
+                    request.GET, self.filterset
+                )
+                dynamic_filter_form = DynamicFilterFormSet(filterset_class=self.filterset, data=factory_formset_params)
+            else:
+                dynamic_filter_form = DynamicFilterFormSet(filterset_class=self.filterset)
+
+            if self.filterset_form:
+                filter_form = self.filterset_form(filter_params, label_suffix="")
 
         # Check for export template rendering
         if request.GET.get("export"):
@@ -284,26 +306,25 @@ class ObjectListView(ObjectPermissionRequiredMixin, View):
             perm_name = get_permission_for_model(model, action)
             permissions[action] = request.user.has_perm(perm_name)
 
-        # Construct the objects table
-        table = self.table(self.queryset, user=request.user)
-        if "pk" in table.base_columns and (permissions["change"] or permissions["delete"]):
-            table.columns.show("pk")
+        table = None
+        table_config_form = None
+        if self.table:
+            # Construct the objects table
+            table = self.table(self.queryset, user=request.user)
+            if "pk" in table.base_columns and (permissions["change"] or permissions["delete"]):
+                table.columns.show("pk")
 
-        # Apply the request context
-        paginate = {
-            "paginator_class": EnhancedPaginator,
-            "per_page": get_paginate_count(request),
-        }
-        RequestConfig(request, paginate).configure(table)
+            # Apply the request context
+            paginate = {
+                "paginator_class": EnhancedPaginator,
+                "per_page": get_paginate_count(request),
+            }
+            RequestConfig(request, paginate).configure(table)
+            table_config_form = TableConfigForm(table=table)
 
-        filter_form = None
-        if self.filterset_form:
-            if request.GET:
-                # Bind form to the values specified in request.GET
-                filter_form = self.filterset_form(filter_params, label_suffix="")
-            else:
-                # Use unbound form with default (initial) values
-                filter_form = self.filterset_form(label_suffix="")
+        # For the search form field, use a custom placeholder.
+        q_placeholder = "Search " + bettertitle(model._meta.verbose_name_plural)
+        search_form = SearchForm(data=request.GET, q_placeholder=q_placeholder)
 
         valid_actions = self.validate_action_buttons(request)
 
@@ -312,9 +333,20 @@ class ObjectListView(ObjectPermissionRequiredMixin, View):
             "table": table,
             "permissions": permissions,
             "action_buttons": valid_actions,
-            "table_config_form": TableConfigForm(table=table),
+            "table_config_form": table_config_form,
+            "filter_params": display_filter_params,
             "filter_form": filter_form,
+            "dynamic_filter_form": dynamic_filter_form,
+            "search_form": search_form,
+            "list_url": validated_viewname(model, "list"),
+            "title": bettertitle(model._meta.verbose_name_plural),
         }
+
+        # `extra_context()` would require `request` access, however `request` parameter cannot simply be
+        # added to `extra_context()` because  this method has been used by multiple apps without any parameters.
+        # Changing 'def extra context()' to 'def extra context(request)' might break current methods
+        # in plugins and core that either override or implement it without request.
+        setattr(self, "request", request)
         context.update(self.extra_context())
 
         return render(request, self.template_name, context)
