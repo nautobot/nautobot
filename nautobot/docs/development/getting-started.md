@@ -320,11 +320,14 @@ $ poetry run mkdocs serve
 
 In order to serve docs on a Mac:
 
-- Install mkdocs via homebrew
+* Install mkdocs via homebrew
+
 ```bash
 brew install mkdocs
 ```
-- Get the proper mkdocs themes installed
+
+* Get the proper mkdocs themes installed
+
 ```bash
 poetry shell
 poetry install
