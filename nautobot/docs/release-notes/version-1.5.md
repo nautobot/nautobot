@@ -80,6 +80,25 @@ As a result, the value of this setting now defaults to `False`, disabling databa
 Added a dynamic filter form that allows users to filter object tables/lists by any field and lookup expression combination supported by the corresponding FilterSet and API.
 
 <!-- towncrier release notes start -->
+## v1.5.1 (2022-11-14)
+
+### Added
+
+- [#2500](https://github.com/nautobot/nautobot/issues/2500) - Added `try/except` block to catch `NoReverseMatch` exception in NotesSerializerMixin and return helpful message.
+- [#2556](https://github.com/nautobot/nautobot/issues/2556) - Revised TODO/FIXME comments for more clarity.
+- [#2740](https://github.com/nautobot/nautobot/issues/2740) - Added ObjectChangeLogView and ObjectNotesView Viewset mixins and routes.
+
+### Changed
+
+- [#1813](https://github.com/nautobot/nautobot/issues/1813) - Updated Example_Plugin to use NautobotUIViewSet.
+
+### Fixed
+
+- [#2470](https://github.com/nautobot/nautobot/issues/2470) - Fixed incorrect automatic generation of Location slugs in the UI.
+- [#2757](https://github.com/nautobot/nautobot/issues/2757) - Fixed filters on default filter form replaces filters on dynamic filter form on submit
+- [#2761](https://github.com/nautobot/nautobot/issues/2761) - Fixed failover strategy not being displayed on Device Redundancy Group page.
+- [#2789](https://github.com/nautobot/nautobot/issues/2789) - Fixed web UI footer margin and swagger UI authorization box size.
+- [#2824](https://github.com/nautobot/nautobot/issues/2824) - Fixed an issue when filtering on nested related fields for Dynamic Groups.
 
 ## v1.5.0 (2022-11-08)
 
