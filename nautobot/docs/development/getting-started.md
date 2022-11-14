@@ -15,7 +15,7 @@ You will always base pull requests off of either the `develop` branch, for fixes
 When developing Nautobot, you'll be working on your own fork, so your first step will be to [fork the official GitHub repository](https://github.com/nautobot/nautobot/fork). You will then clone your GitHub fork locally for development.
 
 !!! note
-It is highly recommended that you use SSH with GitHub. If you haven't already, make sure that you [setup Git](https://docs.github.com/en/github/getting-started-with-github/set-up-git) and [add an SSH key to your GitHub account](https://help.github.com/articles/generating-ssh-keys/) before proceeding.
+    It is highly recommended that you use SSH with GitHub. If you haven't already, make sure that you [setup Git](https://docs.github.com/en/github/getting-started-with-github/set-up-git) and [add an SSH key to your GitHub account](https://help.github.com/articles/generating-ssh-keys/) before proceeding.
 
 In this guide, SSH will be used to interact with Git.
 
@@ -104,7 +104,7 @@ upstream	git@github.com:nautobot/nautobot.git (push)
 You're now ready to proceed to the next steps.
 
 !!! hint
-You will always **push** changes to `origin` (your fork) and **pull** changes from `upstream` (official repo).
+    You will always **push** changes to `origin` (your fork) and **pull** changes from `upstream` (official repo).
 
 ### Creating a Branch
 
@@ -118,7 +118,7 @@ git pull upstream develop
 ```
 
 !!! warning
-If you do not do this, you run the risk of having merge conflicts in your branch, and that's never fun to deal with. Trust us on this one.
+    If you do not do this, you run the risk of having merge conflicts in your branch, and that's never fun to deal with. Trust us on this one.
 
 Now that you've got the latest upstream changes, create your branch. It's convention to always prefix your branch name with your GitHub username or your initials, and suffix it with the issue number if appropriate, separated by hyphens. For example:
 
@@ -131,7 +131,7 @@ git checkout -b yourusername-myfeature-1234
 Nautobot ships with a [Git pre-commit hook](https://githooks.com/) script that automatically checks for style compliance and missing database migrations prior to committing changes. This helps avoid erroneous commits that result in CI test failures.
 
 !!! note
-This pre-commit hook currently only supports the Python Virtual Environment Workflow.
+    This pre-commit hook currently only supports the Python Virtual Environment Workflow.
 
 You are encouraged to enable it by creating a link to `scripts/git-hooks/pre-commit`:
 
@@ -156,7 +156,7 @@ This workflow uses [Docker](https://docs.docker.com/get-docker/) and [Docker Com
 For the Docker Compose workflow, Nautobot uses [Invoke](http://docs.pyinvoke.org/en/latest/index.html) as a replacement for Make. Invoke was chosen because it is less arcane than make. Instead of a `Makefile`, Invoke reads the `tasks.py` in the project root.
 
 !!! note
-Although the Docker Compose workflow uses containers, it is important to note that the containers are running the local repository code on your machine. Changes you make to your local code will be picked up and executed by the containers.
+    Although the Docker Compose workflow uses containers, it is important to note that the containers are running the local repository code on your machine. Changes you make to your local code will be picked up and executed by the containers.
 
 #### Install Invoke
 
@@ -236,14 +236,14 @@ Additional useful commands for the development environment:
 - `invoke stop [-s servicename]` - Stops all containers (or a specific container/service) created by `invoke start`
 
 !!! note
-The mkdocs container must be started manually with `invoke start -s mkdocs`. It will not start automatically with the
+    The mkdocs container must be started manually with `invoke start -s mkdocs`. It will not start automatically with the
 `invoke start` or `invoke debug` commands.
 
 !!! tip
-The Nautobot server uses a Django webservice and worker uses watchdog to provide automatic reload of your web and worker servers in **most** cases when using `invoke start` or `invoke debug`.
+    The Nautobot server uses a Django webservice and worker uses watchdog to provide automatic reload of your web and worker servers in **most** cases when using `invoke start` or `invoke debug`.
 
 !!! tip
-To learn about advanced use cases within the Docker Compose workflow, see the [Docker Compose Advanced Use Cases](docker-compose-advanced-use-cases.md) page.
+    To learn about advanced use cases within the Docker Compose workflow, see the [Docker Compose Advanced Use Cases](docker-compose-advanced-use-cases.md) page.
 
 Proceed to the [Working in your Development Environment](#working-in-your-development-environment) section
 
@@ -270,7 +270,7 @@ curl -sSL https://install.python-poetry.org | python3 -
 ```
 
 !!! danger
-Always utilize this documented method to install Poetry for use when developing Nautobot.
+    Always utilize this documented method to install Poetry for use when developing Nautobot.
 
     Never use `pip` to install Poetry into your Nautobot virtual environment, as it will result in dependency version conflicts that will very likely break Nautobot. Poetry is used as a package manager for Python packages, so you should not install it into the Nautobot environment, because it relies upon a number of the same dependencies as Nautobot, but with conflicting versions.
 
@@ -307,7 +307,7 @@ poetry install
 ```
 
 !!! hint
-If you are doing development or testing using MySQL, you may quickly install the `mysqlclient` library along with Nautobot by running `poetry install --extras mysql`.
+    If you are doing development or testing using MySQL, you may quickly install the `mysqlclient` library along with Nautobot by running `poetry install --extras mysql`.
 
 This will create automatically create a virtualenv in your home directory, which houses a virtual copy of the Python executable and its related libraries and tooling. When running Nautobot for development, it will be run using the Python binary at found within the virtualenv.
 
@@ -384,10 +384,10 @@ Check out the [Poetry usage guide](https://python-poetry.org/docs/basic-usage/) 
 #### Configuring Nautobot
 
 !!! note
-Unless otherwise noted, all following commands should be executed inside the virtualenv.
+    Unless otherwise noted, all following commands should be executed inside the virtualenv.
 
 !!! hint
-Use `poetry shell` to enter the virtualenv.
+    Use `poetry shell` to enter the virtualenv.
 
 Nautobot's configuration file is `nautobot_config.py`.
 
@@ -444,7 +444,7 @@ You'll need to create a administrative superuser account to be able to log into 
 Django provides a lightweight HTTP/WSGI server for development use. The development server automatically reloads Python code for each request, as needed. You don’t need to restart the server for code changes to take effect. However, some actions like adding files don’t trigger a restart, so you’ll have to restart the server in these cases.
 
 !!! danger
-**DO NOT USE THIS SERVER IN A PRODUCTION SETTING.** The development server and watchdog is for development and testing purposes only. It is neither performant nor secure enough for production use.
+    **DO NOT USE THIS SERVER IN A PRODUCTION SETTING.** The development server and watchdog is for development and testing purposes only. It is neither performant nor secure enough for production use.
 
 You can start the Nautobot development server with the `invoke start` command (if using Docker), or the `nautobot-server runserver` management command:
 
@@ -471,7 +471,7 @@ Quit the server with CONTROL-C.
 ```
 
 !!! warning
-Do not use `poetry run nautobot-server runserver` as it will crash unless you also pass the `--noreload` flag, which somewhat defeats the purpose of using the development server. It is recommended to use `nautobot-server runserver` from within an active virtualenv (e.g. `poetry shell`). This is a [known issue with Django and Poetry](https://github.com/python-poetry/poetry/issues/2435).
+    Do not use `poetry run nautobot-server runserver` as it will crash unless you also pass the `--noreload` flag, which somewhat defeats the purpose of using the development server. It is recommended to use `nautobot-server runserver` from within an active virtualenv (e.g. `poetry shell`). This is a [known issue with Django and Poetry](https://github.com/python-poetry/poetry/issues/2435).
 
 Please see the [official Django documentation on `runserver`](https://docs.djangoproject.com/en/stable/ref/django-admin/#runserver) for more information.
 
@@ -488,7 +488,7 @@ The worker is started in Docker Workflow with [watchdog](https://pythonhosted.or
 | `invoke start`          | `nautobot-server celery worker` |
 
 !!! tip
-You can leverage watchdog for your celery worker as described above, with the following watchmedo command in your development environment `watchmedo auto-restart --directory './' --pattern '*.py' --recursive -- nautobot-server celery worker -l INFO --events`.
+    You can leverage watchdog for your celery worker as described above, with the following watchmedo command in your development environment `watchmedo auto-restart --directory './' --pattern '*.py' --recursive -- nautobot-server celery worker -l INFO --events`.
 
 ### Starting the Interactive Shell
 
@@ -530,7 +530,7 @@ Please see the [documentation on the `nautobot-server post_upgrade` command](../
 ### Reinstalling Nautobot
 
 !!! note
-This mostly applies to working with Nautobot in a virtualenv, since Docker containers are typically rebuilt when the code changes.
+    This mostly applies to working with Nautobot in a virtualenv, since Docker containers are typically rebuilt when the code changes.
 
 Sometimes when files are renamed, moved, or deleted and you've been working in the same environment for a while, you can encounter weird behavior. If this happens, don't panic and nuke your environment.
 
@@ -581,7 +581,7 @@ Unit tests are run using the `invoke unittest` command (if using the Docker deve
 | `invoke unittest`       | `nautobot-server --config=nautobot/core/tests/nautobot_config.py test nautobot` |
 
 !!! info
-By default `invoke unittest` will start and run the unit tests inside the Docker development container; this ensures that PostgreSQL and Redis servers are available during the test. However, if you have your environment configured such that `nautobot-server` can run locally, outside of the Docker environment, you may wish to set the environment variable `INVOKE_NAUTOBOT_LOCAL=True` to execute these tests in your local environment instead. See the [Invoke configuration](#invoke-configuration) for more information.
+    By default `invoke unittest` will start and run the unit tests inside the Docker development container; this ensures that PostgreSQL and Redis servers are available during the test. However, if you have your environment configured such that `nautobot-server` can run locally, outside of the Docker environment, you may wish to set the environment variable `INVOKE_NAUTOBOT_LOCAL=True` to execute these tests in your local environment instead. See the [Invoke configuration](#invoke-configuration) for more information.
 
 In cases where you haven't made any changes to the database (which is most of the time), you can append the `--keepdb` argument to this command to reuse the test database between runs. This cuts down on the time it takes to run the test suite since the database doesn't have to be rebuilt each time.
 
@@ -590,10 +590,10 @@ In cases where you haven't made any changes to the database (which is most of th
 | `invoke unittest --keepdb` | `nautobot-server --config=nautobot/core/tests/nautobot_config.py test --keepdb nautobot` |
 
 !!! note
-Using the `--keepdb` argument will raise errors if you've modified any model fields since the previous test run.
+    Using the `--keepdb` argument will raise errors if you've modified any model fields since the previous test run.
 
 !!! warning
-In some cases when tests fail and exit uncleanly it may leave the test database in an inconsistent state. If you encounter errors about missing objects, remove `--keepdb` and run the tests again.
+    In some cases when tests fail and exit uncleanly it may leave the test database in an inconsistent state. If you encounter errors about missing objects, remove `--keepdb` and run the tests again.
 
 #### Integration Tests
 
@@ -616,10 +616,10 @@ Integration tests are run using the `invoke integration-test` command. All integ
 | `invoke integration-test` | `nautobot-server --config=nautobot/core/tests/nautobot_config.py test --tag integration nautobot` |
 
 !!! info
-The same arguments supported by `invoke unittest` are supported by `invoke integration-test`. The key difference being the dependency upon the Selenium container, and inclusion of the `integration` tag.
+    The same arguments supported by `invoke unittest` are supported by `invoke integration-test`. The key difference being the dependency upon the Selenium container, and inclusion of the `integration` tag.
 
 !!! tip
-You may also use `invoke integration-test` in the Virtual Environment workflow given that the `selenium` container is running, and that the `INVOKE_NAUTOBOT_LOCAL=True` environment variable has been set.
+    You may also use `invoke integration-test` in the Virtual Environment workflow given that the `selenium` container is running, and that the `INVOKE_NAUTOBOT_LOCAL=True` environment variable has been set.
 
 ##### Customizing Integration Test Executions
 
@@ -690,7 +690,7 @@ will render as:
 The custom `mkdocs` plugin was added.
 
 !!! caution
-While you _can_ use the `version-added` / `version-changed` / `version-removed` admonitions directly to add a custom title to a specific admonition, in general, you should use the macros for consistency across the documentation.
+    While you _can_ use the `version-added` / `version-changed` / `version-removed` admonitions directly to add a custom title to a specific admonition, in general, you should use the macros for consistency across the documentation.
 
 ### Writing Documentation
 
@@ -724,7 +724,7 @@ Once your fork has the new commit, submit a [pull request](https://github.com/na
 Once submitted, a maintainer will review your pull request and either merge it or request changes. If changes are needed, you can make them via new commits to your fork: The pull request will update automatically.
 
 !!! note
-Remember, pull requests are entertained only for **accepted** issues. If an issue you want to work on hasn't been approved by a maintainer yet, it's best to avoid risking your time and effort on a change that might not be accepted.
+    Remember, pull requests are entertained only for **accepted** issues. If an issue you want to work on hasn't been approved by a maintainer yet, it's best to avoid risking your time and effort on a change that might not be accepted.
 
 ## Troubleshooting
 

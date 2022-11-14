@@ -7,10 +7,10 @@ Nautobot includes a command-line (CLI) management utility called `nautobot-serve
 For those familiar with Django applications, this CLI utility works exactly as a project's `manage.py` script would, except that it comes bundled with the Nautobot code and therefore it gets automatically installed in the `bin` directory of your application environment.
 
 !!! important
-Since Nautobot is a Django application, there are a number of built-in management commands that will not be covered in this document. Please see the [official Django documentation on management commands](https://docs.djangoproject.com/en/stable/ref/django-admin/#available-commands) for more information.
+    Since Nautobot is a Django application, there are a number of built-in management commands that will not be covered in this document. Please see the [official Django documentation on management commands](https://docs.djangoproject.com/en/stable/ref/django-admin/#available-commands) for more information.
 
 !!! important
-Django does not recognize `nautobot-server`. Anywhere `python manage.py` is mentioned, it is safe to replace with `nautobot-server`.
+    Django does not recognize `nautobot-server`. Anywhere `python manage.py` is mentioned, it is safe to replace with `nautobot-server`.
 
 ## Getting Help
 
@@ -72,7 +72,7 @@ celery@worker1 v5.1.1 (sun-harmonics)
 ```
 
 !!! note
-The internals of this command are built into Celery. Please see the [official Celery workers guide](https://docs.celeryq.dev/en/stable/userguide/workers.html) for more information.
+    The internals of this command are built into Celery. Please see the [official Celery workers guide](https://docs.celeryq.dev/en/stable/userguide/workers.html) for more information.
 
 ### `collectstatic`
 
@@ -91,7 +91,7 @@ Output:
 ```
 
 !!! note
-This is a built-in Django command. Please see the [official documentation on `collectstatic`](https://docs.djangoproject.com/en/stable/ref/django-admin/#collectstatic) for more information.
+    This is a built-in Django command. Please see the [official documentation on `collectstatic`](https://docs.djangoproject.com/en/stable/ref/django-admin/#collectstatic) for more information.
 
 ### `createsuperuser`
 
@@ -114,7 +114,7 @@ Superuser created successfully.
 ```
 
 !!! note
-This is a built-in Django command. Please see the [official documentation on `createsuperuser`](https://docs.djangoproject.com/en/stable/ref/django-admin/#createsuperuser) for more information.
+    This is a built-in Django command. Please see the [official documentation on `createsuperuser`](https://docs.djangoproject.com/en/stable/ref/django-admin/#createsuperuser) for more information.
 
 ### `dbshell`
 
@@ -123,7 +123,7 @@ This is a built-in Django command. Please see the [official documentation on `cr
 A shell for your database. This can be very useful in troubleshooting raw database issues.
 
 !!! danger
-This is an advanced feature that gives you direct access to run raw SQL queries. Use this very cautiously as you can cause irreparable damage to your Nautobot installation.
+    This is an advanced feature that gives you direct access to run raw SQL queries. Use this very cautiously as you can cause irreparable damage to your Nautobot installation.
 
 ```no-highlight
 nautobot-server dbshell
@@ -143,7 +143,7 @@ nautobot=> \q
 ```
 
 !!! note
-This is a built-in Django command. Please see the [official documentation on `dbshell`](https://docs.djangoproject.com/en/stable/ref/django-admin/#dbshell) for more information.
+    This is a built-in Django command. Please see the [official documentation on `dbshell`](https://docs.djangoproject.com/en/stable/ref/django-admin/#dbshell) for more information.
 
 ### `dumpdata`
 
@@ -211,7 +211,7 @@ Populate the database with various data as a baseline for testing (automated or 
 Flush any existing data from the database before generating new data.
 
 !!! danger
-Running this command with the `--flush` argument will clear all existing data in your database. You have been warned.
+    Running this command with the `--flush` argument will clear all existing data in your database. You have been warned.
 
 `--seed SEED`  
 String to use as a random generator seed for reproducible results.
@@ -291,7 +291,7 @@ nautobot-server invalidate all
 There are a number of other options not covered here.
 
 !!! note
-This is a built-in management command provided by the [Cacheops plugin](https://github.com/Suor/django-cacheops) Nautobot for caching. Please see the official [Cacheops documentation on `invalidate`](https://github.com/Suor/django-cacheops#invalidation) for more information.
+    This is a built-in management command provided by the [Cacheops plugin](https://github.com/Suor/django-cacheops) Nautobot for caching. Please see the official [Cacheops documentation on `invalidate`](https://github.com/Suor/django-cacheops#invalidation) for more information.
 
 ### `loaddata`
 
@@ -326,7 +326,7 @@ Running migrations:
 ```
 
 !!! note
-This is a built-in Django command. Please see the [official documentation on `migrate`](https://docs.djangoproject.com/en/stable/ref/django-admin/#migrate) for more information.
+    This is a built-in Django command. Please see the [official documentation on `migrate`](https://docs.djangoproject.com/en/stable/ref/django-admin/#migrate) for more information.
 
 ### `nbshell`
 
@@ -335,7 +335,7 @@ This is a built-in Django command. Please see the [official documentation on `mi
 An interactive Python shell with all of the database models and various other utilities already imported for you. This is immensely useful for direct access to manipulating database objects.
 
 !!! danger
-This is an advanced feature that gives you direct access to the Django database models. Use this very cautiously as you can cause irreparable damage to your Nautobot installation.
+    This is an advanced feature that gives you direct access to the Django database models. Use this very cautiously as you can cause irreparable damage to your Nautobot installation.
 
 ```no-highlight
 nautobot-server nbshell
@@ -368,7 +368,7 @@ This will run the following management commands with default settings, in order:
 - `invalidate all`
 
 !!! note
-Commands listed here that are not covered in this document here are Django built-in commands.
+    Commands listed here that are not covered in this document here are Django built-in commands.
 
 `--no-clearsessions`  
 Do not automatically clean out expired sessions.
@@ -511,7 +511,7 @@ Please see the [guide on Jobs](../additional-features/jobs.md) for more informat
 Directly invoke uWSGI to start a Nautobot server suitable for production use. This command behaves exactly as uWSGI does, but allows us to maintain a single entrypoint into the Nautobot application.
 
 !!! note
-uWSGI offers an overwhelming amount of command-line arguments that could not possibly be covered here. Please see the [official uWSGI Options guide](https://uwsgi-docs.readthedocs.io/en/latest/Options.html) for more information.
+    uWSGI offers an overwhelming amount of command-line arguments that could not possibly be covered here. Please see the [official uWSGI Options guide](https://uwsgi-docs.readthedocs.io/en/latest/Options.html) for more information.
 
 ```no-highlight
 nautobot-server start --ini ./uwsgi.ini
@@ -607,7 +607,7 @@ Finished.
 ```
 
 !!! note
-This command is safe to run at any time. If it does detect any changes, it will exit cleanly.
+    This command is safe to run at any time. If it does detect any changes, it will exit cleanly.
 
 ### `webhook_receiver`
 

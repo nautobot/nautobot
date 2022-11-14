@@ -13,7 +13,7 @@ These instructions will guide you through the following actions:
 - Verify the installation using the development/test server
 
 !!! important
-Your database server and Redis must have been successfully installed before continuing with deployment steps. If you haven't done that yet, please visit the guide on [Installing Nautobot Dependencies](index.md#installing-nautobot-dependencies)
+    Your database server and Redis must have been successfully installed before continuing with deployment steps. If you haven't done that yet, please visit the guide on [Installing Nautobot Dependencies](index.md#installing-nautobot-dependencies)
 
 ## Choose your `NAUTOBOT_ROOT`
 
@@ -22,7 +22,7 @@ You need to select a directory path where everything related to Nautobot will be
 We will be using this path as the home directory of the `nautobot` user.
 
 !!! tip
-We have selected `/opt/nautobot`, but you may use any directory you choose.
+    We have selected `/opt/nautobot`, but you may use any directory you choose.
 
 Later on, we will need to set this directory path as the `NAUTOBOT_ROOT` environment variable to tell Nautobot where to find its files and settings.
 
@@ -45,7 +45,7 @@ When installed per the documentation, Nautobot uses a virtual environment in pro
 In the following steps, we will have you create the virtualenv within the `NAUTOBOT_ROOT` you chose in the previous step. This is the same we had you set as the home directory as the `nautobot` user.
 
 !!! note
-Instead of deliberately requiring you to activate/deactivate the virtualenv, we are emphasizing on relying on the `$PATH` to access programs installed within it. We find this to be much more intuitive and natural when working with Nautobot in this way.
+    Instead of deliberately requiring you to activate/deactivate the virtualenv, we are emphasizing on relying on the `$PATH` to access programs installed within it. We find this to be much more intuitive and natural when working with Nautobot in this way.
 
 ### Create the Virtual Environment
 
@@ -88,7 +88,7 @@ Example output:
 ```
 
 !!! warning
-Unless explicitly stated, all remaining steps requiring the use of `pip3` or `nautobot-server` in this document should be performed as the `nautobot` user!
+    Unless explicitly stated, all remaining steps requiring the use of `pip3` or `nautobot-server` in this document should be performed as the `nautobot` user!
 
 ## Understanding the Virtual Environment
 
@@ -164,14 +164,14 @@ pip3 install nautobot
 ```
 
 !!! hint
-If you are using MySQL as your database backend, use `pip3 install "nautobot[mysql]"` to install Nautobot and the `mysqlclient` library together!
+    If you are using MySQL as your database backend, use `pip3 install "nautobot[mysql]"` to install Nautobot and the `mysqlclient` library together!
 
 ### Install MySQL client library
 
 If you are using MySQL as your database server you must install the `mysqlclient` database client for Python.
 
 !!! warning
-If you're using a MySQL database, Nautobot **will not work** without this client library. You cannot skip this step.
+    If you're using a MySQL database, Nautobot **will not work** without this client library. You cannot skip this step.
 
 ```no-highlight
 pip3 install "nautobot[mysql]"
@@ -213,10 +213,10 @@ Edit `$NAUTOBOT_ROOT/nautobot_config.py`, and head over to the documentation on 
 - **Redis settings**: Redis configuration requires multiple settings including [`CACHEOPS_REDIS`](../configuration/required-settings.md#cacheops_redis) and [`RQ_QUEUES`](../configuration/required-settings.md#rq_queues), if different from the defaults. If you installed Redis on the same system as Nautobot, you do not need to change these settings.
 
 !!! important
-You absolutely must update your required settings in your `nautobot_config.py` or Nautobot will not work.
+    You absolutely must update your required settings in your `nautobot_config.py` or Nautobot will not work.
 
 !!! warning
-If you are using MySQL as your database backend, you **must also update** the database `ENGINE` setting to `django.db.backends.mysql`.
+    If you are using MySQL as your database backend, you **must also update** the database `ENGINE` setting to `django.db.backends.mysql`.
 
 Save your changes to your `nautobot_config.py` and then proceed to the next step.
 
@@ -290,7 +290,7 @@ nautobot-server collectstatic
 ## Install Local Requirements
 
 !!! note
-If you did not create a `local_requirements.txt` above, please skip this step.
+    If you did not create a `local_requirements.txt` above, please skip this step.
 
 This step is entirely optional. As indicated above, we mentioned that any extra local requirements should go into `$NAUTOBOT_ROOT/local_requirements.txt`.
 
@@ -305,7 +305,7 @@ Nautobot leverages Django's built-in [system check framework](https://docs.djang
 Checks are ran automatically when running a development server using `nautobot-server runserver`, but not when running in production using WSGI.
 
 !!! hint
-Get into the habit of running checks before deployments!
+    Get into the habit of running checks before deployments!
 
 ```no-highlight
 nautobot-server check
@@ -323,13 +323,13 @@ nautobot-server runserver 0.0.0.0:8080 --insecure
 Next, connect to the name or IP of the server (as defined in `ALLOWED_HOSTS`) on port 8080; for example, <http://127.0.0.1:8080/>. You should be greeted with the Nautobot home page.
 
 !!! danger
-**DO NOT USE THIS SERVER IN A PRODUCTION SETTING.** The development server is for development and testing purposes only. It is neither performant nor secure enough for production use.
+    **DO NOT USE THIS SERVER IN A PRODUCTION SETTING.** The development server is for development and testing purposes only. It is neither performant nor secure enough for production use.
 
 !!! warning
-If the test service does not run, or you cannot reach the Nautobot home page, something has gone wrong. Do not proceed with the rest of this guide until the installation has been corrected. Some platforms (such as CentOS) have a firewall enabled by default. If you are unable to connect to the server url on port 8080, verify the firewall policy to allow the appropriate connections, or select an already permitted port.
+    If the test service does not run, or you cannot reach the Nautobot home page, something has gone wrong. Do not proceed with the rest of this guide until the installation has been corrected. Some platforms (such as CentOS) have a firewall enabled by default. If you are unable to connect to the server url on port 8080, verify the firewall policy to allow the appropriate connections, or select an already permitted port.
 
 !!! important
-Certain Nautobot features (Git repository synchronization, webhooks, jobs, etc.) depend on the presence of Nautobot's background Celery worker process, which is not automatically started by the `runserver` command. To start it for testing purposes, you can run `nautobot-server celery worker` (for background tasks) or `nautobot-server rqworker` (for jobs) separately. For production use, Nautobot and the worker processes should be managed by `systemd` rather than started manually, as described in the next section of this documentation.
+    Certain Nautobot features (Git repository synchronization, webhooks, jobs, etc.) depend on the presence of Nautobot's background Celery worker process, which is not automatically started by the `runserver` command. To start it for testing purposes, you can run `nautobot-server celery worker` (for background tasks) or `nautobot-server rqworker` (for jobs) separately. For production use, Nautobot and the worker processes should be managed by `systemd` rather than started manually, as described in the next section of this documentation.
 
 Note that the initial user interface will be locked down for non-authenticated users.
 

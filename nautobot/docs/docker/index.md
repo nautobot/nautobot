@@ -58,7 +58,7 @@ Currently images are pushed for the following python versions:
 - 3.10
 
 !!! info
-Developer images `networktocode/nautobot-dev:${TAG}` and `ghcr.io/nautobot/nautobot-dev:${TAG}` are also provided with the same tags as above. These images provide the development dependencies needed to build Nautobot; they can be used as a base for development to develop your own Nautobot apps but should **NOT** be used in production.
+    Developer images `networktocode/nautobot-dev:${TAG}` and `ghcr.io/nautobot/nautobot-dev:${TAG}` are also provided with the same tags as above. These images provide the development dependencies needed to build Nautobot; they can be used as a base for development to develop your own Nautobot apps but should **NOT** be used in production.
 
 ## Getting Started
 
@@ -101,7 +101,7 @@ Default: unset
 When starting, the container attempts to connect to the database and run database migrations and upgrade steps necessary when upgrading versions. In normal operation this is harmless to run on every startup and validates the database is operating correctly. However, in certain circumstances such as database maintenance when the database is in a read-only mode it may make sense to start Nautobot but skip these steps. Setting this variable to `true` will start Nautobot without running these initial steps.
 
 !!! note
-Setting this value to anything other than "false" (case-insensitive) will prevent migrations from occurring.
+    Setting this value to anything other than "false" (case-insensitive) will prevent migrations from occurring.
 
 ---
 

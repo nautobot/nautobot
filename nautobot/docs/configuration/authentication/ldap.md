@@ -21,7 +21,7 @@ sudo dnf install -y openldap-devel
 ### Install django-auth-ldap
 
 !!! warning
-This and all remaining steps in this document should all be performed as the `nautobot` user!
+    This and all remaining steps in this document should all be performed as the `nautobot` user!
 
     Hint: Use `sudo -iu nautobot`
 
@@ -46,8 +46,7 @@ echo "nautobot[ldap]" >> /opt/nautobot/local_requirements.txt
 Enable the LDAP authentication backend by adding the following to your `nautobot_config.py`:
 
 !!! note
-It is critical that you include the `ObjectPermissionsBackend` provided by
-Nautobot after the `LDAPBackend` so that object-level permissions features can work properly.
+    It is critical that you include the `ObjectPermissionsBackend` provided by Nautobot after the `LDAPBackend` so that object-level permissions features can work properly.
 
 ```python
 AUTHENTICATION_BACKENDS = [
@@ -61,7 +60,7 @@ AUTHENTICATION_BACKENDS = [
 Define all of the parameters required below in your `nautobot_config.py`. Complete documentation of all `django-auth-ldap` configuration options is included in the project's [official documentation](http://django-auth-ldap.readthedocs.io/).
 
 !!! info
-When using Windows Server 2012 you may wish to use the [Global Catalog](https://docs.microsoft.com/en-us/windows/win32/ad/global-catalog) by specifying a port on `AUTH_LDAP_SERVER_URI`. Use `3269` for secure (`ldaps://`), or `3268` for non-secure.
+    When using Windows Server 2012 you may wish to use the [Global Catalog](https://docs.microsoft.com/en-us/windows/win32/ad/global-catalog) by specifying a port on `AUTH_LDAP_SERVER_URI`. Use `3269` for secure (`ldaps://`), or `3268` for non-secure.
 
 ```python
 import ldap
@@ -126,7 +125,7 @@ Additional ldap connection options can be found in the [python-ldap documentatio
 ### User Authentication
 
 !!! info
-When using Windows Server 2012, `AUTH_LDAP_USER_DN_TEMPLATE` should be set to None.
+    When using Windows Server 2012, `AUTH_LDAP_USER_DN_TEMPLATE` should be set to None.
 
 ```python
 from django_auth_ldap.config import LDAPSearch
@@ -177,7 +176,7 @@ if AUTH_LDAP_USER_SEARCH_DN != "":
 ### User Groups for Permissions
 
 !!! info
-When using Microsoft Active Directory, support for nested groups can be activated by using `NestedGroupOfNamesType()` instead of `GroupOfNamesType()` for `AUTH_LDAP_GROUP_TYPE`. You will also need to modify the import line to use `NestedGroupOfNamesType` instead of `GroupOfNamesType` .
+    When using Microsoft Active Directory, support for nested groups can be activated by using `NestedGroupOfNamesType()` instead of `GroupOfNamesType()` for `AUTH_LDAP_GROUP_TYPE`. You will also need to modify the import line to use `NestedGroupOfNamesType` instead of `GroupOfNamesType` .
 
 ```python
 from django_auth_ldap.config import LDAPSearch, GroupOfNamesType
@@ -211,7 +210,7 @@ AUTH_LDAP_CACHE_TIMEOUT = 3600
 - `is_superuser` - Users mapped to this group will be granted superuser status. Superusers are implicitly granted all permissions.
 
 !!! warning
-Authentication will fail if the groups (the distinguished names) do not exist in the LDAP directory.
+    Authentication will fail if the groups (the distinguished names) do not exist in the LDAP directory.
 
 ## Multiple LDAP Server Support
 
@@ -253,7 +252,7 @@ AUTH_LDAP_SECONDARY_SERVER_URI = "ldap://secondary-ad.example.com"
 ```
 
 !!! info
-In this example the default LDAPBackend was still used as the first LDAP server, which utilized the `AUTH_LDAP_*` environment variables. It is also possible to remove the default backend and create multiple custom backends instead to normalize the environment variable naming scheme.
+    In this example the default LDAPBackend was still used as the first LDAP server, which utilized the `AUTH_LDAP_*` environment variables. It is also possible to remove the default backend and create multiple custom backends instead to normalize the environment variable naming scheme.
 
 ## Troubleshooting LDAP
 

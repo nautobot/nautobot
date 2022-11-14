@@ -34,7 +34,7 @@ The recommended database encoding settings have been revised to rely upon the de
 The collation encoding is used to inform MySQL how characters are sorted in the database. This is important when it comes to retrieving data that has special characters or special byte-encoding such as accents or ligatures, and also including emojis. In some cases, with the `utf8mb4_bin` encoding we were previously recommending, case-insensitive searching may return inconsistent or incorrect results.
 
 !!! danger
-It is **strongly recommended** that you backup your database before executing this query and that you perform this in a non-production environment to identify any potential issues prior to updating your production environment.
+    It is **strongly recommended** that you backup your database before executing this query and that you perform this in a non-production environment to identify any potential issues prior to updating your production environment.
 
 If you have an existing MySQL database, you may update your database to use the recommended encoding by using `nautobot-server dbshell` to launch a database shell and executing the following command:
 
@@ -70,14 +70,14 @@ Nautobot v1.1.0 and later can optionally support the following:
 | MySQL      | 8.0             |
 
 !!! tip
-If you wish to migrate from PostgreSQL to MySQL, we recommend creating a new Nautobot installation based on MySQL and then [migrating the database contents to the new installation](./migrating-from-postgresql.md), rather than attempting an in-place upgrade or migration.
+    If you wish to migrate from PostgreSQL to MySQL, we recommend creating a new Nautobot installation based on MySQL and then [migrating the database contents to the new installation](./migrating-from-postgresql.md), rather than attempting an in-place upgrade or migration.
 
 ## Install the Latest Release
 
 As with the initial installation, you can upgrade Nautobot by installing the Python package directly from the Python Package Index (PyPI).
 
 !!! warning
-Unless explicitly stated, all steps requiring the use of `pip3` or `nautobot-server` in this document should be performed as the `nautobot` user!
+    Unless explicitly stated, all steps requiring the use of `pip3` or `nautobot-server` in this document should be performed as the `nautobot` user!
 
 Upgrade Nautobot using `pip3`:
 

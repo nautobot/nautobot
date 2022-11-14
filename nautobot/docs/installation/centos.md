@@ -82,8 +82,7 @@ At a minimum, we need to create a database for Nautobot and assign it a username
 is done with the following commands.
 
 !!! danger
-**Do not use the password from the example.** Choose a strong, random password to ensure secure database
-authentication for your Nautobot installation.
+    **Do not use the password from the example.** Choose a strong, random password to ensure secure database authentication for your Nautobot installation.
 
 ```no-highlight
 sudo -u postgres psql
@@ -151,10 +150,10 @@ sudo systemctl enable --now mysql
 At a minimum, we need to create a database for Nautobot and assign it a username and password for authentication. This is done with the following commands.
 
 !!! note
-Replace `localhost` below with your database server if using a remote database.
+    Replace `localhost` below with your database server if using a remote database.
 
 !!! danger
-**Do not use the password from the example.** Choose a strong, random password to ensure secure database authentication for your Nautobot installation.
+    **Do not use the password from the example.** Choose a strong, random password to ensure secure database authentication for your Nautobot installation.
 
 ```no-highlight
 sudo -u root mysql
@@ -195,7 +194,7 @@ You can verify that authentication works issuing the following command and provi
 If successful, you will enter a `mysql>` prompt. Type `status` to confirm your connection, or type `\q` to exit.
 
 !!! note
-Replace `localhost` below with your database server if using a remote database.
+    Replace `localhost` below with your database server if using a remote database.
 
 ```no-highlight
 mysql --user nautobot --password --host localhost nautobot

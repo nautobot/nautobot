@@ -7,7 +7,7 @@ Below is a list of tasks to consider when adding a new field to a core model.
 Django migrations are used to express changes to the database schema. In most cases, Django can generate these automatically, however very complex changes may require manual intervention. Always remember to specify a short but descriptive name when generating a new migration.
 
 !!! warning
-Assert that you have installed Nautobot in your development environment using `poetry install` so that changes you make to migrations will apply to the source tree!
+    Assert that you have installed Nautobot in your development environment using `poetry install` so that changes you make to migrations will apply to the source tree!
 
 ```no-highlight
 nautobot-server makemigrations <app> -n <name>
@@ -17,7 +17,7 @@ nautobot-server migrate
 Where possible, try to merge related changes into a single migration. For example, if three new fields are being added to different models within an app, these can be expressed in the same migration. You can merge a new migration with an existing one by combining their `operations` lists.
 
 !!! note
-Migrations can only be merged within a release. Once a new release has been published, its migrations cannot be altered (other than for the purpose of correcting a bug).
+    Migrations can only be merged within a release. Once a new release has been published, its migrations cannot be altered (other than for the purpose of correcting a bug).
 
 ## 2. Add validation logic to `clean()`
 
@@ -97,4 +97,4 @@ Each model has a dedicated page in the documentation, at `models/<app>/<model>.m
 Note that this documentation page will be accessible through the web UI via a "question mark" icon on the corresponding model create/edit page.
 
 !!! warning
-Due to a limitation in how the documentation is rendered in the web UI, cross-reference hyperlinks _between_ Nautobot documentation pages **will not work** in the web UI (they will be broken links), so avoid using them in a model documentation page. External hyperlinks (to the Django documentation, for example) will work correctly and may be used as needed.
+    Due to a limitation in how the documentation is rendered in the web UI, cross-reference hyperlinks _between_ Nautobot documentation pages **will not work** in the web UI (they will be broken links), so avoid using them in a model documentation page. External hyperlinks (to the Django documentation, for example) will work correctly and may be used as needed.

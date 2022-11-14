@@ -10,14 +10,12 @@ provider, obtain one for free from [Let's Encrypt](https://letsencrypt.org/getti
 be installed on your Nautobot server in a secure location that is readable only by the `root` user.
 
 !!! warning
-The command below can be used to generate a self-signed certificate for testing purposes,
-however it is strongly recommended to use a certificate from a trusted authority in production.
+    The command below can be used to generate a self-signed certificate for testing purposes, however it is strongly recommended to use a certificate from a trusted authority in production.
 
 Two files will be created: the public certificate (`nautobot.crt`) and the private key (`nautobot.key`). The certificate is published to the world, whereas the private key must be kept secret at all times.
 
 !!! info
-Some Linux installations, including CentOS, have changed the location for SSL certificates from `/etc/ssl/` to `/etc/pki/tls/`. The
-command below may need to be changed to reflect the certificate location.
+    Some Linux installations, including CentOS, have changed the location for SSL certificates from `/etc/ssl/` to `/etc/pki/tls/`. The command below may need to be changed to reflect the certificate location.
 
     The following command will prompt you for additional details of the certificate; all of which are optional.
 
@@ -32,7 +30,7 @@ sudo openssl req -x509 -nodes -days 365 -newkey rsa:2048 \
 Any HTTP server of your choosing is supported. For your convenience, setup instructions for NGINX are provided here.
 
 !!! warning
-The following steps must be performed with root permissions.
+    The following steps must be performed with root permissions.
 
 ### NGINX
 
@@ -61,7 +59,7 @@ Once NGINX is installed, copy and paste the following NGINX configuration into
 `/etc/nginx/sites-available/nautobot.conf` for Ubuntu or `/etc/nginx/conf.d/nautobot.conf` for CentOS/RHEL:
 
 !!! note
-If the file location of SSL certificates had to be changed in the [Obtain an SSL Certificate](#obtain-an-ssl-certificate) step above, then the location will need to be changed in the NGINX configuration below.
+    If the file location of SSL certificates had to be changed in the [Obtain an SSL Certificate](#obtain-an-ssl-certificate) step above, then the location will need to be changed in the NGINX configuration below.
 
 ```nginxconf
 server {
@@ -136,7 +134,7 @@ sudo systemctl restart nginx
 ```
 
 !!! info
-If the restart fails, and you changed the default key location, check to make sure the `nautobot.conf` file you pasted has the updated key location. For example, CentOS requires keys to be in `/etc/pki/tls/` instead of `/etc/ssl/`.
+    If the restart fails, and you changed the default key location, check to make sure the `nautobot.conf` file you pasted has the updated key location. For example, CentOS requires keys to be in `/etc/pki/tls/` instead of `/etc/ssl/`.
 
 ## Confirm Permissions for NAUTOBOT_ROOT
 
@@ -152,10 +150,10 @@ chmod 755 $NAUTOBOT_ROOT
 At this point, you should be able to connect to the HTTPS service at the server name or IP address you provided. If you used a self-signed certificate, you will likely need to explicitly allow connectivity in your browser.
 
 !!! info
-Please keep in mind that the configurations provided here are bare minimums required to get Nautobot up and running. You may want to make adjustments to better suit your production environment.
+    Please keep in mind that the configurations provided here are bare minimums required to get Nautobot up and running. You may want to make adjustments to better suit your production environment.
 
 !!! warning
-Certain components of Nautobot (such as the display of rack elevation diagrams) rely on the use of embedded objects. Ensure that your HTTP server configuration does not override the `X-Frame-Options` response header set by Nautobot.
+    Certain components of Nautobot (such as the display of rack elevation diagrams) rely on the use of embedded objects. Ensure that your HTTP server configuration does not override the `X-Frame-Options` response header set by Nautobot.
 
 ## Troubleshooting
 

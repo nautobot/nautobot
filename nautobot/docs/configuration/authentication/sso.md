@@ -13,7 +13,7 @@ This module supports several [authentication backends](https://python-social-aut
 ## Installation
 
 !!! warning
-Unless otherwise noted, all remaining steps in this document should all be performed as the `nautobot` user!
+    Unless otherwise noted, all remaining steps in this document should all be performed as the `nautobot` user!
 
     Hint: Use `sudo -iu nautobot`
 
@@ -34,7 +34,7 @@ pip3 install "nautobot[sso]"
 For SAML, additional system-level dependencies are required so that the specialized XML libraries can be built and compiled for your system.
 
 !!! note
-These instructions have only been certified on Ubuntu 20.04 at this time.
+    These instructions have only been certified on Ubuntu 20.04 at this time.
 
 Install the system dependencies as `root`:
 
@@ -60,7 +60,7 @@ To use external authentication, you'll need to define `AUTHENTICATION_BACKENDS` 
 - You must also ensure that `nautobot.core.authentication.ObjectPermissionBackend` is always the second item in the list. It is an error to exclude this backend.
 
 !!! note
-It is critical that you include the `ObjectPermissionsBackend` provided by Nautobot after the desired backend so that object-level permissions features can work properly.
+    It is critical that you include the `ObjectPermissionsBackend` provided by Nautobot after the desired backend so that object-level permissions features can work properly.
 
 For example, if you wanted to use Google OAuth2 as your authentication backend:
 
@@ -72,10 +72,10 @@ AUTHENTICATION_BACKENDS = [
 ```
 
 !!! note
-Many backends have settings specific to that backend that are not covered in this guide. Please consult the documentation for your desired backend linked in the next section.
+    Many backends have settings specific to that backend that are not covered in this guide. Please consult the documentation for your desired backend linked in the next section.
 
 !!! warning
-You should only enable one social authentication authentication backend. It is technically possible to use multiple backends but we cannot officially support more than one at this time.
+    You should only enable one social authentication authentication backend. It is technically possible to use multiple backends but we cannot officially support more than one at this time.
 
 ### Custom Authentication Backends
 
@@ -194,7 +194,7 @@ An example to sync groups with Okta is provided in the [`examples/okta`](https:/
 The following instructions guide you through the process of configuring Google for OAuth2 authentication.
 
 !!! important
-Please note there is further guidance provided by [python-social-auth](https://python-social-auth.readthedocs.io/en/latest/backends/google.html#google-oauth2) as well as [Google](https://developers.google.com/identity/protocols/oauth2?csw=1). For more
+    Please note there is further guidance provided by [python-social-auth](https://python-social-auth.readthedocs.io/en/latest/backends/google.html#google-oauth2) as well as [Google](https://developers.google.com/identity/protocols/oauth2?csw=1). For more
 information please utilize these additional resources.
 
 1. In the [Google API Console](https://console.developers.google.com/) create a new project or select an existing one.
@@ -235,12 +235,12 @@ SOCIAL_AUTH_GOOGLE_OAUTH2_SCOPE = ['openid']
 This guide will walk you through configuring Nautobot to authenticate using SAML with Google as the identity provider.
 
 !!! important
-Please note that there is further guidance provided by [python-social-auth](https://python-social-auth.readthedocs.io/en/latest/backends/saml.html) and [Google](https://support.google.com/a/answer/6087519?hl=en). For more information please utilize these additional resources.
+    Please note that there is further guidance provided by [python-social-auth](https://python-social-auth.readthedocs.io/en/latest/backends/saml.html) and [Google](https://support.google.com/a/answer/6087519?hl=en). For more information please utilize these additional resources.
 
 #### Prerequisites
 
 !!! warning
-SAML will not work without end-to-end encryption. These requirements are not flexible.
+    SAML will not work without end-to-end encryption. These requirements are not flexible.
 
 Before you begin you will need the following:
 
@@ -274,7 +274,7 @@ Before you begin you will need the following:
 There is a lot to configure to inform Nautobot how to integrate with SAML, so please provide the following configuration very carefully. All of these values must be correct in your `nautobot_config.py`.
 
 !!! important
-Refer to the [official Python Social Auth documentation for required SAML configuration](https://python-social-auth.readthedocs.io/en/latest/backends/saml.html#required-configuration) if you run into any issues.
+    Refer to the [official Python Social Auth documentation for required SAML configuration](https://python-social-auth.readthedocs.io/en/latest/backends/saml.html#required-configuration) if you run into any issues.
 
 ```python
 # Django authentication backends

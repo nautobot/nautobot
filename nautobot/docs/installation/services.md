@@ -98,14 +98,14 @@ address and/or port number, or to make performance-related adjustments. See [uWS
 documentation](https://uwsgi-docs.readthedocs.io/en/latest/Configuration.html) for the available configuration parameters.
 
 !!! note
-If you are deploying uWSGI behind a load balancer be sure to configure the harakiri timeout and keep alive appropriately.
+    If you are deploying uWSGI behind a load balancer be sure to configure the harakiri timeout and keep alive appropriately.
 
 ## Setup systemd
 
 We'll use `systemd` to control both uWSGI and Nautobot's background worker processes.
 
 !!! warning
-The following steps must be performed with root permissions.
+    The following steps must be performed with root permissions.
 
 ### Nautobot Service
 
@@ -257,7 +257,7 @@ index f84073fb5..52baf6096 100644
 If you are using plugins that use custom background tasks but have not yet made the change described above, you must run the [RQ worker concurrently with the Celery worker](#concurrent-celery-and-rq-nautobot-workers) until the plugin can be updated.
 
 !!! warning
-Failure to account for the Celery-to-RQ migration may break your custom background tasks
+    Failure to account for the Celery-to-RQ migration may break your custom background tasks
 
 #### Concurrent Celery and RQ Nautobot Workers
 
@@ -311,7 +311,7 @@ sudo systemctl enable --now nautobot-rq-worker
 ```
 
 !!! tip
-If you are running the concurrent RQ worker, you must remember to enable/check/restart the `nautobot-rq-worker` process as needed, oftentimes in addition to the `nautobot-worker` process.
+    If you are running the concurrent RQ worker, you must remember to enable/check/restart the `nautobot-rq-worker` process as needed, oftentimes in addition to the `nautobot-worker` process.
 
 ### Verify the service
 
@@ -335,8 +335,7 @@ You can use the command `systemctl status nautobot.service` to verify that the W
 ```
 
 !!! note
-If the Nautobot service fails to start, issue the command `journalctl -eu nautobot.service` to check for log messages that
-may indicate the problem.
+    If the Nautobot service fails to start, issue the command `journalctl -eu nautobot.service` to check for log messages that may indicate the problem.
 
 Once you've verified that the WSGI service and worker are up and running, move on to [HTTP server setup](http-server.md).
 

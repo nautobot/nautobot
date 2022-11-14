@@ -28,7 +28,7 @@ The other file is `poetry.lock`, which is managed by Poetry and contains package
 Each of the required packages pinned to its current stable version. When Nautobot is installed, this file is used to resolve and install all dependencies listed in `pyproject.toml`, but Poetry will use the exact versions found in `poetry.lock` to ensure that a new release of a dependency doesn't break Nautobot.
 
 !!! warning
-You must never directly edit this file. You will use `poetry update` commands to manage it.
+    You must never directly edit this file. You will use `poetry update` commands to manage it.
 
 #### Run `poetry update`
 
@@ -41,7 +41,7 @@ Every minor version release should refresh `poetry.lock`, so that it lists the m
 5. Run all tests and check that the UI and API function as expected.
 
 !!! hint
-You may use `poetry update --dry-run` to have Poetry automatically tell you what package updates are available and the versions it would upgrade.
+    You may use `poetry update --dry-run` to have Poetry automatically tell you what package updates are available and the versions it would upgrade.
 
 ### Update Static Libraries
 
@@ -64,7 +64,7 @@ Follow the [install instructions](../installation/nautobot.md) to perform a new 
 The goal of this step is to walk through the entire install process _as documented_ to make sure nothing there needs to be changed or updated, to catch any errors or omissions in the documentation, and to ensure that it is current with each release.
 
 !!! tip
-Fire up `mkdocs serve` in your development environment to start the documentation server! This allows you to view the documentation locally and automatically rebuilds the documents as you make changes.
+    Fire up `mkdocs serve` in your development environment to start the documentation server! This allows you to view the documentation locally and automatically rebuilds the documents as you make changes.
 
 Commit any necessary changes to the documentation before proceeding with the release.
 
@@ -161,7 +161,7 @@ Check the git diff to verify the changes are correct (`git diff --cached`).
 Commit and push the staged changes.
 
 !!! important
-The changelog must adhere to the [Keep a Changelog](https://keepachangelog.com/) style guide.
+    The changelog must adhere to the [Keep a Changelog](https://keepachangelog.com/) style guide.
 
 ### Submit Pull Requests
 
@@ -225,7 +225,7 @@ nautobot:
 ```
 
 !!! warning
-You should _not_ include `docker-compose.dev.yml` in this test scenario!
+    You should _not_ include `docker-compose.dev.yml` in this test scenario!
 
 ```no-highlight
 for ver in 3.7 3.8 3.9 3.10; do
