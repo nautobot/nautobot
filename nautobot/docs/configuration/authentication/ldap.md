@@ -149,7 +149,7 @@ AUTH_LDAP_USER_ATTR_MAP = {
 
 #### Searching in Multiple LDAP Groups
 
-Define the user-groups in your environment, such as a \*.env file (delimiter `';'`):
+Define the user-groups in your environment, such as a `*.env` file (delimiter `';'`):
 
 ```python
 # Groups to search for user objects. "(sAMAccountName=%(user)s),..."
