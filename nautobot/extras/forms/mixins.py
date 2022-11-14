@@ -472,8 +472,8 @@ class RelationshipModelFormMixin(forms.ModelForm):
                 self.fields[field_name] = relationship.to_form_field(side=side)
 
                 # HTML5 validation for required relationship field:
-                # if relationship.required_on == side:
-                #     self.fields[field_name].required = True
+                if relationship.required_on == side:
+                    self.fields[field_name].required = True
 
                 # if the object already exists, populate the field with existing values
                 if self.instance.present_in_database:
