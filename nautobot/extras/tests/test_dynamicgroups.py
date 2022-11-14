@@ -634,8 +634,13 @@ class DynamicGroupModelTest(DynamicGroupTestBase):
         # test a regression w/ nested slug-related values such as `DeviceFilterSet.region` which
         # filters on `site__region`.
         parent_region = Region.objects.filter(children__isnull=False).first()
-        group.set_filter({"region": [parent_region.slug]})
+        nested_value = [parent_region.slug]
+        group.set_filter({"region": nested_value})
         group.validated_save()
+        nested_query = group.generate_query_for_filter(filter_field=fs.filters["region"], value=nested_value)
+        nested_qs = queryset.filter(nested_query)
+        region_qs = Device.objects.filter(site__region__slug__in=nested_value)
+        self.assertQuerySetEqual(nested_qs, region_qs)
 
     def test_generate_query_for_group(self):
         """Test `DynamicGroup.generate_query_for_group()`."""
