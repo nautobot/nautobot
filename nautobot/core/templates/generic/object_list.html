@@ -87,4 +87,11 @@
 
 {% block javascript %}
 <script src="{% static 'js/tableconfig.js' %}"></script>
+<script>
+    var clipboard = new ClipboardJS('.btn');
+
+    clipboard.on('success', function (e) {});
+
+    clipboard.on('error', function (e) {});
+</script>
 {% endblock %}
