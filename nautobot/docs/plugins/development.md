@@ -1124,6 +1124,9 @@ urlpatterns = [
 urlpatterns += router.urls
 ```
 
++++ 1.5.1
+    Changelog and Notes views and URLs are now provided in the NautobotUIViewSet and NautobotUIViewSetRouter.
+
 ### Utilizing Generic Django Views
 
 The use of `generic` Django views can aid in plugin development. As an example, let's write a view which displays a random animal and the sound it makes. First, create the view in `views.py`:
