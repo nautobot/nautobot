@@ -17,6 +17,7 @@ from nautobot.dcim.models import (
     LocationType,
     Manufacturer,
     RearPort,
+    Region,
     Site,
 )
 from nautobot.extras.choices import DynamicGroupOperatorChoices
@@ -628,6 +629,22 @@ class DynamicGroupModelTest(DynamicGroupTestBase):
         solo_qs = queryset.filter(solo_query)
         serial_qs = Device.objects.filter(serial__iexact=solo_value)
         self.assertQuerySetEqual(solo_qs, serial_qs)
+
+        # Test that a nested field_name w/ `generate_query` works as expected. This is explicitly to
+        # test a regression w/ nested slug-related values such as `DeviceFilterSet.region` which
+        # filters on `site__region`.
+        parent_region = Region.objects.filter(children__isnull=False).first()
+        nested_value = [parent_region.slug]
+        group.set_filter({"region": nested_value})
+        group.validated_save()
+
+        # We are making sure the filterset generated from the slug as an argument results in the same
+        # filtered queryset, and more importantly that the nested filter expression `site__region`
+        # is automatically used to get the related model name without failing.
+        nested_query = group.generate_query_for_filter(filter_field=fs.filters["region"], value=nested_value)
+        nested_qs = queryset.filter(nested_query)
+        region_qs = Device.objects.filter(site__region__slug__in=nested_value)
+        self.assertQuerySetEqual(nested_qs, region_qs)
 
     def test_generate_query_for_group(self):
         """Test `DynamicGroup.generate_query_for_group()`."""

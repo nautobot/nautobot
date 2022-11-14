@@ -491,7 +491,7 @@ class DynamicGroup(OrganizationalModel):
             # reconstructed from saved filters, lists of slugs are common e.g. (`{"site": ["ams01",
             # "ams02"]}`, the value being a list of site slugs (`["ams01", "ams02"]`).
             if value and isinstance(value, list) and isinstance(value[0], str):
-                model_field = self.model._meta.get_field(filter_field.field_name)
+                model_field = django_filters.utils.get_model_field(self._model, filter_field.field_name)
                 related_model = model_field.related_model
                 lookup_kwargs = {f"{to_field_name}__in": value}
                 gq_value = related_model.objects.filter(**lookup_kwargs)
