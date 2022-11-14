@@ -2075,7 +2075,7 @@ class DeviceCSVForm(LocatableModelCSVFormMixin, BaseDeviceCSVForm):
             }
             self.fields["rack"].queryset = self.fields["rack"].queryset.filter(**params)
 
-            # TODO: limit location queryset by assigned site
+            # 2.0 TODO: limit location queryset by assigned site
 
 
 class ChildDeviceCSVForm(BaseDeviceCSVForm):

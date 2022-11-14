@@ -387,12 +387,6 @@ class DynamicGroup(OrganizationalModel):
 
         self.filter = new_filter
 
-    # FIXME(jathan): Yes, this is "something", but there is discrepancy between explicitly declared
-    # fields on `DeviceFilterForm` (for example) vs. the `DeviceFilterSet` filters. For example
-    # `Device.name` becomes a `MultiValueCharFilter` that emits a `MultiValueCharField` which
-    # expects a list of strings as input. The inverse is not true. It's easier to munge this
-    # dictionary when we go to send it to the form, than it is to dynamically coerce the form field
-    # types coming and going... For now.
     def get_initial(self):
         """
         Return an form-friendly version of `self.filter` for initial form data.
@@ -404,6 +398,7 @@ class DynamicGroup(OrganizationalModel):
 
         return initial_data
 
+    # TODO: Rip this out once the dynamic filter form helper replaces this in the web UI.
     def generate_filter_form(self):
         """
         Generate a `FilterForm` class for use in `DynamicGroup` edit view.
@@ -415,7 +410,6 @@ class DynamicGroup(OrganizationalModel):
         """
         filter_fields = self.get_filter_fields()
 
-        # FIXME(jathan): Account for field_order in the newly generated class.
         try:
 
             class FilterForm(self.filterform_class):
