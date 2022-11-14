@@ -27,7 +27,7 @@ nautobot-server celery --help
 ```
 
 +/- 1.1.0
-Prior to version 1.1.0, Nautobot utilized RQ as the primary background task worker. As of Nautobot 1.1.0, RQ is now _deprecated_. RQ and the `@job` decorator for custom tasks are still supported for now, but users should [migrate the primary worker to Celery](#migrating-to-celery-from-rq) and then, _only if still required_, [run RQ concurrently with the Celery worker](#concurrent-celery-and-rq-nautobot-workers). RQ and the `@job` decorator will no longer be documented, and support for RQ will be removed in a future release.
+    Prior to version 1.1.0, Nautobot utilized RQ as the primary background task worker. As of Nautobot 1.1.0, RQ is now _deprecated_. RQ and the `@job` decorator for custom tasks are still supported for now, but users should [migrate the primary worker to Celery](#migrating-to-celery-from-rq) and then, _only if still required_, [run RQ concurrently with the Celery worker](#concurrent-celery-and-rq-nautobot-workers). RQ and the `@job` decorator will no longer be documented, and support for RQ will be removed in a future release.
 
 #### Advanced Task Queue Configuration
 
@@ -142,7 +142,7 @@ WantedBy=multi-user.target
 ### Nautobot Background Services
 
 +/- 1.1.0
-Prior to version 1.1.0, Nautobot utilized RQ as the primary background task worker. As of Nautobot 1.1.0, RQ is now _deprecated_ and has been replaced with Celery. RQ can still be used by plugins for now, but will be removed in a future release. Please [migrate your deployment to utilize Celery as documented below](#migrating-to-celery-from-rq).
+    Prior to version 1.1.0, Nautobot utilized RQ as the primary background task worker. As of Nautobot 1.1.0, RQ is now *deprecated* and has been replaced with Celery. RQ can still be used by plugins for now, but will be removed in a future release. Please [migrate your deployment to utilize Celery as documented below](#migrating-to-celery-from-rq).
 
 Next, we will setup the `systemd` units for the Celery worker and Celery Beat scheduler.
 
@@ -221,8 +221,8 @@ WantedBy=multi-user.target
 
 Prior to migrating, you need to determine whether you have any plugins installed that run custom background tasks that still rely on the RQ worker. There are a few ways to do this. Two of them are:
 
-- Ask your developer or administrator if there are any plugins running background tasks still using the RQ worker
-- If you are savvy with code, search your code for the `@job` decorator or for `from django_rq import job`
+* Ask your developer or administrator if there are any plugins running background tasks still using the RQ worker
+* If you are savvy with code, search your code for the `@job` decorator or for `from django_rq import job`
 
 If you're upgrading from Nautobot version 1.0.x and are NOT running plugins that use the RQ worker, all you really need to do are two things.
 
@@ -232,8 +232,8 @@ Next, you must update any custom background tasks that you may have written. If 
 
 To update your custom tasks, you'll need to do the following.
 
-- Replace each import `from django_rq import job` with `from nautobot.core.celery import nautobot_task`
-- Replace each decorator of `@job` with `@nautobot_task`
+* Replace each import `from django_rq import job` with `from nautobot.core.celery import nautobot_task`
+* Replace each decorator of `@job` with `@nautobot_task`
 
 For example:
 

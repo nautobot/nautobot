@@ -173,6 +173,11 @@ Adds/Removes any custom fields which should or should not exist on an object. Th
 
 ```no-highlight
 nautobot-server fix_custom_fields
+```
+
+Example output:
+
+```no-highlight
 Processing ContentType dcim | device
 Processing ContentType dcim | site
 Processing ContentType dcim | rack

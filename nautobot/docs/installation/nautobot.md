@@ -4,13 +4,13 @@ This section of the documentation discusses installing and configuring the Nauto
 
 These instructions will guide you through the following actions:
 
-- Establish a Nautobot root directory for the application environment
-- Create a `nautobot` system account
-- Create a Python virtual environment (virtualenv)
-- Install Nautobot and all required Python packages
-- Run the database schema migrations
-- Aggregate static resource files on disk
-- Verify the installation using the development/test server
+* Establish a Nautobot root directory for the application environment
+* Create a `nautobot` system account
+* Create a Python virtual environment (virtualenv)
+* Install Nautobot and all required Python packages
+* Run the database schema migrations
+* Aggregate static resource files on disk
+* Verify the installation using the development/test server
 
 !!! important
     Your database server and Redis must have been successfully installed before continuing with deployment steps. If you haven't done that yet, please visit the guide on [Installing Nautobot Dependencies](index.md#installing-nautobot-dependencies)
@@ -38,7 +38,7 @@ sudo useradd --system --shell /bin/bash --create-home --home-dir /opt/nautobot n
 
 ## Setup the Virtual Environment
 
-A Python [virtual environment](https://docs.python.org/3/tutorial/venv.html) or _virtualenv_ is like a container for a set of Python packages. A virtualenv allows you to build environments suited to specific projects without interfering with system packages or other projects.
+A Python [virtual environment](https://docs.python.org/3/tutorial/venv.html) or *virtualenv* is like a container for a set of Python packages. A virtualenv allows you to build environments suited to specific projects without interfering with system packages or other projects.
 
 When installed per the documentation, Nautobot uses a virtual environment in production.
 
@@ -208,9 +208,9 @@ Your `nautobot_config.py` provides sane defaults for all of the configuration se
 
 Edit `$NAUTOBOT_ROOT/nautobot_config.py`, and head over to the documentation on [Required Settings](../configuration/required-settings.md) to tweak your required settings. At a minimum, you'll need to update the following settings:
 
-- [`ALLOWED_HOSTS`](../configuration/required-settings.md#allowed_hosts): You must set this value. This can be set to `["*"]` for a quick start, but this value is not suitable for production deployment.
-- [`DATABASES`](../configuration/required-settings.md#databases): Database connection parameters. If you installed your database server on the same system as Nautobot, you'll need to update the `USER` and `PASSWORD` fields here. If you are using MySQL, you'll also need to update the `ENGINE` field, changing the default database driver suffix from `django.db.backends.postgresql` to `django.db.backends.mysql`.
-- **Redis settings**: Redis configuration requires multiple settings including [`CACHEOPS_REDIS`](../configuration/required-settings.md#cacheops_redis) and [`RQ_QUEUES`](../configuration/required-settings.md#rq_queues), if different from the defaults. If you installed Redis on the same system as Nautobot, you do not need to change these settings.
+* [`ALLOWED_HOSTS`](../configuration/required-settings.md#allowed_hosts): You must set this value. This can be set to `["*"]` for a quick start, but this value is not suitable for production deployment.
+* [`DATABASES`](../configuration/required-settings.md#databases): Database connection parameters. If you installed your database server on the same system as Nautobot, you'll need to update the `USER` and `PASSWORD` fields here. If you are using MySQL, you'll also need to update the `ENGINE` field, changing the default database driver suffix from `django.db.backends.postgresql` to `django.db.backends.mysql`.
+* **Redis settings**: Redis configuration requires multiple settings including [`CACHEOPS_REDIS`](../configuration/required-settings.md#cacheops_redis) and [`RQ_QUEUES`](../configuration/required-settings.md#rq_queues), if different from the defaults. If you installed Redis on the same system as Nautobot, you do not need to change these settings.
 
 !!! important
     You absolutely must update your required settings in your `nautobot_config.py` or Nautobot will not work.
@@ -274,10 +274,10 @@ nautobot-server createsuperuser
 
 Nautobot relies upon many static files including:
 
-- `git` - For storing [Git repositories](../models/extras/gitrepository.md)
-- `jobs` - For storing [custom Jobs](../additional-features/jobs.md)
-- `media` - For storing [uploaded images and attachments](../configuration/optional-settings.md#media_root) (such as device type images)
-- `static` - The home for [CSS, JavaScript, and images](../configuration/optional-settings.md#static_root) used to serve the web interface
+* `git` - For storing [Git repositories](../models/extras/gitrepository.md)
+* `jobs` - For storing [custom Jobs](../additional-features/jobs.md)
+* `media` - For storing [uploaded images and attachments](../configuration/optional-settings.md#media_root) (such as device type images)
+* `static` - The home for [CSS, JavaScript, and images](../configuration/optional-settings.md#static_root) used to serve the web interface
 
 Each of these have their own corresponding setting that defined in `nautobot_config.py`, but by default they will all be placed in `NAUTOBOT_ROOT` unless you tell Nautobot otherwise by customizing their unique variable.
 

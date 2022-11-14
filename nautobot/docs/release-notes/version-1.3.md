@@ -1,5 +1,4 @@
 <!-- markdownlint-disable MD024 -->
-
 # Nautobot v1.3
 
 This document describes all new features and changes in Nautobot 1.3.
@@ -38,7 +37,7 @@ Installed Jobs are now represented by a data model in the Nautobot database. Thi
 - As a minor security measure, newly installed Jobs default to `enabled = False`, preventing them from being run until an administrator or user with appropriate permissions updates them to be enabled for running.
 
 !!! note
-As a convenience measure, when initially upgrading to Nautobot 1.3.x, any existing Jobs that have been run or scheduled previously (i.e., have at least one associated JobResult and/or ScheduledJob record) will instead default to `enabled = True` so that they may continue to be run without requiring changes.
+    As a convenience measure, when initially upgrading to Nautobot 1.3.x, any existing Jobs that have been run or scheduled previously (i.e., have at least one associated JobResult and/or ScheduledJob record) will instead default to `enabled = True` so that they may continue to be run without requiring changes.
 
 For more details please refer to the [Jobs feature documentation](../additional-features/jobs.md) as well as the [Job data model documentation](../models/extras/job.md).
 
@@ -55,7 +54,7 @@ Custom fields can now have a type of "json". Fields of this type can be used to 
 Many fields have had indexing added to them as well as index togethers on `ObjectChange` fields. This should provide a noticeable performance improvement when filtering and doing lookups.
 
 !!! note
-This is going to perform several migrations to add all of the indexes. On MySQL databases and tables with 1M+ records this can take a few minutes. Every environment is different but it should be expected for this upgrade to take some time.
+    This is going to perform several migrations to add all of the indexes. On MySQL databases and tables with 1M+ records this can take a few minutes. Every environment is different but it should be expected for this upgrade to take some time.
 
 #### Overlapping/Multiple NAT Support ([#630](https://github.com/nautobot/nautobot/issues/630))
 
@@ -64,7 +63,7 @@ IP addresses can now be associated with multiple outside NAT IP addresses. To do
 A new version of the REST API `/api/ipam/ip-addresses/*` endpoints have been implemented as well, but by default this endpoint continues to demonstrate the pre-1.3 behavior unless the REST API client explicitly requests API `version=1.3`. See the section on REST API versioning, below, for more details.
 
 !!! note
-There are some guardrails on this feature to support backwards compatibility. If you consume the REST API without specifying the version header or query argument and start associating multiple IPs to have the same NAT inside IP address, an error will be reported, because the existing REST API schema returns `nat_outside` as a single object, where as 1.3 and beyond will return this as a list.
+    There are some guardrails on this feature to support backwards compatibility. If you consume the REST API without specifying the version header or query argument and start associating multiple IPs to have the same NAT inside IP address, an error will be reported, because the existing REST API schema returns `nat_outside` as a single object, where as 1.3 and beyond will return this as a list.
 
 #### Provider Network Model ([#724](https://github.com/nautobot/nautobot/issues/724))
 
@@ -111,7 +110,7 @@ Nautobot's REST API now supports multiple versions, which may be requested by mo
 - To request an updated (non-backwards-compatible) API endpoint, an API version must be requested corresponding at a minimum to the Nautobot `major.minor` version where the updated API endpoint was introduced (so to interact with the updated REST API endpoints mentioned above, `Accept: application/json; version=1.3`).
 
 !!! tip
-As a best practice, when developing a Nautobot REST API integration, your client should _always_ request the current API version it is being developed against, rather than relying on the default API behavior (which may change with a new Nautobot major release, as noted, and which also may not include the latest and greatest API endpoints already available but not yet made default in the current release).
+    As a best practice, when developing a Nautobot REST API integration, your client should _always_ request the current API version it is being developed against, rather than relying on the default API behavior (which may change with a new Nautobot major release, as noted, and which also may not include the latest and greatest API endpoints already available but not yet made default in the current release).
 
 #### Webhook Pre/Post-change Data Added to Request Body ([#330](https://github.com/nautobot/nautobot/issues/330))
 
@@ -162,7 +161,7 @@ As Python 3.6 has reached end-of-life, and many of Nautobot's dependencies have 
 - [#1226](https://github.com/nautobot/nautobot/issues/1226) - Added custom job intervals package management.
 - [#2073](https://github.com/nautobot/nautobot/pull/2073) - Added `--local` option to `nautobot-server runjob` command.
 - [#2080](https://github.com/nautobot/nautobot/pull/2080) - Added `--data` parameter to `nautobot-server runjob` command.
-- [#2091](https://github.com/nautobot/nautobot/issues/2091) - Added `remove_stale_scheduled_jobs` management command which removes all stale scheduled jobs and al added `has_sensitive_variables` field to Job model which prevents the job's input parameters from being saved to the database.
+- [#2091](https://github.com/nautobot/nautobot/issues/2091) - Added `remove_stale_scheduled_jobs` management command which removes all stale scheduled jobs and also added `has_sensitive_variables` field to Job model which prevents the job's input parameters from being saved to the database.
 - [#2143](https://github.com/nautobot/nautobot/pull/2143) - Scheduled Job detail view now includes details of any custom interval.
 
 ### Changed
@@ -181,7 +180,7 @@ As Python 3.6 has reached end-of-life, and many of Nautobot's dependencies have 
 ### Security
 
 !!! important
-With introducing the `has_sensitive_variables` flag on Job classes and model (see: [#2091](https://github.com/nautobot/nautobot/issues/2091)), jobs can be prevented from storing their inputs in the database. Due to the nature of queuing or scheduling jobs, the desired inputs must be stored for future use.
+    With introducing the `has_sensitive_variables` flag on Job classes and model (see: [#2091](https://github.com/nautobot/nautobot/issues/2091)), jobs can be prevented from storing their inputs in the database. Due to the nature of queuing or scheduling jobs, the desired inputs must be stored for future use.
 
     New safe-default behavior will only permit jobs to be executed immediately, as `has_sensitive_variables` defaults to `True`. This value can be overridden by the Job class itself or the Job model edit page. Values entered for jobs executing immediately go straight to the Celery message bus and are cleaned up on completion of execution.
 
@@ -242,7 +241,7 @@ With introducing the `has_sensitive_variables` flag on Job classes and model (se
 ### Security
 
 !!! important
-CVE in Django versions `>= 3.2, < 3.2.14`. This update upgrades Django to `3.2.14`.
+    CVE in Django versions `>= 3.2, < 3.2.14`. This update upgrades Django to `3.2.14`.
 
 - [#2004](https://github.com/nautobot/nautobot/pull/2004) - Bump Django from 3.2.13 to 3.2.14 for for [CVE-2022-34265](https://github.com/advisories/GHSA-p64x-8rxx-wf6q).
 
@@ -317,7 +316,7 @@ CVE in Django versions `>= 3.2, < 3.2.14`. This update upgrades Django to `3.2.1
 ### Security
 
 !!! attention
-`PyJWT` - Nautobot does not directly depend on `PyJWT` so your upgrading Nautobot via `pip` or other package management tools may not pick up the patched version (we are not pinning this dependency). However some tools support an "eager" upgrade policy as an option. For example, `pip install --upgrade --upgrade-strategy eager nautobot` will upgrade Nautobot and all it's dependencies to their latest compatible version. This may not work for all use cases so it may be safer to update Nautobot then perform `pip install --upgrade PyJWT`.
+    `PyJWT` - Nautobot does not directly depend on `PyJWT` so your upgrading Nautobot via `pip` or other package management tools may not pick up the patched version (we are not pinning this dependency). However some tools support an "eager" upgrade policy as an option. For example, `pip install --upgrade --upgrade-strategy eager nautobot` will upgrade Nautobot and all it's dependencies to their latest compatible version. This may not work for all use cases so it may be safer to update Nautobot then perform `pip install --upgrade PyJWT`.
 
     Docker containers published with this build will have PyJWT upgraded.
 
@@ -398,7 +397,7 @@ CVE in Django versions `>= 3.2, < 3.2.14`. This update upgrades Django to `3.2.1
 ### Security
 
 !!! important
-Critical CVEs in Django versions `>= 3.2, < 3.2.13`. This update upgrades Django to `3.2.13`.
+    Critical CVEs in Django versions `>= 3.2, < 3.2.13`. This update upgrades Django to `3.2.13`.
 
 - [#1686](https://github.com/nautobot/nautobot/pull/1686) - Implemented fixes for [CVE-2022-28347](https://github.com/advisories/GHSA-w24h-v9qh-8gxj) and [CVE-2022-28346](https://github.com/advisories/GHSA-2gwj-7jmv-h26r) to require Django >=3.2.13.
 

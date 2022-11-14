@@ -53,10 +53,10 @@ Extend the model's API serializer in `<app>.api.serializers` to include the new 
 
 Extend any forms to include the new field as appropriate. Common forms include:
 
-- **Credit/edit** - Manipulating a single object
-- **Bulk edit** - Performing a change on many objects at once
-- **CSV import** - The form used when bulk importing objects in CSV format
-- **Filter** - Displays the options available for filtering a list of objects (both UI and API)
+* **Credit/edit** - Manipulating a single object
+* **Bulk edit** - Performing a change on many objects at once
+* **CSV import** - The form used when bulk importing objects in CSV format
+* **Filter** - Displays the options available for filtering a list of objects (both UI and API)
 
 ## 7. Extend object filter set
 
@@ -82,11 +82,11 @@ Note that if you're using the `convert_django_field` registry to override the de
 
 Create or extend the relevant test cases to verify that the new field and any accompanying validation logic perform as expected. This is especially important for relational fields. Nautobot incorporates various test suites, including:
 
-- API serializer/view tests
-- Filter tests
-- Form tests
-- Model tests
-- View tests
+* API serializer/view tests
+* Filter tests
+* Form tests
+* Model tests
+* View tests
 
 Be diligent to ensure all of the relevant test suites are adapted or extended as necessary to test any new functionality.
 
@@ -97,4 +97,4 @@ Each model has a dedicated page in the documentation, at `models/<app>/<model>.m
 Note that this documentation page will be accessible through the web UI via a "question mark" icon on the corresponding model create/edit page.
 
 !!! warning
-    Due to a limitation in how the documentation is rendered in the web UI, cross-reference hyperlinks _between_ Nautobot documentation pages **will not work** in the web UI (they will be broken links), so avoid using them in a model documentation page. External hyperlinks (to the Django documentation, for example) will work correctly and may be used as needed.
+    Due to a limitation in how the documentation is rendered in the web UI, cross-reference hyperlinks *between* Nautobot documentation pages **will not work** in the web UI (they will be broken links), so avoid using them in a model documentation page. External hyperlinks (to the Django documentation, for example) will work correctly and may be used as needed.

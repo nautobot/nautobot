@@ -52,10 +52,10 @@ The following additional tags are only available from the GitHub Container Regis
 
 Currently images are pushed for the following python versions:
 
-- 3.7
-- 3.8
-- 3.9
-- 3.10
+* 3.7
+* 3.8
+* 3.9
+* 3.10
 
 !!! info
     Developer images `networktocode/nautobot-dev:${TAG}` and `ghcr.io/nautobot/nautobot-dev:${TAG}` are also provided with the same tags as above. These images provide the development dependencies needed to build Nautobot; they can be used as a base for development to develop your own Nautobot apps but should **NOT** be used in production.

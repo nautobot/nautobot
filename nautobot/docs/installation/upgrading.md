@@ -13,7 +13,7 @@ The below sub-sections describe some key changes that deployers should be aware 
 
 #### Migration from RQ to Celery
 
-Prior to version 1.1.0, Nautobot utilized RQ as the primary background task worker. As of Nautobot 1.1.0, RQ is now _deprecated_, as Celery has been introduced to eventually replace RQ for executing background tasks within Nautobot. All Nautobot **core** usage of RQ has been migrated to use Celery.
+Prior to version 1.1.0, Nautobot utilized RQ as the primary background task worker. As of Nautobot 1.1.0, RQ is now *deprecated*, as Celery has been introduced to eventually replace RQ for executing background tasks within Nautobot. All Nautobot **core** usage of RQ has been migrated to use Celery.
 
 RQ support for custom tasks was not removed in order to give plugin authors time to migrate, however, to continue to utilize advanced Nautobot features such as Git repository synchronization, webhooks, jobs, etc. you must migrate your `nautobot-worker` deployment from RQ to Celery.
 
@@ -63,7 +63,7 @@ Nautobot v1.3.0 and later requires the following:
 
 Nautobot v1.1.0 and later can optionally support the following:
 
-> _Nautobot v1.1.0 added support for MySQL 8.0 as a database backend as an alternative to PostgreSQL._
+> *Nautobot v1.1.0 added support for MySQL 8.0 as a database backend as an alternative to PostgreSQL.*
 
 | Dependency | Minimum Version |
 | ---------- | --------------- |
@@ -108,12 +108,12 @@ nautobot-server post_upgrade
 
 This command performs the following actions:
 
-- Applies any database migrations that were included in the release
-- Generates any missing cable paths among all cable termination objects in the database
-- Collects all static files to be served by the HTTP service
-- Deletes stale content types from the database
-- Deletes all expired user sessions from the database
-- Clears all cached data to prevent conflicts with the new release
+* Applies any database migrations that were included in the release
+* Generates any missing cable paths among all cable termination objects in the database
+* Collects all static files to be served by the HTTP service
+* Deletes stale content types from the database
+* Deletes all expired user sessions from the database
+* Clears all cached data to prevent conflicts with the new release
 
 ## Restart the Nautobot Services
 

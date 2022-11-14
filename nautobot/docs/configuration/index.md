@@ -85,14 +85,14 @@ Each of the features requiring use of file storage default to being stored in `N
 
 While Nautobot has many configuration settings, only a few of them must be defined at the time of installation. These configuration parameters may be set in `nautobot_config.py` or by default many of them may also be set by environment variables. Please see the following links for more information:
 
-- [Required settings](required-settings.md)
-- [Optional settings](optional-settings.md)
+* [Required settings](required-settings.md)
+* [Optional settings](optional-settings.md)
 
 ## Optional Authentication Configuration
 
-- [LDAP Authentication](authentication/ldap.md)
-- [Remote User Authentication](authentication/remote.md)
-- [SSO Authentication](authentication/sso.md)
+* [LDAP Authentication](authentication/ldap.md)
+* [Remote User Authentication](authentication/remote.md)
+* [SSO Authentication](authentication/sso.md)
 
 ## Changing the Configuration
 
@@ -141,7 +141,7 @@ echo $NAUTOBOT_CONFIG
 !!! warning
     Be cautious not to confuse extra applications with Nautobot plugins which are installed using the [`PLUGINS`](optional-settings.md#plugins) setting. They are similar, but distinctly different!
 
-Nautobot, being a Django application, allows for installation of additional dependencies utilizing the [`INSTALLED_APPS`](https://docs.djangoproject.com/en/stable/ref/settings/#std:setting-INSTALLED_APPS) settings. Due to the highly specialized nature of Nautobot, _you cannot safely do this_.
+Nautobot, being a Django application, allows for installation of additional dependencies utilizing the [`INSTALLED_APPS`](https://docs.djangoproject.com/en/stable/ref/settings/#std:setting-INSTALLED_APPS) settings. Due to the highly specialized nature of Nautobot, *you cannot safely do this*.
 
 For example, let's assume that you want to install the popular [`django-health-check`](https://django-health-check.readthedocs.io/en/latest/) plugin to your Nautobot deployment which requires you to add one or more `health_check` entries to your `INSTALLED_APPS`.
 

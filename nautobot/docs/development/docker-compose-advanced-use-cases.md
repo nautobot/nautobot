@@ -148,7 +148,7 @@ After opening the project directory in VS Code in a supported environment, you w
 To start Nautobot, select **Run Without Debugging** or **Start Debugging** from the Run menu. Once Nautobot has started, you will be prompted to open a browser to connect to Nautobot.
 
 !!! note
-You can run tests with `nautobot-server --config=nautobot/core/tests/nautobot_config.py test nautobot` while inside the Container.
+    You can run tests with `nautobot-server --config=nautobot/core/tests/nautobot_config.py test nautobot` while inside the Container.
 
 ### Special Workflow for Containers on Remote Servers
 

@@ -4,9 +4,9 @@
 
 The Nautobot project follows a branching model based on [Git-flow](https://nvie.com/posts/a-successful-git-branching-model/). As such, there are three persistent git branches:
 
-- `main` - Serves as a snapshot of the current stable release
-- `develop` - All bug fixes and minor feature development on the upcoming stable release occurs here
-- `next` - All major new feature development for the next feature release occurs here.
+* `main` - Serves as a snapshot of the current stable release
+* `develop` - All bug fixes and minor feature development on the upcoming stable release occurs here
+* `next` - All major new feature development for the next feature release occurs here.
 
 You will always base pull requests off of either the `develop` branch, for fixes and minor features, or `next`, if you're working on a feature targeted for a later release. **Never** target fix or feature pull requests into the `main` branch, which receives merges only from the `develop` branch and only for new stable releases of Nautobot.
 
@@ -50,10 +50,10 @@ NOTICE           dist         nautobot    scripts
 
 ### About Remote Repos
 
-Git refers to remote repositories as _remotes_. When you make your initial clone of your fork, Git defaults to naming this remote `origin`. Throughout this documentation, the following remote names will be used:
+Git refers to remote repositories as *remotes*. When you make your initial clone of your fork, Git defaults to naming this remote `origin`. Throughout this documentation, the following remote names will be used:
 
-- `origin` - The default remote name used to refer to _your fork of Nautobot_
-- `upstream` - The main remote used to refer to the _official Nautobot repository_
+* `origin` - The default remote name used to refer to *your fork of Nautobot*
+* `upstream` - The main remote used to refer to the *official Nautobot repository*
 
 ### Setting up your Remotes
 
@@ -224,20 +224,19 @@ Available tasks:
 
 A development environment can be easily started up from the root of the project using the following commands:
 
-- `invoke build` - Builds Nautobot docker images
-- `invoke migrate` - Performs database migration operation in Django
-- `invoke createsuperuser` - Creates a superuser account for the Nautobot application
-- `invoke debug` - Starts Docker containers for Nautobot, PostgreSQL, Redis, Celery, and the RQ worker in debug mode and attaches their output to the terminal in the foreground. You may enter Control-C to stop the containers
+* `invoke build` - Builds Nautobot docker images
+* `invoke migrate` - Performs database migration operation in Django
+* `invoke createsuperuser` - Creates a superuser account for the Nautobot application
+* `invoke debug` - Starts Docker containers for Nautobot, PostgreSQL, Redis, Celery, and the RQ worker in debug mode and attaches their output to the terminal in the foreground. You may enter Control-C to stop the containers
 
 Additional useful commands for the development environment:
 
-- `invoke start [-s servicename]` - Starts Docker containers for Nautobot, PostgreSQL, Redis, Celery, and the RQ worker (or a specific container/service, such as `invoke start -s redis`) to run in the background with debug disabled
-- `invoke cli [-s servicename]` - Launch a `bash` shell inside the specified service container (if none is specified, defaults to the Nautobot container)
-- `invoke stop [-s servicename]` - Stops all containers (or a specific container/service) created by `invoke start`
+* `invoke start [-s servicename]` - Starts Docker containers for Nautobot, PostgreSQL, Redis, Celery, and the RQ worker (or a specific container/service, such as `invoke start -s redis`) to run in the background with debug disabled
+* `invoke cli [-s servicename]` - Launch a `bash` shell inside the specified service container (if none is specified, defaults to the Nautobot container)
+* `invoke stop [-s servicename]` - Stops all containers (or a specific container/service) created by `invoke start`
 
 !!! note
-    The mkdocs container must be started manually with `invoke start -s mkdocs`. It will not start automatically with the
-`invoke start` or `invoke debug` commands.
+    The mkdocs container must be started manually with `invoke start -s mkdocs`. It will not start automatically with the `invoke start` or `invoke debug` commands.
 
 !!! tip
     The Nautobot server uses a Django webservice and worker uses watchdog to provide automatic reload of your web and worker servers in **most** cases when using `invoke start` or `invoke debug`.
@@ -253,11 +252,11 @@ This workflow uses Python and Poetry to work with your development environment l
 
 There are a few things you'll need:
 
-- A Linux system or environment
-- A MySQL or PostgreSQL server, which can be installed locally [per the documentation](../installation/index.md#installing-nautobot-dependencies)
-- A Redis server, which can also be [installed locally](../installation/index.md#installing-nautobot-dependencies)
-- A supported version of Python
-- A recent version of [Poetry](https://python-poetry.org/docs/#installation)
+* A Linux system or environment
+* A MySQL or PostgreSQL server, which can be installed locally [per the documentation](../installation/index.md#installing-nautobot-dependencies)
+* A Redis server, which can also be [installed locally](../installation/index.md#installing-nautobot-dependencies)
+* A supported version of Python
+* A recent version of [Poetry](https://python-poetry.org/docs/#installation)
 
 #### Install Poetry
 
@@ -296,7 +295,7 @@ brew install markdownlint-cli
 
 #### Creating a Python Virtual Environment
 
-A Python [virtual environment](https://docs.python.org/3/tutorial/venv.html) (or _virtualenv_) is like a container for a set of Python packages. A virtualenv allow you to build environments suited to specific projects without interfering with system packages or other projects. When installed per the documentation, Nautobot uses a virtual environment in production.
+A Python [virtual environment](https://docs.python.org/3/tutorial/venv.html) (or *virtualenv*) is like a container for a set of Python packages. A virtualenv allow you to build environments suited to specific projects without interfering with system packages or other projects. When installed per the documentation, Nautobot uses a virtual environment in production.
 
 For Nautobot development, we have selected Poetry, which will transparently create a virtualenv for you, automatically install all dependencies required for Nautobot to operate, and will also install the `nautobot-server` CLI command that you will utilize to interact with Nautobot from here on out.
 
@@ -421,11 +420,11 @@ cp development/nautobot_config.py ~/.nautobot/nautobot_config.py
 
 A newly created configuration includes sane defaults. If you need to customize them, edit your `nautobot_config.py` and update the following settings as required:
 
-- [`ALLOWED_HOSTS`](../configuration/required-settings.md#allowed_hosts): This can be set to `["*"]` for development purposes and must be set if `DEBUG=False`
-- [`DATABASES`](../configuration/required-settings.md#databases): Database connection parameters, if different from the defaults
-- **Redis settings**: Redis configuration requires multiple settings including [`CACHEOPS_REDIS`](../configuration/required-settings.md#cacheops_redis) and [`RQ_QUEUES`](../configuration/required-settings.md#rq_queues). The defaults should be fine for development.
-- [`DEBUG`](../configuration/optional-settings.md#debug): Set to `True` to enable verbose exception logging and, if installed, the [Django debug toolbar](https://django-debug-toolbar.readthedocs.io/en/latest/)
-- [`EXTRA_INSTALLED_APPS`](../configuration/optional-settings.md#extra-applications): Optionally provide a list of extra Django apps/plugins you may desire to use for development
+* [`ALLOWED_HOSTS`](../configuration/required-settings.md#allowed_hosts): This can be set to `["*"]` for development purposes and must be set if `DEBUG=False`
+* [`DATABASES`](../configuration/required-settings.md#databases): Database connection parameters, if different from the defaults
+* **Redis settings**: Redis configuration requires multiple settings including [`CACHEOPS_REDIS`](../configuration/required-settings.md#cacheops_redis) and [`RQ_QUEUES`](../configuration/required-settings.md#rq_queues). The defaults should be fine for development.
+* [`DEBUG`](../configuration/optional-settings.md#debug): Set to `True` to enable verbose exception logging and, if installed, the [Django debug toolbar](https://django-debug-toolbar.readthedocs.io/en/latest/)
+* [`EXTRA_INSTALLED_APPS`](../configuration/optional-settings.md#extra-applications): Optionally provide a list of extra Django apps/plugins you may desire to use for development
 
 ## Working in your Development Environment
 
@@ -625,8 +624,8 @@ Integration tests are run using the `invoke integration-test` command. All integ
 
 The following environment variables can be provided when running tests to customize where Nautobot looks for Selenium and where Selenium looks for Nautobot. If using the default setup documented above, there is no need to customize these.
 
-- `NAUTOBOT_SELENIUM_URL` - The URL used by the Nautobot test runner to remotely control the headless Selenium Firefox node. You can provide your own, but it must be a [`Remote` WebDriver](https://selenium-python.readthedocs.io/getting-started.html#using-selenium-with-remote-webdriver). (Default: `http://localhost:4444/wd/hub`; for Docker: `http://selenium:4444/wd/hub`)
-- `NAUTOBOT_SELENIUM_HOST` - The hostname used by the Selenium WebDriver to access Nautobot using Firefox. (Default: `host.docker.internal`; for Docker: `nautobot`)
+* `NAUTOBOT_SELENIUM_URL` - The URL used by the Nautobot test runner to remotely control the headless Selenium Firefox node. You can provide your own, but it must be a [`Remote` WebDriver](https://selenium-python.readthedocs.io/getting-started.html#using-selenium-with-remote-webdriver). (Default: `http://localhost:4444/wd/hub`; for Docker: `http://selenium:4444/wd/hub`)
+* `NAUTOBOT_SELENIUM_HOST` - The hostname used by the Selenium WebDriver to access Nautobot using Firefox. (Default: `host.docker.internal`; for Docker: `nautobot`)
 
 ### Verifying the REST API Schema
 
@@ -656,8 +655,8 @@ If you're unsure whether a database schema migration is needed based on your cha
 
 If your branch modifies a Django model (and as a result requires a database schema modification), please be sure to provide a meaningful name to the migration before pushing.
 
-- If you have yet to run `invoke makemigrations`, you can pass in a name for the migration with the `-n` option, example `invoke makemigrations -n provider_increase_account_length`.
-- If you have already run `invoke makemigrations`, rename the generated migration files, for example `0004_provider_increase_account_length` instead of `0004_auto_20211220_2104`.
+* If you have yet to run `invoke makemigrations`, you can pass in a name for the migration with the `-n` option, example `invoke makemigrations -n provider_increase_account_length`.
+* If you have already run `invoke makemigrations`, rename the generated migration files, for example `0004_provider_increase_account_length` instead of `0004_auto_20211220_2104`.
 
 You’ll also want to run `black` against the generated migration file as the autogenerated code doesn’t follow our style guide by default.
 
@@ -669,9 +668,9 @@ Some features require documentation updates or new documentation to be written. 
 
 For substantial changes to the code (including new features, removal of existing features, or significant changes in behavior) you should always make corresponding documentation updates. Nautobot's documentation pipeline includes a custom plugin for `mkdocs` that adds a few useful macros for annotating such changes:
 
-- `+++ 1.4.3`, on a line by itself, is a shorthand for `!!! version-added "Added in version 1.4.3"`
-- `+/- 1.4.3`, on a line by itself, is a shorthand for `!!! version-changed "Changed in version 1.4.3"`
-- `--- 1.4.3`, on a line by itself, is a shorthand for `!!! version-removed "Removed in version 1.4.3"`
+* `+++ 1.4.3`, on a line by itself, is a shorthand for `!!! version-added "Added in version 1.4.3"`
+* `+/- 1.4.3`, on a line by itself, is a shorthand for `!!! version-changed "Changed in version 1.4.3"`
+* `--- 1.4.3`, on a line by itself, is a shorthand for `!!! version-removed "Removed in version 1.4.3"`
 
 These admonitions in turn appear in the rendered documentation as follows:
 
@@ -687,10 +686,10 @@ You can also add text to any of these admonitions for further clarity, for examp
 will render as:
 
 +++ 1.4.3
-The custom `mkdocs` plugin was added.
+    The custom `mkdocs` plugin was added.
 
 !!! caution
-    While you _can_ use the `version-added` / `version-changed` / `version-removed` admonitions directly to add a custom title to a specific admonition, in general, you should use the macros for consistency across the documentation.
+    While you *can* use the `version-added` / `version-changed` / `version-removed` admonitions directly to add a custom title to a specific admonition, in general, you should use the macros for consistency across the documentation.
 
 ### Writing Documentation
 

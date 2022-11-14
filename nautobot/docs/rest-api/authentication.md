@@ -58,13 +58,13 @@ Note that we are _not_ passing an existing REST API token with this request. If 
 
 ```json
 {
-  "id": "e87e6ee9-1ab2-46c6-ad7f-3d4697c33d13",
-  "url": "https://nautobot/api/users/tokens/e87e6ee9-1ab2-46c6-ad7f-3d4697c33d13/",
-  "display": "3c9cb9 (hankhill)",
-  "created": "2021-06-11T20:09:13.339367Z",
-  "expires": null,
-  "key": "9fc9b897abec9ada2da6aec9dbc34596293c9cb9",
-  "write_enabled": true,
-  "description": ""
+    "id": "e87e6ee9-1ab2-46c6-ad7f-3d4697c33d13",
+    "url": "https://nautobot/api/users/tokens/e87e6ee9-1ab2-46c6-ad7f-3d4697c33d13/",
+    "display": "3c9cb9 (hankhill)",
+    "created": "2021-06-11T20:09:13.339367Z",
+    "expires": null,
+    "key": "9fc9b897abec9ada2da6aec9dbc34596293c9cb9",
+    "write_enabled": true,
+    "description": ""
 }
 ```

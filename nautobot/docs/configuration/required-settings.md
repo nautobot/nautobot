@@ -18,7 +18,7 @@ ALLOWED_HOSTS = ['nautobot.example.com', '192.0.2.123']
 ```
 
 !!! tip
-    If there is more than one hostname in this list, you _may_ also need to set [`CSRF_TRUSTED_ORIGINS`](optional-settings.md#csrf_trusted_origins) as well.
+    If there is more than one hostname in this list, you *may* also need to set [`CSRF_TRUSTED_ORIGINS`](optional-settings.md#csrf_trusted_origins) as well.
 
 If you are not yet sure what the domain name and/or IP address of the Nautobot installation will be, and are comfortable accepting the risks in doing so, you can set this to a wildcard (asterisk) to allow all host values:
 
@@ -35,26 +35,26 @@ ALLOWED_HOSTS = ['*']
 
 Nautobot requires access to a supported database service to store data. This service can run locally on the Nautobot server or on a remote system. The following parameters must be defined within the `DATABASES` dictionary:
 
-- `NAME` - Database name
-- `USER` - Database username
-- `PASSWORD` - Database password
-- `HOST` - Name or IP address of the database server (use `localhost` if running locally)
-- `PORT` - The port to use when connecting to the database. An empty string means the default port for your selected backend. (PostgreSQL: `5432`, MySQL: `3306`)
-- `CONN_MAX_AGE` - Lifetime of a [persistent database connection](https://docs.djangoproject.com/en/stable/ref/databases/#persistent-connections), in seconds (300 is the default)
-- `ENGINE` - The database backend to use. This can be either `django.db.backends.postgresql` or `django.db.backends.mysql`.
+* `NAME` - Database name
+* `USER` - Database username
+* `PASSWORD` - Database password
+* `HOST` - Name or IP address of the database server (use `localhost` if running locally)
+* `PORT` - The port to use when connecting to the database. An empty string means the default port for your selected backend. (PostgreSQL: `5432`, MySQL: `3306`)
+- `CONN_MAX_AGE` - Lifetime of a [persistent database connection](https://docs.djangoproject.com/en/stable/ref/databases/#persistent-connections), in seconds (300 *s the default)
+* `ENGINE` - The database backend to use. This can be either `django.db.backends.postgresql` or `django.db.backends.mysql`.
 
 The following environment variables may also be set for each of the above values:
 
-- `NAUTOBOT_DB_NAME`
-- `NAUTOBOT_DB_USER`
-- `NAUTOBOT_DB_PASSWORD`
-- `NAUTOBOT_DB_HOST`
-- `NAUTOBOT_DB_PORT`
-- `NAUTOBOT_DB_TIMEOUT`
-- `NAUTOBOT_DB_ENGINE`
+* `NAUTOBOT_DB_NAME`
+* `NAUTOBOT_DB_USER`
+* `NAUTOBOT_DB_PASSWORD`
+* `NAUTOBOT_DB_HOST`
+* `NAUTOBOT_DB_PORT`
+* `NAUTOBOT_DB_TIMEOUT`
+* `NAUTOBOT_DB_ENGINE`
 
 +++ 1.1.0
-The `NAUTOBOT_DB_ENGINE` setting was added along with support for MySQL.
+    The `NAUTOBOT_DB_ENGINE` setting was added along with support for MySQL.
 
 !!! warning
     Nautobot supports either MySQL or PostgreSQL as a database backend. You must make sure that the `ENGINE` setting matches your selected database backend or **you will be unable to connect to the database**.
@@ -103,10 +103,10 @@ DATABASES = {
 ```
 
 +++ 1.1.0
-If you have generated a new `nautobot_config.py` using `nautobot-server init`, this line is already there for you in your config. You'll just need to uncomment it!
+    If you have generated a new `nautobot_config.py` using `nautobot-server init`, this line is already there for you in your config. You'll just need to uncomment it!
 
 +/- 1.1.5
-If you have generated a new `nautobot_config.py` using `nautobot-server init`, this line is already present in your config and no action is required.
+    If you have generated a new `nautobot_config.py` using `nautobot-server init`, this line is already present in your config and no action is required.
 
 ---
 
@@ -178,7 +178,7 @@ setup](https://github.com/Suor/django-cacheops#setup).
 
 #### CACHES
 
-The [`django-redis`](https://github.com/jazzband/django-redis) Django plugin is used to enable Redis as a concurrent write lock for preventing race conditions when allocating IP address objects, and also to define centralized Redis connection settings that will be used by RQ. The `CACHES` setting is required to to simplify the configuration for defining queues. _It is not used for caching at this time._
+The [`django-redis`](https://github.com/jazzband/django-redis) Django plugin is used to enable Redis as a concurrent write lock for preventing race conditions when allocating IP address objects, and also to define centralized Redis connection settings that will be used by RQ. The `CACHES` setting is required to to simplify the configuration for defining queues. *It is not used for caching at this time.*
 
 !!! important
     Nautobot does not utilize the built-in [Django cache framework](https://docs.djangoproject.com/en/stable/topics/cache/) (which also relies on the `CACHES` setting) to perform caching because Cacheops is being used instead as detailed just above. _Yes, we know this is confusing, which is why this is being called out explicitly!_
@@ -211,7 +211,7 @@ CACHES = {
 ### Task Queuing with RQ
 
 +/- 1.1.0
-Using task queueing with RQ is deprecated in exchange for using Celery. Support for RQ will be removed entirely starting in Nautobot 2.0.
+    Using task queueing with RQ is deprecated in exchange for using Celery. Support for RQ will be removed entirely starting in Nautobot 2.0.
 
 Task queues are configured by defining them within the [`RQ_QUEUES`](#rq_queues) setting.
 
@@ -226,7 +226,7 @@ The default value for this setting defines the queues and instructs RQ to use th
 Please see the [official `django-rq` documentation on support for django-redis connection settings](https://github.com/rq/django-rq#support-for-django-redis-and-django-redis-cache) for more information.
 
 +/- 1.1.0
-The `check_releases`, `custom_fields`, and `webhooks` queues are no longer in use by Nautobot but maintained here for backwards compatibility; they will be removed in Nautobot 2.0.
+    The `check_releases`, `custom_fields`, and `webhooks` queues are no longer in use by Nautobot but maintained here for backwards compatibility; they will be removed in Nautobot 2.0.
 
 Default:
 
@@ -286,22 +286,22 @@ RQ_QUEUES = {
 }
 ```
 
-- `HOST` - Name or IP address of the Redis server (use `localhost` if running locally)
-- `PORT` - TCP port of the Redis service; leave blank for default port (6379)
-- `PASSWORD` - Redis password (if set)
-- `DB` - Numeric database ID
-- `SSL` - Use SSL connection to Redis
-- `DEFAULT_TIMEOUT` - The maximum execution time of a background task (such as running a [Job](../additional-features/jobs.md)), in seconds.
+* `HOST` - Name or IP address of the Redis server (use `localhost` if running locally)
+* `PORT` - TCP port of the Redis service; leave blank for default port (6379)
+* `PASSWORD` - Redis password (if set)
+* `DB` - Numeric database ID
+* `SSL` - Use SSL connection to Redis
+* `DEFAULT_TIMEOUT` - The maximum execution time of a background task (such as running a [Job](../additional-features/jobs.md)), in seconds.
 
 The following environment variables may also be set for some of the above values:
 
-- `NAUTOBOT_REDIS_SCHEME`
-- `NAUTOBOT_REDIS_HOST`
-- `NAUTOBOT_REDIS_PORT`
-- `NAUTOBOT_REDIS_PASSWORD`
-- `NAUTOBOT_REDIS_USERNAME`
-- `NAUTOBOT_REDIS_SSL`
-- `NAUTOBOT_REDIS_TIMEOUT`
+* `NAUTOBOT_REDIS_SCHEME`
+* `NAUTOBOT_REDIS_HOST`
+* `NAUTOBOT_REDIS_PORT`
+* `NAUTOBOT_REDIS_PASSWORD`
+* `NAUTOBOT_REDIS_USERNAME`
+* `NAUTOBOT_REDIS_SSL`
+* `NAUTOBOT_REDIS_TIMEOUT`
 
 !!! note
     If you overload any of the default values in [`CACHES`](#caches) or [`RQ_QUEUES`](#rq_queues) you may be unable to utilize the environment variables, depending on what you change.

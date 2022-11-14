@@ -47,11 +47,11 @@ Every minor version release should refresh `poetry.lock`, so that it lists the m
 
 Update the following static libraries to their most recent stable release:
 
-- [Bootstrap 3](https://getbootstrap.com/docs/3.4)
-- [Material Design Icons](https://materialdesignicons.com/)
-- [Select2](https://github.com/select2/select2/releases)
-- [jQuery](https://jquery.com/download/)
-- [jQuery UI](https://jqueryui.com/)
+* [Bootstrap 3](https://getbootstrap.com/docs/3.4)
+* [Material Design Icons](https://materialdesignicons.com/)
+* [Select2](https://github.com/select2/select2/releases)
+* [jQuery](https://jquery.com/download/)
+* [jQuery UI](https://jqueryui.com/)
 
 ### Link to the Release Notes Page
 
@@ -61,7 +61,7 @@ Add the release notes (`docs/release-notes/X.Y.md`) to the table of contents wit
 
 Follow the [install instructions](../installation/nautobot.md) to perform a new production installation of Nautobot.
 
-The goal of this step is to walk through the entire install process _as documented_ to make sure nothing there needs to be changed or updated, to catch any errors or omissions in the documentation, and to ensure that it is current with each release.
+The goal of this step is to walk through the entire install process *as documented* to make sure nothing there needs to be changed or updated, to catch any errors or omissions in the documentation, and to ensure that it is current with each release.
 
 !!! tip
     Fire up `mkdocs serve` in your development environment to start the documentation server! This allows you to view the documentation locally and automatically rebuilds the documents as you make changes.
@@ -173,9 +173,9 @@ Once CI has completed on the PR, merge it.
 
 Draft a [new release](https://github.com/nautobot/nautobot/releases/new) with the following parameters.
 
-- **Tag:** Current version (e.g. `v1.0.0`)
-- **Target:** `main`
-- **Title:** Version and date (e.g. `v1.0.0 - 2021-06-01`)
+* **Tag:** Current version (e.g. `v1.0.0`)
+* **Target:** `main`
+* **Title:** Version and date (e.g. `v1.0.0 - 2021-06-01`)
 
 Copy the description from the pull request to the release.
 
@@ -225,7 +225,7 @@ nautobot:
 ```
 
 !!! warning
-    You should _not_ include `docker-compose.dev.yml` in this test scenario!
+    You should *not* include `docker-compose.dev.yml` in this test scenario!
 
 ```no-highlight
 for ver in 3.7 3.8 3.9 3.10; do
