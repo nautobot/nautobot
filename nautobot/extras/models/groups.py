@@ -440,7 +440,9 @@ class DynamicGroup(OrganizationalModel):
             raise ValidationError({"filter": "Filter requires a `content_type` to be set"})
 
         # Validate against the filterset's internal form validation.
-        self.set_filter(self.filter)
+        filterset = self.filterset_class(self.filter)
+        if not filterset.is_valid():
+            raise ValidationError(filterset.errors)
 
     def delete(self, *args, **kwargs):
         """Check if we're a child and attempt to block delete if we are."""
