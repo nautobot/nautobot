@@ -255,3 +255,15 @@ class ScheduledJobExtendedQuerySet(RestrictedQuerySet, ExtendedQuerySet):
         Return only ScheduledJob instances that require approval and are not approved
         """
         return self.filter(approval_required=True, approved_at__isnull=True).order_by("start_time")
+
+
+class ContentTypeRelatedQuerySet(RestrictedQuerySet):
+    def get_for_model(self, model):
+        """
+        Return all `self.model` instances assigned to the given model.
+        """
+        content_type = ContentType.objects.get_for_model(model._meta.concrete_model)
+        return self.filter(content_types=content_type)
+
+    def get_by_natural_key(self, name):
+        return self.get(name=name)

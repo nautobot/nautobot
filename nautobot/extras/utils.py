@@ -172,6 +172,44 @@ class TaggableClassesQuery:
         return [(f"{ct.app_label}.{ct.model}", ct.pk) for ct in self.as_queryset()]
 
 
+class FeaturedQueryMixin:
+    """Mixin class that gets a list of featured models."""
+
+    def list_subclasses(self):
+        """Return a list of classes that has implements this `name`."""
+
+        raise NotImplementedError("list_subclasses is not implemented")
+
+    def __call__(self):
+        """
+        Given an extras feature, return a Q object for content type lookup
+        """
+        query = Q()
+        for model in self.list_subclasses():
+            query |= Q(app_label=model._meta.app_label, model=model.__name__.lower())
+
+        return query
+
+    def as_queryset(self):
+        return ContentType.objects.filter(self()).order_by("app_label", "model")
+
+    def get_choices(self):
+        return [(f"{ct.app_label}.{ct.model}", ct.pk) for ct in self.as_queryset()]
+
+
+@deconstructible
+class RoleModelsQuery(FeaturedQueryMixin):
+    """
+    Helper class to get ContentType models that implements role.
+    """
+
+    def list_subclasses(self):
+        """
+        Return a list of classes that implements roles e.g roles = ...
+        """
+        return [_class for _class in apps.get_models() if hasattr(_class, "roles")]
+
+
 def extras_features(*features):
     """
     Decorator used to register extras provided features to a model
