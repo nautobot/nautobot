@@ -257,10 +257,8 @@ class RelationshipModel(models.Model):
                     and initial_data.get(relation, {}).get(opposite_side, {}) == {}
                     and not relationships_key_specified
                 ):
-                    if (
-                        RelationshipAssociation.objects.filter(**{f"{relation.required_on}_id": instance.pk}).count()
-                        > 0
-                    ):
+                    filter_kwargs = {"relationship": relation, f"{relation.required_on}_id": instance.pk}
+                    if RelationshipAssociation.objects.filter(**filter_kwargs).count() > 0:
                         continue
 
             required_model_class = getattr(relation, f"{opposite_side}_type").model_class()
@@ -303,14 +301,19 @@ class RelationshipModel(models.Model):
 
             if initial_data is not None:
 
-                supplied_data = []
+                missing_data = False
 
                 if output_for == "ui":
                     supplied_data = initial_data.get(field_key, [])
+                    if not supplied_data:
+                        missing_data = True
+
                 elif output_for == "api":
                     supplied_data = initial_data.get(relation, {}).get(opposite_side, {})
+                    if len(supplied_data) == 0:
+                        missing_data = True
 
-                if not supplied_data:
+                if missing_data:
                     if output_for == "ui":
                         field_errors[field_key].append(
                             f"You need to select {num_required_verbose} {required_model_meta.verbose_name}."

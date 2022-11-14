@@ -4,6 +4,7 @@ from django import forms
 from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ValidationError
 from django.db.models import Q
+from django.utils.safestring import mark_safe
 
 from nautobot.extras.choices import (
     CustomFieldFilterLogicChoices,
@@ -406,10 +407,11 @@ class RelationshipModelBulkEditFormMixin(BulkEditForm):
                 }
             )
 
+        relationship_data_errors = {}
+
         for relationship_to_check in required_relationships_to_check:
             relationship = relationship_to_check["relationship"]
             for editing in self.cleaned_data["pk"]:
-                editing_verbose_name = editing._meta.verbose_name
                 required_target_side = RelationshipSideChoices.OPPOSITE[relationship.required_on]
                 required_target_type = getattr(relationship, f"{required_target_side}_type")
                 required_type_verbose_name = required_target_type.model_class()._meta.verbose_name
@@ -421,19 +423,27 @@ class RelationshipModelBulkEditFormMixin(BulkEditForm):
                     getattr(association, f"get_{RelationshipSideChoices.OPPOSITE[relationship.required_on]}")()
                     for association in RelationshipAssociation.objects.filter(**filter_kwargs)
                 ]
+                requires_message = (
+                    f"{editing._meta.verbose_name_plural} require a {required_type_verbose_name} "
+                    f'for the required relationship "{str(relationship)}"'
+                )
                 if len(existing_objects) == 0 and len(relationship_to_check["to_add"]) == 0:
-                    self.add_error(
-                        None,
-                        f"The {editing_verbose_name} {editing} requires a {required_type_verbose_name}",
-                    )
+                    relationship_data_errors.setdefault(requires_message, []).append(str(editing))
                 else:
                     removed = relationship_to_check["to_remove"]
                     difference = [obj for obj in existing_objects if obj not in removed]
                     if len(difference) == 0:
-                        self.add_error(
-                            None,
-                            f"The {editing_verbose_name} {editing} requires a {required_type_verbose_name}",
-                        )
+                        relationship_data_errors.setdefault(requires_message, []).append(str(editing))
+
+        for relationship_message, object_list in relationship_data_errors.items():
+
+            if len(object_list) > 5:
+                self.add_error(None, f"{len(object_list)} {relationship_message}")
+            else:
+                self.add_error(
+                    None, mark_safe(f"These {relationship_message}:<ul><li>{'</li><li>'.join(object_list)}</li></ul>")
+                )
+
         return super().clean()
 
 
@@ -462,8 +472,8 @@ class RelationshipModelFormMixin(forms.ModelForm):
                 self.fields[field_name] = relationship.to_form_field(side=side)
 
                 # HTML5 validation for required relationship field:
-                if relationship.required_on == side:
-                    self.fields[field_name].required = True
+                # if relationship.required_on == side:
+                #     self.fields[field_name].required = True
 
                 # if the object already exists, populate the field with existing values
                 if self.instance.present_in_database:
