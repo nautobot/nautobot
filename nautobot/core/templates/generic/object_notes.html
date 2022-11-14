@@ -1,0 +1,33 @@
+{% extends base_template %}
+{% load helpers %}
+{% load form_helpers %}
+
+{% block title %}{{ block.super }} - Notes{% endblock %}
+
+{% block content %}
+    {% if perms.extras.add_note %}
+        <form action="{% url 'extras:note_add' %}?return_url={{ request.path }}?tab=notes" method="post" enctype="multipart/form-data" class="form form-horizontal">
+            <div class="row">
+                <div class="col-md-6 col-md-offset-3">
+                    <h3>Add a new note</h3>
+                    <div class="panel panel-default">
+                        <div class="panel-heading">
+                            <strong>Note</strong>
+                        </div>
+                        <div class="panel-body">
+                            {% csrf_token %}
+                            {% render_form form %}
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-6 col-md-offset-3 text-right" style="margin-bottom: 20px;">
+                    <button type="submit" class="btn btn-primary">Create</button>
+                    <a href="{{ object.get_absolute_url }}" class="btn btn-default">Cancel</a>
+                </div>
+            </div>
+        </form>
+    {% endif %}
+
+    {% include 'responsive_table.html' %}
+    {% include 'inc/paginator.html' with paginator=table.paginator page=table.page %}
+{% endblock %}

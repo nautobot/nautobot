@@ -2,12 +2,14 @@ import logging
 
 from django.contrib import messages
 from django.contrib.contenttypes.models import ContentType
+from django.db.models import Q
 from django.utils.safestring import mark_safe
 from django_tables2 import RequestConfig
 from rest_framework import renderers
 
 from nautobot.core.forms import SearchForm
-from nautobot.extras.models.change_logging import ChangeLoggedModel
+from nautobot.extras.models.change_logging import ChangeLoggedModel, ObjectChange
+from nautobot.extras.utils import get_base_template
 from nautobot.utilities.forms import (
     TableConfigForm,
     restrict_form_fields,
@@ -65,12 +67,29 @@ class NautobotHTMLRenderer(renderers.BrowsableAPIRenderer):
         """
         table_class = view.get_table_class()
         queryset = view.get_queryset()
-        if view.action == "list":
-            permissions = kwargs.get("permissions", {})
+        if view.action in ["list", "notes", "changelog"]:
             request = kwargs.get("request", view.request)
-            table = table_class(queryset, user=request.user)
-            if "pk" in table.base_columns and (permissions["change"] or permissions["delete"]):
-                table.columns.show("pk")
+            if view.action == "list":
+                permissions = kwargs.get("permissions", {})
+                table = table_class(queryset, user=request.user)
+                if "pk" in table.base_columns and (permissions["change"] or permissions["delete"]):
+                    table.columns.show("pk")
+            elif view.action == "notes":
+                obj = kwargs.get("object")
+                table = table_class(obj.notes, user=request.user)
+            elif view.action == "changelog":
+                obj = kwargs.get("object")
+                content_type = kwargs.get("content_type")
+                objectchanges = (
+                    ObjectChange.objects.restrict(request.user, "view")
+                    .prefetch_related("user", "changed_object_type")
+                    .filter(
+                        Q(changed_object_type=content_type, changed_object_id=obj.pk)
+                        | Q(related_object_type=content_type, related_object_id=obj.pk)
+                    )
+                )
+                table = table_class(data=objectchanges, orderable=False)
+
             # Apply the request context
             paginate = {
                 "paginator_class": EnhancedPaginator,
@@ -130,7 +149,7 @@ class NautobotHTMLRenderer(renderers.BrowsableAPIRenderer):
         display_filter_params = []
         # Compile a dictionary indicating which permissions are available to the current user for this model
         permissions = self.construct_user_permissions(request, model)
-        if view.action in ["create", "retrieve", "update", "destroy"]:
+        if view.action in ["create", "retrieve", "update", "destroy", "changelog", "notes"]:
             instance = view.get_object()
             return_url = view.get_return_url(request, instance)
             if isinstance(instance, ChangeLoggedModel):
@@ -189,6 +208,15 @@ class NautobotHTMLRenderer(renderers.BrowsableAPIRenderer):
 
                     restrict_form_fields(form, request.user)
                 table = self.construct_table(view, pk_list=pk_list)
+            elif view.action == "notes":
+                initial_data = {
+                    "assigned_object_type": content_type,
+                    "assigned_object_id": instance.pk,
+                }
+                form = form_class(initial=initial_data)
+                table = self.construct_table(view, object=instance)
+            elif view.action == "changelog":
+                table = self.construct_table(view, object=instance, content_type=content_type)
 
         context = {
             "changelog_url": changelog_url,  # NOTE: This context key is deprecated in favor of `object.get_changelog_url`.
@@ -231,6 +259,13 @@ class NautobotHTMLRenderer(renderers.BrowsableAPIRenderer):
                     {
                         "active_tab": view.bulk_create_active_tab if view.bulk_create_active_tab else "csv-data",
                         "fields": view.bulk_create_form_class(model).fields if view.bulk_create_form_class else None,
+                    }
+                )
+            elif view.action in ["changelog", "notes"]:
+                context.update(
+                    {
+                        "base_template": get_base_template(data.get("base_template"), model),
+                        "active_tab": view.action,
                     }
                 )
             context.update(view.get_extra_context(request, instance=None))

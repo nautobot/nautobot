@@ -1,5 +1,8 @@
+import logging
+
 from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ObjectDoesNotExist
+from django.urls import NoReverseMatch
 from django.utils.functional import classproperty
 from drf_spectacular.utils import extend_schema_field
 from rest_framework import serializers
@@ -113,6 +116,8 @@ from .nested_serializers import (  # noqa: F401
 # Mixins and Base Classes
 #
 
+logger = logging.getLogger(__name__)
+
 
 class NotesSerializerMixin(BaseModelSerializer):
     """Extend Serializer with a `notes` field."""
@@ -128,8 +133,22 @@ class NotesSerializerMixin(BaseModelSerializer):
 
     @extend_schema_field(serializers.URLField())
     def get_notes_url(self, instance):
-        notes_url = get_route_for_model(instance, "notes", api=True)
-        return reverse(notes_url, args=[instance.id], request=self.context["request"])
+        try:
+            notes_url = get_route_for_model(instance, "notes", api=True)
+            return reverse(notes_url, args=[instance.id], request=self.context["request"])
+        except NoReverseMatch:
+            model_name = type(instance).__name__
+            logger.warning(
+                (
+                    f"Notes feature is not available for model {model_name}. "
+                    "Please make sure to: "
+                    f"1. Include NotesMixin from nautobot.extras.model.mixins in the {model_name} class definition "
+                    f"2. Include NotesViewSetMixin from nautobot.extras.api.mixins in the {model_name}ViewSet "
+                    "before including NotesSerializerMixin in the model serializer"
+                )
+            )
+
+            return None
 
 
 class NautobotModelSerializer(
@@ -176,7 +195,7 @@ class TagSerializerField(NestedTagSerializer):
         return queryset.get_for_model(model)
 
 
-# TODO should be TaggedModelSerializerMixin
+# 2.0 TODO should be TaggedModelSerializerMixin
 class TaggedObjectSerializer(BaseModelSerializer):
     tags = TagSerializerField(many=True, required=False)
 
