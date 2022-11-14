@@ -637,6 +637,10 @@ class DynamicGroupModelTest(DynamicGroupTestBase):
         nested_value = [parent_region.slug]
         group.set_filter({"region": nested_value})
         group.validated_save()
+
+        # We are making sure the filterset generated from the slug as an argument results in the same
+        # filtered queryset, and more importantly that the nested filter expression `site__region`
+        # is automatically used to get the related model name without failing.
         nested_query = group.generate_query_for_filter(filter_field=fs.filters["region"], value=nested_value)
         nested_qs = queryset.filter(nested_query)
         region_qs = Device.objects.filter(site__region__slug__in=nested_value)
