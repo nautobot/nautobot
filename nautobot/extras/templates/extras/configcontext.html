@@ -188,6 +188,20 @@
                         </td>
                     </tr>
                     <tr>
+                        <td>Device Redundancy Groups</td>
+                        <td>
+                            {% if object.device_redundancy_groups.all %}
+                                <ul>
+                                    {% for device_redundancy_group in object.device_redundancy_groups.all %}
+                                        <li>{{ device_redundancy_group|hyperlinked_object }}</li>
+                                    {% endfor %}
+                                </ul>
+                            {% else %}
+                                <span class="text-muted">None</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    <tr>
                         <td>Tags</td>
                         <td>
                             {% if object.tags.all %}

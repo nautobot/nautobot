@@ -913,7 +913,7 @@ def delete_git_config_context_schemas(repository_record, job_result, preserve=()
 def refresh_git_jobs(repository_record, job_result, delete=False):
     """Callback function for GitRepository updates - refresh all Job records managed by this repository."""
     installed_jobs = []
-    if not delete:
+    if "extras.job" in repository_record.provided_contents and not delete:
         jobs_path = os.path.join(repository_record.filesystem_path, "jobs")
         if os.path.isdir(jobs_path):
             for job_info in jobs_in_directory(jobs_path, report_errors=True):

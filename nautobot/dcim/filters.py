@@ -1,6 +1,7 @@
 import django_filters
 from django.contrib.auth import get_user_model
 from django.db.models import Q
+from drf_spectacular.utils import extend_schema_field
 from timezone_field import TimeZoneField
 
 from nautobot.dcim.filter_mixins import LocatableModelFilterSetMixin
@@ -48,6 +49,7 @@ from .models import (
     Device,
     DeviceBay,
     DeviceBayTemplate,
+    DeviceRedundancyGroup,
     DeviceRole,
     DeviceType,
     FrontPort,
@@ -88,6 +90,7 @@ __all__ = (
     "DeviceBayFilterSet",
     "DeviceBayTemplateFilterSet",
     "DeviceFilterSet",
+    "DeviceRedundancyGroupFilterSet",
     "DeviceRoleFilterSet",
     "DeviceTypeFilterSet",
     "FrontPortFilterSet",
@@ -289,7 +292,7 @@ class LocationTypeFilterSet(NautobotFilterSet, NameSlugSearchFilterSet):
 
     class Meta:
         model = LocationType
-        fields = ["id", "name", "slug", "description"]
+        fields = ["id", "name", "slug", "description", "nestable"]
 
 
 class LocationFilterSet(NautobotFilterSet, StatusModelFilterSetMixin, TenancyFilterSet):
@@ -307,14 +310,24 @@ class LocationFilterSet(NautobotFilterSet, StatusModelFilterSetMixin, TenancyFil
         queryset=Location.objects.all(),
         label="Parent location (slug or ID)",
     )
+    subtree = NaturalKeyOrPKMultipleChoiceFilter(
+        queryset=Location.objects.all(),
+        label="Location(s) and descendants thereof (slug or ID)",
+        method="_subtree",
+    )
     child_location_type = NaturalKeyOrPKMultipleChoiceFilter(
-        field_name="location_type__children",
+        method="_child_location_type",
         queryset=LocationType.objects.all(),
         label="Child location type (slug or ID)",
     )
     site = NaturalKeyOrPKMultipleChoiceFilter(
         queryset=Site.objects.all(),
         label="Site (slug or ID)",
+    )
+    base_site = NaturalKeyOrPKMultipleChoiceFilter(
+        queryset=Site.objects.all(),
+        label="Base location's site (slug or ID)",
+        method="_base_site",
     )
     content_type = ContentTypeMultipleChoiceFilter(
         field_name="location_type__content_types",
@@ -325,6 +338,55 @@ class LocationFilterSet(NautobotFilterSet, StatusModelFilterSetMixin, TenancyFil
     class Meta:
         model = Location
         fields = ["id", "name", "slug", "description"]
+
+    def generate_query__base_site(self, value):
+        """Helper method used by DynamicGroups and by _base_site() method."""
+        if value:
+            max_depth = Location.objects.with_tree_fields().extra(order_by=["-__tree.tree_depth"]).first().tree_depth
+            filter_name = "site__in"
+            params = Q(**{filter_name: value})
+            for _i in range(max_depth):
+                filter_name = f"parent__{filter_name}"
+                params |= Q(**{filter_name: value})
+            return params
+        return Q()
+
+    @extend_schema_field({"type": "string"})
+    def _base_site(self, queryset, name, value):
+        """FilterSet method for getting Locations that are assigned to a given Site(s) or descended from one that is."""
+        params = self.generate_query__base_site(value)
+        return queryset.filter(params)
+
+    def generate_query__child_location_type(self, value):
+        """Helper method used by DynamicGroups and by _child_location_type() method."""
+        if value:
+            # Locations whose location type is a parent of value, or whose location type *is* value but can be nested
+            return Q(location_type__children__in=value) | Q(location_type__in=value, location_type__nestable=True)
+        return Q()
+
+    @extend_schema_field({"type": "string"})
+    def _child_location_type(self, queryset, name, value):
+        """FilterSet method for getting Locations that can have a child of the given LocationType(s)."""
+        params = self.generate_query__child_location_type(value)
+        return queryset.filter(params)
+
+    def generate_query__subtree(self, value):
+        """Helper method used by DynamicGroups and by _subtree() method."""
+        if value:
+            max_depth = Location.objects.with_tree_fields().extra(order_by=["-__tree.tree_depth"]).first().tree_depth
+            params = Q(pk__in=[v.pk for v in value])
+            filter_name = "in"
+            for _i in range(max_depth):
+                filter_name = f"parent__{filter_name}"
+                params |= Q(**{filter_name: value})
+            return params
+        return Q()
+
+    @extend_schema_field({"type": "string"})
+    def _subtree(self, queryset, name, value):
+        """FilterSet method for getting Locations that are or are descended from a given Location(s)."""
+        params = self.generate_query__subtree(value)
+        return queryset.filter(params)
 
 
 class RackGroupFilterSet(NautobotFilterSet, LocatableModelFilterSetMixin, NameSlugSearchFilterSet):
@@ -979,6 +1041,11 @@ class DeviceFilterSet(
         field_name="virtual_chassis",
         label="Is a virtual chassis member",
     )
+    device_redundancy_group = NaturalKeyOrPKMultipleChoiceFilter(
+        field_name="device_redundancy_group",
+        queryset=DeviceRedundancyGroup.objects.all(),
+        label="Device Redundancy Groups (slug or ID)",
+    )
     virtual_chassis_member = is_virtual_chassis_member
     has_console_ports = RelatedMembershipBooleanFilter(
         field_name="consoleports",
@@ -1034,6 +1101,7 @@ class DeviceFilterSet(
             "position",
             "vc_position",
             "vc_priority",
+            "device_redundancy_group_priority",
         ]
 
     def generate_query__has_primary_ip(self, value):
@@ -1722,3 +1790,18 @@ class PowerFeedFilterSet(
             "comments",
             "available_power",
         ]
+
+
+class DeviceRedundancyGroupFilterSet(NautobotFilterSet, StatusModelFilterSetMixin, NameSlugSearchFilterSet):
+    q = SearchFilter(filter_predicates={"name": "icontains", "comments": "icontains"})
+    tag = TagFilter()
+    secrets_group = NaturalKeyOrPKMultipleChoiceFilter(
+        field_name="secrets_group",
+        queryset=SecretsGroup.objects.all(),
+        to_field_name="slug",
+        label="Secrets group",
+    )
+
+    class Meta:
+        model = DeviceRedundancyGroup
+        fields = ["id", "name", "slug", "failover_strategy"]

@@ -194,6 +194,17 @@ class ExampleJobWithSoftTimeLimit(Job):
             cleanup_in_a_hurry()
 ```
 
+#### `task_queues`
+
++++ 1.5.0
+
+Default: `[]`
+
+A list of task queue names that the job can be routed to. An empty list will default to only allowing the user to select the [default queue](../configuration/optional-settings.md#celery_task_default_queue) (`default` unless changed by an administrator). The first queue in the list will be used if a queue is not specified in a job run API call.
+
+!!! note
+    A worker must be listening on the requested queue or the job will not run. See the documentation on [task queues](../administration/celery-queues.md) for more information.
+
 #### `template_name`
 
 +++ 1.4.0
@@ -507,10 +518,12 @@ An administrator or user with `extras.change_job` permission can also edit a Job
 * `description`
 * `approval_required`
 * `commit_default`
+* `has_sensitive_variables`
 * `hidden`
 * `read_only`
 * `soft_time_limit`
 * `time_limit`
+* `task_queues`
 
 This is done by setting the corresponding "override" flag (`grouping_override`, `name_override`, etc.) to `True` then providing a new value for the attribute in question. An overridden attribute will remain set to its overridden value even if the underlying Job class definition changes and `nautobot-server <migrate|post_upgrade>` gets run again. Conversely, clearing the "override" flag for an attribute and saving the database record will revert the attribute to the underlying value defined within the Job class source code.
 
@@ -552,7 +565,7 @@ Once a job has been run, the latest [`JobResult`](../models/extras/jobresult.md)
 
 ### Via the API
 
-To run a job via the REST API, issue a POST request to the job's endpoint `/api/extras/jobs/<uuid>/run/`. You can optionally provide JSON data to set the `commit` flag, specify any required user input `data`, and/or provide optional scheduling information as described in [the section on scheduling and approvals](./job-scheduling-and-approvals.md).
+To run a job via the REST API, issue a POST request to the job's endpoint `/api/extras/jobs/<uuid>/run/`. You can optionally provide JSON data to set the `commit` flag, specify any required user input `data`, optional `task_queue`, and/or provide optional scheduling information as described in [the section on scheduling and approvals](./job-scheduling-and-approvals.md).
 
 For example, to run a job with no user inputs and without committing any anything to the database:
 

@@ -944,99 +944,7 @@ Returned is a GraphQL object which holds the same data as returned from GraphiQL
 
 ## Adding Web UI Views
 
-If your plugin needs its own page or pages in the Nautobot web UI, you'll need to define views. A view is a particular page tied to a URL within Nautobot, which renders content using a template. Views are typically defined in `views.py`, and URL patterns in `urls.py`. As an example, let's write a view which displays a random animal and the sound it makes. First, create the view in `views.py`:
-
-```python
-# views.py
-from django.shortcuts import render
-from django.views.generic import View
-
-from .models import Animal
-
-
-class RandomAnimalView(View):
-    """Display a randomly-selected Animal."""
-
-    def get(self, request):
-        animal = Animal.objects.order_by('?').first()
-        return render(request, 'nautobot_animal_sounds/animal.html', {
-            'animal': animal,
-        })
-```
-
-This view retrieves a random animal from the database and and passes it as a context variable when rendering a template named `animal.html`, which doesn't exist yet. To create this template, first create a directory named `templates/nautobot_animal_sounds/` within the plugin source directory. (We use the plugin's name as a subdirectory to guard against naming collisions with other plugins.) Then, create a template named `animal.html` as described below.
-
-### Utilizing Nautobot Generic Views
-
-Starting in Nautobot 1.1.0 via [PR](https://github.com/nautobot/nautobot/issues/14), some `generic` views have been exposed to help aid in plugin development.  These views have some requirements that must be in place in order to work.  These can be used by importing them from `from nautobot.core.views import generic`.
-
-More documentation and examples can be found in [Generic Views](../development/generic-views.md) guide.
-
-### Extending the Base Template
-
-Nautobot provides a base template to ensure a consistent user experience, which plugins can extend with their own content. This template includes four content blocks:
-
-* `title` - The page title
-* `header` - The upper portion of the page
-* `content` - The main page body
-* `javascript` - A section at the end of the page for including Javascript code
-
-For more information on how template blocks work, consult the [Django documentation](https://docs.djangoproject.com/en/stable/ref/templates/builtins/#block).
-
-```jinja2
-{# templates/nautobot_animal_sounds/animal.html #}
-{% extends 'base.html' %}
-
-{% block content %}
-    {% with config=settings.PLUGINS_CONFIG.nautobot_animal_sounds %}
-        <h2 class="text-center" style="margin-top: 200px">
-            {% if animal %}
-                The {{ animal.name|lower }} says
-                {% if config.loud %}
-                    {{ animal.sound|upper }}!
-                {% else %}
-                    {{ animal.sound }}
-                {% endif %}
-            {% else %}
-                No animals have been created yet!
-            {% endif %}
-        </h2>
-    {% endwith %}
-{% endblock %}
-
-```
-
-The first line of the template instructs Django to extend the Nautobot base template and inject our custom content within its `content` block.
-
-!!! note
-    Django renders templates with its own custom [template language](https://docs.djangoproject.com/en/stable/topics/templates/#the-django-template-language). This template language is very similar to Jinja2, however there are some important differences to keep in mind.
-
-### Registering URL Patterns
-
-Finally, to make the view accessible to users, we need to register a URL for it. We do this in `urls.py` by defining a `urlpatterns` variable containing a list of paths.
-
-```python
-# urls.py
-from django.urls import path
-
-from . import views
-
-
-urlpatterns = [
-    path('random/', views.RandomAnimalView.as_view(), name='random_animal'),
-]
-```
-
-A URL pattern has three components:
-
-* `route` - The unique portion of the URL dedicated to this view
-* `view` - The view itself
-* `name` - A short name used to identify the URL path internally
-
-This makes our view accessible at the URL `/plugins/animal-sounds/random/`. (Remember, our `AnimalSoundsConfig` class sets our plugin's base URL to `animal-sounds`.) Viewing this URL should show the base Nautobot template with our custom content inside it.
-
-!!! tip
-    As a next step, you would typically want to add links from the Nautobot UI to this view, either from the [navigation menu](#adding-navigation-menu-items), the [Nautobot home page](#adding-home-page-content), and/or the [Installed Plugins view](#adding-links-to-the-installed-plugins-view).
+If your plugin needs its own page or pages in the Nautobot web UI, you'll need to define views. A view is a particular page tied to a URL within Nautobot, which renders content using a template.
 
 ### NautobotUIViewSet
 
@@ -1216,6 +1124,102 @@ urlpatterns = [
 urlpatterns += router.urls
 ```
 
+### Utilizing Generic Django Views
+
+The use of `generic` Django views can aid in plugin development. As an example, let's write a view which displays a random animal and the sound it makes. First, create the view in `views.py`:
+
+```python
+# views.py
+from django.shortcuts import render
+from django.views.generic import View
+
+from .models import Animal
+
+
+class RandomAnimalView(View):
+    """Display a randomly-selected Animal."""
+
+    def get(self, request):
+        animal = Animal.objects.order_by('?').first()
+        return render(request, 'nautobot_animal_sounds/animal.html', {
+            'animal': animal,
+        })
+```
+
+This view retrieves a random animal from the database and and passes it as a context variable when rendering a template named `animal.html`, which doesn't exist yet. To create this template, first create a directory named `templates/nautobot_animal_sounds/` within the plugin source directory. (We use the plugin's name as a subdirectory to guard against naming collisions with other plugins.) Then, create a template named `animal.html` as described below.
+
+### Utilizing Nautobot Generic Views
+
+Starting in Nautobot 1.1.0 via [PR](https://github.com/nautobot/nautobot/issues/14), some `generic` views have been exposed to help aid in plugin development.  These views have some requirements that must be in place in order to work.  These can be used by importing them from `from nautobot.core.views import generic`.
+
+More documentation and examples can be found in [Generic Views](../development/generic-views.md) guide.
+
+### Extending the Base Template
+
+Nautobot provides a base template to ensure a consistent user experience, which plugins can extend with their own content. This template includes four content blocks:
+
+* `title` - The page title
+* `header` - The upper portion of the page
+* `content` - The main page body
+* `javascript` - A section at the end of the page for including Javascript code
+
+For more information on how template blocks work, consult the [Django documentation](https://docs.djangoproject.com/en/stable/ref/templates/builtins/#block).
+
+```jinja2
+{# templates/nautobot_animal_sounds/animal.html #}
+{% extends 'base.html' %}
+
+{% block content %}
+    {% with config=settings.PLUGINS_CONFIG.nautobot_animal_sounds %}
+        <h2 class="text-center" style="margin-top: 200px">
+            {% if animal %}
+                The {{ animal.name|lower }} says
+                {% if config.loud %}
+                    {{ animal.sound|upper }}!
+                {% else %}
+                    {{ animal.sound }}
+                {% endif %}
+            {% else %}
+                No animals have been created yet!
+            {% endif %}
+        </h2>
+    {% endwith %}
+{% endblock %}
+
+```
+
+The first line of the template instructs Django to extend the Nautobot base template and inject our custom content within its `content` block.
+
+!!! note
+    Django renders templates with its own custom [template language](https://docs.djangoproject.com/en/stable/topics/templates/#the-django-template-language). This template language is very similar to Jinja2, however there are some important differences to keep in mind.
+
+### Registering URL Patterns
+
+Finally, to make the view accessible to users, we need to register a URL for it. We do this in `urls.py` by defining a `urlpatterns` variable containing a list of paths.
+
+```python
+# urls.py
+from django.urls import path
+
+from . import views
+
+
+urlpatterns = [
+    path('random/', views.RandomAnimalView.as_view(), name='random_animal'),
+]
+```
+
+A URL pattern has three components:
+
+* `route` - The unique portion of the URL dedicated to this view
+* `view` - The view itself
+* `name` - A short name used to identify the URL path internally
+
+This makes our view accessible at the URL `/plugins/animal-sounds/random/`. (Remember, our `AnimalSoundsConfig` class sets our plugin's base URL to `animal-sounds`.) Viewing this URL should show the base Nautobot template with our custom content inside it.
+
+!!! tip
+    As a next step, you would typically want to add links from the Nautobot UI to this view, either from the [navigation menu](#adding-navigation-menu-items), the [Nautobot home page](#adding-home-page-content), and/or the [Installed Plugins view](#adding-links-to-the-installed-plugins-view).
+
 ## Adding REST API Endpoints
 
 Plugins can declare custom endpoints on Nautobot's REST API to retrieve or manipulate models or other data. These behave very similarly to views, except that instead of rendering arbitrary content using a template, data is returned in JSON format using a serializer. Nautobot uses the [Django REST Framework](https://www.django-rest-framework.org/), which makes writing API serializers and views very simple.
@@ -1343,3 +1347,59 @@ try:
 except ImportError:
     pass
 ```
+
+## Testing Plugins
+
+In general plugins can be tested like other Django apps. In most cases you'll want to run your automated tests via the `nautobot-server test <plugin_module>` command or, if using the `coverage` Python library, `coverage run --module nautobot.core.cli test <plugin_module>`.
+
+### Factories
+
++++ 1.5.0
+
+The [`TEST_USE_FACTORIES`](../configuration/optional-settings.md#test_use_factories) setting defaults to `False` when testing plugins, primarily for backwards-compatibility reasons. It can prove a useful way of populating a baseline of Nautobot database data for your tests and save you the trouble of creating a large amount of baseline data yourself. We recommend adding [`factory-boy`](https://pypi.org/project/factory-boy/) to your plugin's development dependencies and settings `TEST_USE_FACTORIES = True` in your plugin's development/test `nautobot_config.py` to take advantage of this.
+
+### Performance Tests
+
++++ 1.5.0
+
+### Running Performance Tests
+
+You need to install `django-slowtests` as a part of your plugin dev dependency to run performance tests. It has a very intuitive way to measure the performance of your own tests for your plugin  (all you have to do is tag your tests with `performance`) and do `invoke performance-test` to get the time to run your tests with `NautobotPerformanceTestRunner`.
+
+`NautobotPerformanceTestRunner` is used by adding the flag `--testrunner nautobot.core.tests.runner.NautobotPerformanceTestRunner` to the `coverage run` command used for unit tests. This flag will replace the default `NautobotTestRunner` while retaining all its functionalities with the addition of performance evaluation after test
+runs.
+Checkout [Performance Tests](../development/testing.md#performance-tests) for more detail.
+
+```python
+@tag("performance")
+def test_your_plugin(self)
+    pass
+...
+```
+
+### Gathering Performance Test Baseline Data
+
+If you want to add baselines for your own test to `nautobot/core/tests/performance_baselines.yml` or have your own baseline yaml file for performance testing, specify a different file path for  `TEST_PERFORMANCE_BASELINE_FILE` in plugin's development/test `nautobot_config.py`, and store the output of `invoke performance-test --performance-snapshot` command in that file. `--performance-snapshot` flag will store the results of your performance test to `report.yml` and all you need to do is copy/paste the result to the file set by `TEST_PERFORMANCE_BASELINE_FILE`. Now you have baselines for your own tests!
+Example output of `invoke performance-test --performance-snapshot`:
+
+```yaml
+tests:
+  - name: >-
+      test_run_job_with_sensitive_variables_and_requires_approval
+      (nautobot.extras.tests.test_views.JobTestCase)
+    execution_time: 4.799533
+  - name: test_run_missing_schedule (nautobot.extras.tests.test_views.JobTestCase)
+    execution_time: 4.367563
+  - name: test_run_now_missing_args (nautobot.extras.tests.test_views.JobTestCase)
+    execution_time: 4.363194
+  - name: >-
+      test_create_object_with_constrained_permission
+      (nautobot.extras.tests.test_views.GraphQLQueriesTestCase)
+    execution_time: 3.474244
+  - name: >-
+      test_run_now_constrained_permissions
+      (nautobot.extras.tests.test_views.JobTestCase)
+    execution_time: 2.727531
+```
+
+We recommend adding [`django-slowtests`](https://pypi.org/project/django-slowtests/) to your plugin's development dependencies to leverage this functionality to build better performing plugins.

@@ -28,7 +28,6 @@ from nautobot.utilities.templatetags.helpers import (
     meters_to_feet,
     get_item,
 )
-from nautobot.extras.models import Status
 from nautobot.dcim.models import Site
 from example_plugin.models import AnotherExampleModel, ExampleModel
 
@@ -44,14 +43,23 @@ class NautobotTemplatetagsHelperTest(TestCase):
         # An object without get_absolute_url gives a string
         self.assertEqual(hyperlinked_object("hello"), "hello")
         # An object with get_absolute_url gives a hyperlink
-        status = Status.objects.get_for_model(Site).first()
-        site = Site.objects.create(name="Test Site", slug="test-site", status=status)
-        self.assertEqual(hyperlinked_object(site), '<a href="/dcim/sites/test-site/">Test Site</a>')
+        site = Site.objects.first()
+        self.assertEqual(hyperlinked_object(site), f'<a href="/dcim/sites/{site.slug}/">{site.name}</a>')
         # An object with get_absolute_url and a description gives a titled hyperlink
         site.description = "An important site"
         site.save()
         self.assertEqual(
-            hyperlinked_object(site), '<a href="/dcim/sites/test-site/" title="An important site">Test Site</a>'
+            hyperlinked_object(site), f'<a href="/dcim/sites/{site.slug}/" title="An important site">{site.name}</a>'
+        )
+        # Optionally you can request a field other than the object's display string
+        self.assertEqual(
+            hyperlinked_object(site, "slug"),
+            f'<a href="/dcim/sites/{site.slug}/" title="An important site">{site.slug}</a>',
+        )
+        # If you request a nonexistent field, it defaults to the string representation
+        self.assertEqual(
+            hyperlinked_object(site, "foo"),
+            f'<a href="/dcim/sites/{site.slug}/" title="An important site">{site!s}</a>',
         )
 
     def test_placeholder(self):
@@ -98,8 +106,7 @@ class NautobotTemplatetagsHelperTest(TestCase):
         self.assertEqual("utf8:\n- 😀😀\n- 😀\n", render_yaml({"utf8": ["😀😀", "😀"]}))
 
     def test_meta(self):
-        status = Status.objects.get_for_model(Site).first()
-        site = Site.objects.create(name="test", slug="test", status=status)
+        site = Site.objects.first()
 
         self.assertEqual(meta(site, "app_label"), "dcim")
         self.assertEqual(meta(Site, "app_label"), "dcim")
@@ -108,8 +115,7 @@ class NautobotTemplatetagsHelperTest(TestCase):
         self.assertEqual(meta(ExampleModel, "app_label"), "example_plugin")
 
     def test_viewname(self):
-        status = Status.objects.get_for_model(Site).first()
-        site = Site.objects.create(name="test", slug="test", status=status)
+        site = Site.objects.first()
 
         self.assertEqual(viewname(site, "edit"), "dcim:site_edit")
         self.assertEqual(viewname(Site, "test"), "dcim:site_test")
@@ -117,8 +123,7 @@ class NautobotTemplatetagsHelperTest(TestCase):
         self.assertEqual(viewname(ExampleModel, "edit"), "plugins:example_plugin:examplemodel_edit")
 
     def test_validated_viewname(self):
-        status = Status.objects.get_for_model(Site).first()
-        site = Site.objects.create(name="test", slug="test", status=status)
+        site = Site.objects.first()
 
         self.assertEqual(validated_viewname(site, "list"), "dcim:site_list")
         self.assertIsNone(validated_viewname(Site, "notvalid"))
@@ -157,8 +162,7 @@ class NautobotTemplatetagsHelperTest(TestCase):
 
     def test_get_docs_url(self):
         self.assertTrue(callable(get_docs_url))
-        status = Status.objects.get_for_model(Site).first()
-        site = Site.objects.create(name="test", slug="test", status=status)
+        site = Site.objects.first()
         self.assertEqual(get_docs_url(site), static("docs/models/dcim/site.html"))
         example_model = ExampleModel.objects.create(name="test", number=1)
         self.assertEqual(get_docs_url(example_model), static("example_plugin/docs/models/examplemodel.html"))

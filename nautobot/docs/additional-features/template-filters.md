@@ -133,6 +133,17 @@ additionally if there is an `object.description` this will be used as the title 
 {{ device|hyperlinked_object }}
 ```
 
++++ 1.5.0
+    This filter now accepts an optional `field` parameter, which allows you to use a field other than `object.display` for the object representation if desired. For example, to display the object's `name` field instead:
+
+    ```django
+    # Django Template
+    {{ location|hyperlinked_object:"name" }}
+
+    # Jinja
+    {{ location|hyperlinked_object("name") }}
+    ```
+
 ### meta
 
 Return the specified Meta attribute of a model.

@@ -31,7 +31,7 @@ SECRET_KEY = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
 CACHES["default"]["LOCATION"] = parse_redis_connection(redis_database=2)  # noqa: F405
 CACHEOPS_REDIS = parse_redis_connection(redis_database=3)
 
-CACHEOPS_ENABLED = False  # TODO(john): we should revisit this, but caching has caused issues with testing
+CACHEOPS_ENABLED = False
 
 # Testing storages within cli.py
 STORAGE_CONFIG = {
@@ -41,5 +41,10 @@ STORAGE_CONFIG = {
     "AWS_S3_REGION_NAME": "us-west-1",
 }
 
-# Disable logging for tests
-LOGGING = {}
+
+# Enable test data factories, as they're a pre-requisite for Nautobot core tests.
+TEST_USE_FACTORIES = True
+# For now, use a constant PRNG seed for consistent results. In the future we can remove this for fuzzier testing.
+TEST_FACTORY_SEED = "Nautobot"
+# File in which all performance-specifc test baselines are stored
+TEST_PERFORMANCE_BASELINE_FILE = "nautobot/core/tests/performance_baselines.yml"

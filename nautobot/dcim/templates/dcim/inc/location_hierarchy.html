@@ -13,20 +13,20 @@
     </style>
     <ul class="location-hierarchy">
         {% for region in location.base_site.region.get_ancestors %}
-            <li>Region: {{ region|hyperlinked_object }}
+            <li>{{ region|hyperlinked_object }} (Region)
                 <ul>
         {% endfor %}
         {% if location.base_site.region %}
-            <li>Region: {{ location.base_site.region|hyperlinked_object }}
+            <li>{{ location.base_site.region|hyperlinked_object }} (Region)
                 <ul>
         {% endif %}
-            <li>Site: {{ location.base_site|hyperlinked_object }}
+            <li>{{ location.base_site|hyperlinked_object }} (Site)
                 <ul>
         {% for ancestor in location.ancestors %}
-            <li><a href="{{ ancestor.location_type.get_absolute_url }}">{{ ancestor.location_type.name }}</a>: <a href="{{ ancestor.get_absolute_url }}">{{ ancestor.name }}</a>
+            <li>{{ ancestor|hyperlinked_object:"name" }} ({{ ancestor.location_type|hyperlinked_object:"name" }})
                 <ul>
         {% endfor %}
-        <li><strong><a href="{{ location.location_type.get_absolute_url }}">{{ location.location_type.name }}</a>: <a href="{{ location.get_absolute_url }}">{{ location.name }}</a></strong></li>
+        <li><strong>{{ location|hyperlinked_object:"name" }} ({{ location.location_type|hyperlinked_object:"name" }})</strong></li>
         {% for ancestor in location.ancestors %}
                 </ul>
             </li>

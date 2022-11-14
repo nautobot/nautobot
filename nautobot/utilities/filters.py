@@ -24,8 +24,9 @@ from nautobot.utilities.constants import (
     FILTER_NEGATION_LOOKUP_MAP,
     FILTER_NUMERIC_BASED_LOOKUP_MAP,
 )
-from nautobot.utilities.forms.fields import MultiMatchModelMultipleChoiceField
+from nautobot.utilities.forms.fields import MultiMatchModelMultipleChoiceField, MultiValueCharField
 from nautobot.utilities.utils import flatten_iterable
+
 
 from taggit.managers import TaggableManager
 
@@ -71,7 +72,7 @@ def multivalue_field_factory(field_class):
 
 
 class MultiValueCharFilter(django_filters.CharFilter, django_filters.MultipleChoiceFilter):
-    field_class = multivalue_field_factory(forms.CharField)
+    field_class = MultiValueCharField
 
 
 class MultiValueDateFilter(django_filters.DateFilter, django_filters.MultipleChoiceFilter):
@@ -485,6 +486,10 @@ class TreeNodeMultipleChoiceFilter(NaturalKeyOrPKMultipleChoiceFilter):
     but a TreeNodeMultipleChoiceFilter on Site for {"region": "USA"} or {"region": "Earth"}
     would match both "Athens" and "Durham".
     """
+
+    def __init__(self, *args, **kwargs):
+        kwargs.pop("lookup_expr", None)  # Disallow overloading of `lookup_expr`.
+        super().__init__(*args, **kwargs)
 
     def generate_query(self, value, qs=None, **kwargs):
         """

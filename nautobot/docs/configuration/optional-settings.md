@@ -168,11 +168,14 @@ Various defaults for caching, the most important of which being the cache timeou
 
 ## CACHEOPS_ENABLED
 
-Default: `True`
+Default: `False`
 
 Environment Variable: `NAUTOBOT_CACHEOPS_ENABLED`
 
 A boolean that turns on/off caching.
+
+!!! check "Changed in 1.5.0"
+    Cachopes is disabled by default and will be removed entirely in a future release.
 
 If set to `False`, all caching is bypassed and Nautobot operates as if there is no cache.
 
@@ -201,6 +204,18 @@ Environment Variable: `NAUTOBOT_CELERY_BROKER_URL`
 Default: `'redis://localhost:6379/0'`
 
 Celery broker URL used to tell workers where queues are located.
+
+---
+
+## CELERY_TASK_DEFAULT_QUEUE
+
++++ 1.5.0
+
+Environment Variable: `NAUTOBOT_CELERY_TASK_DEFAULT_QUEUE`
+
+Default: `'default'`
+
+The default celery queue name that will be used by workers if no queue is specified in the `nautobot-server celery worker` command. This queue will also be used by celery tasks if no queue is specified when a task is run.
 
 ---
 
@@ -774,6 +789,73 @@ If set to `False`, unknown/unrecognized filter parameters will be discarded and 
 
 ---
 
+## TEST_FACTORY_SEED
+
++++ 1.5.0
+
+Default: `None`
+
+Environment Variable: `NAUTOBOT_TEST_FACTORY_SEED`
+
+When [`TEST_USE_FACTORIES`](#test_use_factories) is set to `True`, this configuration provides a fixed seed string for the pseudo-random generator used to populate test data into the database, providing for reproducible randomness across consecutive test runs. If unset, a random seed will be used each time.
+
+---
+
+## TEST_USE_FACTORIES
+
++++ 1.5.0
+
+Default: `False`
+
+Environment Variable: `NAUTOBOT_TEST_USE_FACTORIES`
+
+If set to `True`, the Nautobot test runner will call `nautobot-server generate_test_data ...` before executing any test cases, pre-populating the test database with various pseudo-random instances of many of Nautobot's data models.
+
+!!! warning
+    This functionality requires the installation of the [`factory-boy`](https://pypi.org/project/factory-boy/) Python package, which is present in Nautobot's own development environment, but is _not_ an inherent dependency of the Nautobot package when installed otherwise, such as into a plugin's development environment.
+
+!!! info
+    Setting this to `True` is a requirement for all Nautobot core tests as of 1.5.0, and it is set accordingly in `nautobot/core/tests/nautobot_config.py`, but defaults to `False` otherwise so as to remain backwards-compatible with plugins that also may use the Nautobot test runner in their own test environments, but have not yet updated their tests to account for the presence of this test data.
+
+    Because this test data can obviate the need to manually construct complex test data, and the random factor can improve test robustness, plugin developers are encouraged to set this to `True` in their configuration, ensure that their development environments include the `factory-boy` Python package as a test dependency, and update their tests as needed.
+
+---
+
+## TEST_PERFORMANCE_BASELINE_FILE
+
++++ 1.5.0
+
+Default: `nautobot/core/tests/performance_baselines.yml`
+
+Environment Variable: `TEST_PERFORMANCE_BASELINE_FILE`
+
+[`TEST_PERFORMANCE_BASELINE_FILE`](#test_performance_baseline_file) is set to a certain file path, this file path should point to a .yml file that conforms to the following format:
+
+```yaml
+tests:
+  - name: >-
+      test_run_job_with_sensitive_variables_and_requires_approval
+      (nautobot.extras.tests.test_views.JobTestCase)
+    execution_time: 4.799533
+  - name: test_run_missing_schedule (nautobot.extras.tests.test_views.JobTestCase)
+    execution_time: 4.367563
+  - name: test_run_now_missing_args (nautobot.extras.tests.test_views.JobTestCase)
+    execution_time: 4.363194
+  - name: >-
+      test_create_object_with_constrained_permission
+      (nautobot.extras.tests.test_views.GraphQLQueriesTestCase)
+    execution_time: 3.474244
+  - name: >-
+      test_run_now_constrained_permissions
+      (nautobot.extras.tests.test_views.JobTestCase)
+    execution_time: 2.727531
+...
+```
+
+and store the performance baselines with the `name` of the test and the baseline `execution_time`. This file should provide the baseline times that all performance-related tests are running against.
+
+---
+
 ## UI_RACK_VIEW_TRUNCATE_FUNCTION
 
 +++ 1.4.0
@@ -955,6 +1037,9 @@ Default:
     },
 }
 ```
+
++/- 1.4.10
+    While running unit or integration tests via `nautobot-server test ...`, LOGGING will be set to `{}` instead of the above defaults, as verbose logging to the console is typically not desirable while running tests.
 
 This translates to:
 
