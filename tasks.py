@@ -595,7 +595,7 @@ def pylint(context, target=None, recursive=False):
 @task
 def docs_local(context):
     """Runs local instance of mkdocs serve (ctrl-c to stop)."""
-    command = "poetry run mkdocs serve"
+    command = "mkdocs serve"
     context.nautobot.local = True
     run_command(context, command)
 

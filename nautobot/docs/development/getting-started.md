@@ -318,15 +318,7 @@ It may not always be convenient to enter into the virtual shell just to run prog
 $ poetry run mkdocs serve
 ```
 
-In order to serve docs on a Mac:
-
-* Install mkdocs via homebrew
-
-```bash
-brew install mkdocs
-```
-
-* Get the proper mkdocs themes installed
+* Install verify that you have the proper dependencies installed and are in the virtual environment via Poetry. This also ensures that you have the proper mkdocs themes installed.
 
 ```bash
 poetry shell
