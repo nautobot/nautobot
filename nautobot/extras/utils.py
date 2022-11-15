@@ -71,9 +71,34 @@ def image_upload(instance, filename):
 
     return f"{path}{instance.content_type.name}_{instance.object_id}_{filename}"
 
+@deconstructible
+class FeaturedQueryMixin:
+    """Mixin class that gets a list of featured models."""
+
+    def list_subclasses(self):
+        """Return a list of classes that has implements this `name`."""
+
+        raise NotImplementedError("list_subclasses is not implemented")
+
+    def __call__(self):
+        """
+        Given an extras feature, return a Q object for content type lookup
+        """
+        query = Q()
+        for model in self.list_subclasses():
+            query |= Q(app_label=model._meta.app_label, model=model.__name__.lower())
+
+        return query
+
+    def as_queryset(self):
+        return ContentType.objects.filter(self()).order_by("app_label", "model")
+
+    def get_choices(self):
+        return [(f"{ct.app_label}.{ct.model}", ct.pk) for ct in self.as_queryset()]
+
 
 @deconstructible
-class ChangeLoggedModelsQuery:
+class ChangeLoggedModelsQuery(FeaturedQueryMixin):
     """
     Helper class to get ContentType for models that implements the to_objectchange method for change logging.
     """
@@ -83,26 +108,6 @@ class ChangeLoggedModelsQuery:
         Return a list of classes that implement the to_objectchange method
         """
         return [_class for _class in apps.get_models() if hasattr(_class, "to_objectchange")]
-
-    def __call__(self):
-        return self.get_query()
-
-    def get_query(self):
-        """
-        Return a Q object for content type lookup
-        """
-        query = Q()
-        for model in self.list_subclasses():
-            app_label, model_name = model._meta.label_lower.split(".")
-            query |= Q(app_label=app_label, model=model_name)
-
-        return query
-
-    def as_queryset(self):
-        return ContentType.objects.filter(self.get_query()).order_by("app_label", "model")
-
-    def get_choices(self):
-        return [(f"{ct.app_label}.{ct.model}", ct.pk) for ct in self.as_queryset()]
 
 
 @deconstructible
@@ -140,7 +145,7 @@ class FeatureQuery:
 
 
 @deconstructible
-class TaggableClassesQuery:
+class TaggableClassesQuery(FeaturedQueryMixin):
     """
     Helper class to get ContentType models that implements tags(TaggableManager)
     """
@@ -155,46 +160,6 @@ class TaggableClassesQuery:
             if hasattr(_class, "tags") and isinstance(_class.tags, _TaggableManager)
         ]
 
-    def __call__(self):
-        """
-        Given an extras feature, return a Q object for content type lookup
-        """
-        query = Q()
-        for model in self.list_subclasses():
-            query |= Q(app_label=model._meta.app_label, model=model.__name__.lower())
-
-        return query
-
-    def as_queryset(self):
-        return ContentType.objects.filter(self()).order_by("app_label", "model")
-
-    def get_choices(self):
-        return [(f"{ct.app_label}.{ct.model}", ct.pk) for ct in self.as_queryset()]
-
-
-class FeaturedQueryMixin:
-    """Mixin class that gets a list of featured models."""
-
-    def list_subclasses(self):
-        """Return a list of classes that has implements this `name`."""
-
-        raise NotImplementedError("list_subclasses is not implemented")
-
-    def __call__(self):
-        """
-        Given an extras feature, return a Q object for content type lookup
-        """
-        query = Q()
-        for model in self.list_subclasses():
-            query |= Q(app_label=model._meta.app_label, model=model.__name__.lower())
-
-        return query
-
-    def as_queryset(self):
-        return ContentType.objects.filter(self()).order_by("app_label", "model")
-
-    def get_choices(self):
-        return [(f"{ct.app_label}.{ct.model}", ct.pk) for ct in self.as_queryset()]
 
 
 @deconstructible
@@ -207,7 +172,15 @@ class RoleModelsQuery(FeaturedQueryMixin):
         """
         Return a list of classes that implements roles e.g roles = ...
         """
-        return [_class for _class in apps.get_models() if hasattr(_class, "roles")]
+        # Avoid circular imports
+        from nautobot.extras.models.roles import RoleField
+
+        model_classes = []
+        for model_class in apps.get_models():
+            role_field = getattr(model_class, "roles", None)
+            if role_field and isinstance(role_field, RoleField):
+                model_classes.append(model_class)
+        return model_classes
 
 
 def extras_features(*features):

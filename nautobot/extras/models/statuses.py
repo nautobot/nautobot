@@ -3,7 +3,6 @@ from django.db import models
 
 from nautobot.extras.fields import LimitedChoiceField
 from nautobot.extras.models.base_properties import BasePropertiesModel
-
 from nautobot.extras.utils import extras_features, FeatureQuery
 from nautobot.utilities.querysets import RestrictedQuerySet
 

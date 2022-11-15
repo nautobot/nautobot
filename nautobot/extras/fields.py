@@ -88,7 +88,7 @@ class LimitedChoiceField(models.ForeignKey):
         """Return a prepped formfield for use in model forms."""
         defaults = {
             "form_class": DynamicModelChoiceField,
-            "queryset": self.model.__class__.objects.all(),
+            "queryset": self.related_model.objects.all(),
             # label_lower e.g. "dcim.device"
             "query_params": {"content_types": self.model._meta.label_lower},
         }
