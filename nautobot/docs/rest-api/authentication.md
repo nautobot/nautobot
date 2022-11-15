@@ -34,7 +34,7 @@ curl http://nautobot/api/dcim/sites/
 
 ```json
 {
-  "detail": "Authentication credentials were not provided."
+    "detail": "Authentication credentials were not provided."
 }
 ```
 
