@@ -57,7 +57,7 @@ GET /api/dcim/sites/?cf_foo=123
 ```
 
 !!! note
-For custom field filters, due to historical details of implementation, only a single filter value can be specified when matching a given field. In other words, in the above example, you could _not_ add `&cf_foo=456` to the query in order to get all sites where custom field `foo` is 123 _or_ 456; instead you would need to run two separate queries. This restriction does not apply to custom field filters using lookup expressions (next section) and will likely be changed in a future major version of Nautobot.
+    For custom field filters, due to historical details of implementation, only a single filter value can be specified when matching a given field. In other words, in the above example, you could _not_ add `&cf_foo=456` to the query in order to get all sites where custom field `foo` is 123 _or_ 456; instead you would need to run two separate queries. This restriction does not apply to custom field filters using lookup expressions (next section) and will likely be changed in a future major version of Nautobot.
 
 Custom fields can be mixed with built-in fields to further narrow results. When creating a custom string field, the type of filtering selected (loose versus exact) determines whether partial or full matching is used.
 
