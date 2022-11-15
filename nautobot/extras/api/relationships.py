@@ -276,7 +276,7 @@ class RelationshipModelSerializerMixin(ValidatedModelSerializer):
         if relationships_data:
             try:
                 self._save_relationships(instance, relationships_data)
-            except CoreValidationError as error:
+            except DjangoValidationError as error:
                 raise ValidationError(str(error))
         return instance
 
