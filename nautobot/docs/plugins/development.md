@@ -386,7 +386,7 @@ Using a key and weight system, a developer can integrate the plugin's menu addit
 More documentation and examples can be found in the [Navigation Menu](../development/navigation-menu.md) guide.
 
 !!! tip
-To reduce the amount of clutter in the navigation menu, if your plugin provides a "plugin configuration" view, we recommend [linking it from the main "Installed Plugins" page](#adding-links-to-the-installed-plugins-view) rather than adding it as a separate item in the navigation menu.
+    To reduce the amount of clutter in the navigation menu, if your plugin provides a "plugin configuration" view, we recommend [linking it from the main "Installed Plugins" page](#adding-links-to-the-installed-plugins-view) rather than adding it as a separate item in the navigation menu.
 
     Similarly, if your plugin provides a "plugin home" or "dashboard" view, consider linking it from the "Installed Plugins" page, and/or adding a link from the Nautobot home page (see below), rather than adding it to the navigation menu.
 
@@ -742,16 +742,16 @@ Nautobot will dynamically generate the additional relevant lookup expressions of
 
 Similar to `FilterSet` fields, Nautobot provides a default filter form for each model, however that does not cover every possible use case. To list a few examples of why one may want to extend a filter form:
 
-- The base filter form does not include a custom filter defined by the plugin as described above
-- The base filter form does not provide a specific lookup expression to a filterable field, such as allowing regex on name
+* The base filter form does not include a custom filter defined by the plugin as described above
+* The base filter form does not provide a specific lookup expression to a filterable field, such as allowing regex on name
 
 There are several conditions that must be met in order to extend a filter:
 
-- The original `FilterForm` must follow the pattern: `f"{model.__name__}FilterForm"`, e.g. `TenantFilterForm`
-- The `filterform_fields` attribute must be a valid dictionary of Django form fields
+* The original `FilterForm` must follow the pattern: `f"{model.__name__}FilterForm"`, e.g. `TenantFilterForm`
+* The `filterform_fields` attribute must be a valid dictionary of Django form fields
 
 !!! note
-A plugin is not required to define both `filterset_fields` and `filterform_fields`.
+    A plugin is not required to define both `filterset_fields` and `filterform_fields`.
 
 You can view an example of `filter_extensions.py` by viewing [the one provided](https://github.com/nautobot/nautobot/blob/main/examples/example_plugin/example_plugin/filter_extensions.py) with the Example Plugin.
 
@@ -865,7 +865,7 @@ This will display the plugin and its model in the admin UI. Staff users can crea
 Plugins can optionally expose their models via the GraphQL interface to allow the models to be part of the Graph and to be queried easily. There are two mutually exclusive ways to expose a model to the GraphQL interface.
 
 * By using the `@extras_features` decorator
-* By creating your own GraphQL type definition and registering it within `graphql/types.py` of your plugin (the decorator *should not* be used in this case)
+* By creating your own GraphQL type definition and registering it within `graphql/types.py` of your plugin (the decorator _should not_ be used in this case)
 
 All GraphQL model types defined by your plugin, regardless of which method is chosen, will automatically support some built-in Nautobot features:
 
@@ -1287,7 +1287,7 @@ With these three components in place, we can request `/api/plugins/animal-sounds
 ![Nautobot REST API plugin endpoint](../media/plugins/plugin_rest_api_endpoint.png)
 
 !!! warning
-This example is provided as a minimal reference implementation only. It does not address authentication, performance, or the myriad of other concerns that plugin authors should have.
+    This example is provided as a minimal reference implementation only. It does not address authentication, performance, or the myriad of other concerns that plugin authors should have.
 
 ## Adding Help Documentation
 
