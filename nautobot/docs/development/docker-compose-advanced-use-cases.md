@@ -204,9 +204,10 @@ Follow the steps below to configure VS Code to debug Nautobot and Celery Worker 
 
 3. **Configure `docker-compose.override.yml`**
 
-    It is important not to use the same listen port for the `nautobot` and `celery_worker` services. 
+    It is important not to use the same listen port for the `nautobot` and `celery_worker` services.
 
-    Unlike the current `celery_worker` the container will not automatically restart on source changes. But it is possible to restart the container from the VS Code Docker extension.
+    Unlike the current `celery_worker` the container will not automatically restart on source changes.
+    But it is possible to restart the container from the VS Code Docker extension.
 
     ```yaml
     # We can't remove volumes in a compose override, for the test configuration using the final containers
@@ -290,7 +291,6 @@ Follow the steps below to configure VS Code to debug Nautobot and Celery Worker 
     }
     ```
 
-It is now possible to debug the containerized Nautobot and Celery Worker using the VS Code debugger. 
+It is now possible to debug the containerized Nautobot and Celery Worker using the VS Code debugger.
 
 After restarting the Celery-Worker container you need to restart the debug session.
-
