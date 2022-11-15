@@ -17,8 +17,6 @@ class LimitedChoiceField(models.ForeignKey):
         - the content-type to which the field is attached (e.g. `dcim.device`)
     """
 
-    # TODO(timizuo): StatusField should inherit from this class
-
     def __init__(self, **kwargs):
         kwargs.update(self.set_defaults(**kwargs))
         super().__init__(**kwargs)

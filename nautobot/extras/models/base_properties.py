@@ -31,7 +31,8 @@ class BasePropertiesModel(BaseModel, ChangeLoggedModel, CustomFieldModel, Relati
     shared amongst models that requires these fields: name, color, content_types and description.
     """
 
-    # Todo(timizuo): Status and Tag should inherit from this model.
+    # Todo(timizuo): Tag should inherit from this model; but
+    #  cant because of field conflicts: name and slug field.
     content_types = models.ManyToManyField(
         to=ContentType,
         help_text="The content type(s) to which this model applies.",
