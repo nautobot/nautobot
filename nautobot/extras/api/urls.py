@@ -79,5 +79,8 @@ router.register("tags", views.TagViewSet)
 # Webhooks
 router.register("webhooks", views.WebhooksViewSet)
 
+# Roles
+router.register("roles", views.RoleViewSet)
+
 app_name = "extras-api"
 urlpatterns = router.urls

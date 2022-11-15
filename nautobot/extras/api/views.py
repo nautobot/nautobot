@@ -48,6 +48,7 @@ from nautobot.extras.models import (
     ObjectChange,
     Relationship,
     RelationshipAssociation,
+    Role,
     ScheduledJob,
     Secret,
     SecretsGroup,
@@ -1170,3 +1171,14 @@ class WebhooksViewSet(ModelViewSet, NotesViewSetMixin):
     queryset = Webhook.objects.all()
     serializer_class = serializers.WebhookSerializer
     filterset_class = filters.WebhookFilterSet
+
+
+#
+# Roles
+#
+
+
+class RoleViewSet(NautobotModelViewSet):
+    queryset = Role.objects.all()
+    serializer_class = serializers.RoleSerializer
+    filterset_class = filters.RoleFilterSet
