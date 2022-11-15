@@ -46,7 +46,7 @@ Example output:
 ```
 
 !!! note
-The above works only if the API token used to authenticate the request has permission to make a `POST` request to this endpoint.
+    The above works only if the API token used to authenticate the request has permission to make a `POST` request to this endpoint.
 
 ### Filtering by Custom Field
 
