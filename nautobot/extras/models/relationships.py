@@ -310,7 +310,7 @@ class RelationshipModel(models.Model):
 
                 elif output_for == "api":
                     supplied_data = initial_data.get(relation, {}).get(opposite_side, {})
-                    if len(supplied_data) == 0:
+                    if  not supplied_data:
                         missing_data = True
 
                 if missing_data:
