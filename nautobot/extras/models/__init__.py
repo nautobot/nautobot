@@ -12,6 +12,7 @@ from .jobs import (
     ScheduledJobs,
 )
 from .models import (
+    BasePropertiesModel,
     ConfigContext,
     ConfigContextModel,
     ConfigContextSchema,
@@ -31,6 +32,7 @@ from .tags import Tag, TaggedItem
 
 
 __all__ = (
+    "BasePropertiesModel",
     "ChangeLoggedModel",
     "ComputedField",
     "ConfigContext",

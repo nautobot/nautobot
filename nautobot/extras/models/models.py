@@ -30,11 +30,13 @@ from nautobot.extras.choices import (
     WebhookHttpMethodChoices,
 )
 from nautobot.extras.constants import HTTP_CONTENT_TYPE_JSON
-from nautobot.extras.models import ChangeLoggedModel
+from nautobot.extras.models import ChangeLoggedModel, CustomFieldModel
 from nautobot.extras.models.mixins import NotesMixin
 from nautobot.extras.models.relationships import RelationshipModel
-from nautobot.extras.querysets import ConfigContextQuerySet, NotesQuerySet
+from nautobot.extras.querysets import ConfigContextQuerySet, ContentTypeRelatedQuerySet, NotesQuerySet
 from nautobot.extras.utils import extras_features, FeatureQuery, image_upload
+from nautobot.utilities.choices import ColorChoices
+from nautobot.utilities.fields import ColorField
 from nautobot.utilities.utils import deepmerge, render_jinja2
 
 # Avoid breaking backward compatibility on anything that might expect these to still be defined here:
@@ -858,3 +860,55 @@ class Webhook(BaseModel, ChangeLoggedModel, NotesMixin):
                     )
 
         return conflicts
+
+
+#
+#
+#
+
+
+class BasePropertiesModel(BaseModel, ChangeLoggedModel, CustomFieldModel, RelationshipModel, NotesMixin):
+    """
+    This abstract base properties model contains fields and functionality that are
+    shared amongst models that requires these fields: name, color, content_types and description.
+    """
+
+    # Todo(timizuo): Status and Tag should inherit from this model.
+    content_types = models.ManyToManyField(
+        to=ContentType,
+        help_text="The content type(s) to which this model applies.",
+    )
+    name = models.CharField(max_length=50, unique=True)
+    color = ColorField(default=ColorChoices.COLOR_GREY)
+    description = models.CharField(
+        max_length=200,
+        blank=True,
+    )
+
+    objects = ContentTypeRelatedQuerySet.as_manager()
+
+    csv_headers = ["name", "color", "content_types", "description"]
+    clone_fields = ["color", "content_types"]
+
+    class Meta:
+        ordering = ["name"]
+        abstract = True
+
+    def __str__(self):
+        return self.name
+
+    def natural_key(self):
+        return (self.name,)
+
+    # TODO(timizuo): When view url has been implemented for role; visit this
+    # def get_absolute_url(self):
+    #     return reverse("extras:status", args=[self.slug])
+
+    def to_csv(self):
+        labels = ",".join(f"{ct.app_label}.{ct.model}" for ct in self.content_types.all())
+        return (
+            self.name,
+            self.color,
+            f'"{labels}"',  # Wrap labels in double quotes for CSV
+            self.description,
+        )
