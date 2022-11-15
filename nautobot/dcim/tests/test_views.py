@@ -2264,7 +2264,7 @@ class CableTestCase(
         # interface_ct = ContentType.objects.get_for_model(Interface)
         cls.form_data = {
             # Changing terminations not supported when editing an existing Cable
-            # TODO(John): Revisit this as it is likely an actual bug allowing the terminations to be changed after creation.
+            # FIXME(John): Revisit this as it is likely an actual bug allowing the terminations to be changed after creation.
             # 'termination_a_type': interface_ct.pk,
             # 'termination_a_id': interfaces[0].pk,
             # 'termination_b_type': interface_ct.pk,

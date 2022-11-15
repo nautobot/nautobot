@@ -105,7 +105,7 @@ class InstalledPluginsAPIView(NautobotAPIVersionMixin, APIView):
             "author": plugin_app_config.author,
             "author_email": plugin_app_config.author_email,
             "description": plugin_app_config.description,
-            # TODO: Remove verison key/value when bumping to major revision
+            # 2.0 TODO: Remove verison key/value when bumping to major revision
             "verison": plugin_app_config.version,
             "version": plugin_app_config.version,
         }

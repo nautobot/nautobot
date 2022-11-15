@@ -166,7 +166,7 @@ class VirtualMachineWithConfigContextSerializer(VirtualMachineSerializer):
 #
 
 
-# TODO: collapse this with VMInterfaceSerializer in 2.0.
+# 2.0 TODO: This becomes non-default in 2.0, removed in 2.2.
 class VMInterfaceSerializerVersion12(NautobotModelSerializer, TaggedObjectSerializer):
     url = serializers.HyperlinkedIdentityField(view_name="virtualization-api:vminterface-detail")
     virtual_machine = NestedVirtualMachineSerializer()

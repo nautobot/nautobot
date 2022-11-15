@@ -195,7 +195,7 @@ class TagSerializerField(NestedTagSerializer):
         return queryset.get_for_model(model)
 
 
-# TODO should be TaggedModelSerializerMixin
+# 2.0 TODO should be TaggedModelSerializerMixin
 class TaggedObjectSerializer(BaseModelSerializer):
     tags = TagSerializerField(many=True, required=False)
 
