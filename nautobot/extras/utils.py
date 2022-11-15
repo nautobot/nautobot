@@ -71,6 +71,7 @@ def image_upload(instance, filename):
 
     return f"{path}{instance.content_type.name}_{instance.object_id}_{filename}"
 
+
 @deconstructible
 class FeaturedQueryMixin:
     """Mixin class that gets a list of featured models."""
@@ -159,7 +160,6 @@ class TaggableClassesQuery(FeaturedQueryMixin):
             for _class in apps.get_models()
             if hasattr(_class, "tags") and isinstance(_class.tags, _TaggableManager)
         ]
-
 
 
 @deconstructible
