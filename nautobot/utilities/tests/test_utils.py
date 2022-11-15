@@ -392,7 +392,7 @@ class LookupRelatedFunctionTest(TestCase):
         for field in single_choice_fields:
             self.assertTrue(is_single_choice_field(filterset_class, field))
 
-        multi_choice_fields = ("status", "tenant", "tag")
+        multi_choice_fields = ("status", "tenant", "tags")
         for field in multi_choice_fields:
             self.assertFalse(is_single_choice_field(filterset_class, field))
 

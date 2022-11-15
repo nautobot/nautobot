@@ -418,8 +418,8 @@ class CircuitTerminationTestCase(FilterTestCases.FilterTestCase):
         params = {"site": [sites[0].slug, sites[1].slug]}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 4)
 
-    def test_cabled(self):
-        params = {"cabled": True}
+    def test_has_cable(self):
+        params = {"has_cable": True}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
 
     def test_connected(self):
