@@ -147,7 +147,9 @@ nautobot=> \q
 
 ### `dumpdata`
 
-+/- 1.3.0 - `extras.job` should now be included in the dump (removed `--exclude extras.job` from the example usage) - `django_rq` should now be excluded from the dump (added `--exclude django_rq` to the example usage)
++/- 1.3.0
+    - `extras.job` should now be included in the dump (removed `--exclude extras.job` from the example usage)
+    - `django_rq` should now be excluded from the dump (added `--exclude django_rq` to the example usage)
 
 ```no-highlight
 nautobot-server dumpdata \
