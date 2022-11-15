@@ -2,21 +2,14 @@ from functools import partialmethod
 
 from django.contrib.contenttypes.models import ContentType
 from django.db import models
-from django.urls import reverse
 from django.utils.encoding import force_str
 from django.utils.hashable import make_hashable
-from nautobot.extras.models.mixins import NotesMixin
+
+from nautobot.extras.models.base_properties import BasePropertiesModel
 
 from nautobot.extras.utils import extras_features, FeatureQuery
-from nautobot.extras.models import ChangeLoggedModel
-from nautobot.extras.models.customfields import CustomFieldModel
-from nautobot.extras.models.relationships import RelationshipModel
-from nautobot.core.fields import AutoSlugField
-from nautobot.core.models import BaseModel
 from nautobot.utilities.querysets import RestrictedQuerySet
-from nautobot.utilities.choices import ColorChoices
 from nautobot.utilities.forms import DynamicModelChoiceField
-from nautobot.utilities.fields import ColorField
 
 
 class StatusQuerySet(RestrictedQuerySet):
@@ -42,7 +35,7 @@ class StatusQuerySet(RestrictedQuerySet):
     "relationships",
     "webhooks",
 )
-class Status(BaseModel, ChangeLoggedModel, CustomFieldModel, RelationshipModel, NotesMixin):
+class Status(BasePropertiesModel):
     """Model for database-backend enum choice objects."""
 
     content_types = models.ManyToManyField(
@@ -52,41 +45,10 @@ class Status(BaseModel, ChangeLoggedModel, CustomFieldModel, RelationshipModel, 
         limit_choices_to=FeatureQuery("statuses"),
         help_text="The content type(s) to which this status applies.",
     )
-    name = models.CharField(max_length=50, unique=True)
-    color = ColorField(default=ColorChoices.COLOR_GREY)
-    slug = AutoSlugField(populate_from="name", max_length=50)
-    description = models.CharField(
-        max_length=200,
-        blank=True,
-    )
-
-    objects = StatusQuerySet.as_manager()
-
-    csv_headers = ["name", "slug", "color", "content_types", "description"]
-    clone_fields = ["color", "content_types"]
 
     class Meta:
         ordering = ["name"]
         verbose_name_plural = "statuses"
-
-    def __str__(self):
-        return self.name
-
-    def natural_key(self):
-        return (self.name,)
-
-    def get_absolute_url(self):
-        return reverse("extras:status", args=[self.slug])
-
-    def to_csv(self):
-        labels = ",".join(f"{ct.app_label}.{ct.model}" for ct in self.content_types.all())
-        return (
-            self.name,
-            self.slug,
-            self.color,
-            f'"{labels}"',  # Wrap labels in double quotes for CSV
-            self.description,
-        )
 
 
 class StatusField(models.ForeignKey):

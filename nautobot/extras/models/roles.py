@@ -2,7 +2,7 @@ from django.contrib.contenttypes.models import ContentType
 from django.db import models
 
 from nautobot.extras.fields import LimitedChoiceField
-from nautobot.extras.models import BasePropertiesModel
+from nautobot.extras.models.base_properties import BasePropertiesModel
 from nautobot.extras.utils import RoleModelsQuery, extras_features
 
 

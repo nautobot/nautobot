@@ -1,4 +1,5 @@
 from .change_logging import ChangeLoggedModel, ObjectChange
+from .roles import Role
 from .statuses import Status, StatusField, StatusModel
 from .customfields import ComputedField, CustomField, CustomFieldChoice, CustomFieldModel
 from .datasources import GitRepository
@@ -12,7 +13,6 @@ from .jobs import (
     ScheduledJobs,
 )
 from .models import (
-    BasePropertiesModel,
     ConfigContext,
     ConfigContextModel,
     ConfigContextSchema,
@@ -32,7 +32,6 @@ from .tags import Tag, TaggedItem
 
 
 __all__ = (
-    "BasePropertiesModel",
     "ChangeLoggedModel",
     "ComputedField",
     "ConfigContext",
@@ -60,6 +59,7 @@ __all__ = (
     "Relationship",
     "RelationshipModel",
     "RelationshipAssociation",
+    "Role",
     "ScheduledJob",
     "ScheduledJobs",
     "Secret",
