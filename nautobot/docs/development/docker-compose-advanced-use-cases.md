@@ -204,7 +204,7 @@ Follow the steps below to configure VS Code to debug Nautobot and Celery Worker 
 
 3. **Configure `docker-compose.override.yml`**
 
-    It is important not to use the same listen port for the `nautobot` and `celery_worker` services.
+    It is important not to use the same listen port for the `nautobot` and `celery_worker` services. 
 
     Unlike the current `celery_worker` the container will not automatically restart on source changes.
     But it is possible to restart the container from the VS Code Docker extension.
@@ -244,53 +244,32 @@ Follow the steps below to configure VS Code to debug Nautobot and Celery Worker 
     $ invoke build [--no-cache]
     ```
 
-5. **Add the debug configuration to VS Code**
+5. **VS Code debug configuration**
 
-    Add the following debug configuration to `.vscode/launch.json`:
+    If you have opened the workspace file `nautobot.code-workspace` then there are two debug
+    configurations for remote debugging instantaniously available.
 
-    ```json
-    {
-      // Use IntelliSense to learn about possible attributes.
-      // Hover to view descriptions of existing attributes.
-      // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
-      "version": "0.2.0",
-      "configurations": [
-        {
-          "name": "Nautobot REMOTE",
-          "type": "python",
-          "request": "attach",
-          "connect": {
-            "host": "127.0.0.1",
-            "port": 6899
+    If you add nautobot to an existing VS Code workspace (Menu: _File > Add Folder to Workspace..._)
+    then copy the `launch: ` values to the `.vscode/launch.json` file. 
+
+    - Debug Configurations for Remote Debugging:
+
+      ```json
+      {
+        "version": "0.2.0",
+        "configurations": [
+          {
+            "name": "Python: Remote Attach",
+            ...
           },
-          "pathMappings": [
-            {
-              "localRoot": "${workspaceFolder}",
-              "remoteRoot": "/source"
-            }
-          ],
-          "django": true
-        },
-        {
-          "name": "Nautobot-CELERY REMOTE",
-          "type": "python",
-          "request": "attach",
-          "connect": {
-            "host": "127.0.0.1",
-            "port": 6898
-          },
-          "pathMappings": [
-            {
-              "localRoot": "${workspaceFolder}",
-              "remoteRoot": "/source"
-            }
-          ],
-          "django": true
-        }
-      ]
-    }
-    ```
+          {
+            "name": "Python: Remote Attach Celery Worker",
+            ...
+          }
+        ]
+      }
+      ```
 
-It is now possible to debug the containerized Nautobot and Celery Worker using the VS Code debugger.
+It is now possible to debug the containerized Nautobot and Celery Worker using the VS Code debugger. 
 
 After restarting the Celery-Worker container you need to restart the debug session.
