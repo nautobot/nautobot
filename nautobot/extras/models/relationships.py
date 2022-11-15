@@ -258,7 +258,7 @@ class RelationshipModel(models.Model):
                     and not relationships_key_specified
                 ):
                     filter_kwargs = {"relationship": relation, f"{relation.required_on}_id": instance.pk}
-                    if RelationshipAssociation.objects.filter(**filter_kwargs).count() > 0:
+                    if RelationshipAssociation.objects.filter(**filter_kwargs).exists():
                         continue
 
             required_model_class = getattr(relation, f"{opposite_side}_type").model_class()
