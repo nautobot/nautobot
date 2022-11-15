@@ -40,7 +40,7 @@ Nautobot requires access to a supported database service to store data. This ser
 * `PASSWORD` - Database password
 * `HOST` - Name or IP address of the database server (use `localhost` if running locally)
 * `PORT` - The port to use when connecting to the database. An empty string means the default port for your selected backend. (PostgreSQL: `5432`, MySQL: `3306`)
-- `CONN_MAX_AGE` - Lifetime of a [persistent database connection](https://docs.djangoproject.com/en/stable/ref/databases/#persistent-connections), in seconds (300 is the default)
+* `CONN_MAX_AGE` - Lifetime of a [persistent database connection](https://docs.djangoproject.com/en/stable/ref/databases/#persistent-connections), in seconds (300 is the default)
 * `ENGINE` - The database backend to use. This can be either `django.db.backends.postgresql` or `django.db.backends.mysql`.
 
 The following environment variables may also be set for each of the above values:
