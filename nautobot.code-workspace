@@ -36,7 +36,36 @@
 					"pattern": "Starting development server at (https?://\\S+|[0-9]+)",
 					"uriFormat": "%s"
 				}
+			},
+			{
+				"name": "Nautobot REMOTE",
+				"type": "python",
+				"request": "attach",
+				"connect": {
+					"host": "127.0.0.1",
+					"port": 6899
+				},
+				"pathMappings": [{
+					"localRoot": "${workspaceFolder}",
+					"remoteRoot": "/source"
+				}],
+				"django": true
+			},
+			{
+				"name": "Nautobot-CELERY REMOTE",
+					"type": "python",
+					"request": "attach",
+				"connect": {
+					"host": "127.0.0.1",
+					"port": 6898
+			    },
+			    "pathMappings": [{
+					"localRoot": "${workspaceFolder}",
+					"remoteRoot": "/source"
+				}],
+				"django": true
 			}
+
 		]
 	}
 }
