@@ -201,7 +201,7 @@ Follow the steps below to configure VS Code to debug Nautobot and Celery Worker 
     This allows to modify container settings without touching the original `docker-compose.yml` file.
 
     Copy the file `invoke.yml.example` to `invoke.yml` and configure at least the `compose_dir` according your project location.
-    
+
     See the [docker compose override](development/docker-compose-advanced-use-cases.md#docker-compose-overrides) documentation for more details.
 
 3. **Configure `docker-compose.override.yml`**
