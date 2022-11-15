@@ -205,9 +205,9 @@ AUTH_LDAP_CACHE_TIMEOUT = 3600
 
 ```
 
-- `is_active` - All users must be mapped to at least this group to enable authentication. Without this, users cannot log in.
-- `is_staff` - Users mapped to this group are enabled for access to the administration tools; this is the equivalent of checking the "staff status" box on a manually created user. This doesn't grant any specific permissions.
-- `is_superuser` - Users mapped to this group will be granted superuser status. Superusers are implicitly granted all permissions.
+* `is_active` - All users must be mapped to at least this group to enable authentication. Without this, users cannot log in.
+* `is_staff` - Users mapped to this group are enabled for access to the administration tools; this is the equivalent of checking the "staff status" box on a manually created user. This doesn't grant any specific permissions.
+* `is_superuser` - Users mapped to this group will be granted superuser status. Superusers are implicitly granted all permissions.
 
 !!! warning
     Authentication will fail if the groups (the distinguished names) do not exist in the LDAP directory.

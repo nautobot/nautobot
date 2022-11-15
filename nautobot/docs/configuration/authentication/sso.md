@@ -130,12 +130,12 @@ The following guides are provided for some of the most common authentication met
 
 ### Okta
 
-1. In the Okta admin portal, create a new _Web_ application
+1. In the Okta admin portal, create a new *Web* application
 2. Configure the application as follows:
 
-   * *Base URIs*: should be the URI of your Nautobot application such as `https://nautobot.example.com`
-   * *Login redirect URIs*: should be the Base URI plus `/complete/okta-openidconnect/` such as `https://nautobot.example.com/complete/okta-openidconnect/`
-   * *Logout redirect URIs*: should be the Base URI plus `/disconnect/okta-openidconnect/` such as `https://nautobot.example.com/disconnect/okta-openidconnect/`
+    * *Base URIs*: should be the URI of your Nautobot application such as `https://nautobot.example.com`
+    * *Login redirect URIs*: should be the Base URI plus `/complete/okta-openidconnect/` such as `https://nautobot.example.com/complete/okta-openidconnect/`
+    * *Logout redirect URIs*: should be the Base URI plus `/disconnect/okta-openidconnect/` such as `https://nautobot.example.com/disconnect/okta-openidconnect/`
 
 3. Once the application is configured in Okta, SSO can either be configured with OAuth2 or OpenID Connect (OIDC). When using an organization's authentication server OAuth2 is preferred; with custom Okta authentication backends, use OIDC.
 
@@ -202,9 +202,9 @@ information please utilize these additional resources.
 3. For *User Type* select *Internal* and click *Create*
 4. Configure as follows:
 
-   * *App name*: Acme Corp Nautobot
-   * *User support email*: select an email
-   * *App logo*: The Nautobot logo can be found at `nautobot/project-static/img/nautobot_logo.png`
+    * *App name*: Acme Corp Nautobot
+    * *User support email*: select an email
+    * *App logo*: The Nautobot logo can be found at `nautobot/project-static/img/nautobot_logo.png`
 
 5. Click *Save and Continue*
 6. No additional scopes are needed click *Save and Continue*
@@ -212,9 +212,9 @@ information please utilize these additional resources.
 8. Click *+ Create Credentials* at the top of the page and select *OAuth client ID*
 9. Configure as follows:
 
-   * *Application type*: Web application
-   * *Name*: Nautobot
-   * *Authorized redirect URIs*: should be the Nautobot URL plus `/complete/google-oauth2/` for example `https://nautobot.example.com/complete/google-oauth2/`
+    * *Application type*: Web application
+    * *Name*: Nautobot
+    * *Authorized redirect URIs*: should be the Nautobot URL plus `/complete/google-oauth2/` for example `https://nautobot.example.com/complete/google-oauth2/`
 
 10. Click Create
 11. Edit your `nautobot_config.py` as follows:
@@ -244,10 +244,10 @@ This guide will walk you through configuring Nautobot to authenticate using SAML
 
 Before you begin you will need the following:
 
-- The fully-qualified domain name (FQDN) of your Nautobot host must be registered in DNS. For this example we will be using `nautobot.example.com`.
-- A valid publicly trusted SSL certificate matching the FQDN of your host. You _cannot_ use a self-signed certificate. Google validates this certificate to assert authenticity of SAML authentication requests.
-- The name and email address for a technical point of contact. For this example we will use "Bob Jones, bob@example.com".
-- The name and email address for a support point of contact. For this example we will use "Alice Jenkins, alice@example.com."
+* The fully-qualified domain name (FQDN) of your Nautobot host must be registered in DNS. For this example we will be using `nautobot.example.com`.
+* A valid publicly trusted SSL certificate matching the FQDN of your host. You _cannot_ use a self-signed certificate. Google validates this certificate to assert authenticity of SAML authentication requests.
+* The name and email address for a technical point of contact. For this example we will use "Bob Jones, bob@example.com".
+* The name and email address for a support point of contact. For this example we will use "Alice Jenkins, alice@example.com."
 
 #### Setup SAML in Google
 
@@ -256,18 +256,18 @@ Before you begin you will need the following:
 3. From step 6 of the instructions, capture the **SSO URL**, **Entity ID**, and **Certificate**. You will use these in later steps to configure Nautobot. Each of these will be referred to as `GOOGLE_SSO_URL`, `GOOGLE_ENTITY_ID`, and `GOOGLE_CERTIFICATE` respectively.
 4. Skip step 7 in the instructions, as that does not apply here because we will be configuring Nautobot directly.
 5. For step 9 of the instructions under _Service provider details_, provide the following
-   - **ACS URL**: `https://nautobot.example.com/complete/saml/`
-   - **Entity ID:** `https://nautobot.example.com/`
-   - **Start URL:** Leave this field blank
+    * **ACS URL**: `https://nautobot.example.com/complete/saml/`
+    * **Entity ID:** `https://nautobot.example.com/`
+    * **Start URL:** Leave this field blank
 6. Skip step 10 in the instructions, as a signed response is not required.
-7. For step 11 of the instructions, under _Name ID_, set the following:
-   - **Name ID Format**: Select _EMAIL_
-   - **Name ID:** Select _Basic Information > Primary Email_
-8. For step 13 of the instructions, on the _Attribute mapping_ page, add the following mappings for _Google Directory attributes_ to _App attributes_:
-   - _Primary email_ --> `email`
-   - _First name_ --> `first_name`
-   - _Last name_ --> `last_name`
-9. Click _Finish_
+7. For step 11 of the instructions, under *Name ID*, set the following:
+    * **Name ID Format**: Select *EMAIL*
+    * **Name ID:** Select *Basic Information > Primary Email*
+8. For step 13 of the instructions, on the *Attribute mapping* page, add the following mappings for *Google Directory attributes* to *App attributes*:
+    * *Primary email* --> `email`
+    * *First name* --> `first_name`
+    * *Last name* --> `last_name`
+9. Click *Finish*
 
 #### Configure Nautobot
 
@@ -368,15 +368,15 @@ Be sure to configure [`EXTERNAL_AUTH_DEFAULT_GROUPS`](../../configuration/option
 2. Under *Manage*, select *App registrations -> New registration*.
 3. Configure the application as follows:
 
-   * *Name*: This is the user-facing display name for the app.
-   * *Supported account types*: This specifies the AD directories that you're allowing to authenticate with this app.
-   * *Redirect URIs*: Don't fill this out yet, it will be configured in the following steps.
+    * *Name*: This is the user-facing display name for the app.
+    * *Supported account types*: This specifies the AD directories that you're allowing to authenticate with this app.
+    * *Redirect URIs*: Don't fill this out yet, it will be configured in the following steps.
 
 4. Once the application is configured in Azure, you'll be shown the app registration's *Overview* page. Please take note of the *Application (client) ID* for use later. SSO with Azure can either be configured with OAuth2 or OpenID Connect (OIDC). When using an organization's authentication server OAuth2 is preferred; with custom Azure authentication backends, use OIDC.
 5. From the App registration page, click on *Authentication*. Under *Platform configurations*, select *Add a platform* and select *Web*.
 6. Click on the *Add a Redirect URI* link on the page and configure it as follows:
 
-   * *Redirect URIs*: should be the Base URI plus `/complete/azuread-oauth2/` such as `https://nautobot.example.com/complete/azuread-oauth2/`
+    * *Redirect URIs*: should be the Base URI plus `/complete/azuread-oauth2/` such as `https://nautobot.example.com/complete/azuread-oauth2/`
 
 7. Once the Redirect URI is set, the last thing you'll need is to generate a *client secret*. To do so, click on *Certificates & secrets* and then the *New client secret* option. At this point you'll need to specify the expiration for the secret. Microsoft recommends less than 12 months with a maximum of 24 months as an option. Ensure you make a note of the secret that's generated for the next step.
 
