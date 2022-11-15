@@ -27,10 +27,10 @@ class Role(BaseModel, ChangeLoggedModel, CustomFieldModel, RelationshipModel, No
 
     content_types = models.ManyToManyField(
         to=ContentType,
-        related_name="statuses",
+        related_name="roles",
         verbose_name="Content type(s)",
         limit_choices_to=RoleModelsQuery(),
-        help_text="The content type(s) to which this status applies.",
+        help_text="The content type(s) to which this role applies.",
     )
     name = models.CharField(max_length=50, unique=True)
     color = ColorField(default=ColorChoices.COLOR_GREY)
