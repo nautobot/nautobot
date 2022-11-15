@@ -862,11 +862,6 @@ class Webhook(BaseModel, ChangeLoggedModel, NotesMixin):
         return conflicts
 
 
-#
-#
-#
-
-
 class BasePropertiesModel(BaseModel, ChangeLoggedModel, CustomFieldModel, RelationshipModel, NotesMixin):
     """
     This abstract base properties model contains fields and functionality that are
@@ -879,6 +874,7 @@ class BasePropertiesModel(BaseModel, ChangeLoggedModel, CustomFieldModel, Relati
         help_text="The content type(s) to which this model applies.",
     )
     name = models.CharField(max_length=50, unique=True)
+    slug = AutoSlugField(populate_from="name", max_length=50)
     color = ColorField(default=ColorChoices.COLOR_GREY)
     description = models.CharField(
         max_length=200,
@@ -887,7 +883,7 @@ class BasePropertiesModel(BaseModel, ChangeLoggedModel, CustomFieldModel, Relati
 
     objects = ContentTypeRelatedQuerySet.as_manager()
 
-    csv_headers = ["name", "color", "content_types", "description"]
+    csv_headers = ["name", "slug", "color", "content_types", "description"]
     clone_fields = ["color", "content_types"]
 
     class Meta:
@@ -904,11 +900,14 @@ class BasePropertiesModel(BaseModel, ChangeLoggedModel, CustomFieldModel, Relati
     # def get_absolute_url(self):
     #     return reverse("extras:status", args=[self.slug])
 
+    def get_label(self):
+        return ",".join(f"{ct.app_label}.{ct.model}" for ct in self.content_types.all())
+
     def to_csv(self):
-        labels = ",".join(f"{ct.app_label}.{ct.model}" for ct in self.content_types.all())
         return (
             self.name,
+            self.slug,
             self.color,
-            f'"{labels}"',  # Wrap labels in double quotes for CSV
+            f'"{self.get_label()}"',  # Wrap labels in double quotes for CSV
             self.description,
         )
