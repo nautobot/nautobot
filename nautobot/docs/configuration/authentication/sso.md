@@ -245,7 +245,7 @@ This guide will walk you through configuring Nautobot to authenticate using SAML
 Before you begin you will need the following:
 
 * The fully-qualified domain name (FQDN) of your Nautobot host must be registered in DNS. For this example we will be using `nautobot.example.com`.
-* A valid publicly trusted SSL certificate matching the FQDN of your host. You _cannot_ use a self-signed certificate. Google validates this certificate to assert authenticity of SAML authentication requests.
+* A valid publicly trusted SSL certificate matching the FQDN of your host. You *cannot* use a self-signed certificate. Google validates this certificate to assert authenticity of SAML authentication requests.
 * The name and email address for a technical point of contact. For this example we will use "Bob Jones, bob@example.com".
 * The name and email address for a support point of contact. For this example we will use "Alice Jenkins, alice@example.com."
 
@@ -255,7 +255,7 @@ Before you begin you will need the following:
 2. Follow Google's official document to [Set up your own custom SAML application](https://support.google.com/a/answer/6087519?hl=en), pausing at step 6.
 3. From step 6 of the instructions, capture the **SSO URL**, **Entity ID**, and **Certificate**. You will use these in later steps to configure Nautobot. Each of these will be referred to as `GOOGLE_SSO_URL`, `GOOGLE_ENTITY_ID`, and `GOOGLE_CERTIFICATE` respectively.
 4. Skip step 7 in the instructions, as that does not apply here because we will be configuring Nautobot directly.
-5. For step 9 of the instructions under _Service provider details_, provide the following
+5. For step 9 of the instructions under *Service provider details*, provide the following
     * **ACS URL**: `https://nautobot.example.com/complete/saml/`
     * **Entity ID:** `https://nautobot.example.com/`
     * **Start URL:** Leave this field blank
