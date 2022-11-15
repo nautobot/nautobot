@@ -1,7 +1,7 @@
 import logging
 
 from django.contrib.contenttypes.models import ContentType
-from django.core.exceptions import ValidationError as CoreValidationError
+from django.core.exceptions import ValidationError as DjangoValidationError
 from django.db.models import Q
 from drf_spectacular.utils import extend_schema_field
 from rest_framework.exceptions import PermissionDenied
