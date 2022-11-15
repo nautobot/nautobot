@@ -168,7 +168,7 @@ $ docker-compose -f docker-compose.yml -f docker-compose.debug.yml up
 
 ## VScode Remote Debugging Configuration
 
-Using the Remote-Attach functionality of VS Code debugger is an alternative to debugging in  development container. This allows a local VS Code instance to connect to a remote container and debug the code running in the container the same way as when debugging locally.
+Using the Remote-Attach functionality of VS Code debugger is an alternative to debugging in a development container. This allows a local VS Code instance to connect to a remote container and debug the code running in the container the same way as when debugging locally.
 
 Follow the steps below to configure VS Code to debug Nautobot and Celery Worker running in a remote container:
 
