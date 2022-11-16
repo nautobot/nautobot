@@ -26,7 +26,6 @@ from nautobot.utilities.filters import (
     NaturalKeyOrPKMultipleChoiceFilter,
     RelatedMembershipBooleanFilter,
     SearchFilter,
-    TagFilter,
     TreeNodeMultipleChoiceFilter,
 )
 from nautobot.virtualization.models import Cluster
