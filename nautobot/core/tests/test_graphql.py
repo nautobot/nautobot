@@ -1210,7 +1210,7 @@ query {
             # pylint: disable=consider-using-f-string
             """
                 query {
-                    devices(role: "%s") {
+                    devices(device_role: "%s") {
                         id
                         name
                     }
@@ -1230,7 +1230,7 @@ query {
 
         query = """
             query {
-                devices(role: "EXPECT NO ENTRIES") {
+                devices(device_role: "EXPECT NO ENTRIES") {
                     id
                     name
                 }
@@ -1304,10 +1304,10 @@ query {
             f'id: "{self.device1.pk}"': _count({"id": [self.device1.pk]}),
             f'id: ["{self.device1.pk}"]': _count({"id": [self.device1.pk]}),
             f'id: ["{self.device1.pk}", "{self.device2.pk}"]': _count({"id": [self.device1.pk, self.device2.pk]}),
-            f'role: "{self.device_role1.slug}"': _count({"role": [self.device_role1.slug]}),
-            f'role: ["{self.device_role1.slug}"]': _count({"role": [self.device_role1.slug]}),
-            f'role: ["{self.device_role1.slug}", "{self.device_role2.slug}"]': _count(
-                {"role": [self.device_role1.slug, self.device_role2.slug]}
+            f'device_role: "{self.device_role1.slug}"': _count({"device_role": [self.device_role1.slug]}),
+            f'device_role: ["{self.device_role1.slug}"]': _count({"device_role": [self.device_role1.slug]}),
+            f'device_role: ["{self.device_role1.slug}", "{self.device_role2.slug}"]': _count(
+                {"device_role": [self.device_role1.slug, self.device_role2.slug]}
             ),
             f'site: "{self.site1.slug}"': _count({"site": [self.site1.slug]}),
             f'site: ["{self.site1.slug}"]': _count({"site": [self.site1.slug]}),
