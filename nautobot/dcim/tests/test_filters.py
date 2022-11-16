@@ -4965,8 +4965,12 @@ class PowerFeedTestCase(FilterTestCases.FilterTestCase):
 
     def test_rack(self):
         racks = Rack.objects.all()[:2]
-        params = {"rack": [racks[0].pk, racks[1].pk]}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+        with self.subTest():
+            params = {"rack": [racks[0].pk, racks[1].pk]}
+            self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+        with self.subTest():
+            params = {"rack": [racks[0].pk, racks[1].name]}
+            self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
 
     def test_has_cable(self):
         with self.subTest():
@@ -4992,11 +4996,6 @@ class PowerFeedTestCase(FilterTestCases.FilterTestCase):
         with self.subTest():
             params = {"power_panel": [power_panels[0].name, power_panels[1].name]}
             self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
-
-    def test_rack(self):
-        rack = Rack.objects.all()[:2]
-        params = {"rack": [rack[0].pk, rack[1].name]}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
 
     def test_available_power(self):
         params = {"available_power": [1732, 27000]}
