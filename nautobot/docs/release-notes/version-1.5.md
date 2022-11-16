@@ -75,7 +75,7 @@ As a result, the value of this setting now defaults to `False`, disabling databa
 !!! important
     Users with existing `nautobot_config.py` files generated from earlier versions of Nautobot will still have `CACHEOPS_ENABLED = True` unless they modify or regenerate their configuration. If users no longer desire caching, please be sure to explicitly toggle the value of this setting to `False` and restart your Nautobot services.
 
-#### Deprecation warnings silenced by default ([#2798](https://github.com/nautobot/nautobot/pull/2798))
+#### Deprecation Warnings Silenced by Default ([#2798](https://github.com/nautobot/nautobot/pull/2798))
 
 +/- 1.5.2
 
