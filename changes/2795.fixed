@@ -1,0 +1,1 @@
+Fixed changelog diff ui to fall back to `object_data` when `object_data_v2` is not present for both ObjectChange instances.
