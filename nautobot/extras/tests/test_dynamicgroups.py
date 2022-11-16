@@ -224,7 +224,7 @@ class DynamicGroupModelTest(DynamicGroupTestBase):
         old_filter = group.filter
 
         # Overload the filter and validate that it is the same afterward.
-        new_filter = {"interfaces": True}
+        new_filter = {"has_interfaces": True}
         group.set_filter(new_filter)
         group.validated_save()
         self.assertEqual(group.filter, new_filter)
