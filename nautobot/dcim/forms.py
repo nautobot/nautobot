@@ -1118,7 +1118,7 @@ class ComponentTemplateCreateForm(ComponentForm):
     )
     device_type = DynamicModelChoiceField(
         queryset=DeviceType.objects.all(),
-        query_params={"manufacturer_id": "$manufacturer"},
+        query_params={"manufacturer": "$manufacturer"},
     )
     description = forms.CharField(required=False)
 
@@ -1826,13 +1826,13 @@ class DeviceForm(LocatableModelFormMixin, NautobotModelForm, TenancyForm, LocalC
     )
     device_type = DynamicModelChoiceField(
         queryset=DeviceType.objects.all(),
-        query_params={"manufacturer_id": "$manufacturer"},
+        query_params={"manufacturer": "$manufacturer"},
     )
     device_role = DynamicModelChoiceField(queryset=DeviceRole.objects.all())
     platform = DynamicModelChoiceField(
         queryset=Platform.objects.all(),
         required=False,
-        query_params={"manufacturer_id": ["$manufacturer", "null"]},
+        query_params={"manufacturer": ["$manufacturer", "null"]},
     )
     secrets_group = DynamicModelChoiceField(queryset=SecretsGroup.objects.all(), required=False)
     cluster_group = DynamicModelChoiceField(
@@ -2139,7 +2139,7 @@ class DeviceBulkEditForm(
     device_type = DynamicModelChoiceField(
         queryset=DeviceType.objects.all(),
         required=False,
-        query_params={"manufacturer_id": "$manufacturer"},
+        query_params={"manufacturer": "$manufacturer"},
     )
     rack = DynamicModelChoiceField(queryset=Rack.objects.all(), required=False)
     position = forms.IntegerField(required=False)
@@ -3735,7 +3735,7 @@ class ConnectCableToPowerFeedForm(ConnectCableExcludeIDMixin, NautobotModelForm)
         required=False,
         query_params={
             "site_id": "$termination_b_site",
-            "rack_group_id": "$termination_b_rackgroup",
+            "rack_group": "$termination_b_rackgroup",
         },
     )
     termination_b_id = DynamicModelChoiceField(
