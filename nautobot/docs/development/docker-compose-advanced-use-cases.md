@@ -166,7 +166,7 @@ $ docker-compose -f docker-compose.yml -f docker-compose.debug.yml up
 - Click on `development_nautobot_1` to use VS Code inside the container. The `devcontainer` will startup now.
 - As a last step open the folder `/opt/nautobot` in VS Code.
 
-## VScode Remote Debugging Configuration
+## VS Code Remote Debugging Configuration
 
 Using the Remote-Attach functionality of VS Code debugger is an alternative to debugging in a development container. This allows a local VS Code instance to connect to a remote container and debug the code running in the container the same way as when debugging locally.
 
