@@ -2,7 +2,7 @@ import django_filters
 from django.db.models import Q
 
 from nautobot.dcim.filter_mixins import LocatableModelFilterSetMixin
-from nautobot.dcim.filters import CableTerminationFilterSet, PathEndpointFilterSet
+from nautobot.dcim.filters import CableTerminationFilterSetMixin, PathEndpointFilterSetMixin
 from nautobot.dcim.models import Location, Region, Site
 from nautobot.extras.filters import NautobotFilterSet, StatusModelFilterSetMixin
 from nautobot.tenancy.filters import TenancyFilterSet
@@ -183,9 +183,9 @@ class CircuitFilterSet(NautobotFilterSet, StatusModelFilterSetMixin, TenancyFilt
 
 class CircuitTerminationFilterSet(
     BaseFilterSet,
-    CableTerminationFilterSet,
+    CableTerminationFilterSetMixin,
     LocatableModelFilterSetMixin,
-    PathEndpointFilterSet,
+    PathEndpointFilterSetMixin,
 ):
     q = SearchFilter(
         filter_predicates={

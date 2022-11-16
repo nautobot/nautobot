@@ -81,7 +81,7 @@ from .models import (
 
 __all__ = (
     "CableFilterSet",
-    "CableTerminationFilterSet",
+    "CableTerminationFilterSetMixin",
     "ConsoleConnectionFilterSet",
     "ConsolePortFilterSet",
     "ConsolePortTemplateFilterSet",
@@ -102,7 +102,7 @@ __all__ = (
     "LocationFilterSet",
     "LocationTypeFilterSet",
     "ManufacturerFilterSet",
-    "PathEndpointFilterSet",
+    "PathEndpointFilterSetMixin",
     "PlatformFilterSet",
     "PowerConnectionFilterSet",
     "PowerFeedFilterSet",
@@ -774,8 +774,7 @@ class DeviceTypeFilterSet(NautobotFilterSet):
         return queryset.exclude(devicebaytemplates__isnull=value)
 
 
-# TODO: should be DeviceTypeComponentFilterSetMixin
-class DeviceTypeComponentFilterSet(NameSlugSearchFilterSet, CustomFieldModelFilterSet):
+class DeviceTypeComponentFilterSetMixin(NameSlugSearchFilterSet, CustomFieldModelFilterSet):
     devicetype_id = django_filters.ModelMultipleChoiceFilter(
         queryset=DeviceType.objects.all(),
         field_name="device_type_id",
@@ -791,19 +790,19 @@ class DeviceTypeComponentFilterSet(NameSlugSearchFilterSet, CustomFieldModelFilt
     name = MultiValueCharFilter(label="Name")
 
 
-class ConsolePortTemplateFilterSet(BaseFilterSet, DeviceTypeComponentFilterSet):
+class ConsolePortTemplateFilterSet(BaseFilterSet, DeviceTypeComponentFilterSetMixin):
     class Meta:
         model = ConsolePortTemplate
         fields = ["type"]
 
 
-class ConsoleServerPortTemplateFilterSet(BaseFilterSet, DeviceTypeComponentFilterSet):
+class ConsoleServerPortTemplateFilterSet(BaseFilterSet, DeviceTypeComponentFilterSetMixin):
     class Meta:
         model = ConsoleServerPortTemplate
         fields = ["type"]
 
 
-class PowerPortTemplateFilterSet(BaseFilterSet, DeviceTypeComponentFilterSet):
+class PowerPortTemplateFilterSet(BaseFilterSet, DeviceTypeComponentFilterSetMixin):
     power_outlet_templates = NaturalKeyOrPKMultipleChoiceFilter(
         field_name="poweroutlet_templates",
         to_field_name="name",
@@ -824,7 +823,7 @@ class PowerPortTemplateFilterSet(BaseFilterSet, DeviceTypeComponentFilterSet):
         ]
 
 
-class PowerOutletTemplateFilterSet(BaseFilterSet, DeviceTypeComponentFilterSet):
+class PowerOutletTemplateFilterSet(BaseFilterSet, DeviceTypeComponentFilterSetMixin):
     power_port_template = NaturalKeyOrPKMultipleChoiceFilter(
         field_name="power_port",
         to_field_name="name",
@@ -837,13 +836,13 @@ class PowerOutletTemplateFilterSet(BaseFilterSet, DeviceTypeComponentFilterSet):
         fields = ["type", "feed_leg"]
 
 
-class InterfaceTemplateFilterSet(BaseFilterSet, DeviceTypeComponentFilterSet):
+class InterfaceTemplateFilterSet(BaseFilterSet, DeviceTypeComponentFilterSetMixin):
     class Meta:
         model = InterfaceTemplate
         fields = ["type", "mgmt_only"]
 
 
-class FrontPortTemplateFilterSet(BaseFilterSet, DeviceTypeComponentFilterSet):
+class FrontPortTemplateFilterSet(BaseFilterSet, DeviceTypeComponentFilterSetMixin):
     rear_port_template = django_filters.ModelMultipleChoiceFilter(
         field_name="rear_port",
         queryset=RearPortTemplate.objects.all(),
@@ -855,7 +854,7 @@ class FrontPortTemplateFilterSet(BaseFilterSet, DeviceTypeComponentFilterSet):
         fields = ["type", "rear_port_position"]
 
 
-class RearPortTemplateFilterSet(BaseFilterSet, DeviceTypeComponentFilterSet):
+class RearPortTemplateFilterSet(BaseFilterSet, DeviceTypeComponentFilterSetMixin):
     front_port_templates = django_filters.ModelMultipleChoiceFilter(
         field_name="frontport_templates",
         queryset=FrontPortTemplate.objects.all(),
@@ -871,7 +870,7 @@ class RearPortTemplateFilterSet(BaseFilterSet, DeviceTypeComponentFilterSet):
         fields = ["type", "positions"]
 
 
-class DeviceBayTemplateFilterSet(BaseFilterSet, DeviceTypeComponentFilterSet):
+class DeviceBayTemplateFilterSet(BaseFilterSet, DeviceTypeComponentFilterSetMixin):
     class Meta:
         model = DeviceBayTemplate
         fields = []
@@ -1126,8 +1125,7 @@ class DeviceFilterSet(
         return queryset.filter(params)
 
 
-# TODO: should be DeviceComponentFilterSetMixin
-class DeviceComponentFilterSet(CustomFieldModelFilterSet):
+class DeviceComponentFilterSetMixin(CustomFieldModelFilterSet):
     q = SearchFilter(
         filter_predicates={
             "name": "icontains",
@@ -1169,8 +1167,7 @@ class DeviceComponentFilterSet(CustomFieldModelFilterSet):
     tag = TagFilter()
 
 
-# TODO: should be CableTerminationFilterSetMixin
-class CableTerminationFilterSet(django_filters.FilterSet):
+class CableTerminationFilterSetMixin(django_filters.FilterSet):
     cabled = django_filters.BooleanFilter(field_name="cable", lookup_expr="isnull", exclude=True)
     cable = django_filters.ModelMultipleChoiceFilter(
         queryset=Cable.objects.all(),
@@ -1178,8 +1175,7 @@ class CableTerminationFilterSet(django_filters.FilterSet):
     )
 
 
-# TODO: should be PathEndpointFilterSetMixin
-class PathEndpointFilterSet(django_filters.FilterSet):
+class PathEndpointFilterSetMixin(django_filters.FilterSet):
     connected = django_filters.BooleanFilter(method="filter_connected", label="Connected status (bool)")
 
     def filter_connected(self, queryset, name, value):
@@ -1191,9 +1187,9 @@ class PathEndpointFilterSet(django_filters.FilterSet):
 
 class ConsolePortFilterSet(
     BaseFilterSet,
-    DeviceComponentFilterSet,
-    CableTerminationFilterSet,
-    PathEndpointFilterSet,
+    DeviceComponentFilterSetMixin,
+    CableTerminationFilterSetMixin,
+    PathEndpointFilterSetMixin,
 ):
     type = django_filters.MultipleChoiceFilter(choices=ConsolePortTypeChoices, null_value=None)
 
@@ -1204,9 +1200,9 @@ class ConsolePortFilterSet(
 
 class ConsoleServerPortFilterSet(
     BaseFilterSet,
-    DeviceComponentFilterSet,
-    CableTerminationFilterSet,
-    PathEndpointFilterSet,
+    DeviceComponentFilterSetMixin,
+    CableTerminationFilterSetMixin,
+    PathEndpointFilterSetMixin,
 ):
     type = django_filters.MultipleChoiceFilter(choices=ConsolePortTypeChoices, null_value=None)
 
@@ -1217,9 +1213,9 @@ class ConsoleServerPortFilterSet(
 
 class PowerPortFilterSet(
     BaseFilterSet,
-    DeviceComponentFilterSet,
-    CableTerminationFilterSet,
-    PathEndpointFilterSet,
+    DeviceComponentFilterSetMixin,
+    CableTerminationFilterSetMixin,
+    PathEndpointFilterSetMixin,
 ):
     type = django_filters.MultipleChoiceFilter(choices=PowerPortTypeChoices, null_value=None)
     power_outlets = NaturalKeyOrPKMultipleChoiceFilter(
@@ -1240,9 +1236,9 @@ class PowerPortFilterSet(
 
 class PowerOutletFilterSet(
     BaseFilterSet,
-    DeviceComponentFilterSet,
-    CableTerminationFilterSet,
-    PathEndpointFilterSet,
+    DeviceComponentFilterSetMixin,
+    CableTerminationFilterSetMixin,
+    PathEndpointFilterSetMixin,
 ):
     type = django_filters.MultipleChoiceFilter(choices=PowerOutletTypeChoices, null_value=None)
     power_port = django_filters.ModelMultipleChoiceFilter(
@@ -1258,12 +1254,12 @@ class PowerOutletFilterSet(
 
 class InterfaceFilterSet(
     BaseFilterSet,
-    DeviceComponentFilterSet,
-    CableTerminationFilterSet,
-    PathEndpointFilterSet,
+    DeviceComponentFilterSetMixin,
+    CableTerminationFilterSetMixin,
+    PathEndpointFilterSetMixin,
     StatusModelFilterSetMixin,
 ):
-    # Override device and device_id filters from DeviceComponentFilterSet to match against any peer virtual chassis
+    # Override device and device_id filters from DeviceComponentFilterSetMixin to match against any peer virtual chassis
     # members
     device = MultiValueCharFilter(
         method="filter_device",
@@ -1415,7 +1411,7 @@ class InterfaceFilterSet(
         }.get(value, queryset.none())
 
 
-class FrontPortFilterSet(BaseFilterSet, DeviceComponentFilterSet, CableTerminationFilterSet):
+class FrontPortFilterSet(BaseFilterSet, DeviceComponentFilterSetMixin, CableTerminationFilterSetMixin):
     rear_port = NaturalKeyOrPKMultipleChoiceFilter(
         field_name="rear_port",
         to_field_name="name",
@@ -1428,7 +1424,7 @@ class FrontPortFilterSet(BaseFilterSet, DeviceComponentFilterSet, CableTerminati
         fields = ["id", "name", "type", "description", "label", "rear_port_position"]
 
 
-class RearPortFilterSet(BaseFilterSet, DeviceComponentFilterSet, CableTerminationFilterSet):
+class RearPortFilterSet(BaseFilterSet, DeviceComponentFilterSetMixin, CableTerminationFilterSetMixin):
     front_ports = NaturalKeyOrPKMultipleChoiceFilter(
         field_name="frontports",
         to_field_name="name",
@@ -1445,7 +1441,7 @@ class RearPortFilterSet(BaseFilterSet, DeviceComponentFilterSet, CableTerminatio
         fields = ["id", "name", "type", "positions", "description", "label"]
 
 
-class DeviceBayFilterSet(BaseFilterSet, DeviceComponentFilterSet):
+class DeviceBayFilterSet(BaseFilterSet, DeviceComponentFilterSetMixin):
     installed_device = NaturalKeyOrPKMultipleChoiceFilter(
         field_name="installed_device",
         to_field_name="name",
@@ -1458,7 +1454,7 @@ class DeviceBayFilterSet(BaseFilterSet, DeviceComponentFilterSet):
         fields = ["id", "name", "description", "label"]
 
 
-class InventoryItemFilterSet(BaseFilterSet, DeviceComponentFilterSet):
+class InventoryItemFilterSet(BaseFilterSet, DeviceComponentFilterSetMixin):
     q = SearchFilter(
         filter_predicates={
             "name": "icontains",
@@ -1649,8 +1645,7 @@ class CableFilterSet(NautobotFilterSet, StatusModelFilterSetMixin):
         return queryset
 
 
-# TODO: should be ConnectionFilterSetMixin
-class ConnectionFilterSet:
+class ConnectionFilterSetMixin:
     def filter_site(self, queryset, name, value):
         if not value.strip():
             return queryset
@@ -1662,7 +1657,7 @@ class ConnectionFilterSet:
         return queryset.filter(**{f"{name}__in": value})
 
 
-class ConsoleConnectionFilterSet(ConnectionFilterSet, BaseFilterSet):
+class ConsoleConnectionFilterSet(ConnectionFilterSetMixin, BaseFilterSet):
     site = django_filters.CharFilter(
         method="filter_site",
         label="Site (slug)",
@@ -1675,7 +1670,7 @@ class ConsoleConnectionFilterSet(ConnectionFilterSet, BaseFilterSet):
         fields = ["name"]
 
 
-class PowerConnectionFilterSet(ConnectionFilterSet, BaseFilterSet):
+class PowerConnectionFilterSet(ConnectionFilterSetMixin, BaseFilterSet):
     site = django_filters.CharFilter(
         method="filter_site",
         label="Site (slug)",
@@ -1688,7 +1683,7 @@ class PowerConnectionFilterSet(ConnectionFilterSet, BaseFilterSet):
         fields = ["name"]
 
 
-class InterfaceConnectionFilterSet(ConnectionFilterSet, BaseFilterSet):
+class InterfaceConnectionFilterSet(ConnectionFilterSetMixin, BaseFilterSet):
     site = django_filters.CharFilter(
         method="filter_site",
         label="Site (slug)",
@@ -1730,7 +1725,7 @@ class PowerPanelFilterSet(NautobotFilterSet, LocatableModelFilterSetMixin):
 
 
 class PowerFeedFilterSet(
-    NautobotFilterSet, CableTerminationFilterSet, PathEndpointFilterSet, StatusModelFilterSetMixin
+    NautobotFilterSet, CableTerminationFilterSetMixin, PathEndpointFilterSetMixin, StatusModelFilterSetMixin
 ):
     q = SearchFilter(filter_predicates={"name": "icontains", "comments": "icontains"})
     region_id = TreeNodeMultipleChoiceFilter(
