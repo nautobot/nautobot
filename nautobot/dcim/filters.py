@@ -13,7 +13,7 @@ from nautobot.extras.filters import (
 )
 from nautobot.extras.models import SecretsGroup
 from nautobot.extras.utils import FeatureQuery
-from nautobot.ipam.models import VLAN, VLANGroup
+from nautobot.ipam.models import VirtualMachine, VLAN, VLANGroup
 from nautobot.tenancy.filters import TenancyFilterSet
 from nautobot.tenancy.models import Tenant
 from nautobot.utilities.filters import (
@@ -451,7 +451,7 @@ class RackFilterSet(NautobotFilterSet, LocatableModelFilterSetMixin, TenancyFilt
     type = django_filters.MultipleChoiceFilter(choices=RackTypeChoices)
     width = django_filters.MultipleChoiceFilter(choices=RackWidthChoices)
     role = NaturalKeyOrPKMultipleChoiceFilter(queryset=RackRole.objects.all(), label="Role (slug or ID)")
-    serial = django_filters.CharFilter(lookup_expr="iexact")
+    serial = MultiValueCharFilter(lookup_expr="iexact", label="Serial Number")
     has_devices = RelatedMembershipBooleanFilter(
         field_name="devices",
         label="Has devices",
@@ -501,10 +501,6 @@ class RackReservationFilterSet(NautobotFilterSet, TenancyFilterSet):
             "description": "icontains",
         },
     )
-    rack_id = django_filters.ModelMultipleChoiceFilter(
-        queryset=Rack.objects.all(),
-        label="Rack (ID)",
-    )
     site_id = django_filters.ModelMultipleChoiceFilter(
         field_name="rack__site",
         queryset=Site.objects.all(),
@@ -516,15 +512,10 @@ class RackReservationFilterSet(NautobotFilterSet, TenancyFilterSet):
         to_field_name="slug",
         label="Site (slug)",
     )
-    group_id = TreeNodeMultipleChoiceFilter(
-        queryset=RackGroup.objects.all(),
-        field_name="rack__group",
-        label="Rack group (ID)",
-    )
     group = TreeNodeMultipleChoiceFilter(
         queryset=RackGroup.objects.all(),
         field_name="rack__group",
-        label="Rack group (slug)",
+        label="Rack group (slug or ID)",
     )
     user = NaturalKeyOrPKMultipleChoiceFilter(
         queryset=get_user_model().objects.all(),
@@ -913,7 +904,7 @@ class DeviceFilterSet(
         queryset=DeviceType.objects.all(),
         label="Device type (slug or ID)",
     )
-    device_role = NaturalKeyOrPKMultipleChoiceFilter(
+    role = NaturalKeyOrPKMultipleChoiceFilter(
         field_name="device_role", queryset=DeviceRole.objects.all(), label="Device Role (slug or ID)"
     )
     platform = NaturalKeyOrPKMultipleChoiceFilter(queryset=Platform.objects.all(), label="Platform (slug or ID)")
@@ -922,14 +913,15 @@ class DeviceFilterSet(
         field_name="rack__group",
         label="Rack group (slug or ID)",
     )
-    rack_id = django_filters.ModelMultipleChoiceFilter(
-        field_name="rack",
+    rack = NaturalKeyOrPKMultipleChoiceFilter(
+        to_field_name="name",
         queryset=Rack.objects.all(),
-        label="Rack (ID)",
+        label="Rack (name or ID)",
     )
-    cluster_id = django_filters.ModelMultipleChoiceFilter(
+    cluster = NaturalKeyOrPKMultipleChoiceFilter(
+        to_field_name="name",
         queryset=Cluster.objects.all(),
-        label="VM cluster (ID)",
+        label="VM cluster (name or ID)",
     )
     model = NaturalKeyOrPKMultipleChoiceFilter(
         field_name="device_type",
@@ -953,10 +945,10 @@ class DeviceFilterSet(
         queryset=SecretsGroup.objects.all(),
         label="Secrets group (slug or ID)",
     )
-    virtual_chassis_id = django_filters.ModelMultipleChoiceFilter(
-        field_name="virtual_chassis",
+    virtual_chassis = NaturalKeyOrPKMultipleChoiceFilter(
+        to_field_name="name",
         queryset=VirtualChassis.objects.all(),
-        label="Virtual chassis (ID)",
+        label="Virtual chassis (name or ID)",
     )
     is_virtual_chassis_member = RelatedMembershipBooleanFilter(
         field_name="virtual_chassis",

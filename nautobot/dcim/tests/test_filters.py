@@ -1454,11 +1454,11 @@ class RackTestCase(FilterTestCases.FilterTestCase, FilterTestCases.TenancyFilter
 
     def test_serial(self):
         with self.subTest():
-            params = {"serial": "ABC"}
-            self.assertEqual(self.filterset(params, self.queryset).qs.count(), 1)
+            params = {"serial": ["ABC", "DEF"]}
+            self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
         with self.subTest():
-            params = {"serial": "abc"}
-            self.assertEqual(self.filterset(params, self.queryset).qs.count(), 1)
+            params = {"serial": ["abc", "def"]}
+            self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
 
     def test_search(self):
         value = self.queryset.values_list("pk", flat=True)[0]
@@ -2415,8 +2415,9 @@ class PlatformTestCase(FilterTestCases.NameSlugFilterTestCase):
 
     def test_devices(self):
         devices = [Device.objects.first(), Device.objects.last()]
-        params = {"devices": [devices[0].pk, devices[1].pk]}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), len(devices))
+        with self.subTest():
+            params = {"devices": [devices[0].pk, devices[1].pk]}
+            self.assertEqual(self.filterset(params, self.queryset).qs.count(), len(devices))
 
     def test_has_devices(self):
         with self.subTest():
@@ -2434,8 +2435,9 @@ class PlatformTestCase(FilterTestCases.NameSlugFilterTestCase):
 
     def test_virtual_machines(self):
         virtual_machines = [VirtualMachine.objects.first(), VirtualMachine.objects.last()]
-        params = {"virtual_machines": [virtual_machines[0].pk, virtual_machines[1].pk]}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), len(virtual_machines))
+        with self.subTest():
+            params = {"virtual_machines": [virtual_machines[0].pk, virtual_machines[1].pk]}
+            self.assertEqual(self.filterset(params, self.queryset).qs.count(), len(virtual_machines))
 
     def test_has_virtual_machines(self):
         with self.subTest():
@@ -2556,10 +2558,10 @@ class DeviceTestCase(FilterTestCases.FilterTestCase, FilterTestCases.TenancyFilt
     def test_devicerole(self):
         device_roles = self.device_roles[:2]
         with self.subTest():
-            params = {"device_role": [device_roles[0].pk, device_roles[1].pk]}
+            params = {"role": [device_roles[0].pk, device_roles[1].pk]}
             self.assertEqual(self.filterset(params, self.queryset).qs.count(), len(device_roles))
         with self.subTest():
-            params = {"device_role": [device_roles[0].slug, device_roles[1].slug]}
+            params = {"role": [device_roles[0].slug, device_roles[1].slug]}
             self.assertEqual(self.filterset(params, self.queryset).qs.count(), len(device_roles))
 
     def test_platform(self):
@@ -2612,13 +2614,21 @@ class DeviceTestCase(FilterTestCases.FilterTestCase, FilterTestCases.TenancyFilt
 
     def test_rack(self):
         racks = Rack.objects.all()[:2]
-        params = {"rack_id": [racks[0].pk, racks[1].pk]}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+        with self.subTest():
+            params = {"rack": [racks[0].pk, racks[1].pk]}
+            self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+        with self.subTest():
+            params = {"rack": [racks[0].name, racks[1].name]}
+            self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
 
     def test_cluster(self):
         clusters = Cluster.objects.all()[:2]
-        params = {"cluster_id": [clusters[0].pk, clusters[1].pk]}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+        with self.subTest():
+            params = {"cluster": [clusters[0].pk, clusters[1].pk]}
+            self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+        with self.subTest():
+            params = {"cluster": [clusters[0].name, clusters[1].name]}
+            self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
 
     def test_model(self):
         params = {"model": ["model-1", "model-2"]}
@@ -2660,9 +2670,13 @@ class DeviceTestCase(FilterTestCases.FilterTestCase, FilterTestCases.TenancyFilt
             params = {"has_primary_ip": False}
             self.assertEqual(self.filterset(params, self.queryset).qs.count(), 1)
 
-    def test_virtual_chassis_id(self):
-        params = {"virtual_chassis_id": [VirtualChassis.objects.first().pk]}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+    def test_virtual_chassis(self):
+        with self.subTest():
+            params = {"virtual_chassis": [VirtualChassis.objects.first().pk]}
+            self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+        with self.subTest():
+            params = {"virtual_chassis": [VirtualChassis.objects.first().name]}
+            self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
 
     def test_virtual_chassis_member(self):
         with self.subTest():
