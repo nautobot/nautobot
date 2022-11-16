@@ -1,0 +1,1 @@
+Added `LOG_DEPRECATION_WARNINGS` configuration variable and corresponding environment-variable support.

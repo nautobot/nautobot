@@ -75,9 +75,41 @@ As a result, the value of this setting now defaults to `False`, disabling databa
 !!! important
     Users with existing `nautobot_config.py` files generated from earlier versions of Nautobot will still have `CACHEOPS_ENABLED = True` unless they modify or regenerate their configuration. If users no longer desire caching, please be sure to explicitly toggle the value of this setting to `False` and restart your Nautobot services.
 
+#### Deprecation Warnings Silenced by Default ([#2798](https://github.com/nautobot/nautobot/pull/2798))
+
++/- 1.5.2
+
+Deprecation warnings raised by Nautobot itself (such as warnings about upcoming breaking changes in a future release) are no longer logged as `WARNING` log messages by default, but can be enabled by setting `DEBUG = True` or `LOG_DEPRECATION_WARNINGS = True` in your configuration. More information is available under [Optional Settings](../configuration/optional-settings.md#log_deprecation_warnings).
+
+!!! caution
+    In Nautobot 2.0, deprecation warnings will again be logged by default; a future release of Nautobot 1.5.x will also re-enable default logging of deprecation warnings.
+
 #### Redesigned List Filtering UI ([#1998](https://github.com/nautobot/nautobot/issues/1998))
 
 Added a dynamic filter form that allows users to filter object tables/lists by any field and lookup expression combination supported by the corresponding FilterSet and API.
+
+#### Renamed Mixin Classes ([#2779](https://github.com/nautobot/nautobot/issues/2779))
+
++/- 1.5.2
+
+A number of mixin classes have been renamed and/or relocated for improved self-consistency and clarity of usage. The former names of these mixins are still available for now as aliases, but inheriting from these aliases will now raise a `DeprecationWarning`, and these aliases wil be removed in a future release.
+
+| Former Name                    | New Name                                     |
+| ------------------------------ | -------------------------------------------- |
+| `CableTerminationFilterSet`    | `CableTerminationModelFilterSetMixin`        |
+| `CableTerminationSerializer`   | `CableTerminationModelSerializerMixin`       |
+| `ConnectedEndpointSerializer`  | `PathEndpointModelSerializerMixin`           |
+| `ConnectionFilterSet`          | `ConnectionFilterSetMixin`                   |
+| `CreatedUpdatedFilterSet`      | `CreatedUpdatedModelFilterSetMixin`          |
+| `CustomFieldModelFilterSet`    | `CustomFieldModelFilterSetMixin`             |
+| `CustomFieldModelSerializer`   | `CustomFieldModelSerializerMixin`            |
+| `DeviceComponentFilterSet`     | `DeviceComponentModelFilterSetMixin`         |
+| `DeviceTypeComponentFilterSet` | `DeviceComponentTemplateModelFilterSetMixin` |
+| `LocalContextFilterSet`        | `LocalContextModelFilterSetMixin`            |
+| `PathEndpointFilterSet`        | `PathEndpointModelFilterSetMixin`            |
+| `RelationshipModelFilterSet`   | `RelationshipModelFilterSetMixin`            |
+| `TaggedObjectSerializer`       | `TaggedModelSerializerMixin`                 |
+| `TenancyFilterSet`             | `TenancyModelFilterSetMixin`                 |
 
 <!-- towncrier release notes start -->
 ## v1.5.1 (2022-11-14)
