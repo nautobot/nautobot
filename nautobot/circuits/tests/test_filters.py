@@ -413,7 +413,7 @@ class CircuitTerminationTestCase(FilterTestCases.FilterTestCase):
 
     def test_site(self):
         sites = Site.objects.all()[:2]
-        params = {"site_id": [sites[0].pk, sites[1].pk]}
+        params = {"site": [sites[0].pk, sites[1].pk]}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 4)
         params = {"site": [sites[0].slug, sites[1].slug]}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 4)
