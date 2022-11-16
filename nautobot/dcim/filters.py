@@ -174,15 +174,10 @@ class SiteFilterSet(NautobotFilterSet, TenancyFilterSet, StatusModelFilterSetMix
             },
         },
     )
-    region_id = TreeNodeMultipleChoiceFilter(
-        queryset=Region.objects.all(),
-        field_name="region",
-        label="Region (ID)",
-    )
     region = TreeNodeMultipleChoiceFilter(
         queryset=Region.objects.all(),
         field_name="region",
-        label="Region (slug)",
+        label="Region (slug or ID)",
     )
     locations = TreeNodeMultipleChoiceFilter(
         queryset=Location.objects.all(),
@@ -531,16 +526,10 @@ class RackReservationFilterSet(NautobotFilterSet, TenancyFilterSet):
         queryset=Rack.objects.all(),
         label="Rack (ID)",
     )
-    site_id = django_filters.ModelMultipleChoiceFilter(
+    site = NaturalKeyOrPKMultipleChoiceFilter(
         field_name="rack__site",
         queryset=Site.objects.all(),
-        label="Site (ID)",
-    )
-    site = django_filters.ModelMultipleChoiceFilter(
-        field_name="rack__site__slug",
-        queryset=Site.objects.all(),
-        to_field_name="slug",
-        label="Site (slug)",
+        label="Site (slug or ID)",
     )
     group_id = TreeNodeMultipleChoiceFilter(
         queryset=RackGroup.objects.all(),
@@ -1135,26 +1124,15 @@ class DeviceComponentFilterSet(CustomFieldModelFilterSet):
             "description": "icontains",
         },
     )
-    region_id = TreeNodeMultipleChoiceFilter(
-        queryset=Region.objects.all(),
-        field_name="device__site__region",
-        label="Region (ID)",
-    )
     region = TreeNodeMultipleChoiceFilter(
         queryset=Region.objects.all(),
         field_name="device__site__region",
-        label="Region (slug)",
+        label="Region (slug or ID)",
     )
-    site_id = django_filters.ModelMultipleChoiceFilter(
+    site = NaturalKeyOrPKMultipleChoiceFilter(
         field_name="device__site",
         queryset=Site.objects.all(),
-        label="Site (ID)",
-    )
-    site = django_filters.ModelMultipleChoiceFilter(
-        field_name="device__site__slug",
-        queryset=Site.objects.all(),
-        to_field_name="slug",
-        label="Site name (slug)",
+        label="Site (slug or ID)",
     )
     device_id = django_filters.ModelMultipleChoiceFilter(
         queryset=Device.objects.all(),
@@ -1474,26 +1452,15 @@ class InventoryItemFilterSet(BaseFilterSet, DeviceComponentFilterSet):
             "description": "icontains",
         },
     )
-    region_id = TreeNodeMultipleChoiceFilter(
-        queryset=Region.objects.all(),
-        field_name="device__site__region",
-        label="Region (ID)",
-    )
     region = TreeNodeMultipleChoiceFilter(
         queryset=Region.objects.all(),
         field_name="device__site__region",
-        label="Region (slug)",
+        label="Region (slug or ID)",
     )
-    site_id = django_filters.ModelMultipleChoiceFilter(
+    site = NaturalKeyOrPKMultipleChoiceFilter(
         field_name="device__site",
         queryset=Site.objects.all(),
-        label="Site (ID)",
-    )
-    site = django_filters.ModelMultipleChoiceFilter(
-        field_name="device__site__slug",
-        queryset=Site.objects.all(),
-        to_field_name="slug",
-        label="Site name (slug)",
+        label="Site (slug or ID)",
     )
     device_id = django_filters.ModelChoiceFilter(
         queryset=Device.objects.all(),
@@ -1557,26 +1524,15 @@ class VirtualChassisFilterSet(NautobotFilterSet):
         to_field_name="name",
         label="Master (name)",
     )
-    region_id = TreeNodeMultipleChoiceFilter(
-        queryset=Region.objects.all(),
-        field_name="master__site__region",
-        label="Region (ID)",
-    )
     region = TreeNodeMultipleChoiceFilter(
         queryset=Region.objects.all(),
         field_name="master__site__region",
-        label="Region (slug)",
+        label="Region (slug or ID)",
     )
-    site_id = django_filters.ModelMultipleChoiceFilter(
+    site = NaturalKeyOrPKMultipleChoiceFilter(
         field_name="master__site",
         queryset=Site.objects.all(),
-        label="Site (ID)",
-    )
-    site = django_filters.ModelMultipleChoiceFilter(
-        field_name="master__site__slug",
-        queryset=Site.objects.all(),
-        to_field_name="slug",
-        label="Site name (slug)",
+        label="Site (slug or ID)",
     )
     tenant_id = django_filters.ModelMultipleChoiceFilter(
         field_name="master__tenant",
@@ -1733,26 +1689,15 @@ class PowerFeedFilterSet(
     NautobotFilterSet, CableTerminationFilterSet, PathEndpointFilterSet, StatusModelFilterSetMixin
 ):
     q = SearchFilter(filter_predicates={"name": "icontains", "comments": "icontains"})
-    region_id = TreeNodeMultipleChoiceFilter(
-        queryset=Region.objects.all(),
-        field_name="power_panel__site__region",
-        label="Region (ID)",
-    )
     region = TreeNodeMultipleChoiceFilter(
         queryset=Region.objects.all(),
         field_name="power_panel__site__region",
-        label="Region (slug)",
+        label="Region (slug or ID)",
     )
-    site_id = django_filters.ModelMultipleChoiceFilter(
+    site = NaturalKeyOrPKMultipleChoiceFilter(
         field_name="power_panel__site",
         queryset=Site.objects.all(),
-        label="Site (ID)",
-    )
-    site = django_filters.ModelMultipleChoiceFilter(
-        field_name="power_panel__site__slug",
-        queryset=Site.objects.all(),
-        to_field_name="slug",
-        label="Site name (slug)",
+        label="Site (slug or ID)",
     )
     power_panel_id = django_filters.ModelMultipleChoiceFilter(
         queryset=PowerPanel.objects.all(),
