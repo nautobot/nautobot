@@ -1488,6 +1488,7 @@ class VirtualChassisFilterSet(NautobotFilterSet):
     )
     master = NaturalKeyOrPKMultipleChoiceFilter(
         queryset=Device.objects.all(),
+        to_field_name="name",
         label="Master (name or ID)",
     )
     region_id = TreeNodeMultipleChoiceFilter(

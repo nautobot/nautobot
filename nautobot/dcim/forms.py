@@ -2253,6 +2253,11 @@ class DeviceFilterForm(
         label="Has a primary IP",
         widget=StaticSelect2(choices=BOOLEAN_WITH_BLANK_CHOICES),
     )
+    has_interfaces = forms.NullBooleanField(
+        required=False,
+        label="Has interfaces",
+        widget=StaticSelect2(choices=BOOLEAN_WITH_BLANK_CHOICES),
+    )
     virtual_chassis_member = forms.NullBooleanField(
         required=False,
         label="Virtual chassis member",

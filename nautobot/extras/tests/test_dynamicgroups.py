@@ -552,7 +552,7 @@ class DynamicGroupModelTest(DynamicGroupTestBase):
         self.assertEqual(group.filter, old_filter)
 
         # Now we'll do it using a manually crafted dict.
-        new_filter = {"interfaces": True}
+        new_filter = {"has_interfaces": True}
         group.set_filter(new_filter)
         self.assertEqual(group.filter, new_filter)
 

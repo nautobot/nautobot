@@ -384,7 +384,7 @@ class DynamicGroup(OrganizationalModel):
 
             logger.debug("[%s] Setting filter field {%s: %s}", self.name, field_name, field_value)
             new_filter[field_name] = new_value
-
+        print(new_filter)
         self.filter = new_filter
 
     # FIXME(jathan): Yes, this is "something", but there is discrepancy between explicitly declared
