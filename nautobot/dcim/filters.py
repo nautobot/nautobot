@@ -13,7 +13,7 @@ from nautobot.extras.filters import (
 )
 from nautobot.extras.models import SecretsGroup
 from nautobot.extras.utils import FeatureQuery
-from nautobot.ipam.models import VirtualMachine, VLAN, VLANGroup
+from nautobot.ipam.models import VLAN, VLANGroup
 from nautobot.tenancy.filters import TenancyFilterSet
 from nautobot.tenancy.models import Tenant
 from nautobot.utilities.filters import (
@@ -243,7 +243,6 @@ class SiteFilterSet(NautobotFilterSet, TenancyFilterSet, StatusModelFilterSetMix
         label="Time zone",
         null_value="",
     )
-    tags = TagFilter()
 
     class Meta:
         model = Site
@@ -267,6 +266,7 @@ class SiteFilterSet(NautobotFilterSet, TenancyFilterSet, StatusModelFilterSetMix
             "shipping_address",
             "slug",
             "vlans",
+            "tags",
         ]
 
 
@@ -322,11 +322,10 @@ class LocationFilterSet(NautobotFilterSet, StatusModelFilterSetMixin, TenancyFil
         field_name="location_type__content_types",
         choices=FeatureQuery("locations").get_choices,
     )
-    tags = TagFilter()
 
     class Meta:
         model = Location
-        fields = ["id", "name", "slug", "description"]
+        fields = ["id", "name", "slug", "description", "tags"]
 
     def generate_query__base_site(self, value):
         """Helper method used by DynamicGroups and by _base_site() method."""
@@ -467,7 +466,6 @@ class RackFilterSet(NautobotFilterSet, LocatableModelFilterSetMixin, TenancyFilt
         field_name="reservations",
         label="Has reservations",
     )
-    tags = TagFilter()
 
     class Meta:
         model = Rack
@@ -484,6 +482,7 @@ class RackFilterSet(NautobotFilterSet, LocatableModelFilterSetMixin, TenancyFilt
             "comments",
             "devices",
             "reservations",
+            "tags",
         ]
 
 
@@ -516,11 +515,10 @@ class RackReservationFilterSet(NautobotFilterSet, TenancyFilterSet):
         to_field_name="name",
         label="Rack (name or ID)",
     )
-    tags = TagFilter()
 
     class Meta:
         model = RackReservation
-        fields = ["id", "created", "description"]
+        fields = ["id", "created", "description", "tags"]
 
 
 class ManufacturerFilterSet(NautobotFilterSet, NameSlugSearchFilterSet):
@@ -678,7 +676,6 @@ class DeviceTypeFilterSet(NautobotFilterSet):
         field_name="devicebaytemplates",
         label="Has device bay templates",
     )
-    tags = TagFilter()
 
     class Meta:
         model = DeviceType
@@ -692,6 +689,7 @@ class DeviceTypeFilterSet(NautobotFilterSet):
             "subdevice_role",
             "comments",
             "instances",
+            "tags",
         ]
 
     def _console_ports(self, queryset, name, value):
@@ -1032,7 +1030,6 @@ class DeviceFilterSet(
         to_field_name="name",
         label="Device Bays",
     )
-    tags = TagFilter()
 
     class Meta:
         model = Device
@@ -1045,6 +1042,7 @@ class DeviceFilterSet(
             "vc_position",
             "vc_priority",
             "device_redundancy_group_priority",
+            "tags",
         ]
 
     def generate_query__has_primary_ip(self, value):
@@ -1093,7 +1091,6 @@ class DeviceComponentFilterSet(CustomFieldModelFilterSet):
         to_field_name="name",
         label="Device (name or ID)",
     )
-    tags = TagFilter()
 
 
 # TODO: should be CableTerminationFilterSetMixin
@@ -1127,7 +1124,7 @@ class ConsolePortFilterSet(
 
     class Meta:
         model = ConsolePort
-        fields = ["id", "name", "description", "label"]
+        fields = ["id", "name", "description", "label", "tags"]
 
 
 class ConsoleServerPortFilterSet(
@@ -1140,7 +1137,7 @@ class ConsoleServerPortFilterSet(
 
     class Meta:
         model = ConsoleServerPort
-        fields = ["id", "name", "description", "label"]
+        fields = ["id", "name", "description", "label", "tags"]
 
 
 class PowerPortFilterSet(
@@ -1163,7 +1160,7 @@ class PowerPortFilterSet(
 
     class Meta:
         model = PowerPort
-        fields = ["id", "name", "maximum_draw", "allocated_draw", "description", "label"]
+        fields = ["id", "name", "maximum_draw", "allocated_draw", "description", "label", "tags"]
 
 
 class PowerOutletFilterSet(
@@ -1181,7 +1178,7 @@ class PowerOutletFilterSet(
 
     class Meta:
         model = PowerOutlet
-        fields = ["id", "name", "feed_leg", "description", "label"]
+        fields = ["id", "name", "feed_leg", "description", "label", "tags"]
 
 
 class InterfaceFilterSet(
@@ -1269,7 +1266,6 @@ class InterfaceFilterSet(
         label="Has member interfaces",
     )
     mac_address = MultiValueMACAddressFilter()
-    tags = TagFilter()
     vlan_id = django_filters.CharFilter(method="filter_vlan_id", label="Assigned VLAN")
     vlan = django_filters.NumberFilter(method="filter_vlan", label="Assigned VID")
     type = django_filters.MultipleChoiceFilter(choices=InterfaceTypeChoices, null_value=None)
@@ -1286,6 +1282,7 @@ class InterfaceFilterSet(
             "mode",
             "description",
             "label",
+            "tags",
         ]
 
     def filter_device(self, queryset, name, value):
@@ -1348,7 +1345,7 @@ class FrontPortFilterSet(BaseFilterSet, DeviceComponentFilterSet, CableTerminati
 
     class Meta:
         model = FrontPort
-        fields = ["id", "name", "type", "description", "label", "rear_port_position"]
+        fields = ["id", "name", "type", "description", "label", "rear_port_position", "tags"]
 
 
 class RearPortFilterSet(BaseFilterSet, DeviceComponentFilterSet, CableTerminationFilterSet):
@@ -1365,7 +1362,7 @@ class RearPortFilterSet(BaseFilterSet, DeviceComponentFilterSet, CableTerminatio
 
     class Meta:
         model = RearPort
-        fields = ["id", "name", "type", "positions", "description", "label"]
+        fields = ["id", "name", "type", "positions", "description", "label", "tags"]
 
 
 class DeviceBayFilterSet(BaseFilterSet, DeviceComponentFilterSet):
@@ -1378,7 +1375,7 @@ class DeviceBayFilterSet(BaseFilterSet, DeviceComponentFilterSet):
 
     class Meta:
         model = DeviceBay
-        fields = ["id", "name", "description", "label"]
+        fields = ["id", "name", "description", "label", "tags"]
 
 
 class InventoryItemFilterSet(BaseFilterSet, DeviceComponentFilterSet):
@@ -1434,7 +1431,7 @@ class InventoryItemFilterSet(BaseFilterSet, DeviceComponentFilterSet):
 
     class Meta:
         model = InventoryItem
-        fields = ["id", "name", "part_id", "asset_tag", "discovered", "description", "label"]
+        fields = ["id", "name", "part_id", "asset_tag", "discovered", "description", "label", "tags"]
 
 
 class VirtualChassisFilterSet(NautobotFilterSet):
@@ -1474,11 +1471,10 @@ class VirtualChassisFilterSet(NautobotFilterSet):
         field_name="members",
         label="Has device members",
     )
-    tags = TagFilter()
 
     class Meta:
         model = VirtualChassis
-        fields = ["id", "domain", "name"]
+        fields = ["id", "domain", "name", "tags"]
 
 
 class CableFilterSet(NautobotFilterSet, StatusModelFilterSetMixin):
@@ -1505,7 +1501,6 @@ class CableFilterSet(NautobotFilterSet, StatusModelFilterSetMixin):
         choices=FeatureQuery("cable_terminations").get_choices,
         conjoined=False,
     )
-    tags = TagFilter()
 
     class Meta:
         model = Cable
@@ -1516,6 +1511,7 @@ class CableFilterSet(NautobotFilterSet, StatusModelFilterSetMixin):
             "length_unit",
             "termination_a_id",
             "termination_b_id",
+            "tags",
         ]
 
     def filter_device(self, queryset, name, value):
@@ -1593,11 +1589,10 @@ class PowerPanelFilterSet(NautobotFilterSet, LocatableModelFilterSetMixin):
         field_name="powerfeeds",
         label="Has power feeds",
     )
-    tags = TagFilter()
 
     class Meta:
         model = PowerPanel
-        fields = ["id", "name"]
+        fields = ["id", "name", "tags"]
 
 
 class PowerFeedFilterSet(
@@ -1624,7 +1619,6 @@ class PowerFeedFilterSet(
         to_field_name="name",
         label="Rack (name or ID)",
     )
-    tags = TagFilter()
 
     class Meta:
         model = PowerFeed
@@ -1640,12 +1634,12 @@ class PowerFeedFilterSet(
             "max_utilization",
             "comments",
             "available_power",
+            "tags",
         ]
 
 
 class DeviceRedundancyGroupFilterSet(NautobotFilterSet, StatusModelFilterSetMixin, NameSlugSearchFilterSet):
     q = SearchFilter(filter_predicates={"name": "icontains", "comments": "icontains"})
-    tags = TagFilter()
     secrets_group = NaturalKeyOrPKMultipleChoiceFilter(
         field_name="secrets_group",
         queryset=SecretsGroup.objects.all(),
@@ -1655,4 +1649,4 @@ class DeviceRedundancyGroupFilterSet(NautobotFilterSet, StatusModelFilterSetMixi
 
     class Meta:
         model = DeviceRedundancyGroup
-        fields = ["id", "name", "slug", "failover_strategy"]
+        fields = ["id", "name", "slug", "failover_strategy", "tags"]
