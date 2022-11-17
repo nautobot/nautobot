@@ -8,11 +8,9 @@ from django.conf import settings
 from django.core.validators import MaxValueValidator
 from django.db import models
 from django.forms.utils import ErrorDict, ErrorList
-
 import django_filters
 from django_filters.constants import EMPTY_VALUES
 from django_filters.utils import get_model_field, resolve_field
-
 from drf_spectacular.types import OpenApiTypes
 from drf_spectacular.utils import extend_schema_field
 from mptt.models import MPTTModel
