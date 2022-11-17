@@ -17,6 +17,7 @@ from nautobot.utilities.config import get_settings_or_config
 from nautobot.utilities.forms import TableConfigForm
 from nautobot.utilities.utils import foreground_color, get_route_for_model, UtilizationData
 
+
 HTML_TRUE = '<span class="text-success"><i class="mdi mdi-check-bold" title="Yes"></i></span>'
 HTML_FALSE = '<span class="text-danger"><i class="mdi mdi-close-thick" title="No"></i></span>'
 HTML_NONE = '<span class="text-muted">&mdash;</span>'

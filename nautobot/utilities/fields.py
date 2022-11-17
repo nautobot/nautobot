@@ -5,8 +5,8 @@ from django.db import models
 from django.core import exceptions
 
 from nautobot.utilities.ordering import naturalize
-from .forms import ColorSelect
-from .forms.fields import JSONArrayFormField
+from nautobot.utilities import forms
+
 
 ColorValidator = RegexValidator(
     regex="^[0-9a-f]{6}$",
@@ -43,7 +43,7 @@ class ColorField(models.CharField):
         super().__init__(*args, **kwargs)
 
     def formfield(self, **kwargs):
-        kwargs["widget"] = ColorSelect
+        kwargs["widget"] = forms.ColorSelect
         return super().formfield(**kwargs)
 
 
@@ -184,7 +184,7 @@ class JSONArrayField(models.JSONField):
         """Return a django.forms.Field instance for this field."""
         return super().formfield(
             **{
-                "form_class": JSONArrayFormField,
+                "form_class": forms.JSONArrayFormField,
                 "base_field": self.base_field.formfield(),
                 **kwargs,
             }

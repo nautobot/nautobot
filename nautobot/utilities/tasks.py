@@ -8,6 +8,7 @@ from packaging import version
 from nautobot.core.celery import nautobot_task
 from nautobot.utilities.config import get_settings_or_config
 
+
 # Get an instance of a logger
 logger = logging.getLogger("nautobot.releases")
 

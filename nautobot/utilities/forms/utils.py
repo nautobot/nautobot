@@ -4,7 +4,8 @@ from django import forms
 from django.forms.models import fields_for_model
 
 from nautobot.utilities.querysets import RestrictedQuerySet
-from .constants import ALPHANUMERIC_EXPANSION_PATTERN, IP4_EXPANSION_PATTERN, IP6_EXPANSION_PATTERN
+from nautobot.utilities.forms import constants
+
 
 __all__ = (
     "add_blank_choice",
@@ -75,10 +76,10 @@ def expand_alphanumeric_pattern(string):
     """
     Expand an alphabetic pattern into a list of strings.
     """
-    lead, pattern, remnant = re.split(ALPHANUMERIC_EXPANSION_PATTERN, string, maxsplit=1)
+    lead, pattern, remnant = re.split(constants.ALPHANUMERIC_EXPANSION_PATTERN, string, maxsplit=1)
     parsed_range = parse_alphanumeric_range(pattern)
     for i in parsed_range:
-        if re.search(ALPHANUMERIC_EXPANSION_PATTERN, remnant):
+        if re.search(constants.ALPHANUMERIC_EXPANSION_PATTERN, remnant):
             for string2 in expand_alphanumeric_pattern(remnant):
                 yield f"{lead}{i}{string2}"
         else:
@@ -94,10 +95,10 @@ def expand_ipaddress_pattern(string, family):
     if family not in [4, 6]:
         raise Exception(f"Invalid IP address family: {family}")
     if family == 4:
-        regex = IP4_EXPANSION_PATTERN
+        regex = constants.IP4_EXPANSION_PATTERN
         base = 10
     else:
-        regex = IP6_EXPANSION_PATTERN
+        regex = constants.IP6_EXPANSION_PATTERN
         base = 16
     lead, pattern, remnant = re.split(regex, string, maxsplit=1)
     parsed_range = parse_numeric_range(pattern, base)

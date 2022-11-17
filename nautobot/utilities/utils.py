@@ -18,7 +18,6 @@ from django.db.models import Count, ForeignKey, Model, OuterRef, Subquery
 from django.db.models.functions import Coalesce
 from django.http import QueryDict
 from django.utils.tree import Node
-
 from django.template import engines
 from django.utils.module_loading import import_string
 from django.utils.text import slugify
@@ -36,6 +35,7 @@ from taggit.managers import _TaggableManager
 from nautobot.dcim.choices import CableLengthUnitChoices
 from nautobot.utilities.constants import HTTP_REQUEST_META_SAFE_COPY
 from nautobot.utilities.exceptions import FilterSetFieldNotFound
+
 
 # Check if field name contains a lookup expr
 # e.g `name__ic` has lookup expr `ic (icontains)` while `name` has no lookup expr

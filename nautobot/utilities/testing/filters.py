@@ -2,9 +2,9 @@ import random
 
 from django.db.models import Count
 from django.test import tag
-from nautobot.utilities.testing.views import TestCase
 
 from nautobot.tenancy.models import Tenant, TenantGroup
+from nautobot.utilities.testing.views import TestCase
 
 
 @tag("unit")

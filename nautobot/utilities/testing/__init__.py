@@ -13,23 +13,23 @@ from nautobot.extras.jobs import run_job
 from nautobot.extras.management import populate_status_choices
 from nautobot.extras.models import JobResult
 from nautobot.extras.utils import get_job_content_type
+from nautobot.utilities.testing.api import APITestCase, APIViewTestCases
+from nautobot.utilities.testing.filters import FilterTestCases
 from nautobot.utilities.testing.mixins import NautobotTestCaseMixin
-
-from .api import APITestCase, APIViewTestCases
-from .filters import FilterTestCases
-from .utils import (
+from nautobot.utilities.testing.utils import (
     post_data,
     create_test_user,
     extract_form_failures,
     extract_page_body,
     disable_warnings,
 )
-from .views import (
+from nautobot.utilities.testing.views import (
     TestCase,
     ModelTestCase,
     ModelViewTestCase,
     ViewTestCases,
 )
+
 
 __all__ = (
     "APITestCase",

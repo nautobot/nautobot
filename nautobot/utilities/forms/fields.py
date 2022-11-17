@@ -18,9 +18,10 @@ from nautobot.extras.utils import FeatureQuery
 from nautobot.utilities.choices import unpack_grouped_choices
 from nautobot.utilities.utils import get_route_for_model, is_uuid
 from nautobot.utilities.validators import EnhancedURLValidator
-from . import widgets
-from .constants import ALPHANUMERIC_EXPANSION_PATTERN, IP4_EXPANSION_PATTERN, IP6_EXPANSION_PATTERN
-from .utils import expand_alphanumeric_pattern, expand_ipaddress_pattern, parse_numeric_range, parse_csv, validate_csv
+from nautobot.utilities.forms import widgets
+from nautobot.utilities.forms import constants
+from nautobot.utilities.forms import utils
+
 
 __all__ = (
     "CommentField",
@@ -82,13 +83,13 @@ class CSVDataField(forms.CharField):
         if value is None:
             return None
         reader = csv.reader(StringIO(value.strip()))
-        return parse_csv(reader)
+        return utils.parse_csv(reader)
 
     def validate(self, value):
         if value is None:
             return None
         headers, _records = value
-        validate_csv(headers, self.fields, self.required_fields)
+        utils.validate_csv(headers, self.fields, self.required_fields)
 
         return value
 
@@ -136,7 +137,7 @@ class CSVFileField(forms.FileField):
         except csv.Error:
             dialect = csv.excel
         reader = csv.reader(csv_str.splitlines(), dialect)
-        headers, records = parse_csv(reader)
+        headers, records = utils.parse_csv(reader)
 
         return headers, records
 
@@ -145,7 +146,7 @@ class CSVFileField(forms.FileField):
             return None
 
         headers, _records = value
-        validate_csv(headers, self.fields, self.required_fields)
+        utils.validate_csv(headers, self.fields, self.required_fields)
 
         return value
 
@@ -359,8 +360,8 @@ class ExpandableNameField(forms.CharField):
     def to_python(self, value):
         if not value:
             return ""
-        if re.search(ALPHANUMERIC_EXPANSION_PATTERN, value):
-            return list(expand_alphanumeric_pattern(value))
+        if re.search(constants.ALPHANUMERIC_EXPANSION_PATTERN, value):
+            return list(utils.expand_alphanumeric_pattern(value))
         return [value]
 
 
@@ -379,10 +380,10 @@ class ExpandableIPAddressField(forms.CharField):
 
     def to_python(self, value):
         # Hackish address family detection but it's all we have to work with
-        if "." in value and re.search(IP4_EXPANSION_PATTERN, value):
-            return list(expand_ipaddress_pattern(value, 4))
-        elif ":" in value and re.search(IP6_EXPANSION_PATTERN, value):
-            return list(expand_ipaddress_pattern(value, 6))
+        if "." in value and re.search(constants.IP4_EXPANSION_PATTERN, value):
+            return list(utils.expand_ipaddress_pattern(value, 4))
+        elif ":" in value and re.search(constants.IP6_EXPANSION_PATTERN, value):
+            return list(utils.expand_ipaddress_pattern(value, 6))
         return [value]
 
 
@@ -728,7 +729,7 @@ class NumericArrayField(SimpleArrayField):
 
     def to_python(self, value):
         try:
-            value = ",".join([str(n) for n in parse_numeric_range(value)])
+            value = ",".join([str(n) for n in utils.parse_numeric_range(value)])
         except ValueError as error:
             raise ValidationError(error)
         return super().to_python(value)

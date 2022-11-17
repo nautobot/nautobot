@@ -2,7 +2,8 @@
 from django.core.management.commands.makemigrations import Command
 from django.db import models
 
-from . import custom_deconstruct
+from nautobot.utilities.management.commands import custom_deconstruct
+
 
 __all__ = ("Command",)
 

@@ -13,9 +13,8 @@ from django_tables2.utils import Accessor
 
 from nautobot.extras.models import ComputedField, CustomField, Relationship
 from nautobot.extras.choices import CustomFieldTypeChoices, RelationshipSideChoices
+from nautobot.utilities.templatetags import helpers
 from nautobot.utilities.utils import get_route_for_model
-
-from .templatetags.helpers import render_boolean
 
 
 class BaseTable(tables.Table):
@@ -168,7 +167,7 @@ class BooleanColumn(tables.Column):
     """
 
     def render(self, value):
-        return render_boolean(value)
+        return helpers.render_boolean(value)
 
 
 class ButtonsColumn(tables.TemplateColumn):
@@ -390,7 +389,7 @@ class CustomFieldColumn(tables.Column):
     def render(self, record, bound_column, value):  # pylint: disable=arguments-differ
         template = ""
         if self.customfield.type == CustomFieldTypeChoices.TYPE_BOOLEAN:
-            template = render_boolean(value)
+            template = helpers.render_boolean(value)
         elif self.customfield.type == CustomFieldTypeChoices.TYPE_MULTISELECT:
             for v in value:
                 template += format_html('<span class="label label-default">{}</span> ', v)

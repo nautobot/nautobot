@@ -7,7 +7,8 @@ from django.forms.models import ModelChoiceIterator
 from django.urls import get_script_prefix
 
 from nautobot.utilities.choices import ColorChoices
-from .utils import add_blank_choice
+from nautobot.utilities.forms import utils
+
 
 __all__ = (
     "APISelect",
@@ -49,7 +50,7 @@ class ColorSelect(forms.Select):
     option_template_name = "widgets/colorselect_option.html"
 
     def __init__(self, *args, **kwargs):
-        kwargs["choices"] = add_blank_choice(ColorChoices)
+        kwargs["choices"] = utils.add_blank_choice(ColorChoices)
         super().__init__(*args, **kwargs)
         self.attrs["class"] = "nautobot-select2-color-picker"
 

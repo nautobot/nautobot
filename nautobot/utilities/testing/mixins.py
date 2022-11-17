@@ -15,9 +15,9 @@ from taggit.managers import TaggableManager
 from nautobot.extras.management import populate_status_choices
 from nautobot.extras.models import Tag
 from nautobot.users.models import ObjectPermission
-from nautobot.utilities.permissions import resolve_permission_ct
 from nautobot.utilities.fields import JSONArrayField
-from .utils import extract_form_failures
+from nautobot.utilities.permissions import resolve_permission_ct
+from nautobot.utilities.testing import utils
 
 
 # Use the proper swappable User model
@@ -139,7 +139,7 @@ class NautobotTestCaseMixin:
                 err = response.data
             else:
                 # Attempt to extract form validation errors from the response HTML
-                form_errors = extract_form_failures(response.content.decode(response.charset))
+                form_errors = utils.extract_form_failures(response.content.decode(response.charset))
                 err = form_errors or response.content.decode(response.charset) or "No data"
             err_message = f"Expected HTTP status(es) {expected_status}; received {response.status_code}: {err}"
             if msg:

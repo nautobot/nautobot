@@ -1,5 +1,4 @@
 from django.db.models import Manager
-
 from tree_queries.query import TreeManager as TreeManager_, TreeQuerySet as TreeQuerySet_
 
 from nautobot.utilities.querysets import RestrictedQuerySet

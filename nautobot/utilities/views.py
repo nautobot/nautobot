@@ -5,7 +5,7 @@ from django.urls.exceptions import NoReverseMatch
 from django.utils.http import is_safe_url
 
 from nautobot.utilities.utils import get_route_for_model
-from .permissions import resolve_permission
+from nautobot.utilities import permissions
 
 
 #
@@ -93,7 +93,7 @@ class ObjectPermissionRequiredMixin(AccessMixin):
         if user.has_perms((permission_required, *self.additional_permissions)):
 
             # Update the view's QuerySet to filter only the permitted objects
-            action = resolve_permission(permission_required)[1]
+            action = permissions.resolve_permission(permission_required)[1]
             self.queryset = self.queryset.restrict(user, action)
 
             return True
