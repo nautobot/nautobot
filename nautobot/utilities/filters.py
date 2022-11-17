@@ -1,14 +1,14 @@
-import logging
-import uuid
 from collections import OrderedDict
 from copy import deepcopy
+import logging
+import uuid
 
-import django_filters
-from django import forms as djforms
+from django import forms as django_forms
 from django.conf import settings
 from django.core.validators import MaxValueValidator
 from django.db import models
 from django.forms.utils import ErrorDict, ErrorList
+import django_filters
 from django_filters.constants import EMPTY_VALUES
 from django_filters.utils import get_model_field, resolve_field
 from mptt.models import MPTTModel
@@ -30,7 +30,7 @@ def multivalue_field_factory(field_class):
     """
 
     class NewField(field_class):
-        widget = djforms.SelectMultiple
+        widget = django_forms.SelectMultiple
 
         def to_python(self, value):
             if not value:
@@ -65,15 +65,15 @@ class MultiValueCharFilter(django_filters.CharFilter, django_filters.MultipleCho
 
 
 class MultiValueDateFilter(django_filters.DateFilter, django_filters.MultipleChoiceFilter):
-    field_class = multivalue_field_factory(djforms.DateField)
+    field_class = multivalue_field_factory(django_forms.DateField)
 
 
 class MultiValueDateTimeFilter(django_filters.DateTimeFilter, django_filters.MultipleChoiceFilter):
-    field_class = multivalue_field_factory(djforms.DateTimeField)
+    field_class = multivalue_field_factory(django_forms.DateTimeField)
 
 
 class MultiValueNumberFilter(django_filters.NumberFilter, django_filters.MultipleChoiceFilter):
-    field_class = multivalue_field_factory(djforms.IntegerField)
+    field_class = multivalue_field_factory(django_forms.IntegerField)
 
     class MultiValueMaxValueValidator(MaxValueValidator):
         """As django.core.validators.MaxValueValidator, but apply to a list of values rather than a single value."""
@@ -91,7 +91,7 @@ class MultiValueBigNumberFilter(MultiValueNumberFilter):
 
 
 class MultiValueTimeFilter(django_filters.TimeFilter, django_filters.MultipleChoiceFilter):
-    field_class = multivalue_field_factory(djforms.TimeField)
+    field_class = multivalue_field_factory(django_forms.TimeField)
 
 
 class MACAddressFilter(django_filters.CharFilter):
@@ -103,7 +103,7 @@ class MultiValueMACAddressFilter(django_filters.MultipleChoiceFilter):
 
 
 class MultiValueUUIDFilter(django_filters.UUIDFilter, django_filters.MultipleChoiceFilter):
-    field_class = multivalue_field_factory(djforms.UUIDField)
+    field_class = multivalue_field_factory(django_forms.UUIDField)
 
 
 class RelatedMembershipBooleanFilter(django_filters.BooleanFilter):
