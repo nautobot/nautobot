@@ -985,6 +985,7 @@ class JobMultiPartInputSerializer(serializers.Serializer):
     _task_queue = serializers.CharField(required=False, allow_blank=True)
 
     def validate(self, data):
+        data = super().validate(data)
 
         if "_schedule_interval" in data and data["_schedule_interval"] != JobExecutionType.TYPE_IMMEDIATELY:
             if "_schedule_name" not in data:
