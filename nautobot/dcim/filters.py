@@ -986,10 +986,6 @@ class DeviceFilterSet(
         field_name="interfaces",
         label="Has interfaces",
     )
-    pass_through_ports = django_filters.BooleanFilter(
-        method="_pass_through_ports",
-        label="Has pass-through ports",
-    )
     has_front_ports = RelatedMembershipBooleanFilter(
         field_name="frontports",
         label="Has front ports",
@@ -1041,17 +1037,6 @@ class DeviceFilterSet(
 
     def _has_primary_ip(self, queryset, name, value):
         params = self.generate_query__has_primary_ip(value)
-        return queryset.filter(params)
-
-    # 2.0 TODO: Remove me and `pass_through_ports` in exchange for `has_(front|rear)_ports`.
-    def generate_query__pass_through_ports(self, value):
-        query = Q(frontports__isnull=False, rearports__isnull=False)
-        if not value:
-            return ~query
-        return query
-
-    def _pass_through_ports(self, queryset, name, value):
-        params = self.generate_query__pass_through_ports(value)
         return queryset.filter(params)
 
 

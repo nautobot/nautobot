@@ -2758,14 +2758,6 @@ class DeviceTestCase(FilterTestCases.FilterTestCase, FilterTestCases.TenancyFilt
             params = {"has_interfaces": False}
             self.assertEqual(self.filterset(params, self.queryset).qs.count(), 1)
 
-    def test_pass_through_ports(self):
-        with self.subTest():
-            params = {"pass_through_ports": True}
-            self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
-        with self.subTest():
-            params = {"pass_through_ports": False}
-            self.assertEqual(self.filterset(params, self.queryset).qs.count(), 1)
-
     def test_front_ports(self):
         frontports = list(FrontPort.objects.all())[:2]
         params = {"front_ports": [frontports[0].pk, frontports[1].pk]}
