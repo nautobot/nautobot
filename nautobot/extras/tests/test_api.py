@@ -20,6 +20,7 @@ from nautobot.dcim.models import (
     RackRole,
     Site,
 )
+from nautobot.dcim.tests import test_views
 from nautobot.extras.api.nested_serializers import NestedJobResultSerializer
 from nautobot.extras.choices import (
     DynamicGroupOperatorChoices,
@@ -59,7 +60,8 @@ from nautobot.extras.models import (
 from nautobot.extras.models.jobs import JobHook
 from nautobot.extras.tests.test_relationships import RequiredRelationshipTestMixin
 from nautobot.extras.utils import TaggableClassesQuery
-from nautobot.ipam.models import VLANGroup
+from nautobot.ipam.factory import VLANFactory
+from nautobot.ipam.models import VLAN, VLANGroup
 from nautobot.users.models import ObjectPermission
 from nautobot.utilities.choices import ColorChoices
 from nautobot.utilities.testing import APITestCase, APIViewTestCases
@@ -2633,9 +2635,102 @@ class RelationshipTest(APIViewTestCases.APIViewTestCase, RequiredRelationshipTes
         1. Try creating an object when no required target object exists
         2. Try creating an object without specifying required target object(s)
         3. Try creating an object when all required data is present
+        4. Test various bulk create/edit scenarios
         """
-        # Parameterized test:
+
+        # Parameterized tests (for creating and updating single objects):
         self.required_relationships_test(interact_with="api")
+
+        # 4. Bulk create/edit tests:
+
+        # VLAN endpoint to POST, PATCH and PUT multiple objects to:
+        vlan_list_endpoint = reverse(get_route_for_model(VLAN, "list", api=True))
+
+        def send_bulk_data(http_method, data):
+            return getattr(self.client, http_method)(
+                vlan_list_endpoint,
+                data=data,
+                format="json",
+                **self.header,
+            )
+
+        # Try deleting all devices and then creating 2 VLANs (fails):
+        Device.objects.all().delete()
+        response = send_bulk_data(
+            "post", data=[{"vid": "1", "name": "1", "status": "active"}, {"vid": "2", "name": "2", "status": "active"}]
+        )
+        self.assertHttpStatus(response, 400)
+        self.assertEqual(
+            [
+                {
+                    "vlans-devices-m2m": [
+                        "VLANs require at least one device, but no devices exist yet. "
+                        "Create a device by posting to /api/dcim/devices/",
+                        'You need to specify relationships["vlans-devices-m2m"]["source"]["objects"].',
+                    ]
+                }
+            ],
+            response.json(),
+        )
+
+        # Create test device for association
+        device_for_association = test_views.create_test_device("VLAN Required Device")
+        required_relationship_json = {"vlans-devices-m2m": {"source": {"objects": [str(device_for_association.id)]}}}
+        expected_error_json = [
+            {"vlans-devices-m2m": ['You need to specify relationships["vlans-devices-m2m"]["source"]["objects"].']}
+        ]
+
+        # Test POST, PATCH and PUT
+        for method in ["post", "patch", "put"]:
+            if method == "post":
+                vlan1_json_data = {
+                    "vid": "1",
+                    "name": "1",
+                    "status": "active",
+                }
+                vlan2_json_data = {
+                    "vid": "2",
+                    "name": "2",
+                    "status": "active",
+                }
+            else:
+                vlan1, vlan2 = VLANFactory.create_batch(2)
+                vlan1_json_data = {"status": "active", "id": str(vlan1.id)}
+                # Add required fields for PUT method:
+                if method == "put":
+                    vlan1_json_data.update({"vid": vlan1.vid, "name": vlan1.name})
+
+                vlan2_json_data = {"status": "active", "id": str(vlan2.id)}
+                # Add required fields for PUT method:
+                if method == "put":
+                    vlan2_json_data.update({"vid": vlan2.vid, "name": vlan2.name})
+
+            # Try method without specifying required relationships for either vlan1 or vlan2 (fails)
+            json_data = [vlan1_json_data, vlan2_json_data]
+            response = send_bulk_data(method, json_data)
+            self.assertHttpStatus(response, 400)
+            self.assertEqual(response.json(), expected_error_json)
+
+            # Try method specifying required relationships for just vlan1 (fails)
+            vlan1_json_data["relationships"] = required_relationship_json
+            json_data = [vlan1_json_data, vlan2_json_data]
+            response = send_bulk_data(method, json_data)
+            self.assertHttpStatus(response, 400)
+            self.assertEqual(response.json(), expected_error_json)
+
+            # Try method specifying required relationships for both vlan1 and vlan2 (succeeds)
+            vlan2_json_data["relationships"] = required_relationship_json
+            json_data = [vlan1_json_data, vlan2_json_data]
+            response = send_bulk_data(method, json_data)
+            if method == "post":
+                self.assertHttpStatus(response, 201)
+            else:
+                self.assertHttpStatus(response, 200)
+
+            # Check the relationship associations were actually created
+            for vlan in response.json():
+                associated_device = vlan["relationships"]["vlans-devices-m2m"]["source"]["objects"][0]
+                self.assertEqual(str(device_for_association.id), associated_device["id"])
 
 
 class RelationshipAssociationTest(APIViewTestCases.APIViewTestCase):

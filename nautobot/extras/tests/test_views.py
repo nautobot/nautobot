@@ -11,6 +11,7 @@ from django.utils import timezone
 from unittest import mock
 
 from nautobot.dcim.models import ConsolePort, Device, DeviceRole, DeviceType, Interface, Manufacturer, Site
+from nautobot.dcim.tests import test_views
 from nautobot.extras.choices import (
     CustomFieldTypeChoices,
     JobExecutionType,
@@ -46,6 +47,7 @@ from nautobot.extras.models import (
 )
 from nautobot.extras.tests.test_relationships import RequiredRelationshipTestMixin
 from nautobot.extras.utils import get_job_content_type, TaggableClassesQuery
+from nautobot.ipam.factory import VLANFactory
 from nautobot.ipam.models import VLAN, VLANGroup
 from nautobot.users.models import ObjectPermission
 from nautobot.utilities.testing import ViewTestCases, TestCase, extract_page_body, extract_form_failures
@@ -1975,9 +1977,73 @@ class RelationshipTestCase(
         1. Try creating an object when no required target object exists
         2. Try creating an object without specifying required target object(s)
         3. Try creating an object when all required data is present
+        4. Test bulk edit
         """
-        # Parameterized test:
+
+        # Parameterized tests (for creating and updating single objects):
         self.required_relationships_test(interact_with="ui")
+
+        # 4. Bulk create/edit tests:
+
+        vlans = VLANFactory.create_batch(6)
+
+        # Try deleting all devices and then editing the 6 VLANs (fails):
+        Device.objects.all().delete()
+        response = self.client.post(
+            reverse("ipam:vlan_bulk_edit"), data={"pk": [str(vlan.id) for vlan in vlans], "_apply": [""]}
+        )
+        self.assertContains(response, "VLANs require at least one device, but no devices exist yet.")
+
+        # Create test device for association
+        device_for_association = test_views.create_test_device("VLAN Required Device")
+
+        # Try editing all 6 VLANs without adding the required device(fails):
+        response = self.client.post(
+            reverse("ipam:vlan_bulk_edit"), data={"pk": [str(vlan.id) for vlan in vlans], "_apply": [""]}
+        )
+        self.assertContains(
+            response,
+            "6 VLANs require a device for the required relationship &quot;VLANs require at least one Device&quot;",
+        )
+
+        # Try editing 3 VLANs without adding the required device(fails):
+        response = self.client.post(
+            reverse("ipam:vlan_bulk_edit"), data={"pk": [str(vlan.id) for vlan in vlans[:3]], "_apply": [""]}
+        )
+        self.assertContains(
+            response, 'These VLANs require a device for the required relationship "VLANs require at least one Device":'
+        )
+        for vlan in vlans[:3]:
+            self.assertContains(
+                response,
+                f"<li>{str(vlan)}</li>",
+            )
+
+        # Try editing 6 VLANs and adding the required device (succeeds):
+        response = self.client.post(
+            reverse("ipam:vlan_bulk_edit"),
+            data={
+                "pk": [str(vlan.id) for vlan in vlans],
+                "add_cr_vlans-devices-m2m__source": [str(device_for_association.id)],
+                "_apply": [""],
+            },
+            follow=True,
+        )
+        self.assertContains(response, "Updated 6 VLANs")
+
+        # Try editing 6 VLANs and removing the required device (fails):
+        response = self.client.post(
+            reverse("ipam:vlan_bulk_edit"),
+            data={
+                "pk": [str(vlan.id) for vlan in vlans],
+                "remove_cr_vlans-devices-m2m__source": [str(device_for_association.id)],
+                "_apply": [""],
+            },
+        )
+        self.assertContains(
+            response,
+            "6 VLANs require a device for the required relationship &quot;VLANs require at least one Device&quot;",
+        )
 
 
 class RelationshipAssociationTestCase(
