@@ -2723,7 +2723,7 @@ class DeviceTestCase(FilterTestCases.FilterTestCase, FilterTestCases.TenancyFilt
         power_ports = list(PowerPort.objects.all())[:2]
         params = {"power_ports": [power_ports[0].pk, power_ports[1].pk]}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
-    
+
     def test_has_power_ports(self):
         with self.subTest():
             params = {"has_power_ports": True}
@@ -2749,7 +2749,6 @@ class DeviceTestCase(FilterTestCases.FilterTestCase, FilterTestCases.TenancyFilt
         interfaces = list(Interface.objects.all())[:2]
         params = {"interfaces": [interfaces[0].pk, interfaces[1].pk]}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
-        
 
     def test_has_interfaces(self):
         with self.subTest():
@@ -2771,7 +2770,6 @@ class DeviceTestCase(FilterTestCases.FilterTestCase, FilterTestCases.TenancyFilt
         frontports = list(FrontPort.objects.all())[:2]
         params = {"front_ports": [frontports[0].pk, frontports[1].pk]}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
-
 
     def test_has_front_ports(self):
         with self.subTest():
@@ -2798,7 +2796,6 @@ class DeviceTestCase(FilterTestCases.FilterTestCase, FilterTestCases.TenancyFilt
         device_bays = list(DeviceBay.objects.all())[:2]
         params = {"device_bays": [device_bays[0].pk, device_bays[1].pk]}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
-        
 
     def test_has_device_bays(self):
         with self.subTest():
