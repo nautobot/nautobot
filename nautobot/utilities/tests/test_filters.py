@@ -1162,7 +1162,7 @@ class SearchFilterTest(TestCase, mixins.NautobotTestCaseMixin):
         self.assertQuerysetEqualAndNotEmpty(
             self.filterset_class(params, self.queryset).qs, self.queryset.filter(asn__exact="1234")
         )
-        asn = Site.objects.exclude(asn="1234").values_list("asn", flat=True).first()
+        asn = Site.objects.exclude(asn="1234").exclude(asn__isnull=True).values_list("asn", flat=True).first()
         params = {"q": str(asn)}
         self.assertQuerysetEqualAndNotEmpty(
             self.filterset_class(params, self.queryset).qs, self.queryset.filter(asn__exact=str(asn))
