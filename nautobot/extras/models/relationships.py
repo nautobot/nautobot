@@ -301,19 +301,15 @@ class RelationshipModel(models.Model):
 
             if initial_data is not None:
 
-                missing_data = False
+                supplied_data = []
 
                 if output_for == "ui":
                     supplied_data = initial_data.get(field_key, [])
-                    if not supplied_data:
-                        missing_data = True
 
                 elif output_for == "api":
                     supplied_data = initial_data.get(relation, {}).get(opposite_side, {})
-                    if not supplied_data:
-                        missing_data = True
 
-                if missing_data:
+                if not supplied_data:
                     if output_for == "ui":
                         field_errors[field_key].append(
                             f"You need to select {num_required_verbose} {required_model_meta.verbose_name}."
