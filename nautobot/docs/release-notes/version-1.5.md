@@ -79,7 +79,10 @@ As a result, the value of this setting now defaults to `False`, disabling databa
 
 Added a dynamic filter form that allows users to filter object tables/lists by any field and lookup expression combination supported by the corresponding FilterSet and API.
 
-<!-- towncrier release notes start -->
+## v1.5.0 (2022-11-08)
+
+Unchanged from v1.5.0-beta.1.
+
 ## v1.5.0-beta.1 (2022-11-07)
 
 ### Added
