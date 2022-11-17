@@ -6,7 +6,7 @@ from django.http import Http404
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
 from drf_spectacular.types import OpenApiTypes
-from drf_spectacular.utils import extend_schema, extend_schema_view, OpenApiParameter
+from drf_spectacular.utils import extend_schema, extend_schema_view, OpenApiParameter, PolymorphicProxySerializer
 from graphene_django.views import GraphQLView
 from graphql import GraphQLError
 from rest_framework import status
@@ -333,9 +333,30 @@ class DynamicGroupViewSet(ModelViewSet, NotesViewSetMixin):
     serializer_class = serializers.DynamicGroupSerializer
     filterset_class = filters.DynamicGroupFilterSet
 
-    # FIXME(jathan): Figure out how to do dynamic `responses` serializer based on the `content_type`
-    # of the DynamicGroup? May not be possible or even desirable to have a "dynamic schema".
-    # @extend_schema(methods=["get"], responses={200: member_response})
+    @staticmethod
+    def _get_dynamic_group_serializers():
+        """
+        Returns a list of Dynamic Group response serializers at call time s.
+        """
+        from nautobot.extras.utils import FeatureQuery
+        from nautobot.utilities.api import get_serializer_for_model
+
+        fq = FeatureQuery("dynamic_groups")
+        types = ContentType.objects.filter(fq.get_query())
+        serializers = [get_serializer_for_model(dgt.model_class()) for dgt in types]
+        return serializers
+
+    # Dynamic Group member response types will vary based on the group's `content_type`.
+    @extend_schema(
+        responses={
+            200: PolymorphicProxySerializer(
+                component_name="MetaObject",
+                serializers=_get_dynamic_group_serializers(),
+                resource_type_field_name="content_type",
+                many=True,
+            )
+        }
+    )
     @action(detail=True, methods=["get"])
     def members(self, request, pk, *args, **kwargs):
         """List member objects of the same type as the `content_type` for this dynamic group."""

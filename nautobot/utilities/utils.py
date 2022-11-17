@@ -151,6 +151,8 @@ def lighten_color(r, g, b, factor):
     ]
 
 
+# 2.2 TODO: Remove this entirely as it is inferior and untested compared to
+# `django.utils.module_loading.import_string`.
 def dynamic_import(name):
     """
     Dynamically import a class from an absolute path string

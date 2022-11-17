@@ -1,0 +1,1 @@
+Fixed a bug in `get_serializer_for_model` that would sometimes result in an `AttributeError`.
