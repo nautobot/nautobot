@@ -922,7 +922,7 @@ class DeviceFilterSet(
         field_name="interfaces__mac_address",
         label="MAC address",
     )
-    serial = django_filters.CharFilter(lookup_expr="iexact")
+    serial = MultiValueCharFilter(lookup_expr="iexact")
     has_primary_ip = django_filters.BooleanFilter(
         method="_has_primary_ip",
         label="Has a primary IP",
@@ -1426,7 +1426,7 @@ class InventoryItemFilterSet(BaseFilterSet, DeviceComponentFilterSet):
         field_name="child_items",
         label="Has child items",
     )
-    serial = django_filters.CharFilter(lookup_expr="iexact")
+    serial = MultiValueCharFilter(lookup_expr="iexact")
 
     class Meta:
         model = InventoryItem

@@ -622,12 +622,12 @@ class DynamicGroupModelTest(DynamicGroupTestBase):
 
         # Now do a non-multi-value filter.
         # TODO(jathan): If we ever make "serial" a multi-value filter, this will need to be revised.
-        solo_field = fs.filters["serial"]
-        solo_value = "abc123"
+        solo_field = fs.filters["has_interfaces"]
+        solo_value = False
         solo_query = group.generate_query_for_filter(filter_field=solo_field, value=solo_value)
         solo_qs = queryset.filter(solo_query)
-        serial_qs = Device.objects.filter(serial__iexact=solo_value)
-        self.assertQuerySetEqual(solo_qs, serial_qs)
+        interface_qs = Device.objects.filter(interfaces__isnull=True)
+        self.assertQuerySetEqual(solo_qs, interface_qs)
 
     def test_generate_query_for_group(self):
         """Test `DynamicGroup.generate_query_for_group()`."""
