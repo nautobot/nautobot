@@ -6,6 +6,7 @@ from rest_framework.fields import CreateOnlyDefault, Field
 
 from nautobot.core.api import ValidatedModelSerializer
 from nautobot.extras.models import CustomField
+from nautobot.utilities.deprecation import class_deprecated_in_favor_of
 
 
 #
@@ -88,8 +89,7 @@ class CustomFieldsDataField(Field):
         return data
 
 
-# TODO: Introduce CustomFieldModelSerializerMixin in 2.0, remove in 2.2.
-class CustomFieldModelSerializer(ValidatedModelSerializer):
+class CustomFieldModelSerializerMixin(ValidatedModelSerializer):
     """
     Extends ModelSerializer to render any CustomFields and their values associated with an object.
     """
@@ -110,3 +110,9 @@ class CustomFieldModelSerializer(ValidatedModelSerializer):
         self.extend_field_names(fields, "custom_fields")
         self.extend_field_names(fields, "computed_fields", opt_in_only=True)
         return fields
+
+
+# TODO: remove in 2.2
+@class_deprecated_in_favor_of(CustomFieldModelSerializerMixin)
+class CustomFieldModelSerializer(CustomFieldModelSerializerMixin):
+    pass

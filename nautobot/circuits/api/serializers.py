@@ -9,14 +9,14 @@ from nautobot.dcim.api.nested_serializers import (
     NestedSiteSerializer,
 )
 from nautobot.dcim.api.serializers import (
-    CableTerminationSerializer,
-    ConnectedEndpointSerializer,
+    CableTerminationModelSerializerMixin,
+    PathEndpointModelSerializerMixin,
 )
 from nautobot.extras.api.serializers import (
     NautobotModelSerializer,
     NotesSerializerMixin,
     StatusModelSerializerMixin,
-    TaggedObjectSerializer,
+    TaggedModelSerializerMixin,
 )
 from nautobot.tenancy.api.nested_serializers import NestedTenantSerializer
 
@@ -35,7 +35,7 @@ from .nested_serializers import (  # noqa: F401
 #
 
 
-class ProviderSerializer(NautobotModelSerializer, TaggedObjectSerializer):
+class ProviderSerializer(NautobotModelSerializer, TaggedModelSerializerMixin):
     url = serializers.HyperlinkedIdentityField(view_name="circuits-api:provider-detail")
     circuit_count = serializers.IntegerField(read_only=True)
 
@@ -60,7 +60,7 @@ class ProviderSerializer(NautobotModelSerializer, TaggedObjectSerializer):
 #
 
 
-class ProviderNetworkSerializer(NautobotModelSerializer, TaggedObjectSerializer):
+class ProviderNetworkSerializer(NautobotModelSerializer, TaggedModelSerializerMixin):
     url = serializers.HyperlinkedIdentityField(view_name="circuits-api:providernetwork-detail")
     provider = NestedProviderSerializer()
 
@@ -118,7 +118,7 @@ class CircuitCircuitTerminationSerializer(WritableNestedSerializer, NotesSeriali
         ]
 
 
-class CircuitSerializer(NautobotModelSerializer, StatusModelSerializerMixin, TaggedObjectSerializer):
+class CircuitSerializer(NautobotModelSerializer, StatusModelSerializerMixin, TaggedModelSerializerMixin):
     url = serializers.HyperlinkedIdentityField(view_name="circuits-api:circuit-detail")
     provider = NestedProviderSerializer()
     type = NestedCircuitTypeSerializer()
@@ -144,7 +144,11 @@ class CircuitSerializer(NautobotModelSerializer, StatusModelSerializerMixin, Tag
         ]
 
 
-class CircuitTerminationSerializer(NautobotModelSerializer, CableTerminationSerializer, ConnectedEndpointSerializer):
+class CircuitTerminationSerializer(
+    NautobotModelSerializer,
+    CableTerminationModelSerializerMixin,
+    PathEndpointModelSerializerMixin,
+):
     url = serializers.HyperlinkedIdentityField(view_name="circuits-api:circuittermination-detail")
     circuit = NestedCircuitSerializer()
     site = NestedSiteSerializer(required=False, allow_null=True)
