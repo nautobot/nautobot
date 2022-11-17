@@ -1,3 +1,4 @@
+from nautobot.apps.fields import StatusField, VarbinaryIPField
 from nautobot.core.models import BaseModel
 from nautobot.core.models.generics import OrganizationalModel, PrimaryModel
 from nautobot.extras.utils import extras_features
@@ -8,4 +9,6 @@ __all__ = (
     "BaseModel",
     "OrganizationalModel",
     "PrimaryModel",
+    "StatusField",
+    "VarbinaryIPField",
 )

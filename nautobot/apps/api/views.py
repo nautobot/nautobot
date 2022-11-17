@@ -1,9 +1,15 @@
-from nautobot.core.api.views import ModelViewSet
-from nautobot.extras.api.views import CustomFieldModelViewSet, NautobotModelViewSet
+from nautobot.core.api.views import ModelViewSet, ReadOnlyModelViewSet
+from nautobot.extras.api.views import (
+    CustomFieldModelViewSet,
+    NautobotModelViewSet,
+    NotesViewSetMixin,
+)
 
 
 __all__ = (
     "CustomFieldModelViewSet",
-    "NautobotModelViewSet",
     "ModelViewSet",
+    "NautobotModelViewSet",
+    "NotesViewSetMixin",
+    "ReadOnlyModelViewSet",
 )
