@@ -164,14 +164,11 @@ To import modules from other apps under the `nautobot` namespace, use the conven
 
 #### Resolving Name Conflicts
 
-When using external libraries you may need to import multiple different modules with the same name. In this case, the namespace from the external package should be aliased. A common source of namespace conflicts in Nautobot are django packages. For django, packages should be renamed `dj<module>`. For other external libraries, use `<package>_<module>`.
+When using external libraries you may need to import multiple different modules with the same name. In this case, the namespace from the external package should be aliased. For aliasing external libraries, use `<package>_<module>`.
 
 !!! example
 
     ```py
-    # django
-    from django.db import models as djmodels
-
     # from within the current app
     from nautobot.extras import models
 
@@ -179,6 +176,7 @@ When using external libraries you may need to import multiple different modules 
     from nautobot.dcim import models as dcim_models
 
     # other libraries
+    from django.db import models as django_models
     from mptt import models as mptt_models
     ```
 
