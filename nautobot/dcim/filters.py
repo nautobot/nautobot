@@ -950,50 +950,41 @@ class DeviceFilterSet(
         field_name="consoleports",
         label="Has console ports",
     )
-    console_ports = NaturalKeyOrPKMultipleChoiceFilter(
-        queryset=ConsolePort.objects.all(),
+    console_ports = django_filters.ModelMultipleChoiceFilter(
         field_name="consoleports",
-        to_field_name="name",
+        queryset=ConsolePort.objects.all(),
         label="Console Ports",
     )
     has_console_server_ports = RelatedMembershipBooleanFilter(
         field_name="consoleserverports",
         label="Has console server ports",
     )
-    console_server_ports = NaturalKeyOrPKMultipleChoiceFilter(
+    console_server_ports = django_filters.ModelMultipleChoiceFilter(
         queryset=ConsoleServerPort.objects.all(),
         field_name="consoleserverports",
-        to_field_name="name",
         label="Console Server Ports",
     )
     has_power_ports = RelatedMembershipBooleanFilter(
         field_name="powerports",
         label="Has power ports",
     )
-    power_ports = NaturalKeyOrPKMultipleChoiceFilter(
+    power_ports = django_filters.ModelMultipleChoiceFilter(
         queryset=PowerPort.objects.all(),
         field_name="powerports",
-        to_field_name="name",
         label="Power Ports",
     )
     has_power_outlets = RelatedMembershipBooleanFilter(
         field_name="poweroutlets",
         label="Has power outlets",
     )
-    power_outlets = NaturalKeyOrPKMultipleChoiceFilter(
+    power_outlets = django_filters.ModelMultipleChoiceFilter(
         queryset=PowerOutlet.objects.all(),
         field_name="poweroutlets",
-        to_field_name="name",
         label="Power Outlets",
     )
     has_interfaces = RelatedMembershipBooleanFilter(
         field_name="interfaces",
         label="Has interfaces",
-    )
-    interfaces = NaturalKeyOrPKMultipleChoiceFilter(
-        queryset=Interface.objects.all(),
-        to_field_name="name",
-        label="Interfaces",
     )
     pass_through_ports = django_filters.BooleanFilter(
         method="_pass_through_ports",
@@ -1003,30 +994,27 @@ class DeviceFilterSet(
         field_name="frontports",
         label="Has front ports",
     )
-    front_ports = NaturalKeyOrPKMultipleChoiceFilter(
+    front_ports = django_filters.ModelMultipleChoiceFilter(
         queryset=FrontPort.objects.all(),
         field_name="frontports",
-        to_field_name="name",
         label="Front Port",
     )
     has_rear_ports = RelatedMembershipBooleanFilter(
         field_name="rearports",
         label="Has rear ports",
     )
-    rear_ports = NaturalKeyOrPKMultipleChoiceFilter(
+    rear_ports = django_filters.ModelMultipleChoiceFilter(
         queryset=RearPort.objects.all(),
         field_name="rearports",
-        to_field_name="name",
         label="Rear Port",
     )
     has_device_bays = RelatedMembershipBooleanFilter(
         field_name="devicebays",
         label="Has device bays",
     )
-    device_bays = NaturalKeyOrPKMultipleChoiceFilter(
+    device_bays = django_filters.ModelMultipleChoiceFilter(
         queryset=DeviceBay.objects.all(),
         field_name="devicebays",
-        to_field_name="name",
         label="Device Bays",
     )
 
@@ -1042,6 +1030,7 @@ class DeviceFilterSet(
             "vc_priority",
             "device_redundancy_group_priority",
             "tags",
+            "interfaces",
         ]
 
     def generate_query__has_primary_ip(self, value):
