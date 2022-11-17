@@ -530,23 +530,59 @@ def _run_job(request, job_model, legacy_response=False):
         raise MethodNotAllowed(request.method, detail="This job's source code could not be located and cannot be run")
     job = job_class()
 
-    data = request.data
-    files = None
-
-    if "multipart/form-data" in request.content_type:
-        data = request._data  # .data will return data and files, we just want the data
-        files = request.FILES
-
-    input_serializer = serializers.JobInputSerializer(data=data, context={"request": request})
-    input_serializer.is_valid(raise_exception=True)
-
-    data = input_serializer.validated_data.get("data", {})
-    commit = input_serializer.validated_data.get("commit", None)
-    if commit is None:
-        commit = job_model.commit_default
     # default to first queue in job_model.task_queues if task_queue not specified
     valid_queues = job_model.task_queues if job_model.task_queues else [settings.CELERY_TASK_DEFAULT_QUEUE]
-    task_queue = input_serializer.validated_data.get("task_queue", valid_queues[0])
+
+    # We need to call request.data for both cases as this is what pulls and caches the request data
+    data = request.data
+    files = None
+    schedule_data = None
+
+    # We must extract from the request:
+    # - Job Form data (for submission to the job itself)
+    # - Schedule data
+    # - Commit flag state
+    # - Desired task queue
+    # Depending on request content type (largely for backwards compatibility) the keys at which these are found are different
+    if "multipart/form-data" in request.content_type:
+        data = request._data.dict()  # .data will return data and files, we just want the data
+        files = request.FILES
+        
+        # JobMultiPartInputSerializer is a "flattened" version of JobInputSerializer
+        input_serializer = serializers.JobMultiPartInputSerializer(data=data, context={"request": request})
+        input_serializer.is_valid(raise_exception=True)
+
+        commit = input_serializer.validated_data.get("_commit", None)
+        task_queue = input_serializer.validated_data.get("_task_queue", valid_queues[0])
+
+        # JobMultiPartInputSerializer only has keys for executing job (commit, task_queue, etc),
+        # everything else is a candidate for the job form's data.
+        # job_class.validate_data will throw an error for any unexpected key/value pairs.
+        non_job_keys = input_serializer.validated_data.keys()
+        for non_job_key in non_job_keys:
+            data.pop(non_job_key, None)
+
+        # List of keys in serializer that are effectively exploded versions of the schedule dictionary from JobInputSerializer
+        schedule_keys = ("_schedule_name", "_schedule_start_time", "_schedule_interval", "_schedule_crontab")
+        if any(schedule_key in non_job_keys for schedule_key in schedule_keys):
+            schedule_data = {
+                k.replace("_schedule_", ""): input_serializer.validated_data[k]  # Assign the key from the validated_data output to dictionary without prefixed "_schedule_"
+                for k in schedule_keys  # For all the keys that are schedule keys
+                if k in input_serializer.validated_data  # Assign only if they key is in the output since we don't want None's if not provided
+            }
+
+    else:
+        input_serializer = serializers.JobInputSerializer(data=data, context={"request": request})
+        input_serializer.is_valid(raise_exception=True)
+
+        data = input_serializer.validated_data.get("data", {})
+        commit = input_serializer.validated_data.get("commit", None)
+        task_queue = input_serializer.validated_data.get("task_queue", valid_queues[0])
+        schedule_data = input_serializer.validated_data.get("schedule", None)
+
+    if commit is None:
+        commit = job_model.commit_default
+
     if task_queue not in valid_queues:
         raise ValidationError({"task_queue": [f'"{task_queue}" is not a valid choice.']})
 
@@ -567,7 +603,6 @@ def _run_job(request, job_model, legacy_response=False):
         raise CeleryWorkerNotRunningException(queue=task_queue)
 
     job_content_type = get_job_content_type()
-    schedule_data = input_serializer.validated_data.get("schedule")
 
     # Default to a null JobResult.
     job_result = None
@@ -776,7 +811,11 @@ class JobViewSet(
 
     @extend_schema(
         methods=["post"],
-        request=serializers.JobInputSerializer,
+        request={
+            "application/json": serializers.JobInputSerializer,
+            "application/x-www-form-urlencoded": serializers.JobInputSerializer,
+            "multipart/form-data": serializers.JobMultiPartInputSerializer,
+        },
         responses={"201": serializers.JobRunResponseSerializer},
     )
     @action(detail=True, methods=["post"], permission_classes=[JobRunTokenPermissions])
