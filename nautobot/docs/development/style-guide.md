@@ -84,16 +84,17 @@ To prevent circular dependency errors and improve code readability, the followin
 
 ### PEP8 Style Guide
 
-Nautobot follows the [PEP8 style guide's](https://peps.python.org/pep-0008/#imports) standard for importing modules. Libraries should be imported in these groups: standard library, third party libraries, then `nautobot` packages and finally try/except imports. The groups should be separated by a single blank line. Within these groups, top level packages should be imported first, then sub-package imports. Import lines should be sorted alphanumerically as well as lists of names imported from packages.
+Nautobot follows the [PEP8 style guide's](https://peps.python.org/pep-0008/#imports) standard for importing modules. Libraries should be imported in these groups: standard library, third party libraries, then `nautobot` packages and finally try/except imports. The groups should be separated by a single blank line. Within these groups,import lines should be sorted alphanumerically by the package name. Lists of of names imported from packages should also be sorted alphanumerically.
 
 !!! example
 
     ```py
+    from abc import ABC
     import logging
     from uuid import UUID
 
-    import django_filters
     from django.db.models import CharField, DecimalField, TextField
+    import django_filters
 
     from nautobot.dcim import models as dcim_models
     from nautobot.extras import models
