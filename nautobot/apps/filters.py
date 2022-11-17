@@ -1,3 +1,5 @@
+"""Filterset base classes and mixins for app implementation."""
+
 from nautobot.extras.filters import (
     CreatedUpdatedModelFilterSetMixin,
     CustomFieldModelFilterSetMixin,

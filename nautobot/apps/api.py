@@ -1,3 +1,5 @@
+"""Helpers for an app to implement a REST API."""
+
 from nautobot.core.api import (
     BaseModelSerializer,
     OrderedDefaultRouter,

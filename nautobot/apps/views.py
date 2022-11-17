@@ -1,3 +1,6 @@
+"""Utilities for apps to implement UI views."""
+
+from nautobot.core.views.generic import ObjectView
 from nautobot.core.views.mixins import (
     ObjectBulkCreateViewMixin,
     ObjectBulkDestroyViewMixin,
@@ -22,4 +25,5 @@ __all__ = (
     "ObjectEditViewMixin",
     "ObjectListViewMixin",
     "ObjectNotesViewMixin",
+    "ObjectView",
 )

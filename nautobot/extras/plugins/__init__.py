@@ -263,7 +263,7 @@ class PluginTemplateExtension:
     that are overridden by plugin authors to return template content.
 
     The `model` attribute on the class defines the which model detail page this class renders content for. It
-    should be set as a string in the form '<app_label>.<model_name>'. render() provides the following context data:
+    should be set as a string in the form `<app_label>.<model_name>`. `render()` provides the following context data:
 
     * object - The object being viewed
     * request - The current request
@@ -322,7 +322,8 @@ class PluginTemplateExtension:
         Tabs that will be rendered and added to the existing list of tabs on the detail page view.
         Tabs will be ordered by their position in the list.
 
-        Content should be returned as a list of dicts in the format:
+        Content should be returned as a list of dicts in the following format:
+        ```
         [
             {
                 "title": "<title>",
@@ -333,6 +334,7 @@ class PluginTemplateExtension:
                 "url": "<url for the tab link>",
             },
         ]
+        ```
         """
         raise NotImplementedError
 
@@ -463,6 +465,7 @@ def register_filter_extensions(filter_extensions, plugin_name):
 #
 
 
+# 2.2 TODO: remove in favor of NavMenuItem
 class PluginMenuItem:
     """
     This class represents a navigation menu item. This constitutes primary link and its text, but also allows for
@@ -488,6 +491,7 @@ class PluginMenuItem:
             self.buttons = buttons
 
 
+# 2.2 TODO: remove in favor of NavMenuButton
 class PluginMenuButton:
     """
     This class represents a button within a PluginMenuItem. Note that button colors should come from
@@ -594,7 +598,7 @@ class PluginCustomValidator:
     A convenience method `validation_error(<message>)` may be used for this purpose.
 
     The `model` attribute on the class defines the model to which this validator is registered. It
-    should be set as a string in the form '<app_label>.<model_name>'.
+    should be set as a string in the form `<app_label>.<model_name>`.
     """
 
     model = None
