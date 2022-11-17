@@ -5,6 +5,7 @@ from unittest import mock
 from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.contrib.contenttypes.models import ContentType
+from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import override_settings
 from django.urls import reverse
 from django.utils.timezone import make_aware, now
@@ -1400,6 +1401,89 @@ class JobAPIRunTestMixin:
         )
 
         return (response, job_result)  # so subclasses can do additional testing
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    @mock.patch("nautobot.extras.api.views.get_worker_count")
+    def test_run_job_file_data_commit(self, mock_get_worker_count):
+        """Job run requests can reference objects by their attributes."""
+
+        test_file = SimpleUploadedFile(name="test_file.txt", content=b"I am content.\n")
+
+        job_model = Job.objects.get_for_class_path("local/test_field_order/TestFieldOrder")
+        job_model.enabled = True
+        job_model.validated_save()
+
+        mock_get_worker_count.return_value = 1
+        self.add_permissions("extras.run_job")
+
+        job_data = {
+            "var2": "Ground control to Major Tom",
+            "var23": "Commencing countdown, engines on",
+            "var1": test_file,
+            "_commit": True,
+        }
+
+        url = self.get_run_url(class_path="local/test_field_order/TestFieldOrder")
+        response = self.client.post(url, data=job_data, **self.header)
+        self.assertHttpStatus(response, self.run_success_response_status)
+
+        return response  # so subclasses can do additional testing
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    @mock.patch("nautobot.extras.api.views.get_worker_count")
+    def test_run_job_file_data_only(self, mock_get_worker_count):
+        """Job run requests can reference objects by their attributes."""
+
+        test_file = SimpleUploadedFile(name="test_file.txt", content=b"I am content.\n")
+
+        job_model = Job.objects.get_for_class_path("local/test_field_order/TestFieldOrder")
+        job_model.enabled = True
+        job_model.validated_save()
+
+        mock_get_worker_count.return_value = 1
+        self.add_permissions("extras.run_job")
+
+        job_data = {
+            "var2": "Ground control to Major Tom",
+            "var23": "Commencing countdown, engines on",
+            "var1": test_file,
+        }
+
+        url = self.get_run_url(class_path="local/test_field_order/TestFieldOrder")
+        response = self.client.post(url, data=job_data, **self.header)
+        self.assertHttpStatus(response, self.run_success_response_status)
+
+        return response  # so subclasses can do additional testing
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    @mock.patch("nautobot.extras.api.views.get_worker_count")
+    def test_run_job_file_data_schedule(self, mock_get_worker_count):
+        """Job run requests can reference objects by their attributes."""
+
+        test_file = SimpleUploadedFile(name="test_file.txt", content=b"I am content.\n")
+
+        job_model = Job.objects.get_for_class_path("local/test_field_order/TestFieldOrder")
+        job_model.enabled = True
+        job_model.validated_save()
+
+        mock_get_worker_count.return_value = 1
+        self.add_permissions("extras.run_job")
+
+        job_data = {
+            "var2": "Ground control to Major Tom",
+            "var23": "Commencing countdown, engines on",
+            "var1": test_file,
+            "_commit": True,
+            "_schedule_start_time": str(datetime.now() + timedelta(minutes=1)),
+            "_schedule_interval": "future",
+            "_schedule_name": "test",
+        }
+
+        url = self.get_run_url(class_path="local/test_field_order/TestFieldOrder")
+        response = self.client.post(url, data=job_data, **self.header)
+        self.assertHttpStatus(response, self.run_success_response_status)
+
+        return response  # so subclasses can do additional testing
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     @mock.patch("nautobot.extras.api.views.get_worker_count")

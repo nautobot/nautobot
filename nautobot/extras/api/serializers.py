@@ -979,14 +979,14 @@ class JobInputSerializer(serializers.Serializer):
 class JobMultiPartInputSerializer(serializers.Serializer):
     _commit = serializers.BooleanField(required=False, default=None)
     _schedule_name = serializers.CharField(max_length=255, required=False)
-    _schedule_start_time = serializers.DateTimeField(format=None, required=True)
-    _schedule_interval = ChoiceField(choices=JobExecutionType)
+    _schedule_start_time = serializers.DateTimeField(format=None, required=False)
+    _schedule_interval = ChoiceField(choices=JobExecutionType, required=False)
     _schedule_crontab = serializers.CharField(required=False, allow_blank=True)
     _task_queue = serializers.CharField(required=False, allow_blank=True)
 
     def validate(self, data):
 
-        if data["_schedule_interval"] != JobExecutionType.TYPE_IMMEDIATELY:
+        if "_schedule_interval" in data and data["_schedule_interval"] != JobExecutionType.TYPE_IMMEDIATELY:
             if "_schedule_name" not in data:
                 raise serializers.ValidationError({"_schedule_name": "Please provide a name for the job schedule."})
 
