@@ -1,23 +1,19 @@
-from nautobot.apps.api.nested_serializers import WritableNestedSerializer
-from nautobot.apps.api.serializers import (
+from nautobot.core.api import (
     BaseModelSerializer,
-    CustomFieldModelSerializerMixin,
+    OrderedDefaultRouter,
+    ValidatedModelSerializer,
+    WritableNestedSerializer,
+)
+from nautobot.core.api.views import ModelViewSet, ReadOnlyModelViewSet
+from nautobot.extras.api.customfields import CustomFieldModelSerializerMixin
+from nautobot.extras.api.serializers import (
     NautobotModelSerializer,
     NotesSerializerMixin,
     RelationshipModelSerializerMixin,
     StatusModelSerializerMixin,
     TaggedModelSerializerMixin,
-    ValidatedModelSerializer,
 )
-from nautobot.apps.api.urls import OrderedDefaultRouter
-from nautobot.apps.api.views import (
-    CustomFieldModelViewSet,
-    ModelViewSet,
-    NautobotModelViewSet,
-    NotesViewSetMixin,
-    ReadOnlyModelViewSet,
-)
-
+from nautobot.extras.api.views import CustomFieldModelViewSet, NautobotModelViewSet, NotesViewSetMixin
 
 __all__ = (
     "BaseModelSerializer",

@@ -6,11 +6,7 @@ from nautobot.extras.filters import (
     StatusModelFilterSetMixin,
 )
 from nautobot.tenancy.filters import TenancyModelFilterSetMixin
-from nautobot.utilities.filters import (
-    BaseFilterSet,
-    NaturalKeyOrPKMultipleChoiceFilter,
-    TreeNodeMultipleChoiceFilter,
-)
+from nautobot.utilities.filters import BaseFilterSet, NaturalKeyOrPKMultipleChoiceFilter, TreeNodeMultipleChoiceFilter
 
 __all__ = (
     "BaseFilterSet",
