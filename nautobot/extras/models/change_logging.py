@@ -8,9 +8,9 @@ from django.urls import NoReverseMatch, reverse
 from nautobot.core.celery import NautobotKombuJSONEncoder
 from nautobot.core.models import BaseModel
 from nautobot.extras.choices import ObjectChangeActionChoices, ObjectChangeEventContextChoices
+from nautobot.extras.constants import CHANGELOG_MAX_CHANGE_CONTEXT_DETAIL, CHANGELOG_MAX_OBJECT_REPR
 from nautobot.extras.utils import extras_features
 from nautobot.utilities.utils import get_route_for_model, serialize_object, serialize_object_v2, shallow_compare_dict
-from nautobot.extras.constants import CHANGELOG_MAX_CHANGE_CONTEXT_DETAIL, CHANGELOG_MAX_OBJECT_REPR
 
 
 #
@@ -214,19 +214,22 @@ class ObjectChange(BaseModel):
         prechange = None
         postchange = None
 
-        prior_change = ObjectChange.objects.filter(
-            changed_object_type=self.changed_object_type,
-            changed_object_id=self.changed_object_id,
-            time__lt=self.time,
-        )
+        prior_change = self.get_prev_change()
 
-        if self.action != ObjectChangeActionChoices.ACTION_CREATE and prior_change.exists():
-            prechange = prior_change.first().object_data_v2
+        if self.action != ObjectChangeActionChoices.ACTION_CREATE and prior_change is not None:
+            prechange = prior_change.object_data_v2
+            if prechange is None:
+                prechange = prior_change.object_data
 
         if self.action != ObjectChangeActionChoices.ACTION_DELETE:
             postchange = self.object_data_v2
+            if postchange is None:
+                postchange = self.object_data
 
         if prechange and postchange:
+            if self.object_data_v2 is None or prior_change.object_data_v2 is None:
+                prechange = prior_change.object_data
+                postchange = self.object_data
             diff_added = shallow_compare_dict(prechange, postchange, exclude=["last_updated"])
             diff_removed = {x: prechange.get(x) for x in diff_added}
         elif prechange and not postchange:
