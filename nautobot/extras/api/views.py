@@ -592,9 +592,9 @@ def _run_job(request, job_model, legacy_response=False):
 
     cleaned_data = None
     try:
-        cleaned_data = job.validate_data(data, files)
+        cleaned_data = job.validate_data(data, files=files)
         cleaned_data.pop(
-            "_commit"
+            "_commit", None
         )  # We don't get commit from the form, instead it's part of the serializer's validated data
 
     except FormsValidationError as e:
