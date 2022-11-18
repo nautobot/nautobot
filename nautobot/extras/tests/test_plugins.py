@@ -365,7 +365,7 @@ class PluginListViewTest(TestCase):
         self.assertHttpStatus(response, 200)
 
         response_body = extract_page_body(response.content.decode(response.charset)).lower()
-        self.assertIn("example plugin", response_body, msg=response_body)
+        self.assertIn("example app", response_body, msg=response_body)
 
     def test_list_plugins_authenticated_not_admin(self):
         response = self.client.get(reverse("plugins:plugins_list"))
@@ -389,11 +389,11 @@ class PluginDetailViewTest(TestCase):
         response = self.client.get(reverse("plugins:plugin_detail", kwargs={"plugin": "example_plugin"}))
         self.assertHttpStatus(response, 200)
 
-        response_body = extract_page_body(response.content.decode(response.charset)).lower()
+        response_body = extract_page_body(response.content.decode(response.charset))
         # plugin verbose name
-        self.assertIn("example plugin", response_body, msg=response_body)
+        self.assertIn("Example Nautobot App", response_body, msg=response_body)
         # plugin description
-        self.assertIn("for testing purposes only", response_body, msg=response_body)
+        self.assertIn("For testing purposes only", response_body, msg=response_body)
 
 
 @skipIf(

@@ -1,4 +1,4 @@
-from nautobot.core.apps import HomePageItem, HomePagePanel
+from nautobot.apps.ui import HomePageItem, HomePagePanel
 
 from .models import ExampleModel
 

@@ -8,14 +8,14 @@ __version__ = metadata.version(__name__)
 
 
 from nautobot.core.signals import nautobot_database_ready
-from nautobot.extras.plugins import PluginConfig
+from nautobot.apps import NautobotAppConfig
 
 from example_plugin.signals import nautobot_database_ready_callback
 
 
-class ExamplePluginConfig(PluginConfig):
+class ExamplePluginConfig(NautobotAppConfig):
     name = "example_plugin"
-    verbose_name = "Example plugin"
+    verbose_name = "Example Nautobot App"
     author = "Nautobot development team"
     author_email = "nautobot@example.com"
     version = __version__
@@ -35,7 +35,7 @@ class ExamplePluginConfig(PluginConfig):
     docs_view_name = "plugins:example_plugin:docs"
 
     def ready(self):
-        """Callback when this plugin is loaded."""
+        """Callback when this app is loaded."""
         super().ready()
         # Connect the nautobot_database_ready_callback() function to the nautobot_database_ready signal.
         # This is by no means a requirement for all plugins, but is a useful way for a plugin to perform

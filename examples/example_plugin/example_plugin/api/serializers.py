@@ -1,7 +1,6 @@
 from rest_framework import serializers
 
-from nautobot.core.api import WritableNestedSerializer
-from nautobot.extras.api.serializers import NautobotModelSerializer
+from nautobot.apps.api import WritableNestedSerializer, NautobotModelSerializer
 
 from example_plugin.models import AnotherExampleModel, ExampleModel
 

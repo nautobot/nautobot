@@ -15,7 +15,7 @@ from nautobot.extras.forms import (
     TagsBulkEditFormMixin,
 )
 from nautobot.ipam.formfields import IPAddressFormField, IPNetworkFormField
-from nautobot.utilities.forms import add_blank_choice, BulkEditForm
+from nautobot.utilities.forms import add_blank_choice, BulkEditForm, CSVModelForm
 from nautobot.utilities.forms.fields import (
     CSVModelChoiceField,
     DynamicModelChoiceField,
@@ -31,6 +31,7 @@ __all__ = (
     "CustomFieldModelCSVForm",
     "CustomFieldModelFormMixin",
     "CSVModelChoiceField",
+    "CSVModelForm",
     "DatePicker",
     "DateTimePicker",
     "DynamicModelChoiceField",

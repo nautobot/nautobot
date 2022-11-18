@@ -7,16 +7,26 @@ from nautobot.extras.filters import (
     RelationshipModelFilterSetMixin,
     StatusModelFilterSetMixin,
 )
+from nautobot.extras.plugins import PluginFilterExtension as FilterExtension
 from nautobot.tenancy.filters import TenancyModelFilterSetMixin
-from nautobot.utilities.filters import BaseFilterSet, NaturalKeyOrPKMultipleChoiceFilter, TreeNodeMultipleChoiceFilter
+from nautobot.utilities.filters import (
+    BaseFilterSet,
+    MultiValueCharFilter,
+    NaturalKeyOrPKMultipleChoiceFilter,
+    SearchFilter,
+    TreeNodeMultipleChoiceFilter,
+)
 
 __all__ = (
     "BaseFilterSet",
     "CreatedUpdatedModelFilterSetMixin",
     "CustomFieldModelFilterSetMixin",
+    "FilterExtension",
+    "MultiValueCharFilter",
     "NaturalKeyOrPKMultipleChoiceFilter",
     "NautobotFilterSet",
     "RelationshipModelFilterSetMixin",
+    "SearchFilter",
     "StatusModelFilterSetMixin",
     "TenancyModelFilterSetMixin",
     "TreeNodeMultipleChoiceFilter",

@@ -1,6 +1,6 @@
 from django.urls import include, path
 
-from nautobot.core.api import OrderedDefaultRouter
+from nautobot.apps.api import OrderedDefaultRouter
 from example_plugin.api.views import AnotherExampleModelViewSet, ExampleModelViewSet, ExampleModelWebhook
 
 

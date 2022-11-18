@@ -4,13 +4,12 @@ from typing import Optional
 
 from django.utils.html import format_html
 
-from nautobot.extras.choices import BannerClassChoices
-from nautobot.extras.plugins import PluginBanner
+from nautobot.apps.ui import Banner, BannerClassChoices
 
 
-def banner(context, *args, **kwargs) -> Optional[PluginBanner]:
+def banner(context, *args, **kwargs) -> Optional[Banner]:
     """
-    Construct a custom PluginBanner, if appropriate.
+    Construct a custom Banner, if appropriate.
 
     - If not authenticated, no banner is displayed.
     - On all authenticated UI views, the banner includes a greeting to the logged-in user.
@@ -27,7 +26,7 @@ def banner(context, *args, **kwargs) -> Optional[PluginBanner]:
         context.request.user,
     )
 
-    if "object" in context:
+    if "object" in context and hasattr(context["object"], "_meta"):
         # Object detail view
         content += format_html(
             "<div>You are viewing {} {}</div>",
@@ -37,14 +36,14 @@ def banner(context, *args, **kwargs) -> Optional[PluginBanner]:
         if "/changelog/" in context.request.path:
             # Object changelog view
             content += format_html("<div>Specifically, its changelog.</div>")
-        return PluginBanner(content=content, banner_class=BannerClassChoices.CLASS_SUCCESS)
+        return Banner(content=content, banner_class=BannerClassChoices.CLASS_SUCCESS)
     elif "table" in context:
         # Table view
         content += format_html(
             "<div>You are viewing a table of {}</div>",
             context["table"].Meta.model._meta.verbose_name_plural,
         )
-        return PluginBanner(content=content, banner_class=BannerClassChoices.CLASS_SUCCESS)
+        return Banner(content=content, banner_class=BannerClassChoices.CLASS_SUCCESS)
 
     # Default banner rendering
-    return PluginBanner(content=content, banner_class=BannerClassChoices.CLASS_INFO)
+    return Banner(content=content, banner_class=BannerClassChoices.CLASS_INFO)
