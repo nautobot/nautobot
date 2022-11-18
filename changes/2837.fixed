@@ -1,1 +1,1 @@
-Added NumberFilter to nautobot.utilities.utils.is_single_choice_field check list, fixing the filter globally.
+Changed nautobot.utilities.utils.is_single_choice_field to check if field is an instance MultipleChoiceFilter.
