@@ -719,7 +719,7 @@ class DynamicFilterFormTest(TestCase):
                     ("longitude", "Longitude"),
                     ("name", "Name"),
                     ("physical_address", "Physical address"),
-                    ("power_panels", "Power panels (name or ID)"),
+                    ("power_panels", "Power panels (ID)"),
                     ("prefixes", "Prefixes"),
                     ("rack_groups", "Rack groups (slug or ID)"),
                     ("racks", "Racks"),
