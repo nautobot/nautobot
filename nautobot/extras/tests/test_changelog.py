@@ -1,15 +1,17 @@
 from django.contrib.contenttypes.models import ContentType
-from django.urls import reverse
 from django.test import override_settings
+from django.urls import reverse
+from django.utils.html import escape
 from rest_framework import status
 
 from nautobot.core.graphql import execute_query
 from nautobot.dcim.choices import InterfaceModeChoices
 from nautobot.dcim.models import Site
+from nautobot.extras import context_managers
 from nautobot.extras.choices import CustomFieldTypeChoices, ObjectChangeActionChoices, ObjectChangeEventContextChoices
 from nautobot.extras.models import CustomField, CustomFieldChoice, ObjectChange, Status, Tag
 from nautobot.ipam.models import VLAN
-from nautobot.utilities.testing import APITestCase
+from nautobot.utilities.testing import APITestCase, TestCase
 from nautobot.utilities.testing.utils import post_data
 from nautobot.utilities.testing.views import ModelViewTestCase
 from nautobot.utilities.utils import get_changes_for_model
@@ -41,6 +43,8 @@ class ChangeLogViewTest(ModelViewTestCase):
         CustomFieldChoice.objects.create(field=cf_select, value="Foo")
 
         cls.tags = Tag.objects.get_for_model(Site)
+
+        cls.site_status = Status.objects.get_for_model(Site).first()
 
     def test_create_object(self):
         form_data = {
@@ -157,6 +161,47 @@ class ChangeLogViewTest(ModelViewTestCase):
         self.assertEqual(oc.change_context, ObjectChangeEventContextChoices.CONTEXT_WEB)
         self.assertEqual(oc.change_context_detail, "dcim:site_add")
         self.assertEqual(oc.user_id, self.user.pk)
+
+    def test_legacy_object_data(self):
+        self.add_permissions("dcim.view_site", "extras.view_objectchange")
+        with context_managers.web_request_context(self.user):
+            site = Site.objects.create(
+                name="testobjectchangesite", description="initial description", status=self.site_status
+            )
+
+        # create objectchange without object_data_v2
+        with context_managers.web_request_context(self.user):
+            site.description = "changed description1"
+            site.validated_save()
+        oc_without_object_data_v2_1 = get_changes_for_model(site).first()
+        oc_without_object_data_v2_1.object_data_v2 = None
+        oc_without_object_data_v2_1.validated_save()
+        with self.subTest("previous ObjectChange has object_data_v2, current ObjectChange does not"):
+            resp = self.client.get(oc_without_object_data_v2_1.get_absolute_url())
+            self.assertContains(resp, escape('"description": "initial description"'))
+            self.assertContains(resp, escape('"description": "changed description1"'))
+
+        # create second objectchange without object_data_v2
+        with context_managers.web_request_context(self.user):
+            site.description = "changed description2"
+            site.validated_save()
+        oc_without_object_data_v2_2 = get_changes_for_model(site).first()
+        oc_without_object_data_v2_2.object_data_v2 = None
+        oc_without_object_data_v2_2.validated_save()
+        with self.subTest("previous and current ObjectChange do not have object_data_v2"):
+            resp = self.client.get(oc_without_object_data_v2_2.get_absolute_url())
+            self.assertContains(resp, escape('"description": "changed description1"'))
+            self.assertContains(resp, escape('"description": "changed description2"'))
+
+        # create objectchange with object_data_v2
+        with context_managers.web_request_context(self.user):
+            site.description = "changed description3"
+            site.validated_save()
+        oc_with_object_data_v2 = get_changes_for_model(site).first()
+        with self.subTest("previous ObjectChange does not have object_data_v2, current ObjectChange does"):
+            resp = self.client.get(oc_with_object_data_v2.get_absolute_url())
+            self.assertContains(resp, escape('"description": "changed description2"'))
+            self.assertContains(resp, escape('"description": "changed description3"'))
 
 
 class ChangeLogAPITest(APITestCase):
@@ -420,3 +465,77 @@ class ChangeLogAPITest(APITestCase):
         self.assertEqual(oc.user_id, self.user.pk)
         self.assertEqual(vm_interface.description, "test vm interface m2m change")
         self.assertSequenceEqual(list(vm_interface.tagged_vlans.all()), [tagged_vlan])
+
+
+class ObjectChangeModelTest(TestCase):
+    @classmethod
+    def setUpTestData(cls):
+        cls.site_status = Status.objects.get_for_model(Site).first()
+
+    def test_get_snapshots(self):
+        with context_managers.web_request_context(self.user):
+            site = Site.objects.create(
+                name="testobjectchangesite", description="initial description", status=self.site_status
+            )
+        initial_object_change = get_changes_for_model(site).first()
+
+        with self.subTest("test get_snapshots ObjectChange create"):
+            snapshots = initial_object_change.get_snapshots()
+            self.assertIsNone(snapshots["prechange"])
+            self.assertEqual(snapshots["postchange"], initial_object_change.object_data_v2)
+            self.assertIsNone(snapshots["differences"]["removed"])
+            self.assertEqual(snapshots["differences"]["added"], initial_object_change.object_data_v2)
+
+        # first objectchange without object_data_v2
+        with context_managers.web_request_context(self.user):
+            site.description = "changed description1"
+            site.validated_save()
+        oc_without_object_data_v2_1 = get_changes_for_model(site).first()
+        oc_without_object_data_v2_1.object_data_v2 = None
+        oc_without_object_data_v2_1.validated_save()
+        with self.subTest("test get_snapshots previous ObjectChange has object_data_v2, current ObjectChange does not"):
+            snapshots = oc_without_object_data_v2_1.get_snapshots()
+            self.assertEqual(snapshots["prechange"], initial_object_change.object_data)
+            self.assertEqual(snapshots["postchange"], oc_without_object_data_v2_1.object_data)
+            self.assertEqual(snapshots["differences"]["removed"], {"description": "initial description"})
+            self.assertEqual(snapshots["differences"]["added"], {"description": "changed description1"})
+
+        # second objectchange without object_data_v2
+        with context_managers.web_request_context(self.user):
+            site.description = "changed description2"
+            site.validated_save()
+        oc_without_object_data_v2_2 = get_changes_for_model(site).first()
+        oc_without_object_data_v2_2.object_data_v2 = None
+        oc_without_object_data_v2_2.validated_save()
+        with self.subTest("test get_snapshots previous and current ObjectChange do not have object_data_v2"):
+            snapshots = oc_without_object_data_v2_2.get_snapshots()
+            self.assertEqual(snapshots["prechange"], oc_without_object_data_v2_1.object_data)
+            self.assertEqual(snapshots["postchange"], oc_without_object_data_v2_2.object_data)
+            self.assertEqual(snapshots["differences"]["removed"], {"description": "changed description1"})
+            self.assertEqual(snapshots["differences"]["added"], {"description": "changed description2"})
+
+        # objectchange with object_data_v2
+        with context_managers.web_request_context(self.user):
+            site.description = "changed description3"
+            site.validated_save()
+        oc_with_object_data_v2 = get_changes_for_model(site).first()
+        with self.subTest(
+            "test get_snapshots previous ObjectChange does not have object_data_v2, current ObjectChange does"
+        ):
+            snapshots = oc_with_object_data_v2.get_snapshots()
+            self.assertEqual(snapshots["prechange"], oc_without_object_data_v2_2.object_data)
+            self.assertEqual(snapshots["postchange"], oc_with_object_data_v2.object_data)
+            self.assertEqual(snapshots["differences"]["removed"], {"description": "changed description2"})
+            self.assertEqual(snapshots["differences"]["added"], {"description": "changed description3"})
+
+        # objectchange action delete
+        site_pk = site.pk
+        with context_managers.web_request_context(self.user):
+            site.delete()
+        oc_delete = get_changes_for_model(Site).filter(changed_object_id=site_pk).first()
+        with self.subTest("test get_snapshots ObjectChange delete"):
+            snapshots = oc_delete.get_snapshots()
+            self.assertEqual(snapshots["prechange"], oc_with_object_data_v2.object_data_v2)
+            self.assertIsNone(snapshots["postchange"])
+            self.assertEqual(snapshots["differences"]["removed"], oc_with_object_data_v2.object_data_v2)
+            self.assertIsNone(snapshots["differences"]["added"])
