@@ -20,7 +20,7 @@ class LocatableModelFormMixin(forms.Form):
     )
     site = DynamicModelChoiceField(
         queryset=Site.objects.all(),
-        query_params={"region_id": "$region"},
+        query_params={"region": "$region"},
     )
     location = DynamicModelChoiceField(
         queryset=Location.objects.all(),
@@ -58,7 +58,7 @@ class LocatableModelBulkEditFormMixin(forms.Form):
     site = DynamicModelChoiceField(
         queryset=Site.objects.all(),
         required=False,
-        query_params={"region_id": "$region"},
+        query_params={"region": "$region"},
     )
     location = DynamicModelChoiceField(
         queryset=Location.objects.all(),
