@@ -195,7 +195,8 @@ class NautobotImports:
                     imported_name.package_name = containing_module
                     imported_name.set_name(name)
                     # keep track of these ones for regex replacement later
-                    self.replacements.append((re.compile(re.escape(old_name)), f"{name}.{old_name}"))
+                    re_old = re.escape(old_name) + r"(,|\s|$|\(|\))"
+                    self.replacements.append((re.compile(re_old), f"{name}.{old_name}" + r"\1"))
 
         # deduplicate imports
         deduplicated = sorted(list(set(self.imports["nautobot"])))
@@ -210,6 +211,8 @@ class NautobotImports:
     def replace_content(self):
         for regex, string in self.replacements:
             self.output_content = regex.sub(string, self.output_content)
+        self.output_content = re.sub(r"\n\n\n\n+", r"\n\n\n", self.output_content)
+        self.output_content = re.sub(r"\n+$", r"\n", self.output_content)
 
 
 def main():
@@ -224,11 +227,12 @@ def main():
     import_fix = NautobotImports(filename, data)
     content = import_fix.output_content
 
-    with open(filename, "w") as filedesc:
-        filedesc.write(content)
-    if data != content:
-        print("import successfully reordered for file: %s" % (filename))
-    return 0
+    if re.sub(r"\s", "", data) != re.sub(r"\s", "", content):
+        with open(filename, "w") as filedesc:
+            filedesc.write(content)
+        print(f"imports fixed for file: {filename}")
+    else:
+        print(f"no changes made in file: {filename}")
 
 
 if __name__ == "__main__":
