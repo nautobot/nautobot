@@ -2,16 +2,16 @@ import os
 import time
 
 from celery.contrib.testing.worker import start_worker
-from django.contrib.staticfiles.testing import StaticLiveServerTestCase
 from django.conf import settings
+from django.contrib.staticfiles.testing import StaticLiveServerTestCase
 from django.test import tag
 from django.urls import reverse
 from django.utils.functional import classproperty
 from selenium import webdriver
 from splinter.browser import Browser
 
-from nautobot.core.celery import app
-from nautobot.utilities.testing.mixins import NautobotTestCaseMixin
+from nautobot.core import celery
+from nautobot.utilities.testing import mixins
 
 
 # URL used to connect to the Selenium host
@@ -61,7 +61,7 @@ FIREFOX_PROFILE_PREFERENCES = {
 
 
 @tag("integration")
-class SeleniumTestCase(StaticLiveServerTestCase, NautobotTestCaseMixin):
+class SeleniumTestCase(StaticLiveServerTestCase, mixins.NautobotTestCaseMixin):
     """
     Base test case for Splinter Selenium integration testing with custom helper methods.
 
@@ -88,9 +88,9 @@ class SeleniumTestCase(StaticLiveServerTestCase, NautobotTestCaseMixin):
         )
 
         if cls.requires_celery:
-            app.loader.import_module("celery.contrib.testing.tasks")
+            celery.app.loader.import_module("celery.contrib.testing.tasks")
             cls.clear_worker()
-            cls.celery_worker = start_worker(app, concurrency=1)
+            cls.celery_worker = start_worker(celery.app, concurrency=1)
             cls.celery_worker.__enter__()
 
     def setUp(self):
@@ -144,7 +144,7 @@ class SeleniumTestCase(StaticLiveServerTestCase, NautobotTestCaseMixin):
     @staticmethod
     def clear_worker():
         """Purge any running or queued tasks"""
-        app.control.purge()
+        celery.app.control.purge()
 
     @classmethod
     def wait_on_active_tasks(cls):

@@ -1,12 +1,12 @@
-import json
 from collections.abc import Iterable
+import json
 from urllib.parse import urljoin
 
 from django import forms
 from django.forms.models import ModelChoiceIterator
 from django.urls import get_script_prefix
 
-from nautobot.utilities.choices import ColorChoices
+from nautobot.utilities import choices
 from nautobot.utilities.forms import utils
 
 
@@ -50,7 +50,7 @@ class ColorSelect(forms.Select):
     option_template_name = "widgets/colorselect_option.html"
 
     def __init__(self, *args, **kwargs):
-        kwargs["choices"] = utils.add_blank_choice(ColorChoices)
+        kwargs["choices"] = utils.add_blank_choice(choices.ColorChoices)
         super().__init__(*args, **kwargs)
         self.attrs["class"] = "nautobot-select2-color-picker"
 

@@ -1,12 +1,12 @@
+from collections import namedtuple, OrderedDict
 import copy
 import datetime
+from decimal import Decimal
 import inspect
+from itertools import count, groupby
 import json
 import re
 import uuid
-from collections import OrderedDict, namedtuple
-from itertools import count, groupby
-from decimal import Decimal
 
 from django import forms
 from django.conf import settings
@@ -17,24 +17,16 @@ from django.core.serializers import serialize
 from django.db.models import Count, ForeignKey, Model, OuterRef, Subquery
 from django.db.models.functions import Coalesce
 from django.http import QueryDict
-from django.utils.tree import Node
 from django.template import engines
 from django.utils.module_loading import import_string
 from django.utils.text import slugify
-from django_filters import (
-    BooleanFilter,
-    DateFilter,
-    DateTimeFilter,
-    filters,
-    TimeFilter,
-    NumberFilter,
-)
+from django.utils.tree import Node
+from django_filters import BooleanFilter, DateFilter, DateTimeFilter, filters, NumberFilter, TimeFilter
 from django_filters.utils import verbose_lookup_expr
 from taggit.managers import _TaggableManager
 
-from nautobot.dcim.choices import CableLengthUnitChoices
-from nautobot.utilities.constants import HTTP_REQUEST_META_SAFE_COPY
-from nautobot.utilities.exceptions import FilterSetFieldNotFound
+from nautobot.dcim import choices
+from nautobot.utilities import constants, exceptions
 
 
 # Check if field name contains a lookup expr
@@ -318,17 +310,17 @@ def to_meters(length, unit):
     if length < 0:
         raise ValueError("Length must be a positive integer")
 
-    valid_units = CableLengthUnitChoices.values()
+    valid_units = choices.CableLengthUnitChoices.values()
     if unit not in valid_units:
         raise ValueError(f"Unknown unit {unit}. Must be one of the following: {', '.join(valid_units)}")
 
-    if unit == CableLengthUnitChoices.UNIT_METER:
+    if unit == choices.CableLengthUnitChoices.UNIT_METER:
         return length
-    if unit == CableLengthUnitChoices.UNIT_CENTIMETER:
+    if unit == choices.CableLengthUnitChoices.UNIT_CENTIMETER:
         return length / 100
-    if unit == CableLengthUnitChoices.UNIT_FOOT:
+    if unit == choices.CableLengthUnitChoices.UNIT_FOOT:
         return length * Decimal("0.3048")
-    if unit == CableLengthUnitChoices.UNIT_INCH:
+    if unit == choices.CableLengthUnitChoices.UNIT_INCH:
         return length * Decimal("0.3048") * 12
     raise ValueError(f"Unknown unit {unit}. Must be 'm', 'cm', 'ft', or 'in'.")
 
@@ -503,7 +495,7 @@ def copy_safe_request(request):
     """
     meta = {
         k: request.META[k]
-        for k in HTTP_REQUEST_META_SAFE_COPY
+        for k in constants.HTTP_REQUEST_META_SAFE_COPY
         if k in request.META and isinstance(request.META[k], str)
     }
 
@@ -772,7 +764,7 @@ def get_all_lookup_expr_for_field(model, field_name):
     filterset = get_filterset_for_model(model)().filters
 
     if not filterset.get(field_name):
-        raise FilterSetFieldNotFound("field_name not found")
+        raise exceptions.FilterSetFieldNotFound("field_name not found")
 
     if field_name.startswith("has_"):
         return [{"id": field_name, "name": "exact"}]
@@ -795,7 +787,7 @@ def get_all_lookup_expr_for_field(model, field_name):
 def get_filterset_field(filterset_class, field_name):
     field = filterset_class().filters.get(field_name)
     if field is None:
-        raise FilterSetFieldNotFound(f"{field_name} is not a valid {filterset_class.__name__} field")
+        raise exceptions.FilterSetFieldNotFound(f"{field_name} is not a valid {filterset_class.__name__} field")
     return field
 
 
@@ -959,7 +951,7 @@ def get_filterable_params_from_filter_params(filter_params, non_filter_params, f
             # because the fields that were not discovered are still necessary.
             try:
                 _is_single_choice_field = is_single_choice_field(filterset_class, field)
-            except FilterSetFieldNotFound:
+            except exceptions.FilterSetFieldNotFound:
                 _is_single_choice_field = False
 
             final_filter_params[field] = (

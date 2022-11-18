@@ -3,7 +3,7 @@ import re
 from django import forms
 from django.forms.models import fields_for_model
 
-from nautobot.utilities.querysets import RestrictedQuerySet
+from nautobot.utilities import querysets
 from nautobot.utilities.forms import constants
 
 
@@ -132,11 +132,11 @@ def form_from_model(model, fields):
 
 def restrict_form_fields(form, user, action="view"):
     """
-    Restrict all form fields which reference a RestrictedQuerySet. This ensures that users see only permitted objects
+    Restrict all form fields which reference a querysets.RestrictedQuerySet. This ensures that users see only permitted objects
     as available choices.
     """
     for field in form.fields.values():
-        if hasattr(field, "queryset") and issubclass(field.queryset.__class__, RestrictedQuerySet):
+        if hasattr(field, "queryset") and issubclass(field.queryset.__class__, querysets.RestrictedQuerySet):
             field.queryset = field.queryset.restrict(user, action)
 
 

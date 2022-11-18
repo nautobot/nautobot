@@ -1,11 +1,10 @@
 import json
 
+from django.core import exceptions
 from django.core.validators import RegexValidator
 from django.db import models
-from django.core import exceptions
 
-from nautobot.utilities.ordering import naturalize
-from nautobot.utilities import forms
+from nautobot.utilities import forms, ordering
 
 
 ColorValidator = RegexValidator(
@@ -57,7 +56,7 @@ class NaturalOrderingField(models.CharField):
 
     description = "Stores a representation of its target field suitable for natural ordering"
 
-    def __init__(self, target_field, naturalize_function=naturalize, *args, **kwargs):
+    def __init__(self, target_field, naturalize_function=ordering.naturalize, *args, **kwargs):
         self.target_field = target_field
         self.naturalize_function = naturalize_function
         super().__init__(*args, **kwargs)

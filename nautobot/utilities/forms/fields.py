@@ -1,9 +1,8 @@
 import csv
+from io import StringIO
 import json
 import re
-from io import StringIO
 
-import django_filters
 from django import forms
 from django.apps import apps
 from django.conf import settings
@@ -11,16 +10,16 @@ from django.contrib.contenttypes.models import ContentType
 from django.contrib.postgres.forms import SimpleArrayField
 from django.core.exceptions import MultipleObjectsReturned, ObjectDoesNotExist, ValidationError
 from django.db.models import Count, Q
-from django.forms.fields import BoundField, JSONField as _JSONField, InvalidJSONInput
+from django.forms.fields import BoundField, InvalidJSONInput
+from django.forms.fields import JSONField as _JSONField
 from django.urls import reverse
+import django_filters
 
-from nautobot.extras.utils import FeatureQuery
-from nautobot.utilities.choices import unpack_grouped_choices
-from nautobot.utilities.utils import get_route_for_model, is_uuid
-from nautobot.utilities.validators import EnhancedURLValidator
-from nautobot.utilities.forms import widgets
-from nautobot.utilities.forms import constants
-from nautobot.utilities.forms import utils
+from nautobot.extras import utils as extras_utils
+from nautobot.utilities import choices as utilities_choices
+from nautobot.utilities import utils, validators
+from nautobot.utilities.forms import constants, widgets
+from nautobot.utilities.forms import utils as forms_utils
 
 
 __all__ = (
@@ -83,13 +82,13 @@ class CSVDataField(forms.CharField):
         if value is None:
             return None
         reader = csv.reader(StringIO(value.strip()))
-        return utils.parse_csv(reader)
+        return forms_utils.parse_csv(reader)
 
     def validate(self, value):
         if value is None:
             return None
         headers, _records = value
-        utils.validate_csv(headers, self.fields, self.required_fields)
+        forms_utils.validate_csv(headers, self.fields, self.required_fields)
 
         return value
 
@@ -137,7 +136,7 @@ class CSVFileField(forms.FileField):
         except csv.Error:
             dialect = csv.excel
         reader = csv.reader(csv_str.splitlines(), dialect)
-        headers, records = utils.parse_csv(reader)
+        headers, records = forms_utils.parse_csv(reader)
 
         return headers, records
 
@@ -146,7 +145,7 @@ class CSVFileField(forms.FileField):
             return None
 
         headers, _records = value
-        utils.validate_csv(headers, self.fields, self.required_fields)
+        forms_utils.validate_csv(headers, self.fields, self.required_fields)
 
         return value
 
@@ -160,7 +159,7 @@ class CSVChoiceField(forms.ChoiceField):
 
     def __init__(self, *, choices=(), **kwargs):
         super().__init__(choices=choices, **kwargs)
-        self.choices = unpack_grouped_choices(choices)
+        self.choices = utilities_choices.unpack_grouped_choices(choices)
 
 
 class CSVMultipleChoiceField(CSVChoiceField):
@@ -256,9 +255,9 @@ class MultipleContentTypeField(forms.ModelMultipleChoiceField):
         """
         if "queryset" not in kwargs:
             if feature is not None:
-                kwargs["queryset"] = ContentType.objects.filter(FeatureQuery(feature).get_query()).order_by(
-                    "app_label", "model"
-                )
+                kwargs["queryset"] = ContentType.objects.filter(
+                    extras_utils.FeatureQuery(feature).get_query()
+                ).order_by("app_label", "model")
             else:
                 kwargs["queryset"] = ContentType.objects.order_by("app_label", "model")
         if "widget" not in kwargs:
@@ -361,7 +360,7 @@ class ExpandableNameField(forms.CharField):
         if not value:
             return ""
         if re.search(constants.ALPHANUMERIC_EXPANSION_PATTERN, value):
-            return list(utils.expand_alphanumeric_pattern(value))
+            return list(forms_utils.expand_alphanumeric_pattern(value))
         return [value]
 
 
@@ -381,9 +380,9 @@ class ExpandableIPAddressField(forms.CharField):
     def to_python(self, value):
         # Hackish address family detection but it's all we have to work with
         if "." in value and re.search(constants.IP4_EXPANSION_PATTERN, value):
-            return list(utils.expand_ipaddress_pattern(value, 4))
+            return list(forms_utils.expand_ipaddress_pattern(value, 4))
         elif ":" in value and re.search(constants.IP6_EXPANSION_PATTERN, value):
-            return list(utils.expand_ipaddress_pattern(value, 6))
+            return list(forms_utils.expand_ipaddress_pattern(value, 6))
         return [value]
 
 
@@ -551,7 +550,7 @@ class DynamicModelChoiceMixin:
         # Set the data URL on the APISelect widget (if not already set)
         widget = bound_field.field.widget
         if not widget.attrs.get("data-url"):
-            route = get_route_for_model(self.queryset.model, "list", api=True)
+            route = utils.get_route_for_model(self.queryset.model, "list", api=True)
             data_url = reverse(route)
             widget.attrs["data-url"] = data_url
 
@@ -603,7 +602,7 @@ class LaxURLField(forms.URLField):
     (e.g. http://myserver/ is valid)
     """
 
-    default_validators = [EnhancedURLValidator()]
+    default_validators = [validators.EnhancedURLValidator()]
 
 
 class JSONField(_JSONField):
@@ -729,7 +728,7 @@ class NumericArrayField(SimpleArrayField):
 
     def to_python(self, value):
         try:
-            value = ",".join([str(n) for n in utils.parse_numeric_range(value)])
+            value = ",".join([str(n) for n in forms_utils.parse_numeric_range(value)])
         except ValueError as error:
             raise ValidationError(error)
         return super().to_python(value)
@@ -769,7 +768,7 @@ class MultiMatchModelMultipleChoiceField(django_filters.fields.ModelMultipleChoi
         natural_key_values = set()
         for item in values:
             query = Q()
-            if is_uuid(item):
+            if utils.is_uuid(item):
                 pk_values.add(item)
                 query |= Q(pk=item)
             else:

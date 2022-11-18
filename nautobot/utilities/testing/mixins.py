@@ -12,11 +12,11 @@ from django.utils.text import slugify
 from netaddr import IPNetwork
 from taggit.managers import TaggableManager
 
-from nautobot.extras.management import populate_status_choices
-from nautobot.extras.models import Tag
-from nautobot.users.models import ObjectPermission
-from nautobot.utilities.fields import JSONArrayField
-from nautobot.utilities.permissions import resolve_permission_ct
+from nautobot.extras import management
+from nautobot.extras import models as extras_models
+from nautobot.users import models as users_models
+from nautobot.utilities import fields as utilities_fields
+from nautobot.utilities import permissions
 from nautobot.utilities.testing import utils
 
 
@@ -33,7 +33,7 @@ class NautobotTestCaseMixin:
         """Setup shared testuser, statuses and client."""
         # Re-populate status choices after database truncation by TransactionTestCase
         if populate_status:
-            populate_status_choices(apps, None)
+            management.populate_status_choices(apps, None)
 
         # Create the test user and assign permissions
         self.user = User.objects.create_user(username="nautobotuser")
@@ -97,7 +97,7 @@ class NautobotTestCaseMixin:
             else:
 
                 # Convert ArrayFields to CSV strings
-                if isinstance(field, JSONArrayField):
+                if isinstance(field, utilities_fields.JSONArrayField):
                     model_dict[key] = ",".join([str(v) for v in value])
 
                 # Convert JSONField dict values to JSON strings
@@ -115,8 +115,8 @@ class NautobotTestCaseMixin:
         Assign a set of permissions to the test user. Accepts permission names in the form <app>.<action>_<model>.
         """
         for name in names:
-            ct, action = resolve_permission_ct(name)
-            obj_perm = ObjectPermission(name=name, actions=[action])
+            ct, action = permissions.resolve_permission_ct(name)
+            obj_perm = users_models.ObjectPermission(name=name, actions=[action])
             obj_perm.save()
             obj_perm.users.add(self.user)
             obj_perm.object_types.add(ct)
@@ -197,7 +197,7 @@ class NautobotTestCaseMixin:
     @classmethod
     def create_tags(cls, *names):
         """
-        Create and return a Tag instance for each name given.
+        Create and return a models.Tag instance for each name given.
 
         DEPRECATED: use TagFactory instead.
         """
@@ -207,4 +207,4 @@ class NautobotTestCaseMixin:
             DeprecationWarning,
             stacklevel=2,
         )
-        return [Tag.objects.create(name=name, slug=slugify(name)) for name in names]
+        return [extras_models.Tag.objects.create(name=name, slug=slugify(name)) for name in names]

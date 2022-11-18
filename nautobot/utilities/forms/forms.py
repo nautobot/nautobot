@@ -2,16 +2,13 @@ import json
 import logging
 import re
 
-import yaml
 from django import forms
 from django.forms import formset_factory
 from django.urls import reverse
+import yaml
 
-from nautobot.ipam.formfields import IPNetworkFormField
-from nautobot.utilities.utils import (
-    build_lookup_label,
-    get_filterset_parameter_form_field,
-)
+from nautobot.ipam import formfields
+from nautobot.utilities import utils
 
 
 __all__ = (
@@ -37,7 +34,7 @@ class AddressFieldMixin(forms.ModelForm):
     ModelForm mixin for IPAddress based models.
     """
 
-    address = IPNetworkFormField()
+    address = formfields.IPNetworkFormField()
 
     def __init__(self, *args, **kwargs):
 
@@ -160,7 +157,7 @@ class PrefixFieldMixin(forms.ModelForm):
     ModelForm mixin for IPNetwork based models.
     """
 
-    prefix = IPNetworkFormField()
+    prefix = formfields.IPNetworkFormField()
 
     def __init__(self, *args, **kwargs):
 
@@ -298,9 +295,9 @@ class DynamicFilterForm(BootstrapMixin, forms.Form):
 
                 if lookup_type and lookup_value and lookup_type in self.filterset_filters:
                     verbose_name = self.filterset_filters[lookup_type].lookup_expr
-                    label = build_lookup_label(lookup_type, verbose_name)
+                    label = utils.build_lookup_label(lookup_type, verbose_name)
                     self.fields["lookup_type"].choices = [(lookup_type, label)]
-                    self.fields["lookup_value"] = get_filterset_parameter_form_field(model, lookup_type)
+                    self.fields["lookup_value"] = utils.get_filterset_parameter_form_field(model, lookup_type)
                 elif lookup_type and lookup_type not in self.filterset_filters:
                     logger.warning(f"{lookup_type} is not a valid {filterset_class.__class__.__name__} field")
 

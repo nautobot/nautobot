@@ -7,7 +7,7 @@ from django.urls import reverse
 from rest_framework import status
 from rest_framework.utils import formatting
 
-from nautobot.core.api.exceptions import SerializerNotFound
+from nautobot.core.api import exceptions
 from nautobot.utilities import utils
 
 
@@ -25,7 +25,9 @@ def get_serializer_for_model(model, prefix=""):
     try:
         return utils.dynamic_import(serializer_name)
     except AttributeError:
-        raise SerializerNotFound(f"Could not determine serializer for {app_name}.{model_name} with prefix '{prefix}'")
+        raise exceptions.SerializerNotFound(
+            f"Could not determine serializer for {app_name}.{model_name} with prefix '{prefix}'"
+        )
 
 
 def is_api_request(request):

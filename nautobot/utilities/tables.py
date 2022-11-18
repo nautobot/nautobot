@@ -1,4 +1,3 @@
-import django_tables2 as tables
 from django.contrib.auth.models import AnonymousUser
 from django.contrib.contenttypes.fields import GenericForeignKey
 from django.contrib.contenttypes.models import ContentType
@@ -8,13 +7,13 @@ from django.urls import reverse
 from django.utils.html import escape, format_html
 from django.utils.safestring import mark_safe
 from django.utils.text import Truncator
+import django_tables2 as tables
 from django_tables2.data import TableQuerysetData
 from django_tables2.utils import Accessor
 
-from nautobot.extras.models import ComputedField, CustomField, Relationship
-from nautobot.extras.choices import CustomFieldTypeChoices, RelationshipSideChoices
+from nautobot.extras import choices, models
+from nautobot.utilities import utils
 from nautobot.utilities.templatetags import helpers
-from nautobot.utilities.utils import get_route_for_model
 
 
 class BaseTable(tables.Table):
@@ -33,27 +32,27 @@ class BaseTable(tables.Table):
         # Add custom field columns
         obj_type = ContentType.objects.get_for_model(self._meta.model)
 
-        for cf in CustomField.objects.filter(content_types=obj_type):
+        for cf in models.CustomField.objects.filter(content_types=obj_type):
             name = f"cf_{cf.slug}"
             self.base_columns[name] = CustomFieldColumn(cf)
 
-        for cpf in ComputedField.objects.filter(content_type=obj_type):
+        for cpf in models.ComputedField.objects.filter(content_type=obj_type):
             self.base_columns[f"cpf_{cpf.slug}"] = ComputedFieldColumn(cpf)
 
-        for relationship in Relationship.objects.filter(source_type=obj_type):
+        for relationship in models.Relationship.objects.filter(source_type=obj_type):
             if not relationship.symmetric:
                 self.base_columns[f"cr_{relationship.slug}_src"] = RelationshipColumn(
-                    relationship, side=RelationshipSideChoices.SIDE_SOURCE
+                    relationship, side=choices.RelationshipSideChoices.SIDE_SOURCE
                 )
             else:
                 self.base_columns[f"cr_{relationship.slug}_peer"] = RelationshipColumn(
-                    relationship, side=RelationshipSideChoices.SIDE_PEER
+                    relationship, side=choices.RelationshipSideChoices.SIDE_PEER
                 )
 
-        for relationship in Relationship.objects.filter(destination_type=obj_type):
+        for relationship in models.Relationship.objects.filter(destination_type=obj_type):
             if not relationship.symmetric:
                 self.base_columns[f"cr_{relationship.slug}_dst"] = RelationshipColumn(
-                    relationship, side=RelationshipSideChoices.SIDE_DESTINATION
+                    relationship, side=choices.RelationshipSideChoices.SIDE_DESTINATION
                 )
             # symmetric relationships are already handled above in the source_type case
 
@@ -216,9 +215,9 @@ class ButtonsColumn(tables.TemplateColumn):
             self.template_code = prepend_template + self.template_code
 
         app_label = model._meta.app_label
-        changelog_route = get_route_for_model(model, "changelog")
-        edit_route = get_route_for_model(model, "edit")
-        delete_route = get_route_for_model(model, "delete")
+        changelog_route = utils.get_route_for_model(model, "changelog")
+        edit_route = utils.get_route_for_model(model, "edit")
+        delete_route = utils.get_route_for_model(model, "delete")
 
         template_code = self.template_code.format(
             app_label=app_label,
@@ -388,14 +387,14 @@ class CustomFieldColumn(tables.Column):
 
     def render(self, record, bound_column, value):  # pylint: disable=arguments-differ
         template = ""
-        if self.customfield.type == CustomFieldTypeChoices.TYPE_BOOLEAN:
+        if self.customfield.type == choices.CustomFieldTypeChoices.TYPE_BOOLEAN:
             template = helpers.render_boolean(value)
-        elif self.customfield.type == CustomFieldTypeChoices.TYPE_MULTISELECT:
+        elif self.customfield.type == choices.CustomFieldTypeChoices.TYPE_MULTISELECT:
             for v in value:
                 template += format_html('<span class="label label-default">{}</span> ', v)
-        elif self.customfield.type == CustomFieldTypeChoices.TYPE_SELECT:
+        elif self.customfield.type == choices.CustomFieldTypeChoices.TYPE_SELECT:
             template = format_html('<span class="label label-default">{}</span>', value)
-        elif self.customfield.type == CustomFieldTypeChoices.TYPE_URL:
+        elif self.customfield.type == choices.CustomFieldTypeChoices.TYPE_URL:
             template = format_html('<a href="{}">{}</a>', value, value)
         else:
             template = escape(value)
@@ -414,7 +413,7 @@ class RelationshipColumn(tables.Column):
     def __init__(self, relationship, side, *args, **kwargs):
         self.relationship = relationship
         self.side = side
-        self.peer_side = RelationshipSideChoices.OPPOSITE[side]
+        self.peer_side = choices.RelationshipSideChoices.OPPOSITE[side]
         kwargs.setdefault("verbose_name", relationship.get_label(side))
         kwargs.setdefault("accessor", Accessor("associations"))
         super().__init__(orderable=False, *args, **kwargs)
@@ -424,7 +423,7 @@ class RelationshipColumn(tables.Column):
         # Since associations accessor returns all the relationship associations regardless of the relationship.
         value = [v for v in value if v.relationship == self.relationship]
         if not self.relationship.symmetric:
-            if self.side == RelationshipSideChoices.SIDE_SOURCE:
+            if self.side == choices.RelationshipSideChoices.SIDE_SOURCE:
                 value = [v for v in value if v.source_id == record.id]
             else:
                 value = [v for v in value if v.destination_id == record.id]
