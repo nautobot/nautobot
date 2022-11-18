@@ -59,7 +59,7 @@ from nautobot.extras.models import (
 )
 from nautobot.extras.models import CustomField, CustomFieldChoice
 from nautobot.extras.jobs import run_job
-from nautobot.extras.utils import get_job_content_type, get_worker_count
+from nautobot.extras.utils import get_job_content_type, get_worker_count, FeatureQuery
 from nautobot.utilities.exceptions import CeleryWorkerNotRunningException
 from nautobot.utilities.api import get_serializer_for_model
 from nautobot.utilities.utils import (
@@ -323,6 +323,17 @@ class CustomLinkViewSet(ModelViewSet, NotesViewSetMixin):
 #
 
 
+def _get_dynamic_group_serializers():
+    """
+    Returns a list of Dynamic Group response serializers at call time.
+    """
+
+    fq = FeatureQuery("dynamic_groups")
+    types = ContentType.objects.filter(fq.get_query())
+    serializers = [get_serializer_for_model(dgt.model_class()) for dgt in types]
+    return serializers
+
+
 class DynamicGroupViewSet(ModelViewSet, NotesViewSetMixin):
     """
     Manage Dynamic Groups through DELETE, GET, POST, PUT, and PATCH requests.
@@ -333,26 +344,13 @@ class DynamicGroupViewSet(ModelViewSet, NotesViewSetMixin):
     serializer_class = serializers.DynamicGroupSerializer
     filterset_class = filters.DynamicGroupFilterSet
 
-    @staticmethod
-    def _get_dynamic_group_serializers():
-        """
-        Returns a list of Dynamic Group response serializers at call time s.
-        """
-        from nautobot.extras.utils import FeatureQuery
-        from nautobot.utilities.api import get_serializer_for_model
-
-        fq = FeatureQuery("dynamic_groups")
-        types = ContentType.objects.filter(fq.get_query())
-        serializers = [get_serializer_for_model(dgt.model_class()) for dgt in types]
-        return serializers
-
     # Dynamic Group member response types will vary based on the group's `content_type`.
     @extend_schema(
         responses={
             200: PolymorphicProxySerializer(
                 component_name="MetaObject",
                 serializers=_get_dynamic_group_serializers(),
-                resource_type_field_name="content_type",
+                resource_type_field_name=None,
                 many=True,
             )
         }
