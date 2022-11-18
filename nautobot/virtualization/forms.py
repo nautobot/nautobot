@@ -188,7 +188,7 @@ class ClusterAddDevicesForm(BootstrapMixin, forms.Form):
     site = DynamicModelChoiceField(
         queryset=Site.objects.all(),
         required=False,
-        query_params={"region_id": "$region"},
+        query_params={"region": "$region"},
     )
     location = DynamicModelChoiceField(
         queryset=Location.objects.all(),
@@ -200,15 +200,15 @@ class ClusterAddDevicesForm(BootstrapMixin, forms.Form):
         required=False,
         null_option="None",
         query_params={
-            "site_id": "$site",
-            "location_id": "$location",
+            "site": "$site",
+            "location": "$location",
         },
     )
     devices = DynamicModelMultipleChoiceField(
         queryset=Device.objects.all(),
         query_params={
-            "site_id": "$site",
-            "location_id": "$location",
+            "site": "$site",
+            "location": "$location",
             "rack_id": "$rack",
             "cluster_id": "null",
         },
