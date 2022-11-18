@@ -531,8 +531,9 @@ def _run_job(request, job_model, legacy_response=False):
         raise MethodNotAllowed(request.method, detail="This job's source code could not be located and cannot be run")
     job = job_class()
 
-    # default to first queue in job_model.task_queues if task_queue not specified
     valid_queues = job_model.task_queues if job_model.task_queues else [settings.CELERY_TASK_DEFAULT_QUEUE]
+    # Get a default queue from either the job model's specified task queue or system default to fall back on if request doesn't provide one
+    default_valid_queue = valid_queues[0]
 
     # We need to call request.data for both cases as this is what pulls and caches the request data
     data = request.data
@@ -554,7 +555,7 @@ def _run_job(request, job_model, legacy_response=False):
         input_serializer.is_valid(raise_exception=True)
 
         commit = input_serializer.validated_data.get("_commit", None)
-        task_queue = input_serializer.validated_data.get("_task_queue", valid_queues[0])
+        task_queue = input_serializer.validated_data.get("_task_queue", default_valid_queue)
 
         # JobMultiPartInputSerializer only has keys for executing job (commit, task_queue, etc),
         # everything else is a candidate for the job form's data.
@@ -582,7 +583,7 @@ def _run_job(request, job_model, legacy_response=False):
 
         data = input_serializer.validated_data.get("data", {})
         commit = input_serializer.validated_data.get("commit", None)
-        task_queue = input_serializer.validated_data.get("task_queue", valid_queues[0])
+        task_queue = input_serializer.validated_data.get("task_queue", default_valid_queue)
         schedule_data = input_serializer.validated_data.get("schedule", None)
 
     if commit is None:

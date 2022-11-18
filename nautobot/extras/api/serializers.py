@@ -977,6 +977,8 @@ class JobInputSerializer(serializers.Serializer):
 
 
 class JobMultiPartInputSerializer(serializers.Serializer):
+    """JobMultiPartInputSerializer is a "flattened" version of JobInputSerializer for use with multipart/form-data submissions which only accept key-value pairs"""
+
     _commit = serializers.BooleanField(required=False, default=None)
     _schedule_name = serializers.CharField(max_length=255, required=False)
     _schedule_start_time = serializers.DateTimeField(format=None, required=False)
