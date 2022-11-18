@@ -26,7 +26,6 @@ from nautobot.utilities.filters import (
     NaturalKeyOrPKMultipleChoiceFilter,
     RelatedMembershipBooleanFilter,
     SearchFilter,
-    TagFilter,
     TreeNodeMultipleChoiceFilter,
 )
 from nautobot.virtualization.models import Cluster
@@ -124,15 +123,9 @@ __all__ = (
 
 
 class RegionFilterSet(NautobotFilterSet, NameSlugSearchFilterSet):
-    parent_id = django_filters.ModelMultipleChoiceFilter(
+    parent = NaturalKeyOrPKMultipleChoiceFilter(
         queryset=Region.objects.all(),
-        label="Parent region (ID)",
-    )
-    parent = django_filters.ModelMultipleChoiceFilter(
-        field_name="parent__slug",
-        queryset=Region.objects.all(),
-        to_field_name="slug",
-        label="Parent region (slug)",
+        label="Parent region (slug or ID)",
     )
     children = NaturalKeyOrPKMultipleChoiceFilter(
         queryset=Region.objects.all(),
@@ -191,10 +184,11 @@ class SiteFilterSet(NautobotFilterSet, TenancyFilterSet, StatusModelFilterSetMix
         field_name="circuit_terminations",
         label="Has circuit terminations",
     )
-    devices = NaturalKeyOrPKMultipleChoiceFilter(
+    # TODO: change this filter to NaturalKeyOrPKMultipleChoiceFilter once
+    # https://github.com/nautobot/nautobot/issues/2875 is resolved.
+    devices = django_filters.ModelMultipleChoiceFilter(
         queryset=Device.objects.all(),
-        to_field_name="name",
-        label="Devices (name or ID)",
+        label="Devices (ID)",
     )
     has_devices = RelatedMembershipBooleanFilter(
         field_name="devices",
@@ -250,7 +244,6 @@ class SiteFilterSet(NautobotFilterSet, TenancyFilterSet, StatusModelFilterSetMix
         label="Time zone",
         null_value="",
     )
-    tag = TagFilter()
 
     class Meta:
         model = Site
@@ -274,6 +267,7 @@ class SiteFilterSet(NautobotFilterSet, TenancyFilterSet, StatusModelFilterSetMix
             "shipping_address",
             "slug",
             "vlans",
+            "tags",
         ]
 
 
@@ -329,11 +323,10 @@ class LocationFilterSet(NautobotFilterSet, StatusModelFilterSetMixin, TenancyFil
         field_name="location_type__content_types",
         choices=FeatureQuery("locations").get_choices,
     )
-    tag = TagFilter()
 
     class Meta:
         model = Location
-        fields = ["id", "name", "slug", "description"]
+        fields = ["id", "name", "slug", "description", "tags"]
 
     def generate_query__base_site(self, value):
         """Helper method used by DynamicGroups and by _base_site() method."""
@@ -386,15 +379,9 @@ class LocationFilterSet(NautobotFilterSet, StatusModelFilterSetMixin, TenancyFil
 
 
 class RackGroupFilterSet(NautobotFilterSet, LocatableModelFilterSetMixin, NameSlugSearchFilterSet):
-    parent_id = django_filters.ModelMultipleChoiceFilter(
+    parent = NaturalKeyOrPKMultipleChoiceFilter(
         queryset=RackGroup.objects.all(),
-        label="Parent (ID)",
-    )
-    parent = django_filters.ModelMultipleChoiceFilter(
-        field_name="parent__slug",
-        queryset=RackGroup.objects.all(),
-        to_field_name="slug",
-        label="Parent (slug)",
+        label="Parent (slug or ID)",
     )
     children = NaturalKeyOrPKMultipleChoiceFilter(
         queryset=RackGroup.objects.all(),
@@ -452,29 +439,15 @@ class RackFilterSet(NautobotFilterSet, LocatableModelFilterSetMixin, TenancyFilt
             "comments": "icontains",
         },
     )
-    group_id = TreeNodeMultipleChoiceFilter(
-        queryset=RackGroup.objects.all(),
-        field_name="group",
-        label="Rack group (ID)",
-    )
     group = TreeNodeMultipleChoiceFilter(
         queryset=RackGroup.objects.all(),
         field_name="group",
-        label="Rack group (slug)",
+        label="Rack group (slug or ID)",
     )
     type = django_filters.MultipleChoiceFilter(choices=RackTypeChoices)
     width = django_filters.MultipleChoiceFilter(choices=RackWidthChoices)
-    role_id = django_filters.ModelMultipleChoiceFilter(
-        queryset=RackRole.objects.all(),
-        label="Role (ID)",
-    )
-    role = django_filters.ModelMultipleChoiceFilter(
-        field_name="role__slug",
-        queryset=RackRole.objects.all(),
-        to_field_name="slug",
-        label="Role (slug)",
-    )
-    serial = django_filters.CharFilter(lookup_expr="iexact")
+    role = NaturalKeyOrPKMultipleChoiceFilter(queryset=RackRole.objects.all(), label="Role (slug or ID)")
+    serial = MultiValueCharFilter(lookup_expr="iexact", label="Serial Number")
     has_devices = RelatedMembershipBooleanFilter(
         field_name="devices",
         label="Has devices",
@@ -496,7 +469,6 @@ class RackFilterSet(NautobotFilterSet, LocatableModelFilterSetMixin, TenancyFilt
         field_name="reservations",
         label="Has reservations",
     )
-    tag = TagFilter()
 
     class Meta:
         model = Rack
@@ -513,6 +485,7 @@ class RackFilterSet(NautobotFilterSet, LocatableModelFilterSetMixin, TenancyFilt
             "comments",
             "devices",
             "reservations",
+            "tags",
         ]
 
 
@@ -525,34 +498,20 @@ class RackReservationFilterSet(NautobotFilterSet, TenancyFilterSet):
             "description": "icontains",
         },
     )
-    rack_id = django_filters.ModelMultipleChoiceFilter(
-        queryset=Rack.objects.all(),
-        label="Rack (ID)",
-    )
     site = NaturalKeyOrPKMultipleChoiceFilter(
         field_name="rack__site",
         queryset=Site.objects.all(),
         label="Site (slug or ID)",
     )
-    group_id = TreeNodeMultipleChoiceFilter(
-        queryset=RackGroup.objects.all(),
-        field_name="rack__group",
-        label="Rack group (ID)",
-    )
     group = TreeNodeMultipleChoiceFilter(
         queryset=RackGroup.objects.all(),
         field_name="rack__group",
-        label="Rack group (slug)",
+        label="Rack group (slug or ID)",
     )
-    user_id = django_filters.ModelMultipleChoiceFilter(
-        queryset=get_user_model().objects.all(),
-        label="User (ID)",
-    )
-    user = django_filters.ModelMultipleChoiceFilter(
-        field_name="user__username",
+    user = NaturalKeyOrPKMultipleChoiceFilter(
         queryset=get_user_model().objects.all(),
         to_field_name="username",
-        label="User (name)",
+        label="User (name or ID)",
     )
     # TODO: change this filter to NaturalKeyOrPKMultipleChoiceFilter once
     # https://github.com/nautobot/nautobot/issues/2875 is resolved.
@@ -560,11 +519,10 @@ class RackReservationFilterSet(NautobotFilterSet, TenancyFilterSet):
         queryset=Rack.objects.all(),
         label="Rack (ID)",
     )
-    tag = TagFilter()
 
     class Meta:
         model = RackReservation
-        fields = ["id", "created", "description"]
+        fields = ["id", "created", "description", "tags"]
 
 
 class ManufacturerFilterSet(NautobotFilterSet, NameSlugSearchFilterSet):
@@ -609,15 +567,8 @@ class DeviceTypeFilterSet(NautobotFilterSet):
             "comments": "icontains",
         },
     )
-    manufacturer_id = django_filters.ModelMultipleChoiceFilter(
-        queryset=Manufacturer.objects.all(),
-        label="Manufacturer (ID)",
-    )
-    manufacturer = django_filters.ModelMultipleChoiceFilter(
-        field_name="manufacturer__slug",
-        queryset=Manufacturer.objects.all(),
-        to_field_name="slug",
-        label="Manufacturer (slug)",
+    manufacturer = NaturalKeyOrPKMultipleChoiceFilter(
+        queryset=Manufacturer.objects.all(), label="Manufacturer (slug or ID)"
     )
     console_ports = django_filters.BooleanFilter(
         method="_console_ports",
@@ -737,7 +688,6 @@ class DeviceTypeFilterSet(NautobotFilterSet):
         field_name="devicebaytemplates",
         label="Has device bay templates",
     )
-    tag = TagFilter()
 
     class Meta:
         model = DeviceType
@@ -751,6 +701,7 @@ class DeviceTypeFilterSet(NautobotFilterSet):
             "subdevice_role",
             "comments",
             "instances",
+            "tags",
         ]
 
     def _console_ports(self, queryset, name, value):
@@ -894,16 +845,8 @@ class DeviceRoleFilterSet(NautobotFilterSet, NameSlugSearchFilterSet):
 
 
 class PlatformFilterSet(NautobotFilterSet, NameSlugSearchFilterSet):
-    manufacturer_id = django_filters.ModelMultipleChoiceFilter(
-        field_name="manufacturer",
-        queryset=Manufacturer.objects.all(),
-        label="Manufacturer (ID)",
-    )
-    manufacturer = django_filters.ModelMultipleChoiceFilter(
-        field_name="manufacturer__slug",
-        queryset=Manufacturer.objects.all(),
-        to_field_name="slug",
-        label="Manufacturer (slug)",
+    manufacturer = NaturalKeyOrPKMultipleChoiceFilter(
+        queryset=Manufacturer.objects.all(), label="Manufacturer (slug or ID)"
     )
     has_devices = RelatedMembershipBooleanFilter(
         field_name="devices",
@@ -953,61 +896,38 @@ class DeviceFilterSet(
             "comments": "icontains",
         },
     )
-    manufacturer_id = django_filters.ModelMultipleChoiceFilter(
-        field_name="device_type__manufacturer",
-        queryset=Manufacturer.objects.all(),
-        label="Manufacturer (ID)",
+    manufacturer = NaturalKeyOrPKMultipleChoiceFilter(
+        field_name="device_type__manufacturer", queryset=Manufacturer.objects.all(), label="Manufacturer (slug or ID)"
     )
-    manufacturer = django_filters.ModelMultipleChoiceFilter(
-        field_name="device_type__manufacturer__slug",
-        queryset=Manufacturer.objects.all(),
-        to_field_name="slug",
-        label="Manufacturer (slug)",
-    )
-    device_type_id = django_filters.ModelMultipleChoiceFilter(
+    device_type = NaturalKeyOrPKMultipleChoiceFilter(
         queryset=DeviceType.objects.all(),
-        label="Device type (ID)",
+        label="Device type (slug or ID)",
     )
-    role_id = django_filters.ModelMultipleChoiceFilter(
-        field_name="device_role_id",
-        queryset=DeviceRole.objects.all(),
-        label="Role (ID)",
+    role = NaturalKeyOrPKMultipleChoiceFilter(
+        field_name="device_role", queryset=DeviceRole.objects.all(), label="Device Role (slug or ID)"
     )
-    role = django_filters.ModelMultipleChoiceFilter(
-        field_name="device_role__slug",
-        queryset=DeviceRole.objects.all(),
-        to_field_name="slug",
-        label="Role (slug)",
-    )
-    platform_id = django_filters.ModelMultipleChoiceFilter(
-        queryset=Platform.objects.all(),
-        label="Platform (ID)",
-    )
-    platform = django_filters.ModelMultipleChoiceFilter(
-        field_name="platform__slug",
-        queryset=Platform.objects.all(),
-        to_field_name="slug",
-        label="Platform (slug)",
-    )
-    rack_group_id = TreeNodeMultipleChoiceFilter(
+    platform = NaturalKeyOrPKMultipleChoiceFilter(queryset=Platform.objects.all(), label="Platform (slug or ID)")
+    rack_group = TreeNodeMultipleChoiceFilter(
         queryset=RackGroup.objects.all(),
         field_name="rack__group",
-        label="Rack group (ID)",
+        label="Rack group (slug or ID)",
     )
-    rack_id = django_filters.ModelMultipleChoiceFilter(
-        field_name="rack",
+    # TODO: change this filter to NaturalKeyOrPKMultipleChoiceFilter once
+    # https://github.com/nautobot/nautobot/issues/2875 is resolved.
+    rack = django_filters.ModelMultipleChoiceFilter(
         queryset=Rack.objects.all(),
         label="Rack (ID)",
     )
-    cluster_id = django_filters.ModelMultipleChoiceFilter(
+    # TODO: change this filter to NaturalKeyOrPKMultipleChoiceFilter once
+    # https://github.com/nautobot/nautobot/issues/2875 is resolved.
+    cluster = django_filters.ModelMultipleChoiceFilter(
         queryset=Cluster.objects.all(),
         label="VM cluster (ID)",
     )
-    model = django_filters.ModelMultipleChoiceFilter(
-        field_name="device_type__slug",
+    model = NaturalKeyOrPKMultipleChoiceFilter(
+        field_name="device_type",
         queryset=DeviceType.objects.all(),
-        to_field_name="slug",
-        label="Device model (slug)",
+        label="Device model (slug or ID)",
     )
     is_full_depth = django_filters.BooleanFilter(
         field_name="device_type__is_full_depth",
@@ -1017,24 +937,18 @@ class DeviceFilterSet(
         field_name="interfaces__mac_address",
         label="MAC address",
     )
-    serial = django_filters.CharFilter(lookup_expr="iexact")
+    serial = MultiValueCharFilter(lookup_expr="iexact")
     has_primary_ip = django_filters.BooleanFilter(
         method="_has_primary_ip",
         label="Has a primary IP",
     )
-    secrets_group_id = django_filters.ModelMultipleChoiceFilter(
-        field_name="secrets_group",
+    secrets_group = NaturalKeyOrPKMultipleChoiceFilter(
         queryset=SecretsGroup.objects.all(),
-        label="Secrets group (ID)",
+        label="Secrets group (slug or ID)",
     )
-    secrets_group = django_filters.ModelMultipleChoiceFilter(
-        field_name="secrets_group__slug",
-        queryset=SecretsGroup.objects.all(),
-        to_field_name="slug",
-        label="Secrets group (slug)",
-    )
-    virtual_chassis_id = django_filters.ModelMultipleChoiceFilter(
-        field_name="virtual_chassis",
+    # TODO: change this filter to NaturalKeyOrPKMultipleChoiceFilter once
+    # https://github.com/nautobot/nautobot/issues/2875 is resolved.
+    virtual_chassis = django_filters.ModelMultipleChoiceFilter(
         queryset=VirtualChassis.objects.all(),
         label="Virtual chassis (ID)",
     )
@@ -1052,45 +966,69 @@ class DeviceFilterSet(
         field_name="consoleports",
         label="Has console ports",
     )
-    console_ports = has_console_ports
+    console_ports = django_filters.ModelMultipleChoiceFilter(
+        field_name="consoleports",
+        queryset=ConsolePort.objects.all(),
+        label="Console Ports",
+    )
     has_console_server_ports = RelatedMembershipBooleanFilter(
         field_name="consoleserverports",
         label="Has console server ports",
     )
-    console_server_ports = has_console_server_ports
+    console_server_ports = django_filters.ModelMultipleChoiceFilter(
+        queryset=ConsoleServerPort.objects.all(),
+        field_name="consoleserverports",
+        label="Console Server Ports",
+    )
     has_power_ports = RelatedMembershipBooleanFilter(
         field_name="powerports",
         label="Has power ports",
     )
-    power_ports = has_power_ports
+    power_ports = django_filters.ModelMultipleChoiceFilter(
+        queryset=PowerPort.objects.all(),
+        field_name="powerports",
+        label="Power Ports",
+    )
     has_power_outlets = RelatedMembershipBooleanFilter(
         field_name="poweroutlets",
         label="Has power outlets",
     )
-    power_outlets = has_power_outlets
+    power_outlets = django_filters.ModelMultipleChoiceFilter(
+        queryset=PowerOutlet.objects.all(),
+        field_name="poweroutlets",
+        label="Power Outlets",
+    )
     has_interfaces = RelatedMembershipBooleanFilter(
         field_name="interfaces",
         label="Has interfaces",
-    )
-    interfaces = has_interfaces
-    pass_through_ports = django_filters.BooleanFilter(
-        method="_pass_through_ports",
-        label="Has pass-through ports",
     )
     has_front_ports = RelatedMembershipBooleanFilter(
         field_name="frontports",
         label="Has front ports",
     )
+    front_ports = django_filters.ModelMultipleChoiceFilter(
+        queryset=FrontPort.objects.all(),
+        field_name="frontports",
+        label="Front Port",
+    )
     has_rear_ports = RelatedMembershipBooleanFilter(
         field_name="rearports",
         label="Has rear ports",
+    )
+    rear_ports = django_filters.ModelMultipleChoiceFilter(
+        queryset=RearPort.objects.all(),
+        field_name="rearports",
+        label="Rear Port",
     )
     has_device_bays = RelatedMembershipBooleanFilter(
         field_name="devicebays",
         label="Has device bays",
     )
-    device_bays = has_device_bays
-    tag = TagFilter()
+    device_bays = django_filters.ModelMultipleChoiceFilter(
+        queryset=DeviceBay.objects.all(),
+        field_name="devicebays",
+        label="Device Bays",
+    )
 
     class Meta:
         model = Device
@@ -1103,6 +1041,8 @@ class DeviceFilterSet(
             "vc_position",
             "vc_priority",
             "device_redundancy_group_priority",
+            "tags",
+            "interfaces",
         ]
 
     def generate_query__has_primary_ip(self, value):
@@ -1113,17 +1053,6 @@ class DeviceFilterSet(
 
     def _has_primary_ip(self, queryset, name, value):
         params = self.generate_query__has_primary_ip(value)
-        return queryset.filter(params)
-
-    # 2.0 TODO: Remove me and `pass_through_ports` in exchange for `has_(front|rear)_ports`.
-    def generate_query__pass_through_ports(self, value):
-        query = Q(frontports__isnull=False, rearports__isnull=False)
-        if not value:
-            return ~query
-        return query
-
-    def _pass_through_ports(self, queryset, name, value):
-        params = self.generate_query__pass_through_ports(value)
         return queryset.filter(params)
 
 
@@ -1146,23 +1075,19 @@ class DeviceComponentFilterSet(CustomFieldModelFilterSet):
         queryset=Site.objects.all(),
         label="Site (slug or ID)",
     )
-    device_id = django_filters.ModelMultipleChoiceFilter(
+    # TODO: change this filter to NaturalKeyOrPKMultipleChoiceFilter once
+    # https://github.com/nautobot/nautobot/issues/2875 is resolved.
+    device = django_filters.ModelMultipleChoiceFilter(
         queryset=Device.objects.all(),
         label="Device (ID)",
     )
-    device = django_filters.ModelMultipleChoiceFilter(
-        field_name="device__name",
-        queryset=Device.objects.all(),
-        to_field_name="name",
-        label="Device (name)",
-    )
-    tag = TagFilter()
 
 
 # TODO: should be CableTerminationFilterSetMixin
 class CableTerminationFilterSet(django_filters.FilterSet):
-    cabled = django_filters.BooleanFilter(field_name="cable", lookup_expr="isnull", exclude=True)
-    cable = django_filters.ModelMultipleChoiceFilter(
+    has_cable = django_filters.BooleanFilter(field_name="cable", lookup_expr="isnull", exclude=True)
+    cable = NaturalKeyOrPKMultipleChoiceFilter(
+        to_field_name="id",
         queryset=Cable.objects.all(),
         label="Cable",
     )
@@ -1189,7 +1114,7 @@ class ConsolePortFilterSet(
 
     class Meta:
         model = ConsolePort
-        fields = ["id", "name", "description", "label"]
+        fields = ["id", "name", "description", "label", "tags"]
 
 
 class ConsoleServerPortFilterSet(
@@ -1202,7 +1127,7 @@ class ConsoleServerPortFilterSet(
 
     class Meta:
         model = ConsoleServerPort
-        fields = ["id", "name", "description", "label"]
+        fields = ["id", "name", "description", "label", "tags"]
 
 
 class PowerPortFilterSet(
@@ -1226,7 +1151,7 @@ class PowerPortFilterSet(
 
     class Meta:
         model = PowerPort
-        fields = ["id", "name", "maximum_draw", "allocated_draw", "description", "label"]
+        fields = ["id", "name", "maximum_draw", "allocated_draw", "description", "label", "tags"]
 
 
 class PowerOutletFilterSet(
@@ -1244,7 +1169,7 @@ class PowerOutletFilterSet(
 
     class Meta:
         model = PowerOutlet
-        fields = ["id", "name", "feed_leg", "description", "label"]
+        fields = ["id", "name", "feed_leg", "description", "label", "tags"]
 
 
 class InterfaceFilterSet(
@@ -1289,7 +1214,7 @@ class InterfaceFilterSet(
     )
     # TODO: change this filter to NaturalKeyOrPKMultipleChoiceFilter once
     # https://github.com/nautobot/nautobot/issues/2875 is resolved.
-    lag_id = django_filters.ModelMultipleChoiceFilter(
+    lag = django_filters.ModelMultipleChoiceFilter(
         field_name="lag",
         queryset=Interface.objects.filter(type=InterfaceTypeChoices.TYPE_LAG),
         label="LAG interface (ID)",
@@ -1339,7 +1264,6 @@ class InterfaceFilterSet(
         label="Has member interfaces",
     )
     mac_address = MultiValueMACAddressFilter()
-    tag = TagFilter()
     vlan_id = django_filters.CharFilter(method="filter_vlan_id", label="Assigned VLAN")
     vlan = django_filters.NumberFilter(method="filter_vlan", label="Assigned VID")
     type = django_filters.MultipleChoiceFilter(choices=InterfaceTypeChoices, null_value=None)
@@ -1356,6 +1280,7 @@ class InterfaceFilterSet(
             "mode",
             "description",
             "label",
+            "tags",
         ]
 
     def filter_device(self, queryset, name, value):
@@ -1419,7 +1344,7 @@ class FrontPortFilterSet(BaseFilterSet, DeviceComponentFilterSet, CableTerminati
 
     class Meta:
         model = FrontPort
-        fields = ["id", "name", "type", "description", "label", "rear_port_position"]
+        fields = ["id", "name", "type", "description", "label", "rear_port_position", "tags"]
 
 
 class RearPortFilterSet(BaseFilterSet, DeviceComponentFilterSet, CableTerminationFilterSet):
@@ -1435,20 +1360,21 @@ class RearPortFilterSet(BaseFilterSet, DeviceComponentFilterSet, CableTerminatio
 
     class Meta:
         model = RearPort
-        fields = ["id", "name", "type", "positions", "description", "label"]
+        fields = ["id", "name", "type", "positions", "description", "label", "tags"]
 
 
 class DeviceBayFilterSet(BaseFilterSet, DeviceComponentFilterSet):
-    installed_device = NaturalKeyOrPKMultipleChoiceFilter(
+    # TODO: change this filter to NaturalKeyOrPKMultipleChoiceFilter once
+    # https://github.com/nautobot/nautobot/issues/2875 is resolved.
+    installed_device = django_filters.ModelMultipleChoiceFilter(
         field_name="installed_device",
-        to_field_name="name",
         queryset=Device.objects.all(),
-        label="Installed device (name or ID)",
+        label="Installed device (ID)",
     )
 
     class Meta:
         model = DeviceBay
-        fields = ["id", "name", "description", "label"]
+        fields = ["id", "name", "description", "label", "tags"]
 
 
 class InventoryItemFilterSet(BaseFilterSet, DeviceComponentFilterSet):
@@ -1477,30 +1403,21 @@ class InventoryItemFilterSet(BaseFilterSet, DeviceComponentFilterSet):
         queryset=Site.objects.all(),
         label="Site (slug or ID)",
     )
-    device_id = django_filters.ModelChoiceFilter(
+    # TODO: change this filter to NaturalKeyOrPKMultipleChoiceFilter once
+    # https://github.com/nautobot/nautobot/issues/2875 is resolved.
+    device = django_filters.ModelMultipleChoiceFilter(
         queryset=Device.objects.all(),
         label="Device (ID)",
     )
-    device = django_filters.ModelChoiceFilter(
-        queryset=Device.objects.all(),
-        to_field_name="name",
-        label="Device (name)",
-    )
     # TODO: change this filter to NaturalKeyOrPKMultipleChoiceFilter once
     # https://github.com/nautobot/nautobot/issues/2875 is resolved.
-    parent_id = django_filters.ModelMultipleChoiceFilter(
+    parent = django_filters.ModelMultipleChoiceFilter(
         queryset=InventoryItem.objects.all(),
         label="Parent inventory item (ID)",
     )
-    manufacturer_id = django_filters.ModelMultipleChoiceFilter(
+    manufacturer = NaturalKeyOrPKMultipleChoiceFilter(
         queryset=Manufacturer.objects.all(),
-        label="Manufacturer (ID)",
-    )
-    manufacturer = django_filters.ModelMultipleChoiceFilter(
-        field_name="manufacturer__slug",
-        queryset=Manufacturer.objects.all(),
-        to_field_name="slug",
-        label="Manufacturer (slug)",
+        label="Manufacturer (slug or ID)",
     )
     # TODO: change this filter to NaturalKeyOrPKMultipleChoiceFilter once
     # https://github.com/nautobot/nautobot/issues/2875 is resolved.
@@ -1512,11 +1429,11 @@ class InventoryItemFilterSet(BaseFilterSet, DeviceComponentFilterSet):
         field_name="child_items",
         label="Has child items",
     )
-    serial = django_filters.CharFilter(lookup_expr="iexact")
+    serial = MultiValueCharFilter(lookup_expr="iexact")
 
     class Meta:
         model = InventoryItem
-        fields = ["id", "name", "part_id", "asset_tag", "discovered", "description", "label"]
+        fields = ["id", "name", "part_id", "asset_tag", "discovered", "description", "label", "tags"]
 
 
 class VirtualChassisFilterSet(NautobotFilterSet):
@@ -1527,15 +1444,11 @@ class VirtualChassisFilterSet(NautobotFilterSet):
             "domain": "icontains",
         },
     )
-    master_id = django_filters.ModelMultipleChoiceFilter(
+    # TODO: change this filter to NaturalKeyOrPKMultipleChoiceFilter once
+    # https://github.com/nautobot/nautobot/issues/2875 is resolved.
+    master = django_filters.ModelMultipleChoiceFilter(
         queryset=Device.objects.all(),
         label="Master (ID)",
-    )
-    master = django_filters.ModelMultipleChoiceFilter(
-        field_name="master__name",
-        queryset=Device.objects.all(),
-        to_field_name="name",
-        label="Master (name)",
     )
     region = TreeNodeMultipleChoiceFilter(
         queryset=Region.objects.all(),
@@ -1547,31 +1460,25 @@ class VirtualChassisFilterSet(NautobotFilterSet):
         queryset=Site.objects.all(),
         label="Site (slug or ID)",
     )
-    tenant_id = django_filters.ModelMultipleChoiceFilter(
+    tenant = NaturalKeyOrPKMultipleChoiceFilter(
         field_name="master__tenant",
         queryset=Tenant.objects.all(),
-        label="Tenant (ID)",
+        label="Tenant (slug or ID)",
     )
-    tenant = django_filters.ModelMultipleChoiceFilter(
-        field_name="master__tenant__slug",
-        queryset=Tenant.objects.all(),
-        to_field_name="slug",
-        label="Tenant (slug)",
-    )
-    members = NaturalKeyOrPKMultipleChoiceFilter(
-        to_field_name="name",
+    # TODO: change this filter to NaturalKeyOrPKMultipleChoiceFilter once
+    # https://github.com/nautobot/nautobot/issues/2875 is resolved.
+    members = django_filters.ModelMultipleChoiceFilter(
         queryset=Device.objects.all(),
-        label="Device members (name or ID)",
+        label="Device members (ID)",
     )
     has_members = RelatedMembershipBooleanFilter(
         field_name="members",
         label="Has device members",
     )
-    tag = TagFilter()
 
     class Meta:
         model = VirtualChassis
-        fields = ["id", "domain", "name"]
+        fields = ["id", "domain", "name", "tags"]
 
 
 class CableFilterSet(NautobotFilterSet, StatusModelFilterSetMixin):
@@ -1598,7 +1505,6 @@ class CableFilterSet(NautobotFilterSet, StatusModelFilterSetMixin):
         choices=FeatureQuery("cable_terminations").get_choices,
         conjoined=False,
     )
-    tag = TagFilter()
 
     class Meta:
         model = Cable
@@ -1609,6 +1515,7 @@ class CableFilterSet(NautobotFilterSet, StatusModelFilterSetMixin):
             "length_unit",
             "termination_a_id",
             "termination_b_id",
+            "tags",
         ]
 
     def filter_device(self, queryset, name, value):
@@ -1672,11 +1579,6 @@ class InterfaceConnectionFilterSet(ConnectionFilterSet, BaseFilterSet):
 
 class PowerPanelFilterSet(NautobotFilterSet, LocatableModelFilterSetMixin):
     q = SearchFilter(filter_predicates={"name": "icontains"})
-    rack_group_id = TreeNodeMultipleChoiceFilter(
-        queryset=RackGroup.objects.all(),
-        field_name="rack_group",
-        label="Rack group (ID)",
-    )
     rack_group = TreeNodeMultipleChoiceFilter(
         queryset=RackGroup.objects.all(),
         label="Rack group (slug or ID)",
@@ -1692,11 +1594,10 @@ class PowerPanelFilterSet(NautobotFilterSet, LocatableModelFilterSetMixin):
         field_name="powerfeeds",
         label="Has power feeds",
     )
-    tag = TagFilter()
 
     class Meta:
         model = PowerPanel
-        fields = ["id", "name"]
+        fields = ["id", "name", "tags"]
 
 
 class PowerFeedFilterSet(
@@ -1713,28 +1614,19 @@ class PowerFeedFilterSet(
         queryset=Site.objects.all(),
         label="Site (slug or ID)",
     )
-    power_panel_id = django_filters.ModelMultipleChoiceFilter(
-        queryset=PowerPanel.objects.all(),
-        label="Power panel (ID)",
-    )
     # TODO: change this filter to NaturalKeyOrPKMultipleChoiceFilter once
     # https://github.com/nautobot/nautobot/issues/2875 is resolved.
     power_panel = django_filters.ModelMultipleChoiceFilter(
         queryset=PowerPanel.objects.all(),
         label="Power panel (ID)",
     )
-    rack_id = django_filters.ModelMultipleChoiceFilter(
+    # TODO: change this filter to NaturalKeyOrPKMultipleChoiceFilter once
+    # https://github.com/nautobot/nautobot/issues/2875 is resolved.
+    rack = django_filters.ModelMultipleChoiceFilter(
         field_name="rack",
         queryset=Rack.objects.all(),
         label="Rack (ID)",
     )
-    # TODO: change this filter to NaturalKeyOrPKMultipleChoiceFilter once
-    # https://github.com/nautobot/nautobot/issues/2875 is resolved.
-    rack = django_filters.ModelMultipleChoiceFilter(
-        queryset=Rack.objects.all(),
-        label="Rack (ID)",
-    )
-    tag = TagFilter()
 
     class Meta:
         model = PowerFeed
@@ -1750,12 +1642,12 @@ class PowerFeedFilterSet(
             "max_utilization",
             "comments",
             "available_power",
+            "tags",
         ]
 
 
 class DeviceRedundancyGroupFilterSet(NautobotFilterSet, StatusModelFilterSetMixin, NameSlugSearchFilterSet):
     q = SearchFilter(filter_predicates={"name": "icontains", "comments": "icontains"})
-    tag = TagFilter()
     secrets_group = NaturalKeyOrPKMultipleChoiceFilter(
         field_name="secrets_group",
         queryset=SecretsGroup.objects.all(),
@@ -1765,4 +1657,4 @@ class DeviceRedundancyGroupFilterSet(NautobotFilterSet, StatusModelFilterSetMixi
 
     class Meta:
         model = DeviceRedundancyGroup
-        fields = ["id", "name", "slug", "failover_strategy"]
+        fields = ["id", "name", "slug", "failover_strategy", "tags"]

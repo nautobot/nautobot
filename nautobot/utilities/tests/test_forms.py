@@ -727,7 +727,7 @@ class DynamicFilterFormTest(TestCase):
                     ("shipping_address", "Shipping address"),
                     ("slug", "Slug"),
                     ("status", "Status"),
-                    ("tag", "Tags slug"),
+                    ("tags", "Tags"),
                     ("tenant", "Tenant (slug or ID)"),
                     ("tenant_group", "Tenant Group (slug)"),
                     ("tenant_group_id", "Tenant Group (ID)"),

@@ -482,6 +482,11 @@ class DynamicGroup(OrganizationalModel):
             field_name = f"{field_name}__{to_field_name}"
 
         lookup = f"{field_name}__{filter_field.lookup_expr}"
+        # has_{field_name} boolean filters uses `isnull` lookup expressions
+        # so when we generate queries for those filters we need to negate the value entered
+        # e.g (has_interfaces: True) == (interfaces__isnull: False)
+        if filter_field.lookup_expr == "isnull":
+            value = not value
 
         # Explicitly call generate_query_{filter_method} for a method filter.
         if filter_field.method is not None and hasattr(filter_field.parent, "generate_query_" + filter_field.method):

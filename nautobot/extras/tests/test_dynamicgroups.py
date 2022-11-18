@@ -224,7 +224,7 @@ class DynamicGroupModelTest(DynamicGroupTestBase):
         old_filter = group.filter
 
         # Overload the filter and validate that it is the same afterward.
-        new_filter = {"interfaces": True}
+        new_filter = {"has_interfaces": True}
         group.set_filter(new_filter)
         group.validated_save()
         self.assertEqual(group.filter, new_filter)
@@ -454,8 +454,6 @@ class DynamicGroupModelTest(DynamicGroupTestBase):
         self.assertTrue(hasattr(filterset, filter_field.method))
         self.assertTrue(hasattr(filterset, "generate_query_" + filter_field.method))
 
-    # 2.0 TODO(jathan): This is done using `DeviceFilterSet.pass_through_ports` at this time and
-    # should be revised as filter fields are vetted.
     def test_filter_method_generate_query(self):
         """
         Test that a filter with a filter method's corresponding `generate_query_{filter_method}` works as intended.
@@ -471,7 +469,7 @@ class DynamicGroupModelTest(DynamicGroupTestBase):
 
         # Test that the filter returns the one device to which we added front/rear ports.
         expected = ["device-site-1"]
-        filterset = group.filterset_class({"pass_through_ports": True}, Device.objects.all())
+        filterset = group.filterset_class({"has_front_ports": True, "has_rear_ports": True}, Device.objects.all())
         devices = list(filterset.qs.values_list("name", flat=True))
         self.assertEqual(expected, devices)
 
@@ -552,7 +550,7 @@ class DynamicGroupModelTest(DynamicGroupTestBase):
         self.assertEqual(group.filter, old_filter)
 
         # Now we'll do it using a manually crafted dict.
-        new_filter = {"interfaces": True}
+        new_filter = {"has_interfaces": True}
         group.set_filter(new_filter)
         self.assertEqual(group.filter, new_filter)
 
@@ -621,13 +619,12 @@ class DynamicGroupModelTest(DynamicGroupTestBase):
         self.assertQuerySetEqual(group_qs, device_qs)
 
         # Now do a non-multi-value filter.
-        # TODO(jathan): If we ever make "serial" a multi-value filter, this will need to be revised.
-        solo_field = fs.filters["serial"]
-        solo_value = "abc123"
+        solo_field = fs.filters["has_interfaces"]
+        solo_value = False
         solo_query = group.generate_query_for_filter(filter_field=solo_field, value=solo_value)
         solo_qs = queryset.filter(solo_query)
-        serial_qs = Device.objects.filter(serial__iexact=solo_value)
-        self.assertQuerySetEqual(solo_qs, serial_qs)
+        interface_qs = Device.objects.filter(interfaces__isnull=True)
+        self.assertQuerySetEqual(solo_qs, interface_qs)
 
     def test_generate_query_for_group(self):
         """Test `DynamicGroup.generate_query_for_group()`."""
