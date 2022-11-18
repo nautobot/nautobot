@@ -12,6 +12,7 @@ from graphql import GraphQLError
 from rest_framework import status
 from rest_framework.decorators import action
 from rest_framework.exceptions import MethodNotAllowed, PermissionDenied, ValidationError
+from rest_framework.parsers import JSONParser, MultiPartParser
 from rest_framework.response import Response
 from rest_framework.routers import APIRootView
 from rest_framework import mixins, viewsets
@@ -817,12 +818,16 @@ class JobViewSet(
         methods=["post"],
         request={
             "application/json": serializers.JobInputSerializer,
-            "application/x-www-form-urlencoded": serializers.JobInputSerializer,
             "multipart/form-data": serializers.JobMultiPartInputSerializer,
         },
         responses={"201": serializers.JobRunResponseSerializer},
     )
-    @action(detail=True, methods=["post"], permission_classes=[JobRunTokenPermissions])
+    @action(
+        detail=True,
+        methods=["post"],
+        permission_classes=[JobRunTokenPermissions],
+        parser_classes=[JSONParser, MultiPartParser],
+    )
     def run(self, request, *args, pk, **kwargs):
         """Run the specified Job."""
         job_model = self.get_object()
@@ -841,6 +846,7 @@ class JobViewSet(
         permission_classes=[JobRunTokenPermissions],
         url_path="(?P<class_path>[^/]+/[^/]+/[^/]+)/run",  # /api/extras/jobs/<class_path>/run/
         url_name="run",
+        parser_classes=[JSONParser, MultiPartParser],
     )
     def run_deprecated(self, request, class_path):
         """
