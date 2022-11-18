@@ -201,7 +201,7 @@ class NautobotImports:
                     imported_name.package_name = containing_module
                     imported_name.set_name(name)
                     # keep track of these ones for regex replacement later
-                    re_old = re.escape(old_name) + r"(,|\s|$|\(|\))"
+                    re_old = re.escape(old_name) + r"(,|\s|$|\(|\)|\.|:|\]|\[)"
                     self.replacements.append((re.compile(re_old), f"{name}.{old_name}" + r"\1"))
 
         # deduplicate imports
