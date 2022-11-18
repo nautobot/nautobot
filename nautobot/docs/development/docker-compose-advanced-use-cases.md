@@ -166,90 +166,36 @@ $ docker-compose -f docker-compose.yml -f docker-compose.debug.yml up
 - Click on `development_nautobot_1` to use VS Code inside the container. The `devcontainer` will startup now.
 - As a last step open the folder `/opt/nautobot` in VS Code.
 
-## VS Code Remote Debugging Configuration
+### Remote Debugging Configuration
 
 Using the Remote-Attach functionality of VS Code debugger is an alternative to debugging in a development container. This allows a local VS Code instance to connect to a remote container and debug the code running in the container the same way as when debugging locally.
 
 Follow the steps below to configure VS Code to debug Nautobot and Celery Worker running in a remote container:
 
-1. **Install the Remote Development module in container**
-  
-    In `docker/Dockerfile` in section `FROM dependencies as dependencies-dev-python` add the following line `RUN  pip install --no-cache-dir --upgrade debugpy -t /tmp` to install the `debugpy` python module.
+1. **Configure `invoke.yml` to use the `docker-compose.vscode-rdb.yml` file**
 
-    ```Dockerfile
-    ################################ Stage: dependencies-dev-python (intermediate build target)
-    # We need dev dependencies for building the docs but don't want them in the final build image
-    # We install more dependencies here and can copy where needed
-    # Improves caching as well when these dependencies don't change
+    This overrides the container settings without touching the original `docker-compose.yml` file.
 
-    FROM dependencies as dependencies-dev-python
+    Your `invoke.yml` file should look something like this:
 
-    # Add development-specific dependencies of Nautobot to the installation
-    # Poetry 1.2.0 leaves files in /tmp after doing an install
-    # https://github.com/python-poetry/poetry/issues/6425
-    RUN --mount=type=cache,target="/root/.cache/pip" \
-        --mount=type=cache,target="/root/.cache/pypoetry" \
-        poetry install --no-root --no-ansi --extras all && \
-        rm -rf /tmp/tmp*
-
-    # Add vscode remote debug support
-    RUN  pip install --no-cache-dir --upgrade debugpy  -t /tmp
+    ```yaml
+    ---
+    nautobot:
+      compose_files:
+        - "docker-compose.yml"
+        - "docker-compose.postgres.yml"
+        - "docker-compose.dev.yml"
+        - "docker-compose.vscode-rdb.yml"
     ```
 
-2. **Configure `invoke.yml` to use the `docker-compose.override.yml` file**
-
-    This allows to modify container settings without touching the original `docker-compose.yml` file.
-
-    Copy the file `invoke.yml.example` to `invoke.yml` and configure at least the `compose_dir` according your project location.
+    If you already have a custom `invoke.yml` file, append `docker-compose.vscode-rdb.yml` to the end of the `compose_files` list.
 
     See the [docker compose override](#docker-compose-overrides) documentation for more details.
 
-3. **Configure `docker-compose.override.yml`**
-
-    It is important not to use the same listen port for the `nautobot` and `celery_worker` services.
-
-    Unlike the current `celery_worker` the container will not automatically restart on source changes.
-    But it is possible to restart the container from the VS Code Docker extension.
-
-    ```yaml
-    # We can't remove volumes in a compose override, for the test configuration using the final containers
-    # we don't want the volumes so this is the default override file to add the volumes in the dev case
-    # any override will need to include these volumes to use them.
-    # see:  https://github.com/docker/compose/issues/3729
-    ---
-      version: "3"
-      services:
-        nautobot:
-          command: python /tmp/debugpy --listen 0.0.0.0:6899 -m manage runserver 0.0.0.0:8080 --insecure
-          ports:
-            - "8080:8080"
-            - "6899:6899"
-          volumes:
-            - ./nautobot_config.py:/opt/nautobot/nautobot_config.py
-            - ../:/source
-        celery_worker:
-          entrypoint: python /tmp/debugpy --listen 0.0.0.0:6898 -m manage celery worker -l DEBUG --pool=solo --events
-          ports:
-            - "6898:6898"
-          volumes:
-            - ./nautobot_config.py:/opt/nautobot/nautobot_config.py
-            - ../:/source
-        celery_beat:
-          volumes:
-            - ./nautobot_config.py:/opt/nautobot/nautobot_config.py
-            - ../:/source
-    ```
-
-4. **Rebuild the container**
-
-    ```bash
-    $ invoke build [--no-cache]
-    ```
-
-5. **VS Code debug configuration**
+2. **VS Code debug configuration**
 
     If you have opened the workspace file `nautobot.code-workspace` then there are two debug
-    configurations for remote debugging instantaniously available.
+    configurations for remote debugging already available.
 
     If you add nautobot to an existing VS Code workspace (Menu: _File > Add Folder to Workspace..._)
     then copy the `launch:` values to the `.vscode/launch.json` file.
