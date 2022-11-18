@@ -568,7 +568,7 @@ def _run_job(request, job_model, legacy_response=False):
 
         # Assign the key from the validated_data output to dictionary without prefixed "_schedule_"
         # For all the keys that are schedule keys
-        # Assign only if they key is in the output since we don't want None's if not provided
+        # Assign only if the key is in the output since we don't want None's if not provided
         if any(schedule_key in non_job_keys for schedule_key in schedule_keys):
             schedule_data = {
                 k.replace("_schedule_", ""): input_serializer.validated_data[k]
