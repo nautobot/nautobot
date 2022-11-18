@@ -48,7 +48,7 @@ class ImportedName:
     def __str__(self):
         if self.name == TopLevelImport:
             return f"import {self.package_name}"
-        return f"from {self.package_name} import {self.name}"
+        return f"from {self.package_name} import {self.name_str}"
 
     def __repr__(self):
         return str(self)
@@ -114,16 +114,22 @@ class NautobotImports:
             cur_line = []
             for imported_name in sorted(self.imports[category]):
                 if cur_line and imported_name.package_name != cur_line[0].package_name:
-                    names = ", ".join([n.name_str for n in cur_line])
-                    output += f"from {cur_line[0].package_name} import {names}\n"
+                    names = ", ".join([n.name_str for n in cur_line if not n.alias])
+                    if names:
+                        output += f"from {cur_line[0].package_name} import {names}\n"
+                    for name in [n for n in cur_line if n.alias]:
+                        output += f"from {name.package_name} import {name.name_str}\n"
                     cur_line = []
                 if imported_name.name == TopLevelImport:
                     output += f"import {imported_name.package_name}\n"
                 else:
                     cur_line.append(imported_name)
             if cur_line:
-                names = ", ".join([n.name_str for n in cur_line])
-                output += f"from {cur_line[0].package_name} import {names}\n"
+                names = ", ".join([n.name_str for n in cur_line if not n.alias])
+                if names:
+                    output += f"from {cur_line[0].package_name} import {names}\n"
+                for name in [n for n in cur_line if n.alias]:
+                    output += f"from {name.package_name} import {name.name_str}\n"
             if self.imports[category]:
                 output += "\n"
         return output
@@ -187,7 +193,7 @@ class NautobotImports:
 
             if imported_name.name != TopLevelImport and imported_name.package_name.startswith("nautobot"):
                 package_path = imported_name.package_name[9:].replace(".", "/")
-                path = f"{self.nautobot_base}/{package_path}/{imported_name.name}"
+                path = f"{self.nautobot_base}/{package_path}/{imported_name._name}"
                 if not (os.path.exists(f"{path}.py") or os.path.exists(f"{path}/__init__.py")):
                     old_name = imported_name.name
                     containing_module = ".".join(imported_name.package_name.split(".")[:-1])
