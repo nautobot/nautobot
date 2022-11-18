@@ -123,7 +123,7 @@ Pillow = "~9.3.0"
 # NOTE: psycopg3 is avaiable now and nominally replaces psycopg2
 psycopg2-binary = "~2.9.5"
 # Cryptographic library
-pycryptodome = "~3.13.0"
+pycryptodome = "~3.15.0"
 # The uWSGI WSGI HTTP server as a Python module
 pyuwsgi = "~2.0.21"
 # YAML parsing and rendering
