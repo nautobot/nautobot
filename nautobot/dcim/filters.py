@@ -778,6 +778,8 @@ class PowerPortTemplateFilterSet(BaseFilterSet, DeviceTypeComponentFilterSet):
 
 
 class PowerOutletTemplateFilterSet(BaseFilterSet, DeviceTypeComponentFilterSet):
+    # TODO: change this filter to NaturalKeyOrPKMultipleChoiceFilter once
+    # https://github.com/nautobot/nautobot/issues/2875 is resolved.
     power_port_template = django_filters.ModelMultipleChoiceFilter(
         field_name="power_port",
         queryset=PowerPortTemplate.objects.all(),

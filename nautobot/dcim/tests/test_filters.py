@@ -4883,15 +4883,6 @@ class PowerFeedTestCase(FilterTestCases.FilterTestCase):
             params = {"site": [sites[0].slug, sites[1].slug]}
             self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
 
-    def test_rack(self):
-        racks = Rack.objects.all()[:2]
-        with self.subTest():
-            params = {"rack": [racks[0].pk, racks[1].pk]}
-            self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
-        with self.subTest():
-            params = {"rack": [racks[0].pk, racks[1].name]}
-            self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
-
     def test_has_cable(self):
         with self.subTest():
             params = {"has_cable": True}
