@@ -1,1 +1,1 @@
-Changed nautobot.utilities.utils.is_single_choice_field to check if field is an instance MultipleChoiceFilter.
+Fixed incorrect logic in `nautobot.utilities.utils.is_single_choice_field` that was causing valid filters to report as invalid.
