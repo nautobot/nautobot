@@ -37,8 +37,8 @@ class BasePropertiesModel(BaseModel, ChangeLoggedModel, CustomFieldModel, Relati
         to=ContentType,
         help_text="The content type(s) to which this model applies.",
     )
-    name = models.CharField(max_length=50, unique=True)
-    slug = AutoSlugField(populate_from="name", max_length=50)
+    name = models.CharField(max_length=100, unique=True)
+    slug = AutoSlugField(populate_from="name", max_length=100)
     color = ColorField(default=ColorChoices.COLOR_GREY)
     description = models.CharField(
         max_length=200,
