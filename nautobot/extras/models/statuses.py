@@ -58,7 +58,7 @@ class StatusField(SetFieldColorAndDisplayMixin, ForeignKeyLimitedByContentTypes)
 
     def set_defaults(self, **kwargs):
         kwargs.setdefault("to", Status)
-        return kwargs
+        return super().set_defaults(**kwargs)
 
 
 class StatusModel(models.Model):
