@@ -1,7 +1,7 @@
 from django.contrib.contenttypes.models import ContentType
 from django.db import models
 
-from nautobot.extras.fields import LimitedChoiceField
+from nautobot.extras.fields import ForeignKeyLimitedByContentTypes
 from nautobot.extras.models.base_properties import BasePropertiesModel
 from nautobot.extras.utils import extras_features, FeatureQuery
 from nautobot.utilities.querysets import RestrictedQuerySet
@@ -46,7 +46,7 @@ class Status(BasePropertiesModel):
         verbose_name_plural = "statuses"
 
 
-class StatusField(LimitedChoiceField):
+class StatusField(ForeignKeyLimitedByContentTypes):
     """
     Model database field that automatically limits custom choices.
 

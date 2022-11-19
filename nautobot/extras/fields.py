@@ -8,12 +8,18 @@ from django.utils.hashable import make_hashable
 from nautobot.utilities.forms import DynamicModelChoiceField
 
 
-class LimitedChoiceField(models.ForeignKey):
+class ForeignKeyLimitedByContentTypes(models.ForeignKey):
     """
-    Abstract model database field that automatically limits custom choices.
+    An abstract model field that automatically restricts ForeignKey options based on content_types.
+
+    For instance, if the model "Role" contains two records: role_1 and role_2, role_1's content_types
+    are set to "dcim.site" and "dcim.device" while the role_2's content_types are set to
+    "circuit.circuit" and "dcim.site."
+
+    If Device Model contains a field role, then role_1 is the only Role that is available,
+    while role_1 & role_2 are the only Roles that are available for Status.
 
     The limit_choices_to for the field are automatically derived from:
-
         - the content-type to which the field is attached (e.g. `dcim.device`)
     """
 
@@ -36,12 +42,12 @@ class LimitedChoiceField(models.ForeignKey):
     def contribute_to_class(self, cls, name, *args, private_only=False, **kwargs):
         """
         Overload default so that we can assert that `.get_FOO_display` is
-        attached to any model that is using a `LimitedChoiceField`.
+        attached to any model that is using a `ForeignKeyLimitedByContentTypes`.
 
         Using `.contribute_to_class()` is how field objects get added to the model
         at during the instance preparation. This is also where any custom model
         methods are hooked in. So in short this method asserts that any time a
-        `LimitedChoiceField` is added to a model, that model also gets a
+        `ForeignKeyLimitedByContentTypes` is added to a model, that model also gets a
         `.get_`self.name`_display()` and a `.get_`self.name`_color()` method without
         having to define it on the model yourself.
         """
@@ -71,7 +77,7 @@ class LimitedChoiceField(models.ForeignKey):
             """
             Return `self.FOO.color` (where FOO is field name).
 
-            I am added to the model via `LimitedChoiceField.contribute_to_class()`.
+            I am added to the model via `ForeignKeyLimitedByContentTypes.contribute_to_class()`.
             """
             field_method = getattr(self, field.name)
             return getattr(field_method, "color")
