@@ -2,6 +2,7 @@ from django.contrib.contenttypes.models import ContentType
 from django.db import models
 
 from nautobot.extras.fields import ForeignKeyLimitedByContentTypes
+from nautobot.extras.mixins import SetFieldColorAndDisplayMixin
 from nautobot.extras.models.base_properties import BasePropertiesModel
 from nautobot.extras.utils import RoleModelsQuery, extras_features
 
@@ -25,7 +26,7 @@ class Role(BasePropertiesModel):
     )
 
 
-class RoleField(ForeignKeyLimitedByContentTypes):
+class RoleField(SetFieldColorAndDisplayMixin, ForeignKeyLimitedByContentTypes):
     """Model database field that automatically limits role choices
     depending on the model implementing it.
     """
