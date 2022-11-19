@@ -16,7 +16,7 @@ from nautobot.dcim.choices import InterfaceModeChoices
 from nautobot.extras.api.serializers import (
     NautobotModelSerializer,
     StatusModelSerializerMixin,
-    TaggedObjectSerializer,
+    TaggedModelSerializerMixin,
 )
 from nautobot.extras.api.nested_serializers import NestedConfigContextSchemaSerializer
 from nautobot.extras.models import Status
@@ -80,7 +80,7 @@ class ClusterGroupSerializer(NautobotModelSerializer):
         ]
 
 
-class ClusterSerializer(NautobotModelSerializer, TaggedObjectSerializer):
+class ClusterSerializer(NautobotModelSerializer, TaggedModelSerializerMixin):
     url = serializers.HyperlinkedIdentityField(view_name="virtualization-api:cluster-detail")
     type = NestedClusterTypeSerializer()
     group = NestedClusterGroupSerializer(required=False, allow_null=True)
@@ -112,7 +112,7 @@ class ClusterSerializer(NautobotModelSerializer, TaggedObjectSerializer):
 #
 
 
-class VirtualMachineSerializer(NautobotModelSerializer, TaggedObjectSerializer, StatusModelSerializerMixin):
+class VirtualMachineSerializer(NautobotModelSerializer, TaggedModelSerializerMixin, StatusModelSerializerMixin):
     url = serializers.HyperlinkedIdentityField(view_name="virtualization-api:virtualmachine-detail")
     site = NestedSiteSerializer(read_only=True)
     location = NestedLocationSerializer(read_only=True, required=False, allow_null=True)
@@ -167,7 +167,7 @@ class VirtualMachineWithConfigContextSerializer(VirtualMachineSerializer):
 #
 
 
-# TODO: collapse this with VMInterfaceSerializer in 2.0.
+# 2.0 TODO: This becomes non-default in 2.0, removed in 2.2.
 class VMInterfaceSerializerVersion12(InterfaceCommonSerializer):
     url = serializers.HyperlinkedIdentityField(view_name="virtualization-api:vminterface-detail")
     virtual_machine = NestedVirtualMachineSerializer()

@@ -16,6 +16,7 @@ env:
 
 jobs:
   unittest:
+    continue-on-error: true
     strategy:
       fail-fast: false
       matrix:
@@ -45,5 +46,4 @@ jobs:
       - name: "Copy credentials"
         run: "cp development/creds.example.env development/creds.env"
       - name: "Run Tests"
-        continue-on-error: true
         run: "INVOKE_${{ inputs.invoke_context_name }}_NAUTOBOT_VER=${{ matrix.nautobot-version }} INVOKE_${{ inputs.invoke_context_name }}_PYTHON_VER=${{ env.PYTHON_VERSION }} poetry run invoke unittest --failfast --keepdb"
