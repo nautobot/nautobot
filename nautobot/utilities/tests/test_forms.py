@@ -700,7 +700,7 @@ class DynamicFilterFormTest(TestCase):
                     ("contact_phone", "Contact phone"),
                     ("created", "Created"),
                     ("description", "Description"),
-                    ("devices", "Devices (name or ID)"),
+                    ("devices", "Devices (ID)"),
                     ("facility", "Facility"),
                     ("has_circuit_terminations", "Has circuit terminations"),
                     ("has_clusters", "Has clusters"),
