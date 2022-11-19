@@ -974,6 +974,7 @@ class PowerPortSerializer(
             "connected_endpoint_reachable",
         ]
 
+
 class InterfaceCommonSerializer(NautobotModelSerializer, TaggedModelSerializerMixin):
     def validate(self, data):
 
