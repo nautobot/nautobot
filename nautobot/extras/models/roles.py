@@ -24,6 +24,7 @@ class Role(BasePropertiesModel):
         limit_choices_to=RoleModelsQuery(),
         help_text="The content type(s) to which this role applies.",
     )
+    weight = models.PositiveSmallIntegerField(null=True, blank=True)
 
 
 class RoleField(SetFieldColorAndDisplayMixin, ForeignKeyLimitedByContentTypes):
