@@ -40,6 +40,7 @@ class BasePropertiesModel(BaseModel, ChangeLoggedModel, CustomFieldModel, Relati
     name = models.CharField(max_length=100, unique=True)
     slug = AutoSlugField(populate_from="name", max_length=100)
     color = ColorField(default=ColorChoices.COLOR_GREY)
+    weight = models.PositiveSmallIntegerField(null=True, blank=True)
     description = models.CharField(
         max_length=200,
         blank=True,
