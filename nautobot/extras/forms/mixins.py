@@ -440,9 +440,7 @@ class RelationshipModelBulkEditFormMixin(BulkEditForm):
             if len(object_list) > 5:
                 self.add_error(None, f"{len(object_list)} {relationship_message}")
             else:
-                self.add_error(
-                    None, mark_safe(f"These {relationship_message}:<ul><li>{'</li><li>'.join(object_list)}</li></ul>")
-                )
+                self.add_error(None, f"These {relationship_message}: {', '.join(object_list)}")
 
         return super().clean()
 

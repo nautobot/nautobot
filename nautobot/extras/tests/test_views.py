@@ -2011,13 +2011,12 @@ class RelationshipTestCase(
             reverse("ipam:vlan_bulk_edit"), data={"pk": [str(vlan.id) for vlan in vlans[:3]], "_apply": [""]}
         )
         self.assertContains(
-            response, 'These VLANs require a device for the required relationship "VLANs require at least one Device":'
+            response,
+            "These VLANs require a device for the required "
+            "relationship &quot;VLANs require at least one Device&quot;",
         )
         for vlan in vlans[:3]:
-            self.assertContains(
-                response,
-                f"<li>{str(vlan)}</li>",
-            )
+            self.assertContains(response, f"{str(vlan)}")
 
         # Try editing 6 VLANs and adding the required device (succeeds):
         response = self.client.post(
