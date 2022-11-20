@@ -2,8 +2,8 @@ from django.contrib.contenttypes.models import ContentType
 from django.db import models
 
 from nautobot.extras.fields import ForeignKeyLimitedByContentTypes
-from nautobot.extras.mixins import SetFieldColorAndDisplayMixin
 from nautobot.extras.models.base_properties import BasePropertiesModel
+from nautobot.extras.models.mixins import SetFieldColorAndDisplayMixin
 from nautobot.extras.utils import extras_features, FeatureQuery
 from nautobot.utilities.querysets import RestrictedQuerySet
 
