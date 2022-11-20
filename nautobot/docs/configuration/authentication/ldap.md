@@ -29,9 +29,6 @@ Activate the Python virtual environment and install the `django-auth-ldap` packa
 
 ```no-highlight
 source /opt/nautobot/bin/activate
-```
-
-```no-highlight
 pip3 install "nautobot[ldap]"
 ```
 

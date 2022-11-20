@@ -322,11 +322,6 @@ Example output:
 Spawning shell within /home/example/.cache/pypoetry/virtualenvs/nautobot-Ams_xyDt-py3.8
 
 . /home/example/.cache/pypoetry/virtualenvs/nautobot-Ams_xyDt-py3.8/bin/activate
-```
-
-Example output:
-
-```no-highlight
 (nautobot-Ams_xyDt-py3.8) $
 ```
 

@@ -95,7 +95,11 @@ String-based (char) fields (Name, Address, etc.) support these lookup expression
 - `ie` - case-insensitive exact match
 - `nie` - negated case-insensitive exact match
 
-+++ 1.3.0 - `re` - case-sensitive regular expression match - `nre` - negated case-sensitive regular expression match - `ire` - case-insensitive regular expression match - `nire` - negated case-insensitive regular expression match
++++ 1.3.0
+    - `re` - case-sensitive regular expression match
+    - `nre` - negated case-sensitive regular expression match
+    - `ire` - case-insensitive regular expression match
+    - `nire` - negated case-insensitive regular expression match
 
 ### Foreign Keys & Other Fields
 

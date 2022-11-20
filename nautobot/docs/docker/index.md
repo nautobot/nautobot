@@ -214,14 +214,11 @@ If you have a [development environment](../development/getting-started.md#settin
 invoke build
 ```
 
-Example output:
-
-````no-highlight
-...
+After some output and a prompt is returned:
 
 ```no-highlight
 docker images
-````
+```
 
 Example output:
 

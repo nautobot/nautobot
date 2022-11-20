@@ -168,10 +168,15 @@ If you are unable to connect to the HTTP server, check that:
 
 If you get a *Static Media Failure; The following static media file failed to load: css/base.css*, verify the permissions on the `$NAUTOBOT_ROOT` directory are `755`.
 
-Example of correct permissions:
+Example of correct permissions (at the `[root@localhost ~]# ` prompt)
 
 ```no-highlight
-[root@localhost ~]# ls -l /opt/
+ls -l /opt/
+```
+
+Example output:
+
+```no-highlight
 total 4
 drwxr-xr-x. 11 nautobot nautobot 4096 Apr  5 11:24 nautobot
 [root@localhost ~]#
