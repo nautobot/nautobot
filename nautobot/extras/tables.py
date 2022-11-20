@@ -37,6 +37,7 @@ from .models import (
     ObjectChange,
     Relationship,
     RelationshipAssociation,
+    Role,
     ScheduledJob,
     Secret,
     SecretsGroup,
@@ -851,6 +852,31 @@ class RelationshipAssociationTable(BaseTable):
         model = RelationshipAssociation
         fields = ("pk", "relationship", "source_type", "source", "destination_type", "destination", "actions")
         default_columns = ("pk", "relationship", "source", "destination", "actions")
+
+
+#
+# Roles
+#
+
+
+class RoleTable(BaseTable):
+    """Table for list view of `Role` objects."""
+
+    pk = ToggleColumn()
+    name = tables.LinkColumn(viewname="extras:roles", args=[Accessor("slug")])
+    color = ColorColumn()
+    actions = ButtonsColumn(Role, pk_field="slug")
+    content_types = ContentTypesColumn(truncate_words=15)
+
+    class Meta(BaseTable.Meta):
+        model = Role
+        fields = ["pk", "name", "slug", "color", "weight", "content_types", "description"]
+
+
+class RoleTableMixin(BaseTable):
+    """Mixin to add a `role` field to a table."""
+
+    role = ColoredLabelColumn()
 
 
 #

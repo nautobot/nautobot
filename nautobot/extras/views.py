@@ -67,6 +67,7 @@ from .models import (
     JobResult,
     Relationship,
     RelationshipAssociation,
+    Role,
     ScheduledJob,
     Secret,
     SecretsGroup,
@@ -1790,6 +1791,65 @@ class RelationshipAssociationBulkDeleteView(generic.BulkDeleteView):
 
 class RelationshipAssociationDeleteView(generic.ObjectDeleteView):
     queryset = RelationshipAssociation.objects.all()
+
+
+#
+# Roles
+#
+
+
+class RoleListView(generic.ObjectListView):
+    """List `Roles` objects."""
+
+    queryset = Role.objects.all()
+    filterset = filters.RoleFilterSet
+    table = tables.RoleTable
+
+
+class RoleEditView(generic.ObjectEditView):
+    """Edit a single `Role` object."""
+
+    queryset = Role.objects.all()
+    model_form = forms.RoleForm
+
+
+class RoleBulkEditView(generic.BulkEditView):
+    """Edit multiple `Role` objects."""
+
+    queryset = Role.objects.all()
+    table = tables.RoleTable
+    form = forms.RoleBulkEditForm
+
+
+class RoleBulkDeleteView(generic.BulkDeleteView):
+    """Delete multiple `Role` objects."""
+
+    queryset = Role.objects.all()
+    table = tables.RoleTable
+
+
+class RoleDeleteView(generic.ObjectDeleteView):
+    """Delete a single `Role` object."""
+
+    queryset = Role.objects.all()
+
+
+class RoleBulkImportView(generic.BulkImportView):
+    """Bulk CSV import of multiple `Role` objects."""
+
+    queryset = Role.objects.all()
+    model_form = forms.RoleCSVForm
+    table = tables.RoleTable
+
+
+class RoleView(generic.ObjectView):
+    """Detail view for a single `Role` object."""
+
+    queryset = Role.objects.all()
+
+    def get_extra_context(self, request, instance):
+        """Return ordered content types."""
+        return {"content_types": instance.content_types.order_by("app_label", "model")}
 
 
 #

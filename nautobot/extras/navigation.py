@@ -7,6 +7,34 @@ menu_items = (
         weight=100,
         groups=(
             NavMenuGroup(
+                name="Roles",
+                weight=500,
+                items=(
+                    NavMenuItem(
+                        link="extras:role_list",
+                        name="Roles",
+                        weight=100,
+                        permissions=[
+                            "extras.view_role",
+                        ],
+                        buttons=(
+                            NavMenuAddButton(
+                                link="extras:role_add",
+                                permissions=[
+                                    "extras.add_role",
+                                ],
+                            ),
+                            NavMenuImportButton(
+                                link="extras:role_import",
+                                permissions=[
+                                    "extras.add_role",
+                                ],
+                            ),
+                        ),
+                    ),
+                ),
+            ),
+            NavMenuGroup(
                 name="Tags",
                 weight=400,
                 items=(
