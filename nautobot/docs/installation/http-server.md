@@ -168,7 +168,7 @@ If you are unable to connect to the HTTP server, check that:
 
 If you get a *Static Media Failure; The following static media file failed to load: css/base.css*, verify the permissions on the `$NAUTOBOT_ROOT` directory are `755`.
 
-Example of correct permissions (at the `[root@localhost ~]# ` prompt)
+Example of correct permissions (at the `[root@localhost ~]#` prompt)
 
 ```no-highlight
 ls -l /opt/
