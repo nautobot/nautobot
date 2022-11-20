@@ -1,8 +1,9 @@
 from django.contrib.contenttypes.models import ContentType
 from django.db import models
 
-from nautobot.extras.fields import LimitedChoiceField
+from nautobot.extras.fields import ForeignKeyLimitedByContentTypes
 from nautobot.extras.models.base_properties import BasePropertiesModel
+from nautobot.extras.models.mixins import SetFieldColorAndDisplayMixin
 from nautobot.extras.utils import extras_features, FeatureQuery
 from nautobot.utilities.querysets import RestrictedQuerySet
 
@@ -46,7 +47,7 @@ class Status(BasePropertiesModel):
         verbose_name_plural = "statuses"
 
 
-class StatusField(LimitedChoiceField):
+class StatusField(SetFieldColorAndDisplayMixin, ForeignKeyLimitedByContentTypes):
     """
     Model database field that automatically limits custom choices.
 
@@ -57,7 +58,7 @@ class StatusField(LimitedChoiceField):
 
     def set_defaults(self, **kwargs):
         kwargs.setdefault("to", Status)
-        return kwargs
+        return super().set_defaults(**kwargs)
 
 
 class StatusModel(models.Model):

@@ -37,8 +37,8 @@ class BasePropertiesModel(BaseModel, ChangeLoggedModel, CustomFieldModel, Relati
         to=ContentType,
         help_text="The content type(s) to which this model applies.",
     )
-    name = models.CharField(max_length=50, unique=True)
-    slug = AutoSlugField(populate_from="name", max_length=50)
+    name = models.CharField(max_length=100, unique=True)
+    slug = AutoSlugField(populate_from="name", max_length=100)
     color = ColorField(default=ColorChoices.COLOR_GREY)
     description = models.CharField(
         max_length=200,
@@ -62,7 +62,7 @@ class BasePropertiesModel(BaseModel, ChangeLoggedModel, CustomFieldModel, Relati
 
     # TODO(timizuo): When view url has been implemented for role; visit this
     def get_absolute_url(self):
-        ct = f"{self._meta.app_name}:{self._meta.model_name}"
+        ct = f"{self._meta.app_label}:{self._meta.model_name}"
         return reverse(ct, args=[self.slug])
 
     def get_label(self):

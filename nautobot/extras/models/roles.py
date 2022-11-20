@@ -1,8 +1,9 @@
 from django.contrib.contenttypes.models import ContentType
 from django.db import models
 
-from nautobot.extras.fields import LimitedChoiceField
+from nautobot.extras.fields import ForeignKeyLimitedByContentTypes
 from nautobot.extras.models.base_properties import BasePropertiesModel
+from nautobot.extras.models.mixins import SetFieldColorAndDisplayMixin
 from nautobot.extras.utils import RoleModelsQuery, extras_features
 
 
@@ -23,9 +24,10 @@ class Role(BasePropertiesModel):
         limit_choices_to=RoleModelsQuery(),
         help_text="The content type(s) to which this role applies.",
     )
+    weight = models.PositiveSmallIntegerField(null=True, blank=True)
 
 
-class RoleField(LimitedChoiceField):
+class RoleField(SetFieldColorAndDisplayMixin, ForeignKeyLimitedByContentTypes):
     """Model database field that automatically limits role choices
     depending on the model implementing it.
     """
