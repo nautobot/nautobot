@@ -1121,6 +1121,38 @@ class RelationshipAssociationFilterSet(BaseFilterSet):
 
 
 #
+# Roles
+#
+
+
+class RoleFilterSet(NautobotFilterSet):
+    """API filter for filtering custom role object fields."""
+
+    q = SearchFilter(
+        filter_predicates={
+            "name": "icontains",
+            "slug": "icontains",
+            "content_types__model": "icontains",
+        },
+    )
+    content_types = ContentTypeMultipleChoiceFilter(
+        choices=RoleModelsQuery().get_choices,
+    )
+
+    class Meta:
+        model = Role
+        fields = [
+            "id",
+            "content_types",
+            "color",
+            "name",
+            "slug",
+            "created",
+            "last_updated",
+        ]
+
+
+#
 # Secrets
 #
 
@@ -1316,36 +1348,4 @@ class WebhookFilterSet(BaseFilterSet):
             "type_create",
             "type_update",
             "type_delete",
-        ]
-
-
-#
-# Roles
-#
-
-
-class RoleFilterSet(NautobotFilterSet):
-    """API filter for filtering custom role object fields."""
-
-    q = SearchFilter(
-        filter_predicates={
-            "name": "icontains",
-            "slug": "icontains",
-            "content_types__model": "icontains",
-        },
-    )
-    content_types = ContentTypeMultipleChoiceFilter(
-        choices=RoleModelsQuery().get_choices,
-    )
-
-    class Meta:
-        model = Role
-        fields = [
-            "id",
-            "content_types",
-            "color",
-            "name",
-            "slug",
-            "created",
-            "last_updated",
         ]
