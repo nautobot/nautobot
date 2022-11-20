@@ -62,7 +62,7 @@ from nautobot.extras.models import (
     Tag,
     Webhook,
 )
-from nautobot.extras.utils import ChangeLoggedModelsQuery, FeatureQuery, TaggableClassesQuery, RoleModelsQuery
+from nautobot.extras.utils import ChangeLoggedModelsQuery, FeatureQuery, RoleModelsQuery, TaggableClassesQuery
 from nautobot.tenancy.api.nested_serializers import (
     NestedTenantSerializer,
     NestedTenantGroupSerializer,
