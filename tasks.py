@@ -595,9 +595,10 @@ def pylint(context, target=None, recursive=False):
 @task
 def docs_local(context):
     """Runs local instance of mkdocs serve (ctrl-c to stop)."""
-    command = "mkdocs serve"
-    context.nautobot.local = True
-    run_command(context, command)
+    if is_truthy(context.nautobot.local):
+        run_command(context, "mkdocs serve")
+    else:
+        start(context, service="mkdocs")
 
 
 @task
