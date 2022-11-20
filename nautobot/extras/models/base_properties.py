@@ -62,7 +62,7 @@ class BasePropertiesModel(BaseModel, ChangeLoggedModel, CustomFieldModel, Relati
 
     # TODO(timizuo): When view url has been implemented for role; visit this
     def get_absolute_url(self):
-        ct = f"{self._meta.app_name}:{self._meta.model_name}"
+        ct = f"{self._meta.app_label}:{self._meta.model_name}"
         return reverse(ct, args=[self.slug])
 
     def get_label(self):
