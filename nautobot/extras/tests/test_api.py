@@ -2666,7 +2666,7 @@ class RelationshipTest(APIViewTestCases.APIViewTestCase, RequiredRelationshipTes
                     "vlans-devices-m2m": [
                         "VLANs require at least one device, but no devices exist yet. "
                         "Create a device by posting to /api/dcim/devices/",
-                        'You need to specify relationships["vlans-devices-m2m"]["source"]["objects"].',
+                        'You need to specify ["relationships"]["vlans-devices-m2m"]["source"]["objects"].',
                     ]
                 }
             },
@@ -2678,7 +2678,7 @@ class RelationshipTest(APIViewTestCases.APIViewTestCase, RequiredRelationshipTes
         required_relationship_json = {"vlans-devices-m2m": {"source": {"objects": [str(device_for_association.id)]}}}
         expected_error_json = {
             "relationships": {
-                "vlans-devices-m2m": ['You need to specify relationships["vlans-devices-m2m"]["source"]["objects"].']
+                "vlans-devices-m2m": ['You need to specify ["relationships"]["vlans-devices-m2m"]["source"]["objects"].']
             }
         }
 

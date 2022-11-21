@@ -316,7 +316,7 @@ class RelationshipModel(models.Model):
                         )
                     elif output_for == "api":
                         field_errors[field_key].append(
-                            f'You need to specify relationships["{relation.slug}"]["{opposite_side}"]["objects"].'
+                            f'You need to specify ["relationships"]["{relation.slug}"]["{opposite_side}"]["objects"].'
                         )
 
             if len(field_errors[field_key]) > 0:

@@ -1099,7 +1099,7 @@ class RequiredRelationshipTestMixin(TestCase):
                     "api": {
                         "objects_nonexistent": "VLANs require at least one device, but no devices exist yet. "
                         "Create a device by posting to /api/dcim/devices/",
-                        "objects_not_specified": 'You need to specify relationships["vlans-devices-m2m"]'
+                        "objects_not_specified": 'You need to specify ["relationships"]["vlans-devices-m2m"]'
                         '["source"]["objects"].',
                     },
                     "ui": {
@@ -1121,7 +1121,7 @@ class RequiredRelationshipTestMixin(TestCase):
                     "api": {
                         "objects_nonexistent": "Platforms require at least one device, but no devices exist yet. "
                         "Create a device by posting to /api/dcim/devices/",
-                        "objects_not_specified": 'You need to specify relationships["platform-devices-o2m"]'
+                        "objects_not_specified": 'You need to specify ["relationships"]["platform-devices-o2m"]'
                         '["destination"]["objects"].',
                     },
                     "ui": {
@@ -1144,7 +1144,7 @@ class RequiredRelationshipTestMixin(TestCase):
                     "api": {
                         "objects_nonexistent": "Circuit types require a platform, but no platforms exist yet. "
                         "Create a platform by posting to /api/dcim/platforms/",
-                        "objects_not_specified": 'You need to specify relationships["circuittype-platform-o2o"]'
+                        "objects_not_specified": 'You need to specify ["relationships"]["circuittype-platform-o2o"]'
                         '["destination"]["objects"].',
                     },
                     "ui": {
