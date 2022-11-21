@@ -236,7 +236,7 @@ class RelationshipModel(models.Model):
         """
 
         required_relationships = Relationship.objects.get_required_for_model(cls)
-        relationships_field_errors = []
+        relationships_field_errors = {}
         for relation in required_relationships:
 
             opposite_side = RelationshipSideChoices.OPPOSITE[relation.required_on]
@@ -320,7 +320,7 @@ class RelationshipModel(models.Model):
                         )
 
             if len(field_errors[field_key]) > 0:
-                relationships_field_errors.append(field_errors)
+                relationships_field_errors[field_key] = field_errors[field_key]
 
         return relationships_field_errors
 

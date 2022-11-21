@@ -2661,24 +2661,26 @@ class RelationshipTest(APIViewTestCases.APIViewTestCase, RequiredRelationshipTes
         )
         self.assertHttpStatus(response, 400)
         self.assertEqual(
-            [
-                {
+            {
+                "relationships": {
                     "vlans-devices-m2m": [
                         "VLANs require at least one device, but no devices exist yet. "
                         "Create a device by posting to /api/dcim/devices/",
                         'You need to specify relationships["vlans-devices-m2m"]["source"]["objects"].',
                     ]
                 }
-            ],
+            },
             response.json(),
         )
 
         # Create test device for association
         device_for_association = test_views.create_test_device("VLAN Required Device")
         required_relationship_json = {"vlans-devices-m2m": {"source": {"objects": [str(device_for_association.id)]}}}
-        expected_error_json = [
-            {"vlans-devices-m2m": ['You need to specify relationships["vlans-devices-m2m"]["source"]["objects"].']}
-        ]
+        expected_error_json = {
+            "relationships": {
+                "vlans-devices-m2m": ['You need to specify relationships["vlans-devices-m2m"]["source"]["objects"].']
+            }
+        }
 
         # Test POST, PATCH and PUT
         for method in ["post", "patch", "put"]:

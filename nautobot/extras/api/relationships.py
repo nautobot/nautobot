@@ -271,7 +271,7 @@ class RelationshipModelSerializerMixin(ValidatedModelSerializer):
             output_for="api", initial_data=relationships_data
         )
         if required_relationships_errors:
-            raise ValidationError(required_relationships_errors)
+            raise ValidationError({"relationships": required_relationships_errors})
         instance = super().create(validated_data)
         if relationships_data:
             try:
@@ -290,7 +290,7 @@ class RelationshipModelSerializerMixin(ValidatedModelSerializer):
             instance=instance,
         )
         if required_relationships_errors:
-            raise ValidationError(required_relationships_errors)
+            raise ValidationError({"relationships": required_relationships_errors})
 
         instance = super().update(instance, validated_data)
         if relationships_data:

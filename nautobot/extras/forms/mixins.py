@@ -350,11 +350,10 @@ class RelationshipModelBulkEditFormMixin(BulkEditForm):
         # Get any initial required relationship objects errors (i.e. non-existent required objects)
         required_objects_errors = self.model.required_related_objects_errors(output_for="ui")
         already_invalidated_slugs = []
-        for error_dict in required_objects_errors:
-            for field, errors in error_dict.items():
-                self.add_error(None, errors)
-                relationship_slug = field.split("__")[0][3:]
-                already_invalidated_slugs.append(relationship_slug)
+        for field, errors in required_objects_errors.items():
+            self.add_error(None, errors)
+            relationship_slug = field.split("__")[0][3:]
+            already_invalidated_slugs.append(relationship_slug)
 
         required_relationships = []
         # The following query excludes already invalidated relationships (this happened above
@@ -500,9 +499,8 @@ class RelationshipModelFormMixin(forms.ModelForm):
         required_relationships_errors = self.Meta().model.required_related_objects_errors(
             output_for="ui", initial_data=self.cleaned_data, instance=self.instance
         )
-        for error_dict in required_relationships_errors:
-            for field, errors in error_dict.items():
-                self.add_error(field, errors)
+        for field, errors in required_relationships_errors.items():
+            self.add_error(field, errors)
 
         for side, relationships in self.instance.get_relationships().items():
             for relationship in relationships:
