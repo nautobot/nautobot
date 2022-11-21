@@ -170,11 +170,11 @@ The following best practices must be considered when establishing new `FilterSet
 
 ### Mapping Model Fields to Filters
 
-- Filtersets **must** inherit from `nautobot.extras.filters.NautobotFilterSet` (which inherits from `nautobot.utilities.filters.BaseFilterSet`)
+- FilterSets **must** inherit from `nautobot.extras.filters.NautobotFilterSet` (which inherits from `nautobot.utilities.filters.BaseFilterSet`)
     - This affords that automatically generated lookup expressions (`ic`, `nic`, `iew`, `niew`, etc.) are always included
     - This also asserts that the correct underlying `Form` class that maps the generated form field types and widgets will be included
-- FIltersets **must** publish all model fields from a model, including related fields.
-    - All fields should be provided using `Meta.fields = "__all__"` and this would be preferable for the first and common case as it requires the least maintanence and overhead and asserts parity between the model fields and the filterset filters.
+- FilterSets **must** publish all model fields from a model, including related fields.
+    - All fields should be provided using `Meta.fields = "__all__"` and this would be preferable for the first and common case as it requires the least maintenance and overhead and asserts parity between the model fields and the filterset filters.
     - In some cases simply excluding certain fields would be the next most preferable e.g. `Meta.exclude = ["unwanted_field", "other_unwanted_field"]`
     - Finally, the last resort should be explicitly declaring the desired fields using `Meta.fields =`. This should be avoided because it incurs the highest technical debt in maintaining alignment between model fields and filters.
 - In the event that fields do need to be customized to extend lookup expressions, a [dictionary of field names mapped to a list of lookups](https://django-filter.readthedocs.io/en/stable/ref/filterset.html#declaring-filterable-fields) **may** be used, however, this pattern is only compatible with explicitly declaring all fields, which should also be avoided for the common case. For example:
@@ -256,13 +256,13 @@ class UserFilter(NautobotFilterSet):
    has_consoleports = BooleanFilter(field_name="consoleports", lookup_expr="isnull", exclude=True)
 ```
 
-- Filters **must** be declared using [`disinct=True`](https://django-filter.readthedocs.io/en/stable/ref/filters.html#distinct) if a queryset `.distinct()`is required to be called on the queryset
+- Filters **must** be declared using [`distinct=True`](https://django-filter.readthedocs.io/en/stable/ref/filters.html#distinct) if a queryset `.distinct()`is required to be called on the queryset
 
 - Filters **must not** be set to be required using `required=True`
 
 - Filter methods defined using the [`method=`](https://django-filter.readthedocs.io/en/stable/ref/filters.html#method) keyword argument **may only be used as a last resort** (see below) when correct usage of `field_name`, `lookup_expr`, `exclude`, or other filter keyword arguments do not suffice. In other words: filter methods should used as the exception and not the rule.
 
-- Use of [`filter_overrides`](https://django-filter.readthedocs.io/en/stable/ref/filterset.html#filter-overrides) **must be considered** in cases where more-specific class-local overrides. The need may ocassionally arise to change certain filter-level arguments used for filter generation, such such as changing a filter class, or customizing a UI widget. Any `extra` arguments are sent to the filter as keyword arguments at instance creation time. (Hint: `extra` must be a callable)
+- Use of [`filter_overrides`](https://django-filter.readthedocs.io/en/stable/ref/filterset.html#filter-overrides) **must be considered** in cases where more-specific class-local overrides. The need may occasionally arise to change certain filter-level arguments used for filter generation, such such as changing a filter class, or customizing a UI widget. Any `extra` arguments are sent to the filter as keyword arguments at instance creation time. (Hint: `extra` must be a callable)
 
     For example:
 
@@ -336,7 +336,7 @@ This means that the arguments for the field are being completely ignored and the
 
 Additionally, `name` variable that gets passed to the method cannot be used here because there are two field names at play (`frontports` and `rearports`). This hard-coding is impossible to introspect and therefore impossible to reverse.
 
-So while this filter definition coudl be improved like so, there is still no way to know what is going on in the method body:
+So while this filter definition could be improved like so, there is still no way to know what is going on in the method body:
 
 ```python
     pass_through_ports = django_filters.BooleanFilter(
@@ -357,7 +357,7 @@ True
 'isnull'
 ```
 
-Except that it stops there becuse of the method body. Here are the problems:
+Except that it stops there because of the method body. Here are the problems:
 
 - There's no way to identify either of the field names required here
 - The `name` that is incoming to the method is the filter name as defined (`pass_through_ports` in this case) does not map to an actual model field
@@ -368,7 +368,7 @@ It would be better to just eliminate `pass_through_ports=True` entirely in excha
 
 #### Generating Reversible Q Objects
 
-With consistent and proper use of filter field arguments when defining them on a fitlerset, a query could be constructed using the `field_name` and `lookup_expr` values. For example:
+With consistent and proper use of filter field arguments when defining them on a filterset, a query could be constructed using the `field_name` and `lookup_expr` values. For example:
 
 ```python
     def generate_query(self, field, value):
