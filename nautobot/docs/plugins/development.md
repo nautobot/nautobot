@@ -220,7 +220,7 @@ PLUGINS = ["animal_sounds"]
 
 ### Verify that the App is Installed
 
-In the Nautobot UI, navigate to **Plugins -> Installed Plugins**. The newly installed app should appear in the displayed table if everything is configured correctly. You can also click on the app's name in this table to view more detailed information about this app based on its NautobotAppConfig and other contents.
+After restarting the Nautobot server, the newly installed app should appear in **Plugins -> Installed Plugins** if everything is configured correctly. You can also click on the app's name in this table to view more detailed information about this app based on its NautobotAppConfig and other contents.
 
 ## Extending the Existing Nautobot UI
 

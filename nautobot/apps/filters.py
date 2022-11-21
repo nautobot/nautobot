@@ -13,6 +13,7 @@ from nautobot.utilities.filters import (
     BaseFilterSet,
     MultiValueCharFilter,
     NaturalKeyOrPKMultipleChoiceFilter,
+    RelatedMembershipBooleanFilter,
     SearchFilter,
     TreeNodeMultipleChoiceFilter,
 )
@@ -25,6 +26,7 @@ __all__ = (
     "MultiValueCharFilter",
     "NaturalKeyOrPKMultipleChoiceFilter",
     "NautobotFilterSet",
+    "RelatedMembershipBooleanFilter",
     "RelationshipModelFilterSetMixin",
     "SearchFilter",
     "StatusModelFilterSetMixin",
