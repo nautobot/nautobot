@@ -189,7 +189,6 @@ nav:
           - nautobot.apps.datasources: "code-reference/nautobot/apps/datasources.md"
           - nautobot.apps.filters: "code-reference/nautobot/apps/filters.md"
           - nautobot.apps.forms: "code-reference/nautobot/apps/forms.md"
-          - nautobot.apps.jobs: "code-reference/nautobot/apps/jobs.md"
           - nautobot.apps.models: "code-reference/nautobot/apps/models.md"
           - nautobot.apps.secrets: "code-reference/nautobot/apps/secrets.md"
           - nautobot.apps.tables: "code-reference/nautobot/apps/tables.md"

@@ -477,7 +477,7 @@ By default, for each app, Nautobot looks for an iterable named `jobs` within a `
 
 ```python
 # jobs.py
-from nautobot.apps.jobs import Job
+from nautobot.extras.jobs import Job
 
 
 class CreateDevices(Job):

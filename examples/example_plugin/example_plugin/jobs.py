@@ -2,8 +2,8 @@ import time
 
 from django.conf import settings
 
-from nautobot.apps.jobs import IntegerVar, Job, JobHookReceiver
 from nautobot.extras.choices import ObjectChangeActionChoices
+from nautobot.extras.jobs import IntegerVar, Job, JobHookReceiver
 
 
 name = "ExamplePlugin jobs"
