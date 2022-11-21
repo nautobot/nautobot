@@ -1,0 +1,1 @@
+Fixed issue where changing the interface mode first required removing tagged_vlans in a different request.
