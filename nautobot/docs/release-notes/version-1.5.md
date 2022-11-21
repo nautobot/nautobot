@@ -34,6 +34,8 @@ Device Redundancy Groups have been added to model groups of distinct devices tha
 
 #### Nautobot Apps API ([#2723](https://github.com/nautobot/nautobot/issues/2723))
 
++++ 1.5.2
+
 The new `nautobot.apps` module provides a common starting point for app (a.k.a. plugin) developers to find all of the functions and classes that are recommended for use in apps. For example, instead of needing to look through the entire Nautobot codebase to find the appropriate classes, and then write:
 
 ```python
@@ -130,6 +132,10 @@ A number of mixin classes have been renamed and/or relocated for improved self-c
 | `DeviceTypeComponentFilterSet` | `DeviceComponentTemplateModelFilterSetMixin` |
 | `LocalContextFilterSet`        | `LocalContextModelFilterSetMixin`            |
 | `PathEndpointFilterSet`        | `PathEndpointModelFilterSetMixin`            |
+| `PluginBanner`                 | `Banner`                                     |
+| `PluginConfig`                 | `NautobotAppConfig`                          |
+| `PluginFilterExtension`        | `FilterExtension`                            |
+| `PluginTemplateExtension`      | `TemplateExtension`                          |
 | `RelationshipModelFilterSet`   | `RelationshipModelFilterSetMixin`            |
 | `TaggedObjectSerializer`       | `TaggedModelSerializerMixin`                 |
 | `TenancyFilterSet`             | `TenancyModelFilterSetMixin`                 |

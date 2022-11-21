@@ -24,6 +24,7 @@ from nautobot.extras.plugins.exceptions import PluginImproperlyConfigured
 from nautobot.extras.plugins.utils import import_object
 from nautobot.extras.secrets import register_secrets_provider
 from nautobot.utilities.choices import ButtonColorChoices
+from nautobot.utilities.deprecation import class_deprecated_in_favor_of
 
 logger = getLogger(__name__)
 
@@ -41,7 +42,7 @@ registry["plugin_template_extensions"] = collections.defaultdict(list)
 #
 
 
-class PluginConfig(NautobotConfig):
+class NautobotAppConfig(NautobotConfig):
     """
     Subclass of Django's built-in AppConfig class, to be used for Nautobot plugins.
     """
@@ -252,12 +253,17 @@ class PluginConfig(NautobotConfig):
                 user_config[setting] = value
 
 
+@class_deprecated_in_favor_of(NautobotAppConfig)
+class PluginConfig(NautobotAppConfig):
+    pass
+
+
 #
 # Template content injection
 #
 
 
-class PluginTemplateExtension:
+class TemplateExtension:
     """
     This class is used to register plugin content to be injected into core Nautobot templates. It contains methods
     that are overridden by plugin authors to return template content.
@@ -339,23 +345,28 @@ class PluginTemplateExtension:
         raise NotImplementedError
 
 
+@class_deprecated_in_favor_of(TemplateExtension)
+class PluginTemplateExtension(TemplateExtension):
+    pass
+
+
 def register_template_extensions(class_list):
     """
-    Register a list of PluginTemplateExtension classes
+    Register a list of TemplateExtension classes
     """
     # Validation
     for template_extension in class_list:
         if not inspect.isclass(template_extension):
-            raise TypeError(f"PluginTemplateExtension class {template_extension} was passed as an instance!")
-        if not issubclass(template_extension, PluginTemplateExtension):
-            raise TypeError(f"{template_extension} is not a subclass of extras.plugins.PluginTemplateExtension!")
+            raise TypeError(f"TemplateExtension class {template_extension} was passed as an instance!")
+        if not issubclass(template_extension, TemplateExtension):
+            raise TypeError(f"{template_extension} is not a subclass of nautobot.apps.ui.TemplateExtension!")
         if template_extension.model is None:
-            raise TypeError(f"PluginTemplateExtension class {template_extension} does not define a valid model!")
+            raise TypeError(f"TemplateExtension class {template_extension} does not define a valid model!")
 
         registry["plugin_template_extensions"][template_extension.model].append(template_extension)
 
 
-class PluginBanner:
+class Banner:
     """Class that may be returned by a registered plugin_banners function."""
 
     def __init__(self, content, banner_class=BannerClassChoices.CLASS_INFO):
@@ -363,6 +374,11 @@ class PluginBanner:
         if banner_class not in BannerClassChoices.values():
             raise ValueError("Banner class must be a choice within BannerClassChoices.")
         self.banner_class = banner_class
+
+
+@class_deprecated_in_favor_of(Banner)
+class PluginBanner(Banner):
+    pass
 
 
 def register_banner_function(function):
@@ -408,7 +424,7 @@ def register_jobs(class_list):
     # That is done in response to the `nautobot_database_ready` signal, see nautobot.extras.signals.refresh_job_models
 
 
-class PluginFilterExtension:
+class FilterExtension:
     """Class that may be returned by a registered Filter Extension function."""
 
     model = None
@@ -418,18 +434,23 @@ class PluginFilterExtension:
     filterform_fields = {}
 
 
+@class_deprecated_in_favor_of(FilterExtension)
+class PluginFilterExtension(FilterExtension):
+    pass
+
+
 def register_filter_extensions(filter_extensions, plugin_name):
     """
-    Register a list of PluginFilterExtension classes
+    Register a list of FilterExtension classes
     """
     from nautobot.utilities.utils import get_filterset_for_model, get_form_for_model
     from nautobot.utilities.forms.utils import add_field_to_filter_form_class
 
     for filter_extension in filter_extensions:
-        if not issubclass(filter_extension, PluginFilterExtension):
-            raise TypeError(f"{filter_extension} is not a subclass of extras.plugins.PluginFilterExtension!")
+        if not issubclass(filter_extension, FilterExtension):
+            raise TypeError(f"{filter_extension} is not a subclass of nautobot.apps.filters.FilterExtension!")
         if filter_extension.model is None:
-            raise TypeError(f"PluginFilterExtension class {filter_extension} does not define a valid model!")
+            raise TypeError(f"FilterExtension class {filter_extension} does not define a valid model!")
 
         model_filterset_class = get_filterset_for_model(filter_extension.model)
         model_filterform_class = get_form_for_model(filter_extension.model, "Filter")

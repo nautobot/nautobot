@@ -5,6 +5,9 @@ This documentation covers the development of custom apps (plugins) for Nautobot.
 Apps can [do a lot of different things](./index.md#capabilities), all of which will be covered in detail in this document.
 Keep in mind that each piece of functionality is entirely optional. For example, if your app merely adds a piece of middleware or an API endpoint for existing data, there's no need to define any new models.
 
++/- 1.5.2
+    The `nautobot.apps` namespace was added in Nautobot 1.5.2. If developing apps to be backwards-compatible with older versions of Nautobot, please refer to the app developer documentation of your required Nautobot version.
+
 !!! tip
     The app detail view (`/plugins/installed-plugins/<plugin_name>/`, accessible to superusers via **Plugins -> Installed Plugins** in the navigation menu, then selecting a specific app) provides in-depth information about which features any installed app is implementing or making use of.
 
@@ -110,9 +113,6 @@ Do you confirm generation? (yes/no) [yes]
 ### Define a NautobotAppConfig
 
 The `NautobotAppConfig` class is a Nautobot-specific wrapper around Django's built-in [`AppConfig`](https://docs.djangoproject.com/en/stable/ref/applications/) class. It is used to declare Nautobot app functionality within a Python package. Each app should provide its own subclass, defining its name, metadata, and default and required configuration parameters. An example is below:
-
-+/- 1.5.2
-    The `nautobot.apps` namespace was added in Nautobot 1.5.2. If developing apps to be backwards-compatible with older versions of Nautobot, please refer to the app developer documentation of your required Nautobot version.
 
 ```python
 from nautobot.apps import NautobotAppConfig

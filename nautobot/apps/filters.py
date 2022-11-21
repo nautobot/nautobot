@@ -7,7 +7,7 @@ from nautobot.extras.filters import (
     RelationshipModelFilterSetMixin,
     StatusModelFilterSetMixin,
 )
-from nautobot.extras.plugins import PluginFilterExtension as FilterExtension
+from nautobot.extras.plugins import FilterExtension
 from nautobot.tenancy.filters import TenancyModelFilterSetMixin
 from nautobot.utilities.filters import (
     BaseFilterSet,
