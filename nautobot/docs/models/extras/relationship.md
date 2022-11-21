@@ -33,7 +33,7 @@ To mark a relationship as being required, select "Source objects MUST implement 
 * If "Destination objects MUST implement this relationship" is selected, objects of the type selected in "Destination Type" will enforce this relationship when they are created or edited.
 * If "Source objects MUST implement this relationship" is selected, objects of the type selected in "Source Type" will enforce this relationship when they are created or edited.
 
-Required relationships are enforced in the following scenarios: 
+Required relationships are enforced in the following scenarios:
 
 * Creating or editing an object via the API or the UI
 * Bulk creating objects via the API
