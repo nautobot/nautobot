@@ -2362,6 +2362,12 @@ class ConsoleConnectionsTestCase(ViewTestCases.ListObjectsViewTestCase):
     def _get_base_url(self):
         return "dcim:console_connections_{}"
 
+    def get_list_url(self):
+        return "/dcim/console-connections/"
+
+    def get_title(self):
+        return "Console Connections"
+
     model = ConsolePort
     filterset = ConsoleConnectionFilterSet
 
@@ -2412,6 +2418,12 @@ class PowerConnectionsTestCase(ViewTestCases.ListObjectsViewTestCase):
     """
     Test the PowerConnectionsListView.
     """
+
+    def get_list_url(self):
+        return "/dcim/power-connections/"
+
+    def get_title(self):
+        return "Power Connections"
 
     def _get_base_url(self):
         return "dcim:power_connections_{}"
@@ -2474,6 +2486,12 @@ class InterfaceConnectionsTestCase(ViewTestCases.ListObjectsViewTestCase):
 
     def _get_base_url(self):
         return "dcim:interface_connections_{}"
+
+    def get_list_url(self):
+        return "/dcim/interface-connections/"
+
+    def get_title(self):
+        return "Interface Connections"
 
     model = Interface
     filterset = InterfaceConnectionFilterSet

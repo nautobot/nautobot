@@ -26,6 +26,8 @@ def banner(context, *args, **kwargs) -> Optional[Banner]:
         context.request.user,
     )
 
+    # NautobotUIViewSet list view will pass an `object` context variable with value None
+    # We need to account for that too
     if "object" in context and hasattr(context["object"], "_meta"):
         # Object detail view
         content += format_html(
