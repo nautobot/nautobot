@@ -1,1 +1,0 @@
-Added `try/except` block to catch `NoReverseMatch` exception in NotesSerializerMixin and return helpful message.

@@ -26,8 +26,9 @@ def banner(context, *args, **kwargs) -> Optional[PluginBanner]:
         "<div>Example Plugin says “Hello, <strong>{}</strong>!” 👋</div>",
         context.request.user,
     )
-
-    if "object" in context:
+    # NautobotUIViewSet list view will pass an `object` context variable with value None
+    # We need to account for that too
+    if "object" in context and context["object"] is not None:
         # Object detail view
         content += format_html(
             "<div>You are viewing {} {}</div>",

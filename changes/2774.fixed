@@ -1,0 +1,1 @@
+Fixed SiteFactory time_zone attribute to use only `pytz.common_timezones`.

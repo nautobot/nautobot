@@ -1,6 +1,6 @@
 from rest_framework import serializers
 
-from nautobot.extras.api.serializers import NautobotModelSerializer, TaggedObjectSerializer
+from nautobot.extras.api.serializers import NautobotModelSerializer, TaggedModelSerializerMixin
 from nautobot.tenancy.models import Tenant, TenantGroup
 
 # Not all of these variable(s) are not actually used anywhere in this file, but required for the
@@ -31,7 +31,7 @@ class TenantGroupSerializer(NautobotModelSerializer):
         ]
 
 
-class TenantSerializer(NautobotModelSerializer, TaggedObjectSerializer):
+class TenantSerializer(NautobotModelSerializer, TaggedModelSerializerMixin):
     url = serializers.HyperlinkedIdentityField(view_name="tenancy-api:tenant-detail")
     group = NestedTenantGroupSerializer(required=False)
     circuit_count = serializers.IntegerField(read_only=True)

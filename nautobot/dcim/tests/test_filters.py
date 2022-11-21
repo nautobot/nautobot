@@ -1042,7 +1042,11 @@ class LocationTypeFilterSetTestCase(FilterTestCases.NameSlugFilterTestCase):
     @classmethod
     def setUpTestData(cls):
         cls.lt1 = LocationType.objects.get(name="Building")
+        cls.lt1.description = "It's a building"
+        cls.lt1.validated_save()
         cls.lt2 = LocationType.objects.get(name="Floor")
+        cls.lt2.description = "It's a floor"
+        cls.lt2.validated_save()
 
     def test_description(self):
         params = {"description": [self.lt1.description, self.lt2.description]}
