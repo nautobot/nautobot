@@ -10,8 +10,8 @@ from rest_framework.test import APIClient
 from rest_framework.test import APITransactionTestCase as _APITransactionTestCase
 
 from nautobot.extras import choices as extras_choices
-from nautobot.extras import registry
 from nautobot.extras import models as extras_models
+from nautobot.extras import registry
 from nautobot.users import models as users_models
 from nautobot.utilities import utils
 from nautobot.utilities.testing import mixins, views

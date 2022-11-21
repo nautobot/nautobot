@@ -62,11 +62,11 @@ class ImportedName:
     def __lt__(self, other):
         if self.package_name != other.package_name:
             return self.package_name.lower() < other.package_name.lower()
-        if self.name == TopLevelImport:
+        if self._name == TopLevelImport:
             return True
-        if other.name == TopLevelImport:
+        if other._name == TopLevelImport:
             return False
-        return self.name.lower() < other.name.lower()
+        return self._name.lower() < other._name.lower()
 
 
 class NautobotImports:
@@ -87,8 +87,8 @@ class NautobotImports:
         self.python_library_path = self.dirname.replace("/", ".")
         self.enumerate_imports()
         self.fix_imports()
-        self.insert_new_imports()
         self.replace_content()
+        self.insert_new_imports()
 
     def add_import(self, package_name, name=TopLevelImport):
         package_name = package_name.strip()
@@ -108,28 +108,33 @@ class NautobotImports:
         else:
             return "other"
 
+    def _build_output_line(self, lines):
+        if not lines:
+            return ""
+        output = []
+        names = ", ".join([n.name_str for n in lines if not n.alias])
+        if names:
+            output.append(f"from {lines[0].package_name} import {names}\n")
+        for name in [n for n in lines if n.alias]:
+            output.append(f"from {name.package_name} import {name.name_str}\n")
+        return "".join(sorted(output, key=str.lower))
+
     def build_imports(self):
         output = ""
         for category in ["stdlib", "other", "nautobot"]:
-            cur_line = []
+            line_queue = []
             for imported_name in sorted(self.imports[category]):
-                if cur_line and imported_name.package_name != cur_line[0].package_name:
-                    names = ", ".join([n.name_str for n in cur_line if not n.alias])
-                    if names:
-                        output += f"from {cur_line[0].package_name} import {names}\n"
-                    for name in [n for n in cur_line if n.alias]:
-                        output += f"from {name.package_name} import {name.name_str}\n"
-                    cur_line = []
                 if imported_name.name == TopLevelImport:
+                    output += self._build_output_line(line_queue)
+                    line_queue = []
                     output += f"import {imported_name.package_name}\n"
-                else:
-                    cur_line.append(imported_name)
-            if cur_line:
-                names = ", ".join([n.name_str for n in cur_line if not n.alias])
-                if names:
-                    output += f"from {cur_line[0].package_name} import {names}\n"
-                for name in [n for n in cur_line if n.alias]:
-                    output += f"from {name.package_name} import {name.name_str}\n"
+                    continue
+                elif line_queue and imported_name.package_name != line_queue[0].package_name:
+                    output += self._build_output_line(line_queue)
+                    line_queue = []
+                line_queue.append(imported_name)
+            if line_queue:
+                output += self._build_output_line(line_queue)
             if self.imports[category]:
                 output += "\n"
         return output
@@ -213,12 +218,12 @@ class NautobotImports:
         new_imports = self.build_imports().split("\n")
         output_content_lines[self.first_import_line_nbr : self.first_import_line_nbr] = new_imports
         self.output_content = "\n".join(output_content_lines)
+        self.output_content = re.sub(r"\n\n\n\n+", r"\n\n\n", self.output_content)
+        self.output_content = re.sub(r"\n+$", r"\n", self.output_content)
 
     def replace_content(self):
         for regex, string in self.replacements:
             self.output_content = regex.sub(string, self.output_content)
-        self.output_content = re.sub(r"\n\n\n\n+", r"\n\n\n", self.output_content)
-        self.output_content = re.sub(r"\n+$", r"\n", self.output_content)
 
 
 def main():
