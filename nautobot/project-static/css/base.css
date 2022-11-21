@@ -535,7 +535,7 @@ textarea {
     padding: 1px 5px;
 }
 h1 .btn-inline {
-    font-size: medium;
+    font-size: .45em;
 }
 .btn-inline .mdi::before {
     font-size: .9em;
@@ -595,9 +595,19 @@ h1 .btn-inline {
 
 span.hover_copy .hover_copy_button {
     display: none;
+    margin-left: 2px;
 }
 span.hover_copy:hover .hover_copy_button {
     display: inline;
+}
+td span.hover_copy .hover_copy_button {
+    vertical-align: top;
+    opacity: 0;
+    display: inline;
+    margin-left: 2px;
+}
+td span.hover_copy:hover .hover_copy_button {
+    opacity: 1;
 }
 
 .powered-by-nautobot {
