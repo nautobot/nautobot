@@ -1558,11 +1558,14 @@ test = ["pytest (>=5.1.2)", "pyyaml (>=5.1.2)"]
 
 [[package]]
 name = "netutils"
-version = "1.2.0"
+version = "1.3.0"
 description = "Common helper functions useful in network automation."
 category = "main"
 optional = false
-python-versions = ">=3.6,<4.0"
+python-versions = ">=3.7,<4.0"
+
+[package.extras]
+optionals = ["napalm (>=4.0.0,<5.0.0)"]
 
 [[package]]
 name = "ntc-templates"
@@ -2625,7 +2628,7 @@ sso = ["social-auth-core"]
 [metadata]
 lock-version = "1.1"
 python-versions = "^3.7"
-content-hash = "41ab583aa291d40eb14071f056a0ca1804f274fe39d14271e01241ef51e5844b"
+content-hash = "1da5ab83e44d84a421ea00d3a51ae189d10f4442a613a731f57ad8cfa962972c"
 
 [metadata.files]
 amqp = [
@@ -3378,8 +3381,8 @@ netmiko = [
     {file = "netmiko-3.4.0.tar.gz", hash = "sha256:acadb9dd97864ee848e2032f1f0e301c7b31e7a4153757d98f5c8ba1b9614993"},
 ]
 netutils = [
-    {file = "netutils-1.2.0-py3-none-any.whl", hash = "sha256:23c2ca960544ac6674263063a3580fe3d9d94d5898512df468298659c7eff7e3"},
-    {file = "netutils-1.2.0.tar.gz", hash = "sha256:a661326a46352208ea465f0305831f042f7943289e4cbc3e085c23c07682d24b"},
+    {file = "netutils-1.3.0-py3-none-any.whl", hash = "sha256:33106376f9cc3d849801f06d8dbe4a146a618e20d5d2852d78da4e24db6d7b32"},
+    {file = "netutils-1.3.0.tar.gz", hash = "sha256:500d4024680a714382f1e782a722f08103b42751edb93dfab7cfb245074aba87"},
 ]
 ntc-templates = [
     {file = "ntc_templates-3.1.0-py3-none-any.whl", hash = "sha256:e59fbc485a132e0d3eecb6f53fc8e85426cec099ef39678cdc20eec8dccaced6"},

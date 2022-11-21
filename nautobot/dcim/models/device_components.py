@@ -519,9 +519,6 @@ class BaseInterface(RelationshipModel, StatusModel):
         if not self.mode and self.untagged_vlan is not None:
             raise ValidationError({"untagged_vlan": "Mode must be set when specifying untagged_vlan"})
 
-        if self.tagged_vlans.exists() and self.mode != InterfaceModeChoices.MODE_TAGGED:
-            raise ValidationError({"tagged_vlans": f"Clear tagged_vlans to set mode to {self.mode}"})
-
     def save(self, *args, **kwargs):
 
         if not self.status:
