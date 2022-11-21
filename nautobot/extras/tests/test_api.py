@@ -2678,7 +2678,9 @@ class RelationshipTest(APIViewTestCases.APIViewTestCase, RequiredRelationshipTes
         required_relationship_json = {"vlans-devices-m2m": {"source": {"objects": [str(device_for_association.id)]}}}
         expected_error_json = {
             "relationships": {
-                "vlans-devices-m2m": ['You need to specify ["relationships"]["vlans-devices-m2m"]["source"]["objects"].']
+                "vlans-devices-m2m": [
+                    'You need to specify ["relationships"]["vlans-devices-m2m"]["source"]["objects"].'
+                ]
             }
         }
 
