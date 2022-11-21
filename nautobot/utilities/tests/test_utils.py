@@ -1,48 +1,17 @@
-from django import forms
+from django import forms as django_forms
 from django.core.exceptions import ValidationError
 from django.db.models import Q
 from django.http import QueryDict
 from django.test import TestCase
-
-from nautobot.core.settings_funcs import is_truthy
-from nautobot.extras.models import JobHook, Status, Tag
-from nautobot.extras.utils import ChangeLoggedModelsQuery, TaggableClassesQuery
-from nautobot.utilities.exceptions import FilterSetFieldNotFound
-from nautobot.utilities.forms import (
-    DatePicker,
-    DateTimePicker,
-    DynamicModelMultipleChoiceField,
-    MultipleContentTypeField,
-)
-from nautobot.utilities.utils import (
-    build_lookup_label,
-    convert_querydict_to_factory_formset_acceptable_querydict,
-    deepmerge,
-    dict_to_filter_params,
-    ensure_content_type_and_field_name_inquery_params,
-    flatten_iterable,
-    get_all_lookup_expr_for_field,
-    get_filterable_params_from_filter_params,
-    get_filterset_field,
-    get_filterset_for_model,
-    get_filterset_parameter_form_field,
-    get_form_for_model,
-    get_model_from_name,
-    get_route_for_model,
-    get_table_for_model,
-    is_taggable,
-    is_single_choice_field,
-    normalize_querydict,
-    pretty_print_query,
-    slugify_dots_to_dashes,
-    slugify_dashes_to_underscores,
-)
-from nautobot.dcim.models import Device, Region, Site
-from nautobot.dcim.filters import DeviceFilterSet, SiteFilterSet
-from nautobot.dcim.forms import DeviceForm, DeviceFilterForm, SiteForm, SiteFilterForm
-from nautobot.dcim.tables import DeviceTable, SiteTable
-
 from example_plugin.models import ExampleModel
+
+from nautobot.core import settings_funcs
+from nautobot.dcim import filters, tables
+from nautobot.dcim import forms as dcim_forms
+from nautobot.dcim import models as dcim_models
+from nautobot.extras import models as extras_models
+from nautobot.extras import utils as extras_utils
+from nautobot.utilities import exceptions, forms, utils
 
 
 class DictToFilterParamsTest(TestCase):
@@ -68,11 +37,11 @@ class DictToFilterParamsTest(TestCase):
             "x__y__z": False,
         }
 
-        self.assertEqual(dict_to_filter_params(input_), output)
+        self.assertEqual(utils.dict_to_filter_params(input_), output)
 
         input_["x"]["y"]["z"] = True
 
-        self.assertNotEqual(dict_to_filter_params(input_), output)
+        self.assertNotEqual(utils.dict_to_filter_params(input_), output)
 
 
 class NormalizeQueryDictTest(TestCase):
@@ -82,7 +51,7 @@ class NormalizeQueryDictTest(TestCase):
 
     def test_normalize_querydict(self):
         self.assertDictEqual(
-            normalize_querydict(QueryDict("foo=1&bar=2&bar=3&baz=")),
+            utils.normalize_querydict(QueryDict("foo=1&bar=2&bar=3&baz=")),
             {"foo": "1", "bar": ["2", "3"], "baz": ""},
         )
 
@@ -164,7 +133,7 @@ class DeepMergeTest(TestCase):
             },
         }
 
-        self.assertEqual(deepmerge(dict1, dict2), merged)
+        self.assertEqual(utils.deepmerge(dict1, dict2), merged)
 
 
 class FlattenIterableTest(TestCase):
@@ -173,12 +142,12 @@ class FlattenIterableTest(TestCase):
     def test_list_of_lists(self):
         items = [[1, 2, 3], [4, 5], 6]
         expected = [1, 2, 3, 4, 5, 6]
-        self.assertEqual(list(flatten_iterable(items)), expected)
+        self.assertEqual(list(utils.flatten_iterable(items)), expected)
 
     def test_list_of_strings(self):
         items = ["foo", ["bar"], ["baz"]]
         expected = ["foo", "bar", "baz"]
-        self.assertEqual(list(flatten_iterable(items)), expected)
+        self.assertEqual(list(utils.flatten_iterable(items)), expected)
 
 
 class GetFooForModelTest(TestCase):
@@ -188,110 +157,111 @@ class GetFooForModelTest(TestCase):
         """
         Test the util function `get_filterset_for_model` returns the appropriate FilterSet, if model (as dotted string or class) provided.
         """
-        self.assertEqual(get_filterset_for_model("dcim.device"), DeviceFilterSet)
-        self.assertEqual(get_filterset_for_model(Device), DeviceFilterSet)
-        self.assertEqual(get_filterset_for_model("dcim.site"), SiteFilterSet)
-        self.assertEqual(get_filterset_for_model(Site), SiteFilterSet)
+        self.assertEqual(utils.get_filterset_for_model("dcim.device"), filters.DeviceFilterSet)
+        self.assertEqual(utils.get_filterset_for_model(dcim_models.Device), filters.DeviceFilterSet)
+        self.assertEqual(utils.get_filterset_for_model("dcim.site"), filters.SiteFilterSet)
+        self.assertEqual(utils.get_filterset_for_model(dcim_models.Site), filters.SiteFilterSet)
 
     def test_get_form_for_model(self):
         """
         Test the util function `get_form_for_model` returns the appropriate Form, if form type and model (as dotted string or class) provided.
         """
-        self.assertEqual(get_form_for_model("dcim.device", "Filter"), DeviceFilterForm)
-        self.assertEqual(get_form_for_model(Device, "Filter"), DeviceFilterForm)
-        self.assertEqual(get_form_for_model("dcim.site", "Filter"), SiteFilterForm)
-        self.assertEqual(get_form_for_model(Site, "Filter"), SiteFilterForm)
-        self.assertEqual(get_form_for_model("dcim.device"), DeviceForm)
-        self.assertEqual(get_form_for_model(Device), DeviceForm)
-        self.assertEqual(get_form_for_model("dcim.site"), SiteForm)
-        self.assertEqual(get_form_for_model(Site), SiteForm)
+        self.assertEqual(utils.get_form_for_model("dcim.device", "Filter"), dcim_forms.DeviceFilterForm)
+        self.assertEqual(utils.get_form_for_model(dcim_models.Device, "Filter"), dcim_forms.DeviceFilterForm)
+        self.assertEqual(utils.get_form_for_model("dcim.site", "Filter"), dcim_forms.SiteFilterForm)
+        self.assertEqual(utils.get_form_for_model(dcim_models.Site, "Filter"), dcim_forms.SiteFilterForm)
+        self.assertEqual(utils.get_form_for_model("dcim.device"), dcim_forms.DeviceForm)
+        self.assertEqual(utils.get_form_for_model(dcim_models.Device), dcim_forms.DeviceForm)
+        self.assertEqual(utils.get_form_for_model("dcim.site"), dcim_forms.SiteForm)
+        self.assertEqual(utils.get_form_for_model(dcim_models.Site), dcim_forms.SiteForm)
 
     def test_get_route_for_model(self):
         """
         Test the util function `get_route_for_model` returns the appropriate URL route name, if model (as dotted string or class) provided.
         """
         # UI
-        self.assertEqual(get_route_for_model("dcim.device", "list"), "dcim:device_list")
-        self.assertEqual(get_route_for_model(Device, "list"), "dcim:device_list")
-        self.assertEqual(get_route_for_model("dcim.site", "list"), "dcim:site_list")
-        self.assertEqual(get_route_for_model(Site, "list"), "dcim:site_list")
+        self.assertEqual(utils.get_route_for_model("dcim.device", "list"), "dcim:device_list")
+        self.assertEqual(utils.get_route_for_model(dcim_models.Device, "list"), "dcim:device_list")
+        self.assertEqual(utils.get_route_for_model("dcim.site", "list"), "dcim:site_list")
+        self.assertEqual(utils.get_route_for_model(dcim_models.Site, "list"), "dcim:site_list")
         self.assertEqual(
-            get_route_for_model("example_plugin.examplemodel", "list"), "plugins:example_plugin:examplemodel_list"
+            utils.get_route_for_model("example_plugin.examplemodel", "list"), "plugins:example_plugin:examplemodel_list"
         )
-        self.assertEqual(get_route_for_model(ExampleModel, "list"), "plugins:example_plugin:examplemodel_list")
+        self.assertEqual(utils.get_route_for_model(ExampleModel, "list"), "plugins:example_plugin:examplemodel_list")
 
         # API
-        self.assertEqual(get_route_for_model("dcim.device", "list", api=True), "dcim-api:device-list")
-        self.assertEqual(get_route_for_model(Device, "list", api=True), "dcim-api:device-list")
-        self.assertEqual(get_route_for_model("dcim.site", "detail", api=True), "dcim-api:site-detail")
-        self.assertEqual(get_route_for_model(Site, "detail", api=True), "dcim-api:site-detail")
+        self.assertEqual(utils.get_route_for_model("dcim.device", "list", api=True), "dcim-api:device-list")
+        self.assertEqual(utils.get_route_for_model(dcim_models.Device, "list", api=True), "dcim-api:device-list")
+        self.assertEqual(utils.get_route_for_model("dcim.site", "detail", api=True), "dcim-api:site-detail")
+        self.assertEqual(utils.get_route_for_model(dcim_models.Site, "detail", api=True), "dcim-api:site-detail")
         self.assertEqual(
-            get_route_for_model("example_plugin.examplemodel", "list", api=True),
+            utils.get_route_for_model("example_plugin.examplemodel", "list", api=True),
             "plugins-api:example_plugin-api:examplemodel-list",
         )
         self.assertEqual(
-            get_route_for_model(ExampleModel, "list", api=True), "plugins-api:example_plugin-api:examplemodel-list"
+            utils.get_route_for_model(ExampleModel, "list", api=True),
+            "plugins-api:example_plugin-api:examplemodel-list",
         )
 
     def test_get_table_for_model(self):
         """
         Test the util function `get_table_for_model` returns the appropriate Table, if model (as dotted string or class) provided.
         """
-        self.assertEqual(get_table_for_model("dcim.device"), DeviceTable)
-        self.assertEqual(get_table_for_model(Device), DeviceTable)
-        self.assertEqual(get_table_for_model("dcim.site"), SiteTable)
-        self.assertEqual(get_table_for_model(Site), SiteTable)
+        self.assertEqual(utils.get_table_for_model("dcim.device"), tables.DeviceTable)
+        self.assertEqual(utils.get_table_for_model(dcim_models.Device), tables.DeviceTable)
+        self.assertEqual(utils.get_table_for_model("dcim.site"), tables.SiteTable)
+        self.assertEqual(utils.get_table_for_model(dcim_models.Site), tables.SiteTable)
 
     def test_get_model_from_name(self):
         """
         Test the util function `get_model_from_name` returns the appropriate Model, if the dotted name provided.
         """
-        self.assertEqual(get_model_from_name("dcim.device"), Device)
-        self.assertEqual(get_model_from_name("dcim.site"), Site)
+        self.assertEqual(utils.get_model_from_name("dcim.device"), dcim_models.Device)
+        self.assertEqual(utils.get_model_from_name("dcim.site"), dcim_models.Site)
 
 
 class IsTaggableTest(TestCase):
     def test_is_taggable_true(self):
         # Classes
-        self.assertTrue(is_taggable(Site))
-        self.assertTrue(is_taggable(Device))
+        self.assertTrue(utils.is_taggable(dcim_models.Site))
+        self.assertTrue(utils.is_taggable(dcim_models.Device))
 
         # Instances
-        self.assertTrue(is_taggable(Site(name="Test Site")))
+        self.assertTrue(utils.is_taggable(dcim_models.Site(name="Test Site")))
 
     def test_is_taggable_false(self):
         class FakeOut:
             tags = "Nope!"
 
         # Classes
-        self.assertFalse(is_taggable(Region))
-        self.assertFalse(is_taggable(FakeOut))
+        self.assertFalse(utils.is_taggable(dcim_models.Region))
+        self.assertFalse(utils.is_taggable(FakeOut))
 
         # Instances
-        self.assertFalse(is_taggable(Region(name="Test Region")))
-        self.assertFalse(is_taggable(FakeOut()))
+        self.assertFalse(utils.is_taggable(dcim_models.Region(name="Test Region")))
+        self.assertFalse(utils.is_taggable(FakeOut()))
 
-        self.assertFalse(is_taggable(None))
+        self.assertFalse(utils.is_taggable(None))
 
 
 class IsTruthyTest(TestCase):
     def test_is_truthy(self):
-        self.assertTrue(is_truthy("true"))
-        self.assertTrue(is_truthy("True"))
-        self.assertTrue(is_truthy(True))
-        self.assertTrue(is_truthy("yes"))
-        self.assertTrue(is_truthy("on"))
-        self.assertTrue(is_truthy("y"))
-        self.assertTrue(is_truthy("1"))
-        self.assertTrue(is_truthy(1))
+        self.assertTrue(settings_funcs.is_truthy("true"))
+        self.assertTrue(settings_funcs.is_truthy("True"))
+        self.assertTrue(settings_funcs.is_truthy(True))
+        self.assertTrue(settings_funcs.is_truthy("yes"))
+        self.assertTrue(settings_funcs.is_truthy("on"))
+        self.assertTrue(settings_funcs.is_truthy("y"))
+        self.assertTrue(settings_funcs.is_truthy("1"))
+        self.assertTrue(settings_funcs.is_truthy(1))
 
-        self.assertFalse(is_truthy("false"))
-        self.assertFalse(is_truthy("False"))
-        self.assertFalse(is_truthy(False))
-        self.assertFalse(is_truthy("no"))
-        self.assertFalse(is_truthy("n"))
-        self.assertFalse(is_truthy(0))
-        self.assertFalse(is_truthy("0"))
+        self.assertFalse(settings_funcs.is_truthy("false"))
+        self.assertFalse(settings_funcs.is_truthy("False"))
+        self.assertFalse(settings_funcs.is_truthy(False))
+        self.assertFalse(settings_funcs.is_truthy("no"))
+        self.assertFalse(settings_funcs.is_truthy("n"))
+        self.assertFalse(settings_funcs.is_truthy(0))
+        self.assertFalse(settings_funcs.is_truthy("0"))
 
 
 class PrettyPrintQueryTest(TestCase):
@@ -360,7 +330,7 @@ class PrettyPrintQueryTest(TestCase):
 
         for query, expected in tests:
             with self.subTest(query=query):
-                self.assertEqual(pretty_print_query(query), expected)
+                self.assertEqual(utils.pretty_print_query(query), expected)
 
 
 class SlugifyFunctionsTest(TestCase):
@@ -372,147 +342,147 @@ class SlugifyFunctionsTest(TestCase):
             ("plugins.my_plugin.jobs", "plugins-my_plugin-jobs"),
             ("Lots of . spaces  ... and such", "lots-of-spaces-and-such"),
         ):
-            self.assertEqual(slugify_dots_to_dashes(content), expected)
+            self.assertEqual(utils.slugify_dots_to_dashes(content), expected)
 
     def test_slugify_dashes_to_underscores(self):
         for content, expected in (
             ("Sites / Regions", "sites_regions"),
             ("alpha-beta_gamma delta", "alpha_beta_gamma_delta"),
         ):
-            self.assertEqual(slugify_dashes_to_underscores(content), expected)
+            self.assertEqual(utils.slugify_dashes_to_underscores(content), expected)
 
 
 class LookupRelatedFunctionTest(TestCase):
     def test_is_single_choice_field(self):
         # Assert function returns True for any field starting with create or has_
         # Cause these fields are either boolean fields or date time fields which one accepts single values
-        filterset_class = SiteFilterSet
+        filterset_class = filters.SiteFilterSet
 
         single_choice_fields = ("created", "created__gte", "has_vlans", "has_clusters", "q")
         for field in single_choice_fields:
-            self.assertTrue(is_single_choice_field(filterset_class, field))
+            self.assertTrue(utils.is_single_choice_field(filterset_class, field))
 
         multi_choice_fields = ("status", "tenant", "tag")
         for field in multi_choice_fields:
-            self.assertFalse(is_single_choice_field(filterset_class, field))
+            self.assertFalse(utils.is_single_choice_field(filterset_class, field))
 
     def test_build_lookup_label(self):
         with self.subTest():
-            label = build_lookup_label("slug__iew", "iendswith")
+            label = utils.build_lookup_label("slug__iew", "iendswith")
             self.assertEqual(label, "ends with (iew)")
 
         with self.subTest("Test negation"):
-            label = build_lookup_label("slug__niew", "iendswith")
+            label = utils.build_lookup_label("slug__niew", "iendswith")
             self.assertEqual(label, "not ends with (niew)")
 
         with self.subTest("Test for exact: without a lookup expr"):
-            label = build_lookup_label("slug", "exact")
+            label = utils.build_lookup_label("slug", "exact")
             self.assertEqual(label, "exact")
 
     def test_get_all_lookup_expr_for_field(self):
         with self.subTest():
-            lookup_expr = get_all_lookup_expr_for_field(Site, "status")
+            lookup_expr = utils.get_all_lookup_expr_for_field(dcim_models.Site, "status")
             self.assertEqual(
                 lookup_expr,
                 [{"id": "status", "name": "exact"}, {"id": "status__n", "name": "not exact (n)"}],
             )
 
         with self.subTest("Test field with has_ prefix"):
-            lookup_expr = get_all_lookup_expr_for_field(Site, "has_vlans")
+            lookup_expr = utils.get_all_lookup_expr_for_field(dcim_models.Site, "has_vlans")
             self.assertEqual(
                 lookup_expr,
                 [{"id": "has_vlans", "name": "exact"}],
             )
 
         with self.subTest("Test unknown field"):
-            with self.assertRaises(FilterSetFieldNotFound) as err:
-                get_all_lookup_expr_for_field(Site, "unknown_field")
+            with self.assertRaises(exceptions.FilterSetFieldNotFound) as err:
+                utils.get_all_lookup_expr_for_field(dcim_models.Site, "unknown_field")
             self.assertEqual(str(err.exception), "field_name not found")
 
     def test_get_filterset_field(self):
         with self.subTest():
-            field = get_filterset_field(SiteFilterSet, "name")
-            self.assertEqual(field.__class__, SiteFilterSet().filters.get("name").__class__)
+            field = utils.get_filterset_field(filters.SiteFilterSet, "name")
+            self.assertEqual(field.__class__, filters.SiteFilterSet().filters.get("name").__class__)
 
         with self.subTest("Test invalid field"):
-            with self.assertRaises(FilterSetFieldNotFound) as err:
-                get_filterset_field(SiteFilterSet, "unknown")
+            with self.assertRaises(exceptions.FilterSetFieldNotFound) as err:
+                utils.get_filterset_field(filters.SiteFilterSet, "unknown")
             self.assertEqual(str(err.exception), "unknown is not a valid SiteFilterSet field")
 
     def test_get_filterset_parameter_form_field(self):
         with self.subTest("Test get CharFields"):
             site_fields = ["comments", "name", "contact_email", "physical_address", "shipping_address"]
             for field_name in site_fields:
-                form_field = get_filterset_parameter_form_field(Site, field_name)
-                self.assertIsInstance(form_field, forms.CharField)
+                form_field = utils.get_filterset_parameter_form_field(dcim_models.Site, field_name)
+                self.assertIsInstance(form_field, django_forms.CharField)
 
             device_fields = ["serial", "name"]
             for field_name in device_fields:
-                form_field = get_filterset_parameter_form_field(Device, field_name)
-                self.assertIsInstance(form_field, forms.CharField)
+                form_field = utils.get_filterset_parameter_form_field(dcim_models.Device, field_name)
+                self.assertIsInstance(form_field, django_forms.CharField)
 
         with self.subTest("Test IntegerField"):
-            form_field = get_filterset_parameter_form_field(Site, "asn")
-            self.assertIsInstance(form_field, forms.IntegerField)
+            form_field = utils.get_filterset_parameter_form_field(dcim_models.Site, "asn")
+            self.assertIsInstance(form_field, django_forms.IntegerField)
 
             device_fields = ["vc_position", "vc_priority"]
             for field_name in device_fields:
-                form_field = get_filterset_parameter_form_field(Device, field_name)
-                self.assertIsInstance(form_field, forms.IntegerField)
+                form_field = utils.get_filterset_parameter_form_field(dcim_models.Device, field_name)
+                self.assertIsInstance(form_field, django_forms.IntegerField)
 
         with self.subTest("Test DynamicModelMultipleChoiceField"):
             site_fields = ["region", "tenant", "status"]
             for field_name in site_fields:
-                form_field = get_filterset_parameter_form_field(Site, field_name)
-                self.assertIsInstance(form_field, DynamicModelMultipleChoiceField)
+                form_field = utils.get_filterset_parameter_form_field(dcim_models.Site, field_name)
+                self.assertIsInstance(form_field, forms.DynamicModelMultipleChoiceField)
 
             device_fields = ["cluster_id", "device_type_id", "region"]
             for field_name in device_fields:
-                form_field = get_filterset_parameter_form_field(Device, field_name)
-                self.assertIsInstance(form_field, DynamicModelMultipleChoiceField)
+                form_field = utils.get_filterset_parameter_form_field(dcim_models.Device, field_name)
+                self.assertIsInstance(form_field, forms.DynamicModelMultipleChoiceField)
 
         with self.subTest("Test ChoiceField"):
             site_fields = ["has_locations", "has_circuit_terminations", "has_devices"]
             for field_name in site_fields:
-                form_field = get_filterset_parameter_form_field(Site, field_name)
-                self.assertIsInstance(form_field, forms.ChoiceField)
+                form_field = utils.get_filterset_parameter_form_field(dcim_models.Site, field_name)
+                self.assertIsInstance(form_field, django_forms.ChoiceField)
 
             device_fields = ["has_console_ports", "has_interfaces", "face"]
             for field_name in device_fields:
-                form_field = get_filterset_parameter_form_field(Device, field_name)
-                self.assertIsInstance(form_field, forms.ChoiceField)
+                form_field = utils.get_filterset_parameter_form_field(dcim_models.Device, field_name)
+                self.assertIsInstance(form_field, django_forms.ChoiceField)
 
         with self.subTest("Test DateTimePicker"):
-            form_field = get_filterset_parameter_form_field(Site, "last_updated")
-            self.assertIsInstance(form_field.widget, DateTimePicker)
+            form_field = utils.get_filterset_parameter_form_field(dcim_models.Site, "last_updated")
+            self.assertIsInstance(form_field.widget, forms.DateTimePicker)
 
-            form_field = get_filterset_parameter_form_field(Device, "last_updated")
-            self.assertIsInstance(form_field.widget, DateTimePicker)
+            form_field = utils.get_filterset_parameter_form_field(dcim_models.Device, "last_updated")
+            self.assertIsInstance(form_field.widget, forms.DateTimePicker)
 
         with self.subTest("Test DatePicker"):
-            form_field = get_filterset_parameter_form_field(Site, "created")
-            self.assertIsInstance(form_field.widget, DatePicker)
+            form_field = utils.get_filterset_parameter_form_field(dcim_models.Site, "created")
+            self.assertIsInstance(form_field.widget, forms.DatePicker)
 
-            form_field = get_filterset_parameter_form_field(Device, "created")
-            self.assertIsInstance(form_field.widget, DatePicker)
+            form_field = utils.get_filterset_parameter_form_field(dcim_models.Device, "created")
+            self.assertIsInstance(form_field.widget, forms.DatePicker)
 
         with self.subTest("Test Invalid parameter"):
-            with self.assertRaises(FilterSetFieldNotFound) as err:
-                get_filterset_parameter_form_field(Site, "unknown")
+            with self.assertRaises(exceptions.FilterSetFieldNotFound) as err:
+                utils.get_filterset_parameter_form_field(dcim_models.Site, "unknown")
             self.assertEqual(str(err.exception), "unknown is not a valid SiteFilterSet field")
 
         with self.subTest("Test Content types"):
-            form_field = get_filterset_parameter_form_field(Status, "content_types")
-            self.assertIsInstance(form_field, MultipleContentTypeField)
+            form_field = utils.get_filterset_parameter_form_field(extras_models.Status, "content_types")
+            self.assertIsInstance(form_field, forms.MultipleContentTypeField)
 
-            # Assert total ContentTypes generated by form_field is == total `content_types` generated by TaggableClassesQuery
-            form_field = get_filterset_parameter_form_field(Tag, "content_types")
-            self.assertIsInstance(form_field, MultipleContentTypeField)
-            self.assertEqual(form_field.queryset.count(), TaggableClassesQuery().as_queryset().count())
+            # Assert total ContentTypes generated by form_field is == total `content_types` generated by extras_utils.TaggableClassesQuery
+            form_field = utils.get_filterset_parameter_form_field(extras_models.Tag, "content_types")
+            self.assertIsInstance(form_field, forms.MultipleContentTypeField)
+            self.assertEqual(form_field.queryset.count(), extras_utils.TaggableClassesQuery().as_queryset().count())
 
-            form_field = get_filterset_parameter_form_field(JobHook, "content_types")
-            self.assertIsInstance(form_field, MultipleContentTypeField)
-            self.assertEqual(form_field.queryset.count(), ChangeLoggedModelsQuery().as_queryset().count())
+            form_field = utils.get_filterset_parameter_form_field(extras_models.JobHook, "content_types")
+            self.assertIsInstance(form_field, forms.MultipleContentTypeField)
+            self.assertEqual(form_field.queryset.count(), extras_utils.ChangeLoggedModelsQuery().as_queryset().count())
 
     def test_convert_querydict_to_factory_formset_dict(self):
         with self.subTest("Convert QueryDict to an acceptable factory formset QueryDict and discards invalid params"):
@@ -522,7 +492,9 @@ class LookupRelatedFunctionTest(TestCase):
             request_querydict.setlistdefault("invalid_field", ["invalid"])  # Should be ignored
             request_querydict.setlistdefault("name__iew", [""])  # Should be ignored since it has no value
 
-            data = convert_querydict_to_factory_formset_acceptable_querydict(request_querydict, SiteFilterSet)
+            data = utils.convert_querydict_to_factory_formset_acceptable_querydict(
+                request_querydict, filters.SiteFilterSet
+            )
             expected_querydict = QueryDict(mutable=True)
             expected_querydict.setlistdefault("form-TOTAL_FORMS", [3])
             expected_querydict.setlistdefault("form-INITIAL_FORMS", [0])
@@ -540,7 +512,9 @@ class LookupRelatedFunctionTest(TestCase):
         with self.subTest("Convert an empty QueryDict to an acceptable factory formset QueryDict"):
             request_querydict = QueryDict(mutable=True)
 
-            data = convert_querydict_to_factory_formset_acceptable_querydict(request_querydict, SiteFilterSet)
+            data = utils.convert_querydict_to_factory_formset_acceptable_querydict(
+                request_querydict, filters.SiteFilterSet
+            )
             expected_querydict = QueryDict(mutable=True)
             expected_querydict.setlistdefault("form-TOTAL_FORMS", [3])
             expected_querydict.setlistdefault("form-INITIAL_FORMS", [0])
@@ -554,7 +528,9 @@ class LookupRelatedFunctionTest(TestCase):
             request_querydict.setlistdefault("status", ["active"])
             request_querydict.setlistdefault("q", "site")  # Should be ignored
 
-            data = convert_querydict_to_factory_formset_acceptable_querydict(request_querydict, SiteFilterSet)
+            data = utils.convert_querydict_to_factory_formset_acceptable_querydict(
+                request_querydict, filters.SiteFilterSet
+            )
             expected_querydict = QueryDict(mutable=True)
             expected_querydict.setlistdefault("form-TOTAL_FORMS", [3])
             expected_querydict.setlistdefault("form-INITIAL_FORMS", [0])
@@ -572,18 +548,18 @@ class LookupRelatedFunctionTest(TestCase):
         filter_params.setlistdefault("status", ["active", "planned"])
 
         non_filter_params = ["page", "per_page"]
-        filterset_class = SiteFilterSet
-        data = get_filterable_params_from_filter_params(filter_params, non_filter_params, filterset_class)
+        filterset_class = filters.SiteFilterSet
+        data = utils.get_filterable_params_from_filter_params(filter_params, non_filter_params, filterset_class)
 
         self.assertEqual(data, {"name": ["Site 1"], "status": ["active", "planned"]})
 
     def test_ensure_content_type_and_field_name_inquery_params(self):
         with self.assertRaises(ValidationError) as err:
-            ensure_content_type_and_field_name_inquery_params({})
+            utils.ensure_content_type_and_field_name_inquery_params({})
         self.assertEqual(str(err.exception.args[0]), "content_type and field_name are required parameters")
         self.assertEqual(err.exception.code, 400)
 
         with self.assertRaises(ValidationError) as err:
-            ensure_content_type_and_field_name_inquery_params({"field_name": "name", "content_type": "dcim.abc"})
+            utils.ensure_content_type_and_field_name_inquery_params({"field_name": "name", "content_type": "dcim.abc"})
         self.assertEqual(str(err.exception.args[0]), "content_type not found")
         self.assertEqual(err.exception.code, 404)

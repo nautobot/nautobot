@@ -1,6 +1,7 @@
 # refactor imports
 # find nautobot/appname/ -iname "*.py" -exec python refactor_imports.py {} \;
 import argparse
+import collections
 import functools
 import os
 import re
@@ -85,10 +86,28 @@ class NautobotImports:
         self.dirname = os.path.dirname(filename)
         self.basename = os.path.basename(filename)
         self.python_library_path = self.dirname.replace("/", ".")
+        self.nautobot_app = filename.split("/").pop(filename.split("/").index("nautobot") + 1)
         self.enumerate_imports()
         self.fix_imports()
+        self.generate_aliases()
         self.replace_content()
         self.insert_new_imports()
+
+    def generate_aliases(self):
+        """find imports that need to be aliased"""
+        all_imports = self.imports["nautobot"] + self.imports["stdlib"] + self.imports["other"]
+        names = collections.Counter([x.name for x in all_imports if x.name != TopLevelImport])
+        duplicates = [k for k, v in names.items() if v > 1]
+        duplicate_imports = [i for i in all_imports if i.name in duplicates]
+        for duplicate in duplicate_imports:
+            if duplicate.package_name.startswith(f"nautobot.{self.nautobot_app}"):
+                continue
+            if duplicate.package_name.startswith("nautobot"):
+                nautobot_app = duplicate.package_name.split(".")[1]
+                duplicate.alias = f"{nautobot_app}_{duplicate._name}"
+            else:
+                top_level_package = duplicate.package_name.split(".")[0]
+                duplicate.alias = f"{top_level_package}_{duplicate._name}"
 
     def add_import(self, package_name, name=TopLevelImport):
         package_name = package_name.strip()
@@ -153,7 +172,6 @@ class NautobotImports:
                     continue
                 imports.setdefault(multi_line, [])
                 for name in line.strip().split(","):
-                    # imports[multi_line].append(name.strip())
                     self.add_import(multi_line, name)
 
             # handle module imports (import os, re)
@@ -162,7 +180,6 @@ class NautobotImports:
                 if match.group(1) == "(":
                     raise Exception(f"unexpected multi-line import: {line}")
                 for name in match.group(1).strip().split(","):
-                    # imports[name].append(TopLevelImport)
                     self.add_import(name)
 
             # handle name imports (from xyz import Abc, 123)
@@ -185,33 +202,35 @@ class NautobotImports:
                 self.first_import_line_nbr = min(line_nbr, self.first_import_line_nbr)
 
     def fix_imports(self):
-        for imported_name in self.imports["nautobot"]:
-            if imported_name.package_name == ".":
-                imported_name.package_name = self.python_library_path
+        for import_obj in self.imports["nautobot"].copy():
+            if import_obj.package_name == ".":
+                import_obj.package_name = self.python_library_path
                 continue
-            elif imported_name.package_name.startswith("."):
-                imported_name.package_name = self.python_library_path + "." + imported_name.package_name[1:]
+            elif import_obj.package_name.startswith("."):
+                import_obj.package_name = self.python_library_path + "." + import_obj.package_name[1:]
 
             # don't try to fix wildcard imports
-            if imported_name.name == "*":
+            if import_obj.name == "*":
                 continue
 
-            if imported_name.name != TopLevelImport and imported_name.package_name.startswith("nautobot"):
-                package_path = imported_name.package_name[9:].replace(".", "/")
-                path = f"{self.nautobot_base}/{package_path}/{imported_name._name}"
+            if import_obj.name != TopLevelImport and import_obj.package_name.startswith("nautobot"):
+                package_path = import_obj.package_name[9:].replace(".", "/")
+                path = f"{self.nautobot_base}/{package_path}/{import_obj._name}"
                 if not (os.path.exists(f"{path}.py") or os.path.exists(f"{path}/__init__.py")):
-                    old_name = imported_name.name
-                    containing_module = ".".join(imported_name.package_name.split(".")[:-1])
-                    name = imported_name.package_name.split(".")[-1]
-                    imported_name.package_name = containing_module
-                    imported_name.set_name(name)
-                    # keep track of these ones for regex replacement later
-                    re_old = re.escape(old_name) + r"(,|\s|$|\(|\)|\.|:|\]|\[)"
-                    self.replacements.append((re.compile(re_old), f"{name}.{old_name}" + r"\1"))
+                    old_name = import_obj.name
+                    containing_module = ".".join(import_obj.package_name.split(".")[:-1])
+                    name = import_obj.package_name.split(".")[-1]
+                    # deduplicate
+                    self.imports["nautobot"].remove(import_obj)
+                    new_import_obj = ImportedName(containing_module, name)
+                    if new_import_obj not in self.imports["nautobot"]:
+                        self.imports["nautobot"].append(new_import_obj)
+                        i = -1
+                    else:
+                        i = self.imports["nautobot"].index(new_import_obj)
 
-        # deduplicate imports
-        deduplicated = sorted(list(set(self.imports["nautobot"])))
-        self.imports["nautobot"] = deduplicated
+                    # keep track of these ones for regex replacement later
+                    self.replacements.append((self.imports["nautobot"][i], old_name))
 
     def insert_new_imports(self):
         output_content_lines = self.output_content.split("\n")
@@ -222,8 +241,9 @@ class NautobotImports:
         self.output_content = re.sub(r"\n+$", r"\n", self.output_content)
 
     def replace_content(self):
-        for regex, string in self.replacements:
-            self.output_content = regex.sub(string, self.output_content)
+        for import_obj, old_name in self.replacements:
+            re_old = re.escape(old_name) + r"(,|\s|$|\(|\)|\.|:|\]|\[)"
+            self.output_content = re.sub(re_old, f"{import_obj.name}.{old_name}" + r"\1", self.output_content)
 
 
 def main():
@@ -232,6 +252,9 @@ def main():
 
     args = parser.parse_args()
     filename = args.filename
+    if os.path.basename(filename) == "__init__.py":
+        print(f"skipped {filename}")
+        exit()
 
     with open(filename, "r") as filedesc:
         data = filedesc.read()

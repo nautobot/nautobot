@@ -37,6 +37,7 @@ from nautobot.utilities.forms.forms import (
     BulkRenameForm,
     ConfirmationForm,
     CSVModelForm,
+    DynamicFilterForm,
     ImportForm,
     PrefixFieldMixin,
     ReturnURLForm,
@@ -44,6 +45,7 @@ from nautobot.utilities.forms.forms import (
 )
 from nautobot.utilities.forms.utils import (
     add_blank_choice,
+    add_field_to_filter_form_class,
     expand_alphanumeric_pattern,
     expand_ipaddress_pattern,
     form_from_model,
@@ -72,6 +74,7 @@ from nautobot.utilities.forms.widgets import (
 
 __all__ = (
     "add_blank_choice",
+    "add_field_to_filter_form_class",
     "AddressFieldMixin",
     "ALPHANUMERIC_EXPANSION_PATTERN",
     "APISelect",
@@ -96,6 +99,7 @@ __all__ = (
     "CSVMultipleContentTypeField",
     "DatePicker",
     "DateTimePicker",
+    "DynamicFilterForm",
     "DynamicModelChoiceField",
     "DynamicModelMultipleChoiceField",
     "expand_alphanumeric_pattern",

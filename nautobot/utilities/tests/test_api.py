@@ -3,14 +3,14 @@ from django.test import Client, TestCase
 from django.urls import reverse
 from rest_framework import status
 
-from nautobot.dcim.models import Region, Site
-from nautobot.extras.choices import CustomFieldTypeChoices
-from nautobot.extras.models import CustomField
-from nautobot.ipam.models import VLAN
-from nautobot.utilities.testing import APITestCase, disable_warnings
+from nautobot.dcim import models as dcim_models
+from nautobot.extras import choices
+from nautobot.extras import models as extras_models
+from nautobot.ipam import models as ipam_models
+from nautobot.utilities import testing
 
 
-class WritableNestedSerializerTest(APITestCase):
+class WritableNestedSerializerTest(testing.APITestCase):
     """
     Test the operation of WritableNestedSerializer using VLANSerializer as our test subject.
     """
@@ -18,9 +18,9 @@ class WritableNestedSerializerTest(APITestCase):
     def setUp(self):
         super().setUp()
 
-        self.region_a = Region.objects.filter(sites__isnull=True).first()
-        self.site1 = Site.objects.create(region=self.region_a, name="Site 1", slug="site-1")
-        self.site2 = Site.objects.create(region=self.region_a, name="Site 2", slug="site-2")
+        self.region_a = dcim_models.Region.objects.filter(sites__isnull=True).first()
+        self.site2 = dcim_models.Site.objects.create(region=self.region_a, name="Site 2", slug="site-2")
+        self.site1 = dcim_models.Site.objects.create(region=self.region_a, name="Site 1", slug="site-1")
 
     def test_related_by_pk(self):
         data = {
@@ -35,7 +35,7 @@ class WritableNestedSerializerTest(APITestCase):
         response = self.client.post(url, data, format="json", **self.header)
         self.assertHttpStatus(response, status.HTTP_201_CREATED)
         self.assertEqual(response.data["site"]["id"], str(self.site1.pk))
-        vlan = VLAN.objects.get(pk=response.data["id"])
+        vlan = ipam_models.VLAN.objects.get(pk=response.data["id"])
         self.assertEqual(vlan.site, self.site1)
 
     def test_related_by_pk_no_match(self):
@@ -48,10 +48,10 @@ class WritableNestedSerializerTest(APITestCase):
         url = reverse("ipam-api:vlan-list")
         self.add_permissions("ipam.add_vlan")
 
-        with disable_warnings("django.request"):
+        with testing.disable_warnings("django.request"):
             response = self.client.post(url, data, format="json", **self.header)
         self.assertHttpStatus(response, status.HTTP_400_BAD_REQUEST)
-        self.assertEqual(VLAN.objects.filter(name="Test VLAN 100").count(), 0)
+        self.assertEqual(ipam_models.VLAN.objects.filter(name="Test VLAN 100").count(), 0)
         self.assertTrue(response.data["site"][0].startswith("Related object not found"))
 
     def test_related_by_attributes(self):
@@ -67,7 +67,7 @@ class WritableNestedSerializerTest(APITestCase):
         response = self.client.post(url, data, format="json", **self.header)
         self.assertHttpStatus(response, status.HTTP_201_CREATED)
         self.assertEqual(response.data["site"]["id"], str(self.site1.pk))
-        vlan = VLAN.objects.get(pk=response.data["id"])
+        vlan = ipam_models.VLAN.objects.get(pk=response.data["id"])
         self.assertEqual(vlan.site, self.site1)
 
     def test_related_by_attributes_no_match(self):
@@ -80,10 +80,10 @@ class WritableNestedSerializerTest(APITestCase):
         url = reverse("ipam-api:vlan-list")
         self.add_permissions("ipam.add_vlan")
 
-        with disable_warnings("django.request"):
+        with testing.disable_warnings("django.request"):
             response = self.client.post(url, data, format="json", **self.header)
         self.assertHttpStatus(response, status.HTTP_400_BAD_REQUEST)
-        self.assertEqual(VLAN.objects.filter(name="Test VLAN 100").count(), 0)
+        self.assertEqual(ipam_models.VLAN.objects.filter(name="Test VLAN 100").count(), 0)
         self.assertTrue(response.data["site"][0].startswith("Related object not found"))
 
     def test_related_by_attributes_multiple_matches(self):
@@ -100,10 +100,10 @@ class WritableNestedSerializerTest(APITestCase):
         url = reverse("ipam-api:vlan-list")
         self.add_permissions("ipam.add_vlan")
 
-        with disable_warnings("django.request"):
+        with testing.disable_warnings("django.request"):
             response = self.client.post(url, data, format="json", **self.header)
         self.assertHttpStatus(response, status.HTTP_400_BAD_REQUEST)
-        self.assertEqual(VLAN.objects.filter(name="Test VLAN 100").count(), 0)
+        self.assertEqual(ipam_models.VLAN.objects.filter(name="Test VLAN 100").count(), 0)
         self.assertTrue(response.data["site"][0].startswith("Multiple objects match"))
 
     def test_related_by_invalid(self):
@@ -116,19 +116,19 @@ class WritableNestedSerializerTest(APITestCase):
         url = reverse("ipam-api:vlan-list")
         self.add_permissions("ipam.add_vlan")
 
-        with disable_warnings("django.request"):
+        with testing.disable_warnings("django.request"):
             response = self.client.post(url, data, format="json", **self.header)
         self.assertHttpStatus(response, status.HTTP_400_BAD_REQUEST)
-        self.assertEqual(VLAN.objects.filter(name="Test VLAN 100").count(), 0)
+        self.assertEqual(ipam_models.VLAN.objects.filter(name="Test VLAN 100").count(), 0)
 
 
 class APIDocsTestCase(TestCase):
     def setUp(self):
         self.client = Client()
 
-        # Populate a CustomField to activate CustomFieldSerializer
-        content_type = ContentType.objects.get_for_model(Site)
-        self.cf_text = CustomField(type=CustomFieldTypeChoices.TYPE_TEXT, name="test")
+        # Populate a extras_models.CustomField to activate CustomFieldSerializer
+        content_type = ContentType.objects.get_for_model(dcim_models.Site)
+        self.cf_text = extras_models.CustomField(type=choices.CustomFieldTypeChoices.TYPE_TEXT, name="test")
         self.cf_text.save()
         self.cf_text.content_types.set([content_type])
         self.cf_text.save()
