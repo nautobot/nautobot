@@ -2,40 +2,55 @@
 * {
     margin: 0;
 }
+
 html {
     overflow-y: scroll;
 }
-html, body {
+
+html,
+body {
     height: 100%;
 }
+
 body {
     padding-top: 70px;
 }
+
 .wrapper {
     min-height: 100%;
     height: auto !important;
-    margin: 0 auto -48px; /* the bottom margin is the negative value of the footer's height */
+    margin: 0 auto -48px;
+    /* the bottom margin is the negative value of the footer's height */
     padding-bottom: 30px;
 }
+
 .navbar-brand {
     padding: 12px 15px 8px;
 }
-.footer, .push {
-    height: 48px; /* .push must be the same height as .footer */
+
+.footer,
+.push {
+    height: 48px;
+    /* .push must be the same height as .footer */
 }
+
 .footer {
     background-color: #f5f5f5;
     border-top: 1px solid #d0d0d0;
 }
+
 .footer .row {
     background-color: #f5f5f5;
 }
+
 footer p {
     margin: 12px 0;
 }
+
 #navbar_search {
     padding: 0 8px;
 }
+
 .right-side-panel {
     max-width: 400px;
     min-width: 300px;
@@ -61,9 +76,11 @@ footer p {
     body {
         padding-top: 0px;
     }
+
     a[href]:after {
         content: none !important;
     }
+
     .noprint {
         display: none !important;
     }
@@ -71,7 +88,7 @@ footer p {
 
 /* Scroll the drop-down menus at or above 768px wide to match bootstrap's behavior for hiding dropdown menus */
 @media (min-width: 768px) {
-    .navbar-nav > li > ul {
+    .navbar-nav>li>ul {
         max-height: calc(80vh - 50px);
         overflow-y: auto;
     }
@@ -83,41 +100,49 @@ footer p {
         max-height: calc(80vh - 50px);
         overflow-y: auto;
     }
+
     .navbar-header {
         float: none;
     }
-    .navbar-left, .navbar-right {
+
+    .navbar-left,
+    .navbar-right {
         float: none !important;
     }
+
     .navbar-toggle {
         display: block;
     }
+
     .navbar-collapse {
         border-top: 1px solid transparent;
         box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.1);
     }
+
     .navbar-fixed-top {
         top: 0;
         border-width: 0 0 1px;
     }
-    .navbar-collapse.collapse {
-        display: none !important;
-        max-height: none;
-    }
+
+
     .navbar-nav {
         float: none !important;
         margin-top: 7.5px;
     }
-    .navbar-nav > li {
+
+    .navbar-nav>li {
         float: none;
     }
-    .navbar-nav > li > a {
+
+    .navbar-nav>li>a {
         padding-top: 10px;
         padding-bottom: 10px;
     }
+
     .collapse.in {
         display: block !important;
     }
+
     #navbar_user {
         display: inline;
     }
@@ -127,19 +152,23 @@ footer p {
 ul.dropdown-menu {
     min-width: 250px;
 }
+
 ul.dropdown-menu.edge {
     right: 0;
     left: auto;
 }
+
 ul.dropdown-menu div.buttons {
-    padding-right: 10px;
+    padding-right: 2px;
     padding-top: 2px;
 }
-ul.dropdown-menu > li > a {
+
+ul.dropdown-menu>li>a {
     clear: left;
-    margin-right: 80px
+    margin-right: 40px
 }
-.nav > li > a.dropdown-toggle {
+
+.nav>li>a.dropdown-toggle {
     padding: 15px 12px;
 }
 
@@ -147,29 +176,36 @@ ul.dropdown-menu > li > a {
 label {
     font-weight: normal;
 }
+
 label.required {
     font-weight: bold;
 }
+
 input[name="pk"] {
     margin-top: 0;
 }
 
 
 /* Tables */
-th.pk, td.pk {
+th.pk,
+td.pk {
     padding-bottom: 6px;
     padding-top: 10px;
     width: 30px;
 }
+
 tfoot td {
     font-weight: bold;
 }
+
 table.attr-table td:nth-child(1) {
     width: 25%;
 }
+
 .table-headings th {
     background-color: #f5f5f5;
 }
+
 td.min-width {
     width: 1%;
 }
@@ -178,9 +214,11 @@ td.min-width {
 div.paginator {
     margin-bottom: 20px;
 }
+
 div.paginator form {
     margin-bottom: 6px;
 }
+
 nav ul.pagination {
     margin-top: 0;
     margin-bottom: 8px !important;
@@ -191,6 +229,7 @@ table.component-list td.subtable {
     padding: 0;
     padding-left: 16px;
 }
+
 table.component-list td.subtable td {
     border: none;
     padding-bottom: 6px;
@@ -202,15 +241,18 @@ table.reports td.method {
     font-family: monospace;
     padding-left: 30px;
 }
+
 td.report-stats label {
     display: inline-block;
     line-height: 14px;
     margin-bottom: 0;
     min-width: 40px;
 }
+
 table.report th {
     position: relative;
 }
+
 table.report th a {
     position: absolute;
     top: -51px;
@@ -220,14 +262,17 @@ table.report th a {
 .rendered-markdown table {
     width: 100%;
 }
+
 .rendered-markdown th {
     border-bottom: 2px solid #dddddd;
     padding: 8px;
 }
+
 .rendered-markdown td {
     border-top: 1px solid #dddddd;
     padding: 8px;
 }
+
 .rendered-markdown :last-child {
     margin-bottom: 0;
 }
@@ -238,6 +283,7 @@ table.report th a {
     margin: 16px auto;
     text-align: center;
 }
+
 .cable-trace .node {
     background-color: #f0f0f0;
     border: 1px solid #909090;
@@ -246,6 +292,7 @@ table.report th a {
     position: relative;
     z-index: 1;
 }
+
 .cable-trace .termination {
     background-color: #f7f7f7;
     border: 1px solid #909090;
@@ -256,9 +303,11 @@ table.report th a {
     width: 60%;
     z-index: 2;
 }
+
 .cable-trace .active {
     border: 3px solid #30C030;
 }
+
 .cable-trace .cable {
     border-left-style: solid;
     border-left-width: 4px;
@@ -267,6 +316,7 @@ table.report th a {
     text-align: left;
     width: 50%;
 }
+
 .cable-trace .trace-end {
     margin-top: 48px;
     text-align: center;
@@ -277,49 +327,62 @@ table.report th a {
     margin-bottom: 10px;
     padding-bottom: 2px;
 }
+
 .admonition p {
     padding: 0 12px;
 }
+
 .admonition pre {
     margin: 0 12px 10px;
 }
+
 .admonition p.admonition-title {
     color: rgb(255, 255, 255);
     font-weight: bold;
     padding: 4px 12px;
 }
+
 .admonition p.admonition-title::before {
     content: "\f06a";
     font-family: "FontAwesome";
     margin-right: 4px;
 }
+
 /* Admonition - Note */
 .admonition.note {
     background-color: rgb(231, 242, 250);
 }
+
 .admonition.note .admonition-title {
     background-color: rgb(106, 176, 222);
 }
+
 .admonition.note .admonition-title::before {
     content: "\f05a";
 }
+
 /* Admonition - Warning */
 .admonition.warning {
     background-color: rgb(255, 237, 204);
 }
+
 .admonition.warning .admonition-title {
     background-color: rgb(240, 179, 126);
 }
+
 .admonition.warning .admonition-title::before {
     content: "\f06a";
 }
+
 /* Admonition - Danger */
 .admonition.danger {
     background-color: rgb(253, 243, 242);
 }
+
 .admonition.danger .admonition-title {
     background-color: rgb(242, 159, 151);
 }
+
 .admonition.danger .admonition-title::before {
     content: "\f071";
 }
@@ -338,6 +401,7 @@ table.report th a {
     bottom: 0;
     right: 0;
 }
+
 .loading:before {
     content: '';
     display: block;
@@ -355,6 +419,7 @@ table.report th a {
     width: 80px;
     border: 1px solid grey;
 }
+
 .inline-color-block {
     display: inline-block;
     width: 1.5em;
@@ -363,28 +428,37 @@ table.report th a {
     border-radius: .25em;
     vertical-align: middle;
 }
+
 .text-nowrap {
     white-space: nowrap;
 }
+
 .banner-bottom {
     margin-bottom: 50px;
 }
+
 .panel table {
     margin-bottom: 0;
 }
+
 .panel .table th {
     border-bottom-width: 1px;
 }
+
 .panel table tr.even:first-child td {
     border-top: 0;
 }
+
 .panel .list-group {
     max-height: 400px;
     overflow: auto;
 }
-ul.nav-tabs, ul.nav-pills {
+
+ul.nav-tabs,
+ul.nav-pills {
     margin-bottom: 20px;
 }
+
 ul.nav-tabs li a {
     padding: 8px 10px;
     border: none;
@@ -499,6 +573,7 @@ td .progress {
     margin-bottom: 0;
     min-width: 100px;
 }
+
 textarea {
     font-family: Consolas, Lucida Console, monospace;
 }
@@ -510,23 +585,28 @@ textarea {
     position: relative;
     top: 2px;
 }
+
 .btn .mdi {
     margin: 0 -2px;
 }
+
 .btn .mdi::before {
     font-size: 20px;
     line-height: 14px;
     position: relative;
     top: 2px;
 }
+
 .btn-xs .mdi::before {
     font-size: 18px;
     top: 3px;
 }
+
 .btn-sm .mdi::before {
     font-size: 18px;
     top: 3px;
 }
+
 .btn-inline {
     font-size: .9em;
     line-height: .9em;
@@ -534,55 +614,68 @@ textarea {
     border-radius: 3px;
     padding: 1px 5px;
 }
+
 .btn-inline .mdi::before {
     font-size: .9em;
     top: 0px;
 }
+
 .dropdown-menu .mdi {
     margin-left: 2px;
 }
+
 .nav .mdi::before {
     left: -2px;
     position: relative;
     top: 2px;
 }
+
 .navbar .navbar-toggle .mdi::before {
     position: relative;
     top: 4px;
     color: #FFF;
 }
+
 .breadcrumb .mdi::before {
     position: relative;
     top: 4px;
 }
+
 .breadcrumb a:hover {
     text-decoration: none;
 }
+
 .breadcrumb a:hover span {
     text-decoration: underline;
 }
+
 .alert .mdi::before {
     position: relative;
     top: 4px;
     margin-right: 2px;
 }
+
 .input-group-addon .mdi::before {
     position: relative;
     top: 3px;
 }
+
 .input-group-btn .mdi::before {
     font-size: 20px;
 }
+
 .navbar-brand .mdi::before {
     position: relative;
     top: 2px;
     margin-right: 2px;
 }
+
 .list-group-item .mdi::before {
     position: relative;
     top: 3px;
     left: -3px
 }
+
 .badge .mdi::before {
     font-size: 12px;
     left: 0;
@@ -593,6 +686,7 @@ textarea {
 span.hover_copy .hover_copy_button {
     display: none;
 }
+
 span.hover_copy:hover .hover_copy_button {
     display: inline;
 }
@@ -617,13 +711,19 @@ span.hover_copy:hover .hover_copy_button {
     padding: 0;
     text-decoration: none;
 }
-.accordion-toggle:hover, .accordion-toggle:active, .accordion-toggle:visited, .accordion-toggle:link, .accordion-toggle:focus {
+
+.accordion-toggle:hover,
+.accordion-toggle:active,
+.accordion-toggle:visited,
+.accordion-toggle:link,
+.accordion-toggle:focus {
     border: 0;
     color: black;
     outline: 0;
     padding: 0;
     text-decoration: none;
 }
+
 #accordion-toggle-all {
     display: inline;
 }
@@ -632,6 +732,7 @@ span.hover_copy:hover .hover_copy_button {
 .theme-table .img-responsive {
     margin: 0 auto;
 }
+
 .theme-table .active-theme {
     border: 5px solid #FF0000;
 }
