@@ -13,6 +13,7 @@ from django.utils.text import slugify
 from nautobot.extras.choices import CustomFieldTypeChoices, RelationshipSideChoices, ObjectChangeActionChoices
 from nautobot.extras.models import ChangeLoggedModel, CustomField, Relationship
 from nautobot.users.models import ObjectPermission
+from nautobot.utilities.templatetags.helpers import bettertitle, validated_viewname
 from nautobot.utilities.testing.mixins import NautobotTestCaseMixin
 from nautobot.utilities.utils import get_changes_for_model, get_filterset_for_model
 from .utils import disable_warnings, extract_page_body, get_deletable_objects, post_data
@@ -595,6 +596,14 @@ class ViewTestCases:
         def get_filterset(self):
             return self.filterset or get_filterset_for_model(self.model)
 
+        # Helper methods to be overriden by special cases.
+        # See ConsoleConnectionsTestCase, InterfaceConnectionsTestCase and PowerConnectionsTestCase
+        def get_list_url(self):
+            return reverse(validated_viewname(self.model, "list"))
+
+        def get_title(self):
+            return bettertitle(self.model._meta.verbose_name_plural)
+
         @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
         def test_list_objects_anonymous(self):
             # Make the request as an unauthenticated user
@@ -691,7 +700,22 @@ class ViewTestCases:
             obj_perm.object_types.add(ContentType.objects.get_for_model(self.model))
 
             # Try GET with model-level permission
-            self.assertHttpStatus(self.client.get(self._get_url("list")), 200)
+            response = self.client.get(self._get_url("list"))
+            self.assertHttpStatus(response, 200)
+            response_body = response.content.decode(response.charset)
+
+            list_url = self.get_list_url()
+            title = self.get_title()
+
+            # Check if breadcrumb is rendered correctly
+            self.assertIn(
+                f'<a href="{list_url}">{title}</a>',
+                response_body,
+            )
+            # Check plugin banner is rendered correctly
+            self.assertIn(
+                f"<div>You are viewing a table of {self.model._meta.verbose_name_plural}</div>", response_body
+            )
 
             # Built-in CSV export
             if hasattr(self.model, "csv_headers"):

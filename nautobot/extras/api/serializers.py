@@ -1,5 +1,8 @@
+import logging
+
 from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ObjectDoesNotExist
+from django.urls import NoReverseMatch
 from django.utils.functional import classproperty
 from drf_spectacular.utils import extend_schema_field
 from rest_framework import serializers
@@ -69,6 +72,7 @@ from nautobot.tenancy.api.nested_serializers import (
 from nautobot.tenancy.models import Tenant, TenantGroup
 from nautobot.users.api.nested_serializers import NestedUserSerializer
 from nautobot.utilities.api import get_serializer_for_model
+from nautobot.utilities.deprecation import class_deprecated_in_favor_of
 from nautobot.utilities.utils import get_route_for_model, slugify_dashes_to_underscores
 from nautobot.virtualization.api.nested_serializers import (
     NestedClusterGroupSerializer,
@@ -76,7 +80,7 @@ from nautobot.virtualization.api.nested_serializers import (
 )
 from nautobot.virtualization.models import Cluster, ClusterGroup
 
-from .customfields import CustomFieldModelSerializer
+from .customfields import CustomFieldModelSerializerMixin
 from .fields import MultipleChoiceJSONField
 from .relationships import RelationshipModelSerializerMixin
 
@@ -113,6 +117,8 @@ from .nested_serializers import (  # noqa: F401
 # Mixins and Base Classes
 #
 
+logger = logging.getLogger(__name__)
+
 
 class NotesSerializerMixin(BaseModelSerializer):
     """Extend Serializer with a `notes` field."""
@@ -128,12 +134,26 @@ class NotesSerializerMixin(BaseModelSerializer):
 
     @extend_schema_field(serializers.URLField())
     def get_notes_url(self, instance):
-        notes_url = get_route_for_model(instance, "notes", api=True)
-        return reverse(notes_url, args=[instance.id], request=self.context["request"])
+        try:
+            notes_url = get_route_for_model(instance, "notes", api=True)
+            return reverse(notes_url, args=[instance.id], request=self.context["request"])
+        except NoReverseMatch:
+            model_name = type(instance).__name__
+            logger.warning(
+                (
+                    f"Notes feature is not available for model {model_name}. "
+                    "Please make sure to: "
+                    f"1. Include NotesMixin from nautobot.extras.model.mixins in the {model_name} class definition "
+                    f"2. Include NotesViewSetMixin from nautobot.extras.api.mixins in the {model_name}ViewSet "
+                    "before including NotesSerializerMixin in the model serializer"
+                )
+            )
+
+            return None
 
 
 class NautobotModelSerializer(
-    RelationshipModelSerializerMixin, CustomFieldModelSerializer, NotesSerializerMixin, ValidatedModelSerializer
+    RelationshipModelSerializerMixin, CustomFieldModelSerializerMixin, NotesSerializerMixin, ValidatedModelSerializer
 ):
     """Base class to use for serializers based on OrganizationalModel or PrimaryModel.
 
@@ -176,8 +196,7 @@ class TagSerializerField(NestedTagSerializer):
         return queryset.get_for_model(model)
 
 
-# TODO should be TaggedModelSerializerMixin
-class TaggedObjectSerializer(BaseModelSerializer):
+class TaggedModelSerializerMixin(BaseModelSerializer):
     tags = TagSerializerField(many=True, required=False)
 
     def get_field_names(self, declared_fields, info):
@@ -213,6 +232,12 @@ class TaggedObjectSerializer(BaseModelSerializer):
             instance.tags.clear()
 
         return instance
+
+
+# TODO: remove in 2.2
+@class_deprecated_in_favor_of(TaggedModelSerializerMixin)
+class TaggedObjectSerializer(TaggedModelSerializerMixin):
+    pass
 
 
 #
@@ -721,7 +746,7 @@ class ImageAttachmentSerializer(ValidatedModelSerializer):
 #
 
 
-class JobSerializer(NautobotModelSerializer, TaggedObjectSerializer):
+class JobSerializer(NautobotModelSerializer, TaggedModelSerializerMixin):
     url = serializers.HyperlinkedIdentityField(view_name="extras-api:job-detail")
 
     class Meta:
@@ -810,7 +835,7 @@ class JobRunResponseSerializer(serializers.Serializer):
 #
 
 
-class JobResultSerializer(CustomFieldModelSerializer, BaseModelSerializer):
+class JobResultSerializer(CustomFieldModelSerializerMixin, BaseModelSerializer):
     url = serializers.HyperlinkedIdentityField(view_name="extras-api:jobresult-detail")
     user = NestedUserSerializer(read_only=True)
     status = ChoiceField(choices=JobResultStatusChoices, read_only=True)
@@ -1129,7 +1154,7 @@ class RelationshipAssociationSerializer(ValidatedModelSerializer):
 #
 
 
-class SecretSerializer(NautobotModelSerializer, TaggedObjectSerializer):
+class SecretSerializer(NautobotModelSerializer, TaggedModelSerializerMixin):
     """Serializer for `Secret` objects."""
 
     url = serializers.HyperlinkedIdentityField(view_name="extras-api:secret-detail")

@@ -727,7 +727,7 @@ class JobModelTest(TestCase):
     def test_latest_result(self):
         self.assertEqual(self.local_job.latest_result, None)
         self.assertEqual(self.plugin_job.latest_result, None)
-        # TODO: create some JobResults and test that this works correctly for them as well.
+        # TODO(Glenn): create some JobResults and test that this works correctly for them as well.
 
     def test_defaults(self):
         """Verify that defaults for discovered JobModel instances are as expected."""
