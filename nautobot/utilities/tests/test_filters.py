@@ -1,6 +1,8 @@
 import django_filters
 from django.conf import settings
+from django.contrib.auth import get_user_model
 from django.db import models
+from django.shortcuts import reverse
 from django.test import TestCase
 from mptt.fields import TreeForeignKey
 from taggit.managers import TaggableManager
@@ -21,6 +23,8 @@ from nautobot.dcim.models import (
     Site,
 )
 from nautobot.extras.models import Status, TaggedItem
+from nautobot.ipam import factory
+from nautobot.ipam.models import Prefix
 from nautobot.utilities.filters import (
     BaseFilterSet,
     MACAddressFilter,
@@ -36,6 +40,7 @@ from nautobot.utilities.filters import (
 )
 from nautobot.utilities.testing import FilterTestCases
 from nautobot.utilities.testing import mixins
+from nautobot.utilities.utils import get_route_for_model
 
 
 class TreeNodeMultipleChoiceFilterTest(TestCase):
@@ -1249,3 +1254,16 @@ class SearchFilterTest(TestCase, mixins.NautobotTestCaseMixin):
 
             class InvalidSiteFilterSet(SiteFilterSet):  # pylint: disable=unused-variable
                 q = SearchFilter(filter_predicates={"asn": ["icontains"]})
+
+
+class FilterTypeTest(TestCase):
+    def test_numberfilter(self):
+        """
+        Simple test to show the bug identified in https://github.com/nautobot/nautobot/issues/2837 no longer exists
+        """
+        user = get_user_model().objects.create_user(username="testuser", is_superuser=True)
+        self.client.force_login(user)
+        factory.PrefixFactory()
+        prefix_list_url = reverse(get_route_for_model(Prefix, "list"))
+        response = self.client.get(f"{prefix_list_url}?mask_length__lte=20")
+        self.assertNotContains(response, "Invalid filters were specified")

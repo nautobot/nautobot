@@ -934,7 +934,7 @@ def convert_querydict_to_factory_formset_acceptable_querydict(request_querydict,
 def is_single_choice_field(filterset_class, field_name):
     # Some filter parameters do not accept multiple values, e.g DateTime, Boolean, Int fields and the q field, etc.
     field = get_filterset_field(filterset_class, field_name)
-    return not isinstance(field, django_filters.MultipleChoiceFilter) or field_name == "q"
+    return not isinstance(field, django_filters.MultipleChoiceFilter)
 
 
 def get_filterable_params_from_filter_params(filter_params, non_filter_params, filterset_class):
