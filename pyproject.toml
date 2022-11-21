@@ -104,7 +104,7 @@ importlib-metadata = {version = "^4.4", python = "<3.8"}
 # Template rendering engine
 Jinja2 = "~3.1.0"
 # Optional data validation of config contexts
-jsonschema = "~4.7.0"
+jsonschema = "~4.17.0"
 # Rendering of markdown files to HTML
 Markdown = "~3.3.7"
 # Escape text to use HTML and XML
