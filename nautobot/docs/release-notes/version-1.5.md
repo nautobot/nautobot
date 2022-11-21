@@ -134,6 +134,7 @@ A number of mixin classes have been renamed and/or relocated for improved self-c
 | `PathEndpointFilterSet`        | `PathEndpointModelFilterSetMixin`            |
 | `PluginBanner`                 | `Banner`                                     |
 | `PluginConfig`                 | `NautobotAppConfig`                          |
+| `PluginCustomValidator`        | `CustomValidator`                            |
 | `PluginFilterExtension`        | `FilterExtension`                            |
 | `PluginTemplateExtension`      | `TemplateExtension`                          |
 | `RelationshipModelFilterSet`   | `RelationshipModelFilterSetMixin`            |

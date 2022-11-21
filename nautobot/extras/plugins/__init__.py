@@ -487,6 +487,7 @@ def register_filter_extensions(filter_extensions, plugin_name):
 
 
 # 2.2 TODO: remove in favor of NavMenuItem
+@class_deprecated_in_favor_of(NavMenuItem)
 class PluginMenuItem:
     """
     This class represents a navigation menu item. This constitutes primary link and its text, but also allows for
@@ -513,6 +514,7 @@ class PluginMenuItem:
 
 
 # 2.2 TODO: remove in favor of NavMenuButton
+@class_deprecated_in_favor_of(NavMenuButton)
 class PluginMenuButton:
     """
     This class represents a button within a PluginMenuItem. Note that button colors should come from
@@ -611,7 +613,7 @@ def register_plugin_menu_items(section_name, menu_items):
 #
 
 
-class PluginCustomValidator:
+class CustomValidator:
     """
     This class is used to register plugin custom model validators which act on specified models. It contains the clean
     method which is overridden by plugin authors to execute custom validation logic. Plugin authors must raise
@@ -644,18 +646,23 @@ class PluginCustomValidator:
         raise NotImplementedError
 
 
+@class_deprecated_in_favor_of(CustomValidator)
+class PluginCustomValidator(CustomValidator):
+    pass
+
+
 def register_custom_validators(class_list):
     """
-    Register a list of PluginCustomValidator classes
+    Register a list of CustomValidator classes
     """
     # Validation
     for custom_validator in class_list:
         if not inspect.isclass(custom_validator):
-            raise TypeError(f"PluginCustomValidator class {custom_validator} was passed as an instance!")
-        if not issubclass(custom_validator, PluginCustomValidator):
-            raise TypeError(f"{custom_validator} is not a subclass of extras.plugins.PluginCustomValidator!")
+            raise TypeError(f"CustomValidator class {custom_validator} was passed as an instance!")
+        if not issubclass(custom_validator, CustomValidator):
+            raise TypeError(f"{custom_validator} is not a subclass of nautobot.apps.models.CustomValidator!")
         if custom_validator.model is None:
-            raise TypeError(f"PluginCustomValidator class {custom_validator} does not define a valid model!")
+            raise TypeError(f"CustomValidator class {custom_validator} does not define a valid model!")
 
         registry["plugin_custom_validators"][custom_validator.model].append(custom_validator)
 
