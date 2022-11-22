@@ -280,7 +280,7 @@ class ViewTestCases:
             # Try POST without permission
             request = {
                 "path": self._get_url("add"),
-                "data": utils.post_data(self.form_data),
+                "data": testing.post_data(self.form_data),
             }
             response = self.client.post(**request)
             with testing.disable_warnings("django.request"):
@@ -302,7 +302,7 @@ class ViewTestCases:
             # Try POST with model-level permission
             request = {
                 "path": self._get_url("add"),
-                "data": utils.post_data(self.form_data),
+                "data": testing.post_data(self.form_data),
             }
             self.assertHttpStatus(self.client.post(**request), 302)
             self.assertEqual(initial_count + 1, self._get_queryset().count())
@@ -345,7 +345,7 @@ class ViewTestCases:
             # Try to create an object (not permitted)
             request = {
                 "path": self._get_url("add"),
-                "data": utils.post_data(self.form_data),
+                "data": testing.post_data(self.form_data),
             }
             self.assertHttpStatus(self.client.post(**request), 200)
             self.assertEqual(initial_count, self._get_queryset().count())  # Check that no object was created
@@ -357,7 +357,7 @@ class ViewTestCases:
             # Try to create an object (permitted)
             request = {
                 "path": self._get_url("add"),
-                "data": utils.post_data(self.form_data),
+                "data": testing.post_data(self.form_data),
             }
             self.assertHttpStatus(self.client.post(**request), 302)
             self.assertEqual(initial_count + 1, self._get_queryset().count())
@@ -417,7 +417,7 @@ class ViewTestCases:
             # Try POST without permission
             request = {
                 "path": self._get_url("edit", instance),
-                "data": utils.post_data(self.form_data),
+                "data": testing.post_data(self.form_data),
             }
             with testing.disable_warnings("django.request"):
                 self.assertHttpStatus(self.client.post(**request), [403, 404])
@@ -438,7 +438,7 @@ class ViewTestCases:
             # Try POST with model-level permission
             request = {
                 "path": self._get_url("edit", instance),
-                "data": utils.post_data(self.form_data),
+                "data": testing.post_data(self.form_data),
             }
             self.assertHttpStatus(self.client.post(**request), 302)
             self.assertInstanceEqual(self._get_queryset().get(pk=instance.pk), self.form_data)
@@ -472,7 +472,7 @@ class ViewTestCases:
             # Try to edit a permitted object
             request = {
                 "path": self._get_url("edit", instance1),
-                "data": utils.post_data(self.form_data),
+                "data": testing.post_data(self.form_data),
             }
             self.assertHttpStatus(self.client.post(**request), 302)
             self.assertInstanceEqual(self._get_queryset().get(pk=instance1.pk), self.form_data)
@@ -480,7 +480,7 @@ class ViewTestCases:
             # Try to edit a non-permitted object
             request = {
                 "path": self._get_url("edit", instance2),
-                "data": utils.post_data(self.form_data),
+                "data": testing.post_data(self.form_data),
             }
             self.assertHttpStatus(self.client.post(**request), 404)
 
@@ -496,7 +496,7 @@ class ViewTestCases:
             For some models this may just be any random object, but when we have FKs with `on_delete=models.PROTECT`
             (as is often the case) we need to find or create an instance that doesn't have such entanglements.
             """
-            instance = utils.get_deletable_objects(self.model, self._get_queryset()).first()
+            instance = testing.get_deletable_objects(self.model, self._get_queryset()).first()
             if instance is None:
                 self.fail("Couldn't find a single deletable object!")
             return instance
@@ -511,7 +511,7 @@ class ViewTestCases:
             # Try POST without permission
             request = {
                 "path": self._get_url("delete", instance),
-                "data": utils.post_data({"confirm": True}),
+                "data": testing.post_data({"confirm": True}),
             }
             with testing.disable_warnings("django.request"):
                 self.assertHttpStatus(self.client.post(**request), [403, 404])
@@ -532,7 +532,7 @@ class ViewTestCases:
             # Try POST with model-level permission
             request = {
                 "path": self._get_url("delete", instance),
-                "data": utils.post_data({"confirm": True}),
+                "data": testing.post_data({"confirm": True}),
             }
             self.assertHttpStatus(self.client.post(**request), 302)
             with self.assertRaises(ObjectDoesNotExist):
@@ -568,7 +568,7 @@ class ViewTestCases:
             # Try to delete a permitted object
             request = {
                 "path": self._get_url("delete", instance1),
-                "data": utils.post_data({"confirm": True}),
+                "data": testing.post_data({"confirm": True}),
             }
             self.assertHttpStatus(self.client.post(**request), 302)
             with self.assertRaises(ObjectDoesNotExist):
@@ -580,7 +580,7 @@ class ViewTestCases:
             instance3 = self._get_queryset().first()
             request = {
                 "path": self._get_url("delete", instance3),
-                "data": utils.post_data({"confirm": True}),
+                "data": testing.post_data({"confirm": True}),
             }
             self.assertHttpStatus(self.client.post(**request), 404)
             self.assertTrue(self._get_queryset().filter(pk=instance3.pk).exists())
@@ -740,7 +740,7 @@ class ViewTestCases:
         def test_create_multiple_objects_without_permission(self):
             request = {
                 "path": self._get_url("add"),
-                "data": utils.post_data(self.bulk_create_data),
+                "data": testing.post_data(self.bulk_create_data),
             }
 
             # Try POST without permission
@@ -752,7 +752,7 @@ class ViewTestCases:
             initial_count = self._get_queryset().count()
             request = {
                 "path": self._get_url("add"),
-                "data": utils.post_data(self.bulk_create_data),
+                "data": testing.post_data(self.bulk_create_data),
             }
 
             # Assign non-constrained permission
@@ -782,7 +782,7 @@ class ViewTestCases:
             initial_count = self._get_queryset().count()
             request = {
                 "path": self._get_url("add"),
-                "data": utils.post_data(self.bulk_create_data),
+                "data": testing.post_data(self.bulk_create_data),
             }
 
             # Assign constrained permission
@@ -943,7 +943,7 @@ class ViewTestCases:
             }
 
             # Append the form data to the request
-            data.update(utils.post_data(self.bulk_edit_data))
+            data.update(testing.post_data(self.bulk_edit_data))
 
             # Assign model-level permission
             obj_perm = users_models.ObjectPermission(name="Test permission", actions=["change"])
@@ -992,7 +992,7 @@ class ViewTestCases:
             }
 
             # Append the form data to the request
-            data.update(utils.post_data(self.bulk_edit_data))
+            data.update(testing.post_data(self.bulk_edit_data))
 
             # Dynamically determine a constraint that will *not* be matched by the updated objects.
             attr_name = list(self.bulk_edit_data.keys())[0]
@@ -1036,7 +1036,7 @@ class ViewTestCases:
             For some models this may just be any random objects, but when we have FKs with `on_delete=models.PROTECT`
             (as is often the case) we need to find or create an instance that doesn't have such entanglements.
             """
-            return utils.get_deletable_objects(self.model, self._get_queryset()).values_list("pk", flat=True)[:3]
+            return testing.get_deletable_objects(self.model, self._get_queryset()).values_list("pk", flat=True)[:3]
 
         @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
         def test_bulk_delete_objects_without_permission(self):

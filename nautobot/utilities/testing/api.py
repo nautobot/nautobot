@@ -145,19 +145,15 @@ class APIViewTestCases:
 
             # If opt-in fields are supported on this model, make sure they can be opted into
 
-            registry.custom_fields_registry = registry["model_features"]["custom_fields"]
+            custom_fields_registry = registry.registry["model_features"]["custom_fields"]
             # computed fields and custom fields use the same registry
-            cf_supported = self.model._meta.model_name in registry.custom_fields_registry.get(
-                self.model._meta.app_label, {}
-            )
+            cf_supported = self.model._meta.model_name in custom_fields_registry.get(self.model._meta.app_label, {})
             if cf_supported:  # custom_fields is not an opt-in field, it should always be present if supported
                 self.assertIn("custom_fields", response.data)
                 self.assertIsInstance(response.data["custom_fields"], dict)
 
-            registry.relationships_registry = registry["model_features"]["relationships"]
-            rel_supported = self.model._meta.model_name in registry.relationships_registry.get(
-                self.model._meta.app_label, {}
-            )
+            relationships_registry = registry.registry["model_features"]["relationships"]
+            rel_supported = self.model._meta.model_name in relationships_registry.get(self.model._meta.app_label, {})
             if cf_supported or rel_supported:
                 query_params = []
                 if cf_supported:
