@@ -7,19 +7,19 @@
     <div class="card ">
         <div class="card-header"><strong>Termination</strong></div>
         <div class="card-body">
-            <div class="form-group">
+            <div class="form-group row">
                 <label class="col-lg-3 col-form-label">Provider</label>
                 <div class="col-lg-9">
                     <p class="form-control-static">{{ obj.circuit.provider }}</p>
                 </div>
             </div>
-            <div class="form-group">
+            <div class="form-group row">
                 <label class="col-lg-3 col-form-label">Circuit</label>
                 <div class="col-lg-9">
                     <p class="form-control-static">{{ obj.circuit.cid }}</p>
                 </div>
             </div>
-            <div class="form-group">
+            <div class="form-group row">
                 <label class="col-lg-3 col-form-label">Termination</label>
                 <div class="col-lg-9">
                     <p class="form-control-static">{{ form.term_side.value }}</p>
@@ -27,8 +27,8 @@
             </div>
                 {% with providernetwork_tab_active=form.initial.provider_network %}
                     <ul class="nav nav-tabs" role="tablist">
-                        <li role="presentation"{% if not providernetwork_tab_active %} class="active"{% endif %}><a href="#site" role="tab" data-toggle="tab">Site</a></li>
-                        <li role="presentation"{% if providernetwork_tab_active %} class="active"{% endif %}><a href="#providernetwork" role="tab" data-toggle="tab">Provider Network</a></li>
+                        <li role="presentation" class="nav-item{% if not providernetwork_tab_active %} active{% endif %}"><a class="nav-link" href="#site" role="tab" data-bs-toggle="tab">Site</a></li>
+                        <li role="presentation" class="nav-item{% if providernetwork_tab_active %} active{% endif %}"><a class="nav-link" href="#providernetwork" role="tab" data-bs-toggle="tab">Provider Network</a></li>
                     </ul>
                     <div class="tab-content">
                         <div class="tab-pane{% if not providernetwork_tab_active %} active{% endif %}" id="site">
@@ -46,7 +46,7 @@
     <div class="card ">
         <div class="card-header"><strong>Termination Details</strong></div>
         <div class="card-body">
-            <div class="form-group">
+            <div class="form-group row">
                 <label class="col-lg-3 col-form-label" for="id_port_speed">{{ form.port_speed.label }}</label>
                 <div class="col-lg-9">
                     <div class="input-group">
@@ -56,7 +56,7 @@
                     <span class="form-text">{{ form.port_speed.help_text }}</span>
                 </div>
             </div>
-            <div class="form-group">
+            <div class="form-group row">
                 <label class="col-lg-3 col-form-label" for="id_upstream_speed">{{ form.upstream_speed.label }}</label>
                 <div class="col-lg-9">
                     <div class="input-group">

@@ -106,7 +106,7 @@
 
 {% block content %}
     <div class="tab-content">
-        <div id="main" role="tabpanel" class="tab-pane {% if active_tab == "main" or request.GET.tab == "main" %}active{% else %}fade{% endif %}">
+        <div id="main" role="tabpanel" class="tab-pane {% if active_tab == "main" or request.GET.tab == "main" %}show active{% else %}fade{% endif %}">
             <div class="row">
                 <div class="col-lg-6">
                     {% block content_left_page %}{% endblock content_left_page %}
@@ -127,7 +127,7 @@
                 </div>
             </div>
         </div>
-        <div id="advanced" role="tabpanel" class="tab-pane {% if request.GET.tab == 'advanced' %}active{% else %}fade{% endif %}">
+        <div id="advanced" role="tabpanel" class="tab-pane {% if request.GET.tab == 'advanced' %}show active{% else %}fade{% endif %}">
             <div class="row">
                 <div class="col-lg-6">
                     {% include 'inc/object_details_advanced_panel.html' %}
@@ -175,7 +175,8 @@
         final_query_string = query_string ? "&" + query_string : ""
 
         window.history.replaceState({id: tab_id}, document.title, `${tab_url}?tab=${tab_id}${final_query_string}`);
-        $(`#tabs a[href="{{ object.get_absolute_url }}#${tab_id}"]`).tab('show');
+        document.querySelector(`#${tab_id}`).classList.add('active');
+        document.querySelector(`#${tab_id}`).classList.add('show');
 
     }
 
@@ -196,8 +197,10 @@
     }
 
     window.onpopstate = function(event) {
-        if(event)
-            $(`#tabs a[href="{{ object.get_absolute_url }}#${event.state.id}"]`).tab('show');
+        if(event) {
+            document.querySelector(`#${tab_id}`).classList.add('active');
+            document.querySelector(`#${tab_id}`).classList.add('show');
+        }
     }
     // Toggle v -. >
     $("#accordion .accordion-toggle").click(function () {

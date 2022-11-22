@@ -17,8 +17,8 @@
                     <tr>
                         <td colspan="2"><strong>
                             <button type="button" class="accordion-toggle mdi mdi-chevron-down"
-                                    name="grouping.{{ grouping }}" data-toggle="collapse"
-                                    data-target=".collapseme-{{ count }}">
+                                    name="grouping.{{ grouping }}" data-bs-toggle="collapse"
+                                    data-bs-target=".collapseme-{{ count }}">
                                 {{ grouping }}
                             </button></strong>
                         </td>
@@ -36,8 +36,8 @@
                                     {{ value|join:", " }}
                                 {% elif field.type == 'json' and value is not None %}
                                     <p>
-                                        <button class="btn btn-sm btn-primary" type="button" data-toggle="collapse"
-                                                data-target="#cf_{{ field.slug }}" aria-expanded="false"
+                                        <button class="btn btn-sm btn-primary" type="button" data-bs-toggle="collapse"
+                                                data-bs-target="#cf_{{ field.slug }}" aria-expanded="false"
                                                 aria-controls="cf_{{ field.slug }}">
                                             Show/Hide
                                         </button>

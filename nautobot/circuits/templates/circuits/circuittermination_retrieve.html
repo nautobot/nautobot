@@ -2,10 +2,10 @@
 {% load helpers %}
 
 {% block breadcrumbs %}
-    <li><a href="{% url 'circuits:circuit_list' %}">Circuits</a></li>
-    <li><a href="{% url 'circuits:circuit_list' %}?provider={{ object.circuit.provider.slug }}">{{ object.circuit.provider }}</a></li>
-    <li>{{ object.circuit|hyperlinked_object }}</li>
-    <li>{{ object|hyperlinked_object }}</li>
+    <li class="breadcrumb-item"><a href="{% url 'circuits:circuit_list' %}">Circuits</a></li>
+    <li class="breadcrumb-item"><a href="{% url 'circuits:circuit_list' %}?provider={{ object.circuit.provider.slug }}">{{ object.circuit.provider }}</a></li>
+    <li class="breadcrumb-item">{{ object.circuit|hyperlinked_object }}</li>
+    <li class="breadcrumb-item">{{ object|hyperlinked_object }}</li>
 {% endblock breadcrumbs %}
 
 {% block content_left_page %}
@@ -63,14 +63,14 @@
                             {% if perms.dcim.add_cable and object.site %}
                                 <div class="float-end">
                                     <span class="dropdown">
-                                        <button type="button" class="btn btn-success btn-sm dropdown-toggle" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                                        <button type="button" class="btn btn-success btn-sm dropdown-toggle" data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
                                             <span class="mdi mdi-ethernet-cable" aria-hidden="true"></span> Connect
                                         </button>
                                         <ul class="dropdown-menu dropdown-menu-right">
-                                            <li><a href="{% url 'circuits:circuittermination_connect' termination_a_id=object.pk termination_b_type='interface' %}?termination_b_site={{ object.site.pk }}&return_url={{ object.get_absolute_url }}">Interface</a></li>
-                                            <li><a href="{% url 'circuits:circuittermination_connect' termination_a_id=object.pk termination_b_type='front-port' %}?termination_b_site={{ object.site.pk }}&return_url={{ object.get_absolute_url }}">Front Port</a></li>
-                                            <li><a href="{% url 'circuits:circuittermination_connect' termination_a_id=object.pk termination_b_type='rear-port' %}?termination_b_site={{ object.site.pk }}&return_url={{ object.get_absolute_url }}">Rear Port</a></li>
-                                            <li><a href="{% url 'circuits:circuittermination_connect' termination_a_id=object.pk termination_b_type='circuit-termination' %}?termination_b_site={{ object.site.pk }}&return_url={{ object.get_absolute_url }}">Circuit Termination</a></li>
+                                            <li><a class="dropdown-item" href="{% url 'circuits:circuittermination_connect' termination_a_id=object.pk termination_b_type='interface' %}?termination_b_site={{ object.site.pk }}&return_url={{ object.get_absolute_url }}">Interface</a></li>
+                                            <li><a class="dropdown-item" href="{% url 'circuits:circuittermination_connect' termination_a_id=object.pk termination_b_type='front-port' %}?termination_b_site={{ object.site.pk }}&return_url={{ object.get_absolute_url }}">Front Port</a></li>
+                                            <li><a class="dropdown-item" href="{% url 'circuits:circuittermination_connect' termination_a_id=object.pk termination_b_type='rear-port' %}?termination_b_site={{ object.site.pk }}&return_url={{ object.get_absolute_url }}">Rear Port</a></li>
+                                            <li><a class="dropdown-item" href="{% url 'circuits:circuittermination_connect' termination_a_id=object.pk termination_b_type='circuit-termination' %}?termination_b_site={{ object.site.pk }}&return_url={{ object.get_absolute_url }}">Circuit Termination</a></li>
                                         </ul>
                                     </span>
                                 </div>

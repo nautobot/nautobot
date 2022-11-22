@@ -650,7 +650,7 @@ def modal_form_as_dialog(form, editing=False, form_name=None, obj=None, obj_type
 
     ```
     {% modal_form_as_dialog form editing=False form_name="CreateDevice" obj=obj obj_type="Device" %}
-    <a class="btn btn-primary" data-toggle="modal" data-target="#CreateDevice_form" title="Query Form">Create Device</a>
+    <a class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#CreateDevice_form" title="Query Form">Create Device</a>
     ```
     Args:
         form (django.form.Forms): Django form object.

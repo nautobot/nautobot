@@ -11,7 +11,7 @@
         {% plugin_buttons object %}
         {% if perms.dcim.change_devicetype %}
             <div class="btn-group">
-                <button type="button" class="btn btn-primary dropdown-toggle" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                <button type="button" class="btn btn-primary dropdown-toggle" data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
                     <span class="mdi mdi-plus-thick" aria-hidden="true"></span> Add Components <span class="caret"></span>
                 </button>
                 <ul class="dropdown-menu">
@@ -140,28 +140,28 @@
 {% block content_full_width_page %}
             <ul class="nav nav-tabs" role="tablist">
                 <li role="presentation" class="active">
-                    <a href="#interfaces" role="tab" data-toggle="tab">Interfaces {% badge interface_table.rows|length %}</a>
+                    <a href="#interfaces" role="tab" data-bs-toggle="tab">Interfaces {% badge interface_table.rows|length %}</a>
                 </li>
                 <li role="presentation">
-                    <a href="#frontports" role="tab" data-toggle="tab">Front Ports {% badge front_port_table.rows|length %}</a>
+                    <a href="#frontports" role="tab" data-bs-toggle="tab">Front Ports {% badge front_port_table.rows|length %}</a>
                 </li>
                 <li role="presentation">
-                    <a href="#rearports" role="tab" data-toggle="tab">Rear Ports {% badge rear_port_table.rows|length %}</a>
+                    <a href="#rearports" role="tab" data-bs-toggle="tab">Rear Ports {% badge rear_port_table.rows|length %}</a>
                 </li>
                 <li role="presentation">
-                    <a href="#consoleports" role="tab" data-toggle="tab">Console Ports {% badge consoleport_table.rows|length %}</a>
+                    <a href="#consoleports" role="tab" data-bs-toggle="tab">Console Ports {% badge consoleport_table.rows|length %}</a>
                 </li>
                 <li role="presentation">
-                    <a href="#consoleserverports" role="tab" data-toggle="tab">Console Server Ports {% badge consoleserverport_table.rows|length %}</a>
+                    <a href="#consoleserverports" role="tab" data-bs-toggle="tab">Console Server Ports {% badge consoleserverport_table.rows|length %}</a>
                 </li>
                 <li role="presentation">
-                    <a href="#powerports" role="tab" data-toggle="tab">Power Ports {% badge powerport_table.rows|length %}</a>
+                    <a href="#powerports" role="tab" data-bs-toggle="tab">Power Ports {% badge powerport_table.rows|length %}</a>
                 </li>
                 <li role="presentation">
-                    <a href="#poweroutlets" role="tab" data-toggle="tab">Power Outlets {% badge poweroutlet_table.rows|length %}</a>
+                    <a href="#poweroutlets" role="tab" data-bs-toggle="tab">Power Outlets {% badge poweroutlet_table.rows|length %}</a>
                 </li>
                 <li role="presentation">
-                    <a href="#devicebays" role="tab" data-toggle="tab">Device Bays {% badge devicebay_table.rows|length %}</a>
+                    <a href="#devicebays" role="tab" data-bs-toggle="tab">Device Bays {% badge devicebay_table.rows|length %}</a>
                 </li>
             </ul>
             <div class="tab-content">

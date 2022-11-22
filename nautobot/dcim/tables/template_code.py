@@ -133,7 +133,7 @@ CONSOLEPORT_BUTTONS = """
     <a href="#" class="btn btn-secondary btn-sm disabled"><i class="mdi mdi-transit-connection-variant" aria-hidden="true"></i></a>
     <a href="#" class="btn btn-secondary btn-sm disabled"><i class="mdi mdi-lan-connect" aria-hidden="true"></i></a>
     <span class="dropdown">
-        <button type="button" class="btn btn-success btn-sm dropdown-toggle" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+        <button type="button" class="btn btn-success btn-sm dropdown-toggle" data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
             <span class="mdi mdi-ethernet-cable" aria-hidden="true"></span>
         </button>
         <ul class="dropdown-menu dropdown-menu-right">
@@ -153,7 +153,7 @@ CONSOLESERVERPORT_BUTTONS = """
     <a href="#" class="btn btn-secondary btn-sm disabled"><i class="mdi mdi-transit-connection-variant" aria-hidden="true"></i></a>
     <a href="#" class="btn btn-secondary btn-sm disabled"><i class="mdi mdi-lan-connect" aria-hidden="true"></i></a>
     <span class="dropdown">
-        <button type="button" class="btn btn-success btn-sm dropdown-toggle" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+        <button type="button" class="btn btn-success btn-sm dropdown-toggle" data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
             <span class="mdi mdi-ethernet-cable" aria-hidden="true"></span>
         </button>
         <ul class="dropdown-menu dropdown-menu-right">
@@ -173,7 +173,7 @@ POWERPORT_BUTTONS = """
     <a href="#" class="btn btn-secondary btn-sm disabled"><i class="mdi mdi-transit-connection-variant" aria-hidden="true"></i></a>
     <a href="#" class="btn btn-secondary btn-sm disabled"><i class="mdi mdi-lan-connect" aria-hidden="true"></i></a>
     <span class="dropdown">
-        <button type="button" class="btn btn-success btn-sm dropdown-toggle" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+        <button type="button" class="btn btn-success btn-sm dropdown-toggle" data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
             <span class="mdi mdi-ethernet-cable" aria-hidden="true"></span>
         </button>
         <ul class="dropdown-menu dropdown-menu-right">
@@ -210,7 +210,7 @@ INTERFACE_BUTTONS = """
     <a href="#" class="btn btn-secondary btn-sm disabled"><i class="mdi mdi-transit-connection-variant" aria-hidden="true"></i></a>
     <a href="#" class="btn btn-secondary btn-sm disabled"><i class="mdi mdi-lan-connect" aria-hidden="true"></i></a>
     <span class="dropdown">
-        <button type="button" class="btn btn-success btn-sm dropdown-toggle" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+        <button type="button" class="btn btn-success btn-sm dropdown-toggle" data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
             <span class="mdi mdi-ethernet-cable" aria-hidden="true"></span>
         </button>
         <ul class="dropdown-menu dropdown-menu-right">
@@ -231,7 +231,7 @@ FRONTPORT_BUTTONS = """
     <a href="#" class="btn btn-secondary btn-sm disabled"><i class="mdi mdi-transit-connection-variant" aria-hidden="true"></i></a>
     <a href="#" class="btn btn-secondary btn-sm disabled"><i class="mdi mdi-lan-connect" aria-hidden="true"></i></a>
     <span class="dropdown">
-        <button type="button" class="btn btn-success btn-sm dropdown-toggle" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+        <button type="button" class="btn btn-success btn-sm dropdown-toggle" data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
             <span class="mdi mdi-ethernet-cable" aria-hidden="true"></span>
         </button>
         <ul class="dropdown-menu dropdown-menu-right">
@@ -254,7 +254,7 @@ REARPORT_BUTTONS = """
     <a href="#" class="btn btn-secondary btn-sm disabled"><i class="mdi mdi-transit-connection-variant" aria-hidden="true"></i></a>
     <a href="#" class="btn btn-secondary btn-sm disabled"><i class="mdi mdi-lan-connect" aria-hidden="true"></i></a>
     <span class="dropdown">
-        <button type="button" class="btn btn-success btn-sm dropdown-toggle" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+        <button type="button" class="btn btn-success btn-sm dropdown-toggle" data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
             <span class="mdi mdi-ethernet-cable" aria-hidden="true"></span>
         </button>
         <ul class="dropdown-menu dropdown-menu-right">

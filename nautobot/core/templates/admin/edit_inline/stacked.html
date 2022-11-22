@@ -13,7 +13,7 @@
         <div class="well well-small inline-related{% if inline_admin_form.original or inline_admin_form.show_url %} has_original{% endif %}{% if forloop.last %} empty-form last-related{% endif %}" id="{{ inline_admin_formset.formset.prefix }}-{% if not forloop.last %}{{ forloop.counter0 }}{% else %}empty{% endif %}">
           <legend>
             {% if not forloop.last %}
-            <a data-toggle="collapse" data-target="#{{ inline_admin_formset.formset.prefix }}-{% if not forloop.last %}{{ forloop.counter0 }}{% else %}empty{% endif %} > .collapse">
+            <a data-bs-toggle="collapse" data-bs-target="#{{ inline_admin_formset.formset.prefix }}-{% if not forloop.last %}{{ forloop.counter0 }}{% else %}empty{% endif %} > .collapse">
             {% endif %}
             {% if inline_admin_form.original %}{{ inline_admin_form.original }}{% if inline_admin_form.model_admin.show_change_link and inline_admin_form.model_admin.has_registered_model %} <a href="{% url inline_admin_form.model_admin.opts|admin_urlname:'change' inline_admin_form.original.pk|admin_urlquote %}" class="inlinechangelink">{% trans "Change" %}</a>{% endif %}{% else %}#{{ forloop.counter }}{% endif %} <small class="inline_label">({{ inline_admin_formset.opts.verbose_name|capfirst }})</small>
             {% if not forloop.last %}

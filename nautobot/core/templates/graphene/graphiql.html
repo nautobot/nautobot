@@ -101,7 +101,7 @@ add "&raw" to the end of the URL within a browser.
     document.addEventListener('DOMContentLoaded', function() {
       queries_tab = `
         <div class="btn-group" role="button">
-          <button class="toolbar-button dropdown-toggle" aria-haspopup="true" aria-expanded="false" data-toggle="dropdown">
+          <button class="toolbar-button dropdown-toggle" aria-haspopup="true" aria-expanded="false" data-bs-toggle="dropdown">
               <span>Queries </span>
               <span class="caret"></span>
           </button>
@@ -123,7 +123,7 @@ add "&raw" to the end of the URL within a browser.
               {% endfor %}
               <li class="dropdown-divider" role="separator"></li>
                 <li>
-                    <a onclick="populate_model()" data-toggle="modal" data-target="#GraphQLQueries_form" title="Query Form">Save Current Query As...</a>
+                    <a onclick="populate_model()" data-bs-toggle="modal" data-bs-target="#GraphQLQueries_form" title="Query Form">Save Current Query As...</a>
                 </li>
             </ul>
         </div>
