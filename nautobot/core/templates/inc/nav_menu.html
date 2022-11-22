@@ -2,12 +2,12 @@
 {% load registry %}
 {% load helpers %}
 {% registry %}
-<nav class="navbar navbar-light navbar-fixed-top navbar-expand-sm bg-light">
+<nav class="navbar navbar-dark bg-dark navbar-fixed-top navbar-expand-xxl">
     <div class="container-fluid">
         <a class="navbar-brand" href="{% url 'home' %}">
             <img src="{% custom_branding_or_static 'logo' 'img/nautobot_logo.svg' %}" height="30" />
         </a>
-        <button type="button" class="navbar-toggler collapsed" data-bs-toggle="collapse" data-bs-target="#navbar" aria-expanded="false">
+        <button type="button" class="navbar-toggler collapsed" data-bs-toggle="collapse" data-bs-target="#navbar" aria-expanded="false" aria-controls="navbar" aria-label="Toggle navigation">
             <span class="navbar-toggler-icon"></span>
         </button>
 
@@ -26,7 +26,7 @@
                                             <li class="dropdown-header" data-group-weight="{{ group_details.weight }}">{{ group_name }}</li>
                                             {% for item_link, item_details in group_details.items.items %}
                                                 {% if request.user|has_one_or_more_perms:item_details.permissions or not "HIDE_RESTRICTED_UI"|settings_or_config %}
-                                                    <li class="dropdown-item{% if not request.user|has_perms:item_details.permissions %} disabled{% endif %}"">
+                                                    <li{% if not request.user|has_perms:item_details.permissions %} class="disabled"{% endif %}>
                                                         <div class="buttons float-end">
                                                             {% for button_title, button_details in item_details.buttons.items %}
                                                                 {% if request.user|has_perms:button_details.permissions %}
@@ -51,7 +51,7 @@
                                                                 {% endif %}
                                                             {% endfor %}
                                                         </div>
-                                                        <a class="nav-link" href="{{ item_link }}"
+                                                        <a class="dropdown-item" href="{{ item_link }}"
                                                             data-item-weight="{{ item_details.weight }}">
                                                             {{ item_details.name }}
                                                         </a>
@@ -59,7 +59,7 @@
                                                 {% endif %}
                                             {% endfor %}
                                             {% if not forloop.last %}
-                                                <li class="dropdown-divider"></li>
+                                                <li><hr class="dropdown-divider"></li>
                                             {% endif %}
                                         {% endif %}
                                     {% endfor %}
@@ -69,29 +69,9 @@
                     {% endfor %}
                 </ul>
             {% endif %}
-
-            <ul class="nav navbar-nav navbar-right">
-                {% if request.user.is_authenticated %}
-                    <li class="nav-item dropdown">
-                        <a href="#" class="nav-link dropdown-toggle" data-bs-toggle="dropdown" title="{{ request.user }}" role="button" aria-haspopup="true" aria-expanded="false">
-                            <i class="mdi mdi-account"></i>
-                            <span id="navbar_user">{{ request.user|truncatechars:"30" }}</span>
-                        </a>
-                        <ul class="dropdown-menu">
-                            <li class="dropdown-item"><a href="{% url 'user:profile' %}"><i class="mdi mdi-account-box"></i> Profile</a></li>
-                            {% if request.user.is_staff %}
-                                <li class="dropdown-item"><a href="{% url 'admin:index' %}"><i class="mdi mdi-cogs"></i> Admin</a></li>
-                            {% endif %}
-                            <li class="dropdown-divider"></li>
-                            <li class="dropdown-item"><a href="{% url 'logout' %}"><i class="mdi mdi-logout"></i> Log out</a></li>
-                        </ul>
-                    </li>
-                {% else %}
-                    <li><a href="{% url settings.LOGIN_URL %}?next={{ request.get_full_path | urlencode }}"><i class="mdi mdi-login"></i> Log in</a></li>
-                {% endif %}
-            </ul>
+        </div>
             {% if request.user.is_authenticated or not "HIDE_RESTRICTED_UI"|settings_or_config %}
-                <form action="{% url 'search' %}" method="get" class="navbar-form navbar-right" id="navbar_search" role="search">
+                <form action="{% url 'search' %}" method="get" class="navbar-form navbar-right d-flex" id="navbar_search" role="search">
                     <div class="input-group">
                         <input type="text" name="q" class="form-control" placeholder="Search {{ settings.BRANDING_TITLE }}">
                         <span class="input-group-btn">
@@ -102,6 +82,25 @@
                     </div>
                 </form>
             {% endif %}
-        </div>
+            <ul class="nav navbar-nav navbar-right d-flex">
+                {% if request.user.is_authenticated %}
+                    <li class="nav-item dropdown">
+                        <a href="#" class="nav-link dropdown-toggle" data-bs-toggle="dropdown" title="{{ request.user }}" role="button" aria-haspopup="true" aria-expanded="false">
+                            <i class="mdi mdi-account"></i>
+                            <span id="navbar_user">{{ request.user|truncatechars:"30" }}</span>
+                        </a>
+                        <ul class="dropdown-menu">
+                            <li><a class="dropdown-item" href="{% url 'user:profile' %}"><i class="mdi mdi-account-box"></i> Profile</a></li>
+                            {% if request.user.is_staff %}
+                                <li><a class="dropdown-item" href="{% url 'admin:index' %}"><i class="mdi mdi-cogs"></i> Admin</a></li>
+                            {% endif %}
+                            <li><hr class="dropdown-divider"></li>
+                            <li><a class="dropdown-item" href="{% url 'logout' %}"><i class="mdi mdi-logout"></i> Log out</a></li>
+                        </ul>
+                    </li>
+                {% else %}
+                    <li class="nav-item"><a class="nav-link" href="{% url settings.LOGIN_URL %}?next={{ request.get_full_path | urlencode }}"><i class="mdi mdi-login"></i> Log in</a></li>
+                {% endif %}
+            </ul>
     </div>
 </nav>

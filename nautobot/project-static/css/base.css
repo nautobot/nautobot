@@ -94,10 +94,6 @@ footer p {
         top: 0;
         border-width: 0 0 1px;
     }
-    .navbar-collapse.collapse {
-        display: none !important;
-        max-height: none;
-    }
     .navbar-nav {
         float: none !important;
         margin-top: 7.5px;
@@ -124,6 +120,9 @@ ul.dropdown-menu {
 ul.dropdown-menu.edge {
     right: 0;
     left: auto;
+}
+ul.dropdown-menu div.buttons {
+    padding-right: 10px;
 }
 ul.dropdown-menu > li > a {
     clear: left;
