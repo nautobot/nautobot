@@ -2,9 +2,9 @@
 {% load form_helpers %}
 
 {% block form %}
-    <div class="panel panel-default">
-        <div class="panel-heading"><strong>Rack</strong></div>
-        <div class="panel-body">
+    <div class="card ">
+        <div class="card-header"><strong>Rack</strong></div>
+        <div class="card-body">
             {% render_field form.region %}
             {% render_field form.site %}
             {% render_field form.location %}
@@ -17,21 +17,21 @@
             {% render_field form.asset_tag %}
         </div>
     </div>
-    <div class="panel panel-default">
-        <div class="panel-heading"><strong>Tenancy</strong></div>
-        <div class="panel-body">
+    <div class="card ">
+        <div class="card-header"><strong>Tenancy</strong></div>
+        <div class="card-body">
             {% render_field form.tenant_group %}
             {% render_field form.tenant %}
         </div>
     </div>
-    <div class="panel panel-default">
-        <div class="panel-heading"><strong>Dimensions</strong></div>
-        <div class="panel-body">
+    <div class="card ">
+        <div class="card-header"><strong>Dimensions</strong></div>
+        <div class="card-body">
             {% render_field form.type %}
             {% render_field form.width %}
             {% render_field form.u_height %}
             <div class="form-group">
-                <label class="col-lg-3 control-label">Outer dimensions</label>
+                <label class="col-lg-3 col-form-label">Outer dimensions</label>
                 <div class="col-lg-3">
                     {{ form.outer_width }}
                 </div>
@@ -46,9 +46,9 @@
         </div>
     </div>
     {% include 'inc/extras_features_edit_form_fields.html' %}
-    <div class="panel panel-default">
-        <div class="panel-heading"><strong>Comments</strong></div>
-        <div class="panel-body">
+    <div class="card ">
+        <div class="card-header"><strong>Comments</strong></div>
+        <div class="card-body">
             {% render_field form.comments %}
         </div>
     </div>

@@ -16,11 +16,11 @@
 {% endblock buttons %}
 
 {% block content_left_page %}
-            <div class="panel panel-default">
-                <div class="panel-heading">
+            <div class="card ">
+                <div class="card-header">
                     <strong>Custom Field</strong>
                 </div>
-                <table class="table table-hover panel-body attr-table">
+                <table class="table table-hover card-body attr-table">
                     <tr>
                         {% comment %}2.0 TODO: #824 remove name field{% endcomment %}
                         <td>Name</td>
@@ -65,11 +65,11 @@
                 </table>
             </div>
             {% if object.choices.exists %}
-            <div class="panel panel-default">
-                <div class="panel-heading">
+            <div class="card ">
+                <div class="card-header">
                     <strong>Custom Field Choices</strong>
                 </div>
-                <table class="table table-hover panel-body attr-table">
+                <table class="table table-hover card-body attr-table">
                     <thead>
                         <tr>
                             <th>Value</th>
@@ -90,11 +90,11 @@
 {% endblock content_left_page %}
 
 {% block content_right_page %}
-            <div class="panel panel-default">
-                <div class="panel-heading">
+            <div class="card ">
+                <div class="card-header">
                     <strong>Assignment</strong>
                 </div>
-                <table class="table table-hover panel-body attr-table">
+                <table class="table table-hover card-body attr-table">
                     <tr>
                         <td>Content Types</td>
                         <td>
@@ -107,11 +107,11 @@
                     </tr>
                 </table>
             </div>
-            <div class="panel panel-default">
-                <div class="panel-heading">
+            <div class="card ">
+                <div class="card-header">
                     <strong>Validation Rules</strong>
                 </div>
-                <table class="table table-hover panel-body attr-table">
+                <table class="table table-hover card-body attr-table">
                     <tr>
                         <td>Minimum Value</td>
                         <td><span>{{ object.validation_minimum | placeholder }}</span></td>

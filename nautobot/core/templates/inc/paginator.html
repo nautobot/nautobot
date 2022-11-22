@@ -1,9 +1,9 @@
 {% load helpers %}
 
-<div class="paginator pull-right text-right">
+<div class="paginator float-end text-right">
     {% if paginator.num_pages > 1 %}
         <nav>
-            <ul class="pagination pull-right">
+            <ul class="pagination float-end">
                 {% if page.has_previous %}
                     <li><a href="{% querystring request page=page.previous_page_number %}"><i class="mdi mdi-chevron-double-left"></i></a></li>
                 {% endif %}

@@ -17,7 +17,7 @@
     </div>
     <h1>{{ job_model }}</h1>
     {% if job_model.read_only %}
-        <label class="label label-default">Read-only</label>
+        <label class="badge label-default">Read-only</label>
     {% endif %}
     <p>{{ job_model.description | render_markdown }}</p>
     <ul class="nav nav-tabs" role="tablist">
@@ -53,9 +53,9 @@
                     {% endif %}
                     <form action="" method="post" enctype="multipart/form-data" class="form form-horizontal">
                         {% if job_form.non_field_errors or schedule_form.non_field_errors %}
-                            <div class="panel panel-danger">
-                                <div class="panel-heading"><strong>Errors</strong></div>
-                                <div class="panel-body">
+                            <div class="card panel-danger">
+                                <div class="card-header"><strong>Errors</strong></div>
+                                <div class="card-body">
                                     {{ job_form.non_field_errors }}
                                     {{ schedule_form.non_field_errors }}
                                 </div>
@@ -63,16 +63,16 @@
                         {% endif %}
                         {% csrf_token %}
                         {% if job_form.requires_input %}
-                            <div class="panel panel-default">
-                                <div class="panel-heading">
+                            <div class="card ">
+                                <div class="card-header">
                                     <strong>Job Data</strong>
                                 </div>
-                                <div class="panel-body">
+                                <div class="card-body">
                                     {% render_form job_form %}
                                 </div>
                                 {% if job_model.has_sensitive_variables %}
-                                    <div class="panel-footer">
-                                        <span class="help-block">
+                                    <div class="card-footer">
+                                        <span class="form-text">
                                             <i class="mdi mdi-information-outline"></i>
                                             This job may have sensitive variables and can only be executed immediately. This can be changed in the Job edit view to set `has_sensitive_variables` to `False` if appropriate.
                                         </span>
@@ -86,23 +86,23 @@
                             </div>
                             {% render_form job_form %}
                         {% endif %}
-                        <div class="panel panel-default job_execution">
-                            <div class="panel-heading">
+                        <div class="card  job_execution">
+                            <div class="card-header">
                                 <strong>Job Execution</strong>
                             </div>
-                            <div class="panel-body">
+                            <div class="card-body">
                                 {% render_form schedule_form %}
                             </div>
                             {% if job_model.approval_required %}
-                                <div class="panel-footer">
-                                    <span class="help-block">
+                                <div class="card-footer">
+                                    <span class="form-text">
                                         <i class="mdi mdi-information-outline"></i>
                                         This job requires approval to run or schedule.
                                     </span>
                                 </div>
                             {% endif %}
                         </div>
-                        <div class="pull-right">
+                        <div class="float-end">
                             <button type="submit" name="_run" id="id__run" class="btn btn-primary"
                                 {% if not perms.extras.run_job or not job_model.runnable %}
                                     disabled="disabled"
@@ -110,7 +110,7 @@
                             >
                                 <i class="mdi mdi-play"></i> Run Job Now
                             </button>
-                            <a href="{% url 'extras:job_list' %}" class="btn btn-default">Cancel</a>
+                            <a href="{% url 'extras:job_list' %}" class="btn btn-secondary">Cancel</a>
                         </div>
                     </form>
                 </div>

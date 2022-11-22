@@ -3,36 +3,36 @@
 {% load helpers %}
 
 {% block form %}
-    <div class="panel panel-default">
-        <div class="panel-heading"><strong>Job Source</strong></div>
-        <div class="panel-body">
+    <div class="card ">
+        <div class="card-header"><strong>Job Source</strong></div>
+        <div class="card-body">
             <div class="form-group">
-                <label class="col-lg-3 control-label">Source</label>
+                <label class="col-lg-3 col-form-label">Source</label>
                 <div class="col-lg-9" style="padding-top: 7px">
                     {{ obj.source | split:"." | first | bettertitle }}
-                    <span class="help-block">Source of the Python code for this job</span>
+                    <span class="form-text">Source of the Python code for this job</span>
                 </div>
             </div>
             {% if obj.source == "git" %}
                 <div class="form-group">
-                    <label class="col-lg-3 control-label">Repository</label>
+                    <label class="col-lg-3 col-form-label">Repository</label>
                     <div class="col-lg-9" style="padding-top: 7px">
                         <td>{{ obj.git_repository | placeholder }}</td>
                     </div>
                 </div>
             {% endif %}
             <div class="form-group">
-                <label class="col-lg-3 control-label">Module</label>
+                <label class="col-lg-3 col-form-label">Module</label>
                 <div class="col-lg-9" style="padding-top: 7px">
                     <code>{{ obj.module_name }}</code>
-                    <span class="help-block">Dotted name of the Python module providing this job</span>
+                    <span class="form-text">Dotted name of the Python module providing this job</span>
                 </div>
             </div>
             <div class="form-group">
-                <label class="col-lg-3 control-label">Job Class</label>
+                <label class="col-lg-3 col-form-label">Job Class</label>
                 <div class="col-lg-9" style="padding-top: 7px">
                     <code>{{ obj.job_class_name }}</code>
-                    <span class="help-block">Name of the Python class providing this job</span>
+                    <span class="form-text">Name of the Python class providing this job</span>
                 </div>
             </div>
             <div class="form-group">
@@ -42,7 +42,7 @@
                             <input type="checkbox" disabled="true" {% if obj.installed %}checked="checked"{% endif %}>
                             Installed
                         </label>
-                        <span class="help-block">
+                        <span class="form-text">
                             Whether the Python class providing this job is presently installed and loadable
                         </span>
                     </div>
@@ -55,7 +55,7 @@
                             <input type="checkbox" disabled="true" {% if obj.is_job_hook_receiver %}checked="checked"{% endif %}>
                             Is job hook receiver
                         </label>
-                        <span class="help-block">
+                        <span class="form-text">
                             Whether this job is a job hook receiver
                         </span>
                     </div>
@@ -63,9 +63,9 @@
             </div>
         </div>
     </div>
-    <div class="panel panel-default">
-        <div class="panel-heading"><strong>Job</strong></div>
-        <div class="panel-body">
+    <div class="card ">
+        <div class="card-header"><strong>Job</strong></div>
+        <div class="card-body">
             {% render_field form.enabled %}
             {% include "extras/inc/overridable_field.html" with field=form.name override_field=form.name_override %}
             {% render_field form.slug %}
@@ -73,9 +73,9 @@
             {% include "extras/inc/overridable_field.html" with field=form.description override_field=form.description_override %}
         </div>
     </div>
-    <div class="panel panel-default">
-        <div class="panel-heading"><strong>Properties</strong></div>
-        <div class="panel-body">
+    <div class="card ">
+        <div class="card-header"><strong>Properties</strong></div>
+        <div class="card-body">
             {% include "extras/inc/overridable_field.html" with field=form.approval_required override_field=form.approval_required_override %}
             {% include "extras/inc/overridable_field.html" with field=form.commit_default override_field=form.commit_default_override %}
             {% include "extras/inc/overridable_field.html" with field=form.hidden override_field=form.hidden_override %}

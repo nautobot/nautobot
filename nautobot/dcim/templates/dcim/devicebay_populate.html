@@ -7,24 +7,24 @@
     <div class="row">
         <div class="col-lg-6 col-lg-offset-3">
             {% if form.non_field_errors %}
-                <div class="panel panel-danger">
-                    <div class="panel-heading"><strong>Errors</strong></div>
-                    <div class="panel-body">
+                <div class="card panel-danger">
+                    <div class="card-header"><strong>Errors</strong></div>
+                    <div class="card-body">
                         {{ form.non_field_errors }}
                     </div>
                 </div>
             {% endif %}
-            <div class="panel panel-default">
-                <div class="panel-heading">{% block title %}Populate {{ device_bay }}{% endblock %}</div>
-                <div class="panel-body">
+            <div class="card ">
+                <div class="card-header">{% block title %}Populate {{ device_bay }}{% endblock %}</div>
+                <div class="card-body">
                     <div class="form-group">
-                        <label class="col-lg-3 control-label required">Parent Device</label>
+                        <label class="col-lg-3 col-form-label required">Parent Device</label>
                         <div class="col-lg-9">
                             <p class="form-control-static">{{ device_bay.device }}</p>
                         </div>
                     </div>
                     <div class="form-group">
-                        <label class="col-lg-3 control-label required">Bay</label>
+                        <label class="col-lg-3 col-form-label required">Bay</label>
                         <div class="col-lg-9">
                             <p class="form-control-static">{{ device_bay }}</p>
                         </div>
@@ -35,7 +35,7 @@
 		    <div class="form-group">
                 <div class="col-lg-9 col-lg-offset-3">
                     <button type="submit" name="_update" class="btn btn-primary">Save</button>
-                    <a href="{{ return_url }}" class="btn btn-default">Cancel</a>
+                    <a href="{{ return_url }}" class="btn btn-secondary">Cancel</a>
                 </div>
 		    </div>
         </div>

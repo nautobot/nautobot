@@ -3,12 +3,12 @@
 {% load helpers %}
 
 {% block form %}
-    <div class="panel panel-default">
-        <div class="panel-heading"><strong>Interface</strong></div>
-        <div class="panel-body">
+    <div class="card ">
+        <div class="card-header"><strong>Interface</strong></div>
+        <div class="card-body">
             {% if form.instance.device %}
                 <div class="form-group">
-                    <label class="col-lg-3 control-label required" for="id_device">Device</label>
+                    <label class="col-lg-3 col-form-label required" for="id_device">Device</label>
                     <div class="col-lg-9">
                         <p class="form-control-static">
                             {{ form.instance.device|hyperlinked_object }}
@@ -30,9 +30,9 @@
             {% render_field form.description %}
         </div>
     </div>
-    <div class="panel panel-default">
-        <div class="panel-heading"><strong>802.1Q Switching</strong></div>
-        <div class="panel-body">
+    <div class="card ">
+        <div class="card-header"><strong>802.1Q Switching</strong></div>
+        <div class="card-body">
             {% render_field form.mode %}
             {% render_field form.untagged_vlan %}
             {% render_field form.tagged_vlans %}
@@ -49,5 +49,5 @@
         <button type="submit" name="_create" class="btn btn-primary">Create</button>
         <button type="submit" name="_addanother" class="btn btn-primary">Create and Add Another</button>
     {% endif %}
-    <a href="{{ return_url }}" class="btn btn-default">Cancel</a>
+    <a href="{{ return_url }}" class="btn btn-secondary">Cancel</a>
 {% endblock %}

@@ -13,9 +13,9 @@
                     in <code>nautobot_config.py</code>). The below is just a simple example.
                 </p>
                 {% block form %}
-                    <div class="panel panel-default">
-                        <div class="panel-heading"><strong>Configuration Options</strong></div>
-                        <div class="panel-body">
+                    <div class="card ">
+                        <div class="card-header"><strong>Configuration Options</strong></div>
+                        <div class="card-body">
                             {% block form_fields %}
                                 {% render_form form %}
                             {% endblock %}

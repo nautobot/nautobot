@@ -25,8 +25,8 @@
             <div class="homepage_column" style="columns: 4 360px">
                 {% for panel_name, panel_details in registry.homepage_layout.panels.items %}
                     {% if request.user|has_one_or_more_perms:panel_details.permissions or not "HIDE_RESTRICTED_UI"|settings_or_config %}
-                        <div class="panel panel-default" style="break-inside: avoid" data-panel-weight="{{ panel_details.weight }}">
-                            <div class="panel-heading">
+                        <div class="card " style="break-inside: avoid" data-panel-weight="{{ panel_details.weight }}">
+                            <div class="card-header">
                                 <strong>{{ panel_name }}</strong>
                             </div>
                             <div class="list-group">
@@ -44,7 +44,7 @@
                                             {% if request.user|has_one_or_more_perms:item_details.permissions or not "HIDE_RESTRICTED_UI"|settings_or_config %}
                                                 <div class="list-group-item" data-item-weight="{{ item_details.weight }}">
                                                     {% if request.user|has_perms:item_details.permissions %}
-                                                        <span class="badge pull-right">{{ item_details.count }}</span>
+                                                        <span class="badge bg-secondary float-end">{{ item_details.count }}</span>
                                                         <h4 class="list-group-item-heading">
                                                             {% comment %}
                                                                 Use 'url xxx as variable' so that an invalid
@@ -58,7 +58,7 @@
                                                             {% endif %}
                                                         </h4>
                                                     {% else %}
-                                                        <span class="badge pull-right"><i class="mdi mdi-lock"></i></span>
+                                                        <span class="badge bg-secondary float-end"><i class="mdi mdi-lock"></i></span>
                                                         <h4 class="list-group-item-heading">{{ item_name }}</h4>
                                                     {% endif %}
                                                     <p class="list-group-item-text text-muted">{{ item_details.description }}</p>
@@ -75,7 +75,7 @@
                                                                     {{ group_item_details.rendered_html }}
                                                                 {% endautoescape %}
                                                             {% else %}
-                                                                <span class="badge pull-right">{{ group_item_details.count }}</span>
+                                                                <span class="badge bg-secondary float-end">{{ group_item_details.count }}</span>
                                                                 <p style="padding-left: 20px;">
                                                                     {% comment %}
                                                                         Use 'url xxx as variable' so that an invalid
@@ -90,7 +90,7 @@
                                                                 </p>
                                                             {% endif %}
                                                         {% else %}
-                                                            <span class="badge pull-right"><i class="mdi mdi-lock"></i></span>
+                                                            <span class="badge bg-secondary float-end"><i class="mdi mdi-lock"></i></span>
                                                             <p style="padding-left: 20px;">{{ group_item_name }}</p>
                                                         {% endif %}
                                                     {% endif %}

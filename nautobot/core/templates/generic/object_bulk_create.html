@@ -27,9 +27,9 @@
         <div class="col-lg-8 col-lg-offset-2">
             <h1>{% block title %}{{ obj_type|bettertitle }} Bulk Import{% endblock %}</h1>
             {% if form.non_field_errors %}
-                <div class="panel panel-danger">
-                    <div class="panel-heading"><strong>Errors</strong></div>
-                    <div class="panel-body">
+                <div class="card panel-danger">
+                    <div class="card-header"><strong>Errors</strong></div>
+                    <div class="card-body">
                         {{ form.non_field_errors }}
                     </div>
                 </div>
@@ -47,7 +47,7 @@
                             <div class="col-lg-12 text-right">
                                 <button type="submit" class="btn btn-primary">Submit</button>
                                 {% if return_url %}
-                                    <a href="{{ return_url }}" class="btn btn-default">Cancel</a>
+                                    <a href="{{ return_url }}" class="btn btn-secondary">Cancel</a>
                                 {% endif %}
                             </div>
                         </div>
@@ -62,7 +62,7 @@
                             <div class="col-lg-12 text-right">
                                 <button type="submit" class="btn btn-primary">Submit</button>
                                 {% if return_url %}
-                                    <a href="{{ return_url }}" class="btn btn-default">Cancel</a>
+                                    <a href="{{ return_url }}" class="btn btn-secondary">Cancel</a>
                                 {% endif %}
                             </div>
                         </div>
@@ -72,8 +72,8 @@
             <div class="clearfix"></div>
             <p></p>
             {% if fields %}
-                <div class="panel panel-default">
-                    <div class="panel-heading">
+                <div class="card ">
+                    <div class="card-header">
                         <strong>CSV Field Options</strong>
                     </div>
                     <table class="table">
@@ -98,7 +98,7 @@
                                 </td>
                                 <td>
                                     {% if field.STATIC_CHOICES %}
-                                        <button type="button" class="btn btn-link btn-xs pull-right" data-toggle="modal" data-target="#{{ name }}_choices">
+                                        <button type="button" class="btn btn-link btn-sm float-end" data-toggle="modal" data-target="#{{ name }}_choices">
                                             <i class="mdi mdi-help-circle"></i>
                                         </button>
                                         <div class="modal fade" id="{{ name }}_choices" tabindex="-1" role="dialog">

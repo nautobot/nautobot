@@ -14,16 +14,16 @@
                 <h3>Assign an IP Address</h3>
                 {% include 'ipam/inc/ipadress_edit_header.html' with active_tab='assign' %}
                 {% if form.non_field_errors %}
-                    <div class="panel panel-danger">
-                        <div class="panel-heading"><strong>Errors</strong></div>
-                        <div class="panel-body">
+                    <div class="card panel-danger">
+                        <div class="card-header"><strong>Errors</strong></div>
+                        <div class="card-body">
                             {{ form.non_field_errors }}
                         </div>
                     </div>
                 {% endif %}
-            <div class="panel panel-default">
-                <div class="panel-heading"><strong>Select IP Address</strong></div>
-                <div class="panel-body">
+            <div class="card ">
+                <div class="card-header"><strong>Select IP Address</strong></div>
+                <div class="card-body">
                     {% render_field form.vrf_id %}
                     {% render_field form.q %}
                 </div>
@@ -33,7 +33,7 @@
         <div class="row">
             <div class="col-lg-6 col-lg-offset-3 text-right">
                 <button type="submit" class="btn btn-primary">Search</button>
-                <a href="{{ return_url }}" class="btn btn-default">Cancel</a>
+                <a href="{{ return_url }}" class="btn btn-secondary">Cancel</a>
             </div>
         </div>
     </form>

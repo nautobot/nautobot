@@ -7,24 +7,24 @@
     <div class="row">
         <div class="col-lg-12">
             {% for token in tokens %}
-                <div class="panel panel-{% if token.is_expired %}danger{% else %}default{% endif %}">
-                    <div class="panel-heading">
-                        <div class="pull-right noprint">
-                            <a class="btn btn-xs btn-success copy-token" data-clipboard-target="#token_{{ token.pk }}">Copy</a>
+                <div class="card panel-{% if token.is_expired %}danger{% else %}default{% endif %}">
+                    <div class="card-header">
+                        <div class="float-end noprint">
+                            <a class="btn btn-sm btn-success copy-token" data-clipboard-target="#token_{{ token.pk }}">Copy</a>
                             {% if perms.users.change_token %}
-                                <a href="{% url 'user:token_edit' pk=token.pk %}" class="btn btn-xs btn-warning">Edit</a>
+                                <a href="{% url 'user:token_edit' pk=token.pk %}" class="btn btn-sm btn-warning">Edit</a>
                             {% endif %}
                             {% if perms.users.delete_token %}
-                                <a href="{% url 'user:token_delete' pk=token.pk %}" class="btn btn-xs btn-danger">Delete</a>
+                                <a href="{% url 'user:token_delete' pk=token.pk %}" class="btn btn-sm btn-danger">Delete</a>
                             {% endif %}
                         </div>
                         <i class="mdi mdi-key"></i>
                         <samp><span id="token_{{ token.pk }}">{{ token.key }}</span></samp>
                         {% if token.is_expired %}
-                            <span class="label label-danger">Expired</span>
+                            <span class="badge label-danger">Expired</span>
                         {% endif %}
                     </div>
-                    <div class="panel-body">
+                    <div class="card-body">
                         <div class="row">
                             <div class="col-lg-4">
                                 <small class="text-muted">Created</small><br />
@@ -41,9 +41,9 @@
                             <div class="col-lg-4">
                                 <small class="text-muted">Create/edit/delete operations</small><br />
                                 {% if token.write_enabled %}
-                                    <span class="label label-success">Enabled</span>
+                                    <span class="badge label-success">Enabled</span>
                                 {% else %}
-                                    <span class="label label-danger">Disabled</span>
+                                    <span class="badge label-danger">Disabled</span>
                                 {% endif %}
                             </div>
                         </div>

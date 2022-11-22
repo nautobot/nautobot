@@ -2,12 +2,12 @@
 {% load helpers %}
 
 {% block content_left_page %}
-            <div class="panel panel-default">
-                <div class="panel-heading">
+            <div class="card ">
+                <div class="card-header">
                     <strong>Computed Field</strong>
                 </div>
 
-                <table class="table table-hover panel-body attr-table">
+                <table class="table table-hover card-body attr-table">
                     <tr>
                         <td>Content Type</td>
                         <td><span>{{ object.content_type }}</span></td>
@@ -41,11 +41,11 @@
 {% endblock content_left_page %}
 
 {% block content_full_width_page %}
-            <div class="panel panel-default">
-                <div class="panel-heading">
+            <div class="card ">
+                <div class="card-header">
                     <strong>Template</strong>
                 </div>
-                <div class="panel-body">
+                <div class="card-body">
                     <pre>{{ object.template }}</pre>
                 </div>
             </div>

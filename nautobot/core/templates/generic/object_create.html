@@ -9,13 +9,13 @@
             {{ field }}
         {% endfor %}
         <div class="row">
-            <div class="col-lg-6 col-lg-offset-3">
+            <div class="col-lg-6 offset-lg-3">
                 <h3>
                     {% if obj %}
                         {% with obj|get_docs_url as docs_url %}
                             {% if docs_url %}
-                                <div class="pull-right">
-                                    <a href="{{ docs_url }}" target="_blank" class="btn btn-link btn-xs" title="Help">
+                                <div class="float-end">
+                                    <a href="{{ docs_url }}" target="_blank" class="btn btn-link btn-sm" title="Help">
                                         <i class="mdi mdi-help-circle"></i>
                                     </a>
                                 </div>
@@ -26,17 +26,17 @@
                 </h3>
                 {% block tabs %}{% endblock %}
                 {% if form.non_field_errors %}
-                    <div class="panel panel-danger">
-                        <div class="panel-heading"><strong>Errors</strong></div>
-                        <div class="panel-body">
+                    <div class="card card-danger">
+                        <div class="card-header"><strong>Errors</strong></div>
+                        <div class="card-body">
                             {{ form.non_field_errors }}
                         </div>
                     </div>
                 {% endif %}
                 {% block form %}
-                    <div class="panel panel-default">
-                        <div class="panel-heading"><strong>{{ obj_type|capfirst }}</strong></div>
-                        <div class="panel-body">
+                    <div class="card">
+                        <div class="card-header"><strong>{{ obj_type|capfirst }}</strong></div>
+                        <div class="card-body">
                             {% block form_fields %}
                                 {% render_form form %}
                             {% endblock %}
@@ -47,7 +47,7 @@
             </div>
         </div>
         <div class="row">
-            <div class="col-lg-6 col-lg-offset-3 text-right">
+            <div class="col-lg-6 offset-lg-3 text-end">
                 {% block buttons %}
                     {% if editing %}
                         <button type="submit" name="_update" class="btn btn-primary">Update</button>
@@ -55,7 +55,7 @@
                         <button type="submit" name="_create" class="btn btn-primary">Create</button>
                         <button type="submit" name="_addanother" class="btn btn-primary">Create and Add Another</button>
                     {% endif %}
-                    <a href="{{ return_url }}" class="btn btn-default">Cancel</a>
+                    <a href="{{ return_url }}" class="btn btn-secondary">Cancel</a>
                 {% endblock %}
             </div>
         </div>

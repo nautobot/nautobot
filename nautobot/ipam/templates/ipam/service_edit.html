@@ -2,19 +2,19 @@
 {% load form_helpers %}
 
 {% block form %}
-    <div class="panel panel-default">
-        <div class="panel-heading"><strong>Service</strong></div>
-        <div class="panel-body">
+    <div class="card ">
+        <div class="card-header"><strong>Service</strong></div>
+        <div class="card-body">
             {% if obj.device %}
                 <div class="form-group">
-                    <label class="col-lg-3 control-label required">Device</label>
+                    <label class="col-lg-3 col-form-label required">Device</label>
                     <div class="col-lg-9">
                         <p class="form-control-static">{{ obj.device }}</p>
                     </div>
                 </div>
             {% else %}
                 <div class="form-group">
-                    <label class="col-lg-3 control-label required">Virtual Machine</label>
+                    <label class="col-lg-3 col-form-label required">Virtual Machine</label>
                     <div class="col-lg-9">
                         <p class="form-control-static">{{ obj.virtual_machine }}</p>
                     </div>

@@ -2,11 +2,11 @@
 {% load helpers %}
 
 {% block content_left_page %}
-        <div class="panel panel-default">
-            <div class="panel-heading">
+        <div class="card ">
+            <div class="card-header">
                 <strong>Interface</strong>
             </div>
-            <table class="table table-hover panel-body attr-table">
+            <table class="table table-hover card-body attr-table">
                 <tr>
                     <td>Virtual Machine</td>
                     <td>{{ object.virtual_machine|hyperlinked_object }}</td>
@@ -18,7 +18,7 @@
                 <tr>
                     <td>Status</td>
                         <td>
-                            <span class="label" style="color: {{ object.status.color|fgcolor }}; background-color: #{{ object.status.color }}">{{ object.get_status_display }}</span>
+                            <span class="badge" style="color: {{ object.status.color|fgcolor }}; background-color: #{{ object.status.color }}">{{ object.get_status_display }}</span>
                         </td>
                     </tr>
                 <tr>
@@ -55,7 +55,7 @@
                 </tr>
                 <tr>
                     <td>MAC Address</td>
-                    <td><span class="text-monospace">{{ object.mac_address|placeholder }}</span></td>
+                    <td><span class="font-monospace">{{ object.mac_address|placeholder }}</span></td>
                 </tr>
                 <tr>
                     <td>802.1Q Mode</td>

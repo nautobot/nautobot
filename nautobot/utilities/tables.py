@@ -185,17 +185,17 @@ class ButtonsColumn(tables.TemplateColumn):
     # Note that braces are escaped to allow for string formatting prior to template rendering
     template_code = """
     {{% if "changelog" in buttons %}}
-        <a href="{{% url '{changelog_route}' {pk_field}=record.{pk_field} %}}" class="btn btn-default btn-xs" title="Change log">
+        <a href="{{% url '{changelog_route}' {pk_field}=record.{pk_field} %}}" class="btn btn-secondary btn-sm" title="Change log">
             <i class="mdi mdi-history"></i>
         </a>
     {{% endif %}}
     {{% if "edit" in buttons and perms.{app_label}.change_{model_name} %}}
-        <a href="{{% url '{edit_route}' {pk_field}=record.{pk_field} %}}?return_url={{{{ request.path }}}}{{{{ return_url_extra }}}}" class="btn btn-xs btn-warning" title="Edit">
+        <a href="{{% url '{edit_route}' {pk_field}=record.{pk_field} %}}?return_url={{{{ request.path }}}}{{{{ return_url_extra }}}}" class="btn btn-sm btn-warning" title="Edit">
             <i class="mdi mdi-pencil"></i>
         </a>
     {{% endif %}}
     {{% if "delete" in buttons and perms.{app_label}.delete_{model_name} %}}
-        <a href="{{% url '{delete_route}' {pk_field}=record.{pk_field} %}}?return_url={{{{ request.path }}}}{{{{ return_url_extra }}}}" class="btn btn-xs btn-danger" title="Delete">
+        <a href="{{% url '{delete_route}' {pk_field}=record.{pk_field} %}}?return_url={{{{ request.path }}}}{{{{ return_url_extra }}}}" class="btn btn-sm btn-danger" title="Delete">
             <i class="mdi mdi-trash-can-outline"></i>
         </a>
     {{% endif %}}
@@ -255,7 +255,7 @@ class ChoiceFieldColumn(tables.Column):
             name = bound_column.name
             css_class = getattr(record, f"get_{name}_class")()
             label = getattr(record, f"get_{name}_display")()
-            return mark_safe(f'<span class="label label-{css_class}">{label}</span>')
+            return mark_safe(f'<span class="badge label-{css_class}">{label}</span>')
         return self.default
 
 
@@ -265,7 +265,7 @@ class ColorColumn(tables.Column):
     """
 
     def render(self, value):
-        return mark_safe(f'<span class="label color-block" style="background-color: #{value}">&nbsp;</span>')
+        return mark_safe(f'<span class="badge color-block" style="background-color: #{value}">&nbsp;</span>')
 
 
 class ColoredLabelColumn(tables.TemplateColumn):
@@ -275,7 +275,7 @@ class ColoredLabelColumn(tables.TemplateColumn):
 
     template_code = """
     {% load helpers %}
-    {% if value %}<label class="label" style="color: {{ value.color|fgcolor }}; background-color: #{{ value.color }}">{{ value }}</label>{% else %}&mdash;{% endif %}
+    {% if value %}<label class="badge" style="color: {{ value.color|fgcolor }}; background-color: #{{ value.color }}">{{ value }}</label>{% else %}&mdash;{% endif %}
     """
 
     def __init__(self, *args, **kwargs):
@@ -393,9 +393,9 @@ class CustomFieldColumn(tables.Column):
             template = render_boolean(value)
         elif self.customfield.type == CustomFieldTypeChoices.TYPE_MULTISELECT:
             for v in value:
-                template += format_html('<span class="label label-default">{}</span> ', v)
+                template += format_html('<span class="badge label-default">{}</span> ', v)
         elif self.customfield.type == CustomFieldTypeChoices.TYPE_SELECT:
-            template = format_html('<span class="label label-default">{}</span>', value)
+            template = format_html('<span class="badge label-default">{}</span>', value)
         elif self.customfield.type == CustomFieldTypeChoices.TYPE_URL:
             template = format_html('<a href="{}">{}</a>', value, value)
         else:

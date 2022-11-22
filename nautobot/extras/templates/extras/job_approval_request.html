@@ -24,7 +24,7 @@
     <h1>{{ object.name }}</h1>
     {% if object.job_model is not None %}
         {% if object.job_model.read_only %}
-            <label class="label label-default">Read-only</label>
+            <label class="badge label-default">Read-only</label>
         {% endif %}
         <p>{{ object.job_model.description | render_markdown }}</p>
     {% endif %}
@@ -58,20 +58,20 @@
                         {% csrf_token %}
                         {% if job_form is not None %}
                             {% if job_form.non_field_errors or schedule_form.non_field_errors %}
-                                <div class="panel panel-danger">
-                                    <div class="panel-heading"><strong>Errors</strong></div>
-                                    <div class="panel-body">
+                                <div class="card panel-danger">
+                                    <div class="card-header"><strong>Errors</strong></div>
+                                    <div class="card-body">
                                         {{ job_form.non_field_errors }}
                                         {{ schedule_form.non_field_errors }}
                                     </div>
                                 </div>
                             {% endif %}
                             {% if job_form.requires_input %}
-                                <div class="panel panel-default">
-                                    <div class="panel-heading">
+                                <div class="card ">
+                                    <div class="card-header">
                                         <strong>Job Data</strong>
                                     </div>
-                                    <div class="panel-body">
+                                    <div class="card-body">
                                         {% render_form job_form %}
                                     </div>
                                 </div>
@@ -83,33 +83,33 @@
                                 {% render_form job_form %}
                             {% endif %}
                         {% else %}
-                            <div class="panel panel-default">
-                                <div class="panel-heading"><strong>Job Data</strong></div>
-                                <div class="panel-body">
+                            <div class="card ">
+                                <div class="card-header"><strong>Job Data</strong></div>
+                                <div class="card-body">
                                     <pre>{{ object.kwargs.data | render_json }}</pre>
                                 </div>
                             </div>
                         {% endif %}
-                        <div class="panel panel-default">
-                            <div class="panel-heading">
+                        <div class="card ">
+                            <div class="card-header">
                                 <strong>Approval Request</strong>
                             </div>
-                            <div class="panel-body">
+                            <div class="card-body">
                                 <div class="form-group">
-                                    <label class="col-lg-3 control-label required">Requestor</label>
+                                    <label class="col-lg-3 col-form-label required">Requestor</label>
                                     <div class="col-lg-9">
                                         <span>{{ object.user.username|placeholder }}</span>
                                     </div>
                                 </div>
                                 <div class="form-group">
-                                    <label class="col-lg-3 control-label required">Requested Start Time</label>
+                                    <label class="col-lg-3 col-form-label required">Requested Start Time</label>
                                     <div class="col-lg-9">
                                         <span>{{ object.start_time|placeholder }}</span>
                                     </div>
                                 </div>
                             </div>
                         </div>
-                        <div class="pull-right">
+                        <div class="float-end">
                             <button type="submit" name="_dry_run" id="id__dry_run" class="btn btn-primary"
                                 {% if not perms.extras.run_job or object.job_model is None or not object.job_model.runnable %}
                                     disabled="disabled"
@@ -131,7 +131,7 @@
                             >
                                 <i class="mdi mdi-close"></i> Deny
                             </button>
-                            <a href="{% url 'extras:scheduledjob_approval_queue_list' %}" class="btn btn-default">
+                            <a href="{% url 'extras:scheduledjob_approval_queue_list' %}" class="btn btn-secondary">
                                 Cancel
                             </a>
                         </div>

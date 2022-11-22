@@ -27,16 +27,16 @@
             <form action="" method="post" class="form form-horizontal">
                 {% csrf_token %}
                 {% if form.non_field_errors %}
-                    <div class="panel panel-danger">
-                        <div class="panel-heading"><strong>Errors</strong></div>
-                        <div class="panel-body">
+                    <div class="card panel-danger">
+                        <div class="card-header"><strong>Errors</strong></div>
+                        <div class="card-body">
                             {{ form.non_field_errors }}
                         </div>
                     </div>
                 {% endif %}
-                <div class="panel panel-default">
-                    <div class="panel-heading"><strong>Rename</strong></div>
-                    <div class="panel-body">
+                <div class="card ">
+                    <div class="card-header"><strong>Rename</strong></div>
+                    <div class="card-body">
                         {% render_form form %}
                     </div>
                 </div>
@@ -46,7 +46,7 @@
                         {% if '_preview' in request.POST and not form.errors %}
                             <button type="submit" name="_apply" class="btn btn-primary">Apply</button>
                         {% endif %}
-                        <a href="{{ return_url }}" class="btn btn-default">Cancel</a>
+                        <a href="{{ return_url }}" class="btn btn-secondary">Cancel</a>
                     </div>
                 </div>
             </form>

@@ -25,11 +25,11 @@
 {% endblock extra_nav_tabs %}
 
 {% block content_left_page %}
-            <div class="panel panel-default">
-                <div class="panel-heading">
+            <div class="card ">
+                <div class="card-header">
                     <strong>VLAN</strong>
                 </div>
-                <table class="table table-hover panel-body attr-table">
+                <table class="table table-hover card-body attr-table">
                     <tr>
                         <td>Site</td>
                         <td>
@@ -67,7 +67,7 @@
                     <tr>
                         <td>Status</td>
                         <td>
-                            <span class="label" style="color: {{ object.status.color|fgcolor }}; background-color: #{{ object.status.color }}">{{ object.get_status_display }}</span>
+                            <span class="badge" style="color: {{ object.status.color|fgcolor }}; background-color: #{{ object.status.color }}">{{ object.get_status_display }}</span>
                         </td>
                     </tr>
                     <tr>
@@ -83,14 +83,14 @@
 {% endblock content_left_page %}
 
 {% block content_full_width_page %}
-            <div class="panel panel-default">
-                <div class="panel-heading">
+            <div class="card ">
+                <div class="card-header">
                     <strong>Prefixes</strong>
                 </div>
                 {% include 'responsive_table.html' with table=prefix_table %}
                 {% if perms.ipam.add_prefix %}
-                    <div class="panel-footer text-right noprint">
-                        <a href="{% url 'ipam:prefix_add' %}?{% if object.tenant %}tenant={{ object.tenant.pk }}&{% endif %}site={{ object.site.pk }}{% if object.location %}&location={{ object.location.pk }}{% endif %}&vlan={{ object.pk }}" class="btn btn-primary btn-xs">
+                    <div class="card-footer text-right noprint">
+                        <a href="{% url 'ipam:prefix_add' %}?{% if object.tenant %}tenant={{ object.tenant.pk }}&{% endif %}site={{ object.site.pk }}{% if object.location %}&location={{ object.location.pk }}{% endif %}&vlan={{ object.pk }}" class="btn btn-primary btn-sm">
                             <span class="mdi mdi-plus-thick" aria-hidden="true"></span>
                             Add a prefix
                         </a>

@@ -10,9 +10,9 @@
 {% endblock %}
 
 {% block form %}
-    <div class="panel panel-default">
-        <div class="panel-heading"><strong>IP Address</strong></div>
-        <div class="panel-body">
+    <div class="card ">
+        <div class="card-header"><strong>IP Address</strong></div>
+        <div class="card-body">
             {% render_field form.address %}
             {% render_field form.status %}
             {% render_field form.role %}
@@ -21,18 +21,18 @@
             {% render_field form.description %}
         </div>
     </div>
-    <div class="panel panel-default">
-        <div class="panel-heading"><strong>Tenancy</strong></div>
-        <div class="panel-body">
+    <div class="card ">
+        <div class="card-header"><strong>Tenancy</strong></div>
+        <div class="card-body">
             {% render_field form.tenant_group %}
             {% render_field form.tenant %}
         </div>
     </div>
-    <div class="panel panel-default">
-        <div class="panel-heading">
+    <div class="card ">
+        <div class="card-header">
             <strong>Interface Assignment</strong>
         </div>
-        <div class="panel-body">
+        <div class="card-body">
             {% with vm_tab_active=form.initial.vminterface %}
                 <ul class="nav nav-tabs" role="tablist">
                     <li role="presentation"{% if not vm_tab_active %} class="active"{% endif %}><a href="#device" role="tab" data-toggle="tab">Device</a></li>
@@ -52,9 +52,9 @@
             {% render_field form.primary_for_parent %}
         </div>
     </div>
-    <div class="panel panel-default">
-        <div class="panel-heading"><strong>NAT IP (Inside)</strong></div>
-        <div class="panel-body">
+    <div class="card ">
+        <div class="card-header"><strong>NAT IP (Inside)</strong></div>
+        <div class="card-body">
             <ul class="nav nav-tabs" role="tablist">
                 <li role="presentation" class="active"><a href="#by_device" aria-controls="home" role="tab" data-toggle="tab">By Device</a></li>
                 <li role="presentation"><a href="#by_vm" aria-controls="search" role="tab" data-toggle="tab">By VM</a></li>

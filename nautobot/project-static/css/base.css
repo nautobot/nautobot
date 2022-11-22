@@ -1,15 +1,9 @@
 /* Layout */
-* {
-    margin: 0;
-}
 html {
     overflow-y: scroll;
 }
 html, body {
     height: 100%;
-}
-body {
-    padding-top: 70px;
 }
 .wrapper {
     min-height: 100%;
@@ -131,16 +125,9 @@ ul.dropdown-menu.edge {
     right: 0;
     left: auto;
 }
-ul.dropdown-menu div.buttons {
-    padding-right: 10px;
-    padding-top: 2px;
-}
 ul.dropdown-menu > li > a {
     clear: left;
     margin-right: 80px
-}
-.nav > li > a.dropdown-toggle {
-    padding: 15px 12px;
 }
 
 /* Forms */
@@ -369,18 +356,14 @@ table.report th a {
 .banner-bottom {
     margin-bottom: 50px;
 }
-.panel table {
+.card table {
     margin-bottom: 0;
 }
-.panel .table th {
+.card .table th {
     border-bottom-width: 1px;
 }
-.panel table tr.even:first-child td {
+.card table tr.even:first-child td {
     border-top: 0;
-}
-.panel .list-group {
-    max-height: 400px;
-    overflow: auto;
 }
 ul.nav-tabs, ul.nav-pills {
     margin-bottom: 20px;
@@ -519,7 +502,7 @@ textarea {
     position: relative;
     top: 2px;
 }
-.btn-xs .mdi::before {
+.btn-sm .mdi::before {
     font-size: 18px;
     top: 3px;
 }
@@ -629,7 +612,7 @@ span.hover_copy:hover .hover_copy_button {
 }
 
 /* Theme modal */
-.theme-table .img-responsive {
+.theme-table .img-fluid {
     margin: 0 auto;
 }
 .theme-table .active-theme {

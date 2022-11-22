@@ -17,11 +17,11 @@
 {% endblock extra_buttons %}
 
 {% block content_left_page %}
-    <div class="panel panel-default">
-        <div class="panel-heading">
+    <div class="card ">
+        <div class="card-header">
             <strong>Source Code</strong>
         </div>
-        <table class="table table-hover panel-body attr-table">
+        <table class="table table-hover card-body attr-table">
             <tr>
                 <td>Source</td>
                 <td>{{ object.source | bettertitle }}</td>
@@ -45,7 +45,7 @@
                 <td>
                     <span class="hover_copy">
                         <span id="job_class_path_copy"><code>{{ object.class_path }}</code></span>
-                        <button class="btn btn-inline btn-default hover_copy_button" data-clipboard-target="#job_class_path_copy">
+                        <button class="btn btn-inline btn-secondary hover_copy_button" data-clipboard-target="#job_class_path_copy">
                             <span class="mdi mdi-content-copy"></span>
                         </button>
                     </span>
@@ -62,11 +62,11 @@
             </tr>
         </table>
     </div>
-    <div class="panel panel-default">
-        <div class="panel-heading">
+    <div class="card ">
+        <div class="card-header">
             <strong>Job</strong>
         </div>
-        <table class="table table-hover panel-body attr-table">
+        <table class="table table-hover card-body attr-table">
             <tr>
                 <td>Grouping</td>
                 <td>{{ object.grouping }}</td>
@@ -125,11 +125,11 @@
 {% endblock content_left_page %}
 
 {% block content_right_page %}
-    <div class="panel panel-default">
-        <div class="panel-heading">
+    <div class="card ">
+        <div class="card-header">
             <strong>Properties</strong>
         </div>
-        <table class="table table-hover panel-body attr-table">
+        <table class="table table-hover card-body attr-table">
             <tr>
                 <td>Approval Required to Execute</td>
                 <td>{{ object.approval_required | render_boolean }}</td>

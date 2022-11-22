@@ -3,25 +3,25 @@
 {% load form_helpers %}
 
 {% block form %}
-    <div class="panel panel-default">
-        <div class="panel-heading"><strong>Device</strong></div>
-        <div class="panel-body">
+    <div class="card ">
+        <div class="card-header"><strong>Device</strong></div>
+        <div class="card-body">
             {% render_field form.name %}
             {% render_field form.device_role %}
         </div>
     </div>
-    <div class="panel panel-default">
-        <div class="panel-heading"><strong>Hardware</strong></div>
-        <div class="panel-body">
+    <div class="card ">
+        <div class="card-header"><strong>Hardware</strong></div>
+        <div class="card-body">
             {% render_field form.manufacturer %}
             {% render_field form.device_type %}
             {% render_field form.serial %}
             {% render_field form.asset_tag %}
         </div>
     </div>
-    <div class="panel panel-default">
-        <div class="panel-heading"><strong>Location</strong></div>
-        <div class="panel-body">
+    <div class="card ">
+        <div class="card-header"><strong>Location</strong></div>
+        <div class="card-body">
             {% render_field form.region %}
             {% render_field form.site %}
             {% render_field form.location %}
@@ -29,7 +29,7 @@
             {% render_field form.rack %}
             {% if obj.device_type.is_child_device and obj.parent_bay %}
                 <div class="form-group">
-                    <label class="col-lg-3 control-label">Parent device</label>
+                    <label class="col-lg-3 col-form-label">Parent device</label>
                     <div class="col-lg-9">
                         <p class="form-control-static">
                             {{ obj.parent_bay.device|hyperlinked_object }}
@@ -37,12 +37,12 @@
                     </div>
                 </div>
                 <div class="form-group">
-                    <label class="col-lg-3 control-label">Parent bay</label>
+                    <label class="col-lg-3 col-form-label">Parent bay</label>
                     <div class="col-lg-9">
                         <p class="form-control-static">
                             {{ obj.parent_bay.name }}
                             {% if perms.dcim.change_devicebay %}
-                                <a href="{% url 'dcim:devicebay_depopulate' pk=obj.parent_bay.pk %}" class="btn btn-danger btn-xs">
+                                <a href="{% url 'dcim:devicebay_depopulate' pk=obj.parent_bay.pk %}" class="btn btn-danger btn-sm">
                                     <i class="mdi mdi-close-thick" aria-hidden="true" title="Remove device"></i> Remove
                                 </a>
                             {% endif %}
@@ -55,9 +55,9 @@
             {% endif %}
         </div>
     </div>
-    <div class="panel panel-default">
-        <div class="panel-heading"><strong>Management</strong></div>
-        <div class="panel-body">
+    <div class="card ">
+        <div class="card-header"><strong>Management</strong></div>
+        <div class="card-body">
             {% render_field form.status %}
             {% render_field form.platform %}
             {% if editing %}
@@ -69,31 +69,31 @@
             {% render_field form.device_redundancy_group_priority %}
         </div>
     </div>
-    <div class="panel panel-default">
-        <div class="panel-heading"><strong>Virtualization</strong></div>
-        <div class="panel-body">
+    <div class="card ">
+        <div class="card-header"><strong>Virtualization</strong></div>
+        <div class="card-body">
             {% render_field form.cluster_group %}
             {% render_field form.cluster %}
         </div>
     </div>
-    <div class="panel panel-default">
-        <div class="panel-heading"><strong>Tenancy</strong></div>
-        <div class="panel-body">
+    <div class="card ">
+        <div class="card-header"><strong>Tenancy</strong></div>
+        <div class="card-body">
             {% render_field form.tenant_group %}
             {% render_field form.tenant %}
         </div>
     </div>
     {% include 'inc/extras_features_edit_form_fields.html' %}
-    <div class="panel panel-default">
-        <div class="panel-heading"><strong>Local Config Context Data</strong></div>
-        <div class="panel-body">
+    <div class="card ">
+        <div class="card-header"><strong>Local Config Context Data</strong></div>
+        <div class="card-body">
             {% render_field form.local_context_schema %}
             {% render_field form.local_context_data %}
         </div>
     </div>
-    <div class="panel panel-default">
-        <div class="panel-heading"><strong>Comments</strong></div>
-        <div class="panel-body">
+    <div class="card ">
+        <div class="card-header"><strong>Comments</strong></div>
+        <div class="card-body">
             {% render_field form.comments %}
         </div>
     </div>

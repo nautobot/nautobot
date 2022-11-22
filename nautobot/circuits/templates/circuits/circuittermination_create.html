@@ -4,23 +4,23 @@
 {% block title %}{{ obj.circuit.provider }} {{ obj.circuit }} - Side {{ form.term_side.value }}{% endblock %}
 
 {% block form %}
-    <div class="panel panel-default">
-        <div class="panel-heading"><strong>Termination</strong></div>
-        <div class="panel-body">
+    <div class="card ">
+        <div class="card-header"><strong>Termination</strong></div>
+        <div class="card-body">
             <div class="form-group">
-                <label class="col-lg-3 control-label">Provider</label>
+                <label class="col-lg-3 col-form-label">Provider</label>
                 <div class="col-lg-9">
                     <p class="form-control-static">{{ obj.circuit.provider }}</p>
                 </div>
             </div>
             <div class="form-group">
-                <label class="col-lg-3 control-label">Circuit</label>
+                <label class="col-lg-3 col-form-label">Circuit</label>
                 <div class="col-lg-9">
                     <p class="form-control-static">{{ obj.circuit.cid }}</p>
                 </div>
             </div>
             <div class="form-group">
-                <label class="col-lg-3 control-label">Termination</label>
+                <label class="col-lg-3 col-form-label">Termination</label>
                 <div class="col-lg-9">
                     <p class="form-control-static">{{ form.term_side.value }}</p>
                 </div>
@@ -43,27 +43,27 @@
                 {% endwith %}
         </div>
     </div>
-    <div class="panel panel-default">
-        <div class="panel-heading"><strong>Termination Details</strong></div>
-        <div class="panel-body">
+    <div class="card ">
+        <div class="card-header"><strong>Termination Details</strong></div>
+        <div class="card-body">
             <div class="form-group">
-                <label class="col-lg-3 control-label" for="id_port_speed">{{ form.port_speed.label }}</label>
+                <label class="col-lg-3 col-form-label" for="id_port_speed">{{ form.port_speed.label }}</label>
                 <div class="col-lg-9">
                     <div class="input-group">
                         {{ form.port_speed }}
                         {% include 'circuits/inc/speed_widget.html' with target_field='port_speed' %}
                     </div>
-                    <span class="help-block">{{ form.port_speed.help_text }}</span>
+                    <span class="form-text">{{ form.port_speed.help_text }}</span>
                 </div>
             </div>
             <div class="form-group">
-                <label class="col-lg-3 control-label" for="id_upstream_speed">{{ form.upstream_speed.label }}</label>
+                <label class="col-lg-3 col-form-label" for="id_upstream_speed">{{ form.upstream_speed.label }}</label>
                 <div class="col-lg-9">
                     <div class="input-group">
                         {{ form.upstream_speed }}
                         {% include 'circuits/inc/speed_widget.html' with target_field='upstream_speed' %}
                     </div>
-                    <span class="help-block">{{ form.upstream_speed.help_text }}</span>
+                    <span class="form-text">{{ form.upstream_speed.help_text }}</span>
                 </div>
             </div>
             {% render_field form.xconnect_id %}

@@ -6,9 +6,9 @@
 {% block content %}
     <div class="row">
         <div class="col-lg-8 col-lg-offset-2">
-            <div class="panel panel-danger">
-                <div class="panel-heading"><strong>Confirm Bulk Removal</strong></div>
-                <div class="panel-body">
+            <div class="card panel-danger">
+                <div class="card-header"><strong>Confirm Bulk Removal</strong></div>
+                <div class="card-body">
                     <strong>Warning:</strong> The following operation will remove {{ table.rows|length }} {{ obj_type_plural }} from {{ parent_obj }}. Please carefully review the {{ obj_type_plural }} to be removed and confirm below.
                 </div>
             </div>
@@ -16,7 +16,7 @@
     </div>
     <div class="row">
         <div class="col-lg-8 col-lg-offset-2">
-            <div class="panel panel-default">
+            <div class="card ">
                 {% include 'inc/table.html' %}
             </div>
         </div>
@@ -30,7 +30,7 @@
                 {% endfor %}
                 <div class="text-center">
                     <button type="submit" name="_confirm" class="btn btn-danger">Delete these {{ table.rows|length }} {{ obj_type_plural }}</button>
-                    <a href="{{ return_url }}" class="btn btn-default">Cancel</a>
+                    <a href="{{ return_url }}" class="btn btn-secondary">Cancel</a>
                 </div>
             </form>
         </div>

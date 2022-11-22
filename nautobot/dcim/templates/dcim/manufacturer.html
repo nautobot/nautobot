@@ -2,11 +2,11 @@
 {% load helpers %}
 
 {% block content_left_page %}
-        <div class="panel panel-default">
-            <div class="panel-heading">
+        <div class="card ">
+            <div class="card-header">
                 <strong>Manufacturer</strong>
             </div>
-            <table class="table table-hover panel-body attr-table">
+            <table class="table table-hover card-body attr-table">
                 <tr>
                     <td>Description</td>
                     <td>{{ object.description|placeholder }}</td>
@@ -22,14 +22,14 @@
 {% endblock content_left_page %}
 
 {% block content_full_width_page %}
-        <div class="panel panel-default">
-            <div class="panel-heading">
+        <div class="card ">
+            <div class="card-header">
                 <strong>Devices</strong>
             </div>
             {% include 'inc/table.html' with table=device_table %}
             {% if perms.dcim.add_device %}
-                <div class="panel-footer text-right noprint">
-                    <a href="{% url 'dcim:device_add' %}?manufacturer={{ object.pk }}" class="btn btn-xs btn-primary">
+                <div class="card-footer text-right noprint">
+                    <a href="{% url 'dcim:device_add' %}?manufacturer={{ object.pk }}" class="btn btn-sm btn-primary">
                         <span class="mdi mdi-plus-thick" aria-hidden="true"></span> Add device
                     </a>
                 </div>

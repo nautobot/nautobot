@@ -3,18 +3,18 @@
 {% load form_helpers %}
 
 {% block form %}
-    <div class="panel panel-default">
-        <div class="panel-heading"><strong>Dynamic Group</strong></div>
-        <div class="panel-body">
+    <div class="card ">
+        <div class="card-header"><strong>Dynamic Group</strong></div>
+        <div class="card-body">
             {% render_field form.name %}
             {% render_field form.slug %}
             {% render_field form.description %}
             {% render_field form.content_type %}
         </div>
     </div>
-    <div class="panel panel-default">
-        <div class="panel-heading"><strong>Filter Options</strong></div>
-        <div class="panel-body">
+    <div class="card ">
+        <div class="card-header"><strong>Filter Options</strong></div>
+        <div class="card-body">
             <ul class="nav nav-tabs" role="tablist">
                 <li role="presentation" class="active">
                     <a href="#filter-form" role="tab" data-toggle="tab">Filter Fields</a>
@@ -26,13 +26,13 @@
             <div class="tab-content">
                 <div class="tab-pane active" id="filter-form">
                     {% if filter_form %}
-                    <span class="help-block">
+                    <span class="form-text">
 			Select the filtering criteria to determine membership of objects matching
 			the Content Type for this Dynamic Group. Fields that are not a dropdown are
 			expected to have string inputs and do not support multiple values.
                     </span>
                     {% else %}
-                    <span class="help-block">
+                    <span class="form-text">
 			Filtering criteria will be available after initially saving this group and
 			returning to this page.
                     </span>
@@ -41,9 +41,9 @@
                 </div>
                 <div class="tab-pane" id="children-form">
                     {% if children.errors %}
-                        <div class="panel panel-danger">
-                            <div class="panel-heading"><strong>Errors</strong></div>
-                            <div class="panel-body">
+                        <div class="card panel-danger">
+                            <div class="card-header"><strong>Errors</strong></div>
+                            <div class="card-body">
                                 Please correct the error(s) below:
 
                                 {% for child in children.forms %}

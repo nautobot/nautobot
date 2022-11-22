@@ -139,8 +139,8 @@ class HomeTestCase(SeleniumTestCase):
                 for item_name, item_details in panel_details.items():
                     panel_element_to_search = self.browser.find_by_xpath(
                         f".//div[@class='homepage_column']"
-                        f"/div[@class='panel panel-default']"
-                        f"/div[@class='panel-heading']"
+                        f"/div[@class='panel ']"
+                        f"/div[@class='card-header']"
                         f"/strong[contains(text(), '{panel_name}')]"
                         f"/../.."
                         f"/div[@class='list-group']"
@@ -151,5 +151,5 @@ class HomeTestCase(SeleniumTestCase):
                     else:
                         self.assertEqual(len(links), 0)
             else:
-                panel = self.browser.find_by_xpath(f".//div[@class='panel-heading']/strong[text()='{panel_name}']")
+                panel = self.browser.find_by_xpath(f".//div[@class='card-header']/strong[text()='{panel_name}']")
                 self.assertEqual(len(panel), 0)

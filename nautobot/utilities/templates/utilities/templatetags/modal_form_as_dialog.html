@@ -13,8 +13,8 @@
                     {% csrf_token %}
                     <h3>
                         {% if obj %}
-                            <div class="pull-right">
-                                <a href="{{ obj|get_docs_url }}" target="_blank" class="btn btn-link btn-xs" title="Help">
+                            <div class="float-end">
+                                <a href="{{ obj|get_docs_url }}" target="_blank" class="btn btn-link btn-sm" title="Help">
                                     <i class="mdi mdi-help-circle"></i>
                                 </a>
                             </div>
@@ -34,7 +34,7 @@
                                 {% else %}
                                     <button type="submit" name="_create" class="btn btn-primary">Create</button>
                                 {% endif %}
-                                <a href="" class="btn btn-default" data-dismiss="modal" aria-label="Close">Cancel</a>
+                                <a href="" class="btn btn-secondary" data-dismiss="modal" aria-label="Close">Cancel</a>
                             {% endblock %}
                         </div>
                     </div>

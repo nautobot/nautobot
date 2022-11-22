@@ -5,12 +5,12 @@
         font-size: 14px;
     }
 </style>
-    <div class="panel panel-default">
-        <div class="panel-heading">
+    <div class="card ">
+        <div class="card-header">
             <strong>Custom Fields</strong>
-            <button type="button" class="btn-xs btn-primary pull-right" id="accordion-toggle-all">Collapse All</button>
+            <button type="button" class="btn-sm btn-primary float-end" id="accordion-toggle-all">Collapse All</button>
         </div>
-        <table id="accordion" class="table table-hover panel-body attr-table">
+        <table id="accordion" class="table table-hover card-body attr-table">
             {% for grouping, fields in custom_fields.items %}
             {% with forloop.counter0 as count %}
                 {% if grouping != "" %}
@@ -36,7 +36,7 @@
                                     {{ value|join:", " }}
                                 {% elif field.type == 'json' and value is not None %}
                                     <p>
-                                        <button class="btn btn-xs btn-primary" type="button" data-toggle="collapse"
+                                        <button class="btn btn-sm btn-primary" type="button" data-toggle="collapse"
                                                 data-target="#cf_{{ field.slug }}" aria-expanded="false"
                                                 aria-controls="cf_{{ field.slug }}">
                                             Show/Hide

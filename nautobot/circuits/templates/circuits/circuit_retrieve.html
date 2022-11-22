@@ -6,15 +6,15 @@
 {% endblock extra_breadcrumbs %}
 
 {% block content_left_page %}
-        <div class="panel panel-default">
-            <div class="panel-heading">
+        <div class="card ">
+            <div class="card-header">
                 <strong>Circuit</strong>
             </div>
-            <table class="table table-hover panel-body attr-table">
+            <table class="table table-hover card-body attr-table">
                 <tr>
                     <td>Status</td>
                     <td>
-                        <span class="label" style="color: {{ object.status.color|fgcolor }}; background-color: #{{ object.status.color }}">{{ object.get_status_display }}</span>
+                        <span class="badge" style="color: {{ object.status.color|fgcolor }}; background-color: #{{ object.status.color }}">{{ object.get_status_display }}</span>
                     </td>
                 </tr>
                 <tr>
@@ -52,11 +52,11 @@
                 </tr>
             </table>
         </div>
-        <div class="panel panel-default">
-            <div class="panel-heading">
+        <div class="card ">
+            <div class="card-header">
                 <strong>Comments</strong>
             </div>
-            <div class="panel-body rendered-markdown">
+            <div class="card-body rendered-markdown">
                 {% if object.comments %}
                     {{ object.comments|render_markdown }}
                 {% else %}

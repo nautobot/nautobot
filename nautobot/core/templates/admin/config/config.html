@@ -16,9 +16,9 @@
         <div class="row">
             <div class="col-lg-6 col-lg-offset-3">
                 {% if form.non_field_errors %}
-                    <div class="panel panel-danger">
-                        <div class="panel-heading"><strong>Errors</strong></div>
-                        <div class="panel-body">
+                    <div class="card panel-danger">
+                        <div class="card-header"><strong>Errors</strong></div>
+                        <div class="card-body">
                             {{ form.non_field_errors }}
                         </div>
                     </div>
@@ -38,9 +38,9 @@
 
                 <div class="row">
                     {% for fieldset in fieldsets %}
-                        <div class="panel panel-default">
-                            <div class="panel-heading"><strong>{{ fieldset.title }}</strong></div>
-                            <div class="panel-body">
+                        <div class="card ">
+                            <div class="card-header"><strong>{{ fieldset.title }}</strong></div>
+                            <div class="card-body">
                                 {% for item in fieldset.config_values %}
                                 {% get_attr settings item.name as settings_value %}
                                 <div class="form-group{% if item.form_field.errors %} has-error{% endif %}">
@@ -54,9 +54,9 @@
                                         </div>
                                         {{ item.form_field.as_hidden }}
                                     {% else %}
-                                        <label class="col-lg-3 control-label" for="{{ item.form_field.id_for_label }}">
+                                        <label class="col-lg-3 col-form-label" for="{{ item.form_field.id_for_label }}">
                                             {{ item.name | split:"_" | join:" " }}
-                                            <span class="help-block">
+                                            <span class="form-text">
                                                 (default: <code>{{ item.default }}</code>)
                                             </span>
                                         </label>
@@ -64,7 +64,7 @@
                                             {{ item.form_field.errors }}
                                             {% if item.is_file %}{% trans "Current file" %}: <a href="{% get_media_prefix as MEDIA_URL %}{{ MEDIA_URL }}{{ item.value }}" target="_blank">{{ item.value }}</a>{% endif %}
                                                 {{ item.form_field }}
-                                            <span class="help-block">{{ item.help_text | linebreaksbr }}</span>
+                                            <span class="form-text">{{ item.help_text | linebreaksbr }}</span>
                                         </div>
                                     {% endif %}
                                 </div>

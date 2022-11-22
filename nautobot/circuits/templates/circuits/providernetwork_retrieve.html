@@ -12,11 +12,11 @@
 {% block title %}{{ object.provider }} {{ object.name }}{% endblock title %}
 
 {% block content_left_page %}
-        <div class="panel panel-default">
-            <div class="panel-heading">
+        <div class="card ">
+            <div class="card-header">
                 <strong>Provider Network</strong>
             </div>
-            <table class="table table-hover panel-body attr-table">
+            <table class="table table-hover card-body attr-table">
                 <tr>
                     <td>Provider</td>
                     <td>{{ object.provider|hyperlinked_object }}</td>
@@ -34,11 +34,11 @@
 {% endblock content_left_page %}
 
 {% block content_right_page %}
-        <div class="panel panel-default">
-            <div class="panel-heading">
+        <div class="card ">
+            <div class="card-header">
                 <strong>Comments</strong>
             </div>
-            <div class="panel-body rendered-markdown">
+            <div class="card-body rendered-markdown">
                 {% if object.comments %}
                     {{ object.comments|render_markdown }}
                 {% else %}
@@ -49,8 +49,8 @@
 {% endblock content_right_page %}
 
 {% block content_full_width_page %}
-        <div class="panel panel-default">
-            <div class="panel-heading">
+        <div class="card ">
+            <div class="card-header">
                 <strong>Circuits</strong>
             </div>
             {% include 'inc/table.html' with table=circuits_table %}
