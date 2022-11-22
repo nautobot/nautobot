@@ -20,11 +20,11 @@ class FilterTestCases:
             passed to the queryset's filter(field_name__in=[]) method but will fail to match at least one instance.
 
             Args:
-                field_name: The name of the field to retrieve test values from.
-                queryset: The queryset to retrieve test values. Defaults to `self.queryset`.
+                field_name (str): The name of the field to retrieve test values from.
+                queryset (QuerySet): The queryset to retrieve test values. Defaults to `self.queryset`.
 
             Returns:
-                list: A list of unique values derived from the queryset.
+                (list): A list of unique values derived from the queryset.
 
             Raises:
                 ValueError: Raised if unable to find a combination of 2 or more unique values

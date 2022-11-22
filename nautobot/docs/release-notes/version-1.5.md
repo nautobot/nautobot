@@ -10,13 +10,16 @@ If you are a user migrating from NetBox to Nautobot, please refer to the ["Migra
 
 ### Added
 
+#### Added `nautobot-server generate_test_data` command ([#2536](https://github.com/nautobot/nautobot/issues/2536))
+
+A new management command, [`nautobot-server generate_test_data`](../administration/nautobot-server.md#generate_test_data), has been added that can be used to populate the Nautobot database with various data as a baseline for manual or automated testing. This is now used internally by Nautobot's unit testing suite to create a synthetic data set that looks and feels like real data with randomly-generated values. Most importantly, the objects are created with all of the fields fully and correctly populated, to assert that each object in the database is properly exercising all features.
+
+!!! warning
+    Be very cautious about running this command on your server instance. It is not intended to be used in production environments and will result in data loss.
+
 #### Custom Field Grouping ([#899](https://github.com/nautobot/nautobot/issues/899))
 
 Custom fields can now be assigned to a free-text "grouping" to improve usability when a large number of custom fields are defined on a given model. In the UI, fields in the same grouping will be grouped together, and groupings can be expanded/collapsed for display purposes.
-
-#### Device Redundancy Groups ([#1892](https://github.com/nautobot/nautobot/issues/1892))
-
-Device Redundancy Groups have been added to model groups of distinct devices that perform device clustering or failover high availability functions. This may be used to model whole device redundancy strategies across devices with separate control planes (ex: ASA failover), not devices that share a control plane (ex: stackwise switch stacks), or interface specific redundancy strategies (ex: hsrp). Device Redundancy Groups support grouping an arbitrary number of devices and may be assigned an optional secrets group and one or more optional failover strategies.
 
 #### Custom Celery Task Queues ([#2421](https://github.com/nautobot/nautobot/pull/2421))
 
@@ -25,12 +28,34 @@ A new optional job property `task_queues` has been introduced to allow Nautobot 
 !!! important
     The default celery queue name has been changed from `celery` to `default`. If you have any workers or tasks hard coded to use `celery` you will need to update those workers/tasks or change the [`CELERY_TASK_DEFAULT_QUEUE`](../configuration/optional-settings.md#celery_task_default_queue) setting in your `nautobot_config.py`.
 
-#### Added `nautobot-server generate_test_data` command ([#2536](https://github.com/nautobot/nautobot/issues/2536))
+#### Device Redundancy Groups ([#1892](https://github.com/nautobot/nautobot/issues/1892))
 
-A new management command, [`nautobot-server generate_test_data`](../administration/nautobot-server.md#generate_test_data), has been added that can be used to populate the Nautobot database with various data as a baseline for manual or automated testing. This is now used internally by Nautobot's unit testing suite to create a synthetic data set that looks and feels like real data with randomly-generated values. Most importantly, the objects are created with all of the fields fully and correctly populated, to assert that each object in the database is properly exercising all features.
+Device Redundancy Groups have been added to model groups of distinct devices that perform device clustering or failover high availability functions. This may be used to model whole device redundancy strategies across devices with separate control planes (ex: ASA failover), not devices that share a control plane (ex: stackwise switch stacks), or interface specific redundancy strategies (ex: hsrp). Device Redundancy Groups support grouping an arbitrary number of devices and may be assigned an optional secrets group and one or more optional failover strategies.
 
-!!! warning
-    Be very cautious about running this command on your server instance. It is not intended to be used in production environments and will result in data loss.
+#### Nautobot Apps API ([#2723](https://github.com/nautobot/nautobot/issues/2723))
+
++++ 1.5.2
+
+The new `nautobot.apps` module provides a common starting point for app (a.k.a. plugin) developers to find all of the functions and classes that are recommended for use in apps. For example, instead of needing to look through the entire Nautobot codebase to find the appropriate classes, and then write:
+
+```python
+from nautobot.extras.forms import NautobotModelForm
+from nautobot.utilities.forms import BulkEditForm, CSVModelForm
+from nautobot.utilities.forms.fields import DynamicModelChoiceField
+```
+
+an app developer can now refer to `nautobot.apps.forms` and then write simply:
+
+```python
+from nautobot.apps.forms import (
+    BulkEditForm,
+    CSVModelForm,
+    DynamicModelChoiceField,
+    NautobotModelForm,
+)
+```
+
+For more details, please refer to the updated [app developer documentation](../plugins/development.md).
 
 #### Nestable LocationTypes ([#2608](https://github.com/nautobot/nautobot/issues/2608))
 
@@ -113,6 +138,11 @@ A number of mixin classes have been renamed and/or relocated for improved self-c
 | `DeviceTypeComponentFilterSet` | `DeviceComponentTemplateModelFilterSetMixin` |
 | `LocalContextFilterSet`        | `LocalContextModelFilterSetMixin`            |
 | `PathEndpointFilterSet`        | `PathEndpointModelFilterSetMixin`            |
+| `PluginBanner`                 | `Banner`                                     |
+| `PluginConfig`                 | `NautobotAppConfig`                          |
+| `PluginCustomValidator`        | `CustomValidator`                            |
+| `PluginFilterExtension`        | `FilterExtension`                            |
+| `PluginTemplateExtension`      | `TemplateExtension`                          |
 | `RelationshipModelFilterSet`   | `RelationshipModelFilterSetMixin`            |
 | `TaggedObjectSerializer`       | `TaggedModelSerializerMixin`                 |
 | `TenancyFilterSet`             | `TenancyModelFilterSetMixin`                 |

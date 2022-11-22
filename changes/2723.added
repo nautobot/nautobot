@@ -1,0 +1,2 @@
+Added `nautobot.apps` module to provide a central location for code that is recommended for use by Nautobot apps (plugins).
+Added code reference documentation for the `nautobot.apps` module.

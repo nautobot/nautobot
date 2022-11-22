@@ -2,7 +2,7 @@ from functools import wraps
 
 from django.contrib.contenttypes.models import ContentType
 
-from nautobot.extras.plugins import PluginCustomValidator
+from nautobot.extras.plugins import CustomValidator
 from nautobot.extras.registry import registry
 from nautobot.extras.utils import FeatureQuery
 
@@ -29,7 +29,7 @@ def custom_validator_clean(model_clean_func):
         for custom_validator in custom_validators:
             # If the class has not overridden the specified method, we can skip it (because we know it
             # will raise NotImplementedError).
-            if getattr(custom_validator, "clean") == getattr(PluginCustomValidator, "clean"):
+            if getattr(custom_validator, "clean") == getattr(CustomValidator, "clean"):
                 continue
             custom_validator(model_instance).clean()
 

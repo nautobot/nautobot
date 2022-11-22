@@ -1,8 +1,7 @@
 from django.shortcuts import HttpResponse, render
 from django.views.generic import View
 
-from nautobot.core.views import generic, mixins as view_mixins
-from nautobot.core.views.viewsets import NautobotUIViewSet
+from nautobot.apps import views
 from nautobot.circuits.models import Circuit
 from nautobot.dcim.models import Device
 
@@ -11,7 +10,7 @@ from example_plugin import filters, forms, tables
 from example_plugin.api import serializers
 
 
-class CircuitDetailPluginTabView(generic.ObjectView):
+class CircuitDetailPluginTabView(views.ObjectView):
     """
     This view's template extends the circuit detail template,
     making it suitable to show as a tab on the circuit detail page.
@@ -24,7 +23,7 @@ class CircuitDetailPluginTabView(generic.ObjectView):
     template_name = "example_plugin/tab_circuit_detail.html"
 
 
-class DeviceDetailPluginTabOneView(generic.ObjectView):
+class DeviceDetailPluginTabOneView(views.ObjectView):
     """
     This view's template extends the device detail template,
     making it suitable to show as a tab on the device detail page.
@@ -37,7 +36,7 @@ class DeviceDetailPluginTabOneView(generic.ObjectView):
     template_name = "example_plugin/tab_device_detail_1.html"
 
 
-class DeviceDetailPluginTabTwoView(generic.ObjectView):
+class DeviceDetailPluginTabTwoView(views.ObjectView):
     """
     Same as DeviceDetailPluginTabOneView view above but using a different template.
     """
@@ -69,7 +68,7 @@ class ExamplePluginConfigView(View):
         return render(request, "example_plugin/config.html", {"form": form})
 
 
-class ExampleModelUIViewSet(NautobotUIViewSet):
+class ExampleModelUIViewSet(views.NautobotUIViewSet):
     bulk_create_form_class = forms.ExampleModelCSVForm
     bulk_update_form_class = forms.ExampleModelBulkEditForm
     filterset_class = filters.ExampleModelFilterSet
@@ -83,14 +82,14 @@ class ExampleModelUIViewSet(NautobotUIViewSet):
 
 # Example excluding the BulkUpdateViewSet
 class AnotherExampleModelUIViewSet(
-    view_mixins.ObjectBulkDestroyViewMixin,
-    view_mixins.ObjectBulkUpdateViewMixin,
-    view_mixins.ObjectChangeLogViewMixin,
-    view_mixins.ObjectNotesViewMixin,
-    view_mixins.ObjectDestroyViewMixin,
-    view_mixins.ObjectDetailViewMixin,
-    view_mixins.ObjectEditViewMixin,
-    view_mixins.ObjectListViewMixin,
+    views.ObjectBulkDestroyViewMixin,
+    views.ObjectBulkUpdateViewMixin,
+    views.ObjectChangeLogViewMixin,
+    views.ObjectNotesViewMixin,
+    views.ObjectDestroyViewMixin,
+    views.ObjectDetailViewMixin,
+    views.ObjectEditViewMixin,
+    views.ObjectListViewMixin,
 ):
     action_buttons = ["add", "export"]
     bulk_update_form_class = forms.AnotherExampleModelBulkEditForm
@@ -103,6 +102,6 @@ class AnotherExampleModelUIViewSet(
     table_class = tables.AnotherExampleModelTable
 
 
-class ViewToBeOverridden(generic.View):
+class ViewToBeOverridden(View):
     def get(self, request, *args, **kwargs):
         return HttpResponse("I am a view in the example plugin which will be overridden by another plugin.")

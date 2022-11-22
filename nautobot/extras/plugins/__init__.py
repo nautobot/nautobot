@@ -24,6 +24,7 @@ from nautobot.extras.plugins.exceptions import PluginImproperlyConfigured
 from nautobot.extras.plugins.utils import import_object
 from nautobot.extras.secrets import register_secrets_provider
 from nautobot.utilities.choices import ButtonColorChoices
+from nautobot.utilities.deprecation import class_deprecated_in_favor_of
 
 logger = getLogger(__name__)
 
@@ -41,7 +42,7 @@ registry["plugin_template_extensions"] = collections.defaultdict(list)
 #
 
 
-class PluginConfig(NautobotConfig):
+class NautobotAppConfig(NautobotConfig):
     """
     Subclass of Django's built-in AppConfig class, to be used for Nautobot plugins.
     """
@@ -252,18 +253,23 @@ class PluginConfig(NautobotConfig):
                 user_config[setting] = value
 
 
+@class_deprecated_in_favor_of(NautobotAppConfig)
+class PluginConfig(NautobotAppConfig):
+    pass
+
+
 #
 # Template content injection
 #
 
 
-class PluginTemplateExtension:
+class TemplateExtension:
     """
     This class is used to register plugin content to be injected into core Nautobot templates. It contains methods
     that are overridden by plugin authors to return template content.
 
     The `model` attribute on the class defines the which model detail page this class renders content for. It
-    should be set as a string in the form '<app_label>.<model_name>'. render() provides the following context data:
+    should be set as a string in the form `<app_label>.<model_name>`. `render()` provides the following context data:
 
     * object - The object being viewed
     * request - The current request
@@ -322,7 +328,8 @@ class PluginTemplateExtension:
         Tabs that will be rendered and added to the existing list of tabs on the detail page view.
         Tabs will be ordered by their position in the list.
 
-        Content should be returned as a list of dicts in the format:
+        Content should be returned as a list of dicts in the following format:
+        ```
         [
             {
                 "title": "<title>",
@@ -333,27 +340,33 @@ class PluginTemplateExtension:
                 "url": "<url for the tab link>",
             },
         ]
+        ```
         """
         raise NotImplementedError
 
 
+@class_deprecated_in_favor_of(TemplateExtension)
+class PluginTemplateExtension(TemplateExtension):
+    pass
+
+
 def register_template_extensions(class_list):
     """
-    Register a list of PluginTemplateExtension classes
+    Register a list of TemplateExtension classes
     """
     # Validation
     for template_extension in class_list:
         if not inspect.isclass(template_extension):
-            raise TypeError(f"PluginTemplateExtension class {template_extension} was passed as an instance!")
-        if not issubclass(template_extension, PluginTemplateExtension):
-            raise TypeError(f"{template_extension} is not a subclass of extras.plugins.PluginTemplateExtension!")
+            raise TypeError(f"TemplateExtension class {template_extension} was passed as an instance!")
+        if not issubclass(template_extension, TemplateExtension):
+            raise TypeError(f"{template_extension} is not a subclass of nautobot.apps.ui.TemplateExtension!")
         if template_extension.model is None:
-            raise TypeError(f"PluginTemplateExtension class {template_extension} does not define a valid model!")
+            raise TypeError(f"TemplateExtension class {template_extension} does not define a valid model!")
 
         registry["plugin_template_extensions"][template_extension.model].append(template_extension)
 
 
-class PluginBanner:
+class Banner:
     """Class that may be returned by a registered plugin_banners function."""
 
     def __init__(self, content, banner_class=BannerClassChoices.CLASS_INFO):
@@ -361,6 +374,11 @@ class PluginBanner:
         if banner_class not in BannerClassChoices.values():
             raise ValueError("Banner class must be a choice within BannerClassChoices.")
         self.banner_class = banner_class
+
+
+@class_deprecated_in_favor_of(Banner)
+class PluginBanner(Banner):
+    pass
 
 
 def register_banner_function(function):
@@ -406,7 +424,7 @@ def register_jobs(class_list):
     # That is done in response to the `nautobot_database_ready` signal, see nautobot.extras.signals.refresh_job_models
 
 
-class PluginFilterExtension:
+class FilterExtension:
     """Class that may be returned by a registered Filter Extension function."""
 
     model = None
@@ -416,18 +434,23 @@ class PluginFilterExtension:
     filterform_fields = {}
 
 
+@class_deprecated_in_favor_of(FilterExtension)
+class PluginFilterExtension(FilterExtension):
+    pass
+
+
 def register_filter_extensions(filter_extensions, plugin_name):
     """
-    Register a list of PluginFilterExtension classes
+    Register a list of FilterExtension classes
     """
     from nautobot.utilities.utils import get_filterset_for_model, get_form_for_model
     from nautobot.utilities.forms.utils import add_field_to_filter_form_class
 
     for filter_extension in filter_extensions:
-        if not issubclass(filter_extension, PluginFilterExtension):
-            raise TypeError(f"{filter_extension} is not a subclass of extras.plugins.PluginFilterExtension!")
+        if not issubclass(filter_extension, FilterExtension):
+            raise TypeError(f"{filter_extension} is not a subclass of nautobot.apps.filters.FilterExtension!")
         if filter_extension.model is None:
-            raise TypeError(f"PluginFilterExtension class {filter_extension} does not define a valid model!")
+            raise TypeError(f"FilterExtension class {filter_extension} does not define a valid model!")
 
         model_filterset_class = get_filterset_for_model(filter_extension.model)
         model_filterform_class = get_form_for_model(filter_extension.model, "Filter")
@@ -463,6 +486,8 @@ def register_filter_extensions(filter_extensions, plugin_name):
 #
 
 
+# 2.2 TODO: remove in favor of NavMenuItem
+@class_deprecated_in_favor_of(NavMenuItem)
 class PluginMenuItem:
     """
     This class represents a navigation menu item. This constitutes primary link and its text, but also allows for
@@ -488,6 +513,8 @@ class PluginMenuItem:
             self.buttons = buttons
 
 
+# 2.2 TODO: remove in favor of NavMenuButton
+@class_deprecated_in_favor_of(NavMenuButton)
 class PluginMenuButton:
     """
     This class represents a button within a PluginMenuItem. Note that button colors should come from
@@ -586,7 +613,7 @@ def register_plugin_menu_items(section_name, menu_items):
 #
 
 
-class PluginCustomValidator:
+class CustomValidator:
     """
     This class is used to register plugin custom model validators which act on specified models. It contains the clean
     method which is overridden by plugin authors to execute custom validation logic. Plugin authors must raise
@@ -594,7 +621,7 @@ class PluginCustomValidator:
     A convenience method `validation_error(<message>)` may be used for this purpose.
 
     The `model` attribute on the class defines the model to which this validator is registered. It
-    should be set as a string in the form '<app_label>.<model_name>'.
+    should be set as a string in the form `<app_label>.<model_name>`.
     """
 
     model = None
@@ -619,18 +646,23 @@ class PluginCustomValidator:
         raise NotImplementedError
 
 
+@class_deprecated_in_favor_of(CustomValidator)
+class PluginCustomValidator(CustomValidator):
+    pass
+
+
 def register_custom_validators(class_list):
     """
-    Register a list of PluginCustomValidator classes
+    Register a list of CustomValidator classes
     """
     # Validation
     for custom_validator in class_list:
         if not inspect.isclass(custom_validator):
-            raise TypeError(f"PluginCustomValidator class {custom_validator} was passed as an instance!")
-        if not issubclass(custom_validator, PluginCustomValidator):
-            raise TypeError(f"{custom_validator} is not a subclass of extras.plugins.PluginCustomValidator!")
+            raise TypeError(f"CustomValidator class {custom_validator} was passed as an instance!")
+        if not issubclass(custom_validator, CustomValidator):
+            raise TypeError(f"{custom_validator} is not a subclass of nautobot.apps.models.CustomValidator!")
         if custom_validator.model is None:
-            raise TypeError(f"PluginCustomValidator class {custom_validator} does not define a valid model!")
+            raise TypeError(f"CustomValidator class {custom_validator} does not define a valid model!")
 
         registry["plugin_custom_validators"][custom_validator.model].append(custom_validator)
 

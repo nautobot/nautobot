@@ -170,6 +170,8 @@ flake8 = "~3.9.1"
 invoke = "~1.7.1"
 # Rendering docs to HTML
 mkdocs = "~1.4.2"
+# Automatically generate some files as part of mkdocs build
+mkdocs-gen-files = "~0.4.0"
 # Allow Markdown files to include other files
 mkdocs-include-markdown-plugin = "~3.6.0"
 # Material for mkdocs theme
