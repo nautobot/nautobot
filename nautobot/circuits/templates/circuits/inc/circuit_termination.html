@@ -1,8 +1,8 @@
 {% load helpers %}
 
 <div class="panel panel-default">
-    <div class="panel-heading">
-        <div class="pull-right">
+    <div class="card-header">
+        <div class="float-end">
             {% if not termination and perms.circuits.add_circuittermination %}
                 <a href="{% url 'circuits:circuittermination_add' circuit=object.pk %}?term_side={{ side }}" class="btn btn-xs btn-success">
                     <span class="mdi mdi-plus-thick" aria-hidden="true"></span> Add
@@ -30,7 +30,7 @@
         <strong>Termination - {{ side }} Side</strong>
     </div>
     {% if termination %}
-        <table class="table table-hover panel-body attr-table">
+        <table class="table table-hover card-body attr-table">
             {% if termination.site %}
             <tr>
                 <td>Site</td>
@@ -52,7 +52,7 @@
                 <td>
                     {% if termination.cable %}
                         {% if perms.dcim.delete_cable %}
-                            <div class="pull-right">
+                            <div class="float-end">
                                 <a href="{% url 'dcim:cable_delete' pk=termination.cable.pk %}?return_url={{ termination.circuit.get_absolute_url }}" title="Remove cable" class="btn btn-danger btn-xs">
                                     <i class="mdi mdi-ethernet-cable-off" aria-hidden="true"></i> Disconnect
                                 </a>
@@ -73,7 +73,7 @@
                         {% endwith %}
                     {% else %}
                         {% if perms.dcim.add_cable %}
-                            <div class="pull-right">
+                            <div class="float-end">
                                 <span class="dropdown">
                                     <button type="button" class="btn btn-success btn-xs dropdown-toggle" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
                                         <span class="mdi mdi-ethernet-cable" aria-hidden="true"></span> Connect
@@ -140,7 +140,7 @@
             {% include 'inc/relationships_table_rows.html' with relationships_data=termination.get_relationships_data %}
         </table>
     {% else %}
-        <div class="panel-body">
+        <div class="card-body">
             <span class="text-muted">None</span>
         </div>
     {% endif %}

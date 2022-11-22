@@ -28,8 +28,8 @@
             <h1>{% block title %}{{ obj_type|bettertitle }} Bulk Import{% endblock %}</h1>
             {% if form.non_field_errors %}
                 <div class="panel panel-danger">
-                    <div class="panel-heading"><strong>Errors</strong></div>
-                    <div class="panel-body">
+                    <div class="card-header"><strong>Errors</strong></div>
+                    <div class="card-body">
                         {{ form.non_field_errors }}
                     </div>
                 </div>
@@ -44,7 +44,7 @@
                         {% csrf_token %}
                         {% render_field form.csv_data %}
                         <div class="form-group">
-                            <div class="col-md-12 text-right">
+                            <div class="col-md-12 text-end">
                                 <button type="submit" class="btn btn-primary">Submit</button>
                                 {% if return_url %}
                                     <a href="{{ return_url }}" class="btn btn-default">Cancel</a>
@@ -59,7 +59,7 @@
                         <input type="hidden" name="csv_data" value="{{ form.csv_data.initial }}">
                         {% render_field form.csv_file %}
                         <div class="form-group">
-                            <div class="col-md-12 text-right">
+                            <div class="col-md-12 text-end">
                                 <button type="submit" class="btn btn-primary">Submit</button>
                                 {% if return_url %}
                                     <a href="{{ return_url }}" class="btn btn-default">Cancel</a>
@@ -73,7 +73,7 @@
             <p></p>
             {% if fields %}
                 <div class="panel panel-default">
-                    <div class="panel-heading">
+                    <div class="card-header">
                         <strong>CSV Field Options</strong>
                     </div>
                     <table class="table">
@@ -98,7 +98,7 @@
                                 </td>
                                 <td>
                                     {% if field.STATIC_CHOICES %}
-                                        <button type="button" class="btn btn-link btn-xs pull-right" data-toggle="modal" data-target="#{{ name }}_choices">
+                                        <button type="button" class="btn btn-link btn-xs float-end" data-toggle="modal" data-target="#{{ name }}_choices">
                                             <i class="mdi mdi-help-circle"></i>
                                         </button>
                                         <div class="modal fade" id="{{ name }}_choices" tabindex="-1" role="dialog">

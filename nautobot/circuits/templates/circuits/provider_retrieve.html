@@ -3,10 +3,10 @@
 
 {% block content_left_page %}
         <div class="panel panel-default">
-            <div class="panel-heading">
+            <div class="card-header">
                 <strong>Provider</strong>
             </div>
-            <table class="table table-hover panel-body attr-table">
+            <table class="table table-hover card-body attr-table">
                 <tr>
                     <td>ASN</td>
                     <td>{{ object.asn|placeholder }}</td>
@@ -45,10 +45,10 @@
 
 {% block content_right_page %}
         <div class="panel panel-default">
-            <div class="panel-heading">
+            <div class="card-header">
                 <strong>Comments</strong>
             </div>
-            <div class="panel-body rendered-markdown">
+            <div class="card-body rendered-markdown">
                 {% if object.comments %}
                     {{ object.comments|render_markdown }}
                 {% else %}
@@ -60,12 +60,12 @@
 
 {% block content_full_width_page %}
         <div class="panel panel-default">
-            <div class="panel-heading">
+            <div class="card-header">
                 <strong>Circuits</strong>
             </div>
             {% include 'inc/table.html' with table=circuits_table %}
             {% if perms.circuits.add_circuit %}
-                <div class="panel-footer text-right noprint">
+                <div class="panel-footer text-end noprint">
                     <a href="{% url 'circuits:circuit_add' %}?provider={{ object.pk }}" class="btn btn-xs btn-primary">
                         <span class="mdi mdi-plus-thick" aria-hidden="true"></span> Add circuit
                     </a>

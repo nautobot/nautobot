@@ -3,10 +3,10 @@
 
 {% block content_left_page %}
             <div class="panel panel-default">
-                <div class="panel-heading">
+                <div class="card-header">
                     <strong>Config Context</strong>
                 </div>
-                <table class="table table-hover panel-body attr-table">
+                <table class="table table-hover card-body attr-table">
                     <tr>
                         <td>Name</td>
                         <td>
@@ -43,10 +43,10 @@
 
 {% block content_right_page %}
             <div class="panel panel-default">
-                <div class="panel-heading">
+                <div class="card-header">
                     <strong>Assignment</strong>
                 </div>
-                <table class="table table-hover panel-body attr-table">
+                <table class="table table-hover card-body attr-table">
                     <tr>
                         <td>Regions</td>
                         <td>
@@ -221,11 +221,11 @@
 
 {% block content_full_width_page %}
             <div class="panel panel-default">
-                <div class="panel-heading">
+                <div class="card-header">
                     <strong>Data</strong>
                     {% include 'extras/inc/json_format.html' %}
                 </div>
-                <div class="panel-body">
+                <div class="card-body">
                     {% include 'extras/inc/json_data.html' with data=object.data format=format %}
                 </div>
             </div>

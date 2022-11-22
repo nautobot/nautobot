@@ -4,8 +4,8 @@
 
 {% block form %}
     <div class="panel panel-default">
-        <div class="panel-heading"><strong>Dynamic Group</strong></div>
-        <div class="panel-body">
+        <div class="card-header"><strong>Dynamic Group</strong></div>
+        <div class="card-body">
             {% render_field form.name %}
             {% render_field form.slug %}
             {% render_field form.description %}
@@ -13,8 +13,8 @@
         </div>
     </div>
     <div class="panel panel-default">
-        <div class="panel-heading"><strong>Filter Options</strong></div>
-        <div class="panel-body">
+        <div class="card-header"><strong>Filter Options</strong></div>
+        <div class="card-body">
             <ul class="nav nav-tabs" role="tablist">
                 <li role="presentation" class="active">
                     <a href="#filter-form" role="tab" data-toggle="tab">Filter Fields</a>
@@ -42,8 +42,8 @@
                 <div class="tab-pane" id="children-form">
                     {% if children.errors %}
                         <div class="panel panel-danger">
-                            <div class="panel-heading"><strong>Errors</strong></div>
-                            <div class="panel-body">
+                            <div class="card-header"><strong>Errors</strong></div>
+                            <div class="card-body">
                                 Please correct the error(s) below:
 
                                 {% for child in children.forms %}

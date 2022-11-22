@@ -10,8 +10,8 @@
 
 {% block form %}
     <div class="panel panel-default">
-        <div class="panel-heading"><strong>IP Addresses</strong></div>
-        <div class="panel-body">
+        <div class="card-header"><strong>IP Addresses</strong></div>
+        <div class="card-body">
             {% render_field form.pattern %}
             {% render_field model_form.status %}
             {% render_field model_form.role %}
@@ -20,8 +20,8 @@
         </div>
     </div>
     <div class="panel panel-default">
-        <div class="panel-heading"><strong>Tenancy</strong></div>
-        <div class="panel-body">
+        <div class="card-header"><strong>Tenancy</strong></div>
+        <div class="card-body">
             {% render_field model_form.tenant_group %}
             {% render_field model_form.tenant %}
         </div>

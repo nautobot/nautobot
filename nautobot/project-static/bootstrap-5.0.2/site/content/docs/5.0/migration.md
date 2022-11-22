@@ -316,7 +316,7 @@ toc: true
   - Renamed `.rounded-left` and `.rounded-right` to `.rounded-start` and `.rounded-end`.
   - Renamed `.ml-*` and `.mr-*` to `.ms-*` and `.me-*`.
   - Renamed `.pl-*` and `.pr-*` to `.ps-*` and `.pe-*`.
-  - Renamed `.text-left` and `.text-right` to `.text-start` and `.text-end`.
+  - Renamed `.text-left` and `.text-end` to `.text-start` and `.text-end`.
 
 - <span class="badge bg-danger">Breaking</span> Disabled negative margins by default.
 

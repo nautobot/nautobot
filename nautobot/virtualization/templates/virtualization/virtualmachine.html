@@ -22,10 +22,10 @@
 
 {% block content_left_page %}
         <div class="panel panel-default">
-            <div class="panel-heading">
+            <div class="card-header">
                 <strong>Virtual Machine</strong>
             </div>
-            <table class="table table-hover panel-body attr-table">
+            <table class="table table-hover card-body attr-table">
                 <tr>
                     <td>Name</td>
                     <td>{{ object }}</td>
@@ -98,10 +98,10 @@
             </table>
         </div>
         <div class="panel panel-default">
-            <div class="panel-heading">
+            <div class="card-header">
                 <strong>Comments</strong>
             </div>
-            <div class="panel-body rendered-markdown">
+            <div class="card-body rendered-markdown">
                 {% if object.comments %}
                     {{ object.comments|render_markdown }}
                 {% else %}
@@ -113,10 +113,10 @@
 
 {% block content_right_page %}
         <div class="panel panel-default">
-            <div class="panel-heading">
+            <div class="card-header">
                 <strong>Cluster</strong>
             </div>
-            <table class="table table-hover panel-body attr-table">
+            <table class="table table-hover card-body attr-table">
                 <tr>
                     <td>Cluster</td>
                     <td>
@@ -133,10 +133,10 @@
             </table>
         </div>
         <div class="panel panel-default">
-            <div class="panel-heading">
+            <div class="card-header">
                 <strong>Resources</strong>
             </div>
-            <table class="table table-hover panel-body attr-table">
+            <table class="table table-hover card-body attr-table">
                 <tr>
                     <td><i class="mdi mdi-gauge"></i> Virtual CPUs</td>
                     <td>{{ object.vcpus|placeholder }}</td>
@@ -164,22 +164,22 @@
             </table>
         </div>
         <div class="panel panel-default">
-            <div class="panel-heading">
+            <div class="card-header">
                 <strong>Services</strong>
             </div>
             {% if services %}
-                <table class="table table-hover panel-body">
+                <table class="table table-hover card-body">
                     {% for service in services %}
                         {% include 'ipam/inc/service.html' %}
                     {% endfor %}
                 </table>
             {% else %}
-                <div class="panel-body text-muted">
+                <div class="card-body text-muted">
                     None
                 </div>
             {% endif %}
             {% if perms.ipam.add_service %}
-                <div class="panel-footer text-right noprint">
+                <div class="panel-footer text-end noprint">
                     <a href="{% url 'virtualization:virtualmachine_service_assign' virtualmachine=object.pk %}" class="btn btn-xs btn-primary">
                         <span class="mdi mdi-plus-thick" aria-hidden="true"></span> Assign service
                     </a>
@@ -193,14 +193,14 @@
             {% csrf_token %}
             <input type="hidden" name="virtual_machine" value="{{ object.pk }}" />
             <div class="panel panel-default">
-                <div class="panel-heading">
+                <div class="card-header">
                     <strong>Interfaces</strong>
-                    <div class="pull-right noprint">
+                    <div class="float-end noprint">
                         {% if request.user.is_authenticated %}
                             <button type="button" class="btn btn-default btn-xs" data-toggle="modal" data-target="#VirtualMachineVMInterfaceTable_config" title="Configure table"><i class="mdi mdi-cog"></i> Configure</button>
                         {% endif %}
                     </div>
-                    <div class="pull-right col-md-2 noprint">
+                    <div class="float-end col-md-2 noprint">
                         <input class="form-control interface-filter" type="text" placeholder="Filter" title="Filter text (regular expressions supported)" style="height: 23px" />
                     </div>
                 </div>
@@ -221,7 +221,7 @@
                             </button>
                         {% endif %}
                         {% if perms.virtualization.add_vminterface %}
-                            <div class="pull-right">
+                            <div class="float-end">
                                 <a href="{% url 'virtualization:vminterface_add' %}?virtual_machine={{ object.pk }}&return_url={{ object.get_absolute_url }}" class="btn btn-primary btn-xs">
                                     <span class="mdi mdi-plus-thick" aria-hidden="true"></span> Add interfaces
                                 </a>

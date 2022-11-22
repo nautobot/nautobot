@@ -12,15 +12,15 @@
                 <h3>{% block title %}{% if vc_form.instance %}Editing {{ vc_form.instance }}{% else %}New Virtual Chassis{% endif %}{% endblock %}</h3>
                 {% if vc_form.non_field_errors %}
                     <div class="panel panel-danger">
-                        <div class="panel-heading"><strong>Errors</strong></div>
-                        <div class="panel-body">
+                        <div class="card-header"><strong>Errors</strong></div>
+                        <div class="card-body">
                             {{ vc_form.non_field_errors }}
                         </div>
                     </div>
                 {% endif %}
                 <div class="panel panel-default">
-                    <div class="panel-heading"><strong>Virtual Chassis</strong></div>
-                    <div class="table panel-body">
+                    <div class="card-header"><strong>Virtual Chassis</strong></div>
+                    <div class="table card-body">
                         {% render_field vc_form.name %}
                         {% render_field vc_form.domain %}
                         {% render_field vc_form.master %}
@@ -28,8 +28,8 @@
                 </div>
                 {% include 'inc/extras_features_edit_form_fields.html' with form=vc_form %}
                 <div class="panel panel-default">
-                    <div class="panel-heading"><strong>Members</strong></div>
-                    <table class="table panel-body">
+                    <div class="card-header"><strong>Members</strong></div>
+                    <table class="table card-body">
                         <thead>
                             <tr>
                                 <th>Device</th>
@@ -84,7 +84,7 @@
             </div>
         </div>
         <div class="row">
-            <div class="col-md-8 col-md-offset-2 text-right">
+            <div class="col-md-8 col-md-offset-2 text-end">
                 <button type="submit" name="_update" class="btn btn-primary">Update</button>
                 <a href="{{ return_url }}" class="btn btn-default">Cancel</a>
             </div>

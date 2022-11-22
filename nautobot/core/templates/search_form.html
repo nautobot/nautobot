@@ -1,9 +1,13 @@
-<div class="row" style="padding-bottom: 20px">
-    <div class="col-md-12 text-center">
-        <form action="{% url 'search' %}" method="get" class="form-inline">
+<div class="d-flex justify-content-center">
+    <form action="{% url 'search' %}" method="get" class="row gx-3 gy-2 align-items-center" style="padding-bottom: 20px">
+        <div class="col-auto">
             <input type="text" name="q" value="{{ request.GET.q }}" placeholder="Search" id="id_q" class="form-control" style="width: 350px" />
+        </div>
+        <div class="col-auto">
             {{ search_form.obj_type }}
+        </div>
+        <div class="col-auto">
             <button type="submit" class="btn btn-primary">Search</button>
-        </form>
-    </div>
+        </div>
+    </form>
 </div>

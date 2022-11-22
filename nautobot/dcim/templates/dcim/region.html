@@ -16,10 +16,10 @@
 
 {% block content_left_page %}
         <div class="panel panel-default">
-            <div class="panel-heading">
+            <div class="card-header">
                 <strong>Region</strong>
             </div>
-            <table class="table table-hover panel-body attr-table">
+            <table class="table table-hover card-body attr-table">
                 <tr>
                     <td>Description</td>
                     <td>{{ object.description|placeholder }}</td>
@@ -40,12 +40,12 @@
 
 {% block content_full_width_page %}
         <div class="panel panel-default">
-            <div class="panel-heading">
+            <div class="card-header">
                 <strong>Sites</strong>
             </div>
             {% include 'inc/table.html' with table=sites_table %}
             {% if perms.dcim.add_site %}
-                <div class="panel-footer text-right noprint">
+                <div class="panel-footer text-end noprint">
                     <a href="{% url 'dcim:site_add' %}?region={{ object.pk }}" class="btn btn-xs btn-primary">
                         <span class="mdi mdi-plus-thick" aria-hidden="true"></span> Add site
                     </a>

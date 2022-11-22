@@ -2,10 +2,10 @@
     {% if object.has_computed_fields_basic %}
         {% load computed_fields %}
         <div class="panel panel-default">
-            <div class="panel-heading">
+            <div class="card-header">
                 <strong>Computed Fields</strong>
             </div>
-            <table class="table table-hover panel-body attr-table">
+            <table class="table table-hover card-body attr-table">
                 {% computed_fields object advanced_ui %}
             </table>
         </div>
@@ -14,10 +14,10 @@
     {% if object.has_computed_fields_advanced %}
         {% load computed_fields %}
         <div class="panel panel-default">
-            <div class="panel-heading">
+            <div class="card-header">
                 <strong>Computed Fields</strong>
             </div>
-            <table class="table table-hover panel-body attr-table">
+            <table class="table table-hover card-body attr-table">
                 {% computed_fields object advanced_ui %}
             </table>
         </div>

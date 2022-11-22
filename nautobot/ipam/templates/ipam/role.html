@@ -3,10 +3,10 @@
 
 {% block content_left_page %}
         <div class="panel panel-default">
-            <div class="panel-heading">
+            <div class="card-header">
                 <strong>Role</strong>
             </div>
-            <table class="table table-hover panel-body attr-table">
+            <table class="table table-hover card-body attr-table">
                 <tr>
                     <td>Description</td>
                     <td>{{ object.description|placeholder }}</td>
@@ -33,12 +33,12 @@
 
 {% block content_full_width_page %}
         <div class="panel panel-default">
-            <div class="panel-heading">
+            <div class="card-header">
                 <strong>Prefixes</strong>
             </div>
             {% include 'inc/table.html' with table=prefix_table %}
             {% if perms.ipam.add_prefix %}
-                <div class="panel-footer text-right noprint">
+                <div class="panel-footer text-end noprint">
                     <a href="{% url 'ipam:prefix_add' %}?role={{ object.pk }}" class="btn btn-xs btn-primary">
                         <span class="mdi mdi-plus-thick" aria-hidden="true"></span> Add prefix
                     </a>
@@ -46,12 +46,12 @@
             {% endif %}
         </div>
         <div class="panel panel-default">
-            <div class="panel-heading">
+            <div class="card-header">
                 <strong>VLANs</strong>
             </div>
             {% include 'inc/table.html' with table=vlan_table %}
             {% if perms.ipam.add_vlan %}
-                <div class="panel-footer text-right noprint">
+                <div class="panel-footer text-end noprint">
                     <a href="{% url 'ipam:vlan_add' %}?role={{ object.pk }}" class="btn btn-xs btn-primary">
                         <span class="mdi mdi-plus-thick" aria-hidden="true"></span> Add vlan
                     </a>

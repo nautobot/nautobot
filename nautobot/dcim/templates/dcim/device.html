@@ -13,10 +13,10 @@
                     <div class="row">
                         <div class="col-md-6">
                             <div class="panel panel-default">
-                                <div class="panel-heading">
+                                <div class="card-header">
                                     <strong>Device</strong>
                                 </div>
-                                <table class="table table-hover panel-body attr-table">
+                                <table class="table table-hover card-body attr-table">
                                     <tr>
                                         <td>Site</td>
                                         <td>
@@ -96,10 +96,10 @@
                             </div>
                             {% if vc_members %}
                                 <div class="panel panel-default">
-                                    <div class="panel-heading">
+                                    <div class="card-header">
                                         <strong>Virtual Chassis</strong>
                                     </div>
-                                    <table class="table table-hover panel-body attr-table">
+                                    <table class="table table-hover card-body attr-table">
                                         <tr>
                                             <th>Device</th>
                                             <th>Position</th>
@@ -115,7 +115,7 @@
                                             </tr>
                                         {% endfor %}
                                     </table>
-                                    <div class="panel-footer text-right noprint">
+                                    <div class="panel-footer text-end noprint">
                                         <a href="{{ object.virtual_chassis.get_absolute_url }}" class="btn btn-primary btn-xs">
                                             <span class="mdi mdi-arrow-right-bold" aria-hidden="true"></span> View Virtual Chassis
                                         </a>
@@ -123,10 +123,10 @@
                                 </div>
                             {% endif %}
                             <div class="panel panel-default">
-                                <div class="panel-heading">
+                                <div class="card-header">
                                     <strong>Management</strong>
                                 </div>
-                                <table class="table table-hover panel-body attr-table">
+                                <table class="table table-hover card-body attr-table">
                                     <tr>
                                         <td>Role</td>
                                         <td>{{ object.device_role|hyperlinked_object }}</td>
@@ -215,10 +215,10 @@
                             {% include 'inc/relationships/panel_override.html' with relationships_fields_override=object.get_relationships_data_basic_fields %}
                             {% include 'extras/inc/tags_panel.html' with tags=object.tags.all url='dcim:device_list' %}
                             <div class="panel panel-default">
-                                <div class="panel-heading">
+                                <div class="card-header">
                                     <strong>Comments</strong>
                                 </div>
-                                <div class="panel-body rendered-markdown">
+                                <div class="card-body rendered-markdown">
                                     {% if object.comments %}
                                         {{ object.comments|render_markdown }}
                                     {% else %}
@@ -231,10 +231,10 @@
                         <div class="col-md-6">
                             {% if object.powerports.exists and object.poweroutlets.exists %}
                                 <div class="panel panel-default">
-                                    <div class="panel-heading">
+                                    <div class="card-header">
                                         <strong>Power Utilization</strong>
                                     </div>
-                                    <table class="table table-hover panel-body">
+                                    <table class="table table-hover card-body">
                                         <tr>
                                             <th>Input</th>
                                             <th>Outlets</th>
@@ -273,22 +273,22 @@
                                 </div>
                             {% endif %}
                             <div class="panel panel-default">
-                                <div class="panel-heading">
+                                <div class="card-header">
                                     <strong>Services</strong>
                                 </div>
                                 {% if services %}
-                                    <table class="table table-hover panel-body">
+                                    <table class="table table-hover card-body">
                                         {% for service in services %}
                                             {% include 'ipam/inc/service.html' %}
                                         {% endfor %}
                                     </table>
                                 {% else %}
-                                    <div class="panel-body text-muted">
+                                    <div class="card-body text-muted">
                                         None
                                     </div>
                                 {% endif %}
                                 {% if perms.ipam.add_service %}
-                                    <div class="panel-footer text-right noprint">
+                                    <div class="panel-footer text-end noprint">
                                         <a href="{% url 'dcim:device_service_assign' device=object.pk %}" class="btn btn-xs btn-primary">
                                             <span class="mdi mdi-plus-thick" aria-hidden="true"></span> Assign service
                                         </a>
@@ -296,12 +296,12 @@
                                 {% endif %}
                             </div>
                             <div class="panel panel-default">
-                                <div class="panel-heading">
+                                <div class="card-header">
                                     <strong>Images</strong>
                                 </div>
                                 {% include 'inc/image_attachments.html' with images=object.images.all %}
                                 {% if perms.extras.add_imageattachment %}
-                                    <div class="panel-footer text-right noprint">
+                                    <div class="panel-footer text-end noprint">
                                         <a href="{% url 'dcim:device_add_image' object_id=object.pk %}" class="btn btn-primary btn-xs">
                                             <span class="mdi mdi-plus-thick" aria-hidden="true"></span>
                                             Attach an image

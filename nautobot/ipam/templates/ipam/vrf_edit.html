@@ -3,8 +3,8 @@
 
 {% block form %}
     <div class="panel panel-default">
-        <div class="panel-heading"><strong>VRF</strong></div>
-        <div class="panel-body">
+        <div class="card-header"><strong>VRF</strong></div>
+        <div class="card-body">
             {% render_field form.name %}
             {% render_field form.rd %}
             {% render_field form.enforce_unique %}
@@ -12,15 +12,15 @@
         </div>
     </div>
     <div class="panel panel-default">
-        <div class="panel-heading"><strong>Route Targets</strong></div>
-        <div class="panel-body">
+        <div class="card-header"><strong>Route Targets</strong></div>
+        <div class="card-body">
             {% render_field form.import_targets %}
             {% render_field form.export_targets %}
         </div>
     </div>
     <div class="panel panel-default">
-        <div class="panel-heading"><strong>Tenancy</strong></div>
-        <div class="panel-body">
+        <div class="card-header"><strong>Tenancy</strong></div>
+        <div class="card-body">
             {% render_field form.tenant_group %}
             {% render_field form.tenant %}
         </div>

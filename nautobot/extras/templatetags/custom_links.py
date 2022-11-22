@@ -16,7 +16,7 @@ GROUP_BUTTON = (
     '<button type="button" class="btn btn-sm btn-{} dropdown-toggle" data-toggle="dropdown">\n'
     '{} <span class="caret"></span>\n'
     "</button>\n"
-    '<ul class="dropdown-menu pull-right">\n'
+    '<ul class="dropdown-menu float-end">\n'
     "{}</ul></div>\n"
 )
 GROUP_LINK = '<li><a href="{}"{}>{}</a></li>\n'

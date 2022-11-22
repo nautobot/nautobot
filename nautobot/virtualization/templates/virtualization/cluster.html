@@ -3,10 +3,10 @@
 
 {% block content_left_page %}
         <div class="panel panel-default">
-            <div class="panel-heading">
+            <div class="card-header">
                 <strong>Cluster</strong>
             </div>
-            <table class="table table-hover panel-body attr-table">
+            <table class="table table-hover card-body attr-table">
                 <tr>
                     <td>Name</td>
                     <td>{{ object.name }}</td>
@@ -38,10 +38,10 @@
             </table>
         </div>
         <div class="panel panel-default">
-            <div class="panel-heading">
+            <div class="card-header">
                 <strong>Comments</strong>
             </div>
-            <div class="panel-body rendered-markdown">
+            <div class="card-body rendered-markdown">
                 {% if object.comments %}
                     {{ object.comments|render_markdown }}
                 {% else %}
@@ -53,7 +53,7 @@
 
 {% block content_right_page %}
         <div class="panel panel-default">
-            <div class="panel-heading">
+            <div class="card-header">
                 <strong>Host Devices</strong>
             </div>
             {% if perms.virtualization.change_cluster %}
@@ -63,7 +63,7 @@
             {% include 'responsive_table.html' with table=device_table %}
             {% if perms.virtualization.change_cluster %}
                 <div class="panel-footer noprint">
-                    <div class="pull-right">
+                    <div class="float-end">
                         <a href="{% url 'virtualization:cluster_add_devices' pk=object.pk %}?site={{ object.site.pk }}" class="btn btn-primary btn-xs">
                             <span class="mdi mdi-plus-thick" aria-hidden="true"></span>
                             Add devices

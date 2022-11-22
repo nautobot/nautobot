@@ -13,8 +13,8 @@
         <div class="row">
             <div class="col-md-6 col-md-offset-3">
                 <div class="panel panel-danger">
-                    <div class="panel-heading"><strong>Errors</strong></div>
-                    <div class="panel-body">
+                    <div class="card-header"><strong>Errors</strong></div>
+                    <div class="card-body">
                         {{ form.non_field_errors }}
                     </div>
                 </div>
@@ -26,10 +26,10 @@
         <div class="row">
             <div class="col-md-5">
                 <div class="panel panel-default">
-                    <div class="panel-heading text-center">
+                    <div class="card-header text-center">
                         <strong>A Side</strong>
                     </div>
-                    <div class="panel-body">
+                    <div class="card-body">
                         {% if termination_a.device %}
                             {# Device component #}
                             <div class="form-group">
@@ -103,10 +103,10 @@
             </div>
             <div class="col-md-5">
                 <div class="panel panel-default">
-                    <div class="panel-heading text-center">
+                    <div class="card-header text-center">
                         <strong>B Side</strong>
                     </div>
-                    <div class="panel-body">
+                    <div class="card-body">
                         {% if tabs %}
                             <ul class="nav nav-tabs">
                                 {% for url, link in tabs %}

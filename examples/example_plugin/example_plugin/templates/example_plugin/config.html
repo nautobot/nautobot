@@ -14,8 +14,8 @@
                 </p>
                 {% block form %}
                     <div class="panel panel-default">
-                        <div class="panel-heading"><strong>Configuration Options</strong></div>
-                        <div class="panel-body">
+                        <div class="card-header"><strong>Configuration Options</strong></div>
+                        <div class="card-body">
                             {% block form_fields %}
                                 {% render_form form %}
                             {% endblock %}
@@ -25,7 +25,7 @@
             </div>
         </div>
         <div class="row">
-            <div class="col-md-6 col-md-offset-3 text-right">
+            <div class="col-md-6 col-md-offset-3 text-end">
                 <button type="submit" class="btn btn-primary">Update Configuration</button>
             </div>
         </div>

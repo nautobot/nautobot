@@ -6,11 +6,11 @@
     }
 </style>
     <div class="panel panel-default">
-        <div class="panel-heading">
+        <div class="card-header">
             <strong>Custom Fields</strong>
-            <button type="button" class="btn-xs btn-primary pull-right" id="accordion-toggle-all">Collapse All</button>
+            <button type="button" class="btn-xs btn-primary float-end" id="accordion-toggle-all">Collapse All</button>
         </div>
-        <table id="accordion" class="table table-hover panel-body attr-table">
+        <table id="accordion" class="table table-hover card-body attr-table">
             {% for grouping, fields in custom_fields.items %}
             {% with forloop.counter0 as count %}
                 {% if grouping != "" %}

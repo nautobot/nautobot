@@ -83,20 +83,20 @@
         <div class="row">
             <div class="col-md-6">
                 <div class="panel panel-default">
-                    <div class="panel-heading">
+                    <div class="card-header">
                         <strong>Job Inputs</strong>
                     </div>
-                    <div class="panel-body">
+                    <div class="card-body">
                         {% include 'extras/inc/json_data.html' with data=result.job_kwargs format="json" %}
                     </div>
                 </div>
             </div>
             <div class="col-md-6">
                 <div class="panel panel-default">
-                    <div class="panel-heading">
+                    <div class="card-header">
                         <strong>Output Data</strong>
                     </div>
-                    <div class="panel-body">
+                    <div class="card-body">
                         {% include 'extras/inc/json_data.html' with data=result.data format="json" %}
                     </div>
                 </div>

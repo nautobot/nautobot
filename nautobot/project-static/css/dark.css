@@ -7,15 +7,23 @@ html[data-theme="dark"] {
 }
 
 /* Double-invert the following elements, restoring them to the original non-inverted colors */
-html[data-theme="dark"] img,                              /* Images like .png, .jpg, etc */
+html[data-theme="dark"] img,
+/* Images like .png, .jpg, etc */
 html[data-theme="dark"] .badge,
-html[data-theme="dark"] button,                           /* Buttons */
-html[data-theme="dark"] .btn,                             /* Buttons */
-html[data-theme="dark"] .label,                           /* Labels */
-html[data-theme="dark"] .color-block,                     /* Colored choices, like statuses */
-html[data-theme="dark"] .select2-selection__choice,       /* Colored choices, like statuses */
-html[data-theme="dark"] #select2-id_color-results,        /* Colored choices, like statuses */
-html[data-theme="dark"] #select2-id_color-container {     /* Colored choices, like statuses */
+html[data-theme="dark"] button,
+/* Buttons */
+html[data-theme="dark"] .btn,
+/* Buttons */
+html[data-theme="dark"] .label,
+/* Labels */
+html[data-theme="dark"] .color-block,
+/* Colored choices, like statuses */
+html[data-theme="dark"] .select2-selection__choice,
+/* Colored choices, like statuses */
+html[data-theme="dark"] #select2-id_color-results,
+/* Colored choices, like statuses */
+html[data-theme="dark"] #select2-id_color-container {
+  /* Colored choices, like statuses */
   filter: invert(1) hue-rotate(180deg);
 }
 
@@ -23,6 +31,7 @@ html[data-theme="dark"] #select2-id_color-container {     /* Colored choices, li
 html[data-theme="dark"] .opblock-summary-method {
   color: black !important;
 }
+
 /* Version stamp in API Swagger docs */
 html[data-theme="dark"] .version {
   color: black !important;
@@ -35,46 +44,71 @@ html[data-theme="dark"] .container-fluid.wrapper {
 }
 
 /* Lighter than the background */
-html[data-theme="dark"] .navbar,                          /* Top menu navbar */
-html[data-theme="dark"] .footer,                          /* Bottom footer bar */
-html[data-theme="dark"] .footer .row {                    /* Bottom footer bar */
+html[data-theme="dark"] .navbar,
+/* Top menu navbar */
+html[data-theme="dark"] .footer,
+/* Bottom footer bar */
+html[data-theme="dark"] .footer .row {
+  /* Bottom footer bar */
   background-color: rgb(209, 216, 221) !important;
 }
 
-html[data-theme="dark"] .panel,                           /* Section panels, like on home page */
-html[data-theme="dark"] .panel-default,                   /* Section panels, like on home page */
-html[data-theme="dark"] .panel-body,                      /* Section panels content, like on home page */
-html[data-theme="dark"] .list-group,                      /* Section panels content, like on home page */
-html[data-theme="dark"] .list-group-item,                 /* Item in section panels content, like on home page */
-html[data-theme="dark"] .CodeMirror,                      /* GraphiQL page */
-html[data-theme="dark"] .search-box input,                /* GraphiQL docs tab search box */
-html[data-theme="dark"] .modal-body {                     /* Modal background */
+html[data-theme="dark"] .panel,
+/* Section panels, like on home page */
+html[data-theme="dark"] .panel-default,
+/* Section panels, like on home page */
+html[data-theme="dark"] .card-body,
+/* Section panels content, like on home page */
+html[data-theme="dark"] .list-group,
+/* Section panels content, like on home page */
+html[data-theme="dark"] .list-group-item,
+/* Item in section panels content, like on home page */
+html[data-theme="dark"] .CodeMirror,
+/* GraphiQL page */
+html[data-theme="dark"] .search-box input,
+/* GraphiQL docs tab search box */
+html[data-theme="dark"] .modal-body {
+  /* Modal background */
   background-color: rgb(222, 222, 222) !important;
 }
 
 /* Slightly lighter than background to standout */
-html[data-theme="dark"] .breadcrumb,                      /* Background bar for breadcrumbs */
-html[data-theme="dark"] ul li.active a,                   /* Active tab highlight, eg device details page */
-html[data-theme="dark"] .dropdown-menu>li>a:hover,        /* Navbar menu item when hovering */
-html[data-theme="dark"] .table-responsive>table>tbody>tr:hover, /* Display objects table when hovering over row */
-html[data-theme="dark"] .nav-tabs>li>a:hover,             /* Tab selection when hovering */
-html[data-theme="dark"] .nav-tabs>li>a:focus,             /* Tab selection when clicked */
-html[data-theme="dark"] .panel-heading,                   /* Panel header bars */
-html[data-theme="dark"] .panel-footer,                    /* Panel footer bars */
-html[data-theme="dark"] .modal-header,                    /* Header bar in modals */
-html[data-theme="dark"] .modal-footer,                    /* Footer bar in modals */
+html[data-theme="dark"] .breadcrumb,
+/* Background bar for breadcrumbs */
+html[data-theme="dark"] ul li.active a,
+/* Active tab highlight, eg device details page */
+html[data-theme="dark"] .dropdown-menu>li>a:hover,
+/* Navbar menu item when hovering */
+html[data-theme="dark"] .table-responsive>table>tbody>tr:hover,
+/* Display objects table when hovering over row */
+html[data-theme="dark"] .nav-tabs>li>a:hover,
+/* Tab selection when hovering */
+html[data-theme="dark"] .nav-tabs>li>a:focus,
+/* Tab selection when clicked */
+html[data-theme="dark"] .card-header,
+/* Panel header bars */
+html[data-theme="dark"] .panel-footer,
+/* Panel footer bars */
+html[data-theme="dark"] .modal-header,
+/* Header bar in modals */
+html[data-theme="dark"] .modal-footer,
+/* Footer bar in modals */
 html[data-theme="dark"] .table-headings th {
   background-color: rgb(196, 204, 210) !important;
 }
 
-html[data-theme="dark"] .scheme-container {                /* Swagger docs container header bar */
+html[data-theme="dark"] .scheme-container {
+  /* Swagger docs container header bar */
   background-color: rgb(217, 217, 217) !important;
 }
 
 /* GraphiQL */
-html[data-theme="dark"] .doc-explorer,                     /* GraphiQL docs tab background */
-html[data-theme="dark"] .doc-explorer-contents,            /* GraphiQL docs tab background */
-html[data-theme="dark"] .CodeMirror-gutters {              /* GraphiQL primary background */
+html[data-theme="dark"] .doc-explorer,
+/* GraphiQL docs tab background */
+html[data-theme="dark"] .doc-explorer-contents,
+/* GraphiQL docs tab background */
+html[data-theme="dark"] .CodeMirror-gutters {
+  /* GraphiQL primary background */
   background-color: rgb(217, 217, 217) !important;
 }
 
@@ -91,9 +125,12 @@ html[data-theme="dark"] .swagger-ui select {
 }
 
 
-html[data-theme="dark"] .swagger-ui input,                /* Swagger docs item input input box */
-html[data-theme="dark"] .swagger-ui select,               /* Swagger docs item select input box */
-html[data-theme="dark"] .swagger-ui textarea{             /* Swagger docs item text area input box */
+html[data-theme="dark"] .swagger-ui input,
+/* Swagger docs item input input box */
+html[data-theme="dark"] .swagger-ui select,
+/* Swagger docs item select input box */
+html[data-theme="dark"] .swagger-ui textarea {
+  /* Swagger docs item text area input box */
   background: transparent !important;
   border: 1px solid #888 !important;
 }
@@ -105,37 +142,58 @@ html[data-theme="dark"] .swagger-ui .opblock .opblock-section-header {
   background-color: rgb(217, 217, 217, 0.5) !important;
 }
 
-html[data-theme="dark"] .swagger-ui .tab li button.tablinks, /* Example tab links for each API item */
-html[data-theme="dark"] .swagger-ui .btn {                /* Swagger button text */
+html[data-theme="dark"] .swagger-ui .tab li button.tablinks,
+/* Example tab links for each API item */
+html[data-theme="dark"] .swagger-ui .btn {
+  /* Swagger button text */
   color: rgb(174, 190, 196) !important;
 }
 
 /* Form fields and backdrops, lighter than headers, navbars, etc */
-html[data-theme="dark"] #per_page,                        /* Pagination page selection dropdown menu */
-html[data-theme="dark"] .dropdown-menu,                   /* Dropdown menu from navbar */
-html[data-theme="dark"] .form-control,                    /* Multi-line text fields, eg add device: notes, comments, etc */
-html[data-theme="dark"] .swagger-ui .servers>label select /* Swagger docs server dropdown selection */
-html[data-theme="dark"] .select2-container--default,      /* Drop down menu selections, eg adding new item */
-html[data-theme="dark"] .select2-container--classic,      /* Drop down menu selections, eg adding new item */
-html[data-theme="dark"] .select2-container--bootstrap,    /* Drop down menu selections, eg adding new item */
-html[data-theme="dark"] .select2-selection--single,       /* Drop down menu selections, eg adding new item */
-html[data-theme="dark"] .select2-selection--multiple,     /* Drop down menu selections, eg adding new item */
-html[data-theme="dark"] .select2-search--dropdown,        /* Drop down menu selections for filter form */
-html[data-theme="dark"] .select2-search__field,           /* Search field in filter form */
-html[data-theme="dark"] .select2-search--inline,          /* Search field in filter form */
-html[data-theme="dark"] .select2-close-mask,              /* Close selection */
-html[data-theme="dark"] .select2-dropdown {               /* Dropdown form fields */
+html[data-theme="dark"] #per_page,
+/* Pagination page selection dropdown menu */
+html[data-theme="dark"] .dropdown-menu,
+/* Dropdown menu from navbar */
+html[data-theme="dark"] .form-control,
+/* Multi-line text fields, eg add device: notes, comments, etc */
+html[data-theme="dark"] .swagger-ui .servers>label select
+
+/* Swagger docs server dropdown selection */
+html[data-theme="dark"] .select2-container--default,
+/* Drop down menu selections, eg adding new item */
+html[data-theme="dark"] .select2-container--classic,
+/* Drop down menu selections, eg adding new item */
+html[data-theme="dark"] .select2-container--bootstrap,
+/* Drop down menu selections, eg adding new item */
+html[data-theme="dark"] .select2-selection--single,
+/* Drop down menu selections, eg adding new item */
+html[data-theme="dark"] .select2-selection--multiple,
+/* Drop down menu selections, eg adding new item */
+html[data-theme="dark"] .select2-search--dropdown,
+/* Drop down menu selections for filter form */
+html[data-theme="dark"] .select2-search__field,
+/* Search field in filter form */
+html[data-theme="dark"] .select2-search--inline,
+/* Search field in filter form */
+html[data-theme="dark"] .select2-close-mask,
+/* Close selection */
+html[data-theme="dark"] .select2-dropdown {
+  /* Dropdown form fields */
   background-color: rgb(222, 222, 222) !important;
 }
 
 /* This is already inverted as a button above, however we do not want it to be */
-html[data-theme="dark"] .accordion-toggle {               /* Accordion dropdown header, like on Jobs page */
-  filter: invert(0);                                      /* Do not invert */
+html[data-theme="dark"] .accordion-toggle {
+  /* Accordion dropdown header, like on Jobs page */
+  filter: invert(0);
+  /* Do not invert */
   color: rgb(51, 51, 51);
 }
 
-html[data-theme="dark"] .docExplorerHide,                 /* X button to close GraphiQL docs tab */
-html[data-theme="dark"] .close {                          /* X button to close modals in top right */
+html[data-theme="dark"] .docExplorerHide,
+/* X button to close GraphiQL docs tab */
+html[data-theme="dark"] .close {
+  /* X button to close modals in top right */
   color: rgb(243, 243, 243);
 }
 

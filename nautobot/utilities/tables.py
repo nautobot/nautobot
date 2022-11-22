@@ -181,7 +181,7 @@ class ButtonsColumn(tables.TemplateColumn):
     """
 
     buttons = ("changelog", "edit", "delete")
-    attrs = {"td": {"class": "text-right text-nowrap noprint"}}
+    attrs = {"td": {"class": "text-end text-nowrap noprint"}}
     # Note that braces are escaped to allow for string formatting prior to template rendering
     template_code = """
     {{% if "changelog" in buttons %}}

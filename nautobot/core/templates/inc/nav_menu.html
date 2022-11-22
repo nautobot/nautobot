@@ -13,7 +13,7 @@
         </button>
         <div class="collapse navbar-collapse" id="navbar" >
             {% if request.user.is_authenticated %}
-                <ul class="navbar-nav">
+                <ul class="nav navbar-nav">
                     {% for tab_name, tab_details in registry.nav_menu.tabs.items %}
                         {% if request.user|has_one_or_more_perms:tab_details.permissions or not "HIDE_RESTRICTED_UI"|settings_or_config %}
                             <li class="nav-item dropdown">
@@ -26,35 +26,35 @@
                                             <li class="dropdown-header" data-group-weight="{{ group_details.weight }}">{{ group_name }}</li>
                                             {% for item_link, item_details in group_details.items.items %}
                                                 {% if request.user|has_one_or_more_perms:item_details.permissions or not "HIDE_RESTRICTED_UI"|settings_or_config %}
-                                                    <li {% if not request.user|has_perms:item_details.permissions %} class="disabled"{% endif %}>
-                                                        <span class="float-end">
-                                                                {% for button_title, button_details in item_details.buttons.items %}
-                                                                    {% if request.user|has_perms:button_details.permissions %}
-                                                                        {% comment %}
-                                                                            Use 'url xxx as variable' so that an invalid
-                                                                            link doesn't throw a NoReverseMatch exception.
-                                                                        {% endcomment %}
-                                                                        {% url button_details.link as button_url %}
-                                                                        {% if button_url %}
-                                                                            <a href="{{ button_url }}"
-                                                                            data-button-weight="{{ button_details.weight }}"
-                                                                            class="btn btn-sm btn-{{ button_details.button_class }}"
-                                                                            title="{{ button_title }}">
-                                                                                <i class="mdi {{ button_details.icon_class }}"></i>
-                                                                            </a>
-                                                                        {% else %}
-                                                                            <a class="btn btn-sm btn-danger"
-                                                                            title="ERROR: Invalid link!">
-                                                                                <i class="mdi mdi-alert"></i>
-                                                                            </a>
+                                                    <li style="min-width: 300px;" {% if not request.user|has_perms:item_details.permissions %} class="disabled"{% endif %}>
+                                                            <span class="float-end">
+                                                                    {% for button_title, button_details in item_details.buttons.items %}
+                                                                        {% if request.user|has_perms:button_details.permissions %}
+                                                                            {% comment %}
+                                                                                Use 'url xxx as variable' so that an invalid
+                                                                                link doesn't throw a NoReverseMatch exception.
+                                                                            {% endcomment %}
+                                                                            {% url button_details.link as button_url %}
+                                                                            {% if button_url %}
+                                                                                <a href="{{ button_url }}"
+                                                                                data-button-weight="{{ button_details.weight }}"
+                                                                                class="btn btn-sm btn-{{ button_details.button_class }}"
+                                                                                title="{{ button_title }}">
+                                                                                    <i class="mdi {{ button_details.icon_class }}"></i>
+                                                                                </a>
+                                                                            {% else %}
+                                                                                <a class="btn btn-sm btn-danger"
+                                                                                title="ERROR: Invalid link!">
+                                                                                    <i class="mdi mdi-alert"></i>
+                                                                                </a>
+                                                                            {% endif %}
                                                                         {% endif %}
-                                                                    {% endif %}
-                                                                {% endfor %}
-                                                            </span>
-                                                            <a class=dropdown-item href="{{ item_link }}"
-                                                                data-item-weight="{{ item_details.weight }}">
-                                                                {{ item_details.name }}
-                                                            </a>
+                                                                    {% endfor %}
+                                                                </span>
+                                                                <a class="dropdown-item" href="{{ item_link }}"
+                                                                    data-item-weight="{{ item_details.weight }}">
+                                                                    {{ item_details.name }}
+                                                                </a>
                                                     </li>
                                                 {% endif %}
                                             {% endfor %}

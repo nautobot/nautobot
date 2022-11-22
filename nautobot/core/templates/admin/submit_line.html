@@ -5,7 +5,7 @@
         <a class="btn btn-danger deletelink" href="{% add_preserved_filters delete_url %}">{% trans "Delete" %}</a>
     {% endif %}
 </div>
-<div class="pull-right">
+<div class="float-end">
 {% if show_save_as_new %}<input type="submit" value="{% trans 'Save as new' %}" class="btn btn-default" name="_saveasnew" {{ onclick_attrib }}/>{% endif %}
 {% if show_save_and_add_another %}<input type="submit" value="{% trans 'Save and add another' %}" class="btn btn-default" name="_addanother" {{ onclick_attrib }} />{% endif %}
 {% if show_save_and_continue %}<input type="submit" value="{% trans 'Save and continue editing' %}" class="btn btn-default" name="_continue" {{ onclick_attrib }}/>{% endif %}

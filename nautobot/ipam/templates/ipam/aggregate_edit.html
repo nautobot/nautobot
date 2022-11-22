@@ -3,8 +3,8 @@
 
 {% block form %}
     <div class="panel panel-default">
-        <div class="panel-heading"><strong>Aggregate</strong></div>
-        <div class="panel-body">
+        <div class="card-header"><strong>Aggregate</strong></div>
+        <div class="card-body">
             {% render_field form.prefix %}
             {% render_field form.rir %}
             {% render_field form.date_added %}
@@ -12,8 +12,8 @@
         </div>
     </div>
     <div class="panel panel-default">
-        <div class="panel-heading"><strong>Tenancy</strong></div>
-        <div class="panel-body">
+        <div class="card-header"><strong>Tenancy</strong></div>
+        <div class="card-body">
             {% render_field form.tenant_group %}
             {% render_field form.tenant %}
         </div>

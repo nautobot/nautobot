@@ -25,10 +25,10 @@
 
 {% block content_left_page %}
       <div class="panel panel-default">
-          <div class="panel-heading">
+          <div class="card-header">
               <strong>Scheduled Job</strong>
           </div>
-          <table class="table table-hover panel-body attr-table">
+          <table class="table table-hover card-body attr-table">
               <tr>
                   <td>Name</td>
                   <td>
@@ -72,10 +72,10 @@
           </table>
       </div>
       <div class="panel panel-default">
-          <div class="panel-heading">
+          <div class="card-header">
               <strong>Scheduling</strong>
           </div>
-          <table class="table table-hover panel-body attr-table">
+          <table class="table table-hover card-body attr-table">
               <tr>
                   <td>Enabled?</td>
                   <td>{{ object.enabled | render_boolean }}</td>
@@ -115,10 +115,10 @@
 {% block content_right_page %}
     {% if job_class_found %}
       <div class="panel panel-default">
-          <div class="panel-heading">
+          <div class="card-header">
               <strong>User Inputs</strong>
           </div>
-          <table class="table table-hover panel-body attr-table">
+          <table class="table table-hover card-body attr-table">
               {% for key, value in object.kwargs.data.items %}
               <tr>
                 <td>{{ labels|get_item:key }}</td>

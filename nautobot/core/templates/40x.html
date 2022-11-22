@@ -4,13 +4,13 @@
 <div class="row" style="margin-top: 150px;">
     <div class="col-sm-4 col-sm-offset-4">
         <div class="panel panel-default">
-            <div class="panel-heading">
+            <div class="card-header">
                 <strong>{% block icon %}{% endblock %} {% block title %}{% endblock %}</strong>
             </div>
-            <div class="panel-body">
+            <div class="card-body">
                 {% block message %}{% endblock %}
             </div>
-            <div class="panel-footer text-right">
+            <div class="panel-footer text-end">
                 <a href="{% url 'home' %}" class="btn btn-xs btn-primary">Home Page</a>
             </div>
         </div>

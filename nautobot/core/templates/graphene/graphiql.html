@@ -110,7 +110,7 @@ add "&raw" to the end of the URL within a browser.
               {% for query in saved_graphiql_queries %}
                 <li>
                     {% if request.GET.id|slugify == query.id|slugify %}
-                        <div class="buttons pull-right">
+                        <div class="buttons float-end">
                             <a class="btn btn-xs btn-warning" onclick="save()"><i class="mdi mdi-content-save-edit"></i> Save Changes</a>
                         </div>
                         <a href="#" onclick="reload('{{ query.id }}', '{{ query.query|urlencode }}', '{{ query.variables|render_json|urlencode }}')">

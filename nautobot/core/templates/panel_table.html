@@ -2,13 +2,13 @@
 
 <div class="panel panel-{{ panel_class|default:'default' }}">
     {% if heading %}
-        <div class="panel-heading">
+        <div class="card-header">
             <strong>{{ heading }}</strong>
         </div>
     {% endif %}
     {% if table.rows %}
         {% render_table table 'inc/table.html' %}
     {% else %}
-        <div class="panel-body text-muted">None</div>
+        <div class="card-body text-muted">None</div>
     {% endif %}
 </div>

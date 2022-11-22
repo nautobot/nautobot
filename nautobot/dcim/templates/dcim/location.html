@@ -9,10 +9,10 @@
 
 {% block content_left_page %}
     <div class="panel panel-default">
-        <div class="panel-heading">
+        <div class="card-header">
             <strong>Location</strong>
         </div>
-        <table class="table table-hover panel-body attr-table">
+        <table class="table table-hover card-body attr-table">
             <tr>
                 <td>Location Type</td>
                 <td>{{ object.location_type|hyperlinked_object:"name" }}</td>
@@ -58,10 +58,10 @@
 
 {% block content_right_page %}
     <div class="panel panel-default">
-        <div class="panel-heading">
+        <div class="card-header">
             <strong>Stats</strong>
         </div>
-        <div class="row panel-body">
+        <div class="row card-body">
             <div class="col-md-4 text-center">
                 <h2><a href="{% url 'dcim:rack_list' %}?location={{ object.slug }}" class="btn {% if stats.rack_count %}btn-primary{% else %}btn-default{% endif %} btn-lg">{{ stats.rack_count }}</a></h2>
                 <p>Racks</p>
@@ -89,15 +89,15 @@
         </div>
     </div>
     <div class="panel panel-default">
-        <div class="panel-heading">
+        <div class="card-header">
             <strong>Rack Groups</strong>
         </div>
-        <table class="table table-hover panel-body">
+        <table class="table table-hover card-body">
             {% for rg in rack_groups %}
                 <tr>
                     <td style="padding-left: {{ rg.level }}8px"><i class="mdi mdi-folder-open"></i> <a href="{{ rg.get_absolute_url }}">{{ rg }}</a></td>
                     <td>{{ rg.rack_count }}</td>
-                    <td class="text-right noprint">
+                    <td class="text-end noprint">
                         <a href="{% url 'dcim:rack_elevation_list' %}?group_id={{ rg.pk }}" class="btn btn-xs btn-primary" title="View elevations">
                             <i class="mdi mdi-server"></i>
                         </a>
@@ -107,7 +107,7 @@
             <tr>
                 <td><i class="mdi mdi-folder-open"></i> All racks</td>
                 <td>{{ stats.rack_count }}</td>
-                <td class="text-right noprint">
+                <td class="text-end noprint">
                     <a href="{% url 'dcim:rack_elevation_list' %}?location={{ object.slug }}" class="btn btn-xs btn-primary" title="View elevations">
                         <i class="mdi mdi-server"></i>
                     </a>
@@ -116,12 +116,12 @@
         </table>
     </div>
     <div class="panel panel-default">
-        <div class="panel-heading">
+        <div class="card-header">
             <strong>Images</strong>
         </div>
         {% include 'inc/image_attachments.html' with images=object.images.all %}
         {% if perms.extras.add_imageattachment %}
-            <div class="panel-footer text-right noprint">
+            <div class="panel-footer text-end noprint">
                 <a href="{% url 'dcim:location_add_image' slug=object.slug %}" class="btn btn-primary btn-xs">
                     <span class="mdi mdi-plus-thick" aria-hidden="true"></span>
                     Attach an image
@@ -134,12 +134,12 @@
 {% block content_full_width_page %}
     {% if object.location_type.children.all %}
         <div class="panel panel-default">
-            <div class="panel-heading">
+            <div class="card-header">
                 <strong>Children</strong>
             </div>
             {% include 'inc/table.html' with table=children_table %}
             {% if perms.dcim.add_location %}
-                <div class="panel-footer text-right noprint">
+                <div class="panel-footer text-end noprint">
                     <a href="{% url 'dcim:location_add' %}?parent={{ object.slug }}" class="btn btn-xs btn-primary">
                         <span class="mdi mdi-plus-thick" aria-hidden="true"></span> Add child
                     </a>

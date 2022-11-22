@@ -1,7 +1,7 @@
 {% load bootstrapped_goodies_tags %}
 <fieldset class="panel panel-default" id="fieldset-{% if stacked_prefix %}{{ stacked_prefix }}-{% endif %}{{ forloop.counter }}" style="background:transparent">
     {% if fieldset.name %}
-        <div class="panel-heading">
+        <div class="card-header">
             {% if 'collapse' in fieldset.classes %}
                 <a data-toggle="collapse" data-target="#fieldset-{% if stacked_prefix %}{{ stacked_prefix }}-{% endif %}{{ forloop.counter }} .fields">
                     {{ fieldset.name }}
@@ -12,11 +12,11 @@
             {% endif %}
         </div>
     {% else %}
-        <div class="panel-heading">
+        <div class="card-header">
             <strong>{{ opts.verbose_name_plural|capfirst }}</strong>
         </div>
     {% endif %}
-    <div class="panel-body">
+    <div class="card-body">
     {% if fieldset.description %}
         <div class="description">{{ fieldset.description|safe }}</div>
     {% endif %}

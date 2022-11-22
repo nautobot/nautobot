@@ -4,8 +4,8 @@
 
 {% block form %}
     <div class="panel panel-default">
-        <div class="panel-heading"><strong>Custom Field</strong></div>
-        <div class="panel-body">
+        <div class="card-header"><strong>Custom Field</strong></div>
+        <div class="card-body">
             {% render_field form.label %}
             {% render_field form.grouping %}
             {% render_field form.slug %}
@@ -19,26 +19,26 @@
         </div>
     </div>
     <div class="panel panel-default">
-        <div class="panel-heading"><strong>Assignment</strong></div>
-        <div class="panel-body">
+        <div class="card-header"><strong>Assignment</strong></div>
+        <div class="card-body">
             {% render_field form.content_types %}
         </div>
     </div>
     <div class="panel panel-default">
-        <div class="panel-heading"><strong>Validation Rules</strong></div>
-        <div class="panel-body">
+        <div class="card-header"><strong>Validation Rules</strong></div>
+        <div class="card-body">
             {% render_field form.validation_minimum %}
             {% render_field form.validation_maximum %}
             {% render_field form.validation_regex %}
         </div>
     </div>
     <div class="panel panel-default">
-        <div class="panel-heading"><strong>Custom Field Choices</strong></div>
-        <div class="panel-body">
+        <div class="card-header"><strong>Custom Field Choices</strong></div>
+        <div class="card-body">
             {% if choices.errors %}
                 <div class="panel panel-danger">
-                    <div class="panel-heading"><strong>Errors</strong></div>
-                    <div class="panel-body">
+                    <div class="card-header"><strong>Errors</strong></div>
+                    <div class="card-body">
                         Please correct the error(s) below:
 
                         {% for choice in choices.forms %}

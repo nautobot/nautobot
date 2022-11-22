@@ -92,10 +92,10 @@ class ExampleModelContent(PluginTemplateExtension):
         # You can also just send raw HTML.
         return """
         <div class="panel panel-default">
-            <div class="panel-heading">
+            <div class="card-header">
                 <strong>Plugin Right Page</strong>
             </div>
-            <div class="panel-body">
+            <div class="card-body">
                 <span>Check me out! I'll show up after anything defined in the detail view template.</span>
             </div>
         </div>

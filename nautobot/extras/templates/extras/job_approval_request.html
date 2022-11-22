@@ -59,8 +59,8 @@
                         {% if job_form is not None %}
                             {% if job_form.non_field_errors or schedule_form.non_field_errors %}
                                 <div class="panel panel-danger">
-                                    <div class="panel-heading"><strong>Errors</strong></div>
-                                    <div class="panel-body">
+                                    <div class="card-header"><strong>Errors</strong></div>
+                                    <div class="card-body">
                                         {{ job_form.non_field_errors }}
                                         {{ schedule_form.non_field_errors }}
                                     </div>
@@ -68,10 +68,10 @@
                             {% endif %}
                             {% if job_form.requires_input %}
                                 <div class="panel panel-default">
-                                    <div class="panel-heading">
+                                    <div class="card-header">
                                         <strong>Job Data</strong>
                                     </div>
-                                    <div class="panel-body">
+                                    <div class="card-body">
                                         {% render_form job_form %}
                                     </div>
                                 </div>
@@ -84,17 +84,17 @@
                             {% endif %}
                         {% else %}
                             <div class="panel panel-default">
-                                <div class="panel-heading"><strong>Job Data</strong></div>
-                                <div class="panel-body">
+                                <div class="card-header"><strong>Job Data</strong></div>
+                                <div class="card-body">
                                     <pre>{{ object.kwargs.data | render_json }}</pre>
                                 </div>
                             </div>
                         {% endif %}
                         <div class="panel panel-default">
-                            <div class="panel-heading">
+                            <div class="card-header">
                                 <strong>Approval Request</strong>
                             </div>
-                            <div class="panel-body">
+                            <div class="card-body">
                                 <div class="form-group">
                                     <label class="col-md-3 control-label required">Requestor</label>
                                     <div class="col-md-9">
@@ -109,7 +109,7 @@
                                 </div>
                             </div>
                         </div>
-                        <div class="pull-right">
+                        <div class="float-end">
                             <button type="submit" name="_dry_run" id="id__dry_run" class="btn btn-primary"
                                 {% if not perms.extras.run_job or object.job_model is None or not object.job_model.runnable %}
                                     disabled="disabled"

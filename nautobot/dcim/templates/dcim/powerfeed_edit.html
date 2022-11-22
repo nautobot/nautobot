@@ -3,24 +3,24 @@
 
 {% block form %}
     <div class="panel panel-default">
-        <div class="panel-heading"><strong>Power Panel</strong></div>
-        <div class="panel-body">
+        <div class="card-header"><strong>Power Panel</strong></div>
+        <div class="card-body">
             {% render_field form.region %}
             {% render_field form.site %}
             {% render_field form.power_panel %}
         </div>
     </div>
     <div class="panel panel-default">
-        <div class="panel-heading"><strong>Power Feed</strong></div>
-        <div class="panel-body">
+        <div class="card-header"><strong>Power Feed</strong></div>
+        <div class="card-body">
             {% render_field form.rack %}
             {% render_field form.name %}
             {% render_field form.status %}
         </div>
     </div>
     <div class="panel panel-default">
-        <div class="panel-heading"><strong>Characteristics</strong></div>
-        <div class="panel-body">
+        <div class="card-header"><strong>Characteristics</strong></div>
+        <div class="card-body">
             {% render_field form.type %}
             {% render_field form.supply %}
             {% render_field form.voltage %}
@@ -31,8 +31,8 @@
     </div>
     {% include 'inc/extras_features_edit_form_fields.html' %}
     <div class="panel panel-default">
-        <div class="panel-heading"><strong>Comments</strong></div>
-        <div class="panel-body">
+        <div class="card-header"><strong>Comments</strong></div>
+        <div class="card-body">
             {% render_field form.comments %}
         </div>
     </div>

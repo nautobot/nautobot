@@ -7,9 +7,9 @@
     <form method="post">
         {% csrf_token %}
         <div class="panel panel-default">
-            <div class="panel-heading">
+            <div class="card-header">
                 <strong>Front Ports</strong>
-                <div class="pull-right noprint">
+                <div class="float-end noprint">
                     {% if request.user.is_authenticated %}
                         <button type="button" class="btn btn-default btn-xs" data-toggle="modal" data-target="#DeviceFrontPortTable_config" title="Configure table"><i class="mdi mdi-cog"></i> Configure</button>
                     {% endif %}
@@ -34,7 +34,7 @@
                     </button>
                 {% endif %}
                 {% if perms.dcim.add_frontport %}
-                    <div class="pull-right">
+                    <div class="float-end">
                         <a href="{% url 'dcim:frontport_add' %}?device={{ object.pk }}&return_url={% url 'dcim:device_frontports' pk=object.pk %}" class="btn btn-primary btn-xs">
                             <span class="mdi mdi-plus-thick" aria-hidden="true"></span> Add front ports
                         </a>

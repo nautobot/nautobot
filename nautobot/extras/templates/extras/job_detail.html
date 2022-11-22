@@ -18,10 +18,10 @@
 
 {% block content_left_page %}
     <div class="panel panel-default">
-        <div class="panel-heading">
+        <div class="card-header">
             <strong>Source Code</strong>
         </div>
-        <table class="table table-hover panel-body attr-table">
+        <table class="table table-hover card-body attr-table">
             <tr>
                 <td>Source</td>
                 <td>{{ object.source | bettertitle }}</td>
@@ -63,10 +63,10 @@
         </table>
     </div>
     <div class="panel panel-default">
-        <div class="panel-heading">
+        <div class="card-header">
             <strong>Job</strong>
         </div>
-        <table class="table table-hover panel-body attr-table">
+        <table class="table table-hover card-body attr-table">
             <tr>
                 <td>Grouping</td>
                 <td>{{ object.grouping }}</td>
@@ -126,10 +126,10 @@
 
 {% block content_right_page %}
     <div class="panel panel-default">
-        <div class="panel-heading">
+        <div class="card-header">
             <strong>Properties</strong>
         </div>
-        <table class="table table-hover panel-body attr-table">
+        <table class="table table-hover card-body attr-table">
             <tr>
                 <td>Approval Required to Execute</td>
                 <td>{{ object.approval_required | render_boolean }}</td>

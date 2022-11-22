@@ -3,11 +3,11 @@
 
 {% block content_left_page %}
         <div class="panel panel-default">
-            <div class="panel-heading">
+            <div class="card-header">
                 <strong>Details</strong>
             </div>
 
-            <table class="table table-hover panel-body attr-table">
+            <table class="table table-hover card-body attr-table">
                 <tr>
                     <td>Name</td>
                     <td><span>{{ object.name }}</span></td>
@@ -24,10 +24,10 @@
         </div>
 
         <div class="panel panel-default">
-            <div class="panel-heading">
+            <div class="card-header">
                 <strong>Template</strong>
             </div>
-            <table class="table table-hover panel-body attr-table">
+            <table class="table table-hover card-body attr-table">
                 <tr>
                     <td>Object Type</td>
                     <td><span>{{ object.content_type }}</span></td>
@@ -46,7 +46,7 @@
 
 {% block content_right_page %}
             <div class="panel panel-default">
-                <div class="panel-heading">
+                <div class="card-header">
                     <strong>Code Template</strong>
                 </div>
                     {% if object.template_code %} <pre>{{ object.template_code }}</pre> {% else %} {{ None }} {% endif %}

@@ -4,8 +4,8 @@
 
 {% block form %}
     <div class="panel panel-default">
-        <div class="panel-heading"><strong>Job Source</strong></div>
-        <div class="panel-body">
+        <div class="card-header"><strong>Job Source</strong></div>
+        <div class="card-body">
             <div class="form-group">
                 <label class="col-md-3 control-label">Source</label>
                 <div class="col-md-9" style="padding-top: 7px">
@@ -64,8 +64,8 @@
         </div>
     </div>
     <div class="panel panel-default">
-        <div class="panel-heading"><strong>Job</strong></div>
-        <div class="panel-body">
+        <div class="card-header"><strong>Job</strong></div>
+        <div class="card-body">
             {% render_field form.enabled %}
             {% include "extras/inc/overridable_field.html" with field=form.name override_field=form.name_override %}
             {% render_field form.slug %}
@@ -74,8 +74,8 @@
         </div>
     </div>
     <div class="panel panel-default">
-        <div class="panel-heading"><strong>Properties</strong></div>
-        <div class="panel-body">
+        <div class="card-header"><strong>Properties</strong></div>
+        <div class="card-body">
             {% include "extras/inc/overridable_field.html" with field=form.approval_required override_field=form.approval_required_override %}
             {% include "extras/inc/overridable_field.html" with field=form.commit_default override_field=form.commit_default_override %}
             {% include "extras/inc/overridable_field.html" with field=form.hidden override_field=form.hidden_override %}

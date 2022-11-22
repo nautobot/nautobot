@@ -3,7 +3,7 @@
     <form method="post">
         {% csrf_token %}
         <div class="panel panel-default">
-            <div class="panel-heading">
+            <div class="card-header">
                 <strong>{{ title }}</strong>
             </div>
             {% include 'responsive_table.html' %}
@@ -19,7 +19,7 @@
                         <span class="mdi mdi-trash-can-outline" aria-hidden="true"></span> Delete
                     </button>
                 {% endif %}
-                <div class="pull-right">
+                <div class="float-end">
                     <a href="{% url table.Meta.model|viewname:"add" %}?device_type={{ object.pk }}&return_url={{ object.get_absolute_url }}%23tab_{{ tab }}" class="btn btn-primary btn-xs">
                         <span class="mdi mdi-plus-thick" aria-hidden="true"></span>
                         Add {{ title }}
@@ -31,7 +31,7 @@
     </form>
 {% else %}
     <div class="panel panel-default">
-        <div class="panel-heading">
+        <div class="card-header">
             <strong>{{ title }}</strong>
         </div>
         {% include 'responsive_table.html' %}

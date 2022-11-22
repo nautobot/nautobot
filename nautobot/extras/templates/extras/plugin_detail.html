@@ -12,7 +12,7 @@
             </ol>
         </div>
     </div>
-    <div class="pull-right noprint">
+    <div class="float-end noprint">
         {% block buttons %}
             {% if object.home_view_name %}
                 <a href="{% url object.home_view_name %}" class="btn btn-success">
@@ -36,10 +36,10 @@
         <div class="col-md-6">
             {% block content_left_page %}
                 <div class="panel panel-default">
-                    <div class="panel-heading">
+                    <div class="card-header">
                         <strong>Plugin</strong>
                     </div>
-                    <table class="table table-hover panel-body attr-table">
+                    <table class="table table-hover card-body attr-table">
                         <tr>
                             <td>Package Name</td>
                             <td><code>{{ object.name }}</code></td>
@@ -64,10 +64,10 @@
                     </table>
                 </div>
                 <div class="panel panel-default">
-                    <div class="panel-heading">
+                    <div class="card-header">
                         <strong>Compatibility</strong>
                     </div>
-                    <table class="table table-hover panel-body attr-table">
+                    <table class="table table-hover card-body attr-table">
                         <tr>
                             <td>Min Nautobot Version</td>
                             <td>{{ object.min_version | placeholder }}</td>
@@ -83,10 +83,10 @@
         <div class="col-md-6">
             {% block content_right_page %}
                 <div class="panel panel-default">
-                    <div class="panel-heading">
+                    <div class="card-header">
                         <strong>Features Employed</strong>
                     </div>
-                    <table class="table table-hover panel-body attr-table">
+                    <table class="table table-hover card-body attr-table">
                         {% with object.features as features %}
                             <tr>
                                 <td>Data Models</td>

@@ -11,10 +11,10 @@
 
 {% block content_left_page %}
         <div class="panel panel-default">
-            <div class="panel-heading">
+            <div class="card-header">
                 <strong>Power Feed</strong>
             </div>
-            <table class="table table-hover panel-body attr-table">
+            <table class="table table-hover card-body attr-table">
                 <tr>
                     <td>Power Panel</td>
                     <td>{{ object.power_panel|hyperlinked_object }}</td>
@@ -64,10 +64,10 @@
             </table>
         </div>
         <div class="panel panel-default">
-            <div class="panel-heading">
+            <div class="card-header">
                 <strong>Electrical Characteristics</strong>
             </div>
-            <table class="table table-hover panel-body attr-table">
+            <table class="table table-hover card-body attr-table">
                 <tr>
                     <td>Supply</td>
                     <td>{{ object.get_supply_display }}</td>
@@ -94,11 +94,11 @@
 
 {% block content_right_page %}
         <div class="panel panel-default">
-            <div class="panel-heading">
+            <div class="card-header">
                 <strong>Connection</strong>
             </div>
             {% if object.cable %}
-                <table class="table table-hover panel-body attr-table">
+                <table class="table table-hover card-body attr-table">
                     <tr>
                         <td>Cable</td>
                         <td>
@@ -138,9 +138,9 @@
                     {% endif %}
                 </table>
             {% else %}
-                <div class="panel-body text-muted">
+                <div class="card-body text-muted">
                     {% if perms.dcim.add_cable %}
-                        <a href="{% url 'dcim:powerfeed_connect' termination_a_id=object.pk termination_b_type='power-port' %}?return_url={{ object.get_absolute_url }}" class="btn btn-primary btn-sm pull-right">
+                        <a href="{% url 'dcim:powerfeed_connect' termination_a_id=object.pk termination_b_type='power-port' %}?return_url={{ object.get_absolute_url }}" class="btn btn-primary btn-sm float-end">
                             <span class="mdi mdi-ethernet-cable" aria-hidden="true"></span> Connect
                         </a>
                     {% endif %}
@@ -149,10 +149,10 @@
             {% endif %}
         </div>
         <div class="panel panel-default">
-            <div class="panel-heading">
+            <div class="card-header">
                 <strong>Comments</strong>
             </div>
-            <div class="panel-body rendered-markdown">
+            <div class="card-body rendered-markdown">
                 {% if object.comments %}
                     {{ object.comments|render_markdown }}
                 {% else %}
