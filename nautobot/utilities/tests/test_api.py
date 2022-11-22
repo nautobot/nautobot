@@ -19,8 +19,8 @@ class WritableNestedSerializerTest(testing.APITestCase):
         super().setUp()
 
         self.region_a = dcim_models.Region.objects.filter(sites__isnull=True).first()
-        self.site2 = dcim_models.Site.objects.create(region=self.region_a, name="Site 2", slug="site-2")
         self.site1 = dcim_models.Site.objects.create(region=self.region_a, name="Site 1", slug="site-1")
+        self.site2 = dcim_models.Site.objects.create(region=self.region_a, name="Site 2", slug="site-2")
 
     def test_related_by_pk(self):
         data = {
@@ -126,7 +126,7 @@ class APIDocsTestCase(TestCase):
     def setUp(self):
         self.client = Client()
 
-        # Populate a extras_models.CustomField to activate CustomFieldSerializer
+        # Populate a CustomField to activate CustomFieldSerializer
         content_type = ContentType.objects.get_for_model(dcim_models.Site)
         self.cf_text = extras_models.CustomField(type=choices.CustomFieldTypeChoices.TYPE_TEXT, name="test")
         self.cf_text.save()

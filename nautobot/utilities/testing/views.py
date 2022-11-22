@@ -43,10 +43,10 @@ class ModelTestCase(TestCase):
     """
 
     model = None
-    # Optional, list of extras_models.Relationships populated in setUpTestData for testing with this model
-    # Be sure to also create extras_models.RelationshipAssociations using these extras_models.Relationships!
+    # Optional, list of Relationships populated in setUpTestData for testing with this model
+    # Be sure to also create RelationshipAssociations using these Relationships!
     relationships: Optional[Sequence[extras_models.Relationship]] = None
-    # Optional, list of extras_models.CustomFields populated in setUpTestData for testing with this model
+    # Optional, list of CustomFields populated in setUpTestData for testing with this model
     # Be sure to also populate these fields on your test data!
     custom_fields: Optional[Sequence[extras_models.CustomField]] = None
 
@@ -170,19 +170,19 @@ class ViewTestCases:
             # The object's display name or string representation should appear in the response
             self.assertIn(getattr(instance, "display", str(instance)), response_body, msg=response_body)
 
-            # If any extras_models.Relationships are defined, they should appear in the response
+            # If any Relationships are defined, they should appear in the response
             if self.relationships is not None:
                 for relationship in self.relationships:  # false positive pylint: disable=not-an-iterable
                     content_type = ContentType.objects.get_for_model(instance)
                     if content_type == relationship.source_type:
                         self.assertIn(
-                            relationship.get_label(choices.extras_models.RelationshipSideChoices.SIDE_SOURCE),
+                            relationship.get_label(choices.RelationshipSideChoices.SIDE_SOURCE),
                             response_body,
                             msg=response_body,
                         )
                     if content_type == relationship.destination_type:
                         self.assertIn(
-                            relationship.get_label(choices.extras_models.RelationshipSideChoices.SIDE_DESTINATION),
+                            relationship.get_label(choices.RelationshipSideChoices.SIDE_DESTINATION),
                             response_body,
                             msg=response_body,
                         )
@@ -192,7 +192,7 @@ class ViewTestCases:
                 for custom_field in self.custom_fields:  # false positive pylint: disable=not-an-iterable
                     self.assertIn(str(custom_field), response_body, msg=response_body)
                     # 2.0 TODO: #824 custom_field.slug rather than custom_field.name
-                    if custom_field.type == choices.extras_models.CustomFieldTypeChoices.TYPE_MULTISELECT:
+                    if custom_field.type == choices.CustomFieldTypeChoices.TYPE_MULTISELECT:
                         for value in instance.cf.get(custom_field.name):
                             self.assertIn(str(value), response_body, msg=response_body)
                     else:
@@ -351,7 +351,7 @@ class ViewTestCases:
             self.assertHttpStatus(self.client.post(**request), 200)
             self.assertEqual(initial_count, self._get_queryset().count())  # Check that no object was created
 
-            # Update the users_models.ObjectPermission to allow creation
+            # Update the ObjectPermission to allow creation
             obj_perm.constraints = {"pk__isnull": False}
             obj_perm.save()
 
@@ -800,7 +800,7 @@ class ViewTestCases:
             self.assertHttpStatus(self.client.post(**request), 200)
             self.assertEqual(self._get_queryset().count(), initial_count)
 
-            # Update the users_models.ObjectPermission to allow creation
+            # Update the ObjectPermission to allow creation
             obj_perm.constraints = {"pk__isnull": False}  # Set constraint to allow all
             obj_perm.save()
 

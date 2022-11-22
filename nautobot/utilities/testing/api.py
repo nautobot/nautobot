@@ -740,4 +740,4 @@ class APITransactionTestCase(_APITransactionTestCase, mixins.NautobotTestCaseMix
         self.user.is_superuser = True
         self.user.save()
         self.token = users_models.Token.objects.create(user=self.user)
-        self.header = {"HTTP_AUTHORIZATION": f"models.Token {self.token.key}"}
+        self.header = {"HTTP_AUTHORIZATION": f"Token {self.token.key}"}

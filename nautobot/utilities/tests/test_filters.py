@@ -33,15 +33,9 @@ class TreeNodeMultipleChoiceFilterTest(TestCase):
         self.region2ab = dcim_models.Region.objects.create(
             name="Test Region 2A-B", slug="test-region-2a-b", parent=self.region2a
         )
-        self.site1 = dcim_models.Site.objects.create(
-            region=self.region1, name="Test Site 1", slug="test-site1"
-        )
-        self.site2 = dcim_models.Site.objects.create(
-            region=self.region2, name="Test Site 2", slug="test-site2"
-        )
-        self.site2a = dcim_models.Site.objects.create(
-            region=self.region2a, name="Test Site 2a", slug="test-site2a"
-        )
+        self.site1 = dcim_models.Site.objects.create(region=self.region1, name="Test Site 1", slug="test-site1")
+        self.site2 = dcim_models.Site.objects.create(region=self.region2, name="Test Site 2", slug="test-site2")
+        self.site2a = dcim_models.Site.objects.create(region=self.region2a, name="Test Site 2a", slug="test-site2a")
         self.site2ab = dcim_models.Site.objects.create(
             region=self.region2ab, name="Test Site 2a-b", slug="test-site2a-b"
         )
