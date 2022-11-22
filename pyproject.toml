@@ -92,7 +92,7 @@ drf-yasg = {version = "^1.20.0", extras = ["validation"]}
 # Git integrations for Python
 GitPython = "~3.1.29"
 # GraphQL support
-graphene-django = "~2.15.0"
+graphene-django = "~3.0.0"
 # Graphene Optimizer
 # NOTE: graphene-django-optimizer 0.9 and later require Graphene v3
 graphene-django-optimizer = "~0.8.0"
