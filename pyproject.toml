@@ -104,7 +104,7 @@ importlib-metadata = {version = "^4.4", python = "<3.8"}
 # Template rendering engine
 Jinja2 = "~3.1.0"
 # Optional data validation of config contexts
-jsonschema = "~4.7.0"
+jsonschema = "~4.17.0"
 # Rendering of markdown files to HTML
 Markdown = "~3.3.7"
 # Escape text to use HTML and XML
@@ -122,8 +122,6 @@ Pillow = "~9.3.0"
 # PostgreSQL database adapter
 # NOTE: psycopg3 is avaiable now and nominally replaces psycopg2
 psycopg2-binary = "~2.9.5"
-# Cryptographic library
-pycryptodome = "~3.13.0"
 # The uWSGI WSGI HTTP server as a Python module
 pyuwsgi = "~2.0.21"
 # YAML parsing and rendering

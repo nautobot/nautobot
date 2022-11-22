@@ -1203,7 +1203,7 @@ i18n = ["Babel (>=2.7)"]
 
 [[package]]
 name = "jsonschema"
-version = "4.7.2"
+version = "4.17.0"
 description = "An implementation of JSON Schema validation for Python"
 category = "main"
 optional = false
@@ -1213,6 +1213,7 @@ python-versions = ">=3.7"
 attrs = ">=17.4.0"
 importlib-metadata = {version = "*", markers = "python_version < \"3.8\""}
 importlib-resources = {version = ">=1.4.0", markers = "python_version < \"3.9\""}
+pkgutil-resolve-name = {version = ">=1.3.10", markers = "python_version < \"3.9\""}
 pyrsistent = ">=0.14.0,<0.17.0 || >0.17.0,<0.17.1 || >0.17.1,<0.17.2 || >0.17.2"
 typing-extensions = {version = "*", markers = "python_version < \"3.8\""}
 
@@ -1655,6 +1656,14 @@ docs = ["furo", "olefile", "sphinx (>=2.4)", "sphinx-copybutton", "sphinx-issues
 tests = ["check-manifest", "coverage", "defusedxml", "markdown2", "olefile", "packaging", "pyroma", "pytest", "pytest-cov", "pytest-timeout"]
 
 [[package]]
+name = "pkgutil-resolve-name"
+version = "1.3.10"
+description = "Resolve a name to an object."
+category = "main"
+optional = false
+python-versions = ">=3.6"
+
+[[package]]
 name = "platformdirs"
 version = "2.5.2"
 description = "A small Python module for determining appropriate platform-specific dirs, e.g. a \"user data dir\"."
@@ -1744,14 +1753,6 @@ description = "C parser in Python"
 category = "main"
 optional = false
 python-versions = ">=2.7, !=3.0.*, !=3.1.*, !=3.2.*, !=3.3.*"
-
-[[package]]
-name = "pycryptodome"
-version = "3.13.0"
-description = "Cryptographic library for Python"
-category = "main"
-optional = false
-python-versions = ">=2.7, !=3.0.*, !=3.1.*, !=3.2.*, !=3.3.*, !=3.4.*"
 
 [[package]]
 name = "pyeapi"
@@ -2615,7 +2616,7 @@ sso = ["social-auth-core"]
 [metadata]
 lock-version = "1.1"
 python-versions = "^3.7"
-content-hash = "df64c0a5f0e65b550246c9aadbbb743274151e980507045ea613ea02d949ad6d"
+content-hash = "416dede7f13e705608aa6aefc9c37185e0c52eb33d018645b22717695f2687f7"
 
 [metadata.files]
 amqp = [
@@ -3131,8 +3132,8 @@ Jinja2 = [
     {file = "Jinja2-3.1.2.tar.gz", hash = "sha256:31351a702a408a9e7595a8fc6150fc3f43bb6bf7e319770cbc0db9df9437e852"},
 ]
 jsonschema = [
-    {file = "jsonschema-4.7.2-py3-none-any.whl", hash = "sha256:c7448a421b25e424fccfceea86b4e3a8672b4436e1988ccbde92c80828d4f085"},
-    {file = "jsonschema-4.7.2.tar.gz", hash = "sha256:73764f461d61eb97a057c929368610a134d1d1fffd858acfe88864ee94f1f1d3"},
+    {file = "jsonschema-4.17.0-py3-none-any.whl", hash = "sha256:f660066c3966db7d6daeaea8a75e0b68237a48e51cf49882087757bb59916248"},
+    {file = "jsonschema-4.17.0.tar.gz", hash = "sha256:5bfcf2bca16a087ade17e02b282d34af7ccd749ef76241e7f9bd7c0cb8a9424d"},
 ]
 junos-eznc = [
     {file = "junos-eznc-2.6.5.tar.gz", hash = "sha256:fa4c3e0390db1e41b364fab3d703592b248e10d15a80fce5acddee00f037fed3"},
@@ -3454,6 +3455,10 @@ pillow = [
     {file = "Pillow-9.3.0-pp38-pypy38_pp73-win_amd64.whl", hash = "sha256:073adb2ae23431d3b9bcbcff3fe698b62ed47211d0716b067385538a1b0f28b8"},
     {file = "Pillow-9.3.0.tar.gz", hash = "sha256:c935a22a557a560108d780f9a0fc426dd7459940dc54faa49d83249c8d3e760f"},
 ]
+pkgutil-resolve-name = [
+    {file = "pkgutil_resolve_name-1.3.10-py3-none-any.whl", hash = "sha256:ca27cc078d25c5ad71a9de0a7a330146c4e014c2462d9af19c6b828280649c5e"},
+    {file = "pkgutil_resolve_name-1.3.10.tar.gz", hash = "sha256:357d6c9e6a755653cfd78893817c0853af365dd51ec97f3d358a819373bbd174"},
+]
 platformdirs = [
     {file = "platformdirs-2.5.2-py3-none-any.whl", hash = "sha256:027d8e83a2d7de06bbac4e5ef7e023c02b863d7ea5d079477e722bb41ab25788"},
     {file = "platformdirs-2.5.2.tar.gz", hash = "sha256:58c8abb07dcb441e6ee4b11d8df0ac856038f944ab98b7be6b27b2a3c7feef19"},
@@ -3577,38 +3582,6 @@ pycodestyle = [
 pycparser = [
     {file = "pycparser-2.21-py2.py3-none-any.whl", hash = "sha256:8ee45429555515e1f6b185e78100aea234072576aa43ab53aefcae078162fca9"},
     {file = "pycparser-2.21.tar.gz", hash = "sha256:e644fdec12f7872f86c58ff790da456218b10f863970249516d60a5eaca77206"},
-]
-pycryptodome = [
-    {file = "pycryptodome-3.13.0-cp27-cp27m-macosx_10_9_x86_64.whl", hash = "sha256:e468724173df02f9d83f3fea830bf0d04aa291b5add22b4a78e01c97aab04873"},
-    {file = "pycryptodome-3.13.0-cp27-cp27m-manylinux1_i686.whl", hash = "sha256:1fb7a6f222072412f320b9e48d3ce981920efbfce37b06d028ec9bd94093b37f"},
-    {file = "pycryptodome-3.13.0-cp27-cp27m-manylinux1_x86_64.whl", hash = "sha256:4f1b594d0cf35bd12ec4244df1155a7f565bf6e6245976ac36174c1564688c90"},
-    {file = "pycryptodome-3.13.0-cp27-cp27m-manylinux2010_i686.whl", hash = "sha256:9ea70f6c3f6566159e3798e4593a4a8016994a0080ac29a45200615b45091a1b"},
-    {file = "pycryptodome-3.13.0-cp27-cp27m-manylinux2010_x86_64.whl", hash = "sha256:f7aad304575d075faf2806977b726b67da7ba294adc97d878f92a062e357a56a"},
-    {file = "pycryptodome-3.13.0-cp27-cp27m-manylinux2014_aarch64.whl", hash = "sha256:702446a012fd9337b9327d168bb0c7dc714eb93ad361f6f61af9ca8305a301f1"},
-    {file = "pycryptodome-3.13.0-cp27-cp27m-win32.whl", hash = "sha256:681ac47c538c64305d710eaed2bb49532f62b3f4c93aa7c423c520df981392e5"},
-    {file = "pycryptodome-3.13.0-cp27-cp27m-win_amd64.whl", hash = "sha256:7b3478a187d897f003b2aa1793bcc59463e8d57a42e2aafbcbbe9cd47ec46863"},
-    {file = "pycryptodome-3.13.0-cp27-cp27mu-manylinux1_i686.whl", hash = "sha256:eec02d9199af4b1ccfe1f9c587691a07a1fa39d949d2c1dc69d079ab9af8212f"},
-    {file = "pycryptodome-3.13.0-cp27-cp27mu-manylinux1_x86_64.whl", hash = "sha256:9c8e0e6c5e982699801b20fa74f43c19aa080d2b53a39f3c132d35958e153bd4"},
-    {file = "pycryptodome-3.13.0-cp27-cp27mu-manylinux2010_i686.whl", hash = "sha256:f5457e44d3f26d9946091e92b28f3e970a56538b96c87b4b155a84e32a40b7b5"},
-    {file = "pycryptodome-3.13.0-cp27-cp27mu-manylinux2010_x86_64.whl", hash = "sha256:88d6d54e83cf9bbd665ce1e7b9079983ee2d97a05f42e0569ff00a70f1dd8b1e"},
-    {file = "pycryptodome-3.13.0-cp27-cp27mu-manylinux2014_aarch64.whl", hash = "sha256:72de8c4d71e6b11d54528bb924447fa4fdabcbb3d76cc0e7f61d3b6075def6b3"},
-    {file = "pycryptodome-3.13.0-cp35-abi3-macosx_10_9_x86_64.whl", hash = "sha256:008ef2c631f112cd5a58736e0b29f4a28b4bb853e68878689f8b476fd56e0691"},
-    {file = "pycryptodome-3.13.0-cp35-abi3-manylinux1_i686.whl", hash = "sha256:51ebe9624ad0a0b4da1aaaa2d43aabadf8537737fd494cee0ffa37cd6326de02"},
-    {file = "pycryptodome-3.13.0-cp35-abi3-manylinux1_x86_64.whl", hash = "sha256:deede160bdf87ddb71f0a1314ad5a267b1a960be314ea7dc6b7ad86da6da89a3"},
-    {file = "pycryptodome-3.13.0-cp35-abi3-manylinux2010_i686.whl", hash = "sha256:857c16bffd938254e3a834cd6b2a755ed24e1a953b1a86e33da136d3e4c16a6f"},
-    {file = "pycryptodome-3.13.0-cp35-abi3-manylinux2010_x86_64.whl", hash = "sha256:ca6db61335d07220de0b665bfee7b8e9615b2dfc67a54016db4826dac34c2dd2"},
-    {file = "pycryptodome-3.13.0-cp35-abi3-manylinux2014_aarch64.whl", hash = "sha256:073dedf0f9c490ae22ca081b86357646ac9b76f3e2bd89119d137fc697a9e3b6"},
-    {file = "pycryptodome-3.13.0-cp35-abi3-win32.whl", hash = "sha256:e3affa03c49cce7b0a9501cc7f608d4f8e61fb2522b276d599ac049b5955576d"},
-    {file = "pycryptodome-3.13.0-cp35-abi3-win_amd64.whl", hash = "sha256:e5d72be02b17e6bd7919555811264403468d1d052fa67c946e402257c3c29a27"},
-    {file = "pycryptodome-3.13.0-pp27-pypy_73-macosx_10_9_x86_64.whl", hash = "sha256:0896d5d15ffe584d46cb9b69a75cf14a2bc8f6daf635b7bf16c1b041342a44b1"},
-    {file = "pycryptodome-3.13.0-pp27-pypy_73-manylinux1_x86_64.whl", hash = "sha256:e420cdfca73f80fe15f79bb34756959945231a052440813e5fce531e6e96331a"},
-    {file = "pycryptodome-3.13.0-pp27-pypy_73-manylinux2010_x86_64.whl", hash = "sha256:720fafdf3e5c5de93039d8308f765cc60b8e9e7e852ad7135aa65dd89238191f"},
-    {file = "pycryptodome-3.13.0-pp27-pypy_73-win32.whl", hash = "sha256:7a8b0e526ff239b4f4c61dd6898e2474d609843ffc437267f3a27ddff626e6f6"},
-    {file = "pycryptodome-3.13.0-pp36-pypy36_pp73-macosx_10_9_x86_64.whl", hash = "sha256:d92a5eddffb0ad39f582f07c1de26e9daf6880e3e782a94bb7ebaf939567f8bf"},
-    {file = "pycryptodome-3.13.0-pp36-pypy36_pp73-manylinux1_x86_64.whl", hash = "sha256:cb9453c981554984c6f5c5ce7682d7286e65e2173d7416114c3593a977a01bf5"},
-    {file = "pycryptodome-3.13.0-pp36-pypy36_pp73-manylinux2010_x86_64.whl", hash = "sha256:765b8b16bc1fd699e183dde642c7f2653b8f3c9c1a50051139908e9683f97732"},
-    {file = "pycryptodome-3.13.0-pp36-pypy36_pp73-win32.whl", hash = "sha256:b3af53dddf848afb38b3ac2bae7159ddad1feb9bac14aa3acec6ef1797b82f8d"},
-    {file = "pycryptodome-3.13.0.tar.gz", hash = "sha256:95bacf9ff7d1b90bba537d3f5f6c834efe6bfbb1a0195cb3573f29e6716ef08d"},
 ]
 pyeapi = [
     {file = "pyeapi-0.8.4.tar.gz", hash = "sha256:c33ad1eadd8ebac75f63488df9412081ce0b024c9e1da12a37196a5c60427c54"},
