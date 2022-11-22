@@ -1480,7 +1480,7 @@ query {
 
         filters = (
             (f'name: "{self.device1_frontports[0].name}"', 1),
-            (f'device: "{self.device1.pk}"', 4),
+            (f'device: "{self.device1.name}"', 4),
             (f'_type: "{PortTypeChoices.TYPE_8P8C}"', 3),
         )
 
@@ -1497,7 +1497,7 @@ query {
 
         filters = (
             (f'name: "{self.device1_frontports[0].name}"', 1),
-            (f'device: "{self.device1.pk}"', 4),
+            (f'device: "{self.device1.name}"', 4),
             (f'_type: "{PortTypeChoices.TYPE_8P8C}"', 3),
         )
 
