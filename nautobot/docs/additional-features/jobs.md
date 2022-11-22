@@ -603,6 +603,7 @@ An example of running a job with both `FileVar` (named `myfile`) and `StringVar`
 ```no-highlight
 curl -X POST \
 -H 'Authorization: Token $TOKEN' \
+-H 'Content-Type: multipart/form-data' \
 -H "Accept: application/json; version=1.3; indent=4" \
 'http://nautobot/api/extras/jobs/$JOB_ID/run/' \
 -F '_commit="true"' \
