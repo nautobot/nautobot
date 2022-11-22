@@ -228,6 +228,8 @@ To use remote file storage, add `nautobot[remote_storage]` to your `local_requir
 $ echo "nautobot[remote_storage]" >> $NAUTOBOT_ROOT/local_requirements.txt
 ```
 
+An example of using django-storages with AWS S3 buckets, visit the [django-storages with S3](../user-guides/s3-django-storage.md) user-guide.
+
 ## Prepare the Database
 
 Before Nautobot can run, the database migrations must be performed to prepare the database for use. This will populate the database tables and relationships:

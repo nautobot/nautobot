@@ -132,6 +132,8 @@ nav:
           - The Search Bar: "user-guides/getting-started/search-bar.md"
           - Git as a Data Source: "user-guides/git-data-source.md"
           - GraphQL: "user-guides/graphql.md"
+          - Relationships: "user-guides/relationships.md"
+          - Django Storages with S3: "user-guides/s3-django-storage.md"
       - Core Functionality:
           - Circuits: "core-functionality/circuits.md"
           - Devices and Cabling: "core-functionality/devices.md"
