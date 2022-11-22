@@ -1,5 +1,4 @@
 from django import forms as django_forms
-from django.core.exceptions import ValidationError
 from django.db.models import Q
 from django.http import QueryDict
 from django.test import TestCase
@@ -554,12 +553,12 @@ class LookupRelatedFunctionTest(TestCase):
         self.assertEqual(data, {"name": ["Site 1"], "status": ["active", "planned"]})
 
     def test_ensure_content_type_and_field_name_inquery_params(self):
-        with self.assertRaises(ValidationError) as err:
+        with self.assertRaises(django_forms.ValidationError) as err:
             utils.ensure_content_type_and_field_name_inquery_params({})
         self.assertEqual(str(err.exception.args[0]), "content_type and field_name are required parameters")
         self.assertEqual(err.exception.code, 400)
 
-        with self.assertRaises(ValidationError) as err:
+        with self.assertRaises(django_forms.ValidationError) as err:
             utils.ensure_content_type_and_field_name_inquery_params({"field_name": "name", "content_type": "dcim.abc"})
         self.assertEqual(str(err.exception.args[0]), "content_type not found")
         self.assertEqual(err.exception.code, 404)

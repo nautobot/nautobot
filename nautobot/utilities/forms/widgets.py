@@ -188,8 +188,7 @@ class APISelect(SelectWithDisabled):
                         yield item
 
             null_option = self.attrs.get("data-null-option")
-            choices = ModelChoiceIteratorWithNullOption(field=self.choices.field, null_option=null_option)
-            self.choices = choices
+            self.choices = ModelChoiceIteratorWithNullOption(field=self.choices.field, null_option=null_option)
 
         return super().get_context(name, value, attrs)
 

@@ -2,7 +2,6 @@ from unittest import mock
 
 from django import forms as django_forms
 from django.contrib.contenttypes.models import ContentType
-from django.core.exceptions import ValidationError
 from django.http import QueryDict
 from django.test import TestCase
 from django.urls import reverse
@@ -634,7 +633,7 @@ class MultiMatchModelMultipleChoiceFieldTest(TestCase):
             vlan_groups[0].pk,
         ]
         for value in invalid_values:
-            with self.assertRaises(ValidationError):
+            with self.assertRaises(django_forms.ValidationError):
                 field.clean(value)
 
 
@@ -732,13 +731,13 @@ class DynamicFilterFormTest(TestCase):
             "Assert that the `filterset_filters` property of DynamicFilterForm instance gets the accurate `filterset_class` filters"
         ):
 
-            def get_dict_of_field_and_value_class_from_filters(filters):
+            def get_dict_of_field_and_value_class_from_filters(filters_dict):
                 """return a dict of the filters' field and field value class.
 
                 This is required because instantiated classes of the same type are not equal.
                 For Example `Site()` != `Site()` but `Site().__class__` == `Site().__class__`
                 """
-                return {field: value.__class__ for field, value in filters.items()}
+                return {field: value.__class__ for field, value in filters_dict.items()}
 
             self.assertEqual(
                 get_dict_of_field_and_value_class_from_filters(form.filterset_filters),
