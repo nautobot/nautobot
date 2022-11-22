@@ -16,8 +16,7 @@ from nautobot.extras import management
 from nautobot.extras import models as extras_models
 from nautobot.users import models as users_models
 from nautobot.utilities import fields as utilities_fields
-from nautobot.utilities import permissions
-from nautobot.utilities.testing import utils
+from nautobot.utilities import permissions, testing
 
 
 # Use the proper swappable User model
@@ -139,7 +138,7 @@ class NautobotTestCaseMixin:
                 err = response.data
             else:
                 # Attempt to extract form validation errors from the response HTML
-                form_errors = utils.extract_form_failures(response.content.decode(response.charset))
+                form_errors = testing.extract_form_failures(response.content.decode(response.charset))
                 err = form_errors or response.content.decode(response.charset) or "No data"
             err_message = f"Expected HTTP status(es) {expected_status}; received {response.status_code}: {err}"
             if msg:
@@ -197,7 +196,7 @@ class NautobotTestCaseMixin:
     @classmethod
     def create_tags(cls, *names):
         """
-        Create and return a models.Tag instance for each name given.
+        Create and return a Tag instance for each name given.
 
         DEPRECATED: use TagFactory instead.
         """

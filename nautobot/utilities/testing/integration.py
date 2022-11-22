@@ -11,7 +11,7 @@ from selenium import webdriver
 from splinter.browser import Browser
 
 from nautobot.core import celery
-from nautobot.utilities.testing import mixins
+from nautobot.utilities import testing
 
 
 # URL used to connect to the Selenium host
@@ -61,7 +61,7 @@ FIREFOX_PROFILE_PREFERENCES = {
 
 
 @tag("integration")
-class SeleniumTestCase(StaticLiveServerTestCase, mixins.NautobotTestCaseMixin):
+class SeleniumTestCase(StaticLiveServerTestCase, testing.NautobotTestCaseMixin):
     """
     Base test case for Splinter Selenium integration testing with custom helper methods.
 

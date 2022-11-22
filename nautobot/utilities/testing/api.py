@@ -13,9 +13,7 @@ from nautobot.extras import choices as extras_choices
 from nautobot.extras import models as extras_models
 from nautobot.extras import registry
 from nautobot.users import models as users_models
-from nautobot.utilities import utils
-from nautobot.utilities.testing import mixins, views
-from nautobot.utilities.testing import utils as testing_utils
+from nautobot.utilities import testing, utils
 
 
 __all__ = (
@@ -30,7 +28,7 @@ __all__ = (
 
 
 @tag("api")
-class APITestCase(views.ModelTestCase):
+class APITestCase(testing.ModelTestCase):
     """
     Base test case for API requests.
 
@@ -82,7 +80,7 @@ class APIViewTestCases:
                 self.model._meta.model_name,
             ) in settings.EXEMPT_EXCLUDE_MODELS:
                 # Models listed in EXEMPT_EXCLUDE_MODELS should not be accessible to anonymous users
-                with testing_utils.disable_warnings("django.request"):
+                with testing.disable_warnings("django.request"):
                     self.assertHttpStatus(self.client.get(url, **self.header), status.HTTP_403_FORBIDDEN)
             else:
                 response = self.client.get(url, **self.header)
@@ -96,7 +94,7 @@ class APIViewTestCases:
             url = self._get_detail_url(self._get_queryset().first())
 
             # Try GET without permission
-            with testing_utils.disable_warnings("django.request"):
+            with testing.disable_warnings("django.request"):
                 self.assertHttpStatus(self.client.get(url, **self.header), status.HTTP_403_FORBIDDEN)
 
         @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
@@ -147,7 +145,7 @@ class APIViewTestCases:
             # If opt-in fields are supported on this model, make sure they can be opted into
 
             registry.custom_fields_registry = registry["model_features"]["custom_fields"]
-            # computed fields and custom fields use the same registry.registry
+            # computed fields and custom fields use the same registry
             cf_supported = self.model._meta.model_name in registry.custom_fields_registry.get(
                 self.model._meta.app_label, {}
             )
@@ -210,7 +208,7 @@ class APIViewTestCases:
                 self.model._meta.model_name,
             ) in settings.EXEMPT_EXCLUDE_MODELS:
                 # Models listed in EXEMPT_EXCLUDE_MODELS should not be accessible to anonymous users
-                with testing_utils.disable_warnings("django.request"):
+                with testing.disable_warnings("django.request"):
                     self.assertHttpStatus(self.client.get(url, **self.header), status.HTTP_403_FORBIDDEN)
             else:
                 # TODO FIXME: if we're passing **self.header, we are *by definition* **NOT** anonymous!!
@@ -248,7 +246,7 @@ class APIViewTestCases:
             url = self._get_list_url()
 
             # Try GET without permission
-            with testing_utils.disable_warnings("django.request"):
+            with testing.disable_warnings("django.request"):
                 self.assertHttpStatus(self.client.get(url, **self.header), status.HTTP_403_FORBIDDEN)
 
         @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
@@ -306,7 +304,7 @@ class APIViewTestCases:
             GET a list of objects with an unknown filter parameter and strict filtering, expect a 400 response.
             """
             self.add_permissions(f"{self.model._meta.app_label}.view_{self.model._meta.model_name}")
-            with testing_utils.disable_warnings("django.request"):
+            with testing.disable_warnings("django.request"):
                 response = self.client.get(f"{self._get_list_url()}?ice_cream_flavor=rocky-road", **self.header)
             self.assertHttpStatus(response, status.HTTP_400_BAD_REQUEST)
             self.assertIsInstance(response.data, dict)
@@ -386,7 +384,7 @@ class APIViewTestCases:
             url = self._get_list_url()
 
             # Try POST without permission
-            with testing_utils.disable_warnings("django.request"):
+            with testing.disable_warnings("django.request"):
                 response = self.client.post(url, self.create_data[0], format="json", **self.header)
                 self.assertHttpStatus(response, status.HTTP_403_FORBIDDEN)
 
@@ -490,7 +488,7 @@ class APIViewTestCases:
             update_data = self.update_data or getattr(self, "create_data")[0]
 
             # Try PATCH without permission
-            with testing_utils.disable_warnings("django.request"):
+            with testing.disable_warnings("django.request"):
                 response = self.client.patch(url, update_data, format="json", **self.header)
                 self.assertHttpStatus(response, status.HTTP_403_FORBIDDEN)
 
@@ -626,7 +624,7 @@ class APIViewTestCases:
             For some models this may just be any random object, but when we have FKs with `on_delete=models.PROTECT`
             (as is often the case) we need to find or create an instance that doesn't have such entanglements.
             """
-            instance = testing_utils.get_deletable_objects(self.model, self._get_queryset()).first()
+            instance = testing.get_deletable_objects(self.model, self._get_queryset()).first()
             if instance is None:
                 self.fail("Couldn't find a single deletable object!")
             return instance
@@ -638,9 +636,7 @@ class APIViewTestCases:
             For some models this may just be any random objects, but when we have FKs with `on_delete=models.PROTECT`
             (as is often the case) we need to find or create an instance that doesn't have such entanglements.
             """
-            instances = testing_utils.get_deletable_objects(self.model, self._get_queryset()).values_list(
-                "pk", flat=True
-            )[:3]
+            instances = testing.get_deletable_objects(self.model, self._get_queryset()).values_list("pk", flat=True)[:3]
             if len(instances) < 3:
                 self.fail(f"Couldn't find 3 deletable objects, only found {len(instances)}!")
             return instances
@@ -652,7 +648,7 @@ class APIViewTestCases:
             url = self._get_detail_url(self.get_deletable_object())
 
             # Try DELETE without permission
-            with testing_utils.disable_warnings("django.request"):
+            with testing.disable_warnings("django.request"):
                 response = self.client.delete(url, **self.header)
                 self.assertHttpStatus(response, status.HTTP_403_FORBIDDEN)
 
@@ -731,7 +727,7 @@ class APIViewTestCases:
 
 
 @tag("unit")
-class APITransactionTestCase(_APITransactionTestCase, mixins.NautobotTestCaseMixin):
+class APITransactionTestCase(_APITransactionTestCase, testing.NautobotTestCaseMixin):
     def setUp(self):
         """
         Create a superuser and token for API calls.

@@ -10,7 +10,6 @@ from nautobot.dcim import filters as dcim_filters
 from nautobot.dcim import models as dcim_models
 from nautobot.extras import models as extras_models
 from nautobot.utilities import filters, testing
-from nautobot.utilities.testing import mixins
 
 
 class TreeNodeMultipleChoiceFilterTest(TestCase):
@@ -136,7 +135,7 @@ class TreeNodeMultipleChoiceFilterTest(TestCase):
         self.assertEqual(f.lookup_expr, django_filters.conf.settings.DEFAULT_LOOKUP_EXPR)
 
 
-class NaturalKeyOrPKMultipleChoiceFilterTest(TestCase, mixins.NautobotTestCaseMixin):
+class NaturalKeyOrPKMultipleChoiceFilterTest(TestCase, testing.NautobotTestCaseMixin):
     class SiteFilterSet(filters.BaseFilterSet):
         power_panels = filters.NaturalKeyOrPKMultipleChoiceFilter(
             field_name="powerpanel",
@@ -1139,7 +1138,7 @@ class GetFiltersetTestValuesTest(testing.FilterTestCases.BaseFilterTestCase):
                 self.get_filterset_test_values("description")
 
 
-class SearchFilterTest(TestCase, mixins.NautobotTestCaseMixin):
+class SearchFilterTest(TestCase, testing.NautobotTestCaseMixin):
     """Tests for the `SearchFilter` filter class."""
 
     filterset_class = dcim_filters.SiteFilterSet

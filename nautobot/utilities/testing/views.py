@@ -14,9 +14,7 @@ from tree_queries.models import TreeNode
 from nautobot.extras import choices
 from nautobot.extras import models as extras_models
 from nautobot.users import models as users_models
-from nautobot.utilities import utils
-from nautobot.utilities.testing import mixins
-from nautobot.utilities.testing import utils as testing_utils
+from nautobot.utilities import testing, utils
 
 
 __all__ = (
@@ -29,7 +27,7 @@ __all__ = (
 
 @tag("unit")
 @override_settings(PAGINATE_COUNT=65000)
-class TestCase(_TestCase, mixins.NautobotTestCaseMixin):
+class TestCase(_TestCase, testing.NautobotTestCaseMixin):
     """Base class for all Nautobot-specific unit tests."""
 
     def setUp(self):
@@ -137,7 +135,7 @@ class ViewTestCases:
 
             # The "Change Log" tab should appear in the response since we have all exempt permissions
             if issubclass(self.model, extras_models.ChangeLoggedModel):
-                response_body = testing_utils.extract_page_body(response.content.decode(response.charset))
+                response_body = testing.extract_page_body(response.content.decode(response.charset))
                 self.assertIn("Change Log", response_body, msg=response_body)
 
         @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
@@ -145,7 +143,7 @@ class ViewTestCases:
             instance = self._get_queryset().first()
 
             # Try GET without permission
-            with testing_utils.disable_warnings("django.request"):
+            with testing.disable_warnings("django.request"):
                 response = self.client.get(instance.get_absolute_url())
                 self.assertHttpStatus(response, [403, 404])
                 response_body = response.content.decode(response.charset)
@@ -165,7 +163,7 @@ class ViewTestCases:
             response = self.client.get(instance.get_absolute_url())
             self.assertHttpStatus(response, 200)
 
-            response_body = testing_utils.extract_page_body(response.content.decode(response.charset))
+            response_body = testing.extract_page_body(response.content.decode(response.charset))
 
             # The object's display name or string representation should appear in the response
             self.assertIn(getattr(instance, "display", str(instance)), response_body, msg=response_body)
@@ -231,7 +229,7 @@ class ViewTestCases:
             obj_perm.object_types.add(ContentType.objects.get_for_model(self.model))
 
             response = self.client.get(instance.get_absolute_url())
-            response_body = testing_utils.extract_page_body(response.content.decode(response.charset))
+            response_body = testing.extract_page_body(response.content.decode(response.charset))
             advanced_tab_href = f"{instance.get_absolute_url()}#advanced"
 
             self.assertIn(advanced_tab_href, response_body)
@@ -275,7 +273,7 @@ class ViewTestCases:
         def test_create_object_without_permission(self):
 
             # Try GET without permission
-            with testing_utils.disable_warnings("django.request"):
+            with testing.disable_warnings("django.request"):
                 self.assertHttpStatus(self.client.get(self._get_url("add")), 403)
 
             # Try POST without permission
@@ -284,7 +282,7 @@ class ViewTestCases:
                 "data": utils.post_data(self.form_data),
             }
             response = self.client.post(**request)
-            with testing_utils.disable_warnings("django.request"):
+            with testing.disable_warnings("django.request"):
                 self.assertHttpStatus(response, 403)
 
         @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
@@ -412,7 +410,7 @@ class ViewTestCases:
             instance = self._get_queryset().first()
 
             # Try GET without permission
-            with testing_utils.disable_warnings("django.request"):
+            with testing.disable_warnings("django.request"):
                 self.assertHttpStatus(self.client.get(self._get_url("edit", instance)), [403, 404])
 
             # Try POST without permission
@@ -420,7 +418,7 @@ class ViewTestCases:
                 "path": self._get_url("edit", instance),
                 "data": utils.post_data(self.form_data),
             }
-            with testing_utils.disable_warnings("django.request"):
+            with testing.disable_warnings("django.request"):
                 self.assertHttpStatus(self.client.post(**request), [403, 404])
 
         @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
@@ -506,7 +504,7 @@ class ViewTestCases:
             instance = self.get_deletable_object()
 
             # Try GET without permission
-            with testing_utils.disable_warnings("django.request"):
+            with testing.disable_warnings("django.request"):
                 self.assertHttpStatus(self.client.get(self._get_url("delete", instance)), [403, 404])
 
             # Try POST without permission
@@ -514,7 +512,7 @@ class ViewTestCases:
                 "path": self._get_url("delete", instance),
                 "data": utils.post_data({"confirm": True}),
             }
-            with testing_utils.disable_warnings("django.request"):
+            with testing.disable_warnings("django.request"):
                 self.assertHttpStatus(self.client.post(**request), [403, 404])
 
         @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
@@ -610,7 +608,7 @@ class ViewTestCases:
             instance1, instance2 = self._get_queryset().all()[:2]
             response = self.client.get(f"{self._get_url('list')}?id={instance1.pk}")
             self.assertHttpStatus(response, 200)
-            content = testing_utils.extract_page_body(response.content.decode(response.charset))
+            content = testing.extract_page_body(response.content.decode(response.charset))
             # TODO: it'd make test failures more readable if we strip the page headers/footers from the content
             if hasattr(self.model, "name"):
                 # TODO: https://github.com/nautobot/nautobot/issues/2580
@@ -629,7 +627,7 @@ class ViewTestCases:
             """Verify that with STRICT_FILTERING, an unknown filter results in an error message and no matches."""
             response = self.client.get(f"{self._get_url('list')}?ice_cream_flavor=chocolate")
             self.assertHttpStatus(response, 200)
-            content = testing_utils.extract_page_body(response.content.decode(response.charset))
+            content = testing.extract_page_body(response.content.decode(response.charset))
             # TODO: it'd make test failures more readable if we strip the page headers/footers from the content
             self.assertIn("Unknown filter field", content, msg=content)
             # There should be no table rows displayed except for the empty results row
@@ -656,7 +654,7 @@ class ViewTestCases:
                 ],
             )
             self.assertHttpStatus(response, 200)
-            content = testing_utils.extract_page_body(response.content.decode(response.charset))
+            content = testing.extract_page_body(response.content.decode(response.charset))
             # TODO: it'd make test failures more readable if we strip the page headers/footers from the content
             self.assertNotIn("Unknown filter field", content, msg=content)
             self.assertNotIn(f"No {self.model._meta.verbose_name_plural} found", content, msg=content)
@@ -676,7 +674,7 @@ class ViewTestCases:
         def test_list_objects_without_permission(self):
 
             # Try GET without permission
-            with testing_utils.disable_warnings("django.request"):
+            with testing.disable_warnings("django.request"):
                 response = self.client.get(self._get_url("list"))
                 self.assertHttpStatus(response, 403)
                 response_body = response.content.decode(response.charset)
@@ -717,7 +715,7 @@ class ViewTestCases:
             # Try GET with object-level permission
             response = self.client.get(self._get_url("list"))
             self.assertHttpStatus(response, 200)
-            content = testing_utils.extract_page_body(response.content.decode(response.charset))
+            content = testing.extract_page_body(response.content.decode(response.charset))
             # TODO: it'd make test failures more readable if we strip the page headers/footers from the content
             if hasattr(self.model, "name"):
                 self.assertIn(instance1.name, content, msg=content)
@@ -745,7 +743,7 @@ class ViewTestCases:
             }
 
             # Try POST without permission
-            with testing_utils.disable_warnings("django.request"):
+            with testing.disable_warnings("django.request"):
                 self.assertHttpStatus(self.client.post(**request), 403)
 
         @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
@@ -835,12 +833,12 @@ class ViewTestCases:
             }
 
             # Test GET without permission
-            with testing_utils.disable_warnings("django.request"):
+            with testing.disable_warnings("django.request"):
                 self.assertHttpStatus(self.client.get(self._get_url("import")), 403)
 
             # Try POST without permission
             response = self.client.post(self._get_url("import"), data)
-            with testing_utils.disable_warnings("django.request"):
+            with testing.disable_warnings("django.request"):
                 self.assertHttpStatus(response, 403)
 
         @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
@@ -932,7 +930,7 @@ class ViewTestCases:
             }
 
             # Try POST without permission
-            with testing_utils.disable_warnings("django.request"):
+            with testing.disable_warnings("django.request"):
                 self.assertHttpStatus(self.client.post(self._get_url("bulk_edit"), data), 403)
 
         @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
@@ -979,7 +977,7 @@ class ViewTestCases:
             # Expect a 200 status cause we are only rendering the bulk edit table.
             # after pressing Edit Selected button.
             self.assertHttpStatus(response, 200)
-            response_body = testing_utils.extract_page_body(response.content.decode(response.charset))
+            response_body = testing.extract_page_body(response.content.decode(response.charset))
             # Check if all the pks are passed into the BulkEditForm/BulkUpdateForm
             for pk in pk_list:
                 self.assertIn(f'<input type="hidden" name="pk" value="{pk}"', response_body)
@@ -1049,7 +1047,7 @@ class ViewTestCases:
             }
 
             # Try POST without permission
-            with testing_utils.disable_warnings("django.request"):
+            with testing.disable_warnings("django.request"):
                 self.assertHttpStatus(self.client.post(self._get_url("bulk_delete"), data), 403)
 
         @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
@@ -1094,7 +1092,7 @@ class ViewTestCases:
             # Try POST with the selected data first. Emulating selecting all -> pressing Delete Selected button.
             response = self.client.post(self._get_url("bulk_delete"), selected_data)
             self.assertHttpStatus(response, 200)
-            response_body = testing_utils.extract_page_body(response.content.decode(response.charset))
+            response_body = testing.extract_page_body(response.content.decode(response.charset))
             # Check if all the pks are passed into the BulkDeleteForm/BulkDestroyForm
             for pk in pk_list:
                 self.assertIn(f'<input type="hidden" name="pk" value="{pk}"', response_body)
@@ -1151,11 +1149,11 @@ class ViewTestCases:
             data.update(self.rename_data)
 
             # Test GET without permission
-            with testing_utils.disable_warnings("django.request"):
+            with testing.disable_warnings("django.request"):
                 self.assertHttpStatus(self.client.get(self._get_url("bulk_rename")), 403)
 
             # Try POST without permission
-            with testing_utils.disable_warnings("django.request"):
+            with testing.disable_warnings("django.request"):
                 self.assertHttpStatus(self.client.post(self._get_url("bulk_rename"), data), 403)
 
         @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])

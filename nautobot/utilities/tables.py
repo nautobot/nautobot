@@ -7,7 +7,7 @@ from django.urls import reverse
 from django.utils.html import escape, format_html
 from django.utils.safestring import mark_safe
 from django.utils.text import Truncator
-import django_tables2 as tables
+import django_tables2
 from django_tables2.data import TableQuerysetData
 from django_tables2.utils import Accessor
 
@@ -16,7 +16,7 @@ from nautobot.utilities import utils
 from nautobot.utilities.templatetags import helpers
 
 
-class BaseTable(tables.Table):
+class BaseTable(django_tables2.Table):
     """
     Default table for object lists
 
@@ -74,7 +74,7 @@ class BaseTable(tables.Table):
 
         # Apply custom column ordering for user
         if user is not None and not isinstance(user, AnonymousUser):
-            columns = user.get_config(f"tables.{self.__class__.__name__}.columns")
+            columns = user.get_config(f"django_tables2.{self.__class__.__name__}.columns")
             if columns:
                 pk = self.base_columns.pop("pk", None)
                 actions = self.base_columns.pop("actions", None)
@@ -142,7 +142,7 @@ class BaseTable(tables.Table):
 #
 
 
-class ToggleColumn(tables.CheckBoxColumn):
+class ToggleColumn(django_tables2.CheckBoxColumn):
     """
     Extend CheckBoxColumn to add a "toggle all" checkbox in the column header.
     """
@@ -159,7 +159,7 @@ class ToggleColumn(tables.CheckBoxColumn):
         return mark_safe('<input type="checkbox" class="toggle" title="Toggle all" />')
 
 
-class BooleanColumn(tables.Column):
+class BooleanColumn(django_tables2.Column):
     """
     Custom implementation of BooleanColumn to render a nicely-formatted checkmark or X icon instead of a Unicode
     character.
@@ -169,7 +169,7 @@ class BooleanColumn(tables.Column):
         return helpers.render_boolean(value)
 
 
-class ButtonsColumn(tables.TemplateColumn):
+class ButtonsColumn(django_tables2.TemplateColumn):
     """
     Render edit, delete, and changelog buttons for an object.
 
@@ -242,7 +242,7 @@ class ButtonsColumn(tables.TemplateColumn):
         return ""
 
 
-class ChoiceFieldColumn(tables.Column):
+class ChoiceFieldColumn(django_tables2.Column):
     """
     Render a ChoiceField value inside a <span> indicating a particular CSS class. This is useful for displaying colored
     choices. The CSS class is derived by calling .get_FOO_class() on the row record.
@@ -257,7 +257,7 @@ class ChoiceFieldColumn(tables.Column):
         return self.default
 
 
-class ColorColumn(tables.Column):
+class ColorColumn(django_tables2.Column):
     """
     Display a color (#RRGGBB).
     """
@@ -266,7 +266,7 @@ class ColorColumn(tables.Column):
         return mark_safe(f'<span class="label color-block" style="background-color: #{value}">&nbsp;</span>')
 
 
-class ColoredLabelColumn(tables.TemplateColumn):
+class ColoredLabelColumn(django_tables2.TemplateColumn):
     """
     Render a colored label (e.g. for DeviceRoles).
     """
@@ -280,7 +280,7 @@ class ColoredLabelColumn(tables.TemplateColumn):
         super().__init__(template_code=self.template_code, *args, **kwargs)
 
 
-class LinkedCountColumn(tables.Column):
+class LinkedCountColumn(django_tables2.Column):
     """
     Render a count of related objects linked to a filtered URL.
 
@@ -304,7 +304,7 @@ class LinkedCountColumn(tables.Column):
         return value
 
 
-class TagColumn(tables.TemplateColumn):
+class TagColumn(django_tables2.TemplateColumn):
     """
     Display a list of tags assigned to the object.
     """
@@ -321,7 +321,7 @@ class TagColumn(tables.TemplateColumn):
         super().__init__(template_code=self.template_code, extra_context={"url_name": url_name})
 
 
-class ContentTypesColumn(tables.ManyToManyColumn):
+class ContentTypesColumn(django_tables2.ManyToManyColumn):
     """
     Display a list of `content_types` m2m assigned to an object.
 
@@ -354,7 +354,7 @@ class ContentTypesColumn(tables.ManyToManyColumn):
         return value
 
 
-class ComputedFieldColumn(tables.Column):
+class ComputedFieldColumn(django_tables2.Column):
     """
     Display computed fields in the appropriate format.
     """
@@ -369,7 +369,7 @@ class ComputedFieldColumn(tables.Column):
         return self.computedfield.render({"obj": record})
 
 
-class CustomFieldColumn(tables.Column):
+class CustomFieldColumn(django_tables2.Column):
     """
     Display custom fields in the appropriate format.
     """
@@ -402,7 +402,7 @@ class CustomFieldColumn(tables.Column):
         return mark_safe(template)
 
 
-class RelationshipColumn(tables.Column):
+class RelationshipColumn(django_tables2.Column):
     """
     Display relationship association instances in the appropriate format.
     """

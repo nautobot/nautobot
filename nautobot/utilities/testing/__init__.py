@@ -17,11 +17,12 @@ from nautobot.utilities.testing.api import APITestCase, APIViewTestCases
 from nautobot.utilities.testing.filters import FilterTestCases
 from nautobot.utilities.testing.mixins import NautobotTestCaseMixin
 from nautobot.utilities.testing.utils import (
-    post_data,
     create_test_user,
+    disable_warnings,
     extract_form_failures,
     extract_page_body,
-    disable_warnings,
+    get_deletable_objects,
+    post_data,
 )
 from nautobot.utilities.testing.views import (
     TestCase,
@@ -34,17 +35,19 @@ from nautobot.utilities.testing.views import (
 __all__ = (
     "APITestCase",
     "APIViewTestCases",
-    "FilterTestCases",
-    "ModelTestCase",
-    "ModelViewTestCase",
-    "TestCase",
-    "ViewTestCases",
     "create_test_user",
     "disable_warnings",
     "extract_form_failures",
     "extract_page_body",
+    "FilterTestCases",
+    "get_deletable_objects",
+    "ModelTestCase",
+    "ModelViewTestCase",
+    "NautobotTestCaseMixin",
     "post_data",
     "run_job_for_testing",
+    "TestCase",
+    "ViewTestCases",
 )
 
 # Use the proper swappable User model

@@ -7,7 +7,7 @@ from nautobot.utilities import config
 
 
 class GetSettingsOrConfigTestCase(TestCase):
-    """Test the config.get_settings_or_config() helper function."""
+    """Test the get_settings_or_config() helper function."""
 
     @override_settings(BANNER_TOP="Hello, world!")
     def test_settings_if_no_config(self):
