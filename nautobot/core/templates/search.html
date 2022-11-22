@@ -9,7 +9,7 @@
         {% include 'search_form.html' with search_form=form %}
         {% if results %}
             <div class="row">
-                <div class="col-md-10">
+                <div class="col-lg-10">
                     {% for obj_type in results %}
                         <h3 id="{{ obj_type.name|lower }}">{{ obj_type.name|bettertitle }}</h3>
                         {% include 'panel_table.html' with table=obj_type.table %}
@@ -24,7 +24,7 @@
                     <div class="clearfix"></div>
                     {% endfor %}
                 </div>
-                <div class="col-md-2" style="padding-top: 20px;">
+                <div class="col-lg-2" style="padding-top: 20px;">
                     <div class="panel panel-default">
                         <div class="panel-heading">
                             <strong>Search Results</strong>

@@ -5,7 +5,7 @@
 
 {% block header %}
     <div class="row noprint">
-        <div class="col-sm-8 col-md-9">
+        <div class="col-sm-8 col-lg-9">
             <ol class="breadcrumb">
                 <li><a href="{% url 'extras:objectchange_list' %}">Change Log</a></li>
                 {% if object.related_object.get_absolute_url %}
@@ -18,7 +18,7 @@
                 <li>{{ object }}</li>
             </ol>
         </div>
-        <div class="col-sm-4 col-md-3">
+        <div class="col-sm-4 col-lg-3">
             <form action="{% url 'extras:objectchange_list' %}" method="get">
                 <div class="input-group">
                     <input type="text" name="q" class="form-control" placeholder="Search change logs" />
@@ -35,7 +35,7 @@
 
 {% block content %}
     <div class="row">
-        <div class="col-md-5">
+        <div class="col-lg-5">
             <div class="panel panel-default">
                 <div class="panel-heading">
                     <strong>Change</strong>
@@ -125,7 +125,7 @@
                 </div>
             </div>
         </div>
-        <div class="col-md-7">
+        <div class="col-lg-7">
             <div class="panel panel-default">
                 <div class="panel-heading">
                     <strong>Object Data</strong>
@@ -137,7 +137,7 @@
         </div>
     </div>
     <div class="row">
-        <div class="col-md-12">
+        <div class="col-lg-12">
             {% include 'panel_table.html' with table=related_changes_table heading='Related Changes' panel_class='default' %}
             {% if related_changes_count > related_changes_table.rows|length %}
                 <div class="pull-right">

@@ -30,7 +30,7 @@
 
 {% if not is_popup %}
     {% block breadcrumbs %}
-        <div class="{% if cl.search_fields %}col-sm-8 col-md-9{% else %}col-sm-12 col-md-12{% endif %}">
+        <div class="{% if cl.search_fields %}col-sm-8 col-lg-9{% else %}col-sm-12 col-lg-12{% endif %}">
             <ol class="breadcrumb">
                 <li><a href="{% url 'admin:index' %}">{% trans 'Admin Home' %}</a></li>
                 <!--<li><a href="{% url 'admin:app_list' app_label=cl.opts.app_label %}">{% render_with_template_if_exist app_label|lower|add:"/admin_app_name.html" app_label %}</a></li>-->
@@ -38,7 +38,7 @@
                 <li>{{ cl.opts.verbose_name_plural|capfirst }}</li>
             </ol>
         </div>
-        <div class="col-sm-4 col-md-3">
+        <div class="col-sm-4 col-lg-3">
             {% block search %}{% search_form cl %}{% endblock %}
         </div>
     {% endblock %}

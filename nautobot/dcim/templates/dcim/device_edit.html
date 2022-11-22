@@ -29,16 +29,16 @@
             {% render_field form.rack %}
             {% if obj.device_type.is_child_device and obj.parent_bay %}
                 <div class="form-group">
-                    <label class="col-md-3 control-label">Parent device</label>
-                    <div class="col-md-9">
+                    <label class="col-lg-3 control-label">Parent device</label>
+                    <div class="col-lg-9">
                         <p class="form-control-static">
                             {{ obj.parent_bay.device|hyperlinked_object }}
                         </p>
                     </div>
                 </div>
                 <div class="form-group">
-                    <label class="col-md-3 control-label">Parent bay</label>
-                    <div class="col-md-9">
+                    <label class="col-lg-3 control-label">Parent bay</label>
+                    <div class="col-lg-9">
                         <p class="form-control-static">
                             {{ obj.parent_bay.name }}
                             {% if perms.dcim.change_devicebay %}

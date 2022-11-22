@@ -6,7 +6,7 @@
 
 {% block content %}
     <div class="row noprint">
-        <div class="col-md-12">
+        <div class="col-lg-12">
             <ol class="breadcrumb">
                 <li><a href="{% url 'extras:job_list' %}">Jobs</a></li>
                 <li>{{ job_model.grouping | bettertitle }}</li>
@@ -28,7 +28,7 @@
     <div class="tab-content">
         <div role="tabpanel" class="tab-pane active" id="run">
             <div class="row">
-                <div class="col-md-6 col-md-offset-3">
+                <div class="col-lg-6 col-lg-offset-3">
                     {% if not perms.extras.run_job %}
                         <div class="alert alert-warning">
                             <i class="mdi mdi-alert"></i>

@@ -13,9 +13,9 @@ $('#cabletrace_modal').on('show.bs.modal', function (event) {
             $.each(json, function(i, segment) {
                 modal_body.append(
                     '<div class="row">' +
-                      '<div class="col-md-4 text-center">' + segment[0].device.name + '<br />' + segment[0].name + '</div>' +
-                      '<div class="col-md-4 text-center">Cable #' + segment[1].id + '</div>' +
-                      '<div class="col-md-4 text-center">' + segment[2].device.name + '<br />' + segment[2].name + '</div>' +
+                      '<div class="col-lg-4 text-center">' + segment[0].device.name + '<br />' + segment[0].name + '</div>' +
+                      '<div class="col-lg-4 text-center">Cable #' + segment[1].id + '</div>' +
+                      '<div class="col-lg-4 text-center">' + segment[2].device.name + '<br />' + segment[2].name + '</div>' +
                     '</div><hr />'
                 );
             })

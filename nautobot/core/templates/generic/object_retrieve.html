@@ -10,7 +10,7 @@
 {% block header %}
     <div class="row noprint">
         {% with list_url=object|validated_viewname:"list" %}
-        <div class="col-sm-8 col-md-9">
+        <div class="col-sm-8 col-lg-9">
             <ol class="breadcrumb">
             {% block breadcrumbs %}
                 {% if list_url %}
@@ -24,7 +24,7 @@
             </ol>
         </div>
         {% if list_url %}
-        <div class="col-sm-4 col-md-3">
+        <div class="col-sm-4 col-lg-3">
             <form action="{% url list_url %}" method="get">
                 <div class="input-group">
                     <input type="text" name="q" class="form-control" placeholder="Search {{ verbose_name_plural }}" />
@@ -108,20 +108,20 @@
     <div class="tab-content">
         <div id="main" role="tabpanel" class="tab-pane {% if active_tab == "main" or request.GET.tab == "main" %}active{% else %}fade{% endif %}">
             <div class="row">
-                <div class="col-md-6">
+                <div class="col-lg-6">
                     {% block content_left_page %}{% endblock content_left_page %}
                     {% include 'inc/custom_fields/panel.html' with custom_fields=object.get_custom_field_groupings_basic computed_fields_advanced_ui=False %}
                     {% include 'inc/relationships_panel.html' %}
                     {% include 'extras/inc/tags_panel.html' %}
                     {% plugin_left_page object %}
                 </div>
-                <div class="col-md-6">
+                <div class="col-lg-6">
                     {% block content_right_page %}{% endblock content_right_page %}
                     {% plugin_right_page object %}
                 </div>
             </div>
             <div class="row">
-                <div class="col-md-12">
+                <div class="col-lg-12">
                     {% block content_full_width_page %}{% endblock content_full_width_page %}
                     {% plugin_full_width_page object %}
                 </div>
@@ -129,15 +129,15 @@
         </div>
         <div id="advanced" role="tabpanel" class="tab-pane {% if request.GET.tab == 'advanced' %}active{% else %}fade{% endif %}">
             <div class="row">
-                <div class="col-md-6">
+                <div class="col-lg-6">
                     {% include 'inc/object_details_advanced_panel.html' %}
                 </div>
-                <div class="col-md-6">
+                <div class="col-lg-6">
                     {% block advanced_content_right_page %}{% endblock advanced_content_right_page %}
                 </div>
             </div>
             <div class="row">
-                <div class="col-md-12">
+                <div class="col-lg-12">
                     {% block advanced_content_full_width_page %}{% endblock advanced_content_full_width_page %}
                 </div>
             </div>
@@ -155,7 +155,7 @@
 
     clipboard.on('error', function (e) {});
 
-    
+
     // Set initial history state
     if (location.pathname == "{{ object.get_absolute_url }}"){
         var tab_id = "main";

@@ -8,20 +8,20 @@
         <div class="panel-heading"><strong>Termination</strong></div>
         <div class="panel-body">
             <div class="form-group">
-                <label class="col-md-3 control-label">Provider</label>
-                <div class="col-md-9">
+                <label class="col-lg-3 control-label">Provider</label>
+                <div class="col-lg-9">
                     <p class="form-control-static">{{ obj.circuit.provider }}</p>
                 </div>
             </div>
             <div class="form-group">
-                <label class="col-md-3 control-label">Circuit</label>
-                <div class="col-md-9">
+                <label class="col-lg-3 control-label">Circuit</label>
+                <div class="col-lg-9">
                     <p class="form-control-static">{{ obj.circuit.cid }}</p>
                 </div>
             </div>
             <div class="form-group">
-                <label class="col-md-3 control-label">Termination</label>
-                <div class="col-md-9">
+                <label class="col-lg-3 control-label">Termination</label>
+                <div class="col-lg-9">
                     <p class="form-control-static">{{ form.term_side.value }}</p>
                 </div>
             </div>
@@ -47,8 +47,8 @@
         <div class="panel-heading"><strong>Termination Details</strong></div>
         <div class="panel-body">
             <div class="form-group">
-                <label class="col-md-3 control-label" for="id_port_speed">{{ form.port_speed.label }}</label>
-                <div class="col-md-9">
+                <label class="col-lg-3 control-label" for="id_port_speed">{{ form.port_speed.label }}</label>
+                <div class="col-lg-9">
                     <div class="input-group">
                         {{ form.port_speed }}
                         {% include 'circuits/inc/speed_widget.html' with target_field='port_speed' %}
@@ -57,8 +57,8 @@
                 </div>
             </div>
             <div class="form-group">
-                <label class="col-md-3 control-label" for="id_upstream_speed">{{ form.upstream_speed.label }}</label>
-                <div class="col-md-9">
+                <label class="col-lg-3 control-label" for="id_upstream_speed">{{ form.upstream_speed.label }}</label>
+                <div class="col-lg-9">
                     <div class="input-group">
                         {{ form.upstream_speed }}
                         {% include 'circuits/inc/speed_widget.html' with target_field='upstream_speed' %}

@@ -3,7 +3,7 @@
 
 {% block header %}
     <div class="row noprint">
-        <div class="col-md-12">
+        <div class="col-lg-12">
             <ol class="breadcrumb">
                 {% block breadcrumbs %}
                     <li><a href="{% url 'plugins:plugins_list' %}">Installed Plugins</a></li>
@@ -33,7 +33,7 @@
 
 {% block content %}
     <div class="row">
-        <div class="col-md-6">
+        <div class="col-lg-6">
             {% block content_left_page %}
                 <div class="panel panel-default">
                     <div class="panel-heading">
@@ -80,7 +80,7 @@
                 </div>
             {% endblock content_left_page %}
         </div>
-        <div class="col-md-6">
+        <div class="col-lg-6">
             {% block content_right_page %}
                 <div class="panel panel-default">
                     <div class="panel-heading">
@@ -296,7 +296,7 @@
         </div>
     </div>
     <div class="row">
-        <div class="col-md-12">
+        <div class="col-lg-12">
             {% block content_full_width_page %}
             {% endblock content_full_width_page %}
         </div>

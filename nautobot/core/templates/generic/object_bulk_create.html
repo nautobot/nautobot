@@ -7,14 +7,14 @@
         .tab-content {
             display: flex;
         }
-        
+
         .tab-content > .tab-pane {
             display: block; /* undo "display: none;" */
             visibility: hidden;
             margin-right: -100%;
             width: 100%;
         }
-        
+
         .tab-content > .active {
             visibility: visible;
         }
@@ -24,7 +24,7 @@
 {% block content %}
 {% block tabs %}{% endblock %}
     <div class="row">
-        <div class="col-md-8 col-md-offset-2">
+        <div class="col-lg-8 col-lg-offset-2">
             <h1>{% block title %}{{ obj_type|bettertitle }} Bulk Import{% endblock %}</h1>
             {% if form.non_field_errors %}
                 <div class="panel panel-danger">
@@ -44,7 +44,7 @@
                         {% csrf_token %}
                         {% render_field form.csv_data %}
                         <div class="form-group">
-                            <div class="col-md-12 text-right">
+                            <div class="col-lg-12 text-right">
                                 <button type="submit" class="btn btn-primary">Submit</button>
                                 {% if return_url %}
                                     <a href="{{ return_url }}" class="btn btn-default">Cancel</a>
@@ -59,7 +59,7 @@
                         <input type="hidden" name="csv_data" value="{{ form.csv_data.initial }}">
                         {% render_field form.csv_file %}
                         <div class="form-group">
-                            <div class="col-md-12 text-right">
+                            <div class="col-lg-12 text-right">
                                 <button type="submit" class="btn btn-primary">Submit</button>
                                 {% if return_url %}
                                     <a href="{{ return_url }}" class="btn btn-default">Cancel</a>

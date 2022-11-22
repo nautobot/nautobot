@@ -11,8 +11,8 @@
             {% render_field form.status %}
             {% render_field form.install_date %}
             <div class="form-group">
-                <label class="col-md-3 control-label" for="id_commit_rate">{{ form.commit_rate.label }}</label>
-                <div class="col-md-9">
+                <label class="col-lg-3 control-label" for="id_commit_rate">{{ form.commit_rate.label }}</label>
+                <div class="col-lg-9">
                     <div class="input-group">
                         {{ form.commit_rate }}
                         {% include 'circuits/inc/speed_widget.html' with target_field='commit_rate' %}

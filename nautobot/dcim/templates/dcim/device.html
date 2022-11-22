@@ -7,11 +7,11 @@
 <div class="tab-content">
   <div id="main" role="tabpanel" class="tab-pane {% if active_tab == 'device' and not request.GET.tab or request.GET.tab == 'main' %}active{% else %}fade{% endif %}">
     <div class="row">
-        <div class="col-md-12">
+        <div class="col-lg-12">
             <div class="tab-content">
                 <div role="tabpanel" class="tab-pane active" id="details">
                     <div class="row">
-                        <div class="col-md-6">
+                        <div class="col-lg-6">
                             <div class="panel panel-default">
                                 <div class="panel-heading">
                                     <strong>Device</strong>
@@ -159,7 +159,7 @@
                                             {% else %}
                                                 <span class="text-muted">&mdash;</span>
                                             {% endif %}
-                                            
+
                                         </td>
                                     </tr>
                                     <tr>
@@ -228,7 +228,7 @@
                             </div>
                             {% plugin_left_page object %}
                         </div>
-                        <div class="col-md-6">
+                        <div class="col-lg-6">
                             {% if object.powerports.exists and object.poweroutlets.exists %}
                                 <div class="panel panel-default">
                                     <div class="panel-heading">
@@ -313,7 +313,7 @@
                         </div>
                     </div>
                     <div class="row">
-                        <div class="col-md-12">
+                        <div class="col-lg-12">
                             {% plugin_full_width_page object %}
                         </div>
                     </div>
@@ -324,15 +324,15 @@
   </div>
   <div id="advanced" role="tabpanel" class="tab-pane {% if active_tab == 'device' and request.GET.tab == 'advanced' %}active{% else %}fade{% endif %}">
     <div class="row">
-        <div class="col-md-6">
+        <div class="col-lg-6">
             {% include 'inc/object_details_advanced_panel.html' %}
         </div>
-        <div class="col-md-6">
+        <div class="col-lg-6">
             {% block advanced_content_right_page %}{% endblock advanced_content_right_page %}
         </div>
     </div>
     <div class="row">
-        <div class="col-md-12">
+        <div class="col-lg-12">
             {% block advanced_content_full_width_page %}{% endblock advanced_content_full_width_page %}
         </div>
     </div>

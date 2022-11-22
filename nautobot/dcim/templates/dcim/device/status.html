@@ -6,7 +6,7 @@
 {% block content %}
     {% include 'inc/ajax_loader.html' %}
     <div class="row">
-        <div class="col-md-6">
+        <div class="col-lg-6">
             <div class="panel panel-default">
                 <div class="panel-heading"><strong>Device Facts</strong></div>
                 <table class="table panel-body">
@@ -41,7 +41,7 @@
                 </table>
             </div>
         </div>
-        <div class="col-md-6">
+        <div class="col-lg-6">
             <div class="panel panel-default">
                 <div class="panel-heading"><strong>Environment</strong></div>
                 <table class="table panel-body">
@@ -89,7 +89,7 @@ $(document).ready(function() {
                 var uptime_minutes = Math.floor(uptime % 3600 / 60);
                 $('#uptime').html(uptime_days + "d " + uptime_hours + "h " + uptime_minutes + "m");
             }
-            
+
             if (!json['get_environment']['error']) {
                 $.each(json['get_environment']['cpu'], function(name, obj) {
                     var row="<tr><td>" + name + "</td><td>" + obj['%usage'] + "%</td></tr>";

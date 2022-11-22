@@ -16,7 +16,7 @@
             <li role="presentation"{% if active_tab == 'config-context' %} class="active"{% endif %}>
                 <a href="{% url 'virtualization:virtualmachine_configcontext' pk=object.pk %}">Config Context</a>
             </li>
-        {% endif %} 
+        {% endif %}
 {% endblock extra_nav_tabs %}
 
 
@@ -200,7 +200,7 @@
                             <button type="button" class="btn btn-default btn-xs" data-toggle="modal" data-target="#VirtualMachineVMInterfaceTable_config" title="Configure table"><i class="mdi mdi-cog"></i> Configure</button>
                         {% endif %}
                     </div>
-                    <div class="pull-right col-md-2 noprint">
+                    <div class="pull-right col-lg-2 noprint">
                         <input class="form-control interface-filter" type="text" placeholder="Filter" title="Filter text (regular expressions supported)" style="height: 23px" />
                     </div>
                 </div>

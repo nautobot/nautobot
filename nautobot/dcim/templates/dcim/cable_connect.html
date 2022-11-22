@@ -11,7 +11,7 @@
     {% endfor %}
     {% if form.non_field_errors %}
         <div class="row">
-            <div class="col-md-6 col-md-offset-3">
+            <div class="col-lg-6 col-lg-offset-3">
                 <div class="panel panel-danger">
                     <div class="panel-heading"><strong>Errors</strong></div>
                     <div class="panel-body">
@@ -24,7 +24,7 @@
     {% with termination_a=form.instance.termination_a %}
         <h3>{% block title %}Connect {{ termination_a.device }} {{ termination_a }} to {{ termination_b_type|bettertitle }}{% endblock %}</h3>
         <div class="row">
-            <div class="col-md-5">
+            <div class="col-lg-5">
                 <div class="panel panel-default">
                     <div class="panel-heading text-center">
                         <strong>A Side</strong>
@@ -33,64 +33,64 @@
                         {% if termination_a.device %}
                             {# Device component #}
                             <div class="form-group">
-                                <label class="col-md-3 control-label required">Region</label>
-                                <div class="col-md-9">
+                                <label class="col-lg-3 control-label required">Region</label>
+                                <div class="col-lg-9">
                                     <p class="form-control-static">{{ termination_a.device.site.region }}</p>
                                 </div>
                             </div>
                             <div class="form-group">
-                                <label class="col-md-3 control-label required">Site</label>
-                                <div class="col-md-9">
+                                <label class="col-lg-3 control-label required">Site</label>
+                                <div class="col-lg-9">
                                     <p class="form-control-static">{{ termination_a.device.site }}</p>
                                 </div>
                             </div>
                             <div class="form-group">
-                                <label class="col-md-3 control-label required">Rack</label>
-                                <div class="col-md-9">
+                                <label class="col-lg-3 control-label required">Rack</label>
+                                <div class="col-lg-9">
                                     <p class="form-control-static">{{ termination_a.device.rack|default:"None" }}</p>
                                 </div>
                             </div>
                             <div class="form-group">
-                                <label class="col-md-3 control-label required">Device</label>
-                                <div class="col-md-9">
+                                <label class="col-lg-3 control-label required">Device</label>
+                                <div class="col-lg-9">
                                     <p class="form-control-static">{{ termination_a.device }}</p>
                                 </div>
                             </div>
                             <div class="form-group">
-                                <label class="col-md-3 control-label required">Type</label>
-                                <div class="col-md-9">
+                                <label class="col-lg-3 control-label required">Type</label>
+                                <div class="col-lg-9">
                                     <p class="form-control-static">{{ termination_a|meta:"verbose_name"|capfirst }}</p>
                                 </div>
                             </div>
                             <div class="form-group">
-                                <label class="col-md-3 control-label required">Name</label>
-                                <div class="col-md-9">
+                                <label class="col-lg-3 control-label required">Name</label>
+                                <div class="col-lg-9">
                                     <p class="form-control-static">{{ termination_a }}</p>
                                 </div>
                             </div>
                         {% else %}
                             {# Circuit termination #}
                             <div class="form-group">
-                                <label class="col-md-3 control-label required">Site</label>
-                                <div class="col-md-9">
+                                <label class="col-lg-3 control-label required">Site</label>
+                                <div class="col-lg-9">
                                     <p class="form-control-static">{{ termination_a.site }}</p>
                                 </div>
                             </div>
                             <div class="form-group">
-                                <label class="col-md-3 control-label required">Provider</label>
-                                <div class="col-md-9">
+                                <label class="col-lg-3 control-label required">Provider</label>
+                                <div class="col-lg-9">
                                     <p class="form-control-static">{{ termination_a.circuit.provider }}</p>
                                 </div>
                             </div>
                             <div class="form-group">
-                                <label class="col-md-3 control-label required">Circuit</label>
-                                <div class="col-md-9">
+                                <label class="col-lg-3 control-label required">Circuit</label>
+                                <div class="col-lg-9">
                                     <p class="form-control-static">{{ termination_a.circuit.cid }}</p>
                                 </div>
                             </div>
                             <div class="form-group">
-                                <label class="col-md-3 control-label required">Side</label>
-                                <div class="col-md-9">
+                                <label class="col-lg-3 control-label required">Side</label>
+                                <div class="col-lg-9">
                                     <p class="form-control-static">{{ termination_a.term_side }}</p>
                                 </div>
                             </div>
@@ -98,10 +98,10 @@
                     </div>
                 </div>
             </div>
-            <div class="col-md-2 text-center" style="padding-top: 90px;">
+            <div class="col-lg-2 text-center" style="padding-top: 90px;">
                 <i class="mdi mdi-swap-horizontal-bold mdi-48px"></i>
             </div>
-            <div class="col-md-5">
+            <div class="col-lg-5">
                 <div class="panel panel-default">
                     <div class="panel-heading text-center">
                         <strong>B Side</strong>
@@ -142,8 +142,8 @@
                             {% render_field form.termination_b_circuit %}
                         {% endif %}
                         <div class="form-group">
-                            <label class="col-md-3 control-label required">Type</label>
-                            <div class="col-md-9">
+                            <label class="col-lg-3 control-label required">Type</label>
+                            <div class="col-lg-9">
                                 <p class="form-control-static">{{ termination_b_type|capfirst }}</p>
                             </div>
                         </div>
@@ -153,12 +153,12 @@
             </div>
         </div>
         <div class="row">
-            <div class="col-md-6 col-md-offset-3">
+            <div class="col-lg-6 col-lg-offset-3">
                 {% include 'dcim/inc/cable_form.html' %}
             </div>
         </div>
         <div class="form-group">
-            <div class="col-md-12 text-center">
+            <div class="col-lg-12 text-center">
                 <button type="submit" name="_update" class="btn btn-primary">Connect</button>
                 <a href="{{ return_url }}" class="btn btn-default">Cancel</a>
             </div>
