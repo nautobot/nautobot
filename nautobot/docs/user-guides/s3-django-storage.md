@@ -4,7 +4,7 @@ The backend storage engine is used for Nautobot to handle uploaded files (e.g. i
 
 ## Installation
 
-Nautobot can use [`django-storages`](https://django-storages.readthedocs.io/en/stable/) to publish files to S3 -- see the [docs](https://docs.nautobot.com/projects/core/en/stable/installation/nautobot/#remote-file-storage) for more information on installing this optional dependency.
+Nautobot can use [`django-storages`](https://django-storages.readthedocs.io/en/stable/) to publish files to S3 -- see the [installation docs](../installation/nautobot.md#remote-file-storage) for more information on installing this optional dependency.
 
 TLDR:
 
@@ -71,7 +71,7 @@ The `STORAGE_CONFIG` has some valuable pieces of information.
 !!! info
     The remaining options are not required, but django-storages documentation should be reviewed to understand the security requirements.
 
-By using the the settings listed above, the static files will be stored in the S3 bucket instead of on the Nautobot servers filesystem. Once the `nautobot-server collectstatic` is executed you will see the files.
+By using the the settings listed above, the static files will be stored in the S3 bucket instead of on the Nautobot server's filesystem. Once the `nautobot-server collectstatic` is executed you will see the files.
 
 Here's a snippet from the S3 bucket in use.
 ![initial s3](./images/s3-storage/user-guide-s3-1.png)

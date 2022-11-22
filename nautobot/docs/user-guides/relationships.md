@@ -50,7 +50,7 @@ You can see now the relationship name is `VIDs` instead of `VLANs`.
 !!! info
     In a similar fashion the destination label can be changed to meet business requirements.
 
-Next, some of the visibility options will be discussed. The first option to be demonstrated is the ability to `Move to Advanced tab`, in some views the user may want the relationship data to be displayed on the `Advanced` tab instead of within the detail view of the object.
+Next, some of the visibility options will be discussed. The first option to be demonstrated is the ability to `Move to Advanced tab`. In some cases a particular relationship may not be relevant to the typical user (maybe it's used exclusively in automation) and so you may want the relationship data to be displayed on the `Advanced` tab instead of within the default detail view of the object.
 
 First the option needs to be enabled.
 ![advanced-tab-relationship](./images/relationships/04-relationships.png)
@@ -64,7 +64,7 @@ Another visibility option is the `Hide on Source Object` and `Hide on Destinatio
 !!! info
     If the `Move to Advanced tab` and the `Hide on Object` are both enabled, the `Hide on Object` takes precedence and the relationship is not shown on the advanced tab.
 
-The two options above add flexibility to how the data is visualized within the Nautobot UI, the final option to enhance the relationship feature is the ability to match source or destination objects by providing a [filterset](https://docs.nautobot.com/projects/core/en/stable/models/extras/relationship/#relationship-filters).
+The two options above add flexibility to how the data is visualized within the Nautobot UI, the final option to enhance the relationship feature is the ability to match source or destination objects by providing a [filterset](../models/extras/relationship.md#relationship-filters).
 
 To continue on this example say we want to limit the relationship on the device to be able to only relate VLANs that have specific attributes. Perhaps only VLANs with the role of server and ID of 1000.
 
