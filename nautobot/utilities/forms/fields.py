@@ -18,6 +18,7 @@ import django_filters
 from nautobot.extras import utils as extras_utils
 from nautobot.utilities import choices as utilities_choices
 from nautobot.utilities import forms, utils, validators
+from nautobot.utilities.forms import widgets
 
 
 __all__ = (
@@ -279,7 +280,7 @@ class MultiValueCharField(django_forms.CharField):
     Press enter to complete an input.
     """
 
-    widget = forms.MultiValueCharInput()
+    widget = widgets.MultiValueCharInput()
 
     def get_bound_field(self, form, field_name):
         bound_field = BoundField(form, self, field_name)
@@ -444,7 +445,7 @@ class TagFilterField(django_forms.MultipleChoiceField):
     :param model: The model of the filter
     """
 
-    widget = forms.StaticSelect2Multiple
+    widget = widgets.StaticSelect2Multiple
 
     def __init__(self, model, *args, **kwargs):
         def get_choices():
@@ -467,7 +468,7 @@ class DynamicModelChoiceMixin:
     """
 
     filter = django_filters.ModelChoiceFilter  # TODO can we change this? pylint: disable=redefined-builtin
-    widget = forms.APISelect
+    widget = widgets.APISelect
 
     def __init__(
         self,
@@ -579,7 +580,7 @@ class DynamicModelMultipleChoiceField(DynamicModelChoiceMixin, django_forms.Mode
     """
 
     filter = django_filters.ModelMultipleChoiceFilter
-    widget = forms.APISelectMultiple
+    widget = widgets.APISelectMultiple
 
     def prepare_value(self, value):
         """

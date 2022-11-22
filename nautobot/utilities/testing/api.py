@@ -14,6 +14,7 @@ from nautobot.extras import models as extras_models
 from nautobot.extras import registry
 from nautobot.users import models as users_models
 from nautobot.utilities import testing, utils
+from nautobot.utilities.testing import mixins, views
 
 
 __all__ = (
@@ -28,7 +29,7 @@ __all__ = (
 
 
 @tag("api")
-class APITestCase(testing.ModelTestCase):
+class APITestCase(views.ModelTestCase):
     """
     Base test case for API requests.
 
@@ -727,7 +728,7 @@ class APIViewTestCases:
 
 
 @tag("unit")
-class APITransactionTestCase(_APITransactionTestCase, testing.NautobotTestCaseMixin):
+class APITransactionTestCase(_APITransactionTestCase, mixins.NautobotTestCaseMixin):
     def setUp(self):
         """
         Create a superuser and token for API calls.

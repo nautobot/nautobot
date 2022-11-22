@@ -4,12 +4,12 @@ from django.db.models import Count
 from django.test import tag
 
 from nautobot.tenancy import models
-from nautobot.utilities import testing
+from nautobot.utilities.testing import views
 
 
 @tag("unit")
 class FilterTestCases:
-    class BaseFilterTestCase(testing.TestCase):
+    class BaseFilterTestCase(views.TestCase):
         """Base class for testing of FilterSets."""
 
         def get_filterset_test_values(self, field_name, queryset=None):
@@ -84,7 +84,7 @@ class FilterTestCases:
             self.assertTrue(filterset.is_valid())
             self.assertEqual(filterset.qs.count(), 2)
 
-    class TenancyFilterTestCaseMixin(testing.TestCase):
+    class TenancyFilterTestCaseMixin(views.TestCase):
         """Add test cases for tenant and tenant-group filters."""
 
         tenancy_related_name = ""

@@ -15,6 +15,7 @@ from nautobot.extras import choices
 from nautobot.extras import models as extras_models
 from nautobot.users import models as users_models
 from nautobot.utilities import testing, utils
+from nautobot.utilities.testing import mixins
 
 
 __all__ = (
@@ -27,7 +28,7 @@ __all__ = (
 
 @tag("unit")
 @override_settings(PAGINATE_COUNT=65000)
-class TestCase(_TestCase, testing.NautobotTestCaseMixin):
+class TestCase(_TestCase, mixins.NautobotTestCaseMixin):
     """Base class for all Nautobot-specific unit tests."""
 
     def setUp(self):
