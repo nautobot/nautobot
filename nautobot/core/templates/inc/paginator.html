@@ -1,6 +1,6 @@
 {% load helpers %}
 
-<div class="paginator float-end text-right">
+<div class="paginator float-end text-end">
     {% if paginator.num_pages > 1 %}
         <nav>
             <ul class="pagination float-end">
@@ -35,7 +35,7 @@
         </select> per page
     </form>
     {% if page %}
-        <div class="text-right text-muted">
+        <div class="text-end text-muted">
             Showing {{ page.start_index }}-{{ page.end_index }} of {{ page.paginator.count }}
         </div>
     {% endif %}

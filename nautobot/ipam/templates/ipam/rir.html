@@ -2,7 +2,7 @@
 {% load helpers %}
 
 {% block content_left_page %}
-        <div class="card ">
+        <div class="card">
             <div class="card-header">
                 <strong>RIR</strong>
             </div>
@@ -26,13 +26,13 @@
 {% endblock content_left_page %}
 
 {% block content_full_width_page %}
-        <div class="card ">
+        <div class="card">
             <div class="card-header">
                 <strong>Aggregates</strong>
             </div>
             {% include 'inc/table.html' with table=aggregate_table %}
             {% if perms.ipam.add_aggregate %}
-                <div class="card-footer text-right noprint">
+                <div class="card-footer text-end noprint">
                     <a href="{% url 'ipam:aggregate_add' %}?rir={{ object.pk }}" class="btn btn-sm btn-primary">
                         <span class="mdi mdi-plus-thick" aria-hidden="true"></span> Add aggregate
                     </a>

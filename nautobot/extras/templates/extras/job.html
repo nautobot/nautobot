@@ -53,7 +53,7 @@
                     {% endif %}
                     <form action="" method="post" enctype="multipart/form-data" class="form form-horizontal">
                         {% if job_form.non_field_errors or schedule_form.non_field_errors %}
-                            <div class="card panel-danger">
+                            <div class="card card-danger">
                                 <div class="card-header"><strong>Errors</strong></div>
                                 <div class="card-body">
                                     {{ job_form.non_field_errors }}
@@ -63,7 +63,7 @@
                         {% endif %}
                         {% csrf_token %}
                         {% if job_form.requires_input %}
-                            <div class="card ">
+                            <div class="card">
                                 <div class="card-header">
                                     <strong>Job Data</strong>
                                 </div>
@@ -86,7 +86,7 @@
                             </div>
                             {% render_form job_form %}
                         {% endif %}
-                        <div class="card  job_execution">
+                        <div class="card job_execution">
                             <div class="card-header">
                                 <strong>Job Execution</strong>
                             </div>

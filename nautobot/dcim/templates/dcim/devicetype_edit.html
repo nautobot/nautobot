@@ -2,7 +2,7 @@
 {% load form_helpers %}
 
 {% block form %}
-    <div class="card ">
+    <div class="card">
         <div class="card-header"><strong>Device Type</strong></div>
         <div class="card-body">
             {% render_field form.manufacturer %}
@@ -14,7 +14,7 @@
             {% render_field form.subdevice_role %}
         </div>
     </div>
-    <div class="card ">
+    <div class="card">
         <div class="card-header"><strong>Rack Images</strong></div>
         <div class="card-body">
             {% render_field form.front_image %}
@@ -22,7 +22,7 @@
         </div>
     </div>
     {% include 'inc/extras_features_edit_form_fields.html' %}
-    <div class="card ">
+    <div class="card">
         <div class="card-header"><strong>Comments</strong></div>
         <div class="card-body">
             {% render_field form.comments %}

@@ -7,7 +7,7 @@
     <div class="row">
         <div class="col-lg-12">
             {% for token in tokens %}
-                <div class="card panel-{% if token.is_expired %}danger{% else %}default{% endif %}">
+                <div class="card card-{% if token.is_expired %}danger{% else %}default{% endif %}">
                     <div class="card-header">
                         <div class="float-end noprint">
                             <a class="btn btn-sm btn-success copy-token" data-clipboard-target="#token_{{ token.pk }}">Copy</a>

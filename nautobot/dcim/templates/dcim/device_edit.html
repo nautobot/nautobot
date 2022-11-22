@@ -3,14 +3,14 @@
 {% load form_helpers %}
 
 {% block form %}
-    <div class="card ">
+    <div class="card">
         <div class="card-header"><strong>Device</strong></div>
         <div class="card-body">
             {% render_field form.name %}
             {% render_field form.device_role %}
         </div>
     </div>
-    <div class="card ">
+    <div class="card">
         <div class="card-header"><strong>Hardware</strong></div>
         <div class="card-body">
             {% render_field form.manufacturer %}
@@ -19,7 +19,7 @@
             {% render_field form.asset_tag %}
         </div>
     </div>
-    <div class="card ">
+    <div class="card">
         <div class="card-header"><strong>Location</strong></div>
         <div class="card-body">
             {% render_field form.region %}
@@ -55,7 +55,7 @@
             {% endif %}
         </div>
     </div>
-    <div class="card ">
+    <div class="card">
         <div class="card-header"><strong>Management</strong></div>
         <div class="card-body">
             {% render_field form.status %}
@@ -69,14 +69,14 @@
             {% render_field form.device_redundancy_group_priority %}
         </div>
     </div>
-    <div class="card ">
+    <div class="card">
         <div class="card-header"><strong>Virtualization</strong></div>
         <div class="card-body">
             {% render_field form.cluster_group %}
             {% render_field form.cluster %}
         </div>
     </div>
-    <div class="card ">
+    <div class="card">
         <div class="card-header"><strong>Tenancy</strong></div>
         <div class="card-body">
             {% render_field form.tenant_group %}
@@ -84,14 +84,14 @@
         </div>
     </div>
     {% include 'inc/extras_features_edit_form_fields.html' %}
-    <div class="card ">
+    <div class="card">
         <div class="card-header"><strong>Local Config Context Data</strong></div>
         <div class="card-body">
             {% render_field form.local_context_schema %}
             {% render_field form.local_context_data %}
         </div>
     </div>
-    <div class="card ">
+    <div class="card">
         <div class="card-header"><strong>Comments</strong></div>
         <div class="card-body">
             {% render_field form.comments %}

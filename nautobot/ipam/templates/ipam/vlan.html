@@ -25,7 +25,7 @@
 {% endblock extra_nav_tabs %}
 
 {% block content_left_page %}
-            <div class="card ">
+            <div class="card">
                 <div class="card-header">
                     <strong>VLAN</strong>
                 </div>
@@ -83,13 +83,13 @@
 {% endblock content_left_page %}
 
 {% block content_full_width_page %}
-            <div class="card ">
+            <div class="card">
                 <div class="card-header">
                     <strong>Prefixes</strong>
                 </div>
                 {% include 'responsive_table.html' with table=prefix_table %}
                 {% if perms.ipam.add_prefix %}
-                    <div class="card-footer text-right noprint">
+                    <div class="card-footer text-end noprint">
                         <a href="{% url 'ipam:prefix_add' %}?{% if object.tenant %}tenant={{ object.tenant.pk }}&{% endif %}site={{ object.site.pk }}{% if object.location %}&location={{ object.location.pk }}{% endif %}&vlan={{ object.pk }}" class="btn btn-primary btn-sm">
                             <span class="mdi mdi-plus-thick" aria-hidden="true"></span>
                             Add a prefix

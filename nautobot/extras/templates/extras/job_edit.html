@@ -3,7 +3,7 @@
 {% load helpers %}
 
 {% block form %}
-    <div class="card ">
+    <div class="card">
         <div class="card-header"><strong>Job Source</strong></div>
         <div class="card-body">
             <div class="form-group">
@@ -63,7 +63,7 @@
             </div>
         </div>
     </div>
-    <div class="card ">
+    <div class="card">
         <div class="card-header"><strong>Job</strong></div>
         <div class="card-body">
             {% render_field form.enabled %}
@@ -73,7 +73,7 @@
             {% include "extras/inc/overridable_field.html" with field=form.description override_field=form.description_override %}
         </div>
     </div>
-    <div class="card ">
+    <div class="card">
         <div class="card-header"><strong>Properties</strong></div>
         <div class="card-body">
             {% include "extras/inc/overridable_field.html" with field=form.approval_required override_field=form.approval_required_override %}

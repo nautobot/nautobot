@@ -139,7 +139,7 @@ class HomeTestCase(SeleniumTestCase):
                 for item_name, item_details in panel_details.items():
                     panel_element_to_search = self.browser.find_by_xpath(
                         f".//div[@class='homepage_column']"
-                        f"/div[@class='panel ']"
+                        f"/div[@class='card']"
                         f"/div[@class='card-header']"
                         f"/strong[contains(text(), '{panel_name}')]"
                         f"/../.."

@@ -22,7 +22,7 @@
 {% endblock %}
 
 {% block content_left_page %}
-    <div class="card ">
+    <div class="card">
         <div class="card-header">
             <strong>Location Type</strong>
         </div>
@@ -81,13 +81,13 @@
 {% endblock content_left_page %}
 
 {% block content_full_width_page %}
-    <div class="card ">
+    <div class="card">
         <div class="card-header">
             <strong>Child Location Type(s)</strong>
         </div>
         {% include 'inc/table.html' with table=children_table %}
         {% if perms.dcim.add_locationtype %}
-            <div class="card-footer text-right noprint">
+            <div class="card-footer text-end noprint">
                 <a href="{% url 'dcim:locationtype_add' %}?parent={{ object.pk }}" class="btn btn-sm btn-primary">
                     <span class="mdi mdi-plus-thick" aria-hidden="true"></span> Add child
                 </a>
@@ -96,13 +96,13 @@
     </div>
     {% include 'inc/paginator.html' with paginator=children_table.paginator page=children_table.page %}
     <div class="row"></div>
-    <div class="card ">
+    <div class="card">
         <div class="card-header">
             <strong>Location(s) of this Type</strong>
         </div>
         {% include 'inc/table.html' with table=locations_table %}
         {% if perms.dcim.add_location %}
-            <div class="card-footer text-right noprint">
+            <div class="card-footer text-end noprint">
                 <a href="{% url 'dcim:location_add' %}?location_type={{ object.pk }}" class="btn btn-sm btn-primary">
                     <span class="mdi mdi-plus-thick" aria-hidden="true"></span> Add location
                 </a>

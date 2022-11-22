@@ -12,7 +12,7 @@
     {% if form.non_field_errors %}
         <div class="row">
             <div class="col-lg-6 col-lg-offset-3">
-                <div class="card panel-danger">
+                <div class="card card-danger">
                     <div class="card-header"><strong>Errors</strong></div>
                     <div class="card-body">
                         {{ form.non_field_errors }}
@@ -25,7 +25,7 @@
         <h3>{% block title %}Connect {{ termination_a.device }} {{ termination_a }} to {{ termination_b_type|bettertitle }}{% endblock %}</h3>
         <div class="row">
             <div class="col-lg-5">
-                <div class="card ">
+                <div class="card">
                     <div class="card-header text-center">
                         <strong>A Side</strong>
                     </div>
@@ -102,7 +102,7 @@
                 <i class="mdi mdi-swap-horizontal-bold mdi-48px"></i>
             </div>
             <div class="col-lg-5">
-                <div class="card ">
+                <div class="card">
                     <div class="card-header text-center">
                         <strong>B Side</strong>
                     </div>

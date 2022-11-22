@@ -2,7 +2,7 @@
 {% load helpers %}
 
 {% block content_left_page %}
-        <div class="card ">
+        <div class="card">
             <div class="card-header">
                 <strong>Tenant Group</strong>
             </div>
@@ -26,13 +26,13 @@
 {% endblock content_left_page %}
 
 {% block content_right_page %}
-        <div class="card ">
+        <div class="card">
             <div class="card-header">
                 <strong>Tenants</strong>
             </div>
             {% include 'inc/table.html' with table=tenant_table %}
             {% if perms.teanancy.add_tenant %}
-                <div class="card-footer text-right noprint">
+                <div class="card-footer text-end noprint">
                     <a href="{% url 'tenancy:tenant_add' %}?group={{ object.pk }}" class="btn btn-sm btn-primary">
                         <span class="mdi mdi-plus-thick" aria-hidden="true"></span> Add tenant
                     </a>

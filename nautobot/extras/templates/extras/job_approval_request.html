@@ -58,7 +58,7 @@
                         {% csrf_token %}
                         {% if job_form is not None %}
                             {% if job_form.non_field_errors or schedule_form.non_field_errors %}
-                                <div class="card panel-danger">
+                                <div class="card card-danger">
                                     <div class="card-header"><strong>Errors</strong></div>
                                     <div class="card-body">
                                         {{ job_form.non_field_errors }}
@@ -67,7 +67,7 @@
                                 </div>
                             {% endif %}
                             {% if job_form.requires_input %}
-                                <div class="card ">
+                                <div class="card">
                                     <div class="card-header">
                                         <strong>Job Data</strong>
                                     </div>
@@ -83,14 +83,14 @@
                                 {% render_form job_form %}
                             {% endif %}
                         {% else %}
-                            <div class="card ">
+                            <div class="card">
                                 <div class="card-header"><strong>Job Data</strong></div>
                                 <div class="card-body">
                                     <pre>{{ object.kwargs.data | render_json }}</pre>
                                 </div>
                             </div>
                         {% endif %}
-                        <div class="card ">
+                        <div class="card">
                             <div class="card-header">
                                 <strong>Approval Request</strong>
                             </div>

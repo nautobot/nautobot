@@ -4,7 +4,7 @@
         {% csrf_token %}
         <input type="hidden" name="return_url" value="{% if return_url %}{{ return_url }}{% else %}{{ request.path }}{% if request.GET %}?{{ request.GET.urlencode }}{% endif %}{% endif %}" />
         {% if table.paginator.num_pages > 1 %}
-            <div id="select_all_box" class="hidden panel  noprint">
+            <div id="select_all_box" class="hidden card noprint">
                 <div class="card-body">
                     <div class="checkbox-inline">
                         <label for="select_all">

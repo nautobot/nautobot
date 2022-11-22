@@ -2,7 +2,7 @@
 {% load form_helpers %}
 
 {% block form %}
-    <div class="card ">
+    <div class="card">
         <div class="card-header"><strong>Circuit</strong></div>
         <div class="card-body">
             {% render_field form.provider %}
@@ -23,7 +23,7 @@
             {% render_field form.description %}
         </div>
     </div>
-    <div class="card ">
+    <div class="card">
         <div class="card-header"><strong>Tenancy</strong></div>
         <div class="card-body">
             {% render_field form.tenant_group %}
@@ -31,7 +31,7 @@
         </div>
     </div>
     {% include 'inc/extras_features_edit_form_fields.html' %}
-    <div class="card ">
+    <div class="card">
         <div class="card-header"><strong>Comments</strong></div>
         <div class="card-body">
             {% render_field form.comments %}

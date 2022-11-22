@@ -20,14 +20,14 @@
         </div>
         <div class="col-lg-5">
             {% if form.non_field_errors %}
-                <div class="card panel-danger">
+                <div class="card card-danger">
                     <div class="card-header"><strong>Errors</strong></div>
                     <div class="card-body">
                         {{ form.non_field_errors }}
                     </div>
                 </div>
             {% endif %}
-            <div class="card ">
+            <div class="card">
                 <div class="card-header"><strong>{{ model_name|title }} to Add</strong></div>
                 <div class="card-body">
                     {% for field in form.visible_fields %}
@@ -40,7 +40,7 @@
                     {% endif %}
                 </div>
             </div>
-            <div class="form-group text-right">
+            <div class="form-group text-end">
                 <div class="col-lg-12">
                     <button type="submit" name="_create" class="btn btn-primary">Create</button>
                     <a href="{{ return_url }}" class="btn btn-secondary">Cancel</a>

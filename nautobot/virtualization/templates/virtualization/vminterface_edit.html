@@ -3,7 +3,7 @@
 {% load helpers %}
 
 {% block form %}
-    <div class="card ">
+    <div class="card">
         <div class="card-header"><strong>Interface</strong></div>
         <div class="card-body">
             {% if form.instance.virtual_machine %}
@@ -26,7 +26,7 @@
             {% render_field form.description %}
         </div>
     </div>
-    <div class="card ">
+    <div class="card">
         <div class="card-header"><strong>802.1Q Switching</strong></div>
         <div class="card-body">
             {% render_field form.mode %}

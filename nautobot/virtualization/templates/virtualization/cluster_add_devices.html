@@ -12,14 +12,14 @@
             <div class="col-lg-6 col-lg-offset-3">
                 <h3>{% block title %}Add Devices to Cluster {{ cluster }}{% endblock %}</h3>
                 {% if form.non_field_errors %}
-                    <div class="card panel-danger">
+                    <div class="card card-danger">
                         <div class="card-header"><strong>Errors</strong></div>
                         <div class="card-body">
                             {{ form.non_field_errors }}
                         </div>
                     </div>
                 {% endif %}
-                <div class="card ">
+                <div class="card">
                     <div class="card-header"><strong>Device Selection</strong></div>
                     <div class="card-body">
                         {% render_form form %}
@@ -28,7 +28,7 @@
             </div>
         </div>
         <div class="row">
-            <div class="col-lg-6 col-lg-offset-3 text-right noprint">
+            <div class="col-lg-6 col-lg-offset-3 text-end noprint">
                 <button type="submit" name="_add" class="btn btn-primary">Add Devices</button>
                 <a href="{{ return_url }}" class="btn btn-secondary">Cancel</a>
             </div>

@@ -8,7 +8,7 @@
 	<div class="col-lg-8 col-lg-offset-2">
         <h1>{% block title %}{{ obj_type|bettertitle }} Import{% endblock %}</h1>
         {% if form.non_field_errors %}
-            <div class="card panel-danger">
+            <div class="card card-danger">
                 <div class="card-header"><strong>Errors</strong></div>
                 <div class="card-body">
                     {{ form.non_field_errors }}
@@ -17,19 +17,19 @@
         {% endif %}
         <form action="" method="post" class="form form-horizontal object-import-form">
             {% csrf_token %}
-            <div class="card ">
+            <div class="card">
                 <div class="card-header">Data</div>
                 <div class="card-body">
                     {% render_field form.data %}
                 </div>
             </div>
-            <div class="card ">
+            <div class="card">
                 <div class="card-header">Format</div>
                 <div class="card-body">
                     {% render_field form.format %}
                 </div>
             </div>
-            <div class="form-group text-right">
+            <div class="form-group text-end">
                 <button type="submit" name="_create" class="btn btn-primary">Submit</button>
                 <button type="submit" name="_addanother" class="btn btn-primary">Submit and Import Another</button>
                 {% if return_url %}

@@ -12,7 +12,7 @@
                 <div role="tabpanel" class="tab-pane active" id="details">
                     <div class="row">
                         <div class="col-lg-6">
-                            <div class="card ">
+                            <div class="card">
                                 <div class="card-header">
                                     <strong>Device</strong>
                                 </div>
@@ -95,7 +95,7 @@
                                 </table>
                             </div>
                             {% if vc_members %}
-                                <div class="card ">
+                                <div class="card">
                                     <div class="card-header">
                                         <strong>Virtual Chassis</strong>
                                     </div>
@@ -115,14 +115,14 @@
                                             </tr>
                                         {% endfor %}
                                     </table>
-                                    <div class="card-footer text-right noprint">
+                                    <div class="card-footer text-end noprint">
                                         <a href="{{ object.virtual_chassis.get_absolute_url }}" class="btn btn-primary btn-sm">
                                             <span class="mdi mdi-arrow-right-bold" aria-hidden="true"></span> View Virtual Chassis
                                         </a>
                                     </div>
                                 </div>
                             {% endif %}
-                            <div class="card ">
+                            <div class="card">
                                 <div class="card-header">
                                     <strong>Management</strong>
                                 </div>
@@ -214,7 +214,7 @@
                             {% include 'inc/custom_fields/panel.html' with custom_fields=object.get_custom_field_groupings_basic computed_fields_advanced_ui=False %}
                             {% include 'inc/relationships/panel_override.html' with relationships_fields_override=object.get_relationships_data_basic_fields %}
                             {% include 'extras/inc/tags_panel.html' with tags=object.tags.all url='dcim:device_list' %}
-                            <div class="card ">
+                            <div class="card">
                                 <div class="card-header">
                                     <strong>Comments</strong>
                                 </div>
@@ -230,7 +230,7 @@
                         </div>
                         <div class="col-lg-6">
                             {% if object.powerports.exists and object.poweroutlets.exists %}
-                                <div class="card ">
+                                <div class="card">
                                     <div class="card-header">
                                         <strong>Power Utilization</strong>
                                     </div>
@@ -272,7 +272,7 @@
                                     </table>
                                 </div>
                             {% endif %}
-                            <div class="card ">
+                            <div class="card">
                                 <div class="card-header">
                                     <strong>Services</strong>
                                 </div>
@@ -288,20 +288,20 @@
                                     </div>
                                 {% endif %}
                                 {% if perms.ipam.add_service %}
-                                    <div class="card-footer text-right noprint">
+                                    <div class="card-footer text-end noprint">
                                         <a href="{% url 'dcim:device_service_assign' device=object.pk %}" class="btn btn-sm btn-primary">
                                             <span class="mdi mdi-plus-thick" aria-hidden="true"></span> Assign service
                                         </a>
                                     </div>
                                 {% endif %}
                             </div>
-                            <div class="card ">
+                            <div class="card">
                                 <div class="card-header">
                                     <strong>Images</strong>
                                 </div>
                                 {% include 'inc/image_attachments.html' with images=object.images.all %}
                                 {% if perms.extras.add_imageattachment %}
-                                    <div class="card-footer text-right noprint">
+                                    <div class="card-footer text-end noprint">
                                         <a href="{% url 'dcim:device_add_image' object_id=object.pk %}" class="btn btn-primary btn-sm">
                                             <span class="mdi mdi-plus-thick" aria-hidden="true"></span>
                                             Attach an image

@@ -42,7 +42,7 @@ class InstalledPluginsTable(tables.Table):
                 <i class="mdi mdi-book-open-page-variant"></i>
             </a>
         """,
-        attrs={"td": {"class": "text-right text-nowrap noprint"}},
+        attrs={"td": {"class": "text-end text-nowrap noprint"}},
         verbose_name="",
     )
 

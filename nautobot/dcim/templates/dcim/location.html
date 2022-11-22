@@ -8,7 +8,7 @@
 {% endblock %}
 
 {% block content_left_page %}
-    <div class="card ">
+    <div class="card">
         <div class="card-header">
             <strong>Location</strong>
         </div>
@@ -57,7 +57,7 @@
 {% endblock content_left_page %}
 
 {% block content_right_page %}
-    <div class="card ">
+    <div class="card">
         <div class="card-header">
             <strong>Stats</strong>
         </div>
@@ -88,7 +88,7 @@
             </div>
         </div>
     </div>
-    <div class="card ">
+    <div class="card">
         <div class="card-header">
             <strong>Rack Groups</strong>
         </div>
@@ -97,7 +97,7 @@
                 <tr>
                     <td style="padding-left: {{ rg.level }}8px"><i class="mdi mdi-folder-open"></i> <a href="{{ rg.get_absolute_url }}">{{ rg }}</a></td>
                     <td>{{ rg.rack_count }}</td>
-                    <td class="text-right noprint">
+                    <td class="text-end noprint">
                         <a href="{% url 'dcim:rack_elevation_list' %}?group_id={{ rg.pk }}" class="btn btn-sm btn-primary" title="View elevations">
                             <i class="mdi mdi-server"></i>
                         </a>
@@ -107,7 +107,7 @@
             <tr>
                 <td><i class="mdi mdi-folder-open"></i> All racks</td>
                 <td>{{ stats.rack_count }}</td>
-                <td class="text-right noprint">
+                <td class="text-end noprint">
                     <a href="{% url 'dcim:rack_elevation_list' %}?location={{ object.slug }}" class="btn btn-sm btn-primary" title="View elevations">
                         <i class="mdi mdi-server"></i>
                     </a>
@@ -115,13 +115,13 @@
             </tr>
         </table>
     </div>
-    <div class="card ">
+    <div class="card">
         <div class="card-header">
             <strong>Images</strong>
         </div>
         {% include 'inc/image_attachments.html' with images=object.images.all %}
         {% if perms.extras.add_imageattachment %}
-            <div class="card-footer text-right noprint">
+            <div class="card-footer text-end noprint">
                 <a href="{% url 'dcim:location_add_image' slug=object.slug %}" class="btn btn-primary btn-sm">
                     <span class="mdi mdi-plus-thick" aria-hidden="true"></span>
                     Attach an image
@@ -133,13 +133,13 @@
 
 {% block content_full_width_page %}
     {% if object.location_type.children.all %}
-        <div class="card ">
+        <div class="card">
             <div class="card-header">
                 <strong>Children</strong>
             </div>
             {% include 'inc/table.html' with table=children_table %}
             {% if perms.dcim.add_location %}
-                <div class="card-footer text-right noprint">
+                <div class="card-footer text-end noprint">
                     <a href="{% url 'dcim:location_add' %}?parent={{ object.slug }}" class="btn btn-sm btn-primary">
                         <span class="mdi mdi-plus-thick" aria-hidden="true"></span> Add child
                     </a>

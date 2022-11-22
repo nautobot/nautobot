@@ -21,7 +21,7 @@
 
 
 {% block content_left_page %}
-        <div class="card ">
+        <div class="card">
             <div class="card-header">
                 <strong>Virtual Machine</strong>
             </div>
@@ -97,7 +97,7 @@
                 </tr>
             </table>
         </div>
-        <div class="card ">
+        <div class="card">
             <div class="card-header">
                 <strong>Comments</strong>
             </div>
@@ -112,7 +112,7 @@
 {% endblock content_left_page %}
 
 {% block content_right_page %}
-        <div class="card ">
+        <div class="card">
             <div class="card-header">
                 <strong>Cluster</strong>
             </div>
@@ -132,7 +132,7 @@
                 </tr>
             </table>
         </div>
-        <div class="card ">
+        <div class="card">
             <div class="card-header">
                 <strong>Resources</strong>
             </div>
@@ -163,7 +163,7 @@
                 </tr>
             </table>
         </div>
-        <div class="card ">
+        <div class="card">
             <div class="card-header">
                 <strong>Services</strong>
             </div>
@@ -179,7 +179,7 @@
                 </div>
             {% endif %}
             {% if perms.ipam.add_service %}
-                <div class="card-footer text-right noprint">
+                <div class="card-footer text-end noprint">
                     <a href="{% url 'virtualization:virtualmachine_service_assign' virtualmachine=object.pk %}" class="btn btn-sm btn-primary">
                         <span class="mdi mdi-plus-thick" aria-hidden="true"></span> Assign service
                     </a>
@@ -192,7 +192,7 @@
         <form method="post">
             {% csrf_token %}
             <input type="hidden" name="virtual_machine" value="{{ object.pk }}" />
-            <div class="card ">
+            <div class="card">
                 <div class="card-header">
                     <strong>Interfaces</strong>
                     <div class="float-end noprint">

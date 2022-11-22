@@ -9,14 +9,14 @@
     <div class="row">
         <div class="col-lg-6 col-lg-offset-3">
             {% if form.non_field_errors %}
-                <div class="card panel-danger">
+                <div class="card card-danger">
                     <div class="card-header"><strong>Errors</strong></div>
                     <div class="card-body">
                         {{ form.non_field_errors }}
                     </div>
                 </div>
             {% endif %}
-            <div class="card ">
+            <div class="card">
                 <div class="card-header">
                     <strong>New {{ component_type }}</strong>
                 </div>

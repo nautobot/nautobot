@@ -58,7 +58,7 @@
             </div>
         {% endif %}
         {% if form.non_field_errors %}
-            <div class="card panel-danger">
+            <div class="card card-danger">
                 <div class="card-header"><strong>Errors</strong></div>
                 <div class="card-body">
                     {{ form.non_field_errors }}
@@ -66,7 +66,7 @@
             </div>
         {% endif %}
         <form action="{% url 'login' %}" method="post" class="form form-horizontal">
-            <div class="card ">
+            <div class="card">
                 <div class="card-header">
                     <strong>Log In</strong>
                 </div>
@@ -76,7 +76,7 @@
                     {% if 'next' in request.POST %}<input type="hidden" name="next" value="{{ request.POST.next }}" />{% endif %}
                     {% render_form form %}
                 </div>
-                <div class="card-footer text-right">
+                <div class="card-footer text-end">
                     <button type="submit" class="btn btn-primary">Log In</button>
                 </div>
             </div>

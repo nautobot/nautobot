@@ -33,7 +33,7 @@
 {% endblock panel_buttons %}
 
 {% block content_left_page %}
-        <div class="card ">
+        <div class="card">
             <div class="card-header">
                 <strong>Rack</strong>
             </div>
@@ -109,7 +109,7 @@
                 </tr>
             </table>
         </div>
-        <div class="card ">
+        <div class="card">
             <div class="card-header">
                 <strong>Dimensions</strong>
             </div>
@@ -154,7 +154,7 @@
                 </tr>
             </table>
         </div>
-        <div class="card ">
+        <div class="card">
             <div class="card-header">
                 <strong>Comments</strong>
             </div>
@@ -167,7 +167,7 @@
             </div>
         </div>
         {% if power_feeds %}
-            <div class="card ">
+            <div class="card">
                 <div class="card-header">
                     <strong>Power Feeds</strong>
                 </div>
@@ -207,13 +207,13 @@
                 </table>
             </div>
         {% endif %}
-        <div class="card ">
+        <div class="card">
             <div class="card-header">
                 <strong>Images</strong>
             </div>
             {% include 'inc/image_attachments.html' with images=object.images.all %}
             {% if perms.extras.add_imageattachment %}
-                <div class="card-footer text-right noprint">
+                <div class="card-footer text-end noprint">
                     <a href="{% url 'dcim:rack_add_image' object_id=object.pk %}" class="btn btn-primary btn-sm">
                         <span class="mdi mdi-plus-thick" aria-hidden="true"></span>
                         Attach an image
@@ -221,7 +221,7 @@
                 </div>
             {% endif %}
         </div>
-        <div class="card ">
+        <div class="card">
             <div class="card-header">
                 <strong>Reservations</strong>
             </div>
@@ -245,7 +245,7 @@
                                 {{ resv.description }}<br />
                                 <small>{{ resv.user }} &middot; {{ resv.created }}</small>
                             </td>
-                            <td class="text-right noprint">
+                            <td class="text-end noprint">
                                 {% if perms.dcim.change_rackreservation %}
                                     <a href="{% url 'dcim:rackreservation_edit' pk=resv.pk %}?return_url={{ object.get_absolute_url }}" class="btn btn-warning btn-sm" title="Edit reservation">
                                         <i class="mdi mdi-pencil" aria-hidden="true"></i>
@@ -264,7 +264,7 @@
                 <div class="card-body text-muted">None</div>
             {% endif %}
             {% if perms.dcim.add_rackreservation %}
-                <div class="card-footer text-right noprint">
+                <div class="card-footer text-end noprint">
                     <a href="{% url 'dcim:rackreservation_add' %}?rack={{ object.pk }}&return_url={{ object.get_absolute_url }}" class="btn btn-primary btn-sm">
                         <span class="mdi mdi-plus-thick" aria-hidden="true"></span>
                         Add a reservation
@@ -289,7 +289,7 @@
               </div>
             </div>
         </div>
-        <div class="card ">
+        <div class="card">
             <div class="card-header">
                 <strong>Non-Racked Devices</strong>
             </div>
@@ -319,7 +319,7 @@
                 <div class="card-body text-muted">None</div>
             {% endif %}
             {% if perms.dcim.add_device %}
-                <div class="card-footer text-right noprint">
+                <div class="card-footer text-end noprint">
                     <a href="{% url 'dcim:device_add' %}?site={{ object.site.pk }}&rack={{ object.pk }}" class="btn btn-primary btn-sm">
                         <span class="mdi mdi-plus-thick" aria-hidden="true"></span>
                         Add a non-racked device

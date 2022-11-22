@@ -9,11 +9,11 @@
             {% for field in form.hidden_fields %}
                 {{ field }}
             {% endfor %}
-            <div class="card panel-{{ panel_class|default:"danger" }}">
+            <div class="card card-{{ panel_class|default:"danger" }}">
                 <div class="card-header">{% block title %}{% endblock %}</div>
                 <div class="card-body">
                     {% block message %}<p>Are you sure?</p>{% endblock %}
-                    <div class="text-right">
+                    <div class="text-end">
                         <button type="submit" name="_confirm" class="btn btn-{{ button_class|default:"danger" }}">Confirm</button>
                         <a href="{{ return_url }}" class="btn btn-secondary">Cancel</a>
                     </div>
