@@ -2,7 +2,7 @@
 {% load helpers %}
 
 {% block extra_breadcrumbs %}
-                <li><a href="{% url 'ipam:aggregate_list' %}?rir={{ object.rir.slug }}">{{ object.rir }}</a></li>
+                <li class="breadcrumb-item"><a href="{% url 'ipam:aggregate_list' %}?rir={{ object.rir.slug }}">{{ object.rir }}</a></li>
 {% endblock extra_breadcrumbs %}
 
 {% block panel_buttons %}

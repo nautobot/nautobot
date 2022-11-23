@@ -11,20 +11,22 @@
     <div class="row noprint">
         {% with list_url=object|validated_viewname:"list" %}
         <div class="col-sm-8 col-md-9">
-            <ol class="breadcrumb">
-            {% block breadcrumbs %}
-                {% if list_url %}
-                <li><a href="{% url list_url %}">
-                    {{ verbose_name_plural|bettertitle }}
-                </a></li>
-                {% endif %}
-                {% block extra_breadcrumbs %}{% endblock extra_breadcrumbs %}
-                <li>{{ object|hyperlinked_object }}</li>
-            {% endblock breadcrumbs %}
-            </ol>
+            <nav aria-label="breadcrumb" style="background-color: #f5f5f5; --bs-breadcrumb-divider: ' / ';">
+                <ol class="breadcrumb">
+                {% block breadcrumbs %}
+                    {% if list_url %}
+                    <li class="breadcrumb-item"><a href="{% url list_url %}">
+                        {{ verbose_name_plural|bettertitle }}
+                    </a></li>
+                    {% endif %}
+                    {% block extra_breadcrumbs %}{% endblock extra_breadcrumbs %}
+                    <li class="breadcrumb-item active" aria-current="page">{{ object|hyperlinked_object }}</li>
+                {% endblock breadcrumbs %}
+                </ol>
+            </nav>
         </div>
         {% if list_url %}
-        <div class="col-sm-4 col-md-3">
+        <div class="col-sm-4 col-md-3 float-end">
             <form action="{% url list_url %}" method="get">
                 <div class="input-group">
                     <input type="text" name="q" class="form-control" placeholder="Search {{ verbose_name_plural }}" />
