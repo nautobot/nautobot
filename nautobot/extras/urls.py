@@ -405,7 +405,7 @@ urlpatterns = [
         "jobs/results/<uuid:pk>/",
         RedirectView.as_view(pattern_name="extras:jobresult"),
         name="job_jobresult",
-    ),  # TODO 2.0: Remove this, no existing code references `job_jobresult` but plugins and others may.
+    ),  # 2.0 TODO(jathan): Remove this, no existing code references `job_jobresult` but plugins and others may.
     path("jobs/scheduled-jobs/", views.ScheduledJobListView.as_view(), name="scheduledjob_list"),
     path("jobs/scheduled-jobs/<uuid:pk>/", views.ScheduledJobView.as_view(), name="scheduledjob"),
     path("jobs/scheduled-jobs/<uuid:pk>/delete/", views.ScheduledJobDeleteView.as_view(), name="scheduledjob_delete"),
@@ -434,13 +434,13 @@ urlpatterns = [
     path("jobs/<slug:slug>/delete/", views.JobDeleteView.as_view(), name="job_delete"),
     path(
         "jobs/<slug:slug>/changelog/",
-        views.ObjectChangeLogView.as_view(),
+        views.JobObjectChangeLogView.as_view(),
         name="job_changelog",
         kwargs={"model": Job},
     ),
     path(
         "jobs/<slug:slug>/notes/",
-        views.ObjectNotesView.as_view(),
+        views.JobObjectNotesView.as_view(),
         name="job_notes",
         kwargs={"model": Job},
     ),

@@ -2,6 +2,7 @@ from datetime import datetime, timedelta
 import uuid
 from unittest import mock
 
+from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.contrib.contenttypes.models import ContentType
 from django.test import override_settings
@@ -19,6 +20,7 @@ from nautobot.dcim.models import (
     RackRole,
     Site,
 )
+from nautobot.dcim.tests import test_views
 from nautobot.extras.api.nested_serializers import NestedJobResultSerializer
 from nautobot.extras.choices import (
     DynamicGroupOperatorChoices,
@@ -56,8 +58,10 @@ from nautobot.extras.models import (
     Webhook,
 )
 from nautobot.extras.models.jobs import JobHook
+from nautobot.extras.tests.test_relationships import RequiredRelationshipTestMixin
 from nautobot.extras.utils import TaggableClassesQuery
-from nautobot.ipam.models import VLANGroup
+from nautobot.ipam.factory import VLANFactory
+from nautobot.ipam.models import VLAN, VLANGroup
 from nautobot.users.models import ObjectPermission
 from nautobot.utilities.choices import ColorChoices
 from nautobot.utilities.testing import APITestCase, APIViewTestCases
@@ -911,7 +915,9 @@ class GitRepositoryTest(APIViewTestCases.APIViewTestCase):
         url = reverse("extras-api:gitrepository-sync", kwargs={"pk": self.repos[0].id})
         response = self.client.post(url, format="json", **self.header)
         self.assertHttpStatus(response, status.HTTP_503_SERVICE_UNAVAILABLE)
-        self.assertEqual(response.data["detail"], "Unable to process request: Celery worker process not running.")
+        self.assertEqual(
+            response.data["detail"], "Unable to process request: No celery workers running on queue default."
+        )
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
     @mock.patch("nautobot.extras.api.views.get_worker_count")
@@ -1111,7 +1117,7 @@ query ($device: [String!]) {
         self.assertEqual({"data": {"devices": []}}, response.data)
 
 
-# TODO: Standardize to APIViewTestCase (needs create & update tests)
+# TODO(Glenn): Standardize to APIViewTestCase (needs create & update tests)
 class ImageAttachmentTest(
     APIViewTestCases.GetObjectViewTestCase,
     APIViewTestCases.ListObjectsViewTestCase,
@@ -1278,7 +1284,9 @@ class JobAPIRunTestMixin:
         url = self.get_run_url()
         response = self.client.post(url, data, format="json", **self.header)
         self.assertHttpStatus(response, status.HTTP_503_SERVICE_UNAVAILABLE)
-        self.assertEqual(response.data["detail"], "Unable to process request: Celery worker process not running.")
+        self.assertEqual(
+            response.data["detail"], "Unable to process request: No celery workers running on queue default."
+        )
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     @mock.patch("nautobot.extras.api.views.get_worker_count")
@@ -1596,6 +1604,55 @@ class JobAPIRunTestMixin:
             response.data, {"errors": {"var2": ["This field is required."], "var4": ["This field is required."]}}
         )
 
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
+    def test_run_job_with_invalid_task_queue(self):
+        self.add_permissions("extras.run_job")
+        d = DeviceRole.objects.create(name="role", slug="role")
+        data = {
+            "data": {"var1": "x", "var2": 1, "var3": False, "var4": d.pk},
+            "commit": True,
+            "task_queue": "invalid",
+        }
+
+        url = self.get_run_url()
+        response = self.client.post(url, data, format="json", **self.header)
+        self.assertHttpStatus(response, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(
+            response.data,
+            {"task_queue": ['"invalid" is not a valid choice.']},
+        )
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
+    @mock.patch("nautobot.extras.api.views.get_worker_count", return_value=1)
+    def test_run_job_with_valid_task_queue(self, _):
+        self.add_permissions("extras.run_job")
+        d = DeviceRole.objects.create(name="role", slug="role")
+        data = {
+            "data": {"var1": "x", "var2": 1, "var3": False, "var4": d.pk},
+            "commit": True,
+            "task_queue": settings.CELERY_TASK_DEFAULT_QUEUE,
+        }
+
+        url = self.get_run_url()
+        response = self.client.post(url, data, format="json", **self.header)
+        self.assertHttpStatus(response, self.run_success_response_status)
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
+    @mock.patch("nautobot.extras.api.views.get_worker_count", return_value=1)
+    def test_run_job_with_default_queue_with_empty_job_model_task_queues(self, _):
+        self.add_permissions("extras.run_job")
+        data = {
+            "commit": True,
+            "task_queue": settings.CELERY_TASK_DEFAULT_QUEUE,
+        }
+
+        job_model = Job.objects.get_for_class_path("local/test_pass/TestPass")
+        job_model.enabled = True
+        job_model.validated_save()
+        url = self.get_run_url("local/test_pass/TestPass")
+        response = self.client.post(url, data, format="json", **self.header)
+        self.assertHttpStatus(response, self.run_success_response_status)
+
 
 class JobHookTest(APIViewTestCases.APIViewTestCase):
 
@@ -1744,6 +1801,8 @@ class JobTestVersion13(
         "time_limit": 650,
         "has_sensitive_variables": False,
         "has_sensitive_variables_override": True,
+        "task_queues": ["default", "priority"],
+        "task_queues_override": True,
     }
     bulk_update_data = {
         "enabled": True,
@@ -2332,7 +2391,7 @@ class NoteTest(APIViewTestCases.APIViewTestCase):
         )
 
 
-class RelationshipTest(APIViewTestCases.APIViewTestCase):
+class RelationshipTest(APIViewTestCases.APIViewTestCase, RequiredRelationshipTestMixin):
     model = Relationship
     brief_fields = ["display", "id", "name", "slug", "url"]
 
@@ -2373,7 +2432,7 @@ class RelationshipTest(APIViewTestCases.APIViewTestCase):
     bulk_update_data = {
         "source_filter": {"slug": ["some-slug"]},
     }
-    choices_fields = ["destination_type", "source_type", "type"]
+    choices_fields = ["destination_type", "source_type", "type", "required_on"]
     slug_source = "name"
     slugify_function = staticmethod(slugify_dashes_to_underscores)
 
@@ -2570,6 +2629,112 @@ class RelationshipTest(APIViewTestCases.APIViewTestCase):
                 destination_id=existing_device_2.pk,
             ).exists()
         )
+
+    def test_required_relationships(self):
+        """
+        1. Try creating an object when no required target object exists
+        2. Try creating an object without specifying required target object(s)
+        3. Try creating an object when all required data is present
+        4. Test various bulk create/edit scenarios
+        """
+
+        # Parameterized tests (for creating and updating single objects):
+        self.required_relationships_test(interact_with="api")
+
+        # 4. Bulk create/edit tests:
+
+        # VLAN endpoint to POST, PATCH and PUT multiple objects to:
+        vlan_list_endpoint = reverse(get_route_for_model(VLAN, "list", api=True))
+
+        def send_bulk_data(http_method, data):
+            return getattr(self.client, http_method)(
+                vlan_list_endpoint,
+                data=data,
+                format="json",
+                **self.header,
+            )
+
+        # Try deleting all devices and then creating 2 VLANs (fails):
+        Device.objects.all().delete()
+        response = send_bulk_data(
+            "post", data=[{"vid": "1", "name": "1", "status": "active"}, {"vid": "2", "name": "2", "status": "active"}]
+        )
+        self.assertHttpStatus(response, 400)
+        self.assertEqual(
+            {
+                "relationships": {
+                    "vlans-devices-m2m": [
+                        "VLANs require at least one device, but no devices exist yet. "
+                        "Create a device by posting to /api/dcim/devices/",
+                        'You need to specify ["relationships"]["vlans-devices-m2m"]["source"]["objects"].',
+                    ]
+                }
+            },
+            response.json(),
+        )
+
+        # Create test device for association
+        device_for_association = test_views.create_test_device("VLAN Required Device")
+        required_relationship_json = {"vlans-devices-m2m": {"source": {"objects": [str(device_for_association.id)]}}}
+        expected_error_json = {
+            "relationships": {
+                "vlans-devices-m2m": [
+                    'You need to specify ["relationships"]["vlans-devices-m2m"]["source"]["objects"].'
+                ]
+            }
+        }
+
+        # Test POST, PATCH and PUT
+        for method in ["post", "patch", "put"]:
+            if method == "post":
+                vlan1_json_data = {
+                    "vid": "1",
+                    "name": "1",
+                    "status": "active",
+                }
+                vlan2_json_data = {
+                    "vid": "2",
+                    "name": "2",
+                    "status": "active",
+                }
+            else:
+                vlan1, vlan2 = VLANFactory.create_batch(2)
+                vlan1_json_data = {"status": "active", "id": str(vlan1.id)}
+                # Add required fields for PUT method:
+                if method == "put":
+                    vlan1_json_data.update({"vid": vlan1.vid, "name": vlan1.name})
+
+                vlan2_json_data = {"status": "active", "id": str(vlan2.id)}
+                # Add required fields for PUT method:
+                if method == "put":
+                    vlan2_json_data.update({"vid": vlan2.vid, "name": vlan2.name})
+
+            # Try method without specifying required relationships for either vlan1 or vlan2 (fails)
+            json_data = [vlan1_json_data, vlan2_json_data]
+            response = send_bulk_data(method, json_data)
+            self.assertHttpStatus(response, 400)
+            self.assertEqual(response.json(), expected_error_json)
+
+            # Try method specifying required relationships for just vlan1 (fails)
+            vlan1_json_data["relationships"] = required_relationship_json
+            json_data = [vlan1_json_data, vlan2_json_data]
+            response = send_bulk_data(method, json_data)
+            self.assertHttpStatus(response, 400)
+            self.assertEqual(response.json(), expected_error_json)
+
+            # Try method specifying required relationships for both vlan1 and vlan2 (succeeds)
+            vlan2_json_data["relationships"] = required_relationship_json
+            json_data = [vlan1_json_data, vlan2_json_data]
+            response = send_bulk_data(method, json_data)
+            if method == "post":
+                self.assertHttpStatus(response, 201)
+            else:
+                self.assertHttpStatus(response, 200)
+
+            # Check the relationship associations were actually created
+            for vlan in response.json():
+                associated_device = vlan["relationships"]["vlans-devices-m2m"]["source"]["objects"][0]
+                self.assertEqual(str(device_for_association.id), associated_device["id"])
 
 
 class RelationshipAssociationTest(APIViewTestCases.APIViewTestCase):
@@ -3145,19 +3310,6 @@ class StatusTest(APIViewTestCases.APIViewTestCase):
     ]
     slug_source = "name"
 
-    @classmethod
-    def setUpTestData(cls):
-        """
-        Since many `Status` objects are created as part of data migrations, we're
-        testing against those. If this seems magical, it's because they are
-        imported from `ChoiceSet` enum objects.
-
-        This method is defined just so it's clear that there is no need to
-        create test data for this test case.
-
-        See `extras.management.create_custom_statuses` for context.
-        """
-
 
 class TagTestVersion12(APIViewTestCases.APIViewTestCase):
     model = Tag
@@ -3180,17 +3332,6 @@ class TagTestVersion12(APIViewTestCases.APIViewTestCase):
         "description": "New description",
     }
 
-    @classmethod
-    def setUpTestData(cls):
-        tags = (
-            Tag.objects.create(name="Tag 1", slug="tag-1"),
-            Tag.objects.create(name="Tag 2", slug="tag-2"),
-            Tag.objects.create(name="Tag 3", slug="tag-3"),
-        )
-
-        for tag in tags:
-            tag.content_types.add(ContentType.objects.get_for_model(Site))
-
     def test_all_relevant_content_types_assigned_to_tags_with_empty_content_types(self):
         self.add_permissions("extras.add_tag")
 
@@ -3199,7 +3340,7 @@ class TagTestVersion12(APIViewTestCases.APIViewTestCase):
         tag = Tag.objects.get(slug=self.create_data[0]["slug"])
         self.assertEqual(
             tag.content_types.count(),
-            TaggableClassesQuery().as_queryset.count(),
+            TaggableClassesQuery().as_queryset().count(),
         )
 
 
@@ -3215,23 +3356,23 @@ class TagTestVersion13(
         {"name": "Tag 5", "slug": "tag-5", "content_types": [Site._meta.label_lower]},
         {"name": "Tag 6", "slug": "tag-6", "content_types": [Site._meta.label_lower]},
     ]
-    bulk_update_data = {"content_types": [Site._meta.label_lower]}
     choices_fields = []
 
     @classmethod
     def setUpTestData(cls):
-        tags = (
-            Tag.objects.create(name="Tag 1", slug="tag-1"),
-            Tag.objects.create(name="Tag 2", slug="tag-2"),
-            Tag.objects.create(name="Tag 3", slug="tag-3"),
-        )
-        for tag in tags:
-            tag.content_types.add(ContentType.objects.get_for_model(Site))
-            tag.content_types.add(ContentType.objects.get_for_model(Device))
+        cls.update_data = {
+            "name": "A new tag name",
+            "slug": "a-new-tag-name",
+            "content_types": [f"{ct.app_label}.{ct.model}" for ct in TaggableClassesQuery().as_queryset()],
+        }
+        cls.bulk_update_data = {
+            "content_types": [f"{ct.app_label}.{ct.model}" for ct in TaggableClassesQuery().as_queryset()]
+        }
 
     def test_create_tags_with_invalid_content_types(self):
         self.add_permissions("extras.add_tag")
 
+        # VLANGroup is an OrganizationalModel, not a PrimaryModel, and therefore does not support tags
         data = {**self.create_data[0], "content_types": [VLANGroup._meta.label_lower]}
         response = self.client.post(self._get_list_url(), data, format="json", **self.header)
 
@@ -3255,12 +3396,15 @@ class TagTestVersion13(
         """Test removing a tag content_type that is been tagged to a model"""
         self.add_permissions("extras.change_tag")
 
-        tag_1 = Tag.objects.get(slug="tag-1")
+        tag_1 = Tag.objects.filter(content_types=ContentType.objects.get_for_model(Site)).first()
         site = Site.objects.create(name="site 1", slug="site-1")
         site.tags.add(tag_1)
 
+        tag_content_types = list(tag_1.content_types.all())
+        tag_content_types.remove(ContentType.objects.get_for_model(Site))
+
         url = self._get_detail_url(tag_1)
-        data = {"content_types": [Device._meta.label_lower]}
+        data = {"content_types": [f"{ct.app_label}.{ct.model}" for ct in tag_content_types]}
 
         response = self.client.patch(url, data, format="json", **self.header)
         self.assertHttpStatus(response, 400)
@@ -3272,21 +3416,21 @@ class TagTestVersion13(
         """Test updating a tag without changing its content-types."""
         self.add_permissions("extras.change_tag")
 
-        tag = Tag.objects.get(slug="tag-1")
+        tag = Tag.objects.exclude(content_types=ContentType.objects.get_for_model(Site)).first()
+        tag_content_types = list(tag.content_types.all())
         url = self._get_detail_url(tag)
         data = {"color": ColorChoices.COLOR_LIME}
 
         response = self.client.patch(url, data, format="json", **self.header)
         self.assertHttpStatus(response, status.HTTP_200_OK)
         self.assertEqual(response.data["color"], ColorChoices.COLOR_LIME)
-        self.assertEqual(sorted(response.data["content_types"]), ["dcim.device", "dcim.site"])
+        self.assertEqual(
+            sorted(response.data["content_types"]), sorted([f"{ct.app_label}.{ct.model}" for ct in tag_content_types])
+        )
 
         tag.refresh_from_db()
         self.assertEqual(tag.color, ColorChoices.COLOR_LIME)
-        tag_content_types = tag.content_types.all()
-        self.assertIn(ContentType.objects.get_for_model(Device), tag_content_types)
-        self.assertIn(ContentType.objects.get_for_model(Site), tag_content_types)
-        self.assertNotIn(ContentType.objects.get_for_model(Rack), tag_content_types)
+        self.assertEqual(list(tag.content_types.all()), tag_content_types)
 
 
 class WebhookTest(APIViewTestCases.APIViewTestCase):

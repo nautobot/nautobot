@@ -211,11 +211,14 @@ class DynamicGroup(OrganizationalModel):
             # Get the missing model form field so we can use it to add to the filterform_fields.
             modelform_field = modelform_fields[missing_field]
 
-            # Replace the modelform_field with the correct type for the UI. At this time this is
-            # only being done for CharField since in the filterset form this ends up being a
-            # `MultiValueCharField` (dynamically generated from from `MultiValueCharFilter`) which is
-            # not correct for char fields. For boolean fields, we want them to be nullable.
-            if isinstance(modelform_field, (forms.CharField, forms.BooleanField)):
+            # Use filterset_field to generate the correct filterform_field for CharField.
+            # Which is `MultiValueCharField`.
+            if isinstance(modelform_field, forms.CharField):
+                new_modelform_field = filterset_field.field
+                modelform_field = new_modelform_field
+
+            # For boolean fields, we want them to be nullable.
+            if isinstance(modelform_field, forms.BooleanField):
                 # Get ready to replace the form field w/ correct widget.
                 new_modelform_field = filterset_field.field
                 new_modelform_field.widget = modelform_field.widget
@@ -310,12 +313,16 @@ class DynamicGroup(OrganizationalModel):
     @property
     def members(self):
         """Return the member objects for this group."""
-        return self.get_group_queryset()
+        # If there are child groups, return the generated group queryset, otherwise use this group's
+        # `filter` directly.
+        if self.children.exists():
+            return self.get_group_queryset()
+        return self.get_queryset()
 
     @property
     def count(self):
         """Return the number of member objects in this group."""
-        return self.get_group_queryset().count()
+        return self.members.count()
 
     def get_absolute_url(self):
         return reverse("extras:dynamicgroup", kwargs={"slug": self.slug})
@@ -380,12 +387,6 @@ class DynamicGroup(OrganizationalModel):
 
         self.filter = new_filter
 
-    # FIXME(jathan): Yes, this is "something", but there is discrepancy between explicitly declared
-    # fields on `DeviceFilterForm` (for example) vs. the `DeviceFilterSet` filters. For example
-    # `Device.name` becomes a `MultiValueCharFilter` that emits a `MultiValueCharField` which
-    # expects a list of strings as input. The inverse is not true. It's easier to munge this
-    # dictionary when we go to send it to the form, than it is to dynamically coerce the form field
-    # types coming and going... For now.
     def get_initial(self):
         """
         Return an form-friendly version of `self.filter` for initial form data.
@@ -393,31 +394,11 @@ class DynamicGroup(OrganizationalModel):
         This is intended for use to populate the dynamically-generated filter form created by
         `generate_filter_form()`.
         """
-        filter_fields = self.get_filter_fields()
         initial_data = self.filter.copy()
-
-        # Brute force to capture the names of any `*CharField` fields.
-        char_fields = [f for (f, ftype) in filter_fields.items() if ftype.__class__.__name__.endswith("CharField")]
-
-        # Iterate the char fields and coerce their type to a singular value or
-        # an empty string in the case of an empty list.
-        for char_field in char_fields:
-            if char_field not in initial_data:
-                continue
-
-            field_value = initial_data[char_field]
-
-            if isinstance(field_value, list):
-                # Either the first (and should be only) item in this list.
-                if field_value:
-                    new_value = field_value[0]
-                # Or empty string if there isn't.
-                else:
-                    new_value = ""
-                initial_data[char_field] = new_value
 
         return initial_data
 
+    # TODO: Rip this out once the dynamic filter form helper replaces this in the web UI.
     def generate_filter_form(self):
         """
         Generate a `FilterForm` class for use in `DynamicGroup` edit view.
@@ -429,7 +410,6 @@ class DynamicGroup(OrganizationalModel):
         """
         filter_fields = self.get_filter_fields()
 
-        # FIXME(jathan): Account for field_order in the newly generated class.
         try:
 
             class FilterForm(self.filterform_class):
@@ -490,14 +470,37 @@ class DynamicGroup(OrganizationalModel):
             Value passed to the filter
         """
         query = models.Q()
+        field_name = filter_field.field_name
+
+        # Attempt to account for `ModelChoiceFilter` where `to_field_name` MAY be set.
+        to_field_name = getattr(filter_field.field, "to_field_name", None)
+        if to_field_name is not None:
+            field_name = f"{field_name}__{to_field_name}"
+
+        lookup = f"{field_name}__{filter_field.lookup_expr}"
 
         # Explicitly call generate_query_{filter_method} for a method filter.
         if filter_field.method is not None and hasattr(filter_field.parent, "generate_query_" + filter_field.method):
             filter_method = getattr(filter_field.parent, "generate_query_" + filter_field.method)
-            query |= models.Q(filter_method(value))
+            query |= filter_method(value)
 
-        # In this case we want all values in a set union (boolean OR) because we want ANY of the
-        # filter values to match.
+        # Explicitly call `filter_field.generate_query` for a reversible filter.
+        elif hasattr(filter_field, "generate_query"):
+            # Is this a list of strings? Well let's resolve it to related model objects so we can
+            # pass it to `generate_query` to get a correct Q object back out. When values are being
+            # reconstructed from saved filters, lists of slugs are common e.g. (`{"site": ["ams01",
+            # "ams02"]}`, the value being a list of site slugs (`["ams01", "ams02"]`).
+            if value and isinstance(value, list) and isinstance(value[0], str):
+                model_field = django_filters.utils.get_model_field(self._model, filter_field.field_name)
+                related_model = model_field.related_model
+                lookup_kwargs = {f"{to_field_name}__in": value}
+                gq_value = related_model.objects.filter(**lookup_kwargs)
+            else:
+                gq_value = value
+            query |= filter_field.generate_query(gq_value)
+
+        # For vanilla multiple-choice filters, we want all values in a set union (boolean OR)
+        # because we want ANY of the filter values to match.
         elif isinstance(filter_field, django_filters.MultipleChoiceFilter):
             for v in value:
                 query |= models.Q(**filter_field.get_filter_predicate(v))
@@ -507,14 +510,6 @@ class DynamicGroup(OrganizationalModel):
         # multiple-choice. This is safe for singular filters except `ModelChoiceFilter`, because they
         # do not support `to_field_name`.
         else:
-            field_name = filter_field.field_name
-
-            # Attempt to account for `ModelChoiceFilter` where `to_field_name` MAY be set.
-            to_field_name = getattr(filter_field.field, "to_field_name", None)
-            if to_field_name is not None:
-                field_name = f"{field_name}__{to_field_name}"
-
-            lookup = f"{field_name}__{filter_field.lookup_expr}"
             query |= models.Q(**{lookup: value})
 
         return query

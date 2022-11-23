@@ -1,9 +1,9 @@
-from nautobot.extras.plugins import PluginCustomValidator
+from nautobot.apps.models import CustomValidator
 
 
-class SiteCustomValidator(PluginCustomValidator):
+class SiteCustomValidator(CustomValidator):
     """
-    Example of a PluginCustomValidator that checks if the name of a Site object is
+    Example of a CustomValidator that checks if the name of a Site object is
     "this site has a matching name" and if so, raises a ValidationError.
 
     This is a trivial case used in testing and is constructed to only apply to a
@@ -21,7 +21,7 @@ class SiteCustomValidator(PluginCustomValidator):
             self.validation_error({"name": "Site name must be something valid"})
 
 
-class RelationshipAssociationCustomValidator(PluginCustomValidator):
+class RelationshipAssociationCustomValidator(CustomValidator):
     model = "extras.relationshipassociation"
 
     def clean(self):

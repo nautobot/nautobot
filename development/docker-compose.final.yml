@@ -5,7 +5,7 @@ services:
   nautobot:
     build:
       target: final
-    image: "networktocode/nautobot-py${PYTHON_VER}:local"
+    image: "local/nautobot-final:local-py${PYTHON_VER}"
     ports:
       - 8443:8443
     healthcheck:
@@ -15,4 +15,6 @@ services:
         - "-fk"
         - "https://localhost:8443/health/"
   celery_worker:
-    image: "networktocode/nautobot-py${PYTHON_VER}:local"
+    image: "local/nautobot-final:local-py${PYTHON_VER}"
+  celery_beat:
+    image: "local/nautobot-final:local-py${PYTHON_VER}"

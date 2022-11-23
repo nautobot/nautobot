@@ -32,6 +32,7 @@ class ObjectPermissionBackend(ModelBackend):
         Return all permissions granted to the user by an ObjectPermission.
         """
         # Retrieve all assigned and enabled ObjectPermissions
+        # v2 TODO(jathan): Replace prefetch_related with select_related
         object_permissions = ObjectPermission.objects.filter(
             Q(users=user_obj) | Q(groups__user=user_obj), enabled=True
         ).prefetch_related("object_types")
@@ -144,7 +145,7 @@ def assign_permissions_to_user(user, permissions=None):
     for permission_name, constraints in permissions.items():
         try:
             object_type, action = resolve_permission_ct(permission_name)
-            # TODO: Merge multiple actions into a single ObjectPermission per content type
+            # 2.0 TODO(jathan): Merge multiple actions into a single ObjectPermission per content type OR just replace this with a different solution entirely.
             obj_perm = ObjectPermission(name=permission_name, actions=[action], constraints=constraints)
             obj_perm.save()
             obj_perm.users.add(user)

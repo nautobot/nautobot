@@ -10,7 +10,6 @@ import traceback
 import warnings
 
 
-from cacheops import file_cache
 from db_file_storage.form_widgets import DBClearableFileInput
 from django import forms
 from django.conf import settings
@@ -35,7 +34,7 @@ from .datasources.git import ensure_git_repository
 from .forms import JobForm
 from .models import FileProxy, GitRepository, Job as JobModel, JobHook, ObjectChange, ScheduledJob
 from .registry import registry
-from .utils import ChangeLoggedModelsQuery, get_job_content_type, jobs_in_directory
+from .utils import ChangeLoggedModelsQuery, get_job_content_type, jobs_in_directory, task_queues_as_choices
 
 from nautobot.core.celery import nautobot_task
 from nautobot.ipam.formfields import IPAddressFormField, IPNetworkFormField
@@ -101,6 +100,7 @@ class BaseJob:
         - soft_time_limit (int)
         - time_limit (int)
         - has_sensitive_variables (bool)
+        - task_queues (list)
         """
 
     def __init__(self):
@@ -137,7 +137,7 @@ class BaseJob:
         plugins/my_plugin.jobs/MyPluginJob
         git.my-repository/myjob/MyJob
         """
-        # TODO: it'd be nice if this were derived more automatically instead of needing this logic
+        # TODO(Glenn): it'd be nice if this were derived more automatically instead of needing this logic
         if cls in registry["plugin_jobs"]:
             source_grouping = "plugins"
         elif cls.file_path.startswith(settings.JOBS_ROOT):
@@ -224,6 +224,10 @@ class BaseJob:
         return getattr(cls.Meta, "has_sensitive_variables", True)
 
     @classproperty
+    def task_queues(cls):  # pylint: disable=no-self-argument
+        return getattr(cls.Meta, "task_queues", [])
+
+    @classproperty
     def properties_dict(cls):  # pylint: disable=no-self-argument
         """
         Return all relevant classproperties as a dict.
@@ -241,6 +245,7 @@ class BaseJob:
             "soft_time_limit": cls.soft_time_limit,
             "time_limit": cls.time_limit,
             "has_sensitive_variables": cls.has_sensitive_variables,
+            "task_queues": cls.task_queues,
         }
 
     @classmethod
@@ -314,11 +319,13 @@ class BaseJob:
             job_model = JobModel.objects.get_for_class_path(self.class_path)
             read_only = job_model.read_only if job_model.read_only_override else self.read_only
             commit_default = job_model.commit_default if job_model.commit_default_override else self.commit_default
+            task_queues = job_model.task_queues if job_model.task_queues_override else self.task_queues
         except JobModel.DoesNotExist:
             # 2.0 TODO: remove this fallback, Job records should always exist.
             logger.error("No Job instance found in the database corresponding to %s", self.class_path)
             read_only = self.read_only
             commit_default = self.commit_default
+            task_queues = self.task_queues
 
         if read_only:
             # Hide the commit field for read only jobs
@@ -327,6 +334,9 @@ class BaseJob:
         elif not initial or "_commit" not in initial:
             # Set initial "commit" checkbox state based on the Meta parameter
             form.fields["_commit"].initial = commit_default
+
+        # Update task queue choices
+        form.fields["_task_queue"].choices = task_queues_as_choices(task_queues)
 
         # https://github.com/PyCQA/pylint/issues/3484
         if self.field_order:  # pylint: disable=using-constant-test
@@ -937,7 +947,6 @@ def get_jobs():
     return jobs
 
 
-@file_cache.cached(timeout=60)
 def _get_job_source_paths():
     """
     Helper function to get_jobs().
@@ -977,7 +986,7 @@ def _get_job_source_paths():
             else:
                 logger.warning(f"Git repository {repository_record} is configured to provide jobs, but none are found!")
 
-        # TODO: when a Git repo is deleted or its slug is changed, we update the local filesystem
+        # TODO(Glenn): when a Git repo is deleted or its slug is changed, we update the local filesystem
         # (see extras/signals.py, extras/models/datasources.py), but as noted above, there may be multiple filesystems
         # involved, so not all local clones of deleted Git repositories may have been deleted yet.
         # For now, if we encounter a "leftover" Git repo here, we delete it now.
@@ -996,7 +1005,6 @@ def _get_job_source_paths():
     return paths
 
 
-@file_cache.cached(timeout=60)
 def get_job_classpaths():
     """
     Get a list of all known Job class_path strings.
@@ -1140,7 +1148,7 @@ def run_job(data, request, job_result_pk, commit=True, *args, **kwargs):
         # Force commit to false for read only jobs.
         commit = False
 
-    # TODO: validate that all args required by this job are set in the data or else log helpful errors?
+    # TODO(Glenn): validate that all args required by this job are set in the data or else log helpful errors?
 
     job.logger.info(f"Running job (commit={commit})")
 
@@ -1263,10 +1271,13 @@ def scheduled_job_handler(*args, **kwargs):
     user = User.objects.get(pk=user_pk)
     name = kwargs.pop("name")
     scheduled_job_pk = kwargs.pop("scheduled_job_pk")
+    celery_kwargs = kwargs.pop("celery_kwargs", {})
     schedule = ScheduledJob.objects.get(pk=scheduled_job_pk)
 
     job_content_type = get_job_content_type()
-    JobResult.enqueue_job(run_job, name, job_content_type, user, schedule=schedule, **kwargs)
+    JobResult.enqueue_job(
+        run_job, name, job_content_type, user, celery_kwargs=celery_kwargs, schedule=schedule, **kwargs
+    )
 
 
 def enqueue_job_hooks(object_change):

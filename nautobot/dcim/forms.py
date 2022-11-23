@@ -69,6 +69,7 @@ from .choices import (
     CableTypeChoices,
     ConsolePortTypeChoices,
     DeviceFaceChoices,
+    DeviceRedundancyGroupFailoverStrategyChoices,
     InterfaceModeChoices,
     InterfaceTypeChoices,
     PortTypeChoices,
@@ -96,6 +97,7 @@ from .models import (
     Cable,
     DeviceBay,
     DeviceBayTemplate,
+    DeviceRedundancyGroup,
     ConsolePort,
     ConsolePortTemplate,
     ConsoleServerPort,
@@ -181,17 +183,21 @@ class InterfaceCommonForm(forms.Form):
 
         parent_field = "device" if "device" in self.cleaned_data else "virtual_machine"
         tagged_vlans = self.cleaned_data["tagged_vlans"]
+        mode = self.cleaned_data["mode"]
 
         # Untagged interfaces cannot be assigned tagged VLANs
-        if self.cleaned_data["mode"] == InterfaceModeChoices.MODE_ACCESS and tagged_vlans:
+        if mode == InterfaceModeChoices.MODE_ACCESS and tagged_vlans:
             raise forms.ValidationError({"mode": "An access interface cannot have tagged VLANs assigned."})
 
+        if mode != InterfaceModeChoices.MODE_TAGGED and tagged_vlans:
+            raise forms.ValidationError({"tagged_vlans": f"Clear tagged_vlans to set mode to {self.mode}"})
+
         # Remove all tagged VLAN assignments from "tagged all" interfaces
-        elif self.cleaned_data["mode"] == InterfaceModeChoices.MODE_TAGGED_ALL:
+        elif mode == InterfaceModeChoices.MODE_TAGGED_ALL:
             self.cleaned_data["tagged_vlans"] = []
 
         # Validate tagged VLANs; must be a global VLAN or in the same site
-        elif self.cleaned_data["mode"] == InterfaceModeChoices.MODE_TAGGED:
+        elif mode == InterfaceModeChoices.MODE_TAGGED:
             valid_sites = [None, self.cleaned_data[parent_field].site]
             invalid_vlans = [str(v) for v in tagged_vlans if v.site not in valid_sites]
 
@@ -423,7 +429,7 @@ class LocationTypeForm(NautobotModelForm):
 
     class Meta:
         model = LocationType
-        fields = ("parent", "name", "slug", "description", "content_types")
+        fields = ("parent", "name", "slug", "description", "nestable", "content_types")
 
 
 class LocationTypeCSVForm(CustomFieldModelCSVForm):
@@ -466,6 +472,7 @@ class LocationForm(NautobotModelForm, TenancyForm):
     parent = DynamicModelChoiceField(
         queryset=Location.objects.all(),
         query_params={"child_location_type": "$location_type"},
+        to_field_name="slug",
         required=False,
     )
     site = DynamicModelChoiceField(queryset=Site.objects.all(), required=False)
@@ -535,13 +542,15 @@ class LocationCSVForm(StatusModelCSVFormMixin, CustomFieldModelCSVForm):
 
 class LocationFilterForm(NautobotFilterForm, StatusModelFilterFormMixin, TenancyFilterForm):
     model = Location
-    field_order = ["q", "location_type", "parent", "status", "tenant_group", "tenant", "tag"]
+    field_order = ["q", "location_type", "parent", "subtree", "base_site", "status", "tenant_group", "tenant", "tag"]
 
     q = forms.CharField(required=False, label="Search")
     location_type = DynamicModelMultipleChoiceField(
         queryset=LocationType.objects.all(), to_field_name="slug", required=False
     )
     parent = DynamicModelMultipleChoiceField(queryset=Location.objects.all(), to_field_name="slug", required=False)
+    subtree = DynamicModelMultipleChoiceField(queryset=Location.objects.all(), to_field_name="slug", required=False)
+    base_site = DynamicModelMultipleChoiceField(queryset=Site.objects.all(), to_field_name="slug", required=False)
     tag = TagFilterField(model)
 
 
@@ -948,6 +957,7 @@ class RackReservationFilterForm(NautobotFilterForm, TenancyFilterForm):
         query_params={"region": "$region"},
     )
     group_id = DynamicModelMultipleChoiceField(
+        # v2 TODO(jathan): Replace prefetch_related with select_related
         queryset=RackGroup.objects.prefetch_related("site"),
         required=False,
         label="Rack group",
@@ -1801,6 +1811,7 @@ class DeviceForm(LocatableModelFormMixin, NautobotModelForm, TenancyForm, LocalC
             "group_id": "$rack_group",
         },
     )
+    device_redundancy_group = DynamicModelChoiceField(queryset=DeviceRedundancyGroup.objects.all(), required=False)
     position = forms.IntegerField(
         required=False,
         help_text="The lowest-numbered unit occupied by the device",
@@ -1852,6 +1863,8 @@ class DeviceForm(LocatableModelFormMixin, NautobotModelForm, TenancyForm, LocalC
             "site",
             "location",
             "rack",
+            "device_redundancy_group",
+            "device_redundancy_group_priority",
             "position",
             "face",
             "status",
@@ -1893,6 +1906,7 @@ class DeviceForm(LocatableModelFormMixin, NautobotModelForm, TenancyForm, LocalC
                 interface_ids = self.instance.vc_interfaces.values_list("pk", flat=True)
 
                 # Collect interface IPs
+                # v2 TODO(jathan): Replace prefetch_related with select_related
                 interface_ips = (
                     IPAddress.objects.ip_family(family)
                     .filter(
@@ -1905,6 +1919,7 @@ class DeviceForm(LocatableModelFormMixin, NautobotModelForm, TenancyForm, LocalC
                     ip_list = [(ip.id, f"{ip.address} ({ip.assigned_object})") for ip in interface_ips]
                     ip_choices.append(("Interface IPs", ip_list))
                 # Collect NAT IPs
+                # v2 TODO(jathan): Replace prefetch_related with select_related
                 nat_ips = (
                     IPAddress.objects.prefetch_related("nat_inside")
                     .ip_family(family)
@@ -2018,6 +2033,12 @@ class DeviceCSVForm(LocatableModelCSVFormMixin, BaseDeviceCSVForm):
         help_text="Assigned rack",
     )
     face = CSVChoiceField(choices=DeviceFaceChoices, required=False, help_text="Mounted rack face")
+    device_redundancy_group = CSVModelChoiceField(
+        queryset=DeviceRedundancyGroup.objects.all(),
+        to_field_name="slug",
+        required=False,
+        help_text="Associated device redundancy group (slug)",
+    )
 
     class Meta(BaseDeviceCSVForm.Meta):
         fields = [
@@ -2036,6 +2057,8 @@ class DeviceCSVForm(LocatableModelCSVFormMixin, BaseDeviceCSVForm):
             "rack",
             "position",
             "face",
+            "device_redundancy_group",
+            "device_redundancy_group_priority",
             "cluster",
             "comments",
         ]
@@ -2056,7 +2079,7 @@ class DeviceCSVForm(LocatableModelCSVFormMixin, BaseDeviceCSVForm):
             }
             self.fields["rack"].queryset = self.fields["rack"].queryset.filter(**params)
 
-            # TODO: limit location queryset by assigned site
+            # 2.0 TODO: limit location queryset by assigned site
 
 
 class ChildDeviceCSVForm(BaseDeviceCSVForm):
@@ -2135,6 +2158,8 @@ class DeviceBulkEditForm(
     platform = DynamicModelChoiceField(queryset=Platform.objects.all(), required=False)
     serial = forms.CharField(max_length=255, required=False, label="Serial Number")
     secrets_group = DynamicModelChoiceField(queryset=SecretsGroup.objects.all(), required=False)
+    device_redundancy_group = DynamicModelChoiceField(queryset=DeviceRedundancyGroup.objects.all(), required=False)
+    device_redundancy_group_priority = forms.IntegerField(required=False, min_value=1)
 
     class Meta:
         model = Device
@@ -2148,6 +2173,8 @@ class DeviceBulkEditForm(
             "face",
             "rack_group",
             "secrets_group",
+            "device_redundancy_group",
+            "device_redundancy_group_priority",
         ]
 
     def __init__(self, *args, **kwrags):
@@ -2218,6 +2245,13 @@ class DeviceFilterForm(
         null_option="None",
     )
     mac_address = forms.CharField(required=False, label="MAC address")
+    device_redundancy_group = DynamicModelMultipleChoiceField(
+        queryset=DeviceRedundancyGroup.objects.all(),
+        to_field_name="slug",
+        required=False,
+        null_option="None",
+    )
+    device_redundancy_group_priority = forms.IntegerField(min_value=1, required=False)
     has_primary_ip = forms.NullBooleanField(
         required=False,
         label="Has a primary IP",
@@ -2659,7 +2693,7 @@ class InterfaceFilterForm(DeviceComponentFilterForm, StatusModelFilterFormMixin)
     tag = TagFilterField(model)
 
 
-class InterfaceForm(NautobotModelForm, InterfaceCommonForm):
+class InterfaceForm(InterfaceCommonForm, NautobotModelForm):
     parent_interface = DynamicModelChoiceField(
         queryset=Interface.objects.all(),
         required=False,
@@ -2945,6 +2979,7 @@ class InterfaceBulkEditForm(
             # See netbox-community/netbox#4523
             if "pk" in self.initial:
                 site = None
+                # v2 TODO(jathan): Replace prefetch_related with select_related
                 interfaces = Interface.objects.filter(pk__in=self.initial["pk"]).prefetch_related("device__site")
 
                 # Check interface sites.  First interface should set site, further interfaces will either continue the
@@ -4442,3 +4477,67 @@ class PowerFeedFilterForm(NautobotFilterForm, StatusModelFilterFormMixin):
     amperage = forms.IntegerField(required=False)
     max_utilization = forms.IntegerField(required=False)
     tag = TagFilterField(model)
+
+
+class DeviceRedundancyGroupForm(NautobotModelForm):
+    secrets_group = DynamicModelChoiceField(queryset=SecretsGroup.objects.all(), required=False)
+    comments = CommentField()
+    slug = SlugField()
+
+    class Meta:
+        model = DeviceRedundancyGroup
+        fields = "__all__"
+        widgets = {"failover_strategy": StaticSelect2()}
+
+
+class DeviceRedundancyGroupFilterForm(NautobotFilterForm, StatusModelFilterFormMixin):
+    model = DeviceRedundancyGroup
+    field_order = ["q", "name"]
+    q = forms.CharField(required=False, label="Search")
+    failover_strategy = forms.ChoiceField(
+        choices=add_blank_choice(DeviceRedundancyGroupFailoverStrategyChoices),
+        required=False,
+        widget=StaticSelect2(),
+    )
+    secrets_group = DynamicModelMultipleChoiceField(
+        queryset=SecretsGroup.objects.all(), to_field_name="slug", required=False
+    )
+
+    tag = TagFilterField(model)
+
+
+class DeviceRedundancyGroupBulkEditForm(
+    TagsBulkEditFormMixin, StatusModelBulkEditFormMixin, NautobotBulkEditForm, LocalContextModelBulkEditForm
+):
+    pk = forms.ModelMultipleChoiceField(queryset=DeviceRedundancyGroup.objects.all(), widget=forms.MultipleHiddenInput)
+    failover_strategy = forms.ChoiceField(
+        choices=add_blank_choice(DeviceRedundancyGroupFailoverStrategyChoices),
+        required=False,
+        widget=StaticSelect2(),
+    )
+    secrets_group = DynamicModelChoiceField(queryset=SecretsGroup.objects.all(), to_field_name="name", required=False)
+    comments = CommentField(widget=SmallTextarea, label="Comments")
+
+    class Meta:
+        model = DeviceRedundancyGroup
+        nullable_fields = [
+            "failover_strategy",
+            "secrets_group",
+        ]
+
+
+class DeviceRedundancyGroupCSVForm(StatusModelCSVFormMixin, CustomFieldModelCSVForm):
+    failover_strategy = CSVChoiceField(
+        choices=DeviceRedundancyGroupFailoverStrategyChoices, required=False, help_text="Failover Strategy"
+    )
+
+    secrets_group = CSVModelChoiceField(
+        queryset=SecretsGroup.objects.all(),
+        required=False,
+        to_field_name="name",
+        help_text="Secrets group",
+    )
+
+    class Meta:
+        model = DeviceRedundancyGroup
+        fields = DeviceRedundancyGroup.csv_headers

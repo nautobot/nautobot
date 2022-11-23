@@ -29,6 +29,10 @@ $ nautobot-server celery --help
 +/- 1.1.0
     Prior to version 1.1.0, Nautobot utilized RQ as the primary background task worker. As of Nautobot 1.1.0, RQ is now *deprecated*. RQ and the `@job` decorator for custom tasks are still supported for now, but users should [migrate the primary worker to Celery](#migrating-to-celery-from-rq) and then, *only if still required*, [run RQ concurrently with the Celery worker](#concurrent-celery-and-rq-nautobot-workers). RQ and the `@job` decorator will no longer be documented, and support for RQ will be removed in a future release.
 
+#### Advanced Task Queue Configuration
+
+You may want to deploy multiple workers and/or multiple queues. For more information see the [task queues](../administration/celery-queues.md) documentation.
+
 ## Configuration
 
 As the `nautobot` user, copy and paste the following into `$NAUTOBOT_ROOT/uwsgi.ini`:
@@ -110,7 +114,7 @@ First, we'll establish the `systemd` unit file for the Nautobot web service. Cop
 ```ini
 [Unit]
 Description=Nautobot WSGI Service
-Documentation=https://docs.nautobot.com/en/stable/
+Documentation=https://docs.nautobot.com/projects/core/en/stable/
 After=network-online.target
 Wants=network-online.target
 
@@ -155,7 +159,7 @@ To establish the `systemd` unit file for the Celery worker, copy and paste the f
 ```ini
 [Unit]
 Description=Nautobot Celery Worker
-Documentation=https://docs.nautobot.com/en/stable/
+Documentation=https://docs.nautobot.com/projects/core/en/stable/
 After=network-online.target
 Wants=network-online.target
 
@@ -190,7 +194,7 @@ To establish the `systemd` unit file for the Celery Beat scheduler, copy and pas
 ```ini
 [Unit]
 Description=Nautobot Celery Beat Scheduler
-Documentation=https://docs.nautobot.com/en/stable/
+Documentation=https://docs.nautobot.com/projects/core/en/stable/
 After=network-online.target
 Wants=network-online.target
 
@@ -264,7 +268,7 @@ Copy and paste the following into `/etc/systemd/system/nautobot-rq-worker.servic
 ```ini
 [Unit]
 Description=Nautobot Request Queue Worker
-Documentation=https://docs.nautobot.com/en/stable/
+Documentation=https://docs.nautobot.com/projects/core/en/stable/
 After=network-online.target
 Wants=network-online.target
 
@@ -317,7 +321,7 @@ You can use the command `systemctl status nautobot.service` to verify that the W
 ● nautobot.service - Nautobot WSGI Service
      Loaded: loaded (/etc/systemd/system/nautobot.service; enabled; vendor preset: enabled)
      Active: active (running) since Fri 2021-03-05 22:23:33 UTC; 35min ago
-       Docs: https://docs.nautobot.com/en/stable/
+       Docs: https://docs.nautobot.com/projects/core/en/stable/
    Main PID: 6992 (nautobot-server)
       Tasks: 16 (limit: 9513)
      Memory: 221.1M

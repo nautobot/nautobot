@@ -1,4 +1,5 @@
 import json
+import warnings
 
 from django.apps import apps
 from django.contrib.auth import get_user_model
@@ -181,6 +182,14 @@ class NautobotTestCaseMixin:
 
         self.assertEqual(new_model_dict, relevant_data)
 
+    def assertQuerysetEqualAndNotEmpty(self, qs, values, *args, **kwargs):
+        """Wrapper for assertQuerysetEqual with additional logic to assert input queryset and values are not empty"""
+
+        self.assertNotEqual(len(qs), 0, "Queryset cannot be empty")
+        self.assertNotEqual(len(values), 0, "Values cannot be empty")
+
+        return self.assertQuerysetEqual(qs, values, *args, **kwargs)
+
     #
     # Convenience methods
     #
@@ -189,6 +198,13 @@ class NautobotTestCaseMixin:
     def create_tags(cls, *names):
         """
         Create and return a Tag instance for each name given.
-        """
 
+        DEPRECATED: use TagFactory instead.
+        """
+        warnings.warn(
+            "create_tags() is deprecated and will be removed in a future Nautobot release. "
+            "Use nautobot.extras.factory.TagFactory (provided in Nautobot 1.5 and later) instead.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
         return [Tag.objects.create(name=name, slug=slugify(name)) for name in names]

@@ -62,6 +62,13 @@ class CustomFieldTypeChoices(ChoiceSet):
         (TYPE_JSON, "JSON"),
     )
 
+    REGEX_TYPES = (
+        TYPE_TEXT,
+        TYPE_URL,
+        TYPE_SELECT,
+        TYPE_MULTISELECT,
+    )
+
 
 #
 # CustomLinks
@@ -266,6 +273,18 @@ class ObjectChangeEventContextChoices(ChoiceSet):
 #
 # Relationships
 #
+
+
+class RelationshipRequiredSideChoices(ChoiceSet):
+    NEITHER_SIDE_REQUIRED = ""
+    SOURCE_SIDE_REQUIRED = "source"
+    DESTINATION_SIDE_REQUIRED = "destination"
+
+    CHOICES = (
+        (NEITHER_SIDE_REQUIRED, "Neither side required"),
+        (SOURCE_SIDE_REQUIRED, "Source objects MUST implement this relationship"),
+        (DESTINATION_SIDE_REQUIRED, "Destination objects MUST implement this relationship"),
+    )
 
 
 class RelationshipSideChoices(ChoiceSet):

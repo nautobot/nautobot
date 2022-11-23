@@ -68,6 +68,9 @@ router.register("virtual-chassis", views.VirtualChassisViewSet)
 router.register("power-panels", views.PowerPanelViewSet)
 router.register("power-feeds", views.PowerFeedViewSet)
 
+# Device Redundancy Group
+router.register("device-redundancy-groups", views.DeviceRedundancyGroupViewSet)
+
 # Miscellaneous
 router.register("connected-device", views.ConnectedDeviceViewSet, basename="connected-device")
 

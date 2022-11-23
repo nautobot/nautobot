@@ -25,7 +25,7 @@ class LocatableModelFormMixin(forms.Form):
     location = DynamicModelChoiceField(
         queryset=Location.objects.all(),
         required=False,
-        # TODO: query_params={"base_site": "$site"},
+        query_params={"base_site": "$site"},
     )
 
     def __init__(self, *args, **kwargs):
@@ -63,7 +63,7 @@ class LocatableModelBulkEditFormMixin(forms.Form):
     location = DynamicModelChoiceField(
         queryset=Location.objects.all(),
         required=False,
-        # TODO: query_params={"base_site": "$site"},
+        query_params={"base_site": "$site"},
     )
 
     def __init__(self, *args, **kwargs):
@@ -136,5 +136,5 @@ class LocatableModelFilterFormMixin(forms.Form):
         to_field_name="slug",
         required=False,
         null_option="None",
-        # TODO query_params={"base_site": "$site"},
+        query_params={"base_site": "$site"},
     )

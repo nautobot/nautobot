@@ -35,6 +35,7 @@ class ClusterTypeView(generic.ObjectView):
     def get_extra_context(self, request, instance):
 
         # Clusters
+        # v2 TODO(jathan): Replace prefetch_related with select_related
         clusters = (
             Cluster.objects.restrict(request.user, "view")
             .filter(type=instance)
@@ -95,6 +96,7 @@ class ClusterGroupView(generic.ObjectView):
     def get_extra_context(self, request, instance):
 
         # Clusters
+        # v2 TODO(jathan): Replace prefetch_related with select_related
         clusters = (
             Cluster.objects.restrict(request.user, "view")
             .filter(group=instance)
@@ -158,6 +160,7 @@ class ClusterView(generic.ObjectView):
     queryset = Cluster.objects.all()
 
     def get_extra_context(self, request, instance):
+        # v2 TODO(jathan): Replace prefetch_related with select_related
         devices = (
             Device.objects.restrict(request.user, "view")
             .filter(cluster=instance)
@@ -189,6 +192,7 @@ class ClusterBulkImportView(generic.BulkImportView):
 
 
 class ClusterBulkEditView(generic.BulkEditView):
+    # v2 TODO(jathan): Replace prefetch_related with select_related
     queryset = Cluster.objects.prefetch_related("type", "group", "site")
     filterset = filters.ClusterFilterSet
     table = tables.ClusterTable
@@ -196,6 +200,7 @@ class ClusterBulkEditView(generic.BulkEditView):
 
 
 class ClusterBulkDeleteView(generic.BulkDeleteView):
+    # v2 TODO(jathan): Replace prefetch_related with select_related
     queryset = Cluster.objects.prefetch_related("type", "group", "site")
     filterset = filters.ClusterFilterSet
     table = tables.ClusterTable
@@ -311,10 +316,13 @@ class VirtualMachineListView(generic.ObjectListView):
 
 
 class VirtualMachineView(generic.ObjectView):
+    # v2 TODO(jathan): Replace prefetch_related with select_related
     queryset = VirtualMachine.objects.prefetch_related("tenant__group")
 
     def get_extra_context(self, request, instance):
         # Interfaces
+        # v2 TODO(jathan): Replace prefetch_related with select_related although this one may be
+        # valid since `ip_addresses` is m2m.
         vminterfaces = (
             VMInterface.objects.restrict(request.user, "view")
             .filter(virtual_machine=instance)
@@ -327,6 +335,7 @@ class VirtualMachineView(generic.ObjectView):
             vminterface_table.columns.show("pk")
 
         # Services
+        # v2 TODO(jathan): Replace prefetch_related with select_related
         services = (
             Service.objects.restrict(request.user, "view")
             .filter(virtual_machine=instance)
@@ -361,6 +370,7 @@ class VirtualMachineBulkImportView(generic.BulkImportView):
 
 
 class VirtualMachineBulkEditView(generic.BulkEditView):
+    # v2 TODO(jathan): Replace prefetch_related with select_related
     queryset = VirtualMachine.objects.prefetch_related("cluster", "role", "status", "tenant")
     filterset = filters.VirtualMachineFilterSet
     table = tables.VirtualMachineTable
@@ -368,6 +378,7 @@ class VirtualMachineBulkEditView(generic.BulkEditView):
 
 
 class VirtualMachineBulkDeleteView(generic.BulkDeleteView):
+    # v2 TODO(jathan): Replace prefetch_related with select_related
     queryset = VirtualMachine.objects.prefetch_related("cluster", "role", "status", "tenant")
     filterset = filters.VirtualMachineFilterSet
     table = tables.VirtualMachineTable
@@ -391,6 +402,7 @@ class VMInterfaceView(generic.ObjectView):
 
     def get_extra_context(self, request, instance):
         # Get assigned IP addresses
+        # v2 TODO(jathan): Replace prefetch_related with select_related
         ipaddress_table = InterfaceIPAddressTable(
             data=instance.ip_addresses.restrict(request.user, "view").prefetch_related("vrf", "tenant"),
             orderable=False,
@@ -407,6 +419,8 @@ class VMInterfaceView(generic.ObjectView):
         if instance.untagged_vlan is not None:
             vlans.append(instance.untagged_vlan)
             vlans[0].tagged = False
+
+        # v2 TODO(jathan): Replace prefetch_related with select_related
         for vlan in instance.tagged_vlans.restrict(request.user).prefetch_related("site", "group", "tenant", "role"):
             vlan.tagged = True
             vlans.append(vlan)
@@ -419,7 +433,7 @@ class VMInterfaceView(generic.ObjectView):
         }
 
 
-# TODO: This should not use ComponentCreateView
+# 2.0 TODO: This will be collapsed into `InterfaceCreateView` and will go away.
 class VMInterfaceCreateView(generic.ComponentCreateView):
     queryset = VMInterface.objects.all()
     form = forms.VMInterfaceCreateForm

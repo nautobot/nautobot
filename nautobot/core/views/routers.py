@@ -79,4 +79,22 @@ class NautobotUIViewSetRouter(SimpleRouter):
             detail=True,
             initkwargs={"suffix": "Edit"},
         ),
+        Route(
+            url=r"^{prefix}/{lookup}/changelog/$",
+            mapping={
+                "get": "changelog",
+            },
+            name="{basename}_changelog",
+            detail=True,
+            initkwargs={"suffix": "Changelog"},
+        ),
+        Route(
+            url=r"^{prefix}/{lookup}/notes/$",
+            mapping={
+                "get": "notes",
+            },
+            name="{basename}_notes",
+            detail=True,
+            initkwargs={"suffix": "Notes"},
+        ),
     ]

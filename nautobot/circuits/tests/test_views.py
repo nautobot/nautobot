@@ -9,7 +9,7 @@ from nautobot.circuits.models import (
     Provider,
     ProviderNetwork,
 )
-from nautobot.extras.models import Status
+from nautobot.extras.models import Status, Tag
 from nautobot.utilities.testing import post_data, TestCase as NautobotTestCase, ViewTestCases
 
 
@@ -24,8 +24,6 @@ class ProviderTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         Provider.objects.create(name="Provider 3", slug="provider-3", asn=65003)
         Provider.objects.create(name="Provider 8", asn=65003)
 
-        tags = cls.create_tags("Alpha", "Bravo", "Charlie")
-
         cls.form_data = {
             "name": "Provider X",
             "slug": "provider-x",
@@ -35,7 +33,7 @@ class ProviderTestCase(ViewTestCases.PrimaryObjectViewTestCase):
             "noc_contact": "noc@example.com",
             "admin_contact": "admin@example.com",
             "comments": "Another provider",
-            "tags": [t.pk for t in tags],
+            "tags": [t.pk for t in Tag.objects.get_for_model(Provider)],
         }
 
         cls.csv_data = (
@@ -125,8 +123,6 @@ class CircuitTestCase(ViewTestCases.PrimaryObjectViewTestCase):
             status=statuses[0],
         )
 
-        tags = cls.create_tags("Alpha", "Bravo", "Charlie")
-
         cls.form_data = {
             "cid": "Circuit X",
             "provider": providers[1].pk,
@@ -137,7 +133,7 @@ class CircuitTestCase(ViewTestCases.PrimaryObjectViewTestCase):
             "commit_rate": 1000,
             "description": "A new circuit",
             "comments": "Some comments",
-            "tags": [t.pk for t in tags],
+            "tags": [t.pk for t in Tag.objects.get_for_model(Circuit)],
         }
 
         cls.csv_data = (
@@ -179,15 +175,13 @@ class ProviderNetworkTestCase(ViewTestCases.PrimaryObjectViewTestCase):
             ]
         )
 
-        tags = cls.create_tags("Alpha", "Bravo", "Charlie")
-
         cls.form_data = {
             "name": "ProviderNetwork X",
             "slug": "provider-network-x",
             "provider": providers[1].pk,
             "description": "A new ProviderNetwork",
             "comments": "Longer description goes here",
-            "tags": [t.pk for t in tags],
+            "tags": [t.pk for t in Tag.objects.get_for_model(ProviderNetwork)],
         }
 
         cls.csv_data = (
