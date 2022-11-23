@@ -1,9 +1,51 @@
-from django.db.models import Q, QuerySet
+from django.db.models import (
+    Q,
+    QuerySet,
+    ForeignKey,
+    OneToOneField,
+    OneToOneRel,
+    ManyToOneRel,
+    ManyToManyField,
+    ManyToManyRel,
+)
 
 from nautobot.utilities.permissions import permission_is_exempt
 
 
 class RestrictedQuerySet(QuerySet):
+    def with_related(self, *fields):
+        """
+        Convenience method to call selected_related or prefetch_related on the passed fields.
+        :param fields: Names of fields for which the related data should be selected/pre-fetched.
+        """
+        select_related_fields = []
+        prefetch_related_fields = []
+        for field_name in fields:
+            field = self.model._meta.get_field(field_name)
+            if isinstance(field, (ForeignKey, OneToOneField, OneToOneRel)):
+                select_related_fields.append(field_name)
+            elif isinstance(field, (ManyToOneRel, ManyToManyField, ManyToManyRel)):
+                prefetch_related_fields.append(field_name)
+            else:
+                appropriate_fields = [
+                    "ForeignKey",
+                    "OneToOneField",
+                    "OneToOneRel",
+                    "ManyToOneRel",
+                    "ManyToManyField",
+                    "ManyToManyRel",
+                ]
+                raise ValueError(
+                    f"Fields passed to 'with_related' need to be one of the following: {', '.join(appropriate_fields)}"
+                )
+        qs = self._chain()
+        # Only call the *_related methods if we actually have fields, we don't want to clear out the existing ones.
+        if select_related_fields:
+            qs = qs.select_related(*select_related_fields)
+        if prefetch_related_fields:
+            qs = qs.prefetch_related(*prefetch_related_fields)
+        return qs
+
     def restrict(self, user, action="view"):
         """
         Filter the QuerySet to return only objects on which the specified user has been granted the specified
