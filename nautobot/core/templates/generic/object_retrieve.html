@@ -40,7 +40,7 @@
         {% endwith %}
     </div>
 
-    <div class="pull-right noprint">
+    <div class="float-end noprint">
     {% block buttons %}
         {% plugin_buttons object %}
         {% block extra_buttons %}{% endblock extra_buttons %}
@@ -60,7 +60,7 @@
         <h1>{% block title %}{{ object }}{% endblock %}</h1>
     {% endblock masthead %}
     {% include 'inc/created_updated.html' %}
-    <div class="pull-right noprint">
+    <div class="float-end noprint">
         {% custom_links object %}
         {% block panel_buttons %}{% endblock panel_buttons %}
     </div>
