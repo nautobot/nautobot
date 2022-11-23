@@ -126,12 +126,12 @@ class FilterFormsTestCase(TestCase):
         filter_tabs = """
             <ul id="tabs" class="nav nav-tabs">
                 <li role="presentation" class="active">
-                    <a href="#default-filter" role="tab" data-toggle="tab">
+                    <a href="#default-filter" role="tab" data-bs-toggle="tab">
                         Default
                     </a>
                 </li>
                 <li role="presentation" class="">
-                    <a href="#advanced-filter" role="tab" data-toggle="tab">
+                    <a href="#advanced-filter" role="tab" data-bs-toggle="tab">
                         Advanced
                     </a>
                 </li>

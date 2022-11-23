@@ -27,8 +27,8 @@
             </div>
                 {% with providernetwork_tab_active=form.initial.provider_network %}
                     <ul class="nav nav-tabs" role="tablist">
-                        <li role="presentation"{% if not providernetwork_tab_active %} class="active"{% endif %}><a href="#site" role="tab" data-toggle="tab">Site</a></li>
-                        <li role="presentation"{% if providernetwork_tab_active %} class="active"{% endif %}><a href="#providernetwork" role="tab" data-toggle="tab">Provider Network</a></li>
+                        <li role="presentation"{% if not providernetwork_tab_active %} class="active"{% endif %}><a href="#site" role="tab" data-bs-toggle="tab">Site</a></li>
+                        <li role="presentation"{% if providernetwork_tab_active %} class="active"{% endif %}><a href="#providernetwork" role="tab" data-bs-toggle="tab">Provider Network</a></li>
                     </ul>
                     <div class="tab-content">
                         <div class="tab-pane{% if not providernetwork_tab_active %} active{% endif %}" id="site">

@@ -13,7 +13,7 @@ register = template.Library()
 LINK_BUTTON = '<a href="{}"{} class="btn btn-sm btn-{}">{}</a>\n'
 GROUP_BUTTON = (
     '<div class="btn-group">\n'
-    '<button type="button" class="btn btn-sm btn-{} dropdown-toggle" data-toggle="dropdown">\n'
+    '<button type="button" class="btn btn-sm btn-{} dropdown-toggle" data-bs-toggle="dropdown">\n'
     '{} <span class="caret"></span>\n'
     "</button>\n"
     '<ul class="dropdown-menu float-end">\n'

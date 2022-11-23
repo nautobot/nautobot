@@ -35,8 +35,8 @@
                 </div>
             {% endif %}
             <ul class="nav nav-tabs" role="tablist">
-                <li role="presentation"{% if active_tab == 'csv-data' %} class="active"{% endif %}><a href="#csv-text" role="tab" data-toggle="tab">CSV Data</a></li>
-                <li role="presentation"{% if active_tab == 'csv-file' %} class="active"{% endif %}><a href="#csv-file" role="tab" data-toggle="tab">CSV File Upload</a></li>
+                <li role="presentation"{% if active_tab == 'csv-data' %} class="active"{% endif %}><a href="#csv-text" role="tab" data-bs-toggle="tab">CSV Data</a></li>
+                <li role="presentation"{% if active_tab == 'csv-file' %} class="active"{% endif %}><a href="#csv-file" role="tab" data-bs-toggle="tab">CSV File Upload</a></li>
             </ul>
             <div class="tab-content">
                 <div role="tabpanel" class="tab-pane {% if active_tab == 'csv-data' %}active{% endif %}" id="csv-text">
@@ -98,7 +98,7 @@
                                 </td>
                                 <td>
                                     {% if field.STATIC_CHOICES %}
-                                        <button type="button" class="btn btn-link btn-xs float-end" data-toggle="modal" data-target="#{{ name }}_choices">
+                                        <button type="button" class="btn btn-link btn-xs float-end" data-bs-toggle="modal" data-bs-target="#{{ name }}_choices">
                                             <i class="mdi mdi-help-circle"></i>
                                         </button>
                                         <div class="modal fade" id="{{ name }}_choices" tabindex="-1" role="dialog">

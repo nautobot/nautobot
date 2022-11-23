@@ -3,7 +3,7 @@
     {% if fieldset.name %}
         <div class="card-header">
             {% if 'collapse' in fieldset.classes %}
-                <a data-toggle="collapse" data-target="#fieldset-{% if stacked_prefix %}{{ stacked_prefix }}-{% endif %}{{ forloop.counter }} .fields">
+                <a data-bs-toggle="collapse" data-bs-target="#fieldset-{% if stacked_prefix %}{{ stacked_prefix }}-{% endif %}{{ forloop.counter }} .fields">
                     {{ fieldset.name }}
                 &nbsp;<span class="btn btn-xs btn-default"><span class="glyphicon glyphglyphicon glyphicon-resize-full"></i></span>
                 </a>
