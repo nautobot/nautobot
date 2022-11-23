@@ -1,5 +1,5 @@
 """Nautobot custom health checks."""
-from abc import ABC
+from typing import Optional
 from urllib.parse import urlparse
 
 from django.conf import settings
@@ -15,7 +15,7 @@ from redis.sentinel import Sentinel
 from .models import HealthCheckTestModel
 
 
-class NautobotHealthCheckBackend(BaseHealthCheckBackend, ABC):
+class NautobotHealthCheckBackend(BaseHealthCheckBackend):
     """Automatically set metric based on the outcome of the check.
 
     Due to the multiprocess nature of Nautobot we have multiple processes generating health check metrics. Most of these
@@ -27,15 +27,18 @@ class NautobotHealthCheckBackend(BaseHealthCheckBackend, ABC):
     MULTIPROCESS_MODE = "max"
 
     states = {"unknown": -1, "down": 0, "up": 1}
-    metric: Gauge  # Set this in subclasses
+    metric: Optional[Gauge] = None  # Set this in subclasses
 
     def __init__(self):
         super().__init__()
-        # Initialize the metric as -1
-        self.metric.set(self.states["unknown"])
+        # Initialize the metric as -1 if present
+        if self.metric:
+            self.metric.set(self.states["unknown"])
 
     def run_check(self):
         super().run_check()
+        if not self.metric:
+            return
         if self.errors:
             self.metric.set(self.states["down"])
         else:
@@ -102,11 +105,8 @@ class RedisHealthCheck(NautobotHealthCheckBackend):
 class CacheopsRedisBackend(RedisHealthCheck):
     """Health check for Cacheops Redis."""
 
-    metric = Gauge(
-        "health_check_cache_ops_redis_info",
-        "State of cache ops redis backend",
-        multiprocess_mode=NautobotHealthCheckBackend.MULTIPROCESS_MODE,
-    )
+    # Since cacheops is going away in 2.0 and the cacheops metric didn't work immediately a decision was made to omit it
+    metric = None
 
     redis_url = getattr(settings, "CACHEOPS_REDIS", None)
     sentinel_url = getattr(settings, "CACHEOPS_SENTINEL", None)
