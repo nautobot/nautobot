@@ -50,6 +50,16 @@ You can see now the relationship name is `VIDs` instead of `VLANs`.
 !!! info
     In a similar fashion the destination label can be changed to meet business requirements.
 
+Business requirements are one concept to take into account when making `labels`, but making the relationship data more meaningful is an option worth exploring.
+
+In the snippet below the source label was updated to `Configured VLANs`. The result on the device detail view is evident and provides additional context that is otherwise missing. `VLANs: 3 Vlans` doesn't give the same context as `Configured VLANs: 3 Vlans`.
+
+![updated-source-label-expanded](./images/relationships/10-relationships.png)
+
+In a similar fashion the destination label can make it move evident that these VLANs are in use on the devices. A destination label `In use on devices: 3 devices` is far superior to the default of `Devices: 3 devices`. Providing these labels makes it easier for users of the system to understand the relationships, especially if they weren't the initial implementor of the relationship.
+
+![updated-destination-label-expanded](./images/relationships/11-relationships.png)
+
 Next, some of the visibility options will be discussed. The first option to be demonstrated is the ability to `Move to Advanced tab`. In some cases a particular relationship may not be relevant to the typical user (maybe it's used exclusively in automation) and so you may want the relationship data to be displayed on the `Advanced` tab instead of within the default detail view of the object.
 
 First the option needs to be enabled.
