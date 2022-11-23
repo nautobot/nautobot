@@ -52,12 +52,22 @@ function colorPickerClassCopy(data, container) {
 // Static choice selection
 function initializeStaticChoiceSelection(context) {
     this_context = $(context);
-    this_context.find('.nautobot-select2-static').select2({
+    // check if the dropdown resides within a filterform modal
+    // See issue https://github.com/select2/select2-bootstrap-theme/issues/41
+    var parent = $("#FilterForm_modal")
+    var properties = {
         allowClear: true,
         placeholder: "---------",
         theme: "bootstrap",
-        width: "off"
-    });
+        width: "off",
+    };
+    // Check if parent object has a non-zero length
+    if (Object.keys(parent).length !== 0) {
+        properties.dropdownParent = parent;
+        this_context.find('.nautobot-select2-static').select2(properties);
+    } else {
+        this_context.find('.nautobot-select2-static').select2(properties);
+    }
 }
 
 // Static choice selection
@@ -141,20 +151,32 @@ function initializeBulkEditNullification(context) {
 // Color Picker
 function initializeColorPicker(context) {
     this_context = $(context);
-    this_context.find('.nautobot-select2-color-picker').select2({
+    // check if the dropdown resides within a filterform modal
+    // See issue https://github.com/select2/select2-bootstrap-theme/issues/41
+    var parent = $("#FilterForm_modal")
+    var properties = {
         allowClear: true,
         placeholder: "---------",
         theme: "bootstrap",
         templateResult: colorPickerClassCopy,
         templateSelection: colorPickerClassCopy,
         width: "off"
-    });
+    };
+    if (Object.keys(parent).length !== 0) {
+        properties.dropdownParent = parent;
+        this_context.find('.nautobot-select2-color-picker').select2(properties);
+    } else {
+        this_context.find('.nautobot-select2-color-picker').select2(properties);
+    }
 }
 
 // Dynamic Choice Selection
 function initializeDynamicChoiceSelection(context) {
     this_context = $(context);
-    this_context.find('.nautobot-select2-api').select2({
+    // check if the dropdown resides within a filterform modal
+    // See issue https://github.com/select2/select2-bootstrap-theme/issues/41
+    var parent = $("#FilterForm_modal")
+    var properties = {
         allowClear: true,
         placeholder: "---------",
         theme: "bootstrap",
@@ -304,7 +326,13 @@ function initializeDynamicChoiceSelection(context) {
                 };
             }
         }
-    });
+    }
+    if (Object.keys(parent).length !== 0) {
+        properties.dropdownParent = parent;
+        this_context.find('.nautobot-select2-api').select2(properties);
+    } else {
+        this_context.find('.nautobot-select2-api').select2(properties);
+    }
 }
 
 // Flatpickr selectors
@@ -346,7 +374,10 @@ function initializeTags(context) {
     });
     // Replace the django issued text input with a select element
     this_tag_field.replaceWith('<select name="tags" id="id_tags" class="form-control tagfield"></select>');
-    this_tag_field.select2({
+    // check if the dropdown resides within a filterform modal
+    // See issue https://github.com/select2/select2-bootstrap-theme/issues/41
+    var parent = $("#FilterForm_modal")
+    var properties = {
         tags: true,
         data: tag_objs,
         multiple: true,
@@ -392,7 +423,13 @@ function initializeTags(context) {
                 };
             }
         }
-    });
+    };
+    if (Object.keys(parent).length !== 0) {
+        properties.dropdownParent = parent;
+        this_tag_field.select2(properties);
+    } else {
+        this_tag_field.select2(properties);
+    }
     this_tag_field.closest('form').submit(function (event) {
         // django-taggit can only accept a single comma seperated string value
         // TODO(bryan): the element find here should just be event.target
@@ -441,7 +478,10 @@ function initializeVLANModeSelection(context) {
 
 function initializeMultiValueChar(context) {
     this_context = $(context);
-    this_context.find('.nautobot-select2-multi-value-char').select2({
+    // check if the dropdown resides within a filterform modal
+    // See issue https://github.com/select2/select2-bootstrap-theme/issues/41
+    var parent = $("#FilterForm_modal")
+    var properties = {
         allowClear: true,
         tags: true,
         theme: "bootstrap",
@@ -453,7 +493,13 @@ function initializeMultiValueChar(context) {
                 return "Type something to add it as an option";
             }
         },
-    });
+    }
+    if (Object.keys(parent).length !== 0) {
+        properties.dropdownParent = parent;
+        this_context.find('.nautobot-select2-multi-value-char').select2(properties);
+    } else {
+        this_context.find('.nautobot-select2-multi-value-char').select2(properties);
+    }
 }
 
 function initializeDynamicFilterForm(context) {
