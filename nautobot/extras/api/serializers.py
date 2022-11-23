@@ -31,6 +31,7 @@ from nautobot.extras.api.fields import StatusSerializerField
 from nautobot.extras.choices import (
     CustomFieldFilterLogicChoices,
     CustomFieldTypeChoices,
+    JobExecutionType,
     JobResultStatusChoices,
     ObjectChangeActionChoices,
 )
@@ -979,6 +980,44 @@ class JobInputSerializer(serializers.Serializer):
     commit = serializers.BooleanField(required=False, default=None)
     schedule = NestedScheduledJobSerializer(required=False)
     task_queue = serializers.CharField(required=False, allow_blank=True)
+
+
+class JobMultiPartInputSerializer(serializers.Serializer):
+    """JobMultiPartInputSerializer is a "flattened" version of JobInputSerializer for use with multipart/form-data submissions which only accept key-value pairs"""
+
+    _commit = serializers.BooleanField(required=False, default=None)
+    _schedule_name = serializers.CharField(max_length=255, required=False)
+    _schedule_start_time = serializers.DateTimeField(format=None, required=False)
+    _schedule_interval = ChoiceField(choices=JobExecutionType, required=False)
+    _schedule_crontab = serializers.CharField(required=False, allow_blank=True)
+    _task_queue = serializers.CharField(required=False, allow_blank=True)
+
+    def validate(self, data):
+        data = super().validate(data)
+
+        if "_schedule_interval" in data and data["_schedule_interval"] != JobExecutionType.TYPE_IMMEDIATELY:
+            if "_schedule_name" not in data:
+                raise serializers.ValidationError({"_schedule_name": "Please provide a name for the job schedule."})
+
+            if ("_schedule_start_time" not in data and data["_schedule_interval"] != JobExecutionType.TYPE_CUSTOM) or (
+                "_schedule_start_time" in data and data["_schedule_start_time"] < ScheduledJob.earliest_possible_time()
+            ):
+                raise serializers.ValidationError(
+                    {
+                        "_schedule_start_time": "Please enter a valid date and time greater than or equal to the current date and time."
+                    }
+                )
+
+            if data["_schedule_interval"] == JobExecutionType.TYPE_CUSTOM:
+
+                if data.get("_schedule_crontab") is None:
+                    raise serializers.ValidationError({"_schedule_crontab": "Please enter a valid crontab."})
+                try:
+                    ScheduledJob.get_crontab(data["_schedule_crontab"])
+                except Exception as e:
+                    raise serializers.ValidationError({"_schedule_crontab": e})
+
+        return data
 
 
 class JobLogEntrySerializer(BaseModelSerializer):
