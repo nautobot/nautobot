@@ -13,6 +13,9 @@ class Migration(migrations.Migration):
     ]
 
     operations = [
+        # ##########
+        # Device
+        # ##########
         migrations.AlterField(
             model_name="device",
             name="device_role",
@@ -35,6 +38,24 @@ class Migration(migrations.Migration):
                 null=True,
                 on_delete=django.db.models.deletion.PROTECT,
                 related_name="dcim_device_related",
+                to="extras.role",
+            ),
+        ),
+        # ##########
+        # Rack
+        # ##########
+        migrations.RenameField(
+            model_name="rack",
+            old_name="role",
+            new_name="legacy_role",
+        ),
+        migrations.AddField(
+            model_name="rack",
+            name="new_role",
+            field=nautobot.extras.models.roles.RoleField(
+                null=True,
+                on_delete=django.db.models.deletion.PROTECT,
+                related_name="dcim_rack_related",
                 to="extras.role",
             ),
         ),
