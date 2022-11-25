@@ -889,7 +889,7 @@ class DeviceRoleFilterSet(NautobotFilterSet, NameSlugSearchFilterSet):
 
     class Meta:
         model = DeviceRole
-        fields = ["id", "name", "slug", "color", "vm_role", "description", "devices", "virtual_machines"]
+        fields = ["id", "name", "slug", "color", "vm_role", "description", "devices"]
 
 
 class PlatformFilterSet(NautobotFilterSet, NameSlugSearchFilterSet):

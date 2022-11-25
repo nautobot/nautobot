@@ -399,3 +399,23 @@ def refresh_job_model_from_job_class(job_model_class, job_source, job_class, *, 
     )
 
     return (job_model, created)
+
+
+def migrate_role_data(model, role_model, legacy_role="legacy_role", new_role="new_role"):
+    """Migrate legacy_role's `role_model` equivalent record into new_role."""
+
+    legacy_role_name = legacy_role + "__name"
+    queryset = model.objects.filter(**{legacy_role + "__isnull": False}).values("pk", legacy_role_name)
+    update_instance = []
+    for item in queryset:
+        try:
+            role_equivalent = role_model.objects.get(name=item[legacy_role_name])
+            model_data = {"pk": item["pk"], new_role: role_equivalent}
+            update_instance.append(model(**model_data))
+        except role_model.DoesNotExist:
+            logger.error(f"Role with name {item[legacy_role_name]} not found")
+
+    if update_instance:
+        model.objects.bulk_update(update_instance, fields=[new_role], batch_size=1000)
+
+    queryset.update(**{legacy_role: None})
