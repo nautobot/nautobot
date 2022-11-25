@@ -9,7 +9,7 @@
 {% endblock extra_breadcrumbs %}
 
 {% block content_left_page %}
-        <div class="panel panel-default">
+        <div class="card mb-3">
             <div class="card-header">
                 <strong>IP Address</strong>
             </div>
@@ -21,7 +21,7 @@
                 <tr>
                     <td>Status</td>
                     <td>
-                        <span class="label" style="color: {{ object.status.color|fgcolor }}; background-color: #{{ object.status.color }}">{{ object.get_status_display }}</span>
+                        <span class="badge" style="color: {{ object.status.color|fgcolor }}; background-color: #{{ object.status.color }}">{{ object.get_status_display }}</span>
                     </td>
                 </tr>
                 <tr>
@@ -57,7 +57,7 @@
 {% endblock content_left_page %}
 
 {% block content_right_page %}
-        <div class="panel panel-default">
+        <div class="card mb-3">
             <div class="card-header">
                 <strong>Operational Details</strong>
             </div>
@@ -116,12 +116,12 @@
 {% block content_full_width_page %}
         {% if duplicate_ips_table.rows %}
             {# Custom version of panel_table.html #}
-            <div class="panel panel-danger">
+            <div class="card bg-danger">
                 <div class="card-header">
                     <strong>Duplicate IP Addresses</strong>
                     {% if more_duplicate_ips %}
                     <div class="float-end">
-                        <a type="button" class="btn btn-primary btn-xs"
+                        <a type="button" class="btn btn-primary btn-sm"
                         {% if object.vrf %}
                         href="{% url 'ipam:ipaddress_list' %}?address={{ object.address.ip }}&vrf_id={{ object.vrf.pk }}"
                         {% else %}

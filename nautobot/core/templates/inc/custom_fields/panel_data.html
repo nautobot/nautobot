@@ -5,10 +5,10 @@
         font-size: 14px;
     }
 </style>
-    <div class="panel panel-default">
+    <div class="card mb-3">
         <div class="card-header">
             <strong>Custom Fields</strong>
-            <button type="button" class="btn-xs btn-primary float-end" id="accordion-toggle-all">Collapse All</button>
+            <button type="button" class="btn btn-sm btn-primary float-end" id="accordion-toggle-all">Collapse All</button>
         </div>
         <table id="accordion" class="table table-hover card-body attr-table">
             {% for grouping, fields in custom_fields.items %}
@@ -23,9 +23,19 @@
                             </button></strong>
                         </td>
                     </tr>
+                {% else %}
+                    <tr>
+                        <td colspan="2"><strong>
+                            <button type="button" class="accordion-toggle mdi mdi-chevron-down"
+                                    name="grouping.{{ grouping }}" data-bs-toggle="collapse"
+                                    data-bs-target=".collapseme-{{ count }}">
+                                Default
+                            </button></strong>
+                        </td>
+                    </tr>
                 {% endif %}
                     {% for field, value in fields %}
-                        <tr class="collapseme-{{ count }} collapse in" data-parent="#accordion">
+                        <tr class="collapseme-{{ count }} collapse in show">
                             <td><span title="{{ field.description }}">{{ field }}</span></td>
                             <td>
                                 {% if field.type == 'boolean' %}
@@ -36,7 +46,7 @@
                                     {{ value|join:", " }}
                                 {% elif field.type == 'json' and value is not None %}
                                     <p>
-                                        <button class="btn btn-xs btn-primary" type="button" data-bs-toggle="collapse"
+                                        <button class="btn btn-sm btn-primary" type="button" data-bs-toggle="collapse"
                                                 data-bs-target="#cf_{{ field.slug }}" aria-expanded="false"
                                                 aria-controls="cf_{{ field.slug }}">
                                             Show/Hide

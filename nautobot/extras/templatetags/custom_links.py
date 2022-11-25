@@ -61,7 +61,7 @@ def custom_links(context, obj):
                     template_code += LINK_BUTTON.format(link_rendered, link_target, cl.button_class, text_rendered)
             except Exception as e:
                 template_code += (
-                    f'<a class="btn btn-sm btn-default" disabled="disabled" title="{e}">'
+                    f'<a class="btn btn-sm btn-outline-secondary" disabled="disabled" title="{e}">'
                     f'<i class="mdi mdi-alert"></i> {cl.name}</a>\n'
                 )
 

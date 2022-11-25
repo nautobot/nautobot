@@ -597,7 +597,7 @@ textarea {
     top: 2px;
 }
 
-.btn-xs .mdi::before {
+.btn-sm .mdi::before {
     font-size: 18px;
     top: 3px;
 }

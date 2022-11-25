@@ -2,7 +2,7 @@
 {% load helpers %}
 
 {% block content_left_page %}
-        <div class="panel panel-default">
+        <div class="card mb-3">
             <div class="card-header">
                 <strong>Cluster Type</strong>
             </div>
@@ -22,14 +22,14 @@
 {% endblock content_left_page %}
 
 {% block content_right_page %}
-        <div class="panel panel-default">
+        <div class="card mb-3">
             <div class="card-header">
                 <strong>Clusters</strong>
             </div>
             {% include 'inc/table.html' with table=cluster_table %}
             {% if perms.virtualization.add_cluster %}
                 <div class="panel-footer text-end noprint">
-                    <a href="{% url 'virtualization:cluster_add' %}?type={{ object.pk }}" class="btn btn-xs btn-primary">
+                    <a href="{% url 'virtualization:cluster_add' %}?type={{ object.pk }}" class="btn btn-sm btn-primary">
                         <span class="mdi mdi-plus-thick" aria-hidden="true"></span> Add cluster
                     </a>
                 </div>

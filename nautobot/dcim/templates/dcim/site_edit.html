@@ -2,7 +2,7 @@
 {% load form_helpers %}
 
 {% block form %}
-    <div class="panel panel-default">
+    <div class="card mb-3">
         <div class="card-header"><strong>Site</strong></div>
         <div class="card-body">
             {% render_field form.name %}
@@ -15,14 +15,14 @@
             {% render_field form.description %}
         </div>
     </div>
-    <div class="panel panel-default">
+    <div class="card mb-3">
         <div class="card-header"><strong>Tenancy</strong></div>
         <div class="card-body">
             {% render_field form.tenant_group %}
             {% render_field form.tenant %}
         </div>
     </div>
-    <div class="panel panel-default">
+    <div class="card mb-3">
         <div class="card-header"><strong>Contact Info</strong></div>
         <div class="card-body">
             {% render_field form.physical_address %}
@@ -35,7 +35,7 @@
         </div>
     </div>
     {% include 'inc/extras_features_edit_form_fields.html' %}
-    <div class="panel panel-default">
+    <div class="card mb-3">
         <div class="card-header"><strong>Comments</strong></div>
         <div class="card-body">
             {% render_field form.comments %}

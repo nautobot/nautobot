@@ -36,7 +36,7 @@
 {% block content %}
     <div class="row">
         <div class="col-md-5">
-            <div class="panel panel-default">
+            <div class="card mb-3">
                 <div class="card-header">
                     <strong>Change</strong>
                 </div>
@@ -95,14 +95,14 @@
                     </tr>
                 </table>
             </div>
-            <div class="panel panel-default">
+            <div class="card mb-3">
                 <div class="card-header">
                     <strong>Difference</strong>
                     <div class="btn-group btn-group-xs float-end noprint">
-                        <a {% if prev_change %}href="{% url 'extras:objectchange' pk=prev_change.pk %}"{% else %}disabled{% endif %} class="btn btn-default">
+                        <a {% if prev_change %}href="{% url 'extras:objectchange' pk=prev_change.pk %}"{% else %}disabled{% endif %} class="btn btn-outline-secondary">
                             <span class="mdi mdi-chevron-left" aria-hidden="true"></span> Previous
                         </a>
-                        <a {% if next_change %}href="{% url 'extras:objectchange' pk=next_change.pk %}"{% else %}disabled{% endif %} class="btn btn-default">
+                        <a {% if next_change %}href="{% url 'extras:objectchange' pk=next_change.pk %}"{% else %}disabled{% endif %} class="btn btn-outline-secondary">
                             Next <span class="mdi mdi-chevron-right" aria-hidden="true"></span>
                         </a>
                     </div>
@@ -126,7 +126,7 @@
             </div>
         </div>
         <div class="col-md-7">
-            <div class="panel panel-default">
+            <div class="card mb-3">
                 <div class="card-header">
                     <strong>Object Data</strong>
                 </div>

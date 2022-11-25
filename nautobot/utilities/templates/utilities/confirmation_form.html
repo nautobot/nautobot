@@ -3,7 +3,7 @@
 
 {% block content %}
 <div class="row">
-	<div class="col-md-6 col-md-offset-3">
+	<div class="col-md-6 offset-md-3">
         <form action="" method="post" class="form">
             {% csrf_token %}
             {% for field in form.hidden_fields %}
@@ -15,7 +15,7 @@
                     {% block message %}<p>Are you sure?</p>{% endblock %}
                     <div class="text-end">
                         <button type="submit" name="_confirm" class="btn btn-{{ button_class|default:"danger" }}">Confirm</button>
-                        <a href="{{ return_url }}" class="btn btn-default">Cancel</a>
+                        <a href="{{ return_url }}" class="btn btn-outline-secondary">Cancel</a>
                     </div>
                 </div>
             </div>

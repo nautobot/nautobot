@@ -3,7 +3,7 @@
 {% load form_helpers %}
 
 {% block form %}
-    <div class="panel panel-default">
+    <div class="card mb-3">
         <div class="card-header"><strong>Dynamic Group</strong></div>
         <div class="card-body">
             {% render_field form.name %}
@@ -12,7 +12,7 @@
             {% render_field form.content_type %}
         </div>
     </div>
-    <div class="panel panel-default">
+    <div class="card mb-3">
         <div class="card-header"><strong>Filter Options</strong></div>
         <div class="card-body">
             <ul class="nav nav-tabs" role="tablist">
@@ -41,7 +41,7 @@
                 </div>
                 <div class="tab-pane" id="children-form">
                     {% if children.errors %}
-                        <div class="panel panel-danger">
+                        <div class="card bg-danger">
                             <div class="card-header"><strong>Errors</strong></div>
                             <div class="card-body">
                                 Please correct the error(s) below:

@@ -8,7 +8,7 @@
 {% endblock %}
 
 {% block content_left_page %}
-    <div class="panel panel-default">
+    <div class="card mb-3">
         <div class="card-header">
             <strong>Location</strong>
         </div>
@@ -20,7 +20,7 @@
             <tr>
                 <td>Status</td>
                 <td>
-                    <span class="label" style="color: {{ object.status.color|fgcolor }}; background-color: #{{ object.status.color }}">{{ object.get_status_display }}</span>
+                    <span class="badge" style="color: {{ object.status.color|fgcolor }}; background-color: #{{ object.status.color }}">{{ object.get_status_display }}</span>
                 </td>
             </tr>
             <tr>
@@ -57,38 +57,38 @@
 {% endblock content_left_page %}
 
 {% block content_right_page %}
-    <div class="panel panel-default">
+    <div class="card mb-3">
         <div class="card-header">
             <strong>Stats</strong>
         </div>
         <div class="row card-body">
             <div class="col-md-4 text-center">
-                <h2><a href="{% url 'dcim:rack_list' %}?location={{ object.slug }}" class="btn {% if stats.rack_count %}btn-primary{% else %}btn-default{% endif %} btn-lg">{{ stats.rack_count }}</a></h2>
+                <h2><a href="{% url 'dcim:rack_list' %}?location={{ object.slug }}" class="btn {% if stats.rack_count %}btn-primary{% else %}btn-outline-secondary{% endif %} btn-lg">{{ stats.rack_count }}</a></h2>
                 <p>Racks</p>
             </div>
             <div class="col-md-4 text-center">
-                <h2><a href="{% url 'dcim:device_list' %}?location={{ object.slug }}" class="btn {% if stats.device_count %}btn-primary{% else %}btn-default{% endif %} btn-lg">{{ stats.device_count }}</a></h2>
+                <h2><a href="{% url 'dcim:device_list' %}?location={{ object.slug }}" class="btn {% if stats.device_count %}btn-primary{% else %}btn-outline-secondary{% endif %} btn-lg">{{ stats.device_count }}</a></h2>
                 <p>Devices</p>
             </div>
             <div class="col-md-4 text-center">
-                <h2><a href="{% url 'ipam:prefix_list' %}?location={{ object.slug }}" class="btn {% if stats.prefix_count %}btn-primary{% else %}btn-default{% endif %} btn-lg">{{ stats.prefix_count }}</a></h2>
+                <h2><a href="{% url 'ipam:prefix_list' %}?location={{ object.slug }}" class="btn {% if stats.prefix_count %}btn-primary{% else %}btn-outline-secondary{% endif %} btn-lg">{{ stats.prefix_count }}</a></h2>
                 <p>Prefixes</p>
             </div>
             <div class="col-md-4 text-center">
-                <h2><a href="{% url 'ipam:vlan_list' %}?location={{ object.slug }}" class="btn {% if stats.vlan_count %}btn-primary{% else %}btn-default{% endif %} btn-lg">{{ stats.vlan_count }}</a></h2>
+                <h2><a href="{% url 'ipam:vlan_list' %}?location={{ object.slug }}" class="btn {% if stats.vlan_count %}btn-primary{% else %}btn-outline-secondary{% endif %} btn-lg">{{ stats.vlan_count }}</a></h2>
                 <p>VLANs</p>
             </div>
             <div class="col-md-4 text-center">
-                <h2><a href="{% url 'circuits:circuit_list' %}?location={{ object.slug }}" class="btn {% if stats.circuit_count %}btn-primary{% else %}btn-default{% endif %} btn-lg">{{ stats.circuit_count }}</a></h2>
+                <h2><a href="{% url 'circuits:circuit_list' %}?location={{ object.slug }}" class="btn {% if stats.circuit_count %}btn-primary{% else %}btn-outline-secondary{% endif %} btn-lg">{{ stats.circuit_count }}</a></h2>
                 <p>Circuits</p>
             </div>
             <div class="col-md-4 text-center">
-                <h2><a href="{% url 'virtualization:virtualmachine_list' %}?location={{ object.slug }}" class="btn {% if stats.vm_count %}btn-primary{% else %}btn-default{% endif %} btn-lg">{{ stats.vm_count }}</a></h2>
+                <h2><a href="{% url 'virtualization:virtualmachine_list' %}?location={{ object.slug }}" class="btn {% if stats.vm_count %}btn-primary{% else %}btn-outline-secondary{% endif %} btn-lg">{{ stats.vm_count }}</a></h2>
                 <p>Virtual Machines</p>
             </div>
         </div>
     </div>
-    <div class="panel panel-default">
+    <div class="card mb-3">
         <div class="card-header">
             <strong>Rack Groups</strong>
         </div>
@@ -98,7 +98,7 @@
                     <td style="padding-left: {{ rg.level }}8px"><i class="mdi mdi-folder-open"></i> <a href="{{ rg.get_absolute_url }}">{{ rg }}</a></td>
                     <td>{{ rg.rack_count }}</td>
                     <td class="text-end noprint">
-                        <a href="{% url 'dcim:rack_elevation_list' %}?group_id={{ rg.pk }}" class="btn btn-xs btn-primary" title="View elevations">
+                        <a href="{% url 'dcim:rack_elevation_list' %}?group_id={{ rg.pk }}" class="btn btn-sm btn-primary" title="View elevations">
                             <i class="mdi mdi-server"></i>
                         </a>
                     </td>
@@ -108,21 +108,21 @@
                 <td><i class="mdi mdi-folder-open"></i> All racks</td>
                 <td>{{ stats.rack_count }}</td>
                 <td class="text-end noprint">
-                    <a href="{% url 'dcim:rack_elevation_list' %}?location={{ object.slug }}" class="btn btn-xs btn-primary" title="View elevations">
+                    <a href="{% url 'dcim:rack_elevation_list' %}?location={{ object.slug }}" class="btn btn-sm btn-primary" title="View elevations">
                         <i class="mdi mdi-server"></i>
                     </a>
                 </td>
             </tr>
         </table>
     </div>
-    <div class="panel panel-default">
+    <div class="card mb-3">
         <div class="card-header">
             <strong>Images</strong>
         </div>
         {% include 'inc/image_attachments.html' with images=object.images.all %}
         {% if perms.extras.add_imageattachment %}
             <div class="panel-footer text-end noprint">
-                <a href="{% url 'dcim:location_add_image' slug=object.slug %}" class="btn btn-primary btn-xs">
+                <a href="{% url 'dcim:location_add_image' slug=object.slug %}" class="btn btn-primary btn-sm">
                     <span class="mdi mdi-plus-thick" aria-hidden="true"></span>
                     Attach an image
                 </a>
@@ -133,14 +133,14 @@
 
 {% block content_full_width_page %}
     {% if object.location_type.children.all %}
-        <div class="panel panel-default">
+        <div class="card mb-3">
             <div class="card-header">
                 <strong>Children</strong>
             </div>
             {% include 'inc/table.html' with table=children_table %}
             {% if perms.dcim.add_location %}
                 <div class="panel-footer text-end noprint">
-                    <a href="{% url 'dcim:location_add' %}?parent={{ object.slug }}" class="btn btn-xs btn-primary">
+                    <a href="{% url 'dcim:location_add' %}?parent={{ object.slug }}" class="btn btn-sm btn-primary">
                         <span class="mdi mdi-plus-thick" aria-hidden="true"></span> Add child
                     </a>
                 </div>

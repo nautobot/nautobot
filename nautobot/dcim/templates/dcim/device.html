@@ -12,7 +12,7 @@
                 <div role="tabpanel" class="tab-pane active" id="details">
                     <div class="row">
                         <div class="col-md-6">
-                            <div class="panel panel-default">
+                            <div class="card mb-3">
                                 <div class="card-header">
                                     <strong>Device</strong>
                                 </div>
@@ -81,7 +81,7 @@
                                             <span class="hover_copy">
                                                 <span id="serial_number">{{ object.serial|placeholder }}</span>
                                                 {% if object.serial %}
-                                                    <button class="btn btn-inline btn-default hover_copy_button" data-clipboard-target="#serial_number">
+                                                    <button class="btn btn-inline btn-outline-secondary hover_copy_button" data-clipboard-target="#serial_number">
                                                         <span class="mdi mdi-content-copy"></span>
                                                     </button>
                                                 {% endif %}
@@ -95,7 +95,7 @@
                                 </table>
                             </div>
                             {% if vc_members %}
-                                <div class="panel panel-default">
+                                <div class="card mb-3">
                                     <div class="card-header">
                                         <strong>Virtual Chassis</strong>
                                     </div>
@@ -116,13 +116,13 @@
                                         {% endfor %}
                                     </table>
                                     <div class="panel-footer text-end noprint">
-                                        <a href="{{ object.virtual_chassis.get_absolute_url }}" class="btn btn-primary btn-xs">
+                                        <a href="{{ object.virtual_chassis.get_absolute_url }}" class="btn btn-primary btn-sm">
                                             <span class="mdi mdi-arrow-right-bold" aria-hidden="true"></span> View Virtual Chassis
                                         </a>
                                     </div>
                                 </div>
                             {% endif %}
-                            <div class="panel panel-default">
+                            <div class="card mb-3">
                                 <div class="card-header">
                                     <strong>Management</strong>
                                 </div>
@@ -138,7 +138,7 @@
                                     <tr>
                                         <td>Status</td>
                                         <td>
-                                            <span class="label" style="color: {{ object.status.color|fgcolor }}; background-color: #{{ object.status.color }}">{{ object.get_status_display }}</span>
+                                            <span class="badge" style="color: {{ object.status.color|fgcolor }}; background-color: #{{ object.status.color }}">{{ object.get_status_display }}</span>
                                         </td>
                                     </tr>
                                     <tr>
@@ -152,7 +152,7 @@
                                                     {% elif object.primary_ip4.nat_outside %}
                                                         <span>(NAT: {{ object.primary_ip4.nat_outside.address.ip }})</span>
                                                     {% endif %}
-                                                    <button class="btn btn-inline btn-default hover_copy_button" data-clipboard-target="#ipv4">
+                                                    <button class="btn btn-inline btn-outline-secondary hover_copy_button" data-clipboard-target="#ipv4">
                                                         <span class="mdi mdi-content-copy"></span>
                                                     </button>
                                                 </span>
@@ -173,7 +173,7 @@
                                                     {% elif object.primary_ip6.nat_outside %}
                                                         <span>(NAT: {{ object.primary_ip6.nat_outside.address.ip }})</span>
                                                     {% endif %}
-                                                    <button class="btn btn-inline btn-default hover_copy_button" data-clipboard-target="#ipv6">
+                                                    <button class="btn btn-inline btn-outline-secondary hover_copy_button" data-clipboard-target="#ipv6">
                                                         <span class="mdi mdi-content-copy"></span>
                                                     </button>
                                                 </span>
@@ -214,7 +214,7 @@
                             {% include 'inc/custom_fields/panel.html' with custom_fields=object.get_custom_field_groupings_basic computed_fields_advanced_ui=False %}
                             {% include 'inc/relationships/panel_override.html' with relationships_fields_override=object.get_relationships_data_basic_fields %}
                             {% include 'extras/inc/tags_panel.html' with tags=object.tags.all url='dcim:device_list' %}
-                            <div class="panel panel-default">
+                            <div class="card mb-3">
                                 <div class="card-header">
                                     <strong>Comments</strong>
                                 </div>
@@ -230,7 +230,7 @@
                         </div>
                         <div class="col-md-6">
                             {% if object.powerports.exists and object.poweroutlets.exists %}
-                                <div class="panel panel-default">
+                                <div class="card mb-3">
                                     <div class="card-header">
                                         <strong>Power Utilization</strong>
                                     </div>
@@ -272,7 +272,7 @@
                                     </table>
                                 </div>
                             {% endif %}
-                            <div class="panel panel-default">
+                            <div class="card mb-3">
                                 <div class="card-header">
                                     <strong>Services</strong>
                                 </div>
@@ -289,20 +289,20 @@
                                 {% endif %}
                                 {% if perms.ipam.add_service %}
                                     <div class="panel-footer text-end noprint">
-                                        <a href="{% url 'dcim:device_service_assign' device=object.pk %}" class="btn btn-xs btn-primary">
+                                        <a href="{% url 'dcim:device_service_assign' device=object.pk %}" class="btn btn-sm btn-primary">
                                             <span class="mdi mdi-plus-thick" aria-hidden="true"></span> Assign service
                                         </a>
                                     </div>
                                 {% endif %}
                             </div>
-                            <div class="panel panel-default">
+                            <div class="card mb-3">
                                 <div class="card-header">
                                     <strong>Images</strong>
                                 </div>
                                 {% include 'inc/image_attachments.html' with images=object.images.all %}
                                 {% if perms.extras.add_imageattachment %}
                                     <div class="panel-footer text-end noprint">
-                                        <a href="{% url 'dcim:device_add_image' object_id=object.pk %}" class="btn btn-primary btn-xs">
+                                        <a href="{% url 'dcim:device_add_image' object_id=object.pk %}" class="btn btn-primary btn-sm">
                                             <span class="mdi mdi-plus-thick" aria-hidden="true"></span>
                                             Attach an image
                                         </a>

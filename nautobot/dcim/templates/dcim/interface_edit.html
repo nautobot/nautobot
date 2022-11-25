@@ -3,7 +3,7 @@
 {% load helpers %}
 
 {% block form %}
-    <div class="panel panel-default">
+    <div class="card mb-3">
         <div class="card-header"><strong>Interface</strong></div>
         <div class="card-body">
             {% if form.instance.device %}
@@ -30,7 +30,7 @@
             {% render_field form.description %}
         </div>
     </div>
-    <div class="panel panel-default">
+    <div class="card mb-3">
         <div class="card-header"><strong>802.1Q Switching</strong></div>
         <div class="card-body">
             {% render_field form.mode %}
@@ -49,5 +49,5 @@
         <button type="submit" name="_create" class="btn btn-primary">Create</button>
         <button type="submit" name="_addanother" class="btn btn-primary">Create and Add Another</button>
     {% endif %}
-    <a href="{{ return_url }}" class="btn btn-default">Cancel</a>
+    <a href="{{ return_url }}" class="btn btn-outline-secondary">Cancel</a>
 {% endblock %}

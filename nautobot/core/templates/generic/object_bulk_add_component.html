@@ -14,20 +14,20 @@
     {% endfor %}
     <div class="row">
         <div class="col-md-7">
-            <div class="panel panel-default">
+            <div class="card mb-3">
                 {% include 'inc/table.html' %}
             </div>
         </div>
         <div class="col-md-5">
             {% if form.non_field_errors %}
-                <div class="panel panel-danger">
+                <div class="card bg-danger">
                     <div class="card-header"><strong>Errors</strong></div>
                     <div class="card-body">
                         {{ form.non_field_errors }}
                     </div>
                 </div>
             {% endif %}
-            <div class="panel panel-default">
+            <div class="card mb-3">
                 <div class="card-header"><strong>{{ model_name|title }} to Add</strong></div>
                 <div class="card-body">
                     {% for field in form.visible_fields %}
@@ -43,7 +43,7 @@
             <div class="form-group text-end">
                 <div class="col-md-12">
                     <button type="submit" name="_create" class="btn btn-primary">Create</button>
-                    <a href="{{ return_url }}" class="btn btn-default">Cancel</a>
+                    <a href="{{ return_url }}" class="btn btn-outline-secondary">Cancel</a>
                 </div>
             </div>
         </div>

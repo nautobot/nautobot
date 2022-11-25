@@ -67,37 +67,37 @@
         {% block panel_buttons %}{% endblock panel_buttons %}
     </div>
 
-    <ul id="tabs" class="nav nav-tabs">
+    <ul id="tabs" class="nav nav-tabs" role="tablist">
     {% block nav_tabs %}
-        <li role="presentation"{% if active_tab == "main" or request.GET.tab == "main" %} class="active"{% endif %}>
-            <a href="{{ object.get_absolute_url }}#main" onclick="switch_tab(this.href)" aria-controls="main" role="tab" data-bs-toggle="tab">
+        <li role="presentation" class="nav-item"">
+            <a {% if active_tab == "main" or request.GET.tab == "main" %} class="nav-link active" {% else %} class="nav-link" {% endif %} href="{{ object.get_absolute_url }}#main" onclick="switch_tab(this.href)" aria-controls="main" role="tab" data-bs-toggle="tab">
                 {{ verbose_name|bettertitle }}
             </a>
         </li>
-        <li role="presentation"{% if request.GET.tab == 'advanced' %} class="active"{% endif %}>
-            <a href="{{ object.get_absolute_url }}#advanced" onclick="switch_tab(this.href)" aria-controls="advanced" role="tab" data-bs-toggle="tab">
+        <li role="presentation" class="nav-item">
+            <a {% if request.GET.tab == 'advanced' %} class="nav-link active" {% else %} class="nav-link" {% endif %} href="{{ object.get_absolute_url }}#advanced" onclick="switch_tab(this.href)" aria-controls="advanced" role="tab" data-bs-toggle="tab">
                 Advanced
             </a>
         </li>
         {% block extra_nav_tabs %}{% endblock extra_nav_tabs %}
         {% if perms.extras.view_note %}
             {% if active_tab != 'notes' and object.get_notes_url or active_tab == 'notes' %}
-                <li role="presentation"{% if active_tab == 'notes' %} class="active"{% endif %}>
-                    <a href="{{ object.get_notes_url }}">Notes</a>
+                <li role="presentation" class="nav-item">
+                    <a {% if active_tab == 'notes' %} class="nav-link active" {% else %} class="nav-link" {% endif %} href="{{ object.get_notes_url }}">Notes</a>
                 </li>
             {% endif %}
         {% endif %}
         {% if perms.extras.view_dynamicgroup and object.get_dynamic_groups_url %}
             {% if active_tab != 'dynamic-groups' and object.get_dynamic_groups_url or active_tab == 'dynamic-groups' %}
-                <li role="presentation"{% if active_tab == 'dynamic-groups' %} class="active"{% endif %}>
-                    <a href="{{ object.get_dynamic_groups_url }}">Dynamic Groups</a>
+                <li role="presentation" class="nav-item">
+                    <a {% if active_tab == 'dynamic-groups' %} class="nav-link active" {% else %} class="nav-link" {% endif %} href="{{ object.get_dynamic_groups_url }}">Dynamic Groups</a>
                 </li>
             {% endif %}
         {% endif %}
         {% if perms.extras.view_objectchange %}
             {% if active_tab != 'changelog' and object.get_changelog_url or active_tab == 'changelog' %}
-                <li role="presentation"{% if active_tab == 'changelog' %} class="active"{% endif %}>
-                    <a href="{{ object.get_changelog_url }}">Change Log</a>
+                <li role="presentation" class="nav-item">
+                    <a {% if active_tab == 'changelog' %} class="nav-link active" {% else %} class="nav-link" {% endif %} href="{{ object.get_changelog_url }}">Change Log</a>
                 </li>
             {% endif %}
         {% endif %}
@@ -212,7 +212,7 @@
     $('#accordion-toggle-all').click(function () {
 
         if ($(this).data("lastState") === null || $(this).data("lastState") === 1) {
-            $('.collapse').collapse('show');
+            $('.collapse.in').collapse('show');
             $(this).data("lastState", 0);
 
             $("#accordion .accordion-toggle").addClass("mdi-chevron-down").removeClass("mdi-chevron-right");

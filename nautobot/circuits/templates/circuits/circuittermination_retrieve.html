@@ -9,7 +9,7 @@
 {% endblock breadcrumbs %}
 
 {% block content_left_page %}
-    <div class="panel panel-default">
+    <div class="card mb-3">
             <table class="table table-hover card-body attr-table">
                 <tr>
                     {% if object.site %}
@@ -41,13 +41,13 @@
                         {% if object.cable %}
                             {% if perms.dcim.delete_cable %}
                                 <div class="float-end">
-                                    <a href="{% url 'dcim:cable_delete' pk=object.cable.pk %}?return_url={{ object.circuit.get_absolute_url }}" title="Remove cable" class="btn btn-danger btn-xs">
+                                    <a href="{% url 'dcim:cable_delete' pk=object.cable.pk %}?return_url={{ object.circuit.get_absolute_url }}" title="Remove cable" class="btn btn-danger btn-sm">
                                         <i class="mdi mdi-ethernet-cable-off" aria-hidden="true"></i> Disconnect
                                     </a>
                                 </div>
                             {% endif %}
                             {{ object.cable|hyperlinked_object }}
-                            <a href="{% url 'circuits:circuittermination_trace' pk=object.pk %}" class="btn btn-primary btn-xs" title="Trace">
+                            <a href="{% url 'circuits:circuittermination_trace' pk=object.pk %}" class="btn btn-primary btn-sm" title="Trace">
                                 <i class="mdi mdi-transit-connection-variant" aria-hidden="true"></i>
                             </a>
                             {% with peer=object.get_cable_peer %}
@@ -63,7 +63,7 @@
                             {% if perms.dcim.add_cable and object.site %}
                                 <div class="float-end">
                                     <span class="dropdown">
-                                        <button type="button" class="btn btn-success btn-xs dropdown-toggle" data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                                        <button type="button" class="btn btn-success btn-sm dropdown-toggle" data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
                                             <span class="mdi mdi-ethernet-cable" aria-hidden="true"></span> Connect
                                         </button>
                                         <ul class="dropdown-menu dropdown-menu-right">

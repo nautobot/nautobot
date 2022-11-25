@@ -21,23 +21,23 @@ class InstalledPluginsTable(tables.Table):
     actions = tables.TemplateColumn(
         template_code="""
             {% if record.actions.home %}
-            <a href="{% url record.actions.home %}" class="btn btn-success btn-xs" title="Home">
+            <a href="{% url record.actions.home %}" class="btn btn-success btn-sm" title="Home">
             {% else %}
-            <a href="" class="btn btn-success btn-xs disabled" title="No home link provided">
+            <a href="" class="btn btn-success btn-sm disabled" title="No home link provided">
             {% endif %}
                 <i class="mdi mdi-home"></i>
             </a>
             {% if record.actions.configure %}
-            <a href="{% url record.actions.configure %}" class="btn btn-warning btn-xs" title="Configure">
+            <a href="{% url record.actions.configure %}" class="btn btn-warning btn-sm" title="Configure">
             {% else %}
-            <a href="" class="btn btn-warning btn-xs disabled" title="No configuration link provided">
+            <a href="" class="btn btn-warning btn-sm disabled" title="No configuration link provided">
             {% endif %}
                 <i class="mdi mdi-cog"></i>
             </a>
             {% if record.actions.docs %}
-            <a href="{% url record.actions.docs %}" class="btn btn-info btn-xs" title="Docs">
+            <a href="{% url record.actions.docs %}" class="btn btn-info btn-sm" title="Docs">
             {% else %}
-            <a href="" class="btn btn-info btn-xs disabled" title="No docs provided">
+            <a href="" class="btn btn-info btn-sm disabled" title="No docs provided">
             {% endif %}
                 <i class="mdi mdi-book-open-page-variant"></i>
             </a>

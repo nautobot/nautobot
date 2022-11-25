@@ -170,6 +170,7 @@ class RegionView(generic.ObjectView):
         RequestConfig(request, paginate).configure(sites_table)
 
         return {
+            "active_tab": request.GET.get("tab", "main"),
             "sites_table": sites_table,
         }
 
@@ -241,6 +242,7 @@ class SiteView(generic.ObjectView):
         RequestConfig(request, paginate).configure(locations_table)
 
         return {
+            "active_tab": request.GET.get("tab", "main"),
             "locations_table": locations_table,
             "stats": stats,
             "rack_groups": rack_groups,

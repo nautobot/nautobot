@@ -24,10 +24,10 @@
 {% block content %}
 {% block tabs %}{% endblock %}
     <div class="row">
-        <div class="col-md-8 col-md-offset-2">
+        <div class="col-md-8 offset-md-2">
             <h1>{% block title %}{{ obj_type|bettertitle }} Bulk Import{% endblock %}</h1>
             {% if form.non_field_errors %}
-                <div class="panel panel-danger">
+                <div class="card bg-danger">
                     <div class="card-header"><strong>Errors</strong></div>
                     <div class="card-body">
                         {{ form.non_field_errors }}
@@ -47,7 +47,7 @@
                             <div class="col-md-12 text-end">
                                 <button type="submit" class="btn btn-primary">Submit</button>
                                 {% if return_url %}
-                                    <a href="{{ return_url }}" class="btn btn-default">Cancel</a>
+                                    <a href="{{ return_url }}" class="btn btn-outline-secondary">Cancel</a>
                                 {% endif %}
                             </div>
                         </div>
@@ -62,7 +62,7 @@
                             <div class="col-md-12 text-end">
                                 <button type="submit" class="btn btn-primary">Submit</button>
                                 {% if return_url %}
-                                    <a href="{{ return_url }}" class="btn btn-default">Cancel</a>
+                                    <a href="{{ return_url }}" class="btn btn-outline-secondary">Cancel</a>
                                 {% endif %}
                             </div>
                         </div>
@@ -72,7 +72,7 @@
             <div class="clearfix"></div>
             <p></p>
             {% if fields %}
-                <div class="panel panel-default">
+                <div class="card mb-3">
                     <div class="card-header">
                         <strong>CSV Field Options</strong>
                     </div>
@@ -98,7 +98,7 @@
                                 </td>
                                 <td>
                                     {% if field.STATIC_CHOICES %}
-                                        <button type="button" class="btn btn-link btn-xs float-end" data-bs-toggle="modal" data-bs-target="#{{ name }}_choices">
+                                        <button type="button" class="btn btn-link btn-sm float-end" data-bs-toggle="modal" data-bs-target="#{{ name }}_choices">
                                             <i class="mdi mdi-help-circle"></i>
                                         </button>
                                         <div class="modal fade" id="{{ name }}_choices" tabindex="-1" role="dialog">

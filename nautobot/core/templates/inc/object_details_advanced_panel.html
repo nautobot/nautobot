@@ -1,5 +1,5 @@
 {% if object.pk %}
-    <div class="card">
+    <div class="card mb-3">
         <div class="card-header">
             <strong>Object Details</strong>
         </div>
@@ -10,7 +10,7 @@
                     <td>
                         <span class="hover_copy">
                             <span id="uuid_copy">{{ object.id }}</span>
-                            <button class="btn btn-inline btn-default hover_copy_button" data-clipboard-target="#uuid_copy">
+                            <button class="btn btn-inline btn-outline-secondary hover_copy_button" data-clipboard-target="#uuid_copy">
                                 <span class="mdi mdi-content-copy"></span>
                             </button>
                         </span>
@@ -22,7 +22,7 @@
                         <td>
                             <span class="hover_copy">
                                 <span id="slug_copy">{{ object.slug }}</span>
-                                <button class="btn btn-inline btn-default hover_copy_button" data-clipboard-target="#slug_copy">
+                                <button class="btn btn-inline btn-outline-secondary hover_copy_button" data-clipboard-target="#slug_copy">
                                     <span class="mdi mdi-content-copy"></span>
                                 </button>
                             </span>

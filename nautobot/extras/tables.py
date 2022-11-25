@@ -67,11 +67,11 @@ class="label label-{% if entry.content_identifier in record.provided_contents %}
 """
 
 GITREPOSITORY_BUTTONS = """
-<button data-url="{% url 'extras:gitrepository_sync' slug=record.slug %}" type="submit" class="btn btn-primary btn-xs sync-repository" title="Sync" {% if not perms.extras.change_gitrepository %}disabled="disabled"{% endif %}><i class="mdi mdi-source-branch-sync" aria-hidden="true"></i></button>
+<button data-url="{% url 'extras:gitrepository_sync' slug=record.slug %}" type="submit" class="btn btn-primary btn-sm sync-repository" title="Sync" {% if not perms.extras.change_gitrepository %}disabled="disabled"{% endif %}><i class="mdi mdi-source-branch-sync" aria-hidden="true"></i></button>
 """
 
 JOB_BUTTONS = """
-<a href="{% url 'extras:job_run' slug=record.slug %}" class="btn btn-primary btn-xs" title="Run/Schedule" {% if not perms.extras.run_job or not record.runnable %}disabled="disabled"{% endif %}><i class="mdi mdi-play" aria-hidden="true"></i></a>
+<a href="{% url 'extras:job_run' slug=record.slug %}" class="btn btn-primary btn-sm" title="Run/Schedule" {% if not perms.extras.run_job or not record.runnable %}disabled="disabled"{% endif %}><i class="mdi mdi-play" aria-hidden="true"></i></a>
 """
 
 OBJECTCHANGE_OBJECT = """
@@ -95,19 +95,19 @@ SCHEDULED_JOB_APPROVAL_QUEUE_BUTTONS = """
 <button type="button"
         onClick="handleDetailPostAction('{% url 'extras:scheduledjob_approval_request_view' pk=record.pk %}', '_dry_run')"
         title="Dry Run"
-        class="btn btn-primary btn-xs"{% if not perms.extras.run_job %} disabled="disabled"{% endif %}>
+        class="btn btn-primary btn-sm"{% if not perms.extras.run_job %} disabled="disabled"{% endif %}>
     <i class="mdi mdi-play"></i>
 </button>
 <button type="button"
         onClick="handleDetailPostAction('{% url 'extras:scheduledjob_approval_request_view' pk=record.pk %}', '_approve')"
         title="Approve"
-        class="btn btn-success btn-xs"{% if not perms.extras.run_job %} disabled="disabled"{% endif %}>
+        class="btn btn-success btn-sm"{% if not perms.extras.run_job %} disabled="disabled"{% endif %}>
     <i class="mdi mdi-check"></i>
 </button>
 <button type="button"
         onClick="handleDetailPostAction('{% url 'extras:scheduledjob_approval_request_view' pk=record.pk %}', '_deny')"
         title="Deny"
-        class="btn btn-danger btn-xs"{% if not perms.extras.run_job %} disabled="disabled"{% endif %}>
+        class="btn btn-danger btn-sm"{% if not perms.extras.run_job %} disabled="disabled"{% endif %}>
     <i class="mdi mdi-close"></i>
 </button>
 """
@@ -678,21 +678,21 @@ class JobResultTable(BaseTable):
             {% if perms.extras.run_job %}
                 {% if record.job_model and record.job_kwargs %}
                     <a href="{% url 'extras:job_run' slug=record.job_model.slug %}?kwargs_from_job_result={{ record.pk }}"
-                       class="btn btn-xs btn-success" title="Re-run job with same arguments.">
+                       class="btn btn-sm btn-success" title="Re-run job with same arguments.">
                         <i class="mdi mdi-repeat"></i>
                     </a>
                 {% elif record.job_model is not None %}
-                    <a href="{% url 'extras:job_run' slug=record.job_model.slug %}" class="btn btn-primary btn-xs"
+                    <a href="{% url 'extras:job_run' slug=record.job_model.slug %}" class="btn btn-primary btn-sm"
                        title="Run job">
                         <i class="mdi mdi-play"></i>
                     </a>
                 {% else %}
-                    <a href="#" class="btn btn-xs btn-default disabled" title="Job is not available, cannot be re-run">
+                    <a href="#" class="btn btn-sm btn-outline-secondary disabled" title="Job is not available, cannot be re-run">
                         <i class="mdi mdi-repeat-off"></i>
                     </a>
                 {% endif %}
             {% endif %}
-            <a href="{% url 'extras:jobresult_delete' pk=record.pk %}" class="btn btn-xs btn-danger"
+            <a href="{% url 'extras:jobresult_delete' pk=record.pk %}" class="btn btn-sm btn-danger"
                title="Delete this job result.">
                 <i class="mdi mdi-trash-can-outline"></i>
             </a>

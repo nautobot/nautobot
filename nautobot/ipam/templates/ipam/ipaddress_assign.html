@@ -10,18 +10,18 @@
             {{ field }}
         {% endfor %}
         <div class="row">
-            <div class="col-md-6 col-md-offset-3">
+            <div class="col-md-6 offset-md-3">
                 <h3>Assign an IP Address</h3>
                 {% include 'ipam/inc/ipadress_edit_header.html' with active_tab='assign' %}
                 {% if form.non_field_errors %}
-                    <div class="panel panel-danger">
+                    <div class="card bg-danger">
                         <div class="card-header"><strong>Errors</strong></div>
                         <div class="card-body">
                             {{ form.non_field_errors }}
                         </div>
                     </div>
                 {% endif %}
-            <div class="panel panel-default">
+            <div class="card mb-3">
                 <div class="card-header"><strong>Select IP Address</strong></div>
                 <div class="card-body">
                     {% render_field form.vrf_id %}
@@ -31,9 +31,9 @@
             </div>
         </div>
         <div class="row">
-            <div class="col-md-6 col-md-offset-3 text-end">
+            <div class="col-md-6 offset-md-3 text-end">
                 <button type="submit" class="btn btn-primary">Search</button>
-                <a href="{{ return_url }}" class="btn btn-default">Cancel</a>
+                <a href="{{ return_url }}" class="btn btn-outline-secondary">Cancel</a>
             </div>
         </div>
     </form>

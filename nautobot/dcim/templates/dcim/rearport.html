@@ -2,7 +2,7 @@
 {% load helpers %}
 
 {% block content_left_page %}
-            <div class="panel panel-default">
+            <div class="card mb-3">
                 <div class="card-header">
                     <strong>Rear Port</strong>
                 </div>
@@ -36,7 +36,7 @@
 {% endblock content_left_page %}
 
 {% block content_right_page %}
-            <div class="panel panel-default">
+            <div class="card mb-3">
                 <div class="card-header">
                     <strong>Connection</strong>
                 </div>
@@ -46,7 +46,7 @@
                             <td>Cable</td>
                             <td>
                                 {{ object.cable|hyperlinked_object }}
-                                <a href="{% url 'dcim:rearport_trace' pk=object.pk %}" class="btn btn-primary btn-xs" title="Trace">
+                                <a href="{% url 'dcim:rearport_trace' pk=object.pk %}" class="btn btn-primary btn-sm" title="Trace">
                                     <i class="mdi mdi-transit-connection-variant" aria-hidden="true"></i>
                                 </a>
                             </td>

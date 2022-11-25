@@ -3,7 +3,7 @@
 {% load form_helpers %}
 
 {% block form %}
-    <div class="panel panel-default">
+    <div class="card mb-3">
         <div class="card-header"><strong>Custom Field</strong></div>
         <div class="card-body">
             {% render_field form.label %}
@@ -18,13 +18,13 @@
             {% render_field form.advanced_ui %}
         </div>
     </div>
-    <div class="panel panel-default">
+    <div class="card mb-3">
         <div class="card-header"><strong>Assignment</strong></div>
         <div class="card-body">
             {% render_field form.content_types %}
         </div>
     </div>
-    <div class="panel panel-default">
+    <div class="card mb-3">
         <div class="card-header"><strong>Validation Rules</strong></div>
         <div class="card-body">
             {% render_field form.validation_minimum %}
@@ -32,11 +32,11 @@
             {% render_field form.validation_regex %}
         </div>
     </div>
-    <div class="panel panel-default">
+    <div class="card mb-3">
         <div class="card-header"><strong>Custom Field Choices</strong></div>
         <div class="card-body">
             {% if choices.errors %}
-                <div class="panel panel-danger">
+                <div class="card bg-danger">
                     <div class="card-header"><strong>Errors</strong></div>
                     <div class="card-body">
                         Please correct the error(s) below:

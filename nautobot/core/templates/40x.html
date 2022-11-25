@@ -3,7 +3,7 @@
 {% block content %}
 <div class="row" style="margin-top: 150px;">
     <div class="col-sm-4 col-sm-offset-4">
-        <div class="panel panel-default">
+        <div class="card mb-3">
             <div class="card-header">
                 <strong>{% block icon %}{% endblock %} {% block title %}{% endblock %}</strong>
             </div>
@@ -11,7 +11,7 @@
                 {% block message %}{% endblock %}
             </div>
             <div class="panel-footer text-end">
-                <a href="{% url 'home' %}" class="btn btn-xs btn-primary">Home Page</a>
+                <a href="{% url 'home' %}" class="btn btn-sm btn-primary">Home Page</a>
             </div>
         </div>
     </div>

@@ -7,16 +7,16 @@
 <form action="." method="post" class="form form-horizontal">
     {% csrf_token %}
     <div class="row">
-        <div class="col-md-6 col-md-offset-3">
+        <div class="col-md-6 offset-md-3">
             {% if form.non_field_errors %}
-                <div class="panel panel-danger">
+                <div class="card bg-danger">
                     <div class="card-header"><strong>Errors</strong></div>
                     <div class="card-body">
                         {{ form.non_field_errors }}
                     </div>
                 </div>
             {% endif %}
-            <div class="panel panel-default">
+            <div class="card mb-3">
                 <div class="card-header">
                     <strong>New {{ component_type }}</strong>
                 </div>
@@ -31,9 +31,9 @@
                 </div>
             </div>
 		    <div class="form-group">
-                <div class="col-md-9 col-md-offset-3">
+                <div class="col-md-9 offset-md-3">
                     <button type="submit" name="_update" class="btn btn-primary">Save</button>
-                    <a href="{{ return_url }}" class="btn btn-default">Cancel</a>
+                    <a href="{{ return_url }}" class="btn btn-outline-secondary">Cancel</a>
                 </div>
 		    </div>
         </div>

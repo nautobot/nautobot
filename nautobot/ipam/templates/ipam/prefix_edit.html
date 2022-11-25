@@ -2,7 +2,7 @@
 {% load form_helpers %}
 
 {% block form %}
-    <div class="panel panel-default">
+    <div class="card mb-3">
         <div class="card-header"><strong>Prefix</strong></div>
         <div class="card-body">
             {% render_field form.prefix %}
@@ -13,7 +13,7 @@
             {% render_field form.is_pool %}
         </div>
     </div>
-    <div class="panel panel-default">
+    <div class="card mb-3">
         <div class="card-header"><strong>Site/VLAN Assignment</strong></div>
         <div class="card-body">
             {% render_field form.region %}
@@ -23,7 +23,7 @@
             {% render_field form.vlan %}
         </div>
     </div>
-    <div class="panel panel-default">
+    <div class="card mb-3">
         <div class="card-header"><strong>Tenancy</strong></div>
         <div class="card-body">
             {% render_field form.tenant_group %}

@@ -17,9 +17,9 @@
             {% endif %}
             {% if inline_admin_form.original %}{{ inline_admin_form.original }}{% if inline_admin_form.model_admin.show_change_link and inline_admin_form.model_admin.has_registered_model %} <a href="{% url inline_admin_form.model_admin.opts|admin_urlname:'change' inline_admin_form.original.pk|admin_urlquote %}" class="inlinechangelink">{% trans "Change" %}</a>{% endif %}{% else %}#{{ forloop.counter }}{% endif %} <small class="inline_label">({{ inline_admin_formset.opts.verbose_name|capfirst }})</small>
             {% if not forloop.last %}
-            <span class="btn btn-default btn-xs"><i class="glyphicon glyphicon-resize-full"></i></span>
+            <span class="btn btn-outline-secondary btn-sm"><i class="glyphicon glyphicon-resize-full"></i></span>
             {% if inline_admin_formset.opts.sortable_field_name %}
-            <span class="btn btn-default btn-xs drag-handler"><i class="glyphicon glyphicon-move"></i></span>
+            <span class="btn btn-outline-secondary btn-sm drag-handler"><i class="glyphicon glyphicon-move"></i></span>
             {% endif %}
             </a>
             {% endif %}

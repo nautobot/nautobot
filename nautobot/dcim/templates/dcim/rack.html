@@ -24,16 +24,16 @@
 {% block title %}Rack {{ object }}{% endblock title %}
 
 {% block panel_buttons %}
-<button class="btn btn-sm btn-default toggle-fullname" selected="selected">
+<button class="btn btn-sm btn-outline-secondary toggle-fullname" selected="selected">
     <span class="mdi mdi-checkbox-marked-circle-outline" aria-hidden="true"></span> Show Device Full Name
 </button>
-<button class="btn btn-sm btn-default toggle-images" selected="selected">
+<button class="btn btn-sm btn-outline-secondary toggle-images" selected="selected">
     <span class="mdi mdi-checkbox-marked-circle-outline" aria-hidden="true"></span> Show Images
 </button>
 {% endblock panel_buttons %}
 
 {% block content_left_page %}
-        <div class="panel panel-default">
+        <div class="card mb-3">
             <div class="card-header">
                 <strong>Rack</strong>
             </div>
@@ -78,7 +78,7 @@
                 <tr>
                     <td>Status</td>
                     <td>
-                        <span class="label" style="color: {{ object.status.color|fgcolor }}; background-color: #{{ object.status.color }}">{{ object.get_status_display }}</span>
+                        <span class="badge" style="color: {{ object.status.color|fgcolor }}; background-color: #{{ object.status.color }}">{{ object.get_status_display }}</span>
                     </td>
                 </tr>
                 <tr>
@@ -109,7 +109,7 @@
                 </tr>
             </table>
         </div>
-        <div class="panel panel-default">
+        <div class="card mb-3">
             <div class="card-header">
                 <strong>Dimensions</strong>
             </div>
@@ -154,7 +154,7 @@
                 </tr>
             </table>
         </div>
-        <div class="panel panel-default">
+        <div class="card mb-3">
             <div class="card-header">
                 <strong>Comments</strong>
             </div>
@@ -167,7 +167,7 @@
             </div>
         </div>
         {% if power_feeds %}
-            <div class="panel panel-default">
+            <div class="card mb-3">
                 <div class="card-header">
                     <strong>Power Feeds</strong>
                 </div>
@@ -184,7 +184,7 @@
                             <td>{{ powerfeed.power_panel|hyperlinked_object }}</td>
                             <td>{{ powerfeed|hyperlinked_object }}</td>
                             <td>
-                                <span class="label" style="color: {{ powerfeed.status.color|fgcolor }}; background-color: #{{powerfeed.status.color}}">{{ powerfeed.get_status_display }}</span>
+                                <span class="badge" style="color: {{ powerfeed.status.color|fgcolor }}; background-color: #{{powerfeed.status.color}}">{{ powerfeed.get_status_display }}</span>
                             </td>
                             <td>
                                 <span class="label label-{{ powerfeed.get_type_class }}">{{ powerfeed.get_type_display }}</span>
@@ -207,21 +207,21 @@
                 </table>
             </div>
         {% endif %}
-        <div class="panel panel-default">
+        <div class="card mb-3">
             <div class="card-header">
                 <strong>Images</strong>
             </div>
             {% include 'inc/image_attachments.html' with images=object.images.all %}
             {% if perms.extras.add_imageattachment %}
                 <div class="panel-footer text-end noprint">
-                    <a href="{% url 'dcim:rack_add_image' object_id=object.pk %}" class="btn btn-primary btn-xs">
+                    <a href="{% url 'dcim:rack_add_image' object_id=object.pk %}" class="btn btn-primary btn-sm">
                         <span class="mdi mdi-plus-thick" aria-hidden="true"></span>
                         Attach an image
                     </a>
                 </div>
             {% endif %}
         </div>
-        <div class="panel panel-default">
+        <div class="card mb-3">
             <div class="card-header">
                 <strong>Reservations</strong>
             </div>
@@ -247,12 +247,12 @@
                             </td>
                             <td class="text-end noprint">
                                 {% if perms.dcim.change_rackreservation %}
-                                    <a href="{% url 'dcim:rackreservation_edit' pk=resv.pk %}?return_url={{ object.get_absolute_url }}" class="btn btn-warning btn-xs" title="Edit reservation">
+                                    <a href="{% url 'dcim:rackreservation_edit' pk=resv.pk %}?return_url={{ object.get_absolute_url }}" class="btn btn-warning btn-sm" title="Edit reservation">
                                         <i class="mdi mdi-pencil" aria-hidden="true"></i>
                                     </a>
                                 {% endif %}
                                 {% if perms.dcim.delete_rackreservation %}
-                                    <a href="{% url 'dcim:rackreservation_delete' pk=resv.pk %}?return_url={{ object.get_absolute_url }}" class="btn btn-danger btn-xs" title="Delete reservation">
+                                    <a href="{% url 'dcim:rackreservation_delete' pk=resv.pk %}?return_url={{ object.get_absolute_url }}" class="btn btn-danger btn-sm" title="Delete reservation">
                                         <i class="mdi mdi-trash-can-outline" aria-hidden="true"></i>
                                     </a>
                                 {% endif %}
@@ -265,7 +265,7 @@
             {% endif %}
             {% if perms.dcim.add_rackreservation %}
                 <div class="panel-footer text-end noprint">
-                    <a href="{% url 'dcim:rackreservation_add' %}?rack={{ object.pk }}&return_url={{ object.get_absolute_url }}" class="btn btn-primary btn-xs">
+                    <a href="{% url 'dcim:rackreservation_add' %}?rack={{ object.pk }}&return_url={{ object.get_absolute_url }}" class="btn btn-primary btn-sm">
                         <span class="mdi mdi-plus-thick" aria-hidden="true"></span>
                         Add a reservation
                     </a>
@@ -289,7 +289,7 @@
               </div>
             </div>
         </div>
-        <div class="panel panel-default">
+        <div class="card mb-3">
             <div class="card-header">
                 <strong>Non-Racked Devices</strong>
             </div>
@@ -320,7 +320,7 @@
             {% endif %}
             {% if perms.dcim.add_device %}
                 <div class="panel-footer text-end noprint">
-                    <a href="{% url 'dcim:device_add' %}?site={{ object.site.pk }}&rack={{ object.pk }}" class="btn btn-primary btn-xs">
+                    <a href="{% url 'dcim:device_add' %}?site={{ object.site.pk }}&rack={{ object.pk }}" class="btn btn-primary btn-sm">
                         <span class="mdi mdi-plus-thick" aria-hidden="true"></span>
                         Add a non-racked device
                     </a>

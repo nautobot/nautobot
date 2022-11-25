@@ -8,17 +8,17 @@
         {{ pk_form.pk }}
         {{ formset.management_form }}
         <div class="row">
-            <div class="col-md-8 col-md-offset-2">
+            <div class="col-md-8 offset-md-2">
                 <h3>{% block title %}{% if vc_form.instance %}Editing {{ vc_form.instance }}{% else %}New Virtual Chassis{% endif %}{% endblock %}</h3>
                 {% if vc_form.non_field_errors %}
-                    <div class="panel panel-danger">
+                    <div class="card bg-danger">
                         <div class="card-header"><strong>Errors</strong></div>
                         <div class="card-body">
                             {{ vc_form.non_field_errors }}
                         </div>
                     </div>
                 {% endif %}
-                <div class="panel panel-default">
+                <div class="card mb-3">
                     <div class="card-header"><strong>Virtual Chassis</strong></div>
                     <div class="table card-body">
                         {% render_field vc_form.name %}
@@ -27,7 +27,7 @@
                     </div>
                 </div>
                 {% include 'inc/extras_features_edit_form_fields.html' with form=vc_form %}
-                <div class="panel panel-default">
+                <div class="card mb-3">
                     <div class="card-header"><strong>Members</strong></div>
                     <table class="table card-body">
                         <thead>
@@ -70,7 +70,7 @@
                                         </td>
                                         <td>
                                             {% if virtual_chassis.present_in_database %}
-                                                <a href="{% url 'dcim:virtualchassis_remove_member' pk=device.pk %}?return_url={% url 'dcim:virtualchassis_edit' pk=virtual_chassis.pk %}" class="btn btn-danger btn-xs{% if virtual_chassis.master == device %} disabled{% endif %}">
+                                                <a href="{% url 'dcim:virtualchassis_remove_member' pk=device.pk %}?return_url={% url 'dcim:virtualchassis_edit' pk=virtual_chassis.pk %}" class="btn btn-danger btn-sm{% if virtual_chassis.master == device %} disabled{% endif %}">
                                                     <span class="mdi mdi-trash-can-outline" aria-hidden="true"></span>
                                                 </a>
                                             {% endif %}
@@ -84,9 +84,9 @@
             </div>
         </div>
         <div class="row">
-            <div class="col-md-8 col-md-offset-2 text-end">
+            <div class="col-md-8 offset-md-2 text-end">
                 <button type="submit" name="_update" class="btn btn-primary">Update</button>
-                <a href="{{ return_url }}" class="btn btn-default">Cancel</a>
+                <a href="{{ return_url }}" class="btn btn-outline-secondary">Cancel</a>
             </div>
         </div>
     </form>

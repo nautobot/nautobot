@@ -28,7 +28,7 @@
     <div class="tab-content">
         <div role="tabpanel" class="tab-pane active" id="run">
             <div class="row">
-                <div class="col-md-6 col-md-offset-3">
+                <div class="col-md-6 offset-md-3">
                     {% if not perms.extras.run_job %}
                         <div class="alert alert-warning">
                             <i class="mdi mdi-alert"></i>
@@ -53,7 +53,7 @@
                     {% endif %}
                     <form action="" method="post" enctype="multipart/form-data" class="form form-horizontal">
                         {% if job_form.non_field_errors or schedule_form.non_field_errors %}
-                            <div class="panel panel-danger">
+                            <div class="card bg-danger">
                                 <div class="card-header"><strong>Errors</strong></div>
                                 <div class="card-body">
                                     {{ job_form.non_field_errors }}
@@ -63,7 +63,7 @@
                         {% endif %}
                         {% csrf_token %}
                         {% if job_form.requires_input %}
-                            <div class="panel panel-default">
+                            <div class="card mb-3">
                                 <div class="card-header">
                                     <strong>Job Data</strong>
                                 </div>
@@ -86,7 +86,7 @@
                             </div>
                             {% render_form job_form %}
                         {% endif %}
-                        <div class="panel panel-default job_execution">
+                        <div class="card job_execution">
                             <div class="card-header">
                                 <strong>Job Execution</strong>
                             </div>
@@ -110,7 +110,7 @@
                             >
                                 <i class="mdi mdi-play"></i> Run Job Now
                             </button>
-                            <a href="{% url 'extras:job_list' %}" class="btn btn-default">Cancel</a>
+                            <a href="{% url 'extras:job_list' %}" class="btn btn-outline-secondary">Cancel</a>
                         </div>
                     </form>
                 </div>

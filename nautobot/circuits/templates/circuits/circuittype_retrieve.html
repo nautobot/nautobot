@@ -2,7 +2,7 @@
 {% load helpers %}
 
 {% block content_left_page %}
-        <div class="panel panel-default">
+        <div class="card mb-3">
             <div class="card-header">
                 <strong>Circuit Type</strong>
             </div>
@@ -22,14 +22,14 @@
 {% endblock content_left_page %}
 
 {% block content_full_width_page %}
-        <div class="panel panel-default">
+        <div class="card mb-3">
             <div class="card-header">
                 <strong>Circuits</strong>
             </div>
             {% include 'inc/table.html' with table=circuits_table %}
             {% if perms.circuits.add_circuit %}
                 <div class="panel-footer text-end noprint">
-                    <a href="{% url 'circuits:circuit_add' %}?type={{ object.pk }}" class="btn btn-xs btn-primary">
+                    <a href="{% url 'circuits:circuit_add' %}?type={{ object.pk }}" class="btn btn-sm btn-primary">
                         <span class="mdi mdi-plus-thick" aria-hidden="true"></span> Add circuit
                     </a>
                 </div>

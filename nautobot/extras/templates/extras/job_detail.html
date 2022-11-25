@@ -17,7 +17,7 @@
 {% endblock extra_buttons %}
 
 {% block content_left_page %}
-    <div class="panel panel-default">
+    <div class="card mb-3">
         <div class="card-header">
             <strong>Source Code</strong>
         </div>
@@ -45,7 +45,7 @@
                 <td>
                     <span class="hover_copy">
                         <span id="job_class_path_copy"><code>{{ object.class_path }}</code></span>
-                        <button class="btn btn-inline btn-default hover_copy_button" data-clipboard-target="#job_class_path_copy">
+                        <button class="btn btn-inline btn-outline-secondary hover_copy_button" data-clipboard-target="#job_class_path_copy">
                             <span class="mdi mdi-content-copy"></span>
                         </button>
                     </span>
@@ -62,7 +62,7 @@
             </tr>
         </table>
     </div>
-    <div class="panel panel-default">
+    <div class="card mb-3">
         <div class="card-header">
             <strong>Job</strong>
         </div>
@@ -125,7 +125,7 @@
 {% endblock content_left_page %}
 
 {% block content_right_page %}
-    <div class="panel panel-default">
+    <div class="card mb-3">
         <div class="card-header">
             <strong>Properties</strong>
         </div>

@@ -8,16 +8,16 @@
 <form action="" method="post" class="form form-horizontal">
     {% csrf_token %}
     <div class="row">
-        <div class="col-md-6 col-md-offset-3">
+        <div class="col-md-6 offset-md-3">
             {% if form.non_field_errors %}
-                <div class="panel panel-danger">
+                <div class="card bg-danger">
                     <div class="card-header"><strong>Errors</strong></div>
                     <div class="card-body">
                         {{ form.non_field_errors }}
                     </div>
                 </div>
             {% endif %}
-            <div class="panel panel-default">
+            <div class="card mb-3">
                 <div class="card-header">
                     <strong>{{ component_type|bettertitle }}</strong>
                 </div>
@@ -27,10 +27,10 @@
             </div>
             {% include 'inc/extras_features_edit_form_fields.html' with form=model_form %}
 		    <div class="form-group">
-                <div class="col-md-9 col-md-offset-3">
+                <div class="col-md-9 offset-md-3">
                     <button type="submit" name="_create" class="btn btn-primary">Create</button>
                     <button type="submit" name="_addanother" class="btn btn-primary">Create and Add More</button>
-                    <a href="{{ return_url }}" class="btn btn-default">Cancel</a>
+                    <a href="{{ return_url }}" class="btn btn-outline-secondary">Cancel</a>
                 </div>
 		    </div>
         </div>

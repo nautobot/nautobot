@@ -3,7 +3,7 @@
 {% load form_helpers %}
 
 {% block form %}
-    <div class="panel panel-default">
+    <div class="card mb-3">
         <div class="card-header"><strong>Tenant</strong></div>
         <div class="card-body">
             {% render_field form.name %}
@@ -13,7 +13,7 @@
         </div>
     </div>
     {% include 'inc/extras_features_edit_form_fields.html' %}
-    <div class="panel panel-default">
+    <div class="card mb-3">
         <div class="card-header"><strong>Comments</strong></div>
         <div class="card-body">
             {% render_field form.comments %}

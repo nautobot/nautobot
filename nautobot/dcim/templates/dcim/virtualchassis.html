@@ -2,7 +2,7 @@
 {% load helpers %}
 
 {% block content_left_page %}
-        <div class="panel panel-default">
+        <div class="card mb-3">
             <div class="card-header">
                 <strong>Virtual Chassis</strong>
             </div>
@@ -20,7 +20,7 @@
 {% endblock content_left_page %}
 
 {% block content_right_page %}
-        <div class="panel panel-default">
+        <div class="card mb-3">
             <div class="card-header">
                 <strong>Members</strong>
             </div>
@@ -42,7 +42,7 @@
             </table>
             {% if perms.dcim.change_virtualchassis %}
                 <div class="panel-footer text-end noprint">
-                    <a href="{% url 'dcim:virtualchassis_add_member' pk=object.pk %}?site={{ object.master.site.pk }}&rack={{ object.master.rack.pk }}" class="btn btn-primary btn-xs">
+                    <a href="{% url 'dcim:virtualchassis_add_member' pk=object.pk %}?site={{ object.master.site.pk }}&rack={{ object.master.rack.pk }}" class="btn btn-primary btn-sm">
                         <span class="mdi mdi-plus-thick" aria-hidden="true"></span> Add Member
                     </a>
                 </div>

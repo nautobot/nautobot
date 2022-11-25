@@ -2,12 +2,12 @@
 
 {% block content %}
 <div class="row">
-    <div class="col-sm-12 col-md-10 col-md-offset-1">
+    <div class="col-sm-12 col-md-10 offset-md-1">
         <h1>{% block title %}{% endblock %}</h1>
     </div>
 </div>
 <div class="row">
-    <div class="col-sm-3 col-md-2 col-md-offset-1">
+    <div class="col-sm-3 col-md-2 offset-md-1">
         <ul class="nav nav-pills nav-stacked">
             <li{% if active_tab == "profile" %} class="active"{% endif %}>
                 <a href="{% url 'user:profile' %}">Profile</a>

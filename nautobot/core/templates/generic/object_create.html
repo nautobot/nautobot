@@ -8,14 +8,14 @@
         {% for field in form.hidden_fields %}
             {{ field }}
         {% endfor %}
-        <div class="row">
-            <div class="col-md-6 col-md-offset-3">
+        <div class="row mb-3">
+            <div class="col-md-6 offset-md-3">
                 <h3>
                     {% if obj %}
                         {% with obj|get_docs_url as docs_url %}
                             {% if docs_url %}
                                 <div class="float-end">
-                                    <a href="{{ docs_url }}" target="_blank" class="btn btn-link btn-xs" title="Help">
+                                    <a href="{{ docs_url }}" target="_blank" class="btn btn-link btn-sm" title="Help">
                                         <i class="mdi mdi-help-circle"></i>
                                     </a>
                                 </div>
@@ -26,7 +26,7 @@
                 </h3>
                 {% block tabs %}{% endblock %}
                 {% if form.non_field_errors %}
-                    <div class="panel panel-danger">
+                    <div class="card bg-danger mb-3">
                         <div class="card-header"><strong>Errors</strong></div>
                         <div class="card-body">
                             {{ form.non_field_errors }}
@@ -34,7 +34,7 @@
                     </div>
                 {% endif %}
                 {% block form %}
-                    <div class="panel panel-default">
+                    <div class="card mb-3">
                         <div class="card-header"><strong>{{ obj_type|capfirst }}</strong></div>
                         <div class="card-body">
                             {% block form_fields %}
@@ -47,7 +47,7 @@
             </div>
         </div>
         <div class="row">
-            <div class="col-md-6 col-md-offset-3 text-end">
+            <div class="col-md-6 offset-md-3 text-end">
                 {% block buttons %}
                     {% if editing %}
                         <button type="submit" name="_update" class="btn btn-primary">Update</button>
@@ -55,7 +55,7 @@
                         <button type="submit" name="_create" class="btn btn-primary">Create</button>
                         <button type="submit" name="_addanother" class="btn btn-primary">Create and Add Another</button>
                     {% endif %}
-                    <a href="{{ return_url }}" class="btn btn-default">Cancel</a>
+                    <a href="{{ return_url }}" class="btn btn-outline-secondary">Cancel</a>
                 {% endblock %}
             </div>
         </div>
