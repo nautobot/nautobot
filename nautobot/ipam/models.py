@@ -12,7 +12,7 @@ from django.urls import reverse
 from django.utils.functional import classproperty
 
 from nautobot.dcim.models import Device, Interface
-from nautobot.extras.models import Status, StatusModel
+from nautobot.extras.models import RoleModel, Status, StatusModel
 from nautobot.extras.utils import extras_features
 from nautobot.core.fields import AutoSlugField
 from nautobot.core.models.generics import OrganizationalModel, PrimaryModel
@@ -438,7 +438,7 @@ class Role(OrganizationalModel):
     "statuses",
     "webhooks",
 )
-class Prefix(PrimaryModel, StatusModel):
+class Prefix(PrimaryModel, StatusModel, RoleModel):
     """
     A Prefix represents an IPv4 or IPv6 network, including mask length.
     Prefixes can optionally be assigned to Sites (and/or Locations) and VRFs.
@@ -489,14 +489,6 @@ class Prefix(PrimaryModel, StatusModel):
         blank=True,
         null=True,
         verbose_name="VLAN",
-    )
-    role = models.ForeignKey(
-        to="ipam.Role",
-        on_delete=models.SET_NULL,
-        related_name="prefixes",
-        blank=True,
-        null=True,
-        help_text="The primary function of this prefix",
     )
     is_pool = models.BooleanField(
         verbose_name="Is a pool",
@@ -1134,7 +1126,7 @@ class VLANGroup(OrganizationalModel):
     "statuses",
     "webhooks",
 )
-class VLAN(PrimaryModel, StatusModel):
+class VLAN(PrimaryModel, StatusModel, RoleModel):
     """
     A VLAN is a distinct layer two forwarding domain identified by a 12-bit integer (1-4094).
     Each VLAN must be assigned to a Site or Location, however VLAN IDs need not be unique within a Site or Location.
@@ -1172,13 +1164,6 @@ class VLAN(PrimaryModel, StatusModel):
     tenant = models.ForeignKey(
         to="tenancy.Tenant",
         on_delete=models.PROTECT,
-        related_name="vlans",
-        blank=True,
-        null=True,
-    )
-    role = models.ForeignKey(
-        to="ipam.Role",
-        on_delete=models.SET_NULL,
         related_name="vlans",
         blank=True,
         null=True,
