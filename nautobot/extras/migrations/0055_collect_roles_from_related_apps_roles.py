@@ -3,7 +3,6 @@
 from collections import namedtuple
 from django.db import migrations, models
 
-from nautobot.dcim.choices import SubdeviceRoleChoices
 from nautobot.ipam.choices import IPAddressRoleChoices
 
 
@@ -28,7 +27,6 @@ def populate_roles_from_related_app_roles(apps, schema_editor):
         RelatedRoleModelOrChoices("dcim.RackRole", ["dcim.rack"]),
         RelatedRoleModelOrChoices("ipam.Role", ["ipam.rack", "ipam.vlan"]),
         RelatedRoleModelOrChoices("ipam.Role", ["ipam.rack", "ipam.vlan"]),
-        RelatedRoleModelOrChoices(SubdeviceRoleChoices, ["dcim.devicetype"]),
         RelatedRoleModelOrChoices(IPAddressRoleChoices, ["ipam.ipaddress"]),
     )
 
