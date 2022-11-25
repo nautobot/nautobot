@@ -18,7 +18,6 @@ def reverse_role_data_migrate(apps, schema):
 
     model = apps.get_model("virtualization", "VirtualMachine")
     device_role_model = apps.get_model("dcim", "DeviceRole")
-    model.objects.all().update(new_role=None)
     migrate_role_data(
         model=model,
         role_model=device_role_model,
