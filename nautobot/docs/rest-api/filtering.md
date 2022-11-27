@@ -24,7 +24,7 @@ http://nautobot/api/ipam/prefixes/ | jq ".actions.POST.status.choices"
 
 Example output:
 
-```no-highlight
+```json
 [
   {
     "value": "container",
