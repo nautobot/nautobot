@@ -749,7 +749,7 @@ class Prefix(PrimaryModel, StatusModel, RoleModel):
     "statuses",
     "webhooks",
 )
-class IPAddress(PrimaryModel, StatusModel):
+class IPAddress(PrimaryModel, StatusModel, RoleModel):
     """
     An IPAddress represents an individual IPv4 or IPv6 address and its mask. The mask length should match what is
     configured in the real world. (Typically, only loopback interfaces are configured with /32 or /128 masks.) Like
@@ -782,13 +782,6 @@ class IPAddress(PrimaryModel, StatusModel):
         related_name="ip_addresses",
         blank=True,
         null=True,
-    )
-    role = models.CharField(
-        max_length=50,
-        choices=IPAddressRoleChoices,
-        blank=True,
-        help_text="The functional role of this IP",
-        db_index=True,
     )
     assigned_object_type = models.ForeignKey(
         to=ContentType,

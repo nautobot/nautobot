@@ -34,4 +34,16 @@ class Migration(migrations.Migration):
             old_name="new_role",
             new_name="role",
         ),
+        ####################
+        # IPAddress
+        ####################
+        migrations.RemoveField(
+            model_name="ipaddress",
+            name="legacy_role",
+        ),
+        migrations.RenameField(
+            model_name="ipaddress",
+            old_name="new_role",
+            new_name="role",
+        ),
     ]
