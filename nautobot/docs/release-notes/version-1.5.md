@@ -10,13 +10,16 @@ If you are a user migrating from NetBox to Nautobot, please refer to the ["Migra
 
 ### Added
 
+#### Added `nautobot-server generate_test_data` command ([#2536](https://github.com/nautobot/nautobot/issues/2536))
+
+A new management command, [`nautobot-server generate_test_data`](../administration/nautobot-server.md#generate_test_data), has been added that can be used to populate the Nautobot database with various data as a baseline for manual or automated testing. This is now used internally by Nautobot's unit testing suite to create a synthetic data set that looks and feels like real data with randomly-generated values. Most importantly, the objects are created with all of the fields fully and correctly populated, to assert that each object in the database is properly exercising all features.
+
+!!! warning
+    Be very cautious about running this command on your server instance. It is not intended to be used in production environments and will result in data loss.
+
 #### Custom Field Grouping ([#899](https://github.com/nautobot/nautobot/issues/899))
 
 Custom fields can now be assigned to a free-text "grouping" to improve usability when a large number of custom fields are defined on a given model. In the UI, fields in the same grouping will be grouped together, and groupings can be expanded/collapsed for display purposes.
-
-#### Device Redundancy Groups ([#1892](https://github.com/nautobot/nautobot/issues/1892))
-
-Device Redundancy Groups have been added to model groups of distinct devices that perform device clustering or failover high availability functions. This may be used to model whole device redundancy strategies across devices with separate control planes (ex: ASA failover), not devices that share a control plane (ex: stackwise switch stacks), or interface specific redundancy strategies (ex: hsrp). Device Redundancy Groups support grouping an arbitrary number of devices and may be assigned an optional secrets group and one or more optional failover strategies.
 
 #### Custom Celery Task Queues ([#2421](https://github.com/nautobot/nautobot/pull/2421))
 
@@ -25,12 +28,34 @@ A new optional job property `task_queues` has been introduced to allow Nautobot 
 !!! important
     The default celery queue name has been changed from `celery` to `default`. If you have any workers or tasks hard coded to use `celery` you will need to update those workers/tasks or change the [`CELERY_TASK_DEFAULT_QUEUE`](../configuration/optional-settings.md#celery_task_default_queue) setting in your `nautobot_config.py`.
 
-#### Added `nautobot-server generate_test_data` command ([#2536](https://github.com/nautobot/nautobot/issues/2536))
+#### Device Redundancy Groups ([#1892](https://github.com/nautobot/nautobot/issues/1892))
 
-A new management command, [`nautobot-server generate_test_data`](../administration/nautobot-server.md#generate_test_data), has been added that can be used to populate the Nautobot database with various data as a baseline for manual or automated testing. This is now used internally by Nautobot's unit testing suite to create a synthetic data set that looks and feels like real data with randomly-generated values. Most importantly, the objects are created with all of the fields fully and correctly populated, to assert that each object in the database is properly exercising all features.
+Device Redundancy Groups have been added to model groups of distinct devices that perform device clustering or failover high availability functions. This may be used to model whole device redundancy strategies across devices with separate control planes (ex: ASA failover), not devices that share a control plane (ex: stackwise switch stacks), or interface specific redundancy strategies (ex: hsrp). Device Redundancy Groups support grouping an arbitrary number of devices and may be assigned an optional secrets group and one or more optional failover strategies.
 
-!!! warning
-    Be very cautious about running this command on your server instance. It is not intended to be used in production environments and will result in data loss.
+#### Nautobot Apps API ([#2723](https://github.com/nautobot/nautobot/issues/2723))
+
++++ 1.5.2
+
+The new `nautobot.apps` module provides a common starting point for app (a.k.a. plugin) developers to find all of the functions and classes that are recommended for use in apps. For example, instead of needing to look through the entire Nautobot codebase to find the appropriate classes, and then write:
+
+```python
+from nautobot.extras.forms import NautobotModelForm
+from nautobot.utilities.forms import BulkEditForm, CSVModelForm
+from nautobot.utilities.forms.fields import DynamicModelChoiceField
+```
+
+an app developer can now refer to `nautobot.apps.forms` and then write simply:
+
+```python
+from nautobot.apps.forms import (
+    BulkEditForm,
+    CSVModelForm,
+    DynamicModelChoiceField,
+    NautobotModelForm,
+)
+```
+
+For more details, please refer to the updated [app developer documentation](../plugins/development.md).
 
 #### Nestable LocationTypes ([#2608](https://github.com/nautobot/nautobot/issues/2608))
 
@@ -62,6 +87,12 @@ relationship:
 - If "Destination objects MUST implement this relationship" is selected, objects of the type selected in "Destination Type" will enforce this relationship when they are created or edited.
 - If "Source objects MUST implement this relationship" is selected, objects of the type selected in "Source Type" will enforce this relationship when they are created or edited.
 
+Required relationships are enforced in the following scenarios:
+
+- Creating or editing an object via the API or the UI
+- Bulk creating objects via the API
+- Bulk editing objects via the API or the UI
+
 ### Changed
 
 #### Database Query Caching is now Disabled by Default ([#1721](https://github.com/nautobot/nautobot/issues/1721))
@@ -75,11 +106,67 @@ As a result, the value of this setting now defaults to `False`, disabling databa
 !!! important
     Users with existing `nautobot_config.py` files generated from earlier versions of Nautobot will still have `CACHEOPS_ENABLED = True` unless they modify or regenerate their configuration. If users no longer desire caching, please be sure to explicitly toggle the value of this setting to `False` and restart your Nautobot services.
 
+#### Deprecation Warnings Silenced by Default ([#2798](https://github.com/nautobot/nautobot/pull/2798))
+
++/- 1.5.2
+
+Deprecation warnings raised by Nautobot itself (such as warnings about upcoming breaking changes in a future release) are no longer logged as `WARNING` log messages by default, but can be enabled by setting `DEBUG = True` or `LOG_DEPRECATION_WARNINGS = True` in your configuration. More information is available under [Optional Settings](../configuration/optional-settings.md#log_deprecation_warnings).
+
+!!! caution
+    In Nautobot 2.0, deprecation warnings will again be logged by default; a future release of Nautobot 1.5.x will also re-enable default logging of deprecation warnings.
+
 #### Redesigned List Filtering UI ([#1998](https://github.com/nautobot/nautobot/issues/1998))
 
 Added a dynamic filter form that allows users to filter object tables/lists by any field and lookup expression combination supported by the corresponding FilterSet and API.
 
+#### Renamed Mixin Classes ([#2779](https://github.com/nautobot/nautobot/issues/2779))
+
++/- 1.5.2
+
+A number of mixin classes have been renamed and/or relocated for improved self-consistency and clarity of usage. The former names of these mixins are still available for now as aliases, but inheriting from these aliases will now raise a `DeprecationWarning`, and these aliases wil be removed in a future release.
+
+| Former Name                    | New Name                                     |
+| ------------------------------ | -------------------------------------------- |
+| `CableTerminationFilterSet`    | `CableTerminationModelFilterSetMixin`        |
+| `CableTerminationSerializer`   | `CableTerminationModelSerializerMixin`       |
+| `ConnectedEndpointSerializer`  | `PathEndpointModelSerializerMixin`           |
+| `ConnectionFilterSet`          | `ConnectionFilterSetMixin`                   |
+| `CreatedUpdatedFilterSet`      | `CreatedUpdatedModelFilterSetMixin`          |
+| `CustomFieldModelFilterSet`    | `CustomFieldModelFilterSetMixin`             |
+| `CustomFieldModelSerializer`   | `CustomFieldModelSerializerMixin`            |
+| `DeviceComponentFilterSet`     | `DeviceComponentModelFilterSetMixin`         |
+| `DeviceTypeComponentFilterSet` | `DeviceComponentTemplateModelFilterSetMixin` |
+| `LocalContextFilterSet`        | `LocalContextModelFilterSetMixin`            |
+| `PathEndpointFilterSet`        | `PathEndpointModelFilterSetMixin`            |
+| `PluginBanner`                 | `Banner`                                     |
+| `PluginConfig`                 | `NautobotAppConfig`                          |
+| `PluginCustomValidator`        | `CustomValidator`                            |
+| `PluginFilterExtension`        | `FilterExtension`                            |
+| `PluginTemplateExtension`      | `TemplateExtension`                          |
+| `RelationshipModelFilterSet`   | `RelationshipModelFilterSetMixin`            |
+| `TaggedObjectSerializer`       | `TaggedModelSerializerMixin`                 |
+| `TenancyFilterSet`             | `TenancyModelFilterSetMixin`                 |
+
 <!-- towncrier release notes start -->
+## v1.5.1 (2022-11-14)
+
+### Added
+
+- [#2500](https://github.com/nautobot/nautobot/issues/2500) - Added `try/except` block to catch `NoReverseMatch` exception in NotesSerializerMixin and return helpful message.
+- [#2556](https://github.com/nautobot/nautobot/issues/2556) - Revised TODO/FIXME comments for more clarity.
+- [#2740](https://github.com/nautobot/nautobot/issues/2740) - Added ObjectChangeLogView and ObjectNotesView Viewset mixins and routes.
+
+### Changed
+
+- [#1813](https://github.com/nautobot/nautobot/issues/1813) - Updated Example_Plugin to use NautobotUIViewSet.
+
+### Fixed
+
+- [#2470](https://github.com/nautobot/nautobot/issues/2470) - Fixed incorrect automatic generation of Location slugs in the UI.
+- [#2757](https://github.com/nautobot/nautobot/issues/2757) - Fixed filters on default filter form replaces filters on dynamic filter form on submit
+- [#2761](https://github.com/nautobot/nautobot/issues/2761) - Fixed failover strategy not being displayed on Device Redundancy Group page.
+- [#2789](https://github.com/nautobot/nautobot/issues/2789) - Fixed web UI footer margin and swagger UI authorization box size.
+- [#2824](https://github.com/nautobot/nautobot/issues/2824) - Fixed an issue when filtering on nested related fields for Dynamic Groups.
 
 ## v1.5.0 (2022-11-08)
 

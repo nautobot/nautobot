@@ -383,7 +383,7 @@ class VMInterfaceTestVersion12(APIViewTestCases.APIViewTestCase):
 
     def test_tagged_vlan_raise_error_if_mode_not_set_to_tagged(self):
         self.add_permissions("virtualization.add_vminterface", "virtualization.change_vminterface")
-        vlan = VLAN.objects.first()
+        vlan = VLAN.objects.get(name="VLAN 1")
         virtualmachine = VirtualMachine.objects.first()
         with self.subTest("On create, assert 400 status."):
             payload = {
@@ -406,12 +406,31 @@ class VMInterfaceTestVersion12(APIViewTestCases.APIViewTestCase):
                 mode=InterfaceModeChoices.MODE_TAGGED,
             )
             interface.tagged_vlans.add(vlan)
-            payload = {"mode": None}
+            payload = {"mode": None, "tagged_vlans": [vlan.pk]}
             response = self.client.patch(self._get_detail_url(interface), data=payload, format="json", **self.header)
             self.assertHttpStatus(response, status.HTTP_400_BAD_REQUEST)
             self.assertEqual(
                 response.data["tagged_vlans"][0], "Mode must be set to tagged when specifying tagged_vlans"
             )
+
+    def test_change_mode_from_tagged_to_others(self):
+        self.add_permissions("virtualization.change_vminterface")
+        vlan = VLAN.objects.get(name="VLAN 1")
+        interface = VMInterface.objects.first()
+        interface.mode = InterfaceModeChoices.MODE_TAGGED
+        interface.validated_save()
+        interface.tagged_vlans.add(vlan)
+
+        with self.subTest("Update Fail"):
+            payload = {"mode": InterfaceModeChoices.MODE_ACCESS}
+            response = self.client.patch(self._get_detail_url(interface), data=payload, format="json", **self.header)
+            self.assertHttpStatus(response, status.HTTP_400_BAD_REQUEST)
+            self.assertEqual(response.data["tagged_vlans"][0], "Clear tagged_vlans to set mode to access")
+
+        with self.subTest("Update Successful"):
+            payload = {"mode": InterfaceModeChoices.MODE_ACCESS, "tagged_vlans": []}
+            response = self.client.patch(self._get_detail_url(interface), data=payload, format="json", **self.header)
+            self.assertHttpStatus(response, status.HTTP_200_OK)
 
 
 class VMInterfaceTestVersion14(VMInterfaceTestVersion12):

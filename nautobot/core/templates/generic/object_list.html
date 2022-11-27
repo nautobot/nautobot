@@ -155,6 +155,12 @@
 <script src="{% static 'js/tableconfig.js' %}"></script>
 <script src="{% static 'jquery/jquery.formset.js' %}"></script>
 <script>
+    var clipboard = new ClipboardJS('.btn');
+
+    clipboard.on('success', function (e) {});
+
+    clipboard.on('error', function (e) {});
+    
     $('.formset_row-dynamic-filterform').formset({
         addText: '<span class="mdi mdi-plus-thick" aria-hidden="true"></span> Add another Filter',
         addCssClass: 'btn btn-primary add-row',

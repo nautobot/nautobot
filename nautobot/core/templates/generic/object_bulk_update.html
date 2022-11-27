@@ -9,7 +9,12 @@
     <div class="panel panel-danger">
         <div class="panel-heading"><strong>Errors</strong></div>
         <div class="panel-body">
-            {{ form.errors }}
+            {{ form.non_field_errors }}
+            {% for field in form %}
+                {% if field.errors %}
+                    <strong class="panel-title">{{ field.label }}</strong>: {{ field.errors }}
+                {% endif %}
+            {% endfor %}
         </div>
     </div>
 {% endif %}
@@ -28,14 +33,6 @@
             </div>
         </div>
         <div class="col-md-4">
-            {% if form.non_field_errors %}
-                <div class="panel panel-danger">
-                    <div class="panel-heading"><strong>Errors</strong></div>
-                    <div class="panel-body">
-                        {{ form.non_field_errors }}
-                    </div>
-                </div>
-            {% endif %}
             <div class="panel panel-default">
                 <div class="panel-heading"><strong>{% block form_title %}Attributes{% endblock %}</strong></div>
                 <div class="panel-body">
