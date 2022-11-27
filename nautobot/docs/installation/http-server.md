@@ -195,8 +195,23 @@ Example output:
 ```no-highlight
 total 4
 drwx------. 11 nautobot nautobot 4096 Apr  5 10:00 nautobot
-[nautobot@localhost ~]$ chmod 755 $NAUTOBOT
-[nautobot@localhost ~]$ ls -l /opt/
+```
+
+At the prompt `[nautobot@localhost ~]$` execute:
+
+```no-highlight
+chmod 755 $NAUTOBOT
+```
+
+Then to verify that the user has the permissions to the directory execute at the `[nautobot@localhost ~]$` prompt:
+
+```no-highlight
+ls -l /opt/
+```
+
+Example output shows that the user and group are both `nautobot` below:
+
+```no-highlight
 total 4
 drwxr-xr-x. 11 nautobot nautobot 4096 Apr  5 11:24 nautobot
 ```
