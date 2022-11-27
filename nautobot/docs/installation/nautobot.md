@@ -149,12 +149,6 @@ We also want to deliberately install the `wheel` library which will tell Pip to 
 pip3 install --upgrade pip wheel
 ```
 
-Example output:
-
-```no-highlight
-
-```
-
 ## Install Nautobot
 
 Use Pip to install Nautobot:
