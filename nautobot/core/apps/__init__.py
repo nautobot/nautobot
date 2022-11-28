@@ -678,6 +678,7 @@ class CoreConfig(NautobotConfig):
         # If maintenance mode is enabled, assume the database is read-only, and disable updating the user's
         # last_login time upon authentication.
         if settings.MAINTENANCE_MODE:
+            logger.warning("Maintenance mode enabled: disabling update of most recent login time")
             user_logged_in.disconnect(update_last_login, dispatch_uid="update_last_login")
 
         post_migrate.connect(post_migrate_send_nautobot_database_ready, sender=self)
