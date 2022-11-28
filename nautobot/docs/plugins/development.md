@@ -209,7 +209,7 @@ To install the app for development the following steps should be taken:
     You should not use your production environment for app development. For information on getting started with a development environment, check out [Nautobot development guide](../development/getting-started.md).
 
 ```no-highlight
-$ poetry install
+poetry install
 ```
 
 Once the app has been installed, add it to the configuration for Nautobot:
@@ -807,14 +807,19 @@ Once you have defined the model(s) for your app, you'll need to create the datab
 Creating migrations can be done automatically using the `nautobot-server makemigrations <app_name>` management command, where `<app_name>` is the name of the Python package for your app (e.g. `animal_sounds`):
 
 ```no-highlight
-$ nautobot-server makemigrations nautobot_animal_sounds
+nautobot-server makemigrations nautobot_animal_sounds
 ```
 
 !!! note
     An app must be installed before it can be used with Django management commands. If you skipped this step above, run `poetry install` from the app's root directory.
 
 ```no-highlight
-$ nautobot-server makemigrations nautobot_animal_sounds
+nautobot-server makemigrations nautobot_animal_sounds
+```
+
+Example output:
+
+```no-highlight
 Migrations for 'nautobot_animal_sounds':
   /home/bjones/animal_sounds/nautobot_animal_sounds/migrations/0001_initial.py
     - Create model Animal
@@ -823,7 +828,12 @@ Migrations for 'nautobot_animal_sounds':
 Next, apply the migration to the database with the `nautobot-server migrate <app_name>` command:
 
 ```no-highlight
-$ nautobot-server migrate nautobot_animal_sounds
+nautobot-server migrate nautobot_animal_sounds
+```
+
+Example output:
+
+```no-highlight
 Operations to perform:
   Apply all migrations: nautobot_animal_sounds
 Running migrations:
@@ -1155,7 +1165,8 @@ This view retrieves a random animal from the database and and passes it as a con
 
 ### Utilizing Nautobot Generic Views
 
-Starting in Nautobot 1.1.0 via [PR](https://github.com/nautobot/nautobot/issues/14), some `generic` views have been exposed to help aid in app development.  These views have some requirements that must be in place in order to work.  These can be used by importing them from `from nautobot.core.views import generic`.
++++ 1.1.0
+    Via [PR #14](https://github.com/nautobot/nautobot/issues/14), some `generic` views have been exposed to help aid in plugin development. These views have some requirements that must be in place in order to work. These can be used by importing them from `from nautobot.core.views import generic`.
 
 More documentation and examples can be found in [Generic Views](../development/generic-views.md) guide.
 

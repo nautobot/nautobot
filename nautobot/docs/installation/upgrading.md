@@ -29,7 +29,7 @@ As of Nautobot v1.2.0, Nautobot supports deferring ("scheduling") Jobs. To facil
 
 #### Revision of Recommended MySQL UTF-8 Encoding
 
-The recommended database encoding settings have been revised to rely upon the default UTF-8 encoding provided by MySQL for collation of data in the database. Previously we were recommending in our documentation that the collation encoding be set explicitly to `utf8mb4_bin`. We are now recommending  `utf8mb4_0900_ai_ci` which is configured by default on unmodified MySQL database server deployments.
+The recommended database encoding settings have been revised to rely upon the default UTF-8 encoding provided by MySQL for collation of data in the database. Previously we were recommending in our documentation that the collation encoding be set explicitly to `utf8mb4_bin`. We are now recommending `utf8mb4_0900_ai_ci` which is configured by default on unmodified MySQL database server deployments.
 
 The collation encoding is used to inform MySQL how characters are sorted in the database. This is important when it comes to retrieving data that has special characters or special byte-encoding such as accents or ligatures, and also including emojis. In some cases, with the `utf8mb4_bin` encoding we were previously recommending, case-insensitive searching may return inconsistent or incorrect results.
 
@@ -39,7 +39,12 @@ The collation encoding is used to inform MySQL how characters are sorted in the 
 If you have an existing MySQL database, you may update your database to use the recommended encoding by using `nautobot-server dbshell` to launch a database shell and executing the following command:
 
 ```no-highlight
-$ nautobot-server dbshell
+nautobot-server dbshell
+```
+
+Example output:
+
+```no-highlight
 mysql> ALTER DATABASE nautobot COLLATE utf8mb4_0900_ai_ci;
 Query OK, 1 row affected (0.07 sec)
 ```
@@ -51,7 +56,7 @@ Please see the [official MySQL documentation on migrating collation encoding set
 Nautobot v1.3.0 and later requires the following:
 
 | Dependency | Minimum Version |
-|------------|-----------------|
+| ---------- | --------------- |
 | Python     | 3.7             |
 | PostgreSQL | 9.6             |
 | Redis      | 4.0             |
@@ -61,7 +66,7 @@ Nautobot v1.1.0 and later can optionally support the following:
 > *Nautobot v1.1.0 added support for MySQL 8.0 as a database backend as an alternative to PostgreSQL.*
 
 | Dependency | Minimum Version |
-|------------|-----------------|
+| ---------- | --------------- |
 | MySQL      | 8.0             |
 
 !!! tip
@@ -77,7 +82,7 @@ As with the initial installation, you can upgrade Nautobot by installing the Pyt
 Upgrade Nautobot using `pip3`:
 
 ```no-highlight
-$ pip3 install --upgrade nautobot
+pip3 install --upgrade nautobot
 ```
 
 ## Upgrade your Optional Dependencies
@@ -90,7 +95,7 @@ Once the new code is in place, verify that any optional Python packages required
 Then, upgrade your dependencies using `pip3`:
 
 ```no-highlight
-$ pip3 install --upgrade -r $NAUTOBOT_ROOT/local_requirements.txt
+pip3 install --upgrade -r $NAUTOBOT_ROOT/local_requirements.txt
 ```
 
 ## Run the Post Upgrade Operations
@@ -98,7 +103,7 @@ $ pip3 install --upgrade -r $NAUTOBOT_ROOT/local_requirements.txt
 Finally, run Nautobot's `post_upgrade` management command:
 
 ```no-highlight
-$ nautobot-server post_upgrade
+nautobot-server post_upgrade
 ```
 
 This command performs the following actions:
@@ -115,5 +120,5 @@ This command performs the following actions:
 Finally, with root permissions, restart the web and background services:
 
 ```no-highlight
-$ sudo systemctl restart nautobot nautobot-worker nautobot-scheduler
+sudo systemctl restart nautobot nautobot-worker nautobot-scheduler
 ```

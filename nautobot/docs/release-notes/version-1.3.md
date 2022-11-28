@@ -88,7 +88,7 @@ The expressions `re` (regex), `nre` (negated regex), `ire` (case-insensitive reg
 Nautobot now has an `/api/users/tokens/` REST API endpoint where a user can provision a new REST API token. This allows a user to gain REST API access without needing to first create a token via the web UI.
 
 ```bash
-$ curl -X POST \
+curl -X POST \
 -H "Accept: application/json; indent=4" \
 -u "hankhill:I<3C3H8" \
 https://nautobot/api/users/tokens/
@@ -183,7 +183,7 @@ As Python 3.6 has reached end-of-life, and many of Nautobot's dependencies have 
     With introducing the `has_sensitive_variables` flag on Job classes and model (see: [#2091](https://github.com/nautobot/nautobot/issues/2091)), jobs can be prevented from storing their inputs in the database. Due to the nature of queuing or scheduling jobs, the desired inputs must be stored for future use.
 
     New safe-default behavior will only permit jobs to be executed immediately, as `has_sensitive_variables` defaults to `True`. This value can be overridden by the Job class itself or the Job model edit page. Values entered for jobs executing immediately go straight to the Celery message bus and are cleaned up on completion of execution.
-    
+
     Scheduling jobs or requiring approval necessitates those values to be stored in the database until they have been sent to the Celery message bus for execution.
 
     During installation of `v1.3.10`, a migration is applied to set the `has_sensitive_variables` value to `True` to all existing Jobs. However to maintain backwards-compatibility, past scheduled jobs are permitted to keep their schedule. New schedules cannot be made until an administrator has overridden the `has_sensitive_variables` for the desired Job.
@@ -231,7 +231,7 @@ As Python 3.6 has reached end-of-life, and many of Nautobot's dependencies have 
 - [#1407](https://github.com/nautobot/nautobot/issues/1407) - Changed custom field export column headings to prefix with `cf_`.
 - [#1603](https://github.com/nautobot/nautobot/issues/1603) - Changed GraphQL schema generation to call time for GraphQL API.
 - [#1977](https://github.com/nautobot/nautobot/pull/1977) - Updated Renovate config to batch updates (additional PRs included to further refine config).
-- [#2020](https://github.com/nautobot/nautobot/pull/2020) - Updated `celery >= 5.2.7`, `django-jinja  >= 2.10.2`, and `mysqlclient >= 2.1.1` versions in lock file (patch updates).
+- [#2020](https://github.com/nautobot/nautobot/pull/2020) - Updated `celery >= 5.2.7`, `django-jinja >= 2.10.2`, and `mysqlclient >= 2.1.1` versions in lock file (patch updates).
 
 ### Fixed
 

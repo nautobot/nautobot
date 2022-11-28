@@ -45,7 +45,7 @@ In the `docker` directory you will find the following files:
 
 ## Docker-Compose Overrides
 
-If you require changing any of the defaults found in `docker-compose.yml`,  create a file inside the `development` directory called `docker-compose.override.yml` and add this file to the `compose_files` setting in your `invoke.yml` file, for example:
+If you require changing any of the defaults found in `docker-compose.yml`, create a file inside the `development` directory called `docker-compose.override.yml` and add this file to the `compose_files` setting in your `invoke.yml` file, for example:
 
 ```yaml
 ---
@@ -77,7 +77,7 @@ services:
 
 The `docker-entrypoint.sh` script will run any migrations and then look for specific variables set to create the superuser. The `docker-entrypoint.sh` script is copied in during the Docker image build and will read from the default `dev.env` as the `env_file` until you override it as seen above.
 
- Any variables defined in this file will override the defaults. The `override.env` should be located in the `development/` directory, and should look like the following:
+Any variables defined in this file will override the defaults. The `override.env` should be located in the `development/` directory, and should look like the following:
 
 ```bash
 # Superuser information. NAUTOBOT_CREATE_SUPERUSER defaults to false.
@@ -157,8 +157,8 @@ A slightly different workflow is needed when your development container is runni
 To work with remote containers, after `invoke build` use `docker-compose` as follows to start the containers. This prevents the HTTP service from automatically starting inside the container:
 
 ```no-highlight
-$ cd development
-$ docker-compose -f docker-compose.yml -f docker-compose.debug.yml up
+cd development
+docker-compose -f docker-compose.yml -f docker-compose.debug.yml up
 ```
 
 - Now open the VS Code Docker extension. In the `CONTAINERS/development` section, right click on a running container and select the **Attach Visual Studio Code** menu item.

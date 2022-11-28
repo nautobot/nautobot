@@ -10,8 +10,8 @@ Django migrations are used to express changes to the database schema. In most ca
     Assert that you have installed Nautobot in your development environment using `poetry install` so that changes you make to migrations will apply to the source tree!
 
 ```no-highlight
-$ nautobot-server makemigrations <app> -n <name>
-$ nautobot-server migrate
+nautobot-server makemigrations <app> -n <name>
+nautobot-server migrate
 ```
 
 Where possible, try to merge related changes into a single migration. For example, if three new fields are being added to different models within an app, these can be expressed in the same migration. You can merge a new migration with an existing one by combining their `operations` lists.
@@ -42,6 +42,7 @@ Add the name of the new field to `csv_headers` and included a CSV-friendly repre
 ## 4. Update relevant querysets
 
 <!-- v2 TODO(jathan): Replace prefetch_related with select_related -->
+
 If you're adding a relational field (e.g. `ForeignKey`) and intend to include the data when retrieving a list of objects, be sure to include the field using `prefetch_related()` as appropriate. This will optimize the view and avoid extraneous database queries.
 
 ## 5. Update API serializer

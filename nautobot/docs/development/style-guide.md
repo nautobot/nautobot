@@ -13,8 +13,8 @@ Nautobot-specific configuration of these tools is maintained in the files `.flak
 It is strongly recommended to include all of the above tools as part of your commit process before opening any pull request. A Git commit hook is provided in the source at `scripts/git-hooks/pre-commit`. Linking to this script from `.git/hooks/` will invoke these tools prior to every commit attempt and abort if the validation fails.
 
 ```bash
-$ cd .git/hooks/
-$ ln -s ../../scripts/git-hooks/pre-commit
+cd .git/hooks/
+ln -s ../../scripts/git-hooks/pre-commit
 ```
 
 You can also invoke these utilities manually against the development Docker containers by running:
