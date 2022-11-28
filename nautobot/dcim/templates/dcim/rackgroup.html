@@ -58,7 +58,7 @@
             </div>
             {% include 'inc/table.html' with table=rack_table %}
             {% if perms.dcim.add_rack %}
-                <div class="panel-footer text-end noprint">
+                <div class="card-footer text-end noprint">
                     <a href="{% url 'dcim:rack_add' %}?group={{ object.pk }}" class="btn btn-sm btn-primary">
                         <span class="mdi mdi-plus-thick" aria-hidden="true"></span> Add rack
                     </a>

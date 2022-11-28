@@ -87,7 +87,7 @@ html[data-theme="dark"] .nav-tabs>li>a:focus,
 /* Tab selection when clicked */
 html[data-theme="dark"] .card-header,
 /* Panel header bars */
-html[data-theme="dark"] .panel-footer,
+html[data-theme="dark"] .card-footer,
 /* Panel footer bars */
 html[data-theme="dark"] .modal-header,
 /* Header bar in modals */

@@ -32,7 +32,7 @@
             </div>
             {% include 'inc/table.html' with table=aggregate_table %}
             {% if perms.ipam.add_aggregate %}
-                <div class="panel-footer text-end noprint">
+                <div class="card-footer text-end noprint">
                     <a href="{% url 'ipam:aggregate_add' %}?rir={{ object.pk }}" class="btn btn-sm btn-primary">
                         <span class="mdi mdi-plus-thick" aria-hidden="true"></span> Add aggregate
                     </a>

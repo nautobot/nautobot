@@ -115,7 +115,7 @@
                                             </tr>
                                         {% endfor %}
                                     </table>
-                                    <div class="panel-footer text-end noprint">
+                                    <div class="card-footer text-end noprint">
                                         <a href="{{ object.virtual_chassis.get_absolute_url }}" class="btn btn-primary btn-sm">
                                             <span class="mdi mdi-arrow-right-bold" aria-hidden="true"></span> View Virtual Chassis
                                         </a>
@@ -288,7 +288,7 @@
                                     </div>
                                 {% endif %}
                                 {% if perms.ipam.add_service %}
-                                    <div class="panel-footer text-end noprint">
+                                    <div class="card-footer text-end noprint">
                                         <a href="{% url 'dcim:device_service_assign' device=object.pk %}" class="btn btn-sm btn-primary">
                                             <span class="mdi mdi-plus-thick" aria-hidden="true"></span> Assign service
                                         </a>
@@ -301,7 +301,7 @@
                                 </div>
                                 {% include 'inc/image_attachments.html' with images=object.images.all %}
                                 {% if perms.extras.add_imageattachment %}
-                                    <div class="panel-footer text-end noprint">
+                                    <div class="card-footer text-end noprint">
                                         <a href="{% url 'dcim:device_add_image' object_id=object.pk %}" class="btn btn-primary btn-sm">
                                             <span class="mdi mdi-plus-thick" aria-hidden="true"></span>
                                             Attach an image

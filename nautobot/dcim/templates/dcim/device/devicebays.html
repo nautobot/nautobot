@@ -16,7 +16,7 @@
                 </div>
             </div>
             {% render_table devicebay_table 'inc/table.html' %}
-            <div class="panel-footer noprint">
+            <div class="card-footer noprint">
                 {% if perms.dcim.change_devicebay %}
                     <button type="submit" name="_rename" formaction="{% url 'dcim:devicebay_bulk_rename' %}?return_url={{ object.get_absolute_url }}%23tab_devicebays" class="btn btn-warning btn-sm">
                         <span class="mdi mdi-pencil" aria-hidden="true"></span> Rename

@@ -121,7 +121,7 @@
         </div>
         {% include 'inc/image_attachments.html' with images=object.images.all %}
         {% if perms.extras.add_imageattachment %}
-            <div class="panel-footer text-end noprint">
+            <div class="card-footer text-end noprint">
                 <a href="{% url 'dcim:location_add_image' slug=object.slug %}" class="btn btn-primary btn-sm">
                     <span class="mdi mdi-plus-thick" aria-hidden="true"></span>
                     Attach an image
@@ -139,7 +139,7 @@
             </div>
             {% include 'inc/table.html' with table=children_table %}
             {% if perms.dcim.add_location %}
-                <div class="panel-footer text-end noprint">
+                <div class="card-footer text-end noprint">
                     <a href="{% url 'dcim:location_add' %}?parent={{ object.slug }}" class="btn btn-sm btn-primary">
                         <span class="mdi mdi-plus-thick" aria-hidden="true"></span> Add child
                     </a>

@@ -38,7 +38,7 @@
             </div>
             {% include 'inc/table.html' with table=prefix_table %}
             {% if perms.ipam.add_prefix %}
-                <div class="panel-footer text-end noprint">
+                <div class="card-footer text-end noprint">
                     <a href="{% url 'ipam:prefix_add' %}?role={{ object.pk }}" class="btn btn-sm btn-primary">
                         <span class="mdi mdi-plus-thick" aria-hidden="true"></span> Add prefix
                     </a>
@@ -51,7 +51,7 @@
             </div>
             {% include 'inc/table.html' with table=vlan_table %}
             {% if perms.ipam.add_vlan %}
-                <div class="panel-footer text-end noprint">
+                <div class="card-footer text-end noprint">
                     <a href="{% url 'ipam:vlan_add' %}?role={{ object.pk }}" class="btn btn-sm btn-primary">
                         <span class="mdi mdi-plus-thick" aria-hidden="true"></span> Add vlan
                     </a>

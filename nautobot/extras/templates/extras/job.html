@@ -71,7 +71,7 @@
                                     {% render_form job_form %}
                                 </div>
                                 {% if job_model.has_sensitive_variables %}
-                                    <div class="panel-footer">
+                                    <div class="card-footer">
                                         <span class="help-block">
                                             <i class="mdi mdi-information-outline"></i>
                                             This job may have sensitive variables and can only be executed immediately. This can be changed in the Job edit view to set `has_sensitive_variables` to `False` if appropriate.
@@ -94,7 +94,7 @@
                                 {% render_form schedule_form %}
                             </div>
                             {% if job_model.approval_required %}
-                                <div class="panel-footer">
+                                <div class="card-footer">
                                     <span class="help-block">
                                         <i class="mdi mdi-information-outline"></i>
                                         This job requires approval to run or schedule.

@@ -213,7 +213,7 @@
             </div>
             {% include 'inc/image_attachments.html' with images=object.images.all %}
             {% if perms.extras.add_imageattachment %}
-                <div class="panel-footer text-end noprint">
+                <div class="card-footer text-end noprint">
                     <a href="{% url 'dcim:rack_add_image' object_id=object.pk %}" class="btn btn-primary btn-sm">
                         <span class="mdi mdi-plus-thick" aria-hidden="true"></span>
                         Attach an image
@@ -264,7 +264,7 @@
                 <div class="card-body text-muted">None</div>
             {% endif %}
             {% if perms.dcim.add_rackreservation %}
-                <div class="panel-footer text-end noprint">
+                <div class="card-footer text-end noprint">
                     <a href="{% url 'dcim:rackreservation_add' %}?rack={{ object.pk }}&return_url={{ object.get_absolute_url }}" class="btn btn-primary btn-sm">
                         <span class="mdi mdi-plus-thick" aria-hidden="true"></span>
                         Add a reservation
@@ -319,7 +319,7 @@
                 <div class="card-body text-muted">None</div>
             {% endif %}
             {% if perms.dcim.add_device %}
-                <div class="panel-footer text-end noprint">
+                <div class="card-footer text-end noprint">
                     <a href="{% url 'dcim:device_add' %}?site={{ object.site.pk }}&rack={{ object.pk }}" class="btn btn-primary btn-sm">
                         <span class="mdi mdi-plus-thick" aria-hidden="true"></span>
                         Add a non-racked device

@@ -87,7 +87,7 @@
         </div>
         {% include 'inc/table.html' with table=children_table %}
         {% if perms.dcim.add_locationtype %}
-            <div class="panel-footer text-end noprint">
+            <div class="card-footer text-end noprint">
                 <a href="{% url 'dcim:locationtype_add' %}?parent={{ object.pk }}" class="btn btn-sm btn-primary">
                     <span class="mdi mdi-plus-thick" aria-hidden="true"></span> Add child
                 </a>
@@ -102,7 +102,7 @@
         </div>
         {% include 'inc/table.html' with table=locations_table %}
         {% if perms.dcim.add_location %}
-            <div class="panel-footer text-end noprint">
+            <div class="card-footer text-end noprint">
                 <a href="{% url 'dcim:location_add' %}?location_type={{ object.pk }}" class="btn btn-sm btn-primary">
                     <span class="mdi mdi-plus-thick" aria-hidden="true"></span> Add location
                 </a>
