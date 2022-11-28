@@ -367,6 +367,13 @@ Collecting ipython
   ...
 ```
 
+* Install verify that you have the proper dependencies installed and are in the virtual environment via Poetry. This also ensures that you have the proper mkdocs themes installed.
+
+```bash
+poetry shell
+poetry install
+```
+
 It may not always be convenient to enter into the virtual shell just to run programs. You may also execute a given command ad hoc within the project's virtual shell by using `poetry run`:
 
 ```no-highlight
