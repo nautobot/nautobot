@@ -2,8 +2,8 @@ from django.contrib.contenttypes.models import ContentType
 from django.db import models
 
 from nautobot.extras.fields import ForeignKeyLimitedByContentTypes
-from nautobot.extras.models.base_properties import BasePropertiesModel
 from nautobot.extras.models.mixins import SetFieldColorAndDisplayMixin
+from nautobot.extras.models.name_color_content_types import NameColorContentTypesModel
 from nautobot.extras.utils import extras_features, FeatureQuery
 from nautobot.utilities.querysets import RestrictedQuerySet
 
@@ -31,7 +31,7 @@ class StatusQuerySet(RestrictedQuerySet):
     "relationships",
     "webhooks",
 )
-class Status(BasePropertiesModel):
+class Status(NameColorContentTypesModel):
     """Model for database-backend enum choice objects."""
 
     content_types = models.ManyToManyField(
