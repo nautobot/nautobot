@@ -14,7 +14,7 @@ from nautobot.extras.models import (
     TaggedItem,
 )
 from nautobot.extras.models.mixins import NotesMixin
-from nautobot.extras.models.roles import RoleModel
+from nautobot.extras.models.roles import RoleModelMixin
 from nautobot.extras.querysets import ConfigContextModelQuerySet
 from nautobot.extras.utils import extras_features
 from nautobot.core.fields import AutoSlugField
@@ -253,7 +253,7 @@ class Cluster(PrimaryModel):
     "statuses",
     "webhooks",
 )
-class VirtualMachine(PrimaryModel, ConfigContextModel, StatusModel, RoleModel):
+class VirtualMachine(PrimaryModel, ConfigContextModel, StatusModel, RoleModelMixin):
     """
     A virtual machine which runs inside a Cluster.
     """

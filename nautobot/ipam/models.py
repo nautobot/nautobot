@@ -12,7 +12,7 @@ from django.urls import reverse
 from django.utils.functional import classproperty
 
 from nautobot.dcim.models import Device, Interface
-from nautobot.extras.models import RoleModel, Status, StatusModel
+from nautobot.extras.models import RoleModelMixin, Status, StatusModel
 from nautobot.extras.utils import extras_features
 from nautobot.core.fields import AutoSlugField
 from nautobot.core.models.generics import OrganizationalModel, PrimaryModel
@@ -438,7 +438,7 @@ class Role(OrganizationalModel):
     "statuses",
     "webhooks",
 )
-class Prefix(PrimaryModel, StatusModel, RoleModel):
+class Prefix(PrimaryModel, StatusModel, RoleModelMixin):
     """
     A Prefix represents an IPv4 or IPv6 network, including mask length.
     Prefixes can optionally be assigned to Sites (and/or Locations) and VRFs.
@@ -749,7 +749,7 @@ class Prefix(PrimaryModel, StatusModel, RoleModel):
     "statuses",
     "webhooks",
 )
-class IPAddress(PrimaryModel, StatusModel, RoleModel):
+class IPAddress(PrimaryModel, StatusModel, RoleModelMixin):
     """
     An IPAddress represents an individual IPv4 or IPv6 address and its mask. The mask length should match what is
     configured in the real world. (Typically, only loopback interfaces are configured with /32 or /128 masks.) Like
@@ -1119,7 +1119,7 @@ class VLANGroup(OrganizationalModel):
     "statuses",
     "webhooks",
 )
-class VLAN(PrimaryModel, StatusModel, RoleModel):
+class VLAN(PrimaryModel, StatusModel, RoleModelMixin):
     """
     A VLAN is a distinct layer two forwarding domain identified by a 12-bit integer (1-4094).
     Each VLAN must be assigned to a Site or Location, however VLAN IDs need not be unique within a Site or Location.
