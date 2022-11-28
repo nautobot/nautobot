@@ -49,12 +49,7 @@ def populate_roles_from_related_app_roles(apps, schema_editor):
 
             for value, label in role_model_or_choices.model_or_choices.CHOICES:
                 color = role_model_or_choices.model_or_choices.CSS_CLASSES[value]
-                choiceset = ChoicesQuerySet(
-                    name=label,
-                    slug=value,
-                    color=color_map[color],
-                    description=""
-                )
+                choiceset = ChoicesQuerySet(name=label, slug=value, color=color_map[color], description="")
                 roles_to_create.append(choiceset)
 
         roles = [

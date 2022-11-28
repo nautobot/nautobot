@@ -52,15 +52,6 @@ class Migration(migrations.Migration):
         ####################
         # IPAddress
         ####################
-        migrations.AlterField(
-            model_name="ipaddress",
-            name="role",
-            field=models.CharField(
-                blank=True,
-                null=True,
-                max_length=50,
-            ),
-        ),
         migrations.RenameField(
             model_name="ipaddress",
             old_name="role",
