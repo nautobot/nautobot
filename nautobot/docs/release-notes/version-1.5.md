@@ -148,6 +148,43 @@ A number of mixin classes have been renamed and/or relocated for improved self-c
 | `TenancyFilterSet`             | `TenancyModelFilterSetMixin`                 |
 
 <!-- towncrier release notes start -->
+## v1.5.2 (2022-11-28)
+
+### Added
+
+- [#1273](https://github.com/nautobot/nautobot/issues/1273) - Added section "VS Code Remote Debugging Configuration" to development chapter in documentation.
+- [#2473](https://github.com/nautobot/nautobot/issues/2473) - Added `multipart/form-data` support to Job run API.
+- [#2723](https://github.com/nautobot/nautobot/issues/2723) - Added `nautobot.apps` module to provide a central location for code that is recommended for use by Nautobot apps (plugins).
+- [#2723](https://github.com/nautobot/nautobot/issues/2723) - Added code reference documentation for the `nautobot.apps` module.
+- [#2759](https://github.com/nautobot/nautobot/issues/2759) - Add prometheus metrics for health check results
+- [#2798](https://github.com/nautobot/nautobot/issues/2798) - Added `LOG_DEPRECATION_WARNINGS` configuration variable and corresponding environment-variable support.
+
+### Changed
+
+- [#2644](https://github.com/nautobot/nautobot/issues/2644) - Changed published accepted content types for REST API to remove unsupported types.
+- [#2723](https://github.com/nautobot/nautobot/issues/2723) - Moved app (plugin) development documentation into its own section.
+- [#2723](https://github.com/nautobot/nautobot/issues/2723) - Revised "plugin" development documentation to refer to "apps" instead where appropriate.
+- [#2779](https://github.com/nautobot/nautobot/issues/2779) - Renamed many mixin classes for clarity and consistency. Aliases remain but will raise `DeprecationWarning`.
+- [#2779](https://github.com/nautobot/nautobot/issues/2779) - Reorganized filterset code and created `nautobot.dcim.filters.mixins`, `nautobot.extras.filters.mixins`, and `nautobot.tenancy.filters.mixins` submodules.
+- [#2798](https://github.com/nautobot/nautobot/issues/2798) - Changed logging of Nautobot deprecation warnings to be silent by default (can be enabled with `DEBUG` or `LOG_DEPRECATION_WARNINGS` settings).
+- [#2814](https://github.com/nautobot/nautobot/issues/2814) - Update dependency `netutils` to `~1.3.0`.
+- [#2817](https://github.com/nautobot/nautobot/issues/2817) - Update docs to not indicate prompt, makes for better use of copy code snippet feature of MkDocs
+- [#2838](https://github.com/nautobot/nautobot/issues/2838) - Fixed filter selection box colors in dark mode.
+- [#2878](https://github.com/nautobot/nautobot/issues/2878) - Changed Upstream Workflow Job to continue on error for group, not each specific job.
+
+### Fixed
+
+- [#1519](https://github.com/nautobot/nautobot/issues/1519) - Extending the model table columns that need to display copy button when hovered over.
+- [#2477](https://github.com/nautobot/nautobot/issues/2477) - Fixed last login time being updated during maintenance mode when remote user authentication is used.
+- [#2744](https://github.com/nautobot/nautobot/issues/2744) - Enforced required Relationships when bulk editing or creating objects that have required relationships. Bulk edit via API or UI. Bulk create via API.
+- [#2774](https://github.com/nautobot/nautobot/issues/2774) - Fixed SiteFactory time_zone attribute to use only `pytz.common_timezones`.
+- [#2795](https://github.com/nautobot/nautobot/issues/2795) - Fixed changelog diff data to fall back to `object_data` when `object_data_v2` is not present for both `ObjectChange` instances.
+- [#2816](https://github.com/nautobot/nautobot/issues/2816) - Fixed issue where changing the interface mode first required removing tagged_vlans in a different request.
+- [#2819](https://github.com/nautobot/nautobot/issues/2819) - Adds appropriate invoke task for running docs locally and adds how to run manually.
+- [#2833](https://github.com/nautobot/nautobot/issues/2833) - Fixed plugin banner issue and breadcrumb rendering issue in NautobotHTMLRenderer.
+- [#2837](https://github.com/nautobot/nautobot/issues/2837) - Fixed incorrect logic in `nautobot.utilities.utils.is_single_choice_field` that was causing valid filters to report as invalid.
+
+
 ## v1.5.1 (2022-11-14)
 
 ### Added
