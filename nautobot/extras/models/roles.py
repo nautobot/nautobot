@@ -2,8 +2,8 @@ from django.contrib.contenttypes.models import ContentType
 from django.db import models
 
 from nautobot.extras.fields import ForeignKeyLimitedByContentTypes
-from nautobot.extras.models.base_properties import BasePropertiesModel
 from nautobot.extras.models.mixins import SetFieldColorAndDisplayMixin
+from nautobot.extras.models.name_color_content_types import NameColorContentTypesModel
 from nautobot.extras.utils import RoleModelsQuery, extras_features
 
 
@@ -16,7 +16,7 @@ from nautobot.extras.utils import RoleModelsQuery, extras_features
     "relationships",
     "webhooks",
 )
-class Role(BasePropertiesModel):
+class Role(NameColorContentTypesModel):
     content_types = models.ManyToManyField(
         to=ContentType,
         related_name="roles",
@@ -37,7 +37,7 @@ class RoleField(SetFieldColorAndDisplayMixin, ForeignKeyLimitedByContentTypes):
         return super().set_defaults(**kwargs)
 
 
-class RoleModel(models.Model):
+class RoleModelMixin(models.Model):
     """
     Abstract base class for any model which may have roles.
     """
