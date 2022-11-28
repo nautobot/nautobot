@@ -16,7 +16,7 @@ import * as Icon from "react-feather";
 
 export default function ListViewTemplate({ pageTitle, ...props }) {
   const router = useRouter();
-  
+
   const [pageConfig, setPageConfig] = useState({
     buttons: {
       configure: {
@@ -47,8 +47,8 @@ export default function ListViewTemplate({ pageTitle, ...props }) {
   const [tableHeader, setTableHeader] = useState([]);
 
   useEffect(async () => {
-    const data_url = location.pathname + "/";
-    const header_url = location.pathname + "/table-fields/";
+    const data_url = "/api" + location.pathname + "/";
+    const header_url = "/api" + location.pathname + "/table-fields/";
     const table_data = await axios_instance.get(data_url);
     const table_header = await axios_instance.get(header_url);
     setTableData(table_data.data.results);

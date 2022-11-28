@@ -5,10 +5,11 @@ services:
     image: node
     environment:
       PORT: "8888"
+      NEXT_PUBLIC_NAUTOBOT_STATIC_ROOT: "/nautobot_static"
     working_dir: /opt/node/nautobot
     volumes:
-      - ../nautobot-react/:/opt/node/nautobot
-    command: npm start
+      - ../frontend/:/opt/node/nautobot
+    command: npm run dev
   nginx:
     image: nginx
     ports:

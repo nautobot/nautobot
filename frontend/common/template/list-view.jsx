@@ -11,7 +11,7 @@ import { useRouter } from 'next/router';
 import { axios_instance } from '@utils/utils';
 
 
-export default function ListView(props){
+export default function ListView(props) {
     const router = useRouter()
     const [pageConfig, setPageConfig] = useState(
         {
@@ -45,8 +45,8 @@ export default function ListView(props){
     const [tableHeader, setTableHeader] = useState([])
 
     useEffect(async () => {
-        const data_url =  location.pathname + "/"
-        const header_url =  location.pathname + "/table-fields/"
+        const data_url = location.pathname + "/"
+        const header_url = location.pathname + "/table-fields/"
         const table_data = await axios_instance.get(data_url)
         const table_header = await axios_instance.get(header_url)
         setTableData(table_data.data.results)
@@ -56,7 +56,7 @@ export default function ListView(props){
         if (props.config) {
             if (props.config.buttons) {
                 let pageButtons = props.config.buttons
-                newPageConfig = {...newPageConfig, "buttons": {...newPageConfig.buttons, ...pageButtons}}
+                newPageConfig = { ...newPageConfig, "buttons": { ...newPageConfig.buttons, ...pageButtons } }
             }
             // TODO: incase a diffrent api is passed for table daata and header
         }
@@ -69,30 +69,30 @@ export default function ListView(props){
                 <Col xs={8}>
                     {/* <h3>{pageConfig.data.title}</h3> */}
                 </Col>
-                <Col style={{textAlign: "right"}} className="action-items-container">
+                <Col style={{ textAlign: "right" }} className="action-items-container">
                     {
                         Object.entries(pageConfig.buttons).map((item, idx) => (
-                            item[1] ? 
-                            <NavLink key={idx} href={item[1].link ?  router.pathname + "/" + item[1].link : "#"}>
-                                <Button 
-                                    key={idx} 
-                                    size="sm" 
-                                    variant={item[1].color}
-                                    className='mr-2 action-btn'
-                                >
-                                    {item[1].icon} {item[1].label} 
-                                </Button>
-                            </NavLink>
-                            : null
+                            item[1] ?
+                                <NavLink key={idx} href={item[1].link ? router.pathname + "/" + item[1].link : "#"}>
+                                    <Button
+                                        key={idx}
+                                        size="sm"
+                                        variant={item[1].color}
+                                        className='mr-2 action-btn'
+                                    >
+                                        {item[1].icon} {item[1].label}
+                                    </Button>
+                                </NavLink>
+                                : null
                         ))
                     }
                 </Col>
             </Row>
             <Row>
                 <Col>
-                    <NautobotTable 
-                        data={tableData} 
-                        header={tableHeader} 
+                    <NautobotTable
+                        data={tableData}
+                        header={tableHeader}
                     />
                 </Col>
             </Row>
