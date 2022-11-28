@@ -1,13 +1,14 @@
-import json
 from collections.abc import Iterable
+import json
 from urllib.parse import urljoin
 
 from django import forms
 from django.forms.models import ModelChoiceIterator
 from django.urls import get_script_prefix
 
-from nautobot.utilities.choices import ColorChoices
-from .utils import add_blank_choice
+from nautobot.utilities import choices
+from nautobot.utilities.forms import utils
+
 
 __all__ = (
     "APISelect",
@@ -49,7 +50,7 @@ class ColorSelect(forms.Select):
     option_template_name = "widgets/colorselect_option.html"
 
     def __init__(self, *args, **kwargs):
-        kwargs["choices"] = add_blank_choice(ColorChoices)
+        kwargs["choices"] = utils.add_blank_choice(choices.ColorChoices)
         super().__init__(*args, **kwargs)
         self.attrs["class"] = "nautobot-select2-color-picker"
 
@@ -187,8 +188,7 @@ class APISelect(SelectWithDisabled):
                         yield item
 
             null_option = self.attrs.get("data-null-option")
-            choices = ModelChoiceIteratorWithNullOption(field=self.choices.field, null_option=null_option)
-            self.choices = choices
+            self.choices = ModelChoiceIteratorWithNullOption(field=self.choices.field, null_option=null_option)
 
         return super().get_context(name, value, attrs)
 
@@ -231,3 +231,14 @@ class TimePicker(forms.TextInput):
         super().__init__(*args, **kwargs)
         self.attrs["class"] = "time-picker"
         self.attrs["placeholder"] = "hh:mm:ss"
+
+
+class MultiValueCharInput(StaticSelect2Multiple):
+    """
+    Manual text input with tagging enabled.
+    Press enter to create a new entry.
+    """
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.attrs["class"] = "nautobot-select2-multi-value-char"

@@ -3,7 +3,7 @@ from django.contrib.contenttypes.models import ContentType
 from rest_framework import status
 
 from nautobot.dcim.models import Site
-from nautobot.extras.models import Status, Tag
+from nautobot.extras.models import Tag
 from nautobot.utilities.testing import APITestCase, TestCase
 
 
@@ -12,13 +12,11 @@ class TaggedItemORMTest(TestCase):
     Test the application of tags via the Python API (ORM).
     """
 
-    fixtures = ("status",)
-
     @classmethod
     def setUpTestData(cls):
         super().setUpTestData()
 
-        cls.site = Site.objects.create(name="Test Site", slug="test-site", status=Status.objects.get(slug="active"))
+        cls.site = Site.objects.first()
 
     def test_tags_set_taggit_1(self):
         """Test that obj.tags.set() works when invoked like django-taggit 1.x."""
@@ -42,11 +40,6 @@ class TaggedItemTest(APITestCase):
     Test the application of Tags to and item (a Site, for example) upon creation (POST) and modification (PATCH).
     """
 
-    fixtures = (
-        "status",
-        "tag",
-    )
-
     @classmethod
     def setUpTestData(cls):
         super().setUpTestData()
@@ -69,11 +62,7 @@ class TaggedItemTest(APITestCase):
         self.assertListEqual(sorted([t.name for t in site.tags.all()]), sorted([t.name for t in self.tags]))
 
     def test_update_tagged_item(self):
-        site = Site.objects.create(
-            name="Test Site",
-            slug="test-site",
-            status=Status.objects.get(slug="active"),
-        )
+        site = Site.objects.first()
         site.tags.add(*self.tags[:3])
         data = {
             "tags": [
@@ -98,11 +87,7 @@ class TaggedItemTest(APITestCase):
         )
 
     def test_clear_tagged_item(self):
-        site = Site.objects.create(
-            name="Test Site",
-            slug="test-site",
-            status=Status.objects.get(slug="active"),
-        )
+        site = Site.objects.first()
         site.tags.add(*self.tags[:3])
         data = {"tags": []}
         self.add_permissions("dcim.change_site")

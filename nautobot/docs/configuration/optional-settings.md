@@ -2,7 +2,9 @@
 
 ## Administratively Configurable Settings
 
-As of Nautobot 1.2.0, it is now possible to configure a number of settings via the Nautobot Admin UI. To do so, these settings must **not** be defined in your `nautobot_config.py`, as any settings defined there will take precedence over any values defined in the Admin UI. Settings that are currently configurable via the Admin UI include:
++++ 1.2.0
+
+A number of settings can alternatively be configured via the Nautobot Admin UI. To do so, these settings must **not** be defined in your `nautobot_config.py`, as any settings defined there will take precedence over any values defined in the Admin UI. Settings that are currently configurable via the Admin UI include:
 
 * [BANNER_BOTTOM](#banner_bottom)
 * [BANNER_LOGIN](#banner_login)
@@ -36,23 +38,6 @@ EXTRA_INSTALLED_APPS = [
 This will ensure your default setting's `INSTALLED_APPS` do not have to be modified, and the user
 can specify additional apps with ease.  Similarly, additional `MIDDLEWARE` can be added using `EXTRA_MIDDLEWARE`.
 
-## ADMINS
-
-Default: `[]` (Empty list)
-
-Nautobot will email details about critical errors to the administrators listed here. This should be a list of (name, email) tuples. For example:
-
-```python
-ADMINS = [
-    ['Hank Hill', 'hhill@example.com'],
-    ['Dale Gribble', 'dgribble@example.com'],
-]
-```
-
-Please see the [official Django documentation on `ADMINS`](https://docs.djangoproject.com/en/stable/ref/settings/#admins) for more information.
-
----
-
 ## ALLOWED_URL_SCHEMES
 
 Default: `('file', 'ftp', 'ftps', 'http', 'https', 'irc', 'mailto', 'sftp', 'ssh', 'tel', 'telnet', 'tftp', 'vnc', 'xmpp')`
@@ -74,8 +59,8 @@ BANNER_TOP = 'Your banner text'
 BANNER_BOTTOM = BANNER_TOP
 ```
 
-!!! tip
-    As of Nautobot 1.2.0, if you do not set a value for these settings in your `nautobot_config.py`, they can be configured dynamically by an admin user via the Nautobot Admin UI. If you do have a value for either setting in `nautobot_config.py`, it will override any dynamically configured value.
++++ 1.2.0
+    If you do not set a value for these settings in your `nautobot_config.py`, they can be configured dynamically by an admin user via the Nautobot Admin UI. If you do have a value for either setting in `nautobot_config.py`, it will override any dynamically configured value.
 
 ---
 
@@ -85,8 +70,8 @@ Default: `""` (Empty string)
 
 This defines custom content to be displayed on the login page above the login form. HTML is allowed.
 
-!!! tip
-    As of Nautobot 1.2.0, if you do not set a value for this setting in your `nautobot_config.py`, it can be configured dynamically by an admin user via the Nautobot Admin UI. If you do have a value for this setting in `nautobot_config.py`, it will override any dynamically configured value.
++++ 1.2.0
+    If you do not set a value for this setting in your `nautobot_config.py`, it can be configured dynamically by an admin user via the Nautobot Admin UI. If you do have a value for this setting in `nautobot_config.py`, it will override any dynamically configured value.
 
 ---
 
@@ -119,6 +104,18 @@ These environment variables may be used to specify the values:
 * `NAUTOBOT_BRANDING_FILEPATHS_ICON_MASK`
 
 If a custom image asset is not provided for any of the above options, the stock Nautobot asset is used.
+
+---
+
+## BRANDING_PREPENDED_FILENAME
+
++++ 1.3.4
+
+Default: `"nautobot_"`
+
+Environment Variable: `NAUTOBOT_BRANDING_PREPENDED_FILENAME`
+
+Defines the prefix of the filename when exporting to CSV/YAML or export templates.
 
 ---
 
@@ -156,20 +153,6 @@ If a custom URL is not provided for any of the links, the default link within th
 
 ---
 
-## BRANDING_PREPENDED_FILENAME
-
-<!-- markdownlint-disable MD036 -->
-_Added in version 1.3.4_
-<!-- markdownlint-enable MD036 -->
-
-Default: `"nautobot_"`
-
-Environment Variable: `NAUTOBOT_BRANDING_PREPENDED_FILENAME`
-
-Defines the prefix of the filename when exporting to CSV/YAML or export templates.
-
----
-
 ## CACHEOPS_DEFAULTS
 
 Default: `{'timeout': 900}` (15 minutes, in seconds)
@@ -185,11 +168,14 @@ Various defaults for caching, the most important of which being the cache timeou
 
 ## CACHEOPS_ENABLED
 
-Default: `True`
+Default: `False`
 
 Environment Variable: `NAUTOBOT_CACHEOPS_ENABLED`
 
 A boolean that turns on/off caching.
+
+!!! check "Changed in 1.5.0"
+    Cachopes is disabled by default and will be removed entirely in a future release.
 
 If set to `False`, all caching is bypassed and Nautobot operates as if there is no cache.
 
@@ -200,16 +186,6 @@ If set to `False`, all caching is bypassed and Nautobot operates as if there is 
 Default: `False`
 
 A boolean that turns on/off health checks for the Redis server connection utilized by Cacheops. Most deployments share a Redis server with `django-redis` as such we only need to check the health of Redis one time.  If you are using a separate Redis deployment for Cacheops, please consider enabling this to monitor that Redis deployment.  Keep in mind the more health checks enabled the longer the health checks will take and timeouts might need to be increased.
-
----
-
-## CACHEOPS_REDIS
-
-Default: `'redis://localhost:6379/1'`
-
-Environment Variable: `NAUTOBOT_CACHEOPS_REDIS`
-
-The Redis connection string to use for caching.
 
 ---
 
@@ -228,6 +204,18 @@ Environment Variable: `NAUTOBOT_CELERY_BROKER_URL`
 Default: `'redis://localhost:6379/0'`
 
 Celery broker URL used to tell workers where queues are located.
+
+---
+
+## CELERY_TASK_DEFAULT_QUEUE
+
++++ 1.5.0
+
+Environment Variable: `NAUTOBOT_CELERY_TASK_DEFAULT_QUEUE`
+
+Default: `'default'`
+
+The default celery queue name that will be used by workers if no queue is specified in the `nautobot-server celery worker` command. This queue will also be used by celery tasks if no queue is specified when a task is run.
 
 ---
 
@@ -278,8 +266,8 @@ The number of days to retain logged changes (object creations, updates, and dele
 !!! warning
     If enabling indefinite changelog retention, it is recommended to periodically delete old entries. Otherwise, the database may eventually exceed capacity.
 
-!!! tip
-    As of Nautobot 1.2.0, if you do not set a value for this setting in your `nautobot_config.py`, it can be configured dynamically by an admin user via the Nautobot Admin UI. If you do have a value for this setting in `nautobot_config.py`, it will override any dynamically configured value.
++++ 1.2.0
+    If you do not set a value for this setting in your `nautobot_config.py`, it can be configured dynamically by an admin user via the Nautobot Admin UI. If you do have a value for this setting in `nautobot_config.py`, it will override any dynamically configured value.
 
 ---
 
@@ -340,38 +328,9 @@ Previously this setting was called `CORS_ORIGIN_REGEX_WHITELIST`, which still wo
 
 ---
 
-## CSRF_TRUSTED_ORIGINS
-
-Default: `[]`
-
-A list of hosts (fully-qualified domain names (FQDNs) or subdomains) that are considered trusted origins for cross-site secure requests such as HTTPS POST.
-
-For more information, please see the [official Django documentation on `CSRF_TRUSTED_ORIGINS`](https://docs.djangoproject.com/en/stable/ref/settings/#csrf-trusted-origins) and more generally the [official Django documentation on CSRF protection](https://docs.djangoproject.com/en/stable/ref/csrf/#how-it-works)
-
----
-
-## DEBUG
-
-Default: `False`
-
-Environment Variable: `NAUTOBOT_DEBUG`
-
-This setting enables debugging. Debugging should be enabled only during development or troubleshooting. Note that only
-clients which access Nautobot from a recognized [internal IP address](#internal_ips) will see debugging tools in the user interface.
-
-!!! warning
-    Never enable debugging on a production system, as it can expose sensitive data to unauthenticated users and impose a
-    substantial performance penalty.
-
-Please see the [official Django documentation on `DEBUG`](https://docs.djangoproject.com/en/stable/ref/settings/#debug) for more information.
-
----
-
 ## DISABLE_PREFIX_LIST_HIERARCHY
 
 Default: `False`
-
-Environment Variable: `NAUTOBOT_DISABLE_PREFIX_LIST_HIERARCHY`
 
 This setting disables rendering of the IP prefix hierarchy (parent/child relationships) in the IPAM prefix list view. With large sets of prefixes, users may encounter a performance penalty when trying to load the prefix list view due to the nature of calculating the parent/child relationships. This setting allows users to disable the hierarchy and instead only render a flat list of all prefixes in the table.
 
@@ -469,19 +428,6 @@ Please see [the object permissions page](../administration/permissions.md) for m
 
 ---
 
-## FORCE_SCRIPT_NAME
-
-Default: `None`
-
-If not `None`, this will be used as the value of the `SCRIPT_NAME` environment variable in any HTTP request. This setting can be used to override the server-provided value of `SCRIPT_NAME`, which is most commonly used for hosting Nautobot in a subdirectory (e.g. _example.com/nautobot/_).
-
-!!! important
-    To host Nautobot under a subdirectory you must set this value to match the same prefix configured on your HTTP server. For example, if you configure NGINX to serve Nautobot at `/nautobot/`, you must set `FORCE_SCRIPT_NAME = "/nautobot/"`.
-
-Please see the [official Django documentation on `FORCE_SCRIPT_NAME`](https://docs.djangoproject.com/en/stable/ref/settings/#force-script-name) for more information.
-
----
-
 ## GIT_ROOT
 
 Default: `os.path.join(NAUTOBOT_ROOT, "git")`
@@ -494,11 +440,27 @@ The value of this variable can also be customized by setting the environment var
 
 ---
 
+## GRAPHQL_COMPUTED_FIELD_PREFIX
+
+Default: `"cpf"`
+
+By default, all computed fields in GraphQL will be prefixed with `cf`. A computed field named `my_field` will appear in GraphQL as `cpf_my_field` by default. It's possible to change or remove the prefix by setting the value of `GRAPHQL_COMPUTED_FIELD_PREFIX`.
+
+---
+
 ## GRAPHQL_CUSTOM_FIELD_PREFIX
 
-Default: `cf`
+Default: `"cf"`
 
-By default, all custom fields in GraphQL will be prefixed with `cf`. A custom field name `my_field` will appear in GraphQL as `cf_my_field` by default. It's possible to change or remove the prefix by setting the value of `GRAPHQL_CUSTOM_FIELD_PREFIX`.
+By default, all custom fields in GraphQL will be prefixed with `cf`. A custom field named `my_field` will appear in GraphQL as `cf_my_field` by default. It's possible to change or remove the prefix by setting the value of `GRAPHQL_CUSTOM_FIELD_PREFIX`.
+
+---
+
+## GRAPHQL_RELATIONSHIP_PREFIX
+
+Default: `"rel"`
+
+By default, all relationship associations in GraphQL will be prefixed with `rel`. A relationship named `my_relationship` will appear in GraphQL as `rel_my_relationship` by default. It's possible to change or remove the prefix by setting the value of `GRAPHQL_RELATIONSHIP_PREFIX`.
 
 ---
 
@@ -508,11 +470,11 @@ Default: `False`
 
 When set to `True`, users with limited permissions will only be able to see items in the UI they have access to.
 
-!!! tip
-    As of Nautobot 1.2.0, if you do not set a value for this setting in your `nautobot_config.py`, it can be configured dynamically by an admin user via the Nautobot Admin UI. If you do have a value for this setting in `nautobot_config.py`, it will override any dynamically configured value.
++++ 1.2.0
+    If you do not set a value for this setting in your `nautobot_config.py`, it can be configured dynamically by an admin user via the Nautobot Admin UI. If you do have a value for this setting in `nautobot_config.py`, it will override any dynamically configured value.
 
-!!! note
-    As of Nautobot 1.3.10, when this setting is set to `True`, logged out users will be redirected to the login page when navigating to the Nautobot home page.
++++ 1.3.10
+    When this setting is set to `True`, logged out users will be redirected to the login page when navigating to the Nautobot home page.
 
 ---
 
@@ -539,17 +501,6 @@ git config --global https.proxy http://192.0.2.1:3128
 
 ---
 
-## INTERNAL_IPS
-
-Default: `('127.0.0.1', '::1')`
-
-A list of IP addresses recognized as internal to the system, used to control the display of debugging output. For
-example, the [Django debugging toolbar](https://django-debug-toolbar.readthedocs.io/), if installed,
-will be viewable only when a client is accessing Nautobot from one of the listed IP
-addresses (and [`DEBUG`](#debug) is true).
-
----
-
 ## JOBS_ROOT
 
 Default: `os.path.join(NAUTOBOT_ROOT, "jobs")`
@@ -558,58 +509,8 @@ Environment Variable: `NAUTOBOT_JOBS_ROOT`
 
 The file path to a directory where [Jobs](../additional-features/jobs.md) can be discovered.
 
-!!! note
+!!! caution
     This directory **must** contain an `__init__.py` file.
-
----
-
-## LOGGING
-
-Default: `{}` (Empty dictionary)
-
-By default, all messages of INFO severity or higher will be logged to the console. Additionally, if [`DEBUG`](#debug) is False and email access has been configured, ERROR and CRITICAL messages will be emailed to the users defined in [`ADMINS`](#admins).
-
-The Django framework on which Nautobot runs allows for the customization of logging format and destination. Please consult the [Django logging documentation](https://docs.djangoproject.com/en/stable/topics/logging/) for more information on configuring this setting. Below is an example which will write all INFO and higher messages to a local file and log DEBUG and higher messages from Nautobot itself with higher verbosity:
-
-```python
-LOGGING = {
-    'version': 1,
-    'disable_existing_loggers': False,
-    'formatters': {
-        'normal': {
-            'format': '%(asctime)s.%(msecs)03d %(levelname)-7s %(name)s : %(message)s',
-            'datefmt': '%H:%M:%S',
-        },
-        'verbose': {
-            'format': '%(asctime)s.%(msecs)03d %(levelname)-7s %(name)-20s %(filename)-15s %(funcName)30s() :\n  %(message)s',
-            'datefmt': '%H:%M:%S',
-        },
-    },
-    'handlers': {
-        'file': {'level': 'INFO', 'class': 'logging.FileHandler', 'filename': '/var/log/nautobot.log', 'formatter': 'normal'},
-        'normal_console': {'level': 'INFO', 'class': 'logging.StreamHandler', 'formatter': 'normal'},
-        'verbose_console': {'level': 'DEBUG', 'class': 'logging.StreamHandler', 'formatter': 'verbose'},
-    },
-    'loggers': {
-        'django': {'handlers': ['file', 'normal_console'], 'level': 'INFO'},
-        'nautobot': {'handlers': ['file', 'verbose_console'], 'level': 'DEBUG'},
-    },
-}
-```
-
-Additional examples are available in [`/examples/logging`](https://github.com/nautobot/nautobot/tree/develop/examples/logging).
-
-### Available Loggers
-
-* `django.*` - Generic Django operations (HTTP requests/responses, etc.)
-* `nautobot.<app>.<module>` - Generic form for model- or module-specific log messages
-* `nautobot.auth.*` - Authentication events
-* `nautobot.api.views.*` - Views which handle business logic for the REST API
-* `nautobot.jobs.*` - Job execution (`* = JobClassName`)
-* `nautobot.graphql.*` - [GraphQL](../additional-features/graphql.md) initialization and operation.
-* `nautobot.plugins.*` - Plugin loading and activity
-* `nautobot.views.*` - Views which handle business logic for the web UI
-* `rq.worker` - Background task handling
 
 ---
 
@@ -638,18 +539,8 @@ Default: `1000`
 
 A web user or API consumer can request an arbitrary number of objects by appending the "limit" parameter to the URL (e.g. `?limit=1000`). This parameter defines the maximum acceptable limit. Setting this to `0` or `None` will allow a client to retrieve _all_ matching objects at once with no limit by specifying `?limit=0`.
 
-!!! tip
-    As of Nautobot 1.2.0, if you do not set a value for this setting in your `nautobot_config.py`, it can be configured dynamically by an admin user via the Nautobot Admin UI. If you do have a value for this setting in `nautobot_config.py`, it will override any dynamically configured value.
-
----
-
-## MEDIA_ROOT
-
-Default: `os.path.join(NAUTOBOT_ROOT, "media")`
-
-The file path to the location where media files (such as [image attachments](../models/extras/imageattachment.md)) are stored.
-
-Please see the [official Django documentation on `MEDIA_ROOT`](https://docs.djangoproject.com/en/stable/ref/settings/#media-root) for more information.
++++ 1.2.0
+    If you do not set a value for this setting in your `nautobot_config.py`, it can be configured dynamically by an admin user via the Nautobot Admin UI. If you do have a value for this setting in `nautobot_config.py`, it will override any dynamically configured value.
 
 ---
 
@@ -721,22 +612,22 @@ The amount of time (in seconds) to wait for NAPALM to connect to a device.
 
 ---
 
-## PER_PAGE_DEFAULTS
-
-Default: `[25, 50, 100, 250, 500, 1000]`
-
-The options displayed in the web interface dropdown to limit the number of objects per page. For proper user experience, this list should include the [`PAGINATE_COUNT`](#paginate_count) and [`MAX_PAGE_SIZE`](#max_page_size) values as options.
-
----
-
 ## PAGINATE_COUNT
 
 Default: `50`
 
 The default maximum number of objects to display per page within each list of objects. Applies to both the UI and the REST API.
 
-!!! tip
-    As of Nautobot 1.2.0, if you do not set a value for this setting in your `nautobot_config.py`, it can be configured dynamically by an admin user via the Nautobot Admin UI. If you do have a value for this setting in `nautobot_config.py`, it will override any dynamically configured value.
++++ 1.2.0
+    If you do not set a value for this setting in your `nautobot_config.py`, it can be configured dynamically by an admin user via the Nautobot Admin UI. If you do have a value for this setting in `nautobot_config.py`, it will override any dynamically configured value.
+
+---
+
+## PER_PAGE_DEFAULTS
+
+Default: `[25, 50, 100, 250, 500, 1000]`
+
+The options displayed in the web interface dropdown to limit the number of objects per page. For proper user experience, this list should include the [`PAGINATE_COUNT`](#paginate_count) and [`MAX_PAGE_SIZE`](#max_page_size) values as options.
 
 ---
 
@@ -779,8 +670,8 @@ Default: `False`
 
 When determining the primary IP address for a device, IPv6 is preferred over IPv4 by default. Set this to True to prefer IPv4 instead.
 
-!!! tip
-    As of Nautobot 1.2.0, if you do not set a value for this setting in your `nautobot_config.py`, it can be configured dynamically by an admin user via the Nautobot Admin UI. If you do have a value for this setting in `nautobot_config.py`, it will override any dynamically configured value.
++++ 1.2.0
+    If you do not set a value for this setting in your `nautobot_config.py`, it can be configured dynamically by an admin user via the Nautobot Admin UI. If you do have a value for this setting in `nautobot_config.py`, it will override any dynamically configured value.
 
 ---
 
@@ -790,8 +681,8 @@ Default: `22`
 
 Default height (in pixels) of a unit within a rack elevation. For best results, this should be approximately one tenth of `RACK_ELEVATION_DEFAULT_UNIT_WIDTH`.
 
-!!! tip
-    As of Nautobot 1.2.0, if you do not set a value for this setting in your `nautobot_config.py`, it can be configured dynamically by an admin user via the Nautobot Admin UI. If you do have a value for this setting in `nautobot_config.py`, it will override any dynamically configured value.
++++ 1.2.0
+    If you do not set a value for this setting in your `nautobot_config.py`, it can be configured dynamically by an admin user via the Nautobot Admin UI. If you do have a value for this setting in `nautobot_config.py`, it will override any dynamically configured value.
 
 ---
 
@@ -801,8 +692,8 @@ Default: `220`
 
 Default width (in pixels) of a unit within a rack elevation.
 
-!!! tip
-    As of Nautobot 1.2.0, if you do not set a value for this setting in your `nautobot_config.py`, it can be configured dynamically by an admin user via the Nautobot Admin UI. If you do have a value for this setting in `nautobot_config.py`, it will override any dynamically configured value.
++++ 1.2.0
+    If you do not set a value for this setting in your `nautobot_config.py`, it can be configured dynamically by an admin user via the Nautobot Admin UI. If you do have a value for this setting in `nautobot_config.py`, it will override any dynamically configured value.
 
 ---
 
@@ -825,8 +716,8 @@ The number of seconds to retain the latest version that is fetched from the GitH
 !!! warning
     This must be set to at least one hour (`3600` seconds). Setting it to a value lower than this is an error.
 
-!!! tip
-    As of Nautobot 1.2.0, if you do not set a value for this setting in your `nautobot_config.py`, it can be configured dynamically by an admin user via the Nautobot Admin UI. If you do have a value for this setting in `nautobot_config.py`, it will override any dynamically configured value.
++++ 1.2.0
+    If you do not set a value for this setting in your `nautobot_config.py`, it can be configured dynamically by an admin user via the Nautobot Admin UI. If you do have a value for this setting in `nautobot_config.py`, it will override any dynamically configured value.
 
 ---
 
@@ -839,16 +730,14 @@ This parameter defines the URL of the repository that will be checked periodical
 !!! note
     The URL provided **must** be compatible with the [GitHub REST API](https://docs.github.com/en/rest).
 
-!!! tip
-    As of Nautobot 1.2.0, if you do not set a value for this setting in your `nautobot_config.py`, it can be configured dynamically by an admin user via the Nautobot Admin UI. If you do have a value for this setting in `nautobot_config.py`, it will override any dynamically configured value.
++++ 1.2.0
+    If you do not set a value for this setting in your `nautobot_config.py`, it can be configured dynamically by an admin user via the Nautobot Admin UI. If you do have a value for this setting in `nautobot_config.py`, it will override any dynamically configured value.
 
 ---
 
 ## SANITIZER_PATTERNS
 
-<!-- markdownlint-disable MD036 -->
-_Added in version 1.3.4_
-<!-- markdownlint-enable MD036 -->
++++ 1.3.4
 
 Default:
 
@@ -860,53 +749,6 @@ Default:
 ```
 
 List of (regular expression, replacement pattern) tuples used by the `nautobot.utilities.logging.sanitize()` function. As of Nautobot 1.3.4 this function is used primarily for sanitization of Job log entries, but it may be used in other scopes in the future.
-
----
-
-## SESSION_COOKIE_AGE
-
-Default: `1209600` (2 weeks, in seconds)
-
-Environment Variable: `NAUTOBOT_SESSION_COOKIE_AGE`
-
-The age of session cookies, in seconds.
-
----
-
-## SESSION_ENGINE
-
-Default: `'django.contrib.sessions.backends.db'`
-
-Controls where Nautobot stores session data.
-
-To use cache-based sessions, set this to `'django.contrib.sessions.backends.cache'`.
-To use file-based sessions, set this to `'django.contrib.sessions.backends.file'`.
-
-See the official Django documentation on [Configuring the session](https://docs.djangoproject.com/en/stable/topics/http/sessions/#configuring-sessions) engine for more details.
-
----
-
-## SESSION_FILE_PATH
-
-Default: `None`
-
-Environment Variable: `NAUTOBOT_SESSION_FILE_PATH`
-
-HTTP session data is used to track authenticated users when they access Nautobot. By default, Nautobot stores session data in its database. However, this inhibits authentication to a standby instance of Nautobot without write access to the database. Alternatively, a local file path may be specified here and Nautobot will store session data as files instead of using the database. Note that the Nautobot system user must have read and write permissions to this path.
-
-When the default value (`None`) is used, Nautobot will use the standard temporary directory for the system.
-
-If you set this value, you must also enable file-based sessions as explained above using [`SESSION_ENGINE`](#session_engine).
-
----
-
-## STATIC_ROOT
-
-Default: `os.path.join(NAUTOBOT_ROOT, "static")`
-
-The location where static files (such as CSS, JavaScript, fonts, or images) used to serve the web interface will be staged by the `nautobot-server collectstatic` command.
-
-Please see the [official Django documentation on `STATIC_ROOT`](https://docs.djangoproject.com/en/stable/ref/settings/#std:setting-STATIC_ROOT) for more information.
 
 ---
 
@@ -932,7 +774,7 @@ If [`STORAGE_BACKEND`](#storage_backend) is not defined, this setting will be ig
 
 ## STRICT_FILTERING
 
-_Added in version 1.4.0_ <!-- markdownlint-disable-line MD036 -->
++++ 1.4.0
 
 Default: `True`
 
@@ -947,44 +789,76 @@ If set to `False`, unknown/unrecognized filter parameters will be discarded and 
 
 ---
 
-## TIME_ZONE
+## TEST_FACTORY_SEED
 
-Default: `"UTC"`
++++ 1.5.0
 
-Environment Variable: `NAUTOBOT_TIME_ZONE`
+Default: `None`
 
-The time zone Nautobot will use when dealing with dates and times. It is recommended to use UTC time unless you have a specific need to use a local time zone. Please see the [list of available time zones](https://en.wikipedia.org/wiki/List_of_tz_database_time_zones).
+Environment Variable: `NAUTOBOT_TEST_FACTORY_SEED`
 
-Please see the [official Django documentation on `TIME_ZONE`](https://docs.djangoproject.com/en/stable/ref/settings/#time-zone) for more information.
+When [`TEST_USE_FACTORIES`](#test_use_factories) is set to `True`, this configuration provides a fixed seed string for the pseudo-random generator used to populate test data into the database, providing for reproducible randomness across consecutive test runs. If unset, a random seed will be used each time.
 
 ---
 
-## Date and Time Formatting
+## TEST_USE_FACTORIES
 
-You may define custom formatting for date and times. For detailed instructions on writing format strings, please see [the Django documentation](https://docs.djangoproject.com/en/stable/ref/templates/builtins/#date). Default formats are listed below.
++++ 1.5.0
 
-```python
-DATE_FORMAT = 'N j, Y'               # June 26, 2016
-SHORT_DATE_FORMAT = 'Y-m-d'          # 2016-06-26
-TIME_FORMAT = 'g:i a'                # 1:23 p.m.
-DATETIME_FORMAT = 'N j, Y g:i a'     # June 26, 2016 1:23 p.m.
-SHORT_DATETIME_FORMAT = 'Y-m-d H:i'  # 2016-06-26 13:23
+Default: `False`
+
+Environment Variable: `NAUTOBOT_TEST_USE_FACTORIES`
+
+If set to `True`, the Nautobot test runner will call `nautobot-server generate_test_data ...` before executing any test cases, pre-populating the test database with various pseudo-random instances of many of Nautobot's data models.
+
+!!! warning
+    This functionality requires the installation of the [`factory-boy`](https://pypi.org/project/factory-boy/) Python package, which is present in Nautobot's own development environment, but is _not_ an inherent dependency of the Nautobot package when installed otherwise, such as into a plugin's development environment.
+
+!!! info
+    Setting this to `True` is a requirement for all Nautobot core tests as of 1.5.0, and it is set accordingly in `nautobot/core/tests/nautobot_config.py`, but defaults to `False` otherwise so as to remain backwards-compatible with plugins that also may use the Nautobot test runner in their own test environments, but have not yet updated their tests to account for the presence of this test data.
+
+    Because this test data can obviate the need to manually construct complex test data, and the random factor can improve test robustness, plugin developers are encouraged to set this to `True` in their configuration, ensure that their development environments include the `factory-boy` Python package as a test dependency, and update their tests as needed.
+
+---
+
+## TEST_PERFORMANCE_BASELINE_FILE
+
++++ 1.5.0
+
+Default: `nautobot/core/tests/performance_baselines.yml`
+
+Environment Variable: `TEST_PERFORMANCE_BASELINE_FILE`
+
+[`TEST_PERFORMANCE_BASELINE_FILE`](#test_performance_baseline_file) is set to a certain file path, this file path should point to a .yml file that conforms to the following format:
+
+```yaml
+tests:
+  - name: >-
+      test_run_job_with_sensitive_variables_and_requires_approval
+      (nautobot.extras.tests.test_views.JobTestCase)
+    execution_time: 4.799533
+  - name: test_run_missing_schedule (nautobot.extras.tests.test_views.JobTestCase)
+    execution_time: 4.367563
+  - name: test_run_now_missing_args (nautobot.extras.tests.test_views.JobTestCase)
+    execution_time: 4.363194
+  - name: >-
+      test_create_object_with_constrained_permission
+      (nautobot.extras.tests.test_views.GraphQLQueriesTestCase)
+    execution_time: 3.474244
+  - name: >-
+      test_run_now_constrained_permissions
+      (nautobot.extras.tests.test_views.JobTestCase)
+    execution_time: 2.727531
+...
 ```
 
-Environment Variables:
-
-* `NAUTOBOT_DATE_FORMAT`
-* `NAUTOBOT_SHORT_DATE_FORMAT`
-* `NAUTOBOT_TIME_FORMAT`
-* `NAUTOBOT_SHORT_TIME_FORMAT`
-* `NAUTOBOT_DATETIME_FORMAT`
-* `NAUTOBOT_SHORT_DATETIME_FORMAT`
+and store the performance baselines with the `name` of the test and the baseline `execution_time`. This file should provide the baseline times that all performance-related tests are running against.
 
 ---
 
 ## UI_RACK_VIEW_TRUNCATE_FUNCTION
 
-_Added in version 1.4.0_ <!-- markdownlint-disable-line MD036 -->
++++ 1.4.0
 
 Default:
 
@@ -1028,3 +902,242 @@ This setting is used internally in the core settings to provide default location
 
 !!! warning
     Do not override `NAUTOBOT_ROOT` in your `nautobot_config.py`. It will not work as expected. If you need to customize this setting, please always set the `NAUTOBOT_ROOT` environment variable.
+
+## Django Configuration Settings
+
+While the [official Django documentation](https://docs.djangoproject.com/en/stable/ref/settings/) documents all Django settings, the below is provided where either the setting is common in Nautobot deployments and/or there is a supported `NAUTOBOT_*` environment variable.
+
+### ADMINS
+
+Default: `[]` (Empty list)
+
+Nautobot will email details about critical errors to the administrators listed here. This should be a list of (name, email) tuples. For example:
+
+```python
+ADMINS = [
+    ['Hank Hill', 'hhill@example.com'],
+    ['Dale Gribble', 'dgribble@example.com'],
+]
+```
+
+Please see the [official Django documentation on `ADMINS`](https://docs.djangoproject.com/en/stable/ref/settings/#admins) for more information.
+
+---
+
+### CSRF_TRUSTED_ORIGINS
+
+Default: `[]`
+
+A list of hosts (fully-qualified domain names (FQDNs) or subdomains) that are considered trusted origins for cross-site secure requests such as HTTPS POST.
+
+For more information, please see the [official Django documentation on `CSRF_TRUSTED_ORIGINS`](https://docs.djangoproject.com/en/stable/ref/settings/#csrf-trusted-origins) and more generally the [official Django documentation on CSRF protection](https://docs.djangoproject.com/en/stable/ref/csrf/#how-it-works)
+
+---
+
+### Date and Time Formatting
+
+You may define custom formatting for date and times. For detailed instructions on writing format strings, please see [the Django documentation](https://docs.djangoproject.com/en/stable/ref/templates/builtins/#date). Default formats are listed below.
+
+```python
+DATE_FORMAT = 'N j, Y'               # June 26, 2016
+SHORT_DATE_FORMAT = 'Y-m-d'          # 2016-06-26
+TIME_FORMAT = 'g:i a'                # 1:23 p.m.
+DATETIME_FORMAT = 'N j, Y g:i a'     # June 26, 2016 1:23 p.m.
+SHORT_DATETIME_FORMAT = 'Y-m-d H:i'  # 2016-06-26 13:23
+```
+
+Environment Variables:
+
+* `NAUTOBOT_DATE_FORMAT`
+* `NAUTOBOT_SHORT_DATE_FORMAT`
+* `NAUTOBOT_TIME_FORMAT`
+* `NAUTOBOT_SHORT_TIME_FORMAT`
+* `NAUTOBOT_DATETIME_FORMAT`
+* `NAUTOBOT_SHORT_DATETIME_FORMAT`
+
+---
+
+### DEBUG
+
+Default: `False`
+
+Environment Variable: `NAUTOBOT_DEBUG`
+
+This setting enables debugging. Debugging should be enabled only during development or troubleshooting. Note that only
+clients which access Nautobot from a recognized [internal IP address](#internal_ips) will see debugging tools in the user interface.
+
+!!! warning
+    Never enable debugging on a production system, as it can expose sensitive data to unauthenticated users and impose a
+    substantial performance penalty.
+
+Please see the [official Django documentation on `DEBUG`](https://docs.djangoproject.com/en/stable/ref/settings/#debug) for more information.
+
+---
+
+### FORCE_SCRIPT_NAME
+
+Default: `None`
+
+If not `None`, this will be used as the value of the `SCRIPT_NAME` environment variable in any HTTP request. This setting can be used to override the server-provided value of `SCRIPT_NAME`, which is most commonly used for hosting Nautobot in a subdirectory (e.g. _example.com/nautobot/_).
+
+!!! important
+    To host Nautobot under a subdirectory you must set this value to match the same prefix configured on your HTTP server. For example, if you configure NGINX to serve Nautobot at `/nautobot/`, you must set `FORCE_SCRIPT_NAME = "/nautobot/"`.
+
+Please see the [official Django documentation on `FORCE_SCRIPT_NAME`](https://docs.djangoproject.com/en/stable/ref/settings/#force-script-name) for more information.
+
+---
+
+### INTERNAL_IPS
+
+Default: `('127.0.0.1', '::1')`
+
+A list of IP addresses recognized as internal to the system, used to control the display of debugging output. For
+example, the [Django debugging toolbar](https://django-debug-toolbar.readthedocs.io/), if installed,
+will be viewable only when a client is accessing Nautobot from one of the listed IP
+addresses (and [`DEBUG`](#debug) is true).
+
+---
+
+### LOGGING
+
+Default:
+
+```python
+{
+    "version": 1,
+    "disable_existing_loggers": False,
+    "formatters": {
+        "normal": {
+            "format": "%(asctime)s.%(msecs)03d %(levelname)-7s %(name)s :\n  %(message)s",
+            "datefmt": "%H:%M:%S",
+        },
+        "verbose": {
+            "format": "%(asctime)s.%(msecs)03d %(levelname)-7s %(name)-20s %(filename)-15s %(funcName)30s() :\n  %(message)s",
+            "datefmt": "%H:%M:%S",
+        },
+    },
+    "handlers": {
+        "normal_console": {
+            "level": "INFO",
+            "class": "logging.StreamHandler",
+            "formatter": "normal",
+        },
+        "verbose_console": {
+            "level": "DEBUG",
+            "class": "logging.StreamHandler",
+            "formatter": "verbose",
+        },
+    },
+    "loggers": {
+        "django": {"handlers": ["normal_console"], "level": "INFO"},
+        "nautobot": {
+            "handlers": ["verbose_console" if DEBUG else "normal_console"],
+            "level": LOG_LEVEL,
+        },
+    },
+}
+```
+
++/- 1.4.10
+    While running unit or integration tests via `nautobot-server test ...`, LOGGING will be set to `{}` instead of the above defaults, as verbose logging to the console is typically not desirable while running tests.
+
+This translates to:
+
+* all messages from Django and from Nautobot of INFO severity or higher will be logged to the console.
+* if [`DEBUG`](#debug) is True, Nautobot DEBUG messages will also be logged, and all Nautobot messages will be logged with a more verbose format including the filename and function name that originated each log message.
+
+The above default log formatters split each log message across two lines of output for greater readability, which is useful for local observation and troubleshooting, but you may find it impractical to use in production environments that expect one line per log message. Fortunately, the Django framework on which Nautobot runs allows for extensive customization of logging format and destination. Please consult the [Django logging documentation](https://docs.djangoproject.com/en/stable/topics/logging/) for more information on configuring this setting.
+
+Below is an example configuration extension which will additionally write all INFO and higher messages to a local file:
+
+```python
+LOGGING["handlers"]["file"] = {
+    "level": "INFO",
+    "class": "logging.FileHandler",
+    "filename": "/var/log/nautobot.log",
+    "formatter": "normal",
+}
+LOGGING["loggers"]["django"]["handlers"] += ["file"]
+LOGGING["loggers"]["nautobot"]["handlers"] += ["file"]
+```
+
+Additional examples are available in the [`/examples/logging`](https://github.com/nautobot/nautobot/tree/develop/examples/logging) directory in the Nautobot repository.
+
+#### Available Loggers
+
+* `django.*` - Generic Django operations (HTTP requests/responses, etc.)
+* `nautobot.<app>.<module>` - Generic form for model- or module-specific log messages
+* `nautobot.auth.*` - Authentication events
+* `nautobot.jobs.*` - Job execution (`* = JobClassName`)
+* `nautobot.graphql.*` - [GraphQL](../additional-features/graphql.md) initialization and operation.
+* `nautobot.plugins.*` - Plugin loading and activity
+* `nautobot.views.*` - Views which handle business logic for the web UI
+
+---
+
+### MEDIA_ROOT
+
+Default: `os.path.join(NAUTOBOT_ROOT, "media")`
+
+The file path to the location where media files (such as [image attachments](../models/extras/imageattachment.md)) are stored.
+
+Please see the [official Django documentation on `MEDIA_ROOT`](https://docs.djangoproject.com/en/stable/ref/settings/#media-root) for more information.
+
+---
+
+### SESSION_COOKIE_AGE
+
+Default: `1209600` (2 weeks, in seconds)
+
+Environment Variable: `NAUTOBOT_SESSION_COOKIE_AGE`
+
+The age of session cookies, in seconds.
+
+---
+
+### SESSION_ENGINE
+
+Default: `'django.contrib.sessions.backends.db'`
+
+Controls where Nautobot stores session data.
+
+To use cache-based sessions, set this to `'django.contrib.sessions.backends.cache'`.
+To use file-based sessions, set this to `'django.contrib.sessions.backends.file'`.
+
+See the official Django documentation on [Configuring the session](https://docs.djangoproject.com/en/stable/topics/http/sessions/#configuring-sessions) engine for more details.
+
+---
+
+### SESSION_FILE_PATH
+
+Default: `None`
+
+Environment Variable: `NAUTOBOT_SESSION_FILE_PATH`
+
+HTTP session data is used to track authenticated users when they access Nautobot. By default, Nautobot stores session data in its database. However, this inhibits authentication to a standby instance of Nautobot without write access to the database. Alternatively, a local file path may be specified here and Nautobot will store session data as files instead of using the database. Note that the Nautobot system user must have read and write permissions to this path.
+
+When the default value (`None`) is used, Nautobot will use the standard temporary directory for the system.
+
+If you set this value, you must also enable file-based sessions as explained above using [`SESSION_ENGINE`](#session_engine).
+
+---
+
+### STATIC_ROOT
+
+Default: `os.path.join(NAUTOBOT_ROOT, "static")`
+
+The location where static files (such as CSS, JavaScript, fonts, or images) used to serve the web interface will be staged by the `nautobot-server collectstatic` command.
+
+Please see the [official Django documentation on `STATIC_ROOT`](https://docs.djangoproject.com/en/stable/ref/settings/#std:setting-STATIC_ROOT) for more information.
+
+---
+
+### TIME_ZONE
+
+Default: `"UTC"`
+
+Environment Variable: `NAUTOBOT_TIME_ZONE`
+
+The time zone Nautobot will use when dealing with dates and times. It is recommended to use UTC time unless you have a specific need to use a local time zone. Please see the [list of available time zones](https://en.wikipedia.org/wiki/List_of_tz_database_time_zones).
+
+Please see the [official Django documentation on `TIME_ZONE`](https://docs.djangoproject.com/en/stable/ref/settings/#time-zone) for more information.

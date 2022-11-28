@@ -5,7 +5,7 @@
 {% load static%}
 
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en"{% if request.COOKIES|get_item:"theme" == 'dark' %} data-theme="dark"{% endif %}>
 <head>
     <title>{% block title %}Admin Home{% endblock %} - Nautobot</title>
     <link rel="stylesheet"
@@ -28,8 +28,8 @@
           onerror="window.location='{% url 'media_failure' %}?filename=flatpickr-4.6.9/themes/light.min.css'">
     <link rel="stylesheet" id="dark-theme"
           href="{% static 'css/dark.css' %}?v{{ settings.VERSION }}"
-          onerror="window.location='{% url 'media_failure' %}?filename=css/dark.css'" disabled="disabled" />
-    <link rel="stylesheet"
+          onerror="window.location='{% url 'media_failure' %}?filename=css/dark.css'"{% if request.COOKIES|get_item:"theme" != 'dark' %} disabled="disabled"{% endif %} />
+    <link rel="stylesheet" id="base-theme"
           href="{% static 'css/base.css' %}?v{{ settings.VERSION }}"
           onerror="window.location='{% url 'media_failure' %}?filename=css/base.css'">
     <link rel="apple-touch-icon" sizes="180x180" href="{% static 'img/nautobot_icon_180x180.png' %}">

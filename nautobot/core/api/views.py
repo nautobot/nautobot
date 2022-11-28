@@ -5,7 +5,7 @@ from collections import OrderedDict
 from django import __version__ as DJANGO_VERSION
 from django.apps import apps
 from django.conf import settings
-from django.core.exceptions import ObjectDoesNotExist
+from django.core.exceptions import ObjectDoesNotExist, ValidationError
 from django.http.response import HttpResponseBadRequest
 from django.db import transaction
 from django.db.models import ProtectedError
@@ -36,6 +36,13 @@ from nautobot.core.celery import app as celery_app
 from nautobot.core.api import BulkOperationSerializer
 from nautobot.core.api.exceptions import SerializerNotFound
 from nautobot.utilities.api import get_serializer_for_model
+from nautobot.utilities.exceptions import FilterSetFieldNotFound
+from nautobot.utilities.utils import (
+    get_all_lookup_expr_for_field,
+    get_filterset_parameter_form_field,
+    get_form_for_model,
+    ensure_content_type_and_field_name_inquery_params,
+)
 from . import serializers
 
 HTTP_ACTIONS = {
@@ -86,6 +93,8 @@ class BulkCreateModelMixin:
         with transaction.atomic():
             serializer = self.get_serializer(data=request.data, many=True)
             serializer.is_valid(raise_exception=True)
+            # 2.0 TODO: this should be wrapped with a paginator so as to match the same format as the list endpoint,
+            # i.e. `{"results": [{instance}, {instance}, ...]}` instead of bare list `[{instance}, {instance}, ...]`
             return Response(serializer.data, status=status.HTTP_201_CREATED)
 
 
@@ -108,9 +117,11 @@ class BulkUpdateModelMixin:
     ]
     """
 
+    bulk_operation_serializer_class = BulkOperationSerializer
+
     def bulk_update(self, request, *args, **kwargs):
         partial = kwargs.pop("partial", False)
-        serializer = BulkOperationSerializer(data=request.data, many=True)
+        serializer = self.bulk_operation_serializer_class(data=request.data, many=True)
         serializer.is_valid(raise_exception=True)
         qs = self.get_queryset().filter(pk__in=[o["id"] for o in serializer.data])
 
@@ -119,6 +130,8 @@ class BulkUpdateModelMixin:
 
         data = self.perform_bulk_update(qs, update_data, partial=partial)
 
+        # 2.0 TODO: this should be wrapped with a paginator so as to match the same format as the list endpoint,
+        # i.e. `{"results": [{instance}, {instance}, ...]}` instead of bare list `[{instance}, {instance}, ...]`
         return Response(data, status=status.HTTP_200_OK)
 
     def perform_bulk_update(self, objects, update_data, partial):
@@ -150,8 +163,13 @@ class BulkDestroyModelMixin:
     ]
     """
 
+    bulk_operation_serializer_class = BulkOperationSerializer
+
+    @extend_schema(
+        request=BulkOperationSerializer(many=True),
+    )
     def bulk_destroy(self, request, *args, **kwargs):
-        serializer = BulkOperationSerializer(data=request.data, many=True)
+        serializer = self.bulk_operation_serializer_class(data=request.data, many=True)
         serializer.is_valid(raise_exception=True)
         qs = self.get_queryset().filter(pk__in=[o["id"] for o in serializer.data])
 
@@ -172,6 +190,8 @@ class BulkDestroyModelMixin:
 
 class ModelViewSetMixin:
     brief = False
+    # v2 TODO(jathan): Revisit whether this is still valid post-cacheops. Re: prefetch_related vs.
+    # select_related
     brief_prefetch_fields = []
 
     def get_serializer(self, *args, **kwargs):
@@ -201,6 +221,7 @@ class ModelViewSetMixin:
     def get_queryset(self):
         # If using brief mode, clear all prefetches from the queryset and append only brief_prefetch_fields (if any)
         if self.brief:
+            # v2 TODO(jathan): Replace prefetch_related with select_related
             return super().get_queryset().prefetch_related(None).prefetch_related(*self.brief_prefetch_fields)
 
         return super().get_queryset()
@@ -713,3 +734,66 @@ class GetMenu(NautobotAPIVersionMixin, APIView):
         from nautobot.extras.registry import registry
 
         return Response([{"name": item[0], "properties": item[1]} for item in registry["nav_menu"]["tabs"].items()])
+
+
+#
+# Lookup Expr
+#
+
+
+class GetFilterSetFieldLookupExpressionChoicesAPIView(NautobotAPIVersionMixin, APIView):
+    """API View that gets all lookup expression choices for a FilterSet field."""
+
+    permission_classes = [IsAuthenticated]
+
+    @extend_schema(exclude=True)
+    def get(self, request):
+        try:
+            field_name, model = ensure_content_type_and_field_name_inquery_params(request.GET)
+            data = get_all_lookup_expr_for_field(model, field_name)
+        except FilterSetFieldNotFound:
+            return Response("field_name not found", status=404)
+        except ValidationError as err:
+            return Response(err.args[0], status=err.code)
+
+        # Needs to be returned in this format because this endpoint is used by
+        # DynamicModelChoiceField which requires the response of an api in this exact format
+        return Response(
+            {
+                "count": len(data),
+                "next": None,
+                "previous": None,
+                "results": data,
+            }
+        )
+
+
+class GetFilterSetFieldDOMElementAPIView(NautobotAPIVersionMixin, APIView):
+    """API View that gets the DOM element representation of a FilterSet field."""
+
+    permission_classes = [IsAuthenticated]
+
+    @extend_schema(exclude=True)
+    def get(self, request):
+        try:
+            field_name, model = ensure_content_type_and_field_name_inquery_params(request.GET)
+        except ValidationError as err:
+            return Response(err.args[0], status=err.code)
+        model_form = get_form_for_model(model)
+        if model_form is None:
+            logger = logging.getLogger(__name__)
+
+            logger.warning(f"Form for {model} model not found")
+            # Because the DOM Representation cannot be derived from a CharField without a Form, the DOM Representation must be hardcoded.
+            return Response(
+                {
+                    "dom_element": f"<input type='text' name='{field_name}' class='form-control lookup_value-input' id='id_{field_name}'>"
+                }
+            )
+        try:
+            form_field = get_filterset_parameter_form_field(model, field_name)
+        except FilterSetFieldNotFound:
+            return Response("field_name not found", 404)
+
+        field_dom_representation = form_field.get_bound_field(model_form(), field_name).as_widget()
+        return Response({"dom_element": field_dom_representation})

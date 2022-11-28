@@ -17,7 +17,6 @@ from graphene_django.settings import graphene_settings
 from graphql import get_default_backend
 from graphql.error import GraphQLSyntaxError
 from graphql.language.ast import OperationDefinition
-from jsonschema import draft7_format_checker
 from jsonschema.exceptions import SchemaError, ValidationError as JSONSchemaValidationError
 from jsonschema.validators import Draft7Validator
 from rest_framework.utils.encoders import JSONEncoder
@@ -58,7 +57,7 @@ class ConfigContextSchemaValidationMixin:
         # If schema is None, then no schema has been specified on the instance and thus no validation should occur.
         if schema:
             try:
-                Draft7Validator(schema.data_schema, format_checker=draft7_format_checker).validate(data)
+                Draft7Validator(schema.data_schema, format_checker=Draft7Validator.FORMAT_CHECKER).validate(data)
             except JSONSchemaValidationError as e:
                 raise ValidationError({data_field: [f"Validation using the JSON Schema {schema} failed.", e.message]})
 
@@ -105,6 +104,7 @@ class ConfigContext(BaseModel, ChangeLoggedModel, ConfigContextSchemaValidationM
     locations = models.ManyToManyField(to="dcim.Location", related_name="+", blank=True)
     roles = models.ManyToManyField(to="dcim.DeviceRole", related_name="+", blank=True)
     device_types = models.ManyToManyField(to="dcim.DeviceType", related_name="+", blank=True)
+    device_redundancy_groups = models.ManyToManyField(to="dcim.DeviceRedundancyGroup", related_name="+", blank=True)
     platforms = models.ManyToManyField(to="dcim.Platform", related_name="+", blank=True)
     cluster_groups = models.ManyToManyField(to="virtualization.ClusterGroup", related_name="+", blank=True)
     clusters = models.ManyToManyField(to="virtualization.Cluster", related_name="+", blank=True)

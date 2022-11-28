@@ -238,7 +238,17 @@ class WritableNestedSerializer(BaseModelSerializer):
 
 
 class BulkOperationSerializer(serializers.Serializer):
-    id = serializers.CharField()  # This supports both UUIDs and numeric ID for the User model
+    """
+    Representation of bulk-DELETE request for most models; also used to validate required ID field for bulk-PATCH/PUT.
+    """
+
+    id = serializers.UUIDField()
+
+
+class BulkOperationIntegerIDSerializer(serializers.Serializer):
+    """As BulkOperationSerializer, but for models such as users.Group that have an integer ID field."""
+
+    id = serializers.IntegerField()
 
 
 #

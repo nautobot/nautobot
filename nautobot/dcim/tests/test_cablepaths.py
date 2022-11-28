@@ -36,13 +36,11 @@ class CablePathTestCase(TestCase):
         3XX: Test responses to changes in existing objects
     """
 
-    fixtures = ("status",)
-
     @classmethod
     def setUpTestData(cls):
 
         # Create a single device that will hold all components
-        cls.site = Site.objects.create(name="Site", slug="site")
+        cls.site = Site.objects.first()
 
         manufacturer = Manufacturer.objects.create(name="Generic", slug="generic")
         device_type = DeviceType.objects.create(manufacturer=manufacturer, model="Test Device")

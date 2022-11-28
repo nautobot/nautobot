@@ -143,7 +143,6 @@ class VirtualMachineTest(APIViewTestCases.APIViewTestCase):
         "status": "staged",
     }
     choices_fields = ["status"]
-    fixtures = ("status",)
 
     @classmethod
     def setUpTestData(cls):
@@ -291,7 +290,6 @@ class VMInterfaceTestVersion12(APIViewTestCases.APIViewTestCase):
         "description": "New description",
     }
     choices_fields = ["mode", "status"]
-    fixtures = ("status",)
 
     @classmethod
     def setUpTestData(cls):
@@ -382,6 +380,38 @@ class VMInterfaceTestVersion12(APIViewTestCases.APIViewTestCase):
         self.assertHttpStatus(
             self.client.post(url, self.untagged_vlan_data, format="json", **self.header), status.HTTP_201_CREATED
         )
+
+    def test_tagged_vlan_raise_error_if_mode_not_set_to_tagged(self):
+        self.add_permissions("virtualization.add_vminterface", "virtualization.change_vminterface")
+        vlan = VLAN.objects.first()
+        virtualmachine = VirtualMachine.objects.first()
+        with self.subTest("On create, assert 400 status."):
+            payload = {
+                "virtual_machine": virtualmachine.pk,
+                "name": "Tagged Interface",
+                "status": "active",
+                "tagged_vlans": [vlan.pk],
+            }
+            response = self.client.post(self._get_list_url(), data=payload, format="json", **self.header)
+            self.assertHttpStatus(response, status.HTTP_400_BAD_REQUEST)
+            self.assertEqual(
+                response.data["tagged_vlans"][0], "Mode must be set to tagged when specifying tagged_vlans"
+            )
+
+        with self.subTest("On update, assert 400 status."):
+            # Error
+            interface = VMInterface.objects.create(
+                virtual_machine=virtualmachine,
+                name="VMInterface 1",
+                mode=InterfaceModeChoices.MODE_TAGGED,
+            )
+            interface.tagged_vlans.add(vlan)
+            payload = {"mode": None}
+            response = self.client.patch(self._get_detail_url(interface), data=payload, format="json", **self.header)
+            self.assertHttpStatus(response, status.HTTP_400_BAD_REQUEST)
+            self.assertEqual(
+                response.data["tagged_vlans"][0], "Mode must be set to tagged when specifying tagged_vlans"
+            )
 
 
 class VMInterfaceTestVersion14(VMInterfaceTestVersion12):

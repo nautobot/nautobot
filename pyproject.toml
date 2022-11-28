@@ -2,13 +2,13 @@
 name = "nautobot"
 # Primary package version gets set here. This is used for publishing, and once
 # installed, `nautobot.__version__` will have this version number.
-version = "1.5.0-alpha.0"
+version = "2.0.0-alpha.0"
 description = "Source of truth and network automation platform."
 authors = ["Network to Code <opensource@networktocode.com>"]
 license = "Apache-2.0"
 homepage = "https://nautobot.com"
 repository = "https://github.com/nautobot/nautobot"
-documentation = "https://nautobot.readthedocs.io"
+documentation = "https://docs.nautobot.com"
 readme = "README.md"
 keywords = ["Nautobot"]
 classifiers = [
@@ -37,7 +37,7 @@ python = "^3.7"
 # Background task processing
 celery = "~5.2.7"
 # Fundamental web framework for Nautobot
-Django = "~3.2.15"
+Django = "~3.2.16"
 # Adds AJAX capabilities to django-tables2
 django-ajax-tables = "~1.1.1"
 # LDAP Support
@@ -63,7 +63,7 @@ django-health-check = "~3.16.5"
 # Django Jinja - jinja2 backend for django, used to easily register custom jinja filters and render jinja.
 django-jinja = "~2.10.2"
 # Modified Pre-order Tree Traversal - tree structure for Region, RackGroup, etc.
-django-mptt = "~0.13.4"
+django-mptt = "~0.14.0"
 # Prometheus metrics for Django
 django-prometheus = "~2.2.0"
 # Redis cache for Django used for distributed locking
@@ -84,13 +84,13 @@ django-tree-queries = "~0.11"
 # Run production webservers such as uWSGI/gunicorn as a Django management command.
 django-webserver = "~1.2.0"
 # REST API framework
-djangorestframework = "~3.13.1"
+djangorestframework = "~3.14.0"
 # OpenAPI 3.0 schema generation for the REST API
-drf-spectacular = {version = "~0.22.1", extras = ["sidecar"]}
+drf-spectacular = {version = "~0.24.2", extras = ["sidecar"]}
 # 2.0 TODO: no longer used, but retained for now to avoid breaking plugin expectations
 drf-yasg = {version = "^1.20.0", extras = ["validation"]}
 # Git integrations for Python
-GitPython = "~3.1.27"
+GitPython = "~3.1.29"
 # GraphQL support
 graphene-django = "~2.15.0"
 # Graphene Optimizer
@@ -104,7 +104,7 @@ importlib-metadata = {version = "^4.4", python = "<3.8"}
 # Template rendering engine
 Jinja2 = "~3.1.0"
 # Optional data validation of config contexts
-jsonschema = "~4.7.0"
+jsonschema = "~4.17.0"
 # Rendering of markdown files to HTML
 Markdown = "~3.3.7"
 # Escape text to use HTML and XML
@@ -118,14 +118,12 @@ netaddr = "~0.8.0"
 # Library of network related Jinja Filters
 netutils = "~1.2.0"
 # Image processing library
-Pillow = "~9.2.0"
+Pillow = "~9.3.0"
 # PostgreSQL database adapter
 # NOTE: psycopg3 is avaiable now and nominally replaces psycopg2
-psycopg2-binary = "~2.9.3"
-# Cryptographic library
-pycryptodome = "~3.13.0"
+psycopg2-binary = "~2.9.5"
 # The uWSGI WSGI HTTP server as a Python module
-pyuwsgi = "~2.0.20"
+pyuwsgi = "~2.0.21"
 # YAML parsing and rendering
 PyYAML = "~6.0"
 # Social authentication core
@@ -150,29 +148,37 @@ sso = ["social-auth-core"]
 
 [tool.poetry.dev-dependencies]
 # Code style enforcement
-black = "~22.8.0"
+black = "~22.10.0"
 # Test code coverage measurement
-coverage = "~6.4.1"
+coverage = "~6.5.0"
 # Tool for debugging Django
-django-debug-toolbar = "~3.5.0"
+django-debug-toolbar = "~3.7.0"
+# DiscoverSlowestTestsRunner for running CI performance tests and benchmarking.
+django-slowtests = "^1.1.1"
 # Nautobot example plugin used for testing
 example-plugin = {path = "examples/example_plugin", develop = true}
 # Nautobot test plugin used for testing core view overrides
 example-plugin-with-view-override = { path = "examples/example_plugin_with_view_override", develop = true }
+# Random data generation
+factory-boy = "~3.2.1"
 # Code style checking and limited static analysis
 # NOTE: flake8 4.x pins importlib-metadata<4.3; see https://github.com/PyCQA/flake8/pull/1438
 flake8 = "~3.9.1"
 # Alternative to Make, CLI based on `tasks.py`
 invoke = "~1.7.1"
+# Code style checking for python import statements
+isort = "^5.10.1"
+# Rendering docs to HTML
+mkdocs = "~1.4.2"
 # Allow Markdown files to include other files
 mkdocs-include-markdown-plugin = "~3.6.0"
-# Rendering docs to HTML
-mkdocs = "~1.3.0"
 # Material for mkdocs theme
-mkdocs-material = "~8.4.2"
+mkdocs-material = "~8.5.8"
+# Render custom markdown for version added/changed/remove notes
+mkdocs-version-annotations = "~1.0.0"
 # Automatic documentation from sources, for MkDocs
 mkdocstrings = "0.19"
-mkdocstrings-python = "0.7.1"
+mkdocstrings-python = "0.8.0"
 # Code static analysis
 pylint = {version = "~2.14.5", python = "^3.7.2"}
 # Pylint extensions for Django
@@ -185,6 +191,10 @@ rich = "~12.5.1"
 selenium = "~4.3.0"
 # Abstraction layer for working with Selenium
 splinter = "~0.18.0"
+# Change log management and generation
+towncrier = "~22.8.0"
+# Watch files for celery and mkdocs reload
+watchdog = "~2.1.9"
 
 [tool.poetry.scripts]
 nautobot-server = "nautobot.core.cli:main"
@@ -213,6 +223,11 @@ exclude = '''
   )/
 )
 '''
+
+[tool.isort]
+profile = "black"
+line_length = 120
+force_sort_within_sections = true
 
 [tool.pylint.master]
 load-plugins = "pylint_django"
@@ -304,3 +319,18 @@ notes = """,
 [tool.pylint.typecheck]
 # @patch changes the signature of a function it's applied to; don't raise "no-value-for-parameter" here
 signature-mutators=["unittest.mock.patch"]
+
+[tool.towncrier]
+package = "nautobot"
+directory = "changes"
+filename = "nautobot/docs/release-notes/version-1.5.md"
+template = "development/towncrier_template.j2"
+start_string = "<!-- towncrier release notes start -->"
+issue_format = "[#{issue}](https://github.com/nautobot/nautobot/issues/{issue})"
+
+[tool.towncrier.fragment.added]
+[tool.towncrier.fragment.changed]
+[tool.towncrier.fragment.deprecated]
+[tool.towncrier.fragment.fixed]
+[tool.towncrier.fragment.removed]
+[tool.towncrier.fragment.security]

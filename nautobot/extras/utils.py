@@ -6,10 +6,11 @@ import logging
 import pkgutil
 import sys
 
-from cacheops import file_cache
 from django.apps import apps
+from django.conf import settings
 from django.contrib.contenttypes.models import ContentType
 from django.db.models import Q
+from django.template.loader import get_template, TemplateDoesNotExist
 from django.utils.deconstruct import deconstructible
 from taggit.managers import _TaggableManager
 
@@ -29,7 +30,27 @@ from nautobot.extras.registry import registry
 logger = logging.getLogger(__name__)
 
 
-@file_cache.cached(timeout=60)
+def get_base_template(base_template, model):
+    """
+    Returns the name of the base template, if the base_template is not None
+    Otherwise, default to using "<app>/<model>.html" as the base template, if it exists.
+    Otherwise, check if "<app>/<model>_retrieve.html" used in `NautobotUIViewSet` exists.
+    If both templates do not exist, fall back to "base.html".
+    """
+    if base_template is None:
+        base_template = f"{model._meta.app_label}/{model._meta.model_name}.html"
+        # TODO: This can be removed once an object view has been established for every model.
+        try:
+            get_template(base_template)
+        except TemplateDoesNotExist:
+            base_template = f"{model._meta.app_label}/{model._meta.model_name}_retrieve.html"
+            try:
+                get_template(base_template)
+            except TemplateDoesNotExist:
+                base_template = "base.html"
+    return base_template
+
+
 def get_job_content_type():
     """Return a cached instance of the `ContentType` for `extras.Job`."""
     return ContentType.objects.get(app_label="extras", model="job")
@@ -144,12 +165,11 @@ class TaggableClassesQuery:
 
         return query
 
-    @property
     def as_queryset(self):
         return ContentType.objects.filter(self()).order_by("app_label", "model")
 
     def get_choices(self):
-        return [(f"{ct.app_label}.{ct.model}", ct.pk) for ct in self.as_queryset]
+        return [(f"{ct.app_label}.{ct.model}", ct.pk) for ct in self.as_queryset()]
 
 
 def extras_features(*features):
@@ -193,8 +213,8 @@ def get_celery_queues():
     active_queues = celery_inspect.active_queues()
     if active_queues is None:
         return celery_queues
-    for worker_queue_list in active_queues.values():
-        distinct_queues = {q["name"] for q in worker_queue_list}
+    for task_queue_list in active_queues.values():
+        distinct_queues = {q["name"] for q in task_queue_list}
         for queue in distinct_queues:
             celery_queues.setdefault(queue, 0)
             celery_queues[queue] += 1
@@ -202,21 +222,47 @@ def get_celery_queues():
     return celery_queues
 
 
-def get_worker_count(request=None, queue="celery"):
+def get_worker_count(request=None, queue=None):
     """
-    Return a count of the active Celery workers in a specified queue. Defaults to the default queue "celery"
+    Return a count of the active Celery workers in a specified queue. Defaults to the `CELERY_TASK_DEFAULT_QUEUE` setting.
     """
-
     celery_queues = get_celery_queues()
+    if not queue:
+        queue = settings.CELERY_TASK_DEFAULT_QUEUE
     return celery_queues.get(queue, 0)
 
 
+def task_queues_as_choices(task_queues):
+    """
+    Returns a list of 2-tuples for use in the form field `choices` argument. Appends
+    worker count to the description.
+    """
+    if not task_queues:
+        task_queues = [settings.CELERY_TASK_DEFAULT_QUEUE]
+
+    choices = []
+    celery_queues = get_celery_queues()
+    for queue in task_queues:
+        if not queue:
+            worker_count = celery_queues.get(settings.CELERY_TASK_DEFAULT_QUEUE, 0)
+        else:
+            worker_count = celery_queues.get(queue, 0)
+        description = f"{queue if queue else 'default queue'} ({worker_count} worker{'s'[:worker_count^1]})"
+        choices.append((queue, description))
+    return choices
+
+
 # namedtuple class yielded by the jobs_in_directory generator function, below
-# Example: ("devices", <module "devices">, "Hostname", <class "devices.Hostname">)
-JobClassInfo = collections.namedtuple("JobClassInfo", ["module_name", "module", "job_class_name", "job_class"])
+# Example: ("devices", <module "devices">, "Hostname", <class "devices.Hostname">, None)
+# Example: ("devices", None, None, None, "error at line 40")
+JobClassInfo = collections.namedtuple(
+    "JobClassInfo",
+    ["module_name", "module", "job_class_name", "job_class", "error"],
+    defaults=(None, None, None, None),  # all parameters except `module_name` are optional and default to None.
+)
 
 
-def jobs_in_directory(path, module_name=None, reload_modules=True):
+def jobs_in_directory(path, module_name=None, reload_modules=True, report_errors=False):
     """
     Walk the available Python modules in the given directory, and for each module, walk its Job class members.
 
@@ -224,9 +270,11 @@ def jobs_in_directory(path, module_name=None, reload_modules=True):
         path (str): Directory to import modules from, outside of sys.path
         module_name (str): Specific module name to select; if unspecified, all modules will be inspected
         reload_modules (bool): Whether to force reloading of modules even if previously loaded into Python.
+        report_errors (bool): If True, when an error is encountered, yield a JobClassInfo with the given error.
+                              If False (default), log the error but do not yield anything.
 
     Yields:
-        JobClassInfo: (module_name, module, job_class_name, job_class)
+        JobClassInfo: (module_name, module, job_class_name, job_class, error)
     """
     from .jobs import is_job  # avoid circular import
 
@@ -237,13 +285,13 @@ def jobs_in_directory(path, module_name=None, reload_modules=True):
             del sys.modules[discovered_module_name]
         try:
             module = importer.find_module(discovered_module_name).load_module(discovered_module_name)
+            # Get all members of the module that are Job subclasses
+            for job_class_name, job_class in inspect.getmembers(module, is_job):
+                yield JobClassInfo(discovered_module_name, module, job_class_name, job_class)
         except Exception as exc:
-            logger.error(f"Unable to load module {module_name} from {path}: {exc}")
-            # TODO: we want to be able to report these errors to the UI in some fashion?
-            continue
-        # Get all members of the module that are Job subclasses
-        for job_class_name, job_class in inspect.getmembers(module, is_job):
-            yield JobClassInfo(discovered_module_name, module, job_class_name, job_class)
+            logger.error(f"Unable to load module {discovered_module_name} from {path}: {exc}")
+            if report_errors:
+                yield JobClassInfo(module_name=discovered_module_name, error=exc)
 
 
 def refresh_job_model_from_job_class(job_model_class, job_source, job_class, *, git_repository=None):

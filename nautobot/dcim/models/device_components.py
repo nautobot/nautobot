@@ -6,7 +6,6 @@ from django.db import models
 from django.db.models import Sum
 from django.urls import reverse
 from mptt.models import MPTTModel, TreeForeignKey
-from taggit.managers import TaggableManager
 
 from nautobot.dcim.choices import (
     ConsolePortTypeChoices,
@@ -29,21 +28,17 @@ from nautobot.dcim.constants import (
 
 from nautobot.dcim.fields import MACAddressCharField
 from nautobot.extras.models import (
-    CustomFieldModel,
-    ObjectChange,
     RelationshipModel,
     Status,
     StatusModel,
-    TaggedItem,
 )
-from nautobot.extras.models.mixins import NotesMixin
 from nautobot.extras.utils import extras_features
-from nautobot.core.models import BaseModel
+from nautobot.core.models.generics import PrimaryModel
 from nautobot.utilities.fields import NaturalOrderingField
 from nautobot.utilities.mptt import TreeManager
 from nautobot.utilities.ordering import naturalize_interface
 from nautobot.utilities.query_functions import CollateAsChar
-from nautobot.utilities.utils import UtilizationData, serialize_object, serialize_object_v2
+from nautobot.utilities.utils import UtilizationData
 
 __all__ = (
     "BaseInterface",
@@ -61,7 +56,7 @@ __all__ = (
 )
 
 
-class ComponentModel(BaseModel, CustomFieldModel, RelationshipModel, NotesMixin):
+class ComponentModel(PrimaryModel):
     """
     An abstract model inherited by any model which has a parent Device.
     """
@@ -71,7 +66,6 @@ class ComponentModel(BaseModel, CustomFieldModel, RelationshipModel, NotesMixin)
     _name = NaturalOrderingField(target_field="name", max_length=100, blank=True, db_index=True)
     label = models.CharField(max_length=64, blank=True, help_text="Physical label")
     description = models.CharField(max_length=200, blank=True)
-    tags = TaggableManager(through=TaggedItem)
 
     class Meta:
         abstract = True
@@ -81,7 +75,10 @@ class ComponentModel(BaseModel, CustomFieldModel, RelationshipModel, NotesMixin)
             return f"{self.name} ({self.label})"
         return self.name
 
-    def to_objectchange(self, action):
+    def to_objectchange(self, action, **kwargs):
+        """
+        Return a new ObjectChange with the `related_object` pinned to the `device` by default.
+        """
         # Annotate the parent Device
         try:
             device = self.device
@@ -89,14 +86,7 @@ class ComponentModel(BaseModel, CustomFieldModel, RelationshipModel, NotesMixin)
             # The parent Device has already been deleted
             device = None
 
-        return ObjectChange(
-            changed_object=self,
-            object_repr=str(self),
-            action=action,
-            object_data=serialize_object(self),
-            object_data_v2=serialize_object_v2(self),
-            related_object=device,
-        )
+        return super().to_objectchange(action, related_object=device, **kwargs)
 
     @property
     def parent(self):
@@ -528,6 +518,9 @@ class BaseInterface(RelationshipModel, StatusModel):
         # Remove untagged VLAN assignment for non-802.1Q interfaces
         if not self.mode and self.untagged_vlan is not None:
             raise ValidationError({"untagged_vlan": "Mode must be set when specifying untagged_vlan"})
+
+        if self.tagged_vlans.exists() and self.mode != InterfaceModeChoices.MODE_TAGGED:
+            raise ValidationError({"tagged_vlans": f"Clear tagged_vlans to set mode to {self.mode}"})
 
     def save(self, *args, **kwargs):
 

@@ -2,6 +2,7 @@ from datetime import datetime, timedelta
 import uuid
 from unittest import mock
 
+from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.contrib.contenttypes.models import ContentType
 from django.test import override_settings
@@ -56,13 +57,14 @@ from nautobot.extras.models import (
     Webhook,
 )
 from nautobot.extras.models.jobs import JobHook
+from nautobot.extras.tests.test_relationships import RequiredRelationshipTestMixin
 from nautobot.extras.utils import TaggableClassesQuery
 from nautobot.ipam.models import VLANGroup
 from nautobot.users.models import ObjectPermission
 from nautobot.utilities.choices import ColorChoices
 from nautobot.utilities.testing import APITestCase, APIViewTestCases
 from nautobot.utilities.testing.utils import disable_warnings
-from nautobot.utilities.utils import slugify_dashes_to_underscores
+from nautobot.utilities.utils import get_route_for_model, slugify_dashes_to_underscores
 
 
 User = get_user_model()
@@ -632,8 +634,6 @@ class CustomLinkTest(APIViewTestCases.APIViewTestCase):
 class DynamicGroupTestMixin:
     """Mixin for Dynamic Group test cases to re-use the same set of common fixtures."""
 
-    fixtures = ("status",)
-
     @classmethod
     def setUpTestData(cls):
         # Create the objects required for devices.
@@ -914,7 +914,7 @@ class GitRepositoryTest(APIViewTestCases.APIViewTestCase):
         response = self.client.post(url, format="json", **self.header)
         self.assertHttpStatus(response, status.HTTP_503_SERVICE_UNAVAILABLE)
         self.assertEqual(
-            response.data["detail"], "Unable to process request: No celery workers running on queue celery."
+            response.data["detail"], "Unable to process request: No celery workers running on queue default."
         )
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
@@ -967,7 +967,6 @@ class GitRepositoryTest(APIViewTestCases.APIViewTestCase):
 class GraphQLQueryTest(APIViewTestCases.APIViewTestCase):
     model = GraphQLQuery
     brief_fields = ["display", "id", "name", "url"]
-    fixtures = ("status",)
 
     create_data = [
         {
@@ -1284,7 +1283,7 @@ class JobAPIRunTestMixin:
         response = self.client.post(url, data, format="json", **self.header)
         self.assertHttpStatus(response, status.HTTP_503_SERVICE_UNAVAILABLE)
         self.assertEqual(
-            response.data["detail"], "Unable to process request: No celery workers running on queue celery."
+            response.data["detail"], "Unable to process request: No celery workers running on queue default."
         )
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
@@ -1449,6 +1448,37 @@ class JobAPIRunTestMixin:
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     @mock.patch("nautobot.extras.api.views.get_worker_count")
+    def test_run_a_job_with_sensitive_variables_and_requires_approval(self, mock_get_worker_count):
+        mock_get_worker_count.return_value = 1
+        self.add_permissions("extras.run_job")
+
+        job_model = Job.objects.get(job_class_name="ExampleJob")
+        job_model.enabled = True
+        job_model.has_sensitive_variables = True
+        job_model.approval_required = True
+        job_model.save()
+
+        url = reverse("extras-api:job-run", kwargs={"pk": job_model.pk})
+        data = {
+            "data": {},
+            "commit": True,
+            "schedule": {
+                "interval": "immediately",
+                "name": "test",
+            },
+        }
+
+        response = self.client.post(url, data, format="json", **self.header)
+        self.assertHttpStatus(response, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(
+            response.data[0],
+            "Unable to run or schedule job: "
+            "This job is flagged as possibly having sensitive variables but is also flagged as requiring approval."
+            "One of these two flags must be removed before this job can be scheduled or run.",
+        )
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    @mock.patch("nautobot.extras.api.views.get_worker_count")
     def test_run_a_job_with_sensitive_variables_immediately(self, mock_get_worker_count):
         mock_get_worker_count.return_value = 1
         self.add_permissions("extras.run_job")
@@ -1571,6 +1601,55 @@ class JobAPIRunTestMixin:
         self.assertEqual(
             response.data, {"errors": {"var2": ["This field is required."], "var4": ["This field is required."]}}
         )
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
+    def test_run_job_with_invalid_task_queue(self):
+        self.add_permissions("extras.run_job")
+        d = DeviceRole.objects.create(name="role", slug="role")
+        data = {
+            "data": {"var1": "x", "var2": 1, "var3": False, "var4": d.pk},
+            "commit": True,
+            "task_queue": "invalid",
+        }
+
+        url = self.get_run_url()
+        response = self.client.post(url, data, format="json", **self.header)
+        self.assertHttpStatus(response, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(
+            response.data,
+            {"task_queue": ['"invalid" is not a valid choice.']},
+        )
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
+    @mock.patch("nautobot.extras.api.views.get_worker_count", return_value=1)
+    def test_run_job_with_valid_task_queue(self, _):
+        self.add_permissions("extras.run_job")
+        d = DeviceRole.objects.create(name="role", slug="role")
+        data = {
+            "data": {"var1": "x", "var2": 1, "var3": False, "var4": d.pk},
+            "commit": True,
+            "task_queue": settings.CELERY_TASK_DEFAULT_QUEUE,
+        }
+
+        url = self.get_run_url()
+        response = self.client.post(url, data, format="json", **self.header)
+        self.assertHttpStatus(response, self.run_success_response_status)
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
+    @mock.patch("nautobot.extras.api.views.get_worker_count", return_value=1)
+    def test_run_job_with_default_queue_with_empty_job_model_task_queues(self, _):
+        self.add_permissions("extras.run_job")
+        data = {
+            "commit": True,
+            "task_queue": settings.CELERY_TASK_DEFAULT_QUEUE,
+        }
+
+        job_model = Job.objects.get_for_class_path("local/test_pass/TestPass")
+        job_model.enabled = True
+        job_model.validated_save()
+        url = self.get_run_url("local/test_pass/TestPass")
+        response = self.client.post(url, data, format="json", **self.header)
+        self.assertHttpStatus(response, self.run_success_response_status)
 
 
 class JobHookTest(APIViewTestCases.APIViewTestCase):
@@ -1720,6 +1799,8 @@ class JobTestVersion13(
         "time_limit": 650,
         "has_sensitive_variables": False,
         "has_sensitive_variables_override": True,
+        "task_queues": ["default", "priority"],
+        "task_queues_override": True,
     }
     bulk_update_data = {
         "enabled": True,
@@ -1740,10 +1821,8 @@ class JobTestVersion13(
     def test_get_job_variables(self):
         """Test the job/<pk>/variables API endpoint."""
         self.add_permissions("extras.view_job")
-        response = self.client.get(
-            reverse(f"{self._get_view_namespace()}:job-variables", kwargs={"pk": self.job_model.pk}),
-            **self.header,
-        )
+        route = get_route_for_model(self.model, "variables", api=True)
+        response = self.client.get(reverse(route, kwargs={"pk": self.job_model.pk}), **self.header)
         self.assertEqual(4, len(response.data))  # 4 variables, in order
         self.assertEqual(response.data[0], {"name": "var1", "type": "StringVar", "required": True})
         self.assertEqual(response.data[1], {"name": "var2", "type": "IntegerVar", "required": True})
@@ -2310,7 +2389,7 @@ class NoteTest(APIViewTestCases.APIViewTestCase):
         )
 
 
-class RelationshipTest(APIViewTestCases.APIViewTestCase):
+class RelationshipTest(APIViewTestCases.APIViewTestCase, RequiredRelationshipTestMixin):
     model = Relationship
     brief_fields = ["display", "id", "name", "slug", "url"]
 
@@ -2351,8 +2430,7 @@ class RelationshipTest(APIViewTestCases.APIViewTestCase):
     bulk_update_data = {
         "source_filter": {"slug": ["some-slug"]},
     }
-    choices_fields = ["destination_type", "source_type", "type"]
-    fixtures = ("status",)
+    choices_fields = ["destination_type", "source_type", "type", "required_on"]
     slug_source = "name"
     slugify_function = staticmethod(slugify_dashes_to_underscores)
 
@@ -2550,12 +2628,20 @@ class RelationshipTest(APIViewTestCases.APIViewTestCase):
             ).exists()
         )
 
+    def test_required_relationships(self):
+        """
+        1. Try creating an object when no required target object exists
+        2. Try creating an object without specifying required target object(s)
+        3. Try creating an object when all required data is present
+        """
+        # Parameterized test:
+        self.required_relationships_test(interact_with="api")
+
 
 class RelationshipAssociationTest(APIViewTestCases.APIViewTestCase):
     model = RelationshipAssociation
     brief_fields = ["destination_id", "display", "id", "relationship", "source_id", "url"]
     choices_fields = ["destination_type", "source_type"]
-    fixtures = ("status",)
 
     @classmethod
     def setUpTestData(cls):
@@ -3097,7 +3183,6 @@ class StatusTest(APIViewTestCases.APIViewTestCase):
     bulk_update_data = {
         "color": "000000",
     }
-    fixtures = ("status",)
 
     create_data = [
         {
@@ -3147,7 +3232,6 @@ class TagTestVersion12(APIViewTestCases.APIViewTestCase):
     bulk_update_data = {
         "description": "New description",
     }
-    fixtures = ("tag",)
 
     def test_all_relevant_content_types_assigned_to_tags_with_empty_content_types(self):
         self.add_permissions("extras.add_tag")
@@ -3157,7 +3241,7 @@ class TagTestVersion12(APIViewTestCases.APIViewTestCase):
         tag = Tag.objects.get(slug=self.create_data[0]["slug"])
         self.assertEqual(
             tag.content_types.count(),
-            TaggableClassesQuery().as_queryset.count(),
+            TaggableClassesQuery().as_queryset().count(),
         )
 
 
@@ -3173,13 +3257,23 @@ class TagTestVersion13(
         {"name": "Tag 5", "slug": "tag-5", "content_types": [Site._meta.label_lower]},
         {"name": "Tag 6", "slug": "tag-6", "content_types": [Site._meta.label_lower]},
     ]
-    bulk_update_data = {"content_types": [Site._meta.label_lower]}
     choices_fields = []
-    fixtures = ("tag",)
+
+    @classmethod
+    def setUpTestData(cls):
+        cls.update_data = {
+            "name": "A new tag name",
+            "slug": "a-new-tag-name",
+            "content_types": [f"{ct.app_label}.{ct.model}" for ct in TaggableClassesQuery().as_queryset()],
+        }
+        cls.bulk_update_data = {
+            "content_types": [f"{ct.app_label}.{ct.model}" for ct in TaggableClassesQuery().as_queryset()]
+        }
 
     def test_create_tags_with_invalid_content_types(self):
         self.add_permissions("extras.add_tag")
 
+        # VLANGroup is an OrganizationalModel, not a PrimaryModel, and therefore does not support tags
         data = {**self.create_data[0], "content_types": [VLANGroup._meta.label_lower]}
         response = self.client.post(self._get_list_url(), data, format="json", **self.header)
 
@@ -3203,12 +3297,15 @@ class TagTestVersion13(
         """Test removing a tag content_type that is been tagged to a model"""
         self.add_permissions("extras.change_tag")
 
-        tag_1 = Tag.objects.get(slug="devices-and-sites-only")
+        tag_1 = Tag.objects.filter(content_types=ContentType.objects.get_for_model(Site)).first()
         site = Site.objects.create(name="site 1", slug="site-1")
         site.tags.add(tag_1)
 
+        tag_content_types = list(tag_1.content_types.all())
+        tag_content_types.remove(ContentType.objects.get_for_model(Site))
+
         url = self._get_detail_url(tag_1)
-        data = {"content_types": [Device._meta.label_lower]}
+        data = {"content_types": [f"{ct.app_label}.{ct.model}" for ct in tag_content_types]}
 
         response = self.client.patch(url, data, format="json", **self.header)
         self.assertHttpStatus(response, 400)
@@ -3220,21 +3317,21 @@ class TagTestVersion13(
         """Test updating a tag without changing its content-types."""
         self.add_permissions("extras.change_tag")
 
-        tag = Tag.objects.get(slug="devices-and-sites-only")
+        tag = Tag.objects.exclude(content_types=ContentType.objects.get_for_model(Site)).first()
+        tag_content_types = list(tag.content_types.all())
         url = self._get_detail_url(tag)
         data = {"color": ColorChoices.COLOR_LIME}
 
         response = self.client.patch(url, data, format="json", **self.header)
         self.assertHttpStatus(response, status.HTTP_200_OK)
         self.assertEqual(response.data["color"], ColorChoices.COLOR_LIME)
-        self.assertEqual(sorted(response.data["content_types"]), ["dcim.device", "dcim.site"])
+        self.assertEqual(
+            sorted(response.data["content_types"]), sorted([f"{ct.app_label}.{ct.model}" for ct in tag_content_types])
+        )
 
         tag.refresh_from_db()
         self.assertEqual(tag.color, ColorChoices.COLOR_LIME)
-        tag_content_types = tag.content_types.all()
-        self.assertIn(ContentType.objects.get_for_model(Device), tag_content_types)
-        self.assertIn(ContentType.objects.get_for_model(Site), tag_content_types)
-        self.assertNotIn(ContentType.objects.get_for_model(Rack), tag_content_types)
+        self.assertEqual(list(tag.content_types.all()), tag_content_types)
 
 
 class WebhookTest(APIViewTestCases.APIViewTestCase):

@@ -8,14 +8,30 @@ from drf_spectacular.views import (
 
 from nautobot.core.api.views import (
     APIRootView,
-    StatusView,
+    GetFilterSetFieldDOMElementAPIView,
+    GetFilterSetFieldLookupExpressionChoicesAPIView,
     GraphQLDRFAPIView,
+    StatusView,
     NautobotSpectacularSwaggerView,
     NautobotSpectacularRedocView,
     GetMenu,
 )
 from nautobot.extras.plugins.urls import plugin_api_patterns
 
+
+core_api_patterns = [
+    # Lookup Expr
+    path(
+        "filterset-fields/lookup-choices/",
+        GetFilterSetFieldLookupExpressionChoicesAPIView.as_view(),
+        name="filtersetfield-list-lookupchoices",
+    ),
+    path(
+        "filterset-fields/lookup-value-dom-element/",
+        GetFilterSetFieldDOMElementAPIView.as_view(),
+        name="filtersetfield-retrieve-lookupvaluedomelement",
+    ),
+]
 
 urlpatterns = [
     # Base views
@@ -39,4 +55,6 @@ urlpatterns = [
     path("plugins/", include((plugin_api_patterns, "plugins-api"))),
     # Core Apps
     path("get-menu/", GetMenu.as_view(), name="get-menu"),
+    # Core
+    path("core/", include((core_api_patterns, "core-api"))),
 ]

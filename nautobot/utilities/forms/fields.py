@@ -1,26 +1,25 @@
 import csv
+from io import StringIO
 import json
 import re
-from io import StringIO
 
-import django_filters
-from django import forms
+from django import forms as django_forms
 from django.apps import apps
 from django.conf import settings
 from django.contrib.contenttypes.models import ContentType
 from django.contrib.postgres.forms import SimpleArrayField
 from django.core.exceptions import MultipleObjectsReturned, ObjectDoesNotExist, ValidationError
 from django.db.models import Count, Q
-from django.forms.fields import BoundField, JSONField as _JSONField, InvalidJSONInput
+from django.forms.fields import BoundField, InvalidJSONInput
+from django.forms.fields import JSONField as _JSONField
 from django.urls import reverse
+import django_filters
 
-from nautobot.extras.utils import FeatureQuery
-from nautobot.utilities.choices import unpack_grouped_choices
-from nautobot.utilities.utils import is_uuid
-from nautobot.utilities.validators import EnhancedURLValidator
-from . import widgets
-from .constants import ALPHANUMERIC_EXPANSION_PATTERN, IP4_EXPANSION_PATTERN, IP6_EXPANSION_PATTERN
-from .utils import expand_alphanumeric_pattern, expand_ipaddress_pattern, parse_numeric_range, parse_csv, validate_csv
+from nautobot.extras import utils as extras_utils
+from nautobot.utilities import choices as utilities_choices
+from nautobot.utilities import forms, utils, validators
+from nautobot.utilities.forms import widgets
+
 
 __all__ = (
     "CommentField",
@@ -46,7 +45,7 @@ __all__ = (
 )
 
 
-class CSVDataField(forms.CharField):
+class CSVDataField(django_forms.CharField):
     """
     A CharField (rendered as a Textarea) which accepts CSV-formatted data. It returns data as a two-tuple: The first
     item is a dictionary of column headers, mapping field names to the attribute by which they match a related object
@@ -55,7 +54,7 @@ class CSVDataField(forms.CharField):
     :param from_form: The form from which the field derives its validation rules.
     """
 
-    widget = forms.Textarea
+    widget = django_forms.Textarea
 
     def __init__(self, from_form, *args, **kwargs):
 
@@ -82,18 +81,18 @@ class CSVDataField(forms.CharField):
         if value is None:
             return None
         reader = csv.reader(StringIO(value.strip()))
-        return parse_csv(reader)
+        return forms.parse_csv(reader)
 
     def validate(self, value):
         if value is None:
             return None
         headers, _records = value
-        validate_csv(headers, self.fields, self.required_fields)
+        forms.validate_csv(headers, self.fields, self.required_fields)
 
         return value
 
 
-class CSVFileField(forms.FileField):
+class CSVFileField(django_forms.FileField):
     """
     A FileField (rendered as a ClearableFileInput) which accepts a file containing CSV-formatted data. It returns
     data as a two-tuple: The first item is a dictionary of column headers, mapping field names to the attribute
@@ -127,9 +126,16 @@ class CSVFileField(forms.FileField):
 
         file = super().to_python(file)
         csv_str = file.read().decode("utf-8-sig").strip()
-        dialect = csv.Sniffer().sniff(csv_str)
+        # Check if there is only one column of input
+        # If so a delimiter cannot be determined and it will raise an exception.
+        # In that case we will use csv.excel class
+        # Which defines the usual properties of an Excel-generated CSV file.
+        try:
+            dialect = csv.Sniffer().sniff(csv_str, delimiters=",")
+        except csv.Error:
+            dialect = csv.excel
         reader = csv.reader(csv_str.splitlines(), dialect)
-        headers, records = parse_csv(reader)
+        headers, records = forms.parse_csv(reader)
 
         return headers, records
 
@@ -138,12 +144,12 @@ class CSVFileField(forms.FileField):
             return None
 
         headers, _records = value
-        validate_csv(headers, self.fields, self.required_fields)
+        forms.validate_csv(headers, self.fields, self.required_fields)
 
         return value
 
 
-class CSVChoiceField(forms.ChoiceField):
+class CSVChoiceField(django_forms.ChoiceField):
     """
     Invert the provided set of choices to take the human-friendly label as input, and return the database value.
     """
@@ -152,7 +158,7 @@ class CSVChoiceField(forms.ChoiceField):
 
     def __init__(self, *, choices=(), **kwargs):
         super().__init__(choices=choices, **kwargs)
-        self.choices = unpack_grouped_choices(choices)
+        self.choices = utilities_choices.unpack_grouped_choices(choices)
 
 
 class CSVMultipleChoiceField(CSVChoiceField):
@@ -172,7 +178,7 @@ class CSVMultipleChoiceField(CSVChoiceField):
             super().validate(v)
 
 
-class CSVModelChoiceField(forms.ModelChoiceField):
+class CSVModelChoiceField(django_forms.ModelChoiceField):
     """
     Provides additional validation for model choices entered as CSV data.
     """
@@ -185,7 +191,9 @@ class CSVModelChoiceField(forms.ModelChoiceField):
         try:
             return super().to_python(value)
         except MultipleObjectsReturned:
-            raise forms.ValidationError(f'"{value}" is not a unique value for this field; multiple objects were found')
+            raise django_forms.ValidationError(
+                f'"{value}" is not a unique value for this field; multiple objects were found'
+            )
 
 
 class CSVContentTypeField(CSVModelChoiceField):
@@ -221,14 +229,14 @@ class CSVContentTypeField(CSVModelChoiceField):
         try:
             app_label, model = value.split(".")
         except ValueError:
-            raise forms.ValidationError('Object type must be specified as "<app_label>.<model>"')
+            raise django_forms.ValidationError('Object type must be specified as "<app_label>.<model>"')
         try:
             return self.queryset.get(app_label=app_label, model=model)
         except ObjectDoesNotExist:
-            raise forms.ValidationError("Invalid object type")
+            raise django_forms.ValidationError("Invalid object type")
 
 
-class MultipleContentTypeField(forms.ModelMultipleChoiceField):
+class MultipleContentTypeField(django_forms.ModelMultipleChoiceField):
     """
     Field for choosing any number of `ContentType` objects.
 
@@ -248,13 +256,13 @@ class MultipleContentTypeField(forms.ModelMultipleChoiceField):
         """
         if "queryset" not in kwargs:
             if feature is not None:
-                kwargs["queryset"] = ContentType.objects.filter(FeatureQuery(feature).get_query()).order_by(
-                    "app_label", "model"
-                )
+                kwargs["queryset"] = ContentType.objects.filter(
+                    extras_utils.FeatureQuery(feature).get_query()
+                ).order_by("app_label", "model")
             else:
                 kwargs["queryset"] = ContentType.objects.order_by("app_label", "model")
         if "widget" not in kwargs:
-            kwargs["widget"] = widgets.StaticSelect2Multiple()
+            kwargs["widget"] = forms.StaticSelect2Multiple()
 
         super().__init__(*args, **kwargs)
 
@@ -264,6 +272,41 @@ class MultipleContentTypeField(forms.ModelMultipleChoiceField):
     def _string_choices_from_queryset(self):
         """Overload choices to return `{app_label}.{model}` instead of PKs."""
         return [(f"{m.app_label}.{m.model}", m.app_labeled_name) for m in self.queryset.all()]
+
+
+class MultiValueCharField(django_forms.CharField):
+    """
+    CharField that takes multiple user character inputs and render them as tags in the form field.
+    Press enter to complete an input.
+    """
+
+    widget = widgets.MultiValueCharInput()
+
+    def get_bound_field(self, form, field_name):
+        bound_field = BoundField(form, self, field_name)
+        value = bound_field.value()
+        widget = bound_field.field.widget
+        # Save the selected choices in the widget even after the filterform is submitted
+        if value is not None:
+            widget.choices = [(v, v) for v in value]
+
+        return bound_field
+
+    def to_python(self, value):
+        self.field_class = django_forms.CharField
+        if not value:
+            return []
+
+        # Make it a list if it's a string.
+        if isinstance(value, str):
+            value = [value]
+
+        return [
+            # Only append non-empty values (this avoids e.g. trying to cast '' as an integer)
+            super(self.field_class, self).to_python(v)  # pylint: disable=bad-super-call
+            for v in value
+            if v
+        ]
 
 
 class CSVMultipleContentTypeField(MultipleContentTypeField):
@@ -285,7 +328,7 @@ class CSVMultipleContentTypeField(MultipleContentTypeField):
                 try:
                     model = apps.get_model(v)
                 except (ValueError, LookupError):
-                    raise forms.ValidationError(
+                    raise django_forms.ValidationError(
                         self.error_messages["invalid_choice"],
                         code="invalid_choice",
                         params={"value": v},
@@ -296,7 +339,7 @@ class CSVMultipleContentTypeField(MultipleContentTypeField):
         return super().prepare_value(pk_list)
 
 
-class ExpandableNameField(forms.CharField):
+class ExpandableNameField(django_forms.CharField):
     """
     A field which allows for numeric range expansion
       Example: 'Gi0/[1-3]' => ['Gi0/1', 'Gi0/2', 'Gi0/3']
@@ -317,12 +360,12 @@ class ExpandableNameField(forms.CharField):
     def to_python(self, value):
         if not value:
             return ""
-        if re.search(ALPHANUMERIC_EXPANSION_PATTERN, value):
-            return list(expand_alphanumeric_pattern(value))
+        if re.search(forms.ALPHANUMERIC_EXPANSION_PATTERN, value):
+            return list(forms.expand_alphanumeric_pattern(value))
         return [value]
 
 
-class ExpandableIPAddressField(forms.CharField):
+class ExpandableIPAddressField(django_forms.CharField):
     """
     A field which allows for expansion of IP address ranges
       Example: '192.0.2.[1-254]/24' => ['192.0.2.1/24', '192.0.2.2/24', '192.0.2.3/24' ... '192.0.2.254/24']
@@ -337,19 +380,19 @@ class ExpandableIPAddressField(forms.CharField):
 
     def to_python(self, value):
         # Hackish address family detection but it's all we have to work with
-        if "." in value and re.search(IP4_EXPANSION_PATTERN, value):
-            return list(expand_ipaddress_pattern(value, 4))
-        elif ":" in value and re.search(IP6_EXPANSION_PATTERN, value):
-            return list(expand_ipaddress_pattern(value, 6))
+        if "." in value and re.search(forms.IP4_EXPANSION_PATTERN, value):
+            return list(forms.expand_ipaddress_pattern(value, 4))
+        elif ":" in value and re.search(forms.IP6_EXPANSION_PATTERN, value):
+            return list(forms.expand_ipaddress_pattern(value, 6))
         return [value]
 
 
-class CommentField(forms.CharField):
+class CommentField(django_forms.CharField):
     """
     A textarea with support for Markdown rendering. Exists mostly just to add a standard help_text.
     """
 
-    widget = forms.Textarea
+    widget = django_forms.Textarea
     default_label = ""
     # TODO: Port Markdown cheat sheet to internal documentation
     default_helptext = (
@@ -365,7 +408,16 @@ class CommentField(forms.CharField):
         super().__init__(required=required, label=label, help_text=help_text, *args, **kwargs)
 
 
-class SlugField(forms.SlugField):
+class NullableDateField(django_forms.DateField):
+    def to_python(self, value):
+        if not value:
+            return None
+        elif value == "null":
+            return value
+        return super().to_python(value)
+
+
+class SlugField(django_forms.SlugField):
     """
     Extend the built-in SlugField to automatically populate from a field called `name` unless otherwise specified.
     """
@@ -379,14 +431,14 @@ class SlugField(forms.SlugField):
         """
         kwargs.setdefault("label", "Slug")
         kwargs.setdefault("help_text", "URL-friendly unique shorthand")
-        kwargs.setdefault("widget", widgets.SlugWidget)
+        kwargs.setdefault("widget", forms.SlugWidget)
         super().__init__(*args, **kwargs)
         if isinstance(slug_source, (tuple, list)):
             slug_source = " ".join(slug_source)
         self.widget.attrs["slug-source"] = slug_source
 
 
-class TagFilterField(forms.MultipleChoiceField):
+class TagFilterField(django_forms.MultipleChoiceField):
     """
     A filter field for the tags of a model. Only the tags used by a model are displayed.
 
@@ -490,7 +542,7 @@ class DynamicModelChoiceMixin:
             filter_ = self.filter(field_name=field_name)
             try:
                 self.queryset = filter_.filter(self.queryset, data)
-            except TypeError:
+            except (TypeError, ValidationError):
                 # Catch any error caused by invalid initial data passed from the user
                 self.queryset = self.queryset.none()
         else:
@@ -499,18 +551,14 @@ class DynamicModelChoiceMixin:
         # Set the data URL on the APISelect widget (if not already set)
         widget = bound_field.field.widget
         if not widget.attrs.get("data-url"):
-            app_label = self.queryset.model._meta.app_label
-            model_name = self.queryset.model._meta.model_name
-            if app_label in settings.PLUGINS:
-                data_url = reverse(f"plugins-api:{app_label}-api:{model_name}-list")
-            else:
-                data_url = reverse(f"{app_label}-api:{model_name}-list")
+            route = utils.get_route_for_model(self.queryset.model, "list", api=True)
+            data_url = reverse(route)
             widget.attrs["data-url"] = data_url
 
         return bound_field
 
 
-class DynamicModelChoiceField(DynamicModelChoiceMixin, forms.ModelChoiceField):
+class DynamicModelChoiceField(DynamicModelChoiceMixin, django_forms.ModelChoiceField):
     """
     Override get_bound_field() to avoid pre-populating field choices with a SQL query. The field will be
     rendered only with choices set via bound data. Choices are populated on-demand via the APISelect widget.
@@ -526,7 +574,7 @@ class DynamicModelChoiceField(DynamicModelChoiceMixin, forms.ModelChoiceField):
         return super().clean(value)
 
 
-class DynamicModelMultipleChoiceField(DynamicModelChoiceMixin, forms.ModelMultipleChoiceField):
+class DynamicModelMultipleChoiceField(DynamicModelChoiceMixin, django_forms.ModelMultipleChoiceField):
     """
     A multiple-choice version of DynamicModelChoiceField.
     """
@@ -549,13 +597,13 @@ class DynamicModelMultipleChoiceField(DynamicModelChoiceMixin, forms.ModelMultip
         return super().prepare_value(value)
 
 
-class LaxURLField(forms.URLField):
+class LaxURLField(django_forms.URLField):
     """
     Modifies Django's built-in URLField to remove the requirement for fully-qualified domain names
     (e.g. http://myserver/ is valid)
     """
 
-    default_validators = [EnhancedURLValidator()]
+    default_validators = [validators.EnhancedURLValidator()]
 
 
 class JSONField(_JSONField):
@@ -583,7 +631,7 @@ class JSONField(_JSONField):
         return super().bound_data(data, initial)
 
 
-class JSONArrayFormField(forms.JSONField):
+class JSONArrayFormField(django_forms.JSONField):
     """
     A FormField counterpart to JSONArrayField.
     Replicates ArrayFormField's base field validation: Field values are validated as JSON Arrays,
@@ -681,7 +729,7 @@ class NumericArrayField(SimpleArrayField):
 
     def to_python(self, value):
         try:
-            value = ",".join([str(n) for n in parse_numeric_range(value)])
+            value = ",".join([str(n) for n in forms.parse_numeric_range(value)])
         except ValueError as error:
             raise ValidationError(error)
         return super().to_python(value)
@@ -721,7 +769,7 @@ class MultiMatchModelMultipleChoiceField(django_filters.fields.ModelMultipleChoi
         natural_key_values = set()
         for item in values:
             query = Q()
-            if is_uuid(item):
+            if utils.is_uuid(item):
                 pk_values.add(item)
                 query |= Q(pk=item)
             else:

@@ -143,17 +143,14 @@ class JobTest(TransactionTestCase):
         job_class = get_job(f"local/{module}/{name}")
         form = job_class().as_form()
 
-        self.assertHTMLEqual(
-            form.as_table(),
+        self.assertInHTML(
             """<tr><th><label for="id_var_int">Var int:</label></th><td>
 <input class="form-control form-control" id="id_var_int" max="3600" name="var_int" placeholder="None" required type="number" value="0">
 <br><span class="helptext">Test default of 0 Falsey</span></td></tr>
 <tr><th><label for="id_var_int_no_default">Var int no default:</label></th><td>
 <input class="form-control form-control" id="id_var_int_no_default" max="3600" name="var_int_no_default" placeholder="None" type="number">
-<br><span class="helptext">Test default without default</span></td></tr>
-<tr><th><label for="id__commit">Commit changes:</label></th><td>
-<input checked id="id__commit" name="_commit" placeholder="Commit changes" type="checkbox">
-<br><span class="helptext">Commit changes to the database (uncheck for a dry-run)</span></td></tr>""",
+<br><span class="helptext">Test default without default</span></td></tr>""",
+            form.as_table(),
         )
 
     def test_field_order(self):
@@ -164,7 +161,7 @@ class JobTest(TransactionTestCase):
         name = "TestFieldOrder"
         job_class = get_job(f"local/{module}/{name}")
         form = job_class().as_form()
-        self.assertSequenceEqual(list(form.fields.keys()), ["var1", "var2", "var23", "_commit"])
+        self.assertSequenceEqual(list(form.fields.keys()), ["var1", "var2", "var23", "_task_queue", "_commit"])
 
     def test_no_field_order(self):
         """
@@ -174,7 +171,7 @@ class JobTest(TransactionTestCase):
         name = "TestNoFieldOrder"
         job_class = get_job(f"local/{module}/{name}")
         form = job_class().as_form()
-        self.assertSequenceEqual(list(form.fields.keys()), ["var23", "var2", "_commit"])
+        self.assertSequenceEqual(list(form.fields.keys()), ["var23", "var2", "_task_queue", "_commit"])
 
     def test_no_field_order_inherited_variable(self):
         """
@@ -184,7 +181,10 @@ class JobTest(TransactionTestCase):
         name = "TestDefaultFieldOrderWithInheritance"
         job_class = get_job(f"local/{module}/{name}")
         form = job_class().as_form()
-        self.assertSequenceEqual(list(form.fields.keys()), ["testvar1", "b_testvar2", "a_testvar3", "_commit"])
+        self.assertSequenceEqual(
+            list(form.fields.keys()),
+            ["testvar1", "b_testvar2", "a_testvar3", "_task_queue", "_commit"],
+        )
 
     def test_read_only_job_pass(self):
         """
@@ -222,11 +222,9 @@ class JobTest(TransactionTestCase):
 
         form = job_class().as_form()
 
-        self.assertHTMLEqual(
+        self.assertInHTML(
+            "<input id='id__commit' name='_commit' type='hidden' value='False'>",
             form.as_table(),
-            """<tr><th><label for="id_var">Var:</label></th><td>
-<input class="form-control form-control" id="id_var" name="var" placeholder="None" required type="text">
-<br><span class="helptext">Hello</span><input id="id__commit" name="_commit" type="hidden" value="False"></td></tr>""",
         )
 
     def test_ip_address_vars(self):
@@ -383,6 +381,53 @@ class JobTest(TransactionTestCase):
         self.assertGreaterEqual(job_model.results.count(), 2)
         latest_job_result = job_model.latest_result
         self.assertEqual(job_result_2.completed, latest_job_result.completed)
+
+    @mock.patch("nautobot.extras.utils.get_celery_queues")
+    def test_job_class_task_queues(self, mock_get_celery_queues):
+        """
+        Test job form with custom task queues defined on the job class
+        """
+        module = "test_task_queues"
+        name = "TestWorkerQueues"
+        mock_get_celery_queues.return_value = {"celery": 4, "irrelevant": 5}
+        job_class, _ = get_job_class_and_model(module, name)
+        form = job_class().as_form()
+        self.assertInHTML(
+            """<tr><th><label for="id__task_queue">Task queue:</label></th>
+            <td><select name="_task_queue" class="form-control" placeholder="Task queue" id="id__task_queue">
+            <option value="celery">celery (4 workers)</option>
+            <option value="nonexistent">nonexistent (0 workers)</option></select><br>
+            <span class="helptext">The task queue to route this job to</span></td></tr>
+            <tr><th><label for="id__commit">Commit changes:</label></th>
+            <td><input type="checkbox" name="_commit" placeholder="Commit changes" id="id__commit" checked><br>
+            <span class="helptext">Commit changes to the database (uncheck for a dry-run)</span></td></tr>""",
+            form.as_table(),
+        )
+
+    @mock.patch("nautobot.extras.utils.get_celery_queues")
+    def test_job_class_task_queues_override(self, mock_get_celery_queues):
+        """
+        Test job form with custom task queues defined on the job class and overridden on the model
+        """
+        module = "test_task_queues"
+        name = "TestWorkerQueues"
+        mock_get_celery_queues.return_value = {"default": 1, "irrelevant": 5}
+        job_class, job_model = get_job_class_and_model(module, name)
+        job_model.task_queues = ["default", "priority"]
+        job_model.task_queues_override = True
+        job_model.save()
+        form = job_class().as_form()
+        self.assertInHTML(
+            """<tr><th><label for="id__task_queue">Task queue:</label></th>
+            <td><select name="_task_queue" class="form-control" placeholder="Task queue" id="id__task_queue">
+            <option value="default">default (1 worker)</option>
+            <option value="priority">priority (0 workers)</option>
+            </select><br><span class="helptext">The task queue to route this job to</span></td></tr>
+            <tr><th><label for="id__commit">Commit changes:</label></th>
+            <td><input type="checkbox" name="_commit" placeholder="Commit changes" id="id__commit" checked><br>
+            <span class="helptext">Commit changes to the database (uncheck for a dry-run)</span></td></tr>""",
+            form.as_table(),
+        )
 
 
 class JobFileUploadTest(TransactionTestCase):
@@ -627,7 +672,7 @@ class JobHookReceiverTest(TransactionTestCase):
         name = "TestJobHookReceiverLog"
         job_class, _job_model = get_job_class_and_model(module, name)
         form = job_class().as_form()
-        self.assertCountEqual(form.fields.keys(), ["object_change", "_commit"])
+        self.assertSequenceEqual(list(form.fields.keys()), ["object_change", "_task_queue", "_commit"])
 
     def test_hidden(self):
         module = "test_job_hook_receiver"
@@ -741,3 +786,28 @@ class RemoveScheduledJobManagementCommandTestCase(TestCase):
         self.assertTrue(ScheduledJob.objects.filter(name="test1").exists())
         for i in range(2, 7):
             self.assertFalse(ScheduledJob.objects.filter(name=f"test{i}").exists())
+
+
+class ScheduledJobIntervalTestCase(TestCase):
+    """Test scheduled job intervals"""
+
+    # cron schedule day_of_week starts on Sunday (Sunday = 0)
+    cron_days = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"]
+    # datetime weekday starts on Monday (Sunday = 6)
+    datetime_days = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
+
+    def test_weekly_interval(self):
+        start_time = timezone.now() + datetime.timedelta(days=6)
+        scheduled_job = ScheduledJob.objects.create(
+            name="weekly_interval",
+            task="nautobot.extras.jobs.scheduled_job_handler",
+            job_class="local/test_pass/TestPass",
+            interval=JobExecutionType.TYPE_WEEKLY,
+            user=self.user,
+            start_time=start_time,
+        )
+
+        requested_weekday = self.datetime_days[start_time.weekday()]
+        schedule_day_of_week = list(scheduled_job.schedule.day_of_week)[0]
+        scheduled_job_weekday = self.cron_days[schedule_day_of_week]
+        self.assertEqual(scheduled_job_weekday, requested_weekday)

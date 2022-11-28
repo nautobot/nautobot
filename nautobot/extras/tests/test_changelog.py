@@ -4,6 +4,7 @@ from django.test import override_settings
 from rest_framework import status
 
 from nautobot.core.graphql import execute_query
+from nautobot.dcim.choices import InterfaceModeChoices
 from nautobot.dcim.models import Site
 from nautobot.extras.choices import CustomFieldTypeChoices, ObjectChangeActionChoices, ObjectChangeEventContextChoices
 from nautobot.extras.models import CustomField, CustomFieldChoice, ObjectChange, Status, Tag
@@ -17,10 +18,6 @@ from nautobot.virtualization.models import Cluster, ClusterType, VMInterface, Vi
 
 class ChangeLogViewTest(ModelViewTestCase):
     model = Site
-    fixtures = (
-        "status",
-        "tag",
-    )
 
     @classmethod
     def setUpTestData(cls):
@@ -163,8 +160,6 @@ class ChangeLogViewTest(ModelViewTestCase):
 
 
 class ChangeLogAPITest(APITestCase):
-    fixtures = ("status", "tag")
-
     def setUp(self):
         super().setUp()
 
@@ -299,10 +294,11 @@ class ChangeLogAPITest(APITestCase):
         self.assertEqual(ObjectChange.objects.count(), 0)
         self.add_permissions("dcim.delete_site", "extras.view_status")
         url = reverse("dcim-api:site-detail", kwargs={"pk": site.pk})
+        initial_count = Site.objects.count()
 
         response = self.client.delete(url, **self.header)
         self.assertHttpStatus(response, status.HTTP_204_NO_CONTENT)
-        self.assertEqual(Site.objects.count(), 0)
+        self.assertEqual(Site.objects.count(), initial_count - 1)
 
         oc = ObjectChange.objects.first()
         self.assertEqual(oc.changed_object, None)
@@ -406,6 +402,7 @@ class ChangeLogAPITest(APITestCase):
             name="vm interface 1",
             virtual_machine=vm,
             status=vminterface_statuses.get(slug="active"),
+            mode=InterfaceModeChoices.MODE_TAGGED,
         )
         vlan_statuses = Status.objects.get_for_model(VLAN)
         tagged_vlan = VLAN.objects.create(vid=100, name="Vlan100", status=vlan_statuses.get(slug="active"))

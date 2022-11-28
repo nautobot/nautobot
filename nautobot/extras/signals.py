@@ -18,6 +18,7 @@ from prometheus_client import Counter
 from nautobot.extras.tasks import delete_custom_field_data, provision_field
 from nautobot.extras.utils import refresh_job_model_from_job_class
 from nautobot.utilities.config import get_settings_or_config
+from nautobot.extras.constants import CHANGELOG_MAX_CHANGE_CONTEXT_DETAIL
 from .choices import JobResultStatusChoices, ObjectChangeActionChoices
 from .models import CustomField, DynamicGroup, DynamicGroupMembership, GitRepository, JobResult, ObjectChange
 from .webhooks import enqueue_webhooks
@@ -80,7 +81,7 @@ def _handle_changed_object(change_context, sender, instance, **kwargs):
             objectchange.user = _get_user_if_authenticated(change_context.get_user(), objectchange)
             objectchange.request_id = change_context.change_id
             objectchange.change_context = change_context.context
-            objectchange.change_context_detail = change_context.context_detail
+            objectchange.change_context_detail = change_context.context_detail[:CHANGELOG_MAX_CHANGE_CONTEXT_DETAIL]
             objectchange.save()
 
         # Enqueue job hooks
@@ -115,7 +116,7 @@ def _handle_deleted_object(change_context, sender, instance, **kwargs):
         objectchange.user = _get_user_if_authenticated(change_context.get_user(), objectchange)
         objectchange.request_id = change_context.change_id
         objectchange.change_context = change_context.context
-        objectchange.change_context_detail = change_context.context_detail
+        objectchange.change_context_detail = change_context.context_detail[:CHANGELOG_MAX_CHANGE_CONTEXT_DETAIL]
         objectchange.save()
 
         # Enqueue job hooks

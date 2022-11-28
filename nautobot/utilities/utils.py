@@ -1,29 +1,39 @@
+from collections import namedtuple, OrderedDict
 import copy
 import datetime
-import inspect
-import json
-import uuid
-from collections import OrderedDict, namedtuple
-from itertools import count, groupby
 from decimal import Decimal
+import inspect
+from itertools import count, groupby
+import json
+import re
+import uuid
 
+from django import forms
 from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.contrib.contenttypes.models import ContentType
+from django.core.exceptions import ValidationError
 from django.core.serializers import serialize
-from django.db.models import Count, Model, OuterRef, Subquery
+from django.db.models import Count, ForeignKey, Model, OuterRef, Subquery
 from django.db.models.functions import Coalesce
-from django.urls import reverse
-from django.utils.tree import Node
-
+from django.http import QueryDict
 from django.template import engines
+from django.urls import reverse
 from django.utils.module_loading import import_string
 from django.utils.text import slugify
+from django.utils.tree import Node
+from django_filters import BooleanFilter, DateFilter, DateTimeFilter, filters, NumberFilter, TimeFilter
+from django_filters.utils import verbose_lookup_expr
 from rest_framework.serializers import ListSerializer
 from taggit.managers import _TaggableManager
 
-from nautobot.dcim.choices import CableLengthUnitChoices
-from nautobot.utilities.constants import HTTP_REQUEST_META_SAFE_COPY
+from nautobot.dcim import choices
+from nautobot.utilities import constants, exceptions
+
+
+# Check if field name contains a lookup expr
+# e.g `name__ic` has lookup expr `ic (icontains)` while `name` has no lookup expr
+CONTAINS_LOOKUP_EXPR_RE = re.compile(r"(?<=__)\w+")
 
 
 def csv_format(data):
@@ -56,7 +66,7 @@ def csv_format(data):
     return ",".join(csv)
 
 
-def get_route_for_model(model, action):
+def get_route_for_model(model, action, api=False):
     """
     Return the URL route name for the given model and action. Does not perform any validation.
     Supports both core and plugin routes.
@@ -64,19 +74,36 @@ def get_route_for_model(model, action):
     Args:
         model (models.Model, str): Class, Instance, or dotted string of a Django Model
         action (str): name of the action in the route
+        api (bool): If set, return an API route.
 
     Returns:
         str: return the name of the view for the model/action provided.
+
     Examples:
         >>> get_route_for_model(Device, "list")
         "dcim:device_list"
+        >>> get_route_for_model(Device, "list", api=True)
+        "dcim-api:device-list"
+        >>> get_route_for_model("dcim.site", "list")
+        "dcim:site_list"
+        >>> get_route_for_model("dcim.site", "list", api=True)
+        "dcim-api:site-list"
+        >>> get_route_for_model(ExampleModel, "list")
+        "plugins:example_plugin:examplemodel_list"
+        >>> get_route_for_model(ExampleModel, "list", api=True)
+        "plugins-api:example_plugin-api:examplemodel-list"
     """
 
     if isinstance(model, str):
         model = get_model_from_name(model)
-    viewname = f"{model._meta.app_label}:{model._meta.model_name}_{action}"
+
+    suffix = "" if not api else "-api"
+    prefix = f"{model._meta.app_label}{suffix}:{model._meta.model_name}"
+    sep = "_" if not api else "-"
+    viewname = f"{prefix}{sep}{action}"
+
     if model._meta.app_label in settings.PLUGINS:
-        viewname = f"plugins:{viewname}"
+        viewname = f"plugins{suffix}:{viewname}"
 
     return viewname
 
@@ -285,17 +312,17 @@ def to_meters(length, unit):
     if length < 0:
         raise ValueError("Length must be a positive integer")
 
-    valid_units = CableLengthUnitChoices.values()
+    valid_units = choices.CableLengthUnitChoices.values()
     if unit not in valid_units:
         raise ValueError(f"Unknown unit {unit}. Must be one of the following: {', '.join(valid_units)}")
 
-    if unit == CableLengthUnitChoices.UNIT_METER:
+    if unit == choices.CableLengthUnitChoices.UNIT_METER:
         return length
-    if unit == CableLengthUnitChoices.UNIT_CENTIMETER:
+    if unit == choices.CableLengthUnitChoices.UNIT_CENTIMETER:
         return length / 100
-    if unit == CableLengthUnitChoices.UNIT_FOOT:
+    if unit == choices.CableLengthUnitChoices.UNIT_FOOT:
         return length * Decimal("0.3048")
-    if unit == CableLengthUnitChoices.UNIT_INCH:
+    if unit == choices.CableLengthUnitChoices.UNIT_INCH:
         return length * Decimal("0.3048") * 12
     raise ValueError(f"Unknown unit {unit}. Must be 'm', 'cm', 'ft', or 'in'.")
 
@@ -314,10 +341,26 @@ def prepare_cloned_fields(instance):
     Compile an object's `clone_fields` list into a string of URL query parameters. Tags are automatically cloned where
     applicable.
     """
+    form_class = get_form_for_model(instance)
+    form = form_class() if form_class is not None else None
     params = []
     for field_name in getattr(instance, "clone_fields", []):
         field = instance._meta.get_field(field_name)
         field_value = field.value_from_object(instance)
+
+        # For foreign-key fields, if the ModelForm's field has a defined `to_field_name`,
+        # use that field from the related object instead of its PK.
+        # Example: Location.parent, LocationForm().fields["parent"].to_field_name = "slug", so use slug rather than PK.
+        if isinstance(field, ForeignKey):
+            related_object = getattr(instance, field_name)
+            if (
+                related_object is not None
+                and form is not None
+                and field_name in form.fields
+                and hasattr(form.fields[field_name], "to_field_name")
+                and form.fields[field_name].to_field_name is not None
+            ):
+                field_value = getattr(related_object, form.fields[field_name].to_field_name)
 
         # Swap out False with URL-friendly value
         if field_value is False:
@@ -376,6 +419,21 @@ def flatten_dict(d, prefix="", separator="."):
         else:
             ret[key] = v
     return ret
+
+
+def flatten_iterable(iterable):
+    """
+    Flatten a nested iterable such as a list of lists, keeping strings intact.
+
+    :param iterable: The iterable to be flattened
+    :returns: generator
+    """
+    for i in iterable:
+        if hasattr(i, "__iter__") and not isinstance(i, str):
+            for j in flatten_iterable(i):
+                yield j
+        else:
+            yield i
 
 
 # Taken from django.utils.functional (<3.0)
@@ -439,7 +497,7 @@ def copy_safe_request(request):
     """
     meta = {
         k: request.META[k]
-        for k in HTTP_REQUEST_META_SAFE_COPY
+        for k in constants.HTTP_REQUEST_META_SAFE_COPY
         if k in request.META and isinstance(request.META[k], str)
     }
 
@@ -494,7 +552,7 @@ def get_related_class_for_model(model, module_name, object_suffix):
     """Return the appropriate class associated with a given model matching the `module_name` and
     `object_suffix`.
 
-    The given `model` can either be a model class or a dotted representation (ex: `dcim.device`).
+    The given `model` can either be a model class, a model instance, or a dotted representation (ex: `dcim.device`).
 
     The object class is expected to be in the module within the application
     associated with the model and its name is expected to be `{ModelName}{object_suffix}`.
@@ -506,6 +564,8 @@ def get_related_class_for_model(model, module_name, object_suffix):
     """
     if isinstance(model, str):
         model = get_model_from_name(model)
+    if isinstance(model, Model):
+        model = type(model)
     if not inspect.isclass(model):
         raise TypeError(f"{model!r} is not a Django Model class")
     if not issubclass(model, Model):
@@ -765,3 +825,253 @@ def get_data_for_serializer_parameter(model):
         if not field_value.read_only
     }
     return writeable_fields
+
+
+def build_lookup_label(field_name, _verbose_name):
+    """
+    Return lookup expr with its verbose name
+
+    Args:
+        field_name (str): Field name e.g slug__iew
+        _verbose_name (str): The verbose name for the lookup exper which is suffixed to the field name e.g iew -> iendswith
+
+    Examples:
+        >>> build_lookup_label("slug__iew", "iendswith")
+        >>> "ends-with (iew)"
+    """
+    verbose_name = verbose_lookup_expr(_verbose_name) or "exact"
+    label = ""
+    search = CONTAINS_LOOKUP_EXPR_RE.search(field_name)
+    if search:
+        label = f" ({search.group()})"
+
+    verbose_name = "not " + verbose_name if label.startswith(" (n") else verbose_name
+
+    return verbose_name + label
+
+
+def get_all_lookup_expr_for_field(model, field_name):
+    """
+    Return all lookup expressions for `field_name` in `model` filterset
+    """
+    filterset = get_filterset_for_model(model)().filters
+
+    if not filterset.get(field_name):
+        raise exceptions.FilterSetFieldNotFound("field_name not found")
+
+    if field_name.startswith("has_"):
+        return [{"id": field_name, "name": "exact"}]
+
+    lookup_expr_choices = []
+
+    for name, field in filterset.items():
+        # remove the lookup_expr from field_name e.g name__iew -> name
+        if re.sub(r"__\w+", "", name) == field_name and not name.startswith("has_"):
+            lookup_expr_choices.append(
+                {
+                    "id": name,
+                    "name": build_lookup_label(name, field.lookup_expr),
+                }
+            )
+
+    return lookup_expr_choices
+
+
+def get_filterset_field(filterset_class, field_name):
+    field = filterset_class().filters.get(field_name)
+    if field is None:
+        raise exceptions.FilterSetFieldNotFound(f"{field_name} is not a valid {filterset_class.__name__} field")
+    return field
+
+
+def get_filterset_parameter_form_field(model, parameter):
+    """
+    Return the relevant form field instance for a filterset parameter e.g DynamicModelMultipleChoiceField, forms.IntegerField e.t.c
+    """
+    # Avoid circular import
+    from nautobot.extras.filters import ContentTypeMultipleChoiceFilter, StatusFilter
+    from nautobot.extras.models import Status, Tag
+    from nautobot.extras.utils import ChangeLoggedModelsQuery, TaggableClassesQuery
+    from nautobot.utilities.forms import (
+        BOOLEAN_CHOICES,
+        DatePicker,
+        DateTimePicker,
+        DynamicModelMultipleChoiceField,
+        StaticSelect2,
+        StaticSelect2Multiple,
+        TimePicker,
+        MultipleContentTypeField,
+    )
+
+    filterset_class = get_filterset_for_model(model)
+    field = get_filterset_field(filterset_class, parameter)
+    form_field = field.field
+
+    # TODO(Culver): We are having to replace some widgets here because multivalue_field_factory that generates these isn't smart enough
+    if isinstance(field, NumberFilter):
+        form_field = forms.IntegerField()
+    elif isinstance(field, filters.ModelMultipleChoiceFilter):
+        related_model = Status if isinstance(field, StatusFilter) else field.extra["queryset"].model
+        form_attr = {
+            "queryset": related_model.objects.all(),
+            "to_field_name": field.extra.get("to_field_name", "id"),
+        }
+        # Status and Tag api requires content_type, to limit result to only related content_types
+        if related_model in [Status, Tag]:
+            form_attr["query_params"] = {"content_types": model._meta.label_lower}
+
+        form_field = DynamicModelMultipleChoiceField(**form_attr)
+    elif isinstance(field, ContentTypeMultipleChoiceFilter):
+        plural_name = model._meta.verbose_name_plural
+        try:
+            form_field = MultipleContentTypeField(choices_as_strings=True, feature=plural_name)
+        except KeyError:
+            # `MultipleContentTypeField` employs `registry["model features"][feature]`, which may
+            # result in an error if `feature` is not found in the `registry["model features"]` dict.
+            # In this case use queryset
+            queryset_map = {"tags": TaggableClassesQuery, "job hooks": ChangeLoggedModelsQuery}
+            form_field = MultipleContentTypeField(
+                choices_as_strings=True, queryset=queryset_map[plural_name]().as_queryset()
+            )
+    elif isinstance(field, (filters.MultipleChoiceFilter, filters.ChoiceFilter)) and "choices" in field.extra:
+        form_field_class = forms.ChoiceField
+        form_field_class.widget = StaticSelect2Multiple()
+        form_attr = {"choices": field.extra.get("choices")}
+
+        form_field = form_field_class(**form_attr)
+    elif isinstance(field, (BooleanFilter,)):  # Yes / No choice
+        form_field_class = forms.ChoiceField
+        form_field_class.widget = StaticSelect2()
+        form_attr = {"choices": BOOLEAN_CHOICES}
+
+        form_field = form_field_class(**form_attr)
+    elif isinstance(field, DateTimeFilter):
+        form_field.widget = DateTimePicker()
+    elif isinstance(field, DateFilter):
+        form_field.widget = DatePicker()
+    elif isinstance(field, TimeFilter):
+        form_field.widget = TimePicker()
+
+    form_field.required = False
+    form_field.initial = None
+    form_field.widget.attrs.pop("required", None)
+
+    css_classes = form_field.widget.attrs.get("class", "")
+    form_field.widget.attrs["class"] = "form-control " + css_classes
+    return form_field
+
+
+def convert_querydict_to_factory_formset_acceptable_querydict(request_querydict, filterset_class):
+    """
+    Convert request QueryDict/GET into an acceptable factory formset QueryDict
+    while discarding `querydict` params which are not part of `filterset_class` params
+
+    Args:
+        request_querydict (QueryDict): QueryDict to convert
+        filterset_class: Filterset class
+
+    Examples:
+        >>> convert_querydict_to_factory_formset_acceptable_querydict({"status": ["active", "decommissioning"], "name__ic": ["site"]},)
+        >>> {
+        ...     'form-TOTAL_FORMS': [3],
+        ...     'form-INITIAL_FORMS': ['0'],
+        ...     'form-MIN_NUM_FORMS': [''],
+        ...     'form-MAX_NUM_FORMS': [''],
+        ...     'form-0-lookup_field': ['status'],
+        ...     'form-0-lookup_type': ['status'],
+        ...     'form-0-value': ['active', 'decommissioning'],
+        ...     'form-1-lookup_field': ['name'],
+        ...     'form-1-lookup_type': ['name__ic'],
+        ...     'form-1-value': ['site']
+        ... }
+    """
+    query_dict = QueryDict(mutable=True)
+    filterset_class_fields = filterset_class().filters.keys()
+
+    query_dict.setdefault("form-INITIAL_FORMS", 0)
+    query_dict.setdefault("form-MIN_NUM_FORMS", 0)
+    query_dict.setdefault("form-MAX_NUM_FORMS", 100)
+
+    lookup_field_placeholder = "form-%d-lookup_field"
+    lookup_type_placeholder = "form-%d-lookup_type"
+    lookup_value_placeholder = "form-%d-lookup_value"
+
+    num = 0
+    request_querydict = request_querydict.copy()
+    request_querydict.pop("q", None)
+    for lookup_type, value in request_querydict.items():
+        # Discard fields without values
+        if value:
+            if lookup_type in filterset_class_fields:
+                lookup_field = re.sub(r"__\w+", "", lookup_type)
+                lookup_value = request_querydict.getlist(lookup_type)
+
+                query_dict.setlistdefault(lookup_field_placeholder % num, [lookup_field])
+                query_dict.setlistdefault(lookup_type_placeholder % num, [lookup_type])
+                query_dict.setlistdefault(lookup_value_placeholder % num, lookup_value)
+                num += 1
+
+    query_dict.setdefault("form-TOTAL_FORMS", max(num, 3))
+    return query_dict
+
+
+def is_single_choice_field(filterset_class, field_name):
+    # Some filter parameters do not accept multiple values, e.g DateTime fields, boolean fields, q field etc.
+    field = get_filterset_field(filterset_class, field_name)
+    return isinstance(field, (DateFilter, DateTimeFilter, TimeFilter, BooleanFilter)) or field_name == "q"
+
+
+def get_filterable_params_from_filter_params(filter_params, non_filter_params, filterset_class):
+    """
+    Remove any `non_filter_params` and fields that are not a part of the filterset from  `filter_params`
+    to return only queryset filterable parameters.
+
+    Args:
+        filter_params(QueryDict): Filter param querydict
+        non_filter_params(list): Non queryset filterable params
+        filterset_class: The FilterSet class
+    """
+    for non_filter_param in non_filter_params:
+        filter_params.pop(non_filter_param, None)
+
+    # Some FilterSet field only accept single choice not multiple choices
+    # e.g datetime field, bool fields etc.
+    final_filter_params = {}
+    for field in filter_params.keys():
+        if filter_params.get(field):
+            # `is_single_choice_field` implements `get_filterset_field`, which throws an exception if a field is not found.
+            # If an exception is thrown, instead of throwing an exception, set `_is_single_choice_field` to 'False'
+            # because the fields that were not discovered are still necessary.
+            try:
+                _is_single_choice_field = is_single_choice_field(filterset_class, field)
+            except exceptions.FilterSetFieldNotFound:
+                _is_single_choice_field = False
+
+            final_filter_params[field] = (
+                filter_params.get(field) if _is_single_choice_field else filter_params.getlist(field)
+            )
+
+    return final_filter_params
+
+
+def ensure_content_type_and_field_name_inquery_params(query_params):
+    """Ensure that the `query_params` include `content_type` and `field_name` and that
+    `content_type` is a valid ContentType value.
+    ensure_content_type_and_field_name_inquery_params
+
+    Return the 'ContentTypes' model and 'field_name' if validation was successful.
+    """
+    if "content_type" not in query_params or "field_name" not in query_params:
+        raise ValidationError("content_type and field_name are required parameters", code=400)
+    contenttype = query_params.get("content_type")
+    app_label, model_name = contenttype.split(".")
+    try:
+        model_contenttype = ContentType.objects.get(app_label=app_label, model=model_name)
+        model = model_contenttype.model_class()
+        if model is None:
+            raise ValidationError(f"model for content_type: <{model_contenttype}> not found", code=500)
+    except ContentType.DoesNotExist:
+        raise ValidationError("content_type not found", code=404)
+    field_name = query_params.get("field_name")
+
+    return field_name, model

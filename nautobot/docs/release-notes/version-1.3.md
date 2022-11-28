@@ -212,7 +212,7 @@ As Python 3.6 has reached end-of-life, and many of Nautobot's dependencies have 
 - [#1694](https://github.com/nautobot/nautobot/issues/1694) - Fixed CablePath not found error when disconnects/delete action performed on a cable
 - [#1795](https://github.com/nautobot/nautobot/issues/1795) - Corrected relationship source/destination filter help text from queryset Filter to filterset Filter and updated documentations.
 - [#1839](https://github.com/nautobot/nautobot/issues/1795) - Fixed staff users with auth > group permissions unable to view groups in admin UI.
-- [#1937](https://github.com/nautobot/nautobot/issues/1937) - Solved _custom_field_data do not fully delete when using CustomFieldBulkDeleteView.
+- [#1937](https://github.com/nautobot/nautobot/issues/1937) - Solved `_custom_field_data` do not fully delete when using CustomFieldBulkDeleteView.
 - [#1947](https://github.com/nautobot/nautobot/issues/1947) - Fixed unbound local error by initializing template variable before conditional logic statements.
 - [#2036](https://github.com/nautobot/nautobot/pull/2036) - Fixed outdated UI navigation references in documentation.
 - [#2039](https://github.com/nautobot/nautobot/issues/2039) - Fixed IntegerVar with default set to 0 on Job evaluating to False.
@@ -279,13 +279,13 @@ As Python 3.6 has reached end-of-life, and many of Nautobot's dependencies have 
 
 - [#1409](https://github.com/nautobot/nautobot/issues/1409) - Fixed page title on device status (NAPALM) page template.
 - [#1524](https://github.com/nautobot/nautobot/issues/1524) - Fixed valid "None" option removed from search field upon display.
-- [#1649](https://github.com/nautobot/nautobot/issues/1649) - Changed the incorrect view permission (circuits.view_vrf to ipam.view_vrf)
+- [#1649](https://github.com/nautobot/nautobot/issues/1649) - Changed the incorrect view permission (`circuits.view_vrf` to `ipam.view_vrf`)
 - [#1750](https://github.com/nautobot/nautobot/issues/1750) - Fixed incorrect display of boolean value in Virtual Chassis display.
 - [#1759](https://github.com/nautobot/nautobot/issues/1759) - Fixed TypeError on webhook REST API PATCH.
 - [#1787](https://github.com/nautobot/nautobot/issues/1787) - Fix scheduled jobs failing when scheduled from REST API.
 - [#1841](https://github.com/nautobot/nautobot/issues/1841) - Fixed incorrect display of boolean values in Git Repository view.
 - [#1848](https://github.com/nautobot/nautobot/pull/1848) - Fix Poetry cache issue in CI causing version tests to fail in `next`.
-- [#1850](https://github.com/nautobot/nautobot/pull/1850) - Added {{block.super}} to negate the override from the js block in rack.html. This change fixed the issue of unable to navigate away from rack changelog tab.
+- [#1850](https://github.com/nautobot/nautobot/pull/1850) - Added `{{block.super}}` to negate the override from the js block in rack.html. This change fixed the issue of unable to navigate away from rack changelog tab.
 - [#1868](https://github.com/nautobot/nautobot/pull/1868) - Updated link to advanced Docker compose use in getting started guide.
 
 ## v1.3.5 (2022-05-30)

@@ -54,6 +54,9 @@ class AnotherExampleModel(OrganizationalModel):
     class Meta:
         ordering = ["name"]
 
+    def get_absolute_url(self):
+        return reverse("plugins:example_plugin:anotherexamplemodel", kwargs={"pk": self.pk})
+
 
 @extras_features(
     "custom_fields",

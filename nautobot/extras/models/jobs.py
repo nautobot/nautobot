@@ -44,6 +44,7 @@ from nautobot.extras.utils import (
     get_job_content_type,
     jobs_in_directory,
 )
+from nautobot.utilities.fields import JSONArrayField
 from nautobot.utilities.logging import sanitize
 
 from .customfields import CustomFieldModel
@@ -170,6 +171,12 @@ class Job(PrimaryModel):
         help_text="Maximum runtime in seconds before the job will be forcibly terminated."
         "<br>Set to 0 to use Nautobot system default",
     )
+    task_queues = JSONArrayField(
+        base_field=models.CharField(max_length=100, blank=True),
+        default=list,
+        blank=True,
+        help_text="Comma separated list of task queues that this job can run on. A blank list will use the default queue",
+    )
 
     # Flags to indicate whether the above properties are inherited from the source code or overridden by the database
     grouping_override = models.BooleanField(
@@ -210,6 +217,10 @@ class Job(PrimaryModel):
         help_text="If set, the configured value will remain even if the underlying Job source code changes",
     )
     has_sensitive_variables_override = models.BooleanField(
+        default=False,
+        help_text="If set, the configured value will remain even if the underlying Job source code changes",
+    )
+    task_queues_override = models.BooleanField(
         default=False,
         help_text="If set, the configured value will remain even if the underlying Job source code changes",
     )
@@ -319,7 +330,12 @@ class Job(PrimaryModel):
 
     @property
     def runnable(self):
-        return self.enabled and self.installed and self.job_class is not None
+        return (
+            self.enabled
+            and self.installed
+            and self.job_class is not None
+            and not (self.has_sensitive_variables and self.approval_required)
+        )
 
     def clean(self):
         """For any non-overridden fields, make sure they get reset to the actual underlying class value if known."""
@@ -470,6 +486,8 @@ class JobLogEntry(BaseModel):
     log_object = models.CharField(max_length=JOB_LOG_MAX_LOG_OBJECT_LENGTH, null=True, blank=True)
     absolute_url = models.CharField(max_length=JOB_LOG_MAX_ABSOLUTE_URL_LENGTH, null=True, blank=True)
 
+    csv_headers = ["created", "grouping", "log_level", "log_object", "message"]
+
     def __str__(self):
         return self.message
 
@@ -477,6 +495,10 @@ class JobLogEntry(BaseModel):
         ordering = ["created"]
         get_latest_by = "created"
         verbose_name_plural = "job log entries"
+
+    def to_csv(self):
+        """Indicates model fields to return as csv."""
+        return (str(self.created), self.grouping, self.log_level, self.log_object, self.message)
 
 
 #
@@ -999,7 +1021,7 @@ class ScheduledJob(BaseModel):
         elif self.interval == JobExecutionType.TYPE_DAILY:
             return schedules.crontab(minute=t.minute, hour=t.hour)
         elif self.interval == JobExecutionType.TYPE_WEEKLY:
-            return schedules.crontab(minute=t.minute, hour=t.hour, day_of_week=t.weekday())
+            return schedules.crontab(minute=t.minute, hour=t.hour, day_of_week=t.strftime("%w"))
         elif self.interval == JobExecutionType.TYPE_CUSTOM:
             return self.get_crontab(self.crontab)
         raise ValueError(f"I do not know to convert {self.interval} to a Cronjob!")

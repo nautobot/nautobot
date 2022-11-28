@@ -19,7 +19,7 @@ from django.utils.html import escape
 from django.utils.safestring import mark_safe
 from django.views.generic.edit import FormView
 
-from rest_framework import mixins
+from rest_framework import mixins, exceptions
 from rest_framework.response import Response
 from rest_framework.viewsets import GenericViewSet
 
@@ -35,7 +35,6 @@ from nautobot.utilities.forms import (
     CSVFileField,
     restrict_form_fields,
 )
-from nautobot.utilities.permissions import resolve_permission
 from nautobot.core.views.renderers import NautobotHTMLRenderer
 from nautobot.utilities.utils import (
     csv_format,
@@ -101,32 +100,44 @@ class NautobotViewSetMixin(GenericViewSet, AccessMixin, GetReturnURLMixin, FormV
             )
         return self.get_permissions_for_model(queryset.model, permissions)
 
-    def has_permission(self):
+    def check_permissions(self, request):
         """
         Check whether the user has the permissions needed to perform certain actions.
         """
         user = self.request.user
-        queryset = self.get_queryset()
         permission_required = self.get_required_permission()
-        # Check that the user has been granted the required permission(s).
-        if user.has_perms(permission_required):
+        # Check that the user has been granted the required permission(s) one by one.
+        # In case the permission has `message` or `code`` attribute, we want to include those information in the permission_denied error.
+        for permission in permission_required:
+            # If the user does not have the permission required, we raise DRF's `NotAuthenticated` or `PermissionDenied` exception
+            # which will be handled by self.handle_no_permission() in the UI appropriately in the dispatch() method
+            # Cast permission to a list since has_perms() takes a list type parameter.
+            if not user.has_perms([permission]):
+                self.permission_denied(
+                    request,
+                    message=getattr(permission, "message", None),
+                    code=getattr(permission, "code", None),
+                )
 
-            # Update the view's QuerySet to filter only the permitted objects
-            for permission in permission_required:
-                action = resolve_permission(permission)[1]
-                queryset = queryset.restrict(user, action)
-
-            return True
-
-        return False
-
-    def check_permissions(self, request):
+    def dispatch(self, request, *args, **kwargs):
         """
+        Override the default dispatch() method to check permissions first.
         Used to determine whether the user has permissions to a view and object-level permissions.
         Using AccessMixin handle_no_permission() to deal with Object-Level permissions and API-Level permissions in one pass.
         """
-        if not self.has_permission():
-            self.handle_no_permission()
+        # self.initialize_request() converts a WSGI request and returns an API request object which can be passed into self.check_permissions()
+        # If the user is not authenticated or does not have the permission to perform certain actions,
+        # DRF NotAuthenticated or PermissionDenied exception can be raised appropriately and handled by self.handle_no_permission() in the UI.
+        # initialize_request() also instantiates self.action which is needed for permission checks.
+        api_request = self.initialize_request(request, *args, **kwargs)
+        try:
+            self.check_permissions(api_request)
+        # check_permissions() could raise NotAuthenticated and PermissionDenied Error.
+        # We handle them by a single except statement since self.handle_no_permission() is able to handle both errors
+        except (exceptions.NotAuthenticated, exceptions.PermissionDenied):
+            return self.handle_no_permission()
+
+        return super().dispatch(request, *args, **kwargs)
 
     def get_table_class(self):
         # Check if self.table_class is specified in the ModelViewSet before performing subsequent actions
@@ -181,7 +192,10 @@ class NautobotViewSetMixin(GenericViewSet, AccessMixin, GetReturnURLMixin, FormV
         self.has_error = True
 
     def _handle_validation_error(self, e):
-        messages.error(self.request, f"{self.obj} failed validation: {e}")
+        # For bulk_create/bulk_update view, self.obj is not set since there are multiple
+        # The errors will be rendered on the form itself.
+        if self.action not in ["bulk_create", "bulk_update"]:
+            messages.error(self.request, f"{self.obj} failed validation: {e}")
         self.has_error = True
 
     def form_valid(self, form):
@@ -223,7 +237,7 @@ class NautobotViewSetMixin(GenericViewSet, AccessMixin, GetReturnURLMixin, FormV
             # render the form with the error message.
             data = {}
             if self.action in ["bulk_update", "bulk_destroy"]:
-                pk_list = self.request.POST.getlist("pk")
+                pk_list = self.pk_list
                 table_class = self.get_table_class()
                 table = table_class(queryset.filter(pk__in=pk_list), orderable=False)
                 if not table.rows:
@@ -245,7 +259,7 @@ class NautobotViewSetMixin(GenericViewSet, AccessMixin, GetReturnURLMixin, FormV
         request = self.request
         queryset = self.get_queryset()
         if self.action in ["bulk_update", "bulk_destroy"]:
-            pk_list = self.request.POST.getlist("pk")
+            pk_list = self.pk_list
             table_class = self.get_table_class()
             table = table_class(queryset.filter(pk__in=pk_list), orderable=False)
             if not table.rows:
@@ -645,7 +659,7 @@ class ObjectBulkDestroyViewMixin(NautobotViewSetMixin, BulkDestroyModelMixin):
 
     def _process_bulk_destroy_form(self, form):
         request = self.request
-        pk_list = self.request.POST.getlist("pk")
+        pk_list = self.pk_list
         queryset = self.get_queryset()
         model = queryset.model
         # Delete objects
@@ -712,6 +726,7 @@ class ObjectBulkCreateViewMixin(NautobotViewSetMixin, BulkCreateModelMixin):
     UI mixin to bulk create model instances.
     """
 
+    bulk_create_active_tab = "csv-data"
     bulk_create_form_class = None
     bulk_create_widget_attrs = {}
 
@@ -723,6 +738,10 @@ class ObjectBulkCreateViewMixin(NautobotViewSetMixin, BulkCreateModelMixin):
         with transaction.atomic():
             if request.FILES:
                 field_name = "csv_file"
+                # Set the bulk_create_active_tab to "csv-file"
+                # In case the form validation fails, the user will be redirected
+                # to the tab with errors rendered on the form.
+                self.bulk_create_active_tab = "csv-file"
             else:
                 field_name = "csv_data"
             headers, records = form.cleaned_data[field_name]
@@ -735,7 +754,7 @@ class ObjectBulkCreateViewMixin(NautobotViewSetMixin, BulkCreateModelMixin):
                     new_objs.append(obj)
                 else:
                     for field, err in obj_form.errors.items():
-                        form.add_error("csv_data", f"Row {row} {field}: {err[0]}")
+                        form.add_error(field_name, f"Row {row} {field}: {err[0]}")
                     raise ValidationError("")
 
             # Enforce object-level permissions
@@ -759,7 +778,7 @@ class ObjectBulkCreateViewMixin(NautobotViewSetMixin, BulkCreateModelMixin):
 
     def perform_bulk_create(self, request):
         form_class = self.get_form_class()
-        form = form_class(request.POST)
+        form = form_class(request.POST, request.FILES)
         if form.is_valid():
             return self.form_valid(form)
         else:
@@ -818,7 +837,7 @@ class ObjectBulkUpdateViewMixin(NautobotViewSetMixin, BulkUpdateModelMixin):
                 for field_name in form_custom_fields:
                     if field_name in form.nullable_fields and field_name in nullified_fields:
                         obj.cf[form_cf_to_key[field_name]] = None
-                    elif form.cleaned_data.get(field_name) not in (None, ""):
+                    elif form.cleaned_data.get(field_name) not in (None, "", []):
                         obj.cf[form_cf_to_key[field_name]] = form.cleaned_data[field_name]
 
                 obj.validated_save()

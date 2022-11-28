@@ -7,7 +7,6 @@ html {
 }
 html, body {
     height: 100%;
-    overflow: auto;
 }
 body {
     padding-top: 70px;
@@ -27,6 +26,9 @@ body {
 .footer {
     background-color: #f5f5f5;
     border-top: 1px solid #d0d0d0;
+}
+.footer .row {
+    background-color: #f5f5f5;
 }
 footer p {
     margin: 12px 0;
@@ -386,6 +388,110 @@ ul.nav-tabs, ul.nav-pills {
 ul.nav-tabs li a {
     padding: 8px 10px;
     border: none;
+}
+
+/* Filters */
+.filter-container {
+    box-sizing: border-box;
+    display: inline-block;
+    margin: 0;
+    position: relative;
+    vertical-align: middle;
+}
+
+.filter-container.display-inline {
+    display: inline-block;
+}
+
+.filter-container .filter-selection {
+    min-height: 34px;
+    padding: 5px;
+    height: auto;
+    box-sizing: border-box;
+    cursor: pointer;
+    display: block;
+    user-select: none;
+    -webkit-user-select: none;
+    margin: 0;
+    webkit-box-shadow: inset 0 1px 1px rgb(0 0 0 / 8%);
+    box-shadow: inset 0 1px 1px rgb(0 0 0 / 8%);
+    background-color: #fff;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    color: #555;
+    font-size: 14px;
+    outline: 0;
+}
+
+.remove-filter-param {
+    color: #999;
+    cursor: pointer;
+    float: right;
+    font-weight: 700;
+    margin-left: 10px;
+}
+
+.fitler-container .filter-selection .filter-selection-rendered {
+    webkit-box-sizing: border-box;
+    -moz-box-sizing: border-box;
+    box-sizing: border-box;
+    display: block;
+    line-height: 1.42857143;
+    list-style: none;
+    margin: 0;
+    overflow: hidden;
+    padding: 0;
+    width: 100%;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.filter-container .filter-selection .filter-selection-choice {
+    color: #555;
+    background: #fff;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    cursor: default;
+    float: left;
+    margin: 5px 3px 0 0;
+    padding: 0 6px;
+}
+
+.filter-container .filter-selection .filter-selection-rendered {
+    -webkit-box-sizing: border-box;
+    -moz-box-sizing: border-box;
+    box-sizing: border-box;
+    display: block;
+    line-height: 1.42857143;
+    list-style: none;
+    margin: 0;
+    overflow: hidden;
+    padding: 0;
+    width: 100%;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.filter-container .filter-selection .filter-selection-choice-remove {
+    display: inline-block;
+    margin-right: 3px;
+    margin-left: 0;
+    float: none;
+}
+
+.filter-container .filter-selection .filter-selection-rendered {
+    -webkit-box-sizing: border-box;
+    -moz-box-sizing: border-box;
+    box-sizing: border-box;
+    display: block;
+    line-height: 1.42857143;
+    list-style: none;
+    margin: 0;
+    overflow: hidden;
+    padding: 0;
+    width: 100%;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
 
 /* Fix progress bar margin inside table cells */

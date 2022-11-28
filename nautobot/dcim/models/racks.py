@@ -455,6 +455,7 @@ class Rack(PrimaryModel, StatusModel):
 
             # Retrieve all devices installed within the rack
             queryset = (
+                # v2 TODO(jathan): Replace prefetch_related with select_related
                 Device.objects.prefetch_related("device_type", "device_type__manufacturer", "device_role")
                 .annotate(devicebay_count=Count("devicebays"))
                 .exclude(pk=exclude)
@@ -497,6 +498,7 @@ class Rack(PrimaryModel, StatusModel):
         :param exclude: List of devices IDs to exclude (useful when moving a device within a rack)
         """
         # Gather all devices which consume U space within the rack
+        # v2 TODO(jathan): Replace prefetch_related with select_related
         devices = self.devices.prefetch_related("device_type").filter(position__gte=1)
         if exclude is not None:
             devices = devices.exclude(pk__in=exclude)
@@ -604,6 +606,7 @@ class Rack(PrimaryModel, StatusModel):
             _cable_peer_type=ContentType.objects.get_for_model(PowerFeed),
             _cable_peer_id__in=powerfeeds.values_list("id", flat=True),
         )
+        direct_allocated_draw = pf_powerports.aggregate(Sum("allocated_draw"))["allocated_draw__sum"] or 0
         poweroutlets = PowerOutlet.objects.filter(power_port_id__in=pf_powerports)
         allocated_draw_total = (
             PowerPort.objects.filter(
@@ -612,6 +615,7 @@ class Rack(PrimaryModel, StatusModel):
             ).aggregate(Sum("allocated_draw"))["allocated_draw__sum"]
             or 0
         )
+        allocated_draw_total += direct_allocated_draw
 
         return UtilizationData(numerator=allocated_draw_total, denominator=available_power_total)
 

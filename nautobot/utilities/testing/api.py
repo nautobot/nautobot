@@ -2,20 +2,19 @@ from typing import Optional, Sequence, Union
 
 from django.conf import settings
 from django.contrib.contenttypes.models import ContentType
-from django.urls import reverse
 from django.test import override_settings, tag
+from django.urls import reverse
 from django.utils.text import slugify
 from rest_framework import status
-from rest_framework.test import APIClient, APITransactionTestCase as _APITransactionTestCase
+from rest_framework.test import APIClient
+from rest_framework.test import APITransactionTestCase as _APITransactionTestCase
 
-from nautobot.users.models import ObjectPermission, Token
-from nautobot.extras.choices import ObjectChangeActionChoices
-from nautobot.extras.models import ChangeLoggedModel
-from nautobot.extras.registry import registry
-from nautobot.utilities.testing.mixins import NautobotTestCaseMixin
-from nautobot.utilities.utils import get_changes_for_model, get_filterset_for_model
-from .utils import disable_warnings
-from .views import ModelTestCase
+from nautobot.extras import choices as extras_choices
+from nautobot.extras import models as extras_models
+from nautobot.extras import registry
+from nautobot.users import models as users_models
+from nautobot.utilities import testing, utils
+from nautobot.utilities.testing import mixins, views
 
 
 __all__ = (
@@ -30,17 +29,15 @@ __all__ = (
 
 
 @tag("api")
-class APITestCase(ModelTestCase):
+class APITestCase(views.ModelTestCase):
     """
     Base test case for API requests.
 
     client_class: Test client class
-    view_namespace: Namespace for API views. If None, the model's app_label will be used.
     api_version: Specific API version to test. Leave unset to test the default behavior. Override with set_api_version()
     """
 
     client_class = APIClient
-    view_namespace = None
     api_version = None
 
     def setUp(self):
@@ -49,7 +46,7 @@ class APITestCase(ModelTestCase):
         """
         # Do not initialize the client, it conflicts with the APIClient.
         super().setUpNautobot(client=False)
-        self.token = Token.objects.create(user=self.user)
+        self.token = users_models.Token.objects.create(user=self.user)
         self.header = {"HTTP_AUTHORIZATION": f"Token {self.token.key}"}
         if self.api_version:
             self.set_api_version(self.api_version)
@@ -61,19 +58,12 @@ class APITestCase(ModelTestCase):
         else:
             self.header["HTTP_ACCEPT"] = f"application/json; version={api_version}"
 
-    def _get_view_namespace(self):
-        if self.view_namespace:
-            return f"{self.view_namespace}-api"
-        if self.model._meta.app_label in settings.PLUGINS:
-            return f"plugins-api:{self.model._meta.app_label}-api"
-        return f"{self.model._meta.app_label}-api"
-
     def _get_detail_url(self, instance):
-        viewname = f"{self._get_view_namespace()}:{instance._meta.model_name}-detail"
+        viewname = utils.get_route_for_model(instance, "detail", api=True)
         return reverse(viewname, kwargs={"pk": instance.pk})
 
     def _get_list_url(self):
-        viewname = f"{self._get_view_namespace()}:{self.model._meta.model_name}-list"
+        viewname = utils.get_route_for_model(self.model, "list", api=True)
         return reverse(viewname)
 
 
@@ -91,7 +81,7 @@ class APIViewTestCases:
                 self.model._meta.model_name,
             ) in settings.EXEMPT_EXCLUDE_MODELS:
                 # Models listed in EXEMPT_EXCLUDE_MODELS should not be accessible to anonymous users
-                with disable_warnings("django.request"):
+                with testing.disable_warnings("django.request"):
                     self.assertHttpStatus(self.client.get(url, **self.header), status.HTTP_403_FORBIDDEN)
             else:
                 response = self.client.get(url, **self.header)
@@ -105,7 +95,7 @@ class APIViewTestCases:
             url = self._get_detail_url(self._get_queryset().first())
 
             # Try GET without permission
-            with disable_warnings("django.request"):
+            with testing.disable_warnings("django.request"):
                 self.assertHttpStatus(self.client.get(url, **self.header), status.HTTP_403_FORBIDDEN)
 
         @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
@@ -121,7 +111,7 @@ class APIViewTestCases:
             instance1, instance2 = self._get_queryset()[:2]
 
             # Add object-level permission
-            obj_perm = ObjectPermission(
+            obj_perm = users_models.ObjectPermission(
                 name="Test permission",
                 constraints={"pk": instance1.pk},
                 actions=["view"],
@@ -146,7 +136,7 @@ class APIViewTestCases:
             self.assertIn("display", response.data)
             self.assertIsInstance(response.data["display"], str)
             # Fields that should be present in appropriate model serializers:
-            if issubclass(self.model, ChangeLoggedModel):
+            if issubclass(self.model, extras_models.ChangeLoggedModel):
                 self.assertIn("created", response.data)
                 self.assertIn("last_updated", response.data)
             # Fields that should be absent by default (opt-in fields):
@@ -155,14 +145,14 @@ class APIViewTestCases:
 
             # If opt-in fields are supported on this model, make sure they can be opted into
 
-            custom_fields_registry = registry["model_features"]["custom_fields"]
+            custom_fields_registry = registry.registry["model_features"]["custom_fields"]
             # computed fields and custom fields use the same registry
             cf_supported = self.model._meta.model_name in custom_fields_registry.get(self.model._meta.app_label, {})
             if cf_supported:  # custom_fields is not an opt-in field, it should always be present if supported
                 self.assertIn("custom_fields", response.data)
                 self.assertIsInstance(response.data["custom_fields"], dict)
 
-            relationships_registry = registry["model_features"]["relationships"]
+            relationships_registry = registry.registry["model_features"]["relationships"]
             rel_supported = self.model._meta.model_name in relationships_registry.get(self.model._meta.app_label, {})
             if cf_supported or rel_supported:
                 query_params = []
@@ -202,7 +192,7 @@ class APIViewTestCases:
         filterset = None
 
         def get_filterset(self):
-            return self.filterset or get_filterset_for_model(self.model)
+            return self.filterset or utils.get_filterset_for_model(self.model)
 
         @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
         def test_list_objects_anonymous(self):
@@ -215,7 +205,7 @@ class APIViewTestCases:
                 self.model._meta.model_name,
             ) in settings.EXEMPT_EXCLUDE_MODELS:
                 # Models listed in EXEMPT_EXCLUDE_MODELS should not be accessible to anonymous users
-                with disable_warnings("django.request"):
+                with testing.disable_warnings("django.request"):
                     self.assertHttpStatus(self.client.get(url, **self.header), status.HTTP_403_FORBIDDEN)
             else:
                 # TODO FIXME: if we're passing **self.header, we are *by definition* **NOT** anonymous!!
@@ -238,7 +228,12 @@ class APIViewTestCases:
             self.assertIsInstance(response.data, dict)
             self.assertIn("results", response.data)
             self.assertEqual(len(response.data["results"]), self._get_queryset().count())
-            self.assertEqual(sorted(response.data["results"][0]), self.brief_fields)
+            self.assertEqual(
+                sorted(response.data["results"][0]),
+                self.brief_fields,
+                "In order to test the brief API parameter the brief fields need to be manually added to "
+                "self.brief_fields. If this is already the case, perhaps the serializer is implemented incorrectly?",
+            )
 
         @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
         def test_list_objects_without_permission(self):
@@ -248,7 +243,7 @@ class APIViewTestCases:
             url = self._get_list_url()
 
             # Try GET without permission
-            with disable_warnings("django.request"):
+            with testing.disable_warnings("django.request"):
                 self.assertHttpStatus(self.client.get(url, **self.header), status.HTTP_403_FORBIDDEN)
 
         @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
@@ -264,7 +259,7 @@ class APIViewTestCases:
             instance1, instance2 = self._get_queryset()[:2]
 
             # Add object-level permission
-            obj_perm = ObjectPermission(
+            obj_perm = users_models.ObjectPermission(
                 name="Test permission",
                 constraints={"pk__in": [instance1.pk, instance2.pk]},
                 actions=["view"],
@@ -306,7 +301,7 @@ class APIViewTestCases:
             GET a list of objects with an unknown filter parameter and strict filtering, expect a 400 response.
             """
             self.add_permissions(f"{self.model._meta.app_label}.view_{self.model._meta.model_name}")
-            with disable_warnings("django.request"):
+            with testing.disable_warnings("django.request"):
                 response = self.client.get(f"{self._get_list_url()}?ice_cream_flavor=rocky-road", **self.header)
             self.assertHttpStatus(response, status.HTTP_400_BAD_REQUEST)
             self.assertIsInstance(response.data, dict)
@@ -386,7 +381,7 @@ class APIViewTestCases:
             url = self._get_list_url()
 
             # Try POST without permission
-            with disable_warnings("django.request"):
+            with testing.disable_warnings("django.request"):
                 response = self.client.post(url, self.create_data[0], format="json", **self.header)
                 self.assertHttpStatus(response, status.HTTP_403_FORBIDDEN)
 
@@ -415,7 +410,7 @@ class APIViewTestCases:
             POST a single object with permission.
             """
             # Add object-level permission
-            obj_perm = ObjectPermission(name="Test permission", actions=["add"])
+            obj_perm = users_models.ObjectPermission(name="Test permission", actions=["add"])
             obj_perm.save()
             obj_perm.users.add(self.user)
             obj_perm.object_types.add(ContentType.objects.get_for_model(self.model))
@@ -439,16 +434,16 @@ class APIViewTestCases:
 
                 # Verify ObjectChange creation
                 if hasattr(self.model, "to_objectchange"):
-                    objectchanges = get_changes_for_model(instance)
+                    objectchanges = utils.get_changes_for_model(instance)
                     self.assertEqual(len(objectchanges), 1)
-                    self.assertEqual(objectchanges[0].action, ObjectChangeActionChoices.ACTION_CREATE)
+                    self.assertEqual(objectchanges[0].action, extras_choices.ObjectChangeActionChoices.ACTION_CREATE)
 
         def test_bulk_create_objects(self):
             """
             POST a set of objects in a single request.
             """
             # Add object-level permission
-            obj_perm = ObjectPermission(name="Test permission", actions=["add"])
+            obj_perm = users_models.ObjectPermission(name="Test permission", actions=["add"])
             obj_perm.save()
             obj_perm.users.add(self.user)
             obj_perm.object_types.add(ContentType.objects.get_for_model(self.model))
@@ -490,7 +485,7 @@ class APIViewTestCases:
             update_data = self.update_data or getattr(self, "create_data")[0]
 
             # Try PATCH without permission
-            with disable_warnings("django.request"):
+            with testing.disable_warnings("django.request"):
                 response = self.client.patch(url, update_data, format="json", **self.header)
                 self.assertHttpStatus(response, status.HTTP_403_FORBIDDEN)
 
@@ -503,7 +498,7 @@ class APIViewTestCases:
             update_data = self.update_data or getattr(self, "create_data")[0]
 
             # Add object-level permission
-            obj_perm = ObjectPermission(name="Test permission", actions=["change"])
+            obj_perm = users_models.ObjectPermission(name="Test permission", actions=["change"])
             obj_perm.save()
             obj_perm.users.add(self.user)
             obj_perm.object_types.add(ContentType.objects.get_for_model(self.model))
@@ -515,9 +510,9 @@ class APIViewTestCases:
 
             # Verify ObjectChange creation
             if hasattr(self.model, "to_objectchange"):
-                objectchanges = get_changes_for_model(instance)
+                objectchanges = utils.get_changes_for_model(instance)
                 self.assertEqual(len(objectchanges), 1)
-                self.assertEqual(objectchanges[0].action, ObjectChangeActionChoices.ACTION_UPDATE)
+                self.assertEqual(objectchanges[0].action, extras_choices.ObjectChangeActionChoices.ACTION_UPDATE)
 
         def test_bulk_update_objects(self):
             """
@@ -527,7 +522,7 @@ class APIViewTestCases:
                 self.skipTest("Bulk update data not set")
 
             # Add object-level permission
-            obj_perm = ObjectPermission(name="Test permission", actions=["change"])
+            obj_perm = users_models.ObjectPermission(name="Test permission", actions=["change"])
             obj_perm.save()
             obj_perm.users.add(self.user)
             obj_perm.object_types.add(ContentType.objects.get_for_model(self.model))
@@ -611,17 +606,46 @@ class APIViewTestCases:
             else:
                 self.fail(f"Neither PUT nor POST are available actions in: {data['actions']}")
 
-            self.assertEqual(set(self.choices_fields), field_choices)
+            self.assertEqual(
+                set(self.choices_fields),
+                field_choices,
+                "All field names of choice fields for a given model serializer need to be manually added to "
+                "self.choices_fields. If this is already the case, perhaps the serializer is implemented incorrectly?",
+            )
 
     class DeleteObjectViewTestCase(APITestCase):
+        def get_deletable_object(self):
+            """
+            Get an instance that can be deleted.
+
+            For some models this may just be any random object, but when we have FKs with `on_delete=models.PROTECT`
+            (as is often the case) we need to find or create an instance that doesn't have such entanglements.
+            """
+            instance = testing.get_deletable_objects(self.model, self._get_queryset()).first()
+            if instance is None:
+                self.fail("Couldn't find a single deletable object!")
+            return instance
+
+        def get_deletable_object_pks(self):
+            """
+            Get a list of PKs corresponding to objects that can be safely bulk-deleted.
+
+            For some models this may just be any random objects, but when we have FKs with `on_delete=models.PROTECT`
+            (as is often the case) we need to find or create an instance that doesn't have such entanglements.
+            """
+            instances = testing.get_deletable_objects(self.model, self._get_queryset()).values_list("pk", flat=True)[:3]
+            if len(instances) < 3:
+                self.fail(f"Couldn't find 3 deletable objects, only found {len(instances)}!")
+            return instances
+
         def test_delete_object_without_permission(self):
             """
             DELETE a single object without permission.
             """
-            url = self._get_detail_url(self._get_queryset().first())
+            url = self._get_detail_url(self.get_deletable_object())
 
             # Try DELETE without permission
-            with disable_warnings("django.request"):
+            with testing.disable_warnings("django.request"):
                 response = self.client.delete(url, **self.header)
                 self.assertHttpStatus(response, status.HTTP_403_FORBIDDEN)
 
@@ -629,11 +653,11 @@ class APIViewTestCases:
             """
             DELETE a single object identified by its primary key.
             """
-            instance = self._get_queryset().first()
+            instance = self.get_deletable_object()
             url = self._get_detail_url(instance)
 
             # Add object-level permission
-            obj_perm = ObjectPermission(name="Test permission", actions=["delete"])
+            obj_perm = users_models.ObjectPermission(name="Test permission", actions=["delete"])
             obj_perm.save()
             obj_perm.users.add(self.user)
             obj_perm.object_types.add(ContentType.objects.get_for_model(self.model))
@@ -644,26 +668,27 @@ class APIViewTestCases:
 
             # Verify ObjectChange creation
             if hasattr(self.model, "to_objectchange"):
-                objectchanges = get_changes_for_model(instance)
+                objectchanges = utils.get_changes_for_model(instance)
                 self.assertEqual(len(objectchanges), 1)
-                self.assertEqual(objectchanges[0].action, ObjectChangeActionChoices.ACTION_DELETE)
+                self.assertEqual(objectchanges[0].action, extras_choices.ObjectChangeActionChoices.ACTION_DELETE)
 
         def test_bulk_delete_objects(self):
             """
             DELETE a set of objects in a single request.
             """
+            id_list = self.get_deletable_object_pks()
             # Add object-level permission
-            obj_perm = ObjectPermission(name="Test permission", actions=["delete"])
+            obj_perm = users_models.ObjectPermission(name="Test permission", actions=["delete"])
             obj_perm.save()
             obj_perm.users.add(self.user)
             obj_perm.object_types.add(ContentType.objects.get_for_model(self.model))
 
-            id_list = self._get_queryset().values_list("id", flat=True)
             data = [{"id": id} for id in id_list]
 
+            initial_count = self._get_queryset().count()
             response = self.client.delete(self._get_list_url(), data, format="json", **self.header)
             self.assertHttpStatus(response, status.HTTP_204_NO_CONTENT)
-            self.assertEqual(self._get_queryset().count(), 0)
+            self.assertEqual(self._get_queryset().count(), initial_count - len(id_list))
 
     class NotesURLViewTestCase(APITestCase):
         """Validate Notes URL on objects that have the Note model Mixin."""
@@ -673,7 +698,7 @@ class APIViewTestCases:
             if hasattr(self.model, "notes"):
                 instance1 = self._get_queryset().first()
                 # Add object-level permission
-                obj_perm = ObjectPermission(
+                obj_perm = users_models.ObjectPermission(
                     name="Test permission",
                     constraints={"pk": instance1.pk},
                     actions=["view"],
@@ -699,7 +724,7 @@ class APIViewTestCases:
 
 
 @tag("unit")
-class APITransactionTestCase(_APITransactionTestCase, NautobotTestCaseMixin):
+class APITransactionTestCase(_APITransactionTestCase, mixins.NautobotTestCaseMixin):
     def setUp(self):
         """
         Create a superuser and token for API calls.
@@ -707,5 +732,5 @@ class APITransactionTestCase(_APITransactionTestCase, NautobotTestCaseMixin):
         super().setUpNautobot()
         self.user.is_superuser = True
         self.user.save()
-        self.token = Token.objects.create(user=self.user)
+        self.token = users_models.Token.objects.create(user=self.user)
         self.header = {"HTTP_AUTHORIZATION": f"Token {self.token.key}"}

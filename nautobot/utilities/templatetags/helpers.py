@@ -2,7 +2,6 @@ import datetime
 import json
 import re
 
-import yaml
 from django import template
 from django.conf import settings
 from django.contrib.staticfiles.finders import find
@@ -10,12 +9,12 @@ from django.templatetags.static import static, StaticNode
 from django.urls import NoReverseMatch, reverse
 from django.utils.html import format_html, strip_tags
 from django.utils.safestring import mark_safe
-from markdown import markdown
 from django_jinja import library
+from markdown import markdown
+import yaml
 
-from nautobot.utilities.config import get_settings_or_config
-from nautobot.utilities.forms import TableConfigForm
-from nautobot.utilities.utils import foreground_color, get_route_for_model, UtilizationData
+from nautobot.utilities import config, forms, utils
+
 
 HTML_TRUE = '<span class="text-success"><i class="mdi mdi-check-bold" title="Yes"></i></span>'
 HTML_FALSE = '<span class="text-danger"><i class="mdi mdi-close-thick" title="No"></i></span>'
@@ -31,10 +30,10 @@ register = template.Library()
 
 @library.filter()
 @register.filter()
-def hyperlinked_object(value):
+def hyperlinked_object(value, field="display"):
     """Render and link to a Django model instance, if any, or render a placeholder if not.
 
-    Uses `object.display` if available, otherwise uses the string representation of the object.
+    Uses the specified object field if available, otherwise uses the string representation of the object.
     If the object defines `get_absolute_url()` this will be used to hyperlink the displayed object;
     additionally if there is an `object.description` this will be used as the title of the hyperlink.
 
@@ -53,10 +52,14 @@ def hyperlinked_object(value):
         '<span class="text-muted">&mdash;</span>'
         >>> hyperlinked_object("Hello")
         'Hello'
+        >>> hyperlinked_object(location)
+        '<a href="/dcim/locations/leaf/">Root → Intermediate → Leaf</a>'
+        >>> hyperlinked_object(location, "name")
+        '<a href="/dcim/locations/leaf/">Leaf</a>'
     """
     if value is None:
         return placeholder(value)
-    display = value.display if hasattr(value, "display") else str(value)
+    display = getattr(value, field) if hasattr(value, field) else str(value)
     if hasattr(value, "get_absolute_url"):
         if hasattr(value, "description") and value.description:
             return format_html('<a href="{}" title="{}">{}</a>', value.get_absolute_url(), value.description, display)
@@ -84,6 +87,30 @@ def placeholder(value):
     if value:
         return value
     return mark_safe(HTML_NONE)
+
+
+@library.filter()
+@register.filter()
+def add_html_id(element_str, id_str):
+    """Add an HTML `id="..."` attribute to the given HTML element string.
+
+    Args:
+        element_str (str): String describing an HTML element.
+        id_str (str): String to add as the `id` attribute of the element_str.
+
+    Returns:
+        str: HTML string with added `id`.
+
+    Example:
+        >>> add_html_id("<div></div>", "my-div")
+        '<div id="my-div"></div>'
+        >>> add_html_id('<a href="..." title="...">Hello!</a>', "my-a")
+        '<a id="my-a" href="..." title="...">Hello!</a>'
+    """
+    match = re.match(r"^(.*?<\w+) ?(.*)$", element_str, flags=re.DOTALL)
+    if not match:
+        return element_str
+    return mark_safe(match.group(1) + format_html(' id="{}" ', id_str) + match.group(2))
 
 
 @library.filter()
@@ -194,7 +221,7 @@ def viewname(model, action):
         >>> viewname(Device, "list")
         "dcim:device_list"
     """
-    return get_route_for_model(model, action)
+    return utils.get_route_for_model(model, action)
 
 
 @library.filter()
@@ -210,7 +237,7 @@ def validated_viewname(model, action):
     Returns:
         str or None: return the name of the view for the model/action provided if valid, or None if invalid.
     """
-    viewname_str = get_route_for_model(model, action)
+    viewname_str = utils.get_route_for_model(model, action)
 
     try:
         # Validate and return the view name. We don't return the actual URL yet because many of the templates
@@ -292,7 +319,7 @@ def fgcolor(value):
     value = value.lower().strip("#")
     if not re.match("^[0-9a-f]{6}$", value):
         return ""
-    return f"#{foreground_color(value)}"
+    return f"#{utils.foreground_color(value)}"
 
 
 @library.filter()
@@ -466,7 +493,7 @@ def get_item(d, key):
 @register.filter()
 def settings_or_config(key):
     """Get a value from Django settings (if specified there) or Constance configuration (otherwise)."""
-    return get_settings_or_config(key)
+    return config.get_settings_or_config(key)
 
 
 @library.filter()
@@ -525,7 +552,7 @@ def utilization_graph(utilization_data, warning_threshold=75, danger_threshold=9
     # See https://github.com/nautobot/nautobot/issues/1169
     # If `get_utilization()` threw an exception, utilization_data will be an empty string
     # rather than a UtilizationData instance. Avoid a potentially confusing exception in that case.
-    if not isinstance(utilization_data, UtilizationData):
+    if not isinstance(utilization_data, utils.UtilizationData):
         return {}
     return utilization_graph_raw_data(
         numerator=utilization_data.numerator,
@@ -590,7 +617,24 @@ def badge(value, show_empty=False):
 def table_config_form(table, table_name=None):
     return {
         "table_name": table_name or table.__class__.__name__,
-        "table_config_form": TableConfigForm(table=table),
+        "table_config_form": forms.TableConfigForm(table=table),
+    }
+
+
+@register.inclusion_tag("utilities/templatetags/filter_form_modal.html")
+def filter_form_modal(
+    filter_form,
+    dynamic_filter_form,
+    model_plural_name,
+    filter_form_name="FilterForm",
+    dynamic_filter_form_name="DynamicFilterForm",
+):
+    return {
+        "model_plural_name": model_plural_name,
+        "filter_form": filter_form,
+        "filter_form_name": filter_form_name,
+        "dynamic_filter_form": dynamic_filter_form,
+        "dynamic_filter_form_name": dynamic_filter_form_name,
     }
 
 

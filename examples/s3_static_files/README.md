@@ -4,7 +4,7 @@ This example shows how you can configure Nautobot to host static files on AWS S3
 
 ## Installation
 
-Nautobot can use [`django-storages`](https://django-storages.readthedocs.io/en/stable/) to publish files to S3 -- see the [docs](https://nautobot.readthedocs.io/en/stable/installation/nautobot/#remote-file-storage) for more information.
+Nautobot can use [`django-storages`](https://django-storages.readthedocs.io/en/stable/) to publish files to S3 -- see the [docs](https://docs.nautobot.com/projects/core/en/stable/installation/nautobot/#remote-file-storage) for more information.
 
 TLDR:
 

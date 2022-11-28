@@ -1,9 +1,13 @@
+from contextlib import contextmanager
 import logging
 import re
-from contextlib import contextmanager
 
 from django.contrib.auth import get_user_model
 from django.contrib.auth.models import Permission
+from django.db.models import Q
+from django.db.models.deletion import PROTECT
+from mptt.models import TreeForeignKey
+from tree_queries.models import TreeNodeForeignKey
 
 
 # Use the proper swappable User model
@@ -19,6 +23,8 @@ def post_data(data):
     for key, value in data.items():
         if value is None:
             ret[key] = ""
+            ret.setdefault("_nullify", [])
+            ret["_nullify"].append(key)
         elif isinstance(value, (list, tuple)):
             if value and hasattr(value[0], "pk"):
                 # Value is a list of instances
@@ -89,3 +95,17 @@ def disable_warnings(logger_name):
     logger.setLevel(logging.ERROR)
     yield
     logger.setLevel(current_level)
+
+
+def get_deletable_objects(model, queryset):
+    """
+    Returns a queryset of objects in the supplied queryset that have no protected relationships that would prevent deletion.
+    """
+    q = Q()
+    for field in model._meta.get_fields(include_parents=True):
+        if getattr(field, "on_delete", None) is PROTECT:
+            q &= Q(**{f"{field.name}__isnull": True})
+        # Only delete leaf nodes of trees to reduce complexity
+        if isinstance(field, (TreeForeignKey, TreeNodeForeignKey)):
+            q &= Q(**{f"{field.related_query_name()}__isnull": True})
+    return queryset.filter(q)

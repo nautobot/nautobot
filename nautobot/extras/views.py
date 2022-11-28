@@ -3,7 +3,6 @@ from datetime import timedelta
 import logging
 
 from celery import chain
-from django import template
 from django.contrib import messages
 from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ObjectDoesNotExist
@@ -22,17 +21,17 @@ from django.template.loader import get_template, TemplateDoesNotExist
 from django_tables2 import RequestConfig
 from jsonschema.validators import Draft7Validator
 
-from nautobot.core.celery import app
 from nautobot.core.views import generic
 from nautobot.dcim.models import Device
 from nautobot.dcim.tables import DeviceTable
 from nautobot.extras.tasks import delete_custom_field_data
-from nautobot.extras.utils import get_job_content_type, get_worker_count
+from nautobot.extras.utils import get_base_template, get_job_content_type, get_worker_count
 from nautobot.utilities.paginator import EnhancedPaginator, get_paginate_count
 from nautobot.utilities.forms import restrict_form_fields
 from nautobot.utilities.utils import (
     copy_safe_request,
     count_related,
+    csv_format,
     get_table_for_model,
     prepare_cloned_fields,
     pretty_print_query,
@@ -63,6 +62,7 @@ from .models import (
     ImageAttachment,
     Job as JobModel,
     JobHook,
+    JobLogEntry,
     ObjectChange,
     JobResult,
     Relationship,
@@ -270,6 +270,7 @@ class ConfigContextSchemaObjectValidationView(generic.ObjectView):
 
         # Device table
         device_table = DeviceTable(
+            # v2 TODO(jathan): Replace prefetch_related with select_related
             data=instance.device_set.prefetch_related(
                 "tenant", "site", "rack", "device_type", "device_role", "primary_ip"
             ),
@@ -290,6 +291,7 @@ class ConfigContextSchemaObjectValidationView(generic.ObjectView):
 
         # Virtual machine table
         virtual_machine_table = VirtualMachineTable(
+            # v2 TODO(jathan): Replace prefetch_related with select_related
             data=instance.virtualmachine_set.prefetch_related("cluster", "role", "tenant", "primary_ip"),
             orderable=False,
             extra_columns=[
@@ -474,7 +476,7 @@ class CustomFieldBulkDeleteView(generic.BulkDeleteView):
         """
         Remove all Custom Field Keys/Values from _custom_field_data of the related ContentType in the background.
         """
-        if not get_worker_count(request):
+        if not get_worker_count():
             messages.error(
                 request, "Celery worker process not running. Object custom fields may fail to reflect this deletion."
             )
@@ -702,6 +704,48 @@ class DynamicGroupBulkDeleteView(generic.BulkDeleteView):
     table = tables.DynamicGroupTable
 
 
+class ObjectDynamicGroupsView(View):
+    """
+    Present a list of dynamic groups associated to a particular object.
+    base_template: The name of the template to extend. If not provided, "<app>/<model>.html" will be used.
+    """
+
+    base_template = None
+
+    def get(self, request, model, **kwargs):
+
+        # Handle QuerySet restriction of parent object if needed
+        if hasattr(model.objects, "restrict"):
+            obj = get_object_or_404(model.objects.restrict(request.user, "view"), **kwargs)
+        else:
+            obj = get_object_or_404(model, **kwargs)
+
+        # Gather all dynamic groups for this object (and its related objects)
+        dynamicsgroups_table = tables.DynamicGroupTable(data=obj.dynamic_groups, orderable=False)
+
+        # Apply the request context
+        paginate = {
+            "paginator_class": EnhancedPaginator,
+            "per_page": get_paginate_count(request),
+        }
+        RequestConfig(request, paginate).configure(dynamicsgroups_table)
+
+        self.base_template = get_base_template(self.base_template, model)
+
+        return render(
+            request,
+            "extras/object_dynamicgroups.html",
+            {
+                "object": obj,
+                "verbose_name": obj._meta.verbose_name,
+                "verbose_name_plural": obj._meta.verbose_name_plural,
+                "table": dynamicsgroups_table,
+                "base_template": self.base_template,
+                "active_tab": "dynamic-groups",
+            },
+        )
+
+
 #
 # Export Templates
 #
@@ -807,6 +851,7 @@ class GitRepositoryBulkImportView(generic.BulkImportView):
 
 
 class GitRepositoryBulkEditView(generic.BulkEditView):
+    # v2 TODO(jathan): Replace prefetch_related with select_related
     queryset = GitRepository.objects.prefetch_related("secrets_group")
     filterset = filters.GitRepositoryFilterSet
     table = tables.GitRepositoryBulkTable
@@ -846,7 +891,7 @@ def check_and_call_git_repository_function(request, slug, func):
         return HttpResponseForbidden()
 
     # Allow execution only if a worker process is running.
-    if not get_worker_count(request):
+    if not get_worker_count():
         messages.error(request, "Unable to run job: Celery worker process not running.")
     else:
         repository = get_object_or_404(GitRepository, slug=slug)
@@ -993,6 +1038,7 @@ class JobListView(generic.ObjectListView):
             queryset = queryset.filter(installed=True)
         if "is_job_hook_receiver" not in request.GET:
             queryset = queryset.filter(is_job_hook_receiver=False)
+        # v2 TODO(jathan): Replace prefetch_related with select_related
         queryset = queryset.prefetch_related("results")
         return queryset
 
@@ -1040,6 +1086,9 @@ class JobView(ObjectPermissionRequiredMixin, View):
                 commit = job_result.job_kwargs.get("commit")
                 if commit is not None:
                     initial.setdefault("_commit", commit)
+                task_queue = job_result.job_kwargs.get("task_queue")
+                if task_queue is not None:
+                    initial.setdefault("_task_queue", task_queue)
                 initial.update(explicit_initial)
             except JobResult.DoesNotExist:
                 messages.warning(request, f"JobResult {job_result_pk} not found, cannot use it to pre-populate inputs.")
@@ -1077,11 +1126,10 @@ class JobView(ObjectPermissionRequiredMixin, View):
             job_model.job_class().as_form(request.POST, request.FILES) if job_model.job_class is not None else None
         )
         schedule_form = forms.JobScheduleForm(request.POST)
-        # TODO: add form field for celery queue name, move default value to form field
-        celery_queue = app.conf.task_default_queue
+        task_queue = request.POST.get("_task_queue")
 
         # Allow execution only if a worker process is running and the job is runnable.
-        if not get_worker_count(request, queue=celery_queue):
+        if not get_worker_count(queue=task_queue):
             messages.error(request, "Unable to run or schedule job: Celery worker process not running.")
         elif not job_model.installed or job_model.job_class is None:
             messages.error(request, "Unable to run or schedule job: Job is not presently installed.")
@@ -1089,6 +1137,13 @@ class JobView(ObjectPermissionRequiredMixin, View):
             messages.error(request, "Unable to run or schedule job: Job is not enabled to be run.")
         elif job_model.has_sensitive_variables and request.POST["_schedule_type"] != JobExecutionType.TYPE_IMMEDIATELY:
             messages.error(request, "Unable to schedule job: Job may have sensitive input variables.")
+        elif job_model.has_sensitive_variables and job_model.approval_required:
+            messages.error(
+                request,
+                "Unable to run or schedule job: "
+                "This job is flagged as possibly having sensitive variables but is also flagged as requiring approval."
+                "One of these two flags must be removed before this job can be scheduled or run.",
+            )
         elif job_form is not None and job_form.is_valid() and schedule_form.is_valid():
             # Run the job. A new JobResult is created.
             commit = job_form.cleaned_data.pop("_commit")
@@ -1126,8 +1181,10 @@ class JobView(ObjectPermissionRequiredMixin, View):
                     "user": request.user.pk,
                     "commit": commit,
                     "name": job_model.class_path,
-                    "celery_kwargs": {"queue": celery_queue},
+                    "task_queue": job_form.cleaned_data.get("_task_queue", None),
                 }
+                if task_queue:
+                    job_kwargs["celery_kwargs"] = {"queue": task_queue}
 
                 scheduled_job = ScheduledJob(
                     name=schedule_name,
@@ -1139,7 +1196,7 @@ class JobView(ObjectPermissionRequiredMixin, View):
                     kwargs=job_kwargs,
                     interval=schedule_type,
                     one_off=schedule_type == JobExecutionType.TYPE_FUTURE,
-                    queue=celery_queue,
+                    queue=task_queue,
                     user=request.user,
                     approval_required=job_model.approval_required,
                     crontab=crontab,
@@ -1161,13 +1218,14 @@ class JobView(ObjectPermissionRequiredMixin, View):
                     job_model.class_path,
                     job_content_type,
                     request.user,
-                    celery_kwargs={"queue": celery_queue},
+                    celery_kwargs={"queue": task_queue},
                     data=job_model.job_class.serialize_data(job_form.cleaned_data),
                     request=copy_safe_request(request),
                     commit=commit,
+                    task_queue=job_form.cleaned_data.get("_task_queue", None),
                 )
 
-                return redirect("extras:job_jobresult", pk=job_result.pk)
+                return redirect("extras:jobresult", pk=job_result.pk)
 
         template_name = "extras/job.html"
         if job_model.job_class is not None and hasattr(job_model.job_class, "template_name"):
@@ -1273,20 +1331,20 @@ class JobApprovalRequestView(generic.ObjectView):
                 job_content_type = get_job_content_type()
                 initial = scheduled_job.kwargs.get("data", {})
                 initial["_commit"] = False
-                # TODO: add form field for celery queue name, move default value to form field
-                celery_queue = app.conf.task_default_queue
+                celery_kwargs = scheduled_job.kwargs.get("celery_kwargs", {})
                 job_result = JobResult.enqueue_job(
                     run_job,
                     job_model.job_class.class_path,
                     job_content_type,
                     request.user,
-                    celery_kwargs={"queue": celery_queue},
+                    celery_kwargs=celery_kwargs,
                     data=job_model.job_class.serialize_data(initial),
                     request=copy_safe_request(request),
                     commit=False,  # force a dry-run
+                    task_queue=scheduled_job.kwargs.get("task_queue", None),
                 )
 
-                return redirect("extras:job_jobresult", pk=job_result.pk)
+                return redirect("extras:jobresult", pk=job_result.pk)
         elif deny:
             if not (
                 self.queryset.check_perms(request.user, instance=scheduled_job, action="delete")
@@ -1363,22 +1421,17 @@ class ScheduledJobApprovalQueueListView(generic.ObjectListView):
 class ScheduledJobView(generic.ObjectView):
     queryset = ScheduledJob.objects.all()
 
-    def _get_job(self, class_path):
-        job_class = get_job(class_path)
-        if job_class is None:
-            raise Http404
-        return job_class
-
     def get_extra_context(self, request, instance):
-        job_class = self._get_job(instance.job_class)
+        job_class = get_job(instance.job_class)
         labels = {}
-        for name, var in job_class._get_vars().items():
-            field = var.as_field()
-            if field.label:
-                labels[name] = var
-            else:
-                labels[name] = pretty_name(name)
-        return {"labels": labels}
+        if job_class is not None:
+            for name, var in job_class._get_vars().items():
+                field = var.as_field()
+                if field.label:
+                    labels[name] = var
+                else:
+                    labels[name] = pretty_name(name)
+        return {"labels": labels, "job_class_found": (job_class is not None)}
 
 
 class ScheduledJobDeleteView(generic.ObjectDeleteView):
@@ -1429,6 +1482,7 @@ class JobResultListView(generic.ObjectListView):
     List JobResults
     """
 
+    # v2 TODO(jathan): Replace prefetch_related with select_related
     queryset = JobResult.objects.prefetch_related("job_model", "logs", "obj_type", "user")
     filterset = filters.JobResultFilterSet
     filterset_form = forms.JobResultFilterForm
@@ -1450,8 +1504,36 @@ class JobResultView(generic.ObjectView):
     Display a JobResult and its Job data.
     """
 
-    queryset = JobResult.objects.all()
+    queryset = JobResult.objects.prefetch_related("job_model", "obj_type", "user")
     template_name = "extras/jobresult.html"
+
+    def instance_to_csv(self, instance):
+        """Format instance to csv."""
+        csv_data = []
+        headers = JobLogEntry.csv_headers.copy()
+        csv_data.append(",".join(headers))
+
+        for log_entry in instance.logs.all():
+            data = log_entry.to_csv()
+            csv_data.append(csv_format(data))
+
+        return "\n".join(csv_data)
+
+    def get(self, request, *args, **kwargs):
+        """
+        Generic GET handler for accessing an object by PK or slug
+        """
+        instance = get_object_or_404(self.queryset, **kwargs)
+
+        if "export" in request.GET:
+            response = HttpResponse(self.instance_to_csv(instance), content_type="text/csv")
+            underscore_filename = f"{instance.job_model.slug.replace('-', '_')}"
+            formated_completion_time = instance.completed.strftime("%Y-%m-%d_%H_%M")
+            filename = f"{underscore_filename}_{formated_completion_time}_logs.csv"
+            response["Content-Disposition"] = f"attachment; filename={filename}"
+            return response
+
+        return super().get(request, *args, **kwargs)
 
     def get_extra_context(self, request, instance):
         associated_record = None
@@ -1557,6 +1639,7 @@ class ObjectChangeLogView(View):
 
         # Gather all changes for this object (and its related objects)
         content_type = ContentType.objects.get_for_model(model)
+        # v2 TODO(jathan): Replace prefetch_related with select_related
         objectchanges = (
             ObjectChange.objects.restrict(request.user, "view")
             .prefetch_related("user", "changed_object_type")
@@ -1574,15 +1657,7 @@ class ObjectChangeLogView(View):
         }
         RequestConfig(request, paginate).configure(objectchanges_table)
 
-        # Default to using "<app>/<model>.html" as the template, if it exists. Otherwise,
-        # fall back to using base.html.
-        if self.base_template is None:
-            self.base_template = f"{model._meta.app_label}/{model._meta.model_name}.html"
-            # TODO: This can be removed once an object view has been established for every model.
-            try:
-                template.loader.get_template(self.base_template)
-            except template.TemplateDoesNotExist:
-                self.base_template = "base.html"
+        self.base_template = get_base_template(self.base_template, model)
 
         return render(
             request,
@@ -1651,15 +1726,7 @@ class ObjectNotesView(View):
         }
         RequestConfig(request, paginate).configure(notes_table)
 
-        # Default to using "<app>/<model>.html" as the template, if it exists. Otherwise,
-        # fall back to using base.html.
-        if self.base_template is None:
-            self.base_template = f"{model._meta.app_label}/{model._meta.model_name}.html"
-            # TODO: This can be removed once an object view has been established for every model.
-            try:
-                template.loader.get_template(self.base_template)
-            except template.TemplateDoesNotExist:
-                self.base_template = "base.html"
+        self.base_template = get_base_template(self.base_template, model)
 
         return render(
             request,
@@ -1997,6 +2064,7 @@ class TagView(generic.ObjectView):
     queryset = Tag.objects.all()
 
     def get_extra_context(self, request, instance):
+        # v2 TODO(jathan): Replace prefetch_related with select_related
         tagged_items = TaggedItem.objects.filter(tag=instance).prefetch_related("content_type", "content_object")
 
         # Generate a table of all items tagged with this Tag
@@ -2073,3 +2141,18 @@ class WebhookDeleteView(generic.ObjectDeleteView):
 class WebhookBulkDeleteView(generic.BulkDeleteView):
     queryset = Webhook.objects.all()
     table = tables.WebhookTable
+
+
+#
+# Job Extra Views
+#
+# NOTE: Due to inheritance, JobObjectChangeLogView and JobObjectNotesView can only be
+# constructed below # ObjectChangeLogView and ObjectNotesView.
+
+
+class JobObjectChangeLogView(ObjectChangeLogView):
+    base_template = "extras/job_detail.html"
+
+
+class JobObjectNotesView(ObjectNotesView):
+    base_template = "extras/job_detail.html"

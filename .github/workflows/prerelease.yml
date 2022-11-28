@@ -47,6 +47,7 @@ jobs:
           password: "${{ secrets.PYPI_API_TOKEN }}"
 
   publish_containers:
+    name: "Build & Publish Container Images"
     runs-on: "ubuntu-20.04"
     needs:
       - "ci"
@@ -61,8 +62,6 @@ jobs:
         uses: "actions/checkout@v2"
       - run: echo "##[set-output name=branch;]$(echo ${GITHUB_REF#refs/heads/})"
         id: "gitbranch"
-      - run: echo "##[set-output name=version;]$(egrep -m1 'file.*pyuwsgi-' poetry.lock | cut -f2 -d-)"
-        id: "pyuwsgi"
       - name: "Set up QEMU"
         uses: "docker/setup-qemu-action@v1"
       - name: "Set up Docker Buildx"
@@ -104,7 +103,6 @@ jobs:
           context: "."
           build-args: |
             PYTHON_VER=${{ matrix.python-version }}
-            PYUWSGI_VER=${{ steps.pyuwsgi.outputs.version }}
             POETRY_PARALLEL=false
       - name: "Docker Dev Metadata"
         id: "dockerdevmeta"
@@ -132,7 +130,6 @@ jobs:
           context: "."
           build-args: |
             PYTHON_VER=${{ matrix.python-version }}
-            PYUWSGI_VER=${{ steps.pyuwsgi.outputs.version }}
             POETRY_PARALLEL=false
 
   slack-notify:

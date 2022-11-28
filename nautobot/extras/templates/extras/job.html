@@ -35,6 +35,13 @@
                             You do not have permission to run jobs.
                         </div>
                     {% endif %}
+                    {% if job_model.has_sensitive_variables and job_model.approval_required %}
+                        <div class="alert alert-danger">
+                            <i class="mdi mdi-alert"></i>
+                            This job is flagged as possibly having sensitive variables but is also flagged as requiring approval.
+                            One of these two flags must be removed before this job can be run.
+                        </div>
+                    {% endif %}
                     {% if not job_model.installed or job_model.job_class is None %}
                         <div class="alert alert-warning">
                             <i class="mdi mdi-alert"></i> This job is not presently installed and cannot be run.

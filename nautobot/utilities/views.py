@@ -1,11 +1,10 @@
-from django.conf import settings
 from django.contrib.auth.mixins import AccessMixin
 from django.core.exceptions import ImproperlyConfigured
 from django.urls import reverse
 from django.urls.exceptions import NoReverseMatch
 from django.utils.http import is_safe_url
 
-from .permissions import resolve_permission
+from nautobot.utilities import permissions, utils
 
 
 #
@@ -93,7 +92,7 @@ class ObjectPermissionRequiredMixin(AccessMixin):
         if user.has_perms((permission_required, *self.additional_permissions)):
 
             # Update the view's QuerySet to filter only the permitted objects
-            action = resolve_permission(permission_required)[1]
+            action = permissions.resolve_permission(permission_required)[1]
             self.queryset = self.queryset.restrict(user, action)
 
             return True
@@ -144,10 +143,8 @@ class GetReturnURLMixin:
 
         # Attempt to dynamically resolve the list view for the object
         if hasattr(self, "queryset"):
-            model_opts = self.queryset.model._meta
             try:
-                prefix = "plugins:" if model_opts.app_label in settings.PLUGINS else ""
-                return reverse(f"{prefix}{model_opts.app_label}:{model_opts.model_name}_list")
+                return reverse(utils.get_route_for_model(self.queryset.model, "list"))
             except NoReverseMatch:
                 pass
 

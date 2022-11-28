@@ -1,5 +1,3 @@
-import django_tables2 as tables
-from django.conf import settings
 from django.contrib.auth.models import AnonymousUser
 from django.contrib.contenttypes.fields import GenericForeignKey
 from django.contrib.contenttypes.models import ContentType
@@ -9,16 +7,16 @@ from django.urls import reverse
 from django.utils.html import escape, format_html
 from django.utils.safestring import mark_safe
 from django.utils.text import Truncator
+import django_tables2
 from django_tables2.data import TableQuerysetData
 from django_tables2.utils import Accessor
 
-from nautobot.extras.models import ComputedField, CustomField, Relationship
-from nautobot.extras.choices import CustomFieldTypeChoices, RelationshipSideChoices
+from nautobot.extras import choices, models
+from nautobot.utilities import utils
+from nautobot.utilities.templatetags import helpers
 
-from .templatetags.helpers import render_boolean
 
-
-class BaseTable(tables.Table):
+class BaseTable(django_tables2.Table):
     """
     Default table for object lists
 
@@ -34,27 +32,27 @@ class BaseTable(tables.Table):
         # Add custom field columns
         obj_type = ContentType.objects.get_for_model(self._meta.model)
 
-        for cf in CustomField.objects.filter(content_types=obj_type):
+        for cf in models.CustomField.objects.filter(content_types=obj_type):
             name = f"cf_{cf.slug}"
             self.base_columns[name] = CustomFieldColumn(cf)
 
-        for cpf in ComputedField.objects.filter(content_type=obj_type):
+        for cpf in models.ComputedField.objects.filter(content_type=obj_type):
             self.base_columns[f"cpf_{cpf.slug}"] = ComputedFieldColumn(cpf)
 
-        for relationship in Relationship.objects.filter(source_type=obj_type):
+        for relationship in models.Relationship.objects.filter(source_type=obj_type):
             if not relationship.symmetric:
                 self.base_columns[f"cr_{relationship.slug}_src"] = RelationshipColumn(
-                    relationship, side=RelationshipSideChoices.SIDE_SOURCE
+                    relationship, side=choices.RelationshipSideChoices.SIDE_SOURCE
                 )
             else:
                 self.base_columns[f"cr_{relationship.slug}_peer"] = RelationshipColumn(
-                    relationship, side=RelationshipSideChoices.SIDE_PEER
+                    relationship, side=choices.RelationshipSideChoices.SIDE_PEER
                 )
 
-        for relationship in Relationship.objects.filter(destination_type=obj_type):
+        for relationship in models.Relationship.objects.filter(destination_type=obj_type):
             if not relationship.symmetric:
                 self.base_columns[f"cr_{relationship.slug}_dst"] = RelationshipColumn(
-                    relationship, side=RelationshipSideChoices.SIDE_DESTINATION
+                    relationship, side=choices.RelationshipSideChoices.SIDE_DESTINATION
                 )
             # symmetric relationships are already handled above in the source_type case
 
@@ -98,6 +96,7 @@ class BaseTable(tables.Table):
 
         # Dynamically update the table's QuerySet to ensure related fields are pre-fetched
         if isinstance(self.data, TableQuerysetData):
+            # v2 TODO(jathan): Replace prefetch_related with select_related
             prefetch_fields = []
             for column in self.columns:
                 if column.visible:
@@ -143,7 +142,7 @@ class BaseTable(tables.Table):
 #
 
 
-class ToggleColumn(tables.CheckBoxColumn):
+class ToggleColumn(django_tables2.CheckBoxColumn):
     """
     Extend CheckBoxColumn to add a "toggle all" checkbox in the column header.
     """
@@ -160,17 +159,17 @@ class ToggleColumn(tables.CheckBoxColumn):
         return mark_safe('<input type="checkbox" class="toggle" title="Toggle all" />')
 
 
-class BooleanColumn(tables.Column):
+class BooleanColumn(django_tables2.Column):
     """
     Custom implementation of BooleanColumn to render a nicely-formatted checkmark or X icon instead of a Unicode
     character.
     """
 
     def render(self, value):
-        return render_boolean(value)
+        return helpers.render_boolean(value)
 
 
-class ButtonsColumn(tables.TemplateColumn):
+class ButtonsColumn(django_tables2.TemplateColumn):
     """
     Render edit, delete, and changelog buttons for an object.
 
@@ -184,17 +183,17 @@ class ButtonsColumn(tables.TemplateColumn):
     # Note that braces are escaped to allow for string formatting prior to template rendering
     template_code = """
     {{% if "changelog" in buttons %}}
-        <a href="{{% url '{prefix}{app_label}:{model_name}_changelog' {pk_field}=record.{pk_field} %}}" class="btn btn-default btn-xs" title="Change log">
+        <a href="{{% url '{changelog_route}' {pk_field}=record.{pk_field} %}}" class="btn btn-default btn-xs" title="Change log">
             <i class="mdi mdi-history"></i>
         </a>
     {{% endif %}}
     {{% if "edit" in buttons and perms.{app_label}.change_{model_name} %}}
-        <a href="{{% url '{prefix}{app_label}:{model_name}_edit' {pk_field}=record.{pk_field} %}}?return_url={{{{ request.path }}}}{{{{ return_url_extra }}}}" class="btn btn-xs btn-warning" title="Edit">
+        <a href="{{% url '{edit_route}' {pk_field}=record.{pk_field} %}}?return_url={{{{ request.path }}}}{{{{ return_url_extra }}}}" class="btn btn-xs btn-warning" title="Edit">
             <i class="mdi mdi-pencil"></i>
         </a>
     {{% endif %}}
     {{% if "delete" in buttons and perms.{app_label}.delete_{model_name} %}}
-        <a href="{{% url '{prefix}{app_label}:{model_name}_delete' {pk_field}=record.{pk_field} %}}?return_url={{{{ request.path }}}}{{{{ return_url_extra }}}}" class="btn btn-xs btn-danger" title="Delete">
+        <a href="{{% url '{delete_route}' {pk_field}=record.{pk_field} %}}?return_url={{{{ request.path }}}}{{{{ return_url_extra }}}}" class="btn btn-xs btn-danger" title="Delete">
             <i class="mdi mdi-trash-can-outline"></i>
         </a>
     {{% endif %}}
@@ -216,12 +215,16 @@ class ButtonsColumn(tables.TemplateColumn):
             self.template_code = prepend_template + self.template_code
 
         app_label = model._meta.app_label
-        prefix = "plugins:" if app_label in settings.PLUGINS else ""
+        changelog_route = utils.get_route_for_model(model, "changelog")
+        edit_route = utils.get_route_for_model(model, "edit")
+        delete_route = utils.get_route_for_model(model, "delete")
 
         template_code = self.template_code.format(
-            prefix=prefix,
             app_label=app_label,
             model_name=model._meta.model_name,
+            changelog_route=changelog_route,
+            edit_route=edit_route,
+            delete_route=delete_route,
             pk_field=pk_field,
             buttons=buttons,
         )
@@ -239,7 +242,7 @@ class ButtonsColumn(tables.TemplateColumn):
         return ""
 
 
-class ChoiceFieldColumn(tables.Column):
+class ChoiceFieldColumn(django_tables2.Column):
     """
     Render a ChoiceField value inside a <span> indicating a particular CSS class. This is useful for displaying colored
     choices. The CSS class is derived by calling .get_FOO_class() on the row record.
@@ -254,7 +257,7 @@ class ChoiceFieldColumn(tables.Column):
         return self.default
 
 
-class ColorColumn(tables.Column):
+class ColorColumn(django_tables2.Column):
     """
     Display a color (#RRGGBB).
     """
@@ -263,7 +266,7 @@ class ColorColumn(tables.Column):
         return mark_safe(f'<span class="label color-block" style="background-color: #{value}">&nbsp;</span>')
 
 
-class ColoredLabelColumn(tables.TemplateColumn):
+class ColoredLabelColumn(django_tables2.TemplateColumn):
     """
     Render a colored label (e.g. for DeviceRoles).
     """
@@ -277,7 +280,7 @@ class ColoredLabelColumn(tables.TemplateColumn):
         super().__init__(template_code=self.template_code, *args, **kwargs)
 
 
-class LinkedCountColumn(tables.Column):
+class LinkedCountColumn(django_tables2.Column):
     """
     Render a count of related objects linked to a filtered URL.
 
@@ -301,7 +304,7 @@ class LinkedCountColumn(tables.Column):
         return value
 
 
-class TagColumn(tables.TemplateColumn):
+class TagColumn(django_tables2.TemplateColumn):
     """
     Display a list of tags assigned to the object.
     """
@@ -318,7 +321,7 @@ class TagColumn(tables.TemplateColumn):
         super().__init__(template_code=self.template_code, extra_context={"url_name": url_name})
 
 
-class ContentTypesColumn(tables.ManyToManyColumn):
+class ContentTypesColumn(django_tables2.ManyToManyColumn):
     """
     Display a list of `content_types` m2m assigned to an object.
 
@@ -351,7 +354,7 @@ class ContentTypesColumn(tables.ManyToManyColumn):
         return value
 
 
-class ComputedFieldColumn(tables.Column):
+class ComputedFieldColumn(django_tables2.Column):
     """
     Display computed fields in the appropriate format.
     """
@@ -366,10 +369,13 @@ class ComputedFieldColumn(tables.Column):
         return self.computedfield.render({"obj": record})
 
 
-class CustomFieldColumn(tables.Column):
+class CustomFieldColumn(django_tables2.Column):
     """
     Display custom fields in the appropriate format.
     """
+
+    # Add [] to empty_values so when there is no choice populated for multiselect_cf i.e. [], "—" is returned automatically.
+    empty_values = (None, "", [])
 
     def __init__(self, customfield, *args, **kwargs):
         self.customfield = customfield
@@ -380,20 +386,15 @@ class CustomFieldColumn(tables.Column):
         super().__init__(*args, **kwargs)
 
     def render(self, record, bound_column, value):  # pylint: disable=arguments-differ
-        if value is None:
-            return self.default
-
         template = ""
-        if self.customfield.type == CustomFieldTypeChoices.TYPE_BOOLEAN:
-            template = render_boolean(value)
-        elif self.customfield.type == CustomFieldTypeChoices.TYPE_MULTISELECT:
-            if not value:
-                return self.default
+        if self.customfield.type == choices.CustomFieldTypeChoices.TYPE_BOOLEAN:
+            template = helpers.render_boolean(value)
+        elif self.customfield.type == choices.CustomFieldTypeChoices.TYPE_MULTISELECT:
             for v in value:
                 template += format_html('<span class="label label-default">{}</span> ', v)
-        elif self.customfield.type == CustomFieldTypeChoices.TYPE_SELECT:
+        elif self.customfield.type == choices.CustomFieldTypeChoices.TYPE_SELECT:
             template = format_html('<span class="label label-default">{}</span>', value)
-        elif self.customfield.type == CustomFieldTypeChoices.TYPE_URL:
+        elif self.customfield.type == choices.CustomFieldTypeChoices.TYPE_URL:
             template = format_html('<a href="{}">{}</a>', value, value)
         else:
             template = escape(value)
@@ -401,38 +402,37 @@ class CustomFieldColumn(tables.Column):
         return mark_safe(template)
 
 
-class RelationshipColumn(tables.Column):
+class RelationshipColumn(django_tables2.Column):
     """
     Display relationship association instances in the appropriate format.
     """
 
+    # Add [] to empty_values so when there is no relationship associations i.e. [], "—" is returned automatically.
+    empty_values = (None, "", [])
+
     def __init__(self, relationship, side, *args, **kwargs):
         self.relationship = relationship
         self.side = side
-        self.peer_side = RelationshipSideChoices.OPPOSITE[side]
+        self.peer_side = choices.RelationshipSideChoices.OPPOSITE[side]
         kwargs.setdefault("verbose_name", relationship.get_label(side))
         kwargs.setdefault("accessor", Accessor("associations"))
         super().__init__(orderable=False, *args, **kwargs)
 
     def render(self, record, value):  # pylint: disable=arguments-differ
-        if value is None:
-            # This returns None if value is None
-            return self.default
-
         # Filter the relationship associations by the relationship instance.
         # Since associations accessor returns all the relationship associations regardless of the relationship.
         value = [v for v in value if v.relationship == self.relationship]
         if not self.relationship.symmetric:
-            if self.side == RelationshipSideChoices.SIDE_SOURCE:
+            if self.side == choices.RelationshipSideChoices.SIDE_SOURCE:
                 value = [v for v in value if v.source_id == record.id]
             else:
                 value = [v for v in value if v.destination_id == record.id]
 
         template = ""
         # Handle Symmetric Relationships
+        # List `value` could be empty here [] after the filtering from above
         if len(value) < 1:
-            # If no relationship association, render None
-            return self.default
+            return "—"
         else:
             # Handle Relationships on the many side.
             if self.relationship.has_many(self.peer_side):

@@ -129,10 +129,9 @@ nautobot=> \q
 
 ### `dumpdata`
 
-<!-- markdownlint-disable MD036 -->
-_Changed in version 1.3.0: `extras.job` should now be included (removed `--exclude extras.job`)_
-_Changed in version 1.3.0: `django_rq` should now be excluded (add `--exclude django_rq`)_
- <!-- markdownlint-enable MD036 -->
++/- 1.3.0
+    - `extras.job` should now be included in the dump (removed `--exclude extras.job` from the example usage)
+    - `django_rq` should now be excluded from the dump (added `--exclude django_rq` to the example usage)
 
 ```no-highlight
 $ nautobot-server dumpdata \
@@ -177,6 +176,40 @@ Generates a new [`SECRET_KEY`](../configuration/required-settings.md#secret_key)
 ```no-highlight
 $ nautobot-server generate_secret_key
 e!j=vrlhz-!wl8p_3+q5s5cph29nzj$xm81eap-!&n!_9^du09
+```
+
+### `generate_test_data`
+
++++ 1.5.0
+
+`nautobot-server generate_test_data [--flush] --seed SEED`
+
+Populate the database with various data as a baseline for testing (automated or manual).
+
+`--flush`  
+Flush any existing data from the database before generating new data.
+
+!!! danger
+    Running this command with the `--flush` argument will clear all existing data in your database. You have been warned.
+
+`--seed SEED`  
+String to use as a random generator seed for reproducible results.
+
+```no-highlight
+$ nautobot-server generate_test_data --flush --seed "Nautobot"
+Flushing all existing data from the database...
+Seeding the pseudo-random number generator with seed "Nautobot"...
+Creating Statuses...
+Creating TenantGroups...
+Creating Tenants...
+Creating RIRs...
+Creating Aggregates...
+Creating RouteTargets...
+Creating VRFs...
+Creating IP/VLAN Roles...
+Creating VLANGroups...
+Creating VLANs...
+Database populated successfully!
 ```
 
 ### `health_check`
@@ -339,6 +372,8 @@ Invalidating cache...
 ```
 
 ### `remove_stale_scheduled_jobs`
+
++++ 1.3.10
 
 `nautobot-server remove_stale_scheduled_jobs [max-age of days]`
 

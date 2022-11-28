@@ -18,10 +18,7 @@ class NoteModelTest(TestCase):
 
         user = User.objects.first()
 
-        cls.sites = [
-            Site.objects.create(name="Site 1", slug="site-1"),
-            Site.objects.create(name="Site 2", slug="site-2"),
-        ]
+        cls.sites = Site.objects.all()[:2]
 
         Note.objects.create(
             note="Site has been placed on **maintenance**.",

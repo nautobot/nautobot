@@ -1,6 +1,6 @@
 from django.test import TestCase
 
-from nautobot.dcim.models import Site
+from nautobot.dcim import models
 
 
 class NaturalOrderByManagerTest(TestCase):
@@ -14,15 +14,15 @@ class NaturalOrderByManagerTest(TestCase):
     def evaluate_ordering(self, names):
 
         # Create the Sites
-        Site.objects.bulk_create(Site(name=name, slug=name.lower()) for name in names)
+        models.Site.objects.bulk_create(models.Site(name=name, slug=name.lower()) for name in names)
 
         # Validate forward ordering
-        self.assertEqual(names, list(Site.objects.values_list("name", flat=True)))
+        self.assertEqual(names, list(models.Site.objects.filter(name__in=names).values_list("name", flat=True)))
 
         # Validate reverse ordering
         self.assertEqual(
             list(reversed(names)),
-            list(Site.objects.reverse().values_list("name", flat=True)),
+            list(models.Site.objects.filter(name__in=names).reverse().values_list("name", flat=True)),
         )
 
     def test_leading_digits(self):

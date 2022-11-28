@@ -9,7 +9,8 @@ from nautobot.core.celery import NautobotKombuJSONEncoder
 from nautobot.core.models import BaseModel
 from nautobot.extras.choices import ObjectChangeActionChoices, ObjectChangeEventContextChoices
 from nautobot.extras.utils import extras_features
-from nautobot.utilities.utils import serialize_object, serialize_object_v2, shallow_compare_dict
+from nautobot.utilities.utils import get_route_for_model, serialize_object, serialize_object_v2, shallow_compare_dict
+from nautobot.extras.constants import CHANGELOG_MAX_CHANGE_CONTEXT_DETAIL, CHANGELOG_MAX_OBJECT_REPR
 
 
 #
@@ -37,7 +38,7 @@ class ChangeLoggedModel(models.Model):
 
         return ObjectChange(
             changed_object=self,
-            object_repr=str(self),
+            object_repr=str(self)[:CHANGELOG_MAX_OBJECT_REPR],
             action=action,
             object_data=serialize_object(self, extra=object_data_extra, exclude=object_data_exclude),
             object_data_v2=serialize_object_v2(self),
@@ -46,11 +47,7 @@ class ChangeLoggedModel(models.Model):
 
     def get_changelog_url(self):
         """Return the changelog URL for this object."""
-        meta = self._meta
-
-        route = f"{meta.app_label}:{meta.model_name}_changelog"
-        if meta.app_label in settings.PLUGINS:
-            route = f"plugins:{route}"
+        route = get_route_for_model(self, "changelog")
 
         # Iterate the pk-like fields and try to get a URL, or return None.
         fields = ["pk", "slug"]
@@ -94,7 +91,7 @@ class ObjectChange(BaseModel):
         editable=False,
         db_index=True,
     )
-    change_context_detail = models.CharField(max_length=100, blank=True, editable=False)
+    change_context_detail = models.CharField(max_length=CHANGELOG_MAX_CHANGE_CONTEXT_DETAIL, blank=True, editable=False)
     related_object_type = models.ForeignKey(
         to=ContentType,
         on_delete=models.PROTECT,
@@ -105,7 +102,7 @@ class ObjectChange(BaseModel):
     # todoindex:
     related_object_id = models.UUIDField(blank=True, null=True)
     related_object = GenericForeignKey(ct_field="related_object_type", fk_field="related_object_id")
-    object_repr = models.CharField(max_length=200, editable=False)
+    object_repr = models.CharField(max_length=CHANGELOG_MAX_OBJECT_REPR, editable=False)
     object_data = models.JSONField(encoder=DjangoJSONEncoder, editable=False)
     object_data_v2 = models.JSONField(encoder=NautobotKombuJSONEncoder, editable=False, null=True, blank=True)
 
@@ -152,7 +149,7 @@ class ObjectChange(BaseModel):
                 self.user_name = "Undefined"
 
         if not self.object_repr:
-            self.object_repr = str(self.changed_object)
+            self.object_repr = str(self.changed_object)[:CHANGELOG_MAX_OBJECT_REPR]
 
         return super().save(*args, **kwargs)
 

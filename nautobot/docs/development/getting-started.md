@@ -167,12 +167,12 @@ Available tasks:
   flake8                 Check for PEP8 compliance and other style issues.
   hadolint               Check Dockerfile for hadolint compliance and other style issues.
   integration-test       Run Nautobot integration tests.
-  load-fixture           Load a data fixture into Nautobot.
   loaddata               Load data from file.
   makemigrations         Perform makemigrations operation in Django.
   markdownlint           Lint Markdown files.
   migrate                Perform migrate operation in Django.
   nbshell                Launch an interactive nbshell session.
+  performance-test       Run Nautobot performance specific unit tests.
   post-upgrade           Performs Nautobot common post-upgrade operations using a single entrypoint.
   pylint                 Perform static analysis of Nautobot code.
   restart                Gracefully restart containers.
@@ -182,7 +182,6 @@ Available tasks:
   unittest               Run Nautobot unit tests.
   unittest-coverage      Report on code test coverage as measured by 'invoke unittest'.
   vscode                 Launch Visual Studio Code with the appropriate Environment variables to run in a container.
-  write-fixture          Create or overwrite a data fixture.
 ```
 
 #### Using Docker with Invoke
@@ -203,6 +202,9 @@ Additional useful commands for the development environment:
 !!! note
     The mkdocs container must be started manually with `invoke start -s mkdocs`. It will not start automatically with the
     `invoke start` or `invoke debug` commands.
+
+!!! tip
+    The Nautobot server uses a Django webservice and worker uses watchdog to provide automatic reload of your web and worker servers in **most** cases when using `invoke start` or `invoke debug`.
 
 !!! tip
     To learn about advanced use cases within the Docker Compose workflow, see the [Docker Compose Advanced Use Cases](docker-compose-advanced-use-cases.md) page.
@@ -230,6 +232,13 @@ You may install Poetry in your user environment by running:
 ```no-highlight
 $ curl -sSL https://install.python-poetry.org | python3 -
 ```
+
+!!! danger
+    Always utilize this documented method to install Poetry for use when developing Nautobot.
+
+    Never use `pip` to install Poetry into your Nautobot virtual environment, as it will result in dependency version conflicts that will very likely break Nautobot. Poetry is used as a package manager for Python packages, so you should not install it into the Nautobot environment, because it relies upon a number of the same dependencies as Nautobot, but with conflicting versions.
+
+    While there are certain cases where running `pip install poetry` is valid, such as in Nautobot's automated release deployments where Nautobot is not actually installed, installing Poetry into Nautobot's runtime development environment is not one of them!
 
 For detailed installation instructions, please see the [official Poetry installation guide](https://python-poetry.org/docs/#installation).
 
@@ -369,7 +378,7 @@ You'll need to create a administrative superuser account to be able to log into 
 Django provides a lightweight HTTP/WSGI server for development use. The development server automatically reloads Python code for each request, as needed. You don’t need to restart the server for code changes to take effect. However, some actions like adding files don’t trigger a restart, so you’ll have to restart the server in these cases.
 
 !!! danger
-    **DO NOT USE THIS SERVER IN A PRODUCTION SETTING.** The development server is for development and testing purposes only. It is neither performant nor secure enough for production use.
+    **DO NOT USE THIS SERVER IN A PRODUCTION SETTING.** The development server and watchdog is for development and testing purposes only. It is neither performant nor secure enough for production use.
 
 You can start the Nautobot development server with the `invoke start` command (if using Docker), or the `nautobot-server runserver` management command:
 
@@ -397,11 +406,18 @@ Please see the [official Django documentation on `runserver`](https://docs.djang
 
 You can then log into the development server at `localhost:8080` with the [superuser](#creating-a-superuser) you created.
 
-### Loading Data Fixtures
+### Starting the Worker Server
 
-Nautobot includes a number of [fixture](https://docs.djangoproject.com/en/stable/topics/testing/tools/#fixture-loading) files that are used in our [unit and integration tests](testing.md). You can also load these fixtures into your development database as an alternative to manually populating all data from scratch. Fixtures are stored as JSON files in the various `nautobot/APPNAME/fixtures/` directories. You can use the `invoke load-fixture --app APP --filename FIXTURE` command to load a given fixture; for example `invoke load-fixture --app extras --filename status` will populate some Status records defined in `nautobot/extras/fixtures/status.json` into the database.
+In order to run Nautobot Jobs or anything that requires a worker you must start a Celery worker.
 
-There is a corresponding `invoke write-fixture` command that can be used to create or update fixtures; more on this in the [testing](testing.md) documentation.
+The worker is started in Docker Workflow with [watchdog](https://pythonhosted.org/watchdog/) and can be setup to be started with watchdog in the Virtual Environment Workflow. Watchdog provides a similar experience to the Django lightweight HTTP/WSGI for restarting your application automatically. Watchdog can watch for changes on your filesystem, this is helpful when adjusting existing Python files to not have to restart the celery worker when testing jobs.
+
+| Docker Compose Workflow | Virtual Environment Workflow    |
+|-------------------------|---------------------------------|
+| `invoke start`          | `nautobot-server celery worker` |
+
+!!! tip
+    You can leverage watchdog for your celery worker as described above, with the following watchmedo command in your development environment `watchmedo auto-restart --directory './' --pattern '*.py' --recursive -- nautobot-server celery worker -l INFO --events`.
 
 ### Starting the Interactive Shell
 
@@ -564,6 +580,31 @@ When modifying model field attributes, modify the test data in the tests too to 
 ## Working on Documentation
 
 Some features require documentation updates or new documentation to be written. The documentation files can be found in the `docs` directory. To preview these changes locally, you can use `mkdocs`.
+
+For substantial changes to the code (including new features, removal of existing features, or significant changes in behavior) you should always make corresponding documentation updates. Nautobot's documentation pipeline includes a custom plugin for `mkdocs` that adds a few useful macros for annotating such changes:
+
+* `+++ 1.4.3`, on a line by itself, is a shorthand for `!!! version-added "Added in version 1.4.3"`
+* `+/- 1.4.3`, on a line by itself, is a shorthand for `!!! version-changed "Changed in version 1.4.3"`
+* `--- 1.4.3`, on a line by itself, is a shorthand for `!!! version-removed "Removed in version 1.4.3"`
+
+These admonitions in turn appear in the rendered documentation as follows:
+
++++ 1.4.3
++/- 1.4.3
+--- 1.4.3
+
+You can also add text to any of these admonitions for further clarity, for example:
+
+    +++ 1.4.3
+        The custom `mkdocs` plugin was added.
+
+will render as:
+
++++ 1.4.3
+    The custom `mkdocs` plugin was added.
+
+!!! caution
+    While you *can* use the `version-added` / `version-changed` / `version-removed` admonitions directly to add a custom title to a specific admonition, in general, you should use the macros for consistency across the documentation.
 
 ### Writing Documentation
 

@@ -8,7 +8,7 @@
                 <div class="col-xs-4">
                     <p class="text-muted">
                         {% if settings.BRANDING_FILEPATHS.logo and settings.BRANDING_POWERED_BY_URL %}<a href="{{ settings.BRANDING_POWERED_BY_URL }}"><img src="{% static 'img/nautobot_logo.svg' %}" height="20" /> Powered</a> &middot;{% endif %}
-                        {{ settings.HOSTNAME }} (v{{ settings.VERSION }})
+                        {{ settings.HOSTNAME }} {% if request.user.is_authenticated %} (v{{ settings.VERSION }}) {% endif %}
                     </p>
                 </div>
                 <div class="col-xs-4 text-center">
