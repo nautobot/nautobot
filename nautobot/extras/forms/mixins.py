@@ -16,7 +16,7 @@ from nautobot.extras.models import (
     Relationship,
     RelationshipAssociation,
     Status,
-    Tag,
+    Tag, Role,
 )
 from nautobot.utilities.deprecation import class_deprecated_in_favor_of
 from nautobot.utilities.forms import (
@@ -589,6 +589,46 @@ class RelationshipModelFilterFormMixin(forms.Form):
             self.fields[field_name] = relationship.to_form_field(side=side)
             self.fields[field_name].empty_label = None
             self.relationships.append(field_name)
+
+
+class RoleModelBulkEditFormMixin(forms.Form):
+    """Mixin to add non-required `role` choice field to forms."""
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields["role"] = DynamicModelChoiceField(
+            required=False,
+            queryset=Role.objects.all(),
+            query_params={"content_types": self.model._meta.label_lower},
+        )
+        self.order_fields(self.field_order)  # Reorder fields again
+
+
+class RoleModelFilterFormMixin(forms.Form):
+    """
+    Mixin to add non-required `status` multiple-choice field to filter forms.
+    """
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields["role"] = DynamicModelMultipleChoiceField(
+            required=False,
+            queryset=Role.objects.all(),
+            query_params={"content_types": self.model._meta.label_lower},
+            to_field_name="name",  # TODO(timizuo): Might be slug but i dont think so
+        )
+        self.order_fields(self.field_order)  # Reorder fields again
+
+
+class RoleModelCSVFormMixin(CSVModelForm):
+    """Mixin to add a required `status` choice field to CSV import forms."""
+
+    role = CSVModelChoiceField(
+        queryset=Role.objects.all(),
+        to_field_name="name",
+        required=False,
+        help_text="Assigned role"
+    )
 
 
 class StatusModelBulkEditFormMixin(forms.Form):

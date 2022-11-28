@@ -130,6 +130,7 @@ from .models import (
     Site,
     VirtualChassis,
 )
+from ..extras.forms.mixins import RoleModelBulkEditFormMixin, RoleModelCSVFormMixin, RoleModelFilterFormMixin
 
 DEVICE_BY_PK_RE = r"{\d+\}"
 
@@ -643,7 +644,6 @@ class RackForm(LocatableModelFormMixin, NautobotModelForm, TenancyForm):
         required=False,
         query_params={"site_id": "$site"},
     )
-    role = DynamicModelChoiceField(queryset=RackRole.objects.all(), required=False)
     comments = CommentField()
 
     class Meta:
@@ -685,19 +685,13 @@ class RackForm(LocatableModelFormMixin, NautobotModelForm, TenancyForm):
         }
 
 
-class RackCSVForm(LocatableModelCSVFormMixin, StatusModelCSVFormMixin, CustomFieldModelCSVForm):
+class RackCSVForm(LocatableModelCSVFormMixin, StatusModelCSVFormMixin, RoleModelCSVFormMixin, CustomFieldModelCSVForm):
     group = CSVModelChoiceField(queryset=RackGroup.objects.all(), required=False, to_field_name="name")
     tenant = CSVModelChoiceField(
         queryset=Tenant.objects.all(),
         required=False,
         to_field_name="name",
         help_text="Name of assigned tenant",
-    )
-    role = CSVModelChoiceField(
-        queryset=RackRole.objects.all(),
-        required=False,
-        to_field_name="name",
-        help_text="Name of assigned role",
     )
     type = CSVChoiceField(choices=RackTypeChoices, required=False, help_text="Rack type")
     width = forms.ChoiceField(choices=RackWidthChoices, help_text="Rail-to-rail width (in inches)")
@@ -725,6 +719,7 @@ class RackBulkEditForm(
     TagsBulkEditFormMixin,
     LocatableModelBulkEditFormMixin,
     StatusModelBulkEditFormMixin,
+    RoleModelBulkEditFormMixin,
     NautobotBulkEditForm,
 ):
     pk = forms.ModelMultipleChoiceField(queryset=Rack.objects.all(), widget=forms.MultipleHiddenInput)
@@ -734,7 +729,6 @@ class RackBulkEditForm(
         query_params={"site_id": "$site"},
     )
     tenant = DynamicModelChoiceField(queryset=Tenant.objects.all(), required=False)
-    role = DynamicModelChoiceField(queryset=RackRole.objects.all(), required=False)
     serial = forms.CharField(max_length=255, required=False, label="Serial Number")
     asset_tag = forms.CharField(max_length=50, required=False)
     type = forms.ChoiceField(
@@ -764,7 +758,6 @@ class RackBulkEditForm(
             "location",
             "group",
             "tenant",
-            "role",
             "serial",
             "asset_tag",
             "outer_width",
@@ -774,7 +767,7 @@ class RackBulkEditForm(
         ]
 
 
-class RackFilterForm(NautobotFilterForm, LocatableModelFilterFormMixin, TenancyFilterForm, StatusModelFilterFormMixin):
+class RackFilterForm(NautobotFilterForm, LocatableModelFilterFormMixin, TenancyFilterForm, StatusModelFilterFormMixin, RoleModelFilterFormMixin):
     model = Rack
     field_order = [
         "q",
@@ -797,12 +790,6 @@ class RackFilterForm(NautobotFilterForm, LocatableModelFilterFormMixin, TenancyF
     )
     type = forms.MultipleChoiceField(choices=RackTypeChoices, required=False, widget=StaticSelect2Multiple())
     width = forms.MultipleChoiceField(choices=RackWidthChoices, required=False, widget=StaticSelect2Multiple())
-    role = DynamicModelMultipleChoiceField(
-        queryset=RackRole.objects.all(),
-        to_field_name="slug",
-        required=False,
-        null_option="None",
-    )
     tag = TagFilterField(model)
 
 
@@ -1828,7 +1815,6 @@ class DeviceForm(LocatableModelFormMixin, NautobotModelForm, TenancyForm, LocalC
         queryset=DeviceType.objects.all(),
         query_params={"manufacturer_id": "$manufacturer"},
     )
-    device_role = DynamicModelChoiceField(queryset=DeviceRole.objects.all())
     platform = DynamicModelChoiceField(
         queryset=Platform.objects.all(),
         required=False,
@@ -1852,7 +1838,7 @@ class DeviceForm(LocatableModelFormMixin, NautobotModelForm, TenancyForm, LocalC
         model = Device
         fields = [
             "name",
-            "device_role",
+            "role",
             "device_type",
             "serial",
             "asset_tag",
@@ -1878,7 +1864,7 @@ class DeviceForm(LocatableModelFormMixin, NautobotModelForm, TenancyForm, LocalC
             "local_context_schema",
         ]
         help_texts = {
-            "device_role": "The function this device serves",
+            "role": "The function this device serves",
             "serial": "Chassis serial number",
             "local_context_data": "Local config context data overwrites all source contexts in the final rendered "
             "config context",
@@ -1960,12 +1946,7 @@ class DeviceForm(LocatableModelFormMixin, NautobotModelForm, TenancyForm, LocalC
             self.fields["position"].widget.choices = [(position, f"U{position}")]
 
 
-class BaseDeviceCSVForm(StatusModelCSVFormMixin, CustomFieldModelCSVForm):
-    device_role = CSVModelChoiceField(
-        queryset=DeviceRole.objects.all(),
-        to_field_name="name",
-        help_text="Assigned role",
-    )
+class BaseDeviceCSVForm(StatusModelCSVFormMixin,  RoleModelCSVFormMixin, CustomFieldModelCSVForm):
     tenant = CSVModelChoiceField(
         queryset=Tenant.objects.all(),
         required=False,
@@ -2039,7 +2020,7 @@ class DeviceCSVForm(LocatableModelCSVFormMixin, BaseDeviceCSVForm):
     class Meta(BaseDeviceCSVForm.Meta):
         fields = [
             "name",
-            "device_role",
+            "role",
             "tenant",
             "manufacturer",
             "device_type",
@@ -2089,7 +2070,8 @@ class ChildDeviceCSVForm(BaseDeviceCSVForm):
     class Meta(BaseDeviceCSVForm.Meta):
         fields = [
             "name",
-            "device_role",
+            # TODO(timizuo): Device Role Reassign
+            # "device_role",
             "tenant",
             "manufacturer",
             "device_type",
@@ -2131,6 +2113,7 @@ class DeviceBulkEditForm(
     TagsBulkEditFormMixin,
     LocatableModelBulkEditFormMixin,
     StatusModelBulkEditFormMixin,
+    RoleModelBulkEditFormMixin,
     NautobotBulkEditForm,
     LocalContextModelBulkEditForm,
 ):
@@ -2149,7 +2132,6 @@ class DeviceBulkEditForm(
         widget=StaticSelect2(),
     )
     rack_group = DynamicModelChoiceField(queryset=RackGroup.objects.all(), required=False)
-    device_role = DynamicModelChoiceField(queryset=DeviceRole.objects.all(), required=False)
     tenant = DynamicModelChoiceField(queryset=Tenant.objects.all(), required=False)
     platform = DynamicModelChoiceField(queryset=Platform.objects.all(), required=False)
     serial = forms.CharField(max_length=255, required=False, label="Serial Number")
@@ -2186,6 +2168,7 @@ class DeviceFilterForm(
     LocatableModelFilterFormMixin,
     TenancyFilterForm,
     StatusModelFilterFormMixin,
+    RoleModelFilterFormMixin,
 ):
     model = Device
     field_order = [
@@ -2221,7 +2204,6 @@ class DeviceFilterForm(
             "group_id": "$rack_group_id",
         },
     )
-    role = DynamicModelMultipleChoiceField(queryset=DeviceRole.objects.all(), to_field_name="slug", required=False)
     manufacturer = DynamicModelMultipleChoiceField(
         queryset=Manufacturer.objects.all(),
         to_field_name="slug",

@@ -1,7 +1,7 @@
 import django_tables2 as tables
 
 from nautobot.dcim.tables.devices import BaseInterfaceTable
-from nautobot.extras.tables import StatusTableMixin
+from nautobot.extras.tables import StatusTableMixin, RoleTableMixin
 from nautobot.tenancy.tables import TenantColumn
 from nautobot.utilities.tables import (
     BaseTable,
@@ -120,11 +120,10 @@ class ClusterTable(BaseTable):
 #
 
 
-class VirtualMachineTable(StatusTableMixin, BaseTable):
+class VirtualMachineTable(StatusTableMixin, RoleTableMixin, BaseTable):
     pk = ToggleColumn()
     name = tables.LinkColumn()
     cluster = tables.Column(linkify=True)
-    role = ColoredLabelColumn()
     tenant = TenantColumn()
 
     class Meta(BaseTable.Meta):

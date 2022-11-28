@@ -144,7 +144,8 @@ SEARCH_TYPES = OrderedDict(
                 # v2 TODO(jathan): Replace prefetch_related with select_related
                 "queryset": Device.objects.prefetch_related(
                     "device_type__manufacturer",
-                    "device_role",
+                    # TODO(timizuo): Device Role Reassign
+                    # "device_role",
                     "tenant",
                     "site",
                     "rack",

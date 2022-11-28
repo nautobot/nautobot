@@ -705,8 +705,8 @@ class DeviceBayTemplateSerializer(NautobotModelSerializer):
 
 class DeviceRoleSerializer(NautobotModelSerializer):
     url = serializers.HyperlinkedIdentityField(view_name="dcim-api:devicerole-detail")
-    device_count = serializers.IntegerField(read_only=True)
-    virtualmachine_count = serializers.IntegerField(read_only=True)
+    # device_count = serializers.IntegerField(read_only=True)
+    # virtualmachine_count = serializers.IntegerField(read_only=True)
 
     class Meta:
         model = DeviceRole
@@ -717,8 +717,9 @@ class DeviceRoleSerializer(NautobotModelSerializer):
             "color",
             "vm_role",
             "description",
-            "device_count",
-            "virtualmachine_count",
+            # TODO(timizuo): Device Role Reassign
+            # "device_count",
+            # "virtualmachine_count",
         ]
 
 
@@ -746,7 +747,8 @@ class PlatformSerializer(NautobotModelSerializer):
 class DeviceSerializer(NautobotModelSerializer, TaggedObjectSerializer, StatusModelSerializerMixin):
     url = serializers.HyperlinkedIdentityField(view_name="dcim-api:device-detail")
     device_type = NestedDeviceTypeSerializer()
-    device_role = NestedDeviceRoleSerializer()
+    # TODO(timizuo): Device Role Reassign
+    # device_role = NestedDeviceRoleSerializer()
     tenant = NestedTenantSerializer(required=False, allow_null=True)
     platform = NestedPlatformSerializer(required=False, allow_null=True)
     site = NestedSiteSerializer()
@@ -769,7 +771,8 @@ class DeviceSerializer(NautobotModelSerializer, TaggedObjectSerializer, StatusMo
             "url",
             "name",
             "device_type",
-            "device_role",
+            # TODO(timizuo): Device Role Reassign
+            # "device_role",
             "tenant",
             "platform",
             "serial",

@@ -83,7 +83,7 @@
                 </tr>
                 <tr>
                     <td>Role</td>
-                    <td>{{ object.role|hyperlinked_object }}</td>
+                    <td><span class="label" style="color: {{ object.role.color|fgcolor }}; background-color: #{{ object.role.color }}">{{ object.get_role_display }}</span></td>
                 </tr>
                 <tr>
                     <td>Serial Number</td>

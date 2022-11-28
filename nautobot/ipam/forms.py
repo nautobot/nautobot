@@ -62,6 +62,7 @@ from .models import (
     VLANGroup,
     VRF,
 )
+from ..extras.forms.mixins import RoleModelBulkEditFormMixin, RoleModelCSVFormMixin, RoleModelFilterFormMixin
 
 PREFIX_MASK_LENGTH_CHOICES = add_blank_choice([(i, i) for i in range(PREFIX_LENGTH_MIN, PREFIX_LENGTH_MAX + 1)])
 
@@ -368,7 +369,6 @@ class PrefixForm(LocatableModelFormMixin, NautobotModelForm, TenancyForm, Prefix
             "group_id": "$vlan_group",
         },
     )
-    role = DynamicModelChoiceField(queryset=Role.objects.all(), required=False)
 
     class Meta:
         model = Prefix
@@ -394,7 +394,7 @@ class PrefixForm(LocatableModelFormMixin, NautobotModelForm, TenancyForm, Prefix
         self.fields["vrf"].empty_label = "Global"
 
 
-class PrefixCSVForm(PrefixFieldMixin, LocatableModelCSVFormMixin, StatusModelCSVFormMixin, CustomFieldModelCSVForm):
+class PrefixCSVForm(PrefixFieldMixin, LocatableModelCSVFormMixin, StatusModelCSVFormMixin, RoleModelCSVFormMixin, CustomFieldModelCSVForm):
     vrf = CSVModelChoiceField(
         queryset=VRF.objects.all(),
         to_field_name="name",
@@ -419,12 +419,6 @@ class PrefixCSVForm(PrefixFieldMixin, LocatableModelCSVFormMixin, StatusModelCSV
         to_field_name="vid",
         help_text="Assigned VLAN",
     )
-    role = CSVModelChoiceField(
-        queryset=Role.objects.all(),
-        required=False,
-        to_field_name="name",
-        help_text="Functional role",
-    )
 
     class Meta:
         model = Prefix
@@ -447,6 +441,7 @@ class PrefixBulkEditForm(
     TagsBulkEditFormMixin,
     LocatableModelBulkEditFormMixin,
     StatusModelBulkEditFormMixin,
+    RoleModelBulkEditFormMixin,
     NautobotBulkEditForm,
 ):
     pk = forms.ModelMultipleChoiceField(queryset=Prefix.objects.all(), widget=forms.MultipleHiddenInput())
@@ -457,7 +452,6 @@ class PrefixBulkEditForm(
     )
     prefix_length = forms.IntegerField(min_value=PREFIX_LENGTH_MIN, max_value=PREFIX_LENGTH_MAX, required=False)
     tenant = DynamicModelChoiceField(queryset=Tenant.objects.all(), required=False)
-    role = DynamicModelChoiceField(queryset=Role.objects.all(), required=False)
     is_pool = forms.NullBooleanField(required=False, widget=BulkEditNullBooleanSelect(), label="Is a pool")
     description = forms.CharField(max_length=100, required=False)
 
@@ -468,7 +462,6 @@ class PrefixBulkEditForm(
             "location",
             "vrf",
             "tenant",
-            "role",
             "description",
         ]
 
@@ -478,6 +471,7 @@ class PrefixFilterForm(
     LocatableModelFilterFormMixin,
     TenancyFilterForm,
     StatusModelFilterFormMixin,
+    RoleModelFilterFormMixin,
 ):
     model = Prefix
     field_order = [
@@ -527,12 +521,6 @@ class PrefixFilterForm(
         null_option="Global",
     )
     present_in_vrf_id = DynamicModelChoiceField(queryset=VRF.objects.all(), required=False, label="Present in VRF")
-    role = DynamicModelMultipleChoiceField(
-        queryset=Role.objects.all(),
-        to_field_name="slug",
-        required=False,
-        null_option="None",
-    )
     is_pool = forms.NullBooleanField(
         required=False,
         label="Is a pool",
@@ -648,9 +636,6 @@ class IPAddressForm(NautobotModelForm, TenancyForm, ReturnURLForm, AddressFieldM
             "tenant",
             "tags",
         ]
-        widgets = {
-            "role": StaticSelect2(),
-        }
 
     def __init__(self, *args, **kwargs):
 
@@ -769,16 +754,13 @@ class IPAddressBulkAddForm(NautobotModelForm, TenancyForm, AddressFieldMixin):
             "tenant",
             "tags",
         ]
-        widgets = {
-            "role": StaticSelect2(),
-        }
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.fields["vrf"].empty_label = "Global"
 
 
-class IPAddressCSVForm(StatusModelCSVFormMixin, AddressFieldMixin, CustomFieldModelCSVForm):
+class IPAddressCSVForm(StatusModelCSVFormMixin, RoleModelCSVFormMixin, AddressFieldMixin, CustomFieldModelCSVForm):
     vrf = CSVModelChoiceField(
         queryset=VRF.objects.all(),
         to_field_name="name",
@@ -791,7 +773,6 @@ class IPAddressCSVForm(StatusModelCSVFormMixin, AddressFieldMixin, CustomFieldMo
         required=False,
         help_text="Assigned tenant",
     )
-    role = CSVChoiceField(choices=IPAddressRoleChoices, required=False, help_text="Functional role")
     device = CSVModelChoiceField(
         queryset=Device.objects.all(),
         required=False,
@@ -876,7 +857,7 @@ class IPAddressCSVForm(StatusModelCSVFormMixin, AddressFieldMixin, CustomFieldMo
         return ipaddress
 
 
-class IPAddressBulkEditForm(TagsBulkEditFormMixin, StatusModelBulkEditFormMixin, NautobotBulkEditForm):
+class IPAddressBulkEditForm(TagsBulkEditFormMixin, StatusModelBulkEditFormMixin, RoleModelBulkEditFormMixin, NautobotBulkEditForm):
     pk = forms.ModelMultipleChoiceField(queryset=IPAddress.objects.all(), widget=forms.MultipleHiddenInput())
     vrf = DynamicModelChoiceField(
         queryset=VRF.objects.all(),
@@ -889,18 +870,12 @@ class IPAddressBulkEditForm(TagsBulkEditFormMixin, StatusModelBulkEditFormMixin,
         required=False,
     )
     tenant = DynamicModelChoiceField(queryset=Tenant.objects.all(), required=False)
-    role = forms.ChoiceField(
-        choices=add_blank_choice(IPAddressRoleChoices),
-        required=False,
-        widget=StaticSelect2(),
-    )
     dns_name = forms.CharField(max_length=255, required=False)
     description = forms.CharField(max_length=100, required=False)
 
     class Meta:
         nullable_fields = [
             "vrf",
-            "role",
             "tenant",
             "dns_name",
             "description",
@@ -915,7 +890,7 @@ class IPAddressAssignForm(BootstrapMixin, forms.Form):
     )
 
 
-class IPAddressFilterForm(NautobotFilterForm, TenancyFilterForm, StatusModelFilterFormMixin):
+class IPAddressFilterForm(NautobotFilterForm, TenancyFilterForm, StatusModelFilterFormMixin, RoleModelFilterFormMixin):
     model = IPAddress
     field_order = [
         "q",
@@ -959,7 +934,6 @@ class IPAddressFilterForm(NautobotFilterForm, TenancyFilterForm, StatusModelFilt
         null_option="Global",
     )
     present_in_vrf_id = DynamicModelChoiceField(queryset=VRF.objects.all(), required=False, label="Present in VRF")
-    role = forms.MultipleChoiceField(choices=IPAddressRoleChoices, required=False, widget=StaticSelect2Multiple())
     assigned_to_interface = forms.NullBooleanField(
         required=False,
         label="Assigned to an interface",
@@ -1009,7 +983,6 @@ class VLANForm(LocatableModelFormMixin, NautobotModelForm, TenancyForm):
         required=False,
         query_params={"site_id": "$site"},
     )
-    role = DynamicModelChoiceField(queryset=Role.objects.all(), required=False)
 
     class Meta:
         model = VLAN
@@ -1036,7 +1009,7 @@ class VLANForm(LocatableModelFormMixin, NautobotModelForm, TenancyForm):
         }
 
 
-class VLANCSVForm(LocatableModelCSVFormMixin, StatusModelCSVFormMixin, CustomFieldModelCSVForm):
+class VLANCSVForm(LocatableModelCSVFormMixin, StatusModelCSVFormMixin, RoleModelCSVFormMixin, CustomFieldModelCSVForm):
     group = CSVModelChoiceField(
         queryset=VLANGroup.objects.all(),
         required=False,
@@ -1048,12 +1021,6 @@ class VLANCSVForm(LocatableModelCSVFormMixin, StatusModelCSVFormMixin, CustomFie
         to_field_name="name",
         required=False,
         help_text="Assigned tenant",
-    )
-    role = CSVModelChoiceField(
-        queryset=Role.objects.all(),
-        required=False,
-        to_field_name="name",
-        help_text="Functional role",
     )
 
     class Meta:
@@ -1078,6 +1045,7 @@ class VLANBulkEditForm(
     TagsBulkEditFormMixin,
     LocatableModelBulkEditFormMixin,
     StatusModelBulkEditFormMixin,
+    RoleModelBulkEditFormMixin,
     NautobotBulkEditForm,
 ):
     pk = forms.ModelMultipleChoiceField(queryset=VLAN.objects.all(), widget=forms.MultipleHiddenInput())
@@ -1087,7 +1055,6 @@ class VLANBulkEditForm(
         query_params={"site_id": "$site"},
     )
     tenant = DynamicModelChoiceField(queryset=Tenant.objects.all(), required=False)
-    role = DynamicModelChoiceField(queryset=Role.objects.all(), required=False)
     description = forms.CharField(max_length=100, required=False)
 
     class Meta:
@@ -1097,12 +1064,11 @@ class VLANBulkEditForm(
             "location",
             "group",
             "tenant",
-            "role",
             "description",
         ]
 
 
-class VLANFilterForm(NautobotFilterForm, LocatableModelFilterFormMixin, TenancyFilterForm, StatusModelFilterFormMixin):
+class VLANFilterForm(NautobotFilterForm, LocatableModelFilterFormMixin, TenancyFilterForm, StatusModelFilterFormMixin, RoleModelFilterFormMixin):
     model = VLAN
     field_order = [
         "q",
@@ -1122,12 +1088,6 @@ class VLANFilterForm(NautobotFilterForm, LocatableModelFilterFormMixin, TenancyF
         label="VLAN group",
         null_option="None",
         query_params={"region": "$region"},
-    )
-    role = DynamicModelMultipleChoiceField(
-        queryset=Role.objects.all(),
-        to_field_name="slug",
-        required=False,
-        null_option="None",
     )
     tag = TagFilterField(model)
 

@@ -782,7 +782,7 @@ class IPAddressBulkImportView(generic.BulkImportView):
 
 class IPAddressBulkEditView(generic.BulkEditView):
     # v2 TODO(jathan): Replace prefetch_related with select_related
-    queryset = IPAddress.objects.prefetch_related("status", "tenant", "vrf__tenant")
+    queryset = IPAddress.objects.prefetch_related("status", "role", "tenant", "vrf__tenant")
     filterset = filters.IPAddressFilterSet
     table = tables.IPAddressTable
     form = forms.IPAddressBulkEditForm
@@ -790,7 +790,7 @@ class IPAddressBulkEditView(generic.BulkEditView):
 
 class IPAddressBulkDeleteView(generic.BulkDeleteView):
     # v2 TODO(jathan): Replace prefetch_related with select_related
-    queryset = IPAddress.objects.prefetch_related("status", "tenant", "vrf__tenant")
+    queryset = IPAddress.objects.prefetch_related("status", "role", "tenant", "vrf__tenant")
     filterset = filters.IPAddressFilterSet
     table = tables.IPAddressTable
 

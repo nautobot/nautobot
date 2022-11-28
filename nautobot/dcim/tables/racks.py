@@ -2,7 +2,7 @@ import django_tables2 as tables
 from django_tables2.utils import Accessor
 
 from nautobot.dcim.models import Rack, RackGroup, RackReservation, RackRole
-from nautobot.extras.tables import StatusTableMixin
+from nautobot.extras.tables import StatusTableMixin, RoleTableMixin
 from nautobot.tenancy.tables import TenantColumn
 from nautobot.utilities.tables import (
     BaseTable,
@@ -73,14 +73,13 @@ class RackRoleTable(BaseTable):
 #
 
 
-class RackTable(StatusTableMixin, BaseTable):
+class RackTable(StatusTableMixin, RoleTableMixin, BaseTable):
     pk = ToggleColumn()
     name = tables.Column(order_by=("_name",), linkify=True)
     group = tables.Column(linkify=True)
     site = tables.Column(linkify=True)
     location = tables.Column(linkify=True)
     tenant = TenantColumn()
-    role = ColoredLabelColumn()
     u_height = tables.TemplateColumn(template_code="{{ record.u_height }}U", verbose_name="Height")
 
     class Meta(BaseTable.Meta):

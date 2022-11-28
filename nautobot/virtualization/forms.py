@@ -50,6 +50,7 @@ from nautobot.utilities.forms import (
 )
 from nautobot.utilities.forms.constants import BOOLEAN_WITH_BLANK_CHOICES
 from .models import Cluster, ClusterGroup, ClusterType, VirtualMachine, VMInterface
+from ..extras.forms.mixins import RoleModelBulkEditFormMixin, RoleModelCSVFormMixin, RoleModelFilterFormMixin
 
 
 #
@@ -273,11 +274,6 @@ class VirtualMachineForm(NautobotModelForm, TenancyForm, LocalContextModelForm):
         initial_params={"clusters": "$cluster"},
     )
     cluster = DynamicModelChoiceField(queryset=Cluster.objects.all(), query_params={"group_id": "$cluster_group"})
-    role = DynamicModelChoiceField(
-        queryset=DeviceRole.objects.all(),
-        required=False,
-        query_params={"vm_role": "True"},
-    )
     platform = DynamicModelChoiceField(queryset=Platform.objects.all(), required=False)
 
     class Meta:
@@ -354,17 +350,11 @@ class VirtualMachineForm(NautobotModelForm, TenancyForm, LocalContextModelForm):
             self.fields["primary_ip6"].widget.attrs["readonly"] = True
 
 
-class VirtualMachineCSVForm(StatusModelCSVFormMixin, CustomFieldModelCSVForm):
+class VirtualMachineCSVForm(StatusModelCSVFormMixin, RoleModelCSVFormMixin, CustomFieldModelCSVForm):
     cluster = CSVModelChoiceField(
         queryset=Cluster.objects.all(),
         to_field_name="name",
         help_text="Assigned cluster",
-    )
-    role = CSVModelChoiceField(
-        queryset=DeviceRole.objects.filter(vm_role=True),
-        required=False,
-        to_field_name="name",
-        help_text="Functional role",
     )
     tenant = CSVModelChoiceField(
         queryset=Tenant.objects.all(),
@@ -385,15 +375,10 @@ class VirtualMachineCSVForm(StatusModelCSVFormMixin, CustomFieldModelCSVForm):
 
 
 class VirtualMachineBulkEditForm(
-    TagsBulkEditFormMixin, StatusModelBulkEditFormMixin, NautobotBulkEditForm, LocalContextModelBulkEditForm
+    TagsBulkEditFormMixin, StatusModelBulkEditFormMixin, RoleModelBulkEditFormMixin, NautobotBulkEditForm, LocalContextModelBulkEditForm
 ):
     pk = forms.ModelMultipleChoiceField(queryset=VirtualMachine.objects.all(), widget=forms.MultipleHiddenInput())
     cluster = DynamicModelChoiceField(queryset=Cluster.objects.all(), required=False)
-    role = DynamicModelChoiceField(
-        queryset=DeviceRole.objects.filter(vm_role=True),
-        required=False,
-        query_params={"vm_role": "True"},
-    )
     tenant = DynamicModelChoiceField(queryset=Tenant.objects.all(), required=False)
     platform = DynamicModelChoiceField(queryset=Platform.objects.all(), required=False)
     vcpus = forms.IntegerField(required=False, label="vCPUs")
@@ -403,7 +388,6 @@ class VirtualMachineBulkEditForm(
 
     class Meta:
         nullable_fields = [
-            "role",
             "tenant",
             "platform",
             "vcpus",
@@ -418,6 +402,7 @@ class VirtualMachineFilterForm(
     LocatableModelFilterFormMixin,
     TenancyFilterForm,
     StatusModelFilterFormMixin,
+    RoleModelFilterFormMixin,
     LocalContextFilterForm,
 ):
     model = VirtualMachine
@@ -450,13 +435,6 @@ class VirtualMachineFilterForm(
         null_option="None",
     )
     cluster_id = DynamicModelMultipleChoiceField(queryset=Cluster.objects.all(), required=False, label="Cluster")
-    role = DynamicModelMultipleChoiceField(
-        queryset=DeviceRole.objects.filter(vm_role=True),
-        to_field_name="slug",
-        required=False,
-        null_option="None",
-        query_params={"vm_role": "True"},
-    )
     platform = DynamicModelMultipleChoiceField(
         queryset=Platform.objects.all(),
         to_field_name="slug",

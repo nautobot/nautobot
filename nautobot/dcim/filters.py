@@ -436,7 +436,9 @@ class RackRoleFilterSet(NautobotFilterSet, NameSlugSearchFilterSet):
 
     class Meta:
         model = RackRole
-        fields = ["id", "name", "slug", "color", "description", "racks"]
+        # TODO (timizuo): Racks Role
+        # fields = ["id", "name", "slug", "color", "description", "racks"]
+        fields = ["id", "name", "slug", "color", "description"]
 
 
 class RackFilterSet(NautobotFilterSet, LocatableModelFilterSetMixin, TenancyFilterSet, StatusModelFilterSetMixin):
@@ -878,18 +880,21 @@ class DeviceBayTemplateFilterSet(BaseFilterSet, DeviceTypeComponentFilterSet):
 
 
 class DeviceRoleFilterSet(NautobotFilterSet, NameSlugSearchFilterSet):
-    has_devices = RelatedMembershipBooleanFilter(
-        field_name="devices",
-        label="Has devices",
-    )
-    has_virtual_machines = RelatedMembershipBooleanFilter(
-        field_name="virtual_machines",
-        label="Has virtual machines",
-    )
+    # TODO(timizuo): Device Role Reassign
+    # has_devices = RelatedMembershipBooleanFilter(
+    #     field_name="devices",
+    #     label="Has devices",
+    # )
+    # has_virtual_machines = RelatedMembershipBooleanFilter(
+    #     field_name="virtual_machines",
+    #     label="Has virtual machines",
+    # )
 
     class Meta:
         model = DeviceRole
-        fields = ["id", "name", "slug", "color", "vm_role", "description", "devices"]
+        fields = ["id", "name", "slug", "color", "vm_role", "description"]
+        # TODO(timizuo): Device Role Reassign
+        # fields = ["id", "name", "slug", "color", "vm_role", "description", "devices"]
 
 
 class PlatformFilterSet(NautobotFilterSet, NameSlugSearchFilterSet):

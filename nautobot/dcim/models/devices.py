@@ -577,8 +577,7 @@ class Device(PrimaryModel, ConfigContextModel, StatusModel, RoleModelMixin):
 
     csv_headers = [
         "name",
-        # TODO(timizuo): Device Role Reassign
-        # "device_role",
+        "role",
         "tenant",
         "manufacturer",
         "device_type",
@@ -600,8 +599,7 @@ class Device(PrimaryModel, ConfigContextModel, StatusModel, RoleModelMixin):
     ]
     clone_fields = [
         "device_type",
-        # TODO(timizuo): Device Role Reassign
-        # "device_role",
+        "role",
         "tenant",
         "platform",
         "site",

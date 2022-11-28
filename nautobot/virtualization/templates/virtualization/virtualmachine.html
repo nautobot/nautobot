@@ -39,11 +39,7 @@
                 <tr>
                     <td>Role</td>
                     <td>
-                        {% if object.role %}
-                            <a href="{% url 'virtualization:virtualmachine_list' %}?role={{ object.role.slug }}">{{ object.role }}</a>
-                        {% else %}
-                            <span class="text-muted">None</span>
-                        {% endif %}
+                        <span class="label" style="color: {{ object.role.color|fgcolor }}; background-color: #{{ object.role.color }}">{{ object.get_role_display }}</span>
                     </td>
                 </tr>
                 <tr>

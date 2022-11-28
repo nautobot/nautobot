@@ -272,9 +272,11 @@ class ConfigContextSchemaObjectValidationView(generic.ObjectView):
         # Device table
         device_table = DeviceTable(
             # v2 TODO(jathan): Replace prefetch_related with select_related
-            data=instance.device_set.prefetch_related(
-                "tenant", "site", "rack", "device_type", "device_role", "primary_ip"
-            ),
+            # TODO(timizuo): Device Role Reassign
+            # data=instance.device_set.prefetch_related(
+            #     "tenant", "site", "rack", "device_type", "device_role", "primary_ip"
+            # ),
+            data=instance.device_set.prefetch_related("tenant", "site", "rack", "device_type", "primary_ip"),
             orderable=False,
             extra_columns=[
                 (

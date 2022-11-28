@@ -9,7 +9,6 @@ from nautobot.dcim.models import (
     ConsolePort,
     ConsoleServerPort,
     Device,
-    DeviceRole,
     DeviceType,
     FrontPort,
     Interface,
@@ -44,12 +43,13 @@ class CablePathTestCase(TestCase):
 
         manufacturer = Manufacturer.objects.create(name="Generic", slug="generic")
         device_type = DeviceType.objects.create(manufacturer=manufacturer, model="Test Device")
-        device_role = DeviceRole.objects.create(name="Device Role", slug="device-role")
+        # TODO(timizuo): Device Role Reassign
+        # device_role = DeviceRole.objects.create(name="Device Role", slug="device-role")
         device_status = Status.objects.get_for_model(Device).get(slug="active")
         cls.device = Device.objects.create(
             site=cls.site,
             device_type=device_type,
-            device_role=device_role,
+            # device_role=device_role,
             name="Test Device",
             status=device_status,
         )
