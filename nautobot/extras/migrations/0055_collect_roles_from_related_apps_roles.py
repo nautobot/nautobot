@@ -13,7 +13,7 @@ from nautobot.ipam.choices import IPAddressRoleChoices
 RelatedRoleModelOrChoices = namedtuple("RelatedRoleModelOrChoices", ["model_or_choices", "implemented_by"])
 
 # Using this, Choices is made to resemble a Role Queryset.
-ChoicesQuerySet = namedtuple("FakeQuerySet", ["name", "description"])
+ChoicesQuerySet = namedtuple("FakeQuerySet", ["name", "slug", "description", "color"])
 
 
 def populate_roles_from_related_app_roles(apps, schema_editor):
@@ -30,6 +30,13 @@ def populate_roles_from_related_app_roles(apps, schema_editor):
         RelatedRoleModelOrChoices(IPAddressRoleChoices, ["ipam.ipaddress"]),
     )
 
+    color_map = {
+        "default": "9e9e9e",  # Grey
+        "primary": "2196f3",  # Blue
+        "warning": "ffc107",  # Amber
+        "success": "4caf50",  # Green
+    }
+
     for role_model_or_choices in related_role_models_or_choices:
         try:
             app_name, model_class = role_model_or_choices.model_or_choices.split(".")
@@ -38,15 +45,24 @@ def populate_roles_from_related_app_roles(apps, schema_editor):
             roles_to_create = related_role_model_class.objects.filter(~models.Q(name__in=existing_roles))
         except AttributeError:
             # An AttributeError would occur when trying to perform a split on a choice e.g. IPAddressRoleChoices
-            roles_to_create = [
-                ChoicesQuerySet(name=label, description="")
-                for _, label in role_model_or_choices.model_or_choices.CHOICES
-            ]
+            roles_to_create = []
+
+            for value, label in role_model_or_choices.model_or_choices.CHOICES:
+                color = role_model_or_choices.model_or_choices.CSS_CLASSES[value]
+                choiceset = ChoicesQuerySet(
+                    name=label,
+                    slug=value,
+                    color=color_map[color],
+                    description=""
+                )
+                roles_to_create.append(choiceset)
 
         roles = [
             Role(
                 name=data.name,
+                slug=data.slug,
                 description=data.description,
+                color=data.color if hasattr(data, "color") else color_map["default"],
                 weight=data.weight if hasattr(data, "weight") else None,
             )
             for data in roles_to_create
