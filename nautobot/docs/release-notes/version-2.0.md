@@ -152,7 +152,7 @@ Below is a table documenting all such changes and where they occurred.
 |                 | front_ports          | Changed from mapping to `has_front_ports` to `ModelMultipleChoiceFilter`          |
 |                 | rear_ports           | Changed from mapping to `has_rear_ports` to `ModelMultipleChoiceFilter`           |
 |                 | device_bays          | Changed from mapping to `has_device_bays` to `ModelMultipleChoiceFilter`          |
-|                 | pass_through_ports   | deleted in exchange for in exchange for `has_(front|rear)_ports`                  |
+|                 | pass_through_ports   | Deleted in exchange for in exchange for `has_(front|rear)_ports`                  |
 
 !!! important
     `NaturalKeyOrPKMultipleChoiceFilter` is not filtering on true Natural Keys in the case where its `to_field_name` argument is mapped to the `name` attribute or a single field that is not enough to identify an unique model instance by itself. This is technically a bug and is tracked here https://github.com/nautobot/nautobot/issues/2875 and should be resolved after concluding this Epic https://github.com/nautobot/nautobot/issues/1574.
