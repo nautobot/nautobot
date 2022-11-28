@@ -184,7 +184,6 @@ A number of mixin classes have been renamed and/or relocated for improved self-c
 - [#2833](https://github.com/nautobot/nautobot/issues/2833) - Fixed plugin banner issue and breadcrumb rendering issue in NautobotHTMLRenderer.
 - [#2837](https://github.com/nautobot/nautobot/issues/2837) - Fixed incorrect logic in `nautobot.utilities.utils.is_single_choice_field` that was causing valid filters to report as invalid.
 
-
 ## v1.5.1 (2022-11-14)
 
 ### Added
