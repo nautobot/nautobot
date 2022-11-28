@@ -80,11 +80,11 @@ class ObjectView(ObjectPermissionRequiredMixin, View):
         Return any additional context data for the template.
 
         Args:
-            request: The current request
-            instance: The object being viewed
+            request (Request): The current request
+            instance (Model): The object being viewed
 
         Returns:
-            dict
+            (dict): Additional context data
         """
         return {
             "active_tab": request.GET.get("tab", "main"),

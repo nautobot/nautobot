@@ -5,6 +5,7 @@ from unittest import mock
 from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.contrib.contenttypes.models import ContentType
+from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import override_settings
 from django.urls import reverse
 from django.utils.timezone import make_aware, now
@@ -20,6 +21,7 @@ from nautobot.dcim.models import (
     RackRole,
     Site,
 )
+from nautobot.dcim.tests import test_views
 from nautobot.extras.api.nested_serializers import NestedJobResultSerializer
 from nautobot.extras.choices import (
     DynamicGroupOperatorChoices,
@@ -59,7 +61,8 @@ from nautobot.extras.models import (
 from nautobot.extras.models.jobs import JobHook
 from nautobot.extras.tests.test_relationships import RequiredRelationshipTestMixin
 from nautobot.extras.utils import TaggableClassesQuery
-from nautobot.ipam.models import VLANGroup
+from nautobot.ipam.factory import VLANFactory
+from nautobot.ipam.models import VLAN, VLANGroup
 from nautobot.users.models import ObjectPermission
 from nautobot.utilities.choices import ColorChoices
 from nautobot.utilities.testing import APITestCase, APIViewTestCases
@@ -1378,8 +1381,12 @@ class JobAPIRunTestMixin:
             "var4": {"name": "role"},
         }
 
+        # This handles things like ObjectVar fields looked up by non-UUID
+        # Jobs are executed with deserialized data
+        deserialized_data = get_job("local/api_test_job/APITestJob").deserialize_data(job_data)
+
         self.assertEqual(
-            get_job("local/api_test_job/APITestJob").deserialize_data(job_data),
+            deserialized_data,
             {"var1": "FooBar", "var2": 123, "var3": False, "var4": device_role},
         )
 
@@ -1389,9 +1396,96 @@ class JobAPIRunTestMixin:
 
         job_result = JobResult.objects.last()
         self.assertIn("data", job_result.job_kwargs)
-        self.assertEqual(job_result.job_kwargs["data"], job_data)
+
+        # Ensure the stored job_kwargs deserialize to the same as originally inputted
+        self.assertEqual(
+            get_job("local/api_test_job/APITestJob").deserialize_data(job_result.job_kwargs["data"]), deserialized_data
+        )
 
         return (response, job_result)  # so subclasses can do additional testing
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    @mock.patch("nautobot.extras.api.views.get_worker_count")
+    def test_run_job_file_data_commit(self, mock_get_worker_count):
+        """Job run requests can reference objects by their attributes."""
+
+        test_file = SimpleUploadedFile(name="test_file.txt", content=b"I am content.\n")
+
+        job_model = Job.objects.get_for_class_path("local/test_field_order/TestFieldOrder")
+        job_model.enabled = True
+        job_model.validated_save()
+
+        mock_get_worker_count.return_value = 1
+        self.add_permissions("extras.run_job")
+
+        job_data = {
+            "var2": "Ground control to Major Tom",
+            "var23": "Commencing countdown, engines on",
+            "var1": test_file,
+            "_commit": True,
+        }
+
+        url = self.get_run_url(class_path="local/test_field_order/TestFieldOrder")
+        response = self.client.post(url, data=job_data, **self.header)
+        self.assertHttpStatus(response, self.run_success_response_status)
+
+        return response  # so subclasses can do additional testing
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    @mock.patch("nautobot.extras.api.views.get_worker_count")
+    def test_run_job_file_data_only(self, mock_get_worker_count):
+        """Job run requests can reference objects by their attributes."""
+
+        test_file = SimpleUploadedFile(name="test_file.txt", content=b"I am content.\n")
+
+        job_model = Job.objects.get_for_class_path("local/test_field_order/TestFieldOrder")
+        job_model.enabled = True
+        job_model.validated_save()
+
+        mock_get_worker_count.return_value = 1
+        self.add_permissions("extras.run_job")
+
+        job_data = {
+            "var2": "Ground control to Major Tom",
+            "var23": "Commencing countdown, engines on",
+            "var1": test_file,
+        }
+
+        url = self.get_run_url(class_path="local/test_field_order/TestFieldOrder")
+        response = self.client.post(url, data=job_data, **self.header)
+        self.assertHttpStatus(response, self.run_success_response_status)
+
+        return response  # so subclasses can do additional testing
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    @mock.patch("nautobot.extras.api.views.get_worker_count")
+    def test_run_job_file_data_schedule(self, mock_get_worker_count):
+        """Job run requests can reference objects by their attributes."""
+
+        test_file = SimpleUploadedFile(name="test_file.txt", content=b"I am content.\n")
+
+        job_model = Job.objects.get_for_class_path("local/test_field_order/TestFieldOrder")
+        job_model.enabled = True
+        job_model.validated_save()
+
+        mock_get_worker_count.return_value = 1
+        self.add_permissions("extras.run_job")
+
+        job_data = {
+            "var2": "Ground control to Major Tom",
+            "var23": "Commencing countdown, engines on",
+            "var1": test_file,
+            "_commit": True,
+            "_schedule_start_time": str(datetime.now() + timedelta(minutes=1)),
+            "_schedule_interval": "future",
+            "_schedule_name": "test",
+        }
+
+        url = self.get_run_url(class_path="local/test_field_order/TestFieldOrder")
+        response = self.client.post(url, data=job_data, **self.header)
+        self.assertHttpStatus(response, self.run_success_response_status)
+
+        return response  # so subclasses can do additional testing
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     @mock.patch("nautobot.extras.api.views.get_worker_count")
@@ -2633,9 +2727,106 @@ class RelationshipTest(APIViewTestCases.APIViewTestCase, RequiredRelationshipTes
         1. Try creating an object when no required target object exists
         2. Try creating an object without specifying required target object(s)
         3. Try creating an object when all required data is present
+        4. Test various bulk create/edit scenarios
         """
-        # Parameterized test:
+
+        # Parameterized tests (for creating and updating single objects):
         self.required_relationships_test(interact_with="api")
+
+        # 4. Bulk create/edit tests:
+
+        # VLAN endpoint to POST, PATCH and PUT multiple objects to:
+        vlan_list_endpoint = reverse(get_route_for_model(VLAN, "list", api=True))
+
+        def send_bulk_data(http_method, data):
+            return getattr(self.client, http_method)(
+                vlan_list_endpoint,
+                data=data,
+                format="json",
+                **self.header,
+            )
+
+        # Try deleting all devices and then creating 2 VLANs (fails):
+        Device.objects.all().delete()
+        response = send_bulk_data(
+            "post", data=[{"vid": "1", "name": "1", "status": "active"}, {"vid": "2", "name": "2", "status": "active"}]
+        )
+        self.assertHttpStatus(response, 400)
+        self.assertEqual(
+            {
+                "relationships": {
+                    "vlans-devices-m2m": [
+                        "VLANs require at least one device, but no devices exist yet. "
+                        "Create a device by posting to /api/dcim/devices/",
+                        'You need to specify ["relationships"]["vlans-devices-m2m"]["source"]["objects"].',
+                    ]
+                }
+            },
+            response.json(),
+        )
+
+        # Create test device for association
+        device_for_association = test_views.create_test_device("VLAN Required Device")
+        required_relationship_json = {"vlans-devices-m2m": {"source": {"objects": [str(device_for_association.id)]}}}
+        expected_error_json = {
+            "relationships": {
+                "vlans-devices-m2m": [
+                    'You need to specify ["relationships"]["vlans-devices-m2m"]["source"]["objects"].'
+                ]
+            }
+        }
+
+        # Test POST, PATCH and PUT
+        for method in ["post", "patch", "put"]:
+            if method == "post":
+                vlan1_json_data = {
+                    "vid": "1",
+                    "name": "1",
+                    "status": "active",
+                }
+                vlan2_json_data = {
+                    "vid": "2",
+                    "name": "2",
+                    "status": "active",
+                }
+            else:
+                vlan1, vlan2 = VLANFactory.create_batch(2)
+                vlan1_json_data = {"status": "active", "id": str(vlan1.id)}
+                # Add required fields for PUT method:
+                if method == "put":
+                    vlan1_json_data.update({"vid": vlan1.vid, "name": vlan1.name})
+
+                vlan2_json_data = {"status": "active", "id": str(vlan2.id)}
+                # Add required fields for PUT method:
+                if method == "put":
+                    vlan2_json_data.update({"vid": vlan2.vid, "name": vlan2.name})
+
+            # Try method without specifying required relationships for either vlan1 or vlan2 (fails)
+            json_data = [vlan1_json_data, vlan2_json_data]
+            response = send_bulk_data(method, json_data)
+            self.assertHttpStatus(response, 400)
+            self.assertEqual(response.json(), expected_error_json)
+
+            # Try method specifying required relationships for just vlan1 (fails)
+            vlan1_json_data["relationships"] = required_relationship_json
+            json_data = [vlan1_json_data, vlan2_json_data]
+            response = send_bulk_data(method, json_data)
+            self.assertHttpStatus(response, 400)
+            self.assertEqual(response.json(), expected_error_json)
+
+            # Try method specifying required relationships for both vlan1 and vlan2 (succeeds)
+            vlan2_json_data["relationships"] = required_relationship_json
+            json_data = [vlan1_json_data, vlan2_json_data]
+            response = send_bulk_data(method, json_data)
+            if method == "post":
+                self.assertHttpStatus(response, 201)
+            else:
+                self.assertHttpStatus(response, 200)
+
+            # Check the relationship associations were actually created
+            for vlan in response.json():
+                associated_device = vlan["relationships"]["vlans-devices-m2m"]["source"]["objects"][0]
+                self.assertEqual(str(device_for_association.id), associated_device["id"])
 
 
 class RelationshipAssociationTest(APIViewTestCases.APIViewTestCase):

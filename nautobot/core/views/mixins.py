@@ -20,6 +20,7 @@ from django.utils.safestring import mark_safe
 from django.views.generic.edit import FormView
 
 from rest_framework import mixins, exceptions
+from rest_framework.parsers import MultiPartParser
 from rest_framework.response import Response
 from rest_framework.viewsets import GenericViewSet
 
@@ -71,6 +72,7 @@ class NautobotViewSetMixin(GenericViewSet, AccessMixin, GetReturnURLMixin, FormV
     filterset_class = None
     filterset_form_class = None
     form_class = None
+    parser_classes = [MultiPartParser]
     queryset = None
     # serializer_class has to be specified to eliminate the need to override retrieve() in the RetrieveModelMixin for now.
     serializer_class = None

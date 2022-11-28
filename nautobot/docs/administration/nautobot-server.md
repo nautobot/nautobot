@@ -10,20 +10,20 @@ For those familiar with Django applications, this CLI utility works exactly as a
     Since Nautobot is a Django application, there are a number of built-in management commands that will not be covered in this document. Please see the [official Django documentation on management commands](https://docs.djangoproject.com/en/stable/ref/django-admin/#available-commands) for more information.
 
 !!! important
-    Django does not recognize `nautobot-server`.  Anywhere `python manage.py` is mentioned, it is safe to replace with `nautobot-server`.
+    Django does not recognize `nautobot-server`. Anywhere `python manage.py` is mentioned, it is safe to replace with `nautobot-server`.
 
 ## Getting Help
 
-To see all available management commands:
+To see all available management commands as the Nautobot user:
 
 ```no-highlight
-$ nautobot-server help
+nautobot-server help
 ```
 
 All management commands have a `-h/--help` flag to list all available arguments for that command, for example:
 
 ```no-highlight
-$ nautobot-server migrate --help
+nautobot-server migrate --help
 ```
 
 ## Available Commands
@@ -37,8 +37,12 @@ Celery command entrypoint which serves as a thin wrapper to the `celery` command
 Most commonly you will be using this command to start the Celery worker process:
 
 ```no-highlight
-$ nautobot-server celery worker --loglevel INFO --pidfile $(pwd)/nautobot-celery.pid -n worker1
+nautobot-server celery worker --loglevel INFO --pidfile $(pwd)/nautobot-celery.pid -n worker1
+```
 
+Output:
+
+```no-highlight
 celery@worker1 v5.1.1 (sun-harmonics)
 
 [config]
@@ -77,8 +81,12 @@ celery@worker1 v5.1.1 (sun-harmonics)
 Collect static files into [`STATIC_ROOT`](../configuration/optional-settings.md#static_root).
 
 ```no-highlight
-$ nautobot-server collectstatic
+nautobot-server collectstatic
+```
 
+Output:
+
+```no-highlight
 965 static files copied to '/opt/nautobot/static'.
 ```
 
@@ -92,7 +100,12 @@ $ nautobot-server collectstatic
 Creates a superuser account that has all permissions.
 
 ```no-highlight
-$ nautobot-server createsuperuser
+nautobot-server createsuperuser
+```
+
+This provides the following output:
+
+```no-highlight
 Username (leave blank to use 'jathan'): example
 Email address: example@localhost
 Password:
@@ -113,7 +126,12 @@ A shell for your database. This can be very useful in troubleshooting raw databa
     This is an advanced feature that gives you direct access to run raw SQL queries. Use this very cautiously as you can cause irreparable damage to your Nautobot installation.
 
 ```no-highlight
-$ nautobot-server dbshell
+nautobot-server dbshell
+```
+
+Output:
+
+```no-highlight
 psql (12.6 (Ubuntu 12.6-0ubuntu0.20.04.1))
 SSL connection (protocol: TLSv1.3, cipher: TLS_AES_256_GCM_SHA384, bits: 256, compression: off)
 Type "help" for help.
@@ -134,7 +152,7 @@ nautobot=> \q
     - `django_rq` should now be excluded from the dump (added `--exclude django_rq` to the example usage)
 
 ```no-highlight
-$ nautobot-server dumpdata \
+nautobot-server dumpdata \
   --natural-foreign \
   --natural-primary \
   --exclude contenttypes \
@@ -153,10 +171,15 @@ One example of using this command would be to [`export data from PostgreSQL`](..
 
 `nautobot-server fix_custom_fields`
 
-Adds/Removes any custom fields which should or should not exist on an object.  This command should not be run unless a custom fields jobs has failed:
+Adds/Removes any custom fields which should or should not exist on an object. This command should not be run unless a custom fields jobs has failed:
 
 ```no-highlight
-$ nautobot-server fix_custom_fields
+nautobot-server fix_custom_fields
+```
+
+Example output:
+
+```no-highlight
 Processing ContentType dcim | device
 Processing ContentType dcim | site
 Processing ContentType dcim | rack
@@ -174,7 +197,12 @@ Processing ContentType ipam | prefix
 Generates a new [`SECRET_KEY`](../configuration/required-settings.md#secret_key) that can be used in your `nautobot_config.py`:
 
 ```no-highlight
-$ nautobot-server generate_secret_key
+nautobot-server generate_secret_key
+```
+
+Output:
+
+```no-highlight
 e!j=vrlhz-!wl8p_3+q5s5cph29nzj$xm81eap-!&n!_9^du09
 ```
 
@@ -196,7 +224,12 @@ Flush any existing data from the database before generating new data.
 String to use as a random generator seed for reproducible results.
 
 ```no-highlight
-$ nautobot-server generate_test_data --flush --seed "Nautobot"
+nautobot-server generate_test_data --flush --seed "Nautobot"
+```
+
+Sample output:
+
+```no-highlight
 Flushing all existing data from the database...
 Seeding the pseudo-random number generator with seed "Nautobot"...
 Creating Statuses...
@@ -219,7 +252,12 @@ Database populated successfully!
 Run health checks and exit 0 if everything went well.
 
 ```no-highlight
-$ nautobot-server health_check
+nautobot-server health_check
+```
+
+Output
+
+```no-highlight
 DatabaseBackend          ... working
 DefaultFileStorageHealthCheck ... working
 RedisBackend             ... working
@@ -236,7 +274,12 @@ Generates a new configuration with all of the default settings provided for you,
 By default the file will be created at `$HOME/.nautobot/nautobot_config.py`:
 
 ```no-highlight
-$ nautobot-server init
+nautobot-server init
+```
+
+Output:
+
+```no-highlight
 Configuration file created at '/home/example/.nautobot/nautobot_config.py
 ```
 
@@ -249,7 +292,7 @@ For more information on configuring Nautobot for the first time or on more advan
 Invalidates cache for entire app, model or particular instance. Most commonly you will see us recommend clearing the entire cache using `invalidate all`:
 
 ```no-highlight
-$ nautobot-server invalidate all
+nautobot-server invalidate all
 ```
 
 There are a number of other options not covered here.
@@ -273,7 +316,12 @@ To import the data that was exported with `nautobot-server dumpdata ...` see the
 Initialize a new database or run any pending database migrations to an existing database.
 
 ```no-highlight
-$ nautobot-server migrate
+nautobot-server migrate
+```
+
+Output:
+
+```no-highlight
 Wrapping model clean methods for custom validators failed because the ContentType table was not available or populated. This is normal during the execution of the migration command for the first time.
 Operations to perform:
   Apply all migrations: admin, auth, circuits, contenttypes, dcim, extras, ipam, sessions, taggit, tenancy, users, virtualization
@@ -297,7 +345,12 @@ An interactive Python shell with all of the database models and various other ut
     This is an advanced feature that gives you direct access to the Django database models. Use this very cautiously as you can cause irreparable damage to your Nautobot installation.
 
 ```no-highlight
-$ nautobot-server nbshell
+nautobot-server nbshell
+```
+
+Prompt provided:
+
+```no-highlight
 ### Nautobot interactive shell (localhost)
 ### Python 3.8.7 | Django 3.1.7 | Nautobot 1.0.0
 ### lsmodels() will show available models. Use help(<model>) for more info.
@@ -343,7 +396,12 @@ Do not automatically remove stale content types.
 Do not automatically generate missing cable paths.
 
 ```no-highlight
-$ nautobot-server post_upgrade
+nautobot-server post_upgrade
+```
+
+Example Output:
+
+```no-highlight
 Performing database migrations...
 Operations to perform:
   Apply all migrations: admin, auth, circuits, contenttypes, dcim, extras, ipam, sessions, taggit, tenancy, users, virtualization
@@ -388,7 +446,12 @@ Recalculate natural ordering values for the specified models.
 This defaults to recalculating natural ordering on all models which have one or more fields of type `NaturalOrderingField`:
 
 ```no-highlight
-$ nautobot-server renaturalize
+nautobot-server renaturalize
+```
+
+Example output:
+
+```no-highlight
 Renaturalizing 21 models.
 dcim.ConsolePort.name (_name)... 196
 dcim.ConsoleServerPort.name (_name)... 0
@@ -417,7 +480,12 @@ Done.
 You may optionally specify or more specific models (each prefixed with its app_label) to renaturalize:
 
 ```no-highlight
-$ nautobot-server renaturalize dcim.Device
+nautobot-server renaturalize dcim.Device
+```
+
+Example output:
+
+```no-highlight
 Renaturalizing 1 models.
 dcim.Device.name (_name)... 208
 Done.
@@ -436,7 +504,7 @@ Commit changes to DB (defaults to dry-run if unset). `--username` is mandatory i
 User account to impersonate as the requester of this job.
 
 ```no-highlight
-$ nautobot-server runjob --commit --username someuser local/example/MyJobWithNoVars
+nautobot-server runjob --commit --username someuser local/example/MyJobWithNoVars
 ```
 
 Note that there is presently no option to provide input parameters (`data`) for jobs via the CLI.
@@ -453,7 +521,12 @@ Directly invoke uWSGI to start a Nautobot server suitable for production use. Th
     uWSGI offers an overwhelming amount of command-line arguments that could not possibly be covered here. Please see the [official uWSGI Options guide](https://uwsgi-docs.readthedocs.io/en/latest/Options.html) for more information.
 
 ```no-highlight
-$ nautobot-server start --ini ./uwsgi.ini
+nautobot-server start --ini ./uwsgi.ini
+```
+
+Example output:
+
+```no-highlight
 [uWSGI] getting INI configuration from ./uwsgi.ini
 [uwsgi-static] added mapping for /static => /opt/nautobot/static
 *** Starting uWSGI 2.0.19.1 (64bit) on [Thu Mar 11 21:13:22 2021] ***
@@ -500,11 +573,11 @@ Create a new plugin with `name`.
 
 This command is similar to the django-admin [startapp](https://docs.djangoproject.com/en/stable/ref/django-admin/#startapp) command, but with a default template directory (`--template`) of `nautobot/core/templates/plugin_template`. This command assists with creating a basic file structure for beginning development of a new Nautobot plugin.
 
-Without passing in the destination directory, `nautobot-server startplugin` will use your current directory and the `name` argument provided to create a new directory. We recommend providing a  directory so that the plugin can be installed or published easily. Here is an example:
+Without passing in the destination directory, `nautobot-server startplugin` will use your current directory and the `name` argument provided to create a new directory. We recommend providing a directory so that the plugin can be installed or published easily. Here is an example:
 
 ```no-highlight
-$ mkdir -p ~/myplugin/myplugin
-$ nautobot-server startplugin myplugin ~/myplugin/myplugin
+mkdir -p ~/myplugin/myplugin
+nautobot-server startplugin myplugin ~/myplugin/myplugin
 ```
 
 Additional options such as `--name` or `--extension` can be found in the Django [documentation](https://docs.djangoproject.com/en/stable/ref/django-admin/#startapp).
@@ -524,7 +597,12 @@ Force recalculation of all existing cable paths.
 Do not prompt user for any input/confirmation.
 
 ```no-highlight
-$ nautobot-server trace_paths
+nautobot-server trace_paths
+```
+
+Example output:
+
+```no-highlight
 Found no missing circuit termination paths; skipping
 Found no missing console port paths; skipping
 Found no missing console server port paths; skipping
@@ -551,7 +629,12 @@ Optional port number (default: `9000`)
 Hide HTTP request headers.
 
 ```no-highlight
-$ nautobot-server webhook_receiver --port 9001 --no-headers
+nautobot-server webhook_receiver --port 9001 --no-headers
+```
+
+Example output:
+
+```no-highlight
 Listening on port http://localhost:9000. Stop with CONTROL-C.
 ```
 

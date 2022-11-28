@@ -168,7 +168,7 @@ Additional settings may be available and are not covered here. Please see the of
 
 Default: `undefined`
 
-If you are using [Redis Sentinel](https://redis.io/topics/sentinel) for high-availability purposes, you must replace the [`CACHEOPS_REDIS`](#cacheops_redis) setting with [`CACHEOPS_SENTINEL`](#cacheops_sentinel).  For more details on configuring Nautobot to use Redis Sentinel see [Using Redis Sentinel](../additional-features/caching.md#using-redis-sentinel). For more details on how to configure Cacheops specifically to use Redis Sentinel see the official guide on [Cacheops
+If you are using [Redis Sentinel](https://redis.io/topics/sentinel) for high-availability purposes, you must replace the [`CACHEOPS_REDIS`](#cacheops_redis) setting with [`CACHEOPS_SENTINEL`](#cacheops_sentinel). For more details on configuring Nautobot to use Redis Sentinel see [Using Redis Sentinel](../additional-features/caching.md#using-redis-sentinel). For more details on how to configure Cacheops specifically to use Redis Sentinel see the official guide on [Cacheops
 setup](https://github.com/Suor/django-cacheops#setup).
 
 !!! warning
@@ -378,14 +378,24 @@ Please note that this key is **not** used directly for hashing user passwords or
 You may run `nautobot-server generate_secret_key` to generate a new key at any time.
 
 ```no-highlight
-$ nautobot-server generate_secret_key
+nautobot-server generate_secret_key
+```
+
+Sample output:
+
+```no-highlight
 +$_kw69oq&fbkfk6&q-+ksbgzw1&061ghw%420u3(wen54w(m
 ```
 
 Alternatively use the following command to generate a secret even before `nautobot-server` is runnable:
 
 ```no-highlight
-$ LC_ALL=C tr -cd '[:lower:][:digit:]!@#$%^&*(\-_=+)' < /dev/urandom | fold -w50 | head -n1
+LC_ALL=C tr -cd '[:lower:][:digit:]!@#$%^&*(\-_=+)' < /dev/urandom | fold -w50 | head -n1
+```
+
+Example output:
+
+```no-highlight
 9.V$@Kxkc@@Kd@z<a/=.J-Y;rYc79<y@](9o9(L(*sS)Q+ud5P
 ```
 
