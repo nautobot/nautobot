@@ -15,7 +15,7 @@ If you are a user migrating from Nautobot v1.X, please refer to the ["Upgrading 
 ### Removed
 
 #### Removed DCIM Shadowed Filter Fields ([#2804](https://github.com/nautobot/nautobot/pull/2804))
- 
+
 As a part of breaking changes made in v2.0, shadowed filter/filterset fields are being removed in the dcim app:
 
 Currently for foreign-key related fields, **on existing core models in the v1.3 release train**:
@@ -46,6 +46,7 @@ Now these two fields will be replaced by a single field using `NaturalKeyOrPKMul
         label="Site (slug or ID)",
     )
 ```
+
 Below is a table documenting all such changes and where they occurred.
 
 | Filterset                      | Old Filter Field   | Changes                                                                      |
@@ -140,6 +141,7 @@ Now we change the foregin-key related field to be its own PK based filter:
         label="Power Outlets",
     )
 ```
+
 Below is a table documenting all such changes and where they occurred.
 
 | Filterset       | Old Filter Field     | Changes                                                                           |
@@ -152,9 +154,9 @@ Below is a table documenting all such changes and where they occurred.
 |                 | front_ports          | Changed from mapping to `has_front_ports` to `ModelMultipleChoiceFilter`          |
 |                 | rear_ports           | Changed from mapping to `has_rear_ports` to `ModelMultipleChoiceFilter`           |
 |                 | device_bays          | Changed from mapping to `has_device_bays` to `ModelMultipleChoiceFilter`          |
-|                 | pass_through_ports   | Deleted in exchange for in exchange for `has_(front|rear)_ports`                  |
+|                 | pass_through_ports   | Deleted in exchange for in exchange for `has_(front/rear)_ports`                  |
 
 !!! important
-    `NaturalKeyOrPKMultipleChoiceFilter` is not filtering on true Natural Keys in the case where its `to_field_name` argument is mapped to the `name` attribute or a single field that is not enough to identify an unique model instance by itself. This is technically a bug and is tracked here https://github.com/nautobot/nautobot/issues/2875 and should be resolved after concluding this Epic https://github.com/nautobot/nautobot/issues/1574.
+    `NaturalKeyOrPKMultipleChoiceFilter` is not filtering on true Natural Keys in the case where its `to_field_name` argument is mapped to the `name` attribute or a single field that is not enough to identify an unique model instance by itself. This is technically a bug and is tracked here <https://github.com/nautobot/nautobot/issues/2875> and should be resolved after concluding this Epic <https://github.com/nautobot/nautobot/issues/1574>.
 
 <!-- towncrier release notes start -->
