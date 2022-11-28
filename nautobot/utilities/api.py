@@ -4,28 +4,27 @@ import sys
 from django.conf import settings
 from django.http import JsonResponse
 from django.urls import reverse
-from django.utils.module_loading import import_string
 from rest_framework import status
 from rest_framework.utils import formatting
 
 from nautobot.core.api.exceptions import SerializerNotFound
+from nautobot.utilities.utils import get_related_class_for_model
 
 
-def get_serializer_for_model(model, prefix=""):
+def get_serializer_for_model(model, prefix="", as_string=False):
     """
     Dynamically resolve and return the appropriate serializer for a model.
     """
-    app_name, model_name = model._meta.label.split(".")
-    # Serializers for Django's auth models are in the users app
-    if app_name == "auth":
-        app_name = "users"
-    serializer_name = f"{app_name}.api.serializers.{prefix}{model_name}Serializer"
-    if app_name not in settings.PLUGINS:
-        serializer_name = f"nautobot.{serializer_name}"
-    try:
-        return import_string(serializer_name)
-    except AttributeError:
-        raise SerializerNotFound(f"Could not determine serializer for {app_name}.{model_name} with prefix '{prefix}'")
+    serializer = get_related_class_for_model(
+        model, module_name="api.serializers", object_suffix="Serializer", as_string=as_string
+    )
+
+    if serializer is None:
+        raise SerializerNotFound(
+            f"Could not determine serializer for {model._meta.app_label}.{model._meta.model_name} with prefix '{prefix}'"
+        )
+
+    return serializer
 
 
 def is_api_request(request):
