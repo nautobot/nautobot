@@ -1,6 +1,6 @@
 from django.db.models import Q, QuerySet
 
-from nautobot.utilities.permissions import permission_is_exempt
+from nautobot.utilities import permissions
 
 
 class RestrictedQuerySet(QuerySet):
@@ -18,7 +18,7 @@ class RestrictedQuerySet(QuerySet):
         permission_required = f"{app_label}.{action}_{model_name}"
 
         # Bypass restriction for superusers and exempt views
-        if user.is_superuser or permission_is_exempt(permission_required):
+        if user.is_superuser or permissions.permission_is_exempt(permission_required):
             qs = self
 
         # User is anonymous or has not been granted the requisite permission

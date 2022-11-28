@@ -1,7 +1,7 @@
-from nautobot.core.apps import NautobotConfig
+from nautobot.core import apps
 
 
-class UtilitiesConfig(NautobotConfig):
+class UtilitiesConfig(apps.NautobotConfig):
     name = "nautobot.utilities"
 
     def ready(self):

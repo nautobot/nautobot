@@ -37,6 +37,7 @@ from nautobot.utilities.forms.forms import (
     BulkRenameForm,
     ConfirmationForm,
     CSVModelForm,
+    DynamicFilterForm,
     ImportForm,
     PrefixFieldMixin,
     ReturnURLForm,
@@ -44,12 +45,15 @@ from nautobot.utilities.forms.forms import (
 )
 from nautobot.utilities.forms.utils import (
     add_blank_choice,
+    add_field_to_filter_form_class,
     expand_alphanumeric_pattern,
     expand_ipaddress_pattern,
     form_from_model,
     parse_alphanumeric_range,
+    parse_csv,
     parse_numeric_range,
     restrict_form_fields,
+    validate_csv,
 )
 from nautobot.utilities.forms.widgets import (
     APISelect,
@@ -59,6 +63,7 @@ from nautobot.utilities.forms.widgets import (
     ContentTypeSelect,
     DatePicker,
     DateTimePicker,
+    MultiValueCharInput,
     SelectWithDisabled,
     SelectWithPK,
     SlugWidget,
@@ -70,6 +75,7 @@ from nautobot.utilities.forms.widgets import (
 
 __all__ = (
     "add_blank_choice",
+    "add_field_to_filter_form_class",
     "AddressFieldMixin",
     "ALPHANUMERIC_EXPANSION_PATTERN",
     "APISelect",
@@ -94,6 +100,7 @@ __all__ = (
     "CSVMultipleContentTypeField",
     "DatePicker",
     "DateTimePicker",
+    "DynamicFilterForm",
     "DynamicModelChoiceField",
     "DynamicModelMultipleChoiceField",
     "expand_alphanumeric_pattern",
@@ -110,10 +117,12 @@ __all__ = (
     "MultiMatchModelMultipleChoiceField",
     "MultipleContentTypeField",
     "MultiValueCharField",
+    "MultiValueCharInput",
     "NullableDateField",
     "NUMERIC_EXPANSION_PATTERN",
     "NumericArrayField",
     "parse_alphanumeric_range",
+    "parse_csv",
     "parse_numeric_range",
     "PrefixFieldMixin",
     "restrict_form_fields",
@@ -128,4 +137,5 @@ __all__ = (
     "TableConfigForm",
     "TagFilterField",
     "TimePicker",
+    "validate_csv",
 )

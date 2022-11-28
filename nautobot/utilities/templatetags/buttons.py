@@ -1,8 +1,9 @@
 from django import template
-from django.urls import reverse, NoReverseMatch
+from django.urls import NoReverseMatch, reverse
 
-from nautobot.extras.models import ExportTemplate
-from nautobot.utilities.utils import prepare_cloned_fields, get_route_for_model
+from nautobot.extras import models
+from nautobot.utilities import utils
+
 
 register = template.Library()
 
@@ -15,12 +16,12 @@ register = template.Library()
 @register.inclusion_tag("buttons/clone.html")
 def clone_button(instance):
     try:
-        url = reverse(get_route_for_model(instance, "add"))
+        url = reverse(utils.get_route_for_model(instance, "add"))
     except NoReverseMatch:
         return {"url": None}
 
     # Populate cloned field values
-    param_string = prepare_cloned_fields(instance)
+    param_string = utils.prepare_cloned_fields(instance)
     if param_string:
         url = f"{url}?{param_string}"
 
@@ -39,7 +40,7 @@ def edit_button(instance, use_pk=False, key="slug"):
         use_pk: If True, use the primary key instead of any specified "key" field. (Deprecated, use `key="pk"` instead)
         key: The attribute on the model to use for reverse URL lookup.
     """
-    viewname = get_route_for_model(instance, "edit")
+    viewname = utils.get_route_for_model(instance, "edit")
 
     # Assign kwargs
     if hasattr(instance, key) and not use_pk:
@@ -67,7 +68,7 @@ def delete_button(instance, use_pk=False, key="slug"):
         use_pk: If True, use the primary key instead of any specified "key" field. (Deprecated, use `key="pk"` instead)
         key: The attribute on the model to use for reverse URL lookup.
     """
-    viewname = get_route_for_model(instance, "delete")
+    viewname = utils.get_route_for_model(instance, "delete")
 
     # Assign kwargs
     if hasattr(instance, key) and not use_pk:
@@ -114,7 +115,7 @@ def import_button(url):
 def export_button(context, content_type=None):
     if content_type is not None:
         user = context["request"].user
-        export_templates = ExportTemplate.objects.restrict(user, "view").filter(content_type=content_type)
+        export_templates = models.ExportTemplate.objects.restrict(user, "view").filter(content_type=content_type)
     else:
         export_templates = []
 

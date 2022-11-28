@@ -1,11 +1,11 @@
+from django.db.models import Manager
 from mptt.managers import TreeManager as TreeManager_
 from mptt.querysets import TreeQuerySet as TreeQuerySet_
 
-from django.db.models import Manager
-from .querysets import RestrictedQuerySet
+from nautobot.utilities import querysets
 
 
-class TreeQuerySet(TreeQuerySet_, RestrictedQuerySet):
+class TreeQuerySet(TreeQuerySet_, querysets.RestrictedQuerySet):
     """
     Mate django-mptt's TreeQuerySet with our RestrictedQuerySet for permissions enforcement.
     """

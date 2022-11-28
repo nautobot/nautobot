@@ -1,12 +1,11 @@
 import json
 
+from django.core import exceptions
 from django.core.validators import RegexValidator
 from django.db import models
-from django.core import exceptions
 
-from nautobot.utilities.ordering import naturalize
-from .forms import ColorSelect
-from .forms.fields import JSONArrayFormField
+from nautobot.utilities import forms, ordering
+
 
 ColorValidator = RegexValidator(
     regex="^[0-9a-f]{6}$",
@@ -43,7 +42,7 @@ class ColorField(models.CharField):
         super().__init__(*args, **kwargs)
 
     def formfield(self, **kwargs):
-        kwargs["widget"] = ColorSelect
+        kwargs["widget"] = forms.ColorSelect
         return super().formfield(**kwargs)
 
 
@@ -57,7 +56,7 @@ class NaturalOrderingField(models.CharField):
 
     description = "Stores a representation of its target field suitable for natural ordering"
 
-    def __init__(self, target_field, naturalize_function=naturalize, *args, **kwargs):
+    def __init__(self, target_field, naturalize_function=ordering.naturalize, *args, **kwargs):
         self.target_field = target_field
         self.naturalize_function = naturalize_function
         super().__init__(*args, **kwargs)
@@ -184,7 +183,7 @@ class JSONArrayField(models.JSONField):
         """Return a django.forms.Field instance for this field."""
         return super().formfield(
             **{
-                "form_class": JSONArrayFormField,
+                "form_class": forms.JSONArrayFormField,
                 "base_field": self.base_field.formfield(),
                 **kwargs,
             }
