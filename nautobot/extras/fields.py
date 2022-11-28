@@ -12,8 +12,8 @@ class ForeignKeyLimitedByContentTypes(models.ForeignKey):
     are set to "dcim.site" and "dcim.device" while the role_2's content_types are set to
     "circuit.circuit" and "dcim.site."
 
-    If Device Model contains a field role, then role_1 is the only Role that is available,
-    while role_1 & role_2 are the only Roles that are available for Status.
+    Then, for the field `role` on the Device model, role_1 is the only Role that is available,
+    while role_1 & role_2 are both available for the Site model.
 
     The limit_choices_to for the field are automatically derived from:
         - the content-type to which the field is attached (e.g. `dcim.device`)
