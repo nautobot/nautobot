@@ -43,9 +43,7 @@ export default function ObjectRetrieveTemplate({ pageTitle, ...props }) {
   useEffect(() => {
     async function fetchData(props) {
       const data_url = "/api" + window.location.pathname;
-      // const header_url = "/api" + window.location.pathname + "table-fields/";
       const object_data = await axios_instance.get(data_url);
-      // const table_header = await axios_instance.get(header_url);
       setObjectData(object_data.data);
 
       let newPageConfig = pageConfig;
