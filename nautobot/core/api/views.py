@@ -218,6 +218,11 @@ class ModelViewSetMixin:
         # Fall back to the hard-coded serializer class
         return self.serializer_class
 
+    def get_serializer_context(self, *args, **kwargs):
+        ctx = super().get_serializer_context()
+        ctx["request"] = None
+        return ctx
+
     def get_queryset(self):
         # If using brief mode, clear all prefetches from the queryset and append only brief_prefetch_fields (if any)
         if self.brief:

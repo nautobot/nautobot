@@ -9,6 +9,7 @@ import Tabs from "react-bootstrap/Tabs";
 import { axios_instance } from "common/utils/utils";
 //icons
 import * as Icon from "react-feather";
+import { Link } from "react-router-dom";
 
 
 export default function ObjectRetrieveTemplate({ pageTitle, ...props }) {
@@ -88,7 +89,9 @@ export default function ObjectRetrieveTemplate({ pageTitle, ...props }) {
                 <tr>
                   <td>Status</td>
                   <td>
-                    <span className="label">Active</span>
+                    <span className="label">
+                      {objectData.status ? <>{objectData.status.label}</> : "—"}
+                    </span>
                   </td>
                 </tr>
                 <tr>
@@ -100,7 +103,8 @@ export default function ObjectRetrieveTemplate({ pageTitle, ...props }) {
                 <tr>
                   <td>Tenant</td>
                   <td>
-                    {objectData.tenant ? <>{objectData.tenant}</> : "—"}
+                    {objectData.tenant ?
+                      <Link to={objectData.tenant.url}>{objectData.tenant.display}</Link> : "—"}
                   </td>
                 </tr>
                 <tr>
