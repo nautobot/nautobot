@@ -97,7 +97,8 @@ export default function ObjectRetrieveTemplate({ pageTitle, ...props }) {
                 <tr>
                   <td>Region</td>
                   <td>
-                    {objectData.region ? <>{objectData.region}</> : "—"}
+                    {objectData.region ?
+                      <Link to={objectData.region.url}>{objectData.region.display}</Link> : "—"}
                   </td>
                 </tr>
                 <tr>
