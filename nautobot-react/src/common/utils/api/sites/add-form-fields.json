@@ -1,0 +1,66 @@
+[
+    {
+        "title": "Site",
+        "fields": [
+            {
+                "type": "text",
+                "placeholder": "Name",
+                "label": "Name",
+                "help-text": ""
+            },
+            {
+                "type": "text",
+                "placeholder": "Slug",
+                "label": "Slug",
+                "help-text": "URL-friendly unique shorthand"
+            },
+            {
+                "type": "select",
+                "placeholder": "Status",
+                "label": "Status",
+                "options": [
+                    {
+                        "value": "active",
+                        "label": "Active"
+                    },
+                    {
+                        "value": "planned",
+                        "label": "Planned"
+                    },
+                    {
+                        "value": "staging",
+                        "label": "Staging"
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "title": "Tenancy",
+        "fields": [
+            {
+                "type": "select",
+                "placeholder": "Tenant group",
+                "label": "Tenant group",
+                "options": []
+            },
+            {
+                "type": "select",
+                "placeholder": "Tenant",
+                "label": "Tenant",
+                "options": []
+            }
+        ]
+    },
+    {
+        "title": "Comments",
+        "fields": [
+            {
+                "type": "text-area",
+                "placeholder": "Comments",
+                "label": "Comments",
+                "options": []
+            }
+        ]
+    }
+]

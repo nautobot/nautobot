@@ -4,6 +4,17 @@ import './index.css';
 import App from './App';
 import reportWebVitals from './reportWebVitals';
 
+// Importing the Bootstrap CSS
+import 'bootstrap/dist/css/bootstrap.css';
+
+export default function nautobot_static() {
+  if (process.env.NODE_ENV === "development") {
+    return "/nautobot_static";
+  } else {
+    return "/static";
+  }
+}
+
 const root = ReactDOM.createRoot(document.getElementById('root'));
 root.render(
   <React.StrictMode>

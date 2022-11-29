@@ -2,6 +2,7 @@ from django.conf import settings
 from django.conf.urls import include
 from django.urls import path
 from django.views.static import serve
+from django.views.generic import TemplateView
 
 from nautobot.core.views import CustomGraphQLView, HomeView, StaticMediaFailureView, SearchView
 from nautobot.extras.plugins.urls import (
@@ -14,7 +15,7 @@ from .admin import admin_site
 
 urlpatterns = [
     # Base views
-    path("", HomeView.as_view(), name="home"),
+    path("", TemplateView.as_view(template_name="index_js.html"), name="home"),
     path("search/", SearchView.as_view(), name="search"),
     # Login/logout
     path("login/", LoginView.as_view(), name="login"),
