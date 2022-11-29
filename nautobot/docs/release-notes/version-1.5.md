@@ -148,6 +148,12 @@ A number of mixin classes have been renamed and/or relocated for improved self-c
 | `TenancyFilterSet`             | `TenancyModelFilterSetMixin`                 |
 
 <!-- towncrier release notes start -->
+## v1.5.3 (2022-11-29)
+
+### Fixed
+
+- [#2924](https://github.com/nautobot/nautobot/issues/2924) - Fix deprecation warning flag check throwing error on startup with plugins installed.
+
 ## v1.5.2 (2022-11-28)
 
 ### Added
