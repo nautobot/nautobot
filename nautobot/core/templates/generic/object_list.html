@@ -170,57 +170,125 @@
 
     // By default on lookup_value field names are form-\d-lookup_value, thats why
     // on page load we change all `lookup_value` name to its relevant `lookup_type` value
-    $(".dynamic-filterform").each(function(){
-        lookup_type_value = $(this).find(".lookup_type-select").val();
-        lookup_value = $(this).find(".lookup_value-input");
-        lookup_value.attr("name", lookup_type_value);
-    })
+    // $(".dynamic-filterform").each(function(){
+    //     console.log($(this))
+    //     lookup_type_value = $(this).find(".lookup_type-select").val();
+    //     console.log(lookup_type_value);
+    //     lookup_value = $(this).find(".lookup_value-input");
+    //     console.log(lookup_value);
+    //     lookup_value.attr("name", lookup_type_value);
+    // })
+    document.querySelectorAll(".dynamic-filterform").forEach(
+        el =>
+        {
+            lookup_type_value = el.querySelector(".lookup_type-select").value;
+            lookup_value = el.querySelector(".lookup_value-input");
+            lookup_value.setAttribute("name", lookup_type_value);
+        }
+    )
 
     // Remove applied filters
-    $(".remove-filter-param").on("click", function(){
-        let query_params = location.search;
-        let type = $(this).attr("data-field-type");
-        let field_value = $(this).attr("data-field-value");
-        let query_string = location.search.substr(1).split("&");
+    // $(".remove-filter-param").on("click", function(){
+    //     let query_params = location.search;
+    //     let type = $(this).attr("data-field-type");
+    //     let field_value = $(this).attr("data-field-value");
+    //     let query_string = location.search.substr(1).split("&");
 
-        if (type === "parent") {
-            query_string = query_string.filter(item => item.search(field_value) < 0);
-        } else {
-            let parent = $(this).attr("data-field-parent");
-            query_string = query_string.filter(item => item.search(parent + "=" + field_value) < 0)
-        }
-        location.replace("?" + query_string.join("&"))
-    })
+    //     if (type === "parent") {
+    //         query_string = query_string.filter(item => item.search(field_value) < 0);
+    //     } else {
+    //         let parent = $(this).attr("data-field-parent");
+    //         query_string = query_string.filter(item => item.search(parent + "=" + field_value) < 0)
+    //     }
+    //     location.replace("?" + query_string.join("&"))
+    // })
+    document.querySelectorAll(".remove-filter-param").forEach(
+        el => el.addEventListener("click", (e) => {
+                let query_params = location.search;
+                let type = el.getAttribute("data-field-type");
+                let field_value = el.getAttribute("data-field-value");
+                let query_string = location.search.substr(1).split("&");
+
+                if (type === "parent") {
+                    query_string = query_string.filter(item => item.search(field_value) < 0);
+                } else {
+                    let parent = el.getAttribute("data-field-parent");
+                    query_string = query_string.filter(item => item.search(parent + "=" + field_value) < 0)
+                }
+                location.replace("?" + query_string.join("&"))
+            }
+        )
+    );
+    var dynamic_filter_form = document.querySelector("#dynamic-filter-form")
+    // On submit of filter search form
 
     // On submit of filter form
-    $("#dynamic-filter-form").on("submit", function(e){
-        let this_form = $(this);
-        this_form.find(`input[name*="form-"], select[name*="form-"]`).removeAttr("name")
-        // Append q form field to to dynamic filter form via hidden input
-        let q_field = $('#id_q')
-        let q_field_phantom = $('<input type="hidden" name="q" />')
-        q_field_phantom.val(q_field.val())
-        this_form.append(q_field_phantom);
-    })
-
-    // On submit of filter search form
-    $("#search-form").on("submit", function(e){
+    // $("#dynamic-filter-form").on("submit", function(e){
+    //     let this_form = $(this);
+    //     this_form.find(`input[name*="form-"], select[name*="form-"]`).removeAttr("name")
+    //     // Append q form field to to dynamic filter form via hidden input
+    //     let q_field = $('#id_q')
+    //     let q_field_phantom = $('<input type="hidden" name="q" />')
+    //     q_field_phantom.val(q_field.val())
+    //     this_form.append(q_field_phantom);
+    // })
+    dynamic_filter_form.addEventListener("submit", (e) => {
+        let this_form = dynamic_filter_form;
+        this_form.querySelectorAll(`input[name*="form-"], select[name*="form-"]`).forEach(
+            el => el.removeAttribute("name")
+        )
+        let q_field = document.getElementById("id_q")
+        var q_field_phantom = document.createElement("input");
+        q_field_phantom.setAttribute("type", "hidden");
+        q_field_phantom.setAttribute("name", "q");
+        q_field_phantom.setAttribute("value", q_field.value)
+        this_form.appendChild(q_field_phantom);
+    });
+    document.querySelector("#search-form").addEventListener("submit", (e) => {
         // Since the Dynamic Filter Form will already grab my q field, just have it do a majority of the work.
         e.preventDefault()
-        $("#dynamic-filter-form").submit()
+        let this_form = dynamic_filter_form;
+        this_form.querySelectorAll(`input[name*="form-"], select[name*="form-"]`).forEach(
+            el => el.removeAttribute("name")
+        )
+        let q_field = document.getElementById("id_q")
+        var q_field_phantom = document.createElement("input");
+        q_field_phantom.setAttribute("type", "hidden");
+        q_field_phantom.setAttribute("name", "q");
+        q_field_phantom.setAttribute("value", q_field.value)
+        this_form.appendChild(q_field_phantom);
+        dynamic_filter_form.submit()
     })
 
     // Clear new row values upon creation
-    $(".dynamic-filterform-add .add-row").click(function(){
-        let new_fields_parent_element = $(".dynamic-filterform").last()
-        let lookup_field_classes = [".lookup_field-select", ".lookup_type-select", ".lookup_value-input"];
-        lookup_field_classes.forEach(field_class => {
-            let element = new_fields_parent_element.find(field_class);
-            element.val(null).trigger('change')
-        })
-        // reinitialize jsify_form
-        jsify_form($(document))
-    })
+    // $(".dynamic-filterform-add .add-row").click(function(){
+    //     let new_fields_parent_element = $(".dynamic-filterform").last()
+    //     console.log(new_fields_parent_element)
+    //     let lookup_field_classes = [".lookup_field-select", ".lookup_type-select", ".lookup_value-input"];
+    //     lookup_field_classes.forEach(field_class => {
+    //         let element = new_fields_parent_element.find(field_class);
+    //         element.val(null).trigger('change')
+    //     })
+    //     // reinitialize jsify_form
+    //     jsify_form($(document))
+    // })
+    var add_button = document.querySelectorAll(".dynamic-filterform-add .add-row");
+    var filter_form_table = document.querySelector("#filterform-table")
+    document.querySelectorAll(".dynamic-filterform-add .add-row").forEach(
+        el => el.addEventListener("click", (e) => {
+                let new_fields_parent_element = filter_form_table.rows[filter_form_table.rows.length - 2];
+                let lookup_field_classes = [".lookup_field-select", ".lookup_type-select", ".lookup_value-input"];
+                lookup_field_classes.forEach(field_class => {
+                    let element = new_fields_parent_element.querySelector(field_class);
+                    element.addEventListener("change", (e) => {
+                        element.value = null;
+                    })
+                })
+                // reinitialize jsify_form
+                jsify_form($(document))
+            }
+        )
+    );
 
 </script>
 {% endblock %}
