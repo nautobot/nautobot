@@ -110,7 +110,7 @@ As a result, the value of this setting now defaults to `False`, disabling databa
 
 +/- 1.5.2
 
-Deprecation warnings raised by Nautobot itself (such as warnings about upcoming breaking changes in a future release) are no longer logged as `WARNING` log messages by default, but can be enabled by setting `DEBUG = True` or `LOG_DEPRECATION_WARNINGS = True` in your configuration. More information is available under [Optional Settings](../configuration/optional-settings.md#log_deprecation_warnings).
+Deprecation warnings raised by Nautobot itself (such as warnings about upcoming breaking changes in a future release) are no longer logged as `WARNING` log messages by default, but can be enabled by setting the `NAUTOBOT_LOG_DEPRECATION_WARNINGS` environment variable to `True` in your configuration. More information is available under [Optional Settings](../configuration/optional-settings.md#nautobot_log_deprecation_warnings).
 
 !!! caution
     In Nautobot 2.0, deprecation warnings will again be logged by default; a future release of Nautobot 1.5.x will also re-enable default logging of deprecation warnings.
