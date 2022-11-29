@@ -125,20 +125,20 @@ class FilterFormsTestCase(TestCase):
 
         filter_tabs = """
             <ul id="tabs" class="nav nav-tabs">
-                
+
                 <li role="presentation" class="nav-item">
                     <a class="nav-link active" href="#default-filter" role="tab" data-bs-toggle="tab">
                         Default
                     </a>
                 </li>
-                
-                
+
+
                 <li role="presentation" class="nav-item">
                     <a class="nav-link " href="#advanced-filter" role="tab" data-bs-toggle="tab">
                         Advanced
                     </a>
                 </li>
-                
+
             </ul>
             """
 
