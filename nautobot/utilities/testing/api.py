@@ -49,8 +49,7 @@ class APITestCase(ModelTestCase):
         super().setUpNautobot(client=False)
         self.token = Token.objects.create(user=self.user)
         self.header = {"HTTP_AUTHORIZATION": f"Token {self.token.key}"}
-        if self.api_version:
-            self.set_api_version(self.api_version)
+        self.set_api_version(self.api_version)
 
     def set_api_version(self, api_version):
         """Set or unset a specific API version for requests in this test case."""
