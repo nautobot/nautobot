@@ -1,2 +1,0 @@
-Renamed many mixin classes for clarity and consistency. Aliases remain but will raise `DeprecationWarning`.
-Reorganized filterset code and created `nautobot.dcim.filters.mixins`, `nautobot.extras.filters.mixins`, and `nautobot.tenancy.filters.mixins` submodules.

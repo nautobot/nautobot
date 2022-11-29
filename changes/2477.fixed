@@ -1,1 +1,0 @@
-Fixed last login time being updated during maintenance mode when remote user authentication is used.
