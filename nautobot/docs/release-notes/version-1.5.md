@@ -110,7 +110,7 @@ As a result, the value of this setting now defaults to `False`, disabling databa
 
 +/- 1.5.2
 
-Deprecation warnings raised by Nautobot itself (such as warnings about upcoming breaking changes in a future release) are no longer logged as `WARNING` log messages by default, but can be enabled by setting `DEBUG = True` or `LOG_DEPRECATION_WARNINGS = True` in your configuration. More information is available under [Optional Settings](../configuration/optional-settings.md#log_deprecation_warnings).
+Deprecation warnings raised by Nautobot itself (such as warnings about upcoming breaking changes in a future release) are no longer logged as `WARNING` log messages by default, but can be enabled by setting the `NAUTOBOT_LOG_DEPRECATION_WARNINGS` environment variable to `True` in your configuration. More information is available under [Optional Settings](../configuration/optional-settings.md#nautobot_log_deprecation_warnings).
 
 !!! caution
     In Nautobot 2.0, deprecation warnings will again be logged by default; a future release of Nautobot 1.5.x will also re-enable default logging of deprecation warnings.
@@ -148,6 +148,12 @@ A number of mixin classes have been renamed and/or relocated for improved self-c
 | `TenancyFilterSet`             | `TenancyModelFilterSetMixin`                 |
 
 <!-- towncrier release notes start -->
+## v1.5.3 (2022-11-29)
+
+### Fixed
+
+- [#2924](https://github.com/nautobot/nautobot/issues/2924) - Fix deprecation warning flag check throwing error on startup with plugins installed.
+
 ## v1.5.2 (2022-11-28)
 
 ### Added

@@ -5,7 +5,7 @@ import sys
 import traceback
 import warnings
 
-from django.conf import settings
+from nautobot.core.settings import LOG_DEPRECATION_WARNINGS
 
 
 logger = logging.getLogger(__name__)
@@ -31,7 +31,7 @@ def class_deprecated_in_favor_of(replacement_class):
                 DeprecationWarning,
                 stacklevel=stacklevel,
             )
-            if settings.LOG_DEPRECATION_WARNINGS or settings.DEBUG:
+            if LOG_DEPRECATION_WARNINGS:
                 # Since DeprecationWarnings are silenced by default, also log a traditional warning.
                 # Note: logger.warning() only supports a `stacklevel` parameter in Python 3.8 and later
                 if sys.version_info >= (3, 8):
