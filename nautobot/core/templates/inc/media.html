@@ -20,6 +20,9 @@
     <link rel="stylesheet"
           href="{% static 'flatpickr-4.6.9/themes/light.min.css' %}"
           onerror="window.location='{% url 'media_failure' %}?filename=flatpickr-4.6.9/themes/light.min.css'">
+    <link rel="stylesheet"
+          href="{% static 'css/theme.css' %}?v{{ settings.VERSION }}"
+          onerror="window.location='{% url 'media_failure' %}?filename=css/theme.css'">
     <link rel="stylesheet" id="dark-theme"
           href="{% static 'css/dark.css' %}?v{{ settings.VERSION }}"
           onerror="window.location='{% url 'media_failure' %}?filename=css/dark.css'"{% if request.COOKIES|get_item:"theme" != 'dark' %} disabled="disabled"{% endif %} />
