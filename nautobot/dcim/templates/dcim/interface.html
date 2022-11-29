@@ -2,7 +2,7 @@
 {% load helpers %}
 
 {% block content_left_page %}
-            <div class="card">
+            <div class="card mb-3">
                 <div class="card-header">
                     <strong>Interface</strong>
                 </div>
@@ -67,7 +67,7 @@
 
 {% block content_right_page %}
             {% if object.is_connectable %}
-                <div class="card">
+                <div class="card mb-3">
                     <div class="card-header">
                         <strong>Connection</strong>
                     </div>
@@ -169,7 +169,7 @@
                 </div>
             {% endif %}
             {% if object.is_lag %}
-                <div class="card">
+                <div class="card mb-3">
                     <div class="card-header"><strong>LAG Members</strong></div>
                     <table class="table table-hover table-headings card-body">
                         <thead>

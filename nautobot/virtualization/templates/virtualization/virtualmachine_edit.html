@@ -2,21 +2,21 @@
 {% load form_helpers %}
 
 {% block form %}
-    <div class="card">
+    <div class="card mb-3">
         <div class="card-header"><strong>Virtual Machine</strong></div>
         <div class="card-body">
             {% render_field form.name %}
             {% render_field form.role %}
         </div>
     </div>
-    <div class="card">
+    <div class="card mb-3">
         <div class="card-header"><strong>Cluster</strong></div>
         <div class="card-body">
             {% render_field form.cluster_group %}
             {% render_field form.cluster %}
         </div>
     </div>
-    <div class="card">
+    <div class="card mb-3">
         <div class="card-header"><strong>Management</strong></div>
         <div class="card-body">
             {% render_field form.status %}
@@ -25,7 +25,7 @@
             {% render_field form.primary_ip6 %}
         </div>
     </div>
-    <div class="card">
+    <div class="card mb-3">
         <div class="card-header"><strong>Resources</strong></div>
         <div class="card-body">
             {% render_field form.vcpus %}
@@ -33,7 +33,7 @@
             {% render_field form.disk %}
         </div>
     </div>
-    <div class="card">
+    <div class="card mb-3">
         <div class="card-header"><strong>Tenancy</strong></div>
         <div class="card-body">
             {% render_field form.tenant_group %}
@@ -41,14 +41,14 @@
         </div>
     </div>
     {% include 'inc/extras_features_edit_form_fields.html' %}
-    <div class="card">
+    <div class="card mb-3">
         <div class="card-header"><strong>Local Config Context Data</strong></div>
         <div class="card-body">
             {% render_field form.local_context_schema %}
             {% render_field form.local_context_data %}
         </div>
     </div>
-    <div class="card">
+    <div class="card mb-3">
         <div class="card-header"><strong>Comments</strong></div>
         <div class="card-body">
             {% render_field form.comments %}

@@ -2,14 +2,14 @@
 {% load form_helpers %}
 
 {% block form %}
-    <div class="card">
+    <div class="card mb-3">
         <div class="card-header"><strong>Virtual Chassis</strong></div>
         <div class="card-body">
             {% render_field form.name %}
             {% render_field form.domain %}
         </div>
     </div>
-    <div class="card">
+    <div class="card mb-3">
         <div class="card-header"><strong>Member Devices</strong></div>
         <div class="card-body">
             {% render_field form.region %}

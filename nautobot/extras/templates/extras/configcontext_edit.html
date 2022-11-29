@@ -2,7 +2,7 @@
 {% load form_helpers %}
 
 {% block form %}
-    <div class="card">
+    <div class="card mb-3">
         <div class="card-header"><strong>Config Context</strong></div>
         <div class="card-body">
             {% render_field form.name %}
@@ -12,7 +12,7 @@
             {% render_field form.is_active %}
         </div>
     </div>
-    <div class="card">
+    <div class="card mb-3">
         <div class="card-header"><strong>Assignment</strong></div>
         <div class="card-body">
             {% render_field form.regions %}
@@ -29,7 +29,7 @@
             {% render_field form.tags %}
         </div>
     </div>
-    <div class="card">
+    <div class="card mb-3">
         <div class="card-header"><strong>Data</strong></div>
         <div class="card-body">
             {% render_field form.data %}
@@ -40,7 +40,7 @@
     and incorrect, "Tags" field to the form. Currently config-contexts don't support custom-fields or relationships,
     but they do support notes.
     {% endcomment %}
-    <div class="card">
+    <div class="card mb-3">
         <div class="card-header"><strong>Notes</strong></div>
         <div class="card-body">
             {% render_field form.object_note %}

@@ -91,7 +91,7 @@ class ExampleModelContent(PluginTemplateExtension):
     def right_page(self):
         # You can also just send raw HTML.
         return """
-        <div class="card">
+        <div class="card mb-3">
             <div class="card-header">
                 <strong>Plugin Right Page</strong>
             </div>

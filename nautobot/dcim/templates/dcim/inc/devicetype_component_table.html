@@ -2,7 +2,7 @@
 {% if perms.dcim.change_devicetype %}
     <form method="post">
         {% csrf_token %}
-        <div class="card">
+        <div class="card mb-3">
             <div class="card-header">
                 <strong>{{ title }}</strong>
             </div>
@@ -30,7 +30,7 @@
         </div>
     </form>
 {% else %}
-    <div class="card">
+    <div class="card mb-3">
         <div class="card-header">
             <strong>{{ title }}</strong>
         </div>
