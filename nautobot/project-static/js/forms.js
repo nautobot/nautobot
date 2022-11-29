@@ -50,26 +50,36 @@ function colorPickerClassCopy(data, container) {
 */
 
 // Static choice selection
-function initializeStaticChoiceSelection(context){
+function initializeStaticChoiceSelection(context) {
     this_context = $(context);
-    this_context.find('.nautobot-select2-static').select2({
+    // check if the dropdown resides within a filterform modal
+    // See issue https://github.com/select2/select2-bootstrap-theme/issues/41
+    var parent = $("#FilterForm_modal")
+    var properties = {
         allowClear: true,
         placeholder: "---------",
         theme: "bootstrap",
-        width: "off"
-    });
+        width: "off",
+    };
+    // Check if parent object has a non-zero length
+    if (Object.keys(parent).length !== 0) {
+        properties.dropdownParent = parent;
+        this_context.find('.nautobot-select2-static').select2(properties);
+    } else {
+        this_context.find('.nautobot-select2-static').select2(properties);
+    }
 }
 
 // Static choice selection
-function initializeCheckboxes(context){
+function initializeCheckboxes(context) {
     this_context = $(context);
     // "Toggle" checkbox for object lists (PK column)
-    this_context.find('input:checkbox.toggle').click(function() {
+    this_context.find('input:checkbox.toggle').click(function () {
         $(this).closest('table').find('input:checkbox[name=pk]:visible').prop('checked', $(this).prop('checked'));
 
         // Show the "select all" box if present
         if ($(this).is(':checked')) {
-            $('#select_all_box').removeClass('hidden');
+            $('#select_all_box').removeClass('visually-hidden');
         } else {
             $('#select_all').prop('checked', false);
         }
@@ -83,7 +93,7 @@ function initializeCheckboxes(context){
     });
 }
 
-function initializeSlugField(context){
+function initializeSlugField(context) {
     this_context = $(context);
     var slug_field = this_context.find('#id_slug');
     if (slug_field.length != 0) {
@@ -92,7 +102,7 @@ function initializeSlugField(context){
         if (slug_field.val()) {
             slug_field.attr('_changed', true);
         }
-        slug_field.change(function() {
+        slug_field.change(function () {
             $(this).attr('_changed', true);
         });
         function reslugify() {
@@ -109,7 +119,7 @@ function initializeSlugField(context){
 
         for (slug_source_str of slug_source_arr) {
             let slug_source = $('#id_' + slug_source_str);
-            slug_source.on('keyup change', function() {
+            slug_source.on('keyup change', function () {
                 if (slug_field && !slug_field.attr('_changed')) {
                     reslugify();
                 }
@@ -119,10 +129,10 @@ function initializeSlugField(context){
     }
 }
 
-function initializeFormActionClick(context){
+function initializeFormActionClick(context) {
     this_context = $(context);
     // Set formaction and submit using a link
-    this_context.find('a.formaction').click(function(event) {
+    this_context.find('a.formaction').click(function (event) {
         event.preventDefault();
         var form = $(this).closest('form');
         form.attr('action', $(this).attr('href'));
@@ -131,30 +141,42 @@ function initializeFormActionClick(context){
 }
 
 // Bulk edit nullification
-function initializeBulkEditNullification(context){
+function initializeBulkEditNullification(context) {
     this_context = $(context);
-    this_context.find('input:checkbox[name=_nullify]').click(function() {
+    this_context.find('input:checkbox[name=_nullify]').click(function () {
         $('#id_' + this.value).toggle('disabled');
     });
 }
 
 // Color Picker
-function initializeColorPicker(context){
+function initializeColorPicker(context) {
     this_context = $(context);
-    this_context.find('.nautobot-select2-color-picker').select2({
+    // check if the dropdown resides within a filterform modal
+    // See issue https://github.com/select2/select2-bootstrap-theme/issues/41
+    var parent = $("#FilterForm_modal")
+    var properties = {
         allowClear: true,
         placeholder: "---------",
         theme: "bootstrap",
         templateResult: colorPickerClassCopy,
         templateSelection: colorPickerClassCopy,
         width: "off"
-    });
+    };
+    if (Object.keys(parent).length !== 0) {
+        properties.dropdownParent = parent;
+        this_context.find('.nautobot-select2-color-picker').select2(properties);
+    } else {
+        this_context.find('.nautobot-select2-color-picker').select2(properties);
+    }
 }
 
 // Dynamic Choice Selection
-function initializeDynamicChoiceSelection(context){
+function initializeDynamicChoiceSelection(context) {
     this_context = $(context);
-    this_context.find('.nautobot-select2-api').select2({
+    // check if the dropdown resides within a filterform modal
+    // See issue https://github.com/select2/select2-bootstrap-theme/issues/41
+    var parent = $("#FilterForm_modal")
+    var properties = {
         allowClear: true,
         placeholder: "---------",
         theme: "bootstrap",
@@ -162,7 +184,7 @@ function initializeDynamicChoiceSelection(context){
         ajax: {
             delay: 500,
 
-            url: function(params) {
+            url: function (params) {
                 var element = this[0];
                 var url = parseURL(element.getAttribute("data-url"));
 
@@ -173,7 +195,7 @@ function initializeDynamicChoiceSelection(context){
                 return url;
             },
 
-            data: function(params) {
+            data: function (params) {
                 var element = this[0];
                 // Paging. Note that `params.page` indexes at 1
                 var offset = (params.page - 1) * 50 || 0;
@@ -186,25 +208,25 @@ function initializeDynamicChoiceSelection(context){
 
                 // Set api_version
                 api_version = $(element).attr("data-api-version")
-                if(api_version)
-                parameters["api_version"] = api_version
+                if (api_version)
+                    parameters["api_version"] = api_version
 
 
                 // Allow for controlling the brief setting from within APISelect
-                parameters.brief = ( $(element).is('[data-full]') ? undefined : true );
+                parameters.brief = ($(element).is('[data-full]') ? undefined : true);
 
                 // Attach any extra query parameters
-                $.each(element.attributes, function(index, attr){
-                    if (attr.name.includes("data-query-param-")){
+                $.each(element.attributes, function (index, attr) {
+                    if (attr.name.includes("data-query-param-")) {
                         var param_name = attr.name.split("data-query-param-")[1];
 
-                        $.each($.parseJSON(attr.value), function(index, value) {
+                        $.each($.parseJSON(attr.value), function (index, value) {
                             // Referencing the value of another form field
                             if (value.startsWith('$')) {
                                 let element_id = $(element).attr("id")
                                 let ref_field;
 
-                                if(element_id.includes("id_form-")){
+                                if (element_id.includes("id_form-")) {
                                     let id_prefix = element_id.match(/id_form-[0-9]+-/i, "")[0]
                                     ref_field = $("#" + id_prefix + value.slice(1));
                                 }
@@ -235,7 +257,7 @@ function initializeDynamicChoiceSelection(context){
 
                 // Attach contenttype to parameters
                 contenttype = $(element).attr("data-contenttype");
-                if(contenttype){
+                if (contenttype) {
                     parameters["content_type"] = contenttype;
                 }
 
@@ -248,7 +270,7 @@ function initializeDynamicChoiceSelection(context){
                 $(element).children('option').attr('disabled', false);
                 var results = data.results;
 
-                results = results.reduce((results,record,idx) => {
+                results = results.reduce((results, record, idx) => {
                     record.text = record[element.getAttribute('display-field')] || record.name;
                     if (record._depth) {
                         // Annotate hierarchical depth for MPTT objects
@@ -256,24 +278,24 @@ function initializeDynamicChoiceSelection(context){
                     }
 
                     record.id = record[element.getAttribute('value-field')] || record.id;
-                    if(element.getAttribute('disabled-indicator') && record[element.getAttribute('disabled-indicator')]) {
+                    if (element.getAttribute('disabled-indicator') && record[element.getAttribute('disabled-indicator')]) {
                         // The disabled-indicator equated to true, so we disable this option
                         record.disabled = true;
                     }
 
-                    if( record.group !== undefined && record.group !== null && record.site !== undefined && record.site !== null ) {
+                    if (record.group !== undefined && record.group !== null && record.site !== undefined && record.site !== null) {
                         results[record.site.name + ":" + record.group.name] = results[record.site.name + ":" + record.group.name] || { text: record.site.name + " / " + record.group.name, children: [] };
                         results[record.site.name + ":" + record.group.name].children.push(record);
                     }
-                    else if( record.group !== undefined && record.group !== null ) {
+                    else if (record.group !== undefined && record.group !== null) {
                         results[record.group.name] = results[record.group.name] || { text: record.group.name, children: [] };
                         results[record.group.name].children.push(record);
                     }
-                    else if( record.site !== undefined && record.site !== null ) {
+                    else if (record.site !== undefined && record.site !== null) {
                         results[record.site.name] = results[record.site.name] || { text: record.site.name, children: [] };
                         results[record.site.name].children.push(record);
                     }
-                    else if ( (record.group !== undefined || record.group == null) && (record.site !== undefined || record.site === null) ) {
+                    else if ((record.group !== undefined || record.group == null) && (record.site !== undefined || record.site === null)) {
                         results['global'] = results['global'] || { text: 'Global', children: [] };
                         results['global'].children.push(record);
                     }
@@ -282,7 +304,7 @@ function initializeDynamicChoiceSelection(context){
                     }
 
                     return results;
-                },Object.create(null));
+                }, Object.create(null));
 
                 results = Object.values(results);
 
@@ -304,11 +326,17 @@ function initializeDynamicChoiceSelection(context){
                 };
             }
         }
-    });
+    }
+    if (Object.keys(parent).length !== 0) {
+        properties.dropdownParent = parent;
+        this_context.find('.nautobot-select2-api').select2(properties);
+    } else {
+        this_context.find('.nautobot-select2-api').select2(properties);
+    }
 }
 
 // Flatpickr selectors
-function initializeDateTimePicker(context){
+function initializeDateTimePicker(context) {
     this_context = $(context);
     this_context.find('.date-picker').flatpickr({
         allowInput: true
@@ -328,11 +356,11 @@ function initializeDateTimePicker(context){
     });
 }
 
-function initializeTags(context){
+function initializeTags(context) {
     this_context = $(context);
     this_tag_field = this_context.find('#id_tags.tagfield')
     var tags = this_tag_field;
-    if (tags.length > 0 && tags.val().length > 0){
+    if (tags.length > 0 && tags.val().length > 0) {
         tags = this_tag_field.val().split(/,\s*/);
     } else {
         tags = [];
@@ -346,7 +374,10 @@ function initializeTags(context){
     });
     // Replace the django issued text input with a select element
     this_tag_field.replaceWith('<select name="tags" id="id_tags" class="form-control tagfield"></select>');
-    this_tag_field.select2({
+    // check if the dropdown resides within a filterform modal
+    // See issue https://github.com/select2/select2-bootstrap-theme/issues/41
+    var parent = $("#FilterForm_modal")
+    var properties = {
         tags: true,
         data: tag_objs,
         multiple: true,
@@ -358,7 +389,7 @@ function initializeTags(context){
             delay: 250,
             url: nautobot_api_path + "extras/tags/",
 
-            data: function(params) {
+            data: function (params) {
                 // Paging. Note that `params.page` indexes at 1
                 var offset = (params.page - 1) * 50 || 0;
                 var parameters = {
@@ -374,7 +405,7 @@ function initializeTags(context){
                 var results = $.map(data.results, function (obj) {
                     // If tag contains space add double quotes
                     if (/\s/.test(obj.name))
-                    obj.name = '"' + obj.name + '"'
+                        obj.name = '"' + obj.name + '"'
 
                     return {
                         id: obj.name,
@@ -392,12 +423,18 @@ function initializeTags(context){
                 };
             }
         }
-    });
-    this_tag_field.closest('form').submit(function(event){
+    };
+    if (Object.keys(parent).length !== 0) {
+        properties.dropdownParent = parent;
+        this_tag_field.select2(properties);
+    } else {
+        this_tag_field.select2(properties);
+    }
+    this_tag_field.closest('form').submit(function (event) {
         // django-taggit can only accept a single comma seperated string value
         // TODO(bryan): the element find here should just be event.target
         var value = $('#id_tags.tagfield').val();
-        if (value.length > 0){
+        if (value.length > 0) {
             var final_tags = value.join(', ');
             $('#id_tags.tagfield').val(null).trigger('change');
             var option = new Option(final_tags, final_tags, true, true);
@@ -406,9 +443,9 @@ function initializeTags(context){
     });
 }
 
-function initializeVLANModeSelection(context){
+function initializeVLANModeSelection(context) {
     this_context = $(context);
-    if( this_context.find('select#id_mode').length > 0 ) { // Not certain for the length check here as if none is find it should not apply the onChange
+    if (this_context.find('select#id_mode').length > 0) { // Not certain for the length check here as if none is find it should not apply the onChange
         this_context.find('select#id_mode').on('change', function () {
             if ($(this).val() == '') {
                 $('select#id_untagged_vlan').val('');
@@ -439,9 +476,12 @@ function initializeVLANModeSelection(context){
     }
 }
 
-function initializeMultiValueChar(context){
+function initializeMultiValueChar(context) {
     this_context = $(context);
-    this_context.find('.nautobot-select2-multi-value-char').select2({
+    // check if the dropdown resides within a filterform modal
+    // See issue https://github.com/select2/select2-bootstrap-theme/issues/41
+    var parent = $("#FilterForm_modal")
+    var properties = {
         allowClear: true,
         tags: true,
         theme: "bootstrap",
@@ -449,24 +489,30 @@ function initializeMultiValueChar(context){
         multiple: true,
         width: "off",
         "language": {
-            "noResults": function(){
+            "noResults": function () {
                 return "Type something to add it as an option";
             }
         },
-    });
+    }
+    if (Object.keys(parent).length !== 0) {
+        properties.dropdownParent = parent;
+        this_context.find('.nautobot-select2-multi-value-char').select2(properties);
+    } else {
+        this_context.find('.nautobot-select2-multi-value-char').select2(properties);
+    }
 }
 
-function initializeDynamicFilterForm(context){
+function initializeDynamicFilterForm(context) {
     this_context = $(context);
     // Dynamic filter form
-    this_context.find(".lookup_type-select").bind("change", function(){
+    this_context.find(".lookup_type-select").bind("change", function () {
         let parent_element = $(this).parents("tr")
         let lookup_type = parent_element.find(".lookup_type-select")
         let lookup_type_val = lookup_type.val()
         let contenttype = lookup_type.attr("data-contenttype")
         let lookup_value_element = parent_element.find(".lookup_value-input")
 
-        if(lookup_type_val){
+        if (lookup_type_val) {
             $.ajax({
                 url: `/api/core/filterset-fields/lookup-value-dom-element/?field_name=${lookup_type_val}&content_type=${contenttype}`,
                 async: true,
@@ -486,7 +532,7 @@ function initializeDynamicFilterForm(context){
     })
 
     // On change of lookup_field or lookup_type field in filter form reset field value
-    this_context.find(".lookup_field-select, .lookup_type-select").on("change", function(){
+    this_context.find(".lookup_field-select, .lookup_type-select").on("change", function () {
         let parent_element = $(this).parents("tr")
         let lookup_field_element = parent_element.find(".lookup_field-select")
         let lookup_type_element = parent_element.find(".lookup_type-select")
@@ -500,11 +546,11 @@ function initializeDynamicFilterForm(context){
     })
 }
 
-function initializeSortableList(context){
+function initializeSortableList(context) {
     this_context = $(context);
     // Rearrange options within a <select> list
-    this_context.find('#move-option-up').bind('click', function() {
-        var select_id = '#' + $(this).attr('data-target');
+    this_context.find('#move-option-up').bind('click', function () {
+        var select_id = '#' + $(this).attr('data-bs-target');
         $(select_id + ' option:selected').each(function () {
             var newPos = $(select_id + ' option').index(this) - 1;
             if (newPos > -1) {
@@ -513,8 +559,8 @@ function initializeSortableList(context){
             }
         });
     });
-    this_context.find('#move-option-down').bind('click', function() {
-        var select_id = '#' + $(this).attr('data-target');
+    this_context.find('#move-option-down').bind('click', function () {
+        var select_id = '#' + $(this).attr('data-bs-target');
         var countOptions = $(select_id + ' option').length;
         var countSelectedOptions = $(select_id + ' option:selected').length;
         $(select_id + ' option:selected').each(function () {
@@ -525,19 +571,19 @@ function initializeSortableList(context){
             }
         });
     });
-    this_context.find('#select-all-options').bind('click', function() {
-        var select_id = '#' + $(this).attr('data-target');
-        $(select_id + ' option').prop('selected',true);
+    this_context.find('#select-all-options').bind('click', function () {
+        var select_id = '#' + $(this).attr('data-bs-target');
+        $(select_id + ' option').prop('selected', true);
     });
 }
 
-function initializeImagePreview(context){
+function initializeImagePreview(context) {
     this_context = $(context);
     // Offset between the preview window and the window edges
     const IMAGE_PREVIEW_OFFSET_X = 20;
     const IMAGE_PREVIEW_OFFSET_Y = 10;
     // Preview an image attachment when the link is hovered over
-    this_context.find('a.image-preview').on('mouseover', function(e) {
+    this_context.find('a.image-preview').on('mouseover', function (e) {
         // Twice the offset to account for all sides of the picture
         var maxWidth = window.innerWidth - (e.clientX + (IMAGE_PREVIEW_OFFSET_X * 2));
         var maxHeight = window.innerHeight - (e.clientY + (IMAGE_PREVIEW_OFFSET_Y * 2));
@@ -556,7 +602,7 @@ function initializeImagePreview(context){
         $('body').append(img);
 
         // Once loaded, show the preview if the image is indeed an image
-        img.on('load', function(e) {
+        img.on('load', function (e) {
             if (e.target.complete && e.target.naturalWidth) {
                 $('#image-preview-window').fadeIn('fast');
             }
@@ -567,14 +613,14 @@ function initializeImagePreview(context){
     });
 
     // Fade the image out; it will be deleted when another one is previewed
-    this_context.find('a.image-preview').on('mouseout', function() {
+    this_context.find('a.image-preview').on('mouseout', function () {
         $('#image-preview-window').fadeOut('fast');
     });
 }
 
-function initializeSelectAllForm(context){
+function initializeSelectAllForm(context) {
     this_context = $(context);
-    this_context.find('#select_all').click(function() {
+    this_context.find('#select_all').click(function () {
         if ($(this).is(':checked')) {
             $('#select_all_box').find('button').prop('disabled', '');
         } else {
@@ -583,9 +629,9 @@ function initializeSelectAllForm(context){
     });
 }
 
-function initializeResultPerPageSelection(context){
+function initializeResultPerPageSelection(context) {
     this_context = $(context);
-    this_context.find('select#per_page').change(function() {
+    this_context.find('select#per_page').change(function () {
         this.form.submit();
     });
 }
@@ -626,7 +672,7 @@ function jsify_form(context) {
 */
 
 
-function createInput(element){
+function createInput(element) {
     input_field = `
     <input
     type="text"
@@ -648,7 +694,7 @@ $(document).ready((e) => {
 function headerOffsetScroll() {
     if (window.location.hash) {
         // Short wait needed to allow the page to scroll to the element
-        setTimeout(function() {
+        setTimeout(function () {
             window.scrollBy(0, -$('nav').height())
         }, 10);
     }
