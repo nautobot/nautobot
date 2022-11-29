@@ -22,7 +22,7 @@ menu_items = (
                 link="plugins:example_plugin:examplemodel_import",
                 title="Import example models",
                 icon_class="mdi mdi-database-import-outline",
-                color=ButtonColorChoices.DEFAULT,
+                color=ButtonColorChoices.GREY,
                 permissions=[
                     "example_plugin.add_examplemodel",
                 ],

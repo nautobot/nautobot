@@ -22,7 +22,7 @@
 {% endblock %}
 
 {% block content_left_page %}
-    <div class="card">
+    <div class="card mb-3">
         <div class="card-header">
             <strong>Location Type</strong>
         </div>
@@ -81,7 +81,7 @@
 {% endblock content_left_page %}
 
 {% block content_full_width_page %}
-    <div class="card">
+    <div class="card mb-3">
         <div class="card-header">
             <strong>Child Location Type(s)</strong>
         </div>
@@ -96,7 +96,7 @@
     </div>
     {% include 'inc/paginator.html' with paginator=children_table.paginator page=children_table.page %}
     <div class="row"></div>
-    <div class="card">
+    <div class="card mb-3">
         <div class="card-header">
             <strong>Location(s) of this Type</strong>
         </div>

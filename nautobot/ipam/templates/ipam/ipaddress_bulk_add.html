@@ -9,7 +9,7 @@
 {% endblock %}
 
 {% block form %}
-    <div class="card">
+    <div class="card mb-3">
         <div class="card-header"><strong>IP Addresses</strong></div>
         <div class="card-body">
             {% render_field form.pattern %}
@@ -19,7 +19,7 @@
             {% render_field model_form.description %}
         </div>
     </div>
-    <div class="card">
+    <div class="card mb-3">
         <div class="card-header"><strong>Tenancy</strong></div>
         <div class="card-body">
             {% render_field model_form.tenant_group %}

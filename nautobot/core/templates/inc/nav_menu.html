@@ -27,34 +27,34 @@
                                             {% for item_link, item_details in group_details.items.items %}
                                                 {% if request.user|has_one_or_more_perms:item_details.permissions or not "HIDE_RESTRICTED_UI"|settings_or_config %}
                                                     <li style="min-width: 300px;" {% if not request.user|has_perms:item_details.permissions %} class="disabled"{% endif %}>
-                                                        <div class="buttons float-end">
-                                                            {% for button_title, button_details in item_details.buttons.items %}
-                                                                {% if request.user|has_perms:button_details.permissions %}
-                                                                    {% comment %}
-                                                                        Use 'url xxx as variable' so that an invalid
-                                                                        link doesn't throw a NoReverseMatch exception.
-                                                                    {% endcomment %}
-                                                                    {% url button_details.link as button_url %}
-                                                                    {% if button_url %}
-                                                                        <a href="{{ button_url }}"
-                                                                           data-button-weight="{{ button_details.weight }}"
-                                                                           class="btn btn-sm btn-{{ button_details.button_class }}"
-                                                                           title="{{ button_title }}">
-                                                                            <i class="mdi {{ button_details.icon_class }}"></i>
-                                                                        </a>
-                                                                    {% else %}
-                                                                        <a class="btn btn-sm btn-danger"
-                                                                           title="ERROR: Invalid link!">
-                                                                            <i class="mdi mdi-alert"></i>
-                                                                        </a>
-                                                                    {% endif %}
-                                                                {% endif %}
-                                                            {% endfor %}
-                                                        </div>
-                                                        <a class="dropdown-item" href="{{ item_link }}"
-                                                            data-item-weight="{{ item_details.weight }}">
-                                                            {{ item_details.name }}
-                                                        </a>
+                                                            <div class="float-end">
+                                                                    {% for button_title, button_details in item_details.buttons.items %}
+                                                                        {% if request.user|has_perms:button_details.permissions %}
+                                                                            {% comment %}
+                                                                                Use 'url xxx as variable' so that an invalid
+                                                                                link doesn't throw a NoReverseMatch exception.
+                                                                            {% endcomment %}
+                                                                            {% url button_details.link as button_url %}
+                                                                            {% if button_url %}
+                                                                                <a href="{{ button_url }}"
+                                                                                data-button-weight="{{ button_details.weight }}"
+                                                                                class="btn btn-sm btn-{{ button_details.button_class }}"
+                                                                                title="{{ button_title }}">
+                                                                                    <i class="mdi {{ button_details.icon_class }}"></i>
+                                                                                </a>
+                                                                            {% else %}
+                                                                                <a class="btn btn-sm btn-danger"
+                                                                                title="ERROR: Invalid link!">
+                                                                                    <i class="mdi mdi-alert"></i>
+                                                                                </a>
+                                                                            {% endif %}
+                                                                        {% endif %}
+                                                                    {% endfor %}
+                                                                </div>
+                                                                <a class="dropdown-item" href="{{ item_link }}"
+                                                                    data-item-weight="{{ item_details.weight }}">
+                                                                    {{ item_details.name }}
+                                                                </a>
                                                     </li>
                                                 {% endif %}
                                             {% endfor %}
@@ -69,9 +69,9 @@
                     {% endfor %}
                 </ul>
             {% endif %}
-        </div>
+
             {% if request.user.is_authenticated or not "HIDE_RESTRICTED_UI"|settings_or_config %}
-                <form action="{% url 'search' %}" method="get" class="navbar-form navbar-right d-flex" id="navbar_search" role="search">
+                <form action="{% url 'search' %}" method="get" class="navbar-form ms-auto" id="navbar_search" role="search">
                     <div class="input-group">
                         <input type="text" name="q" class="form-control" placeholder="Search {{ settings.BRANDING_TITLE }}">
                         <span class="input-group-btn">
@@ -82,7 +82,7 @@
                     </div>
                 </form>
             {% endif %}
-            <ul class="nav navbar-nav navbar-right d-flex">
+            <ul class="nav navbar-nav ms-auto">
                 {% if request.user.is_authenticated %}
                     <li class="nav-item dropdown">
                         <a href="#" class="nav-link dropdown-toggle" data-bs-toggle="dropdown" title="{{ request.user }}" role="button" aria-haspopup="true" aria-expanded="false">
@@ -99,8 +99,9 @@
                         </ul>
                     </li>
                 {% else %}
-                    <li class="nav-item"><a class="nav-link" href="{% url settings.LOGIN_URL %}?next={{ request.get_full_path | urlencode }}"><i class="mdi mdi-login"></i> Log in</a></li>
+                    <li class="nav-item"><a class="dropdown-item" href="{% url settings.LOGIN_URL %}?next={{ request.get_full_path | urlencode }}"><i class="mdi mdi-login"></i> Log in</a></li>
                 {% endif %}
             </ul>
+        </div>
     </div>
 </nav>

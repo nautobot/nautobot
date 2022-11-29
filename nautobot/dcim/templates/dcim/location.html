@@ -8,7 +8,7 @@
 {% endblock %}
 
 {% block content_left_page %}
-    <div class="card">
+    <div class="card mb-3">
         <div class="card-header">
             <strong>Location</strong>
         </div>
@@ -57,7 +57,7 @@
 {% endblock content_left_page %}
 
 {% block content_right_page %}
-    <div class="card">
+    <div class="card mb-3">
         <div class="card-header">
             <strong>Stats</strong>
         </div>
@@ -88,7 +88,7 @@
             </div>
         </div>
     </div>
-    <div class="card">
+    <div class="card mb-3">
         <div class="card-header">
             <strong>Rack Groups</strong>
         </div>
@@ -115,7 +115,7 @@
             </tr>
         </table>
     </div>
-    <div class="card">
+    <div class="card mb-3">
         <div class="card-header">
             <strong>Images</strong>
         </div>
@@ -133,7 +133,7 @@
 
 {% block content_full_width_page %}
     {% if object.location_type.children.all %}
-        <div class="card">
+        <div class="card mb-3">
             <div class="card-header">
                 <strong>Children</strong>
             </div>

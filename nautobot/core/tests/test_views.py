@@ -32,7 +32,7 @@ class HomeViewTestCase(TestCase):
 
         # Search bar in nav
         nav_search_bar_pattern = re.compile(
-            '<nav.*<form action="/search/" method="get" class="navbar-form navbar-right" id="navbar_search" role="search">.*</form>.*</nav>'
+            '<nav.*<form action="/search/" method="get" class="navbar-form ms-auto" id="navbar_search" role="search">.*</form>.*</nav>'
         )
         nav_search_bar_result = nav_search_bar_pattern.search(
             response.content.decode(response.charset).replace("\n", "")
@@ -40,7 +40,7 @@ class HomeViewTestCase(TestCase):
 
         # Global search bar in body/container-fluid wrapper
         body_search_bar_pattern = re.compile(
-            '<div class="container-fluid wrapper">.*<form action="/search/" method="get" class="form-inline">.*</form>.*</div>'
+            '<div class="container-fluid wrapper">.*<form action="/search/" method="get" class="row gx-3 gy-2 align-items-center" style="padding-bottom: 20px">.*</form>.*</div>'
         )
         body_search_bar_result = body_search_bar_pattern.search(
             response.content.decode(response.charset).replace("\n", "")
@@ -57,7 +57,7 @@ class HomeViewTestCase(TestCase):
         self.assertIsNone(nav_search_bar_result)
         self.assertIsNone(body_search_bar_result)
 
-    @override_settings(HIDE_RESTRICTED_UI=False)
+    @override_settings(HIDE_RESTRICTED_UI=True)
     def test_search_bar_visible_if_user_authenticated_and_hide_restricted_ui_True(self):
         nav_search_bar_result, body_search_bar_result = self.make_request()
 
@@ -125,16 +125,20 @@ class FilterFormsTestCase(TestCase):
 
         filter_tabs = """
             <ul id="tabs" class="nav nav-tabs">
-                <li role="presentation" class="active">
-                    <a href="#default-filter" role="tab" data-bs-toggle="tab">
+                
+                <li role="presentation" class="nav-item">
+                    <a class="nav-link active" href="#default-filter" role="tab" data-bs-toggle="tab">
                         Default
                     </a>
                 </li>
-                <li role="presentation" class="">
-                    <a href="#advanced-filter" role="tab" data-bs-toggle="tab">
+                
+                
+                <li role="presentation" class="nav-item">
+                    <a class="nav-link " href="#advanced-filter" role="tab" data-bs-toggle="tab">
                         Advanced
                     </a>
                 </li>
+                
             </ul>
             """
 
@@ -196,9 +200,12 @@ class NavRestrictedUI(TestCase):
         response_content = self.make_request()
         self.assertInHTML(
             f"""
-            <li>
-              <div class="buttons float-end"></div>
-              <a href="{self.url}" data-item-weight="{self.item_weight}">Installed Plugins</a>
+            <li style="min-width: 300px;">
+                    <div class="float-end"></div>
+                    <a class="dropdown-item" href={self.url}
+                        data-item-weight={self.item_weight}>
+                        Installed Plugins
+                    </a>
             </li>
             """,
             response_content,
@@ -214,9 +221,12 @@ class NavRestrictedUI(TestCase):
         response_content = self.make_request()
         self.assertInHTML(
             f"""
-            <li>
-              <div class="buttons float-end"></div>
-              <a href="{self.url}" data-item-weight="{self.item_weight}">Installed Plugins</a>
+            <li style="min-width: 300px;">
+                    <div class="float-end"></div>
+                    <a class="dropdown-item" href={self.url}
+                        data-item-weight={self.item_weight}>
+                        Installed Plugins
+                    </a>
             </li>
             """,
             response_content,
@@ -236,9 +246,12 @@ class NavRestrictedUI(TestCase):
 
         self.assertInHTML(
             f"""
-            <li class="disabled">
-              <div class="buttons float-end"></div>
-              <a href="{self.url}" data-item-weight="{self.item_weight}">Installed Plugins</a>
+            <li style="min-width: 300px;"  class="disabled">
+                    <div class="float-end"></div>
+                    <a class="dropdown-item" href={self.url}
+                        data-item-weight={self.item_weight}>
+                        Installed Plugins
+                    </a>
             </li>
             """,
             response_content,

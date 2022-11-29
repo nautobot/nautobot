@@ -16,21 +16,21 @@
     <div class="modal-dialog modal-lg" style="width: 90% !important;">
         <div class="modal-content">
             <div class="modal-header">
-                <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
-                <h4 class="modal-title">Filter {{ model_plural_name }}</h4>
+                <h5 class="modal-title">Filter {{ model_plural_name }}</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body">
                 <ul id="tabs" class="nav nav-tabs">
                     {% if filter_form %}
-                    <li role="presentation" class="active">
-                        <a href="#default-filter" role="tab" data-bs-toggle="tab">
+                    <li role="presentation" class="nav-item">
+                        <a class="nav-link active" href="#default-filter" role="tab" data-bs-toggle="tab">
                             Default
                         </a>
                     </li>
                     {% endif %}
                     {% if dynamic_filter_form %}
-                    <li role="presentation" class="{% if not filter_form %} active {% endif %}">
-                        <a href="#advanced-filter" role="tab" data-bs-toggle="tab">
+                    <li role="presentation" class="nav-item">
+                        <a class="nav-link {% if not filter_form %}active {% endif %}" href="#advanced-filter" role="tab" data-bs-toggle="tab">
                             Advanced
                         </a>
                     </li>
@@ -43,7 +43,7 @@
                     </div>
                     {% endif %}
                     {% if dynamic_filter_form %}
-                    <div id="advanced-filter" role="tabpanel" class="tab-pane {% if not filter_form %} active {% endif %}">
+                    <div id="advanced-filter" role="tabpanel" class="tab-pane {% if not filter_form %}active {% endif %}">
                         <form id="dynamic-filter-form" class="form-horizontal" method="get" action=".">
                             <div class="">
                                 <table class="table" id="filterform-table">
