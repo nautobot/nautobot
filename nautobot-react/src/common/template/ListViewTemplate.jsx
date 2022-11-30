@@ -11,6 +11,8 @@ import API from "common/utils/utils";
 import * as Icon from "react-feather";
 import { LinkContainer } from "react-router-bootstrap";
 
+import App from "App";
+
 export default function ListViewTemplate({ pageTitle, ...props }) {
   const [pageConfig, setPageConfig] = useState({
     buttons: {
@@ -68,32 +70,34 @@ export default function ListViewTemplate({ pageTitle, ...props }) {
 
   return (
     <div>
-      <Row>
-        <Col xs={8}>{/* <h3>{pageConfig.data.title}</h3> */}</Col>
-        <Col className="text-right action-items-container">
-          {Object.entries(pageConfig.buttons).map((item, idx) =>
-            item[1] ? (
-              <LinkContainer key={idx} to={item[1].link ? item[1].link : ""}>
-                <NavLink>
-                  <Button
-                    // key={idx}
-                    size="sm"
-                    variant={item[1].color}
-                    className="mr-2 action-btn"
-                  >
-                    {item[1].icon} {item[1].label}
-                  </Button>
-                </NavLink>
-              </LinkContainer>
-            ) : null
-          )}
-        </Col>
-      </Row>
-      <Row>
-        <Col>
-          <NautobotTable data={tableData} header={tableHeader} />
-        </Col>
-      </Row>
+      <App>
+        <Row>
+          <Col xs={8}>{/* <h3>{pageConfig.data.title}</h3> */}</Col>
+          <Col className="text-right action-items-container">
+            {Object.entries(pageConfig.buttons).map((item, idx) =>
+              item[1] ? (
+                <LinkContainer key={idx} to={item[1].link ? item[1].link : ""}>
+                  <NavLink>
+                    <Button
+                      // key={idx}
+                      size="sm"
+                      variant={item[1].color}
+                      className="mr-2 action-btn"
+                    >
+                      {item[1].icon} {item[1].label}
+                    </Button>
+                  </NavLink>
+                </LinkContainer>
+              ) : null
+            )}
+          </Col>
+        </Row>
+        <Row>
+          <Col>
+            <NautobotTable data={tableData} header={tableHeader} />
+          </Col>
+        </Row>
+      </App>
     </div>
   );
 }

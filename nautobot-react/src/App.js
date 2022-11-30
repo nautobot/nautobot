@@ -1,34 +1,25 @@
 import "./App.css";
-import Menu from "./common/components/menu";
-import { Container } from "react-bootstrap";
-import Alert from "react-bootstrap/Alert";
-import { Route, Routes, BrowserRouter } from "react-router-dom";
-import ListViewTemplate from "common/template/ListViewTemplate";
-import ObjectRetrieveTemplate from "common/template/ObjectRetrieveTemplate";
 import { Component } from "react";
+import Container from "react-bootstrap/Container";
+import Alert from "react-bootstrap/Alert";
+import Menu from "./common/components/menu";
 
 class App extends Component {
   render() {
     return (
       <div className="">
-        <BrowserRouter>
-          <Menu />
-          <Container fluid="sm" className='page-container'>
+        <Menu />
+        <Container fluid="sm" className='page-container'>
 
-            <Alert variant="success" style={{ textAlign: "center" }}>
-              Example Plugin says “Hello, admin!” 👋 <br />
-            </Alert>
-            <Routes>
-              <Route path="/" />
-              <Route path="/dcim/sites" element={<ListViewTemplate />} />
-              <Route path="/dcim/sites/:id" element={<ObjectRetrieveTemplate />} />
-            </Routes>
-          </Container>
+          <Alert variant="success" style={{ textAlign: "center" }}>
+            Example Plugin says “Hello, admin!” 👋 <br />
+          </Alert>
+          {this.props.children}
+        </Container>
 
-          <footer>
-          </footer>
+        <footer>
+        </footer>
 
-        </BrowserRouter>
       </div>
     );
   }
