@@ -1,5 +1,12 @@
 {% if url %}
-    <a href="{{ url }}" class="btn btn-warning" id="edit-button">
+    <a href="{{ url }}" hx-get="{{ url }}" hx-target="#modals-here" class="btn btn-warning" id="edit-button">
         <span class="mdi mdi-pencil" aria-hidden="true"></span> Edit
     </a>
+    <script>
+        window.document.getElementById("edit-button").addEventListener("htmx:afterOnLoad", function() {
+            const editModal = new bootstrap.Modal("#edit-modal");
+            editModal.show();
+            jsify_form(document.getElementById("edit-modal"));
+        });
+    </script>
 {% endif %}

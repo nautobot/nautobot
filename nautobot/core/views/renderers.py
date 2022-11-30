@@ -193,6 +193,7 @@ class NautobotHTMLRenderer(renderers.BrowsableAPIRenderer):
         context = {
             "changelog_url": changelog_url,  # NOTE: This context key is deprecated in favor of `object.get_changelog_url`.
             "content_type": content_type,
+            "current_url": request.get_full_path(),
             "form": form,
             "filter_form": filter_form,
             "dynamic_filter_form": self.get_dynamic_filter_form(view, request, filterset_class=view.filterset_class),
@@ -225,6 +226,7 @@ class NautobotHTMLRenderer(renderers.BrowsableAPIRenderer):
                 context.update(
                     {
                         "editing": instance.present_in_database,
+                        "wrapper_template": "generic/object_create.html" if not request.headers.get("HX-Request", None) else "modals/modal_object_edit.html",
                     }
                 )
             elif view.action == "bulk_create":

@@ -1,5 +1,12 @@
 {% if url %}
-    <a href="{{ url }}" class="btn btn-success" id="clone-button">
+    <a href="{{ url }}" hx-get="{{ url }}" hx-target="#modals-here" class="btn btn-success" id="clone-button">
         <span class="mdi mdi-plus-thick" aria-hidden="true"></span> Clone
     </a>
+    <script>
+        window.document.getElementById("clone-button").addEventListener("htmx:afterOnLoad", function() {
+            const editModal = new bootstrap.Modal("#edit-modal");
+            editModal.show();
+            jsify_form(document.getElementById("edit-modal"));
+        });
+    </script>
 {% endif %}

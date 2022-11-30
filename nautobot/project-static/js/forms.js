@@ -52,9 +52,6 @@ function colorPickerClassCopy(data, container) {
 // Static choice selection
 function initializeStaticChoiceSelection(context) {
     this_context = $(context);
-    // check if the dropdown resides within a filterform modal
-    // See issue https://github.com/select2/select2-bootstrap-theme/issues/41
-    var parent = $("#FilterForm_modal")
     var properties = {
         allowClear: true,
         placeholder: "---------",
@@ -62,12 +59,13 @@ function initializeStaticChoiceSelection(context) {
         width: "off",
     };
     // Check if parent object has a non-zero length
-    if (Object.keys(parent).length !== 0) {
-        properties.dropdownParent = parent;
-        this_context.find('.nautobot-select2-static').select2(properties);
-    } else {
-        this_context.find('.nautobot-select2-static').select2(properties);
-    }
+    this_context.find('.nautobot-select2-static').each(function() {
+        var parent = $(this).closest(".modal");
+        if (parent.length) {
+            properties.dropdownParent = parent;
+        }
+        $(this).select2(properties);
+    });
 }
 
 // Static choice selection
@@ -151,9 +149,6 @@ function initializeBulkEditNullification(context) {
 // Color Picker
 function initializeColorPicker(context) {
     this_context = $(context);
-    // check if the dropdown resides within a filterform modal
-    // See issue https://github.com/select2/select2-bootstrap-theme/issues/41
-    var parent = $("#FilterForm_modal")
     var properties = {
         allowClear: true,
         placeholder: "---------",
@@ -162,20 +157,18 @@ function initializeColorPicker(context) {
         templateSelection: colorPickerClassCopy,
         width: "off"
     };
-    if (Object.keys(parent).length !== 0) {
-        properties.dropdownParent = parent;
-        this_context.find('.nautobot-select2-color-picker').select2(properties);
-    } else {
-        this_context.find('.nautobot-select2-color-picker').select2(properties);
-    }
+    this_context.find('.nautobot-select2-color-picker').each(function() {
+        var parent = $(this).closest(".modal");
+        if (parent.length) {
+            properties.dropdownParent = parent;
+        }
+        $(this).select2(properties);
+    });
 }
 
 // Dynamic Choice Selection
 function initializeDynamicChoiceSelection(context) {
     this_context = $(context);
-    // check if the dropdown resides within a filterform modal
-    // See issue https://github.com/select2/select2-bootstrap-theme/issues/41
-    var parent = $("#FilterForm_modal")
     var properties = {
         allowClear: true,
         placeholder: "---------",
@@ -327,12 +320,13 @@ function initializeDynamicChoiceSelection(context) {
             }
         }
     }
-    if (Object.keys(parent).length !== 0) {
-        properties.dropdownParent = parent;
-        this_context.find('.nautobot-select2-api').select2(properties);
-    } else {
-        this_context.find('.nautobot-select2-api').select2(properties);
-    }
+    this_context.find('.nautobot-select2-api').each(function() {
+        var parent = $(this).closest(".modal");
+        if (parent.length) {
+            properties.dropdownParent = parent;
+        }
+        $(this).select2(properties);
+    });
 }
 
 // Flatpickr selectors
