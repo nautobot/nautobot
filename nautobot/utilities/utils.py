@@ -23,6 +23,7 @@ from django.utils.text import slugify
 from django.utils.tree import Node
 from django_filters import BooleanFilter, DateFilter, DateTimeFilter, filters, NumberFilter, TimeFilter
 from django_filters.utils import verbose_lookup_expr
+from rest_framework.serializers import ListSerializer
 from taggit.managers import _TaggableManager
 
 from nautobot.dcim import choices
@@ -982,3 +983,88 @@ def ensure_content_type_and_field_name_inquery_params(query_params):
     field_name = query_params.get("field_name")
 
     return field_name, model
+
+
+#
+#
+#
+
+
+def format_output(field, field_value):
+    data = {
+        "field_name": field,  # Form field placeholder
+        "type": "others",  # Param type e.g select field, char field, datetime field etc.
+        "choices": [],  # Param choices for select fields
+        "help_text": None,  # Form field placeholder
+        "label": None,  # Form field placeholder
+        "required": False,  # Form field placeholder
+    }
+    # choice field, char field, nested-serializer field, integer-field
+    # nested serializer
+    from nautobot.core.api import WritableNestedSerializer
+    from rest_framework.fields import CharField
+    from rest_framework.fields import IntegerField
+    from nautobot.core.api import ChoiceField
+    from nautobot.extras.api.fields import StatusSerializerField
+
+    kwargs = {}
+    if isinstance(field_value, (WritableNestedSerializer, ListSerializer, StatusSerializerField)):
+        kwargs = {
+            "type": "dynamic-choice-field",
+        }
+        extra_kwargs = {}
+
+        if isinstance(field_value, WritableNestedSerializer):
+            extra_kwargs = {
+                "label": getattr(field_value, "label", None) or field,
+                "required": field_value.required,
+                "help_text": field_value.help_text,
+            }
+        elif isinstance(field_value, ListSerializer):
+            extra_kwargs = {
+                "label": "Tags",
+                "required": False,
+            }
+        elif isinstance(field_value, StatusSerializerField):
+            extra_kwargs = {
+                "label": "Status",
+                "required": True,
+            }
+        kwargs.update(extra_kwargs)
+    elif isinstance(field_value, ChoiceField):
+        kwargs = {
+            "type": "choice-field",
+            "label": getattr(field_value, "label", None) or field,
+            "required": field_value.required,
+            "help_text": field_value.help_text,
+            "choices": field_value.choices.items(),
+        }
+    elif isinstance(field_value, CharField):
+        kwargs = {
+            "type": "char-field",
+            "label": getattr(field_value, "label", None) or field,
+            "required": field_value.required,
+            "help_text": field_value.help_text,
+        }
+    elif isinstance(field_value, IntegerField):
+        kwargs = {
+            "type": "integer-field",
+            "label": getattr(field_value, "label", None) or field,
+            "required": field_value.required,
+            "help_text": field_value.help_text,
+        }
+    data.update(kwargs)
+    return data
+
+
+def get_data_for_serializer_parameter(model):
+
+    from nautobot.utilities.api import get_serializer_for_model
+
+    serializer = get_serializer_for_model(model)
+    writeable_fields = {
+        field_name: format_output(field_name, field_value)
+        for field_name, field_value in serializer().get_fields().items()
+        if not field_value.read_only
+    }
+    return writeable_fields

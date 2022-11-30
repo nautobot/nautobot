@@ -623,7 +623,7 @@ CONSTANCE_CONFIG_FIELDSETS = {
 # Defaults to False. Setting this to True can be dangerous, as it allows any website to make
 # cross-origin requests to yours. Generally you'll want to restrict the list of allowed origins with
 # CORS_ALLOWED_ORIGINS or CORS_ALLOWED_ORIGIN_REGEXES.
-CORS_ALLOW_ALL_ORIGINS = is_truthy(os.getenv("NAUTOBOT_CORS_ALLOW_ALL_ORIGINS", "False"))
+CORS_ALLOW_ALL_ORIGINS = True
 
 # A list of strings representing regexes that match Origins that are authorized to make cross-site
 # HTTP requests. Defaults to [].

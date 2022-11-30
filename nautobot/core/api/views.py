@@ -772,3 +772,17 @@ class GetFilterSetFieldDOMElementAPIView(NautobotAPIVersionMixin, APIView):
 
         field_dom_representation = form_field.get_bound_field(model_form(), field_name).as_widget()
         return Response({"dom_element": field_dom_representation})
+
+
+class GetMenu(NautobotAPIVersionMixin, APIView):
+    permission_classes = [AllowAny]
+
+    def get(self, request):
+        from nautobot.extras.registry import registry
+
+        return Response(
+            [
+                {"name": item[0], "properties": item[1]}
+                for item in registry["nav_menu"]["tabs"].items()
+            ]
+        )
