@@ -1,10 +1,9 @@
-import NavBar from "../components/common/NavBar"
+import BaseLayout from "@layouts/BaseLayout"
 
 export default function Home(){
     return (
-        <div>
-            <NavBar />
+        <BaseLayout>
             <h1>Home Page</h1>
-        </div>
+        </BaseLayout>
     )
 }

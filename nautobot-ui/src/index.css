@@ -1,19 +1,8 @@
-/* .menu {
-    padding: 20px;
-} */
+.body {
+    margin-top: 30px;
+}
 
-/* .dropdown-menu {
-    border-top-left-radius: 0.5rem;
-    border-top-right-radius: 0.5rem;
-    border-bottom-left-radius: 0;
-    border-bottom-right-radius: 0;
-} */
-/* .dropdown-menu {
-    padding: 0.5rem 1rem;
-    color: #4f4f4f;
-    border-radius: 0;
-} */
-/* .dropdown-menu {
+.dropdown-item-menu {
     display: block;
     width: 100%;
     padding: 0.5rem 1rem;
@@ -25,4 +14,5 @@
     white-space: nowrap;
     background-color: transparent;
     border: 0;
-} */
+}
+ 

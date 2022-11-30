@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
-import {Link} from "react-router-dom";
+import { Link } from "react-router-dom";
 import {
     MDBContainer,
     MDBNavbar,
@@ -12,7 +12,7 @@ import {
     MDBDropdownMenu,
     MDBDropdownItem,
 } from 'mdb-react-ui-kit';
-import {naxios} from '@utils/axios';
+import { naxios } from '@utils/axios';
 
 
 export default function NavBar() {
@@ -35,28 +35,25 @@ export default function NavBar() {
                         NavMenu.map((item, idx) => (
                             <MDBNavbarItem key={idx}>
                                 <MDBDropdown>
-                                <MDBDropdownToggle tag='a' className='nav-link' role='button'>
-                                    {item.name}
-                                </MDBDropdownToggle>
-                                <MDBDropdownMenu>
-                                    {
-                                        Object.entries(item.properties.groups).map((group, _) => (
-                                            <>
-                                            {
-                                                Object.entries(group[1].items).map((menu, _) => (
-                                                    <MDBDropdownItem link>
-                                                        <Link to={menu[0]}>
-                                                            {/* <Link to={"plugins"}>{menu[1].name}</Link> */}
-                                                            {menu[1].name}
-                                                        </Link>
-                                                    </MDBDropdownItem>
-                                                ))
-                                            }
-                                            </>
+                                    <MDBDropdownToggle tag='a' className='nav-link' role='button'>
+                                        {item.name}
+                                    </MDBDropdownToggle>
+                                    <MDBDropdownMenu>
+                                        {
+                                            Object.entries(item.properties.groups).map((group, idx) => (
+                                                <div key={idx}>
+                                                    {
+                                                        Object.entries(group[1].items).map((menu, idx) => (
+                                                            <Link to={menu[0]} key={idx} className="dropdown-item-menu">
+                                                                {menu[1].name}
+                                                            </Link>
+                                                        ))
+                                                    }
+                                                </div>
 
-                                        ))
-                                    }
-                                </MDBDropdownMenu>
+                                            ))
+                                        }
+                                    </MDBDropdownMenu>
                                 </MDBDropdown>
                             </MDBNavbarItem>
                         ))
