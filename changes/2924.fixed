@@ -1,1 +1,0 @@
-Fix deprecation warning flag check throwing error on startup with plugins installed.
