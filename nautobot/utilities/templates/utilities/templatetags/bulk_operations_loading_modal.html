@@ -1,0 +1,17 @@
+{% load static %}
+
+<div class="modal fade" tabindex="-1" id="loading_modal" data-bs-backdrop="static" aria-labelledby="loadingModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h4 class="modal-title" id="loadingModalLabel">{{action}}ing {{ size }} {{ model_plural_name }} for you, hold on ...</h4>
+            </div>
+            <div class="modal-body">
+                <div class="d-flex justify-content-center">
+                    <div class="spinner-border text-primary" role="status">
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

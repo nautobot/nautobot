@@ -8,7 +8,7 @@
         {{ pk_form.pk }}
         {{ formset.management_form }}
         <div class="row">
-            <div class="col-lg-8 col-lg-offset-2">
+            <div class="col-lg-8 offset-lg-2">
                 <h3>{% block title %}{% if vc_form.instance %}Editing {{ vc_form.instance }}{% else %}New Virtual Chassis{% endif %}{% endblock %}</h3>
                 {% if vc_form.non_field_errors %}
                     <div class="card card-danger">
@@ -84,7 +84,7 @@
             </div>
         </div>
         <div class="row">
-            <div class="col-lg-8 col-lg-offset-2 text-end">
+            <div class="col-lg-8 offset-lg-2 text-end">
                 <button type="submit" name="_update" class="btn btn-primary">Update</button>
                 <a href="{{ return_url }}" class="btn btn-secondary">Cancel</a>
             </div>

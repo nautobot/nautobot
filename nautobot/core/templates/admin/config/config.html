@@ -14,7 +14,7 @@
     <form action="" method="post" enctype="multipart/form-data" id="changelist-form" class="form form-horizontal">
         {% csrf_token %}
         <div class="row">
-            <div class="col-lg-6 col-lg-offset-3">
+            <div class="col-lg-6 offset-lg-3">
                 {% if form.non_field_errors %}
                     <div class="card card-danger">
                         <div class="card-header"><strong>Errors</strong></div>
@@ -76,7 +76,7 @@
             </div>
         </div>
         <div class="row">
-            <div class="col-lg-6 col-lg-offset-3 text-end">
+            <div class="col-lg-6 offset-lg-3 text-end">
                 <input type="submit" name="_save" class="btn btn-primary" value="{% trans 'Save' %}"/>
             </div>
         </div>

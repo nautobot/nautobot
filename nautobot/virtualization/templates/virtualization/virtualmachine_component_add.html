@@ -8,7 +8,7 @@
 <form action="" method="post" class="form form-horizontal">
     {% csrf_token %}
     <div class="row">
-        <div class="col-lg-6 col-lg-offset-3">
+        <div class="col-lg-6 offset-lg-3">
             {% if form.non_field_errors %}
                 <div class="card card-danger">
                     <div class="card-header"><strong>Errors</strong></div>
@@ -27,7 +27,7 @@
             </div>
             {% include 'inc/extras_features_edit_form_fields.html' with form=model_form %}
 		    <div class="form-group">
-                <div class="col-lg-9 col-lg-offset-3">
+                <div class="col-lg-9 offset-lg-3">
                     <button type="submit" name="_create" class="btn btn-primary">Create</button>
                     <button type="submit" name="_addanother" class="btn btn-primary">Create and Add More</button>
                     <a href="{{ return_url }}" class="btn btn-secondary">Cancel</a>

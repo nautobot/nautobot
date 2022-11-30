@@ -870,8 +870,10 @@ class BulkImportView(GetReturnURLMixin, ObjectPermissionRequiredMixin, View):
                 "form": self._import_form(),
                 "fields": self.model_form().fields,
                 "obj_type": self.model_form._meta.model._meta.verbose_name,
+                "obj_type_plural": self.model_form._meta.model._meta.verbose_name_plural,
                 "return_url": self.get_return_url(request),
                 "active_tab": "csv-data",
+                "action": "Import",
             },
         )
 
@@ -1116,6 +1118,7 @@ class BulkEditView(GetReturnURLMixin, ObjectPermissionRequiredMixin, View):
             "table": table,
             "obj_type_plural": model._meta.verbose_name_plural,
             "return_url": self.get_return_url(request),
+            "action": "Bulk Edit",
         }
         context.update(self.extra_context())
         return render(request, self.template_name, context)
@@ -1289,6 +1292,7 @@ class BulkDeleteView(GetReturnURLMixin, ObjectPermissionRequiredMixin, View):
             "obj_type_plural": model._meta.verbose_name_plural,
             "table": table,
             "return_url": self.get_return_url(request),
+            "action": "Bulk Destroy",
         }
         context.update(self.extra_context())
         return render(request, self.template_name, context)

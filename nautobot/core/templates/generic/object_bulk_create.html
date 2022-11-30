@@ -24,7 +24,7 @@
 {% block content %}
 {% block tabs %}{% endblock %}
     <div class="row">
-        <div class="col-lg-8 col-lg-offset-2">
+        <div class="col-lg-8 offset-lg-2">
             <h1>{% block title %}{{ obj_type|bettertitle }} Bulk Import{% endblock %}</h1>
             {% if form.non_field_errors %}
                 <div class="card card-danger">
@@ -45,7 +45,7 @@
                         {% render_field form.csv_data %}
                         <div class="form-group">
                             <div class="col-lg-12 text-end">
-                                <button type="submit" class="btn btn-primary">Submit</button>
+                                <button type="submit" name="_create" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#loading_modal" title="Show Modal">Submit</button>
                                 {% if return_url %}
                                     <a href="{{ return_url }}" class="btn btn-secondary">Cancel</a>
                                 {% endif %}
@@ -60,7 +60,7 @@
                         {% render_field form.csv_file %}
                         <div class="form-group">
                             <div class="col-lg-12 text-end">
-                                <button type="submit" class="btn btn-primary">Submit</button>
+                                <button type="submit" name="_create" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#loading_modal" title="Show Modal">Submit</button>
                                 {% if return_url %}
                                     <a href="{{ return_url }}" class="btn btn-secondary">Cancel</a>
                                 {% endif %}
@@ -105,7 +105,7 @@
                                             <div class="modal-dialog" role="document">
                                                 <div class="modal-content">
                                                     <div class="modal-header">
-                                                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+                                                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"><button>
                                                         <h4 class="modal-title"><code>{{ name }}</code> Choices</h4>
                                                     </div>
                                                     <table class="table table-striped modal-body">
@@ -144,4 +144,5 @@
             {% endif %}
         </div>
     </div>
+{% bulk_operations_loading_modal model_plural_name=obj_type_plural action=action %}
 {% endblock %}

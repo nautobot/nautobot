@@ -9,7 +9,7 @@
             {{ field }}
         {% endfor %}
         <div class="row">
-            <div class="col-lg-6 col-lg-offset-3">
+            <div class="col-lg-6 offset-lg-3">
                 <h3>{% block title %}Add Devices to Cluster {{ cluster }}{% endblock %}</h3>
                 {% if form.non_field_errors %}
                     <div class="card card-danger">
@@ -28,7 +28,7 @@
             </div>
         </div>
         <div class="row">
-            <div class="col-lg-6 col-lg-offset-3 text-end noprint">
+            <div class="col-lg-6 offset-lg-3 text-end noprint">
                 <button type="submit" name="_add" class="btn btn-primary">Add Devices</button>
                 <a href="{{ return_url }}" class="btn btn-secondary">Cancel</a>
             </div>
