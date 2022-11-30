@@ -4,10 +4,7 @@ Plugin utilities.
 
 import importlib.util
 import logging
-import os
-import shutil
 import sys
-from contextlib import contextmanager
 
 from django.core.exceptions import ImproperlyConfigured
 from django.utils.module_loading import import_string
@@ -107,31 +104,6 @@ def load_plugin(plugin_name, settings):
 
     # Update caching configg
     settings.CACHEOPS.update({f"{plugin_name}.{key}": value for key, value in plugin_config.caching_config.items()})
-
-    copy_react_files_from_plugin_into_nautobot_frontend(plugin_name, os.path.dirname(plugin.__file__))
-
-
-def slugify(item):
-    return item.replace("_", "-")
-
-
-def copy_react_files_from_plugin_into_nautobot_frontend(plugin_name, plugin_dir):
-    """Copy files(pages, utils and components) from plugin into nautobot frontend"""
-    pages_dst = os.path.join("/source/frontend/pages/plugins/", slugify(plugin_name))
-    components_dst = os.path.join("/source/frontend/common/components/plugins/", slugify(plugin_name))
-    utils_dst = os.path.join("/source/frontend/common/utils/plugins/", slugify(plugin_name))
-
-    if not os.path.isdir(pages_dst):
-        src = os.path.join(plugin_dir, "templates/react/pages")
-        shutil.copytree(src, pages_dst)
-
-    if not os.path.isdir(components_dst):
-        src = os.path.join(plugin_dir, "templates/react/components")
-        shutil.copytree(src, components_dst)
-
-    if not os.path.isdir(utils_dst):
-        src = os.path.join(plugin_dir, "templates/react/utils")
-        shutil.copytree(src, utils_dst)
 
 
 def get_sso_backend_name(social_auth_module):
