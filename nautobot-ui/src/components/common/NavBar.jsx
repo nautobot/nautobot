@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
-import { Link } from "react-router-dom";
+import { Link, NavLink } from "react-router-dom";
 import {
     MDBContainer,
     MDBNavbar,
@@ -29,7 +29,7 @@ export default function NavBar() {
     return (
         <MDBNavbar expand='lg' dark bgColor='dark'>
             <MDBContainer fluid>
-                <MDBNavbarBrand href='#'>Nautobot</MDBNavbarBrand>
+                <Link style={{fontSize: "20px", marginRight: 10}} to='/'>Nautobot</Link>
                 <MDBNavbarNav className='me-auto mb-2 mb-lg-0'>
                     {
                         NavMenu.map((item, idx) => (
@@ -44,9 +44,9 @@ export default function NavBar() {
                                                 <div key={idx}>
                                                     {
                                                         Object.entries(group[1].items).map((menu, idx) => (
-                                                            <Link to={menu[0]} key={idx} className="dropdown-item-menu">
+                                                            <NavLink to={menu[0]} key={idx} className="dropdown-item-menu">
                                                                 {menu[1].name}
-                                                            </Link>
+                                                            </NavLink>
                                                         ))
                                                     }
                                                 </div>

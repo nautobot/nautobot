@@ -1,21 +1,26 @@
-import {createBrowserRouter} from "react-router-dom";
+import { useRoutes } from "react-router-dom";
 
-import Home from "./views/Home";
-import Plugins from "./views/Plugins";
+import Home from "@views/Home";
+import Plugins from "@views/Plugins";
+import ListView from "@views/ListView";
 
-
-const router = createBrowserRouter([
-    {
-        path: "/",
-        element: <Home />,
-    },
-    {
-        path: "/plugins",
-        element: <Plugins />,
-        children: [
-            // Add plugins path here
-        ]
-    },
-]);
-
-export default router;
+export default function NautobotRouter() {
+    let element = useRoutes([
+        {
+            path: "/",
+            element: <Home />,
+            children: [],
+        },
+        {
+            path: "/:app_name/:model_name",
+            element: <ListView />,
+            children: [],
+        },
+        {
+            path: "/plugins",
+            element: <Plugins />,
+            children: [],
+        },
+    ]);
+    return element;
+}
