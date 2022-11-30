@@ -133,6 +133,7 @@ class ObjectView(ObjectPermissionRequiredMixin, View):
             self.get_template_name(),
             {
                 "object": instance,
+                "list_url": validated_viewname(instance, "list"),
                 "verbose_name": self.queryset.model._meta.verbose_name,
                 "verbose_name_plural": self.queryset.model._meta.verbose_name_plural,
                 "changelog_url": changelog_url,  # TODO: Remove in 2.0. This information can be retrieved from the object itself now.

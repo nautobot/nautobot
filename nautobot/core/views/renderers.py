@@ -198,6 +198,7 @@ class NautobotHTMLRenderer(renderers.BrowsableAPIRenderer):
             "dynamic_filter_form": self.get_dynamic_filter_form(view, request, filterset_class=view.filterset_class),
             "search_form": search_form,
             "filter_params": display_filter_params,
+            "list_url": validated_viewname(queryset.model, "list"),
             "object": instance,
             "obj": instance,  # NOTE: This context key is deprecated in favor of `object`.
             "obj_type": queryset.model._meta.verbose_name,  # NOTE: This context key is deprecated in favor of `verbose_name`.

@@ -27,7 +27,7 @@ def banner(context, *args, **kwargs) -> Optional[PluginBanner]:
         context.request.user,
     )
 
-    if "object" in context:
+    if "object" in context and context["object"] is not None:
         # Object detail view
         content += format_html(
             "<div>You are viewing {} {}</div>",
