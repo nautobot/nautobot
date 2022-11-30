@@ -2,7 +2,7 @@ import "./App.css";
 import Menu from "./common/components/menu";
 import { Container } from "react-bootstrap";
 import Alert from "react-bootstrap/Alert";
-import { Route, Routes, NavLink, HashRouter, BrowserRouter } from "react-router-dom";
+import { Route, Routes, BrowserRouter } from "react-router-dom";
 import ListViewTemplate from "common/template/ListViewTemplate";
 import ObjectRetrieveTemplate from "common/template/ObjectRetrieveTemplate";
 import { Component } from "react";

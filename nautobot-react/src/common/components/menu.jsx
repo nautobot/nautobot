@@ -3,7 +3,7 @@ import { Container } from "react-bootstrap";
 import Nav from "react-bootstrap/Nav";
 import Navbar from "react-bootstrap/Navbar";
 import NavDropdown from "react-bootstrap/NavDropdown";
-import { axios_instance } from "common/utils/utils";
+import API from "common/utils/utils";
 import { LinkContainer } from "react-router-bootstrap";
 import nautobot_static from "index";
 
@@ -11,7 +11,7 @@ export default function Menu() {
     const [NavMenu, setNavMenu] = useState([])
     useEffect(() => {
         async function fetchData() {
-            const nav_api = await axios_instance.get("/api/get-menu/")
+            const nav_api = await API.get("/api/get-menu/")
             setNavMenu(nav_api.data)
         };
         fetchData();

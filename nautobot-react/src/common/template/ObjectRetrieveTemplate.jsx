@@ -6,7 +6,7 @@ import Tab from "react-bootstrap/Tab";
 import Table from "react-bootstrap/Table";
 import Tabs from "react-bootstrap/Tabs";
 //utils
-import { axios_instance } from "common/utils/utils";
+import API from "common/utils/utils";
 //icons
 import * as Icon from "react-feather";
 import { Link } from "react-router-dom";
@@ -44,7 +44,7 @@ export default function ObjectRetrieveTemplate({ pageTitle, ...props }) {
   useEffect(() => {
     async function fetchData(props) {
       const data_url = "/api" + window.location.pathname;
-      const object_data = await axios_instance.get(data_url);
+      const object_data = await API.get(data_url);
       setObjectData(object_data.data);
 
       let newPageConfig = pageConfig;

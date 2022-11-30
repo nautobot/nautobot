@@ -17,4 +17,4 @@ services:
       - ./nginx.conf:/etc/nginx/conf.d/default.conf
       - ../nautobot/project-static/:/opt/nautobot/static/
   nautobot:
-    command: nautobot-server start --socket :8080 --master --processes 3 --threads 2 --buffer-size 32768
+    command: nautobot-server start --http :8080 --socket :8081 --master --processes 3 --threads 2 --buffer-size 32768

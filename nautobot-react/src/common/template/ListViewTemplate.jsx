@@ -6,7 +6,7 @@ import Button from "react-bootstrap/Button";
 import NavLink from "react-bootstrap/NavLink";
 import NautobotTable from "common/shared/NautobotTable";
 //utils
-import { axios_instance } from "common/utils/utils";
+import API from "common/utils/utils";
 //icons
 import * as Icon from "react-feather";
 import { LinkContainer } from "react-router-bootstrap";
@@ -45,8 +45,8 @@ export default function ListViewTemplate({ pageTitle, ...props }) {
     async function fetchData(props) {
       const data_url = "/api" + window.location.pathname;
       const header_url = "/api" + window.location.pathname + "table-fields/";
-      const table_data = await axios_instance.get(data_url);
-      const table_header = await axios_instance.get(header_url);
+      const table_data = await API.get(data_url);
+      const table_header = await API.get(header_url);
       setTableData(table_data.data.results);
       setTableHeader(table_header.data.data);
 
