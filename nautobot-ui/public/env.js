@@ -59,7 +59,7 @@ window.env = {
   "HOMEBREW_PREFIX": "/opt/homebrew",
   "npm_config_cache": "/Users/timizuoebideri/.npm",
   "LOGNAME": "timizuoebideri",
-  "npm_lifecycle_script": "react-dotenv && react-scripts start",
+  "npm_lifecycle_script": "react-dotenv && react-app-rewired start",
   "GATEWAY_VM_OPTIONS": "/Users/timizuoebideri/jetbra3/vmoptions/gateway.vmoptions",
   "VSCODE_GIT_IPC_HANDLE": "/var/folders/q1/6pwx4c155tz91np0zdgs68wm0000gn/T/vscode-git-a2e88af1f7.sock",
   "DATAGRIP_VM_OPTIONS": "/Users/timizuoebideri/jetbra3/vmoptions/datagrip.vmoptions",
