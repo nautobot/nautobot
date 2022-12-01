@@ -218,6 +218,7 @@ class NautobotHTMLRenderer(renderers.BrowsableAPIRenderer):
                 context.update(
                     {
                         "action_buttons": valid_actions,
+                        "title": queryset.model._meta.verbose_name_plural,
                     }
                 )
             elif view.action in ["create", "update"]:

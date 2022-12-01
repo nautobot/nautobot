@@ -642,14 +642,13 @@ def filter_form_modal(
 @register.inclusion_tag("utilities/templatetags/bulk_operations_loading_modal.html")
 def bulk_operations_loading_modal(
     model_plural_name,
-    action,
+    action=None,
     size="",
 ):
-    return {
-        "size": size,
-        "model_plural_name": model_plural_name,
-        "action": action,
-    }
+    if action is not None:
+        return {"message": f"{action}ing {size} {model_plural_name} for you, hold on ..."}
+    else:
+        return {"message": f"Loading the table of {size} {model_plural_name} for you, hold on ..."}
 
 
 @register.inclusion_tag("utilities/templatetags/modal_form_as_dialog.html")

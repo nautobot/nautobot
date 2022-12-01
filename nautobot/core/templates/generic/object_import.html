@@ -39,5 +39,5 @@
         </form>
 	</div>
 </div>
-{% bulk_operations_loading_modal size=table.rows|length model_plural_name=obj_type_plural action=action %}
+{% bulk_operations_loading_modal model_plural_name=obj_type_plural action=action size=table.rows|length %}
 {% endblock %}
