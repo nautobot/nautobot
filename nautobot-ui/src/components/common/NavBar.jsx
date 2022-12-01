@@ -29,7 +29,7 @@ export default function NavBar() {
     return (
         <MDBNavbar expand='lg' dark bgColor='dark'>
             <MDBContainer fluid>
-                <Link style={{fontSize: "20px", marginRight: 10}} to='/'>Nautobot</Link>
+                <Link className='nautobot-logo' to='/'>Nautobot</Link>
                 <MDBNavbarNav className='me-auto mb-2 mb-lg-0'>
                     {
                         NavMenu.map((item, idx) => (

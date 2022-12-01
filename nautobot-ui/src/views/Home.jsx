@@ -1,9 +1,9 @@
-import BaseLayout from "@layouts/BaseLayout"
+import ListViewLayout from "@components/layouts/ListViewLayout"
 
 export default function Home(){
     return (
-        <BaseLayout>
+        <ListViewLayout>
             <h1>Home Page</h1>
-        </BaseLayout>
+        </ListViewLayout>
     )
 }
