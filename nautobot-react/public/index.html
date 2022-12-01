@@ -25,6 +25,9 @@
       Learn how to configure a non-root public URL by running `npm run build`.
     -->
     <title>Nautobot</title>
+    {% for script in plugin_scripts %}
+      <script defer="defer" src="{{ script }}"></script>
+    {% endfor %}
   </head>
   <body>
     <noscript>You need to enable JavaScript to run this app.</noscript>

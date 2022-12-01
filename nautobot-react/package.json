@@ -20,6 +20,7 @@
   "scripts": {
     "start": "react-app-rewired start",
     "build": "react-app-rewired build",
+    "postbuild": "scripts/move-build-files.sh",
     "test": "react-app-rewired test",
     "eject": "react-scripts eject"
   },
