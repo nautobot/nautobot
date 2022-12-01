@@ -38,6 +38,7 @@ export default function Menu() {
                   {
                     Object.entries(item.properties.groups).map((group, group_idx) => (
                       <div key={group_idx}>
+                        <NavDropdown.Header>{group[0]}</NavDropdown.Header>
                         {
                           Object.entries(group[1].items).map((menu, menu_idx) => (
                             <LinkContainer to={menu[0]} key={menu_idx}>
