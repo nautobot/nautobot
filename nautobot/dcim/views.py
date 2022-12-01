@@ -348,93 +348,64 @@ class LocationTypeBulkDeleteView(generic.BulkDeleteView):
 #
 
 
-class LocationListView(generic.ObjectListView):
-    # v2 TODO(jathan): Replace prefetch_related with select_related
+class LocationUIViewSet(NautobotUIViewSet):
+    bulk_create_form_class = forms.LocationCSVForm
+    bulk_update_form_class = forms.LocationBulkEditForm
+    filterset_class = filters.LocationFilterSet
+    filterset_form_class = forms.LocationFilterForm
+    form_class = forms.LocationForm
     queryset = Location.objects.prefetch_related("location_type", "parent", "site", "tenant")
-    filterset = filters.LocationFilterSet
-    filterset_form = forms.LocationFilterForm
-    table = tables.LocationTable
-
-
-class LocationView(generic.ObjectView):
-    queryset = Location.objects.all()
+    serializer_class = serializers.LocationSerializer
+    table_class = tables.LocationTable
 
     def get_extra_context(self, request, instance):
-        related_locations = (
-            instance.descendants(include_self=True).restrict(request.user, "view").values_list("pk", flat=True)
-        )
-        stats = {
-            "rack_count": Rack.objects.restrict(request.user, "view").filter(location__in=related_locations).count(),
-            "device_count": Device.objects.restrict(request.user, "view")
-            .filter(location__in=related_locations)
-            .count(),
-            "prefix_count": Prefix.objects.restrict(request.user, "view")
-            .filter(location__in=related_locations)
-            .count(),
-            "vlan_count": VLAN.objects.restrict(request.user, "view").filter(location__in=related_locations).count(),
-            "circuit_count": Circuit.objects.restrict(request.user, "view")
-            .filter(terminations__location__in=related_locations)
-            .count(),
-            "vm_count": VirtualMachine.objects.restrict(request.user, "view")
-            .filter(cluster__location__in=related_locations)
-            .count(),
-        }
-        rack_groups = (
-            RackGroup.objects.add_related_count(RackGroup.objects.all(), Rack, "group", "rack_count", cumulative=True)
-            .restrict(request.user, "view")
-            .filter(location__in=related_locations)
-        )
-        # v2 TODO(jathan): Replace prefetch_related with select_related
-        children = (
-            Location.objects.restrict(request.user, "view")
-            .filter(parent=instance)
-            .prefetch_related("parent", "location_type")
-        )
+        context = super().get_extra_context(request, instance)
+        if instance is not None:
+            related_locations = (
+                instance.descendants(include_self=True).restrict(request.user, "view").values_list("pk", flat=True)
+            )
+            stats = {
+                "rack_count": Rack.objects.restrict(request.user, "view").filter(location__in=related_locations).count(),
+                "device_count": Device.objects.restrict(request.user, "view")
+                .filter(location__in=related_locations)
+                .count(),
+                "prefix_count": Prefix.objects.restrict(request.user, "view")
+                .filter(location__in=related_locations)
+                .count(),
+                "vlan_count": VLAN.objects.restrict(request.user, "view").filter(location__in=related_locations).count(),
+                "circuit_count": Circuit.objects.restrict(request.user, "view")
+                .filter(terminations__location__in=related_locations)
+                .count(),
+                "vm_count": VirtualMachine.objects.restrict(request.user, "view")
+                .filter(cluster__location__in=related_locations)
+                .count(),
+            }
+            rack_groups = (
+                RackGroup.objects.add_related_count(RackGroup.objects.all(), Rack, "group", "rack_count", cumulative=True)
+                .restrict(request.user, "view")
+                .filter(location__in=related_locations)
+            )
+            # v2 TODO(jathan): Replace prefetch_related with select_related
+            children = (
+                Location.objects.restrict(request.user, "view")
+                .filter(parent=instance)
+                .prefetch_related("parent", "location_type")
+            )
 
-        children_table = tables.LocationTable(children)
+            children_table = tables.LocationTable(children)
 
-        paginate = {
-            "paginator_class": EnhancedPaginator,
-            "per_page": get_paginate_count(request),
-        }
-        RequestConfig(request, paginate).configure(children_table)
+            paginate = {
+                "paginator_class": EnhancedPaginator,
+                "per_page": get_paginate_count(request),
+            }
+            RequestConfig(request, paginate).configure(children_table)
 
-        return {
-            "children_table": children_table,
-            "rack_groups": rack_groups,
-            "stats": stats,
-        }
-
-
-class LocationEditView(generic.ObjectEditView):
-    queryset = Location.objects.all()
-    model_form = forms.LocationForm
-    template_name = "dcim/location_edit.html"
-
-
-class LocationDeleteView(generic.ObjectDeleteView):
-    queryset = Location.objects.all()
-
-
-class LocationBulkEditView(generic.BulkEditView):
-    # v2 TODO(jathan): Replace prefetch_related with select_related
-    queryset = Location.objects.prefetch_related("location_type", "parent", "site", "tenant")
-    filterset = filters.LocationFilterSet
-    table = tables.LocationTable
-    form = forms.LocationBulkEditForm
-
-
-class LocationBulkImportView(generic.BulkImportView):
-    queryset = Location.objects.all()
-    model_form = forms.LocationCSVForm
-    table = tables.LocationTable
-
-
-class LocationBulkDeleteView(generic.BulkDeleteView):
-    # v2 TODO(jathan): Replace prefetch_related with select_related
-    queryset = Location.objects.prefetch_related("location_type", "parent", "site", "tenant")
-    filterset = filters.LocationFilterSet
-    table = tables.LocationTable
+            context.update({
+                "children_table": children_table,
+                "rack_groups": rack_groups,
+                "stats": stats,
+            })
+        return context
 
 
 #

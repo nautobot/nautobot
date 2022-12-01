@@ -221,6 +221,7 @@ class NautobotHTMLRenderer(renderers.BrowsableAPIRenderer):
                     {
                         "action_buttons": valid_actions,
                         "title": bettertitle(model._meta.verbose_name_plural),
+                        "wrapper_template": "generic/object_list.html" if not request.headers.get("HX-Request", None) else "generic/object_list_table.html",
                     }
                 )
             elif view.action in ["create", "update"]:

@@ -38,6 +38,7 @@ app_name = "dcim"
 
 router = NautobotUIViewSetRouter()
 router.register("device-redundancy-groups", views.DeviceRedundancyGroupUIViewSet)
+router.register("locations", views.LocationUIViewSet)
 
 urlpatterns = [
     # Regions
@@ -116,14 +117,6 @@ urlpatterns = [
         kwargs={"model": LocationType},
     ),
     # Locations
-    path("locations/", views.LocationListView.as_view(), name="location_list"),
-    path("locations/add/", views.LocationEditView.as_view(), name="location_add"),
-    path("locations/edit/", views.LocationBulkEditView.as_view(), name="location_bulk_edit"),
-    path("locations/import/", views.LocationBulkImportView.as_view(), name="location_import"),
-    path("locations/delete/", views.LocationBulkDeleteView.as_view(), name="location_bulk_delete"),
-    path("locations/<slug:slug>/", views.LocationView.as_view(), name="location"),
-    path("locations/<slug:slug>/edit/", views.LocationEditView.as_view(), name="location_edit"),
-    path("locations/<slug:slug>/delete/", views.LocationDeleteView.as_view(), name="location_delete"),
     path(
         "locations/<slug:slug>/changelog/",
         ObjectChangeLogView.as_view(),

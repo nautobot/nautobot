@@ -320,27 +320,25 @@ class NautobotViewSetMixin(GenericViewSet, AccessMixin, GetReturnURLMixin, FormV
         app_label = model_opts.app_label
         action = self.action
 
-        try:
-            template_name = f"{app_label}/{model_opts.model_name}_{action}.html"
-            select_template([template_name])
-        except TemplateDoesNotExist:
+        if action == "list" and self.request.headers.get("HX-Request", None):
+            candidate_templates = [
+                f"{app_label}/{model_opts.model_name}_{action}_table.html",
+                f"generic/object_{action}_table.html",
+            ]
+        else:
+            candidate_templates = [f"{app_label}/{model_opts.model_name}_{action}.html"]
+            if action == "create":
+                candidate_templates.append(f"{app_label}/{model_opts.model_name}_update.html")
+            elif action == "update":
+                candidate_templates.append(f"{app_label}/{model_opts.model_name}_create.html")
+            candidate_templates.append(f"generic/object_{action}.html")
+
+        for candidate_template in candidate_templates:
             try:
-                if action == "create":
-                    # When the action is `create`, try {object}_update.html as a fallback
-                    # If both are not defined, fall back to generic/object_create.html
-                    template_name = f"{app_label}/{model_opts.model_name}_update.html"
-                    select_template([template_name])
-                elif action == "update":
-                    # When the action is `update`, try {object}_create.html as a fallback
-                    # If both are not defined, fall back to generic/object_update.html
-                    template_name = f"{app_label}/{model_opts.model_name}_create.html"
-                    select_template([template_name])
-                else:
-                    # No special case fallback, fall back to generic/object_{action}.html
-                    raise TemplateDoesNotExist("")
+                select_template([candidate_template])
+                return candidate_template
             except TemplateDoesNotExist:
-                template_name = f"generic/object_{action}.html"
-        return template_name
+                continue
 
     def get_form(self, *args, **kwargs):
         """

@@ -44,7 +44,7 @@
                     {% endif %}
                     {% if dynamic_filter_form %}
                     <div id="advanced-filter" role="tabpanel" class="tab-pane {% if not filter_form %}active {% endif %}">
-                        <form id="dynamic-filter-form" class="form-horizontal" method="get" action="." hx-get=".?table_only=1" hx-target="#object-list-table-wrapper">
+                        <form id="dynamic-filter-form" class="form-horizontal" method="get" action="." hx-get="." hx-target="#object-list-table-wrapper">
                             <div class="">
                                 <table class="table" id="filterform-table">
                                     {{ dynamic_filter_form.management_form }}
