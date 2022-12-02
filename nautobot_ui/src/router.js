@@ -8,7 +8,7 @@ import ListView from "@views/ListView";
 
 
 // Placeholder for nautobot to inject code
-// The idea would be to dynamicly generate this lines of codes relating to
+// The idea would be to dynamically generate this lines of codes relating to
 //  nautobot_plugin_one_ui
 
 // nautobot__inject_import__start
@@ -36,7 +36,7 @@ export default function NautobotRouter() {
                     element: <InstalledPlugins />
                 },
                 // nautobot__inject_route__start
-                
+
                 // nautobot__inject_route__ends
             ],
         },
