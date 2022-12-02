@@ -7,19 +7,19 @@ from django.core.management.base import BaseCommand
 
 
 ROUTER_JS_DATA = """
-import { useRoutes } from "react-router-dom";
+import {{ useRoutes }} from "react-router-dom";
 import Home from "{plugin_alias}/views/Home";
 
 
-export default function Router() {
+export default function Router() {{
     let element = useRoutes([
-        {
+        {{
             path: "/",
             element: <Home />,
-        }
+        }}
     ]);
     return element;
-}
+}}
 
 """
 
@@ -27,9 +27,9 @@ APP_JS_DATA = """
 import Router from '{plugin_alias}/router';
 
 
-export default function {plugin_component}(){
+export default function {plugin_component}(){{
     return <Router />
-}
+}}
 
 """
 
