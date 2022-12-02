@@ -19,6 +19,10 @@ plugin_api_patterns = [
         views.InstalledPluginsAPIView.as_view(),
         name="plugins-list",
     ),
+    path(
+        "installed-plugins/table-fields/",
+        views.InstalledPluginsTableAPIView.as_view(),
+    ),
 ]
 plugin_admin_patterns = []
 

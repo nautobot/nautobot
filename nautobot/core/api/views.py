@@ -786,3 +786,17 @@ class GetMenu(NautobotAPIVersionMixin, APIView):
                 for item in registry["nav_menu"]["tabs"].items()
             ]
         )
+
+
+class InstalledPlugins(NautobotAPIVersionMixin, APIView):
+    permission_classes = [AllowAny]
+
+    def get(self, request):
+        from nautobot.extras.registry import registry
+
+        return Response(
+            [
+                {"name": item[0], "properties": item[1]}
+                for item in registry["nav_menu"]["tabs"].items()
+            ]
+        )

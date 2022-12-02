@@ -115,6 +115,17 @@ class InstalledPluginsAPIView(NautobotAPIVersionMixin, APIView):
         return Response([self._get_plugin_data(apps.get_app_config(plugin)) for plugin in settings.PLUGINS])
 
 
+ # @action(detail=False, url_path="table-fields", methods=["GET"])
+class InstalledPluginsTableAPIView(NautobotAPIVersionMixin, APIView):
+    def get(self, request):
+        data = [
+            {"name": "name", "label": "Name"},
+            {"name": "description", "label": "Description"},
+            {"name": "version", "label": "Version"},
+        ]
+        return Response({"data": data})
+
+
 class PluginsAPIRootView(NautobotAPIVersionMixin, APIView):
     _ignore_model_permissions = True
 

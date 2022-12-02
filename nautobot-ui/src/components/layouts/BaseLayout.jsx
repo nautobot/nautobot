@@ -16,7 +16,7 @@ import {
 
 
 
-export default function ListViewLayout(props) {
+export default function BaseLayout(props) {
     return (
         <MDBContainer fluid className='body'>
             {/* Breadcrub */}
@@ -37,7 +37,7 @@ export default function ListViewLayout(props) {
             </Grid>
 
             {/* Page title and buttons */}
-            <Grid templateColumns='repeat(8, 1fr)' gap={2} marginTop={3}>
+            <Grid templateColumns='repeat(8, 1fr)' gap={2} marginTop={10} marginBottom={10}>
                 <GridItem colSpan={2}>
                     <Heading as='h3' size='lg'>{props.page_title}</Heading>
                 </GridItem>
@@ -45,6 +45,7 @@ export default function ListViewLayout(props) {
                     {/* <Button colorScheme='gray' variant='outline'>Email</Button> */}
                 </GridItem>
             </Grid>
+            
         
             {props.children}
         </MDBContainer>

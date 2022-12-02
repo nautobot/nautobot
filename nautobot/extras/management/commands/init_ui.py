@@ -1,3 +1,4 @@
+import json
 import os
 
 from django.core.management.base import BaseCommand
@@ -32,16 +33,15 @@ class Command(BaseCommand):
         - Add the plugin ui name to jsconfig using the directory as alias
         """
 
-        # plugin_name =
-        print("Good to go....")
         plugin_root_dir = os.getcwd()
         plugin_name = options["plugin_name"]
         plugin_path = os.path.join(plugin_root_dir, plugin_name)
-        plugin_ui_name = plugin_name + "_ui"
+        plugin_ui_dir_name = plugin_name + "_ui"
+        plugin_ui_name = "-".join(plugin_ui_dir_name.split("_"))
 
         try:
-            os.mkdir(plugin_ui_name)
-            os.chdir(plugin_ui_name)
+            os.mkdir(plugin_ui_dir_name)
+            os.chdir(plugin_ui_dir_name)
 
             nautobot_ui_dirs = ["components", "utils", "views"]
             for dir_name in nautobot_ui_dirs:
@@ -49,6 +49,17 @@ class Command(BaseCommand):
 
             with open("plugin-config.json", "w") as file:
                 # file.writelines({"d": ""})
+                pass
+
+            # Add package.json to plugin ui root
+            nautobot_ui_config = {
+                "name": plugin_ui_name,
+                "version": "0.1.0",
+                "private": True
+
+            }
+            with open("package.json", "w") as file:
+                file.write(json.dumps((nautobot_ui_config)))
                 pass
 
 

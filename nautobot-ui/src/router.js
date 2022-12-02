@@ -2,7 +2,7 @@ import { useRoutes } from "react-router-dom";
 import { lazy } from 'react';
 
 import Home from "@views/Home";
-import Plugins from "@views/Plugins";
+import InstalledPlugins from "@views/InstalledPlugins";
 import ListView from "@views/ListView";
 
 
@@ -30,9 +30,12 @@ export default function NautobotRouter() {
             children: [],
         },
         {
-            path: "/plugins",
-            element: <Plugins />,
+            path: "/plugins/",
             children: [
+                {
+                    path: "installed-plugins",
+                    element: <InstalledPlugins />
+                },
                 {
                     path: "nautobot-plugin-one",
                     element: <NautobotPluginOne />

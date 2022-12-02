@@ -1,4 +1,4 @@
-import ListViewLayout from "@components/layouts/ListViewLayout"
+import ListViewLayout from "@components/layouts/BaseLayout"
 
 export default function Home(){
     return (
