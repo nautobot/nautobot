@@ -7,8 +7,8 @@ services:
       PORT: "8888"
     working_dir: /opt/node/nautobot
     volumes:
-      - ../nautobot-react/:/opt/node/nautobot
-    command: npm start
+      - ../frontend-next/:/opt/node/nautobot
+    command: npm run dev
   nginx:
     image: nginx
     ports:
