@@ -84,7 +84,11 @@ const injectAuthCredentials = (request) => {
       return;
     // This conditional resolves issue #2154 and is the only portion that is updated for this patch.
     } else if (authDef.schema.type === "apiKey" && authDef.schema.in === "header" && authDef.schema.description === 'Token-based authentication with required prefix "Token"') {
+      if (authDef.value.startsWith("Token ")) {
+        request.headers["Authorization"] = authDef.value;
+      } else {
         request.headers["Authorization"] = "Token " + authDef.value;
+      }
         return;
     // End of block for resolving issue #2154.
     } else if (authDef.schema.type === "apiKey" && authDef.schema.in === "header") {
