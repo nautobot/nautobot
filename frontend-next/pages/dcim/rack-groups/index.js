@@ -1,4 +1,4 @@
-import ListViewTemplate from "../../../components/list"
+import ListViewTemplate from "components/list"
 
 export default function ListView() {
     return (

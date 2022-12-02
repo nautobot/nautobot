@@ -88,7 +88,9 @@ export default function SitesObjectRetrieve() {
             </Table>
           </Card>
         </Tab>
-        <Tab eventKey="advanced" title="Advanced" />
+        <Tab eventKey="advanced" title="Advanced">
+          <img src="https://raw.githubusercontent.com/nautobot/nautobot/develop/nautobot/docs/nautobot_logo.svg"></img>
+        </Tab>
         <Tab eventKey="notes" title="Notes" />
         <Tab eventKey="change_log" title="Change Log" />
       </Tabs>
