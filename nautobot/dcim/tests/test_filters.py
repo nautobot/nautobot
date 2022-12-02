@@ -2415,9 +2415,8 @@ class PlatformTestCase(FilterTestCases.NameSlugFilterTestCase):
 
     def test_devices(self):
         devices = [Device.objects.first(), Device.objects.last()]
-        with self.subTest():
-            params = {"devices": [devices[0].pk, devices[1].pk]}
-            self.assertEqual(self.filterset(params, self.queryset).qs.count(), len(devices))
+        params = {"devices": [devices[0].pk, devices[1].pk]}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), len(devices))
 
     def test_has_devices(self):
         with self.subTest():
@@ -2608,8 +2607,12 @@ class DeviceTestCase(FilterTestCases.FilterTestCase, FilterTestCases.TenancyFilt
 
     def test_rackgroup(self):
         rack_groups = RackGroup.objects.all()[:2]
-        params = {"rack_group": [rack_groups[0].pk, rack_groups[1].pk]}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+        with self.subTest():
+            params = {"rack_group": [rack_groups[0].pk, rack_groups[1].pk]}
+            self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+        with self.subTest():
+            params = {"rack_group": [rack_groups[0].slug, rack_groups[1].slug]}
+            self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
 
     def test_rack(self):
         racks = Rack.objects.all()[:2]
@@ -4256,14 +4259,11 @@ class InventoryItemTestCase(FilterTestCases.FilterTestCase):
             self.assertEqual(self.filterset(params, self.queryset).qs.count(), 4)
 
     def test_device(self):
-        # TODO: Allow multiple values
-        device = Device.objects.first()
-        with self.subTest():
-            params = {"device": [device.pk]}
-            self.assertEqual(self.filterset(params, self.queryset).qs.distinct().count(), 2)
-        with self.subTest():
-            params = {"device": [device.name]}
-            self.assertEqual(self.filterset(params, self.queryset).qs.distinct().count(), 2)
+        device_1 = Device.objects.get(name="Device 1")
+        device_2 = Device.objects.get(name="Device 2")
+        params = {"device": [device_1.pk, device_2.name]}
+        # Each device is assoicated with two InventoryItems
+        self.assertEqual(self.filterset(params, self.queryset).qs.distinct().count(), 4)
 
     def test_parent(self):
         with self.subTest():
@@ -4785,7 +4785,7 @@ class PowerPanelTestCase(FilterTestCases.FilterTestCase):
             params = {"rack_group": [rack_groups[0].pk, rack_groups[1].pk]}
             self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
         with self.subTest():
-            params = {"rack_group": [rack_groups[0].pk, rack_groups[1].pk]}
+            params = {"rack_group": [rack_groups[0].slug, rack_groups[1].slug]}
             self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
 
     def test_power_feeds(self):
@@ -4936,15 +4936,6 @@ class PowerFeedTestCase(FilterTestCases.FilterTestCase):
             params = {"site": [sites[0].slug, sites[1].slug]}
             self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
 
-    def test_rack(self):
-        racks = Rack.objects.all()[:2]
-        with self.subTest():
-            params = {"rack": [racks[0].pk, racks[1].pk]}
-            self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
-        with self.subTest():
-            params = {"rack": [racks[0].pk, racks[1].name]}
-            self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
-
     def test_has_cable(self):
         with self.subTest():
             params = {"has_cable": True}
@@ -4968,6 +4959,15 @@ class PowerFeedTestCase(FilterTestCases.FilterTestCase):
             self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
         with self.subTest():
             params = {"power_panel": [power_panels[0].name, power_panels[1].name]}
+            self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+
+    def test_rack(self):
+        racks = Rack.objects.all()[:2]
+        with self.subTest():
+            params = {"rack": [racks[0].pk, racks[1].pk]}
+            self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+        with self.subTest():
+            params = {"rack": [racks[0].pk, racks[1].name]}
             self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
 
     def test_available_power(self):
