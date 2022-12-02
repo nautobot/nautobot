@@ -136,7 +136,8 @@ def load_plugin_ui(plugin, settings):
 
     plugin_ui_path = os.path.join(plugin_path, plugin_ui_name)
     if not os.path.exists(plugin_ui_path):
-        raise PluginImproperlyConfigured(f"Plugin {plugin.config.name} UI directory does not exists")
+        return
+        # raise PluginImproperlyConfigured(f"Plugin {plugin.config.name} UI directory does not exists")
     # TODO(timizuo): It would be nice to check if _app.js and package.json are available in plugin_ui since they are important to nautobot
 
     nautobot_path = pathlib.Path(__file__).parent.parent.parent.parent.resolve()
@@ -195,6 +196,7 @@ def load_plugin_ui(plugin, settings):
         file.writelines(lines)
 
 
+# TODO(timizuo): Remember to remove plugin obsolete packages from nautobot_ui jsconfig and router
 def remove_stale_nautobot_ui():
     """Remove from jsconfig and routers plugins that are not installed in nautobot"""
 

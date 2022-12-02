@@ -12,6 +12,7 @@ import ListView from "@views/ListView";
 //  nautobot_plugin_one_ui
 
 // nautobot__inject_import__start
+
 const NautobotPluginOne = lazy(() => import('@nautobot_plugin_one_ui/_app'));
 // nautobot__inject_import__ends
 
@@ -36,6 +37,7 @@ export default function NautobotRouter() {
                     element: <InstalledPlugins />
                 },
                 // nautobot__inject_route__start
+                
                 {
                     path: "nautobot-plugin-one",
                     element: <NautobotPluginOne />

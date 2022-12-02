@@ -1,6 +1,8 @@
+import importlib
 import json
 import os
 
+import simplejson
 from django.core.management.base import BaseCommand
 
 
@@ -22,6 +24,7 @@ class Command(BaseCommand):
     help = "Init Nautobot UI project in current plugin root directory."
 
     def add_arguments(self, parser):
+        """ser"""
         parser.add_argument("plugin_name", type=str, help="Plugin project name.")
 
     def handle(self, *args, **options):
@@ -36,26 +39,42 @@ class Command(BaseCommand):
         plugin_root_dir = os.getcwd()
         plugin_name = options["plugin_name"]
         plugin_path = os.path.join(plugin_root_dir, plugin_name)
-        plugin_ui_dir_name = plugin_name + "_ui"
-        plugin_ui_name = "-".join(plugin_ui_dir_name.split("_"))
+        plugin = importlib.import_module(plugin_name)
+        plugin_ui_name = plugin.config.nautobot_ui
 
+        os.chdir(plugin_path)
         try:
-            os.mkdir(plugin_ui_dir_name)
-            os.chdir(plugin_ui_dir_name)
+            os.mkdir(plugin_ui_name)
+            os.chdir(plugin_ui_name)
 
             nautobot_ui_dirs = ["components", "utils", "views"]
             for dir_name in nautobot_ui_dirs:
                 os.mkdir(dir_name)
 
-            with open("plugin-config.json", "w") as file:
-                # file.writelines({"d": ""})
-                pass
+            # with open("plugin-config.json", "w") as file:
+            #     # file.writelines({"d": ""})
+            #     pass
 
             # Add package.json to plugin ui root
             nautobot_ui_config = {"name": plugin_ui_name, "version": "0.1.0", "private": True}
             with open("package.json", "w") as file:
-                file.write(json.dumps((nautobot_ui_config)))
+                file.write(simplejson.dumps((nautobot_ui_config), indent=4))
                 pass
+
+            # Add _app.js to plugin ui root
+            appjs_data = [
+                "import {Heading} from '@chakra-ui/react'\n\n",
+                "export default function NautobotPluginOne(){\n",
+                "    return (\n",
+                "        <Heading>\n",
+                "            Welcome to Nautobot Plugin UI ❄️\n",
+                "        </Heading>\n",
+                "    )\n",
+                "}\n\n",
+            ]
+
+            with open("_app.js", "w") as file:
+                file.writelines(appjs_data)
 
         except FileExistsError:
             self.stdout.write(BG_COLORS.FAIL + "Project already initialized" + BG_COLORS.ENDC)
