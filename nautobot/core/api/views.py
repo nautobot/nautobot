@@ -512,6 +512,9 @@ class NautobotSpectacularSwaggerView(APIVersioningGetSchemaURLMixin, Spectacular
         response = super().get(request, *args, **kwargs)
         response.data["swagger_settings"] = response.data["settings"]
         del response.data["settings"]
+
+        # Add additional data so drf-spectacular will use the Token keyword in authorization header.
+        response.data["schema_auth_names"] = ["tokenAuth"]
         return response
 
 
