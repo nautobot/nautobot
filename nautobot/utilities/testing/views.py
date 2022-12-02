@@ -9,6 +9,7 @@ from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import TestCase as _TestCase, override_settings, tag
 from django.urls import reverse, NoReverseMatch
 from django.utils.text import slugify
+from django.utils.http import urlencode
 
 from nautobot.extras.choices import CustomFieldTypeChoices, RelationshipSideChoices, ObjectChangeActionChoices
 from nautobot.extras.models import ChangeLoggedModel, CustomField, Relationship
@@ -534,6 +535,35 @@ class ViewTestCases:
             request = {
                 "path": self._get_url("delete", instance),
                 "data": post_data({"confirm": True}),
+            }
+            self.assertHttpStatus(self.client.post(**request), 302)
+            with self.assertRaises(ObjectDoesNotExist):
+                self._get_queryset().get(pk=instance.pk)
+
+            if hasattr(self.model, "to_objectchange"):
+                # Verify ObjectChange creation
+                objectchanges = get_changes_for_model(instance)
+                self.assertEqual(len(objectchanges), 1)
+                self.assertEqual(objectchanges[0].action, ObjectChangeActionChoices.ACTION_DELETE)
+
+        @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+        def test_delete_object_with_permission_and_xwwwformurlencoded(self):
+            instance = self.get_deletable_object()
+
+            # Assign model-level permission
+            obj_perm = ObjectPermission(name="Test permission", actions=["delete"])
+            obj_perm.save()
+            obj_perm.users.add(self.user)
+            obj_perm.object_types.add(ContentType.objects.get_for_model(self.model))
+
+            # Try GET with model-level permission
+            self.assertHttpStatus(self.client.get(self._get_url("delete", instance)), 200)
+
+            # Try POST with model-level permission
+            request = {
+                "path": self._get_url("delete", instance),
+                "data": urlencode({"confirm": True}),
+                "content_type": "application/x-www-form-urlencoded",
             }
             self.assertHttpStatus(self.client.post(**request), 302)
             with self.assertRaises(ObjectDoesNotExist):
