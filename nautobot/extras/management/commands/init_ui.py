@@ -52,16 +52,10 @@ class Command(BaseCommand):
                 pass
 
             # Add package.json to plugin ui root
-            nautobot_ui_config = {
-                "name": plugin_ui_name,
-                "version": "0.1.0",
-                "private": True
-
-            }
+            nautobot_ui_config = {"name": plugin_ui_name, "version": "0.1.0", "private": True}
             with open("package.json", "w") as file:
                 file.write(json.dumps((nautobot_ui_config)))
                 pass
-
 
         except FileExistsError:
             self.stdout.write(BG_COLORS.FAIL + "Project already initialized" + BG_COLORS.ENDC)

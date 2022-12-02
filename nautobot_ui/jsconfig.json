@@ -1,0 +1,28 @@
+{
+    "compilerOptions": {
+        "baseUrl": ".",
+        "paths": {
+            "@utils/*": [
+                "src/utils/*"
+            ],
+            "@views/*": [
+                "src/views/*"
+            ],
+            "@components/*": [
+                "src/components/*"
+            ],
+            "@layouts/*": [
+                "src/components/layouts/*"
+            ],
+            "@common/*": [
+                "src/components/common/*"
+            ],
+            "@core/*": [
+                "src/components/core/*"
+            ],
+            "@nautobot_plugin_one_ui/*": [
+                "/Users/timizuoebideri/Documents/Work/NTC/frontend/nautobot-plugin-one/nautobot_plugin_one/nautobot_plugin_one_ui/*"
+            ]
+        }
+    }
+}

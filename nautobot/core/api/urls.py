@@ -13,7 +13,8 @@ from nautobot.core.api.views import (
     GraphQLDRFAPIView,
     StatusView,
     NautobotSpectacularSwaggerView,
-    NautobotSpectacularRedocView, GetMenu,
+    NautobotSpectacularRedocView,
+    GetMenu,
 )
 from nautobot.extras.plugins.urls import plugin_api_patterns
 

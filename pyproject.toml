@@ -132,6 +132,7 @@ social-auth-core = {version = "~4.3.0", optional = true, extras = ["openidconnec
 social-auth-app-django = "~5.0.0"
 # Rendering of SVG images (for rack elevations, etc.)
 svgwrite = "~1.4.2"
+simplejson = "^3.18.0"
 
 
 [tool.poetry.extras]
