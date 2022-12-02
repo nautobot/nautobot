@@ -43,6 +43,14 @@
     height: 50px;
 }
 
+/*
+ * Don't line-break code in tables in the middle of a word
+ * https://github.com/squidfunk/mkdocs-material/issues/2462
+ */
+td code, th code {
+    word-break: inherit !important;
+}
+
 img.logo {
     height: 100px;
 }

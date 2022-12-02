@@ -13,15 +13,37 @@ class ChoiceSetMeta(type):
 
 
 class ChoiceSet(metaclass=ChoiceSetMeta):
+    """
+    Base class for defining choices for a model and/or menu.
+
+    Subclasses should define a CHOICES constant which consists of a list of tuples of the form `(value, display_str)`,
+    or optionally as tuples of the form `(grouping, ((value, display_str), (value, display_str), ...))`.
+
+    Example:
+        ```python
+        class GreekCapitalLetterChoices(ChoiceSet):
+            ALPHA = "Α"
+            BETA = "Β"
+            GAMMA = "Γ"
+
+            CHOICES = (
+                (ALPHA, "alpha"),
+                (BETA, "beta"),
+                (GAMMA, "gamma"),
+            )
+        ```
+    """
 
     CHOICES = []
 
     @classmethod
     def values(cls):
+        """Get a flat list of all values defined in this ChoiceSet's `CHOICES`."""
         return [c[0] for c in unpack_grouped_choices(cls.CHOICES)]
 
     @classmethod
     def as_dict(cls):
+        """Get a dictionary representation of this ChoiceSet's `CHOICES`."""
         # Unpack grouped choices before casting as a dict
         return dict(unpack_grouped_choices(cls.CHOICES))
 

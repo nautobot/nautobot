@@ -514,6 +514,13 @@ The file path to a directory where [Jobs](../additional-features/jobs.md) can be
 
 ---
 
+## LOG_DEPRECATION_WARNINGS
+
+--- 1.5.3
+    This setting was moved to [environment variable only](#nautobot_log_deprecation_warnings) as it conflicts with app startup due to import-time order.
+
+---
+
 ## MAINTENANCE_MODE
 
 Default: `False`
@@ -889,6 +896,22 @@ in order for the repository to sync.
 
 !!! warning
     This _must_ be specified as an environment variable. Setting it in `nautobot_config.py` will not have the desired effect.
+
+---
+
+## NAUTOBOT_LOG_DEPRECATION_WARNINGS
+
++++ 1.5.2
+
++/- 1.5.3
+    This was previously available as a config file setting but changed to environment-variable only. Also `DEBUG = True` will no longer work to log deprecation warnings.
+
+Default: `False`
+
+This can be set to `True` to allow deprecation warnings raised by Nautobot to (additionally) be logged as `WARNING` level log messages. (Deprecation warnings are normally silent in Python, but can be enabled globally by [various means](https://docs.python.org/3/library/warnings.html) such as setting the `PYTHONWARNINGS` environment variable. However, doing so can be rather noisy, as it will also include warnings from within Django about various code in various package dependencies of Nautobot's, etc. This configuration setting allows a more targeted enablement of only warnings from within Nautobot itself, which can be useful when vetting various Nautobot apps (plugins) for future-proofness against upcoming changes to Nautobot.)
+
+!!! caution
+    In Nautobot 2.0, deprecation warnings will be logged by default; a future release of Nautobot 1.5.x will also enable default logging of deprecation warnings.
 
 ---
 

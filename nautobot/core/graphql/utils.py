@@ -78,7 +78,7 @@ def get_filtering_args_from_filterset(filterset_class):
 
     # Hack to swap `type` fields to `_type` since they will conflict with
     # `graphene.types.fields.Field.type` in Graphene 2.x.
-    # TODO(jathan): Once we upgrade to Graphene 3.x we can remove this, but we
+    # 2.0 TODO(jathan): Once we upgrade to Graphene 3.x we can remove this, but we
     # will still need to do an API migration to deprecate it. This argument was
     # validated to be safe to keep even in Graphene 3.
     if "type" in args:

@@ -1385,6 +1385,17 @@ Markdown = ">=3.3"
 mkdocs = ">=1.1"
 
 [[package]]
+name = "mkdocs-gen-files"
+version = "0.4.0"
+description = "MkDocs plugin to programmatically generate documentation pages during the build"
+category = "dev"
+optional = false
+python-versions = ">=3.7,<4.0"
+
+[package.dependencies]
+mkdocs = ">=1.0.3,<2.0.0"
+
+[[package]]
 name = "mkdocs-include-markdown-plugin"
 version = "3.6.1"
 description = "Mkdocs Markdown includer plugin."
@@ -1547,11 +1558,14 @@ test = ["pytest (>=5.1.2)", "pyyaml (>=5.1.2)"]
 
 [[package]]
 name = "netutils"
-version = "1.2.0"
+version = "1.3.0"
 description = "Common helper functions useful in network automation."
 category = "main"
 optional = false
-python-versions = ">=3.6,<4.0"
+python-versions = ">=3.7,<4.0"
+
+[package.extras]
+optionals = ["napalm (>=4.0.0,<5.0.0)"]
 
 [[package]]
 name = "ntc-templates"
@@ -2614,7 +2628,7 @@ sso = ["social-auth-core"]
 [metadata]
 lock-version = "1.1"
 python-versions = "^3.7"
-content-hash = "1c3105ef2b3d15ab0382aba9cc6594159f5de8abf746d0fd7113043af2780a76"
+content-hash = "1da5ab83e44d84a421ea00d3a51ae189d10f4442a613a731f57ad8cfa962972c"
 
 [metadata.files]
 amqp = [
@@ -3310,6 +3324,10 @@ mkdocs-autorefs = [
     {file = "mkdocs-autorefs-0.4.1.tar.gz", hash = "sha256:70748a7bd025f9ecd6d6feeba8ba63f8e891a1af55f48e366d6d6e78493aba84"},
     {file = "mkdocs_autorefs-0.4.1-py3-none-any.whl", hash = "sha256:a2248a9501b29dc0cc8ba4c09f4f47ff121945f6ce33d760f145d6f89d313f5b"},
 ]
+mkdocs-gen-files = [
+    {file = "mkdocs-gen-files-0.4.0.tar.gz", hash = "sha256:377bff8ee8e93515916689f483d971643f83a94eed7e92318854da8f344f0163"},
+    {file = "mkdocs_gen_files-0.4.0-py3-none-any.whl", hash = "sha256:3241a4c947ecd11763ca77cc645015305bf71a0e1b9b886801c114fcf9971e71"},
+]
 mkdocs-include-markdown-plugin = [
     {file = "mkdocs_include_markdown_plugin-3.6.1-py3-none-any.whl", hash = "sha256:ea36a7d50ee98028f03574d7bf40a307e16211ad3013a4e42f64494b3c106e9e"},
     {file = "mkdocs_include_markdown_plugin-3.6.1.tar.gz", hash = "sha256:5e7416f23081085a220f7534b2fc7456e74c5a65f3b401da1f29b9e9132b46e5"},
@@ -3363,8 +3381,8 @@ netmiko = [
     {file = "netmiko-3.4.0.tar.gz", hash = "sha256:acadb9dd97864ee848e2032f1f0e301c7b31e7a4153757d98f5c8ba1b9614993"},
 ]
 netutils = [
-    {file = "netutils-1.2.0-py3-none-any.whl", hash = "sha256:23c2ca960544ac6674263063a3580fe3d9d94d5898512df468298659c7eff7e3"},
-    {file = "netutils-1.2.0.tar.gz", hash = "sha256:a661326a46352208ea465f0305831f042f7943289e4cbc3e085c23c07682d24b"},
+    {file = "netutils-1.3.0-py3-none-any.whl", hash = "sha256:33106376f9cc3d849801f06d8dbe4a146a618e20d5d2852d78da4e24db6d7b32"},
+    {file = "netutils-1.3.0.tar.gz", hash = "sha256:500d4024680a714382f1e782a722f08103b42751edb93dfab7cfb245074aba87"},
 ]
 ntc-templates = [
     {file = "ntc_templates-3.1.0-py3-none-any.whl", hash = "sha256:e59fbc485a132e0d3eecb6f53fc8e85426cec099ef39678cdc20eec8dccaced6"},

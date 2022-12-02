@@ -1,10 +1,10 @@
 from django.contrib import admin
 
-from nautobot.core.admin import admin_site
+from nautobot.apps.admin import NautobotModelAdmin
 
 from example_plugin.models import ExampleModel
 
 
-@admin.register(ExampleModel, site=admin_site)
-class ExampleModelAdmin(admin.ModelAdmin):
+@admin.register(ExampleModel)
+class ExampleModelAdmin(NautobotModelAdmin):
     list_display = ("name", "number")

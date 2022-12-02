@@ -20,6 +20,7 @@ from django.utils.safestring import mark_safe
 from django.views.generic.edit import FormView
 
 from rest_framework import mixins, exceptions
+from rest_framework.parsers import MultiPartParser
 from rest_framework.response import Response
 from rest_framework.viewsets import GenericViewSet
 
@@ -27,6 +28,8 @@ from drf_spectacular.utils import extend_schema
 
 from nautobot.core.api.views import BulkCreateModelMixin, BulkDestroyModelMixin, BulkUpdateModelMixin
 from nautobot.extras.models import CustomField, ExportTemplate
+from nautobot.extras.forms import NoteForm
+from nautobot.extras.tables import ObjectChangeTable, NoteTable
 from nautobot.utilities.error_handlers import handle_protectederror
 from nautobot.utilities.forms import (
     BootstrapMixin,
@@ -51,6 +54,8 @@ PERMISSIONS_ACTION_MAP = {
     "bulk_create": "add",
     "bulk_destroy": "delete",
     "bulk_update": "change",
+    "changelog": "view",
+    "notes": "view",
 }
 
 
@@ -67,10 +72,12 @@ class NautobotViewSetMixin(GenericViewSet, AccessMixin, GetReturnURLMixin, FormV
     filterset_class = None
     filterset_form_class = None
     form_class = None
+    parser_classes = [MultiPartParser]
     queryset = None
     # serializer_class has to be specified to eliminate the need to override retrieve() in the RetrieveModelMixin for now.
     serializer_class = None
     table_class = None
+    notes_form_class = NoteForm
 
     def get_permissions_for_model(self, model, actions):
         """
@@ -142,6 +149,11 @@ class NautobotViewSetMixin(GenericViewSet, AccessMixin, GetReturnURLMixin, FormV
     def get_table_class(self):
         # Check if self.table_class is specified in the ModelViewSet before performing subsequent actions
         # If not, display an error message
+        if self.action == "notes":
+            return NoteTable
+        elif self.action == "changelog":
+            return ObjectChangeTable
+
         assert (
             self.table_class is not None
         ), f"'{self.__class__.__name__}' should include a `table_class` attribute for bulk operations"
@@ -910,4 +922,32 @@ class ObjectBulkUpdateViewMixin(NautobotViewSetMixin, BulkUpdateModelMixin):
             )
             return redirect(self.get_return_url(request))
         data.update({"table": table})
+        return Response(data)
+
+
+class ObjectChangeLogViewMixin(NautobotViewSetMixin):
+    """
+    UI mixin to list a model's changelog queryset
+    """
+
+    base_template = None
+
+    def changelog(self, request, *args, **kwargs):
+        data = {
+            "base_template": self.base_template,
+        }
+        return Response(data)
+
+
+class ObjectNotesViewMixin(NautobotViewSetMixin):
+    """
+    UI Mixin for an Object's Notes.
+    """
+
+    base_template = None
+
+    def notes(self, request, *args, **kwargs):
+        data = {
+            "base_template": self.base_template,
+        }
         return Response(data)

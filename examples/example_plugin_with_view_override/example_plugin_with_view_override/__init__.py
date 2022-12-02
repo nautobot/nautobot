@@ -6,12 +6,12 @@ except ImportError:
 
 __version__ = metadata.version(__name__)
 
-from nautobot.extras.plugins import PluginConfig
+from nautobot.apps import NautobotAppConfig
 
 
-class ExamplePluginWithOverrideConfig(PluginConfig):
+class ExamplePluginWithOverrideConfig(NautobotAppConfig):
     name = "example_plugin_with_view_override"
-    verbose_name = "Example Plugin With View Override"
+    verbose_name = "Example App With View Override"
     author = "Nautobot development team"
     author_email = "nautobot@example.com"
     version = __version__

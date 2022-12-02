@@ -209,7 +209,7 @@ class APIViewTestCases:
                 with disable_warnings("django.request"):
                     self.assertHttpStatus(self.client.get(url, **self.header), status.HTTP_403_FORBIDDEN)
             else:
-                # TODO FIXME: if we're passing **self.header, we are *by definition* **NOT** anonymous!!
+                # TODO(Glenn): if we're passing **self.header, we are *by definition* **NOT** anonymous!!
                 response = self.client.get(url, **self.header)
                 self.assertHttpStatus(response, status.HTTP_200_OK)
                 self.assertIsInstance(response.data, dict)
@@ -541,7 +541,7 @@ class APIViewTestCases:
                         obj,
                         f"Bulk update field '{field}' missing from object {i} in response",
                     )
-                    # TODO: shouldn't we also check that obj[field] == value?
+                    # TODO(Glenn): shouldn't we also check that obj[field] == value?
             for instance in self._get_queryset().filter(pk__in=id_list):
                 self.assertInstanceEqual(
                     instance,

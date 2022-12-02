@@ -35,6 +35,7 @@ PLUGINS = [
     "example_plugin",
 ]
 
+
 #
 # Development Environment for SSO
 # Configure `invoke.yml` based on example for SSO development environment
@@ -56,3 +57,6 @@ if is_truthy(os.getenv("ENABLE_OIDC", "False")):
     )
     SOCIAL_AUTH_KEYCLOAK_ACCESS_TOKEN_URL = "https://keycloak:8443/auth/realms/nautobot/protocol/openid-connect/token"
     SOCIAL_AUTH_KEYCLOAK_VERIFY_SSL = False
+
+METRICS_ENABLED = True
+

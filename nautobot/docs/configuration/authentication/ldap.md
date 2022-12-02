@@ -9,13 +9,13 @@ This guide explains how to implement LDAP authentication using an external serve
 On Ubuntu:
 
 ```no-highlight
-$ sudo apt install -y libldap-dev libsasl2-dev
+sudo apt install -y libldap-dev libsasl2-dev
 ```
 
 On CentOS:
 
 ```no-highlight
-$ sudo dnf install -y openldap-devel
+sudo dnf install -y openldap-devel
 ```
 
 ### Install django-auth-ldap
@@ -28,14 +28,14 @@ $ sudo dnf install -y openldap-devel
 Activate the Python virtual environment and install the `django-auth-ldap` package using pip:
 
 ```no-highlight
-$ source /opt/nautobot/bin/activate
-(nautobot) $ pip3 install "nautobot[ldap]"
+source /opt/nautobot/bin/activate
+pip3 install "nautobot[ldap]"
 ```
 
 Once installed, add the package to `local_requirements.txt` to ensure it is re-installed during future rebuilds of the virtual environment:
 
 ```no-highlight
-(nautobot) $ echo "nautobot[ldap]" >> /opt/nautobot/local_requirements.txt
+echo "nautobot[ldap]" >> /opt/nautobot/local_requirements.txt
 ```
 
 ## Configuration
@@ -43,8 +43,7 @@ Once installed, add the package to `local_requirements.txt` to ensure it is re-i
 Enable the LDAP authentication backend by adding the following to your `nautobot_config.py`:
 
 !!! note
-    It is critical that you include the `ObjectPermissionsBackend` provided by
-    Nautobot after the `LDAPBackend` so that object-level permissions features can work properly.
+    It is critical that you include the `ObjectPermissionsBackend` provided by Nautobot after the `LDAPBackend` so that object-level permissions features can work properly.
 
 ```python
 AUTHENTICATION_BACKENDS = [
@@ -99,7 +98,7 @@ AUTH_LDAP_SERVER_URI = "ldaps://ad.example.com"
 
 #### Certificate Validation
 
-When using either TLS or SSL it is necessary to validate the certificate from your LDAP server.  Copy your CA cert to `/opt/nautobot/ca.pem`.
+When using either TLS or SSL it is necessary to validate the certificate from your LDAP server. Copy your CA cert to `/opt/nautobot/ca.pem`.
 
 ```python
 # Set the path to the trusted CA certificates and create a new internal SSL context.
@@ -147,7 +146,7 @@ AUTH_LDAP_USER_ATTR_MAP = {
 
 #### Searching in Multiple LDAP Groups
 
-Define the user-groups in your environment, such as a *.env file (delimiter `';'`):
+Define the user-groups in your environment, such as a `*.env` file (delimiter `';'`):
 
 ```python
 # Groups to search for user objects. "(sAMAccountName=%(user)s),..."
@@ -214,7 +213,7 @@ AUTH_LDAP_CACHE_TIMEOUT = 3600
 
 Multiple servers can be supported in `django-auth-ldap` by the use of additional LDAP backends, as described in the library's [documentation](https://django-auth-ldap.readthedocs.io/en/latest/multiconfig.html).
 
-In order to define and load additional backends into Nautobot a plugin can be used. This plugin will allow the backend(s) to be loaded into the Django settings for use within the `nautobot_config.py` file.  At the simplest form the plugin should have a custom backend(s) defined:
+In order to define and load additional backends into Nautobot a plugin can be used. This plugin will allow the backend(s) to be loaded into the Django settings for use within the `nautobot_config.py` file. At the simplest form the plugin should have a custom backend(s) defined:
 
 ```python
 # my_customer_backends.py
@@ -237,7 +236,7 @@ AUTHENTICATION_BACKENDS = [
 ]
 ```
 
-Once the custom backend is loaded into the settings all the configuration items mentioned previously need to be completed for each server.  As a simplified example defining the URIs would be accomplished by the following two lines in the `nautobot_config.py` file.  A similar approach would be done to define the rest of the settings.
+Once the custom backend is loaded into the settings all the configuration items mentioned previously need to be completed for each server. As a simplified example defining the URIs would be accomplished by the following two lines in the `nautobot_config.py` file. A similar approach would be done to define the rest of the settings.
 
 ```python
 # nautobot_config.py

@@ -619,6 +619,15 @@ def pylint(context, target=None, recursive=False):
 
 
 @task
+def serve_docs(context):
+    """Runs local instance of mkdocs serve (ctrl-c to stop)."""
+    if is_truthy(context.nautobot.local):
+        run_command(context, "mkdocs serve")
+    else:
+        start(context, service="mkdocs")
+
+
+@task
 def hadolint(context):
     """Check Dockerfile for hadolint compliance and other style issues."""
     command = "hadolint docker/Dockerfile"
