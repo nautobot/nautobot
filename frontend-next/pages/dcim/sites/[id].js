@@ -1,6 +1,7 @@
 import Card from "react-bootstrap/Card"
 import CardHeader from "react-bootstrap/CardHeader"
 import Link from "next/link"
+import { nautobot_url } from "pages"
 import Tab from "react-bootstrap/Tab"
 import Table from "react-bootstrap/Table"
 import Tabs from "react-bootstrap/Tabs"
@@ -8,13 +9,13 @@ import Layout from "components/layout"
 import { useRouter } from "next/router"
 import useSWR from "swr"
 
-const fetcher = (url) => fetch(url).then((res) => res.json())
+const fetcher = (url) => fetch(url, { credentials: "include" }).then((res) => res.json())
 
 export default function SitesObjectRetrieve() {
 
   const router = useRouter()
   const { id } = router.query
-  const { data: objectData, error } = useSWR(() => "/api/dcim/sites/" + id + "/", fetcher)
+  const { data: objectData, error } = useSWR(() => nautobot_url + "/api/dcim/sites/" + id + "/", fetcher)
   if (error) return <div>Failed to load site</div>
   if (!objectData) return <></>
   return (

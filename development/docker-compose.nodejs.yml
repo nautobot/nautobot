@@ -4,17 +4,10 @@ services:
   nodejs:
     image: node
     environment:
-      PORT: "8888"
+      PORT: "3000"
+    ports:
+      - "3000:3000"
     working_dir: /opt/node/nautobot
     volumes:
       - ../frontend-next/:/opt/node/nautobot
     command: npm run dev
-  nginx:
-    image: nginx
-    ports:
-      - "8888:80"
-    volumes:
-      - ./nginx.conf:/etc/nginx/conf.d/default.conf
-      - ../nautobot/project-static/:/opt/nautobot/static/
-  nautobot:
-    command: nautobot-server start --http :8080 --socket :8081 --master --processes 3 --threads 2 --buffer-size 32768

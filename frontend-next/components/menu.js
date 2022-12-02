@@ -4,12 +4,12 @@ import Nav from "react-bootstrap/Nav"
 import Navbar from "react-bootstrap/Navbar"
 import NavDropdown from "react-bootstrap/NavDropdown"
 import useSWR from "swr"
-import { nautobot_static } from "../pages"
+import { nautobot_static, nautobot_url } from "pages/index"
 
-const fetcher = (url) => fetch(url).then((res) => res.json());
+const fetcher = (url) => fetch(url, { credentials: "include" }).then((res) => res.json());
 
 export default function Menu() {
-  const { data, error } = useSWR("/api/get-menu/", fetcher)
+  const { data, error } = useSWR(nautobot_url + "/api/get-menu/", fetcher)
   if (error) return <div>Failed to load menu</div>
   if (!data) return <></>
 

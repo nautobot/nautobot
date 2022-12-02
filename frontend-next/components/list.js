@@ -5,7 +5,7 @@ import Row from "react-bootstrap/Row"
 import useSWR from "swr"
 
 const fetcher = (...urls) => {
-  const f = url => fetch(url).then(r => r.json())
+  const f = url => fetch(url, { credentials: "include" }).then(r => r.json())
   return Promise.all(urls.map(url => f(url)))
 }
 
