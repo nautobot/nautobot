@@ -47,6 +47,7 @@ export default function Home(){
 
 """
 
+
 class BG_COLORS:
     """BG colors for terminal"""
 
@@ -107,8 +108,18 @@ class Command(BaseCommand):
 
             # Add _app.js to plugin ui root
             with open("_app.js", "w") as file:
-                appjs_data = APP_JS_DATA.format(plugin_alias=plugin_alias, plugin_component=plugin_component)
-                file.writelines(appjs_data)
+                data = APP_JS_DATA.format(plugin_alias=plugin_alias, plugin_component=plugin_component)
+                file.write(data)
+
+            # Add router.js to plugin ui root
+            with open("router.js", "w") as file:
+                data = ROUTER_JS_DATA.format(plugin_alias=plugin_alias)
+                file.write(data)
+
+            os.chdir("views")
+            # Add Home.jsx to plugin ui root
+            with open("Home.jsx", "w") as file:
+                file.write(HOME_JS_DATA)
 
         except FileExistsError:
             self.stdout.write(BG_COLORS.FAIL + "Project already initialized" + BG_COLORS.ENDC)
