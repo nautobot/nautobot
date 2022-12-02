@@ -116,7 +116,7 @@ Below is a table documenting [corrected filter field changes](../release-notes/v
 
 #### Removed Redundant Filter Fields
 
-Below is a table documenting [corrected filter field changes](../release-notes/version-2.0.md/#corrected-filter-fields-2804) in v2.x.
+Below is a table documenting [removed redundant filter field changes](../release-notes/version-2.0.md/#removed-redundant-filter-fields-2804) in v2.x.
 
 | Filterset                      |Removed Filter Field| UI and API endpoints that are no longer supported in v2.X                     |
 |--------------------------------|--------------------|-------------------------------------------------------------------------------|
