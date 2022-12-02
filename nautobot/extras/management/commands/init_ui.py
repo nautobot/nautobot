@@ -6,6 +6,47 @@ import simplejson
 from django.core.management.base import BaseCommand
 
 
+ROUTER_JS_DATA = """
+import { useRoutes } from "react-router-dom";
+import Home from "{plugin_alias}/views/Home";
+
+
+export default function Router() {
+    let element = useRoutes([
+        {
+            path: "/",
+            element: <Home />,
+        }
+    ]);
+    return element;
+}
+
+"""
+
+APP_JS_DATA = """
+import Router from '{plugin_alias}/router';
+
+
+export default function {plugin_component}(){
+    return <Router />
+}
+
+"""
+
+HOME_JS_DATA = """
+import {Heading} from '@chakra-ui/react'
+
+
+export default function Home(){
+    return (
+        <Heading>
+            Welcome to Nautobot Plugin UI ❄️
+        </Heading>
+    )
+}
+
+"""
+
 class BG_COLORS:
     """BG colors for terminal"""
 
@@ -41,7 +82,6 @@ class Command(BaseCommand):
         plugin_path = os.path.join(plugin_root_dir, plugin_name)
         plugin = importlib.import_module(plugin_name)
         plugin_ui_name = plugin.config.nautobot_ui
-
         os.chdir(plugin_path)
         try:
             os.mkdir(plugin_ui_name)
@@ -61,19 +101,13 @@ class Command(BaseCommand):
                 file.write(simplejson.dumps((nautobot_ui_config), indent=4))
                 pass
 
-            # Add _app.js to plugin ui root
-            appjs_data = [
-                "import {Heading} from '@chakra-ui/react'\n\n",
-                "export default function NautobotPluginOne(){\n",
-                "    return (\n",
-                "        <Heading>\n",
-                "            Welcome to Nautobot Plugin UI ❄️\n",
-                "        </Heading>\n",
-                "    )\n",
-                "}\n\n",
-            ]
+            plugin_name_without_ui_suffix = plugin_ui_name.replace("_ui", "")
+            plugin_alias = f"@{plugin_name_without_ui_suffix}"
+            plugin_component = plugin_name_without_ui_suffix.replace("_", " ").title().replace(" ", "")
 
+            # Add _app.js to plugin ui root
             with open("_app.js", "w") as file:
+                appjs_data = APP_JS_DATA.format(plugin_alias=plugin_alias, plugin_component=plugin_component)
                 file.writelines(appjs_data)
 
         except FileExistsError:

@@ -19,9 +19,6 @@
             ],
             "@core/*": [
                 "src/components/core/*"
-            ],
-            "@nautobot_plugin_one_ui/*": [
-                "/Users/timizuoebideri/Documents/Work/NTC/frontend/nautobot-plugin-one/nautobot_plugin_one/nautobot_plugin_one_ui/*"
             ]
         }
     }

@@ -151,7 +151,8 @@ def load_plugin_ui(plugin, settings):
         jsconfig = json.load(file)
 
     jsconfig_paths = jsconfig["compilerOptions"]["paths"]
-    plugin_ui_alias = f"@{plugin_ui_name}"
+    plugin_name_without_ui_suffix = plugin_ui_name.replace("_ui", "")
+    plugin_ui_alias = f"@{plugin_name_without_ui_suffix}"
     plugin_ui_jsconfig_path_dir = f"{plugin_ui_path}/*"
 
     # check if plugin_ui name is available and path is correct
@@ -172,7 +173,6 @@ def load_plugin_ui(plugin, settings):
         import_lines = lines[import_lines_index[0] : import_lines_index[1] + 1]
 
     # Check if plugin module has been imported
-    plugin_name_without_ui_suffix = plugin_ui_name.replace("_ui", "")
     plugin_import_name = plugin_name_without_ui_suffix.replace("_", " ").title().replace(" ", "")
     import_statement = f"const {plugin_import_name} = lazy(() => import('{plugin_ui_alias}/_app'));\n"
     if list(filter(lambda line: import_statement in line, import_lines)):
