@@ -156,9 +156,9 @@ A number of mixin classes have been renamed and/or relocated for improved self-c
 
 ### Fixed
 
-- [#2411](https://github.com/nautobot/nautobot/issues/2411) - Fixed SwaggerUI use of Authorization Token, API calls in SwaggerUI now use appropriate token pattern and curl command match the correct pattern.
+- [#2154](https://github.com/nautobot/nautobot/issues/2154) - Fixed SwaggerUI use of Authorization Token, API calls in SwaggerUI now use appropriate token pattern and curl command match the correct pattern.
 - [#2931](https://github.com/nautobot/nautobot/issues/2931) - Fixed title and breadcrumb rendering in NautobotUIViewSet list views.
-- [#2946](https://github.com/nautobot/nautobot/issues/2946) - Fixed NautobotUIViewSet views not being able to delete objects.
+- [#2936](https://github.com/nautobot/nautobot/issues/2936) - Fixed NautobotUIViewSet views not being able to delete objects.
 
 ## v1.5.3 (2022-11-29)
 
