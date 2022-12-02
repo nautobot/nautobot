@@ -115,7 +115,7 @@ class InstalledPluginsAPIView(NautobotAPIVersionMixin, APIView):
         return Response([self._get_plugin_data(apps.get_app_config(plugin)) for plugin in settings.PLUGINS])
 
 
- # @action(detail=False, url_path="table-fields", methods=["GET"])
+# @action(detail=False, url_path="table-fields", methods=["GET"])
 class InstalledPluginsTableAPIView(NautobotAPIVersionMixin, APIView):
     def get(self, request):
         data = [

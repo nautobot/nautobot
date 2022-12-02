@@ -3,9 +3,13 @@ Plugin utilities.
 """
 
 import importlib.util
+import json
 import logging
+import os
+import pathlib
 import sys
 
+import simplejson
 from django.core.exceptions import ImproperlyConfigured
 from django.utils.module_loading import import_string
 
@@ -102,8 +106,97 @@ def load_plugin(plugin_name, settings):
         if middleware not in settings.MIDDLEWARE:
             settings.MIDDLEWARE.append(middleware)
 
+    # Load plugin UI
+    load_plugin_ui(plugin, settings)
+
     # Update caching configg
     settings.CACHEOPS.update({f"{plugin_name}.{key}": value for key, value in plugin_config.caching_config.items()})
+
+
+def get_start_and_end_indexes(data, filter_by):
+    start = None
+    end = None
+
+    for idx, line in enumerate(data):
+        if filter_by in line and not start:
+            start = idx
+        elif filter_by in line and start and not end:
+            end = idx
+        if start and end:
+            break
+    return start, end
+
+
+def load_plugin_ui(plugin, settings):
+    """Modify jsconfig and routers inorder to make nautobot react aware of a plugin UI"""
+    plugin_path = os.path.dirname(plugin.__file__)
+    plugin_ui_name = getattr(plugin.config, "nautobot_ui", None)
+    if not plugin_ui_name:
+        return
+
+    plugin_ui_path = os.path.join(plugin_path, plugin_ui_name)
+    if not os.path.exists(plugin_ui_path):
+        raise PluginImproperlyConfigured(f"Plugin {plugin.config.name} UI directory does not exists")
+    # TODO(timizuo): It would be nice to check if _app.js and package.json are available in plugin_ui since they are important to nautobot
+
+    nautobot_path = pathlib.Path(__file__).parent.parent.parent.parent.resolve()
+    nautobot_ui_path = os.path.join(nautobot_path, "nautobot_ui")
+    jsconfig_file_path = os.path.join(nautobot_ui_path, "jsconfig.json")
+
+    ##########################################
+    # Add plugin to nautobot_ui/jsconfig file
+    ##########################################
+    with open(jsconfig_file_path, "r", encoding="utf-8") as file:
+        jsconfig = json.load(file)
+
+    jsconfig_paths = jsconfig["compilerOptions"]["paths"]
+    plugin_ui_alias = f"@{plugin_ui_name}"
+    plugin_ui_jsconfig_path_dir = f"{plugin_ui_path}/*"
+
+    # check if plugin_ui name is available and path is correct
+    if jsconfig_paths.get(plugin_ui_alias + "/*") != [plugin_ui_jsconfig_path_dir]:
+        jsconfig["compilerOptions"]["paths"][plugin_ui_alias + "/*"] = [plugin_ui_jsconfig_path_dir]
+
+        with open(jsconfig_file_path, "w", encoding="utf-8") as file:
+            simplejson.dump(jsconfig, file, indent=4)
+
+    ##########################################
+    # Add plugin to nautobot_ui/src/router.js file
+    ##########################################
+    router_file_path = os.path.join(nautobot_ui_path, "src/router.js")
+
+    with open(router_file_path, "r", encoding="utf-8") as file:
+        lines = file.readlines()
+        import_lines_index = get_start_and_end_indexes(lines, "__inject_import__")
+        import_lines = lines[import_lines_index[0] : import_lines_index[1] + 1]
+
+    # Check if plugin module has been imported
+    plugin_name_without_ui_suffix = plugin_ui_name.replace("_ui", "")
+    plugin_import_name = plugin_name_without_ui_suffix.replace("_", " ").title().replace(" ", "")
+    import_statement = f"const {plugin_import_name} = lazy(() => import('{plugin_ui_alias}/_app'));\n"
+    if list(filter(lambda line: import_statement in line, import_lines)):
+        # Skip because plugin route exists
+        return
+
+    # insert import statement
+    lines.insert(import_lines_index[1], import_statement)
+
+    routes_lines_index = get_start_and_end_indexes(lines, "__inject_route__")
+    plugin_route_path = plugin_name_without_ui_suffix.replace("_", "-")
+    route_statement = [
+        "                {\n",
+        f'                    path: "{plugin_route_path}",\n',
+        f"                    element: <{plugin_import_name} />\n",
+        "                },\n",
+    ]
+    lines[routes_lines_index[1] : routes_lines_index[1]] = route_statement
+
+    with open(router_file_path, "w", encoding="utf-8") as file:
+        file.writelines(lines)
+
+
+def remove_stale_nautobot_ui():
+    """Remove from jsconfig and routers plugins that are not installed in nautobot"""
 
 
 def get_sso_backend_name(social_auth_module):
