@@ -50,7 +50,7 @@ Please see the [official MySQL documentation on migrating collation encoding set
 
 #### Enhanced Filter Fields
 
-Below is a table documenting [enhanced filter field changes](../release-notes/version-2.0/?h=version+2.#enhanced-filter-fields-2804) in v2.x.
+Below is a table documenting [enhanced filter field changes](../release-notes/version-2.0.md/#enhanced-filter-fields-2804) in v2.x.
 
 | Filterset                      | Enhanced Filter Field| Changes                                                    | UI and Rest API endpoints Available in v2.X                                                                   |
 |--------------------------------|--------------------|------------------------------------------------------------|---------------------------------------------------------------------------------------------------------------|
@@ -101,7 +101,7 @@ Below is a table documenting [enhanced filter field changes](../release-notes/ve
 
 #### Corrected Filter Fields
 
-Below is a table documenting [corrected filter field changes](../release-notes/version-2.0/?h=version+2.#corrected-filter-fields-2804) in v2.x.
+Below is a table documenting [corrected filter field changes](../release-notes/version-2.0.md/#corrected-filter-fields-2804) in v2.x.
 
 | Filterset       | Changed Filter Field | Before                                     | After                                           |
 |-----------------|----------------------|--------------------------------------------|-------------------------------------------------|
@@ -116,7 +116,7 @@ Below is a table documenting [corrected filter field changes](../release-notes/v
 
 #### Removed Redundant Filter Fields
 
-Below is a table documenting [removed redundant filter field changes](../release-notes/version-2.0.md/?h=version+2.#removed-redundant-filter-fields-2804) in v2.x.
+Below is a table documenting [removed redundant filter field changes](../release-notes/version-2.0.md/#removed-redundant-filter-fields-2804) in v2.x.
 
 | Filterset                      |Removed Filter Field| UI and API endpoints that are no longer supported in v2.X                     |
 |--------------------------------|--------------------|-------------------------------------------------------------------------------|
