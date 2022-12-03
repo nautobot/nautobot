@@ -24,7 +24,7 @@ Now in v2.x, you are able to filter those `Regions` by slugs or UUID primary key
 
 `/dcim/regions/?parent=<slug>` or `/dcim/regions/?parent=<uuid>`
 
-Check out the specific changes documented in the table at [Updating from Nautobot 1.5 to 2.0](../installation/upgrading.md/#enhanced-filter-fields)
+Check out the specific changes documented in the table at [Updating from Nautobot 1.5 to 2.0](../installation/upgrading/#enhanced-filter-fields)
 
 #### Corrected Filter Fields ([#2804](https://github.com/nautobot/nautobot/pull/2804))
 
@@ -38,7 +38,7 @@ This has been addressed in v2.x as follows:
 
 `console_ports` and similar filters are taking foreign key UUIDs as input values and can be used in this format: `/dcim/devices/?console_ports=<uuid>` whereas `has_console_ports` and similar filters remain the same.
 
-Check out the specific changes documented in the table at [Updating from Nautobot 1.5 to 2.0](../installation/upgrading.md/#corrected-filter-fields)
+Check out the specific changes documented in the table at [Updating from Nautobot 1.5 to 2.0](../installation/upgrading/#corrected-filter-fields)
 
 ### Removed
 
@@ -60,6 +60,6 @@ Now in v2.x, that format is no longer supported. Instead, you would use:
 
 `/dcim/devices/?site=<uuid>`
 
-Check out the specific changes documented in the table at [Updating from Nautobot 1.5 to 2.0](../installation/upgrading.md/#removed-redundant-filter-fields)
+Check out the specific changes documented in the table at [Updating from Nautobot 1.5 to 2.0](../installation/upgrading/#removed-redundant-filter-fields)
 
 <!-- towncrier release notes start -->
