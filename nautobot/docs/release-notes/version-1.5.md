@@ -148,6 +148,18 @@ A number of mixin classes have been renamed and/or relocated for improved self-c
 | `TenancyFilterSet`             | `TenancyModelFilterSetMixin`                 |
 
 <!-- towncrier release notes start -->
+## v1.5.4 (2022-12-02)
+
+### Added
+
+- [#86](https://github.com/nautobot/nautobot/issues/86) - Added user-guide for relationships and S3 storage backends.
+
+### Fixed
+
+- [#2154](https://github.com/nautobot/nautobot/issues/2154) - Fixed SwaggerUI use of Authorization Token, API calls in SwaggerUI now use appropriate token pattern and curl command match the correct pattern.
+- [#2931](https://github.com/nautobot/nautobot/issues/2931) - Fixed title and breadcrumb rendering in NautobotUIViewSet list views.
+- [#2936](https://github.com/nautobot/nautobot/issues/2936) - Fixed NautobotUIViewSet views not being able to delete objects.
+
 ## v1.5.3 (2022-11-29)
 
 ### Fixed
