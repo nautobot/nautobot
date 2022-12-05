@@ -742,10 +742,6 @@ class ViewTestCases:
                 f'<a href="{list_url}">{title}</a>',
                 response_body,
             )
-            # Check plugin banner is rendered correctly
-            self.assertIn(
-                f"<div>You are viewing a table of {self.model._meta.verbose_name_plural}</div>", response_body
-            )
 
             # Built-in CSV export
             if hasattr(self.model, "csv_headers"):
