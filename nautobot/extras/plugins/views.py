@@ -112,11 +112,14 @@ class InstalledPluginsAPIView(NautobotAPIVersionMixin, APIView):
 
     @extend_schema(exclude=True)
     def get(self, request, format=None):  # pylint: disable=redefined-builtin
-        return Response([self._get_plugin_data(apps.get_app_config(plugin)) for plugin in settings.PLUGINS])
+        data = [self._get_plugin_data(apps.get_app_config(plugin)) for plugin in settings.PLUGINS]
+        return Response({"results": data})
 
 
 # @action(detail=False, url_path="table-fields", methods=["GET"])
 class InstalledPluginsTableAPIView(NautobotAPIVersionMixin, APIView):
+    permission_classes = [permissions.IsAdminUser]
+    _ignore_model_permissions = True
     def get(self, request):
         data = [
             {"name": "name", "label": "Name"},

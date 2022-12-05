@@ -6,24 +6,30 @@ import {
     Tr,
     Th,
     Td,
-    TableCaption,
     TableContainer,
-    Checkbox,
+    Stack,
 } from '@chakra-ui/react'
 import { Link } from 'react-router-dom'
-import { useEffect } from 'react'
+import LinkedIcon from "@core/LinkedIcon";
 
-export default function NautobotTable({ header_coloums, body_coloums }) {
+export default function NautobotTable({ header_coloums, body_coloums, buttons }) {
     return (
         <TableContainer>
             <Table variant='striped'>
                 <Thead bg="blackAlpha.900">
                     <Tr>
-                        <Th color="white"><Checkbox /></Th>
                         {
                             header_coloums.map((item, idx) => (
                                 <Th key={idx} color="white">{item.label}</Th>
                             ))
+                        }
+                        {
+                            buttons ?
+                                (
+                                    <Th color="white">Action</Th>
+                                )
+                                :
+                                null
                         }
                     </Tr>
                 </Thead>
@@ -31,7 +37,6 @@ export default function NautobotTable({ header_coloums, body_coloums }) {
                     {
                         body_coloums.map((item, idx) => (
                             <Tr key={idx}>
-                                <Td><Checkbox /></Td>
                                 {
                                     header_coloums.map((header, idx) => (
                                         <Td key={idx}>
@@ -53,8 +58,29 @@ export default function NautobotTable({ header_coloums, body_coloums }) {
                                         </Td>
                                     ))
                                 }
-                            </Tr>
+                                {
+                                    buttons ?
+                                        (
+                                            <Td>
+                                                <Stack direction='row' spacing={2} align='center'>
+                                                {
+                                                    buttons.map((btn_data, idx) => (
+                                                        <LinkedIcon
+                                                            key={idx}
+                                                            icon={btn_data["icon"]}
+                                                            link={item["pathname"]}
+                                                            tooltip={btn_data["tooltip"]}
+                                                        />
+                                                    ))
+                                                }
+                                                </Stack>
+                                            </Td>
+                                        )
+                                        :
+                                        null
+                                }
 
+                            </Tr>
                         ))
                     }
                 </Tbody>
