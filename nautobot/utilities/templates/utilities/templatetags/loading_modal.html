@@ -1,0 +1,33 @@
+{% load static %}
+{% block extra_styles %}
+<style>
+    .glyphicon.spinning {
+        animation: spin 1s infinite linear;
+        -webkit-animation: spin2 1s infinite linear;
+    }
+
+    @keyframes spin {
+        from { transform: scale(1) rotate(0deg); }
+        to { transform: scale(1) rotate(360deg); }
+    }
+
+    @-webkit-keyframes spin2 {
+        from { -webkit-transform: rotate(0deg); }
+        to { -webkit-transform: rotate(360deg); }
+    }
+</style>
+{% endblock %}
+<div class="modal fade" style="vertical-align: middle;" tabindex="-1" id="loading_modal" data-backdrop="static" aria-labelledby="loadingModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h4 class="modal-title" id="loadingModalLabel">{{action}}ing {{ size }} {{ model_plural_name }} for you, hold on ...</h4>
+            </div>
+            <div class="modal-body">
+                <div class="text-center">
+                    <span class="glyphicon glyphicon-refresh spinning"></span>   
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

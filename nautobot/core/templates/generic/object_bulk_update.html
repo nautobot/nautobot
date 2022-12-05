@@ -51,11 +51,12 @@
             </div>
 		    <div class="form-group text-right">
                 <div class="col-md-12">
-                    <button type="submit" name="_apply" class="btn btn-primary">Apply</button>
+                    <button type="submit" name="_apply" class="btn btn-primary" data-toggle="modal" data-target="#loading_modal" title="Show Modal">Apply</button>
                     <a href="{{ return_url }}" class="btn btn-default">Cancel</a>
                 </div>
 		    </div>
         </div>
     </div>
 </form>
+{% loading_modal size=table.rows|length model_plural_name=obj_type_plural action=action %}
 {% endblock %}

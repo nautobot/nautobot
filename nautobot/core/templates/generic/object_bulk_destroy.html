@@ -31,10 +31,11 @@
                     {{ field }}
                 {% endfor %}
                 <div class="text-center">
-                    <button type="submit" name="_confirm" class="btn btn-danger">Delete these {{ table.rows|length }} {{ obj_type_plural }}</button>
+                    <button type="submit" name="_confirm" class="btn btn-danger" data-toggle="modal" data-target="#loading_modal" title="Show Modal">Delete these {{ table.rows|length }} {{ obj_type_plural }}</button>
                     <a href="{{ return_url }}" class="btn btn-default">Cancel</a>
                 </div>
             </form>
         </div>
     </div>
+{% loading_modal size=table.rows|length model_plural_name=obj_type_plural action=action %}
 {% endblock %}

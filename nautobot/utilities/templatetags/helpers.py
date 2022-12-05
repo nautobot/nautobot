@@ -639,6 +639,19 @@ def filter_form_modal(
     }
 
 
+@register.inclusion_tag("utilities/templatetags/loading_modal.html")
+def loading_modal(
+    model_plural_name,
+    action,
+    size="",
+):
+    return {
+        "size": size,
+        "model_plural_name": model_plural_name,
+        "action": action,
+    }
+
+
 @register.inclusion_tag("utilities/templatetags/modal_form_as_dialog.html")
 def modal_form_as_dialog(form, editing=False, form_name=None, obj=None, obj_type=None):
     """Generate a form in a modal view.
