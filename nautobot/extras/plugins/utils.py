@@ -183,7 +183,7 @@ def load_plugin_ui(plugin, settings):
     lines.insert(import_lines_index[1], import_statement)
 
     routes_lines_index = get_start_and_end_indexes(lines, "__inject_route__")
-    plugin_route_path = plugin_name_without_ui_suffix.replace("_", "-")
+    plugin_route_path = getattr(plugin.config, "base_url", plugin_name_without_ui_suffix.replace("_", "-"))
     route_statement = [
         "                {\n",
         f'                    path: "{plugin_route_path}",\n',
