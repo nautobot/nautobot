@@ -21,7 +21,7 @@ export default function LinkedIcon({icon, link, tooltip}) {
     }
 
     return (
-            <Link to="#">
+            <Link to={"/plugins/" + link}>
                 {renderIcon(icon)}
             </Link>
     )

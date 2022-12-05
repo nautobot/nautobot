@@ -107,7 +107,7 @@ class InstalledPluginsAPIView(NautobotAPIVersionMixin, APIView):
             "description": plugin_app_config.description,
             # TODO: Remove verison key/value when bumping to major revision
             "version": plugin_app_config.version,
-            "home_url": plugin_app_config.base_url,
+            "base_url": plugin_app_config.base_url,
         }
 
     @extend_schema(exclude=True)

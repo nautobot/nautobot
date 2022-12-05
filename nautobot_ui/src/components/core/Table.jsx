@@ -2,7 +2,6 @@ import {
     Table,
     Thead,
     Tbody,
-    Tfoot,
     Tr,
     Th,
     Td,
@@ -68,7 +67,7 @@ export default function NautobotTable({ header_coloums, body_coloums, buttons })
                                                         <LinkedIcon
                                                             key={idx}
                                                             icon={btn_data["icon"]}
-                                                            link={item["pathname"]}
+                                                            link={item["base_url"]}
                                                             tooltip={btn_data["tooltip"]}
                                                         />
                                                     ))
@@ -84,13 +83,7 @@ export default function NautobotTable({ header_coloums, body_coloums, buttons })
                         ))
                     }
                 </Tbody>
-                <Tfoot>
-                    <Tr>
-                        <Th>To convert</Th>
-                    </Tr>
-                </Tfoot>
             </Table>
         </TableContainer>
-
     )
 }
