@@ -1,1 +1,1 @@
-Changed `tags` field in ConfigContextForm to `DynamicModelMultipleChoiceField`
+Changed `tags` field in ConfigContextForm to `DynamicModelMultipleChoiceField`.
