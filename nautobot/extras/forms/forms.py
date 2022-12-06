@@ -220,6 +220,7 @@ class ConfigContextForm(BootstrapMixin, NoteModelFormMixin, forms.ModelForm):
     device_redundancy_groups = DynamicModelMultipleChoiceField(
         queryset=DeviceRedundancyGroup.objects.all(), required=False
     )
+    tags = DynamicModelMultipleChoiceField(queryset=Tag.objects.all(), required=False)
 
     data = JSONField(label="")
 
