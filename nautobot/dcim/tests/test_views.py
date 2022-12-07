@@ -320,7 +320,6 @@ class LocationTestCase(ViewTestCases.PrimaryObjectViewTestCase):
             "facility": "Facility X",
             "asn": 65001,
             "time_zone": pytz.UTC,
-            "description": "Location description",
             "physical_address": "742 Evergreen Terrace, Springfield, USA",
             "shipping_address": "742 Evergreen Terrace, Springfield, USA",
             "latitude": Decimal("35.780000"),
@@ -348,7 +347,6 @@ class LocationTestCase(ViewTestCases.PrimaryObjectViewTestCase):
             "status": Status.objects.get(name="Planned").pk,
             "asn": 65009,
             "time_zone": pytz.timezone("US/Eastern"),
-            "description": "New description",
         }
 
         # No slug_source/slug_test_object here because Location uses the composite [parent__name, name]
