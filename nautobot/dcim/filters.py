@@ -360,13 +360,13 @@ class LocationFilterSet(NautobotFilterSet, StatusModelFilterSetMixin, TenancyFil
     # The reverse relation here is misnamed as `powerpanel`, but fixing it would be a breaking API change.
     # 2.0 TODO: fix the reverse relation name, at which point this filter can be deleted here and added to Meta.fields.
     power_panels = NaturalKeyOrPKMultipleChoiceFilter(
-        field_name="powerpanel",
+        field_name="powerpanels",
         to_field_name="name",
         queryset=PowerPanel.objects.all(),
         label="Power panels (name or ID)",
     )
     has_power_panels = RelatedMembershipBooleanFilter(
-        field_name="powerpanel",
+        field_name="powerpanels",
         label="Has power panels",
     )
     rack_groups = NaturalKeyOrPKMultipleChoiceFilter(

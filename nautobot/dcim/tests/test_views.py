@@ -317,6 +317,19 @@ class LocationTestCase(ViewTestCases.PrimaryObjectViewTestCase):
             "slug": "root-3",
             "status": active.pk,
             "tenant": tenant.pk,
+            "facility": "Facility X",
+            "asn": 65001,
+            "time_zone": pytz.UTC,
+            "description": "Location description",
+            "physical_address": "742 Evergreen Terrace, Springfield, USA",
+            "shipping_address": "742 Evergreen Terrace, Springfield, USA",
+            "latitude": Decimal("35.780000"),
+            "longitude": Decimal("-78.642000"),
+            "contact_name": "Hank Hill",
+            "contact_phone": "123-555-9999",
+            "contact_email": "hank@stricklandpropane.com",
+            "comments": "Test site",
+            "tags": [t.pk for t in Tag.objects.get_for_model(Location)],
             "description": "A new root location",
         }
 
@@ -333,6 +346,9 @@ class LocationTestCase(ViewTestCases.PrimaryObjectViewTestCase):
             # we can't bulk-edit the parent or site fields in this generic test
             "tenant": tenant.pk,
             "status": Status.objects.get(name="Planned").pk,
+            "asn": 65009,
+            "time_zone": pytz.timezone("US/Eastern"),
+            "description": "New description",
         }
 
         # No slug_source/slug_test_object here because Location uses the composite [parent__name, name]
