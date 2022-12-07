@@ -27,19 +27,19 @@ Questions? Comments? Start by perusing our [GitHub discussions](https://github.c
 
 ## Screenshots
 
-![Screenshot of main page](https://raw.githubusercontent.com/nautobot/nautobot/develop/nautobot/docs/media/ss_main_page.png "Main page")
+![Gif of main page](docs/media/nautobot_mainpage.gif "Main page")
 
 ---
 
-![Screenshot of config contexts](https://raw.githubusercontent.com/nautobot/nautobot/develop/nautobot/docs/media/ss_config_contexts.png "Config Contexts")
+![Gif of config contexts](docs/media/nautobot_config_context.gif "Config Contexts")
 
 ---
 
-![Screenshot of prefix hierarchy](https://raw.githubusercontent.com/nautobot/nautobot/develop/nautobot/docs/media/ss_prefix_hierarchy.png "Prefix hierarchy")
+![Gif of prefix hierarchy](docs/media/nautobot_prefix_hierarchy.gif "Prefix hierarchy")
 
 ---
 
-![Screenshot of GraphQL](https://raw.githubusercontent.com/nautobot/nautobot/develop/nautobot/docs/media/ss_graphiql.png "GraphQL API")
+![Gif of GraphQL](docs/media/nautobot_graphql.gif "GraphQL API")
 
 ## Installation
 
