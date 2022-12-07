@@ -472,6 +472,7 @@ class LocationForm(NautobotModelForm, TenancyForm):
         required=False,
     )
     site = DynamicModelChoiceField(queryset=Site.objects.all(), required=False)
+    comments = CommentField()
 
     class Meta:
         model = Location
@@ -485,8 +486,44 @@ class LocationForm(NautobotModelForm, TenancyForm):
             "tenant_group",
             "tenant",
             "description",
+            "facility",
+            "asn",
+            "time_zone",
+            "physical_address",
+            "shipping_address",
+            "latitude",
+            "longitude",
+            "contact_name",
+            "contact_phone",
+            "contact_email",
+            "comments",
             "tags",
         ]
+
+        widgets = {
+            "physical_address": SmallTextarea(
+                attrs={
+                    "rows": 3,
+                }
+            ),
+            "shipping_address": SmallTextarea(
+                attrs={
+                    "rows": 3,
+                }
+            ),
+            "time_zone": StaticSelect2(),
+        }
+        help_texts = {
+            "name": "Full name of the location",
+            "facility": "Data center provider and facility (e.g. Equinix NY7)",
+            "asn": "BGP autonomous system number",
+            "time_zone": "Local time zone",
+            "description": "Short description (will appear in locations list)",
+            "physical_address": "Physical location of the building (e.g. for GPS)",
+            "shipping_address": "If different from the physical address",
+            "latitude": "Latitude in decimal format (xx.yyyyyy)",
+            "longitude": "Longitude in decimal format (xx.yyyyyy)",
+        }
 
 
 class LocationBulkEditForm(TagsBulkEditFormMixin, StatusModelBulkEditFormMixin, NautobotBulkEditForm):
@@ -496,6 +533,12 @@ class LocationBulkEditForm(TagsBulkEditFormMixin, StatusModelBulkEditFormMixin, 
     site = DynamicModelChoiceField(queryset=Site.objects.all(), required=False)
     tenant = DynamicModelChoiceField(queryset=Tenant.objects.all(), required=False)
     description = forms.CharField(max_length=100, required=False)
+    asn = forms.IntegerField(min_value=BGP_ASN_MIN, max_value=BGP_ASN_MAX, required=False, label="ASN")
+    time_zone = TimeZoneFormField(
+        choices=add_blank_choice(TimeZoneFormField().choices),
+        required=False,
+        widget=StaticSelect2(),
+    )
 
     class Meta:
         nullable_fields = [
@@ -503,6 +546,9 @@ class LocationBulkEditForm(TagsBulkEditFormMixin, StatusModelBulkEditFormMixin, 
             "site",
             "tenant",
             "description",
+            "asn",
+            "description",
+            "time_zone",
         ]
 
 
@@ -534,6 +580,11 @@ class LocationCSVForm(StatusModelCSVFormMixin, CustomFieldModelCSVForm):
     class Meta:
         model = Location
         fields = Location.csv_headers
+        help_texts = {
+            "time_zone": mark_safe(
+                'Time zone (<a href="https://en.wikipedia.org/wiki/List_of_tz_database_time_zones">available options</a>)'
+            )
+        }
 
 
 class LocationFilterForm(NautobotFilterForm, StatusModelFilterFormMixin, TenancyFilterForm):
