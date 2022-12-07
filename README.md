@@ -40,7 +40,6 @@ Questions? Comments? Start by perusing our [GitHub discussions](https://github.c
 ---
 
 ![Gif of GraphQL](/nautobot/docs/media/nautobot_graphql.gif?raw=true "GraphQL API")
-![Gif of GraphQL](/nautobot/docs/media/nautobot_graphql2.gif?raw=true "GraphQL API")
 
 ## Installation
 
