@@ -10,3 +10,7 @@ Once you have defined the hierarchy of Location Types that you wish to use, you 
     At present, Locations fill the conceptual space between the more abstract Region and Site models and the more concrete Rack Group model. In a future Nautobot release, some or all of these other models may be collapsed into Locations. That is to say, in the future you might not deal with Regions and Sites as distinct models, but instead your Location Type hierarchy might include these higher-level categories, becoming something like Country ← City ← Site ← Building ← Floor ← Room.
 
 Much like Sites, each Location must be assigned a name and operational [`status`](../../models/extras/status.md). The same default operational statuses are defined for Locations as for Sites, but as always, you can customize these to suit your needs. Locations can also be assigned to a tenant.
+
++++ 2.0.0
+
+In Nautobot v2.0, Site and Region will be collapsed in to Location Model. As a result, Location will inherent all the properties of the Site model that is going away [#2954](https://github.com/nautobot/nautobot/issues/2954). Location Model now has `asn`, `comments`, `contact_email`, `contact_name`, `contact_phone`, `facility`, `latitude`, `longitude`, `physical_address`, `shipping_address` and `time_zone` fields.
