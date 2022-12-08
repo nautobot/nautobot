@@ -193,8 +193,11 @@ class RelationshipFilter(django_filters.ModelMultipleChoiceFilter):
                 ).values_list("source_id", flat=True)
 
                 values = list(destinations) + list(sources)
-            qs &= self.get_method(self.qs)(Q(**{"id__in": values}))
-            return qs
+
+            # ModelMultipleChoiceFilters always have `distinct=True` so we must make sure that the
+            # unioned queryset is also distinct. Ref: https://github.com/nautobot/nautobot/issues/2963
+            union_qs = self.get_method(self.qs)(Q(**{"id__in": values})).distinct()
+            return qs & union_qs
 
 
 class RelationshipModelFilterSetMixin(django_filters.FilterSet):
