@@ -18,6 +18,7 @@ from nautobot.extras.choices import DynamicGroupOperatorChoices
 from nautobot.extras.querysets import DynamicGroupQuerySet, DynamicGroupMembershipQuerySet
 from nautobot.extras.utils import extras_features
 from nautobot.utilities.forms.constants import BOOLEAN_WITH_BLANK_CHOICES
+from nautobot.utilities.forms.fields import DynamicModelChoiceField
 from nautobot.utilities.forms.widgets import StaticSelect2
 from nautobot.utilities.utils import get_filterset_for_model, get_form_for_model
 
@@ -229,6 +230,9 @@ class DynamicGroup(OrganizationalModel):
             # Null boolean fields need a special widget that doesn't save `False` when unchecked.
             if isinstance(modelform_field, forms.NullBooleanField):
                 modelform_field.widget = StaticSelect2(choices=BOOLEAN_WITH_BLANK_CHOICES)
+
+            if isinstance(modelform_field, DynamicModelChoiceField):
+                modelform_field = filterset_field.field
 
             # Filter fields should never be required!
             modelform_field.required = False
