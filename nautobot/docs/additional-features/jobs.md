@@ -376,7 +376,7 @@ tenant_group = ObjectVar(
 site = ObjectVar(
     model=Site,
     query_params={
-        'region_id': '$region',
+        'region': '$region',
         'tenant_group_id': '$tenant_group'
     }
 )
