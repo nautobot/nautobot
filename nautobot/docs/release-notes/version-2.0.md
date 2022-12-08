@@ -44,7 +44,7 @@ Check out the specific changes documented in the table at [Updating from Nautobo
 
 #### Removed Redundant Filter Fields ([#2804](https://github.com/nautobot/nautobot/pull/2804))
 
-As a part of breaking changes made in v2.X, shadowed filter/filterset fields are being removed in the dcim app:
+As a part of breaking changes made in v2.X, shadowed filter/filterset fields are being removed in the DCIM app:
 
 Currently for some of the foreign-key related fields:
     - The field is shadowed for the purpose of replacing the PK filter with a lookup-based on a more human-readable value (typically `slug`, if available).
