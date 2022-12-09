@@ -185,69 +185,49 @@ def common_test_data(cls):
     lt4 = LocationType.objects.get(name="Room")
     lt4.content_types.add(ContentType.objects.get_for_model(Device))
 
-    status_active = Status.objects.get(slug="active")
-    cls.site = Site.objects.get(slug="site-1")
-
-    loc0 = Location.objects.create(
-        name="Campus 1",
-        location_type=lt1,
-        status=status_active,
-        site=cls.site,
-    )
-    loc1 = Location.objects.create(
-        name="RTP",
-        location_type=lt1,
-        status=status_active,
-        site=cls.site,
-        description="Research Triangle Park",
-        asn=65003,
-        facility="Facility 3",
-        contact_name="Contact 3",
-        contact_phone="123-555-0003",
-        contact_email="contact3@example.com",
-        time_zone="America/Los_Angeles",
-        physical_address="1 road st, hoboken, nj",
-        shipping_address="PO Box 1, hoboken, nj",
-    )
-    loc2 = Location.objects.create(
-        name="RTP4E",
-        location_type=lt2,
-        status=status_active,
-        parent=loc1,
-        asn=65004,
-        facility="Facility 4",
-        contact_name="Contact 4",
-        contact_phone="123-555-0004",
-        contact_email="contact4@example.com",
-        time_zone="America/Chicago",
-    )
-    loc3 = Location.objects.create(
-        name="RTP4E-3",
-        location_type=lt3,
-        status=status_active,
-        parent=loc2,
-        tenant=tenants[0],
-        asn=65005,
-        latitude=10,
-        longitude=10,
-    )
-    loc4 = Location.objects.create(
-        name="RTP4E-3-0101",
-        location_type=lt4,
-        status=status_active,
-        parent=loc3,
-        tenant=tenants[1],
-        description="Cube",
-        asn=65006,
-        latitude=20,
-        longitude=20,
-        comments="comment2",
-    )
-    nested_loc = Location.objects.create(
-        name="RTP South", location_type=lt1, status=status_active, parent=loc1, asn=65007
-    )
+    loc0 = Location.objects.filter(location_type=lt1).first()
+    loc1 = Location.objects.filter(location_type=lt1).first()
+    loc1.description = "Research Triangle Park"
+    loc1.asn = 65003
+    loc1.facility = "Facility 3"
+    loc1.contact_name = "Contact 3"
+    loc1.contact_phone = "123-555-0003"
+    loc1.contact_email = "contact3@example.com"
+    loc1.time_zone = "America/Los_Angeles"
+    loc1.physical_address = "1 road st, hoboken, nj"
+    loc1.shipping_address = "PO Box 1, hoboken, nj"
+    loc2 = Location.objects.filter(location_type=lt2).first()
+    loc2.parent = loc1
+    loc2.asn = 65004
+    loc2.facility = "Facility 4"
+    loc2.contact_name = "Contact 4"
+    loc2.contact_phone = "123-555-0004"
+    loc2.contact_email = "contact4@example.com"
+    loc2.time_zone = "America/Chicago"
+    loc3 = Location.objects.filter(location_type=lt3).first()
+    loc3.parent = loc2
+    loc3.tenant = tenants[0]
+    loc3.asn = 65005
+    loc3.latitude = 10
+    loc3.longitude = 10
+    loc4 = Location.objects.filter(location_type=lt4).first()
+    loc4.parent = loc3
+    loc4.tenant = tenants[1]
+    loc4.description = "Cube"
+    loc4.asn = 65006
+    loc4.latitude = 20
+    loc4.longitude = 20
+    loc4.comments = "comment2"
+    nested_loc = Location.objects.filter(location_type__nestable=True, parent=loc1).first()
+    nested_loc.asn = 65007
     for loc in [loc1, loc2, loc3, loc4, nested_loc]:
         loc.validated_save()
+    cls.loc0 = loc0
+    cls.loc1 = loc1
+    cls.loc2 = loc2
+    cls.loc3 = loc3
+    cls.loc4 = loc4
+    cls.nested_loc = nested_loc
 
     provider = Provider.objects.create(name="Provider 1", slug="provider-1", asn=65001, account="1234")
     circuit_type = CircuitType.objects.create(name="Test Circuit Type 1", slug="test-circuit-type-1")
@@ -1163,23 +1143,25 @@ class LocationFilterSetTestCase(FilterTestCases.NameSlugFilterTestCase, FilterTe
                 LocationType.objects.get(name="Floor").pk,
             ]
         }
-        self.assertEqual(
-            self.filterset(params, self.queryset).qs.count(),
+        self.assertQuerysetEqualAndNotEmpty(
+            self.filterset(params, self.queryset).qs,
             self.queryset.filter(
                 location_type__in=[
                     LocationType.objects.get(name="Building"),
                     LocationType.objects.get(name="Floor"),
                 ]
-            )
-            .distinct()
-            .count(),
+            ).distinct(),
         )
 
     def test_parent(self):
-        params = {"parent": ["rtp", Location.objects.get(name="RTP4E").pk]}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 3)
+        parent = Location.objects.filter(location_type__name="Root").first()
+        params = {"parent": [parent.slug, parent.pk]}
+        self.assertQuerysetEqualAndNotEmpty(
+            self.filterset(params, self.queryset).qs, self.queryset.filter(parent=parent)
+        )
 
     def test_base_site(self):
+        self.site = self.loc1.site
         params = {"base_site": [self.site.slug, self.site.pk]}
         self.assertQuerysetEqualAndNotEmpty(
             self.filterset(params, self.queryset).qs,
@@ -1187,9 +1169,10 @@ class LocationFilterSetTestCase(FilterTestCases.NameSlugFilterTestCase, FilterTe
         )
 
     def test_subtree(self):
-        params = {"subtree": [Location.objects.get(name="RTP").slug, Location.objects.get(name="RTP South").pk]}
+        params = {"subtree": [self.loc1.slug, self.nested_loc.pk]}
         self.assertQuerysetEqualAndNotEmpty(
-            self.filterset(params, self.queryset).qs, Location.objects.get(name="RTP").descendants(include_self=True)
+            self.filterset(params, self.queryset).qs,
+            Location.objects.get(name=self.loc1.name).descendants(include_self=True),
         )
 
     def test_child_location_type(self):
@@ -1200,16 +1183,16 @@ class LocationFilterSetTestCase(FilterTestCases.NameSlugFilterTestCase, FilterTe
             location_type__in=[LocationType.objects.get(name="Room"), LocationType.objects.get(name="Floor")],
             location_type__nestable=True,
         )
-        self.assertEqual(
-            self.filterset(params, self.queryset).qs.count(), Location.objects.filter(query_params).count()
+        self.assertQuerysetEqualAndNotEmpty(
+            self.filterset(params, self.queryset).qs, Location.objects.filter(query_params)
         )
 
     def test_content_type(self):
         params = {"content_type": ["dcim.device"]}
         ct = ContentType.objects.get_for_model(Device)
-        self.assertEqual(
-            self.filterset(params, self.queryset).qs.count(),
-            Location.objects.filter(location_type__content_types=ct).count(),
+        self.assertQuerysetEqualAndNotEmpty(
+            self.filterset(params, self.queryset).qs,
+            Location.objects.filter(location_type__content_types=ct),
         )
 
     def test_facility(self):
@@ -1285,94 +1268,111 @@ class LocationFilterSetTestCase(FilterTestCases.NameSlugFilterTestCase, FilterTe
     def test_circuit_terminations(self):
         circuit_terminations = CircuitTermination.objects.filter(location__isnull=False)[:1]
         params = {"circuit_terminations": [circuit_terminations[0].pk]}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 1)
+        self.assertQuerysetEqualAndNotEmpty(
+            self.filterset(params, self.queryset).qs,
+            self.queryset.filter(circuit_terminations__in=[circuit_terminations[0].pk]),
+        )
 
     def test_has_circuit_terminations(self):
         with self.subTest():
             params = {"has_circuit_terminations": True}
-            self.assertEqual(
-                self.filterset(params, self.queryset).qs.count(),
-                self.queryset.filter(circuit_terminations__isnull=False).distinct().count(),
+            self.assertQuerysetEqualAndNotEmpty(
+                self.filterset(params, self.queryset).qs,
+                self.queryset.filter(circuit_terminations__isnull=False).distinct(),
             )
         with self.subTest():
             params = {"has_circuit_terminations": False}
-            self.assertEqual(
-                self.filterset(params, self.queryset).qs.count(),
-                self.queryset.filter(circuit_terminations__isnull=True).count(),
+            self.assertQuerysetEqualAndNotEmpty(
+                self.filterset(params, self.queryset).qs,
+                self.queryset.filter(circuit_terminations__isnull=True),
             )
 
     def test_devices(self):
         devices = Device.objects.all()[:2]
         params = {"devices": [devices[0].pk, devices[1].name]}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 1)
+        self.assertQuerysetEqualAndNotEmpty(
+            self.filterset(params, self.queryset).qs, self.queryset.filter(devices__in=[devices[0].pk])
+        )
 
     def test_has_devices(self):
         with self.subTest():
             params = {"has_devices": True}
-            self.assertEqual(
-                self.filterset(params, self.queryset).qs.count(),
-                self.queryset.filter(devices__isnull=False).distinct().count(),
+            self.assertQuerysetEqualAndNotEmpty(
+                self.filterset(params, self.queryset).qs,
+                self.queryset.filter(devices__isnull=False).distinct(),
             )
         with self.subTest():
             params = {"has_devices": False}
-            self.assertEqual(
-                self.filterset(params, self.queryset).qs.count(), self.queryset.filter(devices__isnull=True).count()
+            self.assertQuerysetEqualAndNotEmpty(
+                self.filterset(params, self.queryset).qs, self.queryset.filter(devices__isnull=True)
             )
 
     def test_power_panels(self):
         power_panels = PowerPanel.objects.filter(location__isnull=False)[:1]
         params = {"power_panels": [power_panels[0].pk, power_panels[0].name]}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 1)
+        self.assertQuerysetEqualAndNotEmpty(
+            self.filterset(params, self.queryset).qs, self.queryset.filter(powerpanels__in=[power_panels[0].pk])
+        )
 
     def test_has_power_panels(self):
         with self.subTest():
             params = {"has_power_panels": True}
-            self.assertEqual(
-                self.filterset(params, self.queryset).qs.count(),
-                self.queryset.filter(powerpanels__isnull=False).distinct().count(),
+            self.assertQuerysetEqualAndNotEmpty(
+                self.filterset(params, self.queryset).qs,
+                self.queryset.filter(powerpanels__isnull=False).distinct(),
             )
         with self.subTest():
             params = {"has_power_panels": False}
-            self.assertEqual(
-                self.filterset(params, self.queryset).qs.count(),
-                self.queryset.filter(powerpanels__isnull=True).count(),
+            self.assertQuerysetEqualAndNotEmpty(
+                self.filterset(params, self.queryset).qs,
+                self.queryset.filter(powerpanels__isnull=True),
             )
 
     def test_rack_groups(self):
         rack_groups = RackGroup.objects.filter(location__isnull=False)[:1]
         params = {"rack_groups": [rack_groups[0].pk]}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 1)
+        self.assertQuerysetEqualAndNotEmpty(
+            self.filterset(params, self.queryset).qs, self.queryset.filter(rack_groups__in=[rack_groups[0].pk])
+        )
 
     def test_has_rack_groups(self):
         with self.subTest():
             params = {"has_rack_groups": True}
-            self.assertEqual(
-                self.filterset(params, self.queryset).qs.count(),
-                self.queryset.filter(rack_groups__isnull=False).distinct().count(),
+            self.assertQuerysetEqualAndNotEmpty(
+                self.filterset(params, self.queryset).qs,
+                self.queryset.filter(rack_groups__isnull=False).distinct(),
             )
         with self.subTest():
             params = {"has_rack_groups": False}
-            self.assertEqual(
-                self.filterset(params, self.queryset).qs.count(),
-                self.queryset.filter(rack_groups__isnull=True).distinct().count(),
+            self.assertQuerysetEqualAndNotEmpty(
+                self.filterset(params, self.queryset).qs,
+                self.queryset.filter(rack_groups__isnull=True).distinct(),
             )
 
     def test_racks(self):
         racks = Rack.objects.filter(location__isnull=False)[:1]
-        params = {"racks": [racks[0].pk]}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 1)
+        with self.subTest():
+            params = {"racks": [racks[0].pk]}
+            self.assertQuerysetEqualAndNotEmpty(
+                self.filterset(params, self.queryset).qs, self.queryset.filter(racks__in=[racks[0].pk])
+            )
+        with self.subTest():
+            params = {"racks": [racks[0].name]}
+            self.assertQuerysetEqualAndNotEmpty(
+                self.filterset(params, self.queryset).qs, self.queryset.filter(racks__in=[racks[0].pk])
+            )
 
     def test_has_racks(self):
         with self.subTest():
             params = {"has_racks": True}
-            self.assertEqual(
-                self.filterset(params, self.queryset).qs.count(),
-                self.queryset.filter(racks__isnull=False).distinct().count(),
+            self.assertQuerysetEqualAndNotEmpty(
+                self.filterset(params, self.queryset).qs,
+                self.queryset.filter(racks__isnull=False).distinct(),
             )
         with self.subTest():
             params = {"has_racks": False}
-            self.assertEqual(
-                self.filterset(params, self.queryset).qs.count(), self.queryset.filter(racks__isnull=True).count()
+            self.assertQuerysetEqualAndNotEmpty(
+                self.filterset(params, self.queryset).qs, self.queryset.filter(racks__isnull=True)
             )
 
     def test_prefixes(self):
@@ -1385,15 +1385,15 @@ class LocationFilterSetTestCase(FilterTestCases.NameSlugFilterTestCase, FilterTe
     def test_has_prefixes(self):
         with self.subTest():
             params = {"has_prefixes": True}
-            self.assertEqual(
-                self.filterset(params, self.queryset).qs.count(),
-                self.queryset.filter(prefixes__isnull=False).distinct().count(),
+            self.assertQuerysetEqualAndNotEmpty(
+                self.filterset(params, self.queryset).qs,
+                self.queryset.filter(prefixes__isnull=False).distinct(),
             )
         with self.subTest():
             params = {"has_prefixes": False}
-            self.assertEqual(
-                self.filterset(params, self.queryset).qs.count(),
-                self.queryset.filter(prefixes__isnull=True).distinct().count(),
+            self.assertQuerysetEqualAndNotEmpty(
+                self.filterset(params, self.queryset).qs,
+                self.queryset.filter(prefixes__isnull=True).distinct(),
             )
 
     def test_vlan_groups(self):
@@ -1417,10 +1417,16 @@ class LocationFilterSetTestCase(FilterTestCases.NameSlugFilterTestCase, FilterTe
 
     def test_vlans(self):
         vlans = list(VLAN.objects.filter(site__isnull=False))[:2]
-        params = {"vlans": [vlans[0].pk, vlans[1].pk]}
-        self.assertQuerysetEqual(
-            self.filterset(params, self.queryset).qs, self.queryset.filter(vlans__in=vlans).distinct()
-        )
+        with self.subTest():
+            params = {"vlans": [vlans[0].pk, vlans[1].pk]}
+            self.assertQuerysetEqual(
+                self.filterset(params, self.queryset).qs, self.queryset.filter(vlans__in=vlans).distinct()
+            )
+        with self.subTest():
+            params = {"vlans": [vlans[0].vid, vlans[1].vid]}
+            self.assertQuerysetEqual(
+                self.filterset(params, self.queryset).qs, self.queryset.filter(vlans__in=vlans).distinct()
+            )
 
     def test_has_vlans(self):
         with self.subTest():
@@ -1436,39 +1442,50 @@ class LocationFilterSetTestCase(FilterTestCases.NameSlugFilterTestCase, FilterTe
 
     def test_clusters(self):
         clusters = Cluster.objects.filter(location__isnull=False)[:1]
-        params = {"clusters": [clusters[0].pk]}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 1)
+        with self.subTest():
+            params = {"clusters": [clusters[0].pk]}
+            self.assertQuerysetEqualAndNotEmpty(
+                self.filterset(params, self.queryset).qs, self.queryset.filter(clusters__in=[clusters[0].pk])
+            )
+        with self.subTest():
+            params = {"clusters": [clusters[0].name]}
+            self.assertQuerysetEqualAndNotEmpty(
+                self.filterset(params, self.queryset).qs, self.queryset.filter(clusters__in=[clusters[0].pk])
+            )
 
     def test_has_clusters(self):
         with self.subTest():
             params = {"has_clusters": True}
-            self.assertEqual(
-                self.filterset(params, self.queryset).qs.count(),
-                self.queryset.filter(clusters__isnull=False).distinct().count(),
+            self.assertQuerysetEqualAndNotEmpty(
+                self.filterset(params, self.queryset).qs,
+                self.queryset.filter(clusters__isnull=False).distinct(),
             )
         with self.subTest():
             params = {"has_clusters": False}
-            self.assertEqual(
-                self.filterset(params, self.queryset).qs.count(), self.queryset.filter(clusters__isnull=True).count()
+            self.assertQuerysetEqualAndNotEmpty(
+                self.filterset(params, self.queryset).qs, self.queryset.filter(clusters__isnull=True)
             )
 
     def test_time_zone(self):
         with self.subTest():
             params = {"time_zone": ["America/Los_Angeles", "America/Chicago"]}
-            self.assertEqual(
-                self.filterset(params, self.queryset).qs.count(),
-                self.queryset.filter(time_zone__in=params["time_zone"]).count(),
+            self.assertQuerysetEqualAndNotEmpty(
+                self.filterset(params, self.queryset).qs,
+                self.queryset.filter(time_zone__in=params["time_zone"]),
             )
         with self.subTest():
             params = {"time_zone": [""]}
-            self.assertEqual(
-                self.filterset(params, self.queryset).qs.count(), self.queryset.filter(time_zone="").count()
+            self.assertQuerysetEqualAndNotEmpty(
+                self.filterset(params, self.queryset).qs, self.queryset.filter(time_zone="")
             )
 
     def test_physical_address(self):
         with self.subTest():
             params = {"physical_address": "1 road st, hoboken, nj"}
-            self.assertEqual(self.filterset(params, self.queryset).qs.count(), 1)
+            self.assertQuerysetEqualAndNotEmpty(
+                self.filterset(params, self.queryset).qs,
+                self.queryset.filter(physical_address="1 road st, hoboken, nj"),
+            )
         with self.subTest():
             params = {"physical_address": "nomatch"}
             self.assertFalse(self.filterset(params, self.queryset).qs.exists())
@@ -1476,21 +1493,27 @@ class LocationFilterSetTestCase(FilterTestCases.NameSlugFilterTestCase, FilterTe
     def test_shipping_address(self):
         with self.subTest():
             params = {"shipping_address": "PO Box 1, hoboken, nj"}
-            self.assertEqual(self.filterset(params, self.queryset).qs.count(), 1)
+            self.assertQuerysetEqualAndNotEmpty(
+                self.filterset(params, self.queryset).qs,
+                self.queryset.filter(shipping_address="PO Box 1, hoboken, nj"),
+            )
         with self.subTest():
             params = {"shipping_address": "nomatch"}
             self.assertFalse(self.filterset(params, self.queryset).qs.exists())
 
     def test_description(self):
         params = {"description": ["Research Triangle Park", "Cube"]}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+        self.assertQuerysetEqualAndNotEmpty(
+            self.filterset(params, self.queryset).qs,
+            self.queryset.filter(description__in=["Research Triangle Park", "Cube"]),
+        )
 
     def test_site(self):
-        self.site = Site.objects.first()
+        self.site = Site.objects.filter(locations__isnull=False).first()
         params = {"site": [self.site.slug, self.site.pk]}
         # TODO: should this filter return descendant locations as well?
-        self.assertEqual(
-            self.filterset(params, self.queryset).qs.count(), Location.objects.filter(site=self.site).count()
+        self.assertQuerysetEqualAndNotEmpty(
+            self.filterset(params, self.queryset).qs, Location.objects.filter(site=self.site)
         )
 
 
