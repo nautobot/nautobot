@@ -25,6 +25,8 @@ class CircuitTypeUIViewSet(
     view_mixins.ObjectDestroyViewMixin,
     view_mixins.ObjectBulkDestroyViewMixin,
     view_mixins.ObjectBulkCreateViewMixin,
+    view_mixins.ObjectChangeLogViewMixin,
+    view_mixins.ObjectNotesViewMixin,
 ):
     bulk_create_form_class = forms.CircuitTypeCSVForm
     filterset_class = filters.CircuitTypeFilterSet
@@ -60,6 +62,8 @@ class CircuitTerminationUIViewSet(
     view_mixins.ObjectDetailViewMixin,
     view_mixins.ObjectEditViewMixin,
     view_mixins.ObjectDestroyViewMixin,
+    view_mixins.ObjectChangeLogViewMixin,
+    view_mixins.ObjectNotesViewMixin,
 ):
     form_class = forms.CircuitTerminationForm
     lookup_field = "pk"

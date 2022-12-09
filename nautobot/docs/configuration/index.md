@@ -9,7 +9,12 @@ An initial configuration can be created by executing `nautobot-server init`. Thi
 By default (if you haven't set [`NAUTOBOT_ROOT`](#nautobot-root-directory) to some other value), the file will be created at `$HOME/.nautobot/nautobot_config.py`:
 
 ```no-highlight
-$ nautobot-server init
+nautobot-server init
+```
+
+Example output:
+
+```no-highlight
 Configuration file created at '/opt/nautobot/nautobot_config.py'
 ```
 
@@ -19,7 +24,10 @@ Configuration file created at '/opt/nautobot/nautobot_config.py'
 You may specify a different location for the configuration as the argument to `init`:
 
 ```no-highlight
-$ nautobot-server init /tmp/custom_config.py
+nautobot-server init /tmp/custom_config.py
+```
+
+```no-highlight
 Configuration file created at '/tmp/custom_config.py'
 ```
 
@@ -37,7 +45,7 @@ If you do not wish to utilize the default location, you have two options:
 You may provide the `--config` argument when executing `nautobot-server` to tell Nautobot where to find your configuration. For example, to start a shell with the configuration in an alternate location:
 
 ```no-highlight
-$ nautobot-server --config=/etc/nautobot_config.py nbshell
+nautobot-server --config=/etc/nautobot_config.py nbshell
 ```
 
 ### Environment variable
@@ -45,8 +53,8 @@ $ nautobot-server --config=/etc/nautobot_config.py nbshell
 You may also set the `NAUTOBOT_CONFIG` environment variable to the location of your configuration file so that you don't have to keep providing the `--config` argument. If set, this overrides the default location.
 
 ```no-highlight
-$ export NAUTOBOT_CONFIG=/etc/nautobot_config.py
-$ nautobot-server nbshell
+export NAUTOBOT_CONFIG=/etc/nautobot_config.py
+nautobot-server nbshell
 ```
 
 ## Nautobot Root Directory
@@ -56,7 +64,7 @@ By default, Nautobot will always read or store files in `~/.nautobot` to allow f
 The `NAUTOBOT_ROOT` configuration setting specifies where these files will be stored on your file system. You may customize this location by setting the `NAUTOBOT_ROOT` environment variable. For example:
 
 ```no-highlight
-$ export NAUTOBOT_ROOT=/opt/nautobot
+export NAUTOBOT_ROOT=/opt/nautobot
 ```
 
 This setting is also used in the [Nautobot deployment guide](../installation/nautobot.md) to make the `nautobot-server` command easier to find and use.
@@ -75,7 +83,7 @@ Each of the features requiring use of file storage default to being stored in `N
 
 ## Configuration Parameters
 
-While Nautobot has many configuration settings, only a few of them must be defined at the time of installation.  These configuration parameters may be set in `nautobot_config.py` or by default many of them may also be set by environment variables. Please see the following links for more information:
+While Nautobot has many configuration settings, only a few of them must be defined at the time of installation. These configuration parameters may be set in `nautobot_config.py` or by default many of them may also be set by environment variables. Please see the following links for more information:
 
 * [Required settings](required-settings.md)
 * [Optional settings](optional-settings.md)
@@ -91,7 +99,7 @@ While Nautobot has many configuration settings, only a few of them must be defin
 Configuration settings may be changed at any time. However, the WSGI service (e.g. uWSGI) must be restarted before the changes will take effect. For example, if you're running Nautobot using `systemd:`
 
 ```no-highlight
-$ sudo systemctl restart nautobot nautobot-worker
+sudo systemctl restart nautobot nautobot-worker
 ```
 
 ## Advanced Configuration
@@ -103,7 +111,12 @@ To facilitate troubleshooting and debugging of settings, try inspecting the sett
 First get a shell and load the Django settings:
 
 ```no-highlight
-$ nautobot-server nbshell
+nautobot-server nbshell
+```
+
+Output:
+
+```no-highlight
 ### Nautobot interactive shell (localhost)
 ### Python 3.9.1 | Django 3.1.3 | Nautobot 1.0.0
 ### lsmodels() will show available models. Use help(<model>) for more info.
@@ -120,7 +133,7 @@ Inspect the `SETTINGS_PATH` variable. Does it match the configuration you're exp
 If not, double check that you haven't set the `NAUTOBOT_CONFIG` environment variable, or if you did, that the path defined there is the correct one.
 
 ```no-highlight
-$ echo $NAUTOBOT_CONFIG
+echo $NAUTOBOT_CONFIG
 ```
 
 ### Adding your own dependencies

@@ -4,10 +4,10 @@ This document explains how to migrate the contents of an existing Nautobot Postg
 
 ## Export data from PostgreSQL
 
-In your existing installation of Nautobot with PostgreSQL, run the following command to generate a JSON dump of the database contents. This may take several minutes to complete depending on the size of your database.
+In your existing installation of Nautobot with PostgreSQL, run the following command to generate a JSON dump of the database contents. This may take several minutes to complete depending on the size of your database. From the Postgres host `(nautobot-postgres) $`:
 
 ```no-highlight
-(nautobot-postgres) $ nautobot-server dumpdata \
+nautobot-server dumpdata \
     --natural-foreign \
     --natural-primary \
     --exclude contenttypes \
@@ -29,10 +29,10 @@ In very rare cases, there may problems when importing your data from the case-se
 
 ### Confirming database encoding
 
-To confirm that your MySQL database has the correct encoding, you may start up a database shell using `nautobot-server dbshell` and run the following command:
+To confirm that your MySQL database has the correct encoding, you may start up a database shell using `nautobot-server dbshell` and run the following command with the prompt `(nautobot-mysql) $`
 
 ```no-highlight
-(nautobot-mysql) $ nautobot-server dbshell
+nautobot-server dbshell
 mysql> SELECT @@character_set_database, @@collation_database;
 +--------------------------+----------------------+
 | @@character_set_database | @@collation_database |
@@ -44,18 +44,23 @@ mysql> SELECT @@character_set_database, @@collation_database;
 
 ## Apply database migrations to the MySQL database
 
-With Nautobot pointing to the MySQL database (we recommend creating a new Nautobot installation for this purpose), run `nautobot-server migrate` to create all of Nautobot's tables in the database:
+With Nautobot pointing to the MySQL database (we recommend creating a new Nautobot installation for this purpose), run `nautobot-server migrate` to create all of Nautobot's tables in the MySQL database `(nautobot-mysql) $`:
 
 ```no-highlight
-(nautobot-mysql) $ nautobot-server migrate
+nautobot-server migrate
 ```
 
 ## Remove the auto-populated Status records from the MySQL database
 
-A side effect of the `nautobot-server migrate` command is that it will populate the `Status` table with a number of predefined records. This is normally useful for getting started quickly with Nautobot, but since we're going to be importing data from our other database, these records will likely conflict with the records to be imported. Therefore we need to remove them, using the `nautobot-server nbshell` command in our MySQL instance of Nautobot:
+A side effect of the `nautobot-server migrate` command is that it will populate the `Status` table with a number of predefined records. This is normally useful for getting started quickly with Nautobot, but since we're going to be importing data from our other database, these records will likely conflict with the records to be imported. Therefore we need to remove them, using the `nautobot-server nbshell` command in our MySQL instance of Nautobot (`(nautobot-mysql) $` shell prompt):
 
 ```no-highlight
-(nautobot-mysql) $ nautobot-server nbshell
+nautobot-server nbshell
+```
+
+Example output:
+
+```no-highlight
 ### Nautobot interactive shell (32cec46b2b7e)
 ### Python 3.9.7 | Django 3.1.13 | Nautobot 1.1.3
 ### lsmodels() will show available models. Use help(<model>) for more info.
@@ -68,10 +73,10 @@ Press Control-D to exit the `nbshell` when you are finished.
 
 ## Import the database dump into MySQL
 
-Use the `nautobot-server loaddata` command to import the database dump that you previously created. This may take several minutes to complete depending on the size of your database.
+Use the `nautobot-server loaddata` command to import the database dump that you previously created. This may take several minutes to complete depending on the size of your database. This is from the MySQL host with the prompt (`(nautobot-mysql) $`):
 
 ```no-highlight
-(nautobot-mysql) $ nautobot-server loaddata --traceback nautobot_dump.json
+nautobot-server loaddata --traceback nautobot_dump.json
 ```
 
 Assuming that the command ran to completion with no errors, you should now have a fully populated clone of your original database in MySQL.

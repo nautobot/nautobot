@@ -66,6 +66,8 @@ django-jinja = "~2.10.2"
 django-mptt = "~0.14.0"
 # Prometheus metrics for Django
 django-prometheus = "~2.2.0"
+# Custom prometheus metrics
+prometheus-client = "~0.14.1"
 # Redis cache for Django used for distributed locking
 django-redis = "~5.2.0"
 # RQ (Redis Queueing) for background handling of webhooks, jobs, etc.
@@ -116,7 +118,7 @@ napalm = {version = "~3.4.1", optional = true}
 # IP prefix and address handling
 netaddr = "~0.8.0"
 # Library of network related Jinja Filters
-netutils = "~1.2.0"
+netutils = "~1.3.0"
 # Image processing library
 Pillow = "~9.3.0"
 # PostgreSQL database adapter
@@ -170,6 +172,8 @@ invoke = "~1.7.1"
 isort = "^5.10.1"
 # Rendering docs to HTML
 mkdocs = "~1.4.2"
+# Automatically generate some files as part of mkdocs build
+mkdocs-gen-files = "~0.4.0"
 # Allow Markdown files to include other files
 mkdocs-include-markdown-plugin = "~3.6.0"
 # Material for mkdocs theme

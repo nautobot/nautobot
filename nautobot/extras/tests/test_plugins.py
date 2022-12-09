@@ -1,11 +1,11 @@
-from unittest import skipIf
+from unittest import mock, skipIf
 
 from django.conf import settings
 from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ValidationError
 from django.template import engines
 from django.test import override_settings
-from django.urls import reverse
+from django.urls import NoReverseMatch, reverse
 
 import netaddr
 
@@ -23,6 +23,7 @@ from nautobot.extras.plugins.utils import load_plugin
 from nautobot.extras.plugins.validators import wrap_model_clean_methods
 from nautobot.extras.registry import registry, DatasourceContent
 from nautobot.ipam.models import Prefix, IPAddress
+from nautobot.users.models import ObjectPermission
 from nautobot.utilities.testing import APIViewTestCases, TestCase, ViewTestCases, extract_page_body
 
 from example_plugin import config as example_config
@@ -364,7 +365,7 @@ class PluginListViewTest(TestCase):
         self.assertHttpStatus(response, 200)
 
         response_body = extract_page_body(response.content.decode(response.charset)).lower()
-        self.assertIn("example plugin", response_body, msg=response_body)
+        self.assertIn("example app", response_body, msg=response_body)
 
     def test_list_plugins_authenticated_not_admin(self):
         response = self.client.get(reverse("plugins:plugins_list"))
@@ -388,11 +389,11 @@ class PluginDetailViewTest(TestCase):
         response = self.client.get(reverse("plugins:plugin_detail", kwargs={"plugin": "example_plugin"}))
         self.assertHttpStatus(response, 200)
 
-        response_body = extract_page_body(response.content.decode(response.charset)).lower()
+        response_body = extract_page_body(response.content.decode(response.charset))
         # plugin verbose name
-        self.assertIn("example plugin", response_body, msg=response_body)
+        self.assertIn("Example Nautobot App", response_body, msg=response_body)
         # plugin description
-        self.assertIn("for testing purposes only", response_body, msg=response_body)
+        self.assertIn("For testing purposes only", response_body, msg=response_body)
 
 
 @skipIf(
@@ -438,6 +439,43 @@ class PluginAPITest(APIViewTestCases.APIViewTestCase):
         instance = ExampleModel.objects.first()
         detail_url = reverse("plugins-api:example_plugin-api:examplemodel-detail", kwargs={"pk": instance.pk})
         self.assertEqual(detail_url, self._get_detail_url(instance))
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
+    @mock.patch("nautobot.extras.api.serializers.reverse")
+    def test_get_notes_url_on_object_raise_no_reverse_match(self, mock_reverse):
+        # This test is to check the error handling when the user implemented a model without NotesMixin
+        # But include the NotesSerializerMixin in the Model APIViewSet with NautobotModelViewSet
+
+        # Raise NoReverseMatch in get_notes_url()
+        mock_reverse.side_effect = mock.Mock(side_effect=NoReverseMatch())
+        instance = self._get_queryset().first()
+        obj_perm = ObjectPermission(
+            name="Test permission",
+            constraints={"pk": instance.pk},
+            actions=["view"],
+        )
+        obj_perm.save()
+        obj_perm.users.add(self.user)
+        obj_perm.object_types.add(ContentType.objects.get_for_model(self.model))
+        url = self._get_detail_url(instance)
+
+        # Check if log messages and API data is properly rendered
+        with self.assertLogs(logger="nautobot.extras.api", level="WARNING") as cm:
+            response = self.client.get(url, **self.header)
+            self.assertHttpStatus(response, 200)
+            self.assertIn("notes_url", response.data)
+            self.assertIsNone(response.data["notes_url"])
+            model_name = type(instance).__name__
+            self.assertIn(
+                (
+                    f"Notes feature is not available for model {model_name}. "
+                    "Please make sure to: "
+                    f"1. Include NotesMixin from nautobot.extras.model.mixins in the {model_name} class definition "
+                    f"2. Include NotesViewSetMixin from nautobot.extras.api.mixins in the {model_name}ViewSet "
+                    "before including NotesSerializerMixin in the model serializer"
+                ),
+                cm.output[0],
+            )
 
 
 @skipIf(
