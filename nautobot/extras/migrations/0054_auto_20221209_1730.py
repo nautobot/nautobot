@@ -4,6 +4,30 @@ import django.db.models.deletion
 from django.db import migrations, models
 
 
+def migrate_contenttypes(apps, schema_editor):
+    ContentType = apps.get_model("contenttypes", "ContentType")
+
+    dynamicgroup_ct = ContentType.objects.get_by_natural_key("extras", "dynamicgroup")
+    dynamicgroup_ct.app_label = "core"
+    dynamicgroup_ct.save()
+
+    dynamicgroupmembership_ct = ContentType.objects.get_by_natural_key("extras", "dynamicgroupmembership")
+    dynamicgroupmembership_ct.app_label = "core"
+    dynamicgroupmembership_ct.save()
+
+
+def reverse_migrate_contenttypes(apps, schema_editor):
+    ContentType = apps.get_model("contenttypes", "ContentType")
+
+    dynamicgroup_ct = ContentType.objects.get_by_natural_key("core", "dynamicgroup")
+    dynamicgroup_ct.app_label = "extras"
+    dynamicgroup_ct.save()
+
+    dynamicgroupmembership_ct = ContentType.objects.get_by_natural_key("core", "dynamicgroupmembership")
+    dynamicgroupmembership_ct.app_label = "extras"
+    dynamicgroupmembership_ct.save()
+
+
 class Migration(migrations.Migration):
 
     dependencies = [
@@ -38,6 +62,7 @@ class Migration(migrations.Migration):
                 to='core.dynamicgroup',
             ),
         ),
+        migrations.RunPython(migrate_contenttypes, reverse_migrate_contenttypes),
     ]
 
     state_operations = [
