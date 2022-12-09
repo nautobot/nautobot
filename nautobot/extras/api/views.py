@@ -60,7 +60,6 @@ from nautobot.extras.models import CustomField, CustomFieldChoice
 from nautobot.extras.jobs import run_job
 from nautobot.extras.utils import get_job_content_type, get_worker_count
 from nautobot.utilities.exceptions import CeleryWorkerNotRunningException
-from nautobot.utilities.api import get_serializer_for_model
 from nautobot.utilities.utils import (
     copy_safe_request,
     count_related,

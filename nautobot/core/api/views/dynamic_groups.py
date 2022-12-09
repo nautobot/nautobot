@@ -2,7 +2,6 @@ from django.shortcuts import get_object_or_404
 from rest_framework.decorators import action
 
 from nautobot.core import filters
-from nautobot.core.api import serializers
 from nautobot.core.api.serializers.dynamic_groups import DynamicGroupSerializer, DynamicGroupMembershipSerializer
 from nautobot.core.api.views import ModelViewSet
 from nautobot.core.models.dynamic_groups import DynamicGroup, DynamicGroupMembership
@@ -49,6 +48,3 @@ class DynamicGroupMembershipViewSet(ModelViewSet):
     queryset = DynamicGroupMembership.objects.prefetch_related("group", "parent_group")
     serializer_class = DynamicGroupMembershipSerializer
     filterset_class = filters.DynamicGroupMembershipFilterSet
-
-
-

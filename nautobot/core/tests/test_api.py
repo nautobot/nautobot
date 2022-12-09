@@ -4,6 +4,7 @@ from django.conf import settings
 from django.contrib.contenttypes.models import ContentType
 from django.test import override_settings
 from django.urls import reverse
+from rest_framework import status
 
 from constance import config
 from constance.test import override_config
@@ -390,10 +391,10 @@ class DynamicGroupTest(DynamicGroupTestMixin, APIViewTestCases.APIViewTestCase):
 
     def test_get_members(self):
         """Test that the `/members/` API endpoint returns what is expected."""
-        self.add_permissions("extras.view_dynamicgroup")
+        self.add_permissions("core.view_dynamicgroup")
         instance = DynamicGroup.objects.first()
         member_count = instance.members.count()
-        url = reverse("extras-api:dynamicgroup-members", kwargs={"pk": instance.pk})
+        url = reverse("core-api:dynamicgroup-members", kwargs={"pk": instance.pk})
         response = self.client.get(url, **self.header)
         self.assertHttpStatus(response, status.HTTP_200_OK)
         self.assertEqual(member_count, len(response.json()["results"]))

@@ -2,10 +2,15 @@ from django.contrib.contenttypes.models import ContentType
 from django import forms
 
 from nautobot.core.models.dynamic_groups import DynamicGroup, DynamicGroupMembership
-from nautobot.extras.forms.base import NautobotFilterForm, NautobotModelForm
+from nautobot.extras.forms.base import NautobotModelForm
 from nautobot.extras.utils import FeatureQuery
 from nautobot.utilities.forms import (
-    BootstrapMixin, CSVContentTypeField, DynamicModelChoiceField, MultipleContentTypeField, SlugField, StaticSelect2,
+    BootstrapMixin,
+    CSVContentTypeField,
+    DynamicModelChoiceField,
+    MultipleContentTypeField,
+    SlugField,
+    StaticSelect2,
 )
 
 OBJ_TYPE_CHOICES = (

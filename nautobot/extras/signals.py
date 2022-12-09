@@ -7,9 +7,8 @@ from datetime import timedelta
 
 from cacheops.signals import cache_invalidated, cache_read
 from django.contrib.contenttypes.models import ContentType
-from django.core.exceptions import ValidationError
 from django.db import transaction
-from django.db.models.signals import m2m_changed, pre_delete, pre_save
+from django.db.models.signals import m2m_changed, pre_delete
 from django.dispatch import receiver
 from django.utils import timezone
 from django_prometheus.models import model_deletes, model_inserts, model_updates

@@ -10,12 +10,12 @@ from django.utils.http import is_safe_url
 from django.utils.safestring import mark_safe
 from django_tables2 import RequestConfig
 
-from nautobot.core import filters, forms, models, tables
+from nautobot.core import filters, forms, tables
 from nautobot.core.models.dynamic_groups import DynamicGroup
 from nautobot.core.views import generic
 from nautobot.utilities.forms import restrict_form_fields
 from nautobot.utilities.paginator import EnhancedPaginator, get_paginate_count
-from nautobot.utilities.utils import get_table_for_model, pretty_print_query
+from nautobot.utilities.utils import get_table_for_model, prepare_cloned_fields, pretty_print_query
 
 
 logger = logging.getLogger(__name__)

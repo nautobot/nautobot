@@ -12,7 +12,6 @@ from nautobot.utilities.forms.fields import DynamicModelMultipleChoiceField
 from nautobot.utilities.utils import get_route_for_model
 
 
-
 class NotesMixin:
     """
     Adds a `notes` property that returns a queryset of `Notes` membership.

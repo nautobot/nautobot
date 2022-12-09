@@ -14,50 +14,89 @@ class Migration(migrations.Migration):
     initial = True
 
     dependencies = [
-        ('contenttypes', '0002_remove_content_type_name'),
+        ("contenttypes", "0002_remove_content_type_name"),
     ]
 
     state_operations = [
         migrations.CreateModel(
-            name='DynamicGroup',
+            name="DynamicGroup",
             fields=[
-                ('id', models.UUIDField(default=uuid.uuid4, editable=False, primary_key=True, serialize=False, unique=True)),
-                ('created', models.DateField(auto_now_add=True, null=True)),
-                ('last_updated', models.DateTimeField(auto_now=True, null=True)),
-                ('_custom_field_data', models.JSONField(blank=True, default=dict, encoder=django.core.serializers.json.DjangoJSONEncoder)),
-                ('name', models.CharField(max_length=100, unique=True)),
-                ('slug', nautobot.core.fields.AutoSlugField(blank=True, max_length=100, populate_from='name', unique=True)),
-                ('description', models.CharField(blank=True, max_length=200)),
-                ('filter', models.JSONField(default=dict, editable=False, encoder=django.core.serializers.json.DjangoJSONEncoder)),
+                (
+                    "id",
+                    models.UUIDField(
+                        default=uuid.uuid4, editable=False, primary_key=True, serialize=False, unique=True
+                    ),
+                ),
+                ("created", models.DateField(auto_now_add=True, null=True)),
+                ("last_updated", models.DateTimeField(auto_now=True, null=True)),
+                (
+                    "_custom_field_data",
+                    models.JSONField(blank=True, default=dict, encoder=django.core.serializers.json.DjangoJSONEncoder),
+                ),
+                ("name", models.CharField(max_length=100, unique=True)),
+                (
+                    "slug",
+                    nautobot.core.fields.AutoSlugField(blank=True, max_length=100, populate_from="name", unique=True),
+                ),
+                ("description", models.CharField(blank=True, max_length=200)),
+                (
+                    "filter",
+                    models.JSONField(
+                        default=dict, editable=False, encoder=django.core.serializers.json.DjangoJSONEncoder
+                    ),
+                ),
             ],
             options={
-                'ordering': ['content_type', 'name'],
+                "ordering": ["content_type", "name"],
             },
-            bases=(models.Model, nautobot.core.models.mixins.DynamicGroupMixin, nautobot.extras.models.mixins.NotesMixin),
+            bases=(
+                models.Model,
+                nautobot.core.models.mixins.DynamicGroupMixin,
+                nautobot.extras.models.mixins.NotesMixin,
+            ),
         ),
         migrations.CreateModel(
-            name='DynamicGroupMembership',
+            name="DynamicGroupMembership",
             fields=[
-                ('id', models.UUIDField(default=uuid.uuid4, editable=False, primary_key=True, serialize=False, unique=True)),
-                ('operator', models.CharField(max_length=12)),
-                ('weight', models.PositiveSmallIntegerField()),
-                ('group', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='+', to='core.dynamicgroup')),
-                ('parent_group', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='dynamic_group_memberships', to='core.dynamicgroup')),
+                (
+                    "id",
+                    models.UUIDField(
+                        default=uuid.uuid4, editable=False, primary_key=True, serialize=False, unique=True
+                    ),
+                ),
+                ("operator", models.CharField(max_length=12)),
+                ("weight", models.PositiveSmallIntegerField()),
+                (
+                    "group",
+                    models.ForeignKey(
+                        on_delete=django.db.models.deletion.CASCADE, related_name="+", to="core.dynamicgroup"
+                    ),
+                ),
+                (
+                    "parent_group",
+                    models.ForeignKey(
+                        on_delete=django.db.models.deletion.CASCADE,
+                        related_name="dynamic_group_memberships",
+                        to="core.dynamicgroup",
+                    ),
+                ),
             ],
             options={
-                'ordering': ['parent_group', 'weight', 'group'],
-                'unique_together': {('group', 'parent_group', 'operator', 'weight')},
+                "ordering": ["parent_group", "weight", "group"],
+                "unique_together": {("group", "parent_group", "operator", "weight")},
             },
         ),
         migrations.AddField(
-            model_name='dynamicgroup',
-            name='children',
-            field=models.ManyToManyField(related_name='parents', through='core.DynamicGroupMembership', to='core.DynamicGroup'),
+            model_name="dynamicgroup",
+            name="children",
+            field=models.ManyToManyField(
+                related_name="parents", through="core.DynamicGroupMembership", to="core.DynamicGroup"
+            ),
         ),
         migrations.AddField(
-            model_name='dynamicgroup',
-            name='content_type',
-            field=models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to='contenttypes.contenttype'),
+            model_name="dynamicgroup",
+            name="content_type",
+            field=models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to="contenttypes.contenttype"),
         ),
     ]
 

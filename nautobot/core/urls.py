@@ -30,4 +30,3 @@ urlpatterns = [
         kwargs={"model": DynamicGroup},
     ),
 ]
-

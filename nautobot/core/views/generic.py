@@ -23,8 +23,10 @@ from django.views.generic import View
 from django_tables2 import RequestConfig
 
 from nautobot.core.forms import SearchForm
+from nautobot.core import tables
 from nautobot.extras.models import CustomField, ExportTemplate
 from nautobot.extras.models.change_logging import ChangeLoggedModel
+from nautobot.extras.utils import get_base_template
 from nautobot.utilities.error_handlers import handle_protectederror
 from nautobot.utilities.exceptions import AbortTransaction
 from nautobot.utilities.forms import (

@@ -24,7 +24,7 @@ from nautobot.extras.registry import registry
 from nautobot.extras.forms import GraphQLQueryForm
 from nautobot.utilities.config import get_settings_or_config
 
-from .dynamic_groups import (
+from .dynamic_groups import (  # noqa: F401
     DynamicGroupBulkDeleteView,
     DynamicGroupDeleteView,
     DynamicGroupEditView,

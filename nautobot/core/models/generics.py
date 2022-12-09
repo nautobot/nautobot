@@ -72,7 +72,9 @@ class _NautobotTaggableManager(_TaggableManager):
         return super().set(tags, through_defaults=through_defaults, **kwargs)
 
 
-class PrimaryModel(BaseModel, ChangeLoggedModel, CustomFieldModel, RelationshipModel, mixins.DynamicGroupMixin, NotesMixin):
+class PrimaryModel(
+    BaseModel, ChangeLoggedModel, CustomFieldModel, RelationshipModel, mixins.DynamicGroupMixin, NotesMixin
+):
     """
     Base abstract model for all primary models.
 

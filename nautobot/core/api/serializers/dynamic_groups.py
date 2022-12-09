@@ -2,9 +2,7 @@ from django.contrib.contenttypes.models import ContentType
 from rest_framework import serializers
 
 from nautobot.core.api.fields import ContentTypeField
-from nautobot.core.api.nested_serializers import (
-    NestedDynamicGroupSerializer, NestedDynamicGroupMembershipSerializer
-)
+from nautobot.core.api.nested_serializers import NestedDynamicGroupSerializer, NestedDynamicGroupMembershipSerializer
 from nautobot.core.api.serializers import ValidatedModelSerializer
 from nautobot.core.models.dynamic_groups import DynamicGroup, DynamicGroupMembership
 from nautobot.extras.api.serializers import NautobotModelSerializer

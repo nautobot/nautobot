@@ -13,7 +13,6 @@ from nautobot.core.api.views import (
     NautobotSpectacularSwaggerView,
     NautobotSpectacularRedocView,
 )
-from . import routers, views
 from nautobot.extras.plugins.urls import plugin_api_patterns
 
 urlpatterns = [
