@@ -10,19 +10,17 @@ provider, obtain one for free from [Let's Encrypt](https://letsencrypt.org/getti
 be installed on your Nautobot server in a secure location that is readable only by the `root` user.
 
 !!! warning
-    The command below can be used to generate a self-signed certificate for testing purposes,
-    however it is strongly recommended to use a certificate from a trusted authority in production.
+    The command below can be used to generate a self-signed certificate for testing purposes, however it is strongly recommended to use a certificate from a trusted authority in production.
 
 Two files will be created: the public certificate (`nautobot.crt`) and the private key (`nautobot.key`). The certificate is published to the world, whereas the private key must be kept secret at all times.
 
 !!! info
-    Some Linux installations, including CentOS, have changed the location for SSL certificates from `/etc/ssl/` to `/etc/pki/tls/`. The
-    command below may need to be changed to reflect the certificate location.
+    Some Linux installations, including CentOS, have changed the location for SSL certificates from `/etc/ssl/` to `/etc/pki/tls/`. The command below may need to be changed to reflect the certificate location.
 
     The following command will prompt you for additional details of the certificate; all of which are optional.
 
 ```no-highlight
-$ sudo openssl req -x509 -nodes -days 365 -newkey rsa:2048 \
+sudo openssl req -x509 -nodes -days 365 -newkey rsa:2048 \
   -keyout /etc/ssl/private/nautobot.key \
   -out /etc/ssl/certs/nautobot.crt
 ```
@@ -46,13 +44,13 @@ Begin by installing NGINX:
 On Ubuntu:
 
 ```no-highlight
-$ sudo apt install -y nginx
+sudo apt install -y nginx
 ```
 
 On CentOS/RHEL:
 
 ```no-highlight
-$ sudo dnf install -y nginx
+sudo dnf install -y nginx
 ```
 
 #### Configure NGINX
@@ -115,8 +113,8 @@ To enable the Nautobot site, you'll need to delete `/etc/nginx/sites-enabled/def
 `sites-enabled` directory to the configuration file you just created:
 
 ```no-highlight
-$ sudo rm -f /etc/nginx/sites-enabled/default
-$ sudo ln -s /etc/nginx/sites-available/nautobot.conf /etc/nginx/sites-enabled/nautobot.conf
+sudo rm -f /etc/nginx/sites-enabled/default
+sudo ln -s /etc/nginx/sites-available/nautobot.conf /etc/nginx/sites-enabled/nautobot.conf
 ```
 
 On CentOS:
@@ -124,7 +122,7 @@ On CentOS:
 Run the following command to disable the default site that comes with the `nginx` package:
 
 ```no-highlight
-$ sudo sed -i 's@ default_server@@' /etc/nginx/nginx.conf
+sudo sed -i 's@ default_server@@' /etc/nginx/nginx.conf
 ```
 
 #### Restart NGINX
@@ -132,7 +130,7 @@ $ sudo sed -i 's@ default_server@@' /etc/nginx/nginx.conf
 Finally, restart the `nginx` service to use the new configuration.
 
 ```no-highlight
-$ sudo systemctl restart nginx
+sudo systemctl restart nginx
 ```
 
 !!! info
@@ -144,7 +142,7 @@ Ensure that the `NAUTOBOT_ROOT` permissions are set to `755`.
 If permissions need to be changed, as the `nautobot` user run:
 
 ```no-highlight
-$ chmod 755 $NAUTOBOT_ROOT
+chmod 755 $NAUTOBOT_ROOT
 ```
 
 ## Confirm Connectivity
@@ -170,13 +168,18 @@ If you are unable to connect to the HTTP server, check that:
 
 If you get a *Static Media Failure; The following static media file failed to load: css/base.css*, verify the permissions on the `$NAUTOBOT_ROOT` directory are `755`.
 
-Example of correct permissions:
+Example of correct permissions (at the `[root@localhost ~]#` prompt)
 
 ```no-highlight
-[root@localhost ~]# ls -l /opt/
+ls -l /opt/
+```
+
+Example output:
+
+```no-highlight
 total 4
 drwxr-xr-x. 11 nautobot nautobot 4096 Apr  5 11:24 nautobot
-[root@localhost ~]# 
+[root@localhost ~]#
 ```
 
 If the permissions are not correct, modify them accordingly.
@@ -184,11 +187,31 @@ If the permissions are not correct, modify them accordingly.
 Example of modifying the permissions:
 
 ```no-highlight
-[nautobot@localhost ~]$ ls -l /opt/
+ls -l /opt/
+```
+
+Example output:
+
+```no-highlight
 total 4
 drwx------. 11 nautobot nautobot 4096 Apr  5 10:00 nautobot
-[nautobot@localhost ~]$ chmod 755 $NAUTOBOT
-[nautobot@localhost ~]$ ls -l /opt/
+```
+
+At the prompt `[nautobot@localhost ~]$` execute:
+
+```no-highlight
+chmod 755 $NAUTOBOT
+```
+
+Then to verify that the user has the permissions to the directory execute at the `[nautobot@localhost ~]$` prompt:
+
+```no-highlight
+ls -l /opt/
+```
+
+Example output shows that the user and group are both `nautobot` below:
+
+```no-highlight
 total 4
 drwxr-xr-x. 11 nautobot nautobot 4096 Apr  5 11:24 nautobot
 ```

@@ -5,7 +5,6 @@ from django.forms.models import fields_for_model
 
 from nautobot.utilities import forms, querysets
 
-
 __all__ = (
     "add_blank_choice",
     "add_field_to_filter_form_class",

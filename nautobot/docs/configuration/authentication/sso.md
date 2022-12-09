@@ -26,7 +26,7 @@ If you are using OpenID Connect or SAML you will also need to install the extra 
 For OpenID connect, you'll need to install the `sso` Python extra.
 
 ```no-highlight
-$ pip3 install "nautobot[sso]"
+pip3 install "nautobot[sso]"
 ```
 
 #### SAML Dependencies
@@ -39,13 +39,13 @@ For SAML, additional system-level dependencies are required so that the speciali
 Install the system dependencies as `root`:
 
 ```no-highlight
-$ sudo apt install -y libxmlsec1-dev libxmlsec1-openssl pkg-config
+sudo apt install -y libxmlsec1-dev libxmlsec1-openssl pkg-config
 ```
 
 Install the `sso` Python extra as the `nautobot` user.
 
 ```no-highlight
-$ pip3 install "nautobot[sso]"
+pip3 install "nautobot[sso]"
 ```
 
 Please see the SAML configuration guide below for an example of how to configure Nautobot to authenticate using SAML with Google as the identity provider.
@@ -137,7 +137,7 @@ The following guides are provided for some of the most common authentication met
     * *Login redirect URIs*: should be the Base URI plus `/complete/okta-openidconnect/` such as `https://nautobot.example.com/complete/okta-openidconnect/`
     * *Logout redirect URIs*: should be the Base URI plus `/disconnect/okta-openidconnect/` such as `https://nautobot.example.com/disconnect/okta-openidconnect/`
 
-3. Once the application is configured in Okta, SSO can either be configured with OAuth2 or OpenID Connect (OIDC).  When using an organization's authentication server OAuth2 is preferred; with custom Okta authentication backends, use OIDC.
+3. Once the application is configured in Okta, SSO can either be configured with OAuth2 or OpenID Connect (OIDC). When using an organization's authentication server OAuth2 is preferred; with custom Okta authentication backends, use OIDC.
 
 #### Okta - OAuth2
 
@@ -173,7 +173,7 @@ The `/default` authentication server can be used for testing, however, it should
 
 #### Okta - Additional Scopes
 
-It is possible to get additional OAuth scopes from okta by adding them to the `SOCIAL_AUTH_{BACKEND}_SCOPE` list.  For example to get the `groups` scope from Okta using OAuth2 add the following to your `nautobot_config.py`:
+It is possible to get additional OAuth scopes from okta by adding them to the `SOCIAL_AUTH_{BACKEND}_SCOPE` list. For example to get the `groups` scope from Okta using OAuth2 add the following to your `nautobot_config.py`:
 
 ```python
 SOCIAL_AUTH_OKTA_OAUTH2_SCOPE = ['groups']
@@ -372,7 +372,7 @@ Be sure to configure [`EXTERNAL_AUTH_DEFAULT_GROUPS`](../../configuration/option
     * *Supported account types*: This specifies the AD directories that you're allowing to authenticate with this app.
     * *Redirect URIs*: Don't fill this out yet, it will be configured in the following steps.
 
-4. Once the application is configured in Azure, you'll be shown the app registration's *Overview* page. Please take note of the *Application (client) ID* for use later. SSO with Azure can either be configured with OAuth2 or OpenID Connect (OIDC).  When using an organization's authentication server OAuth2 is preferred; with custom Azure authentication backends, use OIDC.
+4. Once the application is configured in Azure, you'll be shown the app registration's *Overview* page. Please take note of the *Application (client) ID* for use later. SSO with Azure can either be configured with OAuth2 or OpenID Connect (OIDC). When using an organization's authentication server OAuth2 is preferred; with custom Azure authentication backends, use OIDC.
 5. From the App registration page, click on *Authentication*. Under *Platform configurations*, select *Add a platform* and select *Web*.
 6. Click on the *Add a Redirect URI* link on the page and configure it as follows:
 

@@ -183,17 +183,21 @@ class InterfaceCommonForm(forms.Form):
 
         parent_field = "device" if "device" in self.cleaned_data else "virtual_machine"
         tagged_vlans = self.cleaned_data["tagged_vlans"]
+        mode = self.cleaned_data["mode"]
 
         # Untagged interfaces cannot be assigned tagged VLANs
-        if self.cleaned_data["mode"] == InterfaceModeChoices.MODE_ACCESS and tagged_vlans:
+        if mode == InterfaceModeChoices.MODE_ACCESS and tagged_vlans:
             raise forms.ValidationError({"mode": "An access interface cannot have tagged VLANs assigned."})
 
+        if mode != InterfaceModeChoices.MODE_TAGGED and tagged_vlans:
+            raise forms.ValidationError({"tagged_vlans": f"Clear tagged_vlans to set mode to {self.mode}"})
+
         # Remove all tagged VLAN assignments from "tagged all" interfaces
-        elif self.cleaned_data["mode"] == InterfaceModeChoices.MODE_TAGGED_ALL:
+        elif mode == InterfaceModeChoices.MODE_TAGGED_ALL:
             self.cleaned_data["tagged_vlans"] = []
 
         # Validate tagged VLANs; must be a global VLAN or in the same site
-        elif self.cleaned_data["mode"] == InterfaceModeChoices.MODE_TAGGED:
+        elif mode == InterfaceModeChoices.MODE_TAGGED:
             valid_sites = [None, self.cleaned_data[parent_field].site]
             invalid_vlans = [str(v) for v in tagged_vlans if v.site not in valid_sites]
 
@@ -2075,7 +2079,7 @@ class DeviceCSVForm(LocatableModelCSVFormMixin, BaseDeviceCSVForm):
             }
             self.fields["rack"].queryset = self.fields["rack"].queryset.filter(**params)
 
-            # TODO: limit location queryset by assigned site
+            # 2.0 TODO: limit location queryset by assigned site
 
 
 class ChildDeviceCSVForm(BaseDeviceCSVForm):
@@ -2689,7 +2693,7 @@ class InterfaceFilterForm(DeviceComponentFilterForm, StatusModelFilterFormMixin)
     tag = TagFilterField(model)
 
 
-class InterfaceForm(NautobotModelForm, InterfaceCommonForm):
+class InterfaceForm(InterfaceCommonForm, NautobotModelForm):
     parent_interface = DynamicModelChoiceField(
         queryset=Interface.objects.all(),
         required=False,

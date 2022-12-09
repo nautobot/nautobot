@@ -28,3 +28,5 @@ class PluginBannerTestCase(SeleniumTestCase):
             self.assertIn(f"Hello, <strong>{self.user.username}</strong>", banners_html.first["innerHTML"])
         finally:
             self.logout()
+
+    # TODO: Expand banner testing to ensure the banner is visible on more than just the homepage.

@@ -1099,7 +1099,7 @@ class RequiredRelationshipTestMixin(TestCase):
                     "api": {
                         "objects_nonexistent": "VLANs require at least one device, but no devices exist yet. "
                         "Create a device by posting to /api/dcim/devices/",
-                        "objects_not_specified": 'You need to specify relationships["vlans-devices-m2m"]'
+                        "objects_not_specified": 'You need to specify ["relationships"]["vlans-devices-m2m"]'
                         '["source"]["objects"].',
                     },
                     "ui": {
@@ -1121,7 +1121,7 @@ class RequiredRelationshipTestMixin(TestCase):
                     "api": {
                         "objects_nonexistent": "Platforms require at least one device, but no devices exist yet. "
                         "Create a device by posting to /api/dcim/devices/",
-                        "objects_not_specified": 'You need to specify relationships["platform-devices-o2m"]'
+                        "objects_not_specified": 'You need to specify ["relationships"]["platform-devices-o2m"]'
                         '["destination"]["objects"].',
                     },
                     "ui": {
@@ -1144,7 +1144,7 @@ class RequiredRelationshipTestMixin(TestCase):
                     "api": {
                         "objects_nonexistent": "Circuit types require a platform, but no platforms exist yet. "
                         "Create a platform by posting to /api/dcim/platforms/",
-                        "objects_not_specified": 'You need to specify relationships["circuittype-platform-o2o"]'
+                        "objects_not_specified": 'You need to specify ["relationships"]["circuittype-platform-o2o"]'
                         '["destination"]["objects"].',
                     },
                     "ui": {
@@ -1194,14 +1194,14 @@ class RequiredRelationshipTestMixin(TestCase):
 
                 elif interact_with == "api":
                     self.assertHttpStatus(response, 400)
-                    expected_error_json = [
-                        {
+                    expected_error_json = {
+                        "relationships": {
                             related_field_name: [
                                 params["expected_errors"]["api"]["objects_nonexistent"],
                                 params["expected_errors"]["api"]["objects_not_specified"],
                             ]
                         }
-                    ]
+                    }
                     self.assertEqual(expected_error_json, response.json())
 
                 # Check that no object was created:
@@ -1223,9 +1223,11 @@ class RequiredRelationshipTestMixin(TestCase):
 
                 elif interact_with == "api":
                     self.assertHttpStatus(response, 400)
-                    expected_error_json = [
-                        {related_field_name: [params["expected_errors"]["api"]["objects_not_specified"]]}
-                    ]
+                    expected_error_json = {
+                        "relationships": {
+                            related_field_name: [params["expected_errors"]["api"]["objects_not_specified"]]
+                        }
+                    }
                     self.assertEqual(expected_error_json, response.json())
 
                 # Check that no object was created:
@@ -1295,9 +1297,11 @@ class RequiredRelationshipTestMixin(TestCase):
                         url_kwargs={"pk": newly_created_object.pk},
                     )
                     self.assertHttpStatus(response, 400)
-                    expected_error_json = [
-                        {related_field_name: [params["expected_errors"]["api"]["objects_not_specified"]]}
-                    ]
+                    expected_error_json = {
+                        "relationships": {
+                            related_field_name: [params["expected_errors"]["api"]["objects_not_specified"]]
+                        }
+                    }
                     self.assertEqual(expected_error_json, response.json())
 
                     # Object is updated with the required relationship data (succeeds)
@@ -1353,7 +1357,9 @@ class RequiredRelationshipTestMixin(TestCase):
                         url_kwargs={"pk": newly_created_object.pk},
                     )
                     self.assertHttpStatus(response, 400)
-                    expected_error_json = [
-                        {related_field_name: [params["expected_errors"]["api"]["objects_not_specified"]]}
-                    ]
+                    expected_error_json = {
+                        "relationships": {
+                            related_field_name: [params["expected_errors"]["api"]["objects_not_specified"]]
+                        }
+                    }
                     self.assertEqual(expected_error_json, response.json())

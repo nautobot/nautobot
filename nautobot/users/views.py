@@ -1,6 +1,5 @@
 import logging
 
-from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth import (
     BACKEND_SESSION_KEY,
@@ -9,8 +8,6 @@ from django.contrib.auth import (
     update_session_auth_hash,
 )
 from django.contrib.auth.mixins import LoginRequiredMixin
-from django.contrib.auth.models import update_last_login
-from django.contrib.auth.signals import user_logged_in
 from django.http import HttpResponseForbidden, HttpResponseRedirect
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
@@ -61,12 +58,6 @@ class LoginView(View):
 
         if form.is_valid():
             logger.debug("Login form validation was successful")
-
-            # If maintenance mode is enabled, assume the database is read-only, and disable updating the user's
-            # last_login time upon authentication.
-            if settings.MAINTENANCE_MODE:
-                logger.warning("Maintenance mode enabled: disabling update of most recent login time")
-                user_logged_in.disconnect(update_last_login, dispatch_uid="update_last_login")
 
             # Authenticate user
             auth_login(request, form.get_user())

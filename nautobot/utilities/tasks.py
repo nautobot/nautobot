@@ -1,13 +1,12 @@
 import logging
 
-from cacheops.simple import cache, CacheMiss
+from cacheops.simple import CacheMiss, cache
 from django.conf import settings
 from packaging import version
 import requests
 
 from nautobot.core import celery
 from nautobot.utilities import config
-
 
 # Get an instance of a logger
 logger = logging.getLogger("nautobot.releases")

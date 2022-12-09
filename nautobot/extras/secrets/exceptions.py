@@ -7,14 +7,17 @@ class SecretError(Exception):
     def __init__(self, secret, provider_class, message, *args, **kwargs):
         super().__init__(message, *args, **kwargs)
         self.secret = secret
-        self.provider_class = provider_class
+        # provider_class can be a SecretsProvider class or just a descriptive string.
+        if isinstance(provider_class, type):
+            self.provider_class = provider_class
+            self.provider = provider_class.__name__
+        else:
+            self.provider_class = None
+            self.provider = str(provider_class)
         self.message = message
 
     def __str__(self):
-        return (
-            f"{self.__class__.__name__}: "
-            f'Secret "{self.secret}" (provider "{self.provider_class.__name__}"): {self.message}'
-        )
+        return f'{self.__class__.__name__}: Secret "{self.secret}" (provider "{self.provider}"): {self.message}'
 
 
 class SecretParametersError(SecretError):

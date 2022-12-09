@@ -18,7 +18,6 @@ from nautobot.users import models as users_models
 from nautobot.utilities import fields as utilities_fields
 from nautobot.utilities import permissions, testing
 
-
 # Use the proper swappable User model
 User = get_user_model()
 

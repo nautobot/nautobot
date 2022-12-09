@@ -10,7 +10,6 @@ from .models import (
     ConsoleServerPort,
     Device,
     DeviceBay,
-    DeviceRedundancyGroup,
     DeviceRole,
     DeviceType,
     FrontPort,
@@ -1634,18 +1633,6 @@ urlpatterns = [
         views.CableCreateView.as_view(),
         name="powerfeed_connect",
         kwargs={"termination_a_type": PowerFeed},
-    ),
-    path(
-        "device-redundancy-groups/<slug:slug>/changelog/",
-        ObjectChangeLogView.as_view(),
-        name="deviceredundancygroup_changelog",
-        kwargs={"model": DeviceRedundancyGroup},
-    ),
-    path(
-        "device-redundancy-groups/<slug:slug>/notes/",
-        ObjectNotesView.as_view(),
-        name="deviceredundancygroup_notes",
-        kwargs={"model": DeviceRedundancyGroup},
     ),
 ]
 urlpatterns += router.urls

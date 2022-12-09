@@ -80,17 +80,17 @@ class ObjectView(ObjectPermissionRequiredMixin, View):
         Return any additional context data for the template.
 
         Args:
-            request: The current request
-            instance: The object being viewed
+            request (Request): The current request
+            instance (Model): The object being viewed
 
         Returns:
-            dict
+            (dict): Additional context data
         """
         return {
             "active_tab": request.GET.get("tab", "main"),
         }
 
-    # TODO: Remove this method in 2.0. Can be retrieved from instance itself now
+    # 2.0 TODO: Remove this method in 2.0. Can be retrieved from instance itself now
     # instance.get_changelog_url()
     # Only available on models that support changelogs
     def get_changelog_url(self, instance):
@@ -135,7 +135,7 @@ class ObjectView(ObjectPermissionRequiredMixin, View):
                 "object": instance,
                 "verbose_name": self.queryset.model._meta.verbose_name,
                 "verbose_name_plural": self.queryset.model._meta.verbose_name_plural,
-                "changelog_url": changelog_url,  # TODO: Remove in 2.0. This information can be retrieved from the object itself now.
+                "changelog_url": changelog_url,  # 2.0 TODO: Remove in 2.0. This information can be retrieved from the object itself now.
                 **self.get_extra_context(request, instance),
             },
         )
