@@ -137,7 +137,7 @@ class BaseJob:
         plugins/my_plugin.jobs/MyPluginJob
         git.my-repository/myjob/MyJob
         """
-        # TODO: it'd be nice if this were derived more automatically instead of needing this logic
+        # TODO(Glenn): it'd be nice if this were derived more automatically instead of needing this logic
         if cls in registry["plugin_jobs"]:
             source_grouping = "plugins"
         elif cls.file_path.startswith(settings.JOBS_ROOT):
@@ -443,7 +443,7 @@ class BaseJob:
 
         return return_data
 
-    def validate_data(self, data):
+    def validate_data(self, data, files=None):
         cls_vars = self._get_vars()
 
         if not isinstance(data, dict):
@@ -454,9 +454,11 @@ class BaseJob:
                 raise ValidationError({k: "Job data contained an unknown property"})
 
         # defer validation to the form object
-        f = self.as_form(data=self.deserialize_data(data))
+        f = self.as_form(data=self.deserialize_data(data), files=files)
         if not f.is_valid():
             raise ValidationError(f.errors)
+
+        return f.cleaned_data
 
     @staticmethod
     def load_file(pk):
@@ -986,7 +988,7 @@ def _get_job_source_paths():
             else:
                 logger.warning(f"Git repository {repository_record} is configured to provide jobs, but none are found!")
 
-        # TODO: when a Git repo is deleted or its slug is changed, we update the local filesystem
+        # TODO(Glenn): when a Git repo is deleted or its slug is changed, we update the local filesystem
         # (see extras/signals.py, extras/models/datasources.py), but as noted above, there may be multiple filesystems
         # involved, so not all local clones of deleted Git repositories may have been deleted yet.
         # For now, if we encounter a "leftover" Git repo here, we delete it now.
@@ -1148,7 +1150,7 @@ def run_job(data, request, job_result_pk, commit=True, *args, **kwargs):
         # Force commit to false for read only jobs.
         commit = False
 
-    # TODO: validate that all args required by this job are set in the data or else log helpful errors?
+    # TODO(Glenn): validate that all args required by this job are set in the data or else log helpful errors?
 
     job.logger.info(f"Running job (commit={commit})")
 

@@ -5,9 +5,10 @@ from django.test import TestCase
 from example_plugin.models import ExampleModel
 
 from nautobot.core import settings_funcs
-from nautobot.dcim import filters, tables
+from nautobot.dcim import filters
 from nautobot.dcim import forms as dcim_forms
 from nautobot.dcim import models as dcim_models
+from nautobot.dcim import tables
 from nautobot.extras import models as extras_models
 from nautobot.extras import utils as extras_utils
 from nautobot.utilities import exceptions, forms, utils

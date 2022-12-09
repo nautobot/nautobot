@@ -4,7 +4,6 @@ from django.urls import NoReverseMatch, reverse
 from nautobot.extras import models
 from nautobot.utilities import utils
 
-
 register = template.Library()
 
 

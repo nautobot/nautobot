@@ -45,7 +45,7 @@ In the `docker` directory you will find the following files:
 
 ## Docker-Compose Overrides
 
-If you require changing any of the defaults found in `docker-compose.yml`,  create a file inside the `development` directory called `docker-compose.override.yml` and add this file to the `compose_files` setting in your `invoke.yml` file, for example:
+If you require changing any of the defaults found in `docker-compose.yml`, create a file inside the `development` directory called `docker-compose.override.yml` and add this file to the `compose_files` setting in your `invoke.yml` file, for example:
 
 ```yaml
 ---
@@ -77,7 +77,7 @@ services:
 
 The `docker-entrypoint.sh` script will run any migrations and then look for specific variables set to create the superuser. The `docker-entrypoint.sh` script is copied in during the Docker image build and will read from the default `dev.env` as the `env_file` until you override it as seen above.
 
- Any variables defined in this file will override the defaults. The `override.env` should be located in the `development/` directory, and should look like the following:
+Any variables defined in this file will override the defaults. The `override.env` should be located in the `development/` directory, and should look like the following:
 
 ```bash
 # Superuser information. NAUTOBOT_CREATE_SUPERUSER defaults to false.
@@ -157,11 +157,67 @@ A slightly different workflow is needed when your development container is runni
 To work with remote containers, after `invoke build` use `docker-compose` as follows to start the containers. This prevents the HTTP service from automatically starting inside the container:
 
 ```no-highlight
-$ cd development
-$ docker-compose -f docker-compose.yml -f docker-compose.debug.yml up
+cd development
+docker-compose -f docker-compose.yml -f docker-compose.debug.yml up
 ```
 
 - Now open the VS Code Docker extension. In the `CONTAINERS/development` section, right click on a running container and select the **Attach Visual Studio Code** menu item.
 - The **Select the container to attach VS Code** input field provides a list of running containers.
 - Click on `development_nautobot_1` to use VS Code inside the container. The `devcontainer` will startup now.
 - As a last step open the folder `/opt/nautobot` in VS Code.
+
+### Remote Debugging Configuration
+
+Using the Remote-Attach functionality of VS Code debugger is an alternative to debugging in a development container. This allows a local VS Code instance to connect to a remote container and debug the code running in the container the same way as when debugging locally.
+
+Follow the steps below to configure VS Code to debug Nautobot and Celery Worker running in a remote container:
+
+1. **Configure `invoke.yml` to use the `docker-compose.vscode-rdb.yml` file**
+
+    This overrides the container settings without touching the original `docker-compose.yml` file.
+
+    Your `invoke.yml` file should look something like this:
+
+    ```yaml
+    ---
+    nautobot:
+      compose_files:
+        - "docker-compose.yml"
+        - "docker-compose.postgres.yml"
+        - "docker-compose.dev.yml"
+        - "docker-compose.vscode-rdb.yml"
+    ```
+
+    If you already have a custom `invoke.yml` file, append `docker-compose.vscode-rdb.yml` to the end of the `compose_files` list.
+
+    See the [docker compose override](#docker-compose-overrides) documentation for more details.
+
+2. **VS Code debug configuration**
+
+    If you have opened the workspace file `nautobot.code-workspace` then there are two debug
+    configurations for remote debugging already available.
+
+    If you add nautobot to an existing VS Code workspace (Menu: _File > Add Folder to Workspace..._)
+    then copy the `launch:` values to the `.vscode/launch.json` file.
+
+    - Debug Configurations for Remote Debugging:
+
+      ```json
+      {
+        "version": "0.2.0",
+        "configurations": [
+          {
+            "name": "Python: Remote Attach",
+            ...
+          },
+          {
+            "name": "Python: Remote Attach Celery Worker",
+            ...
+          }
+        ]
+      }
+      ```
+
+It is now possible to debug the containerized Nautobot and Celery Worker using the VS Code debugger.
+
+After restarting the Celery-Worker container you need to restart the debug session.

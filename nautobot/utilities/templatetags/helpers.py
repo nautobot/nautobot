@@ -5,7 +5,7 @@ import re
 from django import template
 from django.conf import settings
 from django.contrib.staticfiles.finders import find
-from django.templatetags.static import static, StaticNode
+from django.templatetags.static import StaticNode, static
 from django.urls import NoReverseMatch, reverse
 from django.utils.html import format_html, strip_tags
 from django.utils.safestring import mark_safe
@@ -14,7 +14,6 @@ from markdown import markdown
 import yaml
 
 from nautobot.utilities import config, forms, utils
-
 
 HTML_TRUE = '<span class="text-success"><i class="mdi mdi-check-bold" title="Yes"></i></span>'
 HTML_FALSE = '<span class="text-danger"><i class="mdi mdi-close-thick" title="No"></i></span>'

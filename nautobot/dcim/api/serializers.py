@@ -75,7 +75,7 @@ from nautobot.dcim.models import (
 from nautobot.extras.api.serializers import (
     NautobotModelSerializer,
     StatusModelSerializerMixin,
-    TaggedObjectSerializer,
+    TaggedModelSerializerMixin,
 )
 from nautobot.extras.api.nested_serializers import NestedConfigContextSchemaSerializer, NestedSecretsGroupSerializer
 from nautobot.extras.models import Status
@@ -89,6 +89,7 @@ from nautobot.tenancy.api.nested_serializers import NestedTenantSerializer
 from nautobot.users.api.nested_serializers import NestedUserSerializer
 from nautobot.utilities.api import get_serializer_for_model
 from nautobot.utilities.config import get_settings_or_config
+from nautobot.utilities.deprecation import class_deprecated_in_favor_of
 from nautobot.virtualization.api.nested_serializers import NestedClusterSerializer
 
 # Not all of these variable(s) are not actually used anywhere in this file, but required for the
@@ -132,7 +133,7 @@ from .nested_serializers import (  # noqa: F401
 )
 
 
-class CableTerminationSerializer(serializers.ModelSerializer):
+class CableTerminationModelSerializerMixin(serializers.ModelSerializer):
     cable_peer_type = serializers.SerializerMethodField(read_only=True)
     cable_peer = serializers.SerializerMethodField(read_only=True)
 
@@ -154,7 +155,13 @@ class CableTerminationSerializer(serializers.ModelSerializer):
         return None
 
 
-class ConnectedEndpointSerializer(ValidatedModelSerializer):
+# TODO: remove in 2.2
+@class_deprecated_in_favor_of(CableTerminationModelSerializerMixin)
+class CableTerminationSerializer(CableTerminationModelSerializerMixin):
+    pass
+
+
+class PathEndpointModelSerializerMixin(ValidatedModelSerializer):
     connected_endpoint_type = serializers.SerializerMethodField(read_only=True)
     connected_endpoint = serializers.SerializerMethodField(read_only=True)
     connected_endpoint_reachable = serializers.SerializerMethodField(read_only=True)
@@ -183,6 +190,12 @@ class ConnectedEndpointSerializer(ValidatedModelSerializer):
         return None
 
 
+# TODO: remove in 2.2
+@class_deprecated_in_favor_of(PathEndpointModelSerializerMixin)
+class ConnectedEndpointSerializer(PathEndpointModelSerializerMixin):
+    pass
+
+
 #
 # Regions/sites
 #
@@ -207,7 +220,7 @@ class RegionSerializer(NautobotModelSerializer):
         ]
 
 
-class SiteSerializer(NautobotModelSerializer, TaggedObjectSerializer, StatusModelSerializerMixin):
+class SiteSerializer(NautobotModelSerializer, TaggedModelSerializerMixin, StatusModelSerializerMixin):
     url = serializers.HyperlinkedIdentityField(view_name="dcim-api:site-detail")
     region = NestedRegionSerializer(required=False, allow_null=True)
     tenant = NestedTenantSerializer(required=False, allow_null=True)
@@ -283,7 +296,7 @@ class LocationTypeSerializer(NautobotModelSerializer):
         ]
 
 
-class LocationSerializer(NautobotModelSerializer, TaggedObjectSerializer, StatusModelSerializerMixin):
+class LocationSerializer(NautobotModelSerializer, TaggedModelSerializerMixin, StatusModelSerializerMixin):
     url = serializers.HyperlinkedIdentityField(view_name="dcim-api:location-detail")
     location_type = NestedLocationTypeSerializer()
     parent = NestedLocationSerializer(required=False, allow_null=True)
@@ -377,12 +390,12 @@ class RackGroupSerializer(NautobotModelSerializer):
         ]
         # Omit the UniqueTogetherValidator that would be automatically added to validate (site, slug). This
         # prevents slug from being interpreted as a required field.
-        # TODO: Remove if/when slug is globally unique. This would be a breaking change.
+        # 2.0 TODO: Remove if/when slug is globally unique. This would be a breaking change.
         validators = [UniqueTogetherValidator(queryset=RackGroup.objects.all(), fields=("site", "name"))]
 
     def validate(self, data):
         # Validate uniqueness of (site, slug) since we omitted the automatically-created validator from Meta.
-        # TODO: Remove if/when slug is globally unique. This would be a breaking change.
+        # 2.0 TODO: Remove if/when slug is globally unique. This would be a breaking change.
         if data.get("slug", None):
             validator = UniqueTogetherValidator(queryset=RackGroup.objects.all(), fields=("site", "slug"))
             validator(data, self)
@@ -409,7 +422,7 @@ class RackRoleSerializer(NautobotModelSerializer):
         ]
 
 
-class RackSerializer(NautobotModelSerializer, TaggedObjectSerializer, StatusModelSerializerMixin):
+class RackSerializer(NautobotModelSerializer, TaggedModelSerializerMixin, StatusModelSerializerMixin):
     url = serializers.HyperlinkedIdentityField(view_name="dcim-api:rack-detail")
     site = NestedSiteSerializer()
     location = NestedLocationSerializer(required=False, allow_null=True)
@@ -475,7 +488,7 @@ class RackUnitSerializer(serializers.Serializer):
     occupied = serializers.BooleanField(read_only=True)
 
 
-class RackReservationSerializer(NautobotModelSerializer, TaggedObjectSerializer):
+class RackReservationSerializer(NautobotModelSerializer, TaggedModelSerializerMixin):
     url = serializers.HyperlinkedIdentityField(view_name="dcim-api:rackreservation-detail")
     rack = NestedRackSerializer()
     user = NestedUserSerializer()
@@ -538,7 +551,7 @@ class ManufacturerSerializer(NautobotModelSerializer):
         ]
 
 
-class DeviceTypeSerializer(NautobotModelSerializer, TaggedObjectSerializer):
+class DeviceTypeSerializer(NautobotModelSerializer, TaggedModelSerializerMixin):
     url = serializers.HyperlinkedIdentityField(view_name="dcim-api:devicetype-detail")
     manufacturer = NestedManufacturerSerializer()
     subdevice_role = ChoiceField(choices=SubdeviceRoleChoices, allow_blank=True, required=False)
@@ -562,12 +575,12 @@ class DeviceTypeSerializer(NautobotModelSerializer, TaggedObjectSerializer):
         ]
         # Omit the UniqueTogetherValidator that would be automatically added to validate (manufacturer, slug). This
         # prevents slug from being interpreted as a required field.
-        # TODO: Remove if/when slug is globally unique. This would be a breaking change.
+        # 2.0 TODO: Remove if/when slug is globally unique. This would be a breaking change.
         validators = [UniqueTogetherValidator(queryset=DeviceType.objects.all(), fields=("manufacturer", "model"))]
 
     def validate(self, data):
         # Validate uniqueness of (manufacturer, slug) since we omitted the automatically-created validator from Meta.
-        # TODO: Remove if/when slug is globally unique. This would be a breaking change.
+        # 2.0 TODO: Remove if/when slug is globally unique. This would be a breaking change.
         if data.get("slug", None):
             validator = UniqueTogetherValidator(queryset=DeviceType.objects.all(), fields=("manufacturer", "slug"))
             validator(data, self)
@@ -768,7 +781,7 @@ class PlatformSerializer(NautobotModelSerializer):
         ]
 
 
-class DeviceSerializer(NautobotModelSerializer, TaggedObjectSerializer, StatusModelSerializerMixin):
+class DeviceSerializer(NautobotModelSerializer, TaggedModelSerializerMixin, StatusModelSerializerMixin):
     url = serializers.HyperlinkedIdentityField(view_name="dcim-api:device-detail")
     device_type = NestedDeviceTypeSerializer()
     device_role = NestedDeviceRoleSerializer()
@@ -867,9 +880,9 @@ class DeviceNAPALMSerializer(serializers.Serializer):
 
 class ConsoleServerPortSerializer(
     NautobotModelSerializer,
-    TaggedObjectSerializer,
-    CableTerminationSerializer,
-    ConnectedEndpointSerializer,
+    TaggedModelSerializerMixin,
+    CableTerminationModelSerializerMixin,
+    PathEndpointModelSerializerMixin,
 ):
     url = serializers.HyperlinkedIdentityField(view_name="dcim-api:consoleserverport-detail")
     device = NestedDeviceSerializer()
@@ -896,9 +909,9 @@ class ConsoleServerPortSerializer(
 
 class ConsolePortSerializer(
     NautobotModelSerializer,
-    TaggedObjectSerializer,
-    CableTerminationSerializer,
-    ConnectedEndpointSerializer,
+    TaggedModelSerializerMixin,
+    CableTerminationModelSerializerMixin,
+    PathEndpointModelSerializerMixin,
 ):
     url = serializers.HyperlinkedIdentityField(view_name="dcim-api:consoleport-detail")
     device = NestedDeviceSerializer()
@@ -925,9 +938,9 @@ class ConsolePortSerializer(
 
 class PowerOutletSerializer(
     NautobotModelSerializer,
-    TaggedObjectSerializer,
-    CableTerminationSerializer,
-    ConnectedEndpointSerializer,
+    TaggedModelSerializerMixin,
+    CableTerminationModelSerializerMixin,
+    PathEndpointModelSerializerMixin,
 ):
     url = serializers.HyperlinkedIdentityField(view_name="dcim-api:poweroutlet-detail")
     device = NestedDeviceSerializer()
@@ -958,9 +971,9 @@ class PowerOutletSerializer(
 
 class PowerPortSerializer(
     NautobotModelSerializer,
-    TaggedObjectSerializer,
-    CableTerminationSerializer,
-    ConnectedEndpointSerializer,
+    TaggedModelSerializerMixin,
+    CableTerminationModelSerializerMixin,
+    PathEndpointModelSerializerMixin,
 ):
     url = serializers.HyperlinkedIdentityField(view_name="dcim-api:powerport-detail")
     device = NestedDeviceSerializer()
@@ -987,12 +1000,31 @@ class PowerPortSerializer(
         ]
 
 
-# TODO: collapse this with InterfaceSerializer in 2.0.
+class InterfaceCommonSerializer(NautobotModelSerializer, TaggedModelSerializerMixin):
+    def validate(self, data):
+
+        # Validate many-to-many VLAN assignments
+        mode = data.get("mode", getattr(self.instance, "mode", None))
+
+        if mode != InterfaceModeChoices.MODE_TAGGED:
+            if data.get("tagged_vlans"):
+                raise serializers.ValidationError(
+                    {
+                        "tagged_vlans": f"Mode must be set to {InterfaceModeChoices.MODE_TAGGED} when specifying tagged_vlans"
+                    }
+                )
+
+            if data.get("tagged_vlans") != [] and self.instance and self.instance.tagged_vlans.exists():
+                raise serializers.ValidationError({"tagged_vlans": f"Clear tagged_vlans to set mode to {mode}"})
+
+        return super().validate(data)
+
+
+# 2.0 TODO: This becomes non-default in 2.0, removed in 2.2.
 class InterfaceSerializerVersion12(
-    NautobotModelSerializer,
-    TaggedObjectSerializer,
-    CableTerminationSerializer,
-    ConnectedEndpointSerializer,
+    InterfaceCommonSerializer,
+    CableTerminationModelSerializerMixin,
+    PathEndpointModelSerializerMixin,
 ):
     url = serializers.HyperlinkedIdentityField(view_name="dcim-api:interface-detail")
     device = NestedDeviceSerializer()
@@ -1057,16 +1089,6 @@ class InterfaceSerializerVersion12(
                 )
 
         # Validate many-to-many VLAN assignments
-        mode = data.get("mode", getattr(self.instance, "mode", None))
-        has_tagged_vlans = data.get("tagged_vlans", False)
-        if not has_tagged_vlans and self.instance and self.instance.tagged_vlans.exists():
-            has_tagged_vlans = True
-
-        if has_tagged_vlans and mode != InterfaceModeChoices.MODE_TAGGED:
-            raise serializers.ValidationError(
-                {"tagged_vlans": f"Mode must be set to {InterfaceModeChoices.MODE_TAGGED} when specifying tagged_vlans"}
-            )
-
         device = self.instance.device if self.instance else data.get("device")
         for vlan in data.get("tagged_vlans", []):
             if vlan.site not in [device.site, None]:
@@ -1087,7 +1109,7 @@ class InterfaceSerializer(InterfaceSerializerVersion12, StatusModelSerializerMix
         fields.insert(4, "status")
 
 
-class RearPortSerializer(NautobotModelSerializer, TaggedObjectSerializer, CableTerminationSerializer):
+class RearPortSerializer(NautobotModelSerializer, TaggedModelSerializerMixin, CableTerminationModelSerializerMixin):
     url = serializers.HyperlinkedIdentityField(view_name="dcim-api:rearport-detail")
     device = NestedDeviceSerializer()
     type = ChoiceField(choices=PortTypeChoices)
@@ -1121,7 +1143,7 @@ class FrontPortRearPortSerializer(WritableNestedSerializer):
         fields = ["id", "url", "name", "label"]
 
 
-class FrontPortSerializer(NautobotModelSerializer, TaggedObjectSerializer, CableTerminationSerializer):
+class FrontPortSerializer(NautobotModelSerializer, TaggedModelSerializerMixin, CableTerminationModelSerializerMixin):
     url = serializers.HyperlinkedIdentityField(view_name="dcim-api:frontport-detail")
     device = NestedDeviceSerializer()
     type = ChoiceField(choices=PortTypeChoices)
@@ -1145,7 +1167,7 @@ class FrontPortSerializer(NautobotModelSerializer, TaggedObjectSerializer, Cable
         ]
 
 
-class DeviceBaySerializer(NautobotModelSerializer, TaggedObjectSerializer):
+class DeviceBaySerializer(NautobotModelSerializer, TaggedModelSerializerMixin):
     url = serializers.HyperlinkedIdentityField(view_name="dcim-api:devicebay-detail")
     device = NestedDeviceSerializer()
     installed_device = NestedDeviceSerializer(required=False, allow_null=True)
@@ -1162,7 +1184,7 @@ class DeviceBaySerializer(NautobotModelSerializer, TaggedObjectSerializer):
         ]
 
 
-class DeviceRedundancyGroupSerializer(NautobotModelSerializer, TaggedObjectSerializer, StatusModelSerializerMixin):
+class DeviceRedundancyGroupSerializer(NautobotModelSerializer, TaggedModelSerializerMixin, StatusModelSerializerMixin):
     url = serializers.HyperlinkedIdentityField(view_name="dcim-api:deviceredundancygroup-detail")
     failover_strategy = ChoiceField(choices=DeviceRedundancyGroupFailoverStrategyChoices)
 
@@ -1184,7 +1206,7 @@ class DeviceRedundancyGroupSerializer(NautobotModelSerializer, TaggedObjectSeria
 #
 
 
-class InventoryItemSerializer(NautobotModelSerializer, TaggedObjectSerializer):
+class InventoryItemSerializer(NautobotModelSerializer, TaggedModelSerializerMixin):
     url = serializers.HyperlinkedIdentityField(view_name="dcim-api:inventoryitem-detail")
     device = NestedDeviceSerializer()
     # Provide a default value to satisfy UniqueTogetherValidator
@@ -1215,7 +1237,7 @@ class InventoryItemSerializer(NautobotModelSerializer, TaggedObjectSerializer):
 #
 
 
-class CableSerializer(NautobotModelSerializer, TaggedObjectSerializer, StatusModelSerializerMixin):
+class CableSerializer(NautobotModelSerializer, TaggedModelSerializerMixin, StatusModelSerializerMixin):
     url = serializers.HyperlinkedIdentityField(view_name="dcim-api:cable-detail")
     termination_a_type = ContentTypeField(queryset=ContentType.objects.filter(CABLE_TERMINATION_MODELS))
     termination_b_type = ContentTypeField(queryset=ContentType.objects.filter(CABLE_TERMINATION_MODELS))
@@ -1367,7 +1389,7 @@ class InterfaceConnectionSerializer(ValidatedModelSerializer):
 #
 
 
-class VirtualChassisSerializer(NautobotModelSerializer, TaggedObjectSerializer):
+class VirtualChassisSerializer(NautobotModelSerializer, TaggedModelSerializerMixin):
     url = serializers.HyperlinkedIdentityField(view_name="dcim-api:virtualchassis-detail")
     master = NestedDeviceSerializer(required=False, allow_null=True)
     member_count = serializers.IntegerField(read_only=True)
@@ -1388,7 +1410,7 @@ class VirtualChassisSerializer(NautobotModelSerializer, TaggedObjectSerializer):
 #
 
 
-class PowerPanelSerializer(NautobotModelSerializer, TaggedObjectSerializer):
+class PowerPanelSerializer(NautobotModelSerializer, TaggedModelSerializerMixin):
     url = serializers.HyperlinkedIdentityField(view_name="dcim-api:powerpanel-detail")
     site = NestedSiteSerializer()
     location = NestedLocationSerializer(required=False, allow_null=True)
@@ -1409,9 +1431,9 @@ class PowerPanelSerializer(NautobotModelSerializer, TaggedObjectSerializer):
 
 class PowerFeedSerializer(
     NautobotModelSerializer,
-    TaggedObjectSerializer,
-    CableTerminationSerializer,
-    ConnectedEndpointSerializer,
+    TaggedModelSerializerMixin,
+    CableTerminationModelSerializerMixin,
+    PathEndpointModelSerializerMixin,
     StatusModelSerializerMixin,
 ):
     url = serializers.HyperlinkedIdentityField(view_name="dcim-api:powerfeed-detail")

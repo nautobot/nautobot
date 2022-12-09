@@ -2278,7 +2278,7 @@ class CableTestCase(
         # interface_ct = ContentType.objects.get_for_model(Interface)
         cls.form_data = {
             # Changing terminations not supported when editing an existing Cable
-            # TODO(John): Revisit this as it is likely an actual bug allowing the terminations to be changed after creation.
+            # FIXME(John): Revisit this as it is likely an actual bug allowing the terminations to be changed after creation.
             # 'termination_a_type': interface_ct.pk,
             # 'termination_a_id': interfaces[0].pk,
             # 'termination_b_type': interface_ct.pk,
@@ -2376,6 +2376,12 @@ class ConsoleConnectionsTestCase(ViewTestCases.ListObjectsViewTestCase):
     def _get_base_url(self):
         return "dcim:console_connections_{}"
 
+    def get_list_url(self):
+        return "/dcim/console-connections/"
+
+    def get_title(self):
+        return "Console Connections"
+
     model = ConsolePort
     filterset = ConsoleConnectionFilterSet
 
@@ -2426,6 +2432,12 @@ class PowerConnectionsTestCase(ViewTestCases.ListObjectsViewTestCase):
     """
     Test the PowerConnectionsListView.
     """
+
+    def get_list_url(self):
+        return "/dcim/power-connections/"
+
+    def get_title(self):
+        return "Power Connections"
 
     def _get_base_url(self):
         return "dcim:power_connections_{}"
@@ -2488,6 +2500,12 @@ class InterfaceConnectionsTestCase(ViewTestCases.ListObjectsViewTestCase):
 
     def _get_base_url(self):
         return "dcim:interface_connections_{}"
+
+    def get_list_url(self):
+        return "/dcim/interface-connections/"
+
+    def get_title(self):
+        return "Interface Connections"
 
     model = Interface
     filterset = InterfaceConnectionFilterSet

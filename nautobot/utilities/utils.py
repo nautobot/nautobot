@@ -1,4 +1,4 @@
-from collections import namedtuple, OrderedDict
+from collections import OrderedDict, namedtuple
 import copy
 import datetime
 from decimal import Decimal
@@ -21,13 +21,13 @@ from django.template import engines
 from django.utils.module_loading import import_string
 from django.utils.text import slugify
 from django.utils.tree import Node
-from django_filters import BooleanFilter, DateFilter, DateTimeFilter, filters, NumberFilter, TimeFilter
+import django_filters
+from django_filters import BooleanFilter, DateFilter, DateTimeFilter, NumberFilter, TimeFilter, filters
 from django_filters.utils import verbose_lookup_expr
 from taggit.managers import _TaggableManager
 
 from nautobot.dcim import choices
 from nautobot.utilities import constants, exceptions
-
 
 # Check if field name contains a lookup expr
 # e.g `name__ic` has lookup expr `ic (icontains)` while `name` has no lookup expr
@@ -804,10 +804,10 @@ def get_filterset_parameter_form_field(model, parameter):
         DatePicker,
         DateTimePicker,
         DynamicModelMultipleChoiceField,
+        MultipleContentTypeField,
         StaticSelect2,
         StaticSelect2Multiple,
         TimePicker,
-        MultipleContentTypeField,
     )
 
     filterset_class = get_filterset_for_model(model)
@@ -923,9 +923,9 @@ def convert_querydict_to_factory_formset_acceptable_querydict(request_querydict,
 
 
 def is_single_choice_field(filterset_class, field_name):
-    # Some filter parameters do not accept multiple values, e.g DateTime fields, boolean fields, q field etc.
+    # Some filter parameters do not accept multiple values, e.g DateTime, Boolean, Int fields and the q field, etc.
     field = get_filterset_field(filterset_class, field_name)
-    return isinstance(field, (DateFilter, DateTimeFilter, TimeFilter, BooleanFilter)) or field_name == "q"
+    return not isinstance(field, django_filters.MultipleChoiceFilter)
 
 
 def get_filterable_params_from_filter_params(filter_params, non_filter_params, filterset_class):

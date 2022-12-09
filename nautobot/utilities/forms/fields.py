@@ -20,7 +20,6 @@ from nautobot.utilities import choices as utilities_choices
 from nautobot.utilities import forms, utils, validators
 from nautobot.utilities.forms import widgets
 
-
 __all__ = (
     "CommentField",
     "CSVChoiceField",
@@ -467,7 +466,7 @@ class DynamicModelChoiceMixin:
     :param brief_mode: Use the "brief" format (?brief=true) when making API requests (default)
     """
 
-    filter = django_filters.ModelChoiceFilter  # TODO can we change this? pylint: disable=redefined-builtin
+    filter = django_filters.ModelChoiceFilter  # 2.0 TODO(Glenn): can we rename this? pylint: disable=redefined-builtin
     widget = widgets.APISelect
 
     def __init__(

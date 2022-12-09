@@ -1,11 +1,13 @@
+from contextlib import contextmanager
 import time
 import uuid
-from contextlib import contextmanager
 
 from celery.contrib.testing.worker import start_worker
 from django.apps import apps
 from django.contrib.auth import get_user_model
-from django.test import Client, tag, TransactionTestCase as _TransactionTestCase
+from django.test import Client
+from django.test import TransactionTestCase as _TransactionTestCase
+from django.test import tag
 
 from nautobot.core.celery import app
 from nautobot.extras.context_managers import web_request_context
@@ -24,13 +26,7 @@ from nautobot.utilities.testing.utils import (
     get_deletable_objects,
     post_data,
 )
-from nautobot.utilities.testing.views import (
-    TestCase,
-    ModelTestCase,
-    ModelViewTestCase,
-    ViewTestCases,
-)
-
+from nautobot.utilities.testing.views import ModelTestCase, ModelViewTestCase, TestCase, ViewTestCases
 
 __all__ = (
     "APITestCase",

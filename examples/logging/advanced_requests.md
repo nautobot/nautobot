@@ -100,11 +100,11 @@ LOGGING = {
 
 ## Add User Information to ALL Requests
 
-Unfortunately, when running Nautobot behind uWSGI only failed requests are logged through the django.request logger.  We can get more information
+Unfortunately, when running Nautobot behind uWSGI only failed requests are logged through the django.request logger. We can get more information
 from all requests by installing the [`django-request-logging`](https://github.com/Rhumbix/django-request-logging) package.
 
 ```no-highlight
-$ sudo -u nautobot pip install django-request-logging
+sudo -u nautobot pip install django-request-logging
 ```
 
 Add the following to `nautobot_config.py`:

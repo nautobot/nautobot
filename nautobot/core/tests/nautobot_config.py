@@ -30,8 +30,7 @@ SECRET_KEY = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
 # Use *different* redis_databases than the ones (0 and 1) used during non-automated-testing operations.
 CACHES["default"]["LOCATION"] = parse_redis_connection(redis_database=2)  # noqa: F405
 CACHEOPS_REDIS = parse_redis_connection(redis_database=3)
-
-CACHEOPS_ENABLED = False
+CACHEOPS_ENABLED = False  # 2.0 TODO(jathan): Remove me.
 
 # Testing storages within cli.py
 STORAGE_CONFIG = {

@@ -1094,7 +1094,11 @@ class LocationTypeFilterSetTestCase(FilterTestCases.NameSlugFilterTestCase):
     @classmethod
     def setUpTestData(cls):
         cls.lt1 = LocationType.objects.get(name="Building")
+        cls.lt1.description = "It's a building"
+        cls.lt1.validated_save()
         cls.lt2 = LocationType.objects.get(name="Floor")
+        cls.lt2.description = "It's a floor"
+        cls.lt2.validated_save()
 
     def test_description(self):
         params = {"description": [self.lt1.description, self.lt2.description]}
@@ -2494,7 +2498,7 @@ class PowerOutletTemplateTestCase(Mixins.ComponentTemplateMixin):
         )
 
     def test_feed_leg(self):
-        # TODO: Support filtering for multiple values
+        # 2.0 TODO: Support filtering for multiple values
         params = {"feed_leg": PowerOutletFeedLegChoices.FEED_LEG_A}
         self.assertQuerysetEqual(
             self.filterset(params, self.queryset).qs,
@@ -2515,7 +2519,7 @@ class InterfaceTemplateTestCase(Mixins.ComponentTemplateMixin):
     test_names = ["Interface 1", "Interface 2"]
 
     def test_type(self):
-        # TODO: Support filtering for multiple values
+        # 2.0 TODO: Support filtering for multiple values
         params = {"type": InterfaceTypeChoices.TYPE_1GE_FIXED}
         self.assertQuerysetEqual(
             self.filterset(params, self.queryset).qs,
@@ -2545,7 +2549,7 @@ class FrontPortTemplateTestCase(Mixins.ComponentTemplateMixin):
     test_names = ["Front Port 1", "Front Port 2"]
 
     def test_type(self):
-        # TODO: Support filtering for multiple values
+        # 2.0 TODO: Support filtering for multiple values
         params = {"type": PortTypeChoices.TYPE_8P8C}
         self.assertQuerysetEqual(
             self.filterset(params, self.queryset).qs,
@@ -2588,7 +2592,7 @@ class RearPortTemplateTestCase(Mixins.ComponentTemplateMixin):
         )
 
     def test_type(self):
-        # TODO: Support filtering for multiple values
+        # 2.0 TODO: Support filtering for multiple values
         params = {"type": PortTypeChoices.TYPE_8P8C}
         self.assertQuerysetEqual(
             self.filterset(params, self.queryset).qs,
@@ -3564,7 +3568,7 @@ class PowerOutletTestCase(FilterTestCases.FilterTestCase):
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
 
     def test_feed_leg(self):
-        # TODO: Support filtering for multiple values
+        # 2.0 TODO: Support filtering for multiple values
         params = {"feed_leg": PowerOutletFeedLegChoices.FEED_LEG_A}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 1)
 
@@ -4190,7 +4194,7 @@ class FrontPortTestCase(FilterTestCases.FilterTestCase):
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
 
     def test_type(self):
-        # TODO: Test for multiple values
+        # 2.0 TODO: Test for multiple values
         params = {"type": PortTypeChoices.TYPE_8P8C}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 1)
 
@@ -4309,7 +4313,7 @@ class RearPortTestCase(FilterTestCases.FilterTestCase):
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
 
     def test_type(self):
-        # TODO: Test for multiple values
+        # 2.0 TODO: Test for multiple values
         params = {"type": PortTypeChoices.TYPE_8P8C}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 3)
 
@@ -4558,7 +4562,7 @@ class InventoryItemTestCase(FilterTestCases.FilterTestCase):
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
 
     def test_discovered(self):
-        # TODO: Fix boolean value
+        # 2.0 TODO: Fix boolean value
         with self.subTest():
             params = {"discovered": True}
             self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
@@ -4591,7 +4595,7 @@ class InventoryItemTestCase(FilterTestCases.FilterTestCase):
             self.assertEqual(self.filterset(params, self.queryset).qs.count(), 4)
 
     def test_device(self):
-        # TODO: Allow multiple values
+        # 2.0 TODO: Allow multiple values
         device = Device.objects.first()
         with self.subTest():
             params = {"device_id": device.pk}

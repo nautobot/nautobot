@@ -9,7 +9,6 @@ from django.urls import get_script_prefix
 from nautobot.utilities import choices
 from nautobot.utilities.forms import utils
 
-
 __all__ = (
     "APISelect",
     "APISelectMultiple",
