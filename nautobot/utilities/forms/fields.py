@@ -734,12 +734,15 @@ class NumericArrayField(SimpleArrayField):
         return super().to_python(value)
 
 
-class MultiMatchModelMultipleChoiceField(django_filters.fields.ModelMultipleChoiceField):
+class MultiMatchModelMultipleChoiceField(DynamicModelChoiceMixin, django_filters.fields.ModelMultipleChoiceField):
     """
     Filter field to support matching on the PK *or* `to_field_name` fields (defaulting to `slug` if not specified).
 
     Raises ValidationError if none of the fields match the requested value.
     """
+
+    filter = django_filters.ModelMultipleChoiceFilter
+    widget = widgets.APISelectMultiple
 
     def __init__(self, *args, **kwargs):
         self.natural_key = kwargs.setdefault("to_field_name", "slug")

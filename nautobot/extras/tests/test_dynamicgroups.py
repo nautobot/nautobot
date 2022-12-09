@@ -23,8 +23,8 @@ from nautobot.extras.choices import DynamicGroupOperatorChoices
 from nautobot.extras.filters import DynamicGroupFilterSet, DynamicGroupMembershipFilterSet
 from nautobot.extras.models import DynamicGroup, DynamicGroupMembership, Status
 from nautobot.ipam.models import Prefix
-from nautobot.utilities.forms.fields import MultiValueCharField
-from nautobot.utilities.forms.widgets import MultiValueCharInput
+from nautobot.utilities.forms.fields import MultiMatchModelMultipleChoiceField, MultiValueCharField
+from nautobot.utilities.forms.widgets import APISelectMultiple, MultiValueCharInput
 from nautobot.utilities.testing import TestCase
 
 
@@ -414,6 +414,9 @@ class DynamicGroupModelTest(DynamicGroupTestBase):
         # See if a CharField is properly converted to a MultiValueCharField In DynamicGroupEditForm.
         self.assertIsInstance(fields["name"], MultiValueCharField)
         self.assertIsInstance(fields["name"].widget, MultiValueCharInput)
+        # See if a DynamicModelChoiceField is properly converted to a MultiMatchModelMultipleChoiceField
+        self.assertIsInstance(fields["rack"], MultiMatchModelMultipleChoiceField)
+        self.assertIsInstance(fields["rack"].widget, APISelectMultiple)
 
     def test_map_filter_fields_skip_missing(self):
         """
@@ -511,6 +514,7 @@ class DynamicGroupModelTest(DynamicGroupTestBase):
         self.assertNotEqual(filter_fields, {})
         self.assertNotIn("q", filter_fields)
         self.assertIn("name", filter_fields)
+        self.assertIn("rack", filter_fields)
 
     def test_generate_filter_form(self):
         """Test `DynamicGroup.generate_filter_form()`."""
