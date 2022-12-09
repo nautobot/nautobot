@@ -26,7 +26,6 @@ from nautobot.extras.models import (
     ConfigContextSchema,
     CustomField,
     CustomLink,
-    DynamicGroup,
     ExportTemplate,
     GitRepository,
     GraphQLQuery,
@@ -461,43 +460,6 @@ class CustomLinkTest(TestCase):
         self.assertEqual(response.status_code, 200)
         content = extract_page_body(response.content.decode(response.charset))
         self.assertIn(f"FOO {site.name} BAR", content, content)
-
-
-class DynamicGroupTestCase(
-    ViewTestCases.CreateObjectViewTestCase,
-    ViewTestCases.DeleteObjectViewTestCase,
-    ViewTestCases.EditObjectViewTestCase,
-    ViewTestCases.GetObjectViewTestCase,
-    ViewTestCases.GetObjectChangelogViewTestCase,
-    ViewTestCases.ListObjectsViewTestCase,
-    ViewTestCases.BulkDeleteObjectsViewTestCase,
-    # NOTE: This isn't using `ViewTestCases.PrimaryObjectViewTestCase` because bulk-import/edit
-    # views for DynamicGroup do not make sense at this time, primarily because `content_type` is
-    # immutable after create.
-):
-    model = DynamicGroup
-
-    @classmethod
-    def setUpTestData(cls):
-
-        content_type = ContentType.objects.get_for_model(Device)
-
-        # DynamicGroup objects to test.
-        DynamicGroup.objects.create(name="DG 1", slug="dg-1", content_type=content_type)
-        DynamicGroup.objects.create(name="DG 2", slug="dg-2", content_type=content_type)
-        DynamicGroup.objects.create(name="DG 3", slug="dg-3", content_type=content_type)
-
-        cls.form_data = {
-            "name": "new_dynamic_group",
-            "slug": "new-dynamic-group",
-            "description": "I am a new dynamic group object.",
-            "content_type": content_type.pk,
-            # Management form fields required for the dynamic formset
-            "dynamic_group_memberships-TOTAL_FORMS": "0",
-            "dynamic_group_memberships-INITIAL_FORMS": "1",
-            "dynamic_group_memberships-MIN_NUM_FORMS": "0",
-            "dynamic_group_memberships-MAX_NUM_FORMS": "1000",
-        }
 
 
 class ExportTemplateTestCase(

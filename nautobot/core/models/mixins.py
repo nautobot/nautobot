@@ -11,7 +11,7 @@ class DynamicGroupMixin:
     @property
     def dynamic_groups(self):
         """Return a `DynamicGroup` queryset for this instance."""
-        from nautobot.core.models.groups import DynamicGroup
+        from nautobot.core.models.dynamic_groups import DynamicGroup
 
         if not hasattr(self, "_dynamic_group_queryset"):
             queryset = DynamicGroup.objects.get_for_object(self)

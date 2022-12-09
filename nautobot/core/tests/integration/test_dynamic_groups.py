@@ -5,7 +5,7 @@ from nautobot.core.models.dynamic_groups import DynamicGroup
 from nautobot.dcim.models import Device
 from nautobot.utilities.testing.integration import SeleniumTestCase
 
-from . import create_test_device
+from nautobot.extras.tests.integration import create_test_device
 
 
 class DynamicGroupTestCase(SeleniumTestCase):

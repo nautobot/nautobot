@@ -34,7 +34,7 @@ from nautobot.dcim.filters import (
     SiteFilterSet,
 )
 from nautobot.extras.graphql.types import TagType  # noqa: F401
-from nautobot.core.models import DynamicGroup
+from nautobot.core.models.dynamic_groups import DynamicGroup
 
 
 class SiteType(gql_optimizer.OptimizedDjangoObjectType):
