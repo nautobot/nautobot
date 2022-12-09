@@ -1158,7 +1158,7 @@ class LocationFilterSetTestCase(FilterTestCases.NameSlugFilterTestCase, FilterTe
         )
 
     def test_parent(self):
-        parent = Location.objects.filter(location_type__name="Root").first()
+        parent = Location.objects.filter(location_type__name="Campus").first()
         params = {"parent": [parent.slug, parent.pk]}
         self.assertQuerysetEqualAndNotEmpty(
             self.filterset(params, self.queryset).qs, self.queryset.filter(parent=parent)
