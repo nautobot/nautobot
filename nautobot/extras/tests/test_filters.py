@@ -1269,7 +1269,7 @@ class RelationshipModelFilterSetTestCase(FilterTestCases.FilterTestCase):
 
     def test_regression_distinct_2963(self):
         """
-        Regression tests for issue #2963 u address `AssertionError`error when combining filtering on
+        Regression tests for issue #2963 to  address `AssertionError` error when combining filtering on
         relationships with concrete fields.
 
         Ref: https://github.com/nautobot/nautobot/issues/2963
