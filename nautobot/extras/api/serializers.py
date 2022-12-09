@@ -43,8 +43,6 @@ from nautobot.extras.models import (
     CustomField,
     CustomFieldChoice,
     CustomLink,
-    DynamicGroup,
-    DynamicGroupMembership,
     ExportTemplate,
     GitRepository,
     GraphQLQuery,
@@ -93,8 +91,6 @@ from .nested_serializers import (  # noqa: F401
     NestedConfigContextSerializer,
     NestedCustomFieldSerializer,
     NestedCustomLinkSerializer,
-    NestedDynamicGroupSerializer,
-    NestedDynamicGroupMembershipSerializer,
     NestedExportTemplateSerializer,
     NestedGitRepositorySerializer,
     NestedGraphQLQuerySerializer,
@@ -535,44 +531,6 @@ class CustomLinkSerializer(ValidatedModelSerializer, NotesSerializerMixin):
             "button_class",
             "new_window",
         )
-
-
-#
-# Dynamic Groups
-#
-
-
-class DynamicGroupSerializer(NautobotModelSerializer):
-    url = serializers.HyperlinkedIdentityField(view_name="extras-api:dynamicgroup-detail")
-    content_type = ContentTypeField(
-        queryset=ContentType.objects.filter(FeatureQuery("dynamic_groups").get_query()).order_by("app_label", "model"),
-    )
-    # Read-only because m2m is hard. Easier to just create # `DynamicGroupMemberships` explicitly
-    # using their own endpoint at /api/extras/dynamic-group-memberships/.
-    children = NestedDynamicGroupMembershipSerializer(source="dynamic_group_memberships", read_only=True, many=True)
-
-    class Meta:
-        model = DynamicGroup
-        fields = [
-            "url",
-            "name",
-            "slug",
-            "description",
-            "content_type",
-            "filter",
-            "children",
-        ]
-        extra_kwargs = {"filter": {"read_only": False}}
-
-
-class DynamicGroupMembershipSerializer(ValidatedModelSerializer):
-    url = serializers.HyperlinkedIdentityField(view_name="extras-api:dynamicgroupmembership-detail")
-    group = NestedDynamicGroupSerializer()
-    parent_group = NestedDynamicGroupSerializer()
-
-    class Meta:
-        model = DynamicGroupMembership
-        fields = ["url", "group", "parent_group", "operator", "weight"]
 
 
 #

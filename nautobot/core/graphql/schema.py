@@ -23,7 +23,7 @@ from nautobot.core.graphql.generators import (
     generate_schema_type,
     generate_null_choices_resolver,
 )
-from nautobot.core.graphql.types import ContentTypeType
+from nautobot.core.graphql.types import ContentTypeType, DynamicGroupType
 from nautobot.dcim.graphql.types import (
     CableType,
     CablePathType,
@@ -42,7 +42,7 @@ from nautobot.dcim.graphql.types import (
 from nautobot.extras.registry import registry
 from nautobot.extras.models import ComputedField, CustomField, Relationship
 from nautobot.extras.choices import CustomFieldTypeChoices, RelationshipSideChoices
-from nautobot.extras.graphql.types import TagType, DynamicGroupType
+from nautobot.extras.graphql.types import TagType
 from nautobot.ipam.graphql.types import AggregateType, IPAddressType, PrefixType
 from nautobot.virtualization.graphql.types import VirtualMachineType, VMInterfaceType
 
@@ -51,6 +51,7 @@ logger = logging.getLogger("nautobot.graphql.schema")
 registry["graphql_types"] = OrderedDict()
 registry["graphql_types"]["circuits.circuittermination"] = CircuitTerminationType
 registry["graphql_types"]["contenttypes.contenttype"] = ContentTypeType
+registry["graphql_types"]["core.dynamicgroup"] = DynamicGroupType
 registry["graphql_types"]["dcim.cable"] = CableType
 registry["graphql_types"]["dcim.cablepath"] = CablePathType
 registry["graphql_types"]["dcim.consoleport"] = ConsolePortType
@@ -65,7 +66,6 @@ registry["graphql_types"]["dcim.rack"] = RackType
 registry["graphql_types"]["dcim.rearport"] = RearPortType
 registry["graphql_types"]["dcim.site"] = SiteType
 registry["graphql_types"]["extras.tag"] = TagType
-registry["graphql_types"]["extras.dynamicgroup"] = DynamicGroupType
 registry["graphql_types"]["ipam.aggregate"] = AggregateType
 registry["graphql_types"]["ipam.ipaddress"] = IPAddressType
 registry["graphql_types"]["ipam.prefix"] = PrefixType

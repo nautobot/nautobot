@@ -5,6 +5,7 @@ import django.core.validators
 from django.db import migrations, models
 import django.db.models.deletion
 import nautobot.core.fields
+import nautobot.core.models.mixins
 import nautobot.extras.models.mixins
 import nautobot.extras.models.statuses
 import taggit.managers
@@ -75,7 +76,7 @@ class Migration(migrations.Migration):
             },
             bases=(
                 models.Model,
-                nautobot.extras.models.mixins.DynamicGroupMixin,
+                nautobot.core.models.mixins.DynamicGroupMixin,
                 nautobot.extras.models.mixins.NotesMixin,
             ),
         ),

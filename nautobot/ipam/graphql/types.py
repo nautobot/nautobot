@@ -2,7 +2,7 @@ import graphene
 import graphene_django_optimizer as gql_optimizer
 
 from nautobot.dcim.graphql.types import InterfaceType
-from nautobot.extras.models import DynamicGroup
+from nautobot.core.models.dynamic_groups import DynamicGroup
 from nautobot.ipam import models, filters
 from nautobot.extras.graphql.types import TagType  # noqa: F401
 from nautobot.virtualization.graphql.types import VMInterfaceType
@@ -42,7 +42,7 @@ class IPAddressType(gql_optimizer.OptimizedDjangoObjectType):
     interface = graphene.Field("nautobot.dcim.graphql.types.InterfaceType")
     vminterface = graphene.Field("nautobot.virtualization.graphql.types.VMInterfaceType")
     nat_outside = graphene.Field(lambda: IPAddressType)
-    dynamic_groups = graphene.List("nautobot.extras.graphql.types.DynamicGroupType")
+    dynamic_groups = graphene.List("nautobot.core.graphql.types.DynamicGroupType")
 
     class Meta:
         model = models.IPAddress
@@ -80,7 +80,7 @@ class PrefixType(gql_optimizer.OptimizedDjangoObjectType):
 
     prefix = graphene.String()
     family = graphene.Int()
-    dynamic_groups = graphene.List("nautobot.extras.graphql.types.DynamicGroupType")
+    dynamic_groups = graphene.List("nautobot.core.graphql.types.DynamicGroupType")
 
     class Meta:
         model = models.Prefix

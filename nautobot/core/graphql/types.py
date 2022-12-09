@@ -2,6 +2,8 @@ from django.contrib.contenttypes.models import ContentType
 
 import graphene_django_optimizer as gql_optimizer
 
+from nautobot.core import models, filters
+
 
 class ContentTypeType(gql_optimizer.OptimizedDjangoObjectType):
     """
@@ -12,3 +14,11 @@ class ContentTypeType(gql_optimizer.OptimizedDjangoObjectType):
 
     class Meta:
         model = ContentType
+
+
+class DynamicGroupType(gql_optimizer.OptimizedDjangoObjectType):
+    """Graphql Type object for `DynamicGroup` model."""
+
+    class Meta:
+        model = models.DynamicGroup
+        filterset_class = filters.DynamicGroupFilterSet

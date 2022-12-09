@@ -207,7 +207,7 @@ tests:
     execution_time: 0.506929
   - name: >-
       test_list_objects_filtered
-      (nautobot.extras.tests.test_views.DynamicGroupTestCase)
+      (nautobot.core.tests.test_views.DynamicGroupTestCase)
     execution_time: 0.500641
   - name: >-
       test_bulk_edit_objects_with_permission
@@ -231,7 +231,7 @@ tests:
     execution_time: 0.461275
   - name: >-
       test_get_object_with_constrained_permission
-      (nautobot.extras.tests.test_views.DynamicGroupTestCase)
+      (nautobot.core.tests.test_views.DynamicGroupTestCase)
     execution_time: 0.458311
   - name: >-
       test_bulk_edit_objects_with_constrained_permission
@@ -271,7 +271,7 @@ tests:
     execution_time: 0.420225
   - name: >-
       test_create_object_with_constrained_permission
-      (nautobot.extras.tests.test_views.DynamicGroupTestCase)
+      (nautobot.core.tests.test_views.DynamicGroupTestCase)
     execution_time: 0.415647
   - name: >-
       test_bulk_import_objects_with_constrained_permission
@@ -327,7 +327,7 @@ tests:
     execution_time: 0.391538
   - name: >-
       test_edit_object_with_constrained_permission
-      (nautobot.extras.tests.test_views.DynamicGroupTestCase)
+      (nautobot.core.tests.test_views.DynamicGroupTestCase)
     execution_time: 0.389707
   - name: >-
       test_bulk_delete_objects_with_constrained_permission
@@ -503,7 +503,7 @@ tests:
     execution_time: 0.348992
   - name: >-
       test_list_objects_with_permission
-      (nautobot.extras.tests.test_views.DynamicGroupTestCase)
+      (nautobot.core.tests.test_views.DynamicGroupTestCase)
     execution_time: 0.347445
   - name: >-
       test_get_object_with_constrained_permission
@@ -665,7 +665,7 @@ tests:
     execution_time: 0.334425
   - name: >-
       test_has_advanced_tab
-      (nautobot.extras.tests.test_views.DynamicGroupTestCase)
+      (nautobot.core.tests.test_views.DynamicGroupTestCase)
     execution_time: 0.334289
   - name: >-
       test_bulk_import_objects_without_permission
@@ -949,7 +949,7 @@ tests:
     execution_time: 0.316096
   - name: >-
       test_edit_object_without_permission
-      (nautobot.extras.tests.test_views.DynamicGroupTestCase)
+      (nautobot.core.tests.test_views.DynamicGroupTestCase)
     execution_time: 0.316078
   - name: >-
       test_create_object_without_permission
@@ -997,7 +997,7 @@ tests:
     execution_time: 0.313936
   - name: >-
       test_get_object_with_permission
-      (nautobot.extras.tests.test_views.DynamicGroupTestCase)
+      (nautobot.core.tests.test_views.DynamicGroupTestCase)
     execution_time: 0.313861
   - name: >-
       test_delete_object_without_permission
@@ -1005,7 +1005,7 @@ tests:
     execution_time: 0.313493
   - name: >-
       test_edit_object_with_permission
-      (nautobot.extras.tests.test_views.DynamicGroupTestCase)
+      (nautobot.core.tests.test_views.DynamicGroupTestCase)
     execution_time: 0.313257
   - name: >-
       test_delete_object_without_permission
@@ -1469,7 +1469,7 @@ tests:
     execution_time: 0.298652
   - name: >-
       test_delete_object_without_permission
-      (nautobot.extras.tests.test_views.DynamicGroupTestCase)
+      (nautobot.core.tests.test_views.DynamicGroupTestCase)
     execution_time: 0.2986
   - name: >-
       test_create_object_without_permission
@@ -2191,7 +2191,7 @@ tests:
     execution_time: 0.2712
   - name: >-
       test_create_object_without_permission
-      (nautobot.extras.tests.test_views.DynamicGroupTestCase)
+      (nautobot.core.tests.test_views.DynamicGroupTestCase)
     execution_time: 0.270961
   - name: >-
       test_delete_object_without_permission
@@ -2223,7 +2223,7 @@ tests:
     execution_time: 0.267753
   - name: >-
       test_list_objects_with_constrained_permission
-      (nautobot.extras.tests.test_views.DynamicGroupTestCase)
+      (nautobot.core.tests.test_views.DynamicGroupTestCase)
     execution_time: 0.267359
   - name: >-
       test_edit_object_with_constrained_permission
@@ -2367,7 +2367,7 @@ tests:
     execution_time: 0.25665
   - name: >-
       test_list_objects_unknown_filter_no_strict_filtering
-      (nautobot.extras.tests.test_views.DynamicGroupTestCase)
+      (nautobot.core.tests.test_views.DynamicGroupTestCase)
     execution_time: 0.256274
   - name: >-
       test_bulk_edit_objects_with_constrained_permission
@@ -2843,7 +2843,7 @@ tests:
     execution_time: 0.229319
   - name: >-
       test_list_objects_anonymous
-      (nautobot.extras.tests.test_views.DynamicGroupTestCase)
+      (nautobot.core.tests.test_views.DynamicGroupTestCase)
     execution_time: 0.229283
   - name: >-
       test_bulk_import_objects_with_constrained_permission
@@ -3275,7 +3275,7 @@ tests:
     execution_time: 0.21221
   - name: >-
       test_get_object_anonymous
-      (nautobot.extras.tests.test_views.DynamicGroupTestCase)
+      (nautobot.core.tests.test_views.DynamicGroupTestCase)
     execution_time: 0.212071
   - name: >-
       test_list_objects_with_permission
@@ -3783,7 +3783,7 @@ tests:
     execution_time: 0.196171
   - name: >-
       test_create_object_with_permission
-      (nautobot.extras.tests.test_views.DynamicGroupTestCase)
+      (nautobot.core.tests.test_views.DynamicGroupTestCase)
     execution_time: 0.196003
   - name: >-
       test_bulk_delete_objects_with_constrained_permission
@@ -4317,7 +4317,7 @@ tests:
     execution_time: 0.181985
   - name: >-
       test_delete_object_with_constrained_permission
-      (nautobot.extras.tests.test_views.DynamicGroupTestCase)
+      (nautobot.core.tests.test_views.DynamicGroupTestCase)
     execution_time: 0.181966
   - name: >-
       test_bulk_import_objects_with_permission
@@ -5149,7 +5149,7 @@ tests:
     execution_time: 0.165543
   - name: >-
       test_bulk_delete_objects_without_permission
-      (nautobot.extras.tests.test_views.DynamicGroupTestCase)
+      (nautobot.core.tests.test_views.DynamicGroupTestCase)
     execution_time: 0.165539
   - name: >-
       test_list_objects_without_permission
@@ -5241,7 +5241,7 @@ tests:
     execution_time: 0.164781
   - name: >-
       test_get_object_without_permission
-      (nautobot.extras.tests.test_views.DynamicGroupTestCase)
+      (nautobot.core.tests.test_views.DynamicGroupTestCase)
     execution_time: 0.164775
   - name: >-
       test_get_object_without_permission
@@ -5461,7 +5461,7 @@ tests:
     execution_time: 0.163151
   - name: >-
       test_list_objects_without_permission
-      (nautobot.extras.tests.test_views.DynamicGroupTestCase)
+      (nautobot.core.tests.test_views.DynamicGroupTestCase)
     execution_time: 0.163121
   - name: >-
       test_bulk_delete_objects_without_permission
@@ -5969,7 +5969,7 @@ tests:
     execution_time: 0.146049
   - name: >-
       test_get_object_changelog
-      (nautobot.extras.tests.test_views.DynamicGroupTestCase)
+      (nautobot.core.tests.test_views.DynamicGroupTestCase)
     execution_time: 0.145966
   - name: >-
       test_list_objects_unknown_filter_no_strict_filtering
@@ -6859,7 +6859,7 @@ tests:
     execution_time: 0.115492
   - name: >-
       test_bulk_delete_objects_with_constrained_permission
-      (nautobot.extras.tests.test_views.DynamicGroupTestCase)
+      (nautobot.core.tests.test_views.DynamicGroupTestCase)
     execution_time: 0.115432
   - name: >-
       test_list_objects_unknown_filter_no_strict_filtering
@@ -7255,7 +7255,7 @@ tests:
     execution_time: 0.107789
   - name: >-
       test_list_objects_unknown_filter_strict_filtering
-      (nautobot.extras.tests.test_views.DynamicGroupTestCase)
+      (nautobot.core.tests.test_views.DynamicGroupTestCase)
     execution_time: 0.107774
   - name: >-
       test_list_objects_filtered
@@ -7425,7 +7425,7 @@ tests:
     execution_time: 0.103729
   - name: >-
       test_delete_object_with_permission
-      (nautobot.extras.tests.test_views.DynamicGroupTestCase)
+      (nautobot.core.tests.test_views.DynamicGroupTestCase)
     execution_time: 0.103693
   - name: >-
       test_delete_object_with_permission
@@ -8307,7 +8307,7 @@ tests:
     execution_time: 0.080606
   - name: >-
       test_bulk_delete_objects_with_permission
-      (nautobot.extras.tests.test_views.DynamicGroupTestCase)
+      (nautobot.core.tests.test_views.DynamicGroupTestCase)
     execution_time: 0.080137
   - name: >-
       test_bulk_delete_objects_with_permission
@@ -8875,7 +8875,7 @@ tests:
     execution_time: 0.01267
   - name: >-
       test_slug_not_modified
-      (nautobot.extras.tests.test_views.DynamicGroupTestCase)
+      (nautobot.core.tests.test_views.DynamicGroupTestCase)
     execution_time: 0.012632
   - name: test_slug_autocreation (nautobot.dcim.tests.test_views.PowerPanelTestCase)
     execution_time: 0.012614
@@ -8887,7 +8887,7 @@ tests:
     execution_time: 0.012561
   - name: >-
       test_slug_autocreation
-      (nautobot.extras.tests.test_views.DynamicGroupTestCase)
+      (nautobot.core.tests.test_views.DynamicGroupTestCase)
     execution_time: 0.012541
   - name: test_slug_autocreation (nautobot.dcim.tests.test_views.RackGroupTestCase)
     execution_time: 0.012416

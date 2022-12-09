@@ -37,8 +37,6 @@ from nautobot.extras.models import (
     CustomField,
     CustomFieldChoice,
     CustomLink,
-    DynamicGroup,
-    DynamicGroupMembership,
     ExportTemplate,
     GitRepository,
     GraphQLQuery,
@@ -93,8 +91,6 @@ __all__ = (
     "CustomFieldModelFilterSet",
     "CustomFieldModelFilterSetMixin",
     "CustomLinkFilterSet",
-    "DynamicGroupFilterSet",
-    "DynamicGroupMembershipFilterSet",
     "ExportTemplateFilterSet",
     "GitRepositoryFilterSet",
     "GraphQLQueryFilterSet",
@@ -434,52 +430,6 @@ class CustomLinkFilterSet(BaseFilterSet):
             "button_class",
             "new_window",
         )
-
-
-#
-# Dynamic Groups
-#
-
-
-class DynamicGroupFilterSet(NautobotFilterSet):
-    q = SearchFilter(
-        filter_predicates={
-            "name": "icontains",
-            "slug": "icontains",
-            "description": "icontains",
-            "content_type__app_label": "icontains",
-            "content_type__model": "icontains",
-        },
-    )
-    content_type = ContentTypeMultipleChoiceFilter(choices=FeatureQuery("dynamic_groups").get_choices, conjoined=False)
-
-    class Meta:
-        model = DynamicGroup
-        fields = ("id", "name", "slug", "description")
-
-
-class DynamicGroupMembershipFilterSet(NautobotFilterSet):
-    q = SearchFilter(
-        filter_predicates={
-            "operator": "icontains",
-            "group__name": "icontains",
-            "group__slug": "icontains",
-            "parent_group__name": "icontains",
-            "parent_group__slug": "icontains",
-        },
-    )
-    group = NaturalKeyOrPKMultipleChoiceFilter(
-        queryset=DynamicGroup.objects.all(),
-        label="Group (slug or ID)",
-    )
-    parent_group = NaturalKeyOrPKMultipleChoiceFilter(
-        queryset=DynamicGroup.objects.all(),
-        label="Parent Group (slug or ID)",
-    )
-
-    class Meta:
-        model = DynamicGroupMembership
-        fields = ("id", "group", "parent_group", "operator", "weight")
 
 
 #

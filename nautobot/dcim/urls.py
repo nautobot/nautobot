@@ -1,7 +1,8 @@
 from django.urls import path
 
+from nautobot.core.views.generic import ObjectDynamicGroupsView
 from nautobot.core.views.routers import NautobotUIViewSetRouter
-from nautobot.extras.views import ObjectChangeLogView, ObjectDynamicGroupsView, ObjectNotesView, ImageAttachmentEditView
+from nautobot.extras.views import ObjectChangeLogView, ObjectNotesView, ImageAttachmentEditView
 from nautobot.ipam.views import ServiceEditView
 from . import views
 from .models import (

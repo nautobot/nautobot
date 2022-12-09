@@ -1,7 +1,7 @@
 import graphene
 import graphene_django_optimizer as gql_optimizer
 
-from nautobot.extras.models import DynamicGroup
+from nautobot.core.models.dynamic_groups import DynamicGroup
 from nautobot.virtualization.models import VirtualMachine, VMInterface, Cluster
 from nautobot.virtualization.filters import VirtualMachineFilterSet, VMInterfaceFilterSet, ClusterFilterSet
 
@@ -9,7 +9,7 @@ from nautobot.virtualization.filters import VirtualMachineFilterSet, VMInterface
 class ClusterType(gql_optimizer.OptimizedDjangoObjectType):
     """GraphQL type object for Cluster model."""
 
-    dynamic_groups = graphene.List("nautobot.extras.graphql.types.DynamicGroupType")
+    dynamic_groups = graphene.List("nautobot.core.graphql.types.DynamicGroupType")
 
     class Meta:
         model = Cluster
@@ -22,7 +22,7 @@ class ClusterType(gql_optimizer.OptimizedDjangoObjectType):
 class VirtualMachineType(gql_optimizer.OptimizedDjangoObjectType):
     """GraphQL type object for VirtualMachine model."""
 
-    dynamic_groups = graphene.List("nautobot.extras.graphql.types.DynamicGroupType")
+    dynamic_groups = graphene.List("nautobot.core.graphql.types.DynamicGroupType")
 
     class Meta:
         model = VirtualMachine

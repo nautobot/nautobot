@@ -131,7 +131,7 @@ Dynamic Groups may now be nested in parent/child relationships. The Dynamic Grou
 !!! warning
     The default behavior of Dynamic Groups with an empty filter (`{}`) has been inverted to include all objects matching the content type by default instead of matching no objects. This was necessary to implement the progressive layering of child filters similarly to how we use filters to reduce desired objects from basic list view filters.
 
-Please see the greatly-expanded documentation on [Dynamic Groups](../models/extras/dynamicgroup.md) for more information.
+Please see the greatly-expanded documentation on [Dynamic Groups](../models/core/dynamicgroup.md) for more information.
 
 #### Renamed Mixin Classes ([#2135](https://github.com/nautobot/nautobot/issues/2135))
 

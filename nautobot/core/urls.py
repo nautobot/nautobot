@@ -1,69 +1,33 @@
-from django.conf import settings
-from django.conf.urls import include
 from django.urls import path
-from django.views.static import serve
 
-from nautobot.core.views import CustomGraphQLView, HomeView, StaticMediaFailureView, SearchView
-from nautobot.extras.plugins.urls import (
-    plugin_admin_patterns,
-    plugin_patterns,
-)
-from nautobot.users.views import LoginView, LogoutView
-from .admin import admin_site
+from nautobot.core.models.dynamic_groups import DynamicGroup
+from nautobot.core import views
+from nautobot.extras import views as extras_views
 
-
+app_name = "core"
 urlpatterns = [
-    # Base views
-    path("", HomeView.as_view(), name="home"),
-    path("search/", SearchView.as_view(), name="search"),
-    # Login/logout
-    path("login/", LoginView.as_view(), name="login"),
-    path("logout/", LogoutView.as_view(), name="logout"),
-    # Apps
-    path("circuits/", include("nautobot.circuits.urls")),
-    path("dcim/", include("nautobot.dcim.urls")),
-    path("extras/", include("nautobot.extras.urls")),
-    path("ipam/", include("nautobot.ipam.urls")),
-    path("tenancy/", include("nautobot.tenancy.urls")),
-    path("user/", include("nautobot.users.urls")),
-    path("virtualization/", include("nautobot.virtualization.urls")),
-    # API
-    path("api/", include("nautobot.core.api.urls")),
-    # GraphQL
-    path("graphql/", CustomGraphQLView.as_view(graphiql=True), name="graphql"),
-    # Serving static media in Django
-    path("media/<path:path>", serve, {"document_root": settings.MEDIA_ROOT}),
-    # Admin
-    path("admin/", admin_site.urls),
-    path("admin/background-tasks/", include("django_rq.urls")),
-    # Errors
-    path("media-failure/", StaticMediaFailureView.as_view(), name="media_failure"),
-    # Plugins
-    path("plugins/", include((plugin_patterns, "plugins"))),
-    path("admin/plugins/", include(plugin_admin_patterns)),
-    # Social auth/SSO
-    path("", include("social_django.urls", namespace="social")),
-    # django-health-check
-    path(r"health/", include("health_check.urls")),
-    # FileProxy attachments download/get URLs used in admin views only
-    path("files/", include("db_file_storage.urls")),
+    # Dynamic Groups
+    path("dynamic-groups/", views.DynamicGroupListView.as_view(), name="dynamicgroup_list"),
+    path("dynamic-groups/add/", views.DynamicGroupEditView.as_view(), name="dynamicgroup_add"),
+    path(
+        "dynamic-groups/delete/",
+        views.DynamicGroupBulkDeleteView.as_view(),
+        name="dynamicgroup_bulk_delete",
+    ),
+    path("dynamic-groups/<str:slug>/", views.DynamicGroupView.as_view(), name="dynamicgroup"),
+    path("dynamic-groups/<str:slug>/edit/", views.DynamicGroupEditView.as_view(), name="dynamicgroup_edit"),
+    path("dynamic-groups/<str:slug>/delete/", views.DynamicGroupDeleteView.as_view(), name="dynamicgroup_delete"),
+    path(
+        "dynamic-groups/<str:slug>/changelog/",
+        extras_views.ObjectChangeLogView.as_view(),
+        name="dynamicgroup_changelog",
+        kwargs={"model": DynamicGroup},
+    ),
+    path(
+        "dynamic-groups/<str:slug>/notes/",
+        extras_views.ObjectNotesView.as_view(),
+        name="dynamicgroup_notes",
+        kwargs={"model": DynamicGroup},
+    ),
 ]
 
-
-if settings.DEBUG:
-    try:
-        import debug_toolbar
-
-        urlpatterns += [
-            path("__debug__/", include(debug_toolbar.urls)),
-        ]
-    except ImportError:
-        pass
-
-if settings.METRICS_ENABLED:
-    urlpatterns += [
-        path("", include("django_prometheus.urls")),
-    ]
-
-handler404 = "nautobot.core.views.resource_not_found"
-handler500 = "nautobot.core.views.server_error"

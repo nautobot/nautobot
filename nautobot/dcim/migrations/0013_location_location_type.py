@@ -4,7 +4,7 @@ import django.core.serializers.json
 from django.db import migrations, models
 import django.db.models.deletion
 import nautobot.core.fields
-import nautobot.extras.models.mixins
+import nautobot.core.models.mixins
 import nautobot.extras.models.statuses
 import nautobot.extras.utils
 import nautobot.utilities.fields
@@ -66,7 +66,7 @@ class Migration(migrations.Migration):
             options={
                 "ordering": ("name",),
             },
-            bases=(models.Model, nautobot.extras.models.mixins.DynamicGroupMixin),
+            bases=(models.Model, nautobot.core.models.mixins.DynamicGroupMixin),
         ),
         migrations.CreateModel(
             name="Location",
@@ -151,7 +151,7 @@ class Migration(migrations.Migration):
             options={
                 "ordering": ("_name",),
             },
-            bases=(models.Model, nautobot.extras.models.mixins.DynamicGroupMixin),
+            bases=(models.Model, nautobot.core.models.mixins.DynamicGroupMixin),
         ),
         migrations.AddField(
             model_name="device",

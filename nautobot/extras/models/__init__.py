@@ -2,7 +2,6 @@ from .change_logging import ChangeLoggedModel, ObjectChange
 from .statuses import Status, StatusField, StatusModel
 from .customfields import ComputedField, CustomField, CustomFieldChoice, CustomFieldModel
 from .datasources import GitRepository
-from .groups import DynamicGroup, DynamicGroupMembership
 from .jobs import (
     Job,
     JobHook,
@@ -40,8 +39,6 @@ __all__ = (
     "CustomFieldChoice",
     "CustomFieldModel",
     "CustomLink",
-    "DynamicGroup",
-    "DynamicGroupMembership",
     "ExportTemplate",
     "FileAttachment",
     "FileProxy",

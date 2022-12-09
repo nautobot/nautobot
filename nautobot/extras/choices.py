@@ -97,23 +97,6 @@ class CustomLinkButtonClassChoices(ChoiceSet):
 
 
 #
-# Dynamic Groups
-#
-
-
-class DynamicGroupOperatorChoices(ChoiceSet):
-    OPERATOR_UNION = "union"
-    OPERATOR_INTERSECTION = "intersection"
-    OPERATOR_DIFFERENCE = "difference"
-
-    CHOICES = (
-        (OPERATOR_UNION, "Include (OR)"),
-        (OPERATOR_INTERSECTION, "Restrict (AND)"),
-        (OPERATOR_DIFFERENCE, "Exclude (NOT)"),
-    )
-
-
-#
 # Jobs
 #
 

@@ -24,6 +24,14 @@ from nautobot.extras.registry import registry
 from nautobot.extras.forms import GraphQLQueryForm
 from nautobot.utilities.config import get_settings_or_config
 
+from .dynamic_groups import (
+    DynamicGroupBulkDeleteView,
+    DynamicGroupDeleteView,
+    DynamicGroupEditView,
+    DynamicGroupListView,
+    DynamicGroupView,
+)
+
 
 class HomeView(AccessMixin, TemplateView):
     template_name = "home.html"

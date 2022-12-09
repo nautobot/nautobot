@@ -1,6 +1,7 @@
 from django.urls import path
 
-from nautobot.extras.views import ObjectChangeLogView, ObjectDynamicGroupsView, ObjectNotesView
+from nautobot.core.views.generic import ObjectDynamicGroupsView
+from nautobot.extras.views import ObjectChangeLogView, ObjectNotesView
 from nautobot.ipam.views import ServiceEditView
 from . import views
 from .models import Cluster, ClusterGroup, ClusterType, VirtualMachine, VMInterface

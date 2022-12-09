@@ -12,10 +12,10 @@ from django.urls import reverse
 from django.utils.functional import cached_property
 
 from nautobot.core.fields import AutoSlugField
+from nautobot.core.choices import DynamicGroupOperatorChoices
 from nautobot.core.models import BaseModel
 from nautobot.core.models.generics import OrganizationalModel
-from nautobot.extras.choices import DynamicGroupOperatorChoices
-from nautobot.extras.querysets import DynamicGroupQuerySet, DynamicGroupMembershipQuerySet
+from nautobot.core.querysets import DynamicGroupQuerySet, DynamicGroupMembershipQuerySet
 from nautobot.extras.utils import extras_features
 from nautobot.utilities.forms.constants import BOOLEAN_WITH_BLANK_CHOICES
 from nautobot.utilities.forms.widgets import StaticSelect2
@@ -53,9 +53,9 @@ class DynamicGroup(OrganizationalModel):
         help_text="A JSON-encoded dictionary of filter parameters for group membership",
     )
     children = models.ManyToManyField(
-        "extras.DynamicGroup",
+        "core.DynamicGroup",
         help_text="Child DynamicGroups of filter parameters for group membership",
-        through="extras.DynamicGroupMembership",
+        through="core.DynamicGroupMembership",
         through_fields=("parent_group", "group"),
         related_name="parents",
     )
@@ -325,7 +325,7 @@ class DynamicGroup(OrganizationalModel):
         return self.members.count()
 
     def get_absolute_url(self):
-        return reverse("extras:dynamicgroup", kwargs={"slug": self.slug})
+        return reverse("core:dynamicgroup", kwargs={"slug": self.slug})
 
     def get_group_members_url(self):
         """Get URL to group members."""
@@ -852,9 +852,9 @@ class DynamicGroup(OrganizationalModel):
 class DynamicGroupMembership(BaseModel):
     """Intermediate model for associating filters to groups."""
 
-    group = models.ForeignKey("extras.DynamicGroup", on_delete=models.CASCADE, related_name="+")
+    group = models.ForeignKey("core.DynamicGroup", on_delete=models.CASCADE, related_name="+")
     parent_group = models.ForeignKey(
-        "extras.DynamicGroup", on_delete=models.CASCADE, related_name="dynamic_group_memberships"
+        "core.DynamicGroup", on_delete=models.CASCADE, related_name="dynamic_group_memberships"
     )
     operator = models.CharField(choices=DynamicGroupOperatorChoices.CHOICES, max_length=12)
     weight = models.PositiveSmallIntegerField()
@@ -871,7 +871,7 @@ class DynamicGroupMembership(BaseModel):
     def natural_key(self):
         return self.group.natural_key() + self.parent_group.natural_key() + (self.operator, self.weight)
 
-    natural_key.dependencies = ["extras.dynamicgroup"]
+    natural_key.dependencies = ["core.dynamicgroup"]
 
     @property
     def name(self):

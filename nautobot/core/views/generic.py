@@ -828,6 +828,48 @@ class ObjectImportView(GetReturnURLMixin, ObjectPermissionRequiredMixin, View):
         )
 
 
+class ObjectDynamicGroupsView(View):
+    """
+    Present a list of dynamic groups associated to a particular object.
+    base_template: The name of the template to extend. If not provided, "<app>/<model>.html" will be used.
+    """
+
+    base_template = None
+
+    def get(self, request, model, **kwargs):
+
+        # Handle QuerySet restriction of parent object if needed
+        if hasattr(model.objects, "restrict"):
+            obj = get_object_or_404(model.objects.restrict(request.user, "view"), **kwargs)
+        else:
+            obj = get_object_or_404(model, **kwargs)
+
+        # Gather all dynamic groups for this object (and its related objects)
+        dynamicsgroups_table = tables.DynamicGroupTable(data=obj.dynamic_groups, orderable=False)
+
+        # Apply the request context
+        paginate = {
+            "paginator_class": EnhancedPaginator,
+            "per_page": get_paginate_count(request),
+        }
+        RequestConfig(request, paginate).configure(dynamicsgroups_table)
+
+        self.base_template = get_base_template(self.base_template, model)
+
+        return render(
+            request,
+            "core/object_dynamicgroups.html",
+            {
+                "object": obj,
+                "verbose_name": obj._meta.verbose_name,
+                "verbose_name_plural": obj._meta.verbose_name_plural,
+                "table": dynamicsgroups_table,
+                "base_template": self.base_template,
+                "active_tab": "dynamic-groups",
+            },
+        )
+
+
 class BulkImportView(GetReturnURLMixin, ObjectPermissionRequiredMixin, View):
     """
     Import objects in bulk (CSV format).

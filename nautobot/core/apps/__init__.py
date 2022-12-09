@@ -6,7 +6,7 @@ from collections import OrderedDict
 
 from django.apps import AppConfig, apps as global_apps
 from django.db.models import JSONField, BigIntegerField, BinaryField
-from django.db.models.signals import post_migrate
+from django.db.models.signals import m2m_changed, pre_save, post_migrate
 from django.urls import reverse
 from django.urls.exceptions import NoReverseMatch
 
@@ -682,6 +682,12 @@ class CoreConfig(NautobotConfig):
             user_logged_in.disconnect(update_last_login, dispatch_uid="update_last_login")
 
         post_migrate.connect(post_migrate_send_nautobot_database_ready, sender=self)
+
+        from nautobot.core.models.dynamic_groups import DynamicGroup, DynamicGroupMembership
+        from nautobot.core.signals import dynamic_group_children_changed, dynamic_group_membership_created
+
+        m2m_changed.connect(dynamic_group_children_changed, sender=DynamicGroup.children.through)
+        pre_save.connect(dynamic_group_membership_created, sender=DynamicGroupMembership)
 
         super().ready()
 

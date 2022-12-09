@@ -1,6 +1,7 @@
 import json
 
 from django.conf import settings
+from django.contrib.contenttypes.models import ContentType
 from django.test import override_settings
 from django.urls import reverse
 
@@ -8,7 +9,11 @@ from constance import config
 from constance.test import override_config
 
 from nautobot.circuits.models import Provider
-from nautobot.utilities.testing import APITestCase
+from nautobot.core.choices import DynamicGroupOperatorChoices
+from nautobot.core.models.dynamic_groups import DynamicGroup, DynamicGroupMembership
+from nautobot.dcim.models import Device, DeviceRole, DeviceType, Manufacturer, Site
+from nautobot.extras.models import Status
+from nautobot.utilities.testing import APITestCase, APIViewTestCases
 
 
 class AppTest(APITestCase):
@@ -290,3 +295,169 @@ class GenerateLookupValueDomElementViewTestCase(APITestCase):
                 "dom_element": '<select name="name" class="form-control nautobot-select2-multi-value-char" data-multiple="1" id="id_for_name" multiple>\n</select>'
             },
         )
+
+
+class DynamicGroupTestMixin:
+    """Mixin for Dynamic Group test cases to re-use the same set of common fixtures."""
+
+    @classmethod
+    def setUpTestData(cls):
+        # Create the objects required for devices.
+        sites = [
+            Site.objects.create(name="Site 1", slug="site-1"),
+            Site.objects.create(name="Site 2", slug="site-2"),
+            Site.objects.create(name="Site 3", slug="site-3"),
+        ]
+
+        manufacturer = Manufacturer.objects.create(name="Manufacturer 1", slug="manufacturer-1")
+        device_type = DeviceType.objects.create(
+            manufacturer=manufacturer,
+            model="device Type 1",
+            slug="device-type-1",
+        )
+        device_role = DeviceRole.objects.create(name="Device Role 1", slug="device-role-1", color="ff0000")
+        status_active = Status.objects.get(slug="active")
+        status_planned = Status.objects.get(slug="planned")
+        Device.objects.create(
+            name="device-site-1",
+            status=status_active,
+            device_role=device_role,
+            device_type=device_type,
+            site=sites[0],
+        )
+        Device.objects.create(
+            name="device-site-2",
+            status=status_active,
+            device_role=device_role,
+            device_type=device_type,
+            site=sites[1],
+        )
+        Device.objects.create(
+            name="device-site-3",
+            status=status_planned,
+            device_role=device_role,
+            device_type=device_type,
+            site=sites[2],
+        )
+
+        # Then the DynamicGroups.
+        cls.content_type = ContentType.objects.get_for_model(Device)
+        cls.groups = [
+            DynamicGroup.objects.create(
+                name="API DynamicGroup 1",
+                slug="api-dynamicgroup-1",
+                content_type=cls.content_type,
+                filter={"status": ["active"]},
+            ),
+            DynamicGroup.objects.create(
+                name="API DynamicGroup 2",
+                slug="api-dynamicgroup-2",
+                content_type=cls.content_type,
+                filter={"status": ["planned"]},
+            ),
+            DynamicGroup.objects.create(
+                name="API DynamicGroup 3",
+                slug="api-dynamicgroup-3",
+                content_type=cls.content_type,
+                filter={"site": ["site-3"]},
+            ),
+        ]
+
+
+class DynamicGroupTest(DynamicGroupTestMixin, APIViewTestCases.APIViewTestCase):
+    model = DynamicGroup
+    brief_fields = ["content_type", "display", "id", "name", "slug", "url"]
+    create_data = [
+        {
+            "name": "API DynamicGroup 4",
+            "slug": "api-dynamicgroup-4",
+            "content_type": "dcim.device",
+            "filter": {"site": ["site-1"]},
+        },
+        {
+            "name": "API DynamicGroup 5",
+            "slug": "api-dynamicgroup-5",
+            "content_type": "dcim.device",
+            "filter": {"has_interfaces": False},
+        },
+        {
+            "name": "API DynamicGroup 6",
+            "slug": "api-dynamicgroup-6",
+            "content_type": "dcim.device",
+            "filter": {"site": ["site-2"]},
+        },
+    ]
+
+    def test_get_members(self):
+        """Test that the `/members/` API endpoint returns what is expected."""
+        self.add_permissions("extras.view_dynamicgroup")
+        instance = DynamicGroup.objects.first()
+        member_count = instance.members.count()
+        url = reverse("extras-api:dynamicgroup-members", kwargs={"pk": instance.pk})
+        response = self.client.get(url, **self.header)
+        self.assertHttpStatus(response, status.HTTP_200_OK)
+        self.assertEqual(member_count, len(response.json()["results"]))
+
+
+class DynamicGroupMembershipTest(DynamicGroupTestMixin, APIViewTestCases.APIViewTestCase):
+    model = DynamicGroupMembership
+    brief_fields = ["display", "group", "id", "operator", "parent_group", "url", "weight"]
+    choices_fields = ["operator"]
+
+    @classmethod
+    def setUpTestData(cls):
+        super().setUpTestData()
+
+        parent = DynamicGroup.objects.create(
+            name="parent",
+            slug="parent",
+            content_type=cls.content_type,
+            filter={},
+        )
+        parent2 = DynamicGroup.objects.create(
+            name="parent2",
+            slug="parent2",
+            content_type=cls.content_type,
+            filter={},
+        )
+        group1, group2, group3 = cls.groups
+
+        DynamicGroupMembership.objects.create(
+            parent_group=parent,
+            group=group1,
+            operator=DynamicGroupOperatorChoices.OPERATOR_INTERSECTION,
+            weight=10,
+        )
+        DynamicGroupMembership.objects.create(
+            parent_group=parent,
+            group=group2,
+            operator=DynamicGroupOperatorChoices.OPERATOR_UNION,
+            weight=20,
+        )
+        DynamicGroupMembership.objects.create(
+            parent_group=parent,
+            group=group3,
+            operator=DynamicGroupOperatorChoices.OPERATOR_DIFFERENCE,
+            weight=30,
+        )
+
+        cls.create_data = [
+            {
+                "parent_group": parent2.pk,
+                "group": group1.pk,
+                "operator": DynamicGroupOperatorChoices.OPERATOR_INTERSECTION,
+                "weight": 10,
+            },
+            {
+                "parent_group": parent2.pk,
+                "group": group2.pk,
+                "operator": DynamicGroupOperatorChoices.OPERATOR_UNION,
+                "weight": 20,
+            },
+            {
+                "parent_group": parent2.pk,
+                "group": group3.pk,
+                "operator": DynamicGroupOperatorChoices.OPERATOR_DIFFERENCE,
+                "weight": 30,
+            },
+        ]

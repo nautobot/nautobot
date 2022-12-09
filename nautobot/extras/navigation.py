@@ -62,28 +62,6 @@ menu_items = (
                     ),
                 ),
             ),
-            NavMenuGroup(
-                name="Dynamic Groups",
-                weight=500,
-                items=(
-                    NavMenuItem(
-                        link="extras:dynamicgroup_list",
-                        name="Dynamic Groups",
-                        weight=100,
-                        permissions=[
-                            "extras.view_dynamicgroup",
-                        ],
-                        buttons=(
-                            NavMenuAddButton(
-                                link="extras:dynamicgroup_add",
-                                permissions=[
-                                    "extras.add_dynamicgroup",
-                                ],
-                            ),
-                        ),
-                    ),
-                ),
-            ),
         ),
     ),
     NavMenuTab(

@@ -12,39 +12,6 @@ from nautobot.utilities.forms.fields import DynamicModelMultipleChoiceField
 from nautobot.utilities.utils import get_route_for_model
 
 
-class DynamicGroupMixin:
-    """
-    Adds a `dynamic_groups` property that returns a queryset of `DynamicGroup` membership.
-    """
-
-    @property
-    def dynamic_groups(self):
-        """Return a `DynamicGroup` queryset for this instance."""
-        from nautobot.extras.models.groups import DynamicGroup
-
-        if not hasattr(self, "_dynamic_group_queryset"):
-            queryset = DynamicGroup.objects.get_for_object(self)
-            self._dynamic_group_queryset = queryset
-
-        return self._dynamic_group_queryset
-
-    def get_dynamic_groups_url(self):
-        """Return the dynamic groups URL for a given instance."""
-        route = get_route_for_model(self, "dynamicgroups")
-
-        # Iterate the pk-like fields and try to get a URL, or return None.
-        fields = ["pk", "slug"]
-        for field in fields:
-            if not hasattr(self, field):
-                continue
-
-            try:
-                return reverse(route, kwargs={field: getattr(self, field)})
-            except NoReverseMatch:
-                continue
-
-        return None
-
 
 class NotesMixin:
     """

@@ -20,9 +20,10 @@ from nautobot.dcim.models import (
     Region,
     Site,
 )
-from nautobot.extras.choices import DynamicGroupOperatorChoices
-from nautobot.extras.filters import DynamicGroupFilterSet, DynamicGroupMembershipFilterSet
-from nautobot.extras.models import DynamicGroup, DynamicGroupMembership, Status
+from nautobot.core.choices import DynamicGroupOperatorChoices
+from nautobot.core.filters import DynamicGroupFilterSet, DynamicGroupMembershipFilterSet
+from nautobot.core.models.dynamic_groups import DynamicGroup, DynamicGroupMembership
+from nautobot.extras.models import Status
 from nautobot.ipam.models import Prefix
 from nautobot.utilities.forms.fields import MultiValueCharField
 from nautobot.utilities.forms.widgets import MultiValueCharInput
@@ -393,7 +394,7 @@ class DynamicGroupModelTest(DynamicGroupTestBase):
         # First assert that a basic group with no children, then a group with children, will always
         # link to the members tab on the detail view.
         for group in [self.first_child, self.parent]:
-            detail_url = reverse("extras:dynamicgroup", kwargs={"slug": group.slug})
+            detail_url = reverse("core:dynamicgroup", kwargs={"slug": group.slug})
             params = "tab=members"
             url = f"{detail_url}?{params}"
             self.assertEqual(group.get_group_members_url(), url)

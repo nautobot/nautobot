@@ -2,8 +2,8 @@ from django.contrib.contenttypes.models import ContentType
 from django.test import override_settings
 
 from nautobot.core.graphql import execute_query
+from nautobot.core.models.dynamic_groups import DynamicGroup
 from nautobot.dcim.models import Device, DeviceType, DeviceRole, Manufacturer, Site
-from nautobot.extras.models import DynamicGroup
 from nautobot.utilities.testing import create_test_user, TestCase
 
 

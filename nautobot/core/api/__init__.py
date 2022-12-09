@@ -5,11 +5,11 @@ from .fields import (
     TimeZoneSerializerField,
 )
 from .routers import OrderedDefaultRouter
+from .nested_serializers import WritableNestedSerializer
 from .serializers import (
     BaseModelSerializer,
     BulkOperationSerializer,
     ValidatedModelSerializer,
-    WritableNestedSerializer,
 )
 
 

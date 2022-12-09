@@ -2,6 +2,7 @@
 import logging
 
 from django.contrib.auth.signals import user_logged_in, user_logged_out
+from django.core.exceptions import ValidationError
 from django.dispatch import receiver, Signal
 
 
@@ -33,3 +34,28 @@ def user_logged_out_signal(sender, request, user, **kwargs):
     """Generate a log message when a user logs out from the web ui"""
     logger = logging.getLogger("nautobot.auth.logout")
     logger.info(f"User {user} has logged out")
+
+
+#
+# Dynamic Groups
+#
+
+
+def dynamic_group_children_changed(sender, instance, action, reverse, model, pk_set, **kwargs):
+    """
+    Disallow adding DynamicGroup children if the parent has a filter.
+    """
+    if action == "pre_add" and instance.filter:
+        raise ValidationError(
+            {
+                "children": "A parent group may have either a filter or child groups, but not both. Clear the parent filter and try again."
+            }
+        )
+
+
+def dynamic_group_membership_created(sender, instance, **kwargs):
+    """
+    Forcibly call `full_clean()` when a new `DynamicGroupMembership` object
+    is manually created to prevent inadvertantly creating invalid memberships.
+    """
+    instance.full_clean()

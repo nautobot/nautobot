@@ -3,19 +3,19 @@ import sys
 
 from taggit.managers import TaggableManager, _TaggableManager
 
+from nautobot.core.models import BaseModel, mixins
 from nautobot.extras.models.change_logging import ChangeLoggedModel
 from nautobot.extras.models.customfields import CustomFieldModel
-from nautobot.extras.models.mixins import DynamicGroupMixin, NotesMixin
+from nautobot.extras.models.mixins import NotesMixin
 from nautobot.extras.models.relationships import RelationshipModel
 from nautobot.extras.models.tags import TaggedItem
-from nautobot.core.models import BaseModel
 
 
 logger = logging.getLogger(__name__)
 
 
 class OrganizationalModel(
-    BaseModel, ChangeLoggedModel, CustomFieldModel, RelationshipModel, DynamicGroupMixin, NotesMixin
+    BaseModel, ChangeLoggedModel, CustomFieldModel, RelationshipModel, mixins.DynamicGroupMixin, NotesMixin
 ):
     """
     Base abstract model for all organizational models.
@@ -72,7 +72,7 @@ class _NautobotTaggableManager(_TaggableManager):
         return super().set(tags, through_defaults=through_defaults, **kwargs)
 
 
-class PrimaryModel(BaseModel, ChangeLoggedModel, CustomFieldModel, RelationshipModel, DynamicGroupMixin, NotesMixin):
+class PrimaryModel(BaseModel, ChangeLoggedModel, CustomFieldModel, RelationshipModel, mixins.DynamicGroupMixin, NotesMixin):
     """
     Base abstract model for all primary models.
 

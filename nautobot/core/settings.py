@@ -430,7 +430,7 @@ MIDDLEWARE = [
     "django_prometheus.middleware.PrometheusAfterMiddleware",
 ]
 
-ROOT_URLCONF = "nautobot.core.urls"
+ROOT_URLCONF = "nautobot.core.urls_root"
 
 TEMPLATES = [
     {

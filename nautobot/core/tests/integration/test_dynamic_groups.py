@@ -1,8 +1,8 @@
 from django.contrib.contenttypes.models import ContentType
 from django.urls import reverse
 
+from nautobot.core.models.dynamic_groups import DynamicGroup
 from nautobot.dcim.models import Device
-from nautobot.extras.models import DynamicGroup
 from nautobot.utilities.testing.integration import SeleniumTestCase
 
 from . import create_test_device
@@ -10,7 +10,7 @@ from . import create_test_device
 
 class DynamicGroupTestCase(SeleniumTestCase):
     """
-    Integration test to check nautobot.extras.models.DynamicGroup add/edit functionality.
+    Integration test to check nautobot.core.models.dynamic_groups.DynamicGroup add/edit functionality.
     """
 
     def setUp(self):

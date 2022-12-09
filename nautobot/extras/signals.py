@@ -20,7 +20,7 @@ from nautobot.extras.utils import refresh_job_model_from_job_class
 from nautobot.utilities.config import get_settings_or_config
 from nautobot.extras.constants import CHANGELOG_MAX_CHANGE_CONTEXT_DETAIL
 from .choices import JobResultStatusChoices, ObjectChangeActionChoices
-from .models import CustomField, DynamicGroup, DynamicGroupMembership, GitRepository, JobResult, ObjectChange
+from .models import CustomField, GitRepository, JobResult, ObjectChange
 from .webhooks import enqueue_webhooks
 
 logger = logging.getLogger("nautobot.extras.signals")
@@ -218,35 +218,6 @@ def git_repository_pre_delete(instance, **kwargs):
     # to clean up other clones as they're encountered.
     if os.path.isdir(instance.filesystem_path):
         shutil.rmtree(instance.filesystem_path)
-
-
-#
-# Dynamic Groups
-#
-
-
-def dynamic_group_children_changed(sender, instance, action, reverse, model, pk_set, **kwargs):
-    """
-    Disallow adding DynamicGroup children if the parent has a filter.
-    """
-    if action == "pre_add" and instance.filter:
-        raise ValidationError(
-            {
-                "children": "A parent group may have either a filter or child groups, but not both. Clear the parent filter and try again."
-            }
-        )
-
-
-def dynamic_group_membership_created(sender, instance, **kwargs):
-    """
-    Forcibly call `full_clean()` when a new `DynamicGroupMembership` object
-    is manually created to prevent inadvertantly creating invalid memberships.
-    """
-    instance.full_clean()
-
-
-m2m_changed.connect(dynamic_group_children_changed, sender=DynamicGroup.children.through)
-pre_save.connect(dynamic_group_membership_created, sender=DynamicGroupMembership)
 
 
 #

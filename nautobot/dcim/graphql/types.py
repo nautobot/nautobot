@@ -34,7 +34,7 @@ from nautobot.dcim.filters import (
     SiteFilterSet,
 )
 from nautobot.extras.graphql.types import TagType  # noqa: F401
-from nautobot.extras.models import DynamicGroup
+from nautobot.core.models import DynamicGroup
 
 
 class SiteType(gql_optimizer.OptimizedDjangoObjectType):
@@ -54,7 +54,7 @@ class DeviceType(gql_optimizer.OptimizedDjangoObjectType):
         filterset_class = DeviceFilterSet
         exclude = ["_name"]
 
-    dynamic_groups = graphene.List("nautobot.extras.graphql.types.DynamicGroupType")
+    dynamic_groups = graphene.List("nautobot.core.graphql.types.DynamicGroupType")
 
     def resolve_dynamic_groups(self, args):
         return DynamicGroup.objects.get_for_object(self)
@@ -68,7 +68,7 @@ class RackType(gql_optimizer.OptimizedDjangoObjectType):
         filterset_class = RackFilterSet
         exclude = ["images"]
 
-    dynamic_groups = graphene.List("nautobot.extras.graphql.types.DynamicGroupType")
+    dynamic_groups = graphene.List("nautobot.core.graphql.types.DynamicGroupType")
 
     def resolve_dynamic_groups(self, args):
         return DynamicGroup.objects.get_for_object(self)

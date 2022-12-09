@@ -33,7 +33,7 @@ from graphene_django.settings import graphene_settings
 from graphene_django.views import GraphQLView, instantiate_middleware, HttpError
 
 from nautobot.core.celery import app as celery_app
-from nautobot.core.api import BulkOperationSerializer
+from nautobot.core.api import serializers
 from nautobot.core.api.exceptions import SerializerNotFound
 from nautobot.utilities.api import get_serializer_for_model
 from nautobot.utilities.exceptions import FilterSetFieldNotFound
@@ -43,7 +43,6 @@ from nautobot.utilities.utils import (
     get_form_for_model,
     ensure_content_type_and_field_name_inquery_params,
 )
-from . import serializers
 
 HTTP_ACTIONS = {
     "GET": "view",
@@ -117,7 +116,7 @@ class BulkUpdateModelMixin:
     ]
     """
 
-    bulk_operation_serializer_class = BulkOperationSerializer
+    bulk_operation_serializer_class = serializers.BulkOperationSerializer
 
     def bulk_update(self, request, *args, **kwargs):
         partial = kwargs.pop("partial", False)
@@ -163,10 +162,10 @@ class BulkDestroyModelMixin:
     ]
     """
 
-    bulk_operation_serializer_class = BulkOperationSerializer
+    bulk_operation_serializer_class = serializers.BulkOperationSerializer
 
     @extend_schema(
-        request=BulkOperationSerializer(many=True),
+        request=serializers.BulkOperationSerializer(many=True),
     )
     def bulk_destroy(self, request, *args, **kwargs):
         serializer = self.bulk_operation_serializer_class(data=request.data, many=True)
@@ -775,3 +774,12 @@ class GetFilterSetFieldDOMElementAPIView(NautobotAPIVersionMixin, APIView):
 
         field_dom_representation = form_field.get_bound_field(model_form(auto_id="id_for_%s"), field_name).as_widget()
         return Response({"dom_element": field_dom_representation})
+
+
+class CoreRootView(APIRootView):
+    """
+    Core API root view.
+    """
+
+    def get_view_name(self):
+        return "Core"

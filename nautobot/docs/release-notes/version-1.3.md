@@ -11,7 +11,7 @@ If you are a user migrating from NetBox to Nautobot, please refer to the ["Migra
 
 #### Dynamic Group Model ([#896](https://github.com/nautobot/nautobot/issues/896))
 
-A new data model for representing [dynamic groups](../models/extras/dynamicgroup.md) of objects has been implemented. Dynamic groups can be used to organize objects together by matching criteria such as their site location or region, for example, and are dynamically updated whenever new matching objects are created, or existing objects are updated.
+A new data model for representing [dynamic groups](../models/core/dynamicgroup.md) of objects has been implemented. Dynamic groups can be used to organize objects together by matching criteria such as their site location or region, for example, and are dynamically updated whenever new matching objects are created, or existing objects are updated.
 
 For the initial release only dynamic groups of `Device` and `VirtualMachine` objects are supported.
 
