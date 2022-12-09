@@ -1,0 +1,1 @@
+Moved `extras.DynamicGroup` model and associated functionality to `core.DynamicGroup`.
