@@ -224,8 +224,8 @@ class Location(TreeNode, StatusModel, PrimaryModel):
         help_text="32-bit autonomous system number",
     )
     time_zone = TimeZoneField(blank=True)
-    physical_address = models.CharField(max_length=200, blank=True)
-    shipping_address = models.CharField(max_length=200, blank=True)
+    physical_address = models.TextField(blank=True)
+    shipping_address = models.TextField(blank=True)
     latitude = models.DecimalField(
         max_digits=8,
         decimal_places=6,
@@ -240,8 +240,8 @@ class Location(TreeNode, StatusModel, PrimaryModel):
         null=True,
         help_text="GPS coordinate (longitude)",
     )
-    contact_name = models.CharField(max_length=50, blank=True)
-    contact_phone = models.CharField(max_length=20, blank=True)
+    contact_name = models.CharField(max_length=100, blank=True)
+    contact_phone = models.CharField(max_length=50, blank=True)
     contact_email = models.EmailField(blank=True, verbose_name="Contact E-mail")
     comments = models.TextField(blank=True)
     images = GenericRelation(to="extras.ImageAttachment")

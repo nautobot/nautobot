@@ -13,4 +13,4 @@ Much like Sites, each Location must be assigned a name and operational [`status`
 
 +++ 2.0.0
 
-In Nautobot v2.0, Site and Region will be collapsed in to Location Model. As a result, Location will inherent all the properties of the Site model that is going away [#2954](https://github.com/nautobot/nautobot/issues/2954). Location Model now has `asn`, `comments`, `contact_email`, `contact_name`, `contact_phone`, `facility`, `latitude`, `longitude`, `physical_address`, `shipping_address` and `time_zone` fields.
+Location now supports all properties previously present on the Site model, including the `asn`, `comments`, `contact_email` `contact_name`, `contact_phone`, `facility`, `latitude`, `longitude`, `physical_address`, `shipping_address` and `time_zone` fields.

@@ -1214,46 +1214,60 @@ class LocationFilterSetTestCase(FilterTestCases.NameSlugFilterTestCase, FilterTe
 
     def test_facility(self):
         params = {"facility": ["Facility 3", "Facility 4"]}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+        self.assertQuerysetEqualAndNotEmpty(
+            self.filterset(params, self.queryset).qs, self.queryset.filter(facility__in=["Facility 3", "Facility 4"])
+        )
 
     def test_asn(self):
         params = {"asn": [65003, 65004]}
-        self.assertEqual(
-            self.filterset(params, self.queryset).qs.count(), self.queryset.filter(asn__in=[65003, 65004]).count()
+        self.assertQuerysetEqualAndNotEmpty(
+            self.filterset(params, self.queryset).qs, self.queryset.filter(asn__in=[65003, 65004])
         )
 
     def test_latitude(self):
         params = {"latitude": [10, 20]}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+        self.assertQuerysetEqualAndNotEmpty(
+            self.filterset(params, self.queryset).qs, self.queryset.filter(latitude__in=[10, 20])
+        )
 
     def test_longitude(self):
         params = {"longitude": [10, 20]}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+        self.assertQuerysetEqualAndNotEmpty(
+            self.filterset(params, self.queryset).qs, self.queryset.filter(longitude__in=[10, 20])
+        )
 
     def test_contact_name(self):
         params = {"contact_name": ["Contact 3", "Contact 4"]}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+        self.assertQuerysetEqualAndNotEmpty(
+            self.filterset(params, self.queryset).qs, self.queryset.filter(contact_name__in=["Contact 3", "Contact 4"])
+        )
 
     def test_contact_phone(self):
         params = {"contact_phone": ["123-555-0003", "123-555-0004"]}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+        self.assertQuerysetEqualAndNotEmpty(
+            self.filterset(params, self.queryset).qs,
+            self.queryset.filter(contact_phone__in=["123-555-0003", "123-555-0004"]),
+        )
 
     def test_contact_email(self):
         params = {"contact_email": ["contact3@example.com", "contact4@example.com"]}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+        self.assertQuerysetEqualAndNotEmpty(
+            self.filterset(params, self.queryset).qs,
+            self.queryset.filter(contact_email__in=["contact3@example.com", "contact4@example.com"]),
+        )
 
     def test_status(self):
         statuses = list(Status.objects.get_for_model(Location)[:2])
         params = {"status": [statuses[0].slug, statuses[1].slug]}
-        self.assertEqual(
-            self.filterset(params, self.queryset).qs.count(),
-            self.queryset.filter(status__slug__in=params["status"]).count(),
+        self.assertQuerysetEqualAndNotEmpty(
+            self.filterset(params, self.queryset).qs,
+            self.queryset.filter(status__slug__in=params["status"]),
         )
 
     def test_search(self):
         value = self.queryset.values_list("pk", flat=True)[0]
         params = {"q": value}
-        self.assertEqual(self.filterset(params, self.queryset).qs.values_list("pk", flat=True)[0], value)
+        self.assertQuerysetEqualAndNotEmpty(self.filterset(params, self.queryset).qs, self.queryset.filter(pk=value))
 
     def test_comments(self):
         with self.subTest():
@@ -1264,7 +1278,9 @@ class LocationFilterSetTestCase(FilterTestCases.NameSlugFilterTestCase, FilterTe
             self.assertEqual(self.filterset(params, self.queryset).qs.count(), 0)
         with self.subTest():
             params = {"comments": "comment2"}
-            self.assertEqual(self.filterset(params, self.queryset).qs.count(), 1)
+            self.assertQuerysetEqualAndNotEmpty(
+                self.filterset(params, self.queryset).qs, self.queryset.filter(comments="comment2")
+            )
 
     def test_circuit_terminations(self):
         circuit_terminations = CircuitTermination.objects.filter(location__isnull=False)[:1]

@@ -359,20 +359,20 @@ class LocationTest(APIViewTestCases.APIViewTestCase):
 
     @classmethod
     def setUpTestData(cls):
-        lt1 = LocationType.objects.get(name="Campus")
-        lt2 = LocationType.objects.get(name="Building")
-        lt3 = LocationType.objects.get(name="Floor")
-        lt4 = LocationType.objects.get(name="Room")
+        cls.lt1 = LocationType.objects.get(name="Campus")
+        cls.lt2 = LocationType.objects.get(name="Building")
+        cls.lt3 = LocationType.objects.get(name="Floor")
+        cls.lt4 = LocationType.objects.get(name="Room")
 
         status_active = Status.objects.get(slug="active")
-        site = Site.objects.first()
+        cls.site = Site.objects.first()
         tenant = Tenant.objects.create(name="Test Tenant")
 
-        loc1 = Location.objects.create(name="RTP", location_type=lt1, status=status_active, site=site)
-        loc2 = Location.objects.create(name="RTP4E", location_type=lt2, status=status_active, parent=loc1)
-        loc3 = Location.objects.create(name="RTP4E-3", location_type=lt3, status=status_active, parent=loc2)
+        loc1 = Location.objects.create(name="RTP", location_type=cls.lt1, status=status_active, site=cls.site)
+        loc2 = Location.objects.create(name="RTP4E", location_type=cls.lt2, status=status_active, parent=loc1)
+        loc3 = Location.objects.create(name="RTP4E-3", location_type=cls.lt3, status=status_active, parent=loc2)
         loc4 = Location.objects.create(
-            name="RTP4E-3-0101", location_type=lt4, status=status_active, parent=loc3, tenant=tenant
+            name="RTP4E-3-0101", location_type=cls.lt4, status=status_active, parent=loc3, tenant=tenant
         )
         for loc in [loc1, loc2, loc3, loc4]:
             loc.validated_save()
@@ -388,20 +388,20 @@ class LocationTest(APIViewTestCases.APIViewTestCase):
         cls.create_data = [
             {
                 "name": "Downtown Durham",
-                "location_type": lt1.pk,
-                "site": site.pk,
+                "location_type": cls.lt1.pk,
+                "site": cls.site.pk,
                 "status": "active",
             },
             {
                 "name": "RTP12",
                 "slug": "rtp-12",
-                "location_type": lt2.pk,
+                "location_type": cls.lt2.pk,
                 "parent": loc1.pk,
                 "status": "active",
             },
             {
                 "name": "RTP4E-2",
-                "location_type": lt3.pk,
+                "location_type": cls.lt3.pk,
                 "parent": loc2.pk,
                 "status": "active",
                 "description": "Second floor of RTP4E",
@@ -418,63 +418,88 @@ class LocationTest(APIViewTestCases.APIViewTestCase):
 
     def test_time_zone_field_post_null(self):
         """
-        Test allow_null to time_zone field on site.
-
-        See: https://github.com/nautobot/nautobot/issues/342
+        Test allow_null to time_zone field on locaton.
         """
-        self.add_permissions("dcim.add_site")
-        url = reverse("dcim-api:site-list")
-        site = {"name": "foo", "slug": "foo", "status": "active", "time_zone": None}
 
-        # Attempt to create new site with null time_zone attr.
-        response = self.client.post(url, **self.header, data=site, format="json")
+        self.add_permissions("dcim.add_location")
+        url = reverse("dcim-api:location-list")
+        location = {
+            "name": "foo",
+            "slug": "foo",
+            "status": "active",
+            "time_zone": None,
+            "location_type": self.lt1.pk,
+            "site": self.site.pk,
+        }
+
+        # Attempt to create new location with null time_zone attr.
+        response = self.client.post(url, **self.header, data=location, format="json")
+        print(response.json())
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
         self.assertEqual(response.json()["time_zone"], None)
 
     def test_time_zone_field_post_blank(self):
         """
-        Test disallowed blank time_zone field on site.
-
-        See: https://github.com/nautobot/nautobot/issues/342
+        Test disallowed blank time_zone field on location.
         """
-        self.add_permissions("dcim.add_site")
-        url = reverse("dcim-api:site-list")
-        site = {"name": "foo", "slug": "foo", "status": "active", "time_zone": ""}
 
-        # Attempt to create new site with blank time_zone attr.
-        response = self.client.post(url, **self.header, data=site, format="json")
+        self.add_permissions("dcim.add_location")
+        url = reverse("dcim-api:location-list")
+        location = {
+            "name": "foo",
+            "slug": "foo",
+            "status": "active",
+            "time_zone": "",
+            "location_type": self.lt1.pk,
+            "site": self.site.pk,
+        }
+
+        # Attempt to create new location with blank time_zone attr.
+        response = self.client.post(url, **self.header, data=location, format="json")
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertEqual(response.json()["time_zone"], ["A valid timezone is required."])
 
     def test_time_zone_field_post_valid(self):
         """
-        Test valid time_zone field on site.
-
-        See: https://github.com/nautobot/nautobot/issues/342
+        Test valid time_zone field on location.
         """
-        self.add_permissions("dcim.add_site")
-        url = reverse("dcim-api:site-list")
-        time_zone = "UTC"
-        site = {"name": "foo", "slug": "foo", "status": "active", "time_zone": time_zone}
 
-        # Attempt to create new site with valid time_zone attr.
-        response = self.client.post(url, **self.header, data=site, format="json")
+        self.add_permissions("dcim.add_location")
+        url = reverse("dcim-api:location-list")
+        time_zone = "UTC"
+        location = {
+            "name": "foo",
+            "slug": "foo",
+            "status": "active",
+            "time_zone": time_zone,
+            "location_type": self.lt1.pk,
+            "site": self.site.pk,
+        }
+
+        # Attempt to create new location with valid time_zone attr.
+        response = self.client.post(url, **self.header, data=location, format="json")
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
         self.assertEqual(response.json()["time_zone"], time_zone)
 
     def test_time_zone_field_post_invalid(self):
         """
-        Test invalid time_zone field on site.
-
-        See: https://github.com/nautobot/nautobot/issues/342
+        Test invalid time_zone field on location.
         """
-        self.add_permissions("dcim.add_site")
-        url = reverse("dcim-api:site-list")
-        time_zone = "IDONOTEXIST"
-        site = {"name": "foo", "slug": "foo", "status": "active", "time_zone": time_zone}
 
-        # Attempt to create new site with invalid time_zone attr.
-        response = self.client.post(url, **self.header, data=site, format="json")
+        self.add_permissions("dcim.add_location")
+        url = reverse("dcim-api:location-list")
+        time_zone = "IDONOTEXIST"
+        location = {
+            "name": "foo",
+            "slug": "foo",
+            "status": "active",
+            "time_zone": time_zone,
+            "location_type": self.lt1.pk,
+            "site": self.site.pk,
+        }
+
+        # Attempt to create new location with invalid time_zone attr.
+        response = self.client.post(url, **self.header, data=location, format="json")
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertEqual(
             response.json()["time_zone"],
@@ -483,14 +508,12 @@ class LocationTest(APIViewTestCases.APIViewTestCase):
 
     def test_time_zone_field_get_blank(self):
         """
-        Test that a site's time_zone field defaults to null.
-
-        See: https://github.com/nautobot/nautobot/issues/342
+        Test that a location's time_zone field defaults to null.
         """
 
-        self.add_permissions("dcim.view_site")
-        site = Site.objects.filter(time_zone="").first()
-        url = reverse("dcim-api:site-detail", kwargs={"pk": site.pk})
+        self.add_permissions("dcim.view_location")
+        location = Location.objects.filter(time_zone="").first()
+        url = reverse("dcim-api:location-detail", kwargs={"pk": location.pk})
         response = self.client.get(url, **self.header)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(response.json()["time_zone"], None)

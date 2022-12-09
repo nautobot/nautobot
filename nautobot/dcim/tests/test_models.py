@@ -651,18 +651,20 @@ class LocationTestCase(TestCase):
 
     def test_latitude_or_longitude(self):
         """Test latitude and longitude is parsed to string."""
-        active_status = Status.objects.get_for_model(Site).get(slug="active")
-        site = Site(
-            name="Site A",
-            slug="site-a",
+        active_status = Status.objects.get_for_model(Location).get(slug="active")
+        location = Location(
+            location_type=self.root_type,
+            site=self.site,
+            name="Location A",
+            slug="location-a",
             status=active_status,
             longitude=55.1234567896,
             latitude=55.1234567896,
         )
-        site.validated_save()
+        location.validated_save()
 
-        self.assertEqual(site.longitude, Decimal("55.123457"))
-        self.assertEqual(site.latitude, Decimal("55.123457"))
+        self.assertEqual(location.longitude, Decimal("55.123457"))
+        self.assertEqual(location.latitude, Decimal("55.123457"))
 
     def test_validate_unique(self):
         """Confirm that the uniqueness constraint on (parent, name) works when parent is None."""

@@ -381,6 +381,11 @@ class LocationFilterSet(NautobotFilterSet, StatusModelFilterSetMixin, TenancyFil
         field_name="racks",
         label="Has racks",
     )
+    racks = NaturalKeyOrPKMultipleChoiceFilter(
+        queryset=Rack.objects.all(),
+        to_field_name="name",
+        label="Rack (name or ID)",
+    )
     has_prefixes = RelatedMembershipBooleanFilter(
         field_name="prefixes",
         label="Has prefixes",
@@ -397,9 +402,19 @@ class LocationFilterSet(NautobotFilterSet, StatusModelFilterSetMixin, TenancyFil
         field_name="vlans",
         label="Has vlans",
     )
+    vlans = NaturalKeyOrPKMultipleChoiceFilter(
+        to_field_name="vid",
+        queryset=VLAN.objects.all(),
+        label="Tagged VLANs (VID or ID)",
+    )
     has_clusters = RelatedMembershipBooleanFilter(
         field_name="clusters",
         label="Has clusters",
+    )
+    clusters = NaturalKeyOrPKMultipleChoiceFilter(
+        queryset=Cluster.objects.all(),
+        to_field_name="name",
+        label="Clusters (name or ID)",
     )
     time_zone = django_filters.MultipleChoiceFilter(
         choices=[(str(obj), name) for obj, name in TimeZoneField().choices],
@@ -417,7 +432,6 @@ class LocationFilterSet(NautobotFilterSet, StatusModelFilterSetMixin, TenancyFil
             "description",
             "asn",
             "circuit_terminations",
-            "clusters",
             "comments",
             "contact_email",
             "contact_name",
@@ -427,9 +441,7 @@ class LocationFilterSet(NautobotFilterSet, StatusModelFilterSetMixin, TenancyFil
             "longitude",
             "physical_address",
             "prefixes",
-            "racks",
             "shipping_address",
-            "vlans",
         ]
 
     def generate_query__base_site(self, value):
