@@ -6,7 +6,6 @@ from django.utils.http import is_safe_url
 
 from nautobot.utilities import permissions, utils
 
-
 #
 # View Mixins
 #

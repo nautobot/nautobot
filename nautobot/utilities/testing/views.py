@@ -5,8 +5,8 @@ from django.conf import settings
 from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ObjectDoesNotExist
 from django.core.files.uploadedfile import SimpleUploadedFile
-from django.test import override_settings, tag
 from django.test import TestCase as _TestCase
+from django.test import override_settings, tag
 from django.urls import NoReverseMatch, reverse
 from django.utils.http import urlencode
 from django.utils.text import slugify
@@ -18,7 +18,6 @@ from nautobot.users import models as users_models
 from nautobot.utilities import testing, utils
 from nautobot.utilities.templatetags import helpers
 from nautobot.utilities.testing import mixins
-
 
 __all__ = (
     "TestCase",

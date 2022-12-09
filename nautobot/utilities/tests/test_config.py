@@ -1,7 +1,7 @@
 """Test cases for nautobot.utilities.config module."""
 
 from constance.test import override_config
-from django.test import override_settings, TestCase
+from django.test import TestCase, override_settings
 
 from nautobot.utilities import config
 

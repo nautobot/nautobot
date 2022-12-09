@@ -20,7 +20,6 @@ from nautobot.utilities import choices as utilities_choices
 from nautobot.utilities import forms, utils, validators
 from nautobot.utilities.forms import widgets
 
-
 __all__ = (
     "CommentField",
     "CSVChoiceField",

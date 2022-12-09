@@ -16,7 +16,6 @@ from nautobot.users import models as users_models
 from nautobot.utilities import testing, utils
 from nautobot.utilities.testing import mixins, views
 
-
 __all__ = (
     "APITestCase",
     "APIViewTestCases",

@@ -1,4 +1,4 @@
-from collections import namedtuple, OrderedDict
+from collections import OrderedDict, namedtuple
 import copy
 import datetime
 from decimal import Decimal
@@ -8,7 +8,6 @@ import json
 import re
 import uuid
 
-import django_filters
 from django import forms
 from django.conf import settings
 from django.contrib.auth import get_user_model
@@ -22,13 +21,13 @@ from django.template import engines
 from django.utils.module_loading import import_string
 from django.utils.text import slugify
 from django.utils.tree import Node
-from django_filters import BooleanFilter, DateFilter, DateTimeFilter, filters, NumberFilter, TimeFilter
+import django_filters
+from django_filters import BooleanFilter, DateFilter, DateTimeFilter, NumberFilter, TimeFilter, filters
 from django_filters.utils import verbose_lookup_expr
 from taggit.managers import _TaggableManager
 
 from nautobot.dcim import choices
 from nautobot.utilities import constants, exceptions
-
 
 # Check if field name contains a lookup expr
 # e.g `name__ic` has lookup expr `ic (icontains)` while `name` has no lookup expr
@@ -805,10 +804,10 @@ def get_filterset_parameter_form_field(model, parameter):
         DatePicker,
         DateTimePicker,
         DynamicModelMultipleChoiceField,
+        MultipleContentTypeField,
         StaticSelect2,
         StaticSelect2Multiple,
         TimePicker,
-        MultipleContentTypeField,
     )
 
     filterset_class = get_filterset_for_model(model)

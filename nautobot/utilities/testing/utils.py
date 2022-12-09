@@ -9,7 +9,6 @@ from django.db.models.deletion import PROTECT
 from mptt.models import TreeForeignKey
 from tree_queries.models import TreeNodeForeignKey
 
-
 # Use the proper swappable User model
 User = get_user_model()
 
