@@ -61,11 +61,11 @@ There are many plugins available within the Nautobot Apps ecosystem. The below s
 
 #### Golden Config Plugin
 
-![Screenshot of golden config](https://raw.githubusercontent.com/nautobot/nautobot/develop/nautobot/docs/media/ss_plugin_golden_config.png "Golden config")
+![Gif of golden config](/nautobot/docs/media/nautobot_golden_config.gif?raw=true "Golden config")
 
 #### ChatOps Plugin
 
-![Screenshot of chatops](https://raw.githubusercontent.com/nautobot/nautobot/develop/nautobot/docs/media/ss_plugin_chatops.png "ChatOps")
+![Gif of chatops](/nautobot/docs/media/nautobot_chatops.gif?raw=true "ChatOps")
 
 ## Providing Feedback
 
