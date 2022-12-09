@@ -193,8 +193,16 @@ class RelationshipFilter(django_filters.ModelMultipleChoiceFilter):
                 ).values_list("source_id", flat=True)
 
                 values = list(destinations) + list(sources)
-            qs &= self.get_method(self.qs)(Q(**{"id__in": values}))
-            return qs
+
+            # ModelMultipleChoiceFilters always have `distinct=True` so we must make sure that the
+            # unioned queryset is also distinct. We also need to conditionally check if the incoming
+            # `qs` is distinct in the case that a caller is manually passing in a queryset that may
+            # not be distinct. (Ref: https://github.com/nautobot/nautobot/issues/2963)
+            union_qs = self.get_method(self.qs)(Q(**{"id__in": values}))
+            if qs.query.distinct:
+                union_qs = union_qs.distinct()
+
+            return qs & union_qs
 
 
 class RelationshipModelFilterSetMixin(django_filters.FilterSet):
