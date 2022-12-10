@@ -4,29 +4,36 @@ from collections import namedtuple
 from django.db import migrations, models
 
 from nautobot.ipam.choices import IPAddressRoleChoices
-
+from nautobot.utilities.choices import ColorChoices
 
 # Role Models that would be integrated into this Role model are referred to as RelatedRoleModels.
 # For Example: DeviceRole, RackRole e.t.c.
 # while implemented_by refers to the model that actually implements the Related Model.
 # e.g role = models.ForeignKey(to=DeviceRole, ...)
-RelatedRoleModel = namedtuple("RelatedRoleModel", ["model", "implemented_by"])
+RelatedRoleModel = namedtuple("RelatedRoleModel", ["model", "implemented_by", "field_check"])
 
 # Using this, Choices is made to resemble a Role Queryset.
 ChoicesQuerySet = namedtuple("FakeQuerySet", ["name", "slug", "description", "color"])
 
 color_map = {
-    "default": "9e9e9e",  # Grey
-    "primary": "2196f3",  # Blue
-    "warning": "ffc107",  # Amber
-    "success": "4caf50",  # Green
+    "default": ColorChoices.COLOR_GREY,
+    "primary": ColorChoices.COLOR_BLUE,
+    "warning": ColorChoices.COLOR_AMBER,
+    "success": ColorChoices.COLOR_GREEN,
 }
 
 
-def create_roles_for_related_role_models(apps):
+def create_equivalent_roles_of_virtualmachine_device_role(apps):
+    """Create equivalent roles for the VirtualMachine DeviceRole."""
+    DeviceRole = apps.get_model("dcim", "DeviceRole")
+    roles_to_create = DeviceRole.objects.filter(vm_role=True)
+    bulk_create_roles(apps, roles_to_create, ["virtualization.virtualmachine"])
+
+
+def create_equivalent_roles_of_related_role_model(apps):
     """Create equivalent roles for the related role model."""
     related_role_models = (
-        RelatedRoleModel("dcim.DeviceRole", ["dcim.device", "virtualization.virtualmachine"]),
+        RelatedRoleModel("dcim.DeviceRole", ["dcim.device"]),
         RelatedRoleModel("dcim.RackRole", ["dcim.rack"]),
         RelatedRoleModel("ipam.Role", ["ipam.rack", "ipam.vlan"]),
     )
@@ -36,11 +43,12 @@ def create_roles_for_related_role_models(apps):
         related_role_model_class = apps.get_model(app_name, model_class)
 
         roles_to_create = related_role_model_class.objects.all()
+        # Add to content_type if vm_role is True in
         bulk_create_roles(apps, roles_to_create, related_role_model.implemented_by)
 
 
-def create_roles_for_related_choiceset(apps):
-    """Create equivalent roles for the related role choiceset."""
+def create_equivalent_roles_of_ipaddress_role_choices(apps):
+    """Create equivalent roles for the IPAddressRoleChoices."""
     roles_to_create = []
 
     for value, label in IPAddressRoleChoices.CHOICES:
@@ -55,7 +63,7 @@ def bulk_create_roles(apps, roles_to_create, content_types):
     Role = apps.get_model("extras", "Role")
     ContentType = apps.get_model("contenttypes", "ContentType")
 
-    # Exclude roles with name currently existing
+    # Exclude roles whose names are already exists from bulk create.
     existing_roles = Role.objects.values_list("name", flat=True)
     roles_instances = [
         Role(
@@ -72,7 +80,7 @@ def bulk_create_roles(apps, roles_to_create, content_types):
 
     roles = Role.objects.filter(name__in=[roles.name for roles in roles_to_create])
 
-    # Add content_type to the created roles
+    # Add content_types to the roles
     filter_ct_by = models.Q()
     for app_and_model in content_types:
         app_label, model_name = app_and_model.split(".")
@@ -85,8 +93,9 @@ def bulk_create_roles(apps, roles_to_create, content_types):
 
 def populate_roles_from_related_app_roles(apps, schema_editor):
     """Populate Role models using records from other related role models or choices from different apps."""
-    create_roles_for_related_role_models(apps)
-    create_roles_for_related_choiceset(apps)
+    create_equivalent_roles_of_related_role_model(apps)
+    create_equivalent_roles_of_ipaddress_role_choices(apps)
+    create_equivalent_roles_of_virtualmachine_device_role(apps)
 
 
 def clear_populated_roles(apps, schema_editor):
