@@ -19,29 +19,34 @@ def migrate_data_from_legacy_role_to_new_role(apps, schema):
         migrate_role_data(model=model, role_model=role_model, is_choice_field=is_choices)
 
 
-def reverse_role_data_migrate(apps, schema):
-    """Reverse changes made to new_role"""
+def reverse_ipaddress_data_migration(apps):
+    model = apps.get_model("ipam", "IPAddress")
+    migrate_role_data(
+        model=model,
+        role_choiceset=IPAddressRoleChoices,
+        legacy_role="new_role",
+        new_role="legacy_role",
+    )
 
-    model_role_map = {
-        "VLAN": {"role_model": "Role"},
-        "Prefix": {"role_model": "Role"},
-        "IPAddress": {"role_choiceset": IPAddressRoleChoices},
-    }
+
+def reverse_vlan_and_prefix_data_migration(apps):
+    model_role_map = {"VLAN": {"role_model": "Role"}, "Prefix": {"role_model": "Role"}}
     for model_name, value in model_role_map.items():
-        role_model = None
-        role_choiceset = None
         model = apps.get_model("ipam", model_name)
-        if "role_model" in value:
-            role_model = apps.get_model("ipam", value["role_model"])
-        else:
-            role_choiceset = value["role_choiceset"]
+        role_model = apps.get_model("ipam", value["role_model"])
         migrate_role_data(
             model=model,
             role_model=role_model,
-            role_choiceset=role_choiceset,
             legacy_role="new_role",
             new_role="legacy_role",
         )
+
+
+def reverse_role_data_migrate(apps, schema):
+    """Reverse changes made to new_role"""
+
+    reverse_vlan_and_prefix_data_migration(apps)
+    reverse_ipaddress_data_migration(apps)
 
 
 class Migration(migrations.Migration):
