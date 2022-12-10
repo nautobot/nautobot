@@ -6,72 +6,87 @@ from django.db import migrations, models
 from nautobot.ipam.choices import IPAddressRoleChoices
 
 
-# Role Models or RoleChoices that would be integrated into this Role model are referred to as RelatedRoleModelOrChoices.
-# For Example: DeviceRole, RackRole, IPAddressRoleChoices e.t.c.
-# while implemented_by refers to the model that actually implements the Related Model/Choice.
+# Role Models that would be integrated into this Role model are referred to as RelatedRoleModels.
+# For Example: DeviceRole, RackRole e.t.c.
+# while implemented_by refers to the model that actually implements the Related Model.
 # e.g role = models.ForeignKey(to=DeviceRole, ...)
-RelatedRoleModelOrChoices = namedtuple("RelatedRoleModelOrChoices", ["model_or_choices", "implemented_by"])
+RelatedRoleModel = namedtuple("RelatedRoleModel", ["model", "implemented_by"])
 
 # Using this, Choices is made to resemble a Role Queryset.
 ChoicesQuerySet = namedtuple("FakeQuerySet", ["name", "slug", "description", "color"])
 
+color_map = {
+    "default": "9e9e9e",  # Grey
+    "primary": "2196f3",  # Blue
+    "warning": "ffc107",  # Amber
+    "success": "4caf50",  # Green
+}
 
-def populate_roles_from_related_app_roles(apps, schema_editor):
-    """Populate Role models using records from other related role models or choices from different apps."""
 
+def create_roles_for_related_role_models(apps):
+    """Create equivalent roles for the related role model."""
+    related_role_models = (
+        RelatedRoleModel("dcim.DeviceRole", ["dcim.device", "virtualization.virtualmachine"]),
+        RelatedRoleModel("dcim.RackRole", ["dcim.rack"]),
+        RelatedRoleModel("ipam.Role", ["ipam.rack", "ipam.vlan"]),
+    )
+
+    for related_role_model in related_role_models:
+        app_name, model_class = related_role_model.model.split(".")
+        related_role_model_class = apps.get_model(app_name, model_class)
+
+        roles_to_create = related_role_model_class.objects.all()
+        bulk_create_roles(apps, roles_to_create, related_role_model.implemented_by)
+
+
+def create_roles_for_related_choiceset(apps):
+    """Create equivalent roles for the related role choiceset."""
+    roles_to_create = []
+
+    for value, label in IPAddressRoleChoices.CHOICES:
+        color = IPAddressRoleChoices.CSS_CLASSES[value]
+        choiceset = ChoicesQuerySet(name=label, slug=value, color=color_map[color], description="")
+        roles_to_create.append(choiceset)
+    bulk_create_roles(apps, roles_to_create, ["ipam.ipaddress"])
+
+
+def bulk_create_roles(apps, roles_to_create, content_types):
+    """Bulk create role and set its contenttypes"""
     Role = apps.get_model("extras", "Role")
     ContentType = apps.get_model("contenttypes", "ContentType")
 
-    related_role_models_or_choices = (
-        RelatedRoleModelOrChoices("dcim.DeviceRole", ["dcim.device", "virtualization.virtualmachine"]),
-        RelatedRoleModelOrChoices("dcim.RackRole", ["dcim.rack"]),
-        RelatedRoleModelOrChoices("ipam.Role", ["ipam.rack", "ipam.vlan"]),
-        RelatedRoleModelOrChoices("ipam.Role", ["ipam.rack", "ipam.vlan"]),
-        RelatedRoleModelOrChoices(IPAddressRoleChoices, ["ipam.ipaddress"]),
-    )
+    # Exclude roles with name currently existing
+    existing_roles = Role.objects.values_list("name", flat=True)
+    roles_instances = [
+        Role(
+            name=data.name,
+            slug=data.slug,
+            description=data.description,
+            color=data.color if hasattr(data, "color") else color_map["default"],
+            weight=data.weight if hasattr(data, "weight") else None,
+        )
+        for data in roles_to_create
+        if data.name not in existing_roles
+    ]
+    Role.objects.bulk_create(roles_instances, batch_size=1000)
 
-    color_map = {
-        "default": "9e9e9e",  # Grey
-        "primary": "2196f3",  # Blue
-        "warning": "ffc107",  # Amber
-        "success": "4caf50",  # Green
-    }
+    roles = Role.objects.filter(name__in=[roles.name for roles in roles_to_create])
 
-    for role_model_or_choices in related_role_models_or_choices:
-        try:
-            app_name, model_class = role_model_or_choices.model_or_choices.split(".")
-            related_role_model_class = apps.get_model(app_name, model_class)
-            existing_roles = Role.objects.values_list("name", flat=True)
-            roles_to_create = related_role_model_class.objects.filter(~models.Q(name__in=existing_roles))
-        except AttributeError:
-            # An AttributeError would occur when trying to perform a split on a choice e.g. IPAddressRoleChoices
-            roles_to_create = []
+    # Add content_type to the created roles
+    filter_ct_by = models.Q()
+    for app_and_model in content_types:
+        app_label, model_name = app_and_model.split(".")
+        filter_ct_by |= models.Q(app_label=app_label, model=model_name)
 
-            for value, label in role_model_or_choices.model_or_choices.CHOICES:
-                color = role_model_or_choices.model_or_choices.CSS_CLASSES[value]
-                choiceset = ChoicesQuerySet(name=label, slug=value, color=color_map[color], description="")
-                roles_to_create.append(choiceset)
+    content_types = ContentType.objects.filter(filter_ct_by)
+    for role in roles:
+        role.content_types.set(content_types)
 
-        roles = [
-            Role(
-                name=data.name,
-                slug=data.slug,
-                description=data.description,
-                color=data.color if hasattr(data, "color") else color_map["default"],
-                weight=data.weight if hasattr(data, "weight") else None,
-            )
-            for data in roles_to_create
-        ]
-        role_instances = Role.objects.bulk_create(roles, batch_size=1000)
 
-        filter_ct_by = models.Q()
-        for app_and_model in role_model_or_choices.implemented_by:
-            app_label, model_name = app_and_model.split(".")
-            filter_ct_by |= models.Q(app_label=app_label, model=model_name)
-
-        content_types = ContentType.objects.filter(filter_ct_by)
-        for role in role_instances:
-            role.content_types.set(content_types)
+def populate_roles_from_related_app_roles(apps, schema_editor):
+    """Populate Role models using records from other related role models or choices from different apps."""
+    create_roles_for_related_role_models(apps)
+    create_roles_for_related_choiceset(apps)
 
 
 def clear_populated_roles(apps, schema_editor):
