@@ -15,8 +15,9 @@ from nautobot.extras.models import (
     Note,
     Relationship,
     RelationshipAssociation,
+    Role,
     Status,
-    Tag, Role,
+    Tag,
 )
 from nautobot.utilities.deprecation import class_deprecated_in_favor_of
 from nautobot.utilities.forms import (
@@ -624,10 +625,7 @@ class RoleModelCSVFormMixin(CSVModelForm):
     """Mixin to add a required `status` choice field to CSV import forms."""
 
     role = CSVModelChoiceField(
-        queryset=Role.objects.all(),
-        to_field_name="name",
-        required=False,
-        help_text="Assigned role"
+        queryset=Role.objects.all(), to_field_name="name", required=False, help_text="Assigned role"
     )
 
 

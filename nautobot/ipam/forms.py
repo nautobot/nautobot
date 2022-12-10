@@ -394,7 +394,13 @@ class PrefixForm(LocatableModelFormMixin, NautobotModelForm, TenancyForm, Prefix
         self.fields["vrf"].empty_label = "Global"
 
 
-class PrefixCSVForm(PrefixFieldMixin, LocatableModelCSVFormMixin, StatusModelCSVFormMixin, RoleModelCSVFormMixin, CustomFieldModelCSVForm):
+class PrefixCSVForm(
+    PrefixFieldMixin,
+    LocatableModelCSVFormMixin,
+    StatusModelCSVFormMixin,
+    RoleModelCSVFormMixin,
+    CustomFieldModelCSVForm,
+):
     vrf = CSVModelChoiceField(
         queryset=VRF.objects.all(),
         to_field_name="name",
@@ -857,7 +863,9 @@ class IPAddressCSVForm(StatusModelCSVFormMixin, RoleModelCSVFormMixin, AddressFi
         return ipaddress
 
 
-class IPAddressBulkEditForm(TagsBulkEditFormMixin, StatusModelBulkEditFormMixin, RoleModelBulkEditFormMixin, NautobotBulkEditForm):
+class IPAddressBulkEditForm(
+    TagsBulkEditFormMixin, StatusModelBulkEditFormMixin, RoleModelBulkEditFormMixin, NautobotBulkEditForm
+):
     pk = forms.ModelMultipleChoiceField(queryset=IPAddress.objects.all(), widget=forms.MultipleHiddenInput())
     vrf = DynamicModelChoiceField(
         queryset=VRF.objects.all(),
@@ -1068,7 +1076,13 @@ class VLANBulkEditForm(
         ]
 
 
-class VLANFilterForm(NautobotFilterForm, LocatableModelFilterFormMixin, TenancyFilterForm, StatusModelFilterFormMixin, RoleModelFilterFormMixin):
+class VLANFilterForm(
+    NautobotFilterForm,
+    LocatableModelFilterFormMixin,
+    TenancyFilterForm,
+    StatusModelFilterFormMixin,
+    RoleModelFilterFormMixin,
+):
     model = VLAN
     field_order = [
         "q",

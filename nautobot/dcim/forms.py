@@ -767,7 +767,13 @@ class RackBulkEditForm(
         ]
 
 
-class RackFilterForm(NautobotFilterForm, LocatableModelFilterFormMixin, TenancyFilterForm, StatusModelFilterFormMixin, RoleModelFilterFormMixin):
+class RackFilterForm(
+    NautobotFilterForm,
+    LocatableModelFilterFormMixin,
+    TenancyFilterForm,
+    StatusModelFilterFormMixin,
+    RoleModelFilterFormMixin,
+):
     model = Rack
     field_order = [
         "q",
@@ -1946,7 +1952,7 @@ class DeviceForm(LocatableModelFormMixin, NautobotModelForm, TenancyForm, LocalC
             self.fields["position"].widget.choices = [(position, f"U{position}")]
 
 
-class BaseDeviceCSVForm(StatusModelCSVFormMixin,  RoleModelCSVFormMixin, CustomFieldModelCSVForm):
+class BaseDeviceCSVForm(StatusModelCSVFormMixin, RoleModelCSVFormMixin, CustomFieldModelCSVForm):
     tenant = CSVModelChoiceField(
         queryset=Tenant.objects.all(),
         required=False,

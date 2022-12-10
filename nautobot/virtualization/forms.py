@@ -375,7 +375,11 @@ class VirtualMachineCSVForm(StatusModelCSVFormMixin, RoleModelCSVFormMixin, Cust
 
 
 class VirtualMachineBulkEditForm(
-    TagsBulkEditFormMixin, StatusModelBulkEditFormMixin, RoleModelBulkEditFormMixin, NautobotBulkEditForm, LocalContextModelBulkEditForm
+    TagsBulkEditFormMixin,
+    StatusModelBulkEditFormMixin,
+    RoleModelBulkEditFormMixin,
+    NautobotBulkEditForm,
+    LocalContextModelBulkEditForm,
 ):
     pk = forms.ModelMultipleChoiceField(queryset=VirtualMachine.objects.all(), widget=forms.MultipleHiddenInput())
     cluster = DynamicModelChoiceField(queryset=Cluster.objects.all(), required=False)
