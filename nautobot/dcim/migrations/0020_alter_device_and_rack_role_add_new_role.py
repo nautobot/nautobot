@@ -16,6 +16,16 @@ class Migration(migrations.Migration):
         # ##########
         # Device
         # ##########
+        migrations.AlterField(
+            model_name="device",
+            name="device_role",
+            field=models.ForeignKey(
+                on_delete=django.db.models.deletion.PROTECT,
+                related_name="devices",
+                to="dcim.devicerole",
+                null=True,
+            ),
+        ),
         migrations.RenameField(
             model_name="device",
             old_name="device_role",
