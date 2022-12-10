@@ -10,7 +10,7 @@ from nautobot.utilities.choices import ColorChoices
 # For Example: DeviceRole, RackRole e.t.c.
 # while implemented_by refers to the model that actually implements the Related Model.
 # e.g role = models.ForeignKey(to=DeviceRole, ...)
-RelatedRoleModel = namedtuple("RelatedRoleModel", ["model", "implemented_by", "field_check"])
+RelatedRoleModel = namedtuple("RelatedRoleModel", ["model", "implemented_by"])
 
 # Using this, Choices is made to resemble a Role Queryset.
 ChoicesQuerySet = namedtuple("FakeQuerySet", ["name", "slug", "description", "color"])
@@ -35,7 +35,7 @@ def create_equivalent_roles_of_related_role_model(apps):
     related_role_models = (
         RelatedRoleModel("dcim.DeviceRole", ["dcim.device"]),
         RelatedRoleModel("dcim.RackRole", ["dcim.rack"]),
-        RelatedRoleModel("ipam.Role", ["ipam.rack", "ipam.vlan"]),
+        RelatedRoleModel("ipam.Role", ["ipam.prefix", "ipam.vlan"]),
     )
 
     for related_role_model in related_role_models:
@@ -76,7 +76,8 @@ def bulk_create_roles(apps, roles_to_create, content_types):
         for data in roles_to_create
         if data.name not in existing_roles
     ]
-    Role.objects.bulk_create(roles_instances, batch_size=1000)
+    if roles_instances:
+        Role.objects.bulk_create(roles_instances, batch_size=1000)
 
     roles = Role.objects.filter(name__in=[roles.name for roles in roles_to_create])
 
@@ -88,14 +89,14 @@ def bulk_create_roles(apps, roles_to_create, content_types):
 
     content_types = ContentType.objects.filter(filter_ct_by)
     for role in roles:
-        role.content_types.set(content_types)
+        role.content_types.add(*[content_type.id for content_type in content_types])
 
 
 def populate_roles_from_related_app_roles(apps, schema_editor):
     """Populate Role models using records from other related role models or choices from different apps."""
     create_equivalent_roles_of_related_role_model(apps)
-    create_equivalent_roles_of_ipaddress_role_choices(apps)
     create_equivalent_roles_of_virtualmachine_device_role(apps)
+    create_equivalent_roles_of_ipaddress_role_choices(apps)
 
 
 def clear_populated_roles(apps, schema_editor):
