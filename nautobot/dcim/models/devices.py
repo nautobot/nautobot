@@ -839,8 +839,7 @@ class Device(PrimaryModel, ConfigContextModel, StatusModel, RoleModelMixin):
     def to_csv(self):
         return (
             self.name or "",
-            # TODO(timizuo): Device Role Reassign
-            # self.device_role.name,
+            self.get_role_display(),
             self.tenant.name if self.tenant else None,
             self.device_type.manufacturer.name,
             self.device_type.model,

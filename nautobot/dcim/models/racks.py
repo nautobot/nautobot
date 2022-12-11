@@ -386,7 +386,7 @@ class Rack(PrimaryModel, StatusModel, RoleModelMixin):
             self.facility_id,
             self.tenant.name if self.tenant else None,
             self.get_status_display(),
-            self.role.name if self.role else None,
+            self.get_role_display(),
             self.get_type_display() if self.type else None,
             self.serial,
             self.asset_tag,

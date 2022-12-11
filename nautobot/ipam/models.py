@@ -617,7 +617,7 @@ class Prefix(PrimaryModel, StatusModel, RoleModelMixin):
             self.vlan.group.name if self.vlan and self.vlan.group else None,
             self.vlan.vid if self.vlan else None,
             self.get_status_display(),
-            self.role.name if self.role else None,
+            self.get_role_display(),
             self.is_pool,
             self.description,
         )
@@ -1015,9 +1015,6 @@ class IPAddress(PrimaryModel, StatusModel, RoleModelMixin):
 
     mask_length = property(fset=_set_mask_length)
 
-    def get_role_class(self):
-        return IPAddressRoleChoices.CSS_CLASSES.get(self.role)
-
 
 @extras_features(
     "custom_fields",
@@ -1243,7 +1240,7 @@ class VLAN(PrimaryModel, StatusModel, RoleModelMixin):
             self.name,
             self.tenant.name if self.tenant else None,
             self.get_status_display(),
-            self.role.name if self.role else None,
+            self.get_role_display(),
             self.description,
         )
 
