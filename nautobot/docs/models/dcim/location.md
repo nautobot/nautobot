@@ -12,5 +12,4 @@ Once you have defined the hierarchy of Location Types that you wish to use, you 
 Much like Sites, each Location must be assigned a name and operational [`status`](../../models/extras/status.md). The same default operational statuses are defined for Locations as for Sites, but as always, you can customize these to suit your needs. Locations can also be assigned to a tenant.
 
 +++ 2.0.0
-
-Location now supports all properties previously present on the Site model, including the `asn`, `comments`, `contact_email` `contact_name`, `contact_phone`, `facility`, `latitude`, `longitude`, `physical_address`, `shipping_address` and `time_zone` fields.
+    Location now supports all properties previously present on the Site model, including the `asn`, `comments`, `contact_email` `contact_name`, `contact_phone`, `facility`, `latitude`, `longitude`, `physical_address`, `shipping_address` and `time_zone` fields.

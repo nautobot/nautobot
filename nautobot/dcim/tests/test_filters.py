@@ -187,46 +187,15 @@ def common_test_data(cls):
 
     loc0 = Location.objects.filter(location_type=lt1).first()
     loc1 = Location.objects.filter(location_type=lt1).first()
-    loc1.description = "Research Triangle Park"
-    loc1.asn = 65003
-    loc1.facility = "Facility 3"
-    loc1.contact_name = "Contact 3"
-    loc1.contact_phone = "123-555-0003"
-    loc1.contact_email = "contact3@example.com"
-    loc1.time_zone = "America/Los_Angeles"
-    loc1.physical_address = "1 road st, hoboken, nj"
-    loc1.shipping_address = "PO Box 1, hoboken, nj"
     loc2 = Location.objects.filter(location_type=lt2).first()
     loc2.parent = loc1
-    loc2.asn = 65004
-    loc2.facility = "Facility 4"
-    loc2.contact_name = "Contact 4"
-    loc2.contact_phone = "123-555-0004"
-    loc2.contact_email = "contact4@example.com"
-    loc2.time_zone = "America/Chicago"
     loc3 = Location.objects.filter(location_type=lt3).first()
     loc3.parent = loc2
-    loc3.tenant = tenants[0]
-    loc3.asn = 65005
-    loc3.latitude = 10
-    loc3.longitude = 10
     loc4 = Location.objects.filter(location_type=lt4).first()
-    loc4.parent = loc3
-    loc4.tenant = tenants[1]
-    loc4.description = "Cube"
-    loc4.asn = 65006
-    loc4.latitude = 20
-    loc4.longitude = 20
-    loc4.comments = "comment2"
     nested_loc = Location.objects.filter(location_type__nestable=True, parent=loc1).first()
-    nested_loc.asn = 65007
     for loc in [loc1, loc2, loc3, loc4, nested_loc]:
         loc.validated_save()
-    cls.loc0 = loc0
     cls.loc1 = loc1
-    cls.loc2 = loc2
-    cls.loc3 = loc3
-    cls.loc4 = loc4
     cls.nested_loc = nested_loc
 
     provider = Provider.objects.create(name="Provider 1", slug="provider-1", asn=65001, account="1234")
@@ -1200,47 +1169,54 @@ class LocationFilterSetTestCase(FilterTestCases.NameSlugFilterTestCase, FilterTe
         )
 
     def test_facility(self):
-        params = {"facility": ["Facility 3", "Facility 4"]}
+        locations = Location.objects.exclude(facility="")[:2]
+        params = {"facility": [locations[0].facility, locations[1].facility]}
         self.assertQuerysetEqualAndNotEmpty(
-            self.filterset(params, self.queryset).qs, self.queryset.filter(facility__in=["Facility 3", "Facility 4"])
+            self.filterset(params, self.queryset).qs, self.queryset.filter(facility__in=params["facility"])
         )
 
     def test_asn(self):
-        params = {"asn": [65003, 65004]}
+        locations = Location.objects.filter(asn__isnull=False)[:2]
+        params = {"asn": [locations[0].asn, locations[1].asn]}
         self.assertQuerysetEqualAndNotEmpty(
-            self.filterset(params, self.queryset).qs, self.queryset.filter(asn__in=[65003, 65004])
+            self.filterset(params, self.queryset).qs, self.queryset.filter(asn__in=params["asn"])
         )
 
     def test_latitude(self):
-        params = {"latitude": [10, 20]}
+        locations = Location.objects.filter(latitude__isnull=False)[:2]
+        params = {"latitude": [locations[0].latitude, locations[1].latitude]}
         self.assertQuerysetEqualAndNotEmpty(
-            self.filterset(params, self.queryset).qs, self.queryset.filter(latitude__in=[10, 20])
+            self.filterset(params, self.queryset).qs, self.queryset.filter(latitude__in=params["latitude"])
         )
 
     def test_longitude(self):
-        params = {"longitude": [10, 20]}
+        locations = Location.objects.filter(longitude__isnull=False)[:2]
+        params = {"longitude": [locations[0].longitude, locations[1].longitude]}
         self.assertQuerysetEqualAndNotEmpty(
-            self.filterset(params, self.queryset).qs, self.queryset.filter(longitude__in=[10, 20])
+            self.filterset(params, self.queryset).qs, self.queryset.filter(longitude__in=params["longitude"])
         )
 
     def test_contact_name(self):
-        params = {"contact_name": ["Contact 3", "Contact 4"]}
+        locations = Location.objects.exclude(contact_name="")[:2]
+        params = {"contact_name": [locations[0].contact_name, locations[1].contact_name]}
         self.assertQuerysetEqualAndNotEmpty(
-            self.filterset(params, self.queryset).qs, self.queryset.filter(contact_name__in=["Contact 3", "Contact 4"])
+            self.filterset(params, self.queryset).qs, self.queryset.filter(contact_name__in=params["contact_name"])
         )
 
     def test_contact_phone(self):
-        params = {"contact_phone": ["123-555-0003", "123-555-0004"]}
+        locations = Location.objects.exclude(contact_phone="")[:2]
+        params = {"contact_phone": [locations[0].contact_phone, locations[1].contact_phone]}
         self.assertQuerysetEqualAndNotEmpty(
             self.filterset(params, self.queryset).qs,
-            self.queryset.filter(contact_phone__in=["123-555-0003", "123-555-0004"]),
+            self.queryset.filter(contact_phone__in=params["contact_phone"]),
         )
 
     def test_contact_email(self):
-        params = {"contact_email": ["contact3@example.com", "contact4@example.com"]}
+        locations = Location.objects.exclude(contact_email="")[:2]
+        params = {"contact_email": [locations[0].contact_email, locations[1].contact_email]}
         self.assertQuerysetEqualAndNotEmpty(
             self.filterset(params, self.queryset).qs,
-            self.queryset.filter(contact_email__in=["contact3@example.com", "contact4@example.com"]),
+            self.queryset.filter(contact_email__in=params["contact_email"]),
         )
 
     def test_status(self):
@@ -1257,16 +1233,17 @@ class LocationFilterSetTestCase(FilterTestCases.NameSlugFilterTestCase, FilterTe
         self.assertQuerysetEqualAndNotEmpty(self.filterset(params, self.queryset).qs, self.queryset.filter(pk=value))
 
     def test_comments(self):
+        location = Location.objects.exclude(comments="")[:1]
         with self.subTest():
-            params = {"comments": "COMMENT"}
+            params = {"comments": "FAKE COMMENT"}
             self.assertEqual(self.filterset(params, self.queryset).qs.count(), 0)
         with self.subTest():
-            params = {"comments": "comment123"}
+            params = {"comments": "COMMENT123"}
             self.assertEqual(self.filterset(params, self.queryset).qs.count(), 0)
         with self.subTest():
-            params = {"comments": "comment2"}
+            params = {"comments": location[0].comments}
             self.assertQuerysetEqualAndNotEmpty(
-                self.filterset(params, self.queryset).qs, self.queryset.filter(comments="comment2")
+                self.filterset(params, self.queryset).qs, self.queryset.filter(comments=params["comments"])
             )
 
     def test_circuit_terminations(self):
@@ -1471,8 +1448,9 @@ class LocationFilterSetTestCase(FilterTestCases.NameSlugFilterTestCase, FilterTe
             )
 
     def test_time_zone(self):
+        locations = Location.objects.exclude(time_zone="")[:2]
         with self.subTest():
-            params = {"time_zone": ["America/Los_Angeles", "America/Chicago"]}
+            params = {"time_zone": [locations[0].time_zone, locations[1].time_zone]}
             self.assertQuerysetEqualAndNotEmpty(
                 self.filterset(params, self.queryset).qs,
                 self.queryset.filter(time_zone__in=params["time_zone"]),
@@ -1484,32 +1462,35 @@ class LocationFilterSetTestCase(FilterTestCases.NameSlugFilterTestCase, FilterTe
             )
 
     def test_physical_address(self):
+        location = Location.objects.exclude(physical_address="")[:1]
         with self.subTest():
-            params = {"physical_address": "1 road st, hoboken, nj"}
+            params = {"physical_address": location[0].physical_address}
             self.assertQuerysetEqualAndNotEmpty(
                 self.filterset(params, self.queryset).qs,
-                self.queryset.filter(physical_address="1 road st, hoboken, nj"),
+                self.queryset.filter(physical_address=params["physical_address"]),
             )
         with self.subTest():
             params = {"physical_address": "nomatch"}
             self.assertFalse(self.filterset(params, self.queryset).qs.exists())
 
     def test_shipping_address(self):
+        location = Location.objects.exclude(shipping_address="")[:1]
         with self.subTest():
-            params = {"shipping_address": "PO Box 1, hoboken, nj"}
+            params = {"shipping_address": location[0].shipping_address}
             self.assertQuerysetEqualAndNotEmpty(
                 self.filterset(params, self.queryset).qs,
-                self.queryset.filter(shipping_address="PO Box 1, hoboken, nj"),
+                self.queryset.filter(shipping_address=params["shipping_address"]),
             )
         with self.subTest():
             params = {"shipping_address": "nomatch"}
             self.assertFalse(self.filterset(params, self.queryset).qs.exists())
 
     def test_description(self):
-        params = {"description": ["Research Triangle Park", "Cube"]}
+        locations = Location.objects.exclude(description="")[:2]
+        params = {"description": [locations[0].description, locations[1].description]}
         self.assertQuerysetEqualAndNotEmpty(
             self.filterset(params, self.queryset).qs,
-            self.queryset.filter(description__in=["Research Triangle Park", "Cube"]),
+            self.queryset.filter(description__in=params["description"]),
         )
 
     def test_site(self):
