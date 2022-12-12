@@ -32,6 +32,7 @@ from nautobot.extras.choices import (
     ObjectChangeActionChoices,
 )
 from nautobot.extras.datasources import get_datasource_content_choices
+from nautobot.extras.models.mixins import LimitQuerysetChoicesSerializerMixin
 from nautobot.extras.models import (
     ComputedField,
     ConfigContext,
@@ -108,6 +109,7 @@ from .nested_serializers import (  # noqa: F401
     NestedTagSerializer,
     NestedWebhookSerializer,
     NestedJobHookSerializer,
+    NestedRoleSerializer,
 )
 
 #
@@ -142,6 +144,16 @@ class NautobotModelSerializer(
     """
 
 
+class RoleSerializerField(LimitQuerysetChoicesSerializerMixin, NestedRoleSerializer):
+    """NestedSerializer field for `Role` object fields."""
+
+
+class RoleModelSerializerMixin(BaseModelSerializer):
+    """Mixin to add `role` choice field to model serializers."""
+
+    role = RoleSerializerField(required=False)
+
+
 class StatusModelSerializerMixin(BaseModelSerializer):
     """Mixin to add `status` choice field to model serializers."""
 
@@ -166,15 +178,8 @@ class StatusModelSerializerMixin(BaseModelSerializer):
         return list(cls().fields["status"].get_choices().keys())
 
 
-class TagSerializerField(NestedTagSerializer):
+class TagSerializerField(LimitQuerysetChoicesSerializerMixin, NestedTagSerializer):
     """NestedSerializer field for `Tag` object fields."""
-
-    def get_queryset(self):
-        """Only emit status options for this model/field combination."""
-        queryset = super().get_queryset()
-        # Get objects model e.g Site, Device... etc.
-        model = self.parent.parent.Meta.model
-        return queryset.get_for_model(model)
 
 
 # TODO should be TaggedModelSerializerMixin

@@ -74,6 +74,7 @@ from nautobot.dcim.models import (
 )
 from nautobot.extras.api.serializers import (
     NautobotModelSerializer,
+    RoleModelSerializerMixin,
     StatusModelSerializerMixin,
     TaggedObjectSerializer,
 )
@@ -384,13 +385,14 @@ class RackRoleSerializer(NautobotModelSerializer):
         ]
 
 
-class RackSerializer(NautobotModelSerializer, TaggedObjectSerializer, StatusModelSerializerMixin):
+class RackSerializer(
+    NautobotModelSerializer, TaggedObjectSerializer, StatusModelSerializerMixin, RoleModelSerializerMixin
+):
     url = serializers.HyperlinkedIdentityField(view_name="dcim-api:rack-detail")
     site = NestedSiteSerializer()
     location = NestedLocationSerializer(required=False, allow_null=True)
     group = NestedRackGroupSerializer(required=False, allow_null=True, default=None)
     tenant = NestedTenantSerializer(required=False, allow_null=True)
-    role = NestedRackRoleSerializer(required=False, allow_null=True)
     type = ChoiceField(choices=RackTypeChoices, allow_blank=True, required=False)
     width = ChoiceField(choices=RackWidthChoices, required=False)
     outer_unit = ChoiceField(choices=RackDimensionUnitChoices, allow_blank=True, required=False)
@@ -744,11 +746,11 @@ class PlatformSerializer(NautobotModelSerializer):
         ]
 
 
-class DeviceSerializer(NautobotModelSerializer, TaggedObjectSerializer, StatusModelSerializerMixin):
+class DeviceSerializer(
+    NautobotModelSerializer, TaggedObjectSerializer, StatusModelSerializerMixin, RoleModelSerializerMixin
+):
     url = serializers.HyperlinkedIdentityField(view_name="dcim-api:device-detail")
     device_type = NestedDeviceTypeSerializer()
-    # TODO(timizuo): Device Role Reassign
-    # device_role = NestedDeviceRoleSerializer()
     tenant = NestedTenantSerializer(required=False, allow_null=True)
     platform = NestedPlatformSerializer(required=False, allow_null=True)
     site = NestedSiteSerializer()
@@ -771,8 +773,7 @@ class DeviceSerializer(NautobotModelSerializer, TaggedObjectSerializer, StatusMo
             "url",
             "name",
             "device_type",
-            # TODO(timizuo): Device Role Reassign
-            # "device_role",
+            "role",
             "tenant",
             "platform",
             "serial",

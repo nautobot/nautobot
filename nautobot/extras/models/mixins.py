@@ -214,3 +214,15 @@ class SetFieldColorAndDisplayMixin:
                 f"get_{self.name}_color",
                 partialmethod(_get_FIELD_color, field=self),
             )
+
+
+class LimitQuerysetChoicesSerializerMixin:
+    """Mixin field that restricts queryset choices to those accessible
+    for the queryset model that implemented it."""
+
+    def get_queryset(self):
+        """Only emit options for this model/field combination."""
+        queryset = super().get_queryset()
+        # Get objects model e.g Site, Device... etc.
+        model = self.parent.parent.Meta.model
+        return queryset.get_for_model(model)

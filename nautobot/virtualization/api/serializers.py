@@ -14,6 +14,7 @@ from nautobot.dcim.api.nested_serializers import (
 from nautobot.dcim.choices import InterfaceModeChoices
 from nautobot.extras.api.serializers import (
     NautobotModelSerializer,
+    RoleModelSerializerMixin,
     StatusModelSerializerMixin,
     TaggedObjectSerializer,
 )
@@ -111,12 +112,13 @@ class ClusterSerializer(NautobotModelSerializer, TaggedObjectSerializer):
 #
 
 
-class VirtualMachineSerializer(NautobotModelSerializer, TaggedObjectSerializer, StatusModelSerializerMixin):
+class VirtualMachineSerializer(
+    NautobotModelSerializer, TaggedObjectSerializer, StatusModelSerializerMixin, RoleModelSerializerMixin
+):
     url = serializers.HyperlinkedIdentityField(view_name="virtualization-api:virtualmachine-detail")
     site = NestedSiteSerializer(read_only=True)
     location = NestedLocationSerializer(read_only=True, required=False, allow_null=True)
     cluster = NestedClusterSerializer()
-    role = NestedDeviceRoleSerializer(required=False, allow_null=True)
     tenant = NestedTenantSerializer(required=False, allow_null=True)
     platform = NestedPlatformSerializer(required=False, allow_null=True)
     primary_ip = NestedIPAddressSerializer(read_only=True)

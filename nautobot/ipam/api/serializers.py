@@ -17,6 +17,7 @@ from nautobot.dcim.api.nested_serializers import (
 )
 from nautobot.extras.api.serializers import (
     NautobotModelSerializer,
+    RoleModelSerializerMixin,
     StatusModelSerializerMixin,
     TaggedObjectSerializer,
 )
@@ -214,13 +215,14 @@ class VLANGroupSerializer(NautobotModelSerializer):
         return data
 
 
-class VLANSerializer(NautobotModelSerializer, TaggedObjectSerializer, StatusModelSerializerMixin):
+class VLANSerializer(
+    NautobotModelSerializer, TaggedObjectSerializer, StatusModelSerializerMixin, RoleModelSerializerMixin
+):
     url = serializers.HyperlinkedIdentityField(view_name="ipam-api:vlan-detail")
     site = NestedSiteSerializer(required=False, allow_null=True)
     location = NestedLocationSerializer(required=False, allow_null=True)
     group = NestedVLANGroupSerializer(required=False, allow_null=True)
     tenant = NestedTenantSerializer(required=False, allow_null=True)
-    role = NestedRoleSerializer(required=False, allow_null=True)
     prefix_count = serializers.IntegerField(read_only=True)
 
     class Meta:
@@ -259,7 +261,9 @@ class VLANSerializer(NautobotModelSerializer, TaggedObjectSerializer, StatusMode
 #
 
 
-class PrefixSerializer(NautobotModelSerializer, TaggedObjectSerializer, StatusModelSerializerMixin):
+class PrefixSerializer(
+    NautobotModelSerializer, TaggedObjectSerializer, StatusModelSerializerMixin, RoleModelSerializerMixin
+):
     url = serializers.HyperlinkedIdentityField(view_name="ipam-api:prefix-detail")
     family = ChoiceField(choices=IPAddressFamilyChoices, read_only=True)
     prefix = IPFieldSerializer()
@@ -268,7 +272,6 @@ class PrefixSerializer(NautobotModelSerializer, TaggedObjectSerializer, StatusMo
     vrf = NestedVRFSerializer(required=False, allow_null=True)
     tenant = NestedTenantSerializer(required=False, allow_null=True)
     vlan = NestedVLANSerializer(required=False, allow_null=True)
-    role = NestedRoleSerializer(required=False, allow_null=True)
 
     class Meta:
         model = Prefix
@@ -336,13 +339,14 @@ class AvailablePrefixSerializer(serializers.Serializer):
 #
 
 
-class IPAddressSerializer(NautobotModelSerializer, TaggedObjectSerializer, StatusModelSerializerMixin):
+class IPAddressSerializer(
+    NautobotModelSerializer, TaggedObjectSerializer, StatusModelSerializerMixin, RoleModelSerializerMixin
+):
     url = serializers.HyperlinkedIdentityField(view_name="ipam-api:ipaddress-detail")
     family = ChoiceField(choices=IPAddressFamilyChoices, read_only=True)
     address = IPFieldSerializer()
     vrf = NestedVRFSerializer(required=False, allow_null=True)
     tenant = NestedTenantSerializer(required=False, allow_null=True)
-    role = ChoiceField(choices=IPAddressRoleChoices, allow_blank=True, required=False)
     assigned_object_type = ContentTypeField(
         queryset=ContentType.objects.filter(constants.IPADDRESS_ASSIGNMENT_MODELS),
         required=False,
