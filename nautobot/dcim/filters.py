@@ -9,6 +9,7 @@ from nautobot.extras.filters import (
     CustomFieldModelFilterSet,
     LocalContextFilterSet,
     NautobotFilterSet,
+    RoleModelFilterSetMixin,
     StatusModelFilterSetMixin,
 )
 from nautobot.extras.models import SecretsGroup
@@ -441,7 +442,13 @@ class RackRoleFilterSet(NautobotFilterSet, NameSlugSearchFilterSet):
         fields = ["id", "name", "slug", "color", "description"]
 
 
-class RackFilterSet(NautobotFilterSet, LocatableModelFilterSetMixin, TenancyFilterSet, StatusModelFilterSetMixin):
+class RackFilterSet(
+    NautobotFilterSet,
+    LocatableModelFilterSetMixin,
+    TenancyFilterSet,
+    StatusModelFilterSetMixin,
+    RoleModelFilterSetMixin,
+):
     q = SearchFilter(
         filter_predicates={
             "name": "icontains",
@@ -472,12 +479,6 @@ class RackFilterSet(NautobotFilterSet, LocatableModelFilterSetMixin, TenancyFilt
     role_id = django_filters.ModelMultipleChoiceFilter(
         queryset=RackRole.objects.all(),
         label="Role (ID)",
-    )
-    role = django_filters.ModelMultipleChoiceFilter(
-        field_name="role__slug",
-        queryset=RackRole.objects.all(),
-        to_field_name="slug",
-        label="Role (slug)",
     )
     serial = django_filters.CharFilter(lookup_expr="iexact")
     has_devices = RelatedMembershipBooleanFilter(
@@ -938,6 +939,7 @@ class DeviceFilterSet(
     TenancyFilterSet,
     LocalContextFilterSet,
     StatusModelFilterSetMixin,
+    RoleModelFilterSetMixin,
 ):
     q = SearchFilter(
         filter_predicates={
@@ -971,17 +973,6 @@ class DeviceFilterSet(
     device_type_id = django_filters.ModelMultipleChoiceFilter(
         queryset=DeviceType.objects.all(),
         label="Device type (ID)",
-    )
-    role_id = django_filters.ModelMultipleChoiceFilter(
-        field_name="device_role_id",
-        queryset=DeviceRole.objects.all(),
-        label="Role (ID)",
-    )
-    role = django_filters.ModelMultipleChoiceFilter(
-        field_name="device_role__slug",
-        queryset=DeviceRole.objects.all(),
-        to_field_name="slug",
-        label="Role (slug)",
     )
     platform_id = django_filters.ModelMultipleChoiceFilter(
         queryset=Platform.objects.all(),

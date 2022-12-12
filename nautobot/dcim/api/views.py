@@ -424,8 +424,7 @@ class DeviceViewSet(ConfigContextQuerySetMixin, StatusViewSetMixin, NautobotMode
     # v2 TODO(jathan): Replace prefetch_related with select_related (extap tags because it is m2m)
     queryset = Device.objects.prefetch_related(
         "device_type__manufacturer",
-        # TODO(timizuo): Device Role Reassign
-        # "device_role",
+        "role",
         "tenant",
         "platform",
         "site",

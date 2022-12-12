@@ -7,6 +7,7 @@ from nautobot.extras.filters import (
     CustomFieldModelFilterSet,
     LocalContextFilterSet,
     NautobotFilterSet,
+    RoleModelFilterSetMixin,
     StatusModelFilterSetMixin,
 )
 from nautobot.ipam.models import IPAddress, Service, VLAN
@@ -117,7 +118,9 @@ class ClusterFilterSet(NautobotFilterSet, LocatableModelFilterSetMixin, TenancyF
         fields = ["id", "name", "comments"]
 
 
-class VirtualMachineFilterSet(NautobotFilterSet, LocalContextFilterSet, TenancyFilterSet, StatusModelFilterSetMixin):
+class VirtualMachineFilterSet(
+    NautobotFilterSet, LocalContextFilterSet, TenancyFilterSet, StatusModelFilterSetMixin, RoleModelFilterSetMixin
+):
     q = SearchFilter(
         filter_predicates={
             "name": "icontains",
@@ -177,16 +180,6 @@ class VirtualMachineFilterSet(NautobotFilterSet, LocalContextFilterSet, TenancyF
         field_name="cluster__location",
         to_field_name="slug",
         label="Location (slug or ID)",
-    )
-    role_id = django_filters.ModelMultipleChoiceFilter(
-        queryset=DeviceRole.objects.all(),
-        label="Role (ID)",
-    )
-    role = django_filters.ModelMultipleChoiceFilter(
-        field_name="role__slug",
-        queryset=DeviceRole.objects.all(),
-        to_field_name="slug",
-        label="Role (slug)",
     )
     platform_id = django_filters.ModelMultipleChoiceFilter(
         queryset=Platform.objects.all(),

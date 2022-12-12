@@ -6,7 +6,7 @@ from netaddr.core import AddrFormatError
 
 from nautobot.dcim.filter_mixins import LocatableModelFilterSetMixin
 from nautobot.dcim.models import Device, Interface
-from nautobot.extras.filters import NautobotFilterSet, StatusModelFilterSetMixin
+from nautobot.extras.filters import NautobotFilterSet, RoleModelFilterSetMixin, StatusModelFilterSetMixin
 from nautobot.tenancy.filters import TenancyFilterSet
 from nautobot.utilities.filters import (
     MultiValueCharFilter,
@@ -191,6 +191,7 @@ class PrefixFilterSet(
     LocatableModelFilterSetMixin,
     TenancyFilterSet,
     StatusModelFilterSetMixin,
+    RoleModelFilterSetMixin,
 ):
     prefix = django_filters.CharFilter(
         method="filter_prefix",
@@ -241,16 +242,6 @@ class PrefixFilterSet(
     vlan_vid = django_filters.NumberFilter(
         field_name="vlan__vid",
         label="VLAN number (1-4095)",
-    )
-    role_id = django_filters.ModelMultipleChoiceFilter(
-        queryset=Role.objects.all(),
-        label="Role (ID)",
-    )
-    role = django_filters.ModelMultipleChoiceFilter(
-        field_name="role__slug",
-        queryset=Role.objects.all(),
-        to_field_name="slug",
-        label="Role (slug)",
     )
     tag = TagFilter()
 
@@ -331,7 +322,9 @@ class PrefixFilterSet(
         return queryset.filter(params)
 
 
-class IPAddressFilterSet(NautobotFilterSet, IPAMFilterSetMixin, TenancyFilterSet, StatusModelFilterSetMixin):
+class IPAddressFilterSet(
+    NautobotFilterSet, IPAMFilterSetMixin, TenancyFilterSet, StatusModelFilterSetMixin, RoleModelFilterSetMixin
+):
     parent = django_filters.CharFilter(
         method="search_by_parent",
         label="Parent prefix",
@@ -413,7 +406,6 @@ class IPAddressFilterSet(NautobotFilterSet, IPAMFilterSetMixin, TenancyFilterSet
         method="_assigned_to_interface",
         label="Is assigned to an interface",
     )
-    role = django_filters.MultipleChoiceFilter(choices=IPAddressRoleChoices)
     tag = TagFilter()
 
     class Meta:
@@ -474,7 +466,13 @@ class VLANGroupFilterSet(NautobotFilterSet, LocatableModelFilterSetMixin, NameSl
         fields = ["id", "name", "slug", "description"]
 
 
-class VLANFilterSet(NautobotFilterSet, LocatableModelFilterSetMixin, TenancyFilterSet, StatusModelFilterSetMixin):
+class VLANFilterSet(
+    NautobotFilterSet,
+    LocatableModelFilterSetMixin,
+    TenancyFilterSet,
+    StatusModelFilterSetMixin,
+    RoleModelFilterSetMixin,
+):
     q = SearchFilter(
         filter_predicates={
             "name": "icontains",
@@ -499,16 +497,6 @@ class VLANFilterSet(NautobotFilterSet, LocatableModelFilterSetMixin, TenancyFilt
         queryset=VLANGroup.objects.all(),
         to_field_name="slug",
         label="Group",
-    )
-    role_id = django_filters.ModelMultipleChoiceFilter(
-        queryset=Role.objects.all(),
-        label="Role (ID)",
-    )
-    role = django_filters.ModelMultipleChoiceFilter(
-        field_name="role__slug",
-        queryset=Role.objects.all(),
-        to_field_name="slug",
-        label="Role (slug)",
     )
     tag = TagFilter()
 
