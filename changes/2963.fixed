@@ -1,1 +1,0 @@
-Fixed 500 error when combining filtering on relationships with concrete fields.
