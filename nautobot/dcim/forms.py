@@ -169,7 +169,7 @@ class DeviceComponentFilterForm(NautobotFilterForm):
         required=False,
         query_params={"region": "$region"},
     )
-    device_id = DynamicModelMultipleChoiceField(
+    device = DynamicModelMultipleChoiceField(
         queryset=Device.objects.all(),
         required=False,
         label="Device",
@@ -785,14 +785,14 @@ class RackFilterForm(NautobotFilterForm, LocatableModelFilterFormMixin, TenancyF
         "region",
         "site",
         "location",
-        "group_id",
+        "group",
         "status",
         "role",
         "tenant_group",
         "tenant",
     ]
     q = forms.CharField(required=False, label="Search")
-    group_id = DynamicModelMultipleChoiceField(
+    group = DynamicModelMultipleChoiceField(
         queryset=RackGroup.objects.all(),
         required=False,
         label="Rack group",
@@ -820,7 +820,7 @@ class RackElevationFilterForm(RackFilterForm):
         "q",
         "region",
         "site",
-        "group_id",
+        "group",
         "id",
         "status",
         "role",
@@ -833,7 +833,7 @@ class RackElevationFilterForm(RackFilterForm):
         required=False,
         query_params={
             "site": "$site",
-            "group_id": "$group_id",
+            "group": "$group",
         },
     )
 
@@ -859,7 +859,7 @@ class RackReservationForm(NautobotModelForm, TenancyForm):
         queryset=Rack.objects.all(),
         query_params={
             "site": "$site",
-            "group_id": "$rack_group",
+            "group": "$rack_group",
         },
     )
     units = NumericArrayField(
@@ -943,8 +943,8 @@ class RackReservationFilterForm(NautobotFilterForm, TenancyFilterForm):
         "q",
         "region",
         "site",
-        "group_id",
-        "user_id",
+        "group",
+        "user",
         "tenant_group",
         "tenant",
     ]
@@ -956,14 +956,14 @@ class RackReservationFilterForm(NautobotFilterForm, TenancyFilterForm):
         required=False,
         query_params={"region": "$region"},
     )
-    group_id = DynamicModelMultipleChoiceField(
+    group = DynamicModelMultipleChoiceField(
         # v2 TODO(jathan): Replace prefetch_related with select_related
         queryset=RackGroup.objects.prefetch_related("site"),
         required=False,
         label="Rack group",
         null_option="None",
     )
-    user_id = DynamicModelMultipleChoiceField(
+    user = DynamicModelMultipleChoiceField(
         queryset=get_user_model().objects.all(),
         required=False,
         label="User",
@@ -1808,7 +1808,7 @@ class DeviceForm(LocatableModelFormMixin, NautobotModelForm, TenancyForm, LocalC
         required=False,
         query_params={
             "site": "$site",
-            "group_id": "$rack_group",
+            "group": "$rack_group",
         },
     )
     device_redundancy_group = DynamicModelChoiceField(queryset=DeviceRedundancyGroup.objects.all(), required=False)
@@ -2197,32 +2197,32 @@ class DeviceFilterForm(
         "region",
         "site",
         "location",
-        "rack_group_id",
-        "rack_id",
+        "rack_group",
+        "rack",
         "status",
         "role",
         "tenant_group",
         "tenant",
-        "manufacturer_id",
-        "device_type_id",
+        "manufacturer",
+        "device_type",
         "mac_address",
         "has_primary_ip",
     ]
     q = forms.CharField(required=False, label="Search")
-    rack_group_id = DynamicModelMultipleChoiceField(
+    rack_group = DynamicModelMultipleChoiceField(
         queryset=RackGroup.objects.all(),
         required=False,
         label="Rack group",
         query_params={"site": "$site"},
     )
-    rack_id = DynamicModelMultipleChoiceField(
+    rack = DynamicModelMultipleChoiceField(
         queryset=Rack.objects.all(),
         required=False,
         label="Rack",
         null_option="None",
         query_params={
             "site": "$site",
-            "group_id": "$rack_group_id",
+            "group": "$rack_group",
         },
     )
     role = DynamicModelMultipleChoiceField(queryset=DeviceRole.objects.all(), to_field_name="slug", required=False)
@@ -2232,7 +2232,7 @@ class DeviceFilterForm(
         required=False,
         label="Manufacturer",
     )
-    device_type_id = DynamicModelMultipleChoiceField(
+    device_type = DynamicModelMultipleChoiceField(
         queryset=DeviceType.objects.all(),
         required=False,
         label="Model",
@@ -3450,7 +3450,7 @@ class InventoryItemForm(NautobotModelForm):
     parent = DynamicModelChoiceField(
         queryset=InventoryItem.objects.all(),
         required=False,
-        query_params={"device_id": "$device"},
+        query_params={"device": "$device"},
     )
     manufacturer = DynamicModelChoiceField(queryset=Manufacturer.objects.all(), required=False)
 
@@ -3475,7 +3475,7 @@ class InventoryItemCreateForm(ComponentCreateForm):
     parent = DynamicModelChoiceField(
         queryset=InventoryItem.objects.all(),
         required=False,
-        query_params={"device_id": "$device"},
+        query_params={"device": "$device"},
     )
     part_id = forms.CharField(max_length=50, required=False, label="Part ID")
     serial = forms.CharField(
@@ -3579,7 +3579,7 @@ class ConnectCableToDeviceForm(ConnectCableExcludeIDMixin, NautobotModelForm):
         required=False,
         query_params={
             "site": "$termination_b_site",
-            "rack_id": "$termination_b_rack",
+            "rack": "$termination_b_rack",
         },
     )
 
@@ -3617,7 +3617,7 @@ class ConnectCableToConsolePortForm(ConnectCableToDeviceForm):
         queryset=ConsolePort.objects.all(),
         label="Name",
         disabled_indicator="cable",
-        query_params={"device_id": "$termination_b_device"},
+        query_params={"device": "$termination_b_device"},
     )
 
 
@@ -3626,7 +3626,7 @@ class ConnectCableToConsoleServerPortForm(ConnectCableToDeviceForm):
         queryset=ConsoleServerPort.objects.all(),
         label="Name",
         disabled_indicator="cable",
-        query_params={"device_id": "$termination_b_device"},
+        query_params={"device": "$termination_b_device"},
     )
 
 
@@ -3635,7 +3635,7 @@ class ConnectCableToPowerPortForm(ConnectCableToDeviceForm):
         queryset=PowerPort.objects.all(),
         label="Name",
         disabled_indicator="cable",
-        query_params={"device_id": "$termination_b_device"},
+        query_params={"device": "$termination_b_device"},
     )
 
 
@@ -3644,7 +3644,7 @@ class ConnectCableToPowerOutletForm(ConnectCableToDeviceForm):
         queryset=PowerOutlet.objects.all(),
         label="Name",
         disabled_indicator="cable",
-        query_params={"device_id": "$termination_b_device"},
+        query_params={"device": "$termination_b_device"},
     )
 
 
@@ -3654,7 +3654,7 @@ class ConnectCableToInterfaceForm(ConnectCableToDeviceForm):
         label="Name",
         disabled_indicator="cable",
         query_params={
-            "device_id": "$termination_b_device",
+            "device": "$termination_b_device",
             "kind": "physical",
         },
     )
@@ -3665,7 +3665,7 @@ class ConnectCableToFrontPortForm(ConnectCableToDeviceForm):
         queryset=FrontPort.objects.all(),
         label="Name",
         disabled_indicator="cable",
-        query_params={"device_id": "$termination_b_device"},
+        query_params={"device": "$termination_b_device"},
     )
 
 
@@ -3674,7 +3674,7 @@ class ConnectCableToRearPortForm(ConnectCableToDeviceForm):
         queryset=RearPort.objects.all(),
         label="Name",
         disabled_indicator="cable",
-        query_params={"device_id": "$termination_b_device"},
+        query_params={"device": "$termination_b_device"},
     )
 
 
@@ -3751,7 +3751,7 @@ class ConnectCableToPowerFeedForm(ConnectCableExcludeIDMixin, NautobotModelForm)
         queryset=PowerFeed.objects.all(),
         label="Name",
         disabled_indicator="cable",
-        query_params={"power_panel_id": "$termination_b_powerpanel"},
+        query_params={"power_panel": "$termination_b_powerpanel"},
     )
 
     class Meta:
@@ -3944,7 +3944,7 @@ class CableFilterForm(BootstrapMixin, StatusModelFilterFormMixin, forms.Form):
         query_params={"region": "$region"},
     )
     tenant = DynamicModelMultipleChoiceField(queryset=Tenant.objects.all(), to_field_name="slug", required=False)
-    rack_id = DynamicModelMultipleChoiceField(
+    rack = DynamicModelMultipleChoiceField(
         queryset=Rack.objects.all(),
         required=False,
         label="Rack",
@@ -3957,14 +3957,14 @@ class CableFilterForm(BootstrapMixin, StatusModelFilterFormMixin, forms.Form):
         widget=StaticSelect2Multiple(),
     )
     color = forms.CharField(max_length=6, required=False, widget=ColorSelect())  # RGB color code
-    device_id = DynamicModelMultipleChoiceField(
+    device = DynamicModelMultipleChoiceField(
         queryset=Device.objects.all(),
         required=False,
         label="Device",
         query_params={
             "site": "$site",
             "tenant": "$tenant",
-            "rack_id": "$rack_id",
+            "rack": "$rack",
         },
     )
     tag = TagFilterField(model)
@@ -3983,7 +3983,7 @@ class ConsoleConnectionFilterForm(BootstrapMixin, forms.Form):
         required=False,
         query_params={"region": "$region"},
     )
-    device_id = DynamicModelMultipleChoiceField(
+    device = DynamicModelMultipleChoiceField(
         queryset=Device.objects.all(),
         required=False,
         label="Device",
@@ -3999,7 +3999,7 @@ class PowerConnectionFilterForm(BootstrapMixin, forms.Form):
         required=False,
         query_params={"region": "$region"},
     )
-    device_id = DynamicModelMultipleChoiceField(
+    device = DynamicModelMultipleChoiceField(
         queryset=Device.objects.all(),
         required=False,
         label="Device",
@@ -4015,7 +4015,7 @@ class InterfaceConnectionFilterForm(BootstrapMixin, forms.Form):
         required=False,
         query_params={"region": "$region"},
     )
-    device_id = DynamicModelMultipleChoiceField(
+    device = DynamicModelMultipleChoiceField(
         queryset=Device.objects.all(),
         required=False,
         label="Device",
@@ -4050,7 +4050,7 @@ class VirtualChassisCreateForm(NautobotModelForm):
         required=False,
         query_params={
             "site": "$site",
-            "rack_id": "$rack",
+            "rack": "$rack",
         },
     )
     initial_position = forms.IntegerField(
@@ -4177,8 +4177,8 @@ class VCMemberSelectForm(BootstrapMixin, forms.Form):
         queryset=Device.objects.all(),
         query_params={
             "site": "$site",
-            "rack_id": "$rack",
-            "virtual_chassis_id": "null",
+            "rack": "$rack",
+            "virtual_chassis": "null",
         },
     )
 
@@ -4297,10 +4297,10 @@ class PowerPanelBulkEditForm(
 class PowerPanelFilterForm(NautobotFilterForm, LocatableModelFilterFormMixin):
     model = PowerPanel
     q = forms.CharField(required=False, label="Search")
-    rack_group_id = DynamicModelMultipleChoiceField(
+    rack_group = DynamicModelMultipleChoiceField(
         queryset=RackGroup.objects.all(),
         required=False,
-        label="Rack group (ID)",
+        label="Rack group",
         null_option="None",
         query_params={"site": "$site"},
     )
@@ -4449,14 +4449,14 @@ class PowerFeedFilterForm(NautobotFilterForm, StatusModelFilterFormMixin):
         required=False,
         query_params={"region": "$region"},
     )
-    power_panel_id = DynamicModelMultipleChoiceField(
+    power_panel = DynamicModelMultipleChoiceField(
         queryset=PowerPanel.objects.all(),
         required=False,
         label="Power panel",
         null_option="None",
         query_params={"site": "$site"},
     )
-    rack_id = DynamicModelMultipleChoiceField(
+    rack = DynamicModelMultipleChoiceField(
         queryset=Rack.objects.all(),
         required=False,
         label="Rack",

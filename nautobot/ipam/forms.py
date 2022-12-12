@@ -598,7 +598,7 @@ class IPAddressForm(NautobotModelForm, TenancyForm, ReturnURLForm, AddressFieldM
         label="Device",
         query_params={
             "site": "$site",
-            "rack_id": "$nat_rack",
+            "rack": "$nat_rack",
         },
     )
     nat_cluster = DynamicModelChoiceField(queryset=Cluster.objects.all(), required=False, label="Cluster")

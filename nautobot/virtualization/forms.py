@@ -209,8 +209,8 @@ class ClusterAddDevicesForm(BootstrapMixin, forms.Form):
         query_params={
             "site": "$site",
             "location": "$location",
-            "rack_id": "$rack",
-            "cluster_id": "null",
+            "rack": "$rack",
+            "cluster": "null",
         },
     )
 
