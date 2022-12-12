@@ -45,6 +45,8 @@ class RoleModelMixin(models.Model):
     role = RoleField(
         on_delete=models.PROTECT,
         related_name="%(app_label)s_%(class)s_related",  # e.g. dcim_device_related
+        blank=True,
+        null=True,
     )
 
     class Meta:
