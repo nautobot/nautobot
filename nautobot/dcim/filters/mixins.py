@@ -22,19 +22,9 @@ class CableTerminationModelFilterSetMixin(django_filters.FilterSet):
 
 
 class DeviceComponentTemplateModelFilterSetMixin(NameSlugSearchFilterSet, CustomFieldModelFilterSetMixin):
-    devicetype_id = django_filters.ModelMultipleChoiceFilter(
-        queryset=DeviceType.objects.all(),
-        field_name="device_type_id",
-        label="Device type (ID)",
-    )
     device_type = NaturalKeyOrPKMultipleChoiceFilter(
         queryset=DeviceType.objects.all(),
         label="Device type (slug or ID)",
-    )
-    device = NaturalKeyOrPKMultipleChoiceFilter(
-        queryset=Device.objects.all(),
-        to_field_name="name",
-        label="Device (name or ID)",
     )
     label = MultiValueCharFilter(label="Label")
     description = MultiValueCharFilter(label="Description")
