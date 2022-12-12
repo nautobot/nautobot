@@ -148,6 +148,18 @@ A number of mixin classes have been renamed and/or relocated for improved self-c
 | `TenancyFilterSet`             | `TenancyModelFilterSetMixin`                 |
 
 <!-- towncrier release notes start -->
+## v1.5.5 (2022-12-12)
+
+### Changed
+
+- [#2663](https://github.com/nautobot/nautobot/issues/2663) - Changed `tags` field in ConfigContextForm to `DynamicModelMultipleChoiceField`.
+
+### Fixed
+
+- [#2948](https://github.com/nautobot/nautobot/issues/2948) - Fixed incorrect assumption in test base that `example_plugin` would always be installed.
+- [#2962](https://github.com/nautobot/nautobot/issues/2962) - Fixed an error raised when logging errors about a `Secret` with an invalid `provider`.
+- [#2963](https://github.com/nautobot/nautobot/issues/2963) - Fixed 500 error when combining filtering on relationships with concrete fields.
+
 ## v1.5.4 (2022-12-02)
 
 ### Added
