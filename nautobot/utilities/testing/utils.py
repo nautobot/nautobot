@@ -1,14 +1,13 @@
+from contextlib import contextmanager
 import logging
 import re
-from contextlib import contextmanager
 
 from django.contrib.auth import get_user_model
 from django.contrib.auth.models import Permission
 from django.db.models import Q
 from django.db.models.deletion import PROTECT
-from tree_queries.models import TreeNodeForeignKey
 from mptt.models import TreeForeignKey
-
+from tree_queries.models import TreeNodeForeignKey
 
 # Use the proper swappable User model
 User = get_user_model()

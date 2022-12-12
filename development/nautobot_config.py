@@ -34,3 +34,5 @@ LOGGING["loggers"]["nautobot"]["level"] = LOG_LEVEL  # noqa: F405
 PLUGINS = [
     "example_plugin",
 ]
+
+METRICS_ENABLED = True

@@ -13,8 +13,8 @@ Nautobot-specific configuration of these tools is maintained in the files `.flak
 It is strongly recommended to include all of the above tools as part of your commit process before opening any pull request. A Git commit hook is provided in the source at `scripts/git-hooks/pre-commit`. Linking to this script from `.git/hooks/` will invoke these tools prior to every commit attempt and abort if the validation fails.
 
 ```bash
-$ cd .git/hooks/
-$ ln -s ../../scripts/git-hooks/pre-commit
+cd .git/hooks/
+ln -s ../../scripts/git-hooks/pre-commit
 ```
 
 You can also invoke these utilities manually against the development Docker containers by running:
@@ -49,13 +49,13 @@ New dependencies can be added to the project via the `poetry add` command. This 
 
 * No easter eggs. While they can be fun, Nautobot must be considered as a business-critical tool. The potential, however minor, for introducing a bug caused by unnecessary logic is best avoided entirely.
 
-* Constants (variables which generally do not change) should be declared in `constants.py` within each app. Wildcard imports from the file are acceptable.
+* Constants (variables which generally do not change) should be declared in `constants.py` within each app.
 
 * Every model should have a docstring. Every custom method should include an explanation of its function.
 
 * Nested API serializers generate minimal representations of an object. These are stored separately from the primary serializers to avoid circular dependencies. Always import nested serializers from other apps directly. For example, from within the DCIM app you would write `from nautobot.ipam.api.nested_serializers import NestedIPAddressSerializer`.
 
-* The combination of `nautobot.utilities.filters.BaseFilterSet`, `nautobot.extras.filters.CreatedUpdatedFilterSet`, `nautobot.extras.filters.CustomFieldModelFilterSet`, and `nautobot.extras.filters.RelationshipModelFilterSet` is such a common use case throughout the code base that they have a helper class which combines all of these at `nautobot.extras.NautobotFilterSet`. Use this helper class if you need the functionality from these classes.
+* The combination of `nautobot.utilities.filters.BaseFilterSet`, `nautobot.extras.filters.CreatedUpdatedModelFilterSetMixin`, `nautobot.extras.filters.CustomFieldModelFilterSetMixin`, and `nautobot.extras.filters.RelationshipModelFilterSetMixin` is such a common use case throughout the code base that they have a helper class which combines all of these at `nautobot.extras.NautobotFilterSet`. Use this helper class if you need the functionality from these classes.
 
 * The combination of `nautobot.utilities.forms.BootstrapMixin`, `nautobot.extras.forms.CustomFieldModelFormMixin`, `nautobot.extras.forms.RelationshipModelFormMixin` and `nautobot.extras.forms.NoteModelFormMixin` is such a common use case throughout the code base that they have a helper class which combines all of these at `nautobot.extras.forms.NautobotModelForm`. Use this helper class if you need the functionality from these classes.
 
@@ -67,7 +67,7 @@ New dependencies can be added to the project via the `poetry add` command. This 
 
     * API serializers for most models should inherit from `nautobot.extras.api.serializers.NautobotModelSerializer` and any appropriate mixins. Only use more abstract base classes such as ValidatedModelSerializer where absolutely required.
 
-    * `NautobotModelSerializer` will automatically add serializer fields for `id`, `created`/`last_updated` (if applicable), `custom_fields`, `computed_fields`, and `relationships`, so there's generally no need to explicitly declare these fields in `.Meta.fields` of each serializer class. Similarly, `TaggedObjectSerializer` and `StatusModelSerializerMixin` will automatically add the `tags` and `status` fields when included in a serializer class.
+    * `NautobotModelSerializer` will automatically add serializer fields for `id`, `created`/`last_updated` (if applicable), `custom_fields`, `computed_fields`, and `relationships`, so there's generally no need to explicitly declare these fields in `.Meta.fields` of each serializer class. Similarly, `TaggedModelSerializerMixin` and `StatusModelSerializerMixin` will automatically add the `tags` and `status` fields when included in a serializer class.
 
     * API Views for most models should inherit from `nautobot.extras.api.views.NautobotModelViewSet`. Only use more abstract base classes such as `ModelViewSet` where absolutely required.
 
@@ -77,3 +77,122 @@ New dependencies can be added to the project via the `poetry add` command. This 
 
 <!-- markdownlint-disable-next-line NAUTOBOTMD001 -->
 * There is an SVG form of the Nautobot logo at [nautobot/docs/nautobot_logo.svg](../nautobot_logo.svg). It is preferred to use this logo for all purposes as it scales to arbitrary sizes without loss of resolution. If a raster image is required, the SVG logo should be converted to a PNG image of the prescribed size.
+
+## Importing Python Packages
+
+To prevent circular dependency errors and improve code readability, the following standards should be followed when importing from other python modules.
+
+### PEP8 Style Guide
+
+Nautobot follows the [PEP8 style guide's](https://peps.python.org/pep-0008/#imports) standard for importing modules. Libraries should be imported in these groups: standard library, third party libraries, then `nautobot` packages and finally try/except imports. The groups should be separated by a single blank line. Within these groups,import lines should be sorted alphanumerically by the package name. Lists of of names imported from packages should also be sorted alphanumerically.
+
+!!! example
+
+    ```py
+    from abc import ABC
+    import logging
+    from uuid import UUID
+
+    from django.db.models import CharField, DecimalField, TextField
+    import django_filters
+
+    from nautobot.dcim import models as dcim_models
+    from nautobot.extras import models
+    ```
+
+### Wildcard Imports
+
+Wildcard imports (`from foo import *`) should only be used in `__init__.py` files to import names from submodules that have a `__all__` variable defined.
+
+!!! example
+
+    ```py title="nautobot/dcim/models/__init__.py"
+    from nautobot.dcim.models.cables import *
+    from nautobot.dcim.models.device_component_templates import *
+    from nautobot.dcim.models.device_components import *
+    # etc ...
+    ```
+
+### Importing from External Packages
+
+Individual names may be imported from external packages (`from foo import some_function, SomeClass`). This differs from the standard for [importing from the `nautobot` package](#module-name-imports).
+
+### Importing Nautobot Packages
+
+#### Module Name Imports
+
+Whenever possible, imports from the `nautobot` package should use module level imports, not individual names from a module.
+
+!!! example
+
+    ```py
+    # module import
+    from nautobot.utilities import xyz
+
+    # name import (do not use)
+    from nautobot.utilities.xyz import SomeClass, some_function
+    ```
+
+#### Absolute Imports
+
+Always use absolute imports instead of relative imports.
+
+!!! example
+
+    ```py
+    # absolute import
+    from nautobot.dcim import constants
+    from nautobot.dcim.models import Device
+
+    # relative import (do not use)
+    import constants
+    from .models import Device
+    ```
+
+#### Import Style Conventions
+
+To import modules from other apps under the `nautobot` namespace, use the convention `from nautobot.<app_name> import <module> as <app_name>_<module>`. If importing from within the same app do not alias the imported namespace.
+
+!!! example
+
+    ```py title="nautobot/extras/models.py"
+    # inter-app import
+    from nautobot.dcim import models as dcim_models
+
+    # intra-app import
+    from nautobot.extras import constants
+    ```
+
+#### Resolving Name Conflicts
+
+When using external libraries you may need to import multiple different modules with the same name. In this case, the namespace from the external package should be aliased. For aliasing external libraries, use `<package>_<module>`.
+
+!!! example
+
+    ```py
+    # from within the current app
+    from nautobot.extras import models
+
+    # from a different Nautobot app
+    from nautobot.dcim import models as dcim_models
+
+    # other libraries
+    from django.db import models as django_models
+    from mptt import models as mptt_models
+    ```
+
+#### Convenience Imports
+
+Nautobot uses convenience imports in the same way that [django](https://docs.djangoproject.com/en/dev/internals/contributing/writing-code/coding-style/#imports) implements them. These should be leveraged whenever possible.
+
+!!! example
+
+    ```py
+    from nautobot.extras import forms
+
+    # use top level import if available:
+    forms.NoteModelFormMixin()
+
+    # instead of the full path:
+    forms.mixins.NoteModelFormMixin()
+    ```

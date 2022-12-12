@@ -52,20 +52,22 @@ The optional settings include:
 
 Although caching is performed automatically and rarely requires administrative intervention, Nautobot provides the `invalidate` management command to force invalidation of cached results. This command can reference a specific object my its type and UUID:
 
+> Run these commands as the Nautobot user
+
 ```no-highlight
-$ nautobot-server invalidate dcim.Device.84ae706d-c189-4d13-a898-9737648e34b3
+nautobot-server invalidate dcim.Device.84ae706d-c189-4d13-a898-9737648e34b3
 ```
 
 Alternatively, it can also delete all cached results for an object type:
 
 ```no-highlight
-$ nautobot-server invalidate dcim.Device
+nautobot-server invalidate dcim.Device
 ```
 
 Finally, calling it with the `all` argument will force invalidation of the entire cache database:
 
 ```no-highlight
-$ nautobot-server invalidate all
+nautobot-server invalidate all
 ```
 
 ## High Availability Caching

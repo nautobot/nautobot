@@ -1,9 +1,9 @@
 from django.test import TestCase
 
-from nautobot.utilities.choices import ChoiceSet
+from nautobot.utilities import choices
 
 
-class ExampleChoices(ChoiceSet):
+class ExampleChoices(choices.ChoiceSet):
 
     CHOICE_A = "a"
     CHOICE_B = "b"

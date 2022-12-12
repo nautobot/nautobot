@@ -48,7 +48,7 @@ class PluginNavBarTestCase(SeleniumTestCase):
             },
         },
         "Plugins": {
-            "Example plugin": {
+            "Example Nautobot App": {
                 "Models": {
                     "permission": "example_plugin.view_examplemodel",
                     "buttons": ["Add a new example model", "Import example models"],

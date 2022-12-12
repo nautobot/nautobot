@@ -74,7 +74,7 @@ You must be **absolutely** sure to install the plugin within Nautobot's virtual 
 Download and install the plugin package per its installation instructions. Plugins published via PyPI are typically installed using `pip3`.
 
 ```no-highlight
-$ pip3 install <package>
+pip3 install <package>
 ```
 
 Alternatively, if you're or installing a plugin from from a local source copy, you may wish to install the plugin manually by running `python setup.py install`.

@@ -391,12 +391,6 @@ class DynamicGroup(OrganizationalModel):
 
         self.filter = new_filter
 
-    # FIXME(jathan): Yes, this is "something", but there is discrepancy between explicitly declared
-    # fields on `DeviceFilterForm` (for example) vs. the `DeviceFilterSet` filters. For example
-    # `Device.name` becomes a `MultiValueCharFilter` that emits a `MultiValueCharField` which
-    # expects a list of strings as input. The inverse is not true. It's easier to munge this
-    # dictionary when we go to send it to the form, than it is to dynamically coerce the form field
-    # types coming and going... For now.
     def get_initial(self):
         """
         Return an form-friendly version of `self.filter` for initial form data.
@@ -408,6 +402,7 @@ class DynamicGroup(OrganizationalModel):
 
         return initial_data
 
+    # TODO: Rip this out once the dynamic filter form helper replaces this in the web UI.
     def generate_filter_form(self):
         """
         Generate a `FilterForm` class for use in `DynamicGroup` edit view.
@@ -419,7 +414,6 @@ class DynamicGroup(OrganizationalModel):
         """
         filter_fields = self.get_filter_fields()
 
-        # FIXME(jathan): Account for field_order in the newly generated class.
         try:
 
             class FilterForm(self.filterform_class):
@@ -444,7 +438,9 @@ class DynamicGroup(OrganizationalModel):
             raise ValidationError({"filter": "Filter requires a `content_type` to be set"})
 
         # Validate against the filterset's internal form validation.
-        self.set_filter(self.filter)
+        filterset = self.filterset_class(self.filter)
+        if not filterset.is_valid():
+            raise ValidationError(filterset.errors)
 
     def delete(self, *args, **kwargs):
         """Check if we're a child and attempt to block delete if we are."""
@@ -504,7 +500,7 @@ class DynamicGroup(OrganizationalModel):
             # reconstructed from saved filters, lists of slugs are common e.g. (`{"site": ["ams01",
             # "ams02"]}`, the value being a list of site slugs (`["ams01", "ams02"]`).
             if value and isinstance(value, list) and isinstance(value[0], str):
-                model_field = self.model._meta.get_field(filter_field.field_name)
+                model_field = django_filters.utils.get_model_field(self._model, filter_field.field_name)
                 related_model = model_field.related_model
                 lookup_kwargs = {f"{to_field_name}__in": value}
                 gq_value = related_model.objects.filter(**lookup_kwargs)

@@ -201,7 +201,7 @@ class AggregateTestCase(FilterTestCases.FilterTestCase, FilterTestCases.TenancyF
         params = {"date_added": [str(date) for date in dates]}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
 
-    # TODO: Test for multiple values
+    # 2.0 TODO: Test for multiple values
     def test_prefix(self):
         params = {"prefix": self.queryset.ip_family(4).first().prefix}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 1)
@@ -393,7 +393,7 @@ class PrefixTestCase(FilterTestCases.FilterTestCase, FilterTestCases.TenancyFilt
         self.assertQuerysetEqualAndNotEmpty(
             self.filterset(params, self.queryset).qs, self.queryset.filter(vlan__in=vlans)
         )
-        # TODO: Test for multiple values
+        # 2.0 TODO: Test for multiple values
         params = {"vlan_vid": vlans[0].vid}
         self.assertQuerysetEqualAndNotEmpty(
             self.filterset(params, self.queryset).qs, self.queryset.filter(vlan__vid=vlans[0].vid)

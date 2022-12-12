@@ -1,10 +1,8 @@
 # noinspection PyUnresolvedReferences
-from django.core.management.commands.makemigrations import Command
+from django.core.management.commands.makemigrations import Command  # noqa: F401
 from django.db import models
 
-from . import custom_deconstruct
-
-__all__ = ("Command",)
+from nautobot.utilities.management import commands
 
 # Overload deconstruct with our own.
-models.Field.deconstruct = custom_deconstruct
+models.Field.deconstruct = commands.custom_deconstruct

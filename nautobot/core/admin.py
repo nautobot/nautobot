@@ -53,6 +53,8 @@ admin_site.register([Config], ConfigAdmin)
 
 
 class NautobotModelAdmin(ModelAdmin):
+    """Extend Django's ModelAdmin to use some standard Nautobot UI widgets by default."""
+
     formfield_overrides = {
         models.DateField: {"widget": widgets.DatePicker},
         models.ForeignKey: {"widget": widgets.StaticSelect2},

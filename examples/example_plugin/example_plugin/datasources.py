@@ -1,4 +1,4 @@
-from nautobot.extras.registry import DatasourceContent
+from nautobot.apps.datasources import DatasourceContent
 
 
 def refresh_git_text_files(repository, job_result, delete=False):

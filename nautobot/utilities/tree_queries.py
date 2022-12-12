@@ -1,11 +1,11 @@
 from django.db.models import Manager
+from tree_queries.query import TreeManager as TreeManager_
+from tree_queries.query import TreeQuerySet as TreeQuerySet_
 
-from tree_queries.query import TreeManager as TreeManager_, TreeQuerySet as TreeQuerySet_
-
-from nautobot.utilities.querysets import RestrictedQuerySet
+from nautobot.utilities import querysets
 
 
-class TreeQuerySet(TreeQuerySet_, RestrictedQuerySet):
+class TreeQuerySet(TreeQuerySet_, querysets.RestrictedQuerySet):
     """
     Combine django-tree-queries' TreeQuerySet with our RestrictedQuerySet for permissions enforcement.
     """

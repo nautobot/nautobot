@@ -480,7 +480,7 @@ class VirtualMachineTestCase(FilterTestCases.FilterTestCase, FilterTestCases.Ten
         clusters = Cluster.objects.all()[:2]
         params = {"cluster_id": [clusters[0].pk, clusters[1].pk]}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
-        # TODO: 'cluster' should match on name
+        # 2.0 TODO: 'cluster' should match on name (This should be solved in FilterSet refactors)
         # params = {'cluster': [clusters[0].name, clusters[1].name]}
         # self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
 

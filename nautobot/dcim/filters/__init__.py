@@ -4,32 +4,7 @@ from django.db.models import Q
 from drf_spectacular.utils import extend_schema_field
 from timezone_field import TimeZoneField
 
-from nautobot.dcim.filter_mixins import LocatableModelFilterSetMixin
-from nautobot.extras.filters import (
-    CustomFieldModelFilterSet,
-    LocalContextFilterSet,
-    NautobotFilterSet,
-    StatusModelFilterSetMixin,
-)
-from nautobot.extras.models import SecretsGroup
-from nautobot.extras.utils import FeatureQuery
-from nautobot.ipam.models import VLAN, VLANGroup
-from nautobot.tenancy.filters import TenancyFilterSet
-from nautobot.tenancy.models import Tenant
-from nautobot.utilities.filters import (
-    BaseFilterSet,
-    ContentTypeMultipleChoiceFilter,
-    MultiValueCharFilter,
-    MultiValueMACAddressFilter,
-    MultiValueUUIDFilter,
-    NameSlugSearchFilterSet,
-    NaturalKeyOrPKMultipleChoiceFilter,
-    RelatedMembershipBooleanFilter,
-    SearchFilter,
-    TreeNodeMultipleChoiceFilter,
-)
-from nautobot.virtualization.models import Cluster
-from .choices import (
+from nautobot.dcim.choices import (
     CableTypeChoices,
     ConsolePortTypeChoices,
     InterfaceTypeChoices,
@@ -38,8 +13,15 @@ from .choices import (
     RackTypeChoices,
     RackWidthChoices,
 )
-from .constants import NONCONNECTABLE_IFACE_TYPES, VIRTUAL_IFACE_TYPES, WIRELESS_IFACE_TYPES
-from .models import (
+from nautobot.dcim.constants import NONCONNECTABLE_IFACE_TYPES, VIRTUAL_IFACE_TYPES, WIRELESS_IFACE_TYPES
+from nautobot.dcim.filters.mixins import (
+    CableTerminationModelFilterSetMixin,
+    DeviceComponentModelFilterSetMixin,
+    DeviceComponentTemplateModelFilterSetMixin,
+    LocatableModelFilterSetMixin,
+    PathEndpointModelFilterSetMixin,
+)
+from nautobot.dcim.models import (
     Cable,
     ConsolePort,
     ConsolePortTemplate,
@@ -76,11 +58,36 @@ from .models import (
     Site,
     VirtualChassis,
 )
+from nautobot.extras.filters import (
+    NautobotFilterSet,
+    LocalContextModelFilterSetMixin,
+    StatusModelFilterSetMixin,
+)
+from nautobot.extras.models import SecretsGroup
+from nautobot.extras.utils import FeatureQuery
+from nautobot.ipam.models import VLAN, VLANGroup
+from nautobot.tenancy.filters import TenancyModelFilterSetMixin
+from nautobot.tenancy.models import Tenant
+from nautobot.utilities.deprecation import class_deprecated_in_favor_of
+from nautobot.utilities.filters import (
+    BaseFilterSet,
+    ContentTypeMultipleChoiceFilter,
+    MultiValueCharFilter,
+    MultiValueMACAddressFilter,
+    MultiValueUUIDFilter,
+    NameSlugSearchFilterSet,
+    NaturalKeyOrPKMultipleChoiceFilter,
+    RelatedMembershipBooleanFilter,
+    SearchFilter,
+    TreeNodeMultipleChoiceFilter,
+)
+from nautobot.virtualization.models import Cluster
 
 
 __all__ = (
     "CableFilterSet",
     "CableTerminationFilterSet",
+    "CableTerminationModelFilterSetMixin",
     "ConsoleConnectionFilterSet",
     "ConsolePortFilterSet",
     "ConsolePortTemplateFilterSet",
@@ -102,6 +109,7 @@ __all__ = (
     "LocationTypeFilterSet",
     "ManufacturerFilterSet",
     "PathEndpointFilterSet",
+    "PathEndpointModelFilterSetMixin",
     "PlatformFilterSet",
     "PowerConnectionFilterSet",
     "PowerFeedFilterSet",
@@ -149,7 +157,7 @@ class RegionFilterSet(NautobotFilterSet, NameSlugSearchFilterSet):
         fields = ["id", "name", "slug", "description"]
 
 
-class SiteFilterSet(NautobotFilterSet, TenancyFilterSet, StatusModelFilterSetMixin):
+class SiteFilterSet(NautobotFilterSet, TenancyModelFilterSetMixin, StatusModelFilterSetMixin):
     q = SearchFilter(
         filter_predicates={
             "name": "icontains",
@@ -285,7 +293,7 @@ class LocationTypeFilterSet(NautobotFilterSet, NameSlugSearchFilterSet):
         fields = ["id", "name", "slug", "description", "nestable"]
 
 
-class LocationFilterSet(NautobotFilterSet, StatusModelFilterSetMixin, TenancyFilterSet):
+class LocationFilterSet(NautobotFilterSet, StatusModelFilterSetMixin, TenancyModelFilterSetMixin):
     q = SearchFilter(
         filter_predicates={
             "name": "icontains",
@@ -423,7 +431,12 @@ class RackRoleFilterSet(NautobotFilterSet, NameSlugSearchFilterSet):
         fields = ["id", "name", "slug", "color", "description", "racks"]
 
 
-class RackFilterSet(NautobotFilterSet, LocatableModelFilterSetMixin, TenancyFilterSet, StatusModelFilterSetMixin):
+class RackFilterSet(
+    NautobotFilterSet,
+    LocatableModelFilterSetMixin,
+    TenancyModelFilterSetMixin,
+    StatusModelFilterSetMixin,
+):
     q = SearchFilter(
         filter_predicates={
             "name": "icontains",
@@ -489,7 +502,7 @@ class RackFilterSet(NautobotFilterSet, LocatableModelFilterSetMixin, TenancyFilt
         ]
 
 
-class RackReservationFilterSet(NautobotFilterSet, TenancyFilterSet):
+class RackReservationFilterSet(NautobotFilterSet, TenancyModelFilterSetMixin):
     q = SearchFilter(
         filter_predicates={
             "rack__name": "icontains",
@@ -728,31 +741,25 @@ class DeviceTypeFilterSet(NautobotFilterSet):
         return queryset.exclude(devicebaytemplates__isnull=value)
 
 
-# TODO: should be DeviceTypeComponentFilterSetMixin
-class DeviceTypeComponentFilterSet(NameSlugSearchFilterSet, CustomFieldModelFilterSet):
-    device_type = NaturalKeyOrPKMultipleChoiceFilter(
-        queryset=DeviceType.objects.all(),
-        label="Device type (slug or ID)",
-    )
-    label = MultiValueCharFilter(label="Label")
-    description = MultiValueCharFilter(label="Description")
-    id = MultiValueUUIDFilter(label="ID")
-    name = MultiValueCharFilter(label="Name")
+# TODO: remove in 2.2
+@class_deprecated_in_favor_of(DeviceComponentTemplateModelFilterSetMixin)
+class DeviceTypeComponentFilterSet(DeviceComponentTemplateModelFilterSetMixin):
+    pass
 
 
-class ConsolePortTemplateFilterSet(BaseFilterSet, DeviceTypeComponentFilterSet):
+class ConsolePortTemplateFilterSet(BaseFilterSet, DeviceComponentTemplateModelFilterSetMixin):
     class Meta:
         model = ConsolePortTemplate
         fields = ["type"]
 
 
-class ConsoleServerPortTemplateFilterSet(BaseFilterSet, DeviceTypeComponentFilterSet):
+class ConsoleServerPortTemplateFilterSet(BaseFilterSet, DeviceComponentTemplateModelFilterSetMixin):
     class Meta:
         model = ConsoleServerPortTemplate
         fields = ["type"]
 
 
-class PowerPortTemplateFilterSet(BaseFilterSet, DeviceTypeComponentFilterSet):
+class PowerPortTemplateFilterSet(BaseFilterSet, DeviceComponentTemplateModelFilterSetMixin):
     # TODO: solve https://github.com/nautobot/nautobot/issues/2875 to use this filter correctly
     power_outlet_templates = NaturalKeyOrPKMultipleChoiceFilter(
         field_name="poweroutlet_templates",
@@ -774,7 +781,7 @@ class PowerPortTemplateFilterSet(BaseFilterSet, DeviceTypeComponentFilterSet):
         ]
 
 
-class PowerOutletTemplateFilterSet(BaseFilterSet, DeviceTypeComponentFilterSet):
+class PowerOutletTemplateFilterSet(BaseFilterSet, DeviceComponentTemplateModelFilterSetMixin):
     # TODO: solve https://github.com/nautobot/nautobot/issues/2875 to use this filter correctly
     power_port_template = NaturalKeyOrPKMultipleChoiceFilter(
         field_name="power_port",
@@ -788,13 +795,13 @@ class PowerOutletTemplateFilterSet(BaseFilterSet, DeviceTypeComponentFilterSet):
         fields = ["type", "feed_leg"]
 
 
-class InterfaceTemplateFilterSet(BaseFilterSet, DeviceTypeComponentFilterSet):
+class InterfaceTemplateFilterSet(BaseFilterSet, DeviceComponentTemplateModelFilterSetMixin):
     class Meta:
         model = InterfaceTemplate
         fields = ["type", "mgmt_only"]
 
 
-class FrontPortTemplateFilterSet(BaseFilterSet, DeviceTypeComponentFilterSet):
+class FrontPortTemplateFilterSet(BaseFilterSet, DeviceComponentTemplateModelFilterSetMixin):
     rear_port_template = django_filters.ModelMultipleChoiceFilter(
         field_name="rear_port",
         queryset=RearPortTemplate.objects.all(),
@@ -806,7 +813,7 @@ class FrontPortTemplateFilterSet(BaseFilterSet, DeviceTypeComponentFilterSet):
         fields = ["type", "rear_port_position"]
 
 
-class RearPortTemplateFilterSet(BaseFilterSet, DeviceTypeComponentFilterSet):
+class RearPortTemplateFilterSet(BaseFilterSet, DeviceComponentTemplateModelFilterSetMixin):
     front_port_templates = django_filters.ModelMultipleChoiceFilter(
         field_name="frontport_templates",
         queryset=FrontPortTemplate.objects.all(),
@@ -822,7 +829,7 @@ class RearPortTemplateFilterSet(BaseFilterSet, DeviceTypeComponentFilterSet):
         fields = ["type", "positions"]
 
 
-class DeviceBayTemplateFilterSet(BaseFilterSet, DeviceTypeComponentFilterSet):
+class DeviceBayTemplateFilterSet(BaseFilterSet, DeviceComponentTemplateModelFilterSetMixin):
     class Meta:
         model = DeviceBayTemplate
         fields = []
@@ -873,8 +880,8 @@ class PlatformFilterSet(NautobotFilterSet, NameSlugSearchFilterSet):
 class DeviceFilterSet(
     NautobotFilterSet,
     LocatableModelFilterSetMixin,
-    TenancyFilterSet,
-    LocalContextFilterSet,
+    TenancyModelFilterSetMixin,
+    LocalContextModelFilterSetMixin,
     StatusModelFilterSetMixin,
 ):
     q = SearchFilter(
@@ -1055,59 +1062,29 @@ class DeviceFilterSet(
         return queryset.filter(params)
 
 
-# TODO: should be DeviceComponentFilterSetMixin
-class DeviceComponentFilterSet(CustomFieldModelFilterSet):
-    q = SearchFilter(
-        filter_predicates={
-            "name": "icontains",
-            "label": "icontains",
-            "description": "icontains",
-        },
-    )
-    region = TreeNodeMultipleChoiceFilter(
-        queryset=Region.objects.all(),
-        field_name="device__site__region",
-        label="Region (slug or ID)",
-    )
-    site = NaturalKeyOrPKMultipleChoiceFilter(
-        field_name="device__site",
-        queryset=Site.objects.all(),
-        label="Site (slug or ID)",
-    )
-    # TODO: solve https://github.com/nautobot/nautobot/issues/2875 to use this filter correctly
-    device = NaturalKeyOrPKMultipleChoiceFilter(
-        queryset=Device.objects.all(),
-        to_field_name="name",
-        label="Device (name or ID)",
-    )
+# TODO: remove in 2.2
+@class_deprecated_in_favor_of(DeviceComponentModelFilterSetMixin)
+class DeviceComponentFilterSet(DeviceComponentModelFilterSetMixin):
+    pass
 
 
-# TODO: should be CableTerminationFilterSetMixin
-class CableTerminationFilterSet(django_filters.FilterSet):
-    has_cable = django_filters.BooleanFilter(field_name="cable", lookup_expr="isnull", exclude=True)
-    cable = NaturalKeyOrPKMultipleChoiceFilter(
-        to_field_name="id",
-        queryset=Cable.objects.all(),
-        label="Cable",
-    )
+# TODO: remove in 2.2
+@class_deprecated_in_favor_of(CableTerminationModelFilterSetMixin)
+class CableTerminationFilterSet(CableTerminationModelFilterSetMixin):
+    pass
 
 
-# TODO: should be PathEndpointFilterSetMixin
-class PathEndpointFilterSet(django_filters.FilterSet):
-    connected = django_filters.BooleanFilter(method="filter_connected", label="Connected status (bool)")
-
-    def filter_connected(self, queryset, name, value):
-        if value:
-            return queryset.filter(_path__is_active=True)
-        else:
-            return queryset.filter(Q(_path__isnull=True) | Q(_path__is_active=False))
+# TODO: remove in 2.2
+@class_deprecated_in_favor_of(PathEndpointModelFilterSetMixin)
+class PathEndpointFilterSet(PathEndpointModelFilterSetMixin):
+    pass
 
 
 class ConsolePortFilterSet(
     BaseFilterSet,
-    DeviceComponentFilterSet,
-    CableTerminationFilterSet,
-    PathEndpointFilterSet,
+    DeviceComponentModelFilterSetMixin,
+    CableTerminationModelFilterSetMixin,
+    PathEndpointModelFilterSetMixin,
 ):
     type = django_filters.MultipleChoiceFilter(choices=ConsolePortTypeChoices, null_value=None)
 
@@ -1118,9 +1095,9 @@ class ConsolePortFilterSet(
 
 class ConsoleServerPortFilterSet(
     BaseFilterSet,
-    DeviceComponentFilterSet,
-    CableTerminationFilterSet,
-    PathEndpointFilterSet,
+    DeviceComponentModelFilterSetMixin,
+    CableTerminationModelFilterSetMixin,
+    PathEndpointModelFilterSetMixin,
 ):
     type = django_filters.MultipleChoiceFilter(choices=ConsolePortTypeChoices, null_value=None)
 
@@ -1131,9 +1108,9 @@ class ConsoleServerPortFilterSet(
 
 class PowerPortFilterSet(
     BaseFilterSet,
-    DeviceComponentFilterSet,
-    CableTerminationFilterSet,
-    PathEndpointFilterSet,
+    DeviceComponentModelFilterSetMixin,
+    CableTerminationModelFilterSetMixin,
+    PathEndpointModelFilterSetMixin,
 ):
     type = django_filters.MultipleChoiceFilter(choices=PowerPortTypeChoices, null_value=None)
     # TODO: solve https://github.com/nautobot/nautobot/issues/2875 to use this filter correctly
@@ -1155,9 +1132,9 @@ class PowerPortFilterSet(
 
 class PowerOutletFilterSet(
     BaseFilterSet,
-    DeviceComponentFilterSet,
-    CableTerminationFilterSet,
-    PathEndpointFilterSet,
+    DeviceComponentModelFilterSetMixin,
+    CableTerminationModelFilterSetMixin,
+    PathEndpointModelFilterSetMixin,
 ):
     type = django_filters.MultipleChoiceFilter(choices=PowerOutletTypeChoices, null_value=None)
     power_port = django_filters.ModelMultipleChoiceFilter(
@@ -1173,13 +1150,13 @@ class PowerOutletFilterSet(
 
 class InterfaceFilterSet(
     BaseFilterSet,
-    DeviceComponentFilterSet,
-    CableTerminationFilterSet,
-    PathEndpointFilterSet,
+    DeviceComponentModelFilterSetMixin,
+    CableTerminationModelFilterSetMixin,
+    PathEndpointModelFilterSetMixin,
     StatusModelFilterSetMixin,
 ):
-    # Override device and device_id filters from DeviceComponentFilterSet to match against any peer virtual chassis
-    # members
+    # Override device and device_id filters from DeviceComponentModelFilterSetMixin to
+    # match against any peer virtual chassis members
     device = MultiValueCharFilter(
         method="filter_device",
         field_name="name",
@@ -1331,7 +1308,7 @@ class InterfaceFilterSet(
         }.get(value, queryset.none())
 
 
-class FrontPortFilterSet(BaseFilterSet, DeviceComponentFilterSet, CableTerminationFilterSet):
+class FrontPortFilterSet(BaseFilterSet, DeviceComponentModelFilterSetMixin, CableTerminationModelFilterSetMixin):
     # TODO: solve https://github.com/nautobot/nautobot/issues/2875 to use this filter correctly
     rear_port = NaturalKeyOrPKMultipleChoiceFilter(
         field_name="rear_port",
@@ -1345,7 +1322,7 @@ class FrontPortFilterSet(BaseFilterSet, DeviceComponentFilterSet, CableTerminati
         fields = ["id", "name", "type", "description", "label", "rear_port_position", "tags"]
 
 
-class RearPortFilterSet(BaseFilterSet, DeviceComponentFilterSet, CableTerminationFilterSet):
+class RearPortFilterSet(BaseFilterSet, DeviceComponentModelFilterSetMixin, CableTerminationModelFilterSetMixin):
     front_ports = NaturalKeyOrPKMultipleChoiceFilter(
         field_name="frontports",
         to_field_name="name",
@@ -1362,7 +1339,7 @@ class RearPortFilterSet(BaseFilterSet, DeviceComponentFilterSet, CableTerminatio
         fields = ["id", "name", "type", "positions", "description", "label", "tags"]
 
 
-class DeviceBayFilterSet(BaseFilterSet, DeviceComponentFilterSet):
+class DeviceBayFilterSet(BaseFilterSet, DeviceComponentModelFilterSetMixin):
     # TODO: solve https://github.com/nautobot/nautobot/issues/2875 to use this filter correctly
     installed_device = NaturalKeyOrPKMultipleChoiceFilter(
         field_name="installed_device",
@@ -1376,7 +1353,7 @@ class DeviceBayFilterSet(BaseFilterSet, DeviceComponentFilterSet):
         fields = ["id", "name", "description", "label", "tags"]
 
 
-class InventoryItemFilterSet(BaseFilterSet, DeviceComponentFilterSet):
+class InventoryItemFilterSet(BaseFilterSet, DeviceComponentModelFilterSetMixin):
     q = SearchFilter(
         filter_predicates={
             "name": "icontains",
@@ -1524,8 +1501,7 @@ class CableFilterSet(NautobotFilterSet, StatusModelFilterSetMixin):
         return queryset
 
 
-# TODO: should be ConnectionFilterSetMixin
-class ConnectionFilterSet:
+class ConnectionFilterSetMixin:
     def filter_site(self, queryset, name, value):
         if not value.strip():
             return queryset
@@ -1537,7 +1513,13 @@ class ConnectionFilterSet:
         return queryset.filter(**{f"{name}__in": value})
 
 
-class ConsoleConnectionFilterSet(ConnectionFilterSet, BaseFilterSet):
+# TODO: remove in 2.2
+@class_deprecated_in_favor_of(ConnectionFilterSetMixin)
+class ConnectionFilterSet(ConnectionFilterSetMixin):
+    pass
+
+
+class ConsoleConnectionFilterSet(ConnectionFilterSetMixin, BaseFilterSet):
     site = django_filters.CharFilter(
         method="filter_site",
         label="Site (slug)",
@@ -1550,7 +1532,7 @@ class ConsoleConnectionFilterSet(ConnectionFilterSet, BaseFilterSet):
         fields = ["name"]
 
 
-class PowerConnectionFilterSet(ConnectionFilterSet, BaseFilterSet):
+class PowerConnectionFilterSet(ConnectionFilterSetMixin, BaseFilterSet):
     site = django_filters.CharFilter(
         method="filter_site",
         label="Site (slug)",
@@ -1563,7 +1545,7 @@ class PowerConnectionFilterSet(ConnectionFilterSet, BaseFilterSet):
         fields = ["name"]
 
 
-class InterfaceConnectionFilterSet(ConnectionFilterSet, BaseFilterSet):
+class InterfaceConnectionFilterSet(ConnectionFilterSetMixin, BaseFilterSet):
     site = django_filters.CharFilter(
         method="filter_site",
         label="Site (slug)",
@@ -1600,7 +1582,7 @@ class PowerPanelFilterSet(NautobotFilterSet, LocatableModelFilterSetMixin):
 
 
 class PowerFeedFilterSet(
-    NautobotFilterSet, CableTerminationFilterSet, PathEndpointFilterSet, StatusModelFilterSetMixin
+    NautobotFilterSet, CableTerminationModelFilterSetMixin, PathEndpointModelFilterSetMixin, StatusModelFilterSetMixin
 ):
     q = SearchFilter(filter_predicates={"name": "icontains", "comments": "icontains"})
     region = TreeNodeMultipleChoiceFilter(

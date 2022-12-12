@@ -2,14 +2,14 @@ import random
 
 from django.db.models import Count
 from django.test import tag
-from nautobot.utilities.testing.views import TestCase
 
-from nautobot.tenancy.models import Tenant, TenantGroup
+from nautobot.tenancy import models
+from nautobot.utilities.testing import views
 
 
 @tag("unit")
 class FilterTestCases:
-    class BaseFilterTestCase(TestCase):
+    class BaseFilterTestCase(views.TestCase):
         """Base class for testing of FilterSets."""
 
         def get_filterset_test_values(self, field_name, queryset=None):
@@ -20,11 +20,11 @@ class FilterTestCases:
             passed to the queryset's filter(field_name__in=[]) method but will fail to match at least one instance.
 
             Args:
-                field_name: The name of the field to retrieve test values from.
-                queryset: The queryset to retrieve test values. Defaults to `self.queryset`.
+                field_name (str): The name of the field to retrieve test values from.
+                queryset (QuerySet): The queryset to retrieve test values. Defaults to `self.queryset`.
 
             Returns:
-                list: A list of unique values derived from the queryset.
+                (list): A list of unique values derived from the queryset.
 
             Raises:
                 ValueError: Raised if unable to find a combination of 2 or more unique values
@@ -84,13 +84,13 @@ class FilterTestCases:
             self.assertTrue(filterset.is_valid())
             self.assertEqual(filterset.qs.count(), 2)
 
-    class TenancyFilterTestCaseMixin(TestCase):
+    class TenancyFilterTestCaseMixin(views.TestCase):
         """Add test cases for tenant and tenant-group filters."""
 
         tenancy_related_name = ""
 
         def test_tenant(self):
-            tenants = list(Tenant.objects.filter(**{f"{self.tenancy_related_name}__isnull": False}))[:2]
+            tenants = list(models.Tenant.objects.filter(**{f"{self.tenancy_related_name}__isnull": False}))[:2]
             params = {"tenant_id": [tenants[0].pk, tenants[1].pk]}
             self.assertQuerysetEqual(
                 self.filterset(params, self.queryset).qs, self.queryset.filter(tenant__in=tenants), ordered=False
@@ -102,7 +102,7 @@ class FilterTestCases:
 
         def test_tenant_group(self):
             tenant_groups = list(
-                TenantGroup.objects.filter(
+                models.TenantGroup.objects.filter(
                     tenants__isnull=False, **{f"tenants__{self.tenancy_related_name}__isnull": False}
                 )
             )[:2]
