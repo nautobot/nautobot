@@ -391,7 +391,7 @@ INSTALLED_APPS = [
     "nautobot.core",
     "django.contrib.admin",  # Must be after `nautobot.core` for template overrides
     "django_celery_beat",  # Must be after `nautobot.core` for template overrides
-    "django_celery_results",  # Must be after `nautobot.core` for template overrides
+    "django_celery_results",
     "rest_framework",  # Must be after `nautobot.core` for template overrides
     "db_file_storage",
     "nautobot.circuits",
@@ -726,9 +726,7 @@ RQ_QUEUES = {
 CELERY_BROKER_URL = os.getenv("NAUTOBOT_CELERY_BROKER_URL", parse_redis_connection(redis_database=0))
 
 # Celery results backend URL to tell workers where to publish task results
-CELERY_RESULT_BACKEND = os.getenv(
-    "NAUTOBOT_CELERY_RESULT_BACKEND", "nautobot.core.celery.backends.NautobotDatabaseBackend"
-)
+CELERY_RESULT_BACKEND = "nautobot.core.celery.backends.NautobotDatabaseBackend"
 
 # Instruct celery to report the started status of a job, instead of just `pending`, `finished`, or `failed`
 CELERY_TASK_TRACK_STARTED = True
