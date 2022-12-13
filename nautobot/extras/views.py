@@ -21,7 +21,7 @@ from django.template.loader import get_template, TemplateDoesNotExist
 from django_tables2 import RequestConfig
 from jsonschema.validators import Draft7Validator
 
-from nautobot.core.views import generic
+from nautobot.core.views import generic, viewsets
 from nautobot.dcim.models import Device
 from nautobot.dcim.tables import DeviceTable
 from nautobot.extras.tasks import delete_custom_field_data
@@ -42,6 +42,7 @@ from nautobot.utilities.utils import normalize_querydict
 from nautobot.virtualization.models import VirtualMachine
 from nautobot.virtualization.tables import VirtualMachineTable
 from . import filters, forms, tables
+from .api.serializers import RoleSerializer
 from .choices import JobExecutionType, JobResultStatusChoices
 from .datasources import (
     enqueue_git_repository_diff_origin_and_local,
@@ -79,7 +80,6 @@ from .models import (
     Note,
 )
 from .registry import registry
-
 
 logger = logging.getLogger(__name__)
 
@@ -1798,58 +1798,23 @@ class RelationshipAssociationDeleteView(generic.ObjectDeleteView):
 #
 
 
-class RoleListView(generic.ObjectListView):
-    """List `Roles` objects."""
-
-    queryset = Role.objects.all()
-    filterset = filters.RoleFilterSet
-    table = tables.RoleTable
-
-
-class RoleEditView(generic.ObjectEditView):
-    """Edit a single `Role` object."""
-
-    queryset = Role.objects.all()
-    model_form = forms.RoleForm
-
-
-class RoleBulkEditView(generic.BulkEditView):
-    """Edit multiple `Role` objects."""
+class RoleUIViewSet(viewsets.NautobotUIViewSet):
+    """`Roles` UIViewSet."""
 
     queryset = Role.objects.all()
     table = tables.RoleTable
-    form = forms.RoleBulkEditForm
-
-
-class RoleBulkDeleteView(generic.BulkDeleteView):
-    """Delete multiple `Role` objects."""
-
-    queryset = Role.objects.all()
-    table = tables.RoleTable
-
-
-class RoleDeleteView(generic.ObjectDeleteView):
-    """Delete a single `Role` object."""
-
-    queryset = Role.objects.all()
-
-
-class RoleBulkImportView(generic.BulkImportView):
-    """Bulk CSV import of multiple `Role` objects."""
-
-    queryset = Role.objects.all()
-    model_form = forms.RoleCSVForm
-    table = tables.RoleTable
-
-
-class RoleView(generic.ObjectView):
-    """Detail view for a single `Role` object."""
-
-    queryset = Role.objects.all()
+    bulk_create_form_class = forms.RoleCSVForm
+    bulk_update_form_class = forms.RoleBulkEditForm
+    filterset_class = filters.RoleFilterSet
+    form_class = forms.RoleForm
+    serializer_class = RoleSerializer
+    table_class = tables.RoleTable
 
     def get_extra_context(self, request, instance):
-        """Return ordered content types."""
-        return {"content_types": instance.content_types.order_by("app_label", "model")}
+        context = super().get_extra_context(request, instance)
+        if self.action == "retrieve":
+            context["content_types"] = instance.content_types.order_by("app_label", "model")
+        return context
 
 
 #

@@ -8,7 +8,7 @@ menu_items = (
         groups=(
             NavMenuGroup(
                 name="Roles",
-                weight=500,
+                weight=600,
                 items=(
                     NavMenuItem(
                         link="extras:role_list",
