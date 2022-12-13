@@ -392,11 +392,6 @@ class DeviceBayTemplateViewSet(NautobotModelViewSet):
 
 class DeviceRoleViewSet(NautobotModelViewSet):
     queryset = DeviceRole.objects.all()
-    # TODO(timizuo): Device Role Reassign
-    # queryset = DeviceRole.objects.annotate(
-    #     device_count=count_related(Device, "device_role"),
-    #     virtualmachine_count=count_related(VirtualMachine, "role"),
-    # )
     serializer_class = serializers.DeviceRoleSerializer
     filterset_class = filters.DeviceRoleFilterSet
 

@@ -707,8 +707,6 @@ class DeviceBayTemplateSerializer(NautobotModelSerializer):
 
 class DeviceRoleSerializer(NautobotModelSerializer):
     url = serializers.HyperlinkedIdentityField(view_name="dcim-api:devicerole-detail")
-    # device_count = serializers.IntegerField(read_only=True)
-    # virtualmachine_count = serializers.IntegerField(read_only=True)
 
     class Meta:
         model = DeviceRole
@@ -719,9 +717,6 @@ class DeviceRoleSerializer(NautobotModelSerializer):
             "color",
             "vm_role",
             "description",
-            # TODO(timizuo): Device Role Reassign
-            # "device_count",
-            # "virtualmachine_count",
         ]
 
 

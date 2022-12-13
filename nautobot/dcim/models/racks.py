@@ -448,9 +448,7 @@ class Rack(PrimaryModel, StatusModel, RoleModelMixin):
             # Retrieve all devices installed within the rack
             queryset = (
                 # v2 TODO(jathan): Replace prefetch_related with select_related
-                # TODO(timizuo): Device Role Reassign
-                # Device.objects.prefetch_related("device_type", "device_type__manufacturer", "device_role")
-                Device.objects.prefetch_related("device_type", "device_type__manufacturer")
+                Device.objects.prefetch_related("device_type", "device_type__manufacturer", "role")
                 .annotate(devicebay_count=Count("devicebays"))
                 .exclude(pk=exclude)
                 .filter(rack=self, position__gt=0, device_type__u_height__gt=0)

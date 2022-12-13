@@ -2076,8 +2076,7 @@ class ChildDeviceCSVForm(BaseDeviceCSVForm):
     class Meta(BaseDeviceCSVForm.Meta):
         fields = [
             "name",
-            # TODO(timizuo): Device Role Reassign
-            # "device_role",
+            "role",
             "tenant",
             "manufacturer",
             "device_type",

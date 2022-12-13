@@ -83,13 +83,6 @@ __all__ = (
 class DeviceRoleTable(BaseTable):
     pk = ToggleColumn()
     name = tables.LinkColumn()
-    # TODO(timizuo): Device Role Reassign
-    # device_count = LinkedCountColumn(viewname="dcim:device_list", url_params={"role": "slug"}, verbose_name="Devices")
-    # vm_count = LinkedCountColumn(
-    #     viewname="virtualization:virtualmachine_list",
-    #     url_params={"role": "slug"},
-    #     verbose_name="VMs",
-    # )
     color = ColorColumn()
     vm_role = BooleanColumn()
     actions = ButtonsColumn(DeviceRole, pk_field="slug")
@@ -99,9 +92,6 @@ class DeviceRoleTable(BaseTable):
         fields = (
             "pk",
             "name",
-            # TODO(timizuo): Device Role Reassign
-            # "device_count",
-            # "vm_count",
             "color",
             "vm_role",
             "description",
@@ -111,9 +101,6 @@ class DeviceRoleTable(BaseTable):
         default_columns = (
             "pk",
             "name",
-            # TODO(timizuo): Device Role Reassign
-            # "device_count",
-            # "vm_count",
             "color",
             "vm_role",
             "description",
@@ -248,8 +235,7 @@ class DeviceImportTable(BaseTable):
     tenant = TenantColumn()
     site = tables.Column(linkify=True)
     rack = tables.Column(linkify=True)
-    # TODO(timizuo): Device Role Reassign
-    # device_role = tables.Column(verbose_name="Role")
+    role = tables.Column(verbose_name="Role")
     device_type = tables.Column(verbose_name="Type")
 
     class Meta(BaseTable.Meta):
