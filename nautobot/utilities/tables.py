@@ -364,8 +364,10 @@ class ComputedFieldColumn(tables.Column):
     def __init__(self, computedfield, *args, **kwargs):
         self.computedfield = computedfield
         kwargs["verbose_name"] = computedfield.label
+        kwargs["empty_values"] = []
+        kwargs["orderable"] = False
 
-        super().__init__(*args, empty_values=[], orderable=False, **kwargs)
+        super().__init__(*args, **kwargs)
 
     def render(self, record):
         return self.computedfield.render({"obj": record})
