@@ -3654,7 +3654,7 @@ class ConnectCableToInterfaceForm(ConnectCableToDeviceForm):
         label="Name",
         disabled_indicator="cable",
         query_params={
-            "device": "$termination_b_device",
+            "device_id": "$termination_b_device",
             "kind": "physical",
         },
     )
