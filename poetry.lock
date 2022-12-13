@@ -1410,15 +1410,15 @@ mkdocs = ">=1.0.3,<2.0.0"
 
 [[package]]
 name = "mkdocs-include-markdown-plugin"
-version = "3.6.1"
+version = "3.9.1"
 description = "Mkdocs Markdown includer plugin."
 category = "dev"
 optional = false
 python-versions = ">=3.6"
 
 [package.extras]
-dev = ["bump2version (==1.0.1)", "flake8 (==3.9.2)", "flake8-implicit-str-concat (==0.2.0)", "flake8-print (==4.0.0)", "isort (==5.9.1)", "mdpo (==0.3.61)", "mkdocs (==1.2.3)", "pre-commit (==2.13.0)", "pytest (==6.2.5)", "pytest-cov (==3.0.0)", "pyupgrade (==2.19.4)", "yamllint (==1.26.1)"]
-test = ["pytest (==6.2.5)", "pytest-cov (==3.0.0)"]
+dev = ["bump2version (==1.0.1)", "mkdocs (==1.4.0)", "pre-commit", "pytest (==7.1.3)", "pytest-cov (==3.0.0)", "tox"]
+test = ["mkdocs (==1.4.0)", "pytest (==7.1.3)", "pytest-cov (==3.0.0)"]
 
 [[package]]
 name = "mkdocs-material"
@@ -2643,6 +2643,7 @@ lock-version = "1.1"
 python-versions = "^3.7"
 content-hash = "b373035fb2080ab473817df84c7b8ae79c62d793f0b4c02c0344ebe3600a87ca"
 
+
 [metadata.files]
 amqp = [
     {file = "amqp-5.1.1-py3-none-any.whl", hash = "sha256:6f0956d2c23d8fa6e7691934d8c3930eadb44972cbbd1a7ae3a520f735d43359"},
@@ -3335,8 +3336,8 @@ mkdocs-gen-files = [
     {file = "mkdocs_gen_files-0.4.0-py3-none-any.whl", hash = "sha256:3241a4c947ecd11763ca77cc645015305bf71a0e1b9b886801c114fcf9971e71"},
 ]
 mkdocs-include-markdown-plugin = [
-    {file = "mkdocs_include_markdown_plugin-3.6.1-py3-none-any.whl", hash = "sha256:ea36a7d50ee98028f03574d7bf40a307e16211ad3013a4e42f64494b3c106e9e"},
-    {file = "mkdocs_include_markdown_plugin-3.6.1.tar.gz", hash = "sha256:5e7416f23081085a220f7534b2fc7456e74c5a65f3b401da1f29b9e9132b46e5"},
+    {file = "mkdocs_include_markdown_plugin-3.9.1-py3-none-any.whl", hash = "sha256:f33687e29ac66d045ba181ea50f054646b0090b42b0a4318f08e7f1d1235e6f6"},
+    {file = "mkdocs_include_markdown_plugin-3.9.1.tar.gz", hash = "sha256:5e5698e78d7fea111be9873a456089daa333497988405acaac8eba2924a19152"},
 ]
 mkdocs-material = [
     {file = "mkdocs_material-8.5.8-py3-none-any.whl", hash = "sha256:7ff092299e3a63cef99cd87e4a6cc7e7d9ec31fd190d766fd147c35572e6d593"},
