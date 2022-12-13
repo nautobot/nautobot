@@ -35,6 +35,7 @@ from nautobot.extras.models import (
     ObjectChange,
     Relationship,
     RelationshipAssociation,
+    Role,
     ScheduledJob,
     Secret,
     SecretsGroup,
@@ -48,6 +49,7 @@ from nautobot.extras.tests.test_relationships import RequiredRelationshipTestMix
 from nautobot.extras.utils import get_job_content_type, TaggableClassesQuery
 from nautobot.ipam.models import VLAN, VLANGroup
 from nautobot.users.models import ObjectPermission
+from nautobot.utilities.choices import ColorChoices
 from nautobot.utilities.testing import ViewTestCases, TestCase, extract_page_body, extract_form_failures
 from nautobot.utilities.testing.utils import disable_warnings, post_data
 from nautobot.utilities.utils import slugify_dashes_to_underscores
@@ -2220,3 +2222,43 @@ class WebhookTestCase(
             "http_method": "POST",
             "http_content_type": "application/json",
         }
+
+
+class RoleTestCase(
+    ViewTestCases.CreateObjectViewTestCase,
+    ViewTestCases.DeleteObjectViewTestCase,
+    ViewTestCases.EditObjectViewTestCase,
+    ViewTestCases.GetObjectViewTestCase,
+    ViewTestCases.GetObjectChangelogViewTestCase,
+    ViewTestCases.ListObjectsViewTestCase,
+):
+    model = Role
+
+    @classmethod
+    def setUpTestData(cls):
+
+        # Status objects to test.
+        content_type = ContentType.objects.get_for_model(Device)
+
+        cls.form_data = {
+            "name": "New Role",
+            "slug": "new-role",
+            "description": "I am a new role object.",
+            "color": ColorChoices.COLOR_GREY,
+            "content_types": [content_type.pk],
+        }
+
+        cls.csv_data = (
+            "name,slug,color,content_types"
+            'test_role1,test-role1,ffffff,"dcim.device"'
+            'test_role2,test-role2,ffffff,"dcim.device,dcim.rack"'
+            'test_role3,test-role3,ffffff,"dcim.device,ipam.prefix"'
+            'test_role4,test-role4,ffffff,"ipam.ipaddress,ipam.vlan"'
+        )
+
+        cls.bulk_edit_data = {
+            "color": "000000",
+        }
+
+        cls.slug_source = "name"
+        cls.slug_test_object = Role.objects.first().name

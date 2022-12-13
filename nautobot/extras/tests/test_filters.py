@@ -37,6 +37,7 @@ from nautobot.extras.filters import (
     ObjectChangeFilterSet,
     RelationshipAssociationFilterSet,
     RelationshipFilterSet,
+    RoleFilterSet,
     SecretFilterSet,
     SecretsGroupAssociationFilterSet,
     SecretsGroupFilterSet,
@@ -59,6 +60,7 @@ from nautobot.extras.models import (
     ObjectChange,
     Relationship,
     RelationshipAssociation,
+    Role,
     Secret,
     SecretsGroup,
     SecretsGroupAssociation,
@@ -1516,3 +1518,56 @@ class WebhookTestCase(FilterTestCases.FilterTestCase):
         value = self.queryset.values_list("pk", flat=True)[0]
         params = {"q": value}
         self.assertEqual(self.filterset(params, self.queryset).qs.values_list("pk", flat=True)[0], value)
+
+
+class RoleTestCase(FilterTestCases.NameSlugFilterTestCase):
+    queryset = Role.objects.all()
+    filterset = RoleFilterSet
+
+    @classmethod
+    def setUpTestData(cls):
+        cls.device_ct = ContentType.objects.get_for_model(Device)
+        cls.rack_ct = ContentType.objects.get_for_model(Rack)
+        roles = [
+            Role.objects.create(name="Role 1", color=ColorChoices.COLOR_GREY, weight=100),
+            Role.objects.create(name="Role 2", color=ColorChoices.COLOR_GREY, weight=20),
+            Role.objects.create(name="Role 3", color=ColorChoices.COLOR_AMBER, weight=10),
+            Role.objects.create(name="Role 4", color=ColorChoices.COLOR_AMBER, weight=100),
+            Role.objects.create(name="Role 5", color=ColorChoices.COLOR_AMBER, weight=100),
+        ]
+        for i in range(2):
+            roles[i].content_types.add(cls.device_ct)
+        for i in range(2, 4):
+            roles[i].content_types.add(cls.rack_ct)
+
+    def test_content_types(self):
+        device_count = self.queryset.filter(content_types=self.device_ct).count()
+        params = {"content_types": ["dcim.device"]}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), device_count)
+
+        rack_count = self.queryset.filter(content_types=self.rack_ct).count()
+        params = {"content_types": ["dcim.rack"]}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), rack_count)
+
+    def test_color(self):
+        """Test the color search field."""
+        params = {"color": [ColorChoices.COLOR_AMBER]}
+        # This current expected count may change as more `Status` objects are
+        # imported by way of `extras.management.create_custom_statuses`. If as
+        # these objects are imported, and this test fails, this number will need
+        # to be adjusted.
+        expected_count = Role.objects.filter(color=ColorChoices.COLOR_AMBER).count()
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), expected_count)
+
+    def test_search(self):
+        params = {"q": "Role 1"}
+        self.assertQuerysetEqualAndNotEmpty(
+            self.filterset(params, self.queryset).qs,
+            self.queryset.filter(name="Role 1").distinct(),
+        )
+        value = self.queryset.first().pk
+        params = {"q": value}
+        self.assertQuerysetEqualAndNotEmpty(
+            self.filterset(params, self.queryset).qs,
+            self.queryset.filter(pk=value),
+        )

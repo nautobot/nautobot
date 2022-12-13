@@ -99,6 +99,7 @@ __all__ = (
     "ObjectChangeFilterSet",
     "RelationshipFilterSet",
     "RelationshipAssociationFilterSet",
+    "RoleFilterSet",
     "RoleModelFilterSetMixin",
     "ScheduledJobFilterSet",
     "SecretFilterSet",

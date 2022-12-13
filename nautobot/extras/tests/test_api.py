@@ -48,6 +48,7 @@ from nautobot.extras.models import (
     Note,
     Relationship,
     RelationshipAssociation,
+    Role,
     ScheduledJob,
     Secret,
     SecretsGroup,
@@ -3561,3 +3562,33 @@ class WebhookTest(APIViewTestCases.APIViewTestCase):
             response.data["type_create"][0],
             "A webhook already exists for create on dcim | device type to URL http://example.com/test1",
         )
+
+
+class RoleTest(APIViewTestCases.APIViewTestCase):
+    model = Role
+    brief_fields = ["display", "id", "name", "slug", "url"]
+    bulk_update_data = {
+        "color": "000000",
+    }
+
+    create_data = [
+        {
+            "name": "Role 1",
+            "slug": "role-1",
+            "color": "0000ff",
+            "content_types": ["dcim.device", "dcim.rack"],
+        },
+        {
+            "name": "Role 2",
+            "slug": "role-2",
+            "color": "0000ff",
+            "content_types": ["dcim.rack"],
+        },
+        {
+            "name": "Role 3",
+            "slug": "role-3",
+            "color": "0000ff",
+            "content_types": ["ipam.ipaddress", "ipam.vlan"],
+        },
+    ]
+    slug_source = "name"
