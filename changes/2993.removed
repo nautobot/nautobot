@@ -1,3 +1,3 @@
-Removed environment `NAUTOBOT_CELERY_RESULT_BACKEND` environment variable used to customize where Celery stores task results.
+Removed `NAUTOBOT_CELERY_RESULT_BACKEND` environment variable used to customize where Celery stores task results.
 Removed optional settings documentation for `CELERY_RESULT_BACKEND` as it is no longer user-serviceable.
 Removed optional settings documentation for `CELERY_RESULT_BACKEND_TRANSPORT_OPTIONS` as it is no longer user-serviceable.
