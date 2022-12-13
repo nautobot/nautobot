@@ -1409,7 +1409,7 @@ test = ["pytest (==6.2.5)", "pytest-cov (==3.0.0)"]
 
 [[package]]
 name = "mkdocs-material"
-version = "8.5.8"
+version = "8.5.11"
 description = "Documentation that simply works"
 category = "dev"
 optional = false
@@ -2628,7 +2628,7 @@ sso = ["social-auth-core"]
 [metadata]
 lock-version = "1.1"
 python-versions = "^3.7"
-content-hash = "1da5ab83e44d84a421ea00d3a51ae189d10f4442a613a731f57ad8cfa962972c"
+content-hash = "0c74d03263bb6c88aeec27086e8283eaedc8c74b502f630ef03d6d10265f2c7f"
 
 [metadata.files]
 amqp = [
@@ -3333,8 +3333,8 @@ mkdocs-include-markdown-plugin = [
     {file = "mkdocs_include_markdown_plugin-3.6.1.tar.gz", hash = "sha256:5e7416f23081085a220f7534b2fc7456e74c5a65f3b401da1f29b9e9132b46e5"},
 ]
 mkdocs-material = [
-    {file = "mkdocs_material-8.5.8-py3-none-any.whl", hash = "sha256:7ff092299e3a63cef99cd87e4a6cc7e7d9ec31fd190d766fd147c35572e6d593"},
-    {file = "mkdocs_material-8.5.8.tar.gz", hash = "sha256:61396251819cf7f547f70a09ce6a7edb2ff5d32e47b9199769020b2d20a83d44"},
+    {file = "mkdocs_material-8.5.11-py3-none-any.whl", hash = "sha256:c907b4b052240a5778074a30a78f31a1f8ff82d7012356dc26898b97559f082e"},
+    {file = "mkdocs_material-8.5.11.tar.gz", hash = "sha256:b0ea0513fd8cab323e8a825d6692ea07fa83e917bb5db042e523afecc7064ab7"},
 ]
 mkdocs-material-extensions = [
     {file = "mkdocs_material_extensions-1.1-py3-none-any.whl", hash = "sha256:bcc2e5fc70c0ec50e59703ee6e639d87c7e664c0c441c014ea84461a90f1e902"},

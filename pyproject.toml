@@ -203,6 +203,9 @@ watchdog = "~2.1.9"
 [tool.poetry.scripts]
 nautobot-server = "nautobot.core.cli:main"
 
+[tool.poetry.group.dev.dependencies]
+mkdocs-material = "~8.5.11"
+
 [build-system]
 requires = ["poetry-core>=1.0.0"]
 build-backend = "poetry.core.masonry.api"
