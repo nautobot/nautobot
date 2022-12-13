@@ -416,8 +416,8 @@ class DynamicGroupModelTest(DynamicGroupTestBase):
         self.assertIsInstance(fields["name"], MultiValueCharField)
         self.assertIsInstance(fields["name"].widget, MultiValueCharInput)
         # See if a DynamicModelChoiceField is properly converted to a MultiMatchModelMultipleChoiceField
-        self.assertIsInstance(fields["rack"], MultiMatchModelMultipleChoiceField)
-        self.assertIsInstance(fields["rack"].widget, APISelectMultiple)
+        self.assertIsInstance(fields["cluster"], MultiMatchModelMultipleChoiceField)
+        self.assertIsInstance(fields["cluster"].widget, APISelectMultiple)
 
     def test_map_filter_fields_skip_missing(self):
         """
