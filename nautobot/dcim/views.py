@@ -1669,10 +1669,7 @@ class DeviceConfigView(generic.ObjectView):
 
 
 class DeviceConfigContextView(ObjectConfigContextView):
-
-    queryset = Device.objects.all()
-    # FixMe (timizuo): Has something do with change of device_role name
-    # queryset = Device.objects.annotate_config_context_data()
+    queryset = Device.objects.annotate_config_context_data()
     base_template = "dcim/device/base.html"
 
 
