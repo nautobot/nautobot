@@ -62,6 +62,16 @@ class RackElevationSVG:
         drawing.defs.add(gradient)
 
     @staticmethod
+    def _add_filters(drawing):
+        new_filter = drawing.filter(id="darkmodeinvert")
+        fct = new_filter.feComponentTransfer(color_interpolation_filters="sRGB", result="inverted")
+        fct.feFuncR("table", tableValues="1,0")
+        fct.feFuncG("table", tableValues="1,0")
+        fct.feFuncB("table", tableValues="1,0")
+        new_filter.feColorMatrix(type_="hueRotate", values="180", in_="inverted")
+        drawing.defs.add(new_filter)
+
+    @staticmethod
     def _setup_drawing(width, height):
         drawing = svgwrite.Drawing(size=(width, height))
 
@@ -73,6 +83,7 @@ class RackElevationSVG:
         RackElevationSVG._add_gradient(drawing, "reserved", "#c7c7ff")
         RackElevationSVG._add_gradient(drawing, "occupied", "#d7d7d7")
         RackElevationSVG._add_gradient(drawing, "blocked", "#ffc0c0")
+        RackElevationSVG._add_filters(drawing)
 
         return drawing
 
