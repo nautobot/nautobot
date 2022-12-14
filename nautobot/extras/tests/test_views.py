@@ -2224,14 +2224,7 @@ class WebhookTestCase(
         }
 
 
-class RoleTestCase(
-    ViewTestCases.CreateObjectViewTestCase,
-    ViewTestCases.DeleteObjectViewTestCase,
-    ViewTestCases.EditObjectViewTestCase,
-    ViewTestCases.GetObjectViewTestCase,
-    ViewTestCases.GetObjectChangelogViewTestCase,
-    ViewTestCases.ListObjectsViewTestCase,
-):
+class RoleTestCase(ViewTestCases.OrganizationalObjectViewTestCase):
     model = Role
 
     @classmethod
@@ -2249,11 +2242,11 @@ class RoleTestCase(
         }
 
         cls.csv_data = (
-            "name,slug,color,content_types"
-            'test_role1,test-role1,ffffff,"dcim.device"'
-            'test_role2,test-role2,ffffff,"dcim.device,dcim.rack"'
-            'test_role3,test-role3,ffffff,"dcim.device,ipam.prefix"'
-            'test_role4,test-role4,ffffff,"ipam.ipaddress,ipam.vlan"'
+            "name,slug,color,content_types",
+            "test_role1,test-role1,ffffff,dcim.device",
+            'test_role2,test-role2,ffffff,"dcim.device,dcim.rack"',
+            'test_role3,test-role3,ffffff,"dcim.device,ipam.prefix"',
+            'test_role4,test-role4,ffffff,"ipam.ipaddress,ipam.vlan"',
         )
 
         cls.bulk_edit_data = {
