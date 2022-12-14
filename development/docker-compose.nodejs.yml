@@ -11,3 +11,5 @@ services:
     volumes:
       - ../frontend-next/:/opt/node/nautobot
     command: npm run dev
+  nautobot:
+    command: nautobot-server start --http :8080 --master --processes 3 --threads 2 --buffer-size 32768
