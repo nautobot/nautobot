@@ -27,19 +27,19 @@ Questions? Comments? Start by perusing our [GitHub discussions](https://github.c
 
 ## Screenshots
 
-![Screenshot of main page](https://raw.githubusercontent.com/nautobot/nautobot/develop/nautobot/docs/media/ss_main_page.png "Main page")
+![Gif of main page](/nautobot/docs/media/nautobot_mainpage.gif?raw=true "Main page")
 
 ---
 
-![Screenshot of config contexts](https://raw.githubusercontent.com/nautobot/nautobot/develop/nautobot/docs/media/ss_config_contexts.png "Config Contexts")
+![Gif of config contexts](/nautobot/docs/media/nautobot_config_context.gif?raw=true "Config Contexts")
 
 ---
 
-![Screenshot of prefix hierarchy](https://raw.githubusercontent.com/nautobot/nautobot/develop/nautobot/docs/media/ss_prefix_hierarchy.png "Prefix hierarchy")
+![Gif of prefix hierarchy](/nautobot/docs/media/nautobot_prefix_hierarchy.gif?raw=true "Prefix hierarchy")
 
 ---
 
-![Screenshot of GraphQL](https://raw.githubusercontent.com/nautobot/nautobot/develop/nautobot/docs/media/ss_graphiql.png "GraphQL API")
+![Gif of GraphQL](/nautobot/docs/media/nautobot_graphql.gif?raw=true "GraphQL API")
 
 ## Installation
 
@@ -61,11 +61,11 @@ There are many plugins available within the Nautobot Apps ecosystem. The below s
 
 #### Golden Config Plugin
 
-![Screenshot of golden config](https://raw.githubusercontent.com/nautobot/nautobot/develop/nautobot/docs/media/ss_plugin_golden_config.png "Golden config")
+![Gif of golden config](/nautobot/docs/media/nautobot_golden_config.gif?raw=true "Golden config")
 
 #### ChatOps Plugin
 
-![Screenshot of chatops](https://raw.githubusercontent.com/nautobot/nautobot/develop/nautobot/docs/media/ss_plugin_chatops.png "ChatOps")
+![Gif of chatops](/nautobot/docs/media/nautobot_chatops.gif?raw=true "ChatOps")
 
 ## Providing Feedback
 
