@@ -13,7 +13,7 @@ from nautobot.utilities.choices import ColorChoices
 RelatedRoleModel = namedtuple("RelatedRoleModel", ["model", "implemented_by"])
 
 # Using this, Choices is made to resemble a Role Queryset.
-ChoicesQuerySet = namedtuple("FakeQuerySet", ["name", "slug", "description", "color"])
+ChoicesQuerySet = namedtuple("ChoicesQuerySet", ["name", "slug", "description", "color"])
 
 color_map = {
     "default": ColorChoices.COLOR_GREY,
@@ -70,8 +70,8 @@ def bulk_create_roles(apps, roles_to_create, content_types):
             name=data.name,
             slug=data.slug,
             description=data.description,
-            color=data.color if hasattr(data, "color") else color_map["default"],
-            weight=data.weight if hasattr(data, "weight") else None,
+            color=getattr(data, "color", color_map["default"]),
+            weight=getattr(data, "weight", None),
         )
         for data in roles_to_create
         if data.name not in existing_roles

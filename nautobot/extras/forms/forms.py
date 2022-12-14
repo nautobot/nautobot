@@ -75,7 +75,7 @@ from nautobot.extras.models import (
     Webhook,
 )
 from nautobot.extras.registry import registry
-from nautobot.extras.utils import ChangeLoggedModelsQuery, FeatureQuery, TaggableClassesQuery
+from nautobot.extras.utils import ChangeLoggedModelsQuery, FeatureQuery, RoleModelsQuery, TaggableClassesQuery
 from .base import (
     NautobotBulkEditForm,
     NautobotFilterForm,
@@ -1181,7 +1181,7 @@ class RoleForm(NautobotModelForm):
     content_types = MultipleContentTypeField(
         required=False,
         label="Content Type(s)",
-        queryset=TaggableClassesQuery().as_queryset(),
+        queryset=RoleModelsQuery().as_queryset(),
     )
 
     class Meta:
@@ -1194,10 +1194,10 @@ class RoleCSVForm(CustomFieldModelCSVForm):
     """Generic CSV bulk import form for `Role` objects."""
 
     content_types = CSVMultipleContentTypeField(
-        queryset=TaggableClassesQuery().as_queryset(),
+        queryset=RoleModelsQuery().as_queryset(),
         choices_as_strings=True,
         help_text=mark_safe(
-            "The object types to which this status applies. Multiple values "
+            "The object types to which this role applies. Multiple values "
             "must be comma-separated and wrapped in double quotes. (e.g. "
             '<code>"dcim.device,dcim.rack"</code>)'
         ),
@@ -1218,7 +1218,7 @@ class RoleBulkEditForm(NautobotBulkEditForm):
     pk = forms.ModelMultipleChoiceField(queryset=Role.objects.all(), widget=forms.MultipleHiddenInput)
     color = forms.CharField(max_length=6, required=False, widget=ColorSelect())
     content_types = MultipleContentTypeField(
-        queryset=TaggableClassesQuery().as_queryset(), required=False, label="Content Type(s)"
+        queryset=RoleModelsQuery().as_queryset(), required=False, label="Content Type(s)"
     )
 
     class Meta:

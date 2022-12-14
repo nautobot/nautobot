@@ -1131,6 +1131,32 @@ class RelationshipAssociationSerializer(ValidatedModelSerializer):
 
 
 #
+# Roles
+#
+
+
+class RoleSerializer(NautobotModelSerializer):
+    """Serializer for `Role` objects."""
+
+    url = serializers.HyperlinkedIdentityField(view_name="extras-api:role-detail")
+    content_types = ContentTypeField(
+        queryset=RoleModelsQuery().as_queryset(),
+        many=True,
+    )
+
+    class Meta:
+        model = Role
+        fields = [
+            "url",
+            "content_types",
+            "name",
+            "slug",
+            "color",
+            "weight",
+        ]
+
+
+#
 # Secrets
 #
 
@@ -1323,28 +1349,3 @@ class WebhookSerializer(ValidatedModelSerializer, NotesSerializerMixin):
             raise serializers.ValidationError(conflicts)
 
         return validated_data
-
-
-#
-# Roles
-#
-
-
-class RoleSerializer(NautobotModelSerializer):
-    """Serializer for `Role` objects."""
-
-    url = serializers.HyperlinkedIdentityField(view_name="extras-api:role-detail")
-    content_types = ContentTypeField(
-        queryset=RoleModelsQuery().as_queryset(),
-        many=True,
-    )
-
-    class Meta:
-        model = Role
-        fields = [
-            "url",
-            "content_types",
-            "name",
-            "slug",
-            "color",
-        ]

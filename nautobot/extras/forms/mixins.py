@@ -607,7 +607,7 @@ class RoleModelBulkEditFormMixin(forms.Form):
 
 class RoleModelFilterFormMixin(forms.Form):
     """
-    Mixin to add non-required `status` multiple-choice field to filter forms.
+    Mixin to add non-required `role` multiple-choice field to filter forms.
     """
 
     def __init__(self, *args, **kwargs):
@@ -622,7 +622,7 @@ class RoleModelFilterFormMixin(forms.Form):
 
 
 class RoleModelCSVFormMixin(CSVModelForm):
-    """Mixin to add a required `status` choice field to CSV import forms."""
+    """Mixin to add a required `role` choice field to CSV import forms."""
 
     role = CSVModelChoiceField(
         queryset=Role.objects.all(), to_field_name="name", required=False, help_text="Assigned role"

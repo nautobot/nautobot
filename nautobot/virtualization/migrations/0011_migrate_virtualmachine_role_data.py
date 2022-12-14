@@ -12,7 +12,6 @@ def migrate_data_from_legacy_role_to_new_role(apps, schema):
     migrate_role_data(model=model, role_model=role_model)
 
 
-# FIXME(timizuo): Reversal do not work as expected; This is suppose to migrate data from new_role back to legacy_role
 def reverse_role_data_migrate(apps, schema):
     """Reverse changes made to new_role"""
 

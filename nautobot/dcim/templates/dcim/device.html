@@ -130,7 +130,7 @@
                                     <tr>
                                         <td>Role</td>
                                         <td>
-                                            <span class="label" style="color: {{ object.role.color|fgcolor }}; background-color: #{{ object.role.color }}">{{ object.get_role_display }}</span>
+                                            {{ object | render_obj_display:"role" }}
                                         </td>
                                     </tr>
                                     <tr>
@@ -140,7 +140,7 @@
                                     <tr>
                                         <td>Status</td>
                                         <td>
-                                            <span class="label" style="color: {{ object.status.color|fgcolor }}; background-color: #{{ object.status.color }}">{{ object.get_status_display }}</span>
+                                            {{ object | render_obj_display:"status" }}
                                         </td>
                                     </tr>
                                     <tr>
