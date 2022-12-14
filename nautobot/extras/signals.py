@@ -19,8 +19,16 @@ from nautobot.extras.tasks import delete_custom_field_data, provision_field
 from nautobot.extras.utils import refresh_job_model_from_job_class
 from nautobot.utilities.config import get_settings_or_config
 from nautobot.extras.constants import CHANGELOG_MAX_CHANGE_CONTEXT_DETAIL
-from .choices import JobResultStatusChoices, ObjectChangeActionChoices
-from .models import CustomField, DynamicGroup, DynamicGroupMembership, GitRepository, JobResult, ObjectChange
+from nautobot.extras.choices import JobResultStatusChoices, ObjectChangeActionChoices
+from nautobot.extras.models import (
+    CustomField,
+    DynamicGroup,
+    DynamicGroupMembership,
+    GitRepository,
+    JobResult,
+    ObjectChange,
+    RelationshipAssociation,
+)
 from .webhooks import enqueue_webhooks
 
 logger = logging.getLogger("nautobot.extras.signals")
@@ -88,6 +96,9 @@ def _handle_changed_object(change_context, sender, instance, **kwargs):
         if objectchange is not None:
             enqueue_job_hooks(objectchange)
 
+    elif isinstance(instance, RelationshipAssociation):
+        _handle_relationship_association_change(change_context, instance)
+
     # Enqueue webhooks
     enqueue_webhooks(instance, change_context.get_user(), change_context.change_id, action)
 
@@ -121,6 +132,9 @@ def _handle_deleted_object(change_context, sender, instance, **kwargs):
 
         # Enqueue job hooks
         enqueue_job_hooks(objectchange)
+
+    elif isinstance(instance, RelationshipAssociation):
+        _handle_relationship_association_change(change_context, instance)
 
     # Enqueue webhooks
     enqueue_webhooks(
@@ -298,3 +312,23 @@ def refresh_job_models(sender, *, apps, **kwargs):
             )
             job_model.installed = False
             job_model.save()
+
+
+def _handle_relationship_association_change(change_context, instance):
+    """Handle changes to RelationshipAssociation objects."""
+    from .jobs import enqueue_job_hooks  # avoid circular import
+
+    for related_object in [instance.source, instance.destination]:
+        if hasattr(related_object, "to_objectchange"):
+            related_changes = ObjectChange.objects.filter(
+                changed_object_type=ContentType.objects.get_for_model(related_object),
+                changed_object_id=related_object.pk,
+                request_id=change_context.change_id,
+            )
+            obj_changes = related_object.to_objectchange(ObjectChangeActionChoices.ACTION_UPDATE)
+            related_changes.update(object_data=obj_changes.object_data, object_data_v2=obj_changes.object_data_v2)
+            objectchange = related_changes.first() if related_changes.exists() else None
+
+            # Enqueue job hooks
+            if objectchange is not None:
+                enqueue_job_hooks(objectchange)
