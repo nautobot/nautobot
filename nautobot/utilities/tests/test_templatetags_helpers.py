@@ -1,8 +1,12 @@
+from django.contrib.contenttypes.models import ContentType
 from django.test import TestCase
 from django.templatetags.static import static
 from django.conf import settings
 from unittest import skipIf
 
+from nautobot.extras.models import Role
+from nautobot.ipam.models import VLAN
+from nautobot.utilities.choices import ColorChoices
 from nautobot.utilities.templatetags.helpers import (
     hyperlinked_object,
     placeholder,
@@ -27,6 +31,7 @@ from nautobot.utilities.templatetags.helpers import (
     as_range,
     meters_to_feet,
     get_item,
+    render_obj_display,
 )
 from nautobot.dcim.models import Site
 from example_plugin.models import AnotherExampleModel, ExampleModel
@@ -209,3 +214,15 @@ class NautobotTemplatetagsHelperTest(TestCase):
                 render_boolean(value), '<span class="text-danger"><i class="mdi mdi-close-thick" title="No"></i></span>'
             )
         self.assertEqual(render_boolean(None), '<span class="text-muted">&mdash;</span>')
+
+    def test_render_obj_display(self):
+        vlan_ct = ContentType.objects.get_for_model(VLAN)
+        role = Role.objects.create(name="New Role", color=ColorChoices.COLOR_GREY)
+        role.content_types.add(vlan_ct)
+        site = Site.objects.create(name="Site-1", slug="site-1")
+        vlan = VLAN.objects.create(name="VLAN 1", vid=100, site=site, role=role)
+        self.assertEqual(
+            render_obj_display(vlan, "role"),
+            '<span class="label" style="color: #ffffff; background-color: #9e9e9e">New Role</span>',
+        )
+        self.assertEqual(render_obj_display(vlan, "status"), "—")
