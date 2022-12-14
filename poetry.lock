@@ -1115,14 +1115,14 @@ rest-framework = ["djangorestframework (>=3.0.0)"]
 
 [[package]]
 name = "django-tree-queries"
-version = "0.11.0"
+version = "0.13.0"
 description = "Tree queries with explicit opt-in, without configurability"
 category = "main"
 optional = false
 python-versions = ">=3.6"
 files = [
-    {file = "django_tree_queries-0.11.0-py3-none-any.whl", hash = "sha256:d74fe9e36dc67cb2c6f7df1969ef700627b0c49af2ada15990dd3ae44e4ddb23"},
-    {file = "django_tree_queries-0.11.0.tar.gz", hash = "sha256:768bc75fd5ab617e19bec5c7e207964d7f2f6155f5f3d8c3332b41d9d0e6b436"},
+    {file = "django_tree_queries-0.13.0-py3-none-any.whl", hash = "sha256:fd838c67aed5a88ae2d91a9718d6776cfa4514d4fc8918ee7d09f27f1989a16e"},
+    {file = "django_tree_queries-0.13.0.tar.gz", hash = "sha256:5a0db212096371b17fc547e8333ad050ccbca073e8c117a6f3bf36b391f8ef86"},
 ]
 
 [package.extras]
@@ -4108,4 +4108,4 @@ sso = ["social-auth-core"]
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.7"
-content-hash = "165fb3f68df2cdc0d7293fb3441e344c7c6077ec65c3ed5dd6d7eff6538b7f4e"
+content-hash = "3abc50d9f68b746653edac9f7baead563692726561b49706786dab79220b8c38"
