@@ -190,7 +190,7 @@ pylint-django = {version = "~2.5.3", python = "^3.7.2"}
 # Integration Tests
 requests = "~2.27.1"
 # Colorization and autoformatting of CLI output, used for Invoke tasks
-rich = "~12.5.1"
+rich = "~12.6.0"
 # Selenium web drivers for live integration testing
 selenium = "~4.3.0"
 # Abstraction layer for working with Selenium
