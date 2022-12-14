@@ -1148,6 +1148,7 @@ class RoleFilterSet(NautobotFilterSet):
             "color",
             "name",
             "slug",
+            "weight",
             "created",
             "last_updated",
         ]

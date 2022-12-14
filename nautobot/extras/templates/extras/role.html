@@ -22,15 +22,17 @@
                     <tr>
                         <td>Weight</td>
                         <td>
-                            {{ object.weight }}
+                            {{ object.weight|placeholder }}
                         </td>
                     </tr>
                     <tr>
                         <td>Content Type(s)</td>
                         <td>
-                            {% for ct in content_types %}
-                                {{ ct }}<br>
-                            {% endfor %}
+                            <ul class="list-unstyled">
+                                {% for ct in content_types %}
+                                    <li>{{ ct }}</li>
+                                {% endfor %}
+                            </ul>
                         </td>
                     </tr>
                     <tr>
