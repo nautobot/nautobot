@@ -1,1 +1,1 @@
-Added mouseover help text for cable connect buttons on DeviceInterfaceTable.
+Added mouseover help text for cable connect buttons on DeviceConsolePortTable, DeviceConsoleServerPortTable, DevicePowerPortTable, DeviceInterfaceTable, DeviceFrontPortTable, DeviceRearPortTable.
