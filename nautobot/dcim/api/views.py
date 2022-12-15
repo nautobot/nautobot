@@ -138,9 +138,9 @@ class PassThroughPortMixin:
 
 
 class RegionViewSet(NautobotModelViewSet):
-    # TODO(glenn) tree-queries doesn't have add_related_count()
+    # TODO(glenn) tree-queries doesn't have add_related_count(); count_related() is non-cumulative
     # queryset = Region.objects.add_related_count(Region.objects.all(), Site, "region", "site_count", cumulative=True)
-    queryset = Region.objects.all()
+    queryset = Region.objects.annotate(site_count=count_related(Site, "region"))
     serializer_class = serializers.RegionSerializer
     filterset_class = filters.RegionFilterSet
 
@@ -196,11 +196,11 @@ class LocationViewSet(StatusViewSetMixin, NautobotModelViewSet):
 
 class RackGroupViewSet(NautobotModelViewSet):
     # v2 TODO(jathan): Replace prefetch_related with select_related
-    # TODO(glenn): tree-queries doesn't have add_related_count()
+    # TODO(glenn): tree-queries doesn't have add_related_count(); count_related() is non-cumulative
     # queryset = RackGroup.objects.add_related_count(
     #     RackGroup.objects.all(), Rack, "group", "rack_count", cumulative=True
     # ).prefetch_related("site")
-    queryset = RackGroup.objects.prefetch_related("site")
+    queryset = RackGroup.objects.annotate(rack_count=count_related(Rack, "group")).prefetch_related("site")
     serializer_class = serializers.RackGroupSerializer
     filterset_class = filters.RackGroupFilterSet
 

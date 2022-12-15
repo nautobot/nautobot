@@ -142,9 +142,9 @@ class BulkDisconnectView(GetReturnURLMixin, ObjectPermissionRequiredMixin, View)
 
 
 class RegionListView(generic.ObjectListView):
-    # TODO(glenn) tree-queries doesn't have add_related_count()
+    # TODO(glenn) tree-queries doesn't have add_related_count(); count_related() is non-cumulative
     # queryset = Region.objects.add_related_count(Region.objects.all(), Site, "region", "site_count", cumulative=True)
-    queryset = Region.objects.all()
+    queryset = Region.objects.annotate(site_count=count_related(Site, "region"))
     filterset = filters.RegionFilterSet
     filterset_form = forms.RegionFilterForm
     table = tables.RegionTable
@@ -192,9 +192,9 @@ class RegionBulkImportView(generic.BulkImportView):
 
 
 class RegionBulkDeleteView(generic.BulkDeleteView):
-    # TODO(glenn) tree-queries doesn't have add_related_count()
+    # TODO(glenn) tree-queries doesn't have add_related_count(); count_related() is non-cumulative
     # queryset = Region.objects.add_related_count(Region.objects.all(), Site, "region", "site_count", cumulative=True)
-    queryset = Region.objects.all()
+    queryset = Region.objects.annotate(site_count=count_related(Site, "region"))
     filterset = filters.RegionFilterSet
     table = tables.RegionTable
 
@@ -225,11 +225,12 @@ class SiteView(generic.ObjectView):
             "vm_count": VirtualMachine.objects.restrict(request.user, "view").filter(cluster__site=instance).count(),
         }
         rack_groups = (
-            # TODO(glenn): tree-queries doesn't have add_related_count()
+            # TODO(glenn): tree-queries doesn't have add_related_count(); count_related() is non-cumulative
             # RackGroup.objects.add_related_count(RackGroup.objects.all(), Rack, "group", "rack_count", cumulative=True)
             RackGroup.objects
+            .annotate(rack_count=count_related(Rack, "group"))
             .restrict(request.user, "view")
-            .filter(site=instance)
+            # .filter(site=instance)
         )
         # v2 TODO(jathan): Replace prefetch_related with select_related
         locations = (
@@ -386,9 +387,10 @@ class LocationView(generic.ObjectView):
             .count(),
         }
         rack_groups = (
-            # TODO(glenn) tree-queries doesn't have add_related_count()
+            # TODO(glenn) tree-queries doesn't have add_related_count(); count_related() is non-cumulative
             # RackGroup.objects.add_related_count(RackGroup.objects.all(), Rack, "group", "rack_count", cumulative=True)
             RackGroup.objects
+            .annotate(rack_count=count_related(Rack, "group"))
             .restrict(request.user, "view")
             .filter(location__in=related_locations)
         )
@@ -451,11 +453,11 @@ class LocationBulkDeleteView(generic.BulkDeleteView):
 
 
 class RackGroupListView(generic.ObjectListView):
-    # TODO(glenn): tree-queries doesn't have add_related_count()
+    # TODO(glenn): tree-queries doesn't have add_related_count(); count_related() is non-cumulative
     # queryset = RackGroup.objects.add_related_count(
     #     RackGroup.objects.all(), Rack, "group", "rack_count", cumulative=True
     # )
-    queryset = RackGroup.objects.all()
+    queryset = RackGroup.objects.annotate(rack_count=count_related(Rack, "group"))
     filterset = filters.RackGroupFilterSet
     filterset_form = forms.RackGroupFilterForm
     table = tables.RackGroupTable
@@ -505,11 +507,11 @@ class RackGroupBulkImportView(generic.BulkImportView):
 
 class RackGroupBulkDeleteView(generic.BulkDeleteView):
     # v2 TODO(jathan): Replace prefetch_related with select_related
-    # TODO(glenn): tree-queries doesn't have add_related_count()
+    # TODO(glenn): tree-queries doesn't have add_related_count(); count_related() is non-cumulative
     # queryset = RackGroup.objects.add_related_count(
     #     RackGroup.objects.all(), Rack, "group", "rack_count", cumulative=True
     # ).prefetch_related("site")
-    queryset = RackGroup.objects.prefetch_related("site")
+    queryset = RackGroup.objects.annotate(rack_count=count_related(Rack, "group")).prefetch_related("site")
     filterset = filters.RackGroupFilterSet
     table = tables.RackGroupTable
 
