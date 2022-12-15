@@ -1,5 +1,3 @@
-
-
 class LimitQuerysetChoicesSerializerMixin:
     """Mixin field that restricts queryset choices to those accessible
     for the queryset model that implemented it."""

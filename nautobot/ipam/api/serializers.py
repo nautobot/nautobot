@@ -158,6 +158,7 @@ class AggregateSerializer(NautobotModelSerializer, TaggedObjectSerializer):
 #
 # VLANs
 
+
 class VLANGroupSerializer(NautobotModelSerializer):
     url = serializers.HyperlinkedIdentityField(view_name="ipam-api:vlangroup-detail")
     site = NestedSiteSerializer(required=False, allow_null=True)

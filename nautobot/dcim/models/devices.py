@@ -331,7 +331,6 @@ class DeviceType(PrimaryModel):
 #
 
 
-
 @extras_features("custom_fields", "custom_validators", "relationships", "graphql")
 class Platform(OrganizationalModel):
     """

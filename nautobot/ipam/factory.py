@@ -6,7 +6,7 @@ import math
 
 from nautobot.core.factory import OrganizationalModelFactory, PrimaryModelFactory
 from nautobot.dcim.models import Location, Site
-from nautobot.extras.models import Status
+from nautobot.extras.models import Status, Role
 from nautobot.ipam.choices import IPAddressRoleChoices
 from nautobot.ipam.models import Aggregate, RIR, IPAddress, Prefix, RouteTarget, VLAN, VLANGroup, VRF
 from nautobot.tenancy.models import Tenant
@@ -578,7 +578,10 @@ class IPAddressFactory(PrimaryModelFactory):
         nat_inside=None,
         is_ipv6=factory.SelfAttribute("..is_ipv6"),
     )
-    role = factory.Maybe("has_role", factory.LazyAttribute(lambda obj: obj.role_choice[0]), "")
+    role = factory.Maybe(
+        "has_role",
+        random_instance(lambda: Role.objects.get_for_model(IPAddress), allow_null=False),
+    )
     status = factory.Maybe(
         "is_ipv6",
         random_instance(lambda: Status.objects.get_for_model(IPAddress), allow_null=False),

@@ -28,7 +28,6 @@ from nautobot.dcim.models import (
     DeviceBay,
     DeviceBayTemplate,
     DeviceRedundancyGroup,
-    DeviceRole,
     DeviceType,
     FrontPort,
     FrontPortTemplate,
@@ -48,14 +47,13 @@ from nautobot.dcim.models import (
     Rack,
     RackGroup,
     RackReservation,
-    RackRole,
     RearPort,
     RearPortTemplate,
     Region,
     Site,
     VirtualChassis,
 )
-from nautobot.extras.models import ConfigContextSchema, SecretsGroup, Status
+from nautobot.extras.models import ConfigContextSchema, SecretsGroup, Status, Role
 from nautobot.ipam.models import IPAddress, VLAN
 from nautobot.tenancy.models import Tenant
 from nautobot.utilities.testing import APITestCase, APIViewTestCases
@@ -89,7 +87,7 @@ class Mixins:
             peer_device = Device.objects.create(
                 site=Site.objects.first(),
                 device_type=DeviceType.objects.first(),
-                device_role=DeviceRole.objects.first(),
+                role=Role.objects.get_for_model(Device).first(),
                 name="Peer Device",
             )
             if self.peer_termination_type is None:
@@ -125,9 +123,9 @@ class Mixins:
             cls.device_type = DeviceType.objects.exclude(manufacturer__isnull=True).first()
             cls.manufacturer = cls.device_type.manufacturer
             cls.site = Site.objects.first()
-            cls.device_role = DeviceRole.objects.first()
+            cls.device_role = Role.objects.get_for_model(Device).first()
             cls.device = Device.objects.create(
-                device_type=cls.device_type, device_role=cls.device_role, name="Device 1", site=cls.site
+                device_type=cls.device_type, role=cls.device_role, name="Device 1", site=cls.site
             )
 
     class BasePortTestMixin(ComponentTraceMixin, BaseComponentTestMixin):
@@ -564,43 +562,6 @@ class RackGroupTest(APIViewTestCases.APIViewTestCase):
         )
 
 
-class RackRoleTest(APIViewTestCases.APIViewTestCase):
-    model = RackRole
-    brief_fields = ["display", "id", "name", "rack_count", "slug", "url"]
-    create_data = [
-        {
-            "name": "Rack Role 4",
-            "slug": "rack-role-4",
-            "color": "ffff00",
-        },
-        {
-            "name": "Rack Role 5",
-            "slug": "rack-role-5",
-            "color": "ffff00",
-        },
-        {
-            "name": "Rack Role 6",
-            "slug": "rack-role-6",
-            "color": "ffff00",
-        },
-        {
-            "name": "Rack Role 7",
-            "color": "ffff00",
-        },
-    ]
-    bulk_update_data = {
-        "description": "New description",
-    }
-    slug_source = "name"
-
-    @classmethod
-    def setUpTestData(cls):
-
-        RackRole.objects.create(name="Rack Role 1", slug="rack-role-1", color="ff0000")
-        RackRole.objects.create(name="Rack Role 2", slug="rack-role-2", color="00ff00")
-        RackRole.objects.create(name="Rack Role 3", slug="rack-role-3", color="0000ff")
-
-
 class RackTest(APIViewTestCases.APIViewTestCase):
     model = Rack
     brief_fields = ["device_count", "display", "id", "name", "url"]
@@ -619,11 +580,7 @@ class RackTest(APIViewTestCases.APIViewTestCase):
             RackGroup.objects.create(site=sites[1], name="Rack Group 2", slug="rack-group-2"),
         )
 
-        rack_roles = (
-            RackRole.objects.create(name="Rack Role 1", slug="rack-role-1", color="ff0000"),
-            RackRole.objects.create(name="Rack Role 2", slug="rack-role-2", color="00ff00"),
-        )
-
+        rack_roles = Role.objects.get_for_model(Rack)
         statuses = Status.objects.get_for_model(Rack)
 
         Rack.objects.create(
@@ -1179,36 +1136,6 @@ class DeviceBayTemplateTest(Mixins.BasePortTemplateTestMixin):
         ]
 
 
-class DeviceRoleTest(APIViewTestCases.APIViewTestCase):
-    model = DeviceRole
-    brief_fields = ["device_count", "display", "id", "name", "slug", "url", "virtualmachine_count"]
-    create_data = [
-        {
-            "name": "Device Role 4",
-            "slug": "device-role-4",
-            "color": "ffff00",
-        },
-        {
-            "name": "Device Role 5",
-            "slug": "device-role-5",
-            "color": "ffff00",
-        },
-        {
-            "name": "Device Role 6",
-            "slug": "device-role-6",
-            "color": "ffff00",
-        },
-        {
-            "name": "Device Role 7",
-            "color": "ffff00",
-        },
-    ]
-    bulk_update_data = {
-        "description": "New description",
-    }
-    slug_source = "name"
-
-
 class PlatformTest(APIViewTestCases.APIViewTestCase):
     model = Platform
     brief_fields = ["device_count", "display", "id", "name", "slug", "url", "virtualmachine_count"]
@@ -1268,11 +1195,11 @@ class DeviceTest(APIViewTestCases.APIViewTestCase):
         )
 
         device_type = DeviceType.objects.first()
-        device_role = DeviceRole.objects.first()
+        device_role = Role.objects.get_for_model(Device).first()
 
         Device.objects.create(
             device_type=device_type,
-            device_role=device_role,
+            role=device_role,
             status=device_statuses[0],
             name="Device 1",
             site=sites[0],
@@ -1283,7 +1210,7 @@ class DeviceTest(APIViewTestCases.APIViewTestCase):
         )
         Device.objects.create(
             device_type=device_type,
-            device_role=device_role,
+            role=device_role,
             status=device_statuses[0],
             name="Device 2",
             site=sites[0],
@@ -1294,7 +1221,7 @@ class DeviceTest(APIViewTestCases.APIViewTestCase):
         )
         Device.objects.create(
             device_type=device_type,
-            device_role=device_role,
+            role=device_role,
             status=device_statuses[0],
             name="Device 3",
             site=sites[0],
@@ -1315,7 +1242,7 @@ class DeviceTest(APIViewTestCases.APIViewTestCase):
         cls.create_data = [
             {
                 "device_type": device_type.pk,
-                "device_role": device_role.pk,
+                "role": device_role.pk,
                 "status": "offline",
                 "name": "Test Device 4",
                 "site": sites[1].pk,
@@ -1325,7 +1252,7 @@ class DeviceTest(APIViewTestCases.APIViewTestCase):
             },
             {
                 "device_type": device_type.pk,
-                "device_role": device_role.pk,
+                "role": device_role.pk,
                 "status": "offline",
                 "name": "Test Device 5",
                 "site": sites[1].pk,
@@ -1335,7 +1262,7 @@ class DeviceTest(APIViewTestCases.APIViewTestCase):
             },
             {
                 "device_type": device_type.pk,
-                "device_role": device_role.pk,
+                "role": device_role.pk,
                 "status": "offline",
                 "name": "Test Device 6",
                 "site": sites[1].pk,
@@ -1374,7 +1301,7 @@ class DeviceTest(APIViewTestCases.APIViewTestCase):
         device = Device.objects.first()
         data = {
             "device_type": device.device_type.pk,
-            "device_role": device.device_role.pk,
+            "role": device.role.pk,
             "site": device.site.pk,
             "name": device.name,
         }
@@ -1609,15 +1536,9 @@ class InterfaceTestVersion12(Mixins.BasePortTestMixin):
         super().setUpTestData()
 
         cls.devices = (
-            Device.objects.create(
-                device_type=cls.device_type, device_role=cls.device_role, name="Device 1", site=cls.site
-            ),
-            Device.objects.create(
-                device_type=cls.device_type, device_role=cls.device_role, name="Device 2", site=cls.site
-            ),
-            Device.objects.create(
-                device_type=cls.device_type, device_role=cls.device_role, name="Device 3", site=cls.site
-            ),
+            Device.objects.create(device_type=cls.device_type, role=cls.device_role, name="Device 1", site=cls.site),
+            Device.objects.create(device_type=cls.device_type, role=cls.device_role, name="Device 2", site=cls.site),
+            Device.objects.create(device_type=cls.device_type, role=cls.device_role, name="Device 3", site=cls.site),
         )
 
         cls.virtual_chassis = VirtualChassis.objects.create(
@@ -1986,25 +1907,25 @@ class DeviceBayTest(Mixins.BaseComponentTestMixin):
         devices = (
             Device.objects.create(
                 device_type=device_types[0],
-                device_role=cls.device_role,
+                role=cls.device_role,
                 name="Device 1",
                 site=cls.site,
             ),
             Device.objects.create(
                 device_type=device_types[1],
-                device_role=cls.device_role,
+                role=cls.device_role,
                 name="Device 2",
                 site=cls.site,
             ),
             Device.objects.create(
                 device_type=device_types[1],
-                device_role=cls.device_role,
+                role=cls.device_role,
                 name="Device 3",
                 site=cls.site,
             ),
             Device.objects.create(
                 device_type=device_types[1],
-                device_role=cls.device_role,
+                role=cls.device_role,
                 name="Device 4",
                 site=cls.site,
             ),
@@ -2084,13 +2005,13 @@ class CableTest(Mixins.BaseComponentTestMixin):
         devices = (
             Device.objects.create(
                 device_type=cls.device_type,
-                device_role=cls.device_role,
+                role=cls.device_role,
                 name="Device 2",
                 site=cls.site,
             ),
             Device.objects.create(
                 device_type=cls.device_type,
-                device_role=cls.device_role,
+                role=cls.device_role,
                 name="Device 3",
                 site=cls.site,
             ),
@@ -2171,19 +2092,19 @@ class ConnectedDeviceTest(APITestCase):
 
         site = Site.objects.first()
         device_type = DeviceType.objects.exclude(manufacturer__isnull=True).first()
-        device_role = DeviceRole.objects.first()
+        device_role = Role.objects.get_for_model(Device).first()
 
         cable_status = Status.objects.get_for_model(Cable).get(slug="connected")
 
         self.device1 = Device.objects.create(
             device_type=device_type,
-            device_role=device_role,
+            role=device_role,
             name="TestDevice1",
             site=site,
         )
         device2 = Device.objects.create(
             device_type=device_type,
-            device_role=device_role,
+            role=device_role,
             name="TestDevice2",
             site=site,
         )
@@ -2209,79 +2130,79 @@ class VirtualChassisTest(APIViewTestCases.APIViewTestCase):
     def setUpTestData(cls):
         site = Site.objects.first()
         device_type = DeviceType.objects.exclude(manufacturer__isnull=True).first()
-        device_role = DeviceRole.objects.first()
+        device_role = Role.objects.get_for_model(Device).first()
 
         devices = (
             Device.objects.create(
                 name="Device 1",
                 device_type=device_type,
-                device_role=device_role,
+                role=device_role,
                 site=site,
             ),
             Device.objects.create(
                 name="Device 2",
                 device_type=device_type,
-                device_role=device_role,
+                role=device_role,
                 site=site,
             ),
             Device.objects.create(
                 name="Device 3",
                 device_type=device_type,
-                device_role=device_role,
+                role=device_role,
                 site=site,
             ),
             Device.objects.create(
                 name="Device 4",
                 device_type=device_type,
-                device_role=device_role,
+                role=device_role,
                 site=site,
             ),
             Device.objects.create(
                 name="Device 5",
                 device_type=device_type,
-                device_role=device_role,
+                role=device_role,
                 site=site,
             ),
             Device.objects.create(
                 name="Device 6",
                 device_type=device_type,
-                device_role=device_role,
+                role=device_role,
                 site=site,
             ),
             Device.objects.create(
                 name="Device 7",
                 device_type=device_type,
-                device_role=device_role,
+                role=device_role,
                 site=site,
             ),
             Device.objects.create(
                 name="Device 8",
                 device_type=device_type,
-                device_role=device_role,
+                role=device_role,
                 site=site,
             ),
             Device.objects.create(
                 name="Device 9",
                 device_type=device_type,
-                device_role=device_role,
+                role=device_role,
                 site=site,
             ),
             Device.objects.create(
                 name="Device 10",
                 device_type=device_type,
-                device_role=device_role,
+                role=device_role,
                 site=site,
             ),
             Device.objects.create(
                 name="Device 11",
                 device_type=device_type,
-                device_role=device_role,
+                role=device_role,
                 site=site,
             ),
             Device.objects.create(
                 name="Device 12",
                 device_type=device_type,
-                device_role=device_role,
+                role=device_role,
                 site=site,
             ),
         )
@@ -2379,7 +2300,7 @@ class VirtualChassisTest(APIViewTestCases.APIViewTestCase):
         url = reverse("dcim-api:device-detail", kwargs={"pk": master_device.id})
         payload = {
             "device_type": str(master_device.device_type.id),
-            "device_role": str(master_device.device_role.id),
+            "role": str(master_device.role.id),
             "site": str(master_device.site.id),
             "status": "active",
             "virtual_chassis": None,
@@ -2443,7 +2364,7 @@ class PowerFeedTest(APIViewTestCases.APIViewTestCase):
     def setUpTestData(cls):
         site = Site.objects.first()
         rackgroup = RackGroup.objects.create(site=site, name="Rack Group 1", slug="rack-group-1")
-        rackrole = RackRole.objects.create(name="Rack Role 1", slug="rack-role-1", color="ff0000")
+        rackrole = Role.objects.get_for_model(Rack).first()
 
         racks = (
             Rack.objects.create(site=site, group=rackgroup, role=rackrole, name="Rack 1"),
