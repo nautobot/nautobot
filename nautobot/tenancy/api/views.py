@@ -26,9 +26,11 @@ class TenancyRootView(APIRootView):
 
 
 class TenantGroupViewSet(NautobotModelViewSet):
-    queryset = TenantGroup.objects.add_related_count(
-        TenantGroup.objects.all(), Tenant, "group", "tenant_count", cumulative=True
-    )
+    # TODO(glenn) tree-queries doesn't have add_related_count
+    # queryset = TenantGroup.objects.add_related_count(
+    #     TenantGroup.objects.all(), Tenant, "group", "tenant_count", cumulative=True
+    # )
+    queryset = TenantGroup.objects.all()
     serializer_class = serializers.TenantGroupSerializer
     filterset_class = filters.TenantGroupFilterSet
 

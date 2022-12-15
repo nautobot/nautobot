@@ -137,13 +137,14 @@ class ConfigContextModelQuerySet(RestrictedQuerySet):
             base_query.add((Q(sites=OuterRef("cluster__site")) | Q(sites=None)), Q.AND)
             region_field = "cluster__site__region"
 
+        # TODO(glenn) Replace with tree-queries equivalent, similar to LocationFilterSet._subtree?
         base_query.add(
             (
                 Q(
-                    regions__tree_id=OuterRef(f"{region_field}__tree_id"),
-                    regions__level__lte=OuterRef(f"{region_field}__level"),
-                    regions__lft__lte=OuterRef(f"{region_field}__lft"),
-                    regions__rght__gte=OuterRef(f"{region_field}__rght"),
+                    # regions__tree_id=OuterRef(f"{region_field}__tree_id"),
+                    # regions__level__lte=OuterRef(f"{region_field}__level"),
+                    # regions__lft__lte=OuterRef(f"{region_field}__lft"),
+                    # regions__rght__gte=OuterRef(f"{region_field}__rght"),
                 )
                 | Q(regions=None)
             ),

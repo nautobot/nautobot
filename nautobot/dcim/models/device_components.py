@@ -5,7 +5,7 @@ from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
 from django.db.models import Sum
 from django.urls import reverse
-from mptt.models import MPTTModel, TreeForeignKey
+from tree_queries.models import TreeNode
 
 from nautobot.dcim.choices import (
     ConsolePortTypeChoices,
@@ -35,9 +35,9 @@ from nautobot.extras.models import (
 from nautobot.extras.utils import extras_features
 from nautobot.core.models.generics import PrimaryModel
 from nautobot.utilities.fields import NaturalOrderingField
-from nautobot.utilities.mptt import TreeManager
 from nautobot.utilities.ordering import naturalize_interface
 from nautobot.utilities.query_functions import CollateAsChar
+from nautobot.utilities.tree_queries import TreeManager
 from nautobot.utilities.utils import UtilizationData
 
 __all__ = (
@@ -966,20 +966,12 @@ class DeviceBay(ComponentModel):
     "relationships",
     "webhooks",
 )
-class InventoryItem(MPTTModel, ComponentModel):
+class InventoryItem(TreeNode, ComponentModel):
     """
     An InventoryItem represents a serialized piece of hardware within a Device, such as a line card or power supply.
     InventoryItems are used only for inventory purposes.
     """
 
-    parent = TreeForeignKey(
-        to="self",
-        on_delete=models.CASCADE,
-        related_name="child_items",
-        blank=True,
-        null=True,
-        db_index=True,
-    )
     manufacturer = models.ForeignKey(
         to="dcim.Manufacturer",
         on_delete=models.PROTECT,

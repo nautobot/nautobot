@@ -4,8 +4,8 @@ from django.db import models as django_models
 from django.shortcuts import reverse
 from django.test import TestCase
 import django_filters
-from mptt.fields import TreeForeignKey
 from taggit.managers import TaggableManager
+from tree_queries.models import TreeNodeForeignKey
 
 from nautobot.dcim import choices as dcim_choices
 from nautobot.dcim import fields as dcim_fields
@@ -331,7 +331,7 @@ class TestModel(django_models.Model):
     macaddressfield = dcim_fields.MACAddressCharField()
     textfield = django_models.TextField()
     timefield = django_models.TimeField()
-    treeforeignkeyfield = TreeForeignKey(to="self", on_delete=django_models.CASCADE)
+    treeforeignkeyfield = TreeNodeForeignKey(to="self", on_delete=django_models.CASCADE)
 
     tags = TaggableManager(through=extras_models.TaggedItem)
 

@@ -11,7 +11,6 @@ from django.forms.utils import ErrorDict, ErrorList
 import django_filters
 from django_filters.constants import EMPTY_VALUES
 from django_filters.utils import get_model_field, resolve_field
-from mptt.models import MPTTModel
 from taggit.managers import TaggableManager
 from tree_queries.models import TreeNode
 
@@ -485,14 +484,8 @@ class TreeNodeMultipleChoiceFilter(NaturalKeyOrPKMultipleChoiceFilter):
         Given a filter value, return a `Q` object that accounts for nested tree node descendants.
         """
         if value:
-            if any(isinstance(node, TreeNode) for node in value):
-                # django-tree-queries
-                value = [node.descendants(include_self=True) if not isinstance(node, str) else node for node in value]
-            elif any(isinstance(node, MPTTModel) for node in value):
-                # django-mptt
-                value = [
-                    node.get_descendants(include_self=True) if not isinstance(node, str) else node for node in value
-                ]
+            # django-tree-queries
+            value = [node.descendants(include_self=True) if not isinstance(node, str) else node for node in value]
 
         # This new_value is going to be a list of querysets that needs to be flattened.
         value = list(utils.flatten_iterable(value))

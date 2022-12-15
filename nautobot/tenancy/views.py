@@ -16,9 +16,11 @@ from .models import Tenant, TenantGroup
 
 
 class TenantGroupListView(generic.ObjectListView):
-    queryset = TenantGroup.objects.add_related_count(
-        TenantGroup.objects.all(), Tenant, "group", "tenant_count", cumulative=True
-    )
+    # TODO(glenn) tree-queries doesn't have add_related_count()
+    # queryset = TenantGroup.objects.add_related_count(
+    #     TenantGroup.objects.all(), Tenant, "group", "tenant_count", cumulative=True
+    # )
+    queryset = TenantGroup.objects.all()
     filterset = filters.TenantGroupFilterSet
     table = tables.TenantGroupTable
 
@@ -63,9 +65,11 @@ class TenantGroupBulkImportView(generic.BulkImportView):
 
 
 class TenantGroupBulkDeleteView(generic.BulkDeleteView):
-    queryset = TenantGroup.objects.add_related_count(
-        TenantGroup.objects.all(), Tenant, "group", "tenant_count", cumulative=True
-    )
+    # TODO(glenn) tree-queries doesn't have add_related_count()
+    # queryset = TenantGroup.objects.add_related_count(
+    #     TenantGroup.objects.all(), Tenant, "group", "tenant_count", cumulative=True
+    # )
+    queryset = TenantGroup.objects.all()
     table = tables.TenantGroupTable
 
 

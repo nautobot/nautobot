@@ -2,8 +2,8 @@ from django.contrib.contenttypes.fields import GenericRelation
 from django.db import models
 from django.db.models import Q
 from django.urls import reverse
-from mptt.models import MPTTModel, TreeForeignKey
 from timezone_field import TimeZoneField
+from tree_queries.models import TreeNode
 
 from nautobot.dcim.fields import ASNField
 from nautobot.extras.models import StatusModel
@@ -11,7 +11,7 @@ from nautobot.extras.utils import extras_features
 from nautobot.core.fields import AutoSlugField
 from nautobot.core.models.generics import OrganizationalModel, PrimaryModel
 from nautobot.utilities.fields import NaturalOrderingField
-from nautobot.utilities.mptt import TreeManager
+from nautobot.utilities.tree_queries import TreeManager
 
 __all__ = (
     "Region",
@@ -32,19 +32,11 @@ __all__ = (
     "relationships",
     "webhooks",
 )
-class Region(MPTTModel, OrganizationalModel):
+class Region(TreeNode, OrganizationalModel):
     """
     Sites can be grouped within geographic Regions.
     """
 
-    parent = TreeForeignKey(
-        to="self",
-        on_delete=models.CASCADE,
-        related_name="children",
-        blank=True,
-        null=True,
-        db_index=True,
-    )
     name = models.CharField(max_length=100, unique=True)
     slug = AutoSlugField(populate_from="name")
     description = models.CharField(max_length=200, blank=True)
@@ -53,8 +45,8 @@ class Region(MPTTModel, OrganizationalModel):
 
     csv_headers = ["name", "slug", "parent", "description"]
 
-    class MPTTMeta:
-        order_insertion_by = ["name"]
+    class Meta:
+        ordering = ("name",)
 
     def __str__(self):
         return self.name
@@ -72,13 +64,6 @@ class Region(MPTTModel, OrganizationalModel):
 
     def get_site_count(self):
         return Site.objects.filter(Q(region=self) | Q(region__in=self.get_descendants())).count()
-
-    def to_objectchange(self, action, object_data_exclude=None, **kwargs):
-        if object_data_exclude is None:
-            object_data_exclude = []
-        # Remove MPTT-internal fields
-        object_data_exclude += ["level", "lft", "rght", "tree_id"]
-        return super().to_objectchange(action, object_data_exclude=object_data_exclude, **kwargs)
 
 
 #

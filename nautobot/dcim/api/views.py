@@ -138,7 +138,9 @@ class PassThroughPortMixin:
 
 
 class RegionViewSet(NautobotModelViewSet):
-    queryset = Region.objects.add_related_count(Region.objects.all(), Site, "region", "site_count", cumulative=True)
+    # TODO(glenn) tree-queries doesn't have add_related_count()
+    # queryset = Region.objects.add_related_count(Region.objects.all(), Site, "region", "site_count", cumulative=True)
+    queryset = Region.objects.all()
     serializer_class = serializers.RegionSerializer
     filterset_class = filters.RegionFilterSet
 
@@ -194,9 +196,11 @@ class LocationViewSet(StatusViewSetMixin, NautobotModelViewSet):
 
 class RackGroupViewSet(NautobotModelViewSet):
     # v2 TODO(jathan): Replace prefetch_related with select_related
-    queryset = RackGroup.objects.add_related_count(
-        RackGroup.objects.all(), Rack, "group", "rack_count", cumulative=True
-    ).prefetch_related("site")
+    # TODO(glenn): tree-queries doesn't have add_related_count()
+    # queryset = RackGroup.objects.add_related_count(
+    #     RackGroup.objects.all(), Rack, "group", "rack_count", cumulative=True
+    # ).prefetch_related("site")
+    queryset = RackGroup.objects.prefetch_related("site")
     serializer_class = serializers.RackGroupSerializer
     filterset_class = filters.RackGroupFilterSet
 
