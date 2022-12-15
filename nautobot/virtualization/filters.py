@@ -2,7 +2,7 @@ import django_filters
 from django.db.models import Q
 
 from nautobot.dcim.filter_mixins import LocatableModelFilterSetMixin
-from nautobot.dcim.models import Device, DeviceRole, Location, Platform, Region, Site
+from nautobot.dcim.models import Device, Location, Platform, Region, Site
 from nautobot.extras.filters import (
     CustomFieldModelFilterSet,
     LocalContextFilterSet,

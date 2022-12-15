@@ -51,7 +51,6 @@ from .models import (
     DeviceBay,
     DeviceBayTemplate,
     DeviceRedundancyGroup,
-    DeviceRole,
     DeviceType,
     FrontPort,
     FrontPortTemplate,
@@ -878,12 +877,6 @@ class DeviceBayTemplateFilterSet(BaseFilterSet, DeviceTypeComponentFilterSet):
     class Meta:
         model = DeviceBayTemplate
         fields = []
-
-
-class DeviceRoleFilterSet(NautobotFilterSet, NameSlugSearchFilterSet):
-    class Meta:
-        model = DeviceRole
-        fields = ["id", "name", "slug", "color", "vm_role", "description"]
 
 
 class PlatformFilterSet(NautobotFilterSet, NameSlugSearchFilterSet):

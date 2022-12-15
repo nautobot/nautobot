@@ -11,7 +11,7 @@ from nautobot.dcim.form_mixins import (
     LocatableModelFilterFormMixin,
     LocatableModelFormMixin,
 )
-from nautobot.dcim.models import Device, DeviceRole, Location, Platform, Rack, Region, Site
+from nautobot.dcim.models import Device, Location, Platform, Rack, Region, Site
 from nautobot.extras.forms import (
     CustomFieldModelBulkEditFormMixin,
     CustomFieldModelCSVForm,

@@ -106,7 +106,6 @@ from .models import (
     ConsoleServerPort,
     ConsoleServerPortTemplate,
     Device,
-    DeviceRole,
     DeviceType,
     FrontPort,
     FrontPortTemplate,
@@ -1715,34 +1714,6 @@ class DeviceBayTemplateImportForm(ComponentTemplateImportForm):
             "device_type",
             "name",
         ]
-
-
-#
-# Device roles
-#
-
-
-class DeviceRoleForm(NautobotModelForm):
-    slug = SlugField()
-
-    class Meta:
-        model = DeviceRole
-        fields = [
-            "name",
-            "slug",
-            "color",
-            "vm_role",
-            "description",
-        ]
-
-
-class DeviceRoleCSVForm(CustomFieldModelCSVForm):
-    class Meta:
-        model = DeviceRole
-        fields = DeviceRole.csv_headers
-        help_texts = {
-            "color": mark_safe("RGB color in hexadecimal (e.g. <code>00ff00</code>)"),
-        }
 
 
 #
