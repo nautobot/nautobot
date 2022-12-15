@@ -144,7 +144,7 @@ class Mixins:
 
 class RegionTest(APIViewTestCases.APIViewTestCase):
     model = Region
-    brief_fields = ["_depth", "display", "id", "name", "site_count", "slug", "url"]
+    brief_fields = ["display", "id", "name", "site_count", "slug", "tree_depth", "url"]
     create_data = [
         {
             "name": "Region 4",
@@ -419,7 +419,7 @@ class LocationTest(APIViewTestCases.APIViewTestCase):
 
 class RackGroupTest(APIViewTestCases.APIViewTestCase):
     model = RackGroup
-    brief_fields = ["_depth", "display", "id", "name", "rack_count", "slug", "url"]
+    brief_fields = ["display", "id", "name", "rack_count", "slug", "tree_depth", "url"]
     bulk_update_data = {
         "description": "New description",
     }
@@ -2053,7 +2053,7 @@ class DeviceBayTest(Mixins.BaseComponentTestMixin):
 
 class InventoryItemTest(Mixins.BaseComponentTestMixin):
     model = InventoryItem
-    brief_fields = ["_depth", "device", "display", "id", "name", "url"]
+    brief_fields = ["device", "display", "id", "name", "tree_depth", "url"]
     choices_fields = []
 
     @classmethod
