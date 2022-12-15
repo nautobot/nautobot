@@ -32,7 +32,7 @@ from nautobot.extras.choices import (
     ObjectChangeActionChoices,
 )
 from nautobot.extras.datasources import get_datasource_content_choices
-from nautobot.extras.models.mixins import LimitQuerysetChoicesSerializerMixin
+from ...core.models.mixins import LimitQuerysetChoicesSerializerMixin
 from nautobot.extras.models import (
     ComputedField,
     ConfigContext,

@@ -34,7 +34,7 @@ from nautobot.extras.models import ChangeLoggedModel
 from nautobot.extras.models.mixins import NotesMixin
 from nautobot.extras.models.relationships import RelationshipModel
 from nautobot.extras.querysets import ConfigContextQuerySet, NotesQuerySet
-from nautobot.extras.utils import extras_features, FeatureQuery, image_upload
+from nautobot.extras.utils import extras_features, FeatureQuery, image_upload, RoleModelsQuery
 from nautobot.utilities.utils import deepmerge, render_jinja2
 
 # Avoid breaking backward compatibility on anything that might expect these to still be defined here:
@@ -103,8 +103,12 @@ class ConfigContext(BaseModel, ChangeLoggedModel, ConfigContextSchemaValidationM
     regions = models.ManyToManyField(to="dcim.Region", related_name="+", blank=True)
     sites = models.ManyToManyField(to="dcim.Site", related_name="+", blank=True)
     locations = models.ManyToManyField(to="dcim.Location", related_name="+", blank=True)
-    # TODO(timizuo): Figure out if roles is still meant to be here.
-    roles = models.ManyToManyField(to="extras.Role", related_name="+", blank=True, null=True)
+    roles = models.ManyToManyField(
+        to="extras.Role",
+        related_name="+",
+        blank=True,
+        limit_choices_to=RoleModelsQuery(),
+    )
     device_types = models.ManyToManyField(to="dcim.DeviceType", related_name="+", blank=True)
     device_redundancy_groups = models.ManyToManyField(to="dcim.DeviceRedundancyGroup", related_name="+", blank=True)
     platforms = models.ManyToManyField(to="dcim.Platform", related_name="+", blank=True)
