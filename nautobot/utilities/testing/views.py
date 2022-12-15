@@ -1328,3 +1328,53 @@ class ViewTestCases:
         """
 
         maxDiff = None
+        bulk_add_data = None
+        """Used for bulk-add (distinct from bulk-create) view testing; self.bulk_create_data will be used if unset."""
+
+        @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+        def test_bulk_add_component(self):
+            """Test bulk-adding this component to devices/virtual-machines."""
+            obj_perm = ObjectPermission(name="Test permission", actions=["add"])
+            obj_perm.save()
+            obj_perm.users.add(self.user)
+            obj_perm.object_types.add(ContentType.objects.get_for_model(self.model))
+
+            initial_count = self._get_queryset().count()
+
+            data = (self.bulk_add_data or self.bulk_create_data).copy()
+
+            # Load the device-bulk-add or virtualmachine-bulk-add form
+            if "device" in data:
+                url = reverse(f"dcim:device_bulk_add_{self.model._meta.model_name}")
+                request = {
+                    "path": url,
+                    "data": post_data({"pk": data["device"]}),
+                }
+            else:
+                url = reverse(f"virtualization:virtualmachine_bulk_add_{self.model._meta.model_name}")
+                request = {
+                    "path": url,
+                    "data": post_data({"pk": data["virtual_machine"]}),
+                }
+            self.assertHttpStatus(self.client.post(**request), 200)
+
+            # Post to the device-bulk-add or virtualmachine-bulk-add form to create records
+            if "device" in data:
+                data["pk"] = data.pop("device")
+            else:
+                data["pk"] = data.pop("virtual_machine")
+            data["_create"] = ""
+            request["data"] = post_data(data)
+            self.assertHttpStatus(self.client.post(**request), 302)
+
+            updated_count = self._get_queryset().count()
+            self.assertEqual(updated_count, initial_count + self.bulk_create_count)
+
+            matching_count = 0
+            for instance in self._get_queryset().all():
+                try:
+                    self.assertInstanceEqual(instance, (self.bulk_add_data or self.bulk_create_data))
+                    matching_count += 1
+                except AssertionError:
+                    pass
+            self.assertEqual(matching_count, self.bulk_create_count)
