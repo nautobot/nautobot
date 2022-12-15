@@ -64,7 +64,6 @@ from nautobot.dcim.models import (
     Rack,
     RackGroup,
     RackReservation,
-    RackRole,
     RearPort,
     RearPortTemplate,
     Region,
@@ -122,7 +121,6 @@ from .nested_serializers import (  # noqa: F401
     NestedPowerPortTemplateSerializer,
     NestedRackGroupSerializer,
     NestedRackReservationSerializer,
-    NestedRackRoleSerializer,
     NestedRackSerializer,
     NestedRearPortSerializer,
     NestedRearPortTemplateSerializer,
@@ -366,22 +364,6 @@ class RackGroupSerializer(NautobotModelSerializer):
         super().validate(data)
 
         return data
-
-
-class RackRoleSerializer(NautobotModelSerializer):
-    url = serializers.HyperlinkedIdentityField(view_name="dcim-api:rackrole-detail")
-    rack_count = serializers.IntegerField(read_only=True)
-
-    class Meta:
-        model = RackRole
-        fields = [
-            "url",
-            "name",
-            "slug",
-            "color",
-            "description",
-            "rack_count",
-        ]
 
 
 class RackSerializer(

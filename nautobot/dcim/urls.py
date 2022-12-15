@@ -26,7 +26,6 @@ from .models import (
     Rack,
     RackGroup,
     RackReservation,
-    RackRole,
     RearPort,
     Region,
     Site,
@@ -176,42 +175,6 @@ urlpatterns = [
         ObjectNotesView.as_view(),
         name="rackgroup_notes",
         kwargs={"model": RackGroup},
-    ),
-    # Rack roles
-    path("rack-roles/", views.RackRoleListView.as_view(), name="rackrole_list"),
-    path("rack-roles/add/", views.RackRoleEditView.as_view(), name="rackrole_add"),
-    path(
-        "rack-roles/import/",
-        views.RackRoleBulkImportView.as_view(),
-        name="rackrole_import",
-    ),
-    path(
-        "rack-roles/delete/",
-        views.RackRoleBulkDeleteView.as_view(),
-        name="rackrole_bulk_delete",
-    ),
-    path("rack-roles/<uuid:pk>/", views.RackRoleView.as_view(), name="rackrole"),
-    path(
-        "rack-roles/<uuid:pk>/edit/",
-        views.RackRoleEditView.as_view(),
-        name="rackrole_edit",
-    ),
-    path(
-        "rack-roles/<uuid:pk>/delete/",
-        views.RackRoleDeleteView.as_view(),
-        name="rackrole_delete",
-    ),
-    path(
-        "rack-roles/<uuid:pk>/changelog/",
-        ObjectChangeLogView.as_view(),
-        name="rackrole_changelog",
-        kwargs={"model": RackRole},
-    ),
-    path(
-        "rack-roles/<uuid:pk>/notes/",
-        ObjectNotesView.as_view(),
-        name="rackrole_notes",
-        kwargs={"model": RackRole},
     ),
     # Rack reservations
     path(

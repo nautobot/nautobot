@@ -1,7 +1,7 @@
 import django_tables2 as tables
 from django_tables2.utils import Accessor
 
-from nautobot.dcim.models import Rack, RackGroup, RackReservation, RackRole
+from nautobot.dcim.models import Rack, RackGroup, RackReservation
 from nautobot.extras.tables import StatusTableMixin, RoleTableMixin
 from nautobot.tenancy.tables import TenantColumn
 from nautobot.utilities.tables import (
@@ -20,7 +20,6 @@ __all__ = (
     "RackDetailTable",
     "RackGroupTable",
     "RackReservationTable",
-    "RackRoleTable",
 )
 
 
@@ -41,31 +40,6 @@ class RackGroupTable(BaseTable):
         model = RackGroup
         fields = ("pk", "name", "site", "location", "rack_count", "description", "slug", "actions")
         default_columns = ("pk", "name", "site", "location", "rack_count", "description", "actions")
-
-
-#
-# Rack roles
-#
-
-
-class RackRoleTable(BaseTable):
-    pk = ToggleColumn()
-    name = tables.Column(linkify=True)
-    rack_count = tables.Column(verbose_name="Racks")
-    color = ColorColumn()
-    actions = ButtonsColumn(RackRole)
-
-    class Meta(BaseTable.Meta):
-        model = RackRole
-        fields = ("pk", "name", "rack_count", "color", "description", "slug", "actions")
-        default_columns = (
-            "pk",
-            "name",
-            "rack_count",
-            "color",
-            "description",
-            "actions",
-        )
 
 
 #

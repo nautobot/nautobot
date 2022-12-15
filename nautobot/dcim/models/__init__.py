@@ -26,7 +26,7 @@ from .device_components import (
 from .devices import Device, DeviceRedundancyGroup, DeviceType, Manufacturer, Platform, VirtualChassis
 from .locations import Location, LocationType
 from .power import PowerFeed, PowerPanel
-from .racks import Rack, RackGroup, RackReservation, RackRole
+from .racks import Rack, RackGroup, RackReservation
 from .sites import Region, Site
 
 __all__ = (
@@ -62,7 +62,6 @@ __all__ = (
     "Rack",
     "RackGroup",
     "RackReservation",
-    "RackRole",
     "RearPort",
     "RearPortTemplate",
     "Region",

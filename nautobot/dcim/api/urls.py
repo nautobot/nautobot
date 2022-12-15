@@ -15,7 +15,6 @@ router.register("locations", views.LocationViewSet)
 
 # Racks
 router.register("rack-groups", views.RackGroupViewSet)
-router.register("rack-roles", views.RackRoleViewSet)
 router.register("racks", views.RackViewSet)
 router.register("rack-reservations", views.RackReservationViewSet)
 

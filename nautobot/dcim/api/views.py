@@ -49,7 +49,6 @@ from nautobot.dcim.models import (
     Rack,
     RackGroup,
     RackReservation,
-    RackRole,
     RearPort,
     RearPortTemplate,
     Region,
@@ -198,17 +197,6 @@ class RackGroupViewSet(NautobotModelViewSet):
     ).prefetch_related("site")
     serializer_class = serializers.RackGroupSerializer
     filterset_class = filters.RackGroupFilterSet
-
-
-#
-# Rack roles
-#
-
-
-class RackRoleViewSet(NautobotModelViewSet):
-    queryset = RackRole.objects.annotate(rack_count=count_related(Rack, "role"))
-    serializer_class = serializers.RackRoleSerializer
-    filterset_class = filters.RackRoleFilterSet
 
 
 #

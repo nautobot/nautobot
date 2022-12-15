@@ -125,7 +125,6 @@ from .models import (
     Rack,
     RackGroup,
     RackReservation,
-    RackRole,
     RearPort,
     RearPortTemplate,
     Region,
@@ -605,33 +604,6 @@ class RackGroupFilterForm(NautobotFilterForm, LocatableModelFilterFormMixin):
             "site": "$site",
         },
     )
-
-
-#
-# Rack roles
-#
-
-
-class RackRoleForm(NautobotModelForm):
-    slug = SlugField()
-
-    class Meta:
-        model = RackRole
-        fields = [
-            "name",
-            "slug",
-            "color",
-            "description",
-        ]
-
-
-class RackRoleCSVForm(CustomFieldModelCSVForm):
-    class Meta:
-        model = RackRole
-        fields = RackRole.csv_headers
-        help_texts = {
-            "color": mark_safe("RGB color in hexadecimal (e.g. <code>00ff00</code>)"),
-        }
 
 
 #
