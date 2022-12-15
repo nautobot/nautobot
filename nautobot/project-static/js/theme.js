@@ -95,7 +95,11 @@ function setDarkTheme() {
     for (let obj of document.getElementsByTagName('object')) {
         obj.addEventListener('load', (event) => {
             if (event.target.contentDocument) {
-                for (let rack_image of event.target.contentDocument.getElementsByTagName('image')) {
+                images = event.target.contentDocument.getElementsByTagName('image');
+                short_names = event.target.contentDocument.getElementsByClassName('rack-device-shortname');
+                full_names = event.target.contentDocument.getElementsByClassName('rack-device-fullname');
+                all = [].concat(Array.from(images), Array.from(short_names), Array.from(full_names))
+                for (let rack_image of all) {
                     rack_image.setAttribute('filter', 'url(#darkmodeinvert)')
                 }
             }

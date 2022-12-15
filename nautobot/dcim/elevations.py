@@ -4,7 +4,6 @@ from django.conf import settings
 from django.urls import reverse
 from django.utils.http import urlencode
 
-from nautobot.utilities.utils import foreground_color
 from .choices import DeviceFaceChoices
 from .constants import RACK_ELEVATION_BORDER_WIDTH
 
@@ -106,7 +105,6 @@ class RackElevationSVG:
         )
         link.set_desc(self._get_device_description(device))
         link.add(drawing.rect(start, end, style=f"fill: #{color}", class_="slot"))
-        hex_color = f"#{foreground_color(color)}"
 
         # Embed front device type image if one exists
         if self.include_images and device.device_type.front_image:
@@ -123,7 +121,8 @@ class RackElevationSVG:
             drawing.text(
                 device_fullname,
                 insert=text,
-                fill=hex_color,
+                fill="white",
+                style="text-shadow: 1px 1px 3px black;",
                 class_=f"rack-device-fullname{'' if self.display_fullname else ' hidden'}",
             )
         )
@@ -131,7 +130,8 @@ class RackElevationSVG:
             drawing.text(
                 device_shortname,
                 insert=text,
-                fill=hex_color,
+                fill="white",
+                style="text-shadow: 1px 1px 3px black;",
                 class_=f"rack-device-shortname{' hidden' if self.display_fullname else ''}",
             )
         )
@@ -158,13 +158,19 @@ class RackElevationSVG:
 
         drawing.add(
             drawing.text(
-                device_fullname, insert=text, class_=f"rack-device-fullname{'' if self.display_fullname else ' hidden'}"
+                device_fullname,
+                insert=text,
+                fill="white",
+                style="text-shadow: 1px 1px 3px black;",
+                class_=f"rack-device-fullname{'' if self.display_fullname else ' hidden'}",
             )
         )
         drawing.add(
             drawing.text(
                 device_shortname,
                 insert=text,
+                fill="white",
+                style="text-shadow: 1px 1px 3px black;",
                 class_=f"rack-device-shortname{' hidden' if self.display_fullname else ''}",
             )
         )
