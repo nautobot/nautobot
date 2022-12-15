@@ -315,6 +315,8 @@ def _handle_relationship_association_change(change_context, sender, instance, **
     from .jobs import enqueue_job_hooks  # avoid circular import
 
     for related_object in [instance.source, instance.destination]:
+        if related_object is None:
+            continue
         if hasattr(related_object, "to_objectchange"):
             updated_objectchange = related_object.to_objectchange(ObjectChangeActionChoices.ACTION_UPDATE)
             related_changes = ObjectChange.objects.filter(
