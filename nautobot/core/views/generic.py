@@ -7,6 +7,7 @@ from django.contrib import messages
 from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import (
     FieldDoesNotExist,
+    FieldError,
     ObjectDoesNotExist,
     ValidationError,
 )
@@ -46,6 +47,7 @@ from nautobot.utilities.utils import (
     csv_format,
     get_route_for_model,
     get_filterable_params_from_filter_params,
+    is_uuid,
     normalize_querydict,
     prepare_cloned_fields,
 )
@@ -244,6 +246,7 @@ class ObjectListView(ObjectPermissionRequiredMixin, View):
         if self.filterset:
             filter_params = self.get_filter_params(request)
             filterset = self.filterset(filter_params, self.queryset)
+            filterset_filters = filterset.get_filters()
             self.queryset = filterset.qs
             if not filterset.is_valid():
                 messages.error(
@@ -252,9 +255,21 @@ class ObjectListView(ObjectPermissionRequiredMixin, View):
                 )
                 self.queryset = self.queryset.none()
 
+            def check_for_display(field_name, values):
+                values = values if isinstance(values, (list, tuple)) else [values]
+                label = filterset_filters[field_name].label
+                if len(values) == 0 or not is_uuid(values[0]):
+                    return [label, values]
+                else:
+                    try:
+                        filtered_results = filterset_filters[field_name].queryset.filter(pk__in=values)
+                        new_values = [result.display for result in filtered_results]
+                        return [label, new_values]
+                    except (FieldError, AttributeError):
+                        return [label, values]
+
             display_filter_params = [
-                [field_name, values if isinstance(values, (list, tuple)) else [values]]
-                for field_name, values in filter_params.items()
+                check_for_display(field_name, values) for field_name, values in filter_params.items()
             ]
 
             if request.GET:
