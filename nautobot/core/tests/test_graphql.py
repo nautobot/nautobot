@@ -64,6 +64,7 @@ from nautobot.extras.models import (
     GraphQLQuery,
     Relationship,
     RelationshipAssociation,
+    Role,
     Status,
     Webhook,
 )
@@ -649,8 +650,8 @@ class GraphQLQueryTest(TestCase):
         # Populate Data
         cls.device_type1 = DeviceType.objects.first()
         cls.device_type2 = DeviceType.objects.last()
-        cls.device_role1 = DeviceRole.objects.first()
-        cls.device_role2 = DeviceRole.objects.last()
+        cls.device_role1 = Role.objects.get_for_model(Device).first()
+        cls.device_role2 = Role.objects.get_for_model(Device).last()
         cls.device_role3 = random.choice(DeviceRole.objects.all())
         cls.site_statuses = list(Status.objects.get_for_model(Site))[:2]
         cls.region1 = Region.objects.create(name="Region1", slug="region1")
