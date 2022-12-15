@@ -71,6 +71,7 @@ class StatusField(ForeignKeyLimitedByContentTypes):
         """
         Overload default so that we can assert that `.get_FOO_display` is
         attached to any model that is using a `StatusField`.
+
         Using `.contribute_to_class()` is how field objects get added to the model
         at during the instance preparation. This is also where any custom model
         methods are hooked in. So in short this method asserts that any time a
@@ -83,6 +84,7 @@ class StatusField(ForeignKeyLimitedByContentTypes):
         def _get_FIELD_display(self, field):
             """
             Closure to replace default model method of the same name.
+
             Cargo-culted from `django.db.models.base.Model._get_FIELD_display`
             """
             choices = field.get_choices()
@@ -102,6 +104,7 @@ class StatusField(ForeignKeyLimitedByContentTypes):
         def _get_FIELD_color(self, field):
             """
             Return `self.FOO.color` (where FOO is field name).
+
             I am added to the model via `StatusField.contribute_to_class()`.
             """
             field_method = getattr(self, field.name)
