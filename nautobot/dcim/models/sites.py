@@ -62,9 +62,6 @@ class Region(TreeNode, OrganizationalModel):
             self.description,
         )
 
-    def get_site_count(self):
-        return Site.objects.filter(Q(region=self) | Q(region__in=self.get_descendants())).count()
-
 
 #
 # Sites

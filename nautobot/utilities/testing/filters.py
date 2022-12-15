@@ -108,7 +108,7 @@ class FilterTestCases:
             )[:2]
             tenant_groups_including_children = []
             for tenant_group in tenant_groups:
-                tenant_groups_including_children += tenant_group.get_descendants(include_self=True)
+                tenant_groups_including_children += tenant_group.descendants(include_self=True)
 
             params = {"tenant_group_id": [tenant_groups[0].pk, tenant_groups[1].pk]}
             self.assertQuerysetEqual(

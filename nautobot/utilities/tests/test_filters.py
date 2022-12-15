@@ -950,7 +950,7 @@ class DynamicFilterLookupExpressionTest(TestCase):
         params = {"region_id__n": [self.regions[0].pk]}
         self.assertQuerysetEqual(
             dcim_filters.SiteFilterSet(params, self.site_queryset).qs,
-            dcim_models.Site.objects.exclude(region__in=self.regions[0].get_descendants(include_self=True)),
+            dcim_models.Site.objects.exclude(region__in=self.regions[0].descendants(include_self=True)),
         )
 
     def test_device_name_eq(self):

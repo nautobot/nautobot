@@ -159,7 +159,7 @@ class RegionView(generic.ObjectView):
         # v2 TODO(jathan): Replace prefetch_related with select_related
         sites = (
             Site.objects.restrict(request.user, "view")
-            .filter(region__in=instance.get_descendants(include_self=True))
+            .filter(region__in=instance.descendants(include_self=True))
             .prefetch_related("parent", "region", "tenant")
         )
 
@@ -472,7 +472,7 @@ class RackGroupView(generic.ObjectView):
         # v2 TODO(jathan): Replace prefetch_related with select_related
         racks = (
             Rack.objects.restrict(request.user, "view")
-            .filter(group__in=instance.get_descendants(include_self=True))
+            .filter(group__in=instance.descendants(include_self=True))
             .prefetch_related("role", "site", "tenant")
         )
 
