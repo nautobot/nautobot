@@ -11,7 +11,6 @@ from .models import (
     Device,
     DeviceBay,
     DeviceRedundancyGroup,
-    DeviceRole,
     DeviceType,
     FrontPort,
     Interface,
@@ -637,42 +636,6 @@ urlpatterns = [
         "device-bay-templates/<uuid:pk>/delete/",
         views.DeviceBayTemplateDeleteView.as_view(),
         name="devicebaytemplate_delete",
-    ),
-    # Device roles
-    path("device-roles/", views.DeviceRoleListView.as_view(), name="devicerole_list"),
-    path("device-roles/add/", views.DeviceRoleEditView.as_view(), name="devicerole_add"),
-    path(
-        "device-roles/import/",
-        views.DeviceRoleBulkImportView.as_view(),
-        name="devicerole_import",
-    ),
-    path(
-        "device-roles/delete/",
-        views.DeviceRoleBulkDeleteView.as_view(),
-        name="devicerole_bulk_delete",
-    ),
-    path("device-roles/<slug:slug>/", views.DeviceRoleView.as_view(), name="devicerole"),
-    path(
-        "device-roles/<slug:slug>/edit/",
-        views.DeviceRoleEditView.as_view(),
-        name="devicerole_edit",
-    ),
-    path(
-        "device-roles/<slug:slug>/delete/",
-        views.DeviceRoleDeleteView.as_view(),
-        name="devicerole_delete",
-    ),
-    path(
-        "device-roles/<slug:slug>/changelog/",
-        ObjectChangeLogView.as_view(),
-        name="devicerole_changelog",
-        kwargs={"model": DeviceRole},
-    ),
-    path(
-        "device-roles/<slug:slug>/notes/",
-        ObjectNotesView.as_view(),
-        name="devicerole_notes",
-        kwargs={"model": DeviceRole},
     ),
     # Platforms
     path("platforms/", views.PlatformListView.as_view(), name="platform_list"),

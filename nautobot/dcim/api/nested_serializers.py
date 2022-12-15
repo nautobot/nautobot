@@ -12,7 +12,6 @@ __all__ = [
     "NestedConsoleServerPortTemplateSerializer",
     "NestedDeviceBaySerializer",
     "NestedDeviceBayTemplateSerializer",
-    "NestedDeviceRoleSerializer",
     "NestedDeviceSerializer",
     "NestedDeviceTypeSerializer",
     "NestedFrontPortSerializer",
@@ -241,16 +240,6 @@ class NestedDeviceBayTemplateSerializer(WritableNestedSerializer):
 #
 # Devices
 #
-
-
-class NestedDeviceRoleSerializer(WritableNestedSerializer):
-    url = serializers.HyperlinkedIdentityField(view_name="dcim-api:devicerole-detail")
-    device_count = serializers.IntegerField(read_only=True)
-    virtualmachine_count = serializers.IntegerField(read_only=True)
-
-    class Meta:
-        model = models.DeviceRole
-        fields = ["id", "url", "name", "slug", "device_count", "virtualmachine_count"]
 
 
 class NestedPlatformSerializer(WritableNestedSerializer):

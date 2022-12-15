@@ -15,7 +15,6 @@ from nautobot.core.api.exceptions import SerializerNotFound
 from nautobot.core.api.serializers import BaseModelSerializer
 from nautobot.dcim.api.nested_serializers import (
     NestedDeviceSerializer,
-    NestedDeviceRoleSerializer,
     NestedDeviceTypeSerializer,
     NestedLocationSerializer,
     NestedPlatformSerializer,
@@ -23,7 +22,7 @@ from nautobot.dcim.api.nested_serializers import (
     NestedRegionSerializer,
     NestedSiteSerializer,
 )
-from nautobot.dcim.models import Device, DeviceRole, DeviceType, Location, Platform, Rack, Region, Site
+from nautobot.dcim.models import Device, DeviceType, Location, Platform, Rack, Region, Site
 from nautobot.extras.api.fields import StatusSerializerField
 from nautobot.extras.choices import (
     CustomFieldFilterLogicChoices,
@@ -286,8 +285,8 @@ class ConfigContextSerializer(ValidatedModelSerializer, NotesSerializerMixin):
         many=True,
     )
     roles = SerializedPKRelatedField(
-        queryset=DeviceRole.objects.all(),
-        serializer=NestedDeviceRoleSerializer,
+        queryset=Role.objects.all(),
+        serializer=NestedRoleSerializer,
         required=False,
         many=True,
     )

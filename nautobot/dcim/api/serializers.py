@@ -45,7 +45,6 @@ from nautobot.dcim.models import (
     DeviceBay,
     DeviceBayTemplate,
     DeviceRedundancyGroup,
-    DeviceRole,
     DeviceType,
     FrontPort,
     FrontPortTemplate,
@@ -104,7 +103,6 @@ from .nested_serializers import (  # noqa: F401
     NestedDeviceBaySerializer,
     NestedDeviceBayTemplateSerializer,
     NestedDeviceRedundancyGroupSerializer,
-    NestedDeviceRoleSerializer,
     NestedDeviceSerializer,
     NestedDeviceTypeSerializer,
     NestedFrontPortSerializer,
@@ -704,21 +702,6 @@ class DeviceBayTemplateSerializer(NautobotModelSerializer):
 #
 # Devices
 #
-
-
-class DeviceRoleSerializer(NautobotModelSerializer):
-    url = serializers.HyperlinkedIdentityField(view_name="dcim-api:devicerole-detail")
-
-    class Meta:
-        model = DeviceRole
-        fields = [
-            "url",
-            "name",
-            "slug",
-            "color",
-            "vm_role",
-            "description",
-        ]
 
 
 class PlatformSerializer(NautobotModelSerializer):

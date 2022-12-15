@@ -44,7 +44,6 @@ from .models import (
     DeviceBay,
     DeviceBayTemplate,
     DeviceRedundancyGroup,
-    DeviceRole,
     DeviceType,
     FrontPort,
     FrontPortTemplate,
@@ -1244,67 +1243,6 @@ class DeviceBayTemplateBulkRenameView(generic.BulkRenameView):
 class DeviceBayTemplateBulkDeleteView(generic.BulkDeleteView):
     queryset = DeviceBayTemplate.objects.all()
     table = tables.DeviceBayTemplateTable
-
-
-#
-# Device roles
-#
-
-
-class DeviceRoleListView(generic.ObjectListView):
-    queryset = DeviceRole.objects.annotate(
-        device_count=count_related(Device, "role"),
-        vm_count=count_related(VirtualMachine, "role"),
-    )
-    filterset = filters.DeviceRoleFilterSet
-    table = tables.DeviceRoleTable
-
-
-class DeviceRoleView(generic.ObjectView):
-    queryset = DeviceRole.objects.all()
-
-    def get_extra_context(self, request, instance):
-
-        # Devices
-        # v2 TODO(jathan): Replace prefetch_related with select_related
-        devices = (
-            Device.objects.restrict(request.user, "view")
-            .all()
-            .prefetch_related("status", "site", "tenant", "rack", "device_type")
-        )
-
-        device_table = tables.DeviceTable(devices)
-        device_table.columns.hide()
-
-        paginate = {
-            "paginator_class": EnhancedPaginator,
-            "per_page": get_paginate_count(request),
-        }
-        RequestConfig(request, paginate).configure(device_table)
-
-        return {
-            "device_table": device_table,
-        }
-
-
-class DeviceRoleEditView(generic.ObjectEditView):
-    queryset = DeviceRole.objects.all()
-    model_form = forms.DeviceRoleForm
-
-
-class DeviceRoleDeleteView(generic.ObjectDeleteView):
-    queryset = DeviceRole.objects.all()
-
-
-class DeviceRoleBulkImportView(generic.BulkImportView):
-    queryset = DeviceRole.objects.all()
-    model_form = forms.DeviceRoleCSVForm
-    table = tables.DeviceRoleTable
-
-
-class DeviceRoleBulkDeleteView(generic.BulkDeleteView):
-    queryset = DeviceRole.objects.all()
-    table = tables.DeviceRoleTable
 
 
 #
