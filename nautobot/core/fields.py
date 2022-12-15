@@ -114,4 +114,3 @@ class ForeignKeyLimitedByContentTypes(ForeignKey):
         }
         defaults.update(**kwargs)
         return super().formfield(**defaults)
-

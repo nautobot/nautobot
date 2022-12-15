@@ -25,7 +25,7 @@ class ContentTypeRelatedQuerySet(RestrictedQuerySet):
         return self.get(name=name)
 
 
-# Inheriting from OrganizationalModel here causes partial import error
+# TODO(timizuo): Inheriting from OrganizationalModel here causes partial import error
 class NameColorContentTypesModel(
     BaseModel,
     ChangeLoggedModel,
@@ -39,7 +39,7 @@ class NameColorContentTypesModel(
     shared amongst models that requires these fields: name, color, content_types and description.
     """
 
-    # Todo(timizuo): Tag should inherit from this model; but
+    # TODO(timizuo): Tag should inherit from this model; but
     #  cant because of field conflicts: name and slug field.
     content_types = models.ManyToManyField(
         to=ContentType,
@@ -75,7 +75,7 @@ class NameColorContentTypesModel(
         # TODO(timizuo): Replace self.slug with natural key or pk
         return reverse(ct, args=[self.slug])
 
-    def get_label(self):
+    def get_content_types(self):
         return ",".join(f"{ct.app_label}.{ct.model}" for ct in self.content_types.all())
 
     def to_csv(self):
@@ -83,6 +83,6 @@ class NameColorContentTypesModel(
             self.name,
             self.slug,
             self.color,
-            f'"{self.get_label()}"',  # Wrap labels in double quotes for CSV
+            f'"{self.get_content_types()}"',  # Wrap labels in double quotes for CSV
             self.description,
         )
