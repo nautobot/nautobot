@@ -257,6 +257,10 @@ class ObjectListView(ObjectPermissionRequiredMixin, View):
 
             def check_for_display(field_name, values):
                 values = values if isinstance(values, (list, tuple)) else [values]
+
+                if not hasattr(filterset_filters, field_name):
+                    return [field_name, values]
+
                 label = filterset_filters[field_name].label
                 if len(values) == 0 or not is_uuid(values[0]):
                     return [label, values]
