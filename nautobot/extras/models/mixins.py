@@ -143,5 +143,3 @@ class TaggableManagerMonkeyMixin:
         kwargs.setdefault("required", False)
         kwargs.setdefault("query_params", {"content_types": self.model._meta.label_lower})
         return self._no_monkey.formfield(self, form_class=form_class, **kwargs)
-
-
