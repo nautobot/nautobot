@@ -1,0 +1,2 @@
+Removed dependency on `django-mptt`, migrating `Region`, `RackGroup`, `TenantGroup`, and `InventoryItem` to use `django-tree-queries` instead. This does change the API for certain tree operations on these models, for example `get_ancestors()` is now `ancestors()` and `get_descendants()` is now `descendants()`.
+Renamed field `_depth` to `tree_depth` in the REST API for `Region`, `RackGroup`, `TenantGroup`, and `InventoryItem`.
