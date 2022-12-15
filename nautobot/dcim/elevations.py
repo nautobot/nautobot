@@ -45,13 +45,13 @@ class RackElevationSVG:
         )
 
     @staticmethod
-    def _add_gradient(drawing, id_, color):
+    def _add_gradient(drawing, id_, color, angle=45):
         gradient = drawing.linearGradient(
             start=(0, 0),
             end=(0, 25),
             spreadMethod="repeat",
             id_=id_,
-            gradientTransform="rotate(45, 0, 0)",
+            gradientTransform=f"rotate({angle}, 0, 0)",
             gradientUnits="userSpaceOnUse",
         )
         gradient.add_stop_color(offset="0%", color="#f7f7f7")
@@ -82,6 +82,7 @@ class RackElevationSVG:
         RackElevationSVG._add_gradient(drawing, "reserved", "#c7c7ff")
         RackElevationSVG._add_gradient(drawing, "occupied", "#d7d7d7")
         RackElevationSVG._add_gradient(drawing, "blocked", "#ffc0c0")
+        RackElevationSVG._add_gradient(drawing, "blocked_partial", "#a0a0a0", angle=-45)
         RackElevationSVG._add_filters(drawing)
 
         return drawing
@@ -208,7 +209,7 @@ class RackElevationSVG:
         unit_cursor = 0
         for u in elevation:
             o = other[unit_cursor]
-            if not u["device"] and o["device"] and o["device"].device_type.is_full_depth:
+            if not u["device"] and o["device"]:
                 u["device"] = o["device"]
                 u["height"] = 1
             unit_cursor += u.get("height", 1)
@@ -250,10 +251,24 @@ class RackElevationSVG:
             text_coordinates = (x_offset + (unit_width / 2), y_offset + end_y / 2)
 
             # Draw the device
-            if device and device.face == face and device.pk in self.permitted_device_ids:
-                self._draw_device_front(drawing, device, start_coordinates, end_coordinates, text_coordinates)
-            elif device and device.device_type.is_full_depth and device.pk in self.permitted_device_ids:
-                self._draw_device_rear(drawing, device, start_coordinates, end_coordinates, text_coordinates)
+            if device and device.pk in self.permitted_device_ids:
+                if device.face == face:
+                    self._draw_device_front(drawing, device, start_coordinates, end_coordinates, text_coordinates)
+                elif device.device_type.is_full_depth:
+                    self._draw_device_rear(drawing, device, start_coordinates, end_coordinates, text_coordinates)
+                else:
+                    # Half-depth devices add an empty box that is partially blocked
+                    self._draw_empty(
+                        drawing,
+                        self.rack,
+                        start_coordinates,
+                        end_coordinates,
+                        text_coordinates,
+                        unit["id"],
+                        face,
+                        "slot blocked_partial",
+                        None,
+                    )
             elif device:
                 # Devices which the user does not have permission to view are rendered only as unavailable space
                 drawing.add(drawing.rect(start_coordinates, end_coordinates, class_="blocked"))
