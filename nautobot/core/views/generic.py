@@ -258,7 +258,7 @@ class ObjectListView(ObjectPermissionRequiredMixin, View):
             def check_for_display(field_name, values):
                 values = values if isinstance(values, (list, tuple)) else [values]
 
-                if not hasattr(filterset_filters, field_name):
+                if field_name not in filterset_filters.keys():
                     return [field_name, values]
 
                 label = filterset_filters[field_name].label
