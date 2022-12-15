@@ -9,7 +9,6 @@ from nautobot.utilities.tables import (
     BaseTable,
     BooleanColumn,
     ButtonsColumn,
-    ChoiceFieldColumn,
     LinkedCountColumn,
     TagColumn,
     ToggleColumn,
@@ -21,7 +20,6 @@ from .models import (
     IPAddress,
     Prefix,
     RIR,
-    Role,
     RouteTarget,
     Service,
     VLAN,
@@ -42,14 +40,6 @@ PREFIX_LINK = """
     <i class="mdi mdi-circle-small"></i>
 {% endfor %}
 <a href="{% if record.present_in_database %}{% url 'ipam:prefix' pk=record.pk %}{% else %}{% url 'ipam:prefix_add' %}?prefix={{ record }}{% if object.vrf %}&vrf={{ object.vrf.pk }}{% endif %}{% if object.site %}&site={{ object.site.pk }}{% endif %}{% if object.tenant %}&tenant_group={{ object.tenant.group.pk }}&tenant={{ object.tenant.pk }}{% endif %}{% endif %}">{{ record.prefix }}</a>
-"""
-
-PREFIX_ROLE_LINK = """
-{% if record.role %}
-    <a href="{% url 'ipam:prefix_list' %}?role={{ record.role.slug }}">{{ record.role }}</a>
-{% else %}
-    &mdash;
-{% endif %}
 """
 
 IPADDRESS_LINK = """
@@ -248,44 +238,6 @@ class AggregateDetailTable(AggregateTable):
             "utilization",
             "date_added",
             "description",
-        )
-
-
-#
-# Roles
-#
-
-
-class RoleTable(BaseTable):
-    pk = ToggleColumn()
-    name = tables.LinkColumn()
-    prefix_count = LinkedCountColumn(
-        viewname="ipam:prefix_list",
-        url_params={"role": "slug"},
-        verbose_name="Prefixes",
-    )
-    vlan_count = LinkedCountColumn(viewname="ipam:vlan_list", url_params={"role": "slug"}, verbose_name="VLANs")
-    actions = ButtonsColumn(Role, pk_field="slug")
-
-    class Meta(BaseTable.Meta):
-        model = Role
-        fields = (
-            "pk",
-            "name",
-            "slug",
-            "prefix_count",
-            "vlan_count",
-            "description",
-            "weight",
-            "actions",
-        )
-        default_columns = (
-            "pk",
-            "name",
-            "prefix_count",
-            "vlan_count",
-            "description",
-            "actions",
         )
 
 

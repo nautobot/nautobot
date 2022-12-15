@@ -17,13 +17,11 @@ from nautobot.utilities.filters import (
     TagFilter,
 )
 from nautobot.virtualization.models import VirtualMachine, VMInterface
-from .choices import IPAddressRoleChoices
 from .models import (
     Aggregate,
     IPAddress,
     Prefix,
     RIR,
-    Role,
     RouteTarget,
     Service,
     VLAN,
@@ -37,7 +35,6 @@ __all__ = (
     "IPAddressFilterSet",
     "PrefixFilterSet",
     "RIRFilterSet",
-    "RoleFilterSet",
     "RouteTargetFilterSet",
     "ServiceFilterSet",
     "VLANFilterSet",
@@ -177,12 +174,6 @@ class AggregateFilterSet(NautobotFilterSet, IPAMFilterSetMixin, TenancyFilterSet
             return queryset.net_equals(netaddr.IPNetwork(value))
         except (AddrFormatError, ValueError):
             return queryset.none()
-
-
-class RoleFilterSet(NautobotFilterSet, NameSlugSearchFilterSet):
-    class Meta:
-        model = Role
-        fields = ["id", "name", "slug"]
 
 
 class PrefixFilterSet(

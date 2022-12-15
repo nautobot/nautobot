@@ -44,7 +44,7 @@ from nautobot.utilities.forms import (
 )
 from nautobot.utilities.forms.constants import BOOLEAN_WITH_BLANK_CHOICES
 from nautobot.virtualization.models import Cluster, VirtualMachine, VMInterface
-from .choices import IPAddressFamilyChoices, IPAddressRoleChoices, ServiceProtocolChoices
+from .choices import IPAddressFamilyChoices, ServiceProtocolChoices
 from .constants import (
     IPADDRESS_MASK_LENGTH_MIN,
     IPADDRESS_MASK_LENGTH_MAX,
@@ -58,7 +58,6 @@ from .models import (
     IPAddress,
     Prefix,
     RIR,
-    Role,
     RouteTarget,
     Service,
     VLAN,
@@ -317,30 +316,6 @@ class AggregateFilterForm(NautobotFilterForm, TenancyFilterForm):
     )
     rir = DynamicModelMultipleChoiceField(queryset=RIR.objects.all(), to_field_name="slug", required=False, label="RIR")
     tag = TagFilterField(model)
-
-
-#
-# Roles
-#
-
-
-class RoleForm(NautobotModelForm):
-    slug = SlugField()
-
-    class Meta:
-        model = Role
-        fields = [
-            "name",
-            "slug",
-            "weight",
-            "description",
-        ]
-
-
-class RoleCSVForm(CustomFieldModelCSVForm):
-    class Meta:
-        model = Role
-        fields = Role.csv_headers
 
 
 #

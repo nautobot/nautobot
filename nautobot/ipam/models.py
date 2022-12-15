@@ -37,7 +37,6 @@ __all__ = (
     "IPAddress",
     "Prefix",
     "RIR",
-    "Role",
     "RouteTarget",
     "Service",
     "VLAN",
@@ -384,46 +383,6 @@ class Aggregate(PrimaryModel):
         queryset = Prefix.objects.net_contained_or_equal(self.prefix)
         child_prefixes = netaddr.IPSet([p.prefix for p in queryset])
         return UtilizationData(numerator=child_prefixes.size, denominator=self.prefix.size)
-
-
-@extras_features(
-    "custom_fields",
-    "custom_validators",
-    "graphql",
-    "relationships",
-)
-class Role(OrganizationalModel):
-    """
-    A Role represents the functional role of a Prefix or VLAN; for example, "Customer," "Infrastructure," or
-    "Management."
-    """
-
-    name = models.CharField(max_length=100, unique=True)
-    slug = AutoSlugField(populate_from="name")
-    weight = models.PositiveSmallIntegerField(default=1000)
-    description = models.CharField(
-        max_length=200,
-        blank=True,
-    )
-
-    csv_headers = ["name", "slug", "weight", "description"]
-
-    class Meta:
-        ordering = ["weight", "name"]
-
-    def __str__(self):
-        return self.name
-
-    def get_absolute_url(self):
-        return reverse("ipam:role", args=[self.slug])
-
-    def to_csv(self):
-        return (
-            self.name,
-            self.slug,
-            self.weight,
-            self.description,
-        )
 
 
 @extras_features(
