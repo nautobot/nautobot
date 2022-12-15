@@ -1,12 +1,12 @@
 import uuid
 
-from nautobot.extras.models import Status
-from nautobot.dcim.models import Device, DeviceRole, DeviceType, Manufacturer, Site
+from nautobot.extras.models import Role, Status
+from nautobot.dcim.models import Device, DeviceType, Manufacturer, Site
 
 
 def create_test_device():
     test_uuid = str(uuid.uuid4())
-    device_role = DeviceRole.objects.create(
+    device_role = Role.objects.create(
         name=f"Test Role {test_uuid}",
         slug=f"test-role-{test_uuid}",
     )

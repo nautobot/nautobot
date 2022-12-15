@@ -26,6 +26,7 @@ class Migration(migrations.Migration):
             name="new_role",
             field=nautobot.extras.models.roles.RoleField(
                 null=True,
+                blank=True,
                 on_delete=django.db.models.deletion.PROTECT,
                 related_name="ipam_prefix_related",
                 to="extras.role",
@@ -44,6 +45,7 @@ class Migration(migrations.Migration):
             name="new_role",
             field=nautobot.extras.models.roles.RoleField(
                 null=True,
+                blank=True,
                 on_delete=django.db.models.deletion.PROTECT,
                 related_name="ipam_vlan_related",
                 to="extras.role",
@@ -62,6 +64,7 @@ class Migration(migrations.Migration):
             name="new_role",
             field=nautobot.extras.models.roles.RoleField(
                 null=True,
+                blank=True,
                 on_delete=django.db.models.deletion.PROTECT,
                 related_name="ipam_ipaddress_related",
                 to="extras.role",

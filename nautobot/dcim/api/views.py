@@ -30,7 +30,6 @@ from nautobot.dcim.models import (
     DeviceBay,
     DeviceBayTemplate,
     DeviceRedundancyGroup,
-    DeviceRole,
     DeviceType,
     FrontPort,
     FrontPortTemplate,
@@ -50,7 +49,6 @@ from nautobot.dcim.models import (
     Rack,
     RackGroup,
     RackReservation,
-    RackRole,
     RearPort,
     RearPortTemplate,
     Region,
@@ -199,17 +197,6 @@ class RackGroupViewSet(NautobotModelViewSet):
     ).prefetch_related("site")
     serializer_class = serializers.RackGroupSerializer
     filterset_class = filters.RackGroupFilterSet
-
-
-#
-# Rack roles
-#
-
-
-class RackRoleViewSet(NautobotModelViewSet):
-    queryset = RackRole.objects.annotate(rack_count=count_related(Rack, "role"))
-    serializer_class = serializers.RackRoleSerializer
-    filterset_class = filters.RackRoleFilterSet
 
 
 #
@@ -383,17 +370,6 @@ class DeviceBayTemplateViewSet(NautobotModelViewSet):
     queryset = DeviceBayTemplate.objects.prefetch_related("device_type__manufacturer")
     serializer_class = serializers.DeviceBayTemplateSerializer
     filterset_class = filters.DeviceBayTemplateFilterSet
-
-
-#
-# Device roles
-#
-
-
-class DeviceRoleViewSet(NautobotModelViewSet):
-    queryset = DeviceRole.objects.all()
-    serializer_class = serializers.DeviceRoleSerializer
-    filterset_class = filters.DeviceRoleFilterSet
 
 
 #

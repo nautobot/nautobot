@@ -11,7 +11,7 @@ from nautobot.dcim.form_mixins import (
     LocatableModelFilterFormMixin,
     LocatableModelFormMixin,
 )
-from nautobot.dcim.models import Device, DeviceRole, Location, Platform, Rack, Region, Site
+from nautobot.dcim.models import Device, Location, Platform, Rack, Region, Site
 from nautobot.extras.forms import (
     CustomFieldModelBulkEditFormMixin,
     CustomFieldModelCSVForm,
@@ -21,6 +21,9 @@ from nautobot.extras.forms import (
     LocalContextFilterForm,
     LocalContextModelForm,
     LocalContextModelBulkEditForm,
+    RoleModelBulkEditFormMixin,
+    RoleModelCSVFormMixin,
+    RoleModelFilterFormMixin,
     StatusModelBulkEditFormMixin,
     StatusModelCSVFormMixin,
     StatusModelFilterFormMixin,
@@ -50,7 +53,6 @@ from nautobot.utilities.forms import (
 )
 from nautobot.utilities.forms.constants import BOOLEAN_WITH_BLANK_CHOICES
 from .models import Cluster, ClusterGroup, ClusterType, VirtualMachine, VMInterface
-from ..extras.forms.mixins import RoleModelBulkEditFormMixin, RoleModelCSVFormMixin, RoleModelFilterFormMixin
 
 
 #

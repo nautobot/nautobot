@@ -27,6 +27,9 @@ from nautobot.extras.forms import (
     LocalContextFilterForm,
     LocalContextModelForm,
     LocalContextModelBulkEditForm,
+    RoleModelBulkEditFormMixin,
+    RoleModelCSVFormMixin,
+    RoleModelFilterFormMixin,
     StatusModelBulkEditFormMixin,
     StatusModelCSVFormMixin,
     StatusModelFilterFormMixin,
@@ -103,7 +106,6 @@ from .models import (
     ConsoleServerPort,
     ConsoleServerPortTemplate,
     Device,
-    DeviceRole,
     DeviceType,
     FrontPort,
     FrontPortTemplate,
@@ -123,14 +125,12 @@ from .models import (
     Rack,
     RackGroup,
     RackReservation,
-    RackRole,
     RearPort,
     RearPortTemplate,
     Region,
     Site,
     VirtualChassis,
 )
-from ..extras.forms.mixins import RoleModelBulkEditFormMixin, RoleModelCSVFormMixin, RoleModelFilterFormMixin
 
 DEVICE_BY_PK_RE = r"{\d+\}"
 
@@ -604,33 +604,6 @@ class RackGroupFilterForm(NautobotFilterForm, LocatableModelFilterFormMixin):
             "site": "$site",
         },
     )
-
-
-#
-# Rack roles
-#
-
-
-class RackRoleForm(NautobotModelForm):
-    slug = SlugField()
-
-    class Meta:
-        model = RackRole
-        fields = [
-            "name",
-            "slug",
-            "color",
-            "description",
-        ]
-
-
-class RackRoleCSVForm(CustomFieldModelCSVForm):
-    class Meta:
-        model = RackRole
-        fields = RackRole.csv_headers
-        help_texts = {
-            "color": mark_safe("RGB color in hexadecimal (e.g. <code>00ff00</code>)"),
-        }
 
 
 #
@@ -1713,34 +1686,6 @@ class DeviceBayTemplateImportForm(ComponentTemplateImportForm):
             "device_type",
             "name",
         ]
-
-
-#
-# Device roles
-#
-
-
-class DeviceRoleForm(NautobotModelForm):
-    slug = SlugField()
-
-    class Meta:
-        model = DeviceRole
-        fields = [
-            "name",
-            "slug",
-            "color",
-            "vm_role",
-            "description",
-        ]
-
-
-class DeviceRoleCSVForm(CustomFieldModelCSVForm):
-    class Meta:
-        model = DeviceRole
-        fields = DeviceRole.csv_headers
-        help_texts = {
-            "color": mark_safe("RGB color in hexadecimal (e.g. <code>00ff00</code>)"),
-        }
 
 
 #

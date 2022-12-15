@@ -734,7 +734,7 @@ These variables are presented as a web form to be completed by the user. Once su
 ```python
 from django.utils.text import slugify
 
-from nautobot.dcim.models import Device, DeviceRole, DeviceType, Manufacturer, Site
+from nautobot.dcim.models import Device, DeviceType, Manufacturer, Site
 from nautobot.extras.models import Status
 from nautobot.extras.jobs import *
 

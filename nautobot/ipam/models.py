@@ -37,7 +37,6 @@ __all__ = (
     "IPAddress",
     "Prefix",
     "RIR",
-    "Role",
     "RouteTarget",
     "Service",
     "VLAN",
@@ -388,46 +387,6 @@ class Aggregate(PrimaryModel):
 
 @extras_features(
     "custom_fields",
-    "custom_validators",
-    "graphql",
-    "relationships",
-)
-class Role(OrganizationalModel):
-    """
-    A Role represents the functional role of a Prefix or VLAN; for example, "Customer," "Infrastructure," or
-    "Management."
-    """
-
-    name = models.CharField(max_length=100, unique=True)
-    slug = AutoSlugField(populate_from="name")
-    weight = models.PositiveSmallIntegerField(default=1000)
-    description = models.CharField(
-        max_length=200,
-        blank=True,
-    )
-
-    csv_headers = ["name", "slug", "weight", "description"]
-
-    class Meta:
-        ordering = ["weight", "name"]
-
-    def __str__(self):
-        return self.name
-
-    def get_absolute_url(self):
-        return reverse("ipam:role", args=[self.slug])
-
-    def to_csv(self):
-        return (
-            self.name,
-            self.slug,
-            self.weight,
-            self.description,
-        )
-
-
-@extras_features(
-    "custom_fields",
     "custom_links",
     "custom_validators",
     "dynamic_groups",
@@ -617,7 +576,7 @@ class Prefix(PrimaryModel, StatusModel, RoleModelMixin):
             self.vlan.group.name if self.vlan and self.vlan.group else None,
             self.vlan.vid if self.vlan else None,
             self.get_status_display(),
-            self.get_role_display(),
+            self.role.name if self.role else None,
             self.is_pool,
             self.description,
         )
@@ -956,7 +915,7 @@ class IPAddress(PrimaryModel, StatusModel, RoleModelMixin):
             self.vrf.name if self.vrf else None,
             self.tenant.name if self.tenant else None,
             self.get_status_display(),
-            self.get_role_display(),
+            self.role.name if self.role else None,
             obj_type,
             self.assigned_object_id,
             is_primary,
@@ -1240,7 +1199,7 @@ class VLAN(PrimaryModel, StatusModel, RoleModelMixin):
             self.name,
             self.tenant.name if self.tenant else None,
             self.get_status_display(),
-            self.get_role_display(),
+            self.role.name if self.role else None,
             self.description,
         )
 

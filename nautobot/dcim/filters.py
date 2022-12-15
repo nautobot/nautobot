@@ -51,7 +51,6 @@ from .models import (
     DeviceBay,
     DeviceBayTemplate,
     DeviceRedundancyGroup,
-    DeviceRole,
     DeviceType,
     FrontPort,
     FrontPortTemplate,
@@ -71,7 +70,6 @@ from .models import (
     Rack,
     RackGroup,
     RackReservation,
-    RackRole,
     RearPort,
     RearPortTemplate,
     Region,
@@ -115,7 +113,6 @@ __all__ = (
     "RackFilterSet",
     "RackGroupFilterSet",
     "RackReservationFilterSet",
-    "RackRoleFilterSet",
     "RearPortFilterSet",
     "RearPortTemplateFilterSet",
     "RegionFilterSet",
@@ -429,19 +426,6 @@ class RackGroupFilterSet(NautobotFilterSet, LocatableModelFilterSetMixin, NameSl
         fields = ["id", "name", "slug", "description", "racks"]
 
 
-class RackRoleFilterSet(NautobotFilterSet, NameSlugSearchFilterSet):
-    has_racks = RelatedMembershipBooleanFilter(
-        field_name="racks",
-        label="Has racks",
-    )
-
-    class Meta:
-        model = RackRole
-        # TODO (timizuo): Racks Role
-        # fields = ["id", "name", "slug", "color", "description", "racks"]
-        fields = ["id", "name", "slug", "color", "description"]
-
-
 class RackFilterSet(
     NautobotFilterSet,
     LocatableModelFilterSetMixin,
@@ -476,10 +460,6 @@ class RackFilterSet(
     )
     type = django_filters.MultipleChoiceFilter(choices=RackTypeChoices)
     width = django_filters.MultipleChoiceFilter(choices=RackWidthChoices)
-    role_id = django_filters.ModelMultipleChoiceFilter(
-        queryset=RackRole.objects.all(),
-        label="Role (ID)",
-    )
     serial = django_filters.CharFilter(lookup_expr="iexact")
     has_devices = RelatedMembershipBooleanFilter(
         field_name="devices",
@@ -878,12 +858,6 @@ class DeviceBayTemplateFilterSet(BaseFilterSet, DeviceTypeComponentFilterSet):
     class Meta:
         model = DeviceBayTemplate
         fields = []
-
-
-class DeviceRoleFilterSet(NautobotFilterSet, NameSlugSearchFilterSet):
-    class Meta:
-        model = DeviceRole
-        fields = ["id", "name", "slug", "color", "vm_role", "description"]
 
 
 class PlatformFilterSet(NautobotFilterSet, NameSlugSearchFilterSet):

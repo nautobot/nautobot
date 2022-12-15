@@ -11,7 +11,6 @@ from .models import (
     Device,
     DeviceBay,
     DeviceRedundancyGroup,
-    DeviceRole,
     DeviceType,
     FrontPort,
     Interface,
@@ -27,7 +26,6 @@ from .models import (
     Rack,
     RackGroup,
     RackReservation,
-    RackRole,
     RearPort,
     Region,
     Site,
@@ -177,42 +175,6 @@ urlpatterns = [
         ObjectNotesView.as_view(),
         name="rackgroup_notes",
         kwargs={"model": RackGroup},
-    ),
-    # Rack roles
-    path("rack-roles/", views.RackRoleListView.as_view(), name="rackrole_list"),
-    path("rack-roles/add/", views.RackRoleEditView.as_view(), name="rackrole_add"),
-    path(
-        "rack-roles/import/",
-        views.RackRoleBulkImportView.as_view(),
-        name="rackrole_import",
-    ),
-    path(
-        "rack-roles/delete/",
-        views.RackRoleBulkDeleteView.as_view(),
-        name="rackrole_bulk_delete",
-    ),
-    path("rack-roles/<uuid:pk>/", views.RackRoleView.as_view(), name="rackrole"),
-    path(
-        "rack-roles/<uuid:pk>/edit/",
-        views.RackRoleEditView.as_view(),
-        name="rackrole_edit",
-    ),
-    path(
-        "rack-roles/<uuid:pk>/delete/",
-        views.RackRoleDeleteView.as_view(),
-        name="rackrole_delete",
-    ),
-    path(
-        "rack-roles/<uuid:pk>/changelog/",
-        ObjectChangeLogView.as_view(),
-        name="rackrole_changelog",
-        kwargs={"model": RackRole},
-    ),
-    path(
-        "rack-roles/<uuid:pk>/notes/",
-        ObjectNotesView.as_view(),
-        name="rackrole_notes",
-        kwargs={"model": RackRole},
     ),
     # Rack reservations
     path(
@@ -637,42 +599,6 @@ urlpatterns = [
         "device-bay-templates/<uuid:pk>/delete/",
         views.DeviceBayTemplateDeleteView.as_view(),
         name="devicebaytemplate_delete",
-    ),
-    # Device roles
-    path("device-roles/", views.DeviceRoleListView.as_view(), name="devicerole_list"),
-    path("device-roles/add/", views.DeviceRoleEditView.as_view(), name="devicerole_add"),
-    path(
-        "device-roles/import/",
-        views.DeviceRoleBulkImportView.as_view(),
-        name="devicerole_import",
-    ),
-    path(
-        "device-roles/delete/",
-        views.DeviceRoleBulkDeleteView.as_view(),
-        name="devicerole_bulk_delete",
-    ),
-    path("device-roles/<slug:slug>/", views.DeviceRoleView.as_view(), name="devicerole"),
-    path(
-        "device-roles/<slug:slug>/edit/",
-        views.DeviceRoleEditView.as_view(),
-        name="devicerole_edit",
-    ),
-    path(
-        "device-roles/<slug:slug>/delete/",
-        views.DeviceRoleDeleteView.as_view(),
-        name="devicerole_delete",
-    ),
-    path(
-        "device-roles/<slug:slug>/changelog/",
-        ObjectChangeLogView.as_view(),
-        name="devicerole_changelog",
-        kwargs={"model": DeviceRole},
-    ),
-    path(
-        "device-roles/<slug:slug>/notes/",
-        ObjectNotesView.as_view(),
-        name="devicerole_notes",
-        kwargs={"model": DeviceRole},
     ),
     # Platforms
     path("platforms/", views.PlatformListView.as_view(), name="platform_list"),

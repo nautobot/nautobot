@@ -7,7 +7,6 @@ from nautobot.dcim.models import (
     Device,
     DeviceBay,
     DeviceRedundancyGroup,
-    DeviceRole,
     FrontPort,
     Interface,
     InventoryItem,
@@ -62,7 +61,6 @@ __all__ = (
     "DevicePowerOutletTable",
     "DeviceRearPortTable",
     "DeviceRedundancyGroupTable",
-    "DeviceRoleTable",
     "DeviceTable",
     "FrontPortTable",
     "InterfaceTable",
@@ -73,39 +71,6 @@ __all__ = (
     "RearPortTable",
     "VirtualChassisTable",
 )
-
-
-#
-# Device roles
-#
-
-
-class DeviceRoleTable(BaseTable):
-    pk = ToggleColumn()
-    name = tables.LinkColumn()
-    color = ColorColumn()
-    vm_role = BooleanColumn()
-    actions = ButtonsColumn(DeviceRole, pk_field="slug")
-
-    class Meta(BaseTable.Meta):
-        model = DeviceRole
-        fields = (
-            "pk",
-            "name",
-            "color",
-            "vm_role",
-            "description",
-            "slug",
-            "actions",
-        )
-        default_columns = (
-            "pk",
-            "name",
-            "color",
-            "vm_role",
-            "description",
-            "actions",
-        )
 
 
 #

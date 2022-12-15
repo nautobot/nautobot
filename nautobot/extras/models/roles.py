@@ -2,7 +2,6 @@ from django.contrib.contenttypes.models import ContentType
 from django.db import models
 
 from nautobot.core.fields import ForeignKeyLimitedByContentTypes
-from nautobot.extras.models.mixins import SetFieldColorAndDisplayMixin
 from nautobot.core.models.name_color_content_types import NameColorContentTypesModel
 from nautobot.extras.utils import RoleModelsQuery, extras_features
 
@@ -27,13 +26,16 @@ class Role(NameColorContentTypesModel):
     weight = models.PositiveSmallIntegerField(null=True, blank=True)
 
 
-class RoleField(SetFieldColorAndDisplayMixin, ForeignKeyLimitedByContentTypes):
+class RoleField(ForeignKeyLimitedByContentTypes):
     """Model database field that automatically limits role choices
     depending on the model implementing it.
     """
 
     def set_defaults(self, **kwargs):
         kwargs.setdefault("to", Role)
+        kwargs.setdefault("on_delete", models.PROTECT)
+        kwargs.setdefault("blank", True)
+        kwargs.setdefault("related_name", "%(app_label)s_%(class)s_related")
         return super().set_defaults(**kwargs)
 
 
@@ -42,12 +44,18 @@ class RoleModelMixin(models.Model):
     Abstract base class for any model which may have roles.
     """
 
-    role = RoleField(
-        on_delete=models.PROTECT,
-        related_name="%(app_label)s_%(class)s_related",  # e.g. dcim_device_related
-        blank=True,
-        null=True,
-    )
+    role = RoleField()
+
+    class Meta:
+        abstract = True
+
+
+class RoleRequiredRoleModelMixin(RoleModelMixin):
+    """
+    Abstract base class for any model which may have roles with role field required.
+    """
+
+    role = RoleField(null=False, blank=False)
 
     class Meta:
         abstract = True

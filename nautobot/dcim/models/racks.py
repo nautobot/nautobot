@@ -31,7 +31,6 @@ __all__ = (
     "Rack",
     "RackGroup",
     "RackReservation",
-    "RackRole",
 )
 
 
@@ -143,45 +142,6 @@ class RackGroup(MPTTModel, OrganizationalModel):
                         f'parent rack group "{self.parent}" location "{self.parent.location}".'
                     }
                 )
-
-
-@extras_features(
-    "custom_fields",
-    "custom_validators",
-    "graphql",
-    "relationships",
-)
-class RackRole(OrganizationalModel):
-    """
-    Racks can be organized by functional role, similar to Devices.
-    """
-
-    name = models.CharField(max_length=100, unique=True)
-    slug = AutoSlugField(populate_from="name")
-    color = ColorField(default=ColorChoices.COLOR_GREY)
-    description = models.CharField(
-        max_length=200,
-        blank=True,
-    )
-
-    csv_headers = ["name", "slug", "color", "description"]
-
-    class Meta:
-        ordering = ["name"]
-
-    def __str__(self):
-        return self.name
-
-    def get_absolute_url(self):
-        return reverse("dcim:rackrole", args=[self.pk])
-
-    def to_csv(self):
-        return (
-            self.name,
-            self.slug,
-            self.color,
-            self.description,
-        )
 
 
 @extras_features(
@@ -386,7 +346,7 @@ class Rack(PrimaryModel, StatusModel, RoleModelMixin):
             self.facility_id,
             self.tenant.name if self.tenant else None,
             self.get_status_display(),
-            self.get_role_display(),
+            self.role.name if self.role else None,
             self.get_type_display() if self.type else None,
             self.serial,
             self.asset_tag,

@@ -23,6 +23,7 @@ class Migration(migrations.Migration):
             name="new_role",
             field=nautobot.extras.models.roles.RoleField(
                 null=True,
+                blank=True,
                 on_delete=django.db.models.deletion.PROTECT,
                 related_name="virtualization_virtualmachine_related",
                 to="extras.role",

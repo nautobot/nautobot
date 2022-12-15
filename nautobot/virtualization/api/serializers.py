@@ -6,7 +6,6 @@ from nautobot.core.api import (
     SerializedPKRelatedField,
 )
 from nautobot.dcim.api.nested_serializers import (
-    NestedDeviceRoleSerializer,
     NestedLocationSerializer,
     NestedPlatformSerializer,
     NestedSiteSerializer,

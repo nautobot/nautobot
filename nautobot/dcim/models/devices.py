@@ -13,7 +13,7 @@ from django.utils.safestring import mark_safe
 
 from nautobot.dcim.choices import DeviceFaceChoices, DeviceRedundancyGroupFailoverStrategyChoices, SubdeviceRoleChoices
 
-from nautobot.extras.models import ConfigContextModel, RoleModelMixin, StatusModel
+from nautobot.extras.models import ConfigContextModel, RoleRequiredRoleModelMixin, StatusModel
 from nautobot.extras.querysets import ConfigContextModelQuerySet
 from nautobot.extras.utils import extras_features
 from nautobot.core.fields import AutoSlugField
@@ -36,7 +36,6 @@ from .device_components import (
 __all__ = (
     "Device",
     "DeviceRedundancyGroup",
-    "DeviceRole",
     "DeviceType",
     "Manufacturer",
     "Platform",
@@ -332,48 +331,6 @@ class DeviceType(PrimaryModel):
 #
 
 
-@extras_features("custom_fields", "custom_validators", "relationships", "graphql")
-class DeviceRole(OrganizationalModel):
-    """
-    Devices are organized by functional role; for example, "Core Switch" or "File Server". Each DeviceRole is assigned a
-    color to be used when displaying rack elevations. The vm_role field determines whether the role is applicable to
-    virtual machines as well.
-    """
-
-    name = models.CharField(max_length=100, unique=True)
-    slug = AutoSlugField(populate_from="name")
-    color = ColorField(default=ColorChoices.COLOR_GREY)
-    # todoindex:
-    vm_role = models.BooleanField(
-        default=True,
-        verbose_name="VM Role",
-        help_text="Virtual machines may be assigned to this role",
-    )
-    description = models.CharField(
-        max_length=200,
-        blank=True,
-    )
-
-    csv_headers = ["name", "slug", "color", "vm_role", "description"]
-
-    class Meta:
-        ordering = ["name"]
-
-    def get_absolute_url(self):
-        return reverse("dcim:devicerole", args=[self.slug])
-
-    def __str__(self):
-        return self.name
-
-    def to_csv(self):
-        return (
-            self.name,
-            self.slug,
-            self.color,
-            self.vm_role,
-            self.description,
-        )
-
 
 @extras_features("custom_fields", "custom_validators", "relationships", "graphql")
 class Platform(OrganizationalModel):
@@ -449,10 +406,10 @@ class Platform(OrganizationalModel):
     "statuses",
     "webhooks",
 )
-class Device(PrimaryModel, ConfigContextModel, StatusModel, RoleModelMixin):
+class Device(PrimaryModel, ConfigContextModel, StatusModel, RoleRequiredRoleModelMixin):
     """
     A Device represents a piece of physical hardware. Each Device is assigned a DeviceType,
-    DeviceRole, and (optionally) a Platform. Device names are not required, however if one is set it must be unique.
+    Role, and (optionally) a Platform. Device names are not required, however if one is set it must be unique.
 
     Each Device must be assigned to a Site and/or Location, and optionally to a Rack within that.
     Associating a device with a particular rack face or unit is optional (for example, vertically mounted PDUs
@@ -839,7 +796,7 @@ class Device(PrimaryModel, ConfigContextModel, StatusModel, RoleModelMixin):
     def to_csv(self):
         return (
             self.name or "",
-            self.get_role_display(),
+            self.role.name if self.role else None,
             self.tenant.name if self.tenant else None,
             self.device_type.manufacturer.name,
             self.device_type.model,

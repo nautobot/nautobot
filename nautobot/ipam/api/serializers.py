@@ -21,14 +21,13 @@ from nautobot.extras.api.serializers import (
     StatusModelSerializerMixin,
     TaggedObjectSerializer,
 )
-from nautobot.ipam.choices import IPAddressFamilyChoices, IPAddressRoleChoices, ServiceProtocolChoices
+from nautobot.ipam.choices import IPAddressFamilyChoices, ServiceProtocolChoices
 from nautobot.ipam import constants
 from nautobot.ipam.models import (
     Aggregate,
     IPAddress,
     Prefix,
     RIR,
-    Role,
     RouteTarget,
     Service,
     VLAN,
@@ -49,7 +48,6 @@ from .nested_serializers import (  # noqa: F401
     NestedIPAddressSerializer,
     NestedPrefixSerializer,
     NestedRIRSerializer,
-    NestedRoleSerializer,
     NestedRouteTargetSerializer,
     NestedServiceSerializer,
     NestedVLANGroupSerializer,
@@ -159,26 +157,6 @@ class AggregateSerializer(NautobotModelSerializer, TaggedObjectSerializer):
 
 #
 # VLANs
-#
-
-
-class RoleSerializer(NautobotModelSerializer):
-    url = serializers.HyperlinkedIdentityField(view_name="ipam-api:role-detail")
-    prefix_count = serializers.IntegerField(read_only=True)
-    vlan_count = serializers.IntegerField(read_only=True)
-
-    class Meta:
-        model = Role
-        fields = [
-            "url",
-            "name",
-            "slug",
-            "weight",
-            "description",
-            "prefix_count",
-            "vlan_count",
-        ]
-
 
 class VLANGroupSerializer(NautobotModelSerializer):
     url = serializers.HyperlinkedIdentityField(view_name="ipam-api:vlangroup-detail")

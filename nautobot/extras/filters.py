@@ -5,7 +5,7 @@ from django.db.models import Q
 from django_filters.utils import verbose_lookup_expr
 from django.forms import IntegerField
 
-from nautobot.dcim.models import DeviceRedundancyGroup, DeviceRole, DeviceType, Location, Platform, Region, Site
+from nautobot.dcim.models import DeviceRedundancyGroup, DeviceType, Location, Platform, Region, Site
 from nautobot.extras.utils import ChangeLoggedModelsQuery, FeatureQuery, RoleModelsQuery, TaggableClassesQuery
 from nautobot.tenancy.models import Tenant, TenantGroup
 from nautobot.utilities.constants import (
@@ -319,12 +319,12 @@ class ConfigContextFilterSet(BaseFilterSet):
     )
     role_id = django_filters.ModelMultipleChoiceFilter(
         field_name="roles",
-        queryset=DeviceRole.objects.all(),
+        queryset=Role.objects.all(),
         label="Role",
     )
     role = django_filters.ModelMultipleChoiceFilter(
         field_name="roles__slug",
-        queryset=DeviceRole.objects.all(),
+        queryset=Role.objects.all(),
         to_field_name="slug",
         label="Role (slug)",
     )

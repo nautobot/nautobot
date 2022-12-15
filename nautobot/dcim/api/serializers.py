@@ -45,7 +45,6 @@ from nautobot.dcim.models import (
     DeviceBay,
     DeviceBayTemplate,
     DeviceRedundancyGroup,
-    DeviceRole,
     DeviceType,
     FrontPort,
     FrontPortTemplate,
@@ -65,7 +64,6 @@ from nautobot.dcim.models import (
     Rack,
     RackGroup,
     RackReservation,
-    RackRole,
     RearPort,
     RearPortTemplate,
     Region,
@@ -74,6 +72,7 @@ from nautobot.dcim.models import (
 )
 from nautobot.extras.api.serializers import (
     NautobotModelSerializer,
+    RoleRequiredRoleModelSerializerMixin,
     RoleModelSerializerMixin,
     StatusModelSerializerMixin,
     TaggedObjectSerializer,
@@ -103,7 +102,6 @@ from .nested_serializers import (  # noqa: F401
     NestedDeviceBaySerializer,
     NestedDeviceBayTemplateSerializer,
     NestedDeviceRedundancyGroupSerializer,
-    NestedDeviceRoleSerializer,
     NestedDeviceSerializer,
     NestedDeviceTypeSerializer,
     NestedFrontPortSerializer,
@@ -123,7 +121,6 @@ from .nested_serializers import (  # noqa: F401
     NestedPowerPortTemplateSerializer,
     NestedRackGroupSerializer,
     NestedRackReservationSerializer,
-    NestedRackRoleSerializer,
     NestedRackSerializer,
     NestedRearPortSerializer,
     NestedRearPortTemplateSerializer,
@@ -367,22 +364,6 @@ class RackGroupSerializer(NautobotModelSerializer):
         super().validate(data)
 
         return data
-
-
-class RackRoleSerializer(NautobotModelSerializer):
-    url = serializers.HyperlinkedIdentityField(view_name="dcim-api:rackrole-detail")
-    rack_count = serializers.IntegerField(read_only=True)
-
-    class Meta:
-        model = RackRole
-        fields = [
-            "url",
-            "name",
-            "slug",
-            "color",
-            "description",
-            "rack_count",
-        ]
 
 
 class RackSerializer(
@@ -705,21 +686,6 @@ class DeviceBayTemplateSerializer(NautobotModelSerializer):
 #
 
 
-class DeviceRoleSerializer(NautobotModelSerializer):
-    url = serializers.HyperlinkedIdentityField(view_name="dcim-api:devicerole-detail")
-
-    class Meta:
-        model = DeviceRole
-        fields = [
-            "url",
-            "name",
-            "slug",
-            "color",
-            "vm_role",
-            "description",
-        ]
-
-
 class PlatformSerializer(NautobotModelSerializer):
     url = serializers.HyperlinkedIdentityField(view_name="dcim-api:platform-detail")
     manufacturer = NestedManufacturerSerializer(required=False, allow_null=True)
@@ -742,7 +708,7 @@ class PlatformSerializer(NautobotModelSerializer):
 
 
 class DeviceSerializer(
-    NautobotModelSerializer, TaggedObjectSerializer, StatusModelSerializerMixin, RoleModelSerializerMixin
+    NautobotModelSerializer, TaggedObjectSerializer, StatusModelSerializerMixin, RoleRequiredRoleModelSerializerMixin
 ):
     url = serializers.HyperlinkedIdentityField(view_name="dcim-api:device-detail")
     device_type = NestedDeviceTypeSerializer()
