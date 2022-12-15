@@ -2,12 +2,12 @@ from django.test import TestCase
 
 from nautobot.dcim.models import (
     Device,
-    DeviceRole,
     DeviceType,
     Interface,
     Manufacturer,
     Site,
 )
+from nautobot.extras.models import Role
 
 
 class NaturalOrderingTestCase(TestCase):
@@ -20,10 +20,10 @@ class NaturalOrderingTestCase(TestCase):
             model="Test Device Type 1",
             slug="test-device-type-1",
         )
-        devicerole = DeviceRole.objects.create(name="Test Device Role 1", slug="test-device-role-1", color="ff0000")
+        devicerole = Role.objects.get_for_model(Device).first()
         self.device = Device.objects.create(
             device_type=devicetype,
-            device_role=devicerole,
+            role=devicerole,
             name="Test Device 1",
             site=site,
         )

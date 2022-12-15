@@ -78,7 +78,7 @@ Type 'yes' to continue, or 'no' to cancel: """
         factory.random.reseed_random(seed)
 
         self.stdout.write("Creating Roles...")
-        RoleFactory.create_batch(10)
+        RoleFactory.create_batch(15)
         self.stdout.write("Creating Statuses...")
         populate_status_choices(verbosity=0)
         StatusFactory.create_batch(10)
