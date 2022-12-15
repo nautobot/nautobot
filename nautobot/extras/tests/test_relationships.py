@@ -10,7 +10,8 @@ from nautobot.circuits.models import CircuitType
 from nautobot.dcim.models import Device, Platform, Rack, Site
 from nautobot.dcim.tables import SiteTable
 from nautobot.dcim.tests.test_views import create_test_device
-from nautobot.ipam.models import VLAN
+from nautobot.ipam.models import IPAddress, VLAN
+from nautobot.extras import context_managers
 from nautobot.extras.choices import RelationshipRequiredSideChoices, RelationshipSideChoices, RelationshipTypeChoices
 from nautobot.extras.models import Relationship, RelationshipAssociation, Status
 from nautobot.utilities.tables import RelationshipColumn
@@ -19,7 +20,7 @@ from nautobot.utilities.forms import (
     DynamicModelChoiceField,
     DynamicModelMultipleChoiceField,
 )
-from nautobot.utilities.utils import get_route_for_model
+from nautobot.utilities.utils import get_changes_for_model, get_route_for_model
 
 
 class RelationshipBaseTest(TestCase):
@@ -1363,3 +1364,80 @@ class RequiredRelationshipTestMixin(TestCase):
                         }
                     }
                     self.assertEqual(expected_error_json, response.json())
+
+
+class RelationshipChangeLoggingTest(TestCase):
+    @classmethod
+    def setUpTestData(cls):
+        cls.site_status = Status.objects.get_for_model(Site).first()
+        site_ct = ContentType.objects.get_for_model(Site)
+        ipaddress_ct = ContentType.objects.get_for_model(IPAddress)
+        cls.site_ip_relationship = Relationship(
+            name="Site to IP Address",
+            slug="sites-ipaddresses-m2m",
+            type="many-to-many",
+            source_type=site_ct,
+            destination_type=ipaddress_ct,
+        )
+        cls.site_ip_relationship.validated_save()
+        cls.site = Site.objects.first()
+        cls.ip = IPAddress.objects.first()
+
+    def test_change_logging_relationship_association(self):
+        """Test that an objectchange is generated for associated objects when a RelationshipAssociation is saved"""
+        with context_managers.web_request_context(self.user):
+            RelationshipAssociation.objects.create(
+                relationship=self.site_ip_relationship, source=self.site, destination=self.ip
+            )
+
+        with self.subTest("Source object change was generated"):
+            self.assertEqual(get_changes_for_model(self.site).count(), 1)
+            object_change = get_changes_for_model(self.site).first()
+            snapshots_added = object_change.get_snapshots()["differences"]["added"]
+            self.assertIn("relationships", snapshots_added)
+            self.assertEqual(
+                snapshots_added["relationships"]["sites-ipaddresses-m2m"]["destination"]["objects"][0]["id"],
+                str(self.ip.pk),
+            )
+
+        with self.subTest("Destination object change was generated"):
+            self.assertEqual(get_changes_for_model(self.ip).count(), 1)
+            object_change = get_changes_for_model(self.ip).first()
+            snapshots_added = object_change.get_snapshots()["differences"]["added"]
+            self.assertIn("relationships", snapshots_added)
+            self.assertEqual(
+                snapshots_added["relationships"]["sites-ipaddresses-m2m"]["source"]["objects"][0]["id"],
+                str(self.site.pk),
+            )
+
+    def test_change_logging_with_object_save(self):
+        """
+        Test that only a single objectchange is generated for associated objects when a RelationshipAssociation
+        is created and the associated object is saved in the same request
+        """
+        with context_managers.web_request_context(self.user):
+            self.ip.validated_save()
+            self.site.validated_save()
+            RelationshipAssociation.objects.create(
+                relationship=self.site_ip_relationship, source=self.site, destination=self.ip
+            )
+
+        with self.subTest("Source object change was generated"):
+            self.assertEqual(get_changes_for_model(self.site).count(), 1)
+            object_change = get_changes_for_model(self.site).first()
+            snapshots_added = object_change.get_snapshots()["differences"]["added"]
+            self.assertIn("relationships", snapshots_added)
+            self.assertEqual(
+                snapshots_added["relationships"]["sites-ipaddresses-m2m"]["destination"]["objects"][0]["id"],
+                str(self.ip.pk),
+            )
+
+        with self.subTest("Destination object change was generated"):
+            self.assertEqual(get_changes_for_model(self.ip).count(), 1)
+            object_change = get_changes_for_model(self.ip).first()
+            snapshots_added = object_change.get_snapshots()["differences"]["added"]
+            self.assertIn("relationships", snapshots_added)
+            self.assertEqual(
+                snapshots_added["relationships"]["sites-ipaddresses-m2m"]["source"]["objects"][0]["id"],
+                str(self.site.pk),
+            )

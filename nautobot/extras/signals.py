@@ -27,7 +27,6 @@ from nautobot.extras.models import (
     GitRepository,
     JobResult,
     ObjectChange,
-    RelationshipAssociation,
 )
 from .webhooks import enqueue_webhooks
 
@@ -96,9 +95,6 @@ def _handle_changed_object(change_context, sender, instance, **kwargs):
         if objectchange is not None:
             enqueue_job_hooks(objectchange)
 
-    elif isinstance(instance, RelationshipAssociation):
-        _handle_relationship_association_change(change_context, instance)
-
     # Enqueue webhooks
     enqueue_webhooks(instance, change_context.get_user(), change_context.change_id, action)
 
@@ -132,9 +128,6 @@ def _handle_deleted_object(change_context, sender, instance, **kwargs):
 
         # Enqueue job hooks
         enqueue_job_hooks(objectchange)
-
-    elif isinstance(instance, RelationshipAssociation):
-        _handle_relationship_association_change(change_context, instance)
 
     # Enqueue webhooks
     enqueue_webhooks(
@@ -314,21 +307,39 @@ def refresh_job_models(sender, *, apps, **kwargs):
             job_model.save()
 
 
-def _handle_relationship_association_change(change_context, instance):
-    """Handle changes to RelationshipAssociation objects."""
+def _handle_relationship_association_change(change_context, sender, instance, **kwargs):
+    """
+    Signal handler for RelationshipAssociation changes. When a RelationshipAssociation
+    is changed or deleted, also create ObjectChanges for related objects.
+    """
     from .jobs import enqueue_job_hooks  # avoid circular import
 
     for related_object in [instance.source, instance.destination]:
         if hasattr(related_object, "to_objectchange"):
+            updated_objectchange = related_object.to_objectchange(ObjectChangeActionChoices.ACTION_UPDATE)
             related_changes = ObjectChange.objects.filter(
                 changed_object_type=ContentType.objects.get_for_model(related_object),
                 changed_object_id=related_object.pk,
                 request_id=change_context.change_id,
             )
-            obj_changes = related_object.to_objectchange(ObjectChangeActionChoices.ACTION_UPDATE)
-            related_changes.update(object_data=obj_changes.object_data, object_data_v2=obj_changes.object_data_v2)
-            objectchange = related_changes.first() if related_changes.exists() else None
+            if related_changes.exists():
+                related_changes.update(
+                    object_data=updated_objectchange.object_data, object_data_v2=updated_objectchange.object_data_v2
+                )
+                enqueue_job_hooks(related_changes.first())
+            else:
+                updated_objectchange.user = _get_user_if_authenticated(change_context.get_user(), updated_objectchange)
+                updated_objectchange.request_id = change_context.change_id
+                updated_objectchange.change_context = change_context.context
+                updated_objectchange.change_context_detail = change_context.context_detail[
+                    :CHANGELOG_MAX_CHANGE_CONTEXT_DETAIL
+                ]
+                updated_objectchange.save()
+                enqueue_job_hooks(updated_objectchange)
 
-            # Enqueue job hooks
-            if objectchange is not None:
-                enqueue_job_hooks(objectchange)
+        enqueue_webhooks(
+            related_object,
+            change_context.get_user(),
+            change_context.change_id,
+            ObjectChangeActionChoices.ACTION_UPDATE,
+        )
