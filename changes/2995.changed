@@ -1,0 +1,2 @@
+Updated `Poetry` lockfile to use new v2 version format (requiring `Poetry>=1.3`).
+Updated included `poetry` version in `nautobot-dev` container to `1.3.1`.
