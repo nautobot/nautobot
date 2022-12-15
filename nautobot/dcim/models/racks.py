@@ -72,7 +72,7 @@ class RackGroup(TreeNode, OrganizationalModel):
     csv_headers = ["site", "location", "parent", "name", "slug", "description"]
 
     class Meta:
-        ordering = ["site", "name"]
+        ordering = ("name",)
         unique_together = [
             ["site", "name"],
             # 2.0 TODO: Remove unique_together to make slug globally unique. This would be a breaking change.

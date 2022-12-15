@@ -93,6 +93,10 @@ class Migration(migrations.Migration):
             ),
         ),
         migrations.AlterModelOptions(
+            name="rackgroup",
+            options={"ordering": ("name",)},
+        ),
+        migrations.AlterModelOptions(
             name="region",
             options={"ordering": ("name",)},
         ),
