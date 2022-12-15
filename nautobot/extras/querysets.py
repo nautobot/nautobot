@@ -32,7 +32,7 @@ class ConfigContextQuerySet(RestrictedQuerySet):
         # Match against the directly assigned region as well as any parent regions.
         region = getattr(obj.site, "region", None)
         if region:
-            regions = region.get_ancestors(include_self=True)
+            regions = region.ancestors(include_self=True)
         else:
             regions = []
 
