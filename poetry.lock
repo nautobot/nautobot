@@ -861,18 +861,22 @@ Django = ">=2.2"
 
 [[package]]
 name = "django-health-check"
-version = "3.16.5"
+version = "3.16.7"
 description = "Run checks on services like databases, queue servers, celery processes, etc."
 category = "main"
 optional = false
-python-versions = "*"
+python-versions = ">=3.8"
 files = [
-    {file = "django-health-check-3.16.5.tar.gz", hash = "sha256:1edfd49293ccebbce29f9da609c407f307aee240ab799ab4201031341ae78c0f"},
-    {file = "django_health_check-3.16.5-py2.py3-none-any.whl", hash = "sha256:8d66781a0ea82b1a8b44878187b38a27370e94f18287312e39be0593e72d8983"},
+    {file = "django-health-check-3.16.7.tar.gz", hash = "sha256:85b8e4ffa6ebbee3a7214c91ea4a67ce0e918bc8ed9679d054afd9cc9fa17c4f"},
+    {file = "django_health_check-3.16.7-py2.py3-none-any.whl", hash = "sha256:4f4fe32838eb367b9dda51669f128b97f8416eaa66b80b58c50db6fc2cc42356"},
 ]
 
 [package.dependencies]
 django = ">=2.2"
+
+[package.extras]
+docs = ["sphinx"]
+test = ["celery", "pytest", "pytest-cov", "pytest-django", "redis"]
 
 [[package]]
 name = "django-jinja"
@@ -1554,14 +1558,14 @@ files = [
 
 [[package]]
 name = "importlib-metadata"
-version = "4.13.0"
+version = "5.1.0"
 description = "Read metadata from Python packages"
 category = "main"
 optional = false
 python-versions = ">=3.7"
 files = [
-    {file = "importlib_metadata-4.13.0-py3-none-any.whl", hash = "sha256:8a8a81bcf996e74fee46f0d16bd3eaa382a7eb20fd82445c3ad11f4090334116"},
-    {file = "importlib_metadata-4.13.0.tar.gz", hash = "sha256:dd0173e8f150d6815e098fd354f6414b0f079af4644ddfe90c71e2fc6174346d"},
+    {file = "importlib_metadata-5.1.0-py3-none-any.whl", hash = "sha256:d84d17e21670ec07990e1044a99efe8d615d860fd176fc29ef5c306068fda313"},
+    {file = "importlib_metadata-5.1.0.tar.gz", hash = "sha256:d5059f9f1e8e41f80e9c56c2ee58811450c31984dfa625329ffd7c0dad88a73b"},
 ]
 
 [package.dependencies]
