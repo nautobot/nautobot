@@ -2636,10 +2636,6 @@ class DeviceTestCase(FilterTestCases.FilterTestCase, FilterTestCases.TenancyFilt
             params = {"cluster": [clusters[0].name, clusters[1].name]}
             self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
 
-    def test_model(self):
-        params = {"model": ["model-1", "model-2"]}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
-
     def test_status(self):
         statuses = list(Status.objects.get_for_model(Device)[:2])
         params = {"status": [statuses[0].slug, statuses[1].slug]}
