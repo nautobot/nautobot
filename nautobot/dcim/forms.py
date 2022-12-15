@@ -2360,7 +2360,7 @@ class ConsolePortCreateForm(ComponentCreateForm):
     )
 
 
-class ConsolePortBulkCreateForm(form_from_model(ConsolePort, ["type"]), DeviceBulkAddComponentForm):
+class ConsolePortBulkCreateForm(form_from_model(ConsolePort, ["type", "tags"]), DeviceBulkAddComponentForm):
     field_order = ("name_pattern", "label_pattern", "type", "description", "tags")
 
 
@@ -2427,7 +2427,7 @@ class ConsoleServerPortCreateForm(ComponentCreateForm):
     )
 
 
-class ConsoleServerPortBulkCreateForm(form_from_model(ConsoleServerPort, ["type"]), DeviceBulkAddComponentForm):
+class ConsoleServerPortBulkCreateForm(form_from_model(ConsoleServerPort, ["type", "tags"]), DeviceBulkAddComponentForm):
     field_order = ("name_pattern", "label_pattern", "type", "description", "tags")
 
 
@@ -2501,7 +2501,7 @@ class PowerPortCreateForm(ComponentCreateForm):
 
 
 class PowerPortBulkCreateForm(
-    form_from_model(PowerPort, ["type", "maximum_draw", "allocated_draw"]),
+    form_from_model(PowerPort, ["type", "maximum_draw", "allocated_draw", "tags"]),
     DeviceBulkAddComponentForm,
 ):
     field_order = (
@@ -2600,7 +2600,7 @@ class PowerOutletCreateForm(ComponentCreateForm):
         self.fields["power_port"].queryset = PowerPort.objects.filter(device=device)
 
 
-class PowerOutletBulkCreateForm(form_from_model(PowerOutlet, ["type", "feed_leg"]), DeviceBulkAddComponentForm):
+class PowerOutletBulkCreateForm(form_from_model(PowerOutlet, ["type", "feed_leg", "tags"]), DeviceBulkAddComponentForm):
     field_order = (
         "name_pattern",
         "label_pattern",
@@ -2879,17 +2879,29 @@ class InterfaceCreateForm(ComponentCreateForm, InterfaceCommonForm):
 
 
 class InterfaceBulkCreateForm(
-    form_from_model(Interface, ["type", "enabled", "mtu", "mgmt_only"]),
+    form_from_model(Interface, ["enabled", "mtu", "mgmt_only", "mode", "tags"]),
     DeviceBulkAddComponentForm,
 ):
+    type = forms.ChoiceField(
+        choices=InterfaceTypeChoices,
+        widget=StaticSelect2(),
+    )
+    status = DynamicModelChoiceField(
+        required=True,
+        queryset=Status.objects.all(),
+        query_params={"content_types": Interface._meta.label_lower},
+    )
+
     field_order = (
         "name_pattern",
         "label_pattern",
+        "status",
         "type",
         "enabled",
         "mtu",
         "mgmt_only",
         "description",
+        "mode",
         "tags",
     )
 
@@ -3292,7 +3304,7 @@ class RearPortCreateForm(ComponentCreateForm):
     )
 
 
-class RearPortBulkCreateForm(form_from_model(RearPort, ["type", "positions"]), DeviceBulkAddComponentForm):
+class RearPortBulkCreateForm(form_from_model(RearPort, ["type", "positions", "tags"]), DeviceBulkAddComponentForm):
     field_order = (
         "name_pattern",
         "label_pattern",
@@ -3377,7 +3389,7 @@ class PopulateDeviceBayForm(BootstrapMixin, forms.Form):
         ).exclude(pk=device_bay.device.pk)
 
 
-class DeviceBayBulkCreateForm(DeviceBulkAddComponentForm):
+class DeviceBayBulkCreateForm(form_from_model(DeviceBay, ["tags"]), DeviceBulkAddComponentForm):
     field_order = ("name_pattern", "label_pattern", "description", "tags")
 
 
@@ -3505,7 +3517,7 @@ class InventoryItemCSVForm(CustomFieldModelCSVForm):
 
 
 class InventoryItemBulkCreateForm(
-    form_from_model(InventoryItem, ["manufacturer", "part_id", "serial", "asset_tag", "discovered"]),
+    form_from_model(InventoryItem, ["manufacturer", "part_id", "serial", "asset_tag", "discovered", "tags"]),
     DeviceBulkAddComponentForm,
 ):
     field_order = (
