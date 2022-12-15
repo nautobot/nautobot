@@ -524,7 +524,7 @@ class RackReservationFilterSet(NautobotFilterSet, TenancyModelFilterSetMixin):
     user = NaturalKeyOrPKMultipleChoiceFilter(
         queryset=get_user_model().objects.all(),
         to_field_name="username",
-        label="User (name or ID)",
+        label="User (username or ID)",
     )
     # TODO: solve https://github.com/nautobot/nautobot/issues/2875 to use this filter correctly
     rack = NaturalKeyOrPKMultipleChoiceFilter(
@@ -930,11 +930,6 @@ class DeviceFilterSet(
         to_field_name="name",
         label="VM cluster (name or ID)",
     )
-    model = NaturalKeyOrPKMultipleChoiceFilter(
-        field_name="device_type",
-        queryset=DeviceType.objects.all(),
-        label="Device model (slug or ID)",
-    )
     is_full_depth = django_filters.BooleanFilter(
         field_name="device_type__is_full_depth",
         label="Is full depth",
@@ -972,6 +967,7 @@ class DeviceFilterSet(
         field_name="consoleports",
         label="Has console ports",
     )
+    # TODO Remove this filter definition and add it to Meta.fields after resolving https://github.com/nautobot/nautobot/issues/2520
     console_ports = django_filters.ModelMultipleChoiceFilter(
         field_name="consoleports",
         queryset=ConsolePort.objects.all(),
@@ -981,6 +977,7 @@ class DeviceFilterSet(
         field_name="consoleserverports",
         label="Has console server ports",
     )
+    # TODO Remove this filter definition and add it to Meta.fields after resolving https://github.com/nautobot/nautobot/issues/2520
     console_server_ports = django_filters.ModelMultipleChoiceFilter(
         queryset=ConsoleServerPort.objects.all(),
         field_name="consoleserverports",
@@ -990,6 +987,7 @@ class DeviceFilterSet(
         field_name="powerports",
         label="Has power ports",
     )
+    # TODO Remove this filter definition and add it to Meta.fields after resolving https://github.com/nautobot/nautobot/issues/2520
     power_ports = django_filters.ModelMultipleChoiceFilter(
         queryset=PowerPort.objects.all(),
         field_name="powerports",
@@ -999,6 +997,7 @@ class DeviceFilterSet(
         field_name="poweroutlets",
         label="Has power outlets",
     )
+    # TODO Remove this filter definition and add it to Meta.fields after resolving https://github.com/nautobot/nautobot/issues/2520
     power_outlets = django_filters.ModelMultipleChoiceFilter(
         queryset=PowerOutlet.objects.all(),
         field_name="poweroutlets",
@@ -1012,6 +1011,7 @@ class DeviceFilterSet(
         field_name="frontports",
         label="Has front ports",
     )
+    # TODO Remove this filter definition and add it to Meta.fields after resolving https://github.com/nautobot/nautobot/issues/2520
     front_ports = django_filters.ModelMultipleChoiceFilter(
         queryset=FrontPort.objects.all(),
         field_name="frontports",
@@ -1021,6 +1021,7 @@ class DeviceFilterSet(
         field_name="rearports",
         label="Has rear ports",
     )
+    # TODO Remove this filter definition and add it to Meta.fields after resolving https://github.com/nautobot/nautobot/issues/2520
     rear_ports = django_filters.ModelMultipleChoiceFilter(
         queryset=RearPort.objects.all(),
         field_name="rearports",
@@ -1030,6 +1031,7 @@ class DeviceFilterSet(
         field_name="devicebays",
         label="Has device bays",
     )
+    # TODO Remove this filter definition and add it to Meta.fields after resolving https://github.com/nautobot/nautobot/issues/2520
     device_bays = django_filters.ModelMultipleChoiceFilter(
         queryset=DeviceBay.objects.all(),
         field_name="devicebays",

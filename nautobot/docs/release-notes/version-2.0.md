@@ -12,9 +12,23 @@ If you are a user migrating from Nautobot v1.X, please refer to the ["Upgrading 
 
 ### Changed
 
+#### Renamed Filter Fields ([#2804](https://github.com/nautobot/nautobot/pull/2804))
+
+Some filter fields have been renamed to reflect their functionalities better.
+
+For example in v1.X, to filter `FrontPorts` that has a cable attached in the UI or make changes to them via Rest API, you would use the `cabled` filter:
+
+`/dcim/front-ports/?cabled=True`
+
+Now in v2.x, you would instead use the `has_cable` filter which has a more user-friendly name:
+
+`/dcim/front-ports/?has_cable=True`
+
+Check out the specific changes documented in the table at [UI and REST API Filter Changes](../installation/upgrading-from-nautobot-v1.md#renamed-filter-fields)
+
 #### Enhanced Filter Fields ([#2804](https://github.com/nautobot/nautobot/pull/2804))
 
-In nautobot v2.X, we changed some of the filter fields to enable filtering by both slugs and UUID primary keys:
+Many filter fields have been enhanced to enable filtering by both slugs and UUID primary keys.
 
 For example in v1.X, to filter `Regions` with a specific `parent` value in the UI or make changes to them via Rest API, you are only able to input slugs as the filter values:
 
@@ -24,7 +38,7 @@ Now in v2.x, you are able to filter those `Regions` by slugs or UUID primary key
 
 `/dcim/regions/?parent=<slug>` or `/dcim/regions/?parent=<uuid>`
 
-Check out the specific changes documented in the table at [Updating from Nautobot 1.5 to 2.0](../installation/upgrading-from-nautobot-v1.md#enhanced-filter-fields)
+Check out the specific changes documented in the table at [UI and REST API Filter Changes](../installation/upgrading-from-nautobot-v1.md#enhanced-filter-fields)
 
 #### Corrected Filter Fields ([#2804](https://github.com/nautobot/nautobot/pull/2804))
 
@@ -38,7 +52,7 @@ This has been addressed in v2.x as follows:
 
 `console_ports` and similar filters are taking foreign key UUIDs as input values and can be used in this format: `/dcim/devices/?console_ports=<uuid>` whereas `has_console_ports` and similar filters remain the same.
 
-Check out the specific changes documented in the table at [Updating from Nautobot 1.5 to 2.0](../installation/upgrading-from-nautobot-v1.md#corrected-filter-fields)
+Check out the specific changes documented in the table at [UI and REST API Filter Changes](../installation/upgrading-from-nautobot-v1.md#corrected-filter-fields)
 
 ### Removed
 
@@ -60,6 +74,6 @@ Now in v2.x, that format is no longer supported. Instead, you would use:
 
 `/dcim/devices/?site=<uuid>`
 
-Check out the specific changes documented in the table at [Updating from Nautobot 1.5 to 2.0](../installation/upgrading-from-nautobot-v1.md#removed-redundant-filter-fields)
+Check out the specific changes documented in the table at [UI and REST API Filter Changes](../installation/upgrading-from-nautobot-v1.md#removed-redundant-filter-fields)
 
 <!-- towncrier release notes start -->

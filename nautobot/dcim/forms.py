@@ -2257,44 +2257,44 @@ class DeviceFilterForm(
         label="Has a primary IP",
         widget=StaticSelect2(choices=BOOLEAN_WITH_BLANK_CHOICES),
     )
-    has_interfaces = forms.NullBooleanField(
-        required=False,
-        label="Has interfaces",
-        widget=StaticSelect2(choices=BOOLEAN_WITH_BLANK_CHOICES),
-    )
     virtual_chassis_member = forms.NullBooleanField(
         required=False,
         label="Virtual chassis member",
         widget=StaticSelect2(choices=BOOLEAN_WITH_BLANK_CHOICES),
     )
-    console_ports = forms.NullBooleanField(
+    has_console_ports = forms.NullBooleanField(
         required=False,
         label="Has console ports",
         widget=StaticSelect2(choices=BOOLEAN_WITH_BLANK_CHOICES),
     )
-    console_server_ports = forms.NullBooleanField(
+    has_console_server_ports = forms.NullBooleanField(
         required=False,
         label="Has console server ports",
         widget=StaticSelect2(choices=BOOLEAN_WITH_BLANK_CHOICES),
     )
-    power_ports = forms.NullBooleanField(
+    has_power_ports = forms.NullBooleanField(
         required=False,
         label="Has power ports",
         widget=StaticSelect2(choices=BOOLEAN_WITH_BLANK_CHOICES),
     )
-    power_outlets = forms.NullBooleanField(
+    has_power_outlets = forms.NullBooleanField(
         required=False,
         label="Has power outlets",
         widget=StaticSelect2(choices=BOOLEAN_WITH_BLANK_CHOICES),
     )
-    interfaces = forms.NullBooleanField(
+    has_interfaces = forms.NullBooleanField(
         required=False,
         label="Has interfaces",
         widget=StaticSelect2(choices=BOOLEAN_WITH_BLANK_CHOICES),
     )
-    pass_through_ports = forms.NullBooleanField(
+    has_front_ports = forms.NullBooleanField(
         required=False,
-        label="Has pass-through ports",
+        label="Has front ports",
+        widget=StaticSelect2(choices=BOOLEAN_WITH_BLANK_CHOICES),
+    )
+    has_rear_ports = forms.NullBooleanField(
+        required=False,
+        label="Has rear ports",
         widget=StaticSelect2(choices=BOOLEAN_WITH_BLANK_CHOICES),
     )
     tag = TagFilterField(model)
