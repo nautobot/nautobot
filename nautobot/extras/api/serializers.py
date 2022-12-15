@@ -53,6 +53,7 @@ from nautobot.extras.models import (
     ObjectChange,
     Relationship,
     RelationshipAssociation,
+    Role,
     ScheduledJob,
     Secret,
     SecretsGroup,
@@ -61,7 +62,7 @@ from nautobot.extras.models import (
     Tag,
     Webhook,
 )
-from nautobot.extras.utils import ChangeLoggedModelsQuery, FeatureQuery, TaggableClassesQuery
+from nautobot.extras.utils import ChangeLoggedModelsQuery, FeatureQuery, RoleModelsQuery, TaggableClassesQuery
 from nautobot.tenancy.api.nested_serializers import (
     NestedTenantSerializer,
     NestedTenantGroupSerializer,
@@ -1121,6 +1122,32 @@ class RelationshipAssociationSerializer(ValidatedModelSerializer):
             "source_id",
             "destination_type",
             "destination_id",
+        ]
+
+
+#
+# Roles
+#
+
+
+class RoleSerializer(NautobotModelSerializer):
+    """Serializer for `Role` objects."""
+
+    url = serializers.HyperlinkedIdentityField(view_name="extras-api:role-detail")
+    content_types = ContentTypeField(
+        queryset=RoleModelsQuery().as_queryset(),
+        many=True,
+    )
+
+    class Meta:
+        model = Role
+        fields = [
+            "url",
+            "content_types",
+            "name",
+            "slug",
+            "color",
+            "weight",
         ]
 
 

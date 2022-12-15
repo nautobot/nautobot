@@ -48,6 +48,7 @@ from nautobot.extras.models import (
     ObjectChange,
     Relationship,
     RelationshipAssociation,
+    Role,
     ScheduledJob,
     Secret,
     SecretsGroup,
@@ -1053,6 +1054,17 @@ class RelationshipAssociationViewSet(ModelViewSet):
     queryset = RelationshipAssociation.objects.all()
     serializer_class = serializers.RelationshipAssociationSerializer
     filterset_class = filters.RelationshipAssociationFilterSet
+
+
+#
+# Roles
+#
+
+
+class RoleViewSet(NautobotModelViewSet):
+    queryset = Role.objects.all()
+    serializer_class = serializers.RoleSerializer
+    filterset_class = filters.RoleFilterSet
 
 
 #
