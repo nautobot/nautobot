@@ -13,7 +13,7 @@ from django.utils.safestring import mark_safe
 
 from nautobot.dcim.choices import DeviceFaceChoices, DeviceRedundancyGroupFailoverStrategyChoices, SubdeviceRoleChoices
 
-from nautobot.extras.models import ConfigContextModel, RoleModelMixin, StatusModel
+from nautobot.extras.models import ConfigContextModel, RoleRequiredRoleModelMixin, StatusModel
 from nautobot.extras.querysets import ConfigContextModelQuerySet
 from nautobot.extras.utils import extras_features
 from nautobot.core.fields import AutoSlugField
@@ -449,7 +449,7 @@ class Platform(OrganizationalModel):
     "statuses",
     "webhooks",
 )
-class Device(PrimaryModel, ConfigContextModel, StatusModel, RoleModelMixin):
+class Device(PrimaryModel, ConfigContextModel, StatusModel, RoleRequiredRoleModelMixin):
     """
     A Device represents a piece of physical hardware. Each Device is assigned a DeviceType,
     DeviceRole, and (optionally) a Platform. Device names are not required, however if one is set it must be unique.

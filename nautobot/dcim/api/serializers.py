@@ -74,6 +74,7 @@ from nautobot.dcim.models import (
 )
 from nautobot.extras.api.serializers import (
     NautobotModelSerializer,
+    RoleRequiredRoleModelSerializerMixin,
     RoleModelSerializerMixin,
     StatusModelSerializerMixin,
     TaggedObjectSerializer,
@@ -742,7 +743,7 @@ class PlatformSerializer(NautobotModelSerializer):
 
 
 class DeviceSerializer(
-    NautobotModelSerializer, TaggedObjectSerializer, StatusModelSerializerMixin, RoleModelSerializerMixin
+    NautobotModelSerializer, TaggedObjectSerializer, StatusModelSerializerMixin, RoleRequiredRoleModelSerializerMixin
 ):
     url = serializers.HyperlinkedIdentityField(view_name="dcim-api:device-detail")
     device_type = NestedDeviceTypeSerializer()

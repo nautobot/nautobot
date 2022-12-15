@@ -35,7 +35,6 @@ class Migration(migrations.Migration):
             model_name="device",
             name="new_role",
             field=nautobot.extras.models.roles.RoleField(
-                null=True,
                 on_delete=django.db.models.deletion.PROTECT,
                 related_name="dcim_device_related",
                 to="extras.role",
@@ -54,6 +53,7 @@ class Migration(migrations.Migration):
             name="new_role",
             field=nautobot.extras.models.roles.RoleField(
                 null=True,
+                blank=True,
                 on_delete=django.db.models.deletion.PROTECT,
                 related_name="dcim_rack_related",
                 to="extras.role",
