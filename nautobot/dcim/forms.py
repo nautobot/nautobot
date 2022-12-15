@@ -27,6 +27,9 @@ from nautobot.extras.forms import (
     LocalContextFilterForm,
     LocalContextModelForm,
     LocalContextModelBulkEditForm,
+    RoleModelBulkEditFormMixin,
+    RoleModelCSVFormMixin,
+    RoleModelFilterFormMixin,
     StatusModelBulkEditFormMixin,
     StatusModelCSVFormMixin,
     StatusModelFilterFormMixin,
@@ -130,7 +133,6 @@ from .models import (
     Site,
     VirtualChassis,
 )
-from ..extras.forms.mixins import RoleModelBulkEditFormMixin, RoleModelCSVFormMixin, RoleModelFilterFormMixin
 
 DEVICE_BY_PK_RE = r"{\d+\}"
 

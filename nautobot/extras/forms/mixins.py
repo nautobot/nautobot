@@ -51,6 +51,9 @@ __all__ = (
     "CustomFieldFilterForm",
     "CustomFieldModelForm",
     "RelationshipModelForm",
+    "RoleModelBulkEditFormMixin",
+    "RoleModelCSVFormMixin",
+    "RoleModelFilterFormMixin",
     "StatusBulkEditFormMixin",
     "StatusFilterFormMixin",
 )

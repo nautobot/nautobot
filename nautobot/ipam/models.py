@@ -617,7 +617,7 @@ class Prefix(PrimaryModel, StatusModel, RoleModelMixin):
             self.vlan.group.name if self.vlan and self.vlan.group else None,
             self.vlan.vid if self.vlan else None,
             self.get_status_display(),
-            self.get_role_display(),
+            self.role.name if self.role else None,
             self.is_pool,
             self.description,
         )
@@ -956,7 +956,7 @@ class IPAddress(PrimaryModel, StatusModel, RoleModelMixin):
             self.vrf.name if self.vrf else None,
             self.tenant.name if self.tenant else None,
             self.get_status_display(),
-            self.get_role_display(),
+            self.role.name if self.role else None,
             obj_type,
             self.assigned_object_id,
             is_primary,
@@ -1240,7 +1240,7 @@ class VLAN(PrimaryModel, StatusModel, RoleModelMixin):
             self.name,
             self.tenant.name if self.tenant else None,
             self.get_status_display(),
-            self.get_role_display(),
+            self.role.name if self.role else None,
             self.description,
         )
 

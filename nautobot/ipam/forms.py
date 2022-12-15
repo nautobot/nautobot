@@ -13,6 +13,9 @@ from nautobot.extras.forms import (
     NautobotBulkEditForm,
     NautobotModelForm,
     NautobotFilterForm,
+    RoleModelBulkEditFormMixin,
+    RoleModelCSVFormMixin,
+    RoleModelFilterFormMixin,
     StatusModelBulkEditFormMixin,
     StatusModelCSVFormMixin,
     StatusModelFilterFormMixin,
@@ -62,7 +65,6 @@ from .models import (
     VLANGroup,
     VRF,
 )
-from ..extras.forms.mixins import RoleModelBulkEditFormMixin, RoleModelCSVFormMixin, RoleModelFilterFormMixin
 
 PREFIX_MASK_LENGTH_CHOICES = add_blank_choice([(i, i) for i in range(PREFIX_LENGTH_MIN, PREFIX_LENGTH_MAX + 1)])
 

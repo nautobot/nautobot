@@ -378,7 +378,7 @@ class VirtualMachine(PrimaryModel, ConfigContextModel, StatusModel, RoleModelMix
         return (
             self.name,
             self.get_status_display(),
-            self.get_role_display(),
+            self.role.name if self.role else None,
             self.cluster.name,
             self.tenant.name if self.tenant else None,
             self.platform.name if self.platform else None,
