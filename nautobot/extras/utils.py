@@ -78,7 +78,6 @@ class FeaturedQueryMixin:
 
     def list_subclasses(self):
         """Return a list of classes that has implements this `name`."""
-
         raise NotImplementedError("list_subclasses is not implemented")
 
     def __call__(self):
@@ -177,8 +176,7 @@ class RoleModelsQuery(FeaturedQueryMixin):
 
         model_classes = []
         for model_class in apps.get_models():
-            role_field = getattr(model_class, "roles", None)
-            if role_field and isinstance(role_field, RoleField):
+            if hasattr(model_class, "roles") and isinstance(model_class.roles, RoleField):
                 model_classes.append(model_class)
         return model_classes
 
