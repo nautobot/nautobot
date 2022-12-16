@@ -10,7 +10,7 @@ import yaml
 from django.contrib.contenttypes.models import ContentType
 from django.test import RequestFactory
 
-from nautobot.dcim.models import Device, DeviceRole, DeviceType, Manufacturer, Site
+from nautobot.dcim.models import Device, DeviceType, Manufacturer, Site
 from nautobot.ipam.models import VLAN
 
 from nautobot.extras.choices import (

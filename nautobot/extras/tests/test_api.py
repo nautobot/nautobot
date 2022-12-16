@@ -13,12 +13,10 @@ from rest_framework import status
 
 from nautobot.dcim.models import (
     Device,
-    DeviceRole,
     DeviceType,
     Manufacturer,
     Rack,
     RackGroup,
-    RackRole,
     Site,
 )
 from nautobot.dcim.tests import test_views

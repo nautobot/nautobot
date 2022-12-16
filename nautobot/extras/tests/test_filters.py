@@ -7,7 +7,6 @@ from django.db.models import Q
 from nautobot.dcim.filters import DeviceFilterSet
 from nautobot.dcim.models import (
     Device,
-    DeviceRole,
     DeviceType,
     Interface,
     Manufacturer,

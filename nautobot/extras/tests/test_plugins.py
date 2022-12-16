@@ -10,7 +10,7 @@ from django.urls import NoReverseMatch, reverse
 import netaddr
 
 from nautobot.circuits.models import Circuit, CircuitType, Provider
-from nautobot.dcim.models import Device, DeviceType, DeviceRole, Manufacturer, Site
+from nautobot.dcim.models import Device, DeviceType, Manufacturer, Site
 from nautobot.dcim.tests.test_views import create_test_device
 from nautobot.tenancy.models import Tenant, TenantGroup
 from nautobot.tenancy.filters import TenantFilterSet

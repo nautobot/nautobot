@@ -41,7 +41,6 @@ from nautobot.dcim.models import (
     ConsolePort,
     ConsoleServerPort,
     Device,
-    DeviceRole,
     DeviceType,
     FrontPort,
     Interface,

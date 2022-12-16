@@ -10,7 +10,6 @@ from nautobot.dcim.filters import DeviceFilterSet
 from nautobot.dcim.forms import DeviceFilterForm, DeviceForm
 from nautobot.dcim.models import (
     Device,
-    DeviceRole,
     DeviceType,
     FrontPort,
     Location,
