@@ -18,6 +18,10 @@
                     <td>{{ object.description }}</td>
                 </tr>
                 <tr>
+                    <td>Failover Strategy</td>
+                    <td>{{ object.get_failover_strategy_display }}</td>
+                </tr>
+                <tr>
                     <td>Secrets Group</td>
                     <td>{{ object.secrets_group|hyperlinked_object }}</td>
                 </tr>

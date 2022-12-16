@@ -176,7 +176,7 @@ Example:
 
 ### `plugin_custom_validators`
 
-Plugin [custom validator classes](../plugins/development.md#implementing-custom-validators) that provide additional data model validation logic. Implemented as a dictionary mapping data model names to a list of `PluginCustomValidator` subclasses, for example:
+Plugin [custom validator classes](../plugins/development.md#implementing-custom-validators) that provide additional data model validation logic. Implemented as a dictionary mapping data model names to a list of `CustomValidator` subclasses, for example:
 
 ```python
 {

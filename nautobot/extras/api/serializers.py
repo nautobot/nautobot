@@ -1,5 +1,8 @@
+import logging
+
 from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ObjectDoesNotExist
+from django.urls import NoReverseMatch
 from django.utils.functional import classproperty
 from drf_spectacular.utils import extend_schema_field
 from rest_framework import serializers
@@ -27,6 +30,7 @@ from nautobot.extras.api.fields import StatusSerializerField
 from nautobot.extras.choices import (
     CustomFieldFilterLogicChoices,
     CustomFieldTypeChoices,
+    JobExecutionType,
     JobResultStatusChoices,
     ObjectChangeActionChoices,
 )
@@ -70,6 +74,7 @@ from nautobot.tenancy.api.nested_serializers import (
 from nautobot.tenancy.models import Tenant, TenantGroup
 from nautobot.users.api.nested_serializers import NestedUserSerializer
 from nautobot.utilities.api import get_serializer_for_model
+from nautobot.utilities.deprecation import class_deprecated_in_favor_of
 from nautobot.utilities.utils import get_route_for_model, slugify_dashes_to_underscores
 from nautobot.virtualization.api.nested_serializers import (
     NestedClusterGroupSerializer,
@@ -77,7 +82,7 @@ from nautobot.virtualization.api.nested_serializers import (
 )
 from nautobot.virtualization.models import Cluster, ClusterGroup
 
-from .customfields import CustomFieldModelSerializer
+from .customfields import CustomFieldModelSerializerMixin
 from .fields import MultipleChoiceJSONField
 from .relationships import RelationshipModelSerializerMixin
 
@@ -115,6 +120,8 @@ from .nested_serializers import (  # noqa: F401
 # Mixins and Base Classes
 #
 
+logger = logging.getLogger(__name__)
+
 
 class NotesSerializerMixin(BaseModelSerializer):
     """Extend Serializer with a `notes` field."""
@@ -130,12 +137,26 @@ class NotesSerializerMixin(BaseModelSerializer):
 
     @extend_schema_field(serializers.URLField())
     def get_notes_url(self, instance):
-        notes_url = get_route_for_model(instance, "notes", api=True)
-        return reverse(notes_url, args=[instance.id], request=self.context["request"])
+        try:
+            notes_url = get_route_for_model(instance, "notes", api=True)
+            return reverse(notes_url, args=[instance.id], request=self.context["request"])
+        except NoReverseMatch:
+            model_name = type(instance).__name__
+            logger.warning(
+                (
+                    f"Notes feature is not available for model {model_name}. "
+                    "Please make sure to: "
+                    f"1. Include NotesMixin from nautobot.extras.model.mixins in the {model_name} class definition "
+                    f"2. Include NotesViewSetMixin from nautobot.extras.api.mixins in the {model_name}ViewSet "
+                    "before including NotesSerializerMixin in the model serializer"
+                )
+            )
+
+            return None
 
 
 class NautobotModelSerializer(
-    RelationshipModelSerializerMixin, CustomFieldModelSerializer, NotesSerializerMixin, ValidatedModelSerializer
+    RelationshipModelSerializerMixin, CustomFieldModelSerializerMixin, NotesSerializerMixin, ValidatedModelSerializer
 ):
     """Base class to use for serializers based on OrganizationalModel or PrimaryModel.
 
@@ -187,8 +208,7 @@ class TagSerializerField(LimitQuerysetChoicesSerializerMixin, NestedTagSerialize
     """NestedSerializer field for `Tag` object fields."""
 
 
-# TODO should be TaggedModelSerializerMixin
-class TaggedObjectSerializer(BaseModelSerializer):
+class TaggedModelSerializerMixin(BaseModelSerializer):
     tags = TagSerializerField(many=True, required=False)
 
     def get_field_names(self, declared_fields, info):
@@ -224,6 +244,12 @@ class TaggedObjectSerializer(BaseModelSerializer):
             instance.tags.clear()
 
         return instance
+
+
+# TODO: remove in 2.2
+@class_deprecated_in_favor_of(TaggedModelSerializerMixin)
+class TaggedObjectSerializer(TaggedModelSerializerMixin):
+    pass
 
 
 #
@@ -732,7 +758,7 @@ class ImageAttachmentSerializer(ValidatedModelSerializer):
 #
 
 
-class JobSerializer(NautobotModelSerializer, TaggedObjectSerializer):
+class JobSerializer(NautobotModelSerializer, TaggedModelSerializerMixin):
     url = serializers.HyperlinkedIdentityField(view_name="extras-api:job-detail")
 
     class Meta:
@@ -821,7 +847,7 @@ class JobRunResponseSerializer(serializers.Serializer):
 #
 
 
-class JobResultSerializer(CustomFieldModelSerializer, BaseModelSerializer):
+class JobResultSerializer(CustomFieldModelSerializerMixin, BaseModelSerializer):
     url = serializers.HyperlinkedIdentityField(view_name="extras-api:jobresult-detail")
     user = NestedUserSerializer(read_only=True)
     status = ChoiceField(choices=JobResultStatusChoices, read_only=True)
@@ -965,6 +991,44 @@ class JobInputSerializer(serializers.Serializer):
     commit = serializers.BooleanField(required=False, default=None)
     schedule = NestedScheduledJobSerializer(required=False)
     task_queue = serializers.CharField(required=False, allow_blank=True)
+
+
+class JobMultiPartInputSerializer(serializers.Serializer):
+    """JobMultiPartInputSerializer is a "flattened" version of JobInputSerializer for use with multipart/form-data submissions which only accept key-value pairs"""
+
+    _commit = serializers.BooleanField(required=False, default=None)
+    _schedule_name = serializers.CharField(max_length=255, required=False)
+    _schedule_start_time = serializers.DateTimeField(format=None, required=False)
+    _schedule_interval = ChoiceField(choices=JobExecutionType, required=False)
+    _schedule_crontab = serializers.CharField(required=False, allow_blank=True)
+    _task_queue = serializers.CharField(required=False, allow_blank=True)
+
+    def validate(self, data):
+        data = super().validate(data)
+
+        if "_schedule_interval" in data and data["_schedule_interval"] != JobExecutionType.TYPE_IMMEDIATELY:
+            if "_schedule_name" not in data:
+                raise serializers.ValidationError({"_schedule_name": "Please provide a name for the job schedule."})
+
+            if ("_schedule_start_time" not in data and data["_schedule_interval"] != JobExecutionType.TYPE_CUSTOM) or (
+                "_schedule_start_time" in data and data["_schedule_start_time"] < ScheduledJob.earliest_possible_time()
+            ):
+                raise serializers.ValidationError(
+                    {
+                        "_schedule_start_time": "Please enter a valid date and time greater than or equal to the current date and time."
+                    }
+                )
+
+            if data["_schedule_interval"] == JobExecutionType.TYPE_CUSTOM:
+
+                if data.get("_schedule_crontab") is None:
+                    raise serializers.ValidationError({"_schedule_crontab": "Please enter a valid crontab."})
+                try:
+                    ScheduledJob.get_crontab(data["_schedule_crontab"])
+                except Exception as e:
+                    raise serializers.ValidationError({"_schedule_crontab": e})
+
+        return data
 
 
 class JobLogEntrySerializer(BaseModelSerializer):
@@ -1166,7 +1230,7 @@ class RoleSerializer(NautobotModelSerializer):
 #
 
 
-class SecretSerializer(NautobotModelSerializer, TaggedObjectSerializer):
+class SecretSerializer(NautobotModelSerializer, TaggedModelSerializerMixin):
     """Serializer for `Secret` objects."""
 
     url = serializers.HyperlinkedIdentityField(view_name="extras-api:secret-detail")

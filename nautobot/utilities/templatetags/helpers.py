@@ -2,20 +2,18 @@ import datetime
 import json
 import re
 
-import yaml
 from django import template
 from django.conf import settings
 from django.contrib.staticfiles.finders import find
-from django.templatetags.static import static, StaticNode
+from django.templatetags.static import StaticNode, static
 from django.urls import NoReverseMatch, reverse
 from django.utils.html import format_html, strip_tags
 from django.utils.safestring import mark_safe
-from markdown import markdown
 from django_jinja import library
+from markdown import markdown
+import yaml
 
-from nautobot.utilities.config import get_settings_or_config
-from nautobot.utilities.forms import TableConfigForm
-from nautobot.utilities.utils import foreground_color, get_route_for_model, UtilizationData
+from nautobot.utilities import config, forms, utils
 
 HTML_TRUE = '<span class="text-success"><i class="mdi mdi-check-bold" title="Yes"></i></span>'
 HTML_FALSE = '<span class="text-danger"><i class="mdi mdi-close-thick" title="No"></i></span>'
@@ -222,7 +220,7 @@ def viewname(model, action):
         >>> viewname(Device, "list")
         "dcim:device_list"
     """
-    return get_route_for_model(model, action)
+    return utils.get_route_for_model(model, action)
 
 
 @library.filter()
@@ -238,7 +236,7 @@ def validated_viewname(model, action):
     Returns:
         str or None: return the name of the view for the model/action provided if valid, or None if invalid.
     """
-    viewname_str = get_route_for_model(model, action)
+    viewname_str = utils.get_route_for_model(model, action)
 
     try:
         # Validate and return the view name. We don't return the actual URL yet because many of the templates
@@ -320,7 +318,7 @@ def fgcolor(value):
     value = value.lower().strip("#")
     if not re.match("^[0-9a-f]{6}$", value):
         return ""
-    return f"#{foreground_color(value)}"
+    return f"#{utils.foreground_color(value)}"
 
 
 @library.filter()
@@ -494,7 +492,7 @@ def get_item(d, key):
 @register.filter()
 def settings_or_config(key):
     """Get a value from Django settings (if specified there) or Constance configuration (otherwise)."""
-    return get_settings_or_config(key)
+    return config.get_settings_or_config(key)
 
 
 @library.filter()
@@ -553,7 +551,7 @@ def utilization_graph(utilization_data, warning_threshold=75, danger_threshold=9
     # See https://github.com/nautobot/nautobot/issues/1169
     # If `get_utilization()` threw an exception, utilization_data will be an empty string
     # rather than a UtilizationData instance. Avoid a potentially confusing exception in that case.
-    if not isinstance(utilization_data, UtilizationData):
+    if not isinstance(utilization_data, utils.UtilizationData):
         return {}
     return utilization_graph_raw_data(
         numerator=utilization_data.numerator,
@@ -618,7 +616,7 @@ def badge(value, show_empty=False):
 def table_config_form(table, table_name=None):
     return {
         "table_name": table_name or table.__class__.__name__,
-        "table_config_form": TableConfigForm(table=table),
+        "table_config_form": forms.TableConfigForm(table=table),
     }
 
 

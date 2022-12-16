@@ -89,35 +89,60 @@ The new version should ideally be a valid semver string or a valid bump rule: `p
 Display the current version with no arguments:
 
 ```no-highlight
-$ poetry version
+poetry version
+```
+
+Example output:
+
+```no-highlight
 nautobot 1.0.0-beta.2
 ```
 
 Bump pre-release versions using `prerelease`:
 
 ```no-highlight
-$ poetry version prerelease
+poetry version prerelease
+```
+
+Example output:
+
+```no-highlight
 Bumping version from 1.0.0-beta.2 to 1.0.0-beta.3
 ```
 
 For major versions, use `major`:
 
 ```no-highlight
-$ poetry version major
+poetry version major
+```
+
+Example output:
+
+```no-highlight
 Bumping version from 1.0.0-beta.2 to 1.0.0
 ```
 
 For patch versions, use `minor`:
 
 ```no-highlight
-$ poetry version minor
+poetry version minor
+```
+
+Example output:
+
+```no-highlight
 Bumping version from 1.0.0 to 1.1.0
 ```
 
 And lastly, for patch versions, you guessed it, use `patch`:
 
 ```no-highlight
-$ poetry version patch
+poetry version patch
+```
+
+Example output:
+
+```no-highlight
 Bumping version from 1.1.0 to 1.1.1
 ```
 
@@ -167,13 +192,13 @@ poetry run mkdocs build --no-directory-urls --strict
 Second, you'll need to build the Python package distributions (which will include the rendered documentation):
 
 ```no-highlight
-$ poetry build
+poetry build
 ```
 
 Finally, publish to PyPI using the username `__token__` and the Nautobot PyPI API token as the password. The API token can be found in the Nautobot maintainers vault (if you're a maintainer, you'll have access to this vault):
 
 ```no-highlight
-$ poetry publish --username __token__ --password <api_token>
+poetry publish --username __token__ --password <api_token>
 ```
 
 ### Publish Docker Images
@@ -228,6 +253,11 @@ Use `poetry version prepatch` to bump the version to the next release and commit
 For example, if you just released `v1.1.0`:
 
 ```no-highlight
-$ poetry version prepatch
+poetry version prepatch
+```
+
+Example output:
+
+```no-highlight
 Bumping version from 1.1.0 to 1.1.1-alpha.0
 ```

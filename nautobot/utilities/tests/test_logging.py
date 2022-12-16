@@ -1,8 +1,7 @@
-from nautobot.utilities.logging import sanitize
-from nautobot.utilities.testing import TestCase
+from nautobot.utilities import logging, testing
 
 
-class LoggingUtilitiesTest(TestCase):
+class LoggingUtilitiesTest(testing.TestCase):
 
     DIRTY_CLEAN = (
         # should match first default pattern
@@ -23,9 +22,9 @@ class LoggingUtilitiesTest(TestCase):
     def test_sanitize_default_coverage(self):
         """Test that the default sanitizer patterns cover a variety of cases."""
         for dirty, clean in self.DIRTY_CLEAN:
-            self.assertEqual(sanitize(dirty), clean)
+            self.assertEqual(logging.sanitize(dirty), clean)
 
     def test_sanitize_idempotent(self):
         """Test that sanitizing the same string repeatedly doesn't cascade oddly."""
         for dirty, clean in self.DIRTY_CLEAN:
-            self.assertEqual(sanitize(sanitize(dirty)), clean)
+            self.assertEqual(logging.sanitize(logging.sanitize(dirty)), clean)

@@ -14,8 +14,8 @@ This will install:
 - Redis server and client
 
 ```no-highlight
-$ sudo apt update -y
-$ sudo apt install -y git python3 python3-pip python3-venv python3-dev redis-server
+sudo apt update -y
+sudo apt install -y git python3 python3-pip python3-venv python3-dev redis-server
 ```
 
 ## Database Setup
@@ -33,7 +33,7 @@ Please follow the steps for your selected database backend below.
 This will install the PostgreSQL database server and client.
 
 ```no-highlight
-$ sudo apt install -y postgresql
+sudo apt install -y postgresql
 ```
 
 #### Create a PostgreSQL Database
@@ -42,11 +42,15 @@ At a minimum, we need to create a database for Nautobot and assign it a username
 is done with the following commands.
 
 !!! danger
-    **Do not use the password from the example.** Choose a strong, random password to ensure secure database
-    authentication for your Nautobot installation.
+    **Do not use the password from the example.** Choose a strong, random password to ensure secure database authentication for your Nautobot installation.
 
 ```no-highlight
-$ sudo -u postgres psql
+sudo -u postgres psql
+```
+
+Example output:
+
+```no-highlight
 psql (12.5 (Ubuntu 12.5-0ubuntu0.20.04.1))
 Type "help" for help.
 
@@ -66,7 +70,12 @@ You can verify that authentication works issuing the following command and provi
 If successful, you will enter a `nautobot` prompt. Type `\conninfo` to confirm your connection, or type `\q` to exit.
 
 ```no-highlight
-$ psql --username nautobot --password --host localhost nautobot
+psql --username nautobot --password --host localhost nautobot
+```
+
+Example output:
+
+```no-highlight
 Password for user nautobot:
 psql (12.5 (Ubuntu 12.5-0ubuntu0.20.04.1))
 SSL connection (protocol: TLSv1.3, cipher: TLS_AES_256_GCM_SHA384, bits: 256, compression: off)
@@ -99,7 +108,12 @@ At a minimum, we need to create a database for Nautobot and assign it a username
     **Do not use the password from the example.** Choose a strong, random password to ensure secure database authentication for your Nautobot installation.
 
 ```no-highlight
-$ sudo -u root mysql
+sudo -u root mysql
+```
+
+Example output:
+
+```no-highlight
 Welcome to the MySQL monitor.  Commands end with ; or \g.
 Your MySQL connection id is 11
 Server version: 8.0.25-0ubuntu0.20.04.1 (Ubuntu)
@@ -135,7 +149,12 @@ If successful, you will enter a `mysql>` prompt. Type `status` to confirm your c
     Replace `localhost` below with your database server if using a remote database.
 
 ```no-highlight
-$ mysql --user nautobot --password --host localhost nautobot
+mysql --user nautobot --password --host localhost nautobot
+```
+
+Example output:
+
+```no-highlight
 Enter password:
 Welcome to the MySQL monitor.  Commands end with ; or \g.
 Your MySQL connection id is 13
@@ -183,7 +202,12 @@ Bye
 Since Redis was already installed, let's just verify that it's working using `redis-cli`:
 
 ```no-highlight
-$ redis-cli ping
+redis-cli ping
+```
+
+Example output:
+
+```no-highlight
 PONG
 ```
 

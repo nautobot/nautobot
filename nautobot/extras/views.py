@@ -120,7 +120,7 @@ class ComputedFieldBulkDeleteView(generic.BulkDeleteView):
 # Config contexts
 #
 
-# TODO: disallow (or at least warn) user from manually editing config contexts that
+# TODO(Glenn): disallow (or at least warn) user from manually editing config contexts that
 # have an associated owner, such as a Git repository
 
 
@@ -203,7 +203,7 @@ class ObjectConfigContextView(generic.ObjectView):
 # Config context schemas
 #
 
-# TODO: disallow (or at least warn) user from manually editing config context schemas that
+# TODO(Glenn): disallow (or at least warn) user from manually editing config context schemas that
 # have an associated owner, such as a Git repository
 
 
@@ -582,9 +582,6 @@ class DynamicGroupEditView(generic.ObjectEditView):
         filterform_class = instance.generate_filter_form()
 
         if filterform_class is None:
-            # FIXME(jathan): There is currently an edge case here that needs to be addressed:
-            # `AttributeError: 'NoneType' object has no attribute 'is_valid'`
-            # See: https://sentry.io/share/issue/fb41c6afb40248f6931021574bc38a0d/
             filter_form = None
         elif request.POST:
             filter_form = filterform_class(data=request.POST)
@@ -594,8 +591,6 @@ class DynamicGroupEditView(generic.ObjectEditView):
 
         ctx["filter_form"] = filter_form
 
-        # FIXME(jathan): Editing filter or groups are distinct. Both should not
-        # be possible. For now let's just get it working.
         formset_kwargs = {"instance": instance}
         if request.POST:
             formset_kwargs["data"] = request.POST
@@ -1581,7 +1576,7 @@ class ObjectChangeListView(generic.ObjectListView):
     template_name = "extras/objectchange_list.html"
     action_buttons = ("export",)
 
-    # TODO: Remove this remapping in 2.0 as it is addressing a potentially breaking change
+    # 2.0 TODO: Remove this remapping and solve it at the `BaseFilterSet` as it is addressing a breaking change.
     def get(self, request, **kwargs):
 
         # Remappings below allow previous queries of time_before and time_after to use
@@ -1737,7 +1732,7 @@ class ObjectNotesView(View):
                 "table": notes_table,
                 "base_template": self.base_template,
                 "active_tab": "notes",
-                "notes_form": notes_form,
+                "form": notes_form,
             },
         )
 

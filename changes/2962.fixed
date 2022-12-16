@@ -1,0 +1,1 @@
+Fixed an error raised when logging errors about a `Secret` with an invalid `provider`.

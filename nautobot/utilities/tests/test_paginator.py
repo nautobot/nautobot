@@ -1,18 +1,16 @@
 """Test the nautobot.utilities.paginator module."""
 
+from constance.test import override_config
 from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.test import RequestFactory, override_settings
 from django.urls import reverse
 
-from constance.test import override_config
-
-from nautobot.dcim.models import Site
-from nautobot.utilities.paginator import get_paginate_count
-from nautobot.utilities.testing import TestCase
+from nautobot.dcim import models
+from nautobot.utilities import paginator, testing
 
 
-class PaginatorTestCase(TestCase):
+class PaginatorTestCase(testing.TestCase):
     def setUp(self):
         User = get_user_model()
         self.user = User.objects.create(username="User 1", is_active=True)
@@ -24,20 +22,20 @@ class PaginatorTestCase(TestCase):
     def test_get_paginate_count_config(self):
         """Get the default paginate count from Constance config."""
         del settings.PAGINATE_COUNT
-        self.assertEqual(get_paginate_count(self.request), 100)
+        self.assertEqual(paginator.get_paginate_count(self.request), 100)
 
     @override_settings(PAGINATE_COUNT=50)
     @override_config(PAGINATE_COUNT=100)
     def test_get_paginate_count_settings(self):
         """Get the default paginate count from Django settings, overriding Constance config."""
-        self.assertEqual(get_paginate_count(self.request), 50)
+        self.assertEqual(paginator.get_paginate_count(self.request), 50)
 
     @override_settings(PAGINATE_COUNT=50)
     @override_config(PAGINATE_COUNT=100)
     def test_get_paginate_count_user_config(self):
         """Get the user's configured paginate count, overriding global defaults."""
         self.user.set_config("pagination.per_page", 200, commit=True)
-        self.assertEqual(get_paginate_count(self.request), 200)
+        self.assertEqual(paginator.get_paginate_count(self.request), 200)
 
     @override_settings(PAGINATE_COUNT=50)
     @override_config(PAGINATE_COUNT=100)
@@ -46,13 +44,13 @@ class PaginatorTestCase(TestCase):
         self.user.set_config("pagination.per_page", 200, commit=True)
         request = self.request_factory.get("some_paginated_view", {"per_page": 400})
         request.user = self.user
-        self.assertEqual(get_paginate_count(request), 400)
+        self.assertEqual(paginator.get_paginate_count(request), 400)
 
     @override_settings(MAX_PAGE_SIZE=10)
     @override_settings(PAGINATE_COUNT=50)
     def test_enforce_max_page_size(self):
         """Request an object list view and assert that the MAX_PAGE_SIZE setting is enforced"""
-        Site.objects.bulk_create([Site(name=f"TestSite{x}") for x in range(20)])
+        models.Site.objects.bulk_create([models.Site(name=f"TestSite{x}") for x in range(20)])
         url = reverse("dcim:site_list")
         self.add_permissions("dcim.view_site")
         self.client.force_login(self.user)

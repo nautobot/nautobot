@@ -4,7 +4,7 @@ from django import template as template_
 from django.conf import settings
 from django.utils.safestring import mark_safe
 
-from nautobot.extras.plugins import PluginBanner, PluginTemplateExtension
+from nautobot.extras.plugins import Banner, TemplateExtension
 from nautobot.extras.registry import registry
 
 register = template_.Library()
@@ -15,7 +15,7 @@ logger = logging.getLogger("nautobot.plugins")
 
 def _get_registered_content(obj, method, template_context, return_html=True):
     """
-    Given an object and a PluginTemplateExtension method name and the template context, return all the
+    Given an object and a TemplateExtension method name and the template context, return all the
     registered content for the object's model.
     """
     context = {
@@ -34,7 +34,7 @@ def _get_registered_content(obj, method, template_context, return_html=True):
 
         # If the class has not overridden the specified method, we can skip it (because we know it
         # will raise NotImplementedError).
-        if getattr(template_extension, method) == getattr(PluginTemplateExtension, method):
+        if getattr(template_extension, method) == getattr(TemplateExtension, method):
             continue
 
         # Update context with plugin-specific configuration parameters
@@ -111,11 +111,11 @@ def plugin_banners(context):
             continue
 
         if banner:
-            if isinstance(banner, PluginBanner):
+            if isinstance(banner, Banner):
                 banners.append(banner)
             else:
                 logger.error(
-                    "Plugin banner function %s should return a PluginBanner, but instead returned %s",
+                    "Plugin banner function %s should return a Banner, but instead returned %s",
                     banner_function,
                     banner,
                 )

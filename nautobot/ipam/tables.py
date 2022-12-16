@@ -52,8 +52,28 @@ IPADDRESS_LINK = """
 {% endif %}
 """
 
+IPADDRESS_COPY_LINK = """
+{% if record.present_in_database %}
+    <span class="hover_copy"><a href="{{ record.get_absolute_url }}" id="copy_{{record.id}}">{{ record.address }}</a><button type="button" class="btn btn-inline btn-default hover_copy_button" data-clipboard-target="#copy_{{record.id}}">
+                                <span class="mdi mdi-content-copy"></span>
+                            </button>
+                        </span>
+{% elif perms.ipam.add_ipaddress %}
+    <a href="{% url 'ipam:ipaddress_add' %}?address={{ record.1 }}{% if object.vrf %}&vrf={{ object.vrf.pk }}{% endif %}{% if object.tenant %}&tenant={{ object.tenant.pk }}{% endif %}" class="btn btn-xs btn-success">{% if record.0 <= 65536 %}{{ record.0 }}{% else %}Many{% endif %} IP{{ record.0|pluralize }} available</a>
+{% else %}
+    {% if record.0 <= 65536 %}{{ record.0 }}{% else %}Many{% endif %} IP{{ record.0|pluralize }} available
+{% endif %}
+"""
+
 IPADDRESS_ASSIGN_LINK = """
 <a href="{% url 'ipam:ipaddress_edit' pk=record.pk %}?{% if request.GET.interface %}interface={{ request.GET.interface }}{% elif request.GET.vminterface %}vminterface={{ request.GET.vminterface }}{% endif %}&return_url={{ request.GET.return_url }}">{{ record }}</a>
+"""
+
+IPADDRESS_ASSIGN_COPY_LINK = """
+<span class="hover_copy"><a href="{% url 'ipam:ipaddress_edit' pk=record.pk %}?{% if request.GET.interface %}interface={{ request.GET.interface }}{% elif request.GET.vminterface %}vminterface={{ request.GET.vminterface }}{% endif %}&return_url={{ request.GET.return_url }}" id="copy_{{record.pk}}">{{ record }}</a><button type="button" class="btn btn-inline btn-default hover_copy_button" data-clipboard-target="#copy_{{record.pk}}">
+                                <span class="mdi mdi-content-copy"></span>
+                            </button>
+                        </span>
 """
 
 VRF_LINK = """
@@ -249,7 +269,7 @@ class AggregateDetailTable(AggregateTable):
 class PrefixTable(StatusTableMixin, RoleTableMixin, BaseTable):
     pk = ToggleColumn()
     prefix = tables.TemplateColumn(
-        template_code=PREFIX_LINK, attrs={"td": {"class": "text-nowrap"}}, order_by=("network", "prefix_length")
+        template_code=PREFIX_COPY_LINK, attrs={"td": {"class": "text-nowrap"}}, order_by=("network", "prefix_length")
     )
     vrf = tables.TemplateColumn(template_code=VRF_LINK, verbose_name="VRF")
     tenant = TenantColumn()
@@ -337,7 +357,7 @@ class PrefixDetailTable(PrefixTable):
 class IPAddressTable(StatusTableMixin, RoleTableMixin, BaseTable):
     pk = ToggleColumn()
     address = tables.TemplateColumn(
-        template_code=IPADDRESS_LINK, verbose_name="IP Address", order_by=("host", "prefix_length")
+        template_code=IPADDRESS_COPY_LINK, verbose_name="IP Address", order_by=("host", "prefix_length")
     )
     vrf = tables.TemplateColumn(template_code=VRF_LINK, verbose_name="VRF")
     tenant = TenantColumn()
@@ -402,7 +422,7 @@ class IPAddressDetailTable(IPAddressTable):
 
 
 class IPAddressAssignTable(StatusTableMixin, BaseTable):
-    address = tables.TemplateColumn(template_code=IPADDRESS_ASSIGN_LINK, verbose_name="IP Address")
+    address = tables.TemplateColumn(template_code=IPADDRESS_ASSIGN_COPY_LINK, verbose_name="IP Address")
     assigned_object = tables.Column(orderable=False)
 
     class Meta(BaseTable.Meta):
@@ -425,7 +445,7 @@ class InterfaceIPAddressTable(StatusTableMixin, BaseTable):
     List IP addresses assigned to a specific Interface.
     """
 
-    address = tables.LinkColumn(verbose_name="IP Address")
+    address = tables.TemplateColumn(template_code=IPADDRESS_ASSIGN_COPY_LINK, verbose_name="IP Address")
     vrf = tables.TemplateColumn(template_code=VRF_LINK, verbose_name="VRF")
     tenant = TenantColumn()
 
