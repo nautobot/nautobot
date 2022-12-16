@@ -297,9 +297,7 @@ class Rack(PrimaryModel, StatusModel):
         "outer_depth",
         "outer_unit",
     ]
-    dynamic_group_filter_fields = {
-        "group": "group_id",  # Duplicate filter fields that will be collapsed in 2.0
-    }
+    dynamic_group_filter_fields = {}
     dynamic_group_skip_missing_fields = True  # Poor widget selection for `outer_depth` (no validators, limit supplied)
 
     class Meta:

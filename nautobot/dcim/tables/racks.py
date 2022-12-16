@@ -118,7 +118,7 @@ class RackTable(StatusTableMixin, BaseTable):
 class RackDetailTable(RackTable):
     device_count = LinkedCountColumn(
         viewname="dcim:device_list",
-        url_params={"rack_id": "pk"},
+        url_params={"rack": "pk"},
         verbose_name="Devices",
     )
     get_utilization = tables.TemplateColumn(template_code=UTILIZATION_GRAPH, orderable=False, verbose_name="Space")
