@@ -1,14 +1,13 @@
 from django import forms
 
-from nautobot.extras.plugins import PluginFilterExtension
-from nautobot.utilities.filters import MultiValueCharFilter
+from nautobot.apps.filters import FilterExtension, MultiValueCharFilter
 
 
 def suffix_search(queryset, name, value):
     return queryset.filter(description=f"{value[0]}.nautobot.com")
 
 
-class TenantFilterExtension(PluginFilterExtension):
+class TenantFilterExtension(FilterExtension):
     """Test instance showing both filterset_fields and filterform_fields in action."""
 
     model = "tenancy.tenant"
@@ -31,7 +30,7 @@ class TenantFilterExtension(PluginFilterExtension):
     }
 
 
-class DeviceFilterExtension(PluginFilterExtension):
+class DeviceFilterExtension(FilterExtension):
     """Created to test that filterset_fields and filterform_fields being empty dicts is fine."""
 
     model = "dcim.device"

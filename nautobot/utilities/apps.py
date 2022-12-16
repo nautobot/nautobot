@@ -1,17 +1,16 @@
-from nautobot.core.apps import NautobotConfig
+from nautobot.core import apps
 
 
-class UtilitiesConfig(NautobotConfig):
+class UtilitiesConfig(apps.NautobotConfig):
     name = "nautobot.utilities"
 
     def ready(self):
         super().ready()
 
         # Register netutils jinja2 filters in django_jinja and Django Template
-        from netutils.utils import jinja2_convenience_function
-        from django_jinja import library
-
         from django import template
+        from django_jinja import library
+        from netutils.utils import jinja2_convenience_function
 
         register = template.Library()
 

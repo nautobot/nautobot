@@ -39,7 +39,7 @@ def get_base_template(base_template, model):
     """
     if base_template is None:
         base_template = f"{model._meta.app_label}/{model._meta.model_name}.html"
-        # TODO: This can be removed once an object view has been established for every model.
+        # 2.0 TODO(Hanlin): This can be removed once an object view has been established for every model.
         try:
             get_template(base_template)
         except TemplateDoesNotExist:

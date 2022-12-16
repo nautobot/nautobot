@@ -9,7 +9,7 @@ class AbortTransaction(Exception):
     """
 
 
-# TODO remove this in 2.0
+# 2.0 TODO remove this in 2.0
 class RQWorkerNotRunningException(APIException):
     """
     Indicates the temporary inability to enqueue a legacy RQ task  because no RQ worker processes are currently running.

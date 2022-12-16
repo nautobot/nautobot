@@ -1,9 +1,8 @@
 from django.test import TestCase
 from jinja2.exceptions import TemplateAssertionError
-
 from netutils.utils import jinja2_convenience_function
 
-from nautobot.utilities.utils import render_jinja2
+from nautobot.utilities import utils
 
 
 class NautobotJinjaFilterTest(TestCase):
@@ -13,7 +12,7 @@ class NautobotJinjaFilterTest(TestCase):
 
         for helper in helpers_not_valid:
             with self.assertRaises(TemplateAssertionError):
-                render_jinja2("{{ data | " + helper + " }}", {"data": None})
+                utils.render_jinja2("{{ data | " + helper + " }}", {"data": None})
 
     def test_templatetags_helpers_in_jinja(self):
         """
@@ -47,7 +46,7 @@ class NautobotJinjaFilterTest(TestCase):
         # For each helper, try to render a jinja template with render_jinja2 and fail if TemplateAssertionError is raised
         for helper in helpers_to_validate:
             try:
-                render_jinja2("{{ data | " + helper + " }}", {"data": None})
+                utils.render_jinja2("{{ data | " + helper + " }}", {"data": None})
             except TemplateAssertionError:
                 raise
             except Exception:
@@ -59,7 +58,7 @@ class NautobotJinjaFilterTest(TestCase):
 
         for filter_ in filters.keys():
             try:
-                render_jinja2("{{ data | " + filter_ + " }}", {"data": None})
+                utils.render_jinja2("{{ data | " + filter_ + " }}", {"data": None})
             except TemplateAssertionError:
                 raise
             except Exception:

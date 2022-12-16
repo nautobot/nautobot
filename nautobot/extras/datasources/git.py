@@ -266,7 +266,7 @@ def ensure_git_repository(
     Note that this function may be called independently of the `pull_git_repository_and_refresh_data` job,
     such as to ensure that different Nautobot instances and/or worker instances all have a local copy of the same HEAD.
     Args:
-      repository_record (GitRepository)
+      repository_record (GitRepository): Repository to ensure the state of.
       job_result (JobResult): Optional JobResult to store results into.
       logger (logging.Logger): Optional Logger to additionally log results to.
       head (str): Optional Git commit hash to check out instead of pulling branch latest.

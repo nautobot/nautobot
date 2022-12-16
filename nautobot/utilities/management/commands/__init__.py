@@ -1,6 +1,5 @@
 from django.db import models
 
-
 EXEMPT_ATTRS = [
     "choices",
     "help_text",

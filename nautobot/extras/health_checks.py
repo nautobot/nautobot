@@ -1,4 +1,5 @@
 """Nautobot custom health checks."""
+from typing import Optional
 from urllib.parse import urlparse
 
 from django.conf import settings
@@ -6,6 +7,7 @@ from django.db import DatabaseError, IntegrityError, connection
 from funcy import omit
 from health_check.backends import BaseHealthCheckBackend
 from health_check.exceptions import ServiceReturnedUnexpectedResult, ServiceUnavailable
+from prometheus_client import Gauge
 from redis import exceptions, from_url
 from redis.client import Redis
 from redis.sentinel import Sentinel
@@ -13,8 +15,44 @@ from redis.sentinel import Sentinel
 from .models import HealthCheckTestModel
 
 
-class DatabaseBackend(BaseHealthCheckBackend):
+class NautobotHealthCheckBackend(BaseHealthCheckBackend):
+    """Automatically set metric based on the outcome of the check.
+
+    Due to the multiprocess nature of Nautobot we have multiple processes generating health check metrics. Most of these
+    seem to never run the health checks and therefore the value stays at the uninitiated value of -1. Therefore, we set
+    'multiprocess_mode' to "max", as the values 0 (down) or 1 (up) are always bigger than -1. Finally, we use a gauge
+    metric instead of the more intuitive enum, because the latter doesn't support multiprocessing.
+    """
+
+    MULTIPROCESS_MODE = "max"
+
+    states = {"unknown": -1, "down": 0, "up": 1}
+    metric: Optional[Gauge] = None  # Set this in subclasses
+
+    def __init__(self):
+        super().__init__()
+        # Initialize the metric as -1 if present
+        if self.metric:
+            self.metric.set(self.states["unknown"])
+
+    def run_check(self):
+        super().run_check()
+        if not self.metric:
+            return
+        if self.errors:
+            self.metric.set(self.states["down"])
+        else:
+            self.metric.set(self.states["up"])
+
+
+class DatabaseBackend(NautobotHealthCheckBackend):
     """Check database connectivity, test read/write if available."""
+
+    metric = Gauge(
+        "health_check_database_info",
+        "State of database backend",
+        multiprocess_mode=NautobotHealthCheckBackend.MULTIPROCESS_MODE,
+    )
 
     def check_status(self):
         """Check the database connection is available."""
@@ -34,7 +72,7 @@ class DatabaseBackend(BaseHealthCheckBackend):
             raise ServiceUnavailable("Database error")
 
 
-class RedisHealthCheck(BaseHealthCheckBackend):
+class RedisHealthCheck(NautobotHealthCheckBackend):
     """Cacheops and django_redis have 2 different data structures for configuring redis, however, the checks are the same for both."""
 
     def check_sentinel(self, sentinel_servers, service_name, db, **kwargs):
@@ -67,6 +105,9 @@ class RedisHealthCheck(BaseHealthCheckBackend):
 class CacheopsRedisBackend(RedisHealthCheck):
     """Health check for Cacheops Redis."""
 
+    # Since cacheops is going away in 2.0 and the cacheops metric didn't work immediately a decision was made to omit it
+    metric = None
+
     redis_url = getattr(settings, "CACHEOPS_REDIS", None)
     sentinel_url = getattr(settings, "CACHEOPS_SENTINEL", None)
 
@@ -93,6 +134,12 @@ class CacheopsRedisBackend(RedisHealthCheck):
 
 class RedisBackend(RedisHealthCheck):
     """Health check for Django Redis."""
+
+    metric = Gauge(
+        "health_check_redis_backend_info",
+        "State of redis backend",
+        multiprocess_mode=NautobotHealthCheckBackend.MULTIPROCESS_MODE,
+    )
 
     caches = getattr(settings, "CACHES", {}).get("default", {})
 

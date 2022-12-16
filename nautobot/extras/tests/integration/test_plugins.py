@@ -1,9 +1,7 @@
 import json
 import os
 import tempfile
-from unittest import skipIf
 
-from django.conf import settings
 from django.contrib.contenttypes.models import ContentType
 from django.urls import reverse
 
@@ -22,10 +20,6 @@ from nautobot.utilities.testing.integration import SeleniumTestCase
 from example_plugin.models import ExampleModel
 
 
-@skipIf(
-    "example_plugin" not in settings.PLUGINS,
-    "example_plugin not in settings.PLUGINS",
-)
 class PluginWebhookTest(SeleniumTestCase):
     """
     This test case proves that plugins can use the webhook functions when making changes on a model.
@@ -210,9 +204,9 @@ class PluginTabsTestCase(SeleniumTestCase):
         )
         # Visit the circuit's detail page and check that the tab is visible
         self.browser.visit(f'{self.live_server_url}{reverse("circuits:circuit", args=[str(circuit.pk)])}')
-        self.assertTrue(self.browser.is_text_present("Plugin Tab"))
+        self.assertTrue(self.browser.is_text_present("App Tab"))
         # Visit the tab link and check the view content
-        self.browser.links.find_by_partial_text("Plugin Tab")[0].click()
+        self.browser.links.find_by_partial_text("Example App Tab")[0].click()
         self.assertTrue(
             self.browser.is_text_present(
                 f"I am some content for the example plugin's circuit ({str(circuit.pk)}) detail tab."
@@ -228,9 +222,9 @@ class PluginTabsTestCase(SeleniumTestCase):
         # Visit the device's detail page and check that the tab is visible
         self.browser.visit(f'{self.live_server_url}{reverse("dcim:device", args=[str(device.pk)])}')
         for tab_i in [1, 2]:
-            self.assertTrue(self.browser.is_text_present(f"Plugin Tab {tab_i}"))
+            self.assertTrue(self.browser.is_text_present(f"Example App Tab {tab_i}"))
             # Visit the tab link and check the view content
-            self.browser.links.find_by_partial_text(f"Plugin Tab {tab_i}")[0].click()
+            self.browser.links.find_by_partial_text(f"Example App Tab {tab_i}")[0].click()
             self.assertTrue(
                 self.browser.is_text_present(
                     f"I am some content for the example plugin's device ({str(device.pk)}) detail tab {tab_i}."

@@ -2,7 +2,6 @@ from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ValidationError
 from django.test import TestCase
 
-from nautobot.dcim.choices import InterfaceModeChoices
 from nautobot.dcim.models import Location, LocationType, Site
 from nautobot.extras.models import Status
 from nautobot.ipam.models import VLAN
@@ -88,14 +87,3 @@ class VMInterfaceTestCase(TestCase):
         self.assertEqual(
             err.exception.message_dict["tagged_vlans"][0], "Mode must be set to tagged when specifying tagged_vlans"
         )
-
-    def test_tagged_vlan_raise_error_if_mode_is_changed_without_clearing_tagged_vlans(self):
-        interface = VMInterface.objects.create(
-            virtual_machine=self.virtualmachine, name="Interface 1", mode=InterfaceModeChoices.MODE_TAGGED
-        )
-        interface.tagged_vlans.add(self.vlan)
-
-        interface.mode = InterfaceModeChoices.MODE_ACCESS
-        with self.assertRaises(ValidationError) as err:
-            interface.validated_save()
-        self.assertEqual(err.exception.message_dict["tagged_vlans"][0], "Clear tagged_vlans to set mode to access")

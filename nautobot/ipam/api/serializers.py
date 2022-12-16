@@ -18,7 +18,7 @@ from nautobot.dcim.api.nested_serializers import (
 from nautobot.extras.api.serializers import (
     NautobotModelSerializer,
     StatusModelSerializerMixin,
-    TaggedObjectSerializer,
+    TaggedModelSerializerMixin,
 )
 from nautobot.ipam.choices import IPAddressFamilyChoices, IPAddressRoleChoices, ServiceProtocolChoices
 from nautobot.ipam import constants
@@ -61,7 +61,7 @@ from .nested_serializers import (  # noqa: F401
 #
 
 
-class VRFSerializer(NautobotModelSerializer, TaggedObjectSerializer):
+class VRFSerializer(NautobotModelSerializer, TaggedModelSerializerMixin):
     url = serializers.HyperlinkedIdentityField(view_name="ipam-api:vrf-detail")
     tenant = NestedTenantSerializer(required=False, allow_null=True)
     import_targets = SerializedPKRelatedField(
@@ -100,7 +100,7 @@ class VRFSerializer(NautobotModelSerializer, TaggedObjectSerializer):
 #
 
 
-class RouteTargetSerializer(NautobotModelSerializer, TaggedObjectSerializer):
+class RouteTargetSerializer(NautobotModelSerializer, TaggedModelSerializerMixin):
     url = serializers.HyperlinkedIdentityField(view_name="ipam-api:routetarget-detail")
     tenant = NestedTenantSerializer(required=False, allow_null=True)
 
@@ -135,7 +135,7 @@ class RIRSerializer(NautobotModelSerializer):
         ]
 
 
-class AggregateSerializer(NautobotModelSerializer, TaggedObjectSerializer):
+class AggregateSerializer(NautobotModelSerializer, TaggedModelSerializerMixin):
     url = serializers.HyperlinkedIdentityField(view_name="ipam-api:aggregate-detail")
     family = ChoiceField(choices=IPAddressFamilyChoices, read_only=True)
     prefix = IPFieldSerializer()
@@ -196,13 +196,13 @@ class VLANGroupSerializer(NautobotModelSerializer):
             "description",
             "vlan_count",
         ]
-        # TODO: Remove if/when slug is globally unique. This would be a breaking change.
+        # 2.0 TODO: Remove if/when slug is globally unique. This would be a breaking change.
         validators = []
 
     def validate(self, data):
 
         # Validate uniqueness of name and slug if a site has been assigned.
-        # TODO: Remove if/when slug is globally unique. This would be a breaking change.
+        # 2.0 TODO: Remove if/when slug is globally unique. This would be a breaking change.
         if data.get("site", None):
             for field in ["name", "slug"]:
                 validator = UniqueTogetherValidator(queryset=VLANGroup.objects.all(), fields=("site", field))
@@ -214,7 +214,7 @@ class VLANGroupSerializer(NautobotModelSerializer):
         return data
 
 
-class VLANSerializer(NautobotModelSerializer, TaggedObjectSerializer, StatusModelSerializerMixin):
+class VLANSerializer(NautobotModelSerializer, TaggedModelSerializerMixin, StatusModelSerializerMixin):
     url = serializers.HyperlinkedIdentityField(view_name="ipam-api:vlan-detail")
     site = NestedSiteSerializer(required=False, allow_null=True)
     location = NestedLocationSerializer(required=False, allow_null=True)
@@ -259,7 +259,7 @@ class VLANSerializer(NautobotModelSerializer, TaggedObjectSerializer, StatusMode
 #
 
 
-class PrefixSerializer(NautobotModelSerializer, TaggedObjectSerializer, StatusModelSerializerMixin):
+class PrefixSerializer(NautobotModelSerializer, TaggedModelSerializerMixin, StatusModelSerializerMixin):
     url = serializers.HyperlinkedIdentityField(view_name="ipam-api:prefix-detail")
     family = ChoiceField(choices=IPAddressFamilyChoices, read_only=True)
     prefix = IPFieldSerializer()
@@ -336,7 +336,7 @@ class AvailablePrefixSerializer(serializers.Serializer):
 #
 
 
-class IPAddressSerializer(NautobotModelSerializer, TaggedObjectSerializer, StatusModelSerializerMixin):
+class IPAddressSerializer(NautobotModelSerializer, TaggedModelSerializerMixin, StatusModelSerializerMixin):
     url = serializers.HyperlinkedIdentityField(view_name="ipam-api:ipaddress-detail")
     family = ChoiceField(choices=IPAddressFamilyChoices, read_only=True)
     address = IPFieldSerializer()
@@ -414,7 +414,7 @@ class AvailableIPSerializer(serializers.Serializer):
 #
 
 
-class ServiceSerializer(NautobotModelSerializer, TaggedObjectSerializer):
+class ServiceSerializer(NautobotModelSerializer, TaggedModelSerializerMixin):
     url = serializers.HyperlinkedIdentityField(view_name="ipam-api:service-detail")
     device = NestedDeviceSerializer(required=False, allow_null=True)
     virtual_machine = NestedVirtualMachineSerializer(required=False, allow_null=True)

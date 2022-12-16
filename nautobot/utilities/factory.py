@@ -1,5 +1,4 @@
 from django.db.models import Model
-
 import factory
 import factory.random
 
