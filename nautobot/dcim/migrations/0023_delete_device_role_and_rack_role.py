@@ -6,14 +6,14 @@ from django.db import migrations
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('dcim', '0022_rename_device_and_rack_role'),
+        ("dcim", "0022_rename_device_and_rack_role"),
     ]
 
     operations = [
         migrations.DeleteModel(
-            name='DeviceRole',
+            name="DeviceRole",
         ),
         migrations.DeleteModel(
-            name='RackRole',
+            name="RackRole",
         ),
     ]

@@ -112,7 +112,9 @@ class ClusterSerializer(NautobotModelSerializer, TaggedModelSerializerMixin):
 #
 
 
-class VirtualMachineSerializer(NautobotModelSerializer, TaggedModelSerializerMixin, StatusModelSerializerMixin, RoleModelSerializerMixin):
+class VirtualMachineSerializer(
+    NautobotModelSerializer, TaggedModelSerializerMixin, StatusModelSerializerMixin, RoleModelSerializerMixin
+):
     url = serializers.HyperlinkedIdentityField(view_name="virtualization-api:virtualmachine-detail")
     site = NestedSiteSerializer(read_only=True)
     location = NestedLocationSerializer(read_only=True, required=False, allow_null=True)

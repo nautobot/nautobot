@@ -123,7 +123,7 @@ class VirtualMachineFilterSet(
     LocalContextModelFilterSetMixin,
     TenancyModelFilterSetMixin,
     StatusModelFilterSetMixin,
-    RoleModelFilterSetMixin
+    RoleModelFilterSetMixin,
 ):
     q = SearchFilter(
         filter_predicates={

@@ -720,7 +720,12 @@ class PlatformSerializer(NautobotModelSerializer):
         ]
 
 
-class DeviceSerializer(NautobotModelSerializer, TaggedModelSerializerMixin, StatusModelSerializerMixin, RoleRequiredRoleModelSerializerMixin):
+class DeviceSerializer(
+    NautobotModelSerializer,
+    TaggedModelSerializerMixin,
+    StatusModelSerializerMixin,
+    RoleRequiredRoleModelSerializerMixin,
+):
     url = serializers.HyperlinkedIdentityField(view_name="dcim-api:device-detail")
     device_type = NestedDeviceTypeSerializer()
     tenant = NestedTenantSerializer(required=False, allow_null=True)

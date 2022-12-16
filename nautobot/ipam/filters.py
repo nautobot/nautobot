@@ -6,7 +6,7 @@ from netaddr.core import AddrFormatError
 
 from nautobot.dcim.filters import LocatableModelFilterSetMixin
 from nautobot.dcim.models import Device, Interface
-from nautobot.extras.filters import NautobotFilterSet, StatusModelFilterSetMixin
+from nautobot.extras.filters import NautobotFilterSet, StatusModelFilterSetMixin, RoleModelFilterSetMixin
 from nautobot.tenancy.filters import TenancyModelFilterSetMixin
 from nautobot.utilities.filters import (
     MultiValueCharFilter,
@@ -313,7 +313,13 @@ class PrefixFilterSet(
         return queryset.filter(params)
 
 
-class IPAddressFilterSet(NautobotFilterSet, IPAMFilterSetMixin, TenancyModelFilterSetMixin, StatusModelFilterSetMixin, RoleModelFilterSetMixin):
+class IPAddressFilterSet(
+    NautobotFilterSet,
+    IPAMFilterSetMixin,
+    TenancyModelFilterSetMixin,
+    StatusModelFilterSetMixin,
+    RoleModelFilterSetMixin,
+):
     parent = django_filters.CharFilter(
         method="search_by_parent",
         label="Parent prefix",
@@ -460,7 +466,7 @@ class VLANFilterSet(
     LocatableModelFilterSetMixin,
     TenancyModelFilterSetMixin,
     StatusModelFilterSetMixin,
-RoleModelFilterSetMixin,
+    RoleModelFilterSetMixin,
 ):
     q = SearchFilter(
         filter_predicates={
