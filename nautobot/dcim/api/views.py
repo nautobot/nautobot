@@ -182,7 +182,16 @@ class LocationTypeViewSet(NautobotModelViewSet):
 
 class LocationViewSet(StatusViewSetMixin, NautobotModelViewSet):
     # v2 TODO(jathan): Replace prefetch_related with select_related
-    queryset = Location.objects.prefetch_related("location_type", "parent", "site", "status")
+    queryset = Location.objects.prefetch_related(
+        "location_type", "parent", "site", "status", "tenant", "tags"
+    ).annotate(
+        device_count=count_related(Device, "location"),
+        rack_count=count_related(Rack, "location"),
+        prefix_count=count_related(Prefix, "location"),
+        vlan_count=count_related(VLAN, "location"),
+        circuit_count=count_related(Circuit, "terminations__location"),
+        virtualmachine_count=count_related(VirtualMachine, "cluster__location"),
+    )
     serializer_class = serializers.LocationSerializer
     filterset_class = filters.LocationFilterSet
 
