@@ -237,6 +237,7 @@ class ConsolePort(CableTermination, PathEndpoint, ComponentModel):
     def parent(self):
         return self.device
 
+
 #
 # Console server ports
 #
