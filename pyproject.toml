@@ -184,7 +184,7 @@ mkdocs-version-annotations = "~1.0.0"
 mkdocstrings = "0.19"
 mkdocstrings-python = "0.8.2"
 # Code static analysis
-pylint = {version = "~2.14.5", python = "^3.7.2"}
+pylint = {version = "~2.15.0", python = "^3.7.2"}
 # Pylint extensions for Django
 pylint-django = {version = "~2.5.3", python = "^3.7.2"}
 # Integration Tests
