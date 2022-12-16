@@ -17,7 +17,6 @@ from nautobot.extras.models import (
     Note,
     JobHook,
     Relationship,
-    Role,
     Secret,
     SecretsGroup,
     Status,
@@ -552,19 +551,6 @@ urlpatterns = [
         "relationship-associations/<uuid:pk>/delete/",
         views.RelationshipAssociationDeleteView.as_view(),
         name="relationshipassociation_delete",
-    ),
-    # Roles
-    path(
-        "roles/<str:slug>/changelog/",
-        views.ObjectChangeLogView.as_view(),
-        name="role_changelog",
-        kwargs={"model": Role},
-    ),
-    path(
-        "roles/<str:slug>/notes/",
-        views.ObjectNotesView.as_view(),
-        name="role_notes",
-        kwargs={"model": Role},
     ),
     # Secrets
     path("secrets/", views.SecretListView.as_view(), name="secret_list"),
