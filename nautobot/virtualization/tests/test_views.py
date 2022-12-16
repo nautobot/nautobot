@@ -3,8 +3,8 @@ from django.contrib.contenttypes.models import ContentType
 from netaddr import EUI
 
 from nautobot.dcim.choices import InterfaceModeChoices
-from nautobot.dcim.models import DeviceRole, Platform, Site
-from nautobot.extras.models import ConfigContextSchema, CustomField, Status, Tag
+from nautobot.dcim.models import Device, Platform, Site
+from nautobot.extras.models import ConfigContextSchema, CustomField, Role, Status, Tag
 from nautobot.ipam.models import VLAN
 from nautobot.utilities.testing import ViewTestCases, post_data
 from nautobot.virtualization.models import (
@@ -144,10 +144,7 @@ class VirtualMachineTestCase(ViewTestCases.PrimaryObjectViewTestCase):
     @classmethod
     def setUpTestData(cls):
 
-        deviceroles = (
-            DeviceRole.objects.create(name="Device Role 1", slug="device-role-1"),
-            DeviceRole.objects.create(name="Device Role 2", slug="device-role-2"),
-        )
+        deviceroles = Role.objects.get_for_model(Device)[:2]
 
         platforms = (
             Platform.objects.create(name="Platform 1", slug="platform-1"),
@@ -278,7 +275,7 @@ class VMInterfaceTestCase(ViewTestCases.DeviceComponentViewTestCase):
     def setUpTestData(cls):
 
         site = Site.objects.create(name="Site 1", slug="site-1")
-        devicerole = DeviceRole.objects.create(name="Device Role 1", slug="device-role-1")
+        devicerole = Role.objects.get_for_model(Device).first()
         clustertype = ClusterType.objects.create(name="Cluster Type 1", slug="cluster-type-1")
         cluster = Cluster.objects.create(name="Cluster 1", type=clustertype, site=site)
         virtualmachines = (

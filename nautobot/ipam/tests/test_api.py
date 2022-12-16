@@ -8,15 +8,14 @@ from django.urls import reverse
 from netaddr import IPNetwork
 from rest_framework import status
 
-from nautobot.dcim.models import Device, DeviceRole, DeviceType, Manufacturer, Site
-from nautobot.extras.models import Status
+from nautobot.dcim.models import Device, DeviceType, Manufacturer, Site
+from nautobot.extras.models import Role, Status
 from nautobot.ipam.choices import ServiceProtocolChoices
 from nautobot.ipam.models import (
     Aggregate,
     IPAddress,
     Prefix,
     RIR,
-    Role,
     RouteTarget,
     Service,
     VLAN,
@@ -141,32 +140,6 @@ class AggregateTest(APIViewTestCases.APIViewTestCase):
                 "rir": rir.pk,
             },
         ]
-
-
-class RoleTest(APIViewTestCases.APIViewTestCase):
-    model = Role
-    brief_fields = ["display", "id", "name", "prefix_count", "slug", "url", "vlan_count"]
-    create_data = [
-        {
-            "name": "Role 4",
-            "slug": "role-4",
-        },
-        {
-            "name": "Role 5",
-            "slug": "role-5",
-        },
-        {
-            "name": "Role 6",
-            "slug": "role-6",
-        },
-        {
-            "name": "Role 7",
-        },
-    ]
-    bulk_update_data = {
-        "description": "New description",
-    }
-    slug_source = "name"
 
 
 class PrefixTest(APIViewTestCases.APIViewTestCase):
@@ -435,7 +408,7 @@ class IPAddressTest(APIViewTestCases.APIViewTestCase):
     bulk_update_data = {
         "description": "New description",
     }
-    choices_fields = ["assigned_object_type", "role", "status"]
+    choices_fields = ["assigned_object_type", "status"]
 
     # FIXME(jathan): The writable serializer for `status` takes the
     # status `name` (str) and not the `pk` (int). Do not validate this
@@ -601,20 +574,20 @@ class ServiceTest(APIViewTestCases.APIViewTestCase):
         site = Site.objects.first()
         manufacturer = Manufacturer.objects.create(name="Manufacturer 1", slug="manufacturer-1")
         devicetype = DeviceType.objects.create(manufacturer=manufacturer, model="Device Type 1")
-        devicerole = DeviceRole.objects.create(name="Device Role 1", slug="device-role-1")
+        devicerole = Role.objects.get_for_model(Device).first()
 
         devices = (
             Device.objects.create(
                 name="Device 1",
                 site=site,
                 device_type=devicetype,
-                device_role=devicerole,
+                role=devicerole,
             ),
             Device.objects.create(
                 name="Device 2",
                 site=site,
                 device_type=devicetype,
-                device_role=devicerole,
+                role=devicerole,
             ),
         )
         cls.devices = devices

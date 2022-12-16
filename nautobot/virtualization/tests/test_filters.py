@@ -2,8 +2,8 @@ from django.contrib.contenttypes.models import ContentType
 from django.db.models import Q
 
 from nautobot.dcim.choices import InterfaceModeChoices
-from nautobot.dcim.models import Device, DeviceRole, DeviceType, Manufacturer, Platform, Region, Site
-from nautobot.extras.models import Status, Tag
+from nautobot.dcim.models import Device, DeviceType, Manufacturer, Platform, Region, Site
+from nautobot.extras.models import Role, Status, Tag
 from nautobot.ipam.choices import ServiceProtocolChoices
 from nautobot.ipam.models import IPAddress, VLAN, Service
 from nautobot.tenancy.models import Tenant
@@ -159,10 +159,10 @@ class ClusterTestCase(FilterTestCases.FilterTestCase, FilterTestCases.TenancyFil
 
         manufacturer = Manufacturer.objects.create(name="Manufacturer 1", slug="manufacturer-1")
         devicetype = DeviceType.objects.create(manufacturer=manufacturer, model="Device Type", slug="device-type")
-        devicerole = DeviceRole.objects.create(name="Device Role", slug="device-role", color="ff0000")
+        devicerole = Role.objects.get_for_model(Device).first()
 
         cls.device = Device.objects.create(
-            name="Device 1", device_type=devicetype, device_role=devicerole, site=cls.sites[0], cluster=clusters[0]
+            name="Device 1", device_type=devicetype, role=devicerole, site=cls.sites[0], cluster=clusters[0]
         )
 
         cls.virtualmachine = VirtualMachine.objects.create(name="Virtual Machine 1", cluster=clusters[1])
@@ -304,11 +304,7 @@ class VirtualMachineTestCase(FilterTestCases.FilterTestCase, FilterTestCases.Ten
         )
         cls.platforms = platforms
 
-        roles = (
-            DeviceRole.objects.create(name="Device Role 1", slug="device-role-1"),
-            DeviceRole.objects.create(name="Device Role 2", slug="device-role-2"),
-            DeviceRole.objects.create(name="Device Role 3", slug="device-role-3"),
-        )
+        roles = Role.objects.get_for_model(Device)
         cls.roles = roles
 
         tenants = Tenant.objects.filter(group__isnull=False)[:3]
