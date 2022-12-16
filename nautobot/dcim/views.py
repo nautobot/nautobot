@@ -1684,7 +1684,7 @@ class DeviceConfigContextView(ObjectConfigContextView):
     base_template = "dcim/device/base.html"
 
     @cached_property
-    def queryset(self):
+    def queryset(self):  # pylint: disable=method-hidden
         """
         A cached_property rather than a class attribute because annotate_config_context_data() is unsafe at import time.
         """
