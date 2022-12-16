@@ -5,9 +5,11 @@ from django.db import models
 from django.urls import reverse
 
 from tree_queries.models import TreeNode
+from timezone_field import TimeZoneField
 
 from nautobot.core.fields import AutoSlugField
 from nautobot.core.models.generics import OrganizationalModel, PrimaryModel
+from nautobot.dcim.fields import ASNField
 from nautobot.extras.models import StatusModel
 from nautobot.extras.utils import extras_features, FeatureQuery
 from nautobot.utilities.fields import NaturalOrderingField
@@ -214,6 +216,34 @@ class Location(TreeNode, StatusModel, PrimaryModel):
         null=True,
     )
     description = models.CharField(max_length=200, blank=True)
+    facility = models.CharField(max_length=50, blank=True, help_text="Local facility ID or description")
+    asn = ASNField(
+        blank=True,
+        null=True,
+        verbose_name="ASN",
+        help_text="32-bit autonomous system number",
+    )
+    time_zone = TimeZoneField(blank=True)
+    physical_address = models.TextField(blank=True)
+    shipping_address = models.TextField(blank=True)
+    latitude = models.DecimalField(
+        max_digits=8,
+        decimal_places=6,
+        blank=True,
+        null=True,
+        help_text="GPS coordinate (latitude)",
+    )
+    longitude = models.DecimalField(
+        max_digits=9,
+        decimal_places=6,
+        blank=True,
+        null=True,
+        help_text="GPS coordinate (longitude)",
+    )
+    contact_name = models.CharField(max_length=100, blank=True)
+    contact_phone = models.CharField(max_length=50, blank=True)
+    contact_email = models.EmailField(blank=True, verbose_name="Contact E-mail")
+    comments = models.TextField(blank=True)
     images = GenericRelation(to="extras.ImageAttachment")
 
     objects = LocationQuerySet.as_manager(with_tree_fields=True)
@@ -227,6 +257,17 @@ class Location(TreeNode, StatusModel, PrimaryModel):
         "parent",
         "tenant",
         "description",
+        "facility",
+        "asn",
+        "time_zone",
+        "physical_address",
+        "shipping_address",
+        "latitude",
+        "longitude",
+        "contact_name",
+        "contact_phone",
+        "contact_email",
+        "comments",
     ]
 
     clone_fields = [
@@ -236,6 +277,16 @@ class Location(TreeNode, StatusModel, PrimaryModel):
         "parent",
         "tenant",
         "description",
+        "facility",
+        "asn",
+        "time_zone",
+        "physical_address",
+        "shipping_address",
+        "latitude",
+        "longitude",
+        "contact_name",
+        "contact_phone",
+        "contact_email",
     ]
 
     class Meta:
@@ -258,6 +309,17 @@ class Location(TreeNode, StatusModel, PrimaryModel):
             self.parent.name if self.parent else None,
             self.tenant.name if self.tenant else None,
             self.description,
+            self.facility,
+            self.asn,
+            self.time_zone,
+            self.physical_address,
+            self.shipping_address,
+            self.latitude,
+            self.longitude,
+            self.contact_name,
+            self.contact_phone,
+            self.contact_email,
+            self.comments,
         )
 
     @property
@@ -377,3 +439,14 @@ class Location(TreeNode, StatusModel, PrimaryModel):
                             f"of type {self.location_type.parent} as its parent."
                         }
                     )
+
+    def clean_fields(self, exclude=None):
+        """Explicitly convert latitude/longitude to strings to avoid floating-point precision errors."""
+
+        if self.longitude is not None and isinstance(self.longitude, float):
+            decimal_places = self._meta.get_field("longitude").decimal_places
+            self.longitude = f"{self.longitude:.{decimal_places}f}"
+        if self.latitude is not None and isinstance(self.latitude, float):
+            decimal_places = self._meta.get_field("latitude").decimal_places
+            self.latitude = f"{self.latitude:.{decimal_places}f}"
+        super().clean_fields(exclude)

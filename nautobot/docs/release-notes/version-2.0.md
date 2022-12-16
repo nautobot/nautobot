@@ -10,7 +10,13 @@ If you are a user migrating from Nautobot v1.X, please refer to the ["Upgrading 
 
 ### Added
 
+#### Added Site Fields to Location ([#2954](https://github.com/nautobot/nautobot/issues/2954))
+
+Added Site Model Fields to Location. Location Model now has `asn`, `comments`, `contact_email`, `contact_name`, `contact_phone`, `facility`, `latitude`, `longitude`, `physical_address`, `shipping_address` and `time_zone` fields.
+
 ### Changed
+
+#### Collapse Region and Site Models into Location ([#2517](https://github.com/nautobot/nautobot/issues/2517))
 
 #### Renamed Filter Fields ([#2804](https://github.com/nautobot/nautobot/pull/2804))
 
