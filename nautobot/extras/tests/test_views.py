@@ -10,7 +10,7 @@ from django.urls import reverse
 from django.utils import timezone
 from unittest import mock
 
-from nautobot.dcim.models import ConsolePort, Device, DeviceRole, DeviceType, Interface, Manufacturer, Site
+from nautobot.dcim.models import ConsolePort, Device, DeviceType, Interface, Manufacturer, Site
 from nautobot.dcim.tests import test_views
 from nautobot.extras.choices import (
     CustomFieldTypeChoices,

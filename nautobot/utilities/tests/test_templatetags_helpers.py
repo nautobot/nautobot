@@ -1,14 +1,11 @@
 from unittest import skipIf
 
 from django.conf import settings
-from django.contrib.contenttypes.models import ContentType
 from django.templatetags.static import static
 from django.test import TestCase
 from example_plugin.models import AnotherExampleModel, ExampleModel
 
 from nautobot.dcim import models
-from nautobot.dcim.models import Site
-from nautobot.extras.models import Role
 from nautobot.ipam.models import VLAN
 from nautobot.utilities.templatetags import helpers
 
@@ -195,14 +192,14 @@ class NautobotTemplatetagsHelperTest(TestCase):
             )
         self.assertEqual(helpers.render_boolean(None), '<span class="text-muted">&mdash;</span>')
 
-    def test_render_obj_display(self):
-        vlan_ct = ContentType.objects.get_for_model(VLAN)
-        role = Role.objects.create(name="New Role", color=ColorChoices.COLOR_GREY)
-        role.content_types.add(vlan_ct)
-        site = Site.objects.create(name="Site-1", slug="site-1")
-        vlan = VLAN.objects.create(name="VLAN 1", vid=100, site=site, role=role)
+    def test_render_related_name_and_color(self):
+        vlan_with_role = VLAN.objects.filter(role__isnull=False).first()
+        vlan_without_role = VLAN.objects.filter(role__isnull=True).first()
+        role = vlan_with_role.role
+        color = role.color
+        fbcolor = helpers.fgcolor(color)
         self.assertEqual(
-            render_obj_display(vlan, "role"),
-            '<span class="label" style="color: #ffffff; background-color: #9e9e9e">New Role</span>',
+            helpers.render_related_name_and_color(role),
+            f'<span class="label" style="color: #{fbcolor}; background-color: #{color}">{role.name}</span>',
         )
-        self.assertEqual(render_obj_display(vlan, "status"), "—")
+        self.assertEqual(helpers.render_related_name_and_color(vlan_without_role.role), "—")

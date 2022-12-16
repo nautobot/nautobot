@@ -1,5 +1,5 @@
-from nautobot.dcim.models import DeviceRole
 from nautobot.extras.jobs import Job, ObjectVar, MultiObjectVar
+from nautobot.extras.models import Role
 
 name = "Object Vars"
 
@@ -8,8 +8,8 @@ class TestObjectVars(Job):
     class Meta:
         description = "Validate Objects"
 
-    role = ObjectVar(model=DeviceRole)
-    roles = MultiObjectVar(model=DeviceRole)
+    role = ObjectVar(model=Role)
+    roles = MultiObjectVar(model=Role)
 
     def run(self, data, commit):
         role = data["role"]
