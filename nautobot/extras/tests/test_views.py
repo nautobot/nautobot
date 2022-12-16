@@ -2072,12 +2072,12 @@ class RelationshipAssociationTestCase(
         relationship.validated_save()
         manufacturer = Manufacturer.objects.create(name="Manufacturer 1", slug="manufacturer-1")
         devicetype = DeviceType.objects.create(manufacturer=manufacturer, model="Device Type 1", slug="device-type-1")
-        devicerole = DeviceRole.objects.create(name="Device Role 1", slug="device-role-1")
+        devicerole = Role.objects.get_for_model(Device).first()
         site = Site.objects.first()
         devices = (
-            Device.objects.create(name="Device 1", device_type=devicetype, device_role=devicerole, site=site),
-            Device.objects.create(name="Device 2", device_type=devicetype, device_role=devicerole, site=site),
-            Device.objects.create(name="Device 3", device_type=devicetype, device_role=devicerole, site=site),
+            Device.objects.create(name="Device 1", device_type=devicetype, role=devicerole, site=site),
+            Device.objects.create(name="Device 2", device_type=devicetype, role=devicerole, site=site),
+            Device.objects.create(name="Device 3", device_type=devicetype, role=devicerole, site=site),
         )
         vlans = (
             VLAN.objects.create(vid=1, name="VLAN 1"),

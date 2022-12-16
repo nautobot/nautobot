@@ -17,7 +17,7 @@ from nautobot.tenancy.filters import TenantFilterSet
 from nautobot.tenancy.forms import TenantFilterForm
 from nautobot.extras.choices import CustomFieldTypeChoices, RelationshipTypeChoices
 from nautobot.extras.jobs import get_job, get_job_classpaths, get_jobs
-from nautobot.extras.models import CustomField, Secret, Status, Relationship, RelationshipAssociation
+from nautobot.extras.models import CustomField, Secret, Status, Relationship, RelationshipAssociation, Role
 from nautobot.extras.plugins.exceptions import PluginImproperlyConfigured
 from nautobot.extras.plugins.utils import load_plugin
 from nautobot.extras.plugins.validators import wrap_model_clean_methods
@@ -546,9 +546,7 @@ class FilterExtensionTest(TestCase):
         Manufacturer.objects.create(name="Manufacturer 2", slug="manufacturer-2")
         Manufacturer.objects.create(name="Manufacturer 3", slug="manufacturer-3")
 
-        DeviceRole.objects.create(name="Device Role 1", slug="device-role-1")
-        DeviceRole.objects.create(name="Device Role 2", slug="device-role-2")
-        DeviceRole.objects.create(name="Device Role 3", slug="device-role-3")
+        roles = Role.objects.get_for_model(Device)
 
         DeviceType.objects.create(
             manufacturer=Manufacturer.objects.get(slug="manufacturer-1"),
@@ -578,21 +576,21 @@ class FilterExtensionTest(TestCase):
         Device.objects.create(
             name="Device 1",
             device_type=DeviceType.objects.get(slug="model-1"),
-            device_role=DeviceRole.objects.get(slug="device-role-1"),
+            role=roles[0],
             tenant=Tenant.objects.get(slug="tenant-1"),
             site=Site.objects.get(slug="site-1"),
         )
         Device.objects.create(
             name="Device 2",
             device_type=DeviceType.objects.get(slug="model-2"),
-            device_role=DeviceRole.objects.get(slug="device-role-2"),
+            role=roles[1],
             tenant=Tenant.objects.get(slug="tenant-2"),
             site=Site.objects.get(slug="site-2"),
         )
         Device.objects.create(
             name="Device 3",
             device_type=DeviceType.objects.get(slug="model-2"),
-            device_role=DeviceRole.objects.get(slug="device-role-3"),
+            role=roles[3],
             tenant=Tenant.objects.get(slug="tenant-3"),
             site=Site.objects.get(slug="site-3"),
         )

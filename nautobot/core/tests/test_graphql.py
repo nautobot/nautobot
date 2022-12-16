@@ -650,9 +650,10 @@ class GraphQLQueryTest(TestCase):
         # Populate Data
         cls.device_type1 = DeviceType.objects.first()
         cls.device_type2 = DeviceType.objects.last()
-        cls.device_role1 = Role.objects.get_for_model(Device).first()
-        cls.device_role2 = Role.objects.get_for_model(Device).last()
-        cls.device_role3 = random.choice(DeviceRole.objects.all())
+        roles = Role.objects.get_for_model(Device)
+        cls.device_role1 = roles[0]
+        cls.device_role2 = roles[1]
+        cls.device_role3 = random.choice(roles)
         cls.site_statuses = list(Status.objects.get_for_model(Site))[:2]
         cls.region1 = Region.objects.create(name="Region1", slug="region1")
         cls.region2 = Region.objects.create(name="Region2", slug="region2")
@@ -688,7 +689,7 @@ class GraphQLQueryTest(TestCase):
         cls.upsdevice1 = Device.objects.create(
             name="UPS 1",
             device_type=cls.device_type2,
-            device_role=cls.device_role3,
+            role=cls.device_role3,
             site=cls.site1,
             status=cls.device_statuses[0],
             rack=cls.rack1,
@@ -708,7 +709,7 @@ class GraphQLQueryTest(TestCase):
         cls.device1 = Device.objects.create(
             name="Device 1",
             device_type=cls.device_type1,
-            device_role=cls.device_role1,
+            role=cls.device_role1,
             site=cls.site1,
             status=cls.device_statuses[0],
             rack=cls.rack1,
@@ -795,7 +796,7 @@ class GraphQLQueryTest(TestCase):
         cls.device2 = Device.objects.create(
             name="Device 2",
             device_type=cls.device_type1,
-            device_role=cls.device_role2,
+            role=cls.device_role2,
             site=cls.site1,
             status=cls.device_statuses[1],
             rack=cls.rack2,
@@ -820,7 +821,7 @@ class GraphQLQueryTest(TestCase):
         cls.device3 = Device.objects.create(
             name="Device 3",
             device_type=cls.device_type1,
-            device_role=cls.device_role1,
+            role=cls.device_role1,
             site=cls.site2,
             status=cls.device_statuses[0],
         )
@@ -1221,7 +1222,7 @@ query {
         )
         result = self.execute_query(query)
 
-        expected = list(Device.objects.filter(device_role=self.device_role1).values_list("name", flat=True))
+        expected = list(Device.objects.filter(role=self.device_role1).values_list("name", flat=True))
         self.assertEqual(len(result.data["devices"]), len(expected))
         device_names = [item["name"] for item in result.data["devices"]]
         self.assertEqual(sorted(device_names), sorted(expected))

@@ -211,9 +211,9 @@ class ConfigContextTest(APIViewTestCases.APIViewTestCase):
         """
         manufacturer = Manufacturer.objects.create(name="Manufacturer 1", slug="manufacturer-1")
         devicetype = DeviceType.objects.create(manufacturer=manufacturer, model="Device Type 1", slug="device-type-1")
-        devicerole = DeviceRole.objects.create(name="Device Role 1", slug="device-role-1")
+        devicerole = Role.objects.get_for_model(Device).first()
         site = Site.objects.create(name="Site-1", slug="site-1")
-        device = Device.objects.create(name="Device 1", device_type=devicetype, device_role=devicerole, site=site)
+        device = Device.objects.create(name="Device 1", device_type=devicetype, role=devicerole, site=site)
 
         # Test default config contexts (created at test setup)
         rendered_context = device.get_config_context()
@@ -653,27 +653,27 @@ class DynamicGroupTestMixin:
             model="device Type 1",
             slug="device-type-1",
         )
-        device_role = DeviceRole.objects.create(name="Device Role 1", slug="device-role-1", color="ff0000")
+        device_role = Role.objects.get_for_model(Device).first()
         status_active = Status.objects.get(slug="active")
         status_planned = Status.objects.get(slug="planned")
         Device.objects.create(
             name="device-site-1",
             status=status_active,
-            device_role=device_role,
+            role=device_role,
             device_type=device_type,
             site=sites[0],
         )
         Device.objects.create(
             name="device-site-2",
             status=status_active,
-            device_role=device_role,
+            role=device_role,
             device_type=device_type,
             site=sites[1],
         )
         Device.objects.create(
             name="device-site-3",
             status=status_planned,
-            device_role=device_role,
+            role=device_role,
             device_type=device_type,
             site=sites[2],
         )
@@ -1270,7 +1270,7 @@ class JobAPIRunTestMixin:
         """Job run cannot be requested if Celery is not running."""
         mock_get_worker_count.return_value = 0
         self.add_permissions("extras.run_job")
-        device_role = DeviceRole.objects.create(name="role", slug="role")
+        device_role = Role.objects.get_for_model(Device).first()
         job_data = {
             "var1": "FooBar",
             "var2": 123,
@@ -1296,7 +1296,7 @@ class JobAPIRunTestMixin:
         """Job run requests can reference objects by their primary keys."""
         mock_get_worker_count.return_value = 1
         self.add_permissions("extras.run_job")
-        device_role = DeviceRole.objects.create(name="role", slug="role")
+        device_role = Role.objects.get_for_model(Device).first()
         job_data = {
             "var1": "FooBar",
             "var2": 123,
@@ -1338,7 +1338,7 @@ class JobAPIRunTestMixin:
         # Do the stuff.
         mock_get_worker_count.return_value = 1
         self.add_permissions("extras.run_job")
-        device_role = DeviceRole.objects.create(name="role", slug="role")
+        device_role = Role.objects.get_for_model(Device).first()
         job_data = {
             "var1": "FooBar",
             "var2": 123,
@@ -1374,7 +1374,7 @@ class JobAPIRunTestMixin:
         """Job run requests can reference objects by their attributes."""
         mock_get_worker_count.return_value = 1
         self.add_permissions("extras.run_job")
-        device_role = DeviceRole.objects.create(name="role", slug="role")
+        device_role = Role.objects.get_for_model(Device).first()
         job_data = {
             "var1": "FooBar",
             "var2": 123,
@@ -1493,7 +1493,7 @@ class JobAPIRunTestMixin:
     def test_run_job_future(self, mock_get_worker_count):
         mock_get_worker_count.return_value = 1
         self.add_permissions("extras.run_job")
-        d = DeviceRole.objects.create(name="role", slug="role")
+        d = Role.objects.get_for_model(Device).first()
         data = {
             "data": {"var1": "x", "var2": 1, "var3": False, "var4": d.pk},
             "commit": True,
@@ -1577,7 +1577,7 @@ class JobAPIRunTestMixin:
     def test_run_a_job_with_sensitive_variables_immediately(self, mock_get_worker_count):
         mock_get_worker_count.return_value = 1
         self.add_permissions("extras.run_job")
-        d = DeviceRole.objects.create(name="role", slug="role")
+        d = Role.objects.get_for_model(Device).first()
         data = {
             "data": {"var1": "x", "var2": 1, "var3": False, "var4": d.pk},
             "commit": True,
@@ -1603,7 +1603,7 @@ class JobAPIRunTestMixin:
     def test_run_job_future_past(self, mock_get_worker_count):
         mock_get_worker_count.return_value = 1
         self.add_permissions("extras.run_job")
-        d = DeviceRole.objects.create(name="role", slug="role")
+        d = Role.objects.get_for_model(Device).first()
         data = {
             "data": {"var1": "x", "var2": 1, "var3": False, "var4": d.pk},
             "commit": True,
@@ -1623,7 +1623,7 @@ class JobAPIRunTestMixin:
     def test_run_job_interval(self, mock_get_worker_count):
         mock_get_worker_count.return_value = 1
         self.add_permissions("extras.run_job")
-        d = DeviceRole.objects.create(name="role", slug="role")
+        d = Role.objects.get_for_model(Device).first()
         data = {
             "data": {"var1": "x", "var2": 1, "var3": False, "var4": d.pk},
             "commit": True,
@@ -1700,7 +1700,7 @@ class JobAPIRunTestMixin:
     @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
     def test_run_job_with_invalid_task_queue(self):
         self.add_permissions("extras.run_job")
-        d = DeviceRole.objects.create(name="role", slug="role")
+        d = Role.objects.get_for_model(Device).first()
         data = {
             "data": {"var1": "x", "var2": 1, "var3": False, "var4": d.pk},
             "commit": True,
@@ -1719,7 +1719,7 @@ class JobAPIRunTestMixin:
     @mock.patch("nautobot.extras.api.views.get_worker_count", return_value=1)
     def test_run_job_with_valid_task_queue(self, _):
         self.add_permissions("extras.run_job")
-        d = DeviceRole.objects.create(name="role", slug="role")
+        d = Role.objects.get_for_model(Device).first()
         data = {
             "data": {"var1": "x", "var2": 1, "var3": False, "var4": d.pk},
             "commit": True,
@@ -1924,7 +1924,7 @@ class JobTestVersion13(
         self.assertEqual(response.data[2], {"name": "var3", "type": "BooleanVar", "required": False})
         self.assertEqual(
             response.data[3],
-            {"name": "var4", "type": "ObjectVar", "required": True, "model": "dcim.devicerole"},
+            {"name": "var4", "type": "ObjectVar", "required": True, "model": "dcim.role"},
         )
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
@@ -2637,18 +2637,18 @@ class RelationshipTest(APIViewTestCases.APIViewTestCase, RequiredRelationshipTes
             model="device Type 1",
             slug="device-type-1",
         )
-        device_role = DeviceRole.objects.create(name="Device Role 1", slug="device-role-1", color="ff0000")
+        device_role = Role.objects.get_for_model(Device).first()
         existing_device_1 = Device.objects.create(
             name="existing-device-site-1",
             status=Status.objects.get(slug="active"),
-            device_role=device_role,
+            role=device_role,
             device_type=device_type,
             site=existing_site_1,
         )
         existing_device_2 = Device.objects.create(
             name="existing-device-site-2",
             status=Status.objects.get(slug="active"),
-            device_role=device_role,
+            role=device_role,
             device_type=device_type,
             site=existing_site_2,
         )
@@ -2856,33 +2856,33 @@ class RelationshipAssociationTest(APIViewTestCases.APIViewTestCase):
         )
         manufacturer = Manufacturer.objects.create(name="Manufacturer 1", slug="manufacturer-1")
         devicetype = DeviceType.objects.create(manufacturer=manufacturer, model="Device Type 1", slug="device-type-1")
-        devicerole = DeviceRole.objects.create(name="Device Role 1", slug="device-role-1")
+        devicerole = Role.objects.get_for_model(Device).first()
         cls.devices = (
             Device.objects.create(
                 name="Device 1",
                 device_type=devicetype,
-                device_role=devicerole,
+                role=devicerole,
                 site=cls.sites[1],
                 status=cls.status_active,
             ),
             Device.objects.create(
                 name="Device 2",
                 device_type=devicetype,
-                device_role=devicerole,
+                role=devicerole,
                 site=cls.sites[1],
                 status=cls.status_active,
             ),
             Device.objects.create(
                 name="Device 3",
                 device_type=devicetype,
-                device_role=devicerole,
+                role=devicerole,
                 site=cls.sites[1],
                 status=cls.status_active,
             ),
             Device.objects.create(
                 name="Device 4",
                 device_type=devicetype,
-                device_role=devicerole,
+                role=devicerole,
                 site=cls.sites[1],
                 status=cls.status_active,
             ),

@@ -168,11 +168,7 @@ class ConfigContextTestCase(FilterTestCases.FilterTestCase):
         regions = Region.objects.all()[:3]
         sites = Site.objects.all()[:3]
 
-        device_roles = (
-            DeviceRole.objects.create(name="Device Role 1", slug="device-role-1"),
-            DeviceRole.objects.create(name="Device Role 2", slug="device-role-2"),
-            DeviceRole.objects.create(name="Device Role 3", slug="device-role-3"),
-        )
+        device_roles = Role.objects.get_for_model(Device)
         cls.device_roles = device_roles
 
         manufacturer = Manufacturer.objects.create(name="Manufacturer 1", slug="manufacturer-1")
@@ -1001,12 +997,12 @@ class RelationshipAssociationTestCase(FilterTestCases.FilterTestCase):
 
         manufacturer = Manufacturer.objects.create(name="Manufacturer 1", slug="manufacturer-1")
         devicetype = DeviceType.objects.create(manufacturer=manufacturer, model="Device Type 1", slug="device-type-1")
-        devicerole = DeviceRole.objects.create(name="Device Role 1", slug="device-role-1")
+        devicerole = Role.objects.get_for_model(Device).first()
         site = Site.objects.first()
         cls.devices = (
-            Device.objects.create(name="Device 1", device_type=devicetype, device_role=devicerole, site=site),
-            Device.objects.create(name="Device 2", device_type=devicetype, device_role=devicerole, site=site),
-            Device.objects.create(name="Device 3", device_type=devicetype, device_role=devicerole, site=site),
+            Device.objects.create(name="Device 1", device_type=devicetype, role=devicerole, site=site),
+            Device.objects.create(name="Device 2", device_type=devicetype, role=devicerole, site=site),
+            Device.objects.create(name="Device 3", device_type=devicetype, role=devicerole, site=site),
         )
         cls.vlans = (
             VLAN.objects.create(vid=1, name="VLAN 1"),
@@ -1119,12 +1115,12 @@ class RelationshipModelFilterSetTestCase(FilterTestCases.FilterTestCase):
 
         manufacturer = Manufacturer.objects.create(name="Manufacturer 1", slug="manufacturer-1")
         devicetype = DeviceType.objects.create(manufacturer=manufacturer, model="Device Type 1", slug="device-type-1")
-        devicerole = DeviceRole.objects.create(name="Device Role 1", slug="device-role-1")
+        devicerole = Role.objects.get_for_model(Device).first()
         site = Site.objects.first()
         cls.devices = (
-            Device.objects.create(name="Device 1", device_type=devicetype, device_role=devicerole, site=site),
-            Device.objects.create(name="Device 2", device_type=devicetype, device_role=devicerole, site=site),
-            Device.objects.create(name="Device 3", device_type=devicetype, device_role=devicerole, site=site),
+            Device.objects.create(name="Device 1", device_type=devicetype, role=devicerole, site=site),
+            Device.objects.create(name="Device 2", device_type=devicetype, role=devicerole, site=site),
+            Device.objects.create(name="Device 3", device_type=devicetype, role=devicerole, site=site),
         )
         cls.vlans = (
             VLAN.objects.create(vid=1, name="VLAN 1"),

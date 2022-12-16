@@ -13,7 +13,6 @@ from django.db.utils import IntegrityError
 
 from nautobot.dcim.models import (
     Device,
-    DeviceRole,
     DeviceType,
     Location,
     LocationType,
@@ -35,6 +34,7 @@ from nautobot.extras.models import (
     Job as JobModel,
     JobLogEntry,
     JobResult,
+    Role,
     Secret,
     SecretsGroup,
     SecretsGroupAssociation,
@@ -113,7 +113,7 @@ class ConfigContextTest(TestCase):
         self.devicetype = DeviceType.objects.create(
             manufacturer=manufacturer, model="Device Type 1", slug="device-type-1"
         )
-        self.devicerole = DeviceRole.objects.create(name="Device Role 1", slug="device-role-1")
+        self.devicerole = Role.objects.get_for_model(Device).first()
         self.site = Site.objects.filter(region__isnull=False).first()
         self.region = self.site.region
         location_type = LocationType.objects.create(name="Location Type 1")
@@ -126,7 +126,7 @@ class ConfigContextTest(TestCase):
         self.device = Device.objects.create(
             name="Device 1",
             device_type=self.devicetype,
-            device_role=self.devicerole,
+            role=self.devicerole,
             site=self.site,
             location=self.location,
         )
@@ -204,7 +204,7 @@ class ConfigContextTest(TestCase):
             location=self.location,
             tenant=self.tenant,
             platform=self.platform,
-            device_role=self.devicerole,
+            role=self.devicerole,
             device_type=self.devicetype,
         )
         device.tags.add(self.tag)
@@ -290,7 +290,7 @@ class ConfigContextTest(TestCase):
             site=self.site,
             tenant=self.tenant,
             platform=self.platform,
-            device_role=self.devicerole,
+            role=self.devicerole,
             device_type=self.devicetype,
         )
         device.tags.add(self.tag)
@@ -321,7 +321,7 @@ class ConfigContextTest(TestCase):
             site=self.site,
             tenant=self.tenant,
             platform=self.platform,
-            device_role=self.devicerole,
+            role=self.devicerole,
             device_type=self.devicetype,
         )
         device.tags.add(self.tag)
@@ -384,12 +384,12 @@ class ConfigContextSchemaTestCase(TestCase):
         site = Site.objects.first()
         manufacturer = Manufacturer.objects.create(name="manufacturer", slug="manufacturer")
         device_type = DeviceType.objects.create(model="device_type", manufacturer=manufacturer)
-        device_role = DeviceRole.objects.create(name="device_role", slug="device-role", color="ffffff")
+        device_role = Role.objects.get_for_model(Device).first()
         self.device = Device.objects.create(
             name="device",
             site=site,
             device_type=device_type,
-            device_role=device_role,
+            role=device_role,
             status=status,
             local_context_data=context_data,
         )
@@ -1295,13 +1295,13 @@ class StatusTest(TestCase):
 
         manufacturer = Manufacturer.objects.create(name="Manufacturer 1")
         devicetype = DeviceType.objects.create(manufacturer=manufacturer, model="Device Type 1")
-        devicerole = DeviceRole.objects.create(name="Device Role 1")
+        devicerole = Role.objects.get_for_model(Device).first()
         site = Site.objects.first()
 
         self.device = Device.objects.create(
             name="Device 1",
             device_type=devicetype,
-            device_role=devicerole,
+            role=devicerole,
             site=site,
             status=self.status,
         )
