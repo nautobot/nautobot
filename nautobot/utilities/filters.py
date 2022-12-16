@@ -11,6 +11,8 @@ from django.forms.utils import ErrorDict, ErrorList
 import django_filters
 from django_filters.constants import EMPTY_VALUES
 from django_filters.utils import get_model_field, resolve_field
+from drf_spectacular.types import OpenApiTypes
+from drf_spectacular.utils import extend_schema_field
 from mptt.models import MPTTModel
 from taggit.managers import TaggableManager
 from tree_queries.models import TreeNode
@@ -152,6 +154,7 @@ class NullableCharFieldFilter(django_filters.CharFilter):
         return qs.distinct() if self.distinct else qs
 
 
+@extend_schema_field(OpenApiTypes.STR)
 class TagFilter(django_filters.ModelMultipleChoiceFilter):
     """
     Match on one or more assigned tags. If multiple tags are specified (e.g. ?tag=foo&tag=bar), the queryset is filtered
