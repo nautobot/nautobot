@@ -1011,7 +1011,7 @@ class InventoryItem(TreeNode, ComponentModel):
     ]
 
     class Meta:
-        ordering = ("device__id", "parent__id", "_name")
+        ordering = ("_name",)
         unique_together = ("device", "parent", "name")
 
     def get_absolute_url(self):
