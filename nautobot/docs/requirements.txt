@@ -5,5 +5,5 @@ mkdocs-gen-files==0.4.0
 mkdocs-include-markdown-plugin==3.9.1
 mkdocs-material==8.5.8
 mkdocs-version-annotations==1.0.0
-mkdocstrings==0.19
+mkdocstrings==0.19.1
 mkdocstrings-python==0.8.2
