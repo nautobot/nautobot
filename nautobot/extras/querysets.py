@@ -130,26 +130,21 @@ class ConfigContextModelQuerySet(RestrictedQuerySet):
                 Q.AND,
             )
             base_query.add((Q(sites=OuterRef("site")) | Q(sites=None)), Q.AND)
-            region_field = "site__region"  # TODO(glenn) pylint:disable=unused-variable # noqa: F841
+            region_field = "site__region"
 
         elif self.model._meta.model_name == "virtualmachine":
             base_query.add((Q(roles=OuterRef("role")) | Q(roles=None)), Q.AND)
             base_query.add((Q(sites=OuterRef("cluster__site")) | Q(sites=None)), Q.AND)
-            region_field = "cluster__site__region"  # TODO(glenn) pylint:disable=unused-variable # noqa: F841
+            region_field = "cluster__site__region"
 
-        # TODO(glenn) Replace with tree-queries equivalent, similar to LocationFilterSet._subtree?
-        base_query.add(
-            (
-                Q(
-                    # regions__tree_id=OuterRef(f"{region_field}__tree_id"),
-                    # regions__level__lte=OuterRef(f"{region_field}__level"),
-                    # regions__lft__lte=OuterRef(f"{region_field}__lft"),
-                    # regions__rght__gte=OuterRef(f"{region_field}__rght"),
-                )
-                | Q(regions=None)
-            ),
-            Q.AND,
-        )
+        # Avoid circular import error
+        from nautobot.dcim.models import Region
+        # Query for regions=(None OR site__region OR site__region__parent OR site__region__parent__parent OR ...)
+        region_query = Q(regions=None) | Q(regions=OuterRef(region_field))
+        for _i in range(Region.objects.all().max_tree_depth()):
+            region_field = f"{region_field}__parent"
+            region_query |= Q(regions=OuterRef(region_field))
+        base_query.add(region_query, Q.AND)
 
         return base_query
 
