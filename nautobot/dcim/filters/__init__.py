@@ -31,7 +31,6 @@ from nautobot.dcim.models import (
     DeviceBay,
     DeviceBayTemplate,
     DeviceRedundancyGroup,
-    DeviceRole,
     DeviceType,
     FrontPort,
     FrontPortTemplate,
@@ -51,7 +50,6 @@ from nautobot.dcim.models import (
     Rack,
     RackGroup,
     RackReservation,
-    RackRole,
     RearPort,
     RearPortTemplate,
     Region,
@@ -122,7 +120,6 @@ __all__ = (
     "RackFilterSet",
     "RackGroupFilterSet",
     "RackReservationFilterSet",
-    "RackRoleFilterSet",
     "RearPortFilterSet",
     "RearPortTemplateFilterSet",
     "RegionFilterSet",
@@ -436,22 +433,12 @@ class RackGroupFilterSet(NautobotFilterSet, LocatableModelFilterSetMixin, NameSl
         fields = ["id", "name", "slug", "description", "racks"]
 
 
-class RackRoleFilterSet(NautobotFilterSet, NameSlugSearchFilterSet):
-    has_racks = RelatedMembershipBooleanFilter(
-        field_name="racks",
-        label="Has racks",
-    )
-
-    class Meta:
-        model = RackRole
-        fields = ["id", "name", "slug", "color", "description", "racks"]
-
-
 class RackFilterSet(
     NautobotFilterSet,
     LocatableModelFilterSetMixin,
     TenancyModelFilterSetMixin,
     StatusModelFilterSetMixin,
+    RoleModelFilterSetMixin,
 ):
     q = SearchFilter(
         filter_predicates={
@@ -480,16 +467,6 @@ class RackFilterSet(
     )
     type = django_filters.MultipleChoiceFilter(choices=RackTypeChoices)
     width = django_filters.MultipleChoiceFilter(choices=RackWidthChoices)
-    role_id = django_filters.ModelMultipleChoiceFilter(
-        queryset=RackRole.objects.all(),
-        label="Role (ID)",
-    )
-    role = django_filters.ModelMultipleChoiceFilter(
-        field_name="role__slug",
-        queryset=RackRole.objects.all(),
-        to_field_name="slug",
-        label="Role (slug)",
-    )
     serial = django_filters.CharFilter(lookup_expr="iexact")
     has_devices = RelatedMembershipBooleanFilter(
         field_name="devices",
@@ -879,21 +856,6 @@ class DeviceBayTemplateFilterSet(BaseFilterSet, DeviceComponentTemplateModelFilt
         fields = []
 
 
-class DeviceRoleFilterSet(NautobotFilterSet, NameSlugSearchFilterSet):
-    has_devices = RelatedMembershipBooleanFilter(
-        field_name="devices",
-        label="Has devices",
-    )
-    has_virtual_machines = RelatedMembershipBooleanFilter(
-        field_name="virtual_machines",
-        label="Has virtual machines",
-    )
-
-    class Meta:
-        model = DeviceRole
-        fields = ["id", "name", "slug", "color", "vm_role", "description", "devices", "virtual_machines"]
-
-
 class PlatformFilterSet(NautobotFilterSet, NameSlugSearchFilterSet):
     manufacturer_id = django_filters.ModelMultipleChoiceFilter(
         field_name="manufacturer",
@@ -935,6 +897,7 @@ class DeviceFilterSet(
     TenancyModelFilterSetMixin,
     LocalContextModelFilterSetMixin,
     StatusModelFilterSetMixin,
+    RoleModelFilterSetMixin,
 ):
     q = SearchFilter(
         filter_predicates={
@@ -968,17 +931,6 @@ class DeviceFilterSet(
     device_type_id = django_filters.ModelMultipleChoiceFilter(
         queryset=DeviceType.objects.all(),
         label="Device type (ID)",
-    )
-    role_id = django_filters.ModelMultipleChoiceFilter(
-        field_name="device_role_id",
-        queryset=DeviceRole.objects.all(),
-        label="Role (ID)",
-    )
-    role = django_filters.ModelMultipleChoiceFilter(
-        field_name="device_role__slug",
-        queryset=DeviceRole.objects.all(),
-        to_field_name="slug",
-        label="Role (slug)",
     )
     platform_id = django_filters.ModelMultipleChoiceFilter(
         queryset=Platform.objects.all(),

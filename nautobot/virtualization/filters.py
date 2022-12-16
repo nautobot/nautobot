@@ -7,6 +7,7 @@ from nautobot.extras.filters import (
     CustomFieldModelFilterSetMixin,
     LocalContextModelFilterSetMixin,
     NautobotFilterSet,
+    RoleModelFilterSetMixin,
     StatusModelFilterSetMixin,
 )
 from nautobot.ipam.models import IPAddress, Service, VLAN
@@ -122,6 +123,7 @@ class VirtualMachineFilterSet(
     LocalContextModelFilterSetMixin,
     TenancyModelFilterSetMixin,
     StatusModelFilterSetMixin,
+    RoleModelFilterSetMixin,
 ):
     q = SearchFilter(
         filter_predicates={
@@ -182,16 +184,6 @@ class VirtualMachineFilterSet(
         field_name="cluster__location",
         to_field_name="slug",
         label="Location (slug or ID)",
-    )
-    role_id = django_filters.ModelMultipleChoiceFilter(
-        queryset=DeviceRole.objects.all(),
-        label="Role (ID)",
-    )
-    role = django_filters.ModelMultipleChoiceFilter(
-        field_name="role__slug",
-        queryset=DeviceRole.objects.all(),
-        to_field_name="slug",
-        label="Role (slug)",
     )
     platform_id = django_filters.ModelMultipleChoiceFilter(
         queryset=Platform.objects.all(),

@@ -8,7 +8,7 @@ from nautobot.core.factory import OrganizationalModelFactory, PrimaryModelFactor
 from nautobot.dcim.models import Location, Site
 from nautobot.extras.models import Status
 from nautobot.ipam.choices import IPAddressRoleChoices
-from nautobot.ipam.models import Aggregate, RIR, IPAddress, Prefix, Role, RouteTarget, VLAN, VLANGroup, VRF
+from nautobot.ipam.models import Aggregate, RIR, IPAddress, Prefix, RouteTarget, VLAN, VLANGroup, VRF
 from nautobot.tenancy.models import Tenant
 from nautobot.utilities.factory import get_random_instances, random_instance, UniqueFaker
 
@@ -269,22 +269,6 @@ class VRFFactory(PrimaryModelFactory):
                 self.export_targets.set(get_random_instances(RouteTarget))
 
 
-class RoleFactory(OrganizationalModelFactory):
-    class Meta:
-        model = Role
-        exclude = ("has_description",)
-
-    class Params:
-        unique_name = UniqueFaker("word", part_of_speech="adjective")
-
-    name = factory.LazyAttribute(lambda o: o.unique_name.title())
-
-    weight = factory.Faker("pyint", min_value=100, step=100)
-
-    has_description = factory.Faker("pybool")
-    description = factory.Maybe("has_description", factory.Faker("text", max_nb_chars=200), "")
-
-
 class VLANGroupFactory(OrganizationalModelFactory):
     class Meta:
         model = VLANGroup
@@ -362,7 +346,6 @@ class VLANFactory(PrimaryModelFactory):
     )
 
     has_role = factory.Faker("pybool")
-    role = factory.Maybe("has_role", random_instance(Role), None)
 
     has_site = factory.Faker("pybool")
     site = factory.Maybe(
@@ -439,7 +422,6 @@ class PrefixFactory(PrimaryModelFactory):
     location = factory.Maybe(
         "has_location", random_instance(lambda: Location.objects.get_for_model(Prefix), allow_null=False), None
     )
-    role = factory.Maybe("has_role", random_instance(Role), None)
     # TODO: create a SiteGetOrCreateFactory to get or create a site with matching tenant
     site = factory.Maybe(
         "has_location",

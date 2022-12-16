@@ -12,7 +12,7 @@ from django.urls import reverse
 from django.utils.functional import classproperty
 
 from nautobot.dcim.models import Device, Interface
-from nautobot.extras.models import Status, StatusModel
+from nautobot.extras.models import RoleModelMixin, Status, StatusModel
 from nautobot.extras.utils import extras_features
 from nautobot.core.fields import AutoSlugField
 from nautobot.core.models.generics import OrganizationalModel, PrimaryModel
@@ -37,7 +37,6 @@ __all__ = (
     "IPAddress",
     "Prefix",
     "RIR",
-    "Role",
     "RouteTarget",
     "Service",
     "VLAN",
@@ -388,46 +387,6 @@ class Aggregate(PrimaryModel):
 
 @extras_features(
     "custom_fields",
-    "custom_validators",
-    "graphql",
-    "relationships",
-)
-class Role(OrganizationalModel):
-    """
-    A Role represents the functional role of a Prefix or VLAN; for example, "Customer," "Infrastructure," or
-    "Management."
-    """
-
-    name = models.CharField(max_length=100, unique=True)
-    slug = AutoSlugField(populate_from="name")
-    weight = models.PositiveSmallIntegerField(default=1000)
-    description = models.CharField(
-        max_length=200,
-        blank=True,
-    )
-
-    csv_headers = ["name", "slug", "weight", "description"]
-
-    class Meta:
-        ordering = ["weight", "name"]
-
-    def __str__(self):
-        return self.name
-
-    def get_absolute_url(self):
-        return reverse("ipam:role", args=[self.slug])
-
-    def to_csv(self):
-        return (
-            self.name,
-            self.slug,
-            self.weight,
-            self.description,
-        )
-
-
-@extras_features(
-    "custom_fields",
     "custom_links",
     "custom_validators",
     "dynamic_groups",
@@ -438,7 +397,7 @@ class Role(OrganizationalModel):
     "statuses",
     "webhooks",
 )
-class Prefix(PrimaryModel, StatusModel):
+class Prefix(PrimaryModel, StatusModel, RoleModelMixin):
     """
     A Prefix represents an IPv4 or IPv6 network, including mask length.
     Prefixes can optionally be assigned to Sites (and/or Locations) and VRFs.
@@ -489,14 +448,6 @@ class Prefix(PrimaryModel, StatusModel):
         blank=True,
         null=True,
         verbose_name="VLAN",
-    )
-    role = models.ForeignKey(
-        to="ipam.Role",
-        on_delete=models.SET_NULL,
-        related_name="prefixes",
-        blank=True,
-        null=True,
-        help_text="The primary function of this prefix",
     )
     is_pool = models.BooleanField(
         verbose_name="Is a pool",
@@ -757,7 +708,7 @@ class Prefix(PrimaryModel, StatusModel):
     "statuses",
     "webhooks",
 )
-class IPAddress(PrimaryModel, StatusModel):
+class IPAddress(PrimaryModel, StatusModel, RoleModelMixin):
     """
     An IPAddress represents an individual IPv4 or IPv6 address and its mask. The mask length should match what is
     configured in the real world. (Typically, only loopback interfaces are configured with /32 or /128 masks.) Like
@@ -790,13 +741,6 @@ class IPAddress(PrimaryModel, StatusModel):
         related_name="ip_addresses",
         blank=True,
         null=True,
-    )
-    role = models.CharField(
-        max_length=50,
-        choices=IPAddressRoleChoices,
-        blank=True,
-        help_text="The functional role of this IP",
-        db_index=True,
     )
     assigned_object_type = models.ForeignKey(
         to=ContentType,
@@ -971,7 +915,7 @@ class IPAddress(PrimaryModel, StatusModel):
             self.vrf.name if self.vrf else None,
             self.tenant.name if self.tenant else None,
             self.get_status_display(),
-            self.get_role_display(),
+            self.role.name if self.role else None,
             obj_type,
             self.assigned_object_id,
             is_primary,
@@ -1029,9 +973,6 @@ class IPAddress(PrimaryModel, StatusModel):
             self.prefix_length = value
 
     mask_length = property(fset=_set_mask_length)
-
-    def get_role_class(self):
-        return IPAddressRoleChoices.CSS_CLASSES.get(self.role)
 
 
 @extras_features(
@@ -1134,7 +1075,7 @@ class VLANGroup(OrganizationalModel):
     "statuses",
     "webhooks",
 )
-class VLAN(PrimaryModel, StatusModel):
+class VLAN(PrimaryModel, StatusModel, RoleModelMixin):
     """
     A VLAN is a distinct layer two forwarding domain identified by a 12-bit integer (1-4094).
     Each VLAN must be assigned to a Site or Location, however VLAN IDs need not be unique within a Site or Location.
@@ -1172,13 +1113,6 @@ class VLAN(PrimaryModel, StatusModel):
     tenant = models.ForeignKey(
         to="tenancy.Tenant",
         on_delete=models.PROTECT,
-        related_name="vlans",
-        blank=True,
-        null=True,
-    )
-    role = models.ForeignKey(
-        to="ipam.Role",
-        on_delete=models.SET_NULL,
         related_name="vlans",
         blank=True,
         null=True,

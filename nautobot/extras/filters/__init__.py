@@ -111,6 +111,7 @@ __all__ = (
     "RelationshipFilter",
     "RelationshipFilterSet",
     "RelationshipAssociationFilterSet",
+    "RoleModelFilterSetMixin",
     "ScheduledJobFilterSet",
     "SecretFilterSet",
     "SecretsGroupFilterSet",
@@ -217,12 +218,12 @@ class ConfigContextFilterSet(BaseFilterSet):
     )
     role_id = django_filters.ModelMultipleChoiceFilter(
         field_name="roles",
-        queryset=DeviceRole.objects.all(),
+        queryset=Role.objects.all(),
         label="Role",
     )
     role = django_filters.ModelMultipleChoiceFilter(
         field_name="roles__slug",
-        queryset=DeviceRole.objects.all(),
+        queryset=Role.objects.all(),
         to_field_name="slug",
         label="Role (slug)",
     )
@@ -868,6 +869,30 @@ class RoleFilterSet(NautobotFilterSet):
             "created",
             "last_updated",
         ]
+
+
+class RoleFilter(NaturalKeyOrPKMultipleChoiceFilter):
+    """Limit role choices to the available role choices for self.model"""
+
+    def __init__(self, *args, **kwargs):
+
+        kwargs.setdefault("field_name", "role")
+        kwargs.setdefault("to_field_name", "slug")
+        kwargs.setdefault("queryset", Role.objects.all())
+        kwargs.setdefault("label", "Role (slug or ID)")
+
+        super().__init__(*args, **kwargs)
+
+    def get_queryset(self, request):
+        return self.queryset.get_for_model(self.model)
+
+
+class RoleModelFilterSetMixin(django_filters.FilterSet):
+    """
+    Mixin to add a `role` filter field to a FilterSet.
+    """
+
+    role = RoleFilter()
 
 
 #

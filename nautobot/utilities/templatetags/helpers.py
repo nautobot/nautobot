@@ -679,3 +679,16 @@ def custom_branding_or_static(branding_asset, static_asset):
     if settings.BRANDING_FILEPATHS.get(branding_asset):
         return f"{ settings.MEDIA_URL }{ settings.BRANDING_FILEPATHS.get(branding_asset) }"
     return StaticNode.handle_simple(static_asset)
+
+
+@library.filter()
+@register.filter()
+def render_related_name_and_color(model, field_name):
+    """Render the display view of an object."""
+    obj = getattr(model, field_name)
+    if obj:
+        content = (
+            f'<span class="label" style="color: {fgcolor(obj.color)}; background-color: #{obj.color}">{obj.name}</span>'
+        )
+        return format_html(content)
+    return "—"

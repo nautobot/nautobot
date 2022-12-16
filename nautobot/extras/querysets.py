@@ -14,8 +14,8 @@ class ConfigContextQuerySet(RestrictedQuerySet):
         Return all applicable ConfigContexts for a given object. Only active ConfigContexts will be included.
         """
 
-        # `device_role` for Device; `role` for VirtualMachine
-        role = getattr(obj, "device_role", None) or obj.role
+        # `role` for Device; `role` for VirtualMachine
+        role = obj.role
 
         # `device_type` for Device; `type` for VirtualMachine
         device_type = getattr(obj, "device_type", None)
@@ -123,7 +123,7 @@ class ConfigContextModelQuerySet(RestrictedQuerySet):
         )
 
         if self.model._meta.model_name == "device":
-            base_query.add((Q(roles=OuterRef("device_role")) | Q(roles=None)), Q.AND)
+            base_query.add((Q(roles=OuterRef("role")) | Q(roles=None)), Q.AND)
             base_query.add((Q(device_types=OuterRef("device_type")) | Q(device_types=None)), Q.AND)
             base_query.add(
                 (Q(device_redundancy_groups=OuterRef("device_redundancy_group")) | Q(device_redundancy_groups=None)),

@@ -18,7 +18,7 @@
                     <tr>
                         <td>Status</td>
                         <td>
-                            <span class="label" style="color: {{ object.status.color|fgcolor }}; background-color: #{{ object.status.color }}">{{ object.get_status_display }}</span>
+                            {{ object | render_related_name_and_color:"status" }}
                         </td>
                     </tr>
                     <tr>

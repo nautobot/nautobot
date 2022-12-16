@@ -14,7 +14,7 @@ from nautobot.dcim.choices import DeviceFaceChoices, RackDimensionUnitChoices, R
 from nautobot.dcim.constants import RACK_ELEVATION_LEGEND_WIDTH_DEFAULT, RACK_U_HEIGHT_DEFAULT
 
 from nautobot.dcim.elevations import RackElevationSVG
-from nautobot.extras.models import StatusModel
+from nautobot.extras.models import RoleModelMixin, StatusModel
 from nautobot.extras.utils import extras_features
 from nautobot.core.fields import AutoSlugField
 from nautobot.core.models.generics import OrganizationalModel, PrimaryModel
@@ -31,7 +31,6 @@ __all__ = (
     "Rack",
     "RackGroup",
     "RackReservation",
-    "RackRole",
 )
 
 
@@ -147,45 +146,6 @@ class RackGroup(MPTTModel, OrganizationalModel):
 
 @extras_features(
     "custom_fields",
-    "custom_validators",
-    "graphql",
-    "relationships",
-)
-class RackRole(OrganizationalModel):
-    """
-    Racks can be organized by functional role, similar to Devices.
-    """
-
-    name = models.CharField(max_length=100, unique=True)
-    slug = AutoSlugField(populate_from="name")
-    color = ColorField(default=ColorChoices.COLOR_GREY)
-    description = models.CharField(
-        max_length=200,
-        blank=True,
-    )
-
-    csv_headers = ["name", "slug", "color", "description"]
-
-    class Meta:
-        ordering = ["name"]
-
-    def __str__(self):
-        return self.name
-
-    def get_absolute_url(self):
-        return reverse("dcim:rackrole", args=[self.pk])
-
-    def to_csv(self):
-        return (
-            self.name,
-            self.slug,
-            self.color,
-            self.description,
-        )
-
-
-@extras_features(
-    "custom_fields",
     "custom_links",
     "custom_validators",
     "dynamic_groups",
@@ -196,7 +156,7 @@ class RackRole(OrganizationalModel):
     "statuses",
     "webhooks",
 )
-class Rack(PrimaryModel, StatusModel):
+class Rack(PrimaryModel, StatusModel, RoleModelMixin):
     """
     Devices are housed within Racks. Each rack has a defined height measured in rack units, and a front and rear face.
     Each Rack is assigned to a Site and (optionally) a RackGroup.
@@ -233,14 +193,6 @@ class Rack(PrimaryModel, StatusModel):
         related_name="racks",
         blank=True,
         null=True,
-    )
-    role = models.ForeignKey(
-        to="dcim.RackRole",
-        on_delete=models.PROTECT,
-        related_name="racks",
-        blank=True,
-        null=True,
-        help_text="Functional role",
     )
     serial = models.CharField(max_length=255, blank=True, verbose_name="Serial number", db_index=True)
     asset_tag = models.CharField(
@@ -456,7 +408,7 @@ class Rack(PrimaryModel, StatusModel):
             # Retrieve all devices installed within the rack
             queryset = (
                 # v2 TODO(jathan): Replace prefetch_related with select_related
-                Device.objects.prefetch_related("device_type", "device_type__manufacturer", "device_role")
+                Device.objects.prefetch_related("device_type", "device_type__manufacturer", "role")
                 .annotate(devicebay_count=Count("devicebays"))
                 .exclude(pk=exclude)
                 .filter(rack=self, position__gt=0, device_type__u_height__gt=0)

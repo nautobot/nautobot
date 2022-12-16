@@ -19,7 +19,6 @@ from .devices import (
     DevicePowerOutletTable,
     DeviceRearPortTable,
     DeviceRedundancyGroupTable,
-    DeviceRoleTable,
     DeviceTable,
     FrontPortTable,
     InterfaceTable,
@@ -49,7 +48,6 @@ from .racks import (
     RackDetailTable,
     RackGroupTable,
     RackReservationTable,
-    RackRoleTable,
 )
 from .sites import RegionTable, SiteTable
 
@@ -73,7 +71,6 @@ __all__ = (
     "DevicePowerPortTable",
     "DeviceRearPortTable",
     "DeviceRedundancyGroupTable",
-    "DeviceRoleTable",
     "DeviceTable",
     "DeviceTypeTable",
     "FrontPortTable",
@@ -96,7 +93,6 @@ __all__ = (
     "RackDetailTable",
     "RackGroupTable",
     "RackReservationTable",
-    "RackRoleTable",
     "RackTable",
     "RearPortTable",
     "RearPortTemplateTable",

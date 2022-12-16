@@ -18,7 +18,6 @@ from nautobot.core.api.exceptions import SerializerNotFound
 from nautobot.core.api.serializers import BaseModelSerializer
 from nautobot.dcim.api.nested_serializers import (
     NestedDeviceSerializer,
-    NestedDeviceRoleSerializer,
     NestedDeviceTypeSerializer,
     NestedLocationSerializer,
     NestedPlatformSerializer,
@@ -26,7 +25,7 @@ from nautobot.dcim.api.nested_serializers import (
     NestedRegionSerializer,
     NestedSiteSerializer,
 )
-from nautobot.dcim.models import Device, DeviceRole, DeviceType, Location, Platform, Rack, Region, Site
+from nautobot.dcim.models import Device, DeviceType, Location, Platform, Rack, Region, Site
 from nautobot.extras.api.fields import StatusSerializerField
 from nautobot.extras.choices import (
     CustomFieldFilterLogicChoices,
@@ -36,6 +35,7 @@ from nautobot.extras.choices import (
     ObjectChangeActionChoices,
 )
 from nautobot.extras.datasources import get_datasource_content_choices
+from ...core.models.mixins import LimitQuerysetChoicesSerializerMixin
 from nautobot.extras.models import (
     ComputedField,
     ConfigContext,
@@ -113,6 +113,7 @@ from .nested_serializers import (  # noqa: F401
     NestedTagSerializer,
     NestedWebhookSerializer,
     NestedJobHookSerializer,
+    NestedRoleSerializer,
 )
 
 #
@@ -163,6 +164,22 @@ class NautobotModelSerializer(
     """
 
 
+class RoleSerializerField(LimitQuerysetChoicesSerializerMixin, NestedRoleSerializer):
+    """NestedSerializer field for `Role` object fields."""
+
+
+class RoleModelSerializerMixin(BaseModelSerializer):
+    """Mixin to add `role` choice field to model serializers."""
+
+    role = RoleSerializerField(required=False)
+
+
+class RoleRequiredRoleModelSerializerMixin(BaseModelSerializer):
+    """Mixin to add `role` choice field to model serializers."""
+
+    role = RoleSerializerField()
+
+
 class StatusModelSerializerMixin(BaseModelSerializer):
     """Mixin to add `status` choice field to model serializers."""
 
@@ -187,15 +204,8 @@ class StatusModelSerializerMixin(BaseModelSerializer):
         return list(cls().fields["status"].get_choices().keys())
 
 
-class TagSerializerField(NestedTagSerializer):
+class TagSerializerField(LimitQuerysetChoicesSerializerMixin, NestedTagSerializer):
     """NestedSerializer field for `Tag` object fields."""
-
-    def get_queryset(self):
-        """Only emit status options for this model/field combination."""
-        queryset = super().get_queryset()
-        # Get objects model e.g Site, Device... etc.
-        model = self.parent.parent.Meta.model
-        return queryset.get_for_model(model)
 
 
 class TaggedModelSerializerMixin(BaseModelSerializer):
@@ -301,8 +311,8 @@ class ConfigContextSerializer(ValidatedModelSerializer, NotesSerializerMixin):
         many=True,
     )
     roles = SerializedPKRelatedField(
-        queryset=DeviceRole.objects.all(),
-        serializer=NestedDeviceRoleSerializer,
+        queryset=Role.objects.all(),
+        serializer=NestedRoleSerializer,
         required=False,
         many=True,
     )

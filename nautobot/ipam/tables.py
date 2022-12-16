@@ -3,13 +3,12 @@ from django.utils.safestring import mark_safe
 from django_tables2.utils import Accessor
 
 from nautobot.dcim.models import Interface
-from nautobot.extras.tables import StatusTableMixin
+from nautobot.extras.tables import StatusTableMixin, RoleTableMixin
 from nautobot.tenancy.tables import TenantColumn
 from nautobot.utilities.tables import (
     BaseTable,
     BooleanColumn,
     ButtonsColumn,
-    ChoiceFieldColumn,
     LinkedCountColumn,
     TagColumn,
     ToggleColumn,
@@ -21,7 +20,6 @@ from .models import (
     IPAddress,
     Prefix,
     RIR,
-    Role,
     RouteTarget,
     Service,
     VLAN,
@@ -42,25 +40,6 @@ PREFIX_LINK = """
     <i class="mdi mdi-circle-small"></i>
 {% endfor %}
 <a href="{% if record.present_in_database %}{% url 'ipam:prefix' pk=record.pk %}{% else %}{% url 'ipam:prefix_add' %}?prefix={{ record }}{% if object.vrf %}&vrf={{ object.vrf.pk }}{% endif %}{% if object.site %}&site={{ object.site.pk }}{% endif %}{% if object.tenant %}&tenant_group={{ object.tenant.group.pk }}&tenant={{ object.tenant.pk }}{% endif %}{% endif %}">{{ record.prefix }}</a>
-"""
-
-PREFIX_COPY_LINK = """
-{% load helpers %}
-{% for i in record.parents|as_range %}
-    <i class="mdi mdi-circle-small"></i>
-{% endfor %}
-<span class="hover_copy"><a href="{% if record.present_in_database %}{% url 'ipam:prefix' pk=record.pk %}{% else %}{% url 'ipam:prefix_add' %}?prefix={{ record }}{% if object.vrf %}&vrf={{ object.vrf.pk }}{% endif %}{% if object.site %}&site={{ object.site.pk }}{% endif %}{% if object.tenant %}&tenant_group={{ object.tenant.group.pk }}&tenant={{ object.tenant.pk }}{% endif %}{% endif %}" id="copy_{{record.id}}">{{ record.prefix }}</a><button type="button" class="btn btn-inline btn-default hover_copy_button" data-clipboard-target="#copy_{{record.id}}">
-                                <span class="mdi mdi-content-copy"></span>
-                            </button>
-                        </span>
-"""
-
-PREFIX_ROLE_LINK = """
-{% if record.role %}
-    <a href="{% url 'ipam:prefix_list' %}?role={{ record.role.slug }}">{{ record.role }}</a>
-{% else %}
-    &mdash;
-{% endif %}
 """
 
 IPADDRESS_LINK = """
@@ -283,49 +262,11 @@ class AggregateDetailTable(AggregateTable):
 
 
 #
-# Roles
-#
-
-
-class RoleTable(BaseTable):
-    pk = ToggleColumn()
-    name = tables.LinkColumn()
-    prefix_count = LinkedCountColumn(
-        viewname="ipam:prefix_list",
-        url_params={"role": "slug"},
-        verbose_name="Prefixes",
-    )
-    vlan_count = LinkedCountColumn(viewname="ipam:vlan_list", url_params={"role": "slug"}, verbose_name="VLANs")
-    actions = ButtonsColumn(Role, pk_field="slug")
-
-    class Meta(BaseTable.Meta):
-        model = Role
-        fields = (
-            "pk",
-            "name",
-            "slug",
-            "prefix_count",
-            "vlan_count",
-            "description",
-            "weight",
-            "actions",
-        )
-        default_columns = (
-            "pk",
-            "name",
-            "prefix_count",
-            "vlan_count",
-            "description",
-            "actions",
-        )
-
-
-#
 # Prefixes
 #
 
 
-class PrefixTable(StatusTableMixin, BaseTable):
+class PrefixTable(StatusTableMixin, RoleTableMixin, BaseTable):
     pk = ToggleColumn()
     prefix = tables.TemplateColumn(
         template_code=PREFIX_COPY_LINK, attrs={"td": {"class": "text-nowrap"}}, order_by=("network", "prefix_length")
@@ -335,7 +276,6 @@ class PrefixTable(StatusTableMixin, BaseTable):
     site = tables.Column(linkify=True)
     location = tables.Column(linkify=True)
     vlan = tables.Column(linkify=True, verbose_name="VLAN")
-    role = tables.TemplateColumn(template_code=PREFIX_ROLE_LINK)
     is_pool = BooleanColumn(verbose_name="Pool")
 
     class Meta(BaseTable.Meta):
@@ -414,13 +354,12 @@ class PrefixDetailTable(PrefixTable):
 #
 
 
-class IPAddressTable(StatusTableMixin, BaseTable):
+class IPAddressTable(StatusTableMixin, RoleTableMixin, BaseTable):
     pk = ToggleColumn()
     address = tables.TemplateColumn(
         template_code=IPADDRESS_COPY_LINK, verbose_name="IP Address", order_by=("host", "prefix_length")
     )
     vrf = tables.TemplateColumn(template_code=VRF_LINK, verbose_name="VRF")
-    role = ChoiceFieldColumn()
     tenant = TenantColumn()
     assigned_object = tables.Column(linkify=True, orderable=False, verbose_name="Interface")
     assigned_object_parent = tables.Column(
@@ -539,14 +478,13 @@ class VLANGroupTable(BaseTable):
 #
 
 
-class VLANTable(StatusTableMixin, BaseTable):
+class VLANTable(StatusTableMixin, RoleTableMixin, BaseTable):
     pk = ToggleColumn()
     vid = tables.TemplateColumn(template_code=VLAN_LINK, verbose_name="ID")
     site = tables.Column(linkify=True)
     location = tables.Column(linkify=True)
     group = tables.Column(linkify=True)
     tenant = TenantColumn()
-    role = tables.TemplateColumn(template_code=VLAN_ROLE_LINK)
 
     class Meta(BaseTable.Meta):
         model = VLAN

@@ -8,7 +8,7 @@ from django.forms import ModelMultipleChoiceField, inlineformset_factory
 from django.urls.base import reverse
 from django.utils.safestring import mark_safe
 
-from nautobot.dcim.models import DeviceRedundancyGroup, DeviceRole, DeviceType, Location, Platform, Region, Site
+from nautobot.dcim.models import DeviceRedundancyGroup, DeviceType, Location, Platform, Region, Site
 from nautobot.tenancy.models import Tenant, TenantGroup
 from nautobot.utilities.deprecation import class_deprecated_in_favor_of
 from nautobot.utilities.forms import (
@@ -214,7 +214,7 @@ class ConfigContextForm(BootstrapMixin, NoteModelFormMixin, forms.ModelForm):
     regions = DynamicModelMultipleChoiceField(queryset=Region.objects.all(), required=False)
     sites = DynamicModelMultipleChoiceField(queryset=Site.objects.all(), required=False)
     locations = DynamicModelMultipleChoiceField(queryset=Location.objects.all(), required=False)
-    roles = DynamicModelMultipleChoiceField(queryset=DeviceRole.objects.all(), required=False)
+    roles = DynamicModelMultipleChoiceField(queryset=Role.objects.all(), required=False)
     device_types = DynamicModelMultipleChoiceField(queryset=DeviceType.objects.all(), required=False)
     platforms = DynamicModelMultipleChoiceField(queryset=Platform.objects.all(), required=False)
     cluster_groups = DynamicModelMultipleChoiceField(queryset=ClusterGroup.objects.all(), required=False)
@@ -272,7 +272,7 @@ class ConfigContextFilterForm(BootstrapMixin, forms.Form):
     region = DynamicModelMultipleChoiceField(queryset=Region.objects.all(), to_field_name="slug", required=False)
     site = DynamicModelMultipleChoiceField(queryset=Site.objects.all(), to_field_name="slug", required=False)
     location = DynamicModelMultipleChoiceField(queryset=Location.objects.all(), to_field_name="slug", required=False)
-    role = DynamicModelMultipleChoiceField(queryset=DeviceRole.objects.all(), to_field_name="slug", required=False)
+    role = DynamicModelMultipleChoiceField(queryset=Role.objects.all(), to_field_name="slug", required=False)
     type = DynamicModelMultipleChoiceField(queryset=DeviceType.objects.all(), to_field_name="slug", required=False)
     platform = DynamicModelMultipleChoiceField(queryset=Platform.objects.all(), to_field_name="slug", required=False)
     cluster_group = DynamicModelMultipleChoiceField(

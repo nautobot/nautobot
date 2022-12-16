@@ -397,3 +397,49 @@ def refresh_job_model_from_job_class(job_model_class, job_source, job_class, *, 
     )
 
     return (job_model, created)
+
+
+def migrate_role_data(
+    model,
+    role_model=None,
+    is_choice_field=False,
+    role_choiceset=None,
+    legacy_role="legacy_role",
+    new_role="new_role",
+):
+    """
+    Migrate legacy_role's `role_model` equivalent record into new_role.
+
+    Args:
+        model(Model): Model with role field to alter
+        role_model(Model): Role Model (optional)
+        is_choice_field(bool): True if Model's role field is a choice field not an FK field else False
+        role_choiceset(ChoiceSet): Role ChoiceSet (optional)
+        legacy_role(str): Models role field legacy name; This is the current role field name
+        new_role(str): Models role field new name; This is the name role field should be updated to
+    """
+
+    legacy_role_name = legacy_role if is_choice_field else legacy_role + "__name"
+    queryset = model.objects.filter(**{legacy_role + "__isnull": False}).values("pk", legacy_role_name)
+    instances_to_update = []
+
+    for item in queryset:
+        role_equivalent = None
+        if role_model:
+            try:
+                role_equivalent = role_model.objects.get(
+                    Q(name=item[legacy_role_name]) | Q(slug=item[legacy_role_name])
+                )
+            except role_model.DoesNotExist:
+                logger.error(f"Role with name {item[legacy_role_name]} not found")
+        else:
+            # ChoiceSet.CHOICES has to be inverted to obtain the value using its label
+            # i.e {"vrf": "VRF"} --> {"VRF": "vrf"}
+            inverted_role_choiceset = {label: value for value, label in role_choiceset.CHOICES}
+            role_equivalent = inverted_role_choiceset.get(item[legacy_role_name])
+
+        model_data = {"pk": item["pk"], new_role: role_equivalent}
+        instances_to_update.append(model(**model_data))
+
+    if instances_to_update:
+        model.objects.bulk_update(instances_to_update, fields=[new_role], batch_size=1000)

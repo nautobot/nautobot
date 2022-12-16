@@ -30,7 +30,6 @@ from nautobot.dcim.models import (
     DeviceBay,
     DeviceBayTemplate,
     DeviceRedundancyGroup,
-    DeviceRole,
     DeviceType,
     FrontPort,
     FrontPortTemplate,
@@ -50,7 +49,6 @@ from nautobot.dcim.models import (
     Rack,
     RackGroup,
     RackReservation,
-    RackRole,
     RearPort,
     RearPortTemplate,
     Region,
@@ -199,17 +197,6 @@ class RackGroupViewSet(NautobotModelViewSet):
     ).prefetch_related("site")
     serializer_class = serializers.RackGroupSerializer
     filterset_class = filters.RackGroupFilterSet
-
-
-#
-# Rack roles
-#
-
-
-class RackRoleViewSet(NautobotModelViewSet):
-    queryset = RackRole.objects.annotate(rack_count=count_related(Rack, "role"))
-    serializer_class = serializers.RackRoleSerializer
-    filterset_class = filters.RackRoleFilterSet
 
 
 #
@@ -386,20 +373,6 @@ class DeviceBayTemplateViewSet(NautobotModelViewSet):
 
 
 #
-# Device roles
-#
-
-
-class DeviceRoleViewSet(NautobotModelViewSet):
-    queryset = DeviceRole.objects.annotate(
-        device_count=count_related(Device, "device_role"),
-        virtualmachine_count=count_related(VirtualMachine, "role"),
-    )
-    serializer_class = serializers.DeviceRoleSerializer
-    filterset_class = filters.DeviceRoleFilterSet
-
-
-#
 # Platforms
 #
 
@@ -422,7 +395,7 @@ class DeviceViewSet(ConfigContextQuerySetMixin, StatusViewSetMixin, NautobotMode
     # v2 TODO(jathan): Replace prefetch_related with select_related (extap tags because it is m2m)
     queryset = Device.objects.prefetch_related(
         "device_type__manufacturer",
-        "device_role",
+        "role",
         "tenant",
         "platform",
         "site",

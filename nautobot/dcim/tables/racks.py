@@ -1,8 +1,8 @@
 import django_tables2 as tables
 from django_tables2.utils import Accessor
 
-from nautobot.dcim.models import Rack, RackGroup, RackReservation, RackRole
-from nautobot.extras.tables import StatusTableMixin
+from nautobot.dcim.models import Rack, RackGroup, RackReservation
+from nautobot.extras.tables import StatusTableMixin, RoleTableMixin
 from nautobot.tenancy.tables import TenantColumn
 from nautobot.utilities.tables import (
     BaseTable,
@@ -20,7 +20,6 @@ __all__ = (
     "RackDetailTable",
     "RackGroupTable",
     "RackReservationTable",
-    "RackRoleTable",
 )
 
 
@@ -44,43 +43,17 @@ class RackGroupTable(BaseTable):
 
 
 #
-# Rack roles
-#
-
-
-class RackRoleTable(BaseTable):
-    pk = ToggleColumn()
-    name = tables.Column(linkify=True)
-    rack_count = tables.Column(verbose_name="Racks")
-    color = ColorColumn()
-    actions = ButtonsColumn(RackRole)
-
-    class Meta(BaseTable.Meta):
-        model = RackRole
-        fields = ("pk", "name", "rack_count", "color", "description", "slug", "actions")
-        default_columns = (
-            "pk",
-            "name",
-            "rack_count",
-            "color",
-            "description",
-            "actions",
-        )
-
-
-#
 # Racks
 #
 
 
-class RackTable(StatusTableMixin, BaseTable):
+class RackTable(StatusTableMixin, RoleTableMixin, BaseTable):
     pk = ToggleColumn()
     name = tables.Column(order_by=("_name",), linkify=True)
     group = tables.Column(linkify=True)
     site = tables.Column(linkify=True)
     location = tables.Column(linkify=True)
     tenant = TenantColumn()
-    role = ColoredLabelColumn()
     u_height = tables.TemplateColumn(template_code="{{ record.u_height }}U", verbose_name="Height")
 
     class Meta(BaseTable.Meta):
