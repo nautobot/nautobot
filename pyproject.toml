@@ -154,7 +154,7 @@ black = "~22.12.0"
 # Test code coverage measurement
 coverage = "~6.5.0"
 # Tool for debugging Django
-django-debug-toolbar = "~3.7.0"
+django-debug-toolbar = "~3.8.0"
 # DiscoverSlowestTestsRunner for running CI performance tests and benchmarking.
 django-slowtests = "^1.1.1"
 # Nautobot example plugin used for testing
