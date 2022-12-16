@@ -12,6 +12,7 @@ from django.forms import (
     modelformset_factory,
 )
 from django.shortcuts import get_object_or_404, redirect, render
+from django.utils.functional import cached_property
 from django.utils.html import escape
 from django.utils.safestring import mark_safe
 from django.views.generic import View
@@ -1680,8 +1681,14 @@ class DeviceConfigView(generic.ObjectView):
 
 
 class DeviceConfigContextView(ObjectConfigContextView):
-    queryset = Device.objects.annotate_config_context_data()
     base_template = "dcim/device/base.html"
+
+    @cached_property
+    def queryset(self):
+        """
+        A cached_property rather than a class attribute because annotate_config_context_data() is unsafe at import time.
+        """
+        return Device.objects.annotate_config_context_data()
 
 
 class DeviceChangeLogView(ObjectChangeLogView):
