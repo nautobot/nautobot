@@ -1,5 +1,16 @@
 # Upgrading from Nautobot v1.X
 
+## REST API Changes
+
+### Renamed Serializer Fields
+
+| Model         | Renamed Field | Changes                 |
+|---------------|---------------|-------------------------|
+| InventoryItem | `_depth`      | Renamed to `tree_depth` |
+| RackGroup     | `_depth`      | Renamed to `tree_depth` |
+| Region        | `_depth`      | Renamed to `tree_depth` |
+| TenantGroup   | `_depth`      | Renamed to `tree_depth` |
+
 ## UI and REST API Filter Changes
 
 ### Renamed Filter Fields
@@ -15,6 +26,8 @@
 |                       | `virtual_chassis_id` | Renamed to `virtual_chassis` | `/dcim/devices/?virtual_chassis=<uuid|slug>`      |
 | FrontPort             | `cabled`             | Renamed to `has_cable`       | `/dcim/front-ports/?has_cable=True|False`         |
 | Interface             | `cabled`             | Renamed to `has_cable`       | `/dcim/interfaces/?has_cable=True|False`          |
+| InventoryItem         | `child_items`        | Renamed to `children`        | `/dcim/inventory-items/?children=<uuid|name>`     |
+|                       | `has_child_items`    | Renamed to `has_children`    | `/dcim/inventory-items/?has_children=True|False`  |
 | PowerFeed             | `cabled`             | Renamed to `has_cable`       | `/dcim/power-feeds/?has_cable=True|False`         |
 | PowerOutlet           | `cabled`             | Renamed to `has_cable`       |  `/dcim/power-outlets/?has_cable=True|False`      |
 | PowerPort             | `cabled`             | Renamed to `has_cable`       | `/dcim/power-ports/?has_cable=True|False`         |
