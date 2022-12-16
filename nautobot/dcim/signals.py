@@ -82,7 +82,7 @@ def handle_rackgroup_site_location_change(instance, created, **kwargs):
             racks_permitted = False
             power_panels_permitted = False
 
-        for rackgroup in instance.children:
+        for rackgroup in instance.children.all():
             changed = False
             if rackgroup.site != instance.site:
                 rackgroup.site = instance.site
