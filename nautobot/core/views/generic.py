@@ -7,7 +7,6 @@ from django.contrib import messages
 from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import (
     FieldDoesNotExist,
-    FieldError,
     ObjectDoesNotExist,
     ValidationError,
 )
@@ -24,6 +23,7 @@ from django.views.generic import View
 from django_tables2 import RequestConfig
 
 from nautobot.core.forms import SearchForm
+from nautobot.core.utilities import check_filter_for_display
 from nautobot.extras.models import CustomField, ExportTemplate
 from nautobot.extras.models.change_logging import ChangeLoggedModel
 from nautobot.utilities.error_handlers import handle_protectederror
@@ -47,7 +47,6 @@ from nautobot.utilities.utils import (
     csv_format,
     get_route_for_model,
     get_filterable_params_from_filter_params,
-    is_uuid,
     normalize_querydict,
     prepare_cloned_fields,
 )
@@ -255,25 +254,9 @@ class ObjectListView(ObjectPermissionRequiredMixin, View):
                 )
                 self.queryset = self.queryset.none()
 
-            def check_for_display(field_name, values):
-                values = values if isinstance(values, (list, tuple)) else [values]
-
-                if field_name not in filterset_filters.keys():
-                    return [field_name, values]
-
-                label = filterset_filters[field_name].label
-                if len(values) == 0 or not is_uuid(values[0]):
-                    return [label, values]
-                else:
-                    try:
-                        filtered_results = filterset_filters[field_name].queryset.filter(pk__in=values)
-                        new_values = [result.display for result in filtered_results]
-                        return [label, new_values]
-                    except (FieldError, AttributeError):
-                        return [label, values]
-
             display_filter_params = [
-                check_for_display(field_name, values) for field_name, values in filter_params.items()
+                check_filter_for_display(filterset_filters, field_name, values)
+                for field_name, values in filter_params.items()
             ]
 
             if request.GET:
