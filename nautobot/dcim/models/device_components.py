@@ -5,7 +5,6 @@ from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
 from django.db.models import Sum
 from django.urls import reverse
-from tree_queries.models import TreeNode
 
 from nautobot.dcim.choices import (
     ConsolePortTypeChoices,
@@ -37,7 +36,7 @@ from nautobot.core.models.generics import PrimaryModel
 from nautobot.utilities.fields import NaturalOrderingField
 from nautobot.utilities.ordering import naturalize_interface
 from nautobot.utilities.query_functions import CollateAsChar
-from nautobot.utilities.tree_queries import TreeManager
+from nautobot.utilities.tree_queries import TreeModel
 from nautobot.utilities.utils import UtilizationData
 
 __all__ = (
@@ -995,7 +994,7 @@ class DeviceBay(ComponentModel):
     "relationships",
     "webhooks",
 )
-class InventoryItem(TreeNode, ComponentModel):
+class InventoryItem(TreeModel, ComponentModel):
     """
     An InventoryItem represents a serialized piece of hardware within a Device, such as a line card or power supply.
     InventoryItems are used only for inventory purposes.
@@ -1024,8 +1023,6 @@ class InventoryItem(TreeNode, ComponentModel):
         help_text="A unique tag used to identify this item",
     )
     discovered = models.BooleanField(default=False, help_text="This item was automatically discovered")
-
-    objects = TreeManager()
 
     csv_headers = [
         "device",

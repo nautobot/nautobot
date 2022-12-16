@@ -17,11 +17,6 @@
                 <tr>
                     <td>Region</td>
                     <td>
-                        {% if object.region %}
-                            {% for region in object.region.ancestors %}
-                                {{ region|hyperlinked_object }} /
-                            {% endfor %}
-                        {% endif %}
                         {{ object.region|hyperlinked_object }}
                     </td>
                 </tr>

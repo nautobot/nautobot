@@ -1,11 +1,10 @@
 from django.db import models
 from django.urls import reverse
-from tree_queries.models import TreeNode
 
 from nautobot.extras.utils import extras_features
 from nautobot.core.fields import AutoSlugField
 from nautobot.core.models.generics import OrganizationalModel, PrimaryModel
-from nautobot.utilities.tree_queries import TreeManager
+from nautobot.utilities.tree_queries import TreeModel
 
 
 __all__ = (
@@ -20,7 +19,7 @@ __all__ = (
     "graphql",
     "relationships",
 )
-class TenantGroup(TreeNode, OrganizationalModel):
+class TenantGroup(TreeModel, OrganizationalModel):
     """
     An arbitrary collection of Tenants.
     """
@@ -28,8 +27,6 @@ class TenantGroup(TreeNode, OrganizationalModel):
     name = models.CharField(max_length=100, unique=True)
     slug = AutoSlugField(populate_from="name")
     description = models.CharField(max_length=200, blank=True)
-
-    objects = TreeManager()
 
     csv_headers = ["name", "slug", "parent", "description"]
 

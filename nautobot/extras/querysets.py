@@ -139,6 +139,7 @@ class ConfigContextModelQuerySet(RestrictedQuerySet):
 
         # Avoid circular import error
         from nautobot.dcim.models import Region
+
         # Query for regions=(None OR site__region OR site__region__parent OR site__region__parent__parent OR ...)
         region_query = Q(regions=None) | Q(regions=OuterRef(region_field))
         for _i in range(Region.objects.all().max_tree_depth()):

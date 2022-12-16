@@ -2,7 +2,6 @@ from django.contrib.contenttypes.fields import GenericRelation
 from django.db import models
 from django.urls import reverse
 from timezone_field import TimeZoneField
-from tree_queries.models import TreeNode
 
 from nautobot.dcim.fields import ASNField
 from nautobot.extras.models import StatusModel
@@ -10,7 +9,7 @@ from nautobot.extras.utils import extras_features
 from nautobot.core.fields import AutoSlugField
 from nautobot.core.models.generics import OrganizationalModel, PrimaryModel
 from nautobot.utilities.fields import NaturalOrderingField
-from nautobot.utilities.tree_queries import TreeManager
+from nautobot.utilities.tree_queries import TreeModel
 
 __all__ = (
     "Region",
@@ -31,7 +30,7 @@ __all__ = (
     "relationships",
     "webhooks",
 )
-class Region(TreeNode, OrganizationalModel):
+class Region(TreeModel, OrganizationalModel):
     """
     Sites can be grouped within geographic Regions.
     """
@@ -39,8 +38,6 @@ class Region(TreeNode, OrganizationalModel):
     name = models.CharField(max_length=100, unique=True)
     slug = AutoSlugField(populate_from="name")
     description = models.CharField(max_length=200, blank=True)
-
-    objects = TreeManager()
 
     csv_headers = ["name", "slug", "parent", "description"]
 

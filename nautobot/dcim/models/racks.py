@@ -9,8 +9,6 @@ from django.db import models
 from django.db.models import Count, Sum, Q
 from django.urls import reverse
 
-from tree_queries.models import TreeNode
-
 from nautobot.dcim.choices import DeviceFaceChoices, RackDimensionUnitChoices, RackTypeChoices, RackWidthChoices
 from nautobot.dcim.constants import RACK_ELEVATION_LEGEND_WIDTH_DEFAULT, RACK_U_HEIGHT_DEFAULT
 
@@ -22,7 +20,7 @@ from nautobot.core.models.generics import OrganizationalModel, PrimaryModel
 from nautobot.utilities.choices import ColorChoices
 from nautobot.utilities.config import get_settings_or_config
 from nautobot.utilities.fields import ColorField, NaturalOrderingField, JSONArrayField
-from nautobot.utilities.tree_queries import TreeManager
+from nautobot.utilities.tree_queries import TreeModel
 from nautobot.utilities.utils import array_to_string, UtilizationData
 from .device_components import PowerOutlet, PowerPort
 from .devices import Device
@@ -49,7 +47,7 @@ __all__ = (
     "locations",
     "relationships",
 )
-class RackGroup(TreeNode, OrganizationalModel):
+class RackGroup(TreeModel, OrganizationalModel):
     """
     Racks can be grouped as subsets within a Site or Location.
     """
@@ -66,8 +64,6 @@ class RackGroup(TreeNode, OrganizationalModel):
         null=True,
     )
     description = models.CharField(max_length=200, blank=True)
-
-    objects = TreeManager()
 
     csv_headers = ["site", "location", "parent", "name", "slug", "description"]
 
