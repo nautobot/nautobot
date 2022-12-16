@@ -60,7 +60,7 @@ from nautobot.extras.models import (
     Tag,
     Webhook,
 )
-from nautobot.extras.utils import ChangeLoggedModelsQuery, FeatureQuery, TaggableClassesQuery
+from nautobot.extras.utils import ChangeLoggedModelsQuery, FeatureQuery, RoleModelsQuery, TaggableClassesQuery
 from nautobot.tenancy.models import Tenant, TenantGroup
 from nautobot.utilities.deprecation import class_deprecated_in_favor_of
 from nautobot.utilities.filters import (
