@@ -15,7 +15,10 @@ class Migration(migrations.Migration):
             model_name="configcontext",
             name="roles",
             field=models.ManyToManyField(
-                blank=True, related_name="_extras_configcontext_roles_+", to="extras.Role", limit_choices_to=nautobot.extras.utils.RoleModelsQuery(),
+                blank=True,
+                related_name="_extras_configcontext_roles_+",
+                to="extras.Role",
+                limit_choices_to=nautobot.extras.utils.RoleModelsQuery(),
             ),
         ),
     ]

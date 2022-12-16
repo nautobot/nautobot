@@ -1162,7 +1162,6 @@ class RoleFilter(NaturalKeyOrPKMultipleChoiceFilter):
 
         kwargs.setdefault("field_name", "role")
         kwargs.setdefault("to_field_name", "slug")
-        kwargs.setdefault("conjoined", True)
         kwargs.setdefault("queryset", Role.objects.all())
         kwargs.setdefault("label", "Role (slug or ID)")
 
