@@ -77,12 +77,12 @@ django-storages = {version = "~1.12.3", optional = true}
 # Advanced HTML tables
 django-tables2 = "~2.4.1"
 # Tags
-django-taggit = "~3.0.0"
+django-taggit = "~3.1.0"
 # Represent time zones in Django
 # NOTE: django-timezone-field 4.2.x is available but appears to break our initial migrations?
 django-timezone-field = "~4.1.2"
 # Tree database structures based on Common Table Expressions
-django-tree-queries = "~0.11"
+django-tree-queries = "~0.13.0"
 # Run production webservers such as uWSGI/gunicorn as a Django management command.
 django-webserver = "~1.2.0"
 # REST API framework
@@ -175,7 +175,7 @@ mkdocs = "~1.4.2"
 # Automatically generate some files as part of mkdocs build
 mkdocs-gen-files = "~0.4.0"
 # Allow Markdown files to include other files
-mkdocs-include-markdown-plugin = "~3.6.0"
+mkdocs-include-markdown-plugin = "~3.9.0"
 # Material for mkdocs theme
 mkdocs-material = "~8.5.8"
 # Render custom markdown for version added/changed/remove notes
@@ -190,7 +190,7 @@ pylint-django = {version = "~2.5.3", python = "^3.7.2"}
 # Integration Tests
 requests = "~2.27.1"
 # Colorization and autoformatting of CLI output, used for Invoke tasks
-rich = "~12.5.1"
+rich = "~12.6.0"
 # Selenium web drivers for live integration testing
 selenium = "~4.3.0"
 # Abstraction layer for working with Selenium

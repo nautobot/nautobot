@@ -947,7 +947,7 @@ class DynamicFilterLookupExpressionTest(TestCase):
         )
 
     def test_site_region_id_negation(self):
-        params = {"region_id__n": [self.regions[0].pk]}
+        params = {"region__n": [self.regions[0].pk]}
         self.assertQuerysetEqual(
             dcim_filters.SiteFilterSet(params, self.site_queryset).qs,
             dcim_models.Site.objects.exclude(region__in=self.regions[0].get_descendants(include_self=True)),

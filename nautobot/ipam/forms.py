@@ -583,22 +583,22 @@ class IPAddressForm(NautobotModelForm, TenancyForm, ReturnURLForm, AddressFieldM
         queryset=Site.objects.all(),
         required=False,
         label="Site",
-        query_params={"region_id": "$nat_region"},
+        query_params={"region": "$nat_region"},
     )
     nat_rack = DynamicModelChoiceField(
         queryset=Rack.objects.all(),
         required=False,
         label="Rack",
         null_option="None",
-        query_params={"site_id": "$site"},
+        query_params={"site": "$site"},
     )
     nat_device = DynamicModelChoiceField(
         queryset=Device.objects.all(),
         required=False,
         label="Device",
         query_params={
-            "site_id": "$site",
-            "rack_id": "$nat_rack",
+            "site": "$site",
+            "rack": "$nat_rack",
         },
     )
     nat_cluster = DynamicModelChoiceField(queryset=Cluster.objects.all(), required=False, label="Cluster")
