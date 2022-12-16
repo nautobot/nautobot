@@ -148,7 +148,7 @@ remote_storage = ["django-storages"]
 # saml = ["social-auth-core[saml]"]
 sso = ["social-auth-core"]
 
-[tool.poetry.dev-dependencies]
+[tool.poetry.group.dev.dependencies]
 # Code style enforcement
 black = "~22.10.0"
 # Test code coverage measurement
