@@ -34,10 +34,10 @@ class Migration(migrations.Migration):
                 ("name", models.CharField(max_length=100, unique=True)),
                 ("slug", models.SlugField(max_length=100, unique=True)),
                 ("description", models.CharField(blank=True, max_length=200)),
-                ("lft", models.PositiveIntegerField(editable=False)),
-                ("rght", models.PositiveIntegerField(editable=False)),
-                ("tree_id", models.PositiveIntegerField(db_index=True, editable=False)),
-                ("level", models.PositiveIntegerField(editable=False)),
+                ("lft", models.PositiveIntegerField(default=0, editable=False)),
+                ("rght", models.PositiveIntegerField(default=0, editable=False)),
+                ("tree_id", models.PositiveIntegerField(default=0, editable=False)),
+                ("level", models.PositiveIntegerField(default=0, editable=False)),
                 (
                     "parent",
                     models.ForeignKey(
