@@ -9,7 +9,6 @@ from nautobot.dcim.choices import (
     CableStatusChoices,
     CableTypeChoices,
     DeviceFaceChoices,
-    InterfaceModeChoices,
     InterfaceTypeChoices,
     PortTypeChoices,
     PowerOutletFeedLegChoices,
@@ -1328,20 +1327,6 @@ class InterfaceTestCase(TestCase):
         self.assertEqual(
             err.exception.message_dict["tagged_vlans"][0], "Mode must be set to tagged when specifying tagged_vlans"
         )
-
-    def test_tagged_vlan_raise_error_if_mode_is_changed_without_clearing_tagged_vlans(self):
-        interface = Interface.objects.create(
-            name="Int2",
-            type=InterfaceTypeChoices.TYPE_VIRTUAL,
-            device=self.device,
-            mode=InterfaceModeChoices.MODE_TAGGED,
-        )
-        interface.tagged_vlans.add(self.vlan)
-
-        interface.mode = InterfaceModeChoices.MODE_ACCESS
-        with self.assertRaises(ValidationError) as err:
-            interface.validated_save()
-        self.assertEqual(err.exception.message_dict["tagged_vlans"][0], "Clear tagged_vlans to set mode to access")
 
 
 class SiteTestCase(TestCase):

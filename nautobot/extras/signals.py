@@ -212,7 +212,7 @@ def git_repository_pre_delete(instance, **kwargs):
         job_result.set_status(JobResultStatusChoices.STATUS_COMPLETED)
     job_result.save()
 
-    # TODO: In a distributed Nautobot deployment, each Django instance and/or worker instance may have its own clone
+    # TODO(Glenn): In a distributed Nautobot deployment, each Django instance and/or worker instance may have its own clone
     # of this repository; we need some way to ensure that all such clones are deleted.
     # For now we just delete the one that we have locally and rely on other methods (notably get_jobs())
     # to clean up other clones as they're encountered.
@@ -268,7 +268,7 @@ def refresh_job_models(sender, *, apps, **kwargs):
 
     from nautobot.extras.jobs import get_jobs
 
-    # TODO: eventually this should be inverted so that get_jobs() relies on the database models...
+    # TODO(Glenn): eventually this should be inverted so that get_jobs() relies on the database models...
     job_classes = get_jobs()
     job_models = []
     for source, modules in job_classes.items():
@@ -282,7 +282,7 @@ def refresh_job_models(sender, *, apps, **kwargs):
 
         for module_details in modules.values():
             for job_class in module_details["jobs"].values():
-                # TODO: catch DB error in case where multiple Jobs have the same grouping + name
+                # TODO(Glenn): catch DB error in case where multiple Jobs have the same grouping + name
                 job_model, _ = refresh_job_model_from_job_class(Job, source, job_class, git_repository=git_repository)
                 if job_model is not None:
                     job_models.append(job_model)

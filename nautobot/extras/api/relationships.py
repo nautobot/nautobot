@@ -1,6 +1,7 @@
 import logging
 
 from django.contrib.contenttypes.models import ContentType
+from django.core.exceptions import ValidationError as DjangoValidationError
 from django.db.models import Q
 from drf_spectacular.utils import extend_schema_field
 from rest_framework.exceptions import PermissionDenied
@@ -270,11 +271,13 @@ class RelationshipModelSerializerMixin(ValidatedModelSerializer):
             output_for="api", initial_data=relationships_data
         )
         if required_relationships_errors:
-            raise ValidationError(required_relationships_errors)
-
+            raise ValidationError({"relationships": required_relationships_errors})
         instance = super().create(validated_data)
         if relationships_data:
-            self._save_relationships(instance, relationships_data)
+            try:
+                self._save_relationships(instance, relationships_data)
+            except DjangoValidationError as error:
+                raise ValidationError(str(error))
         return instance
 
     def update(self, instance, validated_data):
@@ -287,7 +290,7 @@ class RelationshipModelSerializerMixin(ValidatedModelSerializer):
             instance=instance,
         )
         if required_relationships_errors:
-            raise ValidationError(required_relationships_errors)
+            raise ValidationError({"relationships": required_relationships_errors})
 
         instance = super().update(instance, validated_data)
         if relationships_data:

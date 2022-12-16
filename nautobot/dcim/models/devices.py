@@ -107,10 +107,10 @@ class DeviceType(PrimaryModel):
 
     manufacturer = models.ForeignKey(to="dcim.Manufacturer", on_delete=models.PROTECT, related_name="device_types")
     model = models.CharField(max_length=100)
-    # TODO: Remove unique=None to make slug globally unique. This would be a breaking change.
+    # 2.0 TODO: Remove unique=None to make slug globally unique. This would be a breaking change.
     slug = AutoSlugField(populate_from="model", unique=None, db_index=True)
     part_number = models.CharField(max_length=50, blank=True, help_text="Discrete part number (optional)")
-    # TODO: Profile filtering on this field if it could benefit from an index
+    # 2.0 TODO: Profile filtering on this field if it could benefit from an index
     u_height = models.PositiveSmallIntegerField(default=1, verbose_name="Height (U)")
     # todoindex:
     is_full_depth = models.BooleanField(
@@ -142,7 +142,7 @@ class DeviceType(PrimaryModel):
         ordering = ["manufacturer", "model"]
         unique_together = [
             ["manufacturer", "model"],
-            # TODO: Remove unique_together to make slug globally unique. This would be a breaking change.
+            # 2.0 TODO: Remove unique_together to make slug globally unique. This would be a breaking change.
             ["manufacturer", "slug"],
         ]
 
@@ -460,7 +460,7 @@ class Device(PrimaryModel, ConfigContextModel, StatusModel, RoleRequiredRoleMode
         blank=True,
         null=True,
     )
-    # TODO: Profile filtering on this field if it could benefit from an index
+    # 2.0 TODO: Profile filtering on this field if it could benefit from an index
     position = models.PositiveSmallIntegerField(
         blank=True,
         null=True,
@@ -515,7 +515,7 @@ class Device(PrimaryModel, ConfigContextModel, StatusModel, RoleRequiredRoleMode
         verbose_name="Device Redundancy Group Priority",
         help_text="The priority the device has in the device redundancy group.",
     )
-    # TODO: Profile filtering on this field if it could benefit from an index
+    # 2.0 TODO: Profile filtering on this field if it could benefit from an index
     vc_position = models.PositiveSmallIntegerField(blank=True, null=True, validators=[MaxValueValidator(255)])
     vc_priority = models.PositiveSmallIntegerField(blank=True, null=True, validators=[MaxValueValidator(255)])
     comments = models.TextField(blank=True)

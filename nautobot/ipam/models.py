@@ -988,7 +988,7 @@ class VLANGroup(OrganizationalModel):
     """
 
     name = models.CharField(max_length=100, db_index=True)
-    # TODO: Remove unique=None to make slug globally unique. This would be a breaking change.
+    # 2.0 TODO: Remove unique=None to make slug globally unique. This would be a breaking change.
     slug = AutoSlugField(populate_from="name", unique=None, db_index=True)
     site = models.ForeignKey(
         to="dcim.Site",
@@ -1014,10 +1014,10 @@ class VLANGroup(OrganizationalModel):
             "name",
         )  # (site, name) may be non-unique
         unique_together = [
-            # TODO: since site is nullable, and NULL != NULL, this means that we can have multiple non-Site VLANGroups
+            # 2.0 TODO: since site is nullable, and NULL != NULL, this means that we can have multiple non-Site VLANGroups
             # with the same name. This should probably be fixed with a custom validate_unique() function!
             ["site", "name"],
-            # TODO: Remove unique_together to make slug globally unique. This would be a breaking change.
+            # 2.0 TODO: Remove unique_together to make slug globally unique. This would be a breaking change.
             ["site", "slug"],
         ]
         verbose_name = "VLAN group"
@@ -1147,7 +1147,7 @@ class VLAN(PrimaryModel, StatusModel, RoleModelMixin):
             "vid",
         )  # (site, group, vid) may be non-unique
         unique_together = [
-            # TODO: since group is nullable and NULL != NULL, we can have multiple non-group VLANs with
+            # 2.0 TODO: since group is nullable and NULL != NULL, we can have multiple non-group VLANs with
             # the same vid and name. We should probably fix this with a custom validate_unique() function.
             ["group", "vid"],
             ["group", "name"],

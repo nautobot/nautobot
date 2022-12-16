@@ -236,7 +236,7 @@ class RelationshipModel(models.Model):
         """
 
         required_relationships = Relationship.objects.get_required_for_model(cls)
-        relationships_field_errors = []
+        relationships_field_errors = {}
         for relation in required_relationships:
 
             opposite_side = RelationshipSideChoices.OPPOSITE[relation.required_on]
@@ -257,10 +257,8 @@ class RelationshipModel(models.Model):
                     and initial_data.get(relation, {}).get(opposite_side, {}) == {}
                     and not relationships_key_specified
                 ):
-                    if (
-                        RelationshipAssociation.objects.filter(**{f"{relation.required_on}_id": instance.pk}).count()
-                        > 0
-                    ):
+                    filter_kwargs = {"relationship": relation, f"{relation.required_on}_id": instance.pk}
+                    if RelationshipAssociation.objects.filter(**filter_kwargs).exists():
                         continue
 
             required_model_class = getattr(relation, f"{opposite_side}_type").model_class()
@@ -307,6 +305,7 @@ class RelationshipModel(models.Model):
 
                 if output_for == "ui":
                     supplied_data = initial_data.get(field_key, [])
+
                 elif output_for == "api":
                     supplied_data = initial_data.get(relation, {}).get(opposite_side, {})
 
@@ -317,11 +316,11 @@ class RelationshipModel(models.Model):
                         )
                     elif output_for == "api":
                         field_errors[field_key].append(
-                            f'You need to specify relationships["{relation.slug}"]["{opposite_side}"]["objects"].'
+                            f'You need to specify ["relationships"]["{relation.slug}"]["{opposite_side}"]["objects"].'
                         )
 
             if len(field_errors[field_key]) > 0:
-                relationships_field_errors.append(field_errors)
+                relationships_field_errors[field_key] = field_errors[field_key]
 
         return relationships_field_errors
 

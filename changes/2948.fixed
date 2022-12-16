@@ -1,0 +1,1 @@
+Fixed incorrect assumption in test base that `example_plugin` would always be installed.

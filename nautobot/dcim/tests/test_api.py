@@ -1760,12 +1760,30 @@ class InterfaceTestVersion12(Mixins.BasePortTestMixin):
                 type=InterfaceTypeChoices.TYPE_VIRTUAL,
             )
             interface.tagged_vlans.add(self.vlans[0])
-            payload = {"mode": None}
+            payload = {"mode": None, "tagged_vlans": [self.vlans[2].pk]}
             response = self.client.patch(self._get_detail_url(interface), data=payload, format="json", **self.header)
             self.assertHttpStatus(response, status.HTTP_400_BAD_REQUEST)
             self.assertEqual(
                 response.data["tagged_vlans"][0], "Mode must be set to tagged when specifying tagged_vlans"
             )
+
+    def test_change_mode_from_tagged_to_others(self):
+        self.add_permissions("dcim.change_interface")
+        interface = Interface.objects.first()
+        interface.mode = InterfaceModeChoices.MODE_TAGGED
+        interface.validated_save()
+        interface.tagged_vlans.add(self.vlans[0])
+
+        with self.subTest("Update Fail"):
+            payload = {"mode": InterfaceModeChoices.MODE_ACCESS}
+            response = self.client.patch(self._get_detail_url(interface), data=payload, format="json", **self.header)
+            self.assertHttpStatus(response, status.HTTP_400_BAD_REQUEST)
+            self.assertEqual(response.data["tagged_vlans"][0], "Clear tagged_vlans to set mode to access")
+
+        with self.subTest("Update Successful"):
+            payload = {"mode": InterfaceModeChoices.MODE_ACCESS, "tagged_vlans": []}
+            response = self.client.patch(self._get_detail_url(interface), data=payload, format="json", **self.header)
+            self.assertHttpStatus(response, status.HTTP_200_OK)
 
 
 class InterfaceTestVersion14(InterfaceTestVersion12):

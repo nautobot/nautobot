@@ -4,10 +4,10 @@ from django.core.exceptions import ValidationError
 from django.db.models import Q
 from netaddr.core import AddrFormatError
 
-from nautobot.dcim.filter_mixins import LocatableModelFilterSetMixin
+from nautobot.dcim.filters import LocatableModelFilterSetMixin
 from nautobot.dcim.models import Device, Interface
-from nautobot.extras.filters import NautobotFilterSet, RoleModelFilterSetMixin, StatusModelFilterSetMixin
-from nautobot.tenancy.filters import TenancyFilterSet
+from nautobot.extras.filters import NautobotFilterSet, StatusModelFilterSetMixin, RoleModelFilterSetMixin
+from nautobot.tenancy.filters import TenancyModelFilterSetMixin
 from nautobot.utilities.filters import (
     MultiValueCharFilter,
     MultiValueUUIDFilter,
@@ -43,7 +43,7 @@ __all__ = (
 )
 
 
-class VRFFilterSet(NautobotFilterSet, TenancyFilterSet):
+class VRFFilterSet(NautobotFilterSet, TenancyModelFilterSetMixin):
     q = SearchFilter(
         filter_predicates={
             "name": "icontains",
@@ -80,7 +80,7 @@ class VRFFilterSet(NautobotFilterSet, TenancyFilterSet):
         fields = ["id", "name", "rd", "enforce_unique"]
 
 
-class RouteTargetFilterSet(NautobotFilterSet, TenancyFilterSet):
+class RouteTargetFilterSet(NautobotFilterSet, TenancyModelFilterSetMixin):
     q = SearchFilter(
         filter_predicates={
             "name": "icontains",
@@ -146,7 +146,7 @@ class IPAMFilterSetMixin(django_filters.FilterSet):
         return qs.ip_family(value)
 
 
-class AggregateFilterSet(NautobotFilterSet, IPAMFilterSetMixin, TenancyFilterSet):
+class AggregateFilterSet(NautobotFilterSet, IPAMFilterSetMixin, TenancyModelFilterSetMixin):
     prefix = django_filters.CharFilter(
         method="filter_prefix",
         label="Prefix",
@@ -180,7 +180,7 @@ class PrefixFilterSet(
     NautobotFilterSet,
     IPAMFilterSetMixin,
     LocatableModelFilterSetMixin,
-    TenancyFilterSet,
+    TenancyModelFilterSetMixin,
     StatusModelFilterSetMixin,
     RoleModelFilterSetMixin,
 ):
@@ -314,7 +314,11 @@ class PrefixFilterSet(
 
 
 class IPAddressFilterSet(
-    NautobotFilterSet, IPAMFilterSetMixin, TenancyFilterSet, StatusModelFilterSetMixin, RoleModelFilterSetMixin
+    NautobotFilterSet,
+    IPAMFilterSetMixin,
+    TenancyModelFilterSetMixin,
+    StatusModelFilterSetMixin,
+    RoleModelFilterSetMixin,
 ):
     parent = django_filters.CharFilter(
         method="search_by_parent",
@@ -460,7 +464,7 @@ class VLANGroupFilterSet(NautobotFilterSet, LocatableModelFilterSetMixin, NameSl
 class VLANFilterSet(
     NautobotFilterSet,
     LocatableModelFilterSetMixin,
-    TenancyFilterSet,
+    TenancyModelFilterSetMixin,
     StatusModelFilterSetMixin,
     RoleModelFilterSetMixin,
 ):

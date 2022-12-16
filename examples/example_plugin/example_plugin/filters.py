@@ -1,4 +1,4 @@
-from nautobot.utilities.filters import BaseFilterSet, SearchFilter
+from nautobot.apps.filters import BaseFilterSet, SearchFilter
 
 from example_plugin.models import AnotherExampleModel, ExampleModel
 

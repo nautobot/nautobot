@@ -6,7 +6,6 @@ import os
 
 from git import Repo
 
-
 logger = logging.getLogger("nautobot.utilities.git")
 
 # namedtuple takes a git log diff status and its accompanying text.

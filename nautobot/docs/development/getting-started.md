@@ -20,7 +20,12 @@ When developing Nautobot, you'll be working on your own fork, so your first step
 In this guide, SSH will be used to interact with Git.
 
 ```no-highlight
-$ git clone git@github.com:yourusername/nautobot.git
+git clone git@github.com:yourusername/nautobot.git
+```
+
+Example output:
+
+```no-highlight
 Cloning into 'nautobot'...
 remote: Enumerating objects: 231, done.
 remote: Counting objects: 100% (231/231), done.
@@ -28,7 +33,15 @@ remote: Compressing objects: 100% (147/147), done.
 remote: Total 56705 (delta 134), reused 145 (delta 84), pack-reused 56474
 Receiving objects: 100% (56705/56705), 27.96 MiB | 34.92 MiB/s, done.
 Resolving deltas: 100% (44177/44177), done.
-$ ls nautobot/
+```
+
+```no-highlight
+ls nautobot/
+```
+
+Example output:
+
+```no-highlight
 CHANGELOG.md     README.md    docs        nautobot.code-workspace  site
 CONTRIBUTING.md  contrib      manage.py   poetry.lock              tasks.py
 LICENSE.txt      development  mkdocs.yml  pyproject.toml           upgrade.sh
@@ -47,29 +60,47 @@ Git refers to remote repositories as *remotes*. When you make your initial clone
 Remote repos are managed using the `git remote` command.
 
 Upon cloning Nautobot for the first time, you will have only a single remote:
+
 <!-- markdownlint-disable MD010 -->
+
 ```no-highlight
-$ git remote -v
+git remote -v
+```
+
+Example output:
+
+```no-highlight
 origin	git@github.com:yourusername/nautobot.git (fetch)
 origin	git@github.com:yourusername/nautobot.git (push)
 ```
+
 <!-- markdownlint-enable MD010 -->
+
 Add the official Nautobot repo as a the `upstream` remote:
 
 ```no-highlight
-$ git remote add upstream git@github.com:nautobot/nautobot.git
+git remote add upstream git@github.com:nautobot/nautobot.git
 ```
 
 View your remotes again to confirm you've got both `origin` pointing to your fork and `upstream` pointing to the official repo:
+
 <!-- markdownlint-disable MD010 -->
+
 ```no-highlight
-$ git remote -v
+git remote -v
+```
+
+Example output:
+
+```no-highlight
 origin	git@github.com:yourusername/nautobot.git (fetch)
 origin	git@github.com:yourusername/nautobot.git (push)
 upstream	git@github.com:nautobot/nautobot.git (fetch)
 upstream	git@github.com:nautobot/nautobot.git (push)
 ```
+
 <!-- markdownlint-enable MD010 -->
+
 You're now ready to proceed to the next steps.
 
 !!! hint
@@ -82,8 +113,8 @@ Before you make any changes, always create a new branch. Again, for bug fixes an
 Before you ever create a new branch, always checkout the appropriate branch and make sure you you've got the latest changes from `upstream`:
 
 ```no-highlight
-$ git checkout develop
-$ git pull upstream develop
+git checkout develop
+git pull upstream develop
 ```
 
 !!! warning
@@ -92,7 +123,7 @@ $ git pull upstream develop
 Now that you've got the latest upstream changes, create your branch. It's convention to always prefix your branch name with your GitHub username or your initials, and suffix it with the issue number if appropriate, separated by hyphens. For example:
 
 ```no-highlight
-$ git checkout -b yourusername-myfeature-1234
+git checkout -b yourusername-myfeature-1234
 ```
 
 ## Enabling Pre-Commit Hooks
@@ -105,8 +136,8 @@ Nautobot ships with a [Git pre-commit hook](https://githooks.com/) script that a
 You are encouraged to enable it by creating a link to `scripts/git-hooks/pre-commit`:
 
 ```no-highlight
-$ cd .git/hooks/
-$ ln -s ../../scripts/git-hooks/pre-commit
+cd .git/hooks/
+ln -s ../../scripts/git-hooks/pre-commit
 ```
 
 ## Setting up your Development Environment
@@ -132,13 +163,13 @@ For the Docker Compose workflow, Nautobot uses [Invoke](http://docs.pyinvoke.org
 Because it is used to execute all common Docker workflow tasks, Invoke must be installed for your user environment. On most systems, if you're installing without root/superuser permissions, the default will install into your local user environment.
 
 ```no-highlight
-$ pip3 install invoke
+pip3 install invoke
 ```
 
 If you run into issues, you may also deliberately tell `pip3` to install into your user environment by adding the `--user` flag:
 
 ```no-highlight
-$ pip3 install --user invoke
+pip3 install --user invoke
 ```
 
 Please see the [official documentation on Pip user installs](https://pip.pypa.io/en/stable/user_guide/#user-installs) for more information.
@@ -148,7 +179,12 @@ Please see the [official documentation on Pip user installs](https://pip.pypa.io
 Now that you have an `invoke` command, list the tasks defined in `tasks.py`:
 
 ```no-highlight
-$ invoke --list
+invoke --list
+```
+
+Example output:
+
+```no-highlight
 Available tasks:
 
   black                  Check Python code style with Black.
@@ -200,8 +236,7 @@ Additional useful commands for the development environment:
 * `invoke stop [-s servicename]` - Stops all containers (or a specific container/service) created by `invoke start`
 
 !!! note
-    The mkdocs container must be started manually with `invoke start -s mkdocs`. It will not start automatically with the
-    `invoke start` or `invoke debug` commands.
+    The mkdocs container must be started manually with `invoke start -s mkdocs`. It will not start automatically with the `invoke start` or `invoke debug` commands.
 
 !!! tip
     The Nautobot server uses a Django webservice and worker uses watchdog to provide automatic reload of your web and worker servers in **most** cases when using `invoke start` or `invoke debug`.
@@ -230,7 +265,7 @@ There are a few things you'll need:
 You may install Poetry in your user environment by running:
 
 ```no-highlight
-$ curl -sSL https://install.python-poetry.org | python3 -
+curl -sSL https://install.python-poetry.org | python3 -
 ```
 
 !!! danger
@@ -247,7 +282,7 @@ For detailed installation instructions, please see the [official Poetry installa
 [Hadolint](https://github.com/hadolint/hadolint) is a tool used to validate and lint Dockerfiles to ensure we are following best practices. On macOS with [Homebrew](https://brew.sh/) you can install Hadolint by running:
 
 ```no-highlight
-$ brew install hadolint
+brew install hadolint
 ```
 
 #### Install markdownlint-cli
@@ -255,7 +290,7 @@ $ brew install hadolint
 [markdownlint-cli](https://github.com/igorshubovych/markdownlint-cli) is a tool used to validate and lint Markdown files, such as Nautobot's documentation, to ensure that they are correctly constructed. On macOS with [Homebrew](https://brew.sh/) you can install markdownlint-cli by running:
 
 ```no-highlight
-$ brew install markdownlint-cli
+brew install markdownlint-cli
 ```
 
 #### Creating a Python Virtual Environment
@@ -267,7 +302,7 @@ For Nautobot development, we have selected Poetry, which will transparently crea
 Bootstrap your virtual environment using `poetry install`:
 
 ```no-highlight
-$ poetry install
+poetry install
 ```
 
 !!! hint
@@ -278,10 +313,15 @@ This will create automatically create a virtualenv in your home directory, which
 Once created, you may activate the virtual environment using `poetry shell`:
 
 ```no-highlight
-$ poetry shell
+poetry shell
+```
+
+Example output:
+
+```no-highlight
 Spawning shell within /home/example/.cache/pypoetry/virtualenvs/nautobot-Ams_xyDt-py3.8
 
-$ . /home/example/.cache/pypoetry/virtualenvs/nautobot-Ams_xyDt-py3.8/bin/activate
+. /home/example/.cache/pypoetry/virtualenvs/nautobot-Ams_xyDt-py3.8/bin/activate
 (nautobot-Ams_xyDt-py3.8) $
 ```
 
@@ -290,14 +330,24 @@ Notice that the console prompt changes to indicate the active environment. This 
 Observe also that the `python` interpreter is bound within the virtualenv:
 
 ```no-highlight
-(nautobot-Ams_xyDt-py3.8) $ which python
-/home/example/.cache/pypoetry/virtualenvs/nautobot-Ams_xyDt-py3.8/bin/python
+which python
+```
+
+Example output:
+
+```no-highlight
+(nautobot-Ams_xyDt-py3.8) $ /home/example/.cache/pypoetry/virtualenvs/nautobot-Ams_xyDt-py3.8/bin/python
 ```
 
 To exit the virtual shell, use `exit`:
 
 ```no-highlight
-(nautobot-Ams_xyDt-py3.8) $ exit
+exit
+```
+
+Example output:
+
+```no-highlight
 $
 ```
 
@@ -306,16 +356,28 @@ $
 Poetry automatically installs your dependencies. However, if you need to install any additional dependencies this can be done with `pip`. For example, if you really like using `ipython` for development:
 
 ```no-highlight
-(nautobot-Ams_xyDt-py3.8) $ pip3 install ipython
+pip3 install ipython
+```
+
+Example output:
+
+```no-highlight
 Collecting ipython
   Using cached ipython-7.20.0-py3-none-any.whl (784 kB)
   ...
 ```
 
+* Install verify that you have the proper dependencies installed and are in the virtual environment via Poetry. This also ensures that you have the proper mkdocs themes installed.
+
+```bash
+poetry shell
+poetry install
+```
+
 It may not always be convenient to enter into the virtual shell just to run programs. You may also execute a given command ad hoc within the project's virtual shell by using `poetry run`:
 
 ```no-highlight
-$ poetry run mkdocs serve
+poetry run mkdocs serve
 ```
 
 Check out the [Poetry usage guide](https://python-poetry.org/docs/basic-usage/) for more tips.
@@ -335,7 +397,12 @@ Nautobot's configuration file is `nautobot_config.py`.
 You may also initialize a new configuration using `nautobot-server init`:
 
 ```no-highlight
-$ nautobot-server init
+nautobot-server init
+```
+
+Example output:
+
+```no-highlight
 Configuration file created at '/home/example/.nautobot/nautobot_config.py'
 ```
 
@@ -348,7 +415,7 @@ A `nautobot_config.py` suitable for development purposes can be found at `develo
 If you want to use this file, initialize a config first, then copy this file to the default location Nautobot expects to find its config:
 
 ```no-highlight
-$ cp development/nautobot_config.py ~/.nautobot/nautobot_config.py
+cp development/nautobot_config.py ~/.nautobot/nautobot_config.py
 ```
 
 ##### Required Settings
@@ -369,9 +436,9 @@ Below are common commands for working your development environment.
 
 You'll need to create a administrative superuser account to be able to log into the Nautobot Web UI for the first time. Specifying an email address for the user is not required, but be sure to use a very strong password.
 
-| Docker Compose Workflow | Virtual Environment Workflow   |
-|-------------------------|--------------------------------|
-| `invoke createsuperuser`| `nautobot-server createsuperuser` |
+| Docker Compose Workflow  | Virtual Environment Workflow      |
+| ------------------------ | --------------------------------- |
+| `invoke createsuperuser` | `nautobot-server createsuperuser` |
 
 ### Starting the Development Server
 
@@ -382,14 +449,19 @@ Django provides a lightweight HTTP/WSGI server for development use. The developm
 
 You can start the Nautobot development server with the `invoke start` command (if using Docker), or the `nautobot-server runserver` management command:
 
-| Docker Compose Workflow | Virtual Environment Workflow   |
-|-------------------------|--------------------------------|
-| `invoke start`          | `nautobot-server runserver`    |
+| Docker Compose Workflow | Virtual Environment Workflow |
+| ----------------------- | ---------------------------- |
+| `invoke start`          | `nautobot-server runserver`  |
 
 For example:
 
 ```no-highlight
-$ nautobot-server runserver
+nautobot-server runserver
+```
+
+Example output:
+
+```no-highlight
 Performing system checks...
 
 System check identified no issues (0 silenced).
@@ -413,7 +485,7 @@ In order to run Nautobot Jobs or anything that requires a worker you must start 
 The worker is started in Docker Workflow with [watchdog](https://pythonhosted.org/watchdog/) and can be setup to be started with watchdog in the Virtual Environment Workflow. Watchdog provides a similar experience to the Django lightweight HTTP/WSGI for restarting your application automatically. Watchdog can watch for changes on your filesystem, this is helpful when adjusting existing Python files to not have to restart the celery worker when testing jobs.
 
 | Docker Compose Workflow | Virtual Environment Workflow    |
-|-------------------------|---------------------------------|
+| ----------------------- | ------------------------------- |
 | `invoke start`          | `nautobot-server celery worker` |
 
 !!! tip
@@ -425,14 +497,19 @@ Nautobot provides an [interactive Python shell](../administration/nautobot-shell
 
 Run the Nautobot interactive shell with `invoke nbshell` (Docker) or the `nautobot-server nbshell` management command:
 
-| Docker Compose Workflow | Virtual Environment Workflow   |
-|-------------------------|--------------------------------|
-| `invoke nbshell`        | `nautobot-server nbshell`      |
+| Docker Compose Workflow | Virtual Environment Workflow |
+| ----------------------- | ---------------------------- |
+| `invoke nbshell`        | `nautobot-server nbshell`    |
 
 For example:
 
 ```bash
-$ nautobot-server nbshell
+nautobot-server nbshell
+```
+
+Example output:
+
+```no-highlight
 ### Nautobot interactive shell (localhost)
 ### Python 3.9.1 | Django 3.1.3 | Nautobot 1.0.0b1
 ### lsmodels() will show available models. Use help(<model>) for more info.
@@ -446,7 +523,7 @@ There will be times where you're working with the bleeding edge of Nautobot from
 Get into the habit of running `nautobot-server post_upgrade` (or `invoke post-upgrade` when using Docker) after you pull in a major set of changes from Nautobot, which performs a handful of common operations (such as `migrate`) from a single command:
 
 | Docker Compose Workflow | Virtual Environment Workflow   |
-|-------------------------|--------------------------------|
+| ----------------------- | ------------------------------ |
 | `invoke post-upgrade`   | `nautobot-server post_upgrade` |
 
 Please see the [documentation on the `nautobot-server post_upgrade` command](../administration/nautobot-server.md#post_upgrade) for more information.
@@ -461,7 +538,12 @@ Sometimes when files are renamed, moved, or deleted and you've been working in t
 First, use `pip3` to explicitly uninstall the Nautobot package from the environment:
 
 ```no-highlight
-$ pip3 uninstall -y nautobot
+pip3 uninstall -y nautobot
+```
+
+Example output:
+
+```no-highlight
 Found existing installation: nautobot 1.0.0b2
 Uninstalling nautobot-1.0.0b2:
   Successfully uninstalled nautobot-1.0.0b2
@@ -470,7 +552,12 @@ Uninstalling nautobot-1.0.0b2:
 Then try to just have Poetry do the right thing by telling it to install again:
 
 ```no-highlight
-$ poetry install
+poetry install
+```
+
+Example output:
+
+```no-highlight
 Installing dependencies from lock file
 
 No dependencies to install or update
@@ -491,16 +578,16 @@ Unit tests are automated tests written and run to ensure that a section of the N
 Unit tests are run using the `invoke unittest` command (if using the Docker development environment) or the `nautobot-server test` command:
 
 | Docker Compose Workflow | Virtual Environment Workflow                                                    |
-|-------------------------|---------------------------------------------------------------------------------|
+| ----------------------- | ------------------------------------------------------------------------------- |
 | `invoke unittest`       | `nautobot-server --config=nautobot/core/tests/nautobot_config.py test nautobot` |
 
 !!! info
-    By default `invoke unittest` will start and run the unit tests inside the Docker development container; this ensures that PostgreSQL and Redis servers are available during the test. However, if you have your environment configured such that `nautobot-server` can run locally, outside of the Docker environment, you may wish to set the environment variable `INVOKE_NAUTOBOT_LOCAL=True` to execute these tests in your local environment instead.  See the [Invoke configuration](#invoke-configuration) for more information.
+    By default `invoke unittest` will start and run the unit tests inside the Docker development container; this ensures that PostgreSQL and Redis servers are available during the test. However, if you have your environment configured such that `nautobot-server` can run locally, outside of the Docker environment, you may wish to set the environment variable `INVOKE_NAUTOBOT_LOCAL=True` to execute these tests in your local environment instead. See the [Invoke configuration](#invoke-configuration) for more information.
 
 In cases where you haven't made any changes to the database (which is most of the time), you can append the `--keepdb` argument to this command to reuse the test database between runs. This cuts down on the time it takes to run the test suite since the database doesn't have to be rebuilt each time.
 
 | Docker Compose Workflow    | Virtual Environment Workflow                                                             |
-|----------------------------|------------------------------------------------------------------------------------------|
+| -------------------------- | ---------------------------------------------------------------------------------------- |
 | `invoke unittest --keepdb` | `nautobot-server --config=nautobot/core/tests/nautobot_config.py test --keepdb nautobot` |
 
 !!! note
@@ -519,14 +606,14 @@ The Selenium container is running a standalone, headless Firefox "web driver" br
 
 Before running integration tests, the `selenium` container must be running. If you are using the Docker Compose workflow, it is automatically started for you. For the Virtual Environment workflow, you must start it manually.
 
-| Docker Compose Workflow   | Virtual Environment Workflow      |
-|---------------------------|-----------------------------------|
-| (automatic)               | `invoke start --service selenium` |
+| Docker Compose Workflow | Virtual Environment Workflow      |
+| ----------------------- | --------------------------------- |
+| (automatic)             | `invoke start --service selenium` |
 
 Integration tests are run using the `invoke integration-test` command. All integration tests must inherit from `nautobot.utilities.testing.integration.SeleniumTestCase`, which itself is tagged with `integration`. A custom test runner has been implemented to automatically skip any test case tagged with `integration` by default, so normal unit tests run without any concern. To run the integration tests the `--tag integration` argument must be passed to `nautobot-server test`.
 
 | Docker Compose Workflow   | Virtual Environment Workflow                                                                      |
-|---------------------------|---------------------------------------------------------------------------------------------------|
+| ------------------------- | ------------------------------------------------------------------------------------------------- |
 | `invoke integration-test` | `nautobot-server --config=nautobot/core/tests/nautobot_config.py test --tag integration nautobot` |
 
 !!! info
@@ -547,7 +634,7 @@ The following environment variables can be provided when running tests to custom
 If you make changes to the REST API, you should verify that the REST API OpenAPI schema renders correctly without errors. To verify that there are no errors, you can run the `invoke check-schema` command (if using the Docker development environment) or the `nautobot-server spectacular` command. In the latter case you should run the command for each supported REST API version that Nautobot provides (e.g. "1.2", "1.3")
 
 | Docker Compose Workflow | Virtual Environment Workflow                                                               |
-|-------------------------|--------------------------------------------------------------------------------------------|
+| ----------------------- | ------------------------------------------------------------------------------------------ |
 | `invoke check-schema`   | `nautobot-server spectacular --api-version 1.2 --validate --fail-on-warn --file /dev/null` |
 
 ### Verifying Code Style and Static Analysis
@@ -555,7 +642,7 @@ If you make changes to the REST API, you should verify that the REST API OpenAPI
 To enforce best practices around consistent [coding style](style-guide.md), Nautobot uses [Flake8](https://flake8.pycqa.org/) and [Black](https://black.readthedocs.io/). Additionally, [static analysis](https://en.wikipedia.org/wiki/Static_program_analysis) of Nautobot code is performed by [Pylint](https://pylint.pycqa.org/en/latest/). You should run all of these commands and ensure that they pass fully with regard to your code changes before opening a pull request upstream.
 
 | Docker Compose Workflow | Virtual Environment Workflow                                                                            |
-|-------------------------|---------------------------------------------------------------------------------------------------------|
+| ----------------------- | ------------------------------------------------------------------------------------------------------- |
 | `invoke flake8`         | `flake8`                                                                                                |
 | `invoke black`          | `black`                                                                                                 |
 | `invoke pylint`         | `nautobot-server pylint nautobot tasks.py && nautobot-server pylint --recursive development/ examples/` |
@@ -565,7 +652,7 @@ To enforce best practices around consistent [coding style](style-guide.md), Naut
 If you're unsure whether a database schema migration is needed based on your changes, you can run the following command:
 
 | Docker Compose Workflow   | Virtual Environment Workflow                                                                       |
-|---------------------------|----------------------------------------------------------------------------------------------------|
+| ------------------------- | -------------------------------------------------------------------------------------------------- |
 | `invoke check-migrations` | `nautobot-server --config=nautobot/core/tests/nautobot_config.py makemigrations --dry-run --check` |
 
 If your branch modifies a Django model (and as a result requires a database schema modification), please be sure to provide a meaningful name to the migration before pushing.
@@ -611,7 +698,7 @@ will render as:
 You can preview the documentation using the server built into mkdocs, which should start a web server at `http://localhost:8001`.
 
 | Docker Compose Workflow  | Virtual Environment Workflow |
-|--------------------------|------------------------------|
+| ------------------------ | ---------------------------- |
 | `invoke start -s mkdocs` | `mkdocs serve`               |
 
 Documentation is written in Markdown. If you need to add additional pages or sections to the documentation, you can add them to `mkdocs.yml` at the root of the repository.
@@ -620,8 +707,8 @@ Documentation is written in Markdown. If you need to add additional pages or sec
 
 Nautobot uses [`markdownlint-cli`](https://github.com/igorshubovych/markdownlint-cli) to verify correctness of the documentation. You should run this command and ensure that it passes fully with regard to your documentation changes before opening a pull request upstream.
 
-| Docker Compose Workflow | Virtual Environment Workflow                                                               |
-|-------------------------|--------------------------------------------------------------------------------------------|
+| Docker Compose Workflow | Virtual Environment Workflow                                                                      |
+| ----------------------- | ------------------------------------------------------------------------------------------------- |
 | `invoke markdownlint`   | `markdownlint --ignore nautobot/project-static --config .markdownlint.yml nautobot examples *.md` |
 
 ## Submitting Pull Requests
@@ -629,8 +716,8 @@ Nautobot uses [`markdownlint-cli`](https://github.com/igorshubovych/markdownlint
 Once you're happy with your work and have verified that all tests pass, commit your changes and push it upstream to your fork. Always provide descriptive (but not excessively verbose) commit messages. When working on a specific issue, be sure to reference it.
 
 ```no-highlight
-$ git commit -m "Closes #1234: Add IPv5 support"
-$ git push origin
+git commit -m "Closes #1234: Add IPv5 support"
+git push origin
 ```
 
 Once your fork has the new commit, submit a [pull request](https://github.com/nautobot/nautobot/compare) to the Nautobot repo to propose the changes. Be sure to provide a detailed accounting of the changes being made and the reasons for doing so.
@@ -656,5 +743,5 @@ Exception Value: FATAL:  sorry, too many clients already
 The `runserver` development server is multi-threaded by default, which means that every request is creating its own connection. If you are doing some local testing or development that is resulting in a lot of connections to the database, pass `--nothreading` to the runserver command to disable threading:
 
 ```no-highlight
-$ nautobot-server runserver --nothreading
+nautobot-server runserver --nothreading
 ```

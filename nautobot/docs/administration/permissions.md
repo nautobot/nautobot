@@ -65,11 +65,9 @@ Permissions can be related directly to users from the Admin UI or the API:
 Multiple permissions can be assigned to a user account.
 
 !!! info
-
     User permission relationships can be managed in the Admin UI by modifying the user or the permission.
 
 !!! warning
-
     Granting a user `users.change_permission` or `users.add_permission` gives the user the ability to modify their own permissions. This permission should be restricted to trusted accounts and should be considered the same as giving a user full access.
 
 ### Creating Groups
@@ -98,5 +96,4 @@ Permissions can be related to groups by superusers or users with `users.add_perm
 Multiple permissions can be assigned to a user group.
 
 !!! info
-
     Group permission relationships can be managed in the Admin UI by modifying the group (superusers only) or the permission.

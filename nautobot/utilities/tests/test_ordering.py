@@ -1,6 +1,6 @@
 from django.test import TestCase
 
-from nautobot.utilities.ordering import naturalize, naturalize_interface
+from nautobot.utilities import ordering
 
 
 class NaturalizationTestCase(TestCase):
@@ -22,10 +22,10 @@ class NaturalizationTestCase(TestCase):
         )
 
         for origin, naturalized in data:
-            self.assertEqual(naturalize(origin, max_length=100), naturalized)
+            self.assertEqual(ordering.naturalize(origin, max_length=100), naturalized)
 
     def test_naturalize_max_length(self):
-        self.assertEqual(naturalize("abc123def456", max_length=10), "abc0000012")
+        self.assertEqual(ordering.naturalize("abc123def456", max_length=10), "abc0000012")
 
     def test_naturalize_interface(self):
 
@@ -60,7 +60,7 @@ class NaturalizationTestCase(TestCase):
         )
 
         for origin, naturalized in data:
-            self.assertEqual(naturalize_interface(origin, max_length=100), naturalized)
+            self.assertEqual(ordering.naturalize_interface(origin, max_length=100), naturalized)
 
     def test_naturalize_interface_max_length(self):
-        self.assertEqual(naturalize_interface("Gi1/2/3", max_length=20), "0001000299999999Gi00")
+        self.assertEqual(ordering.naturalize_interface("Gi1/2/3", max_length=20), "0001000299999999Gi00")

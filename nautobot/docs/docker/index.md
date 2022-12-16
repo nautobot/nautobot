@@ -4,7 +4,7 @@ Nautobot is packaged as a Docker image for use in a production environment. The 
 
 ## Platforms
 
-Nautobot docker images are currently provided for both `linux/amd64` and `linux/arm64` architectures.  Please note ARM64 support is untested by our automated tests and should be considered in an alpha state.
+Nautobot docker images are currently provided for both `linux/amd64` and `linux/arm64` architectures. Please note ARM64 support is untested by our automated tests and should be considered in an alpha state.
 
 ## Tags
 
@@ -66,10 +66,10 @@ Nautobot requires a MySQL or PostgreSQL database and Redis instance before it wi
 
 ## Configuration
 
-Most configuration parameters are available via environment variables which can be passed to the container.  If you desire you can inject your own `nautobot_config.py` by overriding `/opt/nautobot/nautobot_config.py` using [docker volumes](https://docs.docker.com/storage/volumes/) by adding `-v /local/path/to/custom/nautobot_config.py:/opt/nautobot/nautobot_config.py` to your docker run command, for example:
+Most configuration parameters are available via environment variables which can be passed to the container. If you desire you can inject your own `nautobot_config.py` by overriding `/opt/nautobot/nautobot_config.py` using [docker volumes](https://docs.docker.com/storage/volumes/) by adding `-v /local/path/to/custom/nautobot_config.py:/opt/nautobot/nautobot_config.py` to your docker run command, for example:
 
 ```no-highlight
-$ docker run --name nautobot -v /local/path/to/custom/nautobot_config.py:/opt/nautobot/nautobot_config.py networktocode/nautobot
+docker run --name nautobot -v /local/path/to/custom/nautobot_config.py:/opt/nautobot/nautobot_config.py networktocode/nautobot
 ```
 
 Or if you are using docker-compose:
@@ -98,7 +98,7 @@ Enables creation of a super user specified by [`NAUTOBOT_SUPERUSER_NAME`](#nauto
 
 Default: unset
 
-When starting, the container attempts to connect to the database and run database migrations and upgrade steps necessary when upgrading versions.  In normal operation this is harmless to run on every startup and validates the database is operating correctly.  However, in certain circumstances such as database maintenance when the database is in a read-only mode it may make sense to start Nautobot but skip these steps.  Setting this variable to `true` will start Nautobot without running these initial steps.
+When starting, the container attempts to connect to the database and run database migrations and upgrade steps necessary when upgrading versions. In normal operation this is harmless to run on every startup and validates the database is operating correctly. However, in certain circumstances such as database maintenance when the database is in a read-only mode it may make sense to start Nautobot but skip these steps. Setting this variable to `true` will start Nautobot without running these initial steps.
 
 !!! note
     Setting this value to anything other than "false" (case-insensitive) will prevent migrations from occurring.
@@ -109,7 +109,7 @@ When starting, the container attempts to connect to the database and run databas
 
 Default: unset
 
-If [`NAUTOBOT_CREATE_SUPERUSER`](#nautobot_create_superuser) is true, `NAUTOBOT_SUPERUSER_API_TOKEN` specifies the API token of the super user to be created; alternatively the `/run/secrets/superuser_api_token` file contents are read for the token.  Either the variable or the file is required if `NAUTOBOT_CREATE_SUPERUSER` is true.
+If [`NAUTOBOT_CREATE_SUPERUSER`](#nautobot_create_superuser) is true, `NAUTOBOT_SUPERUSER_API_TOKEN` specifies the API token of the super user to be created; alternatively the `/run/secrets/superuser_api_token` file contents are read for the token. Either the variable or the file is required if `NAUTOBOT_CREATE_SUPERUSER` is true.
 
 ---
 
@@ -133,13 +133,13 @@ If [`NAUTOBOT_CREATE_SUPERUSER`](#nautobot_create_superuser) is true, `NAUTOBOT_
 
 Default: unset
 
-If [`NAUTOBOT_CREATE_SUPERUSER`](#nautobot_create_superuser) is true, `NAUTOBOT_SUPERUSER_PASSWORD` specifies the password of the super user to be created; alternatively the `/run/secrets/superuser_password` file contents are read for the password.  Either the variable or the file is required if `NAUTOBOT_CREATE_SUPERUSER` is true.
+If [`NAUTOBOT_CREATE_SUPERUSER`](#nautobot_create_superuser) is true, `NAUTOBOT_SUPERUSER_PASSWORD` specifies the password of the super user to be created; alternatively the `/run/secrets/superuser_password` file contents are read for the password. Either the variable or the file is required if `NAUTOBOT_CREATE_SUPERUSER` is true.
 
 ---
 
 ### uWSGI
 
-The docker container uses [uWSGI](https://uwsgi-docs.readthedocs.io/) to serve Nautobot.  A default configuration is [provided](https://github.com/nautobot/nautobot/blob/main/docker/uwsgi.ini), and can be overridden by injecting a new `uwsgi.ini` file at `/opt/nautobot/uwsgi.ini`.  There are a couple of environment variables provided to override some uWSGI defaults:
+The docker container uses [uWSGI](https://uwsgi-docs.readthedocs.io/) to serve Nautobot. A default configuration is [provided](https://github.com/nautobot/nautobot/blob/main/docker/uwsgi.ini), and can be overridden by injecting a new `uwsgi.ini` file at `/opt/nautobot/uwsgi.ini`. There are a couple of environment variables provided to override some uWSGI defaults:
 
 #### `NAUTOBOT_UWSGI_BUFFER_SIZE`
 
@@ -159,7 +159,7 @@ This can also be overridden by appending `-b DESIRED_BUFFER_SIZE`, ex: `-b 8192`
 
 Default: `128`
 
-The socket listen queue size of uWSGI.  In production environments it is recommended to increase this value to 1024 or higher, however depending on your platform, this may require additional kernel parameter settings, please see [the uWSGI documentation](https://uwsgi-docs.readthedocs.io/en/latest/articles/TheArtOfGracefulReloading.html#the-listen-queue) for more information.
+The socket listen queue size of uWSGI. In production environments it is recommended to increase this value to 1024 or higher, however depending on your platform, this may require additional kernel parameter settings, please see [the uWSGI documentation](https://uwsgi-docs.readthedocs.io/en/latest/articles/TheArtOfGracefulReloading.html#the-listen-queue) for more information.
 
 Please see the [official uWSGI documentation on `listen`](https://uwsgi-docs.readthedocs.io/en/latest/Options.html?highlight=listen#listen) for more information.
 
@@ -177,10 +177,10 @@ Please see the [official uWSGI documentation on `processes`](https://uwsgi-docs.
 
 ### SSL
 
-Self signed SSL certificates are included by default with the container.  For a production deployment you should utilize your own signed certificates, these can be injected into the container at runtime using [docker volumes](https://docs.docker.com/storage/volumes/).  The public certificate should be placed at `/opt/nautobot/nautobot.crt` and the private key should be at `/opt/nautobot/nautobot.key`.  Using a `docker run` these can be injected using the `-v` parameter:
+Self signed SSL certificates are included by default with the container. For a production deployment you should utilize your own signed certificates, these can be injected into the container at runtime using [docker volumes](https://docs.docker.com/storage/volumes/). The public certificate should be placed at `/opt/nautobot/nautobot.crt` and the private key should be at `/opt/nautobot/nautobot.key`. Using a `docker run` these can be injected using the `-v` parameter:
 
 ```no-highlight
-$ docker run --name nautobot -v /local/path/to/custom/nautobot.crt:/opt/nautobot/nautobot.crt -v /local/path/to/custom/nautobot.key:/opt/nautobot/nautobot.key networktocode/nautobot
+docker run --name nautobot -v /local/path/to/custom/nautobot.crt:/opt/nautobot/nautobot.crt -v /local/path/to/custom/nautobot.key:/opt/nautobot/nautobot.key networktocode/nautobot
 ```
 
 Or if you are using `docker-compose`:
@@ -208,12 +208,21 @@ COPY nautobot_config.py /opt/nautobot/nautobot_config.py
 
 ## Building the Image
 
-If you have a [development environment](../development/getting-started.md#setting-up-your-development-environment) you can use `invoke` to build the Docker image.  By default `invoke build` will build the `dev` image:
+If you have a [development environment](../development/getting-started.md#setting-up-your-development-environment) you can use `invoke` to build the Docker image. By default `invoke build` will build the `dev` image:
 
 ```no-highlight
-$ invoke build
-...
-$ docker images
+invoke build
+```
+
+After some output and a prompt is returned:
+
+```no-highlight
+docker images
+```
+
+Example output:
+
+```no-highlight
 REPOSITORY                                       TAG                              IMAGE ID       CREATED          SIZE
 local/nautobot-dev                               local-py3.7                      0d93eec7dfea   5 minutes ago    1.31GB
 ```
@@ -232,9 +241,23 @@ nautobot:
 Then you can re-run the `invoke build` command:
 
 ```no-highlight
-$ invoke build
+invoke build
+```
+
+Example output:
+
+```no-highlight
 ...
-$ docker images
+```
+
+```no-highlight
+docker images
+
+```
+
+Example output:
+
+```no-highlight
 REPOSITORY                                       TAG                              IMAGE ID       CREATED          SIZE
 local/nautobot-final                             local-py3.7                      e03e752fcc6b   27 minutes ago   629MB
 ```
