@@ -94,7 +94,7 @@ class Migration(migrations.Migration):
         ),
         migrations.AlterModelOptions(
             name="inventoryitem",
-            options={"ordering": ("name",)},
+            options={"ordering": ("_name",)},
         ),
         migrations.AlterModelOptions(
             name="rackgroup",
