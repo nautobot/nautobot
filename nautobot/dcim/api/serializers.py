@@ -297,6 +297,13 @@ class LocationSerializer(
     parent = NestedLocationSerializer(required=False, allow_null=True)
     tenant = NestedTenantSerializer(required=False, allow_null=True)
     site = NestedSiteSerializer(required=False, allow_null=True)
+    time_zone = TimeZoneSerializerField(required=False, allow_null=True)
+    circuit_count = serializers.IntegerField(read_only=True)
+    device_count = serializers.IntegerField(read_only=True)
+    prefix_count = serializers.IntegerField(read_only=True)
+    rack_count = serializers.IntegerField(read_only=True)
+    virtualmachine_count = serializers.IntegerField(read_only=True)
+    vlan_count = serializers.IntegerField(read_only=True)
 
     class Meta:
         model = Location
@@ -311,6 +318,24 @@ class LocationSerializer(
             "tenant",
             "description",
             "tree_depth",
+            "facility",
+            "asn",
+            "time_zone",
+            "description",
+            "physical_address",
+            "shipping_address",
+            "latitude",
+            "longitude",
+            "contact_name",
+            "contact_phone",
+            "contact_email",
+            "comments",
+            "circuit_count",
+            "device_count",
+            "prefix_count",
+            "rack_count",
+            "virtualmachine_count",
+            "vlan_count",
         ]
         # https://www.django-rest-framework.org/api-guide/validators/#optional-fields
         validators = []

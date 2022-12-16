@@ -297,7 +297,18 @@ class LocationFilterSet(NautobotFilterSet, StatusModelFilterSetMixin, TenancyMod
     q = SearchFilter(
         filter_predicates={
             "name": "icontains",
+            "facility": "icontains",
             "description": "icontains",
+            "physical_address": "icontains",
+            "shipping_address": "icontains",
+            "contact_name": "icontains",
+            "contact_phone": "icontains",
+            "contact_email": "icontains",
+            "comments": "icontains",
+            "asn": {
+                "lookup_expr": "exact",
+                "preprocessor": int,  # asn expects an int
+            },
         },
     )
     location_type = NaturalKeyOrPKMultipleChoiceFilter(
@@ -331,10 +342,105 @@ class LocationFilterSet(NautobotFilterSet, StatusModelFilterSetMixin, TenancyMod
         field_name="location_type__content_types",
         choices=FeatureQuery("locations").get_choices,
     )
+    has_circuit_terminations = RelatedMembershipBooleanFilter(
+        field_name="circuit_terminations",
+        label="Has circuit terminations",
+    )
+    devices = NaturalKeyOrPKMultipleChoiceFilter(
+        queryset=Device.objects.all(),
+        to_field_name="name",
+        label="Devices (name or ID)",
+    )
+    has_devices = RelatedMembershipBooleanFilter(
+        field_name="devices",
+        label="Has devices",
+    )
+    # The reverse relation here is misnamed as `powerpanel`, but fixing it would be a breaking API change.
+    # 2.0 TODO: fix the reverse relation name, at which point this filter can be deleted here and added to Meta.fields.
+    power_panels = NaturalKeyOrPKMultipleChoiceFilter(
+        field_name="powerpanels",
+        to_field_name="name",
+        queryset=PowerPanel.objects.all(),
+        label="Power panels (name or ID)",
+    )
+    has_power_panels = RelatedMembershipBooleanFilter(
+        field_name="powerpanels",
+        label="Has power panels",
+    )
+    rack_groups = NaturalKeyOrPKMultipleChoiceFilter(
+        queryset=RackGroup.objects.all(),
+        label="Rack groups (slug or ID)",
+    )
+    has_rack_groups = RelatedMembershipBooleanFilter(
+        field_name="rack_groups",
+        label="Has rack groups",
+    )
+    has_racks = RelatedMembershipBooleanFilter(
+        field_name="racks",
+        label="Has racks",
+    )
+    racks = NaturalKeyOrPKMultipleChoiceFilter(
+        queryset=Rack.objects.all(),
+        to_field_name="name",
+        label="Rack (name or ID)",
+    )
+    has_prefixes = RelatedMembershipBooleanFilter(
+        field_name="prefixes",
+        label="Has prefixes",
+    )
+    vlan_groups = NaturalKeyOrPKMultipleChoiceFilter(
+        queryset=VLANGroup.objects.all(),
+        label="Vlan groups (slug or ID)",
+    )
+    has_vlan_groups = RelatedMembershipBooleanFilter(
+        field_name="vlan_groups",
+        label="Has vlan groups",
+    )
+    has_vlans = RelatedMembershipBooleanFilter(
+        field_name="vlans",
+        label="Has vlans",
+    )
+    vlans = NaturalKeyOrPKMultipleChoiceFilter(
+        to_field_name="vid",
+        queryset=VLAN.objects.all(),
+        label="Tagged VLANs (VID or ID)",
+    )
+    has_clusters = RelatedMembershipBooleanFilter(
+        field_name="clusters",
+        label="Has clusters",
+    )
+    clusters = NaturalKeyOrPKMultipleChoiceFilter(
+        queryset=Cluster.objects.all(),
+        to_field_name="name",
+        label="Clusters (name or ID)",
+    )
+    time_zone = django_filters.MultipleChoiceFilter(
+        choices=[(str(obj), name) for obj, name in TimeZoneField().choices],
+        label="Time zone",
+        null_value="",
+    )
 
     class Meta:
         model = Location
-        fields = ["id", "name", "slug", "description", "tags"]
+        fields = [
+            "id",
+            "name",
+            "slug",
+            "description",
+            "asn",
+            "circuit_terminations",
+            "comments",
+            "contact_email",
+            "contact_name",
+            "contact_phone",
+            "facility",
+            "latitude",
+            "longitude",
+            "physical_address",
+            "prefixes",
+            "shipping_address",
+            "tags",
+        ]
 
     def generate_query__base_site(self, value):
         """Helper method used by DynamicGroups and by _base_site() method."""

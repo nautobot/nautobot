@@ -7,7 +7,7 @@ import django.db.models.deletion
 class Migration(migrations.Migration):
 
     dependencies = [
-        ("dcim", "0019_device_redundancy_group_data_migration"),
+        ("dcim", "0020_move_site_fields_to_location_model"),
     ]
 
     operations = [
