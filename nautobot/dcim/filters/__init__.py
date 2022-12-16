@@ -1480,13 +1480,13 @@ class InventoryItemFilterSet(BaseFilterSet, DeviceComponentModelFilterSetMixin):
         to_field_name="slug",
         label="Manufacturer (slug)",
     )
-    child_items = NaturalKeyOrPKMultipleChoiceFilter(
+    children = NaturalKeyOrPKMultipleChoiceFilter(
         queryset=InventoryItem.objects.all(),
         to_field_name="name",
         label="Child items (name or ID)",
     )
-    has_child_items = RelatedMembershipBooleanFilter(
-        field_name="child_items",
+    has_children = RelatedMembershipBooleanFilter(
+        field_name="children",
         label="Has child items",
     )
     serial = django_filters.CharFilter(lookup_expr="iexact")
