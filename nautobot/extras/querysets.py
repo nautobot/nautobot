@@ -130,12 +130,12 @@ class ConfigContextModelQuerySet(RestrictedQuerySet):
                 Q.AND,
             )
             base_query.add((Q(sites=OuterRef("site")) | Q(sites=None)), Q.AND)
-            region_field = "site__region"
+            region_field = "site__region"  # TODO(glenn) # noqa: F841
 
         elif self.model._meta.model_name == "virtualmachine":
             base_query.add((Q(roles=OuterRef("role")) | Q(roles=None)), Q.AND)
             base_query.add((Q(sites=OuterRef("cluster__site")) | Q(sites=None)), Q.AND)
-            region_field = "cluster__site__region"
+            region_field = "cluster__site__region"  # TODO(glenn) # noqa: F841
 
         # TODO(glenn) Replace with tree-queries equivalent, similar to LocationFilterSet._subtree?
         base_query.add(

@@ -1,5 +1,4 @@
 from rest_framework import serializers
-from drf_spectacular.utils import extend_schema_field
 
 from nautobot.core.api import WritableNestedSerializer
 from nautobot.tenancy.models import Tenant, TenantGroup

@@ -12,7 +12,6 @@ import django_filters
 from django_filters.constants import EMPTY_VALUES
 from django_filters.utils import get_model_field, resolve_field
 from taggit.managers import TaggableManager
-from tree_queries.models import TreeNode
 
 from nautobot.dcim import fields as dcim_fields
 from nautobot.dcim import forms as dcim_forms
