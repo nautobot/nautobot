@@ -22,7 +22,7 @@ from nautobot.dcim.models import (
 )
 
 from nautobot.dcim.utils import object_to_path_node
-from nautobot.extras.models import Status
+from nautobot.extras.models import Role, Status
 
 
 class CablePathTestCase(TestCase):
@@ -43,13 +43,12 @@ class CablePathTestCase(TestCase):
 
         manufacturer = Manufacturer.objects.create(name="Generic", slug="generic")
         device_type = DeviceType.objects.create(manufacturer=manufacturer, model="Test Device")
-        # TODO(timizuo): Device Role Reassign
-        # device_role = DeviceRole.objects.create(name="Device Role", slug="device-role")
+        device_role = Role.objects.get_for_model(Device).first()
         device_status = Status.objects.get_for_model(Device).get(slug="active")
         cls.device = Device.objects.create(
             site=cls.site,
             device_type=device_type,
-            # device_role=device_role,
+            role=device_role,
             name="Test Device",
             status=device_status,
         )

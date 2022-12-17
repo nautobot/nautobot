@@ -19,7 +19,7 @@ from nautobot.core.models.generics import OrganizationalModel, PrimaryModel
 from nautobot.utilities.utils import array_to_string, UtilizationData
 from nautobot.virtualization.models import VirtualMachine, VMInterface
 from nautobot.utilities.fields import JSONArrayField
-from .choices import IPAddressRoleChoices, ServiceProtocolChoices
+from .choices import ServiceProtocolChoices
 from .constants import (
     IPADDRESS_ASSIGNMENT_MODELS,
     IPADDRESS_ROLES_NONUNIQUE,

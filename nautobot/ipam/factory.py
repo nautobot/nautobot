@@ -6,7 +6,7 @@ import math
 
 from nautobot.core.factory import OrganizationalModelFactory, PrimaryModelFactory
 from nautobot.dcim.models import Location, Site
-from nautobot.extras.models import Status
+from nautobot.extras.models import Role, Status
 from nautobot.ipam.choices import IPAddressRoleChoices
 from nautobot.ipam.models import Aggregate, RIR, IPAddress, Prefix, RouteTarget, VLAN, VLANGroup, VRF
 from nautobot.tenancy.models import Tenant
@@ -331,6 +331,7 @@ class VLANFactory(PrimaryModelFactory):
     )
 
     status = random_instance(lambda: Status.objects.get_for_model(VLAN), allow_null=False)
+    role = random_instance(lambda: Role.objects.get_for_model(VLAN), allow_null=True)
 
     has_description = factory.Faker("pybool")
     description = factory.Maybe("has_description", factory.Faker("text", max_nb_chars=200), "")
@@ -428,6 +429,7 @@ class PrefixFactory(PrimaryModelFactory):
         factory.LazyAttribute(lambda l: l.location.site or l.location.base_site),
         factory.Maybe("has_site", random_instance(Site, allow_null=False), None),
     )
+    role = random_instance(lambda: Role.objects.get_for_model(Prefix), allow_null=True)
     status = factory.Maybe(
         "is_container",
         factory.LazyFunction(lambda: Prefix.STATUS_CONTAINER),
@@ -578,7 +580,7 @@ class IPAddressFactory(PrimaryModelFactory):
         nat_inside=None,
         is_ipv6=factory.SelfAttribute("..is_ipv6"),
     )
-    role = factory.Maybe("has_role", factory.LazyAttribute(lambda obj: obj.role_choice[0]), "")
+    role = random_instance(lambda: Role.objects.get_for_model(IPAddress))
     status = factory.Maybe(
         "is_ipv6",
         random_instance(lambda: Status.objects.get_for_model(IPAddress), allow_null=False),

@@ -16,6 +16,7 @@ from nautobot.core.api import (
 )
 from nautobot.core.api.exceptions import SerializerNotFound
 from nautobot.core.api.serializers import BaseModelSerializer
+from nautobot.core.models.mixins import LimitQuerysetChoicesSerializerMixin
 from nautobot.dcim.api.nested_serializers import (
     NestedDeviceSerializer,
     NestedDeviceTypeSerializer,
@@ -35,7 +36,6 @@ from nautobot.extras.choices import (
     ObjectChangeActionChoices,
 )
 from nautobot.extras.datasources import get_datasource_content_choices
-from ...core.models.mixins import LimitQuerysetChoicesSerializerMixin
 from nautobot.extras.models import (
     ComputedField,
     ConfigContext,

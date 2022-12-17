@@ -59,6 +59,7 @@ from nautobot.dcim.models import (
 from nautobot.extras.filters import (
     NautobotFilterSet,
     LocalContextModelFilterSetMixin,
+    RoleModelFilterSetMixin,
     StatusModelFilterSetMixin,
 )
 from nautobot.extras.models import SecretsGroup

@@ -42,6 +42,25 @@ PREFIX_LINK = """
 <a href="{% if record.present_in_database %}{% url 'ipam:prefix' pk=record.pk %}{% else %}{% url 'ipam:prefix_add' %}?prefix={{ record }}{% if object.vrf %}&vrf={{ object.vrf.pk }}{% endif %}{% if object.site %}&site={{ object.site.pk }}{% endif %}{% if object.tenant %}&tenant_group={{ object.tenant.group.pk }}&tenant={{ object.tenant.pk }}{% endif %}{% endif %}">{{ record.prefix }}</a>
 """
 
+PREFIX_COPY_LINK = """
+{% load helpers %}
+{% for i in record.parents|as_range %}
+    <i class="mdi mdi-circle-small"></i>
+{% endfor %}
+<span class="hover_copy"><a href="{% if record.present_in_database %}{% url 'ipam:prefix' pk=record.pk %}{% else %}{% url 'ipam:prefix_add' %}?prefix={{ record }}{% if object.vrf %}&vrf={{ object.vrf.pk }}{% endif %}{% if object.site %}&site={{ object.site.pk }}{% endif %}{% if object.tenant %}&tenant_group={{ object.tenant.group.pk }}&tenant={{ object.tenant.pk }}{% endif %}{% endif %}" id="copy_{{record.id}}">{{ record.prefix }}</a><button type="button" class="btn btn-inline btn-default hover_copy_button" data-clipboard-target="#copy_{{record.id}}">
+                                <span class="mdi mdi-content-copy"></span>
+                            </button>
+                        </span>
+"""
+
+PREFIX_ROLE_LINK = """
+{% if record.role %}
+    <a href="{% url 'ipam:prefix_list' %}?role={{ record.role.slug }}">{{ record.role }}</a>
+{% else %}
+    &mdash;
+{% endif %}
+"""
+
 IPADDRESS_LINK = """
 {% if record.present_in_database %}
     <a href="{{ record.get_absolute_url }}">{{ record.address }}</a>
