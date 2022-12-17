@@ -39,7 +39,6 @@ from nautobot.utilities.utils import deepmerge, render_jinja2
 # Avoid breaking backward compatibility on anything that might expect these to still be defined here:
 from .jobs import JOB_LOGS, Job, JobLogEntry, JobResult, ScheduledJob, ScheduledJobs  # noqa: F401
 
-
 #
 # Config contexts
 #
@@ -102,12 +101,9 @@ class ConfigContext(BaseModel, ChangeLoggedModel, ConfigContextSchemaValidationM
     regions = models.ManyToManyField(to="dcim.Region", related_name="+", blank=True)
     sites = models.ManyToManyField(to="dcim.Site", related_name="+", blank=True)
     locations = models.ManyToManyField(to="dcim.Location", related_name="+", blank=True)
-    roles = models.ManyToManyField(
-        to="extras.Role",
-        related_name="+",
-        blank=True,
-        limit_choices_to=RoleModelsQuery(),
-    )
+    # TODO(timizuo): Find a way to limit role choices to Device; as of now using
+    #  limit_choices_to=Role.objects.get_for_model(Device), causes a partial import error
+    roles = models.ManyToManyField(to="extras.Role", related_name="+", blank=True)
     device_types = models.ManyToManyField(to="dcim.DeviceType", related_name="+", blank=True)
     device_redundancy_groups = models.ManyToManyField(to="dcim.DeviceRedundancyGroup", related_name="+", blank=True)
     platforms = models.ManyToManyField(to="dcim.Platform", related_name="+", blank=True)

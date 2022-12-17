@@ -218,10 +218,7 @@ class ConfigContextFilterSet(BaseFilterSet):
         label="Location (slug)",
     )
     role = NaturalKeyOrPKMultipleChoiceFilter(
-        field_name="role",
-        to_field_name="slug",
-        queryset=Role.objects.get_for_model(Device),
-        label="Role (slug or ID)"
+        field_name="role", to_field_name="slug", queryset=Role.objects.get_for_model(Device), label="Role (slug or ID)"
     )
     device_type_id = django_filters.ModelMultipleChoiceFilter(
         field_name="device_types",
