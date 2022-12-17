@@ -14,7 +14,6 @@ class ConfigContextQuerySet(RestrictedQuerySet):
         Return all applicable ConfigContexts for a given object. Only active ConfigContexts will be included.
         """
 
-        # `role` for Device; `role` for VirtualMachine
         role = obj.role
 
         # `device_type` for Device; `type` for VirtualMachine

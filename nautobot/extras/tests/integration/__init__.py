@@ -6,10 +6,7 @@ from nautobot.dcim.models import Device, DeviceType, Manufacturer, Site
 
 def create_test_device():
     test_uuid = str(uuid.uuid4())
-    device_role = Role.objects.create(
-        name=f"Test Role {test_uuid}",
-        slug=f"test-role-{test_uuid}",
-    )
+    device_role = Role.objects.get_for_model(Device).first()
     manufacturer = Manufacturer.objects.create(
         name=f"Test Manufacturer {test_uuid}",
         slug=f"test-manufacturer-{test_uuid}",

@@ -715,7 +715,7 @@ class RoleModelFilterFormMixin(forms.Form):
             required=False,
             queryset=Role.objects.all(),
             query_params={"content_types": self.model._meta.label_lower},
-            to_field_name="name",  # TODO(timizuo): Might be slug but i dont think so
+            to_field_name="slug",
         )
         self.order_fields(self.field_order)  # Reorder fields again
 
