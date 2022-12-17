@@ -2,7 +2,7 @@ import django_filters
 from django.contrib.auth import get_user_model
 from django.contrib.contenttypes.models import ContentType
 
-from nautobot.dcim.models import DeviceRedundancyGroup, DeviceType, Location, Platform, Region, Site
+from nautobot.dcim.models import Device, DeviceRedundancyGroup, DeviceType, Location, Platform, Region, Site
 from nautobot.extras.choices import (
     JobResultStatusChoices,
     RelationshipTypeChoices,
@@ -217,16 +217,11 @@ class ConfigContextFilterSet(BaseFilterSet):
         queryset=Location.objects.all(),
         label="Location (slug)",
     )
-    role_id = django_filters.ModelMultipleChoiceFilter(
-        field_name="roles",
-        queryset=Role.objects.all(),
-        label="Role",
-    )
-    role = django_filters.ModelMultipleChoiceFilter(
-        field_name="roles__slug",
-        queryset=Role.objects.all(),
+    role = NaturalKeyOrPKMultipleChoiceFilter(
+        field_name="role",
         to_field_name="slug",
-        label="Role (slug)",
+        queryset=Role.objects.get_for_model(Device),
+        label="Role (slug or ID)"
     )
     device_type_id = django_filters.ModelMultipleChoiceFilter(
         field_name="device_types",

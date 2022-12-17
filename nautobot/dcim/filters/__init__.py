@@ -97,7 +97,6 @@ __all__ = (
     "DeviceBayTemplateFilterSet",
     "DeviceFilterSet",
     "DeviceRedundancyGroupFilterSet",
-    "DeviceRoleFilterSet",
     "DeviceTypeFilterSet",
     "FrontPortFilterSet",
     "FrontPortTemplateFilterSet",

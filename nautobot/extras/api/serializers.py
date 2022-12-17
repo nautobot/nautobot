@@ -100,11 +100,13 @@ from .nested_serializers import (  # noqa: F401
     NestedGitRepositorySerializer,
     NestedGraphQLQuerySerializer,
     NestedImageAttachmentSerializer,
+    NestedJobHookSerializer,
     NestedJobSerializer,
     NestedJobResultSerializer,
     NestedNoteSerializer,
     NestedRelationshipAssociationSerializer,
     NestedRelationshipSerializer,
+    NestedRoleSerializer,
     NestedScheduledJobSerializer,
     NestedSecretSerializer,
     NestedSecretsGroupSerializer,
@@ -112,8 +114,6 @@ from .nested_serializers import (  # noqa: F401
     NestedStatusSerializer,
     NestedTagSerializer,
     NestedWebhookSerializer,
-    NestedJobHookSerializer,
-    NestedRoleSerializer,
 )
 
 #
