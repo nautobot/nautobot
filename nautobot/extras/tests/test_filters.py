@@ -1536,13 +1536,13 @@ class RoleTestCase(FilterTestCases.NameSlugFilterTestCase):
             roles[i].content_types.add(cls.rack_ct)
 
     def test_content_types(self):
-        device_count = self.queryset.filter(content_types=self.device_ct).count()
+        device_roles = self.queryset.filter(content_types=self.device_ct)
         params = {"content_types": ["dcim.device"]}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), device_count)
+        self.assertQuerysetEqualAndNotEmpty(self.filterset(params, self.queryset).qs, device_roles)
 
-        rack_count = self.queryset.filter(content_types=self.rack_ct).count()
+        rack_roles = self.queryset.filter(content_types=self.rack_ct)
         params = {"content_types": ["dcim.rack"]}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), rack_count)
+        self.assertEqual(self.filterset(params, self.queryset).qs, rack_roles)
 
     def test_color(self):
         """Test the color search field."""

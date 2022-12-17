@@ -364,7 +364,7 @@ class CreatedUpdatedFilterTest(APITestCase):
 
         self.site1 = Site.objects.create(name="Test Site 1", slug="test-site-1")
         self.rackgroup1 = RackGroup.objects.create(site=self.site1, name="Test Rack Group 1", slug="test-rack-group-1")
-        self.rackrole1 = RackRole.objects.create(name="Test Rack Role 1", slug="test-rack-role-1", color="ff0000")
+        self.rackrole1 = Role.objects.get_for_model(Rack).first()
         self.rack1 = Rack.objects.create(
             site=self.site1,
             group=self.rackgroup1,
