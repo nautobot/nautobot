@@ -292,10 +292,10 @@ class JobTest(TransactionTestCase):
         name = "TestObjectVars"
 
         # Prepare the job data
-        d = Role.objects.get_for_model(Device).first()
+        role = Role.objects.get_for_model(Device).first()
         data = {
-            "role": {"name": "role"},
-            "roles": [d.pk],
+            "role": {"name": role.name},
+            "roles": [role.pk],
         }
         job_result = create_job_result_and_run_job(module, name, data=data, commit=False, request=self.request)
 
@@ -308,9 +308,9 @@ class JobTest(TransactionTestCase):
 
         # Assert stuff
         self.assertEqual(job_result.status, JobResultStatusChoices.STATUS_COMPLETED)
-        self.assertEqual({"role": str(d.pk), "roles": [str(d.pk)]}, job_result_data)
+        self.assertEqual({"role": str(role.pk), "roles": [str(role.pk)]}, job_result_data)
         self.assertEqual(info_log.log_object, None)
-        self.assertEqual(info_log.message, "Role: role")
+        self.assertEqual(info_log.message, f"Role: {role.name}")
         self.assertEqual(job_result.data["output"], "\nNice Roles!")
 
     def test_optional_object_var(self):

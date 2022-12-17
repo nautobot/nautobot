@@ -211,7 +211,7 @@ class DeviceImportTable(BaseTable):
             "site",
             "rack",
             "position",
-            "device_role",
+            "role",
             "device_type",
         )
         empty_text = False

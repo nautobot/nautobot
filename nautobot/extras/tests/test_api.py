@@ -979,11 +979,11 @@ class GraphQLQueryTest(APIViewTestCases.APIViewTestCase):
         {
             "name": "graphql-query-5",
             "slug": "graphql-query-5",
-            "query": '{ devices(role: "edge") { id, name, device_role { name slug } } }',
+            "query": '{ devices(role: "edge") { id, name, role { name slug } } }',
         },
         {
             "name": "Graphql Query 6",
-            "query": '{ devices(role: "edge") { id, name, device_role { name slug } } }',
+            "query": '{ devices(role: "edge") { id, name, role { name slug } } }',
         },
     ]
     slug_source = "name"
@@ -999,7 +999,7 @@ class GraphQLQueryTest(APIViewTestCases.APIViewTestCase):
             GraphQLQuery(
                 name="graphql-query-2",
                 slug="graphql-query-2",
-                query='{ devices(role: "edge") { id, name, device_role { name slug } } }',
+                query='{ devices(role: "edge") { id, name, role { name slug } } }',
             ),
             GraphQLQuery(
                 name="graphql-query-3",
@@ -1025,7 +1025,7 @@ query ($device: [String!]) {
       name
       slug
     }
-    device_role {
+    role {
       name
     }
     platform {
@@ -1377,7 +1377,7 @@ class JobAPIRunTestMixin:
             "var1": "FooBar",
             "var2": 123,
             "var3": False,
-            "var4": {"name": "role"},
+            "var4": {"name": device_role.name},
         }
 
         # This handles things like ObjectVar fields looked up by non-UUID
@@ -1922,7 +1922,7 @@ class JobTestVersion13(
         self.assertEqual(response.data[2], {"name": "var3", "type": "BooleanVar", "required": False})
         self.assertEqual(
             response.data[3],
-            {"name": "var4", "type": "ObjectVar", "required": True, "model": "dcim.role"},
+            {"name": "var4", "type": "ObjectVar", "required": True, "model": "extras.role"},
         )
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])

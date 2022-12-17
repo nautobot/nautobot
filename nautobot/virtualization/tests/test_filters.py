@@ -304,7 +304,7 @@ class VirtualMachineTestCase(FilterTestCases.FilterTestCase, FilterTestCases.Ten
         )
         cls.platforms = platforms
 
-        roles = Role.objects.get_for_model(Device)
+        roles = Role.objects.get_for_model(VirtualMachine)
         cls.roles = roles
 
         tenants = Tenant.objects.filter(group__isnull=False)[:3]
@@ -507,10 +507,10 @@ class VirtualMachineTestCase(FilterTestCases.FilterTestCase, FilterTestCases.Ten
 
     def test_role(self):
         roles = self.roles[:2]
-        params = {"role_id": [roles[0].pk, roles[1].pk]}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), len(roles))
-        params = {"role": [roles[0].slug, roles[1].slug]}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), len(roles))
+        params = {"role": [roles[0].pk, roles[1].slug]}
+        self.assertQuerysetEqualAndNotEmpty(
+            self.filterset(params, self.queryset).qs, self.queryset.filter(role__in=[roles[0], roles[1]])
+        )
 
     def test_platform(self):
         platforms = self.platforms[:2]

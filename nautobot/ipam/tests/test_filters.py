@@ -395,8 +395,7 @@ class PrefixTestCase(FilterTestCases.FilterTestCase, FilterTestCases.TenancyFilt
         roles = Role.objects.get_for_model(Prefix).filter(ipam_prefix_related__isnull=False)[:2]
         params = {"role": [roles[0].pk, roles[1].slug]}
         self.assertQuerysetEqualAndNotEmpty(
-            self.filterset(params, self.queryset).qs,
-            self.queryset.filter(role__in=[roles[0], roles[1]])
+            self.filterset(params, self.queryset).qs, self.queryset.filter(role__in=[roles[0], roles[1]])
         )
 
     def test_status(self):
@@ -922,8 +921,7 @@ class VLANTestCase(FilterTestCases.FilterTestCase, FilterTestCases.TenancyFilter
         roles = Role.objects.get_for_model(VLAN)[:2]
         params = {"role": [roles[0].pk, roles[1].slug]}
         self.assertQuerysetEqualAndNotEmpty(
-            self.filterset(params, self.queryset).qs,
-            self.queryset.filter(role__in=[roles[0], roles[1]])
+            self.filterset(params, self.queryset).qs, self.queryset.filter(role__in=[roles[0], roles[1]])
         )
 
     def test_status(self):

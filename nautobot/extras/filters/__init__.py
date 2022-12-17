@@ -2,7 +2,8 @@ import django_filters
 from django.contrib.auth import get_user_model
 from django.contrib.contenttypes.models import ContentType
 
-from nautobot.dcim.models import Device, DeviceRedundancyGroup, DeviceType, Location, Platform, Region, Site
+from nautobot.core.filters.mixins import RoleModelFilterSetMixin
+from nautobot.dcim.models import DeviceRedundancyGroup, DeviceType, Location, Platform, Region, Site
 from nautobot.extras.choices import (
     JobResultStatusChoices,
     RelationshipTypeChoices,
@@ -112,7 +113,6 @@ __all__ = (
     "RelationshipFilterSet",
     "RelationshipAssociationFilterSet",
     "RoleFilterSet",
-    "RoleModelFilterSetMixin",
     "ScheduledJobFilterSet",
     "SecretFilterSet",
     "SecretsGroupFilterSet",
@@ -170,7 +170,7 @@ class ComputedFieldFilterSet(BaseFilterSet):
 #
 
 
-class ConfigContextFilterSet(BaseFilterSet):
+class ConfigContextFilterSet(BaseFilterSet, RoleModelFilterSetMixin):
     q = SearchFilter(
         filter_predicates={
             "name": "icontains",
@@ -216,9 +216,6 @@ class ConfigContextFilterSet(BaseFilterSet):
         field_name="locations__slug",
         queryset=Location.objects.all(),
         label="Location (slug)",
-    )
-    role = NaturalKeyOrPKMultipleChoiceFilter(
-        field_name="role", to_field_name="slug", queryset=Role.objects.get_for_model(Device), label="Role (slug or ID)"
     )
     device_type_id = django_filters.ModelMultipleChoiceFilter(
         field_name="device_types",
@@ -862,30 +859,6 @@ class RoleFilterSet(NautobotFilterSet):
             "created",
             "last_updated",
         ]
-
-
-class RoleFilter(NaturalKeyOrPKMultipleChoiceFilter):
-    """Limit role choices to the available role choices for self.model"""
-
-    def __init__(self, *args, **kwargs):
-
-        kwargs.setdefault("field_name", "role")
-        kwargs.setdefault("to_field_name", "slug")
-        kwargs.setdefault("queryset", Role.objects.all())
-        kwargs.setdefault("label", "Role (slug or ID)")
-
-        super().__init__(*args, **kwargs)
-
-    def get_queryset(self, request):
-        return self.queryset.get_for_model(self.model)
-
-
-class RoleModelFilterSetMixin(django_filters.FilterSet):
-    """
-    Mixin to add a `role` filter field to a FilterSet.
-    """
-
-    role = RoleFilter()
 
 
 #

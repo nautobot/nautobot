@@ -4,9 +4,10 @@ from django.core.exceptions import ValidationError
 from django.db.models import Q
 from netaddr.core import AddrFormatError
 
+from nautobot.core.filters.mixins import RoleModelFilterSetMixin
 from nautobot.dcim.filters import LocatableModelFilterSetMixin
 from nautobot.dcim.models import Device, Interface
-from nautobot.extras.filters import NautobotFilterSet, StatusModelFilterSetMixin, RoleModelFilterSetMixin
+from nautobot.extras.filters import NautobotFilterSet, StatusModelFilterSetMixin
 from nautobot.tenancy.filters import TenancyModelFilterSetMixin
 from nautobot.utilities.filters import (
     MultiValueCharFilter,

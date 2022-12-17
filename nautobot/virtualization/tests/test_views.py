@@ -144,7 +144,7 @@ class VirtualMachineTestCase(ViewTestCases.PrimaryObjectViewTestCase):
     @classmethod
     def setUpTestData(cls):
 
-        deviceroles = Role.objects.get_for_model(Device)[:2]
+        deviceroles = Role.objects.get_for_model(VirtualMachine)[:2]
 
         platforms = (
             Platform.objects.create(name="Platform 1", slug="platform-1"),
