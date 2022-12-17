@@ -23,7 +23,6 @@ from nautobot.dcim.models import (
     DeviceBay,
     DeviceBayTemplate,
     DeviceRedundancyGroup,
-    DeviceRole,
     DeviceType,
     FrontPort,
     FrontPortTemplate,
@@ -44,7 +43,7 @@ from nautobot.dcim.models import (
     Site,
 )
 from nautobot.extras.choices import CustomFieldTypeChoices
-from nautobot.extras.models import CustomField, Status
+from nautobot.extras.models import CustomField, Status, Role
 from nautobot.ipam.models import VLAN
 from nautobot.tenancy.models import Tenant
 
@@ -58,18 +57,16 @@ class CableLengthTestCase(TestCase):
             model="Test Device Type 1",
             slug="test-device-type-1",
         )
-        self.devicerole = DeviceRole.objects.create(
-            name="Test Device Role 1", slug="test-device-role-1", color="ff0000"
-        )
+        self.devicerole = Role.objects.get_for_model(Device).first()
         self.device1 = Device.objects.create(
             device_type=self.devicetype,
-            device_role=self.devicerole,
+            role=self.devicerole,
             name="TestDevice1",
             site=self.site,
         )
         self.device2 = Device.objects.create(
             device_type=self.devicetype,
-            device_role=self.devicerole,
+            role=self.devicerole,
             name="TestDevice2",
             site=self.site,
         )
@@ -111,7 +108,7 @@ class InterfaceTemplateCustomFieldTestCase(TestCase):
         statuses = Status.objects.get_for_model(Device)
         site = Site.objects.first()
         manufacturer = Manufacturer.objects.create(name="Acme", slug="acme")
-        device_role = DeviceRole.objects.create(name="Device Role 1", slug="device-role-1", color="ff0000")
+        device_role = Role.objects.get_for_model(Device).first()
         custom_fields = [
             CustomField.objects.create(type=CustomFieldTypeChoices.TYPE_TEXT, name="field_1", default="value_1"),
             CustomField.objects.create(type=CustomFieldTypeChoices.TYPE_TEXT, name="field_2", default="value_2"),
@@ -137,7 +134,7 @@ class InterfaceTemplateCustomFieldTestCase(TestCase):
         # instantiate_model() is run when device is created
         device = Device.objects.create(
             device_type=device_type,
-            device_role=device_role,
+            role=device_role,
             status=statuses[0],
             name="Test Device",
             site=site,
@@ -160,7 +157,7 @@ class InterfaceTemplateTestCase(TestCase):
         statuses = Status.objects.get_for_model(Device)
         site = Site.objects.create(name="Site 1", slug="site-1")
         manufacturer = Manufacturer.objects.create(name="Acme", slug="acme")
-        device_role = DeviceRole.objects.create(name="Device Role 1", slug="device-role-1", color="ff0000")
+        device_role = Role.objects.get_for_model(Device).first()
         device_type = DeviceType.objects.create(manufacturer=manufacturer, model="FrameForwarder 2048", slug="ff2048")
         InterfaceTemplate.objects.create(
             device_type=device_type,
@@ -170,7 +167,7 @@ class InterfaceTemplateTestCase(TestCase):
         )
         device_1 = Device.objects.create(
             device_type=device_type,
-            device_role=device_role,
+            role=device_role,
             status=statuses[0],
             name="Test Device 1",
             site=site,
@@ -185,7 +182,7 @@ class InterfaceTemplateTestCase(TestCase):
 
         device_2 = Device.objects.create(
             device_type=device_type,
-            device_role=device_role,
+            role=device_role,
             status=statuses[0],
             name="Test Device 2",
             site=site,
@@ -373,19 +370,19 @@ class RackTestCase(TestCase):
             ),
         }
         self.role = {
-            "Server": DeviceRole.objects.create(
+            "Server": Role.objects.create(
                 name="Server",
                 slug="server",
             ),
-            "Switch": DeviceRole.objects.create(
+            "Switch": Role.objects.create(
                 name="Switch",
                 slug="switch",
             ),
-            "Console Server": DeviceRole.objects.create(
+            "Console Server": Role.objects.create(
                 name="Console Server",
                 slug="console-server",
             ),
-            "PDU": DeviceRole.objects.create(
+            "PDU": Role.objects.create(
                 name="PDU",
                 slug="pdu",
             ),
@@ -405,7 +402,7 @@ class RackTestCase(TestCase):
         device1 = Device(
             name="TestSwitch1",
             device_type=DeviceType.objects.get(manufacturer__slug="acme", slug="ff2048"),
-            device_role=DeviceRole.objects.get(slug="switch"),
+            role=Role.objects.get(slug="switch"),
             site=self.site1,
             rack=rack1,
             position=43,
@@ -436,7 +433,7 @@ class RackTestCase(TestCase):
         device1 = Device(
             name="TestSwitch1",
             device_type=DeviceType.objects.get(manufacturer__slug="acme", slug="ff2048"),
-            device_role=DeviceRole.objects.get(slug="switch"),
+            role=Role.objects.get(slug="switch"),
             site=self.site1,
             rack=self.rack,
             position=10,
@@ -464,7 +461,7 @@ class RackTestCase(TestCase):
     def test_mount_zero_ru(self):
         pdu = Device.objects.create(
             name="TestPDU",
-            device_role=self.role.get("PDU"),
+            role=self.role.get("PDU"),
             device_type=self.device_type.get("cc5000"),
             site=self.site1,
             rack=self.rack,
@@ -484,14 +481,14 @@ class RackTestCase(TestCase):
 
         manufacturer = Manufacturer.objects.create(name="Manufacturer 1", slug="manufacturer-1")
         device_type = DeviceType.objects.create(manufacturer=manufacturer, model="Device Type 1", slug="device-type-1")
-        device_role = DeviceRole.objects.create(name="Device Role 1", slug="device-role-1", color="ff0000")
+        device_role = Role.objects.get_for_model(Device).first()
 
         # Create Rack1 in Site A and Location A
         rack1 = Rack.objects.create(site=site_a, location=location_a, name="Rack 1", status=self.status)
 
         # Create Device1 in Rack1 and Location A
         device1 = Device.objects.create(
-            site=site_a, location=location_a, rack=rack1, device_type=device_type, device_role=device_role
+            site=site_a, location=location_a, rack=rack1, device_type=device_type, role=device_role
         )
 
         # Move Rack1 to Site B and Location B
@@ -515,14 +512,14 @@ class RackTestCase(TestCase):
             location=self.location1,
             rack=self.rack,
             device_type=self.device_type["cc5000"],
-            device_role=self.role["Switch"],
+            role=self.role["Switch"],
         )
         # Device2 is defaulted to a null Location
         device2 = Device.objects.create(
             site=self.site1,
             rack=self.rack,
             device_type=self.device_type["cc5000"],
-            device_role=self.role["Switch"],
+            role=self.role["Switch"],
         )
 
         # Move self.rack to a new location
@@ -544,7 +541,7 @@ class RackTestCase(TestCase):
             location=self.location1,
             rack=self.rack,
             device_type=self.device_type["cc5000"],
-            device_role=self.role["Switch"],
+            role=self.role["Switch"],
         )
 
         # Move self.rack to a new location that permits Racks but not Devices
@@ -760,9 +757,7 @@ class DeviceTestCase(TestCase):
             model="Test Device Type 1",
             slug="test-device-type-1",
         )
-        self.device_role = DeviceRole.objects.create(
-            name="Test Device Role 1", slug="test-device-role-1", color="ff0000"
-        )
+        self.device_role = Role.objects.get_for_model(Device).first()
         self.device_status = Status.objects.get_for_model(Device).get(slug="active")
         self.location_type_1 = LocationType.objects.get(name="Building")
         self.location_type_2 = LocationType.objects.get(name="Floor")
@@ -827,7 +822,7 @@ class DeviceTestCase(TestCase):
         d = Device(
             site=self.site,
             device_type=self.device_type,
-            device_role=self.device_role,
+            role=self.device_role,
             name="Test Device 1",
         )
         d.save()
@@ -869,7 +864,7 @@ class DeviceTestCase(TestCase):
         device1 = Device(
             site=self.site,
             device_type=self.device_type,
-            device_role=self.device_role,
+            role=self.device_role,
             status=self.device_status,
             name="",
         )
@@ -878,7 +873,7 @@ class DeviceTestCase(TestCase):
         device2 = Device(
             site=device1.site,
             device_type=device1.device_type,
-            device_role=device1.device_role,
+            role=device1.role,
             status=self.device_status,
             name="",
         )
@@ -892,7 +887,7 @@ class DeviceTestCase(TestCase):
         device1 = Device(
             site=self.site,
             device_type=self.device_type,
-            device_role=self.device_role,
+            role=self.device_role,
             status=self.device_status,
             name="Test Device 1",
         )
@@ -901,7 +896,7 @@ class DeviceTestCase(TestCase):
         device2 = Device(
             site=device1.site,
             device_type=device1.device_type,
-            device_role=device1.device_role,
+            role=device1.role,
             status=self.device_status,
             name=device1.name,
         )
@@ -930,7 +925,7 @@ class DeviceTestCase(TestCase):
         device = Device(
             name="Device 3",
             device_type=self.device_type,
-            device_role=self.device_role,
+            role=self.device_role,
             status=self.device_status,
             site=other_site,
             location=self.location_2,
@@ -943,7 +938,7 @@ class DeviceTestCase(TestCase):
         device = Device(
             name="Device 3",
             device_type=self.device_type,
-            device_role=self.device_role,
+            role=self.device_role,
             status=self.device_status,
             site=self.site,
             location=self.location_1,
@@ -958,7 +953,7 @@ class DeviceTestCase(TestCase):
         d1 = Device(
             name="Test Device 1",
             device_type=self.device_type,
-            device_role=self.device_role,
+            role=self.device_role,
             status=self.device_status,
             site=self.site,
         )
@@ -967,7 +962,7 @@ class DeviceTestCase(TestCase):
         d2 = Device(
             name="Test Device 2",
             device_type=self.device_type,
-            device_role=self.device_role,
+            role=self.device_role,
             status=self.device_status,
             site=self.site,
         )
@@ -1011,16 +1006,16 @@ class CableTestCase(TestCase):
             model="Test Device Type 1",
             slug="test-device-type-1",
         )
-        devicerole = DeviceRole.objects.create(name="Test Device Role 1", slug="test-device-role-1", color="ff0000")
+        devicerole = Role.objects.get_for_model(Device).first()
         self.device1 = Device.objects.create(
             device_type=devicetype,
-            device_role=devicerole,
+            role=devicerole,
             name="TestDevice1",
             site=site,
         )
         self.device2 = Device.objects.create(
             device_type=devicetype,
-            device_role=devicerole,
+            role=devicerole,
             name="TestDevice2",
             site=site,
         )
@@ -1038,7 +1033,7 @@ class CableTestCase(TestCase):
         self.power_port1 = PowerPort.objects.create(device=self.device2, name="psu1")
         self.patch_panel = Device.objects.create(
             device_type=devicetype,
-            device_role=devicerole,
+            role=devicerole,
             name="TestPatchPanel",
             site=site,
         )
@@ -1309,14 +1304,14 @@ class InterfaceTestCase(TestCase):
     def setUp(self):
         manufacturer = Manufacturer.objects.create(name="Manufacturer 1", slug="manufacturer-1")
         devicetype = DeviceType.objects.create(manufacturer=manufacturer, model="Device Type 1", slug="device-type-1")
-        devicerole = DeviceRole.objects.create(name="Device Role 1", slug="device-role-1")
+        devicerole = Role.objects.get_for_model(Device).first()
         site = Site.objects.create(name="Site-1", slug="site-1")
         self.vlan = VLAN.objects.create(name="VLAN 1", vid=100, site=site)
         status = Status.objects.get_for_model(Device)[0]
         self.device = Device.objects.create(
             name="Device 1",
             device_type=devicetype,
-            device_role=devicerole,
+            role=devicerole,
             site=site,
             status=status,
         )

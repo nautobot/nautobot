@@ -683,9 +683,8 @@ def custom_branding_or_static(branding_asset, static_asset):
 
 @library.filter()
 @register.filter()
-def render_related_name_and_color(model, field_name):
+def render_related_name_and_color(obj):
     """Render the display view of an object."""
-    obj = getattr(model, field_name)
     if obj:
         content = (
             f'<span class="label" style="color: {fgcolor(obj.color)}; background-color: #{obj.color}">{obj.name}</span>'

@@ -1,5 +1,5 @@
-from nautobot.dcim.models import Device, DeviceRole, DeviceType, Manufacturer, Site
-from nautobot.extras.models import ConfigContext, ConfigContextSchema, Status
+from nautobot.dcim.models import Device, DeviceType, Manufacturer, Site
+from nautobot.extras.models import ConfigContext, ConfigContextSchema, Role, Status
 from nautobot.utilities.testing.integration import SeleniumTestCase
 from nautobot.virtualization.models import Cluster, ClusterType, VirtualMachine
 
@@ -106,12 +106,12 @@ class ConfigContextSchemaTestCase(SeleniumTestCase):
         site = Site.objects.create(name="site", slug="site", status=Status.objects.get_for_model(Site).first())
         manufacturer = Manufacturer.objects.create(name="manufacturer", slug="manufacturer")
         device_type = DeviceType.objects.create(model="device_type", manufacturer=manufacturer)
-        device_role = DeviceRole.objects.create(name="device_role", slug="device-role", color="ffffff")
+        device_role = Role.objects.get_for_model(Device).first()
         Device.objects.create(
             name="device",
             site=site,
             device_type=device_type,
-            device_role=device_role,
+            role=device_role,
             status=Status.objects.get_for_model(Device).first(),
             local_context_data=context_data,
             local_context_schema=schema,

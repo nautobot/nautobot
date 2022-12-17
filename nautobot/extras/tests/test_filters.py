@@ -7,7 +7,6 @@ from django.db.models import Q
 from nautobot.dcim.filters import DeviceFilterSet
 from nautobot.dcim.models import (
     Device,
-    DeviceRole,
     DeviceType,
     Interface,
     Manufacturer,
@@ -37,6 +36,7 @@ from nautobot.extras.filters import (
     ObjectChangeFilterSet,
     RelationshipAssociationFilterSet,
     RelationshipFilterSet,
+    RoleFilterSet,
     SecretFilterSet,
     SecretsGroupAssociationFilterSet,
     SecretsGroupFilterSet,
@@ -59,6 +59,7 @@ from nautobot.extras.models import (
     ObjectChange,
     Relationship,
     RelationshipAssociation,
+    Role,
     Secret,
     SecretsGroup,
     SecretsGroupAssociation,
@@ -166,11 +167,7 @@ class ConfigContextTestCase(FilterTestCases.FilterTestCase):
         regions = Region.objects.all()[:3]
         sites = Site.objects.all()[:3]
 
-        device_roles = (
-            DeviceRole.objects.create(name="Device Role 1", slug="device-role-1"),
-            DeviceRole.objects.create(name="Device Role 2", slug="device-role-2"),
-            DeviceRole.objects.create(name="Device Role 3", slug="device-role-3"),
-        )
+        device_roles = Role.objects.get_for_model(Device)
         cls.device_roles = device_roles
 
         manufacturer = Manufacturer.objects.create(name="Manufacturer 1", slug="manufacturer-1")
@@ -999,12 +996,12 @@ class RelationshipAssociationTestCase(FilterTestCases.FilterTestCase):
 
         manufacturer = Manufacturer.objects.create(name="Manufacturer 1", slug="manufacturer-1")
         devicetype = DeviceType.objects.create(manufacturer=manufacturer, model="Device Type 1", slug="device-type-1")
-        devicerole = DeviceRole.objects.create(name="Device Role 1", slug="device-role-1")
+        devicerole = Role.objects.get_for_model(Device).first()
         site = Site.objects.first()
         cls.devices = (
-            Device.objects.create(name="Device 1", device_type=devicetype, device_role=devicerole, site=site),
-            Device.objects.create(name="Device 2", device_type=devicetype, device_role=devicerole, site=site),
-            Device.objects.create(name="Device 3", device_type=devicetype, device_role=devicerole, site=site),
+            Device.objects.create(name="Device 1", device_type=devicetype, role=devicerole, site=site),
+            Device.objects.create(name="Device 2", device_type=devicetype, role=devicerole, site=site),
+            Device.objects.create(name="Device 3", device_type=devicetype, role=devicerole, site=site),
         )
         cls.vlans = (
             VLAN.objects.create(vid=1, name="VLAN 1"),
@@ -1117,12 +1114,12 @@ class RelationshipModelFilterSetTestCase(FilterTestCases.FilterTestCase):
 
         manufacturer = Manufacturer.objects.create(name="Manufacturer 1", slug="manufacturer-1")
         devicetype = DeviceType.objects.create(manufacturer=manufacturer, model="Device Type 1", slug="device-type-1")
-        devicerole = DeviceRole.objects.create(name="Device Role 1", slug="device-role-1")
+        devicerole = Role.objects.get_for_model(Device).first()
         site = Site.objects.first()
         cls.devices = (
-            Device.objects.create(name="Device 1", device_type=devicetype, device_role=devicerole, site=site),
-            Device.objects.create(name="Device 2", device_type=devicetype, device_role=devicerole, site=site),
-            Device.objects.create(name="Device 3", device_type=devicetype, device_role=devicerole, site=site),
+            Device.objects.create(name="Device 1", device_type=devicetype, role=devicerole, site=site),
+            Device.objects.create(name="Device 2", device_type=devicetype, role=devicerole, site=site),
+            Device.objects.create(name="Device 3", device_type=devicetype, role=devicerole, site=site),
         )
         cls.vlans = (
             VLAN.objects.create(vid=1, name="VLAN 1"),
@@ -1516,3 +1513,52 @@ class WebhookTestCase(FilterTestCases.FilterTestCase):
         value = self.queryset.values_list("pk", flat=True)[0]
         params = {"q": value}
         self.assertEqual(self.filterset(params, self.queryset).qs.values_list("pk", flat=True)[0], value)
+
+
+class RoleTestCase(FilterTestCases.NameSlugFilterTestCase):
+    queryset = Role.objects.all()
+    filterset = RoleFilterSet
+
+    @classmethod
+    def setUpTestData(cls):
+        cls.device_ct = ContentType.objects.get_for_model(Device)
+        cls.rack_ct = ContentType.objects.get_for_model(Rack)
+        roles = [
+            Role.objects.create(name="Role 1", color=ColorChoices.COLOR_GREY, weight=100),
+            Role.objects.create(name="Role 2", color=ColorChoices.COLOR_GREY, weight=20),
+            Role.objects.create(name="Role 3", color=ColorChoices.COLOR_AMBER, weight=10),
+            Role.objects.create(name="Role 4", color=ColorChoices.COLOR_AMBER, weight=100),
+            Role.objects.create(name="Role 5", color=ColorChoices.COLOR_AMBER, weight=100),
+        ]
+        for i in range(2):
+            roles[i].content_types.add(cls.device_ct)
+        for i in range(2, 4):
+            roles[i].content_types.add(cls.rack_ct)
+
+    def test_content_types(self):
+        device_roles = self.queryset.filter(content_types=self.device_ct)
+        params = {"content_types": ["dcim.device"]}
+        self.assertQuerysetEqualAndNotEmpty(self.filterset(params, self.queryset).qs, device_roles)
+
+        rack_roles = self.queryset.filter(content_types=self.rack_ct)
+        params = {"content_types": ["dcim.rack"]}
+        self.assertEqual(self.filterset(params, self.queryset).qs, rack_roles)
+
+    def test_color(self):
+        """Test the color search field."""
+        params = {"color": [ColorChoices.COLOR_AMBER]}
+        expected_count = Role.objects.filter(color=ColorChoices.COLOR_AMBER).count()
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), expected_count)
+
+    def test_search(self):
+        params = {"q": "Role 1"}
+        self.assertQuerysetEqualAndNotEmpty(
+            self.filterset(params, self.queryset).qs,
+            self.queryset.filter(name="Role 1").distinct(),
+        )
+        value = self.queryset.first().pk
+        params = {"q": value}
+        self.assertQuerysetEqualAndNotEmpty(
+            self.filterset(params, self.queryset).qs,
+            self.queryset.filter(pk=value),
+        )

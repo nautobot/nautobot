@@ -10,7 +10,7 @@ from django.urls import reverse
 from django.utils import timezone
 from unittest import mock
 
-from nautobot.dcim.models import ConsolePort, Device, DeviceRole, DeviceType, Interface, Manufacturer, Site
+from nautobot.dcim.models import ConsolePort, Device, DeviceType, Interface, Manufacturer, Site
 from nautobot.dcim.tests import test_views
 from nautobot.extras.choices import (
     CustomFieldTypeChoices,
@@ -36,6 +36,7 @@ from nautobot.extras.models import (
     ObjectChange,
     Relationship,
     RelationshipAssociation,
+    Role,
     ScheduledJob,
     Secret,
     SecretsGroup,
@@ -50,6 +51,7 @@ from nautobot.extras.utils import get_job_content_type, TaggableClassesQuery
 from nautobot.ipam.factory import VLANFactory
 from nautobot.ipam.models import VLAN, VLANGroup
 from nautobot.users.models import ObjectPermission
+from nautobot.utilities.choices import ColorChoices
 from nautobot.utilities.testing import ViewTestCases, TestCase, extract_page_body, extract_form_failures
 from nautobot.utilities.testing.utils import disable_warnings, post_data
 from nautobot.utilities.utils import slugify_dashes_to_underscores
@@ -2070,12 +2072,12 @@ class RelationshipAssociationTestCase(
         relationship.validated_save()
         manufacturer = Manufacturer.objects.create(name="Manufacturer 1", slug="manufacturer-1")
         devicetype = DeviceType.objects.create(manufacturer=manufacturer, model="Device Type 1", slug="device-type-1")
-        devicerole = DeviceRole.objects.create(name="Device Role 1", slug="device-role-1")
+        devicerole = Role.objects.get_for_model(Device).first()
         site = Site.objects.first()
         devices = (
-            Device.objects.create(name="Device 1", device_type=devicetype, device_role=devicerole, site=site),
-            Device.objects.create(name="Device 2", device_type=devicetype, device_role=devicerole, site=site),
-            Device.objects.create(name="Device 3", device_type=devicetype, device_role=devicerole, site=site),
+            Device.objects.create(name="Device 1", device_type=devicetype, role=devicerole, site=site),
+            Device.objects.create(name="Device 2", device_type=devicetype, role=devicerole, site=site),
+            Device.objects.create(name="Device 3", device_type=devicetype, role=devicerole, site=site),
         )
         vlans = (
             VLAN.objects.create(vid=1, name="VLAN 1"),
@@ -2285,3 +2287,36 @@ class WebhookTestCase(
             "http_method": "POST",
             "http_content_type": "application/json",
         }
+
+
+class RoleTestCase(ViewTestCases.OrganizationalObjectViewTestCase):
+    model = Role
+
+    @classmethod
+    def setUpTestData(cls):
+
+        # Status objects to test.
+        content_type = ContentType.objects.get_for_model(Device)
+
+        cls.form_data = {
+            "name": "New Role",
+            "slug": "new-role",
+            "description": "I am a new role object.",
+            "color": ColorChoices.COLOR_GREY,
+            "content_types": [content_type.pk],
+        }
+
+        cls.csv_data = (
+            "name,slug,color,content_types",
+            "test_role1,test-role1,ffffff,dcim.device",
+            'test_role2,test-role2,ffffff,"dcim.device,dcim.rack"',
+            'test_role3,test-role3,ffffff,"dcim.device,ipam.prefix"',
+            'test_role4,test-role4,ffffff,"ipam.ipaddress,ipam.vlan"',
+        )
+
+        cls.bulk_edit_data = {
+            "color": "000000",
+        }
+
+        cls.slug_source = "name"
+        cls.slug_test_object = Role.objects.first().name

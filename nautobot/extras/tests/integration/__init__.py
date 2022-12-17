@@ -24,7 +24,7 @@ def create_test_device():
     )
     device = Device.objects.create(
         name=f"Test Device {test_uuid}",
-        device_role=device_role,
+        role=device_role,
         device_type=device_type,
         site=site,
         status=Status.objects.get_for_model(Device).get(slug="active"),

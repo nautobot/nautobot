@@ -7,8 +7,6 @@ from nautobot.tenancy.tables import TenantColumn
 from nautobot.utilities.tables import (
     BaseTable,
     ButtonsColumn,
-    ColorColumn,
-    ColoredLabelColumn,
     LinkedCountColumn,
     TagColumn,
     ToggleColumn,

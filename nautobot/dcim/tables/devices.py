@@ -23,7 +23,6 @@ from nautobot.utilities.tables import (
     BaseTable,
     BooleanColumn,
     ButtonsColumn,
-    ColorColumn,
     ColoredLabelColumn,
     LinkedCountColumn,
     TagColumn,

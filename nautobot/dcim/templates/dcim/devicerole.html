@@ -29,7 +29,7 @@
             {% include 'inc/table.html' with table=device_table %}
             {% if perms.dcim.add_device %}
                 <div class="panel-footer text-right noprint">
-                    <a href="{% url 'dcim:device_add' %}?device_role={{ object.pk }}" class="btn btn-xs btn-primary">
+                    <a href="{% url 'dcim:device_add' %}?role={{ object.pk }}" class="btn btn-xs btn-primary">
                         <span class="mdi mdi-plus-thick" aria-hidden="true"></span> Add device
                     </a>
                 </div>
