@@ -194,12 +194,12 @@ class NautobotTemplatetagsHelperTest(TestCase):
 
     def test_render_related_name_and_color(self):
         vlan_with_role = VLAN.objects.filter(role__isnull=False).first()
-        vlan_without_role = VLAN.objects.filter(role__isnull=True).first()
         role = vlan_with_role.role
         color = role.color
         fbcolor = helpers.fgcolor(color)
         self.assertEqual(
-            helpers.render_related_name_and_color(role),
-            f'<span class="label" style="color: #{fbcolor}; background-color: #{color}">{role.name}</span>',
+            helpers.render_related_name_and_color(obj=role),
+            f'<span class="label" style="color: {fbcolor}; background-color: #{color}">{role.name}</span>',
         )
-        self.assertEqual(helpers.render_related_name_and_color(vlan_without_role.role), "—")
+        # Assert when obj is None
+        self.assertEqual(helpers.render_related_name_and_color(obj=None), "—")

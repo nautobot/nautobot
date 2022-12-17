@@ -392,14 +392,11 @@ class PrefixTestCase(FilterTestCases.FilterTestCase, FilterTestCases.TenancyFilt
         )
 
     def test_role(self):
-        roles = list(Role.objects.filter(prefixes__isnull=False)[:2])
-        params = {"role_id": [roles[0].pk, roles[1].pk]}
+        roles = Role.objects.get_for_model(Prefix).filter(ipam_prefix_related__isnull=False)[:2]
+        params = {"role": [roles[0].pk, roles[1].slug]}
         self.assertQuerysetEqualAndNotEmpty(
-            self.filterset(params, self.queryset).qs, self.queryset.filter(role__in=roles)
-        )
-        params = {"role": [roles[0].slug, roles[1].slug]}
-        self.assertQuerysetEqualAndNotEmpty(
-            self.filterset(params, self.queryset).qs, self.queryset.filter(role__in=roles)
+            self.filterset(params, self.queryset).qs,
+            self.queryset.filter(role__in=[roles[0], roles[1]])
         )
 
     def test_status(self):
@@ -922,11 +919,12 @@ class VLANTestCase(FilterTestCases.FilterTestCase, FilterTestCases.TenancyFilter
         self.assertQuerysetEqual(self.filterset(params, self.queryset).qs, self.queryset.filter(group__in=groups))
 
     def test_role(self):
-        roles = Role.objects.get_for_model(VLAN).distinct()[:2]
-        params = {"role_id": [roles[0].pk, roles[1].pk]}
-        self.assertQuerysetEqual(self.filterset(params, self.queryset).qs, self.queryset.filter(role__in=roles))
-        params = {"role": [roles[0].slug, roles[1].slug]}
-        self.assertQuerysetEqual(self.filterset(params, self.queryset).qs, self.queryset.filter(role__in=roles))
+        roles = Role.objects.get_for_model(VLAN)[:2]
+        params = {"role": [roles[0].pk, roles[1].slug]}
+        self.assertQuerysetEqualAndNotEmpty(
+            self.filterset(params, self.queryset).qs,
+            self.queryset.filter(role__in=[roles[0], roles[1]])
+        )
 
     def test_status(self):
         statuses = list(Status.objects.get_for_model(VLAN).filter(ipam_vlan_related__isnull=False).distinct())[:2]
