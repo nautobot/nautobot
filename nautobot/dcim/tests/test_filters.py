@@ -667,14 +667,13 @@ class RegionTestCase(FilterTestCases.NameSlugFilterTestCase):
             params = {"children": [self.child_regions[0].pk, self.child_regions[1].slug]}
             self.assertQuerysetEqualAndNotEmpty(
                 self.filterset(params, self.queryset).qs,
-                self.queryset.filter(children__in=[self.child_regions[0], self.child_regions[1]]),
+                self.queryset.filter(children__in=[self.child_regions[0], self.child_regions[1]]).distinct(),
             )
-        # FIXME(timizuo): Test fails, filter returns 1 object instead of two
         with self.subTest():
-            params = {"children": [self.child_regions[0].pk, self.child_regions[1].pk]}
+            params = {"children": [self.child_regions[0].pk, self.child_regions[2].pk]}
             self.assertQuerysetEqualAndNotEmpty(
                 self.filterset(params, self.queryset).qs,
-                self.queryset.filter(children__in=[self.child_regions[0].pk, self.child_regions[1].pk]),
+                self.queryset.filter(children__in=[self.child_regions[0].pk, self.child_regions[2].pk]).distinct(),
             )
 
     def test_has_children(self):
@@ -682,13 +681,13 @@ class RegionTestCase(FilterTestCases.NameSlugFilterTestCase):
             params = {"has_children": True}
             self.assertQuerysetEqual(
                 self.filterset(params, self.queryset).qs,
-                self.queryset.filter(children__isnull=False),
+                self.queryset.filter(children__isnull=False).distinct(),
             )
         with self.subTest():
             params = {"has_children": False}
             self.assertQuerysetEqual(
                 self.filterset(params, self.queryset).qs,
-                self.queryset.filter(children__isnull=True),
+                self.queryset.filter(children__isnull=True).distinct(),
             )
 
     def test_sites(self):

@@ -2,7 +2,7 @@ import django_filters
 from django.contrib.auth import get_user_model
 from django.contrib.contenttypes.models import ContentType
 
-from nautobot.core.filters.mixins import RoleModelFilterSetMixin
+from nautobot.core.filters.mixins import RoleFilter
 from nautobot.dcim.models import DeviceRedundancyGroup, DeviceType, Location, Platform, Region, Site
 from nautobot.extras.choices import (
     JobResultStatusChoices,
@@ -170,7 +170,7 @@ class ComputedFieldFilterSet(BaseFilterSet):
 #
 
 
-class ConfigContextFilterSet(BaseFilterSet, RoleModelFilterSetMixin):
+class ConfigContextFilterSet(BaseFilterSet):
     q = SearchFilter(
         filter_predicates={
             "name": "icontains",
@@ -289,6 +289,7 @@ class ConfigContextFilterSet(BaseFilterSet, RoleModelFilterSetMixin):
         to_field_name="slug",
         label="Tag (slug)",
     )
+    roles = RoleFilter(field_name="roles")
 
     class Meta:
         model = ConfigContext

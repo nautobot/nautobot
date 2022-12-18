@@ -245,11 +245,12 @@ class ConfigContextTestCase(FilterTestCases.FilterTestCase):
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
 
     def test_role(self):
-        device_roles = self.device_roles[:2]
-        params = {"role_id": [device_roles[0].pk, device_roles[1].pk]}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), len(device_roles))
-        params = {"role": [device_roles[0].slug, device_roles[1].slug]}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), len(device_roles))
+        device_roles = self.device_roles
+        params = {"roles": [device_roles[1].pk, device_roles[2].slug]}
+        self.assertQuerysetEqualAndNotEmpty(
+            self.filterset(params, self.queryset).qs,
+            self.queryset.filter(roles__in=[device_roles[1], device_roles[2]]).distinct()
+        )
 
     def test_type(self):
         device_types = self.device_types[:2]
@@ -1542,7 +1543,7 @@ class RoleTestCase(FilterTestCases.NameSlugFilterTestCase):
 
         rack_roles = self.queryset.filter(content_types=self.rack_ct)
         params = {"content_types": ["dcim.rack"]}
-        self.assertEqual(self.filterset(params, self.queryset).qs, rack_roles)
+        self.assertQuerysetEqualAndNotEmpty(self.filterset(params, self.queryset).qs, rack_roles)
 
     def test_color(self):
         """Test the color search field."""
