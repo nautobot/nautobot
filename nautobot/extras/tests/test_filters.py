@@ -36,7 +36,6 @@ from nautobot.extras.filters import (
     ObjectChangeFilterSet,
     RelationshipAssociationFilterSet,
     RelationshipFilterSet,
-    RoleFilterSet,
     SecretFilterSet,
     SecretsGroupAssociationFilterSet,
     SecretsGroupFilterSet,
@@ -44,6 +43,7 @@ from nautobot.extras.filters import (
     TagFilterSet,
     WebhookFilterSet,
 )
+from nautobot.core.filters import RoleFilterSet
 from nautobot.extras.models import (
     ComputedField,
     ConfigContext,

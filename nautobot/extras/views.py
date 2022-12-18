@@ -21,6 +21,8 @@ from django.template.loader import get_template, TemplateDoesNotExist
 from django_tables2 import RequestConfig
 from jsonschema.validators import Draft7Validator
 
+from nautobot.core.filters import RoleFilterSet
+from nautobot.core.forms import RoleBulkEditForm, RoleCSVForm, RoleForm
 from nautobot.core.views import generic, viewsets
 from nautobot.dcim.models import Device
 from nautobot.dcim.tables import DeviceTable
@@ -1796,10 +1798,10 @@ class RoleUIViewSet(viewsets.NautobotUIViewSet):
 
     queryset = Role.objects.all()
     table = tables.RoleTable
-    bulk_create_form_class = forms.RoleCSVForm
-    bulk_update_form_class = forms.RoleBulkEditForm
-    filterset_class = filters.RoleFilterSet
-    form_class = forms.RoleForm
+    bulk_create_form_class = RoleCSVForm
+    bulk_update_form_class = RoleBulkEditForm
+    filterset_class = RoleFilterSet
+    form_class = RoleForm
     serializer_class = RoleSerializer
     table_class = tables.RoleTable
 

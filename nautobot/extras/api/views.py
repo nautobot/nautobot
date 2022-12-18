@@ -17,6 +17,7 @@ from rest_framework.response import Response
 from rest_framework.routers import APIRootView
 from rest_framework import mixins, viewsets
 
+from nautobot.core.filters import RoleFilterSet
 from nautobot.core.api.authentication import TokenPermissions
 from nautobot.core.api.filter_backends import NautobotFilterBackend
 from nautobot.core.api.metadata import ContentTypeMetadata, StatusFieldMetadata
@@ -1126,7 +1127,7 @@ class RelationshipAssociationViewSet(ModelViewSet):
 class RoleViewSet(NautobotModelViewSet):
     queryset = Role.objects.all()
     serializer_class = serializers.RoleSerializer
-    filterset_class = filters.RoleFilterSet
+    filterset_class = RoleFilterSet
 
 
 #

@@ -4,7 +4,7 @@ from django.db.models import Q
 from drf_spectacular.utils import extend_schema_field
 from timezone_field import TimeZoneField
 
-from nautobot.core.filters.mixins import RoleModelFilterSetMixin
+from nautobot.core.filters import RoleModelFilterSetMixin
 from nautobot.dcim.filters.mixins import (
     CableTerminationModelFilterSetMixin,
     DeviceComponentModelFilterSetMixin,

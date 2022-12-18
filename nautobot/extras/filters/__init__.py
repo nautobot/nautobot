@@ -2,7 +2,7 @@ import django_filters
 from django.contrib.auth import get_user_model
 from django.contrib.contenttypes.models import ContentType
 
-from nautobot.core.filters.mixins import RoleFilter
+from nautobot.core.filters import RoleFilter
 from nautobot.dcim.models import DeviceRedundancyGroup, DeviceType, Location, Platform, Region, Site
 from nautobot.extras.choices import (
     JobResultStatusChoices,
@@ -52,7 +52,6 @@ from nautobot.extras.models import (
     ObjectChange,
     Relationship,
     RelationshipAssociation,
-    Role,
     ScheduledJob,
     Secret,
     SecretsGroup,
@@ -61,7 +60,7 @@ from nautobot.extras.models import (
     Tag,
     Webhook,
 )
-from nautobot.extras.utils import ChangeLoggedModelsQuery, FeatureQuery, RoleModelsQuery, TaggableClassesQuery
+from nautobot.extras.utils import ChangeLoggedModelsQuery, FeatureQuery, TaggableClassesQuery
 from nautobot.tenancy.models import Tenant, TenantGroup
 from nautobot.utilities.deprecation import class_deprecated_in_favor_of
 from nautobot.utilities.filters import (
@@ -112,7 +111,6 @@ __all__ = (
     "RelationshipFilter",
     "RelationshipFilterSet",
     "RelationshipAssociationFilterSet",
-    "RoleFilterSet",
     "ScheduledJobFilterSet",
     "SecretFilterSet",
     "SecretsGroupFilterSet",
@@ -827,39 +825,6 @@ class RelationshipAssociationFilterSet(BaseFilterSet):
         # Then Filter based on peer_id.
         queryset = queryset.filter(source_id__in=value) | queryset.filter(destination_id__in=value)
         return queryset
-
-
-#
-# Roles
-#
-
-
-class RoleFilterSet(NautobotFilterSet):
-    """API filter for filtering custom role object fields."""
-
-    q = SearchFilter(
-        filter_predicates={
-            "name": "icontains",
-            "slug": "icontains",
-            "content_types__model": "icontains",
-        },
-    )
-    content_types = ContentTypeMultipleChoiceFilter(
-        choices=RoleModelsQuery().get_choices,
-    )
-
-    class Meta:
-        model = Role
-        fields = [
-            "id",
-            "content_types",
-            "color",
-            "name",
-            "slug",
-            "weight",
-            "created",
-            "last_updated",
-        ]
 
 
 #
