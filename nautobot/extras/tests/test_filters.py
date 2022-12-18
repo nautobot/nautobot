@@ -249,7 +249,7 @@ class ConfigContextTestCase(FilterTestCases.FilterTestCase):
         params = {"roles": [device_roles[1].pk, device_roles[2].slug]}
         self.assertQuerysetEqualAndNotEmpty(
             self.filterset(params, self.queryset).qs,
-            self.queryset.filter(roles__in=[device_roles[1], device_roles[2]]).distinct()
+            self.queryset.filter(roles__in=[device_roles[1], device_roles[2]]).distinct(),
         )
 
     def test_type(self):
