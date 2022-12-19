@@ -1,24 +1,74 @@
 # Upgrading from Nautobot v1.X
 
+## Database (ORM) Changes
+
+### Renamed Database Fields
+
+| Model         | Renamed Field | New Name     |
+|---------------|---------------|--------------|
+| InventoryItem | `child_items` | `children`   |
+|               | `level`       | `tree_depth` |
+| RackGroup     | `level`       | `tree_depth` |
+| Region        | `level`       | `tree_depth` |
+| TenantGroup   | `level`       | `tree_depth` |
+
+### Removed Database Fields
+
+| Model         | Removed Field |
+|---------------|---------------|
+| InventoryItem | `lft`         |
+|               | `rght`        |
+|               | `tree_id`     |
+| RackGroup     | `lft`         |
+|               | `rght`        |
+|               | `tree_id`     |
+| Region        | `lft`         |
+|               | `rght`        |
+|               | `tree_id`     |
+| TenantGroup   | `lft`         |
+|               | `rght`        |
+|               | `tree_id`     |
+
+## REST API Changes
+
+### Behavior Changes
+
+| Model       | Field          | Changes                                                                                                 |
+|-------------|----------------|---------------------------------------------------------------------------------------------------------|
+| RackGroup   | `rack_count`   | Now only counts Racks directly belonging to this RackGroup, not those belonging to its descendants.     |
+| Region      | `site_count`   | Now only counts Sites directly belonging to this Region, not those belonging to its descendants.        |
+| TenantGroup | `tenant_count` | Now only counts Tenants directly belonging to this TenantGroup, not those belonging to its descendants. |
+
+### Renamed Serializer Fields
+
+| Model         | Renamed Field | New Name     |
+|---------------|---------------|--------------|
+| InventoryItem | `_depth`      | `tree_depth` |
+| RackGroup     | `_depth`      | `tree_depth` |
+| Region        | `_depth`      | `tree_depth` |
+| TenantGroup   | `_depth`      | `tree_depth` |
+
 ## UI and REST API Filter Changes
 
 ### Renamed Filter Fields
 
-| Model                 | Renamed Filter Field | Changes                      | UI and Rest API endpoints Available in v2.X       |
-|-----------------------|----------------------|------------------------------|---------------------------------------------------|
-| ConsolePort           | `cabled`             | Renamed to `has_cable`       | `/dcim/console-ports/?has_cable=True/False`       |
-| ConsoleServerPort     | `cabled`             | Renamed to `has_cable`       | `/dcim/console-server-ports/?has_cable=True/False`|
-| Device                | `device_type_id`     | Renamed to `device_type`     | `/dcim/devices/?device_type=<uuid/slug>`          |
-|                       | `rack_group_id`      | Renamed to `rack_group`      | `/dcim/devices/?rack_group=<uuid/slug>`           |
-|                       | `rack_id`            | Renamed to `rack`            | `/dcim/devices/?rack=<uuid/slug>`                 |
-|                       | `cluster_id`         | Renamed to `cluster`         | `/dcim/devices/?cluster=<uuid/slug>`              |
-|                       | `virtual_chassis_id` | Renamed to `virtual_chassis` | `/dcim/devices/?virtual_chassis=<uuid/slug>`      |
-| FrontPort             | `cabled`             | Renamed to `has_cable`       | `/dcim/front-ports/?has_cable=True/False`         |
-| Interface             | `cabled`             | Renamed to `has_cable`       | `/dcim/interfaces/?has_cable=True/False`          |
-| PowerFeed             | `cabled`             | Renamed to `has_cable`       | `/dcim/power-feeds/?has_cable=True/False`         |
-| PowerOutlet           | `cabled`             | Renamed to `has_cable`       |  `/dcim/power-outlets/?has_cable=True/False`      |
-| PowerPort             | `cabled`             | Renamed to `has_cable`       | `/dcim/power-ports/?has_cable=True/False`         |
-| RearPort              | `cabled`             | Renamed to `has_cable`       | `/dcim/rear-ports/?has_cable=True/False`          |
+| Model                 | Renamed Filter Field | New Name          | UI and Rest API endpoints Available in v2.X       |
+|-----------------------|----------------------|-------------------|---------------------------------------------------|
+| ConsolePort           | `cabled`             | `has_cable`       | `/dcim/console-ports/?has_cable=True|False`       |
+| ConsoleServerPort     | `cabled`             | `has_cable`       | `/dcim/console-server-ports/?has_cable=True|False`|
+| Device                | `device_type_id`     | `device_type`     | `/dcim/devices/?device_type=<uuid|slug>`          |
+|                       | `rack_group_id`      | `rack_group`      | `/dcim/devices/?rack_group=<uuid|slug>`           |
+|                       | `rack_id`            | `rack`            | `/dcim/devices/?rack=<uuid|slug>`                 |
+|                       | `cluster_id`         | `cluster`         | `/dcim/devices/?cluster=<uuid|slug>`              |
+|                       | `virtual_chassis_id` | `virtual_chassis` | `/dcim/devices/?virtual_chassis=<uuid|slug>`      |
+| FrontPort             | `cabled`             | `has_cable`       | `/dcim/front-ports/?has_cable=True|False`         |
+| Interface             | `cabled`             | `has_cable`       | `/dcim/interfaces/?has_cable=True|False`          |
+| InventoryItem         | `child_items`        | `children`        | `/dcim/inventory-items/?children=<uuid|name>`     |
+|                       | `has_child_items`    | `has_children`    | `/dcim/inventory-items/?has_children=True|False`  |
+| PowerFeed             | `cabled`             | `has_cable`       | `/dcim/power-feeds/?has_cable=True|False`         |
+| PowerOutlet           | `cabled`             | `has_cable`       |  `/dcim/power-outlets/?has_cable=True|False`      |
+| PowerPort             | `cabled`             | `has_cable`       | `/dcim/power-ports/?has_cable=True|False`         |
+| RearPort              | `cabled`             | `has_cable`       | `/dcim/rear-ports/?has_cable=True|False`          |
 
 ### Enhanced Filter Fields
 
