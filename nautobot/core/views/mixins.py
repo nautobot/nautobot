@@ -43,7 +43,7 @@ from nautobot.utilities.utils import (
     csv_format,
     prepare_cloned_fields,
 )
-from nautobot.utilities.views import GetReturnURLMixin
+from nautobot.core.mixins import GetReturnURLMixin
 
 PERMISSIONS_ACTION_MAP = {
     "list": "view",

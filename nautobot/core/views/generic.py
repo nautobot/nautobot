@@ -49,7 +49,7 @@ from nautobot.utilities.utils import (
     normalize_querydict,
     prepare_cloned_fields,
 )
-from nautobot.utilities.views import GetReturnURLMixin, ObjectPermissionRequiredMixin
+from nautobot.core.mixins import GetReturnURLMixin, ObjectPermissionRequiredMixin
 
 
 class ObjectView(ObjectPermissionRequiredMixin, View):

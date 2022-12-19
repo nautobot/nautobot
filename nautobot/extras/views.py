@@ -21,6 +21,7 @@ from django.template.loader import get_template, TemplateDoesNotExist
 from django_tables2 import RequestConfig
 from jsonschema.validators import Draft7Validator
 
+from nautobot.core.mixins import ObjectPermissionRequiredMixin
 from nautobot.core.views import generic
 from nautobot.dcim.models import Device
 from nautobot.dcim.tables import DeviceTable
@@ -37,7 +38,6 @@ from nautobot.utilities.utils import (
     pretty_print_query,
 )
 from nautobot.utilities.tables import ButtonsColumn
-from nautobot.utilities.views import ObjectPermissionRequiredMixin
 from nautobot.utilities.utils import normalize_querydict
 from nautobot.virtualization.models import VirtualMachine
 from nautobot.virtualization.tables import VirtualMachineTable
