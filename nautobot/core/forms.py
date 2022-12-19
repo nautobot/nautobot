@@ -82,7 +82,7 @@ class RoleBulkEditForm(NautobotBulkEditForm):
     )
 
     class Meta:
-        nullable_fields = []
+        nullable_fields = ["weight"]
 
 
 class RoleCSVForm(CustomFieldModelCSVForm):

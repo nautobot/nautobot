@@ -1548,8 +1548,19 @@ class RoleTestCase(FilterTestCases.NameSlugFilterTestCase):
     def test_color(self):
         """Test the color search field."""
         params = {"color": [ColorChoices.COLOR_AMBER]}
-        expected_count = Role.objects.filter(color=ColorChoices.COLOR_AMBER).count()
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), expected_count)
+        self.assertQuerysetEqualAndNotEmpty(
+            self.filterset(params, self.queryset).qs,
+            Role.objects.filter(color=ColorChoices.COLOR_AMBER)
+        )
+
+    def test_weight(self):
+        """Test the weight search field."""
+        roles = Role.objects.filter(weight=100)
+        params = {"wight": [roles.weight]}
+        self.assertQuerysetEqualAndNotEmpty(
+            self.filterset(params, self.queryset).qs,
+            roles,
+        )
 
     def test_search(self):
         params = {"q": "Role 1"}

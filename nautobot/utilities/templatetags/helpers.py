@@ -687,7 +687,7 @@ def render_related_name_and_color(obj):
     """Render the display view of an object."""
     if obj:
         content = (
-            f'<span class="label" style="color: {fgcolor(obj.color)}; background-color: #{obj.color}">{obj.name}</span>'
+            f'<span class="label" style="color: {fgcolor(obj.color)}; background-color: #{obj.color}">{hyperlinked_object(obj)}</span>'
         )
         return format_html(content)
     return "—"

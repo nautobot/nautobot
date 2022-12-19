@@ -176,7 +176,7 @@ class RoleModelsQuery(FeaturedQueryMixin):
 
         model_classes = []
         for model_class in apps.get_models():
-            if hasattr(model_class, "roles") and isinstance(model_class.roles, RoleField):
+            if hasattr(model_class, "role") and isinstance(model_class._meta.get_field("role"), RoleField):
                 model_classes.append(model_class)
         return model_classes
 

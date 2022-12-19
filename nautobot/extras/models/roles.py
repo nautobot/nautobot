@@ -25,6 +25,9 @@ class Role(NameColorContentTypesModel):
     )
     weight = models.PositiveSmallIntegerField(null=True, blank=True)
 
+    class Meta:
+        ordering = ("name", "weight")
+
 
 class RoleField(ForeignKeyLimitedByContentTypes):
     """Model database field that automatically limits role choices
