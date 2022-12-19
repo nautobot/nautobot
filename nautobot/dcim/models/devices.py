@@ -794,7 +794,7 @@ class Device(PrimaryModel, ConfigContextModel, StatusModel, RoleRequiredRoleMode
     def to_csv(self):
         return (
             self.name or "",
-            self.role.name if self.role else None,
+            self.role.name,
             self.tenant.name if self.tenant else None,
             self.device_type.manufacturer.name,
             self.device_type.model,

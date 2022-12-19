@@ -16,6 +16,8 @@ class Migration(migrations.Migration):
         # ##########
         # Device
         # ##########
+        # Setting device role to nullable because device role would be null when
+        # conducting reverse migration, resulting in an error.
         migrations.AlterField(
             model_name="device",
             name="device_role",

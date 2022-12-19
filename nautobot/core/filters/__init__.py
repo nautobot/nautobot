@@ -4,7 +4,10 @@ from nautobot.extras.models import Role
 from nautobot.extras.utils import RoleModelsQuery
 from nautobot.utilities.filters import ContentTypeMultipleChoiceFilter, SearchFilter
 
+
 __all__ = ("RoleFilter", "RoleFilterSet", "RoleModelFilterSetMixin")
+
+
 #
 # Roles
 #
