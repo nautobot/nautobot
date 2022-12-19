@@ -22,7 +22,6 @@ from django_tables2 import RequestConfig
 from jsonschema.validators import Draft7Validator
 
 from nautobot.core.tables import RoleTable
-from nautobot.core.filters import RoleFilterSet
 from nautobot.core.forms import RoleBulkEditForm, RoleCSVForm, RoleForm
 from nautobot.core.views import generic, viewsets
 from nautobot.dcim.models import Device
@@ -52,6 +51,7 @@ from .datasources import (
     enqueue_pull_git_repository_and_refresh_data,
     get_datasource_contents,
 )
+from .filters import RoleFilterSet
 from .jobs import get_job, run_job, Job as JobClass
 from .models import (
     ComputedField,

@@ -16,7 +16,10 @@ class RoleFactory(OrganizationalModelFactory):
 
     class Meta:
         model = Role
-        exclude = ("has_description", "has_weight",)
+        exclude = (
+            "has_description",
+            "has_weight",
+        )
 
     name = factory.LazyFunction(
         lambda: "".join(word.title() for word in faker.Faker().words(nb=2, part_of_speech="adjective", unique=True))

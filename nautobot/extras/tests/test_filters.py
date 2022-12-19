@@ -36,6 +36,7 @@ from nautobot.extras.filters import (
     ObjectChangeFilterSet,
     RelationshipAssociationFilterSet,
     RelationshipFilterSet,
+    RoleFilterSet,
     SecretFilterSet,
     SecretsGroupAssociationFilterSet,
     SecretsGroupFilterSet,
@@ -43,7 +44,6 @@ from nautobot.extras.filters import (
     TagFilterSet,
     WebhookFilterSet,
 )
-from nautobot.core.filters import RoleFilterSet
 from nautobot.extras.models import (
     ComputedField,
     ConfigContext,
@@ -1549,8 +1549,7 @@ class RoleTestCase(FilterTestCases.NameSlugFilterTestCase):
         """Test the color search field."""
         params = {"color": [ColorChoices.COLOR_AMBER]}
         self.assertQuerysetEqualAndNotEmpty(
-            self.filterset(params, self.queryset).qs,
-            Role.objects.filter(color=ColorChoices.COLOR_AMBER)
+            self.filterset(params, self.queryset).qs, Role.objects.filter(color=ColorChoices.COLOR_AMBER)
         )
 
     def test_weight(self):

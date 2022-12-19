@@ -60,7 +60,7 @@ from nautobot.extras.models import (
     Tag,
     Webhook,
 )
-from nautobot.extras.utils import ChangeLoggedModelsQuery, FeatureQuery, TaggableClassesQuery
+from nautobot.extras.utils import ChangeLoggedModelsQuery, FeatureQuery, RoleModelsQuery, TaggableClassesQuery
 from nautobot.tenancy.models import Tenant, TenantGroup
 from nautobot.utilities.deprecation import class_deprecated_in_favor_of
 from nautobot.utilities.filters import (
@@ -111,6 +111,7 @@ __all__ = (
     "RelationshipFilter",
     "RelationshipFilterSet",
     "RelationshipAssociationFilterSet",
+    "RoleFilterSet",
     "ScheduledJobFilterSet",
     "SecretFilterSet",
     "SecretsGroupFilterSet",
@@ -992,4 +993,32 @@ class WebhookFilterSet(BaseFilterSet):
             "type_create",
             "type_update",
             "type_delete",
+        ]
+
+
+class RoleFilterSet(NautobotFilterSet):
+    """API filter for filtering custom role object fields."""
+
+    q = SearchFilter(
+        filter_predicates={
+            "name": "icontains",
+            "slug": "icontains",
+            "content_types__model": "icontains",
+        },
+    )
+    content_types = ContentTypeMultipleChoiceFilter(
+        choices=RoleModelsQuery().get_choices,
+    )
+
+    class Meta:
+        model = Role
+        fields = [
+            "id",
+            "content_types",
+            "color",
+            "name",
+            "slug",
+            "weight",
+            "created",
+            "last_updated",
         ]
