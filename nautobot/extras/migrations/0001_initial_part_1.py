@@ -5,11 +5,12 @@ import django.core.validators
 from django.db import migrations, models
 import django.db.models.deletion
 import django_cryptography.fields
+
+import nautobot.core.validators
 import nautobot.extras.models.customfields
 import nautobot.extras.models.relationships
 import nautobot.extras.utils
 import nautobot.utilities.fields
-import nautobot.utilities.validators
 import uuid
 
 
@@ -78,7 +79,7 @@ class Migration(migrations.Migration):
                 (
                     "validation_regex",
                     models.CharField(
-                        blank=True, max_length=500, validators=[nautobot.utilities.validators.validate_regex]
+                        blank=True, max_length=500, validators=[nautobot.core.validators.validate_regex]
                     ),
                 ),
             ],

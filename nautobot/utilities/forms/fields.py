@@ -15,9 +15,10 @@ from django.forms.fields import JSONField as _JSONField
 from django.urls import reverse
 import django_filters
 
+from nautobot.core import validators
 from nautobot.extras import utils as extras_utils
 from nautobot.utilities import choices as utilities_choices
-from nautobot.utilities import forms, utils, validators
+from nautobot.utilities import forms, utils
 from nautobot.utilities.forms import widgets
 
 __all__ = (

@@ -4,11 +4,12 @@ import django.core.serializers.json
 import django.core.validators
 from django.db import migrations, models
 import django.db.models.deletion
+
+import nautobot.core.validators
 import nautobot.dcim.fields
 import nautobot.utilities.fields
 import nautobot.utilities.ordering
 import nautobot.utilities.query_functions
-import nautobot.utilities.validators
 import timezone_field.fields
 import uuid
 
@@ -609,7 +610,7 @@ class Migration(migrations.Migration):
                 (
                     "voltage",
                     models.SmallIntegerField(
-                        default=120, validators=[nautobot.utilities.validators.ExclusionValidator([0])]
+                        default=120, validators=[nautobot.core.validators.ExclusionValidator([0])]
                     ),
                 ),
                 (
