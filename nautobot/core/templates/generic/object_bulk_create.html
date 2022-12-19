@@ -45,7 +45,7 @@
                         {% render_field form.csv_data %}
                         <div class="form-group">
                             <div class="col-md-12 text-right">
-                                <button type="submit" class="btn btn-primary">Submit</button>
+                                <button type="submit" class="btn btn-primary" data-toggle="modal" data-target="#loading_modal" title="Show Modal">Submit</button>
                                 {% if return_url %}
                                     <a href="{{ return_url }}" class="btn btn-default">Cancel</a>
                                 {% endif %}
@@ -60,7 +60,7 @@
                         {% render_field form.csv_file %}
                         <div class="form-group">
                             <div class="col-md-12 text-right">
-                                <button type="submit" class="btn btn-primary">Submit</button>
+                                <button type="submit" class="btn btn-primary" data-toggle="modal" data-target="#loading_modal" title="Show Modal">Submit</button>
                                 {% if return_url %}
                                     <a href="{{ return_url }}" class="btn btn-default">Cancel</a>
                                 {% endif %}
@@ -144,4 +144,5 @@
             {% endif %}
         </div>
     </div>
+{% loading_modal model_plural_name=obj_type_plural action=action %}
 {% endblock %}

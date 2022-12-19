@@ -259,8 +259,21 @@ class NautobotHTMLRenderer(renderers.BrowsableAPIRenderer):
             elif view.action == "bulk_create":
                 context.update(
                     {
+                        "action": "Creat",
                         "active_tab": view.bulk_create_active_tab if view.bulk_create_active_tab else "csv-data",
                         "fields": view.bulk_create_form_class(model).fields if view.bulk_create_form_class else None,
+                    }
+                )
+            elif view.action == "bulk_destroy":
+                context.update(
+                    {
+                        "action": "Destroy",
+                    }
+                )
+            elif view.action == "bulk_update":
+                context.update(
+                    {
+                        "action": "Updat",
                     }
                 )
             elif view.action in ["changelog", "notes"]:

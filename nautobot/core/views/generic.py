@@ -609,6 +609,7 @@ class BulkCreateView(GetReturnURLMixin, ObjectPermissionRequiredMixin, View):
                 "form": form,
                 "model_form": model_form,
                 "return_url": self.get_return_url(request),
+                "action": "Creat",
             },
         )
 
@@ -679,6 +680,7 @@ class BulkCreateView(GetReturnURLMixin, ObjectPermissionRequiredMixin, View):
                 "model_form": model_form,
                 "obj_type": model._meta.verbose_name,
                 "return_url": self.get_return_url(request),
+                "action": "Creat",
             },
         )
 
@@ -711,6 +713,7 @@ class ObjectImportView(GetReturnURLMixin, ObjectPermissionRequiredMixin, View):
                 "form": form,
                 "obj_type": self.queryset.model._meta.verbose_name,
                 "return_url": self.get_return_url(request),
+                "action": "Import",
             },
         )
 
@@ -824,6 +827,7 @@ class ObjectImportView(GetReturnURLMixin, ObjectPermissionRequiredMixin, View):
                 "form": form,
                 "obj_type": self.queryset.model._meta.verbose_name,
                 "return_url": self.get_return_url(request),
+                "action": "Import",
             },
         )
 
@@ -869,6 +873,7 @@ class BulkImportView(GetReturnURLMixin, ObjectPermissionRequiredMixin, View):
             {
                 "form": self._import_form(),
                 "fields": self.model_form().fields,
+                "obj_type_plural": self.model_form._meta.model._meta.verbose_name_plural,
                 "obj_type": self.model_form._meta.model._meta.verbose_name,
                 "return_url": self.get_return_url(request),
                 "active_tab": "csv-data",
@@ -943,8 +948,10 @@ class BulkImportView(GetReturnURLMixin, ObjectPermissionRequiredMixin, View):
                 "form": form,
                 "fields": self.model_form().fields,
                 "obj_type": self.model_form._meta.model._meta.verbose_name,
+                "obj_type_plural": self.model_form._meta.model._meta.verbose_name_plural,
                 "return_url": self.get_return_url(request),
                 "active_tab": "csv-file" if form.has_error("csv_file") else "csv-data",
+                "action": "Import",
             },
         )
 
@@ -1117,7 +1124,7 @@ class BulkEditView(GetReturnURLMixin, ObjectPermissionRequiredMixin, View):
             "table": table,
             "obj_type_plural": model._meta.verbose_name_plural,
             "return_url": self.get_return_url(request),
-            "action": "Bulk Edit",
+            "action": "Edit",
         }
         context.update(self.extra_context())
         return render(request, self.template_name, context)
@@ -1291,7 +1298,7 @@ class BulkDeleteView(GetReturnURLMixin, ObjectPermissionRequiredMixin, View):
             "obj_type_plural": model._meta.verbose_name_plural,
             "table": table,
             "return_url": self.get_return_url(request),
-            "action": "Bulk Destroy",
+            "action": "Destroy",
         }
         context.update(self.extra_context())
         return render(request, self.template_name, context)
