@@ -904,42 +904,6 @@ django = ">=2.2"
 jinja2 = ">=3"
 
 [[package]]
-name = "django-js-asset"
-version = "2.0.0"
-description = "script tag with additional attributes for django.forms.Media"
-category = "main"
-optional = false
-python-versions = ">=3.6"
-files = [
-    {file = "django_js_asset-2.0.0-py3-none-any.whl", hash = "sha256:86f9f300d682537ddaf0487dc2ab356581b8f50c069bdba91d334a46e449f923"},
-    {file = "django_js_asset-2.0.0.tar.gz", hash = "sha256:adc1ee1efa853fad42054b540c02205344bb406c9bddf87c9e5377a41b7db90f"},
-]
-
-[package.dependencies]
-Django = ">=2.2"
-
-[package.extras]
-tests = ["coverage"]
-
-[[package]]
-name = "django-mptt"
-version = "0.14.0"
-description = "Utilities for implementing Modified Preorder Tree Traversal with your Django Models and working with trees of Model instances."
-category = "main"
-optional = false
-python-versions = ">=3.6"
-files = [
-    {file = "django-mptt-0.14.0.tar.gz", hash = "sha256:2c92a2b1614c53086278795ccf50580cf1f9b8564f3ff03055dd62bab5987711"},
-    {file = "django_mptt-0.14.0-py3-none-any.whl", hash = "sha256:d9a87433ab0e4f35247c6f6d5a93ace6990860a4ba8796f815d185f773b9acfc"},
-]
-
-[package.dependencies]
-django-js-asset = "*"
-
-[package.extras]
-tests = ["coverage", "mock-django"]
-
-[[package]]
 name = "django-picklefield"
 version = "3.1"
 description = "Pickled object field for Django"
@@ -4075,4 +4039,4 @@ sso = ["social-auth-core"]
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.7"
-content-hash = "fb4da530a57cd362ecc65de6854248f92d29cc4fe123caa9ef53425f3d563701"
+content-hash = "396b8f3b0acc7fa46f567c2036f923af7758b7f455074df73a932697decd6bda"
