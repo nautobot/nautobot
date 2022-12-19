@@ -78,9 +78,7 @@ class Migration(migrations.Migration):
                 ("validation_maximum", models.PositiveIntegerField(blank=True, null=True)),
                 (
                     "validation_regex",
-                    models.CharField(
-                        blank=True, max_length=500, validators=[nautobot.core.validators.validate_regex]
-                    ),
+                    models.CharField(blank=True, max_length=500, validators=[nautobot.core.validators.validate_regex]),
                 ),
             ],
             options={
