@@ -1,10 +1,12 @@
 import Container from "react-bootstrap/Container"
+import Image from "next/image"
 import Link from "next/link"
+import nautobot_logo from "public/img/nautobot_logo.svg"
 import Nav from "react-bootstrap/Nav"
 import Navbar from "react-bootstrap/Navbar"
 import NavDropdown from "react-bootstrap/NavDropdown"
 import useSWR from "swr"
-import { nautobot_static, nautobot_url } from "pages/index"
+import { nautobot_url } from "pages/index"
 
 const fetcher = (url) => fetch(url, { credentials: "include" }).then((res) => res.json());
 
@@ -18,11 +20,7 @@ export default function Menu() {
       <Container fluid>
         <Link href="/" passHref>
           <Navbar.Brand>
-            <img
-              src={nautobot_static + "/img/nautobot_logo.svg"}
-              alt="nautobot-logo"
-              height={30}
-            />
+            <Image src={nautobot_logo} alt="nautobot-logo" height={30} />
           </Navbar.Brand>
         </Link>
         <Navbar.Toggle aria-controls="basic-navbar-nav" />

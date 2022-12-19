@@ -1,5 +1,6 @@
 from copy import deepcopy
 import logging
+import os
 import re
 
 from django.conf import settings
@@ -13,7 +14,7 @@ from django.core.exceptions import (
 from django.db import transaction, IntegrityError
 from django.db.models import ManyToManyField, ProtectedError
 from django.forms import Form, ModelMultipleChoiceField, MultipleHiddenInput, Textarea
-from django.http import HttpResponse
+from django.http import Http404, HttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import NoReverseMatch, reverse
 from django.utils.html import escape
@@ -1541,3 +1542,15 @@ class BulkComponentCreateView(GetReturnURLMixin, ObjectPermissionRequiredMixin, 
                 "return_url": self.get_return_url(request),
             },
         )
+
+
+class ReactView(View):
+    filename = None
+
+    def get(self, request, *args, **kwargs):
+        if self.filename is not None and os.path.isfile(self.filename):
+            with open(self.filename, "r") as f:
+                content = f.read()
+                return HttpResponse(content)
+
+        raise Http404

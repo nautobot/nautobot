@@ -1,5 +1,4 @@
 import Col from "react-bootstrap/Col"
-import Layout from "./layout"
 import NautobotTable from "./table"
 import Row from "react-bootstrap/Row"
 import useSWR from "swr"
@@ -19,14 +18,10 @@ export default function ListViewTemplate({ list_url }) {
   const tableData = data[0].results
   const tableHeader = data[1].data
   return (
-    <div>
-      <Layout>
-        <Row>
-          <Col>
-            <NautobotTable data={tableData} headers={tableHeader} />
-          </Col>
-        </Row>
-      </Layout>
-    </div>
+    <Row>
+      <Col>
+        <NautobotTable data={tableData} headers={tableHeader} />
+      </Col>
+    </Row>
   );
 }
