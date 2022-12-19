@@ -91,7 +91,7 @@ from nautobot.dcim.models import (
     VirtualChassis,
 )
 from nautobot.circuits.models import Circuit, CircuitTermination, CircuitType, Provider
-from nautobot.extras.models import SecretsGroup, Status, Role
+from nautobot.extras.models import Role, SecretsGroup, Status
 from nautobot.ipam.models import IPAddress, Prefix, Service, VLAN, VLANGroup
 from nautobot.tenancy.models import Tenant
 from nautobot.utilities.testing import FilterTestCases
@@ -2421,9 +2421,8 @@ class DeviceTestCase(FilterTestCases.FilterTestCase, FilterTestCases.TenancyFilt
 
     def test_devicerole(self):
         device_roles = self.device_roles[:2]
-        with self.subTest():
-            params = {"role": [device_roles[0].slug, device_roles[1].slug]}
-            self.assertEqual(self.filterset(params, self.queryset).qs.count(), len(device_roles))
+        params = {"role": [device_roles[0].slug, device_roles[1].id]}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), len(device_roles))
 
     def test_platform(self):
         platforms = self.platforms[:2]

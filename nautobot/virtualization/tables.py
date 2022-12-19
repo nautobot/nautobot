@@ -1,7 +1,8 @@
 import django_tables2 as tables
 
+from nautobot.core.tables import RoleTableMixin
 from nautobot.dcim.tables.devices import BaseInterfaceTable
-from nautobot.extras.tables import StatusTableMixin, RoleTableMixin
+from nautobot.extras.tables import StatusTableMixin
 from nautobot.tenancy.tables import TenantColumn
 from nautobot.utilities.tables import (
     BaseTable,

@@ -53,7 +53,7 @@ from nautobot.dcim.models import (
     Site,
     VirtualChassis,
 )
-from nautobot.extras.models import ConfigContextSchema, SecretsGroup, Status, Role
+from nautobot.extras.models import ConfigContextSchema, Role, SecretsGroup, Status
 from nautobot.ipam.models import IPAddress, VLAN
 from nautobot.tenancy.models import Tenant
 from nautobot.utilities.testing import APITestCase, APIViewTestCases

@@ -43,7 +43,7 @@ from nautobot.dcim.models import (
     Site,
 )
 from nautobot.extras.choices import CustomFieldTypeChoices
-from nautobot.extras.models import CustomField, Status, Role
+from nautobot.extras.models import CustomField, Role, Status
 from nautobot.ipam.models import VLAN
 from nautobot.tenancy.models import Tenant
 

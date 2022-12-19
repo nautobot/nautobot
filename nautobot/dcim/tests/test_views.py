@@ -2530,75 +2530,10 @@ class VirtualChassisTestCase(ViewTestCases.PrimaryObjectViewTestCase):
             Device.objects.create(
                 device_type=device_type,
                 role=device_role,
-                name="Device 1",
+                name=f"Device {num}",
                 site=site,
-            ),
-            Device.objects.create(
-                device_type=device_type,
-                role=device_role,
-                name="Device 2",
-                site=site,
-            ),
-            Device.objects.create(
-                device_type=device_type,
-                role=device_role,
-                name="Device 3",
-                site=site,
-            ),
-            Device.objects.create(
-                device_type=device_type,
-                role=device_role,
-                name="Device 4",
-                site=site,
-            ),
-            Device.objects.create(
-                device_type=device_type,
-                role=device_role,
-                name="Device 5",
-                site=site,
-            ),
-            Device.objects.create(
-                device_type=device_type,
-                role=device_role,
-                name="Device 6",
-                site=site,
-            ),
-            Device.objects.create(
-                device_type=device_type,
-                role=device_role,
-                name="Device 7",
-                site=site,
-            ),
-            Device.objects.create(
-                device_type=device_type,
-                role=device_role,
-                name="Device 8",
-                site=site,
-            ),
-            Device.objects.create(
-                device_type=device_type,
-                role=device_role,
-                name="Device 9",
-                site=site,
-            ),
-            Device.objects.create(
-                device_type=device_type,
-                role=device_role,
-                name="Device 10",
-                site=site,
-            ),
-            Device.objects.create(
-                device_type=device_type,
-                role=device_role,
-                name="Device 11",
-                site=site,
-            ),
-            Device.objects.create(
-                device_type=device_type,
-                role=device_role,
-                name="Device 12",
-                site=site,
-            ),
+            )
+            for num in range(1, 13)
         )
 
         # Create three VirtualChassis with three members each

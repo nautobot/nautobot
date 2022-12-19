@@ -21,6 +21,7 @@ from django.template.loader import get_template, TemplateDoesNotExist
 from django_tables2 import RequestConfig
 from jsonschema.validators import Draft7Validator
 
+from nautobot.core.tables import RoleTable
 from nautobot.core.filters import RoleFilterSet
 from nautobot.core.forms import RoleBulkEditForm, RoleCSVForm, RoleForm
 from nautobot.core.views import generic, viewsets
@@ -1797,13 +1798,12 @@ class RoleUIViewSet(viewsets.NautobotUIViewSet):
     """`Roles` UIViewSet."""
 
     queryset = Role.objects.all()
-    table = tables.RoleTable
     bulk_create_form_class = RoleCSVForm
     bulk_update_form_class = RoleBulkEditForm
     filterset_class = RoleFilterSet
     form_class = RoleForm
     serializer_class = RoleSerializer
-    table_class = tables.RoleTable
+    table_class = RoleTable
 
     def get_extra_context(self, request, instance):
         context = super().get_extra_context(request, instance)

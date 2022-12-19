@@ -4,6 +4,9 @@ from django.urls import reverse
 
 from nautobot.core.fields import AutoSlugField
 from nautobot.core.models import BaseModel
+
+# Importing CustomFieldModel, ChangeLoggedModel, RelationshipModel from  nautobot.extras.models
+# caused circular import error
 from nautobot.extras.models.customfields import CustomFieldModel
 from nautobot.extras.models.change_logging import ChangeLoggedModel
 from nautobot.extras.models.relationships import RelationshipModel
