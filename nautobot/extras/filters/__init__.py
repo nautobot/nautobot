@@ -2,7 +2,6 @@ import django_filters
 from django.contrib.auth import get_user_model
 from django.contrib.contenttypes.models import ContentType
 
-from nautobot.core.filters import RoleFilter
 from nautobot.dcim.models import DeviceRedundancyGroup, DeviceType, Location, Platform, Region, Site
 from nautobot.extras.choices import (
     JobResultStatusChoices,
@@ -52,6 +51,7 @@ from nautobot.extras.models import (
     ObjectChange,
     Relationship,
     RelationshipAssociation,
+    Role,
     ScheduledJob,
     Secret,
     SecretsGroup,
@@ -287,7 +287,13 @@ class ConfigContextFilterSet(BaseFilterSet):
         to_field_name="slug",
         label="Tag (slug)",
     )
-    roles = RoleFilter(field_name="roles")
+    # TODO(timizuo): Limit Role choices by Device/VM but can't
+    #  import device cause of partial import error
+    roles = NaturalKeyOrPKMultipleChoiceFilter(
+        queryset=Role.objects.all(),
+        to_field_name="slug",
+        label="Roles (slug or PK)",
+    )
 
     class Meta:
         model = ConfigContext

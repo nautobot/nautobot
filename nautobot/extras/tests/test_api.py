@@ -2857,33 +2857,13 @@ class RelationshipAssociationTest(APIViewTestCases.APIViewTestCase):
         devicerole = Role.objects.get_for_model(Device).first()
         cls.devices = (
             Device.objects.create(
-                name="Device 1",
+                name=f"Device {num}",
                 device_type=devicetype,
                 role=devicerole,
                 site=cls.sites[1],
                 status=cls.status_active,
-            ),
-            Device.objects.create(
-                name="Device 2",
-                device_type=devicetype,
-                role=devicerole,
-                site=cls.sites[1],
-                status=cls.status_active,
-            ),
-            Device.objects.create(
-                name="Device 3",
-                device_type=devicetype,
-                role=devicerole,
-                site=cls.sites[1],
-                status=cls.status_active,
-            ),
-            Device.objects.create(
-                name="Device 4",
-                device_type=devicetype,
-                role=devicerole,
-                site=cls.sites[1],
-                status=cls.status_active,
-            ),
+            )
+            for num in range(1, 5)
         )
 
         cls.associations = (

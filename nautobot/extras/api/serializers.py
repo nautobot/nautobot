@@ -15,6 +15,7 @@ from nautobot.core.api import (
     ValidatedModelSerializer,
 )
 from nautobot.core.api.exceptions import SerializerNotFound
+from nautobot.core.api.nested_serializers import NestedRoleSerializer
 from nautobot.core.api.serializers import BaseModelSerializer
 from nautobot.core.models.mixins import LimitQuerysetChoicesSerializerMixin
 from nautobot.dcim.api.nested_serializers import (
@@ -106,7 +107,6 @@ from .nested_serializers import (  # noqa: F401
     NestedNoteSerializer,
     NestedRelationshipAssociationSerializer,
     NestedRelationshipSerializer,
-    NestedRoleSerializer,
     NestedScheduledJobSerializer,
     NestedSecretSerializer,
     NestedSecretsGroupSerializer,
@@ -164,6 +164,7 @@ class NautobotModelSerializer(
     """
 
 
+# TODO(timizuo): Cannot be moved to core cause of partial import error
 class RoleSerializerField(LimitQuerysetChoicesSerializerMixin, NestedRoleSerializer):
     """NestedSerializer field for `Role` object fields."""
 

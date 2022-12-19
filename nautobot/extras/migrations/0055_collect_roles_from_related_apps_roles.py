@@ -43,7 +43,6 @@ def create_equivalent_roles_of_related_role_model(apps):
         related_role_model_class = apps.get_model(app_name, model_class)
 
         roles_to_create = related_role_model_class.objects.all()
-        # Add to content_type if vm_role is True in
         bulk_create_roles(apps, roles_to_create, related_role_model.implemented_by)
 
 
