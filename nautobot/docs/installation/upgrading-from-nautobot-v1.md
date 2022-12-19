@@ -54,21 +54,21 @@
 
 | Model                 | Renamed Filter Field | New Name          | UI and Rest API endpoints Available in v2.X       |
 |-----------------------|----------------------|-------------------|---------------------------------------------------|
-| ConsolePort           | `cabled`             | `has_cable`       | `/dcim/console-ports/?has_cable=True|False`       |
-| ConsoleServerPort     | `cabled`             | `has_cable`       | `/dcim/console-server-ports/?has_cable=True|False`|
-| Device                | `device_type_id`     | `device_type`     | `/dcim/devices/?device_type=<uuid|slug>`          |
-|                       | `rack_group_id`      | `rack_group`      | `/dcim/devices/?rack_group=<uuid|slug>`           |
-|                       | `rack_id`            | `rack`            | `/dcim/devices/?rack=<uuid|slug>`                 |
-|                       | `cluster_id`         | `cluster`         | `/dcim/devices/?cluster=<uuid|slug>`              |
-|                       | `virtual_chassis_id` | `virtual_chassis` | `/dcim/devices/?virtual_chassis=<uuid|slug>`      |
-| FrontPort             | `cabled`             | `has_cable`       | `/dcim/front-ports/?has_cable=True|False`         |
-| Interface             | `cabled`             | `has_cable`       | `/dcim/interfaces/?has_cable=True|False`          |
-| InventoryItem         | `child_items`        | `children`        | `/dcim/inventory-items/?children=<uuid|name>`     |
-|                       | `has_child_items`    | `has_children`    | `/dcim/inventory-items/?has_children=True|False`  |
-| PowerFeed             | `cabled`             | `has_cable`       | `/dcim/power-feeds/?has_cable=True|False`         |
-| PowerOutlet           | `cabled`             | `has_cable`       |  `/dcim/power-outlets/?has_cable=True|False`      |
-| PowerPort             | `cabled`             | `has_cable`       | `/dcim/power-ports/?has_cable=True|False`         |
-| RearPort              | `cabled`             | `has_cable`       | `/dcim/rear-ports/?has_cable=True|False`          |
+| ConsolePort           | `cabled`             | `has_cable`       | `/dcim/console-ports/?has_cable=True/False`       |
+| ConsoleServerPort     | `cabled`             | `has_cable`       | `/dcim/console-server-ports/?has_cable=True/False`|
+| Device                | `device_type_id`     | `device_type`     | `/dcim/devices/?device_type=<uuid/slug>`          |
+|                       | `rack_group_id`      | `rack_group`      | `/dcim/devices/?rack_group=<uuid/slug>`           |
+|                       | `rack_id`            | `rack`            | `/dcim/devices/?rack=<uuid/slug>`                 |
+|                       | `cluster_id`         | `cluster`         | `/dcim/devices/?cluster=<uuid/slug>`              |
+|                       | `virtual_chassis_id` | `virtual_chassis` | `/dcim/devices/?virtual_chassis=<uuid/slug>`      |
+| FrontPort             | `cabled`             | `has_cable`       | `/dcim/front-ports/?has_cable=True/False`         |
+| Interface             | `cabled`             | `has_cable`       | `/dcim/interfaces/?has_cable=True/False`          |
+| InventoryItem         | `child_items`        | `children`        | `/dcim/inventory-items/?children=<uuid/name>`     |
+|                       | `has_child_items`    | `has_children`    | `/dcim/inventory-items/?has_children=True/False`  |
+| PowerFeed             | `cabled`             | `has_cable`       | `/dcim/power-feeds/?has_cable=True/False`         |
+| PowerOutlet           | `cabled`             | `has_cable`       |  `/dcim/power-outlets/?has_cable=True/False`      |
+| PowerPort             | `cabled`             | `has_cable`       | `/dcim/power-ports/?has_cable=True/False`         |
+| RearPort              | `cabled`             | `has_cable`       | `/dcim/rear-ports/?has_cable=True/False`          |
 
 ### Enhanced Filter Fields
 
