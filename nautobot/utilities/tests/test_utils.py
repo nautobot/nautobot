@@ -269,6 +269,7 @@ class PrettyPrintQueryTest(TestCase):
 
     def test_pretty_print_query(self):
         """Test that each Q object, from deeply nested to flat, pretty prints as expected."""
+        # pylint: disable=unsupported-binary-operation
         queries = [
             ((Q(site__slug="ams01") | Q(site__slug="ang01")) & ~Q(status__slug="active")) | Q(status__slug="planned"),
             (Q(site__slug="ams01") | Q(site__slug="ang01")) & ~Q(status__slug="active"),
@@ -279,6 +280,7 @@ class PrettyPrintQueryTest(TestCase):
             Q(status__id=12345),
             Q(site__slug__in=["ams01", "ang01"]),
         ]
+        # pylint: enable=unsupported-binary-operation
         results = [
             """\
 (
