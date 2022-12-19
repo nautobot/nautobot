@@ -8,9 +8,9 @@ from graphql import GraphQLError
 from graphene_django import DjangoObjectType
 
 from nautobot.core.graphql.utils import str_to_var_name, get_filtering_args_from_filterset
+from nautobot.core.utils import get_filterset_for_model
 from nautobot.extras.choices import RelationshipSideChoices
 from nautobot.extras.models import RelationshipAssociation
-from nautobot.utilities.utils import get_filterset_for_model
 
 logger = logging.getLogger("nautobot.graphql.generators")
 RESOLVER_PREFIX = "resolve_"

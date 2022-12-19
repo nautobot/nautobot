@@ -10,6 +10,7 @@ from django.urls import reverse
 from django.utils import timezone
 from unittest import mock
 
+from nautobot.core.utils import slugify_dashes_to_underscores
 from nautobot.dcim.models import ConsolePort, Device, DeviceRole, DeviceType, Interface, Manufacturer, Site
 from nautobot.dcim.tests import test_views
 from nautobot.extras.choices import (
@@ -52,8 +53,6 @@ from nautobot.ipam.models import VLAN, VLANGroup
 from nautobot.users.models import ObjectPermission
 from nautobot.utilities.testing import ViewTestCases, TestCase, extract_page_body, extract_form_failures
 from nautobot.utilities.testing.utils import disable_warnings, post_data
-from nautobot.utilities.utils import slugify_dashes_to_underscores
-
 
 # Use the proper swappable User model
 User = get_user_model()

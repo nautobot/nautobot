@@ -21,9 +21,10 @@ from django_celery_beat.clockedschedule import clocked
 from django_celery_beat.managers import ExtendedManager
 
 from nautobot.core.celery import NautobotKombuJSONEncoder
-from nautobot.core.fields import AutoSlugField, slugify_dots_to_dashes
+from nautobot.core.fields import AutoSlugField
 from nautobot.core.models import BaseModel
 from nautobot.core.models.generics import OrganizationalModel, PrimaryModel
+from nautobot.core.utils import slugify_dots_to_dashes
 from nautobot.extras.choices import JobExecutionType, JobResultStatusChoices, JobSourceChoices, LogLevelChoices
 from nautobot.extras.constants import (
     JOB_LOG_MAX_ABSOLUTE_URL_LENGTH,

@@ -14,14 +14,13 @@ from django.utils.functional import cached_property
 from nautobot.core.fields import AutoSlugField
 from nautobot.core.models import BaseModel
 from nautobot.core.models.generics import OrganizationalModel
+from nautobot.core.utils import get_filterset_for_model, get_form_for_model
 from nautobot.extras.choices import DynamicGroupOperatorChoices
 from nautobot.extras.querysets import DynamicGroupQuerySet, DynamicGroupMembershipQuerySet
 from nautobot.extras.utils import extras_features
 from nautobot.utilities.forms.constants import BOOLEAN_WITH_BLANK_CHOICES
 from nautobot.utilities.forms.fields import DynamicModelChoiceField
 from nautobot.utilities.forms.widgets import StaticSelect2
-from nautobot.utilities.utils import get_filterset_for_model, get_form_for_model
-
 
 logger = logging.getLogger(__name__)
 

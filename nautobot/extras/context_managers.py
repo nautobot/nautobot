@@ -1,13 +1,13 @@
 import uuid
 from contextlib import contextmanager
 
+from nautobot.core.utils import curry
 from django.contrib.auth import get_user_model
 from django.db.models.signals import m2m_changed, pre_delete, post_save
 from django.test.client import RequestFactory
 
 from nautobot.extras.choices import ObjectChangeEventContextChoices
 from nautobot.extras.signals import _handle_changed_object, _handle_deleted_object
-from nautobot.utilities.utils import curry
 
 
 class ChangeContext:

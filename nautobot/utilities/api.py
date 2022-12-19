@@ -7,8 +7,8 @@ from django.urls import reverse
 from rest_framework import status
 from rest_framework.utils import formatting
 
+from nautobot.core import utils
 from nautobot.core.api import exceptions
-from nautobot.utilities import utils
 
 
 def get_serializer_for_model(model, prefix=""):

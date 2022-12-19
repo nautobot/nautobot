@@ -3,7 +3,8 @@ from django.core.exceptions import ImproperlyConfigured
 from django.urls import NoReverseMatch, reverse
 from django.utils.http import is_safe_url
 
-from nautobot.utilities import permissions, utils
+from nautobot.core import utils
+from nautobot.utilities import permissions
 
 
 #

@@ -4,9 +4,8 @@ from django_filters.filters import BooleanFilter, NumberFilter, MultipleChoiceFi
 import graphene
 
 from nautobot.core.graphql import BigInteger
+from nautobot.core.utils import slugify_dashes_to_underscores
 from nautobot.utilities.filters import MultiValueBigNumberFilter, MultiValueNumberFilter
-from nautobot.utilities.utils import slugify_dashes_to_underscores
-
 
 logger = logging.getLogger(__name__)
 

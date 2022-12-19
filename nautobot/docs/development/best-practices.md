@@ -86,7 +86,8 @@ class ExampleModel(PrimaryModel):
 When developing new models a need often arises to retrieve a reversible route for a model to access it in either the web UI or the REST API. When this time comes, you **must** use `nautobot.utilities.utils.get_route_for_model`. You **must not** write your own logic to construct route names.
 
 ```python
-from nautobot.utilities.utils import get_route_for_model
+
+from nautobot.core.utils import get_route_for_model
 ```
 
 This utility function supports both UI and API views for both Nautobot core apps and Nautobot plugins.

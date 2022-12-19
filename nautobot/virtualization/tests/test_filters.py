@@ -1,6 +1,7 @@
 from django.contrib.contenttypes.models import ContentType
 from django.db.models import Q
 
+from nautobot.core.utils import flatten_iterable
 from nautobot.dcim.choices import InterfaceModeChoices
 from nautobot.dcim.models import Device, DeviceRole, DeviceType, Manufacturer, Platform, Region, Site
 from nautobot.extras.models import Status, Tag
@@ -8,7 +9,6 @@ from nautobot.ipam.choices import ServiceProtocolChoices
 from nautobot.ipam.models import IPAddress, VLAN, Service
 from nautobot.tenancy.models import Tenant
 from nautobot.utilities.testing import FilterTestCases
-from nautobot.utilities.utils import flatten_iterable
 from nautobot.virtualization.filters import (
     ClusterTypeFilterSet,
     ClusterGroupFilterSet,

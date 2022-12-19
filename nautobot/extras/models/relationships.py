@@ -13,11 +13,11 @@ from django.utils.safestring import mark_safe
 
 from nautobot.core.fields import AutoSlugField
 from nautobot.core.models import BaseModel
+from nautobot.core.utils import get_filterset_for_model, get_route_for_model, slugify_dashes_to_underscores
 from nautobot.extras.choices import RelationshipTypeChoices, RelationshipRequiredSideChoices, RelationshipSideChoices
 from nautobot.extras.utils import FeatureQuery, extras_features
 from nautobot.extras.models import ChangeLoggedModel
 from nautobot.extras.models.mixins import NotesMixin
-from nautobot.utilities.utils import get_filterset_for_model, get_route_for_model, slugify_dashes_to_underscores
 from nautobot.utilities.forms import (
     DynamicModelChoiceField,
     DynamicModelMultipleChoiceField,

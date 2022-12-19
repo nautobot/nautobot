@@ -7,6 +7,7 @@ from django.urls import reverse
 from django.utils.html import format_html
 
 from nautobot.circuits.models import CircuitType
+from nautobot.core.utils import get_route_for_model
 from nautobot.dcim.models import Device, Platform, Rack, Site
 from nautobot.dcim.tables import SiteTable
 from nautobot.dcim.tests.test_views import create_test_device
@@ -19,7 +20,6 @@ from nautobot.utilities.forms import (
     DynamicModelChoiceField,
     DynamicModelMultipleChoiceField,
 )
-from nautobot.utilities.utils import get_route_for_model
 
 
 class RelationshipBaseTest(TestCase):

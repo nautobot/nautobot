@@ -3,6 +3,8 @@ from django.contrib.auth import get_user_model
 from django.contrib.contenttypes.models import ContentType
 from django.db.models import Q
 
+from nautobot.circuits.models import Circuit, CircuitTermination, CircuitType, Provider
+from nautobot.core.utils import flatten_iterable
 from nautobot.dcim.choices import (
     CableLengthUnitChoices,
     CableTypeChoices,
@@ -94,12 +96,10 @@ from nautobot.dcim.models import (
     Site,
     VirtualChassis,
 )
-from nautobot.circuits.models import Circuit, CircuitTermination, CircuitType, Provider
 from nautobot.extras.models import SecretsGroup, Status
 from nautobot.ipam.models import IPAddress, Prefix, Service, VLAN, VLANGroup
 from nautobot.tenancy.models import Tenant
 from nautobot.utilities.testing import FilterTestCases
-from nautobot.utilities.utils import flatten_iterable
 from nautobot.virtualization.models import Cluster, ClusterType, VirtualMachine
 
 

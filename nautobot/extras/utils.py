@@ -15,7 +15,7 @@ from django.utils.deconstruct import deconstructible
 from taggit.managers import _TaggableManager
 
 # 2.0 TODO: remove `is_taggable` import here; included for now for backwards compatibility with <1.4 code.
-from nautobot.utilities.utils import is_taggable, slugify_dots_to_dashes  # noqa: F401
+from nautobot.core.utils import is_taggable, slugify_dots_to_dashes
 from nautobot.extras.constants import (
     EXTRAS_FEATURES,
     JOB_MAX_GROUPING_LENGTH,

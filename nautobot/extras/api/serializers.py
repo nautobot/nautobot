@@ -16,6 +16,7 @@ from nautobot.core.api import (
 )
 from nautobot.core.api.exceptions import SerializerNotFound
 from nautobot.core.api.serializers import BaseModelSerializer
+from nautobot.core.utils import get_route_for_model, slugify_dashes_to_underscores
 from nautobot.dcim.api.nested_serializers import (
     NestedDeviceSerializer,
     NestedDeviceRoleSerializer,
@@ -74,7 +75,6 @@ from nautobot.tenancy.models import Tenant, TenantGroup
 from nautobot.users.api.nested_serializers import NestedUserSerializer
 from nautobot.utilities.api import get_serializer_for_model
 from nautobot.utilities.deprecation import class_deprecated_in_favor_of
-from nautobot.utilities.utils import get_route_for_model, slugify_dashes_to_underscores
 from nautobot.virtualization.api.nested_serializers import (
     NestedClusterGroupSerializer,
     NestedClusterSerializer,

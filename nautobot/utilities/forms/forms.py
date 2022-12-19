@@ -7,8 +7,8 @@ from django.forms import formset_factory
 from django.urls import reverse
 import yaml
 
+from nautobot.core import utils
 from nautobot.ipam import formfields
-from nautobot.utilities import utils
 
 __all__ = (
     "AddressFieldMixin",

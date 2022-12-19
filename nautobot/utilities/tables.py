@@ -11,8 +11,8 @@ import django_tables2
 from django_tables2.data import TableQuerysetData
 from django_tables2.utils import Accessor
 
+from nautobot.core import utils
 from nautobot.extras import choices, models
-from nautobot.utilities import utils
 from nautobot.utilities.templatetags import helpers
 
 

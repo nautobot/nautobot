@@ -3,6 +3,7 @@ from collections import OrderedDict
 from nautobot.circuits.filters import CircuitFilterSet, ProviderFilterSet, ProviderNetworkFilterSet
 from nautobot.circuits.models import Circuit, Provider, ProviderNetwork
 from nautobot.circuits.tables import CircuitTable, ProviderTable, ProviderNetworkTable
+from nautobot.core.utils import count_related
 from nautobot.dcim.filters import (
     CableFilterSet,
     DeviceFilterSet,
@@ -51,7 +52,6 @@ from nautobot.ipam.tables import (
 from nautobot.tenancy.filters import TenantFilterSet
 from nautobot.tenancy.models import Tenant
 from nautobot.tenancy.tables import TenantTable
-from nautobot.utilities.utils import count_related
 from nautobot.virtualization.filters import ClusterFilterSet, VirtualMachineFilterSet
 from nautobot.virtualization.models import Cluster, VirtualMachine
 from nautobot.virtualization.tables import ClusterTable, VirtualMachineDetailTable

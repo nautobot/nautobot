@@ -39,11 +39,8 @@ from nautobot.utilities.forms import (
     restrict_form_fields,
 )
 from nautobot.core.views.renderers import NautobotHTMLRenderer
-from nautobot.utilities.utils import (
-    csv_format,
-    prepare_cloned_fields,
-)
 from nautobot.core.mixins import GetReturnURLMixin
+from nautobot.core.utils import csv_format, prepare_cloned_fields
 
 PERMISSIONS_ACTION_MAP = {
     "list": "view",

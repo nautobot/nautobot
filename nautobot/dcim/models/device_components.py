@@ -7,6 +7,7 @@ from django.db.models import Sum
 from django.urls import reverse
 from mptt.models import MPTTModel, TreeForeignKey
 
+from nautobot.core.utils import UtilizationData
 from nautobot.dcim.choices import (
     ConsolePortTypeChoices,
     InterfaceModeChoices,
@@ -38,7 +39,6 @@ from nautobot.utilities.fields import NaturalOrderingField
 from nautobot.utilities.mptt import TreeManager
 from nautobot.utilities.ordering import naturalize_interface
 from nautobot.utilities.query_functions import CollateAsChar
-from nautobot.utilities.utils import UtilizationData
 
 __all__ = (
     "BaseInterface",

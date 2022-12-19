@@ -4,7 +4,7 @@ from django.conf import settings
 from django.urls import reverse
 from django.utils.http import urlencode
 
-from nautobot.utilities.utils import foreground_color
+from nautobot.core.utils import foreground_color
 from .choices import DeviceFaceChoices
 from .constants import RACK_ELEVATION_BORDER_WIDTH
 

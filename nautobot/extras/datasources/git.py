@@ -15,6 +15,7 @@ from django.utils.text import slugify
 import yaml
 
 from nautobot.core.celery import nautobot_task
+from nautobot.core.utils import copy_safe_request
 from nautobot.dcim.models import Device, DeviceRole, DeviceType, Platform, Region, Site
 from nautobot.extras.choices import (
     JobSourceChoices,
@@ -37,7 +38,6 @@ from nautobot.extras.registry import DatasourceContent, register_datasource_cont
 from nautobot.extras.utils import jobs_in_directory, refresh_job_model_from_job_class
 from nautobot.tenancy.models import TenantGroup, Tenant
 from nautobot.utilities.git import GitRepo
-from nautobot.utilities.utils import copy_safe_request
 from nautobot.virtualization.models import ClusterGroup, Cluster, VirtualMachine
 from .registry import refresh_datasource_content
 from .utils import files_from_contenttype_directories

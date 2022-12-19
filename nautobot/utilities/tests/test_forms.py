@@ -7,6 +7,7 @@ from django.test import TestCase
 from django.urls import reverse
 from netaddr import IPNetwork
 
+from nautobot.core import utils
 from nautobot.dcim import filters as dcim_filters
 from nautobot.dcim import models as dcim_models
 from nautobot.dcim.tests import test_views
@@ -14,7 +15,7 @@ from nautobot.extras import filters as extras_filters
 from nautobot.extras import models as extras_models
 from nautobot.ipam import forms as ipam_forms
 from nautobot.ipam import models as ipam_models
-from nautobot.utilities import filters, forms, testing, utils
+from nautobot.utilities import filters, forms, testing
 
 
 class ExpandIPAddress(TestCase):

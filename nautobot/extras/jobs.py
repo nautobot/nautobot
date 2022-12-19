@@ -37,6 +37,7 @@ from .registry import registry
 from .utils import ChangeLoggedModelsQuery, get_job_content_type, jobs_in_directory, task_queues_as_choices
 
 from nautobot.core.celery import nautobot_task
+from nautobot.core.utils import copy_safe_request
 from nautobot.ipam.formfields import IPAddressFormField, IPNetworkFormField
 from nautobot.ipam.validators import (
     MaxPrefixLengthValidator,
@@ -48,8 +49,6 @@ from nautobot.utilities.forms import (
     DynamicModelChoiceField,
     DynamicModelMultipleChoiceField,
 )
-from nautobot.utilities.utils import copy_safe_request
-
 
 User = get_user_model()
 

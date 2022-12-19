@@ -18,6 +18,7 @@ from rest_framework.viewsets import GenericViewSet, ViewSet
 
 from nautobot.circuits.models import Circuit
 from nautobot.core.api.exceptions import ServiceUnavailable
+from nautobot.core.utils import SerializerForAPIVersions, count_related, versioned_serializer_selector
 from nautobot.dcim import filters
 from nautobot.dcim.models import (
     Cable,
@@ -66,7 +67,6 @@ from nautobot.extras.choices import SecretsGroupAccessTypeChoices, SecretsGroupS
 from nautobot.extras.secrets.exceptions import SecretError
 from nautobot.ipam.models import Prefix, VLAN
 from nautobot.utilities.api import get_serializer_for_model
-from nautobot.utilities.utils import count_related, SerializerForAPIVersions, versioned_serializer_selector
 from nautobot.virtualization.models import VirtualMachine
 from . import serializers
 from .exceptions import MissingFilterException

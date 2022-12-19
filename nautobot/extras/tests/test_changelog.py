@@ -5,6 +5,7 @@ from django.utils.html import escape
 from rest_framework import status
 
 from nautobot.core.graphql import execute_query
+from nautobot.core.utils import get_changes_for_model
 from nautobot.dcim.choices import InterfaceModeChoices
 from nautobot.dcim.models import Site
 from nautobot.extras import context_managers
@@ -14,7 +15,6 @@ from nautobot.ipam.models import VLAN
 from nautobot.utilities.testing import APITestCase, TestCase
 from nautobot.utilities.testing.utils import post_data
 from nautobot.utilities.testing.views import ModelViewTestCase
-from nautobot.utilities.utils import get_changes_for_model
 from nautobot.virtualization.models import Cluster, ClusterType, VMInterface, VirtualMachine
 
 

@@ -17,10 +17,11 @@ from mptt.models import MPTTModel
 from taggit.managers import TaggableManager
 from tree_queries.models import TreeNode
 
+from nautobot.core import utils
 from nautobot.dcim import fields as dcim_fields
 from nautobot.dcim import forms as dcim_forms
 from nautobot.extras import models as extras_models
-from nautobot.utilities import constants, forms, utils
+from nautobot.utilities import constants, forms
 
 logger = logging.getLogger(__name__)
 

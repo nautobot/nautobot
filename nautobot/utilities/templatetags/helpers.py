@@ -13,7 +13,8 @@ from django_jinja import library
 from markdown import markdown
 import yaml
 
-from nautobot.utilities import config, forms, utils
+from nautobot.core import utils
+from nautobot.utilities import config, forms
 
 HTML_TRUE = '<span class="text-success"><i class="mdi mdi-check-bold" title="Yes"></i></span>'
 HTML_FALSE = '<span class="text-danger"><i class="mdi mdi-close-thick" title="No"></i></span>'

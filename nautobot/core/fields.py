@@ -1,7 +1,5 @@
 from django_extensions.db.fields import AutoSlugField as _AutoSlugField
 
-from nautobot.utilities.utils import slugify_dots_to_dashes  # noqa: F401
-
 
 class AutoSlugField(_AutoSlugField):
     """AutoSlugField

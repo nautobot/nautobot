@@ -9,6 +9,7 @@ from django.db.models import Sum
 from django.urls import reverse
 from django.utils.functional import classproperty
 
+from nautobot.core.utils import to_meters
 from nautobot.dcim.choices import CableLengthUnitChoices, CableTypeChoices
 from nautobot.dcim.constants import CABLE_TERMINATION_MODELS, COMPATIBLE_TERMINATION_TYPES, NONCONNECTABLE_IFACE_TYPES
 
@@ -22,7 +23,6 @@ from nautobot.extras.models import Status, StatusModel
 from nautobot.extras.utils import extras_features
 from nautobot.core.models.generics import BaseModel, PrimaryModel
 from nautobot.utilities.fields import ColorField
-from nautobot.utilities.utils import to_meters
 from .devices import Device
 from .device_components import FrontPort, RearPort
 

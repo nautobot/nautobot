@@ -27,6 +27,7 @@ from nautobot.core.api.views import (
     ReadOnlyModelViewSet,
 )
 from nautobot.core.graphql import execute_saved_query
+from nautobot.core.utils import SerializerForAPIVersions, copy_safe_request, count_related, versioned_serializer_selector
 from nautobot.extras import filters
 from nautobot.extras.choices import JobExecutionType, JobResultStatusChoices
 from nautobot.extras.datasources import enqueue_pull_git_repository_and_refresh_data
@@ -63,12 +64,6 @@ from nautobot.extras.jobs import run_job
 from nautobot.extras.utils import get_job_content_type, get_worker_count
 from nautobot.utilities.exceptions import CeleryWorkerNotRunningException
 from nautobot.utilities.api import get_serializer_for_model
-from nautobot.utilities.utils import (
-    copy_safe_request,
-    count_related,
-    SerializerForAPIVersions,
-    versioned_serializer_selector,
-)
 from . import nested_serializers, serializers
 
 

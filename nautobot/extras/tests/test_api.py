@@ -6,6 +6,7 @@ from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.contrib.contenttypes.models import ContentType
 from django.core.files.uploadedfile import SimpleUploadedFile
+from nautobot.core.utils import get_route_for_model, slugify_dashes_to_underscores
 from django.test import override_settings
 from django.urls import reverse
 from django.utils.timezone import make_aware, now
@@ -67,8 +68,6 @@ from nautobot.users.models import ObjectPermission
 from nautobot.utilities.choices import ColorChoices
 from nautobot.utilities.testing import APITestCase, APIViewTestCases
 from nautobot.utilities.testing.utils import disable_warnings
-from nautobot.utilities.utils import get_route_for_model, slugify_dashes_to_underscores
-
 
 User = get_user_model()
 

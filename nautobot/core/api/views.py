@@ -35,14 +35,14 @@ from graphene_django.views import GraphQLView, instantiate_middleware, HttpError
 from nautobot.core.celery import app as celery_app
 from nautobot.core.api import BulkOperationSerializer
 from nautobot.core.api.exceptions import SerializerNotFound
-from nautobot.utilities.api import get_serializer_for_model
-from nautobot.utilities.exceptions import FilterSetFieldNotFound
-from nautobot.utilities.utils import (
+from nautobot.core.utils import (
+    ensure_content_type_and_field_name_inquery_params,
     get_all_lookup_expr_for_field,
     get_filterset_parameter_form_field,
     get_form_for_model,
-    ensure_content_type_and_field_name_inquery_params,
 )
+from nautobot.utilities.api import get_serializer_for_model
+from nautobot.utilities.exceptions import FilterSetFieldNotFound
 from . import serializers
 
 HTTP_ACTIONS = {

@@ -16,6 +16,7 @@ from django.test import override_settings
 from django.test.client import RequestFactory
 from django.utils import timezone
 
+from nautobot.core.utils import get_changes_for_model
 from nautobot.dcim.models import DeviceRole, Site
 from nautobot.extras.choices import (
     JobExecutionType,
@@ -33,7 +34,6 @@ from nautobot.utilities.testing import (
     TransactionTestCase,
     run_job_for_testing,
 )
-from nautobot.utilities.utils import get_changes_for_model
 
 
 def get_job_class_and_model(module, name):

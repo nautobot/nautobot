@@ -12,10 +12,11 @@ from django.utils.http import urlencode
 from django.utils.text import slugify
 from tree_queries.models import TreeNode
 
+from nautobot.core import utils
 from nautobot.extras import choices as extras_choices
 from nautobot.extras import models as extras_models
 from nautobot.users import models as users_models
-from nautobot.utilities import testing, utils
+from nautobot.utilities import testing
 from nautobot.utilities.templatetags import helpers
 from nautobot.utilities.testing import mixins
 
