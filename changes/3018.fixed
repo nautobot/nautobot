@@ -1,1 +1,1 @@
-Update Select2 widgets to know they are in a modal.
+Fixed rendering of Select2 widgets in modal dialogs.
