@@ -31,6 +31,14 @@
 
 ## REST API Changes
 
+### Behavior Changes
+
+| Model       | Field          | Changes                                                                                                 |
+|-------------|----------------|---------------------------------------------------------------------------------------------------------|
+| RackGroup   | `rack_count`   | Now only counts Racks directly belonging to this RackGroup, not those belonging to its descendants.     |
+| Region      | `site_count`   | Now only counts Sites directly belonging to this Region, not those belonging to its descendants.        |
+| TenantGroup | `tenant_count` | Now only counts Tenants directly belonging to this TenantGroup, not those belonging to its descendants. |
+
 ### Renamed Serializer Fields
 
 | Model         | Renamed Field | New Name     |
