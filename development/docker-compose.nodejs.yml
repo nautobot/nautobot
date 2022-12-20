@@ -9,7 +9,8 @@ services:
       - "3000:3000"
     working_dir: /opt/node/nautobot
     volumes:
-      - ../frontend-next/:/opt/node/nautobot
-    command: npm run dev
+      - ../nautobot_ui/:/opt/node/nautobot
+    command: >
+      bash -c "npm install && npm run start"
   nautobot:
     command: nautobot-server start --http :8080 --master --processes 3 --threads 2 --buffer-size 32768
