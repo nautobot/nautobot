@@ -46,6 +46,7 @@ export default function ObjectRetrieve() {
         <div className="pull-right noprint"></div>
         <Tabs defaultActiveKey="site">
           <Tab eventKey="site" title="Site">
+            <br />
             <Card>
               <CardHeader>
                 <strong>Site</strong>
@@ -106,10 +107,12 @@ export default function ObjectRetrieve() {
             <br />
           </Tab>
           <Tab eventKey="advanced" title="Advanced">
+            <br />
             <Image src={nautobot_logo} alt="nautobot-logo" />
           </Tab>
           <Tab eventKey="notes" title="Notes" />
           <Tab eventKey="change_log" title="Change Log">
+            <br />
             <div dangerouslySetInnerHTML={{ __html: "<p>Your html code here.<p>" }} />
           </Tab>
         </Tabs>
