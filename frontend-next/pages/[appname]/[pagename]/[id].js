@@ -13,6 +13,7 @@ import { useRouter } from "next/router"
 import useSWR from "swr"
 
 const fetcher = (url) => fetch(url, { credentials: "include" }).then((res) => res.json())
+const fetcherHTML = (url) => fetch(url, { credentials: "include" }).then((res) => res.text())
 
 export default function ObjectRetrieve() {
 
@@ -23,6 +24,7 @@ export default function ObjectRetrieve() {
     api_url = `${nautobot_url}/api/${appname}/${pagename}/${id}/`
   }
   const { data: objectData, error } = useSWR(() => api_url, fetcher)
+  const { data: pluginHTML, _ } = useSWR(() => api_url ? api_url + "plugin_full_width_fragment/" : null, fetcherHTML)
   if (error) return <div>Failed to load {api_url}</div>
   if (!objectData) return <></>
   return (
@@ -44,7 +46,6 @@ export default function ObjectRetrieve() {
         <div className="pull-right noprint"></div>
         <Tabs defaultActiveKey="site">
           <Tab eventKey="site" title="Site">
-            <br />
             <Card>
               <CardHeader>
                 <strong>Site</strong>
@@ -100,12 +101,17 @@ export default function ObjectRetrieve() {
                 </tbody>
               </Table>
             </Card>
+            <br />
+            <div dangerouslySetInnerHTML={{ __html: pluginHTML }} />
+            <br />
           </Tab>
           <Tab eventKey="advanced" title="Advanced">
             <Image src={nautobot_logo} alt="nautobot-logo" />
           </Tab>
           <Tab eventKey="notes" title="Notes" />
-          <Tab eventKey="change_log" title="Change Log" />
+          <Tab eventKey="change_log" title="Change Log">
+            <div dangerouslySetInnerHTML={{ __html: "<p>Your html code here.<p>" }} />
+          </Tab>
         </Tabs>
       </Layout>
     </div>

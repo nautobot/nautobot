@@ -3,7 +3,7 @@ from django.conf import settings
 from django.contrib.contenttypes.models import ContentType
 from django.forms import ValidationError as FormsValidationError
 from django.http import Http404
-from django.shortcuts import get_object_or_404
+from django.shortcuts import get_object_or_404, render
 from django.utils import timezone
 from drf_spectacular.types import OpenApiTypes
 from drf_spectacular.utils import extend_schema, extend_schema_view, OpenApiParameter
@@ -370,6 +370,15 @@ class NautobotModelViewSet(CustomFieldModelViewSet, NotesViewSetMixin, FormField
 
     Can also be used for models derived from BaseModel, so long as they support Notes.
     """
+
+    @action(detail=True, url_path="plugin_full_width_fragment")
+    def plugin_full_width_fragment(self, request, pk):
+        """
+        Return html fragment from a plugin.
+        """
+        obj = get_object_or_404(self.queryset, pk=pk)
+
+        return render(request, "generic/object_retrieve_plugin_full_width.html", {"object": obj})
 
 
 #

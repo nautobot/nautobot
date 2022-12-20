@@ -67,7 +67,16 @@ class SiteContent(PluginTemplateExtension):
         return "SITE CONTENT - RIGHT PAGE"
 
     def full_width_page(self):
-        return "SITE CONTENT - FULL WIDTH PAGE"
+        return """
+            <div class="card card-default">
+                <div class="card-header">
+                    <strong>Plugin Full Width Page</strong>
+                </div>
+                <div class="card-body">
+                    <span>Check me out! I'll show up after anything defined in the detail view template.</span>
+                </div>
+            </div>
+        """
 
     def buttons(self):
         return "SITE CONTENT - BUTTONS"
