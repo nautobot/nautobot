@@ -23,6 +23,7 @@ from django.utils.safestring import mark_safe
 from django.views.generic import View
 from django_tables2 import RequestConfig
 
+import nautobot
 from nautobot.core.forms import SearchForm
 from nautobot.extras.models import CustomField, ExportTemplate
 from nautobot.extras.models.change_logging import ChangeLoggedModel
@@ -1545,12 +1546,26 @@ class BulkComponentCreateView(GetReturnURLMixin, ObjectPermissionRequiredMixin, 
 
 
 class ReactView(View):
+    frontend_build_dir = os.path.join(os.path.dirname(nautobot.__file__), "../frontend-next/out")
     filename = None
 
     def get(self, request, *args, **kwargs):
-        if self.filename is not None and os.path.isfile(self.filename):
-            with open(self.filename, "r") as f:
+        path = f"{self.frontend_build_dir}/{self.filename}"
+        if self.filename is not None and os.path.isfile(path):
+            with open(path, "r") as f:
                 content = f.read()
                 return HttpResponse(content)
 
         raise Http404
+
+
+class ReactHomeView(ReactView):
+    filename = "index.html"
+
+
+class ReactListView(ReactView):
+    filename = "[appname]/[pagename].html"
+
+
+class ReactObjectView(ReactView):
+    filename = "[appname]/[pagename]/[id].html"

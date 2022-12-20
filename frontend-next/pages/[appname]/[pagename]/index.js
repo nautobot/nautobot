@@ -1,10 +1,10 @@
 import Head from "next/head"
 import ListViewTemplate from "components/list"
 import Layout from "components/layout"
-import { nautobot_url } from "pages"
+import { nautobot_url } from "pages/_app"
 import { useRouter } from "next/router"
 
-export default function ListView() {
+export default function ListView({ list_url }) {
   const router = useRouter()
   const { appname, pagename } = router.query
   let pagetitle = "Nautobot"
@@ -15,6 +15,9 @@ export default function ListView() {
   if (!appname || !pagename) {
     return <></>
   }
+  if (!list_url) {
+    list_url = `${nautobot_url}/api/${appname}/${pagename}/`
+  }
   return (
     <div>
       <Head>
@@ -22,7 +25,7 @@ export default function ListView() {
         <link rel="icon" href="/static/favicon.ico" />
       </Head>
       <Layout>
-        <ListViewTemplate list_url={`${nautobot_url}/api/${appname}/${pagename}/`} />
+        <ListViewTemplate list_url={list_url} />
       </Layout>
     </div>
   )

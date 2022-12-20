@@ -3,7 +3,7 @@ import CardHeader from "react-bootstrap/CardHeader"
 import Head from "next/head"
 import Image from "next/image"
 import Link from "next/link"
-import { nautobot_url } from "pages"
+import { nautobot_url } from "pages/_app"
 import nautobot_logo from "public/img/nautobot_logo.svg"
 import Tab from "react-bootstrap/Tab"
 import Table from "react-bootstrap/Table"
@@ -12,15 +12,14 @@ import Layout from "components/layout"
 import { useRouter } from "next/router"
 import useSWR from "swr"
 
-const fetcher = (url) => fetch(url, { credentials: "include" }).then((res) => res.json())
-const fetcherHTML = (url) => fetch(url, { credentials: "include" }).then((res) => res.text())
+const fetcher = (url) => fetch(url, { credentials: "include" }).then((res) => res.ok ? res.json() : null)
+const fetcherHTML = (url) => fetch(url, { credentials: "include" }).then((res) => res.ok ? res.text() : null)
 
-export default function ObjectRetrieve() {
+export default function ObjectRetrieve({ api_url }) {
 
   const router = useRouter()
   const { appname, pagename, id } = router.query
-  let api_url = null
-  if (!!appname && !!pagename && !!id) {
+  if (!!appname && !!pagename && !!id && !api_url) {
     api_url = `${nautobot_url}/api/${appname}/${pagename}/${id}/`
   }
   const { data: objectData, error } = useSWR(() => api_url, fetcher)

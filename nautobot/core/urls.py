@@ -7,7 +7,7 @@ from django.views.static import serve
 
 import nautobot
 from nautobot.core.views import CustomGraphQLView, StaticMediaFailureView, SearchView
-from nautobot.core.views.generic import ReactView
+from nautobot.core.views.generic import ReactHomeView, ReactListView, ReactObjectView
 from nautobot.extras.plugins.urls import (
     plugin_admin_patterns,
     plugin_patterns,
@@ -23,7 +23,8 @@ urlpatterns = [
     # API
     path("api/", include("nautobot.core.api.urls")),
     # Base views
-    path("", serve, {"document_root": frontend_build_dir, "path": "index.html"}, name="home"),
+    # path("", serve, {"document_root": frontend_build_dir, "path": "[[...catchall]].html"}, name="home"),
+    path("", ReactHomeView.as_view(), name="home"),
     # Short circuit all other paths to statically serve from javascript frontend
     re_path(
         r"^_next/(?P<path>.*)$",
@@ -40,10 +41,8 @@ urlpatterns = [
         serve,
         {"document_root": f"{frontend_build_dir}/static"},
     ),
-    path("<appname>/<pagename>/", ReactView.as_view(filename=f"{frontend_build_dir}/[appname]/[pagename].html")),
-    path(
-        "<appname>/<pagename>/<id>", ReactView.as_view(filename=f"{frontend_build_dir}/[appname]/[pagename]/[id].html")
-    ),
+    path("<appname>/<pagename>/", ReactListView.as_view()),
+    path("<appname>/<pagename>/<id>", ReactObjectView.as_view()),
     path("search/", SearchView.as_view(), name="search"),
     # Login/logout
     path("login/", LoginView.as_view(), name="login"),
