@@ -75,7 +75,7 @@ from nautobot.extras.models import (
     Webhook,
 )
 from nautobot.extras.registry import registry
-from nautobot.extras.utils import ChangeLoggedModelsQuery, FeatureQuery, TaggableClassesQuery
+from nautobot.extras.utils import ChangeLoggedModelsQuery, FeatureQuery, RoleModelsQuery, TaggableClassesQuery
 from .base import (
     NautobotBulkEditForm,
     NautobotFilterForm,
@@ -134,6 +134,10 @@ __all__ = (
     "RelationshipForm",
     "RelationshipFilterForm",
     "RelationshipAssociationFilterForm",
+    "RelationshipAssociationFilterForm",
+    "RoleBulkEditForm",
+    "RoleCSVForm",
+    "RoleForm",
     "ScheduledJobFilterForm",
     "SecretForm",
     "SecretCSVForm",
@@ -1161,6 +1165,62 @@ class RelationshipAssociationFilterForm(BootstrapMixin, forms.Form):
     destination_type = MultipleContentTypeField(
         feature="relationships", choices_as_strings=True, required=False, label="Destination Type"
     )
+
+
+#
+# Role
+#
+
+
+class RoleForm(NautobotModelForm):
+    """Generic create/update form for `Role` objects."""
+
+    slug = SlugField()
+    content_types = MultipleContentTypeField(
+        required=False,
+        label="Content Type(s)",
+        queryset=RoleModelsQuery().as_queryset(),
+    )
+
+    class Meta:
+        model = Role
+        widgets = {"color": ColorSelect()}
+        fields = ["name", "slug", "weight", "description", "content_types", "color"]
+
+
+class RoleBulkEditForm(NautobotBulkEditForm):
+    """Bulk edit/delete form for `Role` objects."""
+
+    pk = forms.ModelMultipleChoiceField(queryset=Role.objects.all(), widget=forms.MultipleHiddenInput)
+    color = forms.CharField(max_length=6, required=False, widget=ColorSelect())
+    content_types = MultipleContentTypeField(
+        queryset=RoleModelsQuery().as_queryset(), required=False, label="Content Type(s)"
+    )
+
+    class Meta:
+        nullable_fields = ["weight"]
+
+
+class RoleCSVForm(CustomFieldModelCSVForm):
+    """Generic CSV bulk import form for `Role` objects."""
+
+    content_types = CSVMultipleContentTypeField(
+        queryset=RoleModelsQuery().as_queryset(),
+        choices_as_strings=True,
+        help_text=mark_safe(
+            "The object types to which this role applies. Multiple values "
+            "must be comma-separated and wrapped in double quotes. (e.g. "
+            '<code>"dcim.device,dcim.rack"</code>)'
+        ),
+        label="Content type(s)",
+    )
+
+    class Meta:
+        model = Role
+        fields = ["name", "slug", "weight", "color", "content_types", "description"]
+        help_texts = {
+            "color": mark_safe("RGB color in hexadecimal (e.g. <code>00ff00</code>)"),
+        }
 
 
 #
