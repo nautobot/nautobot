@@ -4,11 +4,11 @@ from collections import OrderedDict
 from django.conf import settings
 from django.core.exceptions import ObjectDoesNotExist
 from django.db.models import F
-from django.http import HttpResponseForbidden, HttpResponse
+from django.http import HttpResponse, HttpResponseForbidden
 from django.shortcuts import get_object_or_404
 from django.views.decorators.clickjacking import xframe_options_sameorigin
 from drf_spectacular.types import OpenApiTypes
-from drf_spectacular.utils import extend_schema, extend_schema_view, OpenApiParameter
+from drf_spectacular.utils import OpenApiParameter, extend_schema, extend_schema_view
 from rest_framework.decorators import action
 from rest_framework.mixins import ListModelMixin
 from rest_framework.permissions import IsAuthenticated
@@ -19,6 +19,7 @@ from rest_framework.viewsets import GenericViewSet, ViewSet
 from nautobot.circuits.models import Circuit
 from nautobot.core.api.exceptions import ServiceUnavailable
 from nautobot.core.utils import SerializerForAPIVersions, count_related, versioned_serializer_selector
+from nautobot.core.utils.api import get_serializer_for_model
 from nautobot.dcim import filters
 from nautobot.dcim.models import (
     Cable,
@@ -37,10 +38,10 @@ from nautobot.dcim.models import (
     FrontPortTemplate,
     Interface,
     InterfaceTemplate,
+    InventoryItem,
     Location,
     LocationType,
     Manufacturer,
-    InventoryItem,
     Platform,
     PowerFeed,
     PowerOutlet,
@@ -58,16 +59,12 @@ from nautobot.dcim.models import (
     Site,
     VirtualChassis,
 )
-from nautobot.extras.api.views import (
-    ConfigContextQuerySetMixin,
-    NautobotModelViewSet,
-    StatusViewSetMixin,
-)
+from nautobot.extras.api.views import ConfigContextQuerySetMixin, NautobotModelViewSet, StatusViewSetMixin
 from nautobot.extras.choices import SecretsGroupAccessTypeChoices, SecretsGroupSecretTypeChoices
 from nautobot.extras.secrets.exceptions import SecretError
-from nautobot.ipam.models import Prefix, VLAN
-from nautobot.utilities.api import get_serializer_for_model
+from nautobot.ipam.models import VLAN, Prefix
 from nautobot.virtualization.models import VirtualMachine
+
 from . import serializers
 from .exceptions import MissingFilterException
 

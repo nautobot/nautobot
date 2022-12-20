@@ -2,4 +2,4 @@
 
 from nautobot.core.choices import ChoiceSet
 
-__all__ = ("ChoiceSet", )
+__all__ = ("ChoiceSet",)

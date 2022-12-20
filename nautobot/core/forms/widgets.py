@@ -1,13 +1,13 @@
-from collections.abc import Iterable
 import json
+from collections.abc import Iterable
 from urllib.parse import urljoin
 
 from django import forms
 from django.forms.models import ModelChoiceIterator
 from django.urls import get_script_prefix
 
+from nautobot.core import choices
 from nautobot.core.forms import utils
-from nautobot.utilities import choices
 
 __all__ = (
     "APISelect",

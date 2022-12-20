@@ -1,12 +1,12 @@
 from django.contrib.contenttypes.models import ContentType
 from django.utils import timezone
 
-
 from nautobot.core.utils import get_changes_for_model
+from nautobot.core.utils.api import get_serializer_for_model
 from nautobot.extras.models import Webhook
 from nautobot.extras.registry import registry
 from nautobot.extras.tasks import process_webhook
-from nautobot.utilities.api import get_serializer_for_model
+
 from .choices import ObjectChangeActionChoices
 
 
