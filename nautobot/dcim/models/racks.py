@@ -6,23 +6,22 @@ from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ValidationError
 from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
-from django.db.models import Count, Sum, Q
+from django.db.models import Count, Q, Sum
 from django.urls import reverse
 from mptt.models import MPTTModel, TreeForeignKey
 
+from nautobot.core.choices import ColorChoices
+from nautobot.core.fields import AutoSlugField, ColorField, JSONArrayField, NaturalOrderingField
+from nautobot.core.models.generics import OrganizationalModel, PrimaryModel
+from nautobot.core.mptt import TreeManager
+from nautobot.core.utils import UtilizationData, array_to_string
+from nautobot.core.utils.config import get_settings_or_config
 from nautobot.dcim.choices import DeviceFaceChoices, RackDimensionUnitChoices, RackTypeChoices, RackWidthChoices
 from nautobot.dcim.constants import RACK_ELEVATION_LEGEND_WIDTH_DEFAULT, RACK_U_HEIGHT_DEFAULT
-
-from nautobot.core.fields import AutoSlugField
-from nautobot.core.models.generics import OrganizationalModel, PrimaryModel
-from nautobot.core.utils import UtilizationData, array_to_string
 from nautobot.dcim.elevations import RackElevationSVG
 from nautobot.extras.models import StatusModel
 from nautobot.extras.utils import extras_features
-from nautobot.utilities.choices import ColorChoices
-from nautobot.utilities.config import get_settings_or_config
-from nautobot.utilities.fields import ColorField, NaturalOrderingField, JSONArrayField
-from nautobot.utilities.mptt import TreeManager
+
 from .device_components import PowerOutlet, PowerPort
 from .devices import Device
 from .power import PowerFeed

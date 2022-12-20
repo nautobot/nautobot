@@ -5,13 +5,12 @@ from django.urls import reverse
 from mptt.models import MPTTModel, TreeForeignKey
 from timezone_field import TimeZoneField
 
+from nautobot.core.fields import AutoSlugField, NaturalOrderingField
+from nautobot.core.models.generics import OrganizationalModel, PrimaryModel
+from nautobot.core.mptt import TreeManager
 from nautobot.dcim.fields import ASNField
 from nautobot.extras.models import StatusModel
 from nautobot.extras.utils import extras_features
-from nautobot.core.fields import AutoSlugField
-from nautobot.core.models.generics import OrganizationalModel, PrimaryModel
-from nautobot.utilities.fields import NaturalOrderingField
-from nautobot.utilities.mptt import TreeManager
 
 __all__ = (
     "Region",

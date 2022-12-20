@@ -8,18 +8,15 @@ from drf_spectacular.utils import extend_schema_field
 from rest_framework import serializers
 from rest_framework.reverse import reverse
 
-from nautobot.core.api import (
-    ChoiceField,
-    ContentTypeField,
-    SerializedPKRelatedField,
-    ValidatedModelSerializer,
-)
+from nautobot.core.api import ChoiceField, ContentTypeField, SerializedPKRelatedField, ValidatedModelSerializer
 from nautobot.core.api.exceptions import SerializerNotFound
 from nautobot.core.api.serializers import BaseModelSerializer
+from nautobot.core.deprecation import class_deprecated_in_favor_of
 from nautobot.core.utils import get_route_for_model, slugify_dashes_to_underscores
+from nautobot.core.utils.api import get_serializer_for_model
 from nautobot.dcim.api.nested_serializers import (
-    NestedDeviceSerializer,
     NestedDeviceRoleSerializer,
+    NestedDeviceSerializer,
     NestedDeviceTypeSerializer,
     NestedLocationSerializer,
     NestedPlatformSerializer,
@@ -67,52 +64,44 @@ from nautobot.extras.models import (
     Webhook,
 )
 from nautobot.extras.utils import ChangeLoggedModelsQuery, FeatureQuery, TaggableClassesQuery
-from nautobot.tenancy.api.nested_serializers import (
-    NestedTenantSerializer,
-    NestedTenantGroupSerializer,
-)
+from nautobot.tenancy.api.nested_serializers import NestedTenantGroupSerializer, NestedTenantSerializer
 from nautobot.tenancy.models import Tenant, TenantGroup
 from nautobot.users.api.nested_serializers import NestedUserSerializer
-from nautobot.utilities.api import get_serializer_for_model
-from nautobot.utilities.deprecation import class_deprecated_in_favor_of
-from nautobot.virtualization.api.nested_serializers import (
-    NestedClusterGroupSerializer,
-    NestedClusterSerializer,
-)
+from nautobot.virtualization.api.nested_serializers import NestedClusterGroupSerializer, NestedClusterSerializer
 from nautobot.virtualization.models import Cluster, ClusterGroup
 
 from .customfields import CustomFieldModelSerializerMixin
 from .fields import MultipleChoiceJSONField
-from .relationships import RelationshipModelSerializerMixin
 
 # Not all of these variable(s) are not actually used anywhere in this file, but required for the
 # automagically replacing a Serializer with its corresponding NestedSerializer.
-from .nested_serializers import (  # noqa: F401
-    NestedComputedFieldSerializer,
+from .nested_serializers import NestedComputedFieldSerializer  # noqa: F401
+from .nested_serializers import (
     NestedConfigContextSchemaSerializer,
     NestedConfigContextSerializer,
     NestedCustomFieldSerializer,
     NestedCustomLinkSerializer,
-    NestedDynamicGroupSerializer,
     NestedDynamicGroupMembershipSerializer,
+    NestedDynamicGroupSerializer,
     NestedExportTemplateSerializer,
     NestedGitRepositorySerializer,
     NestedGraphQLQuerySerializer,
     NestedImageAttachmentSerializer,
-    NestedJobSerializer,
+    NestedJobHookSerializer,
     NestedJobResultSerializer,
+    NestedJobSerializer,
     NestedNoteSerializer,
     NestedRelationshipAssociationSerializer,
     NestedRelationshipSerializer,
     NestedScheduledJobSerializer,
     NestedSecretSerializer,
-    NestedSecretsGroupSerializer,
     NestedSecretsGroupAssociationSerializer,
+    NestedSecretsGroupSerializer,
     NestedStatusSerializer,
     NestedTagSerializer,
     NestedWebhookSerializer,
-    NestedJobHookSerializer,
 )
+from .relationships import RelationshipModelSerializerMixin
 
 #
 # Mixins and Base Classes

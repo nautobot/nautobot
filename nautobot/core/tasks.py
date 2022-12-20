@@ -6,7 +6,7 @@ from django.conf import settings
 from packaging import version
 
 from nautobot.core import celery
-from nautobot.utilities import config
+from nautobot.core.utils import config
 
 logger = logging.getLogger("nautobot.releases")
 

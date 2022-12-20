@@ -1,17 +1,16 @@
 from django.contrib.contenttypes.models import ContentType
 from django.db import models
 from django.urls import reverse
-from taggit.models import TagBase, GenericUUIDTaggedItemBase
+from taggit.models import GenericUUIDTaggedItemBase, TagBase
 
+from nautobot.core.choices import ColorChoices
+from nautobot.core.fields import ColorField
+from nautobot.core.models import BaseModel
+from nautobot.core.querysets import RestrictedQuerySet
 from nautobot.extras.models import ChangeLoggedModel, CustomFieldModel
 from nautobot.extras.models.mixins import NotesMixin
 from nautobot.extras.models.relationships import RelationshipModel
-from nautobot.extras.utils import extras_features, TaggableClassesQuery
-from nautobot.core.models import BaseModel
-from nautobot.core.querysets import RestrictedQuerySet
-from nautobot.utilities.choices import ColorChoices
-from nautobot.utilities.fields import ColorField
-
+from nautobot.extras.utils import TaggableClassesQuery, extras_features
 
 #
 # Tags

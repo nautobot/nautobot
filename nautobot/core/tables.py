@@ -11,9 +11,9 @@ from django.utils.text import Truncator
 from django_tables2.data import TableQuerysetData
 from django_tables2.utils import Accessor
 
+from nautobot.core.templatetags import helpers
 from nautobot.core import utils
 from nautobot.extras import choices, models
-from nautobot.utilities.templatetags import helpers
 
 
 class BaseTable(django_tables2.Table):

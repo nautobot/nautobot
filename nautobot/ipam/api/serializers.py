@@ -5,45 +5,24 @@ from drf_spectacular.utils import extend_schema_field
 from rest_framework import serializers
 from rest_framework.validators import UniqueTogetherValidator
 
-from nautobot.core.api import (
-    ChoiceField,
-    ContentTypeField,
-    SerializedPKRelatedField,
-)
-from nautobot.dcim.api.nested_serializers import (
-    NestedDeviceSerializer,
-    NestedLocationSerializer,
-    NestedSiteSerializer,
-)
+from nautobot.core.api import ChoiceField, ContentTypeField, SerializedPKRelatedField
+from nautobot.core.utils.api import get_serializer_for_model
+from nautobot.dcim.api.nested_serializers import NestedDeviceSerializer, NestedLocationSerializer, NestedSiteSerializer
 from nautobot.extras.api.serializers import (
     NautobotModelSerializer,
     StatusModelSerializerMixin,
     TaggedModelSerializerMixin,
 )
-from nautobot.ipam.choices import IPAddressFamilyChoices, IPAddressRoleChoices, ServiceProtocolChoices
 from nautobot.ipam import constants
-from nautobot.ipam.models import (
-    Aggregate,
-    IPAddress,
-    Prefix,
-    RIR,
-    Role,
-    RouteTarget,
-    Service,
-    VLAN,
-    VLANGroup,
-    VRF,
-)
+from nautobot.ipam.choices import IPAddressFamilyChoices, IPAddressRoleChoices, ServiceProtocolChoices
+from nautobot.ipam.models import RIR, VLAN, VRF, Aggregate, IPAddress, Prefix, Role, RouteTarget, Service, VLANGroup
 from nautobot.tenancy.api.nested_serializers import NestedTenantSerializer
-from nautobot.utilities.api import get_serializer_for_model
-from nautobot.virtualization.api.nested_serializers import (
-    NestedVirtualMachineSerializer,
-)
+from nautobot.virtualization.api.nested_serializers import NestedVirtualMachineSerializer
 
 # Not all of these variable(s) are not actually used anywhere in this file, but required for the
 # automagically replacing a Serializer with its corresponding NestedSerializer.
-from .nested_serializers import (  # noqa: F401
-    IPFieldSerializer,
+from .nested_serializers import IPFieldSerializer  # noqa: F401
+from .nested_serializers import (
     NestedAggregateSerializer,
     NestedIPAddressSerializer,
     NestedPrefixSerializer,

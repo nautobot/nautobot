@@ -12,11 +12,12 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 
-from distutils.util import strtobool
 import os
 import re
+from distutils.util import strtobool
 
-from invoke import Collection, task as invoke_task
+from invoke import Collection
+from invoke import task as invoke_task
 from invoke.exceptions import Exit
 
 try:

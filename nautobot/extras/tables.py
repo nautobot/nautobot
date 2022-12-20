@@ -16,7 +16,7 @@ from nautobot.core.tables import (
     TagColumn,
     ToggleColumn,
 )
-from nautobot.utilities.templatetags.helpers import render_boolean, render_markdown
+from nautobot.core.templatetags.helpers import render_boolean, render_markdown
 
 from .choices import LogLevelChoices
 from .models import (

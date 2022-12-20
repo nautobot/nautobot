@@ -11,7 +11,9 @@ from nautobot.core.api import (
     ValidatedModelSerializer,
     WritableNestedSerializer,
 )
-
+from nautobot.core.deprecation import class_deprecated_in_favor_of
+from nautobot.core.utils.api import get_serializer_for_model
+from nautobot.core.utils.config import get_settings_or_config
 from nautobot.dcim.choices import (
     CableLengthUnitChoices,
     ConsolePortTypeChoices,
@@ -51,10 +53,10 @@ from nautobot.dcim.models import (
     FrontPortTemplate,
     Interface,
     InterfaceTemplate,
+    InventoryItem,
     Location,
     LocationType,
     Manufacturer,
-    InventoryItem,
     Platform,
     PowerFeed,
     PowerOutlet,
@@ -72,30 +74,24 @@ from nautobot.dcim.models import (
     Site,
     VirtualChassis,
 )
+from nautobot.extras.api.nested_serializers import NestedConfigContextSchemaSerializer, NestedSecretsGroupSerializer
 from nautobot.extras.api.serializers import (
     NautobotModelSerializer,
     StatusModelSerializerMixin,
     TaggedModelSerializerMixin,
 )
-from nautobot.extras.api.nested_serializers import NestedConfigContextSchemaSerializer, NestedSecretsGroupSerializer
 from nautobot.extras.models import Status
 from nautobot.extras.utils import FeatureQuery
-from nautobot.ipam.api.nested_serializers import (
-    NestedIPAddressSerializer,
-    NestedVLANSerializer,
-)
+from nautobot.ipam.api.nested_serializers import NestedIPAddressSerializer, NestedVLANSerializer
 from nautobot.ipam.models import VLAN
 from nautobot.tenancy.api.nested_serializers import NestedTenantSerializer
 from nautobot.users.api.nested_serializers import NestedUserSerializer
-from nautobot.utilities.api import get_serializer_for_model
-from nautobot.utilities.config import get_settings_or_config
-from nautobot.utilities.deprecation import class_deprecated_in_favor_of
 from nautobot.virtualization.api.nested_serializers import NestedClusterSerializer
 
 # Not all of these variable(s) are not actually used anywhere in this file, but required for the
 # automagically replacing a Serializer with its corresponding NestedSerializer.
-from .nested_serializers import (  # noqa: F401
-    NestedCableSerializer,
+from .nested_serializers import NestedCableSerializer  # noqa: F401
+from .nested_serializers import (
     NestedConsolePortSerializer,
     NestedConsolePortTemplateSerializer,
     NestedConsoleServerPortSerializer,
