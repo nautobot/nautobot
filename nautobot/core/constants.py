@@ -2,7 +2,7 @@ from collections import OrderedDict
 
 from nautobot.circuits.filters import CircuitFilterSet, ProviderFilterSet, ProviderNetworkFilterSet
 from nautobot.circuits.models import Circuit, Provider, ProviderNetwork
-from nautobot.circuits.tables import CircuitTable, ProviderTable, ProviderNetworkTable
+from nautobot.circuits.tables import CircuitTable, ProviderNetworkTable, ProviderTable
 from nautobot.core.utils import count_related
 from nautobot.dcim.filters import (
     CableFilterSet,
@@ -14,41 +14,20 @@ from nautobot.dcim.filters import (
     SiteFilterSet,
     VirtualChassisFilterSet,
 )
-from nautobot.dcim.models import (
-    Cable,
-    Device,
-    DeviceType,
-    PowerFeed,
-    Rack,
-    RackGroup,
-    Site,
-    VirtualChassis,
-)
+from nautobot.dcim.models import Cable, Device, DeviceType, PowerFeed, Rack, RackGroup, Site, VirtualChassis
 from nautobot.dcim.tables import (
     CableTable,
     DeviceTable,
     DeviceTypeTable,
     PowerFeedTable,
-    RackTable,
     RackGroupTable,
+    RackTable,
     SiteTable,
     VirtualChassisTable,
 )
-from nautobot.ipam.filters import (
-    AggregateFilterSet,
-    IPAddressFilterSet,
-    PrefixFilterSet,
-    VLANFilterSet,
-    VRFFilterSet,
-)
-from nautobot.ipam.models import Aggregate, IPAddress, Prefix, VLAN, VRF
-from nautobot.ipam.tables import (
-    AggregateTable,
-    IPAddressTable,
-    PrefixTable,
-    VLANTable,
-    VRFTable,
-)
+from nautobot.ipam.filters import AggregateFilterSet, IPAddressFilterSet, PrefixFilterSet, VLANFilterSet, VRFFilterSet
+from nautobot.ipam.models import VLAN, VRF, Aggregate, IPAddress, Prefix
+from nautobot.ipam.tables import AggregateTable, IPAddressTable, PrefixTable, VLANTable, VRFTable
 from nautobot.tenancy.filters import TenantFilterSet
 from nautobot.tenancy.models import Tenant
 from nautobot.tenancy.tables import TenantTable
@@ -280,3 +259,51 @@ SEARCH_TYPES = OrderedDict(
         ),
     )
 )
+
+
+#
+# Filter lookup expressions
+#
+
+
+FILTER_CHAR_BASED_LOOKUP_MAP = dict(
+    n="exact",
+    ic="icontains",
+    nic="icontains",
+    iew="iendswith",
+    niew="iendswith",
+    isw="istartswith",
+    nisw="istartswith",
+    ie="iexact",
+    nie="iexact",
+    re="regex",
+    nre="regex",
+    ire="iregex",
+    nire="iregex",
+)
+FILTER_NUMERIC_BASED_LOOKUP_MAP = dict(n="exact", lte="lte", lt="lt", gte="gte", gt="gt")
+FILTER_NEGATION_LOOKUP_MAP = dict(n="exact")
+
+
+#
+# HTTP Request META safe copy
+#
+
+
+HTTP_REQUEST_META_SAFE_COPY = [
+    "CONTENT_LENGTH",
+    "CONTENT_TYPE",
+    "HTTP_ACCEPT",
+    "HTTP_ACCEPT_ENCODING",
+    "HTTP_ACCEPT_LANGUAGE",
+    "HTTP_HOST",
+    "HTTP_REFERER",
+    "HTTP_USER_AGENT",
+    "QUERY_STRING",
+    "REMOTE_ADDR",
+    "REMOTE_HOST",
+    "REMOTE_USER",
+    "REQUEST_METHOD",
+    "SERVER_NAME",
+    "SERVER_PORT",
+]

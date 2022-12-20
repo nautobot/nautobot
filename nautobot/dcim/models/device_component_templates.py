@@ -1,25 +1,25 @@
+from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ObjectDoesNotExist, ValidationError
 from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
-from django.contrib.contenttypes.models import ContentType
 
-from nautobot.dcim.choices import (
-    SubdeviceRoleChoices,
-    ConsolePortTypeChoices,
-    PowerPortTypeChoices,
-    PowerOutletTypeChoices,
-    PowerOutletFeedLegChoices,
-    InterfaceTypeChoices,
-    InterfaceStatusChoices,
-    PortTypeChoices,
-)
-
+from nautobot.core.fields import NaturalOrderingField
 from nautobot.core.models import BaseModel
+from nautobot.core.ordering import naturalize_interface
+from nautobot.dcim.choices import (
+    ConsolePortTypeChoices,
+    InterfaceStatusChoices,
+    InterfaceTypeChoices,
+    PortTypeChoices,
+    PowerOutletFeedLegChoices,
+    PowerOutletTypeChoices,
+    PowerPortTypeChoices,
+    SubdeviceRoleChoices,
+)
 from nautobot.dcim.constants import REARPORT_POSITIONS_MAX, REARPORT_POSITIONS_MIN
 from nautobot.extras.models import ChangeLoggedModel, CustomField, CustomFieldModel, RelationshipModel, Status
 from nautobot.extras.utils import extras_features
-from nautobot.utilities.fields import NaturalOrderingField
-from nautobot.utilities.ordering import naturalize_interface
+
 from .device_components import (
     ConsolePort,
     ConsoleServerPort,

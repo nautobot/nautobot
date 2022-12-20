@@ -117,6 +117,7 @@ The `NautobotAppConfig` class is a Nautobot-specific wrapper around Django's bui
 ```python
 from nautobot.apps import NautobotAppConfig
 
+
 class AnimalSoundsConfig(NautobotAppConfig):
     name = 'nautobot_animal_sounds'
     verbose_name = 'Animal Sounds'
@@ -250,6 +251,7 @@ Declared subclasses should be gathered into a list or tuple for integration with
 ```python
 # template_content.py
 from django.urls import reverse
+
 from nautobot.apps.ui import TemplateExtension
 
 from .models import Animal
@@ -322,6 +324,7 @@ Here's a basic example of a tab's view
 from nautobot.apps.views import ObjectView
 from nautobot.dcim.models import Device
 
+
 class DeviceDetailAppTabOne(ObjectView):
     """
     This view's template extends the device detail template,
@@ -340,7 +343,6 @@ You must also add the view to the `url_patterns` like so (make sure to read the 
 ```python
 # urls.py
 from django.urls import path
-
 from example_plugin import views
 
 urlpatterns = [
@@ -365,6 +367,7 @@ This function currently receives a single argument, `context`, which is the [Dja
 from django.utils.html import format_html
 
 from nautobot.apps.ui import Banner, BannerClassChoices
+
 
 def banner(context, *args, **kwargs):
     """Greet the user, if logged in."""
@@ -426,6 +429,7 @@ then in your `AnimalSoundsConfig` you could refer to the view by name:
 ```python
 # __init__.py
 from nautobot.apps import NautobotAppConfig
+
 
 class AnimalSoundsConfig(NautobotAppConfig):
     # ...
@@ -604,6 +608,7 @@ For example, maybe we want our app to make use of a Relationship allowing each S
 
 from nautobot.extras.choices import RelationshipTypeChoices
 
+
 def create_site_to_animal_relationship(sender, apps, **kwargs):
     """Create a Site-to-Animal Relationship if it doesn't already exist."""
     # Use apps.get_model to look up Nautobot core models
@@ -632,9 +637,10 @@ Then, in the `NautobotAppConfig` `ready()` function, we connect this callback fu
 ```python
 # __init__.py
 
-from nautobot.apps import nautobot_database_ready, NautobotAppConfig
+from nautobot.apps import NautobotAppConfig, nautobot_database_ready
 
 from .signals import create_site_to_animal_relationship
+
 
 class AnimalSoundsConfig(NautobotAppConfig):
     # ...
@@ -849,6 +855,7 @@ Apps can optionally expose their models via Django's built-in [administrative in
 ```python
 # admin.py
 from django.contrib import admin
+
 from nautobot.apps.admin import NautobotModelAdmin
 
 from .models import Animal
@@ -972,6 +979,7 @@ Below we provide an example on how to use `NautobotUIViewSet` on a theoretical a
 
 ```python
 from nautobot.apps.views import NautobotUIViewset
+
 
 class YourAppModelUIViewSet(NautobotUIViewSet):
     bulk_create_form_class = YourAppModelCSVForm
@@ -1219,7 +1227,6 @@ from django.urls import path
 
 from . import views
 
-
 urlpatterns = [
     path('random/', views.RandomAnimalView.as_view(), name='random_animal'),
 ]
@@ -1243,10 +1250,10 @@ Apps can declare custom endpoints on Nautobot's REST API to retrieve or manipula
 First, create a serializer for the `Animal` model, in `api/serializers.py`:
 
 ```python
+from nautobot_animal_sounds.models import Animal
+
 # api/serializers.py
 from nautobot.apps.api import ValidatedModelSerializer
-
-from nautobot_animal_sounds.models import Animal
 
 
 class AnimalSerializer(ValidatedModelSerializer):
@@ -1263,10 +1270,10 @@ class AnimalSerializer(ValidatedModelSerializer):
 Next, create a generic API view set that allows basic CRUD (create, read, update, and delete) operations for Animal instances. This is defined in `api/views.py`:
 
 ```python
+from nautobot_animal_sounds.models import Animal
 # api/views.py
 from rest_framework.viewsets import ModelViewSet
 
-from nautobot_animal_sounds.models import Animal
 from .serializers import AnimalSerializer
 
 
@@ -1287,7 +1294,6 @@ Finally, register a URL for our endpoint in `api/urls.py`. This file **must** de
 from rest_framework import routers
 
 from .views import AnimalViewSet
-
 
 router = routers.DefaultRouter()
 router.register('animals', AnimalViewSet)

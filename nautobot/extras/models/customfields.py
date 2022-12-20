@@ -27,6 +27,7 @@ from nautobot.core.forms import (
 )
 from nautobot.core.models import BaseModel
 from nautobot.core.querysets import RestrictedQuerySet
+from nautobot.core.templatetags.helpers import render_markdown
 from nautobot.core.utils import render_jinja2, slugify_dashes_to_underscores
 from nautobot.core.validators import validate_regex
 from nautobot.extras.choices import CustomFieldFilterLogicChoices, CustomFieldTypeChoices
@@ -34,7 +35,6 @@ from nautobot.extras.models import ChangeLoggedModel
 from nautobot.extras.models.mixins import NotesMixin
 from nautobot.extras.tasks import delete_custom_field_data, update_custom_field_choice_data
 from nautobot.extras.utils import FeatureQuery, extras_features
-from nautobot.utilities.templatetags.helpers import render_markdown
 
 logger = logging.getLogger(__name__)
 

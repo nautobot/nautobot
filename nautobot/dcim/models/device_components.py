@@ -7,7 +7,12 @@ from django.db.models import Sum
 from django.urls import reverse
 from mptt.models import MPTTModel, TreeForeignKey
 
+from nautobot.core.fields import NaturalOrderingField
+from nautobot.core.models.generics import PrimaryModel
+from nautobot.core.mptt import TreeManager
+from nautobot.core.ordering import naturalize_interface
 from nautobot.core.utils import UtilizationData
+from nautobot.core.utils.query_functions import CollateAsChar
 from nautobot.dcim.choices import (
     ConsolePortTypeChoices,
     InterfaceModeChoices,
@@ -26,19 +31,9 @@ from nautobot.dcim.constants import (
     VIRTUAL_IFACE_TYPES,
     WIRELESS_IFACE_TYPES,
 )
-
 from nautobot.dcim.fields import MACAddressCharField
-from nautobot.extras.models import (
-    RelationshipModel,
-    Status,
-    StatusModel,
-)
+from nautobot.extras.models import RelationshipModel, Status, StatusModel
 from nautobot.extras.utils import extras_features
-from nautobot.core.models.generics import PrimaryModel
-from nautobot.utilities.fields import NaturalOrderingField
-from nautobot.utilities.mptt import TreeManager
-from nautobot.utilities.ordering import naturalize_interface
-from nautobot.utilities.query_functions import CollateAsChar
 
 __all__ = (
     "BaseInterface",

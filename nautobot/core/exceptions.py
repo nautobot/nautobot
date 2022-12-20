@@ -44,3 +44,7 @@ class FilterSetFieldNotFound(Exception):
     """
     An exception indicating that a filterset field could not be found.
     """
+
+
+class BranchDoesNotExist(Exception):
+    pass
