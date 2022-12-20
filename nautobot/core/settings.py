@@ -728,8 +728,23 @@ CELERY_BROKER_URL = os.getenv("NAUTOBOT_CELERY_BROKER_URL", parse_redis_connecti
 # Celery results backend URL to tell workers where to publish task results
 CELERY_RESULT_BACKEND = "nautobot.core.celery.backends.NautobotDatabaseBackend"
 
+# Enables extended task result attributes (name, args, kwargs, worker, retries, queue, delivery_info) to be written to backend.
+CELERY_RESULT_EXTENDED = True
+
+# A value of None or 0 means results will never expire (depending on backend specifications).
+CELERY_RESULT_EXPIRES = None
+
+# If set to True, result messages will be persistent. This means the messages won’t be lost after a broker restart.
+CELERY_RESULT_PERSISTENT = True
+
 # Instruct celery to report the started status of a job, instead of just `pending`, `finished`, or `failed`
 CELERY_TASK_TRACK_STARTED = True
+
+# If enabled, a `task-sent` event will be sent for every task so tasks can be tracked before they’re consumed by a worker.
+CELERY_TASK_SEND_SENT_EVENT = True
+
+# Send task-related events so that tasks can be monitored using tools like flower. Sets the default value for the workers -E argument.
+CELERY_WORKER_SEND_TASK_EVENTS = True
 
 # Default celery queue name that will be used by workers and tasks if no queue is specified
 CELERY_TASK_DEFAULT_QUEUE = os.getenv("NAUTOBOT_CELERY_TASK_DEFAULT_QUEUE", "default")
