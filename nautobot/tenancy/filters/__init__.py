@@ -1,18 +1,17 @@
 import django_filters
 
-from nautobot.dcim.models import Location
-from nautobot.extras.filters import NautobotFilterSet
-from nautobot.tenancy.filters.mixins import TenancyModelFilterSetMixin
-from nautobot.tenancy.models import Tenant, TenantGroup
-from nautobot.utilities.deprecation import class_deprecated_in_favor_of
-from nautobot.utilities.filters import (
+from nautobot.core.deprecation import class_deprecated_in_favor_of
+from nautobot.core.filters import (
     NameSlugSearchFilterSet,
     RelatedMembershipBooleanFilter,
     SearchFilter,
     TagFilter,
     TreeNodeMultipleChoiceFilter,
 )
-
+from nautobot.dcim.models import Location
+from nautobot.extras.filters import NautobotFilterSet
+from nautobot.tenancy.filters.mixins import TenancyModelFilterSetMixin
+from nautobot.tenancy.models import Tenant, TenantGroup
 
 __all__ = (
     "TenancyFilterSet",

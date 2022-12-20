@@ -1,23 +1,21 @@
 import logging
 import os
-
 from abc import ABC, abstractmethod
 from collections import OrderedDict
 
-from django.apps import AppConfig, apps as global_apps
-from django.db.models import JSONField, BigIntegerField, BinaryField
+from constance.apps import ConstanceConfig
+from django.apps import AppConfig
+from django.apps import apps as global_apps
+from django.db.models import BigIntegerField, BinaryField, JSONField
 from django.db.models.signals import post_migrate
 from django.urls import reverse
 from django.urls.exceptions import NoReverseMatch
+from graphene.types import String, generic
 
-from constance.apps import ConstanceConfig
-from graphene.types import generic, String
-
+from nautobot.core.choices import ButtonActionColorChoices, ButtonActionIconChoices
 from nautobot.core.signals import nautobot_database_ready
 from nautobot.extras.plugins.utils import import_object
 from nautobot.extras.registry import registry
-from nautobot.utilities.choices import ButtonActionColorChoices, ButtonActionIconChoices
-
 
 logger = logging.getLogger("nautobot.core.apps")
 registry["nav_menu"] = {"tabs": {}}
@@ -654,6 +652,7 @@ class CoreConfig(NautobotConfig):
 
     def ready(self):
         from graphene_django.converter import convert_django_field
+
         from nautobot.core.graphql import BigInteger
 
         @convert_django_field.register(JSONField)
@@ -687,10 +686,25 @@ class CoreConfig(NautobotConfig):
 
         # Magical monkey-patch TaggableManager to replace the `formfield()` method from our mixin.
         from cacheops.utils import monkey_mix
-        from nautobot.extras.models import mixins
         from taggit.managers import TaggableManager
 
+        from nautobot.extras.models import mixins
+
         monkey_mix(TaggableManager, mixins.TaggableManagerMonkeyMixin)
+
+        # Register netutils jinja2 filters in django_jinja and Django Template
+        from django import template
+        from django_jinja import library
+        from netutils.utils import jinja2_convenience_function
+
+        register = template.Library()
+
+        for name, func in jinja2_convenience_function().items():
+            # Register in django_jinja
+            library.filter(name=name, fn=func)
+
+            # Register in Django Template
+            register.filter(name, func)
 
 
 class NautobotConstanceConfig(ConstanceConfig):

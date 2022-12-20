@@ -2,6 +2,16 @@ import django_filters
 from django.contrib.auth import get_user_model
 from django.contrib.contenttypes.models import ContentType
 
+from nautobot.core.deprecation import class_deprecated_in_favor_of
+from nautobot.core.filters import (
+    BaseFilterSet,
+    ContentTypeFilter,
+    ContentTypeMultipleChoiceFilter,
+    MultiValueUUIDFilter,
+    NaturalKeyOrPKMultipleChoiceFilter,
+    SearchFilter,
+    TagFilter,
+)
 from nautobot.dcim.models import DeviceRedundancyGroup, DeviceRole, DeviceType, Location, Platform, Region, Site
 from nautobot.extras.choices import (
     JobResultStatusChoices,
@@ -22,8 +32,8 @@ from nautobot.extras.filters.customfields import (
     CustomFieldNumberFilter,
 )
 from nautobot.extras.filters.mixins import (
-    CustomFieldModelFilterSetMixin,
     CreatedUpdatedModelFilterSetMixin,
+    CustomFieldModelFilterSetMixin,
     LocalContextModelFilterSetMixin,
     RelationshipFilter,
     RelationshipModelFilterSetMixin,
@@ -61,18 +71,7 @@ from nautobot.extras.models import (
 )
 from nautobot.extras.utils import ChangeLoggedModelsQuery, FeatureQuery, TaggableClassesQuery
 from nautobot.tenancy.models import Tenant, TenantGroup
-from nautobot.utilities.deprecation import class_deprecated_in_favor_of
-from nautobot.utilities.filters import (
-    BaseFilterSet,
-    ContentTypeFilter,
-    ContentTypeMultipleChoiceFilter,
-    MultiValueUUIDFilter,
-    NaturalKeyOrPKMultipleChoiceFilter,
-    SearchFilter,
-    TagFilter,
-)
 from nautobot.virtualization.models import Cluster, ClusterGroup
-
 
 __all__ = (
     "ComputedFieldFilterSet",

@@ -4,6 +4,19 @@ from django.db.models import Q
 from drf_spectacular.utils import extend_schema_field
 from timezone_field import TimeZoneField
 
+from nautobot.core.deprecation import class_deprecated_in_favor_of
+from nautobot.core.filters import (
+    BaseFilterSet,
+    ContentTypeMultipleChoiceFilter,
+    MultiValueCharFilter,
+    MultiValueMACAddressFilter,
+    MultiValueUUIDFilter,
+    NameSlugSearchFilterSet,
+    NaturalKeyOrPKMultipleChoiceFilter,
+    RelatedMembershipBooleanFilter,
+    SearchFilter,
+    TreeNodeMultipleChoiceFilter,
+)
 from nautobot.dcim.choices import (
     CableTypeChoices,
     ConsolePortTypeChoices,
@@ -58,31 +71,13 @@ from nautobot.dcim.models import (
     Site,
     VirtualChassis,
 )
-from nautobot.extras.filters import (
-    NautobotFilterSet,
-    LocalContextModelFilterSetMixin,
-    StatusModelFilterSetMixin,
-)
+from nautobot.extras.filters import LocalContextModelFilterSetMixin, NautobotFilterSet, StatusModelFilterSetMixin
 from nautobot.extras.models import SecretsGroup
 from nautobot.extras.utils import FeatureQuery
 from nautobot.ipam.models import VLAN, VLANGroup
 from nautobot.tenancy.filters import TenancyModelFilterSetMixin
 from nautobot.tenancy.models import Tenant
-from nautobot.utilities.deprecation import class_deprecated_in_favor_of
-from nautobot.utilities.filters import (
-    BaseFilterSet,
-    ContentTypeMultipleChoiceFilter,
-    MultiValueCharFilter,
-    MultiValueMACAddressFilter,
-    MultiValueUUIDFilter,
-    NameSlugSearchFilterSet,
-    NaturalKeyOrPKMultipleChoiceFilter,
-    RelatedMembershipBooleanFilter,
-    SearchFilter,
-    TreeNodeMultipleChoiceFilter,
-)
 from nautobot.virtualization.models import Cluster
-
 
 __all__ = (
     "CableFilterSet",

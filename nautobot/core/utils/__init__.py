@@ -26,8 +26,7 @@ from django_filters import BooleanFilter, DateFilter, DateTimeFilter, NumberFilt
 from django_filters.utils import verbose_lookup_expr
 from taggit.managers import _TaggableManager
 
-from nautobot.dcim import choices
-from nautobot.utilities import constants, exceptions
+from nautobot.core import constants, exceptions
 
 # Check if field name contains a lookup expr
 # e.g `name__ic` has lookup expr `ic (icontains)` while `name` has no lookup expr
@@ -306,6 +305,9 @@ def to_meters(length, unit):
     """
     Convert the given length to meters.
     """
+    # Avoid circular import
+    from nautobot.dcim import choices
+
     length = int(length)
     if length < 0:
         raise ValueError("Length must be a positive integer")
@@ -792,6 +794,7 @@ def get_filterset_parameter_form_field(model, parameter):
     Return the relevant form field instance for a filterset parameter e.g DynamicModelMultipleChoiceField, forms.IntegerField e.t.c
     """
     # Avoid circular import
+    from nautobot.core.filters import ContentTypeMultipleChoiceFilter
     from nautobot.core.forms import (
         BOOLEAN_CHOICES,
         DatePicker,
@@ -802,7 +805,7 @@ def get_filterset_parameter_form_field(model, parameter):
         StaticSelect2Multiple,
         TimePicker,
     )
-    from nautobot.extras.filters import ContentTypeMultipleChoiceFilter, StatusFilter
+    from nautobot.extras.filters import StatusFilter
     from nautobot.extras.models import Status, Tag
     from nautobot.extras.utils import ChangeLoggedModelsQuery, TaggableClassesQuery
 
