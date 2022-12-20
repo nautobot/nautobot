@@ -2,18 +2,15 @@ from django import forms as django_forms
 from django.db.models import Q
 from django.http import QueryDict
 from django.test import TestCase
-
-from nautobot.core import utils
 from example_plugin.models import ExampleModel
 
-from nautobot.core import settings_funcs
+from nautobot.core import exceptions, forms, settings_funcs, utils
 from nautobot.dcim import filters
 from nautobot.dcim import forms as dcim_forms
 from nautobot.dcim import models as dcim_models
 from nautobot.dcim import tables
 from nautobot.extras import models as extras_models
 from nautobot.extras import utils as extras_utils
-from nautobot.utilities import exceptions, forms
 
 
 class DictToFilterParamsTest(TestCase):

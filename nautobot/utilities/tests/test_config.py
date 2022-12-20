@@ -3,7 +3,7 @@
 from constance.test import override_config
 from django.test import TestCase, override_settings
 
-from nautobot.utilities import config
+from nautobot.core.utils import config
 
 
 class GetSettingsOrConfigTestCase(TestCase):

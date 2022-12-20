@@ -2,7 +2,7 @@ from unittest import mock
 
 from django.test import TestCase
 
-from nautobot.utilities.git import GitRepo, convert_git_diff_log_to_list
+from nautobot.core.git import GitRepo, convert_git_diff_log_to_list
 
 
 @mock.patch("nautobot.utilities.git.Repo")

@@ -4,18 +4,9 @@ from django.contrib.auth import get_user_model
 from django.contrib.contenttypes.models import ContentType
 from django.db.models import Q
 
+from nautobot.core.choices import ColorChoices
 from nautobot.dcim.filters import DeviceFilterSet
-from nautobot.dcim.models import (
-    Device,
-    DeviceRole,
-    DeviceType,
-    Interface,
-    Manufacturer,
-    Platform,
-    Rack,
-    Region,
-    Site,
-)
+from nautobot.dcim.models import Device, DeviceRole, DeviceType, Interface, Manufacturer, Platform, Rack, Region, Site
 from nautobot.extras.choices import (
     ObjectChangeActionChoices,
     SecretsGroupAccessTypeChoices,
@@ -67,9 +58,8 @@ from nautobot.extras.models import (
     Webhook,
 )
 from nautobot.ipam.filters import VLANFilterSet
-from nautobot.ipam.models import IPAddress, VLAN
+from nautobot.ipam.models import VLAN, IPAddress
 from nautobot.tenancy.models import Tenant, TenantGroup
-from nautobot.utilities.choices import ColorChoices
 from nautobot.utilities.testing import FilterTestCases
 from nautobot.virtualization.models import Cluster, ClusterGroup, ClusterType
 

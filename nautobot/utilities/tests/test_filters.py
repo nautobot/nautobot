@@ -1,13 +1,13 @@
+import django_filters
 from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.db import models as django_models
 from django.shortcuts import reverse
 from django.test import TestCase
-import django_filters
 from mptt.fields import TreeForeignKey
 from taggit.managers import TaggableManager
 
-from nautobot.core import utils
+from nautobot.core import filters, utils
 from nautobot.dcim import choices as dcim_choices
 from nautobot.dcim import fields as dcim_fields
 from nautobot.dcim import filters as dcim_filters
@@ -15,7 +15,7 @@ from nautobot.dcim import models as dcim_models
 from nautobot.extras import models as extras_models
 from nautobot.ipam import factory as ipam_factory
 from nautobot.ipam import models as ipam_models
-from nautobot.utilities import filters, testing
+from nautobot.utilities import testing
 
 
 class TreeNodeMultipleChoiceFilterTest(TestCase):

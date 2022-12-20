@@ -1,6 +1,6 @@
 from django.test.utils import override_settings
 
-from nautobot.utilities.choices import ButtonActionColorChoices, ButtonActionIconChoices
+from nautobot.core.choices import ButtonActionColorChoices, ButtonActionIconChoices
 from nautobot.utilities.testing.integration import SeleniumTestCase
 
 

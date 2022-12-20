@@ -1,6 +1,6 @@
 from django.test import TestCase
 
-from nautobot.utilities import ordering
+from nautobot.core import ordering
 
 
 class NaturalizationTestCase(TestCase):

@@ -1,15 +1,7 @@
 from django.contrib.contenttypes.models import ContentType
 from django.db.models import Q
 
-from nautobot.dcim.models import (
-    Device,
-    DeviceRole,
-    DeviceType,
-    Interface,
-    Manufacturer,
-    Region,
-    Site,
-)
+from nautobot.dcim.models import Device, DeviceRole, DeviceType, Interface, Manufacturer, Region, Site
 from nautobot.extras.models import Status
 from nautobot.ipam.choices import IPAddressRoleChoices, ServiceProtocolChoices
 from nautobot.ipam.factory import PrefixFactory
@@ -25,26 +17,10 @@ from nautobot.ipam.filters import (
     VLANGroupFilterSet,
     VRFFilterSet,
 )
-from nautobot.ipam.models import (
-    Aggregate,
-    IPAddress,
-    Prefix,
-    RIR,
-    Role,
-    RouteTarget,
-    Service,
-    VLAN,
-    VLANGroup,
-    VRF,
-)
+from nautobot.ipam.models import RIR, VLAN, VRF, Aggregate, IPAddress, Prefix, Role, RouteTarget, Service, VLANGroup
 from nautobot.tenancy.models import Tenant
 from nautobot.utilities.testing import FilterTestCases
-from nautobot.virtualization.models import (
-    Cluster,
-    ClusterType,
-    VirtualMachine,
-    VMInterface,
-)
+from nautobot.virtualization.models import Cluster, ClusterType, VirtualMachine, VMInterface
 
 
 class VRFTestCase(FilterTestCases.FilterTestCase, FilterTestCases.TenancyFilterTestCaseMixin):

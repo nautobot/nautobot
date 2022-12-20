@@ -1,6 +1,6 @@
 from django.test import TestCase
 
-from nautobot.utilities import choices
+from nautobot.core import choices
 
 
 class ExampleChoices(choices.ChoiceSet):

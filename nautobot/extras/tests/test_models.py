@@ -1,8 +1,8 @@
+import datetime
 import os
 import tempfile
-import datetime
-from unittest import mock
 import uuid
+from unittest import mock
 
 from django.conf import settings
 from django.contrib.contenttypes.models import ContentType
@@ -11,19 +11,12 @@ from django.core.files.uploadedfile import SimpleUploadedFile
 from django.db.models import ProtectedError
 from django.db.utils import IntegrityError
 
-from nautobot.dcim.models import (
-    Device,
-    DeviceRole,
-    DeviceType,
-    Location,
-    LocationType,
-    Manufacturer,
-    Platform,
-    Site,
-)
-from nautobot.extras.constants import JOB_OVERRIDABLE_FIELDS
+from nautobot.core.choices import ColorChoices
+from nautobot.dcim.models import Device, DeviceRole, DeviceType, Location, LocationType, Manufacturer, Platform, Site
 from nautobot.extras.choices import LogLevelChoices, SecretsGroupAccessTypeChoices, SecretsGroupSecretTypeChoices
-from nautobot.extras.jobs import get_job, Job as JobClass
+from nautobot.extras.constants import JOB_OVERRIDABLE_FIELDS
+from nautobot.extras.jobs import Job as JobClass
+from nautobot.extras.jobs import get_job
 from nautobot.extras.models import (
     ComputedField,
     ConfigContext,
@@ -32,7 +25,9 @@ from nautobot.extras.models import (
     FileAttachment,
     FileProxy,
     GitRepository,
-    Job as JobModel,
+)
+from nautobot.extras.models import Job as JobModel
+from nautobot.extras.models import (
     JobLogEntry,
     JobResult,
     Secret,
@@ -42,18 +37,12 @@ from nautobot.extras.models import (
     Tag,
     Webhook,
 )
-from nautobot.extras.utils import get_job_content_type
 from nautobot.extras.secrets.exceptions import SecretParametersError, SecretProviderError, SecretValueNotFoundError
+from nautobot.extras.utils import get_job_content_type
 from nautobot.ipam.models import IPAddress
 from nautobot.tenancy.models import Tenant, TenantGroup
-from nautobot.utilities.choices import ColorChoices
 from nautobot.utilities.testing import TestCase, TransactionTestCase
-from nautobot.virtualization.models import (
-    Cluster,
-    ClusterGroup,
-    ClusterType,
-    VirtualMachine,
-)
+from nautobot.virtualization.models import Cluster, ClusterGroup, ClusterType, VirtualMachine
 
 
 class ComputedFieldTest(TestCase):
