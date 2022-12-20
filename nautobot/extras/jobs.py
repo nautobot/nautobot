@@ -1,15 +1,16 @@
 """Jobs functionality - consolidates and replaces legacy "custom scripts" and "reports" features."""
-from collections import OrderedDict
 import inspect
 import json
 import logging
 import os
 import shutil
-from textwrap import dedent
 import traceback
 import warnings
+from collections import OrderedDict
+from textwrap import dedent
 
-
+import netaddr
+import yaml
 from db_file_storage.form_widgets import DBClearableFileInput
 from django import forms
 from django.conf import settings
@@ -24,31 +25,23 @@ from django.forms import ValidationError
 from django.test.client import RequestFactory
 from django.utils import timezone
 from django.utils.functional import classproperty
-import netaddr
-import yaml
-
-
-from .choices import JobResultStatusChoices, LogLevelChoices, ObjectChangeActionChoices, ObjectChangeEventContextChoices
-from .context_managers import change_logging, JobChangeContext, JobHookChangeContext
-from .datasources.git import ensure_git_repository
-from .forms import JobForm
-from .models import FileProxy, GitRepository, Job as JobModel, JobHook, ObjectChange, ScheduledJob
-from .registry import registry
-from .utils import ChangeLoggedModelsQuery, get_job_content_type, jobs_in_directory, task_queues_as_choices
 
 from nautobot.core.celery import nautobot_task
+from nautobot.core.forms import DynamicModelChoiceField, DynamicModelMultipleChoiceField
 from nautobot.core.utils import copy_safe_request
 from nautobot.ipam.formfields import IPAddressFormField, IPNetworkFormField
-from nautobot.ipam.validators import (
-    MaxPrefixLengthValidator,
-    MinPrefixLengthValidator,
-    prefix_validator,
-)
+from nautobot.ipam.validators import MaxPrefixLengthValidator, MinPrefixLengthValidator, prefix_validator
 from nautobot.utilities.exceptions import AbortTransaction
-from nautobot.utilities.forms import (
-    DynamicModelChoiceField,
-    DynamicModelMultipleChoiceField,
-)
+
+from .choices import JobResultStatusChoices, LogLevelChoices, ObjectChangeActionChoices, ObjectChangeEventContextChoices
+from .context_managers import JobChangeContext, JobHookChangeContext, change_logging
+from .datasources.git import ensure_git_repository
+from .forms import JobForm
+from .models import FileProxy, GitRepository
+from .models import Job as JobModel
+from .models import JobHook, ObjectChange, ScheduledJob
+from .registry import registry
+from .utils import ChangeLoggedModelsQuery, get_job_content_type, jobs_in_directory, task_queues_as_choices
 
 User = get_user_model()
 
@@ -883,8 +876,8 @@ def is_job(obj):
     """
     Returns True if the given object is a Job subclass.
     """
-    from .scripts import Script, BaseScript
     from .reports import Report
+    from .scripts import BaseScript, Script
 
     try:
         return issubclass(obj, Job) and obj not in [Job, Script, BaseScript, Report, JobHookReceiver]

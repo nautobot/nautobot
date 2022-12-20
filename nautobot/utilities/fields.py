@@ -4,7 +4,8 @@ from django.core import exceptions
 from django.core.validators import RegexValidator
 from django.db import models
 
-from nautobot.utilities import forms, ordering
+from nautobot.core import forms
+from nautobot.utilities import ordering
 
 ColorValidator = RegexValidator(
     regex="^[0-9a-f]{6}$",

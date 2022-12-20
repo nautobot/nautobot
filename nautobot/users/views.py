@@ -1,12 +1,10 @@
 import logging
 
 from django.contrib import messages
-from django.contrib.auth import (
-    BACKEND_SESSION_KEY,
-    login as auth_login,
-    logout as auth_logout,
-    update_session_auth_hash,
-)
+from django.contrib.auth import BACKEND_SESSION_KEY
+from django.contrib.auth import login as auth_login
+from django.contrib.auth import logout as auth_logout
+from django.contrib.auth import update_session_auth_hash
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.http import HttpResponseForbidden, HttpResponseRedirect
 from django.shortcuts import get_object_or_404, redirect, render
@@ -16,10 +14,10 @@ from django.utils.http import is_safe_url
 from django.views.decorators.debug import sensitive_post_parameters
 from django.views.generic import View
 
-from nautobot.utilities.forms import ConfirmationForm
+from nautobot.core.forms import ConfirmationForm
+
 from .forms import LoginForm, PasswordChangeForm, TokenForm
 from .models import Token
-
 
 #
 # Login/logout

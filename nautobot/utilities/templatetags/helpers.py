@@ -2,6 +2,7 @@ import datetime
 import json
 import re
 
+import yaml
 from django import template
 from django.conf import settings
 from django.contrib.staticfiles.finders import find
@@ -11,10 +12,9 @@ from django.utils.html import format_html, strip_tags
 from django.utils.safestring import mark_safe
 from django_jinja import library
 from markdown import markdown
-import yaml
 
-from nautobot.core import utils
-from nautobot.utilities import config, forms
+from nautobot.core import forms, utils
+from nautobot.utilities import config
 
 HTML_TRUE = '<span class="text-success"><i class="mdi mdi-check-bold" title="Yes"></i></span>'
 HTML_FALSE = '<span class="text-danger"><i class="mdi mdi-close-thick" title="No"></i></span>'

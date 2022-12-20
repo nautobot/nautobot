@@ -792,10 +792,7 @@ def get_filterset_parameter_form_field(model, parameter):
     Return the relevant form field instance for a filterset parameter e.g DynamicModelMultipleChoiceField, forms.IntegerField e.t.c
     """
     # Avoid circular import
-    from nautobot.extras.filters import ContentTypeMultipleChoiceFilter, StatusFilter
-    from nautobot.extras.models import Status, Tag
-    from nautobot.extras.utils import ChangeLoggedModelsQuery, TaggableClassesQuery
-    from nautobot.utilities.forms import (
+    from nautobot.core.forms import (
         BOOLEAN_CHOICES,
         DatePicker,
         DateTimePicker,
@@ -805,6 +802,9 @@ def get_filterset_parameter_form_field(model, parameter):
         StaticSelect2Multiple,
         TimePicker,
     )
+    from nautobot.extras.filters import ContentTypeMultipleChoiceFilter, StatusFilter
+    from nautobot.extras.models import Status, Tag
+    from nautobot.extras.utils import ChangeLoggedModelsQuery, TaggableClassesQuery
 
     filterset_class = get_filterset_for_model(model)
     field = get_filterset_field(filterset_class, parameter)

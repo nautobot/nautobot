@@ -57,13 +57,13 @@ New dependencies can be added to the project via the `poetry add` command. This 
 
 * The combination of `nautobot.utilities.filters.BaseFilterSet`, `nautobot.extras.filters.CreatedUpdatedModelFilterSetMixin`, `nautobot.extras.filters.CustomFieldModelFilterSetMixin`, and `nautobot.extras.filters.RelationshipModelFilterSetMixin` is such a common use case throughout the code base that they have a helper class which combines all of these at `nautobot.extras.NautobotFilterSet`. Use this helper class if you need the functionality from these classes.
 
-* The combination of `nautobot.utilities.forms.BootstrapMixin`, `nautobot.extras.forms.CustomFieldModelFormMixin`, `nautobot.extras.forms.RelationshipModelFormMixin` and `nautobot.extras.forms.NoteModelFormMixin` is such a common use case throughout the code base that they have a helper class which combines all of these at `nautobot.extras.forms.NautobotModelForm`. Use this helper class if you need the functionality from these classes.
+* The combination of `nautobot.core.forms.BootstrapMixin`, `nautobot.extras.forms.CustomFieldModelFormMixin`, `nautobot.extras.forms.RelationshipModelFormMixin` and `nautobot.extras.forms.NoteModelFormMixin` is such a common use case throughout the code base that they have a helper class which combines all of these at `nautobot.extras.forms.NautobotModelForm`. Use this helper class if you need the functionality from these classes.
 
 +++ 1.4.0
 
-    * Similarly, for filter forms, `nautobot.extras.forms.NautobotFilterForm` combines `nautobot.utilities.forms.BootstrapMixin`, `nautobot.extras.forms.CustomFieldModelFilterFormMixin`, and `nautobot.extras.forms.RelationshipModelFilterFormMixin`, and should be used where appropriate.
+    * Similarly, for filter forms, `nautobot.extras.forms.NautobotFilterForm` combines `nautobot.core.forms.BootstrapMixin`, `nautobot.extras.forms.CustomFieldModelFilterFormMixin`, and `nautobot.extras.forms.RelationshipModelFilterFormMixin`, and should be used where appropriate.
 
-    * Similarly, for bulk-edit forms, `nautobot.extras.forms.NautobotBulkEditForm` combines `nautobot.utilities.forms.BulkEditForm` and `nautobot.utilities.forms.BootstrapMixin` with `nautobot.extras.forms.CustomFieldModelBulkEditFormMixin`, `nautobot.extras.forms.RelationshipModelBulkEditFormMixin` and `nautobot.extras.forms.NoteModelBulkEditFormMixin`, and should be used where appropriate.
+    * Similarly, for bulk-edit forms, `nautobot.extras.forms.NautobotBulkEditForm` combines `nautobot.core.forms.BulkEditForm` and `nautobot.core.forms.BootstrapMixin` with `nautobot.extras.forms.CustomFieldModelBulkEditFormMixin`, `nautobot.extras.forms.RelationshipModelBulkEditFormMixin` and `nautobot.extras.forms.NoteModelBulkEditFormMixin`, and should be used where appropriate.
 
     * API serializers for most models should inherit from `nautobot.extras.api.serializers.NautobotModelSerializer` and any appropriate mixins. Only use more abstract base classes such as ValidatedModelSerializer where absolutely required.
 
@@ -89,12 +89,12 @@ Nautobot follows the [PEP8 style guide's](https://peps.python.org/pep-0008/#impo
 !!! example
 
     ```py
-    from abc import ABC
     import logging
+    from abc import ABC
     from uuid import UUID
 
-    from django.db.models import CharField, DecimalField, TextField
     import django_filters
+    from django.db.models import CharField, DecimalField, TextField
 
     from nautobot.dcim import models as dcim_models
     from nautobot.extras import models
@@ -110,6 +110,7 @@ Wildcard imports (`from foo import *`) should only be used in `__init__.py` file
     from nautobot.dcim.models.cables import *
     from nautobot.dcim.models.device_component_templates import *
     from nautobot.dcim.models.device_components import *
+
     # etc ...
     ```
 
@@ -128,7 +129,6 @@ Whenever possible, imports from the `nautobot` package should use module level i
     ```py
     # module import
     from nautobot.utilities import xyz
-
     # name import (do not use)
     from nautobot.utilities.xyz import SomeClass, some_function
     ```
@@ -141,11 +141,12 @@ Always use absolute imports instead of relative imports.
 
     ```py
     # absolute import
+    # relative import (do not use)
+    import constants
+
     from nautobot.dcim import constants
     from nautobot.dcim.models import Device
 
-    # relative import (do not use)
-    import constants
     from .models import Device
     ```
 
@@ -158,7 +159,6 @@ To import modules from other apps under the `nautobot` namespace, use the conven
     ```py title="nautobot/extras/models.py"
     # inter-app import
     from nautobot.dcim import models as dcim_models
-
     # intra-app import
     from nautobot.extras import constants
     ```
@@ -171,14 +171,13 @@ When using external libraries you may need to import multiple different modules 
 
     ```py
     # from within the current app
-    from nautobot.extras import models
-
-    # from a different Nautobot app
-    from nautobot.dcim import models as dcim_models
-
     # other libraries
     from django.db import models as django_models
     from mptt import models as mptt_models
+
+    # from a different Nautobot app
+    from nautobot.dcim import models as dcim_models
+    from nautobot.extras import models
     ```
 
 #### Convenience Imports

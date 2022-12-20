@@ -1,30 +1,20 @@
 import logging
 import re
 from collections import OrderedDict
-from datetime import datetime, date
+from datetime import date, datetime
 
 from django import forms
-from django.db import transaction
 from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ObjectDoesNotExist
 from django.core.serializers.json import DjangoJSONEncoder
 from django.core.validators import RegexValidator, ValidationError
-from django.db import models
+from django.db import models, transaction
 from django.forms.widgets import TextInput
 from django.urls import reverse
 from django.utils.safestring import mark_safe
 
 from nautobot.core.fields import AutoSlugField
-from nautobot.core.models import BaseModel
-from nautobot.core.querysets import RestrictedQuerySet
-from nautobot.core.utils import render_jinja2, slugify_dashes_to_underscores
-from nautobot.core.validators import validate_regex
-from nautobot.extras.choices import CustomFieldFilterLogicChoices, CustomFieldTypeChoices
-from nautobot.extras.models import ChangeLoggedModel
-from nautobot.extras.models.mixins import NotesMixin
-from nautobot.extras.tasks import delete_custom_field_data, update_custom_field_choice_data
-from nautobot.extras.utils import FeatureQuery, extras_features
-from nautobot.utilities.forms import (
+from nautobot.core.forms import (
     CSVChoiceField,
     CSVMultipleChoiceField,
     DatePicker,
@@ -35,6 +25,15 @@ from nautobot.utilities.forms import (
     StaticSelect2Multiple,
     add_blank_choice,
 )
+from nautobot.core.models import BaseModel
+from nautobot.core.querysets import RestrictedQuerySet
+from nautobot.core.utils import render_jinja2, slugify_dashes_to_underscores
+from nautobot.core.validators import validate_regex
+from nautobot.extras.choices import CustomFieldFilterLogicChoices, CustomFieldTypeChoices
+from nautobot.extras.models import ChangeLoggedModel
+from nautobot.extras.models.mixins import NotesMixin
+from nautobot.extras.tasks import delete_custom_field_data, update_custom_field_choice_data
+from nautobot.extras.utils import FeatureQuery, extras_features
 from nautobot.utilities.templatetags.helpers import render_markdown
 
 logger = logging.getLogger(__name__)

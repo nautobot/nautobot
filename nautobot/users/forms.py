@@ -1,10 +1,9 @@
 from django import forms
-from django.contrib.auth.forms import (
-    AuthenticationForm,
-    PasswordChangeForm as DjangoPasswordChangeForm,
-)
+from django.contrib.auth.forms import AuthenticationForm
+from django.contrib.auth.forms import PasswordChangeForm as DjangoPasswordChangeForm
 
-from nautobot.utilities.forms import BootstrapMixin, DateTimePicker
+from nautobot.core.forms import BootstrapMixin, DateTimePicker
+
 from .models import Token
 
 

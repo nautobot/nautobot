@@ -7,19 +7,18 @@ from django.http import Http404
 from django.shortcuts import render
 from django.urls.exceptions import NoReverseMatch
 from django.views.generic import View
+from django_tables2 import RequestConfig
 from drf_spectacular.utils import extend_schema
 from rest_framework import permissions
 from rest_framework.response import Response
 from rest_framework.reverse import reverse
 from rest_framework.views import APIView
 
-from django_tables2 import RequestConfig
-
 from nautobot.core.api.views import NautobotAPIVersionMixin
-from nautobot.utilities.forms import TableConfigForm
-from nautobot.utilities.paginator import EnhancedPaginator, get_paginate_count
-from nautobot.extras.plugins.tables import InstalledPluginsTable
+from nautobot.core.forms import TableConfigForm
 from nautobot.core.mixins import AdminRequiredMixin
+from nautobot.extras.plugins.tables import InstalledPluginsTable
+from nautobot.utilities.paginator import EnhancedPaginator, get_paginate_count
 
 
 class InstalledPluginsView(AdminRequiredMixin, View):

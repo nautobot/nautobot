@@ -1,46 +1,34 @@
 import logging
 
 from django.contrib import messages
-from django.contrib.contenttypes.models import ContentType
 from django.contrib.auth.mixins import AccessMixin
-from django.core.exceptions import (
-    FieldDoesNotExist,
-    ObjectDoesNotExist,
-    ValidationError,
-)
+from django.contrib.contenttypes.models import ContentType
+from django.core.exceptions import FieldDoesNotExist, ObjectDoesNotExist, ValidationError
 from django.db import transaction
 from django.db.models import ManyToManyField, ProtectedError
 from django.forms import Form, ModelMultipleChoiceField, MultipleHiddenInput, Textarea
 from django.http import HttpResponse
 from django.shortcuts import get_object_or_404, redirect
-from django.template.loader import select_template, TemplateDoesNotExist
-from django.utils.http import is_safe_url
+from django.template.loader import TemplateDoesNotExist, select_template
 from django.utils.html import escape
+from django.utils.http import is_safe_url
 from django.utils.safestring import mark_safe
 from django.views.generic.edit import FormView
-
-from rest_framework import mixins, exceptions
+from drf_spectacular.utils import extend_schema
+from rest_framework import exceptions, mixins
 from rest_framework.parsers import FormParser, MultiPartParser
 from rest_framework.response import Response
 from rest_framework.viewsets import GenericViewSet
 
-from drf_spectacular.utils import extend_schema
-
 from nautobot.core.api.views import BulkCreateModelMixin, BulkDestroyModelMixin, BulkUpdateModelMixin
-from nautobot.extras.models import CustomField, ExportTemplate
-from nautobot.extras.forms import NoteForm
-from nautobot.extras.tables import ObjectChangeTable, NoteTable
-from nautobot.utilities.error_handlers import handle_protectederror
-from nautobot.utilities.forms import (
-    BootstrapMixin,
-    ConfirmationForm,
-    CSVDataField,
-    CSVFileField,
-    restrict_form_fields,
-)
-from nautobot.core.views.renderers import NautobotHTMLRenderer
+from nautobot.core.forms import BootstrapMixin, ConfirmationForm, CSVDataField, CSVFileField, restrict_form_fields
 from nautobot.core.mixins import GetReturnURLMixin
 from nautobot.core.utils import csv_format, prepare_cloned_fields
+from nautobot.core.views.renderers import NautobotHTMLRenderer
+from nautobot.extras.forms import NoteForm
+from nautobot.extras.models import CustomField, ExportTemplate
+from nautobot.extras.tables import NoteTable, ObjectChangeTable
+from nautobot.utilities.error_handlers import handle_protectederror
 
 PERMISSIONS_ACTION_MAP = {
     "list": "view",

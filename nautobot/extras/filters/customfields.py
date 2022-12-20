@@ -1,15 +1,10 @@
+import django_filters
 from django.db.models import Q
 from django.forms import IntegerField
-import django_filters
 
+from nautobot.core.forms import NullableDateField
 from nautobot.extras.choices import CustomFieldFilterLogicChoices, CustomFieldTypeChoices
-from nautobot.utilities.filters import (
-    MultiValueCharFilter,
-    MultiValueDateFilter,
-    MultiValueNumberFilter,
-)
-from nautobot.utilities.forms import NullableDateField
-
+from nautobot.utilities.filters import MultiValueCharFilter, MultiValueDateFilter, MultiValueNumberFilter
 
 EXACT_FILTER_TYPES = (
     CustomFieldTypeChoices.TYPE_BOOLEAN,

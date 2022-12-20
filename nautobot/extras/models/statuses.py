@@ -5,17 +5,17 @@ from django.db import models
 from django.urls import reverse
 from django.utils.encoding import force_str
 from django.utils.hashable import make_hashable
-from nautobot.extras.models.mixins import NotesMixin
 
-from nautobot.extras.utils import extras_features, FeatureQuery
-from nautobot.extras.models import ChangeLoggedModel
-from nautobot.extras.models.customfields import CustomFieldModel
-from nautobot.extras.models.relationships import RelationshipModel
 from nautobot.core.fields import AutoSlugField
+from nautobot.core.forms import DynamicModelChoiceField
 from nautobot.core.models import BaseModel
 from nautobot.core.querysets import RestrictedQuerySet
+from nautobot.extras.models import ChangeLoggedModel
+from nautobot.extras.models.customfields import CustomFieldModel
+from nautobot.extras.models.mixins import NotesMixin
+from nautobot.extras.models.relationships import RelationshipModel
+from nautobot.extras.utils import FeatureQuery, extras_features
 from nautobot.utilities.choices import ColorChoices
-from nautobot.utilities.forms import DynamicModelChoiceField
 from nautobot.utilities.fields import ColorField
 
 

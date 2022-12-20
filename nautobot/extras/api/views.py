@@ -1,4 +1,5 @@
 from datetime import timedelta
+
 from django.conf import settings
 from django.contrib.contenttypes.models import ContentType
 from django.forms import ValidationError as FormsValidationError
@@ -6,38 +7,40 @@ from django.http import Http404
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
 from drf_spectacular.types import OpenApiTypes
-from drf_spectacular.utils import extend_schema, extend_schema_view, OpenApiParameter
+from drf_spectacular.utils import OpenApiParameter, extend_schema, extend_schema_view
 from graphene_django.views import GraphQLView
 from graphql import GraphQLError
-from rest_framework import status
+from rest_framework import mixins, status, viewsets
 from rest_framework.decorators import action
 from rest_framework.exceptions import MethodNotAllowed, PermissionDenied, ValidationError
 from rest_framework.parsers import JSONParser, MultiPartParser
 from rest_framework.response import Response
 from rest_framework.routers import APIRootView
-from rest_framework import mixins, viewsets
 
 from nautobot.core.api.authentication import TokenPermissions
 from nautobot.core.api.filter_backends import NautobotFilterBackend
 from nautobot.core.api.metadata import ContentTypeMetadata, StatusFieldMetadata
-from nautobot.core.api.views import (
-    BulkDestroyModelMixin,
-    BulkUpdateModelMixin,
-    ModelViewSet,
-    ReadOnlyModelViewSet,
-)
+from nautobot.core.api.views import BulkDestroyModelMixin, BulkUpdateModelMixin, ModelViewSet, ReadOnlyModelViewSet
 from nautobot.core.graphql import execute_saved_query
-from nautobot.core.utils import SerializerForAPIVersions, copy_safe_request, count_related, versioned_serializer_selector
+from nautobot.core.utils import (
+    SerializerForAPIVersions,
+    copy_safe_request,
+    count_related,
+    versioned_serializer_selector,
+)
 from nautobot.extras import filters
 from nautobot.extras.choices import JobExecutionType, JobResultStatusChoices
 from nautobot.extras.datasources import enqueue_pull_git_repository_and_refresh_data
+from nautobot.extras.jobs import run_job
 from nautobot.extras.models import (
     ComputedField,
     ConfigContext,
     ConfigContextSchema,
+    CustomField,
+    CustomFieldChoice,
+    CustomLink,
     DynamicGroup,
     DynamicGroupMembership,
-    CustomLink,
     ExportTemplate,
     GitRepository,
     GraphQLQuery,
@@ -59,11 +62,10 @@ from nautobot.extras.models import (
     TaggedItem,
     Webhook,
 )
-from nautobot.extras.models import CustomField, CustomFieldChoice
-from nautobot.extras.jobs import run_job
 from nautobot.extras.utils import get_job_content_type, get_worker_count
-from nautobot.utilities.exceptions import CeleryWorkerNotRunningException
 from nautobot.utilities.api import get_serializer_for_model
+from nautobot.utilities.exceptions import CeleryWorkerNotRunningException
+
 from . import nested_serializers, serializers
 
 

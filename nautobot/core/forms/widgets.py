@@ -6,8 +6,8 @@ from django import forms
 from django.forms.models import ModelChoiceIterator
 from django.urls import get_script_prefix
 
+from nautobot.core.forms import utils
 from nautobot.utilities import choices
-from nautobot.utilities.forms import utils
 
 __all__ = (
     "APISelect",

@@ -1,8 +1,8 @@
 from django import forms
 from django.contrib.contenttypes.models import ContentType
 
-from nautobot.dcim.models import Region, Site, Location
-from nautobot.utilities.forms import CSVModelChoiceField, DynamicModelChoiceField, DynamicModelMultipleChoiceField
+from nautobot.core.forms import CSVModelChoiceField, DynamicModelChoiceField, DynamicModelMultipleChoiceField
+from nautobot.dcim.models import Location, Region, Site
 
 
 class LocatableModelFormMixin(forms.Form):

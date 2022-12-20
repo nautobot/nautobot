@@ -18,12 +18,55 @@ __all__ = (
     "ConfirmationForm",
     "CSVModelForm",
     "DynamicFilterForm",
+    "DynamicFilterFormSet",
     "ImportForm",
     "PrefixFieldMixin",
     "ReturnURLForm",
+    "SearchForm",
     "TableConfigForm",
 )
 
+OBJ_TYPE_CHOICES = (
+    ("", "All Objects"),
+    (
+        "Circuits",
+        (
+            ("provider", "Providers"),
+            ("circuit", "Circuits"),
+        ),
+    ),
+    (
+        "DCIM",
+        (
+            ("site", "Sites"),
+            ("rack", "Racks"),
+            ("rackgroup", "Rack Groups"),
+            ("devicetype", "Device types"),
+            ("device", "Devices"),
+            ("virtualchassis", "Virtual Chassis"),
+            ("cable", "Cables"),
+            ("powerfeed", "Power Feeds"),
+        ),
+    ),
+    (
+        "IPAM",
+        (
+            ("vrf", "VRFs"),
+            ("aggregate", "Aggregates"),
+            ("prefix", "Prefixes"),
+            ("ipaddress", "IP addresses"),
+            ("vlan", "VLANs"),
+        ),
+    ),
+    ("Tenancy", (("tenant", "Tenants"),)),
+    (
+        "Virtualization",
+        (
+            ("cluster", "Clusters"),
+            ("virtualmachine", "Virtual machines"),
+        ),
+    ),
+)
 
 logger = logging.getLogger(__name__)
 
@@ -264,7 +307,7 @@ class DynamicFilterForm(BootstrapMixin, forms.Form):
 
     def __init__(self, *args, filterset_class=None, **kwargs):
         super().__init__(*args, **kwargs)
-        from nautobot.utilities.forms import add_blank_choice  # Avoid circular import
+        from nautobot.core.forms import add_blank_choice  # Avoid circular import
 
         # cls.model is set at `dynamic_formset_factory()`
         self.filterset_class = filterset_class or getattr(self, "filterset_class", None)
@@ -347,3 +390,14 @@ def dynamic_formset_factory(filterset_class, data=None, **kwargs):
 
 
 DynamicFilterFormSet = dynamic_formset_factory
+
+
+class SearchForm(BootstrapMixin, forms.Form):
+    q = forms.CharField(label="Search")
+    obj_type = forms.ChoiceField(choices=OBJ_TYPE_CHOICES, required=False, label="Type")
+
+    def __init__(self, *args, q_placeholder=None, **kwargs):
+        super().__init__(*args, **kwargs)
+
+        if q_placeholder:
+            self.fields["q"].widget.attrs["placeholder"] = q_placeholder

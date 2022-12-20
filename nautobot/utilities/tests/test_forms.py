@@ -550,7 +550,7 @@ class AddressFieldMixinTest(TestCase):
 
     def test_address_initial(self):
         """Ensure initial kwargs for address is passed in."""
-        with mock.patch("nautobot.utilities.forms.forms.forms.ModelForm.__init__") as mock_init:
+        with mock.patch("nautobot.core.forms.forms.forms.ModelForm.__init__") as mock_init:
             ip_none = ipam_models.IPAddress()
             forms.AddressFieldMixin(initial=self.initial, instance=ip_none)
             mock_init.assert_called_with(initial=self.initial, instance=ip_none)
@@ -558,8 +558,8 @@ class AddressFieldMixinTest(TestCase):
     def test_address_instance(self):
         """Ensure override with computed field when initial kwargs for address is not passed in."""
 
-        # Mock the django.forms.ModelForm __init__ function used in nautobot.utilities.forms.forms
-        with mock.patch("nautobot.utilities.forms.forms.forms.ModelForm.__init__") as mock_init:
+        # Mock the django.forms.ModelForm __init__ function used in nautobot.core.forms.forms
+        with mock.patch("nautobot.core.forms.forms.forms.ModelForm.__init__") as mock_init:
             forms.AddressFieldMixin(instance=self.ip)
             mock_init.assert_called_with(initial=self.initial, instance=self.ip)
 
@@ -574,7 +574,7 @@ class PrefixFieldMixinTest(TestCase):
 
     def test_prefix_initial(self):
         """Ensure initial kwargs for prefix is passed through."""
-        with mock.patch("nautobot.utilities.forms.forms.forms.ModelForm.__init__") as mock_init:
+        with mock.patch("nautobot.core.forms.forms.forms.ModelForm.__init__") as mock_init:
             prefix_none = ipam_models.Prefix()
             forms.PrefixFieldMixin(initial=self.initial, instance=prefix_none)
             mock_init.assert_called_with(initial=self.initial, instance=prefix_none)
@@ -582,8 +582,8 @@ class PrefixFieldMixinTest(TestCase):
     def test_prefix_instance(self):
         """Ensure override with computed field when initial kwargs for prefix is not passed in."""
 
-        # Mock the django.forms.ModelForm __init__ function used in nautobot.utilities.forms.forms
-        with mock.patch("nautobot.utilities.forms.forms.forms.ModelForm.__init__") as mock_init:
+        # Mock the django.forms.ModelForm __init__ function used in nautobot.core.forms.forms
+        with mock.patch("nautobot.core.forms.forms.forms.ModelForm.__init__") as mock_init:
             forms.PrefixFieldMixin(instance=self.prefix)
             mock_init.assert_called_with(initial=self.initial, instance=self.prefix)
 

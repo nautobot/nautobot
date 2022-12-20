@@ -12,35 +12,10 @@ from netaddr.core import AddrFormatError
 from timezone_field import TimeZoneFormField
 
 from nautobot.circuits.models import Circuit, CircuitTermination, Provider
-from nautobot.dcim.form_mixins import (
-    LocatableModelBulkEditFormMixin,
-    LocatableModelCSVFormMixin,
-    LocatableModelFilterFormMixin,
-    LocatableModelFormMixin,
-)
-from nautobot.extras.forms import (
-    CustomFieldModelBulkEditFormMixin,
-    CustomFieldModelCSVForm,
-    NautobotBulkEditForm,
-    NautobotModelForm,
-    NautobotFilterForm,
-    LocalContextFilterForm,
-    LocalContextModelForm,
-    LocalContextModelBulkEditForm,
-    StatusModelBulkEditFormMixin,
-    StatusModelCSVFormMixin,
-    StatusModelFilterFormMixin,
-    TagsBulkEditFormMixin,
-)
-from nautobot.extras.models import SecretsGroup, Status
-from nautobot.ipam.constants import BGP_ASN_MAX, BGP_ASN_MIN
-from nautobot.ipam.models import IPAddress, VLAN
-from nautobot.tenancy.forms import TenancyFilterForm, TenancyForm
-from nautobot.tenancy.models import Tenant, TenantGroup
-from nautobot.utilities.forms import (
+from nautobot.core.forms import (
+    BOOLEAN_WITH_BLANK_CHOICES,
     APISelect,
     APISelectMultiple,
-    add_blank_choice,
     BootstrapMixin,
     BulkEditNullBooleanSelect,
     ColorSelect,
@@ -52,18 +27,44 @@ from nautobot.utilities.forms import (
     DynamicModelChoiceField,
     DynamicModelMultipleChoiceField,
     ExpandableNameField,
-    form_from_model,
     MultipleContentTypeField,
     NumericArrayField,
     SelectWithPK,
-    SmallTextarea,
     SlugField,
+    SmallTextarea,
     StaticSelect2,
     StaticSelect2Multiple,
     TagFilterField,
+    add_blank_choice,
+    form_from_model,
 )
-from nautobot.utilities.forms.constants import BOOLEAN_WITH_BLANK_CHOICES
+from nautobot.dcim.form_mixins import (
+    LocatableModelBulkEditFormMixin,
+    LocatableModelCSVFormMixin,
+    LocatableModelFilterFormMixin,
+    LocatableModelFormMixin,
+)
+from nautobot.extras.forms import (
+    CustomFieldModelBulkEditFormMixin,
+    CustomFieldModelCSVForm,
+    LocalContextFilterForm,
+    LocalContextModelBulkEditForm,
+    LocalContextModelForm,
+    NautobotBulkEditForm,
+    NautobotFilterForm,
+    NautobotModelForm,
+    StatusModelBulkEditFormMixin,
+    StatusModelCSVFormMixin,
+    StatusModelFilterFormMixin,
+    TagsBulkEditFormMixin,
+)
+from nautobot.extras.models import SecretsGroup, Status
+from nautobot.ipam.constants import BGP_ASN_MAX, BGP_ASN_MIN
+from nautobot.ipam.models import VLAN, IPAddress
+from nautobot.tenancy.forms import TenancyFilterForm, TenancyForm
+from nautobot.tenancy.models import Tenant, TenantGroup
 from nautobot.virtualization.models import Cluster, ClusterGroup
+
 from .choices import (
     CableLengthUnitChoices,
     CableTypeChoices,
@@ -92,27 +93,26 @@ from .constants import (
     REARPORT_POSITIONS_MAX,
     REARPORT_POSITIONS_MIN,
 )
-
 from .models import (
     Cable,
-    DeviceBay,
-    DeviceBayTemplate,
-    DeviceRedundancyGroup,
     ConsolePort,
     ConsolePortTemplate,
     ConsoleServerPort,
     ConsoleServerPortTemplate,
     Device,
+    DeviceBay,
+    DeviceBayTemplate,
+    DeviceRedundancyGroup,
     DeviceRole,
     DeviceType,
     FrontPort,
     FrontPortTemplate,
     Interface,
     InterfaceTemplate,
+    InventoryItem,
     Location,
     LocationType,
     Manufacturer,
-    InventoryItem,
     Platform,
     PowerFeed,
     PowerOutlet,

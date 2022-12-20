@@ -1,9 +1,8 @@
 from django import forms
+from example_plugin.models import AnotherExampleModel, ExampleModel
 
 from nautobot.apps.forms import BulkEditForm, CSVModelForm, NautobotModelForm
-from nautobot.utilities.forms import BootstrapMixin
-
-from example_plugin.models import AnotherExampleModel, ExampleModel
+from nautobot.core.forms import BootstrapMixin
 
 
 class ExamplePluginConfigForm(BootstrapMixin, forms.Form):

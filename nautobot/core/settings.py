@@ -3,11 +3,12 @@ import platform
 import re
 import sys
 
-from django.contrib.messages import constants as messages
 import django.forms
+from django.contrib.messages import constants as messages
 
 from nautobot import __version__
-from nautobot.core.settings_funcs import is_truthy, parse_redis_connection  # noqa: F401
+from nautobot.core.settings_funcs import is_truthy  # noqa: F401
+from nautobot.core.settings_funcs import parse_redis_connection
 
 #
 # Environment setup
@@ -523,7 +524,7 @@ CONSTANCE_IGNORE_ADMIN_VERSION_CHECK = True  # avoid potential errors in a multi
 
 CONSTANCE_ADDITIONAL_FIELDS = {
     "per_page_defaults_field": [
-        "nautobot.utilities.forms.fields.JSONArrayFormField",
+        "nautobot.core.forms.fields.JSONArrayFormField",
         {
             "widget": "django.forms.TextInput",
             "base_field": django.forms.IntegerField(min_value=1),

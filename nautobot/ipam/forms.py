@@ -1,27 +1,8 @@
 from django import forms
 from django.db.models import Q
 
-from nautobot.dcim.form_mixins import (
-    LocatableModelBulkEditFormMixin,
-    LocatableModelCSVFormMixin,
-    LocatableModelFilterFormMixin,
-    LocatableModelFormMixin,
-)
-from nautobot.dcim.models import Device, Interface, Rack, Region, Site
-from nautobot.extras.forms import (
-    CustomFieldModelCSVForm,
-    NautobotBulkEditForm,
-    NautobotModelForm,
-    NautobotFilterForm,
-    StatusModelBulkEditFormMixin,
-    StatusModelCSVFormMixin,
-    StatusModelFilterFormMixin,
-    TagsBulkEditFormMixin,
-)
-from nautobot.tenancy.forms import TenancyFilterForm, TenancyForm
-from nautobot.tenancy.models import Tenant
-from nautobot.utilities.forms import (
-    add_blank_choice,
+from nautobot.core.forms import (
+    BOOLEAN_WITH_BLANK_CHOICES,
     AddressFieldMixin,
     BootstrapMixin,
     BulkEditNullBooleanSelect,
@@ -38,30 +19,39 @@ from nautobot.utilities.forms import (
     StaticSelect2,
     StaticSelect2Multiple,
     TagFilterField,
+    add_blank_choice,
 )
-from nautobot.utilities.forms.constants import BOOLEAN_WITH_BLANK_CHOICES
+from nautobot.dcim.form_mixins import (
+    LocatableModelBulkEditFormMixin,
+    LocatableModelCSVFormMixin,
+    LocatableModelFilterFormMixin,
+    LocatableModelFormMixin,
+)
+from nautobot.dcim.models import Device, Interface, Rack, Region, Site
+from nautobot.extras.forms import (
+    CustomFieldModelCSVForm,
+    NautobotBulkEditForm,
+    NautobotFilterForm,
+    NautobotModelForm,
+    StatusModelBulkEditFormMixin,
+    StatusModelCSVFormMixin,
+    StatusModelFilterFormMixin,
+    TagsBulkEditFormMixin,
+)
+from nautobot.tenancy.forms import TenancyFilterForm, TenancyForm
+from nautobot.tenancy.models import Tenant
 from nautobot.virtualization.models import Cluster, VirtualMachine, VMInterface
+
 from .choices import IPAddressFamilyChoices, IPAddressRoleChoices, ServiceProtocolChoices
 from .constants import (
-    IPADDRESS_MASK_LENGTH_MIN,
     IPADDRESS_MASK_LENGTH_MAX,
+    IPADDRESS_MASK_LENGTH_MIN,
     PREFIX_LENGTH_MAX,
     PREFIX_LENGTH_MIN,
     SERVICE_PORT_MAX,
     SERVICE_PORT_MIN,
 )
-from .models import (
-    Aggregate,
-    IPAddress,
-    Prefix,
-    RIR,
-    Role,
-    RouteTarget,
-    Service,
-    VLAN,
-    VLANGroup,
-    VRF,
-)
+from .models import RIR, VLAN, VRF, Aggregate, IPAddress, Prefix, Role, RouteTarget, Service, VLANGroup
 
 PREFIX_MASK_LENGTH_CHOICES = add_blank_choice([(i, i) for i in range(PREFIX_LENGTH_MIN, PREFIX_LENGTH_MAX + 1)])
 

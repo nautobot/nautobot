@@ -2,24 +2,22 @@ import django_tables2 as tables
 from django.utils.safestring import mark_safe
 from django_tables2.utils import Accessor
 
-from nautobot.core.tables import BaseTable, BooleanColumn, ButtonsColumn, ChoiceFieldColumn, LinkedCountColumn, TagColumn, ToggleColumn
+from nautobot.core.tables import (
+    BaseTable,
+    BooleanColumn,
+    ButtonsColumn,
+    ChoiceFieldColumn,
+    LinkedCountColumn,
+    TagColumn,
+    ToggleColumn,
+)
 from nautobot.dcim.models import Interface
 from nautobot.extras.tables import StatusTableMixin
 from nautobot.tenancy.tables import TenantColumn
 from nautobot.utilities.templatetags.helpers import render_boolean
 from nautobot.virtualization.models import VMInterface
-from .models import (
-    Aggregate,
-    IPAddress,
-    Prefix,
-    RIR,
-    Role,
-    RouteTarget,
-    Service,
-    VLAN,
-    VLANGroup,
-    VRF,
-)
+
+from .models import RIR, VLAN, VRF, Aggregate, IPAddress, Prefix, Role, RouteTarget, Service, VLANGroup
 
 AVAILABLE_LABEL = mark_safe('<span class="label label-success">Available</span>')
 

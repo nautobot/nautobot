@@ -141,6 +141,7 @@ class BaseTable(django_tables2.Table):
 # Table columns
 #
 
+
 class ToggleColumn(django_tables2.CheckBoxColumn):
     """
     Extend CheckBoxColumn to add a "toggle all" checkbox in the column header.

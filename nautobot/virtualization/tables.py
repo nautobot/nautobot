@@ -1,9 +1,17 @@
 import django_tables2 as tables
 
-from nautobot.core.tables import BaseTable, ButtonsColumn, ColoredLabelColumn, LinkedCountColumn, TagColumn, ToggleColumn
+from nautobot.core.tables import (
+    BaseTable,
+    ButtonsColumn,
+    ColoredLabelColumn,
+    LinkedCountColumn,
+    TagColumn,
+    ToggleColumn,
+)
 from nautobot.dcim.tables.devices import BaseInterfaceTable
 from nautobot.extras.tables import StatusTableMixin
 from nautobot.tenancy.tables import TenantColumn
+
 from .models import Cluster, ClusterGroup, ClusterType, VirtualMachine, VMInterface
 
 __all__ = (

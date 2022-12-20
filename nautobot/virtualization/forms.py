@@ -2,36 +2,8 @@ from django import forms
 from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ValidationError
 
-from nautobot.dcim.choices import InterfaceModeChoices
-from nautobot.dcim.constants import INTERFACE_MTU_MAX, INTERFACE_MTU_MIN
-from nautobot.dcim.forms import InterfaceCommonForm, INTERFACE_MODE_HELP_TEXT
-from nautobot.dcim.form_mixins import (
-    LocatableModelBulkEditFormMixin,
-    LocatableModelCSVFormMixin,
-    LocatableModelFilterFormMixin,
-    LocatableModelFormMixin,
-)
-from nautobot.dcim.models import Device, DeviceRole, Location, Platform, Rack, Region, Site
-from nautobot.extras.forms import (
-    CustomFieldModelBulkEditFormMixin,
-    CustomFieldModelCSVForm,
-    NautobotBulkEditForm,
-    NautobotModelForm,
-    NautobotFilterForm,
-    LocalContextFilterForm,
-    LocalContextModelForm,
-    LocalContextModelBulkEditForm,
-    StatusModelBulkEditFormMixin,
-    StatusModelCSVFormMixin,
-    StatusModelFilterFormMixin,
-    TagsBulkEditFormMixin,
-)
-from nautobot.extras.models import Status
-from nautobot.ipam.models import IPAddress, VLAN
-from nautobot.tenancy.forms import TenancyFilterForm, TenancyForm
-from nautobot.tenancy.models import Tenant
-from nautobot.utilities.forms import (
-    add_blank_choice,
+from nautobot.core.forms import (
+    BOOLEAN_WITH_BLANK_CHOICES,
     BootstrapMixin,
     BulkEditNullBooleanSelect,
     BulkRenameForm,
@@ -42,15 +14,43 @@ from nautobot.utilities.forms import (
     DynamicModelChoiceField,
     DynamicModelMultipleChoiceField,
     ExpandableNameField,
-    form_from_model,
     SlugField,
     SmallTextarea,
     StaticSelect2,
     TagFilterField,
+    add_blank_choice,
+    form_from_model,
 )
-from nautobot.utilities.forms.constants import BOOLEAN_WITH_BLANK_CHOICES
-from .models import Cluster, ClusterGroup, ClusterType, VirtualMachine, VMInterface
+from nautobot.dcim.choices import InterfaceModeChoices
+from nautobot.dcim.constants import INTERFACE_MTU_MAX, INTERFACE_MTU_MIN
+from nautobot.dcim.form_mixins import (
+    LocatableModelBulkEditFormMixin,
+    LocatableModelCSVFormMixin,
+    LocatableModelFilterFormMixin,
+    LocatableModelFormMixin,
+)
+from nautobot.dcim.forms import INTERFACE_MODE_HELP_TEXT, InterfaceCommonForm
+from nautobot.dcim.models import Device, DeviceRole, Location, Platform, Rack, Region, Site
+from nautobot.extras.forms import (
+    CustomFieldModelBulkEditFormMixin,
+    CustomFieldModelCSVForm,
+    LocalContextFilterForm,
+    LocalContextModelBulkEditForm,
+    LocalContextModelForm,
+    NautobotBulkEditForm,
+    NautobotFilterForm,
+    NautobotModelForm,
+    StatusModelBulkEditFormMixin,
+    StatusModelCSVFormMixin,
+    StatusModelFilterFormMixin,
+    TagsBulkEditFormMixin,
+)
+from nautobot.extras.models import Status
+from nautobot.ipam.models import VLAN, IPAddress
+from nautobot.tenancy.forms import TenancyFilterForm, TenancyForm
+from nautobot.tenancy.models import Tenant
 
+from .models import Cluster, ClusterGroup, ClusterType, VirtualMachine, VMInterface
 
 #
 # Cluster types

@@ -1,21 +1,13 @@
-from django.contrib.admin import site as admin_site, ModelAdmin
+from constance.admin import Config, ConstanceAdmin, ConstanceForm
+from django.contrib.admin import ModelAdmin
+from django.contrib.admin import site as admin_site
 from django.db import models
-
-from constance.admin import ConstanceAdmin, ConstanceForm, Config
 from django_celery_beat import admin  # noqa: F401
-from django_celery_beat.models import (
-    ClockedSchedule,
-    CrontabSchedule,
-    IntervalSchedule,
-    PeriodicTask,
-    SolarSchedule,
-)
+from django_celery_beat.models import ClockedSchedule, CrontabSchedule, IntervalSchedule, PeriodicTask, SolarSchedule
 from social_django.models import Association, Nonce, UserSocialAuth
 from taggit.models import Tag
 
-from nautobot.utilities.forms import BootstrapMixin
-import nautobot.utilities.forms.widgets as widgets
-
+from nautobot.core.forms import BootstrapMixin, widgets
 
 # Override default AdminSite attributes so we can avoid creating and
 # registering our own class

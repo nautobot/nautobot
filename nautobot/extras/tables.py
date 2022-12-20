@@ -5,8 +5,19 @@ from django.utils.safestring import mark_safe
 from django_tables2.utils import Accessor
 from jsonschema.exceptions import ValidationError as JSONSchemaValidationError
 
-from nautobot.core.tables import BaseTable, BooleanColumn, ButtonsColumn, ChoiceFieldColumn, ColorColumn, ColoredLabelColumn, ContentTypesColumn, TagColumn, ToggleColumn
+from nautobot.core.tables import (
+    BaseTable,
+    BooleanColumn,
+    ButtonsColumn,
+    ChoiceFieldColumn,
+    ColorColumn,
+    ColoredLabelColumn,
+    ContentTypesColumn,
+    TagColumn,
+    ToggleColumn,
+)
 from nautobot.utilities.templatetags.helpers import render_boolean, render_markdown
+
 from .choices import LogLevelChoices
 from .models import (
     ComputedField,
@@ -19,10 +30,12 @@ from .models import (
     ExportTemplate,
     GitRepository,
     GraphQLQuery,
-    Job as JobModel,
+)
+from .models import Job as JobModel
+from .models import (
     JobHook,
-    JobResult,
     JobLogEntry,
+    JobResult,
     Note,
     ObjectChange,
     Relationship,
@@ -36,7 +49,6 @@ from .models import (
     Webhook,
 )
 from .registry import registry
-
 
 TAGGED_ITEM = """
 {% if value.get_absolute_url %}

@@ -17,10 +17,10 @@ import django_filters
 
 from nautobot.core import utils
 from nautobot.core import validators
+from nautobot.core import forms
+from nautobot.core.forms import widgets
 from nautobot.extras import utils as extras_utils
 from nautobot.utilities import choices as utilities_choices
-from nautobot.utilities import forms
-from nautobot.utilities.forms import widgets
 
 __all__ = (
     "CommentField",
@@ -40,7 +40,9 @@ __all__ = (
     "LaxURLField",
     "MultipleContentTypeField",
     "MultiMatchModelMultipleChoiceField",
+    "MultiValueCharField",
     "NumericArrayField",
+    "NullableDateField",
     "SlugField",
     "TagFilterField",
 )

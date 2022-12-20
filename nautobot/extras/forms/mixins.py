@@ -5,21 +5,7 @@ from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ValidationError
 from django.db.models import Q
 
-from nautobot.extras.choices import (
-    CustomFieldFilterLogicChoices,
-    RelationshipSideChoices,
-    RelationshipTypeChoices,
-)
-from nautobot.extras.models import (
-    CustomField,
-    Note,
-    Relationship,
-    RelationshipAssociation,
-    Status,
-    Tag,
-)
-from nautobot.utilities.deprecation import class_deprecated_in_favor_of
-from nautobot.utilities.forms import (
+from nautobot.core.forms import (
     BulkEditForm,
     CommentField,
     CSVModelChoiceField,
@@ -27,6 +13,9 @@ from nautobot.utilities.forms import (
     DynamicModelChoiceField,
     DynamicModelMultipleChoiceField,
 )
+from nautobot.extras.choices import CustomFieldFilterLogicChoices, RelationshipSideChoices, RelationshipTypeChoices
+from nautobot.extras.models import CustomField, Note, Relationship, RelationshipAssociation, Status, Tag
+from nautobot.utilities.deprecation import class_deprecated_in_favor_of
 
 logger = logging.getLogger(__name__)
 

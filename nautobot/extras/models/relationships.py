@@ -1,8 +1,8 @@
 import logging
 
 from django import forms
-from django.contrib.contenttypes.models import ContentType
 from django.contrib.contenttypes.fields import GenericForeignKey, GenericRelation
+from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ValidationError
 from django.core.serializers.json import DjangoJSONEncoder
 from django.db import models
@@ -12,18 +12,14 @@ from django.urls.exceptions import NoReverseMatch
 from django.utils.safestring import mark_safe
 
 from nautobot.core.fields import AutoSlugField
+from nautobot.core.forms import DynamicModelChoiceField, DynamicModelMultipleChoiceField, widgets
 from nautobot.core.models import BaseModel
 from nautobot.core.querysets import RestrictedQuerySet
 from nautobot.core.utils import get_filterset_for_model, get_route_for_model, slugify_dashes_to_underscores
-from nautobot.extras.choices import RelationshipTypeChoices, RelationshipRequiredSideChoices, RelationshipSideChoices
-from nautobot.extras.utils import FeatureQuery, extras_features
+from nautobot.extras.choices import RelationshipRequiredSideChoices, RelationshipSideChoices, RelationshipTypeChoices
 from nautobot.extras.models import ChangeLoggedModel
 from nautobot.extras.models.mixins import NotesMixin
-from nautobot.utilities.forms import (
-    DynamicModelChoiceField,
-    DynamicModelMultipleChoiceField,
-    widgets,
-)
+from nautobot.extras.utils import FeatureQuery, extras_features
 
 logger = logging.getLogger(__name__)
 

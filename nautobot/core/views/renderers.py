@@ -7,7 +7,8 @@ from django.utils.safestring import mark_safe
 from django_tables2 import RequestConfig
 from rest_framework import renderers
 
-from nautobot.core.forms import SearchForm
+from nautobot.core.forms import TableConfigForm, restrict_form_fields
+from nautobot.core.forms.forms import DynamicFilterFormSet, SearchForm
 from nautobot.core.utils import (
     convert_querydict_to_factory_formset_acceptable_querydict,
     get_filterable_params_from_filter_params,
@@ -15,11 +16,6 @@ from nautobot.core.utils import (
 )
 from nautobot.extras.models.change_logging import ChangeLoggedModel, ObjectChange
 from nautobot.extras.utils import get_base_template
-from nautobot.utilities.forms import (
-    TableConfigForm,
-    restrict_form_fields,
-)
-from nautobot.utilities.forms.forms import DynamicFilterFormSet
 from nautobot.utilities.paginator import EnhancedPaginator, get_paginate_count
 from nautobot.utilities.permissions import get_permission_for_model
 from nautobot.utilities.templatetags.helpers import bettertitle, validated_viewname
