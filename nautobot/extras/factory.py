@@ -1,14 +1,13 @@
+import factory
+import faker
 from django.contrib.contenttypes.models import ContentType
 from django.utils.text import slugify
 
-import factory
-import faker
-
+from nautobot.core.choices import ColorChoices
 from nautobot.core.factory import OrganizationalModelFactory
+from nautobot.core.utils.factory import get_random_instances
 from nautobot.extras.models import Status, Tag
 from nautobot.extras.utils import FeatureQuery, TaggableClassesQuery
-from nautobot.utilities.choices import ColorChoices
-from nautobot.utilities.factory import get_random_instances
 
 
 class StatusFactory(OrganizationalModelFactory):

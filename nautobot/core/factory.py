@@ -1,8 +1,8 @@
 import factory
 from factory.django import DjangoModelFactory
 
+from nautobot.core.utils.factory import get_random_instances
 from nautobot.extras.models import Tag
-from nautobot.utilities.factory import get_random_instances
 
 
 class BaseModelFactory(DjangoModelFactory):
@@ -42,3 +42,11 @@ class PrimaryModelFactory(BaseModelFactory):
                 self.tags.set(extracted)
             else:
                 self.tags.set(get_random_instances(Tag.objects.get_for_model(self._meta.model)))
+
+
+class UniqueFaker(factory.Faker):
+    """https://github.com/FactoryBoy/factory_boy/pull/820#issuecomment-1004802669"""
+
+    @classmethod
+    def _get_faker(cls, locale=None):
+        return super()._get_faker(locale=locale).unique

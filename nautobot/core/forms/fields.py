@@ -1,8 +1,9 @@
 import csv
-from io import StringIO
 import json
 import re
+from io import StringIO
 
+import django_filters
 from django import forms as django_forms
 from django.apps import apps
 from django.conf import settings
@@ -13,14 +14,11 @@ from django.db.models import Count, Q
 from django.forms.fields import BoundField, InvalidJSONInput
 from django.forms.fields import JSONField as _JSONField
 from django.urls import reverse
-import django_filters
 
-from nautobot.core import utils
-from nautobot.core import validators
-from nautobot.core import forms
+from nautobot.core import choices as utilities_choices
+from nautobot.core import forms, utils, validators
 from nautobot.core.forms import widgets
 from nautobot.extras import utils as extras_utils
-from nautobot.utilities import choices as utilities_choices
 
 __all__ = (
     "CommentField",

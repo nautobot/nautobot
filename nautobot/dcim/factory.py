@@ -1,38 +1,37 @@
-import factory
 import logging
-import pytz
 import random
-from faker import Faker
 
+import factory
+import pytz
 from django.contrib.contenttypes.models import ContentType
 from django.db.models import Q
+from faker import Faker
 
-from nautobot.core.factory import OrganizationalModelFactory, PrimaryModelFactory
 from nautobot.circuits.models import CircuitTermination
+from nautobot.core.choices import ColorChoices
+from nautobot.core.factory import OrganizationalModelFactory, PrimaryModelFactory, UniqueFaker
+from nautobot.core.utils.factory import random_instance
 from nautobot.dcim.choices import DeviceRedundancyGroupFailoverStrategyChoices, SubdeviceRoleChoices
 from nautobot.dcim.models import (
     Device,
     DeviceRedundancyGroup,
     DeviceRole,
     DeviceType,
-    Manufacturer,
-    Platform,
     Location,
     LocationType,
-    Region,
+    Manufacturer,
+    Platform,
+    PowerPanel,
     Rack,
     RackGroup,
-    PowerPanel,
+    Region,
     Site,
 )
 from nautobot.extras.models import Status
 from nautobot.extras.utils import FeatureQuery
-from nautobot.ipam.models import Prefix, VLAN, VLANGroup
+from nautobot.ipam.models import VLAN, Prefix, VLANGroup
 from nautobot.tenancy.models import Tenant
-from nautobot.utilities.choices import ColorChoices
-from nautobot.utilities.factory import random_instance, UniqueFaker
 from nautobot.virtualization.models import Cluster
-
 
 logger = logging.getLogger(__name__)
 

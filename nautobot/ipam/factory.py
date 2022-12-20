@@ -1,17 +1,16 @@
 import logging
+import math
 
 import factory
 import faker
-import math
 
-from nautobot.core.factory import OrganizationalModelFactory, PrimaryModelFactory
+from nautobot.core.factory import OrganizationalModelFactory, PrimaryModelFactory, UniqueFaker
+from nautobot.core.utils.factory import get_random_instances, random_instance
 from nautobot.dcim.models import Location, Site
 from nautobot.extras.models import Status
 from nautobot.ipam.choices import IPAddressRoleChoices
-from nautobot.ipam.models import Aggregate, RIR, IPAddress, Prefix, Role, RouteTarget, VLAN, VLANGroup, VRF
+from nautobot.ipam.models import RIR, VLAN, VRF, Aggregate, IPAddress, Prefix, Role, RouteTarget, VLANGroup
 from nautobot.tenancy.models import Tenant
-from nautobot.utilities.factory import get_random_instances, random_instance, UniqueFaker
-
 
 logger = logging.getLogger(__name__)
 
