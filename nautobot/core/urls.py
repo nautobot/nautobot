@@ -22,8 +22,10 @@ urlpatterns = [
     path(r"health/", include("health_check.urls")),
     # API
     path("api/", include("nautobot.core.api.urls")),
+    # Login/logout
+    path("login/", LoginView.as_view(), name="login"),
+    path("logout/", LogoutView.as_view(), name="logout"),
     # Base views
-    # path("", serve, {"document_root": frontend_build_dir, "path": "[[...catchall]].html"}, name="home"),
     path("", ReactHomeView.as_view(), name="home"),
     # Short circuit all other paths to statically serve from javascript frontend
     re_path(
@@ -44,9 +46,6 @@ urlpatterns = [
     path("<appname>/<pagename>/", ReactListView.as_view()),
     path("<appname>/<pagename>/<id>", ReactObjectView.as_view()),
     path("search/", SearchView.as_view(), name="search"),
-    # Login/logout
-    path("login/", LoginView.as_view(), name="login"),
-    path("logout/", LogoutView.as_view(), name="logout"),
     # Apps
     path("circuits/", include("nautobot.circuits.urls")),
     path("dcim/", include("nautobot.dcim.urls")),
