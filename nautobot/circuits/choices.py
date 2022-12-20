@@ -1,5 +1,4 @@
-from nautobot.utilities.choices import ChoiceSet
-
+from nautobot.core.choices import ChoiceSet
 
 #
 # Circuits
