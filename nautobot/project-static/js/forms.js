@@ -619,7 +619,7 @@ function initializeInputs(context) {
     initializeSelectAllForm(this_context)
     initializeMultiValueChar(this_context)
 
-    $(".modal").each(function() {
+    $(this_context).each(function() {
         this_modal = $(this)
         initializeStaticChoiceSelection(this_modal, this_modal)
         initializeColorPicker(this_modal, this_modal)
