@@ -104,11 +104,11 @@ class ProviderNetworkFilterSet(NautobotFilterSet):
     def search(self, queryset, name, value):
         if not value.strip():
             return queryset
+        # pylint: disable=unsupported-binary-operation
         return queryset.filter(
-            Q(name__icontains=value)
-            | Q(description__icontains=value)
-            | Q(comments__icontains=value)  # pylint: disable=unsupported-binary-operation
+            Q(name__icontains=value) | Q(description__icontains=value) | Q(comments__icontains=value)
         ).distinct()
+        # pylint: enable=unsupported-binary-operation
 
 
 class CircuitTypeFilterSet(NautobotFilterSet, NameSlugSearchFilterSet):
