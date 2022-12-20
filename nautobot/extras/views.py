@@ -38,7 +38,7 @@ from ..core.utils import (
     prepare_cloned_fields,
     pretty_print_query,
 )
-from nautobot.utilities.tables import ButtonsColumn
+from nautobot.core.tables import ButtonsColumn
 from nautobot.virtualization.models import VirtualMachine
 from nautobot.virtualization.tables import VirtualMachineTable
 from . import filters, forms, tables

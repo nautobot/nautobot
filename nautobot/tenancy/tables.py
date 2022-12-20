@@ -1,12 +1,6 @@
 import django_tables2 as tables
 
-from nautobot.utilities.tables import (
-    BaseTable,
-    ButtonsColumn,
-    LinkedCountColumn,
-    TagColumn,
-    ToggleColumn,
-)
+from nautobot.core.tables import BaseTable, ButtonsColumn, LinkedCountColumn, TagColumn, ToggleColumn
 from .models import Tenant, TenantGroup
 
 MPTT_LINK = """

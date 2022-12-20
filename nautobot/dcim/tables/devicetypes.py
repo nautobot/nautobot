@@ -1,5 +1,6 @@
 import django_tables2 as tables
 
+from nautobot.core.tables import BaseTable, BooleanColumn, ButtonsColumn, LinkedCountColumn, TagColumn, ToggleColumn
 from nautobot.dcim.models import (
     ConsolePortTemplate,
     ConsoleServerPortTemplate,
@@ -11,14 +12,6 @@ from nautobot.dcim.models import (
     PowerOutletTemplate,
     PowerPortTemplate,
     RearPortTemplate,
-)
-from nautobot.utilities.tables import (
-    BaseTable,
-    BooleanColumn,
-    ButtonsColumn,
-    LinkedCountColumn,
-    TagColumn,
-    ToggleColumn,
 )
 
 __all__ = (

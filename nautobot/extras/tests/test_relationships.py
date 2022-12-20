@@ -7,6 +7,7 @@ from django.urls import reverse
 from django.utils.html import format_html
 
 from nautobot.circuits.models import CircuitType
+from nautobot.core.tables import RelationshipColumn
 from nautobot.core.utils import get_route_for_model
 from nautobot.dcim.models import Device, Platform, Rack, Site
 from nautobot.dcim.tables import SiteTable
@@ -14,7 +15,6 @@ from nautobot.dcim.tests.test_views import create_test_device
 from nautobot.ipam.models import VLAN
 from nautobot.extras.choices import RelationshipRequiredSideChoices, RelationshipSideChoices, RelationshipTypeChoices
 from nautobot.extras.models import Relationship, RelationshipAssociation, Status
-from nautobot.utilities.tables import RelationshipColumn
 from nautobot.utilities.testing import TestCase
 from nautobot.utilities.forms import (
     DynamicModelChoiceField,

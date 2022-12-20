@@ -1,10 +1,6 @@
 import django_tables2 as tables
 
-from nautobot.apps.tables import (
-    BaseTable,
-    ButtonsColumn,
-    ToggleColumn,
-)
+from nautobot.core.tables import BaseTable, ButtonsColumn, ToggleColumn
 
 from example_plugin.models import AnotherExampleModel, ExampleModel
 

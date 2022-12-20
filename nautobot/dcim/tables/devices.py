@@ -20,16 +20,7 @@ from nautobot.dcim.models import (
 from nautobot.dcim.utils import cable_status_color_css
 from nautobot.extras.tables import StatusTableMixin
 from nautobot.tenancy.tables import TenantColumn
-from nautobot.utilities.tables import (
-    BaseTable,
-    BooleanColumn,
-    ButtonsColumn,
-    ColorColumn,
-    ColoredLabelColumn,
-    LinkedCountColumn,
-    TagColumn,
-    ToggleColumn,
-)
+from ...core.tables import BaseTable, BooleanColumn, ButtonsColumn, ColorColumn, ColoredLabelColumn, LinkedCountColumn, TagColumn, ToggleColumn
 from .template_code import (
     CABLETERMINATION,
     CONSOLEPORT_BUTTONS,

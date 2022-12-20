@@ -1,3 +1,4 @@
+import django_tables2
 from django.contrib.auth.models import AnonymousUser
 from django.contrib.contenttypes.fields import GenericForeignKey
 from django.contrib.contenttypes.models import ContentType
@@ -7,7 +8,6 @@ from django.urls import reverse
 from django.utils.html import escape, format_html
 from django.utils.safestring import mark_safe
 from django.utils.text import Truncator
-import django_tables2
 from django_tables2.data import TableQuerysetData
 from django_tables2.utils import Accessor
 
@@ -140,7 +140,6 @@ class BaseTable(django_tables2.Table):
 #
 # Table columns
 #
-
 
 class ToggleColumn(django_tables2.CheckBoxColumn):
     """
