@@ -1,6 +1,6 @@
 from django.core.paginator import Page, Paginator
 
-from nautobot.utilities import config
+from nautobot.core.utils import config
 
 
 class EnhancedPaginator(Paginator):

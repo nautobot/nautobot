@@ -2,11 +2,10 @@ from django.db import models
 from django.urls import reverse
 from mptt.models import MPTTModel, TreeForeignKey
 
-from nautobot.extras.utils import extras_features
 from nautobot.core.fields import AutoSlugField
 from nautobot.core.models.generics import OrganizationalModel, PrimaryModel
-from nautobot.utilities.mptt import TreeManager
-
+from nautobot.core.mptt import TreeManager
+from nautobot.extras.utils import extras_features
 
 __all__ = (
     "Tenant",

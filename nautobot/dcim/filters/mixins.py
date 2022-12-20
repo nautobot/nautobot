@@ -1,16 +1,16 @@
-from django.db.models import Q
 import django_filters
+from django.db.models import Q
 
-from nautobot.dcim.models import Cable, Device, DeviceType, Region, Site, Location
-from nautobot.extras.filters import CustomFieldModelFilterSetMixin
-from nautobot.utilities.filters import (
+from nautobot.core.filters import (
     MultiValueCharFilter,
     MultiValueUUIDFilter,
-    NaturalKeyOrPKMultipleChoiceFilter,
     NameSlugSearchFilterSet,
+    NaturalKeyOrPKMultipleChoiceFilter,
     SearchFilter,
     TreeNodeMultipleChoiceFilter,
 )
+from nautobot.dcim.models import Cable, Device, DeviceType, Location, Region, Site
+from nautobot.extras.filters import CustomFieldModelFilterSetMixin
 
 
 class CableTerminationModelFilterSetMixin(django_filters.FilterSet):

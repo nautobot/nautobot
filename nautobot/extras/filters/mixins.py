@@ -1,13 +1,10 @@
+import django_filters
 from django.contrib.contenttypes.models import ContentType
 from django.db.models import Q
-import django_filters
 from django_filters.utils import verbose_lookup_expr
 
-from nautobot.extras.choices import (
-    CustomFieldFilterLogicChoices,
-    CustomFieldTypeChoices,
-    RelationshipSideChoices,
-)
+from nautobot.core.constants import FILTER_CHAR_BASED_LOOKUP_MAP, FILTER_NUMERIC_BASED_LOOKUP_MAP
+from nautobot.extras.choices import CustomFieldFilterLogicChoices, CustomFieldTypeChoices, RelationshipSideChoices
 from nautobot.extras.filters.customfields import (
     CustomFieldBooleanFilter,
     CustomFieldCharFilter,
@@ -19,17 +16,7 @@ from nautobot.extras.filters.customfields import (
     CustomFieldMultiValueNumberFilter,
     CustomFieldNumberFilter,
 )
-from nautobot.extras.models import (
-    ConfigContextSchema,
-    CustomField,
-    Relationship,
-    RelationshipAssociation,
-    Status,
-)
-from nautobot.utilities.constants import (
-    FILTER_CHAR_BASED_LOOKUP_MAP,
-    FILTER_NUMERIC_BASED_LOOKUP_MAP,
-)
+from nautobot.extras.models import ConfigContextSchema, CustomField, Relationship, RelationshipAssociation, Status
 
 
 class CustomFieldModelFilterSetMixin(django_filters.FilterSet):

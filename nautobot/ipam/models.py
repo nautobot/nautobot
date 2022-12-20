@@ -4,21 +4,21 @@ import netaddr
 from django.conf import settings
 from django.contrib.contenttypes.fields import GenericForeignKey
 from django.contrib.contenttypes.models import ContentType
-from django.core.exceptions import ValidationError, MultipleObjectsReturned
+from django.core.exceptions import MultipleObjectsReturned, ValidationError
 from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
 from django.db.models import F, Q
 from django.urls import reverse
 from django.utils.functional import classproperty
 
-from nautobot.core.fields import AutoSlugField
+from nautobot.core.fields import AutoSlugField, JSONArrayField
+from nautobot.core.models.generics import OrganizationalModel, PrimaryModel
 from nautobot.core.utils import UtilizationData, array_to_string
 from nautobot.dcim.models import Device, Interface
 from nautobot.extras.models import Status, StatusModel
 from nautobot.extras.utils import extras_features
-from nautobot.core.models.generics import OrganizationalModel, PrimaryModel
 from nautobot.virtualization.models import VirtualMachine, VMInterface
-from nautobot.utilities.fields import JSONArrayField
+
 from .choices import IPAddressRoleChoices, ServiceProtocolChoices
 from .constants import (
     IPADDRESS_ASSIGNMENT_MODELS,
@@ -30,7 +30,6 @@ from .constants import (
 from .fields import VarbinaryIPField
 from .querysets import AggregateQuerySet, IPAddressQuerySet, PrefixQuerySet, RIRQuerySet
 from .validators import DNSValidator
-
 
 __all__ = (
     "Aggregate",

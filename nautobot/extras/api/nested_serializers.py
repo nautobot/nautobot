@@ -4,9 +4,9 @@ from rest_framework import serializers
 
 from nautobot.core.api import BaseModelSerializer, ChoiceField, ContentTypeField, WritableNestedSerializer
 from nautobot.core.api.exceptions import SerializerNotFound
+from nautobot.core.utils.api import get_serializer_for_model
 from nautobot.extras import choices, models
 from nautobot.users.api.nested_serializers import NestedUserSerializer
-from nautobot.utilities.api import get_serializer_for_model
 
 __all__ = [
     "NestedComputedFieldSerializer",

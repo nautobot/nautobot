@@ -1,11 +1,11 @@
 from django.contrib.contenttypes.models import ContentType
-from django.db.models import Model, OuterRef, Subquery, Q, F
+from django.db.models import F, Model, OuterRef, Q, Subquery
 from django.db.models.functions import JSONObject
 from django_celery_beat.managers import ExtendedQuerySet
 
 from nautobot.core.querysets import RestrictedQuerySet
+from nautobot.core.utils.query_functions import EmptyGroupByJSONBAgg
 from nautobot.extras.models.tags import TaggedItem
-from nautobot.utilities.query_functions import EmptyGroupByJSONBAgg
 
 
 class ConfigContextQuerySet(RestrictedQuerySet):

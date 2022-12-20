@@ -5,24 +5,17 @@ from django.db import models
 from django.urls import reverse
 from taggit.managers import TaggableManager
 
-from nautobot.core.fields import AutoSlugField
+from nautobot.core.fields import AutoSlugField, NaturalOrderingField
 from nautobot.core.models.generics import BaseModel, OrganizationalModel, PrimaryModel
+from nautobot.core.ordering import naturalize_interface
 from nautobot.core.utils import serialize_object, serialize_object_v2
+from nautobot.core.utils.config import get_settings_or_config
+from nautobot.core.utils.query_functions import CollateAsChar
 from nautobot.dcim.models import BaseInterface, Device
-from nautobot.extras.models import (
-    ConfigContextModel,
-    CustomFieldModel,
-    ObjectChange,
-    StatusModel,
-    TaggedItem,
-)
+from nautobot.extras.models import ConfigContextModel, CustomFieldModel, ObjectChange, StatusModel, TaggedItem
 from nautobot.extras.models.mixins import NotesMixin
 from nautobot.extras.querysets import ConfigContextModelQuerySet
 from nautobot.extras.utils import extras_features
-from nautobot.utilities.config import get_settings_or_config
-from nautobot.utilities.fields import NaturalOrderingField
-from nautobot.utilities.ordering import naturalize_interface
-from nautobot.utilities.query_functions import CollateAsChar
 
 __all__ = (
     "Cluster",

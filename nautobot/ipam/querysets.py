@@ -2,17 +2,7 @@ import re
 import uuid
 
 import netaddr
-from django.db.models import (
-    Count,
-    ExpressionWrapper,
-    IntegerField,
-    F,
-    OuterRef,
-    Subquery,
-    Q,
-    UUIDField,
-    Value,
-)
+from django.db.models import Count, ExpressionWrapper, F, IntegerField, OuterRef, Q, Subquery, UUIDField, Value
 from django.db.models.functions import Coalesce, Length
 
 from nautobot.core.querysets import RestrictedQuerySet
