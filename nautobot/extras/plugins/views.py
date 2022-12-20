@@ -17,8 +17,8 @@ from rest_framework.views import APIView
 from nautobot.core.api.views import NautobotAPIVersionMixin
 from nautobot.core.forms import TableConfigForm
 from nautobot.core.mixins import AdminRequiredMixin
+from nautobot.core.paginator import EnhancedPaginator, get_paginate_count
 from nautobot.extras.plugins.tables import InstalledPluginsTable
-from nautobot.utilities.paginator import EnhancedPaginator, get_paginate_count
 
 
 class InstalledPluginsView(AdminRequiredMixin, View):

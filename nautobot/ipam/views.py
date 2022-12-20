@@ -1,34 +1,19 @@
-from django.db.models import Prefetch, Q, Count, F
+from django.db.models import Count, F, Prefetch, Q
 from django.db.models.expressions import RawSQL
 from django.shortcuts import get_object_or_404, redirect, render
 from django_tables2 import RequestConfig
 
-from nautobot.core.views import generic
+from nautobot.core.paginator import EnhancedPaginator, get_paginate_count
 from nautobot.core.utils import count_related
+from nautobot.core.views import generic
 from nautobot.dcim.models import Device, Interface
 from nautobot.utilities.config import get_settings_or_config
-from nautobot.utilities.paginator import EnhancedPaginator, get_paginate_count
 from nautobot.virtualization.models import VirtualMachine, VMInterface
+
 from . import filters, forms, tables
 from .choices import IPAddressRoleChoices
-from .models import (
-    Aggregate,
-    IPAddress,
-    Prefix,
-    RIR,
-    Role,
-    RouteTarget,
-    Service,
-    VLAN,
-    VLANGroup,
-    VRF,
-)
-from .utils import (
-    add_available_ipaddresses,
-    add_available_prefixes,
-    add_available_vlans,
-)
-
+from .models import RIR, VLAN, VRF, Aggregate, IPAddress, Prefix, Role, RouteTarget, Service, VLANGroup
+from .utils import add_available_ipaddresses, add_available_prefixes, add_available_vlans
 
 #
 # VRFs

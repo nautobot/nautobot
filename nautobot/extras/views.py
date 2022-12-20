@@ -23,6 +23,7 @@ from jsonschema.validators import Draft7Validator
 
 from nautobot.core.forms import restrict_form_fields
 from nautobot.core.mixins import ObjectPermissionRequiredMixin
+from nautobot.core.paginator import EnhancedPaginator, get_paginate_count
 from nautobot.core.tables import ButtonsColumn
 from nautobot.core.utils import (
     copy_safe_request,
@@ -38,7 +39,6 @@ from nautobot.dcim.models import Device
 from nautobot.dcim.tables import DeviceTable
 from nautobot.extras.tasks import delete_custom_field_data
 from nautobot.extras.utils import get_base_template, get_job_content_type, get_worker_count
-from nautobot.utilities.paginator import EnhancedPaginator, get_paginate_count
 from nautobot.virtualization.models import VirtualMachine
 from nautobot.virtualization.tables import VirtualMachineTable
 

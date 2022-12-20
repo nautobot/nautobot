@@ -31,6 +31,7 @@ from nautobot.core.forms import (
     restrict_form_fields,
 )
 from nautobot.core.mixins import GetReturnURLMixin, ObjectPermissionRequiredMixin
+from nautobot.core.paginator import EnhancedPaginator, get_paginate_count
 from nautobot.core.utils import (
     convert_querydict_to_factory_formset_acceptable_querydict,
     csv_format,
@@ -44,7 +45,6 @@ from nautobot.extras.models import CustomField, ExportTemplate
 from nautobot.extras.models.change_logging import ChangeLoggedModel
 from nautobot.utilities.error_handlers import handle_protectederror
 from nautobot.utilities.exceptions import AbortTransaction
-from nautobot.utilities.paginator import EnhancedPaginator, get_paginate_count
 from nautobot.utilities.templatetags.helpers import bettertitle, validated_viewname
 
 

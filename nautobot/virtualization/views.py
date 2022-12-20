@@ -5,17 +5,17 @@ from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django_tables2 import RequestConfig
 
-from nautobot.core.views import generic
+from nautobot.core.paginator import EnhancedPaginator, get_paginate_count
 from nautobot.core.utils import count_related, normalize_querydict
+from nautobot.core.views import generic
 from nautobot.dcim.models import Device
 from nautobot.dcim.tables import DeviceTable
 from nautobot.extras.views import ObjectConfigContextView
 from nautobot.ipam.models import IPAddress, Service
 from nautobot.ipam.tables import InterfaceIPAddressTable, InterfaceVLANTable
-from nautobot.utilities.paginator import EnhancedPaginator, get_paginate_count
+
 from . import filters, forms, tables
 from .models import Cluster, ClusterGroup, ClusterType, VirtualMachine, VMInterface
-
 
 #
 # Cluster types
