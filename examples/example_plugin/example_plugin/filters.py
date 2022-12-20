@@ -1,6 +1,6 @@
-from nautobot.apps.filters import BaseFilterSet, SearchFilter
-
 from example_plugin.models import AnotherExampleModel, ExampleModel
+
+from nautobot.core.filters import BaseFilterSet, SearchFilter
 
 
 class ExampleModelFilterSet(BaseFilterSet):

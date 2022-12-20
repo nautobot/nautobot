@@ -1,11 +1,11 @@
 import json
 import logging
 import re
+import yaml
 
 from django import forms
 from django.forms import formset_factory
 from django.urls import reverse
-import yaml
 
 from nautobot.core import utils
 from nautobot.ipam import formfields
