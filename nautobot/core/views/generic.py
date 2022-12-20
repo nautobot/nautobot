@@ -39,12 +39,12 @@ from nautobot.core.utils import (
     normalize_querydict,
     prepare_cloned_fields,
 )
+from nautobot.core.utils.permissions import get_permission_for_model
 from nautobot.extras.models import CustomField, ExportTemplate
 from nautobot.extras.models.change_logging import ChangeLoggedModel
 from nautobot.utilities.error_handlers import handle_protectederror
 from nautobot.utilities.exceptions import AbortTransaction
 from nautobot.utilities.paginator import EnhancedPaginator, get_paginate_count
-from nautobot.utilities.permissions import get_permission_for_model
 from nautobot.utilities.templatetags.helpers import bettertitle, validated_viewname
 
 

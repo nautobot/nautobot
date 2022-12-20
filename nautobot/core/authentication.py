@@ -2,19 +2,13 @@ import logging
 from collections import defaultdict
 
 from django.conf import settings
-from django.contrib.auth.backends import (
-    ModelBackend,
-    RemoteUserBackend as _RemoteUserBackend,
-)
+from django.contrib.auth.backends import ModelBackend
+from django.contrib.auth.backends import RemoteUserBackend as _RemoteUserBackend
 from django.contrib.auth.models import Group
 from django.db.models import Q
 
+from nautobot.core.utils.permissions import permission_is_exempt, resolve_permission, resolve_permission_ct
 from nautobot.users.models import ObjectPermission
-from nautobot.utilities.permissions import (
-    permission_is_exempt,
-    resolve_permission,
-    resolve_permission_ct,
-)
 
 logger = logging.getLogger("nautobot.authentication")
 

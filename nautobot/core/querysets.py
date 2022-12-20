@@ -1,6 +1,6 @@
 from django.db.models import Q, QuerySet
 
-from nautobot.utilities import permissions
+from nautobot.core.utils import permissions
 
 
 class RestrictedQuerySet(QuerySet):

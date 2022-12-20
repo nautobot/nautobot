@@ -17,13 +17,13 @@ from nautobot.circuits.models import Circuit
 from nautobot.core.forms import ConfirmationForm
 from nautobot.core.mixins import GetReturnURLMixin, ObjectPermissionRequiredMixin
 from nautobot.core.utils import count_related, csv_format
+from nautobot.core.utils.permissions import get_permission_for_model
 from nautobot.core.views import generic
 from nautobot.core.views.viewsets import NautobotUIViewSet
 from nautobot.extras.views import ObjectChangeLogView, ObjectConfigContextView, ObjectDynamicGroupsView
 from nautobot.ipam.models import VLAN, IPAddress, Prefix, Service
 from nautobot.ipam.tables import InterfaceIPAddressTable, InterfaceVLANTable
 from nautobot.utilities.paginator import EnhancedPaginator, get_paginate_count
-from nautobot.utilities.permissions import get_permission_for_model
 from nautobot.virtualization.models import VirtualMachine
 
 from . import filters, forms, tables

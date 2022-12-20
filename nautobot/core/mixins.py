@@ -3,9 +3,7 @@ from django.core.exceptions import ImproperlyConfigured
 from django.urls import NoReverseMatch, reverse
 from django.utils.http import is_safe_url
 
-from nautobot.core import utils
-from nautobot.utilities import permissions
-
+from nautobot.core.utils import get_route_for_model, permissions
 
 #
 # View Mixins
@@ -144,7 +142,7 @@ class GetReturnURLMixin:
         # Attempt to dynamically resolve the list view for the object
         if hasattr(self, "queryset"):
             try:
-                return reverse(utils.get_route_for_model(self.queryset.model, "list"))
+                return reverse(get_route_for_model(self.queryset.model, "list"))
             except NoReverseMatch:
                 pass
 

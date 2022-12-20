@@ -12,11 +12,12 @@ from django.utils.text import slugify
 from netaddr import IPNetwork
 from taggit.managers import TaggableManager
 
+from nautobot.core.utils import permissions
 from nautobot.extras import management
 from nautobot.extras import models as extras_models
 from nautobot.users import models as users_models
 from nautobot.utilities import fields as utilities_fields
-from nautobot.utilities import permissions, testing
+from nautobot.utilities import testing
 
 # Use the proper swappable User model
 User = get_user_model()

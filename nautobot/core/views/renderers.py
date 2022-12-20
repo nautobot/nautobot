@@ -14,10 +14,10 @@ from nautobot.core.utils import (
     get_filterable_params_from_filter_params,
     normalize_querydict,
 )
+from nautobot.core.utils.permissions import get_permission_for_model
 from nautobot.extras.models.change_logging import ChangeLoggedModel, ObjectChange
 from nautobot.extras.utils import get_base_template
 from nautobot.utilities.paginator import EnhancedPaginator, get_paginate_count
-from nautobot.utilities.permissions import get_permission_for_model
 from nautobot.utilities.templatetags.helpers import bettertitle, validated_viewname
 
 
