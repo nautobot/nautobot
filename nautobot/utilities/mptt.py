@@ -2,7 +2,7 @@ from django.db.models import Manager
 from mptt.managers import TreeManager as TreeManager_
 from mptt.querysets import TreeQuerySet as TreeQuerySet_
 
-from nautobot.utilities import querysets
+from nautobot.core import querysets
 
 
 class TreeQuerySet(TreeQuerySet_, querysets.RestrictedQuerySet):

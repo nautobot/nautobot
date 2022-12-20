@@ -13,7 +13,7 @@ from nautobot.extras.models.customfields import CustomFieldModel
 from nautobot.extras.models.relationships import RelationshipModel
 from nautobot.core.fields import AutoSlugField
 from nautobot.core.models import BaseModel
-from nautobot.utilities.querysets import RestrictedQuerySet
+from nautobot.core.querysets import RestrictedQuerySet
 from nautobot.utilities.choices import ColorChoices
 from nautobot.utilities.forms import DynamicModelChoiceField
 from nautobot.utilities.fields import ColorField
