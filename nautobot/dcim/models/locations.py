@@ -9,11 +9,11 @@ from timezone_field import TimeZoneField
 
 from nautobot.core.fields import AutoSlugField
 from nautobot.core.models.generics import OrganizationalModel, PrimaryModel
+from nautobot.core.utils.tree_queries import TreeManager, TreeQuerySet
 from nautobot.dcim.fields import ASNField
 from nautobot.extras.models import StatusModel
 from nautobot.extras.utils import extras_features, FeatureQuery
 from nautobot.utilities.fields import NaturalOrderingField
-from nautobot.utilities.tree_queries import TreeManager, TreeQuerySet
 
 
 @extras_features(
