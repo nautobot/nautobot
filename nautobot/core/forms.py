@@ -1,16 +1,7 @@
 from django import forms
-from django.utils.safestring import mark_safe
-
-from nautobot.extras.forms import CustomFieldModelCSVForm, NautobotBulkEditForm, NautobotModelForm
-from nautobot.extras.models import Role
-from nautobot.extras.utils import RoleModelsQuery
 
 from nautobot.utilities.forms import (
     BootstrapMixin,
-    CSVMultipleContentTypeField,
-    ColorSelect,
-    MultipleContentTypeField,
-    SlugField,
 )
 
 OBJ_TYPE_CHOICES = (
@@ -54,57 +45,6 @@ OBJ_TYPE_CHOICES = (
         ),
     ),
 )
-
-
-class RoleForm(NautobotModelForm):
-    """Generic create/update form for `Role` objects."""
-
-    slug = SlugField()
-    content_types = MultipleContentTypeField(
-        required=False,
-        label="Content Type(s)",
-        queryset=RoleModelsQuery().as_queryset(),
-    )
-
-    class Meta:
-        model = Role
-        widgets = {"color": ColorSelect()}
-        fields = ["name", "slug", "weight", "description", "content_types", "color"]
-
-
-class RoleBulkEditForm(NautobotBulkEditForm):
-    """Bulk edit/delete form for `Role` objects."""
-
-    pk = forms.ModelMultipleChoiceField(queryset=Role.objects.all(), widget=forms.MultipleHiddenInput)
-    color = forms.CharField(max_length=6, required=False, widget=ColorSelect())
-    content_types = MultipleContentTypeField(
-        queryset=RoleModelsQuery().as_queryset(), required=False, label="Content Type(s)"
-    )
-
-    class Meta:
-        nullable_fields = ["weight"]
-
-
-class RoleCSVForm(CustomFieldModelCSVForm):
-    """Generic CSV bulk import form for `Role` objects."""
-
-    content_types = CSVMultipleContentTypeField(
-        queryset=RoleModelsQuery().as_queryset(),
-        choices_as_strings=True,
-        help_text=mark_safe(
-            "The object types to which this role applies. Multiple values "
-            "must be comma-separated and wrapped in double quotes. (e.g. "
-            '<code>"dcim.device,dcim.rack"</code>)'
-        ),
-        label="Content type(s)",
-    )
-
-    class Meta:
-        model = Role
-        fields = ["name", "slug", "weight", "color", "content_types", "description"]
-        help_texts = {
-            "color": mark_safe("RGB color in hexadecimal (e.g. <code>00ff00</code>)"),
-        }
 
 
 class SearchForm(BootstrapMixin, forms.Form):

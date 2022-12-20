@@ -1,9 +1,8 @@
 import django_tables2 as tables
 from django_tables2.utils import Accessor
 
-from nautobot.core.tables import RoleTableMixin
 from nautobot.dcim.models import Rack, RackGroup, RackReservation
-from nautobot.extras.tables import StatusTableMixin
+from nautobot.extras.tables import RoleTableMixin, StatusTableMixin
 from nautobot.tenancy.tables import TenantColumn
 from nautobot.utilities.tables import (
     BaseTable,

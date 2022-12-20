@@ -1,7 +1,6 @@
 import django_tables2 as tables
 from django_tables2.utils import Accessor
 
-from nautobot.core.tables import RoleTableMixin
 from nautobot.dcim.models import (
     ConsolePort,
     ConsoleServerPort,
@@ -18,7 +17,7 @@ from nautobot.dcim.models import (
     VirtualChassis,
 )
 from nautobot.dcim.utils import cable_status_color_css
-from nautobot.extras.tables import StatusTableMixin
+from nautobot.extras.tables import RoleTableMixin, StatusTableMixin
 from nautobot.tenancy.tables import TenantColumn
 from nautobot.utilities.tables import (
     BaseTable,

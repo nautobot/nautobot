@@ -24,12 +24,14 @@ from nautobot.extras.models import (
     CustomField,
     Relationship,
     RelationshipAssociation,
+    Role,
     Status,
 )
 from nautobot.utilities.constants import (
     FILTER_CHAR_BASED_LOOKUP_MAP,
     FILTER_NUMERIC_BASED_LOOKUP_MAP,
 )
+from nautobot.utilities.filters import NaturalKeyOrPKMultipleChoiceFilter
 
 
 class CustomFieldModelFilterSetMixin(django_filters.FilterSet):
@@ -255,6 +257,35 @@ class RelationshipModelFilterSetMixin(django_filters.FilterSet):
                     qs=model.objects.all(),
                 )
             self.relationships.append(field_name)
+
+
+#
+# Role
+#
+
+
+class RoleFilter(NaturalKeyOrPKMultipleChoiceFilter):
+    """Limit role choices to the available role choices for self.model"""
+
+    def __init__(self, *args, **kwargs):
+
+        kwargs.setdefault("field_name", "role")
+        kwargs.setdefault("to_field_name", "slug")
+        kwargs.setdefault("queryset", Role.objects.all())
+        kwargs.setdefault("label", "Role (slug or ID)")
+
+        super().__init__(*args, **kwargs)
+
+    def get_queryset(self, request):
+        return self.queryset.get_for_model(self.model)
+
+
+class RoleModelFilterSetMixin(django_filters.FilterSet):
+    """
+    Mixin to add a `role` filter field to a FilterSet.
+    """
+
+    role = RoleFilter()
 
 
 class StatusFilter(django_filters.ModelMultipleChoiceFilter):

@@ -27,6 +27,7 @@ from nautobot.extras.filters.mixins import (
     LocalContextModelFilterSetMixin,
     RelationshipFilter,
     RelationshipModelFilterSetMixin,
+    RoleModelFilterSetMixin,
     StatusFilter,
     StatusModelFilterSetMixin,
 )
@@ -112,6 +113,7 @@ __all__ = (
     "RelationshipFilterSet",
     "RelationshipAssociationFilterSet",
     "RoleFilterSet",
+    "RoleModelFilterSetMixin",
     "ScheduledJobFilterSet",
     "SecretFilterSet",
     "SecretsGroupFilterSet",

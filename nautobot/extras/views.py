@@ -21,8 +21,8 @@ from django.template.loader import get_template, TemplateDoesNotExist
 from django_tables2 import RequestConfig
 from jsonschema.validators import Draft7Validator
 
-from nautobot.core.tables import RoleTable
-from nautobot.core.forms import RoleBulkEditForm, RoleCSVForm, RoleForm
+from .tables import RoleTable
+from .forms import RoleBulkEditForm, RoleCSVForm, RoleForm
 from nautobot.core.views import generic, viewsets
 from nautobot.dcim.models import Device
 from nautobot.dcim.tables import DeviceTable
