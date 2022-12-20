@@ -10,10 +10,9 @@ from nautobot.core.apps import (
     NavMenuItem,
     NavMenuTab,
 )
+from nautobot.core.choices import ButtonColorChoices
 from nautobot.extras.choices import BannerClassChoices
-from nautobot.extras.plugins import Banner
-from nautobot.extras.plugins import TemplateExtension
-from nautobot.utilities.choices import ButtonColorChoices
+from nautobot.extras.plugins import Banner, TemplateExtension
 
 __all__ = (
     "Banner",

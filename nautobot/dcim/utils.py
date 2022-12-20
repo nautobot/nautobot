@@ -2,8 +2,6 @@ import uuid
 
 from django.contrib.contenttypes.models import ContentType
 
-from nautobot.core.utils import hex_to_rgb, lighten_color, rgb_to_hex
-
 
 def compile_path_node(ct_id, object_id):
     return f"{ct_id}:{object_id}"
@@ -38,6 +36,9 @@ def cable_status_color_css(record):
     """
     Given a record such as an Interface, return the CSS needed to apply appropriate coloring to it.
     """
+    # Avoid circular import
+    from nautobot.core.utils import hex_to_rgb, lighten_color, rgb_to_hex
+
     if not record.cable:
         return ""
     # The status colors are for use with labels and such, and tend to be quite bright.

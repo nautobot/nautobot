@@ -10,12 +10,12 @@ from django.apps import apps
 from django.conf import settings
 from django.contrib.contenttypes.models import ContentType
 from django.db.models import Q
-from django.template.loader import get_template, TemplateDoesNotExist
+from django.template.loader import TemplateDoesNotExist, get_template
 from django.utils.deconstruct import deconstructible
 from taggit.managers import _TaggableManager
 
 # 2.0 TODO: remove `is_taggable` import here; included for now for backwards compatibility with <1.4 code.
-from nautobot.core.utils import is_taggable, slugify_dots_to_dashes
+from nautobot.core.utils import is_taggable
 from nautobot.extras.constants import (
     EXTRAS_FEATURES,
     JOB_MAX_GROUPING_LENGTH,
@@ -25,7 +25,6 @@ from nautobot.extras.constants import (
     JOB_OVERRIDABLE_FIELDS,
 )
 from nautobot.extras.registry import registry
-
 
 logger = logging.getLogger(__name__)
 
@@ -302,6 +301,7 @@ def refresh_job_model_from_job_class(job_model_class, job_source, job_class, *, 
     this function may be called from various initialization processes (such as the "nautobot_database_ready" signal)
     and in that case we need to not import models ourselves.
     """
+    from nautobot.core.utils import slugify_dots_to_dashes
     from nautobot.extras.jobs import JobHookReceiver  # imported here to prevent circular import problem
 
     if git_repository is not None:

@@ -9,8 +9,7 @@ import sys
 from django.core.exceptions import ImproperlyConfigured
 from django.utils.module_loading import import_string
 
-from .exceptions import PluginNotFound, PluginImproperlyConfigured
-
+from .exceptions import PluginImproperlyConfigured, PluginNotFound
 
 # Logging object
 logger = logging.getLogger("nautobot.plugins")

@@ -1,6 +1,6 @@
-from contextlib import contextmanager
 import logging
 import re
+from contextlib import contextmanager
 
 from django.contrib.auth import get_user_model
 from django.contrib.auth.models import Permission
