@@ -7,7 +7,6 @@ from django.template.loader import render_to_string
 
 register = template.Library()
 
-
 CUSTOM_FIELD_RENDERER = getattr(settings, "DAB_FIELD_RENDERER", False)
 
 

@@ -9,22 +9,17 @@ from django.db.models import Sum
 from django.urls import reverse
 from django.utils.functional import classproperty
 
-from nautobot.core.utils import to_meters
+from nautobot.core.fields import ColorField
+from nautobot.core.models.generics import BaseModel, PrimaryModel
 from nautobot.dcim.choices import CableLengthUnitChoices, CableTypeChoices
 from nautobot.dcim.constants import CABLE_TERMINATION_MODELS, COMPATIBLE_TERMINATION_TYPES, NONCONNECTABLE_IFACE_TYPES
-
 from nautobot.dcim.fields import JSONPathField
-from nautobot.dcim.utils import (
-    decompile_path_node,
-    object_to_path_node,
-    path_node_to_object,
-)
+from nautobot.dcim.utils import decompile_path_node, object_to_path_node, path_node_to_object
 from nautobot.extras.models import Status, StatusModel
 from nautobot.extras.utils import extras_features
-from nautobot.core.models.generics import BaseModel, PrimaryModel
-from nautobot.utilities.fields import ColorField
-from .devices import Device
+
 from .device_components import FrontPort, RearPort
+from .devices import Device
 
 __all__ = (
     "Cable",
@@ -256,6 +251,8 @@ class Cable(PrimaryModel, StatusModel):
             self.length_unit = ""
 
     def save(self, *args, **kwargs):
+        # Avoid Circular Import
+        from nautobot.core.utils import to_meters
 
         # Store the given length (if any) in meters for use in database ordering
         if self.length and self.length_unit:

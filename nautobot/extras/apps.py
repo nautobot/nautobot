@@ -1,14 +1,12 @@
 import logging
 
+import graphene
 from django.conf import settings
 from django.db.utils import ProgrammingError
-
-import graphene
 from health_check.plugins import plugin_dir
 
 from nautobot.core.apps import NautobotConfig
 from nautobot.core.signals import nautobot_database_ready
-
 
 logger = logging.getLogger("nautobot.extras.apps")
 
@@ -25,6 +23,7 @@ class ExtrasConfig(NautobotConfig):
 
         from graphene_django.converter import convert_django_field
         from taggit.managers import TaggableManager
+
         from nautobot.extras.graphql.types import TagType
 
         @convert_django_field.register(TaggableManager)
@@ -54,8 +53,8 @@ class ExtrasConfig(NautobotConfig):
             plugin_dir.register(CacheopsRedisBackend)
 
         # Register built-in SecretsProvider classes
-        from nautobot.extras.secrets.providers import EnvironmentVariableSecretsProvider, TextFileSecretsProvider
         from nautobot.extras.secrets import register_secrets_provider
+        from nautobot.extras.secrets.providers import EnvironmentVariableSecretsProvider, TextFileSecretsProvider
 
         register_secrets_provider(EnvironmentVariableSecretsProvider)
         register_secrets_provider(TextFileSecretsProvider)
