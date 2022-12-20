@@ -3,17 +3,15 @@ from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ObjectDoesNotExist, ValidationError
 from django.db import models
 from django.urls import reverse
-
-from tree_queries.models import TreeNode
 from timezone_field import TimeZoneField
+from tree_queries.models import TreeNode
 
-from nautobot.core.fields import AutoSlugField
+from nautobot.core.fields import AutoSlugField, NaturalOrderingField
 from nautobot.core.models.generics import OrganizationalModel, PrimaryModel
 from nautobot.core.utils.tree_queries import TreeManager, TreeQuerySet
 from nautobot.dcim.fields import ASNField
 from nautobot.extras.models import StatusModel
-from nautobot.extras.utils import extras_features, FeatureQuery
-from nautobot.utilities.fields import NaturalOrderingField
+from nautobot.extras.utils import FeatureQuery, extras_features
 
 
 @extras_features(

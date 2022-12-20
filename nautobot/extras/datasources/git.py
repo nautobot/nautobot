@@ -1,25 +1,26 @@
 """Git data source functionality."""
 
-from collections import defaultdict, namedtuple
 import logging
 import mimetypes
 import os
 import re
+from collections import defaultdict, namedtuple
 from urllib.parse import quote
 
+import yaml
 from django.conf import settings
 from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import MultipleObjectsReturned, ObjectDoesNotExist
 from django.db import transaction
 from django.utils.text import slugify
-import yaml
 
 from nautobot.core.celery import nautobot_task
+from nautobot.core.git import GitRepo
 from nautobot.core.utils import copy_safe_request
 from nautobot.dcim.models import Device, DeviceRole, DeviceType, Platform, Region, Site
 from nautobot.extras.choices import (
-    JobSourceChoices,
     JobResultStatusChoices,
+    JobSourceChoices,
     LogLevelChoices,
     SecretsGroupAccessTypeChoices,
     SecretsGroupSecretTypeChoices,
@@ -36,12 +37,11 @@ from nautobot.extras.models import (
 )
 from nautobot.extras.registry import DatasourceContent, register_datasource_contents
 from nautobot.extras.utils import jobs_in_directory, refresh_job_model_from_job_class
-from nautobot.tenancy.models import TenantGroup, Tenant
-from nautobot.utilities.git import GitRepo
-from nautobot.virtualization.models import ClusterGroup, Cluster, VirtualMachine
+from nautobot.tenancy.models import Tenant, TenantGroup
+from nautobot.virtualization.models import Cluster, ClusterGroup, VirtualMachine
+
 from .registry import refresh_datasource_content
 from .utils import files_from_contenttype_directories
-
 
 logger = logging.getLogger("nautobot.datasources.git")
 

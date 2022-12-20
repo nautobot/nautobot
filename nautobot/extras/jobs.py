@@ -27,11 +27,11 @@ from django.utils import timezone
 from django.utils.functional import classproperty
 
 from nautobot.core.celery import nautobot_task
+from nautobot.core.exceptions import AbortTransaction
 from nautobot.core.forms import DynamicModelChoiceField, DynamicModelMultipleChoiceField
 from nautobot.core.utils import copy_safe_request
 from nautobot.ipam.formfields import IPAddressFormField, IPNetworkFormField
 from nautobot.ipam.validators import MaxPrefixLengthValidator, MinPrefixLengthValidator, prefix_validator
-from nautobot.utilities.exceptions import AbortTransaction
 
 from .choices import JobResultStatusChoices, LogLevelChoices, ObjectChangeActionChoices, ObjectChangeEventContextChoices
 from .context_managers import JobChangeContext, JobHookChangeContext, change_logging

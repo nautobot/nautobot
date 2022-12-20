@@ -18,6 +18,7 @@ from django.utils.safestring import mark_safe
 from django.views.generic import View
 from django_tables2 import RequestConfig
 
+from nautobot.core.exceptions import AbortTransaction
 from nautobot.core.forms import (
     BootstrapMixin,
     BulkRenameForm,
@@ -32,6 +33,7 @@ from nautobot.core.forms import (
 )
 from nautobot.core.mixins import GetReturnURLMixin, ObjectPermissionRequiredMixin
 from nautobot.core.paginator import EnhancedPaginator, get_paginate_count
+from nautobot.core.templatetags.helpers import bettertitle, validated_viewname
 from nautobot.core.utils import (
     convert_querydict_to_factory_formset_acceptable_querydict,
     csv_format,
@@ -40,12 +42,10 @@ from nautobot.core.utils import (
     normalize_querydict,
     prepare_cloned_fields,
 )
+from nautobot.core.utils.error_handlers import handle_protectederror
 from nautobot.core.utils.permissions import get_permission_for_model
 from nautobot.extras.models import CustomField, ExportTemplate
 from nautobot.extras.models.change_logging import ChangeLoggedModel
-from nautobot.utilities.error_handlers import handle_protectederror
-from nautobot.utilities.exceptions import AbortTransaction
-from nautobot.utilities.templatetags.helpers import bettertitle, validated_viewname
 
 
 class ObjectView(ObjectPermissionRequiredMixin, View):

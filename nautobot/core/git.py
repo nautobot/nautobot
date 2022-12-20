@@ -1,15 +1,19 @@
 """General-purpose Git utilities."""
 
-from collections import namedtuple
 import logging
 import os
+from collections import namedtuple
 
 from git import Repo
+
+import nautobot.core.templatetags.helpers
+from nautobot.core.exceptions import BranchDoesNotExist
 
 logger = logging.getLogger("nautobot.utilities.git")
 
 # namedtuple takes a git log diff status and its accompanying text.
 GitDiffLog = namedtuple("GitDiffLog", ["status", "text"])
+
 
 # 'A' and 'D' status are swapped because of the way the repo.git.diff was implemented
 # e.g. 'A' actually stands for Addition but in this case is Deletion
@@ -42,10 +46,6 @@ def convert_git_diff_log_to_list(logs):
     """
     logs = logs.split("\n")
     return [swap_status_initials(line) for line in logs]
-
-
-class BranchDoesNotExist(Exception):
-    pass
 
 
 class GitRepo:

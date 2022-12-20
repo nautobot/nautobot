@@ -14,14 +14,11 @@ from django_jinja import library
 from markdown import markdown
 
 from nautobot.core import forms, utils
-from nautobot.utilities import config
 
 HTML_TRUE = '<span class="text-success"><i class="mdi mdi-check-bold" title="Yes"></i></span>'
 HTML_FALSE = '<span class="text-danger"><i class="mdi mdi-close-thick" title="No"></i></span>'
 HTML_NONE = '<span class="text-muted">&mdash;</span>'
-
 register = template.Library()
-
 
 #
 # Filters
@@ -493,7 +490,7 @@ def get_item(d, key):
 @register.filter()
 def settings_or_config(key):
     """Get a value from Django settings (if specified there) or Constance configuration (otherwise)."""
-    return config.get_settings_or_config(key)
+    return utils.config.get_settings_or_config(key)
 
 
 @library.filter()
