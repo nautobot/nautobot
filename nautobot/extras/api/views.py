@@ -712,7 +712,7 @@ class JobViewSet(
                 status__in=JobResultStatusChoices.TERMINAL_STATE_CHOICES,
             )
             .defer("data")
-            .order_by("created")
+            .order_by("date_created")
         }
 
         job_models = Job.objects.restrict(request.user, "view")

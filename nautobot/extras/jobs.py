@@ -1086,7 +1086,7 @@ def run_job(data, request, job_result_pk, commit=True, *args, **kwargs):
             logger=logger,
         )
         job_result.status = JobResultStatusChoices.STATUS_ERRORED
-        job_result.completed = timezone.now()
+        job_result.date_done = timezone.now()
         job_result.save()
         return False
 
@@ -1100,7 +1100,7 @@ def run_job(data, request, job_result_pk, commit=True, *args, **kwargs):
         stacktrace = traceback.format_exc()
         job_result.log_failure(f"Error initializing job:\n```\n{stacktrace}\n```")
         job_result.set_status(JobResultStatusChoices.STATUS_ERRORED)
-        job_result.completed = timezone.now()
+        job_result.date_done = timezone.now()
         job_result.save()
         return False
 
@@ -1137,7 +1137,7 @@ def run_job(data, request, job_result_pk, commit=True, *args, **kwargs):
             grouping="initialization",
             logger=logger,
         )
-        job_result.completed = timezone.now()
+        job_result.date_done = timezone.now()
         job_result.save()
         if file_ids:
             # Cleanup FileProxy objects
@@ -1239,7 +1239,7 @@ def run_job(data, request, job_result_pk, commit=True, *args, **kwargs):
             if output:
                 job.results["output"] += "\n" + str(output)
 
-            job_result.completed = timezone.now()
+            job_result.date_done = timezone.now()
             job_result.save()
 
             job.logger.info(f"Job completed in {job_result.duration}")

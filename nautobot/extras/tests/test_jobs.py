@@ -107,7 +107,7 @@ class JobTest(TransactionTestCase):
             obj_type=job_content_type,
             job_model=job_model,
             user=None,
-            job_id=uuid.uuid4(),
+            task_id=uuid.uuid4(),
         )
         run_job(data={}, request=None, commit=False, job_result_pk=job_result.pk)
         job_result = create_job_result_and_run_job(module, name, commit=False)
@@ -382,7 +382,7 @@ class JobTest(TransactionTestCase):
         _job_class, job_model = get_job_class_and_model(module, name)
         self.assertGreaterEqual(job_model.results.count(), 2)
         latest_job_result = job_model.latest_result
-        self.assertEqual(job_result_2.completed, latest_job_result.completed)
+        self.assertEqual(job_result_2.date_done, latest_job_result.date_done)
 
     @mock.patch("nautobot.extras.utils.get_celery_queues")
     def test_job_class_task_queues(self, mock_get_celery_queues):

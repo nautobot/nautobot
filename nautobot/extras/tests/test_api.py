@@ -2133,7 +2133,7 @@ class JobResultTest(
     APIViewTestCases.DeleteObjectViewTestCase,
 ):
     model = JobResult
-    brief_fields = ["completed", "created", "display", "id", "name", "status", "url", "user"]
+    brief_fields = ["date_done", "date_created", "display", "id", "name", "status", "url", "user"]
 
     @classmethod
     def setUpTestData(cls):
@@ -2145,37 +2145,37 @@ class JobResultTest(
             job_model=jobs[0],
             name=jobs[0].class_path,
             obj_type=job_ct,
-            completed=datetime.now(),
+            date_done=datetime.now(),
             user=None,
             status=JobResultStatusChoices.STATUS_COMPLETED,
             data={"output": "\nRan for 3 seconds"},
             job_kwargs=None,
             schedule=None,
-            job_id=uuid.uuid4(),
+            task_id=uuid.uuid4(),
         )
         JobResult.objects.create(
             job_model=None,
             name="Git Repository",
             obj_type=git_ct,
-            completed=datetime.now(),
+            date_done=datetime.now(),
             user=None,
             status=JobResultStatusChoices.STATUS_COMPLETED,
             data=None,
             job_kwargs={"repository_pk": uuid.uuid4()},
             schedule=None,
-            job_id=uuid.uuid4(),
+            task_id=uuid.uuid4(),
         )
         JobResult.objects.create(
             job_model=jobs[1],
             name=jobs[1].class_path,
             obj_type=job_ct,
-            completed=None,
+            date_done=None,
             user=None,
             status=JobResultStatusChoices.STATUS_PENDING,
             data=None,
             job_kwargs={"data": {"device": uuid.uuid4(), "multichoices": ["red", "green"], "checkbox": False}},
             schedule=None,
-            job_id=uuid.uuid4(),
+            task_id=uuid.uuid4(),
         )
 
 
@@ -2202,7 +2202,7 @@ class JobLogEntryTest(
     def setUpTestData(cls):
         cls.job_result = JobResult.objects.create(
             name="test",
-            job_id=uuid.uuid4(),
+            task_id=uuid.uuid4(),
             obj_type=ContentType.objects.get_for_model(GitRepository),
         )
 

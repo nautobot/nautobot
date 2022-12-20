@@ -83,7 +83,7 @@ def run_job_for_testing(job, data=None, commit=True, username="test-user", reque
         obj_type=get_job_content_type(),
         user=user_instance,
         job_model=job,
-        job_id=uuid.uuid4(),
+        task_id=uuid.uuid4(),
     )
 
     @contextmanager

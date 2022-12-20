@@ -58,7 +58,7 @@ class JobResultAdmin(NautobotModelAdmin):
         "user",
         "status",
         "data",
-        "job_id",
+        "task_id",
     ]
     list_filter = [
         "status",

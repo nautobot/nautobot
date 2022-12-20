@@ -34,7 +34,7 @@ class JobResultTest(SeleniumTestCase):
             obj_type=ContentType.objects.get_for_model(Job),
             user=self.user,
             status=JobResultStatusChoices.STATUS_RUNNING,
-            job_id=job.pk,
+            task_id=job.pk,
         )
         job_result.save()
 

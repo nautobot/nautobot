@@ -5,8 +5,7 @@ import logging
 import os
 import uuid
 
-from celery import schedules
-
+from celery import schedules, states
 from django.conf import settings
 from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ObjectDoesNotExist, ValidationError
@@ -16,9 +15,9 @@ from django.db import models, transaction
 from django.db.models import signals
 from django.urls import reverse
 from django.utils import timezone
-
 from django_celery_beat.clockedschedule import clocked
 from django_celery_beat.managers import ExtendedManager
+from django_celery_results.models import TASK_STATE_CHOICES
 
 from nautobot.core.celery import NautobotKombuJSONEncoder
 from nautobot.core.models import BaseModel
@@ -520,7 +519,16 @@ class JobResult(BaseModel, CustomFieldModel):
         to="extras.Job", null=True, blank=True, on_delete=models.SET_NULL, related_name="results"
     )
 
-    name = models.CharField(max_length=255, db_index=True)
+    task_name = models.CharField(max_length=255, db_index=True)
+
+    @property
+    def name(self):
+        return self.task_name
+
+    @name.setter
+    def set_name(self, name):
+        self.task_name = name
+
     obj_type = models.ForeignKey(
         to=ContentType,
         related_name="job_results",
@@ -529,16 +537,36 @@ class JobResult(BaseModel, CustomFieldModel):
         help_text="The object type to which this job result applies",
         on_delete=models.CASCADE,
     )
-    created = models.DateTimeField(auto_now_add=True)
-    completed = models.DateTimeField(null=True, blank=True)
+
+    date_created = models.DateTimeField(auto_now_add=True)
+
+    @property
+    def created(self):
+        return self.date_created
+
+    @created.setter
+    def set_created(self):
+        self.date_created = created
+
+    date_done = models.DateTimeField(null=True, blank=True)
+
+    @property
+    def completed(self):
+        return self.date_done
+
+    @completed.setter
+    def set_completed(self, completed):
+        self.date_done = completed
+
     user = models.ForeignKey(
         to=settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, related_name="+", blank=True, null=True
     )
-    # todoindex:
     status = models.CharField(
         max_length=30,
-        choices=JobResultStatusChoices,
-        default=JobResultStatusChoices.STATUS_PENDING,
+        choices=TASK_STATE_CHOICES,
+        default=states.PENDING,
+        help_text="Current state of the Job being run",
+        db_index=True,
     )
     data = models.JSONField(encoder=DjangoJSONEncoder, null=True, blank=True)
     job_kwargs = models.JSONField(blank=True, null=True, encoder=NautobotKombuJSONEncoder)
@@ -555,32 +583,40 @@ class JobResult(BaseModel, CustomFieldModel):
     }
     """
 
-    job_id = models.UUIDField(unique=True)
+    task_id = models.UUIDField(unique=True)
+
+    @property
+    def job_id(self):
+        return self.task_id
+
+    @job_id.setter
+    def set_job_id(self, job_id):
+        self.task_id = job_id
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.use_job_logs_db = True
 
     class Meta:
-        ordering = ["-created"]
-        get_latest_by = "created"
+        ordering = ["-date_created"]
+        get_latest_by = "date_created"
 
     def __str__(self):
-        return str(self.job_id)
+        return str(self.task_id)
 
     @property
     def duration(self):
-        if not self.completed:
+        if not self.date_done:
             return None
 
-        duration = self.completed - self.created
+        duration = self.date_done - self.date_created
         minutes, seconds = divmod(duration.total_seconds(), 60)
 
         return f"{int(minutes)} minutes, {seconds:.2f} seconds"
 
     @property
     def related_object(self):
-        """Get the related object, if any, identified by the `obj_type`, `name`, and/or `job_id` fields.
+        """Get the related object, if any, identified by the `obj_type`, `name`, and/or `task_id` fields.
 
         If `obj_type` is extras.Job, then the `name` is used to look up an extras.jobs.Job subclass based on the
         `class_path` of the Job subclass.
@@ -591,8 +627,8 @@ class JobResult(BaseModel, CustomFieldModel):
         more generally it can be used by any model that 1) has a unique `name` field and 2) needs to have a many-to-one
         relationship between JobResults and model instances.
 
-        Else, the `obj_type` and `job_id` will be used together as a quasi-GenericForeignKey to look up a model
-        instance whose PK corresponds to the `job_id`. This behavior is currently unused in the Nautobot core,
+        Else, the `obj_type` and `task_id` will be used together as a quasi-GenericForeignKey to look up a model
+        instance whose PK corresponds to the `task_id`. This behavior is currently unused in the Nautobot core,
         but may be of use to plugin developers wishing to create JobResults that have a one-to-one relationship
         to plugin model instances.
 
@@ -615,9 +651,9 @@ class JobResult(BaseModel, CustomFieldModel):
                 except model_class.DoesNotExist:
                     pass
 
-            # See if we have a one-to-one relationship from JobResult to model_class record based on `job_id`
+            # See if we have a one-to-one relationship from JobResult to model_class record based on `task_id`
             try:
-                return model_class.objects.get(id=self.job_id)
+                return model_class.objects.get(id=self.task_id)
             except model_class.DoesNotExist:
                 pass
 
@@ -668,7 +704,7 @@ class JobResult(BaseModel, CustomFieldModel):
         """
         self.status = status
         if status in JobResultStatusChoices.TERMINAL_STATE_CHOICES:
-            self.completed = timezone.now()
+            self.date_done = timezone.now()
 
     @classmethod
     def enqueue_job(cls, func, name, obj_type, user, *args, celery_kwargs=None, schedule=None, **kwargs):
@@ -692,9 +728,19 @@ class JobResult(BaseModel, CustomFieldModel):
             name=name,
             obj_type=obj_type,
             user=user,
-            job_id=uuid.uuid4(),
+            task_id=uuid.uuid4(),
             schedule=schedule,
         )
+
+        # Explicitly create a TaskResult before the Celery task is called to
+        # test that we can have it there. This was confirmed to work.
+        """
+        from django_celery_results.models import TaskResult
+        from django.utils import timezone
+        t = TaskResult.objects.create(task_id=job_result.task_id)
+        t.date_created = timezone.datetime(2021, 12, 28, 19, 30, 23, 742973, tzinfo=timezone.now().tzinfo)
+        t.save()
+        """
 
         kwargs["job_result_pk"] = job_result.pk
 
@@ -732,7 +778,7 @@ class JobResult(BaseModel, CustomFieldModel):
 
         # Jobs queued inside of a transaction need to run after the transaction completes and the JobResult is saved to the database
         transaction.on_commit(
-            lambda: func.apply_async(args=args, kwargs=kwargs, task_id=str(job_result.job_id), **celery_kwargs)
+            lambda: func.apply_async(args=args, kwargs=kwargs, task_id=str(job_result.task_id), **celery_kwargs)
         )
 
         return job_result

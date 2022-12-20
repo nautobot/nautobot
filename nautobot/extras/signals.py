@@ -197,7 +197,7 @@ def git_repository_pre_delete(instance, **kwargs):
         name=instance.name,
         obj_type=ContentType.objects.get_for_model(instance),
         user=None,
-        job_id=uuid.uuid4(),
+        task_id=uuid.uuid4(),
         status=JobResultStatusChoices.STATUS_RUNNING,
     )
 

@@ -1420,17 +1420,17 @@ class JobResultTestCase(
         obj_type = get_job_content_type()
         JobResult.objects.create(
             name="local/test_pass/TestPass",
-            job_id=uuid.uuid4(),
+            task_id=uuid.uuid4(),
             obj_type=obj_type,
         )
         JobResult.objects.create(
             name="local/test_fail/TestFail",
-            job_id=uuid.uuid4(),
+            task_id=uuid.uuid4(),
             obj_type=obj_type,
         )
         JobResult.objects.create(
             name="local/test_read_only_fail/TestReadOnlyFail",
-            job_id=uuid.uuid4(),
+            task_id=uuid.uuid4(),
             obj_type=obj_type,
         )
 
