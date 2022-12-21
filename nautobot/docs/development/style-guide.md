@@ -178,7 +178,7 @@ When using external libraries you may need to import multiple different modules 
 
     # other libraries
     from django.db import models as django_models
-    from mptt import models as mptt_models
+    from tree_queries import models as tree_queries_models
     ```
 
 #### Convenience Imports

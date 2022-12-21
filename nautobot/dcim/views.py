@@ -12,6 +12,7 @@ from django.forms import (
     modelformset_factory,
 )
 from django.shortcuts import get_object_or_404, redirect, render
+from django.utils.functional import cached_property
 from django.utils.html import escape
 from django.utils.safestring import mark_safe
 from django.views.generic import View
@@ -140,7 +141,7 @@ class BulkDisconnectView(GetReturnURLMixin, ObjectPermissionRequiredMixin, View)
 
 
 class RegionListView(generic.ObjectListView):
-    queryset = Region.objects.add_related_count(Region.objects.all(), Site, "region", "site_count", cumulative=True)
+    queryset = Region.objects.annotate(site_count=count_related(Site, "region"))
     filterset = filters.RegionFilterSet
     filterset_form = forms.RegionFilterForm
     table = tables.RegionTable
@@ -155,7 +156,7 @@ class RegionView(generic.ObjectView):
         # v2 TODO(jathan): Replace prefetch_related with select_related
         sites = (
             Site.objects.restrict(request.user, "view")
-            .filter(region__in=instance.get_descendants(include_self=True))
+            .filter(region__in=instance.descendants(include_self=True))
             .prefetch_related("parent", "region", "tenant")
         )
 
@@ -188,7 +189,7 @@ class RegionBulkImportView(generic.BulkImportView):
 
 
 class RegionBulkDeleteView(generic.BulkDeleteView):
-    queryset = Region.objects.add_related_count(Region.objects.all(), Site, "region", "site_count", cumulative=True)
+    queryset = Region.objects.annotate(site_count=count_related(Site, "region"))
     filterset = filters.RegionFilterSet
     table = tables.RegionTable
 
@@ -219,9 +220,8 @@ class SiteView(generic.ObjectView):
             "vm_count": VirtualMachine.objects.restrict(request.user, "view").filter(cluster__site=instance).count(),
         }
         rack_groups = (
-            RackGroup.objects.add_related_count(RackGroup.objects.all(), Rack, "group", "rack_count", cumulative=True)
-            .restrict(request.user, "view")
-            .filter(site=instance)
+            RackGroup.objects.annotate(rack_count=count_related(Rack, "group")).restrict(request.user, "view")
+            # .filter(site=instance)
         )
         # v2 TODO(jathan): Replace prefetch_related with select_related
         locations = (
@@ -378,7 +378,7 @@ class LocationView(generic.ObjectView):
             .count(),
         }
         rack_groups = (
-            RackGroup.objects.add_related_count(RackGroup.objects.all(), Rack, "group", "rack_count", cumulative=True)
+            RackGroup.objects.annotate(rack_count=count_related(Rack, "group"))
             .restrict(request.user, "view")
             .filter(location__in=related_locations)
         )
@@ -441,9 +441,7 @@ class LocationBulkDeleteView(generic.BulkDeleteView):
 
 
 class RackGroupListView(generic.ObjectListView):
-    queryset = RackGroup.objects.add_related_count(
-        RackGroup.objects.all(), Rack, "group", "rack_count", cumulative=True
-    )
+    queryset = RackGroup.objects.annotate(rack_count=count_related(Rack, "group"))
     filterset = filters.RackGroupFilterSet
     filterset_form = forms.RackGroupFilterForm
     table = tables.RackGroupTable
@@ -458,7 +456,7 @@ class RackGroupView(generic.ObjectView):
         # v2 TODO(jathan): Replace prefetch_related with select_related
         racks = (
             Rack.objects.restrict(request.user, "view")
-            .filter(group__in=instance.get_descendants(include_self=True))
+            .filter(group__in=instance.descendants(include_self=True))
             .prefetch_related("role", "site", "tenant")
         )
 
@@ -493,9 +491,7 @@ class RackGroupBulkImportView(generic.BulkImportView):
 
 class RackGroupBulkDeleteView(generic.BulkDeleteView):
     # v2 TODO(jathan): Replace prefetch_related with select_related
-    queryset = RackGroup.objects.add_related_count(
-        RackGroup.objects.all(), Rack, "group", "rack_count", cumulative=True
-    ).prefetch_related("site")
+    queryset = RackGroup.objects.annotate(rack_count=count_related(Rack, "group")).prefetch_related("site")
     filterset = filters.RackGroupFilterSet
     table = tables.RackGroupTable
 
@@ -1548,8 +1544,14 @@ class DeviceConfigView(generic.ObjectView):
 
 
 class DeviceConfigContextView(ObjectConfigContextView):
-    queryset = Device.objects.annotate_config_context_data()
     base_template = "dcim/device/base.html"
+
+    @cached_property
+    def queryset(self):  # pylint: disable=method-hidden
+        """
+        A cached_property rather than a class attribute because annotate_config_context_data() is unsafe at import time.
+        """
+        return Device.objects.annotate_config_context_data()
 
 
 class DeviceChangeLogView(ObjectChangeLogView):

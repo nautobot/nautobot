@@ -114,13 +114,9 @@ SEARCH_TYPES = OrderedDict(
             "rackgroup",
             {
                 # v2 TODO(jathan): Replace prefetch_related with select_related
-                "queryset": RackGroup.objects.add_related_count(
-                    RackGroup.objects.all(),
-                    Rack,
-                    "group",
-                    "rack_count",
-                    cumulative=True,
-                ).prefetch_related("site"),
+                "queryset": RackGroup.objects.annotate(rack_count=count_related(Rack, "group")).prefetch_related(
+                    "site"
+                ),
                 "filterset": RackGroupFilterSet,
                 "table": RackGroupTable,
                 "url": "dcim:rackgroup_list",

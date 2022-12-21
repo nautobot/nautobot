@@ -72,8 +72,18 @@ class LocationTable(StatusTableMixin, BaseTable):
             "parent",
             "tenant",
             "description",
-            "tags",
             "actions",
+            "facility",
+            "asn",
+            "time_zone",
+            "physical_address",
+            "shipping_address",
+            "latitude",
+            "longitude",
+            "contact_name",
+            "contact_phone",
+            "contact_email",
+            "tags",
         )
         default_columns = ("pk", "name", "status", "site", "tenant", "description", "tags", "actions")
         orderable = False

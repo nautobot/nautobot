@@ -18,6 +18,7 @@ from nautobot.extras.choices import DynamicGroupOperatorChoices
 from nautobot.extras.querysets import DynamicGroupQuerySet, DynamicGroupMembershipQuerySet
 from nautobot.extras.utils import extras_features
 from nautobot.utilities.forms.constants import BOOLEAN_WITH_BLANK_CHOICES
+from nautobot.utilities.forms.fields import DynamicModelChoiceField
 from nautobot.utilities.forms.widgets import StaticSelect2
 from nautobot.utilities.utils import get_filterset_for_model, get_form_for_model
 
@@ -229,6 +230,9 @@ class DynamicGroup(OrganizationalModel):
             # Null boolean fields need a special widget that doesn't save `False` when unchecked.
             if isinstance(modelform_field, forms.NullBooleanField):
                 modelform_field.widget = StaticSelect2(choices=BOOLEAN_WITH_BLANK_CHOICES)
+
+            if isinstance(modelform_field, DynamicModelChoiceField):
+                modelform_field = filterset_field.field
 
             # Filter fields should never be required!
             modelform_field.required = False
@@ -478,6 +482,11 @@ class DynamicGroup(OrganizationalModel):
             field_name = f"{field_name}__{to_field_name}"
 
         lookup = f"{field_name}__{filter_field.lookup_expr}"
+        # has_{field_name} boolean filters uses `isnull` lookup expressions
+        # so when we generate queries for those filters we need to negate the value entered
+        # e.g (has_interfaces: True) == (interfaces__isnull: False)
+        if filter_field.lookup_expr == "isnull":
+            value = not value
 
         # Explicitly call generate_query_{filter_method} for a method filter.
         if filter_field.method is not None and hasattr(filter_field.parent, "generate_query_" + filter_field.method):
