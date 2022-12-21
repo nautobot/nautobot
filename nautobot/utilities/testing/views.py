@@ -733,16 +733,6 @@ class ViewTestCases:
             # Try GET with model-level permission
             response = self.client.get(self._get_url("list"))
             self.assertHttpStatus(response, 200)
-            response_body = response.content.decode(response.charset)
-
-            list_url = self.get_list_url()
-            title = self.get_title()
-
-            # Check if breadcrumb is rendered correctly
-            self.assertIn(
-                f'<a href="{list_url}">{title}</a>',
-                response_body,
-            )
 
             # Built-in CSV export
             if hasattr(self.model, "csv_headers"):
