@@ -1596,6 +1596,7 @@ class ChildDeviceBulkImportView(generic.BulkImportView):
 
 
 class DeviceBulkEditView(generic.BulkEditView):
+    # v2 TODO(jathan): Replace prefetch_related with select_related
     queryset = Device.objects.prefetch_related(
         "tenant", "site", "rack", "role", "device_type__manufacturer", "secrets_group", "device_redundancy_group"
     )

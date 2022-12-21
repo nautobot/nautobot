@@ -72,7 +72,6 @@ class NameColorContentTypesModel(
     def natural_key(self):
         return (self.name,)
 
-    # TODO(timizuo): When view url has been implemented for role; visit this
     def get_absolute_url(self):
         ct = f"{self._meta.app_label}:{self._meta.model_name}"
         # TODO(timizuo): Replace self.slug with natural key or pk

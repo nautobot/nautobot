@@ -26,7 +26,7 @@ class Role(NameColorContentTypesModel):
     weight = models.PositiveSmallIntegerField(null=True, blank=True)
 
     class Meta:
-        ordering = ("name", "weight")
+        ordering = ("weight", "name")
 
 
 class RoleField(ForeignKeyLimitedByContentTypes):
