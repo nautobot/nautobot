@@ -114,7 +114,7 @@ class MultiValueMACAddressFilter(django_filters.MultipleChoiceFilter):
 
 
 class MultiValueUUIDFilter(django_filters.UUIDFilter, django_filters.MultipleChoiceFilter):
-    field_class = multivalue_field_factory(forms.UUIDField)
+    field_class = MultiValueCharField
 
 
 class RelatedMembershipBooleanFilter(django_filters.BooleanFilter):
