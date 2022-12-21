@@ -12,6 +12,7 @@ from django.db.models import ProtectedError
 from django.db.utils import IntegrityError
 
 from nautobot.core.choices import ColorChoices
+from nautobot.core.testing import TestCase, TransactionTestCase
 from nautobot.dcim.models import Device, DeviceRole, DeviceType, Location, LocationType, Manufacturer, Platform, Site
 from nautobot.extras.choices import LogLevelChoices, SecretsGroupAccessTypeChoices, SecretsGroupSecretTypeChoices
 from nautobot.extras.constants import JOB_OVERRIDABLE_FIELDS
@@ -41,7 +42,6 @@ from nautobot.extras.secrets.exceptions import SecretParametersError, SecretProv
 from nautobot.extras.utils import get_job_content_type
 from nautobot.ipam.models import IPAddress
 from nautobot.tenancy.models import Tenant, TenantGroup
-from nautobot.utilities.testing import TestCase, TransactionTestCase
 from nautobot.virtualization.models import Cluster, ClusterGroup, ClusterType, VirtualMachine
 
 

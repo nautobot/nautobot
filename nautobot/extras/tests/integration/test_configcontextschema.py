@@ -1,6 +1,6 @@
+from nautobot.core.testing.integration import SeleniumTestCase
 from nautobot.dcim.models import Device, DeviceRole, DeviceType, Manufacturer, Site
 from nautobot.extras.models import ConfigContext, ConfigContextSchema, Status
-from nautobot.utilities.testing.integration import SeleniumTestCase
 from nautobot.virtualization.models import Cluster, ClusterType, VirtualMachine
 
 

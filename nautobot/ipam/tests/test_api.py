@@ -1,6 +1,6 @@
-from concurrent.futures.thread import ThreadPoolExecutor
 import json
 import logging
+from concurrent.futures.thread import ThreadPoolExecutor
 from random import shuffle
 
 from django.db import connection
@@ -8,23 +8,11 @@ from django.urls import reverse
 from netaddr import IPNetwork
 from rest_framework import status
 
+from nautobot.core.testing import APITestCase, APITransactionTestCase, APIViewTestCases, disable_warnings
 from nautobot.dcim.models import Device, DeviceRole, DeviceType, Manufacturer, Site
 from nautobot.extras.models import Status
 from nautobot.ipam.choices import ServiceProtocolChoices
-from nautobot.ipam.models import (
-    Aggregate,
-    IPAddress,
-    Prefix,
-    RIR,
-    Role,
-    RouteTarget,
-    Service,
-    VLAN,
-    VLANGroup,
-    VRF,
-)
-from nautobot.utilities.testing import APITestCase, APIViewTestCases, disable_warnings
-from nautobot.utilities.testing.api import APITransactionTestCase
+from nautobot.ipam.models import RIR, VLAN, VRF, Aggregate, IPAddress, Prefix, Role, RouteTarget, Service, VLANGroup
 
 
 class AppTest(APITestCase):

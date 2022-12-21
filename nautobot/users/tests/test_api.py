@@ -1,16 +1,15 @@
 import base64
+
 from django.contrib.auth import get_user_model
 from django.contrib.auth.models import Group
 from django.contrib.contenttypes.models import ContentType
 from django.urls import reverse
+from rest_framework import HTTP_HEADER_ENCODING
 
+from nautobot.core.testing.api import APITestCase, APIViewTestCases
 from nautobot.core.utils import deepmerge
 from nautobot.users.filters import GroupFilterSet
 from nautobot.users.models import ObjectPermission, Token
-from nautobot.utilities.testing import APIViewTestCases, APITestCase
-
-from rest_framework import HTTP_HEADER_ENCODING
-
 
 # Use the proper swappable User model
 User = get_user_model()

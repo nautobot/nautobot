@@ -1,5 +1,5 @@
+from nautobot.core import testing
 from nautobot.core.utils import logging
-from nautobot.utilities import testing
 
 
 class LoggingUtilitiesTest(testing.TestCase):

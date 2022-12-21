@@ -5,15 +5,9 @@ from django.contrib.auth.models import Group
 from django.contrib.contenttypes.models import ContentType
 from django.utils.timezone import make_aware
 
-from nautobot.users.filters import (
-    GroupFilterSet,
-    ObjectPermissionFilterSet,
-    TokenFilterSet,
-    UserFilterSet,
-)
+from nautobot.core.testing import FilterTestCases
+from nautobot.users.filters import GroupFilterSet, ObjectPermissionFilterSet, TokenFilterSet, UserFilterSet
 from nautobot.users.models import ObjectPermission, Token
-from nautobot.utilities.testing import FilterTestCases
-
 
 # Use the proper swappable User model
 User = get_user_model()

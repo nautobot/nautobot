@@ -4,18 +4,12 @@ from django.contrib.contenttypes.models import ContentType
 from django.urls import reverse
 from rest_framework import status
 
+from nautobot.core.testing import APITestCase, APIViewTestCases
 from nautobot.dcim.choices import InterfaceModeChoices
 from nautobot.extras.models import ConfigContextSchema, Status
 from nautobot.ipam.models import VLAN
-from nautobot.utilities.testing import APITestCase, APIViewTestCases
 from nautobot.virtualization.choices import VMInterfaceStatusChoices
-from nautobot.virtualization.models import (
-    Cluster,
-    ClusterGroup,
-    ClusterType,
-    VirtualMachine,
-    VMInterface,
-)
+from nautobot.virtualization.models import Cluster, ClusterGroup, ClusterType, VirtualMachine, VMInterface
 
 
 class AppTest(APITestCase):

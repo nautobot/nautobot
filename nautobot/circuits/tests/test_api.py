@@ -2,9 +2,9 @@ from django.urls import reverse
 
 from nautobot.circuits.choices import CircuitTerminationSideChoices
 from nautobot.circuits.models import Circuit, CircuitTermination, CircuitType, Provider, ProviderNetwork
+from nautobot.core.testing import APITestCase, APIViewTestCases
 from nautobot.dcim.models import Site
 from nautobot.extras.models import Status
-from nautobot.utilities.testing import APITestCase, APIViewTestCases
 
 
 class AppTest(APITestCase):

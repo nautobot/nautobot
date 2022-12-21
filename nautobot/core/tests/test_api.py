@@ -9,12 +9,12 @@ from django.urls import reverse
 from rest_framework import status
 
 from nautobot.circuits.models import Provider
+from nautobot.core import testing
+from nautobot.core.testing import APITestCase
 from nautobot.dcim import models as dcim_models
 from nautobot.extras import choices
 from nautobot.extras import models as extras_models
 from nautobot.ipam import models as ipam_models
-from nautobot.utilities import testing
-from nautobot.utilities.testing import APITestCase
 
 
 class AppTest(APITestCase):

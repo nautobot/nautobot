@@ -1,14 +1,14 @@
 import json
 from unittest import skip
 
+from constance.test import override_config
 from django.contrib.auth import get_user_model
 from django.contrib.contenttypes.models import ContentType
 from django.test import override_settings
 from django.urls import reverse
 from rest_framework import status
 
-from constance.test import override_config
-
+from nautobot.core.testing import APITestCase, APIViewTestCases
 from nautobot.dcim.choices import (
     InterfaceModeChoices,
     InterfaceStatusChoices,
@@ -17,7 +17,6 @@ from nautobot.dcim.choices import (
     PowerFeedTypeChoices,
     SubdeviceRoleChoices,
 )
-
 from nautobot.dcim.models import (
     Cable,
     ConsolePort,
@@ -34,17 +33,17 @@ from nautobot.dcim.models import (
     FrontPortTemplate,
     Interface,
     InterfaceTemplate,
+    InventoryItem,
     Location,
     LocationType,
     Manufacturer,
-    InventoryItem,
     Platform,
     PowerFeed,
-    PowerPort,
-    PowerPortTemplate,
     PowerOutlet,
     PowerOutletTemplate,
     PowerPanel,
+    PowerPort,
+    PowerPortTemplate,
     Rack,
     RackGroup,
     RackReservation,
@@ -56,11 +55,9 @@ from nautobot.dcim.models import (
     VirtualChassis,
 )
 from nautobot.extras.models import ConfigContextSchema, SecretsGroup, Status
-from nautobot.ipam.models import IPAddress, VLAN
+from nautobot.ipam.models import VLAN, IPAddress
 from nautobot.tenancy.models import Tenant
-from nautobot.utilities.testing import APITestCase, APIViewTestCases
 from nautobot.virtualization.models import Cluster, ClusterType
-
 
 # Use the proper swappable User model
 User = get_user_model()

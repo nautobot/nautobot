@@ -2,9 +2,9 @@ from django.contrib.contenttypes.models import ContentType
 from django.test import override_settings
 
 from nautobot.core.graphql import execute_query
-from nautobot.dcim.models import Device, DeviceType, DeviceRole, Manufacturer, Site
+from nautobot.core.testing import TestCase, create_test_user
+from nautobot.dcim.models import Device, DeviceRole, DeviceType, Manufacturer, Site
 from nautobot.extras.models import DynamicGroup
-from nautobot.utilities.testing import create_test_user, TestCase
 
 
 class GraphQLTestCase(TestCase):

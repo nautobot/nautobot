@@ -9,6 +9,7 @@ from django.utils import timezone
 from requests import Session
 
 from nautobot.core.api.exceptions import SerializerNotFound
+from nautobot.core.testing import APITestCase
 from nautobot.core.utils import get_changes_for_model
 from nautobot.dcim.api.serializers import SiteSerializer
 from nautobot.dcim.models import Site
@@ -19,7 +20,6 @@ from nautobot.extras.models import Webhook
 from nautobot.extras.models.statuses import Status
 from nautobot.extras.tasks import process_webhook
 from nautobot.extras.utils import generate_signature
-from nautobot.utilities.testing import APITestCase
 
 User = get_user_model()
 

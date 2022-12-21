@@ -1,6 +1,7 @@
-from datetime import datetime, timedelta
 import urllib.parse
 import uuid
+from datetime import datetime, timedelta
+from unittest import mock
 
 from django.contrib.auth import get_user_model
 from django.contrib.contenttypes.models import ContentType
@@ -8,8 +9,15 @@ from django.core.exceptions import ValidationError
 from django.test import override_settings
 from django.urls import reverse
 from django.utils import timezone
-from unittest import mock
 
+from nautobot.core.testing import (
+    TestCase,
+    ViewTestCases,
+    disable_warnings,
+    extract_form_failures,
+    extract_page_body,
+    post_data,
+)
 from nautobot.core.utils import slugify_dashes_to_underscores
 from nautobot.dcim.models import ConsolePort, Device, DeviceRole, DeviceType, Interface, Manufacturer, Site
 from nautobot.dcim.tests import test_views
@@ -23,6 +31,7 @@ from nautobot.extras.choices import (
 )
 from nautobot.extras.constants import HTTP_CONTENT_TYPE_JSON
 from nautobot.extras.models import (
+    ComputedField,
     ConfigContext,
     ConfigContextSchema,
     CustomField,
@@ -44,15 +53,12 @@ from nautobot.extras.models import (
     Status,
     Tag,
     Webhook,
-    ComputedField,
 )
 from nautobot.extras.tests.test_relationships import RequiredRelationshipTestMixin
-from nautobot.extras.utils import get_job_content_type, TaggableClassesQuery
+from nautobot.extras.utils import TaggableClassesQuery, get_job_content_type
 from nautobot.ipam.factory import VLANFactory
 from nautobot.ipam.models import VLAN, VLANGroup
 from nautobot.users.models import ObjectPermission
-from nautobot.utilities.testing import ViewTestCases, TestCase, extract_page_body, extract_form_failures
-from nautobot.utilities.testing.utils import disable_warnings, post_data
 
 # Use the proper swappable User model
 User = get_user_model()

@@ -177,7 +177,9 @@ The `celery.exceptions.SoftTimeLimitExceeded` exception will be raised when this
 
 ```python
 from celery.exceptions import SoftTimeLimitExceeded
+
 from nautobot.extras.jobs import Job
+
 
 class ExampleJobWithSoftTimeLimit(Job):
     class Meta:
@@ -413,7 +415,8 @@ The `run()` method, if you choose to implement it, should accept two arguments:
 2. `commit` - A boolean indicating whether database changes should be committed. If this is `False`, even if your Job attempts to make database changes, they will be automatically rolled back when the Job completes.
 
 ```python
-from nautobot.extras.jobs import Job, StringVar, IntegerVar, ObjectVar
+from nautobot.extras.jobs import IntegerVar, Job, ObjectVar, StringVar
+
 
 class CreateDevices(Job):
     var1 = StringVar(...)
@@ -657,8 +660,8 @@ When using `TransactionTestCase` (whether from Django or from Nautobot) each tes
 A simple example of a Job test case for 1.3.3 and forward might look like the following:
 
 ```python
+from nautobot.core.testing import TransactionTestCase, run_job_for_testing
 from nautobot.extras.models import Job, JobLogEntry
-from nautobot.utilities.testing import run_job_for_testing, TransactionTestCase
 
 
 class MyJobTestCase(TransactionTestCase):
@@ -696,12 +699,14 @@ Replicate the behavior of `run_job_for_testing` manually so that your test execu
 
 ```python
 import uuid
+
 from django.contrib.auth import get_user_model
 from django.contrib.contenttypes.models import ContentType
 
 from nautobot.extras.context_managers import web_request_context
 from nautobot.extras.jobs import run_job
-from nautobot.extras.models import JobResult, Job
+from nautobot.extras.models import Job, JobResult
+
 
 def run_job_for_testing(job, data=None, commit=True, username="test-user"):
     if data is None:
@@ -727,6 +732,7 @@ from django.conf import settings
 from django.test import TransactionTestCase
 
 from nautobot.extras.management import populate_status_choices
+
 
 class MyJobTestCase(TransactionTestCase):
     # 'job_logs' is a proxy connection to the same (default) database that's used exclusively for Job logging

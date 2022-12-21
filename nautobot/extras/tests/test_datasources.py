@@ -2,24 +2,22 @@ import json
 import logging
 import os
 import tempfile
-from unittest import mock
 import uuid
+from unittest import mock
 
 import yaml
-
 from django.contrib.contenttypes.models import ContentType
 from django.test import RequestFactory
 
+from nautobot.core.testing import TransactionTestCase
 from nautobot.dcim.models import Device, DeviceRole, DeviceType, Manufacturer, Site
-from nautobot.ipam.models import VLAN
-
 from nautobot.extras.choices import (
     JobResultStatusChoices,
+    LogLevelChoices,
     SecretsGroupAccessTypeChoices,
     SecretsGroupSecretTypeChoices,
 )
-from nautobot.extras.choices import LogLevelChoices
-from nautobot.extras.datasources.git import pull_git_repository_and_refresh_data, git_repository_diff_origin_and_local
+from nautobot.extras.datasources.git import git_repository_diff_origin_and_local, pull_git_repository_and_refresh_data
 from nautobot.extras.datasources.registry import get_datasource_contents
 from nautobot.extras.models import (
     ConfigContext,
@@ -33,7 +31,7 @@ from nautobot.extras.models import (
     SecretsGroupAssociation,
     Status,
 )
-from nautobot.utilities.testing import TransactionTestCase
+from nautobot.ipam.models import VLAN
 
 
 @mock.patch("nautobot.extras.datasources.git.GitRepo")

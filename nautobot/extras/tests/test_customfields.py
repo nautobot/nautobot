@@ -9,15 +9,14 @@ from django.urls import reverse
 from rest_framework import status
 
 from nautobot.core.tables import CustomFieldColumn
+from nautobot.core.testing import APITestCase, CeleryTestCase, TestCase, post_data
 from nautobot.dcim.filters import SiteFilterSet
 from nautobot.dcim.forms import SiteCSVForm
-from nautobot.dcim.models import Site, Rack, Device
+from nautobot.dcim.models import Device, Rack, Site
 from nautobot.dcim.tables import SiteTable
-from nautobot.extras.choices import CustomFieldTypeChoices, CustomFieldFilterLogicChoices
+from nautobot.extras.choices import CustomFieldFilterLogicChoices, CustomFieldTypeChoices
 from nautobot.extras.models import ComputedField, CustomField, CustomFieldChoice, Status
 from nautobot.users.models import ObjectPermission
-from nautobot.utilities.testing import APITestCase, CeleryTestCase, TestCase
-from nautobot.utilities.testing.utils import post_data
 from nautobot.virtualization.models import VirtualMachine
 
 

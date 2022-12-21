@@ -2,9 +2,9 @@
 
 from django.apps import apps
 
+from nautobot.core.testing.views import TestCase
 from nautobot.extras.management import populate_status_choices
 from nautobot.extras.models import Status
-from nautobot.utilities.testing import TestCase
 
 
 class StatusManagementTestCase(TestCase):

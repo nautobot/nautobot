@@ -1,8 +1,8 @@
+from nautobot.core.testing import FilterTestCases
 from nautobot.dcim.models import Location, LocationType, Site
 from nautobot.extras.models import Status
-from nautobot.tenancy.filters import TenantGroupFilterSet, TenantFilterSet
+from nautobot.tenancy.filters import TenantFilterSet, TenantGroupFilterSet
 from nautobot.tenancy.models import Tenant, TenantGroup
-from nautobot.utilities.testing import FilterTestCases
 
 
 class TenantGroupTestCase(FilterTestCases.NameSlugFilterTestCase):

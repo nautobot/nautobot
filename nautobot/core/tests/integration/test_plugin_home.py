@@ -1,13 +1,13 @@
-from django.test.utils import override_settings
-from django.conf import settings
 from unittest import skipIf
 
+from django.conf import settings
+from django.test.utils import override_settings
+from example_plugin.models import ExampleModel
+
 from nautobot.circuits.models import Circuit, Provider
+from nautobot.core.testing.integration import SeleniumTestCase
 from nautobot.dcim.models import PowerFeed, PowerPanel, Site
 from nautobot.tenancy.models import Tenant
-from nautobot.utilities.testing.integration import SeleniumTestCase
-
-from example_plugin.models import ExampleModel
 
 
 @skipIf(

@@ -1,39 +1,36 @@
 import random
 import types
-from unittest import skip
 import uuid
+from unittest import skip
 
+import graphene.types
 from django.contrib.auth import get_user_model
 from django.contrib.auth.models import Group
 from django.contrib.contenttypes.models import ContentType
 from django.test import TestCase, override_settings
 from django.test.client import RequestFactory
 from django.urls import reverse
-from graphql import GraphQLError
-import graphene.types
 from graphene_django import DjangoObjectType
 from graphene_django.settings import graphene_settings
+from graphql import GraphQLError, get_default_backend
 from graphql.error.located_error import GraphQLLocatedError
-from graphql import get_default_backend
 from rest_framework import status
 from rest_framework.test import APIClient
 
-from nautobot.circuits.models import Provider, CircuitTermination
-from nautobot.core.graphql.generators import (
-    generate_list_search_parameters,
-    generate_schema_type,
-)
+from nautobot.circuits.models import CircuitTermination, Provider
 from nautobot.core.graphql import execute_query, execute_saved_query
-from nautobot.core.graphql.utils import str_to_var_name
+from nautobot.core.graphql.generators import generate_list_search_parameters, generate_schema_type
 from nautobot.core.graphql.schema import (
     extend_schema_type,
-    extend_schema_type_custom_field,
-    extend_schema_type_tags,
     extend_schema_type_config_context,
-    extend_schema_type_relationships,
+    extend_schema_type_custom_field,
     extend_schema_type_null_field_choice,
+    extend_schema_type_relationships,
+    extend_schema_type_tags,
 )
-from nautobot.dcim.choices import InterfaceTypeChoices, InterfaceModeChoices, PortTypeChoices, ConsolePortTypeChoices
+from nautobot.core.graphql.utils import str_to_var_name
+from nautobot.core.testing.utils import create_test_user
+from nautobot.dcim.choices import ConsolePortTypeChoices, InterfaceModeChoices, InterfaceTypeChoices, PortTypeChoices
 from nautobot.dcim.filters import DeviceFilterSet, SiteFilterSet
 from nautobot.dcim.graphql.types import DeviceType as DeviceTypeGraphQL
 from nautobot.dcim.models import (
@@ -46,30 +43,28 @@ from nautobot.dcim.models import (
     FrontPort,
     Interface,
     PowerFeed,
-    PowerPort,
     PowerOutlet,
     PowerPanel,
+    PowerPort,
     Rack,
     RearPort,
     Region,
     Site,
 )
 from nautobot.extras.choices import CustomFieldTypeChoices
-from nautobot.utilities.testing.utils import create_test_user
-
 from nautobot.extras.models import (
     ChangeLoggedModel,
-    CustomField,
     ConfigContext,
+    CustomField,
     GraphQLQuery,
     Relationship,
     RelationshipAssociation,
     Status,
     Webhook,
 )
-from nautobot.ipam.models import IPAddress, VLAN
-from nautobot.users.models import ObjectPermission, Token
+from nautobot.ipam.models import VLAN, IPAddress
 from nautobot.tenancy.models import Tenant
+from nautobot.users.models import ObjectPermission, Token
 from nautobot.virtualization.models import Cluster, ClusterType, VirtualMachine, VMInterface
 
 # Use the proper swappable User model

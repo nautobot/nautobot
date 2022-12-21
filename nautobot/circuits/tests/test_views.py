@@ -1,4 +1,5 @@
 import datetime
+
 from django.urls import reverse
 
 from nautobot.circuits.models import (
@@ -9,8 +10,9 @@ from nautobot.circuits.models import (
     Provider,
     ProviderNetwork,
 )
+from nautobot.core.testing import TestCase as NautobotTestCase
+from nautobot.core.testing import ViewTestCases, post_data
 from nautobot.extras.models import Status, Tag
-from nautobot.utilities.testing import post_data, TestCase as NautobotTestCase, ViewTestCases
 
 
 class ProviderTestCase(ViewTestCases.PrimaryObjectViewTestCase):

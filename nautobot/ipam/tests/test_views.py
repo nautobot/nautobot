@@ -1,28 +1,16 @@
 import datetime
 
-from netaddr import IPNetwork
 from django.contrib.contenttypes.models import ContentType
 from django.test import override_settings
+from netaddr import IPNetwork
 
+from nautobot.core.testing import ViewTestCases, extract_page_body
 from nautobot.dcim.models import Device, DeviceRole, DeviceType, Location, Manufacturer, Site
 from nautobot.extras.choices import CustomFieldTypeChoices
 from nautobot.extras.models import CustomField, Status, Tag
 from nautobot.ipam.choices import IPAddressRoleChoices, ServiceProtocolChoices
-from nautobot.ipam.models import (
-    Aggregate,
-    IPAddress,
-    Prefix,
-    RIR,
-    Role,
-    RouteTarget,
-    Service,
-    VLAN,
-    VLANGroup,
-    VRF,
-)
+from nautobot.ipam.models import RIR, VLAN, VRF, Aggregate, IPAddress, Prefix, Role, RouteTarget, Service, VLANGroup
 from nautobot.tenancy.models import Tenant
-from nautobot.utilities.testing import ViewTestCases
-from nautobot.utilities.testing.utils import extract_page_body
 
 
 class VRFTestCase(ViewTestCases.PrimaryObjectViewTestCase):

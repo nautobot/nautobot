@@ -12,6 +12,7 @@ from django.utils.timezone import make_aware, now
 from rest_framework import status
 
 from nautobot.core.choices import ColorChoices
+from nautobot.core.testing import APITestCase, APIViewTestCases, disable_warnings
 from nautobot.core.utils import get_route_for_model, slugify_dashes_to_underscores
 from nautobot.dcim.models import Device, DeviceRole, DeviceType, Manufacturer, Rack, RackGroup, RackRole, Site
 from nautobot.dcim.tests import test_views
@@ -57,8 +58,6 @@ from nautobot.extras.utils import TaggableClassesQuery
 from nautobot.ipam.factory import VLANFactory
 from nautobot.ipam.models import VLAN, VLANGroup
 from nautobot.users.models import ObjectPermission
-from nautobot.utilities.testing import APITestCase, APIViewTestCases
-from nautobot.utilities.testing.utils import disable_warnings
 
 User = get_user_model()
 

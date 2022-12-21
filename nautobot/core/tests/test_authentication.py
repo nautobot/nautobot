@@ -11,12 +11,11 @@ from netaddr import IPNetwork
 from rest_framework.test import APIClient
 
 from nautobot.core.settings_funcs import sso_auth_enabled
+from nautobot.core.testing import TestCase
 from nautobot.dcim.models import Site
 from nautobot.extras.models import Status
 from nautobot.ipam.models import Prefix
 from nautobot.users.models import ObjectPermission, Token
-from nautobot.utilities.testing import TestCase
-
 
 # Use the proper swappable User model
 User = get_user_model()

@@ -2,7 +2,6 @@ from decimal import Decimal
 
 import pytz
 import yaml
-
 from django.contrib.auth import get_user_model
 from django.contrib.contenttypes.models import ContentType
 from django.db.models import Q
@@ -12,6 +11,7 @@ from netaddr import EUI
 
 from nautobot.circuits.choices import CircuitTerminationSideChoices
 from nautobot.circuits.models import Circuit, CircuitTermination, CircuitType, Provider
+from nautobot.core.testing import ModelViewTestCase, ViewTestCases, extract_page_body, post_data
 from nautobot.dcim.choices import (
     CableLengthUnitChoices,
     CableTypeChoices,
@@ -50,17 +50,17 @@ from nautobot.dcim.models import (
     FrontPortTemplate,
     Interface,
     InterfaceTemplate,
-    Manufacturer,
     InventoryItem,
     Location,
     LocationType,
+    Manufacturer,
     Platform,
     PowerFeed,
-    PowerPort,
-    PowerPortTemplate,
     PowerOutlet,
     PowerOutletTemplate,
     PowerPanel,
+    PowerPort,
+    PowerPortTemplate,
     Rack,
     RackGroup,
     RackReservation,
@@ -85,7 +85,6 @@ from nautobot.extras.models import (
 from nautobot.ipam.models import VLAN, IPAddress
 from nautobot.tenancy.models import Tenant
 from nautobot.users.models import ObjectPermission
-from nautobot.utilities.testing import ViewTestCases, extract_page_body, ModelViewTestCase, post_data
 
 # Use the proper swappable User model
 User = get_user_model()

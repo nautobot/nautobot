@@ -1,10 +1,10 @@
-from django.urls import reverse
 from django.contrib.contenttypes.models import ContentType
+from django.urls import reverse
 from rest_framework import status
 
+from nautobot.core.testing import APITestCase, TestCase
 from nautobot.dcim.models import Site
 from nautobot.extras.models import Tag
-from nautobot.utilities.testing import APITestCase, TestCase
 
 
 class TaggedItemORMTest(TestCase):

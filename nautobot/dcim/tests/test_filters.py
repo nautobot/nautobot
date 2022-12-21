@@ -4,6 +4,7 @@ from django.contrib.contenttypes.models import ContentType
 from django.db.models import Q
 
 from nautobot.circuits.models import Circuit, CircuitTermination, CircuitType, Provider
+from nautobot.core.testing import FilterTestCases
 from nautobot.core.utils import flatten_iterable
 from nautobot.dcim.choices import (
     CableLengthUnitChoices,
@@ -43,11 +44,11 @@ from nautobot.dcim.filters import (
     ManufacturerFilterSet,
     PlatformFilterSet,
     PowerFeedFilterSet,
+    PowerOutletFilterSet,
+    PowerOutletTemplateFilterSet,
     PowerPanelFilterSet,
     PowerPortFilterSet,
     PowerPortTemplateFilterSet,
-    PowerOutletFilterSet,
-    PowerOutletTemplateFilterSet,
     RackFilterSet,
     RackGroupFilterSet,
     RackReservationFilterSet,
@@ -58,7 +59,6 @@ from nautobot.dcim.filters import (
     SiteFilterSet,
     VirtualChassisFilterSet,
 )
-
 from nautobot.dcim.models import (
     Cable,
     ConsolePort,
@@ -81,11 +81,11 @@ from nautobot.dcim.models import (
     Manufacturer,
     Platform,
     PowerFeed,
+    PowerOutlet,
+    PowerOutletTemplate,
     PowerPanel,
     PowerPort,
     PowerPortTemplate,
-    PowerOutlet,
-    PowerOutletTemplate,
     Rack,
     RackGroup,
     RackReservation,
@@ -97,11 +97,9 @@ from nautobot.dcim.models import (
     VirtualChassis,
 )
 from nautobot.extras.models import SecretsGroup, Status
-from nautobot.ipam.models import IPAddress, Prefix, Service, VLAN, VLANGroup
+from nautobot.ipam.models import VLAN, IPAddress, Prefix, Service, VLANGroup
 from nautobot.tenancy.models import Tenant
-from nautobot.utilities.testing import FilterTestCases
 from nautobot.virtualization.models import Cluster, ClusterType, VirtualMachine
-
 
 # Use the proper swappable User model
 User = get_user_model()

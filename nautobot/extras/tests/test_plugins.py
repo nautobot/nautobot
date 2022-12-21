@@ -1,34 +1,32 @@
 from unittest import mock, skipIf
 
+import netaddr
 from django.conf import settings
 from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ValidationError
 from django.template import engines
 from django.test import override_settings
 from django.urls import NoReverseMatch, reverse
-
-import netaddr
-
-from nautobot.circuits.models import Circuit, CircuitType, Provider
-from nautobot.dcim.models import Device, DeviceType, DeviceRole, Manufacturer, Site
-from nautobot.dcim.tests.test_views import create_test_device
-from nautobot.tenancy.models import Tenant, TenantGroup
-from nautobot.tenancy.filters import TenantFilterSet
-from nautobot.tenancy.forms import TenantFilterForm
-from nautobot.extras.choices import CustomFieldTypeChoices, RelationshipTypeChoices
-from nautobot.extras.jobs import get_job, get_job_classpaths, get_jobs
-from nautobot.extras.models import CustomField, Secret, Status, Relationship, RelationshipAssociation
-from nautobot.extras.plugins.exceptions import PluginImproperlyConfigured
-from nautobot.extras.plugins.utils import load_plugin
-from nautobot.extras.plugins.validators import wrap_model_clean_methods
-from nautobot.extras.registry import registry, DatasourceContent
-from nautobot.ipam.models import Prefix, IPAddress
-from nautobot.users.models import ObjectPermission
-from nautobot.utilities.testing import APIViewTestCases, TestCase, ViewTestCases, extract_page_body
-
 from example_plugin import config as example_config
 from example_plugin.datasources import refresh_git_text_files
 from example_plugin.models import ExampleModel
+
+from nautobot.circuits.models import Circuit, CircuitType, Provider
+from nautobot.core.testing import APIViewTestCases, TestCase, ViewTestCases, extract_page_body
+from nautobot.dcim.models import Device, DeviceRole, DeviceType, Manufacturer, Site
+from nautobot.dcim.tests.test_views import create_test_device
+from nautobot.extras.choices import CustomFieldTypeChoices, RelationshipTypeChoices
+from nautobot.extras.jobs import get_job, get_job_classpaths, get_jobs
+from nautobot.extras.models import CustomField, Relationship, RelationshipAssociation, Secret, Status
+from nautobot.extras.plugins.exceptions import PluginImproperlyConfigured
+from nautobot.extras.plugins.utils import load_plugin
+from nautobot.extras.plugins.validators import wrap_model_clean_methods
+from nautobot.extras.registry import DatasourceContent, registry
+from nautobot.ipam.models import IPAddress, Prefix
+from nautobot.tenancy.filters import TenantFilterSet
+from nautobot.tenancy.forms import TenantFilterForm
+from nautobot.tenancy.models import Tenant, TenantGroup
+from nautobot.users.models import ObjectPermission
 
 
 @skipIf(
@@ -77,7 +75,7 @@ class PluginTest(TestCase):
         """
         Check that plugin custom validators are registered correctly.
         """
-        from example_plugin.custom_validators import SiteCustomValidator, RelationshipAssociationCustomValidator
+        from example_plugin.custom_validators import RelationshipAssociationCustomValidator, SiteCustomValidator
 
         self.assertIn(SiteCustomValidator, registry["plugin_custom_validators"]["dcim.site"])
         self.assertIn(
