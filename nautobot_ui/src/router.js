@@ -1,8 +1,7 @@
 import { useRoutes } from "react-router-dom";
-import { lazy } from 'react';
+// import { lazy } from 'react';
 
 import Home from "@views/BSHome";
-import InstalledPlugins from "@views/InstalledPlugins";
 import ListView from "@views/BSListView";
 import DetailView from "@views/BSDetailView";
 
@@ -34,18 +33,6 @@ export default function NautobotRouter() {
             element: <DetailView />,
             children: [],
         },
-        // {
-        //     path: "/plugins/",
-        //     children: [
-        //         {
-        //             path: "installed-plugins",
-        //             element: <InstalledPlugins />
-        //         },
-        //         // nautobot__inject_route__start
-
-        //         // nautobot__inject_route__ends
-        //     ],
-        // },
     ]);
     return element;
 }

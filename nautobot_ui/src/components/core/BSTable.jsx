@@ -26,8 +26,8 @@ export default function NautobotTable({ data, headers }) {
                 <TableItem
                   name={header.name}
                   obj={item[header.name]}
-                  url={window.location.pathname + "/" + item["id"]}
-                  link={idx == 0}
+                  url={window.location.pathname + item["id"]}
+                  link={idx === 0}
                 />
               </td>
             ))}

@@ -18,7 +18,7 @@ export default function ObjectRetrieve({ api_url }) {
     api_url = `${nautobot_url}/api/${app_name}/${model_name}/${object_id}/`
   }
   const { data: objectData, error } = useSWR(() => api_url, fetcher)
-  const { data: pluginHTML, _ } = useSWR(() => api_url ? api_url + "plugin_full_width_fragment/" : null, fetcherHTML)
+  const { data: pluginHTML } = useSWR(() => api_url ? api_url + "plugin_full_width_fragment/" : null, fetcherHTML)
   if (error) return <div>Failed to load {api_url}</div>
   if (!objectData) return <></>
   return (

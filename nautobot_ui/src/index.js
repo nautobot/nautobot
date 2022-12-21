@@ -6,7 +6,6 @@ import { BrowserRouter } from "react-router-dom";
 import "@fortawesome/fontawesome-free/css/all.min.css";
 
 import NautobotRouter from './router';
-import NavBar from '@components/common/BSNavBar';
 
 import "./styles/globals.css"
 import "bootstrap/dist/css/bootstrap.css"
@@ -16,14 +15,16 @@ export const nautobot_url = dev ? "http://localhost:8080" : ""
 
 /**
  * Adds capitalize method to string
+ * 
+ * TODO: Useful utility but extending String.prototype isn't recommended
  */
-Object.defineProperty(String.prototype, 'capitalize', {
-  value: function () {
-      let values = this.split("-").map(text => text.charAt(0).toUpperCase() + text.slice(1))
-      return values.join(" ");
-  },
-  enumerable: false
-});
+// Object.defineProperty(String.prototype, 'capitalize', {
+//   value: function () {
+//       let values = this.split("-").map(text => text.charAt(0).toUpperCase() + text.slice(1))
+//       return values.join(" ");
+//   },
+//   enumerable: false
+// });
 
 const root = ReactDOM.createRoot(document.getElementById('root'));
 root.render(
