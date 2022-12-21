@@ -1,5 +1,5 @@
 from django.test import TestCase
-from jinja2.exceptions import TemplateAssertionError
+from jinja2 import TemplateAssertionError
 from netutils.utils import jinja2_convenience_function
 
 from nautobot.core import utils

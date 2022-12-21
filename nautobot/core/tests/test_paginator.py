@@ -1,5 +1,3 @@
-"""Test the nautobot.utilities.paginator module."""
-
 from constance.test import override_config
 from django.conf import settings
 from django.contrib.auth import get_user_model
