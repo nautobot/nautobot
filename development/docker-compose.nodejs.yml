@@ -8,6 +8,7 @@ services:
     ports:
       - "3000:3000"
     working_dir: /opt/node/nautobot
+    user: root
     volumes:
       - ../nautobot_ui/:/opt/node/nautobot
       - nautobot_ui_nodemodules:/opt/node/nautobot/node_modules
