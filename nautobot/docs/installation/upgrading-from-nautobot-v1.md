@@ -1,5 +1,10 @@
 # Upgrading from Nautobot v1.X
 
+## Dependency Changes
+
+- Nautobot no longer uses or supports the use of `django-mptt`.
+- Nautobot no longer uses or supports the use of `django-rq`.
+
 ## Database (ORM) Changes
 
 ### Renamed Database Fields

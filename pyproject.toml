@@ -68,8 +68,6 @@ django-prometheus = "~2.2.0"
 prometheus-client = "~0.14.1"
 # Redis cache for Django used for distributed locking
 django-redis = "~5.2.0"
-# RQ (Redis Queueing) for background handling of webhooks, jobs, etc.
-django-rq = "~2.5.1"
 # External Storage support (i.e. S3)
 django-storages = {version = "~1.12.3", optional = true}
 # Advanced HTML tables
