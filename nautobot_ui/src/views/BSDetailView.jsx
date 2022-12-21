@@ -1,6 +1,5 @@
 import Card from "react-bootstrap/Card"
 import CardHeader from "react-bootstrap/CardHeader"
-import { Link } from "react-router-dom";
 import { nautobot_url } from "../index"
 import Tab from "react-bootstrap/Tab"
 import Table from "react-bootstrap/Table"
@@ -10,6 +9,39 @@ import useSWR from "swr"
 
 const fetcher = (url) => fetch(url, { credentials: "include" }).then((res) => res.ok ? res.json() : null)
 const fetcherHTML = (url) => fetch(url, { credentials: "include" }).then((res) => res.ok ? res.text() : null)
+
+function RenderRow(props) {
+  var key = props.identifier;
+  var value = props.value;
+
+  if (["id", "url", "display", "slug", "notes_url"].includes(key) ^ !props.advanced) {
+    return null;
+  }
+
+  // "foo_bar" --> "Foo Bar"
+  key = key.split("_").map((x) => (x[0].toUpperCase() + x.slice(1))).join(" ");
+
+  return (
+    <tr>
+      <td>{key}</td>
+      <td>{
+        value === null || value === "" ?
+          "—" :
+          Array.isArray(value) ?
+            <ul class="list-unstyled">{value.map((item) =>
+              typeof (item) == "object" ? <li>{item["display"]}</li> : <li>{item}</li>
+            )}</ul> :
+            typeof (value) == "object" ?
+              value["display"] :
+              typeof (value) == "array" ?
+                value.join(", ") :
+                typeof (value) == "boolean" ?
+                  value ? "✅" : "🚫" :
+                  value
+      }</td>
+    </tr>
+  );
+}
 
 export default function ObjectRetrieve({ api_url }) {
 
@@ -23,87 +55,52 @@ export default function ObjectRetrieve({ api_url }) {
   if (!objectData) return <></>
   return (
     <>
-        <h1>{objectData.name}</h1>
-        <p>
-            <small className="text-muted">
-            {objectData.created &&
-                <>Created {objectData.created} &middot; </>
-            }
-            <> Updated <span title={objectData.last_updated}>xyz seconds</span> ago</>
-            </small>
-        </p>
-        <div className="pull-right noprint"></div>
-        <Tabs defaultActiveKey="site">
-            <Tab eventKey="site" title="Site">
-            <br />
-            <Card>
-                <CardHeader>
-                <strong>Site</strong>
-                </CardHeader>
-                <Table hover>
-                <tbody>
-                    <tr>
-                    <td>Status</td>
-                    <td>
-                        <span className="label">
-                        {objectData.status ? <>{objectData.status.label}</> : "—"}
-                        </span>
-                    </td>
-                    </tr>
-                    <tr>
-                    <td>Region</td>
-                    <td>
-                        {objectData.region ?
-                        <Link to={objectData.region.url}>{objectData.region.display}</Link> : "—"}
-                    </td>
-                    </tr>
-                    <tr>
-                    <td>Tenant</td>
-                    <td>
-                        {objectData.tenant ?
-                        <Link to={objectData.tenant.url}>{objectData.tenant.display}</Link> : "—"}
-                    </td>
-                    </tr>
-                    <tr>
-                    <td>Facility</td>
-                    <td>
-                        {objectData.facility ? <>{objectData.facility}</> : "—"}
-                    </td>
-                    </tr>
-                    <tr>
-                    <td>AS Number</td>
-                    <td>
-                        {objectData.asn ? <>{objectData.asn}</> : "—"}
-                    </td>
-                    </tr>
-                    <tr>
-                    <td>Time Zone</td>
-                    <td>
-                        {objectData.time_zone ? <>{objectData.time_zone}</> : "—"}
-                    </td>
-                    </tr>
-                    <tr>
-                    <td>Description</td>
-                    <td>
-                        {objectData.description ? <>{objectData.description}</> : "—"}
-                    </td>
-                    </tr>
-                </tbody>
-                </Table>
-            </Card>
-            <br />
-            <div dangerouslySetInnerHTML={{ __html: pluginHTML }} />
-            <br />
-            </Tab>
-            <Tab eventKey="advanced" title="Advanced">
-            <br />
-            </Tab>
-            <Tab eventKey="notes" title="Notes" />
-            <Tab eventKey="change_log" title="Change Log">
-            <br />
-            <div dangerouslySetInnerHTML={{ __html: "<p>Your html code here.<p>" }} />
-            </Tab>
-        </Tabs>
+      <h1>{objectData.name}</h1>
+      <p>
+        <small className="text-muted">
+          {objectData.created &&
+            <>Created {objectData.created} &middot; </>
+          }
+          <> Updated <span title={objectData.last_updated}>xyz seconds</span> ago</>
+        </small>
+      </p>
+      <div className="pull-right noprint"></div>
+      <Tabs defaultActiveKey="main">
+        <Tab eventKey="main" title="Main">
+          <br />
+          <Card>
+            <CardHeader>
+              <strong>Main</strong>
+            </CardHeader>
+            <Table hover>
+              <tbody>
+                {Object.keys(objectData).map((key) => <RenderRow identifier={key} value={objectData[key]} advanced />)}
+              </tbody>
+            </Table>
+          </Card>
+          <br />
+          <div dangerouslySetInnerHTML={{ __html: pluginHTML }} />
+          <br />
+        </Tab>
+        <Tab eventKey="advanced" title="Advanced">
+          <br />
+          <Card>
+            <CardHeader>
+              <strong>Advanced</strong>
+            </CardHeader>
+            <Table hover>
+              <tbody>
+                {Object.keys(objectData).map((key) => <RenderRow identifier={key} value={objectData[key]} advanced={false} />)}
+              </tbody>
+            </Table>
+          </Card>
+        </Tab>
+        <Tab eventKey="notes" title="Notes" />
+        <Tab eventKey="change_log" title="Change Log">
+          <br />
+          <div dangerouslySetInnerHTML={{ __html: "<p>Your html code here.<p>" }} />
+        </Tab>
+      </Tabs>
     </>
   )
 }
