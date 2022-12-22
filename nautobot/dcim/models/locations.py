@@ -8,7 +8,7 @@ from tree_queries.models import TreeNode
 
 from nautobot.core.fields import AutoSlugField, NaturalOrderingField
 from nautobot.core.models.generics import OrganizationalModel, PrimaryModel
-from nautobot.core.utils.tree_queries import TreeManager, TreeQuerySet
+from nautobot.core.models.utils import TreeManager, TreeQuerySet
 from nautobot.dcim.fields import ASNField
 from nautobot.extras.models import StatusModel
 from nautobot.extras.utils import FeatureQuery, extras_features

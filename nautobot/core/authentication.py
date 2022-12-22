@@ -7,7 +7,7 @@ from django.contrib.auth.backends import RemoteUserBackend as _RemoteUserBackend
 from django.contrib.auth.models import Group
 from django.db.models import Q
 
-from nautobot.core.utils.permissions import permission_is_exempt, resolve_permission, resolve_permission_ct
+from nautobot.core.permissions import permission_is_exempt, resolve_permission, resolve_permission_ct
 from nautobot.users.models import ObjectPermission
 
 logger = logging.getLogger("nautobot.authentication")

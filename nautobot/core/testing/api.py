@@ -9,13 +9,12 @@ from rest_framework import status
 from rest_framework.test import APIClient
 from rest_framework.test import APITransactionTestCase as _APITransactionTestCase
 
-from nautobot.core import utils
+from nautobot.core import testing, utils
+from nautobot.core.testing import mixins, views
 from nautobot.extras import choices as extras_choices
 from nautobot.extras import models as extras_models
 from nautobot.extras import registry
 from nautobot.users import models as users_models
-from nautobot.core import testing
-from nautobot.core.testing import mixins, views
 
 
 @tag("api")
@@ -623,9 +622,7 @@ class APIViewTestCases:
             For some models this may just be any random objects, but when we have FKs with `on_delete=models.PROTECT`
             (as is often the case) we need to find or create an instance that doesn't have such entanglements.
             """
-            instances = testing.get_deletable_objects(self.model, self._get_queryset()).values_list(
-                "pk", flat=True
-            )[:3]
+            instances = testing.get_deletable_objects(self.model, self._get_queryset()).values_list("pk", flat=True)[:3]
             if len(instances) < 3:
                 self.fail(f"Couldn't find 3 deletable objects, only found {len(instances)}!")
             return instances

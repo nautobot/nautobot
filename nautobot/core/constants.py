@@ -307,3 +307,46 @@ HTTP_REQUEST_META_SAFE_COPY = [
     "SERVER_NAME",
     "SERVER_PORT",
 ]
+
+
+OBJ_TYPE_CHOICES = (
+    ("", "All Objects"),
+    (
+        "Circuits",
+        (
+            ("provider", "Providers"),
+            ("circuit", "Circuits"),
+        ),
+    ),
+    (
+        "DCIM",
+        (
+            ("site", "Sites"),
+            ("rack", "Racks"),
+            ("rackgroup", "Rack Groups"),
+            ("devicetype", "Device types"),
+            ("device", "Devices"),
+            ("virtualchassis", "Virtual Chassis"),
+            ("cable", "Cables"),
+            ("powerfeed", "Power Feeds"),
+        ),
+    ),
+    (
+        "IPAM",
+        (
+            ("vrf", "VRFs"),
+            ("aggregate", "Aggregates"),
+            ("prefix", "Prefixes"),
+            ("ipaddress", "IP addresses"),
+            ("vlan", "VLANs"),
+        ),
+    ),
+    ("Tenancy", (("tenant", "Tenants"),)),
+    (
+        "Virtualization",
+        (
+            ("cluster", "Clusters"),
+            ("virtualmachine", "Virtual machines"),
+        ),
+    ),
+)

@@ -14,8 +14,7 @@ from nautobot.core.choices import ColorChoices
 from nautobot.core.fields import AutoSlugField, ColorField, JSONArrayField, NaturalOrderingField
 from nautobot.core.models.generics import OrganizationalModel, PrimaryModel
 from nautobot.core.mptt import TreeManager
-from nautobot.core.utils import UtilizationData, array_to_string
-from nautobot.core.utils.config import get_settings_or_config
+from nautobot.core.utils import UtilizationData, array_to_string, get_settings_or_config
 from nautobot.dcim.choices import DeviceFaceChoices, RackDimensionUnitChoices, RackTypeChoices, RackWidthChoices
 from nautobot.dcim.constants import RACK_ELEVATION_LEGEND_WIDTH_DEFAULT, RACK_U_HEIGHT_DEFAULT
 from nautobot.dcim.elevations import RackElevationSVG

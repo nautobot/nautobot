@@ -210,7 +210,7 @@ class JSONArrayField(models.JSONField):
                 vals = json.loads(value)
                 value = [self.base_field.to_python(val) for val in vals]
             except json.JSONDecodeError as e:
-                raise exceptions.ValidationError(e)
+                raise exceptions.ValidationError(e) from e
         return value
 
     def value_to_string(self, obj):

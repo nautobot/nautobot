@@ -1,7 +1,6 @@
 from django import forms
 
-from nautobot.apps.filters import FilterExtension
-from nautobot.core.filters import MultiValueCharFilter
+from nautobot.apps.filters import FilterExtension, MultiValueCharFilter
 
 
 def suffix_search(queryset, name, value):

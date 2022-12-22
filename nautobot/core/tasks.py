@@ -5,15 +5,14 @@ from cacheops import CacheMiss, cache
 from django.conf import settings
 from packaging import version
 
-from nautobot.core import celery
-from nautobot.core.utils import config
+from nautobot.core import celery, utils
 
 logger = logging.getLogger("nautobot.releases")
 
 
 @celery.nautobot_task
 def get_releases(pre_releases=False):
-    url = config.get_settings_or_config("RELEASE_CHECK_URL")
+    url = utils.get_settings_or_config("RELEASE_CHECK_URL")
     headers = {
         "Accept": "application/vnd.github.v3+json",
     }
@@ -48,7 +47,7 @@ def get_releases(pre_releases=False):
         return []
 
     # Cache the most recent release
-    cache.set("latest_release", max(releases), config.get_settings_or_config("RELEASE_CHECK_TIMEOUT"))
+    cache.set("latest_release", max(releases), utils.get_settings_or_config("RELEASE_CHECK_TIMEOUT"))
 
     # Since this is a Celery task, we can't return Version objects as they are not JSON serializable.
     return [(str(version), url) for version, url in releases]

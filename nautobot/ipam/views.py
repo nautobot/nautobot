@@ -4,8 +4,7 @@ from django.shortcuts import get_object_or_404, redirect, render
 from django_tables2 import RequestConfig
 
 from nautobot.core.paginator import EnhancedPaginator, get_paginate_count
-from nautobot.core.utils import count_related
-from nautobot.core.utils.config import get_settings_or_config
+from nautobot.core.utils import count_related, get_settings_or_config
 from nautobot.core.views import generic
 from nautobot.dcim.models import Device, Interface
 from nautobot.virtualization.models import VirtualMachine, VMInterface

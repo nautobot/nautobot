@@ -6,7 +6,7 @@ from rest_framework import serializers
 from rest_framework.validators import UniqueTogetherValidator
 
 from nautobot.core.api import ChoiceField, ContentTypeField, SerializedPKRelatedField
-from nautobot.core.utils.api import get_serializer_for_model
+from nautobot.core.api.utils import get_serializer_for_model
 from nautobot.dcim.api.nested_serializers import NestedDeviceSerializer, NestedLocationSerializer, NestedSiteSerializer
 from nautobot.extras.api.serializers import (
     NautobotModelSerializer,

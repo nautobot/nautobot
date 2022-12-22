@@ -11,9 +11,9 @@ from rest_framework.reverse import reverse
 from nautobot.core.api import ChoiceField, ContentTypeField, SerializedPKRelatedField, ValidatedModelSerializer
 from nautobot.core.api.exceptions import SerializerNotFound
 from nautobot.core.api.serializers import BaseModelSerializer
+from nautobot.core.api.utils import get_serializer_for_model
 from nautobot.core.deprecation import class_deprecated_in_favor_of
 from nautobot.core.utils import get_route_for_model, slugify_dashes_to_underscores
-from nautobot.core.utils.api import get_serializer_for_model
 from nautobot.dcim.api.nested_serializers import (
     NestedDeviceRoleSerializer,
     NestedDeviceSerializer,

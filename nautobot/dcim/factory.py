@@ -10,7 +10,7 @@ from faker import Faker
 from nautobot.circuits.models import CircuitTermination
 from nautobot.core.choices import ColorChoices
 from nautobot.core.factory import OrganizationalModelFactory, PrimaryModelFactory, UniqueFaker
-from nautobot.core.utils.factory import random_instance
+from nautobot.core.factory.utils import random_instance
 from nautobot.dcim.choices import DeviceRedundancyGroupFailoverStrategyChoices, SubdeviceRoleChoices
 from nautobot.dcim.models import (
     Device,

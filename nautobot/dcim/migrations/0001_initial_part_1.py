@@ -9,8 +9,8 @@ import timezone_field.fields
 from django.db import migrations, models
 
 import nautobot.core.fields
+import nautobot.core.models.utils
 import nautobot.core.ordering
-import nautobot.core.utils.query_functions
 import nautobot.core.validators
 import nautobot.dcim.fields
 
@@ -467,7 +467,7 @@ class Migration(migrations.Migration):
                 ("mgmt_only", models.BooleanField(default=False)),
             ],
             options={
-                "ordering": ("device", nautobot.core.utils.query_functions.CollateAsChar("_name")),
+                "ordering": ("device", nautobot.core.models.utils.CollateAsChar("_name")),
             },
         ),
         migrations.CreateModel(

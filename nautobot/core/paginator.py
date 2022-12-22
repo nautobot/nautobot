@@ -1,6 +1,6 @@
 from django.core.paginator import Page, Paginator
 
-from nautobot.core.utils import config
+from nautobot.core import utils
 
 
 class EnhancedPaginator(Paginator):
@@ -8,11 +8,11 @@ class EnhancedPaginator(Paginator):
         try:
             per_page = int(per_page)
             if per_page < 1:
-                per_page = config.get_settings_or_config("PAGINATE_COUNT")
+                per_page = utils.get_settings_or_config("PAGINATE_COUNT")
         except ValueError:
-            per_page = config.get_settings_or_config("PAGINATE_COUNT")
+            per_page = utils.get_settings_or_config("PAGINATE_COUNT")
 
-        max_page_size = config.get_settings_or_config("MAX_PAGE_SIZE")
+        max_page_size = utils.get_settings_or_config("MAX_PAGE_SIZE")
         if max_page_size:
             per_page = min(per_page, max_page_size)
 
@@ -60,5 +60,5 @@ def get_paginate_count(request):
             pass
 
     if request.user.is_authenticated:
-        return request.user.get_config("pagination.per_page", config.get_settings_or_config("PAGINATE_COUNT"))
-    return config.get_settings_or_config("PAGINATE_COUNT")
+        return request.user.get_config("pagination.per_page", utils.get_settings_or_config("PAGINATE_COUNT"))
+    return utils.get_settings_or_config("PAGINATE_COUNT")

@@ -9,6 +9,7 @@ from decimal import Decimal
 from itertools import count, groupby
 
 import django_filters
+from constance import config
 from django import forms
 from django.conf import settings
 from django.contrib.auth import get_user_model
@@ -215,7 +216,7 @@ def serialize_object_v2(obj):
     Return a JSON serialized representation of an object using obj's serializer.
     """
     from nautobot.core.api.exceptions import SerializerNotFound
-    from nautobot.core.utils.api import get_serializer_for_model
+    from nautobot.core.api.utils import get_serializer_for_model
 
     # Try serializing obj(model instance) using its API Serializer
     try:
@@ -981,3 +982,11 @@ def ensure_content_type_and_field_name_inquery_params(query_params):
     field_name = query_params.get("field_name")
 
     return field_name, model
+
+
+def get_settings_or_config(variable_name):
+    """Get a value from Django settings (if specified there) or Constance configuration (otherwise)."""
+    # Explicitly set in settings.py or nautobot_config.py takes precedence, for now
+    if hasattr(settings, variable_name):
+        return getattr(settings, variable_name)
+    return getattr(config, variable_name)

@@ -11,9 +11,9 @@ from nautobot.core.api import (
     ValidatedModelSerializer,
     WritableNestedSerializer,
 )
+from nautobot.core.api.utils import get_serializer_for_model
 from nautobot.core.deprecation import class_deprecated_in_favor_of
-from nautobot.core.utils.api import get_serializer_for_model
-from nautobot.core.utils.config import get_settings_or_config
+from nautobot.core.utils import get_settings_or_config
 from nautobot.dcim.choices import (
     CableLengthUnitChoices,
     ConsolePortTypeChoices,

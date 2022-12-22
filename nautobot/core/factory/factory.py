@@ -1,7 +1,7 @@
 import factory
 from factory.django import DjangoModelFactory
 
-from nautobot.core.utils.factory import get_random_instances
+from nautobot.core.factory.utils import get_random_instances
 from nautobot.extras.models import Tag
 
 

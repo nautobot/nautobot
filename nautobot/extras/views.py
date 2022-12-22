@@ -22,7 +22,6 @@ from django_tables2 import RequestConfig
 from jsonschema.validators import Draft7Validator
 
 from nautobot.core.forms import restrict_form_fields
-from nautobot.core.mixins import ObjectPermissionRequiredMixin
 from nautobot.core.paginator import EnhancedPaginator, get_paginate_count
 from nautobot.core.tables import ButtonsColumn
 from nautobot.core.utils import (
@@ -35,6 +34,7 @@ from nautobot.core.utils import (
     pretty_print_query,
 )
 from nautobot.core.views import generic
+from nautobot.core.views.mixins import ObjectPermissionRequiredMixin
 from nautobot.dcim.models import Device
 from nautobot.dcim.tables import DeviceTable
 from nautobot.extras.tasks import delete_custom_field_data

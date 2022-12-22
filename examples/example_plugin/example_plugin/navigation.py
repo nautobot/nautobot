@@ -1,5 +1,11 @@
-from nautobot.apps.ui import NavMenuAddButton, NavMenuGroup, NavMenuImportButton, NavMenuItem, NavMenuTab
-from nautobot.core.choices import ButtonColorChoices
+from nautobot.apps.ui import (
+    ButtonColorChoices,
+    NavMenuAddButton,
+    NavMenuGroup,
+    NavMenuImportButton,
+    NavMenuItem,
+    NavMenuTab,
+)
 from nautobot.extras.plugins import PluginMenuButton, PluginMenuItem  # deprecated, used here for testing only
 
 menu_items = (

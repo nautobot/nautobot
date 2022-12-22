@@ -41,9 +41,9 @@ from nautobot.core.utils import (
     get_filterset_parameter_form_field,
     get_form_for_model,
 )
-from nautobot.core.utils.api import get_serializer_for_model
 
 from . import serializers
+from .utils import get_serializer_for_model
 
 HTTP_ACTIONS = {
     "GET": "view",

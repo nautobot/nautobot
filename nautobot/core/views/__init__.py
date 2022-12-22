@@ -19,7 +19,7 @@ from packaging import version
 from nautobot.core.constants import SEARCH_MAX_RESULTS, SEARCH_TYPES
 from nautobot.core.forms import SearchForm
 from nautobot.core.releases import get_latest_release
-from nautobot.core.utils.config import get_settings_or_config
+from nautobot.core.utils import get_settings_or_config
 from nautobot.extras.forms import GraphQLQueryForm
 from nautobot.extras.models import GraphQLQuery
 from nautobot.extras.registry import registry

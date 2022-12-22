@@ -9,8 +9,8 @@ import taggit.managers
 from django.db import migrations, models
 
 import nautobot.core.fields
+import nautobot.core.models.utils
 import nautobot.core.ordering
-import nautobot.core.utils.query_functions
 import nautobot.dcim.fields
 import nautobot.extras.models.statuses
 import nautobot.extras.utils
@@ -322,7 +322,7 @@ class Migration(migrations.Migration):
             ],
             options={
                 "verbose_name": "interface",
-                "ordering": ("virtual_machine", nautobot.core.utils.query_functions.CollateAsChar("_name")),
+                "ordering": ("virtual_machine", nautobot.core.models.utils.CollateAsChar("_name")),
                 "unique_together": {("virtual_machine", "name")},
             },
         ),

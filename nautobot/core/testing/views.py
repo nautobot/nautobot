@@ -12,7 +12,7 @@ from django.utils.http import urlencode
 from django.utils.text import slugify
 from tree_queries.models import TreeNode
 
-from nautobot.core import utils, testing
+from nautobot.core import testing, utils
 from nautobot.core.templatetags import helpers
 from nautobot.extras import choices as extras_choices
 from nautobot.extras import models as extras_models
@@ -680,8 +680,7 @@ class ViewTestCases:
             self.assertEqual(
                 cm.output,
                 [
-                    f"WARNING:nautobot.core.filters:{filterset.__name__}: "
-                    'Unknown filter field "ice_cream_flavor"',
+                    f"WARNING:nautobot.core.filters:{filterset.__name__}: " 'Unknown filter field "ice_cream_flavor"',
                 ],
             )
             self.assertHttpStatus(response, 200)
@@ -1077,9 +1076,7 @@ class ViewTestCases:
             For some models this may just be any random objects, but when we have FKs with `on_delete=models.PROTECT`
             (as is often the case) we need to find or create an instance that doesn't have such entanglements.
             """
-            return testing.get_deletable_objects(self.model, self._get_queryset()).values_list(
-                "pk", flat=True
-            )[:3]
+            return testing.get_deletable_objects(self.model, self._get_queryset()).values_list("pk", flat=True)[:3]
 
         @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
         def test_bulk_delete_objects_without_permission(self):

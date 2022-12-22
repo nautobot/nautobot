@@ -3,8 +3,8 @@ from django.db.models import F, Model, OuterRef, Q, Subquery
 from django.db.models.functions import JSONObject
 from django_celery_beat.managers import ExtendedQuerySet
 
+from nautobot.core.models.utils import EmptyGroupByJSONBAgg
 from nautobot.core.querysets import RestrictedQuerySet
-from nautobot.core.utils.query_functions import EmptyGroupByJSONBAgg
 from nautobot.extras.models.tags import TaggedItem
 
 

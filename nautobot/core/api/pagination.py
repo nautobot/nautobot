@@ -1,6 +1,6 @@
 from rest_framework.pagination import LimitOffsetPagination
 
-from nautobot.core.utils.config import get_settings_or_config
+from nautobot.core.utils import get_settings_or_config
 
 
 class OptionalLimitOffsetPagination(LimitOffsetPagination):

@@ -13,11 +13,11 @@ from netaddr import IPNetwork
 from taggit.managers import TaggableManager
 
 from nautobot.core import fields as utilities_fields
-from nautobot.core.utils import permissions
+from nautobot.core import testing
+from nautobot.core.permissions import resolve_permission_ct
 from nautobot.extras import management
 from nautobot.extras import models as extras_models
 from nautobot.users import models as users_models
-from nautobot.core import testing
 
 # Use the proper swappable User model
 User = get_user_model()
@@ -114,7 +114,7 @@ class NautobotTestCaseMixin:
         Assign a set of permissions to the test user. Accepts permission names in the form <app>.<action>_<model>.
         """
         for name in names:
-            ct, action = permissions.resolve_permission_ct(name)
+            ct, action = resolve_permission_ct(name)
             obj_perm = users_models.ObjectPermission(name=name, actions=[action])
             obj_perm.save()
             obj_perm.users.add(self.user)
@@ -138,9 +138,7 @@ class NautobotTestCaseMixin:
                 err = response.data
             else:
                 # Attempt to extract form validation errors from the response HTML
-                form_errors = testing.extract_form_failures(
-                    response.content.decode(response.charset)
-                )
+                form_errors = testing.extract_form_failures(response.content.decode(response.charset))
                 err = form_errors or response.content.decode(response.charset) or "No data"
             err_message = f"Expected HTTP status(es) {expected_status}; received {response.status_code}: {err}"
             if msg:

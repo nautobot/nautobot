@@ -490,7 +490,7 @@ def get_item(d, key):
 @register.filter()
 def settings_or_config(key):
     """Get a value from Django settings (if specified there) or Constance configuration (otherwise)."""
-    return utils.config.get_settings_or_config(key)
+    return utils.get_settings_or_config(key)
 
 
 @library.filter()

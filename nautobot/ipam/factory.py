@@ -5,7 +5,7 @@ import factory
 import faker
 
 from nautobot.core.factory import OrganizationalModelFactory, PrimaryModelFactory, UniqueFaker
-from nautobot.core.utils.factory import get_random_instances, random_instance
+from nautobot.core.factory.utils import get_random_instances, random_instance
 from nautobot.dcim.models import Location, Site
 from nautobot.extras.models import Status
 from nautobot.ipam.choices import IPAddressRoleChoices

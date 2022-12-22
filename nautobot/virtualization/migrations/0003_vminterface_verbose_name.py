@@ -2,7 +2,7 @@
 
 from django.db import migrations
 
-import nautobot.core.utils.query_functions
+import nautobot.core.models.utils
 
 
 class Migration(migrations.Migration):
@@ -15,7 +15,7 @@ class Migration(migrations.Migration):
         migrations.AlterModelOptions(
             name="vminterface",
             options={
-                "ordering": ("virtual_machine", nautobot.core.utils.query_functions.CollateAsChar("_name")),
+                "ordering": ("virtual_machine", nautobot.core.models.utils.CollateAsChar("_name")),
                 "verbose_name": "VM interface",
             },
         ),

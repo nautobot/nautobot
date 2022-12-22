@@ -1,13 +1,14 @@
 import json
 import logging
 import re
-import yaml
 
+import yaml
 from django import forms
 from django.forms import formset_factory
 from django.urls import reverse
 
 from nautobot.core import utils
+from nautobot.core.constants import OBJ_TYPE_CHOICES
 from nautobot.ipam import formfields
 
 __all__ = (
@@ -24,48 +25,6 @@ __all__ = (
     "ReturnURLForm",
     "SearchForm",
     "TableConfigForm",
-)
-
-OBJ_TYPE_CHOICES = (
-    ("", "All Objects"),
-    (
-        "Circuits",
-        (
-            ("provider", "Providers"),
-            ("circuit", "Circuits"),
-        ),
-    ),
-    (
-        "DCIM",
-        (
-            ("site", "Sites"),
-            ("rack", "Racks"),
-            ("rackgroup", "Rack Groups"),
-            ("devicetype", "Device types"),
-            ("device", "Devices"),
-            ("virtualchassis", "Virtual Chassis"),
-            ("cable", "Cables"),
-            ("powerfeed", "Power Feeds"),
-        ),
-    ),
-    (
-        "IPAM",
-        (
-            ("vrf", "VRFs"),
-            ("aggregate", "Aggregates"),
-            ("prefix", "Prefixes"),
-            ("ipaddress", "IP addresses"),
-            ("vlan", "VLANs"),
-        ),
-    ),
-    ("Tenancy", (("tenant", "Tenants"),)),
-    (
-        "Virtualization",
-        (
-            ("cluster", "Clusters"),
-            ("virtualmachine", "Virtual machines"),
-        ),
-    ),
 )
 
 logger = logging.getLogger(__name__)

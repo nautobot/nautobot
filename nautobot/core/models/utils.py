@@ -1,5 +1,9 @@
 from django.db import NotSupportedError
-from django.db.models import Aggregate, Func, JSONField
+from django.db.models import Aggregate, Func, JSONField, Manager
+from tree_queries.query import TreeManager as TreeManager_
+from tree_queries.query import TreeQuerySet as TreeQuerySet_
+
+from nautobot.core import querysets
 
 
 class CollateAsChar(Func):
@@ -68,3 +72,22 @@ class EmptyGroupByJSONBAgg(JSONBAgg):
     """
 
     contains_aggregate = False
+
+
+#
+# Tree Query
+#
+
+
+class TreeQuerySet(TreeQuerySet_, querysets.RestrictedQuerySet):
+    """
+    Combine django-tree-queries' TreeQuerySet with our RestrictedQuerySet for permissions enforcement.
+    """
+
+
+class TreeManager(Manager.from_queryset(TreeQuerySet), TreeManager_):
+    """
+    Extend django-tree-queries' TreeManager to incorporate RestrictedQuerySet.
+    """
+
+    _with_tree_fields = True

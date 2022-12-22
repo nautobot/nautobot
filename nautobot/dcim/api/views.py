@@ -18,8 +18,8 @@ from rest_framework.viewsets import GenericViewSet, ViewSet
 
 from nautobot.circuits.models import Circuit
 from nautobot.core.api.exceptions import ServiceUnavailable
+from nautobot.core.api.utils import get_serializer_for_model
 from nautobot.core.utils import SerializerForAPIVersions, count_related, versioned_serializer_selector
-from nautobot.core.utils.api import get_serializer_for_model
 from nautobot.dcim import filters
 from nautobot.dcim.models import (
     Cable,

@@ -14,7 +14,7 @@ from django.utils.safestring import mark_safe
 from nautobot.core.choices import ColorChoices
 from nautobot.core.fields import AutoSlugField, ColorField, NaturalOrderingField
 from nautobot.core.models.generics import OrganizationalModel, PrimaryModel
-from nautobot.core.utils.config import get_settings_or_config
+from nautobot.core.utils import get_settings_or_config
 from nautobot.dcim.choices import DeviceFaceChoices, DeviceRedundancyGroupFailoverStrategyChoices, SubdeviceRoleChoices
 from nautobot.extras.models import ConfigContextModel, StatusModel
 from nautobot.extras.querysets import ConfigContextModelQuerySet

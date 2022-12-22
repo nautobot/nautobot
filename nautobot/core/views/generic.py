@@ -31,8 +31,8 @@ from nautobot.core.forms import (
     TableConfigForm,
     restrict_form_fields,
 )
-from nautobot.core.mixins import GetReturnURLMixin, ObjectPermissionRequiredMixin
 from nautobot.core.paginator import EnhancedPaginator, get_paginate_count
+from nautobot.core.permissions import get_permission_for_model
 from nautobot.core.templatetags.helpers import bettertitle, validated_viewname
 from nautobot.core.utils import (
     convert_querydict_to_factory_formset_acceptable_querydict,
@@ -43,7 +43,7 @@ from nautobot.core.utils import (
     prepare_cloned_fields,
 )
 from nautobot.core.utils.error_handlers import handle_protectederror
-from nautobot.core.utils.permissions import get_permission_for_model
+from nautobot.core.views.mixins import GetReturnURLMixin, ObjectPermissionRequiredMixin
 from nautobot.extras.models import CustomField, ExportTemplate
 from nautobot.extras.models.change_logging import ChangeLoggedModel
 
