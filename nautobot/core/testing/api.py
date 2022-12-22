@@ -305,12 +305,12 @@ class APIViewTestCases:
             GET a list of objects with an unknown filter parameter and no strict filtering, expect it to be ignored.
             """
             self.add_permissions(f"{self.model._meta.app_label}.view_{self.model._meta.model_name}")
-            with self.assertLogs("nautobot.utilities.filters") as cm:
+            with self.assertLogs("nautobot.core.filters") as cm:
                 response = self.client.get(f"{self._get_list_url()}?ice_cream_flavor=rocky-road", **self.header)
             self.assertEqual(
                 cm.output,
                 [
-                    f"WARNING:nautobot.utilities.filters:{self.get_filterset().__name__}: "
+                    f"WARNING:nautobot.core.filters:{self.get_filterset().__name__}: "
                     'Unknown filter field "ice_cream_flavor"',
                 ],
             )

@@ -6,10 +6,9 @@ from collections import namedtuple
 
 from git import Repo
 
-import nautobot.core.templatetags.helpers
 from nautobot.core.exceptions import BranchDoesNotExist
 
-logger = logging.getLogger("nautobot.utilities.git")
+logger = logging.getLogger("nautobot.core.git")
 
 # namedtuple takes a git log diff status and its accompanying text.
 GitDiffLog = namedtuple("GitDiffLog", ["status", "text"])

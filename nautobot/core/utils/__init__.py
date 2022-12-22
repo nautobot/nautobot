@@ -215,7 +215,7 @@ def serialize_object_v2(obj):
     Return a JSON serialized representation of an object using obj's serializer.
     """
     from nautobot.core.api.exceptions import SerializerNotFound
-    from nautobot.utilities.api import get_serializer_for_model
+    from nautobot.core.utils.api import get_serializer_for_model
 
     # Try serializing obj(model instance) using its API Serializer
     try:

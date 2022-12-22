@@ -209,7 +209,7 @@ REST_FRAMEWORK = {
         # Custom operations
         "bulk_destroy": "bulk_delete",
     },
-    "VIEW_NAME_FUNCTION": "nautobot.utilities.api.get_view_name",
+    "VIEW_NAME_FUNCTION": "nautobot.core.api.get_view_name",
 }
 
 
@@ -400,7 +400,6 @@ INSTALLED_APPS = [
     "nautobot.extras",
     "nautobot.tenancy",
     "nautobot.users",
-    "nautobot.utilities",
     "nautobot.virtualization",
     "django_rq",  # Must come after nautobot.extras to allow overriding management commands
     "drf_spectacular",

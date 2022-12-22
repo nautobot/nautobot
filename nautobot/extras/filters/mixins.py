@@ -65,13 +65,13 @@ class CustomFieldModelFilterSetMixin(django_filters.FilterSet):
 
         return lookup_map
 
-    # TODO 2.0: Transition CustomField filters to nautobot.utilities.filters.MultiValue* filters and
+    # TODO 2.0: Transition CustomField filters to nautobot.core.filters.MultiValue* filters and
     # leverage BaseFilterSet to add dynamic lookup expression filters. Remove CustomField.filter_logic field
     @classmethod
     def _generate_custom_field_lookup_expression_filters(cls, filter_name, custom_field):
         """
         For specific filter types, new filters are created based on defined lookup expressions in
-        the form `<field_name>__<lookup_expr>`. Copied from nautobot.utilities.filters.BaseFilterSet
+        the form `<field_name>__<lookup_expr>`. Copied from nautobot.core.filters.BaseFilterSet
         and updated to work with custom fields.
         """
         magic_filters = {}

@@ -144,7 +144,7 @@ class NaturalOrderingField(models.CharField):
         kwargs["naturalize_function"] = self.naturalize_function
         return (
             self.name,
-            "nautobot.utilities.fields.NaturalOrderingField",
+            "nautobot.core.fields.NaturalOrderingField",
             [self.target_field],
             kwargs,
         )

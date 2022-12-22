@@ -668,7 +668,7 @@ class ViewTestCases:
         def test_list_objects_unknown_filter_no_strict_filtering(self):
             """Verify that without STRICT_FILTERING, an unknown filter is ignored."""
             instance1, instance2 = self._get_queryset().all()[:2]
-            with self.assertLogs("nautobot.utilities.filters") as cm:
+            with self.assertLogs("nautobot.core.filters") as cm:
                 response = self.client.get(f"{self._get_url('list')}?ice_cream_flavor=chocolate")
             filterset = self.get_filterset()
             if not filterset:
@@ -680,7 +680,7 @@ class ViewTestCases:
             self.assertEqual(
                 cm.output,
                 [
-                    f"WARNING:nautobot.utilities.filters:{filterset.__name__}: "
+                    f"WARNING:nautobot.core.filters:{filterset.__name__}: "
                     'Unknown filter field "ice_cream_flavor"',
                 ],
             )

@@ -5,7 +5,7 @@ from django.test import TestCase
 from nautobot.core.git import GitRepo, convert_git_diff_log_to_list
 
 
-@mock.patch("nautobot.utilities.git.Repo")
+@mock.patch("nautobot.core.git.Repo")
 class GitRepoTest(TestCase):
     def test_git_repo(self, RepoMock):
         RepoMock.init.return_value = RepoMock

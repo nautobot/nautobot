@@ -456,7 +456,7 @@ class SearchFilter(MappedPredicatesFilterMixin, django_filters.CharFilter):
     """
     Provide a search filter for use on filtersets as the `q=` parameter.
 
-    See the docstring for `nautobot.utilities.filters.MappedPredicatesFilterMixin` for usage.
+    See the docstring for `nautobot.core.filters.MappedPredicatesFilterMixin` for usage.
     """
 
     label = "Search"

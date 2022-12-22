@@ -19,7 +19,7 @@ def check_sanitizer_patterns(app_configs, **kwargs):
                     "Invalid entry in settings.SANITIZER_PATTERNS",
                     hint="Each entry must be a list or tuple of (compiled regexp, replacement string)",
                     obj=entry,
-                    id="nautobot.utilities.E001",
+                    id="nautobot.core.E001",
                 )
             )
             continue
@@ -33,7 +33,7 @@ def check_sanitizer_patterns(app_configs, **kwargs):
                     "Entry in settings.SANITIZER_PATTERNS not usable for sanitization",
                     hint=str(exc),
                     obj=entry,
-                    id="nautobot.utilities.E002",
+                    id="nautobot.core.E002",
                 )
             )
 
