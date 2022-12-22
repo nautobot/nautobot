@@ -269,6 +269,8 @@ class PrettyPrintQueryTest(TestCase):
 
     def test_pretty_print_query(self):
         """Test that each Q object, from deeply nested to flat, pretty prints as expected."""
+        # TODO: Remove pylint disable after issue is resolved (see: https://github.com/PyCQA/pylint/issues/7381)
+        # pylint: disable=unsupported-binary-operation
         queries = [
             ((Q(site__slug="ams01") | Q(site__slug="ang01")) & ~Q(status__slug="active")) | Q(status__slug="planned"),
             (Q(site__slug="ams01") | Q(site__slug="ang01")) & ~Q(status__slug="active"),
@@ -279,6 +281,7 @@ class PrettyPrintQueryTest(TestCase):
             Q(status__id=12345),
             Q(site__slug__in=["ams01", "ang01"]),
         ]
+        # pylint: enable=unsupported-binary-operation
         results = [
             """\
 (
@@ -362,7 +365,7 @@ class LookupRelatedFunctionTest(TestCase):
         for field in single_choice_fields:
             self.assertTrue(utils.is_single_choice_field(filterset_class, field))
 
-        multi_choice_fields = ("status", "tenant", "tag")
+        multi_choice_fields = ("status", "tenant", "tags")
         for field in multi_choice_fields:
             self.assertFalse(utils.is_single_choice_field(filterset_class, field))
 
@@ -436,7 +439,7 @@ class LookupRelatedFunctionTest(TestCase):
                 form_field = utils.get_filterset_parameter_form_field(dcim_models.Site, field_name)
                 self.assertIsInstance(form_field, forms.DynamicModelMultipleChoiceField)
 
-            device_fields = ["cluster_id", "device_type_id", "region"]
+            device_fields = ["cluster", "device_type", "region"]
             for field_name in device_fields:
                 form_field = utils.get_filterset_parameter_form_field(dcim_models.Device, field_name)
                 self.assertIsInstance(form_field, forms.DynamicModelMultipleChoiceField)

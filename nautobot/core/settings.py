@@ -383,7 +383,6 @@ INSTALLED_APPS = [
     "django_jinja",
     "django_tables2",
     "django_prometheus",
-    "mptt",
     "social_django",
     "taggit",
     "timezone_field",
@@ -667,14 +666,10 @@ CACHEOPS = {
     "auth.*": {"ops": ("fetch", "get")},
     "auth.permission": {"ops": "all"},
     "circuits.*": {"ops": "all"},
-    "dcim.inventoryitem": None,  # MPTT models are exempt due to raw SQL
-    "dcim.region": None,  # MPTT models are exempt due to raw SQL
-    "dcim.rackgroup": None,  # MPTT models are exempt due to raw SQL
     "dcim.*": {"ops": "all"},
     "ipam.*": {"ops": "all"},
     "extras.*": {"ops": "all"},
     "users.*": {"ops": "all"},
-    "tenancy.tenantgroup": None,  # MPTT models are exempt due to raw SQL
     "tenancy.*": {"ops": "all"},
     "virtualization.*": {"ops": "all"},
 }

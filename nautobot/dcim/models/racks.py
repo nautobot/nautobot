@@ -8,7 +8,6 @@ from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
 from django.db.models import Count, Sum, Q
 from django.urls import reverse
-from mptt.models import MPTTModel, TreeForeignKey
 
 from nautobot.dcim.choices import DeviceFaceChoices, RackDimensionUnitChoices, RackTypeChoices, RackWidthChoices
 from nautobot.dcim.constants import RACK_ELEVATION_LEGEND_WIDTH_DEFAULT, RACK_U_HEIGHT_DEFAULT
@@ -21,7 +20,7 @@ from nautobot.core.models.generics import OrganizationalModel, PrimaryModel
 from nautobot.utilities.choices import ColorChoices
 from nautobot.utilities.config import get_settings_or_config
 from nautobot.utilities.fields import ColorField, NaturalOrderingField, JSONArrayField
-from nautobot.utilities.mptt import TreeManager
+from nautobot.utilities.tree_queries import TreeModel
 from nautobot.utilities.utils import array_to_string, UtilizationData
 from .device_components import PowerOutlet, PowerPort
 from .devices import Device
@@ -48,7 +47,7 @@ __all__ = (
     "locations",
     "relationships",
 )
-class RackGroup(MPTTModel, OrganizationalModel):
+class RackGroup(TreeModel, OrganizationalModel):
     """
     Racks can be grouped as subsets within a Site or Location.
     """
@@ -64,30 +63,17 @@ class RackGroup(MPTTModel, OrganizationalModel):
         blank=True,
         null=True,
     )
-    parent = TreeForeignKey(
-        to="self",
-        on_delete=models.CASCADE,
-        related_name="children",
-        blank=True,
-        null=True,
-        db_index=True,
-    )
     description = models.CharField(max_length=200, blank=True)
-
-    objects = TreeManager()
 
     csv_headers = ["site", "location", "parent", "name", "slug", "description"]
 
     class Meta:
-        ordering = ["site", "name"]
+        ordering = ("name",)
         unique_together = [
             ["site", "name"],
             # 2.0 TODO: Remove unique_together to make slug globally unique. This would be a breaking change.
             ["site", "slug"],
         ]
-
-    class MPTTMeta:
-        order_insertion_by = ["name"]
 
     def __str__(self):
         return self.name
@@ -104,13 +90,6 @@ class RackGroup(MPTTModel, OrganizationalModel):
             self.slug,
             self.description,
         )
-
-    def to_objectchange(self, action, object_data_exclude=None, **kwargs):
-        if object_data_exclude is None:
-            object_data_exclude = []
-        # Remove MPTT-internal fields
-        object_data_exclude += ["level", "lft", "rght", "tree_id"]
-        return super().to_objectchange(action, object_data_exclude=object_data_exclude, **kwargs)
 
     def clean(self):
         super().clean()
@@ -314,9 +293,7 @@ class Rack(PrimaryModel, StatusModel):
         "outer_depth",
         "outer_unit",
     ]
-    dynamic_group_filter_fields = {
-        "group": "group_id",  # Duplicate filter fields that will be collapsed in 2.0
-    }
+    dynamic_group_filter_fields = {}
     dynamic_group_skip_missing_fields = True  # Poor widget selection for `outer_depth` (no validators, limit supplied)
 
     class Meta:

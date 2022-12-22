@@ -330,6 +330,18 @@ class LocationFactory(PrimaryModelFactory):
         model = Location
         exclude = (
             "has_parent",
+            "has_asn",
+            "has_comments",
+            "has_facility",
+            "has_tenant",
+            "has_time_zone",
+            "has_physical_address",
+            "has_shipping_address",
+            "has_latitude",
+            "has_longitude",
+            "has_contact_name",
+            "has_contact_phone",
+            "has_contact_email",
             "has_site",
             "has_tenant",
             "has_description",
@@ -338,6 +350,39 @@ class LocationFactory(PrimaryModelFactory):
 
     name = factory.LazyAttributeSequence(lambda l, n: f"{l.location_type.name}-{n:02d}")
     status = random_instance(lambda: Status.objects.get_for_model(Location), allow_null=False)
+
+    has_asn = factory.Faker("pybool")
+    asn = factory.Maybe("has_asn", factory.Sequence(lambda n: 65000 + n), None)
+
+    has_facility = factory.Faker("pybool")
+    facility = factory.Maybe("has_facility", factory.Faker("building_number"), "")
+
+    has_time_zone = factory.Faker("pybool")
+    time_zone = factory.Maybe("has_time_zone", factory.Faker("random_element", elements=pytz.common_timezones))
+
+    has_physical_address = factory.Faker("pybool")
+    physical_address = factory.Maybe("has_physical_address", factory.Faker("address"))
+
+    has_shipping_address = factory.Faker("pybool")
+    shipping_address = factory.Maybe("has_shipping_address", factory.Faker("address"))
+
+    # Faker().latitude()/longitude() sometimes will generate a decimal number with more than 8 digits.
+    # Which will make validations for those fields fail.
+    # This is a way to formulate the number to make sure it generates no more than 5 digits.
+    has_latitude = factory.Faker("pybool")
+    latitude = factory.Maybe("has_latitude", factory.LazyFunction(lambda: f"{Faker().latitude():.2f}"), None)
+
+    has_longitude = factory.Faker("pybool")
+    longitude = factory.Maybe("has_longitude", factory.LazyFunction(lambda: f"{Faker().longitude():.2f}"), None)
+
+    has_contact_name = factory.Faker("pybool")
+    contact_name = factory.Maybe("has_contact_name", factory.Faker("name"))
+
+    has_contact_phone = factory.Faker("pybool")
+    contact_phone = factory.Maybe("has_contact_phone", factory.Faker("phone_number"))
+
+    has_contact_email = factory.Faker("pybool")
+    contact_email = factory.Maybe("has_contact_email", factory.Faker("safe_email"))
 
     @factory.iterator
     def location_type():  # pylint: disable=no-method-argument
@@ -377,3 +422,6 @@ class LocationFactory(PrimaryModelFactory):
 
     has_description = factory.Faker("pybool")
     description = factory.Maybe("has_description", factory.Faker("sentence", nb_words=5), "")
+
+    has_comments = factory.Faker("pybool")
+    comments = factory.Maybe("has_comments", factory.Faker("sentence", nb_words=5), "")

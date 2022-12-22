@@ -1,17 +1,18 @@
 from django.contrib.contenttypes.fields import GenericRelation
 from django.contrib.contenttypes.models import ContentType
-from django.core.exceptions import ObjectDoesNotExist, ValidationError
+from django.core.exceptions import ValidationError
 from django.db import models
 from django.urls import reverse
 
-from tree_queries.models import TreeNode
+from timezone_field import TimeZoneField
 
 from nautobot.core.fields import AutoSlugField
 from nautobot.core.models.generics import OrganizationalModel, PrimaryModel
+from nautobot.dcim.fields import ASNField
 from nautobot.extras.models import StatusModel
 from nautobot.extras.utils import extras_features, FeatureQuery
 from nautobot.utilities.fields import NaturalOrderingField
-from nautobot.utilities.tree_queries import TreeManager, TreeQuerySet
+from nautobot.utilities.tree_queries import TreeModel, TreeQuerySet
 
 
 @extras_features(
@@ -23,7 +24,7 @@ from nautobot.utilities.tree_queries import TreeManager, TreeQuerySet
     "relationships",
     "webhooks",
 )
-class LocationType(TreeNode, OrganizationalModel):
+class LocationType(TreeModel, OrganizationalModel):
     """
     Definition of a category of Locations, including its hierarchical relationship to other LocationTypes.
 
@@ -46,8 +47,6 @@ class LocationType(TreeNode, OrganizationalModel):
         default=False,
         help_text="Allow Locations of this type to be parents/children of other Locations of this same type",
     )
-
-    objects = TreeManager()
 
     csv_headers = ["name", "slug", "parent", "description", "nestable", "content_types"]
 
@@ -120,30 +119,6 @@ class LocationType(TreeNode, OrganizationalModel):
                 }
             )
 
-    @property
-    def display(self):
-        """
-        Include the parent type names as well in order to provide UI clarity.
-        `self.ancestors()` returns all the preceding nodes from the top down.
-        So if we are looking at node C and its node structure is the following:
-            A
-           /
-          B
-         /
-        C
-        This method will return "A → B → C".
-        Note that `self.ancestors()` may throw an `ObjectDoesNotExist` during bulk-delete operations.
-        """
-        display_str = ""
-        try:
-            for ancestor in self.ancestors():
-                display_str += ancestor.name + " → "
-        except ObjectDoesNotExist:
-            pass
-        finally:
-            display_str += self.name
-            return display_str  # pylint: disable=lost-exception
-
 
 class LocationQuerySet(TreeQuerySet):
     def get_for_model(self, model):
@@ -162,7 +137,7 @@ class LocationQuerySet(TreeQuerySet):
     "statuses",
     "webhooks",
 )
-class Location(TreeNode, StatusModel, PrimaryModel):
+class Location(TreeModel, StatusModel, PrimaryModel):
     """
     A Location represents an arbitrarily specific geographic location, such as a campus, building, floor, room, etc.
 
@@ -214,6 +189,34 @@ class Location(TreeNode, StatusModel, PrimaryModel):
         null=True,
     )
     description = models.CharField(max_length=200, blank=True)
+    facility = models.CharField(max_length=50, blank=True, help_text="Local facility ID or description")
+    asn = ASNField(
+        blank=True,
+        null=True,
+        verbose_name="ASN",
+        help_text="32-bit autonomous system number",
+    )
+    time_zone = TimeZoneField(blank=True)
+    physical_address = models.TextField(blank=True)
+    shipping_address = models.TextField(blank=True)
+    latitude = models.DecimalField(
+        max_digits=8,
+        decimal_places=6,
+        blank=True,
+        null=True,
+        help_text="GPS coordinate (latitude)",
+    )
+    longitude = models.DecimalField(
+        max_digits=9,
+        decimal_places=6,
+        blank=True,
+        null=True,
+        help_text="GPS coordinate (longitude)",
+    )
+    contact_name = models.CharField(max_length=100, blank=True)
+    contact_phone = models.CharField(max_length=50, blank=True)
+    contact_email = models.EmailField(blank=True, verbose_name="Contact E-mail")
+    comments = models.TextField(blank=True)
     images = GenericRelation(to="extras.ImageAttachment")
 
     objects = LocationQuerySet.as_manager(with_tree_fields=True)
@@ -227,6 +230,17 @@ class Location(TreeNode, StatusModel, PrimaryModel):
         "parent",
         "tenant",
         "description",
+        "facility",
+        "asn",
+        "time_zone",
+        "physical_address",
+        "shipping_address",
+        "latitude",
+        "longitude",
+        "contact_name",
+        "contact_phone",
+        "contact_email",
+        "comments",
     ]
 
     clone_fields = [
@@ -236,6 +250,16 @@ class Location(TreeNode, StatusModel, PrimaryModel):
         "parent",
         "tenant",
         "description",
+        "facility",
+        "asn",
+        "time_zone",
+        "physical_address",
+        "shipping_address",
+        "latitude",
+        "longitude",
+        "contact_name",
+        "contact_phone",
+        "contact_email",
     ]
 
     class Meta:
@@ -258,37 +282,23 @@ class Location(TreeNode, StatusModel, PrimaryModel):
             self.parent.name if self.parent else None,
             self.tenant.name if self.tenant else None,
             self.description,
+            self.facility,
+            self.asn,
+            self.time_zone,
+            self.physical_address,
+            self.shipping_address,
+            self.latitude,
+            self.longitude,
+            self.contact_name,
+            self.contact_phone,
+            self.contact_email,
+            self.comments,
         )
 
     @property
     def base_site(self):
         """The site that this Location belongs to, if any, or that its root ancestor belongs to, if any."""
         return self.site or self.ancestors().first().site
-
-    @property
-    def display(self):
-        """
-        Location name is unique per parent but not globally unique, so include parent information as context.
-        `self.ancestors()` returns all the preceding nodes from the top down.
-        So if we are looking at node C and its node structure is the following:
-            A
-           /
-          B
-         /
-        C
-        This method will return "A → B → C".
-
-        Note that `self.ancestors()` may throw an `ObjectDoesNotExist` during bulk-delete operations.
-        """
-        display_str = ""
-        try:
-            for ancestor in self.ancestors():
-                display_str += ancestor.name + " → "
-        except ObjectDoesNotExist:
-            pass
-        finally:
-            display_str += self.name
-            return display_str  # pylint: disable=lost-exception
 
     def validate_unique(self, exclude=None):
         # Check for a duplicate name on a Location with no parent.
@@ -377,3 +387,14 @@ class Location(TreeNode, StatusModel, PrimaryModel):
                             f"of type {self.location_type.parent} as its parent."
                         }
                     )
+
+    def clean_fields(self, exclude=None):
+        """Explicitly convert latitude/longitude to strings to avoid floating-point precision errors."""
+
+        if self.longitude is not None and isinstance(self.longitude, float):
+            decimal_places = self._meta.get_field("longitude").decimal_places
+            self.longitude = f"{self.longitude:.{decimal_places}f}"
+        if self.latitude is not None and isinstance(self.latitude, float):
+            decimal_places = self._meta.get_field("latitude").decimal_places
+            self.latitude = f"{self.latitude:.{decimal_places}f}"
+        super().clean_fields(exclude)

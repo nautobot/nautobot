@@ -13,7 +13,7 @@ from nautobot.utilities.tables import (
     TagColumn,
     ToggleColumn,
 )
-from .template_code import MPTT_LINK, RACKGROUP_ELEVATIONS, UTILIZATION_GRAPH
+from .template_code import TREE_LINK, RACKGROUP_ELEVATIONS, UTILIZATION_GRAPH
 
 __all__ = (
     "RackTable",
@@ -31,7 +31,7 @@ __all__ = (
 
 class RackGroupTable(BaseTable):
     pk = ToggleColumn()
-    name = tables.TemplateColumn(template_code=MPTT_LINK, orderable=False, attrs={"td": {"class": "text-nowrap"}})
+    name = tables.TemplateColumn(template_code=TREE_LINK, orderable=False, attrs={"td": {"class": "text-nowrap"}})
     site = tables.Column(linkify=True)
     location = tables.Column(linkify=True)
     rack_count = tables.Column(verbose_name="Racks")
@@ -118,7 +118,7 @@ class RackTable(StatusTableMixin, BaseTable):
 class RackDetailTable(RackTable):
     device_count = LinkedCountColumn(
         viewname="dcim:device_list",
-        url_params={"rack_id": "pk"},
+        url_params={"rack": "pk"},
         verbose_name="Devices",
     )
     get_utilization = tables.TemplateColumn(template_code=UTILIZATION_GRAPH, orderable=False, verbose_name="Space")
