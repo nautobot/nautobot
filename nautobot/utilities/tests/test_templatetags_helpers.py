@@ -197,9 +197,10 @@ class NautobotTemplatetagsHelperTest(TestCase):
         role = vlan_with_role.role
         color = role.color
         fbcolor = helpers.fgcolor(color)
+        display = helpers.hyperlinked_object(role)
         self.assertEqual(
             helpers.render_related_name_and_color(obj=role),
-            f'<span class="label" style="color: {fbcolor}; background-color: #{color}">{role.name}</span>',
+            f'<span class="label" style="color: {fbcolor}; background-color: #{color}">{display}</span>',
         )
         # Assert when obj is None
         self.assertEqual(helpers.render_related_name_and_color(obj=None), "—")

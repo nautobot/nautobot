@@ -188,7 +188,7 @@ def common_test_data(cls):
     loc3 = Location.objects.filter(location_type=lt3).first()
     loc3.parent = loc2
     loc4 = Location.objects.filter(location_type=lt4).first()
-    nested_loc = Location.objects.filter(location_type__nestable=True, parent=loc1).first()
+    nested_loc = Location.objects.filter(location_type__nestable=True, parent__isnull=False).first()
     for loc in [loc1, loc2, loc3, loc4, nested_loc]:
         loc.validated_save()
     cls.loc1 = loc1

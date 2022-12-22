@@ -2540,7 +2540,7 @@ class VirtualChassisTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         device_type = DeviceType.objects.create(manufacturer=manufacturer, model="Device Type 1", slug="device-type-1")
         device_role = Role.objects.get_for_model(Device).first()
 
-        cls.devices = (
+        cls.devices = [
             Device.objects.create(
                 device_type=device_type,
                 role=device_role,
@@ -2548,7 +2548,7 @@ class VirtualChassisTestCase(ViewTestCases.PrimaryObjectViewTestCase):
                 site=site,
             )
             for num in range(1, 13)
-        )
+        ]
 
         # Create three VirtualChassis with three members each
         vc1 = VirtualChassis.objects.create(name="VC1", master=cls.devices[0], domain="domain-1")
