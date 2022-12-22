@@ -1,3 +1,4 @@
+import copy
 import logging
 import uuid
 
@@ -12,7 +13,12 @@ from nautobot.dcim.tables import SiteTable
 from nautobot.dcim.tests.test_views import create_test_device
 from nautobot.ipam.models import IPAddress, VLAN
 from nautobot.extras import context_managers
-from nautobot.extras.choices import RelationshipRequiredSideChoices, RelationshipSideChoices, RelationshipTypeChoices
+from nautobot.extras.choices import (
+    ObjectChangeActionChoices,
+    RelationshipRequiredSideChoices,
+    RelationshipSideChoices,
+    RelationshipTypeChoices,
+)
 from nautobot.extras.models import Relationship, RelationshipAssociation, Status
 from nautobot.utilities.tables import RelationshipColumn
 from nautobot.utilities.testing import TestCase
@@ -1385,30 +1391,81 @@ class RelationshipChangeLoggingTest(TestCase):
 
     def test_change_logging_relationship_association(self):
         """Test that an objectchange is generated for associated objects when a RelationshipAssociation is saved"""
+        # generate initial object change
+        with context_managers.web_request_context(self.user):
+            self.ip.validated_save()
+            self.site.validated_save()
+
         with context_managers.web_request_context(self.user):
             RelationshipAssociation.objects.create(
                 relationship=self.site_ip_relationship, source=self.site, destination=self.ip
             )
 
+        base_diff = {
+            "relationships": {
+                self.site_ip_relationship.slug: {
+                    "id": str(self.site_ip_relationship.pk),
+                    "name": self.site_ip_relationship.name,
+                    "type": "many-to-many",
+                    "url": "http://testserver"
+                    + reverse("extras-api:relationship-detail", kwargs={"pk": self.site_ip_relationship.pk}),
+                    "destination": {
+                        "label": "IP addresses",
+                        "object_type": "ipam.ipaddress",
+                        "objects": [],
+                    },
+                    "source": {
+                        "label": "sites",
+                        "object_type": "dcim.site",
+                        "objects": [],
+                    },
+                }
+            }
+        }
+
         with self.subTest("Source object change was generated"):
-            self.assertEqual(get_changes_for_model(self.site).count(), 1)
+            self.assertEqual(get_changes_for_model(self.site).count(), 2)
             object_change = get_changes_for_model(self.site).first()
-            snapshots_added = object_change.get_snapshots()["differences"]["added"]
-            self.assertIn("relationships", snapshots_added)
-            self.assertEqual(
-                snapshots_added["relationships"]["sites-ipaddresses-m2m"]["destination"]["objects"][0]["id"],
-                str(self.ip.pk),
-            )
+            self.assertEqual(object_change.action, ObjectChangeActionChoices.ACTION_UPDATE)
+
+            # ensure diff only contains added relationship
+            snapshots = object_change.get_snapshots()
+            expected_diff = copy.deepcopy(base_diff)
+            expected_diff["relationships"][self.site_ip_relationship.slug].pop("source")
+            self.assertEqual(snapshots["differences"]["removed"], expected_diff)
+
+            expected_diff["relationships"][self.site_ip_relationship.slug]["destination"]["objects"] = [
+                {
+                    "id": str(self.ip.pk),
+                    "url": "http://testserver" + reverse("ipam-api:ipaddress-detail", kwargs={"pk": self.ip.pk}),
+                    "address": str(self.ip),
+                    "display": getattr(self.ip, "display", str(self.ip)),
+                    "family": self.ip.family,
+                }
+            ]
+            self.assertEqual(snapshots["differences"]["added"], expected_diff)
 
         with self.subTest("Destination object change was generated"):
-            self.assertEqual(get_changes_for_model(self.ip).count(), 1)
+            self.assertEqual(get_changes_for_model(self.ip).count(), 2)
             object_change = get_changes_for_model(self.ip).first()
-            snapshots_added = object_change.get_snapshots()["differences"]["added"]
-            self.assertIn("relationships", snapshots_added)
-            self.assertEqual(
-                snapshots_added["relationships"]["sites-ipaddresses-m2m"]["source"]["objects"][0]["id"],
-                str(self.site.pk),
-            )
+            self.assertEqual(object_change.action, ObjectChangeActionChoices.ACTION_UPDATE)
+
+            # ensure diff only contains added relationship
+            snapshots = object_change.get_snapshots()
+            expected_diff = copy.deepcopy(base_diff)
+            expected_diff["relationships"][self.site_ip_relationship.slug].pop("destination")
+            self.assertEqual(snapshots["differences"]["removed"], expected_diff)
+
+            expected_diff["relationships"][self.site_ip_relationship.slug]["source"]["objects"] = [
+                {
+                    "id": str(self.site.pk),
+                    "url": "http://testserver" + reverse("dcim-api:site-detail", kwargs={"pk": self.site.pk}),
+                    "display": getattr(self.site, "display", str(self.site)),
+                    "name": self.site.name,
+                    "slug": self.site.slug,
+                }
+            ]
+            self.assertEqual(snapshots["differences"]["added"], expected_diff)
 
     def test_change_logging_with_object_save(self):
         """
