@@ -852,7 +852,7 @@ class InventoryItemTable(DeviceComponentTable):
 
 class DeviceInventoryItemTable(InventoryItemTable):
     name = tables.TemplateColumn(
-        template_code='<a href="{{ record.get_absolute_url }}" style="padding-left: {{ record.level }}0px">'
+        template_code='<a href="{{ record.get_absolute_url }}" style="padding-left: {{ record.tree_depth }}0px">'
         "{{ value }}</a>",
         attrs={"td": {"class": "text-nowrap"}},
     )

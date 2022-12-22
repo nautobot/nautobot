@@ -9,7 +9,7 @@ class Migration(migrations.Migration):
 
     dependencies = [
         ("extras", "0055_collect_roles_from_related_apps_roles"),
-        ("dcim", "0019_device_redundancy_group_data_migration"),
+        ("dcim", "0021_mptt_to_tree_queries"),
     ]
 
     operations = [

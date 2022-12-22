@@ -31,7 +31,7 @@ class ConfigContextQuerySet(RestrictedQuerySet):
         # Match against the directly assigned region as well as any parent regions.
         region = getattr(obj.site, "region", None)
         if region:
-            regions = region.get_ancestors(include_self=True)
+            regions = region.ancestors(include_self=True)
         else:
             regions = []
 
@@ -136,18 +136,15 @@ class ConfigContextModelQuerySet(RestrictedQuerySet):
             base_query.add((Q(sites=OuterRef("cluster__site")) | Q(sites=None)), Q.AND)
             region_field = "cluster__site__region"
 
-        base_query.add(
-            (
-                Q(
-                    regions__tree_id=OuterRef(f"{region_field}__tree_id"),
-                    regions__level__lte=OuterRef(f"{region_field}__level"),
-                    regions__lft__lte=OuterRef(f"{region_field}__lft"),
-                    regions__rght__gte=OuterRef(f"{region_field}__rght"),
-                )
-                | Q(regions=None)
-            ),
-            Q.AND,
-        )
+        # Avoid circular import error
+        from nautobot.dcim.models import Region
+
+        # Query for regions=(None OR site__region OR site__region__parent OR site__region__parent__parent OR ...)
+        region_query = Q(regions=None) | Q(regions=OuterRef(region_field))
+        for _i in range(Region.objects.all().max_tree_depth()):
+            region_field = f"{region_field}__parent"
+            region_query |= Q(regions=OuterRef(region_field))
+        base_query.add(region_query, Q.AND)
 
         return base_query
 

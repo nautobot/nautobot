@@ -1,5 +1,6 @@
 {% extends 'generic/object_detail.html' %}
 {% load helpers %}
+{% load tz %}
 
 {% block extra_breadcrumbs %}
     {% for ancestor in object.ancestors %}
@@ -39,6 +40,25 @@
                 </td>
             </tr>
             <tr>
+                <td>Facility</td>
+                <td>{{ object.facility|placeholder }}</td>
+            </tr>
+            <tr>
+                <td>AS Number</td>
+                <td>{{ object.asn|placeholder }}</td>
+            </tr>
+            <tr>
+                <td>Time Zone</td>
+                 <td>
+                    {% if object.time_zone %}
+                        {{ object.time_zone }} (UTC {{ object.time_zone|tzoffset }})<br />
+                        <small class="text-muted">Site time: {% timezone object.time_zone %}{% now "SHORT_DATETIME_FORMAT" %}{% endtimezone %}</small>
+                    {% else %}
+                        <span class="text-muted">&mdash;</span>
+                    {% endif %}
+                </td>
+            </tr>
+            <tr>
                 <td>Description</td>
                 <td>{{ object.description|placeholder }}</td>
             </tr>
@@ -53,6 +73,83 @@
                 </td>
             </tr>
         </table>
+    </div>
+    <div class="panel panel-default">
+        <div class="panel-heading">
+            <strong>Contact Info</strong>
+        </div>
+        <table class="table table-hover panel-body attr-table">
+            <tr>
+                <td>Physical Address</td>
+                <td>
+                    {% if object.physical_address %}
+                        <div class="pull-right noprint">
+                            <a href="https://maps.google.com/?q={{ object.physical_address|urlencode }}" target="_blank" class="btn btn-primary btn-xs">
+                                <i class="mdi mdi-map-marker"></i> Map it
+                            </a>
+                        </div>
+                        <span>{{ object.physical_address|linebreaksbr }}</span>
+                    {% else %}
+                        <span class="text-muted">&mdash;</span>
+                    {% endif %}
+                </td>
+            </tr>
+            <tr>
+                <td>Shipping Address</td>
+                <td>{{ object.shipping_address|linebreaksbr|placeholder }}</td>
+            </tr>
+            <tr>
+                <td>GPS Coordinates</td>
+                <td>
+                    {% if object.latitude and object.longitude %}
+                        <div class="pull-right noprint">
+                            <a href="https://maps.google.com/?q={{ object.latitude }},{{ object.longitude }}" target="_blank" class="btn btn-primary btn-xs">
+                                <i class="mdi mdi-map-marker"></i> Map it
+                            </a>
+                        </div>
+                        <span>{{ object.latitude }}, {{ object.longitude }}</span>
+                    {% else %}
+                        <span class="text-muted">&mdash;</span>
+                    {% endif %}
+                </td>
+            </tr>
+            <tr>
+                <td>Contact Name</td>
+                <td>{{ object.contact_name|placeholder }}</td>
+            </tr>
+            <tr>
+                <td>Contact Phone</td>
+                <td>
+                    {% if object.contact_phone %}
+                        <a href="tel:{{ object.contact_phone }}">{{ object.contact_phone }}</a>
+                    {% else %}
+                        <span class="text-muted">&mdash;</span>
+                    {% endif %}
+                </td>
+            </tr>
+            <tr>
+                <td>Contact E-Mail</td>
+                <td>
+                    {% if object.contact_email %}
+                        <a href="mailto:{{ object.contact_email }}">{{ object.contact_email }}</a>
+                    {% else %}
+                        <span class="text-muted">&mdash;</span>
+                    {% endif %}
+                </td>
+            </tr>
+        </table>
+    </div>
+    <div class="panel panel-default">
+        <div class="panel-heading">
+            <strong>Comments</strong>
+        </div>
+        <div class="panel-body rendered-markdown">
+            {% if object.comments %}
+                {{ object.comments|render_markdown }}
+            {% else %}
+                <span class="text-muted">None</span>
+            {% endif %}
+        </div>
     </div>
 {% endblock content_left_page %}
 
@@ -95,7 +192,7 @@
         <table class="table table-hover panel-body">
             {% for rg in rack_groups %}
                 <tr>
-                    <td style="padding-left: {{ rg.level }}8px"><i class="mdi mdi-folder-open"></i> <a href="{{ rg.get_absolute_url }}">{{ rg }}</a></td>
+                    <td style="padding-left: {{ rg.tree_depth }}8px"><i class="mdi mdi-folder-open"></i> <a href="{{ rg.get_absolute_url }}">{{ rg }}</a></td>
                     <td>{{ rg.rack_count }}</td>
                     <td class="text-right noprint">
                         <a href="{% url 'dcim:rack_elevation_list' %}?group_id={{ rg.pk }}" class="btn btn-xs btn-primary" title="View elevations">

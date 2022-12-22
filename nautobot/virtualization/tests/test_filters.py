@@ -210,9 +210,9 @@ class ClusterTestCase(FilterTestCases.FilterTestCase, FilterTestCases.TenancyFil
     def test_region(self):
         filter_parent_regions = self.regions[:2]
         nested_regions = list(
-            set(flatten_iterable(map(lambda r: r.get_descendants(include_self=True), filter_parent_regions)))
+            set(flatten_iterable(map(lambda r: r.descendants(include_self=True), filter_parent_regions)))
         )
-        params = {"region_id": [filter_parent_regions[0].pk, filter_parent_regions[1].pk]}
+        params = {"region": [filter_parent_regions[0].pk, filter_parent_regions[1].pk]}
         self.assertQuerysetEqual(
             self.filterset(params, self.queryset).qs, self.queryset.filter(site__region__in=nested_regions)
         )
@@ -223,7 +223,7 @@ class ClusterTestCase(FilterTestCases.FilterTestCase, FilterTestCases.TenancyFil
 
     def test_site(self):
         sites = list(self.sites[:2])
-        params = {"site_id": [sites[0].pk, sites[1].pk]}
+        params = {"site": [sites[0].pk, sites[1].pk]}
         self.assertQuerysetEqual(self.filterset(params, self.queryset).qs, self.queryset.filter(site__in=sites))
         params = {"site": [sites[0].slug, sites[1].slug]}
         self.assertQuerysetEqual(self.filterset(params, self.queryset).qs, self.queryset.filter(site__in=sites))
@@ -483,7 +483,7 @@ class VirtualMachineTestCase(FilterTestCases.FilterTestCase, FilterTestCases.Ten
     def test_region(self):
         filter_parent_regions = self.regions[:2]
         nested_regions = list(
-            set(flatten_iterable(map(lambda r: r.get_descendants(include_self=True), filter_parent_regions)))
+            set(flatten_iterable(map(lambda r: r.descendants(include_self=True), filter_parent_regions)))
         )
         params = {"region_id": [filter_parent_regions[0].pk, filter_parent_regions[1].pk]}
         self.assertQuerysetEqual(

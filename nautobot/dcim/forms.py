@@ -170,7 +170,7 @@ class DeviceComponentFilterForm(NautobotFilterForm):
         required=False,
         query_params={"region": "$region"},
     )
-    device_id = DynamicModelMultipleChoiceField(
+    device = DynamicModelMultipleChoiceField(
         queryset=Device.objects.all(),
         required=False,
         label="Device",
@@ -477,6 +477,7 @@ class LocationForm(NautobotModelForm, TenancyForm):
         required=False,
     )
     site = DynamicModelChoiceField(queryset=Site.objects.all(), required=False)
+    comments = CommentField()
 
     class Meta:
         model = Location
@@ -490,8 +491,44 @@ class LocationForm(NautobotModelForm, TenancyForm):
             "tenant_group",
             "tenant",
             "description",
+            "facility",
+            "asn",
+            "time_zone",
+            "physical_address",
+            "shipping_address",
+            "latitude",
+            "longitude",
+            "contact_name",
+            "contact_phone",
+            "contact_email",
+            "comments",
             "tags",
         ]
+
+        widgets = {
+            "physical_address": SmallTextarea(
+                attrs={
+                    "rows": 3,
+                }
+            ),
+            "shipping_address": SmallTextarea(
+                attrs={
+                    "rows": 3,
+                }
+            ),
+            "time_zone": StaticSelect2(),
+        }
+        help_texts = {
+            "name": "Full name of the location",
+            "facility": "Data center provider and facility (e.g. Equinix NY7)",
+            "asn": "BGP autonomous system number",
+            "time_zone": "Local time zone",
+            "description": "Short description (will appear in locations list)",
+            "physical_address": "Physical location of the building (e.g. for GPS)",
+            "shipping_address": "If different from the physical address",
+            "latitude": "Latitude in decimal format (xx.yyyyyy)",
+            "longitude": "Longitude in decimal format (xx.yyyyyy)",
+        }
 
 
 class LocationBulkEditForm(TagsBulkEditFormMixin, StatusModelBulkEditFormMixin, NautobotBulkEditForm):
@@ -501,6 +538,12 @@ class LocationBulkEditForm(TagsBulkEditFormMixin, StatusModelBulkEditFormMixin, 
     site = DynamicModelChoiceField(queryset=Site.objects.all(), required=False)
     tenant = DynamicModelChoiceField(queryset=Tenant.objects.all(), required=False)
     description = forms.CharField(max_length=100, required=False)
+    asn = forms.IntegerField(min_value=BGP_ASN_MIN, max_value=BGP_ASN_MAX, required=False, label="ASN")
+    time_zone = TimeZoneFormField(
+        choices=add_blank_choice(TimeZoneFormField().choices),
+        required=False,
+        widget=StaticSelect2(),
+    )
 
     class Meta:
         nullable_fields = [
@@ -508,6 +551,9 @@ class LocationBulkEditForm(TagsBulkEditFormMixin, StatusModelBulkEditFormMixin, 
             "site",
             "tenant",
             "description",
+            "asn",
+            "description",
+            "time_zone",
         ]
 
 
@@ -539,6 +585,11 @@ class LocationCSVForm(StatusModelCSVFormMixin, CustomFieldModelCSVForm):
     class Meta:
         model = Location
         fields = Location.csv_headers
+        help_texts = {
+            "time_zone": mark_safe(
+                'Time zone (<a href="https://en.wikipedia.org/wiki/List_of_tz_database_time_zones">available options</a>)'
+            )
+        }
 
 
 class LocationFilterForm(NautobotFilterForm, StatusModelFilterFormMixin, TenancyFilterForm):
@@ -564,7 +615,7 @@ class RackGroupForm(LocatableModelFormMixin, NautobotModelForm):
     parent = DynamicModelChoiceField(
         queryset=RackGroup.objects.all(),
         required=False,
-        query_params={"site_id": "$site"},
+        query_params={"site": "$site"},
     )
     slug = SlugField()
 
@@ -619,7 +670,7 @@ class RackForm(LocatableModelFormMixin, NautobotModelForm, TenancyForm):
     group = DynamicModelChoiceField(
         queryset=RackGroup.objects.all(),
         required=False,
-        query_params={"site_id": "$site"},
+        query_params={"site": "$site"},
     )
     comments = CommentField()
 
@@ -703,7 +754,7 @@ class RackBulkEditForm(
     group = DynamicModelChoiceField(
         queryset=RackGroup.objects.all(),
         required=False,
-        query_params={"site_id": "$site"},
+        query_params={"site": "$site"},
     )
     tenant = DynamicModelChoiceField(queryset=Tenant.objects.all(), required=False)
     serial = forms.CharField(max_length=255, required=False, label="Serial Number")
@@ -757,14 +808,14 @@ class RackFilterForm(
         "region",
         "site",
         "location",
-        "group_id",
+        "group",
         "status",
         "role",
         "tenant_group",
         "tenant",
     ]
     q = forms.CharField(required=False, label="Search")
-    group_id = DynamicModelMultipleChoiceField(
+    group = DynamicModelMultipleChoiceField(
         queryset=RackGroup.objects.all(),
         required=False,
         label="Rack group",
@@ -786,7 +837,7 @@ class RackElevationFilterForm(RackFilterForm):
         "q",
         "region",
         "site",
-        "group_id",
+        "group",
         "id",
         "status",
         "role",
@@ -799,7 +850,7 @@ class RackElevationFilterForm(RackFilterForm):
         required=False,
         query_params={
             "site": "$site",
-            "group_id": "$group_id",
+            "group": "$group",
         },
     )
 
@@ -814,18 +865,18 @@ class RackReservationForm(NautobotModelForm, TenancyForm):
     site = DynamicModelChoiceField(
         queryset=Site.objects.all(),
         required=False,
-        query_params={"region_id": "$region"},
+        query_params={"region": "$region"},
     )
     rack_group = DynamicModelChoiceField(
         queryset=RackGroup.objects.all(),
         required=False,
-        query_params={"site_id": "$site"},
+        query_params={"site": "$site"},
     )
     rack = DynamicModelChoiceField(
         queryset=Rack.objects.all(),
         query_params={
-            "site_id": "$site",
-            "group_id": "$rack_group",
+            "site": "$site",
+            "group": "$rack_group",
         },
     )
     units = NumericArrayField(
@@ -909,8 +960,8 @@ class RackReservationFilterForm(NautobotFilterForm, TenancyFilterForm):
         "q",
         "region",
         "site",
-        "group_id",
-        "user_id",
+        "group",
+        "user",
         "tenant_group",
         "tenant",
     ]
@@ -922,14 +973,14 @@ class RackReservationFilterForm(NautobotFilterForm, TenancyFilterForm):
         required=False,
         query_params={"region": "$region"},
     )
-    group_id = DynamicModelMultipleChoiceField(
+    group = DynamicModelMultipleChoiceField(
         # v2 TODO(jathan): Replace prefetch_related with select_related
         queryset=RackGroup.objects.prefetch_related("site"),
         required=False,
         label="Rack group",
         null_option="None",
     )
-    user_id = DynamicModelMultipleChoiceField(
+    user = DynamicModelMultipleChoiceField(
         queryset=get_user_model().objects.all(),
         required=False,
         label="User",
@@ -1088,7 +1139,7 @@ class ComponentTemplateCreateForm(ComponentForm):
     )
     device_type = DynamicModelChoiceField(
         queryset=DeviceType.objects.all(),
-        query_params={"manufacturer_id": "$manufacturer"},
+        query_params={"manufacturer": "$manufacturer"},
     )
     description = forms.CharField(required=False)
 
@@ -1738,15 +1789,15 @@ class DeviceForm(LocatableModelFormMixin, NautobotModelForm, TenancyForm, LocalC
     rack_group = DynamicModelChoiceField(
         queryset=RackGroup.objects.all(),
         required=False,
-        query_params={"site_id": "$site"},
+        query_params={"site": "$site"},
         initial_params={"racks": "$rack"},
     )
     rack = DynamicModelChoiceField(
         queryset=Rack.objects.all(),
         required=False,
         query_params={
-            "site_id": "$site",
-            "group_id": "$rack_group",
+            "site": "$site",
+            "group": "$rack_group",
         },
     )
     device_redundancy_group = DynamicModelChoiceField(queryset=DeviceRedundancyGroup.objects.all(), required=False)
@@ -1768,12 +1819,12 @@ class DeviceForm(LocatableModelFormMixin, NautobotModelForm, TenancyForm, LocalC
     )
     device_type = DynamicModelChoiceField(
         queryset=DeviceType.objects.all(),
-        query_params={"manufacturer_id": "$manufacturer"},
+        query_params={"manufacturer": "$manufacturer"},
     )
     platform = DynamicModelChoiceField(
         queryset=Platform.objects.all(),
         required=False,
-        query_params={"manufacturer_id": ["$manufacturer", "null"]},
+        query_params={"manufacturer": ["$manufacturer", "null"]},
     )
     secrets_group = DynamicModelChoiceField(queryset=SecretsGroup.objects.all(), required=False)
     cluster_group = DynamicModelChoiceField(
@@ -2076,7 +2127,7 @@ class DeviceBulkEditForm(
     device_type = DynamicModelChoiceField(
         queryset=DeviceType.objects.all(),
         required=False,
-        query_params={"manufacturer_id": "$manufacturer"},
+        query_params={"manufacturer": "$manufacturer"},
     )
     rack = DynamicModelChoiceField(queryset=Rack.objects.all(), required=False)
     position = forms.IntegerField(required=False)
@@ -2130,32 +2181,32 @@ class DeviceFilterForm(
         "region",
         "site",
         "location",
-        "rack_group_id",
-        "rack_id",
+        "rack_group",
+        "rack",
         "status",
         "role",
         "tenant_group",
         "tenant",
-        "manufacturer_id",
-        "device_type_id",
+        "manufacturer",
+        "device_type",
         "mac_address",
         "has_primary_ip",
     ]
     q = forms.CharField(required=False, label="Search")
-    rack_group_id = DynamicModelMultipleChoiceField(
+    rack_group = DynamicModelMultipleChoiceField(
         queryset=RackGroup.objects.all(),
         required=False,
         label="Rack group",
         query_params={"site": "$site"},
     )
-    rack_id = DynamicModelMultipleChoiceField(
+    rack = DynamicModelMultipleChoiceField(
         queryset=Rack.objects.all(),
         required=False,
         label="Rack",
         null_option="None",
         query_params={
             "site": "$site",
-            "group_id": "$rack_group_id",
+            "group": "$rack_group",
         },
     )
     manufacturer = DynamicModelMultipleChoiceField(
@@ -2164,7 +2215,7 @@ class DeviceFilterForm(
         required=False,
         label="Manufacturer",
     )
-    device_type_id = DynamicModelMultipleChoiceField(
+    device_type = DynamicModelMultipleChoiceField(
         queryset=DeviceType.objects.all(),
         required=False,
         label="Model",
@@ -2194,34 +2245,39 @@ class DeviceFilterForm(
         label="Virtual chassis member",
         widget=StaticSelect2(choices=BOOLEAN_WITH_BLANK_CHOICES),
     )
-    console_ports = forms.NullBooleanField(
+    has_console_ports = forms.NullBooleanField(
         required=False,
         label="Has console ports",
         widget=StaticSelect2(choices=BOOLEAN_WITH_BLANK_CHOICES),
     )
-    console_server_ports = forms.NullBooleanField(
+    has_console_server_ports = forms.NullBooleanField(
         required=False,
         label="Has console server ports",
         widget=StaticSelect2(choices=BOOLEAN_WITH_BLANK_CHOICES),
     )
-    power_ports = forms.NullBooleanField(
+    has_power_ports = forms.NullBooleanField(
         required=False,
         label="Has power ports",
         widget=StaticSelect2(choices=BOOLEAN_WITH_BLANK_CHOICES),
     )
-    power_outlets = forms.NullBooleanField(
+    has_power_outlets = forms.NullBooleanField(
         required=False,
         label="Has power outlets",
         widget=StaticSelect2(choices=BOOLEAN_WITH_BLANK_CHOICES),
     )
-    interfaces = forms.NullBooleanField(
+    has_interfaces = forms.NullBooleanField(
         required=False,
         label="Has interfaces",
         widget=StaticSelect2(choices=BOOLEAN_WITH_BLANK_CHOICES),
     )
-    pass_through_ports = forms.NullBooleanField(
+    has_front_ports = forms.NullBooleanField(
         required=False,
-        label="Has pass-through ports",
+        label="Has front ports",
+        widget=StaticSelect2(choices=BOOLEAN_WITH_BLANK_CHOICES),
+    )
+    has_rear_ports = forms.NullBooleanField(
+        required=False,
+        label="Has rear ports",
         widget=StaticSelect2(choices=BOOLEAN_WITH_BLANK_CHOICES),
     )
     tag = TagFilterField(model)
@@ -2656,7 +2712,7 @@ class InterfaceForm(InterfaceCommonForm, NautobotModelForm):
         label="Untagged VLAN",
         brief_mode=False,
         query_params={
-            "site_id": "null",
+            "site": "null",
         },
     )
     tagged_vlans = DynamicModelMultipleChoiceField(
@@ -2665,7 +2721,7 @@ class InterfaceForm(InterfaceCommonForm, NautobotModelForm):
         label="Tagged VLANs",
         brief_mode=False,
         query_params={
-            "site_id": "null",
+            "site": "null",
         },
     )
 
@@ -2716,8 +2772,8 @@ class InterfaceForm(InterfaceCommonForm, NautobotModelForm):
         self.fields["lag"].widget.add_query_param("device_with_common_vc", device.pk)
 
         # Add current site to VLANs query params
-        self.fields["untagged_vlan"].widget.add_query_param("site_id", device.site.pk)
-        self.fields["tagged_vlans"].widget.add_query_param("site_id", device.site.pk)
+        self.fields["untagged_vlan"].widget.add_query_param("site", device.site.pk)
+        self.fields["tagged_vlans"].widget.add_query_param("site", device.site.pk)
 
 
 class InterfaceCreateForm(ComponentCreateForm, InterfaceCommonForm):
@@ -2866,7 +2922,7 @@ class InterfaceBulkEditForm(
         required=False,
         brief_mode=False,
         query_params={
-            "site_id": "null",
+            "site": "null",
         },
     )
     tagged_vlans = DynamicModelMultipleChoiceField(
@@ -2874,7 +2930,7 @@ class InterfaceBulkEditForm(
         required=False,
         brief_mode=False,
         query_params={
-            "site_id": "null",
+            "site": "null",
         },
     )
 
@@ -2905,8 +2961,8 @@ class InterfaceBulkEditForm(
             self.fields["lag"].widget.add_query_param("device_with_common_vc", device.pk)
 
             # Add current site to VLANs query params
-            self.fields["untagged_vlan"].widget.add_query_param("site_id", device.site.pk)
-            self.fields["tagged_vlans"].widget.add_query_param("site_id", device.site.pk)
+            self.fields["untagged_vlan"].widget.add_query_param("site", device.site.pk)
+            self.fields["tagged_vlans"].widget.add_query_param("site", device.site.pk)
         else:
             # See netbox-community/netbox#4523
             if "pk" in self.initial:
@@ -2924,8 +2980,8 @@ class InterfaceBulkEditForm(
                         break
 
                 if site is not None:
-                    self.fields["untagged_vlan"].widget.add_query_param("site_id", site.pk)
-                    self.fields["tagged_vlans"].widget.add_query_param("site_id", site.pk)
+                    self.fields["untagged_vlan"].widget.add_query_param("site", site.pk)
+                    self.fields["tagged_vlans"].widget.add_query_param("site", site.pk)
 
             self.fields["parent_interface"].choices = ()
             self.fields["parent_interface"].widget.attrs["disabled"] = True
@@ -3377,7 +3433,7 @@ class InventoryItemForm(NautobotModelForm):
     parent = DynamicModelChoiceField(
         queryset=InventoryItem.objects.all(),
         required=False,
-        query_params={"device_id": "$device"},
+        query_params={"device": "$device"},
     )
     manufacturer = DynamicModelChoiceField(queryset=Manufacturer.objects.all(), required=False)
 
@@ -3402,7 +3458,7 @@ class InventoryItemCreateForm(ComponentCreateForm):
     parent = DynamicModelChoiceField(
         queryset=InventoryItem.objects.all(),
         required=False,
-        query_params={"device_id": "$device"},
+        query_params={"device": "$device"},
     )
     part_id = forms.CharField(max_length=50, required=False, label="Part ID")
     serial = forms.CharField(
@@ -3491,22 +3547,22 @@ class ConnectCableToDeviceForm(ConnectCableExcludeIDMixin, NautobotModelForm):
         queryset=Site.objects.all(),
         label="Site",
         required=False,
-        query_params={"region_id": "$termination_b_region"},
+        query_params={"region": "$termination_b_region"},
     )
     termination_b_rack = DynamicModelChoiceField(
         queryset=Rack.objects.all(),
         label="Rack",
         required=False,
         null_option="None",
-        query_params={"site_id": "$termination_b_site"},
+        query_params={"site": "$termination_b_site"},
     )
     termination_b_device = DynamicModelChoiceField(
         queryset=Device.objects.all(),
         label="Device",
         required=False,
         query_params={
-            "site_id": "$termination_b_site",
-            "rack_id": "$termination_b_rack",
+            "site": "$termination_b_site",
+            "rack": "$termination_b_rack",
         },
     )
 
@@ -3544,7 +3600,7 @@ class ConnectCableToConsolePortForm(ConnectCableToDeviceForm):
         queryset=ConsolePort.objects.all(),
         label="Name",
         disabled_indicator="cable",
-        query_params={"device_id": "$termination_b_device"},
+        query_params={"device": "$termination_b_device"},
     )
 
 
@@ -3553,7 +3609,7 @@ class ConnectCableToConsoleServerPortForm(ConnectCableToDeviceForm):
         queryset=ConsoleServerPort.objects.all(),
         label="Name",
         disabled_indicator="cable",
-        query_params={"device_id": "$termination_b_device"},
+        query_params={"device": "$termination_b_device"},
     )
 
 
@@ -3562,7 +3618,7 @@ class ConnectCableToPowerPortForm(ConnectCableToDeviceForm):
         queryset=PowerPort.objects.all(),
         label="Name",
         disabled_indicator="cable",
-        query_params={"device_id": "$termination_b_device"},
+        query_params={"device": "$termination_b_device"},
     )
 
 
@@ -3571,7 +3627,7 @@ class ConnectCableToPowerOutletForm(ConnectCableToDeviceForm):
         queryset=PowerOutlet.objects.all(),
         label="Name",
         disabled_indicator="cable",
-        query_params={"device_id": "$termination_b_device"},
+        query_params={"device": "$termination_b_device"},
     )
 
 
@@ -3592,7 +3648,7 @@ class ConnectCableToFrontPortForm(ConnectCableToDeviceForm):
         queryset=FrontPort.objects.all(),
         label="Name",
         disabled_indicator="cable",
-        query_params={"device_id": "$termination_b_device"},
+        query_params={"device": "$termination_b_device"},
     )
 
 
@@ -3601,7 +3657,7 @@ class ConnectCableToRearPortForm(ConnectCableToDeviceForm):
         queryset=RearPort.objects.all(),
         label="Name",
         disabled_indicator="cable",
-        query_params={"device_id": "$termination_b_device"},
+        query_params={"device": "$termination_b_device"},
     )
 
 
@@ -3612,14 +3668,14 @@ class ConnectCableToCircuitTerminationForm(ConnectCableExcludeIDMixin, NautobotM
         queryset=Site.objects.all(),
         label="Site",
         required=False,
-        query_params={"region_id": "$termination_b_region"},
+        query_params={"region": "$termination_b_region"},
     )
     termination_b_circuit = DynamicModelChoiceField(
         queryset=Circuit.objects.all(),
         label="Circuit",
         query_params={
             "provider_id": "$termination_b_provider",
-            "site_id": "$termination_b_site",
+            "site": "$termination_b_site",
         },
     )
     termination_b_id = DynamicModelChoiceField(
@@ -3657,28 +3713,28 @@ class ConnectCableToPowerFeedForm(ConnectCableExcludeIDMixin, NautobotModelForm)
         queryset=Site.objects.all(),
         label="Site",
         required=False,
-        query_params={"region_id": "$termination_b_region"},
+        query_params={"region": "$termination_b_region"},
     )
     termination_b_rackgroup = DynamicModelChoiceField(
         queryset=RackGroup.objects.all(),
         label="Rack Group",
         required=False,
-        query_params={"site_id": "$termination_b_site"},
+        query_params={"site": "$termination_b_site"},
     )
     termination_b_powerpanel = DynamicModelChoiceField(
         queryset=PowerPanel.objects.all(),
         label="Power Panel",
         required=False,
         query_params={
-            "site_id": "$termination_b_site",
-            "rack_group_id": "$termination_b_rackgroup",
+            "site": "$termination_b_site",
+            "rack_group": "$termination_b_rackgroup",
         },
     )
     termination_b_id = DynamicModelChoiceField(
         queryset=PowerFeed.objects.all(),
         label="Name",
         disabled_indicator="cable",
-        query_params={"power_panel_id": "$termination_b_powerpanel"},
+        query_params={"power_panel": "$termination_b_powerpanel"},
     )
 
     class Meta:
@@ -3871,7 +3927,7 @@ class CableFilterForm(BootstrapMixin, StatusModelFilterFormMixin, forms.Form):
         query_params={"region": "$region"},
     )
     tenant = DynamicModelMultipleChoiceField(queryset=Tenant.objects.all(), to_field_name="slug", required=False)
-    rack_id = DynamicModelMultipleChoiceField(
+    rack = DynamicModelMultipleChoiceField(
         queryset=Rack.objects.all(),
         required=False,
         label="Rack",
@@ -3884,14 +3940,14 @@ class CableFilterForm(BootstrapMixin, StatusModelFilterFormMixin, forms.Form):
         widget=StaticSelect2Multiple(),
     )
     color = forms.CharField(max_length=6, required=False, widget=ColorSelect())  # RGB color code
-    device_id = DynamicModelMultipleChoiceField(
+    device = DynamicModelMultipleChoiceField(
         queryset=Device.objects.all(),
         required=False,
         label="Device",
         query_params={
             "site": "$site",
             "tenant": "$tenant",
-            "rack_id": "$rack_id",
+            "rack": "$rack",
         },
     )
     tag = TagFilterField(model)
@@ -3910,7 +3966,7 @@ class ConsoleConnectionFilterForm(BootstrapMixin, forms.Form):
         required=False,
         query_params={"region": "$region"},
     )
-    device_id = DynamicModelMultipleChoiceField(
+    device = DynamicModelMultipleChoiceField(
         queryset=Device.objects.all(),
         required=False,
         label="Device",
@@ -3926,7 +3982,7 @@ class PowerConnectionFilterForm(BootstrapMixin, forms.Form):
         required=False,
         query_params={"region": "$region"},
     )
-    device_id = DynamicModelMultipleChoiceField(
+    device = DynamicModelMultipleChoiceField(
         queryset=Device.objects.all(),
         required=False,
         label="Device",
@@ -3942,7 +3998,7 @@ class InterfaceConnectionFilterForm(BootstrapMixin, forms.Form):
         required=False,
         query_params={"region": "$region"},
     )
-    device_id = DynamicModelMultipleChoiceField(
+    device = DynamicModelMultipleChoiceField(
         queryset=Device.objects.all(),
         required=False,
         label="Device",
@@ -3964,20 +4020,20 @@ class VirtualChassisCreateForm(NautobotModelForm):
     site = DynamicModelChoiceField(
         queryset=Site.objects.all(),
         required=False,
-        query_params={"region_id": "$region"},
+        query_params={"region": "$region"},
     )
     rack = DynamicModelChoiceField(
         queryset=Rack.objects.all(),
         required=False,
         null_option="None",
-        query_params={"site_id": "$site"},
+        query_params={"site": "$site"},
     )
     members = DynamicModelMultipleChoiceField(
         queryset=Device.objects.all(),
         required=False,
         query_params={
-            "site_id": "$site",
-            "rack_id": "$rack",
+            "site": "$site",
+            "rack": "$rack",
         },
     )
     initial_position = forms.IntegerField(
@@ -4092,20 +4148,20 @@ class VCMemberSelectForm(BootstrapMixin, forms.Form):
     site = DynamicModelChoiceField(
         queryset=Site.objects.all(),
         required=False,
-        query_params={"region_id": "$region"},
+        query_params={"region": "$region"},
     )
     rack = DynamicModelChoiceField(
         queryset=Rack.objects.all(),
         required=False,
         null_option="None",
-        query_params={"site_id": "$site"},
+        query_params={"site": "$site"},
     )
     device = DynamicModelChoiceField(
         queryset=Device.objects.all(),
         query_params={
-            "site_id": "$site",
-            "rack_id": "$rack",
-            "virtual_chassis_id": "null",
+            "site": "$site",
+            "rack": "$rack",
+            "virtual_chassis": "null",
         },
     )
 
@@ -4172,7 +4228,7 @@ class PowerPanelForm(LocatableModelFormMixin, NautobotModelForm):
     rack_group = DynamicModelChoiceField(
         queryset=RackGroup.objects.all(),
         required=False,
-        query_params={"site_id": "$site"},
+        query_params={"site": "$site"},
     )
 
     class Meta:
@@ -4213,7 +4269,7 @@ class PowerPanelBulkEditForm(
     rack_group = DynamicModelChoiceField(
         queryset=RackGroup.objects.all(),
         required=False,
-        query_params={"site_id": "$site"},
+        query_params={"site": "$site"},
     )
 
     class Meta:
@@ -4224,10 +4280,10 @@ class PowerPanelBulkEditForm(
 class PowerPanelFilterForm(NautobotFilterForm, LocatableModelFilterFormMixin):
     model = PowerPanel
     q = forms.CharField(required=False, label="Search")
-    rack_group_id = DynamicModelMultipleChoiceField(
+    rack_group = DynamicModelMultipleChoiceField(
         queryset=RackGroup.objects.all(),
         required=False,
-        label="Rack group (ID)",
+        label="Rack group",
         null_option="None",
         query_params={"site": "$site"},
     )
@@ -4249,13 +4305,13 @@ class PowerFeedForm(NautobotModelForm):
         queryset=Site.objects.all(),
         required=False,
         initial_params={"powerpanel": "$power_panel"},
-        query_params={"region_id": "$region"},
+        query_params={"region": "$region"},
     )
-    power_panel = DynamicModelChoiceField(queryset=PowerPanel.objects.all(), query_params={"site_id": "$site"})
+    power_panel = DynamicModelChoiceField(queryset=PowerPanel.objects.all(), query_params={"site": "$site"})
     rack = DynamicModelChoiceField(
         queryset=Rack.objects.all(),
         required=False,
-        query_params={"site_id": "$site"},
+        query_params={"site": "$site"},
     )
     comments = CommentField()
 
@@ -4376,14 +4432,14 @@ class PowerFeedFilterForm(NautobotFilterForm, StatusModelFilterFormMixin):
         required=False,
         query_params={"region": "$region"},
     )
-    power_panel_id = DynamicModelMultipleChoiceField(
+    power_panel = DynamicModelMultipleChoiceField(
         queryset=PowerPanel.objects.all(),
         required=False,
         label="Power panel",
         null_option="None",
         query_params={"site": "$site"},
     )
-    rack_id = DynamicModelMultipleChoiceField(
+    rack = DynamicModelMultipleChoiceField(
         queryset=Rack.objects.all(),
         required=False,
         label="Rack",

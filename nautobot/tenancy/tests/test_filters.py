@@ -51,7 +51,7 @@ class TenantTestCase(FilterTestCases.NameSlugFilterTestCase):
         groups = list(TenantGroup.objects.filter(tenants__isnull=False))[:2]
         groups_including_children = []
         for group in groups:
-            groups_including_children += group.get_descendants(include_self=True)
+            groups_including_children += group.descendants(include_self=True)
         params = {"group_id": [groups[0].pk, groups[1].pk]}
         self.assertEqual(
             self.filterset(params, self.queryset).qs.count(),
