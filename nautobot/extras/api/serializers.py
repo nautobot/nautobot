@@ -76,7 +76,7 @@ from .fields import MultipleChoiceJSONField
 # Not all of these variable(s) are not actually used anywhere in this file, but required for the
 # automagically replacing a Serializer with its corresponding NestedSerializer.
 from .nested_serializers import NestedComputedFieldSerializer  # noqa: F401
-from .nested_serializers import (
+from .nested_serializers import (  # noqa: F401
     NestedConfigContextSchemaSerializer,
     NestedConfigContextSerializer,
     NestedCustomFieldSerializer,

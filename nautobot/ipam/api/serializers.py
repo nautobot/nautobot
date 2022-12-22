@@ -22,7 +22,7 @@ from nautobot.virtualization.api.nested_serializers import NestedVirtualMachineS
 # Not all of these variable(s) are not actually used anywhere in this file, but required for the
 # automagically replacing a Serializer with its corresponding NestedSerializer.
 from .nested_serializers import IPFieldSerializer  # noqa: F401
-from .nested_serializers import (
+from .nested_serializers import (  # noqa: F401
     NestedAggregateSerializer,
     NestedIPAddressSerializer,
     NestedPrefixSerializer,
