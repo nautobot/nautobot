@@ -1,7 +1,6 @@
 import Col from "react-bootstrap/Col"
 import NautobotTable from "./table"
 import Paginator from "./paginator"
-import PaginatorForm from "./paginator_form"
 import Row from "react-bootstrap/Row"
 import useSWR from "swr"
 import { useRouter } from "next/router"
@@ -16,8 +15,9 @@ export default function ListViewTemplate({ list_url }) {
   const router = useRouter()
   const headers_url = list_url + "table-fields/"
 
+  // Default page size and active page number
   let size = 50
-  let active_number = 0
+  let active_page_number = 0
 
   if (router.query.limit) {
     list_url += `?limit=${router.query.limit}`
@@ -25,7 +25,7 @@ export default function ListViewTemplate({ list_url }) {
   }
   if (router.query.offset) {
     list_url += `&offset=${router.query.offset}`
-    active_number = router.query.offset / size
+    active_page_number = router.query.offset / size
   }
 
   const urls = [list_url, headers_url]
@@ -47,7 +47,7 @@ export default function ListViewTemplate({ list_url }) {
       </Row >
       <Row>
         <Col>
-          <Paginator url={router.asPath} data={dataCount} page_size={size} active_page={active_number}></Paginator>
+          <Paginator url={router.asPath} data_count={dataCount} page_size={size} active_page={active_page_number}></Paginator>
         </Col>
       </Row>
     </Container>
