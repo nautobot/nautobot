@@ -1,4 +1,4 @@
-import Badge from 'react-bootstrap/Badge';
+// import Badge from 'react-bootstrap/Badge';
 import { Link } from "react-router-dom";
 
 export default function BSTableItem({ name, obj, url, link = false }) {
@@ -16,7 +16,7 @@ export default function BSTableItem({ name, obj, url, link = false }) {
     } else {
       display = obj.join(", ")
     }
-  } else if (typeof obj == "object") {
+  } else if (typeof obj === "object") {
     display = obj.display || obj.label
   } else {
     if (obj === "") {

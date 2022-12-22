@@ -10,6 +10,17 @@ import useSWR from "swr"
 const fetcher = (url) => fetch(url, { credentials: "include" }).then((res) => res.ok ? res.json() : null)
 const fetcherHTML = (url) => fetch(url, { credentials: "include" }).then((res) => res.ok ? res.text() : null)
 
+function render_value(value) {
+  switch (typeof value) {
+    case "object":
+      return value === null ? "—" : Array.isArray(value) ? <ul></ul> : value["display"]
+    case "boolean":
+      return value ? "✅" : "🚫"
+    default:
+      return value === "" ? "—" : value
+  }
+}
+
 function RenderRow(props) {
   var key = props.identifier;
   var value = props.value;
@@ -24,21 +35,7 @@ function RenderRow(props) {
   return (
     <tr>
       <td>{key}</td>
-      <td>{
-        value === null || value === "" ?
-          "—" :
-          Array.isArray(value) ?
-            <ul class="list-unstyled">{value.map((item) =>
-              typeof (item) == "object" ? <li>{item["display"]}</li> : <li>{item}</li>
-            )}</ul> :
-            typeof (value) == "object" ?
-              value["display"] :
-              typeof (value) == "array" ?
-                value.join(", ") :
-                typeof (value) == "boolean" ?
-                  value ? "✅" : "🚫" :
-                  value
-      }</td>
+      <td>{render_value(value)}</td>
     </tr>
   );
 }
