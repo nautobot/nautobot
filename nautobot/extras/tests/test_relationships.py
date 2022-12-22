@@ -1430,11 +1430,10 @@ class RelationshipChangeLoggingTest(TestCase):
 
             # ensure diff only contains added relationship
             snapshots = object_change.get_snapshots()
-            expected_diff = copy.deepcopy(base_diff)
-            expected_diff["relationships"][self.site_ip_relationship.slug].pop("source")
-            self.assertEqual(snapshots["differences"]["removed"], expected_diff)
-
-            expected_diff["relationships"][self.site_ip_relationship.slug]["destination"]["objects"] = [
+            removed_diff = copy.deepcopy(base_diff)
+            removed_diff["relationships"][self.site_ip_relationship.slug].pop("source")
+            added_diff = copy.deepcopy(removed_diff)
+            added_diff["relationships"][self.site_ip_relationship.slug]["destination"]["objects"] = [
                 {
                     "id": str(self.ip.pk),
                     "url": "http://testserver" + reverse("ipam-api:ipaddress-detail", kwargs={"pk": self.ip.pk}),
@@ -1443,7 +1442,8 @@ class RelationshipChangeLoggingTest(TestCase):
                     "family": self.ip.family,
                 }
             ]
-            self.assertEqual(snapshots["differences"]["added"], expected_diff)
+            self.assertEqual(snapshots["differences"]["removed"], removed_diff)
+            self.assertEqual(snapshots["differences"]["added"], added_diff)
 
         with self.subTest("Destination object change was generated"):
             self.assertEqual(get_changes_for_model(self.ip).count(), 2)
@@ -1452,11 +1452,10 @@ class RelationshipChangeLoggingTest(TestCase):
 
             # ensure diff only contains added relationship
             snapshots = object_change.get_snapshots()
-            expected_diff = copy.deepcopy(base_diff)
-            expected_diff["relationships"][self.site_ip_relationship.slug].pop("destination")
-            self.assertEqual(snapshots["differences"]["removed"], expected_diff)
-
-            expected_diff["relationships"][self.site_ip_relationship.slug]["source"]["objects"] = [
+            removed_diff = copy.deepcopy(base_diff)
+            removed_diff["relationships"][self.site_ip_relationship.slug].pop("destination")
+            added_diff = copy.deepcopy(removed_diff)
+            added_diff["relationships"][self.site_ip_relationship.slug]["source"]["objects"] = [
                 {
                     "id": str(self.site.pk),
                     "url": "http://testserver" + reverse("dcim-api:site-detail", kwargs={"pk": self.site.pk}),
@@ -1465,7 +1464,8 @@ class RelationshipChangeLoggingTest(TestCase):
                     "slug": self.site.slug,
                 }
             ]
-            self.assertEqual(snapshots["differences"]["added"], expected_diff)
+            self.assertEqual(snapshots["differences"]["removed"], removed_diff)
+            self.assertEqual(snapshots["differences"]["added"], added_diff)
 
     def test_change_logging_with_object_save(self):
         """
