@@ -1,5 +1,5 @@
-import ListViewTemplate from "./BSListViewTemplate"
-import { nautobot_url } from "../index"
+import ListViewTemplate from "../BSListViewTemplate"
+import { nautobot_url } from "../../index"
 import { useParams } from "react-router-dom"
 
 export default function BSListView({ list_url }) {

@@ -1,9 +1,10 @@
 import { useRoutes } from "react-router-dom";
 // import { lazy } from 'react';
 
-import Home from "@views/BSHome";
-import ListView from "@views/BSListView";
-import DetailView from "@views/BSDetailView";
+import Home from "@views/Home";
+import ListView from "@views/generic/ObjectList";
+import DetailView from "@views/generic/ObjectRetrieve";
+import InstalledPlugins from "@views/InstalledPlugins";
 
 
 
@@ -33,6 +34,16 @@ export default function NautobotRouter() {
             element: <DetailView />,
             children: [],
         },
+        {
+            path: "/plugins/",
+            children: [
+                {
+                    path: "installed-plugins",
+                    element: <InstalledPlugins />
+                }
+            ],
+        },
     ]);
     return element;
 }
+//////

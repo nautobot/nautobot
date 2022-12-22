@@ -1,6 +1,6 @@
 import Card from "react-bootstrap/Card"
 import CardHeader from "react-bootstrap/CardHeader"
-import { nautobot_url } from "../index"
+import { nautobot_url } from "../../index"
 import Tab from "react-bootstrap/Tab"
 import Table from "react-bootstrap/Table"
 import Tabs from "react-bootstrap/Tabs"
