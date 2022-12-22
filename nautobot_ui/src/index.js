@@ -2,9 +2,6 @@ import React from 'react';
 import ReactDOM from 'react-dom/client';
 import reportWebVitals from './reportWebVitals';
 import { BrowserRouter } from "react-router-dom";
-
-import "@fortawesome/fontawesome-free/css/all.min.css";
-
 import NautobotRouter from './router';
 
 import "./styles/globals.css"
@@ -15,7 +12,7 @@ export const nautobot_url = dev ? "http://localhost:8080" : ""
 
 /**
  * Adds capitalize method to string
- * 
+ *
  * TODO: Useful utility but extending String.prototype isn't recommended
  */
 // Object.defineProperty(String.prototype, 'capitalize', {

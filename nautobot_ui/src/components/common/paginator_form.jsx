@@ -13,7 +13,7 @@ export default function PaginatorForm({ start, end, total_count }) {
       <Form.Control
         as="select"
         // Default value
-        value={searchParams.get("limit")}
+        value={searchParams.get("limit") || 50}
         onChange={e => {
           // Set the input value
           setType(e.target.value);

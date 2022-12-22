@@ -1,5 +1,7 @@
 import Card from "react-bootstrap/Card"
 import CardHeader from "react-bootstrap/CardHeader"
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome"
+import { faCheck, faMinus, faXmark } from "@fortawesome/free-solid-svg-icons"
 import { nautobot_url } from "../index"
 import Tab from "react-bootstrap/Tab"
 import Table from "react-bootstrap/Table"
@@ -13,11 +15,11 @@ const fetcherHTML = (url) => fetch(url, { credentials: "include" }).then((res) =
 function render_value(value) {
   switch (typeof value) {
     case "object":
-      return value === null ? "—" : Array.isArray(value) ? <ul></ul> : value["display"]
+      return value === null ? <FontAwesomeIcon icon={faMinus} /> : Array.isArray(value) ? <ul></ul> : value["display"]
     case "boolean":
-      return value ? "✅" : "🚫"
+      return value ? <FontAwesomeIcon icon={faCheck} /> : <FontAwesomeIcon icon={faXmark} />
     default:
-      return value === "" ? "—" : value
+      return value === "" ? <FontAwesomeIcon icon={faMinus} /> : value
   }
 }
 
@@ -71,7 +73,7 @@ export default function ObjectRetrieve({ api_url }) {
             </CardHeader>
             <Table hover>
               <tbody>
-                {Object.keys(objectData).map((key) => <RenderRow identifier={key} value={objectData[key]} advanced />)}
+                {Object.keys(objectData).map((key, idx) => <RenderRow identifier={key} value={objectData[key]} advanced key={idx} />)}
               </tbody>
             </Table>
           </Card>
@@ -87,7 +89,7 @@ export default function ObjectRetrieve({ api_url }) {
             </CardHeader>
             <Table hover>
               <tbody>
-                {Object.keys(objectData).map((key) => <RenderRow identifier={key} value={objectData[key]} advanced={false} />)}
+                {Object.keys(objectData).map((key, idx) => <RenderRow identifier={key} value={objectData[key]} advanced={false} key={idx} />)}
               </tbody>
             </Table>
           </Card>

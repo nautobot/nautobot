@@ -16,9 +16,9 @@ export default function BSNavBar() {
   return (
     <Navbar bg="light" expand="lg" fixed="top">
       <Container fluid>
-        <Link href="/" passHref>
+        <Link to="/">
           <Navbar.Brand>
-            {/* <Image src={nautobot_logo} alt="nautobot-logo" height={30} /> */}
+            <img src={nautobot_url + "/static/img/nautobot_logo.svg"} alt="nautobot-logo" height={30} />
           </Navbar.Brand>
         </Link>
         <Navbar.Toggle aria-controls="basic-navbar-nav" />
