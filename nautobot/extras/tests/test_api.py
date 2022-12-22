@@ -2855,7 +2855,7 @@ class RelationshipAssociationTest(APIViewTestCases.APIViewTestCase):
         manufacturer = Manufacturer.objects.create(name="Manufacturer 1", slug="manufacturer-1")
         devicetype = DeviceType.objects.create(manufacturer=manufacturer, model="Device Type 1", slug="device-type-1")
         devicerole = Role.objects.get_for_model(Device).first()
-        cls.devices = (
+        cls.devices = [
             Device.objects.create(
                 name=f"Device {num}",
                 device_type=devicetype,
@@ -2864,7 +2864,7 @@ class RelationshipAssociationTest(APIViewTestCases.APIViewTestCase):
                 status=cls.status_active,
             )
             for num in range(1, 5)
-        )
+        ]
 
         cls.associations = (
             RelationshipAssociation(
