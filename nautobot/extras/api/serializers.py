@@ -139,6 +139,12 @@ class NautobotModelSerializer(
 
     Can also be used for models derived from BaseModel, so long as they support custom fields and relationships.
     """
+    web_url = serializers.SerializerMethodField()
+
+    def get_web_url(self, obj):
+        # from nautobot.utilities.utils import get_route_for_model
+
+        return obj.get_absolute_url()
 
 
 class StatusModelSerializerMixin(BaseModelSerializer):

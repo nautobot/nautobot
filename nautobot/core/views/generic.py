@@ -14,7 +14,7 @@ from django.core.exceptions import (
 from django.db import transaction, IntegrityError
 from django.db.models import ManyToManyField, ProtectedError
 from django.forms import Form, ModelMultipleChoiceField, MultipleHiddenInput, Textarea
-from django.http import Http404, HttpResponse
+from django.http import Http404, HttpResponse, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import NoReverseMatch, reverse
 from django.utils.html import escape
@@ -130,17 +130,33 @@ class ObjectView(ObjectPermissionRequiredMixin, View):
         if isinstance(instance, ChangeLoggedModel):
             changelog_url = instance.get_changelog_url()
 
-        return render(
-            request,
-            self.get_template_name(),
-            {
-                "object": instance,
-                "verbose_name": self.queryset.model._meta.verbose_name,
-                "verbose_name_plural": self.queryset.model._meta.verbose_name_plural,
-                "changelog_url": changelog_url,  # TODO: Remove in 2.0. This information can be retrieved from the object itself now.
-                **self.get_extra_context(request, instance),
-            },
-        )
+        from nautobot.extras.templatetags.plugins import _get_registered_content
+
+        temp_fake_context = {
+            "object": instance,
+            "request": request,
+            "settings": {},
+            "csrf_token": "",
+            "perms": {},
+        }
+
+        plugin_tabs = _get_registered_content(instance, "detail_tabs", temp_fake_context, return_html=False)
+
+        if request.GET.get("format", None) == "json":
+            resp = {'tabs': plugin_tabs}
+            return JsonResponse(resp)
+        else:
+            render(
+                request,
+                self.get_template_name(),
+                {
+                    "object": instance,
+                    "verbose_name": self.queryset.model._meta.verbose_name,
+                    "verbose_name_plural": self.queryset.model._meta.verbose_name_plural,
+                    "changelog_url": changelog_url,  # TODO: Remove in 2.0. This information can be retrieved from the object itself now.
+                    **self.get_extra_context(request, instance),
+                },
+            )
 
 
 class ObjectListView(ObjectPermissionRequiredMixin, View):

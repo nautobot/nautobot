@@ -246,6 +246,7 @@ class SiteSerializer(NautobotModelSerializer, TaggedObjectSerializer, StatusMode
             "rack_count",
             "virtualmachine_count",
             "vlan_count",
+            "web_url"
         ]
 
 
@@ -794,6 +795,7 @@ class DeviceSerializer(NautobotModelSerializer, TaggedObjectSerializer, StatusMo
             "comments",
             "local_context_schema",
             "local_context_data",
+            "web_url"
         ]
         validators = []
 

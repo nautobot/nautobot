@@ -12,9 +12,7 @@ class Command(RunServerCommand):
 
     def inner_run(self, *args, **options):
         nautobot_path = pathlib.Path(__file__).parent.parent.parent.parent.parent.resolve()
-        nautobot_ui_path = os.path.join(nautobot_path, "nautobot_ui")
-        router_file_path = os.path.join(nautobot_ui_path, "src" , "router.js")
-
-        print(registry["plugin_template_extensions"])
+        router_file_path = os.path.join(nautobot_path, "nautobot_ui", "src" , "router.js")
+        pathlib.Path(router_file_path).touch()
 
         super().inner_run(*args, **options)

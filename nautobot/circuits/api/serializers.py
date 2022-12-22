@@ -141,6 +141,7 @@ class CircuitSerializer(NautobotModelSerializer, StatusModelSerializerMixin, Tag
             "termination_a",
             "termination_z",
             "comments",
+            "web_url"
         ]
 
 

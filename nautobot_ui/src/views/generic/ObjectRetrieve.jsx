@@ -9,6 +9,22 @@ import useSWR from "swr"
 
 const fetcher = (url) => fetch(url, { credentials: "include" }).then((res) => res.ok ? res.json() : null)
 const fetcherHTML = (url) => fetch(url, { credentials: "include" }).then((res) => res.ok ? res.text() : null)
+const fetcherTabs = (url) => fetch(url, { credentials: "include" }).then((res) => {
+  return res.json().then((data) => {
+    console.log(data)
+
+    let tabs = []
+    data.tabs.map((tab_top) => {
+      Object.keys(tab_top).map((tab_key) => {
+        let tab = tab_top[tab_key]
+        console.log(tab)
+        tabs.push(<Tab title={tab.title} eventKey={tab.title}><div dangerouslySetInnerHTML={{__html: "<p>I can be retrieved from "+tab.url+"</p>"}} /></Tab>)
+      })
+    })
+    console.log(tabs)
+    return tabs
+  })
+})
 
 function RenderRow(props) {
   var key = props.identifier;
@@ -44,15 +60,18 @@ function RenderRow(props) {
 }
 
 export default function ObjectRetrieve({ api_url }) {
-
+  // var pluginConfig = []
   const { app_name, model_name, object_id } = useParams()
   if (!!app_name && !!model_name && !!object_id && !api_url) {
     api_url = `${nautobot_url}/api/${app_name}/${model_name}/${object_id}/`
   }
   const { data: objectData, error } = useSWR(() => api_url, fetcher)
   const { data: pluginHTML } = useSWR(() => api_url ? api_url + "plugin_full_width_fragment/" : null, fetcherHTML)
+  const ui_url = objectData ? `${nautobot_url}${objectData.web_url}?format=json` : null
+  var { data: pluginConfig } = useSWR(() => ui_url , fetcherTabs)
   if (error) return <div>Failed to load {api_url}</div>
   if (!objectData) return <></>
+  if (!pluginConfig) return <></>
   return (
     <>
       <h1>{objectData.name}</h1>
@@ -100,6 +119,7 @@ export default function ObjectRetrieve({ api_url }) {
           <br />
           <div dangerouslySetInnerHTML={{ __html: "<p>Your html code here.<p>" }} />
         </Tab>
+        {pluginConfig}
       </Tabs>
     </>
   )

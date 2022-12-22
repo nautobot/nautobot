@@ -26,25 +26,25 @@ urlpatterns = [
     path("login/", LoginView.as_view(), name="login"),
     path("logout/", LogoutView.as_view(), name="logout"),
     # Base views
-    path("", ReactHomeView.as_view(), name="home"),
-    # Short circuit all other paths to statically serve from javascript frontend
-    re_path(
-        r"^_next/(?P<path>.*)$",
-        serve,
-        {"document_root": f"{frontend_build_dir}/_next"},
-    ),
-    re_path(
-        r"^img/(?P<path>.*)$",
-        serve,
-        {"document_root": f"{frontend_build_dir}/img"},
-    ),
-    re_path(
-        r"^static/(?P<path>.*)$",
-        serve,
-        {"document_root": f"{frontend_build_dir}/static"},
-    ),
-    path("<appname>/<pagename>/", ReactListView.as_view()),
-    path("<appname>/<pagename>/<id>", ReactObjectView.as_view()),
+    # path("", ReactHomeView.as_view(), name="home"),
+    # # Short circuit all other paths to statically serve from javascript frontend
+    # re_path(
+    #     r"^_next/(?P<path>.*)$",
+    #     serve,
+    #     {"document_root": f"{frontend_build_dir}/_next"},
+    # ),
+    # re_path(
+    #     r"^img/(?P<path>.*)$",
+    #     serve,
+    #     {"document_root": f"{frontend_build_dir}/img"},
+    # ),
+    # re_path(
+    #     r"^static/(?P<path>.*)$",
+    #     serve,
+    #     {"document_root": f"{frontend_build_dir}/static"},
+    # ),
+    # path("<appname>/<pagename>/", ReactListView.as_view()),
+    # path("<appname>/<pagename>/<id>", ReactObjectView.as_view()),
     path("search/", SearchView.as_view(), name="search"),
     # Apps
     path("circuits/", include("nautobot.circuits.urls")),
