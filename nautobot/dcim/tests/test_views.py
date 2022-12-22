@@ -2351,6 +2351,7 @@ class CableTestCase(
         self.assertFalse(Cable.objects.filter(pk=cables[0].pk).exists())
 
         # Assert the wrong CablePath did not get deleted
+        # TODO: Remove pylint disable after issue is resolved (see: https://github.com/PyCQA/pylint/issues/7381)
         # pylint: disable=unsupported-binary-operation
         cable_path_1 = CablePath.objects.filter(
             Q(origin_type=termination_ct, origin_id=circuit_terminations[0].pk)
@@ -2361,6 +2362,7 @@ class CableTestCase(
         # pylint: enable=unsupported-binary-operation
         self.assertFalse(cable_path_1.exists())
 
+        # TODO: Remove pylint disable after issue is resolved (see: https://github.com/PyCQA/pylint/issues/7381)
         # pylint: disable=unsupported-binary-operation
         cable_path_2 = CablePath.objects.filter(
             Q(origin_type=termination_ct, origin_id=circuit_terminations[1].pk)

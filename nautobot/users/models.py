@@ -210,6 +210,7 @@ class ObjectPermission(BaseModel):
     description = models.CharField(max_length=200, blank=True)
     enabled = models.BooleanField(default=True)
 
+    # TODO: Remove pylint disable after issue is resolved (see: https://github.com/PyCQA/pylint/issues/7381)
     # pylint: disable=unsupported-binary-operation
     object_types = models.ManyToManyField(
         to=ContentType,

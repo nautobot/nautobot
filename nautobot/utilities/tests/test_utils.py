@@ -269,6 +269,7 @@ class PrettyPrintQueryTest(TestCase):
 
     def test_pretty_print_query(self):
         """Test that each Q object, from deeply nested to flat, pretty prints as expected."""
+        # TODO: Remove pylint disable after issue is resolved (see: https://github.com/PyCQA/pylint/issues/7381)
         # pylint: disable=unsupported-binary-operation
         queries = [
             ((Q(site__slug="ams01") | Q(site__slug="ang01")) & ~Q(status__slug="active")) | Q(status__slug="planned"),

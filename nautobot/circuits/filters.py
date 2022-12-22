@@ -69,6 +69,7 @@ class ProviderFilterSet(NautobotFilterSet):
     def search(self, queryset, name, value):
         if not value.strip():
             return queryset
+        # TODO: Remove pylint disable after issue is resolved (see: https://github.com/PyCQA/pylint/issues/7381)
         # pylint: disable=unsupported-binary-operation
         return queryset.filter(
             Q(name__icontains=value)
@@ -104,6 +105,7 @@ class ProviderNetworkFilterSet(NautobotFilterSet):
     def search(self, queryset, name, value):
         if not value.strip():
             return queryset
+        # TODO: Remove pylint disable after issue is resolved (see: https://github.com/PyCQA/pylint/issues/7381)
         # pylint: disable=unsupported-binary-operation
         return queryset.filter(
             Q(name__icontains=value) | Q(description__icontains=value) | Q(comments__icontains=value)

@@ -1416,6 +1416,7 @@ class StatusTestCase(FilterTestCases.NameSlugFilterTestCase):
 
     def test_search(self):
         params = {"q": "active"}
+        # TODO: Remove pylint disable after issue is resolved (see: https://github.com/PyCQA/pylint/issues/7381)
         # pylint: disable=unsupported-binary-operation
         q = Q(id__iexact="active") | Q(name__icontains="active") | Q(slug__icontains="active")
         # pylint: enable=unsupported-binary-operation

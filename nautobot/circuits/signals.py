@@ -18,6 +18,7 @@ def rebuild_paths_circuits(obj):
     """
     termination_type = ContentType.objects.get_for_model(CircuitTermination)
 
+    # TODO: Remove pylint disable after issue is resolved (see: https://github.com/PyCQA/pylint/issues/7381)
     # pylint: disable=unsupported-binary-operation
     cable_paths = CablePath.objects.filter(
         Q(path__contains=obj)
