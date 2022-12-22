@@ -733,6 +733,16 @@ class ViewTestCases:
             # Try GET with model-level permission
             response = self.client.get(self._get_url("list"))
             self.assertHttpStatus(response, 200)
+            response_body = response.content.decode(response.charset)
+
+            list_url = self.get_list_url()
+            title = self.get_title()
+
+            # Check if breadcrumb is rendered correctly
+            self.assertIn(
+                f'<a href="{list_url}">{title}</a>',
+                response_body,
+            )
 
             # Built-in CSV export
             if hasattr(self.model, "csv_headers"):
@@ -771,7 +781,10 @@ class ViewTestCases:
             "example_plugin not in settings.PLUGINS",
         )
         @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
-        def test_list_view_plugin_banner_and_breadcrumb_rendering(self):
+        def test_list_view_plugin_banner(self):
+            """
+            If example plugin is installed, check if the plugin banner is rendered correctly in ObjectListView.
+            """
             # Add model-level permission
             obj_perm = ObjectPermission(name="Test permission", actions=["view"])
             obj_perm.save()
@@ -783,21 +796,10 @@ class ViewTestCases:
             self.assertHttpStatus(response, 200)
             response_body = response.content.decode(response.charset)
 
-            list_url = self.get_list_url()
-            title = self.get_title()
-
             # Check plugin banner is rendered correctly
             self.assertIn(
                 f"<div>You are viewing a table of {self.model._meta.verbose_name_plural}</div>", response_body
             )
-
-            # Check if there is a breadcrumb block in the list template
-            if '<ol class="breadcrumb">' in response_body:
-                # Check if breadcrumb is rendered correctly
-                self.assertIn(
-                    f'<a href="{list_url}">{title}</a>',
-                    response_body,
-                )
 
     class CreateMultipleObjectsViewTestCase(ModelViewTestCase):
         """
