@@ -257,6 +257,16 @@ The global Celery task hard timeout (in seconds). Any background task that excee
 
 ---
 
+## CELERY_WORKER_PROMETHEUS_PORT
+
+Default: `0` (disabled)
+
+Environment Variable: `NAUTOBOT_CELERY_WORKER_PROMETHEUS_PORT`
+
+Port for prometheus metric HTTP server running on the celery worker.
+
+---
+
 ## CHANGELOG_RETENTION
 
 Default: `90`

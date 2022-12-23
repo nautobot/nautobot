@@ -1,11 +1,15 @@
 import json
 import logging
+import os
+from pathlib import Path
 
-from celery import Celery, shared_task
+from celery import Celery, shared_task, signals
 from celery.fixups.django import DjangoFixup
+from django.conf import settings
 from django.core.serializers.json import DjangoJSONEncoder
 from django.utils.module_loading import import_string
 from kombu.serialization import register
+from prometheus_client import CollectorRegistry, multiprocess, start_http_server
 
 logger = logging.getLogger(__name__)
 
@@ -37,6 +41,28 @@ DjangoFixup(app).install()
 
 # Load task modules from all registered Django apps.
 app.autodiscover_tasks()
+
+
+@signals.worker_ready.connect()
+def setup_prometheus(**kwargs):
+    """This sets up an HTTP server to serve prometheus metrics from the celery workers."""
+    # Don't set up the server if the port is undefined
+    if not settings.CELERY_WORKER_PROMETHEUS_PORT:
+        return
+
+    logger.info("Setting up prometheus metrics HTTP server for celery worker.")
+
+    # Ensure that the multiprocess coordination directory exists
+    multiprocess_coordination_directory = Path(os.environ["prometheus_multiproc_dir"])
+    multiprocess_coordination_directory.mkdir(parents=True, exist_ok=True)
+    # Delete any files lefts in the multiprocess coordination directory
+    for filepath in multiprocess_coordination_directory.glob("*.db"):
+        filepath.unlink()
+
+    # Setup the collector registry
+    registry = CollectorRegistry()
+    multiprocess.MultiProcessCollector(registry, path=multiprocess_coordination_directory)
+    start_http_server(settings.CELERY_WORKER_PROMETHEUS_PORT, registry=registry)
 
 
 class NautobotKombuJSONEncoder(DjangoJSONEncoder):

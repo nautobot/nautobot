@@ -738,6 +738,10 @@ CELERY_TASK_DEFAULT_QUEUE = os.getenv("NAUTOBOT_CELERY_TASK_DEFAULT_QUEUE", "def
 CELERY_TASK_SOFT_TIME_LIMIT = int(os.getenv("NAUTOBOT_CELERY_TASK_SOFT_TIME_LIMIT", str(5 * 60)))
 CELERY_TASK_TIME_LIMIT = int(os.getenv("NAUTOBOT_CELERY_TASK_TIME_LIMIT", str(10 * 60)))
 
+# Port for prometheus metric HTTP server running on the celery worker
+# Set this to 0 to disable it.
+CELERY_WORKER_PROMETHEUS_PORT = int(os.getenv("NAUTOBOT_CELERY_WORKER_PROMETHEUS_PORT", "0"))
+
 # These settings define the custom nautobot serialization encoding as an accepted data encoding format
 # and register that format for task input and result serialization
 CELERY_ACCEPT_CONTENT = ["nautobot_json"]
