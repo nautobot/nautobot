@@ -822,6 +822,9 @@ def get_filterset_parameter_form_field(model, parameter):
         TimePicker,
         MultipleContentTypeField,
     )
+    from nautobot.utilities.forms.widgets import (
+        MultiValueCharInput,
+    )
 
     filterset_class = get_filterset_for_model(model)
     field = get_filterset_field(filterset_class, parameter)
@@ -871,6 +874,8 @@ def get_filterset_parameter_form_field(model, parameter):
         form_field.widget = DatePicker()
     elif isinstance(field, TimeFilter):
         form_field.widget = TimePicker()
+    elif isinstance(field, django_filters.UUIDFilter):
+        form_field.widget = MultiValueCharInput()
 
     form_field.required = False
     form_field.initial = None
