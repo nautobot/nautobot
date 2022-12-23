@@ -2,7 +2,7 @@
 
 ## Database (ORM) Changes
 
-### Behavior Changes
+### Database Behavior Changes
 
 | Model        | Field          | Changes                                           |
 |--------------|----------------|---------------------------------------------------|
@@ -40,7 +40,7 @@
 
 ## GraphQL and REST API Changes
 
-### Behavior Changes
+### API Behavior Changes
 
 | Model       | Field          | Changes                                                                                                 |
 |-------------|----------------|---------------------------------------------------------------------------------------------------------|
