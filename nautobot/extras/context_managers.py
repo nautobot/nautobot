@@ -2,11 +2,16 @@ import uuid
 from contextlib import contextmanager
 
 from django.contrib.auth import get_user_model
-from django.db.models.signals import m2m_changed, pre_delete, post_save
+from django.db.models.signals import m2m_changed, post_delete, post_save, pre_delete
 from django.test.client import RequestFactory
 
 from nautobot.extras.choices import ObjectChangeEventContextChoices
-from nautobot.extras.signals import _handle_changed_object, _handle_deleted_object
+from nautobot.extras.models import RelationshipAssociation
+from nautobot.extras.signals import (
+    _handle_changed_object,
+    _handle_deleted_object,
+    _handle_relationship_association_change,
+)
 from nautobot.utilities.utils import curry
 
 
@@ -87,11 +92,22 @@ def change_logging(change_context):
     # Curry signals receivers to pass the current request
     handle_changed_object = curry(_handle_changed_object, change_context)
     handle_deleted_object = curry(_handle_deleted_object, change_context)
+    handle_relationship_association_change = curry(_handle_relationship_association_change, change_context)
 
     # Connect our receivers to the post_save and post_delete signals.
     post_save.connect(handle_changed_object, dispatch_uid="handle_changed_object")
     m2m_changed.connect(handle_changed_object, dispatch_uid="handle_changed_object")
     pre_delete.connect(handle_deleted_object, dispatch_uid="handle_deleted_object")
+    post_save.connect(
+        handle_relationship_association_change,
+        dispatch_uid="handle_relationship_association_change",
+        sender=RelationshipAssociation,
+    )
+    post_delete.connect(
+        handle_relationship_association_change,
+        dispatch_uid="handle_relationship_association_change",
+        sender=RelationshipAssociation,
+    )
 
     yield
 
@@ -100,6 +116,16 @@ def change_logging(change_context):
     post_save.disconnect(handle_changed_object, dispatch_uid="handle_changed_object")
     m2m_changed.disconnect(handle_changed_object, dispatch_uid="handle_changed_object")
     pre_delete.disconnect(handle_deleted_object, dispatch_uid="handle_deleted_object")
+    post_save.disconnect(
+        handle_relationship_association_change,
+        dispatch_uid="handle_relationship_association_change",
+        sender=RelationshipAssociation,
+    )
+    post_delete.disconnect(
+        handle_relationship_association_change,
+        dispatch_uid="handle_relationship_association_change",
+        sender=RelationshipAssociation,
+    )
 
 
 @contextmanager
