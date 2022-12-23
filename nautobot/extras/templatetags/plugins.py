@@ -85,6 +85,9 @@ def plugin_full_width_page(context, obj):
     """
     Render all full width page content registered by plugins
     """
+    print("---=====----")
+    print(context)
+    print("---=====----")
     return _get_registered_content(obj, "full_width_page", context)
 
 

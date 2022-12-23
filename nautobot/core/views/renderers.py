@@ -244,4 +244,6 @@ class NautobotHTMLRenderer(renderers.BrowsableAPIRenderer):
         # Get the corresponding template based on self.action in view.get_template_name() unless it is already specified in the Response() data.
         # See form_valid() for self.action == "bulk_create".
         self.template = data.get("template", view.get_template_name())
+
+        print(data)
         return super().render(data, accepted_media_type=accepted_media_type, renderer_context=renderer_context)

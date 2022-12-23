@@ -142,11 +142,11 @@ class ObjectView(ObjectPermissionRequiredMixin, View):
 
         plugin_tabs = _get_registered_content(instance, "detail_tabs", temp_fake_context, return_html=False)
 
-        if request.GET.get("format", None) == "json":
+        if request.GET.get("viewconfig", None) == "true":
             resp = {'tabs': plugin_tabs}
             return JsonResponse(resp)
         else:
-            render(
+            return render(
                 request,
                 self.get_template_name(),
                 {

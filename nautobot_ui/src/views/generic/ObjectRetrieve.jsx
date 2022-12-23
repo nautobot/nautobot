@@ -7,7 +7,7 @@ import Tabs from "react-bootstrap/Tabs"
 import { useParams } from "react-router-dom"
 import useSWR from "swr"
 
-import PluginTab from "@components/plugins/PluginTab"
+import create_plugin_tab from "@components/plugins/PluginTab"
 
 const fetcher = (url) => fetch(url, { credentials: "include" }).then((res) => res.ok ? res.json() : null)
 const fetcherHTML = (url) => fetch(url, { credentials: "include" }).then((res) => res.ok ? res.text() : null)
@@ -19,11 +19,10 @@ const fetcherTabs = (url) => fetch(url, { credentials: "include" }).then((res) =
     data.tabs.map((tab_top) => {
       Object.keys(tab_top).map(function (tab_key) {
         let tab = tab_top[tab_key]
-        // console.log(tab)
-        tabs.push(<PluginTab tab={tab} />)
+        let tab_component = create_plugin_tab({tab: tab})
+        tabs.push(tab_component)
       })
     })
-    console.log(tabs)
     return tabs
   })
 })
@@ -62,14 +61,14 @@ function RenderRow(props) {
 }
 
 export default function ObjectRetrieve({ api_url }) {
-  // var pluginConfig = []
+  var pluginConfig = []
   const { app_name, model_name, object_id } = useParams()
   if (!!app_name && !!model_name && !!object_id && !api_url) {
     api_url = `${nautobot_url}/api/${app_name}/${model_name}/${object_id}/`
   }
   const { data: objectData, error } = useSWR(() => api_url, fetcher)
   const { data: pluginHTML } = useSWR(() => api_url ? api_url + "plugin_full_width_fragment/" : null, fetcherHTML)
-  const ui_url = objectData ? `${nautobot_url}${objectData.web_url}?format=json` : null
+  const ui_url = objectData ? `${nautobot_url}${objectData.web_url}?viewconfig=true` : null
   var { data: pluginConfig } = useSWR(() => ui_url , fetcherTabs)
   if (error) return <div>Failed to load {api_url}</div>
   if (!objectData) return <></>
@@ -86,7 +85,7 @@ export default function ObjectRetrieve({ api_url }) {
         </small>
       </p>
       <div className="pull-right noprint"></div>
-      <Tabs defaultActiveKey="main">
+      <Tabs defaultActiveKey="main" mountOnEnter="true">
         <Tab eventKey="main" title="Main">
           <br />
           <Card>
