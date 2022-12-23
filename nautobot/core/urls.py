@@ -6,7 +6,7 @@ from django.urls import path, re_path
 from django.views.static import serve
 
 import nautobot
-from nautobot.core.views import CustomGraphQLView, StaticMediaFailureView, SearchView
+from nautobot.core.views import HomeView, CustomGraphQLView, StaticMediaFailureView, SearchView
 from nautobot.core.views.generic import ReactHomeView, ReactListView, ReactObjectView
 from nautobot.extras.plugins.urls import (
     plugin_admin_patterns,
@@ -19,6 +19,7 @@ frontend_build_dir = os.path.join(os.path.dirname(nautobot.__file__), "../fronte
 
 urlpatterns = [
     # django-health-check
+    path("", HomeView.as_view(), name="home"),
     path(r"health/", include("health_check.urls")),
     # API
     path("api/", include("nautobot.core.api.urls")),
@@ -26,7 +27,6 @@ urlpatterns = [
     path("login/", LoginView.as_view(), name="login"),
     path("logout/", LogoutView.as_view(), name="logout"),
     # Base views
-    # path("", ReactHomeView.as_view(), name="home"),
     # # Short circuit all other paths to statically serve from javascript frontend
     # re_path(
     #     r"^_next/(?P<path>.*)$",

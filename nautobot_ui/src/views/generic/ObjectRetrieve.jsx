@@ -7,18 +7,20 @@ import Tabs from "react-bootstrap/Tabs"
 import { useParams } from "react-router-dom"
 import useSWR from "swr"
 
+import PluginTab from "@components/plugins/PluginTab"
+
 const fetcher = (url) => fetch(url, { credentials: "include" }).then((res) => res.ok ? res.json() : null)
 const fetcherHTML = (url) => fetch(url, { credentials: "include" }).then((res) => res.ok ? res.text() : null)
 const fetcherTabs = (url) => fetch(url, { credentials: "include" }).then((res) => {
   return res.json().then((data) => {
-    console.log(data)
+    // console.log(data)
 
     let tabs = []
     data.tabs.map((tab_top) => {
-      Object.keys(tab_top).map((tab_key) => {
+      Object.keys(tab_top).map(function (tab_key) {
         let tab = tab_top[tab_key]
-        console.log(tab)
-        tabs.push(<Tab title={tab.title} eventKey={tab.title}><div dangerouslySetInnerHTML={{__html: "<p>I can be retrieved from "+tab.url+"</p>"}} /></Tab>)
+        // console.log(tab)
+        tabs.push(<PluginTab tab={tab} />)
       })
     })
     console.log(tabs)
