@@ -1,3 +1,3 @@
 Added `CELERY_WORKER_PROMETHEUS_PORT` configuration setting
 Added prometheus HTTP server listening on the worker to expose worker metrics
-Added `nautobot_job_results_total` counter metric that reports on job execution
+Added `nautobot_job_results_seconds` counter metric that reports on job execution
