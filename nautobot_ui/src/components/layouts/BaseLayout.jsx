@@ -29,10 +29,10 @@ export default function BaseLayout(props) {
                     </Breadcrumb>
                 </GridItem>
                 <GridItem colSpan={2}>
-                    <MDBInputGroup className='mb-3'>
+                    {/* <MDBInputGroup className='mb-3'>
                         <input className='form-control' placeholder={"Search " + props.page_title} type='text' />
                         <MDBBtn className='nautobot-primary'>Search</MDBBtn>
-                    </MDBInputGroup>
+                    </MDBInputGroup> */}
                 </GridItem>
             </Grid>
 

@@ -4,6 +4,7 @@ import ListTemplate from "./layouts/ListTemplate";
 import LinkedIcon from "./core/LinkedIcon";
 import NautobotTable from "./core/Table"
 import NavBar from "./common/NavBar"
+import Navigation from "./common/Navigation";
 
 
 export {
@@ -16,4 +17,5 @@ export {
     NautobotTable,
     // Common
     NavBar,
+    Navigation,
 }

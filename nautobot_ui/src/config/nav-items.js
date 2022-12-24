@@ -1,18 +1,19 @@
-import {GenericListView} from "@nautobot/components"
-import {DeviceRetriveView} from "@nautobot/views/dcim"
+import { GenericListView } from "@nautobot/components"
+import { DeviceRetriveView } from "@nautobot/views/dcim"
 
-const navigation = {
+const navigation_menu = {
     "Organization": [
         {
-            "Sites": [
+            name: "Sites",
+            items: [
                 {
                     "name": "Sites",
                     "path": "dcim/sites",
                     "model": "dcim.site",
                     "views": ["list", "retrieve", "delete", "create", "update"],
                     "icons": {
-                        "plus": {"action": "create"},
-                        "database-in": {"action": "import"},
+                        "plus": { "action": "create" },
+                        "database-in": { "action": "import" },
                     }
                 },
                 {
@@ -21,19 +22,22 @@ const navigation = {
                     "model": "dcim.region",
                     "views": ["list", "retrieve", "delete", "create", "update"],
                     "icons": {
-                        "plus": {"action": "create"},
-                        "database-in": {"action": "import"},
+                        "plus": { "action": "create" },
+                        "database-in": { "action": "import" },
                     }
                 }
-            ],
-            "Statuses": [
+            ]
+        },
+        {
+            name: "Statuses",
+            items: [
                 {
                     "name": "Statuses",
                     "path": "extras/statuses",
                     "model": "extras.status",
                     "views": ["list", "retrieve", "delete", "create", "update"],
                     "icons": {
-                        "plus": {"action": "create"}
+                        "plus": { "action": "create" }
                     }
                 }
             ]
@@ -41,22 +45,32 @@ const navigation = {
     ],
     "Devices": [
         {
-            "Devices": [
+            name: "Devices",
+            items: [
                 {
                     "name": "Devices",
                     "path": "dcim/sites",
                     "model": "dcim.site",
                     "views": [
-                        {"list": <GenericListView model="dcim.sites" />}, 
-                        {"retrieve": <DeviceRetriveView />},
-                        "delete", 
-                        "create", 
+                        {
+                            "list": {
+                                "component": GenericListView,
+                                "model": "dcim.sites"
+                            }
+                        },
+                        {
+                            "retrieve": {
+                                "component": DeviceRetriveView,
+                            }
+                        },
+                        "delete",
+                        "create",
                         "update"
                     ],
                     "icons": {
-                        "plus": {"action": "create"},
-                        "database-out": {"action": "export"},
-                        "database-in": {"action": "import"},
+                        "plus": { "action": "create" },
+                        "database-out": { "action": "export" },
+                        "database-in": { "action": "import" },
                     }
                 },
                 {
@@ -74,4 +88,16 @@ const navigation = {
     "Secrets": [],
     "Jobs": [],
     "Extensibility": [],
+    "Plugins": [
+        {
+            name: "Insalled Plugins",
+            items: []
+        }
+    ],
 }
+
+function get_navigation(plugin) {
+    return navigation_menu
+}
+
+export { get_navigation }

@@ -1,5 +1,7 @@
 {
     "compilerOptions": {
+        "strict": true,
+        "allowJs": true,
         "baseUrl": ".",
         "paths": {
             "@nautobot/*": ["src/*"],
