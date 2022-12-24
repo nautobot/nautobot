@@ -37,7 +37,7 @@ function convertNavigationToRoute() {
         let views_components =  get_view_component(item.views)
         return {
             path: item.path,
-            element: <views_components.list />
+            element: <views_components.list page_title={item.name} />
         }
     })
 

@@ -1,6 +1,6 @@
 import { Fragment } from 'react'
 import {Transition, Popover } from '@headlessui/react'
-import { NavLink } from "react-router-dom";
+import { Link, NavLink } from "react-router-dom";
 import {
     ArrowPathIcon,
     Bars3Icon,
@@ -36,7 +36,7 @@ function MenuItems() {
     return (
         <Popover.Group as="nav" className="space-x-7 md:flex items-center ml-10">
             {Object.entries(menu_items).map((main_menu, idx) => (
-                <Popover className="relative">
+                <Popover className="relative" key={idx}>
                     {({ open }) => (
                         <>
                             <Popover.Button
@@ -103,13 +103,13 @@ export default function Navigation() {
                 <div className="max-w-full px-8">
                     <div className="relative flex h-16 items-center justify-between">
                         <div className="flex flex-1 items-center justify-center sm:items-stretch sm:justify-start">
-                            <div className="flex flex-shrink-0 items-center">
+                            <Link to="/" className="flex flex-shrink-0 items-center">
                                 <img
                                     className="hidden h-8 w-auto lg:block"
-                                    src="./assets/images/nautobot_logo.svg"
+                                    src="/assets/images/nautobot_logo.svg"
                                     alt="Nautobot"
                                 />
-                            </div>
+                            </Link>
                             <MenuItems />
                         </div>
                     </div>

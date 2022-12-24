@@ -7,6 +7,7 @@ import LinkedIcon from "./core/LinkedIcon";
 import NautobotTable from "./core/Table"
 import NavBar from "./common/NavBar"
 import Navigation from "./common/Navigation";
+import { MarketPlaceCard } from "./market-place/MarketPlaceCard";
 
 
 export {
@@ -19,6 +20,8 @@ export {
     // Core Components
     LinkedIcon,
     NautobotTable,
+    // Market Place Components
+    MarketPlaceCard,
     // Common
     NavBar,
     Navigation,

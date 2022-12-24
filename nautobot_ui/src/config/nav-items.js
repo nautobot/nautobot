@@ -1,4 +1,5 @@
 import { GenericListView } from "@nautobot/components"
+import { MarketPlace } from "@nautobot/views"
 import { DeviceRetriveView } from "@nautobot/views/dcim"
 
 const navigation_menu = {
@@ -19,11 +20,11 @@ const navigation_menu = {
                     "name": "Region",
                     "path": "dcim/regions",
                     "model": "dcim.region",
-                    "views": 
-                        {
-                            "list": {},
-                            "retrieve": {},
-                        },
+                    "views":
+                    {
+                        "list": {},
+                        "retrieve": {},
+                    },
                     "icons": {
                         "plus": { "action": "create" },
                         "database-in": { "action": "import" },
@@ -51,19 +52,19 @@ const navigation_menu = {
             items: [
                 {
                     "name": "Devices",
-                    "path": "dcim/sites",
-                    "model": "dcim.site",
+                    "path": "dcim/devices",
+                    "model": "dcim.device",
                     "views": {
-                            "list": {
-                                "component": GenericListView,
-                                "model": "dcim.sites"
-                            },
-                            "retrieve": {
-                                "component": DeviceRetriveView,
-                            },
-                            "delete": {},
-                            "create": {},
+                        "list": {
+                            "component": GenericListView,
+                            "model": "dcim.sites"
                         },
+                        "retrieve": {
+                            "component": DeviceRetriveView,
+                        },
+                        "delete": {},
+                        "create": {},
+                    },
                     "icons": {
                         "plus": { "action": "create" },
                         "database-out": { "action": "export" },
@@ -87,8 +88,30 @@ const navigation_menu = {
     "Extensibility": [],
     "Plugins": [
         {
-            name: "Insalled Plugins",
-            items: []
+            name: "General",
+            items: [
+                {
+                    "name": "Insalled Plugins",
+                    "path": "plugins/installed-plugins",
+                    "model": "dcim.device",
+                    "views": {
+                        "list": {
+                            "component": GenericListView,
+                            "model": "dcim.sites"
+                        },
+                    },
+                },
+                {
+                    "name": "Market Place",
+                    "path": "plugins/market-place",
+                    "views": {
+                        "list": {
+                            "component": MarketPlace
+                        },
+                    },
+                },
+
+            ]
         }
     ],
 }

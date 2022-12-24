@@ -34,7 +34,7 @@ export default function NautobotRouter() {
             path: "/plugins/",
             children: [
                 {
-                    path: "installed-plugins",
+                    path: "installed-plugins-old",
                     element: <InstalledPlugins />
                 },
                 // nautobot__inject_route__start
