@@ -1,6 +1,6 @@
 import { Fragment } from 'react'
-import { Disclosure, Menu, Transition, Popover } from '@headlessui/react'
-
+import {Transition, Popover } from '@headlessui/react'
+import { NavLink } from "react-router-dom";
 import {
     ArrowPathIcon,
     Bars3Icon,
@@ -31,29 +31,6 @@ function classNames(...classes) {
 
 const menu_items = get_navigation()
 
-const solutions = [
-    {
-        name: 'Analytics',
-        href: '#',
-        icon: ChartBarIcon,
-    },
-    {
-        name: 'Engagement',
-        href: '#',
-        icon: CursorArrowRaysIcon,
-    },
-    { name: 'Security', href: '#', icon: ShieldCheckIcon },
-    {
-        name: 'Integrations',
-        href: '#',
-        icon: Squares2X2Icon,
-    },
-    {
-        name: 'Automations',
-        href: '#',
-        icon: ArrowPathIcon,
-    },
-]
 
 function MenuItems() {
     return (
@@ -96,7 +73,7 @@ function MenuItems() {
                                                         <span className='px-3 text-gray-400 font-light text-sm'>{group.name}</span>
                                                         {group.items.map((item, idx) => (
                                                             <div key={idx} className="justify-between flex items-start rounded-lg px-3 py-2 hover:bg-gray-900">
-                                                                <p className="text-gray-300">{item.name}</p>
+                                                                <NavLink to={item.path} className="text-gray-300">{item.name}</NavLink>
                                                                 <div className="flex gap-1">
                                                                     <PlusIcon className="h-6 w-6 p-1 rounded-md bg-blue-700 text-white" aria-hidden="true" />
                                                                     <CloudArrowDownIcon className="h-6 w-6 p-1 rounded-md bg-green-700 text-white" aria-hidden="true" />

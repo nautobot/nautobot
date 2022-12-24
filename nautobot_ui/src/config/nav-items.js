@@ -38,7 +38,6 @@ const navigation_menu = {
                     "name": "Statuses",
                     "path": "extras/statuses",
                     "model": "extras.status",
-                    "views": ["list", "retrieve", "delete", "create", "update"],
                     "icons": {
                         "plus": { "action": "create" }
                     }
