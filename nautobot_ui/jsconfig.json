@@ -2,6 +2,8 @@
     "compilerOptions": {
         "baseUrl": ".",
         "paths": {
+            "@nautobot/*": ["src/*"],
+            "@nautobot/views": ["src/views/*"],
             "@utils/*": [
                 "src/utils/*"
             ],
