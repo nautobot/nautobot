@@ -7,14 +7,14 @@ import nautobot.utilities.tree_queries
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('tenancy', '0003_mptt_to_tree_queries'),
+        ("tenancy", "0003_mptt_to_tree_queries"),
     ]
 
     operations = [
         migrations.AlterModelManagers(
-            name='tenantgroup',
+            name="tenantgroup",
             managers=[
-                ('objects', nautobot.utilities.tree_queries.TreeManager()),
+                ("objects", nautobot.utilities.tree_queries.TreeManager()),
             ],
         ),
     ]

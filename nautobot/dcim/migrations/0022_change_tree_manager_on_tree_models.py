@@ -7,32 +7,32 @@ import nautobot.utilities.tree_queries
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('dcim', '0021_mptt_to_tree_queries'),
+        ("dcim", "0021_mptt_to_tree_queries"),
     ]
 
     operations = [
         migrations.AlterModelManagers(
-            name='inventoryitem',
+            name="inventoryitem",
             managers=[
-                ('objects', nautobot.utilities.tree_queries.TreeManager()),
+                ("objects", nautobot.utilities.tree_queries.TreeManager()),
             ],
         ),
         migrations.AlterModelManagers(
-            name='locationtype',
+            name="locationtype",
             managers=[
-                ('objects', nautobot.utilities.tree_queries.TreeManager()),
+                ("objects", nautobot.utilities.tree_queries.TreeManager()),
             ],
         ),
         migrations.AlterModelManagers(
-            name='rackgroup',
+            name="rackgroup",
             managers=[
-                ('objects', nautobot.utilities.tree_queries.TreeManager()),
+                ("objects", nautobot.utilities.tree_queries.TreeManager()),
             ],
         ),
         migrations.AlterModelManagers(
-            name='region',
+            name="region",
             managers=[
-                ('objects', nautobot.utilities.tree_queries.TreeManager()),
+                ("objects", nautobot.utilities.tree_queries.TreeManager()),
             ],
         ),
     ]
