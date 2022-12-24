@@ -10,7 +10,6 @@ const navigation_menu = {
                     "name": "Sites",
                     "path": "dcim/sites",
                     "model": "dcim.site",
-                    "views": ["list", "retrieve", "delete", "create", "update"],
                     "icons": {
                         "plus": { "action": "create" },
                         "database-in": { "action": "import" },
@@ -20,7 +19,11 @@ const navigation_menu = {
                     "name": "Region",
                     "path": "dcim/regions",
                     "model": "dcim.region",
-                    "views": ["list", "retrieve", "delete", "create", "update"],
+                    "views": 
+                        {
+                            "list": {},
+                            "retrieve": {},
+                        },
                     "icons": {
                         "plus": { "action": "create" },
                         "database-in": { "action": "import" },
@@ -51,22 +54,17 @@ const navigation_menu = {
                     "name": "Devices",
                     "path": "dcim/sites",
                     "model": "dcim.site",
-                    "views": [
-                        {
+                    "views": {
                             "list": {
                                 "component": GenericListView,
                                 "model": "dcim.sites"
-                            }
-                        },
-                        {
+                            },
                             "retrieve": {
                                 "component": DeviceRetriveView,
-                            }
+                            },
+                            "delete": {},
+                            "create": {},
                         },
-                        "delete",
-                        "create",
-                        "update"
-                    ],
                     "icons": {
                         "plus": { "action": "create" },
                         "database-out": { "action": "export" },

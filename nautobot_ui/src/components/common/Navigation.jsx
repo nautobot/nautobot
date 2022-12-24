@@ -68,7 +68,7 @@ function MenuItems() {
                                     'group inline-flex items-center rounded-md text-base font-medium hover:text-white'
                                 )}
                             >
-                                <span>{main_menu[0]}</span>
+                                <span className=''>{main_menu[0]}</span>
                                 <ChevronDownIcon
                                     className={classNames(
                                         open ? 'text-white' : 'text-gray-400',

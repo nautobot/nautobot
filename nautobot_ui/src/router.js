@@ -5,6 +5,8 @@ import Home from "@views/Home";
 import InstalledPlugins from "@views/InstalledPlugins";
 import ListView from "@views/ListView";
 
+import { get_navigation, convertNavigationToRoute } from "./utils";
+
 
 
 // Placeholder for nautobot to inject code
@@ -40,6 +42,7 @@ export default function NautobotRouter() {
                 // nautobot__inject_route__ends
             ],
         },
+        ...convertNavigationToRoute(),
     ]);
     return element;
 }
