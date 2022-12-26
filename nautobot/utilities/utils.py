@@ -32,6 +32,7 @@ from django_filters import (
     NumberFilter,
 )
 from django_filters.utils import verbose_lookup_expr
+from rest_framework.test import APIRequestFactory
 from taggit.managers import _TaggableManager
 
 from nautobot.dcim.choices import CableLengthUnitChoices
@@ -230,7 +231,10 @@ def serialize_object_v2(obj):
     # Try serializing obj(model instance) using its API Serializer
     try:
         serializer_class = get_serializer_for_model(obj.__class__)
-        data = serializer_class(obj, context={"request": None}).data
+        # create a fake request to include opt-in `relationships` field if available
+        request = APIRequestFactory().get("/", {"include": ["relationships"]})
+        request.version = settings.REST_FRAMEWORK_VERSION
+        data = serializer_class(obj, context={"request": request}).data
     except SerializerNotFound:
         # Fall back to generic JSON representation of obj
         data = serialize_object(obj)
@@ -818,6 +822,9 @@ def get_filterset_parameter_form_field(model, parameter):
         TimePicker,
         MultipleContentTypeField,
     )
+    from nautobot.utilities.forms.widgets import (
+        MultiValueCharInput,
+    )
 
     filterset_class = get_filterset_for_model(model)
     field = get_filterset_field(filterset_class, parameter)
@@ -867,6 +874,8 @@ def get_filterset_parameter_form_field(model, parameter):
         form_field.widget = DatePicker()
     elif isinstance(field, TimeFilter):
         form_field.widget = TimePicker()
+    elif isinstance(field, django_filters.UUIDFilter):
+        form_field.widget = MultiValueCharInput()
 
     form_field.required = False
     form_field.initial = None

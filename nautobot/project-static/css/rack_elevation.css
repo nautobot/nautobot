@@ -56,6 +56,13 @@ text {
 .blocked:hover+.add-device {
     fill: none;
 }
+.blocked_partial {
+    fill: url(#blocked_partial);
+}
+.blocked_partial:hover {
+    fill: url(#blocked_partial);
+}
+
 .unit {
     margin: 0;
     padding: 5px 0px;
