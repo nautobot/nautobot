@@ -165,16 +165,16 @@ def load_plugin_ui(plugin, settings):
     ##########################################
     # Add plugin to nautobot_ui/src/router.js file
     ##########################################
-    router_file_path = os.path.join(nautobot_ui_path, "src/router.js")
+    navigation_file_path = os.path.join(nautobot_ui_path, "src/config/nav-items.js")
 
-    with open(router_file_path, "r", encoding="utf-8") as file:
+    with open(navigation_file_path, "r", encoding="utf-8") as file:
         lines = file.readlines()
         import_lines_index = get_start_and_end_indexes(lines, "__inject_import__")
-        import_lines = lines[import_lines_index[0] : import_lines_index[1] + 1]
+        import_lines = lines[import_lines_index[0]: import_lines_index[1] + 1]
 
     # Check if plugin module has been imported
     plugin_import_name = plugin_name_without_ui_suffix.replace("_", " ").title().replace(" ", "")
-    import_statement = f"const {plugin_import_name} = lazy(() => import('{plugin_ui_alias}/_app'));\n"
+    import_statement = f'import {{ navigation as {plugin_name_without_ui_suffix}_nav }} from "{plugin_ui_alias}/navigation";\n'
     if list(filter(lambda line: import_statement in line, import_lines)):
         # Skip because plugin route exists
         return
@@ -182,17 +182,17 @@ def load_plugin_ui(plugin, settings):
     # insert import statement
     lines.insert(import_lines_index[1], import_statement)
 
-    routes_lines_index = get_start_and_end_indexes(lines, "__inject_route__")
+    navigation_lines_index = get_start_and_end_indexes(lines, "__inject_installed_plugins__")
     plugin_route_path = getattr(plugin.config, "base_url", plugin_name_without_ui_suffix.replace("_", "-"))
     route_statement = [
-        "                {\n",
-        f'                    path: "{plugin_route_path}",\n',
-        f"                    element: <{plugin_import_name} />\n",
-        "                },\n",
+        "    {\n",
+        f'        path: "{plugin_route_path}",\n',
+        f"        navigation: {plugin_name_without_ui_suffix}_nav\n",
+        "    },\n",
     ]
-    lines[routes_lines_index[1] : routes_lines_index[1]] = route_statement
+    lines[navigation_lines_index[1]: navigation_lines_index[1]] = route_statement
 
-    with open(router_file_path, "w", encoding="utf-8") as file:
+    with open(navigation_file_path, "w", encoding="utf-8") as file:
         file.writelines(lines)
 
 

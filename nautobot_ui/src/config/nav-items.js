@@ -3,7 +3,6 @@ import { MarketPlace } from "@nautobot/views"
 import { DeviceRetriveView } from "@nautobot/views/dcim"
 
 // __inject_import__
-import { navigation as tabline_one_nav } from "@tabline_one/navigation"
 
 // End __inject_import__
 
@@ -11,10 +10,7 @@ import { navigation as tabline_one_nav } from "@tabline_one/navigation"
 
 const installed_plugins = [
     // Add installed plugins here: __inject_installed_plugins__
-    {
-        path: "tabline-one",
-        navigation: tabline_one_nav,
-    },
+    
     // End __inject_installed_plugins__
 ]
 
@@ -161,7 +157,7 @@ function buildNavigation(navigation_menu, installed_plugins) {
                     "path": `plugins/${plugin.path}`,
                     "component": navObject
                 }
-                newNav[navName] = !newNav[navName] ? [route_obj] : route_obj
+                newNav[navName] = !newNav[navName] ? [route_obj] : [...newNav[navName], route_obj, ]
             }
             else {
                 // Map over the navigation groups and items in the plugin's navigation configuration

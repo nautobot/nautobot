@@ -6,42 +6,28 @@ import simplejson
 from django.core.management.base import BaseCommand
 
 
-ROUTER_JS_DATA = """
-import {{ useRoutes }} from "react-router-dom";
+NAVIGATION_JS_DATA = """
 import Home from "{plugin_alias}/views/Home";
 
 
-export default function Router() {{
-    let element = useRoutes([
-        {{
-            path: "/",
-            element: <Home />,
-        }}
-    ]);
-    return element;
+// Navigation
+const navigation = {{
+    "__home": Home, // Plugin Homepage
+    "__plugin_nav": [],
 }}
 
-"""
 
-APP_JS_DATA = """
-import Router from '{plugin_alias}/router';
-
-
-export default function {plugin_component}(){{
-    return <Router />
-}}
+export {{ navigation }}
 
 """
 
 HOME_JS_DATA = """
-import {Heading} from '@chakra-ui/react'
-
 
 export default function Home(){
     return (
-        <Heading>
+        <h2>
             Welcome to Nautobot Plugin UI ❄️
-        </Heading>
+        </h2>
     )
 }
 
@@ -106,14 +92,9 @@ class Command(BaseCommand):
             plugin_alias = f"@{plugin_name_without_ui_suffix}"
             plugin_component = plugin_name_without_ui_suffix.replace("_", " ").title().replace(" ", "")
 
-            # Add _app.js to plugin ui root
-            with open("_app.js", "w") as file:
-                data = APP_JS_DATA.format(plugin_alias=plugin_alias, plugin_component=plugin_component)
-                file.write(data)
-
             # Add router.js to plugin ui root
-            with open("router.js", "w") as file:
-                data = ROUTER_JS_DATA.format(plugin_alias=plugin_alias)
+            with open("navigation.js", "w") as file:
+                data = NAVIGATION_JS_DATA.format(plugin_alias=plugin_alias)
                 file.write(data)
 
             os.chdir("views")
