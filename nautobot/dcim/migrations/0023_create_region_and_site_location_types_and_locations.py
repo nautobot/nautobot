@@ -27,7 +27,7 @@ def create_region_and_site_location_types(apps, schema_editor):
             Location.objects.create(
                 location_type=region_lt,
                 name="Global Region",
-                description=region.description,
+                description="Parent Location of Region LocationType for all sites that did not have a region attribute set before the migration",
             )
         for site in Site.objects.all():
             Location.objects.create(
@@ -78,7 +78,7 @@ def create_region_and_site_location_types(apps, schema_editor):
             Location.objects.create(
                 location_type=region_lt,
                 name="Global Region",
-                description=region.description,
+                description="Parent Location of Region LocationType for all sites that did not have a region attribute set before the migration",
             )
         for site in Site.objects.all():
             Location.objects.create(
@@ -109,7 +109,7 @@ def create_region_and_site_location_types(apps, schema_editor):
             location.save()
 
         # Reassign Site Models to Locations of Site LocationType
-        if Site.objects.exists():
+        if Site.objects.exists():  # Iff Site instances exist
             CircuitTermination = apps.get_model("circuits", "circuittermination")
             Device = apps.get_model("dcim", "device")
             PowerPanel = apps.get_model("dcim", "powerpanel")
@@ -124,7 +124,7 @@ def create_region_and_site_location_types(apps, schema_editor):
                 ct.location = Location.objects.get(name=ct.site.name, location_type=site_lt)
                 ct.save()
             for device in Device.objects.filter(location__isnull=True):
-                device.location = Location.objects.get(name=ct.site.name, location_type=site_lt)
+                device.location = Location.objects.get(name=device.site.name, location_type=site_lt)
                 device.save()
             for powerpanel in PowerPanel.objects.filter(location__isnull=True):
                 powerpanel.location = Location.objects.get(name=powerpanel.site.name, location_type=site_lt)
