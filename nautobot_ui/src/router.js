@@ -4,17 +4,9 @@ import Home from "@views/Home";
 import InstalledPlugins from "@views/InstalledPlugins";
 import ListView from "@views/ListView";
 
-import {  convertNavigationToRoute } from "./utils";
+import {  definedRoutes } from "./utils";
 
 
-
-// Placeholder for nautobot to inject code
-// The idea would be to dynamically generate this lines of codes relating to
-//  nautobot_plugin_one_ui
-
-// nautobot__inject_import__start
-
-// nautobot__inject_import__ends
 
 
 export default function NautobotRouter() {
@@ -36,12 +28,9 @@ export default function NautobotRouter() {
                     path: "installed-plugins-old",
                     element: <InstalledPlugins />
                 },
-                // nautobot__inject_route__start
-
-                // nautobot__inject_route__ends
             ],
         },
-        // ...convertNavigationToRoute(),
+        ...definedRoutes,
     ]);
     return element;
 }

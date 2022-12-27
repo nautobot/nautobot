@@ -1,6 +1,6 @@
-import {get_navigation, nav_bar_navigation} from "./nav-items"
+import {navbarNavigation, navigation} from "./nav-items"
 
 
 
 
-export {get_navigation, nav_bar_navigation}
+export {navbarNavigation, navigation}

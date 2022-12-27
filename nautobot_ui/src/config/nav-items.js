@@ -3,7 +3,7 @@ import { MarketPlace } from "@nautobot/views"
 import { DeviceRetriveView } from "@nautobot/views/dcim"
 
 // Import plugin navigations
-import {navigation as tabline_one_nav} from "@tabline_one/navigation"
+import { navigation as tabline_one_nav } from "@tabline_one/navigation"
 // import material_ui_plugin_navigation from "@material_plugin/config"
 
 
@@ -132,54 +132,67 @@ const navigation_menu = {
     ],
 }
 
-function build_navigation(){
-    let new_nav = navigation_menu
-    const exclude = ["__home",]
-    
-    // prepend `plugins/plugin-path/` all plugin routes path
-    // Then add the plugin nav objects to navigation menu
+/**
+ * Builds the navigation menu by adding plugin routes to the main navigation menu.
+ * Plugin routes are prepended with the plugin's path and added to either the main
+ * navigation menu or the "Plugins" dropdown, depending on the plugin's configuration.
+ * 
+ * @param {Object} navigation_menu - The base navigation menu object.
+ * @param {Array} installed_plugins - An array of objects representing installed plugins.
+ * Each object should have a "navigation" property containing the plugin's navigation configuration.
+ * 
+ * @returns {Object} The updated navigation menu object.
+ */
+function buildNavigation(navigation_menu, installed_plugins) {
+    // Make a copy of the base navigation menu
+    let newNav = { ...navigation_menu };
+
+    // These are special routes (e.g. "__home") that should not be added to the navbar
+    const specialRoutes = ["__home",]
+
+    // Iterate over each installed plugin
     installed_plugins.forEach(plugin => {
-        Object.entries(plugin.navgation).forEach(nav => {
-            let [nav_name, nav_object] = nav
-            if (exclude.includes(nav_name)) return
-            
-            const new_nav_object = nav_object.map(nav_group => {
+        // Iterate over each navigation item in the plugin
+        Object.entries(plugin.navgation).forEach(([navName, navObject]) => {
+            if (specialRoutes.includes(navName)) {
+                let route_obj = {
+                    "path": `plugins/${plugin.path}`,
+                    "component": navObject
+                }
+                newNav[navName] = !newNav[navName] ? [route_obj] : route_obj
+            }
+            else {
+                // Map over the navigation groups and items in the plugin's navigation configuration
+                const newNavObject = navObject.map(navGroup => {
                     return {
-                        ...nav_group, 
-                        items: nav_group.items.map(route => {
-                            return {...route, path: `plugins/${plugin.path}/${route.path}`}
+                        ...navGroup,
+                        items: navGroup.items.map(route => {
+                            return { ...route, path: `plugins/${plugin.path}/${route.path}` }
                         })
                     }
                 })
-            
 
-            // We either add this menu to main menu or to plugins dropdown
-            if (nav_name === "__plugin_nav"){
-                // Add items in __plugin to new_nav["Plugins"];
-                // By doing this, we can have this plugin group showing as a dropdown in
-                // Plugins
-                new_nav["Plugins"] = [...new_nav["Plugins"], ...new_nav_object]
+
+                // Add the plugin's navigation to the main navigation menu or the "Plugins" dropdown
+                if (navName === "__plugin_nav") {
+                    // Add the plugin's navigation items to the "Plugins" dropdown
+                    newNav["Plugins"] = [...newNav["Plugins"], ...newNavObject]
+                }
+                else {
+                    // Add the plugin's navigation to the main navigation menu
+                    newNav[navName] = newNavObject
+                }
             }
-            else {
-                // Add plugin nav to navigation menu
-                new_nav[nav_name] = new_nav_object
-            }
-        })
-    })
-    return new_nav
+        });
+    });
+    return newNav;
 }
 
 
-function get_navigation() {
-    let all_navigations = {
-        ...tabline_one_nav,
-        ...navigation_menu,
-    }
-    return all_navigations
-}
+// Build the navigation menu
+const navigation = buildNavigation(navigation_menu, installed_plugins);
 
+// Filter the navigation menu to get only the items that should be shown on the navbar
+const navbarNavigation = Object.entries(navigation).filter(([name]) => !name.startsWith("__"));
 
-// Get only navigations meant to be on the navbar
-const nav_bar_navigation = Object.entries(build_navigation()).filter(item => !item[0].startsWith("__"))
-
-export { get_navigation, nav_bar_navigation }
+export { navbarNavigation, navigation }

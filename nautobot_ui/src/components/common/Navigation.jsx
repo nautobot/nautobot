@@ -4,7 +4,7 @@ import { Link, NavLink } from "react-router-dom";
 import { PlusIcon, CloudArrowDownIcon } from '@heroicons/react/24/outline'
 import { ChevronDownIcon } from '@heroicons/react/20/solid'
 
-import { nav_bar_navigation } from '@nautobot/config';
+import { navbarNavigation } from '@nautobot/config';
 
 
 function classNames(...classes) {
@@ -16,7 +16,7 @@ function classNames(...classes) {
 function MenuItems() {
     return (
         <Popover.Group as="nav" className="space-x-7 md:flex items-center ml-10">
-            {nav_bar_navigation.map((main_menu, idx) => (
+            {navbarNavigation.map((main_menu, idx) => (
                 <Popover className="relative" key={idx}>
                     {({ open }) => (
                         <>
