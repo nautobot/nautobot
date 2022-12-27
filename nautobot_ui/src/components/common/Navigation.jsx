@@ -1,41 +1,22 @@
 import { Fragment } from 'react'
 import {Transition, Popover } from '@headlessui/react'
 import { Link, NavLink } from "react-router-dom";
-import {
-    ArrowPathIcon,
-    Bars3Icon,
-    BookmarkSquareIcon,
-    CalendarIcon,
-    ChartBarIcon,
-    CursorArrowRaysIcon,
-    LifebuoyIcon,
-    PhoneIcon,
-    PlayIcon,
-    ShieldCheckIcon,
-    Squares2X2Icon,
-    XMarkIcon,
-    BellIcon,
-    PlusIcon,
-    CloudArrowDownIcon
-} from '@heroicons/react/24/outline'
+import { PlusIcon, CloudArrowDownIcon } from '@heroicons/react/24/outline'
 import { ChevronDownIcon } from '@heroicons/react/20/solid'
 
-import { get_navigation } from '@nautobot/config';
-
-
+import { nav_bar_navigation } from '@nautobot/config';
 
 
 function classNames(...classes) {
     return classes.filter(Boolean).join(' ')
 }
 
-const menu_items = get_navigation()
 
 
 function MenuItems() {
     return (
         <Popover.Group as="nav" className="space-x-7 md:flex items-center ml-10">
-            {Object.entries(menu_items).map((main_menu, idx) => (
+            {nav_bar_navigation.map((main_menu, idx) => (
                 <Popover className="relative" key={idx}>
                     {({ open }) => (
                         <>
@@ -98,7 +79,7 @@ function MenuItems() {
 
 export default function Navigation() {
     return (
-        <Popover className="relative">
+        <Popover className="relative z-50">
             <div as="nav" className="bg-gray-800">
                 <div className="max-w-full px-8">
                     <div className="relative flex h-16 items-center justify-between">

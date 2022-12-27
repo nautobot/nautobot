@@ -30,6 +30,8 @@ function get_view_component(data){
 }
 
 
+// Start by
+
 function convertNavigationToRoute() {
     const navigation = Object.values(get_navigation()).flatMap((groups) => groups.map(group => group.items)).flat();
 

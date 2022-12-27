@@ -1,4 +1,4 @@
-import { BaseLayout, MarketPlaceCard } from "@nautobot/components";
+import { MarketPlaceCard } from "@nautobot/components";
 
 const bannerStyle = {
     backgroundImage: `url(/assets/images/bg.jpg)`,

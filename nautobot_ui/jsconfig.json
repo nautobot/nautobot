@@ -5,7 +5,15 @@
         "baseUrl": ".",
         "paths": {
             "@nautobot/*": ["src/*"],
-            "@nautobot/views": ["src/views/*"],
+            "@nautobot/views/*": ["src/views/*"],
+            "@nautobot/components/*": ["src/components/*"],
+            "@nautobot/layouts/*": ["src/components/layouts/*"],
+            "@nautobot/common/*": ["src/components/common/*"],
+            "@nautobot/utils/*": ["src/utils/*"],
+            "@tabline_one/*": ["/Users/timizuoebideri/Documents/Work/NTC/project/tabline-plugin/tabline_plugin/tabline_one_ui/*"],
+            "@material_plugin/*": ["/Users/timizuoebideri/Documents/Work/NTC/project/material-ui-plugin/material_ui_plugin/material_ui_plugin_ui/*"],
+
+
             "@utils/*": [
                 "src/utils/*"
             ],

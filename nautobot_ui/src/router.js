@@ -1,11 +1,10 @@
 import { useRoutes } from "react-router-dom";
-import { lazy } from 'react';
 
 import Home from "@views/Home";
 import InstalledPlugins from "@views/InstalledPlugins";
 import ListView from "@views/ListView";
 
-import { get_navigation, convertNavigationToRoute } from "./utils";
+import {  convertNavigationToRoute } from "./utils";
 
 
 
@@ -42,7 +41,7 @@ export default function NautobotRouter() {
                 // nautobot__inject_route__ends
             ],
         },
-        ...convertNavigationToRoute(),
+        // ...convertNavigationToRoute(),
     ]);
     return element;
 }
