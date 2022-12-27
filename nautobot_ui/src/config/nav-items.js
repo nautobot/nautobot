@@ -2,21 +2,23 @@ import { GenericListView } from "@nautobot/components"
 import { MarketPlace } from "@nautobot/views"
 import { DeviceRetriveView } from "@nautobot/views/dcim"
 
-// Import plugin navigations
+// __inject_import__
 import { navigation as tabline_one_nav } from "@tabline_one/navigation"
-// import material_ui_plugin_navigation from "@material_plugin/config"
+
+// End __inject_import__
 
 
-// End plugin navigations
 
-
-// Add installed plugins here
 const installed_plugins = [
+    // Add installed plugins here: __inject_installed_plugins__
     {
         path: "tabline-one",
-        navgation: tabline_one_nav,
-    }
+        navigation: tabline_one_nav,
+    },
+    // End __inject_installed_plugins__
 ]
+
+
 
 const navigation_menu = {
     "Organization": [
@@ -153,7 +155,7 @@ function buildNavigation(navigation_menu, installed_plugins) {
     // Iterate over each installed plugin
     installed_plugins.forEach(plugin => {
         // Iterate over each navigation item in the plugin
-        Object.entries(plugin.navgation).forEach(([navName, navObject]) => {
+        Object.entries(plugin.navigation).forEach(([navName, navObject]) => {
             if (specialRoutes.includes(navName)) {
                 let route_obj = {
                     "path": `plugins/${plugin.path}`,
