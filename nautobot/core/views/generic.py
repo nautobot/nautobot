@@ -1,6 +1,5 @@
 from copy import deepcopy
 import logging
-import os
 import re
 
 from django.conf import settings
@@ -14,7 +13,7 @@ from django.core.exceptions import (
 from django.db import transaction, IntegrityError
 from django.db.models import ManyToManyField, ProtectedError
 from django.forms import Form, ModelMultipleChoiceField, MultipleHiddenInput, Textarea
-from django.http import Http404, HttpResponse
+from django.http import HttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import NoReverseMatch, reverse
 from django.utils.html import escape
@@ -23,7 +22,6 @@ from django.utils.safestring import mark_safe
 from django.views.generic import View
 from django_tables2 import RequestConfig
 
-import nautobot
 from nautobot.core.forms import SearchForm
 from nautobot.extras.models import CustomField, ExportTemplate
 from nautobot.extras.models.change_logging import ChangeLoggedModel
@@ -1543,29 +1541,3 @@ class BulkComponentCreateView(GetReturnURLMixin, ObjectPermissionRequiredMixin, 
                 "return_url": self.get_return_url(request),
             },
         )
-
-
-class ReactView(View):
-    frontend_build_dir = os.path.join(os.path.dirname(nautobot.__file__), "../frontend-next/out")
-    filename = None
-
-    def get(self, request, *args, **kwargs):
-        path = f"{self.frontend_build_dir}/{self.filename}"
-        if self.filename is not None and os.path.isfile(path):
-            with open(path, "r") as f:
-                content = f.read()
-                return HttpResponse(content)
-
-        raise Http404
-
-
-class ReactHomeView(ReactView):
-    filename = "index.html"
-
-
-class ReactListView(ReactView):
-    filename = "[appname]/[pagename].html"
-
-
-class ReactObjectView(ReactView):
-    filename = "[appname]/[pagename]/[id].html"

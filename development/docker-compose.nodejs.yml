@@ -13,5 +13,3 @@ services:
       - ../nautobot_ui/:/opt/node/nautobot
     command: >
       bash -c "npm install && npm run start"
-  nautobot:
-    command: nautobot-server start --http :8080 --master --processes 3 --threads 2 --buffer-size 32768
