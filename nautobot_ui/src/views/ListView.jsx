@@ -1,4 +1,4 @@
-import ListTemplate from "@layouts/ListTemplate"
+import ListTemplate from "@nautobot/layouts/ListTemplate"
 import { useParams } from "react-router-dom"
 
 

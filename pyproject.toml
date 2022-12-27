@@ -30,6 +30,7 @@ include = [
     "NOTICE",
     # Poetry by default will exclude these files as they are in .gitignore
     "nautobot/project-static/docs/**/*",
+    "nautobot_ui"
 ]
 
 [tool.poetry.dependencies]

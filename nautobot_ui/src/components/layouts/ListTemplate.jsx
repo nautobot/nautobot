@@ -1,6 +1,6 @@
-import NautobotTable from "@core/Table"
-import BaseLayout from "@layouts/BaseLayout"
-import { naxios } from "@utils/axios"
+import NautobotTable from "@nautobot/core/Table"
+import BaseLayout from "@nautobot/layouts/BaseLayout"
+import { naxios } from "@nautobot/utils/axios"
 import { useEffect, useState } from "react"
 
 

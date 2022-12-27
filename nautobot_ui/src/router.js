@@ -1,8 +1,8 @@
 import { useRoutes } from "react-router-dom";
 
-import Home from "@views/Home";
-import InstalledPlugins from "@views/InstalledPlugins";
-import ListView from "@views/ListView";
+import Home from "@nautobot/views/Home";
+import InstalledPlugins from "@nautobot/views/InstalledPlugins";
+import ListView from "@nautobot/views/ListView";
 
 import {  definedRoutes } from "./utils";
 

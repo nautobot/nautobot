@@ -4,34 +4,15 @@
         "allowJs": true,
         "baseUrl": ".",
         "paths": {
-            "@nautobot/*": ["src/*"],
             "@nautobot/views/*": ["src/views/*"],
             "@nautobot/components/*": ["src/components/*"],
             "@nautobot/layouts/*": ["src/components/layouts/*"],
             "@nautobot/common/*": ["src/components/common/*"],
             "@nautobot/utils/*": ["src/utils/*"],
+            "@nautobot/core/*": ["src/components/core/*"],
+            "@nautobot/*": ["src/*"],
             "@tabline_one/*": ["/Users/timizuoebideri/Documents/Work/NTC/project/tabline-plugin/tabline_plugin/tabline_one_ui/*"],
-            "@material_plugin/*": ["/Users/timizuoebideri/Documents/Work/NTC/project/material-ui-plugin/material_ui_plugin/material_ui_plugin_ui/*"],
-
-
-            "@utils/*": [
-                "src/utils/*"
-            ],
-            "@views/*": [
-                "src/views/*"
-            ],
-            "@components/*": [
-                "src/components/*"
-            ],
-            "@layouts/*": [
-                "src/components/layouts/*"
-            ],
-            "@common/*": [
-                "src/components/common/*"
-            ],
-            "@core/*": [
-                "src/components/core/*"
-            ]
+            "@material_plugin/*": ["/Users/timizuoebideri/Documents/Work/NTC/project/material-ui-plugin/material_ui_plugin/material_ui_plugin_ui/*"]
         }
     }
 }

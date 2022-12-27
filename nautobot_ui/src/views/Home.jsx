@@ -1,4 +1,4 @@
-import ListViewLayout from "@components/layouts/BaseLayout"
+import ListViewLayout from "@nautobot/components/layouts/BaseLayout"
 
 export default function Home(){
     return (

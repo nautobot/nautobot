@@ -1,4 +1,4 @@
-import ListTemplate from "@layouts/ListTemplate";
+import ListTemplate from "@nautobot/layouts/ListTemplate";
 
 export default function InstalledPlugins(){
     return (

@@ -10,7 +10,7 @@ import {
     MDBDropdownToggle,
     MDBDropdownMenu,
 } from 'mdb-react-ui-kit';
-import { naxios } from '@utils/axios';
+import { naxios } from '@nautobot/utils/axios';
 
 
 export default function NavBar() {

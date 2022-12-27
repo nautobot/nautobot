@@ -8,7 +8,6 @@ import "@fortawesome/fontawesome-free/css/all.min.css";
 import "./index.css"
 
 import NautobotRouter from './router';
-import NavBar from '@components/common/NavBar';
 import {Navigation} from "@nautobot/components"
 
 /**

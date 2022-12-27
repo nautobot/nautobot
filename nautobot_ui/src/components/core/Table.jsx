@@ -9,7 +9,7 @@ import {
     Stack,
 } from '@chakra-ui/react'
 import { Link } from 'react-router-dom'
-import LinkedIcon from "@core/LinkedIcon";
+import LinkedIcon from "@nautobot/core/LinkedIcon";
 
 export default function NautobotTable({ header_coloums, body_coloums, buttons }) {
     return (
