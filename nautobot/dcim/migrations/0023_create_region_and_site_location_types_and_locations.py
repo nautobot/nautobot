@@ -9,8 +9,8 @@ def create_region_and_site_location_types(apps, schema_editor):
     LocationType = apps.get_model("dcim", "locationtype")
     Location = apps.get_model("dcim", "location")
 
-    # Site and Region instances both exist
-    if Site.objects.exists() and Region.objects.exists():
+    # Region instances exist
+    if Region.objects.exists():
         region_lt = LocationType.objects.create(name="Region", nestable=True)
         # Breadth First Query
         for region in Region.objects.with_tree_fields().extra(order_by=["__tree.tree_depth", "__tree.tree_ordering"]):
@@ -22,20 +22,52 @@ def create_region_and_site_location_types(apps, schema_editor):
                 if region.parent
                 else None,
             )
-        site_lt = LocationType.objects.create(name="Site", parent=LocationType.objects.get(name="Region"))
-        if Site.objects.filter(region__isnull=True).exists():
-            Location.objects.create(
-                location_type=region_lt,
-                name="Global Region",
-                description="Parent Location of Region LocationType for all sites that did not have a region attribute set before the migration",
-            )
+        if Site.objects.exists():  # Both Site and Region instances exist
+            site_lt = LocationType.objects.create(name="Site", parent=LocationType.objects.get(name="Region"))
+            if Site.objects.filter(region__isnull=True).exists():
+                Location.objects.create(
+                    location_type=region_lt,
+                    name="Global Region",
+                    description="Parent Location of Region LocationType for all sites that did not have a region attribute set before the migration",
+                )
+            for site in Site.objects.all():
+                Location.objects.create(
+                    name=site.name,
+                    location_type=site_lt,
+                    parent=Location.objects.get(
+                        location_type=region_lt, name=site.region.name if site.region else "Global Region"
+                    ),
+                    tenant=site.tenant,
+                    facility=site.facility,
+                    asn=site.asn,
+                    time_zone=site.time_zone,
+                    description=site.description,
+                    physical_address=site.physical_address,
+                    shipping_address=site.shipping_address,
+                    latitude=site.latitude,
+                    longitude=site.longitude,
+                    contact_name=site.contact_name,
+                    contact_phone=site.contact_phone,
+                    contact_email=site.contact_email,
+                    comments=site.comments,
+                    status=site.status,
+                    tags=site.tags,
+                )
+            for location_type in LocationType.objects.filter(parent__isnull=True).exclude(
+                name="Region"
+            ):  # Every top level location type except Region
+                location_type.parent = site_lt
+                location_type.save()
+            for location in Location.objects.filter(site__isnull=False):
+                location.parent = Location.objects.get(name=location.site.name, location_type=site_lt)
+                location.save()
+
+    elif Site.objects.exists():  # Only Site instances exist, we make Site the top level LocationType
+        site_lt = LocationType.objects.create(name="Site")
         for site in Site.objects.all():
             Location.objects.create(
                 name=site.name,
                 location_type=site_lt,
-                parent=Location.objects.get(
-                    location_type=region_lt, name=site.region.name if site.region else "Global Region"
-                ),
                 tenant=site.tenant,
                 facility=site.facility,
                 asn=site.asn,
@@ -52,103 +84,56 @@ def create_region_and_site_location_types(apps, schema_editor):
                 status=site.status,
                 tags=site.tags,
             )
-        for location_type in LocationType.objects.filter(parent__isnull=True).exclude(name="Region"):
-            location_type.parent = site_lt
-            location_type.save()
-        for location in Location.objects.filter(site__isnull=False):
-            location.parent = Location.objects.get(name=location.site.name, location_type=site_lt)
-            location.save()
-    # Only Region instances exist
-    elif Region.objects.exists():
-        region_lt = LocationType.objects.create(name="Region", nestable=True)
-        for region in Region.objects.with_tree_fields().extra(order_by=["__tree.tree_depth", "__tree.tree_ordering"]):
-            Location.objects.create(
-                location_type=region_lt,
-                name=region.name,
-                description=region.description,
-                parent=Location.objects.get(name=region.parent.name, location_type=region_lt)
-                if region.parent
-                else None,
-            )
-    # Only Site instances exist
-    elif Site.objects.exists():
-        region_lt = LocationType.objects.create(name="Region", nestable=True)
-        site_lt = LocationType.objects.create(name="Site", parent=LocationType.objects.get(name="Region"))
-        if Site.objects.filter(region__isnull=True).exists():
-            Location.objects.create(
-                location_type=region_lt,
-                name="Global Region",
-                description="Parent Location of Region LocationType for all sites that did not have a region attribute set before the migration",
-            )
-        for site in Site.objects.all():
-            Location.objects.create(
-                name=site.name,
-                location_type=site_lt,
-                parent=Location.objects.get(location_type=region_lt, name="Global Region"),
-                tenant=site.tenant,
-                facility=site.facility,
-                asn=site.asn,
-                time_zone=site.time_zone,
-                description=site.description,
-                physical_address=site.physical_address,
-                shipping_address=site.shipping_address,
-                latitude=site.latitude,
-                longitude=site.longitude,
-                contact_name=site.contact_name,
-                contact_phone=site.contact_phone,
-                contact_email=site.contact_email,
-                comments=site.comments,
-                status=site.status,
-                tags=site.tags,
-            )
-        for location_type in LocationType.objects.filter(parent__isnull=True).exclude(name="Region"):
+        for location_type in LocationType.objects.filter(parent__isnull=True).exclude(
+            name="Site"
+        ):  # Every top level location type except Site
             location_type.parent = site_lt
             location_type.save()
         for location in Location.objects.filter(site__isnull=False):
             location.parent = Location.objects.get(name=location.site.name, location_type=site_lt)
             location.save()
 
-        # Reassign Site Models to Locations of Site LocationType
-        if Site.objects.exists():  # Iff Site instances exist
-            CircuitTermination = apps.get_model("circuits", "circuittermination")
-            Device = apps.get_model("dcim", "device")
-            PowerPanel = apps.get_model("dcim", "powerpanel")
-            RackGroup = apps.get_model("dcim", "rackgroup")
-            Rack = apps.get_model("dcim", "rack")
-            Prefix = apps.get_model("ipam", "prefix")
-            VLANGroup = apps.get_model("ipam", "vlangroup")
-            VLAN = apps.get_model("ipam", "vlan")
-            Cluster = apps.get_model("virtualization", "cluster")
+    # Reassign Site Models to Locations of Site LocationType
+    if Site.objects.exists():  # Iff Site instances exist
+        CircuitTermination = apps.get_model("circuits", "circuittermination")
+        Device = apps.get_model("dcim", "device")
+        PowerPanel = apps.get_model("dcim", "powerpanel")
+        RackGroup = apps.get_model("dcim", "rackgroup")
+        Rack = apps.get_model("dcim", "rack")
+        Prefix = apps.get_model("ipam", "prefix")
+        VLANGroup = apps.get_model("ipam", "vlangroup")
+        VLAN = apps.get_model("ipam", "vlan")
+        Cluster = apps.get_model("virtualization", "cluster")
 
-            for ct in CircuitTermination.objects.filter(location__isnull=True):
-                ct.location = Location.objects.get(name=ct.site.name, location_type=site_lt)
-                ct.save()
-            for device in Device.objects.filter(location__isnull=True):
-                device.location = Location.objects.get(name=device.site.name, location_type=site_lt)
-                device.save()
-            for powerpanel in PowerPanel.objects.filter(location__isnull=True):
-                powerpanel.location = Location.objects.get(name=powerpanel.site.name, location_type=site_lt)
-                powerpanel.save()
-            for rackgroup in RackGroup.objects.filter(location__isnull=True):
-                rackgroup.location = Location.objects.get(name=rackgroup.site.name, location_type=site_lt)
-                rackgroup.save()
-            for rack in Rack.objects.filter(location__isnull=True):
-                rack.location = Location.objects.get(name=rack.site.name, location_type=site_lt)
-                rack.save()
-            # Below models' site attribute is not required, so we need to check each instance if the site field is not null
-            # if so we reassign it to Site Location and if not we leave it alone
-            for prefix in Prefix.objects.filter(location__isnull=True, site__isnull=False):
-                prefix.location = Location.objects.get(name=prefix.site.name, location_type=site_lt)
-                prefix.save()
-            for vlangroup in VLANGroup.objects.filter(location__isnull=True, site__isnull=False):
-                vlangroup.location = Location.objects.get(name=vlangroup.site.name, location_type=site_lt)
-                vlangroup.save()
-            for vlan in VLAN.objects.filter(location__isnull=True, site__isnull=False):
-                vlan.location = Location.objects.get(name=vlan.site.name, location_type=site_lt)
-                vlan.save()
-            for cluster in Cluster.objects.filter(location__isnull=True, site__isnull=False):
-                cluster.location = Location.objects.get(name=cluster.site.name, location_type=site_lt)
-                cluster.save()
+        for ct in CircuitTermination.objects.filter(location__isnull=True):
+            ct.location = Location.objects.get(name=ct.site.name, location_type=site_lt)
+            ct.save()
+        for device in Device.objects.filter(location__isnull=True):
+            device.location = Location.objects.get(name=device.site.name, location_type=site_lt)
+            device.save()
+        for powerpanel in PowerPanel.objects.filter(location__isnull=True):
+            powerpanel.location = Location.objects.get(name=powerpanel.site.name, location_type=site_lt)
+            powerpanel.save()
+        for rackgroup in RackGroup.objects.filter(location__isnull=True):
+            rackgroup.location = Location.objects.get(name=rackgroup.site.name, location_type=site_lt)
+            rackgroup.save()
+        for rack in Rack.objects.filter(location__isnull=True):
+            rack.location = Location.objects.get(name=rack.site.name, location_type=site_lt)
+            rack.save()
+        # Below models' site attribute is not required, so we need to check each instance if the site field is not null
+        # if so we reassign it to Site Location and if not we leave it alone
+        for prefix in Prefix.objects.filter(location__isnull=True, site__isnull=False):
+            prefix.location = Location.objects.get(name=prefix.site.name, location_type=site_lt)
+            prefix.save()
+        for vlangroup in VLANGroup.objects.filter(location__isnull=True, site__isnull=False):
+            vlangroup.location = Location.objects.get(name=vlangroup.site.name, location_type=site_lt)
+            vlangroup.save()
+        for vlan in VLAN.objects.filter(location__isnull=True, site__isnull=False):
+            vlan.location = Location.objects.get(name=vlan.site.name, location_type=site_lt)
+            vlan.save()
+        for cluster in Cluster.objects.filter(location__isnull=True, site__isnull=False):
+            cluster.location = Location.objects.get(name=cluster.site.name, location_type=site_lt)
+            cluster.save()
 
 
 class Migration(migrations.Migration):
