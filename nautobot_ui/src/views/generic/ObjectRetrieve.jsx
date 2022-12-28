@@ -9,7 +9,9 @@ import useSWR from "swr"
 
 import create_plugin_tab from "@components/plugins/PluginTab"
 
-import PluginFullWidthComponents from "@components/plugins/PluginFullWidthComponents"
+import PluginComponents from "@components/core/Plugins"
+
+import { PluginFullWidthComponentsWithProps } from "@components/plugins/PluginFullWidthComponents"
 
 const fetcher = (url) => fetch(url, { credentials: "include" }).then((res) => res.ok ? res.json() : null)
 const fetcherHTML = (url) => fetch(url, { credentials: "include" }).then((res) => res.ok ? res.text() : null)
@@ -47,7 +49,7 @@ function RenderRow(props) {
         value === null || value === "" ?
           "—" :
           Array.isArray(value) ?
-            <ul class="list-unstyled">{value.map((item) =>
+            <ul className="list-unstyled">{value.map((item) =>
               typeof (item) == "object" ? <li>{item["display"]}</li> : <li>{item}</li>
             )}</ul> :
             typeof (value) == "object" ?
@@ -75,57 +77,65 @@ export default function ObjectRetrieve({ api_url }) {
   if (error) return <div>Failed to load {api_url}</div>
   if (!objectData) return <></>
   if (!pluginConfig) return <></>
-  return (
-    <>
-      <h1>{objectData.name}</h1>
-      <p>
-        <small className="text-muted">
-          {objectData.created &&
-            <>Created {objectData.created} &middot; </>
-          }
-          <> Updated <span title={objectData.last_updated}>xyz seconds</span> ago</>
-        </small>
-      </p>
-      <div className="pull-right noprint"></div>
-      <Tabs defaultActiveKey="main" mountOnEnter="true">
-        <Tab eventKey="main" title="Main">
-          <br />
-          <Card>
-            <CardHeader>
-              <strong>Main</strong>
-            </CardHeader>
-            <Table hover>
-              <tbody>
-                {Object.keys(objectData).map((key) => <RenderRow identifier={key} value={objectData[key]} advanced />)}
-              </tbody>
-            </Table>
-          </Card>
-          <br />
-          <div dangerouslySetInnerHTML={{ __html: pluginHTML }} />
-          <br />
-        </Tab>
-        <Tab eventKey="advanced" title="Advanced">
-          <br />
-          <Card>
-            <CardHeader>
-              <strong>Advanced</strong>
-            </CardHeader>
-            <Table hover>
-              <tbody>
-                {Object.keys(objectData).map((key) => <RenderRow identifier={key} value={objectData[key]} advanced={false} />)}
-              </tbody>
-            </Table>
-          </Card>
-        </Tab>
-        <Tab eventKey="notes" title="Notes">
-          {PluginFullWidthComponents}
-        </Tab>
-        <Tab eventKey="change_log" title="Change Log">
-          <br />
-          <div dangerouslySetInnerHTML={{ __html: "<p>Your html code here.<p>" }} />
-        </Tab>
-        {pluginConfig}
-      </Tabs>
-    </>
-  )
+
+  const default_view = (<>
+    <h1>{objectData.name}</h1>
+    <p>
+      <small className="text-muted">
+        {objectData.created &&
+          <>Created {objectData.created} &middot; </>
+        }
+        <> Updated <span title={objectData.last_updated}>xyz seconds</span> ago</>
+      </small>
+    </p>
+    <div className="pull-right noprint"></div>
+    <Tabs defaultActiveKey="main" mountOnEnter={true}>
+      <Tab key="main" eventKey="main" title="Main">
+        <br />
+        <Card>
+          <CardHeader>
+            <strong>Main</strong>
+          </CardHeader>
+          <Table hover>
+            <tbody>
+              {Object.keys(objectData).map((key) => <RenderRow key={key} identifier={key} value={objectData[key]} advanced />)}
+            </tbody>
+          </Table>
+        </Card>
+        <br />
+        <div dangerouslySetInnerHTML={{ __html: pluginHTML }} />
+        <br />
+        {PluginFullWidthComponentsWithProps(objectData)}
+      </Tab>
+      <Tab key="advanced" eventKey="advanced" title="Advanced">
+        <br />
+        <Card>
+          <CardHeader>
+            <strong>Advanced</strong>
+          </CardHeader>
+          <Table hover>
+            <tbody>
+              {Object.keys(objectData).map((key) => <RenderRow key={key} identifier={key} value={objectData[key]} advanced={false} />)}
+            </tbody>
+          </Table>
+        </Card>
+      </Tab>
+      <Tab key="notes" eventKey="notes" title="Notes">
+      </Tab>
+      <Tab key="change_log" eventKey="change_log" title="Change Log">
+        <br />
+        <div dangerouslySetInnerHTML={{ __html: "<p>Your html code here.<p>" }} />
+      </Tab>
+      {pluginConfig}
+    </Tabs>
+  </>)
+
+  let return_view = default_view;
+  const lookup_name = `${app_name}:${model_name}`;
+  if(lookup_name in PluginComponents['CustomViews'] && PluginComponents['CustomViews'][lookup_name] !== null ) {
+    const CustomView = PluginComponents['CustomViews'][lookup_name]
+    return_view = <CustomView {...objectData} />
+  }
+
+  return return_view
 }

@@ -16,7 +16,7 @@ export default function BSNavBar() {
   return (
     <Navbar bg="light" expand="lg" fixed="top">
       <Container fluid>
-        <Link href="/" passHref>
+        <Link href="/">
           <Navbar.Brand>
             {/* <Image src={nautobot_logo} alt="nautobot-logo" height={30} /> */}
           </Navbar.Brand>
