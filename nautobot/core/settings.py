@@ -484,7 +484,10 @@ X_FRAME_OPTIONS = "DENY"
 # Static files (CSS, JavaScript, Images)
 STATIC_ROOT = os.path.join(NAUTOBOT_ROOT, "static")
 STATIC_URL = "static/"
-STATICFILES_DIRS = (os.path.join(BASE_DIR, "project-static"),)
+STATICFILES_DIRS = (
+    os.path.join(BASE_DIR, "project-static"),
+    os.path.join(os.path.dirname(BASE_DIR), "nautobot_ui", "build", "static"),
+)
 
 # Media
 MEDIA_URL = "media/"

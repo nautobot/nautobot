@@ -1,6 +1,6 @@
 import Form from "react-bootstrap/Form"
 import Table from "react-bootstrap/Table"
-import TableItem from "./BSTableItem"
+import BSTableItem from "./BSTableItem"
 
 export default function NautobotTable({ data, headers }) {
   return (
@@ -23,7 +23,7 @@ export default function NautobotTable({ data, headers }) {
             </td>
             {headers.map((header, idx) => (
               <td key={idx}>
-                <TableItem
+                <BSTableItem
                   name={header.name}
                   obj={item[header.name]}
                   url={window.location.pathname + item["id"]}

@@ -1,10 +1,12 @@
-import Badge from 'react-bootstrap/Badge';
+// import Badge from 'react-bootstrap/Badge';
+import { faMinus } from "@fortawesome/free-solid-svg-icons";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { Link } from "react-router-dom";
 
 export default function BSTableItem({ name, obj, url, link = false }) {
   let display = ""
   if (obj == null) {
-    display = "—"
+    display = <FontAwesomeIcon icon={faMinus} />
   } else if (Array.isArray(obj)) {
     display = JSON.stringify(obj)
     if (typeof obj[0] == "object") {
@@ -16,11 +18,11 @@ export default function BSTableItem({ name, obj, url, link = false }) {
     } else {
       display = obj.join(", ")
     }
-  } else if (typeof obj == "object") {
+  } else if (typeof obj === "object") {
     display = obj.display || obj.label
   } else {
     if (obj === "") {
-      display = "—"
+      display = <FontAwesomeIcon icon={faMinus} />
     } else {
       display = obj
     }

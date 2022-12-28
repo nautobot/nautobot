@@ -2,7 +2,6 @@ from django.templatetags.static import static
 from django.urls import path
 from django.views.generic import RedirectView
 
-from nautobot.core.views.generic import ReactListView, ReactObjectView
 from nautobot.extras.views import ObjectChangeLogView, ObjectDynamicGroupsView, ObjectNotesView
 
 from example_plugin import views
@@ -14,7 +13,7 @@ app_name = "example_plugin"
 urlpatterns = [
     path("", views.ExamplePluginHomeView.as_view(), name="home"),
     path("config/", views.ExamplePluginConfigView.as_view(), name="config"),
-    path("models/", ReactListView.as_view(), name="examplemodel_list"),
+    path("models/", views.ExampleModelListView.as_view(), name="examplemodel_list"),
     path("models/add/", views.ExampleModelEditView.as_view(), name="examplemodel_add"),
     path(
         "models/edit/",
@@ -31,7 +30,7 @@ urlpatterns = [
         views.ExampleModelBulkImportView.as_view(),
         name="examplemodel_import",
     ),
-    path("models/<uuid:pk>/", ReactObjectView.as_view(), name="examplemodel"),
+    path("models/<uuid:pk>/", views.ExampleModelView.as_view(), name="examplemodel"),
     path(
         "models/<uuid:pk>/edit/",
         views.ExampleModelEditView.as_view(),
@@ -60,7 +59,7 @@ urlpatterns = [
         name="examplemodel_notes",
         kwargs={"model": ExampleModel},
     ),
-    path("other-models/", ReactListView.as_view(), name="anotherexamplemodel_list"),
+    path("other-models/", views.AnotherExampleModelListView.as_view(), name="anotherexamplemodel_list"),
     path("other-models/add/", views.AnotherExampleModelEditView.as_view(), name="anotherexamplemodel_add"),
     path(
         "other-models/edit/",
@@ -72,7 +71,7 @@ urlpatterns = [
         views.AnotherExampleModelBulkDeleteView.as_view(),
         name="anotherexamplemodel_bulk_delete",
     ),
-    path("other-models/<uuid:pk>/", ReactObjectView.as_view(), name="anotherexamplemodel"),
+    path("other-models/<uuid:pk>/", views.AnotherExampleModelView.as_view(), name="anotherexamplemodel"),
     path(
         "other-models/<uuid:pk>/edit/",
         views.AnotherExampleModelEditView.as_view(),

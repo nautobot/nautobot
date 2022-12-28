@@ -1,5 +1,7 @@
 import Card from "react-bootstrap/Card"
 import CardHeader from "react-bootstrap/CardHeader"
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome"
+import { faCheck, faMinus, faXmark } from "@fortawesome/free-solid-svg-icons"
 import { nautobot_url } from "../../index"
 import Tab from "react-bootstrap/Tab"
 import Table from "react-bootstrap/Table"
@@ -8,9 +10,7 @@ import { useParams } from "react-router-dom"
 import useSWR from "swr"
 
 import create_plugin_tab from "@components/plugins/PluginTab"
-
 import PluginComponents from "@components/core/Plugins"
-
 import { PluginFullWidthComponentsWithProps } from "@components/plugins/PluginFullWidthComponents"
 
 const fetcher = (url) => fetch(url, { credentials: "include" }).then((res) => res.ok ? res.json() : null)
@@ -31,6 +31,17 @@ const fetcherTabs = (url) => fetch(url, { credentials: "include" }).then((res) =
   })
 })
 
+function render_value(value) {
+  switch (typeof value) {
+    case "object":
+      return value === null ? <FontAwesomeIcon icon={faMinus} /> : Array.isArray(value) ? <ul></ul> : value["display"]
+    case "boolean":
+      return value ? <FontAwesomeIcon icon={faCheck} /> : <FontAwesomeIcon icon={faXmark} />
+    default:
+      return value === "" ? <FontAwesomeIcon icon={faMinus} /> : value
+  }
+}
+
 function RenderRow(props) {
   var key = props.identifier;
   var value = props.value;
@@ -39,27 +50,15 @@ function RenderRow(props) {
     return null;
   }
 
+  if (key[0] === "_") return null
+
   // "foo_bar" --> "Foo Bar"
-  key = key.split("_").map((x) => (x[0].toUpperCase() + x.slice(1))).join(" ");
+  key = key.split("_").map((x) => (x ? x[0].toUpperCase() + x.slice(1) : "")).join(" ");
 
   return (
     <tr>
       <td>{key}</td>
-      <td>{
-        value === null || value === "" ?
-          "—" :
-          Array.isArray(value) ?
-            <ul className="list-unstyled">{value.map((item) =>
-              typeof (item) == "object" ? <li>{item["display"]}</li> : <li>{item}</li>
-            )}</ul> :
-            typeof (value) == "object" ?
-              value["display"] :
-              typeof (value) == "array" ?
-                value.join(", ") :
-                typeof (value) == "boolean" ?
-                  value ? "✅" : "🚫" :
-                  value
-      }</td>
+      <td>{render_value(value)}</td>
     </tr>
   );
 }
@@ -98,7 +97,7 @@ export default function ObjectRetrieve({ api_url }) {
           </CardHeader>
           <Table hover>
             <tbody>
-              {Object.keys(objectData).map((key) => <RenderRow key={key} identifier={key} value={objectData[key]} advanced />)}
+              {Object.keys(objectData).map((key, idx) => <RenderRow identifier={key} value={objectData[key]} advanced key={idx} />)}
             </tbody>
           </Table>
         </Card>
@@ -115,16 +114,16 @@ export default function ObjectRetrieve({ api_url }) {
           </CardHeader>
           <Table hover>
             <tbody>
-              {Object.keys(objectData).map((key) => <RenderRow key={key} identifier={key} value={objectData[key]} advanced={false} />)}
+              {Object.keys(objectData).map((key, idx) => <RenderRow identifier={key} value={objectData[key]} advanced={false} key={idx} />)}
             </tbody>
           </Table>
         </Card>
       </Tab>
       <Tab key="notes" eventKey="notes" title="Notes">
+        Notes to be rendered here.
       </Tab>
       <Tab key="change_log" eventKey="change_log" title="Change Log">
-        <br />
-        <div dangerouslySetInnerHTML={{ __html: "<p>Your html code here.<p>" }} />
+        <p>Changelog to be rendered here</p>
       </Tab>
       {pluginConfig}
     </Tabs>
