@@ -88,9 +88,9 @@ export default function ObjectRetrieve({ api_url }) {
       <Tab key="main" eventKey="main" title="Main">
         <br />
         <Card>
-          <Card.CardHeader>
+          <Card.Header>
             <strong>Main</strong>
-          </Card.CardHeader>
+          </Card.Header>
           <Table hover>
             <tbody>
               {Object.keys(objectData).map((key, idx) => <RenderRow identifier={key} value={objectData[key]} advanced={false} key={idx} />)}
@@ -105,9 +105,9 @@ export default function ObjectRetrieve({ api_url }) {
       <Tab key="advanced" eventKey="advanced" title="Advanced">
         <br />
         <Card>
-          <Card.CardHeader>
+          <Card.Header>
             <strong>Advanced</strong>
-          </Card.CardHeader>
+          </Card.Header>
           <Table hover>
             <tbody>
               {Object.keys(objectData).map((key, idx) => <RenderRow identifier={key} value={objectData[key]} advanced key={idx} />)}
