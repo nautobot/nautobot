@@ -19,8 +19,6 @@ class Command(RunServerCommand):
         jsconfig_file_path = os.path.join(nautobot_path, "nautobot_ui", "jsconfig.json")
         jsconfig_base_file_path = os.path.join(nautobot_path, "nautobot_ui", "jsconfig-base.json")
 
-        pathlib.Path(router_file_path).touch()
-
         with open(jsconfig_base_file_path, "r", encoding="utf-8") as base_config_file:
             jsconfig = json.load(base_config_file)
 
@@ -38,7 +36,6 @@ class Command(RunServerCommand):
         with open(jsconfig_file_path, "w", encoding="utf-8") as generated_config_file:
             json.dump(jsconfig, generated_config_file, indent=4)
 
-
         plugin_imports_base_file_path = os.path.join(nautobot_path, "nautobot_ui", "plugin_imports.js.j2")
         plugin_imports_final_file_path = os.path.join(nautobot_path, "nautobot_ui", "src", "plugin_imports.js")
 
@@ -49,5 +46,7 @@ class Command(RunServerCommand):
 
         with open(plugin_imports_final_file_path, "w", encoding="utf-8") as generated_import_file:
             generated_import_file.write(content)
+
+        pathlib.Path(router_file_path).touch()
 
         super().inner_run(*args, **options)
