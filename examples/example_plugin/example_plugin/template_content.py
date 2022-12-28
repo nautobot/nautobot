@@ -75,6 +75,7 @@ class SiteContent(PluginTemplateExtension):
                 </div>
                 <div class="card-body">
                     <span>Check me out! I'll show up after anything defined in the detail view template.</span>
+                    /dcim/devices/[pk]/?tab=plugin_tab_2
                 </div>
             </div>
         """

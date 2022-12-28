@@ -11,6 +11,7 @@ services:
     user: node
     volumes:
       - ../nautobot_ui/:/opt/node/nautobot
+      - ../:/source
     command: >
       bash -c "npm install && npm run start"
   nautobot:

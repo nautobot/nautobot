@@ -9,6 +9,8 @@ import useSWR from "swr"
 
 import create_plugin_tab from "@components/plugins/PluginTab"
 
+import PluginFullWidthComponents from "@components/plugins/PluginFullWidthComponents"
+
 const fetcher = (url) => fetch(url, { credentials: "include" }).then((res) => res.ok ? res.json() : null)
 const fetcherHTML = (url) => fetch(url, { credentials: "include" }).then((res) => res.ok ? res.text() : null)
 const fetcherTabs = (url) => fetch(url, { credentials: "include" }).then((res) => {
@@ -115,7 +117,9 @@ export default function ObjectRetrieve({ api_url }) {
             </Table>
           </Card>
         </Tab>
-        <Tab eventKey="notes" title="Notes" />
+        <Tab eventKey="notes" title="Notes">
+          {PluginFullWidthComponents}
+        </Tab>
         <Tab eventKey="change_log" title="Change Log">
           <br />
           <div dangerouslySetInnerHTML={{ __html: "<p>Your html code here.<p>" }} />
