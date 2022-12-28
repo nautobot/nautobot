@@ -22,7 +22,7 @@ class RenderTabContent extends React.Component {
             var doc = parser.parseFromString(payload, 'text/html');
 
             this.setState({
-                html: doc.getElementById('legacy-content').outerHTML
+                html: doc.getElementById('legacy-content').innerHTML
             })
         }
         fetchTabHTML()
