@@ -3,6 +3,7 @@ import { faMinus } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { Link } from "react-router-dom";
 
+
 export default function BSTableItem({ name, obj, url, link = false }) {
   let display = ""
   if (obj == null) {

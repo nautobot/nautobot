@@ -1,6 +1,7 @@
-import Form from "react-bootstrap/Form"
-import Table from "react-bootstrap/Table"
-import BSTableItem from "./BSTableItem"
+import { Form, Table } from "react-bootstrap"
+
+import BSTableItem from "@components/core/BSTableItem"
+
 
 export default function NautobotTable({ data, headers }) {
   return (

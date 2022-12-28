@@ -1,10 +1,9 @@
-import Container from "react-bootstrap/Container"
-import { Link, NavLink } from "react-router-dom";
-import Nav from "react-bootstrap/Nav"
-import Navbar from "react-bootstrap/Navbar"
-import NavDropdown from "react-bootstrap/NavDropdown"
+import { Container, Nav, Navbar, NavDropdown } from "react-bootstrap"
+import { Link, NavLink } from "react-router-dom"
 import useSWR from "swr"
-import { nautobot_url } from "../../index"
+
+import { nautobot_url } from "src/index"
+
 
 const fetcher = (url) => fetch(url, { credentials: "include" }).then((res) => res.json());
 

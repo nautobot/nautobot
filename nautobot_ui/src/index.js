@@ -1,12 +1,15 @@
-import React from 'react';
-import ReactDOM from 'react-dom/client';
-import reportWebVitals from './reportWebVitals';
-import { BrowserRouter } from "react-router-dom";
-import NautobotRouter from './router';
+import React from "react"
+import ReactDOM from "react-dom/client"
+import { BrowserRouter } from "react-router-dom"
 
-import "./styles/globals.css"
+import "src/styles/globals.css"
 import "bootstrap/dist/css/bootstrap.css"
+
 import Layout from '@components/layouts/BSLayout';
+import reportWebVitals from "src/reportWebVitals"
+import NautobotRouter from "src/router"
+
+
 const dev = process.env.NODE_ENV !== "production"
 export const nautobot_url = dev ? "http://localhost:8080" : ""
 

@@ -1,6 +1,7 @@
 import { Alert, Container } from "react-bootstrap"
-import Menu from "../common/BSNavBar"
-import { useLocation } from 'react-router-dom';
+import { useLocation } from "react-router-dom"
+
+import Menu from "@components/common/BSNavBar"
 
 
 export default function Layout({ children }) {

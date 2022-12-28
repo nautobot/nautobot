@@ -1,8 +1,10 @@
 import { Col, Container, Row } from "react-bootstrap"
-import NautobotTable from "../components/core/BSTable"
-import Paginator from "../components/common/paginator"
-import useSWR from "swr"
 import { useLocation, useSearchParams } from "react-router-dom"
+import useSWR from "swr"
+
+import NautobotTable from "@components/core/BSTable"
+import Paginator from "@components/common/paginator"
+
 
 const fetcher = (...urls) => {
   const f = url => fetch(url, { credentials: "include" }).then(r => r.json())

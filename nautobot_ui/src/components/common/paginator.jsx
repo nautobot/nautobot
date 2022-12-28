@@ -1,6 +1,6 @@
-import { Col, Row } from "react-bootstrap";
-import Pagination from 'react-bootstrap/Pagination';
-import PaginatorForm from './paginator_form';
+import { Col, Pagination, Row } from "react-bootstrap"
+
+import PaginatorForm from "@components/common/paginator_form"
 
 
 export default function Paginator({ url, data_count, page_size, active_page }) {

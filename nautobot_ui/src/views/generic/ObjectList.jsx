@@ -1,6 +1,8 @@
-import ListViewTemplate from "../BSListViewTemplate"
-import { nautobot_url } from "../../index"
 import { useParams } from "react-router-dom"
+
+import ListViewTemplate from "@views/BSListViewTemplate"
+import { nautobot_url } from "src/index"
+
 
 export default function BSListView({ list_url }) {
   const { app_name, model_name } = useParams()

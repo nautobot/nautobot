@@ -1,17 +1,14 @@
-import Card from "react-bootstrap/Card"
-import CardHeader from "react-bootstrap/CardHeader"
+import { Card, Tab, Table, Tabs } from "react-bootstrap"
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome"
 import { faCheck, faMinus, faXmark } from "@fortawesome/free-solid-svg-icons"
-import { nautobot_url } from "../../index"
-import Tab from "react-bootstrap/Tab"
-import Table from "react-bootstrap/Table"
-import Tabs from "react-bootstrap/Tabs"
 import { useParams } from "react-router-dom"
 import useSWR from "swr"
 
 import create_plugin_tab from "@components/plugins/PluginTab"
 import PluginComponents from "@components/core/Plugins"
 import { PluginFullWidthComponentsWithProps } from "@components/plugins/PluginFullWidthComponents"
+import { nautobot_url } from "src/index"
+
 
 const fetcher = (url) => fetch(url, { credentials: "include" }).then((res) => res.ok ? res.json() : null)
 const fetcherHTML = (url) => fetch(url, { credentials: "include" }).then((res) => res.ok ? res.text() : null)
@@ -91,9 +88,9 @@ export default function ObjectRetrieve({ api_url }) {
       <Tab key="main" eventKey="main" title="Main">
         <br />
         <Card>
-          <CardHeader>
+          <Card.CardHeader>
             <strong>Main</strong>
-          </CardHeader>
+          </Card.CardHeader>
           <Table hover>
             <tbody>
               {Object.keys(objectData).map((key, idx) => <RenderRow identifier={key} value={objectData[key]} advanced={false} key={idx} />)}
@@ -108,9 +105,9 @@ export default function ObjectRetrieve({ api_url }) {
       <Tab key="advanced" eventKey="advanced" title="Advanced">
         <br />
         <Card>
-          <CardHeader>
+          <Card.CardHeader>
             <strong>Advanced</strong>
-          </CardHeader>
+          </Card.CardHeader>
           <Table hover>
             <tbody>
               {Object.keys(objectData).map((key, idx) => <RenderRow identifier={key} value={objectData[key]} advanced key={idx} />)}
