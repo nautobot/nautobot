@@ -13,6 +13,6 @@ services:
       - ../nautobot_ui/:/opt/node/nautobot
       - ../:/source
     command: >
-      bash -c "npm install && npm run start"
+      bash -c "npm install && npm run build && npm run start"
   nautobot:
     command: nautobot-server ourrunserver 0.0.0.0:8080 --insecure

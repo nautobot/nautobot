@@ -12,7 +12,6 @@ class RenderTabContent extends React.Component {
             html: ""
         }
     }
-    // meatandpotatoes
 
     componentDidMount() {
         const fetchTabHTML = async () => {
@@ -23,7 +22,7 @@ class RenderTabContent extends React.Component {
             var doc = parser.parseFromString(payload, 'text/html');
 
             this.setState({
-                html: doc.getElementById('meatandpotatoes').outerHTML
+                html: doc.getElementById('legacy-content').outerHTML
             })
         }
         fetchTabHTML()

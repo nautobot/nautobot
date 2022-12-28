@@ -245,5 +245,4 @@ class NautobotHTMLRenderer(renderers.BrowsableAPIRenderer):
         # See form_valid() for self.action == "bulk_create".
         self.template = data.get("template", view.get_template_name())
 
-        print(data)
         return super().render(data, accepted_media_type=accepted_media_type, renderer_context=renderer_context)
