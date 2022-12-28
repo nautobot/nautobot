@@ -31,8 +31,10 @@ function RenderRow(props) {
     return null;
   }
 
+  if (key[0] === "_") return null
+
   // "foo_bar" --> "Foo Bar"
-  key = key.split("_").map((x) => (x[0].toUpperCase() + x.slice(1))).join(" ");
+  key = key.split("_").map((x) => (x ? x[0].toUpperCase() + x.slice(1) : "")).join(" ");
 
   return (
     <tr>
