@@ -5,8 +5,8 @@ const PluginFullWidthComponents = PluginComponents['FullWidthComponents'].map((F
 );
 
 export function PluginFullWidthComponentsWithProps(props) {
-    return PluginComponents['FullWidthComponents'].map((FullWidthComponent) =>
-        <FullWidthComponent {...props}/>
+    return PluginComponents['FullWidthComponents'].map((FullWidthComponent, idx) =>
+        <FullWidthComponent {...props} key={idx} />
     );
 }
 export default PluginFullWidthComponents;
