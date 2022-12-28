@@ -18,6 +18,15 @@ Added Site Model Fields to Location. Location Model now has `asn`, `comments`, `
 
 #### Collapse Region and Site Models into Location ([#2517](https://github.com/nautobot/nautobot/issues/2517))
 
+##### Initial Data Migration
+
+`Site` and `Region` models are removed in v2.0. As a result, the existing `Site` and `Region` data will be moved to `LocationTypes` and `Locations`. Here is what to expect:
+
+1. If you do not have any `Site` and `Region` instances in your existing database, running this data migration will do nothing.
+2. If you only have `Region` instances in your existing database, a `Region` LocationType will be created and for each legacy `Region` instance, a corresponding `Location` instance with the same attributes (`name`, `description` and etc) will be created.
+3. If you only have `Site` instances in your existing database, a `Site` LocationType will be created and every root level `LocationType` in your database will have the new `Site` LocationType as their parent. For each legacy `Site` instance, a corresponding `Location` instance with the same attributes (`name`, `description`, `tenant`, `facility`, `asn`, `latitude`, `longitude` and etc) will be created. In addition to that, models (`CircuitTermination`, `Device`, `PowerPanel`, `RackGroup`, `Rack`, `Prefix`, `VLANGroup`, `VLAN`, `Cluster`) with an old `Site` instance assigned without its `location` attribute specified will have its `location` point to the new `Location` of `Site` LocationType. These Models with `location` attribute specified will remain unchanged.
+4. If you have both `Site` and `Region` instances in your existing database, a `Region` LocationType will be created and for each legacy `Region` instance, a corresponding `Location` instance with the same attributes (`name`, `description` and etc) will be created. A `Site` LocationType will be created with the new `Region` LocationType as the parent and every root level `LocationType` in your database will have the new `Site` LocationType as a parent. For each legacy `Site` instance, a corresponding `Location` instance with the same attributes (`name`, `description`, `tenant`, `facility`, `asn`, `latitude`, `longitude` and etc) will be created. If you have `Site` instances in your database without a `Region` assigned to them, one additional location named "Global Region" of LocationType `Region` will be created and all the locations of LocationType `Site` created from the legacy region-less `Site` instances will have "Global Region" as their parent. In addition to that, models (`CircuitTermination`, `Device`, `PowerPanel`, `RackGroup`, `Rack`, `Prefix`, `VLANGroup`, `VLAN`, `Cluster`) with an old `Site` instance assigned but without its `location` attribute specified will have its `location` point to the new `Location` of `Site` LocationType. These Models with `location` attribute specified will remain unchanged.
+
 #### Renamed Filter Fields ([#2804](https://github.com/nautobot/nautobot/pull/2804))
 
 Some filter fields have been renamed to reflect their functionalities better.
