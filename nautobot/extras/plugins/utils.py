@@ -173,7 +173,6 @@ def load_plugin_ui(plugin, settings):
         import_lines = lines[import_lines_index[0]: import_lines_index[1] + 1]
 
     # Check if plugin module has been imported
-    plugin_import_name = plugin_name_without_ui_suffix.replace("_", " ").title().replace(" ", "")
     import_statement = f'import {{ navigation as {plugin_name_without_ui_suffix}_nav }} from "{plugin_ui_alias}/navigation";\n'
     if list(filter(lambda line: import_statement in line, import_lines)):
         # Skip because plugin route exists

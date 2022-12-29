@@ -1,6 +1,6 @@
 import importlib
-import json
 import os
+import re
 
 import simplejson
 from django.core.management.base import BaseCommand
@@ -88,9 +88,8 @@ class Command(BaseCommand):
                 file.write(simplejson.dumps((nautobot_ui_config), indent=4))
                 pass
 
-            plugin_name_without_ui_suffix = plugin_ui_name.replace("_ui", "")
+            plugin_name_without_ui_suffix = re.sub(r"_ui$", "", plugin_ui_name)
             plugin_alias = f"@{plugin_name_without_ui_suffix}"
-            plugin_component = plugin_name_without_ui_suffix.replace("_", " ").title().replace(" ", "")
 
             # Add router.js to plugin ui root
             with open("navigation.js", "w") as file:
