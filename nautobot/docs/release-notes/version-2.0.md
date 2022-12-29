@@ -8,7 +8,7 @@ If you are a user migrating from Nautobot v1.X, please refer to the ["Upgrading 
 
 ## Release Overview
 
-### Added 
+### Added
 
 #### Generic Role Model ([#1063](https://github.com/nautobot/nautobot/issues/1063))
 
