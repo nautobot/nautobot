@@ -29,4 +29,3 @@ services:
       - nautobot
   nautobot:
     command: nautobot-server ourrunserver 0.0.0.0:8080 --insecure
-    # while :; do echo -n "8080: "; netstat -an | grep '8080.*ESTA' | wc -l; echo -n "db: "; netstat -an | grep '5432.*ESTA' | wc -l; sleep 4; done
