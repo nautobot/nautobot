@@ -110,7 +110,7 @@ class RegionTestCase(ViewTestCases.OrganizationalObjectViewTestCase):
     def setUpTestData(cls):
 
         # Create three Regions
-        parent_region = Region.objects.filter(parent__isnull=True).first()
+        parent_region = Region.objects.filter(parent__isnull=True).last()
         regions = Region.objects.all()[:3]
 
         cls.form_data = {

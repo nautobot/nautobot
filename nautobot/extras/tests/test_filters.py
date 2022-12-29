@@ -1558,10 +1558,10 @@ class RoleTestCase(FilterTestCases.NameSlugFilterTestCase):
     def test_weight(self):
         """Test the weight search field."""
         roles = Role.objects.filter(weight=100)
-        params = {"wight": [100]}
+        params = {"weight": [100]}
         self.assertQuerysetEqualAndNotEmpty(
             self.filterset(params, self.queryset).qs,
-            roles,
+            roles.distinct(),
         )
 
     def test_search(self):
