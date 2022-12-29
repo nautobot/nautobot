@@ -6,7 +6,7 @@ import useSWR from "swr"
 
 import create_plugin_tab from "@components/plugins/PluginTab"
 import PluginComponents from "@components/core/Plugins"
-import { PluginFullWidthComponentsWithProps } from "@components/plugins/PluginFullWidthComponents"
+import PluginFullWidthComponentsWithProps from "@components/plugins/PluginFullWidthComponents"
 import { nautobot_url } from "src/index"
 
 
@@ -73,6 +73,8 @@ export default function ObjectRetrieve({ api_url }) {
   if (!objectData) return <></>
   if (!pluginConfig) return <></>
 
+  const route_name = `${app_name}:${model_name}`;
+
   const default_view = (<>
     <h1>{objectData.name}</h1>
     <p>
@@ -100,7 +102,7 @@ export default function ObjectRetrieve({ api_url }) {
         <br />
         <div dangerouslySetInnerHTML={{ __html: pluginHTML }} />
         <br />
-        {PluginFullWidthComponentsWithProps(objectData)}
+        {PluginFullWidthComponentsWithProps(route_name, objectData)}
       </Tab>
       <Tab key="advanced" eventKey="advanced" title="Advanced">
         <br />
@@ -126,9 +128,8 @@ export default function ObjectRetrieve({ api_url }) {
   </>)
 
   let return_view = default_view;
-  const lookup_name = `${app_name}:${model_name}`;
-  if (lookup_name in PluginComponents['CustomViews'] && PluginComponents['CustomViews'][lookup_name] !== null) {
-    const CustomView = PluginComponents['CustomViews'][lookup_name]
+  if (PluginComponents.CustomViews?.[route_name] && "retrieve" in PluginComponents.CustomViews?.[route_name]) {
+    const CustomView = PluginComponents.CustomViews[route_name].retrieve
     return_view = <CustomView {...objectData} />
   }
 

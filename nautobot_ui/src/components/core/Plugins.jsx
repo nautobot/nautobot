@@ -17,15 +17,28 @@ function my_import_as_function(module_name, component_name) {
 
 function get_components() {
     var base = {}
-    base["FullWidthComponents"] = []
-    base["CustomViews"] = { "dcim:sites": null }
+    base["FullWidthComponents"] = {}
+    base["CustomViews"] = {}
 
     for (const [plugin_name, import_promise] of Object.entries(NautobotPlugins)) {
-        base["FullWidthComponents"].push(lazy(() => my_import_as_function(plugin_name, 'PluginFullWidthPageComponent')))
-    }
-
-    for (const [plugin_name, import_promise] of Object.entries(NautobotPlugins)) {
-        base["CustomViews"]["dcim:sites"] = lazy(() => my_import_as_function(plugin_name, 'PluginCustomView'))
+        import_promise.then((value) => {
+            if (value?.default?.view_overrides) {
+                Object.entries(value.default.view_overrides).map(([route, views]) => {
+                    Object.entries(views).map(([view_action, component]) => {
+                        if (!base["CustomViews"][route]) base["CustomViews"][route] = {}
+                        base["CustomViews"][route][view_action] = lazy(() => my_import_as_function(plugin_name, component))
+                    })
+                })
+            }
+            if (value?.default?.full_width_components) {
+                Object.entries(value.default.full_width_components).map(([route, components]) => {
+                    if (!base["FullWidthComponents"][route]) base["FullWidthComponents"][route] = []
+                    components.map((component) => {
+                        base["FullWidthComponents"][route].push(lazy(() => my_import_as_function(plugin_name, component)))
+                    })
+                })
+            }
+        })
     }
 
     return base;
