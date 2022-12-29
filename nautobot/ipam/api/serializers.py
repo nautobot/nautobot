@@ -92,6 +92,7 @@ class VRFSerializer(NautobotModelSerializer, TaggedObjectSerializer):
             "export_targets",
             "ipaddress_count",
             "prefix_count",
+            "web_url",
         ]
 
 
@@ -111,6 +112,7 @@ class RouteTargetSerializer(NautobotModelSerializer, TaggedObjectSerializer):
             "name",
             "tenant",
             "description",
+            "web_url",
         ]
 
 
@@ -132,6 +134,7 @@ class RIRSerializer(NautobotModelSerializer):
             "is_private",
             "description",
             "aggregate_count",
+            "web_url",
         ]
 
 
@@ -152,6 +155,7 @@ class AggregateSerializer(NautobotModelSerializer, TaggedObjectSerializer):
             "tenant",
             "date_added",
             "description",
+            "web_url",
         ]
         read_only_fields = ["family"]
 
@@ -176,6 +180,7 @@ class RoleSerializer(NautobotModelSerializer):
             "description",
             "prefix_count",
             "vlan_count",
+            "web_url",
         ]
 
 
@@ -195,6 +200,7 @@ class VLANGroupSerializer(NautobotModelSerializer):
             "location",
             "description",
             "vlan_count",
+            "web_url",
         ]
         # TODO: Remove if/when slug is globally unique. This would be a breaking change.
         validators = []
@@ -237,6 +243,7 @@ class VLANSerializer(NautobotModelSerializer, TaggedObjectSerializer, StatusMode
             "role",
             "description",
             "prefix_count",
+            "web_url",
         ]
         validators = []
 
@@ -285,6 +292,7 @@ class PrefixSerializer(NautobotModelSerializer, TaggedObjectSerializer, StatusMo
             "role",
             "is_pool",
             "description",
+            "web_url",
         ]
         read_only_fields = ["family"]
 
@@ -369,6 +377,7 @@ class IPAddressSerializer(NautobotModelSerializer, TaggedObjectSerializer, Statu
             "nat_outside",
             "dns_name",
             "description",
+            "web_url",
         ]
         read_only_fields = ["family"]
 
@@ -443,4 +452,5 @@ class ServiceSerializer(NautobotModelSerializer, TaggedObjectSerializer):
             "protocol",
             "ipaddresses",
             "description",
+            "web_url",
         ]
