@@ -6,6 +6,7 @@
 
 | Model         | Renamed Field | New Name     |
 |---------------|---------------|--------------|
+| Device        | `device_role` | `role`       |
 | InventoryItem | `child_items` | `children`   |
 |               | `level`       | `tree_depth` |
 | RackGroup     | `level`       | `tree_depth` |
