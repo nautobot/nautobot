@@ -1,6 +1,6 @@
-import { Col, Form } from "react-bootstrap";
-import React, { useState } from "react";
-import { useSearchParams } from 'react-router-dom';
+import React, { useState } from "react"
+import { Col, Form } from "react-bootstrap"
+import { useSearchParams } from "react-router-dom"
 
 
 export default function PaginatorForm({ start, end, total_count }) {

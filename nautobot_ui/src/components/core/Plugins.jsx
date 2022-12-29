@@ -1,6 +1,7 @@
 import { lazy } from "react"
 
-import NautobotPlugins from "../../plugin_imports"
+import NautobotPlugins from "src/plugin_imports"
+
 
 function EmptyElement() {
     return (<></>)
@@ -17,7 +18,7 @@ function my_import_as_function(module_name, component_name) {
 function get_components() {
     var base = {}
     base["FullWidthComponents"] = []
-    base["CustomViews"] = {"dcim:sites": null}
+    base["CustomViews"] = { "dcim:sites": null }
 
     for (const [plugin_name, import_promise] of Object.entries(NautobotPlugins)) {
         base["FullWidthComponents"].push(lazy(() => my_import_as_function(plugin_name, 'PluginFullWidthPageComponent')))

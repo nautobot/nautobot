@@ -1,7 +1,8 @@
-import React from "react";
-import Tab from "react-bootstrap/Tab"
-import { nautobot_url } from "../../index"
-import useSWR from "swr"
+import React from "react"
+import { Tab } from "react-bootstrap"
+
+import { nautobot_url } from "src/index"
+
 
 class RenderTabContent extends React.Component {
     constructor(props) {
@@ -28,14 +29,14 @@ class RenderTabContent extends React.Component {
         fetchTabHTML()
     }
     render() {
-        
-        return (<div dangerouslySetInnerHTML={{__html: this.state.html}} />);
+
+        return (<div dangerouslySetInnerHTML={{ __html: this.state.html }} />);
     }
 }
 
 export default function create_plugin_tab(props) {
-    let tab=props.tab
+    let tab = props.tab
     return (
-        <Tab title={tab.title} eventKey={tab.title}><RenderTabContent tab={tab}/></Tab>
+        <Tab title={tab.title} eventKey={tab.title}><RenderTabContent tab={tab} /></Tab>
     )
 }

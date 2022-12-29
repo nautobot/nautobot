@@ -1,10 +1,10 @@
-import { useRoutes } from "react-router-dom";
-// import { lazy } from 'react';
+import { useRoutes } from "react-router-dom"
+// import { lazy } from 'react'
 
-import Home from "@views/Home";
-import ListView from "@views/generic/ObjectList";
-import DetailView from "@views/generic/ObjectRetrieve";
-import InstalledPlugins from "@views/InstalledPlugins";
+import Home from "@views/Home"
+import ListView from "@views/generic/ObjectList"
+import DetailView from "@views/generic/ObjectRetrieve"
+import InstalledPlugins from "@views/InstalledPlugins"
 
 
 

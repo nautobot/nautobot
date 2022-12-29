@@ -1,29 +1,25 @@
-import Card from "react-bootstrap/Card"
-import CardHeader from "react-bootstrap/CardHeader"
+import { Card, Tab, Table, Tabs } from "react-bootstrap"
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome"
 import { faCheck, faMinus, faXmark } from "@fortawesome/free-solid-svg-icons"
-import { nautobot_url } from "../../index"
-import Tab from "react-bootstrap/Tab"
-import Table from "react-bootstrap/Table"
-import Tabs from "react-bootstrap/Tabs"
 import { useParams } from "react-router-dom"
 import useSWR from "swr"
 
 import create_plugin_tab from "@components/plugins/PluginTab"
 import PluginComponents from "@components/core/Plugins"
 import { PluginFullWidthComponentsWithProps } from "@components/plugins/PluginFullWidthComponents"
+import { nautobot_url } from "src/index"
+
 
 const fetcher = (url) => fetch(url, { credentials: "include" }).then((res) => res.ok ? res.json() : null)
 const fetcherHTML = (url) => fetch(url, { credentials: "include" }).then((res) => res.ok ? res.text() : null)
 const fetcherTabs = (url) => fetch(url, { credentials: "include" }).then((res) => {
   return res.json().then((data) => {
-    // console.log(data)
 
     let tabs = []
     data.tabs.map((tab_top) => {
       Object.keys(tab_top).map(function (tab_key) {
         let tab = tab_top[tab_key]
-        let tab_component = create_plugin_tab({tab: tab})
+        let tab_component = create_plugin_tab({ tab: tab })
         tabs.push(tab_component)
       })
     })
@@ -46,7 +42,7 @@ function RenderRow(props) {
   var key = props.identifier;
   var value = props.value;
 
-  if (["id", "url", "display", "slug", "notes_url"].includes(key) ^ !props.advanced) {
+  if (["id", "url", "display", "slug", "notes_url"].includes(key) ^ !!props.advanced) {
     return null;
   }
 
@@ -72,7 +68,7 @@ export default function ObjectRetrieve({ api_url }) {
   const { data: objectData, error } = useSWR(() => api_url, fetcher)
   const { data: pluginHTML } = useSWR(() => api_url ? api_url + "plugin_full_width_fragment/" : null, fetcherHTML)
   const ui_url = objectData ? `${nautobot_url}${objectData.web_url}?viewconfig=true` : null
-  var { data: pluginConfig } = useSWR(() => ui_url , fetcherTabs)
+  var { data: pluginConfig } = useSWR(() => ui_url, fetcherTabs)
   if (error) return <div>Failed to load {api_url}</div>
   if (!objectData) return <></>
   if (!pluginConfig) return <></>
@@ -92,12 +88,12 @@ export default function ObjectRetrieve({ api_url }) {
       <Tab key="main" eventKey="main" title="Main">
         <br />
         <Card>
-          <CardHeader>
+          <Card.Header>
             <strong>Main</strong>
-          </CardHeader>
+          </Card.Header>
           <Table hover>
             <tbody>
-              {Object.keys(objectData).map((key, idx) => <RenderRow identifier={key} value={objectData[key]} advanced key={idx} />)}
+              {Object.keys(objectData).map((key, idx) => <RenderRow identifier={key} value={objectData[key]} advanced={false} key={idx} />)}
             </tbody>
           </Table>
         </Card>
@@ -109,12 +105,12 @@ export default function ObjectRetrieve({ api_url }) {
       <Tab key="advanced" eventKey="advanced" title="Advanced">
         <br />
         <Card>
-          <CardHeader>
+          <Card.Header>
             <strong>Advanced</strong>
-          </CardHeader>
+          </Card.Header>
           <Table hover>
             <tbody>
-              {Object.keys(objectData).map((key, idx) => <RenderRow identifier={key} value={objectData[key]} advanced={false} key={idx} />)}
+              {Object.keys(objectData).map((key, idx) => <RenderRow identifier={key} value={objectData[key]} advanced key={idx} />)}
             </tbody>
           </Table>
         </Card>
@@ -131,7 +127,7 @@ export default function ObjectRetrieve({ api_url }) {
 
   let return_view = default_view;
   const lookup_name = `${app_name}:${model_name}`;
-  if(lookup_name in PluginComponents['CustomViews'] && PluginComponents['CustomViews'][lookup_name] !== null ) {
+  if (lookup_name in PluginComponents['CustomViews'] && PluginComponents['CustomViews'][lookup_name] !== null) {
     const CustomView = PluginComponents['CustomViews'][lookup_name]
     return_view = <CustomView {...objectData} />
   }
