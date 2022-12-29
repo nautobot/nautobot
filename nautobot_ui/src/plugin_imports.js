@@ -1,6 +1,6 @@
 export const NautobotPlugins = {
 
-    // "example_plugin": import("@example_plugin"),
+    "example_plugin": import("@example_plugin"),
 
 }
 

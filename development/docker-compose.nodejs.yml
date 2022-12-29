@@ -17,12 +17,14 @@ services:
     depends_on:
       nautobot:
         condition: service_healthy
-  nautobot:
-    command: nautobot-server ourrunserver 0.0.0.0:8080 --insecure
   nginx:
     image: nginx
     ports:
       - "8888:80"
     volumes:
       - ./nginx.conf:/etc/nginx/conf.d/default.conf
-      - ../nautobot/project-static/:/opt/nautobot/static/
+    depends_on:
+      - nodejs
+      - nautobot
+  nautobot:
+    command: nautobot-server ourrunserver 0.0.0.0:8080 --insecure
