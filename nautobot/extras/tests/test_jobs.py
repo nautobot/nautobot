@@ -16,7 +16,7 @@ from django.test import override_settings
 from django.test.client import RequestFactory
 from django.utils import timezone
 
-from nautobot.dcim.models import Device, Site
+from nautobot.dcim.models import Site
 from nautobot.extras.choices import (
     JobExecutionType,
     JobResultStatusChoices,
@@ -292,7 +292,7 @@ class JobTest(TransactionTestCase):
         name = "TestObjectVars"
 
         # Prepare the job data
-        role = Role.objects.get_for_model(Device).first()
+        role = Role.objects.first()
         data = {
             "role": {"name": role.name},
             "roles": [role.pk],
