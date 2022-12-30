@@ -3,6 +3,7 @@ from django.db.models import Q
 import django_filters
 from django_filters.utils import verbose_lookup_expr
 
+from nautobot.dcim.models import Device
 from nautobot.extras.choices import (
     CustomFieldFilterLogicChoices,
     CustomFieldTypeChoices,
@@ -32,6 +33,18 @@ from nautobot.utilities.constants import (
     FILTER_NUMERIC_BASED_LOOKUP_MAP,
 )
 from nautobot.utilities.filters import NaturalKeyOrPKMultipleChoiceFilter
+from nautobot.virtualization.models import VirtualMachine
+
+
+class ConfigContextRoleFilter(NaturalKeyOrPKMultipleChoiceFilter):
+    """Limit role choices to the available role choices for Device and VM"""
+
+    def __init__(self, *args, **kwargs):
+        kwargs.setdefault("to_field_name", "slug")
+        kwargs.setdefault("queryset", Role.objects.get_for_models([Device, VirtualMachine]))
+        kwargs.setdefault("label", "Role (slug or ID)")
+
+        super().__init__(*args, **kwargs)
 
 
 class CustomFieldModelFilterSetMixin(django_filters.FilterSet):

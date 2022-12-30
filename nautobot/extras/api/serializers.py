@@ -164,7 +164,6 @@ class NautobotModelSerializer(
     """
 
 
-# TODO(timizuo): Cannot be moved to core cause of partial import error
 class RoleSerializerField(LimitQuerysetChoicesSerializerMixin, NestedRoleSerializer):
     """NestedSerializer field for `Role` object fields."""
 

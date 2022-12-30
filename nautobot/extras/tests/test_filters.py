@@ -72,7 +72,7 @@ from nautobot.ipam.models import IPAddress, VLAN
 from nautobot.tenancy.models import Tenant, TenantGroup
 from nautobot.utilities.choices import ColorChoices
 from nautobot.utilities.testing import FilterTestCases
-from nautobot.virtualization.models import Cluster, ClusterGroup, ClusterType
+from nautobot.virtualization.models import Cluster, ClusterGroup, ClusterType, VirtualMachine
 
 # Use the proper swappable User model
 User = get_user_model()
@@ -245,11 +245,12 @@ class ConfigContextTestCase(FilterTestCases.FilterTestCase):
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
 
     def test_role(self):
-        device_roles = self.device_roles
-        params = {"roles": [device_roles[1].pk, device_roles[2].slug]}
+        device_role = Role.objects.get_for_model(Device).first()
+        vm_role = Role.objects.get_for_model(VirtualMachine).first()
+        params = {"roles": [device_role.pk, vm_role.slug]}
         self.assertQuerysetEqualAndNotEmpty(
             self.filterset(params, self.queryset).qs,
-            self.queryset.filter(roles__in=[device_roles[1], device_roles[2]]).distinct(),
+            self.queryset.filter(roles__in=[vm_role, device_role]).distinct(),
         )
 
     def test_type(self):

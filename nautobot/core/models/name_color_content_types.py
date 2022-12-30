@@ -1,5 +1,6 @@
 from django.contrib.contenttypes.models import ContentType
 from django.db import models
+from django.db.models import Q
 from django.urls import reverse
 
 from nautobot.core.fields import AutoSlugField
@@ -23,6 +24,18 @@ class ContentTypeRelatedQuerySet(RestrictedQuerySet):
         """
         content_type = ContentType.objects.get_for_model(model._meta.concrete_model)
         return self.filter(content_types=content_type)
+
+    # TODO(timizuo): Merge into get_for_model; Cant do this now cause it would require alot
+    #  of refactoring
+    def get_for_models(self, _models):
+        """"
+        Return all `self.model` instances assigned to the given `_models`.
+        """
+        q = Q()
+        for model in _models:
+            q |= Q(app_label=model._meta.app_label, model=model._meta.model_name)
+        content_types = ContentType.objects.filter(q)
+        return self.filter(content_types__in=content_types)
 
     def get_by_natural_key(self, name):
         return self.get(name=name)

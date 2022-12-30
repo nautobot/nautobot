@@ -8,7 +8,7 @@ from django.forms import ModelMultipleChoiceField, inlineformset_factory
 from django.urls.base import reverse
 from django.utils.safestring import mark_safe
 
-from nautobot.dcim.models import DeviceRedundancyGroup, DeviceType, Location, Platform, Region, Site
+from nautobot.dcim.models import Device, DeviceRedundancyGroup, DeviceType, Location, Platform, Region, Site
 from nautobot.tenancy.models import Tenant, TenantGroup
 from nautobot.utilities.deprecation import class_deprecated_in_favor_of
 from nautobot.utilities.forms import (
@@ -36,7 +36,7 @@ from nautobot.utilities.forms import (
     TagFilterField,
 )
 from nautobot.utilities.forms.constants import BOOLEAN_WITH_BLANK_CHOICES
-from nautobot.virtualization.models import Cluster, ClusterGroup
+from nautobot.virtualization.models import Cluster, ClusterGroup, VirtualMachine
 from nautobot.extras.choices import (
     JobExecutionType,
     JobResultStatusChoices,
@@ -215,7 +215,11 @@ class ConfigContextForm(BootstrapMixin, NoteModelFormMixin, forms.ModelForm):
     regions = DynamicModelMultipleChoiceField(queryset=Region.objects.all(), required=False)
     sites = DynamicModelMultipleChoiceField(queryset=Site.objects.all(), required=False)
     locations = DynamicModelMultipleChoiceField(queryset=Location.objects.all(), required=False)
-    roles = DynamicModelMultipleChoiceField(queryset=Role.objects.all(), required=False)
+    roles = DynamicModelMultipleChoiceField(
+        queryset=Role.objects.get_for_models([Device, VirtualMachine]),
+        query_params={"content_types": [Device._meta.label_lower, VirtualMachine._meta.label_lower]},
+        required=False,
+    )
     device_types = DynamicModelMultipleChoiceField(queryset=DeviceType.objects.all(), required=False)
     platforms = DynamicModelMultipleChoiceField(queryset=Platform.objects.all(), required=False)
     cluster_groups = DynamicModelMultipleChoiceField(queryset=ClusterGroup.objects.all(), required=False)

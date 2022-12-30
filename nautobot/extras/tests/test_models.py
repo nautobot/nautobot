@@ -895,6 +895,22 @@ class JobResultTest(TestCase):
         self.assertIsNone(job_result.related_object)
 
 
+class RoleTest(TestCase):
+    """Tests for the `RoleT` model class."""
+
+    def test_get_for_models(self):
+        """Test get_for_models returns a Roles for those models."""
+
+        device_ct = ContentType.objects.get_for_model(Device)
+        ipaddress_ct = ContentType.objects.get_for_model(IPAddress)
+
+        roles = Role.objects.filter(content_types__in=[device_ct, ipaddress_ct])
+        self.assertQuerysetEqualAndNotEmpty(
+            Role.objects.get_for_models([Device, IPAddress]),
+            roles
+        )
+
+
 class SecretTest(TestCase):
     """
     Tests for the `Secret` model class.
