@@ -1,4 +1,6 @@
 import { Container, Nav, Navbar, NavDropdown } from "react-bootstrap"
+import { faRightToBracket } from "@fortawesome/free-solid-svg-icons";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { Link, NavLink } from "react-router-dom"
 import useSWR from "swr"
 
@@ -45,6 +47,14 @@ export default function BSNavBar() {
               ))
             }
           </Nav>
+        </Navbar.Collapse>
+        <Navbar.Collapse className="justify-content-end">
+          <Navbar.Text>
+            <Link to="/login/">
+              <FontAwesomeIcon icon={faRightToBracket} />
+              {" Login"}
+            </Link>
+          </Navbar.Text>
         </Navbar.Collapse>
       </Container>
     </Navbar >

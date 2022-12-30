@@ -16,6 +16,7 @@
     "axios": "^1.2.0",
     "bootstrap": "^5.2.3",
     "framer-motion": "^6.5.1",
+    "js-cookie": "^3.0.1",
     "localforage": "^1.10.0",
     "match-sorter": "^6.3.1",
     "mdb-react-ui-kit": "^5.0.0",

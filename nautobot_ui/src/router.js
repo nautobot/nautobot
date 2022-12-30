@@ -2,9 +2,10 @@ import { useRoutes } from "react-router-dom"
 // import { lazy } from 'react'
 
 import Home from "@views/Home"
-import ListView from "@views/generic/ObjectList"
 import DetailView from "@views/generic/ObjectRetrieve"
 import InstalledPlugins from "@views/InstalledPlugins"
+import ListView from "@views/generic/ObjectList"
+import Login from "@views/Login"
 
 
 
@@ -23,6 +24,10 @@ export default function NautobotRouter() {
             path: "/",
             element: <Home />,
             children: [],
+        },
+        {
+            path: "/login/",
+            element: <Login />,
         },
         {
             path: "/:app_name/:model_name",
