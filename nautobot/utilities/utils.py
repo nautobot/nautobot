@@ -798,7 +798,7 @@ def get_filterset_parameter_form_field(model, parameter):
     # Avoid circular import
     from nautobot.extras.filters import ContentTypeMultipleChoiceFilter, StatusFilter
     from nautobot.extras.models import Role, Status, Tag
-    from nautobot.extras.utils import ChangeLoggedModelsQuery, TaggableClassesQuery
+    from nautobot.extras.utils import ChangeLoggedModelsQuery, RoleModelsQuery, TaggableClassesQuery
     from nautobot.utilities.forms import (
         BOOLEAN_CHOICES,
         DatePicker,
@@ -836,7 +836,11 @@ def get_filterset_parameter_form_field(model, parameter):
             # `MultipleContentTypeField` employs `registry["model features"][feature]`, which may
             # result in an error if `feature` is not found in the `registry["model features"]` dict.
             # In this case use queryset
-            queryset_map = {"tags": TaggableClassesQuery, "job hooks": ChangeLoggedModelsQuery}
+            queryset_map = {
+                "tags": TaggableClassesQuery,
+                "job hooks": ChangeLoggedModelsQuery,
+                "roles": RoleModelsQuery,
+            }
             form_field = MultipleContentTypeField(
                 choices_as_strings=True, queryset=queryset_map[plural_name]().as_queryset()
             )

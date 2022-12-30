@@ -905,10 +905,7 @@ class RoleTest(TestCase):
         ipaddress_ct = ContentType.objects.get_for_model(IPAddress)
 
         roles = Role.objects.filter(content_types__in=[device_ct, ipaddress_ct])
-        self.assertQuerysetEqualAndNotEmpty(
-            Role.objects.get_for_models([Device, IPAddress]),
-            roles
-        )
+        self.assertQuerysetEqualAndNotEmpty(Role.objects.get_for_models([Device, IPAddress]), roles)
 
 
 class SecretTest(TestCase):
