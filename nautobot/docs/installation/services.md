@@ -15,7 +15,7 @@ This document will guide you through setting up uWSGI and establishing Nautobot 
 Nautobot includes a `nautobot-server start` management command that directly invokes uWSGI. This command behaves exactly as uWSGI does, but allows us to maintain a single entrypoint into the Nautobot application.
 
 ```no-highlight
-$ nautobot-server start --help
+nautobot-server start --help
 ```
 
 ### Worker Service
@@ -23,7 +23,7 @@ $ nautobot-server start --help
 Nautobot requires at least one worker to consume background tasks required for advanced background features. A `nautobot-server celery` command is included that directly invokes Celery. This command behaves exactly as the Celery command-line utility does, but launches it through Nautobot's environment to share Redis and database connection settings transparently.
 
 ```no-highlight
-$ nautobot-server celery --help
+nautobot-server celery --help
 ```
 
 +/- 1.1.0
@@ -295,13 +295,13 @@ WantedBy=multi-user.target
 Because we just added new service files, you'll need to reload the systemd daemon:
 
 ```no-highlight
-$ sudo systemctl daemon-reload
+sudo systemctl daemon-reload
 ```
 
 Then, start the `nautobot`, `nautobot-worker`, and `nautobot-scheduler` services and enable them to initiate at boot time:
 
 ```no-highlight
-$ sudo systemctl enable --now nautobot nautobot-worker nautobot-scheduler
+sudo systemctl enable --now nautobot nautobot-worker nautobot-scheduler
 ```
 
 If you are also running the RQ worker, repeat the above command for the RQ service:
@@ -335,8 +335,7 @@ You can use the command `systemctl status nautobot.service` to verify that the W
 ```
 
 !!! note
-    If the Nautobot service fails to start, issue the command `journalctl -eu nautobot.service` to check for log messages that
-    may indicate the problem.
+    If the Nautobot service fails to start, issue the command `journalctl -eu nautobot.service` to check for log messages that may indicate the problem.
 
 Once you've verified that the WSGI service and worker are up and running, move on to [HTTP server setup](http-server.md).
 
@@ -352,7 +351,7 @@ Please see [Computed fields with fallback value that is unicode results in Opera
 
 ### SVG images not rendered
 
-When serving Nautobot directly from uWSGI on RedHat or CentOS there may be a problem rendering .svg images to include the Nautobot logo. On the RedHat based operating systems there is no file `/etc/mime.types` by default, unfortunately, uWSGI looks for this file to serve static files (see [Serving static files with uWSGI](https://uwsgi-docs.readthedocs.io/en/latest/StaticFiles.html#mime-types)).  To work around this copy the file `/etc/mime.types` from a known good system for example an Ubuntu/Debian system or even the Nautobot container to /opt/nautobot/mime.types.  Then add the following line to your `uwsgi.ini` file and restart the Nautobot services:
+When serving Nautobot directly from uWSGI on RedHat or CentOS there may be a problem rendering .svg images to include the Nautobot logo. On the RedHat based operating systems there is no file `/etc/mime.types` by default, unfortunately, uWSGI looks for this file to serve static files (see [Serving static files with uWSGI](https://uwsgi-docs.readthedocs.io/en/latest/StaticFiles.html#mime-types)). To work around this copy the file `/etc/mime.types` from a known good system for example an Ubuntu/Debian system or even the Nautobot container to /opt/nautobot/mime.types. Then add the following line to your `uwsgi.ini` file and restart the Nautobot services:
 
 ```no-highlight
 mime-file = /opt/nautobot/mime.types

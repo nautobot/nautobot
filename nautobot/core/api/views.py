@@ -517,6 +517,9 @@ class NautobotSpectacularSwaggerView(APIVersioningGetSchemaURLMixin, Spectacular
         response = super().get(request, *args, **kwargs)
         response.data["swagger_settings"] = response.data["settings"]
         del response.data["settings"]
+
+        # Add additional data so drf-spectacular will use the Token keyword in authorization header.
+        response.data["schema_auth_names"] = ["tokenAuth"]
         return response
 
 
@@ -800,5 +803,5 @@ class GetFilterSetFieldDOMElementAPIView(NautobotAPIVersionMixin, APIView):
         except FilterSetFieldNotFound:
             return Response("field_name not found", 404)
 
-        field_dom_representation = form_field.get_bound_field(model_form(), field_name).as_widget()
+        field_dom_representation = form_field.get_bound_field(model_form(auto_id="id_for_%s"), field_name).as_widget()
         return Response({"dom_element": field_dom_representation})

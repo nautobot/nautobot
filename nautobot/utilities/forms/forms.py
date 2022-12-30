@@ -10,7 +10,6 @@ import yaml
 from nautobot.ipam import formfields
 from nautobot.utilities import utils
 
-
 __all__ = (
     "AddressFieldMixin",
     "BootstrapMixin",

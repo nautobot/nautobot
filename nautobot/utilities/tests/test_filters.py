@@ -1,15 +1,20 @@
 from django.conf import settings
+from django.contrib.auth import get_user_model
 from django.db import models as django_models
+from django.shortcuts import reverse
 from django.test import TestCase
 import django_filters
-from mptt.fields import TreeForeignKey
 from taggit.managers import TaggableManager
+from tree_queries.models import TreeNodeForeignKey
 
-from nautobot.dcim import choices, fields
+from nautobot.dcim import choices as dcim_choices
+from nautobot.dcim import fields as dcim_fields
 from nautobot.dcim import filters as dcim_filters
 from nautobot.dcim import models as dcim_models
 from nautobot.extras import models as extras_models
-from nautobot.utilities import filters, testing
+from nautobot.ipam import factory as ipam_factory
+from nautobot.ipam import models as ipam_models
+from nautobot.utilities import filters, testing, utils
 
 
 class TreeNodeMultipleChoiceFilterTest(TestCase):
@@ -323,10 +328,10 @@ class TestModel(django_models.Model):
     datefield = django_models.DateField()
     datetimefield = django_models.DateTimeField()
     integerfield = django_models.IntegerField()
-    macaddressfield = fields.MACAddressCharField()
+    macaddressfield = dcim_fields.MACAddressCharField()
     textfield = django_models.TextField()
     timefield = django_models.TimeField()
-    treeforeignkeyfield = TreeForeignKey(to="self", on_delete=django_models.CASCADE)
+    treeforeignkeyfield = TreeNodeForeignKey(to="self", on_delete=django_models.CASCADE)
 
     tags = TaggableManager(through=extras_models.TaggedItem)
 
@@ -768,7 +773,7 @@ class DynamicFilterLookupExpressionTest(TestCase):
                 site=cls.sites[0],
                 rack=racks[0],
                 position=1,
-                face=choices.DeviceFaceChoices.FACE_FRONT,
+                face=dcim_choices.DeviceFaceChoices.FACE_FRONT,
                 status=device_status_map["active"],
                 local_context_data={"foo": 123},
                 comments="Device 1 comments",
@@ -783,7 +788,7 @@ class DynamicFilterLookupExpressionTest(TestCase):
                 site=cls.sites[1],
                 rack=racks[1],
                 position=2,
-                face=choices.DeviceFaceChoices.FACE_FRONT,
+                face=dcim_choices.DeviceFaceChoices.FACE_FRONT,
                 status=device_status_map["staged"],
                 comments="Device 2 comments",
             ),
@@ -797,7 +802,7 @@ class DynamicFilterLookupExpressionTest(TestCase):
                 site=cls.sites[2],
                 rack=racks[2],
                 position=3,
-                face=choices.DeviceFaceChoices.FACE_REAR,
+                face=dcim_choices.DeviceFaceChoices.FACE_REAR,
                 status=device_status_map["failed"],
                 comments="Device 3 comments",
             ),
@@ -942,10 +947,10 @@ class DynamicFilterLookupExpressionTest(TestCase):
         )
 
     def test_site_region_id_negation(self):
-        params = {"region_id__n": [self.regions[0].pk]}
+        params = {"region__n": [self.regions[0].pk]}
         self.assertQuerysetEqual(
             dcim_filters.SiteFilterSet(params, self.site_queryset).qs,
-            dcim_models.Site.objects.exclude(region__in=self.regions[0].get_descendants(include_self=True)),
+            dcim_models.Site.objects.exclude(region__in=self.regions[0].descendants(include_self=True)),
         )
 
     def test_device_name_eq(self):
@@ -1188,7 +1193,9 @@ class SearchFilterTest(TestCase, testing.NautobotTestCaseMixin):
         self.assertQuerysetEqualAndNotEmpty(
             self.filterset_class(params, self.queryset).qs, self.queryset.filter(asn__exact="1234")
         )
-        asn = dcim_models.Site.objects.exclude(asn="1234").values_list("asn", flat=True).first()
+        asn = (
+            dcim_models.Site.objects.exclude(asn="1234").exclude(asn__isnull=True).values_list("asn", flat=True).first()
+        )
         params = {"q": str(asn)}
         self.assertQuerysetEqualAndNotEmpty(
             self.filterset_class(params, self.queryset).qs, self.queryset.filter(asn__exact=str(asn))
@@ -1277,3 +1284,16 @@ class SearchFilterTest(TestCase, testing.NautobotTestCaseMixin):
 
             class InvalidSiteFilterSet(dcim_filters.SiteFilterSet):  # pylint: disable=unused-variable
                 q = filters.SearchFilter(filter_predicates={"asn": ["icontains"]})
+
+
+class FilterTypeTest(TestCase):
+    def test_numberfilter(self):
+        """
+        Simple test to show the bug identified in https://github.com/nautobot/nautobot/issues/2837 no longer exists
+        """
+        user = get_user_model().objects.create_user(username="testuser", is_superuser=True)
+        self.client.force_login(user)
+        ipam_factory.PrefixFactory()
+        prefix_list_url = reverse(utils.get_route_for_model(ipam_models.Prefix, "list"))
+        response = self.client.get(f"{prefix_list_url}?mask_length__lte=20")
+        self.assertNotContains(response, "Invalid filters were specified")

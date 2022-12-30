@@ -1,7 +1,7 @@
 from django import forms
 
+from nautobot.apps.secrets import SecretsProvider
 from nautobot.utilities.forms import BootstrapMixin
-from nautobot.extras.secrets import SecretsProvider
 
 
 class ConstantValueSecretsProvider(SecretsProvider):

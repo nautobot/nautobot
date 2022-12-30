@@ -2,6 +2,7 @@ from rest_framework import serializers
 
 from nautobot.core.api import WritableNestedSerializer
 from nautobot.tenancy.models import Tenant, TenantGroup
+from nautobot.utilities.api import TreeModelSerializerMixin
 
 __all__ = [
     "NestedTenantGroupSerializer",
@@ -14,14 +15,13 @@ __all__ = [
 #
 
 
-class NestedTenantGroupSerializer(WritableNestedSerializer):
+class NestedTenantGroupSerializer(WritableNestedSerializer, TreeModelSerializerMixin):
     url = serializers.HyperlinkedIdentityField(view_name="tenancy-api:tenantgroup-detail")
     tenant_count = serializers.IntegerField(read_only=True)
-    _depth = serializers.IntegerField(source="level", read_only=True)
 
     class Meta:
         model = TenantGroup
-        fields = ["id", "url", "name", "slug", "tenant_count", "_depth"]
+        fields = ["id", "url", "name", "slug", "tenant_count", "tree_depth"]
 
 
 class NestedTenantSerializer(WritableNestedSerializer):

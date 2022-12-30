@@ -76,6 +76,10 @@ EXEMPT_VIEW_PERMISSIONS = []
 GIT_ROOT = os.getenv("NAUTOBOT_GIT_ROOT", os.path.join(NAUTOBOT_ROOT, "git").rstrip("/"))
 HTTP_PROXIES = None
 JOBS_ROOT = os.getenv("NAUTOBOT_JOBS_ROOT", os.path.join(NAUTOBOT_ROOT, "jobs").rstrip("/"))
+
+# Log Nautobot deprecation warnings. Note that this setting is ignored (deprecation logs always enabled) if DEBUG = True
+LOG_DEPRECATION_WARNINGS = is_truthy(os.getenv("NAUTOBOT_LOG_DEPRECATION_WARNINGS", "False"))
+
 MAINTENANCE_MODE = is_truthy(os.getenv("NAUTOBOT_MAINTENANCE_MODE", "False"))
 # Metrics
 METRICS_ENABLED = is_truthy(os.getenv("NAUTOBOT_METRICS_ENABLED", "False"))
@@ -190,6 +194,7 @@ REST_FRAMEWORK = {
         "rest_framework.renderers.JSONRenderer",
         "nautobot.core.api.renderers.FormlessBrowsableAPIRenderer",
     ),
+    "DEFAULT_PARSER_CLASSES": ("rest_framework.parsers.JSONParser",),
     "DEFAULT_SCHEMA_CLASS": "nautobot.core.api.schema.NautobotAutoSchema",
     # Version to use if the client doesn't request otherwise.
     # This should only change (if at all) with Nautobot major (breaking) releases.
@@ -257,6 +262,10 @@ SPECTACULAR_SETTINGS = {
         "RackStatusChoices": "nautobot.dcim.api.serializers.RackSerializer.status_choices",
         "VirtualMachineStatusChoices": "nautobot.virtualization.api.serializers.VirtualMachineWithConfigContextSerializer.status_choices",
         "VLANStatusChoices": "nautobot.ipam.api.serializers.VLANSerializer.status_choices",
+        # These choice enums need to be overridden because they get assigned to different names with the same choice set and
+        # result in this error:
+        #   encountered multiple names for the same choice set
+        "JobExecutionTypeIntervalChoices": "nautobot.extras.choices.JobExecutionType",
     },
     # Create separate schema components for PATCH requests (fields generally are not `required` on PATCH)
     "COMPONENT_SPLIT_PATCH": True,
@@ -374,7 +383,6 @@ INSTALLED_APPS = [
     "django_jinja",
     "django_tables2",
     "django_prometheus",
-    "mptt",
     "social_django",
     "taggit",
     "timezone_field",
@@ -382,6 +390,7 @@ INSTALLED_APPS = [
     "nautobot.core",
     "django.contrib.admin",  # Must be after `nautobot.core` for template overrides
     "django_celery_beat",  # Must be after `nautobot.core` for template overrides
+    "django_celery_results",
     "rest_framework",  # Must be after `nautobot.core` for template overrides
     "db_file_storage",
     "nautobot.circuits",
@@ -660,14 +669,10 @@ CACHEOPS = {
     "auth.*": {"ops": ("fetch", "get")},
     "auth.permission": {"ops": "all"},
     "circuits.*": {"ops": "all"},
-    "dcim.inventoryitem": None,  # MPTT models are exempt due to raw SQL
-    "dcim.region": None,  # MPTT models are exempt due to raw SQL
-    "dcim.rackgroup": None,  # MPTT models are exempt due to raw SQL
     "dcim.*": {"ops": "all"},
     "ipam.*": {"ops": "all"},
     "extras.*": {"ops": "all"},
     "users.*": {"ops": "all"},
-    "tenancy.tenantgroup": None,  # MPTT models are exempt due to raw SQL
     "tenancy.*": {"ops": "all"},
     "virtualization.*": {"ops": "all"},
 }
@@ -719,10 +724,25 @@ RQ_QUEUES = {
 CELERY_BROKER_URL = os.getenv("NAUTOBOT_CELERY_BROKER_URL", parse_redis_connection(redis_database=0))
 
 # Celery results backend URL to tell workers where to publish task results
-CELERY_RESULT_BACKEND = os.getenv("NAUTOBOT_CELERY_RESULT_BACKEND", parse_redis_connection(redis_database=0))
+CELERY_RESULT_BACKEND = "nautobot.core.celery.backends.NautobotDatabaseBackend"
+
+# Enables extended task result attributes (name, args, kwargs, worker, retries, queue, delivery_info) to be written to backend.
+CELERY_RESULT_EXTENDED = True
+
+# A value of None or 0 means results will never expire (depending on backend specifications).
+CELERY_RESULT_EXPIRES = None
+
+# If set to True, result messages will be persistent. This means the messages won’t be lost after a broker restart.
+CELERY_RESULT_PERSISTENT = True
 
 # Instruct celery to report the started status of a job, instead of just `pending`, `finished`, or `failed`
 CELERY_TASK_TRACK_STARTED = True
+
+# If enabled, a `task-sent` event will be sent for every task so tasks can be tracked before they’re consumed by a worker.
+CELERY_TASK_SEND_SENT_EVENT = True
+
+# Send task-related events so that tasks can be monitored using tools like flower. Sets the default value for the workers -E argument.
+CELERY_WORKER_SEND_TASK_EVENTS = True
 
 # Default celery queue name that will be used by workers and tasks if no queue is specified
 CELERY_TASK_DEFAULT_QUEUE = os.getenv("NAUTOBOT_CELERY_TASK_DEFAULT_QUEUE", "default")

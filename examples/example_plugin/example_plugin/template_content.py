@@ -1,9 +1,9 @@
 from django.urls import reverse
 
-from nautobot.extras.plugins import PluginTemplateExtension
- 
+from nautobot.apps.ui import TemplateExtension
 
-class CircuitContent(PluginTemplateExtension):
+
+class CircuitContent(TemplateExtension):
     model = "circuits.circuit"
 
     def detail_tabs(self):
@@ -22,13 +22,13 @@ class CircuitContent(PluginTemplateExtension):
         """
         return [
             {
-                "title": "Plugin Tab",
+                "title": "Example App Tab",
                 "url": reverse("plugins:example_plugin:circuit_detail_tab", kwargs={"pk": self.context["object"].pk}),
             },
         ]
 
 
-class DeviceContent(PluginTemplateExtension):
+class DeviceContent(TemplateExtension):
     model = "dcim.device"
 
     def detail_tabs(self):
@@ -48,11 +48,11 @@ class DeviceContent(PluginTemplateExtension):
 
         return [
             {
-                "title": "Plugin Tab Taco",
+                "title": "Example App Tab 1",
                 "url": reverse("plugins:example_plugin:device_detail_tab_1", kwargs={"pk": self.context["object"].pk}),
             },
             {
-                "title": "Plugin Tab 2",
+                "title": "Example App Tab 2",
                 "url": reverse("plugins:example_plugin:device_detail_tab_2", kwargs={"pk": self.context["object"].pk}),
             },
         ]
@@ -70,7 +70,7 @@ class DeviceContent(PluginTemplateExtension):
         """
 
 
-class SiteContent(PluginTemplateExtension):
+class SiteContent(TemplateExtension):
     model = "dcim.site"
 
     def left_page(self):
@@ -117,7 +117,7 @@ class SiteContent(PluginTemplateExtension):
         ]
 
 
-class ExampleModelContent(PluginTemplateExtension):
+class ExampleModelContent(TemplateExtension):
     model = "example_plugin.examplemodel"
     template_name = "example_plugin/panel.html"
 
@@ -127,7 +127,7 @@ class ExampleModelContent(PluginTemplateExtension):
         return self.render(
             self.template_name,
             extra_context={
-                "panel_title": "Plugin Left Page",
+                "panel_title": "Example App Left Page",
                 "panel_body": "Now sliiiiide to the left... I'll show up after anything defined in the detail view template",
             },
         )
@@ -137,7 +137,7 @@ class ExampleModelContent(PluginTemplateExtension):
         return """
         <div class="panel panel-default">
             <div class="panel-heading">
-                <strong>Plugin Right Page</strong>
+                <strong>Example App Right Page</strong>
             </div>
             <div class="panel-body">
                 <span>Check me out! I'll show up after anything defined in the detail view template.</span>
@@ -149,16 +149,16 @@ class ExampleModelContent(PluginTemplateExtension):
         return self.render(
             self.template_name,
             extra_context={
-                "panel_title": "Plugin Full Width Page",
+                "panel_title": "Example App Full Width Page",
                 "panel_body": "I'm a full width panel that shows up following other full-width panels defined in the detail view template.",
             },
         )
 
     def buttons(self):
         return """
-        <a href="#" onClick="alert('I am from the plugin template_extension.')" class="btn btn-primary">
+        <a href="#" onClick="alert('I am from the example app template_extension.')" class="btn btn-primary">
             <span class="mdi mdi-plus-thick" aria-hidden="true"></span>
-            Plugin Button
+            Example App Button
         </a>
         """
 

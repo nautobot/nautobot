@@ -9,7 +9,6 @@ from nautobot.dcim.choices import (
     CableStatusChoices,
     CableTypeChoices,
     DeviceFaceChoices,
-    InterfaceModeChoices,
     InterfaceTypeChoices,
     PortTypeChoices,
     PowerOutletFeedLegChoices,
@@ -648,6 +647,23 @@ class LocationTestCase(TestCase):
 
         self.status = Status.objects.get(slug="active")
         self.site = Site.objects.first()
+
+    def test_latitude_or_longitude(self):
+        """Test latitude and longitude is parsed to string."""
+        active_status = Status.objects.get_for_model(Location).get(slug="active")
+        location = Location(
+            location_type=self.root_type,
+            site=self.site,
+            name="Location A",
+            slug="location-a",
+            status=active_status,
+            longitude=55.1234567896,
+            latitude=55.1234567896,
+        )
+        location.validated_save()
+
+        self.assertEqual(location.longitude, Decimal("55.123457"))
+        self.assertEqual(location.latitude, Decimal("55.123457"))
 
     def test_validate_unique(self):
         """Confirm that the uniqueness constraint on (parent, name) works when parent is None."""
@@ -1333,20 +1349,6 @@ class InterfaceTestCase(TestCase):
         self.assertEqual(
             err.exception.message_dict["tagged_vlans"][0], "Mode must be set to tagged when specifying tagged_vlans"
         )
-
-    def test_tagged_vlan_raise_error_if_mode_is_changed_without_clearing_tagged_vlans(self):
-        interface = Interface.objects.create(
-            name="Int2",
-            type=InterfaceTypeChoices.TYPE_VIRTUAL,
-            device=self.device,
-            mode=InterfaceModeChoices.MODE_TAGGED,
-        )
-        interface.tagged_vlans.add(self.vlan)
-
-        interface.mode = InterfaceModeChoices.MODE_ACCESS
-        with self.assertRaises(ValidationError) as err:
-            interface.validated_save()
-        self.assertEqual(err.exception.message_dict["tagged_vlans"][0], "Clear tagged_vlans to set mode to access")
 
 
 class SiteTestCase(TestCase):

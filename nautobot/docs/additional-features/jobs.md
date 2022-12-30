@@ -376,7 +376,7 @@ tenant_group = ObjectVar(
 site = ObjectVar(
     model=Site,
     query_params={
-        'region_id': '$region',
+        'region': '$region',
         'tenant_group_id': '$tenant_group'
     }
 )
@@ -593,6 +593,25 @@ When providing input data, it is possible to specify complex values contained in
 * `ObjectVar`s can be specified by either using their primary key directly as the value, or as a dictionary containing a more complicated query that gets passed into the Django ORM as keyword arguments.
 * `MultiObjectVar`s can be specified as a list of primary keys.
 * `IPAddressVar`s can be provided as strings in CIDR notation.
+
+#### Jobs with Files
+
+To run a job that contains `FileVar` inputs via the REST API, you must use `multipart/form-data` content type requests instead of `application/json`. This also requires a slightly different request payload than the example above. The `commit`, `task_queue`, and `schedule` data are flattened and prefixed with underscore to differentiate them from job-specific data. Job specific data is also flattened and not located under the top-level `data` dictionary key.
+
+An example of running a job with both `FileVar` (named `myfile`) and `StringVar` (named `interval`) input:
+
+```no-highlight
+curl -X POST \
+-H 'Authorization: Token $TOKEN' \
+-H 'Content-Type: multipart/form-data' \
+-H "Accept: application/json; version=1.3; indent=4" \
+'http://nautobot/api/extras/jobs/$JOB_ID/run/' \
+-F '_commit="true"' \
+-F '_schedule_interval="immediately"' \
+-F '_schedule_start_time="2022-10-18T17:31:23.698Z"' \
+-F 'interval="3"' \
+-F 'myfile=@"/path/to/my/file.txt"' \
+```
 
 ### Via the CLI
 

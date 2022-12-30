@@ -5,7 +5,6 @@ from django import template
 from django.conf import settings
 from django.template.loader import render_to_string
 
-
 register = template.Library()
 
 

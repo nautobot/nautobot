@@ -220,6 +220,7 @@ class ConfigContextForm(BootstrapMixin, NoteModelFormMixin, forms.ModelForm):
     device_redundancy_groups = DynamicModelMultipleChoiceField(
         queryset=DeviceRedundancyGroup.objects.all(), required=False
     )
+    tags = DynamicModelMultipleChoiceField(queryset=Tag.objects.all(), required=False)
 
     data = JSONField(label="")
 
@@ -263,10 +264,7 @@ class ConfigContextBulkEditForm(BootstrapMixin, NoteModelBulkEditFormMixin, Bulk
 
 class ConfigContextFilterForm(BootstrapMixin, forms.Form):
     q = forms.CharField(required=False, label="Search")
-    # FIXME(glenn) filtering by owner_content_type
-    schema = DynamicModelMultipleChoiceField(
-        queryset=ConfigContextSchema.objects.all(), to_field_name="slug", required=False
-    )
+    schema = DynamicModelChoiceField(queryset=ConfigContextSchema.objects.all(), to_field_name="slug", required=False)
     region = DynamicModelMultipleChoiceField(queryset=Region.objects.all(), to_field_name="slug", required=False)
     site = DynamicModelMultipleChoiceField(queryset=Site.objects.all(), to_field_name="slug", required=False)
     location = DynamicModelMultipleChoiceField(queryset=Location.objects.all(), to_field_name="slug", required=False)
@@ -318,7 +316,6 @@ class ConfigContextSchemaBulkEditForm(NautobotBulkEditForm):
 
 class ConfigContextSchemaFilterForm(BootstrapMixin, forms.Form):
     q = forms.CharField(required=False, label="Search")
-    # FIXME(glenn) filtering by owner_content_type
 
 
 #
@@ -962,7 +959,7 @@ class JobResultFilterForm(BootstrapMixin, forms.Form):
         to_field_name="slug",
         widget=APISelectMultiple(api_url="/api/extras/jobs/", api_version="1.3"),
     )
-    # FIXME(glenn) Filtering by obj_type?
+    # 2.0 TODO(glenn) filtering by obj_type should be solved by dynamic filter form generation
     name = forms.CharField(required=False)
     user = DynamicModelMultipleChoiceField(
         queryset=get_user_model().objects.all(),

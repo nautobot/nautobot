@@ -81,16 +81,20 @@ markdown_extensions:
 
 plugins:
   - "search"
+  - "gen-files":
+      scripts:
+        - docs/generate_code_reference_pages.py
   - "include-markdown"
   - "mkdocs-version-annotations"
-  - mkdocstrings:
+  - "mkdocstrings":
       default_handler: "python"
       handlers:
         python:
           paths: ["."]
           options:
+            heading_level: 1
             show_root_heading: true
-            show_category_heading: true
+            show_root_members_full_path: true
 
 nav:
   - Overview: "index.md"
@@ -105,6 +109,7 @@ nav:
       - Migration:
           - Migrating from NetBox: "installation/migrating-from-netbox.md"
           - Upgrading Nautobot: "installation/upgrading.md"
+          - Upgrading Nautobot from v1.X to v2.0: "installation/upgrading-from-nautobot-v1.md"
           - Migrating from PostgreSQL to MySQL: "installation/migrating-from-postgresql.md"
       - Configuration:
           - Configuring Nautobot: "configuration/index.md"
@@ -132,6 +137,10 @@ nav:
           - Regions: "user-guides/getting-started/regions.md"
           - Tenants: "user-guides/getting-started/tenants.md"
           - The Search Bar: "user-guides/getting-started/search-bar.md"
+          - Git as a Data Source: "user-guides/git-data-source.md"
+          - GraphQL: "user-guides/graphql.md"
+          - Relationships: "user-guides/relationships.md"
+          - Django Storages with S3: "user-guides/s3-django-storage.md"
           - VLANS and VLAN Groups: "user-guides/getting-started/vlans-and-vlan-groups.md"
       - Core Functionality:
           - Circuits: "core-functionality/circuits.md"
@@ -174,13 +183,28 @@ nav:
       - GraphQL API:
           - Overview: "additional-features/graphql.md"
       - Installing and Using Plugins: "plugins/index.md"
-  - Developer Guide:
+  - App Developer Guide:
+      - Developing Apps: "plugins/development.md"
+      - Porting NetBox Plugins to Nautobot: "plugins/porting-from-netbox.md"
+      - Code Reference:
+          - nautobot.apps: "code-reference/nautobot/apps/__init__.md"
+          - nautobot.apps.admin: "code-reference/nautobot/apps/admin.md"
+          - nautobot.apps.api: "code-reference/nautobot/apps/api.md"
+          - nautobot.apps.choices: "code-reference/nautobot/apps/choices.md"
+          - nautobot.apps.datasources: "code-reference/nautobot/apps/datasources.md"
+          - nautobot.apps.filters: "code-reference/nautobot/apps/filters.md"
+          - nautobot.apps.forms: "code-reference/nautobot/apps/forms.md"
+          - nautobot.apps.models: "code-reference/nautobot/apps/models.md"
+          - nautobot.apps.secrets: "code-reference/nautobot/apps/secrets.md"
+          - nautobot.apps.tables: "code-reference/nautobot/apps/tables.md"
+          - nautobot.apps.testing: "code-reference/nautobot/apps/testing.md"
+          - nautobot.apps.ui: "code-reference/nautobot/apps/ui.md"
+          - nautobot.apps.urls: "code-reference/nautobot/apps/urls.md"
+          - nautobot.apps.views: "code-reference/nautobot/apps/views.md"
+  - Core Developer Guide:
       - Introduction: "development/index.md"
       - Getting Started: "development/getting-started.md"
       - Advanced Docker Compose Usage: "development/docker-compose-advanced-use-cases.md"
-      - Plugins:
-          - Developing Plugins: "plugins/development.md"
-          - Porting NetBox Plugins to Nautobot: "plugins/porting-from-netbox.md"
       - Best Practices: "development/best-practices.md"
       - Style Guide: "development/style-guide.md"
       - Extending Models: "development/extending-models.md"

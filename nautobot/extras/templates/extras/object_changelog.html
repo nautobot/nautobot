@@ -1,17 +1,2 @@
-{% extends base_template %}
-{% load helpers %}
-
-{% block title %}{{ block.super }} - Change Log{% endblock %}
-
-{% block content %}
-    {% include 'panel_table.html' %}
-    {% include 'inc/paginator.html' with paginator=table.paginator page=table.page %}
-    <div class="text-muted">
-        Change log retention:
-        {% if "CHANGELOG_RETENTION"|settings_or_config %}
-            {{ "CHANGELOG_RETENTION"|settings_or_config }} days
-        {% else %}
-            Indefinite
-        {% endif %}
-    </div>
-{% endblock %}
+{% extends 'generic/object_changelog.html' %}
+{% comment %}2.0 TODO: remove this template, which only exists for backward compatibility with 1.5.0 and earlier{% endcomment %}

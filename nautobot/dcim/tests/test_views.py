@@ -317,6 +317,18 @@ class LocationTestCase(ViewTestCases.PrimaryObjectViewTestCase):
             "slug": "root-3",
             "status": active.pk,
             "tenant": tenant.pk,
+            "facility": "Facility X",
+            "asn": 65001,
+            "time_zone": pytz.UTC,
+            "physical_address": "742 Evergreen Terrace, Springfield, USA",
+            "shipping_address": "742 Evergreen Terrace, Springfield, USA",
+            "latitude": Decimal("35.780000"),
+            "longitude": Decimal("-78.642000"),
+            "contact_name": "Hank Hill",
+            "contact_phone": "123-555-9999",
+            "contact_email": "hank@stricklandpropane.com",
+            "comments": "Test site",
+            "tags": [t.pk for t in Tag.objects.get_for_model(Location)],
             "description": "A new root location",
         }
 
@@ -333,6 +345,8 @@ class LocationTestCase(ViewTestCases.PrimaryObjectViewTestCase):
             # we can't bulk-edit the parent or site fields in this generic test
             "tenant": tenant.pk,
             "status": Status.objects.get(name="Planned").pk,
+            "asn": 65009,
+            "time_zone": pytz.timezone("US/Eastern"),
         }
 
         # No slug_source/slug_test_object here because Location uses the composite [parent__name, name]
@@ -2264,7 +2278,7 @@ class CableTestCase(
         # interface_ct = ContentType.objects.get_for_model(Interface)
         cls.form_data = {
             # Changing terminations not supported when editing an existing Cable
-            # TODO(John): Revisit this as it is likely an actual bug allowing the terminations to be changed after creation.
+            # FIXME(John): Revisit this as it is likely an actual bug allowing the terminations to be changed after creation.
             # 'termination_a_type': interface_ct.pk,
             # 'termination_a_id': interfaces[0].pk,
             # 'termination_b_type': interface_ct.pk,
@@ -2337,20 +2351,26 @@ class CableTestCase(
         self.assertFalse(Cable.objects.filter(pk=cables[0].pk).exists())
 
         # Assert the wrong CablePath did not get deleted
+        # TODO: Remove pylint disable after issue is resolved (see: https://github.com/PyCQA/pylint/issues/7381)
+        # pylint: disable=unsupported-binary-operation
         cable_path_1 = CablePath.objects.filter(
             Q(origin_type=termination_ct, origin_id=circuit_terminations[0].pk)
             | Q(origin_type=interface_ct, origin_id=interfaces[0].pk)
             | Q(destination_type=termination_ct, destination_id=circuit_terminations[0].pk)
             | Q(destination_type=interface_ct, destination_id=interfaces[0].pk)
         )
+        # pylint: enable=unsupported-binary-operation
         self.assertFalse(cable_path_1.exists())
 
+        # TODO: Remove pylint disable after issue is resolved (see: https://github.com/PyCQA/pylint/issues/7381)
+        # pylint: disable=unsupported-binary-operation
         cable_path_2 = CablePath.objects.filter(
             Q(origin_type=termination_ct, origin_id=circuit_terminations[1].pk)
             | Q(origin_type=interface_ct, origin_id=interfaces[1].pk)
             | Q(destination_type=termination_ct, destination_id=circuit_terminations[1].pk)
             | Q(destination_type=interface_ct, destination_id=interfaces[1].pk)
         )
+        # pylint: enable=unsupported-binary-operation
         self.assertTrue(cable_path_2.exists())
 
 
@@ -2361,6 +2381,12 @@ class ConsoleConnectionsTestCase(ViewTestCases.ListObjectsViewTestCase):
 
     def _get_base_url(self):
         return "dcim:console_connections_{}"
+
+    def get_list_url(self):
+        return "/dcim/console-connections/"
+
+    def get_title(self):
+        return "Console Connections"
 
     model = ConsolePort
     filterset = ConsoleConnectionFilterSet
@@ -2412,6 +2438,12 @@ class PowerConnectionsTestCase(ViewTestCases.ListObjectsViewTestCase):
     """
     Test the PowerConnectionsListView.
     """
+
+    def get_list_url(self):
+        return "/dcim/power-connections/"
+
+    def get_title(self):
+        return "Power Connections"
 
     def _get_base_url(self):
         return "dcim:power_connections_{}"
@@ -2474,6 +2506,12 @@ class InterfaceConnectionsTestCase(ViewTestCases.ListObjectsViewTestCase):
 
     def _get_base_url(self):
         return "dcim:interface_connections_{}"
+
+    def get_list_url(self):
+        return "/dcim/interface-connections/"
+
+    def get_title(self):
+        return "Interface Connections"
 
     model = Interface
     filterset = InterfaceConnectionFilterSet

@@ -138,7 +138,7 @@ class PassThroughPortMixin:
 
 
 class RegionViewSet(NautobotModelViewSet):
-    queryset = Region.objects.add_related_count(Region.objects.all(), Site, "region", "site_count", cumulative=True)
+    queryset = Region.objects.annotate(site_count=count_related(Site, "region"))
     serializer_class = serializers.RegionSerializer
     filterset_class = filters.RegionFilterSet
 
@@ -201,7 +201,16 @@ class LocationTypeViewSet(NautobotModelViewSet):
 
 class LocationViewSet(StatusViewSetMixin, NautobotModelViewSet):
     # v2 TODO(jathan): Replace prefetch_related with select_related
-    queryset = Location.objects.prefetch_related("location_type", "parent", "site", "status")
+    queryset = Location.objects.prefetch_related(
+        "location_type", "parent", "site", "status", "tenant", "tags"
+    ).annotate(
+        device_count=count_related(Device, "location"),
+        rack_count=count_related(Rack, "location"),
+        prefix_count=count_related(Prefix, "location"),
+        vlan_count=count_related(VLAN, "location"),
+        circuit_count=count_related(Circuit, "terminations__location"),
+        virtualmachine_count=count_related(VirtualMachine, "cluster__location"),
+    )
     serializer_class = serializers.LocationSerializer
     filterset_class = filters.LocationFilterSet
 
@@ -213,9 +222,7 @@ class LocationViewSet(StatusViewSetMixin, NautobotModelViewSet):
 
 class RackGroupViewSet(NautobotModelViewSet):
     # v2 TODO(jathan): Replace prefetch_related with select_related
-    queryset = RackGroup.objects.add_related_count(
-        RackGroup.objects.all(), Rack, "group", "rack_count", cumulative=True
-    ).prefetch_related("site")
+    queryset = RackGroup.objects.annotate(rack_count=count_related(Rack, "group")).prefetch_related("site")
     serializer_class = serializers.RackGroupSerializer
     filterset_class = filters.RackGroupFilterSet
 

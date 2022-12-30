@@ -367,6 +367,10 @@ SECRET_KEY = os.getenv("NAUTOBOT_SECRET_KEY", "{{ secret_key }}")
 #
 # JOBS_ROOT = os.getenv("NAUTOBOT_JOBS_ROOT", os.path.join(NAUTOBOT_ROOT, "jobs").rstrip("/"))
 
+# Log Nautobot deprecation warnings. Note that this setting is ignored (deprecation logs always enabled) if DEBUG = True
+#
+# LOG_DEPRECATION_WARNINGS = is_truthy(os.getenv("NAUTOBOT_LOG_DEPRECATION_WARNINGS", "False"))
+
 # Setting this to True will display a "maintenance mode" banner at the top of every page.
 #
 # MAINTENANCE_MODE = is_truthy(os.getenv("NAUTOBOT_MAINTENANCE_MODE", "False"))

@@ -8,10 +8,9 @@ class UtilitiesConfig(apps.NautobotConfig):
         super().ready()
 
         # Register netutils jinja2 filters in django_jinja and Django Template
-        from netutils.utils import jinja2_convenience_function
-        from django_jinja import library
-
         from django import template
+        from django_jinja import library
+        from netutils.utils import jinja2_convenience_function
 
         register = template.Library()
 

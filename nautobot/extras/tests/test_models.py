@@ -727,7 +727,7 @@ class JobModelTest(TestCase):
     def test_latest_result(self):
         self.assertEqual(self.local_job.latest_result, None)
         self.assertEqual(self.plugin_job.latest_result, None)
-        # TODO: create some JobResults and test that this works correctly for them as well.
+        # TODO(Glenn): create some JobResults and test that this works correctly for them as well.
 
     def test_defaults(self):
         """Verify that defaults for discovered JobModel instances are as expected."""
@@ -931,46 +931,119 @@ class SecretTest(TestCase):
 
     def test_environment_variable_value_not_found(self):
         """Failure to retrieve an environment variable raises an exception."""
-        with self.assertRaises(SecretValueNotFoundError):
+        with self.assertRaises(SecretValueNotFoundError) as handler:
             self.environment_secret.get_value()
-        with self.assertRaises(SecretValueNotFoundError):
-            self.environment_secret.get_value(obj=None)
-        with self.assertRaises(SecretValueNotFoundError):
-            self.environment_secret.get_value(obj=self.site)
+        self.assertEqual(
+            str(handler.exception),
+            f'SecretValueNotFoundError: Secret "{self.environment_secret}" '
+            '(provider "EnvironmentVariableSecretsProvider"): '
+            'Undefined environment variable "NAUTOBOT_TEST_ENVIRONMENT_VARIABLE"!',
+        )
 
-        with self.assertRaises(SecretValueNotFoundError):
+        with self.assertRaises(SecretValueNotFoundError) as handler:
+            self.environment_secret.get_value(obj=None)
+        self.assertEqual(
+            str(handler.exception),
+            f'SecretValueNotFoundError: Secret "{self.environment_secret}" '
+            '(provider "EnvironmentVariableSecretsProvider"): '
+            'Undefined environment variable "NAUTOBOT_TEST_ENVIRONMENT_VARIABLE"!',
+        )
+
+        with self.assertRaises(SecretValueNotFoundError) as handler:
+            self.environment_secret.get_value(obj=self.site)
+        self.assertEqual(
+            str(handler.exception),
+            f'SecretValueNotFoundError: Secret "{self.environment_secret}" '
+            '(provider "EnvironmentVariableSecretsProvider"): '
+            'Undefined environment variable "NAUTOBOT_TEST_ENVIRONMENT_VARIABLE"!',
+        )
+
+        with self.assertRaises(SecretValueNotFoundError) as handler:
             self.environment_secret_templated.get_value(obj=self.site)
+        self.assertEqual(
+            str(handler.exception),
+            f'SecretValueNotFoundError: Secret "{self.environment_secret_templated}" '
+            '(provider "EnvironmentVariableSecretsProvider"): '
+            'Undefined environment variable "NAUTOBOT_TEST_NYC"!',
+        )
 
     def test_environment_variable_value_missing_parameters(self):
         """A mis-defined environment variable secret raises an exception on access."""
         self.environment_secret.parameters = {}
-        with self.assertRaises(SecretParametersError):
+
+        with self.assertRaises(SecretParametersError) as handler:
             self.environment_secret.get_value()
-        with self.assertRaises(SecretParametersError):
+        self.assertEqual(
+            str(handler.exception),
+            f'SecretParametersError: Secret "{self.environment_secret}" '
+            '(provider "EnvironmentVariableSecretsProvider"): '
+            'The "variable" parameter is mandatory!',
+        )
+
+        with self.assertRaises(SecretParametersError) as handler:
             self.environment_secret.get_value(obj=None)
-        with self.assertRaises(SecretParametersError):
+        self.assertEqual(
+            str(handler.exception),
+            f'SecretParametersError: Secret "{self.environment_secret}" '
+            '(provider "EnvironmentVariableSecretsProvider"): '
+            'The "variable" parameter is mandatory!',
+        )
+
+        with self.assertRaises(SecretParametersError) as handler:
             self.environment_secret.get_value(obj=self.site)
+        self.assertEqual(
+            str(handler.exception),
+            f'SecretParametersError: Secret "{self.environment_secret}" '
+            '(provider "EnvironmentVariableSecretsProvider"): '
+            'The "variable" parameter is mandatory!',
+        )
 
     def test_environment_variable_templated_missing_object(self):
         """A templated secret requires an object for context."""
         # Since we're not using Jinja2's StrictUndefined, it just renders as an empty string if obj is omitted or None,
         # For this secret it results in a rendered value of "", which is of course not a defined environment variable.
-        with self.assertRaises(SecretValueNotFoundError):
+        with self.assertRaises(SecretValueNotFoundError) as handler:
             self.environment_secret_templated.get_value()
-        with self.assertRaises(SecretValueNotFoundError):
+        self.assertEqual(
+            str(handler.exception),
+            f'SecretValueNotFoundError: Secret "{self.environment_secret_templated}" '
+            '(provider "EnvironmentVariableSecretsProvider"): '
+            'Undefined environment variable "NAUTOBOT_TEST_"!',
+        )
+
+        with self.assertRaises(SecretValueNotFoundError) as handler:
             self.environment_secret_templated.get_value(obj=None)
+        self.assertEqual(
+            str(handler.exception),
+            f'SecretValueNotFoundError: Secret "{self.environment_secret_templated}" '
+            '(provider "EnvironmentVariableSecretsProvider"): '
+            'Undefined environment variable "NAUTOBOT_TEST_"!',
+        )
 
     def test_environment_variable_templated_bad_template(self):
         """Error handling."""
         # Malformed Jinja2
         self.environment_secret_templated.parameters["variable"] = "{{ obj."
-        with self.assertRaises(SecretParametersError):
+        with self.assertRaises(SecretParametersError) as handler:
             self.environment_secret_templated.get_value(obj=self.site)
+        self.assertEqual(
+            str(handler.exception),
+            f'SecretParametersError: Secret "{self.environment_secret_templated}" '
+            '(provider "EnvironmentVariableSecretsProvider"): '
+            "expected name or number",
+        )
+
         # Template references attribute not present on the provided obj
         # Since we're not using Jinja2's StrictUndefined, this just renders as an empty string
         self.environment_secret_templated.parameters["variable"] = "{{ obj.primary_ip4 }}"
-        with self.assertRaises(SecretValueNotFoundError):
+        with self.assertRaises(SecretValueNotFoundError) as handler:
             self.environment_secret_templated.get_value(obj=self.site)
+        self.assertEqual(
+            str(handler.exception),
+            f'SecretValueNotFoundError: Secret "{self.environment_secret_templated}" '
+            '(provider "EnvironmentVariableSecretsProvider"): '
+            'Undefined environment variable ""!',
+        )
 
     @mock.patch.dict(os.environ, {"NAUTOBOT_TEST_ENVIRONMENT_VARIABLE": "supersecretvalue"})
     def test_environment_variable_value_success(self):
@@ -1006,22 +1079,57 @@ class SecretTest(TestCase):
 
     def test_text_file_value_not_found(self):
         """Failure to retrieve a file raises an exception."""
-        with self.assertRaises(SecretValueNotFoundError):
+        path = self.text_file_secret.rendered_parameters(obj=None)["path"]
+        with self.assertRaises(SecretValueNotFoundError) as handler:
             self.text_file_secret.get_value()
-        with self.assertRaises(SecretValueNotFoundError):
+        self.assertEqual(
+            str(handler.exception),
+            f'SecretValueNotFoundError: Secret "{self.text_file_secret}" (provider "TextFileSecretsProvider"): '
+            f'File "{path}" not found!',
+        )
+
+        with self.assertRaises(SecretValueNotFoundError) as handler:
             self.text_file_secret.get_value(obj=None)
-        with self.assertRaises(SecretValueNotFoundError):
+        self.assertEqual(
+            str(handler.exception),
+            f'SecretValueNotFoundError: Secret "{self.text_file_secret}" (provider "TextFileSecretsProvider"): '
+            f'File "{path}" not found!',
+        )
+
+        with self.assertRaises(SecretValueNotFoundError) as handler:
             self.text_file_secret.get_value(obj=self.site)
+        self.assertEqual(
+            str(handler.exception),
+            f'SecretValueNotFoundError: Secret "{self.text_file_secret}" (provider "TextFileSecretsProvider"): '
+            f'File "{path}" not found!',
+        )
 
     def test_text_file_value_missing_parameters(self):
         """A mis-defined text file secret raises an exception."""
         self.text_file_secret.parameters = {}
-        with self.assertRaises(SecretParametersError):
+        with self.assertRaises(SecretParametersError) as handler:
             self.text_file_secret.get_value()
-        with self.assertRaises(SecretParametersError):
+        self.assertEqual(
+            str(handler.exception),
+            f'SecretParametersError: Secret "{self.text_file_secret}" (provider "TextFileSecretsProvider"): '
+            'The "path" parameter is mandatory!',
+        )
+
+        with self.assertRaises(SecretParametersError) as handler:
             self.text_file_secret.get_value(obj=None)
-        with self.assertRaises(SecretParametersError):
+        self.assertEqual(
+            str(handler.exception),
+            f'SecretParametersError: Secret "{self.text_file_secret}" (provider "TextFileSecretsProvider"): '
+            'The "path" parameter is mandatory!',
+        )
+
+        with self.assertRaises(SecretParametersError) as handler:
             self.text_file_secret.get_value(obj=self.site)
+        self.assertEqual(
+            str(handler.exception),
+            f'SecretParametersError: Secret "{self.text_file_secret}" (provider "TextFileSecretsProvider"): '
+            'The "path" parameter is mandatory!',
+        )
 
     def test_text_file_value_success(self):
         """Successful retrieval of a text file secret."""
@@ -1072,14 +1180,36 @@ class SecretTest(TestCase):
     def test_unknown_provider(self):
         """An unknown/unsupported provider raises an exception."""
         self.environment_secret.provider = "it-is-a-mystery"
-        with self.assertRaises(ValidationError):
+        with self.assertRaises(ValidationError) as handler:
             self.environment_secret.clean()
-        with self.assertRaises(SecretProviderError):
+        self.assertEqual(
+            str(handler.exception),
+            "{'provider': ['No registered provider \"it-is-a-mystery\" is available']}",
+        )
+
+        with self.assertRaises(SecretProviderError) as handler:
             self.environment_secret.get_value()
-        with self.assertRaises(SecretProviderError):
+        self.assertEqual(
+            str(handler.exception),
+            f'SecretProviderError: Secret "{self.environment_secret}" (provider "it-is-a-mystery"): '
+            'No registered provider "it-is-a-mystery" is available',
+        )
+
+        with self.assertRaises(SecretProviderError) as handler:
             self.environment_secret.get_value(obj=None)
-        with self.assertRaises(SecretProviderError):
+        self.assertEqual(
+            str(handler.exception),
+            f'SecretProviderError: Secret "{self.environment_secret}" (provider "it-is-a-mystery"): '
+            'No registered provider "it-is-a-mystery" is available',
+        )
+
+        with self.assertRaises(SecretProviderError) as handler:
             self.environment_secret.get_value(obj=self.site)
+        self.assertEqual(
+            str(handler.exception),
+            f'SecretProviderError: Secret "{self.environment_secret}" (provider "it-is-a-mystery"): '
+            'No registered provider "it-is-a-mystery" is available',
+        )
 
 
 class SecretsGroupTest(TestCase):

@@ -2,8 +2,7 @@ from django.db import models
 from django.urls import reverse
 
 from example_plugin.choices import FeatureChoices
-from nautobot.core.models.generics import OrganizationalModel
-from nautobot.extras.utils import extras_features
+from nautobot.apps.models import extras_features, OrganizationalModel
 
 
 @extras_features(

@@ -14,8 +14,8 @@ This will install:
 - Redis server and client
 
 ```no-highlight
-$ sudo dnf check-update
-$ sudo dnf install -y git python38 python38-devel python38-pip redis
+sudo dnf check-update
+sudo dnf install -y git python38 python38-devel python38-pip redis
 ```
 
 ## Database Setup
@@ -33,7 +33,7 @@ Please follow the steps for your selected database backend below.
 This will install the PostgreSQL database server and client.
 
 ```no-highlight
-$ sudo dnf install -y postgresql-server
+sudo dnf install -y postgresql-server
 ```
 
 #### Initialize PostgreSQL
@@ -41,7 +41,7 @@ $ sudo dnf install -y postgresql-server
 CentOS/RHEL requires a manual step to generate the initial configurations required by PostgreSQL.
 
 ```no-highlight
-$ sudo postgresql-setup --initdb
+sudo postgresql-setup --initdb
 ```
 
 #### Configure Authentication
@@ -73,7 +73,7 @@ host    all             all             ::1/128                 md5
 Start the service and enable it to run at system startup:
 
 ```no-highlight
-$ sudo systemctl enable --now postgresql
+sudo systemctl enable --now postgresql
 ```
 
 #### Create a PostgreSQL Database
@@ -82,14 +82,20 @@ At a minimum, we need to create a database for Nautobot and assign it a username
 is done with the following commands.
 
 !!! danger
-    **Do not use the password from the example.** Choose a strong, random password to ensure secure database
-    authentication for your Nautobot installation.
+    **Do not use the password from the example.** Choose a strong, random password to ensure secure database authentication for your Nautobot installation.
 
 ```no-highlight
-$ sudo -u postgres psql
+sudo -u postgres psql
+```
+
+Example output:
+
+```no-highlight
 psql (10.15)
 Type "help" for help.
+```
 
+```no-highlight
 postgres=# CREATE DATABASE nautobot;
 CREATE DATABASE
 postgres=# CREATE USER nautobot WITH PASSWORD 'insecure_password';
@@ -106,7 +112,12 @@ You can verify that authentication works issuing the following command and provi
 If successful, you will enter a `nautobot` prompt. Type `\conninfo` to confirm your connection, or type `\q` to exit.
 
 ```no-highlight
-$ psql --username nautobot --password --host localhost nautobot
+psql --username nautobot --password --host localhost nautobot
+```
+
+Example output:
+
+```no-highlight
 Password for user nautobot:
 psql (10.15)
 Type "help" for help.
@@ -131,7 +142,7 @@ sudo dnf install -y gcc mysql-server mysql-devel
 Start the service and enable it to run at system startup:
 
 ```no-highlight
-$ sudo systemctl enable --now mysql
+sudo systemctl enable --now mysql
 ```
 
 #### Create a MySQL Database
@@ -145,7 +156,12 @@ At a minimum, we need to create a database for Nautobot and assign it a username
     **Do not use the password from the example.** Choose a strong, random password to ensure secure database authentication for your Nautobot installation.
 
 ```no-highlight
-$ sudo -u root mysql
+sudo -u root mysql
+```
+
+Example output:
+
+```no-highlight
 Welcome to the MySQL monitor.  Commands end with ; or \g.
 Your MySQL connection id is 8
 Server version: 8.0.21 Source distribution
@@ -181,7 +197,12 @@ If successful, you will enter a `mysql>` prompt. Type `status` to confirm your c
     Replace `localhost` below with your database server if using a remote database.
 
 ```no-highlight
-$ mysql --user nautobot --password --host localhost nautobot
+mysql --user nautobot --password --host localhost nautobot
+```
+
+Example output:
+
+```no-highlight
 Enter password:
 Welcome to the MySQL monitor.  Commands end with ; or \g.
 Your MySQL connection id is 10
@@ -231,7 +252,7 @@ Bye
 Start the service and enable it to run at system startup:
 
 ```no-highlight
-$ sudo systemctl enable --now redis
+sudo systemctl enable --now redis
 ```
 
 ### Verify Redis Service Status
@@ -239,7 +260,12 @@ $ sudo systemctl enable --now redis
 Use the `redis-cli` utility to ensure the Redis service is functional:
 
 ```no-highlight
-$ redis-cli ping
+redis-cli ping
+```
+
+Example output:
+
+```no-highlight
 PONG
 ```
 

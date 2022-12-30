@@ -5,18 +5,19 @@ from django.conf import settings
 from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ObjectDoesNotExist
 from django.core.files.uploadedfile import SimpleUploadedFile
-from django.test import override_settings, tag
 from django.test import TestCase as _TestCase
+from django.test import override_settings, tag
 from django.urls import NoReverseMatch, reverse
+from django.utils.http import urlencode
 from django.utils.text import slugify
 from tree_queries.models import TreeNode
 
-from nautobot.extras import choices
+from nautobot.extras import choices as extras_choices
 from nautobot.extras import models as extras_models
 from nautobot.users import models as users_models
 from nautobot.utilities import testing, utils
+from nautobot.utilities.templatetags import helpers
 from nautobot.utilities.testing import mixins
-
 
 __all__ = (
     "TestCase",
@@ -175,13 +176,13 @@ class ViewTestCases:
                     content_type = ContentType.objects.get_for_model(instance)
                     if content_type == relationship.source_type:
                         self.assertIn(
-                            relationship.get_label(choices.RelationshipSideChoices.SIDE_SOURCE),
+                            relationship.get_label(extras_choices.RelationshipSideChoices.SIDE_SOURCE),
                             response_body,
                             msg=response_body,
                         )
                     if content_type == relationship.destination_type:
                         self.assertIn(
-                            relationship.get_label(choices.RelationshipSideChoices.SIDE_DESTINATION),
+                            relationship.get_label(extras_choices.RelationshipSideChoices.SIDE_DESTINATION),
                             response_body,
                             msg=response_body,
                         )
@@ -191,7 +192,7 @@ class ViewTestCases:
                 for custom_field in self.custom_fields:  # false positive pylint: disable=not-an-iterable
                     self.assertIn(str(custom_field), response_body, msg=response_body)
                     # 2.0 TODO: #824 custom_field.slug rather than custom_field.name
-                    if custom_field.type == choices.CustomFieldTypeChoices.TYPE_MULTISELECT:
+                    if custom_field.type == extras_choices.CustomFieldTypeChoices.TYPE_MULTISELECT:
                         for value in instance.cf.get(custom_field.name):
                             self.assertIn(str(value), response_body, msg=response_body)
                     else:
@@ -323,7 +324,7 @@ class ViewTestCases:
                 # Verify ObjectChange creation
                 objectchanges = utils.get_changes_for_model(instance)
                 self.assertEqual(len(objectchanges), 1)
-                self.assertEqual(objectchanges[0].action, choices.ObjectChangeActionChoices.ACTION_CREATE)
+                self.assertEqual(objectchanges[0].action, extras_choices.ObjectChangeActionChoices.ACTION_CREATE)
 
         @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
         def test_create_object_with_constrained_permission(self):
@@ -447,7 +448,7 @@ class ViewTestCases:
                 # Verify ObjectChange creation
                 objectchanges = utils.get_changes_for_model(instance)
                 self.assertEqual(len(objectchanges), 1)
-                self.assertEqual(objectchanges[0].action, choices.ObjectChangeActionChoices.ACTION_UPDATE)
+                self.assertEqual(objectchanges[0].action, extras_choices.ObjectChangeActionChoices.ACTION_UPDATE)
 
         @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
         def test_edit_object_with_constrained_permission(self):
@@ -542,7 +543,36 @@ class ViewTestCases:
                 # Verify ObjectChange creation
                 objectchanges = utils.get_changes_for_model(instance)
                 self.assertEqual(len(objectchanges), 1)
-                self.assertEqual(objectchanges[0].action, choices.ObjectChangeActionChoices.ACTION_DELETE)
+                self.assertEqual(objectchanges[0].action, extras_choices.ObjectChangeActionChoices.ACTION_DELETE)
+
+        @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+        def test_delete_object_with_permission_and_xwwwformurlencoded(self):
+            instance = self.get_deletable_object()
+
+            # Assign model-level permission
+            obj_perm = users_models.ObjectPermission(name="Test permission", actions=["delete"])
+            obj_perm.save()
+            obj_perm.users.add(self.user)
+            obj_perm.object_types.add(ContentType.objects.get_for_model(self.model))
+
+            # Try GET with model-level permission
+            self.assertHttpStatus(self.client.get(self._get_url("delete", instance)), 200)
+
+            # Try POST with model-level permission
+            request = {
+                "path": self._get_url("delete", instance),
+                "data": urlencode({"confirm": True}),
+                "content_type": "application/x-www-form-urlencoded",
+            }
+            self.assertHttpStatus(self.client.post(**request), 302)
+            with self.assertRaises(ObjectDoesNotExist):
+                self._get_queryset().get(pk=instance.pk)
+
+            if hasattr(self.model, "to_objectchange"):
+                # Verify ObjectChange creation
+                objectchanges = utils.get_changes_for_model(instance)
+                self.assertEqual(len(objectchanges), 1)
+                self.assertEqual(objectchanges[0].action, extras_choices.ObjectChangeActionChoices.ACTION_DELETE)
 
         @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
         def test_delete_object_with_constrained_permission(self):
@@ -594,6 +624,14 @@ class ViewTestCases:
 
         def get_filterset(self):
             return self.filterset or utils.get_filterset_for_model(self.model)
+
+        # Helper methods to be overriden by special cases.
+        # See ConsoleConnectionsTestCase, InterfaceConnectionsTestCase and PowerConnectionsTestCase
+        def get_list_url(self):
+            return reverse(helpers.validated_viewname(self.model, "list"))
+
+        def get_title(self):
+            return helpers.bettertitle(self.model._meta.verbose_name_plural)
 
         @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
         def test_list_objects_anonymous(self):
@@ -691,7 +729,18 @@ class ViewTestCases:
             obj_perm.object_types.add(ContentType.objects.get_for_model(self.model))
 
             # Try GET with model-level permission
-            self.assertHttpStatus(self.client.get(self._get_url("list")), 200)
+            response = self.client.get(self._get_url("list"))
+            self.assertHttpStatus(response, 200)
+            response_body = response.content.decode(response.charset)
+
+            list_url = self.get_list_url()
+            title = self.get_title()
+
+            # Check if breadcrumb is rendered correctly
+            self.assertIn(
+                f'<a href="{list_url}">{title}</a>',
+                response_body,
+            )
 
             # Built-in CSV export
             if hasattr(self.model, "csv_headers"):

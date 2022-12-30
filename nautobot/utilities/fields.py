@@ -6,7 +6,6 @@ from django.db import models
 
 from nautobot.utilities import forms, ordering
 
-
 ColorValidator = RegexValidator(
     regex="^[0-9a-f]{6}$",
     message="Enter a valid hexadecimal RGB color code.",

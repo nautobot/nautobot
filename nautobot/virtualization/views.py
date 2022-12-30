@@ -3,6 +3,7 @@ from django.db import transaction
 from django.db.models import Prefetch
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
+from django.utils.functional import cached_property
 from django_tables2 import RequestConfig
 
 from nautobot.core.views import generic
@@ -349,8 +350,14 @@ class VirtualMachineView(generic.ObjectView):
 
 
 class VirtualMachineConfigContextView(ObjectConfigContextView):
-    queryset = VirtualMachine.objects.annotate_config_context_data()
     base_template = "virtualization/virtualmachine.html"
+
+    @cached_property
+    def queryset(self):  # pylint: disable=method-hidden
+        """
+        A cached_property rather than a class attribute because annotate_config_context_data() is unsafe at import time.
+        """
+        return VirtualMachine.objects.annotate_config_context_data()
 
 
 class VirtualMachineEditView(generic.ObjectEditView):
@@ -433,7 +440,7 @@ class VMInterfaceView(generic.ObjectView):
         }
 
 
-# TODO: This should not use ComponentCreateView
+# 2.0 TODO: This will be collapsed into `InterfaceCreateView` and will go away.
 class VMInterfaceCreateView(generic.ComponentCreateView):
     queryset = VMInterface.objects.all()
     form = forms.VMInterfaceCreateForm

@@ -1,13 +1,12 @@
 import logging
 
-from cacheops.simple import cache, CacheMiss
+from cacheops.simple import CacheMiss, cache
 from django.conf import settings
 from packaging import version
 import requests
 
 from nautobot.core import celery
 from nautobot.utilities import config
-
 
 # Get an instance of a logger
 logger = logging.getLogger("nautobot.releases")
@@ -31,7 +30,7 @@ def get_releases(pre_releases=False):
 
     try:
         logger.debug(f"Fetching new releases from {url}")
-        response = requests.get(url, headers=headers, proxies=settings.HTTP_PROXIES)
+        response = requests.get(url, headers=headers, proxies=settings.HTTP_PROXIES, timeout=15)
         response.raise_for_status()
         total_releases = len(response.json())
 

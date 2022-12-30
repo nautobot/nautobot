@@ -13,7 +13,6 @@ from splinter.browser import Browser
 from nautobot.core import celery
 from nautobot.utilities import testing
 
-
 # URL used to connect to the Selenium host
 SELENIUM_URL = os.getenv("NAUTOBOT_SELENIUM_URL", "http://localhost:4444/wd/hub")
 

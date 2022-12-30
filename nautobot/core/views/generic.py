@@ -80,17 +80,17 @@ class ObjectView(ObjectPermissionRequiredMixin, View):
         Return any additional context data for the template.
 
         Args:
-            request: The current request
-            instance: The object being viewed
+            request (Request): The current request
+            instance (Model): The object being viewed
 
         Returns:
-            dict
+            (dict): Additional context data
         """
         return {
             "active_tab": request.GET.get("tab", "main"),
         }
 
-    # TODO: Remove this method in 2.0. Can be retrieved from instance itself now
+    # 2.0 TODO: Remove this method in 2.0. Can be retrieved from instance itself now
     # instance.get_changelog_url()
     # Only available on models that support changelogs
     def get_changelog_url(self, instance):
@@ -141,7 +141,7 @@ class ObjectView(ObjectPermissionRequiredMixin, View):
         plugin_tabs = _get_registered_content(instance, "detail_tabs", temp_fake_context, return_html=False)
 
         if request.GET.get("viewconfig", None) == "true":
-            resp = {'tabs': plugin_tabs}
+            resp = {"tabs": plugin_tabs}
             return JsonResponse(resp)
         else:
             return render(
@@ -151,7 +151,7 @@ class ObjectView(ObjectPermissionRequiredMixin, View):
                     "object": instance,
                     "verbose_name": self.queryset.model._meta.verbose_name,
                     "verbose_name_plural": self.queryset.model._meta.verbose_name_plural,
-                    "changelog_url": changelog_url,  # TODO: Remove in 2.0. This information can be retrieved from the object itself now.
+                    "changelog_url": changelog_url,  # 2.0 TODO: Remove in 2.0. This information can be retrieved from the object itself now.
                     **self.get_extra_context(request, instance),
                 },
             )
@@ -999,9 +999,9 @@ class BulkEditView(GetReturnURLMixin, ObjectPermissionRequiredMixin, View):
         # If we are editing *all* objects in the queryset, replace the PK list with all matched objects.
         if request.POST.get("_all"):
             if self.filterset is not None:
-                pk_list = [obj.pk for obj in self.filterset(request.GET, model.objects.only("pk")).qs]
+                pk_list = self.filterset(request.GET, model.objects.only("pk")).qs
             else:
-                pk_list = model.objects.values_list("pk", flat=True)
+                pk_list = model.objects.all()
         else:
             pk_list = request.POST.getlist("pk")
 
@@ -1250,9 +1250,9 @@ class BulkDeleteView(GetReturnURLMixin, ObjectPermissionRequiredMixin, View):
         # Are we deleting *all* objects in the queryset or just a selected subset?
         if request.POST.get("_all"):
             if self.filterset is not None:
-                pk_list = [obj.pk for obj in self.filterset(request.GET, model.objects.only("pk")).qs]
+                pk_list = self.filterset(request.GET, model.objects.only("pk")).qs
             else:
-                pk_list = model.objects.values_list("pk", flat=True)
+                pk_list = model.objects.all()
         else:
             pk_list = request.POST.getlist("pk")
 
