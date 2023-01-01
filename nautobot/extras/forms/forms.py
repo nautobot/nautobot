@@ -134,7 +134,6 @@ __all__ = (
     "RelationshipForm",
     "RelationshipFilterForm",
     "RelationshipAssociationFilterForm",
-    "RelationshipAssociationFilterForm",
     "RoleBulkEditForm",
     "RoleCSVForm",
     "RoleForm",

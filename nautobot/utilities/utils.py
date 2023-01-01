@@ -824,7 +824,7 @@ def get_filterset_parameter_form_field(model, parameter):
             "to_field_name": field.extra.get("to_field_name", "id"),
         }
         # Status and Tag api requires content_type, to limit result to only related content_types
-        if related_model in [Status, Tag, Role]:
+        if related_model in [Role, Status, Tag]:
             form_attr["query_params"] = {"content_types": model._meta.label_lower}
 
         form_field = DynamicModelMultipleChoiceField(**form_attr)

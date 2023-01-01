@@ -1,6 +1,6 @@
 # Roles
 
-The Role model represents a role that can be assigned to a device, rack, virtual machine, IP address, VLAN, or prefix. Each role is identified by a unique name and has a slug, weight, color and contenttypes associated with it.
+The Role model represents a role that can be assigned to a device, rack, virtual machine, IP address, VLAN, or prefix. Each role is identified by a unique name and has a slug, weight, color and content-types associated with it.
 
 ## Role Basics
 
@@ -35,7 +35,7 @@ Any filter that is intended to have a `role` field must inherit from `nautobot.e
 
 ### Form fields
 
-Any model form that is intended to have a `role` field must inherit from one of three mixins, depending on the use-case:
+Any model form that is intended to have a `role` field must inherit from one of two mixins, depending on the use-case:
 
 - `nautobot.extras.forms.RoleModelFilterFormMixin` should be used to add a non-required, multiple-choice `role` filter field to UI filter forms. This multiple-choice field allows for multiple role values to be selected for filtering objects in list views in the web UI.
 - `nautobot.extras.forms.RoleModelBulkEditFormMixin` should be used to add a non-required `role` form field to an object's model form. This field constrains role choices eligible to the object type being edited.
@@ -51,7 +51,7 @@ This adds an `nautobot.extras.api.fields.RoleSerializerField` to the serializer.
 
 ### Table field
 
-If you wish for a table to include a `role` field, your table must inherit from `nautobot.extras.tables.RoleTableMixin`. This includes a `ColorColumn` on the table.
+If you wish for a table to include a `role` column, your table must inherit from `nautobot.extras.tables.RoleTableMixin`. This includes a `ColorColumn` with the header `role` on the table.
 
 ## Role object integrations
 

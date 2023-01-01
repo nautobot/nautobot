@@ -346,8 +346,6 @@ class VLANFactory(PrimaryModelFactory):
         factory.Maybe("has_location", random_instance(Location, allow_null=False), None),
     )
 
-    has_role = factory.Faker("pybool")
-
     has_site = factory.Faker("pybool")
     site = factory.Maybe(
         "has_group",
@@ -399,7 +397,6 @@ class PrefixFactory(PrimaryModelFactory):
     class Params:
         has_description = factory.Faker("pybool")
         has_location = factory.Faker("pybool")
-        has_role = factory.Faker("pybool")
         has_site = factory.Faker("pybool")
         has_tenant = factory.Faker("pybool")
         has_vlan = factory.Faker("pybool")
@@ -560,7 +557,6 @@ class IPAddressFactory(PrimaryModelFactory):
         has_description = factory.Faker("pybool")
         has_dns_name = factory.Faker("pybool")
         has_nat_inside = factory.Faker("pybool")
-        has_role = factory.Faker("pybool")
         role_choice = factory.Faker("random_element", elements=IPAddressRoleChoices)
         has_tenant = factory.Faker("pybool")
         has_vrf = factory.Faker("pybool")
