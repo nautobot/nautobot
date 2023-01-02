@@ -16,7 +16,8 @@ from django.views.generic import TemplateView, View
 from graphene_django.views import GraphQLView
 from packaging import version
 
-from nautobot.core.constants import SEARCH_MAX_RESULTS, SEARCH_TYPES
+from nautobot.core.constants import SEARCH_MAX_RESULTS
+from nautobot.core.constants.search_types import SEARCH_TYPES
 from nautobot.core.forms import SearchForm
 from nautobot.core.releases import get_latest_release
 from nautobot.core.utils import get_settings_or_config

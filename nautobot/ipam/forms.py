@@ -3,7 +3,6 @@ from django.db.models import Q
 
 from nautobot.core.forms import (
     BOOLEAN_WITH_BLANK_CHOICES,
-    AddressFieldMixin,
     BootstrapMixin,
     BulkEditNullBooleanSelect,
     CSVChoiceField,
@@ -13,7 +12,6 @@ from nautobot.core.forms import (
     DynamicModelMultipleChoiceField,
     ExpandableIPAddressField,
     NumericArrayField,
-    PrefixFieldMixin,
     ReturnURLForm,
     SlugField,
     StaticSelect2,
@@ -21,6 +19,7 @@ from nautobot.core.forms import (
     TagFilterField,
     add_blank_choice,
 )
+from nautobot.core.forms.mixins import AddressFieldMixin, PrefixFieldMixin
 from nautobot.dcim.form_mixins import (
     LocatableModelBulkEditFormMixin,
     LocatableModelCSVFormMixin,

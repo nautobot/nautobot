@@ -16,9 +16,10 @@ from django.forms.fields import JSONField as _JSONField
 from django.urls import reverse
 
 from nautobot.core import choices as utilities_choices
-from nautobot.core import forms, utils, validators
+from nautobot.core import utils, validators
+from nautobot.core.forms import constants
+from nautobot.core.forms import utils as form_utils
 from nautobot.core.forms import widgets
-from nautobot.extras import utils as extras_utils
 
 __all__ = (
     "CommentField",
@@ -82,13 +83,13 @@ class CSVDataField(django_forms.CharField):
         if value is None:
             return None
         reader = csv.reader(StringIO(value.strip()))
-        return forms.parse_csv(reader)
+        return form_utils.parse_csv(reader)
 
     def validate(self, value):
         if value is None:
             return None
         headers, _records = value
-        forms.validate_csv(headers, self.fields, self.required_fields)
+        form_utils.validate_csv(headers, self.fields, self.required_fields)
 
         return value
 
@@ -136,7 +137,7 @@ class CSVFileField(django_forms.FileField):
         except csv.Error:
             dialect = csv.excel
         reader = csv.reader(csv_str.splitlines(), dialect)
-        headers, records = forms.parse_csv(reader)
+        headers, records = form_utils.parse_csv(reader)
 
         return headers, records
 
@@ -145,7 +146,7 @@ class CSVFileField(django_forms.FileField):
             return None
 
         headers, _records = value
-        forms.validate_csv(headers, self.fields, self.required_fields)
+        form_utils.validate_csv(headers, self.fields, self.required_fields)
 
         return value
 
@@ -255,15 +256,17 @@ class MultipleContentTypeField(django_forms.ModelMultipleChoiceField):
             feature (str): Feature name to use in constructing a FeatureQuery to restrict the available ContentTypes.
             choices_as_strings (bool): If True, render selection as a list of `"{app_label}.{model}"` strings.
         """
+        # from nautobot.extras import utils as extras_utils
+
         if "queryset" not in kwargs:
-            if feature is not None:
-                kwargs["queryset"] = ContentType.objects.filter(
-                    extras_utils.FeatureQuery(feature).get_query()
-                ).order_by("app_label", "model")
-            else:
-                kwargs["queryset"] = ContentType.objects.order_by("app_label", "model")
+            # if feature is not None:
+            #     kwargs["queryset"] = ContentType.objects.filter(
+            #         extras_utils.FeatureQuery(feature).get_query()
+            #     ).order_by("app_label", "model")
+            # else:
+            kwargs["queryset"] = ContentType.objects.order_by("app_label", "model")
         if "widget" not in kwargs:
-            kwargs["widget"] = forms.StaticSelect2Multiple()
+            kwargs["widget"] = widgets.StaticSelect2Multiple()
 
         super().__init__(*args, **kwargs)
 
@@ -361,8 +364,8 @@ class ExpandableNameField(django_forms.CharField):
     def to_python(self, value):
         if not value:
             return ""
-        if re.search(forms.ALPHANUMERIC_EXPANSION_PATTERN, value):
-            return list(forms.expand_alphanumeric_pattern(value))
+        if re.search(constants.ALPHANUMERIC_EXPANSION_PATTERN, value):
+            return list(form_utils.expand_alphanumeric_pattern(value))
         return [value]
 
 
@@ -381,10 +384,10 @@ class ExpandableIPAddressField(django_forms.CharField):
 
     def to_python(self, value):
         # Hackish address family detection but it's all we have to work with
-        if "." in value and re.search(forms.IP4_EXPANSION_PATTERN, value):
-            return list(forms.expand_ipaddress_pattern(value, 4))
-        elif ":" in value and re.search(forms.IP6_EXPANSION_PATTERN, value):
-            return list(forms.expand_ipaddress_pattern(value, 6))
+        if "." in value and re.search(constants.IP4_EXPANSION_PATTERN, value):
+            return list(form_utils.expand_ipaddress_pattern(value, 4))
+        elif ":" in value and re.search(constants.IP6_EXPANSION_PATTERN, value):
+            return list(form_utils.expand_ipaddress_pattern(value, 6))
         return [value]
 
 
@@ -432,7 +435,7 @@ class SlugField(django_forms.SlugField):
         """
         kwargs.setdefault("label", "Slug")
         kwargs.setdefault("help_text", "URL-friendly unique shorthand")
-        kwargs.setdefault("widget", forms.SlugWidget)
+        kwargs.setdefault("widget", widgets.SlugWidget)
         super().__init__(*args, **kwargs)
         if isinstance(slug_source, (tuple, list)):
             slug_source = " ".join(slug_source)
@@ -730,7 +733,7 @@ class NumericArrayField(SimpleArrayField):
 
     def to_python(self, value):
         try:
-            value = ",".join([str(n) for n in forms.parse_numeric_range(value)])
+            value = ",".join([str(n) for n in form_utils.parse_numeric_range(value)])
         except ValueError as error:
             raise ValidationError(error)
         return super().to_python(value)

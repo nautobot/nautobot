@@ -9,10 +9,8 @@ from django.urls import reverse
 
 from nautobot.core import utils
 from nautobot.core.constants import OBJ_TYPE_CHOICES
-from nautobot.ipam import formfields
 
 __all__ = (
-    "AddressFieldMixin",
     "BootstrapMixin",
     "BulkEditForm",
     "BulkRenameForm",
@@ -21,42 +19,12 @@ __all__ = (
     "DynamicFilterForm",
     "DynamicFilterFormSet",
     "ImportForm",
-    "PrefixFieldMixin",
     "ReturnURLForm",
     "SearchForm",
     "TableConfigForm",
 )
 
 logger = logging.getLogger(__name__)
-
-
-class AddressFieldMixin(forms.ModelForm):
-    """
-    ModelForm mixin for IPAddress based models.
-    """
-
-    address = formfields.IPNetworkFormField()
-
-    def __init__(self, *args, **kwargs):
-
-        instance = kwargs.get("instance")
-        initial = kwargs.get("initial", {}).copy()
-
-        # If initial already has an `address`, we want to use that `address` as it was passed into
-        # the form. If we're editing an object with a `address` field, we need to patch initial
-        # to include `address` because it is a computed field.
-        if "address" not in initial and instance is not None:
-            initial["address"] = instance.address
-
-        kwargs["initial"] = initial
-
-        super().__init__(*args, **kwargs)
-
-    def clean(self):
-        super().clean()
-
-        # Need to set instance attribute for `address` to run proper validation on Model.clean()
-        self.instance.address = self.cleaned_data.get("address")
 
 
 class BootstrapMixin(forms.BaseForm):
@@ -151,35 +119,6 @@ class CSVModelForm(forms.ModelForm):
             for field, to_field in headers.items():
                 if to_field is not None:
                     self.fields[field].to_field_name = to_field
-
-
-class PrefixFieldMixin(forms.ModelForm):
-    """
-    ModelForm mixin for IPNetwork based models.
-    """
-
-    prefix = formfields.IPNetworkFormField()
-
-    def __init__(self, *args, **kwargs):
-
-        instance = kwargs.get("instance")
-        initial = kwargs.get("initial", {}).copy()
-
-        # If initial already has a `prefix`, we want to use that `prefix` as it was passed into
-        # the form. If we're editing an object with a `prefix` field, we need to patch initial
-        # to include `prefix` because it is a computed field.
-        if "prefix" not in initial and instance is not None:
-            initial["prefix"] = instance.prefix
-
-        kwargs["initial"] = initial
-
-        super().__init__(*args, **kwargs)
-
-    def clean(self):
-        super().clean()
-
-        # Need to set instance attribute for `prefix` to run proper validation on Model.clean()
-        self.instance.prefix = self.cleaned_data.get("prefix")
 
 
 class ImportForm(BootstrapMixin, forms.Form):

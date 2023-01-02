@@ -8,6 +8,7 @@ from django.urls import reverse
 from netaddr import IPNetwork
 
 from nautobot.core import filters, forms, testing, utils
+from nautobot.core.forms import mixins
 from nautobot.dcim import filters as dcim_filters
 from nautobot.dcim import models as dcim_models
 from nautobot.dcim.tests import test_views
@@ -563,7 +564,7 @@ class AddressFieldMixinTest(TestCase):
         """Ensure initial kwargs for address is passed in."""
         with mock.patch("nautobot.core.forms.forms.forms.ModelForm.__init__") as mock_init:
             ip_none = ipam_models.IPAddress()
-            forms.AddressFieldMixin(initial=self.initial, instance=ip_none)
+            mixins.AddressFieldMixin(initial=self.initial, instance=ip_none)
             mock_init.assert_called_with(initial=self.initial, instance=ip_none)
 
     def test_address_instance(self):
@@ -571,7 +572,7 @@ class AddressFieldMixinTest(TestCase):
 
         # Mock the django.forms.ModelForm __init__ function used in nautobot.core.forms.forms
         with mock.patch("nautobot.core.forms.forms.forms.ModelForm.__init__") as mock_init:
-            forms.AddressFieldMixin(instance=self.ip)
+            mixins.AddressFieldMixin(instance=self.ip)
             mock_init.assert_called_with(initial=self.initial, instance=self.ip)
 
 
@@ -587,7 +588,7 @@ class PrefixFieldMixinTest(TestCase):
         """Ensure initial kwargs for prefix is passed through."""
         with mock.patch("nautobot.core.forms.forms.forms.ModelForm.__init__") as mock_init:
             prefix_none = ipam_models.Prefix()
-            forms.PrefixFieldMixin(initial=self.initial, instance=prefix_none)
+            mixins.PrefixFieldMixin(initial=self.initial, instance=prefix_none)
             mock_init.assert_called_with(initial=self.initial, instance=prefix_none)
 
     def test_prefix_instance(self):
@@ -595,7 +596,7 @@ class PrefixFieldMixinTest(TestCase):
 
         # Mock the django.forms.ModelForm __init__ function used in nautobot.core.forms.forms
         with mock.patch("nautobot.core.forms.forms.forms.ModelForm.__init__") as mock_init:
-            forms.PrefixFieldMixin(instance=self.prefix)
+            mixins.PrefixFieldMixin(instance=self.prefix)
             mock_init.assert_called_with(initial=self.initial, instance=self.prefix)
 
 
