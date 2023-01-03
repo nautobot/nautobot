@@ -1,9 +1,9 @@
 # Data models relating to Jobs
 
+from datetime import timedelta
 import logging
 import os
 import uuid
-from datetime import timedelta
 
 from celery import schedules
 from django.conf import settings
@@ -20,8 +20,7 @@ from django_celery_beat.managers import ExtendedManager
 
 from nautobot.core.celery import NautobotKombuJSONEncoder
 from nautobot.core.fields import AutoSlugField, JSONArrayField
-from nautobot.core.models import BaseModel
-from nautobot.core.models.generics import OrganizationalModel, PrimaryModel
+from nautobot.core.models import BaseModel, CustomFieldModel, OrganizationalModel, PrimaryModel
 from nautobot.core.utils import slugify_dots_to_dashes
 from nautobot.core.utils.logging import sanitize
 from nautobot.extras.choices import JobExecutionType, JobResultStatusChoices, JobSourceChoices, LogLevelChoices
@@ -44,8 +43,6 @@ from nautobot.extras.utils import (
     get_job_content_type,
     jobs_in_directory,
 )
-
-from nautobot.core.models.customfields import CustomFieldModel
 
 logger = logging.getLogger(__name__)
 

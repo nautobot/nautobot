@@ -1,7 +1,6 @@
 """Data model classes and utilities for app implementation."""
 
-from nautobot.core.models import BaseModel
-from nautobot.core.models.generics import OrganizationalModel, PrimaryModel
+from nautobot.core.models import BaseModel, OrganizationalModel, PrimaryModel
 from nautobot.extras.models import StatusField
 from nautobot.extras.plugins import CustomValidator
 from nautobot.extras.utils import extras_features

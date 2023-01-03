@@ -11,9 +11,7 @@ from django.urls import reverse
 
 from nautobot.core.fields import AutoSlugField
 from nautobot.core.forms import DynamicModelChoiceField, DynamicModelMultipleChoiceField, widgets
-from nautobot.core.models import BaseModel
-from nautobot.core.models.change_logging import ChangeLoggedModel
-from nautobot.core.models.mixins import NotesMixin
+from nautobot.core.models import BaseModel, ChangeLoggedModel, NotesMixin
 from nautobot.core.querysets import RestrictedQuerySet
 from nautobot.core.utils import get_filterset_for_model, slugify_dashes_to_underscores
 from nautobot.extras.choices import RelationshipRequiredSideChoices, RelationshipSideChoices, RelationshipTypeChoices

@@ -24,9 +24,7 @@ from nautobot.core.forms import (
     StaticSelect2Multiple,
     add_blank_choice,
 )
-from nautobot.core.models import BaseModel
-from nautobot.core.models.change_logging import ChangeLoggedModel
-from nautobot.core.models.mixins import NotesMixin
+from nautobot.core.models import BaseModel, ChangeLoggedModel, NotesMixin
 from nautobot.core.querysets import RestrictedQuerySet
 from nautobot.core.templatetags.helpers import render_markdown
 from nautobot.core.utils import render_jinja2, slugify_dashes_to_underscores

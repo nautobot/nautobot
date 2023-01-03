@@ -4,14 +4,27 @@ from nautobot.circuits.filters import CircuitFilterSet, ProviderFilterSet, Provi
 from nautobot.circuits.models import Circuit, Provider, ProviderNetwork
 from nautobot.circuits.tables import CircuitTable, ProviderNetworkTable, ProviderTable
 from nautobot.core.utils import count_related
-from nautobot.dcim.filters import CableFilterSet, DeviceFilterSet, DeviceTypeFilterSet, PowerFeedFilterSet, \
-    RackFilterSet, \
-    RackGroupFilterSet, \
-    SiteFilterSet, VirtualChassisFilterSet
+from nautobot.dcim.filters import (
+    CableFilterSet,
+    DeviceFilterSet,
+    DeviceTypeFilterSet,
+    PowerFeedFilterSet,
+    RackFilterSet,
+    RackGroupFilterSet,
+    SiteFilterSet,
+    VirtualChassisFilterSet,
+)
 from nautobot.dcim.models import Cable, Device, DeviceType, PowerFeed, Rack, RackGroup, Site, VirtualChassis
-from nautobot.dcim.tables import CableTable, DeviceTable, DeviceTypeTable, PowerFeedTable, RackGroupTable, RackTable, \
-    SiteTable, \
-    VirtualChassisTable
+from nautobot.dcim.tables import (
+    CableTable,
+    DeviceTable,
+    DeviceTypeTable,
+    PowerFeedTable,
+    RackGroupTable,
+    RackTable,
+    SiteTable,
+    VirtualChassisTable,
+)
 from nautobot.ipam.filters import AggregateFilterSet, IPAddressFilterSet, PrefixFilterSet, VLANFilterSet, VRFFilterSet
 from nautobot.ipam.models import Aggregate, IPAddress, Prefix, VLAN, VRF
 from nautobot.ipam.tables import AggregateTable, IPAddressTable, PrefixTable, VLANTable, VRFTable

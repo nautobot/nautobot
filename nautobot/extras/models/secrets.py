@@ -4,12 +4,10 @@ from django.core.exceptions import ValidationError
 from django.core.serializers.json import DjangoJSONEncoder
 from django.db import models
 from django.urls import reverse
-
-from jinja2.exceptions import UndefinedError, TemplateSyntaxError
+from jinja2.exceptions import TemplateSyntaxError, UndefinedError
 
 from nautobot.core.fields import AutoSlugField
-from nautobot.core.models import BaseModel
-from nautobot.core.models.generics import OrganizationalModel, PrimaryModel
+from nautobot.core.models import BaseModel, OrganizationalModel, PrimaryModel
 from nautobot.core.utils import render_jinja2
 from nautobot.extras.choices import SecretsGroupAccessTypeChoices, SecretsGroupSecretTypeChoices
 from nautobot.extras.registry import registry

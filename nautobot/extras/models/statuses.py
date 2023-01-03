@@ -9,11 +9,7 @@ from django.utils.hashable import make_hashable
 from nautobot.core.choices import ColorChoices
 from nautobot.core.fields import AutoSlugField, ColorField
 from nautobot.core.forms import DynamicModelChoiceField
-from nautobot.core.models import BaseModel
-from nautobot.core.models.change_logging import ChangeLoggedModel
-from nautobot.core.models.customfields import CustomFieldModel
-from nautobot.core.models.mixins import NotesMixin
-from nautobot.core.models.relationships import RelationshipModel
+from nautobot.core.models import BaseModel, ChangeLoggedModel, CustomFieldModel, NotesMixin, RelationshipModel
 from nautobot.core.querysets import RestrictedQuerySet
 from nautobot.extras.utils import FeatureQuery, extras_features
 
