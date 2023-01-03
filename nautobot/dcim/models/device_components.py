@@ -9,6 +9,7 @@ from mptt.models import MPTTModel, TreeForeignKey
 
 from nautobot.core.fields import NaturalOrderingField
 from nautobot.core.models.generics import PrimaryModel
+from nautobot.core.models.relationships import RelationshipModel
 from nautobot.core.models.utils import CollateAsChar
 from nautobot.core.mptt import TreeManager
 from nautobot.core.ordering import naturalize_interface
@@ -32,7 +33,7 @@ from nautobot.dcim.constants import (
     WIRELESS_IFACE_TYPES,
 )
 from nautobot.dcim.fields import MACAddressCharField
-from nautobot.extras.models import RelationshipModel, Status, StatusModel
+from nautobot.extras.models import Status, StatusModel
 from nautobot.extras.utils import extras_features
 
 __all__ = (

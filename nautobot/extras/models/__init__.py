@@ -1,16 +1,8 @@
-from .change_logging import ChangeLoggedModel, ObjectChange
-from .statuses import Status, StatusField, StatusModel
-from .customfields import ComputedField, CustomField, CustomFieldChoice, CustomFieldModel
+from .change_logging import ObjectChange
+from .customfields import ComputedField, CustomField, CustomFieldChoice
 from .datasources import GitRepository
 from .groups import DynamicGroup, DynamicGroupMembership
-from .jobs import (
-    Job,
-    JobHook,
-    JobLogEntry,
-    JobResult,
-    ScheduledJob,
-    ScheduledJobs,
-)
+from .jobs import Job, JobHook, JobLogEntry, JobResult, ScheduledJob, ScheduledJobs
 from .models import (
     ConfigContext,
     ConfigContextModel,
@@ -25,20 +17,18 @@ from .models import (
     Note,
     Webhook,
 )
-from .relationships import Relationship, RelationshipAssociation, RelationshipModel
+from .relationships import Relationship, RelationshipAssociation
 from .secrets import Secret, SecretsGroup, SecretsGroupAssociation
+from .statuses import Status, StatusField, StatusModel
 from .tags import Tag, TaggedItem
 
-
 __all__ = (
-    "ChangeLoggedModel",
     "ComputedField",
     "ConfigContext",
     "ConfigContextModel",
     "ConfigContextSchema",
     "CustomField",
     "CustomFieldChoice",
-    "CustomFieldModel",
     "CustomLink",
     "DynamicGroup",
     "DynamicGroupMembership",
@@ -56,7 +46,6 @@ __all__ = (
     "Note",
     "ObjectChange",
     "Relationship",
-    "RelationshipModel",
     "RelationshipAssociation",
     "ScheduledJob",
     "ScheduledJobs",

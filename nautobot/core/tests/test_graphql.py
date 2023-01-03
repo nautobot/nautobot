@@ -29,6 +29,7 @@ from nautobot.core.graphql.schema import (
     extend_schema_type_tags,
 )
 from nautobot.core.graphql.utils import str_to_var_name
+from nautobot.core.models.change_logging import ChangeLoggedModel
 from nautobot.core.testing.utils import create_test_user
 from nautobot.dcim.choices import ConsolePortTypeChoices, InterfaceModeChoices, InterfaceTypeChoices, PortTypeChoices
 from nautobot.dcim.filters import DeviceFilterSet, SiteFilterSet
@@ -53,7 +54,6 @@ from nautobot.dcim.models import (
 )
 from nautobot.extras.choices import CustomFieldTypeChoices
 from nautobot.extras.models import (
-    ChangeLoggedModel,
     ConfigContext,
     CustomField,
     GraphQLQuery,

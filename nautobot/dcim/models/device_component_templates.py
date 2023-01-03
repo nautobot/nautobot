@@ -5,6 +5,9 @@ from django.db import models
 
 from nautobot.core.fields import NaturalOrderingField
 from nautobot.core.models import BaseModel
+from nautobot.core.models.change_logging import ChangeLoggedModel
+from nautobot.core.models.customfields import CustomFieldModel
+from nautobot.core.models.relationships import RelationshipModel
 from nautobot.core.ordering import naturalize_interface
 from nautobot.dcim.choices import (
     ConsolePortTypeChoices,
@@ -17,7 +20,7 @@ from nautobot.dcim.choices import (
     SubdeviceRoleChoices,
 )
 from nautobot.dcim.constants import REARPORT_POSITIONS_MAX, REARPORT_POSITIONS_MIN
-from nautobot.extras.models import ChangeLoggedModel, CustomField, CustomFieldModel, RelationshipModel, Status
+from nautobot.extras.models import CustomField, Status
 from nautobot.extras.utils import extras_features
 
 from .device_components import (

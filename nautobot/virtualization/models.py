@@ -6,13 +6,14 @@ from django.urls import reverse
 from taggit.managers import TaggableManager
 
 from nautobot.core.fields import AutoSlugField, NaturalOrderingField
+from nautobot.core.models.customfields import CustomFieldModel
 from nautobot.core.models.generics import BaseModel, OrganizationalModel, PrimaryModel
+from nautobot.core.models.mixins import NotesMixin
 from nautobot.core.models.utils import CollateAsChar
 from nautobot.core.ordering import naturalize_interface
 from nautobot.core.utils import get_settings_or_config, serialize_object, serialize_object_v2
 from nautobot.dcim.models import BaseInterface, Device
-from nautobot.extras.models import ConfigContextModel, CustomFieldModel, ObjectChange, StatusModel, TaggedItem
-from nautobot.extras.models.mixins import NotesMixin
+from nautobot.extras.models import ConfigContextModel, ObjectChange, StatusModel, TaggedItem
 from nautobot.extras.querysets import ConfigContextModelQuerySet
 from nautobot.extras.utils import extras_features
 

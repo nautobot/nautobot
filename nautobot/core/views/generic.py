@@ -31,6 +31,7 @@ from nautobot.core.forms import (
     TableConfigForm,
     restrict_form_fields,
 )
+from nautobot.core.models.change_logging import ChangeLoggedModel
 from nautobot.core.paginator import EnhancedPaginator, get_paginate_count
 from nautobot.core.permissions import get_permission_for_model
 from nautobot.core.templatetags.helpers import bettertitle, validated_viewname
@@ -45,7 +46,6 @@ from nautobot.core.utils import (
 from nautobot.core.utils.error_handlers import handle_protectederror
 from nautobot.core.views.mixins import GetReturnURLMixin, ObjectPermissionRequiredMixin
 from nautobot.extras.models import CustomField, ExportTemplate
-from nautobot.extras.models.change_logging import ChangeLoggedModel
 
 
 class ObjectView(ObjectPermissionRequiredMixin, View):

@@ -3,13 +3,12 @@ import sys
 
 from taggit.managers import TaggableManager, _TaggableManager
 
-from nautobot.extras.models.change_logging import ChangeLoggedModel
-from nautobot.extras.models.customfields import CustomFieldModel
-from nautobot.extras.models.mixins import DynamicGroupMixin, NotesMixin
-from nautobot.extras.models.relationships import RelationshipModel
-from nautobot.extras.models.tags import TaggedItem
 from nautobot.core.models import BaseModel
-
+from nautobot.core.models.change_logging import ChangeLoggedModel
+from nautobot.core.models.customfields import CustomFieldModel
+from nautobot.core.models.mixins import DynamicGroupMixin, NotesMixin
+from nautobot.core.models.relationships import RelationshipModel
+from nautobot.extras.models import TaggedItem
 
 logger = logging.getLogger(__name__)
 

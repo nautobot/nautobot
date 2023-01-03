@@ -45,7 +45,7 @@ from nautobot.extras.utils import (
     jobs_in_directory,
 )
 
-from .customfields import CustomFieldModel
+from nautobot.core.models.customfields import CustomFieldModel
 
 logger = logging.getLogger(__name__)
 

@@ -13,6 +13,7 @@ from django.utils.text import slugify
 from tree_queries.models import TreeNode
 
 from nautobot.core import testing, utils
+from nautobot.core.models.change_logging import ChangeLoggedModel
 from nautobot.core.templatetags import helpers
 from nautobot.extras import choices as extras_choices
 from nautobot.extras import models as extras_models
@@ -128,7 +129,7 @@ class ViewTestCases:
             )
 
             # The "Change Log" tab should appear in the response since we have all exempt permissions
-            if issubclass(self.model, extras_models.ChangeLoggedModel):
+            if issubclass(self.model, ChangeLoggedModel):
                 response_body = testing.extract_page_body(response.content.decode(response.charset))
                 self.assertIn("Change Log", response_body, msg=response_body)
 

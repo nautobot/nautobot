@@ -10,11 +10,11 @@ from nautobot.core.choices import ColorChoices
 from nautobot.core.fields import AutoSlugField, ColorField
 from nautobot.core.forms import DynamicModelChoiceField
 from nautobot.core.models import BaseModel
+from nautobot.core.models.change_logging import ChangeLoggedModel
+from nautobot.core.models.customfields import CustomFieldModel
+from nautobot.core.models.mixins import NotesMixin
+from nautobot.core.models.relationships import RelationshipModel
 from nautobot.core.querysets import RestrictedQuerySet
-from nautobot.extras.models import ChangeLoggedModel
-from nautobot.extras.models.customfields import CustomFieldModel
-from nautobot.extras.models.mixins import NotesMixin
-from nautobot.extras.models.relationships import RelationshipModel
 from nautobot.extras.utils import FeatureQuery, extras_features
 
 

@@ -8,9 +8,9 @@ from django.db import models, transaction
 from django.urls import reverse
 from django_cryptography.fields import encrypt
 
-from nautobot.extras.utils import extras_features
 from nautobot.core.fields import AutoSlugField
 from nautobot.core.models.generics import PrimaryModel
+from nautobot.extras.utils import extras_features
 
 
 @extras_features(
@@ -153,8 +153,8 @@ class GitRepository(PrimaryModel):
             if trigger_resync or dry_run:
                 assert self.request is not None, "No HTTP request associated with this update!"
                 from nautobot.extras.datasources import (
-                    enqueue_pull_git_repository_and_refresh_data,
                     enqueue_git_repository_diff_origin_and_local,
+                    enqueue_pull_git_repository_and_refresh_data,
                 )
 
                 # NOTE: if dry_run is True, there would be no need to trigger a resync

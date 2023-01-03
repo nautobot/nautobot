@@ -10,6 +10,7 @@ from rest_framework.test import APIClient
 from rest_framework.test import APITransactionTestCase as _APITransactionTestCase
 
 from nautobot.core import testing, utils
+from nautobot.core.models.change_logging import ChangeLoggedModel
 from nautobot.core.testing import mixins, views
 from nautobot.extras import choices as extras_choices
 from nautobot.extras import models as extras_models
@@ -125,7 +126,7 @@ class APIViewTestCases:
             self.assertIn("display", response.data)
             self.assertIsInstance(response.data["display"], str)
             # Fields that should be present in appropriate model serializers:
-            if issubclass(self.model, extras_models.ChangeLoggedModel):
+            if issubclass(self.model, ChangeLoggedModel):
                 self.assertIn("created", response.data)
                 self.assertIn("last_updated", response.data)
             # Fields that should be absent by default (opt-in fields):

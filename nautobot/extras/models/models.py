@@ -1,6 +1,6 @@
-import json
 from collections import OrderedDict
 from datetime import datetime
+import json
 
 from db_file_storage.model_utils import delete_file, delete_file_if_needed
 from db_file_storage.storage import DatabaseFileStorage
@@ -24,15 +24,16 @@ from rest_framework.utils.encoders import JSONEncoder
 
 from nautobot.core.fields import AutoSlugField
 from nautobot.core.models import BaseModel
+from nautobot.core.models.change_logging import ChangeLoggedModel
+from nautobot.core.models.mixins import NotesMixin
+from nautobot.core.models.relationships import RelationshipModel
 from nautobot.core.models.generics import OrganizationalModel
 from nautobot.core.utils import deepmerge, render_jinja2
 from nautobot.extras.choices import CustomLinkButtonClassChoices, WebhookHttpMethodChoices
 from nautobot.extras.constants import HTTP_CONTENT_TYPE_JSON
-from nautobot.extras.models import ChangeLoggedModel
-from nautobot.extras.models.mixins import NotesMixin
-from nautobot.extras.models.relationships import RelationshipModel
 from nautobot.extras.querysets import ConfigContextQuerySet, NotesQuerySet
 from nautobot.extras.utils import FeatureQuery, extras_features, image_upload
+
 
 # Avoid breaking backward compatibility on anything that might expect these to still be defined here:
 from .jobs import JOB_LOGS, Job, JobLogEntry, JobResult, ScheduledJob, ScheduledJobs  # noqa: F401
