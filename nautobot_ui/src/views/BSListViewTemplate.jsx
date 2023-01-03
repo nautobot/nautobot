@@ -1,4 +1,5 @@
-import { Col, Container, Row } from "react-bootstrap"
+import { Button, ButtonGroup, Col, Container, Row } from "react-bootstrap"
+import * as Icon from "react-icons/tb"
 import { useLocation, useSearchParams } from "react-router-dom"
 import useSWR from "swr"
 
@@ -36,11 +37,20 @@ export default function BSListViewTemplate({ list_url }) {
   if (error) return <div>Failed to load {list_url}</div>
   if (!data) return <></>
 
-  const tableData = data[0].results
-  const tableHeader = data[1].data
-  const dataCount = data[0].count
+  const tableData = data[0].formData.results
+  const tableHeader = data[1].formData.data
+  const dataCount = data[0].formData.count
   return (
     <Container>
+      <Row>
+        <Col>
+          <ButtonGroup>
+            <Button href={`${location.pathname}add`}><Icon.TbPlus /> Add</Button>{' '}
+            <Button variant="info"><Icon.TbDatabaseImport /> Import</Button>{' '}
+            <Button variant="success"><Icon.TbDatabaseExport /> Export</Button>{' '}
+          </ButtonGroup>
+        </Col>
+      </Row>
       <Row>
         <Col>
           <NautobotTable data={tableData} headers={tableHeader} />

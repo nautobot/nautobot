@@ -67,7 +67,7 @@ export default function ObjectRetrieve({ api_url }) {
   }
   const { data: objectData, error } = useSWR(() => api_url, fetcher)
   const { data: pluginHTML } = useSWR(() => api_url ? api_url + "plugin_full_width_fragment/" : null, fetcherHTML)
-  const ui_url = objectData ? `${nautobot_url}${objectData.web_url}?viewconfig=true` : null
+  const ui_url = objectData ? `${nautobot_url}${objectData.formData.web_url}?viewconfig=true` : null
   var { data: pluginConfig } = useSWR(() => ui_url, fetcherTabs)
   if (error) return <div>Failed to load {api_url}</div>
   if (!objectData) return <></>
@@ -75,14 +75,16 @@ export default function ObjectRetrieve({ api_url }) {
 
   const route_name = `${app_name}:${model_name}`;
 
+  let obj = objectData.formData
+
   const default_view = (<>
-    <h1>{objectData.name}</h1>
+    <h1>{obj.name}</h1>
     <p>
       <small className="text-muted">
-        {objectData.created &&
-          <>Created {objectData.created} &middot; </>
+        {obj.created &&
+          <>Created {obj.created} &middot; </>
         }
-        <> Updated <span title={objectData.last_updated}>xyz seconds</span> ago</>
+        <> Updated <span title={obj.last_updated}>xyz seconds</span> ago</>
       </small>
     </p>
     <div className="pull-right noprint"></div>
@@ -95,14 +97,14 @@ export default function ObjectRetrieve({ api_url }) {
           </Card.Header>
           <Table hover>
             <tbody>
-              {Object.keys(objectData).map((key, idx) => <RenderRow identifier={key} value={objectData[key]} advanced={false} key={idx} />)}
+              {Object.keys(obj).map((key, idx) => <RenderRow identifier={key} value={obj[key]} advanced={false} key={idx} />)}
             </tbody>
           </Table>
         </Card>
         <br />
         <div dangerouslySetInnerHTML={{ __html: pluginHTML }} />
         <br />
-        {PluginFullWidthComponentsWithProps(route_name, objectData)}
+        {PluginFullWidthComponentsWithProps(route_name, obj)}
       </Tab>
       <Tab key="advanced" eventKey="advanced" title="Advanced">
         <br />
@@ -112,7 +114,7 @@ export default function ObjectRetrieve({ api_url }) {
           </Card.Header>
           <Table hover>
             <tbody>
-              {Object.keys(objectData).map((key, idx) => <RenderRow identifier={key} value={objectData[key]} advanced key={idx} />)}
+              {Object.keys(obj).map((key, idx) => <RenderRow identifier={key} value={obj[key]} advanced key={idx} />)}
             </tbody>
           </Table>
         </Card>
@@ -130,7 +132,7 @@ export default function ObjectRetrieve({ api_url }) {
   let return_view = default_view;
   if (PluginComponents.CustomViews?.[route_name] && "retrieve" in PluginComponents.CustomViews?.[route_name]) {
     const CustomView = PluginComponents.CustomViews[route_name].retrieve
-    return_view = <CustomView {...objectData} />
+    return_view = <CustomView {...obj} />
   }
 
   return return_view

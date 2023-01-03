@@ -21,7 +21,7 @@
                 "src/components/core/*"
             ],
             "@example_plugin/*": [
-                "/source/examples/example_plugin/example_plugin/ui/*"
+                "/Users/jathan/sandbox/src/nautobot/examples/example_plugin/example_plugin/ui/*"
             ]
         }
     }
