@@ -1,0 +1,1 @@
+Rolled back the changes made in 1.5.6 by #3016 to fix a breaking issue with `ALLOWED_HOSTS` and change-logging.
