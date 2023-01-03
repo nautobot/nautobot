@@ -259,11 +259,19 @@ The global Celery task hard timeout (in seconds). Any background task that excee
 
 ## CELERY_WORKER_PROMETHEUS_PORT
 
-Default: `0` (disabled)
++++ 1.5.x
+
+Default: `` (disabled)
 
 Environment Variable: `NAUTOBOT_CELERY_WORKER_PROMETHEUS_PORT`
 
-Port for prometheus metric HTTP server running on the celery worker.
+Ports for prometheus metric HTTP server running on the celery worker.
+
+Normally this should be set to a single port, unless you have multiple workers running on a single machine, i.e.
+sharing the same available ports. In that case you need to specify a range of ports greater than or equal to the
+highest amount of workers you are running on a single machine (comma-separated, like "8080,8081,8082"). You can then use
+the `target_limit` parameter to the Prometheus `scrape_config` to ensure you are not getting duplicate metrics in that
+case. Set this to an empty string to disable it.
 
 ---
 

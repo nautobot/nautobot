@@ -52,17 +52,23 @@ def setup_prometheus(**kwargs):
 
     logger.info("Setting up prometheus metrics HTTP server for celery worker.")
 
-    # Ensure that the multiprocess coordination directory exists
+    # Ensure that the multiprocess coordination directory exists. Note that we explicitly don't clear this directory
+    # out because the worker might share its filesystem with the core app or another worker. The multiprocess
+    # mechanism from prometheus-client takes care of this.
     multiprocess_coordination_directory = Path(os.environ["prometheus_multiproc_dir"])
     multiprocess_coordination_directory.mkdir(parents=True, exist_ok=True)
-    # Delete any files lefts in the multiprocess coordination directory
-    for filepath in multiprocess_coordination_directory.glob("*.db"):
-        filepath.unlink()
 
-    # Setup the collector registry
+    # Set up the collector registry
     registry = CollectorRegistry()
     multiprocess.MultiProcessCollector(registry, path=multiprocess_coordination_directory)
-    start_http_server(settings.CELERY_WORKER_PROMETHEUS_PORT, registry=registry)
+    for port in settings.CELERY_WORKER_PROMETHEUS_PORT:
+        try:
+            start_http_server(port, registry=registry)
+            break
+        except OSError:
+            continue
+    else:
+        logger.warning("Cannot export Prometheus metrics from worker, no available ports in range.")
 
 
 class NautobotKombuJSONEncoder(DjangoJSONEncoder):

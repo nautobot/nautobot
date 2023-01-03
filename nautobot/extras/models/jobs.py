@@ -66,7 +66,7 @@ JOB_LOGS = "job_logs"
 # the celery task queue. This is accomplished by looking one abstraction deeper into
 # the job model of Nautobot.
 JOB_RESULT_METRIC = Histogram(
-    "nautobot_job_duration_seconds", "Results of Nautobot jobs.", ["module", "name", "status"]
+    "nautobot_job_duration_seconds", "Results of Nautobot jobs.", ["grouping", "name", "status"]
 )
 
 
@@ -683,7 +683,7 @@ class JobResult(BaseModel, CustomFieldModel):
             self.completed = timezone.now()
             if self.job_model:
                 duration = self.completed - self.created
-                JOB_RESULT_METRIC.labels(self.job_model.module_name, self.job_model.job_class_name, status).observe(
+                JOB_RESULT_METRIC.labels(self.job_model.grouping, self.job_model.name, status).observe(
                     duration.total_seconds()
                 )
 
