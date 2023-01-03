@@ -1,9 +1,9 @@
 from django.test import TestCase
-from jinja2.exceptions import TemplateAssertionError
-
+from jinja2.exceptions import SecurityError, TemplateAssertionError
 from netutils.utils import jinja2_convenience_function
 
 from nautobot.utilities.utils import render_jinja2
+from nautobot.dcim.models import Site
 
 
 class NautobotJinjaFilterTest(TestCase):
@@ -64,3 +64,20 @@ class NautobotJinjaFilterTest(TestCase):
                 raise
             except Exception:
                 pass
+
+    def test_sandboxed_render(self):
+        """Assert that Jinja template rendering is sandboxed."""
+        template_code = "{{ ''.__class__.__name__ }}"
+        with self.assertRaises(SecurityError):
+            render_jinja2(template_code=template_code, context={})
+
+    def test_safe_render(self):
+        """Assert that safe Jinja rendering still works."""
+        site = Site.objects.filter(region__isnull=False).first()
+        template_code = "{{ obj.region.name }}"
+        try:
+            value = render_jinja2(template_code=template_code, context={"obj": site})
+        except SecurityError:
+            self.fail("SecurityError raised on safe Jinja template render")
+        else:
+            self.assertEqual(value, site.region.name)
