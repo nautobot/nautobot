@@ -4,29 +4,16 @@ from nautobot.circuits.filters import CircuitFilterSet, ProviderFilterSet, Provi
 from nautobot.circuits.models import Circuit, Provider, ProviderNetwork
 from nautobot.circuits.tables import CircuitTable, ProviderNetworkTable, ProviderTable
 from nautobot.core.utils import count_related
-from nautobot.dcim.filters import (
-    CableFilterSet,
-    DeviceFilterSet,
-    DeviceTypeFilterSet,
-    PowerFeedFilterSet,
-    RackFilterSet,
-    RackGroupFilterSet,
-    SiteFilterSet,
-    VirtualChassisFilterSet,
-)
+from nautobot.dcim.filters import CableFilterSet, DeviceFilterSet, DeviceTypeFilterSet, PowerFeedFilterSet, \
+    RackFilterSet, \
+    RackGroupFilterSet, \
+    SiteFilterSet, VirtualChassisFilterSet
 from nautobot.dcim.models import Cable, Device, DeviceType, PowerFeed, Rack, RackGroup, Site, VirtualChassis
-from nautobot.dcim.tables import (
-    CableTable,
-    DeviceTable,
-    DeviceTypeTable,
-    PowerFeedTable,
-    RackGroupTable,
-    RackTable,
-    SiteTable,
-    VirtualChassisTable,
-)
+from nautobot.dcim.tables import CableTable, DeviceTable, DeviceTypeTable, PowerFeedTable, RackGroupTable, RackTable, \
+    SiteTable, \
+    VirtualChassisTable
 from nautobot.ipam.filters import AggregateFilterSet, IPAddressFilterSet, PrefixFilterSet, VLANFilterSet, VRFFilterSet
-from nautobot.ipam.models import VLAN, VRF, Aggregate, IPAddress, Prefix
+from nautobot.ipam.models import Aggregate, IPAddress, Prefix, VLAN, VRF
 from nautobot.ipam.tables import AggregateTable, IPAddressTable, PrefixTable, VLANTable, VRFTable
 from nautobot.tenancy.filters import TenantFilterSet
 from nautobot.tenancy.models import Tenant
@@ -35,7 +22,6 @@ from nautobot.virtualization.filters import ClusterFilterSet, VirtualMachineFilt
 from nautobot.virtualization.models import Cluster, VirtualMachine
 from nautobot.virtualization.tables import ClusterTable, VirtualMachineDetailTable
 
-SEARCH_MAX_RESULTS = 15
 SEARCH_TYPES = OrderedDict(
     (
         # Circuits
@@ -258,95 +244,4 @@ SEARCH_TYPES = OrderedDict(
             },
         ),
     )
-)
-
-
-#
-# Filter lookup expressions
-#
-
-
-FILTER_CHAR_BASED_LOOKUP_MAP = dict(
-    n="exact",
-    ic="icontains",
-    nic="icontains",
-    iew="iendswith",
-    niew="iendswith",
-    isw="istartswith",
-    nisw="istartswith",
-    ie="iexact",
-    nie="iexact",
-    re="regex",
-    nre="regex",
-    ire="iregex",
-    nire="iregex",
-)
-FILTER_NUMERIC_BASED_LOOKUP_MAP = dict(n="exact", lte="lte", lt="lt", gte="gte", gt="gt")
-FILTER_NEGATION_LOOKUP_MAP = dict(n="exact")
-
-
-#
-# HTTP Request META safe copy
-#
-
-
-HTTP_REQUEST_META_SAFE_COPY = [
-    "CONTENT_LENGTH",
-    "CONTENT_TYPE",
-    "HTTP_ACCEPT",
-    "HTTP_ACCEPT_ENCODING",
-    "HTTP_ACCEPT_LANGUAGE",
-    "HTTP_HOST",
-    "HTTP_REFERER",
-    "HTTP_USER_AGENT",
-    "QUERY_STRING",
-    "REMOTE_ADDR",
-    "REMOTE_HOST",
-    "REMOTE_USER",
-    "REQUEST_METHOD",
-    "SERVER_NAME",
-    "SERVER_PORT",
-]
-
-
-OBJ_TYPE_CHOICES = (
-    ("", "All Objects"),
-    (
-        "Circuits",
-        (
-            ("provider", "Providers"),
-            ("circuit", "Circuits"),
-        ),
-    ),
-    (
-        "DCIM",
-        (
-            ("site", "Sites"),
-            ("rack", "Racks"),
-            ("rackgroup", "Rack Groups"),
-            ("devicetype", "Device types"),
-            ("device", "Devices"),
-            ("virtualchassis", "Virtual Chassis"),
-            ("cable", "Cables"),
-            ("powerfeed", "Power Feeds"),
-        ),
-    ),
-    (
-        "IPAM",
-        (
-            ("vrf", "VRFs"),
-            ("aggregate", "Aggregates"),
-            ("prefix", "Prefixes"),
-            ("ipaddress", "IP addresses"),
-            ("vlan", "VLANs"),
-        ),
-    ),
-    ("Tenancy", (("tenant", "Tenants"),)),
-    (
-        "Virtualization",
-        (
-            ("cluster", "Clusters"),
-            ("virtualmachine", "Virtual machines"),
-        ),
-    ),
 )
