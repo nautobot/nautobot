@@ -9,7 +9,7 @@ from django.urls import reverse
 from django_cryptography.fields import encrypt
 
 from nautobot.core.fields import AutoSlugField
-from nautobot.core.models.generics import PrimaryModel
+from nautobot.extras.models.tags import TaggedModel
 from nautobot.extras.utils import extras_features
 
 
@@ -21,7 +21,7 @@ from nautobot.extras.utils import extras_features
     "relationships",
     "webhooks",
 )
-class GitRepository(PrimaryModel):
+class GitRepository(TaggedModel):
     """Representation of a Git repository used as an external data source."""
 
     TOKEN_PLACEHOLDER = "********"

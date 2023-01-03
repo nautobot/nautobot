@@ -6,10 +6,10 @@ from mptt.models import MPTTModel, TreeForeignKey
 from timezone_field import TimeZoneField
 
 from nautobot.core.fields import AutoSlugField, NaturalOrderingField
-from nautobot.core.models.generics import OrganizationalModel, PrimaryModel
+from nautobot.core.models.generics import OrganizationalModel
 from nautobot.core.mptt import TreeManager
 from nautobot.dcim.fields import ASNField
-from nautobot.extras.models import StatusModel
+from nautobot.extras.models import StatusModel, TaggedModel
 from nautobot.extras.utils import extras_features
 
 __all__ = (
@@ -95,7 +95,7 @@ class Region(MPTTModel, OrganizationalModel):
     "statuses",
     "webhooks",
 )
-class Site(PrimaryModel, StatusModel):
+class Site(TaggedModel, StatusModel):
     """
     A Site represents a geographic location within a network; typically a building or campus. The optional facility
     field can be used to include an external designation, such as a data center name (e.g. Equinix SV6).

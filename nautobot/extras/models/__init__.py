@@ -20,7 +20,7 @@ from .models import (
 from .relationships import Relationship, RelationshipAssociation
 from .secrets import Secret, SecretsGroup, SecretsGroupAssociation
 from .statuses import Status, StatusField, StatusModel
-from .tags import Tag, TaggedItem
+from .tags import Tag, TaggedItem, TaggedModel
 
 __all__ = (
     "ComputedField",
@@ -57,5 +57,6 @@ __all__ = (
     "StatusModel",
     "Tag",
     "TaggedItem",
+    "TaggedModel",
     "Webhook",
 )

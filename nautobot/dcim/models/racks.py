@@ -12,13 +12,13 @@ from mptt.models import MPTTModel, TreeForeignKey
 
 from nautobot.core.choices import ColorChoices
 from nautobot.core.fields import AutoSlugField, ColorField, JSONArrayField, NaturalOrderingField
-from nautobot.core.models.generics import OrganizationalModel, PrimaryModel
+from nautobot.core.models.generics import OrganizationalModel
 from nautobot.core.mptt import TreeManager
 from nautobot.core.utils import UtilizationData, array_to_string, get_settings_or_config
 from nautobot.dcim.choices import DeviceFaceChoices, RackDimensionUnitChoices, RackTypeChoices, RackWidthChoices
 from nautobot.dcim.constants import RACK_ELEVATION_LEGEND_WIDTH_DEFAULT, RACK_U_HEIGHT_DEFAULT
 from nautobot.dcim.elevations import RackElevationSVG
-from nautobot.extras.models import StatusModel
+from nautobot.extras.models import StatusModel,TaggedModel
 from nautobot.extras.utils import extras_features
 
 from .device_components import PowerOutlet, PowerPort
@@ -194,7 +194,7 @@ class RackRole(OrganizationalModel):
     "statuses",
     "webhooks",
 )
-class Rack(PrimaryModel, StatusModel):
+class Rack(TaggedModel, StatusModel):
     """
     Devices are housed within Racks. Each rack has a defined height measured in rack units, and a front and rear face.
     Each Rack is assigned to a Site and (optionally) a RackGroup.
@@ -625,7 +625,7 @@ class Rack(PrimaryModel, StatusModel):
     "relationships",
     "webhooks",
 )
-class RackReservation(PrimaryModel):
+class RackReservation(TaggedModel):
     """
     One or more reserved units within a Rack.
     """

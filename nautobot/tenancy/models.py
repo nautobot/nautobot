@@ -3,8 +3,9 @@ from django.urls import reverse
 from mptt.models import MPTTModel, TreeForeignKey
 
 from nautobot.core.fields import AutoSlugField
-from nautobot.core.models.generics import OrganizationalModel, PrimaryModel
+from nautobot.core.models.generics import OrganizationalModel
 from nautobot.core.mptt import TreeManager
+from nautobot.extras.models.tags import TaggedModel
 from nautobot.extras.utils import extras_features
 
 __all__ = (
@@ -77,7 +78,7 @@ class TenantGroup(MPTTModel, OrganizationalModel):
     "relationships",
     "webhooks",
 )
-class Tenant(PrimaryModel):
+class Tenant(TaggedModel):
     """
     A Tenant represents an organization served by the Nautobot owner. This is typically a customer or an internal
     department.

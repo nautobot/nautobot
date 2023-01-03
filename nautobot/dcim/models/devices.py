@@ -13,10 +13,10 @@ from django.utils.safestring import mark_safe
 
 from nautobot.core.choices import ColorChoices
 from nautobot.core.fields import AutoSlugField, ColorField, NaturalOrderingField
-from nautobot.core.models.generics import OrganizationalModel, PrimaryModel
+from nautobot.core.models.generics import OrganizationalModel
 from nautobot.core.utils import get_settings_or_config
 from nautobot.dcim.choices import DeviceFaceChoices, DeviceRedundancyGroupFailoverStrategyChoices, SubdeviceRoleChoices
-from nautobot.extras.models import ConfigContextModel, StatusModel
+from nautobot.extras.models import ConfigContextModel, StatusModel, TaggedModel
 from nautobot.extras.querysets import ConfigContextModelQuerySet
 from nautobot.extras.utils import extras_features
 
@@ -88,7 +88,7 @@ class Manufacturer(OrganizationalModel):
     "relationships",
     "webhooks",
 )
-class DeviceType(PrimaryModel):
+class DeviceType(TaggedModel):
     """
     A DeviceType represents a particular make (Manufacturer) and model of device. It specifies rack height and depth, as
     well as high-level functional role(s).
@@ -447,7 +447,7 @@ class Platform(OrganizationalModel):
     "statuses",
     "webhooks",
 )
-class Device(PrimaryModel, ConfigContextModel, StatusModel):
+class Device(TaggedModel, ConfigContextModel, StatusModel):
     """
     A Device represents a piece of physical hardware. Each Device is assigned a DeviceType,
     DeviceRole, and (optionally) a Platform. Device names are not required, however if one is set it must be unique.
@@ -961,7 +961,7 @@ class Device(PrimaryModel, ConfigContextModel, StatusModel):
     "relationships",
     "webhooks",
 )
-class VirtualChassis(PrimaryModel):
+class VirtualChassis(TaggedModel):
     """
     A collection of Devices which operate with a shared control plane (e.g. a switch stack).
     """
@@ -1036,7 +1036,7 @@ class VirtualChassis(PrimaryModel):
     "statuses",
     "webhooks",
 )
-class DeviceRedundancyGroup(PrimaryModel, StatusModel):
+class DeviceRedundancyGroup(TaggedModel, StatusModel):
     """
     A DeviceRedundancyGroup represents a logical grouping of physical hardware for the purposes of high-availability.
     """

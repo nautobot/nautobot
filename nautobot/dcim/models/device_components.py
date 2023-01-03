@@ -8,7 +8,6 @@ from django.urls import reverse
 from mptt.models import MPTTModel, TreeForeignKey
 
 from nautobot.core.fields import NaturalOrderingField
-from nautobot.core.models.generics import PrimaryModel
 from nautobot.core.models.relationships import RelationshipModel
 from nautobot.core.models.utils import CollateAsChar
 from nautobot.core.mptt import TreeManager
@@ -33,7 +32,7 @@ from nautobot.dcim.constants import (
     WIRELESS_IFACE_TYPES,
 )
 from nautobot.dcim.fields import MACAddressCharField
-from nautobot.extras.models import Status, StatusModel
+from nautobot.extras.models import Status, StatusModel, TaggedModel
 from nautobot.extras.utils import extras_features
 
 __all__ = (
@@ -52,7 +51,7 @@ __all__ = (
 )
 
 
-class ComponentModel(PrimaryModel):
+class ComponentModel(TaggedModel):
     """
     An abstract model inherited by any model which has a parent Device.
     """

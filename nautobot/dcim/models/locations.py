@@ -7,10 +7,10 @@ from timezone_field import TimeZoneField
 from tree_queries.models import TreeNode
 
 from nautobot.core.fields import AutoSlugField, NaturalOrderingField
-from nautobot.core.models.generics import OrganizationalModel, PrimaryModel
+from nautobot.core.models.generics import OrganizationalModel
 from nautobot.core.models.utils import TreeManager, TreeQuerySet
 from nautobot.dcim.fields import ASNField
-from nautobot.extras.models import StatusModel
+from nautobot.extras.models import StatusModel, TaggedModel
 from nautobot.extras.utils import FeatureQuery, extras_features
 
 
@@ -162,7 +162,7 @@ class LocationQuerySet(TreeQuerySet):
     "statuses",
     "webhooks",
 )
-class Location(TreeNode, StatusModel, PrimaryModel):
+class Location(TreeNode, StatusModel, TaggedModel):
     """
     A Location represents an arbitrarily specific geographic location, such as a campus, building, floor, room, etc.
 

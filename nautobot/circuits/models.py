@@ -4,10 +4,10 @@ from django.db import models
 from django.urls import reverse
 
 from nautobot.core.fields import AutoSlugField
-from nautobot.core.models.generics import OrganizationalModel, PrimaryModel
+from nautobot.core.models.generics import OrganizationalModel
 from nautobot.dcim.fields import ASNField
 from nautobot.dcim.models import CableTermination, PathEndpoint
-from nautobot.extras.models import StatusModel
+from nautobot.extras.models import StatusModel, TaggedModel
 from nautobot.extras.utils import extras_features
 
 from .choices import CircuitTerminationSideChoices
@@ -30,7 +30,7 @@ __all__ = (
     "relationships",
     "webhooks",
 )
-class ProviderNetwork(PrimaryModel):
+class ProviderNetwork(TaggedModel):
     name = models.CharField(max_length=100, db_index=True)
     slug = AutoSlugField(populate_from="name")
     provider = models.ForeignKey(to="circuits.Provider", on_delete=models.PROTECT, related_name="provider_networks")
@@ -81,7 +81,7 @@ class ProviderNetwork(PrimaryModel):
     "relationships",
     "webhooks",
 )
-class Provider(PrimaryModel):
+class Provider(TaggedModel):
     """
     Each Circuit belongs to a Provider. This is usually a telecommunications company or similar organization. This model
     stores information pertinent to the user's relationship with the Provider.
@@ -185,7 +185,7 @@ class CircuitType(OrganizationalModel):
     "statuses",
     "webhooks",
 )
-class Circuit(PrimaryModel, StatusModel):
+class Circuit(TaggedModel, StatusModel):
     """
     A communications circuit connects two points.
     Each Circuit belongs to a Provider; Providers may have multiple circuits.
@@ -282,7 +282,7 @@ class Circuit(PrimaryModel, StatusModel):
     "relationships",
     "webhooks",
 )
-class CircuitTermination(PrimaryModel, PathEndpoint, CableTermination):
+class CircuitTermination(TaggedModel, PathEndpoint, CableTermination):
     circuit = models.ForeignKey(to="circuits.Circuit", on_delete=models.CASCADE, related_name="terminations")
     term_side = models.CharField(max_length=1, choices=CircuitTerminationSideChoices, verbose_name="Termination")
     site = models.ForeignKey(
