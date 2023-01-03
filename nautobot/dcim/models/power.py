@@ -12,9 +12,9 @@ from nautobot.dcim.constants import (
     POWERFEED_MAX_UTILIZATION_DEFAULT,
     POWERFEED_VOLTAGE_DEFAULT,
 )
-
 from nautobot.extras.models import StatusModel
 from nautobot.extras.utils import extras_features
+
 from .device_components import CableTermination, PathEndpoint
 
 __all__ = (

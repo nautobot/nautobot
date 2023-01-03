@@ -3,15 +3,14 @@ from django.core.exceptions import ValidationError
 from django.db import models
 from django.urls import reverse
 
+from nautobot.core.fields import AutoSlugField
+from nautobot.core.models.generics import OrganizationalModel, PrimaryModel
 from nautobot.dcim.fields import ASNField
 from nautobot.dcim.models import CableTermination, PathEndpoint
 from nautobot.extras.models import StatusModel
 from nautobot.extras.utils import extras_features
-from nautobot.core.fields import AutoSlugField
-from nautobot.core.models.generics import OrganizationalModel, PrimaryModel
 
 from .choices import CircuitTerminationSideChoices
-
 
 __all__ = (
     "Circuit",
