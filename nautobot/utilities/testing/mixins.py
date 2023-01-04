@@ -25,7 +25,11 @@ User = get_user_model()
 
 
 class NautobotTestClient(APIClient):
-    """Base client class for Nautobot testing."""
+    """
+    Base client class for Nautobot testing.
+
+    DO NOT USE THIS IN PRODUCTION NAUTOBOT CODE.
+    """
 
     def __init__(self, *args, **kwargs):
         """

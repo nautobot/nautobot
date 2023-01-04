@@ -8,7 +8,7 @@ import os
 from nautobot.core.settings import *  # noqa: F401,F403
 from nautobot.core.settings_funcs import parse_redis_connection
 
-ALLOWED_HOSTS = ["nautobot.example.com"]
+ALLOWED_HOSTS = ["nautobot.example.com", os.getenv("NAUTOBOT_SELENIUM_HOST", "host.docker.internal")]
 
 # Discover test jobs from within the Nautobot source code
 JOBS_ROOT = os.path.join(
