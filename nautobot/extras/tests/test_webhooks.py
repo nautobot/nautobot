@@ -210,7 +210,7 @@ class WebhookTest(APITestCase):
                     snapshots,
                 )
 
-    @patch("nautobot.core.utils.api.get_serializer_for_model")
+    @patch("nautobot.core.api.utils.get_serializer_for_model")
     def test_webhooks_snapshot_without_model_api_serializer(self, get_serializer_for_model):
         def get_serializer(model_class):
             raise SerializerNotFound

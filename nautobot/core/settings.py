@@ -209,7 +209,7 @@ REST_FRAMEWORK = {
         # Custom operations
         "bulk_destroy": "bulk_delete",
     },
-    "VIEW_NAME_FUNCTION": "nautobot.core.api.get_view_name",
+    "VIEW_NAME_FUNCTION": "nautobot.core.api.utils.get_view_name",
 }
 
 

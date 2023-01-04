@@ -611,7 +611,7 @@ class APIViewTestCases:
             For some models this may just be any random object, but when we have FKs with `on_delete=models.PROTECT`
             (as is often the case) we need to find or create an instance that doesn't have such entanglements.
             """
-            instance = testing.get_deletable_objects(self.model, self._get_queryset()).first()
+            instance = testing.utils.get_deletable_objects(self.model, self._get_queryset()).first()
             if instance is None:
                 self.fail("Couldn't find a single deletable object!")
             return instance
@@ -623,7 +623,9 @@ class APIViewTestCases:
             For some models this may just be any random objects, but when we have FKs with `on_delete=models.PROTECT`
             (as is often the case) we need to find or create an instance that doesn't have such entanglements.
             """
-            instances = testing.get_deletable_objects(self.model, self._get_queryset()).values_list("pk", flat=True)[:3]
+            instances = testing.utils.get_deletable_objects(self.model, self._get_queryset()).values_list(
+                "pk", flat=True
+            )[:3]
             if len(instances) < 3:
                 self.fail(f"Couldn't find 3 deletable objects, only found {len(instances)}!")
             return instances

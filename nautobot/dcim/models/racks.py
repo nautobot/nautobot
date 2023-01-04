@@ -18,7 +18,7 @@ from nautobot.core.utils import UtilizationData, array_to_string, get_settings_o
 from nautobot.dcim.choices import DeviceFaceChoices, RackDimensionUnitChoices, RackTypeChoices, RackWidthChoices
 from nautobot.dcim.constants import RACK_ELEVATION_LEGEND_WIDTH_DEFAULT, RACK_U_HEIGHT_DEFAULT
 from nautobot.dcim.elevations import RackElevationSVG
-from nautobot.extras.models import StatusModel,TaggedModel
+from nautobot.extras.models import StatusModel, TaggedModel
 from nautobot.extras.utils import extras_features
 
 from .device_components import PowerOutlet, PowerPort

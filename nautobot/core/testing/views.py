@@ -490,7 +490,7 @@ class ViewTestCases:
             For some models this may just be any random object, but when we have FKs with `on_delete=models.PROTECT`
             (as is often the case) we need to find or create an instance that doesn't have such entanglements.
             """
-            instance = testing.get_deletable_objects(self.model, self._get_queryset()).first()
+            instance = testing.utils.get_deletable_objects(self.model, self._get_queryset()).first()
             if instance is None:
                 self.fail("Couldn't find a single deletable object!")
             return instance
@@ -1077,7 +1077,9 @@ class ViewTestCases:
             For some models this may just be any random objects, but when we have FKs with `on_delete=models.PROTECT`
             (as is often the case) we need to find or create an instance that doesn't have such entanglements.
             """
-            return testing.get_deletable_objects(self.model, self._get_queryset()).values_list("pk", flat=True)[:3]
+            return testing.utils.get_deletable_objects(self.model, self._get_queryset()).values_list("pk", flat=True)[
+                :3
+            ]
 
         @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
         def test_bulk_delete_objects_without_permission(self):
