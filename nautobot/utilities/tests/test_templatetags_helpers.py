@@ -192,15 +192,15 @@ class NautobotTemplatetagsHelperTest(TestCase):
             )
         self.assertEqual(helpers.render_boolean(None), '<span class="text-muted">&mdash;</span>')
 
-    def test_render_related_name_and_color(self):
+    def test_hyperlinked_object_with_color(self):
         vlan_with_role = VLAN.objects.filter(role__isnull=False).first()
         role = vlan_with_role.role
         color = role.color
         fbcolor = helpers.fgcolor(color)
         display = helpers.hyperlinked_object(role)
         self.assertEqual(
-            helpers.render_related_name_and_color(obj=role),
+            helpers.hyperlinked_object_with_color(obj=role),
             f'<span class="label" style="color: {fbcolor}; background-color: #{color}">{display}</span>',
         )
         # Assert when obj is None
-        self.assertEqual(helpers.render_related_name_and_color(obj=None), "—")
+        self.assertEqual(helpers.hyperlinked_object_with_color(obj=None), "—")

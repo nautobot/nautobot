@@ -683,7 +683,7 @@ def custom_branding_or_static(branding_asset, static_asset):
 
 @library.filter()
 @register.filter()
-def render_related_name_and_color(obj):
+def hyperlinked_object_with_color(obj):
     """Render the display view of an object."""
     if obj:
         content = f'<span class="label" style="color: {fgcolor(obj.color)}; background-color: #{obj.color}">{hyperlinked_object(obj)}</span>'
