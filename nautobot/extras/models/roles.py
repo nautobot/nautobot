@@ -34,12 +34,12 @@ class RoleField(ForeignKeyLimitedByContentTypes):
     depending on the model implementing it.
     """
 
-    def set_defaults(self, **kwargs):
+    def __init__(self, *args, **kwargs):
         kwargs.setdefault("to", Role)
         kwargs.setdefault("on_delete", models.PROTECT)
         kwargs.setdefault("blank", True)
         kwargs.setdefault("related_name", "%(app_label)s_%(class)s_related")
-        return super().set_defaults(**kwargs)
+        super().__init__(*args, **kwargs)
 
 
 class RoleModelMixin(models.Model):

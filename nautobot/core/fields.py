@@ -89,17 +89,8 @@ class ForeignKeyLimitedByContentTypes(ForeignKey):
     """
 
     def __init__(self, **kwargs):
-        kwargs.update(self.set_defaults(**kwargs))
-        super().__init__(**kwargs)
-
-    def set_defaults(self, **kwargs):
-        """Set defaults of kwargs in class __init__ method.
-
-        Override this method to set __init__ kwargs
-        """
         kwargs.setdefault("null", True)
-
-        return kwargs
+        super().__init__(**kwargs)
 
     def get_limit_choices_to(self):
         return {"content_types": ContentType.objects.get_for_model(self.model)}

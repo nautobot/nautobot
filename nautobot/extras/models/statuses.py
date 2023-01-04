@@ -59,9 +59,8 @@ class StatusField(ForeignKeyLimitedByContentTypes):
         - the content-type to which the field is attached (e.g. `dcim.device`)
     """
 
-    def __init__(self, **kwargs):
+    def __init__(self, *args, **kwargs):
         kwargs.setdefault("to", Status)
-        kwargs.setdefault("null", True)
         super().__init__(**kwargs)
 
     def get_limit_choices_to(self):
