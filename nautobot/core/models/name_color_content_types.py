@@ -27,12 +27,12 @@ class ContentTypeRelatedQuerySet(RestrictedQuerySet):
 
     # TODO(timizuo): Merge into get_for_model; Cant do this now cause it would require alot
     #  of refactoring
-    def get_for_models(self, _models):
+    def get_for_models(self, models_):
         """
         Return all `self.model` instances assigned to the given `_models`.
         """
         q = Q()
-        for model in _models:
+        for model in models_:
             q |= Q(app_label=model._meta.app_label, model=model._meta.model_name)
         content_types = ContentType.objects.filter(q)
         return self.filter(content_types__in=content_types)

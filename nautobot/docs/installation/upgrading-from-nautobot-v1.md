@@ -30,24 +30,47 @@
 |               | `rght`        |
 |               | `tree_id`     |
 
+### Replaced Models
+
+The `ipam.Role`, `dcim.RackRole`, and `dcim.DeviceRole` models have been removed and replaced by a single `extras.Role` model. This means that any references to the removed models in the code now use the `extras.Role` model instead.
+
+| Removed Model     | Replaced With  |
+|-------------------|----------------|
+| `dcim.DeviceRole` | `extras.Role`  |
+| `dcim.RackRole`   | `extras.Role`  |
+| `extras.Role`     | `extras.Role`  |
+| `ipam.Role`       | `extras.Role`  |
+
 ## REST API Changes
 
 ### Behavior Changes
 
-| Model       | Field          | Changes                                                                                                 |
-|-------------|----------------|---------------------------------------------------------------------------------------------------------|
-| RackGroup   | `rack_count`   | Now only counts Racks directly belonging to this RackGroup, not those belonging to its descendants.     |
-| Region      | `site_count`   | Now only counts Sites directly belonging to this Region, not those belonging to its descendants.        |
-| TenantGroup | `tenant_count` | Now only counts Tenants directly belonging to this TenantGroup, not those belonging to its descendants. |
+| Model       | Field          | Changes                                                                                                  |
+|-------------|----------------|----------------------------------------------------------------------------------------------------------|
+| Ipaddress   | `role`         | `/ipam/ip-addresses/` endpoint now uses role nested serializer for the role field, rather than a string. |
+| RackGroup   | `rack_count`   | Now only counts Racks directly belonging to this RackGroup, not those belonging to its descendants.      |
+| Region      | `site_count`   | Now only counts Sites directly belonging to this Region, not those belonging to its descendants.         |
+| TenantGroup | `tenant_count` | Now only counts Tenants directly belonging to this TenantGroup, not those belonging to its descendants.  |
 
 ### Renamed Serializer Fields
 
 | Model         | Renamed Field | New Name     |
 |---------------|---------------|--------------|
+| Device        | `device_role` | `role`       |
 | InventoryItem | `_depth`      | `tree_depth` |
 | RackGroup     | `_depth`      | `tree_depth` |
 | Region        | `_depth`      | `tree_depth` |
 | TenantGroup   | `_depth`      | `tree_depth` |
+
+### Replaced Endpoints
+
+These endpoints `/ipam/roles/`, `/dcim/rack-roles/` and `/dcim/device-roles/` are no longer available. Instead,  use the `/extras/roles/` endpoint to retrieve and manipulate `role` data.
+
+| Removed Endpoints      | Replaced With      |
+|------------------------|--------------------|
+| `/dcim/device-roles/`  | `_/extras/roles/`  |
+| `/dcim/rack-roles/`    | `_/extras/roles/`  |
+| `/ipam/roles/`         | `_/extras/roles/`  |
 
 ## UI and REST API Filter Changes
 

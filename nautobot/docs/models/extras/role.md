@@ -25,20 +25,19 @@ Any model that is intended to have a `role` field must inherit from either of th
 
 ### `RoleField` model field
 
-The `RoleField` field type subclass of a `django.db.models.ForeignKey`
+The `RoleField` field type is a subclass of `django.db.models.ForeignKey`.
 
 This model field also emits its own form field to eliminate the requirement for a form field to be explicitly added to model forms.
 
 ### `RoleFilter` filter field
 
-Any filter that is intended to have a `role` field must inherit from `nautobot.extras.filters.RoleModelFilterSetMixin`. This will add a `nautobot.extras.filters.RoleFilter` to the filter, which allows filtering by the `name` of the role.
+Any filter that is intended to have a `role` field must inherit from `nautobot.extras.filters.RoleModelFilterSetMixin`. This will add a `nautobot.extras.filters.RoleFilter` to the filter, which allows filtering by the `name` or `id` of the role.
 
 ### Form fields
 
-Any model form that is intended to have a `role` field must inherit from one of two mixins, depending on the use-case:
+Any filter form that is intended to have a `role` field must inherit from `nautobot.extras.forms.RoleModelFilterFormMixin`. This mixin adds a non-required, multiple-choice `role` filter field to the filter form.
 
-- `nautobot.extras.forms.RoleModelFilterFormMixin` should be used to add a non-required, multiple-choice `role` filter field to UI filter forms. This multiple-choice field allows for multiple role values to be selected for filtering objects in list views in the web UI.
-- `nautobot.extras.forms.RoleModelBulkEditFormMixin` should be used to add a non-required `role` form field to an object's model form. This field constrains role choices eligible to the object type being edited.
+Any bulk edit form that is intended to have a `role` field must inherit from `nautobot.extras.forms.RoleModelBulkEditFormMixin`. This mixin adds a non-required `role` field to the form, and constrains the eligible role choices to the object type being edited.
 
 ### `RoleSerializerField` serializer field
 
@@ -52,30 +51,3 @@ This adds an `nautobot.extras.api.fields.RoleSerializerField` to the serializer.
 ### Table field
 
 If you wish for a table to include a `role` column, your table must inherit from `nautobot.extras.tables.RoleTableMixin`. This includes a `ColorColumn` with the header `role` on the table.
-
-## Role object integrations
-
-To fully integrate a model to include a `role` field, assert the following:
-
-### Model
-
-- The model must inherit from either `nautobot.extras.models.roles.RoleModelMixin` or `nautobot.extras.models.roles.RoleRequiredRoleModelMixin`
-
-### Forms
-
-- Generic model forms will automatically include a `RoleField`
-- CSV model import forms must inherit from `nautobot.extras.forms.RoleModelCSVFormMixin`
-- Bulk edit model forms must inherit from `nautobot.extras.forms.RoleModelBulkEditFormMixin`
-- Filter forms must inherit from `nautobot.extras.forms.RoleModelFilterFormMixin`
-
-### Filters
-
-- Filtersets for your model must inherit from either `nautobot.extras.filters.RoleModelFilterSetMixin`
-
-### Serializers
-
-- Serializers for your model must inherit from `nautobot.extras.api.serializers.RoleModelSerializerMixin` or `nautobot.extras.api.serializers.RoleRequiredRoleModelSerializerMixin`
-
-### Tables
-
-- The table class for your model must inherit from `nautobot.extras.tables.RoleTableMixin`

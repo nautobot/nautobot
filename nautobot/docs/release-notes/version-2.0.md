@@ -64,6 +64,12 @@ This has been addressed in v2.x as follows:
 
 Check out the specific changes documented in the table at [UI and REST API Filter Changes](../installation/upgrading-from-nautobot-v1.md#corrected-filter-fields)
 
+#### Generic Role Model ([#1063](https://github.com/nautobot/nautobot/issues/1063))
+
+The `DeviceRole`, `RackRole`, `ipam.Role`, and `IPAddressRoleChoices` have all been removed and replaced with a `extras.Role` model, This means that all references to any of the replaced models and choices now points to this generic role model.
+
+In Addition, The `role` field of the `IPAddress` model has also been changed from a choice field to a foreign key related field to the `extras.Role` model. 
+
 ### Removed
 
 #### Removed Redundant Filter Fields ([#2804](https://github.com/nautobot/nautobot/pull/2804))
