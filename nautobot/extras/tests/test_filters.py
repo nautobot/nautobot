@@ -1524,28 +1524,14 @@ class RoleTestCase(FilterTestCases.NameSlugFilterTestCase):
     queryset = Role.objects.all()
     filterset = RoleFilterSet
 
-    @classmethod
-    def setUpTestData(cls):
-        cls.device_ct = ContentType.objects.get_for_model(Device)
-        cls.rack_ct = ContentType.objects.get_for_model(Rack)
-        roles = [
-            Role.objects.create(name="Role 1", color=ColorChoices.COLOR_GREY, weight=100),
-            Role.objects.create(name="Role 2", color=ColorChoices.COLOR_GREY, weight=20),
-            Role.objects.create(name="Role 3", color=ColorChoices.COLOR_AMBER, weight=10),
-            Role.objects.create(name="Role 4", color=ColorChoices.COLOR_AMBER, weight=100),
-            Role.objects.create(name="Role 5", color=ColorChoices.COLOR_AMBER, weight=100),
-        ]
-        for i in range(2):
-            roles[i].content_types.add(cls.device_ct)
-        for i in range(2, 4):
-            roles[i].content_types.add(cls.rack_ct)
-
     def test_content_types(self):
-        device_roles = self.queryset.filter(content_types=self.device_ct)
+        device_ct = ContentType.objects.get_for_model(Device)
+        rack_ct = ContentType.objects.get_for_model(Rack)
+        device_roles = self.queryset.filter(content_types=device_ct)
         params = {"content_types": ["dcim.device"]}
         self.assertQuerysetEqualAndNotEmpty(self.filterset(params, self.queryset).qs, device_roles)
 
-        rack_roles = self.queryset.filter(content_types=self.rack_ct)
+        rack_roles = self.queryset.filter(content_types=rack_ct)
         params = {"content_types": ["dcim.rack"]}
         self.assertQuerysetEqualAndNotEmpty(self.filterset(params, self.queryset).qs, rack_roles)
 

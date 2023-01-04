@@ -331,7 +331,8 @@ class VLANFactory(PrimaryModelFactory):
     )
 
     status = random_instance(lambda: Status.objects.get_for_model(VLAN), allow_null=False)
-    role = random_instance(lambda: Role.objects.get_for_model(VLAN), allow_null=True)
+    has_role = factory.Faker("pybool")
+    role = factory.Maybe("has_role", random_instance(Role.objects.get_for_model(VLAN), allow_null=False), None)
 
     has_description = factory.Faker("pybool")
     description = factory.Maybe("has_description", factory.Faker("text", max_nb_chars=200), "")
@@ -397,6 +398,7 @@ class PrefixFactory(PrimaryModelFactory):
     class Params:
         has_description = factory.Faker("pybool")
         has_location = factory.Faker("pybool")
+        has_role = factory.Faker("pybool")
         has_site = factory.Faker("pybool")
         has_tenant = factory.Faker("pybool")
         has_vlan = factory.Faker("pybool")
@@ -426,7 +428,11 @@ class PrefixFactory(PrimaryModelFactory):
         factory.LazyAttribute(lambda l: l.location.site or l.location.base_site),
         factory.Maybe("has_site", random_instance(Site, allow_null=False), None),
     )
-    role = random_instance(lambda: Role.objects.get_for_model(Prefix), allow_null=True)
+    role = factory.Maybe(
+        "has_role",
+        random_instance(Role.objects.get_for_model(Prefix), allow_null=False),
+        None,
+    )
     status = factory.Maybe(
         "is_container",
         factory.LazyFunction(lambda: Prefix.STATUS_CONTAINER),
@@ -557,7 +563,7 @@ class IPAddressFactory(PrimaryModelFactory):
         has_description = factory.Faker("pybool")
         has_dns_name = factory.Faker("pybool")
         has_nat_inside = factory.Faker("pybool")
-        role_choice = factory.Faker("random_element", elements=IPAddressRoleChoices)
+        has_role = factory.Faker("pybool")
         has_tenant = factory.Faker("pybool")
         has_vrf = factory.Faker("pybool")
         is_ipv6 = factory.Faker("pybool")
@@ -576,7 +582,11 @@ class IPAddressFactory(PrimaryModelFactory):
         nat_inside=None,
         is_ipv6=factory.SelfAttribute("..is_ipv6"),
     )
-    role = random_instance(lambda: Role.objects.get_for_model(IPAddress))
+    role = factory.Maybe(
+        "has_role",
+        random_instance(Role.objects.get_for_model(IPAddress), allow_null=False),
+        None,
+    )
     status = factory.Maybe(
         "is_ipv6",
         random_instance(lambda: Status.objects.get_for_model(IPAddress), allow_null=False),

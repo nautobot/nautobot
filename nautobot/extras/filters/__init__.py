@@ -292,7 +292,8 @@ class ConfigContextFilterSet(BaseFilterSet):
     )
     # TODO(timizuo): Limit Role choices by Device/VM but can't
     #  import device cause of partial import error
-    roles = NaturalKeyOrPKMultipleChoiceFilter(
+    role = NaturalKeyOrPKMultipleChoiceFilter(
+        field_name="roles__slug",
         queryset=Role.objects.all(),
         to_field_name="slug",
         label="Roles (slug or PK)",
