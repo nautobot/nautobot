@@ -295,7 +295,6 @@ class ConfigContextFilterSet(BaseFilterSet):
     role = NaturalKeyOrPKMultipleChoiceFilter(
         field_name="roles__slug",
         queryset=Role.objects.all(),
-        to_field_name="slug",
         label="Roles (slug or PK)",
     )
 

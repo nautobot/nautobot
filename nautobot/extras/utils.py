@@ -406,6 +406,7 @@ def migrate_role_data(
     role_choiceset=None,
     legacy_role="legacy_role",
     new_role="new_role",
+    is_m2m_field=False,
 ):
     """
     Migrate legacy_role's `role_model` equivalent record into new_role.
@@ -417,29 +418,77 @@ def migrate_role_data(
         role_choiceset(ChoiceSet): Role ChoiceSet (optional)
         legacy_role(str): Models role field legacy name; This is the current role field name
         new_role(str): Models role field new name; This is the name role field should be updated to
+        is_m2m_field(bool): True if the role field is a ManyToManyField, else False
     """
 
-    legacy_role_name = legacy_role if is_choice_field else legacy_role + "__name"
-    queryset = model.objects.filter(**{legacy_role + "__isnull": False}).values("pk", legacy_role_name)
-    instances_to_update = []
+    # Determine the name of the legacy_role field based on its type
+    legacy_role_name = legacy_role if is_choice_field or is_m2m_field else legacy_role + "__name"
+    # Retrieve the queryset of `model` instances that have a value for the `legacy_role` field
+    queryset = model.objects.filter(**{legacy_role + "__isnull": False}).only(*["pk", legacy_role_name])
+    instances_to_update_data = get_instances_to_update_data(
+        queryset=queryset,
+        role_model=role_model,
+        role_choiceset=role_choiceset,
+        legacy_role=legacy_role_name,
+        new_role=new_role,
+        is_m2m_field=is_m2m_field,
+    )
+
+    if instances_to_update_data:
+        if is_m2m_field:
+            # Update the new_role field using the set() method for ManyToManyFields
+            for data in instances_to_update_data:
+                instance = model.objects.get(pk=data["id"])
+                getattr(instance, new_role).set(data[new_role])
+        else:
+            # Update the new_role field using the set() method for Foreign Key fields
+            instances_to_update_data = [model(**data) for data in instances_to_update_data]
+            model.objects.bulk_update(instances_to_update_data, fields=[new_role], batch_size=1000)
+
+
+def get_instances_to_update_data(queryset, role_model, role_choiceset, legacy_role, new_role, is_m2m_field):
+    """
+    Return a list of dictionaries containing the primary key and the new role value for each instance in the queryset.
+
+    The new role value is determined by the following logic:
+    - If `role_model` is not None, the value of the `legacy_role` field for each instance is used to
+      query the `role_model` for a matching role. If a match is found, it is used as the new role value.
+      If the `legacy_role` field is a ManyToManyField, all role names are obtained and used to query
+      the `role_model`.
+    - If `role_model` is None, the `legacy_role` field is assumed to be a ChoiceField, and the
+      `role_choiceset` is used to look up the value corresponding to the label of the `legacy_role` field.
+      This value is used as the new role value.
+
+    Args:
+        queryset (QuerySet): A queryset of instances to get the data for.
+        role_model (Model): A model class to use to look up the new role value.
+        role_choiceset (ChoiceSet): A `ChoiceSet` containing the choices for the new role field.
+        legacy_role (str): The name of the field on each instance containing the legacy role value.
+        new_role (str): The name of the field on each instance that will be updated with the new role value.
+        is_m2m_field (bool): Whether the `legacy_role` field is a ManyToManyField.
+    """
+    data = []
 
     for item in queryset:
         role_equivalent = None
         if role_model:
-            try:
-                role_equivalent = role_model.objects.get(
-                    Q(name=item[legacy_role_name]) | Q(slug=item[legacy_role_name])
-                )
-            except role_model.DoesNotExist:
-                logger.error(f"Role with name {item[legacy_role_name]} not found")
+            # Get the value for the legacy role field e.g. Device.role, IPAddress.role
+            legacy_role_field = getattr(item, legacy_role)
+            if is_m2m_field:
+                # In the case of a m2m field, `legacy_role_field` we would need to get all role names e.g ConfigContext.roles.values_list("name", flat=True)
+                role_names = legacy_role_field.values_list("name", flat=True)
+                role_equivalent = role_model.objects.filter(Q(name__in=role_names) | Q(slug__in=role_names))
+            else:
+                try:
+                    role_equivalent = role_model.objects.get(Q(name=legacy_role_field) | Q(slug=legacy_role_field))
+                except role_model.DoesNotExist:
+                    logger.error(f"Role with name {legacy_role_field} not found")
         else:
             # ChoiceSet.CHOICES has to be inverted to obtain the value using its label
             # i.e {"vrf": "VRF"} --> {"VRF": "vrf"}
             inverted_role_choiceset = {label: value for value, label in role_choiceset.CHOICES}
-            role_equivalent = inverted_role_choiceset.get(item[legacy_role_name])
+            role_equivalent = inverted_role_choiceset.get(legacy_role_field)
+        model_data = {"id": item.pk, new_role: role_equivalent}
+        data.append(model_data)
 
-        model_data = {"pk": item["pk"], new_role: role_equivalent}
-        instances_to_update.append(model(**model_data))
-
-    if instances_to_update:
-        model.objects.bulk_update(instances_to_update, fields=[new_role], batch_size=1000)
+    return data
