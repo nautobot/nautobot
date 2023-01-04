@@ -468,6 +468,7 @@ TEMPLATES = [
                 "nautobot.core.context_processors.settings",
                 "nautobot.core.context_processors.sso_auth",
             ],
+            "environment": "jinja2.sandbox.SandboxedEnvironment",
         },
     },
 ]

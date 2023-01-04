@@ -1,4 +1,3 @@
-import copy
 import logging
 import uuid
 
@@ -11,22 +10,16 @@ from nautobot.circuits.models import CircuitType
 from nautobot.dcim.models import Device, Platform, Rack, Site
 from nautobot.dcim.tables import SiteTable
 from nautobot.dcim.tests.test_views import create_test_device
-from nautobot.ipam.models import IPAddress, VLAN
-from nautobot.extras import context_managers
-from nautobot.extras.choices import (
-    ObjectChangeActionChoices,
-    RelationshipRequiredSideChoices,
-    RelationshipSideChoices,
-    RelationshipTypeChoices,
-)
-from nautobot.extras.models import ObjectChange, Relationship, RelationshipAssociation, Status
+from nautobot.ipam.models import VLAN
+from nautobot.extras.choices import RelationshipRequiredSideChoices, RelationshipSideChoices, RelationshipTypeChoices
+from nautobot.extras.models import Relationship, RelationshipAssociation, Status
 from nautobot.utilities.tables import RelationshipColumn
 from nautobot.utilities.testing import TestCase
 from nautobot.utilities.forms import (
     DynamicModelChoiceField,
     DynamicModelMultipleChoiceField,
 )
-from nautobot.utilities.utils import get_changes_for_model, get_route_for_model
+from nautobot.utilities.utils import get_route_for_model
 
 
 class RelationshipBaseTest(TestCase):
@@ -1370,179 +1363,3 @@ class RequiredRelationshipTestMixin(TestCase):
                         }
                     }
                     self.assertEqual(expected_error_json, response.json())
-
-
-class RelationshipChangeLoggingTest(TestCase):
-    @classmethod
-    def setUpTestData(cls):
-        cls.site_status = Status.objects.get_for_model(Site).first()
-        site_ct = ContentType.objects.get_for_model(Site)
-        cls.ipaddress_ct = ContentType.objects.get_for_model(IPAddress)
-        cls.site_ip_relationship = Relationship(
-            name="Site to IP Address",
-            slug="sites-ipaddresses-m2m",
-            type="many-to-many",
-            source_type=site_ct,
-            destination_type=cls.ipaddress_ct,
-        )
-        cls.site_ip_relationship.validated_save()
-        cls.site = Site.objects.first()
-        cls.ip = IPAddress.objects.first()
-        cls.base_diff = {
-            "relationships": {
-                cls.site_ip_relationship.slug: {
-                    "id": str(cls.site_ip_relationship.pk),
-                    "name": cls.site_ip_relationship.name,
-                    "type": "many-to-many",
-                    "url": "http://testserver"
-                    + reverse("extras-api:relationship-detail", kwargs={"pk": cls.site_ip_relationship.pk}),
-                    "destination": {
-                        "label": "IP addresses",
-                        "object_type": "ipam.ipaddress",
-                        "objects": [],
-                    },
-                    "source": {
-                        "label": "sites",
-                        "object_type": "dcim.site",
-                        "objects": [],
-                    },
-                }
-            }
-        }
-
-    def test_change_logging_relationship_association(self):
-        """Test that an objectchange is generated for associated objects when a RelationshipAssociation is saved"""
-        # generate initial object change
-        with context_managers.web_request_context(self.user):
-            self.ip.validated_save()
-            self.site.validated_save()
-
-        with context_managers.web_request_context(self.user):
-            RelationshipAssociation.objects.create(
-                relationship=self.site_ip_relationship, source=self.site, destination=self.ip
-            )
-
-        with self.subTest("Source object change was generated"):
-            self.assertEqual(get_changes_for_model(self.site).count(), 2)
-            object_change = get_changes_for_model(self.site).first()
-            self.assertEqual(object_change.action, ObjectChangeActionChoices.ACTION_UPDATE)
-
-            # ensure diff only contains added relationship
-            snapshots = object_change.get_snapshots()
-            removed_diff = copy.deepcopy(self.base_diff)
-            removed_diff["relationships"][self.site_ip_relationship.slug].pop("source")
-            added_diff = copy.deepcopy(removed_diff)
-            added_diff["relationships"][self.site_ip_relationship.slug]["destination"]["objects"] = [
-                {
-                    "id": str(self.ip.pk),
-                    "url": "http://testserver" + reverse("ipam-api:ipaddress-detail", kwargs={"pk": self.ip.pk}),
-                    "address": str(self.ip),
-                    "display": getattr(self.ip, "display", str(self.ip)),
-                    "family": self.ip.family,
-                }
-            ]
-            self.assertEqual(snapshots["differences"]["removed"], removed_diff)
-            self.assertEqual(snapshots["differences"]["added"], added_diff)
-
-        with self.subTest("Destination object change was generated"):
-            self.assertEqual(get_changes_for_model(self.ip).count(), 2)
-            object_change = get_changes_for_model(self.ip).first()
-            self.assertEqual(object_change.action, ObjectChangeActionChoices.ACTION_UPDATE)
-
-            # ensure diff only contains added relationship
-            snapshots = object_change.get_snapshots()
-            removed_diff = copy.deepcopy(self.base_diff)
-            removed_diff["relationships"][self.site_ip_relationship.slug].pop("destination")
-            added_diff = copy.deepcopy(removed_diff)
-            added_diff["relationships"][self.site_ip_relationship.slug]["source"]["objects"] = [
-                {
-                    "id": str(self.site.pk),
-                    "url": "http://testserver" + reverse("dcim-api:site-detail", kwargs={"pk": self.site.pk}),
-                    "display": getattr(self.site, "display", str(self.site)),
-                    "name": self.site.name,
-                    "slug": self.site.slug,
-                }
-            ]
-            self.assertEqual(snapshots["differences"]["removed"], removed_diff)
-            self.assertEqual(snapshots["differences"]["added"], added_diff)
-
-    def test_change_logging_with_object_save(self):
-        """
-        Test that only a single objectchange is generated for associated objects when a RelationshipAssociation
-        is created and the associated object is saved in the same request
-        """
-        with context_managers.web_request_context(self.user):
-            self.ip.validated_save()
-            self.site.validated_save()
-            RelationshipAssociation.objects.create(
-                relationship=self.site_ip_relationship, source=self.site, destination=self.ip
-            )
-
-        with self.subTest("Source object change was generated"):
-            self.assertEqual(get_changes_for_model(self.site).count(), 1)
-            object_change = get_changes_for_model(self.site).first()
-            snapshots_added = object_change.get_snapshots()["differences"]["added"]
-            self.assertIn("relationships", snapshots_added)
-            self.assertEqual(
-                snapshots_added["relationships"]["sites-ipaddresses-m2m"]["destination"]["objects"][0]["id"],
-                str(self.ip.pk),
-            )
-
-        with self.subTest("Destination object change was generated"):
-            self.assertEqual(get_changes_for_model(self.ip).count(), 1)
-            object_change = get_changes_for_model(self.ip).first()
-            snapshots_added = object_change.get_snapshots()["differences"]["added"]
-            self.assertIn("relationships", snapshots_added)
-            self.assertEqual(
-                snapshots_added["relationships"]["sites-ipaddresses-m2m"]["source"]["objects"][0]["id"],
-                str(self.site.pk),
-            )
-
-    def test_change_logging_relationship_association_on_delete(self):
-        """Test that an objectchange is generated for related objects when an object with relationships is deleted"""
-        # generate initial object change
-        with context_managers.web_request_context(self.user):
-            self.ip.validated_save()
-            self.site.validated_save()
-
-        with context_managers.web_request_context(self.user):
-            RelationshipAssociation.objects.create(
-                relationship=self.site_ip_relationship, source=self.site, destination=self.ip
-            )
-
-        with context_managers.web_request_context(self.user):
-            ip_pk = str(self.ip.pk)
-            self.ip.delete()
-
-        with self.subTest("Source object change was generated"):
-            # object created, modified (relationship added), modified (relationship deleted)
-            site_changes = get_changes_for_model(self.site)
-            self.assertEqual(site_changes.count(), 3)
-
-            # ensure newest diff only contains removed relationship
-            object_change = site_changes.first()
-            self.assertEqual(object_change.action, ObjectChangeActionChoices.ACTION_UPDATE)
-            snapshots = object_change.get_snapshots()
-            added_diff = copy.deepcopy(self.base_diff)
-            added_diff["relationships"][self.site_ip_relationship.slug].pop("source")
-            removed_diff = copy.deepcopy(added_diff)
-            removed_diff["relationships"][self.site_ip_relationship.slug]["destination"]["objects"] = [
-                {
-                    "id": ip_pk,
-                    "url": "http://testserver" + reverse("ipam-api:ipaddress-detail", kwargs={"pk": ip_pk}),
-                    "address": str(self.ip),
-                    "display": getattr(self.ip, "display", str(self.ip)),
-                    "family": self.ip.family,
-                }
-            ]
-            self.assertEqual(snapshots["differences"]["removed"], removed_diff)
-            self.assertEqual(snapshots["differences"]["added"], added_diff)
-
-        with self.subTest("Object change was generated for object delete but not relationship change"):
-            # object created, modified (relationship added), object deleted
-            ip_changes = ObjectChange.objects.filter(
-                changed_object_type=self.ipaddress_ct,
-                changed_object_id=ip_pk,
-            )
-            self.assertEqual(ip_changes.count(), 3)
-            self.assertEqual(ip_changes.first().action, ObjectChangeActionChoices.ACTION_DELETE)

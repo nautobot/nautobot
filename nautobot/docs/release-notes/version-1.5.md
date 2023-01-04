@@ -148,6 +148,16 @@ A number of mixin classes have been renamed and/or relocated for improved self-c
 | `TenancyFilterSet`             | `TenancyModelFilterSetMixin`                 |
 
 <!-- towncrier release notes start -->
+## v1.5.7 (2023-01-04)
+
+### Fixed
+
+- [#3065](https://github.com/nautobot/nautobot/issues/3065) - Rolled back the changes made in 1.5.6 by #3016 to fix a breaking issue with `ALLOWED_HOSTS` and change-logging.
+
+### Security
+
+- [#3074](https://github.com/nautobot/nautobot/issues/3074) - Sandboxed rendering of Jinja2 templates is now enforced by default in keeping with [Jinja2 best practices](https://jinja.palletsprojects.com/en/3.0.x/sandbox/#sandbox). To enable template sandboxing in a Nautobot instance without needing to upgrade, add the following value to your `nautobot_config.py` and restart your Nautobot services: `TEMPLATES[1]["OPTIONS"]["environment"] = "jinja2.sandbox.SandboxedEnvironment"`
+
 ## v1.5.6 (2022-12-23)
 
 ### Added
