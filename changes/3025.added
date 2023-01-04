@@ -1,1 +1,0 @@
-Added plugin banner test back to ListObjectsViewTestCase and ensured `example_plugin` installation before running it.
