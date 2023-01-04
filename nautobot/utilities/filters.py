@@ -140,18 +140,6 @@ class RelatedMembershipBooleanFilter(django_filters.BooleanFilter):
         )
 
 
-class NullableCharFieldFilter(django_filters.CharFilter):
-    """
-    Allow matching on null field values by passing a special string used to signify NULL.
-    """
-
-    def filter(self, qs, value):
-        if value != settings.FILTERS_NULL_CHOICE_VALUE:
-            return super().filter(qs, value)
-        qs = self.get_method(qs)(**{f"{self.field_name}__isnull": True})
-        return qs.distinct() if self.distinct else qs
-
-
 @extend_schema_field(OpenApiTypes.STR)
 class TagFilter(django_filters.ModelMultipleChoiceFilter):
     """

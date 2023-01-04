@@ -7,6 +7,15 @@
 
 ## Database (ORM) Changes
 
+### Database Behavior Changes
+
+| Model        | Field          | Changes                                           |
+|--------------|----------------|---------------------------------------------------|
+| JobLogEntry  | `absolute_url` | No longer accepts `null` values, use `""` instead |
+|              | `log_object`   | No longer accepts `null` values, use `""` instead |
+| ScheduledJob | `queue`        | No longer accepts `null` values, use `""` instead |
+| Webhook      | `ca_file_path` | No longer accepts `null` values, use `""` instead |
+
 ### Renamed Database Fields
 
 | Model         | Renamed Field | New Name     |
@@ -34,9 +43,9 @@
 |               | `rght`        |
 |               | `tree_id`     |
 
-## REST API Changes
+## GraphQL and REST API Changes
 
-### Behavior Changes
+### API Behavior Changes
 
 | Model       | Field          | Changes                                                                                                 |
 |-------------|----------------|---------------------------------------------------------------------------------------------------------|
@@ -59,7 +68,7 @@
 |----------------|----------------------|--------------------------------------|
 | `/api/status/` | `rq-workers-running` | Removed as RQ is no longer supported |
 
-## UI and REST API Filter Changes
+## UI, GraphQL, and REST API Filter Changes
 
 ### Renamed Filter Fields
 
