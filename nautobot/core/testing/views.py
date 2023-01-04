@@ -22,7 +22,7 @@ from nautobot.users import models as users_models
 
 @tag("unit")
 @override_settings(PAGINATE_COUNT=65000)
-class TestCase(_TestCase, testing.NautobotTestCaseMixin):
+class TestCase(_TestCase, testing.mixins.NautobotTestCaseMixin):
     """Base class for all Nautobot-specific unit tests."""
 
     def setUp(self):
