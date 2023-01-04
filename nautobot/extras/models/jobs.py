@@ -483,8 +483,8 @@ class JobLogEntry(BaseModel):
     # compatibility with existing JobResult logs. GFK would pose a problem with dangling foreign-key
     # references, whereas this allows us to retain all records for as long as the entry exists.
     # This also simplifies migration from the JobResult Data field as these were stored as strings.
-    log_object = models.CharField(max_length=JOB_LOG_MAX_LOG_OBJECT_LENGTH, null=True, blank=True)
-    absolute_url = models.CharField(max_length=JOB_LOG_MAX_ABSOLUTE_URL_LENGTH, null=True, blank=True)
+    log_object = models.CharField(max_length=JOB_LOG_MAX_LOG_OBJECT_LENGTH, blank=True, default="")
+    absolute_url = models.CharField(max_length=JOB_LOG_MAX_ABSOLUTE_URL_LENGTH, blank=True, default="")
 
     csv_headers = ["created", "grouping", "log_level", "log_object", "message"]
 
@@ -766,10 +766,10 @@ class JobResult(BaseModel, CustomFieldModel):
             grouping=grouping[:JOB_LOG_MAX_GROUPING_LENGTH],
             message=message,
             created=timezone.now().isoformat(),
-            log_object=str(obj)[:JOB_LOG_MAX_LOG_OBJECT_LENGTH] if obj else None,
+            log_object=str(obj)[:JOB_LOG_MAX_LOG_OBJECT_LENGTH] if obj else "",
             absolute_url=obj.get_absolute_url()[:JOB_LOG_MAX_ABSOLUTE_URL_LENGTH]
             if hasattr(obj, "get_absolute_url")
-            else None,
+            else "",
         )
 
         # If the override is provided, we want to use the default database(pass no using argument)
@@ -854,10 +854,9 @@ class ScheduledJob(BaseModel):
     queue = models.CharField(
         max_length=200,
         blank=True,
-        null=True,
-        default=None,
+        default="",
         verbose_name="Queue Override",
-        help_text="Queue defined in CELERY_TASK_QUEUES. Leave None for default queuing.",
+        help_text="Queue defined in CELERY_TASK_QUEUES. Leave empty for default queuing.",
         db_index=True,
     )
     one_off = models.BooleanField(
@@ -941,7 +940,7 @@ class ScheduledJob(BaseModel):
         return reverse("extras:scheduledjob", kwargs={"pk": self.pk})
 
     def save(self, *args, **kwargs):
-        self.queue = self.queue or None
+        self.queue = self.queue or ""
         # pass pk to worker task in kwargs, celery doesn't provide the full object to the worker
         self.kwargs["scheduled_job_pk"] = self.pk
         # make sure non-valid crontab doesn't get saved

@@ -309,7 +309,7 @@ class JobTest(TransactionTestCase):
         # Assert stuff
         self.assertEqual(job_result.status, JobResultStatusChoices.STATUS_COMPLETED)
         self.assertEqual({"role": str(d.pk), "roles": [str(d.pk)]}, job_result_data)
-        self.assertEqual(info_log.log_object, None)
+        self.assertEqual(info_log.log_object, "")
         self.assertEqual(info_log.message, "Role: role")
         self.assertEqual(job_result.data["output"], "\nNice Roles!")
 
@@ -328,7 +328,7 @@ class JobTest(TransactionTestCase):
 
         # Assert stuff
         self.assertEqual(job_result.status, JobResultStatusChoices.STATUS_COMPLETED)
-        self.assertEqual(info_log.log_object, None)
+        self.assertEqual(info_log.log_object, "")
         self.assertEqual(info_log.message, "The Region if any that the user provided.")
         self.assertEqual(job_result.data["output"], "\nNice Region (or not)!")
 
