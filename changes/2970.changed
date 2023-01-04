@@ -1,1 +1,0 @@
-Updated `certifi` to `2022.12.7` for `CVE-2022-23491`. This is a nested dependency so will not auto-update when upgrading. Please be sure to upgrade your local environment.
