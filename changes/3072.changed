@@ -1,0 +1,1 @@
+In Nautobot's unit tests, all HTTP requests are now sent with SERVER_NAME set to `nautobot.example.com` instead of `testserver` (Django's default) and the test configuration for Nautobot itself sets `ALLOWED_HOSTS = ["nautobot.example.com"]`. This is intended to protect against issues such as #3065.
