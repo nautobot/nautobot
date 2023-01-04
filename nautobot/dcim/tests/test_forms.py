@@ -55,7 +55,7 @@ class DeviceTestCase(TestCase):
         )
         cluster_type = ClusterType.objects.create(name="Cluster Type 1", slug="cluster-type-1")
         cluster_group = ClusterGroup.objects.create(name="Cluster Group 1", slug="cluster-group-1")
-        Cluster.objects.create(name="Cluster 1", type=cluster_type, group=cluster_group)
+        Cluster.objects.create(name="Cluster 1", cluster_type=cluster_type, cluster_group=cluster_group)
         SecretsGroup.objects.create(name="Secrets Group 1", slug="secrets-group-1")
 
     def test_racked_device(self):
@@ -314,7 +314,7 @@ class TestInterfaceCSVForm(TestCase):
             "device": None,
             "name": None,
             "status": None,
-            "parent_interface": None,
+            "parent": None,
             "bridge": None,
             "type": None,
         }
@@ -334,7 +334,7 @@ class TestInterfaceCSVForm(TestCase):
             "device": self.devices[0].name,
             "name": "interface test",
             "status": "active",
-            "parent_interface": self.interfaces[0].name,
+            "parent": self.interfaces[0].name,
             "bridge": self.interfaces[2].name,
             "type": InterfaceTypeChoices.TYPE_VIRTUAL,
         }
@@ -344,7 +344,7 @@ class TestInterfaceCSVForm(TestCase):
         form.save()
 
         interface = Interface.objects.get(name="interface test", device=self.devices[0])
-        self.assertEqual(interface.parent_interface, self.interfaces[0])
+        self.assertEqual(interface.parent, self.interfaces[0])
         self.assertEqual(interface.bridge, self.interfaces[2])
 
         # Assert LAG
@@ -371,14 +371,14 @@ class TestInterfaceCSVForm(TestCase):
             "device": self.devices[0].name,
             "name": "interface test",
             "status": "active",
-            "parent_interface": self.interfaces[4].name,
+            "parent": self.interfaces[4].name,
             "bridge": self.interfaces[4].name,
             "type": InterfaceTypeChoices.TYPE_VIRTUAL,
         }
 
         form = InterfaceCSVForm(data, headers=self.headers_1)
         self.assertFalse(form.is_valid())
-        self.assertTrue(form.has_error("parent_interface"))
+        self.assertTrue(form.has_error("parent"))
         self.assertTrue(form.has_error("bridge"))
 
         # Assert LAG

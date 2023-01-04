@@ -113,8 +113,8 @@ class ConfigContextSchemaTestCase(SeleniumTestCase):
             device_type=device_type,
             device_role=device_role,
             status=Status.objects.get_for_model(Device).first(),
-            local_context_data=context_data,
-            local_context_schema=schema,
+            local_config_context_data=context_data,
+            local_config_context_schema=schema,
         )
 
         # Virtual Machine
@@ -124,8 +124,8 @@ class ConfigContextSchemaTestCase(SeleniumTestCase):
             name="virtual_machine",
             cluster=cluster,
             status=Status.objects.get_for_model(VirtualMachine).first(),
-            local_context_data=context_data,
-            local_context_schema=schema,
+            local_config_context_data=context_data,
+            local_config_context_schema=schema,
         )
 
         # Navigate to ConfigContextSchema Validation tab
@@ -169,7 +169,7 @@ class ConfigContextSchemaTestCase(SeleniumTestCase):
             -1
         ].find_by_tag("a").click()
         # Update the property "a" to be a string
-        self.browser.fill("local_context_data", '{"a": "foo", "b": 456, "c": 777}')
+        self.browser.fill("local_config_context_data", '{"a": "foo", "b": 456, "c": 777}')
         self.browser.find_by_text("Update").click()
 
         # Assert Validation states

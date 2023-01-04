@@ -775,7 +775,7 @@ class DynamicFilterLookupExpressionTest(TestCase):
                 position=1,
                 face=dcim_choices.DeviceFaceChoices.FACE_FRONT,
                 status=device_status_map["active"],
-                local_context_data={"foo": 123},
+                local_config_context_data={"foo": 123},
                 comments="Device 1 comments",
             ),
             dcim_models.Device(

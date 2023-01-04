@@ -5408,7 +5408,7 @@ tests:
       (nautobot.dcim.tests.test_views.LocationTestCase)
     execution_time: 0.163332
   - name: >-
-      test_local_context_schema_validation_fails
+      test_local_config_context_schema_validation_fails
       (nautobot.dcim.tests.test_views.DeviceTestCase)
     execution_time: 0.163321
   - name: >-
@@ -5788,7 +5788,7 @@ tests:
   - name: test_list_objects_anonymous (nautobot.dcim.tests.test_views.SiteTestCase)
     execution_time: 0.158797
   - name: >-
-      test_local_context_schema_validation_pass
+      test_local_config_context_schema_validation_pass
       (nautobot.dcim.tests.test_views.DeviceTestCase)
     execution_time: 0.158642
   - name: >-
@@ -6010,7 +6010,7 @@ tests:
   - name: test_get_object_anonymous (nautobot.dcim.tests.test_views.DeviceTestCase)
     execution_time: 0.143925
   - name: >-
-      test_local_context_schema_validation_fails
+      test_local_config_context_schema_validation_fails
       (nautobot.virtualization.tests.test_views.VirtualMachineTestCase)
     execution_time: 0.143734
   - name: >-
@@ -6662,7 +6662,7 @@ tests:
       (nautobot.extras.tests.test_views.ExportTemplateTestCase)
     execution_time: 0.120308
   - name: >-
-      test_local_context_schema_validation_pass
+      test_local_config_context_schema_validation_pass
       (nautobot.virtualization.tests.test_views.VirtualMachineTestCase)
     execution_time: 0.120187
   - name: >-

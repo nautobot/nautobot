@@ -82,8 +82,8 @@ class ClusterGroupSerializer(NautobotModelSerializer):
 
 class ClusterSerializer(NautobotModelSerializer, TaggedModelSerializerMixin):
     url = serializers.HyperlinkedIdentityField(view_name="virtualization-api:cluster-detail")
-    type = NestedClusterTypeSerializer()
-    group = NestedClusterGroupSerializer(required=False, allow_null=True)
+    cluster_type = NestedClusterTypeSerializer()
+    cluster_group = NestedClusterGroupSerializer(required=False, allow_null=True)
     tenant = NestedTenantSerializer(required=False, allow_null=True)
     site = NestedSiteSerializer(required=False, allow_null=True)
     location = NestedLocationSerializer(required=False, allow_null=True)
@@ -95,8 +95,8 @@ class ClusterSerializer(NautobotModelSerializer, TaggedModelSerializerMixin):
         fields = [
             "url",
             "name",
-            "type",
-            "group",
+            "cluster_type",
+            "cluster_group",
             "tenant",
             "site",
             "location",
@@ -123,7 +123,7 @@ class VirtualMachineSerializer(NautobotModelSerializer, TaggedModelSerializerMix
     primary_ip = NestedIPAddressSerializer(read_only=True)
     primary_ip4 = NestedIPAddressSerializer(required=False, allow_null=True)
     primary_ip6 = NestedIPAddressSerializer(required=False, allow_null=True)
-    local_context_schema = NestedConfigContextSchemaSerializer(required=False, allow_null=True)
+    local_config_context_schema = NestedConfigContextSchemaSerializer(required=False, allow_null=True)
 
     class Meta:
         model = VirtualMachine
@@ -144,15 +144,15 @@ class VirtualMachineSerializer(NautobotModelSerializer, TaggedModelSerializerMix
             "memory",
             "disk",
             "comments",
-            "local_context_data",
-            "local_context_schema",
+            "local_config_context_data",
+            "local_config_context_schema",
         ]
         validators = []
 
 
 class VirtualMachineWithConfigContextSerializer(VirtualMachineSerializer):
     config_context = serializers.SerializerMethodField()
-    local_context_schema = NestedConfigContextSchemaSerializer(required=False, allow_null=True)
+    local_config_context_schema = NestedConfigContextSchemaSerializer(required=False, allow_null=True)
 
     class Meta(VirtualMachineSerializer.Meta):
         fields = VirtualMachineSerializer.Meta.fields + ["config_context"]
@@ -179,7 +179,7 @@ class VMInterfaceSerializerVersion12(InterfaceCommonSerializer):
         required=False,
         many=True,
     )
-    parent_interface = NestedVMInterfaceSerializer(required=False, allow_null=True)
+    parent = NestedVMInterfaceSerializer(required=False, allow_null=True)
     bridge = NestedVMInterfaceSerializer(required=False, allow_null=True)
 
     class Meta:
@@ -189,7 +189,7 @@ class VMInterfaceSerializerVersion12(InterfaceCommonSerializer):
             "virtual_machine",
             "name",
             "enabled",
-            "parent_interface",
+            "parent",
             "bridge",
             "mtu",
             "mac_address",

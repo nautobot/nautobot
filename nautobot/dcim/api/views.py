@@ -675,7 +675,7 @@ class InterfaceViewSet(PathEndpointMixin, NautobotModelViewSet, StatusViewSetMix
     # v2 TODO(jathan): Replace prefetch_related with select_related (except tags: m2m)
     queryset = Interface.objects.prefetch_related(
         "device",
-        "parent_interface",
+        "parent",
         "bridge",
         "lag",
         "status",

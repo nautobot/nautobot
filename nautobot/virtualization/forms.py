@@ -104,16 +104,16 @@ class ClusterGroupCSVForm(CustomFieldModelCSVForm):
 
 
 class ClusterForm(LocatableModelFormMixin, NautobotModelForm, TenancyForm):
-    type = DynamicModelChoiceField(queryset=ClusterType.objects.all())
-    group = DynamicModelChoiceField(queryset=ClusterGroup.objects.all(), required=False)
+    cluster_type = DynamicModelChoiceField(queryset=ClusterType.objects.all())
+    cluster_group = DynamicModelChoiceField(queryset=ClusterGroup.objects.all(), required=False)
     comments = CommentField()
 
     class Meta:
         model = Cluster
         fields = (
             "name",
-            "type",
-            "group",
+            "cluster_type",
+            "cluster_group",
             "tenant",
             "region",
             "site",
@@ -124,12 +124,12 @@ class ClusterForm(LocatableModelFormMixin, NautobotModelForm, TenancyForm):
 
 
 class ClusterCSVForm(LocatableModelCSVFormMixin, CustomFieldModelCSVForm):
-    type = CSVModelChoiceField(
+    cluster_type = CSVModelChoiceField(
         queryset=ClusterType.objects.all(),
         to_field_name="name",
         help_text="Type of cluster",
     )
-    group = CSVModelChoiceField(
+    cluster_group = CSVModelChoiceField(
         queryset=ClusterGroup.objects.all(),
         to_field_name="name",
         required=False,
@@ -153,15 +153,15 @@ class ClusterBulkEditForm(
     NautobotBulkEditForm,
 ):
     pk = forms.ModelMultipleChoiceField(queryset=Cluster.objects.all(), widget=forms.MultipleHiddenInput())
-    type = DynamicModelChoiceField(queryset=ClusterType.objects.all(), required=False)
-    group = DynamicModelChoiceField(queryset=ClusterGroup.objects.all(), required=False)
+    cluster_type = DynamicModelChoiceField(queryset=ClusterType.objects.all(), required=False)
+    cluster_group = DynamicModelChoiceField(queryset=ClusterGroup.objects.all(), required=False)
     tenant = DynamicModelChoiceField(queryset=Tenant.objects.all(), required=False)
     comments = CommentField(widget=SmallTextarea, label="Comments")
 
     class Meta:
         model = Cluster
         nullable_fields = [
-            "group",
+            "cluster_group",
             "site",
             "location",
             "comments",
@@ -171,10 +171,12 @@ class ClusterBulkEditForm(
 
 class ClusterFilterForm(NautobotFilterForm, LocatableModelFilterFormMixin, TenancyFilterForm):
     model = Cluster
-    field_order = ["q", "type", "region", "site", "group", "tenant_group", "tenant"]
+    field_order = ["q", "cluster_type", "region", "site", "cluster_group", "tenant_group", "tenant"]
     q = forms.CharField(required=False, label="Search")
-    type = DynamicModelMultipleChoiceField(queryset=ClusterType.objects.all(), to_field_name="slug", required=False)
-    group = DynamicModelMultipleChoiceField(
+    cluster_type = DynamicModelMultipleChoiceField(
+        queryset=ClusterType.objects.all(), to_field_name="slug", required=False
+    )
+    cluster_group = DynamicModelMultipleChoiceField(
         queryset=ClusterGroup.objects.all(),
         to_field_name="slug",
         required=False,
@@ -272,7 +274,9 @@ class VirtualMachineForm(NautobotModelForm, TenancyForm, LocalContextModelForm):
         null_option="None",
         initial_params={"clusters": "$cluster"},
     )
-    cluster = DynamicModelChoiceField(queryset=Cluster.objects.all(), query_params={"group_id": "$cluster_group"})
+    cluster = DynamicModelChoiceField(
+        queryset=Cluster.objects.all(), query_params={"cluster_group_id": "$cluster_group"}
+    )
     role = DynamicModelChoiceField(
         queryset=DeviceRole.objects.all(),
         required=False,
@@ -298,11 +302,11 @@ class VirtualMachineForm(NautobotModelForm, TenancyForm, LocalContextModelForm):
             "disk",
             "comments",
             "tags",
-            "local_context_data",
-            "local_context_schema",
+            "local_config_context_data",
+            "local_config_context_schema",
         ]
         help_texts = {
-            "local_context_data": "Local config context data overwrites all sources contexts in the final rendered "
+            "local_config_context_data": "Local config context data overwrites all sources contexts in the final rendered "
             "config context",
         }
         widgets = {
@@ -478,7 +482,7 @@ class VirtualMachineFilterForm(
 
 
 class VMInterfaceForm(NautobotModelForm, InterfaceCommonForm):
-    parent_interface = DynamicModelChoiceField(
+    parent = DynamicModelChoiceField(
         queryset=VMInterface.objects.all(),
         required=False,
         label="Parent interface",
@@ -515,7 +519,7 @@ class VMInterfaceForm(NautobotModelForm, InterfaceCommonForm):
             "virtual_machine",
             "name",
             "enabled",
-            "parent_interface",
+            "parent",
             "bridge",
             "mac_address",
             "mtu",
@@ -539,7 +543,7 @@ class VMInterfaceForm(NautobotModelForm, InterfaceCommonForm):
         vm_id = self.initial.get("virtual_machine") or self.data.get("virtual_machine")
 
         # Restrict parent interface assignment by VM
-        self.fields["parent_interface"].widget.add_query_param("virtual_machine_id", vm_id)
+        self.fields["parent"].widget.add_query_param("virtual_machine_id", vm_id)
         self.fields["bridge"].widget.add_query_param("virtual_machine_id", vm_id)
 
         virtual_machine = VirtualMachine.objects.get(
@@ -557,7 +561,7 @@ class VMInterfaceCreateForm(BootstrapMixin, InterfaceCommonForm):
     virtual_machine = DynamicModelChoiceField(queryset=VirtualMachine.objects.all())
     name_pattern = ExpandableNameField(label="Name")
     enabled = forms.BooleanField(required=False, initial=True)
-    parent_interface = DynamicModelChoiceField(
+    parent = DynamicModelChoiceField(
         queryset=VMInterface.objects.all(),
         required=False,
         query_params={
@@ -614,7 +618,7 @@ class VMInterfaceCreateForm(BootstrapMixin, InterfaceCommonForm):
         vm_id = self.initial.get("virtual_machine") or self.data.get("virtual_machine")
 
         # Restrict parent interface assignment by VM
-        self.fields["parent_interface"].widget.add_query_param("virtual_machine_id", vm_id)
+        self.fields["parent"].widget.add_query_param("virtual_machine_id", vm_id)
         self.fields["bridge"].widget.add_query_param("virtual_machine_id", vm_id)
 
         virtual_machine = VirtualMachine.objects.get(
@@ -630,7 +634,7 @@ class VMInterfaceCreateForm(BootstrapMixin, InterfaceCommonForm):
 
 class VMInterfaceCSVForm(CustomFieldModelCSVForm, StatusModelCSVFormMixin):
     virtual_machine = CSVModelChoiceField(queryset=VirtualMachine.objects.all(), to_field_name="name")
-    parent_interface = CSVModelChoiceField(
+    parent = CSVModelChoiceField(
         queryset=VMInterface.objects.all(), required=False, to_field_name="name", help_text="Parent interface"
     )
     bridge = CSVModelChoiceField(
@@ -662,9 +666,7 @@ class VMInterfaceBulkEditForm(TagsBulkEditFormMixin, StatusModelBulkEditFormMixi
         disabled=True,
         widget=forms.HiddenInput(),
     )
-    parent_interface = DynamicModelChoiceField(
-        queryset=VMInterface.objects.all(), required=False, display_field="display_name"
-    )
+    parent = DynamicModelChoiceField(queryset=VMInterface.objects.all(), required=False, display_field="display_name")
     bridge = DynamicModelChoiceField(
         queryset=VMInterface.objects.all(),
         required=False,
@@ -701,7 +703,7 @@ class VMInterfaceBulkEditForm(TagsBulkEditFormMixin, StatusModelBulkEditFormMixi
 
     class Meta:
         nullable_fields = [
-            "parent_interface",
+            "parent",
             "bridge",
             "mtu",
             "description",
@@ -712,7 +714,7 @@ class VMInterfaceBulkEditForm(TagsBulkEditFormMixin, StatusModelBulkEditFormMixi
         vm_id = self.initial.get("virtual_machine") or self.data.get("virtual_machine")
 
         # Restrict parent/bridge interface assignment by VM
-        self.fields["parent_interface"].widget.add_query_param("virtual_machine_id", vm_id)
+        self.fields["parent"].widget.add_query_param("virtual_machine_id", vm_id)
         self.fields["bridge"].widget.add_query_param("virtual_machine_id", vm_id)
 
         # Limit available VLANs based on the parent VirtualMachine
@@ -725,8 +727,8 @@ class VMInterfaceBulkEditForm(TagsBulkEditFormMixin, StatusModelBulkEditFormMixi
                 self.fields["untagged_vlan"].widget.add_query_param("site_id", site.pk)
                 self.fields["tagged_vlans"].widget.add_query_param("site_id", site.pk)
 
-        self.fields["parent_interface"].choices = ()
-        self.fields["parent_interface"].widget.attrs["disabled"] = True
+        self.fields["parent"].choices = ()
+        self.fields["parent"].widget.attrs["disabled"] = True
         self.fields["bridge"].choices = ()
         self.fields["bridge"].widget.attrs["disabled"] = True
 

@@ -678,9 +678,12 @@ def import_local_config_context(
     except ObjectDoesNotExist:
         raise RuntimeError("record not found!")
 
-    if record.local_context_data_owner is not None and record.local_context_data_owner != repository_record:
+    if (
+        record.local_config_context_data_owner is not None
+        and record.local_config_context_data_owner != repository_record
+    ):
         job_result.log(
-            f"DATA CONFLICT: Local context data is owned by another owner, {record.local_context_data_owner}",
+            f"DATA CONFLICT: Local context data is owned by another owner, {record.local_config_context_data_owner}",
             obj=record,
             level_choice=LogLevelChoices.LOG_FAILURE,
             grouping="local config contexts",
@@ -688,7 +691,7 @@ def import_local_config_context(
         )
         return
 
-    if record.local_context_data == context_data and record.local_context_data_owner == repository_record:
+    if record.local_config_context_data == context_data and record.local_config_context_data_owner == repository_record:
         job_result.log(
             "No change to local config context",
             obj=record,
@@ -698,8 +701,8 @@ def import_local_config_context(
         )
         return
 
-    record.local_context_data = context_data
-    record.local_context_data_owner = repository_record
+    record.local_config_context_data = context_data
+    record.local_config_context_data_owner = repository_record
     record.clean()
     record.save()
     job_result.log(
@@ -735,12 +738,12 @@ def delete_git_config_contexts(repository_record, job_result, preserve=(), prese
         ("virtual_machines", VirtualMachine),
     ):
         for record in model.objects.filter(
-            local_context_data_owner_content_type=git_repository_content_type,
-            local_context_data_owner_object_id=repository_record.pk,
+            local_config_context_data_owner_content_type=git_repository_content_type,
+            local_config_context_data_owner_object_id=repository_record.pk,
         ):
             if record.name not in preserve_local[grouping]:
-                record.local_context_data = None
-                record.local_context_data_owner = None
+                record.local_config_context_data = None
+                record.local_config_context_data_owner = None
                 record.clean()
                 record.save()
                 job_result.log(

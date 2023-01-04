@@ -1013,12 +1013,12 @@ class NoteForm(BootstrapMixin, forms.ModelForm):
 
 
 class LocalContextFilterForm(forms.Form):
-    local_context_data = forms.NullBooleanField(
+    local_config_context_data = forms.NullBooleanField(
         required=False,
         label="Has local config context data",
         widget=StaticSelect2(choices=BOOLEAN_WITH_BLANK_CHOICES),
     )
-    local_context_schema = DynamicModelMultipleChoiceField(
+    local_config_context_schema = DynamicModelMultipleChoiceField(
         queryset=ConfigContextSchema.objects.all(), to_field_name="slug", required=False
     )
 
@@ -1029,18 +1029,18 @@ class LocalContextFilterForm(forms.Form):
 
 
 class LocalContextModelForm(forms.ModelForm):
-    local_context_schema = DynamicModelChoiceField(queryset=ConfigContextSchema.objects.all(), required=False)
-    local_context_data = JSONField(required=False, label="")
+    local_config_context_schema = DynamicModelChoiceField(queryset=ConfigContextSchema.objects.all(), required=False)
+    local_config_context_data = JSONField(required=False, label="")
 
 
 class LocalContextModelBulkEditForm(BulkEditForm):
-    local_context_schema = DynamicModelChoiceField(queryset=ConfigContextSchema.objects.all(), required=False)
+    local_config_context_schema = DynamicModelChoiceField(queryset=ConfigContextSchema.objects.all(), required=False)
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
         # append nullable fields
-        self.nullable_fields.append("local_context_schema")
+        self.nullable_fields.append("local_config_context_schema")
 
 
 #

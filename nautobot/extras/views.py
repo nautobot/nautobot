@@ -278,7 +278,9 @@ class ConfigContextSchemaObjectValidationView(generic.ObjectView):
             extra_columns=[
                 (
                     "validation_state",
-                    tables.ConfigContextSchemaValidationStateColumn(validator, "local_context_data", empty_values=()),
+                    tables.ConfigContextSchemaValidationStateColumn(
+                        validator, "local_config_context_data", empty_values=()
+                    ),
                 ),
                 ("actions", ButtonsColumn(model=Device, buttons=["edit"])),
             ],
@@ -297,7 +299,9 @@ class ConfigContextSchemaObjectValidationView(generic.ObjectView):
             extra_columns=[
                 (
                     "validation_state",
-                    tables.ConfigContextSchemaValidationStateColumn(validator, "local_context_data", empty_values=()),
+                    tables.ConfigContextSchemaValidationStateColumn(
+                        validator, "local_config_context_data", empty_values=()
+                    ),
                 ),
                 ("actions", ButtonsColumn(model=VirtualMachine, buttons=["edit"])),
             ],

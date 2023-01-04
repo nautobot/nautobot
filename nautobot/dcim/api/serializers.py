@@ -787,7 +787,7 @@ class DeviceSerializer(NautobotModelSerializer, TaggedModelSerializerMixin, Stat
     cluster = NestedClusterSerializer(required=False, allow_null=True)
     virtual_chassis = NestedVirtualChassisSerializer(required=False, allow_null=True)
     device_redundancy_group = NestedDeviceRedundancyGroupSerializer(required=False, allow_null=True)
-    local_context_schema = NestedConfigContextSchemaSerializer(required=False, allow_null=True)
+    local_config_context_schema = NestedConfigContextSchemaSerializer(required=False, allow_null=True)
 
     class Meta:
         model = Device
@@ -818,8 +818,8 @@ class DeviceSerializer(NautobotModelSerializer, TaggedModelSerializerMixin, Stat
             "device_redundancy_group",
             "device_redundancy_group_priority",
             "comments",
-            "local_context_schema",
-            "local_context_data",
+            "local_config_context_schema",
+            "local_config_context_data",
         ]
         validators = []
 
@@ -1027,7 +1027,7 @@ class InterfaceSerializerVersion12(
     )
     cable = NestedCableSerializer(read_only=True)
     count_ipaddresses = serializers.IntegerField(read_only=True)
-    parent_interface = NestedInterfaceSerializer(required=False, allow_null=True)
+    parent = NestedInterfaceSerializer(required=False, allow_null=True)
     bridge = NestedInterfaceSerializer(required=False, allow_null=True)
     lag = NestedInterfaceSerializer(required=False, allow_null=True)
 
@@ -1040,7 +1040,7 @@ class InterfaceSerializerVersion12(
             "label",
             "type",
             "enabled",
-            "parent_interface",
+            "parent",
             "bridge",
             "lag",
             "mtu",

@@ -153,12 +153,12 @@ class ConfigContextModel(models.Model, ConfigContextSchemaValidationMixin):
     ConfigContexts.
     """
 
-    local_context_data = models.JSONField(
+    local_config_context_data = models.JSONField(
         encoder=DjangoJSONEncoder,
         blank=True,
         null=True,
     )
-    local_context_schema = models.ForeignKey(
+    local_config_context_schema = models.ForeignKey(
         to="extras.ConfigContextSchema",
         on_delete=models.SET_NULL,
         null=True,
@@ -166,7 +166,7 @@ class ConfigContextModel(models.Model, ConfigContextSchemaValidationMixin):
         help_text="Optional schema to validate the structure of the data",
     )
     # The local context data *may* be owned by another model, such as a GitRepository, or it may be un-owned
-    local_context_data_owner_content_type = models.ForeignKey(
+    local_config_context_data_owner_content_type = models.ForeignKey(
         to=ContentType,
         on_delete=models.CASCADE,
         limit_choices_to=FeatureQuery("config_context_owners"),
@@ -174,16 +174,18 @@ class ConfigContextModel(models.Model, ConfigContextSchemaValidationMixin):
         null=True,
         blank=True,
     )
-    local_context_data_owner_object_id = models.UUIDField(default=None, null=True, blank=True)
-    local_context_data_owner = GenericForeignKey(
-        ct_field="local_context_data_owner_content_type",
-        fk_field="local_context_data_owner_object_id",
+    local_config_context_data_owner_object_id = models.UUIDField(default=None, null=True, blank=True)
+    local_config_context_data_owner = GenericForeignKey(
+        ct_field="local_config_context_data_owner_content_type",
+        fk_field="local_config_context_data_owner_object_id",
     )
 
     class Meta:
         abstract = True
         indexes = [
-            models.Index(fields=("local_context_data_owner_content_type", "local_context_data_owner_object_id")),
+            models.Index(
+                fields=("local_config_context_data_owner_content_type", "local_config_context_data_owner_object_id")
+            ),
         ]
 
     def get_config_context(self):
@@ -207,8 +209,8 @@ class ConfigContextModel(models.Model, ConfigContextSchemaValidationMixin):
             data = deepmerge(data, context)
 
         # If the object has local config context data defined, merge it last
-        if self.local_context_data:
-            data = deepmerge(data, self.local_context_data)
+        if self.local_config_context_data:
+            data = deepmerge(data, self.local_config_context_data)
 
         return data
 
@@ -216,14 +218,18 @@ class ConfigContextModel(models.Model, ConfigContextSchemaValidationMixin):
         super().clean()
 
         # Verify that JSON data is provided as an object
-        if self.local_context_data and not isinstance(self.local_context_data, dict):
-            raise ValidationError({"local_context_data": 'JSON data must be in object form. Example: {"foo": 123}'})
+        if self.local_config_context_data and not isinstance(self.local_config_context_data, dict):
+            raise ValidationError(
+                {"local_config_context_data": 'JSON data must be in object form. Example: {"foo": 123}'}
+            )
 
-        if self.local_context_schema and not self.local_context_data:
-            raise ValidationError({"local_context_schema": "Local context data must exist for a schema to be applied."})
+        if self.local_config_context_schema and not self.local_config_context_data:
+            raise ValidationError(
+                {"local_config_context_schema": "Local context data must exist for a schema to be applied."}
+            )
 
         # Validate data against schema
-        self._validate_with_schema("local_context_data", "local_context_schema")
+        self._validate_with_schema("local_config_context_data", "local_config_context_schema")
 
 
 @extras_features(

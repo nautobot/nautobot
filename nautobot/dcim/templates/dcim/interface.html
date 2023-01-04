@@ -35,7 +35,7 @@
                     </tr>
                     <tr>
                          <td>Parent Interface</td>
-                         <td>{{ object.parent_interface|hyperlinked_object }}</td>
+                         <td>{{ object.parent|hyperlinked_object }}</td>
                     </tr>
                     <tr>
                          <th scope="row">Bridge</th>
@@ -202,5 +202,5 @@
 {% block content_full_width_page %}
     {% include 'panel_table.html' with table=ipaddress_table heading="IP Addresses" %}
     {% include 'panel_table.html' with table=vlan_table heading="VLANs" %}
-    {% include 'panel_table.html' with table=child_interfaces_table heading="Child Interfaces" %}
+    {% include 'panel_table.html' with table=children_table heading="Child Interfaces" %}
 {% endblock content_full_width_page %}

@@ -91,21 +91,23 @@ class ClusterFilterSet(NautobotFilterSet, LocatableModelFilterSetMixin, TenancyM
         label="Has virtual machines",
     )
     group_id = django_filters.ModelMultipleChoiceFilter(
+        field_name="cluster_group",
         queryset=ClusterGroup.objects.all(),
         label="Parent group (ID)",
     )
     group = django_filters.ModelMultipleChoiceFilter(
-        field_name="group__slug",
+        field_name="cluster_group__slug",
         queryset=ClusterGroup.objects.all(),
         to_field_name="slug",
         label="Parent group (slug)",
     )
     type_id = django_filters.ModelMultipleChoiceFilter(
+        field_name="cluster_type",
         queryset=ClusterType.objects.all(),
         label="Cluster type (ID)",
     )
     type = django_filters.ModelMultipleChoiceFilter(
-        field_name="type__slug",
+        field_name="cluster_type__slug",
         queryset=ClusterType.objects.all(),
         to_field_name="slug",
         label="Cluster type (slug)",
@@ -130,23 +132,23 @@ class VirtualMachineFilterSet(
         },
     )
     cluster_group_id = django_filters.ModelMultipleChoiceFilter(
-        field_name="cluster__group",
+        field_name="cluster__cluster_group",
         queryset=ClusterGroup.objects.all(),
         label="Cluster group (ID)",
     )
     cluster_group = django_filters.ModelMultipleChoiceFilter(
-        field_name="cluster__group__slug",
+        field_name="cluster__cluster_group__slug",
         queryset=ClusterGroup.objects.all(),
         to_field_name="slug",
         label="Cluster group (slug)",
     )
     cluster_type_id = django_filters.ModelMultipleChoiceFilter(
-        field_name="cluster__type",
+        field_name="cluster__cluster_type",
         queryset=ClusterType.objects.all(),
         label="Cluster type (ID)",
     )
     cluster_type = django_filters.ModelMultipleChoiceFilter(
-        field_name="cluster__type__slug",
+        field_name="cluster__cluster_type__slug",
         queryset=ClusterType.objects.all(),
         to_field_name="slug",
         label="Cluster type (slug)",
@@ -290,19 +292,19 @@ class VMInterfaceFilterSet(BaseFilterSet, StatusModelFilterSetMixin, CustomField
         to_field_name="name",
         label="Virtual machine",
     )
-    parent_interface = NaturalKeyOrPKMultipleChoiceFilter(
+    parent = NaturalKeyOrPKMultipleChoiceFilter(
         to_field_name="name",
         queryset=VMInterface.objects.all(),
         label="Parent interface (name or ID)",
     )
-    child_interfaces = NaturalKeyOrPKMultipleChoiceFilter(
+    children = NaturalKeyOrPKMultipleChoiceFilter(
         to_field_name="name",
         queryset=VMInterface.objects.all(),
         label="Child interfaces (name or ID)",
     )
-    has_child_interfaces = RelatedMembershipBooleanFilter(
-        field_name="child_interfaces",
-        label="Has child interfaces",
+    has_children = RelatedMembershipBooleanFilter(
+        field_name="children",
+        label="Has children",
     )
     bridge = NaturalKeyOrPKMultipleChoiceFilter(
         to_field_name="name",

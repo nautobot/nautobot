@@ -130,23 +130,23 @@ class CreatedUpdatedModelFilterSetMixin(django_filters.FilterSet):
 
 
 class LocalContextModelFilterSetMixin(django_filters.FilterSet):
-    local_context_data = django_filters.BooleanFilter(
-        method="_local_context_data",
+    local_config_context_data = django_filters.BooleanFilter(
+        method="_local_config_context_data",
         label="Has local config context data",
     )
-    local_context_schema_id = django_filters.ModelMultipleChoiceFilter(
+    local_config_context_schema_id = django_filters.ModelMultipleChoiceFilter(
         queryset=ConfigContextSchema.objects.all(),
         label="Schema (ID)",
     )
-    local_context_schema = django_filters.ModelMultipleChoiceFilter(
-        field_name="local_context_schema__slug",
+    local_config_context_schema = django_filters.ModelMultipleChoiceFilter(
+        field_name="local_config_context_schema__slug",
         queryset=ConfigContextSchema.objects.all(),
         to_field_name="slug",
         label="Schema (slug)",
     )
 
-    def _local_context_data(self, queryset, name, value):
-        return queryset.exclude(local_context_data__isnull=value)
+    def _local_config_context_data(self, queryset, name, value):
+        return queryset.exclude(local_config_context_data__isnull=value)
 
 
 class RelationshipFilter(django_filters.ModelMultipleChoiceFilter):

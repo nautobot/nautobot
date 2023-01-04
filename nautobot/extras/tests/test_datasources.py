@@ -184,9 +184,9 @@ class GitTest(TransactionTestCase):
     def assert_device_exists(self, name):
         """Helper function to assert device exists"""
         device = Device.objects.get(name=name)
-        self.assertIsNotNone(device.local_context_data)
-        self.assertEqual({"dns-servers": ["8.8.8.8"]}, device.local_context_data)
-        self.assertEqual(device.local_context_data_owner, self.repo)
+        self.assertIsNotNone(device.local_config_context_data)
+        self.assertEqual({"dns-servers": ["8.8.8.8"]}, device.local_config_context_data)
+        self.assertEqual(device.local_config_context_data_owner, self.repo)
 
     def assert_export_template_device(self, name):
         export_template_device = ExportTemplate.objects.get(
@@ -494,8 +494,8 @@ class GitTest(TransactionTestCase):
                     ),
                 )
                 device = Device.objects.get(name=self.device.name)
-                self.assertIsNone(device.local_context_data)
-                self.assertIsNone(device.local_context_data_owner)
+                self.assertIsNone(device.local_config_context_data)
+                self.assertIsNone(device.local_config_context_data_owner)
 
     def test_pull_git_repository_and_refresh_data_with_bad_data(self, MockGitRepo):
         """
@@ -703,9 +703,9 @@ class GitTest(TransactionTestCase):
 
                 # Make sure Device local config context was successfully populated from file
                 device = Device.objects.get(name=self.device.name)
-                self.assertIsNotNone(device.local_context_data)
-                self.assertEqual({"dns-servers": ["8.8.8.8"]}, device.local_context_data)
-                self.assertEqual(device.local_context_data_owner, self.repo)
+                self.assertIsNotNone(device.local_config_context_data)
+                self.assertEqual({"dns-servers": ["8.8.8.8"]}, device.local_config_context_data)
+                self.assertEqual(device.local_config_context_data_owner, self.repo)
 
                 # Make sure ExportTemplate was successfully loaded from file
                 export_template = ExportTemplate.objects.get(
@@ -738,8 +738,8 @@ class GitTest(TransactionTestCase):
                     )
 
                 device = Device.objects.get(name=self.device.name)
-                self.assertIsNone(device.local_context_data)
-                self.assertIsNone(device.local_context_data_owner)
+                self.assertIsNone(device.local_config_context_data)
+                self.assertIsNone(device.local_config_context_data_owner)
 
     def test_git_dry_run(self, MockGitRepo):
         with tempfile.TemporaryDirectory() as tempdir:

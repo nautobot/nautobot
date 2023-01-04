@@ -1360,8 +1360,8 @@ class DeviceTest(APIViewTestCases.APIViewTestCase):
         cluster_type = ClusterType.objects.create(name="Cluster Type 1", slug="cluster-type-1")
 
         clusters = (
-            Cluster.objects.create(name="Cluster 1", type=cluster_type),
-            Cluster.objects.create(name="Cluster 2", type=cluster_type),
+            Cluster.objects.create(name="Cluster 1", cluster_type=cluster_type),
+            Cluster.objects.create(name="Cluster 2", cluster_type=cluster_type),
         )
 
         secrets_groups = (
@@ -1381,7 +1381,7 @@ class DeviceTest(APIViewTestCases.APIViewTestCase):
             rack=racks[0],
             cluster=clusters[0],
             secrets_group=secrets_groups[0],
-            local_context_data={"A": 1},
+            local_config_context_data={"A": 1},
         )
         Device.objects.create(
             device_type=device_type,
@@ -1392,7 +1392,7 @@ class DeviceTest(APIViewTestCases.APIViewTestCase):
             rack=racks[0],
             cluster=clusters[0],
             secrets_group=secrets_groups[0],
-            local_context_data={"B": 2},
+            local_config_context_data={"B": 2},
         )
         Device.objects.create(
             device_type=device_type,
@@ -1403,7 +1403,7 @@ class DeviceTest(APIViewTestCases.APIViewTestCase):
             rack=racks[0],
             cluster=clusters[0],
             secrets_group=secrets_groups[0],
-            local_context_data={"C": 3},
+            local_config_context_data={"C": 3},
         )
 
         # FIXME(jathan): The writable serializer for `Device.status` takes the
@@ -1487,7 +1487,7 @@ class DeviceTest(APIViewTestCases.APIViewTestCase):
 
         self.assertHttpStatus(response, status.HTTP_400_BAD_REQUEST)
 
-    def test_local_context_schema_validation_pass(self):
+    def test_local_config_context_schema_validation_pass(self):
         """
         Given a config context schema
         And a device with local context that conforms to that schema
@@ -1498,15 +1498,15 @@ class DeviceTest(APIViewTestCases.APIViewTestCase):
         )
         self.add_permissions("dcim.change_device")
 
-        patch_data = {"local_context_schema": str(schema.pk)}
+        patch_data = {"local_config_context_schema": str(schema.pk)}
 
         response = self.client.patch(
             self._get_detail_url(Device.objects.get(name="Device 1")), patch_data, format="json", **self.header
         )
         self.assertHttpStatus(response, status.HTTP_200_OK)
-        self.assertEqual(response.data["local_context_schema"]["id"], str(schema.pk))
+        self.assertEqual(response.data["local_config_context_schema"]["id"], str(schema.pk))
 
-    def test_local_context_schema_schema_validation_fails(self):
+    def test_local_config_context_schema_schema_validation_fails(self):
         """
         Given a config context schema
         And a device with local context that *does not* conform to that schema
@@ -1518,7 +1518,7 @@ class DeviceTest(APIViewTestCases.APIViewTestCase):
         # Add object-level permission
         self.add_permissions("dcim.change_device")
 
-        patch_data = {"local_context_schema": str(schema.pk)}
+        patch_data = {"local_config_context_schema": str(schema.pk)}
 
         response = self.client.patch(
             self._get_detail_url(Device.objects.get(name="Device 2")), patch_data, format="json", **self.header
@@ -1771,7 +1771,7 @@ class InterfaceTestVersion12(Mixins.BasePortTestMixin):
                 "name": "Interface 10",
                 "type": "virtual",
                 "mode": InterfaceModeChoices.MODE_TAGGED,
-                "parent_interface": cls.interfaces[1].pk,
+                "parent": cls.interfaces[1].pk,
                 "tagged_vlans": [cls.vlans[0].pk, cls.vlans[1].pk],
                 "untagged_vlan": cls.vlans[2].pk,
             },
@@ -1789,7 +1789,7 @@ class InterfaceTestVersion12(Mixins.BasePortTestMixin):
                 "device": cls.devices[0].pk,
                 "name": "interface test 1",
                 "type": InterfaceTypeChoices.TYPE_VIRTUAL,
-                "parent_interface": cls.interfaces[3].id,  # belongs to different device but same vc
+                "parent": cls.interfaces[3].id,  # belongs to different device but same vc
                 "bridge": cls.interfaces[2].id,  # belongs to different device but same vc
             },
             {
@@ -1807,7 +1807,7 @@ class InterfaceTestVersion12(Mixins.BasePortTestMixin):
                     "device": cls.devices[0].pk,
                     "name": "interface test 1",
                     "type": InterfaceTypeChoices.TYPE_VIRTUAL,
-                    "parent_interface": cls.interfaces[6].id,  # do not belong to same device or vc
+                    "parent": cls.interfaces[6].id,  # do not belong to same device or vc
                 },
             ],
             [
@@ -1881,7 +1881,7 @@ class InterfaceTestVersion12(Mixins.BasePortTestMixin):
 
         self.assertHttpStatus(response, status.HTTP_201_CREATED)
         queryset = Interface.objects.get(name="interface test 1", device=self.devices[0])
-        self.assertEqual(queryset.parent_interface, self.interfaces[3])
+        self.assertEqual(queryset.parent, self.interfaces[3])
         self.assertEqual(queryset.bridge, self.interfaces[2])
 
         # Assert LAG
@@ -1905,12 +1905,11 @@ class InterfaceTestVersion12(Mixins.BasePortTestMixin):
             self.assertHttpStatus(response, status.HTTP_400_BAD_REQUEST)
 
             field_name = name.upper() if name == "lag" else name
-            error_field_name = f"{name}_interface" if name == "parent" else name
 
-            interface = Interface.objects.get(id=payload[error_field_name])
+            interface = Interface.objects.get(id=payload[name])
             self.assertEqual(
-                str(response.data[error_field_name][0]),
-                f"The selected {field_name} interface ({interface}) belongs to {interface.parent}, which is "
+                str(response.data[name][0]),
+                f"The selected {field_name} interface ({interface}) belongs to {interface.device}, which is "
                 f"not part of virtual chassis {self.virtual_chassis}.",
             )
 

@@ -39,8 +39,8 @@ class ClusterTypeTestCase(FilterTestCases.NameSlugFilterTestCase):
         )
 
         cls.clusters = [
-            Cluster.objects.create(name="Cluster 1", type=cluster_types[0]),
-            Cluster.objects.create(name="Cluster 2", type=cluster_types[1]),
+            Cluster.objects.create(name="Cluster 1", cluster_type=cluster_types[0]),
+            Cluster.objects.create(name="Cluster 2", cluster_type=cluster_types[1]),
         ]
 
     def test_description(self):
@@ -79,8 +79,8 @@ class ClusterGroupTestCase(FilterTestCases.NameSlugFilterTestCase):
         )
 
         cls.clusters = (
-            Cluster.objects.create(name="Cluster 1", type=cluster_types[0], group=cluster_groups[0]),
-            Cluster.objects.create(name="Cluster 2", type=cluster_types[1], group=cluster_groups[1]),
+            Cluster.objects.create(name="Cluster 1", cluster_type=cluster_types[0], cluster_group=cluster_groups[0]),
+            Cluster.objects.create(name="Cluster 2", cluster_type=cluster_types[1], cluster_group=cluster_groups[1]),
         )
 
     def test_description(self):
@@ -133,24 +133,24 @@ class ClusterTestCase(FilterTestCases.FilterTestCase, FilterTestCases.TenancyFil
         clusters = (
             Cluster.objects.create(
                 name="Cluster 1",
-                type=cluster_types[0],
-                group=cluster_groups[0],
+                cluster_type=cluster_types[0],
+                cluster_group=cluster_groups[0],
                 site=cls.sites[0],
                 tenant=tenants[0],
                 comments="This is cluster 1",
             ),
             Cluster.objects.create(
                 name="Cluster 2",
-                type=cluster_types[1],
-                group=cluster_groups[1],
+                cluster_type=cluster_types[1],
+                cluster_group=cluster_groups[1],
                 site=cls.sites[1],
                 tenant=tenants[1],
                 comments="This is cluster 2",
             ),
             Cluster.objects.create(
                 name="Cluster 3",
-                type=cluster_types[2],
-                group=cluster_groups[2],
+                cluster_type=cluster_types[2],
+                cluster_group=cluster_groups[2],
                 site=cls.sites[2],
                 tenant=tenants[2],
                 comments="This is cluster 3",
@@ -279,20 +279,20 @@ class VirtualMachineTestCase(FilterTestCases.FilterTestCase, FilterTestCases.Ten
         clusters = (
             Cluster.objects.create(
                 name="Cluster 1",
-                type=cluster_types[0],
-                group=cluster_groups[0],
+                cluster_type=cluster_types[0],
+                cluster_group=cluster_groups[0],
                 site=cls.sites[0],
             ),
             Cluster.objects.create(
                 name="Cluster 2",
-                type=cluster_types[1],
-                group=cluster_groups[1],
+                cluster_type=cluster_types[1],
+                cluster_group=cluster_groups[1],
                 site=cls.sites[1],
             ),
             Cluster.objects.create(
                 name="Cluster 3",
-                type=cluster_types[2],
-                group=cluster_groups[2],
+                cluster_type=cluster_types[2],
+                cluster_group=cluster_groups[2],
                 site=cls.sites[2],
             ),
         )
@@ -327,7 +327,7 @@ class VirtualMachineTestCase(FilterTestCases.FilterTestCase, FilterTestCases.Ten
                 vcpus=1,
                 memory=1,
                 disk=1,
-                local_context_data={"foo": 123},
+                local_config_context_data={"foo": 123},
                 comments="This is VM 1",
             ),
             VirtualMachine.objects.create(
@@ -533,10 +533,10 @@ class VirtualMachineTestCase(FilterTestCases.FilterTestCase, FilterTestCases.Ten
         params = {"has_primary_ip": "false"}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 1)
 
-    def test_local_context_data(self):
-        params = {"local_context_data": "true"}
+    def test_local_config_context_data(self):
+        params = {"local_config_context_data": "true"}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 1)
-        params = {"local_context_data": "false"}
+        params = {"local_config_context_data": "false"}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
 
     def test_search(self):
@@ -559,9 +559,9 @@ class VMInterfaceTestCase(FilterTestCases.FilterTestCase):
         )
 
         clusters = (
-            Cluster.objects.create(name="Cluster 1", type=cluster_types[0]),
-            Cluster.objects.create(name="Cluster 2", type=cluster_types[1]),
-            Cluster.objects.create(name="Cluster 3", type=cluster_types[2]),
+            Cluster.objects.create(name="Cluster 1", cluster_type=cluster_types[0]),
+            Cluster.objects.create(name="Cluster 2", cluster_type=cluster_types[1]),
+            Cluster.objects.create(name="Cluster 3", cluster_type=cluster_types[2]),
         )
 
         vms = (
@@ -697,44 +697,32 @@ class VMInterfaceTestCase(FilterTestCases.FilterTestCase):
         # Create child interfaces
         parent_interface = VMInterface.objects.first()
         child_interfaces = (
-            VMInterface(
-                virtual_machine=parent_interface.virtual_machine, name="Child 1", parent_interface=parent_interface
-            ),
-            VMInterface(
-                virtual_machine=parent_interface.virtual_machine, name="Child 2", parent_interface=parent_interface
-            ),
-            VMInterface(
-                virtual_machine=parent_interface.virtual_machine, name="Child 3", parent_interface=parent_interface
-            ),
+            VMInterface(virtual_machine=parent_interface.virtual_machine, name="Child 1", parent=parent_interface),
+            VMInterface(virtual_machine=parent_interface.virtual_machine, name="Child 2", parent=parent_interface),
+            VMInterface(virtual_machine=parent_interface.virtual_machine, name="Child 3", parent=parent_interface),
         )
         VMInterface.objects.bulk_create(child_interfaces)
-        params = {"parent_interface": [parent_interface.pk, parent_interface.name]}
+        params = {"parent": [parent_interface.pk, parent_interface.name]}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 3)
 
     def test_child(self):
         # Create child interfaces
         parent_interface = VMInterface.objects.first()
         child_interfaces = (
-            VMInterface(
-                virtual_machine=parent_interface.virtual_machine, name="Child 1", parent_interface=parent_interface
-            ),
-            VMInterface(
-                virtual_machine=parent_interface.virtual_machine, name="Child 2", parent_interface=parent_interface
-            ),
-            VMInterface(
-                virtual_machine=parent_interface.virtual_machine, name="Child 3", parent_interface=parent_interface
-            ),
+            VMInterface(virtual_machine=parent_interface.virtual_machine, name="Child 1", parent=parent_interface),
+            VMInterface(virtual_machine=parent_interface.virtual_machine, name="Child 2", parent=parent_interface),
+            VMInterface(virtual_machine=parent_interface.virtual_machine, name="Child 3", parent=parent_interface),
         )
         VMInterface.objects.bulk_create(child_interfaces)
-        with self.subTest("Child Interfaces"):
-            params = {"child_interfaces": [child_interfaces[0].pk, child_interfaces[1].name]}
+        with self.subTest("Children"):
+            params = {"children": [child_interfaces[0].pk, child_interfaces[1].name]}
             self.assertEqual(self.filterset(params, self.queryset).qs.count(), 1)
 
-        with self.subTest("Has child Interfaces"):
-            params = {"has_child_interfaces": True}
+        with self.subTest("Has children"):
+            params = {"has_children": True}
             self.assertEqual(self.filterset(params, self.queryset).qs.count(), 1)
 
-            params = {"has_child_interfaces": False}
+            params = {"has_children": False}
             self.assertEqual(self.filterset(params, self.queryset).qs.count(), 5)
 
     def test_bridge(self):

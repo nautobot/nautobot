@@ -197,9 +197,9 @@ class ConfigContextTestCase(FilterTestCases.FilterTestCase):
 
         cluster_type = ClusterType.objects.create(name="Cluster Type 1", slug="cluster-type-1")
         clusters = (
-            Cluster.objects.create(name="Cluster 1", type=cluster_type),
-            Cluster.objects.create(name="Cluster 2", type=cluster_type),
-            Cluster.objects.create(name="Cluster 3", type=cluster_type),
+            Cluster.objects.create(name="Cluster 1", cluster_type=cluster_type),
+            Cluster.objects.create(name="Cluster 2", cluster_type=cluster_type),
+            Cluster.objects.create(name="Cluster 3", cluster_type=cluster_type),
         )
 
         cls.tenant_groups = TenantGroup.objects.filter(tenants__isnull=True)[:3]

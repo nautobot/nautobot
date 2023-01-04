@@ -377,9 +377,9 @@ def common_test_data(cls):
 
     cluster_type = ClusterType.objects.create(name="Cluster Type 1", slug="cluster-type-1")
     clusters = (
-        Cluster.objects.create(name="Cluster 1", type=cluster_type, site=sites[0], location=loc0),
-        Cluster.objects.create(name="Cluster 2", type=cluster_type, site=sites[1]),
-        Cluster.objects.create(name="Cluster 3", type=cluster_type, site=sites[2]),
+        Cluster.objects.create(name="Cluster 1", cluster_type=cluster_type, site=sites[0], location=loc0),
+        Cluster.objects.create(name="Cluster 2", cluster_type=cluster_type, site=sites[1]),
+        Cluster.objects.create(name="Cluster 3", cluster_type=cluster_type, site=sites[2]),
     )
 
     VirtualMachine.objects.create(cluster=clusters[0], name="VM 1", role=device_roles[0], platform=platforms[0])
@@ -661,7 +661,7 @@ def common_test_data(cls):
         serial="DEF",
         position=2,
         secrets_group=secrets_groups[1],
-        local_context_data={"foo": 123},
+        local_config_context_data={"foo": 123},
     )
     Device.objects.create(
         name="Device 3",
@@ -3119,12 +3119,12 @@ class DeviceTestCase(FilterTestCases.FilterTestCase, FilterTestCases.TenancyFilt
             params = {"has_device_bays": False}
             self.assertEqual(self.filterset(params, self.queryset).qs.count(), 1)
 
-    def test_local_context_data(self):
+    def test_local_config_context_data(self):
         with self.subTest():
-            params = {"local_context_data": True}
+            params = {"local_config_context_data": True}
             self.assertEqual(self.filterset(params, self.queryset).qs.count(), 1)
         with self.subTest():
-            params = {"local_context_data": False}
+            params = {"local_config_context_data": False}
             self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
 
     def test_search(self):
@@ -3729,21 +3729,21 @@ class InterfaceTestCase(FilterTestCases.FilterTestCase):
         Interface.objects.create(
             device=cabled_interfaces[3].device,
             name="Child 1",
-            parent_interface=cabled_interfaces[3],
+            parent=cabled_interfaces[3],
             status=interface_status_map["planned"],
             type=InterfaceTypeChoices.TYPE_VIRTUAL,
         )
         Interface.objects.create(
             device=cabled_interfaces[4].device,
             name="Child 2",
-            parent_interface=cabled_interfaces[4],
+            parent=cabled_interfaces[4],
             status=interface_status_map["planned"],
             type=InterfaceTypeChoices.TYPE_VIRTUAL,
         )
         Interface.objects.create(
             device=cabled_interfaces[5].device,
             name="Child 3",
-            parent_interface=cabled_interfaces[5],
+            parent=cabled_interfaces[5],
             status=interface_status_map["planned"],
             type=InterfaceTypeChoices.TYPE_VIRTUAL,
         )
@@ -3876,7 +3876,7 @@ class InterfaceTestCase(FilterTestCases.FilterTestCase):
 
     def test_parent(self):
         parent_interfaces = Interface.objects.filter(name__startswith="Parent")[:2]
-        params = {"parent_interface": [parent_interfaces[0].pk, parent_interfaces[1].name]}
+        params = {"parent": [parent_interfaces[0].pk, parent_interfaces[1].name]}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
 
     def test_bridge(self):
@@ -4064,17 +4064,17 @@ class InterfaceTestCase(FilterTestCases.FilterTestCase):
             params = {"has_tagged_vlans": False}
             self.assertEqual(self.filterset(params, self.queryset).qs.count(), 18)
 
-    def test_child_interfaces(self):
+    def test_children(self):
         child_interfaces = Interface.objects.filter(name__startswith="Child")[:2]
-        params = {"child_interfaces": [child_interfaces[0].pk, child_interfaces[1].name]}
+        params = {"children": [child_interfaces[0].pk, child_interfaces[1].name]}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
 
-    def test_has_child_interfaces(self):
+    def test_has_children(self):
         with self.subTest():
-            params = {"has_child_interfaces": True}
+            params = {"has_children": True}
             self.assertEqual(self.filterset(params, self.queryset).qs.count(), 3)
         with self.subTest():
-            params = {"has_child_interfaces": False}
+            params = {"has_children": False}
             self.assertEqual(self.filterset(params, self.queryset).qs.count(), 18)
 
     def test_bridged_interfaces(self):
