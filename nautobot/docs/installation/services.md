@@ -145,7 +145,7 @@ WantedBy=multi-user.target
 ### Nautobot Background Services
 
 +/- 1.1.0
-    Prior to version 1.1.0, Nautobot utilized RQ as the primary background task worker. As of Nautobot 1.1.0, RQ is now *deprecated* and has been replaced with Celery. RQ can still be used by plugins for now, but will be removed in a future release. Please [migrate your deployment to utilize Celery as documented below](#migrating-to-celery-from-rq).
+    Prior to version 1.1.0, Nautobot utilized RQ as the primary background task worker. As of Nautobot 1.1.0, RQ is now *deprecated* and has been replaced with Celery. RQ and the `@job` decorator for custom tasks were still supported for the remainder of the 1.x.y releases, but users should [migrate the primary worker to Celery](#migrating-to-celery-from-rq).
 
 --- 2.0.0
     RQ support has been fully removed from Nautobot.
@@ -261,7 +261,7 @@ index f84073fb5..52baf6096 100644
 ```
 
 !!! warning
-    Failure to account for the Celery-to-RQ migration may break your custom background tasks
+    Failure to account for the RQ to Celery migration may break your custom background tasks.
 
 ### Configure systemd
 

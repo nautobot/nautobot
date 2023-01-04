@@ -53,6 +53,12 @@
 | Region        | `_depth`      | `tree_depth` |
 | TenantGroup   | `_depth`      | `tree_depth` |
 
+### Removed Serializer Fields
+
+| Model/Endpoint | Removed Field        | Comments                             |
+|----------------|----------------------|--------------------------------------|
+| `/api/status/` | `rq-workers-running` | Removed as RQ is no longer supported |
+
 ## UI and REST API Filter Changes
 
 ### Renamed Filter Fields
