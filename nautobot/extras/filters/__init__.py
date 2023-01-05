@@ -22,6 +22,7 @@ from nautobot.extras.filters.customfields import (
     CustomFieldNumberFilter,
 )
 from nautobot.extras.filters.mixins import (
+    ConfigContextRoleFilter,
     CustomFieldModelFilterSetMixin,
     CreatedUpdatedModelFilterSetMixin,
     LocalContextModelFilterSetMixin,
@@ -290,13 +291,7 @@ class ConfigContextFilterSet(BaseFilterSet):
         to_field_name="slug",
         label="Tag (slug)",
     )
-    # TODO(timizuo): Limit Role choices by Device/VM but can't
-    #  import device cause of partial import error
-    role = NaturalKeyOrPKMultipleChoiceFilter(
-        field_name="roles__slug",
-        queryset=Role.objects.all(),
-        label="Roles (slug or PK)",
-    )
+    role = ConfigContextRoleFilter()
 
     class Meta:
         model = ConfigContext
@@ -1008,8 +1003,14 @@ class RoleFilterSet(NautobotFilterSet):
             "content_types__model": "icontains",
         },
     )
+    # TODO(timizuo): Add a feature to set conjoined to either True/False from query param in url;
+    #  this way only ConfigContext related query would set conjoined to True
     content_types = ContentTypeMultipleChoiceFilter(
         choices=RoleModelsQuery().get_choices,
+        # Set the 'conjoined' parameter to False to allow `ConfigContext`
+        # to filter the queryset by a combinations of content types,
+        # such as 'Device or VirtualMachine' but not 'Device and VirtualMachine'.
+        conjoined=False,
     )
 
     class Meta:

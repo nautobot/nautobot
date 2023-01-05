@@ -40,7 +40,7 @@ class ConfigContextRoleFilter(NaturalKeyOrPKMultipleChoiceFilter):
     """Limit role choices to the available role choices for Device and VM"""
 
     def __init__(self, *args, **kwargs):
-        kwargs.setdefault("to_field_name", "slug")
+        kwargs.setdefault("field_name", "roles")
         kwargs.setdefault("queryset", Role.objects.get_for_models([Device, VirtualMachine]))
         kwargs.setdefault("label", "Role (slug or ID)")
 
