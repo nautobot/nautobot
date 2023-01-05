@@ -1816,41 +1816,24 @@ class RoleUIViewSet(viewsets.NautobotUIViewSet):
         if self.action == "retrieve":
             context["content_types"] = instance.content_types.order_by("app_label", "model")
 
-            prefixes = (
-                Prefix.objects.restrict(request.user, "view")
-                .filter(role=instance)
-                .select_related(
-                    "site",
-                    "status",
-                    "tenant",
-                    "vlan",
-                    "vrf",
-                )
+            ipaddress = instance.ipam_ipaddress_related.select_related(
+                "vrf",
+                "tenant",
+                "assigned_object_type",
             )
-            vlans = (
-                VLAN.objects.restrict(request.user, "view")
-                .filter(role=instance)
-                .select_related(
-                    "group",
-                    "site",
-                    "status",
-                    "tenant",
-                )
+            prefixes = instance.ipam_prefix_related.select_related(
+                "site",
+                "status",
+                "tenant",
+                "vlan",
+                "vrf",
             )
-            ipaddress = (
-                IPAddress.objects.restrict(request.user, "view")
-                .filter(role=instance)
-                .select_related(
-                    "vrf",
-                    "tenant",
-                    "assigned_object_type",
-                )
+            vlans = instance.ipam_vlan_related.select_related(
+                "group",
+                "site",
+                "status",
+                "tenant",
             )
-
-            paginate = {
-                "paginator_class": EnhancedPaginator,
-                "per_page": get_paginate_count(request),
-            }
 
             ipaddress_table = IPAddressTable(ipaddress)
             ipaddress_table.columns.hide("role")
@@ -1858,6 +1841,11 @@ class RoleUIViewSet(viewsets.NautobotUIViewSet):
             prefix_table.columns.hide("role")
             vlan_table = VLANTable(vlans)
             vlan_table.columns.hide("role")
+
+            paginate = {
+                "paginator_class": EnhancedPaginator,
+                "per_page": get_paginate_count(request),
+            }
 
             RequestConfig(request, paginate).configure(ipaddress_table)
             RequestConfig(request, paginate).configure(prefix_table)
