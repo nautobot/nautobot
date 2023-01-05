@@ -3,6 +3,7 @@ import os
 import tempfile
 
 from django.contrib.contenttypes.models import ContentType
+from django.test import override_settings
 from django.urls import reverse
 
 from nautobot.circuits.models import (
@@ -20,6 +21,7 @@ from nautobot.utilities.testing.integration import SeleniumTestCase
 from example_plugin.models import ExampleModel
 
 
+@override_settings(ALLOWED_HOSTS=["localhost"])
 class PluginWebhookTest(SeleniumTestCase):
     """
     This test case proves that plugins can use the webhook functions when making changes on a model.
