@@ -13,7 +13,11 @@ def create_region_location_type_locations(region_class, location_class, region_l
         region_lt: The newly created region location type
     """
     # Breadth First Query to create parents on the top levels first and children second.
-    regions = region_class.objects.with_tree_fields().extra(order_by=["__tree.tree_depth", "__tree.tree_ordering"])
+    regions = (
+        region_class.objects.with_tree_fields()
+        .extra(order_by=["__tree.tree_depth", "__tree.tree_ordering"])
+        .select_related("parent")
+    )
     for region in regions:
         location_class.objects.create(
             location_type=region_lt,
@@ -79,8 +83,9 @@ def create_site_location_type_locations(
         )
     location_class.objects.bulk_create(location_instances, batch_size=1000)
     # Set existing top level locations to have site locations as their parents
-    for location in location_class.objects.filter(site__isnull=False):
-        location.parent = location_class.objects.get(name=location.site.name, location_type=site_lt)
+    site_lt_locations = location_class.objects.filter(location_type=site_lt)
+    for location in location_class.objects.filter(site__isnull=False).select_related("site"):
+        location.parent = site_lt_locations.get(name=location.site.name)
         location.save()
     location_type_class.objects.filter(parent__isnull=True).exclude(name=exclude_name).update(parent=site_lt)
 
