@@ -2322,7 +2322,7 @@ class CableTestCase(
 
         provider = Provider.objects.create(name="Provider 1", slug="provider-1")
         circuittype = CircuitType.objects.create(name="Circuit Type A", slug="circuit-type-a")
-        circuit = Circuit.objects.create(cid="Circuit 1", provider=provider, type=circuittype)
+        circuit = Circuit.objects.create(cid="Circuit 1", provider=provider, circuit_type=circuittype)
 
         circuit_terminations = [
             CircuitTermination.objects.create(
@@ -2536,7 +2536,7 @@ class InterfaceConnectionsTestCase(ViewTestCases.ListObjectsViewTestCase):
 
         provider = Provider.objects.create(name="Provider 1", slug="provider-1")
         circuittype = CircuitType.objects.create(name="Circuit Type A", slug="circuit-type-a")
-        circuit = Circuit.objects.create(cid="Circuit 1", provider=provider, type=circuittype)
+        circuit = Circuit.objects.create(cid="Circuit 1", provider=provider, circuit_type=circuittype)
         circuittermination = CircuitTermination.objects.create(
             circuit=circuit, term_side=CircuitTerminationSideChoices.SIDE_A, site=site
         )

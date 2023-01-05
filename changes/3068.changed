@@ -1,0 +1,2 @@
+Changed `type` FK to `circuit_type`, `termination_a` FK to `circuit_termination_a` and `termination_z` FK to `circuit_termination_z` on Circuit model.
+Changed `circuit` FK and `_path` FK related_names to `circuit_terminations` on CircuitTermination model.

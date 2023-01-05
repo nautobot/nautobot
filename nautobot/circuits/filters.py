@@ -34,28 +34,28 @@ class ProviderFilterSet(NautobotFilterSet):
     )
     region_id = TreeNodeMultipleChoiceFilter(
         queryset=Region.objects.all(),
-        field_name="circuits__terminations__site__region",
+        field_name="circuits__circuit_terminations__site__region",
         label="Region (ID)",
     )
     region = TreeNodeMultipleChoiceFilter(
         queryset=Region.objects.all(),
-        field_name="circuits__terminations__site__region",
+        field_name="circuits__circuit_terminations__site__region",
         to_field_name="slug",
         label="Region (slug)",
     )
     site_id = django_filters.ModelMultipleChoiceFilter(
-        field_name="circuits__terminations__site",
+        field_name="circuits__circuit_terminations__site",
         queryset=Site.objects.all(),
         label="Site",
     )
     site = django_filters.ModelMultipleChoiceFilter(
-        field_name="circuits__terminations__site__slug",
+        field_name="circuits__circuit_terminations__site__slug",
         queryset=Site.objects.all(),
         to_field_name="slug",
         label="Site (slug)",
     )
     location = TreeNodeMultipleChoiceFilter(
-        field_name="circuits__terminations__location__slug",
+        field_name="circuits__circuit_terminations__location__slug",
         queryset=Location.objects.all(),
         to_field_name="slug",
         label="Location (slug or ID)",
@@ -123,9 +123,9 @@ class CircuitFilterSet(NautobotFilterSet, StatusModelFilterSetMixin, TenancyMode
     q = SearchFilter(
         filter_predicates={
             "cid": "icontains",
-            "terminations__xconnect_id": "icontains",
-            "terminations__pp_info": "icontains",
-            "terminations__description": "icontains",
+            "circuit_terminations__xconnect_id": "icontains",
+            "circuit_terminations__pp_info": "icontains",
+            "circuit_terminations__description": "icontains",
             "description": "icontains",
             "comments": "icontains",
         },
@@ -141,45 +141,45 @@ class CircuitFilterSet(NautobotFilterSet, StatusModelFilterSetMixin, TenancyMode
         label="Provider (slug)",
     )
     provider_network_id = django_filters.ModelMultipleChoiceFilter(
-        field_name="terminations__provider_network",
+        field_name="circuit_terminations__provider_network",
         queryset=ProviderNetwork.objects.all(),
         label="Provider Network (ID)",
     )
-    type_id = django_filters.ModelMultipleChoiceFilter(
+    circuit_type_id = django_filters.ModelMultipleChoiceFilter(
         queryset=CircuitType.objects.all(),
         label="Circuit type (ID)",
     )
-    type = django_filters.ModelMultipleChoiceFilter(
-        field_name="type__slug",
+    circuit_type = django_filters.ModelMultipleChoiceFilter(
+        field_name="circuit_type__slug",
         queryset=CircuitType.objects.all(),
         to_field_name="slug",
         label="Circuit type (slug)",
     )
     site_id = django_filters.ModelMultipleChoiceFilter(
-        field_name="terminations__site",
+        field_name="circuit_terminations__site",
         queryset=Site.objects.all(),
         label="Site (ID)",
     )
     site = django_filters.ModelMultipleChoiceFilter(
-        field_name="terminations__site__slug",
+        field_name="circuit_terminations__site__slug",
         queryset=Site.objects.all(),
         to_field_name="slug",
         label="Site (slug)",
     )
     location = TreeNodeMultipleChoiceFilter(
-        field_name="terminations__location__slug",
+        field_name="circuit_terminations__location__slug",
         queryset=Location.objects.all(),
         to_field_name="slug",
         label="Location (slug or ID)",
     )
     region_id = TreeNodeMultipleChoiceFilter(
         queryset=Region.objects.all(),
-        field_name="terminations__site__region",
+        field_name="circuit_terminations__site__region",
         label="Region (ID)",
     )
     region = TreeNodeMultipleChoiceFilter(
         queryset=Region.objects.all(),
-        field_name="terminations__site__region",
+        field_name="circuit_terminations__site__region",
         to_field_name="slug",
         label="Region (slug)",
     )

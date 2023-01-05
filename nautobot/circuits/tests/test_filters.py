@@ -46,8 +46,8 @@ class ProviderTestCase(FilterTestCases.NameSlugFilterTestCase):
         )
 
         circuits = (
-            Circuit.objects.create(provider=providers[0], type=circuit_types[0], cid="Test Circuit 1"),
-            Circuit.objects.create(provider=providers[1], type=circuit_types[1], cid="Test Circuit 1"),
+            Circuit.objects.create(provider=providers[0], circuit_type=circuit_types[0], cid="Test Circuit 1"),
+            Circuit.objects.create(provider=providers[1], circuit_type=circuit_types[1], cid="Test Circuit 1"),
         )
 
         CircuitTermination.objects.create(circuit=circuits[0], site=cls.sites[0], term_side="A")
@@ -128,7 +128,7 @@ class CircuitTestCase(FilterTestCases.FilterTestCase, FilterTestCases.TenancyFil
             Circuit.objects.create(
                 provider=providers[0],
                 tenant=tenants[0],
-                type=circuit_types[0],
+                circuit_type=circuit_types[0],
                 cid="Test Circuit 1",
                 install_date="2020-01-01",
                 commit_rate=1000,
@@ -137,7 +137,7 @@ class CircuitTestCase(FilterTestCases.FilterTestCase, FilterTestCases.TenancyFil
             Circuit.objects.create(
                 provider=providers[0],
                 tenant=tenants[0],
-                type=circuit_types[0],
+                circuit_type=circuit_types[0],
                 cid="Test Circuit 2",
                 install_date="2020-01-02",
                 commit_rate=2000,
@@ -146,7 +146,7 @@ class CircuitTestCase(FilterTestCases.FilterTestCase, FilterTestCases.TenancyFil
             Circuit.objects.create(
                 provider=providers[0],
                 tenant=tenants[1],
-                type=circuit_types[0],
+                circuit_type=circuit_types[0],
                 cid="Test Circuit 3",
                 install_date="2020-01-03",
                 commit_rate=3000,
@@ -155,7 +155,7 @@ class CircuitTestCase(FilterTestCases.FilterTestCase, FilterTestCases.TenancyFil
             Circuit.objects.create(
                 provider=providers[1],
                 tenant=tenants[1],
-                type=circuit_types[1],
+                circuit_type=circuit_types[1],
                 cid="Test Circuit 4",
                 install_date="2020-01-04",
                 commit_rate=4000,
@@ -164,7 +164,7 @@ class CircuitTestCase(FilterTestCases.FilterTestCase, FilterTestCases.TenancyFil
             Circuit.objects.create(
                 provider=providers[1],
                 tenant=tenants[2],
-                type=circuit_types[1],
+                circuit_type=circuit_types[1],
                 cid="Test Circuit 5",
                 install_date="2020-01-05",
                 commit_rate=5000,
@@ -173,7 +173,7 @@ class CircuitTestCase(FilterTestCases.FilterTestCase, FilterTestCases.TenancyFil
             Circuit.objects.create(
                 provider=providers[1],
                 tenant=tenants[2],
-                type=circuit_types[1],
+                circuit_type=circuit_types[1],
                 cid="Test Circuit 6",
                 install_date="2020-01-06",
                 commit_rate=6000,
@@ -212,11 +212,11 @@ class CircuitTestCase(FilterTestCases.FilterTestCase, FilterTestCases.TenancyFil
         params = {"provider_network_id": [provider_network[0].pk, provider_network[1].pk]}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
 
-    def test_type(self):
+    def test_circuit_type(self):
         circuit_type = CircuitType.objects.first()
-        params = {"type_id": [circuit_type.pk]}
+        params = {"circuit_type_id": [circuit_type.pk]}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 3)
-        params = {"type": [circuit_type.slug]}
+        params = {"circuit_type": [circuit_type.slug]}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 3)
 
     def test_status(self):
@@ -301,12 +301,12 @@ class CircuitTerminationTestCase(FilterTestCases.FilterTestCase):
         ProviderNetwork.objects.bulk_create(provider_networks)
 
         circuits = (
-            Circuit(provider=providers[0], type=circuit_types[0], cid="Circuit 1"),
-            Circuit(provider=providers[0], type=circuit_types[0], cid="Circuit 2"),
-            Circuit(provider=providers[0], type=circuit_types[0], cid="Circuit 3"),
-            Circuit(provider=providers[0], type=circuit_types[0], cid="Circuit 4"),
-            Circuit(provider=providers[0], type=circuit_types[0], cid="Circuit 5"),
-            Circuit(provider=providers[0], type=circuit_types[0], cid="Circuit 6"),
+            Circuit(provider=providers[0], circuit_type=circuit_types[0], cid="Circuit 1"),
+            Circuit(provider=providers[0], circuit_type=circuit_types[0], cid="Circuit 2"),
+            Circuit(provider=providers[0], circuit_type=circuit_types[0], cid="Circuit 3"),
+            Circuit(provider=providers[0], circuit_type=circuit_types[0], cid="Circuit 4"),
+            Circuit(provider=providers[0], circuit_type=circuit_types[0], cid="Circuit 5"),
+            Circuit(provider=providers[0], circuit_type=circuit_types[0], cid="Circuit 6"),
         )
 
         Circuit.objects.bulk_create(circuits)

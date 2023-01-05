@@ -31,7 +31,7 @@ class CircuitTypeUIViewSet(
     bulk_create_form_class = forms.CircuitTypeCSVForm
     filterset_class = filters.CircuitTypeFilterSet
     form_class = forms.CircuitTypeForm
-    queryset = CircuitType.objects.annotate(circuit_count=count_related(Circuit, "type"))
+    queryset = CircuitType.objects.annotate(circuit_count=count_related(Circuit, "circuit_type"))
     serializer_class = serializers.CircuitTypeSerializer
     table_class = tables.CircuitTypeTable
 
@@ -42,12 +42,12 @@ class CircuitTypeUIViewSet(
             # v2 TODO(jathan): Replace prefetch_related with select_related
             circuits = (
                 Circuit.objects.restrict(request.user, "view")
-                .filter(type=instance)
-                .prefetch_related("type", "tenant", "terminations__site")
+                .filter(circuit_type=instance)
+                .prefetch_related("circuit_type", "tenant", "circuit_terminations__site")
             )
 
             circuits_table = tables.CircuitTable(circuits)
-            circuits_table.columns.hide("type")
+            circuits_table.columns.hide("circuit_type")
 
             paginate = {
                 "paginator_class": EnhancedPaginator,
@@ -97,7 +97,7 @@ class ProviderUIViewSet(NautobotUIViewSet):
             circuits = (
                 Circuit.objects.restrict(request.user, "view")
                 .filter(provider=instance)
-                .prefetch_related("type", "tenant", "terminations__site")
+                .prefetch_related("circuit_type", "tenant", "circuit_terminations__site")
             )
             circuits_table = tables.CircuitTable(circuits)
             circuits_table.columns.hide("provider")
@@ -120,7 +120,7 @@ class CircuitUIViewSet(NautobotUIViewSet):
     form_class = forms.CircuitForm
     lookup_field = "pk"
     # v2 TODO(jathan): Replace prefetch_related with select_related
-    prefetch_related = ["provider", "type", "tenant", "termination_a", "termination_z"]
+    prefetch_related = ["provider", "circuit_type", "tenant", "circuit_termination_a", "circuit_termination_z"]
     queryset = Circuit.objects.all()
     serializer_class = serializers.CircuitSerializer
     table_class = tables.CircuitTable
@@ -130,40 +130,40 @@ class CircuitUIViewSet(NautobotUIViewSet):
         if self.action == "retrieve":
             # A-side termination
             # v2 TODO(jathan): Replace prefetch_related with select_related
-            termination_a = (
+            circuit_termination_a = (
                 CircuitTermination.objects.restrict(request.user, "view")
                 .prefetch_related("site__region")
                 .filter(circuit=instance, term_side=CircuitTerminationSideChoices.SIDE_A)
                 .first()
             )
             if (
-                termination_a
-                and termination_a.connected_endpoint
-                and hasattr(termination_a.connected_endpoint, "ip_addresses")
+                circuit_termination_a
+                and circuit_termination_a.connected_endpoint
+                and hasattr(circuit_termination_a.connected_endpoint, "ip_addresses")
             ):
-                termination_a.ip_addresses = termination_a.connected_endpoint.ip_addresses.restrict(
+                circuit_termination_a.ip_addresses = circuit_termination_a.connected_endpoint.ip_addresses.restrict(
                     request.user, "view"
                 )
 
             # Z-side termination
             # v2 TODO(jathan): Replace prefetch_related with select_related
-            termination_z = (
+            circuit_termination_z = (
                 CircuitTermination.objects.restrict(request.user, "view")
                 .prefetch_related("site__region")
                 .filter(circuit=instance, term_side=CircuitTerminationSideChoices.SIDE_Z)
                 .first()
             )
             if (
-                termination_z
-                and termination_z.connected_endpoint
-                and hasattr(termination_z.connected_endpoint, "ip_addresses")
+                circuit_termination_z
+                and circuit_termination_z.connected_endpoint
+                and hasattr(circuit_termination_z.connected_endpoint, "ip_addresses")
             ):
-                termination_z.ip_addresses = termination_z.connected_endpoint.ip_addresses.restrict(
+                circuit_termination_z.ip_addresses = circuit_termination_z.connected_endpoint.ip_addresses.restrict(
                     request.user, "view"
                 )
 
-            context["termination_a"] = termination_a
-            context["termination_z"] = termination_z
+            context["circuit_termination_a"] = circuit_termination_a
+            context["circuit_termination_z"] = circuit_termination_z
         return context
 
 
@@ -184,13 +184,16 @@ class ProviderNetworkUIViewSet(NautobotUIViewSet):
             # v2 TODO(jathan): Replace prefetch_related with select_related
             circuits = (
                 Circuit.objects.restrict(request.user, "view")
-                .filter(Q(termination_a__provider_network=instance.pk) | Q(termination_z__provider_network=instance.pk))
-                .prefetch_related("type", "tenant", "terminations__site")
+                .filter(
+                    Q(circuit_termination_a__provider_network=instance.pk)
+                    | Q(circuit_termination_z__provider_network=instance.pk)
+                )
+                .prefetch_related("circuit_type", "tenant", "circuit_terminations__site")
             )
 
             circuits_table = tables.CircuitTable(circuits)
-            circuits_table.columns.hide("termination_a")
-            circuits_table.columns.hide("termination_z")
+            circuits_table.columns.hide("circuit_termination_a")
+            circuits_table.columns.hide("circuit_termination_z")
 
             paginate = {"paginator_class": EnhancedPaginator, "per_page": get_paginate_count(request)}
             RequestConfig(request, paginate).configure(circuits_table)
@@ -211,7 +214,7 @@ class CircuitSwapTerminations(generic.ObjectEditView):
         form = ConfirmationForm()
 
         # Circuit must have at least one termination to swap
-        if not circuit.termination_a and not circuit.termination_z:
+        if not circuit.circuit_termination_a and not circuit.circuit_termination_z:
             messages.error(
                 request,
                 f"No terminations have been defined for circuit {circuit}.",
@@ -223,8 +226,8 @@ class CircuitSwapTerminations(generic.ObjectEditView):
             "circuits/circuit_terminations_swap.html",
             {
                 "circuit": circuit,
-                "termination_a": circuit.termination_a,
-                "termination_z": circuit.termination_z,
+                "circuit_termination_a": circuit.circuit_termination_a,
+                "circuit_termination_z": circuit.circuit_termination_z,
                 "form": form,
                 "panel_class": "default",
                 "button_class": "primary",
@@ -238,28 +241,28 @@ class CircuitSwapTerminations(generic.ObjectEditView):
 
         if form.is_valid():
 
-            termination_a = CircuitTermination.objects.filter(
+            circuit_termination_a = CircuitTermination.objects.filter(
                 circuit=circuit, term_side=CircuitTerminationSideChoices.SIDE_A
             ).first()
-            termination_z = CircuitTermination.objects.filter(
+            circuit_termination_z = CircuitTermination.objects.filter(
                 circuit=circuit, term_side=CircuitTerminationSideChoices.SIDE_Z
             ).first()
 
-            if termination_a and termination_z:
+            if circuit_termination_a and circuit_termination_z:
                 # Use a placeholder to avoid an IntegrityError on the (circuit, term_side) unique constraint
                 with transaction.atomic():
-                    termination_a.term_side = "_"
-                    termination_a.save()
-                    termination_z.term_side = "A"
-                    termination_z.save()
-                    termination_a.term_side = "Z"
-                    termination_a.save()
-            elif termination_a:
-                termination_a.term_side = "Z"
-                termination_a.save()
+                    circuit_termination_a.term_side = "_"
+                    circuit_termination_a.save()
+                    circuit_termination_z.term_side = "A"
+                    circuit_termination_z.save()
+                    circuit_termination_a.term_side = "Z"
+                    circuit_termination_a.save()
+            elif circuit_termination_a:
+                circuit_termination_a.term_side = "Z"
+                circuit_termination_a.save()
             else:
-                termination_z.term_side = "A"
-                termination_z.save()
+                circuit_termination_z.term_side = "A"
+                circuit_termination_z.save()
 
             messages.success(request, f"Swapped terminations for circuit {circuit}.")
             return redirect("circuits:circuit", pk=circuit.pk)
@@ -269,8 +272,8 @@ class CircuitSwapTerminations(generic.ObjectEditView):
             "circuits/circuit_terminations_swap.html",
             {
                 "circuit": circuit,
-                "termination_a": circuit.termination_a,
-                "termination_z": circuit.termination_z,
+                "circuit_termination_a": circuit.circuit_termination_a,
+                "circuit_termination_z": circuit.circuit_termination_z,
                 "form": form,
                 "panel_class": "default",
                 "button_class": "primary",

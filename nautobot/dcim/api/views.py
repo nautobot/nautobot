@@ -155,7 +155,7 @@ class SiteViewSet(StatusViewSetMixin, NautobotModelViewSet):
         rack_count=count_related(Rack, "site"),
         prefix_count=count_related(Prefix, "site"),
         vlan_count=count_related(VLAN, "site"),
-        circuit_count=count_related(Circuit, "terminations__site"),
+        circuit_count=count_related(Circuit, "circuit_terminations__site"),
         virtualmachine_count=count_related(VirtualMachine, "cluster__site"),
     )
     serializer_class = serializers.SiteSerializer
@@ -189,7 +189,7 @@ class LocationViewSet(StatusViewSetMixin, NautobotModelViewSet):
         rack_count=count_related(Rack, "location"),
         prefix_count=count_related(Prefix, "location"),
         vlan_count=count_related(VLAN, "location"),
-        circuit_count=count_related(Circuit, "terminations__location"),
+        circuit_count=count_related(Circuit, "circuit_terminations__location"),
         virtualmachine_count=count_related(VirtualMachine, "cluster__location"),
     )
     serializer_class = serializers.LocationSerializer
