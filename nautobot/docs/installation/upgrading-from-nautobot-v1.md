@@ -26,6 +26,21 @@
 | Region        | `level`       | `tree_depth` |
 | TenantGroup   | `level`       | `tree_depth` |
 
+### Renamed Foregin Key Fields
+
+| Model         | Renamed Foregin Key    | New Name                 |
+|---------------|------------------------|--------------------------|
+| Circuit       | `type`                 | `circuit_type`           |
+|               | `termination_a`        | `circuit_termination_a`  |
+|               | `termination_z`        | `circuit_termination_b`  |
+
+### Renamed Foregin Key Related Names
+
+| Model              | FK Field       | Renamed Related Name       | New Related Name         |
+|--------------------|----------------|----------------------------|--------------------------|
+| CircuitTermination | `circuit`      |`terminations`              | `circuit_terminations`   |
+|                    | `_path`        |`terminations`              | `circuit_terminations`   |
+
 ### Removed Database Fields
 
 | Model         | Removed Field |
@@ -55,12 +70,15 @@
 
 ### Renamed Serializer Fields
 
-| Model         | Renamed Field | New Name     |
-|---------------|---------------|--------------|
-| InventoryItem | `_depth`      | `tree_depth` |
-| RackGroup     | `_depth`      | `tree_depth` |
-| Region        | `_depth`      | `tree_depth` |
-| TenantGroup   | `_depth`      | `tree_depth` |
+| Model         | Renamed Field    | New Name                 |
+|---------------|------------------|--------------------------|
+| Circuit       | `type`           | `circuit_type`           |
+|               | `termination_a`  | `circuit_termination_a`  |
+|               | `termination_z`  | `circuit_termination_b`  |  
+| InventoryItem | `_depth`         | `tree_depth`             |
+| RackGroup     | `_depth`         | `tree_depth`             |
+| Region        | `_depth`         | `tree_depth`             |
+| TenantGroup   | `_depth`         | `tree_depth`             |
 
 ### Removed Serializer Fields
 
@@ -74,6 +92,8 @@
 
 | Model                 | Renamed Filter Field | New Name          | UI and Rest API endpoints Available in v2.X       |
 |-----------------------|----------------------|-------------------|---------------------------------------------------|
+| Circuit               | `type`               | `circuit_type`    | `circuits/circuits/?circuit_type=<slug>`          |
+|                       | `type_id`            | `circuit_type_id` | `circuits/circuits/?circuit_type_id=<uuid>`       |
 | ConsolePort           | `cabled`             | `has_cable`       | `/dcim/console-ports/?has_cable=True/False`       |
 | ConsoleServerPort     | `cabled`             | `has_cable`       | `/dcim/console-server-ports/?has_cable=True/False`|
 | Device                | `device_type_id`     | `device_type`     | `/dcim/devices/?device_type=<uuid/slug>`          |
