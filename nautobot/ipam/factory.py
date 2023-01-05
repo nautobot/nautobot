@@ -7,7 +7,6 @@ import math
 from nautobot.core.factory import OrganizationalModelFactory, PrimaryModelFactory
 from nautobot.dcim.models import Location, Site
 from nautobot.extras.models import Role, Status
-from nautobot.ipam.choices import IPAddressRoleChoices
 from nautobot.ipam.models import Aggregate, RIR, IPAddress, Prefix, RouteTarget, VLAN, VLANGroup, VRF
 from nautobot.tenancy.models import Tenant
 from nautobot.utilities.factory import get_random_instances, random_instance, UniqueFaker
