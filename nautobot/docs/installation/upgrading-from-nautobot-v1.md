@@ -55,7 +55,6 @@ The `ipam.Role`, `dcim.RackRole`, and `dcim.DeviceRole` models have been removed
 | `extras.Role`     | `extras.Role`  |
 | `ipam.Role`       | `extras.Role`  |
 
-
 ## GraphQL and REST API Changes
 
 ### API Behavior Changes
