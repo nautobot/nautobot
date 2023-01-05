@@ -199,7 +199,7 @@ class PluginTabsTestCase(SeleniumTestCase):
         circuit = Circuit.objects.create(
             cid="Test Circuit",
             provider=provider,
-            type=circuit_type,
+            circuit_type=circuit_type,
             status=active_status,
         )
         # Visit the circuit's detail page and check that the tab is visible
