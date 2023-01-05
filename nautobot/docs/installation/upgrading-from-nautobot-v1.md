@@ -1,5 +1,10 @@
 # Upgrading from Nautobot v1.X
 
+## Dependency Changes
+
+- Nautobot no longer uses or supports the use of `django-mptt`.
+- Nautobot no longer uses or supports the use of `django-rq`.
+
 ## Database (ORM) Changes
 
 ### Database Behavior Changes
@@ -56,6 +61,12 @@
 | RackGroup     | `_depth`      | `tree_depth` |
 | Region        | `_depth`      | `tree_depth` |
 | TenantGroup   | `_depth`      | `tree_depth` |
+
+### Removed Serializer Fields
+
+| Model/Endpoint | Removed Field        | Comments                             |
+|----------------|----------------------|--------------------------------------|
+| `/api/status/` | `rq-workers-running` | Removed as RQ is no longer supported |
 
 ## UI, GraphQL, and REST API Filter Changes
 
