@@ -971,27 +971,6 @@ redis = ">=3,<4.0.0 || >4.0.0,<4.0.1 || >4.0.1"
 hiredis = ["redis[hiredis] (>=3,!=4.0.0,!=4.0.1)"]
 
 [[package]]
-name = "django-rq"
-version = "2.5.1"
-description = "An app that provides django integration for RQ (Redis Queue)"
-category = "main"
-optional = false
-python-versions = "*"
-files = [
-    {file = "django-rq-2.5.1.tar.gz", hash = "sha256:f08486602664d73a6e335872c868d79663e380247e6307496d01b8fa770fefd8"},
-    {file = "django_rq-2.5.1-py2.py3-none-any.whl", hash = "sha256:7be1e10e7091555f9f36edf100b0dbb205ea2b98683d74443d2bdf3c6649a03f"},
-]
-
-[package.dependencies]
-django = ">=2.0"
-redis = ">=3"
-rq = ">=1.2"
-
-[package.extras]
-sentry = ["raven (>=6.1.0)"]
-testing = ["mock (>=2.0.0)"]
-
-[[package]]
 name = "django-slowtests"
 version = "1.1.1"
 description = "locate your slowest tests"
@@ -3251,22 +3230,6 @@ typing-extensions = {version = ">=4.0.0,<5.0", markers = "python_version < \"3.9
 jupyter = ["ipywidgets (>=7.5.1,<8.0.0)"]
 
 [[package]]
-name = "rq"
-version = "1.11.1"
-description = "RQ is a simple, lightweight, library for creating background jobs, and processing them."
-category = "main"
-optional = false
-python-versions = ">=3.5"
-files = [
-    {file = "rq-1.11.1-py2.py3-none-any.whl", hash = "sha256:433882bde50ac462eb489dc1ffa476209c42b284d0031270631da26363923702"},
-    {file = "rq-1.11.1.tar.gz", hash = "sha256:31c07e55255bdc05c804902d4e15779185603b04b9161b43c3e7bcac84b3343b"},
-]
-
-[package.dependencies]
-click = ">=5.0.0"
-redis = ">=3.5.0"
-
-[[package]]
 name = "rsa"
 version = "4.9"
 description = "Pure-Python RSA implementation"
@@ -4054,4 +4017,4 @@ sso = ["social-auth-core"]
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.7"
-content-hash = "9b10122e39b010c4a10e8ffbe1a9e57e00bf4db15d8000c87547280b2b6740ee"
+content-hash = "e6cf2f127c6ba559267459ef464a0b16afe5f98d865559d254678922dc358cf0"

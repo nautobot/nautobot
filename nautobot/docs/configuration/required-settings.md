@@ -178,7 +178,7 @@ setup](https://github.com/Suor/django-cacheops#setup).
 
 #### CACHES
 
-The [`django-redis`](https://github.com/jazzband/django-redis) Django plugin is used to enable Redis as a concurrent write lock for preventing race conditions when allocating IP address objects, and also to define centralized Redis connection settings that will be used by RQ. The `CACHES` setting is required to to simplify the configuration for defining queues. *It is not used for caching at this time.*
+The [`django-redis`](https://github.com/jazzband/django-redis) Django plugin is used to enable Redis as a concurrent write lock for preventing race conditions when allocating IP address objects. The `CACHES` setting is required to to simplify the configuration for defining queues. *It is not used for caching at this time.*
 
 !!! important
     Nautobot does not utilize the built-in [Django cache framework](https://docs.djangoproject.com/en/stable/topics/cache/) (which also relies on the `CACHES` setting) to perform caching because Cacheops is being used instead as detailed just above. *Yes, we know this is confusing, which is why this is being called out explicitly!*
@@ -207,106 +207,6 @@ CACHES = {
     }
 }
 ```
-
-### Task Queuing with RQ
-
-+/- 1.1.0
-    Using task queueing with RQ is deprecated in exchange for using Celery. Support for RQ will be removed entirely starting in Nautobot 2.0.
-
-Task queues are configured by defining them within the [`RQ_QUEUES`](#rq_queues) setting.
-
-Nautobot's core functionality relies on several distinct queues and these represent the minimum required set of queues that must be defined. By default, these use identical connection settings as defined in [`CACHES`](#caches) (yes, that's confusing and we'll explain below).
-
-In most cases the default settings will be suitable for production use, but it is up to you to modify the task queues for your environment and know that other use cases such as utilizing specific plugins may require additional queues to be defined.
-
-#### RQ_QUEUES
-
-The default value for this setting defines the queues and instructs RQ to use the `default` Redis connection defined in [`CACHES`](#caches). This is intended to simplify default configuration for the common case.
-
-Please see the [official `django-rq` documentation on support for django-redis connection settings](https://github.com/rq/django-rq#support-for-django-redis-and-django-redis-cache) for more information.
-
-+/- 1.1.0
-    The `check_releases`, `custom_fields`, and `webhooks` queues are no longer in use by Nautobot but maintained here for backwards compatibility; they will be removed in Nautobot 2.0.
-
-Default:
-
-```python
-RQ_QUEUES = {
-    "default": {
-        "USE_REDIS_CACHE": "default",
-    },
-    "check_releases": {
-        "USE_REDIS_CACHE": "default",
-    },
-    "custom_fields": {
-        "USE_REDIS_CACHE": "default",
-    },
-    "webhooks": {
-        "USE_REDIS_CACHE": "default",
-    },
-}
-```
-
-More verbose dictionary-style configuration is still supported, but is not required unless you absolutely need more advanced task queuing configuration. An example configuration follows:
-
-```python
-RQ_QUEUES = {
-    "default": {
-        "HOST": "localhost",
-        "PORT": 6379,
-        "DB": 0,
-        "PASSWORD": "",
-        "SSL": False,
-        "DEFAULT_TIMEOUT": 300
-    },
-    "webhooks": {
-        "HOST": "localhost",
-        "PORT": 6379,
-        "DB": 0,
-        "PASSWORD": "",
-        "SSL": False,
-        "DEFAULT_TIMEOUT": 300
-    },
-    "check_releases": {
-        "HOST": "localhost",
-        "PORT": 6379,
-        "DB": 0,
-        "PASSWORD": "",
-        "SSL": False,
-        "DEFAULT_TIMEOUT": 300
-    },
-    "custom_fields": {
-        "HOST": "localhost",
-        "PORT": 6379,
-        "DB": 0,
-        "PASSWORD": "",
-        "SSL": False,
-        "DEFAULT_TIMEOUT": 300
-    }
-}
-```
-
-* `HOST` - Name or IP address of the Redis server (use `localhost` if running locally)
-* `PORT` - TCP port of the Redis service; leave blank for default port (6379)
-* `PASSWORD` - Redis password (if set)
-* `DB` - Numeric database ID
-* `SSL` - Use SSL connection to Redis
-* `DEFAULT_TIMEOUT` - The maximum execution time of a background task (such as running a [Job](../additional-features/jobs.md)), in seconds.
-
-The following environment variables may also be set for some of the above values:
-
-* `NAUTOBOT_REDIS_SCHEME`
-* `NAUTOBOT_REDIS_HOST`
-* `NAUTOBOT_REDIS_PORT`
-* `NAUTOBOT_REDIS_PASSWORD`
-* `NAUTOBOT_REDIS_USERNAME`
-* `NAUTOBOT_REDIS_SSL`
-* `NAUTOBOT_REDIS_TIMEOUT`
-
-!!! note
-    If you overload any of the default values in [`CACHES`](#caches) or [`RQ_QUEUES`](#rq_queues) you may be unable to utilize the environment variables, depending on what you change.
-
-For more details on configuring RQ, please see the documentation for [Django RQ installation](https://github.com/rq/django-rq#installation).
 
 ### Task Queuing with Celery
 

@@ -401,7 +401,6 @@ INSTALLED_APPS = [
     "nautobot.users",
     "nautobot.utilities",
     "nautobot.virtualization",
-    "django_rq",  # Must come after nautobot.extras to allow overriding management commands
     "drf_spectacular",
     "drf_spectacular_sidecar",
     "graphene_django",
@@ -678,8 +677,7 @@ CACHEOPS_ENABLED = is_truthy(os.getenv("NAUTOBOT_CACHEOPS_ENABLED", "False"))
 CACHEOPS_REDIS = os.getenv("NAUTOBOT_CACHEOPS_REDIS", parse_redis_connection(redis_database=1))
 CACHEOPS_DEFAULTS = {"timeout": int(os.getenv("NAUTOBOT_CACHEOPS_TIMEOUT", "900"))}
 
-# The django-redis cache is used to establish concurrent locks using Redis. The
-# django-rq settings will use the same instance/database by default.
+# The django-redis cache is used to establish concurrent locks using Redis.
 CACHES = {
     "default": {
         "BACKEND": "django_redis.cache.RedisCache",
@@ -690,27 +688,6 @@ CACHES = {
             "PASSWORD": "",
         },
     }
-}
-
-#
-# Django RQ (used for legacy background processesing)
-#
-
-# These defaults utilize the Django caches setting defined for django-redis.
-# See: https://github.com/rq/django-rq#support-for-django-redis-and-django-redis-cache
-RQ_QUEUES = {
-    "default": {
-        "USE_REDIS_CACHE": "default",
-    },
-    "check_releases": {
-        "USE_REDIS_CACHE": "default",
-    },
-    "custom_fields": {
-        "USE_REDIS_CACHE": "default",
-    },
-    "webhooks": {
-        "USE_REDIS_CACHE": "default",
-    },
 }
 
 #

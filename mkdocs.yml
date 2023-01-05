@@ -217,6 +217,7 @@ nav:
       - Release Checklist: "development/release-checklist.md"
   - Release Notes:
       - Overview: "release-notes/index.md"
+      - Version 2.0: "release-notes/version-2.0.md"
       - Version 1.5: "release-notes/version-1.5.md"
       - Version 1.4: "release-notes/version-1.4.md"
       - Version 1.3: "release-notes/version-1.3.md"

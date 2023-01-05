@@ -504,7 +504,7 @@ class BaseInterface(RelationshipModel, StatusModel):
     """
 
     enabled = models.BooleanField(default=True)
-    mac_address = MACAddressCharField(null=True, blank=True, verbose_name="MAC Address")
+    mac_address = MACAddressCharField(blank=True, default="", verbose_name="MAC Address")
     mtu = models.PositiveIntegerField(
         blank=True,
         null=True,

@@ -1,6 +1,20 @@
 # Upgrading from Nautobot v1.X
 
+## Dependency Changes
+
+- Nautobot no longer uses or supports the use of `django-mptt`.
+- Nautobot no longer uses or supports the use of `django-rq`.
+
 ## Database (ORM) Changes
+
+### Database Behavior Changes
+
+| Model        | Field          | Changes                                           |
+|--------------|----------------|---------------------------------------------------|
+| JobLogEntry  | `absolute_url` | No longer accepts `null` values, use `""` instead |
+|              | `log_object`   | No longer accepts `null` values, use `""` instead |
+| ScheduledJob | `queue`        | No longer accepts `null` values, use `""` instead |
+| Webhook      | `ca_file_path` | No longer accepts `null` values, use `""` instead |
 
 ### Renamed Database Fields
 
@@ -41,9 +55,10 @@ The `ipam.Role`, `dcim.RackRole`, and `dcim.DeviceRole` models have been removed
 | `extras.Role`     | `extras.Role`  |
 | `ipam.Role`       | `extras.Role`  |
 
-## REST API Changes
 
-### Behavior Changes
+## GraphQL and REST API Changes
+
+### API Behavior Changes
 
 | Model       | Field          | Changes                                                                                                  |
 |-------------|----------------|----------------------------------------------------------------------------------------------------------|
@@ -62,6 +77,12 @@ The `ipam.Role`, `dcim.RackRole`, and `dcim.DeviceRole` models have been removed
 | Region        | `_depth`      | `tree_depth` |
 | TenantGroup   | `_depth`      | `tree_depth` |
 
+### Removed Serializer Fields
+
+| Model/Endpoint | Removed Field        | Comments                             |
+|----------------|----------------------|--------------------------------------|
+| `/api/status/` | `rq-workers-running` | Removed as RQ is no longer supported |
+
 ### Replaced Endpoints
 
 These endpoints `/ipam/roles/`, `/dcim/rack-roles/` and `/dcim/device-roles/` are no longer available. Instead,  use the `/extras/roles/` endpoint to retrieve and manipulate `role` data.
@@ -72,7 +93,7 @@ These endpoints `/ipam/roles/`, `/dcim/rack-roles/` and `/dcim/device-roles/` ar
 | `/dcim/rack-roles/`    | `_/extras/roles/`  |
 | `/ipam/roles/`         | `_/extras/roles/`  |
 
-## UI and REST API Filter Changes
+## UI, GraphQL, and REST API Filter Changes
 
 ### Renamed Filter Fields
 

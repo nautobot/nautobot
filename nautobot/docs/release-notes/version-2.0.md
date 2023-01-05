@@ -92,4 +92,8 @@ Now in v2.x, that format is no longer supported. Instead, you would use:
 
 Check out the specific changes documented in the table at [UI and REST API Filter Changes](../installation/upgrading-from-nautobot-v1.md#removed-redundant-filter-fields)
 
+#### Removed RQ support ([#2523](https://github.com/nautobot/nautobot/issue/2523))
+
+Support for RQ and `django-rq`, deprecated since Nautobot 1.1.0, has been fully removed from Nautobot 2.0.
+
 <!-- towncrier release notes start -->

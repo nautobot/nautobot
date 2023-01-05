@@ -9,17 +9,6 @@ class AbortTransaction(Exception):
     """
 
 
-# 2.0 TODO remove this in 2.0
-class RQWorkerNotRunningException(APIException):
-    """
-    Indicates the temporary inability to enqueue a legacy RQ task  because no RQ worker processes are currently running.
-    """
-
-    status_code = status.HTTP_503_SERVICE_UNAVAILABLE
-    default_detail = "Unable to process request: RQ worker process not running."
-    default_code = "rq_worker_not_running"
-
-
 class CeleryWorkerNotRunningException(APIException):
     """
     Indicates the temporary inability to enqueue a new Celery task (e.g. custom script execution) because
