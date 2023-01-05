@@ -276,7 +276,9 @@ class ConfigContextFilterForm(BootstrapMixin, forms.Form):
     region = DynamicModelMultipleChoiceField(queryset=Region.objects.all(), to_field_name="slug", required=False)
     site = DynamicModelMultipleChoiceField(queryset=Site.objects.all(), to_field_name="slug", required=False)
     location = DynamicModelMultipleChoiceField(queryset=Location.objects.all(), to_field_name="slug", required=False)
-    role = DynamicModelMultipleChoiceField(queryset=Role.objects.all(), to_field_name="slug", required=False)
+    role = DynamicModelMultipleChoiceField(
+        queryset=Role.objects.get_for_models([Device, VirtualMachine]), to_field_name="slug", required=False
+    )
     type = DynamicModelMultipleChoiceField(queryset=DeviceType.objects.all(), to_field_name="slug", required=False)
     platform = DynamicModelMultipleChoiceField(queryset=Platform.objects.all(), to_field_name="slug", required=False)
     cluster_group = DynamicModelMultipleChoiceField(

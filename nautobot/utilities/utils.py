@@ -796,8 +796,9 @@ def get_filterset_parameter_form_field(model, parameter):
     Return the relevant form field instance for a filterset parameter e.g DynamicModelMultipleChoiceField, forms.IntegerField e.t.c
     """
     # Avoid circular import
+    from nautobot.dcim.models import Device
     from nautobot.extras.filters import ContentTypeMultipleChoiceFilter, StatusFilter
-    from nautobot.extras.models import Role, Status, Tag
+    from nautobot.extras.models import ConfigContext, Role, Status, Tag
     from nautobot.extras.utils import ChangeLoggedModelsQuery, RoleModelsQuery, TaggableClassesQuery
     from nautobot.utilities.forms import (
         BOOLEAN_CHOICES,
@@ -809,6 +810,7 @@ def get_filterset_parameter_form_field(model, parameter):
         StaticSelect2Multiple,
         TimePicker,
     )
+    from nautobot.virtualization.models import VirtualMachine
 
     filterset_class = get_filterset_for_model(model)
     field = get_filterset_field(filterset_class, parameter)
@@ -823,8 +825,11 @@ def get_filterset_parameter_form_field(model, parameter):
             "queryset": related_model.objects.all(),
             "to_field_name": field.extra.get("to_field_name", "id"),
         }
+        # ConfigContext requires content_type set to Device and VirtualMachine
+        if model == ConfigContext:
+            form_attr["query_params"] = {"content_types": [Device._meta.label_lower, VirtualMachine._meta.label_lower]}
         # Status and Tag api requires content_type, to limit result to only related content_types
-        if related_model in [Role, Status, Tag]:
+        elif related_model in [Role, Status, Tag]:
             form_attr["query_params"] = {"content_types": model._meta.label_lower}
 
         form_field = DynamicModelMultipleChoiceField(**form_attr)
