@@ -68,7 +68,7 @@ Check out the specific changes documented in the table at [UI and REST API Filte
 
 The `DeviceRole`, `RackRole`, `ipam.Role`, and `IPAddressRoleChoices` have all been removed and replaced with a `extras.Role` model, This means that all references to any of the replaced models and choices now points to this generic role model.
 
-In Addition, The `role` field of the `IPAddress` model has also been changed from a choice field to a foreign key related field to the `extras.Role` model. 
+In Addition, The `role` field of the `IPAddress` model has also been changed from a choice field to a foreign key related field to the `extras.Role` model.
 
 ### Removed
 

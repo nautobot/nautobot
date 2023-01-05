@@ -26,7 +26,6 @@ from nautobot.dcim.models import Device
 from nautobot.dcim.tables import DeviceTable
 from nautobot.extras.tasks import delete_custom_field_data
 from nautobot.extras.utils import get_base_template, get_job_content_type, get_worker_count
-from nautobot.ipam.models import VLAN, IPAddress, Prefix
 from nautobot.ipam.tables import IPAddressTable, PrefixTable, VLANTable
 from nautobot.utilities.forms import restrict_form_fields
 from nautobot.utilities.paginator import EnhancedPaginator, get_paginate_count
