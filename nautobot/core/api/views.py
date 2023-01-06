@@ -10,17 +10,6 @@ from django.db import transaction
 from django.db.models import ProtectedError
 from django.http.response import HttpResponseBadRequest
 from django.shortcuts import redirect
-from django_rq.queues import get_connection as get_rq_connection
-from drf_spectacular.plumbing import get_relative_url, set_query_parameters
-from drf_spectacular.renderers import OpenApiJsonRenderer
-from drf_spectacular.utils import extend_schema
-from drf_spectacular.views import SpectacularRedocView, SpectacularSwaggerView
-from graphene_django.settings import graphene_settings
-from graphene_django.views import GraphQLView, HttpError, instantiate_middleware
-from graphql import get_default_backend
-from graphql.execution import ExecutionResult
-from graphql.execution.middleware import MiddlewareManager
-from graphql.type.schema import GraphQLSchema
 from rest_framework import status
 from rest_framework.exceptions import ParseError, PermissionDenied
 from rest_framework.permissions import AllowAny, IsAuthenticated
@@ -29,7 +18,12 @@ from rest_framework.reverse import reverse
 from rest_framework.views import APIView
 from rest_framework.viewsets import ModelViewSet as ModelViewSet_
 from rest_framework.viewsets import ReadOnlyModelViewSet as ReadOnlyModelViewSet_
-from rq.worker import Worker as RQWorker
+from rest_framework.permissions import AllowAny, IsAuthenticated
+from rest_framework.exceptions import PermissionDenied, ParseError
+from drf_spectacular.plumbing import get_relative_url, set_query_parameters
+from drf_spectacular.renderers import OpenApiJsonRenderer
+from drf_spectacular.utils import extend_schema
+from drf_spectacular.views import SpectacularSwaggerView, SpectacularRedocView
 
 from nautobot.core.api import BulkOperationSerializer
 from nautobot.core.api.exceptions import SerializerNotFound
@@ -422,8 +416,6 @@ class StatusView(NautobotAPIVersionMixin, APIView):
                     "nautobot-version": {"type": "string"},
                     "plugins": {"type": "object"},
                     "python-version": {"type": "string"},
-                    # 2.0 TODO: remove rq-workers-running property
-                    "rq-workers-running": {"type": "integer"},
                     "celery-workers-running": {"type": "integer"},
                 },
             }
@@ -460,8 +452,6 @@ class StatusView(NautobotAPIVersionMixin, APIView):
                 "nautobot-version": settings.VERSION,
                 "plugins": plugins,
                 "python-version": platform.python_version(),
-                # 2.0 TODO: remove rq-workers-running
-                "rq-workers-running": RQWorker.count(get_rq_connection("default")),
                 "celery-workers-running": worker_count,
             }
         )

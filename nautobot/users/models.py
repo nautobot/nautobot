@@ -208,6 +208,9 @@ class ObjectPermission(BaseModel):
     name = models.CharField(max_length=100)
     description = models.CharField(max_length=200, blank=True)
     enabled = models.BooleanField(default=True)
+
+    # TODO: Remove pylint disable after issue is resolved (see: https://github.com/PyCQA/pylint/issues/7381)
+    # pylint: disable=unsupported-binary-operation
     object_types = models.ManyToManyField(
         to=ContentType,
         limit_choices_to=Q(
@@ -226,6 +229,7 @@ class ObjectPermission(BaseModel):
         ),
         related_name="object_permissions",
     )
+    # pylint: enable=unsupported-binary-operation
     groups = models.ManyToManyField(to=Group, blank=True, related_name="object_permissions")
     users = models.ManyToManyField(to=settings.AUTH_USER_MODEL, blank=True, related_name="object_permissions")
     actions = JSONArrayField(

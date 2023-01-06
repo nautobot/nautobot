@@ -27,9 +27,9 @@ Django includes with its own [cache framework](https://docs.djangoproject.com/en
 
 The [`CACHES`](../configuration/required-settings.md#caches) setting is used to, among other things, configure Django's built-in caching. You'll observe that, even though we aren't using Django's built-in caching, *we still have this as a required setting*. Here's why:
 
-Nautobot uses the [`django-redis`](https://github.com/jazzband/django-redis) Django plugin which allows it to use Redis as a backend for caching and session storage. This is used to provide a concurrent write lock for preventing race conditions when allocating IP address objects, and also to define centralized Redis connection settings that will be used by RQ.
+Nautobot uses the [`django-redis`](https://github.com/jazzband/django-redis) Django plugin which allows it to use Redis as a backend for caching and session storage. This is used to provide a concurrent write lock for preventing race conditions when allocating IP address objects.
 
-`django-redis` *also* uses the [`CACHES`](../configuration/required-settings.md#caches) setting, in its case to simplify the configuration for establishing concurrent write locks, and also for referencing the correct Redis connection information when defining RQ task queues using the  [`RQ_QUEUES`](../configuration/required-settings.md#rq_queues) setting.
+`django-redis` *also* uses the [`CACHES`](../configuration/required-settings.md#caches) setting, in its case to simplify the configuration for establishing concurrent write locks.
 
 Again: **`CACHES` is not used for Django's built-in caching at this time, but it is still a required setting for `django-redis` to function properly.**
 
@@ -114,9 +114,6 @@ CACHES = {
     },
 }
 ```
-
-!!! note
-    It is permissible to use Sentinel for only one database and not the other, see [`RQ_QUEUES`](../configuration/required-settings.md#rq_queues) for details.
 
 For more details on configuring django-redis with Redis Sentinel, please see the documentation for [Django Redis](https://github.com/jazzband/django-redis#use-the-sentinel-connection-factory).
 

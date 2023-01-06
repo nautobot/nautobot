@@ -173,11 +173,7 @@ When using external libraries you may need to import multiple different modules 
     # from within the current app
     # other libraries
     from django.db import models as django_models
-    from mptt import models as mptt_models
-
-    # from a different Nautobot app
-    from nautobot.dcim import models as dcim_models
-    from nautobot.extras import models
+    from tree_queries import models as tree_queries_models
     ```
 
 #### Convenience Imports

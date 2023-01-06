@@ -750,11 +750,11 @@ class Webhook(BaseModel, ChangeLoggedModel, NotesMixin):
     )
     ca_file_path = models.CharField(
         max_length=4096,
-        null=True,
         blank=True,
         verbose_name="CA File Path",
         help_text="The specific CA certificate file to use for SSL verification. "
         "Leave blank to use the system defaults.",
+        default="",
     )
 
     class Meta:

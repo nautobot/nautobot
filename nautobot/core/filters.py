@@ -13,9 +13,7 @@ from django_filters.constants import EMPTY_VALUES
 from django_filters.utils import get_model_field, resolve_field
 from drf_spectacular.types import OpenApiTypes
 from drf_spectacular.utils import extend_schema_field
-from mptt.models import MPTTModel
 from taggit.managers import TaggableManager
-from tree_queries.models import TreeNode
 
 from nautobot.core import constants, forms, utils
 from nautobot.dcim import fields as dcim_fields, forms as dcim_forms
@@ -140,18 +138,6 @@ class RelatedMembershipBooleanFilter(django_filters.BooleanFilter):
             exclude=exclude,
             **kwargs,
         )
-
-
-class NullableCharFieldFilter(django_filters.CharFilter):
-    """
-    Allow matching on null field values by passing a special string used to signify NULL.
-    """
-
-    def filter(self, qs, value):
-        if value != settings.FILTERS_NULL_CHOICE_VALUE:
-            return super().filter(qs, value)
-        qs = self.get_method(qs)(**{f"{self.field_name}__isnull": True})
-        return qs.distinct() if self.distinct else qs
 
 
 @extend_schema_field(OpenApiTypes.STR)
@@ -488,14 +474,8 @@ class TreeNodeMultipleChoiceFilter(NaturalKeyOrPKMultipleChoiceFilter):
         Given a filter value, return a `Q` object that accounts for nested tree node descendants.
         """
         if value:
-            if any(isinstance(node, TreeNode) for node in value):
-                # django-tree-queries
-                value = [node.descendants(include_self=True) if not isinstance(node, str) else node for node in value]
-            elif any(isinstance(node, MPTTModel) for node in value):
-                # django-mptt
-                value = [
-                    node.get_descendants(include_self=True) if not isinstance(node, str) else node for node in value
-                ]
+            # django-tree-queries
+            value = [node.descendants(include_self=True) if not isinstance(node, str) else node for node in value]
 
         # This new_value is going to be a list of querysets that needs to be flattened.
         value = list(utils.flatten_iterable(value))

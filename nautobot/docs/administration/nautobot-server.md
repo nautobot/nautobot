@@ -151,13 +151,15 @@ nautobot=> \q
     - `extras.job` should now be included in the dump (removed `--exclude extras.job` from the example usage)
     - `django_rq` should now be excluded from the dump (added `--exclude django_rq` to the example usage)
 
++/- 2.0.0
+    - `django_rq` is no longer part of Nautobot's dependencies and so no longer needs to be explicitly excluded.
+
 ```no-highlight
 nautobot-server dumpdata \
   --natural-foreign \
   --natural-primary \
   --exclude contenttypes \
   --exclude auth.permission \
-  --exclude django_rq \
   --format json \
   --indent 2 \
   --traceback  > nautobot_dump.json

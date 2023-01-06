@@ -979,9 +979,9 @@ class BulkEditView(GetReturnURLMixin, ObjectPermissionRequiredMixin, View):
         # If we are editing *all* objects in the queryset, replace the PK list with all matched objects.
         if request.POST.get("_all"):
             if self.filterset is not None:
-                pk_list = [obj.pk for obj in self.filterset(request.GET, model.objects.only("pk")).qs]
+                pk_list = self.filterset(request.GET, model.objects.only("pk")).qs
             else:
-                pk_list = model.objects.values_list("pk", flat=True)
+                pk_list = model.objects.all()
         else:
             pk_list = request.POST.getlist("pk")
 
@@ -1230,9 +1230,9 @@ class BulkDeleteView(GetReturnURLMixin, ObjectPermissionRequiredMixin, View):
         # Are we deleting *all* objects in the queryset or just a selected subset?
         if request.POST.get("_all"):
             if self.filterset is not None:
-                pk_list = [obj.pk for obj in self.filterset(request.GET, model.objects.only("pk")).qs]
+                pk_list = self.filterset(request.GET, model.objects.only("pk")).qs
             else:
-                pk_list = model.objects.values_list("pk", flat=True)
+                pk_list = model.objects.all()
         else:
             pk_list = request.POST.getlist("pk")
 

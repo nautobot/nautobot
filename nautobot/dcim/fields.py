@@ -57,6 +57,8 @@ class MACAddressCharField(models.CharField):
             return value
         if isinstance(value, str):
             value = value.strip()
+        if value == "":
+            return None
         try:
             return EUI(value, version=48, dialect=mac_unix_expanded_uppercase)
         except AddrFormatError:
@@ -64,35 +66,7 @@ class MACAddressCharField(models.CharField):
 
     def get_prep_value(self, value):
         if not value:
-            return None
-        return str(self.to_python(value))
-
-
-# 2.0 TODO: remove this class, it's unused in core and plugins shouldn't be using it in their models
-@class_deprecated_in_favor_of(MACAddressCharField)
-class MACAddressField(models.Field):
-    description = "PostgreSQL-only MAC Address field"
-
-    def python_type(self):
-        return EUI
-
-    def from_db_value(self, value, expression, connection):
-        return self.to_python(value)
-
-    def to_python(self, value):
-        if value is None:
-            return value
-        try:
-            return EUI(value, version=48, dialect=mac_unix_expanded_uppercase)
-        except AddrFormatError:
-            raise ValidationError(f"Invalid MAC address format: {value}")
-
-    def db_type(self, connection):
-        return "macaddr"
-
-    def get_prep_value(self, value):
-        if not value:
-            return None
+            return ""
         return str(self.to_python(value))
 
 

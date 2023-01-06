@@ -730,9 +730,9 @@ class ObjectBulkDestroyViewMixin(NautobotViewSetMixin, BulkDestroyModelMixin):
         # Are we deleting *all* objects in the queryset or just a selected subset?
         if request.POST.get("_all"):
             if self.filterset_class is not None:
-                self.pk_list = [obj.pk for obj in self.filterset_class(request.POST, model.objects.only("pk")).qs]
+                self.pk_list = self.filterset_class(request.POST, model.objects.only("pk")).qs
             else:
-                self.pk_list = model.objects.values_list("pk", flat=True)
+                self.pk_list = model.objects.all()
         else:
             self.pk_list = request.POST.getlist("pk")
         form_class = self.get_form_class(**kwargs)
@@ -921,9 +921,9 @@ class ObjectBulkUpdateViewMixin(NautobotViewSetMixin, BulkUpdateModelMixin):
         # If we are editing *all* objects in the queryset, replace the PK list with all matched objects.
         if request.POST.get("_all"):
             if self.filterset_class is not None:
-                self.pk_list = [obj.pk for obj in self.filterset_class(request.POST, model.objects.only("pk")).qs]
+                self.pk_list = self.filterset_class(request.POST, model.objects.only("pk")).qs
             else:
-                self.pk_list = model.objects.values_list("pk", flat=True)
+                self.pk_list = model.objects.all()
         else:
             self.pk_list = request.POST.getlist("pk")
         data = {}

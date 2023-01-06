@@ -5,7 +5,7 @@
 {% block extra_breadcrumbs %}
                 <li><a href="{% url 'dcim:rack_list' %}?site={{ object.site.slug }}">{{ object.site }}</a></li>
                 {% if object.group %}
-                    {% for group in object.group.get_ancestors %}
+                    {% for group in object.group.ancestors %}
                         <li>{{ group|hyperlinked_object }}</li>
                     {% endfor %}
                     <li>{{ object.group|hyperlinked_object }}</li>
@@ -55,7 +55,7 @@
                     <td>Group</td>
                     <td>
                         {% if object.group %}
-                            {% for group in object.group.get_ancestors %}
+                            {% for group in object.group.ancestors %}
                                 {{ group|hyperlinked_object }} /
                             {% endfor %}
                         {% endif %}

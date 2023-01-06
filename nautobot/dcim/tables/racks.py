@@ -14,7 +14,7 @@ from nautobot.dcim.models import Rack, RackGroup, RackReservation, RackRole
 from nautobot.extras.tables import StatusTableMixin
 from nautobot.tenancy.tables import TenantColumn
 
-from .template_code import MPTT_LINK, RACKGROUP_ELEVATIONS, UTILIZATION_GRAPH
+from .template_code import TREE_LINK, RACKGROUP_ELEVATIONS, UTILIZATION_GRAPH
 
 __all__ = (
     "RackTable",
@@ -32,7 +32,7 @@ __all__ = (
 
 class RackGroupTable(BaseTable):
     pk = ToggleColumn()
-    name = tables.TemplateColumn(template_code=MPTT_LINK, orderable=False, attrs={"td": {"class": "text-nowrap"}})
+    name = tables.TemplateColumn(template_code=TREE_LINK, orderable=False, attrs={"td": {"class": "text-nowrap"}})
     site = tables.Column(linkify=True)
     location = tables.Column(linkify=True)
     rack_count = tables.Column(verbose_name="Racks")

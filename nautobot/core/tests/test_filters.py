@@ -4,8 +4,8 @@ from django.contrib.auth import get_user_model
 from django.db import models as django_models
 from django.test import TestCase
 from django.urls import reverse
-from mptt.fields import TreeForeignKey
 from taggit.managers import TaggableManager
+from tree_queries.models import TreeNodeForeignKey
 
 from nautobot.core import filters, testing, utils
 from nautobot.dcim import choices as dcim_choices
@@ -331,7 +331,7 @@ class TestModel(django_models.Model):
     macaddressfield = dcim_fields.MACAddressCharField()
     textfield = django_models.TextField()
     timefield = django_models.TimeField()
-    treeforeignkeyfield = TreeForeignKey(to="self", on_delete=django_models.CASCADE)
+    treeforeignkeyfield = TreeNodeForeignKey(to="self", on_delete=django_models.CASCADE)
 
     tags = TaggableManager(through=extras_models.TaggedItem)
 
@@ -950,7 +950,7 @@ class DynamicFilterLookupExpressionTest(TestCase):
         params = {"region__n": [self.regions[0].pk]}
         self.assertQuerysetEqual(
             dcim_filters.SiteFilterSet(params, self.site_queryset).qs,
-            dcim_models.Site.objects.exclude(region__in=self.regions[0].get_descendants(include_self=True)),
+            dcim_models.Site.objects.exclude(region__in=self.regions[0].descendants(include_self=True)),
         )
 
     def test_device_name_eq(self):
