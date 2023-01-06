@@ -93,7 +93,7 @@
 | `/api/status/` | `rq-workers-running` | Removed as RQ is no longer supported |
 
 ## UI, GraphQL, and REST API Filter Changes
-               
+
 ### Renamed Filter Fields
                
 | Model                 | Renamed Filter Field      | New Name                         | UI and Rest API endpoints Available in v2.X                               |
