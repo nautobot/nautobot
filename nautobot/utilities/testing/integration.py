@@ -100,6 +100,13 @@ class SeleniumTestCase(StaticLiveServerTestCase, NautobotTestCaseMixin):
         self.user.set_password(self.password)
         self.user.save()
 
+        # TODO(glenn): for debugging purposes, remove me later
+        import logging
+
+        logging.getLogger(__name__).warning(
+            "selenium_host: %s, ALLOWED_HOSTS: %s", self.selenium_host, settings.ALLOWED_HOSTS
+        )
+
     @classproperty  # https://github.com/PyCQA/pylint-django/issues/240
     def live_server_url(cls):  # pylint: disable=no-self-argument
         return f"http://{cls.selenium_host}:{cls.server_thread.port}"
