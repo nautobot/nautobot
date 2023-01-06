@@ -437,6 +437,7 @@ def flatten_iterable(iterable):
             yield i
 
 
+# Taken from django.utils.functional (<3.0)
 def curry(_curried_func, *args, **kwargs):
     def _curried(*moreargs, **morekwargs):
         return _curried_func(*args, *moreargs, **{**kwargs, **morekwargs})
@@ -635,7 +636,9 @@ def get_table_for_model(model):
     return get_related_class_for_model(model, module_name="tables", object_suffix="Table")
 
 
+# Setup UtilizationData named tuple for use by multiple methods
 UtilizationData = namedtuple("UtilizationData", ["numerator", "denominator"])
+# namedtuple accepts versions(list of API versions) and serializer(Related Serializer for versions).
 SerializerForAPIVersions = namedtuple("SerializersVersions", ("versions", "serializer"))
 
 

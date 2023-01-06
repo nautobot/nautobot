@@ -18,7 +18,7 @@ from django.urls import reverse
 from nautobot.core import choices as utilities_choices
 from nautobot.core import utils, validators
 from nautobot.core.forms import constants
-from nautobot.core.forms import utils as form_utils
+from nautobot.core.forms import utils as forms_utils
 from nautobot.core.forms import widgets
 
 __all__ = (
@@ -83,13 +83,13 @@ class CSVDataField(django_forms.CharField):
         if value is None:
             return None
         reader = csv.reader(StringIO(value.strip()))
-        return form_utils.parse_csv(reader)
+        return forms_utils.parse_csv(reader)
 
     def validate(self, value):
         if value is None:
             return None
         headers, _records = value
-        form_utils.validate_csv(headers, self.fields, self.required_fields)
+        forms_utils.validate_csv(headers, self.fields, self.required_fields)
 
         return value
 
@@ -137,7 +137,7 @@ class CSVFileField(django_forms.FileField):
         except csv.Error:
             dialect = csv.excel
         reader = csv.reader(csv_str.splitlines(), dialect)
-        headers, records = form_utils.parse_csv(reader)
+        headers, records = forms_utils.parse_csv(reader)
 
         return headers, records
 
@@ -146,7 +146,7 @@ class CSVFileField(django_forms.FileField):
             return None
 
         headers, _records = value
-        form_utils.validate_csv(headers, self.fields, self.required_fields)
+        forms_utils.validate_csv(headers, self.fields, self.required_fields)
 
         return value
 
@@ -260,9 +260,9 @@ class MultipleContentTypeField(django_forms.ModelMultipleChoiceField):
 
         if "queryset" not in kwargs:
             if feature is not None:
-                kwargs["queryset"] = ContentType.objects.filter(
-                    FeatureQuery(feature).get_query()
-                ).order_by("app_label", "model")
+                kwargs["queryset"] = ContentType.objects.filter(FeatureQuery(feature).get_query()).order_by(
+                    "app_label", "model"
+                )
             else:
                 kwargs["queryset"] = ContentType.objects.order_by("app_label", "model")
         if "widget" not in kwargs:
@@ -365,7 +365,7 @@ class ExpandableNameField(django_forms.CharField):
         if not value:
             return ""
         if re.search(constants.ALPHANUMERIC_EXPANSION_PATTERN, value):
-            return list(form_utils.expand_alphanumeric_pattern(value))
+            return list(forms_utils.expand_alphanumeric_pattern(value))
         return [value]
 
 
@@ -385,9 +385,9 @@ class ExpandableIPAddressField(django_forms.CharField):
     def to_python(self, value):
         # Hackish address family detection but it's all we have to work with
         if "." in value and re.search(constants.IP4_EXPANSION_PATTERN, value):
-            return list(form_utils.expand_ipaddress_pattern(value, 4))
+            return list(forms_utils.expand_ipaddress_pattern(value, 4))
         elif ":" in value and re.search(constants.IP6_EXPANSION_PATTERN, value):
-            return list(form_utils.expand_ipaddress_pattern(value, 6))
+            return list(forms_utils.expand_ipaddress_pattern(value, 6))
         return [value]
 
 
@@ -733,7 +733,7 @@ class NumericArrayField(SimpleArrayField):
 
     def to_python(self, value):
         try:
-            value = ",".join([str(n) for n in form_utils.parse_numeric_range(value)])
+            value = ",".join([str(n) for n in forms_utils.parse_numeric_range(value)])
         except ValueError as error:
             raise ValidationError(error)
         return super().to_python(value)

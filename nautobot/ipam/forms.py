@@ -19,7 +19,6 @@ from nautobot.core.forms import (
     TagFilterField,
     add_blank_choice,
 )
-from nautobot.core.forms.mixins import AddressFieldMixin, PrefixFieldMixin
 from nautobot.dcim.form_mixins import (
     LocatableModelBulkEditFormMixin,
     LocatableModelCSVFormMixin,
@@ -37,6 +36,7 @@ from nautobot.extras.forms import (
     StatusModelFilterFormMixin,
     TagsBulkEditFormMixin,
 )
+from nautobot.ipam.forms.mixins import AddressFieldMixin, PrefixFieldMixin
 from nautobot.tenancy.forms import TenancyFilterForm, TenancyForm
 from nautobot.tenancy.models import Tenant
 from nautobot.virtualization.models import Cluster, VirtualMachine, VMInterface

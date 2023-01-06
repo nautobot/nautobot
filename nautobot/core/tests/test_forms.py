@@ -1,14 +1,10 @@
-from unittest import mock
-
 from django import forms as django_forms
 from django.contrib.contenttypes.models import ContentType
 from django.http import QueryDict
 from django.test import TestCase
 from django.urls import reverse
-from netaddr import IPNetwork
 
 from nautobot.core import filters, forms, testing, utils
-from nautobot.core.forms import mixins
 from nautobot.dcim import filters as dcim_filters
 from nautobot.dcim import models as dcim_models
 from nautobot.dcim.tests import test_views
@@ -550,54 +546,6 @@ class NumericArrayFieldTest(TestCase):
         for test in tests:
             with self.assertRaises(django_forms.ValidationError):
                 self.field.clean(test)
-
-
-class AddressFieldMixinTest(TestCase):
-    """Test cases for the AddressFieldMixin."""
-
-    def setUp(self):
-        """Setting up shared variables for the AddressFieldMixin."""
-        self.ip = ipam_models.IPAddress.objects.create(address="10.0.0.1/24")
-        self.initial = {"address": self.ip.address}
-
-    def test_address_initial(self):
-        """Ensure initial kwargs for address is passed in."""
-        with mock.patch("nautobot.core.forms.forms.forms.ModelForm.__init__") as mock_init:
-            ip_none = ipam_models.IPAddress()
-            mixins.AddressFieldMixin(initial=self.initial, instance=ip_none)
-            mock_init.assert_called_with(initial=self.initial, instance=ip_none)
-
-    def test_address_instance(self):
-        """Ensure override with computed field when initial kwargs for address is not passed in."""
-
-        # Mock the django.forms.ModelForm __init__ function used in nautobot.core.forms.forms
-        with mock.patch("nautobot.core.forms.forms.forms.ModelForm.__init__") as mock_init:
-            mixins.AddressFieldMixin(instance=self.ip)
-            mock_init.assert_called_with(initial=self.initial, instance=self.ip)
-
-
-class PrefixFieldMixinTest(TestCase):
-    """Test cases for the PrefixFieldMixin."""
-
-    def setUp(self):
-        """Setting up shared variables for the PrefixFieldMixin."""
-        self.prefix = ipam_models.Prefix.objects.create(prefix=IPNetwork("10.0.0.0/24"))
-        self.initial = {"prefix": self.prefix.prefix}
-
-    def test_prefix_initial(self):
-        """Ensure initial kwargs for prefix is passed through."""
-        with mock.patch("nautobot.core.forms.forms.forms.ModelForm.__init__") as mock_init:
-            prefix_none = ipam_models.Prefix()
-            mixins.PrefixFieldMixin(initial=self.initial, instance=prefix_none)
-            mock_init.assert_called_with(initial=self.initial, instance=prefix_none)
-
-    def test_prefix_instance(self):
-        """Ensure override with computed field when initial kwargs for prefix is not passed in."""
-
-        # Mock the django.forms.ModelForm __init__ function used in nautobot.core.forms.forms
-        with mock.patch("nautobot.core.forms.forms.forms.ModelForm.__init__") as mock_init:
-            mixins.PrefixFieldMixin(instance=self.prefix)
-            mock_init.assert_called_with(initial=self.initial, instance=self.prefix)
 
 
 class JSONFieldTest(testing.TestCase):
