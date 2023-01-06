@@ -28,6 +28,7 @@ from django_filters.utils import verbose_lookup_expr
 from taggit.managers import _TaggableManager
 
 from nautobot.core import constants, exceptions
+from nautobot.dcim import choices
 
 # Check if field name contains a lookup expr
 # e.g `name__ic` has lookup expr `ic (icontains)` while `name` has no lookup expr
@@ -306,8 +307,6 @@ def to_meters(length, unit):
     """
     Convert the given length to meters.
     """
-    # Avoid circular import
-    from nautobot.dcim import choices
 
     length = int(length)
     if length < 0:

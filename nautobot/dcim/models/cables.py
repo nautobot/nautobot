@@ -11,6 +11,7 @@ from django.utils.functional import classproperty
 
 from nautobot.core.fields import ColorField
 from nautobot.core.models.generics import BaseModel
+from nautobot.core.utils import to_meters
 from nautobot.dcim.choices import CableLengthUnitChoices, CableTypeChoices
 from nautobot.dcim.constants import CABLE_TERMINATION_MODELS, COMPATIBLE_TERMINATION_TYPES, NONCONNECTABLE_IFACE_TYPES
 from nautobot.dcim.fields import JSONPathField
@@ -252,8 +253,6 @@ class Cable(TaggedModel, StatusModel):
             self.length_unit = ""
 
     def save(self, *args, **kwargs):
-        # Avoid Circular Import
-        from nautobot.core.utils import to_meters
 
         # Store the given length (if any) in meters for use in database ordering
         if self.length and self.length_unit:
