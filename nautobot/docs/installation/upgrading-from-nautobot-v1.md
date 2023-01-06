@@ -4,22 +4,38 @@
 
 ### Database Behavior Changes
 
-| Model        | Field          | Changes                                           |
-|--------------|----------------|---------------------------------------------------|
-| JobLogEntry  | `absolute_url` | No longer accepts `null` values, use `""` instead |
-|              | `log_object`   | No longer accepts `null` values, use `""` instead |
-| ScheduledJob | `queue`        | No longer accepts `null` values, use `""` instead |
-| Webhook      | `ca_file_path` | No longer accepts `null` values, use `""` instead |
+| Model        | Field          | Changes                                                                      |
+|--------------|----------------|------------------------------------------------------------------------------|
+| Interface    | `parent`       | No longer shadows the `device` field. Use `device` instead                   |
+| JobLogEntry  | `absolute_url` | No longer accepts `null` values, use `""` instead                            |
+|              | `log_object`   | No longer accepts `null` values, use `""` instead                            |
+| ScheduledJob | `queue`        | No longer accepts `null` values, use `""` instead                            |
+| VMInterface  | `parent`       | No longer shadows the `virtual_machine` field. Use `virtual_machine` instead |
+| Webhook      | `ca_file_path` | No longer accepts `null` values, use `""` instead                            |
 
 ### Renamed Database Fields
 
-| Model         | Renamed Field | New Name     |
-|---------------|---------------|--------------|
-| InventoryItem | `child_items` | `children`   |
-|               | `level`       | `tree_depth` |
-| RackGroup     | `level`       | `tree_depth` |
-| Region        | `level`       | `tree_depth` |
-| TenantGroup   | `level`       | `tree_depth` |
+| Model          | Renamed Field                           | New Name                                       |
+|----------------|-----------------------------------------|------------------------------------------------|
+| Cluster        | `group`                                 | `cluster_group`                                |
+|                | `type`                                  | `cluster_type`                                 |
+| Device         | `local_context_data`                    | `local_config_context_data`                    |
+|                | `local_context_data_owner_content_type` | `local_config_context_data_owner_content_type` |
+|                | `local_context_data_owner_object_id`    | `local_config_context_data_owner_object_id`    |
+|                | `local_context_schema`                  | `local_config_context_schema`                  |
+| Interface      | `parent_interface`                      | `parent`                                       |
+|                | `child_interfaces`                      | `children`                                     |
+| InventoryItem  | `child_items`                           | `children`                                     |
+|                | `level`                                 | `tree_depth`                                   |
+| RackGroup      | `level`                                 | `tree_depth`                                   |
+| Region         | `level`                                 | `tree_depth`                                   |
+| TenantGroup    | `level`                                 | `tree_depth`                                   |
+| VirtualMachine | `local_context_data`                    | `local_config_context_data`                    |
+|                | `local_context_data_owner_content_type` | `local_config_context_data_owner_content_type` |
+|                | `local_context_data_owner_object_id`    | `local_config_context_data_owner_object_id`    |
+|                | `local_context_schema`                  | `local_config_context_schema`                  |
+| VMInterface    | `parent_interface`                      | `parent`                                       |
+|                | `child_interfaces`                      | `children`                                     |
 
 ### Removed Database Fields
 
@@ -50,77 +66,97 @@
 
 ### Renamed Serializer Fields
 
-| Model         | Renamed Field | New Name     |
-|---------------|---------------|--------------|
-| InventoryItem | `_depth`      | `tree_depth` |
-| RackGroup     | `_depth`      | `tree_depth` |
-| Region        | `_depth`      | `tree_depth` |
-| TenantGroup   | `_depth`      | `tree_depth` |
+| Model                 | Renamed Field           | New Name                      |
+|-----------------------|-------------------------|-------------------------------|
+| Cluster               | `group`                 | `cluster_group`               |
+|                       | `type`                  | `cluster_type`                |
+| Device                | `local_context_data`    | `local_config_context_data`   |
+|                       | `local_context_schema ` | `local_config_context_schema` |
+| Interface             | `parent_interface`      | `parent`                      |
+| InventoryItem         | `_depth`                | `tree_depth`                  |
+| RackGroup             | `_depth`                | `tree_depth`                  |
+| Region                | `_depth`                | `tree_depth`                  |
+| TenantGroup           | `_depth`                | `tree_depth`                  |
+| VirtualMachine        | `local_context_data`    | `local_config_context_data`   |
+|                       | `local_context_schema ` | `local_config_context_schema` |
+| VMInterface           | `parent_interface`      | `parent`                      |
 
-## UI, GraphQL, and REST API Filter Changes
-
-### Renamed Filter Fields
-
-| Model                 | Renamed Filter Field | New Name          | UI and Rest API endpoints Available in v2.X       |
-|-----------------------|----------------------|-------------------|---------------------------------------------------|
-| ConsolePort           | `cabled`             | `has_cable`       | `/dcim/console-ports/?has_cable=True/False`       |
-| ConsoleServerPort     | `cabled`             | `has_cable`       | `/dcim/console-server-ports/?has_cable=True/False`|
-| Device                | `device_type_id`     | `device_type`     | `/dcim/devices/?device_type=<uuid/slug>`          |
-|                       | `rack_group_id`      | `rack_group`      | `/dcim/devices/?rack_group=<uuid/slug>`           |
-|                       | `rack_id`            | `rack`            | `/dcim/devices/?rack=<uuid/slug>`                 |
-|                       | `cluster_id`         | `cluster`         | `/dcim/devices/?cluster=<uuid/slug>`              |
-|                       | `virtual_chassis_id` | `virtual_chassis` | `/dcim/devices/?virtual_chassis=<uuid/slug>`      |
-| FrontPort             | `cabled`             | `has_cable`       | `/dcim/front-ports/?has_cable=True/False`         |
-| Interface             | `cabled`             | `has_cable`       | `/dcim/interfaces/?has_cable=True/False`          |
-| InventoryItem         | `child_items`        | `children`        | `/dcim/inventory-items/?children=<uuid/name>`     |
-|                       | `has_child_items`    | `has_children`    | `/dcim/inventory-items/?has_children=True/False`  |
-| PowerFeed             | `cabled`             | `has_cable`       | `/dcim/power-feeds/?has_cable=True/False`         |
-| PowerOutlet           | `cabled`             | `has_cable`       |  `/dcim/power-outlets/?has_cable=True/False`      |
-| PowerPort             | `cabled`             | `has_cable`       | `/dcim/power-ports/?has_cable=True/False`         |
-| RearPort              | `cabled`             | `has_cable`       | `/dcim/rear-ports/?has_cable=True/False`          |
+## UI, GraphQL, and REST API                Filter Changes
+               
+### Rename               d                Filter Fields
+               
+| Model                 | Renamed Filter Field      | New Name                         | UI and Rest API endpoints Available in v2.X                               |
+|-----------------------|---------------------------|----------------------------------|---------------------------------------------------------------------------|
+| ConsolePort           | `cabled`                  | `has_cable`                      | `/dcim/console-ports/?has_cable=True/False`                               |
+| ConsoleServerPort     | `cabled`                  | `has_cable`                      | `/dcim/console-server-ports/?has_cable=True/False`                        |
+| Device                | `cluster_id`              | `cluster`                        | `/dcim/devices/?cluster=<uuid/slug>`                                      |
+|                       | `device_type_id`          | `device_type`                    | `/dcim/devices/?device_type=<uuid/slug>`                                  |
+|                       | `local_context_data`      | `local_config_context_data`      | `/dcim/devices/?local_config_context_data=True/False`                     |
+|                       | `local_context_schema_id` | `local_config_context_schema_id` | `/dcim/devices/?local_config_context_schema_id=<uuid>`                    |
+|                       | `local_context_schema`    | `local_config_context_schema`    | `/dcim/devices/?local_config_context_schema=<slug>`                       |
+|                       | `rack_group_id`           | `rack_group`                     | `/dcim/devices/?rack_group=<uuid/slug>`                                   |
+|                       | `rack_id`                 | `rack`                           | `/dcim/devices/?rack=<uuid/slug>`                                         |
+|                       | `virtual_chassis_id`      | `virtual_chassis`                | `/dcim/devices/?virtual_chassis=<uuid/slug>`                              |
+| FrontPort             | `cabled`                  | `has_cable`                      | `/dcim/front-ports/?has_cable=True/False`                                 |
+| Interface             | `cabled`                  | `has_cable`                      | `/dcim/interfaces/?has_cable=True/False`                                  |
+|                       | `child_interfaces`        | `children`                       | `/dcim/interfaces/?children=<uuid/name>`                                  |
+|                       | `has_child_interfaces`    | `has_children`                   | `/dcim/interfaces/?has_children=True/False`                               |
+|                       | `parent_interface`        | `parent`                         | `/dcim/interfaces/?parent=<uuid/name>`                                    |
+| InventoryItem         | `child_items`             | `children`                       | `/dcim/inventory-items/?children=<uuid/name>`                             |
+|                       | `has_child_items`         | `has_children`                   | `/dcim/inventory-items/?has_children=True/False`                          |
+| PowerFeed             | `cabled`                  | `has_cable`                      | `/dcim/power-feeds/?has_cable=True/False`                                 |
+| PowerOutlet           | `cabled`                  | `has_cable`                      |  `/dcim/power-outlets/?has_cable=True/False`                              |
+| PowerPort             | `cabled`                  | `has_cable`                      | `/dcim/power-ports/?has_cable=True/False`                                 |
+| RearPort              | `cabled`                  | `has_cable`                      | `/dcim/rear-ports/?has_cable=True/False`                                  |
+| VirtualMachine        | `local_context_data`      | `local_config_context_data`      | `/virtualization/virtual-machines/?local_config_context_data=True/False`  |
+|                       | `local_context_schema_id` | `local_config_context_schema_id` | `/virtualization/virtual-machines/?local_config_context_schema_id=<uuid>` |
+|                       | `local_context_schema`    | `local_config_context_schema`    | `/virtualization/virtual-machines/?local_config_context_schema=<slug>`    |
+| VMInterface           | `child_interfaces`        | `children`                       | `/virtualization/interfaces/?children=<uuid/name>`                        |
+|                       | `has_child_interfaces`    | `has_children`                   | `/virtualization/interfaces/?has_children=True/False`                     |
+|                       | `parent_interface`        | `parent`                         | `/virtualization/interfaces/?parent=<uuid/name>`                          |
 
 ### Enhanced Filter Fields
 
 Below is a table documenting [enhanced filter field changes](../release-notes/version-2.0.md#enhanced-filter-fields-2804) in v2.x.
 
-| Model                 | Enhanced Filter Field| Changes                                                  | UI and Rest API endpoints Available in v2.X|
-|-----------------------|----------------------|------------------------------------------------------------|----------------------------------------------|
-| ConsolePort           | `device`             | Enhanced to support primary key UUIDs in addition to names | `/dcim/console-ports/?device=<uuid/name>`|
-| ConsoleServerPort     | `device`             | Enhanced to support primary key UUIDs in addition to names | `/dcim/console-server-ports/?device=<uuid/name>`|
-| Device                | `manufacturer`       | Enhanced to support primary key UUIDs in addition to slugs | `/dcim/devices/?manufacturer=<uuid/slug>`|
-|                       | `device_type_id`     | Enhanced to support primary key UUIDs in addition to slugs | `/dcim/devices/?device_type=<uuid/slug>`|
-|                       | `role`               | Enhanced to support primary key UUIDs in addition to slugs | `/dcim/devices/?role=<uuid/slug>`|
-|                       | `platform`           | Enhanced to support primary key UUIDs in addition to slugs | `/dcim/devices/?platform=<uuid/slug>`|
-|                       | `rack_group_id`      | Enhanced to support primary key UUIDs in addition to slugs | `/dcim/devices/?rack_group=<uuid/slug>`|
-|                       | `rack_id`            | Enhanced to support primary key UUIDs in addition to slugs | `/dcim/devices/?rack=<uuid/slug>`|
-|                       | `cluster_id`         | Enhanced to support primary key UUIDs in addition to slugs | `/dcim/devices/?cluster=<uuid/slug>`|
-|                       | `model`              | Enhanced to support primary key UUIDs in addition to slugs | `/dcim/devices/?model=<uuid/slug>`|
-|                       | `serial`             | Enhanced to permit filtering on multiple values            | `/dcim/devices/?serial=<value>&serial=<value>...`|
-|                       | `secrets_group`      | Enhanced to support primary key UUIDs in addition to slugs | `/dcim/devices/?secrets_group=<uuid/slug>`|
-|                       | `virtual_chassis_id` | Enhanced to support primary key UUIDs in addition to slugs | `/dcim/devices/?virtual_chassis=<uuid/slug>`|
-|                       | `site`               | Enhanced to support primary key UUIDs in addition to slugs | `/dcim/devices/?site=<uuid/slug>`|
-| DeviceBay             | `device`             | Enhanced to support primary key UUIDs in addition to names | `/dcim/device-bays/?device=<uuid/name>`|
-|                       | `cable`              | Enhanced to support primary key UUIDs in addition to slugs | `/dcim/regions/?parent=<uuid/slug>`|
-| DeviceType            | `manufacturer`       | Enhanced to support primary key UUIDs in addition to slugs | `/dcim/device-types/?manufacturer=<uuid/slug>`|
-| FrontPort             | `device`             | Enhanced to support primary key UUIDs in addition to names | `/dcim/front-ports/?device=<uuid/name>`
-| Interface             | `device`             | Enhanced to support primary key UUIDs in addition to names | `/dcim/interfaces/?device=<uuid/name>`|
-| InventoryItem         | `site`               | Enhanced to support primary key UUIDs in addition to slugs | `/dcim/inventory-items/?site=<uuid/slug>`|
-|                       | `device`             | Enhanced to support primary key UUIDs in addition to name  | `/dcim/inventory-items/?device=<uuid/name>`|
-|                       | `manufacturer`       | Enhanced to support primary key UUIDs in addition to slugs | `/dcim/inventory-items/?manufacturer=<uuid/slug>`|
-|                       | `serial`             | Enhanced to permit filtering on multiple values            | `/dcim/inventory-items/?serial=<value>&serial=<value>...`|
-| Platform              | `manufacturer`       | Enhanced to support primary key UUIDs in addition to slugs | `/dcim/platforms/?manufacturer=<uuid/slug>`|
-| PowerFeed             | `site`               | Enhanced to support primary key UUIDs in addition to slugs | `/dcim/power-feeds/?site=<uuid/slug>`|
-| PowerOutlet           | `device`             | Enhanced to support primary key UUIDs in addition to names | `/dcim/power-outlets/?device=<uuid/name>`|
-| PowerPort             | `device`             | Enhanced to support primary key UUIDs in addition to names | `/dcim/power-ports/?device=<uuid/name>`|
-| Rack                  | `role`               | Enhanced to support primary key UUIDs in addition to slugs | `/dcim/racks/?role=<uuid/slug>`|
-|                       | `serial`             | Enhanced to permit filtering on multiple values            | `/dcim/racks/?serial=<value>&serial=<value>...`|
-| RackGroup             | `parent`             | Enhanced to support primary key UUIDs in addition to slugs | `/dcim/rack-groups/?parent=<uuid/slug>`|
-| RackReservation       | `user`               | Enhanced to support primary key UUIDs in addition to slugs | `/dcim/rack-reservations/?user=<uuid/slug>`|
-| RearPort              | `device`             | Enhanced to support primary key UUIDs in addition to names | `/dcim/rear-ports/?device=<uuid/name>`|
-| Region                | `parent`             | Enhanced to support primary key UUIDs in addition to slugs | `/dcim/regions/?parent=<uuid/slug>`|
-| VirtualChassis        | `site`               | Enhanced to support primary key UUIDs in addition to slugs | `/dcim/virtual-chassis/?site=<uuid/slug>`|
-|                       | `master`             | Enhanced to support primary key UUIDs in addition to name  | `/dcim/virtual-chassis/?master=<uuid/name>`|
-|                       | `tenant`             | Enhanced to support primary key UUIDs in addition to slugs | `/dcim/virtual-chassis/?tenant=<uuid/slug>`|
+| Model                 | Enhanced Filter Field | Changes                                                    | UI and Rest API endpoints Available in v2.X|
+|-----------------------|-----------------------|------------------------------------------------------------|----------------------------------------------|
+| ConsolePort           | `device`              | Enhanced to support primary key UUIDs in addition to names | `/dcim/console-ports/?device=<uuid/name>`|
+| ConsoleServerPort     | `device`              | Enhanced to support primary key UUIDs in addition to names | `/dcim/console-server-ports/?device=<uuid/name>`|
+| Device                | `manufacturer`        | Enhanced to support primary key UUIDs in addition to slugs | `/dcim/devices/?manufacturer=<uuid/slug>`|
+|                       | `device_type_id`      | Enhanced to support primary key UUIDs in addition to slugs | `/dcim/devices/?device_type=<uuid/slug>`|
+|                       | `role`                | Enhanced to support primary key UUIDs in addition to slugs | `/dcim/devices/?role=<uuid/slug>`|
+|                       | `platform`            | Enhanced to support primary key UUIDs in addition to slugs | `/dcim/devices/?platform=<uuid/slug>`|
+|                       | `rack_group_id`       | Enhanced to support primary key UUIDs in addition to slugs | `/dcim/devices/?rack_group=<uuid/slug>`|
+|                       | `rack_id`             | Enhanced to support primary key UUIDs in addition to slugs | `/dcim/devices/?rack=<uuid/slug>`|
+|                       | `cluster_id`          | Enhanced to support primary key UUIDs in addition to slugs | `/dcim/devices/?cluster=<uuid/slug>`|
+|                       | `model`               | Enhanced to support primary key UUIDs in addition to slugs | `/dcim/devices/?model=<uuid/slug>`|
+|                       | `serial`              | Enhanced to permit filtering on multiple values            | `/dcim/devices/?serial=<value>&serial=<value>...`|
+|                       | `secrets_group`       | Enhanced to support primary key UUIDs in addition to slugs | `/dcim/devices/?secrets_group=<uuid/slug>`|
+|                       | `virtual_chassis_id`  | Enhanced to support primary key UUIDs in addition to slugs | `/dcim/devices/?virtual_chassis=<uuid/slug>`|
+|                       | `site`                | Enhanced to support primary key UUIDs in addition to slugs | `/dcim/devices/?site=<uuid/slug>`|
+| DeviceBay             | `device`              | Enhanced to support primary key UUIDs in addition to names | `/dcim/device-bays/?device=<uuid/name>`|
+|                       | `cable`               | Enhanced to support primary key UUIDs in addition to slugs | `/dcim/regions/?parent=<uuid/slug>`|
+| DeviceType            | `manufacturer`        | Enhanced to support primary key UUIDs in addition to slugs | `/dcim/device-types/?manufacturer=<uuid/slug>`|
+| FrontPort             | `device`              | Enhanced to support primary key UUIDs in addition to names | `/dcim/front-ports/?device=<uuid/name>`
+| Interface             | `device`              | Enhanced to support primary key UUIDs in addition to names | `/dcim/interfaces/?device=<uuid/name>`|
+| InventoryItem         | `site`                | Enhanced to support primary key UUIDs in addition to slugs | `/dcim/inventory-items/?site=<uuid/slug>`|
+|                       | `device`              | Enhanced to support primary key UUIDs in addition to name  | `/dcim/inventory-items/?device=<uuid/name>`|
+|                       | `manufacturer`        | Enhanced to support primary key UUIDs in addition to slugs | `/dcim/inventory-items/?manufacturer=<uuid/slug>`|
+|                       | `serial`              | Enhanced to permit filtering on multiple values            | `/dcim/inventory-items/?serial=<value>&serial=<value>...`|
+| Platform              | `manufacturer`        | Enhanced to support primary key UUIDs in addition to slugs | `/dcim/platforms/?manufacturer=<uuid/slug>`|
+| PowerFeed             | `site`                | Enhanced to support primary key UUIDs in addition to slugs | `/dcim/power-feeds/?site=<uuid/slug>`|
+| PowerOutlet           | `device`              | Enhanced to support primary key UUIDs in addition to names | `/dcim/power-outlets/?device=<uuid/name>`|
+| PowerPort             | `device`              | Enhanced to support primary key UUIDs in addition to names | `/dcim/power-ports/?device=<uuid/name>`|
+| Rack                  | `role`                | Enhanced to support primary key UUIDs in addition to slugs | `/dcim/racks/?role=<uuid/slug>`|
+|                       | `serial`              | Enhanced to permit filtering on multiple values            | `/dcim/racks/?serial=<value>&serial=<value>...`|
+| RackGroup             | `parent`              | Enhanced to support primary key UUIDs in addition to slugs | `/dcim/rack-groups/?parent=<uuid/slug>`|
+| RackReservation       | `user`                | Enhanced to support primary key UUIDs in addition to slugs | `/dcim/rack-reservations/?user=<uuid/slug>`|
+| RearPort              | `device`              | Enhanced to support primary key UUIDs in addition to names | `/dcim/rear-ports/?device=<uuid/name>`|
+| Region                | `parent`              | Enhanced to support primary key UUIDs in addition to slugs | `/dcim/regions/?parent=<uuid/slug>`|
+| VirtualChassis        | `site`                | Enhanced to support primary key UUIDs in addition to slugs | `/dcim/virtual-chassis/?site=<uuid/slug>`|
+|                       | `master`              | Enhanced to support primary key UUIDs in addition to name  | `/dcim/virtual-chassis/?master=<uuid/name>`|
+|                       | `tenant`              | Enhanced to support primary key UUIDs in addition to slugs | `/dcim/virtual-chassis/?tenant=<uuid/slug>`|
 
 ### Corrected Filter Fields
 
