@@ -84,6 +84,12 @@ class TreeQuerySet(TreeQuerySet_, querysets.RestrictedQuerySet):
     Combine django-tree-queries' TreeQuerySet with our RestrictedQuerySet for permissions enforcement.
     """
 
+    def max_tree_depth(self):
+        """
+        Get the maximum depth of any tree in this queryset.
+        """
+        return self.with_tree_fields().extra(order_by=["-__tree.tree_depth"]).first().tree_depth
+
 
 class TreeManager(Manager.from_queryset(TreeQuerySet), TreeManager_):
     """

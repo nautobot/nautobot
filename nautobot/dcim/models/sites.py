@@ -4,8 +4,8 @@ from django.urls import reverse
 from timezone_field import TimeZoneField
 
 from nautobot.core.fields import AutoSlugField, NaturalOrderingField
+from nautobot.core.models import TreeModel
 from nautobot.core.models.generics import OrganizationalModel
-from nautobot.core.mptt import TreeManager
 from nautobot.dcim.fields import ASNField
 from nautobot.extras.models import StatusModel, TaggedModel
 from nautobot.extras.utils import extras_features

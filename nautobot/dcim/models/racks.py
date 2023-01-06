@@ -12,7 +12,7 @@ from django.urls import reverse
 from nautobot.core.choices import ColorChoices
 from nautobot.core.fields import AutoSlugField, ColorField, JSONArrayField, NaturalOrderingField
 from nautobot.core.models.generics import OrganizationalModel
-from nautobot.core.mptt import TreeModel
+from nautobot.core.models.tree_querry import TreeModel
 from nautobot.core.utils import UtilizationData, array_to_string, get_settings_or_config
 from nautobot.dcim.choices import DeviceFaceChoices, RackDimensionUnitChoices, RackTypeChoices, RackWidthChoices
 from nautobot.dcim.constants import RACK_ELEVATION_LEGEND_WIDTH_DEFAULT, RACK_U_HEIGHT_DEFAULT

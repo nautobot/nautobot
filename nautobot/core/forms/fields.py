@@ -256,15 +256,15 @@ class MultipleContentTypeField(django_forms.ModelMultipleChoiceField):
             feature (str): Feature name to use in constructing a FeatureQuery to restrict the available ContentTypes.
             choices_as_strings (bool): If True, render selection as a list of `"{app_label}.{model}"` strings.
         """
-        # from nautobot.extras import utils as extras_utils
+        from nautobot.extras.utils import FeatureQuery
 
         if "queryset" not in kwargs:
-            # if feature is not None:
-            #     kwargs["queryset"] = ContentType.objects.filter(
-            #         extras_utils.FeatureQuery(feature).get_query()
-            #     ).order_by("app_label", "model")
-            # else:
-            kwargs["queryset"] = ContentType.objects.order_by("app_label", "model")
+            if feature is not None:
+                kwargs["queryset"] = ContentType.objects.filter(
+                    FeatureQuery(feature).get_query()
+                ).order_by("app_label", "model")
+            else:
+                kwargs["queryset"] = ContentType.objects.order_by("app_label", "model")
         if "widget" not in kwargs:
             kwargs["widget"] = widgets.StaticSelect2Multiple()
 

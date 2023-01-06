@@ -7,9 +7,9 @@ from django.db.models import Sum
 from django.urls import reverse
 
 from nautobot.core.fields import NaturalOrderingField
+from nautobot.core.models import TreeModel
 from nautobot.core.models.relationships import RelationshipModel
 from nautobot.core.models.utils import CollateAsChar
-from nautobot.core.mptt import TreeManager
 from nautobot.core.ordering import naturalize_interface
 from nautobot.core.utils import UtilizationData
 from nautobot.dcim.choices import (

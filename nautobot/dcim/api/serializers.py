@@ -11,6 +11,7 @@ from nautobot.core.api import (
     ValidatedModelSerializer,
     WritableNestedSerializer,
 )
+from nautobot.core.api.mixins import TreeModelSerializerMixin
 from nautobot.core.api.utils import get_serializer_for_model
 from nautobot.core.deprecation import class_deprecated_in_favor_of
 from nautobot.core.utils import get_settings_or_config
@@ -88,9 +89,6 @@ from nautobot.tenancy.api.nested_serializers import NestedTenantSerializer
 from nautobot.users.api.nested_serializers import NestedUserSerializer
 from nautobot.virtualization.api.nested_serializers import NestedClusterSerializer
 
-# Not all of these variable(s) are not actually used anywhere in this file, but required for the
-# automagically replacing a Serializer with its corresponding NestedSerializer.
-from .nested_serializers import NestedCableSerializer  # noqa: F401
 from .nested_serializers import (  # noqa: F401
     NestedConsolePortSerializer,
     NestedConsolePortTemplateSerializer,
@@ -127,6 +125,10 @@ from .nested_serializers import (  # noqa: F401
     NestedSiteSerializer,
     NestedVirtualChassisSerializer,
 )
+
+# Not all of these variable(s) are not actually used anywhere in this file, but required for the
+# automagically replacing a Serializer with its corresponding NestedSerializer.
+from .nested_serializers import NestedCableSerializer  # noqa: F401
 
 
 class CableTerminationModelSerializerMixin(serializers.ModelSerializer):

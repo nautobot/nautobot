@@ -2,8 +2,8 @@ from django.db import models
 from django.urls import reverse
 
 from nautobot.core.fields import AutoSlugField
-from nautobot.core.models.generics import OrganizationalModel, PrimaryModel
-from nautobot.core.mptt import TreeModel
+from nautobot.core.models.generics import OrganizationalModel
+from nautobot.core.models.tree_querry import TreeModel
 from nautobot.extras.models.tags import TaggedModel
 from nautobot.extras.utils import extras_features
 
