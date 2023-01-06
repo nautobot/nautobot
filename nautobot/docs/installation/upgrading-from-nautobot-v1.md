@@ -76,14 +76,14 @@
 | Cluster               | `group`                 | `cluster_group`               |
 |                       | `type`                  | `cluster_type`                |
 | Device                | `local_context_data`    | `local_config_context_data`   |
-|                       | `local_context_schema ` | `local_config_context_schema` |
+|                       | `local_context_schema`  | `local_config_context_schema` |
 | Interface             | `parent_interface`      | `parent`                      |
 | InventoryItem         | `_depth`                | `tree_depth`                  |
 | RackGroup             | `_depth`                | `tree_depth`                  |
 | Region                | `_depth`                | `tree_depth`                  |
 | TenantGroup           | `_depth`                | `tree_depth`                  |
 | VirtualMachine        | `local_context_data`    | `local_config_context_data`   |
-|                       | `local_context_schema ` | `local_config_context_schema` |
+|                       | `local_context_schema`  | `local_config_context_schema` |
 | VMInterface           | `parent_interface`      | `parent`                      |
 
 ### Removed Serializer Fields
@@ -95,7 +95,7 @@
 ## UI, GraphQL, and REST API Filter Changes
 
 ### Renamed Filter Fields
-               
+
 | Model                 | Renamed Filter Field      | New Name                         | UI and Rest API endpoints Available in v2.X                               |
 |-----------------------|---------------------------|----------------------------------|---------------------------------------------------------------------------|
 | ConsolePort           | `cabled`                  | `has_cable`                      | `/dcim/console-ports/?has_cable=True/False`                               |
