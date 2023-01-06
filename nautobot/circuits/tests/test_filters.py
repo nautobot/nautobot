@@ -102,7 +102,7 @@ class CircuitTestCase(FilterTestCases.FilterTestCase, FilterTestCases.TenancyFil
             Site.objects.filter(region=cls.regions[2]).first(),
         )
 
-        tenants = Tenant.objects.filter(group__isnull=False)
+        tenants = Tenant.objects.filter(tenant_group__isnull=False)
 
         circuit_types = (
             CircuitType.objects.create(name="Test Circuit Type 1", slug="test-circuit-type-1"),

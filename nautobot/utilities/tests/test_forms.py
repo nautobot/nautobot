@@ -659,7 +659,7 @@ class DynamicFilterFormTest(TestCase):
         with self.subTest("Assert capitalize"):
             self.assertEqual(form.capitalize("test"), "Test")
             self.assertEqual(form.capitalize("test_one"), "Test one")
-            self.assertEqual(form.capitalize("tenant__group"), "Tenant group")
+            self.assertEqual(form.capitalize("tenant__tenant_group"), "Tenant group")
             self.assertEqual(form.capitalize("_custom_field_data__example_field"), "Example field")
 
         with self.subTest("Assert get_lookup_field_choices"):

@@ -41,7 +41,7 @@ PREFIX_LINK = """
 {% for i in record.parents|as_range %}
     <i class="mdi mdi-circle-small"></i>
 {% endfor %}
-<a href="{% if record.present_in_database %}{% url 'ipam:prefix' pk=record.pk %}{% else %}{% url 'ipam:prefix_add' %}?prefix={{ record }}{% if object.vrf %}&vrf={{ object.vrf.pk }}{% endif %}{% if object.site %}&site={{ object.site.pk }}{% endif %}{% if object.tenant %}&tenant_group={{ object.tenant.group.pk }}&tenant={{ object.tenant.pk }}{% endif %}{% endif %}">{{ record.prefix }}</a>
+<a href="{% if record.present_in_database %}{% url 'ipam:prefix' pk=record.pk %}{% else %}{% url 'ipam:prefix_add' %}?prefix={{ record }}{% if object.vrf %}&vrf={{ object.vrf.pk }}{% endif %}{% if object.site %}&site={{ object.site.pk }}{% endif %}{% if object.tenant %}&tenant_group={{ object.tenant.tenant_group.pk }}&tenant={{ object.tenant.pk }}{% endif %}{% endif %}">{{ record.prefix }}</a>
 """
 
 PREFIX_COPY_LINK = """
@@ -49,7 +49,7 @@ PREFIX_COPY_LINK = """
 {% for i in record.parents|as_range %}
     <i class="mdi mdi-circle-small"></i>
 {% endfor %}
-<span class="hover_copy"><a href="{% if record.present_in_database %}{% url 'ipam:prefix' pk=record.pk %}{% else %}{% url 'ipam:prefix_add' %}?prefix={{ record }}{% if object.vrf %}&vrf={{ object.vrf.pk }}{% endif %}{% if object.site %}&site={{ object.site.pk }}{% endif %}{% if object.tenant %}&tenant_group={{ object.tenant.group.pk }}&tenant={{ object.tenant.pk }}{% endif %}{% endif %}" id="copy_{{record.id}}">{{ record.prefix }}</a><button type="button" class="btn btn-inline btn-default hover_copy_button" data-clipboard-target="#copy_{{record.id}}">
+<span class="hover_copy"><a href="{% if record.present_in_database %}{% url 'ipam:prefix' pk=record.pk %}{% else %}{% url 'ipam:prefix_add' %}?prefix={{ record }}{% if object.vrf %}&vrf={{ object.vrf.pk }}{% endif %}{% if object.site %}&site={{ object.site.pk }}{% endif %}{% if object.tenant %}&tenant_group={{ object.tenant.tenant_group.pk }}&tenant={{ object.tenant.pk }}{% endif %}{% endif %}" id="copy_{{record.id}}">{{ record.prefix }}</a><button type="button" class="btn btn-inline btn-default hover_copy_button" data-clipboard-target="#copy_{{record.id}}">
                                 <span class="mdi mdi-content-copy"></span>
                             </button>
                         </span>
@@ -525,7 +525,7 @@ class VLANGroupTable(BaseTable):
     name = tables.Column(linkify=True)
     site = tables.Column(linkify=True)
     location = tables.Column(linkify=True)
-    vlan_count = LinkedCountColumn(viewname="ipam:vlan_list", url_params={"group": "slug"}, verbose_name="VLANs")
+    vlan_count = LinkedCountColumn(viewname="ipam:vlan_list", url_params={"vlan_group": "slug"}, verbose_name="VLANs")
     actions = ButtonsColumn(model=VLANGroup, prepend_template=VLANGROUP_ADD_VLAN)
 
     class Meta(BaseTable.Meta):
@@ -544,7 +544,7 @@ class VLANTable(StatusTableMixin, BaseTable):
     vid = tables.TemplateColumn(template_code=VLAN_LINK, verbose_name="ID")
     site = tables.Column(linkify=True)
     location = tables.Column(linkify=True)
-    group = tables.Column(linkify=True)
+    vlan_group = tables.Column(linkify=True)
     tenant = TenantColumn()
     role = tables.TemplateColumn(template_code=VLAN_ROLE_LINK)
 
@@ -555,7 +555,7 @@ class VLANTable(StatusTableMixin, BaseTable):
             "vid",
             "site",
             "location",
-            "group",
+            "vlan_group",
             "name",
             "tenant",
             "status",
@@ -578,7 +578,7 @@ class VLANDetailTable(VLANTable):
             "vid",
             "site",
             "location",
-            "group",
+            "vlan_group",
             "name",
             "prefixes",
             "tenant",
@@ -592,7 +592,7 @@ class VLANDetailTable(VLANTable):
             "vid",
             "site",
             "location",
-            "group",
+            "vlan_group",
             "name",
             "prefixes",
             "tenant",
@@ -641,7 +641,7 @@ class InterfaceVLANTable(StatusTableMixin, BaseTable):
     tagged = BooleanColumn()
     site = tables.Column(linkify=True)
     location = tables.Column(linkify=True)
-    group = tables.Column(accessor=Accessor("group__name"), verbose_name="Group")
+    vlan_group = tables.Column(accessor=Accessor("vlan_group__name"), verbose_name="Group")
     tenant = TenantColumn()
     role = tables.TemplateColumn(template_code=VLAN_ROLE_LINK)
 
@@ -652,7 +652,7 @@ class InterfaceVLANTable(StatusTableMixin, BaseTable):
             "tagged",
             "site",
             "location",
-            "group",
+            "vlan_group",
             "name",
             "tenant",
             "status",
@@ -685,7 +685,7 @@ class ServiceTable(BaseTable):
             "parent",
             "protocol",
             "ports",
-            "ipaddresses",
+            "ip_addresses",
             "description",
             "tags",
         )

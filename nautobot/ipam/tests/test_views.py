@@ -321,7 +321,7 @@ class VLANTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         status_reserved = statuses.get(slug="reserved")
 
         VLAN.objects.create(
-            group=vlangroups[0],
+            vlan_group=vlangroups[0],
             vid=101,
             name="VLAN101",
             site=site_1,
@@ -330,7 +330,7 @@ class VLANTestCase(ViewTestCases.PrimaryObjectViewTestCase):
             _custom_field_data={"field": "Value"},
         )
         VLAN.objects.create(
-            group=vlangroups[0],
+            vlan_group=vlangroups[0],
             vid=102,
             name="VLAN102",
             site=site_1,
@@ -339,7 +339,7 @@ class VLANTestCase(ViewTestCases.PrimaryObjectViewTestCase):
             _custom_field_data={"field": "Value"},
         )
         VLAN.objects.create(
-            group=vlangroups[0],
+            vlan_group=vlangroups[0],
             vid=103,
             name="VLAN103",
             site=site_1,
@@ -354,7 +354,7 @@ class VLANTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         cls.form_data = {
             "location": Location.objects.filter(site=vlangroups[1].site).first().pk,
             "site": vlangroups[1].site.pk,
-            "group": vlangroups[1].pk,
+            "vlan_group": vlangroups[1].pk,
             "vid": 999,
             "name": "VLAN999",
             "tenant": None,
@@ -374,7 +374,7 @@ class VLANTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         cls.bulk_edit_data = {
             "location": Location.objects.filter(site=site_1).first().pk,
             "site": site_1.pk,
-            "group": vlangroups[0].pk,
+            "vlan_group": vlangroups[0].pk,
             "tenant": Tenant.objects.first().pk,
             "status": status_reserved.pk,
             "role": roles[0].pk,
@@ -434,7 +434,7 @@ class ServiceTestCase(
             "name": "Service X",
             "protocol": ServiceProtocolChoices.PROTOCOL_TCP,
             "ports": "104,105",
-            "ipaddresses": [],
+            "ip_addresses": [],
             "description": "A new service",
             "tags": [t.pk for t in Tag.objects.get_for_model(Service)],
         }

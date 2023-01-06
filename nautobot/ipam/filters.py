@@ -495,15 +495,15 @@ class VLANFilterSet(
         label="Device (ID)",
         field_name="pk",
     )
-    group_id = django_filters.ModelMultipleChoiceFilter(
+    vlan_group_id = django_filters.ModelMultipleChoiceFilter(
         queryset=VLANGroup.objects.all(),
-        label="Group (ID)",
+        label="VLAN Group (ID)",
     )
-    group = django_filters.ModelMultipleChoiceFilter(
-        field_name="group__slug",
+    vlan_group = django_filters.ModelMultipleChoiceFilter(
+        field_name="vlan_group__slug",
         queryset=VLANGroup.objects.all(),
         to_field_name="slug",
-        label="Group",
+        label="VLAN Group",
     )
     role_id = django_filters.ModelMultipleChoiceFilter(
         queryset=Role.objects.all(),

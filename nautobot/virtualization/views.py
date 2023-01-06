@@ -318,7 +318,7 @@ class VirtualMachineListView(generic.ObjectListView):
 
 class VirtualMachineView(generic.ObjectView):
     # v2 TODO(jathan): Replace prefetch_related with select_related
-    queryset = VirtualMachine.objects.prefetch_related("tenant__group")
+    queryset = VirtualMachine.objects.prefetch_related("tenant__tenant_group")
 
     def get_extra_context(self, request, instance):
         # Interfaces

@@ -218,7 +218,7 @@ class VLANSerializer(NautobotModelSerializer, TaggedModelSerializerMixin, Status
     url = serializers.HyperlinkedIdentityField(view_name="ipam-api:vlan-detail")
     site = NestedSiteSerializer(required=False, allow_null=True)
     location = NestedLocationSerializer(required=False, allow_null=True)
-    group = NestedVLANGroupSerializer(required=False, allow_null=True)
+    vlan_group = NestedVLANGroupSerializer(required=False, allow_null=True)
     tenant = NestedTenantSerializer(required=False, allow_null=True)
     role = NestedRoleSerializer(required=False, allow_null=True)
     prefix_count = serializers.IntegerField(read_only=True)
@@ -229,7 +229,7 @@ class VLANSerializer(NautobotModelSerializer, TaggedModelSerializerMixin, Status
             "url",
             "site",
             "location",
-            "group",
+            "vlan_group",
             "vid",
             "name",
             "tenant",
@@ -243,9 +243,9 @@ class VLANSerializer(NautobotModelSerializer, TaggedModelSerializerMixin, Status
     def validate(self, data):
 
         # Validate uniqueness of vid and name if a group has been assigned.
-        if data.get("group", None):
+        if data.get("vlan_group", None):
             for field in ["vid", "name"]:
-                validator = UniqueTogetherValidator(queryset=VLAN.objects.all(), fields=("group", field))
+                validator = UniqueTogetherValidator(queryset=VLAN.objects.all(), fields=("vlan_group", field))
                 validator(data, self)
 
         # Enforce model validation
@@ -419,7 +419,7 @@ class ServiceSerializer(NautobotModelSerializer, TaggedModelSerializerMixin):
     device = NestedDeviceSerializer(required=False, allow_null=True)
     virtual_machine = NestedVirtualMachineSerializer(required=False, allow_null=True)
     protocol = ChoiceField(choices=ServiceProtocolChoices, required=False)
-    ipaddresses = SerializedPKRelatedField(
+    ip_addresses = SerializedPKRelatedField(
         queryset=IPAddress.objects.all(),
         serializer=NestedIPAddressSerializer,
         required=False,
@@ -441,6 +441,6 @@ class ServiceSerializer(NautobotModelSerializer, TaggedModelSerializerMixin):
             "name",
             "ports",
             "protocol",
-            "ipaddresses",
+            "ip_addresses",
             "description",
         ]

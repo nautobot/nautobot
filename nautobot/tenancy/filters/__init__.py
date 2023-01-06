@@ -48,14 +48,14 @@ class TenantFilterSet(NautobotFilterSet):
             "comments": "icontains",
         },
     )
-    group_id = TreeNodeMultipleChoiceFilter(
+    tenant_group_id = TreeNodeMultipleChoiceFilter(
         queryset=TenantGroup.objects.all(),
-        field_name="group",
+        field_name="tenant_group",
         label="Tenant group (ID)",
     )
-    group = TreeNodeMultipleChoiceFilter(
+    tenant_group = TreeNodeMultipleChoiceFilter(
         queryset=TenantGroup.objects.all(),
-        field_name="group",
+        field_name="tenant_group",
         to_field_name="slug",
         label="Tenant group (slug)",
     )

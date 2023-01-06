@@ -1,0 +1,2 @@
+Changed `group` FK to `vlan_group` on VLAN model, changed `ipaddresses` to `ip_addresses` on Service model
+Changed `group` FK and `tenant_group` on Tenant model.

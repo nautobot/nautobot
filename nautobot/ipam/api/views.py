@@ -365,7 +365,7 @@ class IPAddressViewSet(StatusViewSetMixin, NautobotModelViewSet):
 
 class VLANGroupViewSet(NautobotModelViewSet):
     # v2 TODO(jathan): Replace prefetch_related with select_related
-    queryset = VLANGroup.objects.prefetch_related("site").annotate(vlan_count=count_related(VLAN, "group"))
+    queryset = VLANGroup.objects.prefetch_related("site").annotate(vlan_count=count_related(VLAN, "vlan_group"))
     serializer_class = serializers.VLANGroupSerializer
     filterset_class = filters.VLANGroupFilterSet
 
@@ -378,7 +378,7 @@ class VLANGroupViewSet(NautobotModelViewSet):
 class VLANViewSet(StatusViewSetMixin, NautobotModelViewSet):
     # v2 TODO(jathan): Replace prefetch_related with select_related (except tags: m2m)
     queryset = VLAN.objects.prefetch_related(
-        "group",
+        "vlan_group",
         "site",
         "status",
         "role",
@@ -396,6 +396,6 @@ class VLANViewSet(StatusViewSetMixin, NautobotModelViewSet):
 
 class ServiceViewSet(NautobotModelViewSet):
     # v2 TODO(jathan): Replace prefetch_related with select_related (except tags: m2m)
-    queryset = Service.objects.prefetch_related("device", "virtual_machine", "tags", "ipaddresses")
+    queryset = Service.objects.prefetch_related("device", "virtual_machine", "tags", "ip_addresses")
     serializer_class = serializers.ServiceSerializer
     filterset_class = filters.ServiceFilterSet

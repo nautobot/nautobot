@@ -622,7 +622,7 @@ class Prefix(PrimaryModel, StatusModel):
             self.tenant.name if self.tenant else None,
             self.site.name if self.site else None,
             self.location.name if self.location else None,
-            self.vlan.group.name if self.vlan and self.vlan.group else None,
+            self.vlan.vlan_group.name if self.vlan and self.vlan.vlan_group else None,
             self.vlan.vid if self.vlan else None,
             self.get_status_display(),
             self.role.name if self.role else None,
@@ -1116,7 +1116,7 @@ class VLANGroup(OrganizationalModel):
         """
         Return the first available VLAN ID (1-4094) in the group.
         """
-        vlan_ids = VLAN.objects.filter(group=self).values_list("vid", flat=True)
+        vlan_ids = VLAN.objects.filter(vlan_group=self).values_list("vid", flat=True)
         for i in range(1, 4095):
             if i not in vlan_ids:
                 return i
@@ -1158,7 +1158,7 @@ class VLAN(PrimaryModel, StatusModel):
         blank=True,
         null=True,
     )
-    group = models.ForeignKey(
+    vlan_group = models.ForeignKey(
         to="ipam.VLANGroup",
         on_delete=models.PROTECT,
         related_name="vlans",
@@ -1188,7 +1188,7 @@ class VLAN(PrimaryModel, StatusModel):
     csv_headers = [
         "site",
         "location",
-        "group",
+        "vlan_group",
         "vid",
         "name",
         "tenant",
@@ -1199,7 +1199,7 @@ class VLAN(PrimaryModel, StatusModel):
     clone_fields = [
         "site",
         "location",
-        "group",
+        "vlan_group",
         "tenant",
         "status",
         "role",
@@ -1209,14 +1209,14 @@ class VLAN(PrimaryModel, StatusModel):
     class Meta:
         ordering = (
             "site",
-            "group",
+            "vlan_group",
             "vid",
         )  # (site, group, vid) may be non-unique
         unique_together = [
             # 2.0 TODO: since group is nullable and NULL != NULL, we can have multiple non-group VLANs with
             # the same vid and name. We should probably fix this with a custom validate_unique() function.
-            ["group", "vid"],
-            ["group", "name"],
+            ["vlan_group", "vid"],
+            ["vlan_group", "name"],
         ]
         verbose_name = "VLAN"
         verbose_name_plural = "VLANs"
@@ -1243,24 +1243,26 @@ class VLAN(PrimaryModel, StatusModel):
                 )
 
         # Validate VLAN group
-        if self.group and self.group.site != self.site:
-            raise ValidationError({"group": f"VLAN group must belong to the assigned site ({self.site})."})
+        if self.vlan_group and self.vlan_group.site != self.site:
+            raise ValidationError({"vlan_group": f"VLAN group must belong to the assigned site ({self.site})."})
 
         if (
-            self.group is not None
+            self.vlan_group is not None
             and self.location is not None
-            and self.group.location is not None
-            and self.group.location not in self.location.ancestors(include_self=True)
+            and self.vlan_group.location is not None
+            and self.vlan_group.location not in self.location.ancestors(include_self=True)
         ):
             raise ValidationError(
-                {"group": f'The assigned group belongs to a location that does not include location "{self.location}".'}
+                {
+                    "vlan_group": f'The assigned group belongs to a location that does not include location "{self.location}".'
+                }
             )
 
     def to_csv(self):
         return (
             self.site.name if self.site else None,
             self.location.name if self.location else None,
-            self.group.name if self.group else None,
+            self.vlan_group.name if self.vlan_group else None,
             self.vid,
             self.name,
             self.tenant.name if self.tenant else None,
@@ -1323,7 +1325,7 @@ class Service(PrimaryModel):
         ),
         verbose_name="Port numbers",
     )
-    ipaddresses = models.ManyToManyField(
+    ip_addresses = models.ManyToManyField(
         to="ipam.IPAddress",
         related_name="services",
         blank=True,

@@ -26,7 +26,7 @@ class TenancyRootView(APIRootView):
 
 
 class TenantGroupViewSet(NautobotModelViewSet):
-    queryset = TenantGroup.objects.annotate(tenant_count=count_related(Tenant, "group"))
+    queryset = TenantGroup.objects.annotate(tenant_count=count_related(Tenant, "tenant_group"))
     serializer_class = serializers.TenantGroupSerializer
     filterset_class = filters.TenantGroupFilterSet
 
@@ -38,7 +38,7 @@ class TenantGroupViewSet(NautobotModelViewSet):
 
 class TenantViewSet(NautobotModelViewSet):
     # v2 TODO(jathan): Replace prefetch_related with select_related (it should stay for tags)
-    queryset = Tenant.objects.prefetch_related("group", "tags").annotate(
+    queryset = Tenant.objects.prefetch_related("tenant_group", "tags").annotate(
         circuit_count=count_related(Circuit, "tenant"),
         device_count=count_related(Device, "tenant"),
         ipaddress_count=count_related(IPAddress, "tenant"),

@@ -210,7 +210,7 @@ class SiteListView(generic.ObjectListView):
 
 class SiteView(generic.ObjectView):
     # v2 TODO(jathan): Replace prefetch_related with select_related
-    queryset = Site.objects.prefetch_related("region", "tenant__group")
+    queryset = Site.objects.prefetch_related("region", "tenant__tenant_group")
 
     def get_extra_context(self, request, instance):
         stats = {
@@ -626,7 +626,7 @@ class RackElevationListView(generic.ObjectListView):
 
 class RackView(generic.ObjectView):
     # v2 TODO(jathan): Replace prefetch_related with select_related
-    queryset = Rack.objects.prefetch_related("site__region", "tenant__group", "group", "role")
+    queryset = Rack.objects.prefetch_related("site__region", "tenant__tenant_group", "group", "role")
 
     def get_extra_context(self, request, instance):
         # Get 0U and child devices located within the rack
@@ -1381,7 +1381,7 @@ class DeviceView(generic.ObjectView):
     queryset = Device.objects.prefetch_related(
         "site__region",
         "rack__group",
-        "tenant__group",
+        "tenant__tenant_group",
         "device_role",
         "platform",
         "primary_ip4",

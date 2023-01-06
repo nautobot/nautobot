@@ -109,7 +109,7 @@ User = get_user_model()
 
 def common_test_data(cls):
 
-    tenants = Tenant.objects.filter(group__isnull=False)
+    tenants = Tenant.objects.filter(tenant_group__isnull=False)
     cls.tenants = tenants
 
     regions = (
@@ -1663,7 +1663,7 @@ class RackTestCase(FilterTestCases.FilterTestCase, FilterTestCases.TenancyFilter
 
         site = Site.objects.get(slug="site-3")
         rack_group = RackGroup.objects.get(slug="rack-group-3")
-        tenant = Tenant.objects.filter(group__isnull=False).first()
+        tenant = Tenant.objects.filter(tenant_group__isnull=False).first()
         rack_role = RackRole.objects.get(slug="rack-role-3")
 
         Rack.objects.create(

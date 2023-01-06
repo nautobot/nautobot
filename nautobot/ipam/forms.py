@@ -435,10 +435,10 @@ class PrefixCSVForm(PrefixFieldMixin, LocatableModelCSVFormMixin, StatusModelCSV
 
         if data:
 
-            # Limit vlan queryset by assigned site and group
+            # Limit vlan queryset by assigned site and vlan_group
             params = {
                 f"site__{self.fields['site'].to_field_name}": data.get("site"),
-                f"group__{self.fields['vlan_group'].to_field_name}": data.get("vlan_group"),
+                f"vlan_group__{self.fields['vlan_group'].to_field_name}": data.get("vlan_group"),
             }
             self.fields["vlan"].queryset = self.fields["vlan"].queryset.filter(**params)
 
@@ -1004,7 +1004,7 @@ class VLANGroupFilterForm(NautobotFilterForm, LocatableModelFilterFormMixin):
 
 
 class VLANForm(LocatableModelFormMixin, NautobotModelForm, TenancyForm):
-    group = DynamicModelChoiceField(
+    vlan_group = DynamicModelChoiceField(
         queryset=VLANGroup.objects.all(),
         required=False,
         query_params={"site_id": "$site"},
@@ -1016,7 +1016,7 @@ class VLANForm(LocatableModelFormMixin, NautobotModelForm, TenancyForm):
         fields = [
             "site",
             "location",
-            "group",
+            "vlan_group",
             "vid",
             "name",
             "status",
@@ -1028,7 +1028,7 @@ class VLANForm(LocatableModelFormMixin, NautobotModelForm, TenancyForm):
         ]
         help_texts = {
             "site": "Leave blank if this VLAN spans multiple sites",
-            "group": "VLAN group (optional)",
+            "vlan_group": "VLAN group (optional)",
             "vid": "Configured VLAN ID",
             "name": "Configured VLAN name",
             "status": "Operational status of this VLAN",
@@ -1037,7 +1037,7 @@ class VLANForm(LocatableModelFormMixin, NautobotModelForm, TenancyForm):
 
 
 class VLANCSVForm(LocatableModelCSVFormMixin, StatusModelCSVFormMixin, CustomFieldModelCSVForm):
-    group = CSVModelChoiceField(
+    vlan_group = CSVModelChoiceField(
         queryset=VLANGroup.objects.all(),
         required=False,
         to_field_name="name",
@@ -1071,7 +1071,7 @@ class VLANCSVForm(LocatableModelCSVFormMixin, StatusModelCSVFormMixin, CustomFie
 
             # Limit vlan queryset by assigned group
             params = {f"site__{self.fields['site'].to_field_name}": data.get("site")}
-            self.fields["group"].queryset = self.fields["group"].queryset.filter(**params)
+            self.fields["vlan_group"].queryset = self.fields["vlan_group"].queryset.filter(**params)
 
 
 class VLANBulkEditForm(
@@ -1081,7 +1081,7 @@ class VLANBulkEditForm(
     NautobotBulkEditForm,
 ):
     pk = forms.ModelMultipleChoiceField(queryset=VLAN.objects.all(), widget=forms.MultipleHiddenInput())
-    group = DynamicModelChoiceField(
+    vlan_group = DynamicModelChoiceField(
         queryset=VLANGroup.objects.all(),
         required=False,
         query_params={"site_id": "$site"},
@@ -1095,7 +1095,7 @@ class VLANBulkEditForm(
         nullable_fields = [
             "site",
             "location",
-            "group",
+            "vlan_group",
             "tenant",
             "role",
             "description",
@@ -1149,17 +1149,17 @@ class ServiceForm(NautobotModelForm):
             "name",
             "protocol",
             "ports",
-            "ipaddresses",
+            "ip_addresses",
             "description",
             "tags",
         ]
         help_texts = {
-            "ipaddresses": "IP address assignment is optional. If no IPs are selected, the service is assumed to be "
+            "ip_addresses": "IP address assignment is optional. If no IPs are selected, the service is assumed to be "
             "reachable via all IPs assigned to the device.",
         }
         widgets = {
             "protocol": StaticSelect2(),
-            "ipaddresses": StaticSelect2Multiple(),
+            "ip_addresses": StaticSelect2Multiple(),
         }
 
     def __init__(self, *args, **kwargs):
@@ -1167,15 +1167,15 @@ class ServiceForm(NautobotModelForm):
 
         # Limit IP address choices to those assigned to interfaces of the parent device/VM
         if self.instance.device:
-            self.fields["ipaddresses"].queryset = IPAddress.objects.filter(
+            self.fields["ip_addresses"].queryset = IPAddress.objects.filter(
                 interface__in=self.instance.device.vc_interfaces.values_list("id", flat=True)
             )
         elif self.instance.virtual_machine:
-            self.fields["ipaddresses"].queryset = IPAddress.objects.filter(
+            self.fields["ip_addresses"].queryset = IPAddress.objects.filter(
                 vminterface__in=self.instance.virtual_machine.interfaces.values_list("id", flat=True)
             )
         else:
-            self.fields["ipaddresses"].choices = []
+            self.fields["ip_addresses"].choices = []
 
 
 class ServiceFilterForm(NautobotFilterForm):

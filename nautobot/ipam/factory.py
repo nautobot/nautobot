@@ -72,8 +72,8 @@ class AggregateFactory(PrimaryModelFactory):
     has_tenant_group = factory.Faker("pybool")
     tenant = factory.Maybe(
         "has_tenant_group",
-        random_instance(Tenant.objects.filter(group__isnull=False), allow_null=False),
-        factory.Maybe("has_tenant", random_instance(Tenant.objects.filter(group__isnull=True)), None),
+        random_instance(Tenant.objects.filter(tenant_group__isnull=False), allow_null=False),
+        factory.Maybe("has_tenant", random_instance(Tenant.objects.filter(tenant_group__isnull=True)), None),
     )
 
     has_date_added = factory.Faker("pybool")
@@ -328,7 +328,7 @@ class VLANFactory(PrimaryModelFactory):
         model = VLAN
         exclude = (
             "has_description",
-            "has_group",
+            "has_vlan_group",
             "has_location",
             "has_role",
             "has_site",
@@ -351,13 +351,13 @@ class VLANFactory(PrimaryModelFactory):
     has_description = factory.Faker("pybool")
     description = factory.Maybe("has_description", factory.Faker("text", max_nb_chars=200), "")
 
-    has_group = factory.Faker("pybool")
-    group = factory.Maybe("has_group", random_instance(VLANGroup, allow_null=False), None)
+    has_vlan_group = factory.Faker("pybool")
+    vlan_group = factory.Maybe("has_vlan_group", random_instance(VLANGroup, allow_null=False), None)
 
     has_location = factory.Faker("pybool")
     location = factory.Maybe(
-        "has_group",
-        factory.LazyAttribute(lambda l: l.group.location),
+        "has_vlan_group",
+        factory.LazyAttribute(lambda l: l.vlan_group.location),
         factory.Maybe("has_location", random_instance(Location, allow_null=False), None),
     )
 
@@ -366,8 +366,8 @@ class VLANFactory(PrimaryModelFactory):
 
     has_site = factory.Faker("pybool")
     site = factory.Maybe(
-        "has_group",
-        factory.LazyAttribute(lambda l: l.group.site),
+        "has_vlan_group",
+        factory.LazyAttribute(lambda l: l.vlan_group.site),
         factory.Maybe(
             "has_location",
             factory.LazyAttribute(lambda l: l.location.site),
@@ -381,7 +381,7 @@ class VLANFactory(PrimaryModelFactory):
 
 class VLANGetOrCreateFactory(VLANFactory):
     class Meta:
-        django_get_or_create = ("group", "location", "site", "tenant")
+        django_get_or_create = ("vlan_group", "location", "site", "tenant")
 
 
 class VRFGetOrCreateFactory(VRFFactory):
@@ -458,7 +458,7 @@ class PrefixFactory(PrimaryModelFactory):
         "has_vlan",
         factory.SubFactory(
             VLANGetOrCreateFactory,
-            group=None,
+            vlan_group=None,
             location=factory.SelfAttribute("..location"),
             site=factory.SelfAttribute("..site"),
             tenant=factory.SelfAttribute("..tenant"),

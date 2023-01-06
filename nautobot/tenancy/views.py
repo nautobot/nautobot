@@ -17,7 +17,7 @@ from .models import Tenant, TenantGroup
 
 
 class TenantGroupListView(generic.ObjectListView):
-    queryset = TenantGroup.objects.annotate(tenant_count=count_related(Tenant, "group"))
+    queryset = TenantGroup.objects.annotate(tenant_count=count_related(Tenant, "tenant_group"))
     filterset = filters.TenantGroupFilterSet
     table = tables.TenantGroupTable
 
@@ -29,11 +29,11 @@ class TenantGroupView(generic.ObjectView):
 
         # Tenants
         tenants = Tenant.objects.restrict(request.user, "view").filter(
-            group__in=instance.descendants(include_self=True)
+            tenant_group__in=instance.descendants(include_self=True)
         )
 
         tenant_table = tables.TenantTable(tenants)
-        tenant_table.columns.hide("group")
+        tenant_table.columns.hide("tenant_group")
 
         paginate = {
             "paginator_class": EnhancedPaginator,
@@ -62,7 +62,7 @@ class TenantGroupBulkImportView(generic.BulkImportView):
 
 
 class TenantGroupBulkDeleteView(generic.BulkDeleteView):
-    queryset = TenantGroup.objects.annotate(tenant_count=count_related(Tenant, "group"))
+    queryset = TenantGroup.objects.annotate(tenant_count=count_related(Tenant, "tenant_group"))
     table = tables.TenantGroupTable
 
 
@@ -80,7 +80,7 @@ class TenantListView(generic.ObjectListView):
 
 class TenantView(generic.ObjectView):
     # v2 TODO(jathan): Replace prefetch_related with select_related
-    queryset = Tenant.objects.prefetch_related("group")
+    queryset = Tenant.objects.prefetch_related("tenant_group")
 
     def get_extra_context(self, request, instance):
         stats = {
@@ -124,7 +124,7 @@ class TenantBulkImportView(generic.BulkImportView):
 
 class TenantBulkEditView(generic.BulkEditView):
     # v2 TODO(jathan): Replace prefetch_related with select_related
-    queryset = Tenant.objects.prefetch_related("group")
+    queryset = Tenant.objects.prefetch_related("tenant_group")
     filterset = filters.TenantFilterSet
     table = tables.TenantTable
     form = forms.TenantBulkEditForm
@@ -132,6 +132,6 @@ class TenantBulkEditView(generic.BulkEditView):
 
 class TenantBulkDeleteView(generic.BulkDeleteView):
     # v2 TODO(jathan): Replace prefetch_related with select_related
-    queryset = Tenant.objects.prefetch_related("group")
+    queryset = Tenant.objects.prefetch_related("tenant_group")
     filterset = filters.TenantFilterSet
     table = tables.TenantTable

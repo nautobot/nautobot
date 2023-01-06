@@ -35,12 +35,12 @@ class TenantTestCase(ViewTestCases.PrimaryObjectViewTestCase):
 
         tenant_groups = TenantGroup.objects.all()[:2]
 
-        Tenant.objects.create(name="Tenant 8", group=tenant_groups[0])
+        Tenant.objects.create(name="Tenant 8", tenant_group=tenant_groups[0])
 
         cls.form_data = {
             "name": "Tenant X",
             "slug": "tenant-x",
-            "group": tenant_groups[1].pk,
+            "tenant_group": tenant_groups[1].pk,
             "description": "A new tenant",
             "comments": "Some comments",
             "tags": [t.pk for t in Tag.objects.get_for_model(Tenant)],
@@ -55,7 +55,7 @@ class TenantTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         )
 
         cls.bulk_edit_data = {
-            "group": tenant_groups[1].pk,
+            "tenant_group": tenant_groups[1].pk,
         }
         cls.slug_source = "name"
         cls.slug_test_object = "Tenant 8"
