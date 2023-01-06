@@ -1,5 +1,10 @@
 # Upgrading from Nautobot v1.X
 
+## Dependency Changes
+
+- Nautobot no longer uses or supports the use of `django-mptt`.
+- Nautobot no longer uses or supports the use of `django-rq`.
+
 ## Database (ORM) Changes
 
 ### Database Behavior Changes
@@ -81,9 +86,15 @@
 |                       | `local_context_schema ` | `local_config_context_schema` |
 | VMInterface           | `parent_interface`      | `parent`                      |
 
-## UI, GraphQL, and REST API                Filter Changes
+### Removed Serializer Fields
+
+| Model/Endpoint | Removed Field        | Comments                             |
+|----------------|----------------------|--------------------------------------|
+| `/api/status/` | `rq-workers-running` | Removed as RQ is no longer supported |
+
+## UI, GraphQL, and REST API Filter Changes
                
-### Rename               d                Filter Fields
+### Renamed Filter Fields
                
 | Model                 | Renamed Filter Field      | New Name                         | UI and Rest API endpoints Available in v2.X                               |
 |-----------------------|---------------------------|----------------------------------|---------------------------------------------------------------------------|

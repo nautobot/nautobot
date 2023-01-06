@@ -204,7 +204,7 @@ Edit `$NAUTOBOT_ROOT/nautobot_config.py`, and head over to the documentation on 
 
 * [`ALLOWED_HOSTS`](../configuration/required-settings.md#allowed_hosts): You must set this value. This can be set to `["*"]` for a quick start, but this value is not suitable for production deployment.
 * [`DATABASES`](../configuration/required-settings.md#databases): Database connection parameters. If you installed your database server on the same system as Nautobot, you'll need to update the `USER` and `PASSWORD` fields here. If you are using MySQL, you'll also need to update the `ENGINE` field, changing the default database driver suffix from `django.db.backends.postgresql` to `django.db.backends.mysql`.
-* **Redis settings**: Redis configuration requires multiple settings including [`CACHEOPS_REDIS`](../configuration/required-settings.md#cacheops_redis) and [`RQ_QUEUES`](../configuration/required-settings.md#rq_queues), if different from the defaults. If you installed Redis on the same system as Nautobot, you do not need to change these settings.
+* **Redis settings**: Redis configuration requires multiple settings including [`CACHEOPS_REDIS`](../configuration/required-settings.md#cacheops_redis), if different from the defaults. If you installed Redis on the same system as Nautobot, you do not need to change these settings.
 
 !!! important
     You absolutely must update your required settings in your `nautobot_config.py` or Nautobot will not work.
@@ -325,7 +325,7 @@ Next, connect to the name or IP of the server (as defined in `ALLOWED_HOSTS`) on
     If the test service does not run, or you cannot reach the Nautobot home page, something has gone wrong. Do not proceed with the rest of this guide until the installation has been corrected. Some platforms (such as CentOS) have a firewall enabled by default. If you are unable to connect to the server url on port 8080, verify the firewall policy to allow the appropriate connections, or select an already permitted port.
 
 !!! important
-    Certain Nautobot features (Git repository synchronization, webhooks, jobs, etc.) depend on the presence of Nautobot's background Celery worker process, which is not automatically started by the `runserver` command. To start it for testing purposes, you can run `nautobot-server celery worker` (for background tasks) or `nautobot-server rqworker` (for jobs) separately. For production use, Nautobot and the worker processes should be managed by `systemd` rather than started manually, as described in the next section of this documentation.
+    Certain Nautobot features (Git repository synchronization, webhooks, jobs, etc.) depend on the presence of Nautobot's background Celery worker process, which is not automatically started by the `runserver` command. To start it for testing purposes, you can run `nautobot-server celery worker` separately. For production use, Nautobot and the worker processes should be managed by `systemd` rather than started manually, as described in the next section of this documentation.
 
 Note that the initial user interface will be locked down for non-authenticated users.
 

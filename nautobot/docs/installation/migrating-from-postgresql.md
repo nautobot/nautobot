@@ -12,7 +12,6 @@ nautobot-server dumpdata \
     --natural-primary \
     --exclude contenttypes \
     --exclude auth.permission \
-    --exclude django_rq \
     --format json \
     --indent 2 \
     --traceback \
