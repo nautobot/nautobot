@@ -13,7 +13,7 @@ class Migration(migrations.Migration):
 
     dependencies = [
         ("contenttypes", "0002_remove_content_type_name"),
-        ("extras", "0053_relationship_required_on"),
+        ("extras", "0055_alter_joblogentry_scheduledjob_webhook_fields"),
     ]
 
     operations = [

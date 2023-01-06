@@ -719,11 +719,10 @@ class ManufacturerView(generic.ObjectView):
     def get_extra_context(self, request, instance):
 
         # Devices
-        # v2 TODO(jathan): Replace prefetch_related with select_related
         devices = (
             Device.objects.restrict(request.user, "view")
             .filter(device_type__manufacturer=instance)
-            .prefetch_related("status", "site", "tenant", "role", "rack", "device_type")
+            .select_related("status", "site", "tenant", "role", "rack", "device_type")
         )
 
         device_table = tables.DeviceTable(devices)
@@ -1206,7 +1205,7 @@ class PlatformView(generic.ObjectView):
         devices = (
             Device.objects.restrict(request.user, "view")
             .filter(platform=instance)
-            .prefetch_related("status", "site", "tenant", "rack", "device_type", "role")
+            .select_related("status", "site", "tenant", "rack", "device_type", "role")
         )
 
         device_table = tables.DeviceTable(devices)

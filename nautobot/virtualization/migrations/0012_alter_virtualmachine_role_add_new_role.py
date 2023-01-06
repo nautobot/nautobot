@@ -8,8 +8,8 @@ import nautobot.extras.models.roles
 class Migration(migrations.Migration):
 
     dependencies = [
-        ("extras", "0055_collect_roles_from_related_apps_roles"),
-        ("virtualization", "0009_cluster_location"),
+        ("extras", "0057_collect_roles_from_related_apps_roles"),
+        ("virtualization", "0011_alter_vminterface_mac_address"),
     ]
 
     operations = [

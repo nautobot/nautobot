@@ -7,7 +7,7 @@ import nautobot.dcim.fields
 class Migration(migrations.Migration):
 
     dependencies = [
-        ("virtualization", "0011_alter_vminterface_mac_address"),
+        ("virtualization", "0010_vminterface_mac_address_data_migration"),
     ]
 
     operations = [

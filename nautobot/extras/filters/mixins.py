@@ -283,7 +283,6 @@ class RoleFilter(NaturalKeyOrPKMultipleChoiceFilter):
     def __init__(self, *args, **kwargs):
 
         kwargs.setdefault("field_name", "role")
-        kwargs.setdefault("to_field_name", "slug")
         kwargs.setdefault("queryset", Role.objects.all())
         kwargs.setdefault("label", "Role (slug or ID)")
 

@@ -8,8 +8,8 @@ import nautobot.extras.models.roles
 class Migration(migrations.Migration):
 
     dependencies = [
-        ("extras", "0055_collect_roles_from_related_apps_roles"),
-        ("dcim", "0021_mptt_to_tree_queries"),
+        ("extras", "0057_collect_roles_from_related_apps_roles"),
+        ("dcim", "0023_alter_interface_mac_address"),
     ]
 
     operations = [

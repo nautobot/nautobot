@@ -425,7 +425,7 @@ def migrate_role_data(
     legacy_role_name = legacy_role if is_choice_field or is_m2m_field else legacy_role + "__name"
     # Retrieve the queryset of `model` instances that have a value for the `legacy_role` field
     queryset = model.objects.filter(**{legacy_role + "__isnull": False}).only(*["pk", legacy_role_name])
-    instances_to_update_data = get_instances_to_update_data(
+    instances_to_update_data = get_instances_to_pk_and_new_role(
         queryset=queryset,
         role_model=role_model,
         role_choiceset=role_choiceset,
@@ -446,7 +446,7 @@ def migrate_role_data(
             model.objects.bulk_update(instances_to_update_data, fields=[new_role], batch_size=1000)
 
 
-def get_instances_to_update_data(queryset, role_model, role_choiceset, legacy_role, new_role, is_m2m_field):
+def get_instances_to_pk_and_new_role(queryset, role_model, role_choiceset, legacy_role, new_role, is_m2m_field):
     """
     Return a list of dictionaries containing the primary key and the new role value for each instance in the queryset.
 

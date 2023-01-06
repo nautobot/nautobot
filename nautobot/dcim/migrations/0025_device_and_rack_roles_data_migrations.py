@@ -31,7 +31,7 @@ def reverse_role_data_migrate(apps, schema):
 class Migration(migrations.Migration):
 
     dependencies = [
-        ("dcim", "0022_alter_device_and_rack_role_add_new_role"),
+        ("dcim", "0024_alter_device_and_rack_role_add_new_role"),
     ]
 
     operations = [

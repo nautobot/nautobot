@@ -247,7 +247,7 @@ class ConfigContextTestCase(FilterTestCases.FilterTestCase):
     def test_role(self):
         device_role = Role.objects.get_for_model(Device).first()
         vm_role = Role.objects.get_for_model(VirtualMachine).first()
-        params = {"roles": [device_role.pk, vm_role.slug]}
+        params = {"role": [device_role.pk, vm_role.slug]}
         self.assertQuerysetEqualAndNotEmpty(
             self.filterset(params, self.queryset).qs,
             self.queryset.filter(roles__in=[vm_role, device_role]).distinct(),
@@ -1544,18 +1544,18 @@ class RoleTestCase(FilterTestCases.NameSlugFilterTestCase):
 
     def test_weight(self):
         """Test the weight search field."""
-        roles = Role.objects.filter(weight=100)
-        params = {"weight": [100]}
+        instance = self.queryset.filter(weight__isnull=False).first()
+        params = {"weight": [instance.weight]}
         self.assertQuerysetEqualAndNotEmpty(
-            self.filterset(params, self.queryset).qs,
-            roles.distinct(),
+            self.filterset(params, self.queryset).qs, self.queryset.filter(weight=instance.weight)
         )
 
     def test_search(self):
-        params = {"q": "Role 1"}
+        value = self.queryset.first().name
+        params = {"q": value}
         self.assertQuerysetEqualAndNotEmpty(
             self.filterset(params, self.queryset).qs,
-            self.queryset.filter(name="Role 1").distinct(),
+            self.queryset.filter(name=value).distinct(),
         )
         value = self.queryset.first().pk
         params = {"q": value}

@@ -896,7 +896,7 @@ class JobResultTest(TestCase):
 
 
 class RoleTest(TestCase):
-    """Tests for the `RoleT` model class."""
+    """Tests for `Role` model class."""
 
     def test_get_for_models(self):
         """Test get_for_models returns a Roles for those models."""
