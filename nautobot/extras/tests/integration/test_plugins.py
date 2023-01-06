@@ -21,7 +21,6 @@ from nautobot.utilities.testing.integration import SeleniumTestCase
 from example_plugin.models import ExampleModel
 
 
-@override_settings(ALLOWED_HOSTS=["localhost"])
 class PluginWebhookTest(SeleniumTestCase):
     """
     This test case proves that plugins can use the webhook functions when making changes on a model.
@@ -61,6 +60,7 @@ class PluginWebhookTest(SeleniumTestCase):
         self.webhook.additional_headers = headers
         self.webhook.validated_save()
 
+    @override_settings(ALLOWED_HOSTS=["localhost"])
     def test_plugin_webhook_create(self):
         """
         Test that webhooks are correctly triggered by a plugin model create.
@@ -74,6 +74,7 @@ class PluginWebhookTest(SeleniumTestCase):
         self.assertTrue(os.path.exists(os.path.join(tempfile.gettempdir(), "test_plugin_webhook_create")))
         os.remove(os.path.join(tempfile.gettempdir(), "test_plugin_webhook_create"))
 
+    @override_settings(ALLOWED_HOSTS=["localhost"])
     def test_plugin_webhook_update(self):
         """
         Test that webhooks are correctly triggered by a plugin model update.
@@ -90,6 +91,7 @@ class PluginWebhookTest(SeleniumTestCase):
         self.assertTrue(os.path.exists(os.path.join(tempfile.gettempdir(), "test_plugin_webhook_update")))
         os.remove(os.path.join(tempfile.gettempdir(), "test_plugin_webhook_update"))
 
+    @override_settings(ALLOWED_HOSTS=["localhost"])
     def test_plugin_webhook_delete(self):
         """
         Test that webhooks are correctly triggered by a plugin model delete.
@@ -105,6 +107,7 @@ class PluginWebhookTest(SeleniumTestCase):
         self.assertTrue(os.path.exists(os.path.join(tempfile.gettempdir(), "test_plugin_webhook_delete")))
         os.remove(os.path.join(tempfile.gettempdir(), "test_plugin_webhook_delete"))
 
+    @override_settings(ALLOWED_HOSTS=["localhost"])
     def test_plugin_webhook_with_body(self):
         """
         Verify that webhook body_template is correctly used.
