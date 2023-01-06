@@ -20,27 +20,29 @@
 
 ### Renamed Database Fields
 
-| Model          | Renamed Field                           | New Name                                       |
-|----------------|-----------------------------------------|------------------------------------------------|
-| Cluster        | `group`                                 | `cluster_group`                                |
-|                | `type`                                  | `cluster_type`                                 |
-| Device         | `local_context_data`                    | `local_config_context_data`                    |
-|                | `local_context_data_owner_content_type` | `local_config_context_data_owner_content_type` |
-|                | `local_context_data_owner_object_id`    | `local_config_context_data_owner_object_id`    |
-|                | `local_context_schema`                  | `local_config_context_schema`                  |
-| Interface      | `parent_interface`                      | `parent`                                       |
-|                | `child_interfaces`                      | `children`                                     |
-| InventoryItem  | `child_items`                           | `children`                                     |
-|                | `level`                                 | `tree_depth`                                   |
-| RackGroup      | `level`                                 | `tree_depth`                                   |
-| Region         | `level`                                 | `tree_depth`                                   |
-| TenantGroup    | `level`                                 | `tree_depth`                                   |
-| VirtualMachine | `local_context_data`                    | `local_config_context_data`                    |
-|                | `local_context_data_owner_content_type` | `local_config_context_data_owner_content_type` |
-|                | `local_context_data_owner_object_id`    | `local_config_context_data_owner_object_id`    |
-|                | `local_context_schema`                  | `local_config_context_schema`                  |
-| VMInterface    | `parent_interface`                      | `parent`                                       |
-|                | `child_interfaces`                      | `children`                                     |
+| Model               | Renamed Field                           | New Name                                       |
+|---------------------|-----------------------------------------|------------------------------------------------|
+| Cluster             | `group`                                 | `cluster_group`                                |
+|                     | `type`                                  | `cluster_type`                                 |
+| ConfigContextSchema | `device_set`                            | `dcim_device_related`                          |
+|                     | `virtualmachine_set`                    | `virtualization_virtualmachine_related`        |
+| Device              | `local_context_data`                    | `local_config_context_data`                    |
+|                     | `local_context_data_owner_content_type` | `local_config_context_data_owner_content_type` |
+|                     | `local_context_data_owner_object_id`    | `local_config_context_data_owner_object_id`    |
+|                     | `local_context_schema`                  | `local_config_context_schema`                  |
+| Interface           | `parent_interface`                      | `parent`                                       |
+|                     | `child_interfaces`                      | `children`                                     |
+| InventoryItem       | `child_items`                           | `children`                                     |
+|                     | `level`                                 | `tree_depth`                                   |
+| RackGroup           | `level`                                 | `tree_depth`                                   |
+| Region              | `level`                                 | `tree_depth`                                   |
+| TenantGroup         | `level`                                 | `tree_depth`                                   |
+| VirtualMachine      | `local_context_data`                    | `local_config_context_data`                    |
+|                     | `local_context_data_owner_content_type` | `local_config_context_data_owner_content_type` |
+|                     | `local_context_data_owner_object_id`    | `local_config_context_data_owner_object_id`    |
+|                     | `local_context_schema`                  | `local_config_context_schema`                  |
+| VMInterface         | `parent_interface`                      | `parent`                                       |
+|                     | `child_interfaces`                      | `children`                                     |
 
 ### Removed Database Fields
 

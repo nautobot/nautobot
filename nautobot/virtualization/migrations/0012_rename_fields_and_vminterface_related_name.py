@@ -3,11 +3,15 @@
 from django.db import migrations, models
 import django.db.models.deletion
 
+import nautobot.extras.utils
+
 
 class Migration(migrations.Migration):
 
     dependencies = [
         ("virtualization", "0011_alter_vminterface_mac_address"),
+        ("contenttypes", "0002_remove_content_type_name"),
+        ("extras", "0055_alter_joblogentry_scheduledjob_webhook_fields"),
     ]
 
     operations = [
@@ -55,6 +59,30 @@ class Migration(migrations.Migration):
                 on_delete=django.db.models.deletion.CASCADE,
                 related_name="children",
                 to="virtualization.vminterface",
+            ),
+        ),
+        migrations.AlterField(
+            model_name="virtualmachine",
+            name="local_config_context_data_owner_content_type",
+            field=models.ForeignKey(
+                blank=True,
+                default=None,
+                limit_choices_to=nautobot.extras.utils.FeatureQuery("config_context_owners"),
+                null=True,
+                on_delete=django.db.models.deletion.CASCADE,
+                related_name="virtualization_virtualmachine_related",
+                to="contenttypes.contenttype",
+            ),
+        ),
+        migrations.AlterField(
+            model_name="virtualmachine",
+            name="local_config_context_schema",
+            field=models.ForeignKey(
+                blank=True,
+                null=True,
+                on_delete=django.db.models.deletion.SET_NULL,
+                related_name="virtualization_virtualmachine_related",
+                to="extras.configcontextschema",
             ),
         ),
     ]

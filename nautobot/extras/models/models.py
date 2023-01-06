@@ -163,6 +163,7 @@ class ConfigContextModel(models.Model, ConfigContextSchemaValidationMixin):
         on_delete=models.SET_NULL,
         null=True,
         blank=True,
+        related_name="%(app_label)s_%(class)s_related",
         help_text="Optional schema to validate the structure of the data",
     )
     # The local context data *may* be owned by another model, such as a GitRepository, or it may be un-owned
@@ -173,6 +174,7 @@ class ConfigContextModel(models.Model, ConfigContextSchemaValidationMixin):
         default=None,
         null=True,
         blank=True,
+        related_name="%(app_label)s_%(class)s_related",
     )
     local_config_context_data_owner_object_id = models.UUIDField(default=None, null=True, blank=True)
     local_config_context_data_owner = GenericForeignKey(
