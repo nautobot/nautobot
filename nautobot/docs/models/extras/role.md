@@ -14,4 +14,4 @@ Roles may be managed by navigating to **Organization > Roles** in the navigation
 
 When using CSV import to reference a `role` field on an object, the `Role.name` field is used.
 
-Visit [role-internals](../../development/role-internals.md) to learn more about working with `role` as a developer.`
+Visit [role-internals](../../development/role-internals.md) to learn more about working with `role` as a developer.

@@ -30,6 +30,7 @@ from nautobot.extras.forms import (
     RoleModelBulkEditFormMixin,
     RoleModelCSVFormMixin,
     RoleModelFilterFormMixin,
+    RoleRequiredRoleModelCSVFormMixin,
     StatusModelBulkEditFormMixin,
     StatusModelCSVFormMixin,
     StatusModelFilterFormMixin,
@@ -1952,7 +1953,7 @@ class DeviceForm(LocatableModelFormMixin, NautobotModelForm, TenancyForm, LocalC
             self.fields["position"].widget.choices = [(position, f"U{position}")]
 
 
-class BaseDeviceCSVForm(StatusModelCSVFormMixin, RoleModelCSVFormMixin, CustomFieldModelCSVForm):
+class BaseDeviceCSVForm(StatusModelCSVFormMixin, CustomFieldModelCSVForm):
     tenant = CSVModelChoiceField(
         queryset=Tenant.objects.all(),
         required=False,
@@ -2002,7 +2003,7 @@ class BaseDeviceCSVForm(StatusModelCSVFormMixin, RoleModelCSVFormMixin, CustomFi
             self.fields["device_type"].queryset = self.fields["device_type"].queryset.filter(**params)
 
 
-class DeviceCSVForm(LocatableModelCSVFormMixin, BaseDeviceCSVForm):
+class DeviceCSVForm(LocatableModelCSVFormMixin, BaseDeviceCSVForm, RoleRequiredRoleModelCSVFormMixin):
     rack_group = CSVModelChoiceField(
         queryset=RackGroup.objects.all(),
         to_field_name="name",

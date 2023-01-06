@@ -52,7 +52,6 @@ The `ipam.Role`, `dcim.RackRole`, and `dcim.DeviceRole` models have been removed
 |-------------------|----------------|
 | `dcim.DeviceRole` | `extras.Role`  |
 | `dcim.RackRole`   | `extras.Role`  |
-| `extras.Role`     | `extras.Role`  |
 | `ipam.Role`       | `extras.Role`  |
 
 ## GraphQL and REST API Changes
@@ -61,7 +60,7 @@ The `ipam.Role`, `dcim.RackRole`, and `dcim.DeviceRole` models have been removed
 
 | Model       | Field          | Changes                                                                                                  |
 |-------------|----------------|----------------------------------------------------------------------------------------------------------|
-| Ipaddress   | `role`         | `/ipam/ip-addresses/` endpoint now uses role nested serializer for the role field, rather than a string. |
+| IPAddress   | `role`         | `/ipam/ip-addresses/` endpoint now uses role nested serializer for the role field, rather than a string. |
 | RackGroup   | `rack_count`   | Now only counts Racks directly belonging to this RackGroup, not those belonging to its descendants.      |
 | Region      | `site_count`   | Now only counts Sites directly belonging to this Region, not those belonging to its descendants.         |
 | TenantGroup | `tenant_count` | Now only counts Tenants directly belonging to this TenantGroup, not those belonging to its descendants.  |
@@ -88,9 +87,9 @@ These endpoints `/ipam/roles/`, `/dcim/rack-roles/` and `/dcim/device-roles/` ar
 
 | Removed Endpoints      | Replaced With      |
 |------------------------|--------------------|
-| `/dcim/device-roles/`  | `_/extras/roles/`  |
-| `/dcim/rack-roles/`    | `_/extras/roles/`  |
-| `/ipam/roles/`         | `_/extras/roles/`  |
+| `/dcim/device-roles/`  | `/extras/roles/`  |
+| `/dcim/rack-roles/`    | `/extras/roles/`  |
+| `/ipam/roles/`         | `/extras/roles/`  |
 
 ## UI, GraphQL, and REST API Filter Changes
 

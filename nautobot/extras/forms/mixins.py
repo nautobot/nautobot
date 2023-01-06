@@ -54,6 +54,7 @@ __all__ = (
     "RoleModelBulkEditFormMixin",
     "RoleModelCSVFormMixin",
     "RoleModelFilterFormMixin",
+    "RoleRequiredRoleModelCSVFormMixin",
     "StatusBulkEditFormMixin",
     "StatusFilterFormMixin",
 )
@@ -691,6 +692,11 @@ class RelationshipModelFilterFormMixin(forms.Form):
             self.relationships.append(field_name)
 
 
+#
+# Role
+#
+
+
 class RoleModelBulkEditFormMixin(forms.Form):
     """Mixin to add non-required `role` choice field to forms."""
 
@@ -721,10 +727,18 @@ class RoleModelFilterFormMixin(forms.Form):
 
 
 class RoleModelCSVFormMixin(CSVModelForm):
-    """Mixin to add a required `role` choice field to CSV import forms."""
+    """Mixin to add a non-required `role` choice field to CSV import forms."""
 
     role = CSVModelChoiceField(
         queryset=Role.objects.all(), to_field_name="name", required=False, help_text="Assigned role"
+    )
+
+
+class RoleRequiredRoleModelCSVFormMixin(CSVModelForm):
+    """Mixin to add a required `role` choice field to CSV import forms."""
+
+    role = CSVModelChoiceField(
+        queryset=Role.objects.all(), to_field_name="name", required=True, help_text="Assigned role"
     )
 
 

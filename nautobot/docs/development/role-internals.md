@@ -23,6 +23,8 @@ Any filter form that is intended to have a `role` field must inherit from `nauto
 
 Any bulk edit form that is intended to have a `role` field must inherit from `nautobot.extras.forms.RoleModelBulkEditFormMixin`. This mixin adds a non-required `role` field to the form, and constrains the eligible role choices to the object type being edited.
 
+Any CSV import form that is intended to have a required or non-required `role` field must inherit from either `nautobot.extras.forms.RoleRequiredRoleModelCSVFormMixin` or `nautobot.extras.forms.RoleModelCSVFormMixin`, respectively, which adds the specified role field to the form and constrains the eligible role choices to the object type being imported.
+
 ## `RoleSerializerField` serializer field
 
 Any serializer that is intended to have a `role` field must either inherit from one of these:

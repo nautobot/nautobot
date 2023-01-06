@@ -54,17 +54,32 @@
 {% block content_full_width_page %}
     <div class="panel panel-default">
          <div class="panel-heading">
-             <strong>IPAddresses</strong>
+             <strong>Devices</strong>
+         </div>
+         {% include 'inc/table.html' with table=device_table %}
+         {% if perms.ipam.add_device %}
+             <div class="panel-footer text-right noprint">
+                 <a href="{% url 'dcim:device_add' %}?role={{ object.pk }}" class="btn btn-xs btn-primary">
+                     <span class="mdi mdi-plus-thick" aria-hidden="true"></span> Add Device
+                 </a>
+             </div>
+         {% endif %}
+     </div>
+    {% include 'inc/paginator.html' with paginator=vlan_table.paginator page=device_table.page %}
+    <div class="panel panel-default">
+         <div class="panel-heading">
+             <strong>IP Addresses</strong>
          </div>
          {% include 'inc/table.html' with table=ipaddress_table %}
          {% if perms.ipam.add_ipaddress %}
              <div class="panel-footer text-right noprint">
                  <a href="{% url 'ipam:ipaddress_add' %}?role={{ object.pk }}" class="btn btn-xs btn-primary">
-                     <span class="mdi mdi-plus-thick" aria-hidden="true"></span> Add IPAddress
+                     <span class="mdi mdi-plus-thick" aria-hidden="true"></span> Add IP Address
                  </a>
              </div>
          {% endif %}
      </div>
+    {% include 'inc/paginator.html' with paginator=vlan_table.paginator page=ipaddress_table.page %}
      <div class="panel panel-default">
          <div class="panel-heading">
              <strong>Prefixes</strong>
@@ -73,12 +88,27 @@
          {% if perms.ipam.add_prefix %}
              <div class="panel-footer text-right noprint">
                  <a href="{% url 'ipam:prefix_add' %}?role={{ object.pk }}" class="btn btn-xs btn-primary">
-                     <span class="mdi mdi-plus-thick" aria-hidden="true"></span> Add prefix
+                     <span class="mdi mdi-plus-thick" aria-hidden="true"></span> Add Prefix
                  </a>
              </div>
          {% endif %}
      </div>
-     <div class="panel panel-default">
+    {% include 'inc/paginator.html' with paginator=vlan_table.paginator page=prefix_table.page %}
+    <div class="panel panel-default">
+         <div class="panel-heading">
+             <strong>Virtual Machines</strong>
+         </div>
+         {% include 'inc/table.html' with table=virtual_machine_table %}
+         {% if perms.virtualization.add_virtualmachine %}
+             <div class="panel-footer text-right noprint">
+                 <a href="{% url 'virtualization:virtualmachine_add' %}?role={{ object.pk }}" class="btn btn-xs btn-primary">
+                     <span class="mdi mdi-plus-thick" aria-hidden="true"></span> Add Virtual Machine
+                 </a>
+             </div>
+         {% endif %}
+     </div>
+    {% include 'inc/paginator.html' with paginator=vlan_table.paginator page=virtual_machine_table.page %}
+    <div class="panel panel-default">
          <div class="panel-heading">
              <strong>VLANs</strong>
          </div>
@@ -86,11 +116,11 @@
          {% if perms.ipam.add_vlan %}
              <div class="panel-footer text-right noprint">
                  <a href="{% url 'ipam:vlan_add' %}?role={{ object.pk }}" class="btn btn-xs btn-primary">
-                     <span class="mdi mdi-plus-thick" aria-hidden="true"></span> Add vlan
+                     <span class="mdi mdi-plus-thick" aria-hidden="true"></span> Add VLAN
                  </a>
              </div>
          {% endif %}
      </div>
-     {% include 'inc/paginator.html' with paginator=vlan_table.paginator page=vlan_table.page %}
+    {% include 'inc/paginator.html' with paginator=vlan_table.paginator page=vlan_table.page %}
      <div class="row"></div>
  {% endblock content_full_width_page %}

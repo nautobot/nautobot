@@ -1814,6 +1814,14 @@ class RoleUIViewSet(viewsets.NautobotUIViewSet):
         if self.action == "retrieve":
             context["content_types"] = instance.content_types.order_by("app_label", "model")
 
+            devices = instance.dcim_device_related.select_related(
+                "status",
+                "site",
+                "tenant",
+                "role",
+                "rack",
+                "device_type",
+            )
             ipaddress = instance.ipam_ipaddress_related.select_related(
                 "vrf",
                 "tenant",
@@ -1826,6 +1834,12 @@ class RoleUIViewSet(viewsets.NautobotUIViewSet):
                 "vlan",
                 "vrf",
             )
+            virtual_machines = instance.virtualization_virtualmachine_related.select_related(
+                "cluster",
+                "role",
+                "status",
+                "tenant",
+            )
             vlans = instance.ipam_vlan_related.select_related(
                 "group",
                 "site",
@@ -1833,10 +1847,14 @@ class RoleUIViewSet(viewsets.NautobotUIViewSet):
                 "tenant",
             )
 
+            device_table = DeviceTable(devices)
+            device_table.columns.hide("role")
             ipaddress_table = IPAddressTable(ipaddress)
             ipaddress_table.columns.hide("role")
             prefix_table = PrefixTable(prefixes)
             prefix_table.columns.hide("role")
+            virtual_machine_table = VirtualMachineTable(virtual_machines)
+            virtual_machine_table.columns.hide("role")
             vlan_table = VLANTable(vlans)
             vlan_table.columns.hide("role")
 
@@ -1845,14 +1863,18 @@ class RoleUIViewSet(viewsets.NautobotUIViewSet):
                 "per_page": get_paginate_count(request),
             }
 
+            RequestConfig(request, paginate).configure(device_table)
             RequestConfig(request, paginate).configure(ipaddress_table)
             RequestConfig(request, paginate).configure(prefix_table)
+            RequestConfig(request, paginate).configure(virtual_machine_table)
             RequestConfig(request, paginate).configure(vlan_table)
 
             context.update(
                 {
+                    "device_table": device_table,
                     "ipaddress_table": ipaddress_table,
                     "prefix_table": prefix_table,
+                    "virtual_machine_table": virtual_machine_table,
                     "vlan_table": vlan_table,
                 }
             )
