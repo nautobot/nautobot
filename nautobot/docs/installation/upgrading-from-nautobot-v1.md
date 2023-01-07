@@ -26,6 +26,14 @@
 | Region        | `level`       | `tree_depth` |
 | TenantGroup   | `level`       | `tree_depth` |
 
+### Renamed Foregin Key Fields
+
+| Model         | Renamed Foregin Key    | New Name                 |
+|---------------|------------------------|--------------------------|
+| VLAN          | `group`                | `vlan_group`             |
+| Service       | `ipaddresses`          | `ip_addresses`           |
+| Tenant        | `group`                | `tenant_group`           |
+
 ### Removed Database Fields
 
 | Model         | Removed Field |
