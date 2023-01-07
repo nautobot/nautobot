@@ -4,7 +4,7 @@
     <td>{{ service.get_protocol_display }}</td>
     <td>{{ service.port_list }}</td>
     <td>
-        {% for ip in service.ipaddresses.all %}
+        {% for ip in service.ip_addresses.all %}
             {{ ip|hyperlinked_object }}<br>
         {% empty %}
             <span class="text-muted">All IPs</span>

@@ -340,7 +340,7 @@ class VirtualMachineView(generic.ObjectView):
         services = (
             Service.objects.restrict(request.user, "view")
             .filter(virtual_machine=instance)
-            .prefetch_related(Prefetch("ipaddresses", queryset=IPAddress.objects.restrict(request.user)))
+            .prefetch_related(Prefetch("ip_addresses", queryset=IPAddress.objects.restrict(request.user)))
         )
 
         return {
