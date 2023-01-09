@@ -3,7 +3,6 @@ from django.core.validators import MaxLengthValidator, MaxValueValidator, MinVal
 from django.db import models
 from netaddr import EUI, AddrFormatError, mac_unix_expanded
 
-from nautobot.core.deprecation import class_deprecated_in_favor_of
 from nautobot.core.fields import JSONArrayField
 from nautobot.ipam.constants import BGP_ASN_MAX, BGP_ASN_MIN
 

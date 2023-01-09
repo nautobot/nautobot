@@ -13,7 +13,6 @@ from nautobot.core import testing, utils
 from nautobot.core.models.change_logging import ChangeLoggedModel
 from nautobot.core.testing import mixins, views
 from nautobot.extras import choices as extras_choices
-from nautobot.extras import models as extras_models
 from nautobot.extras import registry
 from nautobot.users import models as users_models
 
