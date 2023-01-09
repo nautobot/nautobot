@@ -46,8 +46,6 @@ django-auth-ldap = {version = "~4.1.0", optional = true}
 django-cacheops = "~6.0"
 # Base functionality for task scheduling with Celery
 django-celery-beat = "~2.2.1"
-# Provides a database backend & models for Celery task results
-django-celery-results = "~2.4.0"
 # Management of app configuration via the Django admin UI
 django-constance = {version = "~2.9.0", extras = ["database"]}
 # Permit cross-domain API requests
@@ -70,6 +68,8 @@ django-prometheus = "~2.2.0"
 prometheus-client = "~0.15.0"
 # Redis cache for Django used for distributed locking
 django-redis = "~5.2.0"
+# RQ (Redis Queueing) for background handling of webhooks, jobs, etc.
+django-rq = "~2.5.1"
 # External Storage support (i.e. S3)
 django-storages = {version = "~1.13.0", optional = true}
 # Advanced HTML tables
@@ -132,6 +132,7 @@ social-auth-core = {version = "~4.3.0", optional = true, extras = ["openidconnec
 social-auth-app-django = "~5.0.0"
 # Rendering of SVG images (for rack elevations, etc.)
 svgwrite = "~1.4.2"
+
 
 [tool.poetry.extras]
 all = ["django-auth-ldap", "django-storages", "mysqlclient", "napalm", "social-auth-core"]
