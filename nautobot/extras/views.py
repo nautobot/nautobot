@@ -271,7 +271,7 @@ class ConfigContextSchemaObjectValidationView(generic.ObjectView):
         # Device table
         device_table = DeviceTable(
             # v2 TODO(jathan): Replace prefetch_related with select_related
-            data=instance.device_set.prefetch_related(
+            data=instance.dcim_device_related.prefetch_related(
                 "tenant", "site", "rack", "device_type", "device_role", "primary_ip"
             ),
             orderable=False,
@@ -294,7 +294,9 @@ class ConfigContextSchemaObjectValidationView(generic.ObjectView):
         # Virtual machine table
         virtual_machine_table = VirtualMachineTable(
             # v2 TODO(jathan): Replace prefetch_related with select_related
-            data=instance.virtualmachine_set.prefetch_related("cluster", "role", "tenant", "primary_ip"),
+            data=instance.virtualization_virtualmachine_related.prefetch_related(
+                "cluster", "role", "tenant", "primary_ip"
+            ),
             orderable=False,
             extra_columns=[
                 (
