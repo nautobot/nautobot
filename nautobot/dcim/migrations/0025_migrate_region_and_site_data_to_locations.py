@@ -106,9 +106,7 @@ def create_site_location_type_locations(
                 location_class.objects.bulk_create(location_instances, batch_size=1000)
             except IntegrityError as e:
                 logger.error(
-                    "\n"
-                    + e.args[0]
-                    + "\nPlease consider changing the slug attribute of this Region instance to resolve this conflict."
+                    f"\n{e.args[0]} \nPlease consider changing the slug attribute of this Region instance to resolve this conflict."
                 )
             count = 0
             location_instances = []
@@ -120,9 +118,7 @@ def create_site_location_type_locations(
             location_class.objects.bulk_create(location_instances, batch_size=1000)
         except IntegrityError as e:
             logger.error(
-                "\n"
-                + e.args[0]
-                + "\nPlease consider changing the slug of the Region and/or Site instance to resolve this conflict."
+                f"\n{e.args[0]} \nPlease consider changing the slug attribute of this Region instance to resolve this conflict."
             )
 
     # Set existing top level locations to have site locations as their parents
