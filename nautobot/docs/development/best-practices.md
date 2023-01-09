@@ -84,7 +84,7 @@ class ExampleModel(TaggedModel):
 
 ## Getting URL Routes
 
-When developing new models a need often arises to retrieve a reversible route for a model to access it in either the web UI or the REST API. When this time comes, you **must** use `nautobot.utilities.utils.get_route_for_model`. You **must not** write your own logic to construct route names.
+When developing new models a need often arises to retrieve a reversible route for a model to access it in either the web UI or the REST API. When this time comes, you **must** use `nautobot.core.utils.get_route_for_model`. You **must not** write your own logic to construct route names.
 
 ```python
 

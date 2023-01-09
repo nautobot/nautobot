@@ -1,8 +1,8 @@
 from django import forms
 from django.db.models import Q
 
+from nautobot.core.constants import BOOLEAN_WITH_BLANK_CHOICES
 from nautobot.core.forms import (
-    BOOLEAN_WITH_BLANK_CHOICES,
     BootstrapMixin,
     BulkEditNullBooleanSelect,
     CSVChoiceField,

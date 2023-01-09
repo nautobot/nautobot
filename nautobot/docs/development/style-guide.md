@@ -141,12 +141,12 @@ Always use absolute imports instead of relative imports.
 
     ```py
     # absolute import
-    # relative import (do not use)
-    import constants
 
     from nautobot.dcim import constants
     from nautobot.dcim.models import Device
 
+    # relative import (do not use)
+    import constants
     from .models import Device
     ```
 
@@ -171,6 +171,11 @@ When using external libraries you may need to import multiple different modules 
 
     ```py
     # from within the current app
+    from nautobot.extras import models
+    
+    # from a different Nautobot app
+    from nautobot.dcim import models as dcim_models
+    
     # other libraries
     from django.db import models as django_models
     from tree_queries import models as tree_queries_models

@@ -1250,10 +1250,10 @@ Apps can declare custom endpoints on Nautobot's REST API to retrieve or manipula
 First, create a serializer for the `Animal` model, in `api/serializers.py`:
 
 ```python
-from nautobot_animal_sounds.models import Animal
-
 # api/serializers.py
 from nautobot.apps.api import ValidatedModelSerializer
+
+from nautobot_animal_sounds.models import Animal
 
 
 class AnimalSerializer(ValidatedModelSerializer):
@@ -1270,10 +1270,10 @@ class AnimalSerializer(ValidatedModelSerializer):
 Next, create a generic API view set that allows basic CRUD (create, read, update, and delete) operations for Animal instances. This is defined in `api/views.py`:
 
 ```python
-from nautobot_animal_sounds.models import Animal
 # api/views.py
 from rest_framework.viewsets import ModelViewSet
 
+from nautobot_animal_sounds.models import Animal
 from .serializers import AnimalSerializer
 
 

@@ -2,8 +2,9 @@ from django import forms
 from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ValidationError
 
+
+from nautobot.core.constants import BOOLEAN_WITH_BLANK_CHOICES
 from nautobot.core.forms import (
-    BOOLEAN_WITH_BLANK_CHOICES,
     BootstrapMixin,
     BulkEditNullBooleanSelect,
     BulkRenameForm,

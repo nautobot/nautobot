@@ -9,6 +9,7 @@ from django.urls import reverse
 
 from nautobot.core import utils
 from nautobot.core.constants import OBJ_TYPE_CHOICES
+from nautobot.core.forms.utils import add_blank_choice
 
 __all__ = (
     "BootstrapMixin",
@@ -205,7 +206,6 @@ class DynamicFilterForm(BootstrapMixin, forms.Form):
 
     def __init__(self, *args, filterset_class=None, **kwargs):
         super().__init__(*args, **kwargs)
-        from nautobot.core.forms import add_blank_choice  # Avoid circular import
 
         # cls.model is set at `dynamic_formset_factory()`
         self.filterset_class = filterset_class or getattr(self, "filterset_class", None)

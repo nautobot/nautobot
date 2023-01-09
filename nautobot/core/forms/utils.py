@@ -3,8 +3,7 @@ import re
 from django import forms as django_forms
 from django.forms.models import fields_for_model
 
-from nautobot.core import querysets
-from nautobot.core.forms import constants
+from nautobot.core import constants, querysets
 
 __all__ = (
     "add_blank_choice",

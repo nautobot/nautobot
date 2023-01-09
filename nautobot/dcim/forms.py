@@ -12,8 +12,8 @@ from netaddr.core import AddrFormatError
 from timezone_field import TimeZoneFormField
 
 from nautobot.circuits.models import Circuit, CircuitTermination, Provider
+from nautobot.core.constants import BOOLEAN_WITH_BLANK_CHOICES
 from nautobot.core.forms import (
-    BOOLEAN_WITH_BLANK_CHOICES,
     APISelect,
     APISelectMultiple,
     BootstrapMixin,

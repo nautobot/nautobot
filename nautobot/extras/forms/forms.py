@@ -9,8 +9,8 @@ from django.urls.base import reverse
 from django.utils.safestring import mark_safe
 
 from nautobot.core.deprecation import class_deprecated_in_favor_of
+from nautobot.core.constants import BOOLEAN_WITH_BLANK_CHOICES
 from nautobot.core.forms import (
-    BOOLEAN_WITH_BLANK_CHOICES,
     APISelect,
     APISelectMultiple,
     BootstrapMixin,

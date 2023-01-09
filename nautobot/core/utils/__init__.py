@@ -28,6 +28,14 @@ from django_filters.utils import verbose_lookup_expr
 from taggit.managers import _TaggableManager
 
 from nautobot.core import constants, exceptions
+from nautobot.core.forms.widgets import (
+    DatePicker,
+    DateTimePicker,
+    StaticSelect2,
+    StaticSelect2Multiple,
+    TimePicker,
+)
+from nautobot.core.forms.fields import DynamicModelMultipleChoiceField, MultipleContentTypeField
 from nautobot.dcim import choices
 
 # Check if field name contains a lookup expr
@@ -798,16 +806,6 @@ def get_filterset_parameter_form_field(model, parameter):
     """
     # Avoid circular import
     from nautobot.core.filters import ContentTypeMultipleChoiceFilter
-    from nautobot.core.forms import (
-        BOOLEAN_CHOICES,
-        DatePicker,
-        DateTimePicker,
-        DynamicModelMultipleChoiceField,
-        MultipleContentTypeField,
-        StaticSelect2,
-        StaticSelect2Multiple,
-        TimePicker,
-    )
     from nautobot.extras.filters import StatusFilter
     from nautobot.extras.models import Status, Tag
     from nautobot.extras.utils import ChangeLoggedModelsQuery, TaggableClassesQuery
@@ -851,7 +849,7 @@ def get_filterset_parameter_form_field(model, parameter):
     elif isinstance(field, (BooleanFilter,)):  # Yes / No choice
         form_field_class = forms.ChoiceField
         form_field_class.widget = StaticSelect2()
-        form_attr = {"choices": BOOLEAN_CHOICES}
+        form_attr = {"choices": constants.BOOLEAN_CHOICES}
 
         form_field = form_field_class(**form_attr)
     elif isinstance(field, DateTimeFilter):

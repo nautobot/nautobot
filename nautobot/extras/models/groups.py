@@ -11,8 +11,8 @@ from django.urls import reverse
 from django.utils.functional import cached_property
 import django_filters
 
+from nautobot.core.constants import BOOLEAN_WITH_BLANK_CHOICES
 from nautobot.core.fields import AutoSlugField
-from nautobot.core.forms.constants import BOOLEAN_WITH_BLANK_CHOICES
 from nautobot.core.forms.fields import DynamicModelChoiceField
 from nautobot.core.forms.widgets import StaticSelect2
 from nautobot.core.models import BaseModel, OrganizationalModel

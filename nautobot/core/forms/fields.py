@@ -15,9 +15,8 @@ from django.forms.fields import BoundField, InvalidJSONInput
 from django.forms.fields import JSONField as _JSONField
 from django.urls import reverse
 
-from nautobot.core import choices as utilities_choices
+from nautobot.core import choices as utilities_choices, constants
 from nautobot.core import utils, validators
-from nautobot.core.forms import constants
 from nautobot.core.forms import utils as forms_utils
 from nautobot.core.forms import widgets
 

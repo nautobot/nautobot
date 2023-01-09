@@ -39,18 +39,21 @@ Device Redundancy Groups have been added to model groups of distinct devices tha
 The new `nautobot.apps` module provides a common starting point for app (a.k.a. plugin) developers to find all of the functions and classes that are recommended for use in apps. For example, instead of needing to look through the entire Nautobot codebase to find the appropriate classes, and then write:
 
 ```python
+from nautobot.extras.forms import NautobotModelForm
 from nautobot.core.forms import BulkEditForm, CSVModelForm
 from nautobot.core.forms.fields import DynamicModelChoiceField
-from nautobot.extras.forms import NautobotModelForm
 
 ```
 
 an app developer can now refer to `nautobot.apps.forms` and then write simply:
 
 ```python
-from nautobot.apps.forms import (BulkEditForm, CSVModelForm,
-                                 DynamicModelChoiceField, NautobotModelForm)
-
+from nautobot.apps.forms import (
+    BulkEditForm,
+    CSVModelForm,
+    DynamicModelChoiceField,
+    NautobotModelForm,
+)
 ```
 
 For more details, please refer to the updated [app developer documentation](../plugins/development.md).
