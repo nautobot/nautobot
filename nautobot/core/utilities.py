@@ -15,7 +15,7 @@ def check_filter_for_display(filters, field_name, values):
     Returns:
         (dict): A dict containing:
             - name: (str) Field name
-            - display: (str) Resolved field name, whether that's a field label of fallback to inputted `field_name` if label unavailable
+            - display: (str) Resolved field name, whether that's a field label or fallback to inputted `field_name` if label unavailable
             - values: (list) List of dictionaries with the same `name` and `display` keys
     """
     values = values if isinstance(values, (list, tuple)) else [values]
