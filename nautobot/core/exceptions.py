@@ -37,5 +37,3 @@ class FilterSetFieldNotFound(Exception):
 
 class BranchDoesNotExist(Exception):
     """Exception to be raised when a git branch does not exist."""
-
-    pass

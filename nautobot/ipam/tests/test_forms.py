@@ -6,9 +6,7 @@ from netaddr import IPNetwork
 
 from nautobot.dcim.models import Device, DeviceRole, DeviceType, Interface, Manufacturer, Site
 from nautobot.extras.models.statuses import Status
-from nautobot.ipam import forms
-from nautobot.ipam import models
-from nautobot.ipam import models as ipam_models
+from nautobot.ipam import forms, models as ipam_models
 from nautobot.ipam.forms import mixins
 
 
