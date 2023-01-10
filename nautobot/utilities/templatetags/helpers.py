@@ -679,3 +679,13 @@ def custom_branding_or_static(branding_asset, static_asset):
     if settings.BRANDING_FILEPATHS.get(branding_asset):
         return f"{ settings.MEDIA_URL }{ settings.BRANDING_FILEPATHS.get(branding_asset) }"
     return StaticNode.handle_simple(static_asset)
+
+
+@library.filter()
+@register.filter()
+def hyperlinked_object_with_color(obj):
+    """Render the display view of an object."""
+    if obj:
+        content = f'<span class="label" style="color: {fgcolor(obj.color)}; background-color: #{obj.color}">{hyperlinked_object(obj)}</span>'
+        return format_html(content)
+    return "—"

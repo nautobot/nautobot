@@ -1,6 +1,8 @@
 from django import forms
 
-from nautobot.utilities.forms import BootstrapMixin
+from nautobot.utilities.forms import (
+    BootstrapMixin,
+)
 
 OBJ_TYPE_CHOICES = (
     ("", "All Objects"),

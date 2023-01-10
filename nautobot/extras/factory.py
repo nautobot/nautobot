@@ -5,10 +5,40 @@ import factory
 import faker
 
 from nautobot.core.factory import OrganizationalModelFactory
-from nautobot.extras.models import Status, Tag
-from nautobot.extras.utils import FeatureQuery, TaggableClassesQuery
+from nautobot.extras.models import Role, Status, Tag
+from nautobot.extras.utils import FeatureQuery, RoleModelsQuery, TaggableClassesQuery
 from nautobot.utilities.choices import ColorChoices
 from nautobot.utilities.factory import get_random_instances
+
+
+class RoleFactory(OrganizationalModelFactory):
+    """Role model factory."""
+
+    class Meta:
+        model = Role
+        exclude = (
+            "has_description",
+            "has_weight",
+        )
+
+    name = factory.LazyFunction(
+        lambda: "".join(word.title() for word in faker.Faker().words(nb=2, part_of_speech="adjective", unique=True))
+    )
+    slug = factory.LazyAttribute(lambda role: slugify(role.name))
+    color = factory.Iterator(ColorChoices.CHOICES, getter=lambda choice: choice[0])
+    has_weight = factory.Faker("pybool")
+    weight = factory.Maybe("has_weight", factory.Faker("pyint"), None)
+
+    has_description = factory.Faker("pybool")
+    description = factory.Maybe("has_description", factory.Faker("text", max_nb_chars=200), "")
+
+    @factory.post_generation
+    def content_types(self, create, extracted, **kwargs):
+        if create:
+            if extracted:
+                self.content_types.set(extracted)
+            else:
+                self.content_types.set(get_random_instances(lambda: RoleModelsQuery().as_queryset(), minimum=1))
 
 
 class StatusFactory(OrganizationalModelFactory):

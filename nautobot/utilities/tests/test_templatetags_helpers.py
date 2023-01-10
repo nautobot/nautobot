@@ -6,6 +6,7 @@ from django.test import TestCase
 from example_plugin.models import AnotherExampleModel, ExampleModel
 
 from nautobot.dcim import models
+from nautobot.ipam.models import VLAN
 from nautobot.utilities.templatetags import helpers
 
 
@@ -190,3 +191,16 @@ class NautobotTemplatetagsHelperTest(TestCase):
                 '<span class="text-danger"><i class="mdi mdi-close-thick" title="No"></i></span>',
             )
         self.assertEqual(helpers.render_boolean(None), '<span class="text-muted">&mdash;</span>')
+
+    def test_hyperlinked_object_with_color(self):
+        vlan_with_role = VLAN.objects.filter(role__isnull=False).first()
+        role = vlan_with_role.role
+        color = role.color
+        fbcolor = helpers.fgcolor(color)
+        display = helpers.hyperlinked_object(role)
+        self.assertEqual(
+            helpers.hyperlinked_object_with_color(obj=role),
+            f'<span class="label" style="color: {fbcolor}; background-color: #{color}">{display}</span>',
+        )
+        # Assert when obj is None
+        self.assertEqual(helpers.hyperlinked_object_with_color(obj=None), "—")
