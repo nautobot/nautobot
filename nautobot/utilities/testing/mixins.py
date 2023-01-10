@@ -7,9 +7,9 @@ from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import FieldDoesNotExist
 from django.db.models import JSONField, ManyToManyField
 from django.forms.models import model_to_dict
-from django.test import Client
 from django.utils.text import slugify
 from netaddr import IPNetwork
+from rest_framework.test import APIClient
 from taggit.managers import TaggableManager
 
 from nautobot.extras.management import populate_status_choices
@@ -24,10 +24,29 @@ from .utils import extract_form_failures
 User = get_user_model()
 
 
+class NautobotTestClient(APIClient):
+    """
+    Base client class for Nautobot testing.
+
+    DO NOT USE THIS IN PRODUCTION NAUTOBOT CODE.
+    """
+
+    def __init__(self, *args, **kwargs):
+        """
+        Default the SERVER_NAME to "nautobot.example.com" rather than Django's default "testserver".
+
+        This matches the ALLOWED_HOSTS set in nautobot/core/tests/nautobot_config.py and
+        helps to protect us against issues like https://github.com/nautobot/nautobot/issues/3065.
+        """
+        kwargs.setdefault("SERVER_NAME", "nautobot.example.com")
+        super().__init__(*args, **kwargs)
+
+
 class NautobotTestCaseMixin:
     """Base class for all Nautobot-specific unit tests."""
 
     user_permissions = ()
+    client_class = NautobotTestClient
 
     def setUpNautobot(self, client=True, populate_status=False):
         """Setup shared testuser, statuses and client."""
@@ -41,7 +60,8 @@ class NautobotTestCaseMixin:
 
         if client:
             # Initialize the test client
-            self.client = Client()
+            if not hasattr(self, "client") or self.client is None:
+                self.client = self.client_class()
 
             # Force login explicitly with the first-available backend
             self.client.force_login(self.user)

@@ -31,7 +31,7 @@ __all__ = (
 
 @tag("unit")
 @override_settings(PAGINATE_COUNT=65000)
-class TestCase(_TestCase, NautobotTestCaseMixin):
+class TestCase(NautobotTestCaseMixin, _TestCase):
     """Base class for all Nautobot-specific unit tests."""
 
     def setUp(self):

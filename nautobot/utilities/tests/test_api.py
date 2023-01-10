@@ -1,5 +1,5 @@
 from django.contrib.contenttypes.models import ContentType
-from django.test import Client, TestCase
+from django.test import TestCase
 from django.urls import reverse
 from rest_framework import status
 
@@ -7,7 +7,7 @@ from nautobot.dcim.models import Region, Site
 from nautobot.extras.choices import CustomFieldTypeChoices
 from nautobot.extras.models import CustomField
 from nautobot.ipam.models import VLAN
-from nautobot.utilities.testing import APITestCase, disable_warnings
+from nautobot.utilities.testing import APITestCase, NautobotTestClient, disable_warnings
 
 
 class WritableNestedSerializerTest(APITestCase):
@@ -123,9 +123,9 @@ class WritableNestedSerializerTest(APITestCase):
 
 
 class APIDocsTestCase(TestCase):
-    def setUp(self):
-        self.client = Client()
+    client_class = NautobotTestClient
 
+    def setUp(self):
         # Populate a CustomField to activate CustomFieldSerializer
         content_type = ContentType.objects.get_for_model(Site)
         self.cf_text = CustomField(type=CustomFieldTypeChoices.TYPE_TEXT, name="test")

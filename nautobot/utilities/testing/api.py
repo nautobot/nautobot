@@ -6,7 +6,7 @@ from django.urls import reverse
 from django.test import override_settings, tag
 from django.utils.text import slugify
 from rest_framework import status
-from rest_framework.test import APIClient, APITransactionTestCase as _APITransactionTestCase
+from rest_framework.test import APITransactionTestCase as _APITransactionTestCase
 
 from nautobot.users.models import ObjectPermission, Token
 from nautobot.extras.choices import ObjectChangeActionChoices
@@ -34,19 +34,17 @@ class APITestCase(ModelTestCase):
     """
     Base test case for API requests.
 
-    client_class: Test client class
     api_version: Specific API version to test. Leave unset to test the default behavior. Override with set_api_version()
     """
 
-    client_class = APIClient
     api_version = None
 
     def setUp(self):
         """
         Create a token for API calls.
         """
-        # Do not initialize the client, it conflicts with the APIClient.
-        super().setUpNautobot(client=False)
+        super().setUp()
+        self.client.logout()
         self.token = Token.objects.create(user=self.user)
         self.header = {"HTTP_AUTHORIZATION": f"Token {self.token.key}"}
         if self.api_version:
