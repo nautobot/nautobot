@@ -731,13 +731,13 @@ class RegionTestCase(FilterTestCases.NameSlugFilterTestCase):
             params = {"has_children": True}
             self.assertQuerysetEqual(
                 self.filterset(params, self.queryset).qs,
-                self.queryset.filter(children__isnull=False),
+                self.queryset.filter(children__isnull=False).distinct(),
             )
         with self.subTest():
             params = {"has_children": False}
             self.assertQuerysetEqual(
                 self.filterset(params, self.queryset).qs,
-                self.queryset.filter(children__isnull=True),
+                self.queryset.filter(children__isnull=True).distinct(),
             )
 
     def test_sites(self):
