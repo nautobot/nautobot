@@ -31,7 +31,7 @@
     heading-offset=1
 %}
 {%
-    include-markdown "../models/dcim/rackrole.md"
+    include-markdown "../models/extras/role.md"
     heading-offset=1
 %}
 {%

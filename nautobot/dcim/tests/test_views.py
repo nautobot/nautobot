@@ -44,7 +44,6 @@ from nautobot.dcim.models import (
     DeviceBay,
     DeviceBayTemplate,
     DeviceRedundancyGroup,
-    DeviceRole,
     DeviceType,
     FrontPort,
     FrontPortTemplate,
@@ -64,7 +63,6 @@ from nautobot.dcim.models import (
     Rack,
     RackGroup,
     RackReservation,
-    RackRole,
     RearPort,
     RearPortTemplate,
     Region,
@@ -78,6 +76,7 @@ from nautobot.extras.models import (
     CustomFieldChoice,
     Relationship,
     RelationshipAssociation,
+    Role,
     SecretsGroup,
     Status,
     Tag,
@@ -98,8 +97,10 @@ def create_test_device(name):
     site, _ = Site.objects.get_or_create(name="Site 1", slug="site-1")
     manufacturer, _ = Manufacturer.objects.get_or_create(name="Manufacturer 1", slug="manufacturer-1")
     devicetype, _ = DeviceType.objects.get_or_create(model="Device Type 1", manufacturer=manufacturer)
-    devicerole, _ = DeviceRole.objects.get_or_create(name="Device Role 1", slug="device-role-1")
-    device = Device.objects.create(name=name, site=site, device_type=devicetype, device_role=devicerole)
+    devicerole, _ = Role.objects.get_or_create(name="Device Role")
+    device_ct = ContentType.objects.get_for_model(Device)
+    devicerole.content_types.add(device_ct)
+    device = Device.objects.create(name=name, site=site, device_type=devicetype, role=devicerole)
 
     return device
 
@@ -111,12 +112,13 @@ class RegionTestCase(ViewTestCases.OrganizationalObjectViewTestCase):
     def setUpTestData(cls):
 
         # Create three Regions
+        parent_region = Region.objects.filter(parent__isnull=True).last()
         regions = Region.objects.all()[:3]
 
         cls.form_data = {
             "name": "Region χ",
             "slug": "region-chi",
-            "parent": regions[2].pk,
+            "parent": parent_region.pk,
             "description": "A new region",
         }
 
@@ -384,35 +386,6 @@ class RackGroupTestCase(ViewTestCases.OrganizationalObjectViewTestCase):
         cls.slug_source = "name"
 
 
-class RackRoleTestCase(ViewTestCases.OrganizationalObjectViewTestCase):
-    model = RackRole
-
-    @classmethod
-    def setUpTestData(cls):
-
-        RackRole.objects.create(name="Rack Role 1", slug="rack-role-1")
-        RackRole.objects.create(name="Rack Role 2", slug="rack-role-2")
-        RackRole.objects.create(name="Rack Role 3", slug="rack-role-3")
-        RackRole.objects.create(name="Rack Role 8")
-
-        cls.form_data = {
-            "name": "Rack Role X",
-            "slug": "rack-role-x",
-            "color": "c0c0c0",
-            "description": "New role",
-        }
-
-        cls.csv_data = (
-            "name,slug,color",
-            "Rack Role 4,rack-role-4,ff0000",
-            "Rack Role 5,rack-role-5,00ff00",
-            "Rack Role 6,rack-role-6,0000ff",
-            "Rack Role 7,,0000ff",
-        )
-        cls.slug_source = "name"
-        cls.slug_test_object = "Rack Role 8"
-
-
 class RackReservationTestCase(ViewTestCases.PrimaryObjectViewTestCase):
     model = RackReservation
 
@@ -475,10 +448,7 @@ class RackTestCase(ViewTestCases.PrimaryObjectViewTestCase):
             RackGroup.objects.create(name="Rack Group 2", slug="rack-group-2", site=cls.sites[1]),
         )
 
-        rackroles = (
-            RackRole.objects.create(name="Rack Role 1", slug="rack-role-1"),
-            RackRole.objects.create(name="Rack Role 2", slug="rack-role-2"),
-        )
+        rackroles = Role.objects.get_for_model(Rack)[:2]
 
         statuses = Status.objects.get_for_model(Rack)
         cls.status_active = statuses.get(slug="active")
@@ -597,7 +567,7 @@ class RackTestCase(ViewTestCases.PrimaryObjectViewTestCase):
             DeviceType.objects.create(model="Device Type 1", slug="device-type-1", manufacturer=manufacturer),
         )
 
-        device_roles = (DeviceRole.objects.create(name="Device Role 1", slug="device-role-1"),)
+        device_roles = Role.objects.get_for_model(Device)[:1]
 
         platforms = (Platform.objects.create(name="Platform 1", slug="platform-1"),)
 
@@ -607,7 +577,7 @@ class RackTestCase(ViewTestCases.PrimaryObjectViewTestCase):
                 site=self.sites[0],
                 rack=self.racks[0],
                 device_type=device_types[0],
-                device_role=device_roles[0],
+                role=device_roles[0],
                 platform=platforms[0],
                 status=self.status_active,
             ),
@@ -616,7 +586,7 @@ class RackTestCase(ViewTestCases.PrimaryObjectViewTestCase):
                 site=self.sites[0],
                 rack=self.racks[0],
                 device_type=device_types[0],
-                device_role=device_roles[0],
+                role=device_roles[0],
                 platform=platforms[0],
                 status=self.status_active,
             ),
@@ -1296,37 +1266,6 @@ class DeviceBayTemplateTestCase(ViewTestCases.DeviceComponentTemplateViewTestCas
         }
 
 
-class DeviceRoleTestCase(ViewTestCases.OrganizationalObjectViewTestCase):
-    model = DeviceRole
-
-    @classmethod
-    def setUpTestData(cls):
-
-        DeviceRole.objects.create(name="Device Role 1", slug="device-role-1")
-        DeviceRole.objects.create(name="Device Role 2", slug="device-role-2")
-        DeviceRole.objects.create(name="Device Role 3", slug="device-role-3")
-        device_role = DeviceRole.objects.create(name="Slug Test Role 8", slug="slug-test-role-8")
-
-        cls.form_data = {
-            "name": "Device Role X",
-            "slug": "device-role-x",
-            "color": "c0c0c0",
-            "vm_role": False,
-            "description": "New device role",
-        }
-
-        cls.csv_data = (
-            "name,slug,color",
-            "Device Role 4,device-role-4,ff0000",
-            "Device Role 5,device-role-5,00ff00",
-            "Device Role 6,device-role-6,0000ff",
-            "Device Role 7,,0000ff",
-        )
-
-        cls.slug_test_object = device_role.name
-        cls.slug_source = "name"
-
-
 class PlatformTestCase(ViewTestCases.OrganizationalObjectViewTestCase):
     model = Platform
 
@@ -1379,10 +1318,7 @@ class DeviceTestCase(ViewTestCases.PrimaryObjectViewTestCase):
             DeviceType.objects.create(model="Device Type 2", slug="device-type-2", manufacturer=manufacturer),
         )
 
-        deviceroles = (
-            DeviceRole.objects.create(name="Device Role 1", slug="device-role-1"),
-            DeviceRole.objects.create(name="Device Role 2", slug="device-role-2"),
-        )
+        deviceroles = Role.objects.get_for_model(Device)[:2]
 
         platforms = (
             Platform.objects.create(name="Platform 1", slug="platform-1"),
@@ -1408,7 +1344,7 @@ class DeviceTestCase(ViewTestCases.PrimaryObjectViewTestCase):
                 site=sites[0],
                 rack=racks[0],
                 device_type=devicetypes[0],
-                device_role=deviceroles[0],
+                role=deviceroles[0],
                 platform=platforms[0],
                 status=status_active,
                 _custom_field_data={"crash-counter": 5},
@@ -1418,7 +1354,7 @@ class DeviceTestCase(ViewTestCases.PrimaryObjectViewTestCase):
                 site=sites[0],
                 rack=racks[0],
                 device_type=devicetypes[0],
-                device_role=deviceroles[0],
+                role=deviceroles[0],
                 platform=platforms[0],
                 status=status_active,
                 _custom_field_data={"crash-counter": 10},
@@ -1428,7 +1364,7 @@ class DeviceTestCase(ViewTestCases.PrimaryObjectViewTestCase):
                 site=sites[0],
                 rack=racks[0],
                 device_type=devicetypes[0],
-                device_role=deviceroles[0],
+                role=deviceroles[0],
                 platform=platforms[0],
                 status=status_active,
                 secrets_group=secrets_groups[0],
@@ -1463,7 +1399,7 @@ class DeviceTestCase(ViewTestCases.PrimaryObjectViewTestCase):
 
         cls.form_data = {
             "device_type": devicetypes[1].pk,
-            "device_role": deviceroles[1].pk,
+            "role": deviceroles[1].pk,
             "tenant": None,
             "platform": platforms[1].pk,
             "name": "Device X",
@@ -1489,15 +1425,15 @@ class DeviceTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         }
 
         cls.csv_data = (
-            "device_role,manufacturer,device_type,status,name,site,rack_group,rack,position,face,secrets_group",
-            f"Device Role 1,Manufacturer 1,Device Type 1,active,Device 4,{sites[0].name},Rack Group 1,Rack 1,10,front,",
-            f"Device Role 1,Manufacturer 1,Device Type 1,active,Device 5,{sites[0].name},Rack Group 1,Rack 1,20,front,",
-            f"Device Role 1,Manufacturer 1,Device Type 1,active,Device 6,{sites[0].name},Rack Group 1,Rack 1,30,front,Secrets Group 2",
+            "role,manufacturer,device_type,status,name,site,rack_group,rack,position,face,secrets_group",
+            f"{deviceroles[0].name},Manufacturer 1,Device Type 1,active,Device 4,{sites[0].name},Rack Group 1,Rack 1,10,front,",
+            f"{deviceroles[0].name},Manufacturer 1,Device Type 1,active,Device 5,{sites[0].name},Rack Group 1,Rack 1,20,front,",
+            f"{deviceroles[0].name},Manufacturer 1,Device Type 1,active,Device 6,{sites[0].name},Rack Group 1,Rack 1,30,front,Secrets Group 2",
         )
 
         cls.bulk_edit_data = {
             "device_type": devicetypes[1].pk,
-            "device_role": deviceroles[1].pk,
+            "role": deviceroles[1].pk,
             "tenant": None,
             "platform": platforms[1].pk,
             "serial": "VMWARE-XX XX XX XX XX XX XX XX-XX XX XX XX XX XX XX XX",
@@ -2165,32 +2101,32 @@ class CableTestCase(
         site = Site.objects.first()
         manufacturer = Manufacturer.objects.create(name="Manufacturer 1", slug="manufacturer-1")
         devicetype = DeviceType.objects.create(model="Device Type 1", manufacturer=manufacturer)
-        devicerole = DeviceRole.objects.create(name="Device Role 1", slug="device-role-1")
+        devicerole = Role.objects.get_for_model(Device).first()
 
         devices = (
             Device.objects.create(
                 name="Device 1",
                 site=site,
                 device_type=devicetype,
-                device_role=devicerole,
+                role=devicerole,
             ),
             Device.objects.create(
                 name="Device 2",
                 site=site,
                 device_type=devicetype,
-                device_role=devicerole,
+                role=devicerole,
             ),
             Device.objects.create(
                 name="Device 3",
                 site=site,
                 device_type=devicetype,
-                device_role=devicerole,
+                role=devicerole,
             ),
             Device.objects.create(
                 name="Device 4",
                 site=site,
                 device_type=devicetype,
-                device_role=devicerole,
+                role=devicerole,
             ),
         )
 
@@ -2610,82 +2546,17 @@ class VirtualChassisTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         site = Site.objects.first()
         manufacturer = Manufacturer.objects.create(name="Manufacturer", slug="manufacturer-1")
         device_type = DeviceType.objects.create(manufacturer=manufacturer, model="Device Type 1", slug="device-type-1")
-        device_role = DeviceRole.objects.create(name="Device Role", slug="device-role-1")
+        device_role = Role.objects.get_for_model(Device).first()
 
-        cls.devices = (
+        cls.devices = [
             Device.objects.create(
                 device_type=device_type,
-                device_role=device_role,
-                name="Device 1",
+                role=device_role,
+                name=f"Device {num}",
                 site=site,
-            ),
-            Device.objects.create(
-                device_type=device_type,
-                device_role=device_role,
-                name="Device 2",
-                site=site,
-            ),
-            Device.objects.create(
-                device_type=device_type,
-                device_role=device_role,
-                name="Device 3",
-                site=site,
-            ),
-            Device.objects.create(
-                device_type=device_type,
-                device_role=device_role,
-                name="Device 4",
-                site=site,
-            ),
-            Device.objects.create(
-                device_type=device_type,
-                device_role=device_role,
-                name="Device 5",
-                site=site,
-            ),
-            Device.objects.create(
-                device_type=device_type,
-                device_role=device_role,
-                name="Device 6",
-                site=site,
-            ),
-            Device.objects.create(
-                device_type=device_type,
-                device_role=device_role,
-                name="Device 7",
-                site=site,
-            ),
-            Device.objects.create(
-                device_type=device_type,
-                device_role=device_role,
-                name="Device 8",
-                site=site,
-            ),
-            Device.objects.create(
-                device_type=device_type,
-                device_role=device_role,
-                name="Device 9",
-                site=site,
-            ),
-            Device.objects.create(
-                device_type=device_type,
-                device_role=device_role,
-                name="Device 10",
-                site=site,
-            ),
-            Device.objects.create(
-                device_type=device_type,
-                device_role=device_role,
-                name="Device 11",
-                site=site,
-            ),
-            Device.objects.create(
-                device_type=device_type,
-                device_role=device_role,
-                name="Device 12",
-                site=site,
-            ),
-        )
+            )
+            for num in range(1, 13)
+        ]
 
         # Create three VirtualChassis with three members each
         vc1 = VirtualChassis.objects.create(name="VC1", master=cls.devices[0], domain="domain-1")
@@ -2860,10 +2731,10 @@ class PowerFeedTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         # Setup base device info
         manufacturer = Manufacturer.objects.create(name="Manufacturer", slug="manufacturer-1")
         device_type = DeviceType.objects.create(manufacturer=manufacturer, model="Device Type 1", slug="device-type-1")
-        device_role = DeviceRole.objects.create(name="Device Role", slug="device-role-1")
+        device_role = Role.objects.get_for_model(Device).first()
         device = Device.objects.create(
             device_type=device_type,
-            device_role=device_role,
+            role=device_role,
             name="Device1",
             site=self.site,
         )
@@ -2892,10 +2763,10 @@ class PathTraceViewTestCase(ModelViewTestCase):
         connected = Status.objects.get(slug="connected")
         manufacturer = Manufacturer.objects.create(name="Test Manufacturer 1", slug="test-manufacturer-1")
         devicetype = DeviceType.objects.create(manufacturer=manufacturer, model="Device Type 1", slug="device-type-1")
-        devicerole = DeviceRole.objects.create(name="Test Device Role 1", slug="test-device-role-1", color="ff0000")
+        devicerole = Role.objects.get_for_model(Device).first()
         site = Site.objects.create(name="Site 1", slug="site-1", status=active)
         device = Device.objects.create(
-            device_type=devicetype, device_role=devicerole, name="Device 1", site=site, status=active
+            device_type=devicetype, role=devicerole, name="Device 1", site=site, status=active
         )
         obj = RearPort.objects.create(device=device, name="Rear Port 1", type=PortTypeChoices.TYPE_8P8C)
         peer_obj = Interface.objects.create(device=device, name="eth0", status=active)

@@ -29,7 +29,6 @@ from nautobot.dcim.filters import (
     DeviceBayTemplateFilterSet,
     DeviceFilterSet,
     DeviceRedundancyGroupFilterSet,
-    DeviceRoleFilterSet,
     DeviceTypeFilterSet,
     FrontPortFilterSet,
     FrontPortTemplateFilterSet,
@@ -49,7 +48,6 @@ from nautobot.dcim.filters import (
     RackFilterSet,
     RackGroupFilterSet,
     RackReservationFilterSet,
-    RackRoleFilterSet,
     RearPortFilterSet,
     RearPortTemplateFilterSet,
     RegionFilterSet,
@@ -67,7 +65,6 @@ from nautobot.dcim.models import (
     DeviceBay,
     DeviceBayTemplate,
     DeviceRedundancyGroup,
-    DeviceRole,
     DeviceType,
     FrontPort,
     FrontPortTemplate,
@@ -87,7 +84,6 @@ from nautobot.dcim.models import (
     Rack,
     RackGroup,
     RackReservation,
-    RackRole,
     RearPort,
     RearPortTemplate,
     Region,
@@ -95,7 +91,7 @@ from nautobot.dcim.models import (
     VirtualChassis,
 )
 from nautobot.circuits.models import Circuit, CircuitTermination, CircuitType, Provider
-from nautobot.extras.models import SecretsGroup, Status
+from nautobot.extras.models import Role, SecretsGroup, Status
 from nautobot.ipam.models import IPAddress, Prefix, Service, VLAN, VLANGroup
 from nautobot.tenancy.models import Tenant
 from nautobot.utilities.testing import FilterTestCases
@@ -192,7 +188,7 @@ def common_test_data(cls):
     loc3 = Location.objects.filter(location_type=lt3).first()
     loc3.parent = loc2
     loc4 = Location.objects.filter(location_type=lt4).first()
-    nested_loc = Location.objects.filter(location_type__nestable=True, parent=loc1).first()
+    nested_loc = Location.objects.filter(location_type__nestable=True, parent__isnull=False).first()
     for loc in [loc1, loc2, loc3, loc4, nested_loc]:
         loc.validated_save()
     cls.loc1 = loc1
@@ -280,11 +276,7 @@ def common_test_data(cls):
         PowerPanel.objects.create(name="Power Panel 3", site=sites[2], rack_group=rack_groups[2]),
     )
 
-    rackroles = (
-        RackRole.objects.create(name="Rack Role 1", slug="rack-role-1", color="ff0000"),
-        RackRole.objects.create(name="Rack Role 2", slug="rack-role-2", color="00ff00"),
-        RackRole.objects.create(name="Rack Role 3", slug="rack-role-3", color="0000ff"),
-    )
+    rackroles = Role.objects.get_for_model(Rack)
 
     rack_statuses = Status.objects.get_for_model(Rack)
     cls.rack_status_map = {s.slug: s for s in rack_statuses.all()}
@@ -350,30 +342,7 @@ def common_test_data(cls):
         ),
     )
 
-    device_roles = (
-        DeviceRole.objects.create(
-            name="Device Role 1",
-            slug="device-role-1",
-            color="ff0000",
-            vm_role=False,
-            description="Device Role Description 1",
-        ),
-        DeviceRole.objects.create(
-            name="Device Role 2",
-            slug="device-role-2",
-            color="00ff00",
-            vm_role=False,
-            description="Device Role Description 2",
-        ),
-        DeviceRole.objects.create(
-            name="Device Role 3",
-            slug="device-role-3",
-            color="0000ff",
-            vm_role=False,
-            description="Device Role Description 3",
-        ),
-    )
-    cls.device_roles = device_roles
+    cls.device_roles = Role.objects.get_for_model(Device)
 
     cluster_type = ClusterType.objects.create(name="Cluster Type 1", slug="cluster-type-1")
     clusters = (
@@ -382,9 +351,9 @@ def common_test_data(cls):
         Cluster.objects.create(name="Cluster 3", type=cluster_type, site=sites[2]),
     )
 
-    VirtualMachine.objects.create(cluster=clusters[0], name="VM 1", role=device_roles[0], platform=platforms[0])
-    VirtualMachine.objects.create(cluster=clusters[0], name="VM 2", role=device_roles[1], platform=platforms[1])
-    VirtualMachine.objects.create(cluster=clusters[0], name="VM 3", role=device_roles[2], platform=platforms[2])
+    VirtualMachine.objects.create(cluster=clusters[0], name="VM 1", role=cls.device_roles[0], platform=platforms[0])
+    VirtualMachine.objects.create(cluster=clusters[0], name="VM 2", role=cls.device_roles[1], platform=platforms[1])
+    VirtualMachine.objects.create(cluster=clusters[0], name="VM 3", role=cls.device_roles[2], platform=platforms[2])
 
     Prefix.objects.create(prefix=netaddr.IPNetwork("192.168.0.0/16"), site=sites[0], location=loc0)
     Prefix.objects.create(prefix=netaddr.IPNetwork("192.168.1.0/24"), site=sites[1])
@@ -632,7 +601,7 @@ def common_test_data(cls):
     Device.objects.create(
         name="Device 1",
         device_type=device_types[0],
-        device_role=device_roles[0],
+        role=cls.device_roles[0],
         platform=platforms[0],
         rack=racks[0],
         site=sites[0],
@@ -649,7 +618,7 @@ def common_test_data(cls):
     Device.objects.create(
         name="Device 2",
         device_type=device_types[1],
-        device_role=device_roles[1],
+        role=cls.device_roles[1],
         platform=platforms[1],
         rack=racks[1],
         site=sites[1],
@@ -666,7 +635,7 @@ def common_test_data(cls):
     Device.objects.create(
         name="Device 3",
         device_type=device_types[2],
-        device_role=device_roles[2],
+        role=cls.device_roles[2],
         platform=platforms[2],
         rack=racks[2],
         site=sites[2],
@@ -717,15 +686,15 @@ class RegionTestCase(FilterTestCases.NameSlugFilterTestCase):
     def test_children(self):
         with self.subTest():
             params = {"children": [self.child_regions[0].pk, self.child_regions[1].slug]}
-            self.assertEqual(
-                self.filterset(params, self.queryset).qs.count(),
-                self.queryset.filter(children__in=[self.child_regions[0].pk, self.child_regions[1].pk]).count(),
+            self.assertQuerysetEqualAndNotEmpty(
+                self.filterset(params, self.queryset).qs,
+                self.queryset.filter(children__in=[self.child_regions[0], self.child_regions[1]]).distinct(),
             )
         with self.subTest():
-            params = {"children": [self.child_regions[0].pk, self.child_regions[2].slug]}
-            self.assertEqual(
-                self.filterset(params, self.queryset).qs.count(),
-                self.queryset.filter(children__in=[self.child_regions[0].pk, self.child_regions[2].pk]).count(),
+            params = {"children": [self.child_regions[0].pk, self.child_regions[2].pk]}
+            self.assertQuerysetEqualAndNotEmpty(
+                self.filterset(params, self.queryset).qs,
+                self.queryset.filter(children__in=[self.child_regions[0].pk, self.child_regions[2].pk]).distinct(),
             )
 
     def test_has_children(self):
@@ -733,13 +702,13 @@ class RegionTestCase(FilterTestCases.NameSlugFilterTestCase):
             params = {"has_children": True}
             self.assertQuerysetEqual(
                 self.filterset(params, self.queryset).qs,
-                self.queryset.filter(children__isnull=False),
+                self.queryset.filter(children__isnull=False).distinct(),
             )
         with self.subTest():
             params = {"has_children": False}
             self.assertQuerysetEqual(
                 self.filterset(params, self.queryset).qs,
-                self.queryset.filter(children__isnull=True),
+                self.queryset.filter(children__isnull=True).distinct(),
             )
 
     def test_sites(self):
@@ -1626,32 +1595,6 @@ class RackGroupTestCase(FilterTestCases.NameSlugFilterTestCase):
             self.assertEqual(self.filterset({"has_racks": False}, self.queryset).qs.count(), 4)
 
 
-class RackRoleTestCase(FilterTestCases.NameSlugFilterTestCase):
-    queryset = RackRole.objects.all()
-    filterset = RackRoleFilterSet
-
-    @classmethod
-    def setUpTestData(cls):
-        common_test_data(cls)
-
-        RackRole.objects.create(name="Rack Role 4", slug="rack-role-4", color="abcdef")
-
-    def test_color(self):
-        params = {"color": ["ff0000", "00ff00"]}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
-
-    def test_racks(self):
-        racks = Rack.objects.all()[:2]
-        params = {"racks": [racks[0].pk, racks[1].pk]}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
-
-    def test_has_racks(self):
-        with self.subTest():
-            self.assertEqual(self.filterset({"has_racks": True}, self.queryset).qs.count(), 3)
-        with self.subTest():
-            self.assertEqual(self.filterset({"has_racks": False}, self.queryset).qs.count(), 1)
-
-
 class RackTestCase(FilterTestCases.FilterTestCase, FilterTestCases.TenancyFilterTestCaseMixin):
     queryset = Rack.objects.all()
     filterset = RackFilterSet
@@ -1664,7 +1607,7 @@ class RackTestCase(FilterTestCases.FilterTestCase, FilterTestCases.TenancyFilter
         site = Site.objects.get(slug="site-3")
         rack_group = RackGroup.objects.get(slug="rack-group-3")
         tenant = Tenant.objects.filter(group__isnull=False).first()
-        rack_role = RackRole.objects.get(slug="rack-role-3")
+        rack_role = Role.objects.get_for_model(Rack).first()
 
         Rack.objects.create(
             name="Rack 4",
@@ -1767,13 +1710,12 @@ class RackTestCase(FilterTestCases.FilterTestCase, FilterTestCases.TenancyFilter
         )
 
     def test_role(self):
-        roles = RackRole.objects.all()[:2]
-        with self.subTest():
-            params = {"role": [roles[0].pk, roles[1].pk]}
-            self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+        roles = Role.objects.get_for_model(Rack)[:2]
         with self.subTest():
             params = {"role": [roles[0].slug, roles[1].slug]}
-            self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+            self.assertQuerysetEqualAndNotEmpty(
+                self.filterset(params, self.queryset).qs, self.queryset.filter(role__in=[roles[0], roles[1]])
+            )
 
     def test_serial(self):
         with self.subTest():
@@ -2618,80 +2560,6 @@ class DeviceBayTemplateTestCase(Mixins.ComponentTemplateMixin):
     test_names = ["Device Bay 1", "Device Bay 2"]
 
 
-class DeviceRoleTestCase(FilterTestCases.NameSlugFilterTestCase):
-    queryset = DeviceRole.objects.all()
-    filterset = DeviceRoleFilterSet
-
-    @classmethod
-    def setUpTestData(cls):
-        common_test_data(cls)
-
-    def test_color(self):
-        colors = ["ff0000", "00ff00"]
-        params = {"color": colors}
-        self.assertQuerysetEqual(
-            self.filterset(params, self.queryset).qs,
-            self.queryset.filter(color__in=colors),
-        )
-
-    def test_vm_role(self):
-        with self.subTest():
-            params = {"vm_role": True}
-            self.assertQuerysetEqual(
-                self.filterset(params, self.queryset).qs,
-                self.queryset.filter(vm_role=True),
-            )
-        with self.subTest():
-            params = {"vm_role": False}
-            self.assertQuerysetEqual(
-                self.filterset(params, self.queryset).qs,
-                self.queryset.filter(vm_role=False),
-            )
-
-    def test_description(self):
-        descriptions = ["Device Role Description 1", "Device Role Description 2"]
-        params = {"description": descriptions}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), len(descriptions))
-
-    def test_devices(self):
-        devices = [Device.objects.first(), Device.objects.last()]
-        params = {"devices": [devices[0].pk, devices[1].pk]}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), len(devices))
-
-    def test_has_devices(self):
-        with self.subTest():
-            params = {"has_devices": True}
-            self.assertQuerysetEqual(
-                self.filterset(params, self.queryset).qs,
-                self.queryset.exclude(devices__isnull=True),
-            )
-        with self.subTest():
-            params = {"has_devices": False}
-            self.assertQuerysetEqual(
-                self.filterset(params, self.queryset).qs,
-                self.queryset.exclude(devices__isnull=False),
-            )
-
-    def test_virtual_machines(self):
-        virtual_machines = [VirtualMachine.objects.first(), VirtualMachine.objects.last()]
-        params = {"virtual_machines": [virtual_machines[0].pk, virtual_machines[1].pk]}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), len(virtual_machines))
-
-    def test_has_virtual_machines(self):
-        with self.subTest():
-            params = {"has_virtual_machines": True}
-            self.assertQuerysetEqual(
-                self.filterset(params, self.queryset).qs,
-                self.queryset.exclude(virtual_machines__isnull=True),
-            )
-        with self.subTest():
-            params = {"has_virtual_machines": False}
-            self.assertQuerysetEqual(
-                self.filterset(params, self.queryset).qs,
-                self.queryset.exclude(virtual_machines__isnull=False),
-            )
-
-
 class PlatformTestCase(FilterTestCases.NameSlugFilterTestCase):
     queryset = Platform.objects.all()
     filterset = PlatformFilterSet
@@ -2879,12 +2747,8 @@ class DeviceTestCase(FilterTestCases.FilterTestCase, FilterTestCases.TenancyFilt
 
     def test_devicerole(self):
         device_roles = self.device_roles[:2]
-        with self.subTest():
-            params = {"role": [device_roles[0].pk, device_roles[1].pk]}
-            self.assertEqual(self.filterset(params, self.queryset).qs.count(), len(device_roles))
-        with self.subTest():
-            params = {"role": [device_roles[0].slug, device_roles[1].slug]}
-            self.assertEqual(self.filterset(params, self.queryset).qs.count(), len(device_roles))
+        params = {"role": [device_roles[0].slug, device_roles[1].id]}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), len(device_roles))
 
     def test_platform(self):
         platforms = self.platforms[:2]
@@ -3897,24 +3761,24 @@ class InterfaceTestCase(FilterTestCases.FilterTestCase):
         """Assert only interfaces belonging to devices with common VC are returned"""
         site = Site.objects.first()
         device_type = DeviceType.objects.first()
-        device_role = DeviceRole.objects.first()
+        device_role = Role.objects.get_for_model(Device).first()
         devices = (
             Device.objects.create(
                 name="Device in vc 1",
                 device_type=device_type,
-                device_role=device_role,
+                role=device_role,
                 site=site,
             ),
             Device.objects.create(
                 name="Device in vc 2",
                 device_type=device_type,
-                device_role=device_role,
+                role=device_role,
                 site=site,
             ),
             Device.objects.create(
                 name="Device not in vc",
                 device_type=device_type,
-                device_role=device_role,
+                role=device_role,
                 site=site,
             ),
         )
@@ -4378,7 +4242,7 @@ class DeviceBayTestCase(FilterTestCases.FilterTestCase):
     def setUpTestData(cls):
         common_test_data(cls)
 
-        device_role = DeviceRole.objects.first()
+        device_role = Role.objects.get_for_model(Device).first()
         parent_device_type = DeviceType.objects.get(slug="model-2")
         child_device_type = DeviceType.objects.get(slug="model-3")
         site = Site.objects.get(name="Site 3")
@@ -4390,14 +4254,14 @@ class DeviceBayTestCase(FilterTestCases.FilterTestCase):
             Device.objects.create(
                 name="Child Device 1",
                 device_type=child_device_type,
-                device_role=device_role,
+                role=device_role,
                 site=site,
                 status=device_status_map["active"],
             ),
             Device.objects.create(
                 name="Child Device 2",
                 device_type=child_device_type,
-                device_role=device_role,
+                role=device_role,
                 site=site,
                 status=device_status_map["active"],
             ),
@@ -4407,14 +4271,14 @@ class DeviceBayTestCase(FilterTestCases.FilterTestCase):
             Device.objects.create(
                 name="Parent Device 1",
                 device_type=parent_device_type,
-                device_role=device_role,
+                role=device_role,
                 site=site,
                 status=device_status_map["active"],
             ),
             Device.objects.create(
                 name="Parent Device 2",
                 device_type=parent_device_type,
-                device_role=device_role,
+                role=device_role,
                 site=site,
                 status=device_status_map["active"],
             ),
@@ -4647,7 +4511,7 @@ class VirtualChassisTestCase(FilterTestCases.FilterTestCase):
 
         manufacturer = Manufacturer.objects.create(name="Manufacturer 1", slug="manufacturer-1")
         device_type = DeviceType.objects.create(manufacturer=manufacturer, model="Model 1", slug="model-1")
-        device_role = DeviceRole.objects.create(name="Device Role 1", slug="device-role-1")
+        device_role = Role.objects.get_for_model(Device).first()
 
         cls.regions = Region.objects.filter(sites__isnull=False)[:3]
 
@@ -4660,42 +4524,42 @@ class VirtualChassisTestCase(FilterTestCases.FilterTestCase):
             Device.objects.create(
                 name="Device 1",
                 device_type=device_type,
-                device_role=device_role,
+                role=device_role,
                 site=cls.sites[0],
                 vc_position=1,
             ),
             Device.objects.create(
                 name="Device 2",
                 device_type=device_type,
-                device_role=device_role,
+                role=device_role,
                 site=cls.sites[0],
                 vc_position=2,
             ),
             Device.objects.create(
                 name="Device 3",
                 device_type=device_type,
-                device_role=device_role,
+                role=device_role,
                 site=cls.sites[1],
                 vc_position=1,
             ),
             Device.objects.create(
                 name="Device 4",
                 device_type=device_type,
-                device_role=device_role,
+                role=device_role,
                 site=cls.sites[1],
                 vc_position=2,
             ),
             Device.objects.create(
                 name="Device 5",
                 device_type=device_type,
-                device_role=device_role,
+                role=device_role,
                 site=cls.sites[2],
                 vc_position=1,
             ),
             Device.objects.create(
                 name="Device 6",
                 device_type=device_type,
-                device_role=device_role,
+                role=device_role,
                 site=cls.sites[2],
                 vc_position=2,
             ),
@@ -4805,7 +4669,7 @@ class CableTestCase(FilterTestCases.FilterTestCase):
             DeviceType.objects.get(slug="model-3"),
         )
 
-        device_role = DeviceRole.objects.first()
+        device_role = Role.objects.get_for_model(Device).first()
 
         devices = (
             Device.objects.get(name="Device 1"),
@@ -4814,7 +4678,7 @@ class CableTestCase(FilterTestCases.FilterTestCase):
             Device.objects.create(
                 name="Device 4",
                 device_type=device_types[0],
-                device_role=device_role,
+                role=device_role,
                 tenant=tenants[0],
                 site=cls.sites[0],
                 rack=racks[0],
@@ -4823,7 +4687,7 @@ class CableTestCase(FilterTestCases.FilterTestCase):
             Device.objects.create(
                 name="Device 5",
                 device_type=device_types[1],
-                device_role=device_role,
+                role=device_role,
                 tenant=tenants[1],
                 site=cls.sites[1],
                 rack=racks[1],
@@ -4832,7 +4696,7 @@ class CableTestCase(FilterTestCases.FilterTestCase):
             Device.objects.create(
                 name="Device 6",
                 device_type=device_types[2],
-                device_role=device_role,
+                role=device_role,
                 tenant=tenants[2],
                 site=cls.sites[2],
                 rack=racks[2],

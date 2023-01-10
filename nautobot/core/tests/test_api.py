@@ -290,3 +290,18 @@ class GenerateLookupValueDomElementViewTestCase(APITestCase):
                 "dom_element": '<select name="name" class="form-control nautobot-select2-multi-value-char" data-multiple="1" id="id_for_name" multiple>\n</select>'
             },
         )
+
+    def test_get_lookup_value_dom_element_for_configcontext(self):
+        url = reverse("core-api:filtersetfield-retrieve-lookupvaluedomelement")
+        response = self.client.get(url + "?content_type=extras.configcontext&field_name=role", **self.header)
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(
+            response.data,
+            {
+                "dom_element": '<select name="role" class="form-control nautobot-select2-api" data-multiple="1" '
+                'data-query-param-content_types="[&quot;dcim.device&quot;, &quot;virtualization.virtualmachine&quot;]" '
+                'display-field="display" value-field="slug" data-url="/api/extras/roles/" id="id_for_role" '
+                "multiple>\n</select>"
+            },
+        )

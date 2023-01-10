@@ -1,4 +1,4 @@
-from nautobot.dcim.models import DeviceRole
+from nautobot.extras.models import Role
 from nautobot.extras.scripts import (
     BooleanVar,
     ChoiceVar,
@@ -52,11 +52,11 @@ class MultiChoiceVarScript(Script):
 
 
 class MultiObjectVarScript(Script):
-    var1 = MultiObjectVar(model=DeviceRole)
+    var1 = MultiObjectVar(model=Role)
 
 
 class ObjectVarScript(Script):
-    var1 = ObjectVar(model=DeviceRole)
+    var1 = ObjectVar(model=Role)
 
 
 class StringVarScript(Script):
