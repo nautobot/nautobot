@@ -40,7 +40,7 @@
         <button type="button" class="btn btn-default" data-toggle="modal" data-target="#ObjectTable_config" title="Configure table"><i class="mdi mdi-cog"></i> Configure</button>
     {% endif %}
     {% if filter_form or dynamic_filter_form %}
-        <button type="button" class="btn btn-default" data-toggle="modal" data-target="#FilterForm_modal" title="Add filters"><i class="mdi mdi-filter"></i> Filter</button>
+        <button type="button" class="btn btn-default" data-toggle="modal" data-target="#FilterForm_modal" title="Add filters" id="id__filterbtn"><i class="mdi mdi-filter"></i> Filter</button>
     {% endif %}
     {% if permissions.add and 'add' in action_buttons %}
         {% add_button content_type.model_class|validated_viewname:"add" %}

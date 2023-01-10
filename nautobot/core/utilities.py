@@ -36,7 +36,7 @@ def check_filter_for_display(filters, field_name, values):
         try:
             new_values = []
             for value in filters[field_name].queryset.filter(pk__in=values):
-                new_values.append({"name": str(value), "display": getattr(value, "display", str(value))})
+                new_values.append({"name": str(value.pk), "display": getattr(value, "display", str(value))})
             resolved_filter["values"] = new_values
         except (FieldError, AttributeError):
             pass
