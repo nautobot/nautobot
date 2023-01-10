@@ -31,12 +31,13 @@ __all__ = (
 
 class User(BaseModel, AbstractUser):
     """
-    Nautobot implements its own User model to suport several specific use cases.
+    Nautobot implements its own User model to support several specific use cases.
 
     This model also implements the user configuration (preferences) data store functionality.
     """
 
     config_data = models.JSONField(encoder=DjangoJSONEncoder, default=dict, blank=True)
+    groups = models.ManyToManyField(to="auth.Group", blank=True, related_name="users", related_query_name="user")
 
     # We must use the stock UserManager instead of RestrictedQuerySet from BaseModel
     objects = UserManager()
@@ -147,6 +148,8 @@ class AdminGroup(Group):
     """
     Proxy contrib.auth.models.Group for the admin UI
     """
+
+    Group._meta.get_field("permissions").related_name = "groups"
 
     class Meta:
         verbose_name = "Group"

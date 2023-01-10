@@ -68,7 +68,7 @@ class GroupAdmin(NautobotModelAdmin):
 
     @staticmethod
     def user_count(obj):
-        return obj.user_set.count()
+        return obj.users.count()
 
 
 @admin.register(User)
