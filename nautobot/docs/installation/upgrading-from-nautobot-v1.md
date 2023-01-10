@@ -18,28 +18,18 @@
 
 ### Renamed Database Fields
 
-| Model         | Renamed Field | New Name     |
-|---------------|---------------|--------------|
-| InventoryItem | `child_items` | `children`   |
-|               | `level`       | `tree_depth` |
-| RackGroup     | `level`       | `tree_depth` |
-| Region        | `level`       | `tree_depth` |
-| TenantGroup   | `level`       | `tree_depth` |
-
-### Renamed Foregin Key Fields
-
-| Model         | Renamed Foregin Key    | New Name                 |
+| Model         | Renamed Field          | New Name                 |
 |---------------|------------------------|--------------------------|
+| CablePath     | `circuittermination`   | `circuit_terminations`   |
 | Circuit       | `type`                 | `circuit_type`           |
 |               | `termination_a`        | `circuit_termination_a`  |
 |               | `termination_z`        | `circuit_termination_b`  |
-
-### Renamed Foregin Key Related Names
-
-| Model              | FK Field       | Renamed Related Name       | New Related Name         |
-|--------------------|----------------|----------------------------|--------------------------|
-| CircuitTermination | `circuit`      |`terminations`              | `circuit_terminations`   |
-|                    | `_path`        |`terminations`              | `circuit_terminations`   |
+|               | `terminations`         | `circuit_terminations`   |
+| InventoryItem | `child_items`          | `children`               |
+|               | `level`                | `tree_depth`             |
+| RackGroup     | `level`                | `tree_depth`             |
+| Region        | `level`                | `tree_depth`             |
+| TenantGroup   | `level`                | `tree_depth`             |
 
 ### Removed Database Fields
 
