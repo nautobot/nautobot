@@ -1,3 +1,5 @@
+from django.contrib.contenttypes.models import ContentType
+
 from nautobot.dcim.models import Device, DeviceType, Manufacturer, Site
 from nautobot.extras.models import ConfigContext, ConfigContextSchema, Role, Status
 from nautobot.utilities.testing.integration import SeleniumTestCase
@@ -106,7 +108,9 @@ class ConfigContextSchemaTestCase(SeleniumTestCase):
         site = Site.objects.create(name="site", slug="site", status=Status.objects.get_for_model(Site).first())
         manufacturer = Manufacturer.objects.create(name="manufacturer", slug="manufacturer")
         device_type = DeviceType.objects.create(model="device_type", manufacturer=manufacturer)
-        device_role = Role.objects.get_for_model(Device).first()
+        device_role, _ = Role.objects.get_or_create(name="Device Role")
+        device_ct = ContentType.objects.get_for_model(Device)
+        device_role.content_types.add(device_ct)
         Device.objects.create(
             name="device",
             site=site,

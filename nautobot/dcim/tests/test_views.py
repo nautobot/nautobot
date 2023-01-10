@@ -97,7 +97,9 @@ def create_test_device(name):
     site, _ = Site.objects.get_or_create(name="Site 1", slug="site-1")
     manufacturer, _ = Manufacturer.objects.get_or_create(name="Manufacturer 1", slug="manufacturer-1")
     devicetype, _ = DeviceType.objects.get_or_create(model="Device Type 1", manufacturer=manufacturer)
-    devicerole = Role.objects.get_for_model(Device).first()
+    devicerole, _ = Role.objects.get_or_create(name="Device Role")
+    device_ct = ContentType.objects.get_for_model(Device)
+    devicerole.content_types.add(device_ct)
     device = Device.objects.create(name=name, site=site, device_type=devicetype, role=devicerole)
 
     return device
