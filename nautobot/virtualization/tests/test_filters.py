@@ -228,18 +228,18 @@ class ClusterTestCase(FilterTestCases.FilterTestCase, FilterTestCases.TenancyFil
         params = {"site": [sites[0].slug, sites[1].slug]}
         self.assertQuerysetEqual(self.filterset(params, self.queryset).qs, self.queryset.filter(site__in=sites))
 
-    def test_group(self):
-        groups = ClusterGroup.objects.all()[:2]
-        params = {"group_id": [groups[0].pk, groups[1].pk]}
+    def test_cluster_group(self):
+        cluster_groups = ClusterGroup.objects.all()[:2]
+        params = {"cluster_group_id": [cluster_groups[0].pk, cluster_groups[1].pk]}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
-        params = {"group": [groups[0].slug, groups[1].slug]}
+        params = {"cluster_group": [cluster_groups[0].slug, cluster_groups[1].slug]}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
 
-    def test_type(self):
-        types = ClusterType.objects.all()[:2]
-        params = {"type_id": [types[0].pk, types[1].pk]}
+    def test_cluster_type(self):
+        cluster_types = ClusterType.objects.all()[:2]
+        params = {"cluster_type_id": [cluster_types[0].pk, cluster_types[1].pk]}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
-        params = {"type": [types[0].slug, types[1].slug]}
+        params = {"cluster_type": [cluster_types[0].slug, cluster_types[1].slug]}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
 
     def test_search(self):

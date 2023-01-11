@@ -90,23 +90,23 @@ class ClusterFilterSet(NautobotFilterSet, LocatableModelFilterSetMixin, TenancyM
         field_name="virtual_machines",
         label="Has virtual machines",
     )
-    group_id = django_filters.ModelMultipleChoiceFilter(
+    cluster_group_id = django_filters.ModelMultipleChoiceFilter(
         field_name="cluster_group",
         queryset=ClusterGroup.objects.all(),
         label="Parent group (ID)",
     )
-    group = django_filters.ModelMultipleChoiceFilter(
+    cluster_group = django_filters.ModelMultipleChoiceFilter(
         field_name="cluster_group__slug",
         queryset=ClusterGroup.objects.all(),
         to_field_name="slug",
         label="Parent group (slug)",
     )
-    type_id = django_filters.ModelMultipleChoiceFilter(
+    cluster_type_id = django_filters.ModelMultipleChoiceFilter(
         field_name="cluster_type",
         queryset=ClusterType.objects.all(),
         label="Cluster type (ID)",
     )
-    type = django_filters.ModelMultipleChoiceFilter(
+    cluster_type = django_filters.ModelMultipleChoiceFilter(
         field_name="cluster_type__slug",
         queryset=ClusterType.objects.all(),
         to_field_name="slug",
