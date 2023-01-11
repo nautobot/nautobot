@@ -11,44 +11,50 @@ from django.db.models import ProtectedError, Q
 from django.forms.utils import pretty_name
 from django.http import Http404, HttpResponse, HttpResponseForbidden
 from django.shortcuts import get_object_or_404, redirect, render
+from django.template.loader import TemplateDoesNotExist, get_template
 from django.urls import reverse
 from django.utils import timezone
 from django.utils.html import escape
 from django.utils.http import is_safe_url
 from django.utils.safestring import mark_safe
 from django.views.generic import View
-from django.template.loader import get_template, TemplateDoesNotExist
 from django_tables2 import RequestConfig
 from jsonschema.validators import Draft7Validator
 
-from nautobot.core.views import generic
+from nautobot.core.views import generic, viewsets
 from nautobot.dcim.models import Device
 from nautobot.dcim.tables import DeviceTable
 from nautobot.extras.tasks import delete_custom_field_data
 from nautobot.extras.utils import get_base_template, get_job_content_type, get_worker_count
-from nautobot.utilities.paginator import EnhancedPaginator, get_paginate_count
+from nautobot.ipam.tables import IPAddressTable, PrefixTable, VLANTable
 from nautobot.utilities.forms import restrict_form_fields
+from nautobot.utilities.paginator import EnhancedPaginator, get_paginate_count
+from nautobot.utilities.tables import ButtonsColumn
 from nautobot.utilities.utils import (
     copy_safe_request,
     count_related,
     csv_format,
     get_table_for_model,
+    normalize_querydict,
     prepare_cloned_fields,
     pretty_print_query,
 )
-from nautobot.utilities.tables import ButtonsColumn
 from nautobot.utilities.views import ObjectPermissionRequiredMixin
-from nautobot.utilities.utils import normalize_querydict
 from nautobot.virtualization.models import VirtualMachine
 from nautobot.virtualization.tables import VirtualMachineTable
+
 from . import filters, forms, tables
+from .api.serializers import RoleSerializer
 from .choices import JobExecutionType, JobResultStatusChoices
 from .datasources import (
     enqueue_git_repository_diff_origin_and_local,
     enqueue_pull_git_repository_and_refresh_data,
     get_datasource_contents,
 )
-from .jobs import get_job, run_job, Job as JobClass
+from .filters import RoleFilterSet
+from .forms import RoleBulkEditForm, RoleCSVForm, RoleForm
+from .jobs import Job as JobClass
+from .jobs import get_job, run_job
 from .models import (
     ComputedField,
     ConfigContext,
@@ -60,13 +66,16 @@ from .models import (
     GitRepository,
     GraphQLQuery,
     ImageAttachment,
-    Job as JobModel,
+)
+from .models import (
     JobHook,
     JobLogEntry,
-    ObjectChange,
     JobResult,
+    Note,
+    ObjectChange,
     Relationship,
     RelationshipAssociation,
+    Role,
     ScheduledJob,
     Secret,
     SecretsGroup,
@@ -75,10 +84,10 @@ from .models import (
     Tag,
     TaggedItem,
     Webhook,
-    Note,
 )
+from .models import Job as JobModel
 from .registry import registry
-
+from .tables import RoleTable
 
 logger = logging.getLogger(__name__)
 
@@ -270,10 +279,7 @@ class ConfigContextSchemaObjectValidationView(generic.ObjectView):
 
         # Device table
         device_table = DeviceTable(
-            # v2 TODO(jathan): Replace prefetch_related with select_related
-            data=instance.device_set.prefetch_related(
-                "tenant", "site", "rack", "device_type", "device_role", "primary_ip"
-            ),
+            data=instance.device_set.prefetch_related("tenant", "site", "rack", "device_type", "role", "primary_ip"),
             orderable=False,
             extra_columns=[
                 (
@@ -1785,6 +1791,95 @@ class RelationshipAssociationBulkDeleteView(generic.BulkDeleteView):
 
 class RelationshipAssociationDeleteView(generic.ObjectDeleteView):
     queryset = RelationshipAssociation.objects.all()
+
+
+#
+# Roles
+#
+
+
+class RoleUIViewSet(viewsets.NautobotUIViewSet):
+    """`Roles` UIViewSet."""
+
+    queryset = Role.objects.all()
+    bulk_create_form_class = RoleCSVForm
+    bulk_update_form_class = RoleBulkEditForm
+    filterset_class = RoleFilterSet
+    form_class = RoleForm
+    serializer_class = RoleSerializer
+    table_class = RoleTable
+
+    def get_extra_context(self, request, instance):
+        context = super().get_extra_context(request, instance)
+        if self.action == "retrieve":
+            context["content_types"] = instance.content_types.order_by("app_label", "model")
+
+            devices = instance.dcim_device_related.select_related(
+                "status",
+                "site",
+                "tenant",
+                "role",
+                "rack",
+                "device_type",
+            )
+            ipaddress = instance.ipam_ipaddress_related.select_related(
+                "vrf",
+                "tenant",
+                "assigned_object_type",
+            )
+            prefixes = instance.ipam_prefix_related.select_related(
+                "site",
+                "status",
+                "tenant",
+                "vlan",
+                "vrf",
+            )
+            virtual_machines = instance.virtualization_virtualmachine_related.select_related(
+                "cluster",
+                "role",
+                "status",
+                "tenant",
+            )
+            vlans = instance.ipam_vlan_related.select_related(
+                "group",
+                "site",
+                "status",
+                "tenant",
+            )
+
+            device_table = DeviceTable(devices)
+            device_table.columns.hide("role")
+            ipaddress_table = IPAddressTable(ipaddress)
+            ipaddress_table.columns.hide("role")
+            prefix_table = PrefixTable(prefixes)
+            prefix_table.columns.hide("role")
+            virtual_machine_table = VirtualMachineTable(virtual_machines)
+            virtual_machine_table.columns.hide("role")
+            vlan_table = VLANTable(vlans)
+            vlan_table.columns.hide("role")
+
+            paginate = {
+                "paginator_class": EnhancedPaginator,
+                "per_page": get_paginate_count(request),
+            }
+
+            RequestConfig(request, paginate).configure(device_table)
+            RequestConfig(request, paginate).configure(ipaddress_table)
+            RequestConfig(request, paginate).configure(prefix_table)
+            RequestConfig(request, paginate).configure(virtual_machine_table)
+            RequestConfig(request, paginate).configure(vlan_table)
+
+            context.update(
+                {
+                    "device_table": device_table,
+                    "ipaddress_table": ipaddress_table,
+                    "prefix_table": prefix_table,
+                    "virtual_machine_table": virtual_machine_table,
+                    "vlan_table": vlan_table,
+                }
+            )
+
+        return context
 
 
 #

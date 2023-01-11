@@ -6,7 +6,7 @@ from netaddr.core import AddrFormatError
 
 from nautobot.dcim.filters import LocatableModelFilterSetMixin
 from nautobot.dcim.models import Device, Interface
-from nautobot.extras.filters import NautobotFilterSet, StatusModelFilterSetMixin
+from nautobot.extras.filters import NautobotFilterSet, RoleModelFilterSetMixin, StatusModelFilterSetMixin
 from nautobot.tenancy.filters import TenancyModelFilterSetMixin
 from nautobot.utilities.filters import (
     MultiValueCharFilter,
@@ -17,13 +17,11 @@ from nautobot.utilities.filters import (
     TagFilter,
 )
 from nautobot.virtualization.models import VirtualMachine, VMInterface
-from .choices import IPAddressRoleChoices
 from .models import (
     Aggregate,
     IPAddress,
     Prefix,
     RIR,
-    Role,
     RouteTarget,
     Service,
     VLAN,
@@ -37,7 +35,6 @@ __all__ = (
     "IPAddressFilterSet",
     "PrefixFilterSet",
     "RIRFilterSet",
-    "RoleFilterSet",
     "RouteTargetFilterSet",
     "ServiceFilterSet",
     "VLANFilterSet",
@@ -179,18 +176,13 @@ class AggregateFilterSet(NautobotFilterSet, IPAMFilterSetMixin, TenancyModelFilt
             return queryset.none()
 
 
-class RoleFilterSet(NautobotFilterSet, NameSlugSearchFilterSet):
-    class Meta:
-        model = Role
-        fields = ["id", "name", "slug"]
-
-
 class PrefixFilterSet(
     NautobotFilterSet,
     IPAMFilterSetMixin,
     LocatableModelFilterSetMixin,
     TenancyModelFilterSetMixin,
     StatusModelFilterSetMixin,
+    RoleModelFilterSetMixin,
 ):
     prefix = django_filters.CharFilter(
         method="filter_prefix",
@@ -241,16 +233,6 @@ class PrefixFilterSet(
     vlan_vid = django_filters.NumberFilter(
         field_name="vlan__vid",
         label="VLAN number (1-4095)",
-    )
-    role_id = django_filters.ModelMultipleChoiceFilter(
-        queryset=Role.objects.all(),
-        label="Role (ID)",
-    )
-    role = django_filters.ModelMultipleChoiceFilter(
-        field_name="role__slug",
-        queryset=Role.objects.all(),
-        to_field_name="slug",
-        label="Role (slug)",
     )
     tag = TagFilter()
 
@@ -331,7 +313,13 @@ class PrefixFilterSet(
         return queryset.filter(params)
 
 
-class IPAddressFilterSet(NautobotFilterSet, IPAMFilterSetMixin, TenancyModelFilterSetMixin, StatusModelFilterSetMixin):
+class IPAddressFilterSet(
+    NautobotFilterSet,
+    IPAMFilterSetMixin,
+    TenancyModelFilterSetMixin,
+    StatusModelFilterSetMixin,
+    RoleModelFilterSetMixin,
+):
     parent = django_filters.CharFilter(
         method="search_by_parent",
         label="Parent prefix",
@@ -413,7 +401,6 @@ class IPAddressFilterSet(NautobotFilterSet, IPAMFilterSetMixin, TenancyModelFilt
         method="_assigned_to_interface",
         label="Is assigned to an interface",
     )
-    role = django_filters.MultipleChoiceFilter(choices=IPAddressRoleChoices)
     tag = TagFilter()
 
     class Meta:
@@ -479,6 +466,7 @@ class VLANFilterSet(
     LocatableModelFilterSetMixin,
     TenancyModelFilterSetMixin,
     StatusModelFilterSetMixin,
+    RoleModelFilterSetMixin,
 ):
     q = SearchFilter(
         filter_predicates={
@@ -504,16 +492,6 @@ class VLANFilterSet(
         queryset=VLANGroup.objects.all(),
         to_field_name="slug",
         label="VLAN Group",
-    )
-    role_id = django_filters.ModelMultipleChoiceFilter(
-        queryset=Role.objects.all(),
-        label="Role (ID)",
-    )
-    role = django_filters.ModelMultipleChoiceFilter(
-        field_name="role__slug",
-        queryset=Role.objects.all(),
-        to_field_name="slug",
-        label="Role (slug)",
     )
     tag = TagFilter()
 

@@ -16,7 +16,6 @@ from .models import (
     IPAddress,
     Prefix,
     RIR,
-    Role,
     RouteTarget,
     Service,
     VLAN,
@@ -314,92 +313,6 @@ class AggregateBulkDeleteView(generic.BulkDeleteView):
     queryset = Aggregate.objects.prefetch_related("rir")
     filterset = filters.AggregateFilterSet
     table = tables.AggregateTable
-
-
-#
-# Prefix/VLAN roles
-#
-
-
-class RoleListView(generic.ObjectListView):
-    queryset = Role.objects.annotate(
-        prefix_count=count_related(Prefix, "role"),
-        vlan_count=count_related(VLAN, "role"),
-    )
-    filterset = filters.RoleFilterSet
-    table = tables.RoleTable
-
-
-class RoleView(generic.ObjectView):
-    queryset = Role.objects.all()
-
-    def get_extra_context(self, request, instance):
-
-        # Prefixes
-        # v2 TODO(jathan): Replace prefetch_related with select_related
-        prefixes = (
-            Prefix.objects.restrict(request.user, "view")
-            .filter(role=instance)
-            .prefetch_related(
-                "site",
-                "status",
-                "tenant",
-                "vlan",
-                "vrf",
-            )
-        )
-
-        prefix_table = tables.PrefixTable(prefixes)
-        prefix_table.columns.hide("role")
-
-        paginate = {
-            "paginator_class": EnhancedPaginator,
-            "per_page": get_paginate_count(request),
-        }
-        RequestConfig(request, paginate).configure(prefix_table)
-
-        # VLANs
-        # v2 TODO(jathan): Replace prefetch_related with select_related
-        vlans = (
-            VLAN.objects.restrict(request.user, "view")
-            .filter(role=instance)
-            .prefetch_related(
-                "vlan_group",
-                "site",
-                "status",
-                "tenant",
-            )
-        )
-
-        vlan_table = tables.VLANTable(vlans)
-        vlan_table.columns.hide("role")
-
-        RequestConfig(request, paginate).configure(vlan_table)
-
-        return {
-            "prefix_table": prefix_table,
-            "vlan_table": vlan_table,
-        }
-
-
-class RoleEditView(generic.ObjectEditView):
-    queryset = Role.objects.all()
-    model_form = forms.RoleForm
-
-
-class RoleDeleteView(generic.ObjectDeleteView):
-    queryset = Role.objects.all()
-
-
-class RoleBulkImportView(generic.BulkImportView):
-    queryset = Role.objects.all()
-    model_form = forms.RoleCSVForm
-    table = tables.RoleTable
-
-
-class RoleBulkDeleteView(generic.BulkDeleteView):
-    queryset = Role.objects.all()
-    table = tables.RoleTable
 
 
 #
@@ -783,7 +696,7 @@ class IPAddressBulkImportView(generic.BulkImportView):
 
 class IPAddressBulkEditView(generic.BulkEditView):
     # v2 TODO(jathan): Replace prefetch_related with select_related
-    queryset = IPAddress.objects.prefetch_related("status", "tenant", "vrf__tenant")
+    queryset = IPAddress.objects.prefetch_related("status", "role", "tenant", "vrf__tenant")
     filterset = filters.IPAddressFilterSet
     table = tables.IPAddressTable
     form = forms.IPAddressBulkEditForm
@@ -791,7 +704,7 @@ class IPAddressBulkEditView(generic.BulkEditView):
 
 class IPAddressBulkDeleteView(generic.BulkDeleteView):
     # v2 TODO(jathan): Replace prefetch_related with select_related
-    queryset = IPAddress.objects.prefetch_related("status", "tenant", "vrf__tenant")
+    queryset = IPAddress.objects.prefetch_related("status", "role", "tenant", "vrf__tenant")
     filterset = filters.IPAddressFilterSet
     table = tables.IPAddressTable
 

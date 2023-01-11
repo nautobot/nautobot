@@ -15,10 +15,10 @@ from nautobot.core.api import (
     ValidatedModelSerializer,
 )
 from nautobot.core.api.exceptions import SerializerNotFound
+from nautobot.core.api.mixins import LimitQuerysetChoicesSerializerMixin
 from nautobot.core.api.serializers import BaseModelSerializer
 from nautobot.dcim.api.nested_serializers import (
     NestedDeviceSerializer,
-    NestedDeviceRoleSerializer,
     NestedDeviceTypeSerializer,
     NestedLocationSerializer,
     NestedPlatformSerializer,
@@ -26,7 +26,7 @@ from nautobot.dcim.api.nested_serializers import (
     NestedRegionSerializer,
     NestedSiteSerializer,
 )
-from nautobot.dcim.models import Device, DeviceRole, DeviceType, Location, Platform, Rack, Region, Site
+from nautobot.dcim.models import Device, DeviceType, Location, Platform, Rack, Region, Site
 from nautobot.extras.api.fields import StatusSerializerField
 from nautobot.extras.choices import (
     CustomFieldFilterLogicChoices,
@@ -57,6 +57,7 @@ from nautobot.extras.models import (
     ObjectChange,
     Relationship,
     RelationshipAssociation,
+    Role,
     ScheduledJob,
     Secret,
     SecretsGroup,
@@ -65,7 +66,7 @@ from nautobot.extras.models import (
     Tag,
     Webhook,
 )
-from nautobot.extras.utils import ChangeLoggedModelsQuery, FeatureQuery, TaggableClassesQuery
+from nautobot.extras.utils import ChangeLoggedModelsQuery, FeatureQuery, RoleModelsQuery, TaggableClassesQuery
 from nautobot.tenancy.api.nested_serializers import (
     NestedTenantSerializer,
     NestedTenantGroupSerializer,
@@ -99,11 +100,13 @@ from .nested_serializers import (  # noqa: F401
     NestedGitRepositorySerializer,
     NestedGraphQLQuerySerializer,
     NestedImageAttachmentSerializer,
+    NestedJobHookSerializer,
     NestedJobSerializer,
     NestedJobResultSerializer,
     NestedNoteSerializer,
     NestedRelationshipAssociationSerializer,
     NestedRelationshipSerializer,
+    NestedRoleSerializer,
     NestedScheduledJobSerializer,
     NestedSecretSerializer,
     NestedSecretsGroupSerializer,
@@ -111,7 +114,6 @@ from .nested_serializers import (  # noqa: F401
     NestedStatusSerializer,
     NestedTagSerializer,
     NestedWebhookSerializer,
-    NestedJobHookSerializer,
 )
 
 #
@@ -186,15 +188,8 @@ class StatusModelSerializerMixin(BaseModelSerializer):
         return list(cls().fields["status"].get_choices().keys())
 
 
-class TagSerializerField(NestedTagSerializer):
+class TagSerializerField(LimitQuerysetChoicesSerializerMixin, NestedTagSerializer):
     """NestedSerializer field for `Tag` object fields."""
-
-    def get_queryset(self):
-        """Only emit status options for this model/field combination."""
-        queryset = super().get_queryset()
-        # Get objects model e.g Site, Device... etc.
-        model = self.parent.parent.Meta.model
-        return queryset.get_for_model(model)
 
 
 class TaggedModelSerializerMixin(BaseModelSerializer):
@@ -300,8 +295,8 @@ class ConfigContextSerializer(ValidatedModelSerializer, NotesSerializerMixin):
         many=True,
     )
     roles = SerializedPKRelatedField(
-        queryset=DeviceRole.objects.all(),
-        serializer=NestedDeviceRoleSerializer,
+        queryset=Role.objects.all(),
+        serializer=NestedRoleSerializer,
         required=False,
         many=True,
     )
@@ -1185,6 +1180,48 @@ class RelationshipAssociationSerializer(ValidatedModelSerializer):
             "source_id",
             "destination_type",
             "destination_id",
+        ]
+
+
+#
+# Roles
+#
+
+
+class RoleSerializerField(LimitQuerysetChoicesSerializerMixin, NestedRoleSerializer):
+    """NestedSerializer field for `Role` object fields."""
+
+
+class RoleModelSerializerMixin(BaseModelSerializer):
+    """Mixin to add `role` choice field to model serializers."""
+
+    role = RoleSerializerField(required=False)
+
+
+class RoleRequiredRoleModelSerializerMixin(BaseModelSerializer):
+    """Mixin to add `role` choice field to model serializers."""
+
+    role = RoleSerializerField()
+
+
+class RoleSerializer(NautobotModelSerializer):
+    """Serializer for `Role` objects."""
+
+    url = serializers.HyperlinkedIdentityField(view_name="extras-api:role-detail")
+    content_types = ContentTypeField(
+        queryset=RoleModelsQuery().as_queryset(),
+        many=True,
+    )
+
+    class Meta:
+        model = Role
+        fields = [
+            "url",
+            "content_types",
+            "name",
+            "slug",
+            "color",
+            "weight",
         ]
 
 

@@ -15,7 +15,6 @@ from nautobot.ipam.models import (
     IPAddress,
     Prefix,
     RIR,
-    Role,
     RouteTarget,
     Service,
     VLAN,
@@ -92,20 +91,6 @@ class AggregateViewSet(NautobotModelViewSet):
     queryset = Aggregate.objects.prefetch_related("rir").prefetch_related("tags")
     serializer_class = serializers.AggregateSerializer
     filterset_class = filters.AggregateFilterSet
-
-
-#
-# Roles
-#
-
-
-class RoleViewSet(NautobotModelViewSet):
-    queryset = Role.objects.annotate(
-        prefix_count=count_related(Prefix, "role"),
-        vlan_count=count_related(VLAN, "role"),
-    )
-    serializer_class = serializers.RoleSerializer
-    filterset_class = filters.RoleFilterSet
 
 
 #
@@ -319,6 +304,7 @@ class IPAddressViewSet(StatusViewSetMixin, NautobotModelViewSet):
         "nat_inside",
         "nat_outside_list",
         "status",
+        "role",
         "tags",
         "tenant",
         "vrf__tenant",

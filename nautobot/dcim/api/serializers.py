@@ -45,7 +45,6 @@ from nautobot.dcim.models import (
     DeviceBay,
     DeviceBayTemplate,
     DeviceRedundancyGroup,
-    DeviceRole,
     DeviceType,
     FrontPort,
     FrontPortTemplate,
@@ -65,7 +64,6 @@ from nautobot.dcim.models import (
     Rack,
     RackGroup,
     RackReservation,
-    RackRole,
     RearPort,
     RearPortTemplate,
     Region,
@@ -74,6 +72,8 @@ from nautobot.dcim.models import (
 )
 from nautobot.extras.api.serializers import (
     NautobotModelSerializer,
+    RoleRequiredRoleModelSerializerMixin,
+    RoleModelSerializerMixin,
     StatusModelSerializerMixin,
     TaggedModelSerializerMixin,
 )
@@ -103,7 +103,6 @@ from .nested_serializers import (  # noqa: F401
     NestedDeviceBaySerializer,
     NestedDeviceBayTemplateSerializer,
     NestedDeviceRedundancyGroupSerializer,
-    NestedDeviceRoleSerializer,
     NestedDeviceSerializer,
     NestedDeviceTypeSerializer,
     NestedFrontPortSerializer,
@@ -123,7 +122,6 @@ from .nested_serializers import (  # noqa: F401
     NestedPowerPortTemplateSerializer,
     NestedRackGroupSerializer,
     NestedRackReservationSerializer,
-    NestedRackRoleSerializer,
     NestedRackSerializer,
     NestedRearPortSerializer,
     NestedRearPortTemplateSerializer,
@@ -394,29 +392,14 @@ class RackGroupSerializer(NautobotModelSerializer, TreeModelSerializerMixin):
         return data
 
 
-class RackRoleSerializer(NautobotModelSerializer):
-    url = serializers.HyperlinkedIdentityField(view_name="dcim-api:rackrole-detail")
-    rack_count = serializers.IntegerField(read_only=True)
-
-    class Meta:
-        model = RackRole
-        fields = [
-            "url",
-            "name",
-            "slug",
-            "color",
-            "description",
-            "rack_count",
-        ]
-
-
-class RackSerializer(NautobotModelSerializer, TaggedModelSerializerMixin, StatusModelSerializerMixin):
+class RackSerializer(
+    NautobotModelSerializer, TaggedModelSerializerMixin, StatusModelSerializerMixin, RoleModelSerializerMixin
+):
     url = serializers.HyperlinkedIdentityField(view_name="dcim-api:rack-detail")
     site = NestedSiteSerializer()
     location = NestedLocationSerializer(required=False, allow_null=True)
     group = NestedRackGroupSerializer(required=False, allow_null=True, default=None)
     tenant = NestedTenantSerializer(required=False, allow_null=True)
-    role = NestedRackRoleSerializer(required=False, allow_null=True)
     type = ChoiceField(choices=RackTypeChoices, allow_blank=True, required=False)
     width = ChoiceField(choices=RackWidthChoices, required=False)
     outer_unit = ChoiceField(choices=RackDimensionUnitChoices, allow_blank=True, required=False)
@@ -729,25 +712,6 @@ class DeviceBayTemplateSerializer(NautobotModelSerializer):
 #
 
 
-class DeviceRoleSerializer(NautobotModelSerializer):
-    url = serializers.HyperlinkedIdentityField(view_name="dcim-api:devicerole-detail")
-    device_count = serializers.IntegerField(read_only=True)
-    virtualmachine_count = serializers.IntegerField(read_only=True)
-
-    class Meta:
-        model = DeviceRole
-        fields = [
-            "url",
-            "name",
-            "slug",
-            "color",
-            "vm_role",
-            "description",
-            "device_count",
-            "virtualmachine_count",
-        ]
-
-
 class PlatformSerializer(NautobotModelSerializer):
     url = serializers.HyperlinkedIdentityField(view_name="dcim-api:platform-detail")
     manufacturer = NestedManufacturerSerializer(required=False, allow_null=True)
@@ -769,10 +733,14 @@ class PlatformSerializer(NautobotModelSerializer):
         ]
 
 
-class DeviceSerializer(NautobotModelSerializer, TaggedModelSerializerMixin, StatusModelSerializerMixin):
+class DeviceSerializer(
+    NautobotModelSerializer,
+    TaggedModelSerializerMixin,
+    StatusModelSerializerMixin,
+    RoleRequiredRoleModelSerializerMixin,
+):
     url = serializers.HyperlinkedIdentityField(view_name="dcim-api:device-detail")
     device_type = NestedDeviceTypeSerializer()
-    device_role = NestedDeviceRoleSerializer()
     tenant = NestedTenantSerializer(required=False, allow_null=True)
     platform = NestedPlatformSerializer(required=False, allow_null=True)
     site = NestedSiteSerializer()
@@ -795,7 +763,7 @@ class DeviceSerializer(NautobotModelSerializer, TaggedModelSerializerMixin, Stat
             "url",
             "name",
             "device_type",
-            "device_role",
+            "role",
             "tenant",
             "platform",
             "serial",
