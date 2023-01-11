@@ -480,7 +480,7 @@ class VMInterface(BaseModel, BaseInterface, CustomFieldModel, NotesMixin):
         "description",
         "mode",
         "status",
-        "parent",
+        "parent_interface",
         "bridge",
     ]
 
@@ -505,7 +505,7 @@ class VMInterface(BaseModel, BaseInterface, CustomFieldModel, NotesMixin):
             self.description,
             self.get_mode_display(),
             self.get_status_display(),
-            self.parent.name if self.parent else None,
+            self.parent_interface.name if self.parent_interface else None,
             self.bridge.name if self.bridge else None,
         )
 
@@ -520,6 +520,10 @@ class VMInterface(BaseModel, BaseInterface, CustomFieldModel, NotesMixin):
             object_data_v2=serialize_object_v2(self),
             related_object=self.virtual_machine,
         )
+
+    @property
+    def parent(self):
+        return self.virtual_machine
 
     @property
     def count_ipaddresses(self):

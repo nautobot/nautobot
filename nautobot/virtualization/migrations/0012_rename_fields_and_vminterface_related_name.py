@@ -45,22 +45,6 @@ class Migration(migrations.Migration):
             old_name="local_context_schema",
             new_name="local_config_context_schema",
         ),
-        migrations.RenameField(
-            model_name="vminterface",
-            old_name="parent_interface",
-            new_name="parent",
-        ),
-        migrations.AlterField(
-            model_name="vminterface",
-            name="parent",
-            field=models.ForeignKey(
-                blank=True,
-                null=True,
-                on_delete=django.db.models.deletion.CASCADE,
-                related_name="children",
-                to="virtualization.vminterface",
-            ),
-        ),
         migrations.AlterField(
             model_name="virtualmachine",
             name="local_config_context_data_owner_content_type",

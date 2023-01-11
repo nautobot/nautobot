@@ -28,8 +28,8 @@
                 <tr>
                      <td>Parent Interface</td>
                      <td>
-                         {% if object.parent %}
-                             <a href="{{ object.parent.get_absolute_url }}">{{ object.parent }}</a>
+                         {% if object.parent_interface %}
+                             <a href="{{ object.parent_interface.get_absolute_url }}">{{ object.parent_interface }}</a>
                          {% else %}
                              <span class="text-muted">None</span>
                          {% endif %}
@@ -68,5 +68,5 @@
 {% block content_full_width_page %}
     {% include 'panel_table.html' with table=ipaddress_table heading="IP Addresses" %}
     {% include 'panel_table.html' with table=vlan_table heading="VLANs" %}
-    {% include 'panel_table.html' with table=children_table heading="Child Interfaces" %}
+    {% include 'panel_table.html' with table=child_interfaces_table heading="Child Interfaces" %}
 {% endblock content_full_width_page %}

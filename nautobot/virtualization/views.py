@@ -416,8 +416,10 @@ class VMInterfaceView(generic.ObjectView):
         )
 
         # Get child interfaces
-        children = instance.children.restrict(request.user, "view")
-        children_tables = tables.VMInterfaceTable(children, orderable=False, exclude=("virtual_machine",))
+        child_interfaces = instance.child_interfaces.restrict(request.user, "view")
+        child_interfaces_tables = tables.VMInterfaceTable(
+            child_interfaces, orderable=False, exclude=("virtual_machine",)
+        )
 
         # Get assigned VLANs and annotate whether each is tagged or untagged
         vlans = []
@@ -433,7 +435,7 @@ class VMInterfaceView(generic.ObjectView):
 
         return {
             "ipaddress_table": ipaddress_table,
-            "children_table": children_tables,
+            "child_interfaces_table": child_interfaces_tables,
             "vlan_table": vlan_table,
         }
 

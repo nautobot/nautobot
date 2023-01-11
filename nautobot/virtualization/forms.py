@@ -482,7 +482,7 @@ class VirtualMachineFilterForm(
 
 
 class VMInterfaceForm(NautobotModelForm, InterfaceCommonForm):
-    parent = DynamicModelChoiceField(
+    parent_interface = DynamicModelChoiceField(
         queryset=VMInterface.objects.all(),
         required=False,
         label="Parent interface",
@@ -519,7 +519,7 @@ class VMInterfaceForm(NautobotModelForm, InterfaceCommonForm):
             "virtual_machine",
             "name",
             "enabled",
-            "parent",
+            "parent_interface",
             "bridge",
             "mac_address",
             "mtu",
@@ -543,7 +543,7 @@ class VMInterfaceForm(NautobotModelForm, InterfaceCommonForm):
         vm_id = self.initial.get("virtual_machine") or self.data.get("virtual_machine")
 
         # Restrict parent interface assignment by VM
-        self.fields["parent"].widget.add_query_param("virtual_machine_id", vm_id)
+        self.fields["parent_interface"].widget.add_query_param("virtual_machine_id", vm_id)
         self.fields["bridge"].widget.add_query_param("virtual_machine_id", vm_id)
 
         virtual_machine = VirtualMachine.objects.get(
@@ -561,7 +561,7 @@ class VMInterfaceCreateForm(BootstrapMixin, InterfaceCommonForm):
     virtual_machine = DynamicModelChoiceField(queryset=VirtualMachine.objects.all())
     name_pattern = ExpandableNameField(label="Name")
     enabled = forms.BooleanField(required=False, initial=True)
-    parent = DynamicModelChoiceField(
+    parent_interface = DynamicModelChoiceField(
         queryset=VMInterface.objects.all(),
         required=False,
         query_params={
@@ -618,7 +618,7 @@ class VMInterfaceCreateForm(BootstrapMixin, InterfaceCommonForm):
         vm_id = self.initial.get("virtual_machine") or self.data.get("virtual_machine")
 
         # Restrict parent interface assignment by VM
-        self.fields["parent"].widget.add_query_param("virtual_machine_id", vm_id)
+        self.fields["parent_interface"].widget.add_query_param("virtual_machine_id", vm_id)
         self.fields["bridge"].widget.add_query_param("virtual_machine_id", vm_id)
 
         virtual_machine = VirtualMachine.objects.get(
@@ -634,7 +634,7 @@ class VMInterfaceCreateForm(BootstrapMixin, InterfaceCommonForm):
 
 class VMInterfaceCSVForm(CustomFieldModelCSVForm, StatusModelCSVFormMixin):
     virtual_machine = CSVModelChoiceField(queryset=VirtualMachine.objects.all(), to_field_name="name")
-    parent = CSVModelChoiceField(
+    parent_interface = CSVModelChoiceField(
         queryset=VMInterface.objects.all(), required=False, to_field_name="name", help_text="Parent interface"
     )
     bridge = CSVModelChoiceField(
@@ -666,7 +666,9 @@ class VMInterfaceBulkEditForm(TagsBulkEditFormMixin, StatusModelBulkEditFormMixi
         disabled=True,
         widget=forms.HiddenInput(),
     )
-    parent = DynamicModelChoiceField(queryset=VMInterface.objects.all(), required=False, display_field="display_name")
+    parent_interface = DynamicModelChoiceField(
+        queryset=VMInterface.objects.all(), required=False, display_field="display_name"
+    )
     bridge = DynamicModelChoiceField(
         queryset=VMInterface.objects.all(),
         required=False,
@@ -703,7 +705,7 @@ class VMInterfaceBulkEditForm(TagsBulkEditFormMixin, StatusModelBulkEditFormMixi
 
     class Meta:
         nullable_fields = [
-            "parent",
+            "parent_interface",
             "bridge",
             "mtu",
             "description",
@@ -714,7 +716,7 @@ class VMInterfaceBulkEditForm(TagsBulkEditFormMixin, StatusModelBulkEditFormMixi
         vm_id = self.initial.get("virtual_machine") or self.data.get("virtual_machine")
 
         # Restrict parent/bridge interface assignment by VM
-        self.fields["parent"].widget.add_query_param("virtual_machine_id", vm_id)
+        self.fields["parent_interface"].widget.add_query_param("virtual_machine_id", vm_id)
         self.fields["bridge"].widget.add_query_param("virtual_machine_id", vm_id)
 
         # Limit available VLANs based on the parent VirtualMachine
@@ -727,8 +729,8 @@ class VMInterfaceBulkEditForm(TagsBulkEditFormMixin, StatusModelBulkEditFormMixi
                 self.fields["untagged_vlan"].widget.add_query_param("site_id", site.pk)
                 self.fields["tagged_vlans"].widget.add_query_param("site_id", site.pk)
 
-        self.fields["parent"].choices = ()
-        self.fields["parent"].widget.attrs["disabled"] = True
+        self.fields["parent_interface"].choices = ()
+        self.fields["parent_interface"].widget.attrs["disabled"] = True
         self.fields["bridge"].choices = ()
         self.fields["bridge"].widget.attrs["disabled"] = True
 

@@ -512,10 +512,10 @@ class BaseInterface(RelationshipModel, StatusModel):
         verbose_name="MTU",
     )
     mode = models.CharField(max_length=50, choices=InterfaceModeChoices, blank=True)
-    parent = models.ForeignKey(
+    parent_interface = models.ForeignKey(
         to="self",
         on_delete=models.CASCADE,
-        related_name="children",
+        related_name="child_interfaces",
         null=True,
         blank=True,
         verbose_name="Parent interface",
@@ -626,7 +626,7 @@ class Interface(CableTermination, PathEndpoint, ComponentModel, BaseInterface):
         "description",
         "mode",
         "status",
-        "parent",
+        "parent_interface",
         "bridge",
     ]
 
@@ -651,7 +651,7 @@ class Interface(CableTermination, PathEndpoint, ComponentModel, BaseInterface):
             self.description,
             self.get_mode_display(),
             self.get_status_display(),
-            self.parent.name if self.parent else None,
+            self.parent_interface.name if self.parent_interface else None,
             self.bridge.name if self.bridge else None,
         )
 
@@ -699,32 +699,36 @@ class Interface(CableTermination, PathEndpoint, ComponentModel, BaseInterface):
             )
 
         # Parent validation
-        if self.parent is not None:
+        if self.parent_interface is not None:
 
             # An interface cannot be its own parent
-            if self.parent.pk == self.pk:
-                raise ValidationError({"parent": "An interface cannot be its own parent."})
+            if self.parent_interface_id == self.pk:
+                raise ValidationError({"parent_interface": "An interface cannot be its own parent."})
             # A physical interface cannot have a parent interface
             if hasattr(self, "type") and self.type != InterfaceTypeChoices.TYPE_VIRTUAL:
-                raise ValidationError({"parent": "Only virtual interfaces may be assigned to a parent interface."})
+                raise ValidationError(
+                    {"parent_interface": "Only virtual interfaces may be assigned to a parent interface."}
+                )
 
             # A virtual interface cannot be a parent interface
-            if getattr(self.parent, "type", None) == InterfaceTypeChoices.TYPE_VIRTUAL:
-                raise ValidationError({"parent": "Virtual interfaces may not be parents of other interfaces."})
+            if getattr(self.parent_interface, "type", None) == InterfaceTypeChoices.TYPE_VIRTUAL:
+                raise ValidationError(
+                    {"parent_interface": "Virtual interfaces may not be parents of other interfaces."}
+                )
 
             # An interface's parent must belong to the same device or virtual chassis
-            if self.parent.device != self.device:
+            if self.parent_interface.device != self.device:
                 if getattr(self.device, "virtual_chassis", None) is None:
                     raise ValidationError(
                         {
-                            "parent": f"The selected parent interface ({self.parent}) belongs to a different device "
-                            f"({self.parent.device})."
+                            "parent_interface": f"The selected parent interface ({self.parent_interface}) belongs to a different device "
+                            f"({self.parent_interface.device})."
                         }
                     )
-                elif self.parent.device.virtual_chassis != self.device.virtual_chassis:
+                elif self.parent_interface.device.virtual_chassis != self.device.virtual_chassis:
                     raise ValidationError(
                         {
-                            "parent": f"The selected parent interface ({self.parent}) belongs to {self.parent.device}, which "
+                            "parent_interface": f"The selected parent interface ({self.parent_interface}) belongs to {self.parent_interface.device}, which "
                             f"is not part of virtual chassis {self.device.virtual_chassis}."
                         }
                     )
@@ -787,6 +791,10 @@ class Interface(CableTermination, PathEndpoint, ComponentModel, BaseInterface):
     @property
     def count_ipaddresses(self):
         return self.ip_addresses.count()
+
+    @property
+    def parent(self):
+        return self.device
 
 
 #

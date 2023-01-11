@@ -1771,7 +1771,7 @@ class InterfaceTestVersion12(Mixins.BasePortTestMixin):
                 "name": "Interface 10",
                 "type": "virtual",
                 "mode": InterfaceModeChoices.MODE_TAGGED,
-                "parent": cls.interfaces[1].pk,
+                "parent_interface": cls.interfaces[1].pk,
                 "tagged_vlans": [cls.vlans[0].pk, cls.vlans[1].pk],
                 "untagged_vlan": cls.vlans[2].pk,
             },
@@ -1789,7 +1789,7 @@ class InterfaceTestVersion12(Mixins.BasePortTestMixin):
                 "device": cls.devices[0].pk,
                 "name": "interface test 1",
                 "type": InterfaceTypeChoices.TYPE_VIRTUAL,
-                "parent": cls.interfaces[3].id,  # belongs to different device but same vc
+                "parent_interface": cls.interfaces[3].id,  # belongs to different device but same vc
                 "bridge": cls.interfaces[2].id,  # belongs to different device but same vc
             },
             {
@@ -1802,12 +1802,12 @@ class InterfaceTestVersion12(Mixins.BasePortTestMixin):
 
         cls.interfaces_not_belonging_to_same_device_data = [
             [
-                "parent",
+                "parent_interface",
                 {
                     "device": cls.devices[0].pk,
                     "name": "interface test 1",
                     "type": InterfaceTypeChoices.TYPE_VIRTUAL,
-                    "parent": cls.interfaces[6].id,  # do not belong to same device or vc
+                    "parent_interface": cls.interfaces[6].id,  # do not belong to same device or vc
                 },
             ],
             [
@@ -1881,7 +1881,7 @@ class InterfaceTestVersion12(Mixins.BasePortTestMixin):
 
         self.assertHttpStatus(response, status.HTTP_201_CREATED)
         queryset = Interface.objects.get(name="interface test 1", device=self.devices[0])
-        self.assertEqual(queryset.parent, self.interfaces[3])
+        self.assertEqual(queryset.parent_interface, self.interfaces[3])
         self.assertEqual(queryset.bridge, self.interfaces[2])
 
         # Assert LAG
@@ -1904,7 +1904,8 @@ class InterfaceTestVersion12(Mixins.BasePortTestMixin):
             response = self.client.post(self._get_list_url(), data=payload, format="json", **self.header)
             self.assertHttpStatus(response, status.HTTP_400_BAD_REQUEST)
 
-            field_name = name.upper() if name == "lag" else name
+            field_name_mapping = {"lag": "LAG", "parent_interface": "parent"}
+            field_name = field_name_mapping[name] if name in field_name_mapping else name
 
             interface = Interface.objects.get(id=payload[name])
             self.assertEqual(

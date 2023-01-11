@@ -50,7 +50,7 @@ query ($device_name: [String]) {
                         host
                         prefix_length
                     }
-                    parent {
+                    parent_interface {
                         name
                         type
                     }
@@ -101,7 +101,7 @@ We will demonstrate how to execute the command for Primary Unit only, however yo
                                             "prefix_length": 31
                                         }
                                     ],
-                                    "parent": {
+                                    "parent_interface": {
                                         "name": "gigabitethernet0/3",
                                         "type": "A_1000BASE_T"
                                     }
@@ -121,7 +121,7 @@ We will demonstrate how to execute the command for Primary Unit only, however yo
                                             "prefix_length": 31
                                         }
                                     ],
-                                    "parent": {
+                                    "parent_interface": {
                                         "name": "gigabitethernet0/3",
                                         "type": "A_1000BASE_T"
                                     }
@@ -152,13 +152,13 @@ template_body="""
 hostname {{ device.name }}
 !
 failover lan unit {{ priority_mapping[failover_device_local.device_redundancy_group_priority] }}
-failover lan interface {{ failover_local_vif.name }} {{ failover_local_vif.parent.name }} 
+failover lan interface {{ failover_local_vif.name }} {{ failover_local_vif.parent_interface.name }} 
 !
 failover interface ip {{ failover_local_vif.name }} {{ failover_local_vif.ip_addresses[0].host }}/{{ failover_local_vif.ip_addresses[0].prefix_length }} standby {{ failover_peer_vif.ip_addresses[0].host }}
-interface {{ failover_local_vif.parent.name }} 
+interface {{ failover_local_vif.parent_interface.name }} 
   no shutdown
 !
-failover link {{ failover_local_vif.name }} {{ failover_local_vif.parent.name }} 
+failover link {{ failover_local_vif.name }} {{ failover_local_vif.parent_interface.name }} 
 !
 !failover ipsec pre-shared-key !Nautobot Secrets
 !

@@ -2750,7 +2750,7 @@ class InterfaceFilterForm(DeviceComponentFilterForm, StatusModelFilterFormMixin)
 
 
 class InterfaceForm(InterfaceCommonForm, NautobotModelForm):
-    parent = DynamicModelChoiceField(
+    parent_interface = DynamicModelChoiceField(
         queryset=Interface.objects.all(),
         required=False,
         label="Parent interface",
@@ -2801,7 +2801,7 @@ class InterfaceForm(InterfaceCommonForm, NautobotModelForm):
             "label",
             "type",
             "enabled",
-            "parent",
+            "parent_interface",
             "bridge",
             "lag",
             "mac_address",
@@ -2835,7 +2835,7 @@ class InterfaceForm(InterfaceCommonForm, NautobotModelForm):
             device = self.instance.device
 
         # Restrict parent/bridge/LAG interface assignment by device
-        self.fields["parent"].widget.add_query_param("device_with_common_vc", device.pk)
+        self.fields["parent_interface"].widget.add_query_param("device_with_common_vc", device.pk)
         self.fields["bridge"].widget.add_query_param("device_with_common_vc", device.pk)
         self.fields["lag"].widget.add_query_param("device_with_common_vc", device.pk)
 
@@ -2856,7 +2856,7 @@ class InterfaceCreateForm(ComponentCreateForm, InterfaceCommonForm):
         },
     )
     enabled = forms.BooleanField(required=False, initial=True)
-    parent = DynamicModelChoiceField(
+    parent_interface = DynamicModelChoiceField(
         queryset=Interface.objects.all(),
         required=False,
         query_params={
@@ -2920,7 +2920,7 @@ class InterfaceCreateForm(ComponentCreateForm, InterfaceCommonForm):
         "status",
         "type",
         "enabled",
-        "parent",
+        "parent_interface",
         "bridge",
         "lag",
         "mtu",
@@ -2952,7 +2952,7 @@ class InterfaceBulkCreateForm(
 
 class InterfaceBulkEditForm(
     form_from_model(
-        Interface, ["label", "type", "parent", "bridge", "lag", "mac_address", "mtu", "description", "mode"]
+        Interface, ["label", "type", "parent_interface", "bridge", "lag", "mac_address", "mtu", "description", "mode"]
     ),
     TagsBulkEditFormMixin,
     StatusModelBulkEditFormMixin,
@@ -2966,7 +2966,7 @@ class InterfaceBulkEditForm(
         widget=forms.HiddenInput(),
     )
     enabled = forms.NullBooleanField(required=False, widget=BulkEditNullBooleanSelect)
-    parent = DynamicModelChoiceField(
+    parent_interface = DynamicModelChoiceField(
         queryset=Interface.objects.all(),
         required=False,
         query_params={
@@ -3005,7 +3005,7 @@ class InterfaceBulkEditForm(
     class Meta:
         nullable_fields = [
             "label",
-            "parent",
+            "parent_interface",
             "bridge",
             "lag",
             "mac_address",
@@ -3024,7 +3024,7 @@ class InterfaceBulkEditForm(
             device = Device.objects.filter(pk=self.initial["device"]).first()
 
             # Restrict parent/bridge/LAG interface assignment by device
-            self.fields["parent"].widget.add_query_param("device_with_common_vc", device.pk)
+            self.fields["parent_interface"].widget.add_query_param("device_with_common_vc", device.pk)
             self.fields["bridge"].widget.add_query_param("device_with_common_vc", device.pk)
             self.fields["lag"].widget.add_query_param("device_with_common_vc", device.pk)
 
@@ -3051,8 +3051,8 @@ class InterfaceBulkEditForm(
                     self.fields["untagged_vlan"].widget.add_query_param("site", site.pk)
                     self.fields["tagged_vlans"].widget.add_query_param("site", site.pk)
 
-            self.fields["parent"].choices = ()
-            self.fields["parent"].widget.attrs["disabled"] = True
+            self.fields["parent_interface"].choices = ()
+            self.fields["parent_interface"].widget.attrs["disabled"] = True
             self.fields["bridge"].choices = ()
             self.fields["bridge"].widget.attrs["disabled"] = True
             self.fields["lag"].choices = ()
@@ -3072,7 +3072,7 @@ class InterfaceBulkEditForm(
 
 class InterfaceCSVForm(CustomFieldModelCSVForm, StatusModelCSVFormMixin):
     device = CSVModelChoiceField(queryset=Device.objects.all(), to_field_name="name")
-    parent = CSVModelChoiceField(
+    parent_interface = CSVModelChoiceField(
         queryset=Interface.objects.all(), required=False, to_field_name="name", help_text="Parent interface"
     )
     bridge = CSVModelChoiceField(
@@ -3105,15 +3105,17 @@ class InterfaceCSVForm(CustomFieldModelCSVForm, StatusModelCSVFormMixin):
                 if device and device.virtual_chassis:
                     filter_by |= Q(device__virtual_chassis=device.virtual_chassis)
 
-                self.fields["parent"].queryset = (
-                    self.fields["parent"].queryset.filter(Q(filter_by)).exclude(type__in=NONCONNECTABLE_IFACE_TYPES)
+                self.fields["parent_interface"].queryset = (
+                    self.fields["parent_interface"]
+                    .queryset.filter(Q(filter_by))
+                    .exclude(type__in=NONCONNECTABLE_IFACE_TYPES)
                 )
                 self.fields["bridge"].queryset = self.fields["bridge"].queryset.filter(filter_by)
 
                 filter_by &= Q(type=InterfaceTypeChoices.TYPE_LAG)
                 self.fields["lag"].queryset = self.fields["lag"].queryset.filter(filter_by)
             else:
-                self.fields["parent"].queryset = self.fields["parent"].queryset.none()
+                self.fields["parent_interface"].queryset = self.fields["parent_interface"].queryset.none()
                 self.fields["bridge"].queryset = self.fields["bridge"].queryset.none()
                 self.fields["lag"].queryset = self.fields["lag"].queryset.none()
 

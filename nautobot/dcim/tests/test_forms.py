@@ -314,7 +314,7 @@ class TestInterfaceCSVForm(TestCase):
             "device": None,
             "name": None,
             "status": None,
-            "parent": None,
+            "parent_interface": None,
             "bridge": None,
             "type": None,
         }
@@ -334,7 +334,7 @@ class TestInterfaceCSVForm(TestCase):
             "device": self.devices[0].name,
             "name": "interface test",
             "status": "active",
-            "parent": self.interfaces[0].name,
+            "parent_interface": self.interfaces[0].name,
             "bridge": self.interfaces[2].name,
             "type": InterfaceTypeChoices.TYPE_VIRTUAL,
         }
@@ -344,7 +344,7 @@ class TestInterfaceCSVForm(TestCase):
         form.save()
 
         interface = Interface.objects.get(name="interface test", device=self.devices[0])
-        self.assertEqual(interface.parent, self.interfaces[0])
+        self.assertEqual(interface.parent_interface, self.interfaces[0])
         self.assertEqual(interface.bridge, self.interfaces[2])
 
         # Assert LAG
@@ -371,14 +371,14 @@ class TestInterfaceCSVForm(TestCase):
             "device": self.devices[0].name,
             "name": "interface test",
             "status": "active",
-            "parent": self.interfaces[4].name,
+            "parent_interface": self.interfaces[4].name,
             "bridge": self.interfaces[4].name,
             "type": InterfaceTypeChoices.TYPE_VIRTUAL,
         }
 
         form = InterfaceCSVForm(data, headers=self.headers_1)
         self.assertFalse(form.is_valid())
-        self.assertTrue(form.has_error("parent"))
+        self.assertTrue(form.has_error("parent_interface"))
         self.assertTrue(form.has_error("bridge"))
 
         # Assert LAG

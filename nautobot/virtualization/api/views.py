@@ -117,7 +117,7 @@ class VirtualMachineViewSet(ConfigContextQuerySetMixin, StatusViewSetMixin, Naut
 class VMInterfaceViewSet(StatusViewSetMixin, ModelViewSet, NotesViewSetMixin):
     # v2 TODO(jathan): Replace prefetch_related with select_related
     queryset = VMInterface.objects.prefetch_related(
-        "virtual_machine", "parent", "bridge", "status", "tags", "tagged_vlans"
+        "virtual_machine", "parent_interface", "bridge", "status", "tags", "tagged_vlans"
     )
     serializer_class = serializers.VMInterfaceSerializer
     filterset_class = filters.VMInterfaceFilterSet

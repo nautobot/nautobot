@@ -1027,7 +1027,7 @@ class InterfaceSerializerVersion12(
     )
     cable = NestedCableSerializer(read_only=True)
     count_ipaddresses = serializers.IntegerField(read_only=True)
-    parent = NestedInterfaceSerializer(required=False, allow_null=True)
+    parent_interface = NestedInterfaceSerializer(required=False, allow_null=True)
     bridge = NestedInterfaceSerializer(required=False, allow_null=True)
     lag = NestedInterfaceSerializer(required=False, allow_null=True)
 
@@ -1040,7 +1040,7 @@ class InterfaceSerializerVersion12(
             "label",
             "type",
             "enabled",
-            "parent",
+            "parent_interface",
             "bridge",
             "lag",
             "mtu",

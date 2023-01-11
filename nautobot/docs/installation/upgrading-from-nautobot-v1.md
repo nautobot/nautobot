@@ -30,8 +30,6 @@
 |                     | `local_context_data_owner_content_type` | `local_config_context_data_owner_content_type` |
 |                     | `local_context_data_owner_object_id`    | `local_config_context_data_owner_object_id`    |
 |                     | `local_context_schema`                  | `local_config_context_schema`                  |
-| Interface           | `parent_interface`                      | `parent`                                       |
-|                     | `child_interfaces`                      | `children`                                     |
 | InventoryItem       | `child_items`                           | `children`                                     |
 |                     | `level`                                 | `tree_depth`                                   |
 | RackGroup           | `level`                                 | `tree_depth`                                   |
@@ -41,8 +39,6 @@
 |                     | `local_context_data_owner_content_type` | `local_config_context_data_owner_content_type` |
 |                     | `local_context_data_owner_object_id`    | `local_config_context_data_owner_object_id`    |
 |                     | `local_context_schema`                  | `local_config_context_schema`                  |
-| VMInterface         | `parent_interface`                      | `parent`                                       |
-|                     | `child_interfaces`                      | `children`                                     |
 
 ### Removed Database Fields
 
@@ -79,14 +75,12 @@
 |                       | `type`                  | `cluster_type`                |
 | Device                | `local_context_data`    | `local_config_context_data`   |
 |                       | `local_context_schema`  | `local_config_context_schema` |
-| Interface             | `parent_interface`      | `parent`                      |
 | InventoryItem         | `_depth`                | `tree_depth`                  |
 | RackGroup             | `_depth`                | `tree_depth`                  |
 | Region                | `_depth`                | `tree_depth`                  |
 | TenantGroup           | `_depth`                | `tree_depth`                  |
 | VirtualMachine        | `local_context_data`    | `local_config_context_data`   |
 |                       | `local_context_schema`  | `local_config_context_schema` |
-| VMInterface           | `parent_interface`      | `parent`                      |
 
 ### Removed Serializer Fields
 
@@ -112,9 +106,6 @@
 |                       | `virtual_chassis_id`      | `virtual_chassis`                | `/dcim/devices/?virtual_chassis=<uuid/slug>`                              |
 | FrontPort             | `cabled`                  | `has_cable`                      | `/dcim/front-ports/?has_cable=True/False`                                 |
 | Interface             | `cabled`                  | `has_cable`                      | `/dcim/interfaces/?has_cable=True/False`                                  |
-|                       | `child_interfaces`        | `children`                       | `/dcim/interfaces/?children=<uuid/name>`                                  |
-|                       | `has_child_interfaces`    | `has_children`                   | `/dcim/interfaces/?has_children=True/False`                               |
-|                       | `parent_interface`        | `parent`                         | `/dcim/interfaces/?parent=<uuid/name>`                                    |
 | InventoryItem         | `child_items`             | `children`                       | `/dcim/inventory-items/?children=<uuid/name>`                             |
 |                       | `has_child_items`         | `has_children`                   | `/dcim/inventory-items/?has_children=True/False`                          |
 | PowerFeed             | `cabled`                  | `has_cable`                      | `/dcim/power-feeds/?has_cable=True/False`                                 |
@@ -124,9 +115,6 @@
 | VirtualMachine        | `local_context_data`      | `local_config_context_data`      | `/virtualization/virtual-machines/?local_config_context_data=True/False`  |
 |                       | `local_context_schema_id` | `local_config_context_schema_id` | `/virtualization/virtual-machines/?local_config_context_schema_id=<uuid>` |
 |                       | `local_context_schema`    | `local_config_context_schema`    | `/virtualization/virtual-machines/?local_config_context_schema=<slug>`    |
-| VMInterface           | `child_interfaces`        | `children`                       | `/virtualization/interfaces/?children=<uuid/name>`                        |
-|                       | `has_child_interfaces`    | `has_children`                   | `/virtualization/interfaces/?has_children=True/False`                     |
-|                       | `parent_interface`        | `parent`                         | `/virtualization/interfaces/?parent=<uuid/name>`                          |
 
 ### Enhanced Filter Fields
 

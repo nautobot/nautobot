@@ -292,19 +292,19 @@ class VMInterfaceFilterSet(BaseFilterSet, StatusModelFilterSetMixin, CustomField
         to_field_name="name",
         label="Virtual machine",
     )
-    parent = NaturalKeyOrPKMultipleChoiceFilter(
+    parent_interface = NaturalKeyOrPKMultipleChoiceFilter(
         to_field_name="name",
         queryset=VMInterface.objects.all(),
         label="Parent interface (name or ID)",
     )
-    children = NaturalKeyOrPKMultipleChoiceFilter(
+    child_interfaces = NaturalKeyOrPKMultipleChoiceFilter(
         to_field_name="name",
         queryset=VMInterface.objects.all(),
         label="Child interfaces (name or ID)",
     )
-    has_children = RelatedMembershipBooleanFilter(
-        field_name="children",
-        label="Has children",
+    has_child_interfaces = RelatedMembershipBooleanFilter(
+        field_name="child_interfaces",
+        label="Has child interfaces",
     )
     bridge = NaturalKeyOrPKMultipleChoiceFilter(
         to_field_name="name",

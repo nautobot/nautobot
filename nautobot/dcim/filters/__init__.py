@@ -1284,7 +1284,7 @@ class InterfaceFilterSet(
         label="Kind of interface",
     )
     # TODO: solve https://github.com/nautobot/nautobot/issues/2875 to use this filter correctly
-    parent = NaturalKeyOrPKMultipleChoiceFilter(
+    parent_interface = NaturalKeyOrPKMultipleChoiceFilter(
         queryset=Interface.objects.all(),
         to_field_name="name",
         label="Parent interface (name or ID)",
@@ -1316,14 +1316,14 @@ class InterfaceFilterSet(
         label="Has tagged VLANs",
     )
     # TODO: solve https://github.com/nautobot/nautobot/issues/2875 to use this filter correctly
-    children = NaturalKeyOrPKMultipleChoiceFilter(
+    child_interfaces = NaturalKeyOrPKMultipleChoiceFilter(
         queryset=Interface.objects.all(),
         to_field_name="name",
         label="Child interfaces (name or ID)",
     )
-    has_children = RelatedMembershipBooleanFilter(
-        field_name="children",
-        label="Has children",
+    has_child_interfaces = RelatedMembershipBooleanFilter(
+        field_name="child_interfaces",
+        label="Has child interfaces",
     )
     # TODO: solve https://github.com/nautobot/nautobot/issues/2875 to use this filter correctly
     bridged_interfaces = NaturalKeyOrPKMultipleChoiceFilter(

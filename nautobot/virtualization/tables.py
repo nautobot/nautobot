@@ -212,7 +212,7 @@ class VMInterfaceTable(StatusTableMixin, BaseInterfaceTable):
 
 
 class VirtualMachineVMInterfaceTable(VMInterfaceTable):
-    parent = tables.Column(linkify=True)
+    parent_interface = tables.Column(linkify=True)
     bridge = tables.Column(linkify=True)
     actions = ButtonsColumn(
         model=VMInterface,
@@ -227,7 +227,7 @@ class VirtualMachineVMInterfaceTable(VMInterfaceTable):
             "name",
             "status",
             "enabled",
-            "parent",
+            "parent_interface",
             "bridge",
             "mac_address",
             "mtu",
@@ -244,7 +244,7 @@ class VirtualMachineVMInterfaceTable(VMInterfaceTable):
             "name",
             "status",
             "enabled",
-            "parent",
+            "parent_interface",
             "mac_address",
             "mtu",
             "mode",
