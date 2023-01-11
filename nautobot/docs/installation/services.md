@@ -361,7 +361,7 @@ Alternatively, host Nautobot behind Nginx as instructed in [HTTP server setup](h
 
 ### Test Redis Connectivity
 
-From a nautobot shell (`nautobot-server shell_plus`) use the following python commands to test connectivity to a redis server. If successful, python should not return any exceptions.
+From a nautobot shell (`nautobot-server shell_plus`) use the following Python commands to test connectivity to your Redis server. If successful, python should not return any exceptions.
 
 ```py
 import os
